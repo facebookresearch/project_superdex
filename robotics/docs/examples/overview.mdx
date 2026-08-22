@@ -1,0 +1,43 @@
+---
+title: Examples
+sidebar_label: Overview
+sidebar_position: 1
+slug: /examples/overview
+---
+
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+
+# Examples
+
+These examples cover common SuperDex Robotics workflows. Each page mirrors a
+runnable script in `superdex_robotics/examples/`, broken into logically grouped
+snippets with the explanation drawn from the script's own comments, so you can
+read along and then run it.
+
+## Basic
+
+| Example | Script | You'll learn |
+|---------|--------|--------------|
+| [Loading a Bot](./basic/loading_a_bot.md) | `examples/basic/example_bot_loading.py` | Load a `.superdex_bot` and simulate it with the debugger. |
+| [Loading a Scene](./basic/loading_a_scene.mdx) | `examples/basic/example_scene_loading.py` | Assemble a workcell from separate bots and a task <ProjectSuperdexLink site="studio" path="docs/prefab_editor/#what-is-a-prefab">prefab</ProjectSuperdexLink>. |
+| [Loading from URDF](./basic/loading_from_urdf.mdx) | `examples/basic/example_urdf_loading.py` | Import a robot straight from a `.urdf`, including the runtime loader's pitfalls. |
+
+## Control
+
+| Example | Script | You'll learn |
+|---------|--------|--------------|
+| [JSC Control](./control/jsc_control.md) | `examples/control/example_jsc_control.py` | Drive joints with a joint-space PD controller. |
+| [OSC Control](./control/osc_control.md) | `examples/control/example_osc_control.py` | Track a Cartesian target with an operational-space PD controller. |
+| [IK + Pose Control](./control/ik_pose_control.md) | `examples/control/example_ik_pose_control.py` | Solve inverse kinematics and hold the result with a pose controller. |
+| [OSC + JSC Control](./control/osc_jsc_control.md) | `examples/control/example_osc_jsc_control.py` | Combine two controllers on one arm-hand bot. |
+| [Bimanual Control](./control/bimanual_control.md) | `examples/control/example_bimanual_control.py` | Run one OSC per arm on a two-armed bot. |
+
+## Running the examples
+
+Set up `uv` and the SuperDex wheels as described in
+[Getting Started](../getting_started.md), then run any example from the
+repository root:
+
+```bash
+uv run python superdex_robotics/examples/basic/example_bot_loading.py
+```

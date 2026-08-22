@@ -1,0 +1,261 @@
+<!-- @generated -->
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Debugger &mdash; SuperDex Physics Python API  documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Viewer" href="viewer.html" />
+    <link rel="prev" title="Models &amp; Meshes" href="models.html" />
+ 
+<!-- Theme synchronization with parent Docusaurus site -->
+<script type="text/javascript">
+    // jQuery shim — Sphinx 7.x removed jQuery but RTD theme search.html
+    // still uses jQuery(fn) for DOM-ready initialization.
+    if (typeof jQuery === 'undefined') {
+        window.jQuery = window.$ = function(fn) {
+            if (typeof fn === 'function') {
+                if (document.readyState !== 'loading') { fn(); }
+                else { document.addEventListener('DOMContentLoaded', fn); }
+            }
+        };
+    }
+
+    (function() {
+        var theme = localStorage.getItem('theme') || 'light';
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    })();
+
+    function setSphinxTheme(theme) {
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+    }
+
+    window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'setTheme') {
+            setSphinxTheme(event.data.theme);
+        }
+    });
+
+    window.addEventListener('DOMContentLoaded', function() {
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'getTheme' }, '*');
+        }
+    });
+</script>
+<!-- Shared SuperDex Physics theme (single source of truth:
+     website/static/api-embed.css). Baked in as a render-blocking stylesheet so
+     the page's FIRST paint is already themed — in lockstep with the pre-paint
+     data-theme script above — with no flash of the stock Sphinx/RTD theme and no
+     need for the embedding iframe to hide/reveal. pathto(..., 1) resolves the
+     path from this page up to the staticdocs site root where api-embed.css lives. -->
+<link rel="stylesheet" type="text/css" href="../../../../../api-embed.css"/>
+<style>
+    /* Sidebar font size — larger for readability. All light/dark theming is
+       owned by static/api-embed.css (single source of truth), baked in above as
+       a render-blocking <link>; no theme colors are set here, so the embedded
+       Python API reference matches the site background in both light and dark. */
+    .wy-menu-vertical a,
+    .wy-menu-vertical li,
+    .wy-menu-vertical code,
+    .wy-menu-vertical code.docutils,
+    .wy-menu-vertical .pre,
+    .wy-menu-vertical span.pre,
+    .wy-menu-vertical li span.toctree-expand,
+    .wy-side-nav-search input[type="text"] {
+        font-size: 14px !important;
+    }
+</style>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> SuperDex Physics Python API
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="physics.html">Physics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#engine-lifecycle">Engine Lifecycle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#execution-threading">Execution &amp; Threading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#scene">Scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#handles">Handles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#shapes-geometry">Shapes &amp; Geometry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#actors">Actors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#soft-materials">Soft Materials</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#constraints">Constraints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#contact-collision">Contact &amp; Collision</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#solver">Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#query-types">Query Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#recording-options">Recording Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#debugging-diagnostics">Debugging &amp; Diagnostics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#build-information">Build Information</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#core-value-spatial-types">Core Value &amp; Spatial Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#error-handling">Error Handling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#containers-spans">Containers &amp; Spans</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#not-yet-categorized">Not Yet Categorized</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="prefab.html">Prefabs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#scene-description">Scene Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#actors">Actors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#articulation-components-controllers">Articulation Components &amp; Controllers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#constraints">Constraints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#contact-filters">Contact Filters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#loading-dependencies">Loading &amp; Dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#instantiation">Instantiation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#serialization-export">Serialization &amp; Export</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#containers">Containers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models &amp; Meshes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="models.html#superdex-physics-model">superdex.physics.model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#module-superdex.physics.mesh">superdex.physics.mesh</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Debugger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="viewer.html">Viewer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="viewer.html#module-superdex.physics.viewer">superdex.physics.viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="viewer.html#module-superdex.physics.viewer.renderers">superdex.physics.viewer.renderers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="viewer.html#module-superdex.physics.viewer.utils">superdex.physics.viewer.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="viewer.html#module-superdex.physics.utils.render_model_registry">superdex.physics.utils.render_model_registry</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="scene_setup.html">Scene Setup, Assets &amp; Runtime</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.paths">superdex.physics.paths</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.environment">superdex.physics.environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.loader">superdex.physics.loader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.utils.context">superdex.physics.utils.context</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.utils.scene_helpers">superdex.physics.utils.scene_helpers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="utilities.html">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.configclasses">superdex.physics.utils.configclasses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.decorators">superdex.physics.utils.decorators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.deprecation">superdex.physics.utils.deprecation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.json">superdex.physics.utils.json</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.coordinate_systems">superdex.physics.utils.coordinate_systems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.transformations">superdex.physics.utils.transformations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.profiling">superdex.physics.utils.profiling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.logging">superdex.physics.utils.logging</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="testing.html">Testing Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="testing.html#module-superdex.physics.utils.testing.decorators">superdex.physics.utils.testing.decorators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="testing.html#module-superdex.physics.utils.testing.environment">superdex.physics.utils.testing.environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="testing.html#module-superdex.physics.utils.testing.testcases">superdex.physics.utils.testing.testcases</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">SuperDex Physics Python API</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Debugger</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/debugger.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="debugger">
+<h1>Debugger<a class="headerlink" href="#debugger" title="Permalink to this heading"></a></h1>
+<p><strong>Module:</strong> <code class="docutils literal notranslate"><span class="pre">superdex.physics.debugger</span></code></p>
+<p>Launch the standalone debugger and attach it to the running process.</p>
+<span class="target" id="module-superdex.physics.debugger"></span><dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.debugger.attach">
+<span class="sig-name descname"><span class="pre">attach</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeout_seconds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="../_modules/superdex/physics/debugger.html#attach"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.debugger.attach" title="Permalink to this definition"></a></dt>
+<dd><p>Launch or focus Mochi Debugger and wait for it to connect to this process.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>timeout_seconds</strong> – Maximum seconds to wait for the debugger to connect.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if the debugger is already attached or connects before the timeout.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.debugger.is_attached">
+<span class="sig-name descname"><span class="pre">is_attached</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="../_modules/superdex/physics/debugger.html#is_attached"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.debugger.is_attached" title="Permalink to this definition"></a></dt>
+<dd><p>Return whether a Mochi Debugger client is connected.</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="models.html" class="btn btn-neutral float-left" title="Models &amp; Meshes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="viewer.html" class="btn btn-neutral float-right" title="Viewer" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Meta Platforms, Inc.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

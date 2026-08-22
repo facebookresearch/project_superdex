@@ -1,0 +1,162 @@
+---
+title: State Capture
+sidebar_position: 14
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# State Capture
+
+State capture checkpoints the dynamic, step-to-step state of a [scene](./scenes.mdx). It supports replaying a scene from an earlier point, branching multiple rollouts from one checkpoint, and transferring state to another compatible scene.
+
+Within a given build, SuperDex Physics is designed to reproduce simulation exactly when inputs, solver and backend settings, worker-thread count, and the prescribed sequence of time steps are unchanged. Features documented as nondeterministic are exceptions.
+
+## Capture Scope
+
+A snapshot includes dynamic simulation data required to continue stepping consistently, including:
+
+- Actor transforms, poses, and velocities.
+- Time-integration history.
+- Current and previous controller and constraint targets.
+- External forces.
+- Scene time, including total simulation time and the most recent positive time step.
+
+State capture does not reconstruct scene topology or restore persistent configuration. It does not create or destroy actors and constraints, or restore shapes, materials, scene parameters, or application-owned state. Captured mutable state on an existing actor, including a static actor's root transform, is restored. If topology or persistent configuration differs after capture, subsequent simulation can diverge even when restoration succeeds.
+
+## Restoration Options
+
+| Option | Storage and ownership | Restore destination | Intended use |
+|---|---|---|---|
+| [`StateHandle`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1StateHandle.html) | Scene-owned memory | The scene that captured it | Fast same-scene replay and repeated branching |
+| Byte buffer | Caller-owned memory | The capturing scene or a compatible scene | Cross-thread, cross-process, or external caching |
+
+## Scene-Owned Handles
+
+[`CaptureState`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) / [`capture_state`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.capture_state) returns a handle to memory owned by the capturing scene. Restore it only into that same scene.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+Error error;
+StateHandle state = scene->CaptureState(error);
+
+// Advance or modify dynamic state.
+scene->Step(timeStepSec);
+
+// Keep the checkpoint for another restore.
+scene->RestoreState(state, /*releaseImmediately=*/ false, error);
+
+scene->ReleaseState(state);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+state = scene.capture_state()
+
+# Advance or modify dynamic state.
+scene.step(time_step_sec)
+
+# Keep the checkpoint for another restore.
+scene.restore_state(state, release_immediately=False)
+
+scene.release_state(state)
+```
+
+</TabItem>
+</Tabs>
+
+The `releaseImmediately` / `release_immediately` argument controls handle lifetime:
+
+- `false` keeps the handle valid for repeated restores. Release it explicitly when finished.
+- `true` releases the handle after the restore attempt, even if restoration fails. Use this for a one-shot checkpoint.
+
+[`ReleaseState`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) / [`release_state`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.release_state) frees one handle; redundant releases are ignored. [`ReleaseAllStates`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) / [`release_all_states`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.release_all_states) frees every captured state owned by the scene and invalidates all prior handles.
+
+## Caller-Owned Bytes
+
+Byte capture stores the same dynamic state outside the scene. Capture appends to the supplied buffer; it does not clear or replace existing contents. Prefer a fresh, empty buffer for each snapshot. If reusing a buffer, pass only the exact appended slice to restore: restoration starts at byte zero and may accept trailing data, so passing the whole buffer can restore an older snapshot.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+DynamicArray<uint8_t> stateBytes;
+sceneFrom->CaptureStateToBytes(stateBytes, error);
+
+// Transfer or cache stateBytes, then restore a compatible scene.
+sceneTo->RestoreStateFromBytes(stateBytes, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+state_buffer = physics.DynamicArrayUint8()
+scene_from.capture_state_to_bytes(state_buffer)
+state_bytes = bytes(state_buffer)
+
+# Transfer or cache state_bytes, then restore a compatible scene.
+scene_to.restore_state_from_bytes(state_bytes)
+```
+
+</TabItem>
+</Tabs>
+
+If capture fails, the buffer may contain a partial snapshot. Discard it or truncate it to its original size before reuse.
+
+:::warning Ephemeral internal format
+State bytes are an internal SuperDex Physics format, not stable long-term serialization or an asset interchange format. Capture and restore must use the same SuperDex Physics build.
+:::
+
+:::caution Restore failures
+Restoration is not transactional, whether restoring a scene-owned handle or caller-owned bytes. If restoration fails, the destination scene may be partially modified. Restore a known-good checkpoint or recreate the scene before continuing.
+:::
+
+## Compatibility Requirements
+
+To restore into a different scene successfully:
+
+- The destination must contain the same actors and constraints, with the same captured component types, created in the same order.
+- Capture and restore must use the same SuperDex Physics build.
+
+Successful restoration does not guarantee that subsequent simulation will match the source scene. To reproduce the same results, scene and actor settings not stored in the snapshot, such as materials and scene parameters, must also have the same values.
+
+## Thread Safety
+
+Scenes are not thread-safe. Capture and restore each scene only from its owning thread or under external synchronization. Do not pass a [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html), actor, or scene-owned [`StateHandle`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1StateHandle.html) to another worker for unsynchronized access.
+
+For cross-thread workflows, capture to a caller-owned byte buffer, transfer a copied buffer, and call [`RestoreStateFromBytes`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) / [`restore_state_from_bytes`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.restore_state_from_bytes) on the destination scene's owning thread.
+
+## Inspection and Comparison
+
+[`IsEqualState`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) / [`is_equal_state`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.is_equal_state) returns true only when both handles are valid in the scene and their captured state is identical at full precision:
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+bool const equal = scene->IsEqualState(stateA, stateB);
+scene->CaptureStateToFile("state.json", error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+equal = scene.is_equal_state(state_a, state_b)
+scene.capture_state_to_file("state.json")
+```
+
+</TabItem>
+</Tabs>
+
+[`CaptureStateToFile`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) / [`capture_state_to_file`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.capture_state_to_file) writes a human-readable JSON representation for manual inspection. It is not a restorable checkpoint and is not one-to-one with the binary byte format.
+
+## Examples
+
+- **[State Capture](../examples/basic/state_capture.md)**: demonstrates reusable same-scene checkpoints. Python example: `examples/example_state_capture_restore.py`.
+- **[Cross-Thread Capture/Restore](../examples/advanced/cross_thread_capture_restore.md)**: demonstrates capturing one parent checkpoint and repeatedly restoring its bytes into worker-owned scenes for independent rollouts. Python example: `examples/example_cross_thread_capture_restore.py`.

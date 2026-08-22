@@ -1,0 +1,230 @@
+---
+sidebar_position: 5
+title: Shapes
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Shapes
+
+Shapes are immutable, reusable geometry registered with the process [`Context`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html). Public APIs represent a registered shape with a [`ShapeHandle`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ShapeHandle.html); there is no public polymorphic `Shape` object to manage.
+
+A handle belongs to the [`Context`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) that created it. The same shape can be shared by actors in multiple scenes owned by that context. Shape-local geometry, including any transform baked while loading, is independent of each actor's world placement.
+
+## Geometry Types
+
+The table identifies each shape's primary geometry. A registered shape may also carry reusable auxiliary data, such as a triangular visual mesh, simulation metadata, and precomputed data used for contact queries. These remain part of the same shape and do not create additional [`ShapeHandle`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ShapeHandle.html)s.
+
+| Geometry | Primary representation | Compatible actors | Creation |
+|---|---|---|---|
+| **Tetrahedral mesh** | Four node indices per volume element. | Rigid, articulated link, and soft. | [`CreateTetMeshShape`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`create_tet_mesh_shape`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.create_tet_mesh_shape), or generic mesh creation with [`nodesPerElement`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1MeshData.html) / [`nodes_per_element`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.MeshData.nodes_per_element) set to `4`. |
+| **Triangle mesh** | Three node indices per surface element. | Rigid, articulated link, and shell. | [`CreateTriMeshShape`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`create_tri_mesh_shape`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.create_tri_mesh_shape), or generic mesh creation with [`nodesPerElement`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1MeshData.html) / [`nodes_per_element`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.MeshData.nodes_per_element) set to `3`. |
+| **Polyline mesh** | Two node indices per line element. | Rod. | [`CreateMeshShape`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`create_mesh_shape`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.create_mesh_shape) with [`nodesPerElement`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1MeshData.html) / [`nodes_per_element`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.MeshData.nodes_per_element) set to `2`. |
+| **Sphere** | Analytic center and radius. | Rigid and articulated link. | [`CreateSphereShape`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`create_sphere_shape`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.create_sphere_shape). |
+| **Plane** | Analytic infinite plane. | Rigid and articulated link. | [`CreatePlaneShape`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`create_plane_shape`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.create_plane_shape). |
+
+[`ModelData.box`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html) can be registered as an oriented-box shape, but no actor factory currently accepts that shape type.
+
+The public actor-creation API assembles articulated actors from ordinary shape handles assigned to individual links; there is no separate articulated-shape factory. See [Articulated Actors](./actors/articulated_actors.mdx) for construction and introspection.
+
+## Model Data
+
+[`ModelData`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html) is a caller-owned, serializable description used to construct one registered shape. It must provide one primary geometry: [`mesh`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html), [`box`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html), [`plane`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html), or [`sphere`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html).
+
+A mesh-backed model can include auxiliary visual, simulation, and material data, as well as a precomputed grid of signed-distance function (SDF) evaluations used for contact queries. Not every primary geometry supports every auxiliary data type.
+
+While `Shape`s can carry data used for contact, actors and articulated links separately select whether and how they act as colliders. See [Collider Representations](./contact.md#collider-representations) for those configuration options.
+
+[`CreateModelShape`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`create_model_shape`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.create_model_shape) copies a [`ModelData`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html) value into the [`Context`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) and returns one [`ShapeHandle`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ShapeHandle.html). The source model data remains independent and can be edited or serialized without changing the registered shape.
+
+Model-data loading supports SuperDex Physics JSON (`.mochi.json`), SuperDex Physics HDF5 (`.mochi.h5`), OBJ (`.obj`), OFF (`.off`), PLY (`.ply`), and STL (`.stl`). Saving writes SuperDex Physics JSON or HDF5.
+
+| Operation | C++ / Python |
+|---|---|
+| **Load model data** | `model_utils::LoadFromFile` / [`physics.model.load_from_file`](pathname:///generated/api/v1.0/python/api/models.html#superdex.physics.model.load_from_file) |
+| **Save model data** | `model_utils::SaveToFile` / [`physics.model.save_to_file`](pathname:///generated/api/v1.0/python/api/models.html#superdex.physics.model.save_to_file) |
+| **Register as a shape** | [`CreateModelShape`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`create_model_shape`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.create_model_shape) |
+
+## Creating Shapes
+
+### Analytic Shapes
+
+Use dedicated constructors for spheres and planes.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+ShapeHandle sphereShape = context->CreateSphereShape(
+    Real3{0_r, 0_r, 0_r}, 0.2_r, error);
+ShapeHandle planeShape = context->CreatePlaneShape(
+    Real3{0_r, 1_r, 0_r}, 0_r, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+sphere_shape = mochi.create_sphere_shape(center=[0, 0, 0], radius=0.2)
+plane_shape = mochi.create_plane_shape(normal=[0, 1, 0], distance=0)
+```
+
+</TabItem>
+</Tabs>
+
+### Mesh Shapes
+
+Mesh coordinates are flat XYZ values in meters, so their length is three times the number of nodes. Connectivity is a flat array of node indices whose length is a multiple of the nodes per element.
+
+For polylines, connectivity is either empty (an open chain) or the sequential segments `[0, 1], [1, 2], ...`, optionally closed by `[n - 1, 0]`. In C++, `experimental::CreatePolylineShape` generates this connectivity from an `isClosedLoop` flag and accepts per-element frame axes; if the axes are empty, it generates a discrete Bishop frame using parallel transport.
+
+Dedicated helpers cover tetrahedral and triangle meshes:
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+ShapeHandle tetShape =
+    context->CreateTetMeshShape(tetCoordinates, tetConnectivity, error);
+ShapeHandle triShape =
+    context->CreateTriMeshShape(triCoordinates, triConnectivity, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+tet_shape = mochi.create_tet_mesh_shape(tet_coordinates, tet_connectivity)
+tri_shape = mochi.create_tri_mesh_shape(tri_coordinates, tri_connectivity)
+```
+
+</TabItem>
+</Tabs>
+
+Use [`MeshData`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1MeshData.html) for the stable generic path. Set [`nodesPerElement`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1MeshData.html) / [`nodes_per_element`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.MeshData.nodes_per_element) to `2` for a polyline, `3` for triangles, or `4` for tetrahedra. SuperDex Physics copies the supplied data when the shape is created.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+MeshData polyline;
+polyline.nodesPerElement = 2;
+polyline.coordinates = {
+    0_r, 0_r, 0_r,
+    1_r, 0_r, 0_r,
+    1_r, 1_r, 0_r,
+};
+polyline.connectivity = {0, 1, 1, 2};
+
+ShapeHandle polylineShape = context->CreateMeshShape(polyline, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+polyline = mochi.MeshData(
+    nodes_per_element=2,
+    coordinates=[0, 0, 0, 1, 0, 0, 1, 1, 0],
+    connectivity=[0, 1, 1, 2],
+)
+polyline_shape = mochi.create_mesh_shape(polyline)
+```
+
+</TabItem>
+</Tabs>
+
+### Loading from Files
+
+[`LoadShapeFromFile`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`load_shape_from_file`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.load_shape_from_file) imports any of the [supported model-data formats](#model-data) directly into the [`Context`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) and returns a [`ShapeHandle`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ShapeHandle.html).
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+ShapeHandle shape =
+    context->LoadShapeFromFile("models/part.obj", error);
+
+ShapeHandle bakedShape = context->LoadShapeFromFile(
+    "models/part.mochi.h5",
+    Real3{0.5_r, 0.5_r, 0.5_r},
+    TransformRT::Identity(),
+    error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+shape = mochi.load_shape_from_file("models/part.obj")
+
+baked_shape = mochi.load_shape_from_file(
+    "models/part.mochi.h5",
+    bake_scale=[0.5, 0.5, 0.5],
+    bake_transform=mochi.TransformRT(),
+)
+```
+
+</TabItem>
+</Tabs>
+
+`bakeScale` / `bake_scale` and `bakeTransform` / `bake_transform` permanently modify the shape-local data during loading. They do not place an actor in the world; use the actor's world transform for placement. Unsupported non-uniform scales are rejected for shape data that cannot represent them.
+
+## Inspecting Shape Data
+
+The context exposes the registered data without requiring a public shape object:
+
+| C++ / Python | Result |
+|---|---|
+| [`GetShapeMesh`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`get_shape_mesh`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.get_shape_mesh) | The main authored mesh: tetrahedral, triangle, or polyline. The view is empty for implicit geometry such as spheres and planes. |
+| [`GetShapeSurfaceMesh`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`get_shape_surface_mesh`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.get_shape_surface_mesh) | A compact triangle surface for tetrahedral and triangle shapes. Its connectivity indexes the coordinates returned in the same view. |
+| [`GetShapeVisualMesh`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`get_shape_visual_mesh`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.get_shape_visual_mesh) | An optional rendering mesh, including linear skinning data when available. |
+| [`GetShapeAabb`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`get_shape_aabb`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.get_shape_aabb) | The shape's axis-aligned bounds in shape-local coordinates. |
+
+The mesh APIs return non-owning [`MeshDataView`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1MeshDataView.html) values. A view remains valid only while its corresponding registered shape handle remains valid; copy it into owning [`MeshData`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1MeshData.html) if it must outlive that handle.
+
+## Assigning Shapes to Actors
+
+Pass a [`ShapeHandle`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ShapeHandle.html) in the actor creation parameters. One registered shape can be reused for many actors, and each actor can have a different world transform.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+RigidActorParams params;
+params.shape = sphereShape;
+params.worldFromLocal = TransformRT{Real3{0_r, 1_r, 0_r}};
+Actor* actor = scene->CreateRigidActor(params, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+actor = scene.create_rigid_actor(
+    shape=sphere_shape,
+    world_from_local=mochi.TransformRT(translation=[0, 1, 0]),
+)
+```
+
+</TabItem>
+</Tabs>
+
+## Lifetime and Caching
+
+The recommended lifecycle is:
+
+1. Create or load a shape.
+2. Pass its handle into actor creation parameters.
+3. Let C++ or Python clean up the handle automatically when the last copy is destroyed.
+
+An actor independently retains the underlying shape data. Cleaning up the caller's handle therefore does not invalidate an actor that was already created with it.
+
+[`ReleaseShape`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`release_shape`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.release_shape) is available for optional eager release. Calling it explicitly invalidates the registered handle value, including other copies of that same value, so do not use those copies afterward.
+
+### File Cache
+
+The shape file cache is disabled by default and applies only to [`LoadShapeFromFile`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`load_shape_from_file`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.load_shape_from_file). Enable it with [`EnableFileCache(true)`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`enable_file_cache(True)`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.enable_file_cache) when repeatedly loading the same assets.
+
+Cache entries are keyed by the exact file path and baked scale/transform parameters. A cached entry retains the underlying shape data after its handles are released. [`ClearFileCache`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`clear_file_cache`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.clear_file_cache) removes every entry, while [`ClearFileFromCache`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`clear_file_from_cache`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.clear_file_from_cache) removes all baked variants for one exact path. [`LoadShapeFromBytes`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`load_shape_from_bytes`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.load_shape_from_bytes) does not use this cache.

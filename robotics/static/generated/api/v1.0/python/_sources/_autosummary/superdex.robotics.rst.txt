@@ -1,0 +1,93 @@
+# @generated
+﻿superdex.robotics
+=================
+
+.. automodule:: superdex.robotics
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      load_bot_prefab_from_file
+      load_bot_prefab_from_urdf_file
+      build_articulated_pose_from_bot_pose
+      create_bot
+      destroy_bot
+      create_context
+      register_python_controller
+      register_python_sensor
+      register_python_actuator
+      get_python_controller
+      get_python_sensor
+      get_python_actuator
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      BotFileType
+      LinkTransformSpace
+      RoboticsHandle
+      BotHandle
+      ControllerHandle
+      SensorHandle
+      ActuatorHandle
+      BotJointPrefab
+      BotSensorPrefab
+      BotActuatorPrefab
+      BotLinkPrefab
+      BotContactOverride
+      BotTransmissionPrefab
+      BotLinearTransmissionPrefab
+      BotSpatialTendonPrefab
+      BotPrefab
+      RoboticsContext
+      ComponentBase
+      ControllerBase
+      ControllerBasicOscPdParams
+      ControllerBasicOscPdObsv
+      ControllerBasicOscPdTarget
+      ControllerBasicOscPd
+      ControllerMochiArticulatedPoseParams
+      ControllerMochiArticulatedPoseObsv
+      ControllerMochiArticulatedPoseTarget
+      ControllerMochiArticulatedPose
+      Bot
+      ControllerBasicJscPdParams
+      ControllerBasicJscPdObsv
+      ControllerBasicJscPdTarget
+      CameraSensorParams
+      ControllerBasicJscPd
+      SensorBase
+      ActuatorBase
+      CameraSensor
+      DynamicArrayActuatorHandle
+      DynamicArrayBotActuatorPrefab
+      DynamicArrayBotContactOverride
+      DynamicArrayBotHandle
+      DynamicArrayBotJointPrefab
+      DynamicArrayBotLinearTransmissionPrefab
+      DynamicArrayBotLinkPrefab
+      DynamicArrayBotSensorPrefab
+      DynamicArrayBotSpatialTendonPrefab
+      DynamicArrayControllerHandle
+      DynamicArraySensorHandle
+   
+   
+
+   
+   
+   
+
+
+

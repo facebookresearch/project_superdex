@@ -1,0 +1,92 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * A key for an annotated screenshot. The numbers are set as badges rather than
+ * as a table column so they read as the same objects that are burned into the
+ * image above, and so nothing needs an empty header cell to hold the column
+ * open. No boxes anywhere: rows are separated by a hairline and held together
+ * by alignment.
+ */
+
+.legend {
+  margin: 1.5rem 0;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 0.9rem;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(9rem, 15rem) 1fr;
+  gap: 0 1.25rem;
+  /* Stretch rather than baseline, so the number column's rule spans the full
+     row height instead of only the height of the badge. */
+  align-items: stretch;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--ifm-table-border-color);
+}
+
+.item:last-child {
+  border-bottom: 0;
+}
+
+/* Carries the single vertical rule, matching the one markdown tables draw
+   after their first column. */
+.numCell {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  border-right: 1px solid var(--ifm-table-border-color);
+}
+
+.num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--sdx-tag-border);
+  background: var(--sdx-tag-bg);
+  color: var(--sdx-tag-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.name {
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--ifm-heading-color);
+}
+
+.text {
+  color: var(--ifm-font-color-secondary);
+  font-weight: 300;
+  line-height: 1.6;
+}
+
+/* Below the doc column's two-column point, stack name over description. */
+@media (max-width: 768px) {
+  .item {
+    grid-template-columns: 2.75rem 1fr;
+    row-gap: 0.15rem;
+  }
+
+  .text {
+    grid-column: 2;
+  }
+}

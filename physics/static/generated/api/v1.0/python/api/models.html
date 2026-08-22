@@ -1,0 +1,838 @@
+<!-- @generated -->
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Models &amp; Meshes &mdash; SuperDex Physics Python API  documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Debugger" href="debugger.html" />
+    <link rel="prev" title="Prefabs" href="prefab.html" />
+ 
+<!-- Theme synchronization with parent Docusaurus site -->
+<script type="text/javascript">
+    // jQuery shim — Sphinx 7.x removed jQuery but RTD theme search.html
+    // still uses jQuery(fn) for DOM-ready initialization.
+    if (typeof jQuery === 'undefined') {
+        window.jQuery = window.$ = function(fn) {
+            if (typeof fn === 'function') {
+                if (document.readyState !== 'loading') { fn(); }
+                else { document.addEventListener('DOMContentLoaded', fn); }
+            }
+        };
+    }
+
+    (function() {
+        var theme = localStorage.getItem('theme') || 'light';
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    })();
+
+    function setSphinxTheme(theme) {
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+    }
+
+    window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'setTheme') {
+            setSphinxTheme(event.data.theme);
+        }
+    });
+
+    window.addEventListener('DOMContentLoaded', function() {
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'getTheme' }, '*');
+        }
+    });
+</script>
+<!-- Shared SuperDex Physics theme (single source of truth:
+     website/static/api-embed.css). Baked in as a render-blocking stylesheet so
+     the page's FIRST paint is already themed — in lockstep with the pre-paint
+     data-theme script above — with no flash of the stock Sphinx/RTD theme and no
+     need for the embedding iframe to hide/reveal. pathto(..., 1) resolves the
+     path from this page up to the staticdocs site root where api-embed.css lives. -->
+<link rel="stylesheet" type="text/css" href="../../../../../api-embed.css"/>
+<style>
+    /* Sidebar font size — larger for readability. All light/dark theming is
+       owned by static/api-embed.css (single source of truth), baked in above as
+       a render-blocking <link>; no theme colors are set here, so the embedded
+       Python API reference matches the site background in both light and dark. */
+    .wy-menu-vertical a,
+    .wy-menu-vertical li,
+    .wy-menu-vertical code,
+    .wy-menu-vertical code.docutils,
+    .wy-menu-vertical .pre,
+    .wy-menu-vertical span.pre,
+    .wy-menu-vertical li span.toctree-expand,
+    .wy-side-nav-search input[type="text"] {
+        font-size: 14px !important;
+    }
+</style>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> SuperDex Physics Python API
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="physics.html">Physics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#engine-lifecycle">Engine Lifecycle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#execution-threading">Execution &amp; Threading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#scene">Scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#handles">Handles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#shapes-geometry">Shapes &amp; Geometry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#actors">Actors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#soft-materials">Soft Materials</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#constraints">Constraints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#contact-collision">Contact &amp; Collision</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#solver">Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#query-types">Query Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#recording-options">Recording Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#debugging-diagnostics">Debugging &amp; Diagnostics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#build-information">Build Information</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#core-value-spatial-types">Core Value &amp; Spatial Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#error-handling">Error Handling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#containers-spans">Containers &amp; Spans</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#not-yet-categorized">Not Yet Categorized</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="prefab.html">Prefabs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#scene-description">Scene Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#actors">Actors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#articulation-components-controllers">Articulation Components &amp; Controllers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#constraints">Constraints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#contact-filters">Contact Filters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#loading-dependencies">Loading &amp; Dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#instantiation">Instantiation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#serialization-export">Serialization &amp; Export</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#containers">Containers</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Models &amp; Meshes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#superdex-physics-model">superdex.physics.model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-superdex.physics.mesh">superdex.physics.mesh</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="debugger.html">Debugger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="viewer.html">Viewer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="viewer.html#module-superdex.physics.viewer">superdex.physics.viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="viewer.html#module-superdex.physics.viewer.renderers">superdex.physics.viewer.renderers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="viewer.html#module-superdex.physics.viewer.utils">superdex.physics.viewer.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="viewer.html#module-superdex.physics.utils.render_model_registry">superdex.physics.utils.render_model_registry</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="scene_setup.html">Scene Setup, Assets &amp; Runtime</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.paths">superdex.physics.paths</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.environment">superdex.physics.environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.loader">superdex.physics.loader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.utils.context">superdex.physics.utils.context</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.utils.scene_helpers">superdex.physics.utils.scene_helpers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="utilities.html">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.configclasses">superdex.physics.utils.configclasses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.decorators">superdex.physics.utils.decorators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.deprecation">superdex.physics.utils.deprecation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.json">superdex.physics.utils.json</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.coordinate_systems">superdex.physics.utils.coordinate_systems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.transformations">superdex.physics.utils.transformations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.profiling">superdex.physics.utils.profiling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.logging">superdex.physics.utils.logging</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="testing.html">Testing Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="testing.html#module-superdex.physics.utils.testing.decorators">superdex.physics.utils.testing.decorators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="testing.html#module-superdex.physics.utils.testing.environment">superdex.physics.utils.testing.environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="testing.html#module-superdex.physics.utils.testing.testcases">superdex.physics.utils.testing.testcases</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">SuperDex Physics Python API</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Models &amp; Meshes</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/models.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="models-meshes">
+<h1>Models &amp; Meshes<a class="headerlink" href="#models-meshes" title="Permalink to this heading"></a></h1>
+<p><strong>Modules:</strong> <code class="docutils literal notranslate"><span class="pre">superdex.physics.model</span></code>, <code class="docutils literal notranslate"><span class="pre">superdex.physics.mesh</span></code></p>
+<p>Prepare geometry before it reaches the engine.</p>
+<section id="superdex-physics-model">
+<h2>superdex.physics.model<a class="headerlink" href="#superdex-physics-model" title="Permalink to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.model.auto_correct">
+<span class="sig-name descname"><span class="pre">auto_correct</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><span class="pre">ModelData</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.model.auto_correct" title="Permalink to this definition"></a></dt>
+<dd><p>Apply automatic in-place fixes to the model data, such as normalizing vectors
+and weights.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><em>ModelData</em></a>) – <a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> to check and possibly
+modify.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.model.bake_coordinate_space_transform">
+<span class="sig-name descname"><span class="pre">bake_coordinate_space_transform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.model.bake_coordinate_space_transform" title="Permalink to this definition"></a></dt>
+<dd><p>Overloaded function.</p>
+<ol class="arabic simple">
+<li><p>bake_coordinate_space_transform(data: superdex.physics.MeshData, from_space: superdex.physics.CoordinateSpace, to_space: superdex.physics.CoordinateSpace) -&gt; None</p></li>
+</ol>
+<p>Modify the <a class="reference internal" href="physics.html#superdex.physics.MeshData" title="superdex.physics.MeshData"><code class="xref py py-class docutils literal notranslate"><span class="pre">MeshData</span></code></a> to convert it from one
+<a class="reference internal" href="physics.html#superdex.physics.CoordinateSpace" title="superdex.physics.CoordinateSpace"><code class="xref py py-class docutils literal notranslate"><span class="pre">CoordinateSpace</span></code></a> to another.</p>
+<p>If the transformation flips handedness, the mesh winding order will also be
+reversed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference internal" href="physics.html#superdex.physics.MeshData" title="superdex.physics.MeshData"><em>MeshData</em></a>) – <a class="reference internal" href="physics.html#superdex.physics.MeshData" title="superdex.physics.MeshData"><code class="xref py py-class docutils literal notranslate"><span class="pre">MeshData</span></code></a> to modify.</p></li>
+<li><p><strong>from_space</strong> (<a class="reference internal" href="physics.html#superdex.physics.CoordinateSpace" title="superdex.physics.CoordinateSpace"><em>CoordinateSpace</em></a>) – Coordinate space the mesh is currently
+expressed in.</p></li>
+<li><p><strong>to_space</strong> (<a class="reference internal" href="physics.html#superdex.physics.CoordinateSpace" title="superdex.physics.CoordinateSpace"><em>CoordinateSpace</em></a>) – Coordinate space to convert the mesh to.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The conversion is exact when
+<a class="reference internal" href="physics.html#superdex.physics.CoordinateSpace.units_per_meter" title="superdex.physics.CoordinateSpace.units_per_meter"><code class="xref py py-attr docutils literal notranslate"><span class="pre">units_per_meter</span></code></a> is unchanged,
+because it only permutes and negates axes.</p>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>bake_coordinate_space_transform(data: superdex.physics.ModelData, from_space: superdex.physics.CoordinateSpace, to_space: superdex.physics.CoordinateSpace) -&gt; None</p></li>
+</ol>
+<p>Modify the <a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> to convert it from one
+<a class="reference internal" href="physics.html#superdex.physics.CoordinateSpace" title="superdex.physics.CoordinateSpace"><code class="xref py py-class docutils literal notranslate"><span class="pre">CoordinateSpace</span></code></a> to another.</p>
+<p>All spatial data within the model will be transformed. If the transformation
+flips handedness, the winding order of any meshes will be reversed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><em>ModelData</em></a>) – <a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> to modify.</p></li>
+<li><p><strong>from_space</strong> (<a class="reference internal" href="physics.html#superdex.physics.CoordinateSpace" title="superdex.physics.CoordinateSpace"><em>CoordinateSpace</em></a>) – Coordinate space the model is currently
+expressed in.</p></li>
+<li><p><strong>to_space</strong> (<a class="reference internal" href="physics.html#superdex.physics.CoordinateSpace" title="superdex.physics.CoordinateSpace"><em>CoordinateSpace</em></a>) – Coordinate space to convert the model to.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The conversion is exact when
+<a class="reference internal" href="physics.html#superdex.physics.CoordinateSpace.units_per_meter" title="superdex.physics.CoordinateSpace.units_per_meter"><code class="xref py py-attr docutils literal notranslate"><span class="pre">units_per_meter</span></code></a> is unchanged,
+except for orientations stored as a quaternion (implicit box and grid SDF),
+which cannot represent a 90 degree rotation exactly.</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.model.bake_sdf">
+<span class="sig-name descname"><span class="pre">bake_sdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data:</span> <span class="pre">superdex.physics.ModelData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params:</span> <span class="pre">superdex.physics.GridSdfParams</span> <span class="pre">=</span> <span class="pre">&lt;superdex.physics.GridSdfParams</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.model.bake_sdf" title="Permalink to this definition"></a></dt>
+<dd><p>Compute and bake an SDF grid into the model data.</p>
+<p>Computes a signed-distance field (SDF) grid from the model’s mesh (triangular or
+tetrahedral) and stores it in the model’s
+<code class="xref py py-attr docutils literal notranslate"><span class="pre">sdf</span></code> field, replacing any existing SDF.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><em>ModelData</em></a>) – <a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> to modify. Must
+contain a triangle or tetrahedral mesh.</p></li>
+<li><p><strong>params</strong> (<a class="reference internal" href="physics.html#superdex.physics.GridSdfParams" title="superdex.physics.GridSdfParams"><em>GridSdfParams</em></a>) – Parameters to control grid resolution and padding.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>SDF computation may be slow.</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.model.bake_transform">
+<span class="sig-name descname"><span class="pre">bake_transform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.model.bake_transform" title="Permalink to this definition"></a></dt>
+<dd><p>Overloaded function.</p>
+<ol class="arabic simple">
+<li><p>bake_transform(data: superdex.physics.ModelData, scale: superdex.physics.Real3 = NdArray&lt;float,3&gt;([ 1, 1, 1 ]), rotation: superdex.physics.Quaternion = Quaternion([ 0, 0, 0, 1 ]), translation: superdex.physics.Real3 = NdArray&lt;float,3&gt;([ 0, 0, 0 ])) -&gt; None</p></li>
+</ol>
+<p>Modify the <a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> by applying a scale, rotation,
+and translation (in that order).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><em>ModelData</em></a>) – <a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> to modify.</p></li>
+<li><p><strong>scale</strong> (<em>Real3Like</em>) – Scale to apply (possibly non-uniform, i.e., 3 unequal
+absolute values).</p></li>
+<li><p><strong>rotation</strong> (<em>QuaternionLike</em>) – Rotation to apply (quaternion in [x, y, z, w]
+order).</p></li>
+<li><p><strong>translation</strong> (<em>Real3Like</em>) – Translation to apply.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Negative scale can be used to mirror the model. In that case,
+<a class="reference internal" href="#superdex.physics.model.flip_winding_order" title="superdex.physics.model.flip_winding_order"><code class="xref py py-func docutils literal notranslate"><span class="pre">flip_winding_order()</span></code></a> will be called
+automatically to avoid turning the model inside out.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If <a class="reference internal" href="physics.html#superdex.physics.ModelData.element_frame_axes" title="superdex.physics.ModelData.element_frame_axes"><code class="xref py py-attr docutils literal notranslate"><span class="pre">element_frame_axes</span></code></a> is present, axes
+are transformed as normal directions using the inverse-transpose of the
+scale-rotation transform, then normalized. This preserves orthogonality with
+transformed polyline element tangents under non-uniform scale.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Some model data cannot bake arbitrary non-uniform scale, resulting in an
+error.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Precomputed grid SDF data is preserved only when <code class="docutils literal notranslate"><span class="pre">scale</span></code> is uniform by
+absolute value. Non-uniform scale by absolute value discards the precomputed
+SDF. If an SDF collider later requires SDF data, Mochi regenerates the SDF
+from the transformed mesh at runtime, which may be expensive.</p>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>bake_transform(data: superdex.physics.ModelData, scale: superdex.physics.Real3 = NdArray&lt;float,3&gt;([ 1, 1, 1 ]), transform: superdex.physics.TransformRT = TransformRT({ “rotation”: [ 0, 0, 0, 1 ], “translation”: [ 0, 0, 0 ] })) -&gt; None</p></li>
+</ol>
+<p>Modify the <a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> by applying a scale, rotation,
+and translation (in that order).</p>
+<p>Takes a combined <a class="reference internal" href="physics.html#superdex.physics.TransformRT" title="superdex.physics.TransformRT"><code class="xref py py-class docutils literal notranslate"><span class="pre">TransformRT</span></code></a> instead of separate
+rotation and translation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><em>ModelData</em></a>) – <a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> to modify.</p></li>
+<li><p><strong>scale</strong> (<em>Real3Like</em>) – Scale to apply (possibly non-uniform, i.e., 3 unequal
+absolute values).</p></li>
+<li><p><strong>transform</strong> (<a class="reference internal" href="physics.html#superdex.physics.TransformRT" title="superdex.physics.TransformRT"><em>TransformRT</em></a>) – Combined rotation and translation to apply.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Negative scale can be used to mirror the model. In that case,
+<a class="reference internal" href="#superdex.physics.model.flip_winding_order" title="superdex.physics.model.flip_winding_order"><code class="xref py py-func docutils literal notranslate"><span class="pre">flip_winding_order()</span></code></a> will be called
+automatically to avoid turning the model inside out.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If <a class="reference internal" href="physics.html#superdex.physics.ModelData.element_frame_axes" title="superdex.physics.ModelData.element_frame_axes"><code class="xref py py-attr docutils literal notranslate"><span class="pre">element_frame_axes</span></code></a> is present, axes
+are transformed as normal directions using the inverse-transpose of the
+scale-rotation transform, then normalized. This preserves orthogonality with
+transformed polyline element tangents under non-uniform scale.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Some model data cannot bake arbitrary non-uniform scale, resulting in an
+error.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Precomputed grid SDF data is preserved only when <code class="docutils literal notranslate"><span class="pre">scale</span></code> is uniform by
+absolute value. Non-uniform scale by absolute value discards the precomputed
+SDF. If an SDF collider later requires SDF data, Mochi regenerates the SDF
+from the transformed mesh at runtime, which may be expensive.</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.model.flip_winding_order">
+<span class="sig-name descname"><span class="pre">flip_winding_order</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.model.flip_winding_order" title="Permalink to this definition"></a></dt>
+<dd><p>Overloaded function.</p>
+<ol class="arabic simple">
+<li><p>flip_winding_order(data: superdex.physics.MeshData) -&gt; None</p></li>
+</ol>
+<p>Flip mesh winding order by swapping the connectivity indices within each
+element.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<a class="reference internal" href="physics.html#superdex.physics.MeshData" title="superdex.physics.MeshData"><em>MeshData</em></a>) – <a class="reference internal" href="physics.html#superdex.physics.MeshData" title="superdex.physics.MeshData"><code class="xref py py-class docutils literal notranslate"><span class="pre">MeshData</span></code></a> to modify.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+<ol class="arabic simple" start="2">
+<li><p>flip_winding_order(data: superdex.physics.ModelData) -&gt; None</p></li>
+</ol>
+<p>Flip mesh winding order by swapping the connectivity indices within each
+element.</p>
+<p>Operates on both the simulation mesh (<code class="xref py py-attr docutils literal notranslate"><span class="pre">mesh</span></code>)
+and the visual mesh (<code class="xref py py-attr docutils literal notranslate"><span class="pre">visual_mesh</span></code>) when
+present. Implicit shapes and SDF data are not modified.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><em>ModelData</em></a>) – <a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> to modify.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.model.load_from_bytes">
+<span class="sig-name descname"><span class="pre">load_from_bytes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.model.load_from_bytes" title="Permalink to this definition"></a></dt>
+<dd><p>Overloaded function.</p>
+<ol class="arabic simple">
+<li><p>load_from_bytes(data: Span[str]) -&gt; superdex.physics.ModelData</p></li>
+</ol>
+<p>Convenience overload using <a class="reference internal" href="physics.html#superdex.physics.MeshFileType" title="superdex.physics.MeshFileType"><code class="xref py py-class docutils literal notranslate"><span class="pre">LEGACY</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>ArrayLikeChar</em>) – File contents in memory.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> that was loaded.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+<ol class="arabic simple" start="2">
+<li><p>load_from_bytes(data: Span[str], format: superdex.physics.MeshFileType) -&gt; superdex.physics.ModelData</p></li>
+</ol>
+<p>Load model data from a file in memory. Then,
+<a class="reference internal" href="#superdex.physics.model.auto_correct" title="superdex.physics.model.auto_correct"><code class="xref py py-func docutils literal notranslate"><span class="pre">auto_correct()</span></code></a> and
+<a class="reference internal" href="#superdex.physics.model.validate" title="superdex.physics.model.validate"><code class="xref py py-func docutils literal notranslate"><span class="pre">validate()</span></code></a> will be called automatically.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>ArrayLikeChar</em>) – File contents in memory.</p></li>
+<li><p><strong>format</strong> (<a class="reference internal" href="physics.html#superdex.physics.MeshFileType" title="superdex.physics.MeshFileType"><em>MeshFileType</em></a><em> | </em><em>int</em>) – Mesh file format hint. When <a class="reference internal" href="physics.html#superdex.physics.MeshFileType" title="superdex.physics.MeshFileType"><code class="xref py py-class docutils literal notranslate"><span class="pre">LEGACY</span></code></a> (the default), auto-detects between
+HDF5 and JSON via header bytes. When a surface mesh format (<a class="reference internal" href="physics.html#superdex.physics.MeshFileType" title="superdex.physics.MeshFileType"><code class="xref py py-class docutils literal notranslate"><span class="pre">PLY</span></code></a>, <a class="reference internal" href="physics.html#superdex.physics.MeshFileType" title="superdex.physics.MeshFileType"><code class="xref py py-class docutils literal notranslate"><span class="pre">OFF</span></code></a>, <a class="reference internal" href="physics.html#superdex.physics.MeshFileType" title="superdex.physics.MeshFileType"><code class="xref py py-class docutils literal notranslate"><span class="pre">STL</span></code></a>, <a class="reference internal" href="physics.html#superdex.physics.MeshFileType" title="superdex.physics.MeshFileType"><code class="xref py py-class docutils literal notranslate"><span class="pre">OBJ</span></code></a>), dispatches directly to that reader.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> that was loaded.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.model.load_from_bytes_unchecked">
+<span class="sig-name descname"><span class="pre">load_from_bytes_unchecked</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.model.load_from_bytes_unchecked" title="Permalink to this definition"></a></dt>
+<dd><p>Overloaded function.</p>
+<ol class="arabic simple">
+<li><p>load_from_bytes_unchecked(data: Span[str]) -&gt; superdex.physics.ModelData</p></li>
+</ol>
+<p>Convenience overload using <a class="reference internal" href="physics.html#superdex.physics.MeshFileType" title="superdex.physics.MeshFileType"><code class="xref py py-class docutils literal notranslate"><span class="pre">LEGACY</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>ArrayLikeChar</em>) – File contents in memory.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> that was loaded.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+<ol class="arabic simple" start="2">
+<li><p>load_from_bytes_unchecked(data: Span[str], format: superdex.physics.MeshFileType) -&gt; superdex.physics.ModelData</p></li>
+</ol>
+<p>Load model data from a file in memory without calling
+<a class="reference internal" href="#superdex.physics.model.auto_correct" title="superdex.physics.model.auto_correct"><code class="xref py py-func docutils literal notranslate"><span class="pre">auto_correct()</span></code></a> nor
+<a class="reference internal" href="#superdex.physics.model.validate" title="superdex.physics.model.validate"><code class="xref py py-func docutils literal notranslate"><span class="pre">validate()</span></code></a>. Can be used to load a model that is
+not currently in a valid state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>ArrayLikeChar</em>) – File contents in memory.</p></li>
+<li><p><strong>format</strong> (<a class="reference internal" href="physics.html#superdex.physics.MeshFileType" title="superdex.physics.MeshFileType"><em>MeshFileType</em></a><em> | </em><em>int</em>) – Mesh file format hint. When <a class="reference internal" href="physics.html#superdex.physics.MeshFileType" title="superdex.physics.MeshFileType"><code class="xref py py-class docutils literal notranslate"><span class="pre">LEGACY</span></code></a> (the default), auto-detects between
+HDF5 and JSON via header bytes. When a surface mesh format (<a class="reference internal" href="physics.html#superdex.physics.MeshFileType" title="superdex.physics.MeshFileType"><code class="xref py py-class docutils literal notranslate"><span class="pre">PLY</span></code></a>, <a class="reference internal" href="physics.html#superdex.physics.MeshFileType" title="superdex.physics.MeshFileType"><code class="xref py py-class docutils literal notranslate"><span class="pre">OFF</span></code></a>, <a class="reference internal" href="physics.html#superdex.physics.MeshFileType" title="superdex.physics.MeshFileType"><code class="xref py py-class docutils literal notranslate"><span class="pre">STL</span></code></a>, <a class="reference internal" href="physics.html#superdex.physics.MeshFileType" title="superdex.physics.MeshFileType"><code class="xref py py-class docutils literal notranslate"><span class="pre">OBJ</span></code></a>), dispatches directly to that reader.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> that was loaded.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.model.load_from_file">
+<span class="sig-name descname"><span class="pre">load_from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><span class="pre">ModelData</span></a></span></span><a class="headerlink" href="#superdex.physics.model.load_from_file" title="Permalink to this definition"></a></dt>
+<dd><p>Load model data from a file. Then, <a class="reference internal" href="#superdex.physics.model.auto_correct" title="superdex.physics.model.auto_correct"><code class="xref py py-func docutils literal notranslate"><span class="pre">auto_correct()</span></code></a>
+and <a class="reference internal" href="#superdex.physics.model.validate" title="superdex.physics.model.validate"><code class="xref py py-func docutils literal notranslate"><span class="pre">validate()</span></code></a> will be called automatically.</p>
+<p>Supported formats: JSON (.mochi.json), HDF5 (.mochi.h5), OBJ (.obj), OFF (.off),
+PLY (.ply), and STL (.stl).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – File path to load.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> that was loaded.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.model.load_from_file_unchecked">
+<span class="sig-name descname"><span class="pre">load_from_file_unchecked</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><span class="pre">ModelData</span></a></span></span><a class="headerlink" href="#superdex.physics.model.load_from_file_unchecked" title="Permalink to this definition"></a></dt>
+<dd><p>Load model data from a file without calling
+<a class="reference internal" href="#superdex.physics.model.auto_correct" title="superdex.physics.model.auto_correct"><code class="xref py py-func docutils literal notranslate"><span class="pre">auto_correct()</span></code></a> nor
+<a class="reference internal" href="#superdex.physics.model.validate" title="superdex.physics.model.validate"><code class="xref py py-func docutils literal notranslate"><span class="pre">validate()</span></code></a>. Can be used to load a model that is
+not currently in a valid state.</p>
+<p>Supported formats: JSON (.mochi.json), HDF5 (.mochi.h5), OBJ (.obj), OFF (.off),
+PLY (.ply), and STL (.stl).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – File path to load.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> that was loaded.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.model.save_to_file">
+<span class="sig-name descname"><span class="pre">save_to_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.model.save_to_file" title="Permalink to this definition"></a></dt>
+<dd><p>Overloaded function.</p>
+<ol class="arabic simple">
+<li><p>save_to_file(data: superdex.physics.ModelData, path: str, format: superdex.physics.FileFormat) -&gt; None</p></li>
+</ol>
+<p>Save a model to a file of the specified format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><em>ModelData</em></a>) – Model data to write.</p></li>
+<li><p><strong>path</strong> (<em>str</em>) – File path to write.</p></li>
+<li><p><strong>format</strong> (<a class="reference internal" href="physics.html#superdex.physics.FileFormat" title="superdex.physics.FileFormat"><em>FileFormat</em></a><em> | </em><em>int</em>) – File format to write.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Creates the destination directories if necessary.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Some model files contain additional data for experimental features (e.g.
+ROMs), which cannot be represented by the
+<a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> struct. That data will be lost if you
+use the <a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> struct to save over the
+original file.</p>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>save_to_file(data: superdex.physics.ModelDataView, path: str, format: superdex.physics.FileFormat) -&gt; None</p></li>
+</ol>
+<p>Save a model to a file of the specified format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference internal" href="physics.html#superdex.physics.ModelDataView" title="superdex.physics.ModelDataView"><em>ModelDataView</em></a>) – A non-owning view of the model data to write.</p></li>
+<li><p><strong>path</strong> (<em>str</em>) – File path to write.</p></li>
+<li><p><strong>format</strong> (<a class="reference internal" href="physics.html#superdex.physics.FileFormat" title="superdex.physics.FileFormat"><em>FileFormat</em></a><em> | </em><em>int</em>) – File format to write.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Creates the destination directories if necessary.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Some model files contain additional data for experimental features (e.g.
+ROMs), which cannot be represented by the
+<a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> struct. That data will be lost if you
+use the <a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelData</span></code></a> struct to save over the
+original file.</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.model.save_to_json_string">
+<span class="sig-name descname"><span class="pre">save_to_json_string</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><span class="pre">ModelData</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#superdex.physics.model.save_to_json_string" title="Permalink to this definition"></a></dt>
+<dd><p>Save a model to a JSON string in memory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<a class="reference internal" href="physics.html#superdex.physics.ModelData" title="superdex.physics.ModelData"><em>ModelData</em></a>) – Model data to serialize.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>JSON string containing the model data.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.model.validate">
+<span class="sig-name descname"><span class="pre">validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.ModelDataView" title="superdex.physics.ModelDataView"><span class="pre">ModelDataView</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#superdex.physics.model.validate" title="Permalink to this definition"></a></dt>
+<dd><p>Check the model for errors.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<a class="reference internal" href="physics.html#superdex.physics.ModelDataView" title="superdex.physics.ModelDataView"><em>ModelDataView</em></a>) – Non-owning view of the model data to check.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="physics.html#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-superdex.physics.mesh">
+<span id="superdex-physics-mesh"></span><h2>superdex.physics.mesh<a class="headerlink" href="#module-superdex.physics.mesh" title="Permalink to this heading"></a></h2>
+<p>SuperDex Physics mesh-processing operations.</p>
+<p>Provides surface remeshing, mesh statistics, and SDF isosurface reconstruction.</p>
+<p>Mochi mesh processing operations (heavy geometry runs in the superdex_mesh_cli helper)</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="superdex.physics.mesh.ACVD">
+<span class="sig-name descname"><span class="pre">ACVD</span></span><a class="headerlink" href="#superdex.physics.mesh.ACVD" title="Permalink to this definition"></a></dt>
+<dd><p>Members:</p>
+<p>NONE</p>
+<p>ALPHA_WRAP</p>
+<p>ACVD</p>
+<p>SURFACE_DELAUNAY</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="superdex.physics.mesh.ALPHA_WRAP">
+<span class="sig-name descname"><span class="pre">ALPHA_WRAP</span></span><a class="headerlink" href="#superdex.physics.mesh.ALPHA_WRAP" title="Permalink to this definition"></a></dt>
+<dd><p>Members:</p>
+<p>NONE</p>
+<p>ALPHA_WRAP</p>
+<p>ACVD</p>
+<p>SURFACE_DELAUNAY</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.mesh.DistributionStatistics">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DistributionStatistics</span></span><a class="headerlink" href="#superdex.physics.mesh.DistributionStatistics" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.mesh.Error">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Error</span></span><a class="headerlink" href="#superdex.physics.mesh.Error" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">RuntimeError</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.mesh.MeshStatistics">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">MeshStatistics</span></span><a class="headerlink" href="#superdex.physics.mesh.MeshStatistics" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="superdex.physics.mesh.NONE">
+<span class="sig-name descname"><span class="pre">NONE</span></span><a class="headerlink" href="#superdex.physics.mesh.NONE" title="Permalink to this definition"></a></dt>
+<dd><p>Members:</p>
+<p>NONE</p>
+<p>ALPHA_WRAP</p>
+<p>ACVD</p>
+<p>SURFACE_DELAUNAY</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.mesh.RemeshMethod">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">RemeshMethod</span></span><a class="headerlink" href="#superdex.physics.mesh.RemeshMethod" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Members:</p>
+<p>NONE</p>
+<p>ALPHA_WRAP</p>
+<p>ACVD</p>
+<p>SURFACE_DELAUNAY</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.mesh.RemeshMethod.name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#superdex.physics.mesh.RemeshMethod.name" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="superdex.physics.mesh.SURFACE_DELAUNAY">
+<span class="sig-name descname"><span class="pre">SURFACE_DELAUNAY</span></span><a class="headerlink" href="#superdex.physics.mesh.SURFACE_DELAUNAY" title="Permalink to this definition"></a></dt>
+<dd><p>Members:</p>
+<p>NONE</p>
+<p>ALPHA_WRAP</p>
+<p>ACVD</p>
+<p>SURFACE_DELAUNAY</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.mesh.SurfaceRemeshingParams">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">SurfaceRemeshingParams</span></span><a class="headerlink" href="#superdex.physics.mesh.SurfaceRemeshingParams" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.mesh.compute_mesh_statistics">
+<span class="sig-name descname"><span class="pre">compute_mesh_statistics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vertices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">faces</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.int32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_vertices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_faces</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.int32</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.mesh.MeshStatistics" title="superdex.physics.mesh.MeshStatistics"><span class="pre">MeshStatistics</span></a></span></span><a class="headerlink" href="#superdex.physics.mesh.compute_mesh_statistics" title="Permalink to this definition"></a></dt>
+<dd><p>Compute quality statistics for a triangle surface mesh.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>vertices</strong> – (N, 3) array of vertex coordinates</p></li>
+<li><p><strong>faces</strong> – (M, 3) array of triangle vertex indices</p></li>
+<li><p><strong>ref_vertices</strong> – Optional (N, 3) reference mesh vertices for Hausdorff distance</p></li>
+<li><p><strong>ref_faces</strong> – Optional (M, 3) reference mesh faces for Hausdorff distance</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>MeshStatistics object with edge_lengths, angles, and hausdorff_distance</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.mesh.reconstruct_surface_from_sdf">
+<span class="sig-name descname"><span class="pre">reconstruct_surface_from_sdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dims</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.int32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds_min</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds_max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.typing.NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.int32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#superdex.physics.mesh.reconstruct_surface_from_sdf" title="Permalink to this definition"></a></dt>
+<dd><p>Reconstruct a triangle mesh from a grid SDF using Marching Cubes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dims</strong> – (3,) integer array of grid dimensions [x, y, z]</p></li>
+<li><p><strong>values</strong> – Flat float array of SDF values in x-slowest, z-fastest order
+(index = dims[1]*dims[2]*x + dims[2]*y + z, size = dims[0]*dims[1]*dims[2])</p></li>
+<li><p><strong>bounds_min</strong> – (3,) float array of grid minimum bounds</p></li>
+<li><p><strong>bounds_max</strong> – (3,) float array of grid maximum bounds</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (vertices, faces) numpy arrays</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.mesh.remesh_surface">
+<span class="sig-name descname"><span class="pre">remesh_surface</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">vertices:</span> <span class="pre">typing.Annotated[numpy.typing.ArrayLike,</span> <span class="pre">numpy.float32],</span> <span class="pre">faces:</span> <span class="pre">typing.Annotated[numpy.typing.ArrayLike,</span> <span class="pre">numpy.int32],</span> <span class="pre">params:</span> <span class="pre">superdex.physics.mesh.SurfaceRemeshingParams</span> <span class="pre">=</span> <span class="pre">&lt;superdex.physics.mesh.SurfaceRemeshingParams</span> <span class="pre">object&gt;</span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.typing.NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.int32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#superdex.physics.mesh.remesh_surface" title="Permalink to this definition"></a></dt>
+<dd><p>Remesh a triangular surface mesh.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>vertices</strong> – (N, 3) array of vertex coordinates</p></li>
+<li><p><strong>faces</strong> – (M, 3) array of triangle vertex indices</p></li>
+<li><p><strong>params</strong> – SurfaceRemeshingParams</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (vertices, faces) numpy arrays</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="prefab.html" class="btn btn-neutral float-left" title="Prefabs" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="debugger.html" class="btn btn-neutral float-right" title="Debugger" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Meta Platforms, Inc.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

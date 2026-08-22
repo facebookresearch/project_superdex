@@ -1,0 +1,88 @@
+{
+  "name": "superdex-robotics-website",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "docusaurus": "docusaurus",
+    "start": "cross-env NODE_OPTIONS=--no-deprecation docusaurus start",
+    "build": "cross-env NODE_OPTIONS=--no-deprecation docusaurus build",
+    "swizzle": "docusaurus swizzle",
+    "deploy": "docusaurus deploy",
+    "clear": "docusaurus clear",
+    "clean": "docusaurus clear",
+    "serve": "docusaurus serve",
+    "write-translations": "docusaurus write-translations",
+    "write-heading-ids": "docusaurus write-heading-ids"
+  },
+  "dependencies": {
+    "@babel/helpers": "7.26.10",
+    "@babel/runtime": "7.26.10",
+    "@babel/runtime-corejs3": "7.26.10",
+    "@babel/traverse": "7.23.2",
+    "@docusaurus/core": "^3.9.2",
+    "@docusaurus/preset-classic": "^3.9.2",
+    "@mdx-js/react": "^3.0.0",
+    "algoliasearch-helper": "3.11.2",
+    "ansi-regex": "4.1.1",
+    "axios": "1.18.0",
+    "body-parser": "1.20.6",
+    "brace-expansion": "5.0.8",
+    "braces": "3.0.3",
+    "clsx": "^1.1.1",
+    "cookie": "0.7.0",
+    "cross-spawn": "7.0.5",
+    "docusaurus-plugin-internaldocs-fb": "^1.19.2",
+    "dom-iterator": "1.0.1",
+    "express": "4.19.2",
+    "follow-redirects": "1.16.0",
+    "got": "11.8.5",
+    "http-proxy-middleware": "3.0.7",
+    "js-yaml": "4.3.0",
+    "loader-utils": "3.2.1",
+    "mermaid": "11.15.0",
+    "micromatch": "4.0.8",
+    "minimatch": "3.1.4",
+    "nanoid": "3.3.8",
+    "node-forge": "1.4.0",
+    "on-headers": "1.1.0",
+    "path-to-regexp": "0.1.13",
+    "postcss": "8.5.18",
+    "prism-react-renderer": "^2.1.0",
+    "prismjs": "1.30.0",
+    "qs": "6.15.2",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "rehype-katex": "^7.0.0",
+    "remark-math": "^6.0.0",
+    "semver": "7.5.2",
+    "send": "0.19.0",
+    "serialize-javascript": "7.0.5",
+    "serve-static": "1.16.0",
+    "trim": "0.0.3",
+    "webpack": "5.104.1",
+    "webpack-dev-middleware": "5.3.4",
+    "webpack-dev-server": "5.2.6",
+    "ws": "7.5.11"
+  },
+  "browserslist": {
+    "production": [
+      ">0.5%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "engines": {
+    "node": ">=16",
+    "npm": "use yarn instead",
+    "yarn": "^1.5"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "yarn-audit-fix": "^9.3.10"
+  }
+}

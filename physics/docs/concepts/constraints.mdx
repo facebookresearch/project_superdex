@@ -1,0 +1,609 @@
+---
+title: Constraints
+sidebar_position: 7
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Constraints
+
+Constraints in SuperDex Physics model interactions and attachments between actors. They are the primary mechanism for coupling degrees of freedom (DoFs) across different entities in a simulation, enabling joints, springs, attachments, and kinematic targets.
+
+:::tip Constraints vs. articulated actors
+Modeling a jointed structure (such as a double pendulum) with constraints is the preferred approach when joints are **added or removed at runtime**. For a **fixed** joint structure, prefer an articulated actor instead — it is more efficient and robust.
+:::
+
+## Mathematical Formulation
+
+Constraints are compliant: they contribute an elastic potential and a dissipation potential to the
+[incremental potential](./dynamics.md#incremental-potential-form) of each implicit stage, rather
+than enforcing an algebraic condition exactly. The notation below follows the
+[dynamics](./dynamics.md) page: $q$ is the generalized configuration, $q_i^0$ the stage-start
+configuration, and $\Delta t_i$ the stage duration.
+
+### Constraint Value
+
+Each constraint defines a **constraint value** $g\in\mathbb R^m$ that vanishes when the constraint
+is satisfied, together with its **Jacobian**
+
+$$
+J=\frac{\partial g}{\partial q}\in\mathbb R^{m\times n}~,
+$$
+
+taken with respect to the $n$ degrees of freedom of the involved actors. The
+[Constraint Types](#constraint-types) below give $g$ for each type; [`GetDeviation`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Constraint.html) ([`get_deviation`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Constraint.get_deviation) in Python) returns its
+current value.
+
+Bilateral constraints (joints, attachments, kinematic targets) have a smooth $g$ that may take
+either sign componentwise. Range constraints instead measure a one-sided violation. Written for a
+single bounded DoF $q_j$,
+
+$$
+g_j=\max\left(q_j-u_j,\;l_j-q_j,\;0\right)~,
+$$
+
+for bounds $l_j\leq q_j\leq u_j$, so $g_j$ and the corresponding row of $J$ vanish inside the
+bounds. Each range type below bounds its own scalar measure — a joint angle, a rotation-vector
+component, a slide offset — in place of $q_j$. A range constraint is inactive, and contributes
+nothing, when every component is within its bounds both in the current configuration and at the
+stage start; the stage-start condition matters because the damping term below differences against
+$g(q_i^0,\hat p_i^0)$.
+
+Target-bearing constraints depend on a prescribed target in addition to the configuration,
+$g=g(q,\hat p)$. The target is fixed data within a stage.
+
+### Constraint Rate
+
+The rate of the constraint value is discretized as a stage-local difference,
+
+$$
+\dot g\;\approx\;\frac{\Delta g}{\Delta t_i}~,
+\qquad
+\Delta g = g\!\left(q,\hat p\right)-g\!\left(q_i^0,\hat p_i^0\right)~.
+$$
+
+Two properties follow. First, the difference is taken on $g$ itself rather than as $Jv$, which
+makes the discrete dissipation term exactly integrable in $q$ and therefore admits an incremental
+potential. Second, $\Delta g$ also differences the **target**: moving a target between stages
+produces a damping force. Use [`UpdateOldTarget`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Constraint.html) ([`update_old_target`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Constraint.update_old_target) in Python) to reset $\hat p_i^0$ when teleporting a target, so
+that no spurious damping transient is generated.
+
+### Incremental Potential
+
+A constraint with stiffness $k$ and damping $d$ contributes
+
+$$
+\Phi^{\mathrm{c}}_i(q)
+=\underbrace{\frac{k}{2}\left\Vert g\right\Vert_2^2}_{\text{contribution to }U}
++\underbrace{\frac{d}{2\Delta t_i}\left\Vert\Delta g\right\Vert_2^2}_{\Delta t_i R}
+$$
+
+to the stage incremental potential, corresponding to the elastic potential
+$U^{\mathrm{c}}=\tfrac{k}{2}\Vert g\Vert_2^2$ and the dissipation potential
+$R^{\mathrm{c}}=\tfrac{d}{2}\Vert\dot g\Vert_2^2$ of the
+[continuous system](./dynamics.md#system-dynamics).
+
+### Saturation
+
+A positive saturation $\bar g$ replaces the quadratic elastic term with
+
+$$
+U^{\mathrm{c}}=k\,\bar g\,\rho\!\left(\left\Vert g\right\Vert_2\right)~,
+\qquad
+\rho(x)=
+\begin{cases}
+\displaystyle \frac{x^2}{\bar g}-\frac{x^3}{3\bar g^2}, & 0\leq x<\bar g~, \\
+\displaystyle x-\frac{\bar g}{3}, & x\geq\bar g~,
+\end{cases}
+$$
+
+using the same $C^1$ ramp as the regularized Coulomb friction in
+[contact](./contact.md#traction-model). Since $\rho'\in[0,1]$, the elastic force magnitude is
+smoothly capped at $k\bar g$, reached once $\Vert g\Vert_2\geq\bar g$. The damping term is
+unaffected by saturation.
+
+:::note
+Saturation is not a clamp applied to the linear spring: $\rho'(x)\approx 2x/\bar g$ for small $x$,
+so the effective stiffness near $g=0$ is $2k$ rather than $k$. Saturation is better understood as a
+force of nearly constant magnitude $k\bar g$ acting along $g$, regularized over the length scale
+$\bar g$.
+:::
+
+### Gradient and Approximate Hessian
+
+The stage residual contributed by a constraint is $\nabla_q\Phi^{\mathrm{c}}_i$,
+
+$$
+r^{\mathrm{c}}=J^T\left(\kappa\,g+\frac{d}{\Delta t_i}\Delta g\right)~,
+\qquad
+\kappa=
+\begin{cases}
+k, & \text{saturation disabled}~, \\
+\displaystyle k\,\bar g\,\frac{\rho'\!\left(\Vert g\Vert_2\right)}{\Vert g\Vert_2},
+& \text{saturation enabled}~,
+\end{cases}
+$$
+
+where the ratio $\rho'(x)/x$ is evaluated in a form that stays regular as $x\to0$. The generalized
+constraint force is $-r^{\mathrm{c}}$, which is what [`GetForce`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Constraint.html) ([`get_force`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Constraint.get_force) in Python) reports.
+
+The residual derivative drops the term involving the second derivative of $g$, which is indefinite
+in general, yielding the Gauss–Newton approximation
+
+$$
+K^{\mathrm{c}}\approx\left(\kappa+\frac{d}{\Delta t_i}\right)J^TJ\succeq 0~.
+$$
+
+## Constraint Types
+
+The table below summarizes every constraint type. $m$ is the dimension of the constraint value $g$,
+and $n$ is the number of degrees of freedom it couples. **Kind** distinguishes *bilateral*
+constraints, whose $g$ is smooth and signed, from *unilateral* ones, whose $g$ is the one-sided
+violation defined in the [Constraint Value](#constraint-value) section and which contribute nothing
+while satisfied. **Target** marks the types that carry a runtime-settable
+[kinematic target](#kinematic-targets).
+
+| Type | Actors | $m$ | $n$ | Kind | Target |
+| --- | ---: | ---: | ---: | --- | :-: |
+| [`RigidSphericalJoint`](#rigidsphericaljoint) | 2 | 3 | 12 | Bilateral | |
+| [`RigidPrismaticJoint`](#rigidprismaticjoint) | 2 | 3 | 9 | Mixed | |
+| [`JointRotationRange`](#jointrotationrange) | 2 | 3 | 6 | Unilateral | |
+| [`JointRotationTracking`](#jointrotationtracking) | 2 | 3 | 6 | Bilateral | ✓ |
+| [`RigidPivotPosition`](#rigidpivotposition) | 1 | 3 | 6 | Bilateral | ✓ |
+| [`RigidPivotToRigidTarget`](#rigidpivottorigidtarget) | 1 | 3 | 6 | Bilateral | ✓ |
+| [`RigidPivotRotation`](#rigidpivotrotation) | 1 | 3 | 3 | Bilateral | ✓ |
+| [`DeformableNodePosition`](#deformablenodeposition) | 1 | 3 | 3 | Bilateral | ✓ |
+| [`DeformableNodeToDeformableNode`](#deformablenodetodeformablenode) | 2 | 3 | 6 | Bilateral | |
+| [`DeformableNodeToRigid`](#deformablenodetorigid) | 2 | 3 | 9 | Bilateral | |
+| [`ArticulatedSingleDofTarget`](#articulatedsingledoftarget) | 1 | 1 | 1 | Bilateral | ✓ |
+| [`ArticulatedSingleDofRange`](#articulatedsingledofrange) | 1 | 1 | 1 | Unilateral | |
+| [`Articulated3dRotationTarget`](#articulated3drotationtarget) | 1 | 3 | 3 | Bilateral | ✓ |
+| [`Articulated3dRotationRange`](#articulated3drotationrange) | 1 | 3 | 3 | Unilateral | |
+| [`RodElementRotationToRigid`](#rodelementrotationtorigid) | 2 | 3 | 11 | Bilateral | ✓ |
+
+The formulas below use the following notation. $T_A$ is the world transform of body $A$, with
+translation $\mathbf t_A$ and rotation $R_A$, so $T_A(\mathbf r)$ is the world position of a point
+$\mathbf r$ given in $A$'s local frame. Deformable nodes have reference position $\mathbf X$ and
+displacement $\mathbf u$. $\mathrm{Log}(R)$ is the rotation vector of a rotation $R$. Hats denote
+prescribed targets.
+
+:::note[Componentwise rotation bounds]
+The rotational range constraints bound each component of a rotation *vector* independently. Because
+rotations do not commute, these components are not independent rotations about fixed axes, and the
+bounds are only an intuitive description of a range of motion for moderate angles.
+:::
+
+### Rigid-Rigid Joints
+
+#### RigidSphericalJoint
+
+Spherical (ball-and-socket) joint between two rigid bodies. The constraint value is the world-space
+displacement between two pivot points, each rigidly attached to its respective body:
+
+$$
+g = T_A(\mathbf{r}_A) - T_B(\mathbf{r}_B)~,
+$$
+
+where $\mathbf{r}_A$ and $\mathbf{r}_B$ are the local pivot positions.
+
+#### RigidPrismaticJoint
+
+Constrains the relative translation of two rigid bodies transverse to a sliding axis, and optionally
+limits travel along it. Let $R_0$ be the joint frame expressed in body $A$'s local coordinates: it
+is specified in world coordinates at creation and converted to $A$-local then, so it is constant
+thereafter. Its $z$ axis is the free axis. The relative translation in that frame is
+
+$$
+\mathbf s = R_0^{-1}R_A^{-1}\left(\mathbf t_B-\mathbf t_A\right)-\mathbf s_{\mathrm{ref}}~.
+$$
+
+The two transverse components are constrained bilaterally, $g_1=s_1$ and $g_2=s_2$, while $g_3$ is
+the signed violation of $s_3$ against the optional travel limits: $s_3-u$ above the upper limit,
+$s_3-l$ below the lower one, and zero in between.
+
+:::warning
+This constraint does **not** restrict relative rotation, and its travel limits are not reported by
+[`GetLimitMinValues`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Constraint.html) / [`GetLimitMaxValues`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Constraint.html). Combine it with a
+[`JointRotationTracking`](#jointrotationtracking) constraint to obtain a full prismatic joint.
+:::
+
+#### JointRotationRange
+
+Limits the relative rotation between two rigid bodies, with independent lower and upper bounds per
+component. The relative rotation is expressed in the joint reference frame $R_0$, again stored in
+body $A$'s local coordinates, and measured against a reference rotation $R_{\mathrm{ref}}$:
+
+$$
+\mathbf{r}_{AB}
+=\mathrm{Log}\!\left(R_0^{-1}R_A^{-1}R_B R_0 R_{\mathrm{ref}}^{-1}\right)~.
+$$
+
+Each $g_j$ is the one-sided violation of $\mathbf{r}_{AB,j}$ against its bounds. By default
+([`rangeAroundRest`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1JointRotationRangeConstraintParams.html)), $R_{\mathrm{ref}}$ is the relative rotation observed at creation, so the bounds
+are relative to the rest pose rather than absolute in the joint frame.
+
+#### JointRotationTracking
+
+Drives the relative rotation between two rigid bodies toward a target rotation $\hat R$, which is
+the orientation of $B$ relative to $A$ expressed in $A$'s local frame:
+
+$$
+g=\mathrm{Log}\!\left(\left(R_A\hat R R_0\right)^{-1}R_B R_0\right)~.
+$$
+
+The target is initialized to the relative rotation observed at creation, so the constraint starts
+satisfied, and is updated at runtime with [`SetTargetRotation`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Constraint.html). It is used both to track measured
+joint angles, such as finger joints driven by a hand tracking system, and to supply the missing
+rotational restriction of a [`RigidPrismaticJoint`](#rigidprismaticjoint).
+
+### Rigid Pivots to Kinematic Targets
+
+Each of these constrains a single rigid body against prescribed target data; none of them couples
+two actors.
+
+#### RigidPivotPosition
+
+Constrains a pivot point on a rigid body to a target position:
+
+$$
+g = T(\mathbf{r}) - \hat{\mathbf{p}}~,
+$$
+
+where $T(\mathbf{r})$ is the world-space position of the pivot and $\hat{\mathbf{p}}$ is the
+prescribed target position.
+
+#### RigidPivotToRigidTarget
+
+Constrains a pivot point on a rigid body to the position that the *same* local point would occupy
+under a prescribed target transform $\hat T$:
+
+$$
+g = T(\mathbf{r}) - \hat T(\mathbf{r})~.
+$$
+
+This differs from [`RigidPivotPosition`](#rigidpivotposition) only in that the target is a full
+rigid motion, so the target point also moves with the target's rotation. Despite the name, it
+involves a single actor: $\hat T$ is prescribed target data, not the state of a second body. Use
+[`RigidSphericalJoint`](#rigidsphericaljoint) to couple a point on one body to a point on another.
+
+#### RigidPivotRotation
+
+Constrains a pivot frame on a rigid body to a target orientation:
+
+$$
+g = \mathrm{Log}\!\left(R\,R_\ell\,\hat R^{-1}\right)~,
+$$
+
+where $R$ is the body rotation, $R_\ell$ is the pivot frame in the body's local coordinates, and
+$\hat R$ is the prescribed target rotation in world coordinates.
+
+### Deformable Couplings
+
+#### DeformableNodePosition
+
+Fixes a deformable-actor node to a prescribed world-space position:
+
+$$
+g = T(\mathbf{X} + \mathbf{u}) - \hat{\mathbf{p}}~.
+$$
+
+This is used for boundary conditions such as pinning a shell corner or fixing the base of a
+deformable object.
+
+#### DeformableNodeToDeformableNode
+
+A spring connecting nodes on two deformable actors:
+
+$$
+g = T_A(\mathbf{X}_A + \mathbf{u}_A) - T_B(\mathbf{X}_B + \mathbf{u}_B)~.
+$$
+
+#### DeformableNodeToRigid
+
+Attaches a deformable-actor node to a pivot point on a rigid body:
+
+$$
+g = T_R(\mathbf{r}) - T_D(\mathbf{X} + \mathbf{u})~.
+$$
+
+By default ([`fixToDeformablePos`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1DeformableNodeToRigidConstraintParams.html)), the rigid-frame pivot $\mathbf{r}$ is computed at creation so
+that the constraint starts at zero deviation, rather than being supplied by the caller.
+
+### Articulated Constraints
+
+These act directly on the reduced pose of an articulated actor, so they involve no world-space
+frames.
+
+#### ArticulatedSingleDofTarget
+
+Drives a single joint DoF toward a target value, $g = \theta - \hat\theta$. Used for articulated
+actor control.
+
+:::note
+The single-DoF types apply only to translational DoFs and to single-DoF rotational (revolute)
+joints. For the rotation of a spherical or free joint, use the 3D variants below.
+:::
+
+#### ArticulatedSingleDofRange
+
+Limits a single joint DoF to $[l, u]$, giving the one-sided violation
+$g = \max\left(\theta - u,\; l - \theta,\; 0\right)$. Used to enforce mechanical joint limits.
+
+#### Articulated3dRotationTarget
+
+Drives the rotation of a spherical or free joint toward a target orientation:
+
+$$
+g = \mathrm{Log}\!\left(R_j\hat R^{-1}\right)~,
+$$
+
+where $R_j$ is the joint rotation from the reduced pose. The target is expressed in the joint's
+local frame **relative to its rest orientation**, so the identity corresponds to the rest pose.
+
+#### Articulated3dRotationRange
+
+Limits the rotation of a spherical or free joint, applying independent bounds to each component of
+$\mathrm{Log}(R_j)$ and returning the one-sided violation componentwise.
+
+### Rod Couplings
+
+#### RodElementRotationToRigid
+
+Drives the rotation of a rod element relative to a rigid body toward a target rotation $\hat R$,
+which is the orientation of the rod element relative to the body expressed in the body's local
+frame. The reference frame $R_0$ is stored in those same local coordinates:
+
+$$
+g=\mathrm{Log}\!\left(\left(R_R\hat R R_0\right)^{-1}R_e R_0\right)~,
+$$
+
+where $R_R$ is the rigid body rotation and $R_e$ is the world-space rotation of the rod element's
+material frame. As with [`JointRotationTracking`](#jointrotationtracking), the target is initialized
+to the relative rotation observed at creation and updated with [`SetTargetRotation`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Constraint.html); the default
+behavior therefore preserves the creation-time relative rotation rather than aligning the rod
+element with the body frame. The $n=11$ coupled DoFs are the 3 rigid rotational DoFs and the 8 DoFs
+of the rod element's two nodes.
+
+## Code Examples
+
+### Pinning a Soft Body Node (DeformableNodePosition)
+
+Pin a specific node of a deformable actor to a fixed position in world space. This is useful for boundary conditions such as fixing a shell corner or anchoring the base of a soft body.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+DeformableNodePositionConstraintParams params;
+params.actor = softActor->GetHandle();
+params.nodeIndex = 0;                          // pin the first node
+params.position = Real3{0_r, 1_r, 0_r};        // target world position
+params.stiffness = 1e6_r;                       // penalty stiffness
+Constraint* constraint = scene->CreateDeformableNodePositionConstraint(params, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+constraint = scene.create_deformable_node_position_constraint(
+    actor=soft_actor.get_handle(),
+    node_index=0,
+    position=[0, 1, 0],
+    stiffness=1e6,
+)
+```
+
+</TabItem>
+</Tabs>
+
+### Connecting Two Rigid Bodies (RigidSphericalJoint)
+
+Create a ball-and-socket joint between two rigid bodies. Each body specifies a local pivot point; the constraint penalizes the distance between those two pivots in world space.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+RigidSphericalJointConstraintParams params;
+params.actorA = bodyA->GetHandle();
+params.actorB = bodyB->GetHandle();
+params.localPosA = Real3{0.5_r, 0_r, 0_r};    // pivot on body A
+params.localPosB = Real3{-0.5_r, 0_r, 0_r};   // pivot on body B
+params.stiffness = 1e6_r;
+Constraint* constraint = scene->CreateRigidSphericalJointConstraint(params, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+constraint = scene.create_rigid_spherical_joint_constraint(
+    actor_a=body_a.get_handle(),
+    actor_b=body_b.get_handle(),
+    local_pos_a=[0.5, 0, 0],
+    local_pos_b=[-0.5, 0, 0],
+    stiffness=1e6,
+)
+```
+
+</TabItem>
+</Tabs>
+
+### Attaching a Deformable Actor to a Rigid Body (DeformableNodeToRigid)
+
+Couple a deformable mesh node to a point on a rigid body. This is commonly used to attach a deformable actor to a rigid handle.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+DeformableNodeToRigidConstraintParams params;
+params.deformableActor = softActor->GetHandle();
+params.rigidActor = rigidActor->GetHandle();
+params.deformableNodeIndex = 10;               // which deformable-actor node
+params.fixToDeformablePos = true;              // use the node's current position
+params.stiffness = 1e4_r;
+Constraint* constraint = scene->CreateDeformableNodeToRigidConstraint(params, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+constraint = scene.create_deformable_node_to_rigid_constraint(
+    deformable_actor=soft_actor.get_handle(),
+    rigid_actor=rigid_actor.get_handle(),
+    deformable_node_index=10,
+    fix_to_deformable_pos=True,
+    stiffness=1e4,
+)
+```
+
+</TabItem>
+</Tabs>
+
+## Working with Constraints at Runtime
+
+The [Constraint Types](#constraint-types) above describe how to *define* a constraint at creation time. Every [`Constraint`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Constraint.html) also exposes a **uniform runtime interface**: the same methods work on all types, but many are type-specific and report a graceful [`Error`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Error.html) (in Python, methods on [`Constraint`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Constraint) raise [`mochi.Error`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Error)) when they don't apply. The [constraints](../examples/contact_constraints/constraints.md) page tours this whole interface as a worked example.
+
+### Lifecycle and Identity
+
+C++ [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) constraint factory methods return a `Constraint*` and a stable [`ConstraintHandle`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ConstraintHandle.html). Look a constraint back up with [`GetConstraint`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html), iterate all of them with [`ForEachConstraint`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html), and remove one with [`DestroyConstraint`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) (by pointer or handle). Python provides the corresponding [`get_constraint`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.get_constraint), [`for_each_constraint`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.for_each_constraint), and [`destroy_constraint`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.destroy_constraint) methods. A constraint is **auto-destroyed** when any actor it references is destroyed.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+ConstraintHandle handle = constraint->GetHandle();
+Constraint* same = scene->GetConstraint(handle);      // look up by handle
+scene->ForEachConstraint([](Constraint* c) { /* ... */ });  // enumerate
+scene->DestroyConstraint(handle);                     // explicit removal
+// scene->DestroyActor(actorHandle) also removes every constraint on that actor
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+handle = constraint.get_handle()
+same = scene.get_constraint(handle)            # look up by handle
+scene.for_each_constraint(lambda c: ...)       # enumerate
+scene.destroy_constraint(handle)               # explicit removal
+# scene.destroy_actor(actor_handle) also removes every constraint on that actor
+```
+
+</TabItem>
+</Tabs>
+
+### Introspection
+
+The generic interface reports how a constraint is wired up, regardless of its type. [`GetNumActors`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Constraint.html) ([`get_num_actors`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Constraint.get_num_actors) in Python) is a useful discriminator — a world-anchored `RigidPivotPosition` involves **one** actor, while a body-to-body `RigidSphericalJoint` involves **two**.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+ConstraintType type = constraint->GetType();
+int numActors = constraint->GetNumActors();
+for (int i = 0; i < numActors; ++i) {
+  Actor* actor = constraint->GetActor(i);
+  Span<int const> dofs = constraint->GetDofIndicesForActor(i);  // affected DoFs
+}
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+constraint_type = constraint.get_type()
+for i in range(constraint.get_num_actors()):
+    actor = constraint.get_actor(actor_index=i)
+    dofs = constraint.get_dof_indices_for_actor(actor_index=i)  # affected DoFs
+```
+
+</TabItem>
+</Tabs>
+
+### Parameters
+
+Stiffness, damping, and saturation can be read and changed at any time. See
+[Mathematical Formulation](#mathematical-formulation) for how each enters the stage problem;
+in short, saturation caps the elastic force magnitude at `stiffness * saturation`, and a negative
+value disables the cap.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+constraint->SetStiffness(1e5_r, error);   // [N/m] (or [N*m/rad] for rotational constraints)
+constraint->SetDamping(20_r, error);      // [N*s/m] (or [N*m*s/rad])
+constraint->SetSaturation(-1_r, error);   // force cap = stiffness * saturation; negative disables
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+constraint.set_stiffness(stiffness=1e5)      # [N/m] (or [N*m/rad] for rotational constraints)
+constraint.set_damping(damping=20.0)         # [N*s/m] (or [N*m*s/rad])
+constraint.set_saturation(saturation=-1.0)   # force cap = stiffness * saturation; negative disables
+```
+
+</TabItem>
+</Tabs>
+
+### Kinematic Targets
+
+Target-bearing constraints track a prescribed target. Updating the target each step animates it — for example, driving a `RigidPivotPosition` anchor along a path to create a *moving base*. Use [`UpdateOldTarget`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Constraint.html) to teleport the target without producing a spurious damping transient.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+pivot->SetTargetPosition(Real3{x, y, z}, error);  // RigidPivotPosition
+// SetTargetRotation / SetTargetDof apply to rotation- / DoF-target constraints
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+pivot.set_target_position(mochi.Real3(x, y, z))  # RigidPivotPosition
+# set_target_rotation / set_target_dof apply to rotation- / DoF-target constraints
+```
+
+</TabItem>
+</Tabs>
+
+### Diagnostics and Queries
+
+[`GetDeviation`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Constraint.html) returns the current constraint value $g$ (the position/rotation error) and needs no setup. [`GetForce`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Constraint.html) returns the constraint force but requires a `ConstraintForce` query to be registered **before** stepping. The query is identified by the C++ `QueryType::ConstraintForce` or corresponding Python [`QueryType`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.QueryType) value. [`IsQuerySupported`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Constraint.html) reports whether a query type applies.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+constraint->RegisterQuery(QueryType::ConstraintForce, error);  // once, before Step
+scene->Step(dt, error);
+DynamicArray<real> deviation = constraint->GetDeviation();     // constraint value g
+Span<real const> force = constraint->GetForce(error);          // needs the query above
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+constraint.register_query(mochi.QueryType.CONSTRAINT_FORCE)  # once, before stepping
+scene.step(dt)
+deviation = constraint.get_deviation()   # constraint value g
+force = constraint.get_force()            # needs the query above
+```
+
+</TabItem>
+</Tabs>
+
+### Limits
+
+Range constraints (e.g. `JointRotationRange`, `ArticulatedSingleDofRange`) expose their bounds via [`GetLimitMinValues`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Constraint.html) / [`GetLimitMaxValues`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Constraint.html); unconstrained components report $\pm\infty$. Python provides [`get_limit_min_values`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Constraint.get_limit_min_values) / [`get_limit_max_values`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Constraint.get_limit_max_values).

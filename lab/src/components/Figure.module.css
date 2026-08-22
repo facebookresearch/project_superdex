@@ -1,0 +1,305 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * Docs figures for SuperDex Studio.
+ *
+ * The artwork sits directly on the page — no frame, no mat, no border. The only
+ * treatment is a small corner radius, so a screenshot reads as an object rather
+ * than a hard-edged rectangle. Everything else is whitespace.
+ */
+
+.figure {
+  margin: 2rem 0;
+}
+
+/* Layout-only wrapper: it exists to carry max-width and centering, nothing visual. */
+.frame {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.caption {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--sdx-eyebrow-color, var(--ifm-color-emphasis-600));
+  margin: 0.7rem auto 0;
+  text-align: left;
+}
+
+.caption code {
+  font-size: 0.9em;
+}
+
+/*
+ * A docked panel that is taller than the page can reasonably show, captured
+ * across several scroll positions and stitched back together. Shrinking it to
+ * fit would make the 1x interface text unreadable, so it keeps native size
+ * inside a scroller that behaves the way the real panel does. `contain` stops
+ * the page from scrolling on behind it once the reader hits either end.
+ */
+.scroller {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 8px;
+  /* macOS hides overlay scrollbars until you scroll, which is the one moment a
+     reader needs to know the frame scrolls at all. Force a visible track. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--sdx-tag-border, var(--ifm-color-emphasis-300)) transparent;
+}
+
+.scroller::-webkit-scrollbar {
+  width: 10px;
+}
+
+.scroller::-webkit-scrollbar-thumb {
+  background: var(--sdx-tag-border, var(--ifm-color-emphasis-300));
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+}
+
+/* Positioning context for the fade below. */
+.scrollWrap {
+  position: relative;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/*
+ * A fade along the lower edge, pinned outside the scroller so it cannot scroll
+ * away. Together with the always-visible scrollbar this is what tells the
+ * reader the panel continues past the frame.
+ */
+.scrollWrap::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3rem;
+  border-radius: 0 0 8px 8px;
+  background: linear-gradient(to bottom, transparent, var(--ifm-background-color));
+  pointer-events: none;
+}
+
+/* The scroller does the clipping, so the image inside must not round its own
+   corners or they show through as notches while scrolling. */
+.scroller .image {
+  border-radius: 0;
+}
+
+/*
+ * A footnote sitting under a Figure or FigureVideo. Same voice as a caption,
+ * but it has to pull itself up: the figure above owns a 2rem bottom margin
+ * (.figure), which would otherwise leave a gap far wider than the one a caption
+ * sits at. The -1rem top margin claws most of that back.
+ */
+.note {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--sdx-eyebrow-color, var(--ifm-color-emphasis-600));
+  margin: -1rem 0 1.5rem;
+}
+
+/* Following prose rather than a figure, there is no oversized margin to pull back from. */
+.noteStandalone {
+  margin-top: 0;
+}
+
+/* -------------------------------------------------------------------------
+   Variants
+   ------------------------------------------------------------------------- */
+
+/* full — the default. Fills the doc column. */
+
+/*
+ * inset — for portrait or otherwise tall artwork. Full column width would make
+ * `transform_gizmo` (1143x1702) taller than the viewport it is describing.
+ */
+.inset .frame {
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.inset .caption {
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+/*
+ * strip — very wide, very short crops (the menu bar is 12.8:1). Centered and
+ * capped so they read as a specimen rather than a stretched banner.
+ */
+.strip .frame {
+  margin: 0 auto;
+}
+
+.strip .caption {
+  text-align: center;
+}
+
+/*
+ * float — figures set beside the prose that explains them, rather than
+ * interrupting the column. 46% keeps figure and text in a workable ratio at any
+ * column width, and lets two floats in the same section render at matching
+ * widths. Each figure still caps itself with `maxWidth`, so the small popover
+ * captures are never scaled past their native size.
+ */
+.float {
+  float: right;
+  width: 46%;
+  max-width: 250px;
+  margin: 0.35rem 0 1.25rem 1.75rem;
+}
+
+.float .caption {
+  text-align: center;
+  font-size: 0.75rem;
+}
+
+/*
+ * A table beside a float gets squeezed into the remaining ~450px and its
+ * columns collapse. Prose wraps happily; tables must clear. Headings clear too,
+ * so a tall float can never bleed down past the end of its own section.
+ */
+.float ~ :global(table),
+.float ~ :global(h2),
+.float ~ :global(h3) {
+  clear: both;
+}
+
+/* A float set wider than the default cap still needs a sane floor on tablets. */
+.float .frame,
+.float .caption {
+  max-width: 100%;
+}
+
+/* Below the two-column breakpoint the float has nowhere useful to go. */
+@media (max-width: 996px) {
+  .float {
+    float: none;
+    width: 100%;
+    max-width: 340px;
+    margin: 1.5rem auto;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   FigureRow — labeled n-up comparisons
+   ------------------------------------------------------------------------- */
+
+.row {
+  display: grid;
+  gap: 0.85rem;
+  margin: 1.75rem 0;
+}
+
+.row2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/*
+ * Columns that refuse to shrink below a usable width. A 1x screenshot cannot be
+ * scaled down without its interface text turning to mush, so the row drops to a
+ * single column the moment two tracks no longer fit, whatever the viewport.
+ */
+.rowFit {
+  grid-template-columns: repeat(auto-fit, minmax(min(var(--sdx-row-min), 100%), 1fr));
+}
+
+.row3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Three-up is unreadable in a ~750px column on a tablet; drop to one. */
+@media (max-width: 996px) {
+  .row2,
+  .row3 {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 460px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* Figures inside a row own no vertical margin — the grid gap does the spacing. */
+.row .figure {
+  margin: 0;
+}
+
+/* Center capped figures in their track, rather than leaving them left-aligned. */
+.row .frame,
+.row .scrollWrap,
+.row .caption {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/*
+ * The three view-mode captures are exported at identical dimensions, so the
+ * grid tracks line up exactly and the captions sit on a shared baseline.
+ */
+.row .caption {
+  text-align: center;
+  font-size: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.rowLabel {
+  display: block;
+  font-weight: 600;
+  color: var(--ifm-heading-color);
+}
+
+/* -------------------------------------------------------------------------
+   FigureVideo
+   ------------------------------------------------------------------------- */
+
+.video {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  /* Sits behind the frame only until the poster paints — stops a white flash
+     on a clip that is dark end to end. */
+  background: var(--ifm-pre-background);
+}
+
+/*
+ * The clip is a silent 11s loop used as an animated diagram, so it autoplays
+ * with no chrome. Readers who ask for less motion get the poster frame and a
+ * real set of controls instead.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .video {
+    animation-play-state: paused;
+  }
+}

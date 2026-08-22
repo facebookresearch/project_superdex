@@ -1,0 +1,343 @@
+---
+title: Bot Context & Lifetime
+sidebar_label: Bot Context & Lifetime
+sidebar_position: 3
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+
+# Bot Context & Lifetime
+
+The `RoboticsContext` functions in the same way as the physics context object.
+It provides access to the API functions and owns the runtime objects.
+
+Every bot, controller, sensor, and actuator is owned by a `RoboticsContext` and
+lives until you destroy it or the context is destroyed. This page covers
+creating and destroying those objects, referring to them by handle, and how
+their lifetimes relate to the context and the physics scene.
+
+## The RoboticsContext
+
+Create a context with `create_context()` in Python or `CreateRoboticsContext()`
+in C++. All built-in types are registered automatically. Novel types you may
+have created yourself should be registered with the context prior to loading
+assets that use them.
+
+<Tabs groupId="language">
+<TabItem value="python" label="Python">
+
+```python
+import superdex.physics as physics
+import superdex.robotics as robotics
+from superdex.physics.paths import resolve_asset
+
+# The physics scene owns the simulated actors; the RoboticsContext owns the bots,
+# controllers, and sensors layered on top of them.
+scene = physics.create_scene("Lifetime Example")
+bots_context = robotics.create_context()
+
+bot_prefab = robotics.load_bot_prefab_from_file(
+    str(resolve_asset("bots/arms/fr3/fr3.superdex_bot"))
+)
+bot = robotics.create_bot(scene, bot_prefab, bots_context)
+```
+
+</TabItem>
+<TabItem value="cpp" label="C++">
+
+```cpp
+#include <superdex_robotics/superdex_robotics.h>
+
+using namespace mochi;               // Context, Scene, CreateContext
+using namespace superdex::robotics;  // RoboticsContext, CreateBot, LoadBotPrefabFromFile
+
+// The physics scene owns the simulated actors; the RoboticsContext owns the bots,
+// controllers, and sensors layered on top of them.
+Context* context = CreateContext();
+Scene* scene = context->CreateScene("Lifetime Example");
+RoboticsContext* botsContext = CreateRoboticsContext();
+
+superdex::Error error;
+BotPrefab botPrefab = LoadBotPrefabFromFile("bots/arms/fr3/fr3.superdex_bot", error);
+Bot* bot = CreateBot(scene, botPrefab, botsContext, error);
+// Check error.IsOK() after each fallible call.
+```
+
+</TabItem>
+</Tabs>
+
+:::note One context, many bots
+A `RoboticsContext` can own any number of bots across one or more scenes. Create
+one and reuse it; you do not need a context per bot.
+:::
+
+## Ownership & lifetime
+
+The `RoboticsContext` owns everything it creates: bots, controllers, sensors,
+and actuators. Ownership is flat: the context owns all objects directly. By
+default object lifetimes are bound to the context lifetime (or a destroy
+request). A component may additionally be associated with a bot. That
+association forms a lifetime contract that ensures the component is destroyed
+when the bot is.
+
+| Element | Created by | Associated with | Freed by |
+|---------|-----------|-----------------|----------|
+| **BotPrefab** *(value type)* | `load_bot_prefab_from_file` / `load_bot_prefab_from_urdf_file` | — (a static description passed to `create_bot`) | normal value / GC lifetime (not context-owned) |
+| **Bot** | `create_bot(scene, prefab, ctx)` | a physics `Scene` (holds its articulated actor) | `destroy_bot`, or context teardown |
+| **Controller** | `bot.create_controller(type, name)` — or `ctx.create_controller(type, prefab, actor)` | the bot containing `actor`, if any | its bot's `destroy_bot`, or context teardown |
+| **Sensor** | declared per-link in the [`BotPrefab`](./bots.mdx#botlinkprefab) (auto-created), `bot.create_sensor(type, link_name, …)`, or `ctx.create_sensor(type, link_actor, …)` | a link actor, or none (scene-level); the bot containing it, if any | its bot's `destroy_bot`, or context teardown |
+| **Actuator** | declared per-link in the [`BotPrefab`](./bots.mdx#botlinkprefab) (auto-created), `bot.create_actuator(type, link_name, …)`, or `ctx.create_actuator(type, link_actor, …)` | a link actor (**required**); the bot containing it, if any | its bot's `destroy_bot`, or context teardown |
+
+:::note Actuators
+No concrete actuator types ship yet, but all the APIs are in place and you can
+register your own. Additional controllers, sensors, and actuators will also be
+coming soon.
+:::
+
+### Creating and destroying
+
+`create_bot` in the above example builds the bot and everything declared in its
+prefab (sensors and actuators) in a single call. You must create and attach 
+controllers yourself; a controller created on a bot is associated with it. You
+can further create and attach sensors and actuators in the scene or on links
+after creating the bot.
+
+<Tabs groupId="language">
+<TabItem value="python" label="Python">
+
+```python
+# create_bot also builds the bot's prefab-declared sensors and actuators.
+# Attach a controller; it is associated with this bot:
+osc = bot.create_controller("BASIC_OSC_PD", "arm_osc")
+
+# Add a sensor to a named link at runtime; it is owned and destroyed with the bot,
+# like the prefab-declared ones.
+wrist_cam = bot.create_sensor("SENSOR_CAMERA", "link8", "wrist_cam")
+
+# Create a scene-level camera on the context with no link actor, so it has no owning
+# bot; the context owns it. "scene_cam" is its instance name (what finders match);
+# CameraSensorParams.name below is a separate params field.
+camera_handle = bots_context.create_sensor("SENSOR_CAMERA", None, "scene_cam")
+camera = bots_context.get_sensor(camera_handle)  # resolves to a CameraSensor
+camera.set_params(robotics.CameraSensorParams(
+    name="scene_cam",
+    image_width=1280,
+    image_height=720,
+    fov_vertical_deg=60.0,
+    look_at=(0.0, 0.0, 0.0),  # world-space target (fixed cameras only)
+))
+
+# Destroying the bot frees it, its associated components, and its actor. The scene
+# camera is independent, so free it yourself (or leave it to context teardown):
+robotics.destroy_bot(scene, bot)
+bots_context.destroy_sensor(camera_handle)
+```
+
+</TabItem>
+<TabItem value="cpp" label="C++">
+
+```cpp
+#include <superdex_robotics/sensors/camera_sensor.h>  // CameraSensor, CameraSensorParams
+
+// create_bot also builds the bot's prefab-declared sensors and actuators.
+// Attach a controller; it is associated with this bot:
+ControllerBase* osc = bot->CreateController("BASIC_OSC_PD", "arm_osc", error);
+
+// Add a sensor to a named link at runtime; it is owned and destroyed with the bot,
+// like the prefab-declared ones.
+SensorBase* wristCam = bot->CreateSensor("SENSOR_CAMERA", "link8", "wrist_cam", "", error);
+
+// Create a scene-level camera on the context with no link actor, so it has no owning
+// bot; the context owns it. "scene_cam" is its instance name (what finders match);
+// CameraSensorParams::name below is a separate params field.
+SensorHandle cameraHandle = botsContext->CreateSensor(
+    "SENSOR_CAMERA", /*linkActor*/ nullptr, "scene_cam", /*paramArgs*/ "", error);
+auto* camera = static_cast<CameraSensor*>(botsContext->GetSensor(cameraHandle));
+
+CameraSensorParams params;
+params.name = "scene_cam";
+params.imageWidth = 1280;
+params.imageHeight = 720;
+params.fovVerticalDeg = 60.0_r;
+params.lookAt = {0.0_r, 0.0_r, 0.0_r};  // world-space target (fixed cameras only)
+camera->SetParams(params, error);
+
+// Destroying the bot frees it, its associated components, and its actor. The scene
+// camera is independent, so free it yourself (or leave it to context teardown):
+DestroyBot(scene, bot);
+botsContext->DestroySensor(cameraHandle);
+```
+
+</TabItem>
+</Tabs>
+
+:::note Scene files
+We plan to release a combined scene file that can host bots,
+<ProjectSuperdexLink site="studio" path="docs/prefab_editor/#what-is-a-prefab">prefabs</ProjectSuperdexLink>,
+controllers and more to load in a single call.
+:::
+
+You rarely destroy controllers or sensors individually — destroying the bot, or
+the whole context, cascades to everything it owns. Reach for the individual
+`destroy_*` calls only when a component's lifetime is genuinely shorter than its
+bot's.
+
+The order only matters if you are reasoning about teardown: destroying a bot
+frees its associated controllers and actuators, then its sensors, then its
+underlying actor; destroying the context frees any remaining bots (each the same
+way) and finally any standalone components.
+
+### Relationship to the physics scene
+
+Two owners are involved, with independent lifetimes: the physics `Scene` owns
+the bot's articulated **actor**, while the `RoboticsContext` owns the
+**bot and its components**. A component resolves its actor on demand, so
+destroying the scene (or the actor) first does not dangle — the bot handle stays
+valid while `get_articulated_actor()` and `get_scene()` return `None`, and
+teardown still completes.
+
+:::tip Recommended teardown order
+In C++, destroy the `RoboticsContext` before its `Scene` (bots, then the
+context, then the scene). The independence above makes the reverse safe, but
+prefer this order. Python does this for you — the bots context is torn down
+automatically just before the physics context, whatever order you shut things
+down in.
+:::
+
+## Handles and finding components
+
+The context refers to each object it owns by a **handle**: an opaque value (an
+integer) that names the object without being a pointer to it. Use a handle to
+reach an object you do not already hold a reference to — for example, a bot's
+auto-created sensors:
+
+<Tabs groupId="language">
+<TabItem value="python" label="Python">
+
+```python
+# A bot's sensors are referenced by handle; resolve each to the live object.
+for sensor_handle in bot.get_sensor_handles():
+    sensor = bot.get_sensor(sensor_handle)
+    link_name = bot.get_sensor_link_name(sensor_handle)
+    # ... use `sensor`; it is attached to link `link_name` ...
+```
+
+</TabItem>
+<TabItem value="cpp" label="C++">
+
+```cpp
+// A bot's sensors are referenced by handle; resolve each to the live object.
+superdex::Error error;
+for (SensorHandle sensorHandle : bot->GetSensorHandles()) {
+  SensorBase* sensor = bot->GetSensor(sensorHandle, error);
+  char const* linkName = bot->GetSensorLinkName(sensorHandle, error);
+  // ... use `sensor`; it is attached to link `linkName` ...
+}
+```
+
+</TabItem>
+</Tabs>
+
+Handles are typed: a base `RoboticsHandle` plus a distinct `BotHandle`,
+`ControllerHandle`, `SensorHandle`, and `ActuatorHandle`. In C++ each accessor
+takes only its own handle type, so passing a controller handle to `GetSensor()`
+is a compile error.
+
+Handles are safe to hold for two reasons:
+
+- **Handle values are never reused.** Each object gets a fresh, globally unique
+  value.
+- **A destroyed object's handle stops resolving.** After destruction,
+  `is_valid_controller()` / `is_valid_sensor()` / `is_valid_actuator()` /
+  `is_valid_bot()` return `false` and the getters return `None`. Since values
+  are never reused, a stale handle never points at a different object, so there
+  is no use-after-free.
+
+:::tip Handles vs. objects
+Keep the object pointer returned by `bot.create_controller(...)` for as long as
+you need it and can guarentee its lifetime. Handles matter for objects created
+on your behalf or for safely referencing objects whose lifetimes your code may
+not have control over. Handles are also used for resolving our find operations
+to ensure they are safe to call regardless of timing (see
+[Finding components](#finding-components) below).
+:::
+
+### Finding components
+
+A bot can carry several components, and names are not unique, so components are
+looked up with a set of **find** functions that return every match (empty if
+none). Each returns a list of handles; resolve each with the matching getter.
+
+Component lookups are by type or by name at two scopes, or unfiltered for a
+single bot; bots have two lookups of their own:
+
+| Lookup | By | Scope |
+|--------|-----|-------|
+| `find_bots_by_name` | instance name | `RoboticsContext` |
+| `get_bot_containing_actor` | an `Actor` (articulation or link) | `RoboticsContext` |
+| `find_controllers_by_type` / `find_controllers_by_name` | registered type, or instance name | `Bot` (that bot), `RoboticsContext` (everything it owns) |
+| `find_sensors_by_type` / `find_sensors_by_name` | registered type, or instance name | `Bot` (that bot), `RoboticsContext` (everything it owns) |
+| `find_actuators_by_type` / `find_actuators_by_name` | registered type, or instance name | `Bot` (that bot), `RoboticsContext` (everything it owns) |
+| `get_controller_handles` / `get_sensor_handles` / `get_actuator_handles` | nothing — every one the bot owns | `Bot` |
+
+Call the finder on the object whose scope you want: `bot.find_*` searches that
+bot, `ctx.find_*` searches the whole context. In C++ the `RoboticsContext`
+finders additionally take an optional `Bot const* scope` argument, which is the
+same thing as calling the bot-scoped form.
+
+The `get_*_handles` accessors are the unfiltered form of the same lookup — the
+bot-scoped finders with nothing to match against — so they answer for exactly
+the set the bot owns, whichever way each component was created. Every lookup on
+this page returns its handles in creation order.
+
+Find on a bot, then resolve the handles through the context:
+
+<Tabs groupId="language">
+<TabItem value="python" label="Python">
+
+```python
+# Every BASIC_OSC_PD controller on this bot, resolved to live objects.
+for handle in bot.find_controllers_by_type("BASIC_OSC_PD"):
+    controller = bots_context.get_controller(handle)
+    # ... use controller ...
+
+# The same lookup across every bot in the context, not just this one.
+for handle in bots_context.find_controllers_by_type("BASIC_OSC_PD"):
+    ...
+
+# Which bot does this actor belong to? Accepts an articulation or a link actor,
+# and returns None if the actor belongs to no bot.
+owner = bots_context.get_bot_containing_actor(actor)
+```
+
+</TabItem>
+<TabItem value="cpp" label="C++">
+
+```cpp
+// Every BASIC_OSC_PD controller on this bot, resolved to live objects.
+for (ControllerHandle handle : bot->FindControllersByType("BASIC_OSC_PD")) {
+  ControllerBase* controller = botsContext->GetController(handle);
+  // ... use controller ...
+}
+
+// The same lookup across every bot in the context, not just this one.
+for (ControllerHandle handle : botsContext->FindControllersByType("BASIC_OSC_PD")) {
+  // ...
+}
+
+// Which bot does this actor belong to? Accepts an articulation or a link actor,
+// and returns nullptr if the actor belongs to no bot.
+Bot* owner = botsContext->GetBotContainingActor(actor);
+```
+
+</TabItem>
+</Tabs>
+
+## See Also
+
+- [Bots](./bots.mdx) — the `BotPrefab` schema and the runtime `Bot`.
+- [Controllers, Sensors & Actuators](./bot_components.mdx) — create, drive and
+  write the three component kinds.
+- [Bot Assets](./bot_assets.md) — the `.superdex_bot` assets we ship.

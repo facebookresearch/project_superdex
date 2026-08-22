@@ -1,0 +1,125 @@
+---
+title: SuperDex Lab
+description: The research and experimentation hub for SuperDex — RL environments, training, and benchmarking.
+hide_table_of_contents: true
+---
+
+import useBaseUrl from '@docusaurus/useBaseUrl';
+import React, {useState} from 'react';
+import styles from './index.module.css';
+import ViewportVideo from '@site/src/components/ViewportVideo';
+
+export const timedOverlayLabels = [
+  {label: 'Sim · Checkpoint 1', startsAtSeconds: 0},
+  {label: 'Sim · Checkpoint 2', startsAtSeconds: 1.710042},
+  {label: 'Sim · Checkpoint 3', startsAtSeconds: 4.004},
+  {label: 'Sim · Checkpoint 4', startsAtSeconds: 5.714042},
+  {label: 'Sim · Checkpoint 5', startsAtSeconds: 7.632625},
+  {label: 'Sim · Checkpoint 6', startsAtSeconds: 9.926583},
+  {label: 'Sim · Checkpoint 7', startsAtSeconds: 11.678333},
+  {label: 'Sim · Checkpoint 8', startsAtSeconds: 13.179833},
+  {label: 'Real', startsAtSeconds: 18.935583},
+];
+
+export function SimToRealMedia() {
+  const [activeLabelIndex, setActiveLabelIndex] = useState(0);
+
+  const updateLabel = currentTime => {
+    let nextIndex = 0;
+    for (let index = 1; index < timedOverlayLabels.length; index++) {
+      if (currentTime < timedOverlayLabels[index].startsAtSeconds) {
+        break;
+      }
+      nextIndex = index;
+    }
+    setActiveLabelIndex(currentIndex =>
+      currentIndex === nextIndex ? currentIndex : nextIndex,
+    );
+  };
+
+  return (
+    <figure className={styles.mediaFigure}>
+      <div className={styles.mediaCard}>
+        <span className={styles.videoBadge} aria-hidden="true">
+          <span className={styles.videoBadgeDot} />
+          Zero-Shot Sim2Real
+        </span>
+        <ViewportVideo
+          ariaLabel="Zero-shot Sim2Real transfer of a shape-sorting policy trained in simulation to a real-world robotic hand. The video shows 8 simulated checkpoints during training, followed by the real-world lab deployment."
+          src={useBaseUrl('/img/main/sim_to_real_shape_sorting.mp4')}
+          poster={useBaseUrl('/img/main/sim_to_real_shape_sorting.webp')}
+          onPlaybackTime={updateLabel}
+        />
+        <span className={styles.timedVideoBadge} aria-hidden="true">
+          {timedOverlayLabels[activeLabelIndex].label}
+        </span>
+      </div>
+      <figcaption className={styles.mediaCaption}>
+        A shape-sorting manipulation policy trained in simulation with SuperDex
+        Gym and deployed directly on a real-world robotic hand.
+      </figcaption>
+    </figure>
+  );
+}
+
+{
+  <>
+    <section className={styles.layer}>
+      <div className={styles.layerInner}>
+        <div className={styles.layerHeader}>
+          <div className={styles.layerHeadingCol}>
+            <p className="sdx-eyebrow">The research layer of SuperDex</p>
+            <div className={styles.layerTitleRow}>
+              <h1 className={`sdx-display ${styles.layerHeading}`}>
+                Welcome to SuperDex Lab.
+              </h1>
+              <span className={`sdx-tag ${styles.previewTag}`}>
+                Early Preview
+              </span>
+            </div>
+          </div>
+          <div className={styles.layerIntroCol}>
+            <p className="sdx-body">
+              SuperDex Lab connects simulation and policy development through a
+              Gymnasium-style API for reinforcement learning. It is currently in
+              early preview and will receive substantial improvements. A general
+              abstraction for partially observable Markov decision processes will
+              underpin applications in reinforcement learning, system identification,
+              and model predictive control.
+            </p>
+          </div>
+        </div>
+
+        <hr className={`sdx-divider-line ${styles.layerDivider}`} />
+
+        <div className={styles.layerBody}>
+          <div className={styles.media}>
+            <SimToRealMedia />
+          </div>
+
+          <div className={styles.features}>
+            <div className={styles.feature}>
+              <h3>SuperDex Gym</h3>
+              <p>
+                A Gymnasium-compatible reinforcement-learning framework built on the
+                SuperDex Physics engine. Train agent controllers in high-fidelity
+                simulation with a suite of classic-control and locomotion
+                environments.
+              </p>
+            </div>
+            <div className={styles.feature}>
+              <h3>RLlib Training</h3>
+              <p>
+                An off-the-shelf Ray/RLlib integration for RL training straight from
+                the Gym environments.
+              </p>
+            </div>
+            <a href={useBaseUrl('/docs/overview/')} className={styles.layerLink}>
+              Get started with SuperDex Lab →
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </>
+}

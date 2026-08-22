@@ -1,0 +1,99 @@
+name: Deploy Project SuperDex Pages preview
+
+on:
+  push:
+    branches:
+      - website
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  SUPERDEX_PUBLIC_BUILD: "1"
+  SUPERDEX_PUBLIC_ORIGIN: https://projectsuperdex.com
+  SUPERDEX_PUBLIC_BASE_URL: /
+  VITE_PUBLIC_BUILD: "1"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the website branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'website' || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.15.0
+
+      - name: Enable Yarn 1
+        run: |
+          corepack enable
+          corepack prepare yarn@1.22.22 --activate
+
+      - name: Install dependencies
+        run: |
+          yarn --cwd superdex install --frozen-lockfile --non-interactive
+          yarn --cwd physics install --frozen-lockfile --non-interactive
+          yarn --cwd robotics install --frozen-lockfile --non-interactive
+          yarn --cwd lab install --frozen-lockfile --non-interactive
+          yarn --cwd studio install --frozen-lockfile --non-interactive
+
+      - name: Build all sites
+        run: |
+          yarn --cwd superdex run check
+          yarn --cwd superdex build
+          yarn --cwd physics build
+          yarn --cwd robotics build
+          yarn --cwd lab build
+          yarn --cwd studio build
+
+      - name: Assemble the Pages artifact
+        run: |
+          mkdir -p _site
+          cp -a superdex/dist/public/. _site/
+          for route in roadmap get-started credits; do
+            mkdir -p "_site/${route}"
+            cp _site/index.html "_site/${route}/index.html"
+          done
+          for site in physics robotics lab studio; do
+            mkdir -p "_site/${site}"
+            cp -a "${site}/build/." "_site/${site}/"
+          done
+          touch _site/.nojekyll
+          test -f _site/index.html
+          test -f _site/roadmap/index.html
+          test -f _site/get-started/index.html
+          test -f _site/credits/index.html
+          test -f _site/physics/index.html
+          test -f _site/robotics/index.html
+          test -f _site/lab/index.html
+          test -f _site/studio/index.html
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

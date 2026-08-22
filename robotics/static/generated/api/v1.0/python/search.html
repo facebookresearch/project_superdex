@@ -1,0 +1,180 @@
+<!-- @generated -->
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Search &mdash; SuperDex Robotics Python API  documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <script src="_static/searchtools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="#" />
+ 
+<!-- Theme synchronization with parent Docusaurus site -->
+<script type="text/javascript">
+    // jQuery shim — Sphinx 7.x removed jQuery but RTD theme search.html
+    // still uses jQuery(fn) for DOM-ready initialization.
+    if (typeof jQuery === 'undefined') {
+        window.jQuery = window.$ = function(fn) {
+            if (typeof fn === 'function') {
+                if (document.readyState !== 'loading') { fn(); }
+                else { document.addEventListener('DOMContentLoaded', fn); }
+            }
+        };
+    }
+
+    (function() {
+        var theme = localStorage.getItem('theme') || 'light';
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    })();
+
+    function setSphinxTheme(theme) {
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+    }
+
+    window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'setTheme') {
+            setSphinxTheme(event.data.theme);
+        }
+    });
+
+    window.addEventListener('DOMContentLoaded', function() {
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'getTheme' }, '*');
+        }
+    });
+</script>
+<!-- Shared SuperDex Physics theme (single source of truth:
+     website/static/api-embed.css). Baked in as a render-blocking stylesheet so
+     the page's FIRST paint is already themed — in lockstep with the pre-paint
+     data-theme script above — with no flash of the stock Sphinx/RTD theme and no
+     need for the embedding iframe to hide/reveal. pathto(..., 1) resolves the
+     path from this page up to the staticdocs site root where api-embed.css lives. -->
+<link rel="stylesheet" type="text/css" href="../../../../api-embed.css"/>
+<style>
+    /* Sidebar font size — larger for readability. All light/dark theming is
+       owned by static/api-embed.css (single source of truth), baked in above as
+       a render-blocking <link>; no theme colors are set here, so the embedded
+       Python API reference matches the site background in both light and dark. */
+    .wy-menu-vertical a,
+    .wy-menu-vertical li,
+    .wy-menu-vertical code,
+    .wy-menu-vertical code.docutils,
+    .wy-menu-vertical .pre,
+    .wy-menu-vertical span.pre,
+    .wy-menu-vertical li span.toctree-expand,
+    .wy-side-nav-search input[type="text"] {
+        font-size: 14px !important;
+    }
+</style>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> SuperDex Robotics Python API
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="#" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/superdex.robotics.html">superdex.robotics</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">SuperDex Robotics Python API</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Search</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <noscript>
+  <div id="fallback" class="admonition warning">
+    <p class="last">
+      Please activate JavaScript to enable the search functionality.
+    </p>
+  </div>
+  </noscript>
+
+  
+  <div id="search-results">
+  
+  </div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Meta Platforms, Inc.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+  <script>
+    jQuery(function() { Search.loadIndex("searchindex.js"); });
+  </script>
+  
+  <script id="searchindexloader"></script>
+   
+
+
+</body>
+</html>

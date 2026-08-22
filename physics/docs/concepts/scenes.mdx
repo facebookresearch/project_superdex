@@ -1,0 +1,176 @@
+---
+sidebar_position: 2
+title: Scenes
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Scenes
+
+A [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) is an independent simulation container owned by a [`Context`](./context.mdx). It owns its actors, constraints, callbacks, captured states, and evolving simulation state. Actors in different scenes do not interact.
+
+## Creating and Destroying Scenes
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+#include <superdex_physics.h>
+
+int main() {
+  superdex::Context* context = superdex::CreateContext();
+  superdex::Scene* scene = context->CreateScene("training environment");
+
+  // Create actors and constraints, then step the scene.
+
+  context->DestroyScene(scene);
+  superdex::DestroyContext(context);
+}
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+import superdex.physics as physics
+
+physics.initialize(num_worker_threads=-1)
+try:
+    scene = physics.create_scene("training environment")
+
+    # Create actors and constraints, then step the scene.
+
+    physics.destroy_scene(scene)
+finally:
+    physics.shutdown()
+```
+
+</TabItem>
+</Tabs>
+
+Destroying a [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) immediately destroys everything it owns. Do not use pointers or handles to the [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html), its actors, or its constraints afterward. Explicit destruction is useful when reclaiming one [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) while keeping the [`Context`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) alive; otherwise [`Context`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) shutdown automatically cleans up remaining scenes.
+
+A [`Context`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) can own multiple scenes. This is useful for independent environments or disconnected systems because actors in separate scenes cannot affect one another.
+
+## Concurrency
+
+A [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) and its actors and constraints may be accessed by only one thread at a time. This is an exclusion rule, not permanent thread affinity: different threads may access the [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) at different times when the application orders and synchronizes those accesses. Ordinary [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) operations do not provide that synchronization.
+
+Different scenes can be stepped concurrently, provided each scene is accessed by only one thread at a time. In C++, bind each non-creator calling thread as described in [`Context`](./context.mdx#worker-configuration). For C++ applications that need a scene to advance independently, [`AsyncScene`](#asyncscene) provides queued access to its wrapped [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html).
+
+## Scene Responsibilities
+
+A [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) owns and coordinates:
+
+- [Actor](./actors/overview.mdx) and [Constraint](./constraints.mdx) lifetimes.
+- Gravity, [Contact](./contact.md) behavior, and [Solver](./solvers.md) parameters.
+- Simulation state advancement and registered [Query](./queries.mdx) updates.
+- Aggregate solver and performance diagnostics.
+- Dynamic [State](./state_capture.mdx) capture and restoration.
+
+## Gravity
+
+SuperDex Physics uses Y-up coordinates by default. New scenes default to
+world-space gravity `(0, -9.8, 0)` [m/s²], along -Y. Use
+[`SetGravity()`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html)
+in C++ or
+[`set_gravity()`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.set_gravity)
+in Python to match your application's coordinate convention.
+
+:::note SuperDex Robotics and Studio
+SuperDex Robotics uses Z-up coordinates. Its examples and SuperDex
+Studio's default configuration set gravity along -Z. Set gravity explicitly
+when creating SuperDex Physics scenes for use with Robotics.
+:::
+
+## Stepping
+
+Call [`Step(timeStepSec)`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) in C++ or [`scene.step(time_step_sec)`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.step) in Python to run one synchronous step. The public sequence is:
+
+1. Pre-step callbacks run.
+2. Physics state advances and registered queries update.
+3. Post-step callbacks run.
+
+A time step may vary between calls. [`Step(0)`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) still runs both callback phases and refreshes registered queries, but it does not advance simulation state or total simulation time.
+
+Use the following accessors after stepping:
+
+| Method | Result |
+|---|---|
+| [`GetLastTimeStep()`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) / [`get_last_time_step()`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.get_last_time_step) | Size of the most recent positive step. A zero step leaves it unchanged. |
+| [`GetTotalSimulationTime()`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) / [`get_total_simulation_time()`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.get_total_simulation_time) | Accumulated simulation time, which may differ from elapsed wall time. |
+| [`GetSolverStats()`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) / [`get_solver_stats()`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.get_solver_stats) | Aggregate convergence data from the last step. A zero step clears it. |
+| [`GetPerformanceStats()`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) / [`get_performance_stats()`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.get_performance_stats) | Timing and profiling data from the last step. |
+
+[`GetLastTimeStep()`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) is unspecified until a newly created [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) has completed its first positive step.
+
+### Callbacks
+
+Pre-step and post-step callbacks run sequentially on the thread that calls [`Step`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html). Lower numeric priorities run first; callbacks with equal priority have no specified relative order.
+
+Callbacks may safely read or update [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) and actor state during their phase, but they must not change [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) structure by adding or removing actors or constraints. If a callback accesses state shared with other threads, the application must provide synchronization.
+
+## Simulation Islands
+
+A simulation island is a dynamic set of actors whose states may be coupled during a step and therefore must be solved together. Constraints and possible two-way interactions can couple actors; as those interactions change, islands may merge or split.
+
+Independent islands limit the size of each numerical system and may be solved concurrently. A large coupled island increases solve cost and leaves less independent work to run in parallel. The [Solvers](./solvers.md) page explains why limiting system size matters for methods whose cost grows faster than the number of unknowns.
+
+[`SetForceSingleIsland(true)`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) / [`set_force_single_island(True)`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.set_force_single_island) forces all actors into one island. This is a debugging aid for investigating partitioning behavior and normally hurts performance.
+
+## AsyncScene {#asyncscene}
+
+[`AsyncScene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1AsyncScene.html) is a C++-only wrapper that owns a synchronous [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) and advances it with a long-lived task on the shared SuperDex Physics worker pool. It is useful when physics should progress independently of rendering or other application work. Access the wrapped [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) only from queued commands and step callbacks.
+
+Creating an [`AsyncScene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1AsyncScene.html) is fallible and must occur outside the worker pool while at least one worker is available and single-threaded mode is disabled. Starting paused makes initial construction deterministic: queued commands continue to execute, but stepping does not begin until requested.
+
+```cpp
+#include <superdex_physics.h>
+
+int main() {
+  superdex::Context* context = superdex::CreateContext(2);
+
+  superdex::Error createError;
+  superdex::AsyncScene* asyncScene =
+      context->CreateAsyncScenePaused("interactive scene", createError);
+  if (asyncScene == nullptr) {
+    superdex::DestroyContext(context);
+    return 1;
+  }
+
+  asyncScene->QueueCommand([](superdex::Scene*) {
+    // Create or modify scene-owned objects here.
+  });
+  asyncScene->WaitForQueuedCommands();
+
+  asyncScene->Pause(false);
+  // The application runs while the scene steps on the worker pool.
+
+  // Destroy from outside this AsyncScene's commands and callbacks.
+  context->DestroyAsyncScene(asyncScene);
+  superdex::DestroyContext(context);
+}
+```
+
+Starting paused lets the example queue initialization before any steps run. [`WaitForQueuedCommands()`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1AsyncScene.html) ensures that initialization finishes before the scene is unpaused. Applications should propagate or report `createError` when creation fails.
+
+### Safe Access
+
+Use [`QueueCommand`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1AsyncScene.html) for work that needs a `Scene*`, and [`QueueActorCommand`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1AsyncScene.html) for work on an actor identified by [`ActorHandle`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ActorHandle.html). Outside commands and callbacks, retain handles rather than raw actor pointers. An actor command is skipped if its handle no longer resolves when the command is processed.
+
+[`WaitForQueuedCommands()`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1AsyncScene.html) blocks an outside caller until commands queued before it have executed. It is illegal to call from the simulation task, and it is a command fence rather than a general step-completion primitive.
+
+Async pre-step and post-step callbacks are the other safe places to access the wrapped [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) during stepping. They run sequentially on the simulation task and follow the same priority, shared-state synchronization, and no-structural-change rules as synchronous [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) callbacks.
+
+### Time Stepping and Pausing
+
+[`AsyncStepParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1AsyncStepParams.html) selects a time step in this order:
+
+1. A custom time-step callback takes precedence when it returns a non-negative value.
+2. Otherwise, fixed mode uses [`fixedTimeStepSeconds`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1AsyncStepParams.html).
+3. Otherwise, dynamic mode uses elapsed wall time clamped to its configured bounds.
+
+[`Pause(true)`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1AsyncScene.html) requests that automatic stepping stop; queued commands still execute while paused. It is not a barrier proving that an already-running step has completed. [`RequestStepThenPause()`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1AsyncScene.html) requests one step followed by a pause. That step uses a non-negative custom callback result when available and otherwise uses [`fixedTimeStepSeconds`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1AsyncStepParams.html), even if dynamic mode is configured.
+
+For actor data that must be computed on demand, [`AsyncScene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1AsyncScene.html) provides thread-safe query registration helpers. See [Queries](./queries.mdx) for query lifetimes and update behavior.

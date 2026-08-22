@@ -1,0 +1,135 @@
+---
+title: Shell
+sidebar_position: 6
+---
+
+# Shell Actors
+
+:::caution Experimental API
+Shell actors are part of the **experimental** API (`mochi_physics_experimental.h`). The API may change without notice in future releases.
+:::
+
+Shell actors represent **thin-shell surface elements** for simulating membranes, fabrics, and other sheet-like deformable structures. Unlike [soft (FEM) actors](./soft/overview.mdx), which use volumetric tetrahedral meshes, shell actors operate on **surface triangle meshes** and model both in-plane stretching and out-of-plane bending.
+
+## Formulation
+
+### Continuous Model
+
+Shell actors approximate the Kirchhoff–Love thin shell model, which is posed on a parametric surface $\Gamma_\mathbf{X}$ parameterized by the mapping $\mathbf{X}(\bm{\xi})$ from coordinates $\bm{\xi}\in\mathbb{R}^2$ to position $\mathbf{X}\in\mathbb{R}^3$.  The surface $\Gamma_\mathbf{X}$ defines the undeformed reference configuration, while the deformed position of $\mathbf{X}(\bm{\xi})$ is given by $\mathbf{x}(\bm{\xi})$.  This can be expressed in terms of a displacement field $\mathbf{u} = \mathbf{x} - \mathbf{X}$, which is treated as the unknown solution.
+
+Kinetic energy is
+$$
+T = \frac{1}{2}\int_{\Gamma_\mathbf{X}} \rho_{A0}\Vert\dot{\mathbf{u}}\Vert_2^2\,d\mathbf{X}~.
+$$
+Elastic potential energy $U$ is given in terms of a density $W$ per unit reference area,
+$$
+U = \int_{\Gamma_\mathbf{X}} W\,d\mathbf{X}~.
+$$
+The energy density $W$ is the sum of two terms:
+$$
+W = W_{\text{membrane}}(\bm{\varepsilon}) + W_{\text{bend}}(\bm{\kappa})~,
+$$
+where $W_{\text{membrane}}$ is the membrane energy, depending on the membrane Green–Lagrange strain $\bm{\varepsilon}$, and $W_{\text{bend}}$ is the bending energy, depending on a curvature strain $\bm{\kappa}$.  Expressed with respect to the standard curvilinear basis $\left\{\mathbf{E}_\alpha = \frac{\partial\mathbf{X}}{\partial\xi^\alpha}\right\}_{\alpha=0,1}$ of the reference configuration, these strains are
+$$
+\varepsilon_{\alpha\beta} = \frac{1}{2}(a_{\alpha\beta} - A_{\alpha\beta})~,\qquad\kappa_{\alpha\beta} = B_{\alpha\beta} - b_{\alpha\beta}~,
+$$
+where $\mathbf{A}$ and $\mathbf{B}$ are the metric tensor and second fundamental form of $\Gamma_\mathbf{X}$ and $\mathbf{a}$ and $\mathbf{b}$ are the corresponding tensors on the deformed surface, pulled back to $\Gamma_\mathbf{X}$.  We follow the Einstein summation convention, with tensor indices $\alpha,\beta\in\{0, 1\}$.
+
+Both energy terms are isotropic St. Venant–Kirchhoff materials, with energies given by
+$$
+W_{\text{membrane}} = \frac{\lambda}{2}(\text{tr}\,\bm{\varepsilon})^2 + \mu\,\text{tr}(\bm{\varepsilon}^2)~,\qquad W_{\text{bend}} = \frac{1}{2}\left(\alpha(\text{tr}\,\bm{\kappa})^2 + \beta\,\text{tr}(\bm{\kappa}^2)\right)~,
+$$
+where $\lambda$ and $\mu$ are 2D Lamé parameters, $\alpha$ and $\beta$ are bending stiffness coefficients, and the trace operator is defined as $\text{tr}\,\bm{\tau} = {\tau^\alpha}_\alpha = A^{\alpha\beta}\tau_{\beta\alpha}$ for a tensor $\bm{\tau}$.
+
+Mass and stiffness dissipation are given by the dissipation potential
+$$
+R = \int_{\Gamma_\mathbf{X}} \left(\alpha_R\frac{1}{2}(\rho_{A0}\Vert\dot{\mathbf{u}}\Vert_2^2) + \beta_R\left(W_\text{membrane}(\dot{\bm{\varepsilon}}) + W_\text{bend}(\dot{\bm{\kappa}})\right)\right)\,d\mathbf{X}~,
+$$
+where $\alpha_R$ and $\beta_R$ are mass and stiffness dissipation coefficients. This potential is the natural shell generalization of the [soft-actor dissipation model](./soft/overview.mdx#continuous-model).
+
+### Parameter Selection
+
+The material parameters $\lambda$, $\mu$, $\alpha$, and $\beta$ can represent any isotropic membrane and bending responses.  However, they are not directly available in material handbooks.  In the special case of a shell that is made of homogeneous isotropic material with Young's modulus $E$, Poisson's ratio $\nu$, and mass density per unit reference volume $\rho_0$, we can calculate the shell material properties assuming a thickness $h$:
+$$
+\lambda = \frac{hE\nu}{1 - \nu^2}~,
+\qquad
+\mu = \frac{hE}{2(1 + \nu)}~,
+\qquad
+\alpha = \frac{h^3E\nu}{12(1 - \nu^2)}~,
+\qquad
+\beta = \frac{h^3E(1 - \nu)}{12(1 - \nu^2)}~,
+\qquad
+\rho_{A0} = h\rho_0~.
+$$
+The utility function `ShellMaterialParamsFrom3dIsotropic` is provided to apply these formulas.  Even for materials where these assumptions do not apply (e.g., textiles consisting of woven threads), this can provide a reasonable starting point for relative orders of magnitude of membrane and bending terms.  The stiffness-damping coefficient $\beta_R$ can be taken directly from a 3D material, while the mass-damping coefficient $\alpha_R$ can be tuned empirically as a crude approximation of air resistance effects.
+
+### Discretization
+
+The reference configuration $\Gamma_\mathbf{X}$ is discretized as a **surface triangle mesh**. The degrees of freedom are the displacements of each mesh vertex (node), giving $3N$ total DoFs for $N$ nodes.  Concepts from discrete differential geometry are then used to define discrete counterparts of the kinematic quantities needed by the continuous model.
+
+Displacement is interpolated with linear finite element shape functions within each triangle.
+This results in a constant value for $\bm{\varepsilon}$ over each triangle, making the discrete evaluation of $W_\text{membrane}$ straightforward.
+The discretization of $W_\text{bend}$ is more complex, and depends on approximating the second fundamental form of a triangulated surface.  We use a similar discrete approximation as that of [Chen et al. (2021)](#references), Appendix A, which estimates the second fundamental form on each triangle from a four-triangle stencil including its three edge-neighbors.
+This involves first computing a mid-edge normal vector $\mathbf{n}_i$ for the edge opposite each vertex $\mathbf{x}_i$ of the triangle, then approximating the partial derivatives of the normal vector with respect to parametric coordinates using finite differences between midpoints of edges:
+$$
+b_{\alpha\beta} = -\mathbf{e}_\alpha\cdot\frac{\partial\mathbf{n}}{\partial\xi^\beta} \quad\rightarrow\quad\lbrack\mathbf{b}\rbrack \approx 2
+\begin{bmatrix}
+(\mathbf{n}_1 - \mathbf{n}_0) \cdot \mathbf{e}_0 &
+-\mathbf{n}_0 \cdot \mathbf{e}_1 \\
+-\mathbf{n}_0 \cdot \mathbf{e}_1 &
+(\mathbf{n}_2 - \mathbf{n}_0) \cdot \mathbf{e}_1
+\end{bmatrix}~,
+$$
+where $\mathbf{e}_0 = \mathbf{x}_1 - \mathbf{x}_0$ and $\mathbf{e}_1 = \mathbf{x}_2 - \mathbf{x}_0$ are the curvilinear basis vectors of the triangle's local parameterization and formulas for off-diagonal entries have been simplified using orthogonality of normals with their corresponding edges and the symmetry $b_{\alpha\beta} = b_{\beta\alpha}$.
+Unlike Chen et al., the mid-edge normals $\{\mathbf{n}_i\}$ are computed via Kelvin inversion (not normalization) of the midpoints between normal vectors of each edge's two adjacent triangles, $A_i$ and $B_i$:
+$$
+\mathbf{n}_i = \frac{\frac{1}{2}(\mathbf{n}_{A_i} + \mathbf{n}_{B_i})}{\left\Vert \frac{1}{2}(\mathbf{n}_{A_i} + \mathbf{n}_{B_i})\right\Vert_2^2}~.
+$$
+This is consistent with normalization in the limit of fine discretization of smooth surfaces, but causes the discrete curvature to diverge if the angle between two adjacent normals approaches 180 degrees.
+It can be seen as a generalization of the diverging $\tan$-based edge energy recommended by [Tamstorf and Grinspun (2013)](#references), and makes the formulation more robust against adjacent triangles folding through each other.
+If an edge is at a boundary of the mesh, the missing face normal is set to the normal of the adjacent face.
+
+## Parameters Reference
+
+### `ShellActorParams`
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `DynamicString` | `""` | Actor name for identification |
+| `layer` | `DynamicString` | `""` | Layer name for grouping |
+| `worldFromLocal` | [`TransformRT`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1TransformRT.html) | Identity | Initial world-space transform |
+| `shape` | [`ShapeHandle`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ShapeHandle.html) | -- | **Required.** Must be a `TriangularMeshShape` created with [`CreateTriMeshShape`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html). |
+| `material` | `ShellMaterialParams` | See below | Material properties (membrane Lamé parameters, bending, density) |
+| `colliderType` | `ColliderType` | `PointCloud` | Must be `ColliderType::PointCloud` or `ColliderType::None`. Controls shell-to-shell contact participation. |
+| `contact` | [`ContactParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ContactParams.html) | Default | Contact properties for interactions with volume (non-shell) actors. Friction settings also apply to shell-shell contact. |
+| `pointCloudCollider` | `PointCloudColliderParams` | Default | [Point-cloud collider parameters](../contact.md#pointcloudcolliderparams). |
+| `hasGravity` | `bool` | `true` | Whether gravity affects this actor |
+| `contactElementType` | `ActorBoundaryElementType` | `Default` | Quadrature type for contact element sampling |
+
+### `ShellMaterialParams`
+
+| Parameter | Type | Default | Units | Description |
+|-----------|------|---------|-------|-------------|
+| `membraneLambda` | `real` | `300` | Pa*m | 2D Lamé first parameter (plane-stress StVK, thickness-integrated) |
+| `membraneMu` | `real` | `400` | Pa*m | 2D Lamé second parameter (plane-stress StVK, thickness-integrated) |
+| `bendingAlpha` | `real` | `0.00002` | Pa*m^3 | First bending stiffness parameter |
+| `bendingBeta` | `real` | `0.00007` | Pa*m^3 | Second bending stiffness parameter |
+| `density` | `real` | `1.0` | kg/m^2 | Mass per unit surface area |
+| `massDampingCoefficient` | `real` | `0` | 1/s | Mass-proportional damping coefficient $\alpha_R$ |
+| `stiffnessDampingCoefficient` | `real` | `0` | s | Stiffness-proportional damping coefficient $\beta_R$ |
+
+## Examples
+
+- **[T-shirt on Plane](../../examples/shell/tshirt_on_plane.md)**: loads a garment triangle mesh, derives shell material parameters from three-dimensional properties, and enables point-cloud self-contact. Python example: `examples/example_tshirt_on_plane.py`.
+- **[Slit Annular Ring Benchmark](../../examples/shell/slit_annular_ring.md)**: solves a literature benchmark for geometrically nonlinear shell behavior while demonstrating prescribed nodal boundary conditions, external nodal forces, and dynamic relaxation toward a static reference solution. Python example: `examples/example_slit_annular_ring.py`.
+
+## Related Concepts
+
+- [Soft Actors](./soft/overview.mdx) — Volumetric deformable bodies using tetrahedral FEM. Use when thickness is not negligible relative to other dimensions.
+- [Solvers](../solvers.md) — Details on the Newton solver, linear solvers, and line search methods used to integrate shell dynamics.
+- [Contact](../contact.md) — General contact model documentation, including penalty-based contact and friction.
+
+## References
+
+- Z. Chen, H.-Y. Chen, D. M. Kaufman, M. Skouras, and E. Vouga, [Fine Wrinkling on Coarsely Meshed Thin Shells](https://doi.org/10.1145/3462758), *ACM Transactions on Graphics*, 40(5), Article 190, 2021.
+- R. Tamstorf and E. Grinspun, [Discrete Bending Forces and Their Jacobians](https://doi.org/10.1016/j.gmod.2013.07.002), *Graphical Models*, 75(6), pp. 362–370, 2013.

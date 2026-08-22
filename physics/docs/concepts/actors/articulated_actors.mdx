@@ -1,0 +1,633 @@
+---
+title: Articulated
+sidebar_position: 4
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Articulated Actors
+
+Articulated actors represent multi-body systems composed of **rigid links connected by joints**. They are the primary building block for simulating robots, characters, mechanisms, and any structure where rigid parts move relative to each other through well-defined kinematic constraints.
+
+Unlike independent rigid bodies, an articulated actor has a set of **generalized joint coordinates** that determine all link poses through forward kinematics. These coordinates include joint angles and displacements, but rotational joints make their combined configuration a nonlinear manifold.
+
+## Formulation
+
+### Configuration and Kinematics {#generalized-coordinates}
+
+The overall structure of the articulation is a rooted tree, where rigid bodies called links form the vertices of the tree graph, while the edges are joints.
+There is also a root joint, connecting the root link to the articulation's root frame, defined by the actor's [`worldFromRoot`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedActorParams.html) transform.
+Different types of joints have different configurations, e.g., a revolute joint has a single scalar angle parameterizing its possible configurations, while a spherical joint's configuration is defined by a general rotation in $\mathrm{SO}(3)$.
+The complete articulated configuration $q$ is then in the product manifold $\mathcal{Q}$ of all the joint configuration spaces:
+$$
+q = (q_1, \ldots, q_n) \in \mathcal Q~,
+\qquad
+\mathcal Q = \prod_{j=1}^{n} \mathcal Q_j~,
+$$
+where $q_j\in\mathcal{Q}_j$ is the configuration of joint $j$ and $n$ is the number of tree joints.
+Generalized velocities and solver increments belong to the tangent space $T_q\mathcal Q$; the distinction is nontrivial because of the rotational configurations of spherical and free joints.
+Pose updates, differences, and state combinations use manifold-aware operations that are natural extrapolations of those described for [rigid-rotation reconstruction](./rigid_actors.mdx#solution-reconstruction).
+
+To simulate articulations with non-tree topologies, SuperDex Physics introduces compliant penalty constraints for [cycle joints](#closed-kinematic-chains), with a formulation analogous to other [constraints](../constraints.mdx#mathematical-formulation).
+As such, they become part of the energy formulation determining the equations of motion, not the kinematic description of the configuration.
+
+Forward kinematics composes the fixed [`worldFromRoot`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedActorParams.html) placement with the joint transforms along the tree, mapping $q$ to the world-space rigid transform $F_i(q)$ of each link $i$. The corresponding articulation Jacobian $J_i(q)$ maps generalized velocity $v \in T_q\mathcal Q$ to link velocity $V_i$:
+$$
+V_i = J_i(q)v~,
+\qquad
+V_i = (\dot{\mathbf c}_i,\boldsymbol{\omega}_i)~.
+$$
+Here $\dot{\mathbf c}_i$ and $\boldsymbol{\omega}_i$ are the link's world-space center-of-mass and angular velocities, respectively, using the notation defined for [rigid actors](./rigid_actors.mdx#continuous-model). The transpose $J_i(q)^T$ pulls link-space forces and residuals back to the cotangent space $T_q^*\mathcal Q$. This lets each link use the same rigid-body mechanics as an independent [rigid actor](./rigid_actors.mdx#formulation), while the articulation is solved in its generalized variables.
+
+### Dynamics
+
+Articulated actors specialize the shared [Lagrangian dynamics](../dynamics.md#system-dynamics) by composing each rigid link's mechanics with forward kinematics. If $T_i$ and $U_i$ are the rigid-body kinetic and potential energies of link $i$, the per-link contributions have the form
+
+$$
+T_{\mathrm{links}}(q,v) = \sum_i T_i\!\left(F_i(q), J_i(q)v\right)~,
+\qquad
+U_{\mathrm{links}}(q) = \sum_i U_i\!\left(F_i(q)\right)~.
+$$
+
+The discrete incremental potential for the kinetic energy uses the [rigid-actor center-of-mass and rotation discretizations](./rigid_actors.mdx#discretization) computed from each link's $\mathbf c_i(q)$ and $\mathbf R_i(q)$, so $J_i(q)$ enters only when differentiating with respect to $q$ for the residual.
+
+Aside from these link contributions, several other sources can contribute energy and dissipation to an articulation's dynamics.
+[Joint inertia](#joint-inertia) adds kinetic energy, [joint limits](#joint-limits) and cycle joints add constraint potentials, and [joint friction and damping](#joint-friction-and-damping) add dissipation.
+[Controllers](#controllers), [direct generalized loads](#actuating-without-a-controller), and [transmissions](../transmissions.mdx) contribute through the conservative potential $U$, dissipation potential $R$, or other generalized forces $Q_{\mathrm{other}}$ according to their models.
+[Soft skinned actors](./soft_skinned_actors.mdx#energy-formulations) strongly couple an articulation to a soft body through skinning.
+[Contact](../contact.md#formulation) and external [constraints](../constraints.mdx#mathematical-formulation) may couple the articulation to other actors, so their energies and residuals depend on the coupled system state rather than on $q$ alone. SuperDex Physics assembles all contributions and advances the coupled system with the implicit stages described in [Dynamics](../dynamics.md#implicit-stage-problem).
+
+## Joint Types
+
+SuperDex Physics supports six joint types:
+
+| Joint Type | Enum Value | DoFs | Description |
+|------------|------------|------|-------------|
+| **Free** | `Free` | 6 | Unrestricted motion (3 translational + 3 rotational). Typically used for the root link of a floating-base system. |
+| **Spherical** | `Spherical` | 3 | Three rotational degrees of freedom (ball-and-socket joint). Rotation is parameterized as a rotation vector. |
+| **Revolute** | `Revolute` | 1 | Single rotational degree of freedom around a specified axis (hinge joint). |
+| **Prismatic** | `Prismatic` | 1 | Single translational degree of freedom along a specified axis (slider joint). |
+| **Hard** | `Hard` | 0 | Rigidly fuses the child link to its parent. No relative motion. Useful for fixing the root to the world or combining geometry. |
+| **Cycle** | `Cycle` | -- | Creates a closed kinematic loop by connecting two links that are not in a direct parent-child relationship. Enforced as a soft spherical constraint. Declared via `cycles`, not `joints`. |
+
+:::note
+For joint types with an axis (Revolute and Prismatic), the `axis` field ([C++](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointParams.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.ArticulatedJointParams.axis)) specifies the axis in the joint's local frame. It is ignored for other joint types.
+:::
+
+## Creating Articulated Actors
+
+An articulated actor is created in a **single call** from parallel `joints` and `links` arrays:
+
+- `joints[i]` is the **inbound joint** connecting `links[i]` to its parent.
+- Links are listed **parent-first**: the root is at index 0 with `parentLink = -1`, and every other link's [`parentLink`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedLinkParams.html) is smaller than its own index.
+- `joint.parentLinkFromJoint` places the joint frame in its parent link's frame; `link.parentJointFromLink` places the link body relative to its inbound joint frame.
+- Cycle-closing joints are declared separately in `cycles` (see [Closed Kinematic Chains](#closed-kinematic-chains)).
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+#include <mochi_physics/mochi_physics.h>
+using namespace mochi;
+
+// A 2-link arm: Free root + Revolute child (hinge about Z).
+ArticulatedActorParams params;
+params.name = "arm";
+params.worldFromRoot = TransformRT{Real3{0, 0.2, 0}};
+params.joints = {
+    {.type = ArticulatedJointType::Free},
+    {.type = ArticulatedJointType::Revolute,
+     .parentLinkFromJoint = TransformRT{Real3{0.1, 0, 0}},
+     .axis = Real3{0, 0, 1}},
+};
+params.links = {
+    {.parentLink = -1, .shape = rootShape, .colliderType = ColliderType::Box, .density = 1000_r},
+    {.parentLink = 0, .shape = childShape, .colliderType = ColliderType::Box, .density = 1000_r},
+};
+
+Actor* actor = scene->CreateArticulatedActor(params, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+import mochi
+
+# A 2-link arm: Free root + Revolute child (hinge about Z).
+params = mochi.ArticulatedActorParams(name="arm")
+params.world_from_root = mochi.TransformRT(translation=[0, 0.2, 0])
+params.joints = [
+    mochi.ArticulatedJointParams(type=mochi.ArticulatedJointType.FREE),
+    mochi.ArticulatedJointParams(
+        type=mochi.ArticulatedJointType.REVOLUTE,
+        parent_link_from_joint=mochi.TransformRT(translation=[0.1, 0, 0]),
+        axis=[0, 0, 1],
+    ),
+]
+params.links = [
+    mochi.ArticulatedLinkParams(
+        parent_link=-1, shape=root_shape, collider_type=mochi.ColliderType.BOX, density=1000.0
+    ),
+    mochi.ArticulatedLinkParams(
+        parent_link=0, shape=child_shape, collider_type=mochi.ColliderType.BOX, density=1000.0
+    ),
+]
+
+actor = scene.create_articulated_actor(params)
+```
+
+</TabItem>
+</Tabs>
+
+Each link becomes a queryable rigid **sub-actor** named `"actorName/linkName"`; retrieve them with [`GetNestedLinkActors`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) / [`get_nested_link_actors`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.get_nested_link_actors).
+
+:::tip Declarative alternative
+Scenes — including articulated actors and URDF-imported skeletons — can also be authored declaratively as [prefabs](../prefabs.mdx) (`.mochi_scene` JSON) and loaded with `prefab::AddToScene` / [`mochi.prefab.add_to_scene`](pathname:///generated/api/v1.0/python/api/prefab.html#superdex.physics.prefab.add_to_scene).
+:::
+
+## ArticulatedJointParams Reference
+
+`ArticulatedJointParams` ([C++](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointParams.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.ArticulatedJointParams)) describes a single joint. `joints[i]` is the inbound joint of `links[i]`.
+
+| Field | C++ Type | Python Name | Description |
+|-------|----------|-------------|-------------|
+| `name` | `DynamicString` | `name` | Joint name (unique per actor). Auto-generated as `"joint_0"`, ... if empty. |
+| `type` | `ArticulatedJointType` | `type` | Joint type (`Free`, `Spherical`, `Revolute`, `Prismatic`, `Hard`). Required. |
+| `parentLinkFromJoint` | [`TransformRT`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1TransformRT.html) | `parent_link_from_joint` | Joint frame relative to the parent link's frame. |
+| `axis` | `Real3` | `axis` | Axis of motion in the joint's local frame. Revolute/Prismatic only; auto-normalized. |
+| `friction` | [`ArticulatedJointFrictionParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html) | `friction` | Per-joint friction/damping. Ignored for `Free`/`Hard`. |
+| `inertia` | `optional<real>` | `inertia` | Joint inertia coefficient [kg or kg·m²]. Ignored for `Free`/`Hard`. Default: none (0). |
+| `minLimit` / `maxLimit` | `optional<Real3>` | `min_limit` / `max_limit` | Per-DoF limits [m or rad]. For 1-DoF joints, encode as `scalar · axis`. |
+| `limitStiffness` | `real` | `limit_stiffness` | Stiffness [N/m or N·m/rad] for limit constraints. Default: `100`. |
+| `limitDamping` | `real` | `limit_damping` | Damping [N·s/m or N·m·s/rad] for limit constraints. Default: `0`. |
+
+## ArticulatedLinkParams Reference
+
+`ArticulatedLinkParams` ([C++](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedLinkParams.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.ArticulatedLinkParams)) describes a single rigid link. The type mirrors [`RigidActorParams`](./rigid_actors.mdx) for the per-link rigid-body properties, plus the tree-structure fields.
+
+| Field | C++ Type | Python Name | Description |
+|-------|----------|-------------|-------------|
+| `name` | `DynamicString` | `name` | Link name (unique per actor). Auto-generated as `"link_0"`, ... if empty. |
+| `parentLink` | `int` | `parent_link` | Parent link index; `-1` for the root. Must satisfy `parentLink < i`. |
+| `parentJointFromLink` | [`TransformRT`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1TransformRT.html) | `parent_joint_from_link` | Link frame relative to its inbound joint frame. Rotation must be identity. |
+| `shape` | [`ShapeHandle`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ShapeHandle.html) | `shape` | Link collision/visual geometry. |
+| `layer` | `DynamicString` | `layer` | Contact layer name for contact filtering. |
+| `colliderType` | `ColliderType` | `collider_type` | Collision geometry type. Default: `Auto`. |
+| `contact` | [`ContactParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ContactParams.html) | `contact` | Contact mechanics parameters. |
+| `hasGravity` | `bool` | `has_gravity` | Whether the link is affected by gravity. Default: `true`. |
+| `density` | `optional<real>` | `density` | Uniform density [kg/m³]. Specify either density **or** mass. |
+| `mass` | `optional<real>` | `mass` | Total mass [kg]. Mutually exclusive with `density`. |
+| `centerOfMass` | `optional<Real3>` | `center_of_mass` | CoM in the link frame. Computed from geometry if unset. |
+| `momentOfInertia` | `optional<Real6>` | `moment_of_inertia` | Inertia tensor `[ixx, ixy, ixz, iyy, iyz, izz]`. Computed from geometry if unset. |
+
+## ArticulatedActorParams Reference
+
+The top-level parameters use `ArticulatedActorParams` ([C++](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedActorParams.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.ArticulatedActorParams)).
+
+| Field | C++ Type | Python Name | Description |
+|-------|----------|-------------|-------------|
+| `name` | `DynamicString` | `name` | Actor name. Link actors are named `"name/linkName"`. |
+| `worldFromRoot` | [`TransformRT`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1TransformRT.html) | `world_from_root` | Initial world-space transform of the actor's root frame. |
+| `joints` | `DynamicArray<ArticulatedJointParams>` | `joints` | Per-joint parameters. Size must equal `links`. |
+| `links` | `DynamicArray<ArticulatedLinkParams>` | `links` | Per-link parameters. Parent-first order; at least one link. |
+| `cycles` | `DynamicArray<ArticulatedCycleJointParams>` | `cycles` | Optional cycle-closing joints for closed loops. |
+| `skin` | `optional<ArticulatedSkinParams>` | `skin` | Optional skinned mesh for surface collision/rendering. |
+| `jointVelocities` | `optional<DynamicArray<real>>` | `joint_velocities` | Initial per-DoF joint velocities [m/s or rad/s]. Zero if unset. |
+
+## Joint Configuration
+
+### Joint Friction and Damping
+
+Joint friction is configured per joint via [`ArticulatedJointParams::friction`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointParams.html) ([`ArticulatedJointFrictionParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html)), which supports viscous damping, Coulomb (dry) friction, and an experimental Stribeck effect.
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `viscous` | `0.0` | Viscous friction coefficient [N*s/m or N*m*s/rad]. Produces a force proportional to joint velocity. |
+| `coulomb` | `0.0` | Coulomb friction coefficient [N or N*m]. Constant opposing force once the joint is moving. |
+| `falloffVel` | `1e-3` | Velocity threshold [m/s or rad/s] for dry friction smoothing. Smaller values are more physical but may reduce stability. |
+| `stictionExtra` | `0.0` | **(Experimental)** Extra stiction force [N or N*m], representing the difference between peak static and dynamic friction. |
+| `stribeckVel` | `0.0` | **(Experimental)** Stribeck velocity [m/s or rad/s] governing the static-to-dynamic friction transition sharpness. |
+
+For a one-DoF joint, let $v_j$ be its tangent velocity, $\mu_v$ its [`viscous`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html) coefficient, $\mu_c$ its [`coulomb`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html) force, $\mu_s$ its [`stictionExtra`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html), $v_f$ its [`falloffVel`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html), and $v_s$ its [`stribeckVel`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointFrictionParams.html). When $\mu_0=\mu_c+\mu_s>0$, define $r=\mu_c/\mu_0$ and
+
+$$
+\phi(x)=
+\begin{cases}
+\dfrac{x^2}{v_f}\left(1-\dfrac{x}{3v_f}\right), & x<v_f~, \\
+\dfrac{2v_f}{3}+r(x-v_f)+(1-r)v_s\dfrac{\sqrt{\pi}}{2}
+\operatorname{erf}\!\left(\dfrac{x-v_f}{v_s}\right), & x\ge v_f,\ v_s>0~, \\
+\dfrac{2v_f}{3}+r(x-v_f), & x\ge v_f,\ v_s=0~.
+\end{cases}
+$$
+
+The joint's dissipation potential is
+
+$$
+R_j(v_j)=\frac12\mu_v v_j^2+\mu_0\phi(|v_j|)~.
+$$
+
+The first branch smoothly increases the dry-friction magnitude from zero to the peak static value $\mu_0$; above $v_f$, it approaches the dynamic value $\mu_c$ according to the Gaussian Stribeck model. If $\mu_0=0$, the dry-friction term is omitted. For a spherical joint, the same construction uses the norm of its rotational tangent velocity. Its discretization follows the shared [incremental-potential formulation](../dynamics.md#incremental-potential-form). Friction is ignored for `Free` and `Hard` joints.
+
+### Joint Limits
+
+Joint limits are defined **per joint** on [`ArticulatedJointParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointParams.html) via [`minLimit`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointParams.html) / [`maxLimit`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointParams.html), and enforced as spring-damper [constraints](../constraints.mdx) whose stiffness and damping are set on the same joint ([`limitStiffness`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointParams.html), [`limitDamping`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointParams.html)):
+
+- **Stiffness** ([`limitStiffness`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointParams.html)): how aggressively limits push the joint back. Default: 100 N·m/rad.
+- **Damping** ([`limitDamping`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointParams.html)): how quickly oscillations at the limit boundary are suppressed. Default: 0.
+
+For **1-DoF joints** (Revolute, Prismatic), the limit is the scalar limit value multiplied by the joint axis vector. For example, a revolute joint about Z with limits [-1, 1] rad:
+
+```
+min_limit = [0, 0, -1]
+max_limit = [0, 0,  1]
+```
+
+Leave [`minLimit`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointParams.html) / [`maxLimit`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointParams.html) unset (in Python, `None`) for an unconstrained joint. Spherical joint limits are complex to specify; it is often easier to model them as three co-located revolute joints.
+
+The limits of a live actor are readable via [`GetArticulatedDofLimits`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) / [`get_articulated_dof_limits`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.get_articulated_dof_limits), and the limit [constraints](../constraints.mdx) themselves via [`GetArticulatedJointLimitConstraints`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) / [`get_articulated_joint_limit_constraints`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.get_articulated_joint_limit_constraints).
+
+### Joint Inertia
+
+`inertia` ([C++](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedJointParams.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.ArticulatedJointParams.inertia)) adds a scalar joint inertia coefficient $a_j$. A reflected motor-rotor inertia is one possible use. For a one-DoF prismatic or revolute joint, its kinetic-energy contribution is
+
+$$
+T_{\mathrm{joint},j}(v_j)=\frac12 a_jv_j^2~.
+$$
+
+This kinetic contribution is discretized using the shared [incremental-potential formulation](../dynamics.md#incremental-potential-form).
+
+For a spherical joint, the continuous contribution is $\tfrac12a_j\Vert\omega_j\Vert_2^2$, where $\omega_j$ is the rotational tangent velocity. Its discrete contribution uses the same manifold-aware [rotational incremental-potential treatment](./rigid_actors.mdx#solution-reconstruction) as a rigid body with isotropic moment-of-inertia tensor $a_j\mathbf{1}$; the scalar parameter does not specify a general $3\times3$ tensor. Units are [kg] for translation DoFs and [kg·m²] for rotation DoFs. Joint inertia is ignored for `Free`/`Hard` joints and can be changed live (see [below](#working-with-articulations-at-runtime)).
+
+## Closed Kinematic Chains
+
+To create a closed loop (e.g., a four-bar linkage), define the tree topology as usual and add **cycle joints** in `cycles`. A cycle joint connects a child link to a parent link that is not its tree-parent, enforced as a soft spherical constraint at a pivot in the child link's frame.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+ArticulatedActorParams params;
+// 4 revolute-jointed links forming an open chain ...
+params.joints = {
+    {.type = ArticulatedJointType::Revolute, .axis = Real3{0, 0, 1}},
+    {.type = ArticulatedJointType::Revolute, .axis = Real3{0, 0, 1}},
+    {.type = ArticulatedJointType::Revolute, .axis = Real3{0, 0, 1}},
+    {.type = ArticulatedJointType::Revolute, .axis = Real3{0, 0, 1}},
+};
+params.links = {
+    {.parentLink = -1, .shape = barShape, .density = 1000_r},
+    {.parentLink = 0, .shape = barShape, .density = 1000_r},
+    {.parentLink = 1, .shape = barShape, .density = 1000_r},
+    {.parentLink = 2, .shape = barShape, .density = 1000_r},
+};
+// ... closed into a loop by tying link 3 back to link 0.
+params.cycles = {
+    {.parentLink = 0, .childLink = 3, .jointFromChildLink = TransformRT{Real3{0.1_r, 0, 0}}},
+};
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+params = mochi.ArticulatedActorParams()
+# 4 revolute-jointed links forming an open chain ...
+params.joints = [
+    mochi.ArticulatedJointParams(type=mochi.ArticulatedJointType.REVOLUTE, axis=[0, 0, 1])
+    for _ in range(4)
+]
+params.links = [
+    mochi.ArticulatedLinkParams(parent_link=i - 1, shape=bar_shape, density=1000.0)
+    for i in range(4)
+]
+# ... closed into a loop by tying link 3 back to link 0.
+params.cycles = [
+    mochi.ArticulatedCycleJointParams(
+        parent_link=0,
+        child_link=3,
+        joint_from_child_link=mochi.TransformRT(translation=[0.1, 0, 0]),
+    )
+]
+```
+
+</TabItem>
+</Tabs>
+
+`ArticulatedCycleJointParams` ([C++](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedCycleJointParams.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.ArticulatedCycleJointParams)) has [`parentLink`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedCycleJointParams.html), [`childLink`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedCycleJointParams.html), [`jointFromChildLink`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedCycleJointParams.html) (the pivot in the child link's frame), and [`stiffness`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedCycleJointParams.html) (default `50000`).
+
+:::note
+Contact is automatically disabled between links that are (a) directly adjacent, (b) connected via hard joints, or (c) connected via shapeless (dummy) links. Use [`EnableActorContactSymmetric`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) / [`enable_actor_contact_symmetric`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.enable_actor_contact_symmetric) to override this for specific link pairs.
+:::
+
+## Skinned Surface
+
+An articulated actor can carry an optional **skinned surface**: a single triangle mesh that is deformed by the underlying links via linear blend skinning. This gives the articulation one continuous surface for collision and rendering, instead of the separate per-link collision shapes.
+
+The skin is a **colliding-only surface** — it detects contact against other actors, but others do not detect against it (the per-link shapes remain the colliders). Attach it by setting [`skin`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedActorParams.html) on [`ArticulatedActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedActorParams.html) before creating the actor.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+ArticulatedActorParams params;
+// ... joints and links as above ...
+params.skin = ArticulatedSkinParams{
+    .shape = skinShape,   // a triangle-mesh shape with skinning weights and link indices
+    .layer = "Skin",
+};
+
+Actor* actor = scene->CreateArticulatedActor(params, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+params = mochi.ArticulatedActorParams()
+# ... joints and links as above ...
+params.skin = mochi.ArticulatedSkinParams(
+    shape=skin_shape,   # a triangle-mesh shape with skinning weights and indices
+    layer="Skin",
+)
+
+actor = scene.create_articulated_actor(params)
+```
+
+</TabItem>
+</Tabs>
+
+### ArticulatedSkinParams Reference
+
+The skin is configured with `ArticulatedSkinParams` ([C++](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedSkinParams.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.ArticulatedSkinParams)).
+
+| Field | C++ Type | Python Name | Description |
+|-------|----------|-------------|-------------|
+| `shape` | [`ShapeHandle`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ShapeHandle.html) | `shape` | Triangle-mesh shape for the skinned surface. |
+| `layer` | `DynamicString` | `layer` | Contact layer name for the skin (for contact filtering). |
+| `contact` | [`ContactParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ContactParams.html) | `contact` | Contact mechanics parameters for the skin. |
+| `boundaryElementType` | `ActorBoundaryElementType` | `boundary_element_type` | Finite-element type for the skin's boundary/contact integrals. Default: `Default`. |
+| `boundarySubsampling` | `optional<BoundarySubsamplingParams>` | `boundary_subsampling` | Optional subsampling to reduce contact-integral cost. Best combined with `boundaryElementType = P1Q1`. |
+
+:::note
+This surface follows the links via skinning; it is not itself physically deformable. A **deformable** skin is possible, but it requires integrating the articulated actor with soft actors into a [soft skinned actor](./soft_skinned_actors.mdx).
+:::
+
+## Working with Articulations at Runtime
+
+The sections above describe how to *define* an articulated actor at creation time. A live actor also exposes a rich runtime API for introspection, reading and manipulating state, actuation, and live re-modeling. The [Articulations examples](../../examples/articulations/double_pendulum_on_rail.md) tour this whole interface as worked examples. (Controller-based actuation is covered separately under [Controllers](#controllers).)
+
+### Lifecycle and Identity
+
+[`CreateArticulatedActor`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) returns an [`Actor*`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) and a stable [`ActorHandle`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ActorHandle.html). Each link is a nested rigid sub-actor; enumerate them with [`GetNestedLinkActors`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) and look them up with [`GetActor`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html). Destroying the articulated actor destroys its links (and any constraints on them).
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+Actor* actor = scene->CreateArticulatedActor(params, error);
+Span<ActorHandle const> links = actor->GetNestedLinkActors(error);
+Actor* endEffector = scene->GetActor(links.back());
+scene->DestroyActor(actor->GetHandle());
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+actor = scene.create_articulated_actor(params)
+links = actor.get_nested_link_actors()
+end_effector = scene.get_actor(links[-1])
+scene.destroy_actor(actor)
+```
+
+</TabItem>
+</Tabs>
+
+### Introspection
+
+[`GetArticulatedShapeInfo`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) returns [`ArticulatedShapeInfo`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedShapeInfo.html), a one-stop dump of the topology ([`linkNames`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedShapeInfo.html), [`jointNames`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedShapeInfo.html), [`jointTypes`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedShapeInfo.html), [`parents`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedShapeInfo.html), joint axes and DoF layout). [`GetNumDofs`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) returns the total DoF count. Per-DoF limits are available via [`GetArticulatedDofLimits`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), and the limit constraints themselves via [`GetArticulatedJointLimitConstraints`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html).
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+ArticulatedShapeInfo info = actor->GetArticulatedShapeInfo(error);
+int numDofs = actor->GetNumDofs();
+DynamicArray<Real2> dofLimits(numDofs);
+actor->GetArticulatedDofLimits(dofLimits, error);                 // [min, max] per DoF
+Span<Constraint* const> limits = actor->GetArticulatedJointLimitConstraints(error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+info = actor.get_articulated_shape_info()   # info.link_names, info.parents, info.joint_types, ...
+num_dofs = actor.get_num_dofs()
+limits = actor.get_articulated_joint_limit_constraints()
+```
+
+</TabItem>
+</Tabs>
+
+### Reading State (Forward Kinematics)
+
+Read the joint-space pose, the world transforms of every link, and the joint velocities into pre-sized output containers.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+DynamicArray<real> pose(actor->GetNumDofs());
+actor->GetArticulatedPose(pose, error);
+DynamicArray<TransformRT> linkTransforms(numLinks);
+actor->GetArticulatedLinkTransforms(linkTransforms, error);
+DynamicArray<real> velocities(actor->GetNumDofs());
+actor->GetArticulatedJointVelocities(velocities, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+pose = mochi.DynamicArrayReal(actor.get_num_dofs())
+actor.get_articulated_pose(pose)
+transforms = mochi.DynamicArrayTransformRT(len(actor.get_nested_link_actors()))
+actor.get_articulated_link_transforms(transforms)
+velocities = mochi.DynamicArrayReal(actor.get_num_dofs())
+actor.get_articulated_joint_velocities(velocities)
+```
+
+</TabItem>
+</Tabs>
+
+### Manipulating State Directly
+
+Set the pose from joint-space DoFs, from link transforms (IK-style), or set joint velocities. Pose-space math composes deltas in the tangent space (so spherical DoFs behave correctly), and the end-effector Jacobian is read from a nested link sub-actor.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+actor->SetArticulatedPoseFromJoints(pose, error);            // joint-space DoFs
+actor->SetArticulatedPoseFromLinks(worldFromLinks, error);   // IK-style
+actor->SetArticulatedJointVelocities(velocities, error);
+actor->AddArticulatedDeltaToPose(pose, delta, outPose, error);
+actor->ComputeArticulatedPoseDelta(poseA, poseB, outDelta, error);
+Span<real const> jacobian = endEffector->GetArticulatedJacobian(error);  // per nested link
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+actor.set_articulated_pose_from_joints(pose=pose)
+actor.set_articulated_pose_from_links(world_from_links=transforms)
+actor.set_articulated_joint_velocities(velocities=velocities)
+actor.add_articulated_delta_to_pose(pose=pose, delta_dofs=delta, out_pose=out_pose)
+jacobian = end_effector.get_articulated_jacobian()   # per nested link
+```
+
+</TabItem>
+</Tabs>
+
+### Actuating without a Controller
+
+Apply generalized forces to specific DoFs, or pin DoFs with a boundary condition (e.g. freeze a slider).
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+actor->SetExternalForcesOnDofs(dofIndices, forceValues, error);
+actor->ClearExternalForces();
+actor->AddBoundaryConditionDofsWorld(dofIndices, dofValues, error);  // pin DoFs
+actor->ClearBoundaryConditions();
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+actor.set_external_forces_on_dofs(dof_indices=[0], force_values=[8.0])
+actor.clear_external_forces()
+actor.add_boundary_condition_dofs_world(dof_indices=[0], dof_values_world=[x])
+actor.clear_boundary_conditions()
+```
+
+</TabItem>
+</Tabs>
+
+### Live Joint Modeling
+
+Per-joint friction and joint inertia can be read and changed mid-simulation (one entry per joint).
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+Span<ArticulatedJointFrictionParams const> friction = actor->GetArticulatedJointFrictionParams(error);
+actor->SetArticulatedJointFrictionParams(friction, error);
+Span<real const> inertia = actor->GetArticulatedJointInertiaParams(error);
+actor->SetArticulatedJointInertiaParams(inertia, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+friction = actor.get_articulated_joint_friction_params()
+actor.set_articulated_joint_friction_params(friction)
+inertia = actor.get_articulated_joint_inertia_params()
+actor.set_articulated_joint_inertia_params(list(inertia))
+```
+
+</TabItem>
+</Tabs>
+
+### Controlling Contact
+
+Contact is filtered coarsely by string **layers** and finely by per-actor overrides. The nested link sub-actors let you toggle contact for an individual link (e.g. only an end-effector collides with a target).
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+scene->EnableLayerContactSymmetric("Pendulum", "Ball", false, error);
+scene->EnableActorContactSymmetric(
+    linkHandle,
+    ballHandle,
+    true,
+    IncludeNestedActors::No,
+    error);
+bool enabled = scene->IsLayerContactEnabled("EndEffector", "Ball");
+int numLayers = scene->GetNumContactLayers();
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+scene.enable_layer_contact_symmetric("Pendulum", "Ball", enable=False)
+scene.enable_actor_contact_symmetric(
+    link_handle,
+    ball_handle,
+    enable=True,
+    include_nested_actors=mochi.IncludeNestedActors.NO,
+)
+enabled = scene.is_layer_contact_enabled("EndEffector", "Ball")
+num_layers = scene.get_num_contact_layers()
+```
+
+</TabItem>
+</Tabs>
+
+### Mass, Root, and Center of Mass
+
+[`GetMass`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) and the root transform are **whole-articulation** queries. Center of mass and linear/angular velocity are **per-rigid-body** queries, so read them from a nested link sub-actor rather than the top-level articulated actor. (The articulated equivalent of [`SetVelocity`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) is [`SetArticulatedJointVelocities`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html).)
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+real mass = actor->GetMass(error);
+TransformRT root = actor->GetRootTransform();
+actor->SetRootTransform(root, error);                            // teleports the whole actor
+TransformRT com = endEffector->GetCenterOfMassTransform(error);  // per nested link
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+mass = actor.get_mass()
+actor.set_root_transform(actor.get_root_transform())
+com = end_effector.get_center_of_mass_transform()   # per nested link
+```
+
+</TabItem>
+</Tabs>
+
+## Controllers
+
+The [Pose Controller](../pose_controller.mdx) adds implicit PD constraints to an articulated actor after creation. It can track joint-space targets, Cartesian link positions and rotations, or a combination of all three. See the [Pose Controller example](../../examples/articulations/pose_controller.md) for a worked hybrid, joint-only, and link-only example.
+
+## Examples
+
+- **Plain — [Double Pendulum on Rail](../../examples/articulations/double_pendulum_on_rail.md)**: builds a double pendulum on a rail in code and tours the runtime API described above.
+  - Python - `uv run --no-project superdex_physics/examples/example_articulations_double_pendulum_on_rail.py`
+  - Prefab — `superdex_physics/assets/samples/articulations_double_pendulum_on_rail.mochi_scene`
+
+- **Skinned — [Skinned Double Pendulum](../../examples/articulations/skinned_double_pendulum.md)**: adds a linear-blend-skinned surface as a colliding-only skin.
+  - Python - `uv run --no-project superdex_physics/examples/example_articulations_skinned_double_pendulum.py`
+  - Prefab — `superdex_physics/assets/samples/articulations_skinned_double_pendulum.mochi_scene`
+
+## Related Concepts
+
+- [Inverse Kinematics](../inverse_kinematics.mdx) — Quasistatic IK solver that computes joint configurations for target end-effector positions.
+- [Pose Controller](../pose_controller.mdx) — Implicit PD controller for joint-space and Cartesian link tracking during dynamic simulation.
+- [Shapes](../shapes.mdx) — Collision geometry types available for link shapes.
+- [Rigid Actors](./rigid_actors.mdx) — The underlying rigid body type used for individual links.
+- [Soft Skinned Actors](./soft_skinned_actors.mdx) — Articulated skeletons coupled with deformable FEM skin.

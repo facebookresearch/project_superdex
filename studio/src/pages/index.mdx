@@ -1,0 +1,124 @@
+---
+title: SuperDex Studio
+description: The content authoring tool for SuperDex — robots, task objects, and scenes, authored to production and simulation-ready quality.
+hide_table_of_contents: true
+---
+
+import styles from './index.module.css';
+import useBaseUrl from '@docusaurus/useBaseUrl';
+import ViewportVideo from '@site/src/components/ViewportVideo';
+
+{
+  <>
+    <section className={styles.layer}>
+      <div className={styles.layerInner}>
+        <div className={styles.layerHeader}>
+          <div className={styles.layerHeadingCol}>
+            <p className="sdx-eyebrow">The authoring layer of SuperDex</p>
+            <h1 className={`sdx-display ${styles.layerHeading}`}>
+              Welcome to SuperDex Studio.
+            </h1>
+          </div>
+          <div className={styles.layerIntroCol}>
+            <p className="sdx-body">
+              SuperDex Studio is the content authoring tool for SuperDex. Robots,
+              task objects, and scenes are authored here, to production and
+              simulation-ready quality.
+            </p>
+          </div>
+        </div>
+    
+        <hr className={`sdx-divider-line ${styles.layerDivider}`} />
+    
+        <div className={styles.layerBody}>
+          <div className={styles.bento}>
+            <figure className={`${styles.bentoCard} ${styles.bentoBig}`}>
+              <ViewportVideo
+                src="img/main/Import2Mesh.mp4"
+                poster="img/main/Import2Mesh.webp"
+                ariaLabel="Importing a robot into SuperDex Studio and meshing its geometry."
+              />
+            </figure>
+            <figure className={`${styles.bentoCard} ${styles.bentoA}`}>
+              <img
+                src="img/main/robot_exporter_square.webp"
+                alt="The SuperDex Robot Configuration Exporter configuring link properties on an OpenArm end effector, with its visual and collision meshes overlaid."
+                loading="lazy"
+              />
+            </figure>
+            <figure className={`${styles.bentoCard} ${styles.bentoB}`}>
+              <img
+                src="img/main/simulation_debug_view.webp"
+                alt="SuperDex Studio displaying wireframe debug geometry for a scene of rigid and deformable simulation assets."
+                className={styles.debugView}
+                loading="lazy"
+              />
+            </figure>
+            <figure className={`${styles.bentoCard} ${styles.bentoC}`}>
+              <img
+                src="img/main/bot_link_details.webp"
+                alt="A Franka arm open in the Bot Editor, with the Bot Hierarchy and Bot Link Details panels beside it."
+                loading="lazy"
+              />
+            </figure>
+            <figure className={`${styles.bentoCard} ${styles.bentoD}`}>
+              <ViewportVideo
+                src="img/main/force_drag.mp4"
+                poster="img/main/force_drag.webp"
+                ariaLabel="Force-dragging a robot arm during a live simulation."
+              />
+            </figure>
+          </div>
+    
+          <div className={styles.features}>
+            <div className={styles.feature}>
+              <h3>Compose, Edit, and Combine Bots</h3>
+              <p>
+                Assemble complex robots from vetted components or import one from{' '}
+                <code>.urdf</code>. Iterate on kinematics and dynamics, joint limits,
+                and self-collision until it behaves like the hardware. Bolt a hand
+                onto an arm, or replace OEM fingertips with custom sensors using the
+                bot mod pipeline.
+              </p>
+            </div>
+            <div className={styles.feature}>
+              <h3>Create Task Prefabs and Scenes</h3>
+              <p>
+                Compose rigid, soft, and articulated actors into reusable task
+                prefabs, then assemble those prefabs into scenes for robotics and
+                dexterous manipulation research.
+              </p>
+            </div>
+            <div className={styles.feature}>
+              <h3>Simulate</h3>
+              <p>
+                Every editor is a live SuperDex Physics scene. Simulate the instant
+                an asset opens, then inspect and debug contact, inertial, and joint
+                behavior on the fly.
+              </p>
+            </div>
+            <div className={styles.feature}>
+              <h3>Edit Meshes</h3>
+              <p>
+                Turn visual assets and even raw CAD into simulation geometry.
+                Rapidly configurable modifier stacks refine, wrap, re-mesh, and
+                bake signed-distance fields into simulation assets.
+              </p>
+            </div>
+            <div className={styles.feature}>
+              <h3>SuperDex CAD Exporter</h3>
+              <p>
+                Export assets and robots ready to import into SuperDex Studio
+                directly from our SolidWorks and NX plugins, along with
+                simulation-ready direct-from-CAD meshing.
+              </p>
+            </div>
+            <a href={useBaseUrl('/docs/overview/')} className={styles.layerLink}>
+              Get started with SuperDex Studio →
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </>
+}

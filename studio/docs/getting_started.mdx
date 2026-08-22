@@ -1,0 +1,89 @@
+---
+title: Getting Started
+sidebar_label: Getting Started
+sidebar_position: 2
+slug: /getting_started
+---
+
+import Figure from '@site/src/components/Figure';
+
+# Getting Started
+
+This page covers installing SuperDex and building SuperDex Studio from source.
+For a tour of the application, see the [Overview](./overview.mdx).
+
+## Requirements
+
+- **Python** 3.12
+- **OS:** Linux (x86_64), Windows (x86_64), macOS (ARM)
+- **Compilers:** Clang 21
+
+The officially supported "build from source" path is Clang + Ninja via CMake.
+Compilers such as GCC and MSVC are not officially supported or covered by CI, but
+can be used "at your own risk".
+
+Pre-built wheels are currently provided only for Python 3.12. More flexible abi3
+wheels will be available in a future release.
+
+## Quick Start (Python)
+
+Project SuperDex has first-class support for Python across the board. The
+quickest way to get started is with `uv` and the PyPI wheels.
+
+1. Install pre-requisites:
+   - [uv](https://docs.astral.sh/uv/getting-started/installation/)
+2. Clone: `git clone --branch stable https://github.com/facebookresearch/project_superdex.git`
+3. Create env: `uv venv`
+4. Pip install: `uv pip install superdex`
+5. Launch SuperDex Studio: `uv run superdex-studio`
+6. File > Open Folder ... > (navigate to `path/to/project_superdex/assets`)
+7. Explore and open the shipped example bots and [prefabs](./prefab_editor.mdx#what-is-a-prefab)
+
+<Figure
+  src="../../img/bot_editor/bot_editor.webp"
+  alt="SuperDex Studio with a Franka arm and a five-finger hand open in the Bot Editor: viewport at center, Bot Hierarchy and Bot Link Details docked right, Asset Browser along the bottom."
+/>
+
+## Building from Source (Pre-requisites)
+
+- [CMake](https://cmake.org/download/)
+- [Ninja](https://github.com/ninja-build/ninja/releases)
+- [Clang](https://github.com/llvm/llvm-project/releases/tag/llvmorg-22.1.8)
+- [MSVC Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (Windows only)
+  - Install the MSVC standalone Build Tools; the Visual Studio IDE is not required.
+  - Select the **Desktop development with C++** workload and include the **C++ Clang tools for Windows** (ClangCL) component.
+  - Or install them with: `winget install Microsoft.VisualStudio.2022.BuildTools --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Component.VC.Llvm.Clang"`
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) (for the Python build)
+- Ensure all are on `PATH`.
+
+## Building from Source (Python)
+
+1. Install pre-requisites (see above).
+2. Clone: `git clone --branch stable https://github.com/facebookresearch/project_superdex.git`
+3. Build: `uv sync --extra gui -v`
+4. Launch SuperDex Studio: `uv run superdex-studio`
+
+The `uv sync` extras select which targets are built:
+
+| `uv sync` flag | Build targets |
+| :-- | :-- |
+| none | build tools only |
+| `--extra core` | physics, robotics, lab |
+| `--extra gui` | core + physics-debugger, studio, mesh-cli |
+| `--extra double` | core + physics-fp64, robotics-fp64 |
+| `--all-extras` | everything |
+
+## Building from Source (C++)
+
+Studio also builds with CMake. Studio is optional, so enable it explicitly.
+
+1. Install pre-requisites (see above) and clone the repository.
+2. Configure the build: `cmake -B build -G Ninja -DSUPERDEX_BUILD_STUDIO=ON`
+3. Build: `cmake --build build --parallel`
+4. Run it: `cd build/bin` then `superdex_studio.exe`
+
+:::note
+Studio is off by default because it needs desktop graphics dependencies that a
+headless build does not. SuperDex Physics always builds, and SuperDex Robotics
+builds by default — pass `-DSUPERDEX_BUILD_ROBOTICS=OFF` for a Physics-only build.
+:::

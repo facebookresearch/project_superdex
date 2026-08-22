@@ -1,0 +1,39 @@
+---
+title: Overview
+slug: /overview
+---
+
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+
+# SuperDex Lab
+
+SuperDex Lab connects simulation and policy development through a Gymnasium-style
+API for reinforcement learning.
+
+:::info Early Preview
+SuperDex Lab is currently in early preview and will receive substantial
+improvements.
+:::
+
+## What's Included
+
+### SuperDex Gym
+
+A [Gymnasium](https://gymnasium.farama.org/)-compatible reinforcement-learning
+framework built on the <ProjectSuperdexLink site="physics">SuperDex Physics</ProjectSuperdexLink>
+engine. Train agent controllers in high-fidelity simulation with a suite of
+manipulation and locomotion environments.
+
+Start with the [SuperDex Gym introduction](./superdex_gym/intro.md), then
+[install and set it up](./superdex_gym/setup.md).
+
+### RLlib Training
+
+An off-the-shelf [Ray/RLlib](https://docs.ray.io/en/latest/rllib/index.html)
+integration for RL training straight from the Gym environments. See
+[Training with Ray/RLlib](./superdex_gym/rllib.md).
+
+### Benchmarking
+
+Benchmark control and simulation throughput and approximate memory usage across
+worker and environment configurations. See [Benchmarking](./superdex_gym/benchmarking.md).

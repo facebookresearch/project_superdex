@@ -1,0 +1,16 @@
+.. @generated
+
+Debugger
+========
+
+**Module:** ``superdex.physics.debugger``
+
+Launch the standalone debugger and attach it to the running process.
+
+.. automodule:: superdex.physics.debugger
+   :no-members:
+
+.. autofunction:: superdex.physics.debugger.attach
+
+.. autofunction:: superdex.physics.debugger.is_attached
+

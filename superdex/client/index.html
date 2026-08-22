@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Apply persisted theme before stylesheet loads to avoid FOUC.
+      (function () {
+        try {
+          var stored = localStorage.getItem('theme');
+          var prefersDark =
+            window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (stored === 'dark' || (stored === 'system' && prefersDark)) {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {
+          // localStorage may be unavailable; fall back to default theme.
+        }
+      })();
+    </script>
+    <link
+      rel="preload"
+      href="/src/fonts/dm-sans-variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="preload"
+      href="/src/fonts/instrument-serif-regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
+    <link rel="icon" type="image/png" href="%BASE_URL%favicon.png" />
+    <title>Project SuperDex</title>
+    <meta name="description" content="SuperDex is a research platform for dexterous manipulation, powered by the SuperDex Physics engine. End-to-end pipeline for contact-rich robotics: scene authoring, simulation, teleop, and policy training." />
+  </head>
+  <body>
+    <div id="root">
+      <footer
+        aria-label="Legal"
+        style="padding: 1rem; font: 0.75rem/1.5 system-ui, sans-serif"
+      >
+        <nav aria-label="Legal links">
+          <a
+            href="https://opensource.fb.com/legal/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Terms of Use
+          </a>
+          &middot;
+          <a
+            href="https://opensource.fb.com/legal/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Privacy Policy
+          </a>
+        </nav>
+        <p>Copyright © 2026 Meta Platforms, Inc.</p>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

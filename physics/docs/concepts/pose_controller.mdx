@@ -1,0 +1,241 @@
+---
+title: Pose Controller
+sidebar_position: 9
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Pose Controller
+
+The SuperDex Physics Pose Controller is an implicit proportional-derivative (PD) controller for [articulated actors](./actors/articulated_actors.mdx). It represents tracking objectives as [soft spring-damper constraints](./constraints.mdx) and solves them together with the rest of the dynamics. This avoids the numerical instability that an explicit force controller can exhibit at high gains.
+
+:::tip Controlling a rigid body
+The Pose Controller is available only for articulated actors. To control a [rigid body](./actors/rigid_actors.mdx) with it, model the body as a single-link articulated actor with a free joint.
+:::
+
+## Simulation-Only Controller
+
+The Pose Controller is a simulation-only controller, not a direct model of a real-world control loop. A real-world controller reads an observation from a previous instant, computes an action, and applies that action during a subsequent control step. The implicit Pose Controller instead computes and applies an action that depends on the simulated state at that same instant, as part of the dynamics solve.
+
+Joint PD tracking can still be retargeted approximately to a real system. One practical interpretation is to match the response of the implicit controller running at the simulation rate with an explicit joint controller running at the hardware control rate. The gains are not necessarily transferable directly because the two controllers use different update timing and integration.
+
+Link position and rotation tracking act as a form of operational-space control. Because these constraints are also solved implicitly with the simulated dynamics, they have no similarly direct mapping to a real-world controller.
+
+For a worked example that changes between hybrid, joint-only, and link-only tracking, see the [Pose Controller example](../examples/articulations/pose_controller.md).
+
+## Tracking Slices
+
+The controller has three independently configured, link-indexed tracking slices:
+
+| Slice | Entry `i` controls | Target representation |
+|---|---|---|
+| Link position | Cartesian position of link `i` | World-space translation |
+| Link rotation | Orientation of link `i` | World-space rotation |
+| Joint | The inbound joint of link `i` | Joint-space DoFs |
+
+All three arrays use link indices. A root or `Hard` joint still occupies an entry, and one entry configures every DoF of a multi-DoF inbound joint such as a spherical joint. Joint-space target poses and returned controller generalized forces remain DoF-indexed.
+
+Tracking slices can be combined. For example, joint tracking can regulate a robot's posture while link position and rotation tracking guide its end effector.
+
+## Parameters
+
+### PoseTrackingParams
+
+Each tracking entry has spring-damper parameters defined by `PoseTrackingParams` ([C++](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1PoseTrackingParams.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.PoseTrackingParams)):
+
+| Parameter | Default | Description |
+|---|---:|---|
+| `stiffness` | `0` | Elastic gain. Units are `[N/m]` for translation and `[N*m/rad]` for rotation. |
+| `damping` | `0` | Damping gain. Units are `[N*s/m]` for translation and `[N*m*s/rad]` for rotation. |
+| `saturation` | `-1` | Saturation distance `[m]` or angle `[rad]`. A negative value disables saturation. |
+
+When enabled, saturation smoothly limits the elastic contribution to approximately `stiffness * saturation`; it does not limit the damping contribution. Zero stiffness and damping disable an entry without destroying its constraint.
+
+### PoseControllerParams
+
+The `PoseControllerParams` constructors ([C++](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1PoseControllerParams.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.PoseControllerParams)) accept `num_links`, pre-size these arrays to the articulation's number of links, and fill them with zero-gain entries:
+
+- `linkPosTracking` / `link_pos_tracking`
+- `linkRotTracking` / `link_rot_tracking`
+- `jointTracking` / `joint_tracking`
+
+Indexed assignment makes the mapping explicit:
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+int const numLinks = actor->GetNestedLinkActors(error).size();
+PoseControllerParams params(numLinks);
+
+params.jointTracking[jointLink] = PoseTrackingParams{500.0_r, 50.0_r};
+params.linkPosTracking[endEffectorLink] = PoseTrackingParams{300.0_r, 30.0_r};
+params.linkRotTracking[endEffectorLink] = PoseTrackingParams{25.0_r, 5.0_r};
+
+actor->AddArticulatedPoseController(params, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+num_links = len(actor.get_nested_link_actors())
+params = mochi.PoseControllerParams(num_links)
+
+params.joint_tracking[joint_link] = mochi.PoseTrackingParams(
+    stiffness=500.0,
+    damping=50.0,
+)
+params.link_pos_tracking[end_effector_link] = mochi.PoseTrackingParams(
+    stiffness=300.0,
+    damping=30.0,
+)
+params.link_rot_tracking[end_effector_link] = mochi.PoseTrackingParams(
+    stiffness=25.0,
+    damping=5.0,
+)
+
+actor.add_articulated_pose_controller(params)
+```
+
+</TabItem>
+</Tabs>
+
+The add and set APIs also accept empty arrays, which broadcast zero-gain defaults, and size-one arrays, which broadcast one parameter set. Full arrays have size `num_links` and are indexed by link. The explicit `num_links` form is preferred when configuring individual entries or reading parameters back.
+
+Only one pose controller can be attached to an actor. Adding it initializes both target pose and target velocity from the actor's current state.
+
+## Targets
+
+The controller stores one target pose that can be expressed in either joint space or link space:
+
+- Joint targets contain [`actor->GetNumDofs()`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) values ([`get_num_dofs`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.get_num_dofs) in Python). Translational DoFs are `[m]` and rotational DoFs are `[rad]`.
+- Link targets contain one world-from-link `TransformRT` ([C++](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1TransformRT.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.TransformRT)) per link, including links whose tracking gains are zero.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+actor->SetArticulatedTargetPose(targetPose, error);
+actor->SetArticulatedTargetLinkTransforms(worldFromTargets, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+actor.set_articulated_target_pose(pose=target_pose)
+actor.set_articulated_target_link_transforms(
+    world_from_targets=world_from_targets
+)
+```
+
+</TabItem>
+</Tabs>
+
+### Set Versus Reset
+
+[`SetArticulatedTargetPose`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) and [`SetArticulatedTargetLinkTransforms`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) infer target velocity from how the target changes between simulation steps. Their Python equivalents are [`set_articulated_target_pose`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.set_articulated_target_pose) and [`set_articulated_target_link_transforms`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.set_articulated_target_link_transforms). Use them for continuous trajectories, updating the target before each step.
+
+[`ResetArticulatedTargetPose`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) and [`ResetArticulatedTargetLinkTransforms`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) set the supplied target and clear target velocity for the next step. Their Python equivalents are [`reset_articulated_target_pose`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.reset_articulated_target_pose) and [`reset_articulated_target_link_transforms`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.reset_articulated_target_link_transforms). Use them for discontinuous handoffs, teleports, or initialization to a target different from the pose captured when the controller was added.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+actor->ResetArticulatedTargetLinkTransforms(initialTargets, error);
+scene->Step(dt, error);
+
+actor->SetArticulatedTargetLinkTransforms(nextTargets, error);
+scene->Step(dt, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+actor.reset_articulated_target_link_transforms(
+    world_from_targets=initial_targets
+)
+scene.step(dt)
+
+actor.set_articulated_target_link_transforms(
+    world_from_targets=next_targets
+)
+scene.step(dt)
+```
+
+</TabItem>
+</Tabs>
+
+To supply a non-zero target velocity after reset, call [`SetArticulatedTargetVelocity`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) / [`set_articulated_target_velocity`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.set_articulated_target_velocity) after the reset. This override is consumed by the next simulation step and then cleared, so set it before every step that needs an explicit target velocity.
+
+## Runtime Tuning
+
+Replace the complete parameter object to change gains or turn tracking slices on and off at runtime. A freshly constructed [`PoseControllerParams(num_links)`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1PoseControllerParams.html) begins with every entry disabled, so filling only one slice naturally creates a joint-only or link-only configuration.
+
+To inspect the current gains, provide pre-sized output arrays:
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+int const numLinks = actor->GetNestedLinkActors(error).size();
+PoseControllerParams params(numLinks);
+actor->GetArticulatedPoseControllerParams(params, error);
+
+params.jointTracking[jointLink].stiffness = 200.0_r;
+actor->SetArticulatedPoseControllerParams(params, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+num_links = len(actor.get_nested_link_actors())
+params = mochi.PoseControllerParams(num_links)
+actor.get_articulated_pose_controller_params(out_params=params)
+
+params.joint_tracking[joint_link].stiffness = 200.0
+actor.set_articulated_pose_controller_params(params)
+```
+
+</TabItem>
+</Tabs>
+
+The getter does not resize its output arrays. Entries for links without a controllable inbound joint are returned with zero gains.
+
+## Querying Controller Generalized Force
+
+The controller-force query returns a generalized-force vector ordered by articulation DoF. It is identified by the C++ `QueryType::ArticulatedControllerForce` or corresponding Python [`QueryType`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.QueryType) value. Translational entries use `[N]`; rotational entries use `[N·m]`. Register before stepping, read after the step completes, and cancel the query when it is no longer needed:
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+QueryHandle query =
+    actor->RegisterQuery(QueryType::ArticulatedControllerForce, error);
+scene->Step(dt, error);
+Span<real const> force = actor->GetArticulatedControllerForce(error);
+
+actor->CancelQuery(query);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+query = actor.register_query(
+    mochi.QueryType.ARTICULATED_CONTROLLER_FORCE
+)
+scene.step(dt)
+force = actor.get_articulated_controller_force()
+
+actor.cancel_query(query)
+```
+
+</TabItem>
+</Tabs>
+
+Results are not available immediately after registration; at least one simulation step must complete first. Multiple registrations are reference-counted, so cancel every returned handle when its consumer is finished.

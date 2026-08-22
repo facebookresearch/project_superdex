@@ -1,0 +1,113 @@
+---
+title: Context
+sidebar_position: 1
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Context
+
+[`Context`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) is the process-level entry point for SuperDex Physics. It owns shared state such as worker resources and shapes, and it creates independent [`Scene`](./scenes.mdx) objects that contain simulations. Create one [`Context`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) per process and keep it alive until all physics work is complete.
+
+C++ exposes this runtime as a [`Context`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) object. Python uses the same underlying C++ [`Context`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html), but keeps it as process-global module state instead of exposing the object directly: [`physics.initialize()`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.initialize) creates it, context operations are available as module-level functions, and [`physics.shutdown()`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.shutdown) destroys it.
+
+## Creating and Destroying a Context
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+#include <superdex_physics.h>
+
+int main() {
+  superdex::Context* context = superdex::CreateContext();
+
+  // Create shapes and scenes, then run simulations.
+
+  superdex::DestroyContext(context);
+}
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+import superdex.physics as physics
+
+
+def main() -> None:
+    physics.initialize(num_worker_threads=-1)
+    try:
+        # Create shapes and scenes, then run simulations.
+        pass
+    finally:
+        physics.shutdown()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+</TabItem>
+</Tabs>
+
+Destroying the underlying [`Context`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) also destroys its remaining scenes, actors, constraints, and other owned state. Pointers to that state are invalid afterward. In both languages, destruction must run on the same thread as creation: call `superdex::DestroyContext()` on the thread that called `superdex::CreateContext()`, or [`physics.shutdown()`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.shutdown) on the thread that called [`physics.initialize()`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.initialize). Creation binds the task scheduler to the calling thread, and destruction removes that binding before shutting the scheduler down.
+
+Python registers automatic cleanup at interpreter exit, but that cleanup may run on a different thread. Do not initialize from a background thread and rely on automatic cleanup; call [`physics.shutdown()`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.shutdown) explicitly on the initializing thread, preferably in a `finally` block as shown above.
+
+### Worker Configuration
+
+The worker-count argument configures the number of threads in the SuperDex Physics worker pool. It does not include the calling thread:
+
+| Value | Behavior |
+|---|---|
+| Negative | Select a hardware-dependent default. |
+| Zero | Request single-threaded execution. |
+| Positive | Request that many worker threads, clamped to the available logical processors. |
+
+During a synchronous step (`Scene::Step()` in C++ or `Scene.step()` in Python), up to `N + 1` threads may participate: the `N` worker-pool threads plus the calling thread. This does not apply to `AsyncScene`, whose step already runs on a worker-pool thread.
+
+More workers do not necessarily improve a simple scene. Choose the worker count based on the workload rather than relying on a particular default formula.
+
+[`SetIsSingleThreaded(true)`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) in C++, or [`physics.set_is_single_threaded(True)`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.set_is_single_threaded) in Python, makes new tasks execute on their calling thread. It does not terminate work that is already running asynchronously. [`IsSingleThreaded()`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`physics.is_single_threaded()`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.is_single_threaded) reports whether this mode is active, including a [`Context`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) created with zero workers. [`GetNumThreads()`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`physics.get_num_threads()`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.get_num_threads) reports the configured worker-pool size, or zero while single-threaded mode is active.
+
+:::note C++ only
+The thread that calls `CreateContext()` is bound automatically. Before any other thread uses a [`Context`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html), [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html), [`Actor`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), or another part of the SuperDex Physics API, call [`BindThisThread()`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html). Balance every bind with [`UnbindThisThread()`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) before the thread exits; binding does not make a [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) safe for concurrent access.
+:::
+
+## Shapes and the File Cache
+
+The [Shapes](./shapes.mdx) page covers creation, supported geometry, and ownership in detail. Shapes are created or loaded through the [`Context`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) and can be shared by actors in multiple scenes. [`ShapeHandle`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ShapeHandle.html) objects are reference-counted in C++ and Python; actors and the optional file cache may also keep shape data alive.
+
+The file cache preserves file-loaded shapes for faster repeated loads with the same path and bake parameters. It can improve repeated scene setup at the cost of retaining memory. Disabling the cache clears its entries, as does [`ClearFileCache()`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html).
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+context->EnableFileCache(true);
+
+superdex::ShapeHandle shape = context->LoadShapeFromFile(
+    "path/to/shape.obj", superdex::ErrorAssert{});
+
+context->ClearFileCache();
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+import superdex.physics as physics
+
+physics.enable_file_cache(True)
+shape = physics.load_shape_from_file("path/to/shape.obj")
+physics.clear_file_cache()
+```
+
+</TabItem>
+</Tabs>
+
+## Scene Ownership
+
+Start with the synchronous [`Scene` model](./scenes.mdx), then use the C++-only [`AsyncScene`](./scenes.mdx#asyncscene) when physics must advance independently of the calling thread. [`AsyncScene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1AsyncScene.html) owns a synchronous [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) and schedules its stepping on the [`Context`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html)'s shared worker pool.

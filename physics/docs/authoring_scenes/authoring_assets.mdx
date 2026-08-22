@@ -1,0 +1,234 @@
+---
+sidebar_position: 2
+title: "Authoring Assets"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Authoring Assets
+
+The SuperDex Physics engine provides some basic utilities to convert geometry data into simulation-ready model assets. This standalone workflow uses only APIs shipped in `superdex-physics`: load model data, validate it, optionally convert its length units and axis convention, optionally bake a grid-interpolated signed-distance field (SDF) for use in the [Contact](../concepts/contact.md) formulation, and save the result as a `.mochi.h5` file.
+
+Supported inputs are:
+
+- Wavefront OBJ (`.obj`)
+- STL (`.stl`)
+- Stanford PLY (`.ply`)
+- Object File Format (`.off`)
+- SuperDex Physics JSON (`.mochi.json`)
+- SuperDex Physics HDF5 (`.mochi.h5`)
+
+The OBJ, STL, PLY, and OFF loaders mentioned above import only triangulated surface geometry.
+Parsing or generating mesh data for tetrahedral meshes or polylines from formats other than SuperDex JSON or HDF5 is outside the current scope of the physics engine.
+An application may use other functionality (e.g., a third-party mesh generator) to produce flattened nodes and connectivity arrays for a tetrahedral mesh or polyline, then construct [`MeshData`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1MeshData.html) from these directly (as described in [Mesh Shapes](../concepts/shapes.mdx#mesh-shapes)) and assign it to [`ModelData.mesh`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html).
+Set [`nodesPerElement`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1MeshData.html) / [`nodes_per_element`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.MeshData.nodes_per_element) to `2` for polylines, `3` for triangles, or `4` for tetrahedra.
+The [Mass on Rod Spring](../examples/tendons_rods/mass_on_rod_spring.md) and [high-fidelity rod-based tendon](../examples/tendons_rods/tendon_model_fidelity.md#high-fidelity-elastic-rod) examples provide practical polyline-model references.
+For higher-level asset preparation, you can also use SuperDex Studio's Model Editor before starting this workflow.
+
+## Input Requirements
+
+The model APIs load and validate geometry; they do not provide general mesh preparation. Prepare input data with these requirements in mind:
+
+- Coordinates must reach simulation in the consuming application's length units and axis convention. Input data in another convention can be transformed with [Convert Scale and Coordinate Space](#convert-scale-and-coordinate-space). For a known consumer, author assets in that consumer's expected length units and axis convention to minimize friction.
+- A meaningful SDF requires a suitable closed surface with consistent orientation and without severe degeneracies, self-intersections, or ambiguous topology.
+
+Checked loading and model validation enforce the invariants known to the model API. Autocorrection applies only narrowly limited in-place fixes, such as normalizing applicable vectors and weights.
+
+See [Shapes](../concepts/shapes.mdx#model-data) for model and shape representations, and [Collider Representations](../concepts/contact.md#collider-representations) for how a baked SDF is used at runtime.
+
+## Load and Validate Model Data
+
+Use checked loading for the normal path:
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+#include <mochi_physics/utils/mochi_model_utils.h>
+#include <superdex_physics.h>
+
+superdex::ModelData modelData = superdex::model_utils::LoadFromFile(
+    "models/prepared_part.obj", superdex::ErrorAssert{});
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+import superdex.physics as physics
+
+model_data = physics.model.load_from_file("models/prepared_part.obj")
+```
+
+</TabItem>
+</Tabs>
+
+`model_utils::LoadFromFile()` / [`physics.model.load_from_file()`](pathname:///generated/api/v1.0/python/api/models.html#superdex.physics.model.load_from_file) parses the file, applies supported autocorrections, and validates the resulting [`ModelData`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html). These examples fail fast for brevity: C++ uses [`ErrorAssert{}`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1ErrorAssert.html), while Python allows generated exceptions to propagate.
+
+Unchecked loading is available via `model_utils::LoadFromFileUnchecked()` / [`physics.model.load_from_file_unchecked()`](pathname:///generated/api/v1.0/python/api/models.html#superdex.physics.model.load_from_file_unchecked) for advanced use cases where data may be initially invalid.
+Equivalent byte-loading APIs are `model_utils::LoadFromBytes()` and `model_utils::LoadFromBytesUnchecked()` in the C++ `model_utils` namespace, and [`physics.model.load_from_bytes()`](pathname:///generated/api/v1.0/python/api/models.html#superdex.physics.model.load_from_bytes) and [`physics.model.load_from_bytes_unchecked()`](pathname:///generated/api/v1.0/python/api/models.html#superdex.physics.model.load_from_bytes_unchecked) in Python.
+
+## Autocorrect and Validate Explicitly
+
+For data created programmatically, loaded through an unchecked API, or otherwise not validated by checked loading, run C++ `model_utils::AutoCorrect()` and `model_utils::Validate()`, or Python [`physics.model.auto_correct()`](pathname:///generated/api/v1.0/python/api/models.html#superdex.physics.model.auto_correct) and [`physics.model.validate()`](pathname:///generated/api/v1.0/python/api/models.html#superdex.physics.model.validate), before baking an SDF or serializing:
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+superdex::model_utils::AutoCorrect(modelData, superdex::ErrorAssert{});
+superdex::model_utils::Validate(modelData, superdex::ErrorAssert{});
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+physics.model.auto_correct(model_data)
+physics.model.validate(model_data)
+```
+
+</TabItem>
+</Tabs>
+
+## Convert Scale and Coordinate Space
+
+If loaded data does not already use the consuming application's convention, bake the conversion into the model before generating an SDF or saving the asset. Define the source and target [`CoordinateSpace`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1CoordinateSpace.html) values from the asset pipeline and consuming application, respectively. The [C++](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1CoordinateSpace.html) and [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.CoordinateSpace) references document the type's fields and named conventions.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+superdex::model_utils::BakeCoordinateSpaceTransform(
+    modelData, sourceSpace, targetSpace, superdex::ErrorAssert{});
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+physics.model.bake_coordinate_space_transform(
+    model_data, source_space, target_space
+)
+```
+
+</TabItem>
+</Tabs>
+
+`model_utils::BakeCoordinateSpaceTransform()` / [`physics.model.bake_coordinate_space_transform()`](pathname:///generated/api/v1.0/python/api/models.html#superdex.physics.model.bake_coordinate_space_transform) converts both axis convention and units, including winding order when handedness changes. Use `model_utils::BakeTransform()` / [`physics.model.bake_transform()`](pathname:///generated/api/v1.0/python/api/models.html#superdex.physics.model.bake_transform) instead when an arbitrary scale, rotation, or translation is required.
+
+## Bake a Grid SDF
+
+`model_utils::BakeSdf()` / [`physics.model.bake_sdf()`](pathname:///generated/api/v1.0/python/api/models.html#superdex.physics.model.bake_sdf) computes a grid SDF from triangle or tetrahedral mesh data and stores it in [`ModelData::sdf`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html) / `model_data.sdf`, replacing any SDF already there. The operation may be slow and memory intensive, and it does not condition or repair the source mesh.
+
+Grid generation is controlled by `GridSdfParams` ([C++](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1GridSdfParams.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.GridSdfParams)):
+
+- `resolutionMode` / `resolution_mode` selects the model measurement used to derive grid cell size, or selects explicit grid cell sizing.
+- `resolutionDelta` / `resolution_delta` is a per-axis multiplier in derived modes. In explicit mode, it is the maximum grid cell size in the model's length units.
+- `boundaryPaddingDist` / `boundary_padding_dist` expands the model bounds in the model's length units so queries remain valid outside the surface.
+- `minGridResolution` / `min_grid_resolution` sets the minimum number of grid cells per axis.
+
+The defaults derive grid cell size from mean edge length. They are useful as a starting point, but production assets should select these parameters deliberately. Increasing [`resolutionDelta`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1GridSdfParams.html) / [`resolution_delta`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.GridSdfParams.resolution_delta) creates larger cells, reducing detail, memory use, and generation time. Decreasing it preserves finer detail at sharply increasing memory and generation cost, approximately cubic in linear resolution. Choose a resolution based on the asset's physical scale, smallest relevant features, intended contact behavior, and available memory.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+if (!modelData.mesh ||
+    (modelData.mesh->nodesPerElement != 3 && modelData.mesh->nodesPerElement != 4)) {
+  // Report that SDF baking requires a triangle or tetrahedral mesh, then return.
+  return;
+}
+
+superdex::GridSdfParams params{};
+superdex::model_utils::BakeSdf(
+    modelData, params, superdex::ErrorAssert{});
+
+if (!modelData.sdf || modelData.sdf->values.empty()) {
+  // Report that SDF baking did not produce grid data.
+}
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+if model_data.mesh is None or model_data.mesh.nodes_per_element not in (3, 4):
+    raise ValueError("SDF baking requires a triangle or tetrahedral mesh.")
+
+params = physics.GridSdfParams()
+physics.model.bake_sdf(model_data, params)
+
+if model_data.sdf is None or len(model_data.sdf.values) == 0:
+    raise RuntimeError("SDF baking did not produce grid data.")
+```
+
+</TabItem>
+</Tabs>
+
+## Save a `.mochi.h5` Asset
+
+Pass the HDF5 format explicitly when saving:
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+constexpr char const* outputPath = "generated/prepared_part.mochi.h5";
+superdex::model_utils::SaveToFile(
+    modelData,
+    outputPath,
+    superdex::FileFormat::H5,
+    superdex::ErrorAssert{});
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+output_path = "generated/prepared_part.mochi.h5"
+physics.model.save_to_file(model_data, output_path, physics.FileFormat.H5)
+```
+
+</TabItem>
+</Tabs>
+
+`FileFormat::H5` / [`physics.FileFormat.H5`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.FileFormat) selects the serializer; the filename alone does not. Missing destination directories are created automatically. The saved model contains the model's mesh data and the baked SDF. `model_utils::SaveToFile()` / [`physics.model.save_to_file()`](pathname:///generated/api/v1.0/python/api/models.html#superdex.physics.model.save_to_file) serializes the supplied data without implicitly autocorrecting or validating it.
+
+Do not blindly overwrite a richer source asset. Some existing model files contain data for unsupported or experimental features that the public [`ModelData`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html) representation cannot preserve when resaved.
+
+## Verify the Result
+
+Reload the output through the same standalone model-data API and confirm that both data sets survived serialization:
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+superdex::ModelData savedModel = superdex::model_utils::LoadFromFile(
+    outputPath, superdex::ErrorAssert{});
+
+if (!savedModel.mesh || !savedModel.sdf || savedModel.sdf->values.empty()) {
+  // Report that the saved asset is missing mesh or SDF data.
+}
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+saved_model = physics.model.load_from_file(output_path)
+
+if saved_model.mesh is None:
+    raise RuntimeError("The saved asset does not contain mesh data.")
+if saved_model.sdf is None or len(saved_model.sdf.values) == 0:
+    raise RuntimeError("The saved asset does not contain SDF data.")
+```
+
+</TabItem>
+</Tabs>
+
+Loading the finished asset as a runtime physics shape is covered in [Shapes](../concepts/shapes.mdx#loading-from-files).
+
+These model-data operations do not require initialization or shutdown. Context initialization is needed when registering runtime shapes and constructing scenes, not when preparing and serializing model data.

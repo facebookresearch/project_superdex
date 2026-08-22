@@ -1,0 +1,306 @@
+.. @generated
+
+Prefabs
+=======
+
+**Module:** ``superdex.physics.prefab``
+
+Declarative physics scene descriptions.
+
+Scene Description
+-----------------
+
+The root document and records that organize scene settings, actors, constraints, and nested prefabs.
+
+.. autoclass:: superdex.physics.prefab.ActorLists
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.ConstraintLists
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.PrefabReference
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.SceneParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.ScenePrefab
+   :members:
+   :show-inheritance:
+
+Actors
+------
+
+Actor descriptions.
+
+.. autoclass:: superdex.physics.prefab.ArticulatedActorPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.RigidActorPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.SoftActorPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.SoftSkinnedActorPrefab
+   :members:
+   :show-inheritance:
+
+Articulation Components & Controllers
+-------------------------------------
+
+Articulated actor components and pose controllers.
+
+.. autoclass:: superdex.physics.prefab.ArticulatedJointPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.ArticulatedLinkPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.ArticulatedSkinPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.PoseControllerPrefab
+   :members:
+   :show-inheritance:
+
+Constraints
+-----------
+
+Authoring records for constraints that bind actors by name.
+
+.. autoclass:: superdex.physics.prefab.Articulated3dRotationRangeConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.Articulated3dRotationTargetConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.ArticulatedSingleDofRangeConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.ArticulatedSingleDofTargetConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DeformableNodePositionConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DeformableNodeToDeformableNodeConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DeformableNodeToRigidConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.JointRotationRangeConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.JointRotationTrackingConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.RigidPivotPositionConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.RigidPivotRotationConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.RigidPivotToRigidTargetConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.RigidPrismaticJointConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.RigidSphericalJointConstraintPrefab
+   :members:
+   :show-inheritance:
+
+Contact Filters
+---------------
+
+Declarative contact rules over actor and layer names.
+
+.. autoclass:: superdex.physics.prefab.ActorContactEntry
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.ContactFilter
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.LayerContactEntry
+   :members:
+   :show-inheritance:
+
+Loading & Dependencies
+----------------------
+
+Load prefab documents and resolve nested prefabs and shape assets.
+
+.. autofunction:: superdex.physics.prefab.ensure_fully_loaded
+
+.. autofunction:: superdex.physics.prefab.get_prefab_full_path
+
+.. autofunction:: superdex.physics.prefab.load_from_file
+
+.. autofunction:: superdex.physics.prefab.load_from_json_string
+
+.. autofunction:: superdex.physics.prefab.load_nested_prefabs
+
+.. autofunction:: superdex.physics.prefab.load_shapes
+
+.. autofunction:: superdex.physics.prefab.shallow_load_from_file
+
+.. autofunction:: superdex.physics.prefab.shallow_load_from_json_string
+
+Instantiation
+-------------
+
+Instantiate a loaded prefab in a scene and inspect the created objects.
+
+.. autoclass:: superdex.physics.prefab.AddToSceneResult
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.PrefabParams
+   :members:
+   :show-inheritance:
+
+.. autofunction:: superdex.physics.prefab.add_to_scene
+
+Serialization & Export
+----------------------
+
+Serialize prefab documents and export live scenes or actors.
+
+.. autofunction:: superdex.physics.prefab.export_actor
+
+.. autofunction:: superdex.physics.prefab.export_scene
+
+.. autofunction:: superdex.physics.prefab.export_scene_excluding
+
+.. autofunction:: superdex.physics.prefab.save_to_json_file
+
+.. autofunction:: superdex.physics.prefab.save_to_json_string
+
+Containers
+----------
+
+Owning array containers that carry prefab records across the native API.
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayActorContactEntry
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayArticulated3dRotationRangeConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayArticulated3dRotationTargetConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayArticulatedActorPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayArticulatedJointPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayArticulatedLinkPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayArticulatedSingleDofRangeConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayArticulatedSingleDofTargetConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayDeformableNodePositionConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayDeformableNodeToDeformableNodeConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayDeformableNodeToRigidConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayJointRotationRangeConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayJointRotationTrackingConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayLayerContactEntry
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayPoseControllerPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayPrefabReference
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayRigidActorPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayRigidPivotPositionConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayRigidPivotRotationConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayRigidPivotToRigidTargetConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayRigidPrismaticJointConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArrayRigidSphericalJointConstraintPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArraySoftActorPrefab
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.prefab.DynamicArraySoftSkinnedActorPrefab
+   :members:
+   :show-inheritance:
+

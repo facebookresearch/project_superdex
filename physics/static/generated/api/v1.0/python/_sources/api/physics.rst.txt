@@ -1,0 +1,948 @@
+.. @generated
+
+Physics
+=======
+
+**Module:** ``superdex.physics``
+
+Core physics APIs.
+
+.. automodule:: superdex.physics
+   :no-members:
+
+Engine Lifecycle
+----------------
+
+Initialize and shut down the engine, and inspect whether it is running.
+
+.. autofunction:: superdex.physics.initialize
+
+.. autofunction:: superdex.physics.is_initialized
+
+.. autofunction:: superdex.physics.shutdown
+
+Execution & Threading
+---------------------
+
+Inspect worker capacity and choose worker-pool or single-threaded execution.
+
+.. autofunction:: superdex.physics.get_num_threads
+
+.. autofunction:: superdex.physics.is_single_threaded
+
+.. autofunction:: superdex.physics.set_is_single_threaded
+
+Scene
+-----
+
+Simulation scenes.
+
+.. autodata:: superdex.physics.DEFAULT_GRAVITY
+   :no-value:
+
+.. autoclass:: superdex.physics.Scene
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.StepInfo
+   :members:
+   :show-inheritance:
+
+.. autofunction:: superdex.physics.create_scene
+
+.. autofunction:: superdex.physics.destroy_scene
+
+.. autofunction:: superdex.physics.get_scene
+
+.. autofunction:: superdex.physics.is_valid_scene
+
+Handles
+-------
+
+Lightweight, strongly typed identifiers for engine-managed objects, queries, states, and callbacks.
+
+.. autoclass:: superdex.physics.ActorHandle
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.CallbackHandle
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ConstraintHandle
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.Handle
+   :members:
+   :show-inheritance:
+
+.. autodata:: superdex.physics.INVALID_HANDLE
+   :no-value:
+
+.. autoclass:: superdex.physics.QueryHandle
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SceneHandle
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ShapeHandle
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.StateHandle
+   :members:
+   :show-inheritance:
+
+Shapes & Geometry
+-----------------
+
+Geometry data and registered shapes.
+
+.. autoclass:: superdex.physics.BlendingData
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.BlendingDataView
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.Box
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.FileFormat
+   :members:
+   :show-inheritance:
+
+.. autodata:: superdex.physics.GRID_SDF_DEFAULT_BOUNDARY_PADDING
+   :no-value:
+
+.. autodata:: superdex.physics.GRID_SDF_PARAMS_DEFAULT
+   :no-value:
+
+.. autoclass:: superdex.physics.GridSdfData
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.GridSdfDataView
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.GridSdfParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.GridSdfResolutionMode
+   :members:
+   :show-inheritance:
+
+.. autodata:: superdex.physics.MESH_DATA_SPACE_DIM
+   :no-value:
+
+.. autoclass:: superdex.physics.MeshData
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.MeshDataView
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.MeshFileType
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ModelData
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ModelDataView
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.Plane
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SkinningData
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SkinningDataView
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.Sphere
+   :members:
+   :show-inheritance:
+
+.. autofunction:: superdex.physics.clear_file_cache
+
+.. autofunction:: superdex.physics.clear_file_from_cache
+
+.. autofunction:: superdex.physics.create_mesh_shape
+
+.. autofunction:: superdex.physics.create_model_shape
+
+.. autofunction:: superdex.physics.create_plane_shape
+
+.. autofunction:: superdex.physics.create_sphere_shape
+
+.. autofunction:: superdex.physics.create_tet_mesh_shape
+
+.. autofunction:: superdex.physics.create_tri_mesh_shape
+
+.. autofunction:: superdex.physics.enable_file_cache
+
+.. autofunction:: superdex.physics.get_num_shapes
+
+.. autofunction:: superdex.physics.get_shape_aabb
+
+.. autofunction:: superdex.physics.get_shape_mesh
+
+.. autofunction:: superdex.physics.get_shape_surface_mesh
+
+.. autofunction:: superdex.physics.get_shape_visual_mesh
+
+.. autofunction:: superdex.physics.is_file_cache_enabled
+
+.. autofunction:: superdex.physics.load_shape_from_bytes
+
+.. autofunction:: superdex.physics.load_shape_from_file
+
+.. autofunction:: superdex.physics.release_shape
+
+Actors
+------
+
+Runtime physical bodies.
+
+.. autoclass:: superdex.physics.Actor
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ActorType
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ArticulatedActorParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ArticulatedCycleJoint
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ArticulatedCycleJointParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ArticulatedDofInfo
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ArticulatedJointFrictionParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ArticulatedJointParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ArticulatedJointType
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ArticulatedLinkParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ArticulatedShapeInfo
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ArticulatedSkinParams
+   :members:
+   :show-inheritance:
+
+.. autodata:: superdex.physics.DEFAULT_DENSITY
+   :no-value:
+
+.. autoclass:: superdex.physics.PoseConstraintInfo
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.PoseConstraintType
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.PoseControllerParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.PoseTrackingParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.RecenteringParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.RigidActorParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SoftActorParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SoftSkinnedActorParams
+   :members:
+   :show-inheritance:
+
+.. autofunction:: superdex.physics.get_articulated_shape_info
+
+Soft Materials
+--------------
+
+Uniform and per-element constitutive-model parameters for soft actors.
+
+.. autoclass:: superdex.physics.ActiveAnisoArapMaterialParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ActiveNeoHookeanMaterialParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ActiveShapeTargetingArapMaterialParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ArapMaterialParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.LinearElasticMaterialParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.MaterialPsdStrategy
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.NeoHookeanMaterialParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.PerElementSoftMaterialData
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.PerElementSoftMaterialDataView
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SoftMaterialParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SoftMaterialType
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.StVenantKirchhoffMaterialParams
+   :members:
+   :show-inheritance:
+
+Constraints
+-----------
+
+Constraints on and between actors.
+
+.. autoclass:: superdex.physics.Articulated3dRotationRangeConstraintParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.Articulated3dRotationTargetConstraintParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ArticulatedSingleDofRangeConstraintParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ArticulatedSingleDofTargetConstraintParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.Constraint
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ConstraintParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ConstraintType
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DeformableNodePositionConstraintParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DeformableNodeToDeformableNodeConstraintParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DeformableNodeToRigidConstraintParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.JointRotationRangeConstraintParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.JointRotationTrackingConstraintParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.RigidPivotPositionConstraintParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.RigidPivotRotationConstraintParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.RigidPivotToRigidTargetConstraintParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.RigidPrismaticJointConstraintParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.RigidSphericalJointConstraintParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.RodElementRotationToRigidConstraintParams
+   :members:
+   :show-inheritance:
+
+Contact & Collision
+-------------------
+
+Contact and collision configuration and results.
+
+.. autoclass:: superdex.physics.ActorBoundaryElementType
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ActorSegmentElementType
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.BoundarySubsamplingParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.BoundarySubsamplingStrategy
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ColliderType
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ContactParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.ContactPoint
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.CoulombFrictionModel
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.IncludeNestedActors
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.NodeContactForce
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SdfDistances
+   :members:
+   :show-inheritance:
+
+Solver
+------
+
+Solver configuration and results.
+
+.. autodata:: superdex.physics.AUTO_LINEAR_SOLVER_MAX_ITER
+   :no-value:
+
+.. autoclass:: superdex.physics.ConvergenceStatus
+   :members:
+   :show-inheritance:
+
+.. autodata:: superdex.physics.DEFAULT_BACK_PROPAGATION_EPS_FINITE_DIFF
+   :no-value:
+
+.. autodata:: superdex.physics.DEFAULT_REL_STEP_TOL
+   :no-value:
+
+.. autoclass:: superdex.physics.ExperimentalEvalParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.IntegrationMethod
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.LineSearchType
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.LinearSolverConvergenceNorm
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.LinearSolverParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.LinearSolverType
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.LinearToleranceStrategy
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.NonLinearSolverConvergenceMode
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.NonLinearSolverParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.NonLinearSolverType
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.PreconditionerType
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.PsdProjectionMode
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SaturationHessianParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SolverParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SolverStats
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.VerbosityLevel
+   :members:
+   :show-inheritance:
+
+Query Types
+-----------
+
+Select the derived data computed by query methods on Actor and Constraint.
+
+.. autoclass:: superdex.physics.QueryType
+   :members:
+   :show-inheritance:
+
+Recording Options
+-----------------
+
+Configure which scene data Scene.start_recording writes.
+
+.. autoclass:: superdex.physics.RecordingParams
+   :members:
+   :show-inheritance:
+
+Debugging & Diagnostics
+-----------------------
+
+Simulation debugging and diagnostics.
+
+.. autoclass:: superdex.physics.DebugDraw
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DebugDrawData
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DebugDrawLineVertices
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DebugDrawSpheres
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DebugServer
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.LogChannel
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.PerformanceStats
+   :members:
+   :show-inheritance:
+
+.. autofunction:: superdex.physics.enable_log_channel
+
+.. autofunction:: superdex.physics.get_debug_server
+
+.. autofunction:: superdex.physics.is_log_channel_enabled
+
+.. autofunction:: superdex.physics.log
+
+.. autofunction:: superdex.physics.set_log_callback
+
+Build Information
+-----------------
+
+Native library build information.
+
+.. autofunction:: superdex.physics.is_debug
+
+.. autofunction:: superdex.physics.uses_double_precision
+
+.. autofunction:: superdex.physics.uses_hdf5
+
+Core Value & Spatial Types
+--------------------------
+
+Numeric and spatial types, constants, and operations.
+
+.. autoclass:: superdex.physics.Aabb
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.Color
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.CoordinateSpace
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.CoordinateSpaceAxes
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.Int3
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.Obb
+   :members:
+   :show-inheritance:
+
+.. autodata:: superdex.physics.QUATERNION_IDENTITY
+   :no-value:
+
+.. autoclass:: superdex.physics.Quaternion
+   :members:
+   :show-inheritance:
+
+.. autodata:: superdex.physics.REAL3_X_AXIS
+   :no-value:
+
+.. autodata:: superdex.physics.REAL3_Y_AXIS
+   :no-value:
+
+.. autodata:: superdex.physics.REAL3_Z_AXIS
+   :no-value:
+
+.. autoclass:: superdex.physics.Real2
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.Real3
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.Real6
+   :members:
+   :show-inheritance:
+
+.. autodata:: superdex.physics.TRANSFORM_RT_IDENTITY
+   :no-value:
+
+.. autoclass:: superdex.physics.TransformRT
+   :members:
+   :show-inheritance:
+
+.. autofunction:: superdex.physics.normalize
+
+Error Handling
+--------------
+
+The exception raised when a SuperDex Physics operation fails.
+
+.. autoclass:: superdex.physics.Error
+   :members:
+   :show-inheritance:
+
+Containers & Spans
+------------------
+
+Owning array containers and non-owning spans used to exchange bulk data with the native API.
+
+.. autoclass:: superdex.physics.DynamicArrayActor
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayActorHandle
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayArticulatedCycleJoint
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayArticulatedCycleJointParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayArticulatedDofInfo
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayArticulatedJointFrictionParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayArticulatedJointParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayArticulatedJointType
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayArticulatedLinkParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayBlendingData
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayBlendingDataView
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayBool
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayChar
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayColor
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayConstraint
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayContactPoint
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayInt
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayNodeContactForce
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayPoseConstraintInfo
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayPoseTrackingParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayReal
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayReal2
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayReal3
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArraySoftActorParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayString
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayTransformRT
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.DynamicArrayUint8
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanActor
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstActor
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstActorConst
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstActorHandle
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstArticulatedCycleJoint
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstArticulatedDofInfo
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstArticulatedJointFrictionParams
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstArticulatedJointType
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstChar
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstColor
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstContactPoint
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstInt
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstNodeContactForce
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstPoseConstraintInfo
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstReal
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstReal3
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstString
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstTransformRT
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstUint8
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanConstraintConst
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanReal
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanReal2
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.SpanTransformRT
+   :members:
+   :show-inheritance:
+
+Not Yet Categorized
+-------------------
+
+Public symbols that are not yet grouped into a section above.
+
+.. autoclass:: superdex.physics.DynamicArrayRoutingElement
+   :members:
+   :show-inheritance:
+
+.. autodata:: superdex.physics.MINUS2_PI_PLUS2_PI
+   :no-value:
+
+.. autodata:: superdex.physics.REAL3_ONES
+   :no-value:
+
+.. autodata:: superdex.physics.REAL3_ZEROS
+   :no-value:
+
+.. autoclass:: superdex.physics.RoutingElement
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.RoutingElementType
+   :members:
+   :show-inheritance:
+
+.. autodata:: superdex.physics.UNIT_INTERVAL
+   :no-value:
+

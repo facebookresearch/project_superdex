@@ -1,0 +1,878 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * Injected into the embedded C++ (Doxygen) and Python (Sphinx / Read the Docs)
+ * API-reference iframes by src/components/api_frame.js, so the tool-produced
+ * docs share the SuperDex Robotics site's typography and oklch palette instead of the
+ * tools' stock themes. Kept as a runtime injection (not baked into the
+ * tool-produced HTML) so it survives regeneration of the API docs.
+ *
+ * Font URLs are RELATIVE (fonts/...), resolved against this file's location at
+ * the site root, so they work under any baseUrl (local '/' and the staticdocs
+ * subpath alike). Do not change them to absolute '/fonts/...'.
+ *
+ * Colors mirror src/css/custom.css (light = pure white bg + black text with a
+ * light sidebar; dark = cool hue-250 neutrals + warm off-white text).
+ */
+
+/* --- Self-hosted fonts (mirror src/css/custom.css; served from <base>/fonts) --- */
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: block;
+  src: url('fonts/dm-sans-variable.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'DM Sans';
+  font-style: italic;
+  font-weight: 300;
+  font-display: block;
+  src: url('fonts/dm-sans-300-italic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('fonts/instrument-serif-regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: italic;
+  font-weight: 400;
+  font-display: block;
+  src: url('fonts/instrument-serif-italic.woff2') format('woff2');
+}
+
+/* =========================================================================
+   C++  —  Doxygen + doxygen-awesome (CSS-variable driven)
+   Light theme = :root defaults; dark theme = html.dark-mode.
+   ========================================================================= */
+html {
+  --font-family: 'DM Sans', system-ui, sans-serif;
+  --font-family-monospace: ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, monospace;
+
+  --primary-color: oklch(0.28 0.08 250);
+  --primary-dark-color: oklch(0.216 0.08 250);
+  --primary-light-color: oklch(0.92 0.02 250);
+
+  --page-background-color: #ffffff;
+  --page-foreground-color: #000000;
+  --page-secondary-foreground-color: #333333;
+  --separator-color: #e6e6e6;
+
+  --side-nav-background: #ffffff;
+  --side-nav-foreground: #333333;
+  --searchbar-background: #ffffff;
+  --searchbar-foreground: #000000;
+
+  --code-background: #f2f2f2;
+  --code-foreground: #000000;
+  /* Code fragments (variable initializers, concept definitions, source listings)
+     follow the theme: a light surface with dark text in light mode. Doxygen's
+     syntax-highlight colors stay readable on this surface. The dark-mode block
+     below flips these to the dark "editor" values. */
+  --fragment-background: #f2f2f2;
+  --fragment-foreground: #000000;
+  --tablehead-background: #ffffff;
+  --blockquote-background: #f6f6f6;
+  --blockquote-foreground: #333333;
+
+  /* Shared neutral tokens used by the C++ landing cards and the Python (RTD)
+     rules below, so both flip correctly between light and dark. */
+  --api-bg: #ffffff;
+  --api-surface: #f2f2f2;
+  --api-surface-title: #e0e0e0;
+  --api-text: #000000;
+  --api-text-secondary: #333333;
+  --api-border: #e6e6e6;
+  --api-border-strong: #cccccc;
+  --api-hover: #f0f0f0;
+  --api-link: oklch(0.28 0.08 250);
+  --api-code-bg: oklch(0.93 0.006 75);
+  --api-code-block-bg: #f2f2f2;
+  --api-code-block-highlight-bg: #fff8c5;
+  --api-code-block-text: #1f2328;
+  --api-code-comment: #57606a;
+  --api-code-keyword: #cf222e;
+  --api-code-name: #8250df;
+  --api-code-string: #0a3069;
+  --api-code-number: #0550ae;
+  --api-code-positive: #116329;
+
+  --border-radius-small: 4px;
+  --border-radius-medium: 6px;
+  --border-radius-large: 8px;
+}
+
+html.dark-mode {
+  --primary-color: oklch(0.62 0.08 250);
+  --primary-dark-color: oklch(0.477 0.08 250);
+  --primary-light-color: oklch(0.3 0.03 250);
+
+  --page-background-color: oklch(0.19 0.02 250);
+  --page-foreground-color: oklch(0.93 0.006 75);
+  --page-secondary-foreground-color: oklch(0.76 0.012 250);
+  --separator-color: oklch(0.33 0.02 250);
+
+  --side-nav-background: oklch(0.19 0.02 250); /* match --page-background-color so the sidebar isn't a different shade */
+  --side-nav-foreground: oklch(0.76 0.012 250);
+  --searchbar-background: oklch(0.22 0.02 250);
+  --searchbar-foreground: oklch(0.93 0.006 75);
+
+  --code-background: oklch(0.25 0.02 250);
+  --code-foreground: oklch(0.93 0.006 75);
+  --fragment-background: var(--api-code-block-bg);
+  --fragment-foreground: var(--api-code-block-text);
+  --fragment-keyword: var(--api-code-name);
+  --fragment-keywordtype: var(--api-code-name);
+  --fragment-keywordflow: var(--api-code-keyword);
+  --fragment-token: var(--api-code-string);
+  --fragment-comment: var(--api-code-comment);
+  --fragment-link: var(--api-code-number);
+  --fragment-preprocessor: var(--api-code-positive);
+  --fragment-linenumber-color: var(--api-text-secondary);
+  --fragment-linenumber-background: var(--api-surface);
+  --fragment-linenumber-border: var(--api-border);
+  --tablehead-background: oklch(0.22 0.02 250);
+  --blockquote-background: oklch(0.22 0.02 250);
+  --warning-color: var(--api-surface);
+  --warning-color-dark: var(--api-code-keyword);
+  --warning-color-darker: var(--api-text);
+  --note-color: var(--api-surface);
+  --note-color-dark: #d29922;
+  --note-color-darker: var(--api-text);
+}
+
+/* Shared neutral tokens — dark values. Covers both the Doxygen (.dark-mode)
+   and the Sphinx/RTD ([data-theme='dark']) dark indicators. */
+html.dark-mode,
+html[data-theme='dark'] {
+  --api-bg: oklch(0.19 0.02 250);
+  --api-surface: oklch(0.22 0.02 250);
+  --api-surface-title: oklch(0.28 0.02 250);
+  --api-text: oklch(0.93 0.006 75);
+  --api-text-secondary: oklch(0.76 0.012 250);
+  --api-border: oklch(0.33 0.02 250);
+  --api-border-strong: oklch(0.4 0.02 250);
+  --api-hover: oklch(0.24 0.02 250);
+  --api-link: oklch(0.62 0.08 250);
+  --api-code-bg: oklch(0.25 0.02 250);
+  --api-code-block-bg: #0d1117;
+  --api-code-block-highlight-bg: #242a31;
+  --api-code-block-text: #e6edf3;
+  --api-code-comment: #8b949e;
+  --api-code-keyword: #ff7b72;
+  --api-code-name: #d2a8ff;
+  --api-code-string: #a5d6ff;
+  --api-code-number: #79c0ff;
+  --api-code-positive: #7ee787;
+}
+
+/* Doxygen project title / page headings → editorial serif, matching the site */
+#projectname {
+  font-family: 'Instrument Serif', Georgia, serif !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.02em;
+}
+#projectbrief {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  color: var(--page-secondary-foreground-color);
+}
+div.header .title,
+.headertitle .title,
+h1.title {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* Injected top-level section list for the otherwise-blank Doxygen landing page
+   (see maybeInjectCppLanding in src/components/api_frame.js). */
+#superdex-robotics-api-landing {
+  max-width: 820px;
+  margin: 1rem auto 0;
+}
+.superdex-robotics-api-landing-lead {
+  color: var(--page-secondary-foreground-color);
+  margin: 0 0 1.25rem;
+}
+.superdex-robotics-api-landing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.superdex-robotics-api-landing-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--api-border);
+  border-radius: 8px;
+  background: var(--api-bg);
+  text-decoration: none !important;
+  transition: border-color 0.15s ease;
+}
+.superdex-robotics-api-landing-card:hover {
+  border-color: var(--primary-color);
+}
+.superdex-robotics-api-landing-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--page-foreground-color);
+}
+.superdex-robotics-api-landing-desc {
+  font-size: 0.85rem;
+  color: var(--page-secondary-foreground-color);
+}
+@media (max-width: 640px) {
+  .superdex-robotics-api-landing-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Desktop sidebar-only layout pins the title area to a fixed --top-height and
+   clips #top with overflow:hidden. The search box sits just below the title, so
+   the stock 120px left its bottom edge cut off — raise it enough to fit the
+   title area (~86px) plus the search box (10px margin + 33px). The variable also
+   drives #side-nav's top offset and #nav-tree's height, so the layout stays
+   consistent. (Mobile uses a different layout and is unaffected.) */
+@media screen and (min-width: 768px) {
+  html {
+    --top-height: 140px;
+  }
+}
+
+/* Dark-mode fixes for classic Doxygen chrome (doxygen.css / navtree.css) that
+   hardcodes light colors (white, #F9FAFC, #C4CFE5, #DCE2EF) the doxygen-awesome
+   CSS variables never reach — so it renders as white blocks in dark mode. Each
+   rule below re-drives those surfaces from the shared tokens: unchanged in light
+   mode, correct in dark. Selectors mirror the originals' specificity and this
+   file is injected last, so equal-specificity rules win via source order. */
+
+/* Section headings mask their own underline with box-shadow strips on each side
+   of the title text; doxygen.css bakes them white via `td h2.groupheader`. */
+td h2.groupheader,
+div.groupHeader {
+  box-shadow:
+    13px 0 var(--page-background-color),
+    -13px 0 var(--page-background-color),
+    13px 1px var(--separator-color),
+    -13px 1px var(--separator-color);
+}
+
+/* Breadcrumb separators: doxygen.css gives li.navelem::after a white square +
+   light shadow. Blend it into the page so doxygen-awesome's token-driven
+   separator (the ::before triangle) is what shows. */
+#nav-path li.navelem:after {
+  background: var(--page-background-color);
+  box-shadow: none;
+}
+#nav-path li.navelem:hover,
+#nav-path li.navelem:hover:after {
+  background-color: var(--api-hover);
+}
+
+/* Navtree "sync" icon (bottom of the tree). */
+div.nav-sync-icon {
+  background-color: var(--api-surface);
+  border-color: var(--api-border);
+}
+div.nav-sync-icon:hover {
+  background-color: var(--api-hover);
+}
+div.nav-sync-icon.active:after {
+  background-color: var(--api-surface);
+  border-top-color: var(--api-border);
+}
+
+/* Left nav-tree separator: navtree.css hardcodes a light #C4CFE5 border-right,
+   which shows as a stray light line in dark mode and clashes with the themed
+   drag handle sitting on the same column (the "broken/disconnected" divider).
+   Theme it so the two coincide as one clean line. */
+#nav-tree {
+  border-right-color: var(--api-border);
+  /* Draw the separator under the search area as this element's border-top so it
+     shares the same box as the border-right above: the two lines then meet at a
+     clean corner and span the full nav column. (Doxygen's own separator lives on
+     #main-nav's border-bottom, which is narrower than the sidebar — so it never
+     reached this vertical divider — and uses a hardcoded light color; it is
+     removed below in favor of this themed, corner-joining one.) */
+  border-top: 1px solid var(--api-border);
+}
+#main-nav {
+  border-bottom: none;
+}
+
+/* Right-hand page-navigation panel and its resize handle. The panel's 1px
+   border-left is the visible divider; keep the 6px drag handle as an invisible
+   hit-area (a solid 6px bar reads as a too-thick doubled separator). */
+#page-nav {
+  background: var(--api-bg);
+  border-left: 1px solid var(--api-border);
+}
+#page-nav-resize-handle {
+  background-color: transparent;
+}
+
+/* Scrollspy / selection highlights: navtree.css hardcodes light fills (#EEF1F7
+   for the page-nav current-section rows, #DCE2EF for the nav-tree selection),
+   which are mis-colored in dark mode and made the highlight's edge stand out.
+   Theme them to the subtle surface token so they blend into the panel (the edge
+   no longer reads as a cut-off band). Deliberately colour-only: forcing the
+   list to full content width collapses doxygen's inline-block #page-nav-tree
+   and flattens the panel to just its scrollbar. */
+ul.page-outline li.vis {
+  background-color: var(--api-surface);
+}
+#nav-tree .selected {
+  background-color: var(--api-surface);
+}
+
+/* Member declaration/detail surfaces use --fragment-background (doxygen-awesome),
+   which this site pins dark for real code blocks (.fragment/.highlight) — that
+   turned the declaration rows and prototype boxes into black bars in LIGHT mode.
+   Re-drive just these signature surfaces from --api-surface so they read as a
+   subtle raised surface in both themes (matching the Python signature boxes);
+   real code blocks keep their editor-dark background. Member text/links already
+   adapt via --page-foreground-color / --primary-color. */
+table.memberdecls .memItemLeft,
+table.memberdecls .memItemRight,
+table.memberdecls .memTemplItemLeft,
+table.memberdecls .memTemplItemRight,
+table.memberdecls .memTemplParams,
+div.memproto,
+h2.memtitle {
+  background: var(--api-surface);
+}
+/* The memtitle tab blends into the proto box below via a box-shadow AND an
+   ::after connector strip — both hardcoded to --fragment-background upstream.
+   Re-point them at --api-surface too, otherwise the connector renders as a dark
+   bar (a "black line") under each subsection title now that the tab/box use the
+   lighter surface. */
+h2.memtitle {
+  box-shadow: 0px var(--spacing-medium) 0 -1px var(--api-surface), var(--box-shadow);
+}
+h2.memtitle::after {
+  background: var(--api-surface);
+}
+
+html.dark-mode span.tt {
+  background-color: var(--api-code-bg);
+  color: var(--api-text);
+}
+
+html.dark-mode .paramname em,
+html.dark-mode table.params .paramname {
+  color: var(--api-text);
+}
+
+/* =========================================================================
+   Python  —  Sphinx + Read the Docs theme (.wy-*, .rst-content)
+   ========================================================================= */
+.wy-body-for-nav,
+.wy-nav-content,
+.wy-nav-side,
+.wy-menu-vertical,
+.wy-side-nav-search,
+.rst-content,
+.rst-content p,
+.rst-content li,
+.rst-content table {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+}
+
+.rst-content h1,
+section > h1,
+.rst-content .section > h1 {
+  font-family: 'Instrument Serif', Georgia, serif !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.02em;
+}
+.rst-content h2,
+.rst-content h3,
+.rst-content h4,
+.rst-content h5 {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+  font-weight: 600 !important;
+}
+
+/* Hide RTD's breadcrumb "home" icon (and its trailing separator). It only jumps
+   to the Python API index, which reads as a second, inconsistent "home" next to
+   the Docusaurus navbar wordmark (which goes to the site homepage). Removing it
+   leaves a single home affordance and matches the C++ (Doxygen) pages, which
+   have no in-content home icon. */
+.wy-breadcrumbs > li:first-child {
+  display: none !important;
+}
+
+/* Content surface + links (all driven by the shared --api-* tokens so light
+   and dark stay consistent) */
+html.writer-html5,
+.wy-body-for-nav,
+.wy-nav-content-wrap,
+.wy-nav-content,
+.rst-content,
+.rst-content .document,
+.wy-nav-content .section,
+.wy-nav-content section,
+.rst-content dl,
+.rst-content dl dd {
+  background: var(--api-bg) !important;
+}
+/* Full-width content column (no 960px cap). */
+.wy-nav-content {
+  max-width: none;
+}
+.rst-content,
+.rst-content p,
+.rst-content li,
+.rst-content dl dt {
+  color: var(--api-text);
+}
+.rst-content a,
+.rst-content a:visited,
+a {
+  color: var(--api-link) !important;
+}
+
+/* Left sidebar → light in light mode, dark in dark mode (matches Doxygen) */
+.wy-nav-side {
+  background: var(--api-bg) !important;
+  border-right: 1px solid var(--api-border);
+}
+.wy-side-nav-search {
+  background: var(--api-bg) !important;
+  border-bottom: 1px solid var(--api-border);
+}
+.wy-side-nav-search > a,
+.wy-side-nav-search > div.version,
+.wy-side-nav-search .wy-dropdown > a {
+  color: var(--api-text) !important;
+}
+.wy-side-nav-search > a {
+  font-family: 'Instrument Serif', Georgia, serif !important;
+  font-weight: 400 !important;
+}
+.wy-side-nav-search input[type='text'] {
+  background-color: var(--api-bg);
+  color: var(--api-text);
+  border: 1px solid var(--api-border-strong);
+  border-radius: 6px;
+}
+.wy-menu-vertical a {
+  color: var(--api-text-secondary) !important;
+}
+/* Long single-word entry names (e.g. long Prefab class names) extend past the
+   fixed-width sidebar. Rather than wrap or clip them, let the scroll container
+   scroll horizontally — mirroring the C++ nav tree (#nav-tree overflow-x:auto).
+   Entry names keep RTD's nowrap so they stay on one line and the bar scrolls. */
+.wy-side-scroll {
+  overflow-x: auto;
+}
+/* Size the menu to its content so row backgrounds — notably the current-section
+   highlight (li.current) — span the full scroll width. Without this they stop at
+   the viewport edge, leaving a two-tone band once you scroll horizontally. */
+.wy-menu-vertical {
+  min-width: max-content;
+}
+.wy-menu-vertical a:hover {
+  background: var(--api-hover) !important;
+  color: var(--api-text) !important;
+}
+.wy-menu-vertical li.current {
+  background: var(--api-surface) !important;
+}
+.wy-menu-vertical li.current > a,
+.wy-menu-vertical li.on a {
+  background: var(--api-surface) !important;
+  color: var(--api-text) !important;
+  border: none;
+}
+.wy-menu-vertical li.current a {
+  border-right: none;
+}
+/* Mobile top bar */
+.wy-nav-top {
+  background: var(--api-bg) !important;
+  color: var(--api-text) !important;
+  border-bottom: 1px solid var(--api-border);
+}
+.wy-nav-top a {
+  color: var(--api-text) !important;
+}
+
+/* Code */
+.rst-content code,
+.rst-content tt,
+.rst-content pre,
+.highlight {
+  font-family: ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, monospace !important;
+}
+.rst-content div[class^='highlight'],
+.rst-content div[class^='highlight'] pre,
+.rst-content pre.literal-block {
+  background: var(--api-code-block-bg) !important;
+  border-color: var(--api-border) !important;
+  color: var(--api-code-block-text);
+  border-radius: 6px;
+}
+.rst-content .highlight .hll {
+  background: var(--api-code-block-highlight-bg);
+}
+.rst-content .highlight .c,
+.rst-content .highlight .ch,
+.rst-content .highlight .cm,
+.rst-content .highlight .cp,
+.rst-content .highlight .cpf,
+.rst-content .highlight .c1,
+.rst-content .highlight .cs,
+.rst-content .highlight .go,
+.rst-content .highlight .gp,
+.rst-content .highlight .w {
+  color: var(--api-code-comment);
+}
+.rst-content .highlight .k,
+.rst-content .highlight .kc,
+.rst-content .highlight .kd,
+.rst-content .highlight .kn,
+.rst-content .highlight .kp,
+.rst-content .highlight .kr {
+  color: var(--api-code-keyword);
+}
+.rst-content .highlight .kt,
+.rst-content .highlight .na,
+.rst-content .highlight .nb,
+.rst-content .highlight .nc,
+.rst-content .highlight .nd,
+.rst-content .highlight .nf,
+.rst-content .highlight .ni,
+.rst-content .highlight .nl,
+.rst-content .highlight .nn,
+.rst-content .highlight .nt,
+.rst-content .highlight .bp,
+.rst-content .highlight .fm,
+.rst-content .highlight .gh,
+.rst-content .highlight .gu {
+  color: var(--api-code-name);
+}
+.rst-content .highlight .s,
+.rst-content .highlight .sa,
+.rst-content .highlight .sb,
+.rst-content .highlight .sc,
+.rst-content .highlight .dl,
+.rst-content .highlight .sd,
+.rst-content .highlight .s2,
+.rst-content .highlight .se,
+.rst-content .highlight .sh,
+.rst-content .highlight .si,
+.rst-content .highlight .sx,
+.rst-content .highlight .sr,
+.rst-content .highlight .s1,
+.rst-content .highlight .ss {
+  color: var(--api-code-string);
+}
+.rst-content .highlight .m,
+.rst-content .highlight .mb,
+.rst-content .highlight .mf,
+.rst-content .highlight .mh,
+.rst-content .highlight .mi,
+.rst-content .highlight .mo,
+.rst-content .highlight .il,
+.rst-content .highlight .no {
+  color: var(--api-code-number);
+}
+.rst-content .highlight .o {
+  color: var(--api-code-block-text);
+}
+.rst-content .highlight .ow {
+  color: var(--api-code-keyword);
+}
+.rst-content .highlight .gd,
+.rst-content .highlight .gr,
+.rst-content .highlight .gt,
+.rst-content .highlight .ne {
+  color: var(--api-code-keyword);
+}
+.rst-content .highlight .gi {
+  color: var(--api-code-positive);
+}
+.rst-content .highlight .nv,
+.rst-content .highlight .vc,
+.rst-content .highlight .vg,
+.rst-content .highlight .vi,
+.rst-content .highlight .vm {
+  color: var(--api-code-block-text);
+}
+.rst-content code.literal,
+.rst-content tt.literal {
+  background: var(--api-code-bg);
+  color: var(--api-link);
+  border: none;
+}
+
+/* Signature boxes, field lists, table headers → neutral gray surface (no blue) */
+.rst-content dl.py > dt,
+.rst-content dl.cpp > dt,
+.rst-content dl.field-list > dt,
+.rst-content dl.py dt.sig,
+.rst-content .sig.sig-object.py,
+.rst-content dl:not(.docutils) dt {
+  background: var(--api-surface) !important;
+  border-color: var(--api-border-strong) !important;
+  color: var(--api-text);
+}
+.rst-content dl.py > dt,
+.rst-content dl.cpp > dt,
+.rst-content dl.field-list > dt {
+  border-top: 3px solid var(--api-border-strong) !important;
+}
+/* Signature text — RTD hardcodes object names to #000 (.sig-name/.descname) and
+   nested method/attribute signature dt text to #555, both unreadable on the dark
+   surface. Re-drive them from the shared --api-* tokens (light in dark mode). */
+.rst-content dl[class] .sig-name,
+.rst-content dl[class] .descname,
+.rst-content dl[class] .descclassname,
+.rst-content dl[class] .sig-prename,
+.rst-content dl[class] dl:not(.field-list) > dt {
+  color: var(--api-text) !important;
+}
+.rst-content dl[class] dt .property {
+  color: var(--api-link) !important;
+}
+/* RTD's generic `.property` rule also matches nested Python property definition
+   lists, giving them inline layout and signature-keyword padding. Keep those
+   definitions as unpadded block rows while retaining inline keyword styling. */
+.rst-content dl.py.property {
+  display: block !important;
+  padding-right: 0 !important;
+}
+
+/* Mobile overflow: long dotted class names
+   (class mochi.prefab.Articulated3dRotationRangeConstraintPrefab) and function
+   signatures (add_boundary_condition_constrained_nodes_at_rest_permanent(...))
+   are single, effectively unbreakable tokens. With the default
+   `overflow-wrap: normal` they have no break opportunity, so on a narrow screen
+   they run past the viewport and get clipped (the iframe can't be scrolled
+   sideways to reach them). Allow these signatures + headings to wrap so the full
+   text is always readable; short signatures on wide screens are unaffected. */
+.rst-content dl.py > dt.sig,
+.rst-content .sig.sig-object,
+.rst-content dl[class] .sig-name,
+.rst-content dl[class] .sig-prename,
+.rst-content dl[class] .descname,
+.rst-content dl[class] .descclassname,
+.rst-content h1,
+.rst-content h2,
+.rst-content h3,
+.rst-content h4 {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Mobile: additional overflow sources beyond the signatures above. On a narrow
+   screen the page must not scroll sideways to read content. */
+@media screen and (max-width: 768px) {
+  /* Long inline type names in parameter docs (e.g.
+     DynamicArrayDeformableNodeToDeformableNodeDistanceConstraintPrefab) default
+     to white-space:nowrap and run off-screen. Let them wrap. RTD applies the
+     nowrap to the inner span.pre, so target those (and any span inside code) too. */
+  html.writer-html5 .rst-content code,
+  html.writer-html5 .rst-content code.literal,
+  html.writer-html5 .rst-content code .pre,
+  html.writer-html5 .rst-content code span,
+  html.writer-html5 .rst-content .pre,
+  html.writer-html5 .rst-content span.pre,
+  .rst-content cite,
+  .rst-content p,
+  .rst-content li,
+  .rst-content dd {
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+  /* The horizontally-scrolling nav is a desktop affordance (see the
+     `min-width: max-content` + `overflow-x: auto` rules above). On mobile the nav
+     is off-canvas, so undo the content-sizing, let entries wrap, and stop the
+     menu width from forcing page-level horizontal scroll. */
+  .wy-menu-vertical {
+    min-width: 0 !important;
+  }
+  .wy-menu-vertical a,
+  .wy-menu-vertical li,
+  .wy-menu-vertical .toctree-l1,
+  .wy-menu-vertical .toctree-l2,
+  .wy-menu-vertical code,
+  .wy-menu-vertical .pre {
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+  .wy-nav-side .wy-menu-vertical,
+  .wy-side-scroll {
+    overflow-x: hidden;
+  }
+  /* Deep nesting (class > method > parameter field-list) compounds RTD's 24px
+     per-level indent, pushing parameter/return descriptions off the right edge
+     on a narrow screen. Tighten the nested indents so content stays on-screen. */
+  .rst-content dl:not(.docutils) dd {
+    margin-left: 10px !important;
+  }
+  /* RTD renders parameter/return field lists as a two-column grid
+     (max-content name + auto body); on a narrow screen the body column keeps a
+     wide min-size and overflows. Stack name over body so the body gets the full
+     remaining width and its content wraps. */
+  .rst-content dl.field-list {
+    display: block !important;
+    margin-left: 0 !important;
+  }
+  .rst-content dl.field-list > dt,
+  .rst-content dl.field-list > dd {
+    display: block !important;
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+  }
+  /* RTD's mobile top bar shows a hamburger that toggles the off-canvas nav via
+     RTD's theme JS — which isn't wired up in this embedded (jQuery-shimmed)
+     context, so it does nothing. It reads as a dead, confusing "second
+     hamburger" just below the Docusaurus navbar. Hide the RTD mobile bar; site
+     navigation is handled by the Docusaurus shell around the iframe. */
+  .wy-nav-top {
+    display: none !important;
+  }
+}
+.rst-content table.docutils thead th,
+.rst-content table.docutils thead,
+.wy-table thead th,
+.rst-content table.docutils th {
+  background: var(--api-surface) !important;
+  color: var(--api-text) !important;
+  border-color: var(--api-border) !important;
+}
+.rst-content table.docutils td {
+  color: var(--api-text);
+  border-color: var(--api-border) !important;
+}
+html[data-theme='dark'] .rst-content table.docutils:not(.field-list) tr:nth-child(2n-1) td {
+  background-color: var(--api-surface) !important;
+}
+html[data-theme='dark'] .rst-content table.docutils caption,
+html[data-theme='dark'] .rst-content table.docutils caption .caption-text {
+  background-color: var(--api-bg);
+  color: var(--api-text);
+}
+
+html[data-theme='dark'] .rst-content span.highlighted {
+  background-color: var(--api-code-block-highlight-bg);
+  color: var(--api-text);
+}
+
+html[data-theme='dark'] .rst-footer-buttons .btn-neutral,
+html[data-theme='dark'] .rst-footer-buttons .btn-neutral:visited {
+  background-color: var(--api-surface) !important;
+  color: var(--api-link) !important;
+  border-color: var(--api-border) !important;
+  box-shadow: none !important;
+}
+html[data-theme='dark'] .rst-footer-buttons .btn-neutral:hover,
+html[data-theme='dark'] .rst-footer-buttons .btn-neutral:focus,
+html[data-theme='dark'] .rst-footer-buttons .btn-neutral:active {
+  background-color: var(--api-hover) !important;
+  color: var(--api-link) !important;
+  border-color: var(--api-border) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='dark'] .rst-content .viewcode-link,
+html[data-theme='dark'] .rst-content .viewcode-back {
+  color: var(--api-link) !important;
+}
+
+/* Neutralize RTD's blue info admonitions ("See also", "Note") → gray.
+   Semantic warning/danger admonitions keep their own colors. */
+.rst-content .admonition.note,
+.rst-content .admonition.seealso,
+.rst-content div.note,
+.rst-content div.seealso {
+  background: var(--api-surface) !important;
+}
+.rst-content .admonition.note > .admonition-title,
+.rst-content .admonition.seealso > .admonition-title,
+.rst-content div.note > .admonition-title,
+.rst-content div.seealso > .admonition-title {
+  background: var(--api-surface-title) !important;
+  color: var(--api-text) !important;
+}
+.rst-content .admonition.note > .admonition-title::before,
+.rst-content .admonition.seealso > .admonition-title::before,
+.rst-content div.note > .admonition-title::before,
+.rst-content div.seealso > .admonition-title::before {
+  color: var(--api-text) !important;
+}
+.rst-content .admonition.note p,
+.rst-content .admonition.seealso p,
+.rst-content div.note p,
+.rst-content div.seealso p {
+  color: var(--api-text);
+}
+
+/* Warning-family admonitions use light body and title backgrounds that are
+   unreadable under the dark theme's light --api-text. In dark mode only, use
+   neutral dark bodies and muted semantic title colors. Light mode keeps RTD's
+   native colors. */
+html[data-theme='dark'] .rst-content .admonition.warning,
+html[data-theme='dark'] .rst-content .admonition.caution,
+html[data-theme='dark'] .rst-content .admonition.attention,
+html[data-theme='dark'] .rst-content .admonition.danger,
+html[data-theme='dark'] .rst-content .admonition.error,
+html[data-theme='dark'] .rst-content div.warning,
+html[data-theme='dark'] .rst-content div.caution,
+html[data-theme='dark'] .rst-content div.attention,
+html[data-theme='dark'] .rst-content div.danger,
+html[data-theme='dark'] .rst-content div.error {
+  background: var(--api-surface) !important;
+}
+/* RTD keeps warning titles peach and danger titles pink in dark mode. */
+html[data-theme='dark'] .rst-content .admonition.warning > .admonition-title,
+html[data-theme='dark'] .rst-content .admonition.caution > .admonition-title,
+html[data-theme='dark'] .rst-content .admonition.attention > .admonition-title,
+html[data-theme='dark'] .rst-content div.warning > .admonition-title,
+html[data-theme='dark'] .rst-content div.caution > .admonition-title,
+html[data-theme='dark'] .rst-content div.attention > .admonition-title {
+  background: #805600 !important;
+  color: var(--api-text) !important;
+}
+html[data-theme='dark'] .rst-content .admonition.danger > .admonition-title,
+html[data-theme='dark'] .rst-content .admonition.error > .admonition-title,
+html[data-theme='dark'] .rst-content div.danger > .admonition-title,
+html[data-theme='dark'] .rst-content div.error > .admonition-title {
+  background: #7a2e2e !important;
+  color: var(--api-text) !important;
+}
+html[data-theme='dark'] .rst-content .admonition.warning p,
+html[data-theme='dark'] .rst-content .admonition.caution p,
+html[data-theme='dark'] .rst-content .admonition.attention p,
+html[data-theme='dark'] .rst-content .admonition.danger p,
+html[data-theme='dark'] .rst-content .admonition.error p,
+html[data-theme='dark'] .rst-content div.warning p,
+html[data-theme='dark'] .rst-content div.caution p,
+html[data-theme='dark'] .rst-content div.attention p,
+html[data-theme='dark'] .rst-content div.danger p,
+html[data-theme='dark'] .rst-content div.error p {
+  color: var(--api-text);
+}

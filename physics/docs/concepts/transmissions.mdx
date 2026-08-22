@@ -1,0 +1,207 @@
+---
+title: Transmissions
+sidebar_position: 13
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Transmissions
+
+:::caution Experimental API
+Transmissions are part of the **experimental** API (`mochi_physics_experimental.h`). The API may change without notice in future releases.
+:::
+
+A transmission maps the kinematics of an [articulated actor](./actors/articulated_actors.mdx) to a scalar generalized coordinate. An actuator attached to that transmission maps the coordinate and its rate to a potential energy, a dissipation potential, or an applied generalized force. Through the transmission Jacobian, this scalar response contributes forces and stiffness to the actor's overall [dynamics](./dynamics.md).
+
+A **transmission** is the general kinematic concept. A tendon is one important specialization, but not every transmission represents a tendon, and the scalar coordinate is not necessarily a tendon length change. For example:
+
+- For a tendon, the coordinate can be length change and its conjugate force is tension.
+- For a gearbox, the coordinate can be an output-shaft angle and its conjugate force is torque.
+- More generally, a transmission can couple several joint coordinates into one scalar actuation coordinate.
+
+## Formulation
+
+### Continuous Model
+
+Let $q\in\mathcal Q$ be the generalized configuration of an [articulated actor](./actors/articulated_actors.mdx#generalized-coordinates). A transmission defines a scalar displacement
+
+$$
+x = \mathcal T(q)
+$$
+
+relative to its value at the actor's all-zero-DoF rest pose. Its differential is the covector
+
+$$
+g(q)=D\mathcal T(q)\in T_q^*\mathcal Q~.
+$$
+
+Each component of $g(q)$ is the signed transmission ratio between a reduced actor DoF and the transmission coordinate. For a tendon routed around a revolute joint, this ratio is a moment arm; for an angle-to-angle gearbox, it is a dimensionless gear ratio. For generalized velocity $v\in T_q\mathcal Q$, the coordinate rate is
+
+$$
+\dot x = g(q)[v]~.
+$$
+
+An attached actuator defines a scalar response in this coordinate. For an actuator with potential energy $U_a(x)$ and dissipation potential $R_a(\dot x)$, its contribution to the actor is the composition
+
+$$
+U_{\mathrm{trans}}(q) = U_a(\mathcal T(q))~,
+\qquad
+R_{\mathrm{trans}}(q,v)=R_a(g(q)[v])~.
+$$
+
+Define the scalar restoring load
+
+$$
+\lambda_a = \frac{\partial U_a}{\partial x}
++ \frac{\partial R_a}{\partial \dot x}~.
+$$
+
+The actuator contributes the covector $\lambda_a g(q)$ to the left-hand side of the actor's equations of motion, or equivalently applies the physical generalized force $-\lambda_a g(q)$. For a tendon, positive $\lambda_a$ is tension and therefore pulls toward decreasing length. This is the same potential-and-dissipation framework introduced in [Dynamics](./dynamics.md#system-dynamics), specialized to a scalar actuation coordinate.
+
+The transmission is a stateless kinematic mapping. Time-evolving control state, such as a target displacement, commanded force, or pressure, belongs to the attached actuator.
+
+### Stage Discretization
+
+Within an implicit stage, SuperDex Physics discretizes the transmission rate by directly differencing its scalar displacement. For stage-end configuration $q_i\in\mathcal Q$, fixed stage-start configuration $q_i^0\in\mathcal Q$, and stage duration $\Delta t_i$,
+
+$$
+\dot x_i
+= \frac{\mathcal T(q_i)-\mathcal T(q_i^0)}{\Delta t_i}~.
+$$
+
+This generally differs from evaluating the continuous rate $g(q_i)[v_i]$ for generalized velocity $v_i\in T_{q_i}\mathcal Q$. The direct stage-local difference gives the dissipation contribution to the incremental potential the form
+
+$$
+\Delta t_i R_a\!\left(
+\frac{\mathcal T(q_i)-\mathcal T(q_i^0)}{\Delta t_i}
+\right)~.
+$$
+
+Treating the stage-start displacement as fixed circumvents the apparent configuration dependence of the continuous composed dissipation potential and lets its configuration gradient map the scalar dissipative load through the transmission Jacobian. This follows the stage-local discretization used in the [incremental-potential formulation](./dynamics.md#incremental-potential-form).
+
+## Transmission Types
+
+### Linear Transmissions
+
+A `LinearTransmission` uses a fixed weighted sum of selected single-DoF joint coordinates:
+
+$$
+x = \sum_i c_i q_{j_i}~.
+$$
+
+The signed coefficients $c_i$ determine both scale and direction. Their interpretation depends on the mechanism:
+
+- For a tendon constrained to maintain nearly constant moment arms, $c_i$ is the signed moment arm for joint $j_i$.
+- For a gearbox, $c_i$ can represent a signed gear ratio coupling an input or output coordinate to the transmission coordinate.
+- For other mechanisms with a fixed linear coupling, the coefficients are the corresponding constant Jacobian entries.
+
+Thus, a linear transmission is not intrinsically a tendon model. Its scalar can have length, angle, or other generalized-coordinate units, provided the coefficients and actuator parameters use a consistent unit system.
+
+### Spatial Tendons
+
+A spatial tendon specializes a transmission to routed length. It is defined by an ordered list of routing elements:
+
+- A `Waypoint` is fixed in a link's local geometry frame. Each pair of adjacent waypoints forms a straight segment whose current length contributes to the tendon coordinate.
+- A `LinearJoint` contributes a signed term $c_i q_{j_i}$ for a single-DoF joint. It carries no routing geometry and breaks the straight-segment path between neighboring waypoints.
+
+The displacement is the current sum of the routed segment lengths and linear-joint terms, minus the corresponding rest-pose value. Unlike a linear transmission, its waypoint contribution generally has configuration-dependent moment arms.
+
+Linear-joint terms can efficiently represent limited wrapping cases. In particular, when a tendon wraps around an obstacle coaxial with a revolute joint and the effective wrap radius remains constant, the wrapped arc-length change is linear in the joint angle. A `LinearJoint` term can add that contribution without discretizing the wrapped arc. This approximation is not a general contact or wrapping solver; it is appropriate only when the assumed axis, radius, and routing regime remain valid.
+
+Although this transmission type represents tendon geometry, disengagement under compression is behavior of the attached actuator. The transmission displacement itself is not clamped.
+
+## Actuators
+
+A transmission can be created without an actuator, in which case its displacement and Jacobian remain queryable but it contributes no actuation force. An actuator can then be attached to define the scalar constitutive or control response.
+
+### Displacement Control
+
+A particularly useful actuator for modeling tendon-like transmissions is the displacement-control actuator, which drives its transmission toward a target $x^*$ using stiffness $k$ and damping $c$. Away from the unilateral slack clamp, its potential and dissipation can be understood as
+
+$$
+U_a(x) = \frac{1}{2}k(x-x^*)^2~,
+\qquad
+R_a(\dot x) = \frac{1}{2}c\dot x^2~,
+$$
+
+with scalar restoring load
+
+$$
+\lambda_a = k(x-x^*) + c\dot x~.
+$$
+
+By default, the actuator does not transmit compressive force, clamping $\lambda_a$ to be non-negative. This unilateral response can approximate the loss of load-bearing capacity when a tendon buckles rather than carrying compression.
+
+For a mechanism that carries force in both directions, such as an ideal gearbox or rigid linkage, set `allowCompressiveForce` / `allow_compressive_force` to `true`. Gearbox backlash can instead be approximated with an antagonistic pair of transmissions with unilateral displacement-control actuators: use opposite transmission directions and separate their target displacements to impose a gap in which both actuators are slack. Outside the gap, one side of the pair engages. This models lost motion through the actuation response rather than changing the transmission's kinematic mapping.
+
+### Other Actuators
+
+Other actuator types include:
+
+- A force-control actuator applies a commanded scalar conjugate load. By default, negative loads are rejected unless `allowCompressiveForce` / `allow_compressive_force` is `true`; unlike displacement control, this flag validates the commanded load rather than clamping it.
+- A McKibben artificial muscle actuator implementing the model of [Chou and Hannaford (1996)](#references), which uses pressure as its control state and provides a pneumatic-muscle response intended for tendon-like length/tension transmissions.
+
+These actuators use the same transmission mapping and actor-level access pattern; only their scalar response and state interpretation differ.
+
+## Access and State
+
+Transmissions are currently supported on articulated actors. Adding a transmission returns an integer index local to that actor. Subsequent operations identify the transmission with the pair (`actor`, `transmissionIndex` / `transmission_index`).
+
+The actuator is attached to, and accessed through, its transmission. It does not receive a separate actor-level index. Accordingly, the same transmission index is used to:
+
+- Attach or replace its actuator.
+- Query the transmission displacement and Jacobian.
+- Query the attached actuator's state size.
+- Read or update the attached actuator's state variables.
+
+For example, the following adds a tendon transmission to an articulated actor, then uses the returned index to attach its actuator and update the actuator state:
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+int const transmissionIndex = experimental::AddLinearTransmission(
+    articulatedActor, tendonParams, error);
+experimental::AttachDisplacementControlActuator(
+    articulatedActor, transmissionIndex, actuatorParams, error);
+experimental::SetTransmissionActuatorStateVariables(
+    articulatedActor, transmissionIndex, MakeConstSpan(actuatorState), error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+transmission_index = mochi.experimental.add_linear_transmission(
+    articulated_actor, tendon_params
+)
+mochi.experimental.attach_displacement_control_actuator(
+    articulated_actor, transmission_index, actuator_params
+)
+mochi.experimental.set_transmission_actuator_state_variables(
+    articulated_actor, transmission_index, actuator_state
+)
+```
+
+</TabItem>
+</Tabs>
+
+For displacement control, the single state variable is the target displacement. For force control it is the commanded generalized force, and for a McKibben actuator it is pressure. A control policy can update these values between simulation steps through `SetTransmissionActuatorStateVariables` / `set_transmission_actuator_state_variables`. The transmission parameters and kinematic mapping remain unchanged.
+
+Use `GetTransmissionDisplacement` / `get_transmission_displacement` to query $x$ at the actor's current pose and `GetTransmissionDisplacementJacobian` / `get_transmission_displacement_jacobian` to query its Jacobian, which has one entry per reduced actor DoF. Before reading actuator state with `GetTransmissionActuatorStateVariables` / `get_transmission_actuator_state_variables`, use `GetNumTransmissionActuatorStateVariables` / `get_num_transmission_actuator_state_variables` to determine the output size.
+
+## Examples
+
+- **[Choosing a Tendon Model](../examples/tendons_rods/tendon_model_fidelity.md)**: compares an elastic rod, a waypoint-routed spatial tendon, and a fixed-coefficient linear transmission for the same articulated mechanism.
+  - Python example — `examples/example_tendon_comparison.py`
+
+## Related Concepts
+
+- [Dynamics](./dynamics.md) — Potential energy, dissipation, and implicit time integration.
+- [Articulated Actors](./actors/articulated_actors.mdx) — Joint coordinates, reduced DoFs, and articulated dynamics.
+- [Solvers](./solvers.md) — Nonlinear solution of the coupled actor dynamics.
+
+## References
+
+- C.-P. Chou and B. Hannaford, [Measurement and Modeling of McKibben Pneumatic Artificial Muscles](https://doi.org/10.1109/70.481753), *IEEE Transactions on Robotics and Automation*, 12(1), pp. 90–102, 1996.

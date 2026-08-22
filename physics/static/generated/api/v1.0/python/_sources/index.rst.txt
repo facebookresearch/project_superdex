@@ -1,0 +1,18 @@
+.. @generated
+
+API Reference
+=============
+
+Categories are shown in curated order. Symbols within each category are listed alphabetically.
+
+.. toctree::
+   :maxdepth: 2
+
+   api/physics
+   api/prefab
+   api/models
+   api/debugger
+   api/viewer
+   api/scene_setup
+   api/utilities
+   api/testing

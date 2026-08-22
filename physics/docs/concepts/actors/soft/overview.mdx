@@ -1,0 +1,207 @@
+---
+title: Soft
+sidebar_position: 1
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Soft Actors
+
+Soft actors represent deformable objects whose shapes change under load.  They use a volumetric representation of geometry that can capture any object shape.  For objects that are thin along one or two dimensions, consider using [shell](../shell.mdx) or [rod](../rod.mdx) actors, which handle those limits more efficiently.
+
+## Formulation
+
+### Continuous Model
+
+Soft actors discretize nonlinear finite-strain solid mechanics.  [Holzapfel (2000)](#references) provides comprehensive background on this problem in a similar notation.
+
+Let $\Omega_0 \subset \mathbb{R}^3$ denote a body in its undeformed reference configuration.  The position of a material point $\mathbf{X}\in\Omega_0$ at time $t$ is denoted $\mathbf{x}(\mathbf{X},t)$, and its displacement is defined as $\mathbf{u}(\mathbf{X}, t) = \mathbf{x}(\mathbf{X}, t) - \mathbf{X}$. Local strain is expressed in terms of the deformation gradient and Green–Lagrange strain,
+$$
+\mathbf{F} = \frac{\partial \mathbf{x}}{\partial \mathbf{X}}
+\qquad\text{and}\qquad
+\mathbf{E} = \frac{1}{2}\left(\mathbf{F}^T\mathbf{F} - \mathbf{1}\right)~.
+$$
+
+The kinetic energy is
+$$
+T = \frac{1}{2}\int_{\Omega_0} \rho_0 \left\Vert\dot{\mathbf{u}}\right\Vert_2^2\,d\mathbf{X}~,
+$$
+where $\rho_0$ is the mass density per unit reference volume.
+
+The elastic potential energy depends on the choice of material model.  Each material has an elastic energy density $\Psi(\mathbf{F})$ per unit reference volume, leading to the total potential energy
+$$
+U = \int_{\Omega_0} \Psi(\mathbf{F})\,d\mathbf{X}~.
+$$
+See the [Materials Overview](./materials/overview.md) page for a list of supported materials and links to their formulations.
+
+Mass- and stiffness-proportional damping are defined by the dissipation potential
+$$
+R = \frac{1}{2}\int_{\Omega_0}
+\left(
+\alpha_R \rho_0 \left\Vert\dot{\mathbf{u}}\right\Vert_2^2
++ \beta_R \, \dot{\mathbf{E}} : \mathbb{C}_0 : \dot{\mathbf{E}}
+\right)\,d\mathbf{X}~,
+$$
+where $\alpha_R$ and $\beta_R$ are the mass- and stiffness-damping coefficients. The fourth-order tensor $\mathbb{C}_0 = \partial^2\Psi/\partial\mathbf{E}^2\rvert_{\mathbf{E}=\mathbf{0}}$ is the Lagrangian material stiffness evaluated at zero deformation. It is fixed, not the current tangent of the nonlinear elastic response. The corresponding viscous second Piola–Kirchhoff stress is
+$$
+\mathbf{S}_{\mathrm{visc}} = \beta_R \, \mathbb{C}_0 : \dot{\mathbf{E}}~.
+$$
+Because the dissipation potential depends only on strain rate, the stiffness damping only dissipates energy during changes of shape, and is insensitive to rigid motions; see [Sánchez-Banderas and Otaduy (2018)](#references) for further discussion and comparison with classical Rayleigh damping.
+It can be seen as a fully Lagrangian variant of Kelvin–Voigt viscoelasticity (often instead formulated in terms of Cauchy stress and Eulerian strain rate), but it is parameterized by a single timescale $\beta_R$ for all materials, by analogy to Rayleigh damping.
+
+Calibrating the relaxation timescale $\beta_R$ to accurately model physical dissipation is important for obtaining qualitatively accurate dynamics with [higher-order time integrators](../../dynamics.md#comparison-and-recommendations) like `BDF2`.
+Insufficient viscoelastic dissipation typically leads to excessive bouncing of soft objects after impacts, even if [normal damping](../../contact.md#friction-and-damping) is included in their contact parameters.
+This is because the contact constraint is typically much stiffer than the soft material, so potential energy is primarily stored in the bulk material during contact.
+
+### Discretization
+
+The reference body is discretized with a volumetric tetrahedral mesh. The degrees of freedom are the nodal displacements from the reference configuration. Each of the $N$ nodes translates freely in three dimensions, giving $3N$ degrees of freedom.
+
+Within each tetrahedron, the motion is interpolated using the barycentric finite element shape functions $N_i$:
+$$
+\mathbf{x}(\mathbf{X}) = \sum_{i=1}^{4} N_i(\mathbf{X}) \, \mathbf{x}_i~,
+$$
+where $\mathbf{x}_i$ are the current nodal positions.
+The potentials $T$, $U$, and $R$ are then integrated numerically over each element using appropriate Gaussian quadrature rules.
+
+The resulting dynamics are discretized in time using the general [implicit-stage formulation](../../dynamics.md#mechanical-variables), with a slight modification to accommodate the strain rate in the viscoelastic damping term.
+During stage $i$, the strain rate is approximated as
+$$
+\dot{\mathbf{E}}_i \approx
+\frac{\mathbf{E}(\mathbf{F}_i)-\mathbf{E}(\mathbf{F}_i^0)}{\Delta t_i}~,
+$$
+where $\mathbf{F}_i^0$ and $\mathbf{F}_i$ are the deformation gradients at the stage-start and stage-end configurations.
+Using this finite difference, rather than an expansion in terms of the velocity gradient, allows the discrete viscoelastic force to derive from an incremental potential, avoiding nonsymmetric contributions to the Newton matrix.
+
+## Creating Soft Actors
+
+### Step 1: Load or Create a Tetrahedral Mesh Shape
+
+Soft actors require a volumetric tetrahedral mesh. Meshes are typically stored in `.mochi.h5` files.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+ShapeHandle meshShape = context->LoadShapeFromFile("duck.mochi.h5", error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+tet_mesh_shape = mochi.load_shape_from_file(file_path="duck.mochi.h5")
+```
+
+</TabItem>
+</Tabs>
+
+### Step 2: Configure and Create the Actor
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+SoftActorParams params;
+params.name = "duck";
+params.shape = meshShape;
+params.worldFromLocal = TransformRT(Real3{0, 1, 0});
+
+// Optional: override material (default is Neo-Hookean)
+params.material.type = SoftMaterialType::NeoHookean;
+params.material.neoHookean.youngsModulus = 1e5;
+params.material.neoHookean.poissonRatio = 0.45;
+params.material.density = 1000.0;
+
+Actor* softActor = scene->CreateSoftActor(params, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+soft_actor = scene.create_soft_actor(
+    name="duck",
+    shape=tet_mesh_shape,
+    world_from_local=mochi.TransformRT(translation=[0, 1, 0]),
+    material=mochi.SoftMaterialParams(
+        type=mochi.SoftMaterialType.NeoHookean,
+        neo_hookean=mochi.NeoHookeanMaterialParams(
+            youngs_modulus=1e5,
+            poisson_ratio=0.45,
+        ),
+        density=1000.0,
+    ),
+)
+```
+
+</TabItem>
+</Tabs>
+
+## Parameters Reference
+
+### SoftActorParams
+
+The creation fields are defined by `SoftActorParams` ([C++](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.SoftActorParams)).
+
+| Parameter | C++ Type | Default | Description |
+|-----------|----------|---------|-------------|
+| `name` | `DynamicString` | `""` | Display name for the actor. |
+| `layer` | `DynamicString` | `""` | Layer name, used for grouping and filtering. |
+| `worldFromLocal` / `world_from_local` | [`TransformRT`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1TransformRT.html) | Identity | Transform placing the actor in world space. |
+| `shape` | [`ShapeHandle`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ShapeHandle.html) | -- | Handle to the tetrahedral mesh shape (**required**). |
+| `material` | [`SoftMaterialParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftMaterialParams.html) | Neo-Hookean | Homogeneous material parameters (see below). |
+| `contact` | [`ContactParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ContactParams.html) | -- | Contact parameters (friction, restitution, etc.). |
+| `hasGravity` / `has_gravity` | `bool` | `true` | Whether the actor is affected by gravity. |
+| `hasInertia` / `has_inertia` | `bool` | `true` | Whether the actor has inertial (mass) terms. Set to `false` for quasistatic solves. |
+| `hasStress` / `has_stress` | `bool` | `true` | Whether internal elastic and viscoelastic stress/strain forces affect the actor. |
+| `boundaryElementType` / `boundary_element_type` | `ActorBoundaryElementType` | `Default` (`P1Q3`) | Quadrature order for boundary (surface) element integration. |
+
+:::note Experimental creation parameters
+Some additional parameters controlling the behavior of soft actors are separated into `experimental::ExperimentalSoftActorParams`, because non-default values are considered experimental.
+This additional struct can be passed alongside [`SoftActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html) at actor creation to use non-default values of its fields.
+:::
+
+### SoftMaterialParams
+
+Material selection is configured with `SoftMaterialParams` ([C++](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftMaterialParams.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.SoftMaterialParams)).
+
+| Parameter | C++ Type | Default | Description |
+|-----------|----------|---------|-------------|
+| `type` | `SoftMaterialType` | `NeoHookean` | Constitutive model selector (see [Material Models](./materials/overview.md#available-models)). |
+| `neoHookean` / `neo_hookean` | [`NeoHookeanMaterialParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SmithNeoHookeanMaterialParams.html) | $E = 10^5$, $\nu = 0.45$ | Parameters used when `type = NeoHookean`. |
+| `stVenantKirchhoff` / `st_venant_kirchhoff` | [`StVenantKirchhoffMaterialParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1StVenantKirchhoffMaterialParams.html) | $E = 10^5$, $\nu = 0.45$ | Parameters used when `type = StVenantKirchhoff`. |
+| `linearElastic` / `linear_elastic` | [`LinearElasticMaterialParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1LinearElasticMaterialParams.html) | $E = 10^5$, $\nu = 0.45$ | Parameters used when `type = LinearElastic`. |
+| `arap` | [`ArapMaterialParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArapMaterialParams.html) | $\mu = 1000$ | Parameters used when `type = Arap`. |
+| `activeNeoHookean` / `active_neo_hookean` | [`ActiveNeoHookeanMaterialParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ActiveNeoHookeanMaterialParams.html) | -- | Parameters used when `type = ActiveNeoHookean`. |
+| `activeShapeTargetingArap` / `active_shape_targeting_arap` | [`ActiveShapeTargetingArapMaterialParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ActiveShapeTargetingArapMaterialParams.html) | -- | Parameters used when `type = ActiveShapeTargetingArap`. |
+| `density` | `real` / `float` | `1000.0` | Mass density in the undeformed configuration [kg/m^3]. |
+| `massDampingCoefficient` / `mass_damping_coefficient` | `real` / `float` | `0` | Mass-proportional damping coefficient $\alpha_R$ [1/s] in the [continuum dissipation potential](#continuous-model). Must be non-negative; active only when [`hasInertia`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html) / [`has_inertia`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.SoftActorParams.has_inertia) is `true`. |
+| `stiffnessDampingCoefficient` / `stiffness_damping_coefficient` | `real` / `float` | `0` | Stiffness-proportional damping coefficient $\beta_R$ [s] in the [continuum dissipation potential](#continuous-model). Must be non-negative; active only when [`hasStress`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html) / [`has_stress`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.SoftActorParams.has_stress) is `true`. |
+| `stiffnessDampingIncludeGeometricTerm` / `stiffness_damping_include_geometric_term` | `bool` | `false` | **Experimental.** Whether the stiffness-damping tangent includes its geometric term. This affects the Newton Jacobian, but not the energy, residual, or converged solution. |
+
+:::note
+Only the parameters corresponding to the selected [`type`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftMaterialParams.html) are used at runtime. The other material parameter structs are ignored.
+
+If the shape provides per-element data for the selected material type, it takes precedence at creation. [`Actor::SetSoftMaterialParams()`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) replaces it with a homogeneous material; use `experimental::GetSoftMaterialParamsField()` and `experimental::SetSoftMaterialParamsField()` for per-element updates.
+:::
+
+## Examples
+
+- **[Soft Duck](../../../examples/basic/soft_duck.md)**: demonstrates a deformable duck falling onto a ground plane. Python example: `examples/example_soft_duck.py`.
+- **[Soft Duck with Visual Mesh](../../../examples/advanced/soft_duck_visual_mesh.md)**: compares a soft actor's embedded visual mesh with the boundary surface of its tetrahedral simulation mesh. Python example: `examples/example_soft_duck_visual_mesh.py`.
+- **[Damping Parameter Sweep](../../../examples/advanced/damping_sweep.md)**: demonstrates use of stiffness-proportional damping. Python example: `examples/example_damping_sweep.py`.
+
+## Related Concepts
+
+- [Materials Overview](./materials/overview.md) — Detailed formulation and parameters for each constitutive model.
+- [Actors Overview](../overview.mdx) — All actor types supported by SuperDex Physics.
+- [Soft Skinned Actors](../soft_skinned_actors.mdx) — Articulated skeleton coupled with deformable FEM skin.
+- [Scenes](../../scenes.mdx) — Creating and managing simulation scenes.
+- [Solvers](../../solvers.md) — Newton solver, linear solvers, and line search methods used for the implicit time integration.
+
+## References
+
+- G. A. Holzapfel, *Nonlinear Solid Mechanics: A Continuum Approach for Engineering*, John Wiley & Sons, Chichester, 2000. ISBN 978-0-471-82319-3.
+- R. M. Sánchez-Banderas and M. A. Otaduy, Strain Rate Dissipation for Elastic Deformations, *Computer Graphics Forum*, 37(8), 161–170, 2018. [doi:10.1111/cgf.13521](https://doi.org/10.1111/cgf.13521).

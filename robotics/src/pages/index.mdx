@@ -1,0 +1,112 @@
+---
+title: SuperDex Robotics
+description: Define, compose, and simulate robots on the SuperDex Physics engine.
+hide_table_of_contents: true
+---
+
+import styles from './index.module.css';
+import useBaseUrl from '@docusaurus/useBaseUrl';
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+import ViewportVideo from '@site/src/components/ViewportVideo';
+
+{
+  <>
+    <section className={styles.layer}>
+      <div className={styles.layerInner}>
+        <div className={styles.layerHeader}>
+          <div className={styles.layerHeadingCol}>
+            <p className="sdx-eyebrow">The robotics layer of SuperDex</p>
+            <h1 className={`sdx-display ${styles.layerHeading}`}>
+              Welcome to SuperDex Robotics.
+            </h1>
+          </div>
+          <div className={styles.layerIntroCol}>
+            <p className="sdx-body">
+              SuperDex Robotics extends the{' '}
+              <ProjectSuperdexLink site="physics">SuperDex Physics</ProjectSuperdexLink> engine to
+              robotics: declarative robot definitions and composition, controllers,
+              sensors, and more. This is the robotics toolkit of Project SuperDex.
+            </p>
+          </div>
+        </div>
+    
+        <hr className={`sdx-divider-line ${styles.layerDivider}`} />
+    
+        <div className={styles.layerBody}>
+          <div className={styles.bento}>
+            <figure className={`${styles.bentoCard} ${styles.bentoBig}`}>
+              <ViewportVideo
+                ariaLabel="Looping demo: browsing a library of ready-to-load robot arms and dexterous hands in SuperDex Robotics"
+                className={styles.leadMedia}
+                src={useBaseUrl('/img/main/robotics_bot_library.mp4')}
+                poster={useBaseUrl('/img/main/robotics_bot_library.webp')}
+              />
+            </figure>
+            <figure className={`${styles.bentoCard} ${styles.bentoA}`}>
+              <ViewportVideo
+                ariaLabel="Looping demo: two robot arms coordinating to manipulate a cube"
+                src={useBaseUrl('/img/main/bimanual_cube_manipulation.mp4')}
+                poster={useBaseUrl('/img/main/bimanual_cube_manipulation.webp')}
+              />
+            </figure>
+            <figure className={`${styles.bentoCard} ${styles.bentoB}`}>
+              <img
+                src={useBaseUrl('/img/main/robot_hand_debug_view.webp')}
+                alt="A dexterous robotic hand shown with link, joint, and collision debug overlays"
+              />
+            </figure>
+            <figure className={`${styles.bentoCard} ${styles.bentoC}`}>
+              <ViewportVideo
+                ariaLabel="Looping demo: a robotic hand manipulating a deformable network cable"
+                src={useBaseUrl('/img/main/main5.mp4')}
+                poster={useBaseUrl('/img/main/main5.webp')}
+              />
+            </figure>
+          </div>
+    
+          <div className={styles.features}>
+            <div className={styles.feature}>
+              <h3>Declarative Bots</h3>
+              <p>
+                A human-readable <code>.superdex_bot</code> file describes a
+                complete robot — links, joints, and mesh references. It extends the
+                physics engine's articulations with fields robotics workflows
+                demand, and is the source of
+                truth from Studio through simulation.
+              </p>
+            </div>
+            <div className={styles.feature}>
+              <h3>Ready-to-Load Bots</h3>
+              <p>
+                A library of bots – arms, robot hands, human hands, sensors,
+                torsos, etc. – is readily available, each as a{' '}
+                <code>.superdex_bot</code> file you can load directly into your
+                simulation scene.
+              </p>
+            </div>
+            <div className={styles.feature}>
+              <h3>BYO Bots</h3>
+              <p>
+                Bring your own robots in from the wider ecosystem. Load a URDF file
+                directly at runtime, or upgrade it into a native bot with{' '}
+                <ProjectSuperdexLink site="studio">SuperDex Studio</ProjectSuperdexLink>{' '}
+                for production-quality collision meshes.
+              </p>
+            </div>
+            <div className={styles.feature}>
+              <h3>Controllers, Sensors, Actuators</h3>
+              <p>
+                One uniform, extensible framework for controllers, sensors, and
+                actuators — use the built-ins or register your own. Ships
+                operational-space and joint-space PD controllers to drive robots.
+              </p>
+            </div>
+            <a href={useBaseUrl('/docs/overview/')} className={styles.layerLink}>
+              Get started with SuperDex Robotics →
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </>
+}

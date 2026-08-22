@@ -1,0 +1,419 @@
+---
+title: Inverse Kinematics
+sidebar_position: 10
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+# Inverse Kinematics
+
+:::caution Experimental API
+The IK solver is part of the **experimental** API (`mochi_physics_experimental.h`). The API may change without notice in future releases.
+:::
+
+SuperDex Physics' inverse kinematics (IK) system computes joint configurations that place an end-effector at a desired position and/or orientation in world space. Unlike traditional IK solvers that use Jacobian transpose or CCD methods, SuperDex Physics reuses its physics engine as a **quasistatic optimizer** — the same Newton solver that drives simulation is repurposed to minimize a target-reaching objective.
+
+Because the IK solve runs inside a full physics scene, **collision-aware IK comes for free**: joint limits, contact handling, and any other scene constraint are automatically respected.
+
+## How It Works
+
+### Quasistatic Optimization
+
+The IK solver reconfigures a physics scene into a static optimization problem by removing all dynamic effects:
+
+- Timestep is set to infinity ($dt = \infty$)
+- Gravity is zeroed out
+- Friction (Coulomb and viscous) is disabled
+- Inertia and joint friction are removed
+
+The solver then calls [`Scene::Step`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) with an infinite timestep, which reduces the equations of motion to the quasistatic equilibrium condition:
+
+$$
+\mathbf{F}_{\text{internal}}(q) + \mathbf{F}_{\text{external}}(q) = \mathbf{0}~,
+$$
+
+where $q\in\mathcal Q$ is the generalized configuration of the IK scene.
+
+### Objective Function
+
+IK targets are expressed as soft constraints (spring-like penalties). The total energy to minimize is:
+
+$$
+E(q) = \sum_i \frac{w_i}{2} \Vert f_i(q) - \mathbf{t}_i \Vert_2^2~,
+$$
+
+where:
+- $f_i(q)$ is the forward kinematics function for the $i$-th target
+- $\mathbf{t}_i$ is the desired position or rotation
+- $w_i$ is the weight (stiffness) of the $i$-th target
+
+**Position targets** use a translational spring:
+
+$$
+E_{\text{pos}} = \frac{w}{2} \Vert \mathbf{R}(q) \, \mathbf{p}_{\text{local}} + \mathbf{t}(q) - \mathbf{p}_{\text{target}} \Vert_2^2~.
+$$
+
+**Rotation targets** use a rotational spring:
+
+$$
+E_{\text{rot}}(q)
+= \frac{w}{2}\left\Vert
+\operatorname{rot}(q)\circ\mathbf{r}_{\text{local}}
+-\mathbf{r}_{\text{target}}
+\right\Vert_2^2~.
+$$
+
+Here composition and subtraction are manifold-aware rotation operations, not arithmetic on rotation-vector components. The API supplies both rotations as **rotation vectors** (axis times angle), i.e., `Real3` values; they are converted to rotations before composition, and their difference is the principal rotation vector of the relative rotation.
+
+### Newton Solver
+
+The IK optimization uses Newton's method with an Armijo line search. `IKSolverParams`
+configures its convergence tolerances and stopping limits. Convergence is declared when
+either the absolute or relative residual-norm criterion is satisfied. The solve may instead
+stop without converging when it reaches the iteration or elapsed-time limit. Regardless of
+whether the solver converged, each target is then evaluated against the configured position
+and rotation error thresholds to determine reachability.
+
+## API Reference
+
+See the [C++ API Reference](../api_reference/cpp.mdx) and
+[Python API Reference](../api_reference/python.mdx) for additional details.
+
+### IKSolverParams
+
+| Parameter | C++ Type | Default | Description |
+|-----------|----------|---------|-------------|
+| `maxIter` / `max_iter` | `int` | `20` | Maximum Newton solver iterations |
+| `lineSearchMaxIter` / `line_search_max_iter` | `int` | `10` | Maximum line-search iterations per Newton step |
+| `absTol` / `abs_tol` | `real` / `float` | `1e-2` | Absolute residual-norm tolerance for convergence |
+| `relTol` / `rel_tol` | `real` / `float` | `1e-8` | Relative residual-norm tolerance for convergence |
+| `positionErrorThres` / `position_error_thres` | `real` / `float` | `1e-2` | Position error threshold [m] for reachability |
+| `rotationErrorThres` / `rotation_error_thres` | `real` / `float` | `1e-2` | Rotation error threshold [rad] for reachability |
+| `maxElapsedTimeSeconds` / `max_elapsed_time_seconds` | `double` / `float` | `0` | Maximum elapsed wall-clock time [s]; `0` disables the limit |
+| `verbosity` | `VerbosityLevel` | `Warning` | Verbosity level for the Newton solver |
+
+### IKSolver Methods
+
+| Method | Return | Description |
+|--------|--------|-------------|
+| `SetSolverParams` / `set_solver_params` | `void` | Set IK solver parameters. |
+| `GetSolverParams` / `get_solver_params` | `IKSolverParams` | Get IK solver parameters. |
+| `CreatePositionTarget` / `create_position_target` | `Constraint*` / `Optional[Constraint]` | Create a position target for a given actor. Only one per actor — creating a new one replaces the old. |
+| `ClearPositionTarget` / `clear_position_target` | `void` | Remove position target for a given actor. |
+| `CreateRotationTarget` / `create_rotation_target` | `Constraint*` / `Optional[Constraint]` | Create a rotation target for a given actor. Only one per actor. |
+| `ClearRotationTarget` / `clear_rotation_target` | `void` | Remove rotation target for a given actor. |
+| `SolveIK` / `solve_ik` | `bool` | Solve the IK problem. Returns `true` if all targets are reachable within error thresholds. |
+
+### Experimental Module Functions
+
+| Method | Return | Description |
+|--------|--------|-------------|
+| `experimental::CreateIKSolver` / `experimental.create_ik_solver` | `experimental::IKSolver*` / `Optional[experimental.IKSolver]` | Create a new IK solver. The solver **takes ownership** of the provided scene. |
+| `experimental::DestroyIKSolver` / `experimental.destroy_ik_solver` | `void` | Destroy an IK solver **and** the scene it owns. |
+| `experimental::IsValidIKSolver` / `experimental.is_valid_ik_solver` | `bool` | Check if an IK solver pointer is valid and belongs to this context. |
+
+:::caution Scene Ownership
+`experimental::CreateIKSolver` takes **ownership** of the scene. The scene must not be used directly while owned by the solver. When the solver is destroyed, the scene is destroyed with it.
+:::
+
+## Usage Guide
+
+### Step 1: Create a Separate Scene for IK
+
+The IK solver modifies the scene's internal configuration (infinite timestep, zero gravity, etc.), making it unsuitable for rendering or normal simulation. Create a dedicated scene for IK.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+Scene* ikScene = context->CreateScene("IKScene");
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+ik_scene = mochi.create_scene("IKScene")
+```
+
+</TabItem>
+</Tabs>
+
+### Step 2: Add the Articulated Actor
+
+Populate the IK scene with the same articulated body you use in your visualization scene.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+Actor* ikActor = ikScene->CreateArticulatedActor(actorParams, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+ik_actor = ik_scene.create_articulated_actor(actor_params)
+```
+
+</TabItem>
+</Tabs>
+
+### Step 3: Create the IK Solver
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+mochi::experimental::IKSolver* ikSolver = mochi::experimental::CreateIKSolver(ikScene, context, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+ik_solver = mochi.experimental.create_ik_solver(ik_scene)
+```
+
+</TabItem>
+</Tabs>
+
+### Step 4: Set Up Targets
+
+Specify position and/or rotation targets on the end-effector (or any link). The `weight` parameter controls how strongly the solver pulls toward the target.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+// Get the end-effector bone
+Actor* ikBone = ikScene->GetActor(
+    ikActor->GetNestedLinkActors(error).back());
+
+// Position target: place the end-effector at (0.5, 0.3, 0.0)
+Constraint* posConstraint = ikSolver->CreatePositionTarget(
+    ikBone->GetHandle(),
+    Real3{0, 0, 0},           // local position on the link
+    Real3{0.5, 0.3, 0.0},     // target position in world frame
+    1.0,                       // weight (stiffness)
+    error);
+
+// Optional: rotation target
+Constraint* rotConstraint = ikSolver->CreateRotationTarget(
+    ikBone->GetHandle(),
+    Real3{0, 0, 0},           // local rotation (rotation vector)
+    Real3{0, 0, 1.57},        // target rotation (rotation vector)
+    1.0,                       // weight
+    error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+# Get the end-effector bone
+ik_bone = ik_scene.get_actor(
+    ik_actor.get_nested_link_actors()[-1])
+
+# Position target: place the end-effector at (0.5, 0.3, 0.0)
+pos_constraint = ik_solver.create_position_target(
+    ik_bone.get_handle(),
+    [0, 0, 0],           # local position on the link
+    [0.5, 0.3, 0.0],     # target position in world frame
+    1.0,                  # weight (stiffness)
+)
+
+# Optional: rotation target
+rot_constraint = ik_solver.create_rotation_target(
+    ik_bone.get_handle(),
+    [0, 0, 0],           # local rotation (rotation vector)
+    [0, 0, 1.57],        # target rotation (rotation vector)
+    1.0,                  # weight
+)
+```
+
+</TabItem>
+</Tabs>
+
+:::note Rotation Vectors
+Both `localRotation` and `targetRotation` are **rotation vectors** (axis times angle), not Euler angles or quaternions. A rotation vector `[0, 0, 1.57]` represents a 1.57-radian rotation about the Z axis.
+:::
+
+### Step 5: Solve
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+bool reachable = ikSolver->SolveIK(error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+reachable = ik_solver.solve_ik()
+```
+
+</TabItem>
+</Tabs>
+
+`SolveIK` returns `true` if all targets were reached within the configured error thresholds.
+
+### Step 6: Read Results
+
+After solving, read the resulting joint pose from the IK actor.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+DynamicArray<real> pose(ikActor->GetNumDofs());
+ikActor->GetArticulatedPose(pose, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+pose = ik_actor.get_articulated_pose()
+```
+
+</TabItem>
+</Tabs>
+
+### Step 7: Copy Pose to Visualization Scene
+
+Transfer the IK result to the actor in your rendering/simulation scene.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+// Apply the IK pose to the visualization actor
+sceneActor->SetArticulatedPoseFromJoints(pose, error);
+
+// Suppress velocities to prevent drift
+DynamicArray<real> zeroVel(sceneActor->GetNumDofs(), 0);
+sceneActor->SetArticulatedJointVelocities(zeroVel, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+# Apply the IK pose to the visualization actor
+scene_actor.set_articulated_pose_from_joints(pose)
+
+# Suppress velocities to prevent drift
+import numpy as np
+zero_vel = np.zeros(scene_actor.get_num_dofs())
+scene_actor.set_articulated_joint_velocities(zero_vel)
+```
+
+</TabItem>
+</Tabs>
+
+### Step 8: Clean Up
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+mochi::experimental::DestroyIKSolver(ikSolver, context, error);  // also destroys ikScene
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+mochi.experimental.destroy_ik_solver(ik_solver)  # also destroys ik_scene
+```
+
+</TabItem>
+</Tabs>
+
+## Collision-Aware IK
+
+Because the IK solver runs inside a full physics scene, collision avoidance works automatically. Add static obstacles to the IK scene before creating the solver, and the optimizer will find poses that avoid penetrations.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+// Create a static box obstacle in the IK scene
+Obb box(TransformRT{rotation, translation}, Real3{0.3, 0.15, 0.3});
+util::CreateActor_StaticBox(ikScene, box);
+
+// Then create the IK solver as usual
+mochi::experimental::IKSolver* ikSolver = mochi::experimental::CreateIKSolver(ikScene, context, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+# Add a static box obstacle to the IK scene
+obstacle_params = mochi.RigidActorParams()
+obstacle_params.shape = mochi.BoxShape(half_extents=[0.3, 0.15, 0.3])
+obstacle_params.transform = obstacle_transform
+obstacle_params.body_type = mochi.BodyType.STATIC
+ik_scene.create_rigid_actor(obstacle_params)
+
+# Then create the IK solver as usual
+ik_solver = mochi.experimental.create_ik_solver(ik_scene)
+```
+
+</TabItem>
+</Tabs>
+
+The IK solver will produce poses that reach the target while respecting collisions with the obstacle — no additional configuration is needed.
+
+<video controls width="100%">
+  <source src={useBaseUrl('/img/tile/ik_with_obstacle.mp4')} type="video/mp4" />
+</video>
+
+## Parameters Reference
+
+| Parameter | Default | Description | Tuning Guidance |
+|-----------|---------|-------------|-----------------|
+| `maxIter` / `max_iter` | `20` | Maximum Newton iterations | Increase if the solver fails to converge for large motions. Decrease for faster but less precise solves. |
+| `lineSearchMaxIter` / `line_search_max_iter` | `10` | Maximum line-search iterations per Newton step | Increase if Armijo backtracking needs more attempts to find an acceptable step. Decrease to cap line-search work. |
+| `maxElapsedTimeSeconds` / `max_elapsed_time_seconds` | `0` [s] | Maximum elapsed wall-clock time | Set a positive value to enforce a time budget. `0` disables the limit. |
+| `verbosity` | `Warning` | Solver log level | Set to `Info` or `Debug` during development to diagnose convergence issues. |
+| `absTol` / `abs_tol` | `1e-2` | Absolute residual-norm tolerance | This is the **primary convergence criterion**. Lower values yield tighter convergence but may require more iterations. |
+| `relTol` / `rel_tol` | `1e-8` | Relative residual-norm tolerance | Typically left at default. Only tighten if the solver converges too early at a poor solution. |
+| `positionErrorThres` / `position_error_thres` | `1e-2` [m] | Reachability threshold for position | Controls when `SolveIK` / `solve_ik` reports a target as reachable. Does not affect the solve itself. |
+| `rotationErrorThres` / `rotation_error_thres` | `1e-2` [rad] | Reachability threshold for rotation | Same as above, for rotation targets. |
+
+:::note
+The `weight` parameter on `CreatePositionTarget` / `CreateRotationTarget` is mapped to the constraint's stiffness. Higher weight means the solver pulls more strongly toward that target. When using multiple targets, relative weights determine priority.
+:::
+
+## Tips and Best Practices
+
+**Use a separate scene for IK.** The IK solver sets the scene to infinite timestep, zero gravity, and removes friction and inertia. This makes the scene unusable for visualization or dynamic simulation.
+
+**Dual-scene pattern.** Create one scene for rendering/simulation and a second scene for IK. After each `SolveIK` call, copy the resulting pose to the visualization scene with [`SetArticulatedPoseFromJoints`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html). Suppress velocities on the visualization actor after copying to prevent drift.
+
+**Suppress velocities after copying.** The IK scene uses an infinite timestep, so velocities in that scene are meaningless. After transferring the pose to your visualization scene, zero out the joint velocities.
+
+**Only articulated and rigid actors.** The IK solver does not support deformable actors (soft, shell, or rod actors). Attempting to create an IK solver with such actors in the scene will produce an error.
+
+**One target per actor per type.** Each actor supports at most one position target and one rotation target. Creating a new target for the same actor replaces the previous one.
+
+**Weight = 0 is valid.** Creating a target with `weight = 0` is a no-op constraint that can serve as a placeholder if you plan to update the weight later.
+
+**IK convergence is primarily driven by `absTol`.** If the solver is not reaching your targets, first check whether the target is reachable given the robot's joint limits, then try increasing `maxIter` or decreasing `absTol`.
+
+## Examples
+
+- **[Inverse Kinematics](../examples/articulations/ik.md)**: solves IK on a five-link articulation with mixed joint types, alternating between a position and a rotation target on the last link. Python example: `examples/example_ik.py`.
+
+## Related Concepts
+
+- [Pose Controller](./pose_controller.mdx) — Tracks joint-space or Cartesian link targets with implicit PD constraints during dynamic simulation. Unlike IK, it applies joint forces and torques while the scene evolves.
+- [Solvers](./solvers.md) — Details on the Newton solver, linear solvers, and line search methods used under the hood.

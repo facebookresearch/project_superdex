@@ -1,0 +1,680 @@
+---
+title: Creating Custom Environments
+---
+
+# Creating Custom Environments
+
+The `MochiEnv` class is the base class for all SuperDex Gym environments. It
+provides standardized interfaces for physics simulation, observation and action
+spaces, and reward computation.
+
+## Overview of MochiEnv
+
+`MochiEnv` is built on Gymnasium's `Env` interface and integrates with the
+**SuperDex Physics API**:
+
+- **`superdex.physics`**: the Python module providing the SuperDex Physics API. The
+  shipped environments import it as `import superdex.physics as physics`, and the snippets
+  below follow that convention. A few entry points are module-level functions
+  (`physics.create_scene(...)`, `physics.destroy_scene(...)`), but most of the API is methods
+  on the objects they return — `scene.create_articulated_actor(...)`,
+  `actor.get_num_dofs()`.
+- **`MochiEnv._scene`**: the `Scene` the environment simulates.
+- **`MochiEnv._agent`**: the `Actor` acting as the controlled agent. It must be an
+  articulated actor.
+
+### Import the framework types from the package façade
+
+`superdex.lab.gym.envs` re-exports the framework types. Concrete environment classes,
+by contrast, must be imported from their own modules — the
+`superdex.lab.gym.envs.benchmarks` and `superdex.lab.gym.envs.robots` packages re-export
+nothing, so a package-level import of an environment class raises `ImportError`.
+
+```python
+from superdex.lab.gym.envs import (
+    ActionSpace,
+    Info,
+    MochiEnv,
+    MochiEnvCfg,
+    ObservationSpace,
+    RewardTerms,
+    StructuredAction,
+    StructuredObservation,
+)
+from superdex.lab.gym.utils import mochi_helpers
+```
+
+### What derived classes must implement
+
+Exactly **three** methods are abstract. A subclass that does not define all three
+cannot be instantiated:
+
+| Method | Purpose |
+| --- | --- |
+| `_apply_action(action)` | Apply the agent action to the physics simulation, e.g. by setting external forces on DOFs or a target pose. |
+| `_make_observation() -> (observation, info)` | Sample the environment state and build the structured observation plus an `info` dict for reward computation, logging and debugging. |
+| `_compute_reward_terms(action, observation, info) -> RewardTerms` | Return a dict of named reward components. |
+
+`_reset_scene()` is **not** abstract — it has a working default implementation. None of
+the three shipped environments override it; an environment that draws a per-episode start
+pose, or that keeps Python-side per-episode state such as an action accumulator, should
+override it and call `super()._reset_scene()` first.
+
+:::danger Every subclass must set `_initial_pose` and `_initial_velocity`
+The default `_reset_scene()` restores the captured initial scene state, then reads
+`self._initial_pose` and `self._initial_velocity` to re-apply the agent pose with
+reset noise. If either is still `None`, the **first `reset()` raises**:
+
+```
+RuntimeError: Derived classes must initialize the initial pose
+RuntimeError: Derived classes must initialize the initial velocity
+```
+
+Set both in `__init__`, immediately after loading the scene:
+
+```python
+self._initial_pose = mochi_helpers.get_articulated_pose(self._agent)
+self._initial_velocity = mochi_helpers.get_articulated_joint_velocities(self._agent)
+```
+:::
+
+### Optional hooks
+
+| Hook | Default behaviour |
+| --- | --- |
+| `_reset_scene()` | Restores the initial state snapshot, then applies reset noise to pose and velocity |
+| `_check_stop_criteria(action, observation, reward, info)` | Truncates when `step_count == steps_per_episode` |
+| `_reset_renderer()` | No-op; called on the first `render()` after a reset |
+| `_update_renderer()` | No-op; called from `render()`, after `_reset_renderer()` |
+| `_init_ui()` | Adds the built-in "Environment" panel (Polyscope viewer only) |
+
+If you override `_reset_scene()` or `_check_stop_criteria()`, **call `super()`** —
+otherwise you silently lose the state restore and the noise injection, or the
+episode-length truncation.
+
+:::caution Call `super()._check_stop_criteria` by keyword
+The base class calls this hook with keyword arguments, and the shipped environments
+declare the parameters in a different order than the base class does. Always call
+it as `super()._check_stop_criteria(action=action, observation=observation, reward=reward, info=info)`.
+:::
+
+:::caution `_apply_action` runs once per *simulation* substep
+`step()` executes `simulation_frequency // control_frequency` substeps, and calls
+`_apply_action` with the same action before **each** one. At the common 20 Hz
+control / 100 Hz simulation setting that is five times per `step()`.
+
+A controller that accumulates inside `_apply_action` therefore applies its increment
+`sim_substeps` times per `step()`. That is a supported pattern, not a bug, subject to
+two rules:
+
+1. **Size the increment against the simulation timestep, not the control timestep.**
+   Bound the action at, for example, `(5°/s) / simulation_frequency`.
+   Applied once per substep, that yields 5°/s of joint-target motion at *any* control
+   frequency that divides the simulation frequency — five substeps at the default
+   20 Hz / 100 Hz, but the rate is the same at any ratio. Sizing from the control
+   timestep would run it `sim_substeps` times too fast.
+2. **Re-seed the accumulator in `_reset_scene()`.** It is per-episode state, and the
+   base implementation knows nothing about it — it restores the scene, not your Python
+   attributes. Override `_reset_scene()`, call `super()` first, then re-seed — for a
+   joint-target accumulator, something like
+   `self._previous_target_pose = self._initial_pose.copy()`. Skip this and episode 2
+   starts with the controller still commanding wherever episode 1 left off, while the
+   physics has been restored to the start pose.
+:::
+
+## 1. Define a Configuration Class
+
+### Common configuration options
+
+Every environment inherits these fields from `MochiEnvCfg`. `@configclass` makes
+them keyword-only.
+
+| Field | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `control_frequency` | `int` | **required** | Control update frequency (Hz) |
+| `simulation_frequency` | `int` | **required** | Physics simulation frequency (Hz) |
+| `steps_per_episode` | `int` | `-1` | Truncation limit; `-1` means no limit |
+| `reset_noise_scale` | `float` | `0.0` | Scale of the random perturbation applied on reset |
+| `num_worker_threads` | `int` | `0` | Solver threads. `0` disables multithreading; `-1` lets Mochi pick based on core count |
+| `use_shared_scenes` | `bool` | `True` | Share physics scenes between environments in the same process |
+| `render_mode` | `str \| None` | `None` | `None`, `"human"` or `"rgb_array"` |
+| `render_size` | `tuple[int, int] \| None` | `None` | Renderer window size |
+| `render_coordinate_system` | `CoordinateSystem \| str \| None` | `None` | Visualization coordinate convention; see [Rendering](./render.mdx) |
+| `start_paused` | `bool` | `False` | Start the human-mode viewer paused |
+| `profile` | `bool` | `False` | Record wall-clock timings into the environment profiler |
+| `dump_timings_to_info` | `bool` | **`True`** | Append recorded timings to `info`. Requires `profile=True` to have any effect |
+
+### Configuration constraints
+
+The constructor validates the configuration and raises `ValueError` for:
+
+- `control_frequency <= 0` or `simulation_frequency <= 0`
+- `control_frequency > simulation_frequency`
+- `simulation_frequency % control_frequency != 0` — *"Simulation frequency must be
+  an integer multiple of control frequency."*
+- `render_mode` outside `(None, "human", "rgb_array")`
+- `reset_noise_scale < 0`
+
+### Reset noise semantics
+
+`reset_noise_scale` is applied differently to pose and velocity:
+
+- **Pose**: uniform noise on `[-scale, +scale]`, then **clipped to the
+  articulation's DOF limits**.
+- **Velocity**: standard-normal noise multiplied by `scale`, **not** clipped.
+
+Both draw from `self.np_random`, which `reset(seed=...)` seeds, so resets are
+reproducible.
+
+### Environment-specific options
+
+Define a derived config class so the extra fields are typed and documented:
+
+```python
+from superdex.physics.utils.configclasses import configclass
+from superdex.lab.gym.envs import MochiEnvCfg
+
+
+@configclass
+class MyCustomEnvCfg(MochiEnvCfg):
+    """Options for MyCustomEnv."""
+
+    # Base options with environment-appropriate defaults.
+    control_frequency: int = 20
+    simulation_frequency: int = 100
+    steps_per_episode: int = 1000
+    reset_noise_scale: float = 0.1
+
+    # Custom environment options.
+    my_reward_weight: float = 1.0
+    """Weight applied to the task reward term."""
+
+    use_gravity: bool = True
+    """If False, gravity is disabled to simplify the environment."""
+```
+
+## 2. Implement the Environment Class
+
+```python
+from typing import Any
+
+import numpy as np
+import superdex.physics as physics
+from superdex.lab.gym.envs import (
+    ActionSpace,
+    Info,
+    MochiEnv,
+    ObservationSpace,
+    RewardTerms,
+    StructuredAction,
+    StructuredObservation,
+)
+from superdex.lab.gym.utils import mochi_helpers
+from superdex.physics.utils.decorators import override_from
+
+
+class MyCustomEnv(MochiEnv):
+    """A minimal custom environment."""
+
+    def __init__(self, cfg: MyCustomEnvCfg | dict[str, Any]):
+        if not isinstance(cfg, MyCustomEnvCfg):
+            cfg = MyCustomEnvCfg(**cfg)
+
+        # Initialize the base environment. This validates the configuration,
+        # initializes the Mochi context and creates the renderer.
+        super().__init__(cfg)
+
+        self._my_reward_weight = cfg.my_reward_weight
+
+        # Create the scene and record the initial agent state.
+        self._init_scene(cfg)
+
+        # Derive space sizes from the agent that was just loaded.
+        num_dofs = self._agent.get_num_dofs()
+        num_controlled_dofs = num_dofs - 6  # This agent has a free-floating root.
+
+        self._setup_action_space(
+            control=ActionSpace(-1.0, 1.0, (num_controlled_dofs,), dtype=np.float32),
+        )
+        self._setup_observation_space(
+            agent_pose=ObservationSpace(-np.inf, np.inf, (num_dofs,), dtype=np.float32),
+            agent_velocity=ObservationSpace(
+                -np.inf, np.inf, (num_dofs,), dtype=np.float32
+            ),
+        )
+
+    def _init_scene(self, cfg: MyCustomEnvCfg):
+        """Create or join the shared scene, then capture the initial agent state."""
+
+        def scene_builder():
+            scene = physics.create_scene("MyCustomScene")
+
+            agent_params = physics.ArticulatedActorParams()
+            # Configure agent_params here...
+            agent = scene.create_articulated_actor(agent_params)
+
+            return scene, agent
+
+        # The scene name must encode every configuration field that changes how the
+        # scene is *built*. Environments whose structural configuration matches share
+        # a single scene; a constant name would wrongly share across configurations.
+        uid_fields = (cfg.use_gravity,)
+        self._load_scene(f"scene_{hash(uid_fields)}", scene_builder)
+
+        # Required by the default _reset_scene().
+        self._initial_pose = mochi_helpers.get_articulated_pose(self._agent)
+        self._initial_velocity = mochi_helpers.get_articulated_joint_velocities(
+            self._agent
+        )
+
+    @override_from(MochiEnv)
+    def _apply_action(self, action: StructuredAction):
+        """Apply the agent action to the simulation. Runs once per simulation substep."""
+        control = action["control"]
+
+        # Force control: apply generalized forces to the controlled DOFs.
+        force_scale = 100.0
+        dof_indices = list(range(6, 6 + control.shape[0]))
+        self._agent.set_external_forces_on_dofs(dof_indices, control * force_scale)
+
+        # Position control is the alternative, but it only has an effect when the
+        # articulation was created with a pose controller:
+        #   target_pose = mochi_helpers.get_articulated_pose(self._agent)
+        #   target_pose[6:] += control
+        #   self._agent.set_articulated_target_pose(target_pose)
+
+    @override_from(MochiEnv)
+    def _make_observation(self) -> tuple[StructuredObservation, Info]:
+        """Sample the environment state and build the observation."""
+        agent_pose = mochi_helpers.get_articulated_pose(self._agent)
+        agent_velocity = mochi_helpers.get_articulated_joint_velocities(self._agent)
+
+        obs = {
+            "agent_pose": agent_pose,
+            "agent_velocity": agent_velocity,
+        }
+
+        info = {
+            "is_healthy": bool(agent_pose[1] > 0.2),
+        }
+
+        return obs, info
+
+    @override_from(MochiEnv)
+    def _compute_reward_terms(
+        self,
+        action: StructuredAction,
+        observation: StructuredObservation,
+        info: Info,
+    ) -> RewardTerms:
+        """Compute the named reward components."""
+        control = action["control"]
+        control_cost = -0.1 * float(np.dot(control, control))
+        task_reward = 1.0 if info["is_healthy"] else 0.0
+
+        return {
+            "task": task_reward * self._my_reward_weight,
+            "ctrl": control_cost,
+        }
+
+    @override_from(MochiEnv)
+    def _check_stop_criteria(
+        self,
+        observation: StructuredObservation,
+        action: StructuredAction,
+        reward: RewardTerms,
+        info: Info,
+    ):
+        """Check for episode termination."""
+        # The base implementation truncates at steps_per_episode. Call it by keyword.
+        super()._check_stop_criteria(
+            action=action,
+            observation=observation,
+            reward=reward,
+            info=info,
+        )
+
+        if not info["is_healthy"]:
+            info["terminated_reason"] = "Agent became unhealthy"
+            self._terminated = True
+```
+
+:::note Scene teardown callbacks
+`_load_scene(name, scene_builder)` accepts a builder returning either
+`(scene, agent)` or `(scene, agent, cleanup_callbacks)`. Use the third element when
+something must be destroyed *before* the scene it lives in — a bot teardown is the
+usual case.
+:::
+
+### Termination and truncation
+
+- Set `self._terminated = True` when the episode ends because of the task —
+  success, failure, or an invalid state.
+- Set `self._truncated = True` when it ends for a reason external to the task, such
+  as a time limit. The base `_check_stop_criteria` already does this at
+  `steps_per_episode`.
+- Record `info["terminated_reason"]` or `info["truncated_reason"]`; the sample
+  runner and the vectorized scripts both surface these strings.
+
+### Call order within `step()`
+
+1. The incoming action is clipped to `action_space.low`/`high`.
+2. `_apply_action` runs, then the scene steps — repeated `sim_substeps` times.
+3. `_make_observation` produces the observation and `info`.
+4. `_compute_reward_terms` produces the reward terms.
+5. `_check_stop_criteria` sets `_terminated` / `_truncated`.
+6. `_update_renderer` runs if the environment renders — automatically in `"human"`
+   mode, and only when you call `render()` yourself in `"rgb_array"` mode.
+
+## 3. Observation and Action Flattening
+
+`_setup_observation_space(**structure)` and `_setup_action_space(**structure)` build
+a `gymnasium.spaces.Dict` from your keyword arguments and then flatten it to a single
+`Box`. That `Box` is what `observation_space` and `action_space` expose, and what
+`step()` receives and returns.
+
+:::caution The flattened vector is ordered alphabetically
+`gymnasium.spaces.Dict` **sorts** the mapping it is given, and `flatten` concatenates
+in that sorted order. The vector layout is therefore alphabetical by key, **not** the
+order you wrote the keyword arguments.
+
+`CartPoleEnv` declares `position, vertical_ang, linear_vel, angular_vel` and gets
+`[angular_vel, linear_vel, position, vertical_ang]`.
+
+This is a silent wrong-answer trap for anyone hand-slicing an observation, writing a
+normalizer, or interpreting a saved rollout. Sort your keys mentally, or better, use
+the conversion helpers below.
+:::
+
+Call `_setup_action_space` and `_setup_observation_space` exactly once each, during
+`__init__`. Keys must be valid Python identifiers, since they are keyword arguments.
+
+### Converting between flat and structured
+
+| Method | Direction |
+| --- | --- |
+| `to_observation(structured)` | dict → flat array |
+| `to_structured_observation(flat)` | flat array → dict |
+| `to_action(structured)` | dict → flat array |
+| `to_structured_action(flat)` | flat array → dict |
+| `get_observation_space_structure()` | The un-flattened `spaces.Dict` |
+| `get_action_space_structure()` | The un-flattened `spaces.Dict` |
+
+`_apply_action` receives the **structured** action and `_make_observation` returns a
+**structured** observation, so inside your environment you work with names; the
+flattening happens at the boundary.
+
+:::note Actions are clipped silently
+`step()` clips the action to `action_space.low`/`high` before anything else. An
+out-of-range action is not an error and produces no warning.
+:::
+
+### Type aliases
+
+`superdex.lab.gym.envs` re-exports the names used in the signatures above:
+
+| Name | Meaning |
+| --- | --- |
+| `ObservationSpace` / `ActionSpace` | A single named `Box`, as passed to `_setup_*_space` |
+| `ObservationSpaceStructure` / `ActionSpaceStructure` | The `spaces.Dict` built from them |
+| `Observation` / `Action` | A flat array |
+| `StructuredObservation` / `StructuredAction` | A dict keyed by name |
+| `Info` | The environment's `info` dict |
+| `RewardTerms` | The dict returned by `_compute_reward_terms` |
+| `StepResult` / `ResetResult` / `StructuredStepResult` | Named tuples returned by `step`, `reset` and `get_last_step` |
+| `MochiEnv` / `MochiEnvCfg` | The base class and its config |
+| `VALID_RENDER_MODES` | `(None, "human", "rgb_array")` |
+
+## 4. Reward Terms, `info` and Profiling
+
+### The reward is the unweighted sum
+
+The scalar reward returned by `step()` is the plain sum of the values in your
+`RewardTerms` dict. There is no weighting at this level — applying weights is your
+environment's job, which is why the shipped environments multiply by their config
+weights before returning.
+
+### Every term is echoed into `info`
+
+Each term `k` also appears in `info` as `reward_<k>`:
+
+```python
+def _compute_reward_terms(self, action, observation, info) -> RewardTerms:
+    return {"task": 1.0, "ctrl": -0.02}
+
+# step() then returns reward == 0.98, and info contains:
+#   info["reward_task"] == 1.0
+#   info["reward_ctrl"] == -0.02
+```
+
+This is the contract `LogRewardAndInfoCallbacks` depends on, so a term named
+`upright_reward` surfaces in TensorBoard as `info_reward_upright_reward_mean`. Pick
+term names with that in mind, and avoid writing your own `info` keys that start with
+`reward_`.
+
+`reset()` does not add the per-term `reward_<k>` keys — those are merged by `step()`
+only. An environment's own `_make_observation` may still put a `reward_`-prefixed key in
+`info`, and the shipped `CartPoleEnv` does (`reward_survive`), so `reset()[1]` is not
+guaranteed to be free of them.
+
+### Profiling and `dump_timings_to_info`
+
+`profile=True` enables the environment's internal profiler, reachable through
+`env.get_profiler()`. `dump_timings_to_info` defaults to **`True`**, so as soon as
+profiling is on, both `reset()` and `step()` also merge a `timings/*` block into
+`info`.
+
+Under RLlib that means every timing series turns into a TensorBoard metric, which is
+a large amount of extra data. Set `dump_timings_to_info=False` if you want the
+profiler without the metrics.
+
+### Logging
+
+Mochi's native C++ log messages are forwarded to the Python logging system the first
+time an environment initializes the Mochi context. They arrive under the logger
+named **`superdex.lab.gym.envs.mochi_env`**:
+
+```python
+import logging
+
+logging.getLogger("superdex.lab.gym.envs.mochi_env").setLevel(logging.DEBUG)
+```
+
+## 5. Discovery and Registration
+
+Environments are found by scanning packages for modules named `*_env.py`. Nothing is
+hardcoded, and there is no registry file to edit.
+
+### Making an environment discoverable
+
+Five conditions must all hold. **Violate any one and the environment silently does
+not appear** — only the missing-config case emits a warning.
+
+1. The module is named `*_env.py`.
+2. It lives inside a scanned package — `superdex.lab.gym.envs.benchmarks`,
+   `superdex.lab.gym.envs.robots`, or any subpackage of them, since the roots are
+   scanned recursively.
+3. The class is a concrete, non-abstract `MochiEnv` subclass.
+4. Its name ends in `Env`.
+5. A sibling config class named `<ClassName>Cfg` exists in the same module.
+
+Condition 3 is the one that bites during development: a subclass that has not
+implemented all three abstract methods is abstract, and is skipped without comment.
+
+Note also that the class must be **defined** in that module — imported base classes
+re-exported into scope are ignored.
+
+### Names derived from the class
+
+| Class | Gymnasium ID | CLI short name |
+| --- | --- | --- |
+| `CartPoleEnv` | `superdex_gym/CartPole-v0` | `cart_pole` |
+| `HalfCheetahEnv` | `superdex_gym/HalfCheetah-v0` | `half_cheetah` |
+| `MyCustomEnv` | `superdex_gym/MyCustom-v0` | `my_custom` |
+
+The `Env` suffix is stripped, the id keeps PascalCase, and the CLI name is the
+snake_case conversion. The module filename does **not** determine either — hence
+`cartpole_env.py` producing `cart_pole`.
+
+### Registering with Gymnasium
+
+:::caution `gym.make` fails until `register_all_envs()` has run
+Discovery populates an internal list; registration is a separate, explicit step.
+
+```python
+import gymnasium as gym
+from superdex.lab.gym.utils.env_discovery import register_all_envs
+
+register_all_envs()
+env = gym.make("superdex_gym/CartPole-v0")
+```
+
+`register_all_envs()` is idempotent — ids already in the registry are left alone.
+:::
+
+Pass configuration through `cfg`:
+
+```python
+env = gym.make("superdex_gym/CartPole-v0", cfg={"use_gravity": False})
+```
+
+To list what your build found:
+
+```python
+from superdex.lab.gym.utils.env_discovery import get_env_short_names, register_all_envs
+
+register_all_envs()
+for short_name, entry in sorted(get_env_short_names().items()):
+    print(f"{short_name:24} {entry.env_id}")
+```
+
+### Config variants
+
+A JSON file whose name extends the module filename registers an **additional**
+Gymnasium environment sharing the same class:
+
+```
+cartpole_env.py
+cartpole_env_no_gravity.json    ->  superdex_gym/CartPoleNoGravity-v0
+                                    CLI: cart_pole_no_gravity
+```
+
+```json
+{
+  "description": "CartPole with gravity disabled.",
+  "env_cfg": {"use_gravity": false}
+}
+```
+
+The variant name is the part after `<module>_`, and three rules apply to its
+underscore-separated segments:
+
+- It must be snake_case. The gym id is built by capitalizing each segment, so
+  `cartpole_env_nogravity.json` yields `CartPoleNogravity-v0`, not `CartPoleNoGravity-v0`.
+- `env`, `train` and `benchmark` are reserved segments. A file using one is silently
+  ignored (a debug log line only) — this is what keeps a longer sibling module's files
+  and the usage recipes below unambiguous.
+- A `test` segment (`cartpole_env_test_damped_free_pole.json`) marks the variant
+  **test-only**: it is discovered and exercised by the generated smoke tests, but
+  `register_all_envs()` skips it and `get_env_short_names()` hides it, so it never
+  appears as a gym id or a CLI name. Test-only variants are degenerate configurations
+  worth crash-checking but not shippable tasks.
+
+### Usage configs — a different convention
+
+Dot-separated files sitting next to a module are **usage recipes**, not
+environments. They are never registered and never discovered as gym ids.
+
+| Filename pattern | Meaning |
+| --- | --- |
+| `<module>_<variant>.json` | Registers a new gym environment (above) |
+| `<module>.train.json` | Training recipe for the base env, read by `train_samples.py` |
+| `<module>_<variant>.train.json` | Training recipe for one variant |
+| `<module>.benchmark.json` | Configuration for the overhead benchmarks |
+| `<module>_<variant>.benchmark.json` | The same, for one variant |
+
+`train` and `benchmark` are the only two recipe kinds anything reads — `load_env_config`
+takes the kind as an arbitrary string, so the set is a convention of the shipped tree
+rather than an enforced list. A variant recipe does **not** fall
+back to the base recipe — a recipe is written for one configuration, so inheriting one
+into another would silently train against the wrong target. A `train` recipe holds only
+training settings and may not configure the environment, which is why every
+configuration that gets trained is also a named, discoverable variant.
+
+The single underscore versus the dot is the whole distinction, so be careful naming
+new files.
+
+## 6. Scene and Actor Helpers
+
+`superdex.lab.gym.utils.mochi_helpers` holds the utilities the shipped environments use
+to build scenes and read agent state.
+
+### Building a scene from a prefab
+
+`init_prefab_scene(prefab, params) -> (scene, agent)` is the highest-leverage entry
+point, and all three shipped environments use it. It creates a scene from a
+`ScenePrefab` or a prefab file path, optionally adds a ground plane, and picks out
+the agent actor.
+
+```python
+import superdex.physics as physics
+from superdex.lab.gym.utils import mochi_helpers
+from superdex.physics.paths import get_assets_root
+
+
+def _init_scene(self, cfg: MyCustomEnvCfg):
+    def scene_builder():
+        prefab_path = (
+            get_assets_root() / "benchmarks" / "cart_pole" / "cart_pole.mochi_scene"
+        )
+        prefab = physics.prefab.shallow_load_from_file(str(prefab_path))
+
+        # Tweak the prefab before instantiating it.
+        if not cfg.use_gravity:
+            prefab.scene.gravity = [0, 0, 0]
+
+        params = mochi_helpers.PrefabParams()
+        params.agent_actor_name = "CartPole"
+        params.add_ground_plane = False
+        return mochi_helpers.init_prefab_scene(prefab, params)
+
+    self._load_scene(f"scene_{hash((cfg.use_gravity,))}", scene_builder)
+```
+
+The builder is a closure nested in `_init_scene` so that it can read `cfg`; that is how
+the shipped environments are written.
+
+`get_assets_root()` is what every shipped environment calls; it raises
+`FileNotFoundError` when the assets root cannot be resolved, rather than silently
+yielding `None`.
+
+`PrefabParams` adds these fields to the base SuperDex Physics prefab parameters:
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `root_dir` | `""` | Where relative paths inside the prefab resolve from. Empty means the Mochi assets directory. |
+| `agent_actor_name` | `""` | Which actor becomes `self._agent`. Empty auto-selects the scene's single articulated actor. Names may contain slashes when they come from nested prefabs. |
+| `add_ground_plane` | `True` | Add a ground plane |
+| `ground_normal` | `(0, 1, 0)` | Ground plane normal |
+| `ground_offset` | `0.0` | Ground plane height |
+| `ground_contact_params` | `None` | Contact parameters for the ground plane; `None` uses Mochi's defaults |
+
+It also inherits `name`, `scale`, `rotation`, `translation` and
+`apply_scene_settings` from the base class.
+
+Auto-selection raises `RuntimeError` if the scene contains more than one
+articulation, so set `agent_actor_name` explicitly for multi-robot scenes.
+
+### Reading agent state
+
+| Function | Returns |
+| --- | --- |
+| `get_articulated_pose(actor)` | Generalized pose, one element per DOF |
+| `get_articulated_joint_velocities(actor)` | Generalized velocity, one element per DOF |
+| `get_articulated_dof_limits(actor)` | Per-DOF `(min, max)` limits |
+| `get_contact_force_and_torque_world(actor)` | The 6-D contact wrench on a rigid actor |
+| `get_actors(scene)` | Every actor in the scene |
+| `TransformRT_to_numpy(transform)` | A `TransformRT` as `[translation, rotation_vector]` |
+
+`get_articulated_dof_limits` is what the default `_reset_scene()` uses to clip the
+pose noise, and it is the right source for validating your own joint targets.

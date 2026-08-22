@@ -1,0 +1,80 @@
+.. @generated
+
+Models & Meshes
+===============
+
+**Modules:** ``superdex.physics.model``, ``superdex.physics.mesh``
+
+Prepare geometry before it reaches the engine.
+
+superdex.physics.model
+----------------------
+
+.. autofunction:: superdex.physics.model.auto_correct
+
+.. autofunction:: superdex.physics.model.bake_coordinate_space_transform
+
+.. autofunction:: superdex.physics.model.bake_sdf
+
+.. autofunction:: superdex.physics.model.bake_transform
+
+.. autofunction:: superdex.physics.model.flip_winding_order
+
+.. autofunction:: superdex.physics.model.load_from_bytes
+
+.. autofunction:: superdex.physics.model.load_from_bytes_unchecked
+
+.. autofunction:: superdex.physics.model.load_from_file
+
+.. autofunction:: superdex.physics.model.load_from_file_unchecked
+
+.. autofunction:: superdex.physics.model.save_to_file
+
+.. autofunction:: superdex.physics.model.save_to_json_string
+
+.. autofunction:: superdex.physics.model.validate
+
+superdex.physics.mesh
+---------------------
+
+.. automodule:: superdex.physics.mesh
+   :no-members:
+
+.. autodata:: superdex.physics.mesh.ACVD
+   :no-value:
+
+.. autodata:: superdex.physics.mesh.ALPHA_WRAP
+   :no-value:
+
+.. autoclass:: superdex.physics.mesh.DistributionStatistics
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.mesh.Error
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.mesh.MeshStatistics
+   :members:
+   :show-inheritance:
+
+.. autodata:: superdex.physics.mesh.NONE
+   :no-value:
+
+.. autoclass:: superdex.physics.mesh.RemeshMethod
+   :members:
+   :show-inheritance:
+
+.. autodata:: superdex.physics.mesh.SURFACE_DELAUNAY
+   :no-value:
+
+.. autoclass:: superdex.physics.mesh.SurfaceRemeshingParams
+   :members:
+   :show-inheritance:
+
+.. autofunction:: superdex.physics.mesh.compute_mesh_statistics
+
+.. autofunction:: superdex.physics.mesh.reconstruct_surface_from_sdf
+
+.. autofunction:: superdex.physics.mesh.remesh_surface
+

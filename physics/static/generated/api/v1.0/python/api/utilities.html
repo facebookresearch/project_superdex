@@ -1,0 +1,1058 @@
+<!-- @generated -->
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Utilities &mdash; SuperDex Physics Python API  documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Testing Utilities" href="testing.html" />
+    <link rel="prev" title="Scene Setup, Assets &amp; Runtime" href="scene_setup.html" />
+ 
+<!-- Theme synchronization with parent Docusaurus site -->
+<script type="text/javascript">
+    // jQuery shim — Sphinx 7.x removed jQuery but RTD theme search.html
+    // still uses jQuery(fn) for DOM-ready initialization.
+    if (typeof jQuery === 'undefined') {
+        window.jQuery = window.$ = function(fn) {
+            if (typeof fn === 'function') {
+                if (document.readyState !== 'loading') { fn(); }
+                else { document.addEventListener('DOMContentLoaded', fn); }
+            }
+        };
+    }
+
+    (function() {
+        var theme = localStorage.getItem('theme') || 'light';
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    })();
+
+    function setSphinxTheme(theme) {
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+    }
+
+    window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'setTheme') {
+            setSphinxTheme(event.data.theme);
+        }
+    });
+
+    window.addEventListener('DOMContentLoaded', function() {
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'getTheme' }, '*');
+        }
+    });
+</script>
+<!-- Shared SuperDex Physics theme (single source of truth:
+     website/static/api-embed.css). Baked in as a render-blocking stylesheet so
+     the page's FIRST paint is already themed — in lockstep with the pre-paint
+     data-theme script above — with no flash of the stock Sphinx/RTD theme and no
+     need for the embedding iframe to hide/reveal. pathto(..., 1) resolves the
+     path from this page up to the staticdocs site root where api-embed.css lives. -->
+<link rel="stylesheet" type="text/css" href="../../../../../api-embed.css"/>
+<style>
+    /* Sidebar font size — larger for readability. All light/dark theming is
+       owned by static/api-embed.css (single source of truth), baked in above as
+       a render-blocking <link>; no theme colors are set here, so the embedded
+       Python API reference matches the site background in both light and dark. */
+    .wy-menu-vertical a,
+    .wy-menu-vertical li,
+    .wy-menu-vertical code,
+    .wy-menu-vertical code.docutils,
+    .wy-menu-vertical .pre,
+    .wy-menu-vertical span.pre,
+    .wy-menu-vertical li span.toctree-expand,
+    .wy-side-nav-search input[type="text"] {
+        font-size: 14px !important;
+    }
+</style>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> SuperDex Physics Python API
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="physics.html">Physics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#engine-lifecycle">Engine Lifecycle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#execution-threading">Execution &amp; Threading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#scene">Scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#handles">Handles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#shapes-geometry">Shapes &amp; Geometry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#actors">Actors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#soft-materials">Soft Materials</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#constraints">Constraints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#contact-collision">Contact &amp; Collision</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#solver">Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#query-types">Query Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#recording-options">Recording Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#debugging-diagnostics">Debugging &amp; Diagnostics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#build-information">Build Information</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#core-value-spatial-types">Core Value &amp; Spatial Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#error-handling">Error Handling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#containers-spans">Containers &amp; Spans</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#not-yet-categorized">Not Yet Categorized</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="prefab.html">Prefabs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#scene-description">Scene Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#actors">Actors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#articulation-components-controllers">Articulation Components &amp; Controllers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#constraints">Constraints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#contact-filters">Contact Filters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#loading-dependencies">Loading &amp; Dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#instantiation">Instantiation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#serialization-export">Serialization &amp; Export</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#containers">Containers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models &amp; Meshes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="models.html#superdex-physics-model">superdex.physics.model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#module-superdex.physics.mesh">superdex.physics.mesh</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="debugger.html">Debugger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="viewer.html">Viewer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="viewer.html#module-superdex.physics.viewer">superdex.physics.viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="viewer.html#module-superdex.physics.viewer.renderers">superdex.physics.viewer.renderers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="viewer.html#module-superdex.physics.viewer.utils">superdex.physics.viewer.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="viewer.html#module-superdex.physics.utils.render_model_registry">superdex.physics.utils.render_model_registry</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="scene_setup.html">Scene Setup, Assets &amp; Runtime</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.paths">superdex.physics.paths</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.environment">superdex.physics.environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.loader">superdex.physics.loader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.utils.context">superdex.physics.utils.context</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.utils.scene_helpers">superdex.physics.utils.scene_helpers</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-superdex.physics.utils.configclasses">superdex.physics.utils.configclasses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-superdex.physics.utils.decorators">superdex.physics.utils.decorators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-superdex.physics.utils.deprecation">superdex.physics.utils.deprecation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-superdex.physics.utils.json">superdex.physics.utils.json</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-superdex.physics.utils.coordinate_systems">superdex.physics.utils.coordinate_systems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-superdex.physics.utils.transformations">superdex.physics.utils.transformations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-superdex.physics.utils.profiling">superdex.physics.utils.profiling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-superdex.physics.utils.logging">superdex.physics.utils.logging</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="testing.html">Testing Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="testing.html#module-superdex.physics.utils.testing.decorators">superdex.physics.utils.testing.decorators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="testing.html#module-superdex.physics.utils.testing.environment">superdex.physics.utils.testing.environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="testing.html#module-superdex.physics.utils.testing.testcases">superdex.physics.utils.testing.testcases</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">SuperDex Physics Python API</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Utilities</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/utilities.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="utilities">
+<h1>Utilities<a class="headerlink" href="#utilities" title="Permalink to this heading"></a></h1>
+<p><strong>Modules:</strong> <code class="docutils literal notranslate"><span class="pre">superdex.physics.utils.configclasses</span></code>, <code class="docutils literal notranslate"><span class="pre">superdex.physics.utils.decorators</span></code>, <code class="docutils literal notranslate"><span class="pre">superdex.physics.utils.deprecation</span></code>, <code class="docutils literal notranslate"><span class="pre">superdex.physics.utils.json</span></code>, <code class="docutils literal notranslate"><span class="pre">superdex.physics.utils.coordinate_systems</span></code>, <code class="docutils literal notranslate"><span class="pre">superdex.physics.utils.transformations</span></code>, <code class="docutils literal notranslate"><span class="pre">superdex.physics.utils.profiling</span></code>, <code class="docutils literal notranslate"><span class="pre">superdex.physics.utils.logging</span></code></p>
+<p>Python utilities for configuring and working with SuperDex Physics.</p>
+<section id="module-superdex.physics.utils.configclasses">
+<span id="superdex-physics-utils-configclasses"></span><h2>superdex.physics.utils.configclasses<a class="headerlink" href="#module-superdex.physics.utils.configclasses" title="Permalink to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.configclasses.configclass">
+<span class="sig-name descname"><span class="pre">configclass</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superdex/physics/utils/configclasses.html#configclass"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.configclasses.configclass" title="Permalink to this definition"></a></dt>
+<dd><p>A decorator for specifying configuration classes. Essentially a wrapper around
+dataclass enforcing the requirement that all fields must be initialized using
+keyword arguments. In the future, this decorator may also enforce additional
+requirements, such as run-time type checking and other validation checks.</p>
+</dd></dl>
+
+</section>
+<section id="module-superdex.physics.utils.decorators">
+<span id="superdex-physics-utils-decorators"></span><h2>superdex.physics.utils.decorators<a class="headerlink" href="#module-superdex.physics.utils.decorators" title="Permalink to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.decorators.override_from">
+<span class="sig-name descname"><span class="pre">override_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent_class</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Type</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/decorators.html#override_from"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.decorators.override_from" title="Permalink to this definition"></a></dt>
+<dd><p>Decorator that marks a method as overriding a method from a specific parent class.</p>
+<p>Unlike the typing.override decorator, this decorator also does a checks at runtime
+if the method exists in the parent class, it is indeed callable, and that the
+overridden method is bound to an instance that inherits from the parent class. If
+none of these hold true, a TypeError is raised.</p>
+<p>This decorator also applies typing.override for static type checkers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>parent_class</strong> – The class that defines the method being overridden.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A decorator function that validates the override relationship.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>TypeError</strong> – If the method doesn’t exist in the parent class or if the
+    instance is not of the expected type.</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">Parent</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">method</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;parent&quot;</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Child</span><span class="p">(</span><span class="n">Parent</span><span class="p">):</span>
+    <span class="nd">@override_from</span><span class="p">(</span><span class="n">Parent</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">method</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;child&quot;</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">NotChild</span><span class="p">:</span>
+    <span class="nd">@override_from</span><span class="p">(</span><span class="n">Parent</span><span class="p">)</span> <span class="c1"># Raises TypeError</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">method</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;not child&quot;</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+<section id="module-superdex.physics.utils.deprecation">
+<span id="superdex-physics-utils-deprecation"></span><h2>superdex.physics.utils.deprecation<a class="headerlink" href="#module-superdex.physics.utils.deprecation" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.utils.deprecation.DeprecatedField">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DeprecatedField</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">T</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">/</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">category</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="pre">Warning</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">DeprecationWarning</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stacklevel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superdex/physics/utils/deprecation.html#DeprecatedField"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.deprecation.DeprecatedField" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">T</span></code>]</p>
+<p>A descriptor for deprecated dataclass fields that issues warnings when the field
+is accessed (get) or modified (set). A deprecation warning is also issued whenever
+the field is initialized with a different value from the default.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.utils.deprecation.DeprecatedField.DefaultSentinel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DefaultSentinel</span></span><a class="reference internal" href="../_modules/superdex/physics/utils/deprecation.html#DeprecatedField.DefaultSentinel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.deprecation.DeprecatedField.DefaultSentinel" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Used to determine whenever a field is initialized with default values.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.utils.deprecation.deprecated">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">deprecated</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">/</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">category</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="pre">Warning</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">DeprecationWarning</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stacklevel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.utils.deprecation.deprecated" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A decorator for marking classes and functions as deprecated.</p>
+</dd></dl>
+
+</section>
+<section id="module-superdex.physics.utils.json">
+<span id="superdex-physics-utils-json"></span><h2>superdex.physics.utils.json<a class="headerlink" href="#module-superdex.physics.utils.json" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.utils.json.ExtendedJSONEncoder">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ExtendedJSONEncoder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skipkeys</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ensure_ascii</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_circular</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_nan</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort_keys</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">indent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">separators</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superdex/physics/utils/json.html#ExtendedJSONEncoder"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.json.ExtendedJSONEncoder" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">JSONEncoder</span></code></p>
+<p>Class defining a custom JSON encoder that adds support to encoding dataclasses and
+numpy arrays.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="superdex.physics.utils.json.ExtendedJSONEncoder.default">
+<span class="sig-name descname"><span class="pre">default</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superdex/physics/utils/json.html#ExtendedJSONEncoder.default"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.json.ExtendedJSONEncoder.default" title="Permalink to this definition"></a></dt>
+<dd><p>Implement this method in a subclass such that it returns
+a serializable object for <code class="docutils literal notranslate"><span class="pre">o</span></code>, or calls the base implementation
+(to raise a <code class="docutils literal notranslate"><span class="pre">TypeError</span></code>).</p>
+<p>For example, to support arbitrary iterators, you could
+implement default like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">default</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">o</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">iterable</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">o</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">iterable</span><span class="p">)</span>
+    <span class="c1"># Let the base class default method raise the TypeError</span>
+    <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">default</span><span class="p">(</span><span class="n">o</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-superdex.physics.utils.coordinate_systems">
+<span id="superdex-physics-utils-coordinate-systems"></span><h2>superdex.physics.utils.coordinate_systems<a class="headerlink" href="#module-superdex.physics.utils.coordinate_systems" title="Permalink to this heading"></a></h2>
+<p>This module provides classes and utilities for defining, converting, and working with
+different coordinate systems used by various 3D rendering engines and tools. Different
+engines use different conventions for which direction is “right”, “up”, and “forward”,
+and this module allows transparent conversion between these conventions.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.Axis">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Axis</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">_not_given</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#Axis"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.Axis" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<p>Enumeration of coordinate axes and their directions.</p>
+<p>Represents the six possible axis directions in 3D space: positive and negative
+X, Y, and Z. Used to define which physical directions correspond to “right”,
+“up”, and “forward” in a coordinate system.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.Axis.from_str">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_str</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axis_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.utils.coordinate_systems.Axis" title="superdex.physics.utils.coordinate_systems.Axis"><span class="pre">Axis</span></a></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#Axis.from_str"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.Axis.from_str" title="Permalink to this definition"></a></dt>
+<dd><p>Convert a string representation of an axis to an Axis enum value.</p>
+<p>The string is case-insensitive and should be in the format “+X”, “-X”, “+Y”,
+“-Y”, “+Z”, or “-Z”. Raises a ValueError if the string doesn’t match any
+valid axis direction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>axis_name</strong> – String representation of an axis (e.g., “+X”, “-y”, “+Z”).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The corresponding Axis enum value.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If the string does not match any valid axis direction.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.Axis.to_vector">
+<span class="sig-name descname"><span class="pre">to_vector</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#Axis.to_vector"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.Axis.to_vector" title="Permalink to this definition"></a></dt>
+<dd><p>Convert the axis to a 3D unit vector.</p>
+<p>Returns a normalized 3D vector pointing in the direction specified by this axis.
+For example, POS_X returns [1, 0, 0] and NEG_Y returns [0, -1, 0].</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A 3D numpy array representing the unit vector for this axis direction.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.Axis.NEG_X">
+<span class="sig-name descname"><span class="pre">NEG_X</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'-X'</span></em><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.Axis.NEG_X" title="Permalink to this definition"></a></dt>
+<dd><p>Negative X axis direction.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.Axis.NEG_Y">
+<span class="sig-name descname"><span class="pre">NEG_Y</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'-Y'</span></em><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.Axis.NEG_Y" title="Permalink to this definition"></a></dt>
+<dd><p>Negative Y axis direction.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.Axis.NEG_Z">
+<span class="sig-name descname"><span class="pre">NEG_Z</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'-Z'</span></em><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.Axis.NEG_Z" title="Permalink to this definition"></a></dt>
+<dd><p>Negative Z axis direction.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.Axis.POS_X">
+<span class="sig-name descname"><span class="pre">POS_X</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'+X'</span></em><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.Axis.POS_X" title="Permalink to this definition"></a></dt>
+<dd><p>Positive X axis direction.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.Axis.POS_Y">
+<span class="sig-name descname"><span class="pre">POS_Y</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'+Y'</span></em><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.Axis.POS_Y" title="Permalink to this definition"></a></dt>
+<dd><p>Positive Y axis direction.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.Axis.POS_Z">
+<span class="sig-name descname"><span class="pre">POS_Z</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'+Z'</span></em><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.Axis.POS_Z" title="Permalink to this definition"></a></dt>
+<dd><p>Positive Z axis direction.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.COORDINATE_SYSTEMS">
+<span class="sig-name descname"><span class="pre">COORDINATE_SYSTEMS</span></span><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.COORDINATE_SYSTEMS" title="Permalink to this definition"></a></dt>
+<dd><p>Preset coordinate systems for common 3D engines and tools.</p>
+<p>This dictionary provides ready-to-use coordinate system definitions used in popular
+3D rendering engines and modeling tools. These coordinate systems are defined in terms
+of the semantic axes (right, up, and forward) derived from the canonical basis vectors
+(X, Y, and Z).</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.CoordinateSystem">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">CoordinateSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">right</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.utils.coordinate_systems.Axis" title="superdex.physics.utils.coordinate_systems.Axis"><span class="pre">Axis</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">up</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.utils.coordinate_systems.Axis" title="superdex.physics.utils.coordinate_systems.Axis"><span class="pre">Axis</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forward</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.utils.coordinate_systems.Axis" title="superdex.physics.utils.coordinate_systems.Axis"><span class="pre">Axis</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#CoordinateSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.CoordinateSystem" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Defines a coordinate system for visualization.</p>
+<p>A coordinate system specifies which directions correspond to “right”, “up”,
+and “forward” in the visualization. This is important for rendering as different
+engines and tools use different conventions.</p>
+<p>The coordinate system is defined by three orthogonal axes. For example:
+- Unity uses: right=+X, up=+Y, forward=+Z (left-handed)
+- Unreal uses: right=+Y, up=+Z, forward=+X (right-handed)
+- Polyscope uses: right=+X, up=+Y, forward=-Z (right-handed)</p>
+<p>The class automatically validates that the three axes are mutually orthogonal
+and computes the handedness of the system.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.CoordinateSystem.axes_matrix">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">axes_matrix</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#CoordinateSystem.axes_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.CoordinateSystem.axes_matrix" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the 3x3 matrix for the coordinate system. The axes matrix consists of
+three column vectors representing the right, forward and up directions.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.CoordinateSystem.forward">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">forward</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#superdex.physics.utils.coordinate_systems.Axis" title="superdex.physics.utils.coordinate_systems.Axis"><span class="pre">Axis</span></a></em><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#CoordinateSystem.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.CoordinateSystem.forward" title="Permalink to this definition"></a></dt>
+<dd><p>The axis direction for the forward direction.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.CoordinateSystem.handedness">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">handedness</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#superdex.physics.utils.coordinate_systems.Handedness" title="superdex.physics.utils.coordinate_systems.Handedness"><span class="pre">Handedness</span></a></em><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#CoordinateSystem.handedness"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.CoordinateSystem.handedness" title="Permalink to this definition"></a></dt>
+<dd><p>Determines the handedness of the coordinate system.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.CoordinateSystem.is_left_handed">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">is_left_handed</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#CoordinateSystem.is_left_handed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.CoordinateSystem.is_left_handed" title="Permalink to this definition"></a></dt>
+<dd><p>Determines if the coordinate system is left-handed.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.CoordinateSystem.is_right_handed">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">is_right_handed</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#CoordinateSystem.is_right_handed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.CoordinateSystem.is_right_handed" title="Permalink to this definition"></a></dt>
+<dd><p>Determines if the coordinate system is right-handed.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.CoordinateSystem.right">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">right</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#superdex.physics.utils.coordinate_systems.Axis" title="superdex.physics.utils.coordinate_systems.Axis"><span class="pre">Axis</span></a></em><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#CoordinateSystem.right"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.CoordinateSystem.right" title="Permalink to this definition"></a></dt>
+<dd><p>The axis direction for the right direction.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.CoordinateSystem.up">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">up</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#superdex.physics.utils.coordinate_systems.Axis" title="superdex.physics.utils.coordinate_systems.Axis"><span class="pre">Axis</span></a></em><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#CoordinateSystem.up"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.CoordinateSystem.up" title="Permalink to this definition"></a></dt>
+<dd><p>The axis direction for the up direction.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.CoordinateTransform">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">CoordinateTransform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_system</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.utils.coordinate_systems.CoordinateSystem" title="superdex.physics.utils.coordinate_systems.CoordinateSystem"><span class="pre">CoordinateSystem</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_system</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.utils.coordinate_systems.CoordinateSystem" title="superdex.physics.utils.coordinate_systems.CoordinateSystem"><span class="pre">CoordinateSystem</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#CoordinateTransform"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.CoordinateTransform" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Provides transformation matrices for converting between coordinate systems.</p>
+<p>This class computes and provides the transformation matrices needed to convert
+geometric data (points, vectors, rotation matrices, transformation matrices) from
+one coordinate system convention to another. This is essential when working with
+content authored in a specific coordinate system (e.g., Unity) but rendered in a
+different one (e.g., Polyscope).</p>
+<p>The transformation matrices are computed using a change-of-basis matrix derived
+from the source and target coordinate systems’ axes vectors. The origin of the
+coordinate system is preserved, but the axes are rotated to match the target
+coordinate system.</p>
+<dl>
+<dt>Mathematical Foundation:</dt><dd><p>Let 𝐒 and 𝐓 be matrices whose columns encode the right, up, and forward
+directions as unit vectors, each expressed in their respective native coordinate
+systems 𝕊 and 𝕋. Let 𝐮 ∈ 𝕊 and 𝐯 ∈ 𝕋 be coordinates representing the same
+geometric point, defined in their respective coordinate systems.</p>
+<p>When projecting both points onto their semantic basis vectors (right, forward,
+up), the resulting coordinates must be identical:</p>
+<blockquote>
+<div><p>𝐒ᵀ𝐮 = 𝐓ᵀ𝐯</p>
+</div></blockquote>
+<p>That is, “how far right, foward, and up” is invariant — it describes the same
+point in space regardless of the underlying coordinate system representation.</p>
+<p>Solving for 𝐯 yields:</p>
+<blockquote>
+<div><p>𝐯 = 𝐓𝐒ᵀ𝐮 = 𝐂𝐮</p>
+</div></blockquote>
+<p>where 𝐂 = 𝐓𝐒ᵀ is the change-of-basis matrix.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.CoordinateTransform.direction_to_target">
+<span class="sig-name descname"><span class="pre">direction_to_target</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">direction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#CoordinateTransform.direction_to_target"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.CoordinateTransform.direction_to_target" title="Permalink to this definition"></a></dt>
+<dd><p>Transform a direction vector from source to target coordinate system.</p>
+<p>Unlike positions, directions are not affected by translation, only by
+the rotation/reflection component of the transformation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>direction</strong> – A 3D direction vector in source coordinates.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The direction vector transformed to target coordinates.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.CoordinateTransform.position_to_target">
+<span class="sig-name descname"><span class="pre">position_to_target</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#CoordinateTransform.position_to_target"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.CoordinateTransform.position_to_target" title="Permalink to this definition"></a></dt>
+<dd><p>Transform a position from source to target coordinate system.</p>
+<p>Applies the coordinate system transformation and an optional scale factor
+(e.g., for meters to centimeters conversion).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>position</strong> – A 3D position in source coordinates.</p></li>
+<li><p><strong>scale</strong> – Optional scale factor to apply (default 1.0).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The position transformed to target coordinates.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.CoordinateTransform.rotation_to_target">
+<span class="sig-name descname"><span class="pre">rotation_to_target</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">quaternion</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#CoordinateTransform.rotation_to_target"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.CoordinateTransform.rotation_to_target" title="Permalink to this definition"></a></dt>
+<dd><p>Transform a rotation quaternion from source to target coordinate system.</p>
+<p>This method correctly handles the conversion of rotations between coordinate
+systems, including the handedness flip when converting between left-handed
+and right-handed systems.</p>
+<p>The algorithm matches the C++ coordinate-space conversion:</p>
+<ol class="arabic simple">
+<li><p>If the transform encodes a reflection (handedness flip), negate the
+quaternion’s imaginary components (x, y, z).</p></li>
+<li><p>Apply the direction transformation to the axis (x, y, z components).</p></li>
+<li><p>Keep the scalar component (w) unchanged.</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>quaternion</strong> – A rotation quaternion in [x, y, z, w] format (scipy convention).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The quaternion transformed to target coordinates in [x, y, z, w] format.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.CoordinateTransform.encodes_reflection">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">encodes_reflection</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#CoordinateTransform.encodes_reflection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.CoordinateTransform.encodes_reflection" title="Permalink to this definition"></a></dt>
+<dd><p>Determines if the coordinate transform encodes a reflection.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.CoordinateTransform.source_system">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">source_system</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#superdex.physics.utils.coordinate_systems.CoordinateSystem" title="superdex.physics.utils.coordinate_systems.CoordinateSystem"><span class="pre">CoordinateSystem</span></a></em><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#CoordinateTransform.source_system"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.CoordinateTransform.source_system" title="Permalink to this definition"></a></dt>
+<dd><p>The source coordinate system to convert from.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.CoordinateTransform.source_to_target">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">source_to_target</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#CoordinateTransform.source_to_target"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.CoordinateTransform.source_to_target" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the 4x4 matrix doing the basis change from source to target.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.CoordinateTransform.target_system">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">target_system</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#superdex.physics.utils.coordinate_systems.CoordinateSystem" title="superdex.physics.utils.coordinate_systems.CoordinateSystem"><span class="pre">CoordinateSystem</span></a></em><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#CoordinateTransform.target_system"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.CoordinateTransform.target_system" title="Permalink to this definition"></a></dt>
+<dd><p>The target coordinate system to convert to.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.CoordinateTransform.target_to_source">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">target_to_source</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#CoordinateTransform.target_to_source"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.CoordinateTransform.target_to_source" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the 4x4 matrix doing the basis change from target to source.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.DEFAULT_COORDINATE_SYSTEM">
+<span class="sig-name descname"><span class="pre">DEFAULT_COORDINATE_SYSTEM</span></span><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.DEFAULT_COORDINATE_SYSTEM" title="Permalink to this definition"></a></dt>
+<dd><p>The default coordinate system used by the SuperDex Physics viewer.</p>
+<p>This is set to the legacy OpenGL view convention (right-handed, Y-up, -Z-forward) as it
+matches the internal coordinate system of Polyscope, the rendering backend used by the
+viewer.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.Handedness">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Handedness</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">_not_given</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superdex/physics/utils/coordinate_systems.html#Handedness"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.Handedness" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<p>Represents the handedness of a coordinate system.</p>
+<p>The handedness of a coordinate system determines the orientation convention used
+for rotations and cross products. Different rendering engines use different
+conventions.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.Handedness.LEFT">
+<span class="sig-name descname"><span class="pre">LEFT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'left'</span></em><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.Handedness.LEFT" title="Permalink to this definition"></a></dt>
+<dd><p>Left-handed coordinate system (e.g., Unity, Unreal).</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.coordinate_systems.Handedness.RIGHT">
+<span class="sig-name descname"><span class="pre">RIGHT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'right'</span></em><a class="headerlink" href="#superdex.physics.utils.coordinate_systems.Handedness.RIGHT" title="Permalink to this definition"></a></dt>
+<dd><p>Right-handed coordinate system (e.g., OpenGL, Blender).</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-superdex.physics.utils.transformations">
+<span id="superdex-physics-utils-transformations"></span><h2>superdex.physics.utils.transformations<a class="headerlink" href="#module-superdex.physics.utils.transformations" title="Permalink to this heading"></a></h2>
+<p>A collection of functions for transforming between different representations of
+rotations and transformations.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.transformations.apply_affine_transform">
+<span class="sig-name descname"><span class="pre">apply_affine_transform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Buffer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_SupportsArray</span><span class="p"><span class="pre">[</span></span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_NestedSequence</span><span class="p"><span class="pre">[</span></span><span class="pre">_SupportsArray</span><span class="p"><span class="pre">[</span></span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bytes</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_NestedSequence</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Buffer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_SupportsArray</span><span class="p"><span class="pre">[</span></span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_NestedSequence</span><span class="p"><span class="pre">[</span></span><span class="pre">_SupportsArray</span><span class="p"><span class="pre">[</span></span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bytes</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_NestedSequence</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/transformations.html#apply_affine_transform"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.transformations.apply_affine_transform" title="Permalink to this definition"></a></dt>
+<dd><p>Applies an affine transformation to a set of points.</p>
+<p>An affine transformation consists of a linear transformation (rotation, scaling,
+shearing) followed by a translation. This function extracts the linear and
+translation components from a homogeneous transformation matrix and applies
+them to the input points. Supports both single points and batches of points.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>transform</strong> – A homogeneous transformation matrix with shape (N+1, N+1).
+For 3D transformations, this is a (4, 4) matrix where:
+- transform[:3, :3] is the linear part (rotation/scale/shear)
+- transform[:3, 3] is the translation vector</p></li>
+<li><p><strong>points</strong> – Points to transform. Can be:
+- A single point with shape (N,)
+- Batch of points with shape (…, N)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Transformed points with the same shape as the input points.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.transformations.apply_linear_map">
+<span class="sig-name descname"><span class="pre">apply_linear_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">linear_map</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Buffer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_SupportsArray</span><span class="p"><span class="pre">[</span></span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_NestedSequence</span><span class="p"><span class="pre">[</span></span><span class="pre">_SupportsArray</span><span class="p"><span class="pre">[</span></span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bytes</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_NestedSequence</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Buffer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_SupportsArray</span><span class="p"><span class="pre">[</span></span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_NestedSequence</span><span class="p"><span class="pre">[</span></span><span class="pre">_SupportsArray</span><span class="p"><span class="pre">[</span></span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bytes</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_NestedSequence</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/transformations.html#apply_linear_map"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.transformations.apply_linear_map" title="Permalink to this definition"></a></dt>
+<dd><p>Applies a linear transformation to a set of points.</p>
+<p>Performs matrix multiplication to transform points using a linear map,
+which can represent rotations, scaling, shearing, or any linear transformation.
+Supports both single points and batches of points.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>linear_map</strong> – A (N, N) transformation matrix representing the linear map.
+For 3D transformations, this is typically a (3, 3) matrix.</p></li>
+<li><p><strong>points</strong> – Points to transform. Can be:
+- A single point with shape (N,)
+- Batch of points with shape (…, N)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Transformed points with the same shape as the input points.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.transformations.is_pure_rotation">
+<span class="sig-name descname"><span class="pre">is_pure_rotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">_ScalarType_co</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/transformations.html#is_pure_rotation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.transformations.is_pure_rotation" title="Permalink to this definition"></a></dt>
+<dd><p>Checks if a linear part of a transformation matrix is describes a pure rotation.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.transformations.make_transform">
+<span class="sig-name descname"><span class="pre">make_transform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Buffer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_SupportsArray</span><span class="p"><span class="pre">[</span></span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_NestedSequence</span><span class="p"><span class="pre">[</span></span><span class="pre">_SupportsArray</span><span class="p"><span class="pre">[</span></span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bytes</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_NestedSequence</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rotvec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Buffer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_SupportsArray</span><span class="p"><span class="pre">[</span></span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_NestedSequence</span><span class="p"><span class="pre">[</span></span><span class="pre">_SupportsArray</span><span class="p"><span class="pre">[</span></span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bytes</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_NestedSequence</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/transformations.html#make_transform"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.transformations.make_transform" title="Permalink to this definition"></a></dt>
+<dd><p>Creates a homogeneous transformation matrix from the given position, rotation vector,
+and uniform scale factor.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.transformations.orthonormalize_transform">
+<span class="sig-name descname"><span class="pre">orthonormalize_transform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">_ScalarType_co</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/transformations.html#orthonormalize_transform"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.transformations.orthonormalize_transform" title="Permalink to this definition"></a></dt>
+<dd><p>Ensures that the linear part of a transformation matrix is orthonormalized, thus
+representing a pure rotation. This is done by applying a Gram-Schmidt
+orthogonalization procedure to the columns of the linear part of the matrix.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.transformations.rotvec_to_mat">
+<span class="sig-name descname"><span class="pre">rotvec_to_mat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rotvec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Buffer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_SupportsArray</span><span class="p"><span class="pre">[</span></span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_NestedSequence</span><span class="p"><span class="pre">[</span></span><span class="pre">_SupportsArray</span><span class="p"><span class="pre">[</span></span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bytes</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_NestedSequence</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/transformations.html#rotvec_to_mat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.transformations.rotvec_to_mat" title="Permalink to this definition"></a></dt>
+<dd><p>Converts a rotation vector to a rotation matrix.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.transformations.rotvec_to_quat">
+<span class="sig-name descname"><span class="pre">rotvec_to_quat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rotvec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Buffer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_SupportsArray</span><span class="p"><span class="pre">[</span></span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_NestedSequence</span><span class="p"><span class="pre">[</span></span><span class="pre">_SupportsArray</span><span class="p"><span class="pre">[</span></span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bytes</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_NestedSequence</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/transformations.html#rotvec_to_quat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.transformations.rotvec_to_quat" title="Permalink to this definition"></a></dt>
+<dd><p>Converts a rotation vector to a quaternion.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.transformations.transformrt_to_numpy">
+<span class="sig-name descname"><span class="pre">transformrt_to_numpy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.TransformRT" title="superdex.physics.TransformRT"><span class="pre">TransformRT</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/transformations.html#transformrt_to_numpy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.transformations.transformrt_to_numpy" title="Permalink to this definition"></a></dt>
+<dd><p>Convert a TransformRT to numpy array.</p>
+</dd></dl>
+
+</section>
+<section id="module-superdex.physics.utils.profiling">
+<span id="superdex-physics-utils-profiling"></span><h2>superdex.physics.utils.profiling<a class="headerlink" href="#module-superdex.physics.utils.profiling" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.Profiler">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Profiler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record_individual_samples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superdex/physics/utils/profiling.html#Profiler"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.profiling.Profiler" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Hierarchical performance profiler for measuring code execution times.</p>
+<p>Provides stack-based profiling with support for nested sections, statistical
+analysis, and configurable timing mechanisms. Tracks execution statistics
+including mean, variance, and total time.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.Profiler.enter">
+<span class="sig-name descname"><span class="pre">enter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.utils.profiling.Profiler" title="superdex.physics.utils.profiling.Profiler"><span class="pre">Profiler</span></a></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/profiling.html#Profiler.enter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.profiling.Profiler.enter" title="Permalink to this definition"></a></dt>
+<dd><p>Enter a profiling section and start timing. Creates a new section if it doesn’t
+exist, or reuses an existing one. Supports nested profiling by maintaining a
+section hierarchy.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.Profiler.exit">
+<span class="sig-name descname"><span class="pre">exit</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/profiling.html#Profiler.exit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.profiling.Profiler.exit" title="Permalink to this definition"></a></dt>
+<dd><p>Exit the current profiling section and update statistics. Calculates elapsed
+time and updates running statistics using Welford’s algorithm for numerically
+stable variance computation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.Profiler.print_summary">
+<span class="sig-name descname"><span class="pre">print_summary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pattern</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/profiling.html#Profiler.print_summary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.profiling.Profiler.print_summary" title="Permalink to this definition"></a></dt>
+<dd><p>Prints a table summarizing all profiling statistics. If a pattern is provided,
+only sections matching the pattern will be included in the summary. The pattern
+can use glob-style wildcards (* and ?).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.Profiler.record">
+<span class="sig-name descname"><span class="pre">record</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration_ms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#superdex.physics.utils.profiling.ProfilerSection" title="superdex.physics.utils.profiling.ProfilerSection"><span class="pre">ProfilerSection</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/profiling.html#Profiler.record"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.profiling.Profiler.record" title="Permalink to this definition"></a></dt>
+<dd><p>Record a custom duration for a profiling section. This is useful when
+profiling code that doesn’t use the profiler’s enter/exit methods.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.Profiler.reset">
+<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/profiling.html#Profiler.reset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.profiling.Profiler.reset" title="Permalink to this definition"></a></dt>
+<dd><p>Reset all profiling statistics and clear the active stack. Removes all collected
+timing data and resets the profiler to its initial state.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.Profiler.to_dict">
+<span class="sig-name descname"><span class="pre">to_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">separator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extended</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/profiling.html#Profiler.to_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.profiling.Profiler.to_dict" title="Permalink to this definition"></a></dt>
+<dd><p>Generate a flat dictionary summary of all profiling statistics.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.Profiler.current_section">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">current_section</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#superdex.physics.utils.profiling.ProfilerSection" title="superdex.physics.utils.profiling.ProfilerSection"><span class="pre">ProfilerSection</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="reference internal" href="../_modules/superdex/physics/utils/profiling.html#Profiler.current_section"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.profiling.Profiler.current_section" title="Permalink to this definition"></a></dt>
+<dd><p>Get the current active profiling section. Returns None if no section is active.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.Profiler.enabled">
+<span class="sig-name descname"><span class="pre">enabled</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#superdex.physics.utils.profiling.Profiler.enabled" title="Permalink to this definition"></a></dt>
+<dd><p>Whether the profiler is enabled</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.Profiler.record_individual_samples">
+<span class="sig-name descname"><span class="pre">record_individual_samples</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#superdex.physics.utils.profiling.Profiler.record_individual_samples" title="Permalink to this definition"></a></dt>
+<dd><p>Whether to record individual sample timings</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.Profiler.sections">
+<span class="sig-name descname"><span class="pre">sections</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#superdex.physics.utils.profiling.ProfilerSection" title="superdex.physics.utils.profiling.ProfilerSection"><span class="pre">ProfilerSection</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#superdex.physics.utils.profiling.Profiler.sections" title="Permalink to this definition"></a></dt>
+<dd><p>Top-level profiling sections</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.Profiler.stack">
+<span class="sig-name descname"><span class="pre">stack</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#superdex.physics.utils.profiling.ProfilerStackEntry" title="superdex.physics.utils.profiling.ProfilerStackEntry"><span class="pre">ProfilerStackEntry</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#superdex.physics.utils.profiling.Profiler.stack" title="Permalink to this definition"></a></dt>
+<dd><p>Active profiling section stack</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.ProfilerSection">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ProfilerSection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">count:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m2:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">history:</span> <span class="pre">list[float]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nested_sections:</span> <span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">superdex.physics.utils.profiling.ProfilerSection]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">info:</span> <span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typing.Any]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superdex/physics/utils/profiling.html#ProfilerSection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.profiling.ProfilerSection" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Statistics container for a profiled code section.</p>
+<p>Tracks timing statistics including duration, count, mean, and variance
+for performance analysis. Supports nested profiling sections for
+hierarchical performance measurement.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.ProfilerSection.to_dict">
+<span class="sig-name descname"><span class="pre">to_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">separator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extended</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/profiling.html#ProfilerSection.to_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.profiling.ProfilerSection.to_dict" title="Permalink to this definition"></a></dt>
+<dd><p>Generate a flat dictionary summary of all profiling statistics.</p>
+<p>Recursively traverses nested sections to create a comprehensive
+summary with hierarchical path names.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.ProfilerSection.count">
+<span class="sig-name descname"><span class="pre">count</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#superdex.physics.utils.profiling.ProfilerSection.count" title="Permalink to this definition"></a></dt>
+<dd><p>Number of times this section has been executed</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.ProfilerSection.history">
+<span class="sig-name descname"><span class="pre">history</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#superdex.physics.utils.profiling.ProfilerSection.history" title="Permalink to this definition"></a></dt>
+<dd><p>Optional history of all durations</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.ProfilerSection.info">
+<span class="sig-name descname"><span class="pre">info</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#superdex.physics.utils.profiling.ProfilerSection.info" title="Permalink to this definition"></a></dt>
+<dd><p>Optional dictionary for storing additional information</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.ProfilerSection.last">
+<span class="sig-name descname"><span class="pre">last</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.0</span></em><a class="headerlink" href="#superdex.physics.utils.profiling.ProfilerSection.last" title="Permalink to this definition"></a></dt>
+<dd><p>Duration of the most recent execution</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.ProfilerSection.m2">
+<span class="sig-name descname"><span class="pre">m2</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.0</span></em><a class="headerlink" href="#superdex.physics.utils.profiling.ProfilerSection.m2" title="Permalink to this definition"></a></dt>
+<dd><p>Welford’s running M2, used to compute the execution variance</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.ProfilerSection.mean">
+<span class="sig-name descname"><span class="pre">mean</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.0</span></em><a class="headerlink" href="#superdex.physics.utils.profiling.ProfilerSection.mean" title="Permalink to this definition"></a></dt>
+<dd><p>Average execution duration</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.ProfilerSection.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></em><a class="headerlink" href="#superdex.physics.utils.profiling.ProfilerSection.name" title="Permalink to this definition"></a></dt>
+<dd><p>Name of the section.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.ProfilerSection.nested_sections">
+<span class="sig-name descname"><span class="pre">nested_sections</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#superdex.physics.utils.profiling.ProfilerSection" title="superdex.physics.utils.profiling.ProfilerSection"><span class="pre">ProfilerSection</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#superdex.physics.utils.profiling.ProfilerSection.nested_sections" title="Permalink to this definition"></a></dt>
+<dd><p>Child profiling sections for hierarchical profiling</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.ProfilerSection.stddev">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">stddev</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="reference internal" href="../_modules/superdex/physics/utils/profiling.html#ProfilerSection.stddev"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.profiling.ProfilerSection.stddev" title="Permalink to this definition"></a></dt>
+<dd><p>Execution standard deviation.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.ProfilerSection.total">
+<span class="sig-name descname"><span class="pre">total</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.0</span></em><a class="headerlink" href="#superdex.physics.utils.profiling.ProfilerSection.total" title="Permalink to this definition"></a></dt>
+<dd><p>Cumulative duration across all executions</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.ProfilerSection.var">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">var</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="reference internal" href="../_modules/superdex/physics/utils/profiling.html#ProfilerSection.var"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.profiling.ProfilerSection.var" title="Permalink to this definition"></a></dt>
+<dd><p>Execution variance.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.ProfilerStackEntry">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ProfilerStackEntry</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">section</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#superdex.physics.utils.profiling.ProfilerSection" title="superdex.physics.utils.profiling.ProfilerSection"><span class="pre">ProfilerSection</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superdex/physics/utils/profiling.html#ProfilerStackEntry"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.profiling.ProfilerStackEntry" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">NamedTuple</span></code></p>
+<p>Stack entry for tracking active profiling sections.</p>
+<p>Represents a single level in the profiling call stack, containing
+the section being profiled and when it started.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.ProfilerStackEntry.section">
+<span class="sig-name descname"><span class="pre">section</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#superdex.physics.utils.profiling.ProfilerSection" title="superdex.physics.utils.profiling.ProfilerSection"><span class="pre">ProfilerSection</span></a></em><a class="headerlink" href="#superdex.physics.utils.profiling.ProfilerStackEntry.section" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.utils.profiling.ProfilerStackEntry.start_time">
+<span class="sig-name descname"><span class="pre">start_time</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#superdex.physics.utils.profiling.ProfilerStackEntry.start_time" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-superdex.physics.utils.logging">
+<span id="superdex-physics-utils-logging"></span><h2>superdex.physics.utils.logging<a class="headerlink" href="#module-superdex.physics.utils.logging" title="Permalink to this heading"></a></h2>
+<p>Logging utilities for SuperDex Physics.</p>
+<dl>
+<dt>Recommended usage:</dt><dd><p>import logging
+from superdex.physics.utils.logging import configure_logger</p>
+<p>configure_logger()
+logger = logging.getLogger(__name__)  # Use module name for logger
+logger.info(“Application started”)</p>
+</dd>
+</dl>
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.utils.logging.ColoredFormatter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ColoredFormatter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datefmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">style</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'%'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">defaults</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superdex/physics/utils/logging.html#ColoredFormatter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.logging.ColoredFormatter" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Formatter</span></code></p>
+<p>Custom formatter that adds ANSI color codes to log levels for terminal output.</p>
+<p>This formatter enhances console log readability by applying color codes to different
+components of log messages. Colors are applied using ANSI escape sequences which work
+in most modern terminals including VS Code, Git Bash, WSL, and Linux/Mac terminals.</p>
+<p>Note: Color codes are NOT applied to file handlers to keep log files clean and
+easily parseable by automated tools.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="superdex.physics.utils.logging.ColoredFormatter.format">
+<span class="sig-name descname"><span class="pre">format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">LogRecord</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/logging.html#ColoredFormatter.format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.logging.ColoredFormatter.format" title="Permalink to this definition"></a></dt>
+<dd><p>Format the complete log record with appropriate color coding.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="superdex.physics.utils.logging.ColoredFormatter.formatTime">
+<span class="sig-name descname"><span class="pre">formatTime</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">LogRecord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datefmt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/logging.html#ColoredFormatter.formatTime"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.logging.ColoredFormatter.formatTime" title="Permalink to this definition"></a></dt>
+<dd><p>Format the timestamp with gray color for subtle appearance.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.logging.configure_logger">
+<span class="sig-name descname"><span class="pre">configure_logger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">log_output_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superdex/physics/utils/logging.html#configure_logger"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.logging.configure_logger" title="Permalink to this definition"></a></dt>
+<dd><p>Configure the Python logger with sensible defaults for SuperDex Physics applications.</p>
+<p>This function sets up both console and optional file logging. Provides simple colored
+console output and unique file logging for each process. Also provides environment
+variable-based log level control via SUPERDEX_PYTHON_LOG_LEVEL.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>log_output_path</strong> – Optional directory path for log files. If provided, creates a
+unique log file combining the current timestamp and process ID within this
+directory (e.g., /var/logs/20251127_105323_12345.log). The directory will be
+created if it doesn’t exist. Each process gets its own log file to avoid
+file locking and race condition issues.</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>Environment Variables:</dt><dd><dl class="simple">
+<dt>SUPERDEX_PYTHON_LOG_LEVEL: Sets the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).</dt><dd><p>Defaults to INFO if not set or if an invalid level is specified.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This function is idempotent - calling it multiple times will have no effect after
+the first call, as it checks if the root logger already has handlers configured.</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.logging.forward_mochi_logs_to_logger">
+<span class="sig-name descname"><span class="pre">forward_mochi_logs_to_logger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">logger</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Logger</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/logging.html#forward_mochi_logs_to_logger"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.logging.forward_mochi_logs_to_logger" title="Permalink to this definition"></a></dt>
+<dd><p>Forward SuperDex Physics C++ logs to a Python logger for unified logging.</p>
+<p>This function bridges the SuperDex Physics C++ logging system with Python’s logging framework
+by setting up a callback that intercepts SuperDex Physics log messages and redirects them
+to the specified Python logger. This allows you to:</p>
+<ul class="simple">
+<li><p>See SuperDex Physics C++ logs in the same output stream as Python logs</p></li>
+<li><p>Apply Python logging filters and formatters to C++ logs</p></li>
+<li><p>Write both Python and C++ logs to the same log files</p></li>
+<li><p>Control C++ log verbosity using Python’s log level system</p></li>
+</ul>
+<dl class="simple">
+<dt>The mapping between SuperDex Physics log channels and Python log levels is:</dt><dd><ul class="simple">
+<li><p>LogChannel.INFO    → logging.INFO    (general information)</p></li>
+<li><p>LogChannel.WARNING → logging.WARNING (warnings and potential issues)</p></li>
+<li><p>LogChannel.ERROR   → logging.ERROR   (errors and failures)</p></li>
+<li><p>Other channels     → logging.DEBUG   (detailed diagnostic info)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>logger</strong> – The Python logger instance to receive forwarded SuperDex Physics logs.
+Typically created with <code class="docutils literal notranslate"><span class="pre">logging.getLogger(__name__)</span></code>.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>RuntimeError</strong> – If called before initializing a SuperDex Physics context. You must create
+    and enter a SuperDex Physics context before calling this function, for example with
+    <code class="docutils literal notranslate"><span class="pre">with</span> <span class="pre">superdex.physics.utils.context.MochiContext():</span></code>.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<dl class="simple">
+<dt>Each forwarded log record includes extra fields with C++ source location:</dt><dd><ul class="simple">
+<li><p>mochi_filename: C++ source file where the log originated.</p></li>
+<li><p>mochi_lineno: Line number in the C++ source file.</p></li>
+</ul>
+</dd>
+</dl>
+<p>These can be used in custom formatters to show C++ source locations.</p>
+</div>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="scene_setup.html" class="btn btn-neutral float-left" title="Scene Setup, Assets &amp; Runtime" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="testing.html" class="btn btn-neutral float-right" title="Testing Utilities" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Meta Platforms, Inc.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

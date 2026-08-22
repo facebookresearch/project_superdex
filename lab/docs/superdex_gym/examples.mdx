@@ -1,0 +1,230 @@
+---
+title: Examples
+---
+
+# Examples
+
+The observation, action, reward and termination contract of the three environment
+**classes** that ship in an open-source build. Sizes marked *(default config)* change if
+you change the configuration fields they depend on.
+
+The config *variants* listed in [the introduction](./intro.md#available-environments)
+(`ant_no_contact`, `half_cheetah_full_observation`, and so on) are alternative
+configurations of these same classes, so they share the contracts below - subject to
+whatever the variant's `env_cfg` changes.
+
+For the shared runtime API implemented by `MochiEnv`, see
+[Environment Class API](./env_reference.mdx).
+
+## Task Summary
+
+| Environment | Observation | Action | Reward terms | Terminates? |
+| --- | ---: | ---: | --- | --- |
+| [CartPole](#cartpole) | 4 | 1 | 1 | yes |
+| [Ant](#ant) | 81 | 8 | 4 | yes |
+| [HalfCheetah](#halfcheetah) | 17 | 6 | 2 | **no** |
+
+Every environment additionally inherits the shared `MochiEnvCfg` fields documented in
+[Creating Custom Environments](./environments.mdx#common-configuration-options).
+
+## CartPole
+
+`superdex_gym/CartPole-v0` · CLI `cart_pole` ·
+`superdex.lab.gym.envs.benchmarks.cartpole_env.CartPoleEnv`
+
+Balance a pole on a cart moving along a linear rail. The cheapest environment to run
+and the recommended smoke test — it needs only the benchmark scene assets
+(`assets/benchmarks/cart_pole/`), no bot asset.
+
+:::note The `superdex-robotics` package is required by *every* environment
+Including this one. `superdex/lab/gym/utils/mochi_helpers.py:25` imports
+`superdex.robotics` at module load and every `*_env` module imports `mochi_helpers`, so
+the `superdex-robotics` package — a declared dependency of `superdex-lab` — is needed by
+CartPole and Ant too, neither of which loads a bot asset. Because it is declared, a
+supported install always has it; but if its native extension was not built, environment
+discovery fails before any `--env` selection takes effect, so choosing a different
+environment is not a workaround. See
+[Verifying the Install](./setup.md#verifying-the-install).
+:::
+
+![CartPole: a pole balanced upright on a cart riding a horizontal rail](/img/superdex_gym/envs/cart_pole.png)
+
+```python
+from superdex.lab.gym.envs.benchmarks.cartpole_env import CartPoleEnv, CartPoleEnvCfg
+
+env = CartPoleEnv(CartPoleEnvCfg())
+```
+
+### Configuration
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `control_frequency` | `25` | Hz |
+| `simulation_frequency` | `50` | Hz — 2 substeps per control step |
+| `steps_per_episode` | `1000` | |
+| `reset_noise_scale` | `0.1` | |
+| `render_control` | `True` | Stored on the environment but currently unused |
+| `actuate_on_pole` | `False` | Apply the control force to the pole instead of the cart |
+| `use_damping` | `True` | Joint viscous friction |
+| `use_gravity` | `True` | |
+| `free_pole` | `False` | Remove the pole's joint limits |
+
+### Observation — 4 elements
+
+| Key | Shape | Meaning |
+| --- | ---: | --- |
+| `angular_vel` | 1 | Angular velocity of the pole (rad/s) |
+| `linear_vel` | 1 | Linear velocity of the cart (m/s) |
+| `position` | 1 | Cart position along the rail (m) |
+| `vertical_ang` | 1 | Vertical angle of the pole (rad) |
+
+Listed in flattened order.
+
+### Action — 1 element
+
+`control`, bounded `[-3.0, 3.0]`. Multiplied by a force scale of 100 and applied as an
+external force on DOF 0 (the cart) or DOF 1 (the pole) depending on
+`actuate_on_pole`.
+
+### Reward
+
+One term, `upright_reward`: `1.0` while `|vertical_ang| <= 0.2`, else `0.0`.
+
+### Termination
+
+Terminates with `terminated_reason = "Pole angle exceeded threshold"` once the pole
+leaves the upright band. Truncates at `steps_per_episode`.
+
+### Scene identity
+
+`uid_fields = (use_damping, use_gravity, free_pole)` — the three fields that change how
+the prefab is built. Environments matching on all three share one physics scene.
+
+## Ant
+
+`superdex_gym/Ant-v0` · CLI `ant` · `superdex.lab.gym.envs.benchmarks.ant_env.AntEnv`
+
+Quadrupedal locomotion. Reward forward progress while penalizing control effort and
+contact forces.
+
+![Ant: a four-legged robot standing on a ground plane](/img/superdex_gym/envs/ant.png)
+
+### Configuration
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `control_frequency` | `20` | Hz |
+| `simulation_frequency` | `100` | Hz — 5 substeps per control step |
+| `steps_per_episode` | `1000` | |
+| `reset_noise_scale` | `0.1` | |
+| `forward_reward_weight` | `1` | |
+| `control_cost_weight` | `0.5` | |
+| `contact_cost_weight` | `5e-4` | |
+| `healthy_reward` | `1.0` | Per-step bonus while healthy |
+| `terminate_when_unhealthy` | `True` | |
+| `healthy_y_range` | `(0.2, 1.0)` | Torso height band, in metres |
+| `contact_force_range` | `(-1.0, 1.0)` | Contact forces are clipped to this before the cost |
+| `exclude_current_positions_from_observation` | `True` | Omit x and z, keeping policies translation-invariant |
+| `include_contact_in_observation` | `True` | |
+| `use_rotation_vector` | `False` | |
+| `use_damping` | `True` | |
+| `use_gravity` | `True` | |
+| `use_low_friction` | `False` | |
+| `use_high_friction` | `False` | |
+| `init_dist_from_ground` | `0.55` | m |
+| `init_ankle_angle` | `radians(57.30)` | ≈ 1.0 rad |
+
+Note the field name is **plural** here (`exclude_current_positions_from_observation`)
+and singular on HalfCheetah.
+
+### Observation — 81 elements (default config)
+
+| Key | Shape | Meaning |
+| --- | ---: | --- |
+| `contact_forces` | 54 | 6 components for each of 9 bodies. Omitted when `include_contact_in_observation=False` |
+| `pose` | 13 | `num_dofs (14) - 2` for the excluded positions, `+1` for the quaternion representation |
+| `vel` | 14 | One per DOF |
+
+Listed in flattened order. Turning off `exclude_current_positions_from_observation`
+adds 2; turning off `include_contact_in_observation` removes 54; setting
+`use_rotation_vector=True` removes 1.
+
+### Action — 8 elements
+
+`control`, bounded `[-1.0, 1.0]`. Applied as external forces on DOFs 6–13 with a force
+scale of 150.
+
+### Reward — 4 terms
+
+| Term | Value |
+| --- | --- |
+| `forward` | `x_velocity × forward_reward_weight` |
+| `ctrl` | `-control_cost_weight × control·control` |
+| `contact` | `-contact_cost_weight × Σ(clipped contact force)²` |
+| `survive` | `healthy_reward` while healthy, else `0` |
+
+The scalar reward is the plain sum; `ctrl` and `contact` are already negative.
+
+### Termination
+
+Terminates with `"Unhealthy"` when the torso height leaves `healthy_y_range`, unless
+`terminate_when_unhealthy=False`. Truncates at `steps_per_episode`.
+
+### Scene identity
+
+`uid_fields = (use_damping, use_gravity, use_low_friction, use_high_friction)`.
+
+## HalfCheetah
+
+`superdex_gym/HalfCheetah-v0` · CLI `half_cheetah` ·
+`superdex.lab.gym.envs.benchmarks.halfcheetah_env.HalfCheetahEnv`
+
+Planar (2-D) running. Reward forward velocity, penalize control effort.
+
+![HalfCheetah: a planar two-legged runner in a mid-stride pose](/img/superdex_gym/envs/half_cheetah.png)
+
+### Configuration
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `control_frequency` | `20` | Hz |
+| `simulation_frequency` | `100` | Hz — 5 substeps per control step |
+| `steps_per_episode` | `1000` | |
+| `reset_noise_scale` | `0.1` | |
+| `forward_reward_weight` | `1` | |
+| `control_cost_weight` | `0.1` | |
+| `exclude_current_position_from_observation` | `True` | Omit the x-coordinate |
+| `use_gravity` | `True` | |
+| `use_rest_springs` | `True` | Apply rest springs to the joints |
+
+### Observation — 17 elements (default config)
+
+| Key | Shape | Meaning |
+| --- | ---: | --- |
+| `pose` | 8 | `num_dofs (9) - 1` for the excluded x-coordinate |
+| `vel` | 9 | One per DOF |
+
+There is no contact observation.
+
+### Action — 6 elements
+
+`control`, bounded `[-1.0, 1.0]`. Applied as external forces on DOFs 3–8 with
+**per-joint** force scales `[120, 90, 60, 120, 60, 30]`.
+
+### Reward — 2 terms
+
+| Term | Value |
+| --- | --- |
+| `forward` | `x_velocity × forward_reward_weight` |
+| `ctrl` | `-control_cost_weight × control·control` |
+
+### Termination
+
+:::note HalfCheetah never terminates
+It does not override `_check_stop_criteria`, so the only stop condition is the base
+class's truncation at `steps_per_episode`. `terminated` is never `True`.
+:::
+
+### Scene identity
+
+`uid_fields = (use_gravity, use_rest_springs)`.

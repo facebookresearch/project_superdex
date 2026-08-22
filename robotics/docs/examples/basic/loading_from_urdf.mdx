@@ -1,0 +1,140 @@
+---
+title: Loading from URDF
+sidebar_label: Loading from URDF
+sidebar_position: 3
+---
+
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+
+# Loading from URDF
+
+Loads a robot directly from a `.urdf` file and simulates it. Collision meshes can
+be plain `.stl`/`.obj`/`.ply`/`.off` files with no preprocessing required; an SDF
+collider is baked on the fly when the bot is created.
+
+**Source**: `examples/basic/example_urdf_loading.py`
+
+:::warning Pitfalls of the runtime URDF loader
+The runtime URDF loader only understands *mesh* collision geometry and silently
+ignores primitive shapes (`<box>`, `<cylinder>`, `<sphere>`). The bundled FR3
+URDF defines its gripper fingers as `<box>` primitives, so the loaded fingers
+have no collision geometry.
+
+Baking an SDF on the fly also assumes each collision mesh is a closed
+(watertight) surface. Raw URDF meshes often are not, so loading may warn that a
+collider mesh is not topologically closed. The SDF sign may then be incorrect,
+causing unreliable collision detection near the open boundaries. The default FR3
+URDF trips this on some links.
+
+For production assets, prefer importing URDFs through <ProjectSuperdexLink site="studio" path="docs/bot_editor/import/">SuperDex Studio</ProjectSuperdexLink>. Its
+importer remeshes collision (or visual) geometry, bakes watertight SDFs offline,
+and emits a `.superdex_bot` with preprocessed assets. This runtime path is best
+for quick prototyping.
+:::
+
+## Key Concepts
+
+### The URDF file
+
+The example resolves the bundled FR3 test URDF, but any `.urdf` path works:
+
+```python
+from superdex.physics.paths import resolve_asset
+
+urdf_path = str(resolve_asset("test/urdf/fr3v2_1_urdf/robots/fr3v2_1_franka_hand.urdf"))
+```
+
+### Initializing the engine and scene
+
+Initialize the physics engine before creating scenes or actors.
+`num_worker_threads=0` runs single-threaded; pass `-1` to auto-select. SuperDex
+robots use a Z-up convention, so gravity points down the -Z axis:
+
+```python
+physics.initialize(num_worker_threads=0)
+
+scene = physics.create_scene("URDF Bot Loading Example")
+scene.set_gravity([0, 0, -9.81])
+```
+
+### Parsing the URDF and welding the base
+
+Parsing the URDF produces a bot prefab: a template describing links and joints.
+Collision mesh paths are kept as-is; no mesh conversion happens here:
+
+```python
+bot_prefab = robotics.load_bot_prefab_from_urdf_file(urdf_path)
+```
+
+URDF loading adds a free `world_joint` at index 0, leaving the base free to fall.
+Making it a `HARD` (0-DoF weld) joint anchors the base to the world. The arm
+still sags under gravity since there is no controller:
+
+```python
+bot_prefab.joints[0].type = physics.ArticulatedJointType.HARD
+```
+
+### Instantiating the bot
+
+Instantiating the prefab builds the robot's articulated actor and bakes each
+link's SDF collider from its mesh. The robotics context tracks every bot and
+controller you create:
+
+```python
+robotics_context = robotics.create_context()
+bot = robotics.create_bot(scene, bot_prefab, robotics_context)
+bot_actor = bot.get_articulated_actor()
+
+plane_shape = physics.create_plane_shape(normal=[0, 0, 1], distance=0)
+scene.create_rigid_actor(name="ground", shape=plane_shape, is_static=True)
+```
+
+The prefab exposes the robot's links and joints, and the actor reports its
+degrees of freedom:
+
+```python
+print(f"Robot: {bot_prefab.name}")
+print(f"  Links: {len(bot_prefab.links)}")
+print(f"  Joints: {len(bot_prefab.joints)}")
+print(f"  DOFs: {bot_actor.get_num_dofs()}")
+```
+
+### Simulating with the debugger
+
+Simulate at 60 Hz. Declare the scene's coordinate convention so the debugger
+renders it the right way up: SuperDex is X-forward, Y-left, Z-up (FLU). This must
+come before `attach()`, which starts the server. The loop runs until you close
+the debugger; `attach()` returns `False` if it can't connect:
+
+```python
+time_step = 1.0 / 60.0
+
+physics.get_debug_server().set_coordinate_space(
+    physics.CoordinateSpace(axes=physics.CoordinateSpaceAxes.FLU)
+)
+
+if physics.debugger.attach():
+    while physics.debugger.is_attached():
+        scene.step(time_step)
+```
+
+### Teardown
+
+Destroy the bot, then shut the engine down cleanly:
+
+```python
+robotics.destroy_bot(scene, bot)
+physics.shutdown()
+```
+
+## Running
+
+```bash
+uv run python superdex_robotics/examples/basic/example_urdf_loading.py
+```
+
+To load your own robot, pass a path to a `.urdf` file:
+
+```bash
+uv run python superdex_robotics/examples/basic/example_urdf_loading.py /path/to/robot.urdf
+```

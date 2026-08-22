@@ -1,0 +1,315 @@
+<!-- @generated -->
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Testing Utilities &mdash; SuperDex Physics Python API  documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Utilities" href="utilities.html" />
+ 
+<!-- Theme synchronization with parent Docusaurus site -->
+<script type="text/javascript">
+    // jQuery shim — Sphinx 7.x removed jQuery but RTD theme search.html
+    // still uses jQuery(fn) for DOM-ready initialization.
+    if (typeof jQuery === 'undefined') {
+        window.jQuery = window.$ = function(fn) {
+            if (typeof fn === 'function') {
+                if (document.readyState !== 'loading') { fn(); }
+                else { document.addEventListener('DOMContentLoaded', fn); }
+            }
+        };
+    }
+
+    (function() {
+        var theme = localStorage.getItem('theme') || 'light';
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    })();
+
+    function setSphinxTheme(theme) {
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+    }
+
+    window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'setTheme') {
+            setSphinxTheme(event.data.theme);
+        }
+    });
+
+    window.addEventListener('DOMContentLoaded', function() {
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'getTheme' }, '*');
+        }
+    });
+</script>
+<!-- Shared SuperDex Physics theme (single source of truth:
+     website/static/api-embed.css). Baked in as a render-blocking stylesheet so
+     the page's FIRST paint is already themed — in lockstep with the pre-paint
+     data-theme script above — with no flash of the stock Sphinx/RTD theme and no
+     need for the embedding iframe to hide/reveal. pathto(..., 1) resolves the
+     path from this page up to the staticdocs site root where api-embed.css lives. -->
+<link rel="stylesheet" type="text/css" href="../../../../../api-embed.css"/>
+<style>
+    /* Sidebar font size — larger for readability. All light/dark theming is
+       owned by static/api-embed.css (single source of truth), baked in above as
+       a render-blocking <link>; no theme colors are set here, so the embedded
+       Python API reference matches the site background in both light and dark. */
+    .wy-menu-vertical a,
+    .wy-menu-vertical li,
+    .wy-menu-vertical code,
+    .wy-menu-vertical code.docutils,
+    .wy-menu-vertical .pre,
+    .wy-menu-vertical span.pre,
+    .wy-menu-vertical li span.toctree-expand,
+    .wy-side-nav-search input[type="text"] {
+        font-size: 14px !important;
+    }
+</style>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> SuperDex Physics Python API
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="physics.html">Physics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#engine-lifecycle">Engine Lifecycle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#execution-threading">Execution &amp; Threading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#scene">Scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#handles">Handles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#shapes-geometry">Shapes &amp; Geometry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#actors">Actors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#soft-materials">Soft Materials</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#constraints">Constraints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#contact-collision">Contact &amp; Collision</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#solver">Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#query-types">Query Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#recording-options">Recording Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#debugging-diagnostics">Debugging &amp; Diagnostics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#build-information">Build Information</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#core-value-spatial-types">Core Value &amp; Spatial Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#error-handling">Error Handling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#containers-spans">Containers &amp; Spans</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html#not-yet-categorized">Not Yet Categorized</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="prefab.html">Prefabs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#scene-description">Scene Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#actors">Actors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#articulation-components-controllers">Articulation Components &amp; Controllers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#constraints">Constraints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#contact-filters">Contact Filters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#loading-dependencies">Loading &amp; Dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#instantiation">Instantiation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#serialization-export">Serialization &amp; Export</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prefab.html#containers">Containers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models &amp; Meshes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="models.html#superdex-physics-model">superdex.physics.model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#module-superdex.physics.mesh">superdex.physics.mesh</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="debugger.html">Debugger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="viewer.html">Viewer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="viewer.html#module-superdex.physics.viewer">superdex.physics.viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="viewer.html#module-superdex.physics.viewer.renderers">superdex.physics.viewer.renderers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="viewer.html#module-superdex.physics.viewer.utils">superdex.physics.viewer.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="viewer.html#module-superdex.physics.utils.render_model_registry">superdex.physics.utils.render_model_registry</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="scene_setup.html">Scene Setup, Assets &amp; Runtime</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.paths">superdex.physics.paths</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.environment">superdex.physics.environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.loader">superdex.physics.loader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.utils.context">superdex.physics.utils.context</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scene_setup.html#module-superdex.physics.utils.scene_helpers">superdex.physics.utils.scene_helpers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="utilities.html">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.configclasses">superdex.physics.utils.configclasses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.decorators">superdex.physics.utils.decorators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.deprecation">superdex.physics.utils.deprecation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.json">superdex.physics.utils.json</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.coordinate_systems">superdex.physics.utils.coordinate_systems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.transformations">superdex.physics.utils.transformations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.profiling">superdex.physics.utils.profiling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#module-superdex.physics.utils.logging">superdex.physics.utils.logging</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Testing Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-superdex.physics.utils.testing.decorators">superdex.physics.utils.testing.decorators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-superdex.physics.utils.testing.environment">superdex.physics.utils.testing.environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-superdex.physics.utils.testing.testcases">superdex.physics.utils.testing.testcases</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">SuperDex Physics Python API</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Testing Utilities</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/testing.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="testing-utilities">
+<h1>Testing Utilities<a class="headerlink" href="#testing-utilities" title="Permalink to this heading"></a></h1>
+<p><strong>Modules:</strong> <code class="docutils literal notranslate"><span class="pre">superdex.physics.utils.testing.decorators</span></code>, <code class="docutils literal notranslate"><span class="pre">superdex.physics.utils.testing.environment</span></code>, <code class="docutils literal notranslate"><span class="pre">superdex.physics.utils.testing.testcases</span></code></p>
+<p>Fixtures and decorators for suites built on SuperDex Physics.</p>
+<section id="module-superdex.physics.utils.testing.decorators">
+<span id="superdex-physics-utils-testing-decorators"></span><h2>superdex.physics.utils.testing.decorators<a class="headerlink" href="#module-superdex.physics.utils.testing.decorators" title="Permalink to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.testing.decorators.skip">
+<span class="sig-name descname"><span class="pre">skip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reason</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/testing/decorators.html#skip"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.testing.decorators.skip" title="Permalink to this definition"></a></dt>
+<dd><p>Unconditionally skip a test with the given reason. This is a convenience wrapper
+around skip_if that always skips the test.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.testing.decorators.skip_if">
+<span class="sig-name descname"><span class="pre">skip_if</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">condition</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reason</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/testing/decorators.html#skip_if"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.testing.decorators.skip_if" title="Permalink to this definition"></a></dt>
+<dd><p>Conditionally skip a test based on a boolean condition. This decorator provides
+different behavior depending on the environment. If the test is running in
+internal CI, it will print a skip message and return early, but will not set the
+skipped flag. This avoids flagging intentionally skipped tests as warnings in the
+internal CI UI. In other environments, it falls back to unittest.skip() for proper
+test reporting.</p>
+</dd></dl>
+
+</section>
+<section id="module-superdex.physics.utils.testing.environment">
+<span id="superdex-physics-utils-testing-environment"></span><h2>superdex.physics.utils.testing.environment<a class="headerlink" href="#module-superdex.physics.utils.testing.environment" title="Permalink to this heading"></a></h2>
+<dl class="py data">
+<dt class="sig sig-object py" id="superdex.physics.utils.testing.environment.IS_INTERNAL_CI">
+<span class="sig-name descname"><span class="pre">IS_INTERNAL_CI</span></span><a class="headerlink" href="#superdex.physics.utils.testing.environment.IS_INTERNAL_CI" title="Permalink to this definition"></a></dt>
+<dd><p>Whether the test is running in an internal CI environment or not.</p>
+</dd></dl>
+
+</section>
+<section id="module-superdex.physics.utils.testing.testcases">
+<span id="superdex-physics-utils-testing-testcases"></span><h2>superdex.physics.utils.testing.testcases<a class="headerlink" href="#module-superdex.physics.utils.testing.testcases" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="superdex.physics.utils.testing.testcases.MochiContextTestCase">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">MochiContextTestCase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">methodName</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'runTest'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/superdex/physics/utils/testing/testcases.html#MochiContextTestCase"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.testing.testcases.MochiContextTestCase" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">TestCase</span></code></p>
+<p>Base class for physics unit tests that require an initialized SuperDex Physics context.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="superdex.physics.utils.testing.testcases.MochiContextTestCase.setUpClass">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">setUpClass</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/testing/testcases.html#MochiContextTestCase.setUpClass"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.testing.testcases.MochiContextTestCase.setUpClass" title="Permalink to this definition"></a></dt>
+<dd><p>Initialize SuperDex Physics before running any tests.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="superdex.physics.utils.testing.testcases.MochiContextTestCase.tearDownClass">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">tearDownClass</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/testing/testcases.html#MochiContextTestCase.tearDownClass"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.testing.testcases.MochiContextTestCase.tearDownClass" title="Permalink to this definition"></a></dt>
+<dd><p>Shut down SuperDex Physics after all tests have completed.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.testing.testcases.add_rigid_cube">
+<span class="sig-name descname"><span class="pre">add_rigid_cube</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.Scene" title="superdex.physics.Scene"><span class="pre">Scene</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.Real3" title="superdex.physics.Real3"><span class="pre">Real3</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rotation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.Quaternion" title="superdex.physics.Quaternion"><span class="pre">Quaternion</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="physics.html#superdex.physics.Actor" title="superdex.physics.Actor"><span class="pre">Actor</span></a></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/testing/testcases.html#add_rigid_cube"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.testing.testcases.add_rigid_cube" title="Permalink to this definition"></a></dt>
+<dd><p>Adds a rigid cube to the scene.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.testing.testcases.add_rigid_sphere">
+<span class="sig-name descname"><span class="pre">add_rigid_sphere</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.Scene" title="superdex.physics.Scene"><span class="pre">Scene</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.Real3" title="superdex.physics.Real3"><span class="pre">Real3</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rotation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="physics.html#superdex.physics.Quaternion" title="superdex.physics.Quaternion"><span class="pre">Quaternion</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="physics.html#superdex.physics.Actor" title="superdex.physics.Actor"><span class="pre">Actor</span></a></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/testing/testcases.html#add_rigid_sphere"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.testing.testcases.add_rigid_sphere" title="Permalink to this definition"></a></dt>
+<dd><p>Adds a rigid sphere to the scene.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.testing.testcases.make_empty_scene">
+<span class="sig-name descname"><span class="pre">make_empty_scene</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Generator</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="physics.html#superdex.physics.Scene" title="superdex.physics.Scene"><span class="pre">Scene</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/testing/testcases.html#make_empty_scene"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.testing.testcases.make_empty_scene" title="Permalink to this definition"></a></dt>
+<dd><p>Creates an empty scene and returns it.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="superdex.physics.utils.testing.testcases.make_single_rigid_cube_scene">
+<span class="sig-name descname"><span class="pre">make_single_rigid_cube_scene</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Generator</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="physics.html#superdex.physics.Scene" title="superdex.physics.Scene"><span class="pre">Scene</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/superdex/physics/utils/testing/testcases.html#make_single_rigid_cube_scene"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#superdex.physics.utils.testing.testcases.make_single_rigid_cube_scene" title="Permalink to this definition"></a></dt>
+<dd><p>Creates a scene with a single rigid cube.</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="utilities.html" class="btn btn-neutral float-left" title="Utilities" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Meta Platforms, Inc.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

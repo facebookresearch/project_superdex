@@ -1,0 +1,121 @@
+---
+title: SuperDex Physics
+description: The engine driving SuperDex — a differentiable, contact-rich physics engine for tactile manipulation.
+hide_table_of_contents: true
+---
+
+import styles from './index.module.css';
+import ViewportVideo from '@site/src/components/ViewportVideo';
+
+{
+  <>
+    <section className={styles.physics}>
+      <div className={styles.physicsInner}>
+        <div className={styles.physicsHeader}>
+          <div className={styles.physicsHeadingCol}>
+            <p className="superdex-physics-eyebrow">The engine driving SuperDex</p>
+            <h1 className={`superdex-physics-display ${styles.physicsHeading}`}>
+              Welcome to SuperDex Physics.
+            </h1>
+          </div>
+          <div className={styles.physicsIntroCol}>
+            <p className="superdex-physics-body">
+              A contact-first physics engine purpose-built for tactile
+              manipulation, and applicable wherever stable contact and accurate
+              sensing matter. This is the simulation backbone of Project SuperDex.
+            </p>
+          </div>
+        </div>
+    
+        <hr className={`superdex-physics-divider-line ${styles.physicsDivider}`} />
+    
+        <div className={styles.physicsBody}>
+          <figure className={styles.bentoFigure}>
+            <div className={styles.bento}>
+              <figure className={`${styles.bentoCard} ${styles.bentoBig}`}>
+                <ViewportVideo
+                  src="img/soft_rigid.mp4"
+                  poster="img/soft_rigid.webp"
+                  ariaLabel="Looping demo: soft and rigid body interaction in the SuperDex Physics engine"
+                />
+              </figure>
+              <figure className={`${styles.bentoCard} ${styles.bentoA}`}>
+                <ViewportVideo
+                  src="img/ropebraid_low.mp4"
+                  poster="img/ropebraid_low.webp"
+                  ariaLabel="Looping demo: hands braiding flexible ropes simulated as rod actors"
+                />
+              </figure>
+              <figure className={`${styles.bentoCard} ${styles.bentoB}`}>
+                <ViewportVideo
+                  src="img/dexterous_multi_actor_manipulation.mp4"
+                  poster="img/dexterous_multi_actor_manipulation.webp"
+                  ariaLabel="Looping demo: simulated hands manipulating deformable sheets and rigid objects across multiple materials"
+                />
+              </figure>
+              <figure className={`${styles.bentoCard} ${styles.bentoC}`}>
+                <ViewportVideo
+                  src="img/sponge_low.mp4"
+                  poster="img/sponge_low.webp"
+                  ariaLabel="Looping demo: a sponge modeled as a soft actor interacting with rigid objects and robotic hands"
+                />
+              </figure>
+              <figure className={`${styles.bentoCard} ${styles.bentoD}`}>
+                <ViewportVideo
+                  src="img/roperoll_low.mp4"
+                  poster="img/roperoll_low.webp"
+                  ariaLabel="Looping demo: hands twisting flexible ropes simulated as rod actors"
+                />
+              </figure>
+            </div>
+            <figcaption className={styles.bentoCaption}>
+              These videos feature real-time physics simulations.
+            </figcaption>
+          </figure>
+    
+          <div className={styles.features}>
+            <div className={styles.feature}>
+              <h3>Multi-Physics Simulation</h3>
+              <p>
+                Unified solver for rigid bodies, soft bodies, rods &amp; tendons,
+                shells &amp; cloth — with more physics on the way.
+              </p>
+            </div>
+            <div className={styles.feature}>
+              <h3>Arbitrary Rigid &amp; Soft Articulations</h3>
+              <p>
+                Articulated bodies with varying joint types,
+                supporting both rigid links and deformable elements in a single model.
+              </p>
+            </div>
+            <div className={styles.feature}>
+              <h3>Non-Convex Collision</h3>
+              <p>
+                Accurate contact force distributions for arbitrary geometries
+                including non-convex and deforming objects.
+              </p>
+            </div>
+            <div className={styles.feature}>
+              <h3>Numerical Stability</h3>
+              <p>
+                Robust simulation without the
+                restrictive time-step stability limits of explicit or semi-implicit methods.
+              </p>
+            </div>
+            <div className={styles.feature}>
+              <h3>Inverse Kinematics</h3>
+              <p>
+                Constraint-aware inverse-kinematics, built on the same nonlinear
+                optimization core as the forward dynamics, solve physically accurate
+                poses under collision, end-effector, and trajectory constraints.
+              </p>
+            </div>
+            <a href="docs/overview/" className={styles.physicsLink}>
+              Get started with SuperDex Physics →
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </>
+}

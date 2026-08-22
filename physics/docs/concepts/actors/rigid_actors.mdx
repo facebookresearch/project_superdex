@@ -1,0 +1,358 @@
+---
+title: Rigid
+sidebar_position: 2
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Rigid Actors
+
+Rigid actors represent non-deformable bodies. They serve as standalone dynamic or static objects and as the building blocks for more complex constructs such as [articulated bodies](./articulated_actors.mdx).
+
+A rigid actor's state is fully described by a position (`Real3`) and an orientation ([`Quaternion`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Quaternion.html)), and solution updates can be parameterized in terms of 6 independent degrees of freedom (DoFs; 3 translational and 3 rotational).
+
+## Static vs. Dynamic
+
+Certain rigid actors can have their positions prescribed directly by setting the [`isStatic`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html) / [`is_static`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.RigidActorParams.is_static) flag.
+Static actors may still act as colliders for other actors, but they do not respond to contact reactions or other external forces.
+While the term "static" may suggest that static actors are stationary (and this is often true), they can still move with nonzero velocity if their prescribed positions are updated at each time step.
+Common use cases for static actors are environmental obstacles such as ground planes, walls, tables, and similar.
+The remainder of this page is concerned with modeling dynamic rigid actors.
+
+## Formulation
+
+### Continuous Model
+
+Let $\mathcal B\subset \mathbb{R}^3$ be a rigid body's volume in a reference configuration. Its mass and center of mass are
+$$
+m=\int_{\mathcal B}\rho\,d\mathbf{X}
+\qquad\text{and}\qquad
+\mathbf{X}_\mathrm{CoM}=\frac{1}{m}\int_{\mathcal B}\rho\,\mathbf{X}\,d\mathbf{X}~,
+$$
+where $\rho$ is the mass density field and $\mathbf{X}$ is a material point in the body.
+For the remainder of this discussion, use a **body frame** centered at the center of mass, with axes aligned with the actor's local frame, and define the body-frame offset $\mathbf{r}=\mathbf{X}-\mathbf{X}_\mathrm{CoM}$.
+Let $\mathbf{c}$ be the world-space center of mass and let $\mathbf{R}\in\mathrm{SO}(3)$ be the world-from-body rotation, which is also the rotation of the actor's [`worldFromLocal`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html) transform.
+The position $\mathbf{c}$ is the world-space image of the [`centerOfMass`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html) parameter and, in general, differs from the translation of [`worldFromLocal`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html).
+
+The mass second-moment tensor in the body frame is
+$$
+\mathbf{J}=\int_{\mathcal B}\rho\,\mathbf{r}\mathbf{r}^T\,d\mathbf{X}~.
+$$
+For some vector $\mathbf{a}\in\mathbb{R}^3$, the corresponding skew-symmetric matrix $\operatorname{skew}(\mathbf{a})$ is defined by
+$$
+\operatorname{skew}(\mathbf{a})\mathbf{b}=\mathbf{a}\times\mathbf{b}\quad\forall\mathbf{b}\in\mathbb{R}^3~.
+$$
+The body-frame angular velocity $\boldsymbol{\Omega}$ then satisfies
+$$
+\dot{\mathbf{R}}=\mathbf{R}\operatorname{skew}(\boldsymbol{\Omega})~.
+$$
+Let $\mathbf{I} = \operatorname{tr}(\mathbf{J})\mathbf{1}-\mathbf{J}$ be the conventional moment-of-inertia tensor about the center of mass.
+The kinetic energy decomposes into translational and rotational contributions
+$$
+T=T_\mathrm{trans}+T_\mathrm{rot}~,
+$$
+where
+$$
+T_\mathrm{trans}=\frac{1}{2}m\left\Vert\dot{\mathbf{c}}\right\Vert_2^2
+\qquad\text{and}\qquad
+T_\mathrm{rot}
+=\frac{1}{2}\boldsymbol{\Omega}^T\mathbf{I}\boldsymbol{\Omega}
+=\frac{1}{2}\boldsymbol{\omega}^T\mathbf{R}\mathbf{I}\mathbf{R}^T\boldsymbol{\omega}
+= \frac{1}{2}\operatorname{tr}\!\left(\dot{\mathbf{R}}\mathbf{J}\dot{\mathbf{R}}^T\right)~.
+$$
+The second form of rotational energy reexpresses the first in terms of the world-space angular velocity $\boldsymbol{\omega}=\mathbf{R}\boldsymbol{\Omega}$.
+The first form can be recovered from the third by invoking the expression of $\dot{\mathbf{R}}$ above and inverting the definition of $\mathbf{I}$ in terms of $\mathbf{J}$.
+
+For a constant world-space force $\mathbf{f}$ applied at body-frame offset $\mathbf{r}$ from the center of mass, the external potential contributing to the general [dynamics formulation](../dynamics.md#system-dynamics) is
+$$
+U_\mathrm{ext}=U_\mathrm{trans}+U_\mathrm{rot}~,
+$$
+where
+$$
+U_\mathrm{trans}=-\mathbf{f}\cdot\mathbf{c}
+\qquad\text{and}\qquad
+U_\mathrm{rot}=-\mathbf{f}\cdot\mathbf{R}\mathbf{r}~.
+$$
+For multiple loads, these potentials are summed.
+Other (possibly non-conservative) forces on rigid actors typically arise from interactions like [contact](../contact.md#friction-and-damping) or [constraints](../constraints.mdx#mathematical-formulation), as documented on separate dedicated pages.
+
+### Discretization
+
+Time discretization of the translational term of kinetic energy $T_\mathrm{trans}$ follows straightforwardly from the [generic recipe](../dynamics.md#incremental-potential-form) outlined for systems whose configurations are in linear spaces with configuration-independent mass matrices.
+The discretization of rotational inertia, on the other hand, involves some nontrivial choices, which are discussed in the remainder of this section.
+
+The first expression for $T_\mathrm{rot}$ above may initially look like a quadratic form in angular velocity, but $\boldsymbol{\Omega}$ is defined in a frame following the body's rotation, which introduces an implicit dependence on rotational state.
+This emerges as a gyration term when deriving the Newton–Euler equations of motion from variational arguments, and is made more explicit by the second form using world-space angular velocity $\boldsymbol{\omega}$, where the mass matrix clearly depends on rotational state.
+The default incremental-potential discretization of rotational inertia in SuperDex Physics is instead derived from the third form, following the approach of [Ferguson et al. (2021)](#references), but using the Lie algebra linearization of [Romanyà-Serrasolsas et al. (2025)](#references) to formulate the discrete residual and Newton Jacobian.
+While the cited references formulate an incremental potential for backward Euler integration of rotational inertia, we generalize this to the implicit stage problem of our unified time integration framework.
+
+At stage $i$, define the discrete rotational velocity by the finite difference
+$$
+\dot{\mathbf{R}}_i=\frac{\mathbf{R}_i-\mathbf{R}_i^0}{\Delta t_i}~.
+$$
+Here $\dot{\mathbf{R}}_i$ denotes this stage difference, not the exact derivative $\dot{\mathbf{R}}(t)$ of a continuous rotation trajectory.
+For an exact rotation rate, right multiplication by $\mathbf{R}^T$ gives the skew-symmetric world-frame angular-velocity matrix $\dot{\mathbf{R}}\mathbf{R}^T=\operatorname{skew}(\boldsymbol{\omega})$.
+Applying the same operation to the stage difference generally also produces a symmetric part. SuperDex Physics therefore decomposes it as
+$$
+\dot{\mathbf{R}}_i\mathbf{R}_i^T=\operatorname{skew}(\boldsymbol{\omega}_i)+\mathbf{S}_i~,
+$$
+where $\operatorname{skew}(\boldsymbol{\omega}_i)$ and $\mathbf{S}_i$ are respectively the skew-symmetric and symmetric parts of the left-hand side. Equivalently,
+$$
+\dot{\mathbf{R}}_i=\left(\operatorname{skew}(\boldsymbol{\omega}_i)+\mathbf{S}_i\right)\mathbf{R}_i~.
+$$
+The symmetric term $\mathbf{S}_i$ is not an additional physical velocity; it retains the part of the finite-difference rotation velocity that would be lost if only $\boldsymbol{\omega}_i$ were stored. After each stage, SuperDex Physics stores the pair $(\boldsymbol{\omega}_i,\mathbf{S}_i)$ as its rotational velocity state.
+For the simplest case of backward Euler, the stage-start rotation and velocity representation are simply the previous completed step's solution: $\mathbf{R}_i^0 = \mathbf{R}_n$, $\boldsymbol{\omega}_i^0 = \boldsymbol{\omega}_n$, and $\mathbf{S}_i^0 = \mathbf{S}_n$.
+When generalizing to our unified multistep/multistage framework, the stage-start and completed-step solutions are reconstructed from prior and intermediate states as discussed below.
+
+The stage-start rotation and rotational velocity then define the predictor
+$$
+\widetilde{\mathbf{R}}_i=\mathbf{R}_i^0+\Delta t_i\left(\operatorname{skew}(\boldsymbol{\omega}_i^0)+\mathbf{S}_i^0\right)\mathbf{R}_i^0~.
+$$
+The rotational contribution to the stage incremental potential is
+$$
+\begin{aligned}
+\Phi_{i,\mathrm{rot}}
+&=\frac{1}{2\Delta t_i^2}\operatorname{tr}\!\left((\mathbf{R}_i-\widetilde{\mathbf{R}}_i)\mathbf{J}(\mathbf{R}_i-\widetilde{\mathbf{R}}_i)^T\right) \\
+&=-\frac{1}{\Delta t_i^2}\operatorname{tr}\!\left(\mathbf{R}_i\mathbf{J}\widetilde{\mathbf{R}}_i^T\right)+C~,
+\end{aligned}
+$$
+where $C$ may vary from step to step, but is independent of the stage-end rotation $\mathbf{R}_i$, so it may safely be omitted from the incremental potential.
+The second equality uses the invariance of $\operatorname{tr}(\mathbf{J})$ under rotational similarity transforms and is helpful for simplifying Lie derivatives used in the implementation.
+
+#### Solution Reconstruction
+
+Because rotations form a nonlinear Lie group, the linear combinations in the general time integration method are instead evaluated in the Lie algebra relative to a base rotation. For base $\mathbf{R}_b$, the Lie-algebra linear combination of rotations $\{\mathbf{R}_j\}$ with coefficients $\{c_j\}$ is given by
+$$
+\mathcal{C}\!\left(\mathbf{R}_b;\{(c_j,\mathbf{R}_j)\}\right)
+=\exp\!\left(\operatorname{skew}\!\left(\sum_j c_j\log\!\left(\mathbf{R}_j\mathbf{R}_b^T\right)\right)\right)\mathbf{R}_b~.
+$$
+Here $\exp$ is the matrix exponential on $\mathfrak{so}(3)$, evaluated by the Rodrigues formula: for a rotation vector $\boldsymbol{\theta}=\theta\mathbf{u}$ with angle $\theta$ and unit axis $\mathbf{u}$,
+$$
+\exp\!\left(\operatorname{skew}(\boldsymbol{\theta})\right)
+=\mathbf{1}+\sin(\theta)\operatorname{skew}(\mathbf{u})
++\left(1-\cos(\theta)\right)\operatorname{skew}(\mathbf{u})^2~.
+$$
+The map $\log$ denotes its inverse: $\log(\mathbf{R})$ is a rotation vector $\boldsymbol{\theta}$ with $\Vert\boldsymbol{\theta}\Vert_2\leq\pi$ such that $\mathbf{R}=\exp(\operatorname{skew}(\boldsymbol{\theta}))$.
+The three rotation reconstructions corresponding to the [general time integration formulas](../dynamics.md#stage-state-reconstruction) are then
+$$
+\begin{aligned}
+\mathbf{R}_n^\star
+&=\mathcal{C}\!\left(\mathbf{R}_n;\{(\alpha_r,\mathbf{R}_{n+1-r})\}_{r=1}^l\right)~, \\
+\mathbf{R}_i^0
+&=\mathcal{C}\!\left(\mathbf{R}_n^\star;\{(\widetilde a_{ij},\mathbf{R}_j)\}_{j=1}^{i-1}\right)~, \\
+\mathbf{R}_{n+1}
+&=\mathcal{C}\!\left(\mathbf{R}_n^\star;\{(\widetilde b_i,\mathbf{R}_i)\}_{i=1}^s\right)~.
+\end{aligned}
+$$
+Thus, the most recent completed rotation $\mathbf{R}_n$ is the base for constructing $\mathbf{R}_n^\star$, while $\mathbf{R}_n^\star$ is the base for both the stage-start and completed-step reconstructions.
+
+#### Properties of the Discrete Problem
+
+The derivation of the discrete equations from an incremental potential results in a symmetric Newton Jacobian and allows for the use of nonlinear solution techniques that are specialized to problems with optimization structure.
+It is therefore preferred for robustness in complicated nonlinear problems, where rigid bodies interact with other systems through contact and constraints.
+However, unlike some other discretizations of rigid body dynamics, this formulation does not provide exact conservation of angular momentum or rotational kinetic energy at finite time step sizes, only convergence in the limit of $\Delta t \to 0$.
+It may introduce noticeable dissipation at moderate-to-large time step sizes.
+
+A nonlinear residual that directly discretizes the Newton–Euler equations without deriving from an incremental potential is available as an experimental feature, and can be selected with `experimental::EnableNewtonEulerInertia`.
+This formulation may provide higher accuracy in certain limiting cases, such as applying a constant torque along a principal axis of a free-floating rigid body initialized to rotate about that axis.
+In this case, at a fixed time step size, the default formulation's dissipation will cause the angular velocity to asymptote to a constant value rather than continuing to increase linearly.
+While exact conservation properties may provide satisfying solutions to simple test problems, they are rarely needed in practical scenarios, where numerous dissipative mechanisms are often at play.
+For robust nonlinear convergence in complex scenes, it is recommended to use the default rotational inertia formulation with a time step size that provides sufficient accuracy for a given application.
+
+## Creating Rigid Actors
+
+### Dynamic Rigid Body
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+// Load a sphere mesh shape
+ShapeHandle sphereShape = context->LoadShapeFromFile(
+    "sphere/icosphere_3subdiv.1.mochi.json",
+    Real3{0.2_r, 0.2_r, 0.2_r}, // bake scale
+    error);
+
+// Create a dynamic rigid sphere
+RigidActorParams params;
+params.name = "sphere";
+params.shape = sphereShape;
+params.density = 1000_r;                    // kg/m^3
+params.colliderType = ColliderType::Sphere;
+params.worldFromLocal = TransformRT(Real3{0_r, 1.2_r, 0_r});
+
+Actor* sphere = scene->CreateRigidActor(params, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+# Load a sphere mesh shape
+sphere_shape = mochi.load_shape_from_file(
+    file_path=str(ASSETS_PATH / "sphere/icosphere_3subdiv.1.mochi.json"),
+    bake_scale=[0.2, 0.2, 0.2],
+)
+
+# Create a dynamic rigid sphere
+sphere_actor = scene.create_rigid_actor(
+    name="sphere",
+    shape=sphere_shape,
+    density=1000.0,                    # kg/m^3
+    collider_type=mochi.ColliderType.SPHERE,
+    world_from_local=mochi.TransformRT(translation=[0, 1.2, 0]),
+)
+```
+
+</TabItem>
+</Tabs>
+
+### Static Rigid Body (Ground Plane)
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+// Create an implicit plane shape (no mesh needed)
+ShapeHandle planeShape = context->CreatePlaneShape(
+    Real3{0_r, 1_r, 0_r},  // normal (Y-up)
+    0_r,                     // distance from origin
+    error);
+
+// Create a static ground plane
+RigidActorParams params;
+params.name = "ground";
+params.shape = planeShape;
+params.isStatic = true;
+params.colliderType = ColliderType::Plane;
+
+Actor* ground = scene->CreateRigidActor(params, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+# Create an implicit plane shape (no mesh needed)
+plane_shape = mochi.create_plane_shape(normal=[0, 1, 0], distance=0)
+
+# Create a static ground plane
+ground_actor = scene.create_rigid_actor(
+    name="ground",
+    shape=plane_shape,
+    is_static=True,
+)
+```
+
+</TabItem>
+</Tabs>
+
+### Setting Initial Velocity
+
+Dynamic rigid actors can be given an initial linear and/or angular velocity at creation time.
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+RigidActorParams params;
+params.name = "projectile";
+params.shape = shape;
+params.density = 1000_r;
+params.linearVelocity = Real3{0_r, -1_r, 0_r};   // downward at 1 m/s
+params.angularVelocity = Real3{0_r, 0_r, 3.14_r}; // spinning about Z
+
+Actor* projectile = scene->CreateRigidActor(params, error);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+projectile = scene.create_rigid_actor(
+    name="projectile",
+    shape=shape,
+    density=1000.0,
+    linear_velocity=[0, -1, 0],     # downward at 1 m/s
+    angular_velocity=[0, 0, 3.14],  # spinning about Z
+)
+```
+
+</TabItem>
+</Tabs>
+
+## Parameters Reference
+
+### RigidActorParams
+
+The creation fields are defined by `RigidActorParams` ([C++](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.RigidActorParams)).
+
+| Parameter | C++ Type | Python Name | Default | Description |
+|-----------|----------|-------------|---------|-------------|
+| `name` | `DynamicString` | `name` | `""` | Human-readable name for the actor. |
+| `layer` | `DynamicString` | `layer` | `""` | Contact layer. Contact can be selectively enabled or disabled between actors on the same or different layers. |
+| `shape` | [`ShapeHandle`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ShapeHandle.html) | `shape` | *(none)* | Handle to the shape geometry. Created via [`LoadShapeFromFile`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html), [`CreatePlaneShape`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html), [`CreateTriMeshShape`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html), etc. |
+| `worldFromLocal` | [`TransformRT`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1TransformRT.html) | `world_from_local` | Identity | Initial transform (rotation + translation) of the actor in world space. |
+| `colliderType` | `ColliderType` | `collider_type` | `Auto` | Collision geometry representation used by *other* actors to detect contact with this actor. See [Collider Representations](../contact.md#collider-representations). |
+| `isStatic` | `bool` | `is_static` | `false` | If `true`, the actor has infinite mass and is not moved by the solver. |
+| `contact` | [`ContactParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ContactParams.html) | `contact` | *(defaults)* | Contact and friction parameters. See [Contact Parameter Reference](../contact.md#contact-parameter-reference). |
+| `sdf` | [`GridSdfParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1GridSdfParams.html) | `sdf` | *(defaults)* | Grid SDF resolution and padding parameters. Only relevant when [`colliderType`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html) is `Sdf`. |
+| `hasGravity` | `bool` | `has_gravity` | `true` | Whether gravity is applied to this actor. Ignored for static actors. |
+| `density` | `optional<real>` | `density` | *(unset)* | Material density in kg/m^3. Used to compute mass, center of mass, and inertia from the shape geometry. |
+| `mass` | `optional<real>` | `mass` | *(unset)* | Total mass in kg. Overrides density-based mass computation. |
+| `centerOfMass` | `optional<Real3>` | `center_of_mass` | *(unset)* | Center of mass in the actor's local frame. If unset, computed from the shape assuming uniform density. |
+| `momentOfInertia` | `optional<Real6>` | `moment_of_inertia` | *(unset)* | Upper-triangle of the 3x3 rotational inertia tensor (Ixx, Ixy, Ixz, Iyy, Iyz, Izz). If unset, computed from the shape. |
+| `boundaryElementType` | `ActorBoundaryElementType` | `boundary_element_type` | `Default` (P1Q3) | Quadrature order for boundary surface integrals used in contact evaluation. |
+| `boundarySubsampling` | `optional<BoundarySubsamplingParams>` | `boundary_subsampling` | *(unset)* | Optional subsampling of boundary elements for contact. |
+| `linearVelocity` | `optional<Real3>` | `linear_velocity` | *(unset)* | Initial linear velocity in m/s. |
+| `angularVelocity` | `optional<Real3>` | `angular_velocity` | *(unset)* | Initial angular velocity in rad/s (rotation vector). |
+
+### Mass and Inertia
+
+For dynamic rigid actors, mass properties are required for integration. The [`density`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html), [`mass`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html), [`centerOfMass`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html), and [`momentOfInertia`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html) parameters can be combined in several ways:
+
+1. **From density** — Provide [`density`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html) and SuperDex Physics computes total mass, center of mass, and rotational inertia from the shape geometry automatically.
+2. **Explicit mass** — Set [`mass`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html) directly. If the inertia tensor is not provided, it is derived from the shape geometry and scaled to match the specified mass.
+3. **Explicit mass and inertia** — Set [`mass`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html), [`centerOfMass`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html), and [`momentOfInertia`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html) directly. Useful when mass properties are known from a CAD model or URDF file.
+
+:::caution
+Do not set both [`density`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html) and [`mass`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html) at the same time. If neither is specified, a default density is used. If [`centerOfMass`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html) or [`momentOfInertia`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html) is provided without the other, the missing value is computed assuming uniform density.
+:::
+
+## Shapes
+
+Rigid actors support several shape types:
+
+| Shape Type | Creation Method | Typical Use |
+|------------|----------------|-------------|
+| **Plane** | [`CreatePlaneShape`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`create_plane_shape`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.create_plane_shape) | Ground planes, infinite walls |
+| **Triangle mesh** | [`CreateTriMeshShape`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`create_tri_mesh_shape`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.create_tri_mesh_shape) | Arbitrary surface geometry defined programmatically |
+| **Mesh from file** | [`LoadShapeFromFile`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`load_shape_from_file`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.load_shape_from_file) | Pre-built mesh assets (`.mochi.json`, `.mochi.h5`) |
+| **Sphere** (implicit) | [`CreateSphereShape`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Context.html) / [`create_sphere_shape`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.create_sphere_shape) | Analytically defined spheres |
+| **Box** (from tetmesh) | Tetmesh utility functions | Box colliders with volumetric mesh |
+
+The shape defines the visual and collision geometry. The [`colliderType`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html) parameter then controls which collision representation is used at runtime (SDF, bounding sphere, AABB, etc.).
+
+For full details on shape creation and management, see the [Shapes](../shapes.mdx) page.
+
+## Role in Articulated Bodies
+
+Rigid actors also serve as the **links** (bones) within articulated body actors. In that context, individual rigid links do not own independent degrees of freedom — their transforms are derived from the joint states of the parent articulated actor. The [`RigidActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1RigidActorParams.html) struct is reused as the `linkParams` array in [`ArticulatedActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedActorParams.html). See [Articulated Actors](./articulated_actors.mdx) for details.
+
+## Examples
+
+- **[Rigid Bodies](../../examples/basic/rigid_bodies.md)**: demonstrates a sphere and cube falling onto a table, and four ways to create shapes and actors. Python example: `examples/example_rigid_bodies.py`.
+
+## Related Concepts
+
+- [Articulated Actors](./articulated_actors.mdx) — Rigid links connected by joints, forming kinematic trees.
+- [Contact](../contact.md) — Contact formulation, collider representations, friction, and filtering.
+- [Shapes](../shapes.mdx) — Shape creation, loading, and management.
+- [Constraints](../constraints.mdx) — Attaching rigid actors to other actors or to world-space anchors.
+- [Solvers](../solvers.md) — Newton solver, linear solvers, and time integration methods.
+
+## References
+
+- Z. Ferguson, M. Li, T. Schneider, F. Gil-Ureta, T. Langlois, C. Jiang, D. Zorin, D. M. Kaufman, and D. Panozzo, [Intersection-free Rigid Body Dynamics](https://ipc-sim.github.io/rigid-ipc/), ACM Transactions on Graphics (SIGGRAPH), 40(4):Article 183, 2021.
+- M. Romanyà-Serrasolsas, J. J. Casafranca, and M. A. Otaduy, [Painless Differentiable Rotation Dynamics](https://doi.org/10.1145/3730944), ACM Transactions on Graphics (SIGGRAPH), 44(4), 2025.

@@ -1,0 +1,343 @@
+---
+title: NX Tutorial
+sidebar_label: NX Tutorial
+sidebar_position: 2
+---
+
+import Figure, {FigureRow, FigureLabel, FigureVideo} from '@site/src/components/Figure';
+
+# SuperDex CAD Exporter Tutorial: Siemens NX
+
+<Figure
+  src="../../../img/cad_exporter/nx_tutorial_banner.jpg"
+  alt="Banner"
+/>
+
+## Part/Assembly Preparation
+The NX exporter, unlike Solidworks, supports both parts and assemblies for export.
+Before we begin, the following must exist in your part or assembly:
+1. **CSYS** for each link/joint's local transform/origin. These can be at any level of the assembly (i.e. nested in parts). Can be an existing selectable CSYS, a Datum CSYS, and potentially other coordinate systems.
+2. If the joint axis is not coincident with any of the principal axes (±X, ±Y, ±Z) of the CSYS, then a **Datum Axis** must be defined. This can also be at any level of the assembly or part.
+3. If any link requires precise mass and inertial properties, then that link's the parts/components must have a material on them. Parts imported via the STEP Importer, for instance, do not have material properties by default.
+
+## Importing an Existing Robot (Optional)
+The exporter supports multiple ways importing kinematic definitions of an existing robot:
+1. You can import a **URDF**, using **Robot Exporter Tools** → **Import URDF**. Datum CSYS for all joints will be generated with the URDF's origin defined using the current **WCS**. Datum Axis will be generated on joint axes that do not lie any CSYS axis. The tool will create a Robot Configuration feature prepopulated with link/joint names, joint limits, joint types, CSYS, axes, and supported meshes (.obj/.stl).
+2. You can import an existing Robot Configuration, saved from either NX or Solidworks (via the **Back-up configuration** button), and imported using the **Import configuration** button. The imported configuration may include valid selections (CSYS, bodies/components, axes) for links if the assembly or part is derived or copied from the original. All other properties, such as link names and joint types, should be imported.
+3. You can create a **New Robot Configuration**, and use the **Import Tree (.txt)** button under Tree Tools.
+
+The format is:
+```
+base
+  foo_link  foo_joint  [fixed]
+    bar_link  bar_joint  [fixed]
+      baz_link  baz_joint  [revolute]
+        biz_link biz_joint  [revolute]
+    bam_link  bam_joint  [revolute]
+      wam_link  wam_joint  [fixed]
+```
+Which results in:
+
+<Figure
+  src="../../../img/cad_exporter/nx_tutorial_imported_tree.png"
+  alt="Imported tree from the above text"
+  maxWidth="500px"
+/>
+
+Joint names and joint types can be omitted, where joints are revolute by default, which is then even shorter:
+```
+base
+  foo_link
+    bar_link
+```
+
+## Setting up a Robot Configuration
+
+:::note Special considerations for Teamcenter NX
+Retaining selections across NX sessions require making changes to features that are selected, by adding custom attributes upon selection. We have taken precautions to prevent accidental changes to parts you do not own with the default settings when editing a robot configuration. Please see the [NX Quirks](../nx_quirks) section for more information.
+:::
+
+Let's create a robot arm from an assembly in NX.
+1. The arm we are exporting is the OpenArm V2.0. The assembly shown was imported from the downloadable STEP assembly and visual properties were applied to loosely match the real arm's colors.
+
+   <Figure
+     src="../../../img/cad_exporter/nx_tutorial_open_arm.png"
+     alt="OpenArm V2"
+     maxWidth="500px"
+   />
+
+2. We've also added simplified geometry, modified from the original files, to serve as collision bodies. These bodies have features and details removed aiming to preserve fidelity and reducing meshing complexity.
+
+   <Figure
+     src="../../../img/cad_exporter/nx_tutorial_open_arm_collision.png"
+     alt="OpenArm collision bodies"
+     maxWidth="500px"
+   />
+   <FigureRow cols={2}>
+      <Figure
+        src="../../../img/cad_exporter/nx_tutorial_visual_detail.png"
+        alt="OpenArm visual details"
+        maxWidth="500px"
+        caption="Visual/Inertial details"
+      />
+      <Figure
+        src="../../../img/cad_exporter/nx_tutorial_collision_detail.png"
+        alt="OpenArm collision details"
+        maxWidth="500px"
+        caption="Simplified collision geometry"
+      />
+   </FigureRow>
+
+3. The arm has been adorned with Datum CSYS representing the joint/link origins at the part level as features. Alternatively, CSYS can be defined at the top level assembly, subassembly, or imported from a URDF (see [above](#importing-an-existing-robot-optional)).
+
+   <Figure
+     src="../../../img/cad_exporter/nx_tutorial_csys.png"
+     alt="CSYS in work part"
+     maxWidth="400px"
+   />
+
+4. Let's start by creating a new Robot Configuration. From the **Robotics** tab, select **New Robot Configuration**.
+
+   <Figure
+     src="../../../img/cad_exporter/nx_tutorial_new_robot.png"
+     alt="Creating a serial chain"
+     maxWidth="400px"
+   />
+
+5. In the Robot Configuration dialog that comes up, expand the **Tree Tools** group.
+6. Since we know the arm has 7 degrees of freedom and we want 1 extra fixed joint to define the gripper's attachment point. **With the base_link selected**, we put in **7** for **Number of links in serial chain** and hit **Create Serial Chain**.
+
+   <Figure
+     src="../../../img/cad_exporter/nx_tutorial_serial_chain.png"
+     alt="Creating a serial chain"
+     maxWidth="500px"
+   />
+
+7. The Kinematic Tree allows for modifications of the tree via drag-n-drop, and right-clicking on the nodes. For instance, we'll add some child links to represent the end effector links.
+
+   <Figure
+     src="../../../img/cad_exporter/nx_tutorial_drag_drop.gif"
+     alt="Drag and drop demo"
+     maxWidth="400px"
+   />
+   <FigureRow cols={2}>
+     <Figure
+       src="../../../img/cad_exporter/nx_tutorial_right_click_link.png"
+       alt="Right clicking on links"
+       maxWidth="500px"
+       caption="Context menu for Links"
+     />
+     <Figure
+       src="../../../img/cad_exporter/nx_tutorial_add_links.png"
+       alt="Adding gripper links"
+       maxWidth="300px"
+       caption="link_8 and link_9 represent the left and right grippers"
+     />
+   </FigureRow>
+
+8. Links can be renamed by editing the Link Name field at the top of the dialog. You can also use **Automatic Joint naming** under the Options flyout for the exporter to name the joints automatically by either prefixing with `joint_` or replacing the word `link` with `joint`.
+
+   <FigureRow cols={2}>
+     <Figure
+       src="../../../img/cad_exporter/nx_tutorial_naming_links.png"
+       alt="Renaming gripper links"
+       maxWidth="500px"
+     />
+     <Figure
+       src="../../../img/cad_exporter/nx_tutorial_naming_links_after.png"
+       alt="Renaming gripper links"
+       maxWidth="500px"
+     />
+   </FigureRow>
+
+9. For each link we will do the following:
+
+   :::note Order of operations
+   It is generally easier to perform the following on each selection type (select all CSYS, then all Axes, then all Inertial Bodies, then all Visual Bodies, etc.) for all links and going through all links again and again, rather than going link-by-link and selecting all items for each link.
+   :::
+
+   1. Select the **Link/Joint CSYS** for the link/joint origin. For links other than the base link, set the Joint Type as well.
+
+      <Figure
+        src="../../../img/cad_exporter/nx_tutorial_select_csys.png"
+        alt="Select csys"
+        maxWidth="500px"
+      />
+      <Figure
+        src="../../../img/cad_exporter/nx_tutorial_joint_type.png"
+        alt="Select joint type"
+        maxWidth="500px"
+      />
+
+   2. If the axis is coincident with one of the CSYS axes, select that axis in **Axis from CSYS**. If the axis is opposite, tick **Flip Axis**. If the axis is not coincident with any of the CSYS axis, then select a Datum Axis in **Joint Axis**.
+
+      *If you have a dropdown for Axis from CSYS, select Show Shortcuts to make them icons like in the screenshot.*
+
+      <Figure
+        src="../../../img/cad_exporter/nx_tutorial_csys_axis.png"
+        alt="Select axis from csys"
+        maxWidth="500px"
+        caption="Usually Axis from CSYS is the most convenient option"
+      />
+      <Figure
+        src="../../../img/cad_exporter/nx_tutorial_joint_axis.png"
+        alt="Select joint axis"
+        maxWidth="500px"
+        caption="Use the 'No, Use selection' to select a Datum Axis instead (which can be part of a CSYS too)"
+      />
+
+   3. Now onto the link's bodies. Optionally, but very helpful: we'll select the **Link Selection Mode** to **Only Components**. We do this because this assembly already has components laid out similarly to the kinematic tree. You can always switch between selection modes at any time, and it will not remove any previous selections.
+
+      <Figure
+        src="../../../img/cad_exporter/nx_tutorial_link_selection_mode.png"
+        alt="Link selection mode"
+        maxWidth="500px"
+      />
+
+      For duplicate selections, say, selecting a body *within* a component in addition to the component itself, will result in the body only counted once for inertial properties and mesh export. (i.e. don't worry!)
+
+    4. For the **Inertial Bodies**, we can select the component we want (which shown here is a subassembly) from the Assembly Navigator's tree. This way, we have the most accurate inertial properties since all bodies under the subassembly are included. *You can use Ctrl + Click to select multiple components in the tree.*
+
+       <Figure
+         src="../../../img/cad_exporter/nx_tutorial_inertial_bodies.png"
+         alt="Select inertial bodies"
+         maxWidth="500px"
+         caption="For inertial bodies, we select the screws making up the mass of the assembly too."
+       />
+
+       Either only **Inertial Bodies** or **Visual Bodies** are the bare minimum for mesh export, please consult the [Link Export Guide Table](../cad_exporter/index.mdx#link-export-guide) for how visual and collision meshes are determined.
+
+       :::note Rule of thumb for selecting Link bodies
+       - **Inertial Bodies** have the highest fidelity and capture the true mass of the assembly
+       - **Visual Bodies** should capture visible external geometry.
+       - **Collision Bodies** should use simplified geometry where possible. Otherwise, collision geometry can be generated from Visual Bodies.
+       :::
+
+    5. (Optional) For our **Visual Bodies**, however, we want only parts that can be seen visually, so only the visible parts are rendered in our high-fidelity renderers, saving precious rendering time. For this, we switch to **Only Bodies**, so we can select individual bodies.
+
+       <Figure
+         src="../../../img/cad_exporter/nx_tutorial_visual_bodies.png"
+         alt="Select inertial bodies"
+         maxWidth="500px"
+         caption="For visual bodies, we only select the visible components, notice that the screws are left  unselected."
+       />
+
+    6. (Optional) We can also select **Collision Bodies** that have the simple geometry we have prepared earlier.
+
+       <Figure
+         src="../../../img/cad_exporter/nx_tutorial_collision_bodies.png"
+         alt="Select inertial bodies"
+         maxWidth="500px"
+         caption="We've temporarily hidden the main assembly so we can select the collision bodies"
+       />
+
+    :::note Multi-link Editing
+    You can select more than one link to edit at once, limited to Joint Type, CSYS, and Axis.
+    <Figure
+      src="../../../img/cad_exporter/nx_tutorial_multi_select.png"
+      alt="Multi-select"
+      maxWidth="300px"
+    />
+    :::
+
+10. Once we're done we can hit **Save Configuration** once to save the Robot Configuration as a feature in our assembly. Then we can hit **Preview &amp; Export…**.
+
+    *At this point we can also hit **Close** and save our assembly to take a breather, or save changes to the assembly*
+
+11. However, we forgot to populate link_6 with a joint axis, and we hit a validation error we need to fix before we can continue.
+
+    <Figure
+      src="../../../img/cad_exporter/nx_tutorial_validation.png"
+      alt="Validation error"
+      maxWidth="500px"
+    />
+
+12. A progress bar appears briefly while the exporter creates temporary top-level CSYS, calculate inertial properties, and axis transforms. Then we're presented with the exporter form.
+
+    <Figure
+      src="../../../img/cad_exporter/nx_tutorial_progress_bar.png"
+      alt="Brief progress bar"
+      maxWidth="300px"
+    />
+
+## Exporting a Robot Configuration
+
+13. From here, optionally, additional **Joint Properties** can be set for each joint such as limits and joint dynamics. For some users, this is left alone and a post-export script takes care of updating the limits from a joint-name-based look up. We can also name our robot, by default, it's the same as the assembly.
+
+    By default, joint axes and limits are drawn as lines and arcs in the viewport. You can customize these in the Visualization panel.
+
+    <Figure
+      src="../../../img/cad_exporter/nx_tutorial_joint_properties.png"
+      alt="Joint properties"
+      maxWidth="750px"
+    />
+
+14. After we hit **Next** (bottom-center button, or the **Link Properties** tab above), we're presented with the link's **Inertial Properties** and numerous meshing options.
+
+    <Figure
+      src="../../../img/cad_exporter/nx_tutorial_link_properties.png"
+      alt="Link properties"
+      maxWidth="750px"
+    />
+
+    - At this point, we can confirm that the Inertial Properties of the link are what we expect, and then we can figure out our meshing options.
+    - By default equivalent inertial boxes and center of mass are drawn as lines in the viewport. If lines are occluded, you can turn on **Show Through Curves** (in the prior dialog window) and turn off **Highlight Selected Bodies**.
+    - You can consult the [Mesh Export Guide table](../cad_exporter/index.mdx#mesh-export-guide) for guidance on what to choose, but there are also Presets that are good starting points. You can also save your own Presets and share them with your colleagues (so your entire team has the same settings).
+
+      <Figure
+        src="../../../img/cad_exporter/nx_tutorial_presets.png"
+        alt="Presets"
+        maxWidth="300px"
+        caption="Presets are saved to and loaded from C:/Users/<username>/NxRobotExporter/presets"
+      />
+
+    - For **Visual Meshes**, NX has native, fast, GLB export so we highly recommend using GLB.
+    - SuperDex options for meshing require an intermediate STEP file to be exported, so they can be slow for large assemblies, but offer higher quality face tesselation.
+    - Per link meshing options are useful for controlling meshing fidelity at the link level. For instance, if you want fingertip meshes to have higher fidelity for contact simulation.
+    - STEP format isn't really a mesh, but is useful for software that can tessellate STEP files to triangular or tetrahedral meshes, including SuperDex Studio.
+
+      :::note For SuperDex Studio
+      We highly recommend the **SuperDex (glb, stp) - Studio import** preset to process the STEP geometry in SuperDex Studio.
+      :::
+
+    - From here you can also hit **Export Link Mesh…** if you ever come back and want to export a single link's mesh (say, after updating some features) rather than the entire package.
+    - The Folder Structure dropdown lets you configure the output mesh folders:
+      - Legacy - `meshes` and `meshes/collision` folders, visual mesh files have no suffix, collision mesh files have `_collision` suffix.
+      - ROS - `meshes` and `meshes/collision`, `_visual` suffix, `_collision` suffix
+      - MuJoCo - single `meshes` folder, `_visual` suffix, `_collision` suffix
+      - SuperDex - `render` and `collision`, `_render` suffix, `_collision` suffix
+
+15. After we've made our choices, we can hit **Export Robot and Meshes…** and choose where to save our robot package. This may take a while, depending on what the meshing options are. The resulting package contains:
+
+    1. a **.superdex_bot** file in the root directory
+    2. a **.urdf** under `/urdf`
+    3. an **mjcf .xml** file in the root directory
+    4. visual and collision **meshes** deposited in their corresponding folders.
+    5. backups of the Robot Configuration and meshing options in /backup (paired .xml and .json files)
+    6. and a dummy package.xml file (for strict URDF importers)
+
+    <FigureRow cols={2}>
+      <Figure
+        src="../../../img/cad_exporter/nx_tutorial_finish.png"
+        alt="Export progress bar"
+        maxWidth="500px"
+      />
+      <Figure
+        src="../../../img/cad_exporter/nx_tutorial_folders.png"
+        alt="Resulting folders"
+        maxWidth="500px"
+      />
+    </FigureRow>
+
+16. All done! From here, you can copy the entire folder into your current SuperDex Studio's workspace for further processing.
+
+    <Figure
+      src="../../../img/cad_exporter/nx_tutorial_studio_import.png"
+      alt="After importing to Studio"
+    />
+
+## See also
+
+- [Model Editor Guide](../model_editor.mdx) — post-export processing in SuperDex Studio
+- [NX Quirks](../cad_exporter/nx_quirks.mdx) — more details about how to handle "Duplicate GUID" warnings
+- [URDF Import](../cad_exporter/urdf_import.mdx) — importing URDFs into NX and SolidWorks

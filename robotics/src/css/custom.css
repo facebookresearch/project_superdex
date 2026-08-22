@@ -1,0 +1,762 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * SuperDex Robotics docs theme — mirrors the Project SuperDex landing page.
+ *
+ * Design language: editorial minimalism. Pure-white background, black text,
+ * deep-navy accent, Instrument Serif for display, DM Sans for body/UI.
+ */
+
+/*
+ * Self-hosted fonts (matches the Project SuperDex site; the site loads no
+ * font from a CDN). DM Sans and Instrument Serif are both licensed under the
+ * SIL Open Font License 1.1 — see ./fonts/OFL.txt.
+ */
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('./fonts/instrument-serif-regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: italic;
+  font-weight: 400;
+  font-display: block;
+  src: url('./fonts/instrument-serif-italic.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: block;
+  src: url('./fonts/dm-sans-variable.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  font-style: italic;
+  font-weight: 300;
+  font-display: block;
+  src: url('./fonts/dm-sans-300-italic.woff2') format('woff2');
+}
+
+/* =========================================================================
+   LIGHT THEME — white background, black text
+   ========================================================================= */
+:root {
+  /* Type system */
+  --ifm-font-family-base: 'DM Sans', system-ui, sans-serif;
+  --ifm-font-family-monospace: ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, monospace;
+  --ifm-heading-font-family: 'DM Sans', system-ui, sans-serif;
+  --ifm-line-height-base: 1.7;
+  --ifm-font-weight-base: 400;
+  --ifm-font-weight-semibold: 600;
+  --ifm-font-weight-bold: 700;
+  --ifm-h1-font-size: 2.4rem;
+  --ifm-h2-font-size: 1.8rem;
+  --ifm-h3-font-size: 1.3rem;
+
+  /* Primary — deep navy accent (Project SuperDex --primary oklch(0.28 0.08 250)). */
+  --ifm-color-primary: oklch(0.28 0.08 250);
+  --ifm-color-primary-dark: oklch(0.26 0.08 250);
+  --ifm-color-primary-darker: oklch(0.249 0.08 250);
+  --ifm-color-primary-darkest: oklch(0.216 0.08 250);
+  --ifm-color-primary-light: oklch(0.3 0.08 250);
+  --ifm-color-primary-lighter: oklch(0.311 0.08 250);
+  --ifm-color-primary-lightest: oklch(0.344 0.08 250);
+
+  /* Backgrounds — pure white */
+  --ifm-background-color: #ffffff;
+  --ifm-background-surface-color: #ffffff;
+
+  /* Text — black on white */
+  --ifm-font-color-base: #000000;
+  --ifm-font-color-secondary: #333333;
+  --ifm-heading-color: #000000;
+
+  /* Navbar */
+  --ifm-navbar-background-color: #ffffff;
+  --ifm-navbar-shadow: none;
+  --ifm-navbar-link-color: oklch(0.45 0.01 250);
+  --ifm-navbar-link-hover-color: oklch(0.15 0.01 250);
+  --ifm-navbar-height: 64px;
+
+  /* Footer — dark contrast band (Project SuperDex --dark-section) */
+  --ifm-footer-background-color: oklch(0.13 0.015 250);
+  --ifm-footer-color: oklch(0.72 0.01 250);
+  --ifm-footer-link-color: oklch(0.72 0.01 250);
+  --ifm-footer-link-hover-color: oklch(0.974 0.008 75);
+  --ifm-footer-title-color: oklch(0.974 0.008 75);
+
+  /* Sidebar / menu */
+  --ifm-menu-color: oklch(0.45 0.01 250);
+  --ifm-menu-color-active: oklch(0.28 0.08 250);
+  --ifm-menu-color-background-active: oklch(0.28 0.08 250 / 0.07);
+  --ifm-menu-color-background-hover: oklch(0.15 0.01 250 / 0.04);
+
+  /* Cards, borders, dividers */
+  --ifm-card-background-color: #ffffff;
+  --ifm-hr-background-color: oklch(0.88 0.007 75);
+  --ifm-toc-border-color: oklch(0.88 0.007 75);
+
+  /* Code blocks */
+  --ifm-code-font-size: 92%;
+  --ifm-code-background: oklch(0.93 0.006 75);
+  --ifm-pre-background: oklch(0.13 0.015 250);
+  --ifm-pre-color: oklch(0.93 0.006 75);
+  --ifm-code-border-radius: 4px;
+
+  /* Alerts / admonitions */
+  --ifm-alert-background-color: #ffffff;
+  --ifm-alert-border-color: oklch(0.88 0.007 75);
+
+  /* Tables */
+  --ifm-table-stripe-background: oklch(0.15 0.01 250 / 0.025);
+  --ifm-table-border-color: oklch(0.88 0.007 75);
+
+  /* Site-wide spacing rhythm */
+  --ifm-global-radius: 6px;
+  --ifm-global-shadow-md: 0 1px 2px oklch(0.15 0.01 250 / 0.04);
+  --ifm-global-shadow-lw: none;
+
+  /* Custom landing-page tokens (used by index.module.css) */
+  --sdx-eyebrow-color: oklch(0.52 0.01 250);
+  --sdx-display-color: #000000;
+  --sdx-tag-bg: oklch(0.96 0.008 240);
+  --sdx-tag-text: oklch(0.35 0.06 250);
+  --sdx-tag-border: oklch(0.84 0.01 250);
+  --sdx-divider: oklch(0.88 0.007 75);
+  --sdx-tile-bg: oklch(0.95 0.005 250);
+}
+
+/* =========================================================================
+   DARK THEME
+   ========================================================================= */
+html[data-theme='dark'] {
+  /* Dark theme is tuned onto the same axis: cool neutrals at hue 250, warm
+     off-whites at hue 75, with the same disciplined low chroma. */
+  --ifm-color-primary: oklch(0.62 0.08 250);
+  --ifm-color-primary-dark: oklch(0.577 0.08 250);
+  --ifm-color-primary-darker: oklch(0.552 0.08 250);
+  --ifm-color-primary-darkest: oklch(0.477 0.08 250);
+  --ifm-color-primary-light: oklch(0.663 0.08 250);
+  --ifm-color-primary-lighter: oklch(0.688 0.08 250);
+  --ifm-color-primary-lightest: oklch(0.763 0.08 250);
+
+  --ifm-background-color: oklch(0.19 0.02 250);
+  --ifm-background-surface-color: oklch(0.22 0.02 250);
+
+  --ifm-font-color-base: oklch(0.93 0.006 75);
+  --ifm-font-color-secondary: oklch(0.76 0.012 250);
+  --ifm-heading-color: oklch(0.96 0.006 75);
+
+  --ifm-navbar-background-color: oklch(0.19 0.02 250);
+  --ifm-navbar-link-color: oklch(0.76 0.012 250);
+  --ifm-navbar-link-hover-color: oklch(0.96 0.006 75);
+
+  --ifm-footer-background-color: oklch(0.17 0.02 250);
+  --ifm-footer-color: oklch(0.67 0.014 250);
+  --ifm-footer-link-color: oklch(0.76 0.012 250);
+  --ifm-footer-link-hover-color: oklch(0.96 0.006 75);
+  --ifm-footer-title-color: oklch(0.96 0.006 75);
+
+  --ifm-menu-color: oklch(0.76 0.012 250);
+  --ifm-menu-color-active: oklch(0.62 0.08 250);
+  --ifm-menu-color-background-active: oklch(0.62 0.08 250 / 0.12);
+  --ifm-menu-color-background-hover: oklch(0.93 0.006 75 / 0.04);
+
+  --ifm-card-background-color: oklch(0.22 0.02 250);
+  --ifm-hr-background-color: oklch(0.33 0.02 250);
+  --ifm-toc-border-color: oklch(0.33 0.02 250);
+
+  --ifm-code-background: oklch(0.25 0.02 250);
+  --ifm-pre-background: #0d1117;
+  --ifm-pre-color: #e6edf3;
+  --docusaurus-highlighted-code-line-bg: #242a31;
+
+  --ifm-alert-background-color: oklch(0.22 0.02 250);
+  --ifm-alert-border-color: oklch(0.33 0.02 250);
+
+  --ifm-table-stripe-background: oklch(0.93 0.006 75 / 0.025);
+  --ifm-table-border-color: oklch(0.33 0.02 250);
+
+  --sdx-eyebrow-color: oklch(0.67 0.014 250);
+  --sdx-display-color: oklch(0.96 0.006 75);
+  --sdx-tag-bg: oklch(0.25 0.02 250);
+  --sdx-tag-text: oklch(0.76 0.012 250);
+  --sdx-tag-border: oklch(0.33 0.02 250);
+  --sdx-divider: oklch(0.33 0.02 250);
+  --sdx-tile-bg: oklch(0.26 0.02 250);
+}
+
+/* =========================================================================
+   GLOBAL TYPE / LAYOUT
+   ========================================================================= */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'ss01', 'cv01';
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+article h1,
+article h2,
+article h3,
+article h4 {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--ifm-heading-color);
+}
+
+.markdown h1,
+article h1:first-child {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(2.2rem, 4vw, 3rem);
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+}
+
+/* Body paragraphs in articles */
+.markdown p {
+  color: var(--ifm-font-color-secondary);
+  font-weight: 300;
+  line-height: 1.7;
+}
+
+/* Hide the "#" anchor link shown next to headings. */
+.hash-link {
+  display: none;
+}
+
+/* =========================================================================
+   NAVBAR — flat, borderless, DM Sans, subtle hover, centered container
+   ========================================================================= */
+.navbar {
+  border-bottom: 1px solid var(--sdx-divider);
+  /* Let the inner container own the horizontal insets so the menu width
+     matches the Project SuperDex site (max-width 1536px, centered). */
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Desktop only: the blurred backdrop makes .navbar a containing block for
+   position:fixed descendants, which collapses the mobile hamburger sidebar.
+   Restrict it to widths where the mobile sidebar isn't used. */
+@media (min-width: 997px) {
+  .navbar {
+    backdrop-filter: saturate(180%) blur(12px);
+  }
+}
+
+/* Contained, centered menu bar — mirrors the Project SuperDex navbar. */
+.navbar__inner {
+  max-width: 1536px;
+  margin: 0 auto;
+  padding-left: 48px;
+  padding-right: 48px;
+}
+
+@media (max-width: 996px) {
+  .navbar__inner {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  /* Hide only the top-bar GitHub button; keep the hamburger-menu link. */
+  .navbar__inner .navbar-github-button {
+    display: none !important;
+  }
+  .navbar-sidebar .navbar-github-button {
+    background-color: transparent;
+    color: var(--ifm-menu-color) !important;
+    margin-right: 0;
+    border-radius: 0;
+  }
+}
+
+.navbar__brand {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Brand wordmark ("SuperDex Robotics") in solid black. */
+.navbar__title {
+  color: #000;
+}
+
+html[data-theme='dark'] .navbar__title {
+  color: #fff;
+}
+
+.navbar__link {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.navbar__link--active {
+  color: var(--ifm-heading-color);
+  font-weight: 600;
+}
+
+/* GitHub navbar item styled as a solid black button (like Project SuperDex). */
+.navbar-github-button {
+  display: inline-flex;
+  align-items: center;
+  background-color: #0b0b0c;
+  color: #ffffff !important;
+  border-radius: 6px;
+  padding: 0.45rem 1rem;
+  margin-right: 0.75rem;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.navbar-github-button:hover {
+  background-color: #2a2a2e;
+  color: #ffffff !important;
+  text-decoration: none;
+}
+
+/* Drop the external-link arrow icon so it reads as a clean button. */
+.navbar-github-button svg {
+  display: none;
+}
+
+html[data-theme='dark'] .navbar-github-button {
+  background-color: #ffffff;
+  color: #0b0b0c !important;
+}
+
+html[data-theme='dark'] .navbar-github-button:hover {
+  background-color: #e6e6e6;
+  color: #0b0b0c !important;
+}
+
+/* In the mobile hamburger menu, the GitHub item is a plain menu link. */
+html[data-theme='dark'] .navbar-sidebar .navbar-github-button {
+  background-color: transparent;
+  color: var(--ifm-menu-color) !important;
+}
+html[data-theme='dark'] .navbar-sidebar .navbar-github-button:hover {
+  background-color: var(--ifm-menu-color-background-hover);
+  color: var(--ifm-menu-color) !important;
+}
+
+/* =========================================================================
+   SIDEBAR / MENU
+   ========================================================================= */
+.menu {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 0.85rem;
+  padding: 1rem;
+}
+
+.menu__link {
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+  font-weight: 400;
+  color: var(--ifm-menu-color);
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.menu__link:hover {
+  color: var(--ifm-heading-color);
+  background-color: var(--ifm-menu-color-background-hover);
+}
+
+.menu__link--active,
+.menu__link--active:hover {
+  color: var(--ifm-color-primary);
+  background-color: var(--ifm-menu-color-background-active);
+  font-weight: 500;
+}
+
+.menu__list-item-collapsible {
+  border-radius: 4px;
+}
+
+/* =========================================================================
+   BUTTONS — match landing page CTA style
+   ========================================================================= */
+.button {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.875rem;
+  border-radius: 4px;
+  padding: 0.625rem 1.25rem;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.button--primary {
+  background-color: oklch(0.13 0.015 250);
+  color: oklch(0.974 0.008 75);
+  border-color: oklch(0.13 0.015 250);
+}
+
+.button--primary:hover {
+  background-color: oklch(0.28 0.08 250);
+  color: oklch(0.974 0.008 75);
+  border-color: oklch(0.28 0.08 250);
+}
+
+.button--secondary {
+  background-color: transparent;
+  color: var(--ifm-heading-color);
+  border-color: var(--sdx-divider);
+}
+
+.button--secondary:hover {
+  background-color: transparent;
+  color: var(--ifm-heading-color);
+  border-color: var(--sdx-eyebrow-color);
+}
+
+html[data-theme='dark'] .button--primary {
+  background-color: oklch(0.974 0.008 75);
+  color: oklch(0.13 0.015 250);
+  border-color: oklch(0.974 0.008 75);
+}
+
+html[data-theme='dark'] .button--primary:hover {
+  background-color: oklch(0.93 0.006 75);
+  color: oklch(0.13 0.015 250);
+  border-color: oklch(0.93 0.006 75);
+}
+
+/* =========================================================================
+   LINKS
+   ========================================================================= */
+a {
+  color: var(--ifm-color-primary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+a:hover {
+  color: var(--ifm-color-primary-dark);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+html[data-theme='dark'] a:hover {
+  color: var(--ifm-color-primary-light);
+}
+
+/* =========================================================================
+   CARDS, ADMONITIONS, CODE
+   ========================================================================= */
+.card {
+  background: var(--ifm-card-background-color);
+  border: 1px solid var(--sdx-divider);
+  border-radius: 12px;
+  box-shadow: none;
+  transition: border-color 0.2s ease;
+}
+
+.card:hover {
+  border-color: oklch(0.78 0.01 250);
+}
+
+html[data-theme='dark'] .card:hover {
+  border-color: oklch(0.36 0.02 250);
+}
+
+.alert {
+  border: 1px solid var(--ifm-alert-border-color);
+  border-left-width: 3px;
+  border-radius: 6px;
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+/* Blue "note" admonitions (:::note). Scoped so other admonition types keep
+   their own semantics. */
+.theme-admonition-note {
+  --ifm-alert-background-color: oklch(0.97 0.03 255);
+  --ifm-alert-background-color-highlight: oklch(0.95 0.04 255);
+  --ifm-alert-border-color: oklch(0.5 0.13 255);
+}
+
+.theme-admonition-note svg {
+  fill: var(--ifm-alert-border-color);
+}
+
+html[data-theme='dark'] .theme-admonition-note,
+html[data-theme='dark'] .theme-admonition-info,
+html[data-theme='dark'] .theme-admonition-tip,
+html[data-theme='dark'] .theme-admonition-warning,
+html[data-theme='dark'] .theme-admonition-caution,
+html[data-theme='dark'] .theme-admonition-danger {
+  --ifm-alert-foreground-color: var(--ifm-font-color-base);
+}
+
+html[data-theme='dark'] .theme-admonition-note {
+  --ifm-alert-background-color: var(--ifm-background-surface-color);
+  --ifm-alert-background-color-highlight: oklch(0.28 0.02 250);
+  --ifm-alert-border-color: #8b949e;
+}
+
+html[data-theme='dark'] .theme-admonition-info {
+  --ifm-alert-background-color: rgb(88 166 255 / 0.12);
+  --ifm-alert-background-color-highlight: rgb(88 166 255 / 0.18);
+  --ifm-alert-border-color: #58a6ff;
+}
+
+html[data-theme='dark'] .theme-admonition-tip {
+  --ifm-alert-background-color: rgb(63 185 80 / 0.12);
+  --ifm-alert-background-color-highlight: rgb(63 185 80 / 0.18);
+  --ifm-alert-border-color: #3fb950;
+}
+
+html[data-theme='dark'] .theme-admonition-warning,
+html[data-theme='dark'] .theme-admonition-caution {
+  --ifm-alert-background-color: rgb(210 153 34 / 0.12);
+  --ifm-alert-background-color-highlight: rgb(210 153 34 / 0.18);
+  --ifm-alert-border-color: #d29922;
+}
+
+html[data-theme='dark'] .theme-admonition-danger {
+  --ifm-alert-background-color: rgb(248 81 73 / 0.13);
+  --ifm-alert-background-color-highlight: rgb(248 81 73 / 0.2);
+  --ifm-alert-border-color: #f85149;
+}
+
+html[data-theme='dark'] .theme-admonition-note svg,
+html[data-theme='dark'] .theme-admonition-info svg,
+html[data-theme='dark'] .theme-admonition-tip svg,
+html[data-theme='dark'] .theme-admonition-warning svg,
+html[data-theme='dark'] .theme-admonition-caution svg,
+html[data-theme='dark'] .theme-admonition-danger svg {
+  fill: var(--ifm-alert-border-color);
+}
+
+code {
+  font-size: var(--ifm-code-font-size);
+  background-color: var(--ifm-code-background);
+  border: none;
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+}
+
+pre code {
+  border-radius: 0;
+  padding: 0;
+  background-color: transparent;
+}
+
+html[data-theme='dark'] .markdown :not(pre) > code {
+  color: var(--ifm-font-color-base);
+}
+
+html[data-theme='dark'] .markdown a > code {
+  color: var(--ifm-color-primary-light);
+}
+
+/* =========================================================================
+   TABLES
+   ========================================================================= */
+table {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 0.9rem;
+  display: table;
+  width: 100%;
+}
+
+table thead {
+  background-color: transparent;
+}
+
+table thead tr th {
+  border-bottom: 2px solid var(--sdx-divider);
+  font-weight: 600;
+  color: var(--ifm-heading-color);
+}
+
+/* The site footer is a swizzled component with its own styles; see
+   src/theme/Footer/styles.module.css. */
+
+/* =========================================================================
+   STRUCTURAL LAYOUT
+   ========================================================================= */
+
+/* Sticky sidebar */
+.theme-doc-sidebar-container {
+  position: sticky !important;
+  top: var(--ifm-navbar-height) !important;
+  height: calc(100vh - var(--ifm-navbar-height)) !important;
+  overflow-y: auto !important;
+  /* overflow-y:auto makes the browser compute overflow-x to auto too; the 1px
+     border-right then yields a spurious horizontal scrollbar. Pin it hidden. */
+  overflow-x: hidden !important;
+  border-right: 1px solid var(--sdx-divider);
+}
+
+.theme-doc-sidebar-menu {
+  padding-top: 0;
+  padding-bottom: 3rem;
+}
+
+/* Code line highlight */
+.docusaurus-highlight-code-line {
+  background-color: rgba(0, 0, 0, 0.1);
+  display: block;
+  margin: 0 calc(-1 * var(--ifm-pre-padding));
+  padding: 0 var(--ifm-pre-padding);
+}
+
+html[data-theme='dark'] .docusaurus-highlight-code-line {
+  background-color: var(--docusaurus-highlighted-code-line-bg);
+}
+
+/* =========================================================================
+   LANDING-PAGE UTILITY CLASSES (reused by index.mdx via globals)
+   ========================================================================= */
+
+.sdx-eyebrow {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sdx-eyebrow-color);
+  margin: 0;
+}
+
+.sdx-display {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--sdx-display-color);
+  margin: 0;
+}
+
+.sdx-body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-weight: 300;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--ifm-font-color-secondary);
+}
+
+.sdx-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--sdx-tag-border);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--sdx-tag-text);
+  background: var(--sdx-tag-bg);
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+.sdx-divider-line {
+  border: none;
+  border-top: 1px solid var(--sdx-divider);
+  margin: 0;
+}
+
+/* =========================================================================
+   API REFERENCE (embedded Doxygen/Sphinx iframe pages)
+   ========================================================================= */
+
+/* Keep the doc content column at least viewport-tall so the sticky sidebar
+   engages consistently on short pages. */
+[class*='docMainContainer'] {
+  min-height: calc(100vh - var(--ifm-navbar-height));
+}
+
+/* API reference pages: full width (no sidebar) */
+.api-reference-fullwidth {
+  width: 100%;
+  max-width: none;
+  /* Reserve the eventual height (version bar + full-height iframe) up front so
+     the async manifest fetch / iframe mount doesn't grow the page and shove the
+     "Edit this page" footer from top to bottom. Matches the iframe's
+     calc(100vh - 120px) plus the ~44px version-selector row. */
+  min-height: calc(100vh - 76px);
+}
+
+.container:has(.api-reference-fullwidth) {
+  max-width: none !important;
+}
+
+article:has(.api-reference-fullwidth) {
+  max-width: none !important;
+}
+
+.row:has(.api-reference-fullwidth) {
+  margin: 0;
+  display: block;
+}
+
+.col:has(.api-reference-fullwidth) {
+  max-width: 100% !important;
+  width: 100%;
+  padding: 0;
+}
+
+main:has(.api-reference-fullwidth) {
+  max-width: none !important;
+  width: 100%;
+}
+
+.row:has(.api-reference-fullwidth) > div[class*="tocCollapsible"],
+.row:has(.api-reference-fullwidth) > div:last-child:not(:has(.api-reference-fullwidth)) {
+  display: none;
+}
+
+/* API reference version selector bar */
+.api-version-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.api-version-bar label {
+  font-weight: 500;
+  color: var(--ifm-font-color-base);
+}
+
+.api-version-bar select {
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--ifm-global-radius);
+  border: 1px solid var(--ifm-toc-border-color);
+  background-color: var(--ifm-background-surface-color);
+  color: var(--ifm-font-color-base);
+  font-family: var(--ifm-font-family-base);
+}
+
+/* Shown when the version manifest is missing or empty (e.g. docs not yet built) */
+.api-version-empty {
+  padding: 1rem;
+  color: var(--ifm-font-color-secondary);
+}

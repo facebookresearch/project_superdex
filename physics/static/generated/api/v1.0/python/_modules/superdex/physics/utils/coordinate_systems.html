@@ -1,0 +1,643 @@
+<!-- @generated -->
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>superdex.physics.utils.coordinate_systems &mdash; SuperDex Physics Python API  documentation</title>
+      <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+        <script src="../../../../_static/sphinx_highlight.js"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<!-- Theme synchronization with parent Docusaurus site -->
+<script type="text/javascript">
+    // jQuery shim — Sphinx 7.x removed jQuery but RTD theme search.html
+    // still uses jQuery(fn) for DOM-ready initialization.
+    if (typeof jQuery === 'undefined') {
+        window.jQuery = window.$ = function(fn) {
+            if (typeof fn === 'function') {
+                if (document.readyState !== 'loading') { fn(); }
+                else { document.addEventListener('DOMContentLoaded', fn); }
+            }
+        };
+    }
+
+    (function() {
+        var theme = localStorage.getItem('theme') || 'light';
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    })();
+
+    function setSphinxTheme(theme) {
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+    }
+
+    window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'setTheme') {
+            setSphinxTheme(event.data.theme);
+        }
+    });
+
+    window.addEventListener('DOMContentLoaded', function() {
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'getTheme' }, '*');
+        }
+    });
+</script>
+<!-- Shared SuperDex Physics theme (single source of truth:
+     website/static/api-embed.css). Baked in as a render-blocking stylesheet so
+     the page's FIRST paint is already themed — in lockstep with the pre-paint
+     data-theme script above — with no flash of the stock Sphinx/RTD theme and no
+     need for the embedding iframe to hide/reveal. pathto(..., 1) resolves the
+     path from this page up to the staticdocs site root where api-embed.css lives. -->
+<link rel="stylesheet" type="text/css" href="../../../../../../../../api-embed.css"/>
+<style>
+    /* Sidebar font size — larger for readability. All light/dark theming is
+       owned by static/api-embed.css (single source of truth), baked in above as
+       a render-blocking <link>; no theme colors are set here, so the embedded
+       Python API reference matches the site background in both light and dark. */
+    .wy-menu-vertical a,
+    .wy-menu-vertical li,
+    .wy-menu-vertical code,
+    .wy-menu-vertical code.docutils,
+    .wy-menu-vertical .pre,
+    .wy-menu-vertical span.pre,
+    .wy-menu-vertical li span.toctree-expand,
+    .wy-side-nav-search input[type="text"] {
+        font-size: 14px !important;
+    }
+</style>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../../index.html" class="icon icon-home"> SuperDex Physics Python API
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/physics.html">Physics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/physics.html#engine-lifecycle">Engine Lifecycle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/physics.html#execution-threading">Execution &amp; Threading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/physics.html#scene">Scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/physics.html#handles">Handles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/physics.html#shapes-geometry">Shapes &amp; Geometry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/physics.html#actors">Actors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/physics.html#soft-materials">Soft Materials</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/physics.html#constraints">Constraints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/physics.html#contact-collision">Contact &amp; Collision</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/physics.html#solver">Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/physics.html#query-types">Query Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/physics.html#recording-options">Recording Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/physics.html#debugging-diagnostics">Debugging &amp; Diagnostics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/physics.html#build-information">Build Information</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/physics.html#core-value-spatial-types">Core Value &amp; Spatial Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/physics.html#error-handling">Error Handling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/physics.html#containers-spans">Containers &amp; Spans</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/physics.html#not-yet-categorized">Not Yet Categorized</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/prefab.html">Prefabs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/prefab.html#scene-description">Scene Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/prefab.html#actors">Actors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/prefab.html#articulation-components-controllers">Articulation Components &amp; Controllers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/prefab.html#constraints">Constraints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/prefab.html#contact-filters">Contact Filters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/prefab.html#loading-dependencies">Loading &amp; Dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/prefab.html#instantiation">Instantiation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/prefab.html#serialization-export">Serialization &amp; Export</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/prefab.html#containers">Containers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/models.html">Models &amp; Meshes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/models.html#superdex-physics-model">superdex.physics.model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/models.html#module-superdex.physics.mesh">superdex.physics.mesh</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/debugger.html">Debugger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/viewer.html">Viewer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/viewer.html#module-superdex.physics.viewer">superdex.physics.viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/viewer.html#module-superdex.physics.viewer.renderers">superdex.physics.viewer.renderers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/viewer.html#module-superdex.physics.viewer.utils">superdex.physics.viewer.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/viewer.html#module-superdex.physics.utils.render_model_registry">superdex.physics.utils.render_model_registry</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/scene_setup.html">Scene Setup, Assets &amp; Runtime</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/scene_setup.html#module-superdex.physics.paths">superdex.physics.paths</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/scene_setup.html#module-superdex.physics.environment">superdex.physics.environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/scene_setup.html#module-superdex.physics.loader">superdex.physics.loader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/scene_setup.html#module-superdex.physics.utils.context">superdex.physics.utils.context</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/scene_setup.html#module-superdex.physics.utils.scene_helpers">superdex.physics.utils.scene_helpers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/utilities.html">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/utilities.html#module-superdex.physics.utils.configclasses">superdex.physics.utils.configclasses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/utilities.html#module-superdex.physics.utils.decorators">superdex.physics.utils.decorators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/utilities.html#module-superdex.physics.utils.deprecation">superdex.physics.utils.deprecation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/utilities.html#module-superdex.physics.utils.json">superdex.physics.utils.json</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/utilities.html#module-superdex.physics.utils.coordinate_systems">superdex.physics.utils.coordinate_systems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/utilities.html#module-superdex.physics.utils.transformations">superdex.physics.utils.transformations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/utilities.html#module-superdex.physics.utils.profiling">superdex.physics.utils.profiling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/utilities.html#module-superdex.physics.utils.logging">superdex.physics.utils.logging</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api/testing.html">Testing Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/testing.html#module-superdex.physics.utils.testing.decorators">superdex.physics.utils.testing.decorators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/testing.html#module-superdex.physics.utils.testing.environment">superdex.physics.utils.testing.environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../api/testing.html#module-superdex.physics.utils.testing.testcases">superdex.physics.utils.testing.testcases</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">SuperDex Physics Python API</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../../index.html">Module code</a> &raquo;</li>
+      <li>superdex.physics.utils.coordinate_systems</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for superdex.physics.utils.coordinate_systems</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (c) Meta Platforms, Inc. and affiliates.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module provides classes and utilities for defining, converting, and working with</span>
+<span class="sd">different coordinate systems used by various 3D rendering engines and tools. Different</span>
+<span class="sd">engines use different conventions for which direction is &quot;right&quot;, &quot;up&quot;, and &quot;forward&quot;,</span>
+<span class="sd">and this module allows transparent conversion between these conventions.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">enum</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">npt</span>
+
+<span class="c1">########################################################################################</span>
+
+
+<div class="viewcode-block" id="Axis"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.Axis">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">Axis</span><span class="p">(</span><span class="n">enum</span><span class="o">.</span><span class="n">Enum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Enumeration of coordinate axes and their directions.</span>
+
+<span class="sd">    Represents the six possible axis directions in 3D space: positive and negative</span>
+<span class="sd">    X, Y, and Z. Used to define which physical directions correspond to &quot;right&quot;,</span>
+<span class="sd">    &quot;up&quot;, and &quot;forward&quot; in a coordinate system.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">POS_X</span> <span class="o">=</span> <span class="s2">&quot;+X&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Positive X axis direction.&quot;&quot;&quot;</span>
+    <span class="n">NEG_X</span> <span class="o">=</span> <span class="s2">&quot;-X&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Negative X axis direction.&quot;&quot;&quot;</span>
+    <span class="n">POS_Y</span> <span class="o">=</span> <span class="s2">&quot;+Y&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Positive Y axis direction.&quot;&quot;&quot;</span>
+    <span class="n">NEG_Y</span> <span class="o">=</span> <span class="s2">&quot;-Y&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Negative Y axis direction.&quot;&quot;&quot;</span>
+    <span class="n">POS_Z</span> <span class="o">=</span> <span class="s2">&quot;+Z&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Positive Z axis direction.&quot;&quot;&quot;</span>
+    <span class="n">NEG_Z</span> <span class="o">=</span> <span class="s2">&quot;-Z&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Negative Z axis direction.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Axis.from_str"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.Axis.from_str">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_str</span><span class="p">(</span><span class="n">axis_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Axis</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert a string representation of an axis to an Axis enum value.</span>
+
+<span class="sd">        The string is case-insensitive and should be in the format &quot;+X&quot;, &quot;-X&quot;, &quot;+Y&quot;,</span>
+<span class="sd">        &quot;-Y&quot;, &quot;+Z&quot;, or &quot;-Z&quot;. Raises a ValueError if the string doesn&#39;t match any</span>
+<span class="sd">        valid axis direction.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            axis_name: String representation of an axis (e.g., &quot;+X&quot;, &quot;-y&quot;, &quot;+Z&quot;).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The corresponding Axis enum value.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If the string does not match any valid axis direction.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">normalized_axis_name</span> <span class="o">=</span> <span class="n">axis_name</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Axis</span><span class="p">(</span><span class="n">normalized_axis_name</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown axis direction: </span><span class="si">{</span><span class="n">axis_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Axis.to_vector"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.Axis.to_vector">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_vector</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert the axis to a 3D unit vector.</span>
+
+<span class="sd">        Returns a normalized 3D vector pointing in the direction specified by this axis.</span>
+<span class="sd">        For example, POS_X returns [1, 0, 0] and NEG_Y returns [0, -1, 0].</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A 3D numpy array representing the unit vector for this axis direction.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">match</span> <span class="bp">self</span><span class="p">:</span>
+            <span class="k">case</span> <span class="n">Axis</span><span class="o">.</span><span class="n">POS_X</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="k">case</span> <span class="n">Axis</span><span class="o">.</span><span class="n">NEG_X</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="k">case</span> <span class="n">Axis</span><span class="o">.</span><span class="n">POS_Y</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="k">case</span> <span class="n">Axis</span><span class="o">.</span><span class="n">NEG_Y</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="k">case</span> <span class="n">Axis</span><span class="o">.</span><span class="n">POS_Z</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="k">case</span> <span class="n">Axis</span><span class="o">.</span><span class="n">NEG_Z</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="k">case</span><span class="w"> </span><span class="k">_</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown axis direction: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="Handedness"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.Handedness">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">Handedness</span><span class="p">(</span><span class="n">enum</span><span class="o">.</span><span class="n">Enum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Represents the handedness of a coordinate system.</span>
+
+<span class="sd">    The handedness of a coordinate system determines the orientation convention used</span>
+<span class="sd">    for rotations and cross products. Different rendering engines use different</span>
+<span class="sd">    conventions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">LEFT</span> <span class="o">=</span> <span class="s2">&quot;left&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Left-handed coordinate system (e.g., Unity, Unreal).&quot;&quot;&quot;</span>
+    <span class="n">RIGHT</span> <span class="o">=</span> <span class="s2">&quot;right&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Right-handed coordinate system (e.g., OpenGL, Blender).&quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="CoordinateSystem"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateSystem">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">CoordinateSystem</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Defines a coordinate system for visualization.</span>
+
+<span class="sd">    A coordinate system specifies which directions correspond to &quot;right&quot;, &quot;up&quot;,</span>
+<span class="sd">    and &quot;forward&quot; in the visualization. This is important for rendering as different</span>
+<span class="sd">    engines and tools use different conventions.</span>
+
+<span class="sd">    The coordinate system is defined by three orthogonal axes. For example:</span>
+<span class="sd">    - Unity uses: right=+X, up=+Y, forward=+Z (left-handed)</span>
+<span class="sd">    - Unreal uses: right=+Y, up=+Z, forward=+X (right-handed)</span>
+<span class="sd">    - Polyscope uses: right=+X, up=+Y, forward=-Z (right-handed)</span>
+
+<span class="sd">    The class automatically validates that the three axes are mutually orthogonal</span>
+<span class="sd">    and computes the handedness of the system.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_right</span><span class="p">:</span> <span class="n">Axis</span>
+    <span class="n">_up</span><span class="p">:</span> <span class="n">Axis</span>
+    <span class="n">_forward</span><span class="p">:</span> <span class="n">Axis</span>
+    <span class="n">_axes_matrix</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">]</span>
+    <span class="n">_handedness</span><span class="p">:</span> <span class="n">Handedness</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">right</span><span class="p">:</span> <span class="n">Axis</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">up</span><span class="p">:</span> <span class="n">Axis</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">forward</span><span class="p">:</span> <span class="n">Axis</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the coordinate system.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            right: The axis direction for the right direction.</span>
+<span class="sd">            up: The axis direction for the up direction.</span>
+<span class="sd">            forward: The axis direction for the forward direction.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Convert strings to Axis enum values.</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">right</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">right</span> <span class="o">=</span> <span class="n">Axis</span><span class="o">.</span><span class="n">from_str</span><span class="p">(</span><span class="n">right</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">up</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">up</span> <span class="o">=</span> <span class="n">Axis</span><span class="o">.</span><span class="n">from_str</span><span class="p">(</span><span class="n">up</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">forward</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">forward</span> <span class="o">=</span> <span class="n">Axis</span><span class="o">.</span><span class="n">from_str</span><span class="p">(</span><span class="n">forward</span><span class="p">)</span>
+
+        <span class="c1"># Extract the basis vectors.</span>
+        <span class="n">right_vec</span> <span class="o">=</span> <span class="n">right</span><span class="o">.</span><span class="n">to_vector</span><span class="p">()</span>
+        <span class="n">up_vec</span> <span class="o">=</span> <span class="n">up</span><span class="o">.</span><span class="n">to_vector</span><span class="p">()</span>
+        <span class="n">forward_vec</span> <span class="o">=</span> <span class="n">forward</span><span class="o">.</span><span class="n">to_vector</span><span class="p">()</span>
+
+        <span class="c1"># Build the matrix specifying the semantic axes of the coordinate system.</span>
+        <span class="n">axes_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">right_vec</span><span class="p">,</span> <span class="n">forward_vec</span><span class="p">,</span> <span class="n">up_vec</span><span class="p">])</span>
+        <span class="n">det_axes_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">det</span><span class="p">(</span><span class="n">axes_matrix</span><span class="p">)</span>
+
+        <span class="c1"># Check that vectors are orthogonal.</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">det_axes_matrix</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;The specified axes (right=</span><span class="si">{</span><span class="n">right</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">, up=</span><span class="si">{</span><span class="n">up</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">, forward=&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">forward</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">) are not orthogonal&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Try infer the handedness of the coordinate system from this.</span>
+        <span class="n">handedness</span> <span class="o">=</span> <span class="n">Handedness</span><span class="o">.</span><span class="n">LEFT</span> <span class="k">if</span> <span class="n">det_axes_matrix</span> <span class="o">&lt;</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="n">Handedness</span><span class="o">.</span><span class="n">RIGHT</span>
+
+        <span class="c1"># Store the coordinate system.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_right</span> <span class="o">=</span> <span class="n">right</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_up</span> <span class="o">=</span> <span class="n">up</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_forward</span> <span class="o">=</span> <span class="n">forward</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_axes_matrix</span> <span class="o">=</span> <span class="n">axes_matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_handedness</span> <span class="o">=</span> <span class="n">handedness</span>
+
+<div class="viewcode-block" id="CoordinateSystem.right"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateSystem.right">[docs]</a>    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">right</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Axis</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The axis direction for the right direction.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right</span></div>
+
+<div class="viewcode-block" id="CoordinateSystem.up"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateSystem.up">[docs]</a>    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">up</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Axis</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The axis direction for the up direction.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_up</span></div>
+
+<div class="viewcode-block" id="CoordinateSystem.forward"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateSystem.forward">[docs]</a>    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Axis</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The axis direction for the forward direction.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward</span></div>
+
+<div class="viewcode-block" id="CoordinateSystem.axes_matrix"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateSystem.axes_matrix">[docs]</a>    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">axes_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the 3x3 matrix for the coordinate system. The axes matrix consists of</span>
+<span class="sd">        three column vectors representing the right, forward and up directions.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes_matrix</span></div>
+
+<div class="viewcode-block" id="CoordinateSystem.handedness"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateSystem.handedness">[docs]</a>    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">handedness</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Handedness</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Determines the handedness of the coordinate system.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handedness</span></div>
+
+<div class="viewcode-block" id="CoordinateSystem.is_left_handed"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateSystem.is_left_handed">[docs]</a>    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_left_handed</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Determines if the coordinate system is left-handed.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handedness</span> <span class="o">==</span> <span class="n">Handedness</span><span class="o">.</span><span class="n">LEFT</span></div>
+
+<div class="viewcode-block" id="CoordinateSystem.is_right_handed"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateSystem.is_right_handed">[docs]</a>    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_right_handed</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Determines if the coordinate system is right-handed.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handedness</span> <span class="o">==</span> <span class="n">Handedness</span><span class="o">.</span><span class="n">RIGHT</span></div>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns a string representation of the coordinate system.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_handedness</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span><span class="si">}</span><span class="s2">-handed, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_up</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">-up, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_forward</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">-forward&quot;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CoordinateTransform"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateTransform">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">CoordinateTransform</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Provides transformation matrices for converting between coordinate systems.</span>
+
+<span class="sd">    This class computes and provides the transformation matrices needed to convert</span>
+<span class="sd">    geometric data (points, vectors, rotation matrices, transformation matrices) from</span>
+<span class="sd">    one coordinate system convention to another. This is essential when working with</span>
+<span class="sd">    content authored in a specific coordinate system (e.g., Unity) but rendered in a</span>
+<span class="sd">    different one (e.g., Polyscope).</span>
+
+<span class="sd">    The transformation matrices are computed using a change-of-basis matrix derived</span>
+<span class="sd">    from the source and target coordinate systems&#39; axes vectors. The origin of the</span>
+<span class="sd">    coordinate system is preserved, but the axes are rotated to match the target</span>
+<span class="sd">    coordinate system.</span>
+
+<span class="sd">    Mathematical Foundation:</span>
+<span class="sd">        Let 𝐒 and 𝐓 be matrices whose columns encode the right, up, and forward</span>
+<span class="sd">        directions as unit vectors, each expressed in their respective native coordinate</span>
+<span class="sd">        systems 𝕊 and 𝕋. Let 𝐮 ∈ 𝕊 and 𝐯 ∈ 𝕋 be coordinates representing the same</span>
+<span class="sd">        geometric point, defined in their respective coordinate systems.</span>
+
+<span class="sd">        When projecting both points onto their semantic basis vectors (right, forward,</span>
+<span class="sd">        up), the resulting coordinates must be identical:</span>
+
+<span class="sd">                                        𝐒ᵀ𝐮 = 𝐓ᵀ𝐯</span>
+
+<span class="sd">        That is, &quot;how far right, foward, and up&quot; is invariant — it describes the same</span>
+<span class="sd">        point in space regardless of the underlying coordinate system representation.</span>
+
+<span class="sd">        Solving for 𝐯 yields:</span>
+
+<span class="sd">                                        𝐯 = 𝐓𝐒ᵀ𝐮 = 𝐂𝐮</span>
+
+<span class="sd">        where 𝐂 = 𝐓𝐒ᵀ is the change-of-basis matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_source_system</span><span class="p">:</span> <span class="n">CoordinateSystem</span>
+    <span class="n">_target_system</span><span class="p">:</span> <span class="n">CoordinateSystem</span>
+    <span class="n">_source_to_target</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">source_system</span><span class="p">:</span> <span class="n">CoordinateSystem</span><span class="p">,</span>
+        <span class="n">target_system</span><span class="p">:</span> <span class="n">CoordinateSystem</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the coordinate transform.</span>
+
+<span class="sd">        Computes the conversion matrix between the source and target coordinate</span>
+<span class="sd">        systems using a change-of-basis transformation.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            source_system: The source coordinate system to convert from.</span>
+<span class="sd">            target_system: The target coordinate system to convert to.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">source_axes</span> <span class="o">=</span> <span class="n">source_system</span><span class="o">.</span><span class="n">axes_matrix</span>
+        <span class="n">target_axes</span> <span class="o">=</span> <span class="n">target_system</span><span class="o">.</span><span class="n">axes_matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_source_system</span> <span class="o">=</span> <span class="n">source_system</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_target_system</span> <span class="o">=</span> <span class="n">target_system</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_source_to_target</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_source_to_target</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">target_axes</span> <span class="o">@</span> <span class="n">source_axes</span><span class="o">.</span><span class="n">T</span>
+
+<div class="viewcode-block" id="CoordinateTransform.source_system"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateTransform.source_system">[docs]</a>    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">source_system</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CoordinateSystem</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The source coordinate system to convert from.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_system</span></div>
+
+<div class="viewcode-block" id="CoordinateTransform.target_system"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateTransform.target_system">[docs]</a>    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">target_system</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CoordinateSystem</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The target coordinate system to convert to.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_target_system</span></div>
+
+<div class="viewcode-block" id="CoordinateTransform.source_to_target"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateTransform.source_to_target">[docs]</a>    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">source_to_target</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the 4x4 matrix doing the basis change from source to target.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_to_target</span></div>
+
+<div class="viewcode-block" id="CoordinateTransform.target_to_source"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateTransform.target_to_source">[docs]</a>    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">target_to_source</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the 4x4 matrix doing the basis change from target to source.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_to_target</span><span class="o">.</span><span class="n">T</span></div>
+
+<div class="viewcode-block" id="CoordinateTransform.encodes_reflection"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateTransform.encodes_reflection">[docs]</a>    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">encodes_reflection</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Determines if the coordinate transform encodes a reflection.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">det</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_source_to_target</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mf">0.0</span></div>
+
+<div class="viewcode-block" id="CoordinateTransform.direction_to_target"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateTransform.direction_to_target">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">direction_to_target</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">direction</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Transform a direction vector from source to target coordinate system.</span>
+
+<span class="sd">        Unlike positions, directions are not affected by translation, only by</span>
+<span class="sd">        the rotation/reflection component of the transformation.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            direction: A 3D direction vector in source coordinates.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The direction vector transformed to target coordinates.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_to_target</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">@</span> <span class="n">direction</span></div>
+
+<div class="viewcode-block" id="CoordinateTransform.position_to_target"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateTransform.position_to_target">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">position_to_target</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">position</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">],</span>
+        <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Transform a position from source to target coordinate system.</span>
+
+<span class="sd">        Applies the coordinate system transformation and an optional scale factor</span>
+<span class="sd">        (e.g., for meters to centimeters conversion).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            position: A 3D position in source coordinates.</span>
+<span class="sd">            scale: Optional scale factor to apply (default 1.0).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The position transformed to target coordinates.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_to_target</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">@</span> <span class="n">position</span> <span class="o">*</span> <span class="n">scale</span></div>
+
+<div class="viewcode-block" id="CoordinateTransform.rotation_to_target"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateTransform.rotation_to_target">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">rotation_to_target</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">quaternion</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Transform a rotation quaternion from source to target coordinate system.</span>
+
+<span class="sd">        This method correctly handles the conversion of rotations between coordinate</span>
+<span class="sd">        systems, including the handedness flip when converting between left-handed</span>
+<span class="sd">        and right-handed systems.</span>
+
+<span class="sd">        The algorithm matches the C++ coordinate-space conversion:</span>
+
+<span class="sd">        1. If the transform encodes a reflection (handedness flip), negate the</span>
+<span class="sd">           quaternion&#39;s imaginary components (x, y, z).</span>
+<span class="sd">        2. Apply the direction transformation to the axis (x, y, z components).</span>
+<span class="sd">        3. Keep the scalar component (w) unchanged.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            quaternion: A rotation quaternion in [x, y, z, w] format (scipy convention).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The quaternion transformed to target coordinates in [x, y, z, w] format.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">quaternion</span>
+
+        <span class="c1"># If handedness flips, negate the quaternion axis</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">encodes_reflection</span><span class="p">:</span>
+            <span class="n">axis</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="n">x</span><span class="p">,</span> <span class="o">-</span><span class="n">y</span><span class="p">,</span> <span class="o">-</span><span class="n">z</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">axis</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">])</span>
+
+        <span class="c1"># Transform the axis using the direction transformation</span>
+        <span class="n">axis_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">direction_to_target</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">axis_out</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis_out</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis_out</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">w</span><span class="p">])</span></div></div>
+
+
+<span class="c1">########################################################################################</span>
+<span class="c1"># Preset Coordinate Systems</span>
+<span class="c1">########################################################################################</span>
+
+<span class="n">COORDINATE_SYSTEMS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;mochi&quot;</span><span class="p">:</span> <span class="n">CoordinateSystem</span><span class="p">(</span><span class="n">right</span><span class="o">=</span><span class="s2">&quot;+x&quot;</span><span class="p">,</span> <span class="n">up</span><span class="o">=</span><span class="s2">&quot;+y&quot;</span><span class="p">,</span> <span class="n">forward</span><span class="o">=</span><span class="s2">&quot;-z&quot;</span><span class="p">),</span>
+    <span class="s2">&quot;unity&quot;</span><span class="p">:</span> <span class="n">CoordinateSystem</span><span class="p">(</span><span class="n">right</span><span class="o">=</span><span class="s2">&quot;+x&quot;</span><span class="p">,</span> <span class="n">up</span><span class="o">=</span><span class="s2">&quot;+y&quot;</span><span class="p">,</span> <span class="n">forward</span><span class="o">=</span><span class="s2">&quot;+z&quot;</span><span class="p">),</span>
+    <span class="s2">&quot;unreal&quot;</span><span class="p">:</span> <span class="n">CoordinateSystem</span><span class="p">(</span><span class="n">right</span><span class="o">=</span><span class="s2">&quot;+y&quot;</span><span class="p">,</span> <span class="n">up</span><span class="o">=</span><span class="s2">&quot;+z&quot;</span><span class="p">,</span> <span class="n">forward</span><span class="o">=</span><span class="s2">&quot;+x&quot;</span><span class="p">),</span>
+    <span class="s2">&quot;blender&quot;</span><span class="p">:</span> <span class="n">CoordinateSystem</span><span class="p">(</span><span class="n">right</span><span class="o">=</span><span class="s2">&quot;+x&quot;</span><span class="p">,</span> <span class="n">up</span><span class="o">=</span><span class="s2">&quot;+z&quot;</span><span class="p">,</span> <span class="n">forward</span><span class="o">=</span><span class="s2">&quot;+y&quot;</span><span class="p">),</span>
+    <span class="s2">&quot;polyscope&quot;</span><span class="p">:</span> <span class="n">CoordinateSystem</span><span class="p">(</span><span class="n">right</span><span class="o">=</span><span class="s2">&quot;+x&quot;</span><span class="p">,</span> <span class="n">up</span><span class="o">=</span><span class="s2">&quot;+y&quot;</span><span class="p">,</span> <span class="n">forward</span><span class="o">=</span><span class="s2">&quot;-z&quot;</span><span class="p">),</span>
+    <span class="s2">&quot;ros&quot;</span><span class="p">:</span> <span class="n">CoordinateSystem</span><span class="p">(</span><span class="n">right</span><span class="o">=</span><span class="s2">&quot;-y&quot;</span><span class="p">,</span> <span class="n">up</span><span class="o">=</span><span class="s2">&quot;+z&quot;</span><span class="p">,</span> <span class="n">forward</span><span class="o">=</span><span class="s2">&quot;+x&quot;</span><span class="p">),</span>
+<span class="p">}</span>
+<span class="sd">&quot;&quot;&quot;Preset coordinate systems for common 3D engines and tools.</span>
+
+<span class="sd">This dictionary provides ready-to-use coordinate system definitions used in popular</span>
+<span class="sd">3D rendering engines and modeling tools. These coordinate systems are defined in terms</span>
+<span class="sd">of the semantic axes (right, up, and forward) derived from the canonical basis vectors</span>
+<span class="sd">(X, Y, and Z).&quot;&quot;&quot;</span>
+
+<span class="n">DEFAULT_COORDINATE_SYSTEM</span> <span class="o">=</span> <span class="n">COORDINATE_SYSTEMS</span><span class="p">[</span><span class="s2">&quot;polyscope&quot;</span><span class="p">]</span>
+<span class="sd">&quot;&quot;&quot;The default coordinate system used by the SuperDex Physics viewer.</span>
+
+<span class="sd">This is set to the legacy OpenGL view convention (right-handed, Y-up, -Z-forward) as it</span>
+<span class="sd">matches the internal coordinate system of Polyscope, the rendering backend used by the</span>
+<span class="sd">viewer.&quot;&quot;&quot;</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Meta Platforms, Inc.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

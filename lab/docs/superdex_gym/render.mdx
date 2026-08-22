@@ -1,0 +1,485 @@
+---
+title: Rendering
+---
+
+# Rendering
+
+SuperDex Gym environments render through `superdex.physics.viewer.Viewer`, the
+SuperDex Physics viewer built on [Polyscope](https://polyscope.run/), a 3D
+visualization library designed for geometry processing and scientific visualization.
+SuperDex Gym instantiates and drives the viewer; the rendering itself lives in
+`superdex-physics`. The result is interactive visualization for environment debugging
+and evaluation, plus programmatic video generation.
+
+:::note Requirements
+Rendering needs **`polyscope>=2.5.0,<2.6`**, declared by `superdex-physics`.
+Availability is not a version parse but a feature probe — the viewer checks for
+`polyscope.get_ui_scale`. When the probe fails,
+`superdex.physics.viewer.VIEWER_AVAILABLE` is `False` and the scripts fall back to
+headless operation. See [Requirements and Failure Modes](#requirements-and-failure-modes).
+:::
+
+## Enabling the Renderer
+
+The renderer is controlled through the `render_mode` configuration parameter in
+your environment:
+
+### Render Modes
+
+- **`"human"`**: Interactive visualization with a GUI window (recommended for
+  debugging)
+- **`"rgb_array"`**: Offscreen rendering for programmatic access and video
+  generation
+- **`None`**: No rendering. This is the **default**, and what you want for training.
+
+![The Polyscope viewer in human render mode, showing the Ant environment alongside the Scene panel's actor list and the Environment tab](/img/superdex_gym/polyscope_viewer_ui.png)
+
+### Basic Configuration
+
+```python
+from superdex.lab.gym.envs.benchmarks.cartpole_env import CartPoleEnv
+
+# Interactive visualization (opens GUI window)
+env = CartPoleEnv({
+    "render_mode": "human",
+    "render_size": (1280, 720),  # Optional: set window size
+    "start_paused": False,       # Optional: start simulation paused
+})
+
+# Offscreen rendering (for video generation)
+env = CartPoleEnv({
+    "render_mode": "rgb_array",
+    "render_size": (1920, 1080),  # Video resolution
+})
+
+# No rendering (training mode)
+env = CartPoleEnv({
+    "render_mode": None,  # Maximum performance
+})
+```
+
+## Configuring the Coordinate System
+
+SuperDex Gym allows you to configure the coordinate system used for visualization through the `render_coordinate_system` parameter in `MochiEnvCfg`. This is useful when working with assets or data authored in different 3D tools or game engines that use different coordinate conventions.
+
+### Available Coordinate Systems
+
+SuperDex Gym provides preset coordinate systems for common 3D engines and tools:
+
+| Preset Name             | Handedness   | Up Axis | Forward Axis | Used By / Convention         | Axis Mapping                      |
+|-------------------------|--------------|---------|--------------|------------------------------|-----------------------------------|
+| `"polyscope"` or `None` | Right-handed | Y       | -Z           | OpenGL, Polyscope (default)  | Right = +X, Up = +Y, Forward = -Z |
+| `"blender"`             | Right-handed | Z       | Y            | Blender                      | Right = +X, Up = +Z, Forward = +Y |
+| `"unity"`               | Left-handed  | Y       | Z            | Unity                        | Right = +X, Up = +Y, Forward = +Z |
+| `"unreal"`              | Left-handed  | Z       | X            | Unreal Engine                | Right = +Y, Up = +Z, Forward = +X |
+| `"mochi"`               | Right-handed | Y       | -Z           | SuperDex Physics engine         | Right = +X, Up = +Y, Forward = -Z |
+| `"ros"`                 | Right-handed | Z       | X            | ROS (Robot Operating System) | Right = -Y, Up = +Z, Forward = +X |
+
+### Using Preset Coordinate Systems
+
+You can specify the coordinate system by passing the preset name as a string:
+
+```python
+from superdex.lab.gym.envs.benchmarks.cartpole_env import CartPoleEnv
+
+# Use Unity coordinate system
+env = CartPoleEnv({
+    "render_mode": "human",
+    "render_coordinate_system": "unity",
+})
+
+# Use Unreal coordinate system
+env = CartPoleEnv({
+    "render_mode": "human",
+    "render_coordinate_system": "unreal",
+})
+```
+
+### Custom Coordinate Systems
+
+For more advanced use cases, you can define a custom coordinate system using the `CoordinateSystem` class:
+
+```python
+from superdex.lab.gym.envs.benchmarks.cartpole_env import CartPoleEnv
+from superdex.physics.utils.coordinate_systems import CoordinateSystem
+
+# Define a custom coordinate system
+custom_system = CoordinateSystem(right="+X", up="+Z", forward="-Y")
+
+env = CartPoleEnv({
+    "render_mode": "human",
+    "render_coordinate_system": custom_system,
+})
+```
+
+### Default Behavior
+
+If `render_coordinate_system` is not specified (or set to `None`), the renderer uses the legacy OpenGL coordinate system, which matches Polyscope's internal convention. In this case, no coordinate transformations are applied.
+
+## Configure Default Render Items
+
+By default, SuperDex Gym automatically renders all actors in the scene that have
+mesh geometry. The renderer determines what to display based on the actor types
+and their properties:
+
+### What Gets Rendered by Default
+
+- **All Actor Types**: Rigid bodies, articulated actors, and soft actors are
+  automatically included
+- **Surface Meshes**: The primary visual representation showing solid surfaces
+
+An actor is drawn if any of three conditions holds:
+
+1. It has a registered GLB visual model.
+2. Its `get_surface_mesh()` is non-empty.
+3. It is a static infinite-plane collider — these are drawn by a dedicated
+   `StaticPlaneRenderer` **despite** having an empty surface mesh, which is how
+   ground planes appear.
+
+### Default Rendering Settings
+
+Solid mesh surfaces are shown; wireframe edges, individual mesh vertices and
+coordinate-frame axes are off unless you turn them on. The initial state of each
+toggle is established when the Polyscope structure is constructed, so the
+authoritative answer for a given build is what the Scene panel shows on the first
+frame.
+
+### Configuring Through Code
+
+You can control what gets rendered by excluding specific actors or configuring
+display options:
+
+#### Excluding Actors from Rendering
+
+```python
+from superdex.lab.gym.envs import MochiEnv
+
+
+class MyCustomEnv(MochiEnv):
+    def _reset_renderer(self):
+        # Exclude specific actors by name or pattern
+        self._renderer.set_excluded_actors([
+            "GroundPlane",      # Exclude by exact name
+            "Debug_*",          # Exclude using wildcard patterns
+            "Sensor*",          # Hide all sensor-related actors
+        ])
+```
+
+#### Configuring Default Display Options
+
+```python
+from superdex.lab.gym.envs import MochiEnv
+
+
+class MyCustomEnv(MochiEnv):
+    def _reset_renderer(self):
+        # Get all actor renderers
+        actor_renderers = self._renderer.get_actor_renderers()
+
+        # Configure rendering for all actors
+        for actor_renderer in actor_renderers:
+            # Enable wireframe edges for debugging
+            actor_renderer.set_enable_edges(True)
+
+            # Show coordinate axes
+            actor_renderer.set_enable_axes(True)
+
+            # Enable vertex visualization for soft bodies
+            if "Soft" in actor_renderer.get_name():
+                actor_renderer.set_enable_nodes(True)
+```
+
+:::note Ground planes ignore these toggles
+`get_actor_renderers()` returns `ActorRenderer` **and** `StaticPlaneRenderer`
+objects. `StaticPlaneRenderer` overrides `set_enable_edges`, `set_enable_axes`,
+`set_enable_nodes` and `set_show_axes_at_com` as no-ops, and does not implement
+`set_transparency` at all — calling it on a ground-plane renderer raises
+`AttributeError`.
+:::
+
+:::note `set_show_axes_at_com` does not stick
+Whether axes are drawn at the origin or at the centre of mass is a **global**
+viewer setting. The viewer rewrites every actor renderer from it each frame, so a
+per-actor `set_show_axes_at_com(...)` call is overwritten before it is ever drawn.
+Toggle it in the viewer UI instead.
+:::
+
+#### Per-Actor Configuration
+
+```python
+from superdex.physics.utils.scene_helpers import find_actor
+from superdex.lab.gym.envs import MochiEnv
+
+
+class MyCustomEnv(MochiEnv):
+    def _update_renderer(self):
+        if self._renderer is None:
+            return
+
+        # Configure specific actors individually
+        robot_actor = find_actor(self._scene, "Robot")
+        robot_renderer = self._renderer.get_actor_renderer(robot_actor)
+        if robot_renderer:
+            # Show robot coordinate frames
+            robot_renderer.set_enable_axes(True)
+            # Do not call set_show_axes_at_com here - see the note above; the
+            # viewer rewrites it from the global setting every frame.
+
+        # Make debugging objects semi-transparent
+        debug_actor = find_actor(self._scene, "DebugObject")
+        debug_renderer = self._renderer.get_actor_renderer(debug_actor)
+        if debug_renderer:
+            debug_renderer.set_transparency(0.5)
+```
+
+### Interactive Configuration
+
+When using `render_mode="human"`, you can also configure visibility through the
+interactive UI:
+
+- **Scene Panel**: Toggle surface, edges, nodes, and axes for each actor
+- **Batch Controls**: Apply visibility changes to all actors simultaneously
+- **Actor Selection**: Click actors to inspect and modify their individual
+  settings
+
+This gives you fine-grained control over what appears in your visualization
+while maintaining optimal performance by only rendering necessary elements.
+
+## Adding Custom Render Items
+
+Custom environments can add visualization elements to aid understanding and
+debugging by overriding renderer methods:
+
+### When the hooks run
+
+`render()` runs `_reset_renderer()` when the render scene is dirty, then
+`_update_renderer()`. In `"human"` mode `reset()` and `step()` call `render()` for
+you, so both hooks fire automatically: `_update_renderer()` once per step, and
+`_reset_renderer()` once per episode, on the `render()` that `reset()` triggers.
+`reset()` arms the dirty flag in every mode where a renderer exists, not just
+`"human"`. In `"rgb_array"` mode neither
+hook runs until you call `env.render()` yourself. If `render_mode is None` there is no
+renderer and neither hook ever runs, so do not put simulation-relevant state into them.
+
+### Available Renderer Methods
+
+#### `_reset_renderer()`
+
+Use this for setup of visualization elements that only changes between episodes. It
+runs on the first `render()` after each `reset()`, which in `"human"` mode is inside
+`reset()` itself.
+
+#### `_update_renderer()`
+
+Called at the end of every `render()` call, just before the frame is produced. Use
+this for dynamic visualizations that change each frame.
+
+### Example: Adding Custom Visualizations
+
+```python
+import numpy as np
+from superdex.lab.gym.envs.mochi_env import MochiEnv
+
+class MyCustomEnv(MochiEnv):
+    def _reset_renderer(self):
+        """Called on the first render() after each reset - static visualizations."""
+        if self._renderer is None:
+            return
+
+        # Add a reference grid
+        self._renderer.add_grid(
+            name="Floor",
+            size=10.0,
+            center=np.array([0, 0, 0]),
+            period=1.0,
+            axes="xz"
+        )
+
+        # Set camera view
+        self._renderer.set_camera_view(
+            look_from=np.array([5, 3, 5]),
+            look_at=np.array([0, 1, 0])
+        )
+
+        # Enable follow camera for dynamic scenes
+        self._renderer.set_enable_follow_camera(True)
+        self._renderer.set_follow_camera_smoothness(0.8)
+
+    def _update_renderer(self):
+        """Called at the end of every render() - add dynamic visualizations."""
+        if self._renderer is None:
+            return
+
+        # Example: Visualize force vectors, targets, etc.
+        # This is where you'd add step-by-step visual debugging
+
+        # Frame the scene to keep objects in view
+        if self.get_step_count() == 0:
+            self._renderer.frame_scene()
+```
+
+### Advanced Renderer Features
+
+The renderer provides access to further visualization tools. These belong inside a
+renderer hook like any other renderer call:
+
+```python
+from superdex.lab.gym.envs import MochiEnv
+
+
+class MyCustomEnv(MochiEnv):
+    def _reset_renderer(self):
+        if self._renderer is None:
+            return
+
+        # Add multiple grids with different styles
+        self._renderer.add_grid("XY_Plane", axes="xy", style="checker")
+        self._renderer.add_grid("Ground", axes="xz", style="grid")
+
+        # Camera controls
+        self._renderer.set_enable_follow_camera(True)
+        self._renderer.set_compute_automatic_distance(True)
+
+        # Get renderer information
+        actors = self._renderer.get_actors()
+        scene_bounds = self._renderer.get_scene_bounds()
+```
+
+`add_grid` takes its options by keyword. Passing them positionally is a trap — the
+signature is
+
+```python
+add_grid(name, size=np.inf, center=None, period=1, axes="xz", style="checker",
+         color_1=(0.9, 0.9, 0.9), color_2=(1, 1, 1), double_sided=False)
+```
+
+so `double_sided` is the ninth positional parameter, after the two colours. `axes` is
+one of `"xy"`, `"xz"`, `"yz"`; `style` is `"grid"` or `"checker"`.
+
+## Producing Videos
+
+Videos are created by rendering in `"rgb_array"` mode and saving frames using
+the `AnimationWriter`:
+
+:::caution MP4 encoding needs the `ffmpeg` plugin, and raises nothing without it
+`AnimationWriter` encodes through `imageio`, which needs ImageIO's `ffmpeg` plugin to
+write `.mp4`. Without the plugin `imageio` resolves `.mp4` to a still-image backend
+that rejects the `fps` argument, and because encoding runs on a background thread the
+error surfaces on that thread while `write()` and `flush()` return normally. The result
+is a truncated `.mp4` and no exception.
+
+The plugin is the `[ffmpeg]` extra on `imageio`, and it brings its own FFmpeg binary.
+Check that `import imageio_ffmpeg` succeeds before trusting a recording; if it does
+not, install `imageio[ffmpeg]`. See [Installation and Setup](./setup.md).
+:::
+
+### Basic Video Recording
+
+```python
+from superdex.physics.viewer.utils import AnimationWriter
+import pathlib
+
+# Setup environment for video recording
+env_config = {
+    "render_mode": "rgb_array",
+    "render_size": (1920, 1080),  # HD video resolution
+}
+
+env = YourEnv(env_config)
+writer = AnimationWriter(
+    output_path=pathlib.Path("./videos/"),
+    fps=30,  # Match your desired video framerate
+    fmt="mp4"
+)
+
+# Record episode
+obs, _ = env.reset()
+for step in range(1000):
+    action = env.action_space.sample()  # Substitute your policy here.
+    obs, reward, terminated, truncated, info = env.step(action)
+
+    # Capture frame. render() returns a frame only in "rgb_array" mode; it returns
+    # None for render_mode=None and for "human".
+    frame = env.render()
+    writer.add(frame)
+
+    if terminated or truncated:
+        break
+
+# Save video
+writer.write("my_episode")  # Creates "my_episode.mp4"
+writer.flush()  # Wait for file to be written
+env.close()
+```
+
+### Batch Video Recording
+
+For recording multiple episodes efficiently:
+
+```python
+def record_multiple_episodes(env_config, num_episodes=10):
+    env = YourEnv(env_config)
+    writer = AnimationWriter(
+        output_path=pathlib.Path("./evaluation_videos/"),
+        fps=30,
+        fmt="mp4"
+    )
+
+    for episode in range(num_episodes):
+        obs, _ = env.reset()
+        episode_frames = []
+
+        while True:
+            action = env.action_space.sample()  # Substitute your policy here.
+            obs, reward, terminated, truncated, info = env.step(action)
+
+            frame = env.render()
+            episode_frames.append(frame)
+
+            if terminated or truncated:
+                break
+
+        # Add all frames for this episode
+        writer.add(episode_frames)
+        writer.write(f"episode_{episode:03d}")
+
+    writer.flush()
+    env.close()
+```
+
+## Performance Considerations
+
+- **Training**: Always use `render_mode=None` for maximum performance
+- **Evaluation**: Use `"human"` mode for interactive debugging, `"rgb_array"`
+  for video generation
+- **Memory**: High-resolution rendering uses significant GPU/CPU resources
+- **Batch Training**: Rendering more than one environment per process is
+  **unsupported**, not merely slow. Keep `render_mode=None` when using
+  `HybridVectorEnv`.
+
+## Requirements and Failure Modes
+
+Rendering requires **`polyscope>=2.5.0,<2.6`**, declared by `superdex-physics`.
+Availability is exposed as `superdex.physics.viewer.VIEWER_AVAILABLE`, which is a
+feature probe rather than a version parse — it is true when `polyscope` imports and
+exposes `get_ui_scale`. Constructing a viewer without it raises
+
+```
+RuntimeError: Failed to initialize the renderer. Polyscope is not installed in the current environment, or it's an incompatible version. Please install Polyscope >= 2.5.0 to enable the renderer.
+```
+
+The callers handle an unavailable viewer differently. `run_sample.py` degrades to
+headless: it warns and falls back to `render_mode=None`, dropping any video request.
+`run_inference.py` does the same for a `superdex_gym/*` checkpoint, printing
+`Renderer not available, setting render mode to None...` and recording nothing.
+For RLlib the check is in `train_samples.py`, which warns and then **skips attaching**
+`CheckpointVideoGeneratorCallback` — checkpoint video generation is disabled, not made
+headless. The callback itself never consults the flag; when it does run it forces
+`render_mode="rgb_array"` unconditionally.
+
+There is no platform gating anywhere in the viewer, and the SuperDex Gym build
+treats Linux, macOS and Windows identically. The failure mode that does exist is
+the absence of a usable GL/EGL context, which affects headless hosts
+and forked subprocesses regardless of operating system. Because
+`HybridVectorEnv` forces the `spawn` start method, a spawned worker gets a fresh
+process and can create its own context; a forked one cannot.

@@ -1,0 +1,90 @@
+---
+sidebar_position: 6
+title: Queries
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Queries
+
+Queries provide on-demand, reference-counted computation of derived simulation data. SuperDex Physics computes and stores this data only while it is requested, so the selected queries affect both step cost and memory use.
+
+## Query Lifecycle
+
+A query has four stages:
+
+1. **Register** the data needed from an actor or constraint.
+2. **Step** the scene so the registered data is computed.
+3. **Read** the result through a getter on that actor or constraint.
+4. **Cancel** the registration when the data is no longer needed.
+
+The following example reads the current local-space node positions of an actor that supports the query:
+
+<Tabs groupId="language">
+<TabItem value="cpp" label="C++" default>
+
+```cpp
+QueryHandle query = actor->RegisterQuery(QueryType::NodePositions, error);
+scene->Step(timeStepSec);
+Span<real const> positions = actor->GetNodePositionsLocal(error);
+// Use or copy positions before cancelling the query.
+actor->CancelQuery(query);
+```
+
+</TabItem>
+<TabItem value="python" label="Python">
+
+```python
+query = actor.register_query(type=mochi.QueryType.NODE_POSITIONS)
+scene.step(time_step_sec)
+positions = actor.get_node_positions_local()
+# Use or copy positions before cancelling the query.
+actor.cancel_query(query)
+```
+
+</TabItem>
+</Tabs>
+
+This example uses a synchronous [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html). With the C++ [`AsyncScene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1AsyncScene.html) API, use [`RegisterActorQuery`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1AsyncScene.html) and [`CancelActorQuery`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1AsyncScene.html), and perform support checks and read computed results through [`QueueActorCommand`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1AsyncScene.html); do not access the underlying scene or actors outside callbacks.
+
+## Support and Computation Timing
+
+Query support depends on the concrete actor or constraint. Actors provide [`IsQuerySupported`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) in C++ and [`is_query_supported`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.is_query_supported) in Python; constraints provide the same check through the `Constraint` interface ([C++](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Constraint.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Constraint)). Constraint-force queries are registered on the constraint; actor queries are registered on the actor.
+
+Registered query data is normally populated by the next scene step. Actors also provide [`RegisterQueryAndCompute`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) ([`register_query_and_compute`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.register_query_and_compute) in Python) for query types that can be computed before stepping; the [`Actor`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) reference describes support and timing.
+
+## Handles and Reference Counting
+
+Each successful registration returns a [`QueryHandle`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1QueryHandle.html) scoped to the scene that created it. The handle is an inert token: copying or dropping it neither adds nor releases a registration.
+
+Multiple registrations of the same query type on the same object share one computation. Each registration must be cancelled separately; the data remains available until the last one is cancelled. Losing a handle without cancelling it leaves its registration active until the owning object is destroyed.
+
+## Reading and Retaining Results
+
+A getter requires an active registration and a computed result. Reading before the result is ready or after the final registration is cancelled reports an error.
+
+Registrations persist across steps, and getters expose the current cached result. After directly changing actor state, [`Scene::Step(0)`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) refreshes state-derived actor queries, such as geometry, energy, and deformation, without advancing the simulation. Fresh contact, distance, constraint-force, and controller-force results require a positive time step. If a solver diverges, some results may be unavailable, stale, or inaccurate.
+
+:::warning Result views are non-owning
+Span-like C++ and Python results are views into engine-managed storage. Copy a result into caller-owned memory if it must be retained across a later query update, final cancellation, or destruction of the associated actor, constraint, or scene.
+:::
+
+## Choosing a Query
+
+Choose the least detailed query that supplies the information needed. The [`QueryType`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.QueryType) enum defines the available queries; representative values include:
+
+- **Geometry** queries, such as `NodePositions`, expose simulation-node, surface-mesh, or visual-mesh positions and normals.
+- **Contact** queries include `ContactPoints` for detailed contact records and `TotalContactForce` for aggregate force and torque on supported rigid actors and links or pairwise force from another actor.
+- **Energy and deformation** queries, such as `ElasticEnergy`, expose elastic energy relative to the rest configuration and per-element deformation gradients.
+- **Distance** queries, such as `SdfDistances`, expose signed-distance information at active contact samples.
+- **Constraint and control** queries, such as `ConstraintForce`, expose generalized constraint forces or generalized forces applied by articulated controllers.
+
+Per-query support, getter names, return layouts, units, and caveats are documented in the `Actor` ([C++](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor)) and `Constraint` ([C++](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Constraint.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Constraint)) references. The broad [C++ API reference](../api_reference/cpp.mdx) and [Python API reference](../api_reference/python.mdx) remain available as language-wide indexes.
+
+## Performance Considerations
+
+- Register only the data that is actively needed.
+- Keep recurring queries registered instead of re-registering them every frame.
+- Cancel registrations promptly when their results are no longer needed.
+- Prefer aggregate data, such as total contact force, when detailed spatial results are unnecessary.

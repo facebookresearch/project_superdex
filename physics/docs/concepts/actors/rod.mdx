@@ -1,0 +1,212 @@
+---
+title: Rod
+sidebar_position: 7
+---
+
+# Rod Actors
+
+:::caution Experimental
+Rod actors are part of the **experimental** API. The interface may change without notice.
+:::
+
+Rod actors represent **one-dimensional elastic elements** for simulating cables, ropes, hair strands, tendons, springs, and other slender deformable structures. They are well-suited for any object whose length is much greater than its cross-sectional dimensions. Their centerline geometry is supplied by a polyline [shape](../shapes.mdx#mesh-shapes).
+
+## Formulation
+
+### Continuous Model
+
+Rod actors approximate Kirchhoff rods, for which cross-sections are assumed to remain orthogonal to the centerline throughout deformation.
+This problem is posed on a parametric curve $\mathcal{L}_\mathbf{X}$ parameterized by the mapping $\mathbf{X}(\xi^0)$ from coordinate $\xi^0\in\mathbb{R}$ to position $\mathbf{X}\in\mathbb{R}^3$.
+The curve $\mathcal{L}_\mathbf{X}$ defines the undeformed reference configuration, while the deformed position of $\mathbf{X}(\xi^0)$ is given by $\mathbf{x}(\xi^0)$.
+This can be expressed in terms of a displacement field $\mathbf{u} = \mathbf{x} - \mathbf{X}$.  The geometry of the curve alone cannot express torsion, which is important to the dynamics of the rod.
+It is augmented with a field of frame axes, $\mathbf{E}_1(\xi^0)$, which are orthogonal to the tangent $\mathbf{E}_0(\xi^0) = \mathbf{X}'(\xi^0)$ and deform to $\mathbf{e}_1(\xi^0)$ that are also unit vectors and orthogonal to $\mathbf{e}_0(\xi^0) = \mathbf{x}'(\xi^0)$.
+A third local frame basis vector $\mathbf{E}_2(\xi^0)$ is defined by the cross product $\mathbf{E}_2 = \mathbf{E}_0 \times \mathbf{E}_1 / \Vert \mathbf{E}_0 \times \mathbf{E}_1\Vert_2$ and deforms to $\mathbf{e}_2 = \mathbf{e}_0 \times \mathbf{e}_1 / \Vert\mathbf{e}_0 \times \mathbf{e}_1\Vert_2$.
+The basis vectors $\mathbf{E}_1$ and $\mathbf{E}_2$ define an orthonormal basis of the cross-section, and are assumed to be the principal axes of its geometry, for simplicity, diagonalizing its area moment of inertia tensor.
+We denote normalized unit tangent basis vectors by $\widehat{\mathbf{E}}_0 = \mathbf{E}_0 / \Vert\mathbf{E}_0\Vert_2$ and $\widehat{\mathbf{e}}_0 = \mathbf{e}_0 / \Vert\mathbf{e}_0\Vert_2$.
+
+The kinetic energy of the rod is given by a translational and a rotational contribution:
+$$
+T = \frac{1}{2}\int_{\mathcal{L}_\mathbf{X}} \left(\rho_{L0}\left\Vert\dot{\mathbf{u}}\right\Vert_2^2 + r_{L0}\dot{\theta}^2\right) \,d\mathbf{X}~,
+$$
+where $\rho_{L0}$ is the mass density per unit reference length, $r_{L0}$ is the cross-section rotational inertia per unit reference length, and
+$$
+\dot{\theta} = \mathbf{e}_2\cdot\dot{\mathbf{e}}_1
+$$
+is the temporal twist rate.  This neglects gyroscopic effects, which are negligible in the thin-rod limit where the Kirchhoff-rod kinematic assumptions are appropriate.
+Some rod formulations neglect the rotational inertia altogether, treating twist quasi-statically, but including the given inertia term can be helpful to stabilize rods with unconstrained ends and improve conditioning of algebraic problems.
+
+The elastic potential energy can be expressed in terms of a density per unit reference length
+$$
+U = \int_{\mathcal{L}_\mathbf{X}} W \,d\mathbf{X}~,
+$$
+where the density can be decomposed into stretching, bending, and twisting terms:
+$$
+W = W_{\text{stretch}}(\varepsilon) + W_{\text{bend}}(\bm{\kappa}) + W_{\text{twist}}(\tau)~,
+$$
+where $\varepsilon$, $\bm{\kappa}$, and $\tau$ are stretching, bending, and twisting strain measures.  The stretching strain is the scalar axial component of the Green–Lagrange strain,
+$$
+\varepsilon = \frac{1}{2}\left(\left(\frac{\Vert\mathbf{e}_0\Vert_2}{\Vert\mathbf{E}_0\Vert_2}\right)^2 - 1\right)~.
+$$
+The bending strain is a vector expressing the change in binormal curvature, expressed with respect to the cross-section basis as
+$$
+\kappa_\alpha = \frac{\mathbf{b}\cdot\mathbf{e}_\alpha - \mathbf{B}\cdot\mathbf{E}_\alpha}{\Vert\mathbf{E}_0\Vert_2^2}~,
+$$
+for $\alpha\in\{1,2\}$, where
+$$
+\mathbf{B} = \frac{\mathbf{E}_0\times\mathbf{E}_0'}{\Vert\mathbf{E}_0\Vert_2}~,\qquad \mathbf{b} = \frac{\mathbf{e}_0\times\mathbf{e}_0'}{\Vert\mathbf{e}_0\Vert_2}
+$$
+are the reference and current scaled binormal-curvature vectors.  The twisting strain is the scalar
+$$
+\tau = \frac{\mathbf{e}_2\cdot\mathbf{e}_1' - \mathbf{E}_2\cdot\mathbf{E}_1'}{\Vert\mathbf{E}_0\Vert_2}~.
+$$
+In terms of these strain measures, the energy density terms are then
+$$
+W_\text{stretch} = \frac{1}{2}k_a\varepsilon^2~,\qquad W_\text{bend} = \frac{1}{2}\left(k_{b1}\kappa_1^2 + k_{b2}\kappa_2^2\right)~,\qquad W_\text{twist} = \frac{1}{2}k_t\tau^2~,
+$$
+defining a St. Venant–Kirchhoff-type model for rod deformation.
+
+Mass and stiffness dissipation are given by the dissipation potential
+$$
+R = \int_{\mathcal{L}_\mathbf{X}} \left(\alpha_R\frac{1}{2}\left(\rho_{L0}\left\Vert\dot{\mathbf{u}}\right\Vert_2^2 + r_{L0}\dot{\theta}^2\right) + \beta_R\left(W_\text{stretch}(\dot{\varepsilon}) + W_\text{bend}(\dot{\bm{\kappa}}) + W_\text{twist}(\dot{\tau})\right)\right)\,d\mathbf{X}~,
+$$
+where $\alpha_R$ and $\beta_R$ are mass and stiffness dissipation coefficients. This potential is the natural rod generalization of the [soft-actor dissipation model](./soft/overview.mdx#continuous-model).
+
+### Linearized Increments
+
+The configuration space $(\mathbf{x}(\xi^0),\mathbf{e}_1(\xi^0))$ is a nonlinear manifold.  The tangent space can be parameterized by $(\Delta\mathbf{u}(\xi^0),\Delta\theta(\xi^0))$, where $\Delta\mathbf{u}$ is a displacement increment and $\Delta\theta$ is a scalar twist angle increment.
+SuperDex Physics formulates variations of the energy with respect to this tangent space and solves for solution increments there, which are applied to the configuration manifold by a retraction map that adds the displacement $\Delta\mathbf{u}$ to the centerline and updates directors by composing the minimum rotation pushing the tangent forward (parallel transport) with a scalar rotation by $\Delta\theta$ about the tangent.
+(The parallel transport and scalar rotation commute when the scalar rotation is about the appropriate tangent, and can be done in either order.)
+
+### Parameter Selection
+
+The parameters $\rho_{L0}$, $r_{L0}$, $k_a$, $k_{b1}$, $k_{b2}$, and $k_t$ can represent general rod responses and need not correspond to a homogeneous three-dimensional material.  In the special case of a rod made of a homogeneous isotropic material with Young's modulus $E$, shear modulus $G$, and mass density per unit reference volume $\rho_0$, they can be calculated from the cross-sectional area $A$, principal area moments of inertia $I_1$ and $I_2$, polar area moment of inertia $J = I_1 + I_2$, and torsion constant $J_t$:
+$$
+\rho_{L0} = \rho_0 A~,
+\qquad
+r_{L0} = \rho_0 J~,
+\qquad
+k_a = EA~,
+\qquad
+k_{b1} = EI_1~,
+\qquad
+k_{b2} = EI_2~,
+\qquad
+k_t = GJ_t~.
+$$
+For circular cross-sections, $J_t = J$; for general cross-sections, the torsion constant differs from the polar area moment of inertia.
+It can be derived by solving for a Prandtl stress function, but values for common shapes are tabulated in engineering handbooks.
+
+:::note Cross-Section Formulas for Circular Rods
+For the common case of a rod with a circular cross-section of radius $r$:
+
+| Quantity | Formula |
+|----------|---------|
+| Area $A$ | $\pi r^2$ |
+| Polar area moment of inertia $J$ | $\frac{1}{2} \pi r^4$ |
+| Second area moment of inertia $I$ | $\frac{1}{4} \pi r^4$ |
+| Torsion constant $J_t$ | $\frac{1}{2} \pi r^4$ |
+:::
+
+The stiffness-dissipation coefficient $\beta_R$ can be taken directly from a three-dimensional material, while the mass-dissipation coefficient $\alpha_R$ can be tuned empirically to model effects such as drag from the surrounding medium.
+
+### Discretization
+
+The reference centerline is discretized as a polyline with nodes $\mathbf{X}_i$, deformed positions $\mathbf{x}_i$, and one material frame per edge.  Let
+$$
+\mathbf{E}_i = \mathbf{X}_{i+1} - \mathbf{X}_i~,
+\qquad
+\mathbf{e}_i = \mathbf{x}_{i+1} - \mathbf{x}_i~,
+\qquad
+L_i = \Vert\mathbf{E}_i\Vert_2~,
+\qquad
+l_i = \Vert\mathbf{e}_i\Vert_2~.
+$$
+The first reference and current directors on edge $i$ are denoted by $\mathbf{A}_i$ and $\mathbf{a}_i$, respectively; these are the discrete counterparts of the continuous fields $\mathbf{E}_1$ and $\mathbf{e}_1$.  The displacement is interpolated linearly, giving the constant axial strain $\varepsilon_i = \frac{1}{2}((l_i/L_i)^2 - 1)$ on each edge.  Translational mass is lumped to the nodes, while rotational inertia and the scalar twist degrees of freedom are associated with the edge frames.
+
+Bending and twisting are evaluated at each interior vertex using its two adjacent edges.  Define the reference and current dual lengths $\overline{L}_i = (L_{i-1}+L_i)/2$ and $\overline{l}_i = (l_{i-1}+l_i)/2$, and the integrated curvature binormal function from [Bergou et al. (2008)](#references)
+$$
+\overline{\mathbf{k}}(\widehat{\mathbf{t}}_0,\widehat{\mathbf{t}}_1)
+= \frac{2\widehat{\mathbf{t}}_0\times\widehat{\mathbf{t}}_1}{1+\widehat{\mathbf{t}}_0\cdot\widehat{\mathbf{t}}_1}
+$$
+operating on two unit vectors $\widehat{\mathbf{t}}_0$ and $\widehat{\mathbf{t}}_1$.
+The discrete counterparts of the scaled binormal curvatures in the continuous model are
+$$
+\mathbf{B}_i^h = \frac{1}{\overline{L}_i}\overline{\mathbf{k}}(\widehat{\mathbf{E}}_{i-1},\widehat{\mathbf{E}}_i)~,
+\qquad
+\mathbf{b}_i^h = \frac{\overline{l}_i}{\overline{L}_i^2}\overline{\mathbf{k}}(\widehat{\mathbf{e}}_{i-1},\widehat{\mathbf{e}}_i)~.
+$$
+The adjacent edge frames are minimum-rotation transported to the averaged vertex tangent and averaged there to obtain the vertex directors $\mathbf{E}_{\alpha i}^h$ and $\mathbf{e}_{\alpha i}^h$.  The bending strains are then
+$$
+\kappa_{\alpha i}^h = \mathbf{b}_i^h\cdot\mathbf{e}_{\alpha i}^h - \mathbf{B}_i^h\cdot\mathbf{E}_{\alpha i}^h~,
+\qquad \alpha\in\{1,2\}~.
+$$
+
+For twist, let $\mathbf{a}_{i-1}^{\to i}$ and $\mathbf{a}_i^{\to i}$ denote the adjacent first directors transported to the averaged current tangent $\widehat{\mathbf{e}}_i^h$, with reference counterparts $\mathbf{A}_{i-1}^{\to i}$, $\mathbf{A}_i^{\to i}$, and $\widehat{\mathbf{E}}_i^h$.  The discrete twist strain is
+$$
+\tau_i^h = \frac{1}{\overline{L}_i}\left(
+\overline{\mathbf{k}}(\mathbf{a}_{i-1}^{\to i},\mathbf{a}_i^{\to i})\cdot\widehat{\mathbf{e}}_i^h
+-
+\overline{\mathbf{k}}(\mathbf{A}_{i-1}^{\to i},\mathbf{A}_i^{\to i})\cdot\widehat{\mathbf{E}}_i^h
+\right)~.
+$$
+The continuous energies are integrated by multiplying the edge stretching density by $L_i$ and the vertex bending and twisting densities by $\overline{L}_i$.  Because $\overline{\mathbf{k}}$ diverges as its arguments approach opposite directions, the bending energy forms a barrier against folding the centerline through $180^\circ$, and the twisting energy similarly forms a barrier against $180^\circ$ relative twist between adjacent frames.  The implementation regularizes the denominator at finite precision.
+
+## Parameters Reference
+
+Pass `RodActorParams` to the experimental free function `CreateRodActor` / `create_rod_actor`; unlike standard actor types, rods are not created through a [`Scene`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) method.
+
+### `RodActorParams`
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `DynamicString` | `""` | Actor name for identification. |
+| `layer` | `DynamicString` | `""` | Contact layer name. |
+| `worldFromLocal` | [`TransformRT`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1TransformRT.html) | Identity | Transform from local (shape) space to world space. |
+| `shape` | [`ShapeHandle`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ShapeHandle.html) | -- | Polyline shape defining the rod centerline. **Required.** |
+| `contact` | [`ContactParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ContactParams.html) | Default | Contact properties. |
+| `contactElementType` | `ActorSegmentElementType` | `Default` (`P1Q3`) | Contact sampling along centerline segments. |
+| `material` | `RodMaterialParams` | Default | Material properties (see below). |
+| `colliderType` | `ColliderType` | `None` | `PointCloud` or `Auto` enables a point-cloud collider. |
+| `pointCloudCollider` | `PointCloudColliderParams` | Default | [Point-cloud collider parameters](../contact.md#pointcloudcolliderparams) shared with shell actors. |
+| `hasGravity` | `bool` | `true` | Whether the rod is affected by scene gravity. |
+| `useVisualMeshContact` | `bool` | `false` | Samples contact on the visual mesh instead of the centerline. |
+| `visualMeshContactElementType` | `ActorBoundaryElementType` | `Default` | Contact sampling on the visual mesh. |
+
+### `RodMaterialParams`
+
+See [Parameter Selection](#parameter-selection) for formulas relating these parameters to homogeneous three-dimensional materials.
+
+| Parameter | Type | Default | Units | Description |
+|-----------|------|---------|-------|-------------|
+| `linearDensity` | `real` | `1e-1` | kg/m | Mass per unit undeformed length $\rho_{L0}$. |
+| `linearRotationalInertia` | `real` | `1e-6` | kg&middot;m | Rotational inertia about the rod axis per unit length $r_{L0}$. |
+| `axialStiffness` | `real` | `1e2` | N | Axial stiffness $k_a$. |
+| `torsionalStiffness` | `real` | `5e-4` | N&middot;m² | Torsional stiffness $k_t$. |
+| `flexuralStiffness` | `Real2` | `[5e-4, 5e-4]` | N&middot;m² | Flexural stiffnesses $[k_{b1}, k_{b2}]$ about the two principal axes. |
+| `massDampingCoefficient` | `real` | `0` | 1/s | Mass-proportional damping coefficient $\alpha_R$. |
+| `stiffnessDampingCoefficient` | `real` | `0` | s | Stiffness-proportional damping coefficient $\beta_R$. |
+
+## Contact
+
+By default, a rod's colliding samples lie along its centerline. For rods with an embedded triangular visual mesh, `useVisualMeshContact` instead places those samples on that surface and transmits contact forces to the rod DoFs through the skinning Jacobian. This mode requires a shape with both a visual mesh and embedding data.
+
+Rods have no collider by default. Set `colliderType` to `PointCloud` or `Auto` to enable a [point-cloud collider](../contact.md#double-integral-generalization), whose collider integral is taken over the centerline. See [Contact Roles](../contact.md#contact-roles) for the distinction between colliding samples and colliders.
+
+## Examples
+
+- **[Mass on Rod Spring](../../examples/tendons_rods/mass_on_rod_spring.md)**: hangs a rigid mass from a helical spring, exercising curved reference geometry and bend-twist coupling, and derives constraint stiffnesses from the rod's own stiffness coefficients by dimensional analysis.
+  - Python example — `examples/example_mass_on_rod_spring.py`
+- **[Choosing a Tendon Model](../../examples/tendons_rods/tendon_model_fidelity.md)**: compares a contact-routed rod tendon with reduced spatial-tendon and linear-transmission models, including tubular visual-mesh contact and rod endpoint constraints.
+  - Python example — `examples/example_tendon_comparison.py`
+
+## Related Concepts
+
+- [Shapes](../shapes.mdx) — How to create and load polyline shapes for rod actors.
+- [Soft Actors](./soft/overview.mdx) — Volumetric deformable bodies (3D counterpart to 1D rods).
+- [Solvers](../solvers.md) — Newton solver, linear solvers, and line search methods used to integrate the rod dynamics.
+- [Constraints](../constraints.mdx) — Constraint types available for coupling rods with other actors.
+- [Transmissions](../transmissions.mdx) — Reduced scalar models for tendon routing and actuation.
+
+## References
+
+- M. Bergou, M. Wardetzky, S. Robinson, B. Audoly, and E. Grinspun, [Discrete Elastic Rods](https://doi.org/10.1145/1399504.1360662), *ACM SIGGRAPH 2008 Papers*, Article 63, 2008.

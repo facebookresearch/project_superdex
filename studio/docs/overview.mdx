@@ -1,0 +1,38 @@
+---
+title: Overview
+sidebar_label: Overview
+sidebar_position: 1
+slug: /overview
+---
+
+import FeatureVideo from '@site/src/components/FeatureVideo';
+import {FigureNote} from '@site/src/components/Figure';
+
+# SuperDex Studio
+
+SuperDex Studio is the **content authoring tool** for SuperDex. Robots, task
+objects, and scenes are authored here, to production and simulation-ready
+quality.
+
+<FeatureVideo
+  src="../../img/SuperDex_Studio_feature_short.mp4"
+  poster="../../img/SuperDex_Studio_feature_short_poster.jpg"
+  alt="SuperDex Studio feature overview"
+/>
+
+{/* Expression child, not markdown: keeps the leading asterisk literal and stops
+    MDX wrapping the text in its own <p> inside the note's <p>. */}
+<FigureNote>
+  {'*Some of the shown features will be part of future SuperDex Studio releases.'}
+</FigureNote>
+
+## What's Here
+
+| Guide | What it covers |
+|-------|----------------|
+| [Getting Started](./getting_started.mdx) | Installing SuperDex and building SuperDex Studio from source. |
+| [User Interface](./user_interface.mdx) | The window map: viewport camera and gizmos, Asset Browser, Log Console, hierarchy and details panels, docking, and undo. |
+| [Bot Editor](./bot_editor/index.mdx) | Importing, editing, simulating, visualizing, modifying, and controlling bots. |
+| [Prefab Editor](./prefab_editor.mdx) | Composing rigid, soft, articulated, and nested actors into a prefab. |
+| [Model Editor](./model_editor.mdx) | The modifier stack: refine, wrap, remesh, and bake SDFs. |
+| [SuperDex CAD Exporter](./cad_exporter/index.mdx) | The SolidWorks and Siemens NX exporter plugins. |

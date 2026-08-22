@@ -1,0 +1,170 @@
+---
+title: Loading a Scene
+sidebar_label: Loading a Scene
+sidebar_position: 2
+---
+
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
+
+# Loading a Scene
+
+Assembles a workcell out of independent pieces rather than loading one monolithic
+scene file: two arm-and-hand bots, each placed at its own root transform and
+started in its own joint pose, plus a task
+<ProjectSuperdexLink site="studio" path="docs/prefab_editor/#what-is-a-prefab">prefab</ProjectSuperdexLink>
+(a box of blocks) positioned in front of them.
+
+**Source**: `examples/basic/example_scene_loading.py`
+
+## Key Concepts
+
+The two halves come from different kinds of asset. A `.superdex_bot` is a robot
+description, loaded into a prefab whose placement (`world_from_root`) and
+starting joint angles (`default_pose`) you set before instantiating it. A
+`.mochi_prefab` is a bundle of scene geometry, added straight to the scene with
+its own placement. The two are independent; the scene is simply their sum.
+
+### Describing each bot's placement
+
+Each bot needs an asset, a world-from-root transform (rotation and translation),
+and a starting joint pose (one angle per DOF, in radians). A small named tuple
+keeps those together: the rotation is a world-from-root quaternion in XYZW order
+and the translation is a position in meters. The two bots face each other across
+the workspace, mounted at the same height:
+
+```python
+class BotPlacement(NamedTuple):
+    asset: str
+    rotation: list[float]
+    translation: list[float]
+    initial_pose: list[float]
+
+
+BOTS = (
+    BotPlacement(
+        asset="bots/arm_hand_combos/fr3_dg5f_short/left/fr3_dg5f_short_left.superdex_bot",
+        rotation=[-0.436878, 0.022288, -0.242939, 0.865807],
+        translation=[-0.773603, 0.050683, 0.650259],
+        initial_pose=[0.130710, -1.414085, ...],
+    ),
+    BotPlacement(
+        asset="bots/arm_hand_combos/fr3_dg5f_short/right/fr3_dg5f_short_right.superdex_bot",
+        rotation=[0.436878, 0.022288, 0.242939, 0.865807],
+        translation=[-0.773602, -0.050681, 0.650259],
+        initial_pose=[-0.194073, -1.600604, ...],
+    ),
+)
+```
+
+The task prefab is a box holding a pile of loose blocks for the robots to work
+on. It is authored with its long axis along its own X and all of its contents in
+the positive octant, so it is yawed 90 degrees about world Z to face the robots
+and then shifted back along Y (that yaw puts the prefab's own X along world Y) to
+bring the box in front of them:
+
+```python
+TASK_PREFAB = "prefabs/box_and_blocks/box_and_blocks.mochi_prefab"
+TASK_PREFAB_YAW = math.radians(90.0)
+TASK_PREFAB_OFFSET_Y = -0.25
+```
+
+### Initializing the engine and scene
+
+Initialize the physics engine before creating scenes or actors.
+`num_worker_threads=0` runs single-threaded; pass `-1` to auto-select. SuperDex
+robots use a Z-up convention, so gravity points down the -Z axis:
+
+```python
+physics.initialize(num_worker_threads=0)
+
+scene = physics.create_scene("Scene Loading Example")
+scene.set_gravity([0, 0, -9.81])
+
+plane_shape = physics.create_plane_shape(normal=[0, 0, 1], distance=0)
+scene.create_rigid_actor(name="ground", shape=plane_shape, is_static=True)
+```
+
+### Placing the bots
+
+Each bot is loaded from its own `.superdex_bot` file into a prefab. Placement and
+starting pose are fields on that prefab, so set them before creating the bot:
+`create_bot` builds the articulated actor at `world_from_root` and seeds it with
+`default_pose`. The robotics context tracks every bot you create:
+
+```python
+robotics_context = robotics.create_context()
+bots = []
+for placement in BOTS:
+    bot_prefab = robotics.load_bot_prefab_from_file(
+        str(resolve_asset(placement.asset))
+    )
+    bot_prefab.world_from_root = physics.TransformRT(
+        rotation=placement.rotation,
+        translation=placement.translation,
+    )
+    bot_prefab.default_pose = placement.initial_pose
+
+    bot = robotics.create_bot(scene, bot_prefab, robotics_context)
+    bots.append(bot)
+```
+
+### Adding the task prefab
+
+A `.mochi_prefab` drops a whole bundle of actors into the scene in one call.
+`PrefabParams` carries its placement and a name prefix, so the actors land as
+`"box_and_blocks/<actor name>"`. Paths inside the prefab resolve against
+`root_path`:
+
+```python
+prefab_result = physics.prefab.add_to_scene(
+    prefab_path=str(resolve_asset(TASK_PREFAB)),
+    root_path=assets_root,
+    scene=scene,
+    params=physics.prefab.PrefabParams(
+        name="box_and_blocks",
+        rotation=physics.Quaternion.rotation_z(TASK_PREFAB_YAW),
+        translation=[0.0, TASK_PREFAB_OFFSET_Y, BOTS[0].translation[2]],
+    ),
+)
+```
+
+### Simulating with the debugger
+
+Simulate at 200 Hz (each step advances 1/200 of a second). Nothing is driving the
+arms (this example is only about getting the scene assembled), so they are free
+to fall under gravity along with the blocks:
+
+```python
+time_step = 1.0 / 200.0
+```
+
+Declare the scene's coordinate convention so the debugger renders it the right
+way up: SuperDex is X-forward, Y-left, Z-up (FLU). This must come before
+`attach()`, which starts the server. The loop then runs until you close the
+debugger; `attach()` returns `False` if it can't connect:
+
+```python
+physics.get_debug_server().set_coordinate_space(
+    physics.CoordinateSpace(axes=physics.CoordinateSpaceAxes.FLU)
+)
+
+if physics.debugger.attach():
+    while physics.debugger.is_attached():
+        scene.step(time_step)
+```
+
+### Teardown
+
+Destroy the bots, then shut the engine down cleanly:
+
+```python
+for bot in bots:
+    robotics.destroy_bot(scene, bot)
+physics.shutdown()
+```
+
+## Running
+
+```bash
+uv run python superdex_robotics/examples/basic/example_scene_loading.py
+```
