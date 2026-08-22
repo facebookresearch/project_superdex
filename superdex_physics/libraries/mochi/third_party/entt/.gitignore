@@ -1,0 +1,13 @@
+# Conan
+conan/test_package/build
+
+# IDEs
+*.user
+.idea
+.vscode
+.vs
+CMakeSettings.json
+cpp.hint
+
+# Bazel
+/bazel-*

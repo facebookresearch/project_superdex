@@ -1,0 +1,8 @@
+# Robot Exporter Help Map File
+# Format: <contextName> = <type> <URL>
+# Types: HTML (web page), TEXT (text file path)
+#
+# When the user presses F1 or clicks the ? button in the dialog,
+# NX will open the URL associated with the active context.
+
+robotexporter:MainDialog = HTML https://facebookresearch.github.io/project_superdex/studio/docs/cad_exporter/

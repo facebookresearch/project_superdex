@@ -1,0 +1,71 @@
+material {
+    name : FlatLitOpaque,
+    shadingModel : lit,
+    parameters : [
+        {
+            type : float3,
+            name : baseColor
+        },
+        {
+            type : float,
+            name : roughness
+        },
+        {
+            type : float,
+            name : metallic
+        },
+        {
+            type : float,
+            name : reflectance
+        },
+        {
+            type : float3,
+            name : sheenColor
+        },
+        {
+            type : float,
+            name : sheenRoughness
+        },
+        {
+            type : float,
+            name : clearCoat
+        },
+        {
+            type : float,
+            name : clearCoatRoughness
+        },
+        {
+            type : float,
+            name : anisotropy
+        },
+        {
+            type : float4,
+            name : emissive
+        }
+    ],
+    specularAntiAliasing : true,
+    doubleSided : true
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        vec3 dpdx = dFdx(getWorldPosition());
+        vec3 dpdy = dFdy(getWorldPosition());
+        vec3 flatWorldNormal = normalize(cross(dpdx, dpdy));
+        if (dot(flatWorldNormal, getWorldViewVector()) < 0.0) {
+            flatWorldNormal = -flatWorldNormal;
+        }
+        material.normal = normalize(flatWorldNormal * getWorldTangentFrame());
+        prepareMaterial(material);
+        material.baseColor.rgb = materialParams.baseColor;
+        material.roughness = materialParams.roughness;
+        material.metallic = materialParams.metallic;
+        material.reflectance = materialParams.reflectance;
+        material.sheenColor = materialParams.sheenColor;
+        material.sheenRoughness = materialParams.sheenRoughness;
+        material.clearCoat = materialParams.clearCoat;
+        material.clearCoatRoughness = materialParams.clearCoatRoughness;
+        material.anisotropy = materialParams.anisotropy;
+        material.emissive = materialParams.emissive;
+    }
+}

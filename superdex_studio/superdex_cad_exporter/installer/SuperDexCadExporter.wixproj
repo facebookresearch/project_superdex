@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (c) Meta Platforms, Inc. and affiliates.
+
+     This source code is licensed under the MIT license found in the
+     LICENSE file in the root directory of this source tree. -->
+<Project Sdk="WixToolset.Sdk/6.0.2">
+
+  <PropertyGroup>
+    <OutputName>SuperDexCadExporterSetup</OutputName>
+    <OutputType>Package</OutputType>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <OutputPath>output\</OutputPath>
+    <IntermediateOutputPath>obj\</IntermediateOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <CommitVersion Condition="'$(CommitVersion)' == ''">unknown</CommitVersion>
+    <ExporterBinDir Condition="'$(ExporterBinDir)' == ''">$(MSBuildThisFileDirectory)..\bin\x64\Release</ExporterBinDir>
+    <DefineConstants>BinDir=$(ExporterBinDir);CommitVersion=$(CommitVersion)</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="6.0.2" />
+  </ItemGroup>
+
+  <Target Name="EnsureExporterBuilt" BeforeTargets="BeforeBuild">
+    <Error Condition="!Exists('$(ExporterBinDir)\SuperDexCADExporter.dll')"
+           Text="$(ExporterBinDir)\SuperDexCADExporter.dll not found. Build SolidWorksRobotExporter (Release|x64) before building the installer." />
+  </Target>
+
+</Project>

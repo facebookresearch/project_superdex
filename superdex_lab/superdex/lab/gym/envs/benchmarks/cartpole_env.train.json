@@ -1,0 +1,7 @@
+{
+  "description": "Training recipe for the CartPole benchmark env. PPO is the recommended workflow. SAC uses the experimental shared baseline.",
+  "stop_criteria": {
+    "episode_return_mean": 1000,
+    "num_env_steps_sampled_lifetime": 1000000
+  }
+}

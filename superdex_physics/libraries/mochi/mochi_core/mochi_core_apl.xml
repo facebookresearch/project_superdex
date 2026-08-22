@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root xmlns:android="http://schemas.android.com/apk/res/android">
+	<!-- optional files or directories to copy to Intermediate/Android/APK -->
+	<resourceCopies>
+		<copyFile src="$S(PluginDir)/libmarl.so" dst="$S(BuildDir)/libs/arm64-v8a/libmarl.so" />
+    <copyFile src="$S(PluginDir)/libtracy_fibers_ondemand_shared.so" dst="$S(BuildDir)/libs/arm64-v8a/libtracy_fibers_ondemand_shared.so" />
+	</resourceCopies>
+
+	<!-- optional libraries to load in GameActivity.java before libUE5.so -->
+	<soLoadLibrary>
+		<loadLibrary name="libmarl.so" failmsg="Failed to load libmarl.so" />
+        <loadLibrary name="libtracy_fibers_ondemand_shared.so" failmsg="Failed to load libtracy_fibers_ondemand_shared.so" />
+	</soLoadLibrary>
+</root>

@@ -1,0 +1,466 @@
+{
+  "actors": {
+    "articulated": [
+      {
+        "joints": [
+          {
+            "axis": [
+              1,
+              0,
+              0
+            ],
+            "name": "RootX",
+            "type": "Prismatic"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "name": "RootZ",
+            "type": "Prismatic"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              -1
+            ],
+            "name": "Torso",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0,
+                0,
+                1,
+                -1.2688052254610913e-08
+              ],
+              "translation": [
+                1.192092875523798e-07,
+                0.6999999880790571,
+                0
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              -1
+            ],
+            "friction": {
+              "viscous": 6
+            },
+            "inertia": 1,
+            "limitDamping": 100,
+            "maxLimit": [
+              0,
+              0,
+              -1.0499999523162842
+            ],
+            "minLimit": [
+              0,
+              0,
+              0.51999998092651367
+            ],
+            "name": "BackThigh",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0,
+                0,
+                0.8977354352906306,
+                0.44053500226831255
+              ],
+              "translation": [
+                0.9999997186902765,
+                -7.420393424370508e-08,
+                0
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              -1
+            ],
+            "friction": {
+              "viscous": 4.5
+            },
+            "inertia": 1,
+            "limitDamping": 100,
+            "maxLimit": [
+              0,
+              0,
+              -0.7850000262260437
+            ],
+            "minLimit": [
+              0,
+              0,
+              0.7850000262260437
+            ],
+            "name": "BackShin",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0,
+                0,
+                -0.77391497487524441,
+                0.63328951646450771
+              ],
+              "translation": [
+                0.27662759482912175,
+                -0.02596487310352273,
+                0
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              -1
+            ],
+            "friction": {
+              "viscous": 3
+            },
+            "inertia": 1,
+            "limitDamping": 100,
+            "maxLimit": [
+              0,
+              0,
+              -0.7850000262260437
+            ],
+            "minLimit": [
+              0,
+              0,
+              0.40000000596046448
+            ],
+            "name": "BackFoot",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0,
+                0,
+                -0.77073887003044861,
+                0.63715115492651131
+              ],
+              "translation": [
+                0.3065232056884912,
+                0.0006955915910619725,
+                0
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              -1
+            ],
+            "friction": {
+              "viscous": 4.5
+            },
+            "inertia": 1,
+            "limitDamping": 100,
+            "maxLimit": [
+              0,
+              0,
+              -0.69999998807907104
+            ],
+            "minLimit": [
+              0,
+              0,
+              1
+            ],
+            "name": "FrontThigh",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0,
+                0,
+                -0.86512429861469542,
+                0.50155752207142834
+              ],
+              "translation": [
+                -7.26217400659479e-08,
+                -1.103663616608408e-07,
+                0
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              -1
+            ],
+            "friction": {
+              "viscous": 3
+            },
+            "inertia": 1,
+            "limitDamping": 100,
+            "maxLimit": [
+              0,
+              0,
+              -0.87000000476837158
+            ],
+            "minLimit": [
+              0,
+              0,
+              1.2000000476837158
+            ],
+            "name": "FrontShin",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0,
+                0,
+                0.53118618411569773,
+                0.8472551196685707
+              ],
+              "translation": [
+                -0.005919927332948549,
+                0.001121697447509451,
+                0
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              -1
+            ],
+            "friction": {
+              "viscous": 1.5
+            },
+            "inertia": 1,
+            "limitDamping": 100,
+            "maxLimit": [
+              0,
+              0,
+              -0.5
+            ],
+            "minLimit": [
+              0,
+              0,
+              0.5
+            ],
+            "name": "FrontFoot",
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.004981965151114265,
+                -0.002828989484707667,
+                0
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "name": "Head",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0,
+                0,
+                -0.9392361167743869,
+                0.34327178291635069
+              ],
+              "translation": [
+                0.49999995356259747,
+                -1.0008800038763255e-07,
+                0
+              ]
+            },
+            "type": "Hard"
+          }
+        ],
+        "links": [
+          {
+            "colliderType": "None",
+            "layer": "HalfCheetah",
+            "name": "RootX"
+          },
+          {
+            "colliderType": "None",
+            "layer": "HalfCheetah",
+            "name": "RootZ",
+            "parentLink": 0
+          },
+          {
+            "colliderType": "None",
+            "layer": "HalfCheetah",
+            "mass": 4.6999998092651367,
+            "name": "Torso",
+            "parentJointFromLink": {
+              "translation": [
+                -0.4999998211860657,
+                7.22926785101663e-08,
+                0
+              ]
+            },
+            "parentLink": 1,
+            "shape": "benchmarks/half_cheetah/mesh_000.mochi.h5"
+          },
+          {
+            "colliderType": "None",
+            "layer": "HalfCheetah",
+            "mass": 1.5,
+            "name": "BackThigh",
+            "parentJointFromLink": {
+              "translation": [
+                0.019011590629816055,
+                -0.00044474704191088676,
+                0
+              ]
+            },
+            "parentLink": 2,
+            "shape": "benchmarks/half_cheetah/mesh_001.mochi.h5"
+          },
+          {
+            "colliderType": "None",
+            "layer": "HalfCheetah",
+            "mass": 1.6000000238418579,
+            "name": "BackShin",
+            "parentJointFromLink": {
+              "translation": [
+                0.006523186340928078,
+                0.0006955759599804878,
+                0
+              ]
+            },
+            "parentLink": 3,
+            "shape": "benchmarks/half_cheetah/mesh_002.mochi.h5"
+          },
+          {
+            "colliderType": "None",
+            "layer": "HalfCheetah",
+            "mass": 1.1000000238418579,
+            "name": "BackFoot",
+            "parentJointFromLink": {
+              "translation": [
+                -0.19548772275447845,
+                -0.0030401796102523804,
+                0
+              ]
+            },
+            "parentLink": 4,
+            "shape": "benchmarks/half_cheetah/mesh_003.mochi.h5"
+          },
+          {
+            "colliderType": "None",
+            "layer": "HalfCheetah",
+            "mass": 1.3999999761581421,
+            "name": "FrontThigh",
+            "parentJointFromLink": {
+              "translation": [
+                -0.2719199061393738,
+                0.0011217296123504639,
+                0
+              ]
+            },
+            "parentLink": 2,
+            "shape": "benchmarks/half_cheetah/mesh_004.mochi.h5"
+          },
+          {
+            "colliderType": "None",
+            "layer": "HalfCheetah",
+            "mass": 1.2000000476837158,
+            "name": "FrontShin",
+            "parentJointFromLink": {
+              "translation": [
+                -0.21698196232318878,
+                -0.0028290152549743652,
+                0
+              ]
+            },
+            "parentLink": 6,
+            "shape": "benchmarks/half_cheetah/mesh_005.mochi.h5"
+          },
+          {
+            "colliderType": "None",
+            "layer": "HalfCheetah",
+            "mass": 0.89999997615814209,
+            "name": "FrontFoot",
+            "parentJointFromLink": {
+              "translation": [
+                -0.15318238735198975,
+                0.002384871244430542,
+                0
+              ]
+            },
+            "parentLink": 7,
+            "shape": "benchmarks/half_cheetah/mesh_006.mochi.h5"
+          },
+          {
+            "colliderType": "None",
+            "layer": "HalfCheetah",
+            "mass": 1.6000000238418579,
+            "name": "Head",
+            "parentJointFromLink": {
+              "translation": [
+                0.3730800449848175,
+                -0.3104630410671234,
+                0
+              ]
+            },
+            "parentLink": 2,
+            "shape": "benchmarks/half_cheetah/mesh_007.mochi.h5"
+          }
+        ],
+        "name": "HalfCheetah"
+      }
+    ]
+  },
+  "contactFilter": {
+    "layerContactSymmetric": [
+      {
+        "enable": false,
+        "layers": [
+          "HalfCheetah",
+          "HalfCheetah"
+        ]
+      }
+    ]
+  },
+  "controllers": [
+    {
+      "articulatedActor": "HalfCheetah",
+      "jointTracking": [
+        {},
+        {},
+        {},
+        {
+          "damping": 3,
+          "stiffness": 240
+        },
+        {
+          "damping": 3,
+          "stiffness": 180
+        },
+        {
+          "damping": 3,
+          "stiffness": 120
+        },
+        {
+          "damping": 3,
+          "stiffness": 180
+        },
+        {
+          "damping": 3,
+          "stiffness": 120
+        },
+        {
+          "damping": 3,
+          "stiffness": 60
+        },
+        {}
+      ]
+    }
+  ],
+  "scene": {
+    "description": "Half Cheetah robot, replica of the Gymnasium example built with MuJoCo."
+  }
+}

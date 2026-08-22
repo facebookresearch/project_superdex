@@ -1,0 +1,37 @@
+material {
+    name : HighlightComposite,
+    shadingModel : unlit,
+    // Premultiplied-alpha over operator: result = src.rgb + (1 - src.a) * dst. The fragment must
+    // premultiply baseColor.rgb by alpha. Lets a fullscreen pass blend a highlight-color image over
+    // the already-rendered scene at a global opacity (opacity 0 = fully transparent).
+    blending : transparent,
+    culling : none,
+    depthWrite : false,
+    depthCulling : false,
+    requires : [uv0],
+    parameters : [
+        {
+            // The highlight overlay render: highlight color where a selected mesh was drawn
+            // (alpha 1), transparent (alpha 0) elsewhere.
+            type : sampler2d,
+            name : sourceTexture
+        },
+        {
+            // Global opacity applied to the overlay when compositing it over the scene.
+            type : float,
+            name : alpha
+        }
+    ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        float2 uv = getUV0();
+        float4 src = texture(materialParams_sourceTexture, uv);
+        float a = src.a * materialParams.alpha;
+        // Premultiplied output for `transparent` blending: rgb scaled by alpha so opacity 0 is fully
+        // transparent (rgb contributes nothing) rather than additively blending the color.
+        material.baseColor = float4(src.rgb * a, a);
+    }
+}

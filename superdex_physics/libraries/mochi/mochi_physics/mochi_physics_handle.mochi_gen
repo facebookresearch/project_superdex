@@ -1,0 +1,77 @@
+// @brief Default value for an invalid handle.
+constant uint64 kInvalidHandle = 0;
+
+// @brief Generic 64-bit handle providing base functionality for strongly-typed handles.
+struct Handle [equality, sortable, hashable] {
+  // @brief Raw 64-bit identifier type.
+  using ValueType = uint64;
+
+  // @brief Raw 64-bit identifier. Zero indicates an invalid handle.
+  ValueType value = kInvalidHandle;
+
+  // @brief Construct a handle from its raw 64-bit identifier.
+  // @param[in] raw The raw handle identifier.
+  ctor Handle(ValueType raw);
+
+  // @brief Check whether the handle is valid (i.e., its value is non-zero).
+  // @return True if the handle is valid, false otherwise.
+  fn IsValid() -> bool [const];
+
+  // @brief Compute a hash of the handle for use in unordered containers.
+  // @return The hash of the handle's raw identifier.
+  fn GetHash() -> uint64 [const];
+}
+
+// @brief Unique identifier for a @ref Scene within a @ref Context.
+struct SceneHandle(Handle) {}
+
+// @brief Unique identifier for an @ref Actor within a @ref Scene.
+//
+// @note An @ref ActorHandle can only be used with the @ref Scene that created it.
+// @note Creating and destroying many actors in the same scene may eventually cause an
+// @ref ActorHandle value from a previously destroyed actor to be re-used.
+struct ActorHandle(Handle) {}
+
+// @brief Handle to a shape (mesh, sphere, plane, etc.) within a @ref Context.
+//
+// @details The shape remains in memory while referenced by any handle, actor, or file cache entry.
+// In C++ and Python, @ref ShapeHandle is reference-counted and releases its reference automatically
+// when destroyed. In the C API, you must call @ref Context::ReleaseShape when done with the handle.
+//
+// @see Context::ReleaseShape
+struct ShapeHandle(Handle) [no_cpp_definition] {}
+
+// @brief Unique identifier for a callback registration within a @ref Scene.
+//
+// @note A @ref CallbackHandle can only be used with the @ref Scene that created it.
+struct CallbackHandle(Handle) {}
+
+// @brief Unique identifier for a @ref Constraint within a @ref Scene.
+//
+// @note A @ref ConstraintHandle can only be used with the @ref Scene that created it.
+// @note Creating and destroying many constraints in the same scene may eventually cause a
+// @ref ConstraintHandle value from a previously destroyed constraint to be re-used.
+struct ConstraintHandle(Handle) {}
+
+// @brief Unique identifier for a captured simulation state within a @ref Scene.
+//
+// @note A @ref StateHandle can only be used with the @ref Scene that created it.
+//
+// @see Scene::CaptureState, Scene::RestoreState, Scene::ReleaseState
+struct StateHandle(Handle) {}
+
+// @brief Unique identifier for a query within a @ref Scene.
+//
+// @note A @ref QueryHandle can only be used with the @ref Scene that created it.
+//
+// @see Actor::RegisterQuery, Actor::CancelQuery, Constraint::RegisterQuery, Constraint::CancelQuery
+struct QueryHandle(Handle) {}
+
+// @brief Runtime handle to a loaded nested prefab (the resolved target of a
+// @ref prefab::PrefabReference).
+//
+// @details It encapsulates a smart pointer to @ref prefab::ScenePrefab.
+//
+// @see prefab::PrefabReference, prefab::LoadNestedPrefabs, prefab::EnsureFullyLoaded,
+// prefab::ScenePrefab
+struct PrefabHandle [no_cpp_definition, no_reflection, no_python] {}

@@ -1,0 +1,92 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+[build-system]
+requires = ["scikit-build-core>=0.11"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "superdex-physics"
+version = "1.0.0"
+requires-python = ">=3.12,<3.13"
+authors = [{name = "SuperDex Team"}]
+description = "Physics runtime for SuperDex"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "thirdparty_licenses/**/*"]
+dependencies = [
+    "imageio[ffmpeg]>=2.36.1",  # Image/video I/O with FFmpeg support for recordings.
+    "numpy",
+    "pillow",
+    "polyscope>=2.5.0,<2.6",
+    "pycollada",
+    "pyre-extensions",
+    "scikit-image",
+    "scipy",
+    "tabulate",
+    "trimesh",
+    "typing_extensions",
+    "unrealcv",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+]
+
+[project.optional-dependencies]
+double = ["superdex-physics-fp64==1.0.0"]
+
+[project.urls]
+Homepage = "https://github.com/facebookresearch/project_superdex"
+Repository = "https://github.com/facebookresearch/project_superdex"
+
+[tool.scikit-build]
+build-dir = "../build-fp32/{wheel_tag}"
+wheel.packages = ["superdex"]
+wheel.exclude = ["superdex/physics/internal", "superdex/physics/utils/testing/internal"]
+wheel.install-dir = "superdex/physics/_native"
+build.targets = ["mochi_physics_pybind"]
+install.components = ["mochi_physics_pybind"]
+
+[tool.scikit-build.cmake]
+source-dir = ".."
+args = [
+    "-GNinja",
+    "-DMOCHI_BUILD_DEBUGGER=OFF",
+    "-DMOCHI_BUILD_MESH_CLI=OFF",
+    "-DMOCHI_BUILD_RENDERER=OFF",
+    "-DMOCHI_BUILD_SHARED=ON",
+    "-DMOCHI_USE_PYBIND=ON",
+    "-DSUPERDEX_BUILD_ROBOTICS=OFF",
+]
+
+[tool.cibuildwheel]
+build = "cp312-*"
+skip = "*musllinux* *-win32"
+test-skip = "*"
+
+[tool.cibuildwheel.linux]
+environment-pass = ["http_proxy", "https_proxy", "no_proxy"]
+before-all = "yum install -y clang"
+
+[tool.cibuildwheel.linux.environment]
+CC = "clang"
+CXX = "clang++"
+
+[tool.cibuildwheel.windows]
+repair-wheel-command = """delvewheel repair -w {dest_dir} -v {wheel} --ignore-existing \
+  --namespace-pkg superdex"""

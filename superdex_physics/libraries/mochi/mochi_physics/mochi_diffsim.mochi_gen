@@ -1,0 +1,343 @@
+namespace diffsim;
+
+// @brief Parameters of the solve in differentiability back-propagation.
+struct diffsim::BackPropagationSolverParams [no_reflection] {
+
+  // @brief Verbosity level of the back-propagation solver's logging.
+  VerbosityLevel verbosity = Warning;
+
+  // @brief Use a Newton solver for the outer adjoint solve instead of the default Krylov solver.
+  bool useNewtonOuterSolver = false;
+
+  // @brief Maximum number of outer-solver iterations for the adjoint solve.
+  int outerSolverMaxIter = 10;
+
+  // @brief Absolute convergence tolerance for the outer solver.
+  real outerSolverAbsTol = 1e-3;
+
+  // @brief Relative convergence tolerance for the outer solver.
+  real outerSolverRelTol = 1e-10;
+
+  // @brief Convergence-checking mode for the outer solver.
+  # TODO(T273020090): Enable NonLinearSolverConvergenceMode::PerActorWeighted.
+  NonLinearSolverConvergenceMode outerSolverConvergenceMode = Global;
+
+  // @brief Absolute convergence tolerance for the inner (linear) solver.
+  real innerSolverAbsTol = 1e-10;
+
+  // @brief Finite-difference step size used for Hessian-vector products in the adjoint solve.
+  real epsFiniteDiff = kDefaultBackPropagationEpsFiniteDiff;
+
+  // @brief Validate analytic Hessian-vector products against finite differences (diagnostic;
+  // slower).
+  bool validateFiniteDiff = false;
+}
+
+// @brief Performance metrics for the last back-propagation step.
+struct diffsim::BackPropagationSceneStats [no_reflection] {
+
+  // @brief Total wall-clock time spent in the last back-propagation step.
+  double totalDurationSec [units(s)];
+
+  // @brief Wall-clock time spent in the adjoint solve of the last back-propagation step.
+  double solveDurationSec [units(s)];
+
+  // @brief Maximum number of outer-solver iterations across all islands in the last
+  // back-propagation step.
+  int maxOuterIters;
+
+  // @brief Final residual norm of the adjoint solve in the last back-propagation step.
+  double residualNorm;
+
+  // @brief True if every finite-difference Hvp validation check across every island and every Hvp
+  // evaluation in this back-prop step passed its tolerance.
+  //
+  // @note Only meaningful when @ref BackPropagationSolverParams::validateFiniteDiff is set;
+  // otherwise stays at its default of true.
+  bool finiteDiffValid = true;
+}
+
+// @brief Make a scene differentiable.
+//
+// @details For accuracy reasons, differentiability is only recommended in double precision.
+// Differentiability is only supported for rigid and articulated actors, and requires
+// @ref SolverParams::integrationMethod to be @ref IntegrationMethod::BackwardEuler. It adds
+// internal data to support the invocation of the functions @ref BackPropagate and
+// @ref GetStepJacobian. It also calls @ref experimental::ApplyImprovedConvergenceSettings, and it
+// logs warnings when overriding non-default scene or actor settings selected by the user. Consider
+// changing those settings to retain the same simulation behavior if the scene is used elsewhere.
+//
+// @param[in] scene The scene to make differentiable.
+fn diffsim::MakeSceneDifferentiable(Scene* scene) -> void [mochi_error];
+
+// @brief Get solver parameters.
+//
+// @param[in] scene The differentiable scene.
+//
+// @return The back-propagation solver parameters.
+fn diffsim::GetBackPropagationSolverParams(Scene const* scene) -> diffsim::BackPropagationSolverParams [mochi_error];
+
+// @brief Set solver parameters.
+//
+// @param[in] scene The differentiable scene.
+// @param[in] params The back-propagation solver parameters to set.
+fn diffsim::SetBackPropagationSolverParams(Scene* scene, diffsim::BackPropagationSolverParams const& params) -> void [mochi_error];
+
+// @brief Get the performance metrics of the last back-propagation step.
+//
+// @param[in] scene The differentiable scene.
+//
+// @return The performance metrics of the last back-propagation step.
+fn diffsim::GetBackPropagationSceneStats(Scene const* scene) -> diffsim::BackPropagationSceneStats [mochi_error];
+
+// @brief Reset back-propagation state.
+//
+// @details Must be called once before a backward pass.
+//
+// @param[in] scene The differentiable scene.
+fn diffsim::ResetBackPropagation(Scene* scene) -> void [mochi_error];
+
+// @brief Prepare one simulation step for backward mode differentiation.
+//
+// @details Validates the state pair and marks the scene as ready for per-step output backward
+// functions and @ref BackPropagate. Must be called before accumulating per-step loss gradients
+// with output backward functions.
+//
+// @param[in] scene The differentiable scene.
+// @param[in] stateNew State handle at step k (q_k).
+// @param[in] stateOld State handle at step k-1 (q_{k-1}).
+fn diffsim::PrepareBackPropagate(Scene* scene, StateHandle stateNew, StateHandle stateOld) -> void [release_gil, mochi_error];
+
+// @brief Backward mode differentiation through the step function.
+//
+// @details Solves the adjoint system to propagate gradients backward through one simulation step.
+// Per-step loss gradients should be accumulated into per-actor adjoint components after calling
+// @ref PrepareBackPropagate and before calling this function, using output backward functions
+// (e.g., @ref GetCenterOfMassTransformBackward, @ref GetArticulatedPoseBackward). The internal
+// adjoint buffers are managed by the scene and must be initialized via @ref ResetBackPropagation
+// before the first call. Each call to this function must be preceded by @ref PrepareBackPropagate
+// for the same state pair. Per-actor gradients wrt control inputs and initial conditions can be
+// extracted via the corresponding backward functions (e.g., @ref SetArticulatedTargetPoseBackward,
+// @ref SetCenterOfMassTransformBackward) after each BackPropagate call. This function assumes that
+// the forward simulation is executed per step by setting inputs, running the step, and reading
+// outputs. The state handles must be captured right before and after stepping the simulation
+// forward, without setting any inputs in between.
+//
+// @note TODO: The function is not tested with variable time-stepping yet.
+//
+// @param[in] scene The differentiable scene.
+fn diffsim::BackPropagate(Scene* scene) -> void [release_gil, mochi_error];
+
+// @brief Forward mode differentiation through the step function.
+//
+// @details Provides the full column-major Jacobian matrices with the following sizes:
+// outJacCurr = dq_t/dq_t-1 (|q| x |q|) and outJacOld = dq_t/dq_t-2 (|q| x |q|). The rows and
+// columns of the Jacobian matrices are sorted according to the order given in Scene.GetActors().
+// The input states are three consecutive states captured during a simulated trajectory:
+// stateNew = state_t, stateCurr = state_t-1, stateOld = state_t-2.
+//
+// @param[in] scene The differentiable scene.
+// @param[in] stateNew State handle at step t.
+// @param[in] stateCurr State handle at step t-1.
+// @param[in] stateOld State handle at step t-2.
+// @param[out] outJacCurr Jacobian dq_t/dq_t-1, column-major, sized |q| x |q|.
+// @param[out] outJacOld Jacobian dq_t/dq_t-2, column-major, sized |q| x |q|.
+fn diffsim::GetStepJacobian(Scene* scene, StateHandle stateNew, StateHandle stateCurr, StateHandle stateOld, Span<real> outJacCurr, Span<real> outJacOld) -> void [mochi_error];
+
+// @brief Convert in-place gradient wrt rigid-actor state from local (Lie-parameterized)
+// representation to full rotation-vector representation.
+//
+// @details This conversion is necessary for gradient-based optimization. outGrad must have size 6
+// (3 translation + 3 rotation DoFs).
+//
+// @param[in] state The rigid-actor state transform.
+// @param[in,out] outGrad In: Lie-parameterized gradient. Out: rotation-vector gradient. Size 6.
+fn diffsim::ConvertRigidGradientLieToRotationVector(TransformRT const& state, Span<real> outGrad) -> void [mochi_error];
+
+// @brief Convert gradient wrt rigid-actor state from local (Lie-parameterized) to quaternion
+// representation.
+//
+// @details This conversion is necessary for gradient-based optimization. inGrad must have size 6
+// (3 translation + 3 rotation DoFs). outGrad must have size 7 (3 translation + 4 rotation DoFs).
+//
+// @param[in] state The rigid-actor state transform.
+// @param[in] inGrad Lie-parameterized gradient. Size 6.
+// @param[out] outGrad Quaternion-parameterized gradient. Size 7.
+fn diffsim::ConvertRigidGradientLieToQuaternion(TransformRT const& state, Span<real const> inGrad, Span<real> outGrad) -> void [mochi_error];
+
+// @brief Convert in-place gradient wrt articulated-actor pose from local (Lie-parameterized)
+// representation to full rotation-vector representation.
+//
+// @details The conversion is applied only to joints with 3D rotations. This conversion is
+// necessary for gradient-based optimization. outGrad must have size equal to the number of DoFs of
+// the articulated actor.
+//
+// @param[in] actor The articulated actor.
+// @param[in] pose The articulated-actor pose.
+// @param[in,out] outGrad In: Lie-parameterized gradient. Out: rotation-vector gradient.
+fn diffsim::ConvertArticulatedGradientLieToRotationVector(Actor const* actor, Span<real const> pose, Span<real> outGrad) -> void [mochi_error];
+
+// @brief Convert gradient wrt rigid-actor state from quaternion to local (Lie-parameterized)
+// representation.
+//
+// @details This conversion is necessary for gradient-based optimization. inGrad must have size 7
+// (3 translation + 4 rotation DoFs). outGrad must have size 6 (3 translation + 3 rotation DoFs).
+//
+// @param[in] state The rigid-actor state transform.
+// @param[in] inGrad Quaternion-parameterized gradient. Size 7.
+// @param[out] outGrad Lie-parameterized gradient. Size 6.
+fn diffsim::ConvertRigidGradientQuaternionToLie(TransformRT const& state, Span<real const> inGrad, Span<real> outGrad) -> void [mochi_error];
+
+// @brief Convert in-place gradient wrt articulated-actor pose from full rotation-vector
+// representation to local (Lie-parameterized) representation.
+//
+// @details The conversion is applied only to joints with 3D rotations. This conversion is
+// necessary for gradient-based optimization. outGrad must have size equal to the number of DoFs of
+// the articulated actor.
+//
+// @param[in] actor The articulated actor.
+// @param[in] pose The articulated-actor pose.
+// @param[in,out] outGrad In: rotation-vector gradient. Out: Lie-parameterized gradient.
+fn diffsim::ConvertArticulatedGradientRotationVectorToLie(Actor const* actor, Span<real const> pose, Span<real> outGrad) -> void [mochi_error];
+
+// @brief Backward pass for @ref Actor::GetCenterOfMassTransform.
+//
+// @details Converts the gradient w.r.t. the center-of-mass transform output (translation +
+// quaternion) to a Lie-parameterized state gradient and accumulates it into the actor. Only rigid
+// actors are supported (standalone or links). Must be called before @ref BackPropagate.
+//
+// @param[in] actor The rigid actor (standalone or link).
+// @param[in] gradOutput Gradient w.r.t. center-of-mass transform output (3 translation +
+// 4 quaternion XYZW). Must be of size 7.
+fn diffsim::GetCenterOfMassTransformBackward(Actor* actor, Span<real const> gradOutput) -> void [mochi_error];
+
+// @brief Backward pass for @ref Actor::GetRootTransform.
+//
+// @details Converts the gradient w.r.t. the root transform output (translation + quaternion) to a
+// Lie-parameterized state gradient and accumulates it into the actor. Only rigid actors are
+// supported (standalone or links). Must be called before @ref BackPropagate.
+//
+// @param[in] actor The rigid actor (standalone or link).
+// @param[in] gradOutput Gradient w.r.t. root transform output (3 translation + 4 quaternion XYZW).
+// Must be of size 7.
+fn diffsim::GetRootTransformBackward(Actor* actor, Span<real const> gradOutput) -> void [mochi_error];
+
+// @brief Backward pass for @ref Actor::GetContactForceWorld.
+//
+// @details Accumulates the gradient w.r.t. the world-frame total contact force into prepared
+// per-contact force adjoints. Only rigid actors are supported. Must be called after
+// @ref PrepareBackPropagate and before @ref BackPropagate.
+//
+// @param[in] actor The rigid actor.
+// @param[in] gradOutput Gradient w.r.t. the total contact force [N] in world frame. Must be of
+// size 3.
+fn diffsim::GetContactForceWorldBackward(Actor* actor, Span<real const> gradOutput) -> void [mochi_error];
+
+// @brief Backward pass for @ref Actor::GetContactForceFromActorWorld.
+//
+// @details Accumulates the gradient w.r.t. the world-frame contact force from another actor into
+// prepared per-contact force adjoints. Only rigid actors are supported. Must be called after
+// @ref PrepareBackPropagate and before @ref BackPropagate.
+//
+// @param[in] actor The rigid actor receiving the contact force.
+// @param[in] other The actor exerting the contact force.
+// @param[in] gradOutput Gradient w.r.t. the contact force [N] in world frame. Must be of size 3.
+fn diffsim::GetContactForceFromActorWorldBackward(Actor* actor, Actor const* other, Span<real const> gradOutput) -> void [mochi_error];
+
+// @brief Backward pass for @ref Actor::GetArticulatedPose.
+//
+// @details Converts the gradient w.r.t. the articulated pose output (joint DOFs in rotation-vector
+// representation) to a Lie-parameterized state gradient and accumulates it into the actor. Only
+// articulated actors are supported. Must be called before @ref BackPropagate.
+//
+// @param[in] actor The articulated actor.
+// @param[in] gradOutput Gradient w.r.t. articulated pose output. Must be of size
+// @ref Actor::GetNumDofs.
+fn diffsim::GetArticulatedPoseBackward(Actor* actor, Span<real const> gradOutput) -> void [mochi_error];
+
+// @brief Backward pass for @ref Actor::SetArticulatedTargetPose.
+//
+// @details Reads the accumulated gradients wrt current and previous pose-controller targets
+// (dg/dgamma_k and dg/dgamma_{k-1}) and sums them into a single output gradient wrt the target
+// pose. Must be called after @ref BackPropagate.
+//
+// @param[in] actor The articulated actor with a pose controller.
+// @param[out] outGradTargetPose Gradient wrt target pose (dg/dgamma_k + dg/dgamma_{k-1}). Must be
+// of size @ref Actor::GetNumDofs. The caller is responsible for accumulation.
+fn diffsim::SetArticulatedTargetPoseBackward(Actor const* actor, Span<real> outGradTargetPose) -> void [mochi_error];
+
+// @brief Backward pass for @ref Actor::SetArticulatedPoseFromJoints.
+//
+// @details @ref Actor::SetArticulatedPoseFromJoints sets the body pose AND initializes the
+// controller targets (both current and previous). This dual sums the gradient contributions from
+// all three paths: state, current target, and previous target. Must be called after @ref
+// BackPropagate.
+//
+// @param[in] actor The articulated actor.
+// @param[out] outGradPose Gradient wrt the joint pose. Must be of size @ref Actor::GetNumDofs. The
+// caller is responsible for accumulation.
+fn diffsim::SetArticulatedPoseFromJointsBackward(Actor const* actor, Span<real> outGradPose) -> void [mochi_error];
+
+// @brief Backward pass for @ref Actor::SetArticulatedTargetVelocity.
+//
+// @details The target velocity is applied by computing the previous controller target as
+// target_old = target_current - dt * velocity. Therefore, the gradient wrt velocity is
+// -dt * dg/dgamma_{k-1}, where dg/dgamma_{k-1} is the gradient wrt the previous controller target.
+// Must be called after @ref BackPropagate.
+//
+// @param[in] actor The articulated actor with a pose controller.
+// @param[out] outGradTargetVelocity Gradient wrt target velocity. Must be of size
+// @ref Actor::GetNumDofs. The caller is responsible for accumulation.
+fn diffsim::SetArticulatedTargetVelocityBackward(Actor const* actor, Span<real> outGradTargetVelocity) -> void [mochi_error];
+
+// @brief Backward pass for @ref Actor::SetArticulatedJointVelocities.
+//
+// @details @ref Actor::SetArticulatedJointVelocities sets the joint velocities v of an articulated
+// actor. The velocity determines the derived step dx = v * dt. Therefore:
+// dL/dv = dt * dL/d(dx) * d(dx)/dq.
+// Additionally, if a pose controller is present, it also sets the target velocity which determines
+// the previous controller target; therefore it receives a gradient contribution from the old
+// controller target. Must be called after @ref BackPropagate.
+//
+// @param[in] actor The articulated actor.
+// @param[out] outGradVelocities Gradient wrt joint velocities. Must be of size
+// @ref Actor::GetNumDofs. The caller is responsible for accumulation.
+fn diffsim::SetArticulatedJointVelocitiesBackward(Actor const* actor, Span<real> outGradVelocities) -> void [mochi_error];
+
+// @brief Backward pass for @ref Actor::SetExternalForcesOnDofs.
+//
+// @details Reads the accumulated force gradient at the specified DOF indices. Only articulated and
+// standalone rigid actors are supported (not rigid links). Must be called after @ref BackPropagate.
+//
+// @param[in] actor The articulated or standalone rigid actor.
+// @param[in] dofIndices DOF indices matching the forward call. Must be unique and match the size of
+// outGradForceValues.
+// @param[out] outGradForceValues Gradient wrt force values. The caller is responsible for
+// accumulation.
+fn diffsim::SetExternalForcesOnDofsBackward(Actor const* actor, Span<int const> dofIndices, Span<real> outGradForceValues) -> void [mochi_error];
+
+// @brief Backward pass for @ref Actor::SetVelocity.
+//
+// @details @ref Actor::SetVelocity sets the rigid-body velocity v = (v_com, omega). The velocity
+// determines the derived step dx = v * dt. Therefore: dL/dv = dt * dL/d(dx), where dL/d(dx) is the
+// derived-state adjoint. Only standalone rigid actors are supported (not articulated links, not
+// soft actors). Must be called after @ref BackPropagate.
+//
+// @param[in] actor The rigid actor.
+// @param[out] outGradLinearVel Gradient wrt linear velocity. Must be of size 3. The caller is
+// responsible for accumulation.
+// @param[out] outGradAngularVel Gradient wrt angular velocity. Must be of size 3. The caller is
+// responsible for accumulation.
+fn diffsim::SetVelocityBackward(Actor const* actor, Span<real> outGradLinearVel, Span<real> outGradAngularVel) -> void [mochi_error];
+
+// @brief Backward pass for @ref Actor::SetCenterOfMassTransform.
+//
+// @details @ref Actor::SetCenterOfMassTransform directly sets the rigid-body state (pose), so this
+// function reads the gradient dL/d(state). The output is in quaternion representation (7 elements:
+// translation(3) + quaternion(4)), matching the forward API. Only standalone rigid actors are
+// supported. Must be called after @ref BackPropagate.
+//
+// @param[in] actor The rigid actor.
+// @param[out] outGradTransform Gradient wrt the CoM transform. Must be of size 7
+// (translation(3) + quaternion_XYZW(4)). The caller is responsible for accumulation.
+fn diffsim::SetCenterOfMassTransformBackward(Actor const* actor, Span<real> outGradTransform) -> void [mochi_error];

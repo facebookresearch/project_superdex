@@ -1,0 +1,1042 @@
+{
+  "defaultPose": [
+    0,
+    0.1745329350233078,
+    0.1745329350233078,
+    0.1745329350233078,
+    0,
+    0.1745329350233078,
+    0.1745329350233078,
+    0.1745329350233078,
+    0,
+    0.1745329350233078,
+    0.1745329350233078,
+    0.1745329350233078,
+    1.0471975803375244,
+    0.52359879016876221,
+    1.0471975803375244,
+    0.52359879016876221
+  ],
+  "joints": [
+    {
+      "name": "world_joint",
+      "type": "Free"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        -1
+      ],
+      "effortLimit": 15,
+      "friction": {
+        "coulomb": 0.0010000000474974513,
+        "viscous": 0.0099999997764825821
+      },
+      "maxLimit": [
+        0,
+        0,
+        -0.28999999165534973
+      ],
+      "minLimit": [
+        0,
+        0,
+        0.25999999046325684
+      ],
+      "name": "allegro_joint_0",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0,
+          0.043619386851787567,
+          0,
+          0.99904823303222656
+        ],
+        "translation": [
+          0.04213700070977211,
+          0.0056929998099803925,
+          0.093367002904415131
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "effortLimit": 15,
+      "friction": {
+        "coulomb": 0.0010000000474974513,
+        "viscous": 0.0099999997764825821
+      },
+      "maxLimit": [
+        -1.7899999618530273,
+        0,
+        0
+      ],
+      "minLimit": [
+        0.20999999344348907,
+        0,
+        0
+      ],
+      "name": "allegro_joint_1",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          0.02199999988079071
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "effortLimit": 15,
+      "friction": {
+        "coulomb": 0.0010000000474974513,
+        "viscous": 0.0099999997764825821
+      },
+      "maxLimit": [
+        -1.8600000143051147,
+        0,
+        0
+      ],
+      "minLimit": [
+        0.11999999731779099,
+        0,
+        0
+      ],
+      "name": "allegro_joint_2",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          0.043111998587846756
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "effortLimit": 15,
+      "friction": {
+        "coulomb": 0.0010000000474974513,
+        "viscous": 0.0099999997764825821
+      },
+      "maxLimit": [
+        -1.8500000238418579,
+        0,
+        0
+      ],
+      "minLimit": [
+        0.20999999344348907,
+        0,
+        0
+      ],
+      "name": "allegro_joint_3",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          0.037999998778104782
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "name": "allegro_joint_3_0_tip",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          0.026495000347495079
+        ]
+      },
+      "type": "Hard"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        -1
+      ],
+      "effortLimit": 15,
+      "friction": {
+        "coulomb": 0.0010000000474974513,
+        "viscous": 0.0099999997764825821
+      },
+      "maxLimit": [
+        0,
+        0,
+        -0.25999999046325684
+      ],
+      "minLimit": [
+        0,
+        0,
+        0.25999999046325684
+      ],
+      "name": "allegro_joint_4",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0.0056929998099803925,
+          0.095510996878147125
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "effortLimit": 15,
+      "friction": {
+        "coulomb": 0.0010000000474974513,
+        "viscous": 0.0099999997764825821
+      },
+      "maxLimit": [
+        -1.7899999618530273,
+        0,
+        0
+      ],
+      "minLimit": [
+        0.20999999344348907,
+        0,
+        0
+      ],
+      "name": "allegro_joint_5",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          0.02199999988079071
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "effortLimit": 15,
+      "friction": {
+        "coulomb": 0.0010000000474974513,
+        "viscous": 0.0099999997764825821
+      },
+      "maxLimit": [
+        -1.8600000143051147,
+        0,
+        0
+      ],
+      "minLimit": [
+        0.11999999731779099,
+        0,
+        0
+      ],
+      "name": "allegro_joint_6",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          0.043111998587846756
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "effortLimit": 15,
+      "friction": {
+        "coulomb": 0.0010000000474974513,
+        "viscous": 0.0099999997764825821
+      },
+      "maxLimit": [
+        -1.8500000238418579,
+        0,
+        0
+      ],
+      "minLimit": [
+        0.20999999344348907,
+        0,
+        0
+      ],
+      "name": "allegro_joint_7",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          0.037999998778104782
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "name": "allegro_joint_7_0_tip",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          0.026495000347495079
+        ]
+      },
+      "type": "Hard"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        -1
+      ],
+      "effortLimit": 15,
+      "friction": {
+        "coulomb": 0.0010000000474974513,
+        "viscous": 0.0099999997764825821
+      },
+      "maxLimit": [
+        0,
+        0,
+        -0.30000001192092896
+      ],
+      "minLimit": [
+        0,
+        0,
+        0.30000001192092896
+      ],
+      "name": "allegro_joint_8",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0,
+          -0.043619386851787567,
+          0,
+          0.99904823303222656
+        ],
+        "translation": [
+          -0.042135998606681824,
+          0.0056929998099803925,
+          0.093347996473312378
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "effortLimit": 15,
+      "friction": {
+        "coulomb": 0.0010000000474974513,
+        "viscous": 0.0099999997764825821
+      },
+      "maxLimit": [
+        -1.6000000238418579,
+        0,
+        0
+      ],
+      "minLimit": [
+        1,
+        0,
+        0
+      ],
+      "name": "allegro_joint_9",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          0.02199999988079071
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "effortLimit": 15,
+      "friction": {
+        "coulomb": 0.0010000000474974513,
+        "viscous": 0.0099999997764825821
+      },
+      "maxLimit": [
+        -1.8600000143051147,
+        0,
+        0
+      ],
+      "minLimit": [
+        0.070000000298023224,
+        0,
+        0
+      ],
+      "name": "allegro_joint_10",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          0.043111998587846756
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "effortLimit": 15,
+      "friction": {
+        "coulomb": 0.0010000000474974513,
+        "viscous": 0.0099999997764825821
+      },
+      "maxLimit": [
+        -2.0099999904632568,
+        0,
+        0
+      ],
+      "minLimit": [
+        0.019999999552965164,
+        0,
+        0
+      ],
+      "name": "allegro_joint_11",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          0.037999998778104782
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "name": "allegro_joint_11_0_tip",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          0.026495000347495079
+        ]
+      },
+      "type": "Hard"
+    },
+    {
+      "axis": [
+        1,
+        0,
+        0
+      ],
+      "effortLimit": 15,
+      "friction": {
+        "coulomb": 0.0010000000474974513,
+        "viscous": 0.0099999997764825821
+      },
+      "maxLimit": [
+        1.7799999713897705,
+        0,
+        0
+      ],
+      "minLimit": [
+        0,
+        0,
+        0
+      ],
+      "name": "allegro_joint_12",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.7372773289680481,
+          -4.5145214962318903e-17,
+          0.67559021711349487,
+          4.1367970795711857e-17
+        ],
+        "translation": [
+          0.026675000786781311,
+          0.0070000002160668373,
+          0.036633998155593872
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        -1
+      ],
+      "effortLimit": 15,
+      "friction": {
+        "coulomb": 0.0010000000474974513,
+        "viscous": 0.0099999997764825821
+      },
+      "maxLimit": [
+        0,
+        0,
+        -1.6499999761581421
+      ],
+      "minLimit": [
+        0,
+        0,
+        0.25999999046325684
+      ],
+      "name": "allegro_joint_13",
+      "parentLinkFromJoint": {
+        "translation": [
+          0.00054999999701976776,
+          0,
+          0.037799999117851257
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "effortLimit": 15,
+      "friction": {
+        "coulomb": 0.0010000000474974513,
+        "viscous": 0.0099999997764825821
+      },
+      "maxLimit": [
+        0,
+        1.8500000238418579,
+        0
+      ],
+      "minLimit": [
+        0,
+        -0.05000000074505806,
+        0
+      ],
+      "name": "allegro_joint_14",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          0.031700000166893005
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "effortLimit": 15,
+      "friction": {
+        "coulomb": 0.0010000000474974513,
+        "viscous": 0.0099999997764825821
+      },
+      "maxLimit": [
+        0,
+        1.7999999523162842,
+        0
+      ],
+      "minLimit": [
+        0,
+        -0.090000003576278687,
+        0
+      ],
+      "name": "allegro_joint_15",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          0.037999998778104782
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "name": "allegro_joint_15_0_tip",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          0.037500001490116119
+        ]
+      },
+      "type": "Hard"
+    }
+  ],
+  "links": [
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0.047499999403953552
+      ],
+      "mass": 0.41539999842643738,
+      "momentOfInertia": [
+        9.9999997473787516e-05,
+        0,
+        0,
+        9.9999997473787516e-05,
+        0,
+        9.9999997473787516e-05
+      ],
+      "name": "allegro_palm_link",
+      "renderModel": "render/G1_render.glb",
+      "shape": "collision/G1_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.017599999904632568,
+      "momentOfInertia": [
+        1.2854007763962727e-05,
+        2.0399999911546729e-08,
+        1.8900000213761814e-06,
+        1.2249999599589501e-05,
+        1.5099999473022763e-07,
+        2.9989998893142911e-06
+      ],
+      "name": "allegro_link_0",
+      "parentLink": 0,
+      "renderModel": "render/L1_render.glb",
+      "shape": "collision/L1_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.086000002920627594,
+      "momentOfInertia": [
+        1.8599999748403206e-05,
+        1.6799999684735667e-06,
+        -6.1599998844030779e-06,
+        4.8699999751988798e-05,
+        3.5100001127830183e-07,
+        5.5699998483760282e-05
+      ],
+      "name": "allegro_link_1",
+      "parentLink": 1,
+      "renderModel": "render/L2_render.glb",
+      "shape": "collision/L2_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.036699999123811722,
+      "momentOfInertia": [
+        3.8099999528640183e-06,
+        5.7200000291857123e-09,
+        -9.970000292014447e-07,
+        1.4549999832524918e-05,
+        2.6300000399714918e-08,
+        1.2900000001536682e-05
+      ],
+      "name": "allegro_link_2",
+      "parentLink": 2,
+      "renderModel": "render/L3_render.glb",
+      "shape": "collision/L3_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.0040000001899898052,
+      "momentOfInertia": [
+        1.1700000186465331e-06,
+        5.0899999770592785e-09,
+        0,
+        2.4000000848900527e-06,
+        0,
+        1.6699999605407356e-06
+      ],
+      "name": "allegro_link_3",
+      "parentLink": 3,
+      "renderModel": "render/L4_render.glb",
+      "shape": "collision/L4_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.0017000000225380063,
+      "momentOfInertia": [
+        9.6799999482755084e-07,
+        0,
+        0,
+        9.6799999482755084e-07,
+        0,
+        9.6799999482755084e-07
+      ],
+      "name": "allegro_link_3_tip",
+      "parentLink": 4,
+      "renderModel": "render/Tip_render.glb",
+      "shape": "collision/Tip_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.017599999904632568,
+      "momentOfInertia": [
+        1.2854007763962727e-05,
+        2.0399999911546729e-08,
+        1.8900000213761814e-06,
+        1.2249999599589501e-05,
+        1.5099999473022763e-07,
+        2.9989998893142911e-06
+      ],
+      "name": "allegro_link_4",
+      "parentLink": 0,
+      "renderModel": "render/L1_render.glb",
+      "shape": "collision/L1_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.086000002920627594,
+      "momentOfInertia": [
+        1.8599999748403206e-05,
+        1.6799999684735667e-06,
+        -6.1599998844030779e-06,
+        4.8699999751988798e-05,
+        3.5100001127830183e-07,
+        5.5699998483760282e-05
+      ],
+      "name": "allegro_link_5",
+      "parentLink": 6,
+      "renderModel": "render/L2_render.glb",
+      "shape": "collision/L2_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.036699999123811722,
+      "momentOfInertia": [
+        3.8099999528640183e-06,
+        5.7200000291857123e-09,
+        -9.970000292014447e-07,
+        1.4549999832524918e-05,
+        2.6300000399714918e-08,
+        1.2900000001536682e-05
+      ],
+      "name": "allegro_link_6",
+      "parentLink": 7,
+      "renderModel": "render/L3_render.glb",
+      "shape": "collision/L3_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.0040000001899898052,
+      "momentOfInertia": [
+        1.1700000186465331e-06,
+        5.0899999770592785e-09,
+        0,
+        2.4000000848900527e-06,
+        0,
+        1.6699999605407356e-06
+      ],
+      "name": "allegro_link_7",
+      "parentLink": 8,
+      "renderModel": "render/L4_render.glb",
+      "shape": "collision/L4_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.0017000000225380063,
+      "momentOfInertia": [
+        9.6799999482755084e-07,
+        0,
+        0,
+        9.6799999482755084e-07,
+        0,
+        9.6799999482755084e-07
+      ],
+      "name": "allegro_link_7_tip",
+      "parentLink": 9,
+      "renderModel": "render/Tip_render.glb",
+      "shape": "collision/Tip_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.017599999904632568,
+      "momentOfInertia": [
+        1.2854007763962727e-05,
+        2.0399999911546729e-08,
+        1.8900000213761814e-06,
+        1.2249999599589501e-05,
+        1.5099999473022763e-07,
+        2.9989998893142911e-06
+      ],
+      "name": "allegro_link_8",
+      "parentLink": 0,
+      "renderModel": "render/L1_render.glb",
+      "shape": "collision/L1_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.086000002920627594,
+      "momentOfInertia": [
+        1.8599999748403206e-05,
+        1.6799999684735667e-06,
+        -6.1599998844030779e-06,
+        4.8699999751988798e-05,
+        3.5100001127830183e-07,
+        5.5699998483760282e-05
+      ],
+      "name": "allegro_link_9",
+      "parentLink": 11,
+      "renderModel": "render/L2_render.glb",
+      "shape": "collision/L2_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.036699999123811722,
+      "momentOfInertia": [
+        3.8099999528640183e-06,
+        5.7200000291857123e-09,
+        -9.970000292014447e-07,
+        1.4549999832524918e-05,
+        2.6300000399714918e-08,
+        1.2900000001536682e-05
+      ],
+      "name": "allegro_link_10",
+      "parentLink": 12,
+      "renderModel": "render/L3_render.glb",
+      "shape": "collision/L3_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.0040000001899898052,
+      "momentOfInertia": [
+        1.1700000186465331e-06,
+        5.0899999770592785e-09,
+        0,
+        2.4000000848900527e-06,
+        0,
+        1.6699999605407356e-06
+      ],
+      "name": "allegro_link_11",
+      "parentLink": 13,
+      "renderModel": "render/L4_render.glb",
+      "shape": "collision/L4_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.0017000000225380063,
+      "momentOfInertia": [
+        9.6799999482755084e-07,
+        0,
+        0,
+        9.6799999482755084e-07,
+        0,
+        9.6799999482755084e-07
+      ],
+      "name": "allegro_link_11_tip",
+      "parentLink": 14,
+      "renderModel": "render/Tip_render.glb",
+      "shape": "collision/Tip_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.044599998742341995,
+      "momentOfInertia": [
+        5.4399999498855323e-05,
+        4.0000000467443897e-07,
+        -1.1200000216149419e-07,
+        9.1900001280009747e-06,
+        1.06999996205559e-05,
+        4.8000001697801054e-05
+      ],
+      "name": "allegro_link_12",
+      "parentLink": 0,
+      "renderModel": "render/T1_L_render.glb",
+      "shape": "collision/T1_L_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.017300000414252281,
+      "momentOfInertia": [
+        1.52000002344721e-05,
+        -2.0899999952916914e-08,
+        -9.7999999226772161e-09,
+        1.3322999620868359e-05,
+        -2.0400000266818097e-06,
+        2.8500001008069376e-06
+      ],
+      "name": "allegro_link_13",
+      "parentLink": 16,
+      "renderModel": "render/T2_L_render.glb",
+      "renderModelRotation": [
+        -0.70710676908493042,
+        0.70710676908493042,
+        -4.3297803017132772e-17,
+        4.3297803017132772e-17
+      ],
+      "shape": "collision/T2_L_collision.mochi.h5",
+      "shapeRotation": [
+        -0.70710676908493042,
+        0.70710676908493042,
+        -4.3297803017132772e-17,
+        4.3297803017132772e-17
+      ]
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.036070000380277634,
+      "momentOfInertia": [
+        3.6999999792897142e-06,
+        2.4299998813148704e-07,
+        6.4800002519405098e-07,
+        1.5400000847876072e-05,
+        -3.1100000796868699e-08,
+        1.387999964208575e-05
+      ],
+      "name": "allegro_link_14",
+      "parentLink": 17,
+      "renderModel": "render/T3_render.glb",
+      "renderModelRotation": [
+        0,
+        0,
+        -0.70710676908493042,
+        0.70710676908493042
+      ],
+      "shape": "collision/T3_collision.mochi.h5",
+      "shapeRotation": [
+        0,
+        0,
+        -0.70710676908493042,
+        0.70710676908493042
+      ]
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.033399999141693115,
+      "momentOfInertia": [
+        2.9400000585155794e-06,
+        1.2440000318747479e-07,
+        3.5200000070290116e-07,
+        1.1299999641778413e-05,
+        -3.1100000796868699e-08,
+        1.0599999768601265e-05
+      ],
+      "name": "allegro_link_15",
+      "parentLink": 18,
+      "renderModel": "render/T4_render.glb",
+      "renderModelRotation": [
+        0,
+        0,
+        0.70710676908493042,
+        0.70710676908493042
+      ],
+      "shape": "collision/T4_collision.mochi.h5",
+      "shapeRotation": [
+        0,
+        0,
+        0.70710676908493042,
+        0.70710676908493042
+      ]
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0.00139999995008111,
+      "momentOfInertia": [
+        9.6799999482755084e-07,
+        0,
+        0,
+        9.6799999482755084e-07,
+        0,
+        9.6799999482755084e-07
+      ],
+      "name": "allegro_link_15_tip",
+      "parentLink": 19,
+      "renderModel": "render/Tip_render.glb",
+      "shape": "collision/Tip_collision.mochi.h5"
+    }
+  ],
+  "name": "allegro_v5_left"
+}

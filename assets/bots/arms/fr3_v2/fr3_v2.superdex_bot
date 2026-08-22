@@ -1,0 +1,517 @@
+{
+  "defaultPose": [
+    0,
+    -0.78539812564849854,
+    0,
+    -2.3561944961547852,
+    0,
+    1.5707962512969971,
+    1.5707962512969971
+  ],
+  "joints": [
+    {
+      "maxLimit": [
+        0,
+        0,
+        0
+      ],
+      "minLimit": [
+        0,
+        0,
+        0
+      ],
+      "name": "world_joint",
+      "type": "Hard"
+    },
+    {
+      "maxLimit": [
+        0,
+        0,
+        0
+      ],
+      "minLimit": [
+        0,
+        0,
+        0
+      ],
+      "name": "fr3_base_joint",
+      "type": "Hard"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "friction": {
+        "coulomb": 1.0715941190719604,
+        "viscous": 1.17708420753479
+      },
+      "inertia": 0.1095493957400322,
+      "limitDamping": 0,
+      "limitStiffness": 1000,
+      "maxLimit": [
+        0,
+        0,
+        2.7437000274658203
+      ],
+      "minLimit": [
+        0,
+        0,
+        -2.7437000274658203
+      ],
+      "name": "fr3_joint1",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          0.33300000429153442
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "friction": {
+        "coulomb": 1.2971571683883667,
+        "viscous": 1.17708420753479
+      },
+      "inertia": 0.1095493957400322,
+      "limitDamping": 0,
+      "limitStiffness": 1000,
+      "maxLimit": [
+        0,
+        0,
+        1.7836999893188477
+      ],
+      "minLimit": [
+        0,
+        0,
+        -1.7836999893188477
+      ],
+      "name": "fr3_joint2",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.70710808038711548,
+          0,
+          0,
+          0.70710545778274536
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "friction": {
+        "coulomb": 1.2087597846984863,
+        "viscous": 1.17708420753479
+      },
+      "inertia": 0.1095493957400322,
+      "limitDamping": 0,
+      "limitStiffness": 1000,
+      "maxLimit": [
+        0,
+        0,
+        2.9007000923156738
+      ],
+      "minLimit": [
+        0,
+        0,
+        -2.9007000923156738
+      ],
+      "name": "fr3_joint3",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.70710808038711548,
+          0,
+          0,
+          0.70710545778274536
+        ],
+        "translation": [
+          0,
+          -0.31600001454353333,
+          0
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "friction": {
+        "coulomb": 0.72262513637542725,
+        "viscous": 1.17708420753479
+      },
+      "inertia": 0.1095493957400322,
+      "limitDamping": 0,
+      "limitStiffness": 1000,
+      "maxLimit": [
+        0,
+        0,
+        -0.1518000066280365
+      ],
+      "minLimit": [
+        0,
+        0,
+        -3.0420999526977539
+      ],
+      "name": "fr3_joint4",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.70710808038711548,
+          0,
+          0,
+          0.70710545778274536
+        ],
+        "translation": [
+          0.082500003278255463,
+          0,
+          0
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "friction": {
+        "coulomb": 0.86576884984970093,
+        "viscous": 0.5445902943611145
+      },
+      "inertia": 0.11079134792089462,
+      "limitDamping": 0,
+      "limitStiffness": 1000,
+      "maxLimit": [
+        0,
+        0,
+        2.8064999580383301
+      ],
+      "minLimit": [
+        0,
+        0,
+        -2.8064999580383301
+      ],
+      "name": "fr3_joint5",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.70710808038711548,
+          0,
+          0,
+          0.70710545778274536
+        ],
+        "translation": [
+          -0.082500003278255463,
+          0.38400000333786011,
+          0
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "friction": {
+        "coulomb": 0.47905969619750977,
+        "viscous": 0.5445902943611145
+      },
+      "inertia": 0.11079134792089462,
+      "limitDamping": 0,
+      "limitStiffness": 1000,
+      "maxLimit": [
+        0,
+        0,
+        4.5169000625610352
+      ],
+      "minLimit": [
+        0,
+        0,
+        0.54449999332427979
+      ],
+      "name": "fr3_joint6",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.70710808038711548,
+          0,
+          0,
+          0.70710545778274536
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "friction": {
+        "coulomb": 0.83447569608688354,
+        "viscous": 0.5445902943611145
+      },
+      "inertia": 0.11079134792089462,
+      "limitDamping": 0,
+      "limitStiffness": 1000,
+      "maxLimit": [
+        0,
+        0,
+        3.0158998966217041
+      ],
+      "minLimit": [
+        0,
+        0,
+        -3.0158998966217041
+      ],
+      "name": "fr3_joint7",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.70710808038711548,
+          0,
+          0,
+          0.70710545778274536
+        ],
+        "translation": [
+          0.087999999523162842,
+          0,
+          0
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "maxLimit": [
+        0,
+        0,
+        0
+      ],
+      "minLimit": [
+        0,
+        0,
+        0
+      ],
+      "name": "fr3_joint8",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          0.10700000077486038
+        ]
+      },
+      "type": "Hard"
+    }
+  ],
+  "links": [
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0,
+      "momentOfInertia": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "base"
+    },
+    {
+      "centerOfMass": [
+        -0.017200, 
+        0.000400, 
+        0.074500
+      ],
+      "mass": 2.396600,
+      "momentOfInertia": [
+        0.009000,
+        0.000000,
+        0.002000,
+        0.011500,
+        0.000000,
+        0.008500
+      ],
+      "name": "fr3_link0",
+      "parentLink": 0,
+      "renderModel": "render/fr3_link0_render.glb",
+      "shape": "collision/fr3_link0_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        -0.004580, 
+        0.027016, 
+        -0.061800
+      ],
+      "mass": 2.437700,
+      "momentOfInertia": [
+        0.023240,
+        0.000333,
+        -0.000676,
+        0.021460,
+        0.003739,
+        0.005500
+      ],
+      "name": "fr3_link1",
+      "parentLink": 1,
+      "renderModel": "render/fr3_link1_render.glb",
+      "shape": "collision/fr3_link1_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.004541, 
+        -0.180691, 
+        -0.010479
+      ],
+      "mass": 2.237500,
+      "momentOfInertia": [
+        0.019026,
+        0.001241,
+        0.000499,
+        0.005660,
+        -0.001804,
+        0.017114
+      ],
+      "name": "fr3_link2",
+      "parentLink": 2,
+      "renderModel": "render/fr3_link2_render.glb",
+      "shape": "collision/fr3_link2_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.082540, 
+        0.019082, 
+        0.042027
+      ],
+      "mass": 2.193082,
+      "momentOfInertia": [
+        0.010225,
+        0.001144,
+        0.003497,
+        0.012398,
+        0.002156,
+        0.006877
+      ],
+      "name": "fr3_link3",
+      "parentLink": 3,
+      "renderModel": "render/fr3_link3_render.glb",
+      "shape": "collision/fr3_link3_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        -0.087533, 
+        0.096335, 
+        0.010120
+      ],
+      "mass": 2.181537,
+      "momentOfInertia": [
+        0.008878,
+        -0.003749,
+        0.001139,
+        0.007628,
+        -0.000460,
+        0.010295
+      ],
+      "name": "fr3_link4",
+      "parentLink": 4,
+      "renderModel": "render/fr3_link4_render.glb",
+      "shape": "collision/fr3_link4_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.008383, 
+        0.010180, 
+        -0.053265
+      ],
+      "mass": 2.186881,
+      "momentOfInertia": [
+        0.031874,
+        0.000134,
+        -0.000265,
+        0.029674,
+        -0.004734,
+        0.004751
+      ],
+      "name": "fr3_link5",
+      "parentLink": 5,
+      "renderModel": "render/fr3_link5_render.glb",
+      "shape": "collision/fr3_link5_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.070391, 
+        -0.016074, 
+        -0.035025
+      ],
+      "mass": 1.579681,
+      "momentOfInertia": [
+        0.002860,
+        -0.000553,
+        -0.000638,
+        0.003910,
+        -0.000240,
+        0.004530
+      ],
+      "name": "fr3_link6",
+      "parentLink": 6,
+      "renderModel": "render/fr3_link6_render.glb",
+      "shape": "collision/fr3_link6_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        -0.009108,
+        0.018151,
+        0.064946
+      ],
+      "mass": 0.694841,
+      "momentOfInertia": [
+        0.000899,
+        0.000000,
+        -0.000013,
+        0.001099,
+        -0.000022,
+        0.000702
+      ],
+      "name": "fr3_link7",
+      "parentLink": 7,
+      "renderModel": "render/fr3_link7_render.glb",
+      "shape": "collision/fr3_link7_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0,
+        0,
+        0
+      ],
+      "mass": 0,
+      "momentOfInertia": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "fr3_link8",
+      "parentLink": 8
+    }
+  ],
+  "name": "fr3_v2"
+}

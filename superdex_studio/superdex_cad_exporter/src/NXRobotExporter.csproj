@@ -1,0 +1,484 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{F4CE390D-F5D4-4523-97DA-7E9CB68D25E2}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>NXRobotExporter</RootNamespace>
+    <AssemblyName>NXRobotExporter</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <ProjectTypeTag>extension</ProjectTypeTag>
+    <LanguageTag>csharp</LanguageTag>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>$(DefineConstants);NX</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>$(DefineConstants);NX</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=10.0.0.9, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.10.0.9\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="NXOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\NXOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="NXOpen.UF, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\NXOpen.UF.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="NXOpen.Utilities, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\NXOpen.Utilities.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="NXOpenUI, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\NXOpenUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="CaeDseWorkflowOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\CaeDseWorkflowOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="CLDCommonOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\CLDCommonOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="CLDKinOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\CLDKinOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="CLDMfgModelOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\CLDMfgModelOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="CLDReportOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\CLDReportOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="CoatingsOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\CoatingsOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="CompositesOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\CompositesOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="ContactlessInspectionOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\ContactlessInspectionOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DMUOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\DMUOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DocumentOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\DocumentOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DSEDesignWorkflowOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\DSEDesignWorkflowOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DSEOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\DSEOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DSEPlatformOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\DSEPlatformOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="EclassStandardOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\EclassStandardOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="FabricOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\FabricOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="FalconOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\FalconOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="InspectorOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\InspectorOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="JoinOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\JoinOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="LineDesignerOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\LineDesignerOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="MBDOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\MBDOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="mfgamopen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\mfgamopen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="MfgMlpOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\MfgMlpOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="MFGViewMakerOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\MFGViewMakerOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="MoldCoolingOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\MoldCoolingOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="MPAOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\MPAOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="NXOpen.Guide, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\NXOpen.Guide.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="PartMfgOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\PartMfgOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="PIDOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\PIDOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="PlasticDesignerOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\PlasticDesignerOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RuleOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\RuleOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="SimplifyOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\SimplifyOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="StageModelOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\StageModelOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="StageModelTemplateOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\StageModelTemplateOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Buffers, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Buffers.4.6.1\lib\net462\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.IO.Pipelines, Version=10.0.0.9, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.IO.Pipelines.10.0.9\lib\net462\System.IO.Pipelines.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Memory, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Memory.4.6.3\lib\net462\System.Memory.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Numerics.Vectors, Version=4.1.6.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Numerics.Vectors.4.6.1\lib\net462\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Encodings.Web, Version=10.0.0.9, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Encodings.Web.10.0.9\lib\net462\System.Text.Encodings.Web.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Json, Version=10.0.0.9, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Json.10.0.9\lib\net462\System.Text.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.4.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.6.3\lib\net462\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ValueTuple" />
+    <Reference Include="TDPOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\TDPOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="ToolDesignerOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\ToolDesignerOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="ALPOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\ALPOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="AMEOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\AMEOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="AnimationDesignerOpen, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(UGII_BASE_DIR)\nxbin\managed\AnimationDesignerOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="MathNet.Numerics, Version=4.7.0.0, Culture=neutral, PublicKeyToken=cd8b63ad3d691a37, processorArchitecture=MSIL">
+      <HintPath>..\packages\MathNet.Numerics.Signed.4.7.0\lib\net40\MathNet.Numerics.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="Serilog, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
+      <HintPath>..\packages\Serilog.2.12.0\lib\net47\Serilog.dll</HintPath>
+    </Reference>
+    <Reference Include="Serilog.Sinks.Debug, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
+      <HintPath>..\packages\Serilog.Sinks.Debug.2.0.0\lib\net46\Serilog.Sinks.Debug.dll</HintPath>
+    </Reference>
+    <Reference Include="Serilog.Sinks.File, Version=5.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
+      <HintPath>..\packages\Serilog.Sinks.File.5.0.0\lib\net45\Serilog.Sinks.File.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data">
+      <Name>System.Data</Name>
+    </Reference>
+    <Reference Include="System.Drawing">
+      <Name>System.Drawing</Name>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="xunit.abstractions, Version=2.0.0.0, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <HintPath>..\packages\xunit.abstractions.2.0.3\lib\net35\xunit.abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.XML">
+      <Name>System.XML</Name>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="NXSigningResource.res" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CAD\NX\AssemblyInfo.cs" />
+    <Compile Include="CAD\NX\ExportRobotDialog.Main.cs" />
+    <Compile Include="CAD\NX\ExportRobotDialog.Tendons.cs" />
+    <Compile Include="CAD\NX\GuidDebugger.cs" />
+    <Compile Include="CAD\NX\GuidSanitizer.cs" />
+    <Compile Include="CAD\NX\NXBridge.cs" />
+    <Compile Include="CAD\NX\NXJointVisualizer.cs" />
+    <Compile Include="CAD\NX\NXTendonVisualizer.cs" />
+    <Compile Include="CAD\NX\NXInertialVisualizer.cs" />
+    <Compile Include="CAD\NX\NXConfigurationSerialization.cs" />
+    <Compile Include="CAD\NX\NXPersistentId.cs" />
+    <Compile Include="CAD\NX\WaveLinker.cs" />
+    <Compile Include="CAD\NX\URDFImporterDialog.cs" />
+    <Compile Include="CAD\CADBridge.cs" />
+    <Compile Include="CAD\NX\NXTreeManager.cs" />
+    <Compile Include="CAD\NX\SuperDexMeshExporterDialog.cs" />
+    <Compile Include="CAD\NX\NXLinkNode.cs" />
+    <Compile Include="Import\URDFImporter.cs" />
+    <Compile Include="Export\ExportOptions.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="Meshing\MeshCliProtocol.cs" />
+    <Compile Include="Meshing\MeshCliRunner.cs" />
+    <Compile Include="Meshing\MeshExport.cs" />
+    <Compile Include="UI\IMessageBox.cs" />
+    <Compile Include="UI\InputDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\ExportCompleteDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\MessageBoxHelper.cs" />
+    <Compile Include="UI\ProgressIndicatorForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\ProgressIndicatorForm.Designer.cs">
+      <DependentUpon>ProgressIndicatorForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\ProgressIndicatorManager.cs" />
+    <Compile Include="RobotDescription\Mimic.cs" />
+    <Compile Include="RobotDescription\Utilities.cs" />
+    <Compile Include="Utilities\Logger.cs" />
+    <Compile Include="Utilities\NativeWindowWrapper.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="UI\AssemblyExportForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\AssemblyExportForm.Designer.cs">
+      <DependentUpon>AssemblyExportForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="RobotExport\ExportHelper.cs" />
+    <Compile Include="UI\AssemblyExportFormExtension.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Utilities\MathOPS.cs" />
+    <Compile Include="Utilities\StlScaler.cs" />
+    <Compile Include="RobotDescription\Axis.cs" />
+    <Compile Include="RobotDescription\Calibration.cs" />
+    <Compile Include="RobotDescription\ChildLink.cs" />
+    <Compile Include="RobotDescription\Collision.cs" />
+    <Compile Include="RobotDescription\Color.cs" />
+    <Compile Include="RobotDescription\Dynamics.cs" />
+    <Compile Include="Export\ExportFormat.cs" />
+    <Compile Include="Export\FormatWriterBase.cs" />
+    <Compile Include="Export\FormatWriterFactory.cs" />
+    <Compile Include="Export\IFormatWriter.cs" />
+    <Compile Include="Export\MJCFFormatWriter.cs" />
+    <Compile Include="Export\URDFFormatWriter.cs" />
+    <Compile Include="Export\SuperDexBotFormatWriter.cs" />
+    <Compile Include="Model\ElementAttribute.cs" />
+    <Compile Include="Model\RobotElement.cs" />
+    <Compile Include="RobotDescription\Geometry.cs" />
+    <Compile Include="RobotDescription\Inertia.cs" />
+    <Compile Include="RobotDescription\Inertial.cs" />
+    <Compile Include="RobotDescription\Joint.cs" />
+    <Compile Include="RobotDescription\Limit.cs" />
+    <Compile Include="RobotDescription\Link.cs" />
+    <Compile Include="UI\LinkNode.cs" />
+    <Compile Include="RobotDescription\Mass.cs" />
+    <Compile Include="RobotDescription\Material.cs" />
+    <Compile Include="RobotDescription\Mesh.cs" />
+    <Compile Include="RobotDescription\Origin.cs" />
+    <Compile Include="RobotDescription\ParentLink.cs" />
+    <Compile Include="RobotDescription\Robot.cs" />
+    <Compile Include="RobotDescription\RoutingElement.cs" />
+    <Compile Include="RobotDescription\SafetyController.cs" />
+    <Compile Include="RobotDescription\Tendon.cs" />
+    <Compile Include="RobotDescription\Texture.cs" />
+    <Compile Include="Import\TreeTextImporter.cs" />
+    <Compile Include="RobotExport\RobotPackage.cs" />
+    <Compile Include="RobotDescription\Visual.cs" />
+    <Compile Include="Versioning\Version.cs" />
+    <Compile Include="Versioning\VersionInfo.cs" />
+    <Compile Include="Versioning\VersionString.cs" />
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\AssemblyExportForm.resx">
+      <DependentUpon>AssemblyExportForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\ProgressIndicatorForm.resx">
+      <DependentUpon>ProgressIndicatorForm.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+    <!-- Out-of-process mesher. Not checked in; build it with scripts\refresh_mesh_cli_buck.bat
+         (or refresh_mesh_cli_cmake.bat). -->
+    <None Include="Meshing\superdex_mesh_cli.exe">
+      <!-- Link flattens it to the output root; MeshCliRunner looks for the helper next to the
+           assembly, not in a Meta subfolder. -->
+      <Link>superdex_mesh_cli.exe</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Target Name="EnsureMeshCliHelper" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(ProjectDir)Meshing\superdex_mesh_cli.exe')" Text="superdex_mesh_cli.exe is missing from src\Meshing. Please build it first." />
+  </Target>
+  <PropertyGroup>
+    <PostBuildEvent>
+if exist "%25UGII_BASE_DIR%25\ugopen\NXOpenAuxillaryActions.bat" call "%25UGII_BASE_DIR%25\ugopen\NXOpenAuxillaryActions.bat" DotNet $(TargetDir) $(TargetFileName) $(ProjectDir) $(ProjectName)
+
+REM Create NX custom directories if they don't exist
+if not exist "C:\NXCustom\startup" mkdir "C:\NXCustom\startup"
+if not exist "C:\NXCustom\application" mkdir "C:\NXCustom\application"
+
+REM Copy DLLs and related files to startup directory
+xcopy /Y "$(TargetDir)*.*" "C:\NXCustom\startup\"
+
+REM Copy application files (dlx, xml, etc.)
+xcopy /Y "$(ProjectDir)CAD\NX\application\*.*" "C:\NXCustom\application\"
+xcopy /Y "$(ProjectDir)CAD\NX\application\icons\*.*" "C:\NXCustom\application\icons\"
+
+REM Copy startup files
+xcopy /Y "$(ProjectDir)CAD\NX\startup\*.*" "C:\NXCustom\startup\"
+</PostBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PreBuildEvent>"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -ExecutionPolicy Bypass -File "$(SolutionDir)scripts\UpdateVersionInfo.ps1" --filename "$(ProjectDir)Versioning\VersionInfo.cs"</PreBuildEvent>
+  </PropertyGroup>
+  <Import Project="..\packages\System.ValueTuple.4.6.2\build\net471\System.ValueTuple.targets" Condition="Exists('..\packages\System.ValueTuple.4.6.2\build\net471\System.ValueTuple.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\System.ValueTuple.4.6.2\build\net471\System.ValueTuple.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\System.ValueTuple.4.6.2\build\net471\System.ValueTuple.targets'))" />
+  </Target>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

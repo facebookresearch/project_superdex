@@ -1,0 +1,82 @@
+{
+  "editorState": {
+    "cadRotation": [
+      0.7071067690849304,
+      0,
+      0,
+      0.7071067690849304
+    ],
+    "cadScale": [
+      1,
+      1,
+      1
+    ],
+    "cadTranslation": [
+      0,
+      0,
+      0
+    ]
+  },
+  "modifiers": [
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "From Model Viewer",
+      "modifier": "Source from CAD Model",
+      "properties": {
+        "allowPartialFailure": true,
+        "angularDeflection": 0.25,
+        "backend": "CadMesher",
+        "bodySelection": 0,
+        "edgeSampling": "Uniform",
+        "linearDeflection": 0.05,
+        "targetEdgeLength": 0,
+        "targetEdgeLengthFraction": 0.009999999999999992
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": false,
+      "method": "Make Manifold",
+      "modifier": "Refine Mesh",
+      "properties": {
+        "thenMakeWatertight": true
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": false,
+      "method": "Tangential Relaxation (Smoothing)",
+      "modifier": "Refine Mesh",
+      "properties": {
+        "angleSmoothingIterations": 0,
+        "tangentialRelaxationIterations": 3
+      }
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "SDF",
+      "modifier": "Export Mochi Model",
+      "properties": {
+        "exportPath": "../collision/base_nine_hole.mochi.h5",
+        "sdf": {
+          "boundaryPaddingDist": 0.005000000353902578,
+          "minGridResolution": [
+            6,
+            6,
+            6
+          ],
+          "resolutionDelta": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "resolutionMode": "MeanEdge"
+        }
+      }
+    }
+  ],
+  "referenceModels": [],
+  "version": 1
+}

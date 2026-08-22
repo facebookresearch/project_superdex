@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StepFilter xmlns="http://schemas.microsoft.com/vstudio/debugger/natstepfilter/2010">
+
+  <!-- Skip std::function constructor and certain internals that get in the way of your attempt to step into the user-defined function -->
+  <Function>
+    <Name>std::function&lt;.*&gt;::function.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>std::_Func_class&lt;.*&gt;::_Empty</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>std::_Func_class&lt;.*&gt;::_Getimpl</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+
+  <!-- Skip other common std library internals -->
+  <Function>
+    <Name>std::basic_string&lt;.*&gt;::.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>std::basic_string_view&lt;.*&gt;::.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>std::forward&lt;.*&gt;</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>std::get.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>std::list&lt;.*&gt;::.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>std::make_.*&lt;.*&gt;</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>std::move&lt;.*&gt;</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>std::optional&lt;.*&gt;::.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>std::shared_ptr&lt;.*&gt;::.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>std::string::.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>std::tuple.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>std::unique_ptr&lt;.*&gt;::.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>std::unordered_map&lt;.*&gt;::.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>std::unordered_set&lt;.*&gt;::.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>std::vector&lt;.*&gt;::.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+
+</StepFilter>

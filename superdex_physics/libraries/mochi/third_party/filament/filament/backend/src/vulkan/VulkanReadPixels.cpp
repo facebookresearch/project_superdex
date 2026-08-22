@@ -1,0 +1,402 @@
+/*
+ * Copyright (C) 2023 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "VulkanReadPixels.h"
+
+#include "DataReshaper.h"
+#include "VulkanCommands.h"
+#include "VulkanHandles.h"
+#include "VulkanTexture.h"
+#include "vulkan/utils/Conversion.h"  // getComponentType()
+#include "vulkan/utils/Image.h"
+
+#include <utils/Log.h>
+#include <utils/compiler.h>
+
+using namespace bluevk;
+
+namespace filament::backend {
+
+using TaskHandler = VulkanReadPixels::TaskHandler;
+using WorkloadFunc = TaskHandler::WorkloadFunc;
+using OnCompleteFunc = TaskHandler::OnCompleteFunc;
+
+TaskHandler::TaskHandler()
+    : mShouldStop(false),
+      mThread(&TaskHandler::loop, this) {}
+
+void TaskHandler::post(WorkloadFunc&& workload, OnCompleteFunc&& oncomplete) {
+    assert_invariant(!mShouldStop);
+    {
+        std::unique_lock<std::mutex> lock(mTaskQueueMutex);
+        mTaskQueue.push(std::make_pair(std::move(workload), std::move(oncomplete)));
+    }
+    mHasTaskCondition.notify_one();
+}
+
+void TaskHandler::drain() {
+    assert_invariant(!mShouldStop);
+
+    std::mutex syncPointMutex;
+    std::condition_variable syncCondition;
+    bool done = false;
+    post([] {},
+            [&syncPointMutex, &syncCondition, &done] {
+                {
+                    std::unique_lock<std::mutex> lock(syncPointMutex);
+                    done = true;
+                    syncCondition.notify_one();
+                }
+            });
+
+    std::unique_lock<std::mutex> lock(syncPointMutex);
+    syncCondition.wait(lock, [&done] { return done; });
+}
+
+void TaskHandler::shutdown() {
+    {
+        std::unique_lock<std::mutex> lock(mTaskQueueMutex);
+        mShouldStop = true;
+    }
+    mHasTaskCondition.notify_one();
+    mThread.join();
+    FILAMENT_CHECK_POSTCONDITION(mTaskQueue.empty())
+            << "ReadPixels handler has tasks in the queue after shutdown";
+}
+
+void TaskHandler::loop() {
+    while (true) {
+        std::unique_lock<std::mutex> lock(mTaskQueueMutex);
+        mHasTaskCondition.wait(lock, [this] { return !mTaskQueue.empty() || mShouldStop; });
+        if (mShouldStop) {
+            break;
+        }
+        auto [workload, oncomplete] = mTaskQueue.front();
+        mTaskQueue.pop();
+        lock.unlock();
+        workload();
+        oncomplete();
+    }
+
+    // Clean-up: we still need to call oncomplete for clients to do clean-up.
+    while (true) {
+        std::unique_lock<std::mutex> lock(mTaskQueueMutex);
+        if (mTaskQueue.empty()) {
+            break;
+        }
+        auto [workload, oncomplete] = mTaskQueue.front();
+        mTaskQueue.pop();
+        lock.unlock();
+        oncomplete();
+    }
+}
+
+void VulkanReadPixels::terminate() noexcept {
+    assert_invariant(mDevice != VK_NULL_HANDLE);
+    if (mCommandPool == VK_NULL_HANDLE) {
+        return;
+    }
+    vkDestroyCommandPool(mDevice, mCommandPool, VKALLOC);
+    mDevice = VK_NULL_HANDLE;
+
+    mTaskHandler->shutdown();
+    mTaskHandler.reset();
+}
+
+VulkanReadPixels::VulkanReadPixels(VkDevice device)
+    : mDevice(device) {}
+
+void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget, uint32_t const x,
+        uint32_t const y, uint32_t const width, uint32_t const height,
+        uint32_t const graphicsQueueFamilyIndex, PixelBufferDescriptor&& pbd,
+        SelecteMemoryFunction const& selectMemoryFunc,
+        OnReadCompleteFunction const& readCompleteFunc) {
+    bool const isDepthStencil = pbd.format == PixelDataFormat::DEPTH_COMPONENT ||
+                         pbd.format == PixelDataFormat::DEPTH_STENCIL;
+    VulkanAttachment const srcAttachment = isDepthStencil ? srcTarget->getDepthStencil() : srcTarget->getColor0();
+    run(srcAttachment.texture, srcAttachment.level, srcAttachment.layer, x, y, width, height,
+            graphicsQueueFamilyIndex, std::move(pbd), selectMemoryFunc, readCompleteFunc);
+}
+
+void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanTexture> srcTexture, uint8_t level,
+        uint16_t layer, uint32_t x, uint32_t y, uint32_t width, uint32_t height,
+        uint32_t graphicsQueueFamilyIndex, PixelBufferDescriptor&& pbd,
+        SelecteMemoryFunction const& selectMemoryFunc,
+        OnReadCompleteFunction const& readCompleteFunc) {
+    assert_invariant(mDevice != VK_NULL_HANDLE);
+    assert_invariant(srcTexture);
+
+    VkDevice& device = mDevice;
+
+    if (mCommandPool == VK_NULL_HANDLE) {
+        // Create a command pool if one has not been created.
+        VkCommandPoolCreateInfo createInfo = {
+                .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+                .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+                         | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+                .queueFamilyIndex = graphicsQueueFamilyIndex,
+        };
+        vkCreateCommandPool(device, &createInfo, VKALLOC, &mCommandPool);
+    }
+
+    // We don't create a task handler (start a thread) unless readPixels is called.
+    if (!mTaskHandler) {
+        mTaskHandler = std::make_unique<TaskHandler>();
+    }
+
+    VkCommandPool const cmdpool = mCommandPool;
+
+    VkFormat const srcFormat = srcTexture->getVkFormat();
+    VkImageAspectFlags const aspectMask = fvkutils::getImageAspect(srcFormat);
+
+    bool const swizzle
+            = srcFormat == VK_FORMAT_B8G8R8A8_UNORM || srcFormat == VK_FORMAT_B8G8R8A8_SRGB;
+
+    bool const isDepth =
+            (aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) || (aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT);
+
+    VkImageAspectFlags copyAspect = aspectMask;
+    if (isDepth) {
+        // If the user requested DEPTH_COMPONENT or DEPTH_STENCIL, we only extract the depth aspect
+        // since Vulkan cannot copy interleaved depth/stencil data into a buffer via vkCmdCopyImageToBuffer.
+        copyAspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+    }
+
+    uint32_t componentCount = fvkutils::getComponentCount(srcFormat);
+    PixelDataType componentType = fvkutils::getComponentType(srcFormat);
+
+    if (isDepth) {
+        // When extracting depth or stencil, Vulkan returns tightly packed 1-component data.
+        componentCount = 1;
+        if (srcFormat == VK_FORMAT_D16_UNORM) {
+            componentType = PixelDataType::USHORT;
+        } else if (copyAspect == VK_IMAGE_ASPECT_STENCIL_BIT) {
+            componentType = PixelDataType::UBYTE;
+        } else {
+            componentType =
+                    (srcFormat == VK_FORMAT_D32_SFLOAT || srcFormat == VK_FORMAT_D32_SFLOAT_S8_UINT)
+                            ? PixelDataType::FLOAT
+                            : PixelDataType::UINT;
+        }
+    }
+
+    uint32_t bpp = 0;
+    switch (componentType) {
+        case PixelDataType::UBYTE:
+        case PixelDataType::BYTE:
+            bpp = 1;
+            break;
+        case PixelDataType::USHORT:
+        case PixelDataType::SHORT:
+        case PixelDataType::HALF:
+        case PixelDataType::USHORT_565:
+            bpp = 2;
+            break;
+        case PixelDataType::UINT:
+        case PixelDataType::INT:
+        case PixelDataType::FLOAT:
+        case PixelDataType::UINT_10F_11F_11F_REV:
+        case PixelDataType::UINT_2_10_10_10_REV:
+            bpp = 4;
+            break;
+        case PixelDataType::COMPRESSED:
+            bpp = 1; // Note: Compressed formats aren't fully supported for readPixels.
+            break;
+    }
+    if (componentType != PixelDataType::UINT_10F_11F_11F_REV &&
+        componentType != PixelDataType::USHORT_565 &&
+        componentType != PixelDataType::UINT_2_10_10_10_REV &&
+        componentType != PixelDataType::COMPRESSED) {
+        bpp *= componentCount;
+    }
+
+    uint32_t const samples = srcTexture->samples > 1 ? srcTexture->samples : 1;
+
+    // Use a VkBuffer as the staging area for readback.
+    // Using a buffer instead of a linearly tiled VkImage unifies the readback path and avoids
+    // driver/validation layer issues since some implementations strictly prohibit linear tiling
+    // for certain formats (such as depth/stencil).
+    VkBuffer stagingBuffer = VK_NULL_HANDLE;
+    VkMemoryRequirements memReqs;
+
+    uint32_t const stagingSize = width * height * bpp * samples;
+    VkBufferCreateInfo bufferInfo = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = stagingSize,
+        .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    };
+    // TODO: we could use a staging buffer pool, but this is on another thread.  We'd need to
+    // have a separate pool, or make our backend-thread one thread-safe.
+    vkCreateBuffer(device, &bufferInfo, VKALLOC, &stagingBuffer);
+    vkGetBufferMemoryRequirements(device, stagingBuffer, &memReqs);
+
+#if FVK_ENABLED(FVK_DEBUG_READ_PIXELS)
+    FVK_LOGD << "readPixels created staging area buffer"
+             << " to copy from image=" << srcTexture->getVkImage()
+             << " src-layout=" << srcTexture->getLayout(level, layer);
+#endif
+
+    VkDeviceMemory stagingMemory;
+
+    uint32_t memoryTypeIndex = selectMemoryFunc(memReqs.memoryTypeBits,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+                    | VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
+
+    // If VK_MEMORY_PROPERTY_HOST_CACHED_BIT is not supported, we try only
+    // HOST_VISIBLE+HOST_COHERENT.  HOST_CACHED helps a lot with readpixels performance.
+    if (memoryTypeIndex >= VK_MAX_MEMORY_TYPES) {
+        memoryTypeIndex = selectMemoryFunc(memReqs.memoryTypeBits,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        FVK_LOGW
+                << "readPixels is slow because VK_MEMORY_PROPERTY_HOST_CACHED_BIT is not available";
+    }
+
+    FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES)
+            << "VulkanReadPixels: unable to find a memory type that meets requirements.";
+
+    VkMemoryAllocateInfo const allocInfo = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memReqs.size,
+        .memoryTypeIndex = memoryTypeIndex,
+    };
+
+    vkAllocateMemory(device, &allocInfo, VKALLOC, &stagingMemory);
+    vkBindBufferMemory(device, stagingBuffer, stagingMemory, 0);
+
+    VkCommandBuffer cmdbuffer;
+    VkCommandBufferAllocateInfo const allocateInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = cmdpool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1,
+    };
+    vkAllocateCommandBuffers(device, &allocateInfo, &cmdbuffer);
+
+    VkCommandBufferBeginInfo const binfo{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    };
+    vkBeginCommandBuffer(cmdbuffer, &binfo);
+
+    VkImageSubresourceRange const srcRange = {
+        .aspectMask = aspectMask,
+        .baseMipLevel = level,
+        .levelCount = 1,
+        .baseArrayLayer = layer,
+        .layerCount = 1,
+    };
+    VulkanLayout const srcLayout = srcTexture->getLayout(level, layer);
+    srcTexture->transitionLayout(cmdbuffer, srcRange, VulkanLayout::TRANSFER_SRC);
+
+    uint32_t const mipHeight = std::max(1u, srcTexture->height >> level);
+
+    VkBufferImageCopy const region = {
+        .bufferOffset = 0,
+        .bufferRowLength = width,
+        .bufferImageHeight = height,
+        .imageSubresource = {
+            .aspectMask = copyAspect,
+            .mipLevel = level,
+            .baseArrayLayer = layer,
+            .layerCount = 1,
+        },
+        .imageOffset = {
+            .x = (int32_t)x,
+            .y = (int32_t)(mipHeight - (height + y)),
+            .z = 0,
+        },
+        .imageExtent = {
+            .width = width,
+            .height = height,
+            .depth = 1,
+        },
+    };
+
+    // Copy the specific aspect from the image into the tightly packed staging buffer.
+    vkCmdCopyImageToBuffer(cmdbuffer, srcTexture->getVkImage(),
+            fvkutils::getVkLayout(VulkanLayout::TRANSFER_SRC), stagingBuffer, 1, &region);
+
+    // Restore the source image layout.
+    srcTexture->transitionLayout(cmdbuffer, srcRange, srcLayout);
+
+    vkEndCommandBuffer(cmdbuffer);
+
+    VkQueue queue;
+    vkGetDeviceQueue(device, graphicsQueueFamilyIndex, 0, &queue);
+    VkFence readCompleteFence;
+    VkFenceCreateInfo const fenceCreateInfo{
+            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+    };
+    vkCreateFence(device, &fenceCreateInfo, VKALLOC, &readCompleteFence);
+    VkSubmitInfo const submitInfo{
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .waitSemaphoreCount = 0,
+            .pWaitSemaphores = VK_NULL_HANDLE,
+            .pWaitDstStageMask = VK_NULL_HANDLE,
+            .commandBufferCount = 1,
+            .pCommandBuffers = &cmdbuffer,
+            .signalSemaphoreCount = 0,
+            .pSignalSemaphores = VK_NULL_HANDLE,
+    };
+    vkQueueSubmit(queue, 1, &submitInfo, readCompleteFence);
+
+    auto* const pUserBuffer = new PixelBufferDescriptor(std::move(pbd));
+    auto cleanPbdFunc = [pUserBuffer, readCompleteFunc]() {
+        PixelBufferDescriptor& p = *pUserBuffer;
+        readCompleteFunc(std::move(p));
+        delete pUserBuffer;
+    };
+    auto waitFenceFunc = [device, width, height, swizzle, stagingBuffer, stagingMemory, cmdpool,
+                                 cmdbuffer, pUserBuffer, bpp, componentType, componentCount,
+                                 fence = readCompleteFence]() mutable {
+        VkResult status = vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
+        if (status != VK_SUCCESS) {
+            FVK_LOGE << "Failed to wait for readPixels fence";
+            return;
+        }
+
+        PixelBufferDescriptor& p = *pUserBuffer;
+
+        // Map memory so that we can start copying from it.
+        uint8_t const* srcPixels;
+        vkMapMemory(device, stagingMemory, 0, VK_WHOLE_SIZE, 0, (void**) &srcPixels);
+
+        // If MSAA, MoltenVK returns samples in planar layout (Sample 0 is the first width * height
+        // pixels). So we can simply ask DataReshaper to read width * height elements with standard
+        // row pitch!
+        int const rowPitch = width * bpp;
+        if (!DataReshaper::reshapeImage(&p, componentType, componentCount, srcPixels, rowPitch,
+                    static_cast<int>(width), static_cast<int>(height), swizzle)) {
+            FVK_LOGE << "Unsupported PixelDataFormat or PixelDataType";
+        }
+
+        vkUnmapMemory(device, stagingMemory);
+        vkDestroyBuffer(device, stagingBuffer, VKALLOC);
+        vkFreeMemory(device, stagingMemory, VKALLOC);
+        vkDestroyFence(device, fence, VKALLOC);
+        vkFreeCommandBuffers(device, cmdpool, 1, &cmdbuffer);
+    };
+    mTaskHandler->post(std::move(waitFenceFunc), std::move(cleanPbdFunc));
+}
+
+void VulkanReadPixels::runUntilComplete() {
+    if (!mTaskHandler) {
+        return;
+    }
+    mTaskHandler->drain();
+}
+
+}// namespace filament::backend

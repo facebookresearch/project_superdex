@@ -1,0 +1,5 @@
+OpenArm by Enactic (https://openarm.dev).
+
+The derived .glb visual mesh, .mochi.h5 collision mesh, simplified .stp
+geometry, and .superdex_bot file in this package are
+distributed with Enactic's permission under the Apache License 2.0.

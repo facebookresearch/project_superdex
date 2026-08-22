@@ -1,0 +1,100 @@
+material {
+    name : Distortion,
+    shadingModel : unlit,
+    culling : none,
+    depthWrite : false,
+    depthCulling : false,
+    requires : [uv0],
+    parameters : [
+        {
+            type : sampler2d,
+            name : sourceTexture
+        },
+        {
+            type : float,
+            name : fx
+        },
+        {
+            type : float,
+            name : fy
+        },
+        {
+            type : float,
+            name : cx
+        },
+        {
+            type : float,
+            name : cy
+        },
+        {
+            type : float,
+            name : k1
+        },
+        {
+            type : float,
+            name : k2
+        },
+        {
+            type : float,
+            name : k3
+        },
+        {
+            type : float,
+            name : p1
+        },
+        {
+            type : float,
+            name : p2
+        },
+        {
+            type : float2,
+            name : imageSize
+        }
+    ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+
+        // UV0 maps [0,1] across the fullscreen quad — convert to pixel coordinates
+        float2 uv0 = getUV0();
+        float u = uv0.x * materialParams.imageSize.x;
+        float v = uv0.y * materialParams.imageSize.y;
+
+        // Convert to normalized coordinates (OpenCV convention)
+        float x = (u - materialParams.cx) / materialParams.fx;
+        float y = (v - materialParams.cy) / materialParams.fy;
+
+        // Compute r^2
+        float r2 = x * x + y * y;
+        float r4 = r2 * r2;
+        float r6 = r4 * r2;
+
+        // Radial distortion (5-coefficient model)
+        float radial = 1.0 + materialParams.k1 * r2
+                            + materialParams.k2 * r4
+                            + materialParams.k3 * r6;
+
+        // Tangential distortion
+        float xd = x * radial + 2.0 * materialParams.p1 * x * y
+                    + materialParams.p2 * (r2 + 2.0 * x * x);
+        float yd = y * radial + materialParams.p1 * (r2 + 2.0 * y * y)
+                    + 2.0 * materialParams.p2 * x * y;
+
+        // Back to pixel coordinates — this is where to sample the undistorted image
+        float ud = materialParams.fx * xd + materialParams.cx;
+        float vd = materialParams.fy * yd + materialParams.cy;
+
+        // Sample source texture with normalized UV
+        float2 srcUv = float2(ud / materialParams.imageSize.x,
+                              vd / materialParams.imageSize.y);
+
+        // Bounds check — black outside source image
+        if (srcUv.x < 0.0 || srcUv.x > 1.0 || srcUv.y < 0.0 || srcUv.y > 1.0) {
+            material.baseColor = float4(0.0, 0.0, 0.0, 1.0);
+        } else {
+            material.baseColor = texture(materialParams_sourceTexture, srcUv);
+        }
+    }
+}

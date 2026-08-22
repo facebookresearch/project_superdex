@@ -1,0 +1,6 @@
+{
+  "description": "Ant without the contact forces in the observation. This is the configuration the Ant training recipe targets.",
+  "env_cfg": {
+    "include_contact_in_observation": false
+  }
+}

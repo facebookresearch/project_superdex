@@ -1,0 +1,180 @@
+{
+  "actors": {
+    "articulated": [
+      {
+        "joints": [
+          {
+            "name": "RootFree",
+            "type": "Free"
+          },
+          {
+            "name": "BoneHinge1",
+            "type": "Revolute",
+            "axis": [0, 0, 1],
+            "parentLinkFromJoint": { "translation": [0.2, 0.1, 0] },
+            "minLimit": [0, 0, 0],
+            "maxLimit": [0, 0, 0.47123889803846897],
+            "limitStiffness": 1000
+          },
+          {
+            "name": "BoneHinge2",
+            "type": "Revolute",
+            "axis": [0, 0, 1],
+            "parentLinkFromJoint": { "translation": [0.2, 0.1, 0] },
+            "minLimit": [0, 0, 0],
+            "maxLimit": [0, 0, 0.47123889803846897],
+            "limitStiffness": 1000
+          },
+          {
+            "name": "BoneHinge3",
+            "type": "Revolute",
+            "axis": [0, 0, 1],
+            "parentLinkFromJoint": { "translation": [0.2, 0.1, 0] },
+            "minLimit": [0, 0, 0],
+            "maxLimit": [0, 0, 0.47123889803846897],
+            "limitStiffness": 1000
+          },
+          {
+            "name": "EyeletWeld0",
+            "type": "Hard",
+            "parentLinkFromJoint": { "translation": [0.1, 0.15, 0.05] }
+          },
+          {
+            "name": "EyeletWeld1",
+            "type": "Hard",
+            "parentLinkFromJoint": { "translation": [0.1, 0.15, 0.05] }
+          },
+          {
+            "name": "EyeletWeld2",
+            "type": "Hard",
+            "parentLinkFromJoint": { "translation": [0.1, 0.15, 0.05] }
+          },
+          {
+            "name": "EyeletWeld3",
+            "type": "Hard",
+            "parentLinkFromJoint": { "translation": [0.1, 0.15, 0.05] }
+          },
+          {
+            "name": "SliderPrismatic",
+            "type": "Prismatic",
+            "axis": [-1, 0, 0],
+            "parentLinkFromJoint": { "translation": [-0.1, 0.15, 0.05] }
+          }
+        ],
+        "links": [
+          {
+            "name": "Bone0",
+            "parentLink": -1,
+            "shape": "cube/cube_mesh.mochi.json",
+            "shapeScale": [0.2, 0.1, 0.1],
+            "layer": "Bone",
+            "density": 1000
+          },
+          {
+            "name": "Bone1",
+            "parentLink": 0,
+            "parentJointFromLink": { "translation": [0, -0.1, 0] },
+            "shape": "cube/cube_mesh.mochi.json",
+            "shapeScale": [0.2, 0.1, 0.1],
+            "layer": "Bone",
+            "density": 1000
+          },
+          {
+            "name": "Bone2",
+            "parentLink": 1,
+            "parentJointFromLink": { "translation": [0, -0.1, 0] },
+            "shape": "cube/cube_mesh.mochi.json",
+            "shapeScale": [0.2, 0.1, 0.1],
+            "layer": "Bone",
+            "density": 1000
+          },
+          {
+            "name": "Bone3",
+            "parentLink": 2,
+            "parentJointFromLink": { "translation": [0, -0.1, 0] },
+            "shape": "cube/cube_mesh.mochi.json",
+            "shapeScale": [0.2, 0.1, 0.1],
+            "layer": "Bone",
+            "density": 1000
+          },
+          {
+            "name": "Eyelet0",
+            "parentLink": 0,
+            "shape": "letters/alphanumeric/O.mochi.h5",
+            "shapeScale": [0.1, 0.1, 0.1],
+            "shapeRotation": [0, 0.7071067811865476, 0, 0.7071067811865476],
+            "shapeTranslation": [-0.01, -0.085, 0.085],
+            "layer": "RoutingGuide",
+            "density": 1000,
+            "contact": {
+              "penaltyCoefficient": 100000000000,
+              "coulombFrictionCoefficient": 0,
+              "viscousFrictionCoefficient": 0
+            }
+          },
+          {
+            "name": "Eyelet1",
+            "parentLink": 1,
+            "shape": "letters/alphanumeric/O.mochi.h5",
+            "shapeScale": [0.1, 0.1, 0.1],
+            "shapeRotation": [0, 0.7071067811865476, 0, 0.7071067811865476],
+            "shapeTranslation": [-0.01, -0.085, 0.085],
+            "layer": "RoutingGuide",
+            "density": 1000,
+            "contact": {
+              "penaltyCoefficient": 100000000000,
+              "coulombFrictionCoefficient": 0,
+              "viscousFrictionCoefficient": 0
+            }
+          },
+          {
+            "name": "Eyelet2",
+            "parentLink": 2,
+            "shape": "letters/alphanumeric/O.mochi.h5",
+            "shapeScale": [0.1, 0.1, 0.1],
+            "shapeRotation": [0, 0.7071067811865476, 0, 0.7071067811865476],
+            "shapeTranslation": [-0.01, -0.085, 0.085],
+            "layer": "RoutingGuide",
+            "density": 1000,
+            "contact": {
+              "penaltyCoefficient": 100000000000,
+              "coulombFrictionCoefficient": 0,
+              "viscousFrictionCoefficient": 0
+            }
+          },
+          {
+            "name": "Eyelet3",
+            "parentLink": 3,
+            "shape": "letters/alphanumeric/O.mochi.h5",
+            "shapeScale": [0.1, 0.1, 0.1],
+            "shapeRotation": [0, 0.7071067811865476, 0, 0.7071067811865476],
+            "shapeTranslation": [-0.01, -0.085, 0.085],
+            "layer": "RoutingGuide",
+            "density": 1000,
+            "contact": {
+              "penaltyCoefficient": 100000000000,
+              "coulombFrictionCoefficient": 0,
+              "viscousFrictionCoefficient": 0
+            }
+          },
+          {
+            "name": "Slider",
+            "parentLink": 0,
+            "shape": "cube/cube_mesh.mochi.json",
+            "shapeScale": [0.06, 0.06, 0.06],
+            "shapeTranslation": [-0.06, -0.03, -0.03],
+            "colliderType": "None",
+            "density": 1000
+          }
+        ]
+      }
+    ]
+  },
+  "contactFilter": {
+    "layerContactSymmetric": [
+      { "layers": ["Bone", "Bone"], "enable": false },
+      { "layers": ["RoutingGuide", "RoutingGuide"], "enable": false },
+      { "layers": ["Bone", "RoutingGuide"], "enable": false }
+    ]
+  }
+}

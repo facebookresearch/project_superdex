@@ -1,0 +1,1411 @@
+namespace prefab;
+
+## Prefab Types
+
+// @brief Parameters that are global to the @ref Scene in which this prefab
+// will be instantiated.
+//
+// @note If prefabs are nested, then only the top-level prefab will use these
+// parameters.
+struct prefab::SceneParams [no_reflection] {
+  // @brief Optional serialized comment.
+  Optional<String> comment;
+
+  // @brief Human-readable description of the scene.
+  String description;
+
+  // @brief Optional gravity vector [m/s^2] in world frame.
+  //
+  // @details @ref AddToScene replaces the scene's gravity only when this value is
+  // provided by the top-level prefab and @ref PrefabParams::applySceneSettings is true.
+  // Otherwise, the existing scene gravity is preserved.
+  Optional<Real3> gravity [units(m/s^2)];
+
+  // @brief Optional solver parameters.
+  //
+  // @details @ref AddToScene replaces the scene's complete solver parameters only when this value
+  // is provided by the top-level prefab and @ref PrefabParams::applySceneSettings is true. In all
+  // other cases, the existing scene solver parameters are preserved. When replacement occurs,
+  // fields omitted from the solver object use their default values, e.g. `"solver": {}` resets all
+  // solver parameters to their defaults.
+  Optional<SolverParams> solver;
+}
+
+// @brief Prefab parameters for a rigid actor.
+//
+// @details Extends @ref RigidActorParams. The inherited @ref RigidActorParams::worldFromLocal
+// is replaced by the prefab-relative @ref rotation and @ref translation fields, and the
+// inherited @ref RigidActorParams::shape (a runtime @ref ShapeHandle) is replaced by
+// @ref shapeFile (a path serialized to JSON. The shape is loaded at instantiation time).
+//
+// @note The inherited @ref RigidActorParams::name field need not be unique, but a name
+// shared by more than one actor cannot be referenced by a constraint, pose controller, or
+// contact filter.
+struct prefab::RigidActorPrefab(RigidActorParams) [no_reflection] {
+  // @brief Optional serialized comment.
+  Optional<String> comment;
+
+  // @brief Path to a model file that will be loaded and referenced via @ref ShapeHandle.
+  String shapeFile;
+
+  // @brief Scale [x, y, z] to bake into the shape file.
+  //
+  // @note All components must be non-zero and finite. Negative scale mirrors the shape.
+  // @note Some shape data cannot bake arbitrary non-uniform scale. Unsupported scale values are
+  // rejected when the shape is loaded.
+  // @note Precomputed grid SDF data is preserved only when @ref scale is uniform by absolute
+  // value. Non-uniform scale by absolute value discards the precomputed SDF. If an SDF collider
+  // is used, SuperDex Physics regenerates the SDF from the transformed mesh at runtime, which
+  // may be expensive.
+  Real3 scale = kReal3Ones;
+
+  // @brief Rotation quaternion [x, y, z, w] to bake into the shape file.
+  Quaternion shapeRotation;
+
+  // @brief Translation [x, y, z] to bake into the shape file.
+  Real3 shapeTranslation [units(m)];
+
+  // @brief Actor rotation quaternion [x, y, z, w] relative to the prefab's local frame
+  // (i.e., the prefab-from-local rotation). Composes with @ref PrefabParams::rotation
+  // to produce the final world-from-local rotation.
+  //
+  // @note Must be finite and non-zero.
+  Quaternion rotation;
+
+  // @brief Actor translation [x, y, z] relative to the prefab's local frame
+  // (i.e., the prefab-from-local translation). Composes with @ref PrefabParams::scale,
+  // @ref PrefabParams::rotation, and @ref PrefabParams::translation to produce the final
+  // world-from-local translation.
+  //
+  // @note Must be finite.
+  Real3 translation [units(m)];
+
+  // @brief Optional path to a render model file (e.g. .glb) for visualization.
+  //
+  // @note SuperDex Physics does not use this field for simulation. It provides additional
+  // metadata for visualization in supported tools. Ignored if empty.
+  DynamicString renderModelFile;
+
+  // @brief Scale [x, y, z] to apply to the render model.
+  //
+  // @note Ignored if @ref renderModelFile is empty.
+  Real3 renderModelScale = kReal3Ones;
+
+  // @brief Rotation quaternion [x, y, z, w] to apply to the render model.
+  //
+  // @note Ignored if @ref renderModelFile is empty.
+  Quaternion renderModelRotation;
+
+  // @brief Translation [x, y, z] to apply to the render model.
+  //
+  // @note Ignored if @ref renderModelFile is empty.
+  Real3 renderModelTranslation [units(m)];
+}
+
+// @brief Prefab parameters for a soft actor.
+//
+// @details Extends @ref SoftActorParams. The inherited @ref SoftActorParams::worldFromLocal
+// is replaced by the prefab-relative @ref rotation and @ref translation fields, and the
+// inherited @ref SoftActorParams::shape (a runtime @ref ShapeHandle) is replaced by
+// @ref shapeFile (a path serialized to JSON. The shape is loaded at instantiation time).
+//
+// @note When used as a standalone soft actor prefab, the inherited @ref SoftActorParams::name
+// field need not be unique, but a name shared by more than one actor cannot be referenced by a
+// constraint, pose controller, or contact filter.
+struct prefab::SoftActorPrefab(SoftActorParams) [no_reflection] {
+  // @brief Optional serialized comment.
+  Optional<String> comment;
+
+  // @brief Path to a model file that will be loaded and referenced via @ref ShapeHandle.
+  String shapeFile;
+
+  // @brief [Experimental] Collision detection geometry.
+  //
+  // @warning This is an experimental feature. It may be changed or removed in the future. Use at
+  // your own risk.
+  //
+  // @note Determines how OTHER actors detect contact with this actor. It does not affect how this
+  // actor detects contact with other actors.
+  ColliderType colliderType = None;
+
+  // @brief [Experimental] Parameters used to construct a grid-based Signed Distance Field (SDF)
+  // if the shape doesn't already have one.
+  //
+  // @warning This is an experimental feature. It may be changed or removed in the future. Use at
+  // your own risk.
+  //
+  // @note Ignored if @ref colliderType is not @ref ColliderType::Sdf.
+  // @note Ignored if the shape already has a grid-based SDF.
+  GridSdfParams sdf;
+
+  // @brief [Experimental] Optional path to a deep flow shape handle for collision detection.
+  //
+  // @warning This is an experimental feature. It may be changed or removed in the future. Use at
+  // your own risk.
+  String flowFile;
+
+  // @brief [Experimental] Optional deep flow shape handle loaded from @ref flowFile.
+  //
+  // @warning This is an experimental feature. It may be changed or removed in the future. Use at
+  // your own risk.
+  ShapeHandle flow;
+
+  // @brief [Experimental] Enable automatic recentering of the local coordinate system.
+  //
+  // @warning This is an experimental feature. It may be changed or removed in the future. Use at
+  // your own risk.
+  //
+  // @note Recentering updates the root transform as the actor moves, keeping local-space
+  // displacements small. This improves numerical stability for actors that move far from their
+  // initial position.
+  // @note Ignored by soft skinned actors, which do not support recentering.
+  bool useRecentering = true;
+
+  // @brief Scale [x, y, z] to bake into the shape file.
+  //
+  // @note All components must be strictly positive and finite. Negative scale (mirroring) is not
+  // supported and rejected at @ref AddToScene.
+  // @note If @ref flowFile is set, @ref scale must be (1, 1, 1).
+  // @note Non-uniform scale is supported only for shape data that supports arbitrary per-axis bake
+  // scale. Unsupported scale values are rejected when the shape is loaded.
+  Real3 scale = kReal3Ones;
+
+  // @brief Rotation quaternion [x, y, z, w] to bake into the shape file.
+  Quaternion shapeRotation;
+
+  // @brief Translation [x, y, z] to bake into the shape file.
+  Real3 shapeTranslation [units(m)];
+
+  // @brief Actor rotation quaternion [x, y, z, w] relative to the prefab's local frame
+  // (i.e., the prefab-from-local rotation). Composes with @ref PrefabParams::rotation
+  // to produce the final world-from-local rotation.
+  //
+  // @note Must be finite and non-zero when used in @ref ActorLists::soft.
+  // @note Ignored when used in @ref SoftSkinnedActorPrefab::softParams.
+  Quaternion rotation;
+
+  // @brief Actor translation [x, y, z] relative to the prefab's local frame
+  // (i.e., the prefab-from-local translation). Composes with @ref PrefabParams::scale,
+  // @ref PrefabParams::rotation, and @ref PrefabParams::translation to produce the final
+  // world-from-local translation.
+  //
+  // @note Must be finite when used in @ref ActorLists::soft.
+  // @note Ignored when used in @ref SoftSkinnedActorPrefab::softParams.
+  Real3 translation [units(m)];
+
+  // @brief Optional path to a render model file (e.g. .glb) for visualization.
+  //
+  // @note SuperDex Physics does not use this field for simulation. It provides additional
+  // metadata for visualization in supported tools. Ignored if empty.
+  DynamicString renderModelFile;
+
+  // @brief Scale [x, y, z] to apply to the render model.
+  //
+  // @note Ignored if @ref renderModelFile is empty.
+  Real3 renderModelScale = kReal3Ones;
+
+  // @brief Rotation quaternion [x, y, z, w] to apply to the render model.
+  //
+  // @note Ignored if @ref renderModelFile is empty.
+  Quaternion renderModelRotation;
+
+  // @brief Translation [x, y, z] to apply to the render model.
+  //
+  // @note Ignored if @ref renderModelFile is empty.
+  Real3 renderModelTranslation [units(m)];
+}
+
+// @brief Joint parameters for an articulated actor prefab.
+struct prefab::ArticulatedJointPrefab(ArticulatedJointParams) [equality, no_reflection] {}
+
+// @brief Link parameters for an articulated actor prefab.
+//
+// @details Extends @ref ArticulatedLinkParams. The inherited @ref ArticulatedLinkParams::shape
+// (a runtime @ref ShapeHandle) is replaced by @ref shapeFile (a path serialized to JSON.
+// The shape is loaded at instantiation time). Inherited link local-name requirements apply: names
+// must not contain forward slash, backslash, or embedded NUL characters, and must be unique within
+// the parent articulated actor's nested actor namespace after default-name assignment.
+struct prefab::ArticulatedLinkPrefab(ArticulatedLinkParams) [equality, no_reflection] {
+  // @brief Path to a simulation model file defining the geometry of the rigid link actor.
+  //
+  // @note Leave empty for dummy links.
+  DynamicString shapeFile;
+
+  // @brief Scale [x, y, z] to bake into the shape file.
+  //
+  // @note Ignored if @ref shapeFile is empty.
+  // @note All components must be non-zero and finite. Negative scale mirrors the link shape.
+  // @note Non-uniform scale is supported only for shape data that supports arbitrary per-axis bake
+  // scale. Unsupported scale values are rejected when the shape is loaded.
+  // @note If @ref ArticulatedLinkParams::mass, @ref ArticulatedLinkParams::centerOfMass, or @ref
+  // ArticulatedLinkParams::momentOfInertia are set explicitly, they are transformed consistently
+  // with the final per-axis scale applied to the link at @ref AddToScene. If they are left unset,
+  // they are computed from the scaled shape.
+  Real3 shapeScale = kReal3Ones;
+
+  // @brief Rotation quaternion [x, y, z, w] to bake into the shape file.
+  //
+  // @note Ignored if @ref shapeFile is empty.
+  Quaternion shapeRotation;
+
+  // @brief Translation [x, y, z] to bake into the shape file.
+  //
+  // @note Ignored if @ref shapeFile is empty.
+  Real3 shapeTranslation [units(m)];
+
+  // @brief Optional path to a render model file (e.g. .glb) for visualization.
+  //
+  // @note SuperDex Physics does not use this field for simulation. It provides additional
+  // metadata for visualization in supported tools. Ignored if empty.
+  DynamicString renderModelFile;
+
+  // @brief Scale [x, y, z] to apply to the render model.
+  //
+  // @note Ignored if @ref renderModelFile is empty.
+  Real3 renderModelScale = kReal3Ones;
+
+  // @brief Rotation quaternion [x, y, z, w] to apply to the render model.
+  //
+  // @note Ignored if @ref renderModelFile is empty.
+  Quaternion renderModelRotation;
+
+  // @brief Translation [x, y, z] to apply to the render model.
+  //
+  // @note Ignored if @ref renderModelFile is empty.
+  Real3 renderModelTranslation [units(m)];
+}
+
+// @brief Skin parameters for an articulated actor prefab.
+//
+// @details Extends @ref ArticulatedSkinParams. The inherited @ref ArticulatedSkinParams::shape
+// (a runtime @ref ShapeHandle) is replaced by @ref shapeFile (a path serialized to JSON.
+// The shape is loaded at instantiation time).
+struct prefab::ArticulatedSkinPrefab(ArticulatedSkinParams) [equality, no_reflection] {
+  // @brief Path to the model file containing a skinned mesh.
+  DynamicString shapeFile;
+
+  // @brief Optional path to a render model file (e.g. .glb) for visualization.
+  //
+  // @note SuperDex Physics does not use this field for simulation. It provides additional
+  // metadata for visualization in supported tools. Ignored if empty.
+  DynamicString renderModelFile;
+
+  // @brief Scale [x, y, z] to apply to the render model.
+  //
+  // @note Ignored if @ref renderModelFile is empty.
+  Real3 renderModelScale = kReal3Ones;
+
+  // @brief Rotation quaternion [x, y, z, w] to apply to the render model.
+  //
+  // @note Ignored if @ref renderModelFile is empty.
+  Quaternion renderModelRotation;
+
+  // @brief Translation [x, y, z] to apply to the render model.
+  //
+  // @note Ignored if @ref renderModelFile is empty.
+  Real3 renderModelTranslation [units(m)];
+}
+
+// @brief Prefab parameters for an articulated actor.
+struct prefab::ArticulatedActorPrefab [equality, no_reflection] {
+  // @brief Optional serialized comment.
+  Optional<String> comment;
+
+  // @brief Optional actor name. Uniqueness is not enforced.
+  //
+  // @note Nested actor runtime paths use the effective actor name as the parent path, where the
+  // effective actor name is this actor name combined with any enclosing @ref PrefabParams::name or
+  // @ref PrefabReference::name path. If the effective actor name is empty, runtime nested actor
+  // paths use "unnamed_articulation" as the parent path. Prefab actor-reference fields such as
+  // contact filters and constraints are authored relative to their containing prefab, and enclosing
+  // prefab-reference names are prepended during instantiation. They do not resolve through the
+  // "unnamed_articulation" fallback. Use a non-empty actor name or enclosing prefab name when
+  // prefab references need to target nested actors.
+  // @note A name shared by more than one actor cannot be referenced by a constraint, pose
+  // controller, or contact filter (see @ref PoseControllerPrefab).
+  DynamicString name;
+
+  // @brief Uniform scale baked into all link and skin shapes when the prefab is instantiated.
+  //
+  // @note Must be strictly positive and finite. Negative or zero scale is invalid and rejected
+  // at @ref AddToScene.
+  // @note This scale is not applied to @ref rotation and @ref translation. It scales each link's
+  // baked shape by multiplying both @ref ArticulatedLinkPrefab::shapeScale and @ref
+  // ArticulatedLinkPrefab::shapeTranslation. It also uniformly scales the skin shape.
+  real scale = 1;
+
+  // @brief Actor rotation quaternion [x, y, z, w] relative to the prefab's local frame
+  // (i.e., the prefab-from-root rotation). Composes with @ref PrefabParams::rotation
+  // to produce the final world-from-root rotation.
+  //
+  // @note Must be finite and non-zero.
+  Quaternion rotation;
+
+  // @brief Actor translation [x, y, z] relative to the prefab's local frame
+  // (i.e., the prefab-from-root translation). Composes with @ref PrefabParams::scale,
+  // @ref PrefabParams::rotation, and @ref PrefabParams::translation to produce the final
+  // world-from-root translation.
+  //
+  // @note Must be finite.
+  Real3 translation [units(m)];
+
+  // @brief Cycle joints creating closed kinematic loops. Empty if no cycles exist.
+  DynamicArray<ArticulatedCycleJointParams> cycles;
+
+  // @brief Joint parameters (one per joint).
+  DynamicArray<prefab::ArticulatedJointPrefab> joints;
+
+  // @brief Link parameters (one per link).
+  DynamicArray<prefab::ArticulatedLinkPrefab> links;
+
+  // @brief Optional skinned mesh parameters.
+  Optional<prefab::ArticulatedSkinPrefab> skin;
+
+  // @brief Optional initial velocity per DoF.
+  //
+  // @note Units depend on joint type: [rad/s] for revolute and spherical, [m/s] for prismatic.
+  Optional<DynamicArray<real>> jointVelocities;
+}
+
+// @brief Prefab parameters for a soft skinned actor.
+//
+// @details A soft skinned actor consists of an articulated skeleton with one
+// or more attached soft bodies.
+struct prefab::SoftSkinnedActorPrefab [no_reflection] {
+  // @brief Optional serialized comment.
+  Optional<String> comment;
+
+  // @brief Articulated actor parameters for the skeleton.
+  prefab::ArticulatedActorPrefab skeletonParams;
+
+  // @brief Soft body parameters, one per soft actor.
+  //
+  // @note The per-soft-actor @ref SoftActorPrefab::rotation and @ref
+  // SoftActorPrefab::translation fields are ignored. Soft actor transforms are
+  // determined by the skeleton's link attachments (see @ref softAttachLinks).
+  // @note Each per-soft-actor @ref SoftActorPrefab::scale must be uniform (three equal, strictly
+  // positive, finite values). Non-uniform soft shape scale is not supported for soft-skinned
+  // prefabs.
+  // @note If a per-soft-actor @ref SoftActorPrefab::flowFile is set, that entry's @ref
+  // SoftActorPrefab::scale must be (1, 1, 1).
+  // @note Each entry's inherited name field is a nested soft local name. Explicit non-empty
+  // names must be unique across skeleton link local names and other nested soft local names, and
+  // must not contain forward slash, backslash, or embedded NUL characters.
+  // @note Empty names are assigned deterministically after reserving all skeleton link names and
+  // all explicit nested soft names: an empty entry at index `i` uses `soft_i` if available;
+  // otherwise it uses the first available `soft_N` found by scanning upward from `N = 0`.
+  DynamicArray<prefab::SoftActorPrefab> softParams;
+
+  // @brief Local link names to attach each soft actor to. Empty or one entry per @ref softParams
+  // element.
+  //
+  // @note If provided, each entry must be non-empty and must match a skeleton link local
+  // name.
+  DynamicArray<String> softAttachLinks;
+
+  // @brief Whether links can collide with each other.
+  bool enableCollidingLinks = false;
+
+  // @brief Whether gravity is applied.
+  bool hasGravity = false;
+
+  // @brief Whether inertia is applied.
+  bool hasInertia = false;
+
+  // @brief Whether soft material stress is applied.
+  bool hasStress = false;
+}
+
+// @brief Lists of actors grouped by type.
+struct prefab::ActorLists [no_reflection] {
+  // @brief Optional serialized comment.
+  Optional<String> comment;
+
+  // @brief Articulated actors.
+  DynamicArray<prefab::ArticulatedActorPrefab> articulated;
+
+  // @brief Rigid actors.
+  DynamicArray<prefab::RigidActorPrefab> rigid;
+
+  // @brief Soft actors.
+  DynamicArray<prefab::SoftActorPrefab> soft;
+
+  // @brief Soft skinned actors.
+  DynamicArray<prefab::SoftSkinnedActorPrefab> softSkinned;
+}
+
+// @brief Prefab parameters for a @ref RigidSphericalJointConstraintParams.
+//
+// @note Actor name fields use the same naming convention as @ref PoseControllerPrefab.
+// "myActor" refers to an actor in this prefab. "myPrefab/myActor" refers to an actor
+// in a nested prefab.
+// @note A referenced actor name must identify exactly one existing actor. Actor names need not be
+// unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+// is invalid and rejected at @ref AddToScene.
+struct prefab::RigidSphericalJointConstraintPrefab(RigidSphericalJointConstraintParams) [no_reflection] {
+  // @brief Name or hierarchy path identifying rigid actor A.
+  String actorNameA;
+
+  // @brief Name or hierarchy path identifying rigid actor B.
+  String actorNameB;
+}
+
+// @brief Prefab parameters for a @ref RigidPrismaticJointConstraintParams.
+//
+// @note Actor name fields use the same naming convention as @ref PoseControllerPrefab.
+// "myActor" refers to an actor in this prefab. "myPrefab/myActor" refers to an actor
+// in a nested prefab.
+// @note A referenced actor name must identify exactly one existing actor. Actor names need not be
+// unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+// is invalid and rejected at @ref AddToScene.
+struct prefab::RigidPrismaticJointConstraintPrefab(RigidPrismaticJointConstraintParams) [no_reflection] {
+  // @brief Name or hierarchy path identifying rigid actor A.
+  String actorNameA;
+
+  // @brief Name or hierarchy path identifying rigid actor B.
+  String actorNameB;
+}
+
+// @brief Prefab parameters for a @ref DeformableNodeToDeformableNodeConstraintParams.
+//
+// @note Actor name fields use the same naming convention as @ref PoseControllerPrefab.
+// "myActor" refers to an actor in this prefab. "myPrefab/myActor" refers to an actor
+// in a nested prefab.
+// @note A referenced actor name must identify exactly one existing actor. Actor names need not be
+// unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+// is invalid and rejected at @ref AddToScene.
+struct prefab::DeformableNodeToDeformableNodeConstraintPrefab(DeformableNodeToDeformableNodeConstraintParams) [no_reflection] {
+  // @brief Name or hierarchy path identifying deformable actor A.
+  String actorNameA;
+
+  // @brief Name or hierarchy path identifying deformable actor B.
+  String actorNameB;
+}
+
+// @brief Prefab parameters for a @ref DeformableNodeToRigidConstraintParams.
+//
+// @note Actor name fields use the same naming convention as @ref PoseControllerPrefab.
+// "myActor" refers to an actor in this prefab. "myPrefab/myActor" refers to an actor
+// in a nested prefab.
+// @note A referenced actor name must identify exactly one existing actor. Actor names need not be
+// unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+// is invalid and rejected at @ref AddToScene.
+struct prefab::DeformableNodeToRigidConstraintPrefab(DeformableNodeToRigidConstraintParams) [no_reflection] {
+  // @brief Name or hierarchy path identifying the rigid actor.
+  String rigidActorName;
+
+  // @brief Name or hierarchy path identifying the deformable actor.
+  String deformableActorName;
+}
+
+// @brief Prefab parameters for a @ref JointRotationRangeConstraintParams.
+//
+// @note Actor name fields use the same naming convention as @ref PoseControllerPrefab.
+// "myActor" refers to an actor in this prefab. "myPrefab/myActor" refers to an actor
+// in a nested prefab.
+// @note A referenced actor name must identify exactly one existing actor. Actor names need not be
+// unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+// is invalid and rejected at @ref AddToScene.
+struct prefab::JointRotationRangeConstraintPrefab(JointRotationRangeConstraintParams) [no_reflection] {
+  // @brief Name or hierarchy path identifying rigid actor A.
+  String actorNameA;
+
+  // @brief Name or hierarchy path identifying rigid actor B.
+  String actorNameB;
+}
+
+// @brief Prefab parameters for a @ref RigidPivotPositionConstraintParams.
+//
+// @note Actor name fields use the same naming convention as @ref PoseControllerPrefab.
+// "myActor" refers to an actor in this prefab. "myPrefab/myActor" refers to an actor
+// in a nested prefab.
+// @note A referenced actor name must identify exactly one existing actor. Actor names need not be
+// unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+// is invalid and rejected at @ref AddToScene.
+struct prefab::RigidPivotPositionConstraintPrefab(RigidPivotPositionConstraintParams) [no_reflection] {
+  // @brief Name or hierarchy path identifying the rigid actor.
+  String actorName;
+}
+
+// @brief Prefab parameters for a @ref RigidPivotToRigidTargetConstraintParams.
+//
+// @note Actor name fields use the same naming convention as @ref PoseControllerPrefab.
+// "myActor" refers to an actor in this prefab. "myPrefab/myActor" refers to an actor
+// in a nested prefab.
+// @note A referenced actor name must identify exactly one existing actor. Actor names need not be
+// unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+// is invalid and rejected at @ref AddToScene.
+struct prefab::RigidPivotToRigidTargetConstraintPrefab(RigidPivotToRigidTargetConstraintParams) [no_reflection]{
+  // @brief Name or hierarchy path identifying the rigid actor.
+  String actorName;
+}
+
+// @brief Prefab parameters for a @ref RigidPivotRotationConstraintParams.
+//
+// @note Actor name fields use the same naming convention as @ref PoseControllerPrefab.
+// "myActor" refers to an actor in this prefab. "myPrefab/myActor" refers to an actor
+// in a nested prefab.
+// @note A referenced actor name must identify exactly one existing actor. Actor names need not be
+// unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+// is invalid and rejected at @ref AddToScene.
+struct prefab::RigidPivotRotationConstraintPrefab(RigidPivotRotationConstraintParams) [no_reflection] {
+  // @brief Name or hierarchy path identifying the rigid actor.
+  String actorName;
+}
+
+// @brief Prefab parameters for a @ref DeformableNodePositionConstraintParams.
+//
+// @note Actor name fields use the same naming convention as @ref PoseControllerPrefab.
+// "myActor" refers to an actor in this prefab. "myPrefab/myActor" refers to an actor
+// in a nested prefab.
+// @note A referenced actor name must identify exactly one existing actor. Actor names need not be
+// unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+// is invalid and rejected at @ref AddToScene.
+struct prefab::DeformableNodePositionConstraintPrefab(DeformableNodePositionConstraintParams) [no_reflection] {
+  // @brief Name or hierarchy path identifying the deformable actor.
+  String actorName;
+}
+
+// @brief Prefab parameters for a @ref JointRotationTrackingConstraintParams.
+//
+// @note Actor name fields use the same naming convention as @ref PoseControllerPrefab.
+// "myActor" refers to an actor in this prefab. "myPrefab/myActor" refers to an actor
+// in a nested prefab.
+// @note A referenced actor name must identify exactly one existing actor. Actor names need not be
+// unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+// is invalid and rejected at @ref AddToScene.
+struct prefab::JointRotationTrackingConstraintPrefab(JointRotationTrackingConstraintParams) [no_reflection] {
+  // @brief Name or hierarchy path identifying rigid actor A.
+  String actorNameA;
+
+  // @brief Name or hierarchy path identifying rigid actor B.
+  String actorNameB;
+}
+
+// @brief Prefab parameters for a @ref ArticulatedSingleDofTargetConstraintParams.
+//
+// @note Actor name fields use the same naming convention as @ref PoseControllerPrefab.
+// "myActor" refers to an actor in this prefab. "myPrefab/myActor" refers to an actor
+// in a nested prefab.
+// @note A referenced actor name must identify exactly one existing actor. Actor names need not be
+// unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+// is invalid and rejected at @ref AddToScene.
+struct prefab::ArticulatedSingleDofTargetConstraintPrefab(ArticulatedSingleDofTargetConstraintParams) [no_reflection] {
+  // @brief Name or hierarchy path identifying the articulated actor.
+  String actorName;
+}
+
+// @brief Prefab parameters for a @ref Articulated3dRotationTargetConstraintParams.
+//
+// @note Actor name fields use the same naming convention as @ref PoseControllerPrefab.
+// "myActor" refers to an actor in this prefab. "myPrefab/myActor" refers to an actor
+// in a nested prefab.
+// @note A referenced actor name must identify exactly one existing actor. Actor names need not be
+// unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+// is invalid and rejected at @ref AddToScene.
+struct prefab::Articulated3dRotationTargetConstraintPrefab(Articulated3dRotationTargetConstraintParams) [no_reflection] {
+  // @brief Name or hierarchy path identifying the articulated actor.
+  String actorName;
+}
+
+// @brief Prefab parameters for a @ref ArticulatedSingleDofRangeConstraintParams.
+//
+// @note Actor name fields use the same naming convention as @ref PoseControllerPrefab.
+// "myActor" refers to an actor in this prefab. "myPrefab/myActor" refers to an actor
+// in a nested prefab.
+// @note A referenced actor name must identify exactly one existing actor. Actor names need not be
+// unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+// is invalid and rejected at @ref AddToScene.
+struct prefab::ArticulatedSingleDofRangeConstraintPrefab(ArticulatedSingleDofRangeConstraintParams) [no_reflection] {
+  // @brief Name or hierarchy path identifying the articulated actor.
+  String actorName;
+}
+
+// @brief Prefab parameters for a @ref Articulated3dRotationRangeConstraintParams.
+//
+// @note Actor name fields use the same naming convention as @ref PoseControllerPrefab.
+// "myActor" refers to an actor in this prefab. "myPrefab/myActor" refers to an actor
+// in a nested prefab.
+// @note A referenced actor name must identify exactly one existing actor. Actor names need not be
+// unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+// is invalid and rejected at @ref AddToScene.
+struct prefab::Articulated3dRotationRangeConstraintPrefab(Articulated3dRotationRangeConstraintParams) [no_reflection] {
+  // @brief Name or hierarchy path identifying the articulated actor.
+  String actorName;
+}
+
+// @brief Lists of constraints grouped by type.
+struct prefab::ConstraintLists [no_reflection] {
+  // @brief Optional serialized comment.
+  Optional<String> comment;
+
+  // @brief 3D rotation range constraints on articulated actors.
+  DynamicArray<prefab::Articulated3dRotationRangeConstraintPrefab> articulated3dRotationRange;
+
+  // @brief Single-DoF range constraints on articulated actors.
+  DynamicArray<prefab::ArticulatedSingleDofRangeConstraintPrefab> articulatedSingleDofRange;
+
+  // @brief 3D rotation target constraints on articulated actors.
+  DynamicArray<prefab::Articulated3dRotationTargetConstraintPrefab> articulated3dRotationTarget;
+
+  // @brief Single-DoF target constraints on articulated actors.
+  DynamicArray<prefab::ArticulatedSingleDofTargetConstraintPrefab> articulatedSingleDofTarget;
+
+  // @brief Joint rotation range constraints.
+  DynamicArray<prefab::JointRotationRangeConstraintPrefab> jointRotationRange;
+
+  // @brief Joint rotation tracking constraints.
+  DynamicArray<prefab::JointRotationTrackingConstraintPrefab> jointRotationTracking;
+
+  // @brief Position constraints on a rigid actor's pivot point.
+  DynamicArray<prefab::RigidPivotPositionConstraintPrefab> rigidPivotPosition;
+
+  // @brief Position constraints attaching a rigid actor's pivot point to a rigid target.
+  DynamicArray<prefab::RigidPivotToRigidTargetConstraintPrefab> rigidPivotToRigidTarget;
+
+  // @brief Rotation constraints on a rigid actor's pivot frame.
+  DynamicArray<prefab::RigidPivotRotationConstraintPrefab> rigidPivotRotation;
+
+  // @brief Prismatic joint constraints between two rigid actors.
+  DynamicArray<prefab::RigidPrismaticJointConstraintPrefab> rigidPrismaticJoint;
+
+  // @brief Spherical joint constraints between two rigid actors.
+  DynamicArray<prefab::RigidSphericalJointConstraintPrefab> rigidSphericalJoint;
+
+  // @brief Position constraints on a deformable actor node.
+  DynamicArray<prefab::DeformableNodePositionConstraintPrefab> deformableNodePosition;
+
+  // @brief Constraints connecting a deformable node to a rigid actor.
+  DynamicArray<prefab::DeformableNodeToRigidConstraintPrefab> deformableNodeToRigid;
+
+  // @brief Constraints connecting two deformable actor nodes.
+  DynamicArray<prefab::DeformableNodeToDeformableNodeConstraintPrefab> deformableNodeToDeformableNode;
+}
+
+// @brief Prefab parameters for an articulated pose controller.
+struct prefab::PoseControllerPrefab [no_reflection] {
+  // @brief Optional serialized comment.
+  Optional<String> comment;
+
+  // @brief Name or hierarchy path of the articulated actor to control.
+  //
+  // @note A name like "myArticulation" refers to an articulated actor in the same prefab.
+  // A name like "myPrefab/myArticulation" refers to an articulated actor in a nested prefab.
+  // @note A referenced actor name must identify exactly one existing actor. Actor names need not be
+  // unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+  // is invalid and rejected at @ref AddToScene.
+  String articulatedActor;
+
+  // @brief Per-link position tracking parameters.
+  DynamicArray<PoseTrackingParams> linkPosTracking;
+
+  // @brief Per-link rotation tracking parameters.
+  DynamicArray<PoseTrackingParams> linkRotTracking;
+
+  // @brief Per-joint pose tracking parameters.
+  DynamicArray<PoseTrackingParams> jointTracking;
+}
+
+// @brief Reference to another prefab file (scene or actor) for prefab nesting.
+struct prefab::PrefabReference [no_reflection] {
+  // @brief Optional serialized comment.
+  Optional<String> comment;
+
+  // @brief Name of the nested prefab instance. Used to format the names of nested actors
+  // in the form "prefabName/actorName".
+  //
+  // @note Name-reference ambiguity is evaluated per nested subtree. A nested prefab's own
+  // references (from its constraints, pose controllers, and contact filters) resolve within its own
+  // instance first, so a name reused across independent sibling instances is not ambiguous for each
+  // instance's internal references. It becomes ambiguous only for a reference written at the
+  // enclosing (parent) scope or above.
+  String name;
+
+  // @brief File path of the nested prefab.
+  String path;
+
+  // @brief Uniform scale of the nested prefab, relative to the parent prefab.
+  //
+  // @details The scale applied to this nested prefab is this value multiplied by
+  // @ref PrefabParams::scale and each enclosing @ref PrefabReference::scale. See
+  // @ref PrefabParams::scale for what scaling affects.
+  //
+  // @note Set this value before loading shapes. If changed later, call @ref LoadShapes on the
+  // top-level @ref ScenePrefab before adding it to a @ref Scene.
+  // @note Must be strictly positive and finite. Negative or zero scale is invalid and rejected
+  // at @ref AddToScene.
+  //
+  // @see PrefabParams::scale
+  real scale = 1;
+
+  // @brief Rotation quaternion [x, y, z, w] of the nested prefab in the parent's local space.
+  //
+  // @note Must be finite and non-zero.
+  Quaternion rotation;
+
+  // @brief Translation [x, y, z] of the nested prefab in the parent's local space.
+  //
+  // @note Must be finite.
+  Real3 translation [units(m)];
+
+  // @brief Handle to the loaded nested prefab. Runtime state, populated at load time and never
+  // serialized.
+  PrefabHandle prefab [no_python];
+}
+
+// @brief Used by @ref ContactFilter to enable or disable contact for a pair of actors.
+//
+// @see Scene::EnableActorContactAsymmetric, Scene::EnableActorContactSymmetric
+struct prefab::ActorContactEntry [equality, no_reflection] {
+  // @brief Enable (true) or disable (false) contact for the specified pair of actors.
+  //
+  // @note Contact is enabled for all actor pairs by default, except that automatic contact
+  // filtering disables adjacent links in articulated and soft-skinned actors. Therefore, you
+  // should usually only list additional pairs of actors for which contact should be
+  // explicitly disabled.
+  //
+  // @see ContactFilter
+  bool enable = true;
+
+  // @brief Identifies two actors by name or hierarchy path.
+  //
+  // @details If the actor is in this prefab, then reference it by name, e.g., "myActor".
+  // If the actor is in a nested prefab, then reference it by hierarchy path, e.g.,
+  // "myPrefab/myActor".
+  //
+  // @warning Must contain exactly 2 elements.
+  //
+  // @note A referenced actor name must identify exactly one existing actor. Actor names need not be
+  // unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+  // is invalid and rejected at @ref AddToScene.
+  // @note Parent actor expansion is controlled by @ref includeNestedActors.
+  // @note Order matters when contact settings are applied asymmetrically. In that case, the first
+  // actor is the "colliding" actor and the second actor is the "collider". When contact is enabled,
+  // the first actor's contact sample points will be tested against the second actor's collider
+  // geometry.
+  // @note If both actors are the same, then the setting affects self-contact within the actor.
+  DynamicArray<String> actors;
+
+  // @brief Whether expandable parent actor names should include nested actors.
+  //
+  // @details When true, a parent actor name resolves to the parent actor plus nested actors. The
+  // contact setting is applied to every ordered pair in the cross-product of the two resolved actor
+  // sets; no pairs outside that cross-product are affected. If the resolved sets overlap, pairs in
+  // the overlap, including self-pairs, are affected. When false, the contact setting applies only
+  // to the exact named actors.
+  //
+  // @note Actors without nested actors are affected as exact actors irrespective of this setting.
+  // @note Default contact filtering disables contact between adjacent links in articulated and
+  // soft-skinned actors. Actor-contact entries override those defaults for pairs included in the
+  // resolved actor sets. If @ref includeNestedActors is true and both actor names resolve to the
+  // same parent actor, the entry also covers pairs between that parent's nested actors, including
+  // adjacent links.
+  bool includeNestedActors = true;
+}
+
+// @brief Used by @ref ContactFilter to enable or disable contact for a pair of layers.
+//
+// @see Scene::EnableLayerContactAsymmetric, Scene::EnableLayerContactSymmetric
+struct prefab::LayerContactEntry [equality, no_reflection] {
+  // @brief Enable (true) or disable (false) contact for the specified pair of contact layer names.
+  //
+  // @note Contact is enabled for any pair of layers by default. Therefore, you should usually
+  // only list pairs of layers for which contact should be explicitly disabled.
+  //
+  // @see ContactFilter
+  bool enable = true;
+
+  // @brief Identifies two contact layer names.
+  //
+  // @warning Must contain exactly 2 elements.
+  //
+  // @note Order matters when contact settings are applied asymmetrically. In that case, the first
+  // layer is the "colliding" layer and the second layer is the "collider". When contact is enabled,
+  // the contact sample points on an actor in the first layer will be tested against the collider
+  // geometry of an actor in the second layer.
+  // @note Both layer names can be the same. In that case, the setting applies between actors within
+  // the same layer.
+  DynamicArray<String> layers;
+}
+
+// @brief Contact filtering parameters for a prefab.
+//
+// @warning Scene export does not record explicit settings that enable contact between actor
+// pairs. If such a setting enables contact between adjacent links of an articulated or
+// soft-skinned actor, adding the exported prefab to a scene applies automatic adjacent-link
+// filtering and disables contact for that pair again. To preserve this behavior, add an equivalent
+// enabling entry to the exported prefab or re-enable the pair after adding the prefab to a scene.
+//
+// @note By default, all actor pairs can potentially collide with each other, except that automatic
+// contact filtering disables adjacent links in articulated and soft-skinned actors. To prevent
+// additional contact, use this contact filter in one of two ways (or both): 1) Use
+// @ref actorContactAsymmetric or @ref actorContactSymmetric to disable contact for a specific pair
+// of actors, or 2) use @ref layerContactAsymmetric or @ref layerContactSymmetric to disable contact
+// for a specific pair of contact layer names. This applies to all actors in those layers.
+// @note Contact only occurs if it is allowed by both the actor-vs-actor contact filter and the
+// layer-vs-layer contact filter. Either can prevent contact.
+// @note You can also explicitly enable contact for a pair of actors or layers to override a setting
+// applied earlier. Actor entries can also override automatic adjacent-link exclusions.
+// @note Contact filters are applied after all actors in the prefab have been created. Nested child
+// prefab contact filters are applied before parent prefab contact filters, so parent settings can
+// override child settings in the same actor-vs-actor or layer-vs-layer filter table.
+// @note Settings are applied in this fixed order: @ref layerContactAsymmetric, @ref
+// layerContactSymmetric, @ref actorContactAsymmetric, then @ref actorContactSymmetric. Within each
+// list, entries are applied in array order, so later entries can override earlier entries in the
+// same actor-vs-actor or layer-vs-layer filter table.
+// @note Contact filter settings are not necessarily symmetric.
+// @note Exporting a scene stores disabled pairs from the effective contact-filter state, not the
+// exact JSON representation originally used to author it. Exporting may emit a canonical
+// representation whose contact-filter category differs from the original JSON. For example,
+// self-contact may be emitted as @ref actorContactSymmetric because the forward and reverse
+// resolved actor pair are the same.
+//
+// @see ActorContactEntry, Scene::EnableActorContactAsymmetric, Scene::EnableActorContactSymmetric,
+// LayerContactEntry, Scene::EnableLayerContactAsymmetric, Scene::EnableLayerContactSymmetric
+struct prefab::ContactFilter [equality, no_reflection] {
+  // @brief Optional serialized comment.
+  Optional<String> comment;
+
+  // @brief Enables or disables contact asymmetrically for each ordered pair of actors.
+  //
+  // @see ContactFilter, ActorContactEntry, Scene::EnableActorContactAsymmetric
+  Optional<DynamicArray<prefab::ActorContactEntry>> actorContactAsymmetric;
+
+  // @brief Enables or disables contact symmetrically for each pair of actors.
+  //
+  // @see ContactFilter, ActorContactEntry, Scene::EnableActorContactSymmetric
+  Optional<DynamicArray<prefab::ActorContactEntry>> actorContactSymmetric;
+
+  // @brief Enables or disables contact asymmetrically for each ordered pair of layers.
+  //
+  // @see ContactFilter, LayerContactEntry, Scene::EnableLayerContactAsymmetric
+  Optional<DynamicArray<prefab::LayerContactEntry>> layerContactAsymmetric;
+
+  // @brief Enables or disables contact symmetrically for each pair of layers.
+  //
+  // @see ContactFilter, LayerContactEntry, Scene::EnableLayerContactSymmetric
+  Optional<DynamicArray<prefab::LayerContactEntry>> layerContactSymmetric;
+}
+
+// @brief Top-level prefab describing a complete or partial physics scene (possibly just one actor).
+struct prefab::ScenePrefab [no_reflection] {
+  // @brief Optional serialized comment.
+  Optional<String> comment;
+
+  // @brief Lists of actors by type.
+  prefab::ActorLists actors;
+
+  // @brief Lists of constraints by type.
+  prefab::ConstraintLists constraints;
+
+  // @brief List of pose controllers.
+  DynamicArray<prefab::PoseControllerPrefab> controllers;
+
+  // @brief List of nested prefab references.
+  DynamicArray<prefab::PrefabReference> prefabs;
+
+  // @brief Global scene parameters (top-level prefab only).
+  Optional<prefab::SceneParams> scene;
+
+  // @brief Path this prefab was loaded from, exactly as passed to the loading function.
+  // Used to resolve prefab-relative ("./"-prefixed) nested prefab and shape paths.
+  //
+  // @note Set by the file-based loaders (@ref LoadFromFile, @ref ShallowLoadFromFile). It is not
+  // converted to an absolute path: a relative path passed to the loader is stored as-is. The
+  // string-based loaders (@ref LoadFromJsonString, @ref ShallowLoadFromJsonString) leave it empty.
+  // In that case, "./"-prefixed paths fall back to resolution against the root path supplied when
+  // the paths are resolved.
+  // @note Runtime state, never serialized.
+  Optional<String> sourceFilePath [no_python];
+
+  // @brief Contact filter settings for selective contact filtering.
+  Optional<prefab::ContactFilter> contactFilter;
+}
+
+## Prefab Serialization
+
+// @brief Fully load a @ref ScenePrefab from a file, including all nested
+// prefabs and shapes.
+//
+// @param[in] prefabPath File path to the prefab file.
+// @param[in] rootPath Root directory for resolving relative paths, except those resolved against
+// a prefab file.
+// @param[in] context The @ref Context that owns the loaded resources.
+// @return The fully loaded @ref ScenePrefab, or a default-constructed
+// @ref ScenePrefab on error.
+//
+// @note Prefab files are in JSON format.
+// @note A prefab must not reference itself, directly or indirectly.
+//
+// @see LoadFromJsonString, ShallowLoadFromFile, ShallowLoadFromJsonString
+fn prefab::LoadFromFile(StringView prefabPath, StringView rootPath, Context* context) -> prefab::ScenePrefab [mochi_error];
+
+// @brief Fully load a @ref ScenePrefab from a JSON string, including all
+// nested prefabs and shapes.
+//
+// @param[in] json JSON string containing the serialized prefab.
+// @param[in] rootPath Root directory for resolving relative paths, except those resolved against
+// a prefab file.
+// @param[in] context The @ref Context that owns the loaded resources.
+// @return The fully loaded @ref ScenePrefab, or a default-constructed
+// @ref ScenePrefab on error.
+//
+// @note The top-level prefab has no source file, so prefab-relative
+// ("./"-prefixed) nested prefab and shape paths written in @ref json resolve
+// against @ref rootPath, not against a prefab directory. Nested prefabs that are
+// loaded from files resolve their own "./"-prefixed paths relative to the
+// directory containing the nested prefab file. Use @ref LoadFromFile if you need
+// prefab-relative resolution at the top level.
+// @note A prefab must not reference itself, directly or indirectly.
+//
+// @see LoadFromFile, ShallowLoadFromFile, ShallowLoadFromJsonString
+fn prefab::LoadFromJsonString(StringView json, StringView rootPath, Context* context) -> prefab::ScenePrefab [mochi_error];
+
+// @brief Serialize a @ref ScenePrefab to a JSON file.
+//
+// @param[in] prefab The @ref ScenePrefab to serialize.
+// @param[in] path Output file path.
+//
+// @note Does NOT serialize nested prefabs. Only the top-level prefab data is written.
+// @note Automatically creates the output directory path, as needed.
+//
+// @see SaveToJsonString
+fn prefab::SaveToJsonFile(prefab::ScenePrefab const& prefab, StringView path) -> void [mochi_error];
+
+// @brief Serialize a @ref ScenePrefab to a JSON string.
+//
+// @param[in] prefab The @ref ScenePrefab to serialize.
+// @return The JSON string, or an empty string on error.
+//
+// @note Does NOT serialize nested prefabs. Only the top-level prefab data is
+// written.
+//
+// @see SaveToJsonFile
+fn prefab::SaveToJsonString(prefab::ScenePrefab const& prefab) -> String [mochi_error];
+
+// @brief Parameters for instantiating a @ref ScenePrefab into a @ref Scene.
+struct prefab::PrefabParams [no_reflection] {
+  // @brief Optional name prefix for created actors.
+  //
+  // @details Actor names are formatted based on their hierarchy paths. If this string is not empty,
+  // it will be used as the first token in the path ("prefabName/actorName",
+  // "prefabName/nestedPrefabName/actorName", etc.)
+  String name;
+
+  // @brief Uniform scale of the new prefab in world-space.
+  //
+  // @details Composes multiplicatively with any nested @ref PrefabReference::scale
+  // and any per-actor scale (e.g. @ref ArticulatedActorPrefab::scale) to give
+  // the cumulative "effective scale" baked into each actor when the prefab is
+  // instantiated.
+  //
+  // The effective scale is applied to:
+  //
+  //   - Mesh geometry (link / actor shapes are loaded at the cumulative scale)
+  //   - Joint and link translations, cycle joint anchors
+  //   - Prismatic joint position limits (Real3, in meters)
+  //   - Constraint geometric target and limit distances [m], including rigid
+  //     prismatic joint limits, world-space position targets, rigid actor-local
+  //     pivot/joint positions in @ref RigidPivotPositionConstraintPrefab,
+  //     @ref RigidPivotToRigidTargetConstraintPrefab, and
+  //     @ref RigidSphericalJointConstraintPrefab; the rigid-local
+  //     attachment/search point in @ref DeformableNodeToRigidConstraintPrefab;
+  //     and translational single-DoF target/range values in @ref
+  //     ArticulatedSingleDofTargetConstraintPrefab and @ref
+  //     ArticulatedSingleDofRangeConstraintPrefab. Actor-local constraint
+  //     distances use the referenced actor's prefab metric scale, so standalone
+  //     rigid/soft shape-bake scale fields are not applied again.
+  //   - User-supplied inertia overrides on rigid and articulated link actors:
+  //     center of mass scales componentwise by the signed effective scale, mass
+  //     scales by the absolute effective volume scale, moment of inertia uses
+  //     the corresponding diagonal inertia transform. For a purely uniform
+  //     effective scale s, this reduces to:
+  // @code
+  // centerOfMass *= s
+  // mass *= s^3
+  // momentOfInertia *= s^5
+  // @endcode
+  //
+  // The mass and moment of inertia formulas preserve the user's authored density.
+  //
+  // The effective scale is NOT applied to:
+  //
+  //   - density (intrinsic material property; mass/density are mutually
+  //     exclusive in the prefab API, so no double-application)
+  //   - linearVelocity / angularVelocity / jointVelocities
+  //   - Constraint stiffness/damping coefficients and saturation thresholds
+  //     inherited from @ref ConstraintParams. These parameters define the
+  //     constraint's response, not just geometry: different goals (preserving
+  //     material behavior, damping ratio, actuator limits, or closed-loop
+  //     response) imply different scale laws, so prefab scaling preserves
+  //     authored values.
+  //   - Joint inertia, friction, limit stiffness/damping, cycle joint
+  //     stiffness (characterized actuator / tuned-penalty parameters; bring
+  //     your own actuator model when scaling a robot)
+  //   - Revolute and spherical joint angular limits, rotation-valued targets and
+  //     ranges in @ref Articulated3dRotationTargetConstraintPrefab and
+  //     @ref Articulated3dRotationRangeConstraintPrefab, and rotational
+  //     single-DoF target/range values in @ref
+  //     ArticulatedSingleDofTargetConstraintPrefab and @ref
+  //     ArticulatedSingleDofRangeConstraintPrefab (scale invariant)
+  //
+  // @note Must be strictly positive and finite. Negative or zero scale is invalid and rejected
+  // at @ref AddToScene. The @ref ScenePrefab overload additionally requires scale == 1; use the
+  // file-path @ref AddToScene overload, nested @ref PrefabReference::scale, or per-actor scale for
+  // non-identity scaling.
+  // @note Authoring with @ref RigidActorParams::mass = M is equivalent to
+  // authoring with the implied density M / V_unit; under prefab scale the
+  // density is preserved and mass scales with the absolute volume scale, so
+  // the result is "the same material at a bigger size." For a purely uniform
+  // effective scale s, this mass factor is s^3. If you need a fixed mass that
+  // does NOT scale with the prefab, set the mass at runtime via
+  // @ref Actor::SetDensity after the actor is instantiated.
+  real scale = 1;
+
+  // @brief Rotation quaternion [x, y, z, w] of the new prefab in world-space.
+  //
+  // @note Must be finite and non-zero.
+  Quaternion rotation;
+
+  // @brief Translation (position) of the new prefab in world-space.
+  //
+  // @note Must be finite.
+  Real3 translation [units(m)];
+
+  // @brief Whether to apply top-level scene settings.
+  //
+  // @details When true, @ref AddToScene applies gravity and solver overrides from the @ref
+  // SceneParams of the top-level prefab. Omitted overrides preserve existing scene values.
+  // When false, neither override is applied. Scene settings from nested prefabs are always
+  // ignored.
+  bool applySceneSettings = true;
+}
+
+// @brief Struct used to return all created actors and constraints from @ref AddToScene.
+//
+// @note The returned pointers are non-owning. They remain valid as long as the @ref Scene
+// is alive and the actors/constraints have not been destroyed.
+struct prefab::AddToSceneResult [no_reflection] {
+  // @brief All newly created actors.
+  //
+  // @note Order is not guaranteed except that actors from nested prefabs will be listed before
+  // actors from the top-level prefab.
+  //
+  // @note Contains only top-level actors. Articulated actors' nested link actors and soft-skinned
+  // actors' nested link and soft sub-actors are created but not listed here. Reach them via
+  // @ref Actor::GetNestedLinkActors and @ref Actor::GetNestedSoftActors.
+  //
+  // @see Filter
+  DynamicArray<Actor*> actors;
+
+  // @brief All newly created constraints.
+  //
+  // @note Order is not guaranteed except that constraints from nested prefabs will be listed before
+  // constraints from the top-level prefab.
+  //
+  // @see Filter
+  DynamicArray<Constraint*> constraints;
+
+  // @brief Return all the newly created actors of a particular type, in order.
+  //
+  // @param[in] type Type of actor to return.
+  //
+  // @return List of actors of the specified type.
+  //
+  // @note If there were nested prefabs, then actors will be listed in depth-first order.
+  // @note For a single prefab (no nested prefabs) whose actors have no nested link or soft
+  // sub-actors, the result is 1-to-1 with the prefab's actors of that type (same size, same order).
+  // Nested link/soft sub-actors are not listed, and soft-skinned actors are reported under
+  // @ref ActorType::Articulated.
+  fn Filter(ActorType type) -> DynamicArray<Actor*> [const, overloaded, export];
+
+  // @brief Return all the newly created constraints of a particular type, in order.
+  //
+  // @param[in] type Type of constraint to return.
+  //
+  // @return List of constraints of the specified type.
+  //
+  // @note If there were nested prefabs, then constraints will be listed in depth-first order.
+  // @note For a single prefab (no nested prefabs), the result will be 1-to-1 with the constraint list
+  // in the prefab (same size, same order).
+  fn Filter(ConstraintType type) -> DynamicArray<Constraint*> [const, overloaded, export];
+}
+
+// @brief Instantiate a @ref ScenePrefab and add it to a @ref Scene.
+//
+// @details Creates the prefab's actors, constraints, and controllers, applies any scene settings
+// enabled by @ref PrefabParams::applySceneSettings, and applies contact filter entries.
+//
+// @param[in] prefab The fully loaded @ref ScenePrefab to instantiate.
+// @param[in,out] scene The @ref Scene to add things to.
+// @param[in] params Parameters for how and where to instantiate the prefab.
+// Can optionally be omitted in Python.
+// @return An @ref AddToSceneResult containing pointers to all created actors and constraints.
+//
+// @warning This function is not transactional. If it returns an error, the prefab may have been
+// partially instantiated in the scene.
+// @warning Only supported with @ref PrefabParams::scale = 1. To instantiate at a
+// non-identity scale, use the file-path @ref AddToScene overload or a nested @ref
+// PrefabReference::scale.
+//
+// @note The prefab must be fully loaded (nested prefabs and shapes) before
+// calling this function. If you're not sure, then call @ref EnsureFullyLoaded.
+//
+// @see LoadFromFile, EnsureFullyLoaded, PrefabParams
+fn prefab::AddToScene(prefab::ScenePrefab const& prefab, Scene* scene, prefab::PrefabParams const& params) -> prefab::AddToSceneResult [overloaded, mochi_error];
+
+// @brief Overload of @ref AddToScene that instantiates a @ref ScenePrefab using default
+// @ref PrefabParams.
+//
+// @param[in] prefab The fully loaded @ref ScenePrefab to instantiate.
+// @param[in,out] scene The @ref Scene to add things to.
+//
+// @return An @ref AddToSceneResult containing pointers to all created actors and constraints.
+//
+// @warning This function is not transactional. If it returns an error, the prefab may have been
+// partially instantiated in the scene.
+//
+// @see AddToScene
+fn prefab::AddToScene(prefab::ScenePrefab const& prefab, Scene* scene) -> prefab::AddToSceneResult [overloaded, mochi_error];
+
+// @brief Load a scene prefab from a file and create an instance of it in
+// the @ref Scene.
+//
+// @details This is a convenience function that loads the prefab, including
+// all nested prefabs and shapes, and immediately adds it to the scene. All
+// loaded shape handles are released automatically afterward.
+//
+// @param[in] prefabPath File path to the prefab file.
+// @param[in] rootPath Root directory for resolving relative paths, except those resolved against
+// a prefab file.
+// @param[in,out] scene The @ref Scene to add things to.
+// @param[in] params Parameters for how and where to instantiate the prefab.
+// @return An @ref AddToSceneResult containing pointers to all created actors and constraints.
+//
+// @warning This function is not transactional. If it returns an error, the prefab may have been
+// partially instantiated in the scene.
+//
+// @note If you intend to add multiple copies of the prefab to a scene, or to
+// multiple scenes, then consider using @ref LoadFromFile to load a @ref
+// ScenePrefab object. You can use that @ref ScenePrefab multiple times.
+// @note Unlike the @ref ScenePrefab overload, this overload supports non-identity
+// @ref PrefabParams::scale by baking it into actor geometry during load.
+//
+// @see LoadFromFile, AddToScene, PrefabParams
+fn prefab::AddToScene(StringView prefabPath, StringView rootPath, Scene* scene, prefab::PrefabParams const& params) -> prefab::AddToSceneResult [overloaded, mochi_error];
+
+// @brief Overload of @ref AddToScene that loads a prefab from a file and instantiates it using
+// default @ref PrefabParams.
+//
+// @param[in] prefabPath File path to the prefab file.
+// @param[in] rootPath Root directory for resolving relative paths, except those resolved against
+// a prefab file.
+// @param[in,out] scene The @ref Scene to add things to.
+//
+// @return An @ref AddToSceneResult containing pointers to all created actors and constraints.
+//
+// @warning This function is not transactional. If it returns an error, the prefab may have been
+// partially instantiated in the scene.
+//
+// @see AddToScene
+fn prefab::AddToScene(StringView prefabPath, StringView rootPath, Scene* scene) -> prefab::AddToSceneResult [overloaded, mochi_error];
+
+// @brief Resolve a path referenced inside a prefab to a full path.
+//
+// @param[in] inputPath The path to resolve, as stored in the prefab (may be
+// prefixed with "./" to indicate it is relative to the prefab file).
+// @param[in] rootForRelativePath Root directory used to resolve paths that are
+// not prefixed with "./".
+// @param[in] prefabFilePath Path to the prefab file that references
+// inputPath, used to resolve "./"-prefixed paths relative to its location.
+// @return The resolved full path.
+//
+// @note Absolute paths are returned unchanged. Paths starting with "./" are resolved relative to
+// the directory containing @ref prefabFilePath when provided. Other relative paths are resolved
+// against @ref rootForRelativePath.
+fn prefab::GetPrefabFullPath(StringView inputPath, StringView rootForRelativePath, StringView prefabFilePath) -> String;
+
+// @brief Deserialize a single @ref ScenePrefab from a file, without loading
+// any nested files.
+//
+// @param[in] path File path to the prefab file.
+// @return The deserialized @ref ScenePrefab, or a default-constructed @ref
+// ScenePrefab on error.
+//
+// @note Use this if you want to modify the @ref ScenePrefab data before
+// nested content is loaded, or if you simply want to edit and re-save the
+// prefab file.
+// @note If you intend to add the @ref ScenePrefab to a @ref Scene, then you
+// will need to load any nested prefabs and shapes first.
+//
+// @see EnsureFullyLoaded, LoadNestedPrefabs, LoadShapes, ShallowLoadFromJsonString
+fn prefab::ShallowLoadFromFile(StringView path) -> prefab::ScenePrefab [mochi_error];
+
+// @brief Deserialize a single @ref ScenePrefab from a JSON string, without
+// loading any nested files.
+//
+// @param[in] json JSON string containing the serialized prefab.
+// @return The deserialized @ref ScenePrefab, or a default-constructed @ref
+// ScenePrefab on error.
+//
+// @note Same as @ref ShallowLoadFromFile except that the JSON string is
+// provided in memory.
+// @note Unlike @ref ShallowLoadFromFile, this function is not given a source file for the
+// top-level prefab. Its "./"-prefixed nested prefab and shape paths therefore resolve against the
+// root path passed to @ref LoadNestedPrefabs, @ref LoadShapes, or @ref EnsureFullyLoaded. Pass the
+// prefab directory as the root path to preserve prefab-relative resolution.
+//
+// @see ShallowLoadFromFile, LoadFromJsonString
+fn prefab::ShallowLoadFromJsonString(StringView json) -> prefab::ScenePrefab [mochi_error];
+
+// @brief Load nested prefab files recursively.
+//
+// @param[in,out] prefab The @ref ScenePrefab whose nested prefab references
+// will be loaded.
+// @param[in] rootPath Root directory for resolving relative paths, except those resolved against
+// a prefab file.
+//
+// @note Use this if the file was loaded via @ref ShallowLoadFromFile or
+// @ref ShallowLoadFromJsonString or if the @ref ScenePrefab was created
+// procedurally.
+// @note You do not need to call this after @ref LoadFromFile or @ref
+// LoadFromJsonString because they load all nested content for you.
+// @note If called a second time, the nested prefabs will be reloaded. If
+// your intention is to avoid redundant loads, then use
+// @ref EnsureFullyLoaded instead.
+// @note A prefab must not reference itself, directly or indirectly.
+//
+// @see EnsureFullyLoaded, LoadShapes
+fn prefab::LoadNestedPrefabs(prefab::ScenePrefab& prefab, StringView rootPath) -> void [mochi_error];
+
+// @brief Load shape files referenced by @ref prefab and its loaded nested prefabs.
+//
+// @param[in,out] prefab The @ref ScenePrefab whose shape references will be
+// loaded.
+// @param[in] rootPath Root directory for resolving relative paths, except those resolved against
+// a prefab file.
+// @param[in] context The @ref Context that owns the loaded resources.
+//
+// @warning Shapes are loaded from nested prefabs only if those prefabs are already loaded. Use
+// @ref EnsureFullyLoaded if any nested prefabs may be unloaded.
+//
+// @note Returns an error if the input prefab or any loaded nested prefab references itself, directly
+// or indirectly.
+// @note Use this if the file was loaded via @ref ShallowLoadFromFile or @ref
+// ShallowLoadFromJsonString or if the @ref ScenePrefab was created procedurally.
+// @note You do not need to call this after @ref LoadFromFile or @ref
+// LoadFromJsonString because they load all nested content for you.
+// @note Calling this function again reloads previously loaded shapes to reflect changes to shape
+// file paths or transforms. Use @ref EnsureFullyLoaded to avoid reloading them.
+//
+// @see EnsureFullyLoaded, LoadNestedPrefabs, AddToScene
+fn prefab::LoadShapes(prefab::ScenePrefab& prefab, StringView rootPath, Context* context) -> void [mochi_error];
+
+// @brief Ensure that all nested prefabs and shape files are loaded,
+// skipping any that are already loaded.
+//
+// @param[in,out] prefab The @ref ScenePrefab whose nested prefabs and
+// shapes will be loaded.
+// @param[in] rootPath Root directory for resolving relative paths, except those resolved against
+// a prefab file.
+// @param[in] context The @ref Context that owns the loaded resources.
+//
+// @note Use this if the file was loaded via @ref ShallowLoadFromFile or
+// @ref ShallowLoadFromJsonString or if the @ref ScenePrefab was created
+// procedurally.
+// @note You do not need to call this after @ref LoadFromFile or @ref
+// LoadFromJsonString because they load all nested content for you.
+// @note A prefab must not reference itself, directly or indirectly.
+//
+// @see LoadNestedPrefabs, LoadShapes, AddToScene
+fn prefab::EnsureFullyLoaded(prefab::ScenePrefab& prefab, StringView rootPath, Context* context) -> void [mochi_error];
+
+// @brief Export a @ref Scene to a folder containing a prefab file and all
+// generated mesh files.
+//
+// @param[in] scene The @ref Scene to export.
+// @param[in] exportName Name for the exported prefab. Used both for the export
+// subdirectory and for the prefab filename (@code <exportName>.mochi_scene @endcode).
+// @param[in] outputDir Directory where the export folder will be created. The
+// subdirectories @code <outputDir>/<exportName> @endcode and
+// @code <outputDir>/<exportName>/generated_assets @endcode are created automatically.
+//
+// @warning Currently exports only rigid, soft, articulated, and soft-skinned actors. Constraints,
+// pose controllers, shell, rod actors, and implicit (non-mesh) shapes are NOT exported.
+// @warning For articulated actors, current joint pose and joint velocities are NOT exported.
+// @warning Scene export does not record explicit settings that enable contact between actor
+// pairs. If such a setting enables contact between adjacent links of an articulated or
+// soft-skinned actor, adding the exported prefab to a scene applies automatic adjacent-link
+// filtering and disables contact for that pair again. To preserve this behavior, add an equivalent
+// enabling entry to the exported prefab or re-enable the pair after adding the prefab to a scene.
+//
+// @note Generated mesh files (.mochi.h5) are written under generated_assets/ and referenced
+// from the prefab using "./generated_assets/" paths.
+// @note Exported actor names are made unique: when two actors share a name, later ones receive a
+// numeric suffix (e.g. "box", "box1"), so an exported name may differ from the runtime name.
+//
+// @see ExportSceneExcluding, ExportActor
+fn prefab::ExportScene(Scene const* scene, StringView exportName, StringView outputDir) -> void [mochi_error];
+
+// @brief Export a @ref Scene to a folder containing a prefab file and all
+// generated mesh files, omitting a caller-provided set of actors.
+//
+// @param[in] scene The @ref Scene to export.
+// @param[in] exportName Name for the exported prefab. Used both for the export
+// subdirectory and for the prefab filename (@code <exportName>.mochi_scene @endcode).
+// @param[in] outputDir Directory where the export folder will be created. The
+// subdirectories @code <outputDir>/<exportName> @endcode and
+// @code <outputDir>/<exportName>/generated_assets @endcode are created automatically.
+// @param[in] excludeActors Handles of actors that should not be exported.
+// Excluding an articulated actor also excludes all of its nested link actors. Excluding a
+// soft-skinned actor also excludes all of its nested link and soft sub-actors. Any contact
+// filter entries that reference excluded actors are dropped.
+//
+// @warning Currently exports only rigid, soft, articulated, and soft-skinned actors. Constraints,
+// pose controllers, shell, rod actors, and implicit (non-mesh) shapes are NOT exported.
+// @warning For articulated actors, current joint pose and joint velocities are NOT exported.
+// @warning Scene export does not record explicit settings that enable contact between actor
+// pairs. If such a setting enables contact between adjacent links of an articulated or
+// soft-skinned actor, adding the exported prefab to a scene applies automatic adjacent-link
+// filtering and disables contact for that pair again. To preserve this behavior, add an equivalent
+// enabling entry to the exported prefab or re-enable the pair after adding the prefab to a scene.
+//
+// @note Generated mesh files (.mochi.h5) are written under generated_assets/ and referenced
+// from the prefab using "./generated_assets/" paths.
+// @note Exported actor names are made unique: when two actors share a name, later ones receive a
+// numeric suffix (e.g. "box", "box1"), so an exported name may differ from the runtime name.
+//
+// @see ExportScene, ExportActor
+fn prefab::ExportSceneExcluding(Scene const* scene, StringView exportName, StringView outputDir, Span<ActorHandle const> excludeActors) -> void [mochi_error];
+
+// @brief Export a single actor to a prefab file under
+// @code outputDir/exportName/<exportName>.mochi_scene @endcode.
+//
+// Extracts creation parameters from the actor and writes the prefab plus any generated
+// mesh assets to disk. Only supported for standalone rigid actors, soft actors and articulated
+// actors.
+//
+// @param[in] actor The actor to export. Must not be null.
+// @param[in] exportName Label used for the actor's name, the export subdirectory, and the
+// prefab filename (@code <exportName>.mochi_scene @endcode).
+// @param[in] outputDir Parent directory for the export. The subdirectories
+// @code <outputDir>/<exportName> @endcode and
+// @code <outputDir>/<exportName>/generated_assets @endcode are created automatically.
+//
+// @warning Only supported for standalone rigid, soft, and articulated actors. Soft-skinned
+// actors are not supported here.
+// @warning Contact-filter settings are not exported. Adding an exported articulated actor to a
+// scene applies automatic adjacent-link filtering, even if contact between adjacent links was
+// explicitly enabled before export. To preserve this behavior, add an equivalent enabling entry to
+// the exported prefab or re-enable the pair after adding the prefab to a scene.
+//
+// @note Uses the same prefab export path as @ref ExportScene. In addition to the soft-skinned
+// restriction above, any limitations documented in @ref ExportScene also apply here.
+// @note When exporting an articulated actor, pass the top-level articulated actor (the one
+// returned by @ref Scene::CreateArticulatedActor or by @ref Actor::GetArticulatedActor on
+// a nested link), not a nested actor.
+// @note Generated mesh files (.mochi.h5) are written under generated_assets/ and referenced
+// from the prefab using "./generated_assets/" paths.
+//
+// @see ExportScene, ExportSceneExcluding
+fn prefab::ExportActor(Actor const* actor, StringView exportName, StringView outputDir) -> void [mochi_error];

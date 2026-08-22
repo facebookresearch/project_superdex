@@ -1,0 +1,108 @@
+{
+  "actors": {
+    "articulated": [
+      {
+        "name": "DoublePendulumOnRail",
+        "translation": [0, 0.75, 0],
+        "jointVelocities": [0.3, 4.2, 0, 0, 0],
+        "joints": [
+          {
+            "name": "CeilingWeld",
+            "type": "Hard"
+          },
+          {
+            "name": "Rail",
+            "type": "Prismatic",
+            "axis": [1, 0, 0],
+            "parentLinkFromJoint": { "translation": [0.25, 0, 0.025] },
+            "minLimit": [-0.2, 0, 0],
+            "maxLimit": [0.2, 0, 0],
+            "limitStiffness": 250,
+            "limitDamping": 8.8,
+            "friction": { "viscous": 0.018 },
+            "inertia": 0.125
+          },
+          {
+            "name": "UpperSwing",
+            "type": "Revolute",
+            "axis": [0, 0, -1],
+            "parentLinkFromJoint": { "translation": [0.0375, 0, 0.0375] }
+          },
+          {
+            "name": "LowerSwing",
+            "type": "Spherical",
+            "parentLinkFromJoint": { "translation": [0.015, 0, 0.015] }
+          }
+        ],
+        "links": [
+          {
+            "name": "RailHousing",
+            "parentLink": -1,
+            "parentJointFromLink": { "translation": [-0.25, -0.025, -0.025] },
+            "shape": "cube/cube_fine_mesh.mochi.json",
+            "shapeScale": [0.5, 0.05, 0.05],
+            "colliderType": "Box",
+            "layer": "Pendulum",
+            "density": 1000
+          },
+          {
+            "name": "Cart",
+            "parentLink": 0,
+            "parentJointFromLink": { "translation": [-0.0375, -0.075, -0.0375] },
+            "shape": "cube/cube_fine_mesh.mochi.json",
+            "shapeScale": [0.075, 0.075, 0.075],
+            "colliderType": "Box",
+            "layer": "Pendulum",
+            "density": 1000
+          },
+          {
+            "name": "UpperArm",
+            "parentLink": 1,
+            "parentJointFromLink": { "translation": [-0.015, -0.3, -0.015] },
+            "shape": "cube/cube_fine_mesh.mochi.json",
+            "shapeScale": [0.03, 0.3, 0.03],
+            "colliderType": "Box",
+            "layer": "Pendulum",
+            "density": 1000
+          },
+          {
+            "name": "LowerArm",
+            "parentLink": 2,
+            "parentJointFromLink": { "translation": [-0.015, -0.3, -0.015] },
+            "shape": "cube/cube_fine_mesh.mochi.json",
+            "shapeScale": [0.03, 0.3, 0.03],
+            "colliderType": "Box",
+            "layer": "EndEffector",
+            "density": 2000
+          }
+        ]
+      }
+    ],
+    "rigid": [
+      {
+        "name": "Ball",
+        "shape": "sphere/icosphere_4subdiv.1.mochi.json",
+        "colliderType": "Sphere",
+        "layer": "Ball",
+        "scale": [0.05, 0.05, 0.05],
+        "translation": [0.15, 0.05, 0],
+        "density": 500
+      }
+    ]
+  },
+  "prefabs": [
+    { "path": "samples/static_environments/ground_plane.mochi_prefab" }
+  ],
+  "contactFilter": {
+    "layerContactSymmetric": [
+      { "layers": ["Pendulum", "Pendulum"], "enable": false },
+      { "layers": ["Pendulum", "Ball"], "enable": false },
+      { "layers": ["Pendulum", "EndEffector"], "enable": false },
+      { "layers": ["Pendulum", "Environment"], "enable": false },
+      { "layers": ["EndEffector", "Environment"], "enable": false }
+    ]
+  },
+  "scene": {
+    "description": "Articulated cart on a horizontal prismatic rail carrying a double pendulum (revolute upper hinge + spherical lower joint) welded to the ceiling; the pendulum swings and its tip strikes a ball resting on the ground."
+  }
+}

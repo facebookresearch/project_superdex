@@ -1,0 +1,86 @@
+{
+  "editorState": {
+    "cadRotation": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "cadScale": [
+      1,
+      1,
+      1
+    ],
+    "cadTranslation": [
+      0,
+      0,
+      0
+    ]
+  },
+  "modifiers": [
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "From Model Viewer",
+      "modifier": "Source from Render Model",
+      "properties": {}
+    },
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "Alpha Wrap",
+      "modifier": "Wrap Mesh",
+      "properties": {
+        "edgeSize": 0.025000000000000001,
+        "relativeAlpha": 1,
+        "relativeOffset": 0,
+        "relativeToMeshSize": true
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "Incremental Isotropic Remesh",
+      "modifier": "Remesh",
+      "properties": {
+        "adaptiveSizingTolerance": 0.01,
+        "detectFeatures": true,
+        "edgeSize": 0.050000000000000003,
+        "maxEdgeSizeFactor": 2,
+        "minEdgeSizeFactor": 0.25,
+        "protectConstraints": false,
+        "relativeToMeshSize": true,
+        "relaxConstraints": false,
+        "relaxationStepsPerIteration": 3,
+        "sharpFeatureAngle": 60,
+        "smoothingIterations": 3,
+        "useAdaptiveSizing": false
+      }
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "SDF",
+      "modifier": "Export Mochi Model",
+      "properties": {
+        "exportPath": "../collision/l_wrist_collision.mochi.h5",
+        "sdf": {
+          "boundaryPaddingDist": 0.0050000003539025784,
+          "minGridResolution": [
+            6,
+            6,
+            6
+          ],
+          "resolutionDelta": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "resolutionMode": "MeanEdge"
+        }
+      }
+    }
+  ],
+  "referenceModels": [],
+  "version": 1
+}

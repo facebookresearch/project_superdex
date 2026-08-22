@@ -1,0 +1,19 @@
+{
+  "actors": {
+    "rigid": [
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 9.9999997473787516e-05,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "mass": 0.014999999664723873,
+        "name": "Paper_Cup",
+        "renderModel": "./render/paper_cup.glb",
+        "shape": "./collision/paper_cup.mochi.h5"
+      }
+    ]
+  }
+}

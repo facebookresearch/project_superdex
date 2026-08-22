@@ -1,0 +1,6 @@
+{
+  "description": "CartPole where the control signal exerts a force on the pole instead of on the cart.",
+  "env_cfg": {
+    "actuate_on_pole": true
+  }
+}

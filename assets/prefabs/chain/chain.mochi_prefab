@@ -1,0 +1,297 @@
+{
+  "actors": {
+    "rigid": [
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 4.9999998736893758e-06,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "density": 7850,
+        "isStatic": true,
+        "name": "Chain1",
+        "renderModel": "./render/chain_link_10_5_2_metalic.glb",
+        "rotation": [
+          0,
+          -0.70710831880569458,
+          0,
+          0.70710527896881104
+        ],
+        "scale": [
+          1.0000113248825073,
+          1,
+          1.0000168085098267
+        ],
+        "shape": "./collision/chain_link_10_5_2.mochi.h5",
+        "translation": [
+          0.001050767139531672,
+          0,
+          1.9778780835366661e-09
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 4.9999998736893758e-06,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "density": 7850,
+        "name": "Chain2",
+        "renderModel": "./render/chain_link_10_5_2_metalic.glb",
+        "rotation": [
+          -0.49999910593032837,
+          -0.50000089406967163,
+          -0.50000089406967163,
+          0.49999910593032837
+        ],
+        "scale": [
+          1.0000113248825073,
+          1.000043511390686,
+          1.0000288486480713
+        ],
+        "shape": "./collision/chain_link_10_5_2.mochi.h5",
+        "translation": [
+          0.001050803461112082,
+          0,
+          -0.0092063648626208305
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 4.9999998736893758e-06,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "density": 7850,
+        "name": "Chain3",
+        "renderModel": "./render/chain_link_10_5_2_metalic.glb",
+        "rotation": [
+          0,
+          -0.70710831880569458,
+          0,
+          0.70710527896881104
+        ],
+        "scale": [
+          1.0000113248825073,
+          1,
+          1.0000168085098267
+        ],
+        "shape": "./collision/chain_link_10_5_2.mochi.h5",
+        "translation": [
+          0.0010508379200473428,
+          0,
+          -0.020569972693920135
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 4.9999998736893758e-06,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "density": 7850,
+        "name": "Chain4",
+        "renderModel": "./render/chain_link_10_5_2_metalic.glb",
+        "rotation": [
+          -0.49999910593032837,
+          -0.50000089406967163,
+          -0.50000089406967163,
+          0.49999910593032837
+        ],
+        "scale": [
+          1.0000113248825073,
+          1.000043511390686,
+          1.0000288486480713
+        ],
+        "shape": "./collision/chain_link_10_5_2.mochi.h5",
+        "translation": [
+          0.0010509049752727151,
+          0,
+          -0.032571971416473389
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 4.9999998736893758e-06,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "density": 7850,
+        "name": "Chain5",
+        "renderModel": "./render/chain_link_10_5_2_metalic.glb",
+        "rotation": [
+          0,
+          -0.70710831880569458,
+          0,
+          0.70710527896881104
+        ],
+        "scale": [
+          1.0000113248825073,
+          1,
+          1.0000168085098267
+        ],
+        "shape": "./collision/chain_link_10_5_2.mochi.h5",
+        "translation": [
+          0.0010509757557883859,
+          0,
+          -0.044272877275943756
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 4.9999998736893758e-06,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "density": 7850,
+        "name": "Chain6",
+        "renderModel": "./render/chain_link_10_5_2_metalic.glb",
+        "rotation": [
+          0.50000244379043579,
+          -0.50000226497650146,
+          0.49999871850013733,
+          0.49999651312828064
+        ],
+        "scale": [
+          1.0000134706497192,
+          1.0000274181365967,
+          1.0000159740447998
+        ],
+        "shape": "./collision/chain_link_10_5_2.mochi.h5",
+        "translation": [
+          0.0010564734693616629,
+          1.4760416888748296e-06,
+          -0.099798277020454407
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 4.9999998736893758e-06,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "density": 7850,
+        "name": "Chain7",
+        "renderModel": "./render/chain_link_10_5_2_metalic.glb",
+        "rotation": [
+          -1.4399784049601294e-06,
+          -0.70710796117782593,
+          -7.0978576331981458e-06,
+          0.70710569620132446
+        ],
+        "scale": [
+          1.0000134706497192,
+          1.00025475025177,
+          1.0002663135528564
+        ],
+        "shape": "./collision/chain_link_10_5_2.mochi.h5",
+        "translation": [
+          0.0010562314419075847,
+          1.4778402146475855e-06,
+          -0.088096804916858673
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 4.9999998736893758e-06,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "density": 7850,
+        "name": "Chain8",
+        "renderModel": "./render/chain_link_10_5_2_metalic.glb",
+        "rotation": [
+          0.50000244379043579,
+          -0.50000226497650146,
+          0.49999871850013733,
+          0.49999651312828064
+        ],
+        "scale": [
+          1.0000134706497192,
+          1.0000274181365967,
+          1.0000159740447998
+        ],
+        "shape": "./collision/chain_link_10_5_2.mochi.h5",
+        "translation": [
+          0.0010559315560385585,
+          1.4876191016810481e-06,
+          -0.076092839241027832
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 4.9999998736893758e-06,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "density": 7850,
+        "name": "Chain9",
+        "renderModel": "./render/chain_link_10_5_2_metalic.glb",
+        "rotation": [
+          -1.4399784049601294e-06,
+          -0.70710796117782593,
+          -7.0978576331981458e-06,
+          0.70710569620132446
+        ],
+        "scale": [
+          1.0000134706497192,
+          1.00025475025177,
+          1.0002663135528564
+        ],
+        "shape": "./collision/chain_link_10_5_2.mochi.h5",
+        "translation": [
+          0.0010559688089415431,
+          1.5919272300379816e-06,
+          -0.06472846120595932
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 4.9999998736893758e-06,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "density": 7850,
+        "name": "Chain10",
+        "renderModel": "./render/chain_link_10_5_2_metalic.glb",
+        "rotation": [
+          0.50000244379043579,
+          -0.50000226497650146,
+          0.49999871850013733,
+          0.49999651312828064
+        ],
+        "scale": [
+          1.0000134706497192,
+          1.0000274181365967,
+          1.0000159740447998
+        ],
+        "shape": "./collision/chain_link_10_5_2.mochi.h5",
+        "translation": [
+          0.0010557378409430385,
+          1.3739977475779597e-06,
+          -0.05552094429731369
+        ]
+      }
+    ]
+  }
+}

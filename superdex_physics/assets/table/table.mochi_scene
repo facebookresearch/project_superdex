@@ -1,0 +1,16 @@
+{
+  "actors": {
+    "rigid": [
+      {
+        "colliderType": "Box",
+        "isStatic": true,
+        "layer": "Object",
+        "name": "Table",
+        "shape": "table/table.mochi.h5"
+      }
+    ]
+  },
+  "scene": {
+    "description": "Table"
+  }
+}

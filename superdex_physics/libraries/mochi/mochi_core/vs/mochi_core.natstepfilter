@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StepFilter xmlns="http://schemas.microsoft.com/vstudio/debugger/natstepfilter/2010">
+  <!-- Skip AsView, AsConstView -->
+  <Function>
+    <Name>mochi::AsView&lt;.*&gt;</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::AsConstView&lt;.*&gt;</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+
+  <!-- Skip MakeSpan, MakeConstSpan, MakeSingletonSpan, MakeSingletonConstSpan-->
+  <Function>
+    <Name>mochi::Make.*Span&lt;.*&gt;</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+
+  <!-- Skip Error{}, ErrorLog{}, ErrorAssert{}, test::ExpectOK{}, test::ExpectNotOK{}, and friends -->
+  <Function>
+    <Name>mochi::Error.*::Error.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::Error.*::operator.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::test::ExpectOK.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::test::ExpectNotOK.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+
+  <!-- Skip DynamicArray: operator[], begin, end, cbegin, cend, front, back, data, size, capacity, empty -->
+  <Function>
+    <Name>mochi::DynamicArray&lt;.*&gt;::operator\[\]</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::DynamicArray&lt;.*&gt;::.*begin</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::DynamicArray&lt;.*&gt;::.*end</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::DynamicArray&lt;.*&gt;::front</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::DynamicArray&lt;.*&gt;::back</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::DynamicArray&lt;.*&gt;::data</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::DynamicArray&lt;.*&gt;::size</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::DynamicArray&lt;.*&gt;::capacity</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::DynamicArray&lt;.*&gt;::empty</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+
+  <!-- Skip NdArray: constructors, operator[], begin, end, data, size -->
+  <Function>
+    <Name>mochi::NdArray&lt;.*&gt;::NdArray.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::NdArray&lt;.*&gt;::operator\[\]</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::NdArray&lt;.*&gt;::begin</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::NdArray&lt;.*&gt;::end</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::NdArray&lt;.*&gt;::data</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::NdArray&lt;.*&gt;::size</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+
+  <!-- Skip Matrix: constructors, operator[], operator(), GetSpan, GetConstSpan -->
+  <Function>
+    <Name>mochi::Matrix&lt;.*&gt;::Matrix.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::Matrix&lt;.*&gt;::operator\[\]</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::Matrix&lt;.*&gt;::operator\(\)</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::Matrix&lt;.*&gt;::Get.*Span</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+
+  <!-- Skip Span: all methods -->
+  <Function>
+    <Name>mochi::Span&lt;.*&gt;::.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+
+  <!-- Skip TransformRT constructors/makers-->
+  <Function>
+    <Name>mochi::TransformRT::TransformRT.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::TransformRT::Identity.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+
+  <!-- Skip Quaternion constructors/makers-->
+  <Function>
+    <Name>mochi::Quaternion::Quaternion.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+  <Function>
+    <Name>mochi::Quaternion::Identity.*</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+
+  <!-- Skip literal suffix operators -->
+  <Function>
+    <Name>mochi::operator&quot;&quot;_r(.*)</Name>
+    <Action>NoStepInto</Action>
+  </Function>
+
+</StepFilter>

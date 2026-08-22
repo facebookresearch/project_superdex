@@ -1,0 +1,24 @@
+GLAD is an OpenGL loader-generator from https://github.com/Dav1dde/glad
+
+The simplest way to regenerate the .h and .c files is to use the glad web service at http://glad.dav1d.de/
+
+1) Go to http://glad.dav1d.de/
+
+2) Set these fields:
+    Specification: OpenGL
+    Profile: Core
+    API:
+        gl 4.5
+        gles1 none
+        gles2 none
+
+3) Under Extensions, on the right hand side, click Add All
+
+4) Click Generate
+
+5) Overlay the downloaded files into external/glad/...
+
+If the web service no longer exists at http://glad.dav1d.de/, you can get the generator code at
+https://github.com/Dav1dde/glad and run it locally.
+
+

@@ -1,0 +1,828 @@
+// @brief Default gravity acceleration in world frame [m/s²].
+constant Real3 kDefaultGravity = {0.0, -9.8, 0.0};
+
+// @brief Represents a simulation scene.
+//
+// @warning Concurrent access to the scene and its actors and constraints is illegal.
+//
+// @note Each scene manages the simulation of a series of actors.
+// @note Actors from different scenes do not interact with each other.
+class Scene [no_init, no_destruct] {
+
+  // @brief Get the @ref Context that owns this scene.
+  //
+  // @return Pointer to the @ref Context that owns this scene.
+  fn GetContext() -> Context* [pure, virtual, overloaded, no_python];
+
+  // @brief Get read-only access to the @ref Context that owns this scene.
+  //
+  // @return Const pointer to the @ref Context that owns this scene.
+  fn GetContext() -> Context const* [pure, virtual, const, overloaded, no_python];
+
+  // @brief Get the scene handle.
+  //
+  // @return Scene's handle.
+  //
+  // @note Handles are safe to store and remain valid throughout the scene lifespan.
+  // @note Call @ref Context::GetScene to look up the scene's pointer from the scene's handle.
+  //
+  // @see Context::GetScene
+  fn GetHandle() -> SceneHandle [pure, virtual, const];
+
+  // @brief Get the name of the scene.
+  //
+  // @return Name of the scene.
+  fn GetName() -> char const* [pure, virtual, const];
+
+  // @brief Get the gravity vector in world frame.
+  //
+  // @return Gravity vector [m/s^2] in world frame.
+  //
+  // @see SetGravity
+  fn GetGravity() -> Real3 [pure, virtual, const, units(m/s^2)];
+
+  // @brief Set the gravity vector in world frame.
+  //
+  // @param[in] gravity Gravity vector [m/s^2] in world frame.
+  //
+  // @see GetGravity
+  fn SetGravity(Real3 const& gravity [units(m/s^2)]) -> void [pure, virtual];
+
+  // @brief Get the solver parameters.
+  //
+  // @return Current solver parameters.
+  //
+  // @see SetSolverParams
+  fn GetSolverParams() -> SolverParams [pure, virtual, const];
+
+  // @brief Set the solver parameters.
+  //
+  // @param[in] params Solver parameters to set.
+  //
+  // @see GetSolverParams, SolverParams
+  fn SetSolverParams(SolverParams const& params) -> void [pure, virtual, mochi_error];
+
+  // @brief Advance the simulation of the @ref Scene one step.
+  //
+  // @details SuperDex Physics uses fully-implicit time integration, enabling substantially larger
+  // stable time steps than physics engines using explicit or semi-implicit methods, particularly
+  // for stiff systems. Fewer steps per simulated second often improve simulation performance and
+  // real-time factor.
+  //
+  // @param[in] timeStepSec Time step size [s]. Must be non-negative.
+  //
+  // @note Time steps of 10–25 ms (40–100 physics steps per simulated second) run robustly in most
+  // scenes, including complex contact-rich and deformable simulations. This is a practical starting
+  // range, not a guarantee. Smaller steps may still be required to resolve fast motion, accurately
+  // capture short-duration contact dynamics without excessive numerical dissipation, resolve dynamics
+  // associated with small geometric or discretization length scales, or improve nonlinear-solver
+  // convergence.
+  // @note It is OK to use a different time step each time.
+  // @note If the time step is zero, then the state of the simulation will not change, but pre-step
+  // and post-step callbacks will still be called, and queries will be updated.
+  // @note If the time step is negative or NaN, no step is taken and an error is logged.
+  //
+  // @see IntegrationMethod
+  fn Step(double timeStepSec [units(s)]) -> void [pure, virtual, release_gil];
+
+  // @brief Returns the time step size [s] from the most recent positive call to @ref Step.
+  //
+  // @return The time step size [s] from the most recent positive @ref Step call.
+  //
+  // @note In a newly created scene, the return value is unspecified until the first positive @ref
+  // Step call.
+  // @note @ref RestoreState and @ref RestoreStateFromBytes restore this value from the captured state.
+  // @note Calling @ref Step with a zero time step (e.g. to refresh queries without advancing the
+  // simulation) does not update this value (i.e. it retains the value from the last positive time step).
+  fn GetLastTimeStep() -> double [pure, virtual, const, units(s)];
+
+  // @brief Returns the total simulation time [s] in the scene.
+  //
+  // @return The total simulation time [s].
+  //
+  // @note May not match the real-time that has elapsed.
+  fn GetTotalSimulationTime() -> double [pure, virtual, const, units(s)];
+
+  // @brief Get solver convergence metrics from the last simulation step.
+  //
+  // @return The @ref SolverStats from the last simulation step.
+  //
+  // @see SolverStats, Actor::GetConvergenceStatus
+  fn GetSolverStats() -> SolverStats [pure, virtual, const];
+
+  // @brief Get timing and profiling metrics from the last simulation step.
+  //
+  // @return The @ref PerformanceStats from the last simulation step.
+  //
+  // @see PerformanceStats
+  fn GetPerformanceStats() -> PerformanceStats [pure, virtual, const];
+
+  // @brief Enables/disables forcing all actors in the scene to be in a single simulation island.
+  //
+  // @details An island is a group of actors and constraints that are solved together. Islands are
+  // managed automatically based on proximity and other factors. Islands can be solved in parallel,
+  // which can greatly improve the performance of the scene. However, if you suspect that island
+  // partitioning might be causing a problem, then you can use this function to force all actors in
+  // the scene to be simulated in a single island.
+  //
+  // @param[in] forceSingleIsland Whether to force all actors to be in a single simulation island.
+  //
+  // @warning Forcing single-island is a debugging feature. It will hurt performance.
+  //
+  // @see GetForceSingleIsland
+  fn SetForceSingleIsland(bool forceSingleIsland) -> void [pure, virtual];
+
+  // @brief Get whether all actors are forced to be in a single simulation island.
+  //
+  // @return True if all actors are forced into a single simulation island.
+  //
+  // @see SetForceSingleIsland
+  fn GetForceSingleIsland() -> bool [pure, virtual, const];
+
+  // @brief Capture the simulation state that changes from step to step for later restoration.
+  //
+  // @details Captured state includes actor solution, transforms, and velocities; current and previous
+  // constraint/controller targets; and external forces.
+  //
+  // @return @ref StateHandle to be used with @ref RestoreState. Call @ref ReleaseState or @ref
+  // ReleaseAllStates when you're done with it.
+  //
+  // @warning Not supported for scenes with ROM actors.
+  //
+  // @see RestoreState, ReleaseState, ReleaseAllStates, CaptureStateToFile, CaptureStateToBytes
+  fn CaptureState() -> StateHandle [pure, virtual, mochi_error];
+
+  // @brief Restore captured simulation state. Optionally release the @ref StateHandle at the same
+  // time.
+  //
+  // @param[in] handle @ref StateHandle from a successful call to @ref CaptureState.
+  // @param[in] releaseImmediately If true, release the state handle immediately (as if @ref ReleaseState
+  // were called), even if the restore fails.
+  //
+  // @warning Does not create or destroy actors or constraints, or restore shapes, materials, or
+  // scene parameters. Captured mutable state on existing actors, including static actor transforms,
+  // is restored; if topology or persistent configuration changes, simulation results may differ.
+  // @warning Restoration is not transactional. If restoration fails, the scene may be partially
+  // modified. Restore a known-good checkpoint or recreate the scene before continuing.
+  //
+  // @note The @ref StateHandle must have been captured from this @ref Scene.
+  // @note The scene composition (actors, constraints) must be the same as when the state was captured.
+  //
+  // @see CaptureState, ReleaseState, ReleaseAllStates, RestoreStateFromBytes
+  fn RestoreState(StateHandle handle, bool releaseImmediately) -> void [pure, virtual, mochi_error];
+
+  // @brief Capture simulation state to a binary byte buffer.
+  //
+  // @details Captures the same simulation state as @ref CaptureState, but writes the
+  // binary representation to caller-owned memory instead of storing it internally. This is
+  // useful for transferring state between processes or caching state outside the scene.
+  //
+  // @param[in,out] outData Output byte buffer. Capture data is appended to the buffer.
+  //
+  // @warning Has the same capture restrictions as @ref CaptureState, including no support for
+  // scenes with ROM actors.
+  // @warning The binary representation uses an internal capture format. It is intended only for
+  // compatible scenes with the same actors and constraints created in the same order and the same
+  // component layouts, using the same SuperDex Physics build. It is not a stable long-term
+  // serialization or asset interchange format.
+  //
+  // @note On failure, the output buffer may contain a partial capture. Discard the buffer or
+  // truncate it to its original size before reuse.
+  //
+  // @see RestoreStateFromBytes, CaptureState, CaptureStateToFile
+  fn CaptureStateToBytes(DynamicArray<uint8>& outData) -> void [pure, virtual, mochi_error];
+
+  // @brief Restore simulation state from a binary byte buffer produced by @ref CaptureStateToBytes.
+  //
+  // @param[in] data State data from a successful call to @ref CaptureStateToBytes.
+  //
+  // @warning Has the same restore scope and non-transactional failure behavior as @ref RestoreState.
+  //
+  // @note The byte buffer must have been captured from this or a compatible scene via @ref
+  // CaptureStateToBytes.
+  // @note The capture and restore scenes must use the same SuperDex Physics build.
+  // @note The restore requirements from @ref RestoreState apply, including scene composition (actors,
+  // constraints) being the same as when the state was captured.
+  //
+  // @see CaptureStateToBytes, RestoreState
+  fn RestoreStateFromBytes(Span<uint8 const> data) -> void [pure, virtual, mochi_error];
+
+  // @brief Release a @ref StateHandle when you are done with it. This frees up memory.
+  //
+  // @param[in] handle @ref StateHandle to release.
+  //
+  // @note Redundant calls to ReleaseState will be ignored.
+  fn ReleaseState(StateHandle handle) -> void [pure, virtual, no_mochi_error];
+
+  // @brief Release memory for all captured state and invalidate all prior @ref StateHandle objects.
+  fn ReleaseAllStates() -> void [pure, virtual, no_mochi_error];
+
+  // @brief Return true if both StateHandles are valid and refer to identical state information
+  // (full precision).
+  //
+  // @param[in] stateA First StateHandle to compare
+  // @param[in] stateB Second StateHandle to compare
+  //
+  // @return True if both states are valid and identical.
+  fn IsEqualState(StateHandle stateA, StateHandle stateB) -> bool [pure, virtual, const];
+
+  // @brief Captures a snapshot of the state of a @ref Scene, similar to @ref Scene::CaptureState,
+  // then writes the data to a JSON file for manual inspection.
+  //
+  // @param[in] filePath Path of the output file to write/overwrite (case sensitive on some
+  // filesystems).
+  //
+  // @warning Not supported for scenes with ROM actors.
+  //
+  // @see Scene::CaptureState
+  fn CaptureStateToFile(StringView filePath) -> void [pure, virtual, mochi_error];
+
+  // @brief Create a rigid body actor.
+  //
+  // @param[in] params Parameters defining the rigid actor.
+  //
+  // @return Pointer to the created @ref Actor, or nullptr on error.
+  //
+  // @see RigidActorParams, DestroyActor
+  fn CreateRigidActor(RigidActorParams const& params) -> Actor* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Create a soft deformable actor.
+  //
+  // @param[in] params Parameters defining the soft actor.
+  //
+  // @return Pointer to the created @ref Actor, or nullptr on error.
+  //
+  // @see SoftActorParams, DestroyActor
+  fn CreateSoftActor(SoftActorParams const& params) -> Actor* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Create an articulated actor.
+  //
+  // @param[in] params Parameters defining the articulated actor.
+  //
+  // @return Pointer to the created @ref Actor, or nullptr on error.
+  //
+  // @warning A zero-DOF skeleton (every joint is @ref ArticulatedJointType::Hard) is a static
+  // welded structure and cannot carry a skin (@ref ArticulatedActorParams::skin).
+  //
+  // @note To access nested link actors, use @ref Actor::GetNestedLinkActors.
+  //
+  // @see ArticulatedActorParams, DestroyActor
+  fn CreateArticulatedActor(ArticulatedActorParams const& params) -> Actor* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Create a soft-skinned actor with an articulated skeleton.
+  //
+  // @param[in] params Parameters defining the soft-skinned actor.
+  //
+  // @return Pointer to the created @ref Actor, or nullptr on error.
+  //
+  // @warning The skeleton must have at least one non-Hard joint.
+  //
+  // @note To access underlying soft actors, use @ref Actor::GetNestedSoftActors.
+  // @note To access underlying rigid link actors, use @ref Actor::GetNestedLinkActors.
+  //
+  // @see SoftSkinnedActorParams, DestroyActor
+  fn CreateSoftSkinnedActor(SoftSkinnedActorParams const& params) -> Actor* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Destroy an actor and remove it from the scene.
+  //
+  // @param[in] actor Pointer to the actor to destroy.
+  //
+  // @warning The pointer must be null or point to a live actor owned by this scene. Passing a pointer
+  // to an actor that has been destroyed is undefined behavior.
+  //
+  // @note Nested actors cannot be destroyed individually. When you destroy the parent actor (e.g.
+  // an articulation), all the nested actors will be destroyed automatically.
+  // @note Constraints attached to the actor are automatically destroyed.
+  // @note If @ref actor is null, this function has no effect.
+  // @note After the actor is destroyed, do not use the pointer or its handle.
+  //
+  // @see GetActor, Actor::GetHandle
+  fn DestroyActor(Actor* actor [nullable]) -> void [overloaded, no_mochi_error];
+
+  // @brief Destroy an actor and remove it from the scene.
+  //
+  // @param[in] actor Handle of the actor to destroy. If valid, it must be owned by this scene.
+  //
+  // @note Nested actors cannot be destroyed individually. When you destroy the parent actor (e.g.
+  // an articulation), all the nested actors will be destroyed automatically.
+  // @note Constraints attached to the actor are automatically destroyed.
+  // @note An invalid handle or one that does not currently identify an actor in the scene has no effect.
+  // @note After the actor is destroyed, do not use its handle.
+  //
+  // @see GetActor, Actor::GetHandle
+  fn DestroyActor(ActorHandle actor) -> void [pure, virtual, overloaded, no_mochi_error];
+
+  // @brief Get the @ref Actor pointer associated with an @ref ActorHandle.
+  //
+  // @param[in] actor Handle of the actor to retrieve. If valid, it must be owned by this scene.
+  //
+  // @return Pointer to the @ref Actor, or nullptr if the handle does not currently identify an actor
+  // in this scene.
+  //
+  // @see Actor, ActorHandle, DestroyActor, Actor::GetHandle
+  fn GetActor(ActorHandle actor) -> Actor* [pure, virtual, overloaded, nullable];
+
+  // @brief Get a const pointer to the @ref Actor associated with an @ref ActorHandle.
+  //
+  // @param[in] actor Handle of the actor to retrieve. If valid, it must be owned by this scene.
+  //
+  // @return Const pointer to the @ref Actor, or nullptr if the handle does not currently identify an
+  // actor in this scene.
+  //
+  // @see Actor, ActorHandle, DestroyActor, Actor::GetHandle
+  fn GetActor(ActorHandle actor) -> Actor const* [pure, virtual, const, overloaded, no_python, nullable];
+
+  // @brief Get the number of actors in the scene, including nested link actors and nested soft
+  // actors.
+  //
+  // @return Number of actors in the scene.
+  //
+  // @note To count only top-level actors, iterate with @ref ForEachActor and skip actors for
+  // which @ref Actor::IsNestedLinkActor or @ref Actor::IsNestedSoftActor returns true.
+  fn GetNumActors() -> int [pure, virtual, const];
+
+  // @brief Get @ref Actor pointers for all the actors in the scene.
+  //
+  // @param[out] outActors Output span to fill with @ref Actor pointers. Must be of size @ref
+  // GetNumActors().
+  //
+  // @see GetNumActors, GetActor
+  fn GetActors(Span<Actor*> outActors) -> void [pure, virtual, overloaded, mochi_error, no_python];
+
+  // @brief Get const @ref Actor pointers for all the actors in the scene.
+  //
+  // @param[out] outActors Output span to fill with const @ref Actor pointers. Must be of size @ref
+  // GetNumActors().
+  //
+  // @see GetNumActors, GetActor
+  fn GetActors(Span<Actor const*> outActors) -> void [pure, virtual, const, overloaded, mochi_error, no_python];
+
+  // @brief Iterate over all the actors in the scene using a callback. Includes nested link
+  // actors and nested soft actors.
+  //
+  // @param[in] callback Function called once for each actor.
+  //
+  // @warning Destroying other actors or constraints from within the callback is illegal.
+  //
+  // @note To skip nested actors, check @ref Actor::IsNestedLinkActor and @ref
+  // Actor::IsNestedSoftActor inside the callback.
+  fn ForEachActor(Function<void, Actor*> const& callback) -> void [pure, virtual, overloaded];
+
+  // @brief Iterate over all the actors in the scene using a callback (const version). Includes
+  // nested link actors and nested soft actors.
+  //
+  // @param[in] callback Function called once for each actor.
+  //
+  // @warning Destroying other actors or constraints from within the callback is illegal.
+  //
+  // @note To skip nested actors, check @ref Actor::IsNestedLinkActor and @ref
+  // Actor::IsNestedSoftActor inside the callback.
+  fn ForEachActor(Function<void, Actor const*> const& callback) -> void [pure, virtual, const, overloaded, no_python];
+
+  # Constraints
+  // @brief Create a range constraint on a single articulated DoF.
+  //
+  // @param[in] params Parameters defining the DoF range constraint.
+  //
+  // @return Pointer to the created @ref Constraint, or nullptr on error.
+  //
+  // @note Use this API for runtime creation/deletion of joint limits. For static joint limits, use
+  // the @ref Scene::CreateArticulatedActor API instead.
+  //
+  // @see ConstraintType::ArticulatedSingleDofRange, ArticulatedSingleDofRangeConstraintParams,
+  // DestroyConstraint
+  fn CreateArticulatedSingleDofRangeConstraint(ArticulatedSingleDofRangeConstraintParams const& params) -> Constraint* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Create a range constraint on the DoFs of a 3D rotation joint of an articulated actor.
+  //
+  // @param[in] params Parameters defining the DoF range constraint.
+  //
+  // @return Pointer to the created @ref Constraint, or nullptr on error.
+  //
+  // @note Use this API for runtime creation/deletion of joint limits. For static joint limits, use
+  // the @ref Scene::CreateArticulatedActor API instead.
+  //
+  // @see ConstraintType::Articulated3dRotationRange, Articulated3dRotationRangeConstraintParams,
+  // DestroyConstraint
+  fn CreateArticulated3dRotationRangeConstraint(Articulated3dRotationRangeConstraintParams const& params) -> Constraint* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Create a target constraint on a single articulated DoF.
+  //
+  // @param[in] params Parameters defining the single DoF target constraint.
+  //
+  // @return Pointer to the created @ref Constraint, or nullptr on error.
+  //
+  // @see ConstraintType::ArticulatedSingleDofTarget, ArticulatedSingleDofTargetConstraintParams,
+  // DestroyConstraint
+  fn CreateArticulatedSingleDofTargetConstraint(ArticulatedSingleDofTargetConstraintParams const& params) -> Constraint* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Create a target constraint on an articulated 3D rotation.
+  //
+  // @param[in] params Parameters defining the 3D rotation target constraint.
+  //
+  // @return Pointer to the created @ref Constraint, or nullptr on error.
+  //
+  // @see ConstraintType::Articulated3dRotationTarget, Articulated3dRotationTargetConstraintParams,
+  // DestroyConstraint
+  fn CreateArticulated3dRotationTargetConstraint(Articulated3dRotationTargetConstraintParams const& params) -> Constraint* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Create a range constraint on joint rotation.
+  //
+  // @param[in] params Parameters defining the joint rotation range constraint.
+  //
+  // @return Pointer to the created @ref Constraint, or nullptr on error.
+  //
+  // @see ConstraintType::JointRotationRange, JointRotationRangeConstraintParams, DestroyConstraint
+  fn CreateJointRotationRangeConstraint(JointRotationRangeConstraintParams const& params) -> Constraint* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Create a tracking constraint on joint rotation.
+  //
+  // @param[in] params Parameters defining the joint rotation tracking constraint.
+  //
+  // @return Pointer to the created @ref Constraint, or nullptr on error.
+  //
+  // @see ConstraintType::JointRotationTracking, JointRotationTrackingConstraintParams,
+  // DestroyConstraint
+  fn CreateJointRotationTrackingConstraint(JointRotationTrackingConstraintParams const& params) -> Constraint* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Create a rotation constraint between a rigid actor and a rod element.
+  //
+  // @param[in] params Parameters defining the rod element rotation constraint.
+  //
+  // @return Pointer to the created @ref Constraint, or nullptr on error.
+  //
+  // @see ConstraintType::RodElementRotationToRigid, RodElementRotationToRigidConstraintParams,
+  // DestroyConstraint
+  fn CreateRodElementRotationToRigidConstraint(RodElementRotationToRigidConstraintParams const& params) -> Constraint* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Create a position constraint on a rigid actor's pivot point.
+  //
+  // @param[in] params Parameters defining the rigid pivot position constraint.
+  //
+  // @return Pointer to the created @ref Constraint, or nullptr on error.
+  //
+  // @see ConstraintType::RigidPivotPosition, RigidPivotPositionConstraintParams, DestroyConstraint
+  fn CreateRigidPivotPositionConstraint(RigidPivotPositionConstraintParams const& params) -> Constraint* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Create a position constraint between a rigid actor's pivot point and the world
+  // position of that pivot under a target center-of-mass transform.
+  //
+  // @param[in] params Parameters defining the rigid pivot to rigid target constraint.
+  //
+  // @return Pointer to the created @ref Constraint, or nullptr on error.
+  //
+  // @see ConstraintType::RigidPivotToRigidTarget, RigidPivotToRigidTargetConstraintParams,
+  // DestroyConstraint
+  fn CreateRigidPivotToRigidTargetConstraint(RigidPivotToRigidTargetConstraintParams const& params) -> Constraint* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Create a rotation constraint on a rigid actor's pivot frame.
+  //
+  // @param[in] params Parameters defining the rigid pivot rotation constraint.
+  //
+  // @return Pointer to the created @ref Constraint, or nullptr on error.
+  //
+  // @see ConstraintType::RigidPivotRotation, RigidPivotRotationConstraintParams, DestroyConstraint
+  fn CreateRigidPivotRotationConstraint(RigidPivotRotationConstraintParams const& params) -> Constraint* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Create a prismatic joint constraint between two rigid actors.
+  //
+  // @param[in] params Parameters defining the prismatic joint constraint.
+  //
+  // @return Pointer to the created @ref Constraint, or nullptr on error.
+  //
+  // @see ConstraintType::RigidPrismaticJoint, RigidPrismaticJointConstraintParams,
+  // DestroyConstraint
+  fn CreateRigidPrismaticJointConstraint(RigidPrismaticJointConstraintParams const& params) -> Constraint* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Create a spherical joint constraint between two rigid actors.
+  //
+  // @param[in] params Parameters defining the spherical joint constraint.
+  //
+  // @return Pointer to the created @ref Constraint, or nullptr on error.
+  //
+  // @see ConstraintType::RigidSphericalJoint, RigidSphericalJointConstraintParams,
+  // DestroyConstraint
+  fn CreateRigidSphericalJointConstraint(RigidSphericalJointConstraintParams const& params) -> Constraint* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Create a position constraint on a deformable actor node.
+  //
+  // @param[in] params Parameters defining the deformable node position constraint.
+  //
+  // @return Pointer to the created @ref Constraint, or nullptr on error.
+  //
+  // @see ConstraintType::DeformableNodePosition, DeformableNodePositionConstraintParams,
+  // DestroyConstraint
+  fn CreateDeformableNodePositionConstraint(DeformableNodePositionConstraintParams const& params) -> Constraint* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Create a constraint connecting two deformable actor nodes.
+  //
+  // @param[in] params Parameters defining the deformable-node-to-deformable-node constraint.
+  //
+  // @return Pointer to the created @ref Constraint, or nullptr on error.
+  //
+  // @see ConstraintType::DeformableNodeToDeformableNode,
+  // DeformableNodeToDeformableNodeConstraintParams, DestroyConstraint
+  fn CreateDeformableNodeToDeformableNodeConstraint(DeformableNodeToDeformableNodeConstraintParams const& params) -> Constraint* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Create a constraint connecting a deformable node to a rigid actor.
+  //
+  // @param[in] params Parameters defining the deformable-node-to-rigid constraint.
+  //
+  // @return Pointer to the created @ref Constraint, or nullptr on error.
+  //
+  // @see ConstraintType::DeformableNodeToRigid, DeformableNodeToRigidConstraintParams,
+  // DestroyConstraint
+  fn CreateDeformableNodeToRigidConstraint(DeformableNodeToRigidConstraintParams const& params) -> Constraint* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
+  // @brief Get the @ref Constraint pointer associated with a @ref ConstraintHandle.
+  //
+  // @param[in] constraint Handle of the constraint to retrieve. If valid, it must be owned by this scene.
+  //
+  // @return Pointer to the @ref Constraint, or nullptr if the handle does not currently identify a
+  // constraint in this scene.
+  //
+  // @see Constraint, ConstraintHandle, DestroyConstraint, Constraint::GetHandle
+  fn GetConstraint(ConstraintHandle constraint) -> Constraint* [pure, virtual, overloaded, nullable];
+
+  // @brief Get the const @ref Constraint pointer associated with a @ref ConstraintHandle.
+  //
+  // @param[in] constraint Handle of the constraint to retrieve. If valid, it must be owned by this scene.
+  //
+  // @return Const pointer to the @ref Constraint, or nullptr if the handle does not currently
+  // identify a constraint in this scene.
+  //
+  // @see Constraint, ConstraintHandle, DestroyConstraint, Constraint::GetHandle
+  fn GetConstraint(ConstraintHandle constraint) -> Constraint const* [pure, virtual, const, overloaded, no_python, nullable];
+
+  // @brief Destroy a constraint and remove it from the scene.
+  //
+  // @param[in] constraint Pointer to the constraint to destroy.
+  //
+  // @warning The pointer must be null or point to a live constraint owned by this scene. Passing
+  // a pointer to a constraint that has been destroyed is undefined behavior.
+  //
+  // @note If @ref constraint is null, this function has no effect.
+  // @note After the constraint is destroyed, do not use the pointer or its handle.
+  //
+  // @see GetConstraint, Constraint::GetHandle
+  fn DestroyConstraint(Constraint* constraint [nullable]) -> void [pure, virtual, overloaded, no_mochi_error];
+
+  // @brief Destroy a constraint and remove it from the scene.
+  //
+  // @param[in] constraint Handle of the constraint to destroy. If valid, it must be owned by this scene.
+  //
+  // @note An invalid handle or one that does not currently identify a constraint in the scene has no effect.
+  // @note After the constraint is destroyed, do not use its handle.
+  //
+  // @see GetConstraint, Constraint::GetHandle
+  fn DestroyConstraint(ConstraintHandle constraint) -> void [pure, virtual, overloaded, no_mochi_error];
+
+  // @brief Get the number of constraints in the scene.
+  //
+  // @return Number of constraints in the scene.
+  //
+  // @note Includes constraints created implicitly by @ref CreateArticulatedActor (e.g. articulated
+  // joint limits).
+  fn GetNumConstraints() -> int [pure, virtual, const];
+
+  // @brief Iterate over all the constraints in the scene using a callback.
+  //
+  // @param[in] callback Function called once for each constraint.
+  //
+  // @warning Destroying other constraints or actors from within the callback is illegal.
+  //
+  // @note Includes constraints created implicitly by @ref CreateArticulatedActor (e.g. articulated
+  // joint limits).
+  fn ForEachConstraint(Function<void, Constraint*> const& callback) -> void [pure, virtual, overloaded];
+
+  // @brief Iterate over all the constraints in the scene using a callback (const version).
+  //
+  // @param[in] callback Function called once for each constraint.
+  //
+  // @warning Destroying other constraints or actors from within the callback is illegal.
+  //
+  // @note Includes constraints created implicitly by @ref CreateArticulatedActor (e.g. articulated
+  // joint limits).
+  fn ForEachConstraint(Function<void, Constraint const*> const& callback) -> void [pure, virtual, const, overloaded, no_python];
+
+  # Debugging
+  // @brief Get the debug draw interface for this scene.
+  //
+  // @return Reference to the @ref DebugDraw interface.
+  //
+  // @see DebugDraw
+  fn GetDebugDraw() -> DebugDraw& [pure, virtual, overloaded];
+
+  // @brief Get a const reference to the debug draw interface for this scene.
+  //
+  // @return Const reference to the @ref DebugDraw interface.
+  //
+  // @see DebugDraw
+  fn GetDebugDraw() -> DebugDraw const& [pure, virtual, const, overloaded, no_python];
+
+  // @brief This gives the debugger a chance to process messages that require reading or writing
+  // scene state.
+  //
+  // @note Must be called on the scene's owning thread (like other @ref Scene methods).
+  //
+  // @details Please call this periodically if you are not actively stepping the scene. If this
+  // function is never called and the scene is never stepped, then some debugger features will not
+  // work.
+  fn UpdateDebugger() -> void [pure, virtual];
+
+  # Recording
+  // @brief Check if the scene is currently recording.
+  //
+  // @return True if recording is active, false otherwise.
+  //
+  // @note A recording write failure does not end the recording session.
+  //
+  // @see StartRecording, StopRecording
+  fn IsRecording() -> bool [pure, virtual, const];
+
+  // @brief Create or replace the specified file and start recording the scene to an HDF5 file.
+  //
+  // @param[in] filePath Path to the output recording file (case sensitive on some filesystems).
+  // File will be created or replaced.
+  // @param[in] params Parameters controlling what data to record.
+  //
+  // @warning Requires a build with HDF5 support.
+  // @warning The recording system may undergo a substantial refactor to expand its capabilities.
+  // Its API and recorded file format may change in future releases.
+  //
+  // @note Enabling additional recording features will generally increase the recording file size
+  // and degrade performance.
+  // @note If the scene is already recording, the previous recording is stopped before starting
+  // the new one.
+  //
+  // @see StopRecording, IsRecording, RecordingParams
+  fn StartRecording(StringView filePath, RecordingParams const& params) -> void [pure, virtual, mochi_error];
+
+  // @brief Stop recording the scene and close the recording file.
+  //
+  // @see StartRecording, IsRecording
+  fn StopRecording() -> void [pure, virtual];
+
+  # Contact Filtering
+  // @brief Enable or disable collision detection for an ordered pair of contact layer names. Order
+  // matters: controls only the specified direction (actors in layerA checking against actors in
+  // layerB).
+  //
+  // @param[in] layerA Name of the layer of the "colliding" actor (the one checking for contact).
+  // Must be non-empty.
+  // @param[in] layerB Name of the layer of the "collider" actor (the one with a @ref ColliderType
+  // being tested). Must be non-empty.
+  // @param[in] enable True to enable contact, false to disable it.
+  //
+  // @note Contact is enabled by default. You only need to call this method if you wish to disable
+  // (or re-enable) contact for a specific layer pair.
+  // @note Both layer-to-layer and actor-to-actor contact must be enabled for contact to occur.
+  // @note Call twice with swapped arguments or use @ref EnableLayerContactSymmetric to affect
+  // collision checks in both directions.
+  // @note Calling this method with a layer name not previously seen in the scene registers it as
+  // a new contact layer, increasing @ref GetNumContactLayers and adding the name to
+  // @ref EnumerateContactLayerNames.
+  //
+  // @see EnableLayerContactSymmetric, EnableActorContactAsymmetric, IsLayerContactEnabled
+  fn EnableLayerContactAsymmetric(StringView layerA, StringView layerB, bool enable) -> void [pure, virtual, mochi_error];
+
+  // @brief Equivalent to calling @ref EnableLayerContactAsymmetric with @ref layerA and @ref
+  // layerB in both orders.
+  //
+  // @param[in] layerA Name of the first contact layer. Must be non-empty.
+  // @param[in] layerB Name of the second contact layer. Must be non-empty.
+  // @param[in] enable True to enable contact, false to disable it.
+  //
+  // @see EnableLayerContactAsymmetric, EnableActorContactSymmetric, IsLayerContactEnabled
+  fn EnableLayerContactSymmetric(StringView layerA, StringView layerB, bool enable) -> void [pure, virtual, mochi_error];
+
+  // @brief Check if collision detection is enabled for an ordered pair of contact layer names.
+  // Order matters: refers only to the specified direction (actors in layerA checking against
+  // actors in layerB).
+  //
+  // @param[in] layerA Name of the layer of the "colliding" actor (the one checking for contact).
+  // @param[in] layerB Name of the layer of the "collider" actor (the one with a @ref ColliderType
+  // being tested).
+  //
+  // @return True if layer-to-layer contact is enabled, false if layer-to-layer contact is disabled.
+  //
+  // @note Contact is enabled by default, so you will get true for any pair of layers unless
+  // overridden via @ref EnableLayerContactAsymmetric or @ref EnableLayerContactSymmetric.
+  // @note This only checks the layer filter. Actor-to-actor contact can still be disabled with
+  // @ref EnableActorContactAsymmetric or @ref EnableActorContactSymmetric.
+  //
+  // @see EnableLayerContactAsymmetric, EnableLayerContactSymmetric
+  fn IsLayerContactEnabled(StringView layerA, StringView layerB) -> bool [pure, virtual, const];
+
+  // @brief Get the number of unique contact layer names in the scene.
+  //
+  // @return Number of unique layer names in the scene.
+  //
+  // @note The count may include layer names not currently assigned to an actor.
+  //
+  // @see EnumerateContactLayerNames
+  fn GetNumContactLayers() -> int [pure, virtual, const];
+
+  // @brief Enumerate all unique contact layer names in the scene.
+  //
+  // @param[in] callback Function called once for each layer name.
+  //
+  // @warning Do not register new contact layers from inside the callback. Doing so may invalidate the
+  // enumeration and cause undefined behavior.
+  //
+  // @note The callback fires @ref GetNumContactLayers times.
+  // @note Enumeration order is unspecified.
+  //
+  // @see GetNumContactLayers
+  fn EnumerateContactLayerNames(Function<void, StringView> const& callback) -> void [pure, virtual, const];
+
+  // @brief Enable or disable collision detection between two actors. Order matters: controls only
+  // the specified direction (colliding actor checking against collider actor).
+  //
+  // @param[in] colliding Handle of the colliding actor.
+  // @param[in] collider Handle of the collider actor.
+  // @param[in] enable True to enable contact, false to disable it.
+  // @param[in] includeNestedActors Whether nested actors should be affected by this contact
+  // setting. With @ref IncludeNestedActors::No, only the exact handles are affected. With @ref
+  // IncludeNestedActors::Yes, parent actors with nested actors resolve to the
+  // parent plus nested actors. The setting is applied to every ordered pair in the cross-product of
+  // the two resolved handle sets; no pairs outside that cross-product are affected. If the
+  // resolved sets overlap, pairs in the overlap, including self-pairs, are affected.
+  //
+  // @note Contact is enabled by default. You only need to call this method if you wish to disable
+  // (or re-enable) contact for a specific actor pair.
+  // @note Both layer-to-layer and actor-to-actor contact must be enabled for contact to occur.
+  // @note Contact between adjacent links is automatically disabled when an articulated or
+  // soft-skinned actor is created. A later actor-contact setting can override that automatic
+  // disable for any pair included in the resolved actor sets. In particular, enabling contact
+  // between a parent actor and itself with @ref IncludeNestedActors::Yes enables
+  // contact between that parent's nested actors, including adjacent links, unless a later
+  // actor-contact setting disables those pairs again.
+  // @note Call twice with swapped arguments or use @ref EnableActorContactSymmetric to affect
+  // collision checks in both directions.
+  //
+  // @see EnableActorContactSymmetric, EnableLayerContactAsymmetric
+  fn EnableActorContactAsymmetric(ActorHandle colliding, ActorHandle collider, bool enable, IncludeNestedActors includeNestedActors) -> void [pure, virtual, mochi_error];
+
+  // @brief Equivalent to calling @ref EnableActorContactAsymmetric with @ref actorA and @ref
+  // actorB in both orders using the same @ref includeNestedActors.
+  //
+  // @param[in] actorA Handle of the first actor.
+  // @param[in] actorB Handle of the second actor.
+  // @param[in] enable True to enable contact, false to disable it.
+  // @param[in] includeNestedActors Whether nested actors should be affected by this contact
+  // setting. See @ref EnableActorContactAsymmetric for details.
+  //
+  // @see EnableActorContactAsymmetric, EnableLayerContactSymmetric
+  fn EnableActorContactSymmetric(ActorHandle actorA, ActorHandle actorB, bool enable, IncludeNestedActors includeNestedActors) -> void [pure, virtual, mochi_error];
+
+  # Step Callbacks
+  // @brief Default priority for callback ordering. Lower values execute earlier (higher priority).
+  constant int kDefaultCallbackPriority = 100;
+
+  // @brief Register a callback to execute before each simulation step.
+  //
+  // @param[in] debugName Descriptive name for debugging and profiling.
+  // @param[in] callback Callback function receiving @ref StepInfo.
+  // @param[in] priority Execution order. Lower values execute first (higher priority).
+  //
+  // @return @ref CallbackHandle for the registered callback.
+  //
+  // @note Callbacks run sequentially on the thread that calls @ref Step, in increasing priority order
+  // (lower values first).
+  // @note The relative order of callbacks registered with equal priority is unspecified. Assign
+  // distinct priorities when ordering matters.
+  // @note Callbacks must be thread-safe if they access shared state.
+  // @note Callbacks should not modify scene structure (add/remove actors/constraints).
+  //
+  // @see CancelCallback, RegisterPostStepCallback
+  fn RegisterPreStepCallback(StringView debugName, Function<void, StepInfo const&> callback, int priority = kDefaultCallbackPriority) -> CallbackHandle [pure, virtual];
+
+  // @brief Register a callback to execute after each simulation step.
+  //
+  // @param[in] debugName Descriptive name for debugging and profiling.
+  // @param[in] callback Callback function receiving @ref StepInfo.
+  // @param[in] priority Execution order. Lower values execute first (higher priority).
+  //
+  // @return @ref CallbackHandle for the registered callback.
+  //
+  // @note Callbacks run sequentially on the thread that calls @ref Step, in increasing priority order
+  // (lower values first).
+  // @note The relative order of callbacks registered with equal priority is unspecified. Assign
+  // distinct priorities when ordering matters.
+  // @note Callbacks must be thread-safe if they access shared state.
+  // @note Callbacks should not modify scene structure (add/remove actors/constraints).
+  //
+  // @see CancelCallback, RegisterPreStepCallback
+  fn RegisterPostStepCallback(StringView debugName, Function<void, StepInfo const&> callback, int priority = kDefaultCallbackPriority) -> CallbackHandle [pure, virtual];
+
+  // @brief Cancel a previously registered callback.
+  //
+  // @param[in] handle @ref CallbackHandle from @ref RegisterPreStepCallback or @ref
+  // RegisterPostStepCallback. Must be owned by this scene.
+  //
+  // @note Invalid and already-cancelled handles are ignored.
+  //
+  // @see RegisterPreStepCallback, RegisterPostStepCallback
+  fn CancelCallback(CallbackHandle handle) -> void [pure, virtual];
+}

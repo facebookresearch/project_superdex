@@ -1,0 +1,66 @@
+material {
+    name : Wireframe,
+    shadingModel : unlit,
+    blending : transparent,
+    // Back-face culling removes edges of back-facing triangles. On its own this does
+    // NOT make a concave mesh self-occlude, so the host also draws a depth pre-pass
+    // (see WireframeDepth) that fills the surface depth; this material then depth-tests
+    // against it so far-side edges are hidden behind nearer surfaces.
+    culling : back,
+    depthCulling : true,
+    depthWrite : false,
+    // Per-vertex barycentric coordinate, supplied as a CUSTOM0 vertex attribute.
+    requires : [
+        custom0
+    ],
+    // Interpolated barycentric coordinate passed from vertex to fragment shader.
+    variables : [
+        bary
+    ],
+    parameters : [
+        {
+            type : float4,
+            name : color
+        },
+        {
+            type : float,
+            name : lineWidth
+        },
+        {
+            type : float,
+            name : depthBias
+        }
+    ]
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        material.bary = getCustom0();
+
+        float3 viewDirection = normalize(getWorldCameraPosition() - material.worldPosition.xyz);
+        material.worldPosition.xyz += viewDirection * materialParams.depthBias;
+    }
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+
+        // Distance to the nearest triangle edge in barycentric space. Using screen-space
+        // derivatives (fwidth) keeps the line a constant pixel width regardless of depth.
+        vec3 bary = variable_bary.xyz;
+        vec3 deltas = fwidth(bary);
+        vec3 smoothed = smoothstep(vec3(0.0), deltas * materialParams.lineWidth, bary);
+        float edge = 1.0 - min(min(smoothed.x, smoothed.y), smoothed.z);
+
+        if (edge <= 0.0) {
+            discard;
+        }
+
+        // blending:transparent uses premultiplied alpha, so the RGB must be scaled by
+        // alpha. Without this the antialiased edge pixels blend at full intensity and the
+        // lines look aliased.
+        float alpha = materialParams.color.a * edge;
+        material.baseColor = vec4(materialParams.color.rgb * alpha, alpha);
+    }
+}

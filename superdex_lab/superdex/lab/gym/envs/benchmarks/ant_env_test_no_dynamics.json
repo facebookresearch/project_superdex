@@ -1,0 +1,8 @@
+{
+  "description": "Test-only: Ant stripped of damping and gravity on a low-friction ground. A degenerate setup that is not a trainable task, kept as a crash check for the non-default physics paths.",
+  "env_cfg": {
+    "use_damping": false,
+    "use_gravity": false,
+    "use_low_friction": true
+  }
+}

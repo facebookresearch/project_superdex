@@ -1,0 +1,248 @@
+{
+  "actors": {
+    "rigid": [
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 9.9999997473787516e-05,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "name": "Cup",
+        "renderModel": "./render/paper_cup.glb",
+        "rotation": [
+          1,
+          0,
+          0,
+          -4.3711388286737929e-08
+        ],
+        "shape": "./collision/paper_cup.mochi.h5"
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 9.9999997473787516e-05,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "name": "Cup1",
+        "renderModel": "./render/paper_cup.glb",
+        "rotation": [
+          1,
+          0,
+          0,
+          -4.3711388286737929e-08
+        ],
+        "shape": "./collision/paper_cup.mochi.h5",
+        "translation": [
+          0,
+          0.09403722733259201,
+          0
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 9.9999997473787516e-05,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "name": "Cup2",
+        "renderModel": "./render/paper_cup.glb",
+        "rotation": [
+          1,
+          0,
+          0,
+          -4.3711388286737929e-08
+        ],
+        "shape": "./collision/paper_cup.mochi.h5",
+        "translation": [
+          0,
+          0.28239625692367554,
+          0
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 9.9999997473787516e-05,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "name": "Cup3",
+        "renderModel": "./render/paper_cup.glb",
+        "rotation": [
+          1,
+          0,
+          0,
+          -4.3711388286737929e-08
+        ],
+        "shape": "./collision/paper_cup.mochi.h5",
+        "translation": [
+          0,
+          0.18835902214050293,
+          0
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 9.9999997473787516e-05,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "name": "Cup4",
+        "renderModel": "./render/paper_cup.glb",
+        "rotation": [
+          1,
+          0,
+          0,
+          -4.3711388286737929e-08
+        ],
+        "shape": "./collision/paper_cup.mochi.h5",
+        "translation": [
+          0,
+          0.051722504198551178,
+          0.11942264437675476
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 9.9999997473787516e-05,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "name": "Cup5",
+        "renderModel": "./render/paper_cup.glb",
+        "rotation": [
+          1,
+          0,
+          0,
+          -4.3711388286737929e-08
+        ],
+        "shape": "./collision/paper_cup.mochi.h5",
+        "translation": [
+          0,
+          0.14575964212417603,
+          0.11942264437675476
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 9.9999997473787516e-05,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "name": "Cup6",
+        "renderModel": "./render/paper_cup.glb",
+        "rotation": [
+          1,
+          0,
+          0,
+          -4.3711388286737929e-08
+        ],
+        "shape": "./collision/paper_cup.mochi.h5",
+        "translation": [
+          0,
+          0.24008139967918396,
+          0.11942264437675476
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 9.9999997473787516e-05,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "name": "Cup7",
+        "renderModel": "./render/paper_cup.glb",
+        "rotation": [
+          1,
+          0,
+          0,
+          -4.3711388286737929e-08
+        ],
+        "shape": "./collision/paper_cup.mochi.h5",
+        "translation": [
+          0,
+          0.09841638058423996,
+          0.23821242153644562
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 9.9999997473787516e-05,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "name": "Cup8",
+        "renderModel": "./render/paper_cup.glb",
+        "rotation": [
+          1,
+          0,
+          0,
+          -4.3711388286737929e-08
+        ],
+        "shape": "./collision/paper_cup.mochi.h5",
+        "translation": [
+          0,
+          0.19245351850986481,
+          0.23821242153644562
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 9.9999997473787516e-05,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "name": "Cup9",
+        "renderModel": "./render/paper_cup.glb",
+        "rotation": [
+          1,
+          0,
+          0,
+          -4.3711388286737929e-08
+        ],
+        "shape": "./collision/paper_cup.mochi.h5",
+        "translation": [
+          0,
+          0.14996230602264404,
+          0.35017096996307373
+        ]
+      },
+      {
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 9.9999997473787516e-05,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "density": 7850,
+        "name": "Sphere1",
+        "renderModel": "./../sphere/render/sphere.glb",
+        "shape": "./../sphere/collision/sphere.mochi.h5",
+        "translation": [
+          0,
+          0.1497153639793396,
+          0.38266375660896301
+        ]
+      }
+    ]
+  }
+}

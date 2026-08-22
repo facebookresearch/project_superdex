@@ -1,0 +1,1119 @@
+namespace bots;
+
+// @brief Shared base handle for bots, controllers, sensors, and actuators. The distinct derived
+// handle types below encode the component kind in the C++ type (compile-time safety); all share this
+// base's raw value and validity check.
+struct bots::RoboticsHandle [equality, sortable, hashable] {
+  uint64 value;
+  fn IsValid() -> bool [const];
+}
+
+// @brief Distinct handle identifying a bot in its owning @ref RoboticsContext.
+struct bots::BotHandle(bots::RoboticsHandle) {}
+
+// @brief Distinct handle identifying a controller in its owning @ref RoboticsContext.
+struct bots::ControllerHandle(bots::RoboticsHandle) {}
+
+// @brief Distinct handle identifying a sensor in its owning @ref RoboticsContext.
+struct bots::SensorHandle(bots::RoboticsHandle) {}
+
+// @brief Distinct handle identifying an actuator in its owning @ref RoboticsContext.
+struct bots::ActuatorHandle(bots::RoboticsHandle) {}
+
+// @brief Type of content stored in a .superdex_bot file.
+enum bots::BotFileType {
+  // @brief Flat bot parameters.
+  BotPrefab,
+  // @brief Mod bot recipe that produces @ref BotPrefab.
+  ModBotPrefab,
+  // @brief Number of enum values.
+  Count,
+}
+
+// @brief Reference space for computed link transforms.
+enum bots::LinkTransformSpace {
+  // @brief Transform from each link to its parent link.
+  ParentFromLink,
+  // @brief Transform from each link to the root link.
+  RootFromParent,
+  // @brief Number of enum values.
+  Count,
+}
+
+// @brief Sentinel @ref BotJointPrefab::effortLimit value: the joint's actuation effort is
+// unbounded.
+constant real bots::kEffortUnbounded = -1.0;
+
+// @brief Parameters describing a single joint in a bot.
+struct bots::BotJointPrefab(prefab::ArticulatedJointPrefab) [equality, no_reflection] {
+  // @brief Maximum effort magnitude that may be applied to actuate this joint
+  // [N·m for revolute, N for prismatic]. Interpreted by regime: a negative value (default
+  // @ref kEffortUnbounded) is unbounded; 0 is non-actuated (no effort can be applied, though the
+  // joint still moves freely within its range under external forces); a positive value is a finite
+  // limit. This is advisory metadata — it is not copied into the physics articulation, so the sim
+  // enforces nothing on its own; controllers may read it (e.g. to clamp their output).
+  real effortLimit = bots::kEffortUnbounded;
+}
+
+// @brief Parameters describing a single sensor in a bot.
+struct bots::BotSensorPrefab [equality, no_reflection] {
+  // @brief Registered sensor type (e.g., "SENSOR_CAMERA").
+  String type;
+  // @brief Human-readable, findable identifier for this sensor instance.
+  String name;
+  // @brief Sensor pose relative to the associated link's actor (aFromB convention: maps
+  // sensor-frame coordinates into the link frame). Chain to world via SensorBase::GetWorldTransform.
+  TransformRT parentFromSensor;
+  // @brief Sensor parameters: a path to a .superdex_sensor JSON file or inline JSON. Empty uses
+  // defaults.
+  String params;
+  // @brief Legacy key captured on load: older assets named this field `typeName`. Folded into
+  // `type` by ApplyLegacyBotSensorFields and cleared (so re-saves omit it).
+  String _legacyTypeName [no_python];
+  // @brief Legacy key captured on load: older assets named this field `paramsFile`. Folded into
+  // `params` by ApplyLegacyBotSensorFields and cleared (so re-saves omit it).
+  String _legacyParamsFile [no_python];
+}
+
+// @brief Parameters describing a single actuator in a bot.
+struct bots::BotActuatorPrefab [equality, no_reflection] {
+  // @brief Registered actuator type.
+  String type;
+  // @brief Human-readable, findable identifier for this actuator instance.
+  String name;
+  // @brief Actuator parameters: a path to a params JSON file or inline JSON. Empty uses defaults.
+  String params;
+}
+
+// @brief Parameters describing a single link (body) in a bot.
+struct bots::BotLinkPrefab(prefab::ArticulatedLinkPrefab) [equality, no_reflection] {
+  // @brief Sensors attached to this link. Optional; may be empty.
+  DynamicArray<bots::BotSensorPrefab> sensors;
+  // @brief Actuators attached to this link. Optional; may be empty.
+  DynamicArray<bots::BotActuatorPrefab> actuators;
+  // @brief [Internal] Link index wrt owning bot; computed at runtime by RebuildBotData; DO NOT
+  // TOUCH!
+  int _index [no_python] = 0;
+  // @brief [Internal] Child link indices wrt owning bot; computed at runtime by RebuildBotData;
+  // DO NOT TOUCH!
+  DynamicArray<int> _childrenIndices [no_python];
+  // @brief [Internal] Transform to parent link; computed at runtime by RebuildBotData; DO NOT
+  // TOUCH!
+  TransformRT _parentFromLink [no_python];
+  // @brief [Internal] Transform to bot root; computed at runtime by RebuildBotData; DO NOT
+  // TOUCH!
+  TransformRT _rootFromLink [no_python];
+}
+
+// @brief Used to explicitly enable or disable contact between links in a bot. By default, all bots
+// will spawn with contact disabled between links and their first ancestor with a physics body not
+// connected via a Hard joint. This structure can be used to either reenable contact on those
+// pairs, or disable contact between links that are not strictly child-parent. Overrides are applied
+// on bot link actors after spawn using @ref Scene::EnableActorContactSymmetric.
+//
+// @see BotPrefab::contactOverrides, Scene::EnableActorContactSymmetric
+struct bots::BotContactOverride [no_reflection] {
+  // @brief The first link in the pair.
+  String linkA;
+  // @brief The second link in the pair.
+  String linkB;
+  // @brief Should contact between the pair be enabled?
+  bool enable = false;
+}
+
+// @brief Common parameters for bot transmissions (linear transmissions and spatial tendons).
+//
+// @details Holds fields shared by transmission-like actuators that couple joint DOFs
+// via a displacement-control actuator. Provides the display name and inherits actuator tuning
+// parameters from mochi::experimental::DisplacementControlActuatorParams.
+struct bots::BotTransmissionPrefab(experimental::DisplacementControlActuatorParams) [equality, no_reflection] {
+  // @brief Human-readable label (used by the editor UI; not consumed by the runtime API).
+  String name;
+}
+
+// @brief Parameters describing a single linear transmission attached to a bot.
+//
+// @details Mirrors mochi::experimental::LinearTransmissionParams with an added
+// display @ref name field and SReflect markup so it can live inside @ref BotPrefab
+// and round-trip through the bot's JSON serialization. The three joint arrays
+// (@ref jointIndices, @ref jointCoefficients, @ref jointAxisDisps)
+// must always be the same length, with one entry
+// per joint the transmission traverses. The remaining fields are inherited from
+// @ref BotTransmissionPrefab which inherits
+// mochi::experimental::DisplacementControlActuatorParams so that one
+// displacement-control actuator can be configured alongside each transmission.
+struct bots::BotLinearTransmissionPrefab(bots::BotTransmissionPrefab) [equality, no_reflection] {
+  // @brief Indices into @ref BotPrefab::joints identifying which joints the
+  // transmission traverses.
+  DynamicArray<int> jointIndices;
+  // @brief Transmission Jacobian entry at each joint [m / joint-DoF units for a
+  // tendon, dimensionless for a gearbox]. Sign encodes direction: positive if
+  // the transmission displacement increases with the joint DoF, negative if it
+  // decreases.
+  DynamicArray<real> jointCoefficients;
+  // @brief Displacement along the joint axis [m] for the transmission attachment
+  // point at each joint. This allows the transmission to be offset from the joint
+  // origin along the axis.
+  DynamicArray<real> jointAxisDisps;
+}
+
+// @brief Parameters describing a single spatial tendon attached to a bot.
+//
+// @details Mirrors mochi::experimental::SpatialTendonParams with an added
+// display @ref name field and SReflect markup so it can live inside @ref BotPrefab
+// and round-trip through the bot's JSON serialization. The ordered
+// @ref routingElements list defines waypoint and linear-joint elements traversed by the
+// tendon. The remaining fields are inherited from @ref BotTransmissionPrefab which inherits
+// mochi::experimental::DisplacementControlActuatorParams so that one
+// displacement-control actuator can be configured alongside each tendon.
+struct bots::BotSpatialTendonPrefab(bots::BotTransmissionPrefab) [equality, no_reflection] {
+  // @brief Ordered routing elements defining the tendon path. Must contain at least
+  // one element, and every waypoint must be adjacent to another waypoint.
+  DynamicArray<RoutingElement> routingElements;
+}
+
+// @brief Complete parameter set for a bot.
+struct bots::BotPrefab [no_reflection] {
+  // @brief Bot name.
+  String name;
+  // @brief Joint parameters for each joint in the articulation.
+  DynamicArray<bots::BotJointPrefab> joints;
+  // @brief Link parameters for each link in the articulation.
+  DynamicArray<bots::BotLinkPrefab> links;
+  // @brief Transform from the root link to the world frame.
+  TransformRT worldFromRoot;
+  // @brief Default pose (array of joint DOF angles/translations) used when spawning the bot.
+  DynamicArray<real> defaultPose;
+  // @brief Linear transmissions that couple multiple joint DOFs via per-joint coefficients. Each
+  // entry produces one mochi::experimental::LinearTransmissionParams at instantiation time.
+  DynamicArray<bots::BotLinearTransmissionPrefab> linearTransmissions;
+  // @brief Spatial tendons routed through waypoint and linear-joint elements. Each entry
+  // produces one mochi::experimental::SpatialTendonParams at instantiation time.
+  DynamicArray<bots::BotSpatialTendonPrefab> spatialTendons;
+  // @brief Array of link-link contact override pairs.
+  DynamicArray<bots::BotContactOverride> contactOverrides;
+  // @brief Cycle-closing joints for closed-loop mechanisms (e.g. four-bar linkages, parallel
+  // grippers). Each entry becomes one mochi::ArticulatedActorParams::cycles entry at
+  // instantiation time. Link references (mochi::ArticulatedCycleJointParams::parentLink /
+  // mochi::ArticulatedCycleJointParams::childLink) are int indices into @ref links.
+  DynamicArray<ArticulatedCycleJointParams> cycles;
+  // @brief [Internal] The number of DOFs; computed at runtime by RebuildBotData; DO NOT TOUCH!
+  int _numDofs [no_python] = 0;
+  // @brief [Internal] Joint indices that are DOFS; computed at runtime by RebuildBotData; DO NOT
+  // TOUCH!
+  DynamicArray<int> _dofIndices [no_python];
+}
+
+// @brief Load bot parameters from a .superdex_bot file using the default file-based loader.
+// Automatically resolves ModBotPrefab files by building the final @ref BotPrefab.
+//
+// If path is a .superdex_bot_archive file (see ArchiveBot), the archive is
+// transparently extracted and cached into a temp directory and the embedded target bot is loaded.
+//
+// @param[in] path File path to the .superdex_bot or .superdex_bot_archive file.
+//
+// @return Loaded or built @ref BotPrefab, or default-constructed on failure.
+fn bots::LoadBotPrefabFromFile(StringView path) -> bots::BotPrefab [export, mochi_error];
+
+// @brief Load bot parameters from a URDF file.
+//
+// @details Parses the URDF and resolves each link's visual and collision mesh references
+// relative to the URDF location (ROS `package://` URIs are supported), storing the resolved
+// on-disk paths in the returned prefab. Collision meshes may be any format the shape loader
+// accepts (e.g. .stl, .obj, .ply, .off, .mochi.h5); when a collision mesh carries no baked
+// SDF, one is generated on demand at bot creation. A free `world_joint` is injected at index 0.
+//
+// @note Only @code <mesh> @endcode geometry is imported. Primitive URDF shapes
+// (@code <box> @endcode, @code <cylinder> @endcode, @code <sphere> @endcode) in
+// @code <visual> @endcode / @code <collision> @endcode elements are not supported and are silently
+// skipped; the importer uses the first mesh-bearing visual/collision on each link.
+//
+// @param[in] path Path to the .urdf file.
+//
+// @return The loaded or built @ref BotPrefab.
+fn bots::LoadBotPrefabFromUrdfFile(StringView path) -> bots::BotPrefab [export, overloaded, mochi_error];
+
+// @brief Resource owner for bots, controllers, sensors, and actuators.
+//
+// @details Owns the memory for bots, controllers, sensors, and actuators created through it.
+class bots::RoboticsContext [no_init, no_destruct] {
+  // @brief Create a controller of the given type for robot. Harvests model-derived configuration
+  // (e.g. per-joint effort limits) from the optional borrowed prefab: pass None to create on a
+  // raw articulated actor with no model (the prefab must outlive the controller otherwise).
+  //
+  // robot may also be None, to drive a real robot with observations pushed in from outside
+  // instead of read off a Mochi articulation. Anything that needs the articulation (e.g. reading a
+  // Jacobian) then has to be supplied externally, and the controller reports an error if asked for
+  // it. A controller that cannot work at all without a simulation rejects the None actor itself —
+  // see @ref ControllerMochiArticulatedPose, which drives Mochi's built-in implicit PD controller.
+  //
+  // The owning bot is inferred from robot (see @ref GetBotContainingActor): if that actor is a
+  // bot's articulation or one of its link actors, the controller is recorded against that bot,
+  // found by the bot-scoped finders, and destroyed with it; otherwise it has no owning bot.
+  // @ref Bot::CreateController is the more direct way to create one on a bot you already hold, and
+  // also carries an instance name.
+  //
+  // @param[in] typeName Registered controller type name.
+  // @param[in] prefab Optional borrowed robot-model description; may be None and must outlive the
+  // created controller.
+  // @param[in] robot Articulated actor to control, or None for externally supplied observations.
+  // @param[in] name Instance name used by the name-based finders; need not be unique.
+  // @return Handle to the created controller, or an invalid handle on error.
+  fn CreateController(StringView typeName, bots::BotPrefab const* prefab [nullable], Actor* robot [nullable], StringView name = "") -> bots::ControllerHandle [mochi_error];
+
+  // @brief Get the controller associated with the given handle.
+  //
+  // @param[in] handle Controller handle to resolve.
+  // @return Context-owned controller, or None if the handle is invalid or stale.
+  fn GetController(bots::ControllerHandle handle) -> bots::ControllerBase* [const, nullable];
+
+  // @brief Destroy the controller associated with the given handle.
+  //
+  // @param[in] handle Controller handle to destroy; invalid or stale handles are ignored.
+  fn DestroyController(bots::ControllerHandle handle) -> void;
+
+  // @brief Check whether a handle refers to a live controller.
+  //
+  // @param[in] handle Controller handle to check.
+  // @return True if the handle resolves to a live controller.
+  fn IsValidController(bots::ControllerHandle handle) -> bool [const];
+
+  // @brief Create a sensor of the given type on the given link actor. paramArgs is an optional
+  // params file path or inline JSON string consumed by the factory; pass an empty view to use
+  // default-constructed parameters. name is the instance name used by @ref FindSensorsByName
+  // and need not be unique. The owning bot is inferred from linkActor. Returns a handle. For
+  // bot-owned sensors, prefer declaring them in the @ref BotPrefab so they are auto-instantiated
+  // and destroyed with the bot.
+  //
+  // @param[in] typeName Registered sensor type name.
+  // @param[in] linkActor Actor to attach the sensor to, or None for an actor-less sensor.
+  // @param[in] name Instance name used by the name-based finders; need not be unique.
+  // @param[in] paramArgs Params file path or inline JSON; empty uses defaults.
+  // @return Handle to the created sensor, or an invalid handle on error.
+  fn CreateSensor(StringView typeName, Actor* linkActor [nullable], StringView name = "", StringView paramArgs = "") -> bots::SensorHandle [mochi_error];
+
+  // @brief Get the sensor associated with the given handle. Returns None if invalid. Downcast
+  // to the concrete sensor type as needed (e.g.
+  // @code static_cast<CameraSensor*>(GetSensor(handle)) @endcode).
+  //
+  // @param[in] handle Sensor handle to resolve.
+  // @return Context-owned sensor, or None if the handle is invalid or stale.
+  fn GetSensor(bots::SensorHandle handle) -> bots::SensorBase* [const, nullable];
+
+  // @brief Destroy the sensor associated with the given handle.
+  //
+  // @param[in] handle Sensor handle to destroy; invalid or stale handles are ignored.
+  fn DestroySensor(bots::SensorHandle handle) -> void;
+
+  // @brief Check whether a handle refers to a live sensor.
+  //
+  // @param[in] handle Sensor handle to check.
+  // @return True if the handle resolves to a live sensor.
+  fn IsValidSensor(bots::SensorHandle handle) -> bool [const];
+
+  // @brief Create an actuator of the given type on the given link actor. Unlike a sensor, an
+  // actuator always drives a body, so linkActor is required: passing None sets an error and returns
+  // an invalid handle. paramArgs is an optional params file path or inline JSON string; empty uses
+  // default-constructed parameters. name is the instance name used by @ref FindActuatorsByName
+  // and need not be unique. The owning bot is inferred from linkActor. Returns a handle. For
+  // bot-owned actuators, prefer declaring them in the @ref BotPrefab so they are auto-instantiated
+  // and destroyed with the bot.
+  //
+  // @param[in] typeName Registered actuator type name.
+  // @param[in] linkActor Actor the actuator drives; must not be None.
+  // @param[in] name Instance name used by the name-based finders; need not be unique.
+  // @param[in] paramArgs Params file path or inline JSON; empty uses defaults.
+  // @return Handle to the created actuator, or an invalid handle on error.
+  fn CreateActuator(StringView typeName, Actor* linkActor, StringView name = "", StringView paramArgs = "") -> bots::ActuatorHandle [mochi_error];
+
+  // @brief Get the actuator associated with the given handle. Returns None if invalid. Downcast
+  // to the concrete actuator type as needed.
+  //
+  // @param[in] handle Actuator handle to resolve.
+  // @return Context-owned actuator, or None if the handle is invalid or stale.
+  fn GetActuator(bots::ActuatorHandle handle) -> bots::ActuatorBase* [const, nullable];
+
+  // @brief Destroy the actuator associated with the given handle.
+  //
+  // @param[in] handle Actuator handle to destroy; invalid or stale handles are ignored.
+  fn DestroyActuator(bots::ActuatorHandle handle) -> void;
+
+  // @brief Check whether a handle refers to a live actuator.
+  //
+  // @param[in] handle Actuator handle to check.
+  // @return True if the handle resolves to a live actuator.
+  fn IsValidActuator(bots::ActuatorHandle handle) -> bool [const];
+
+  // @brief Get the bot associated with the given handle.
+  //
+  // @param[in] handle Bot handle to resolve.
+  // @return Context-owned bot, or None if the handle is invalid or the bot was destroyed.
+  fn GetBot(bots::BotHandle handle) -> bots::Bot* [const, nullable];
+
+  // @brief Check whether a handle refers to a live bot.
+  //
+  // @param[in] handle Bot handle to check.
+  // @return True if the handle resolves to a live bot.
+  fn IsValidBot(bots::BotHandle handle) -> bool [const];
+
+  // @brief Find the bot containing actor. Accepts either a bot's articulation actor or any of
+  // its link actors. Returns null when the actor is contained by no bot, which is a valid result:
+  // a scene may hold standalone actors and articulations from plain mochi prefabs alongside its
+  // bots. A null actor also returns null.
+  //
+  // @param[in] actor Actor to locate; may be None.
+  // @return Context-owned bot containing the actor, or None if none.
+  fn GetBotContainingActor(Actor const* actor [nullable]) -> bots::Bot* [const, nullable];
+
+  // @brief Check whether a controller type name is registered (creatable via CreateController).
+  // Lets the scene loader skip unknown types gracefully (e.g. internal-only types in a public
+  // build).
+  //
+  // @param[in] typeName Registered type name to check.
+  // @return True if a controller factory is registered for the type name.
+  fn IsControllerTypeRegistered(StringView typeName) -> bool [const];
+
+  // @brief Check whether a sensor type name is registered (creatable via CreateSensor). Mirrors
+  // @ref IsControllerTypeRegistered / @ref IsActuatorTypeRegistered.
+  //
+  // @param[in] typeName Registered type name to check.
+  // @return True if a sensor factory is registered for the type name.
+  fn IsSensorTypeRegistered(StringView typeName) -> bool [const];
+
+  // @brief Check whether an actuator type name is registered (creatable via CreateActuator).
+  //
+  // @param[in] typeName Registered type name to check.
+  // @return True if an actuator factory is registered for the type name.
+  fn IsActuatorTypeRegistered(StringView typeName) -> bool [const];
+
+  // @brief Find all controllers whose instance name equals name, across every controller in this
+  // context. Instance names are not unique, so any number of handles may be returned (empty if
+  // none match).
+  //
+  // @param[in] name Exact instance name to match.
+  // @return Handles of every match in creation order; empty if none.
+  fn FindControllersByName(StringView name) -> DynamicArray<bots::ControllerHandle> [const, overloaded];
+
+  // @brief Find all controllers of the given registered typeName. Returns every match; empty if
+  // none.
+  //
+  // @param[in] typeName Exact registered type name to match.
+  // @return Handles of every match in creation order; empty if none.
+  fn FindControllersByType(StringView typeName) -> DynamicArray<bots::ControllerHandle> [const, overloaded];
+
+  // @brief Find all sensors whose instance name equals name, across every sensor in this context
+  // (including scene-level sensors that have no owning bot). Returns every match; empty if none.
+  //
+  // @param[in] name Exact instance name to match.
+  // @return Handles of every match in creation order; empty if none.
+  fn FindSensorsByName(StringView name) -> DynamicArray<bots::SensorHandle> [const, overloaded];
+
+  // @brief Find all sensors of the given registered typeName. Returns every match; empty if none.
+  //
+  // @param[in] typeName Exact registered type name to match.
+  // @return Handles of every match in creation order; empty if none.
+  fn FindSensorsByType(StringView typeName) -> DynamicArray<bots::SensorHandle> [const, overloaded];
+
+  // @brief Find all actuators whose instance name equals name, across every actuator in this
+  // context. Returns every match; empty if none.
+  //
+  // @param[in] name Exact instance name to match.
+  // @return Handles of every match in creation order; empty if none.
+  fn FindActuatorsByName(StringView name) -> DynamicArray<bots::ActuatorHandle> [const, overloaded];
+
+  // @brief Find all actuators of the given registered typeName. Returns every match; empty if none.
+  //
+  // @param[in] typeName Exact registered type name to match.
+  // @return Handles of every match in creation order; empty if none.
+  fn FindActuatorsByType(StringView typeName) -> DynamicArray<bots::ActuatorHandle> [const, overloaded];
+
+  // @brief Find all bots whose name (from @ref BotPrefab::name) equals name. Bot names are not
+  // unique (multiple bots may share a prefab name), so any number of handles may be returned (empty
+  // if none). There is no FindBotsByType: a bot has no registered type.
+  //
+  // @param[in] name Exact bot name to match.
+  // @return Handles of every matching live bot; empty if none.
+  fn FindBotsByName(StringView name) -> DynamicArray<bots::BotHandle> [const];
+}
+
+// @brief Create a new @ref RoboticsContext.
+//
+// @details The returned @ref RoboticsContext owns all bots, controllers, sensors, and actuators
+// created through it. Destroy with @ref DestroyRoboticsContext.
+//
+// @return Pointer to the new @ref RoboticsContext.
+fn bots::CreateRoboticsContext() -> bots::RoboticsContext* [export, no_python];
+
+// @brief Destroy a @ref RoboticsContext previously created by @ref CreateRoboticsContext.
+//
+// @details Destroys all bots, controllers, sensors, and actuators owned by the context. No-op if
+// ctx is null.
+//
+// @param[in] ctx Bots context to destroy.
+fn bots::DestroyRoboticsContext(bots::RoboticsContext* ctx [nullable]) -> void [export, no_python];
+
+// @brief Base class for all bots components (controllers, sensors, actuators).
+// Provides common state: the associated actor's stale-safe identity, a validity flag, and the
+// Destroy pattern. The validity flag is set to false by RoboticsContext before deletion, allowing
+// dangling-pointer detection alongside generational handles.
+//
+// The associated actor is NOT cached as a raw pointer. Its stale-safe identity (@ref ActorHandle /
+// @ref SceneHandle / owning @ref Context) is retained and @ref GetActor resolves the live
+// @ref Actor* on demand, yielding nullptr once the owning scene (or the actor) has been destroyed.
+// A component that outlives its mochi Scene (e.g. the Scene was destroyed before the
+// RoboticsContext) therefore never dereferences a dangling Actor* — callers check @ref GetActor for
+// null. This assumes the mochi @ref Context outlives the RoboticsContext — the outermost lifetime
+// in the mochi ownership graph.
+class bots::ComponentBase [no_init, no_destruct] {
+  // @brief Whether this component remains usable. Returns false after its owning
+  // @ref RoboticsContext destroys it.
+  // @return True while the component is live.
+  fn IsValid() -> bool [const];
+
+  // @brief Resolve the live @ref Actor* this component is bound to, or nullptr if it was
+  // constructed without an actor or its owning scene/actor has since been destroyed. Resolved on
+  // demand from the stale-safe handle each call (an O(1) scene lookup), so it is always current and
+  // never returns a dangling pointer — dereference only after a null check.
+  //
+  // @return Live associated actor, or None if none is available.
+  fn GetActor() -> Actor* [const, nullable];
+
+  // @brief The bot this component was created on, or nullptr if it was created directly on an actor
+  // (not via a bot) — e.g. a scene-level sensor or a controller built on a raw articulation. Used
+  // to scope FindByName / FindByType to a single bot and to drive DestroyBot's component cascade.
+  // Borrowed: the owning bot is owned by the RoboticsContext, which destroys a bot's components
+  // before the bot itself, so this never dangles. Held as a raw pointer (not a handle) because a
+  // bot is not scene-owned, so the stale-safety the actor handles provide is unnecessary here.
+  //
+  // @return Owning bot, or None if this component has no owning bot.
+  fn GetOwningBot() -> bots::Bot* [const, nullable];
+
+  // @brief This component's instance name, or empty if it was created without one. Names are NOT
+  // required to be unique, so name-based lookups (FindByName) may return multiple matches.
+  //
+  // @return Instance name; empty if unnamed.
+  fn GetName() -> StringView [const];
+
+  // @brief This component's registered type name (e.g. "BASIC_OSC_PD", "SENSOR_CAMERA"), reported
+  // polymorphically. Declared here so controllers, sensors, and actuators can be searched by type
+  // uniformly (FindByType); each component kind implements it.
+  //
+  // @return Registered component type name.
+  fn GetTypeName() -> StringView [pure, virtual, const];
+
+  // @brief Reset internal state without destroying the component.
+  // Parameters are preserved. Use between episodes to clear stale state
+  // (e.g., derivative tracking, timing diagnostics).
+  fn Reset() -> void [pure, virtual];
+}
+
+// @brief Base class for all controllers.
+// Inherits common lifecycle from ComponentBase. Controllers are identified
+// by string names via RoboticsContext registration, not enums.
+class bots::ControllerBase(bots::ComponentBase) [no_init, no_destruct] {
+  // @brief Configure this controller from serialized parameter and initialization arguments.
+  // paramArgs is either a params file path or inline JSON; empty uses defaults. initArgs is a
+  // controller-specific file path or inline JSON, for example carrying baseLinkName/eeLinkName for
+  // link-resolved controllers. Implementations typically deserialize it into a small reflected
+  // init-args struct and ignore unrecognized framework keys.
+  //
+  // Pure virtual: every controller must implement this uniform configuration entry point. A
+  // controller that cannot support serialized configuration should set an error with a clear
+  // message rather than silently succeeding.
+  //
+  // @param[in] paramArgs Params file path or inline JSON; empty uses defaults.
+  // @param[in] initArgs Controller-specific init-argument file path or inline JSON.
+  fn ConfigureFromSceneEntry(StringView paramArgs, StringView initArgs) -> void [pure, virtual, mochi_error];
+}
+
+// @brief Basic operational-space PD controller parameters.
+//
+// Minimal parameter set for a robot-agnostic task-space impedance controller.
+// See ControllerBasicOscPd for details.
+struct bots::ControllerBasicOscPdParams [no_reflection] {
+  // @brief Position gain [N/m]
+  real Kp_p;
+  // @brief Position damping gain [Ns/m]
+  real Kd_p;
+  // @brief Rotation gain [Nm/rad]
+  real Kp_r;
+  // @brief Rotation damping gain [Nms/rad]
+  real Kd_r;
+  // @brief If true, renormalize the task-space error so translation and rotation errors stay below
+  // their configured maximums, keeping the force direction consistent. Requires positive
+  // maxTranslationError and maxRotationError.
+  bool bApplyMaxErrorMagnitudeNormalization;
+  // @brief Max translation error for normalization in control space [m]. Must be positive when
+  // enabled.
+  real maxTranslationError;
+  // @brief Max rotation error for normalization in control space [rad]. Must be positive when
+  // enabled.
+  real maxRotationError;
+  // @brief The transform of the actual end-effector in the end-effector link space
+  TransformRT EELinkFromEE;
+  // @brief If true, scale the output efforts down uniformly so that no controlled DOF exceeds the
+  // per-joint effort limit harvested from the controller's BotPrefab (see Initialize), preserving
+  // the task-space force direction. Requires the controller to have been constructed with a
+  // BotPrefab; only joints with a finite (positive) effortLimit constrain the scaling — unbounded
+  // (negative) and non-actuated (zero) joints are ignored.
+  bool bApplyMaxOSCTorqueNormalization;
+
+  // @brief Load controller parameters from a JSON file.
+  // @param[in] path Path to a .superdex_controller JSON file.
+  // @return Loaded parameters, or default-constructed on failure.
+  fn LoadFromFile(StringView path) -> bots::ControllerBasicOscPdParams [mochi_error, static];
+
+  // @brief Save controller parameters to a JSON file.
+  // @param[in] path Destination file path.
+  fn SaveToFile(StringView path) -> void [mochi_error, const];
+}
+
+// @brief Observation state — robot state variables read each control step.
+// Fill it with GetCurrentObservationsFromMochi to read the live simulation, or populate it
+// directly from an external state source (e.g., a real robot).
+struct bots::ControllerBasicOscPdObsv {
+  // @brief All DOF positions [rad or m]
+  DynamicArray<real> dofPositions;
+  // @brief All DOF velocities [rad/s or m/s]
+  DynamicArray<real> dofVelocities;
+  // @brief Root link pose in world frame
+  TransformRT worldFromRoot;
+  // @brief EE link pose in world frame
+  TransformRT worldFromEELink;
+  // @brief 6×numDofs EE Jacobian in world frame (row-major)
+  DynamicArray<real> eeJacobian;
+}
+
+// @brief Target setpoint for the controller.
+struct bots::ControllerBasicOscPdTarget {
+  // @brief Target EE pose in root frame
+  TransformRT rootFromTargetEE;
+}
+
+// @brief Basic operational-space PD (impedance) controller for robotic arms.
+//
+// Computes joint torques via the Jacobian transpose method: tau = J^T * F, where
+// F = Kp * pose_error + Kd * velocity_error combines position/rotation tracking errors with PD
+// gains. This is the minimal, robot-agnostic core of operational-space control:
+//
+//   - No nullspace or posture bias. Redundant (extra-DOF) arms are free to drift in the nullspace;
+//     only the end-effector pose is regulated.
+//   - Per-DOF effort clamping (direction-preserving vector scaling), enabled by default; the
+//     per-joint effort limits are harvested from the controller's BotPrefab (see Initialize).
+//   - No joint/velocity-limit avoidance, friction/gravity compensation, or inertia decoupling;
+//     those belong to richer controllers (see the internal OSC variants).
+//
+// Intended as a clean, open-sourceable baseline that works on any articulated arm without
+// robot-specific tuning tables.
+class bots::ControllerBasicOscPd(bots::ControllerBase) [no_init, no_destruct] {
+  // @brief Registration type name for this controller (see RoboticsContext::RegisterControllerType).
+  //
+  // @return This controller's registration type name.
+  fn TypeName() -> StringView [static];
+
+  // @brief Two-phase initialization: resolve base and end-effector links by name.
+  // Must be called after creation and before @ref ComputeOutput.
+  // @param[in] baseLinkName Name of the base link (root of control chain).
+  // @param[in] eeLinkName Name of the end-effector link.
+  fn Initialize(StringView baseLinkName, StringView eeLinkName) -> void [mochi_error];
+
+  // @brief Get controller parameters.
+  // @return The params.
+  fn GetParams() -> bots::ControllerBasicOscPdParams const& [const];
+
+  // @brief Set controller parameters.
+  // @param[in] params Params.
+  fn SetParams(bots::ControllerBasicOscPdParams const& params) -> void [mochi_error];
+
+  // @brief Get the controlled DOF indices (between base and end-effector links).
+  // @return The controlled dofs.
+  fn GetControlledDofs() -> Span<int const>;
+
+  // @brief Get the controlled link indices (between base and end-effector links).
+  // @return The controlled links.
+  fn GetControlledLinks() -> Span<int const>;
+
+  // @brief Get the end-effector link index.
+  // @return The eelink index.
+  fn GetEELinkIndex() -> int [const];
+
+  // @brief Read current robot state from the Mochi actor.
+  // @return Observation struct populated from the actor's current state.
+  fn GetCurrentObservationsFromMochi() -> bots::ControllerBasicOscPdObsv [mochi_error];
+
+  // @brief Compute control efforts from observation state and target setpoint.
+  // @param[in] obsv Current robot state (positions, velocities, transforms).
+  // @param[in] target Target setpoint.
+  // @return Efforts for all DOFs [Nm]. Uncontrolled DOFs are set to 0. Empty span on error.
+  fn ComputeOutput(bots::ControllerBasicOscPdObsv const& obsv, bots::ControllerBasicOscPdTarget const& target) -> Span<real const> [mochi_error, overloaded];
+
+}
+
+// @brief ControllerMochiArticulatedPose parameters.
+struct bots::ControllerMochiArticulatedPoseParams [no_reflection] {
+  PoseControllerParams poseControllerParams;
+
+  // @brief Load controller parameters from a JSON file.
+  // @param[in] path Path to a .superdex_controller JSON file.
+  // @return Loaded parameters, or default-constructed on failure.
+  fn LoadFromFile(StringView path) -> bots::ControllerMochiArticulatedPoseParams [mochi_error, static];
+
+  // @brief Save controller parameters to a JSON file.
+  // @param[in] path Destination file path.
+  fn SaveToFile(StringView path) -> void [mochi_error, const];
+}
+
+// @brief Observation state (empty — this controller is target-driven).
+struct bots::ControllerMochiArticulatedPoseObsv {}
+
+// @brief Target to drive the ArticulatedPoseController toward.
+// Provide exactly one of @ref bots::ControllerMochiArticulatedPoseTarget::localToParentTransforms or
+// @ref bots::ControllerMochiArticulatedPoseTarget::poseDofs.
+struct bots::ControllerMochiArticulatedPoseTarget {
+  // @brief Root link pose in world frame
+  TransformRT worldFromRoot;
+  // @brief Per-link LocalToParent transforms
+  DynamicArray<TransformRT> localToParentTransforms;
+  // @brief Non-root joint DOFs; root DOFs are derived from worldFromRoot
+  DynamicArray<real> poseDofs;
+}
+
+// @brief ControllerMochiArticulatedPose -- drives a mochi ArticulatedPoseController
+// via either per-link LocalToParent transforms (converted to world-space targets)
+// or non-root pose DOFs combined with a world-space root transform.
+class bots::ControllerMochiArticulatedPose(bots::ControllerBase) [no_init, no_destruct] {
+  // @brief Registration type name for this controller (see RoboticsContext::RegisterControllerType).
+  //
+  // @return This controller's registration type name.
+  fn TypeName() -> StringView [static];
+
+  // @brief Add a mochi ArticulatedPoseController to the actor using the default/current params.
+  // Mochi ArticulatedPoseController is a singleton per articulation so only one controller can be
+  // active at a time. Calling commands on multiple controllers at the same time will result in
+  // overwriting commands. Must be called after SetParams and before ComputeOutput.
+  // @param[in] removeExisting If true, removes any existing ArticulatedPoseController on the actor
+  // before adding a new one. If false, an existing controller causes an error.
+  fn Initialize(bool removeExisting) -> void [mochi_error];
+
+  // @brief Get controller parameters.
+  // @return The params.
+  fn GetParams() -> bots::ControllerMochiArticulatedPoseParams const& [const];
+
+  // @brief Set controller parameters.
+  // @param[in] params Params.
+  fn SetParams(bots::ControllerMochiArticulatedPoseParams const& params) -> void [mochi_error];
+
+  // @brief Forward targets to the internal pose controller.
+  // @param[in] obsv Unused (empty).
+  // @param[in] target Target poses: either worldFromRoot +
+  // @ref bots::ControllerMochiArticulatedPoseTarget::localToParentTransforms (link-transform path),
+  // or worldFromRoot + @ref bots::ControllerMochiArticulatedPoseTarget::poseDofs (pose-DOF path).
+  // Exactly one must be provided.
+  // @return Empty span — control is applied internally via the pose controller.
+  fn ComputeOutput(bots::ControllerMochiArticulatedPoseObsv const& obsv, bots::ControllerMochiArticulatedPoseTarget const& target) -> Span<real const> [mochi_error];
+}
+
+// @brief Runtime interface to a bot instance in a @ref Scene.
+//
+// @details A @ref Bot wraps a single articulated @ref Actor with the controllers, sensors, and
+// actuators created for it. Bots are created via @ref CreateBot and destroyed via @ref DestroyBot.
+// The @ref RoboticsContext owns the bot memory allocated and deallocated by these functions,
+// respectively. The raw @ref Bot* returned by @ref CreateBot remains valid until @ref DestroyBot
+// is called or the @ref RoboticsContext is destroyed.
+//
+// @note Not thread-safe -- like the underlying @ref Scene, a @ref Bot must only be accessed
+// from the thread that owns its scene (usually in an async callback if using async scenes.)
+class bots::Bot [no_init, no_destruct] {
+
+  // @brief Handle identifying this bot in its owning @ref RoboticsContext.
+  //
+  // @return Handle identifying this bot.
+  fn GetHandle() -> bots::BotHandle [pure, virtual, const];
+
+  // @brief The Mochi @ref Context that owns this bot's scene.
+  //
+  // @return Mochi context that owns this bot's scene.
+  fn GetMochiContext() -> Context* [pure, virtual, overloaded, no_python];
+
+  // @brief The @ref RoboticsContext that owns this bot.
+  //
+  // @return Robotics context that owns this bot.
+  fn GetBotContext() -> bots::RoboticsContext* [pure, virtual, overloaded, no_python];
+
+  // @brief The @ref Scene in which this bot was created.
+  //
+  // @return Owning scene, or None if it no longer exists.
+  fn GetScene() -> Scene* [pure, virtual, overloaded, nullable];
+
+  // @brief Bot name (forwarded from @ref BotPrefab::name).
+  //
+  // @return Null-terminated bot name.
+  fn GetName() -> char const* [pure, virtual, const];
+
+  // @brief The @ref BotPrefab from which this bot was created.
+  //
+  // @return Prefab used to create this bot.
+  fn GetBotPrefab() -> bots::BotPrefab const& [pure, virtual, const];
+
+  // @brief The underlying articulated @ref Actor that backs this bot in the scene.
+  //
+  // @return Underlying articulated actor, or None if it no longer exists.
+  fn GetArticulatedActor() -> Actor* [pure, virtual, const, nullable];
+
+  // @brief Create a controller of the given type and attach it to this bot.
+  //
+  // @param[in] typeName Registered controller type (e.g., "BASIC_OSC_PD", "BASIC_JSC_PD").
+  // @param[in] name Instance name for the controller, used by @ref FindControllersByName. Names
+  // need not be unique.
+  //
+  // @return Pointer to the new controller, or None on error.
+  fn CreateController(StringView typeName, StringView name = "") -> bots::ControllerBase* [pure, virtual, mochi_error, nullable];
+
+  // @brief Get the handles of every controller this bot owns.
+  //
+  // @details Covers controllers created through @ref CreateController and those created on one of
+  // this bot's actors with @ref RoboticsContext::CreateController — the owning bot is inferred from
+  // the actor (see @ref RoboticsContext::GetBotContainingActor), so how a controller was created
+  // makes no difference to whether it appears here. Mirrors @ref GetSensorHandles: the same set the
+  // bot-scoped finders draw from, and the same set @ref DestroyBot tears down. Resolve each handle
+  // with @ref RoboticsContext::GetController.
+  //
+  // @return A snapshot of the bot's controller handles, in creation order.
+  fn GetControllerHandles() -> DynamicArray<bots::ControllerHandle> [pure, virtual, const];
+
+  // @brief Resolve a controller handle to its underlying @ref ControllerBase.
+  //
+  // @details Unlike @ref RoboticsContext::GetController, which resolves any handle in the context,
+  // this checks the controller belongs to this bot first — so a handle from another bot, or from a
+  // standalone actor, is reported as an error rather than silently resolved.
+  //
+  // @param[in] controllerHandle Handle returned by @ref GetControllerHandles.
+  //
+  // @return Pointer to the controller, or nullptr on error.
+  fn GetController(bots::ControllerHandle controllerHandle) -> bots::ControllerBase* [pure, virtual, const, mochi_error, nullable];
+
+  // @brief Create a sensor of the given type on one of this bot's links.
+  //
+  // @details The bot-level counterpart to declaring a @ref BotSensorPrefab in the @ref BotPrefab,
+  // for sensors that are only known at runtime. The sensor joins @ref GetSensorHandles and is
+  // destroyed with the bot, exactly like an auto-instantiated one.
+  //
+  // @param[in] typeName Registered sensor type (e.g. "SENSOR_CAMERA").
+  // @param[in] linkName Name of the link (from @ref BotPrefab::links) to attach the sensor to.
+  // @param[in] name Instance name, used by @ref FindSensorsByName. Names need not be unique.
+  // @param[in] paramArgs Optional params file path or inline JSON; empty uses defaults.
+  //
+  // @return Pointer to the new sensor, or nullptr on error.
+  fn CreateSensor(StringView typeName, StringView linkName, StringView name = "", StringView paramArgs = "") -> bots::SensorBase* [pure, virtual, mochi_error, nullable];
+
+  // @brief Get the handles of every sensor this bot owns.
+  //
+  // @details Covers sensors declared per link in the @ref BotPrefab via @ref BotSensorPrefab and
+  // instantiated by @ref CreateBot, those added afterwards via @ref CreateSensor, and those
+  // created straight off one of this bot's actors with @ref RoboticsContext::CreateSensor — the
+  // owning bot is inferred from the actor (see @ref RoboticsContext::GetBotContainingActor), so
+  // how a sensor was created makes no difference to whether it appears here. This is the same set
+  // the bot-scoped finders draw from, and the same set @ref DestroyBot tears down. Use
+  // @ref RoboticsContext::GetSensor on each handle to obtain the underlying @ref SensorBase
+  // pointer.
+  //
+  // @return A snapshot of the bot's sensor handles in creation order: the @ref BotPrefab::links
+  // entries first (by link, then by per-link sensor index), followed by any later additions.
+  fn GetSensorHandles() -> DynamicArray<bots::SensorHandle> [pure, virtual, const];
+
+  // @brief Resolve a sensor handle to its underlying @ref SensorBase.
+  // @param[in] sensorHandle Handle returned by @ref GetSensorHandles.
+  // @return Pointer to the sensor, or nullptr on error.
+  fn GetSensor(bots::SensorHandle sensorHandle) -> bots::SensorBase* [pure, virtual, const, mochi_error, nullable];
+
+  // @brief Get the name of the link to which the sensor is attached.
+  // @param[in] sensorHandle Handle returned by @ref GetSensorHandles.
+  // @return Link name, or nullptr on error.
+  fn GetSensorLinkName(bots::SensorHandle sensorHandle) -> char const* [pure, virtual, const, mochi_error, nullable];
+
+  // @brief Create an actuator of the given type on one of this bot's links. The actuator
+  // counterpart to @ref CreateSensor, for actuators only known at runtime rather than declared as a
+  // @ref BotActuatorPrefab. It joins @ref GetActuatorHandles and is destroyed with the bot.
+  //
+  // @param[in] typeName Registered actuator type.
+  // @param[in] linkName Name of the link (from @ref BotPrefab::links) to attach the actuator to.
+  // @param[in] name Instance name, used by @ref FindActuatorsByName. Names need not be unique.
+  // @param[in] paramArgs Optional params file path or inline JSON; empty uses defaults.
+  //
+  // @return Pointer to the new actuator, or nullptr on error.
+  fn CreateActuator(StringView typeName, StringView linkName, StringView name = "", StringView paramArgs = "") -> bots::ActuatorBase* [pure, virtual, mochi_error, nullable];
+
+  // @brief Get the handles of every actuator this bot owns — its @ref BotPrefab link
+  // @ref BotActuatorPrefab entries, any added afterwards via @ref CreateActuator, and any created
+  // on one of this bot's actors through @ref RoboticsContext::CreateActuator. Destroyed with the
+  // bot. Mirrors @ref GetSensorHandles exactly, ordering included.
+  //
+  // @return A snapshot of the bot's actuator handles in creation order.
+  fn GetActuatorHandles() -> DynamicArray<bots::ActuatorHandle> [pure, virtual, const];
+
+  // @brief Resolve an actuator handle to its underlying @ref ActuatorBase.
+  // @param[in] actuatorHandle Handle returned by @ref GetActuatorHandles.
+  // @return Pointer to the actuator, or nullptr on error.
+  fn GetActuator(bots::ActuatorHandle actuatorHandle) -> bots::ActuatorBase* [pure, virtual, const, mochi_error, nullable];
+
+  // @brief Get the name of the link to which the actuator is attached.
+  // @param[in] actuatorHandle Handle returned by @ref GetActuatorHandles.
+  // @return Link name, or nullptr on error.
+  fn GetActuatorLinkName(bots::ActuatorHandle actuatorHandle) -> char const* [pure, virtual, const, mochi_error, nullable];
+
+  // @brief Find controllers owned by this bot whose instance name equals name. Instance names are
+  // not unique.
+  //
+  // @param[in] name Exact instance name to match.
+  // @return Handles of every match in creation order; empty if none.
+  fn FindControllersByName(StringView name) -> DynamicArray<bots::ControllerHandle> [pure, virtual, const];
+
+  // @brief Find controllers owned by this bot whose registered type name equals typeName.
+  //
+  // @param[in] typeName Exact registered type name to match.
+  // @return Handles of every match in creation order; empty if none.
+  fn FindControllersByType(StringView typeName) -> DynamicArray<bots::ControllerHandle> [pure, virtual, const];
+
+  // @brief Find sensors owned by this bot whose instance name equals name. Instance names are not
+  // unique.
+  //
+  // @param[in] name Exact instance name to match.
+  // @return Handles of every match in creation order; empty if none.
+  fn FindSensorsByName(StringView name) -> DynamicArray<bots::SensorHandle> [pure, virtual, const];
+
+  // @brief Find sensors owned by this bot whose registered type name equals typeName.
+  //
+  // @param[in] typeName Exact registered type name to match.
+  // @return Handles of every match in creation order; empty if none.
+  fn FindSensorsByType(StringView typeName) -> DynamicArray<bots::SensorHandle> [pure, virtual, const];
+
+  // @brief Find actuators owned by this bot whose instance name equals name. Instance names are not
+  // unique.
+  //
+  // @param[in] name Exact instance name to match.
+  // @return Handles of every match in creation order; empty if none.
+  fn FindActuatorsByName(StringView name) -> DynamicArray<bots::ActuatorHandle> [pure, virtual, const];
+
+  // @brief Find actuators owned by this bot whose registered type name equals typeName.
+  //
+  // @param[in] typeName Exact registered type name to match.
+  // @return Handles of every match in creation order; empty if none.
+  fn FindActuatorsByType(StringView typeName) -> DynamicArray<bots::ActuatorHandle> [pure, virtual, const];
+}
+
+// @brief Convert a bot-space pose to an articulated-actor pose.
+//
+// @details Bot DOFs never include the root joint's, whether or not the articulation has any: a
+// Free root contributes 6 actor DOFs that bot space excludes, and a Hard root contributes none.
+// The two spaces therefore share an order and differ only by that leading offset, so this copies
+// srcPose to pose[i + numBaseDofs] and zero-fills the base DOFs, producing the actor-DOF
+// layout @ref Actor::SetArticulatedPoseFromJoints expects. It never permutes.
+//
+// @param[in] botPrefab Bot describing the articulation.
+// @param[in] srcPose Bot-space pose (must have @ref BotPrefab::_numDofs entries).
+// @param[in] numActorDofs The actor's DOF count (@ref Actor::GetNumDofs).
+//
+// @return Pose in actor-DOF layout, sized to numActorDofs.
+fn bots::BuildArticulatedPoseFromBotPose(bots::BotPrefab const& botPrefab, Span<real const> srcPose, int numActorDofs) -> DynamicArray<real> [export, mochi_error];
+
+// @brief Joint-space PD controller parameters.
+struct bots::ControllerBasicJscPdParams [no_reflection] {
+  // @brief The position gain [Nm/rad]
+  DynamicArray<real> Kp;
+  // @brief The position damping gain [Nms/rad]
+  DynamicArray<real> Kd;
+  // @brief The saturation magnitude of the controller output for each joint.
+  // Values < 0 are interpreted as infinitiy [N or Nm]
+  DynamicArray<real> saturation;
+  // @brief The deadband is removed from error towards 0 (limited to 0) before multiplying by Kp.
+  // Damping is always applied regardless of the deadband.
+  // The deadband results in a force profile about the target like this \___/ rather than \/
+  DynamicArray<real> deadband;
+
+  // @brief Load controller parameters from a JSON file.
+  // @param[in] path Path to a .superdex_controller JSON file.
+  // @return Loaded parameters, or default-constructed on failure.
+  fn LoadFromFile(StringView path) -> bots::ControllerBasicJscPdParams [mochi_error, static];
+
+  // @brief Save controller parameters to a JSON file.
+  // @param[in] path Destination file path.
+  fn SaveToFile(StringView path) -> void [mochi_error, const];
+}
+
+// @brief Observation state — robot state variables read each control step.
+// Fill it with GetCurrentObservationsFromMochi to read the live simulation, or populate it
+// directly from an external state source (e.g., a real robot).
+struct bots::ControllerBasicJscPdObsv {
+  // @brief All DOF positions [rad or m]
+  DynamicArray<real> dofPositions;
+  // @brief All DOF velocities [rad/s or m/s]
+  DynamicArray<real> dofVelocities;
+  // @brief Time since the last ComputeOutput call [s]
+  real dt;
+}
+
+// @brief Target setpoint for the controller.
+struct bots::ControllerBasicJscPdTarget {
+  // @brief Target joint positions [m or rad]
+  DynamicArray<real> targetPose;
+}
+
+// @brief Parameters for a camera sensor (fixed or wrist-mounted).
+// Loaded from a .superdex_sensor JSON file via SReflect.
+// Fields with value 0 mean "use engine default".
+struct bots::CameraSensorParams [no_reflection] {
+  // @brief Camera name carried in the params, distinct from the sensor's instance name.
+  String name;
+  // @brief Rendered image width [px].
+  int imageWidth;
+  // @brief Rendered image height [px].
+  int imageHeight;
+  // @brief Vertical field of view [deg].
+  real fovVerticalDeg;
+  // @brief Distance to the near clip plane [m].
+  real nearClip;
+  // @brief Distance to the far clip plane [m].
+  real farClip;
+  // @brief Look-at target in world space (fixed cameras only).
+  Real3 lookAt;
+  // @brief Offset from EE frame origin in local coordinates (wrist cameras only).
+  Real3 offsetLocal;
+  // @brief Forward direction in EE-local frame (wrist cameras only).
+  Real3 forwardAxis;
+  // @brief Up direction in EE-local frame (wrist cameras only).
+  Real3 upAxisLocal;
+  // @brief Distance ahead of offset point to place look-at target (wrist cameras only).
+  real lookDistance;
+
+  // @brief Load sensor parameters from a JSON file.
+  // @param[in] path Path to a .superdex_sensor JSON file.
+  // @return Loaded parameters.
+  fn LoadFromFile(StringView path) -> bots::CameraSensorParams [mochi_error, static];
+
+  // @brief Save sensor parameters to a JSON file.
+  // @param[in] path Destination file path.
+  fn SaveToFile(StringView path) -> void [mochi_error, const];
+}
+
+// @brief A simple PD controller written in joint space.
+class bots::ControllerBasicJscPd(bots::ControllerBase) [no_init, no_destruct] {
+  // @brief Registration type name for this controller (see RoboticsContext::RegisterControllerType).
+  //
+  // @return This controller's registration type name.
+  fn TypeName() -> StringView [static];
+
+  // @brief Get controller parameters.
+  // @return Reference to parameters.
+  fn GetParams() -> bots::ControllerBasicJscPdParams const& [const];
+
+  // @brief Set controller parameters.
+  // @param[in] params New parameters.
+  fn SetParams(bots::ControllerBasicJscPdParams const& params) -> void [mochi_error];
+
+  // @brief Read current robot state from the Mochi actor.
+  // @return Observation struct populated from the actor's current state.
+  fn GetCurrentObservationsFromMochi() -> bots::ControllerBasicJscPdObsv [mochi_error];
+
+  // @brief Compute PD control efforts from observation state and target setpoint.
+  // @param[in] obsv Current robot state (positions, velocities, dt).
+  // @param[in] target Target setpoint.
+  // @return Efforts for all DOFs [N or Nm]. Returns empty span on error.
+  fn ComputeOutput(bots::ControllerBasicJscPdObsv const& obsv, bots::ControllerBasicJscPdTarget const& target) -> Span<real const> [mochi_error, overloaded];
+
+}
+
+// @brief Base class for robot sensors.
+// Derives from ComponentBase for common lifecycle (validity, actor, destroy).
+// Each derived sensor keeps its own specialized ComputeSignal signature.
+class bots::SensorBase(bots::ComponentBase) [no_init, no_destruct] {
+  // @brief The sensor's pose relative to its parent frame: the associated link's actor for
+  // bot-owned sensors, or the scene root for scene-level / actor-less sensors. aFromB convention
+  // (maps sensor-frame coordinates into the parent frame).
+  //
+  // @return Sensor pose relative to its parent frame.
+  fn GetParentFromSensor() -> TransformRT const& [const];
+
+  // @brief Set the sensor's pose relative to its parent frame.
+  // @param[in] parentFromSensor The new parent-from-sensor transform (aFromB convention).
+  fn SetParentFromSensor(TransformRT const& parentFromSensor) -> void;
+
+  // @brief The sensor's pose in world space.
+  // When the sensor is bound to a Mochi @ref Actor, that actor's transform is already
+  // world-resolved by the simulation, so world = actorWorldTransform * parentFromSensor. When the
+  // sensor has no actor (a fusion sensor that consumes other sensors, or a scene sensor standing in
+  // for a scene root that has no Mochi actor), the scene root is the parent: world =
+  // parentFromSensor, i.e. the scene-root-to-world transform is treated as identity (a surrogate
+  // for a real scene-root actor) until scene spawn transforms are supported.
+  //
+  // @return Sensor pose in world space.
+  fn GetWorldTransform() -> TransformRT [const];
+}
+
+// @brief Base class for robot actuators.
+//
+// Mirrors @ref ControllerBase and @ref SensorBase: derives from ComponentBase for common lifecycle
+// (validity, actor, destroy). No concrete actuators exist yet; this establishes the contract early
+// so the first actuator follows the same shape as controllers and sensors.
+//
+// Registration contract (a @code RoboticsContext::RegisterActuator<T> @endcode template lands with
+// the first concrete actuator, mirroring RegisterController/RegisterSensor): every actuator must
+// declare
+//   static constexpr std::string_view TypeName() { return "..."; }
+// (used by the registration templates and for the generated Python type_name() binding), implement
+//   std::string_view GetTypeName() const override; // returns TypeName()
+// and provide a uniform constructor
+//   ActuatorX(Actor* actor, std::string_view paramArgs, Error& error);
+// that loads its own params from the path or inline JSON. An (Actor*, Params const&, Error&)
+// overload is recommended for programmatic / non-filesystem construction.
+//
+// Teardown contract (mirrors @ref ControllerBase / @ref SensorBase): @ref GetActor resolves the
+// live actor on demand and yields None once the owning mochi Scene (or the actor) is gone, so an
+// actuator that outlives its Scene (Scene destroyed before the RoboticsContext) sees
+// @ref GetActor == None in its destructor. Any concrete actuator whose destructor releases
+// actor-held resources must therefore guard on GetActor() != None (or, for context-owned
+// resources, resolve via GetContext()) so teardown never dereferences a dangling Actor*.
+class bots::ActuatorBase(bots::ComponentBase) [no_init, no_destruct] {}
+
+// @brief Camera sensor runtime object.
+// Stores intrinsics/extrinsics for use by renderers (UE, etc.).
+// No ComputeSignal — cameras don't produce data in the mochi physics loop;
+// renderers query GetParams() to configure their camera actors.
+class bots::CameraSensor(bots::SensorBase) [no_init, no_destruct] {
+  // @brief Registration type name for this sensor (see RoboticsContext::RegisterSensorType).
+  //
+  // @return This sensor's registration type name.
+  fn TypeName() -> StringView [static];
+
+  // @brief Get sensor parameters.
+  // @return The params.
+  fn GetParams() -> bots::CameraSensorParams const& [const];
+
+  // @brief Set sensor parameters.
+  // @param[in] params Params.
+  fn SetParams(bots::CameraSensorParams const& params) -> void [mochi_error];
+}
+
+// @brief Create a @ref Bot runtime object from a @ref BotPrefab. Builds the underlying
+// articulated actor in scene and seeds its default pose. The returned @ref Bot owns no
+// scene resources beyond the actor — destroy it with @ref DestroyBot. This must be in the scene
+// thread (i.e. in an async callback if using async scenes.)
+//
+// @param[in] scene Target scene in which to create the bot and its components.
+// @param[in] botPrefab Bot parameters describing the articulation.
+// @param[in] botsContext Bots context used for components created on the bot. Must
+// outlive the returned @ref Bot.
+//
+// @return Pointer to the created @ref Bot.
+fn bots::CreateBot(
+  Scene* scene,
+  bots::BotPrefab const& botPrefab,
+  bots::RoboticsContext* botsContext,
+) -> bots::Bot* [export, mochi_error, nullable];
+
+// @brief Destroy a @ref Bot previously created by @ref CreateBot. Destroys the underlying
+// articulated actor in its owning scene and any controllers, sensors, and actuators the bot
+// created. This must be in the scene thread (i.e. in an async callback if using async scenes.)
+//
+// @param[in] scene Scene to remove the bot from. Must be the same scene used to create the bot.
+// @param[in] bot Pointer to the bot to be destroyed.
+fn bots::DestroyBot(Scene* scene, bots::Bot* bot [nullable]) -> void [export];

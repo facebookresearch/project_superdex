@@ -1,0 +1,6 @@
+{
+  "description": "Ant with the torso x/z position kept in the observation, for policies that are allowed to be position-aware.",
+  "env_cfg": {
+    "exclude_current_positions_from_observation": false
+  }
+}

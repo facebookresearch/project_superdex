@@ -1,0 +1,457 @@
+{
+  "actors": {
+    "articulated": [
+      {
+        "joints": [
+          {
+            "name": "joint",
+            "type": "Free"
+          },
+          {
+            "name": "fr3_base_joint",
+            "type": "Hard"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "friction": {
+              "viscous": 10
+            },
+            "maxLimit": [
+              0,
+              0,
+              2.7437
+            ],
+            "minLimit": [
+              0,
+              0,
+              -2.7437
+            ],
+            "name": "fr3_joint1",
+            "parentLinkFromJoint": {
+              "translation": [
+                0,
+                0,
+                0.33300000000000002
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "friction": {
+              "viscous": 10
+            },
+            "maxLimit": [
+              0,
+              0,
+              1.7837000000000001
+            ],
+            "minLimit": [
+              0,
+              0,
+              -1.7837000000000001
+            ],
+            "name": "fr3_joint2",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0.70710678118654768,
+                0,
+                0,
+                -0.70710678118654735
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "friction": {
+              "viscous": 10
+            },
+            "maxLimit": [
+              0,
+              0,
+              2.9007000000000001
+            ],
+            "minLimit": [
+              0,
+              0,
+              -2.9007000000000001
+            ],
+            "name": "fr3_joint3",
+            "parentLinkFromJoint": {
+              "rotation": [
+                -0.70710678118654768,
+                0,
+                0,
+                -0.70710678118654735
+              ],
+              "translation": [
+                0,
+                -0.316,
+                -1.1102230246251565e-16
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "friction": {
+              "viscous": 10
+            },
+            "maxLimit": [
+              0,
+              0,
+              -0.15179999999999999
+            ],
+            "minLimit": [
+              0,
+              0,
+              -3.0421
+            ],
+            "name": "fr3_joint4",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0.70710678118654768,
+                0,
+                0,
+                0.70710678118654735
+              ],
+              "translation": [
+                0.082500000000000004,
+                0,
+                0
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "friction": {
+              "viscous": 10
+            },
+            "maxLimit": [
+              0,
+              0,
+              2.8065000000000002
+            ],
+            "minLimit": [
+              0,
+              0,
+              -2.8065000000000002
+            ],
+            "name": "fr3_joint5",
+            "parentLinkFromJoint": {
+              "rotation": [
+                -0.70710678118654768,
+                0,
+                0,
+                0.70710678118654735
+              ],
+              "translation": [
+                -0.082500000000000004,
+                0.3839999999999999,
+                0
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "friction": {
+              "viscous": 10
+            },
+            "maxLimit": [
+              0,
+              0,
+              4.5168999999999997
+            ],
+            "minLimit": [
+              0,
+              0,
+              0.54449999999999998
+            ],
+            "name": "fr3_joint6",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0.70710678118654768,
+                0,
+                0,
+                0.70710678118654735
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "friction": {
+              "viscous": 10
+            },
+            "maxLimit": [
+              0,
+              0,
+              3.0158999999999998
+            ],
+            "minLimit": [
+              0,
+              0,
+              -3.0158999999999998
+            ],
+            "name": "fr3_joint7",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0.70710678118654757,
+                0,
+                0,
+                0.70710678118654746
+              ],
+              "translation": [
+                0.087999999999999995,
+                0,
+                0
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "name": "fr3_joint8",
+            "parentLinkFromJoint": {
+              "translation": [
+                0,
+                9.8607613152626476e-32,
+                0.10699999999999998
+              ]
+            },
+            "type": "Hard"
+          },
+          {
+            "name": "fr3_hand_joint",
+            "parentLinkFromJoint": {
+              "rotation": [
+                4.9303806576313238e-32,
+                0,
+                -0.38268343236508973,
+                0.92387953251128674
+              ]
+            },
+            "type": "Hard"
+          },
+          {
+            "axis": [
+              0,
+              -1,
+              0
+            ],
+            "friction": {
+              "viscous": 10
+            },
+            "maxLimit": [
+              0,
+              -0.040000000000000001,
+              0
+            ],
+            "minLimit": [
+              0,
+              0,
+              0
+            ],
+            "name": "fr3_finger_joint2",
+            "parentLinkFromJoint": {
+              "rotation": [
+                2.1293086652231446e-32,
+                4.1782074546394312e-33,
+                -1,
+                -3.3876153945332108e-17
+              ],
+              "translation": [
+                0,
+                0,
+                0.05840000000000023
+              ]
+            },
+            "type": "Prismatic"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "friction": {
+              "viscous": 10
+            },
+            "maxLimit": [
+              0,
+              0.040000000000000001,
+              0
+            ],
+            "minLimit": [
+              0,
+              0,
+              0
+            ],
+            "name": "fr3_finger_joint1",
+            "parentLinkFromJoint": {
+              "rotation": [
+                4.1782074546394312e-33,
+                5.2353310387062062e-33,
+                1.7409462503365722e-17,
+                1
+              ],
+              "translation": [
+                0,
+                0,
+                0.05840000000000023
+              ]
+            },
+            "type": "Prismatic"
+          }
+        ],
+        "links": [
+          {
+            "colliderType": "Sdf",
+            "density": 1000,
+            "layer": "RobotLink",
+            "name": "base",
+            "shape": "franka_arm/fr3/mesh_000.mochi.h5"
+          },
+          {
+            "colliderType": "Sdf",
+            "density": 1000,
+            "layer": "RobotLink",
+            "name": "fr3_link0",
+            "parentLink": 0,
+            "shape": "franka_arm/fr3/mesh_001.mochi.h5"
+          },
+          {
+            "colliderType": "Sdf",
+            "density": 1000,
+            "layer": "RobotLink",
+            "name": "fr3_link1",
+            "parentLink": 1,
+            "shape": "franka_arm/fr3/mesh_002.mochi.h5"
+          },
+          {
+            "colliderType": "Sdf",
+            "density": 1000,
+            "layer": "RobotLink",
+            "name": "fr3_link2",
+            "parentLink": 2,
+            "shape": "franka_arm/fr3/mesh_003.mochi.h5"
+          },
+          {
+            "colliderType": "Sdf",
+            "density": 1000,
+            "layer": "RobotLink",
+            "name": "fr3_link3",
+            "parentLink": 3,
+            "shape": "franka_arm/fr3/mesh_004.mochi.h5"
+          },
+          {
+            "colliderType": "Sdf",
+            "density": 1000,
+            "layer": "RobotLink",
+            "name": "fr3_link4",
+            "parentLink": 4,
+            "shape": "franka_arm/fr3/mesh_005.mochi.h5"
+          },
+          {
+            "colliderType": "Sdf",
+            "density": 1000,
+            "layer": "RobotLink",
+            "name": "fr3_link5",
+            "parentLink": 5,
+            "shape": "franka_arm/fr3/mesh_006.mochi.h5"
+          },
+          {
+            "colliderType": "Sdf",
+            "density": 1000,
+            "layer": "RobotLink",
+            "name": "fr3_link6",
+            "parentLink": 6,
+            "shape": "franka_arm/fr3/mesh_007.mochi.h5"
+          },
+          {
+            "colliderType": "Sdf",
+            "density": 1000,
+            "layer": "RobotLink",
+            "name": "fr3_link7",
+            "parentLink": 7,
+            "shape": "franka_arm/fr3/mesh_008.mochi.h5"
+          },
+          {
+            "colliderType": "Sdf",
+            "density": 1000,
+            "layer": "RobotLink",
+            "name": "fr3_link8",
+            "parentLink": 8,
+            "shape": "franka_arm/fr3/mesh_009.mochi.h5"
+          },
+          {
+            "colliderType": "Sdf",
+            "density": 1000,
+            "layer": "RobotLink",
+            "name": "fr3_hand",
+            "parentLink": 9,
+            "shape": "franka_arm/fr3/mesh_010.mochi.h5"
+          },
+          {
+            "colliderType": "Sdf",
+            "density": 1000,
+            "layer": "RobotLink",
+            "name": "fr3_rightfinger",
+            "parentLink": 10,
+            "shape": "franka_arm/fr3/mesh_011.mochi.h5"
+          },
+          {
+            "colliderType": "Sdf",
+            "density": 1000,
+            "layer": "RobotLink",
+            "name": "fr3_leftfinger",
+            "parentLink": 10,
+            "shape": "franka_arm/fr3/mesh_012.mochi.h5"
+          }
+        ],
+        "name": "FR3"
+      }
+    ]
+  },
+  "controllers": [
+    {
+      "articulatedActor": "FR3",
+      "jointTracking": [
+        {
+          "damping": 100,
+          "stiffness": 1000
+        }
+      ]
+    }
+  ]
+}

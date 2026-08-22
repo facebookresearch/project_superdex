@@ -1,0 +1,7 @@
+{
+  "description": "Training recipe for the Ant benchmark env without contact observations. PPO is the recommended workflow. SAC uses the experimental shared baseline.",
+  "stop_criteria": {
+    "episode_return_mean": 2000,
+    "num_env_steps_sampled_lifetime": 15000000
+  }
+}

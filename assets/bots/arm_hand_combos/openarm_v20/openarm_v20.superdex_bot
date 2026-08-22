@@ -1,0 +1,48 @@
+{
+  "base": "//torsos/openarm_v20/openarm_v20_torso.superdex_bot",
+  "modifications": [
+    {
+      "AttachBot": {
+        "enabled": true,
+        "joint": {
+          "name": "torso_to_left_arm",
+          "type": "Hard"
+        },
+        "name": "left_arm",
+        "parentLinkName": "openarm_left_base_link",
+        "path": "//arms/openarm_v20/left/openarm_v20_left_arm.superdex_bot",
+        "prefix": "arm_"
+      }
+    },
+    {
+      "ReplaceLinkWithBot": {
+        "enabled": true,
+        "linkToReplace": "arm_openarm_left_ee_base_link",
+        "name": "left_gripper",
+        "path": "//grippers/openarm_v20/left/openarm_v20_left_gripper.superdex_bot"
+      }
+    },
+    {
+      "AttachBot": {
+        "enabled": true,
+        "joint": {
+          "name": "torso_to_right_arm",
+          "type": "Hard"
+        },
+        "name": "right_arm",
+        "parentLinkName": "openarm_right_base_link",
+        "path": "//arms/openarm_v20/right/openarm_v20_right_arm.superdex_bot",
+        "prefix": "arm_"
+      }
+    },
+    {
+      "ReplaceLinkWithBot": {
+        "enabled": true,
+        "linkToReplace": "arm_openarm_right_ee_base_link",
+        "name": "right_gripper",
+        "path": "//grippers/openarm_v20/right/openarm_v20_right_gripper.superdex_bot"
+      }
+    }
+  ],
+  "name": "openarm_v20"
+}

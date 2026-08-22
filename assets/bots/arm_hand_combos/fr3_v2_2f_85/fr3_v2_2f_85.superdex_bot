@@ -1,0 +1,18 @@
+{
+  "base": "//arms/fr3_v2/fr3_v2.superdex_bot",
+  "modifications": [
+    {
+      "AttachBot": {
+        "enabled": true,
+        "joint": {
+          "name": "fr3_v2_to_2f_85",
+          "type": "Hard"
+        },
+        "name": "2f_85",
+        "parentLinkName": "fr3_link8",
+        "path": "//grippers/2f_85/2f_85.superdex_bot"
+      }
+    }
+  ],
+  "name": "fr3_v2_2f_85"
+}

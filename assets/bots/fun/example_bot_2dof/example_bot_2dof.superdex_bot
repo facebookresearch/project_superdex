@@ -1,0 +1,211 @@
+{
+  "defaultPose": [
+    0.52359879016876221,
+    1.5707962512969971
+  ],
+  "joints": [
+    {
+      "name": "world_joint",
+      "type": "Hard"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "effortLimit": 1.6,
+      "friction": {
+        "coulomb": 0.10000000149011612,
+        "viscous": 0.02
+      },
+      "inertia": 0.004999999888241291,
+      "maxLimit": [
+        0,
+        0,
+        1.5707963705062866
+      ],
+      "minLimit": [
+        0,
+        0,
+        -1.5707963705062866
+      ],
+      "name": "joint_link_1",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.70710676908493042,
+          0,
+          0,
+          0.70710676908493042
+        ],
+        "translation": [
+          0,
+          0,
+          0.05000000074505806
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "effortLimit": 1.6,
+      "friction": {
+        "coulomb": 0.10000000149011612,
+        "viscous": 0.02
+      },
+      "inertia": 0.004999999888241291,
+      "maxLimit": [
+        0,
+        0,
+        2.0943951606750488
+      ],
+      "minLimit": [
+        0,
+        0,
+        -2.0943951606750488
+      ],
+      "name": "joint_link_2",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0.25,
+          0
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "name": "joint_ball",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.70710676908493042,
+          0,
+          0,
+          0.70710676908493042
+        ],
+        "translation": [
+          0,
+          0.20000000298023224,
+          0
+        ]
+      },
+      "type": "Hard"
+    }
+  ],
+  "links": [
+    {
+      "centerOfMass": [
+        -4.2397910023411459e-19,
+        -3.9471990113679062e-17,
+        0.011933539062738419
+      ],
+      "mass": 4.2116575241088867,
+      "momentOfInertia": [
+        0.010030722245573997,
+        -2.2922268526334042e-20,
+        4.6642717876167739e-20,
+        0.010135576128959656,
+        -3.017867217992745e-17,
+        0.01852603442966938
+      ],
+      "name": "base_link",
+      "renderModel": "render/base_link_render.glb",
+      "shape": "collision/base_link_collision.mochi.h5"
+    },
+    {
+      "actuators": [
+        {
+          "name": "servo_1",
+          "params": {
+            "k_p": 1.0,
+            "k_i": 0.3,
+            "effort_limit": 1.6,
+            "profile_accel": 20.0
+          },
+          "type": "MY_VELOCITY_SERVO_ACTUATOR"
+        }
+      ],
+      "centerOfMass": [
+        -7.8826998483974497e-19,
+        0.12802991271018982,
+        2.6157273680382787e-08
+      ],
+      "mass": 0.061807803809642792,
+      "momentOfInertia": [
+        0.00030171137768775225,
+        -6.3484351023468931e-21,
+        -1.0474296262144925e-13,
+        9.9399849204928614e-06,
+        -1.5683627356891106e-12,
+        0.00030810968019068241
+      ],
+      "name": "link_1",
+      "parentLink": 0,
+      "renderModel": "render/link_1_render.glb",
+      "shape": "collision/link_1_collision.mochi.h5"
+    },
+    {
+      "actuators": [
+        {
+          "name": "servo_2",
+          "params": {
+            "k_p": 1.0,
+            "k_i": 0.3,
+            "effort_limit": 1.6,
+            "profile_accel": 20.0
+          },
+          "type": "MY_VELOCITY_SERVO_ACTUATOR"
+        }
+      ],
+      "centerOfMass": [
+        -1.6284238189465976e-17,
+        0.11433570832014084,
+        -6.1822227871536802e-19
+      ],
+      "mass": 0.042762439697980881,
+      "momentOfInertia": [
+        0.0001627991150598973,
+        1.6470841359788628e-20,
+        5.7127161054443474e-23,
+        5.0493717935751192e-06,
+        -2.1657185343545922e-22,
+        0.00016431175754405558
+      ],
+      "name": "link_2",
+      "parentLink": 1,
+      "renderModel": "render/link_2_render.glb",
+      "shape": "collision/link_2_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        -7.5737272307730953e-17,
+        -1.1082554597329134e-16,
+        0.031793531030416489
+      ],
+      "mass": 0.01683499850332737,
+      "momentOfInertia": [
+        5.6465360103175044e-06,
+        3.0623976639354552e-39,
+        4.4852540589467896e-25,
+        5.6465360103175044e-06,
+        -2.4035109985759863e-21,
+        6.3166726249619387e-06
+      ],
+      "name": "ball",
+      "parentLink": 2,
+      "renderModel": "render/link_3_render.glb",
+      "sensors": [
+        {
+          "name": "force_sensor",
+          "type": "MY_CONTACT_FORCE_SENSOR"
+        }
+      ],
+      "shape": "collision/link_3_collision.mochi.h5"
+    }
+  ],
+  "name": "ExampleBot2dof"
+}

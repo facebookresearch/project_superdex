@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (c) Meta Platforms, Inc. and affiliates.
+
+     This source code is licensed under the MIT license found in the
+     LICENSE file in the root directory of this source tree. -->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <?define AddinClsid = {65c9fc17-6a74-45a3-8f84-55185900275d} ?>
+
+  <Package Name="SuperDex CAD Exporter for SolidWorks"
+           Manufacturer="SuperDex"
+           Version="!(bind.FileVersion.SuperDexCADExporter.dll)"
+           UpgradeCode="7B8EFEE8-9A38-4DB8-9043-FD4A34C0FC98"
+           Scope="perMachine"
+           Compressed="yes"
+           Language="1033"
+           Codepage="1252">
+
+    <SummaryInformation Description="SuperDex CAD Exporter for SolidWorks" Manufacturer="SuperDex" />
+
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer version of [ProductName] is already installed. Uninstall it before running this installer." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/facebookresearch/project_superdex" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/facebookresearch/project_superdex" />
+    <Property Id="ARPCOMMENTS" Value="Build $(CommitVersion)" />
+
+    <!-- ############################################################ -->
+    <!-- Detection                                                    -->
+    <!-- ############################################################ -->
+
+    <Property Id="NETFRAMEWORKINSTALLROOT" Secure="yes">
+      <RegistrySearch Id="NetFxInstallRootSearch" Root="HKLM" Bitness="always64"
+                      Key="SOFTWARE\Microsoft\.NETFramework" Name="InstallRoot" Type="raw" />
+    </Property>
+
+    <Property Id="LEGACYINNOUNINSTALLER" Secure="yes">
+      <RegistrySearch Id="LegacyInnoSearch" Root="HKLM" Bitness="always64"
+                      Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{E43E85A9-071D-430A-91B2-84B7AB923170}_is1"
+                      Name="InstallLocation" Type="directory">
+        <FileSearch Id="LegacyInnoUninstallExe" Name="unins000.exe" />
+      </RegistrySearch>
+    </Property>
+    <Property Id="LEGACYINNONAME" Secure="yes">
+      <RegistrySearch Id="LegacyInnoNameSearch" Root="HKLM" Bitness="always64"
+                      Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{E43E85A9-071D-430A-91B2-84B7AB923170}_is1"
+                      Name="DisplayName" Type="raw" />
+    </Property>
+
+    <!-- Every launch condition is gated on "Installed OR" so it only blocks a fresh install. -->
+    <Launch Condition="Installed OR VersionNT64"
+            Message="[ProductName] requires 64-bit Windows." />
+    <Launch Condition="Installed OR NETFRAMEWORKINSTALLROOT"
+            Message="The .NET Framework 4 runtime could not be found. Install .NET Framework 4.8 and run this installer again." />
+    <Launch Condition="Installed OR NOT LEGACYINNOUNINSTALLER"
+            Message="An older version of this add-in is already installed. Uninstall &quot;[LEGACYINNONAME]&quot; from Apps &amp; Features first, then run this installer again." />
+
+    <!-- ############################################################ -->
+    <!-- Layout                                                       -->
+    <!-- ############################################################ -->
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="SuperDexFolder" Name="SuperDex">
+        <Directory Id="INSTALLFOLDER" Name="CADExporter" />
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="SuperDex CAD Exporter for SolidWorks" Level="1" AllowAbsent="no">
+      <ComponentGroupRef Id="ExporterFiles" />
+    </Feature>
+
+    <ComponentGroup Id="ExporterFiles" Directory="INSTALLFOLDER">
+      <!-- Authored explicitly rather than harvested so the file id stays stable for the
+           !(bind.FileVersion.SuperDexCADExporter.dll) reference in Package/@Version. -->
+      <Component Id="MainAssembly" Bitness="always64" Guid="A8B3C9F7-AF83-4027-805B-965122B3A760">
+        <File Id="SuperDexCADExporter.dll" Name="SuperDexCADExporter.dll"
+              Source="$(BinDir)\SuperDexCADExporter.dll" KeyPath="yes" />
+        <!-- Kept so the Serilog stack traces users send in retain file and line numbers. -->
+        <File Id="SuperDexCADExporter.pdb" Name="SuperDexCADExporter.pdb"
+              Source="$(BinDir)\SuperDexCADExporter.pdb" />
+        <RemoveRegistryKey Root="HKLM" Action="removeOnUninstall"
+                           Key="SOFTWARE\SolidWorks\Addins\$(AddinClsid)" />
+        <RemoveRegistryKey Root="HKLM" Action="removeOnInstall"
+                           Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{E43E85A9-071D-430A-91B2-84B7AB923170}_is1" />
+      </Component>
+
+      <Files Include="$(BinDir)\*">
+        <Exclude Files="$(BinDir)\SuperDexCADExporter.dll" />
+        <!-- Test-only dependencies. They land in the build output because the add-in and
+             its unit tests share one project, but they are not needed at runtime. -->
+        <Exclude Files="$(BinDir)\xunit.*" />
+        <Exclude Files="$(BinDir)\Moq.*" />
+        <Exclude Files="$(BinDir)\Microsoft.VisualStudio.TestPlatform.*" />
+        <Exclude Files="$(BinDir)\solidworkstools.dll" />
+        <!-- Third-party symbols only; the add-in's own .pdb is shipped by MainAssembly. -->
+        <Exclude Files="$(BinDir)\*.pdb" />
+      </Files>
+    </ComponentGroup>
+
+    <!-- ############################################################ -->
+    <!-- COM registration                                             -->
+    <!-- ############################################################ -->
+
+    <Property Id="REGASMEXE" Value="RegAsm.exe" />
+    <!-- Only override the fallback when the search actually resolved. Otherwise the
+         formatted value collapses to a relative "v4.0.30319\RegAsm.exe", which silently
+         fails to launch. -->
+    <SetProperty Id="REGASMEXE"
+                 Value="[NETFRAMEWORKINSTALLROOT]v4.0.30319\RegAsm.exe"
+                 Condition="NETFRAMEWORKINSTALLROOT"
+                 Before="CostFinalize" Sequence="both" />
+
+    <CustomAction Id="RegAsmRegister" Property="REGASMEXE"
+                  ExeCommand="&quot;[INSTALLFOLDER]SuperDexCADExporter.dll&quot; /codebase"
+                  Execute="deferred" Impersonate="no" Return="check" />
+    <CustomAction Id="RegAsmRegisterRollback" Property="REGASMEXE"
+                  ExeCommand="&quot;[INSTALLFOLDER]SuperDexCADExporter.dll&quot; /unregister"
+                  Execute="rollback" Impersonate="no" Return="ignore" />
+    <!-- Return="ignore": a failed unregister must never block removal. -->
+    <CustomAction Id="RegAsmUnregister" Property="REGASMEXE"
+                  ExeCommand="&quot;[INSTALLFOLDER]SuperDexCADExporter.dll&quot; /unregister"
+                  Execute="deferred" Impersonate="no" Return="ignore" />
+
+    <InstallExecuteSequence>
+      <Custom Action="RegAsmUnregister" Before="RemoveFiles" Condition="REMOVE=&quot;ALL&quot;" />
+      <Custom Action="RegAsmRegisterRollback" After="InstallFiles" Condition="NOT REMOVE" />
+      <Custom Action="RegAsmRegister" After="RegAsmRegisterRollback" Condition="NOT REMOVE" />
+    </InstallExecuteSequence>
+
+    <!-- ############################################################ -->
+    <!-- UI                                                           -->
+    <!-- ############################################################ -->
+
+    <UI>
+      <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg"
+               Order="2" Condition="NOT Installed OR NOT PATCH" />
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg"
+               Order="2" Condition="1" />
+    </UI>
+
+  </Package>
+</Wix>

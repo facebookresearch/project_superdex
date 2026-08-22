@@ -1,0 +1,7 @@
+{
+  "description": "Test-only: HalfCheetah without gravity and without joint rest springs. A degenerate setup that is not a trainable task, kept as a crash check for the non-default physics paths.",
+  "env_cfg": {
+    "use_gravity": false,
+    "use_rest_springs": false
+  }
+}

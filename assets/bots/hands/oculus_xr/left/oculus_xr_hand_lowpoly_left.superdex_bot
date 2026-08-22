@@ -1,0 +1,930 @@
+{
+  "contactOverrides": [
+    {
+      "enable": false,
+      "linkA": "bone_00_wrist_root",
+      "linkB": "bone_03_thumb_proximal"
+    },
+    {
+      "enable": false,
+      "linkA": "bone_00_wrist_root",
+      "linkB": "bone_04_thumb_medial"
+    },
+    {
+      "enable": false,
+      "linkA": "bone_06_index_proximal",
+      "linkB": "bone_09_middle_proximal"
+    },
+    {
+      "enable": false,
+      "linkA": "bone_09_middle_proximal",
+      "linkB": "bone_12_ring_proximal"
+    },
+    {
+      "enable": false,
+      "linkA": "bone_02_thumb_metacarpal",
+      "linkB": "bone_15_pinky_metacarpal"
+    },
+    {
+      "enable": false,
+      "linkA": "bone_12_ring_proximal",
+      "linkB": "bone_15_pinky_metacarpal"
+    },
+    {
+      "enable": false,
+      "linkA": "bone_12_ring_proximal",
+      "linkB": "bone_16_pinky_proximal"
+    },
+    {
+      "enable": false,
+      "linkA": "bone_00_wrist_root",
+      "linkB": "bone_16_pinky_proximal"
+    }
+  ],
+  "defaultPose": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "joints": [
+    {
+      "name": "joint_00_wrist_root",
+      "type": "Free"
+    },
+    {
+      "friction": {
+        "viscous": 0.0010000000474974513
+      },
+      "name": "joint_01_wrist_stub",
+      "type": "Hard"
+    },
+    {
+      "friction": {
+        "viscous": 0.0010000000474974513
+      },
+      "limitStiffness": 1000,
+      "maxLimit": [
+        0.52359879016876221,
+        0.52359867095947266,
+        0.087266445159912109
+      ],
+      "minLimit": [
+        -1.0471975803375244,
+        -0.52359873056411743,
+        -0.78539812564849854
+      ],
+      "name": "joint_02_thumb_metacarpal",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.0077787996269762516,
+          -0.37538695335388184,
+          0.42458406090736389,
+          0.8238644003868103
+        ],
+        "translation": [
+          0.01049652136862278,
+          -0.020069301128387451,
+          0.01155409961938858
+        ]
+      },
+      "type": "Spherical"
+    },
+    {
+      "axis": [
+        5.9604651880817983e-08,
+        0.086186416447162628,
+        -0.99627912044525146
+      ],
+      "friction": {
+        "viscous": 9.9999997473787516e-05
+      },
+      "limitStiffness": 1000,
+      "maxLimit": [
+        -1.5707963705062866,
+        -0.26179936528205872,
+        -0.52359879016876221
+      ],
+      "minLimit": [
+        0.52359879016876221,
+        0.26179936528205872,
+        0.52359879016876221
+      ],
+      "name": "joint_03_thumb_proximal",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.12567797303199768,
+          -0.26023030281066895,
+          0.024330887943506241,
+          0.95702314376831055
+        ],
+        "translation": [
+          0,
+          -0.024852558970451355,
+          -9.3132257461547852e-10
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        -0.9976733922958374,
+        -0.068175077438354492,
+        0
+      ],
+      "friction": {
+        "viscous": 1.9999999949504854e-06
+      },
+      "limitStiffness": 1000,
+      "maxLimit": [
+        -1.5707963705062866,
+        -0.34906584024429321,
+        -0.2617993950843811
+      ],
+      "minLimit": [
+        0.2617993950843811,
+        0.087266437709331512,
+        0.17453277111053467
+      ],
+      "name": "joint_04_thumb_medial",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.084062263369560242,
+          0.082703739404678345,
+          -0.076961725950241089,
+          0.99003565311431885
+        ],
+        "translation": [
+          0,
+          -0.032512910664081573,
+          -1.862645149230957e-09
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        -0.99651169776916504,
+        0.08345378190279007,
+        -2.9802325229866256e-07
+      ],
+      "friction": {
+        "viscous": 9.9999997473787516e-06
+      },
+      "limitStiffness": 1000,
+      "maxLimit": [
+        -2.0943951606750488,
+        -0.087266325950622559,
+        -0.17453294992446899
+      ],
+      "minLimit": [
+        0.52359879016876221,
+        0.26179936528205872,
+        0.17453289031982422
+      ],
+      "name": "joint_05_thumb_distal",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.058274123817682266,
+          -0.083505861461162567,
+          0.065015710890293121,
+          0.99267512559890747
+        ],
+        "translation": [
+          0,
+          -0.033793091773986816,
+          -1.862645149230957e-09
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "friction": {
+        "viscous": 3.0000001061125658e-06
+      },
+      "limitStiffness": 1000,
+      "maxLimit": [
+        0.34906581044197083,
+        0.34906584024429321,
+        0.52359879016876221
+      ],
+      "minLimit": [
+        -1.5707963705062866,
+        -0.34906581044197083,
+        -0.52359879016876221
+      ],
+      "name": "joint_06_index_proximal",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.043281465768814087,
+          -0.030683070421218872,
+          -0.018855586647987366,
+          0.99841362237930298
+        ],
+        "translation": [
+          0.023550674319267273,
+          -0.095996230840682983,
+          0.0073164496570825577
+        ]
+      },
+      "type": "Spherical"
+    },
+    {
+      "axis": [
+        -0.99999797344207764,
+        -0.0020183324813842773,
+        1.1920928955078125e-07
+      ],
+      "friction": {
+        "viscous": 1.9999999949504854e-06
+      },
+      "limitStiffness": 1000,
+      "maxLimit": [
+        -2.0943951606750488,
+        -0.17453277111053467,
+        -0.17453292012214661
+      ],
+      "minLimit": [
+        0.2617993950843811,
+        0.17453290522098541,
+        0.087266445159912109
+      ],
+      "name": "joint_07_index_medial",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.0032929177395999432,
+          0.025852411985397339,
+          -0.0071160495281219482,
+          0.99963504076004028
+        ],
+        "translation": [
+          0,
+          -0.037927299737930298,
+          -1.862645149230957e-09
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        -0.99977660179138184,
+        -0.021136313676834106,
+        0
+      ],
+      "friction": {
+        "viscous": 9.9999999747524271e-07
+      },
+      "limitStiffness": 1000,
+      "maxLimit": [
+        -1.5707963705062866,
+        -0.2617993950843811,
+        -0.087266445159912109
+      ],
+      "minLimit": [
+        0.52359879016876221,
+        0.26179936528205872,
+        0.087266325950622559
+      ],
+      "name": "joint_08_index_distal",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.072034016251564026,
+          0.016056060791015625,
+          -0.027148842811584473,
+          0.99690335988998413
+        ],
+        "translation": [
+          0,
+          -0.02430364117026329,
+          -9.3132257461547852e-10
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "friction": {
+        "viscous": 3.0000001061125658e-06
+      },
+      "limitStiffness": 1000,
+      "maxLimit": [
+        0.26179936528205872,
+        0.26179936528205872,
+        0.52359879016876221
+      ],
+      "minLimit": [
+        -1.5707963705062866,
+        -0.26179936528205872,
+        -0.52359879016876221
+      ],
+      "name": "joint_09_middle_proximal",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.051835734397172928,
+          0.0090662697330117226,
+          -0.051465604454278946,
+          0.99728745222091675
+        ],
+        "translation": [
+          0.001725904643535614,
+          -0.095646604895591736,
+          0.0025431588292121887
+        ]
+      },
+      "type": "Spherical"
+    },
+    {
+      "axis": [
+        -0.99999785423278809,
+        0.0020815432071685791,
+        0
+      ],
+      "friction": {
+        "viscous": 1.9999999949504854e-06
+      },
+      "limitStiffness": 1000,
+      "maxLimit": [
+        -2.0943951606750488,
+        -0.17453277111053467,
+        -0.087266474962234497
+      ],
+      "minLimit": [
+        0.2617993950843811,
+        0.17453292012214661,
+        0.087266445159912109
+      ],
+      "name": "joint_10_middle_medial",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.0019782488234341145,
+          0.011228249408304691,
+          -0.0043788407929241657,
+          0.99992543458938599
+        ],
+        "translation": [
+          0,
+          -0.042926974594593048,
+          -1.862645149230957e-09
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        -0.99528640508651733,
+        0.096979781985282898,
+        0
+      ],
+      "friction": {
+        "viscous": 9.9999999747524271e-07
+      },
+      "limitStiffness": 1000,
+      "maxLimit": [
+        -1.5707963705062866,
+        -0.17453289031982422,
+        -0.17453289031982422
+      ],
+      "minLimit": [
+        0.52359879016876221,
+        0.17453289031982422,
+        0.17453289031982422
+      ],
+      "name": "joint_11_middle_distal",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.093007013201713562,
+          0.034319549798965454,
+          -0.0046118199825286865,
+          0.99506312608718872
+        ],
+        "translation": [
+          0,
+          -0.027549583464860916,
+          -9.3132257461547852e-10
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "friction": {
+        "viscous": 3.0000001061125658e-06
+      },
+      "limitStiffness": 1000,
+      "maxLimit": [
+        0.34906584024429321,
+        0.43633225560188293,
+        0.52359879016876221
+      ],
+      "minLimit": [
+        -1.5707963705062866,
+        -0.43633228540420532,
+        -0.52359879016876221
+      ],
+      "name": "joint_12_ring_proximal",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.049813508987426758,
+          0.053159330040216446,
+          -0.12310343235731125,
+          0.98971623182296753
+        ],
+        "translation": [
+          -0.017465241253376007,
+          -0.088693782687187195,
+          0.0065293051302433014
+        ]
+      },
+      "type": "Spherical"
+    },
+    {
+      "axis": [
+        -0.99975180625915527,
+        0.022281737998127937,
+        0
+      ],
+      "friction": {
+        "viscous": 1.9999999949504854e-06
+      },
+      "limitStiffness": 1000,
+      "maxLimit": [
+        -2.0943951606750488,
+        -0.17453277111053467,
+        -0.17453292012214661
+      ],
+      "minLimit": [
+        0.2617993950843811,
+        0.17453290522098541,
+        0.17453289031982422
+      ],
+      "name": "joint_13_ring_medial",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.0056760157458484173,
+          0.03363250195980072,
+          -0.0027898699045181274,
+          0.99941426515579224
+        ],
+        "translation": [
+          0,
+          -0.038996100425720215,
+          -1.862645149230957e-09
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        -0.99709928035736084,
+        0.076113052666187286,
+        0
+      ],
+      "friction": {
+        "viscous": 9.9999999747524271e-07
+      },
+      "limitStiffness": 1000,
+      "maxLimit": [
+        -1.5707963705062866,
+        -0.2617993950843811,
+        -0.17453294992446899
+      ],
+      "minLimit": [
+        0.52359879016876221,
+        0.26179936528205872,
+        0.17453277111053467
+      ],
+      "name": "joint_14_ring_distal",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.025028541684150696,
+          0.0034774839878082275,
+          0.029179409146308899,
+          0.99925482273101807
+        ],
+        "translation": [
+          0,
+          -0.026573408395051956,
+          -9.3132257461547852e-10
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        -1,
+        2.9802322387695312e-08,
+        0
+      ],
+      "friction": {
+        "viscous": 9.9999997473787516e-05
+      },
+      "limitStiffness": 1000,
+      "maxLimit": [
+        -0.43633246421813965,
+        -1.0471975803375244,
+        -0.78539818525314331
+      ],
+      "minLimit": [
+        0.26179945468902588,
+        1.0471974611282349,
+        0.78539812564849854
+      ],
+      "name": "joint_15_pinky_metacarpal",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.018311792984604836,
+          0.20703601837158203,
+          -0.14034280180931091,
+          0.96804165840148926
+        ],
+        "translation": [
+          -0.022998573258519173,
+          -0.034073561429977417,
+          0.0094198323786258698
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "friction": {
+        "viscous": 3.0000001061125658e-06
+      },
+      "limitStiffness": 1000,
+      "maxLimit": [
+        0.52359879016876221,
+        0.52359873056411743,
+        0.52359879016876221
+      ],
+      "minLimit": [
+        -1.5707963705062866,
+        -0.26179936528205872,
+        -0.52359879016876221
+      ],
+      "name": "joint_16_pinky_proximal",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.028129234910011292,
+          -0.091113045811653137,
+          0.0040712952613830566,
+          0.99543488025665283
+        ],
+        "translation": [
+          0,
+          -0.045650534331798553,
+          -1.862645149230957e-09
+        ]
+      },
+      "type": "Spherical"
+    },
+    {
+      "axis": [
+        -0.99898481369018555,
+        0.04504859447479248,
+        -5.9604644775390625e-08
+      ],
+      "friction": {
+        "viscous": 1.9999999949504854e-06
+      },
+      "limitStiffness": 1000,
+      "maxLimit": [
+        -2.0943951606750488,
+        -0.17453277111053467,
+        -0.17453292012214661
+      ],
+      "minLimit": [
+        0.2617993950843811,
+        0.17453290522098541,
+        0.17453289031982422
+      ],
+      "name": "joint_17_pinky_medial",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.013286041095852852,
+          0.037616673856973648,
+          -0.04293769970536232,
+          0.99828094244003296
+        ],
+        "translation": [
+          0,
+          -0.030720409005880356,
+          -9.3132257461547852e-10
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        -0.99895423650741577,
+        0.045722458511590958,
+        5.9604651880817983e-08
+      ],
+      "friction": {
+        "viscous": 9.9999999747524271e-07
+      },
+      "limitStiffness": 1000,
+      "maxLimit": [
+        -1.5707963705062866,
+        -0.2617993950843811,
+        -0.17453294992446899
+      ],
+      "minLimit": [
+        0.52359879016876221,
+        0.26179936528205872,
+        0.17453277111053467
+      ],
+      "name": "joint_18_pinky_distal",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.024018822237849236,
+          -0.00064474344253540039,
+          0.04917067289352417,
+          0.99850142002105713
+        ],
+        "translation": [
+          0,
+          -0.0203113853931427,
+          -9.3132257461547852e-10
+        ]
+      },
+      "type": "Revolute"
+    }
+  ],
+  "links": [
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_00_wrist_root",
+      "renderModel": "render/bone_00_wrist_root_render.glb",
+      "shape": "collision/bone_00_wrist_root_lowpoly_collision.mochi.h5"
+    },
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_01_wrist_stub",
+      "parentLink": 0,
+      "renderModel": "render/bone_01_wrist_stub_render.glb",
+      "shape": "collision/bone_01_wrist_stub_lowpoly_collision.mochi.h5"
+    },
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_02_thumb_metacarpal",
+      "parentLink": 0,
+      "renderModel": "render/bone_02_thumb_metacarpal_render.glb",
+      "shape": "collision/bone_02_thumb_metacarpal_lowpoly_collision.mochi.h5"
+    },
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_03_thumb_proximal",
+      "parentLink": 2,
+      "renderModel": "render/bone_03_thumb_proximal_render.glb",
+      "shape": "collision/bone_03_thumb_proximal_lowpoly_collision.mochi.h5"
+    },
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_04_thumb_medial",
+      "parentLink": 3,
+      "renderModel": "render/bone_04_thumb_medial_render.glb",
+      "shape": "collision/bone_04_thumb_medial_lowpoly_collision.mochi.h5"
+    },
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_05_thumb_distal",
+      "parentLink": 4,
+      "renderModel": "render/bone_05_thumb_distal_render.glb",
+      "shape": "collision/bone_05_thumb_distal_lowpoly_collision.mochi.h5"
+    },
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_06_index_proximal",
+      "parentLink": 0,
+      "renderModel": "render/bone_06_index_proximal_render.glb",
+      "shape": "collision/bone_06_index_proximal_lowpoly_collision.mochi.h5"
+    },
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_07_index_medial",
+      "parentLink": 6,
+      "renderModel": "render/bone_07_index_medial_render.glb",
+      "shape": "collision/bone_07_index_medial_lowpoly_collision.mochi.h5"
+    },
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_08_index_distal",
+      "parentLink": 7,
+      "renderModel": "render/bone_08_index_distal_render.glb",
+      "shape": "collision/bone_08_index_distal_lowpoly_collision.mochi.h5"
+    },
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_09_middle_proximal",
+      "parentLink": 0,
+      "renderModel": "render/bone_09_middle_proximal_render.glb",
+      "shape": "collision/bone_09_middle_proximal_lowpoly_collision.mochi.h5"
+    },
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_10_middle_medial",
+      "parentLink": 9,
+      "renderModel": "render/bone_10_middle_medial_render.glb",
+      "shape": "collision/bone_10_middle_medial_lowpoly_collision.mochi.h5"
+    },
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_11_middle_distal",
+      "parentLink": 10,
+      "renderModel": "render/bone_11_middle_distal_render.glb",
+      "shape": "collision/bone_11_middle_distal_lowpoly_collision.mochi.h5"
+    },
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_12_ring_proximal",
+      "parentLink": 0,
+      "renderModel": "render/bone_12_ring_proximal_render.glb",
+      "shape": "collision/bone_12_ring_proximal_lowpoly_collision.mochi.h5"
+    },
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_13_ring_medial",
+      "parentLink": 12,
+      "renderModel": "render/bone_13_ring_medial_render.glb",
+      "shape": "collision/bone_13_ring_medial_lowpoly_collision.mochi.h5"
+    },
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_14_ring_distal",
+      "parentLink": 13,
+      "renderModel": "render/bone_14_ring_distal_render.glb",
+      "shape": "collision/bone_14_ring_distal_lowpoly_collision.mochi.h5"
+    },
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_15_pinky_metacarpal",
+      "parentLink": 0,
+      "renderModel": "render/bone_15_pinky_metacarpal_render.glb",
+      "shape": "collision/bone_15_pinky_metacarpal_lowpoly_collision.mochi.h5"
+    },
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_16_pinky_proximal",
+      "parentLink": 15,
+      "renderModel": "render/bone_16_pinky_proximal_render.glb",
+      "shape": "collision/bone_16_pinky_proximal_lowpoly_collision.mochi.h5"
+    },
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_17_pinky_medial",
+      "parentLink": 16,
+      "renderModel": "render/bone_17_pinky_medial_render.glb",
+      "shape": "collision/bone_17_pinky_medial_lowpoly_collision.mochi.h5"
+    },
+    {
+      "contact": {
+        "frictionWithColliderNormal": false,
+        "penaltyCoefficient": 10000000000,
+        "penaltyThresholdDefault": 0.0030000000260770321,
+        "viscousFrictionCoefficient": 20
+      },
+      "density": 10,
+      "name": "bone_18_pinky_distal",
+      "parentLink": 17,
+      "renderModel": "render/bone_18_pinky_distal_render.glb",
+      "shape": "collision/bone_18_pinky_distal_lowpoly_collision.mochi.h5"
+    }
+  ],
+  "name": "oculus_xr_hand_lowpoly_left",
+  "worldFromRoot": {
+    "rotation": [
+      0.70710676908493042,
+      -2.9802322387695312e-08,
+      0,
+      0.70710670948028564
+    ]
+  }
+}

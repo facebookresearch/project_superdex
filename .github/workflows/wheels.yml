@@ -1,0 +1,373 @@
+# Build SuperDex wheels on Linux, macOS and Windows, and verify each set on the platform that
+# produced it.
+#
+# Run it by hand from the Actions tab. The defaults build everything and check it, which is what
+# producing a release set means; narrow the inputs when you are chasing one toolchain problem.
+#
+#   distribution   which wheel. `superdex_python` is a directory name -- it builds the
+#                  `superdex-physics` wheel. `pure` is the two py3-none-any wheels together.
+#   platform       which runner. `all` fans out to the three.
+#   verify         run the check stage. Only meaningful on a full matrix, because
+#                  `check_wheels.py` judges the wheelhouse as a set and a partial one fails its
+#                  completeness check by construction. Narrowing either input above turns it off
+#                  on its own, so it can be left on.
+#
+# Manual dispatch is the only trigger. Wheels are not the signal a code review needs, and a
+# timer would rebuild unchanged source against drifting runner images on a schedule nobody
+# reads -- a red run no one is subscribed to teaches people that red is normal.
+#
+# All build configuration lives in each distribution's `pyproject.toml`, never here, so this
+# file and a local `tools/build_wheels.py` run cannot drift apart. That is why there is one build
+# step rather than one per platform.
+#
+# Each job uploads its own wheel, and the `bundle` job collects whatever the run produced into a
+# single flat `wheelhouse` artifact -- one download, and a directory `pip install --find-links`
+# accepts as-is:
+#
+#     gh run download <run-id> --name wheelhouse --dir wheelhouse
+#
+# Every `uses:` is pinned to a 40-character commit SHA, with the release in a trailing comment.
+# A tag is a mutable pointer -- `actions/checkout` can move `v5` to a different commit whenever
+# it likes, and these actions run with the checkout present and produce the artifacts people
+# install, so a moved tag is a supply-chain hole. A SHA is the only immutable name GitHub
+# offers. This satisfies `sha_pinning_required`, which zizmor audits as `unpinned-uses`.
+#
+# No Dependabot yet, deliberately. It maintains pins by opening pull requests, and this
+# repository is a one-way ShipIt export with no PR-import path, so its output would be
+# unmergeable. Add `.github/dependabot.yml` once that path exists. Until then these are all
+# first-party GitHub actions, so review the pins when one ships a major version.
+name: wheels
+
+on:
+  workflow_dispatch:
+    inputs:
+      distribution:
+        description: 'Wheel to build (superdex_python builds the superdex-physics wheel)'
+        type: choice
+        default: all
+        options:
+          - superdex_python
+          - superdex_physics_fp64
+          - superdex_robotics
+          - superdex_robotics_fp64
+          - superdex_mesh_cli
+          - superdex_physics_debugger
+          - superdex_studio
+          - pure
+          - all
+      platform:
+        description: 'Platform to build on'
+        type: choice
+        default: all
+        options:
+          - ubuntu-22.04
+          - macos-26
+          - windows-2022
+          - all
+      verify:
+        description: 'Run the verify stage (needs distribution=all and platform=all)'
+        type: boolean
+        default: true
+
+# Read-only. Nothing here writes to the repository or needs a secret.
+permissions:
+  contents: read
+
+# A second run on the same ref supersedes the first rather than doubling the spend.
+concurrency:
+  group: wheels-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Matches third-party/pypi/cibuildwheel in fbsource, so CI and an internal build resolve the
+  # same tool. Bump both together.
+  CIBUILDWHEEL_VERSION: 4.1.1
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  # Turns the two inputs into the job list. A matrix cannot be filtered inline, so it is computed
+  # here and consumed through `fromJSON`, which also keeps unselected jobs out of the run summary
+  # rather than showing twenty skipped ones.
+  plan:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    outputs:
+      native: ${{ steps.plan.outputs.native }}
+      run_native: ${{ steps.plan.outputs.run_native }}
+      run_pure: ${{ steps.plan.outputs.run_pure }}
+      run_verify: ${{ steps.plan.outputs.run_verify }}
+    steps:
+      - name: Work out which jobs to run
+        id: plan
+        shell: bash
+        env:
+          DIST: ${{ inputs.distribution }}
+          PLATFORM: ${{ inputs.platform }}
+          VERIFY: ${{ inputs.verify }}
+        run: |
+          python3 <<'PY'
+          import json
+          import os
+
+          NATIVE = [
+              "superdex_python",
+              "superdex_physics_fp64",
+              "superdex_robotics",
+              "superdex_robotics_fp64",
+              "superdex_mesh_cli",
+              "superdex_physics_debugger",
+              "superdex_studio",
+          ]
+          OSES = ["ubuntu-22.04", "macos-26", "windows-2022"]
+
+          dist = os.environ["DIST"]
+          platform = os.environ["PLATFORM"]
+          verify = os.environ["VERIFY"] == "true"
+
+          oses = OSES if platform == "all" else [platform]
+          if dist == "all":
+              dists = NATIVE
+          elif dist == "pure":
+              dists = []
+          else:
+              dists = [dist]
+
+          include = [{"os": o, "dist": d} for o in oses for d in dists]
+
+          # The pure wheels are py3-none-any, so one Linux job builds them for everyone.
+          run_pure = dist in ("all", "pure")
+          # check_wheels.py judges the wheelhouse as a set, so it only says anything true about
+          # a complete one.
+          run_verify = verify and dist == "all" and platform == "all"
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as handle:
+              handle.write(f"native={json.dumps({'include': include})}\n")
+              handle.write(f"run_native={str(bool(include)).lower()}\n")
+              handle.write(f"run_pure={str(run_pure).lower()}\n")
+              handle.write(f"run_verify={str(run_verify).lower()}\n")
+
+          print(f"native jobs: {len(include)}")
+          for entry in include:
+              print(f"  {entry['os']} x {entry['dist']}")
+          print(f"pure: {run_pure}")
+          print(f"verify: {run_verify}")
+          if not include and not run_pure:
+              print("::error::that combination builds nothing")
+              raise SystemExit(1)
+          PY
+
+  native:
+    name: ${{ matrix.dist }} · ${{ matrix.os }}
+    needs: plan
+    if: needs.plan.outputs.run_native == 'true'
+    runs-on: ${{ matrix.os }}
+    # The studio takes around thirty minutes on Windows. This is a runaway guard, not a target.
+    timeout-minutes: 120
+    strategy:
+      # One platform failing must not cancel the others. On a full matrix that means a Windows
+      # toolchain problem still leaves usable Linux and macOS results.
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.native) }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Verify AppleClang
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          xcodebuild -version
+          xcode-select -p
+          clang_version="$(clang --version)"
+          printf '%s\n' "$clang_version"
+          clang++ --version
+          major="$(printf '%s\n' "$clang_version" | sed -nE 's/^Apple clang version ([0-9]+).*/\1/p')"
+          if [[ -z "$major" || "$major" -lt 21 ]]; then
+            echo "::error::macOS wheels require AppleClang 21 or newer"
+            exit 1
+          fi
+
+      - name: Install the driver's tools
+        shell: bash
+        run: python -m pip install --upgrade pip "cibuildwheel==${CIBUILDWHEEL_VERSION}" build
+
+      # The Windows pyprojects pin CC/CXX to clang-cl. The runner image ships LLVM but does not
+      # reliably put it on PATH, and without it CMake falls back to an MSVC too old for mochi --
+      # which surfaces as hundreds of conversion errors rather than a missing-compiler message.
+      # Fail here instead, legibly. Delete this step if the image is found to guarantee it.
+      - name: Ensure clang-cl is on PATH
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          if ! command -v clang-cl >/dev/null 2>&1; then
+            echo 'C:\Program Files\LLVM\bin' >> "$GITHUB_PATH"
+            export PATH="/c/Program Files/LLVM/bin:$PATH"
+          fi
+          if ! command -v clang-cl >/dev/null 2>&1; then
+            echo "::error::clang-cl not found; the Windows wheels pin CC/CXX=clang-cl"
+            exit 1
+          fi
+          clang-cl --version
+
+      # `--container-network` selects the CI path over the offline one: it tells the driver to
+      # skip vendoring build requirements and staging the mesh helper's CGAL/Boost/OCCT, and let
+      # the manylinux container fetch them instead. No effect off Linux.
+      #
+      # The driver rather than cibuildwheel directly, so this workflow and a local run take the
+      # same path: `--only` and `--container-network` are the driver's, and anything it does on
+      # the way to a wheel happens here too. Invoking cibuildwheel straight would be a second
+      # way to build, free to drift from the one developers use.
+      - name: Build
+        shell: bash
+        run: |
+          python tools/build_wheels.py \
+            --output wheelhouse \
+            --only "${{ matrix.dist }}" \
+            --container-network
+
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: wheel-${{ matrix.os }}-${{ matrix.dist }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  pure:
+    name: pure (py3-none-any)
+    needs: plan
+    if: needs.plan.outputs.run_pure == 'true'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install the driver's tools
+        shell: bash
+        run: python -m pip install --upgrade pip build
+
+      # Platform-independent, so one job builds them and all three verify jobs consume them.
+      - name: Build
+        shell: bash
+        run: |
+          python tools/build_wheels.py \
+            --output wheelhouse \
+            --only superdex_lab \
+            --only superdex_meta
+
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: wheel-pure
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  # Every wheel the run produced, flat, in one artifact, so `pip install --find-links` can be
+  # pointed straight at it. The per-job artifacts stay: `verify` consumes them one platform at a
+  # time, and they are what you want when a single leg is red.
+  #
+  # `always()` and no completeness gate. This collects what exists rather than asserting a full
+  # set, because a failed Windows leg should not stop anyone collecting the Linux and macOS
+  # wheels. A partial wheelhouse is the normal case during bring-up.
+  #
+  # The artifact name must not match `wheel-*`. That glob is how a caller merges the per-job
+  # artifacts by hand, and a bundle caught by it would be downloaded alongside the very
+  # artifacts it already contains, so every wheel would arrive twice.
+  bundle:
+    needs: [native, pure]
+    if: always()
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - name: Collect every wheel the run produced
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: wheel-*
+          merge-multiple: true
+          path: wheelhouse
+
+      # `if-no-files-found: error` so a run that built nothing says so. The alternative is an
+      # empty artifact that only looks like a wheelhouse once it has been downloaded.
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: wheelhouse
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  verify:
+    name: verify · ${{ matrix.os }}
+    needs: [plan, native, pure]
+    # `always()` because the default is to skip a dependent job when any leg of a dependency
+    # fails, and each verify leg only consumes its own platform's wheels -- a red Windows build
+    # has no bearing on whether the macOS set checks out. Each leg proves its own inputs arrived
+    # in the guard step below rather than trusting the matrix result.
+    if: >-
+      always()
+      && needs.plan.outputs.run_verify == 'true'
+      && needs.pure.result == 'success'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-26, windows-2022]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # `check_wheels.py` prints `auditwheel show` for each native wheel, and silently skips it
+      # when auditwheel is absent -- which it was on every run before this, so the linkage report
+      # has never appeared. It is a Linux tool; elsewhere the install is harmless and the report
+      # stays skipped.
+      - name: Install the linkage reporter
+        if: runner.os == 'Linux'
+        shell: bash
+        run: python -m pip install --upgrade pip auditwheel
+
+      # The Windows counterpart, and a hard requirement rather than an advisory one:
+      # `check_wheels.py` shells out to `delvewheel needed` to read each binary's import table,
+      # and fails the run if it is absent rather than skipping the audit. That audit is the only
+      # thing standing between a missing Visual C++ runtime and a user's machine, because every
+      # runner has the redistributable installed and so cannot fail the way a clean install does.
+      - name: Install the Windows linkage auditor
+        if: runner.os == 'Windows'
+        shell: bash
+        run: python -m pip install --upgrade pip delvewheel
+
+      - name: Collect this platform's wheels
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: wheel-${{ matrix.os }}-*
+          merge-multiple: true
+          path: wheelhouse
+
+      - name: Add the pure wheels
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: wheel-pure
+          path: wheelhouse
+
+      # A pattern that matches nothing downloads nothing and leaves an empty directory, so say so
+      # here rather than letting the check below fail with something less obvious.
+      - name: Confirm the wheels arrived
+        shell: bash
+        run: |
+          count=$(find wheelhouse -name '*.whl' | wc -l)
+          echo "wheelhouse holds $count wheels"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::no wheels downloaded for ${{ matrix.os }}"
+            exit 1
+          fi
+
+      # The runtime layer installs the set into throwaway virtual environments and imports at
+      # both precisions, which is the point of running on the target platform.
+      - name: Check
+        shell: bash
+        run: python tools/check_wheels.py wheelhouse

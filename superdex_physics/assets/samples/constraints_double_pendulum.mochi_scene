@@ -1,0 +1,91 @@
+{
+  "actors": {
+    "rigid": [
+      {
+        "colliderType": "Box",
+        "density": 1000,
+        "layer": "Link",
+        "name": "Link1",
+        "scale": [
+          0.25,
+          0.025,
+          0.025
+        ],
+        "shape": "cube/cube_mesh.mochi.json",
+        "translation": [
+          0,
+          0.4875,
+          -0.0125
+        ]
+      },
+      {
+        "colliderType": "Box",
+        "density": 1000,
+        "layer": "Link",
+        "name": "Link2",
+        "scale": [
+          0.25,
+          0.025,
+          0.025
+        ],
+        "shape": "cube/cube_mesh.mochi.json",
+        "translation": [
+          0.25,
+          0.4875,
+          -0.0125
+        ]
+      }
+    ]
+  },
+  "constraints": {
+    "rigidPivotPosition": [
+      {
+        "actor": "Link1",
+        "localPosition": [
+          0,
+          0.0125,
+          0.0125
+        ],
+        "targetPosition": [
+          0,
+          0.5,
+          0
+        ],
+        "stiffness": 25000,
+        "damping": 3.5
+      }
+    ],
+    "rigidSphericalJoint": [
+      {
+        "actorA": "Link1",
+        "localPosA": [
+          0.25,
+          0.0125,
+          0.0125
+        ],
+        "actorB": "Link2",
+        "localPosB": [
+          0,
+          0.0125,
+          0.0125
+        ],
+        "stiffness": 25000,
+        "damping": 3.5
+      }
+    ]
+  },
+  "contactFilter": {
+    "layerContactSymmetric": [
+      {
+        "enable": false,
+        "layers": [
+          "Link",
+          "Link"
+        ]
+      }
+    ]
+  },
+  "scene": {
+    "description": "Double pendulum: Link1 pinned to a fixed world point via a rigid pivot-position constraint, Link2 hanging off Link1 via a rigid spherical joint. Released from horizontal."
+  }
+}

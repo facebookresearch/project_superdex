@@ -1,0 +1,17 @@
+material {
+    name : WireframeDepth,
+    shadingModel : unlit,
+    // Depth-only pre-pass for the wireframe: fills the surface depth buffer so the
+    // wireframe material can hide far-side edges behind nearer surfaces. The host
+    // disables color writes on the instance, so this only contributes depth.
+    culling : back,
+    depthCulling : true,
+    depthWrite : true
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = vec4(0.0);
+    }
+}

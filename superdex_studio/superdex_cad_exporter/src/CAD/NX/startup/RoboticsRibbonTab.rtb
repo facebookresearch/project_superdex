@@ -1,0 +1,57 @@
+TITLE  Robotics
+VERSION 170
+
+BEGIN_GROUP Robot Exporter
+
+BUTTON ROBOT_EXPORTER_MENU_CREATE_BUTTON
+LABEL New Robot Configuration
+MESSAGE Create a new Robot configuration separate from any existing ones.
+
+BUTTON ROBOT_EXPORTER_MENU_EDIT_BUTTON
+LABEL Edit and Export Robot Configuration
+MESSAGE Edit the selected Robot Configuration and go through the export process.
+
+BUTTON ROBOT_EXPORTER_MENU_LAUNCH_GUID_SANITIZER_BUTTON
+LABEL GUID Sanitizer
+MESSAGE Scans the current assembly or part for duplicate GUIDs for removal. GUIDs are used for retaining selections when using the Robot Exporter
+
+BEGIN_GALLERY ROBOT_EXPORTER_TOOLS_GALLERY
+GALLERY_STYLE SMALL_IMAGE_AND_TEXT
+LABEL Robot Exporter Tools
+CONTEXT_TITLE ROBOT_EXPORTER_TOOLS (ROBOT EXPORTER TOOLS)
+COLLAPSED TRUE
+COLUMN_IN_RIBBON 1
+COLUMN_IN_POPUP 1
+BITMAP ${UGII_USER_DIR}\application\icons\backup_128px.bmp
+
+    BEGIN_GALLERY ROBOT_EXPORTER_TOOLS_GALLERY_LIST
+    LABEL Robot Exporter Tools
+    CONTEXT_TITLE Robot Exporter Tools (ROBOT EXPORTER TOOLS LIST)
+    BITMAP ${UGII_USER_DIR}\application\icons\backup_128px.bmp
+
+        BUTTON ROBOT_EXPORTER_MENU_BACKUP_BUTTON
+        LABEL Back-up configuration
+        MESSAGE Exports selected configuration as an .xml and .json file for import into other models or safekeeping.
+
+        BUTTON ROBOT_EXPORTER_MENU_IMPORT_BUTTON
+        LABEL Import configuration
+        MESSAGE Imports backed-up configurations (.xml and .json) file into the current assembly. Note that this does not import .urdf files.
+
+        BUTTON ROBOT_EXPORTER_MENU_DUPLICATE_BUTTON
+        LABEL Duplicate configuration
+        MESSAGE Duplicates the currently selected configuration into a new one.
+
+        BUTTON ROBOT_EXPORTER_MENU_IMPORT_URDF_BUTTON
+        LABEL Import URDF
+        MESSAGE Imports a URDF file as a Robot Configuration and creates CSYS and Datum Axes for each link and joint. Also imports meshes (OBJ/STL).
+
+        BUTTON ROBOT_EXPORTER_MENU_LAUNCH_GUID_DEBUGGER_BUTTON
+        LABEL GUID Debugger
+        MESSAGE Inspect and clear GUID attributes on selected objects
+
+        BUTTON ROBOT_EXPORTER_MENU_LAUNCH_SUPERDEX_MESH_EXPORTER_BUTTON
+        LABEL SuperDex Mesh Exporter
+        MESSAGE Exports triangular meshes (via temporary STEP export), as an alternative to the standard available formats
+    END_GALLERY
+
+END_GALLERY

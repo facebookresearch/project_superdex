@@ -1,0 +1,22 @@
+material {
+    name : LitVertexColor,
+    shadingModel : lit,
+    // fade (not transparent): plain transparent applies alpha to diffuse only, leaving specular at
+    // full intensity, so a lit surface never fully disappears. fade applies alpha to diffuse AND
+    // specular, so the surface vanishes cleanly at alpha 0.
+    blending : fade,
+    transparency : twoPassesOneSide,
+    culling : back,
+    requires : [color]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        // fade/transparent blending assumes premultiplied alpha, so scale rgb by alpha.
+        vec4 vertexColor = getColor();
+        material.baseColor = vec4(vertexColor.rgb * vertexColor.a, vertexColor.a);
+        material.roughness = 0.6;
+        material.metallic = 0.0;
+    }
+}

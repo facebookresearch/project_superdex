@@ -1,0 +1,102 @@
+{
+  "actors": {
+    "articulated": [
+      {
+        "joints": [
+          {
+            "axis": [
+              1,
+              0,
+              0
+            ],
+            "friction": {
+              "viscous": 1
+            },
+            "limitDamping": 2500,
+            "limitStiffness": 1000,
+            "maxLimit": [
+              1,
+              0,
+              0
+            ],
+            "minLimit": [
+              -1,
+              0,
+              0
+            ],
+            "name": "Cart",
+            "type": "Prismatic"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              -1
+            ],
+            "friction": {
+              "viscous": 1
+            },
+            "limitDamping": 2500,
+            "limitStiffness": 1000,
+            "maxLimit": [
+              0,
+              0,
+              -1.5707963705062866
+            ],
+            "minLimit": [
+              0,
+              0,
+              1.5707963705062866
+            ],
+            "name": "Pole",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.20000000670552254,
+                0.10000000149011612,
+                0.10000000149011612
+              ]
+            },
+            "type": "Revolute"
+          }
+        ],
+        "links": [
+          {
+            "colliderType": "None",
+            "layer": "CartPoleBone",
+            "name": "Cart",
+            "shape": "benchmarks/cart_pole/mesh_000.mochi.h5"
+          },
+          {
+            "colliderType": "None",
+            "layer": "CartPoleBone",
+            "name": "Pole",
+            "parentJointFromLink": {
+              "translation": [
+                -0.04899999871850014,
+                0,
+                -0.04899999871850014
+              ]
+            },
+            "parentLink": 0,
+            "shape": "benchmarks/cart_pole/mesh_001.mochi.h5"
+          }
+        ],
+        "name": "CartPole"
+      }
+    ]
+  },
+  "contactFilter": {
+    "layerContactSymmetric": [
+      {
+        "enable": false,
+        "layers": [
+          "CartPoleBone",
+          "CartPoleBone"
+        ]
+      }
+    ]
+  },
+  "scene": {
+    "description": "Cart pole (inverted pendulum), replica of the Gymnasium example built with MuJoCo."
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "description": "Test-only: CartPole without gravity and with the pole joint limits removed. A degenerate setup that is not a trainable task, kept as a crash check for the non-default physics paths.",
+  "env_cfg": {
+    "use_damping": true,
+    "use_gravity": false,
+    "free_pole": true
+  }
+}

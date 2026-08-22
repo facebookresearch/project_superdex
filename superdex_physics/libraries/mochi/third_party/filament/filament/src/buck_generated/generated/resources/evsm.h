@@ -1,0 +1,18 @@
+#ifndef EVSM_H_
+#define EVSM_H_
+
+#include <stdint.h>
+
+extern "C" {
+    extern const uint8_t EVSM_PACKAGE[];
+}
+
+#define EVSM_GAUSSIAN_OFFSET 0
+#define EVSM_GAUSSIAN_SIZE 6370
+#define EVSM_GAUSSIAN_DATA (EVSM_PACKAGE + EVSM_GAUSSIAN_OFFSET)
+
+#define EVSM_VSMMIPMAP_OFFSET 6370
+#define EVSM_VSMMIPMAP_SIZE 5340
+#define EVSM_VSMMIPMAP_DATA (EVSM_PACKAGE + EVSM_VSMMIPMAP_OFFSET)
+
+#endif

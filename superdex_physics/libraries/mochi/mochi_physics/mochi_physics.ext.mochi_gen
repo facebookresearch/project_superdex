@@ -1,0 +1,16 @@
+// @brief Signature of a logging callback function.
+using LogFn = Function<void, LogChannel, char const*, char const*, int>;
+
+########################################################################################
+
+// @brief Default finite-difference epsilon used by back-propagation solvers.
+constant real kDefaultBackPropagationEpsFiniteDiff; # Fwd. declared because value depends on real precision.
+
+// @brief Identity transform (no rotation, no translation).
+constant TransformRT kTransformRTIdentity = {};
+
+// @brief Identity quaternion (no rotation).
+constant Quaternion kQuaternionIdentity = {};
+
+// @brief Default grid SDF construction parameters.
+constant GridSdfParams kGridSdfParamsDefault = {};

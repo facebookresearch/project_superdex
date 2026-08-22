@@ -1,0 +1,70 @@
+{
+  "base": "//torsos/openarm_v20/openarm_v20_torso.superdex_bot",
+  "modifications": [
+    {
+      "AttachBot": {
+        "enabled": true,
+        "joint": {
+          "name": "torso_to_left_arm",
+          "type": "Hard"
+        },
+        "name": "left_arm",
+        "parentLinkName": "openarm_left_base_link",
+        "path": "//arms/openarm_v20/left/openarm_v20_left_arm.superdex_bot",
+        "prefix": "arm_"
+      }
+    },
+    {
+      "AttachBot": {
+        "enabled": true,
+        "joint": {
+          "name": "arm_to_left_hand",
+          "parentLinkFromJoint": {
+            "translation": [
+              0,
+              0,
+              -0.059999998658895493
+            ]
+          },
+          "type": "Hard"
+        },
+        "name": "wuji_hand_left",
+        "parentLinkName": "arm_openarm_left_ee_base_link",
+        "path": "//hands/wuji_hand2_beta1/left/wuji_hand2_beta1_left.superdex_bot"
+      }
+    },
+    {
+      "AttachBot": {
+        "enabled": true,
+        "joint": {
+          "name": "torso_to_right_arm",
+          "type": "Hard"
+        },
+        "name": "right_arm",
+        "parentLinkName": "openarm_right_base_link",
+        "path": "//arms/openarm_v20/right/openarm_v20_right_arm.superdex_bot",
+        "prefix": "arm_"
+      }
+    },
+    {
+      "AttachBot": {
+        "enabled": true,
+        "joint": {
+          "name": "arm_to_right_hand",
+          "parentLinkFromJoint": {
+            "translation": [
+              0,
+              0,
+              -0.059999998658895493
+            ]
+          },
+          "type": "Hard"
+        },
+        "name": "wuji_hand_right",
+        "parentLinkName": "arm_openarm_right_ee_base_link",
+        "path": "//hands/wuji_hand2_beta1/right/wuji_hand2_beta1_right.superdex_bot"
+      }
+    }
+  ],
+  "name": "openarm_v20"
+}

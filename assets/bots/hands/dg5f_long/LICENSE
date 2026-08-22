@@ -1,0 +1,21 @@
+Tesollo 3D Asset License Agreement
+
+Copyright (c) 2026, Tesollo, Inc. All rights reserved.
+
+The 3D model assets (including but not limited to STEP, STL, OBJ files) of the Tesollo hand/gripper provided in this repository are the intellectual property of Tesollo, Inc.
+
+Permission is hereby granted to use, copy, and distribute these 3D assets strictly under the following conditions:
+
+1. Permitted Uses:
+- Software simulation, visualization, and rendering.
+- Academic or non-commercial research.
+- Integration into open-source robotics software frameworks.
+
+2. Prohibited Uses:
+- Any physical manufacturing, 3D printing, or reproduction of hardware based on these 3D assets.
+- Reverse engineering the physical design for commercial hardware production.
+
+3. Required Attribution:
+- Any public distribution, documentation, or demonstration (including websites and videos) using these assets must include the following attribution in a clearly visible location (e.g., README file, credits section, or website footer):
+
+"The 3D models of the Tesollo hand/gripper are provided by Tesollo, Inc. (https://tesollo.com) and are used with permission."

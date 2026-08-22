@@ -1,0 +1,19 @@
+{
+  "actors": {
+    "rigid": [
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 9.9999997473787516e-05,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "mass": 0.0068000000901520252,
+        "name": "Rigid1",
+        "renderModel": "./render/peg.glb",
+        "shape": "./collision/peg.mochi.h5"
+      }
+    ]
+  }
+}

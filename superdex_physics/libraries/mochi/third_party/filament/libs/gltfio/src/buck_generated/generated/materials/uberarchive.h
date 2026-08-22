@@ -1,0 +1,14 @@
+#ifndef UBERARCHIVE_H_
+#define UBERARCHIVE_H_
+
+#include <stdint.h>
+
+extern "C" {
+    extern const uint8_t UBERARCHIVE_PACKAGE[];
+}
+
+#define UBERARCHIVE_DEFAULT_OFFSET 0
+#define UBERARCHIVE_DEFAULT_SIZE 908911
+#define UBERARCHIVE_DEFAULT_DATA (UBERARCHIVE_PACKAGE + UBERARCHIVE_DEFAULT_OFFSET)
+
+#endif

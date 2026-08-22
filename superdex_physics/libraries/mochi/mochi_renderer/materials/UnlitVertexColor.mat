@@ -1,0 +1,14 @@
+material {
+    name : UnlitVertexColor,
+    shadingModel : unlit,
+    culling : none,
+    depthCulling : false,
+    requires : [color]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = getColor();
+    }
+}

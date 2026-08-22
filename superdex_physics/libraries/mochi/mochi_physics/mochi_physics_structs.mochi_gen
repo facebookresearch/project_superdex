@@ -1,0 +1,1659 @@
+// @brief Simulation solver configuration parameters.
+struct SolverParams [equality] {
+
+  // @brief Nonlinear solver settings.
+  NonLinearSolverParams nonLinearSolver;
+
+  // @brief Linear solver settings.
+  LinearSolverParams linearSolver;
+
+  // @brief Time integration method.
+  IntegrationMethod integrationMethod = Default;
+
+  // @brief [Experimental] Evaluation settings common to the full scene.
+  //
+  // @warning This is an experimental feature. It may be changed or removed in the future. Use at
+  // your own risk.
+  ExperimentalEvalParams experimentalEval;
+}
+
+// @brief Parameters controlling recentering behavior for soft actors (not soft-skinned).
+//
+// @details Recentering automatically updates the root transform as the actor's "rigid pivot"
+// (typically near the center of mass) moves, with corresponding adjustments to local-space
+// coordinates.
+//
+// @note When recentering is disabled, local-space displacement values can become very large if the
+// actor moves far from its starting position. This may be problematic due to finite-precision
+// arithmetic.
+// @note When recentering is enabled, the root transform rotates and translates to follow the actor,
+// and local-space displacements reflect only deformation, not global rotation or translation.
+//
+// @see Actor::GetRecenteringParams, Actor::SetRecenteringParams
+struct RecenteringParams {
+
+  // @brief Whether recentering is enabled.
+  bool useRecentering = true;
+
+  // @brief Minimum rotation threshold [degrees] to apply recentering.
+  //
+  // @note Recentering is applied if either rotation or translation change more than their respective
+  // thresholds.
+  real rotationEpsilonDeg [units(deg)] = 0;
+
+  // @brief Minimum translation threshold [m] to apply recentering.
+  //
+  // @note Recentering is applied if either rotation or translation change more than their respective
+  // thresholds.
+  real translationEpsilon [units(m)] = 0;
+}
+
+// @brief Parameters for subsampling boundary integrals such as contact.
+//
+// @details Subsampling reduces the number of boundary sample points used for contact and other
+// boundary integrals, which can improve performance at the cost of accuracy.
+struct BoundarySubsamplingParams [equality] {
+
+  // @brief Subsampling density in the range [0, 1].
+  //
+  // @note 0 means no sample points are used. 1 means all sample points are used.
+  real subsamplingDensity = 1;
+
+  // @brief Strategy for determining which sample points to use.
+  BoundarySubsamplingStrategy strategy = UniformProbability;
+}
+
+// @brief Information describing an articulated shape's kinematic structure.
+//
+// @details Provides read-only access to an articulated shape's links, joints, and hierarchy. This
+// information is immutable once the shape is created and defines the articulation's topology and
+// configuration limits.
+//
+// @note Number of joints = number of links + number of cycle joints.
+//
+// @see Actor::GetArticulatedShapeInfo, Context::GetArticulatedShapeInfo
+struct ArticulatedShapeInfo [no_capi] {
+
+  // @brief Rotation and translation of each link in rest configuration relative to the local
+  // reference system of the articulated shape. Size must equal the number of links.
+  Span<TransformRT const> rootFromLinksAtRest;
+
+  // @brief Name of each link.
+  Span<String const> linkNames;
+
+  // @brief Parent link indices defining a tree-like joint structure with no cycles. Size must equal
+  // the number of links.
+  //
+  // @note @code parent[i] < i @endcode (parent must come before child in the array).
+  // @note Use -1 for links with no parent.
+  Span<int const> parents;
+
+  // @brief Type of each joint. Size must be numLinks + numCycles.
+  //
+  // @see ArticulatedJointType
+  Span<ArticulatedJointType const> jointTypes;
+
+  // @brief Cycle joints creating closed kinematic loops in the articulated body.
+  //
+  // @note Empty if no cycles exist (i.e., the kinematic structure is purely tree-like).
+  // @note Cycle entries appear at indices [numLinks, numLinks + numCycles) of the per-joint arrays
+  // (@ref jointTypes, @ref jointAxes, @ref jointFromChildLink, @ref parentLinkFromJoint,
+  // @ref jointMinLimits, @ref jointMaxLimits, @ref jointNames).
+  //
+  // @see ArticulatedCycleJoint
+  Span<ArticulatedCycleJoint const> cycles;
+
+  // @brief Axis of each joint in the joint's local frame. Size must be numLinks + numCycles.
+  Span<Real3 const> jointAxes;
+
+  // @brief DoF information of each joint (offset within the full pose, number of translation
+  // DoFs, number of rotation DoFs). Size must be numLinks + numCycles.
+  Span<ArticulatedDofInfo const> dofInfo;
+
+  // @brief Transform from each joint's child link to the joint frame (rotation + translation).
+  // Size must be numLinks + numCycles.
+  //
+  // @details This is the transform from the child link to the joint.
+  // @ref ArticulatedLinkParams::parentJointFromLink for tree joints and
+  // @ref ArticulatedCycleJointParams::jointFromChildLink for cycle joints. The joint axis
+  // (@ref jointAxes) and joint motion are interpreted in this joint frame.
+  Span<TransformRT const> jointFromChildLink;
+
+  // @brief Joint frame of each joint expressed in its parent link's local frame (rotation +
+  // translation). Size must be numLinks + numCycles.
+  //
+  // @details This is the transform from the joint to the parent link, corresponding to
+  // @ref ArticulatedJointParams::parentLinkFromJoint.
+  Span<TransformRT const> parentLinkFromJoint;
+
+  // @brief Minimum joint limits for each joint DoF. Size must be numLinks + numCycles, or empty if
+  // no joint has limits.
+  //
+  // @details Limits are defined for either all joints or none. Joints without minimum limits are
+  // indicated by @ref jointMinLimits[i] = -mochi::kInf3. For 1D joints, limits are the scalar
+  // minimum limits multiplied by the joint axis. For 3D joints, each component defines the limit
+  // along one of the axes of the joint.
+  //
+  // @note The definition of joint limits for spherical joints may be complex, and it may be easier
+  // to model them as 3 co-located revolute joints.
+  // @note Size of @ref jointMinLimits and @ref jointMaxLimits must be the same.
+  Span<Real3 const> jointMinLimits;
+
+  // @brief Maximum joint limits for each joint DoF. Size must be numLinks + numCycles, or empty if
+  // no joint has limits.
+  //
+  // @details Limits are defined for either all joints or none. Joints without maximum limits are
+  // indicated by @ref jointMaxLimits[i] = mochi::kInf3. For 1D joints, limits are the scalar
+  // maximum limits multiplied by the joint axis. For 3D joints, each component defines the limit
+  // along one of the axes of the joint.
+  //
+  // @note The definition of joint limits for spherical joints may be complex, and it may be easier
+  // to model them as 3 co-located revolute joints.
+  // @note Size of @ref jointMinLimits and @ref jointMaxLimits must be the same.
+  Span<Real3 const> jointMaxLimits;
+
+  // @brief Name of each joint. Size must be numLinks + numCycles.
+  Span<String const> jointNames;
+}
+
+// @brief Information passed to per-step callbacks.
+//
+// @see Scene::RegisterPreStepCallback, Scene::RegisterPostStepCallback
+struct StepInfo {
+  // @brief Pointer to the @ref Scene being stepped.
+  Scene* scene;
+
+  // @brief Time step size [s] for this simulation step.
+  double timeStepSec [units(s)];
+}
+
+// @brief Parameters to create a rigid body actor.
+//
+// @details Rigid actors behave as rigid bodies with 6 degrees of freedom (3 translational, 3
+// rotational). They can be static (fixed in space) or dynamic (affected by forces and collisions).
+//
+// @note Also used to create links in articulated bodies.
+//
+// @see Scene::CreateRigidActor, ArticulatedActorParams
+struct RigidActorParams [equality] {
+
+  // @brief Optional actor name. Uniqueness of names is not enforced.
+  String name;
+
+  // @brief Contact layer name for filtering contacts between actors.
+  //
+  // @see Scene::EnableLayerContactAsymmetric, Scene::EnableLayerContactSymmetric,
+  // Scene::EnableActorContactAsymmetric, Scene::EnableActorContactSymmetric
+  String layer;
+
+  // @brief Shape handle defining the actor's geometry and other metadata.
+  //
+  // @note A shape can be shared by multiple actors, even actors in different scenes.
+  // @note Dynamic rigid actors require a shape with a surface mesh.
+  //
+  // @see ShapeHandle, Context::LoadShapeFromFile
+  ShapeHandle shape;
+
+  // @brief Initial rotation and translation of the actor's local frame with respect to world frame.
+  //
+  // @note The actor's center of mass may be located elsewhere, since it is not necessarily at the
+  // origin of the actor's local coordinate frame.
+  //
+  // @see centerOfMass
+  TransformRT worldFromLocal;
+
+  // @brief Collision detection geometry.
+  //
+  // @note Determines how OTHER actors detect contact with this actor. It does not affect how this
+  // actor detects contact with other actors.
+  //
+  // @see ColliderType
+  ColliderType colliderType = Auto;
+
+  // @brief If true, actor will be static (fixed in space). If false, actor will be dynamic.
+  bool isStatic = false;
+
+  // @brief Contact mechanics parameters.
+  //
+  // @see ContactParams
+  ContactParams contact;
+
+  // @brief Parameters used to construct a grid-based Signed Distance Field (SDF) if the shape
+  // doesn't already have one.
+  //
+  // @note Ignored if @ref colliderType is not @ref ColliderType::Sdf.
+  // @note Ignored if the shape already has a grid-based SDF.
+  GridSdfParams sdf;
+
+  // @brief If true, actor is affected by gravity.
+  //
+  // @see Scene::SetGravity
+  bool hasGravity = true;
+
+  // @brief Uniform density [kg/m³] of the actor. Must be positive if provided.
+  //
+  // @note Setting both density and mass is not recommended. If both are set, mass takes
+  // precedence and density is ignored.
+  // @note If only density is set, mass is computed automatically from volume.
+  // @note If neither is set, @ref kDefaultDensity is used.
+  //
+  // @see mass
+  Optional<real> density [units(kg/m^3)];
+
+  // @brief Total mass [kg] of the actor. Must be positive if provided.
+  //
+  // @note Setting both mass and density is not recommended. If both are set, mass takes
+  // precedence and density is ignored.
+  // @note If only mass is set, density is computed automatically from volume.
+  //
+  // @see density
+  Optional<real> mass [units(kg)];
+
+  // @brief Position [m] of the center of mass in the actor's local frame.
+  //
+  // @note If not set, computed automatically from geometry.
+  // @note Usually combined with explicit momentOfInertia.
+  //
+  // @see momentOfInertia
+  Optional<Real3> centerOfMass [units(m)];
+
+  // @brief Moment of inertia tensor [kg·m²] at the center of mass in the actor's local frame.
+  //
+  // @details Stored as [ixx, ixy, ixz, iyy, iyz, izz] using negative tensor notation:
+  //
+  // @code
+  //      [ixx, ixy, ixz]   [ +∫(y²+z²)dm,  -∫(xy)dm,    -∫(xz)dm    ]
+  //  I = [ixy, iyy, iyz] = [ -∫(xy)dm,     +∫(x²+z²)dm, -∫(yz)dm    ]
+  //      [ixz, iyz, izz]   [ -∫(xz)dm,     -∫(yz)dm,    +∫(x²+y²)dm ]
+  // @endcode
+  //
+  // @note Uses negative tensor notation consistent with e.g. robotics URDF files.
+  // @note Many CAD tools (e.g., Solidworks) use positive tensor notation requiring negation of
+  // off-diagonal terms. See https://www.mathworks.com/help/sm/ug/specify-custom-inertia.html.
+  // @note Must be finite. A finite but physically invalid tensor (negative principal moments
+  // or one violating the triangle inequality) is accepted with a warning, not rejected.
+  // @note If not set, computed automatically from geometry and density.
+  // @note Usually combined with explicit centerOfMass.
+  //
+  // @see centerOfMass
+  Optional<Real6> momentOfInertia [units(kg*m^2)];
+
+  // @brief Finite element type for boundary discretization.
+  //
+  // @note Affects accuracy and performance of contact and boundary integrals.
+  //
+  // @see ActorBoundaryElementType
+  ActorBoundaryElementType boundaryElementType = Default;
+
+  // @brief Optional subsampling for boundary integrals such as contact.
+  //
+  // @note Reduces computational cost by using fewer sample points.
+  // @note For best performance, combine subsampling with @ref boundaryElementType = @ref
+  // ActorBoundaryElementType::P1Q1.
+  //
+  // @see BoundarySubsamplingParams
+  Optional<BoundarySubsamplingParams> boundarySubsampling;
+
+  // @brief Optional initial linear velocity of the center of mass in world frame [m/s], zero
+  // otherwise.
+  //
+  // @note Not valid for static rigid actors or articulated links.
+  //
+  // @see Actor::GetLinearVelocity, Actor::SetVelocity
+  Optional<Real3> linearVelocity [units(m/s)];
+
+  // @brief Optional initial angular velocity in world frame [rad/s], zero otherwise.
+  //
+  // @note Not valid for static rigid actors or articulated links.
+  //
+  // @see Actor::GetAngularVelocity, Actor::SetVelocity
+  Optional<Real3> angularVelocity [units(rad/s)];
+}
+
+// @brief Parameters to create a soft deformable actor.
+//
+// @details Soft actors are volumetric deformable bodies simulated using the Finite Element Method
+// (FEM).
+//
+// @note Soft actors created via @ref Scene::CreateSoftActor act as colliding actors via their
+// own surface sample points but not as colliders. To create a soft actor with a collider,
+// use @ref experimental::CreateSoftActor with an explicit @ref
+// experimental::ExperimentalSoftActorParams::colliderType.
+//
+// @see Scene::CreateSoftActor, experimental::CreateSoftActor,
+// experimental::ExperimentalSoftActorParams
+struct SoftActorParams [equality] {
+
+  // @brief Optional actor name. Uniqueness of names is not enforced.
+  //
+  // @note When used in @ref SoftSkinnedActorParams::softParams, this is interpreted as a
+  // nested soft local name. See @ref SoftSkinnedActorParams::softParams for additional
+  // requirements and defaulting behavior.
+  String name;
+
+  // @brief Contact layer name for filtering contacts between actors.
+  //
+  // @see Scene::EnableLayerContactAsymmetric, Scene::EnableLayerContactSymmetric,
+  // Scene::EnableActorContactAsymmetric, Scene::EnableActorContactSymmetric
+  String layer;
+
+  // @brief Initial rotation and translation of the actor's local frame with respect to world frame.
+  //
+  // @note When this struct is used as an entry of @ref SoftSkinnedActorParams::softParams, this
+  // transform must be identity. The soft actor's shape must be defined directly in the reference
+  // frame of the articulated actor (see @ref SoftSkinnedActorParams::skeletonParams). The
+  // soft-skinned actor's placement in the scene world is provided by
+  // @ref ArticulatedActorParams::worldFromRoot in @ref SoftSkinnedActorParams::skeletonParams.
+  TransformRT worldFromLocal;
+
+  // @brief Shape handle defining the actor's geometry and other metadata.
+  //
+  // @note Must be a TetrahedralMeshShape for soft actors.
+  // @note A shape can be shared by multiple actors, even actors in different scenes.
+  //
+  // @see ShapeHandle, Context::LoadShapeFromFile
+  ShapeHandle shape;
+
+  // @brief Uniform material properties.
+  //
+  // @note If the shape contains per-element material data of the same @ref SoftMaterialType, the
+  // per-element values from the shape take precedence over and replace these uniform values.
+  // If the shape's per-element material type differs, these uniform values are used instead.
+  // @note The actor uses a single PSD strategy for all elements. By default it is the
+  // @ref material's PSD strategy. If the shape supplies per-element material data of a matching
+  // @ref SoftMaterialType whose @ref PerElementSoftMaterialData::psdStrategy is specified (i.e. not
+  // @ref MaterialPsdStrategy::MaterialDefault), that value takes precedence. If the @ref material's
+  // PSD strategy is also specified, the two must be equal.
+  // @note Non-uniform material properties can also be applied after the actor is created. See
+  // experimental::SetSoftMaterialParamsField.
+  //
+  // @see Actor::SetSoftMaterialParams, experimental::SetSoftMaterialParamsField
+  SoftMaterialParams material;
+
+  // @brief Contact mechanics parameters.
+  //
+  // @see ContactParams
+  ContactParams contact;
+
+  // @brief If true, actor is affected by gravity.
+  //
+  // @note Unless the soft actor is part of a soft-skinned actor (@ref
+  // SoftSkinnedActorParams::softParams), at least one of @ref hasGravity, @ref hasInertia or
+  // @ref hasStress must be enabled.
+  //
+  // @see Scene::SetGravity
+  bool hasGravity = true;
+
+  // @brief If true, actor is affected by inertial forces.
+  //
+  // @note Disable for quasi-static simulations.
+  // @note Unless the soft actor is part of a soft-skinned actor (@ref
+  // SoftSkinnedActorParams::softParams), at least one of @ref hasGravity, @ref hasInertia or
+  // @ref hasStress must be enabled.
+  bool hasInertia = true;
+
+  // @brief If true, actor is affected by internal stress/strain forces.
+  //
+  // @note Unless the soft actor is part of a soft-skinned actor (@ref
+  // SoftSkinnedActorParams::softParams), at least one of @ref hasGravity, @ref hasInertia or
+  // @ref hasStress must be enabled.
+  bool hasStress = true;
+
+  // @brief Finite element type for boundary discretization.
+  //
+  // @note Affects accuracy and performance of contact and boundary integrals.
+  //
+  // @see ActorBoundaryElementType
+  ActorBoundaryElementType boundaryElementType = Default;
+}
+
+// @brief Parameters describing a single joint within an articulated actor.
+//
+// @details Each joint connects a link to its parent in the kinematic tree. Joints are referenced
+// positionally — the i-th entry of @ref ArticulatedActorParams::joints corresponds to the
+// joint connecting the i-th link to its parent. Cycle-closing joints are declared separately via
+// @ref ArticulatedActorParams::cycles.
+//
+// @see ArticulatedActorParams, ArticulatedLinkParams, ArticulatedJointType
+struct ArticulatedJointParams [equality] {
+  // @brief Joint name. Must be unique among joints of the same articulated actor.
+  //
+  // @note If left empty, a unique default name (e.g., "joint_0", "joint_1", ...) is assigned
+  // automatically.
+  DynamicString name;
+
+  // @brief Joint type.
+  //
+  // @note Default @ref ArticulatedJointType::Invalid is a sentinel. The user must overwrite it.
+  // @note @ref ArticulatedJointType::Cycle is reserved for cycle-closing joints. Use @ref
+  // ArticulatedActorParams::cycles for cycle joints.
+  // @note Static links can be modeled using a @ref ArticulatedJointType::Hard joint whose parent is
+  // either -1 or another static link.
+  ArticulatedJointType type = Invalid;
+
+  // @brief Rotation and translation of the joint with respect to the parent link.
+  TransformRT parentLinkFromJoint;
+
+  // @brief Local axis of motion for the joint, in the joint's local frame.
+  //
+  // @note Only used for @ref ArticulatedJointType::Prismatic and @ref
+  // ArticulatedJointType::Revolute joints. Ignored (and reset to zero) for other joint types.
+  // @note For Prismatic/Revolute joints, must be non-zero and finite. The vector is automatically
+  // normalized to unit length on actor creation.
+  Real3 axis = {};
+
+  // @brief Joint friction parameters.
+  //
+  // @note Ignored for @ref ArticulatedJointType::Free and @ref ArticulatedJointType::Hard joints.
+  ArticulatedJointFrictionParams friction;
+
+  // @brief Joint inertia coefficient. Units are [kg] for translation DoFs and [kg·m²] for
+  // rotation DoFs.
+  //
+  // @note Default is zero joint inertia.
+  // @note Ignored for @ref ArticulatedJointType::Free and @ref ArticulatedJointType::Hard joints.
+  Optional<real> inertia;
+
+  // @brief Minimum joint limits for each DoF. Units are [m] for translation DoFs
+  // and [rad] for rotation DoFs.
+  //
+  // @details For 1D joints, limits must be defined by multiplying the scalar min
+  // limits by the joint axis. For 3D joints, each component must define the limit
+  // along one of the axes of the joint.
+  //
+  // @note The definition of joint limits for spherical joints may be complex, and
+  // it may be easier to model them as 3 co-located revolute joints.
+  Optional<Real3> minLimit;
+
+  // @brief Maximum joint limits for each DoF. Units are [m] for translation DoFs
+  // and [rad] for rotation DoFs.
+  //
+  // @details For 1D joints, limits must be defined by multiplying the scalar max
+  // limits by the joint axis. For 3D joints, each component must define the limit
+  // along one of the axes of the joint.
+  //
+  // @note The definition of joint limits for spherical joints may be complex, and
+  // it may be easier to model them as 3 co-located revolute joints.
+  Optional<Real3> maxLimit;
+
+  // @brief Stiffness coefficient [N/m or N·m/rad] for the joint limit constraints.
+  //
+  // @note Ignored for joints without limits.
+  real limitStiffness = 100;
+
+  // @brief Damping coefficient [N·s/m or N·m·s/rad] for the joint limit constraints.
+  //
+  // @note Ignored for joints without limits.
+  real limitDamping = 0;
+}
+
+// @brief Parameters describing a single rigid link within an articulated actor.
+//
+// @details Each link is a rigid body in the articulation's kinematic tree. Mirrors @ref
+// RigidActorParams for the per-link rigid-body properties (shape, mass, inertia, contact), and
+// adds tree-structure fields (@ref parentLink, @ref parentJointFromLink). Pose and velocity at
+// creation time come from the articulated body, not from per-link fields.
+//
+// @see ArticulatedActorParams, ArticulatedJointParams, RigidActorParams
+struct ArticulatedLinkParams [equality] {
+  // @brief Link local name.
+  //
+  // @note Must be unique among links of the same articulated actor. For soft-skinned actors, it
+  // must also not collide with nested soft actor local names.
+  // @note Must not contain forward slash, backslash, or embedded NUL characters, which are
+  // reserved for hierarchy paths or incompatible with actor path formatting.
+  // @note If left empty, a unique default name (e.g., "link_0", "link_1", ...) is assigned
+  // automatically.
+  // @note In the scene the corresponding actor is named "articulatedActorName/linkLocalName".
+  // If the articulated actor name is empty, link actors use
+  // "unnamed_articulation/linkLocalName".
+  DynamicString name;
+
+  // @brief Index of the parent link in @ref ArticulatedActorParams::links, or -1 for the root.
+  //
+  // @note Links must be listed in parent-first order: @code parentLink < i @endcode for the i-th
+  // link.
+  // @note The root link (index 0) must have @code parentLink == -1 @endcode.
+  int parentLink = -1;
+
+  // @brief Rotation and translation of the link with respect to the parent joint.
+  //
+  // @warning The rotation must be identity. Non-identity rotations are not supported yet.
+  TransformRT parentJointFromLink;
+
+  // @brief Shape handle defining the actor's geometry and other metadata.
+  //
+  // @note A shape can be shared by multiple actors, even actors in different scenes.
+  // @note Dynamic links require a shape with a surface mesh when link contact is enabled. An
+  // articulated actor enables link contact when no skin shape is provided. A soft-skinned actor
+  // enables link contact when @ref SoftSkinnedActorParams::enableCollidingLinks is true.
+  //
+  // @see ShapeHandle, Context::LoadShapeFromFile
+  ShapeHandle shape;
+
+  // @brief Contact layer name for filtering contacts between actors.
+  //
+  // @see Scene::EnableLayerContactAsymmetric, Scene::EnableLayerContactSymmetric,
+  // Scene::EnableActorContactAsymmetric, Scene::EnableActorContactSymmetric
+  DynamicString layer;
+
+  // @brief Collision detection geometry.
+  //
+  // @note Determines how OTHER actors detect contact with this actor. It does not affect
+  // how this actor detects contact with other actors.
+  ColliderType colliderType = Auto;
+
+  // @brief Contact mechanics parameters.
+  ContactParams contact;
+
+  // @brief If true, the link actor will be affected by gravity.
+  //
+  // @see Scene::SetGravity
+  bool hasGravity = true;
+
+  // @brief Uniform density [kg/m³] of the actor. Must be positive if provided.
+  //
+  // @note Specify either density or mass, but not both.
+  // @note If density is set, mass is computed automatically from volume (and vice versa).
+  // @note If neither is set, @ref kDefaultDensity is used.
+  //
+  // @see mass
+  Optional<real> density [units(kg/m^3)];
+
+  // @brief Total mass [kg] of the actor. Must be positive if provided.
+  //
+  // @note Specify either mass or density, but not both.
+  // @note If mass is set, density is computed automatically from volume (and vice versa).
+  //
+  // @see density
+  Optional<real> mass [units(kg)];
+
+  // @brief Position [m] of the center of mass in the link actor's local frame.
+  //
+  // @note If not set, computed automatically from geometry.
+  // @note Usually combined with explicit momentOfInertia.
+  //
+  // @see momentOfInertia
+  Optional<Real3> centerOfMass [units(m)];
+
+  // @brief Moment of inertia tensor [kg·m²] at the center of mass in the actor's local frame.
+  //
+  // @details Stored as [ixx, ixy, ixz, iyy, iyz, izz] using negative tensor notation:
+  //
+  // @code
+  //      [ixx, ixy, ixz]   [ +∫(y²+z²)dm,  -∫(xy)dm,    -∫(xz)dm    ]
+  //  I = [ixy, iyy, iyz] = [ -∫(xy)dm,     +∫(x²+z²)dm, -∫(yz)dm    ]
+  //      [ixz, iyz, izz]   [ -∫(xz)dm,     -∫(yz)dm,    +∫(x²+y²)dm ]
+  // @endcode
+  //
+  // @note Uses negative tensor notation consistent with e.g. robotics URDF files.
+  // @note Many CAD tools (e.g., Solidworks) use positive tensor notation requiring negation of
+  // off-diagonal terms. See https://www.mathworks.com/help/sm/ug/specify-custom-inertia.html.
+  // @note Must be finite. A finite but physically invalid tensor (negative principal moments
+  // or one violating the triangle inequality) is accepted with a warning, not rejected.
+  // @note If not set, computed automatically from geometry and density.
+  // @note Usually combined with explicit centerOfMass.
+  //
+  // @see centerOfMass
+  Optional<Real6> momentOfInertia [units(kg*m^2)];
+
+  // @brief Finite element type for boundary discretization.
+  //
+  // @note Affects accuracy and performance of contact and boundary integrals.
+  ActorBoundaryElementType boundaryElementType = Default;
+
+  // @brief Optional subsampling for boundary integrals such as contact.
+  //
+  // @note Reduces computational cost by using fewer sample points.
+  // @note For best performance, combine subsampling with @ref boundaryElementType = @ref
+  // ActorBoundaryElementType::P1Q1.
+  Optional<BoundarySubsamplingParams> boundarySubsampling;
+}
+
+// @brief Optional skinned mesh attached to an articulated actor for collision and rendering.
+//
+// @details The skin is a triangle mesh deformed by the underlying articulated links. It acts as
+// a colliding actor (its contact sample points are tested against other actors' collider geometry) but
+// not as a collider actor (other actors' contact sample points are not tested against it).
+//
+// @see ArticulatedActorParams::skin
+struct ArticulatedSkinParams [equality] {
+  // @brief Shape handle defining the skinned triangle mesh.
+  //
+  // @note A shape can be shared by multiple actors, even actors in different scenes.
+  //
+  // @see ShapeHandle, Context::LoadShapeFromFile
+  ShapeHandle shape;
+
+  // @brief Contact layer name for filtering contacts between actors.
+  //
+  // @see Scene::EnableLayerContactAsymmetric, Scene::EnableLayerContactSymmetric,
+  // Scene::EnableActorContactAsymmetric, Scene::EnableActorContactSymmetric
+  DynamicString layer;
+
+  // @brief Contact mechanics parameters.
+  ContactParams contact;
+
+  // @brief Finite element type for boundary discretization.
+  //
+  // @note Affects accuracy and performance of contact and boundary integrals.
+  ActorBoundaryElementType boundaryElementType = Default;
+
+  // @brief Optional subsampling for boundary integrals such as contact.
+  //
+  // @note Reduces computational cost by using fewer sample points.
+  // @note For best performance, combine subsampling with @ref boundaryElementType = @ref
+  // ActorBoundaryElementType::P1Q1.
+  Optional<BoundarySubsamplingParams> boundarySubsampling;
+}
+
+// @brief Parameters for a cycle-closing joint within an articulated actor.
+//
+// @details Cycle joints close loops in the kinematic chain, enabling topologies beyond simple
+// trees. Implemented as a soft spherical joint constraint (see @ref jointFromChildLink and @ref
+// stiffness).
+//
+// @see ArticulatedActorParams::cycles, ArticulatedCycleJoint
+struct ArticulatedCycleJointParams [equality] {
+  // @brief Parent link index.
+  int parentLink = -1;
+
+  // @brief Child link index.
+  int childLink = -1;
+
+  // @brief Position and rotation of the cycle joint constraint in the child link's local frame.
+  //
+  // @note A cycle joint is implemented using a spherical joint constraint. The @ref jointFromChildLink
+  // translation defines the pivot point, in the child link's local frame. Rotation is currently unused,
+  // but it could affect joint limits in the future.
+  TransformRT jointFromChildLink;
+
+  // @brief Stiffness [N/m] for the cycle joint constraint.
+  real stiffness = 50000;
+}
+
+// @brief Parameters to create an articulated actor.
+//
+// @details Articulated actors are composed of rigid links connected by joints, forming a
+// kinematic tree with optional cycle joints. Per-link properties are supplied via @ref links,
+// per-joint properties via @ref joints, and cycle-closing joints via @ref cycles. An optional
+// skinned surface mesh can be attached via @ref skin.
+// @details Contact is automatically disabled between links that are: (a) directly adjacent,
+// (b) reachable via hard joints, or (c) reachable via (dummy) shapeless links. To enable or
+// disable contact for specific pairs of links, see @ref Scene::EnableActorContactSymmetric.
+//
+// @see Scene::CreateArticulatedActor
+struct ArticulatedActorParams [equality] {
+  // @brief Name of the articulated actor.
+  //
+  // @note Uniqueness of names is not enforced.
+  // @note Link actor names have the form "articulatedActorName/linkLocalName", where
+  // `linkLocalName` is the link's local name. If the articulated actor name is empty,
+  // link actors use "unnamed_articulation" as the parent name.
+  DynamicString name;
+
+  // @brief Initial rotation and translation of the articulated actor's local frame with respect to
+  // world frame.
+  TransformRT worldFromRoot;
+
+  // @brief Optional cycle joints creating closed kinematic loops. Empty if no cycles exist.
+  DynamicArray<ArticulatedCycleJointParams> cycles;
+
+  // @brief Joint parameters (one per joint).
+  //
+  // @note Size must match @ref links.
+  DynamicArray<ArticulatedJointParams> joints;
+
+  // @brief Link actor parameters (one per link). Must contain at least one link.
+  //
+  // @note Size must match @ref joints.
+  // @note Links must be listed in parent-first order: the root link is at index 0 with
+  // `parentLink == -1`, and any other link's `parentLink` must be smaller than its own index.
+  DynamicArray<ArticulatedLinkParams> links;
+
+  // @brief Optional skinned mesh parameters.
+  Optional<ArticulatedSkinParams> skin;
+
+  // @brief Optional initial joint velocity per DoF [m/s or rad/s].
+  //
+  // @see Actor::GetArticulatedJointVelocities, Actor::SetArticulatedJointVelocities
+  Optional<DynamicArray<real>> jointVelocities;
+}
+
+// @brief Parameters to create soft-skinned actors with a shared articulated skeleton.
+//
+// @details Soft-skinned actors combine deformable soft bodies with an articulated skeleton,
+// allowing realistic tissue simulation that follows skeletal motion.
+//
+// @see Scene::CreateSoftSkinnedActor
+struct SoftSkinnedActorParams {
+
+  // @brief Parameters for the articulated skeleton.
+  //
+  // @note If a skin shape is provided, the skin mesh acts as the colliding surface,
+  // not the individual soft actor surfaces. The skin shape must include blending data to
+  // define how the skinned surfaces of the soft actors are blended with the overarching
+  // skin. Each soft actor must be linked to its corresponding blending data via its effective
+  // nested soft local name after default-name assignment.
+  //
+  // @see ArticulatedActorParams, ArticulatedSkinParams
+  ArticulatedActorParams skeletonParams;
+
+  // @brief Parameters for the soft deformable actors.
+  //
+  // @note If a skin shape is provided, the skin mesh acts as the colliding surface,
+  // not the individual soft actor surfaces.
+  // @note If a skin shape is provided, dynamic hyper-reduction is not allowed on the
+  // soft actors.
+  // @note If a @ref SoftActorParams entry has its hasInertia set to true, inertia is applied in
+  // the unposed configuration of that actor (prior to skinning) and this struct's hasInertia must
+  // be false.
+  // @note If a @ref SoftActorParams entry has its hasStress set to true, elasticity is applied in
+  // the unposed configuration of that actor (prior to skinning) and this struct's hasStress must
+  // be false.
+  // @note Each @ref SoftActorParams entry must have its hasGravity set to false (use this struct's
+  // hasGravity instead).
+  // @note Each soft actor must have some DoFs constrained. This can be implemented (a) by
+  // constraining nodes in the @ref SoftActorParams shape for FOM actors, or (b) by constraining the
+  // ROM subspace for ROM actors.
+  // @note Each soft actor must have at least one energy term enabled: either this struct's
+  // @ref hasGravity, @ref hasInertia or @ref hasStress (applied to every entry), or that entry's
+  // own @ref SoftActorParams::hasInertia or @ref SoftActorParams::hasStress.
+  // @note Each entry's @ref SoftActorParams::name is a nested soft local name. Explicit non-empty
+  // names must be unique across skeleton link local names and other nested soft local names, and
+  // must not contain forward slash, backslash, or embedded NUL characters.
+  // @note Empty names are assigned deterministically after reserving all skeleton link names and
+  // all explicit nested soft names: an empty entry at index `i` uses `soft_i` if available;
+  // otherwise it uses the first available `soft_N` found by scanning upward from `N = 0`.
+  // @note Each entry's @ref SoftActorParams::worldFromLocal must be identity. Each soft actor's
+  // shape must be defined directly in the reference frame of the articulated actor. The
+  // soft-skinned actor's placement in scene world is provided by
+  // @ref ArticulatedActorParams::worldFromRoot from @ref skeletonParams.
+  //
+  // @see hasGravity, hasInertia, hasStress
+  DynamicArray<SoftActorParams> softParams;
+
+  // @brief Optional local names of the rigid links where soft actors are attached.
+  //
+  // @note If empty, soft actor shapes must include skinning data.
+  // @note If provided, must be 1-to-1 with @ref softParams. Each entry must be non-empty
+  // and must match a skeleton link local name.
+  // @note Contact is automatically disabled between soft actors and their attachment links.
+  DynamicArray<String> softAttachLinks;
+
+  // @brief Enable internal skeleton links as colliding actors.
+  //
+  // @note If false, only the soft actors or the skin mesh act as colliding actors.
+  bool enableCollidingLinks = false;
+
+  // @brief Enable gravity evaluation of soft actors on posed/skinned positions.
+  //
+  // @note Each @ref SoftActorParams entry must have its hasGravity set to false.
+  //
+  // @see Scene::SetGravity
+  bool hasGravity = false;
+
+  // @brief Enable inertia evaluation of soft actors on posed/skinned positions.
+  //
+  // @note If true, each @ref SoftActorParams entry must have its hasInertia set to false.
+  // @note If true, inertia is applied in the posed (post-skinning) configuration. This is the
+  // physically correct behavior.
+  // @note If false, inertia is applied in the unposed configuration for each @ref
+  // SoftActorParams entry that has its hasInertia set to true. This is an approximation but
+  // may improve performance.
+  bool hasInertia = false;
+
+  // @brief Enable elasticity evaluation of soft actors on posed/skinned positions.
+  //
+  // @note If true, each @ref SoftActorParams entry must have its hasStress set to false.
+  // @note If true, stress forces are applied in the posed (post-skinning) configuration. This is the
+  // physically correct behavior.
+  // @note If false, stress forces are applied in the unposed configuration for each @ref
+  // SoftActorParams entry that has its hasStress set to true. This is an approximation but may
+  // improve performance.
+  bool hasStress = false;
+}
+
+// @brief Base constraint parameters.
+//
+// @details All constraint types inherit from this struct and add their specific parameters.
+// Constraints apply forces and torques using a spring-damper model. Without saturation, the
+// stiffness contribution is proportional to displacement or angular deviation, and the damping
+// contribution is proportional to the corresponding linear or angular velocity. Their respective
+// coefficients are @ref stiffness and @ref damping. @ref saturation limits only the stiffness
+// contribution.
+//
+// @note SuperDex Physics uses the International System of Units (SI) by default. Other units can be
+// used, but doing so requires overwriting all dimensional default parameters (material, contact,
+// constraints, solver, etc.) to ensure all units remain consistent.
+//
+// @see ConstraintType
+struct ConstraintParams [equality] {
+
+  // @brief Constraint stiffness coefficient. [N/m] for translation constraints, [N·m/rad] for
+  // rotation constraints. Must be non-negative and finite.
+  real stiffness = 1e6;
+
+  // @brief Constraint damping coefficient. [N·s/m] for translation constraints, [N·m·s/rad] for
+  // rotation constraints. Must be non-negative and finite.
+  real damping = 0;
+
+  // @brief Saturation distance [m] or angle [rad]. A negative value disables saturation. Must be
+  // finite and non-zero.
+  //
+  // @note When enabled, saturation smoothly limits the magnitude of the elastic (stiffness)
+  // contribution to @ref stiffness * @ref saturation. The damping contribution is separate and is
+  // not limited by saturation.
+  real saturation = -1;
+}
+
+// @brief Parameters for creating a spherical joint between two rigid actors.
+//
+// @see Scene::CreateRigidSphericalJointConstraint, ConstraintType::RigidSphericalJoint
+struct RigidSphericalJointConstraintParams(ConstraintParams) {
+
+  // @brief Joint position [m] for rigid actor A in actor A's local frame.
+  Real3 localPosA [units(m)];
+
+  // @brief Joint position [m] for rigid actor B in actor B's local frame.
+  Real3 localPosB [units(m)];
+
+  // @brief Actor handle identifying rigid actor A.
+  ActorHandle actorA;
+
+  // @brief Actor handle identifying rigid actor B.
+  ActorHandle actorB;
+}
+
+// @brief Parameters for creating a prismatic joint between two rigid actors.
+//
+// @note Constrains translation perpendicular to the free axis (and optionally limits translation
+// along it). Does not constrain rotation.
+// @note It must be complemented with @ref JointRotationTrackingConstraintParams to constrain the
+// rotation and implement a full prismatic joint.
+//
+// @see Scene::CreateRigidPrismaticJointConstraint, ConstraintType::RigidPrismaticJoint,
+// JointRotationTrackingConstraintParams
+struct RigidPrismaticJointConstraintParams(ConstraintParams) {
+
+  // @brief Axis of free translation, specified in the world frame at constraint creation time.
+  //
+  // @note The axis is captured at creation and thereafter rigidly attached to actor A: it rotates
+  // with actor A rather than remaining fixed in world space.
+  // @note Must be non-zero and finite.
+  // @note Its magnitude is ignored (normalized internally).
+  Real3 freeAxis;
+
+  // @brief Actor handle identifying rigid actor A.
+  ActorHandle actorA;
+
+  // @brief Actor handle identifying rigid actor B.
+  ActorHandle actorB;
+
+  // @brief Maximum translation [m] relative to rest position. Empty means unbounded.
+  Optional<real> max [units(m)];
+
+  // @brief Minimum translation [m] relative to rest position. Empty means unbounded.
+  Optional<real> min [units(m)];
+}
+
+// @brief Parameters for creating a constraint coupling a node in a deformable actor to a node in
+// another deformable actor.
+//
+// @see Scene::CreateDeformableNodeToDeformableNodeConstraint,
+// ConstraintType::DeformableNodeToDeformableNode
+struct DeformableNodeToDeformableNodeConstraintParams(ConstraintParams) {
+
+  // @brief Node index in deformable actor A's reference simulation mesh, as returned by @ref
+  // Actor::GetMesh. Ignored if @ref findClosest is true; otherwise it must identify a node in that
+  // mesh.
+  int nodeIndexA = -1;
+
+  // @brief Node index in deformable actor B's reference simulation mesh, as returned by @ref
+  // Actor::GetMesh. Ignored if @ref findClosest is true; otherwise it must identify a node in that
+  // mesh.
+  int nodeIndexB = -1;
+
+  // @brief Actor handle identifying deformable actor A.
+  ActorHandle actorA;
+
+  // @brief Actor handle identifying deformable actor B.
+  ActorHandle actorB;
+
+  // @brief Whether to automatically select a boundary node on each actor.
+  //
+  // @note When true, selection is based on proximity to the world-space midpoint of the actors'
+  // root-frame origins and occurs at constraint creation using their undeformed reference
+  // simulation meshes. @ref nodeIndexA and @ref nodeIndexB are ignored.
+  // @note When true, both actors must be soft actors (shell and rod actors are not supported).
+  bool findClosest = false;
+}
+
+// @brief Parameters for creating a tracking constraint on the relative rotation between a rigid
+// actor and a rod element.
+//
+// @details Forces the relative rotation between the rigid actor and a specified rod element to
+// track a target rotation. The target rotation is initialized to the relative rotation observed
+// at constraint creation time, and can be updated at runtime via @ref Constraint::SetTargetRotation.
+//
+// @see Scene::CreateRodElementRotationToRigidConstraint, ConstraintType::RodElementRotationToRigid,
+// Constraint::SetTargetRotation
+struct RodElementRotationToRigidConstraintParams(ConstraintParams) {
+
+  // @brief Joint reference-frame orientation in world coordinates at constraint creation,
+  // expressed as a rotation vector [rad].
+  //
+  // @note After creation, the frame remains fixed relative to the rigid actor.
+  Real3 refFrameRotVec [units(rad)];
+
+  // @brief Actor handle identifying rigid actor.
+  ActorHandle rigidActor;
+
+  // @brief Actor handle identifying rod actor.
+  ActorHandle rodActor;
+
+  // @brief Index of the element in the rod actor.
+  int elementIndex = 0;
+}
+
+// @brief Parameters for creating a constraint coupling a deformable node to a rigid actor.
+//
+// @see Scene::CreateDeformableNodeToRigidConstraint, ConstraintType::DeformableNodeToRigid
+struct DeformableNodeToRigidConstraintParams(ConstraintParams) {
+
+  // @brief Coupling position [m] in rigid actor's local frame.
+  //
+  // @note When @ref fixToDeformablePos is true, this field is ignored and the coupling position
+  // is auto-computed based on the deformable node's initial position in the rigid actor's frame.
+  // @note When @ref findClosest is also true, this field is still used as the search point that
+  // selects which deformable node is picked.
+  Real3 rigidLocalPos [units(m)];
+
+  // @brief Node index in the deformable actor's reference simulation mesh, as returned by @ref
+  // Actor::GetMesh. Ignored if @ref findClosest is true; otherwise it must identify a node in that
+  // mesh.
+  int deformableNodeIndex = -1;
+
+  // @brief Actor handle identifying the rigid actor.
+  ActorHandle rigidActor;
+
+  // @brief Actor handle identifying the deformable actor.
+  ActorHandle deformableActor;
+
+  // @brief Whether to automatically select a boundary node of the deformable actor.
+  //
+  // @note When true, selection is based on proximity to @ref rigidLocalPos transformed to world
+  // space by the rigid actor's transform at constraint creation. Selection uses the deformable
+  // actor's undeformed reference simulation mesh, and @ref deformableNodeIndex is ignored.
+  // @note When true, the deformable actor must be a soft actor (shell and rod actors are not
+  // supported).
+  bool findClosest = false;
+
+  // @brief When true, the coupling position on the rigid actor is auto-computed to match the
+  // deformable node's initial position (in the rigid actor's frame), so the constraint starts at
+  // zero deviation, and @ref rigidLocalPos is ignored.
+  //
+  // @note When @ref findClosest is also true, @ref rigidLocalPos is still used as the search point
+  // that selects which deformable node is picked.
+  bool fixToDeformablePos = true;
+}
+
+// @brief Parameters for creating a joint rotation range constraint between two rigid actors.
+//
+// @details Constrains the relative rotation between two rigid actors to remain within specified
+// bounds. The relative rotation is expressed in a joint reference frame (captured at constraint
+// creation time and rigidly attached to actor A thereafter), and each component of its
+// rotation-vector (axis-angle) representation is independently constrained to its [min, max]
+// range.
+//
+// @see Scene::CreateJointRotationRangeConstraint, ConstraintType::JointRotationRange
+struct JointRotationRangeConstraintParams(ConstraintParams) {
+
+  // @brief Joint reference frame specified as a rotation vector [rad] with respect to world frame.
+  Real3 refFrameRotVec [units(rad)];
+
+  // @brief Allowed range [min, max] [rad] for the X component of the relative rotation vector
+  // (axis-angle), expressed in the joint reference frame.
+  Real2 angleRangeX [units(rad)] = kMinus2PiPlus2Pi;
+
+  // @brief Allowed range [min, max] [rad] for the Y component of the relative rotation vector
+  // (axis-angle), expressed in the joint reference frame.
+  Real2 angleRangeY [units(rad)] = kMinus2PiPlus2Pi;
+
+  // @brief Allowed range [min, max] [rad] for the Z component of the relative rotation vector
+  // (axis-angle), expressed in the joint reference frame.
+  Real2 angleRangeZ [units(rad)] = kMinus2PiPlus2Pi;
+
+  // @brief Actor handle identifying rigid actor A.
+  ActorHandle actorA;
+
+  // @brief Actor handle identifying rigid actor B.
+  ActorHandle actorB;
+
+  // @brief When true, angle limits are relative to the actors' relative rotation at constraint
+  // creation time. When false, limits are absolute in the joint reference frame.
+  bool rangeAroundRest = true;
+}
+
+// @brief Parameters for creating a position constraint on a rigid actor's pivot point.
+//
+// @details Couples a point on a rigid actor (expressed in the actor's local coordinates and
+// referred to as "pivot") to a specific target position in world coordinates.
+//
+// @see Scene::CreateRigidPivotPositionConstraint, ConstraintType::RigidPivotPosition
+struct RigidPivotPositionConstraintParams(ConstraintParams) {
+
+  // @brief Target position in world frame [m].
+  Real3 targetPosition [units(m)];
+
+  // @brief Pivot point in rigid actor's local frame [m].
+  Real3 localPosition [units(m)];
+
+  // @brief Actor handle identifying the rigid actor.
+  ActorHandle actor;
+}
+
+// @brief Parameters for creating a constraint on a rigid actor's pivot point. The target is
+// expressed as the center-of-mass transform of the actor.
+//
+// @details Couples a point on a rigid actor (expressed in the actor's local coordinates and
+// referred to as "pivot") to the world position of the pivot under a target center-of-mass
+// transform.
+//
+// @see Scene::CreateRigidPivotToRigidTargetConstraint, ConstraintType::RigidPivotToRigidTarget
+struct RigidPivotToRigidTargetConstraintParams(ConstraintParams) {
+
+  // @brief Target center-of-mass transform.
+  TransformRT targetTransform;
+
+  // @brief Pivot point in rigid actor's local frame [m].
+  Real3 localPosition [units(m)];
+
+  // @brief Actor handle identifying the rigid actor.
+  ActorHandle actor;
+}
+
+// @brief Parameters for creating a rotation constraint on a rigid actor's pivot frame.
+//
+// @details Couples a frame on a rigid actor (expressed in the actor's local coordinates and
+// referred to as "pivot") to a specific target rotation in world coordinates.
+//
+// @see Scene::CreateRigidPivotRotationConstraint, ConstraintType::RigidPivotRotation
+struct RigidPivotRotationConstraintParams(ConstraintParams) {
+
+  // @brief Target rotation in world coordinates, as a rotation vector [rad].
+  Real3 targetRotation [units(rad)];
+
+  // @brief Pivot frame in rigid actor's local coordinates, as a rotation vector [rad].
+  Real3 localRotation [units(rad)];
+
+  // @brief Actor handle identifying the rigid actor.
+  ActorHandle actor;
+}
+
+// @brief Parameters for creating a position constraint on a deformable actor node.
+//
+// @see Scene::CreateDeformableNodePositionConstraint, ConstraintType::DeformableNodePosition
+struct DeformableNodePositionConstraintParams(ConstraintParams) [equality] {
+
+  // @brief Node index in the deformable actor's reference simulation mesh, as returned by @ref
+  // Actor::GetMesh. Must identify a node in that mesh.
+  int nodeIndex = -1;
+
+  // @brief Target position for the node in world frame [m].
+  Real3 position [units(m)];
+
+  // @brief Actor handle identifying the deformable actor.
+  ActorHandle actor;
+}
+
+// @brief Parameters for creating a joint rotation tracking constraint between two rigid actors.
+//
+// @details Forces the relative rotation between two rigid actors to track a target rotation. The
+// target rotation is initialized to the relative rotation observed at constraint creation time, and
+// can be updated at runtime via @ref Constraint::SetTargetRotation. The relative rotation vector is
+// expressed in a reference frame specified by @ref refFrameRotVec.
+//
+// @note Sometimes used in combination with @ref RigidPrismaticJointConstraintParams to fully
+// constrain rotation in a prismatic joint.
+//
+// @see Scene::CreateJointRotationTrackingConstraint, ConstraintType::JointRotationTracking,
+// RigidPrismaticJointConstraintParams, Constraint::SetTargetRotation
+struct JointRotationTrackingConstraintParams(ConstraintParams) {
+
+  // @brief Joint reference-frame orientation in world coordinates at constraint creation,
+  // expressed as a rotation vector [rad].
+  //
+  // @note After creation, the frame remains fixed relative to actor A.
+  Real3 refFrameRotVec [units(rad)];
+
+  // @brief Actor handle identifying rigid actor A.
+  ActorHandle actorA;
+
+  // @brief Actor handle identifying rigid actor B.
+  ActorHandle actorB;
+}
+
+// @brief Parameters for creating a target constraint on a single articulated DoF.
+//
+// @details Forces the specified degree of freedom in a joint of an articulated actor to track a
+// given target value. This drives the joint toward a desired configuration.
+//
+// @note It applies only to translation DoFs (free or prismatic joints) or single-DoF rotation
+// joints (revolute). For 3D rotation joints (spherical or free), use instead @ref
+// Articulated3dRotationTargetConstraintParams.
+//
+// @see Scene::CreateArticulatedSingleDofTargetConstraint,
+// ConstraintType::ArticulatedSingleDofTarget
+struct ArticulatedSingleDofTargetConstraintParams(ConstraintParams) {
+
+  // @brief Actor handle identifying the articulated actor.
+  ActorHandle actor;
+
+  // @brief Index of the joint in the articulated actor.
+  int jointIndex = 0;
+
+  // @brief DoF index within the joint (0-based). Translation DoFs come first, then rotation DoFs.
+  // For free joints, only translation indices are accepted (use @ref
+  // Articulated3dRotationTargetConstraintParams to target the 3D rotation).
+  int dofIndex = 0;
+
+  // @brief Target value for the joint DoF. Units are [m] for translation DoFs, [rad] for
+  // rotation DoFs.
+  real targetValue = 0;
+}
+
+// @brief Parameters for creating a target constraint on 3D rotation DoFs of an articulated actor.
+//
+// @details Forces the rotation degrees of freedom of a spherical or free joint in an articulated
+// actor to track a given target orientation. This drives the joint toward a desired rotational
+// configuration.
+//
+// @note Applies only to joints with 3D rotation DoFs (spherical joints, or the rotational part of
+// free joints).
+//
+// @see Scene::CreateArticulated3dRotationTargetConstraint,
+// ConstraintType::Articulated3dRotationTarget
+struct Articulated3dRotationTargetConstraintParams(ConstraintParams) {
+
+  // @brief Actor handle identifying the articulated actor.
+  ActorHandle actor;
+
+  // @brief Index of the joint in the articulated actor.
+  int jointIndex = 0;
+
+  // @brief Target rotation relative to the joint's rest orientation, expressed in the joint's local
+  // frame as a quaternion [x, y, z, w]. The identity quaternion corresponds to the rest orientation.
+  //
+  // @note Must be finite and non-zero. Normalized before use.
+  Quaternion target;
+}
+
+// @brief Parameters for creating a range constraint on a single articulated DoF.
+//
+// @details Limits a degree of freedom of a joint in an articulated actor to remain within specified
+// [min, max] bounds. This prevents the joint from exceeding its mechanical limits.
+//
+// @note It applies only to translation DoFs (free or prismatic joints) or single-DoF rotation
+// joints (revolute). For 3D rotation joints (spherical or free), use instead @ref
+// Articulated3dRotationRangeConstraintParams.
+//
+// @see Scene::CreateArticulatedSingleDofRangeConstraint, ConstraintType::ArticulatedSingleDofRange
+struct ArticulatedSingleDofRangeConstraintParams(ConstraintParams) {
+
+  // @brief Actor handle identifying the articulated actor.
+  ActorHandle actor;
+
+  // @brief Index of the joint in the articulated actor.
+  int jointIndex = 0;
+
+  // @brief DoF index within the joint (0-based). Translation DoFs come first, then rotation DoFs.
+  // For free joints, only translation indices are accepted (use @ref
+  // Articulated3dRotationRangeConstraintParams to constrain the 3D rotation).
+  int dofIndex = 0;
+
+  // @brief Minimum value for the DoF. [m] for translation DoFs, [rad] for rotation DoFs.
+  real minValue = 0;
+
+  // @brief Maximum value for the DoF. [m] for translation DoFs, [rad] for rotation DoFs.
+  real maxValue = 0;
+}
+
+// @brief Parameters for creating a range constraint on a 3D-rotation articulated joint.
+//
+// @details Constrains each component of a spherical or free joint's local rotation vector
+// (rotation axis multiplied by rotation angle) to its corresponding [min, max] range. Use this
+// constraint to model the joint's mechanical rotation limits.
+//
+// @see Scene::CreateArticulated3dRotationRangeConstraint,
+// ConstraintType::Articulated3dRotationRange
+struct Articulated3dRotationRangeConstraintParams(ConstraintParams) {
+
+  // @brief Actor handle identifying the articulated actor.
+  ActorHandle actor;
+
+  // @brief Index of the joint in the articulated actor.
+  int jointIndex = 0;
+
+  // @brief Minimum allowed value [rad] for each component of the joint-local rotation vector.
+  Real3 minValues [units(rad)];
+
+  // @brief Maximum allowed value [rad] for each component of the joint-local rotation vector.
+  Real3 maxValues [units(rad)];
+}
+
+// @brief Information about a contact point between two actors.
+//
+// @details Describes a single contact or near-contact point between two actors. Contains geometric
+// information (positions, normal, distance), kinematic data (velocities), and dynamic data (force).
+// Also includes finite element discretization information for accurate force interpolation.
+//
+// @note Available via @ref Actor::GetContactPointsWorld after registering @ref
+// QueryType::ContactPoints.
+//
+// @see QueryType::ContactPoints, Actor::RegisterQuery, Actor::GetContactPointsWorld
+struct ContactPoint {
+
+  // @brief Handle of the colliding actor.
+  //
+  // @note When calling @ref Actor::GetContactPointsWorld, the actor being queried may be reported
+  // as either @ref actorA or @ref actorB in this struct, depending on the direction of the contact
+  // test.
+  // @note May be the same as @ref actorB in the case of self-contact.
+  ActorHandle actorA;
+
+  // @brief Handle of the collider actor.
+  //
+  // @note When calling @ref Actor::GetContactPointsWorld, the actor being queried may be reported
+  // as either @ref actorA or @ref actorB in this struct, depending on the direction of the contact
+  // test.
+  // @note May be the same as @ref actorA in the case of self-contact.
+  ActorHandle actorB;
+
+  // @brief Signed separation distance [m] between @ref posA (on @ref actorA) and the closest point
+  // on the surface of @ref actorB. Negative if the point is inside (i.e. actors overlap).
+  real distance [units(m)];
+
+  // @brief Contact position [m] on @ref actorA in world frame.
+  Real3 posA [units(m)];
+
+  // @brief Approximate contact position [m] on @ref actorB in world frame.
+  //
+  // @note Equivalent to (posA - normal * distance).
+  Real3 posB [units(m)];
+
+  // @brief Contact normal in world frame pointing away from @ref actorB. Unit length.
+  Real3 normal;
+
+  // @brief Contact force [N] applied to @ref actorA from @ref actorB in world frame.
+  Real3 force [units(N)];
+
+  // @brief Velocity [m/s] of the contact point on @ref actorA in world frame.
+  Real3 pointVelocityA [units(m/s)];
+
+  // @brief Velocity [m/s] of the contact point on @ref actorB in world frame.
+  Real3 pointVelocityB [units(m/s)];
+
+  // @brief Sample point index of @ref actorA.
+  int sampleIndex;
+
+  // @brief Quadrature integration weight of the sample point on the colliding
+  // manifold of @ref actorA.
+  //
+  // @note Units depend on the dimensionality of the colliding manifold of
+  // @ref actorA: [m²] for surface contact (e.g., rigid, articulated, soft, shell,
+  // and rod actors with visual-mesh contact enabled), or [m] for rod actors using
+  // centerline contact.
+  // @note For surface contact, represents the surface area corresponding to the
+  // sample point. For rod centerline contact, represents the arc length.
+  // @note Useful for contact area/length estimation and other post-processing.
+  // @note @ref force is already weighted by this value.
+  real intWeight;
+
+  // @brief Element index on the surface mesh of @ref actorA.
+  //
+  // @note For rod actors, this field is not populated and is reported as 0. Use @ref sampleIndex
+  // to identify the contact location.
+  int elementIndex = -1;
+
+  // @brief Parametric coordinates within the surface element of @ref actorA.
+  //
+  // @note Corresponds to finite-element basis function values at the contact sample quadrature
+  // point.
+  // @note For linear finite elements, these match barycentric coordinates.
+  // @note Allows interpolation of functions defined on triangle vertices.
+  // @note For rod actors, this field is not populated and is reported as {0, 0, 0}. Use @ref
+  // sampleIndex to identify the contact location.
+  Real3 parametricCoords;
+}
+
+// @brief Contact force applied to a specific node.
+//
+// @note Available via @ref Actor::GetNodeContactForcesWorld after registering @ref
+// QueryType::NodeContactForces.
+//
+// @see QueryType::NodeContactForces, Actor::RegisterQuery, Actor::GetNodeContactForcesWorld
+struct NodeContactForce {
+
+  // @brief Node index in the volumetric mesh (for actors with a volumetric mesh) or surface mesh
+  // (for actors without a volumetric mesh).
+  int index;
+
+  // @brief Contact force [N] applied to the node.
+  Real3 force [units(N)];
+}
+
+// @brief SDF distance information for active contact sample points.
+//
+// @details Stores signed distance field (SDF) values and gradients for contact sample points.
+// Negative distances indicate penetration into the surface.
+//
+// @note Available via @ref Actor::GetSdfDistances after registering @ref QueryType::SdfDistances.
+//
+// @see QueryType::SdfDistances, Actor::RegisterQuery, Actor::GetSdfDistances
+struct SdfDistances {
+
+  // @brief Indices into the actor's contact sample points array.
+  Span<int const> sampleIndices;
+
+  // @brief Sample positions [m] in world frame.
+  Span<Real3 const> worldPositions [units(m)];
+
+  // @brief Signed distances [m] to the closest surface.
+  //
+  // @note Negative values indicate penetration inside the surface.
+  Span<real const> distances [units(m)];
+
+  // @brief SDF gradients at sample positions, in world frame.
+  Span<Real3 const> distanceGrads;
+
+  // @brief Maximum distance [m] at which SDF evaluation was performed.
+  //
+  // @note Non-zero only if the actor has far SDF evaluation enabled.
+  real maxSdfFarDistanceEvaluation [units(m)];
+}
+
+// @brief Parameters controlling the stepping behavior of an @ref AsyncScene.
+//
+// @details Configures how an @ref AsyncScene determines the time step size. There are three modes
+// for determining the time step size, evaluated in the following priority order:
+//
+// 1. If @ref timeStepCallback is set and returns a non-negative value, use the callback value.
+// 2. Else if @ref useFixedTimeStep is true, use @ref fixedTimeStepSeconds.
+// 3. Else, use elapsed real time since the last step (dynamic mode).
+//
+// @see AsyncScene::GetAsyncStepParams, AsyncScene::SetAsyncStepParams
+struct AsyncStepParams [no_capi, no_python] {
+
+  // @brief Use fixed time step if true, dynamic (real-time) time step if false.
+  //
+  // @note "Dynamic" means the time step equals elapsed wall-clock time since the last step.
+  // @note Ignored if @ref timeStepCallback is set and returns a non-negative value.
+  //
+  // @see AsyncStepParams::fixedTimeStepSeconds, AsyncStepParams::timeStepCallback
+  bool useFixedTimeStep = false;
+
+  // @brief Fixed time step size [s].
+  //
+  // @note Must be finite and non-negative.
+  // @note Used when @ref useFixedTimeStep is true and @ref timeStepCallback is not set or returns
+  // a negative value.
+  // @note Also used by @ref AsyncScene::RequestStepThenPause when @ref timeStepCallback is not set or
+  // returns a negative value, even if dynamic-time-step mode is configured.
+  //
+  // @see AsyncScene::RequestStepThenPause, AsyncStepParams::useFixedTimeStep,
+  // AsyncStepParams::timeStepCallback
+  double fixedTimeStepSeconds [units(s)] = 0.01;
+
+  // @brief Minimum time step size [s] in dynamic mode.
+  //
+  // @note Dynamic mode is only used when @ref useFixedTimeStep is false and @ref timeStepCallback either
+  // is not set or returns a negative value.
+  // @note Must be finite. Negative values are clamped to zero. Values greater than @ref
+  // dynamicTimeStepMaxSeconds are clamped down to that maximum.
+  double dynamicTimeStepMinSeconds [units(s)] = 0.001;
+
+  // @brief Maximum time step size [s] in dynamic mode.
+  //
+  // @note Dynamic mode is only used when @ref useFixedTimeStep is false and @ref timeStepCallback either
+  // is not set or returns a negative value.
+  // @note Must be finite. Negative values are clamped to zero.
+  double dynamicTimeStepMaxSeconds [units(s)] = 0.01;
+
+  // @brief Optional callback to provide custom time step size [s].
+  //
+  // @note Called on the simulation thread before each step.
+  // @note If set and it returns a non-negative value, overrides both fixed and dynamic modes.
+  // @note If it returns a negative value, the async scene falls back to the configured fixed or
+  // dynamic time-step behavior.
+  //
+  // @see AsyncStepParams::fixedTimeStepSeconds, AsyncStepParams::useFixedTimeStep
+  Function<double> timeStepCallback [no_reflection];
+}
+
+// @brief Timing and profiling metrics from the last simulation step.
+//
+// @see Scene::GetPerformanceStats
+struct PerformanceStats [equality] {
+
+  // @brief Total wall-clock time [s] spent in the last call to @ref Scene::Step.
+  //
+  // @note Includes time spent in user-defined pre-step and post-step callbacks.
+  double totalStepDurationSec [units(s)];
+
+  // @brief Wall-clock time [s] spent solving physics in the last call to @ref Scene::Step.
+  //
+  // @note Does not include time spent in user-defined pre-step and post-step callbacks.
+  double solveStepDurationSec [units(s)];
+
+  // @brief Wall-clock time [s] spent executing user-defined pre-step callbacks in the last call to
+  // @ref Scene::Step.
+  double preStepCallbacksDurationSec [units(s)];
+
+  // @brief Wall-clock time [s] spent executing user-defined post-step callbacks in the last call to
+  // @ref Scene::Step.
+  double postStepCallbacksDurationSec [units(s)];
+
+  // @brief Wall-clock time [s] spent on recording in the last call to @ref Scene::Step.
+  double recordingStepDurationSec [units(s)];
+}
+
+// @brief Solver convergence metrics from the last simulation step.
+//
+// @see Scene::GetSolverStats
+struct SolverStats [equality] {
+
+  // @brief Maximum number of non-linear solver iterations across all islands and integration stages
+  // in the last call to @ref Scene::Step.
+  int maxNonLinearIters;
+
+  // @brief Aggregate residual norm across all islands and integration stages in the last call to
+  // @ref Scene::Step. Computed as the root mean square across integration stages of the L2 norm
+  // of per-island residual norms.
+  double residualNorm;
+
+  // @brief Maximum number of line-search iterations per Newton solve across all islands and
+  // integration stages in the last call to @ref Scene::Step.
+  int maxLineSearchIters;
+
+  // @brief Aggregate convergence status of the scene in the last call to @ref Scene::Step.
+  //
+  // @details Returns the worst convergence status across all dynamic actors:
+  // @ref ConvergenceStatus::Diverged if any actor diverged,
+  // @ref ConvergenceStatus::Stopped if any actor's solver was stopped,
+  // @ref ConvergenceStatus::Converged if all dynamic actors converged,
+  // @ref ConvergenceStatus::None if no dynamic actors exist, @ref Scene::Step has not been called yet or
+  // the last call to @ref Scene::Step was with zero time step.
+  //
+  // @see ConvergenceStatus, Actor::GetConvergenceStatus
+  ConvergenceStatus convergenceStatus;
+}
+
+// @brief Parameters controlling what data gets included in a scene recording.
+//
+// @warning The recording system may undergo a substantial refactor to expand its capabilities.
+// Its API and recorded file format may change in future releases.
+//
+// @see Scene::StartRecording, Scene::StopRecording
+struct RecordingParams {
+  # Per-Actor Information
+  // @brief Include the meshes (if any) when recording actor creation events.
+  bool recordActorMeshes = true;
+
+  // @brief Include the local-to-global map (if any) when recording actor creation events.
+  bool recordActorLocalToGlobalMap = false;
+
+  // @brief Include the mass matrix (if any) when recording actor creation events.
+  bool recordActorMassMatrix = false;
+
+  # Per-Step Information
+  // @brief Record articulated pose controller targets and tracking parameters every step.
+  bool recordTargetState = true;
+
+  // @brief Record the state of dynamic actors every step.
+  //
+  // @details This includes position, rotation, and velocity. For soft actors, it includes the node
+  // displacements and velocities.
+  bool recordDynamicActorState = true;
+
+  // @brief Record the state of static actors every step. This includes position and rotation.
+  bool recordStaticActorState = false;
+
+  // @brief Record results from @ref QueryType::ContactPoints for each dynamic actor every step.
+  bool recordContactPoints = false;
+
+  // @brief Record results for @ref QueryType::NodeContactForces for each soft actor every step.
+  bool recordNodeContactForces = false;
+
+  // @brief Record SDF distances for @ref QueryType::SdfDistances for each dynamic actor every step.
+  bool recordSdfDistances = false;
+
+  # Utils
+  // @brief Return @ref RecordingParams with all boolean options set to the given value.
+  //
+  // @param[in] enabled True to enable all options (maximum data), false to disable (minimum data).
+  //
+  // @return The initialized @ref RecordingParams.
+  fn All(bool enabled = true) -> RecordingParams [static];
+}
+
+// @brief Parameters for pose controller tracking constraints.
+//
+// @details Defines spring-damper parameters for individual pose tracking constraints in an
+// articulated actor's pose controller. Each constraint acts on a joint rotation, link translation,
+// or link rotation.
+//
+// @see Actor::GetArticulatedPoseControllerParams, Actor::SetArticulatedPoseControllerParams,
+// PoseControllerParams
+struct PoseTrackingParams [equality] {
+
+  // @brief Constraint stiffness.
+  //
+  // @note Units depend on the DoF kind: [N/m] for translation DoFs, [N·m/rad] for
+  // rotation DoFs.
+  // @note Must be non-negative and finite.
+  real stiffness = 0;
+
+  // @brief Constraint damping.
+  //
+  // @note Units depend on the DoF kind: [N·s/m] for translation DoFs, [N·m·s/rad] for
+  // rotation DoFs.
+  // @note Must be non-negative and finite.
+  real damping = 0;
+
+  // @brief Saturation distance [m] or angle [rad]. A negative value disables saturation.
+  //
+  // @note When enabled, saturation smoothly limits the magnitude of the elastic (stiffness)
+  // contribution to @ref stiffness * @ref saturation. The damping contribution is separate and is
+  // not limited by saturation.
+  // @note Must be finite and non-zero.
+  real saturation = -1;
+}
+
+// @brief Parameters to create a pose controller for an articulated actor.
+//
+// @note Each tracking array must be empty, have size 1, or have size equal to the number of
+// links. Empty arrays use zero-gain defaults. Size-1 arrays are broadcast to all applicable
+// constraints. Full-size arrays are indexed by link.
+// @note Empty controllers are allowed. Constraints are created even when stiffness and damping
+// are both zero, and can be accessed/updated via @ref Actor::GetArticulatedPoseConstraints,
+// @ref Actor::GetArticulatedPoseControllerParams and @ref Actor::SetArticulatedPoseControllerParams.
+// @note Control of cycle joints is not supported.
+//
+// @see Actor::AddArticulatedPoseController, PoseTrackingParams
+struct PoseControllerParams {
+
+  // @brief Construct with all tracking arrays pre-sized to numLinks default-constructed
+  // PoseTrackingParams (zero gains).
+  //
+  // @param[in] numLinks Number of links the controller will track.
+  ctor PoseControllerParams(int numLinks) [overloaded];
+
+  // @brief Tracking parameters for link position constraints.
+  DynamicArray<PoseTrackingParams> linkPosTracking;
+
+  // @brief Tracking parameters for link rotation constraints.
+  DynamicArray<PoseTrackingParams> linkRotTracking;
+
+  // @brief Tracking parameters for joint constraints.
+  DynamicArray<PoseTrackingParams> jointTracking;
+}
+
+// @brief Information about a single pose constraint in a pose controller.
+//
+// @see PoseConstraintType, Actor::GetArticulatedPoseConstraints
+struct PoseConstraintInfo {
+
+  // @brief Handle to the underlying constraint.
+  ConstraintHandle handle;
+
+  // @brief Type of constraint.
+  PoseConstraintType type = Invalid;
+
+  // @brief Index of the target link in the articulated body.
+  int link = -1;
+
+  // @brief Index of the parent link, or -1 if none.
+  int parent = -1;
+}
+
+// @brief Sphere primitives for debug visualization.
+struct DebugDrawSpheres [equality] {
+
+  // @brief Sphere center positions [m] in world frame.
+  Span<Real3 const> positions;
+
+  // @brief Sphere radii [m].
+  Span<real const> radii;
+
+  // @brief Sphere colors.
+  Span<Color const> colors;
+}
+
+// @brief Line primitives for debug visualization.
+//
+// @details Vertices are stored as a line list: every two consecutive vertices form one
+// line segment (positions[0]–positions[1] is the first segment, positions[2]–positions[3]
+// is the second, and so on). The total number of line segments is half the size of @ref
+// positions.
+struct DebugDrawLineVertices [equality] {
+
+  // @brief Line vertex positions [m] in world frame.
+  Span<Real3 const> positions;
+
+  // @brief Line vertex colors.
+  Span<Color const> colors;
+}
+
+// @brief Collection of debug draw primitives.
+//
+// @details Contains all geometric primitives to be rendered by the client's rendering system. Data
+// is valid until the next call to @ref DebugDraw::GatherData or @ref Scene modification.
+struct DebugDrawData [equality] {
+
+  // @brief Line primitives.
+  DebugDrawLineVertices lineVertices;
+
+  // @brief Sphere primitives.
+  DebugDrawSpheres spheres;
+}

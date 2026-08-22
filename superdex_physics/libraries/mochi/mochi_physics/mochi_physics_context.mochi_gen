@@ -1,0 +1,969 @@
+// @brief Main entry point for SuperDex Physics simulation.
+//
+// @details A @ref Context owns all global state for SuperDex Physics: scenes, shapes, threading,
+// and shared resources. Create exactly one per process with @ref CreateContext, and destroy it with
+// @ref DestroyContext. Shapes are reference-counted and can be shared between actors.
+class Context [no_init, no_destruct, singleton] {
+  # Concurrency
+  // @brief Bind the calling thread to this @ref Context.
+  //
+  // @details Required before using any @ref Context, @ref Scene, @ref Actor, or another part of
+  // the SuperDex Physics API from a thread that did not create the @ref Context.
+  // The thread that called @ref CreateContext is bound automatically. Each call must be matched by
+  // a call to @ref UnbindThisThread before the thread exits. The binding is reference-counted,
+  // so redundant calls from the same thread are safe as long as they are balanced.
+  //
+  // @note Call on any thread.
+  //
+  // @see UnbindThisThread, CreateContext
+  fn BindThisThread() -> void [pure, virtual, no_python];
+
+  // @brief Unbind the calling thread from this @ref Context.
+  //
+  // @details Each call to @ref BindThisThread must be matched by a call to @ref UnbindThisThread
+  // before the thread exits. The binding is reference-counted, so the thread is only unbound when
+  // the number of unbind calls matches the number of bind calls.
+  //
+  // @note Call on any thread.
+  //
+  // @see BindThisThread
+  fn UnbindThisThread() -> void [pure, virtual, no_python];
+
+  // @brief Enable or disable single-threaded mode.
+  //
+  // @details In single-threaded mode, each new task will be executed on the calling thread, even
+  // if other threads are available. This may hurt performance, but it is useful for debugging and
+  // batch simulation.
+  // @details Enabling single-threaded mode does not, however, terminate tasks that are already
+  // running asynchronously. Such tasks will run to completion. For example, if you have an @ref
+  // AsyncScene, it will continue to step asynchronously, but each step will do its work on that one
+  // thread.
+  //
+  // @param[in] isSingleThreaded True to enable single-threaded mode. False to disable.
+  //
+  // @note Call on any thread.
+  //
+  // @see IsSingleThreaded
+  fn SetIsSingleThreaded(bool isSingleThreaded) -> void [pure, virtual];
+
+  // @brief Return true if running in single-threaded mode.
+  //
+  // @details Returns true when the @ref Context was created with zero worker threads (see @ref
+  // CreateContext) or when single-threaded mode has been explicitly enabled via @ref
+  // SetIsSingleThreaded.
+  //
+  // @return True if running in single-threaded mode.
+  //
+  // @note Call on any thread.
+  //
+  // @see SetIsSingleThreaded, CreateContext
+  fn IsSingleThreaded() -> bool [pure, virtual, const];
+
+  // @brief Return the number of worker threads available to execute asynchronous tasks.
+  //
+  // @return The configured worker-thread count (see @ref CreateContext), or zero if single-threaded
+  // mode is enabled (see @ref SetIsSingleThreaded).
+  //
+  // @note Call on any thread.
+  //
+  // @see CreateContext, IsSingleThreaded
+  fn GetNumThreads() -> int [pure, virtual, const];
+
+  # Debugging
+  // @brief Enable or disable log messages on the specified channel.
+  //
+  // @details When a channel is disabled, messages on that channel are discarded before reaching the
+  // logging callback (see @ref SetLogCallback).
+  //
+  // @param[in] channel The log channel to enable or disable.
+  // @param[in] enable True to enable the channel, false to disable it.
+  //
+  // @note By default, all channels are enabled except for @ref LogChannel::Verbose.
+  // @note Call on any thread.
+  //
+  // @see IsLogChannelEnabled, SetLogCallback
+  fn EnableLogChannel(LogChannel channel, bool enable) -> void [static];
+
+  // @brief Return true if messages on the specified log channel are enabled.
+  //
+  // @param[in] channel The log channel to query.
+  //
+  // @return True if the channel is enabled, false otherwise.
+  //
+  // @note Call on any thread.
+  //
+  // @see EnableLogChannel
+  fn IsLogChannelEnabled(LogChannel channel) -> bool [static, export];
+
+  // @brief Optionally provide a callback function to redirect SuperDex Physics logging.
+  // The default function outputs to stdout and to the debugger (if attached).
+  //
+  // @param[in] callback Function to handle logging, or nullptr to restore the default logging
+  // function.
+  //
+  // @warning Your callback function may be called on any thread.
+  //
+  // @note Call on any thread.
+  //
+  // @see GetLogCallback
+  fn SetLogCallback(LogFn callback) -> void [static, export];
+
+  // @brief Get the function currently being used to output logging.
+  //
+  // @note Call on any thread.
+  //
+  // @return The current logging callback function.
+  //
+  // @see SetLogCallback
+  fn GetLogCallback() -> LogFn [static, export, no_python, no_capi];
+
+  // @brief Optionally provide a callback function to customize the way in which assertion failures
+  // are reported.
+  //
+  // @details An assertion failure indicates a serious problem with the internal code or runtime
+  // environment. When this occurs, the default function will log a block of error text, then stop
+  // at a breakpoint (fatal if no debugger is attached).
+  //
+  // @param[in] callback Function to call in the event of an assertion failure, or nullptr to
+  // restore the default function.
+  //
+  // @warning Your callback function may be called on any thread.
+  //
+  // @note Call on any thread.
+  //
+  // @see GetAssertionFailureCallback
+  fn SetAssertionFailureCallback(OnAssertFn callback) -> void [static, no_python];
+
+  // @brief Get the function currently being used to report assertion failures.
+  //
+  // @note Call on any thread.
+  //
+  // @return The current assertion failure callback function.
+  //
+  // @see SetAssertionFailureCallback
+  fn GetAssertionFailureCallback() -> OnAssertFn [static, export, no_python, no_capi];
+
+  # Shape APIs
+  // @brief Load a shape from a file of supported format.
+  //
+  // @details Supported formats: JSON (.mochi.json), HDF5 (.mochi.h5), OBJ (.obj), OFF (.off),
+  // PLY (.ply), and STL (.stl).
+  //
+  // @param[in] filePath File path to load (case sensitive on some filesystems).
+  //
+  // @return A @ref ShapeHandle that can be used to create actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note Call on any thread.
+  //
+  // @see ShapeHandle, ReleaseShape, LoadShapeFromBytes
+  fn LoadShapeFromFile(StringView filePath) -> ShapeHandle [pure, virtual, overloaded, mochi_error];
+
+  // @brief Load a shape from a file of supported format, and bake in some scale.
+  //
+  // @details Supported formats: JSON (.mochi.json), HDF5 (.mochi.h5), OBJ (.obj), OFF (.off),
+  // PLY (.ply), and STL (.stl).
+  //
+  // @param[in] filePath File path to load (case sensitive on some filesystems).
+  // @param[in] bakeScale Scale to bake into the shape or (1, 1, 1) for no change. Negative scale
+  // results in mirroring.
+  //
+  // @return A @ref ShapeHandle that can be used to create actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note Some shape data cannot bake arbitrary non-uniform scale. Unsupported scale values are
+  // rejected.
+  // @note Precomputed grid SDF data is preserved only when @ref bakeScale is uniform by absolute
+  // value. Non-uniform scale by absolute value discards the precomputed SDF. If an SDF collider
+  // later requires SDF data, SuperDex Physics regenerates it from the transformed mesh at runtime,
+  // which may be expensive.
+  // @note If the loaded model has @ref ModelData::elementFrameAxes, @ref bakeScale transforms those
+  // axes as normal directions using the inverse-transpose of the scale transform, then normalize
+  // them.
+  // @note Call on any thread.
+  //
+  // @see ShapeHandle, ReleaseShape, LoadShapeFromBytes
+  fn LoadShapeFromFile(
+    StringView filePath,
+    Real3 const& bakeScale,
+  ) -> ShapeHandle [overloaded, mochi_error];
+
+  // @brief Load a shape from a file of supported format, and bake in rotation and translation.
+  //
+  // @details Supported formats: JSON (.mochi.json), HDF5 (.mochi.h5), OBJ (.obj), OFF (.off),
+  // PLY (.ply), and STL (.stl).
+  //
+  // @param[in] filePath File path to load (case sensitive on some filesystems).
+  // @param[in] bakeTransform Transform to bake into the shape, or the identity transform for no
+  // change.
+  //
+  // @return A @ref ShapeHandle that can be used to create actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note If the loaded model has @ref ModelData::elementFrameAxes, @ref bakeTransform transforms
+  // those axes as normal directions using the inverse-transpose of the rotation transform, then
+  // normalize them.
+  // @note Call on any thread.
+  //
+  // @see ShapeHandle, ReleaseShape, LoadShapeFromBytes
+  fn LoadShapeFromFile(
+    StringView filePath,
+    TransformRT const& bakeTransform,
+  ) -> ShapeHandle [overloaded, mochi_error];
+
+  // @brief Load a shape from a file of supported format, and bake in some scale, rotation, and
+  // translation.
+  //
+  // @details Supported formats: JSON (.mochi.json), HDF5 (.mochi.h5), OBJ (.obj), OFF (.off),
+  // PLY (.ply), and STL (.stl).
+  //
+  // @param[in] filePath File path to load (case sensitive on some filesystems).
+  // @param[in] bakeScale Scale to bake into the shape or (1, 1, 1) for no change. Negative scale
+  // results in mirroring.
+  // @param[in] bakeTransform Transform to bake into the shape, or the identity transform for no
+  // change.
+  //
+  // @return A @ref ShapeHandle that can be used to create actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note Some shape data cannot bake arbitrary non-uniform scale. Unsupported scale values are
+  // rejected.
+  // @note Precomputed grid SDF data is preserved only when @ref bakeScale is uniform by absolute
+  // value. Non-uniform scale by absolute value discards the precomputed SDF. If an SDF collider
+  // later requires SDF data, SuperDex Physics regenerates it from the transformed mesh at runtime,
+  // which may be expensive.
+  // @note If the loaded model has @ref ModelData::elementFrameAxes, @ref bakeScale and
+  // @ref bakeTransform transform those axes as normal directions using the inverse-transpose of the
+  // scale-rotation transform, then normalize them.
+  // @note Call on any thread.
+  //
+  // @see ShapeHandle, ReleaseShape, LoadShapeFromBytes
+  fn LoadShapeFromFile(
+    StringView filePath,
+    Real3 const& bakeScale,
+    TransformRT const& bakeTransform,
+  ) -> ShapeHandle [pure, virtual, overloaded, mochi_error];
+
+  // @brief Load a shape from a file of supported format, where the file has already been loaded
+  // into memory.
+  //
+  // @details Supported formats: JSON (.mochi.json) and HDF5 (.mochi.h5), auto-detected from
+  // header bytes. To load a surface mesh format (OBJ, PLY, OFF, STL) from memory, use the
+  // overload that takes an explicit @ref MeshFileType.
+  //
+  // @param[in] fileData File contents as an in-memory byte array.
+  //
+  // @return A @ref ShapeHandle that can be used to create actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note Call on any thread.
+  //
+  // @see ShapeHandle, ReleaseShape, LoadShapeFromFile
+  fn LoadShapeFromBytes(Span<char const> fileData) -> ShapeHandle [overloaded, mochi_error];
+
+  // @brief Load a shape from a file of supported format, where the file has already been loaded
+  // into memory, and baking in some scale.
+  //
+  // @details Supported formats: JSON (.mochi.json) and HDF5 (.mochi.h5), auto-detected from
+  // header bytes. To load a surface mesh format (OBJ, PLY, OFF, STL) from memory, use the
+  // overload that takes an explicit @ref MeshFileType.
+  //
+  // @param[in] fileData File contents as an in-memory byte array.
+  // @param[in] bakeScale Scale to bake into the shape or (1, 1, 1) for no change. Negative scale
+  // results in mirroring.
+  //
+  // @return A @ref ShapeHandle that can be used to create actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note Some shape data cannot bake arbitrary non-uniform scale. Unsupported scale values are
+  // rejected.
+  // @note Precomputed grid SDF data is preserved only when @ref bakeScale is uniform by absolute
+  // value. Non-uniform scale by absolute value discards the precomputed SDF. If an SDF collider
+  // later requires SDF data, SuperDex Physics regenerates it from the transformed mesh at runtime,
+  // which may be expensive.
+  // @note If the loaded model has @ref ModelData::elementFrameAxes, @ref bakeScale transforms
+  // those axes as normal directions using the inverse-transpose of the scale transform, then
+  // normalize them.
+  // @note Call on any thread.
+  //
+  // @see ShapeHandle, ReleaseShape, LoadShapeFromFile
+  fn LoadShapeFromBytes(
+    Span<char const> fileData,
+    Real3 const& bakeScale,
+  ) -> ShapeHandle [overloaded, mochi_error];
+
+  // @brief Load a shape from a file of supported format, where the file has already been loaded
+  // into memory, and baking in rotation and translation.
+  //
+  // @details Supported formats: JSON (.mochi.json) and HDF5 (.mochi.h5), auto-detected from
+  // header bytes. To load a surface mesh format (OBJ, PLY, OFF, STL) from memory, use the
+  // overload that takes an explicit @ref MeshFileType.
+  //
+  // @param[in] fileData File contents as an in-memory byte array.
+  // @param[in] bakeTransform Transform to bake into the shape, or the identity transform for no
+  // change.
+  //
+  // @return A @ref ShapeHandle that can be used to create actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note If the loaded model has @ref ModelData::elementFrameAxes, @ref bakeTransform transforms
+  // those axes as normal directions using the inverse-transpose of the rotation transform, then
+  // normalize them.
+  // @note Call on any thread.
+  //
+  // @see ShapeHandle, ReleaseShape, LoadShapeFromFile
+  fn LoadShapeFromBytes(
+    Span<char const> fileData,
+    TransformRT const& bakeTransform,
+  ) -> ShapeHandle [overloaded, mochi_error];
+
+  // @brief Load a shape from a file of supported format, where the file has already been loaded
+  // into memory, and baking in some scale, rotation, and translation.
+  //
+  // @details Supported formats: JSON (.mochi.json) and HDF5 (.mochi.h5), auto-detected from
+  // header bytes. To load a surface mesh format (OBJ, PLY, OFF, STL) from memory, use the
+  // overload that takes an explicit @ref MeshFileType.
+  //
+  // @param[in] fileData File contents as an in-memory byte array.
+  // @param[in] bakeScale Scale to bake into the shape or (1, 1, 1) for no change. Negative scale
+  // results in mirroring.
+  // @param[in] bakeTransform Transform to bake into the shape, or the identity transform for no
+  // change.
+  //
+  // @return A @ref ShapeHandle that can be used to create actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note Some shape data cannot bake arbitrary non-uniform scale. Unsupported scale values are
+  // rejected.
+  // @note Precomputed grid SDF data is preserved only when @ref bakeScale is uniform by absolute
+  // value. Non-uniform scale by absolute value discards the precomputed SDF. If an SDF collider
+  // later requires SDF data, SuperDex Physics regenerates it from the transformed mesh at runtime,
+  // which may be expensive.
+  // @note If the loaded model has @ref ModelData::elementFrameAxes, @ref bakeScale and
+  // @ref bakeTransform transform those axes as normal directions using the inverse-transpose of the
+  // scale-rotation transform, then normalize them.
+  // @note Call on any thread.
+  //
+  // @see ShapeHandle, ReleaseShape, LoadShapeFromFile
+  fn LoadShapeFromBytes(
+    Span<char const> fileData,
+    Real3 const& bakeScale,
+    TransformRT const& bakeTransform,
+  ) -> ShapeHandle [overloaded, mochi_error];
+
+  // @brief Load a shape from a file of supported format, where the file has already been loaded
+  // into memory, with an explicit mesh format hint.
+  //
+  // @param[in] fileData File contents as an in-memory byte array.
+  // @param[in] format Mesh file format hint. When @ref MeshFileType::Legacy, auto-detects
+  // between HDF5 and JSON via header bytes. When a surface mesh format (@ref MeshFileType::PLY,
+  // @ref MeshFileType::OFF, @ref MeshFileType::STL, @ref MeshFileType::OBJ), dispatches directly
+  // to that reader.
+  //
+  // @return A @ref ShapeHandle that can be used to create actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note Call on any thread.
+  //
+  // @see ShapeHandle, ReleaseShape, LoadShapeFromFile
+  fn LoadShapeFromBytes(
+    Span<char const> fileData,
+    MeshFileType format,
+  ) -> ShapeHandle [pure, virtual, overloaded, mochi_error];
+
+  // @brief Load a shape from a file of supported format, where the file has already been loaded
+  // into memory, with an explicit mesh format hint, and baking in some scale.
+  //
+  // @param[in] fileData File contents as an in-memory byte array.
+  // @param[in] format Mesh file format hint. When @ref MeshFileType::Legacy, auto-detects
+  // between HDF5 and JSON via header bytes. When a surface mesh format (@ref MeshFileType::PLY,
+  // @ref MeshFileType::OFF, @ref MeshFileType::STL, @ref MeshFileType::OBJ), dispatches directly
+  // to that reader.
+  // @param[in] bakeScale Scale to bake into the shape or (1, 1, 1) for no change. Negative scale
+  // results in mirroring.
+  //
+  // @return A @ref ShapeHandle that can be used to create actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note Some shape data cannot bake arbitrary non-uniform scale. Unsupported scale values are
+  // rejected.
+  // @note Precomputed grid SDF data is preserved only when @ref bakeScale is uniform by absolute
+  // value. Non-uniform scale by absolute value discards the precomputed SDF. If an SDF collider
+  // later requires SDF data, SuperDex Physics regenerates it from the transformed mesh at runtime,
+  // which may be expensive.
+  // @note If the loaded model has @ref ModelData::elementFrameAxes, @ref bakeScale transforms
+  // those axes as normal directions using the inverse-transpose of the scale transform, then
+  // normalize them.
+  // @note Call on any thread.
+  //
+  // @see ShapeHandle, ReleaseShape, LoadShapeFromFile
+  fn LoadShapeFromBytes(
+    Span<char const> fileData,
+    MeshFileType format,
+    Real3 const& bakeScale,
+  ) -> ShapeHandle [overloaded, mochi_error];
+
+  // @brief Load a shape from a file of supported format, where the file has already been loaded
+  // into memory, with an explicit mesh format hint, and baking in rotation and translation.
+  //
+  // @param[in] fileData File contents as an in-memory byte array.
+  // @param[in] format Mesh file format hint. When @ref MeshFileType::Legacy, auto-detects
+  // between HDF5 and JSON via header bytes. When a surface mesh format (@ref MeshFileType::PLY,
+  // @ref MeshFileType::OFF, @ref MeshFileType::STL, @ref MeshFileType::OBJ), dispatches directly
+  // to that reader.
+  // @param[in] bakeTransform Transform to bake into the shape, or the identity transform for no
+  // change.
+  //
+  // @return A @ref ShapeHandle that can be used to create actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note If the loaded model has @ref ModelData::elementFrameAxes, @ref bakeTransform transforms
+  // those axes as normal directions using the inverse-transpose of the rotation transform, then
+  // normalize them.
+  // @note Call on any thread.
+  //
+  // @see ShapeHandle, ReleaseShape, LoadShapeFromFile
+  fn LoadShapeFromBytes(
+    Span<char const> fileData,
+    MeshFileType format,
+    TransformRT const& bakeTransform,
+  ) -> ShapeHandle [overloaded, mochi_error];
+
+  // @brief Load a shape from a file of supported format, where the file has already been loaded
+  // into memory, with an explicit mesh format hint, and baking in some scale, rotation, and
+  // translation.
+  //
+  // @param[in] fileData File contents as an in-memory byte array.
+  // @param[in] format Mesh file format hint. When @ref MeshFileType::Legacy, auto-detects
+  // between HDF5 and JSON via header bytes. When a surface mesh format (@ref MeshFileType::PLY,
+  // @ref MeshFileType::OFF, @ref MeshFileType::STL, @ref MeshFileType::OBJ), dispatches directly
+  // to that reader.
+  // @param[in] bakeScale Scale to bake into the shape or (1, 1, 1) for no change. Negative scale
+  // results in mirroring.
+  // @param[in] bakeTransform Transform to bake into the shape, or the identity transform for no
+  // change.
+  //
+  // @return A @ref ShapeHandle that can be used to create actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note Some shape data cannot bake arbitrary non-uniform scale. Unsupported scale values are
+  // rejected.
+  // @note Precomputed grid SDF data is preserved only when @ref bakeScale is uniform by absolute
+  // value. Non-uniform scale by absolute value discards the precomputed SDF. If an SDF collider
+  // later requires SDF data, SuperDex Physics regenerates it from the transformed mesh at runtime,
+  // which may be expensive.
+  // @note If the loaded model has @ref ModelData::elementFrameAxes, @ref bakeScale and
+  // @ref bakeTransform transform those axes as normal directions using the inverse-transpose of the
+  // scale-rotation transform, then normalize them.
+  // @note Call on any thread.
+  //
+  // @see ShapeHandle, ReleaseShape, LoadShapeFromFile
+  fn LoadShapeFromBytes(
+    Span<char const> fileData,
+    MeshFileType format,
+    Real3 const& bakeScale,
+    TransformRT const& bakeTransform,
+  ) -> ShapeHandle [pure, virtual, overloaded, mochi_error];
+
+  // @brief Create a shape using in-memory mesh data, so that it can be used to create actors.
+  //
+  // @param[in] mesh The mesh data, which SuperDex Physics copies.
+  //
+  // @return A @ref ShapeHandle that can be used to create actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note Call on any thread.
+  // @note Can be a tetrahedral mesh, a triangular mesh, or a polyline mesh, depending on the value
+  // of @ref MeshData::nodesPerElement.
+  //
+  // @see ShapeHandle, ReleaseShape
+  fn CreateMeshShape(MeshData const& mesh) -> ShapeHandle [pure, virtual, overloaded, expand_struct_params, mochi_error, no_capi];
+
+  // @brief Create a shape using in-memory mesh data, so that it can be used to create actors.
+  //
+  // @param[in] mesh A non-owning view of the mesh data, which SuperDex Physics copies.
+  //
+  // @return A @ref ShapeHandle that can be used to create actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note Call on any thread.
+  // @note Can be a tetrahedral mesh, a triangular mesh, or a polyline mesh, depending on the value
+  // of @ref MeshDataView::nodesPerElement.
+  //
+  // @see ShapeHandle, ReleaseShape
+  fn CreateMeshShape(MeshDataView const& mesh) -> ShapeHandle [pure, virtual, overloaded, mochi_error, no_capi];
+
+  // @brief Create a shape using in-memory model data, so that it can be used to create actors.
+  //
+  // @param[in] model The model data, which SuperDex Physics copies.
+  //
+  // @return A @ref ShapeHandle that can be used to create actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note Call on any thread.
+  // @note Can be a mesh or an implicit shape, depending on the contents.
+  //
+  // @see ShapeHandle, ReleaseShape
+  fn CreateModelShape(ModelData const& model) -> ShapeHandle [pure, virtual, overloaded, expand_struct_params, mochi_error, no_capi];
+
+  // @brief Create a shape using in-memory model data, so that it can be used to create actors.
+  //
+  // @param[in] model A non-owning view of the model data, which SuperDex Physics copies.
+  //
+  // @return A @ref ShapeHandle that can be used to create actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note Call on any thread.
+  // @note Can be a mesh or an implicit shape, depending on the contents.
+  //
+  // @see ShapeHandle, ReleaseShape
+  fn CreateModelShape(ModelDataView const& model) -> ShapeHandle [pure, virtual, overloaded, mochi_error, no_capi];
+
+  // @brief Create a tetrahedral mesh shape using in-memory data.
+  //
+  // @param[in] coordinates Node positions [m] (3 values per node)
+  // @param[in] connectivity Node indices (4 values per tetrahedron).
+  //
+  // @return A @ref ShapeHandle that can be used to create actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note Call on any thread.
+  // @note "Vertex" is another word for "node" in this context.
+  //
+  // @see ShapeHandle, ReleaseShape
+  fn CreateTetMeshShape(
+    Span<real const> coordinates [units(m)],
+    Span<int const> connectivity
+  ) -> ShapeHandle [pure, virtual, mochi_error];
+
+  // @brief Create a triangle mesh shape using in-memory data.
+  //
+  // @param[in] coordinates Node positions [m] (3 values per node).
+  // @param[in] connectivity Node indices (3 values per triangle).
+  //
+  // @return A @ref ShapeHandle that can be used to create actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note Call on any thread.
+  // @note "Vertex" is another word for "node" in this context.
+  //
+  // @see ShapeHandle, ReleaseShape
+  fn CreateTriMeshShape(
+    Span<real const> coordinates [units(m)],
+    Span<int const> connectivity,
+  )  -> ShapeHandle [pure, virtual, mochi_error];
+  // @brief Create an implicit sphere shape.
+  //
+  // @param[in] center Center of the sphere [m], in the shape's local frame.
+  // @param[in] radius Radius of the sphere [m]
+  //
+  // @return A @ref ShapeHandle that can be used to create rigid actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note Call on any thread.
+  //
+  // @see ShapeHandle, ReleaseShape
+  fn CreateSphereShape(Real3 const& center, real radius [units(m)]) -> ShapeHandle [pure, virtual, mochi_error];
+
+  // @brief Create an implicit plane with infinite extents.
+  //
+  // @param[in] normal Normal vector of the plane, in the shape's local frame. Need not be unit
+  // length; it is normalized internally.
+  // @param[in] distance Signed offset [m] from the origin to the plane, measured along the
+  // (normalized) @ref normal. The plane equation is dot(normalize(normal), x) = distance.
+  //
+  // @return A @ref ShapeHandle that can be used to create rigid actors.
+  //
+  // @note The shape remains in memory while referenced by any handle or actor. In the C API, you
+  // must release the shape explicitly by calling @ref Context::ReleaseShape. In C++ and Python,
+  // this is optional, since @ref ShapeHandle cleanup is automatic.
+  // @note Call on any thread.
+  //
+  // @see ShapeHandle, ReleaseShape
+  fn CreatePlaneShape(Real3 const& normal, real distance [units(m)]) -> ShapeHandle [pure, virtual, mochi_error];
+
+  // @brief Get a view of the shape's main mesh data.
+  //
+  // @details For tetrahedral mesh shapes, returns the volume mesh (4 nodes per element).
+  // For triangular mesh shapes, returns the surface mesh (3 nodes per element).
+  // For polyline shapes, returns the polyline mesh (2 nodes per element). For shapes without a
+  // main mesh, including implicit shapes such as spheres and planes, returns an empty view.
+  //
+  // @param[in] shape Handle to a valid shape.
+  //
+  // @return A non-owning view of the shape's main mesh data, or an empty view if the shape has no mesh.
+  //
+  // @note Can be called on any thread.
+  // @note The returned view will be invalid after the shape handle has been released.
+  //
+  // @see MeshDataView, GetShapeSurfaceMesh, GetShapeVisualMesh, Actor::GetMesh
+  fn GetShapeMesh(ShapeHandle shape) -> MeshDataView [pure, virtual, const, mochi_error, no_capi];
+
+  // @brief Get a view of the shape's surface mesh data.
+  //
+  // @details Returns a triangle mesh (3 nodes per element) representing the shape's surface.
+  // The coordinate array contains exactly the surface nodes referenced by the returned connectivity;
+  // nodes present in the underlying main mesh but not referenced by any surface triangle are omitted.
+  // Connectivity values are indices into this returned coordinate array. For shapes without a
+  // surface mesh, returns an empty view.
+  //
+  // @note For triangular mesh shapes, this may differ from @ref GetShapeMesh if the main mesh
+  // contains unreferenced nodes. For tetrahedral mesh shapes, this is the boundary surface of the
+  // volume mesh, with non-boundary volume nodes omitted.
+  //
+  // @param[in] shape Handle to a valid shape.
+  //
+  // @return A non-owning view of the shape's surface mesh data, or an empty view if the shape has
+  // no surface mesh.
+  //
+  // @note Can be called on any thread.
+  // @note The returned view will be invalid after the shape handle has been released.
+  //
+  // @see MeshDataView, GetShapeMesh, GetShapeVisualMesh, Actor::GetSurfaceMesh
+  fn GetShapeSurfaceMesh(ShapeHandle shape) -> MeshDataView [pure, virtual, const, mochi_error, no_capi];
+
+  // @brief Get a view of the shape's visual mesh data, including skinning data if available.
+  //
+  // @details Returns a triangle mesh (3 nodes per element) intended for visual rendering.
+  // Coordinates and connectivity are returned in visual-mesh node-index space, including any visual
+  // mesh nodes not referenced by the visual connectivity. The mesh may include linear skinning data
+  // for deformation. For shapes without a visual mesh, returns an empty view.
+  //
+  // @param[in] shape Handle to a valid shape.
+  //
+  // @return A non-owning view of the shape's visual mesh data, or an empty view if the shape has
+  // no visual mesh.
+  //
+  // @note Can be called on any thread.
+  // @note The returned view will be invalid after the shape handle has been released.
+  // @note When linear visual-mesh skinning data is present, skinning indices refer to the node
+  // ordering returned by @ref GetShapeMesh, not to the compact surface-node ordering returned by
+  // @ref GetShapeSurfaceMesh. Rod visual mesh embeddings are nonlinear and are not exposed through
+  // this linear skinning field.
+  //
+  // @see MeshDataView, GetShapeMesh, GetShapeSurfaceMesh, Actor::GetVisualMesh
+  fn GetShapeVisualMesh(ShapeHandle shape) -> MeshDataView [pure, virtual, const, mochi_error, no_capi];
+
+  // @brief Get an axis-aligned bounding box (AABB) that contains the shape, in its local coordinate
+  // frame.
+  //
+  // @param[in] shape Handle to a valid shape.
+  //
+  // @return The axis-aligned bounding box of the shape in local coordinates.
+  //
+  // @note Call on any thread.
+  // @note Sets an error for shapes that do not have a bounding volume (e.g., articulated shapes —
+  // query their link shapes individually instead).
+  fn GetShapeAabb(ShapeHandle shape) -> Aabb [pure, virtual, const, mochi_error];
+
+  // @brief Get information about an articulated shape.
+  //
+  // @param[in] shape Handle to an articulated shape.
+  //
+  // @return The @ref ArticulatedShapeInfo for the specified shape.
+  //
+  // @note Only supported for articulated shapes. Sets error otherwise.
+  // @note Can be called on any thread.
+  // @note The returned information will be invalid after the shape handle has been released.
+  //
+  // @see ArticulatedShapeInfo, Actor::GetArticulatedShapeInfo
+  fn GetArticulatedShapeInfo(ShapeHandle shape) -> ArticulatedShapeInfo [pure, virtual, const, mochi_error, no_capi];
+
+  // @brief Release a shape handle.
+  //
+  // @details In the C API, this must be called for every @ref ShapeHandle when you are done with
+  // it. In C++ and Python, this is optional because @ref ShapeHandle releases its reference
+  // automatically when destroyed. The shape memory is freed when it is no longer referenced by any
+  // handle, actor, or file cache entry.
+  //
+  // @param[in] shape Handle to the shape to release.
+  //
+  // @note Call on any thread.
+  // @note If the shape handle is invalid or already released, then it will be ignored.
+  //
+  // @see ShapeHandle, IsFileCacheEnabled
+  fn ReleaseShape(ShapeHandle shape) -> void [pure, virtual, no_mochi_error];
+
+  // @brief Get the number of shape handles that have been created/loaded and have not yet been
+  // released.
+  //
+  // @return The number of active shape handles.
+  //
+  // @note The file cache does not affect this value.
+  // @note Call on any thread.
+  //
+  // @see IsFileCacheEnabled
+  fn GetNumShapes() -> int [pure, virtual, const];
+
+  # File Cache
+  // @brief Enable or disable the file cache.
+  //
+  // @details When enabled, shape memory will be preserved even after the @ref ShapeHandle has been
+  // released. Subsequent requests for the same file (with the same baked-in scale and transform) will be
+  // fast because the data will already be loaded. This can be an important optimization, but beware that
+  // it could waste memory if it preserves shapes that are no longer needed.
+  //
+  // @param[in] enable True to enable, false to disable the feature.
+  //
+  // @note Call on any thread.
+  // @note Disabling the cache (passing false) immediately releases all currently cached shapes,
+  // equivalent to calling @ref ClearFileCache.
+  //
+  // @see IsFileCacheEnabled, ClearFileCache, ClearFileFromCache
+  fn EnableFileCache(bool enable) -> void [pure, virtual];
+
+  // @brief Return true if the file cache feature is enabled.
+  //
+  // @return True if the file cache is enabled, false otherwise.
+  //
+  // @note Call on any thread.
+  fn IsFileCacheEnabled() -> bool [pure, virtual, const];
+
+  // @brief Release all shapes that are being preserved by the file cache (if any).
+  //
+  // @details Use this to free up memory, or to force subsequent file requests to be loaded from
+  // disk, in case those files had been modified.
+  //
+  // @note Call on any thread.
+  //
+  // @see IsFileCacheEnabled, ClearFileFromCache
+  fn ClearFileCache() -> void [pure, virtual];
+
+  // @brief Release all cached entries for a given shape file.
+  //
+  // @details Use this to free up memory, or to force the next file request to be loaded from disk,
+  // in case the file had been modified. All entries for @ref filePath are removed, including every
+  // variant produced by different bake scale/transform combinations.
+  //
+  // @param[in] filePath Path to a file that may have been loaded. The match is case-sensitive and
+  // must equal the path used at load time exactly.
+  //
+  // @note Call on any thread.
+  //
+  // @see IsFileCacheEnabled, ClearFileCache
+  fn ClearFileFromCache(StringView filePath) -> void [pure, virtual];
+
+  # Scene APIs
+  // @brief Create a new @ref Scene.
+  //
+  // @details A scene is a collection of actors and constraints, which can be stepped to advance the
+  // simulation. Each scene is independent. Actors from one scene cannot affect another scene.
+  // @details You can create a new scene on any thread, but that scene must only be accessed from
+  // one thread at a time. All reads and writes to the scene must be synchronous and well ordered.
+  // However, if you have multiple scenes, then it is safe to step them concurrently.
+  //
+  // @param[in] name Name of the new scene (for debugging).
+  //
+  // @return Pointer to the new scene. Call @ref DestroyScene when done with it.
+  //
+  // @note Call on any thread.
+  //
+  // @see DestroyScene
+  fn CreateScene(StringView name) -> Scene* [pure, virtual];
+
+  // @brief Immediately destroy a scene and all its actors and constraints.
+  //
+  // @param[in] scene Pointer to the scene to destroy.
+  //
+  // @warning Do not dereference pointers to the scene, actors, constraints, etc. after this call.
+  // @warning If @ref scene is owned by an @ref AsyncScene, the call is a no-op (a warning is logged).
+  // Call @ref DestroyAsyncScene instead.
+  //
+  // @note No-op if @ref scene is null or unknown to this @ref Context.
+  // @note Call on any thread.
+  // @note Any remaining scenes will be cleaned up automatically when the @ref Context is destroyed.
+  //
+  // @see CreateScene, DestroyAsyncScene
+  fn DestroyScene(Scene* scene [nullable]) -> void [pure, virtual, no_mochi_error];
+
+  // @brief Get a pointer to a scene by its handle.
+  //
+  // @param[in] handle Handle to the scene.
+  //
+  // @return Pointer to the scene, or nullptr if the handle is invalid in this context.
+  //
+  // @note Call on any thread.
+  fn GetScene(SceneHandle handle) -> Scene* [pure, virtual, overloaded, nullable];
+
+  // @brief Get a const pointer to a scene by its handle.
+  //
+  // @param[in] handle Handle to the scene.
+  //
+  // @return Const pointer to the scene, or nullptr if the handle is invalid in this context.
+  //
+  // @note Call on any thread.
+  fn GetScene(SceneHandle handle) -> Scene const* [pure, virtual, const, overloaded, no_python, nullable];
+
+  // @brief Check if a scene is valid (not destroyed), and belongs to this @ref Context.
+  //
+  // @param[in] scene Pointer to the scene to check.
+  //
+  // @return True if the scene is valid and belongs to this @ref Context.
+  //
+  // @note Call on any thread.
+  //
+  // @see CreateScene, DestroyScene
+  fn IsValidScene(Scene const* scene [nullable]) -> bool [pure, virtual, const];
+
+  // @brief Create a new @ref AsyncScene.
+  //
+  // @details The returned @ref AsyncScene owns a synchronous @ref Scene and automatically steps it
+  // using a long-lived simulation task executed by the SuperDex Physics worker pool. This type of
+  // scene is often used for real-time interactive simulations where the physics rate is independent
+  // of the render rate.
+  //
+  // @param[in] name Name of the scene to create (for debugging).
+  //
+  // @return Pointer to the new @ref AsyncScene, or nullptr on error. Call @ref DestroyAsyncScene
+  // when done with it.
+  //
+  // @note Must be called from a thread outside the SuperDex Physics worker pool.
+  // @note Requires at least one worker thread to be available at call time. Fails if the @ref Context
+  // was initialized with zero worker threads (see @ref CreateContext), if single-threaded mode is
+  // currently enabled (see @ref SetIsSingleThreaded), or if this call is made from one of the
+  // SuperDex Physics worker threads.
+  // @note Do not call @ref SetIsSingleThreaded from any thread while this function is executing.
+  // Single-threaded mode must remain disabled until this function returns.
+  // @note The single-threaded-mode restriction applies only during this creation call. After the
+  // @ref AsyncScene is created, single-threaded mode may be enabled.
+  //
+  // @see DestroyAsyncScene, IsValidAsyncScene, CreateAsyncScenePaused
+  fn CreateAsyncScene(StringView name) -> AsyncScene* [pure, virtual, mochi_error, no_capi, no_python, nullable];
+
+  // @brief Create a new @ref AsyncScene that will initially be in the paused state.
+  //
+  // @details The returned @ref AsyncScene owns a synchronous @ref Scene and steps it using a long-lived
+  // simulation task executed by the SuperDex Physics worker pool. The scene starts paused but
+  // processes queued commands. It does not step the scene until unpaused.
+  //
+  // @param[in] name Name of the scene to create (for debugging).
+  //
+  // @return Pointer to the new @ref AsyncScene, or nullptr on error. Call @ref DestroyAsyncScene
+  // when done with it.
+  //
+  // @note Must be called from a thread outside the SuperDex Physics worker pool.
+  // @note Requires at least one worker thread to be available at call time. Fails if the @ref Context
+  // was initialized with zero worker threads (see @ref CreateContext), if single-threaded mode is
+  // currently enabled (see @ref SetIsSingleThreaded), or if this call is made from one of the
+  // SuperDex Physics worker threads.
+  // @note Do not call @ref SetIsSingleThreaded from any thread while this function is executing.
+  // Single-threaded mode must remain disabled until this function returns.
+  // @note The single-threaded-mode restriction applies only during this creation call. After the
+  // @ref AsyncScene is created, single-threaded mode may be enabled.
+  //
+  // @see CreateAsyncScene, DestroyAsyncScene, IsValidAsyncScene, AsyncScene::Pause, AsyncScene::IsPaused
+  fn CreateAsyncScenePaused(StringView name) -> AsyncScene* [pure, virtual, mochi_error, no_capi, no_python, nullable];
+
+  // @brief Immediately stop and destroy an @ref AsyncScene and all its actors and constraints.
+  //
+  // @param[in] scene Pointer to the scene to destroy
+  //
+  // @warning Do not dereference pointers to the scene, actors, constraints, etc. after this call.
+  // @warning Do not call from code executed by @ref scene, such as queued commands, pre/post-step
+  // callbacks, or @ref AsyncStepParams::timeStepCallback. Destroying an @ref AsyncScene is
+  // synchronous: if called from code already running on the target scene's simulation task, it can
+  // deadlock during destruction.
+  //
+  // @note No-op if @ref scene is null or unknown to this @ref Context.
+  // @note Call on any thread, except from code executed by @ref scene.
+  // @note Any remaining scenes will be cleaned up automatically when the @ref Context is destroyed.
+  //
+  // @see CreateAsyncScene, IsValidAsyncScene
+  fn DestroyAsyncScene(AsyncScene* scene [nullable]) -> void [pure, virtual, no_capi, no_python];
+
+  // @brief Check if an @ref AsyncScene is valid (not destroyed), and belongs to this @ref Context.
+  //
+  // @param[in] scene Pointer to the @ref AsyncScene to check
+  // @return True if the scene is valid and belongs to this @ref Context.
+  //
+  // @note Call on any thread.
+  //
+  // @see CreateAsyncScene, DestroyAsyncScene
+  fn IsValidAsyncScene(AsyncScene const* scene [nullable]) -> bool [pure, virtual, const, no_capi, no_python];
+
+  # DebugServer APIs
+  // @brief Get the debug server for this context.
+  //
+  // @return Reference to the @ref DebugServer, which accepts connections from external debug tools.
+  //
+  // @see DebugServer
+  fn GetDebugServer() -> DebugServer& [pure, virtual, overloaded];
+
+  // @brief Get a const reference to the debug server for this context.
+  //
+  // @return Const reference to the @ref DebugServer.
+  //
+  // @see DebugServer
+  fn GetDebugServer() -> DebugServer const& [pure, virtual, const, overloaded, no_python];
+}
+
+// @brief Initialize SuperDex Physics by creating a @ref Context object.
+//
+// @details You only need one Context for the entire process. It can be used to load shapes and to
+// create any number of scenes. Call @ref DestroyContext to clean everything up when you are done.
+//
+// @param[in] numWorkerThreads The number of async worker threads to initialize, or zero for
+// single-threaded execution. Negative values (e.g. -1) let SuperDex Physics choose a default
+// based on your CPU hardware. Positive values are clamped to the number of logical processors.
+//
+// @return Pointer to the created @ref Context.
+//
+// @note Simulation performance does not necessarily improve by using more threads. For simple
+// scenes, using a small number of threads (or even single-threaded execution) may be fastest.
+// @note Call on any thread.
+//
+// @see DestroyContext
+fn CreateContext(int numWorkerThreads = -1) -> Context* [export, no_python];
+
+// @brief Shut down SuperDex Physics by destroying the @ref Context object.
+//
+// @details Any remaining state will be immediately destroyed, including all scenes, actors, and
+// constraints.
+//
+// @param[in] context The @ref Context object to destroy.
+//
+// @warning Must be called on the same thread that called @ref CreateContext.
+// @warning Do not dereference any pointers to data owned by the @ref Context after this call.
+//
+// @note Passing nullptr is a no-op.
+//
+// @see CreateContext
+fn DestroyContext(Context* context [nullable]) -> void [export, no_python];

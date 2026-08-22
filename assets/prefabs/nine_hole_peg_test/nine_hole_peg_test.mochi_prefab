@@ -1,0 +1,191 @@
+{
+  "actors": {
+    "rigid": [
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "coulombFrictionCoefficient": 0.25,
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999999747524271e-07,
+          "penaltyThresholdDefault": 9.9999999747524271e-07,
+          "penaltyThresholdExtraPadding": 9.9999999747524271e-07
+        },
+        "isStatic": true,
+        "name": "NineHole_PegBoard",
+        "renderModel": "./render/nine_hole_peg_board.glb",
+        "shape": "./collision/base_nine_hole.mochi.h5"
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "coulombFrictionCoefficient": 0.34999999403953552,
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999999747524271e-07,
+          "penaltyThresholdDefault": 9.9999999747524271e-07,
+          "penaltyThresholdExtraPadding": 9.9999999747524271e-07
+        },
+        "mass": 0.00060000002849847078,
+        "name": "NineHole_Peg",
+        "renderModel": "./render/nine_hole_peg.glb",
+        "shape": "./collision/peg_nine_hole.mochi.h5",
+        "translation": [
+          0.091406702995300293,
+          0.091666460037231445,
+          0.034568455070257187
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "coulombFrictionCoefficient": 0.34999999403953552,
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999999747524271e-07,
+          "penaltyThresholdDefault": 9.9999999747524271e-07,
+          "penaltyThresholdExtraPadding": 9.9999999747524271e-07
+        },
+        "mass": 0.00060000002849847078,
+        "name": "NineHole_Peg1",
+        "renderModel": "./render/nine_hole_peg.glb",
+        "shape": "./collision/peg_nine_hole.mochi.h5",
+        "translation": [
+          0.062288358807563782,
+          0.092129915952682495,
+          0.034580361098051071
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "coulombFrictionCoefficient": 0.34999999403953552,
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999999747524271e-07,
+          "penaltyThresholdDefault": 9.9999999747524271e-07,
+          "penaltyThresholdExtraPadding": 9.9999999747524271e-07
+        },
+        "mass": 0.00060000002849847078,
+        "name": "NineHole_Peg2",
+        "renderModel": "./render/nine_hole_peg.glb",
+        "shape": "./collision/peg_nine_hole.mochi.h5",
+        "translation": [
+          0.033434521406888962,
+          0.091795057058334351,
+          0.034580368548631668
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "coulombFrictionCoefficient": 0.34999999403953552,
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999999747524271e-07,
+          "penaltyThresholdDefault": 9.9999999747524271e-07,
+          "penaltyThresholdExtraPadding": 9.9999999747524271e-07
+        },
+        "mass": 0.00060000002849847078,
+        "name": "NineHole_Peg3",
+        "renderModel": "./render/nine_hole_peg.glb",
+        "shape": "./collision/peg_nine_hole.mochi.h5",
+        "translation": [
+          0.033434521406888962,
+          0.06210215762257576,
+          0.034580368548631668
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "coulombFrictionCoefficient": 0.34999999403953552,
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999999747524271e-07,
+          "penaltyThresholdDefault": 9.9999999747524271e-07,
+          "penaltyThresholdExtraPadding": 9.9999999747524271e-07
+        },
+        "mass": 0.00060000002849847078,
+        "name": "NineHole_Peg4",
+        "renderModel": "./render/nine_hole_peg.glb",
+        "shape": "./collision/peg_nine_hole.mochi.h5",
+        "translation": [
+          0.062288358807563782,
+          0.062437009066343307,
+          0.034580361098051071
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "coulombFrictionCoefficient": 0.34999999403953552,
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999999747524271e-07,
+          "penaltyThresholdDefault": 9.9999999747524271e-07,
+          "penaltyThresholdExtraPadding": 9.9999999747524271e-07
+        },
+        "mass": 0.00060000002849847078,
+        "name": "NineHole_Peg5",
+        "renderModel": "./render/nine_hole_peg.glb",
+        "shape": "./collision/peg_nine_hole.mochi.h5",
+        "translation": [
+          0.091406702995300293,
+          0.062611863017082214,
+          0.034568455070257187
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "coulombFrictionCoefficient": 0.34999999403953552,
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999999747524271e-07,
+          "penaltyThresholdDefault": 9.9999999747524271e-07,
+          "penaltyThresholdExtraPadding": 9.9999999747524271e-07
+        },
+        "mass": 0.00060000002849847078,
+        "name": "NineHole_Peg6",
+        "renderModel": "./render/nine_hole_peg.glb",
+        "shape": "./collision/peg_nine_hole.mochi.h5",
+        "translation": [
+          0.033434521406888962,
+          0.032835856080055237,
+          0.034580368548631668
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "coulombFrictionCoefficient": 0.34999999403953552,
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999999747524271e-07,
+          "penaltyThresholdDefault": 9.9999999747524271e-07,
+          "penaltyThresholdExtraPadding": 9.9999999747524271e-07
+        },
+        "mass": 0.00060000002849847078,
+        "name": "NineHole_Peg7",
+        "renderModel": "./render/nine_hole_peg.glb",
+        "shape": "./collision/peg_nine_hole.mochi.h5",
+        "translation": [
+          0.062288358807563782,
+          0.033170707523822784,
+          0.034580361098051071
+        ]
+      },
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "coulombFrictionCoefficient": 0.34999999403953552,
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999999747524271e-07,
+          "penaltyThresholdDefault": 9.9999999747524271e-07,
+          "penaltyThresholdExtraPadding": 9.9999999747524271e-07
+        },
+        "mass": 0.00060000002849847078,
+        "name": "NineHole_Peg8",
+        "renderModel": "./render/nine_hole_peg.glb",
+        "shape": "./collision/peg_nine_hole.mochi.h5",
+        "translation": [
+          0.091406702995300293,
+          0.033345557749271393,
+          0.034568455070257187
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "actors": {
+    "rigid": [
+      {
+        "colliderType": "Plane",
+        "isStatic": true,
+        "layer": "Environment",
+        "name": "Ground",
+        "shape": "implicit/plane.mochi.json"
+      }
+    ]
+  }
+}

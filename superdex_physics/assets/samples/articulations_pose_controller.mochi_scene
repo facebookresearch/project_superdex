@@ -1,0 +1,46 @@
+{
+  "controllers": [
+    {
+      "articulatedActor": "Pendulum/DoublePendulumOnRail",
+      "jointTracking": [
+        {},
+        {
+          "stiffness": 125,
+          "damping": 8.8
+        },
+        {
+          "stiffness": 31.25,
+          "damping": 2.2
+        },
+        {}
+      ],
+      "linkPosTracking": [
+        {},
+        {},
+        {},
+        {
+          "stiffness": 75,
+          "damping": 5.3
+        }
+      ],
+      "linkRotTracking": [
+        {},
+        {},
+        {},
+        {
+          "stiffness": 1.56,
+          "damping": 0.22
+        }
+      ]
+    }
+  ],
+  "prefabs": [
+    {
+      "name": "Pendulum",
+      "path": "samples/articulations_double_pendulum_on_rail.mochi_scene"
+    }
+  ],
+  "scene": {
+    "description": "Pose-controller variant of the articulated double-pendulum tutorial: joint tracking drives the rail and upper hinge, while Cartesian position and rotation tracking control the end effector."
+  }
+}

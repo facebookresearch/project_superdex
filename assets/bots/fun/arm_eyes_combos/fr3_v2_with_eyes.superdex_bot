@@ -1,0 +1,58 @@
+{
+  "base": "//arms/fr3_v2/fr3_v2.superdex_bot",
+  "modifications": [
+    {
+      "AttachBot": {
+        "enabled": true,
+        "joint": {
+          "name": "left_eye_joint",
+          "parentLinkFromJoint": {
+            "rotation": [
+              0,
+              0,
+              0.95105636119842529,
+              0.30901676416397095
+            ],
+            "translation": [
+              -0.05000000074505806,
+              -0.019999999552965164,
+              0
+            ]
+          },
+          "type": "Hard"
+        },
+        "name": "left_eye",
+        "parentLinkName": "fr3_link7",
+        "path": "//fun/googly_eyes/googly_eyes.superdex_bot",
+        "prefix": "left_eye_"
+      }
+    },
+    {
+      "AttachBot": {
+        "enabled": true,
+        "joint": {
+          "name": "right_eye_joint",
+          "parentLinkFromJoint": {
+            "rotation": [
+              0,
+              0,
+              -0.89100635051727295,
+              0.45399031043052673
+            ],
+            "translation": [
+              0.05000000074505806,
+              -0.019999999552965164,
+              0
+            ]
+          },
+          "type": "Hard"
+        },
+        "name": "right_eye",
+        "parentLinkName": "fr3_link7",
+        "path": "//fun/googly_eyes/googly_eyes.superdex_bot",
+        "prefix": "right_eye_"
+      }
+    }
+  ],
+  "name": "fr3_v2_with_eyes"
+}

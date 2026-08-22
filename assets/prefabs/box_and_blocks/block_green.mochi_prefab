@@ -1,0 +1,18 @@
+{
+  "actors": {
+    "rigid": [
+      {
+        "boundaryElementType": "P1Q1",
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 9.9999997473787516e-05,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "name": "Block_green",
+        "renderModel": "./render/block_green.glb",
+        "shape": "./collision/block.mochi.h5"
+      }
+    ]
+  }
+}

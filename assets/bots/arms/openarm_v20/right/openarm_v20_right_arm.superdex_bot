@@ -1,0 +1,361 @@
+{
+  "defaultPose": [
+    0,
+    0.52359879016876221,
+    0,
+    1.3962634801864624,
+    0,
+    0,
+    0
+  ],
+  "joints": [
+    {
+      "name": "world_joint",
+      "type": "Hard"
+    },
+    {
+      "axis": [
+        0,
+        -1,
+        0
+      ],
+      "effortLimit": 40,
+      "maxLimit": [
+        0,
+        -3.4907000064849854,
+        0
+      ],
+      "minLimit": [
+        0,
+        1.3962999582290649,
+        0
+      ],
+      "name": "openarm_right_joint1",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          -0.0625,
+          0
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "effortLimit": 40,
+      "maxLimit": [
+        -3.3160998821258545,
+        0,
+        0
+      ],
+      "minLimit": [
+        0.17452999949455261,
+        0,
+        0
+      ],
+      "name": "openarm_right_joint2",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          -0.059999998658895493,
+          0
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        -1
+      ],
+      "effortLimit": 27,
+      "maxLimit": [
+        0,
+        0,
+        -1.5707999467849731
+      ],
+      "minLimit": [
+        0,
+        0,
+        1.5707999467849731
+      ],
+      "name": "openarm_right_joint3",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          -0.066249996423721313
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        -1,
+        0
+      ],
+      "effortLimit": 27,
+      "maxLimit": [
+        0,
+        -2.4435000419616699,
+        0
+      ],
+      "minLimit": [
+        0,
+        0,
+        0
+      ],
+      "name": "openarm_right_joint4",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          -0.15375000238418579
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        0,
+        -1
+      ],
+      "effortLimit": 7,
+      "maxLimit": [
+        0,
+        0,
+        -1.5707999467849731
+      ],
+      "minLimit": [
+        0,
+        0,
+        1.5707999467849731
+      ],
+      "name": "openarm_right_joint5",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          -0.095499999821186066
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "effortLimit": 7,
+      "maxLimit": [
+        0,
+        0.78539997339248657,
+        0
+      ],
+      "minLimit": [
+        0,
+        -0.78539997339248657,
+        0
+      ],
+      "name": "openarm_right_joint6",
+      "parentLinkFromJoint": {
+        "translation": [
+          0,
+          0,
+          -0.12049999833106995
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        1,
+        0,
+        0
+      ],
+      "effortLimit": 7,
+      "maxLimit": [
+        1.5707999467849731,
+        0,
+        0
+      ],
+      "minLimit": [
+        -1.5707999467849731,
+        0,
+        0
+      ],
+      "name": "openarm_right_joint7",
+      "type": "Revolute"
+    }
+  ],
+  "links": [
+    {
+      "centerOfMass": [
+        0.00253123748061566,
+        -0.0258185540330169,
+        2.70658291858903e-05
+      ],
+      "mass": 1.1432284943239561,
+      "momentOfInertia": [
+        0.00113607806226198,
+        3.81487993180929e-07,
+        1.09161247709715e-08,
+        0.00159935208714031,
+        2.7521421737084e-08,
+        0.000750541980863571
+      ],
+      "name": "openarm_right_base_link",
+      "renderModel": "render/openarm_right_base_link_render.glb",
+      "shape": "collision/openarm_right_base_link_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.000900350355624244,
+        -0.0444659716892874,
+        2.88441021165683e-05
+      ],
+      "mass": 1.1416684646202298,
+      "momentOfInertia": [
+        0.0010943212038551,
+        9.41628673674543e-06,
+        4.53422182483102e-08,
+        0.000759199728161993,
+        6.66755698859637e-08,
+        0.000670659201019629
+      ],
+      "name": "openarm_right_link1",
+      "parentLink": 0,
+      "renderModel": "render/openarm_right_link1_render.glb",
+      "shape": "collision/openarm_right_link1_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        -0.0247184924346635,
+        7.60578399428002e-08,
+        -0.0312643102292087
+      ],
+      "mass": 0.2775092746011571,
+      "momentOfInertia": [
+        0.000153588833784759,
+        -2.94422592188677e-10,
+        5.21056076779068e-06,
+        0.000113062180225725,
+        3.75816911469744e-10,
+        8.22999351863579e-05
+      ],
+      "name": "openarm_right_link2",
+      "parentLink": 1,
+      "renderModel": "render/openarm_right_link2_render.glb",
+      "shape": "collision/openarm_right_link2_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        -0.00300861804638783,
+        -0.000514813312550808,
+        -0.109368241429434
+      ],
+      "mass": 1.073863338202347,
+      "momentOfInertia": [
+        0.00128939636591746,
+        -2.29951046666492e-07,
+        -6.76161926984358e-05,
+        0.00114018992179734,
+        -1.06260802872572e-05,
+        0.000559765478676303
+      ],
+      "name": "openarm_right_link3",
+      "parentLink": 2,
+      "renderModel": "render/openarm_right_link3_render.glb",
+      "shape": "collision/openarm_right_link3_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        -0.00310326243752606,
+        -0.00136538979048502,
+        -0.0574601379354351
+      ],
+      "mass": 0.6348534566833373,
+      "momentOfInertia": [
+        0.0004690036047182,
+        5.63626910265645e-06,
+        -1.77877991597693e-06,
+        0.000433926270522842,
+        3.41757797773822e-06,
+        0.000245211429759716
+      ],
+      "name": "openarm_right_link4",
+      "parentLink": 3,
+      "renderModel": "render/openarm_right_link4_render.glb",
+      "shape": "collision/openarm_right_link4_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        -0.000737188580130584,
+        -0.000412406544351845,
+        -0.047093829077211
+      ],
+      "mass": 0.6156588026168502,
+      "momentOfInertia": [
+        0.000279653368752989,
+        3.31745289972445e-06,
+        7.68097311403736e-07,
+        0.000334599623120095,
+        -1.49934409279756e-07,
+        0.000176662464388138
+      ],
+      "name": "openarm_right_link5",
+      "parentLink": 4,
+      "renderModel": "render/openarm_right_link5_render.glb",
+      "shape": "collision/openarm_right_link5_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        2.27438423593244e-05,
+        0.00068649602098908,
+        5.44000494765995e-05
+      ],
+      "mass": 0.475202773187987,
+      "momentOfInertia": [
+        0.000179275941446964,
+        6.58439346712228e-08,
+        -3.37101167120887e-08,
+        0.000136247512758587,
+        3.32253600295544e-08,
+        0.000135340695937386
+      ],
+      "name": "openarm_right_link6",
+      "parentLink": 5,
+      "renderModel": "render/openarm_right_link6_render.glb",
+      "shape": "collision/openarm_right_link6_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.02466852217912674,
+        -9.5991825599384129e-12,
+        -0.00027582616894505918
+      ],
+      "mass": 0.063772141933441162,
+      "momentOfInertia": [
+        1.0039093467639759e-05,
+        -2.0357742055542564e-20,
+        -4.1936726091762466e-08,
+        5.6571016102680005e-06,
+        -5.2635156737974257e-20,
+        5.2870336730848067e-06
+      ],
+      "name": "openarm_right_ee_base_link",
+      "parentLink": 6,
+      "renderModel": "render/openarm_right_ee_base_link_render.glb",
+      "shape": "collision/openarm_right_ee_base_link_collision.mochi.h5"
+    }
+  ],
+  "name": "openarm_v20_right_arm"
+}

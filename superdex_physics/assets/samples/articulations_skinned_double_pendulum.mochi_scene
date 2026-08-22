@@ -1,0 +1,76 @@
+{
+  "actors": {
+    "articulated": [
+      {
+        "name": "SkinnedDoublePendulum",
+        "jointVelocities": [4.2, 0.0],
+        "joints": [
+          {
+            "name": "joint_0",
+            "type": "Revolute",
+            "axis": [0, 0, -1],
+            "parentLinkFromJoint": { "translation": [0, 0.5, 0] }
+          },
+          {
+            "name": "joint_1",
+            "type": "Revolute",
+            "axis": [0, 0, -1],
+            "parentLinkFromJoint": { "translation": [0.25, 0.0125, 0.0125] }
+          }
+        ],
+        "links": [
+          {
+            "name": "UpperArm",
+            "parentLink": -1,
+            "parentJointFromLink": { "translation": [0, -0.0125, -0.0125] },
+            "shape": "cube/cube_fine_mesh.mochi.json",
+            "shapeScale": [0.25, 0.025, 0.025],
+            "colliderType": "Box",
+            "layer": "Pendulum",
+            "density": 1000
+          },
+          {
+            "name": "LowerArm",
+            "parentLink": 0,
+            "parentJointFromLink": { "translation": [0, -0.0125, -0.0125] },
+            "shape": "cube/cube_fine_mesh.mochi.json",
+            "shapeScale": [0.25, 0.025, 0.025],
+            "colliderType": "Box",
+            "layer": "Pendulum",
+            "density": 1000
+          }
+        ],
+        "skin": {
+          "shape": "samples/articulations_parts/skin.mochi.json",
+          "layer": "Skin"
+        }
+      }
+    ],
+    "rigid": [
+      {
+        "name": "Ball",
+        "shape": "sphere/icosphere_4subdiv.1.mochi.json",
+        "colliderType": "Sphere",
+        "layer": "Ball",
+        "scale": [0.05, 0.05, 0.05],
+        "translation": [0.05, 0.05, 0],
+        "density": 500
+      }
+    ]
+  },
+  "prefabs": [
+    { "path": "samples/static_environments/ground_plane.mochi_prefab" }
+  ],
+  "contactFilter": {
+    "layerContactSymmetric": [
+      { "layers": ["Pendulum", "Pendulum"], "enable": false },
+      { "layers": ["Pendulum", "Skin"], "enable": false },
+      { "layers": ["Pendulum", "Ball"], "enable": false },
+      { "layers": ["Pendulum", "Environment"], "enable": false },
+      { "layers": ["Skin", "Environment"], "enable": false }
+    ]
+  },
+  "scene": {
+    "description": "Articulated double pendulum wearing a single skinned triangle-mesh surface (linear-blend skinning over two revolute-jointed arms). The skin is a collidee: a ball resting on the ground is struck by the swinging skin, while the per-link box colliders remain the probing colliders."
+  }
+}

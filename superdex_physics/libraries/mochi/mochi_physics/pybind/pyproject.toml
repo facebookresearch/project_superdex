@@ -1,0 +1,37 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Build system configuration.
+[build-system]
+requires = ["scikit-build-core", "pybind11"]
+build-backend = "scikit_build_core.build"
+
+# Project metadata.
+[project]
+name = "mochi_bindings"
+version = "0.0.1"
+authors = [{ name = "Mochi Team" }]
+requires-python = ">=3.12"
+dependencies = []
+
+# Build configuration.
+[tool.scikit-build]
+build.targets = ["mochi_physics_pybind"]
+cmake.args = ["-DMOCHI_BUILD_SHARED=OFF", "-DMOCHI_USE_PYBIND=ON"]
+cmake.build-type = "Release"
+cmake.source-dir = "../../"
+cmake.version = ">=3.25"
+install.components = ["mochi_physics_pybind"]
+wheel.cmake = true
+wheel.packages = ["mochi_physics_pybind"]

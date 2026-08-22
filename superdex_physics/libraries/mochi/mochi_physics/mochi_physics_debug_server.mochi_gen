@@ -1,0 +1,59 @@
+// @brief Server API to enable remote debugging and visualization.
+//
+// @see Context::GetDebugServer
+class DebugServer [no_init, no_destruct] {
+
+  // @brief Start accepting client connections on a TCP port.
+  //
+  // @param[in] preferredPort Preferred TCP port to listen on. If the port is already in use, the
+  // next available port is chosen automatically.
+  //
+  // @note No-op if the server has already been started.
+  //
+  // @see Stop, HasStarted, GetPort
+  fn Start(uint16 preferredPort = 7333) -> void [pure, virtual];
+
+  // @brief Stop the server and disconnect any connected client.
+  //
+  // @note No-op if the server has not started.
+  //
+  // @see Start, HasStarted
+  fn Stop() -> void [pure, virtual];
+
+  // @brief Check whether the server has started.
+  //
+  // @return True if @ref Start has been called, even if the server is not actually able to
+  // accept connections due to issues with permissions or firewalls.
+  //
+  // @see Start, Stop
+  fn HasStarted() -> bool [pure, virtual, const];
+
+  // @brief Check whether a debugger client is currently connected.
+  //
+  // @return True if any debugger client is connected.
+  //
+  // @see Start, Stop
+  fn HasConnection() -> bool [pure, virtual, const];
+
+  // @brief Get the actual TCP port the server is listening on.
+  //
+  // @details May differ from the port requested in @ref Start if that port was already in use.
+  //
+  // @return The TCP port currently in use, or 0 if the server is not listening on a TCP socket.
+  //
+  // @see Start
+  fn GetPort() -> uint16 [pure, virtual, const];
+
+  // @brief Declare the coordinate space this application's scene data is expressed in.
+  //
+  // @details Sent to the debugger client so it can render the scene in the correct orientation.
+  // This is purely descriptive metadata: it does not affect simulation. The default is X-right,
+  // Y-up, Z-backward.
+  //
+  // @param[in] space Coordinate space convention and unit scale of this application's scenes.
+  //
+  // @note Must be called before @ref Start.
+  //
+  // @see Start
+  fn SetCoordinateSpace(CoordinateSpace const& space) -> void [pure, virtual];
+}

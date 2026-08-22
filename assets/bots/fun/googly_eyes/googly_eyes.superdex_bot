@@ -1,0 +1,73 @@
+{
+  "defaultPose": [
+    0
+  ],
+  "joints": [
+    {
+      "name": "world_joint",
+      "type": "Hard"
+    },
+    {
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "effortLimit": 0,
+      "maxLimit": [
+        0,
+        628.31854248046875,
+        0
+      ],
+      "minLimit": [
+        0,
+        -628.31854248046875,
+        0
+      ],
+      "name": "joint_eye",
+      "type": "Revolute"
+    }
+  ],
+  "links": [
+    {
+      "centerOfMass": [
+        -0.001796176889911294,
+        0.0025143467355519533,
+        -3.5779348195319471e-07
+      ],
+      "mass": 0.055800434201955795,
+      "momentOfInertia": [
+        3.1242518161889166e-05,
+        -1.2807908511547339e-08,
+        1.1678165379169769e-10,
+        6.4466919866390526e-05,
+        1.6990406477568332e-12,
+        3.3565014746272936e-05
+      ],
+      "name": "base",
+      "renderModel": "render/base_render.glb",
+      "shape": "collision/base_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        -0.024999909102916718,
+        0.0023865937255322933,
+        5.095617083838988e-08
+      ],
+      "mass": 0.0040093734860420227,
+      "momentOfInertia": [
+        4.3707134977921669e-07,
+        7.5847524604304856e-14,
+        3.6890191422445096e-12,
+        8.6816942257428309e-07,
+        -1.571770599957667e-12,
+        4.3686864614755905e-07
+      ],
+      "name": "eye",
+      "parentLink": 0,
+      "renderModel": "render/eye_render.glb",
+      "shape": "collision/eye_collision.mochi.h5"
+    }
+  ],
+  "name": "googly_eyes"
+}

@@ -1,0 +1,32 @@
+material {
+    name : Outline,
+    shadingModel : unlit,
+    culling : front,
+    depthCulling : true,
+    requires : [tangents],
+    parameters : [
+        {
+            type : float4,
+            name : color
+        },
+        {
+            type : float,
+            name : thickness
+        }
+    ],
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        float3 normal = normalize(material.worldNormal);
+        float4 clip = getClipFromWorldMatrix() * material.worldPosition;
+        material.worldPosition.xyz += normal * materialParams.thickness * clip.w;
+    }
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = materialParams.color;
+    }
+}

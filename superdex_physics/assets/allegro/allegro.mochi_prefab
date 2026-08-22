@@ -1,0 +1,1584 @@
+{
+  "actors": {
+    "articulated": [
+      {
+        "joints": [
+          {
+            "name": "joint",
+            "type": "Free"
+          },
+          {
+            "axis": [
+              -1,
+              0,
+              0
+            ],
+            "limitStiffness": 10000,
+            "maxLimit": [
+              -1.3959999999999999,
+              0,
+              0
+            ],
+            "minLimit": [
+              -0.26300000000000001,
+              0,
+              0
+            ],
+            "name": "joint_12.0",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0.52133380401469931,
+                0.52133380448123923,
+                0.4777144171407377,
+                -0.47771441756824273
+              ],
+              "translation": [
+                -0.018200000000000001,
+                0.019332999999999999,
+                -0.045987
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "limitStiffness": 10000,
+            "maxLimit": [
+              0,
+              0,
+              0.46999999999999997
+            ],
+            "minLimit": [
+              0,
+              0,
+              -0.46999999999999997
+            ],
+            "name": "joint_8.0",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0.043619387340501414,
+                0,
+                0,
+                0.99904822158294204
+              ],
+              "translation": [
+                0,
+                -0.043499999999999997,
+                -0.001542
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "limitStiffness": 10000,
+            "maxLimit": [
+              0,
+              0,
+              0.46999999999999997
+            ],
+            "minLimit": [
+              0,
+              0,
+              -0.46999999999999997
+            ],
+            "name": "joint_4.0",
+            "parentLinkFromJoint": {
+              "translation": [
+                0,
+                0,
+                0.00069999999999999999
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "limitStiffness": 10000,
+            "maxLimit": [
+              0,
+              0,
+              0.46999999999999997
+            ],
+            "minLimit": [
+              0,
+              0,
+              -0.46999999999999997
+            ],
+            "name": "joint_0.0",
+            "parentLinkFromJoint": {
+              "rotation": [
+                -0.043619387340501414,
+                0,
+                0,
+                0.99904822158294204
+              ],
+              "translation": [
+                0,
+                0.043499999999999997,
+                -0.001542
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "limitStiffness": 10000,
+            "maxLimit": [
+              0,
+              0,
+              1.163
+            ],
+            "minLimit": [
+              0,
+              0,
+              -0.105
+            ],
+            "name": "joint_13.0",
+            "parentLinkFromJoint": {
+              "rotation": [
+                7.5586279494701104e-18,
+                -1.3137760375630577e-17,
+                1.417418077729781e-18,
+                1
+              ],
+              "translation": [
+                -0.027000000000000017,
+                0.0050000000000000044,
+                0.039900000000000005
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "limitStiffness": 10000,
+            "maxLimit": [
+              0,
+              1.6100000000000001,
+              0
+            ],
+            "minLimit": [
+              0,
+              -0.19600000000000001,
+              0
+            ],
+            "name": "joint_9.0",
+            "parentLinkFromJoint": {
+              "rotation": [
+                -4.7007565238807664e-19,
+                0,
+                0,
+                1
+              ],
+              "translation": [
+                0,
+                6.9388939039072284e-18,
+                0.016399999999999998
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "limitStiffness": 10000,
+            "maxLimit": [
+              0,
+              1.6100000000000001,
+              0
+            ],
+            "minLimit": [
+              0,
+              -0.19600000000000001,
+              0
+            ],
+            "name": "joint_5.0",
+            "parentLinkFromJoint": {
+              "translation": [
+                0,
+                0,
+                0.016400000000000001
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "limitStiffness": 10000,
+            "maxLimit": [
+              0,
+              1.6100000000000001,
+              0
+            ],
+            "minLimit": [
+              0,
+              -0.19600000000000001,
+              0
+            ],
+            "name": "joint_1.0",
+            "parentLinkFromJoint": {
+              "rotation": [
+                4.7007565238807664e-19,
+                0,
+                0,
+                1
+              ],
+              "translation": [
+                0,
+                -6.9388939039072284e-18,
+                0.016399999999999998
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "limitStiffness": 10000,
+            "maxLimit": [
+              0,
+              1.6439999999999999,
+              0
+            ],
+            "minLimit": [
+              0,
+              -0.189,
+              0
+            ],
+            "name": "joint_14.0",
+            "parentLinkFromJoint": {
+              "rotation": [
+                7.5586279494701104e-18,
+                -1.3137760375630577e-17,
+                1.417418077729781e-18,
+                1
+              ],
+              "translation": [
+                1.3877787807814457e-17,
+                0,
+                0.01769999999999998
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "limitStiffness": 10000,
+            "maxLimit": [
+              0,
+              1.7090000000000001,
+              0
+            ],
+            "minLimit": [
+              0,
+              -0.17399999999999999,
+              0
+            ],
+            "name": "joint_10.0",
+            "parentLinkFromJoint": {
+              "rotation": [
+                -4.7007565238807664e-19,
+                0,
+                0,
+                1
+              ],
+              "translation": [
+                0,
+                0,
+                0.053999999999999999
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "limitStiffness": 10000,
+            "maxLimit": [
+              0,
+              1.7090000000000001,
+              0
+            ],
+            "minLimit": [
+              0,
+              -0.17399999999999999,
+              0
+            ],
+            "name": "joint_6.0",
+            "parentLinkFromJoint": {
+              "translation": [
+                0,
+                0,
+                0.053999999999999992
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "limitStiffness": 10000,
+            "maxLimit": [
+              0,
+              1.7090000000000001,
+              0
+            ],
+            "minLimit": [
+              0,
+              -0.17399999999999999,
+              0
+            ],
+            "name": "joint_2.0",
+            "parentLinkFromJoint": {
+              "rotation": [
+                4.7007565238807664e-19,
+                0,
+                0,
+                1
+              ],
+              "translation": [
+                0,
+                0,
+                0.053999999999999999
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "limitStiffness": 10000,
+            "maxLimit": [
+              0,
+              1.7190000000000001,
+              0
+            ],
+            "minLimit": [
+              0,
+              -0.16200000000000001,
+              0
+            ],
+            "name": "joint_15.0",
+            "parentLinkFromJoint": {
+              "rotation": [
+                7.5586279494701104e-18,
+                -1.3137760375630577e-17,
+                1.417418077729781e-18,
+                1
+              ],
+              "translation": [
+                0,
+                -1.3877787807814457e-17,
+                0.051400000000000015
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "limitStiffness": 10000,
+            "maxLimit": [
+              0,
+              1.6180000000000001,
+              0
+            ],
+            "minLimit": [
+              0,
+              -0.22700000000000001,
+              0
+            ],
+            "name": "joint_11.0",
+            "parentLinkFromJoint": {
+              "rotation": [
+                -4.7007565238807664e-19,
+                0,
+                0,
+                1
+              ],
+              "translation": [
+                0,
+                0,
+                0.038400000000000004
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "limitStiffness": 10000,
+            "maxLimit": [
+              0,
+              1.6180000000000001,
+              0
+            ],
+            "minLimit": [
+              0,
+              -0.22700000000000001,
+              0
+            ],
+            "name": "joint_7.0",
+            "parentLinkFromJoint": {
+              "translation": [
+                0,
+                0,
+                0.03839999999999999
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "limitStiffness": 10000,
+            "maxLimit": [
+              0,
+              1.6180000000000001,
+              0
+            ],
+            "minLimit": [
+              0,
+              -0.22700000000000001,
+              0
+            ],
+            "name": "joint_3.0",
+            "parentLinkFromJoint": {
+              "rotation": [
+                4.7007565238807664e-19,
+                0,
+                0,
+                1
+              ],
+              "translation": [
+                0,
+                0,
+                0.038400000000000004
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "name": "joint_15.0_digit2_sensor_base_tip",
+            "parentLinkFromJoint": {
+              "rotation": [
+                7.5586279494701104e-18,
+                -1.3137760375630577e-17,
+                1.417418077729781e-18,
+                1
+              ],
+              "translation": [
+                0,
+                0,
+                0.035299999999999998
+              ]
+            },
+            "type": "Hard"
+          },
+          {
+            "name": "joint_15.0_digit2_sensor_base",
+            "parentLinkFromJoint": {
+              "rotation": [
+                7.5586279494701104e-18,
+                -1.3137760375630577e-17,
+                1.417418077729781e-18,
+                1
+              ],
+              "translation": [
+                0,
+                0,
+                0.035299999999999998
+              ]
+            },
+            "type": "Hard"
+          },
+          {
+            "name": "joint_11.0_digit2_sensor_base_tip",
+            "parentLinkFromJoint": {
+              "rotation": [
+                -4.7007565238807664e-19,
+                0,
+                0,
+                1
+              ],
+              "translation": [
+                0,
+                -6.9388939039072284e-18,
+                0.020000000000000032
+              ]
+            },
+            "type": "Hard"
+          },
+          {
+            "name": "joint_11.0_digit2_sensor_base",
+            "parentLinkFromJoint": {
+              "rotation": [
+                -4.7007565238807664e-19,
+                0,
+                0,
+                1
+              ],
+              "translation": [
+                0,
+                -6.9388939039072284e-18,
+                0.020000000000000032
+              ]
+            },
+            "type": "Hard"
+          },
+          {
+            "name": "joint_7.0_digit2_sensor_base_tip",
+            "parentLinkFromJoint": {
+              "translation": [
+                0,
+                0,
+                0.01999999999999999
+              ]
+            },
+            "type": "Hard"
+          },
+          {
+            "name": "joint_7.0_digit2_sensor_base",
+            "parentLinkFromJoint": {
+              "translation": [
+                0,
+                0,
+                0.01999999999999999
+              ]
+            },
+            "type": "Hard"
+          },
+          {
+            "name": "joint_3.0_digit2_sensor_base_tip",
+            "parentLinkFromJoint": {
+              "rotation": [
+                4.7007565238807664e-19,
+                0,
+                0,
+                1
+              ],
+              "translation": [
+                0,
+                6.9388939039072284e-18,
+                0.020000000000000032
+              ]
+            },
+            "type": "Hard"
+          },
+          {
+            "name": "joint_3.0_digit2_sensor_base",
+            "parentLinkFromJoint": {
+              "rotation": [
+                4.7007565238807664e-19,
+                0,
+                0,
+                1
+              ],
+              "translation": [
+                0,
+                6.9388939039072284e-18,
+                0.020000000000000032
+              ]
+            },
+            "type": "Hard"
+          }
+        ],
+        "links": [
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link",
+            "shape": "allegro/mesh_000.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_12.0",
+            "parentLink": 0,
+            "shape": "allegro/mesh_001.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_8.0",
+            "parentLink": 0,
+            "shape": "allegro/mesh_002.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_4.0",
+            "parentLink": 0,
+            "shape": "allegro/mesh_002.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_0.0",
+            "parentLink": 0,
+            "shape": "allegro/mesh_002.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_13.0",
+            "parentLink": 1,
+            "shape": "allegro/mesh_005.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_9.0",
+            "parentLink": 2,
+            "shape": "allegro/mesh_006.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_5.0",
+            "parentLink": 3,
+            "shape": "allegro/mesh_006.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_1.0",
+            "parentLink": 4,
+            "shape": "allegro/mesh_006.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_14.0",
+            "parentLink": 5,
+            "shape": "allegro/mesh_009.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_10.0",
+            "parentLink": 6,
+            "shape": "allegro/mesh_010.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_6.0",
+            "parentLink": 7,
+            "shape": "allegro/mesh_010.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_2.0",
+            "parentLink": 8,
+            "shape": "allegro/mesh_010.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_15.0",
+            "parentLink": 9,
+            "shape": "allegro/mesh_013.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_11.0",
+            "parentLink": 10,
+            "shape": "allegro/mesh_014.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_7.0",
+            "parentLink": 11,
+            "shape": "allegro/mesh_014.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_3.0",
+            "parentLink": 12,
+            "shape": "allegro/mesh_014.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_15.0_tip",
+            "parentLink": 13,
+            "shape": "allegro/mesh_017.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_15.0_digit2_sensor_base",
+            "parentLink": 13,
+            "shape": "allegro/mesh_018.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_11.0_tip",
+            "parentLink": 14,
+            "shape": "allegro/mesh_017.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_11.0_digit2_sensor_base",
+            "parentLink": 14,
+            "shape": "allegro/mesh_018.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_7.0_tip",
+            "parentLink": 15,
+            "shape": "allegro/mesh_017.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_7.0_digit2_sensor_base",
+            "parentLink": 15,
+            "shape": "allegro/mesh_018.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_3.0_tip",
+            "parentLink": 16,
+            "shape": "allegro/mesh_017.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "density": 1000,
+            "layer": "Links",
+            "name": "link_3.0_digit2_sensor_base",
+            "parentLink": 16,
+            "shape": "allegro/mesh_018.mochi.h5"
+          }
+        ],
+        "name": "allegro_hand"
+      }
+    ]
+  },
+  "contactFilter": {
+    "_comment": "First disable contact for all pairs of links in the hand. Then, we re-enable just the specific pairs that can mechanically reach each other.",
+    "actorContactSymmetric": [
+      {
+        "actors": [
+          "allegro_hand",
+          "allegro_hand"
+        ],
+        "enable": false
+      },
+      {
+        "actors": [
+          "allegro_hand/link_3.0_digit2_sensor_base",
+          "allegro_hand/link_6.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_3.0_digit2_sensor_base",
+          "allegro_hand/link_7.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_3.0_digit2_sensor_base",
+          "allegro_hand/link_14.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_3.0_digit2_sensor_base",
+          "allegro_hand/link_15.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_3.0_tip",
+          "allegro_hand/link"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_3.0_tip",
+          "allegro_hand/link_5.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_3.0_tip",
+          "allegro_hand/link_6.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_3.0_tip",
+          "allegro_hand/link_7.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_3.0_tip",
+          "allegro_hand/link_7.0_digit2_sensor_base"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_3.0_tip",
+          "allegro_hand/link_9.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_3.0_tip",
+          "allegro_hand/link_10.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_3.0_tip",
+          "allegro_hand/link_11.0_digit2_sensor_base"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_3.0_tip",
+          "allegro_hand/link_12.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_3.0_tip",
+          "allegro_hand/link_13.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_3.0_tip",
+          "allegro_hand/link_14.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_3.0_tip",
+          "allegro_hand/link_15.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_3.0_tip",
+          "allegro_hand/link_15.0_digit2_sensor_base"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_5.0",
+          "allegro_hand/link_1.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_5.0",
+          "allegro_hand/link_2.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_5.0",
+          "allegro_hand/link_9.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_6.0",
+          "allegro_hand/link_1.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_6.0",
+          "allegro_hand/link_2.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_6.0",
+          "allegro_hand/link_3.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_6.0",
+          "allegro_hand/link_9.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_6.0",
+          "allegro_hand/link_10.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_tip",
+          "allegro_hand/link"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0",
+          "allegro_hand/link_1.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_digit2_sensor_base",
+          "allegro_hand/link_1.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_tip",
+          "allegro_hand/link_1.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0",
+          "allegro_hand/link_2.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_digit2_sensor_base",
+          "allegro_hand/link_2.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_tip",
+          "allegro_hand/link_2.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0",
+          "allegro_hand/link_3.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_digit2_sensor_base",
+          "allegro_hand/link_3.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_tip",
+          "allegro_hand/link_3.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_digit2_sensor_base",
+          "allegro_hand/link_3.0_digit2_sensor_base"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_tip",
+          "allegro_hand/link_3.0_digit2_sensor_base"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_tip",
+          "allegro_hand/link_3.0_tip"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0",
+          "allegro_hand/link_11.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0",
+          "allegro_hand/link_15.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_digit2_sensor_base",
+          "allegro_hand/link_11.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_digit2_sensor_base",
+          "allegro_hand/link_11.0_digit2_sensor_base"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_digit2_sensor_base",
+          "allegro_hand/link_15.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_digit2_sensor_base",
+          "allegro_hand/link_15.0_digit2_sensor_base"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_tip",
+          "allegro_hand/link_10.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_tip",
+          "allegro_hand/link_11.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_tip",
+          "allegro_hand/link_11.0_digit2_sensor_base"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_tip",
+          "allegro_hand/link_11.0_tip"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_tip",
+          "allegro_hand/link_12.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_tip",
+          "allegro_hand/link_13.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_tip",
+          "allegro_hand/link_14.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_tip",
+          "allegro_hand/link_15.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_tip",
+          "allegro_hand/link_15.0_digit2_sensor_base"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_7.0_tip",
+          "allegro_hand/link_15.0_tip"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_10.0",
+          "allegro_hand/link_5.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_tip",
+          "allegro_hand/link"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_tip",
+          "allegro_hand/link_2.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_tip",
+          "allegro_hand/link_3.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_digit2_sensor_base",
+          "allegro_hand/link_3.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_tip",
+          "allegro_hand/link_3.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_tip",
+          "allegro_hand/link_3.0_digit2_sensor_base"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_digit2_sensor_base",
+          "allegro_hand/link_3.0_digit2_sensor_base"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_tip",
+          "allegro_hand/link_3.0_digit2_sensor_base"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_tip",
+          "allegro_hand/link_3.0_tip"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_tip",
+          "allegro_hand/link_3.0_tip"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0",
+          "allegro_hand/link_6.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_digit2_sensor_base",
+          "allegro_hand/link_6.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_tip",
+          "allegro_hand/link_6.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_digit2_sensor_base",
+          "allegro_hand/link_7.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_tip",
+          "allegro_hand/link_7.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_tip",
+          "allegro_hand/link_7.0_digit2_sensor_base"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0",
+          "allegro_hand/link_15.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_digit2_sensor_base",
+          "allegro_hand/link_15.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_digit2_sensor_base",
+          "allegro_hand/link_15.0_digit2_sensor_base"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_tip",
+          "allegro_hand/link_14.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_tip",
+          "allegro_hand/link_15.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_tip",
+          "allegro_hand/link_15.0_digit2_sensor_base"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_11.0_tip",
+          "allegro_hand/link_15.0_tip"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_14.0",
+          "allegro_hand/link_3.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_tip",
+          "allegro_hand/link"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0",
+          "allegro_hand/link_1.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_digit2_sensor_base",
+          "allegro_hand/link_1.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_tip",
+          "allegro_hand/link_1.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0",
+          "allegro_hand/link_2.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_digit2_sensor_base",
+          "allegro_hand/link_2.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_tip",
+          "allegro_hand/link_2.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0",
+          "allegro_hand/link_3.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_digit2_sensor_base",
+          "allegro_hand/link_3.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_tip",
+          "allegro_hand/link_3.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_digit2_sensor_base",
+          "allegro_hand/link_3.0_digit2_sensor_base"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_tip",
+          "allegro_hand/link_3.0_digit2_sensor_base"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_tip",
+          "allegro_hand/link_3.0_tip"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_tip",
+          "allegro_hand/link_5.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0",
+          "allegro_hand/link_6.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_digit2_sensor_base",
+          "allegro_hand/link_6.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_tip",
+          "allegro_hand/link_6.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_digit2_sensor_base",
+          "allegro_hand/link_7.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_tip",
+          "allegro_hand/link_7.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_tip",
+          "allegro_hand/link_7.0_digit2_sensor_base"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_tip",
+          "allegro_hand/link_9.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_tip",
+          "allegro_hand/link_10.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_digit2_sensor_base",
+          "allegro_hand/link_11.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_tip",
+          "allegro_hand/link_11.0"
+        ],
+        "enable": true
+      },
+      {
+        "actors": [
+          "allegro_hand/link_15.0_tip",
+          "allegro_hand/link_11.0_digit2_sensor_base"
+        ],
+        "enable": true
+      }
+    ]
+  }
+}

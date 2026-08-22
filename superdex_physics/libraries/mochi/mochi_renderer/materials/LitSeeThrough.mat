@@ -1,0 +1,73 @@
+material {
+    name : LitSeeThrough,
+    shadingModel : lit,
+    // fade (not transparent): plain transparent applies alpha to diffuse only, leaving specular at
+    // full intensity, so a lit surface never fully disappears. fade applies alpha to diffuse AND
+    // specular, so the surface vanishes cleanly at alpha 0.
+    blending : fade,
+    depthCulling : false,
+    parameters : [
+        {
+            type : float3,
+            name : baseColor
+        },
+        {
+            type : float,
+            name : roughness
+        },
+        {
+            type : float,
+            name : metallic
+        },
+        {
+            type : float,
+            name : reflectance
+        },
+        {
+            type : float,
+            name : alpha
+        },
+        {
+            type : float3,
+            name : sheenColor
+        },
+        {
+            type : float,
+            name : sheenRoughness
+        },
+        {
+            type : float,
+            name : clearCoat
+        },
+        {
+            type : float,
+            name : clearCoatRoughness
+        },
+        {
+            type : float,
+            name : anisotropy
+        },
+        {
+            type : float4,
+            name : emissive
+        }
+    ],
+    specularAntiAliasing : true
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        // fade/transparent blending assumes premultiplied alpha, so scale rgb by alpha.
+        material.baseColor = vec4(materialParams.baseColor * materialParams.alpha, materialParams.alpha);
+        material.roughness = materialParams.roughness;
+        material.metallic = materialParams.metallic;
+        material.reflectance = materialParams.reflectance;
+        material.sheenColor = materialParams.sheenColor;
+        material.sheenRoughness = materialParams.sheenRoughness;
+        material.clearCoat = materialParams.clearCoat;
+        material.clearCoatRoughness = materialParams.clearCoatRoughness;
+        material.anisotropy = materialParams.anisotropy;
+        material.emissive = materialParams.emissive;
+    }
+}

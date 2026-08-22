@@ -1,0 +1,12 @@
+.idea
+.polyscope.ini
+*_imgui.ini
+*.local.cmake
+*.recording.h5
+*.state.h5
+*.tlog
+*.user
+build*
+cmake-build*
+CMakeUserPresets.json
+imgui.ini

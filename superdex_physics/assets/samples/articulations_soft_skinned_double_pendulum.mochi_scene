@@ -1,0 +1,174 @@
+{
+  "actors": {
+    "softSkinned": [
+      {
+        "skeletonParams": {
+          "name": "SoftSkinnedDoublePendulum",
+          "jointVelocities": [
+            4.2,
+            0.0
+          ],
+          "joints": [
+            {
+              "name": "joint_0",
+              "type": "Revolute",
+              "axis": [
+                0,
+                0,
+                -1
+              ],
+              "parentLinkFromJoint": {
+                "translation": [
+                  0,
+                  0.5,
+                  0
+                ]
+              }
+            },
+            {
+              "name": "joint_1",
+              "type": "Revolute",
+              "axis": [
+                0,
+                0,
+                -1
+              ],
+              "parentLinkFromJoint": {
+                "translation": [
+                  0.25,
+                  0.0125,
+                  0.0125
+                ]
+              }
+            }
+          ],
+          "links": [
+            {
+              "name": "UpperArm",
+              "parentLink": -1,
+              "parentJointFromLink": {
+                "translation": [
+                  0,
+                  -0.0125,
+                  -0.0125
+                ]
+              },
+              "shape": "cube/cube_fine_mesh.mochi.json",
+              "shapeScale": [
+                0.25,
+                0.025,
+                0.025
+              ],
+              "colliderType": "Box",
+              "layer": "Pendulum",
+              "density": 1000
+            },
+            {
+              "name": "LowerArm",
+              "parentLink": 0,
+              "parentJointFromLink": {
+                "translation": [
+                  0,
+                  -0.0125,
+                  -0.0125
+                ]
+              },
+              "shape": "cube/cube_fine_mesh.mochi.json",
+              "shapeScale": [
+                0.125,
+                0.025,
+                0.025
+              ],
+              "colliderType": "Box",
+              "layer": "Pendulum",
+              "density": 1000
+            }
+          ]
+        },
+        "softParams": [
+          {
+            "name": "SoftArm",
+            "shape": "samples/articulations_parts/soft.mochi.json",
+            "layer": "Soft",
+            "hasGravity": false,
+            "hasInertia": false,
+            "hasStress": true,
+            "material": {
+              "type": "NeoHookean",
+              "density": 500.0,
+              "neoHookean": {
+                "youngsModulus": 15000.0
+              }
+            }
+          }
+        ],
+        "softAttachLinks": [
+          "LowerArm"
+        ],
+        "hasGravity": true,
+        "hasInertia": true,
+        "hasStress": false,
+        "enableCollidingLinks": true
+      }
+    ],
+    "rigid": [
+      {
+        "name": "Ball",
+        "shape": "sphere/icosphere_4subdiv.1.mochi.json",
+        "colliderType": "Sphere",
+        "layer": "Ball",
+        "scale": [
+          0.05,
+          0.05,
+          0.05
+        ],
+        "translation": [
+          0.05,
+          0.05,
+          0
+        ],
+        "density": 500
+      }
+    ]
+  },
+  "prefabs": [
+    {
+      "path": "samples/static_environments/ground_plane.mochi_prefab"
+    }
+  ],
+  "contactFilter": {
+    "layerContactSymmetric": [
+      {
+        "layers": [
+          "Pendulum",
+          "Pendulum"
+        ],
+        "enable": false
+      },
+      {
+        "layers": [
+          "Pendulum",
+          "Ball"
+        ],
+        "enable": false
+      },
+      {
+        "layers": [
+          "Pendulum",
+          "Environment"
+        ],
+        "enable": false
+      },
+      {
+        "layers": [
+          "Soft",
+          "Environment"
+        ],
+        "enable": false
+      }
+    ]
+  },
+  "scene": {
+    "description": "Articulated double pendulum with a soft skinned arm: top rigid arm 0.25 m, second rigid arm 0.125 m, and a soft tetrahedral rod 0.10 m (shortened to avoid ground contact) attached to the second arm via constrained nodes (SoftSkinnedActorParams.softAttachLinks). The soft material is made softer (E=1.5e4 Pa, density 500) to show large deformation. The soft is a collidee: a ball resting on the ground is struck by the swinging soft, while the per-link box colliders remain disabled. Tutorial scene for soft-skinned articulations."
+  }
+}

@@ -1,0 +1,144 @@
+{
+  "base": "//arms/fr3_v2/fr3_v2.superdex_bot",
+  "modifications": [
+    {
+      "AttachLink": {
+        "enabled": true,
+        "joint": {
+          "name": "mount_arm_side_joint",
+          "parentLinkFromJoint": {
+            "rotation": [
+              -0.49999997019767761,
+              -0.49999997019767761,
+              -0.49999997019767761,
+              0.49999997019767761
+            ]
+          },
+          "type": "Hard"
+        },
+        "link": {
+          "centerOfMass": [
+            0.0044667036272585392,
+            0.00013255212979856879,
+            -0.0067686759866774082
+          ],
+          "mass": 0.083889797329902649,
+          "momentOfInertia": [
+            9.0963389084208757e-05,
+            1.8821785374711908e-07,
+            1.2253264003447839e-06,
+            6.9372668804135174e-05,
+            1.0332551028113812e-06,
+            2.4447523173876107e-05
+          ],
+          "name": "mount_arm_side",
+          "renderModel": "render/mount_arm_side_render.glb",
+          "shape": "collision/mount_arm_side_collision.mochi.h5"
+        },
+        "name": "mount_arm_side",
+        "parentLinkName": "fr3_link8"
+      }
+    },
+    {
+      "AttachLink": {
+        "enabled": true,
+        "joint": {
+          "name": "mount_tool_side_joint",
+          "parentLinkFromJoint": {
+            "translation": [
+              0.031300000846385956,
+              0,
+              0
+            ]
+          },
+          "type": "Hard"
+        },
+        "link": {
+          "centerOfMass": [
+            -0.014058751054108143,
+            0.00084239570423960686,
+            -0.0018375158542767167
+          ],
+          "mass": 0.17426520586013794,
+          "momentOfInertia": [
+            9.3903734523337334e-05,
+            1.3100166142976377e-06,
+            1.6543557421755395e-06,
+            4.9569738621357828e-05,
+            -2.3086138867256523e-07,
+            6.3411469454877079e-05
+          ],
+          "name": "mount_tool_side",
+          "renderModel": "render/mount_tool_side_render.glb",
+          "shape": "collision/mount_tool_side_collision.mochi.h5"
+        },
+        "name": "mount_tool_side",
+        "parentLinkName": "mount_arm_side"
+      }
+    },
+    {
+      "AttachLink": {
+        "enabled": true,
+        "joint": {
+          "name": "mount_hand_side_joint",
+          "parentLinkFromJoint": {
+            "rotation": [
+              0.38268345594406128,
+              0,
+              0,
+              0.92387950420379639
+            ]
+          },
+          "type": "Hard"
+        },
+        "link": {
+          "centerOfMass": [
+            0.0029740191530436277,
+            -0.00016811353270895779,
+            -0.00015760411042720079
+          ],
+          "mass": 0.060101356357336044,
+          "momentOfInertia": [
+            3.0679642804898322e-05,
+            -1.6801572355618077e-09,
+            -4.3585535181023261e-09,
+            1.5710917068645358e-05,
+            1.6904907340631325e-07,
+            1.5664803868276067e-05
+          ],
+          "name": "mount_hand_side",
+          "renderModel": "render/mount_hand_side_render.glb",
+          "shape": "collision/mount_hand_side_collision.mochi.h5"
+        },
+        "name": "mount_hand_side",
+        "parentLinkName": "mount_tool_side"
+      }
+    },
+    {
+      "AttachBot": {
+        "enabled": true,
+        "joint": {
+          "name": "mount_to_allegro_v5",
+          "parentLinkFromJoint": {
+            "rotation": [
+              0.49999991059303284,
+              0.49999982118606567,
+              0.50000005960464478,
+              0.50000017881393433
+            ],
+            "translation": [
+              0.0070000002160668373,
+              0,
+              0
+            ]
+          },
+          "type": "Hard"
+        },
+        "name": "allegro_v5_right",
+        "parentLinkName": "mount_hand_side",
+        "path": "//hands/allegro_v5/right/allegro_v5_right.superdex_bot"
+      }
+    }
+  ],
+  "name": "fr3_v2_allegro_v5_right"
+}

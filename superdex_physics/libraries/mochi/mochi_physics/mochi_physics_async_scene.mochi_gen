@@ -1,0 +1,162 @@
+// @brief Manages a simulation scene that steps asynchronously using the SuperDex Physics worker pool.
+//
+// @details AsyncScene wraps a synchronous @ref Scene and automatically steps it using a long-lived
+// simulation task executed by the SuperDex Physics worker pool, decoupling physics updates from the main
+// thread. This enables real-time interactive simulations where physics rate is independent of rendering
+// rate.
+//
+// @warning Concurrent access to the underlying @ref Scene outside of callbacks is illegal.
+// @note In general, commands to modify the scene are queued and executed before the next simulation
+// step.
+// @note Thread-safe as long as the synchronous Scene and Actor APIs are only accessed within
+// callbacks.
+// @note Outside of callbacks, store @ref ActorHandle (not Actor*).
+// @note The AsyncScene owns its underlying @ref Scene.
+class AsyncScene [no_init, no_destruct, no_python, no_capi] {
+  // @brief Get the @ref Context that owns this @ref AsyncScene.
+  //
+  // @return Pointer to the owning @ref Context.
+  fn GetContext() -> Context* [pure, virtual];
+
+  // @brief Queue a command to execute on the simulation thread before the next step.
+  //
+  // @param[in] callback Function to execute. Receives Scene* when executed.
+  //
+  // @note Executed before the next simulation step when Scene access is safe.
+  // @note When using lambdas, capture by value or use @ref WaitForQueuedCommands to ensure object
+  // lifespan.
+  //
+  // @see WaitForQueuedCommands, QueueActorCommand
+  fn QueueCommand(Function<void, Scene*> callback) -> void [pure, virtual];
+
+  // @brief Queue a command to operate on a specific actor on the simulation thread.
+  //
+  // @param[in] actor Handle of the actor to operate on.
+  // @param[in] callback Function to execute. Receives Actor* when executed.
+  //
+  // @note Callback only fires if the actor still exists when processed.
+  // @note Provides direct access to the synchronous Actor API.
+  //
+  // @see QueueCommand, WaitForQueuedCommands
+  fn QueueActorCommand(ActorHandle actor, Function<void, Actor*> callback) -> void [pure, virtual];
+
+  // @brief Block the calling thread until all previously queued commands have executed.
+  //
+  // @warning It is illegal to call from the simulation thread.
+  //
+  // @see QueueCommand, QueueActorCommand
+  fn WaitForQueuedCommands() -> void [pure, virtual];
+
+  // @brief Register a callback to execute before each simulation step.
+  //
+  // @param[in] debugName Descriptive name for debugging and profiling.
+  // @param[in] callback Callback function to execute.
+  // @param[in] priority Execution order. Lower values execute first (higher priority).
+  //
+  // @return @ref CallbackHandle for the registered callback.
+  //
+  // @note Callbacks run sequentially on the simulation thread, in increasing priority order (lower
+  // values first).
+  // @note Can be called from any thread.
+  //
+  // @see CancelCallback, RegisterPostStepCallback
+  fn RegisterPreStepCallback(StringView debugName, Function<void, StepInfo const&> callback, int priority = Scene::kDefaultCallbackPriority) -> CallbackHandle [pure, virtual];
+
+  // @brief Register a callback to execute after each simulation step.
+  //
+  // @param[in] debugName Descriptive name for debugging and profiling.
+  // @param[in] callback Callback function to execute.
+  // @param[in] priority Execution order. Lower values execute first (higher priority).
+  //
+  // @return @ref CallbackHandle for the registered callback.
+  //
+  // @note Callbacks run sequentially on the simulation thread, in increasing priority order (lower
+  // values first).
+  // @note Can be called from any thread.
+  //
+  // @see CancelCallback, RegisterPreStepCallback
+  fn RegisterPostStepCallback(StringView debugName, Function<void, StepInfo const&> callback, int priority = Scene::kDefaultCallbackPriority) -> CallbackHandle [pure, virtual];
+
+  // @brief Cancel a previously registered callback.
+  //
+  // @param[in] handle @ref CallbackHandle from @ref RegisterPreStepCallback or @ref
+  // RegisterPostStepCallback.
+  //
+  // @note Can be called from any thread.
+  //
+  // @see RegisterPreStepCallback, RegisterPostStepCallback
+  fn CancelCallback(CallbackHandle handle) -> void [pure, virtual];
+
+  // @brief Register a query with an actor.
+  //
+  // @param[in] actor Handle of the actor to register the query with.
+  // @param[in] type Type of query to register.
+  // @param[in] forceCompute If true, compute the query result immediately on the simulation thread
+  // upon registration, rather than waiting for the next simulation step. Useful when the actor does
+  // not simulate (e.g., a static actor or a paused scene).
+  //
+  // @return @ref QueryHandle for the registered query, or an invalid handle if @ref actor is
+  // invalid.
+  //
+  // @note Can be called from any thread.
+  // @note May be more convenient than calling @ref QueueActorCommand because it returns the @ref
+  // QueryHandle synchronously.
+  //
+  // @see CancelActorQuery, Actor::RegisterQuery, Actor::RegisterQueryAndCompute
+  fn RegisterActorQuery(ActorHandle actor, QueryType type, bool forceCompute = false) -> QueryHandle [pure, virtual];
+
+  // @brief Cancel a query previously registered with an actor.
+  //
+  // @param[in] actor Handle of the actor.
+  // @param[in] handle @ref QueryHandle from @ref RegisterActorQuery.
+  //
+  // @see RegisterActorQuery, Actor::CancelQuery
+  fn CancelActorQuery(ActorHandle actor, QueryHandle handle) -> void [pure, virtual];
+
+  // @brief Get the parameters controlling async stepping behavior.
+  //
+  // @return Current async step parameters.
+  //
+  // @see SetAsyncStepParams, AsyncStepParams
+  fn GetAsyncStepParams() -> AsyncStepParams [pure, virtual, const];
+
+  // @brief Set the parameters controlling async stepping behavior.
+  //
+  // @param[in] params Async step parameters to set.
+  //
+  // @note Changes take effect on the next simulation step.
+  //
+  // @see GetAsyncStepParams, AsyncStepParams
+  fn SetAsyncStepParams(AsyncStepParams const& params) -> void [pure, virtual, mochi_error];
+
+  // @brief Pause or unpause the simulation.
+  //
+  // @param[in] shouldPause True to pause, false to unpause.
+  //
+  // @note When paused, simulation does not step but queued commands will still execute.
+  //
+  // @see IsPaused, RequestStepThenPause
+  fn Pause(bool shouldPause) -> void [pure, virtual];
+
+  // @brief Check if the simulation is currently paused.
+  //
+  // @return True if paused, false if not paused.
+  //
+  // @note When called from the simulation thread, returns the actual pause state. When called from
+  // other threads, returns the most recently requested pause state to present a consistent state to
+  // the calling thread.
+  //
+  // @see Pause
+  fn IsPaused() -> bool [pure, virtual, const];
+
+  // @brief Advance the simulation by exactly one step, then pause.
+  //
+  // @note Works even if the simulation is already paused.
+  // @note Uses @ref AsyncStepParams::fixedTimeStepSeconds even when dynamic-time-step mode is
+  // configured. If @ref AsyncStepParams::timeStepCallback is set and returns a non-negative value,
+  // the callback's value is used instead.
+  // @note Useful for debugging frame-by-frame.
+  //
+  // @see Pause, AsyncStepParams::fixedTimeStepSeconds, AsyncStepParams::timeStepCallback
+  fn RequestStepThenPause() -> void [pure, virtual];
+}

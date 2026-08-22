@@ -1,0 +1,388 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="mochi::Array&lt;*&gt;">
+    <Expand>
+      <ArrayItems>
+        <Size>sizeof(v) / sizeof(value_type)</Size>
+        <ValuePointer>v</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="mochi::DynamicArray&lt;*&gt;">
+    <DisplayString>{{ size={_end - _begin}, capacity={_endCapacity - _begin} }}</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>_end - _begin</Size>
+        <ValuePointer>_begin</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="mochi::Error">
+    <DisplayString Condition="_description == 0">OK</DisplayString>
+    <DisplayString Condition="_description != 0">ERROR: {_description,s}</DisplayString>
+  </Type>
+
+  <Type Name="mochi::Interval&lt;*&gt;">
+    <DisplayString>[{_begin}, {_end})</DisplayString>
+  </Type>
+
+  <Type Name="mochi::NdArray&lt;*&gt;">
+    <Expand>
+      <ArrayItems>
+        <Size>sizeof(_data) / sizeof(value_type)</Size>
+        <ValuePointer>_data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="mochi::Quaternion">
+    <Expand>
+      <ArrayItems>
+        <Size>4</Size>
+        <ValuePointer>data.raw</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="mochi::Simd&lt;*,*&gt;">
+    <Expand>
+      <ArrayItems>
+        <Size>kSize</Size>
+        <ValuePointer>($T1*)raw</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="mochi::Span&lt;*&gt;">
+    <DisplayString>{{ size={_len} }}</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>_len</Size>
+        <ValuePointer>_ptr</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <!-- Matrix  (rows=fixed, cols=fixed, ld=fixed) -->
+  <Type Name="mochi::Matrix&lt;*,*,*,*,*,*&gt;">
+    <DisplayString Condition="$T4 == 0 &amp;&amp; ($T5 &amp; 1) == 0">Matrix {$T2}x{$T3} (Row Major)</DisplayString>
+    <DisplayString Condition="$T4 == 1 &amp;&amp; ($T5 &amp; 1) == 0">Matrix {$T2}x{$T3} (Column Major)</DisplayString>
+    <DisplayString Condition="$T4 == 0 &amp;&amp; ($T5 &amp; 1) == 1">ViewMatrix {$T2}x{$T3} (Row Major)</DisplayString>
+    <DisplayString Condition="$T4 == 1 &amp;&amp; ($T5 &amp; 1) == 1">ViewMatrix {$T2}x{$T3} (Column Major)</DisplayString>
+    <Expand>
+      <CustomListItems Condition="$T5 == 0 || $T5 == 1">
+        <Variable Name="rows" InitialValue="$T2" />
+        <Variable Name="cols" InitialValue="$T3" />
+        <Variable Name="ld" InitialValue="$T6" />
+        <Variable Name="height" InitialValue="0" />
+        <Variable Name="width" InitialValue="0" />
+        <Variable Name="isRowMajor" InitialValue="$T4 == 0"/>
+        <Variable Name="i" InitialValue="0" />
+        <If Condition="isRowMajor">
+          <Exec>height = rows</Exec>
+          <Exec>width = cols</Exec>
+          <If Condition="ld == 0">
+            <Exec>ld = cols</Exec>
+          </If>
+        </If>
+        <If Condition="!isRowMajor">
+          <Exec>height = cols</Exec>
+          <Exec>width = rows</Exec>
+          <If Condition="ld == 0">
+            <Exec>ld = rows</Exec>
+          </If>
+        </If>
+        <Loop>
+          <If Condition="i &lt; height">
+            <Item Condition="isRowMajor" Name="row[{i}]">(_values._data + i * ld),[width]</Item>
+            <Item Condition="!isRowMajor" Name="col[{i}]">(_values._data + i * ld),[width]</Item>
+          </If>
+          <Exec>i++</Exec>
+          <If Condition="i &gt;= height">
+            <Break/>
+          </If>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+  <!-- Matrix  (rows=dynamic, cols=fixed, ld=fixed) -->
+  <Type Name="mochi::Matrix&lt;*,-1,*,*,*,*&gt;">
+    <DisplayString Condition="$T3 == 0 &amp;&amp; ($T4 &amp; 1) == 0">Matrix {_rows}x{$T2} (Row Major)</DisplayString>
+    <DisplayString Condition="$T3 == 1 &amp;&amp; ($T4 &amp; 1) == 0">Matrix {_rows}x{$T2} (Column Major)</DisplayString>
+    <DisplayString Condition="$T3 == 0 &amp;&amp; ($T4 &amp; 1) == 1">ViewMatrix {_rows}x{$T2} (Row Major)</DisplayString>
+    <DisplayString Condition="$T3 == 1 &amp;&amp; ($T4 &amp; 1) == 1">ViewMatrix {_rows}x{$T2} (Column Major)</DisplayString>
+    <Expand>
+      <CustomListItems Condition="$T4 == 0 || $T4 == 1">
+        <Variable Name="rows" InitialValue="_rows" />
+        <Variable Name="cols" InitialValue="$T2" />
+        <Variable Name="ld" InitialValue="0" />
+        <Variable Name="height" InitialValue="0" />
+        <Variable Name="width" InitialValue="0" />
+        <Variable Name="isRowMajor" InitialValue="$T3 == 0"/>
+        <Variable Name="i" InitialValue="0" />
+        <If Condition="isRowMajor">
+          <Exec>height = rows</Exec>
+          <Exec>width = cols</Exec>
+          <If Condition="ld == 0">
+            <Exec>ld = cols</Exec>
+          </If>
+        </If>
+        <If Condition="!isRowMajor">
+          <Exec>height = cols</Exec>
+          <Exec>width = rows</Exec>
+          <If Condition="ld == 0">
+            <Exec>ld = rows</Exec>
+          </If>
+        </If>
+        <Loop>
+          <If Condition="i &lt; height">
+            <Item Condition="isRowMajor" Name="row[{i}]">(_values._data + i * ld),[width]</Item>
+            <Item Condition="!isRowMajor" Name="col[{i}]">(_values._data + i * ld),[width]</Item>
+            <Exec>i++</Exec>
+          </If>
+          <If Condition="i &gt;= height">
+            <Break/>
+          </If>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+  
+  <!-- Matrix  (rows=fixed, cols=dynamic, ld=fixed) -->
+  <Type Name="mochi::Matrix&lt;*,*,-1,*,*,*&gt;">
+    <DisplayString Condition="$T3 == 0 &amp;&amp; ($T4 &amp; 1) == 0">Matrix {$T2}x{_cols} (Row Major)</DisplayString>
+    <DisplayString Condition="$T3 == 1 &amp;&amp; ($T4 &amp; 1) == 0">Matrix {$T2}x{_cols} (Column Major)</DisplayString>
+    <DisplayString Condition="$T3 == 0 &amp;&amp; ($T4 &amp; 1) == 1">ViewMatrix {$T2}x{_cols} (Row Major)</DisplayString>
+    <DisplayString Condition="$T3 == 1 &amp;&amp; ($T4 &amp; 1) == 1">ViewMatrix {$T2}x{_cols} (Column Major)</DisplayString>
+    <Expand>
+      <CustomListItems Condition="$T4 == 0 || $T4 == 1">
+        <Variable Name="rows" InitialValue="$T2" />
+        <Variable Name="cols" InitialValue="_cols" />
+        <Variable Name="ld" InitialValue="0" />
+        <Variable Name="height" InitialValue="0" />
+        <Variable Name="width" InitialValue="0" />
+        <Variable Name="isRowMajor" InitialValue="$T3 == 0"/>
+        <Variable Name="i" InitialValue="0" />
+        <If Condition="isRowMajor">
+          <Exec>height = rows</Exec>
+          <Exec>width = cols</Exec>
+          <If Condition="ld == 0">
+            <Exec>ld = cols</Exec>
+          </If>
+        </If>
+        <If Condition="!isRowMajor">
+          <Exec>height = cols</Exec>
+          <Exec>width = rows</Exec>
+          <If Condition="ld == 0">
+            <Exec>ld = rows</Exec>
+          </If>
+        </If>
+        <Loop>
+          <If Condition="i &lt; height">
+            <Item Condition="isRowMajor" Name="row[{i}]">(_values._data + i * ld),[width]</Item>
+            <Item Condition="!isRowMajor" Name="col[{i}]">(_values._data + i * ld),[width]</Item>
+            <Exec>i++</Exec>
+          </If>
+          <If Condition="i &gt;= height">
+            <Break/>
+          </If>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+  
+  <!-- Matrix  (rows=dynamic, cols=dynamic, ld=fixed) -->
+  <Type Name="mochi::Matrix&lt;*,-1,-1,*,*,*&gt;">
+    <DisplayString Condition="$T2 == 0 &amp;&amp; ($T3 &amp; 1) == 0">Matrix {_rows}x{_cols} (Row Major)</DisplayString>
+    <DisplayString Condition="$T2 == 1 &amp;&amp; ($T3 &amp; 1) == 0">Matrix {_rows}x{_cols} (Column Major)</DisplayString>
+    <DisplayString Condition="$T2 == 0 &amp;&amp; ($T3 &amp; 1) == 1">ViewMatrix {_rows}x{_cols} (Row Major)</DisplayString>
+    <DisplayString Condition="$T2 == 1 &amp;&amp; ($T3 &amp; 1) == 1">ViewMatrix {_rows}x{_cols} (Column Major)</DisplayString>
+    <Expand>
+      <CustomListItems Condition="$T3 == 0 || $T3 == 1">
+        <Variable Name="rows" InitialValue="_rows" />
+        <Variable Name="cols" InitialValue="_cols" />
+        <Variable Name="ld" InitialValue="0" />
+        <Variable Name="height" InitialValue="0" />
+        <Variable Name="width" InitialValue="0" />
+        <Variable Name="isRowMajor" InitialValue="$T2 == 0"/>
+        <Variable Name="i" InitialValue="0" />
+        <If Condition="isRowMajor">
+          <Exec>height = rows</Exec>
+          <Exec>width = cols</Exec>
+          <If Condition="ld == 0">
+            <Exec>ld = cols</Exec>
+          </If>
+        </If>
+        <If Condition="!isRowMajor">
+          <Exec>height = cols</Exec>
+          <Exec>width = rows</Exec>
+          <If Condition="ld == 0">
+            <Exec>ld = rows</Exec>
+          </If>
+        </If>
+        <Loop>
+          <If Condition="i &lt; height">
+            <Item Condition="isRowMajor" Name="row[{i}]">(_values._data + i * ld),[width]</Item>
+            <Item Condition="!isRowMajor" Name="col[{i}]">(_values._data + i * ld),[width]</Item>
+          </If>
+          <Exec>i++</Exec>
+          <If Condition="i &gt;= height">
+            <Break/>
+          </If>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+  <!-- Matrix  (rows=fixed, cols=fixed, ld=dynamic) -->
+  <Type Name="mochi::Matrix&lt;*,*,*,*,*,-1&gt;">
+    <DisplayString Condition="$T4 == 0 &amp;&amp; ($T5 &amp; 1) == 0">Matrix {$T2}x{$T3} (Row Major)</DisplayString>
+    <DisplayString Condition="$T4 == 1 &amp;&amp; ($T5 &amp; 1) == 0">Matrix {$T2}x{$T3} (Column Major)</DisplayString>
+    <DisplayString Condition="$T4 == 0 &amp;&amp; ($T5 &amp; 1) == 1">ViewMatrix {$T2}x{$T3} (Row Major)</DisplayString>
+    <DisplayString Condition="$T4 == 1 &amp;&amp; ($T5 &amp; 1) == 1">ViewMatrix {$T2}x{$T3} (Column Major)</DisplayString>
+    <Expand>
+      <CustomListItems Condition="$T5 == 0 || $T5 == 1">
+        <Variable Name="rows" InitialValue="$T2" />
+        <Variable Name="cols" InitialValue="$T3" />
+        <Variable Name="ld" InitialValue="_ld" />
+        <Variable Name="height" InitialValue="0" />
+        <Variable Name="width" InitialValue="0" />
+        <Variable Name="isRowMajor" InitialValue="$T4 == 0"/>
+        <Variable Name="i" InitialValue="0" />
+        <If Condition="isRowMajor">
+          <Exec>height = rows</Exec>
+          <Exec>width = cols</Exec>
+        </If>
+        <If Condition="!isRowMajor">
+          <Exec>height = cols</Exec>
+          <Exec>width = rows</Exec>
+        </If>
+        <Loop>
+          <If Condition="i &lt; height">
+            <Item Condition="isRowMajor" Name="row[{i}]">(_values._data + i * ld),[width]</Item>
+            <Item Condition="!isRowMajor" Name="col[{i}]">(_values._data + i * ld),[width]</Item>
+          </If>
+          <Exec>i++</Exec>
+          <If Condition="i &gt;= height">
+            <Break/>
+          </If>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+  <!-- Matrix  (rows=dynamic, cols=fixed, ld=dynamic) -->
+  <Type Name="mochi::Matrix&lt;*,-1,*,*,*,-1&gt;">
+    <DisplayString Condition="$T3 == 0 &amp;&amp; ($T4 &amp; 1) == 0">Matrix {_rows}x{$T2} (Row Major)</DisplayString>
+    <DisplayString Condition="$T3 == 1 &amp;&amp; ($T4 &amp; 1) == 0">Matrix {_rows}x{$T2} (Column Major)</DisplayString>
+    <DisplayString Condition="$T3 == 0 &amp;&amp; ($T4 &amp; 1) == 1">ViewMatrix {_rows}x{$T2} (Row Major)</DisplayString>
+    <DisplayString Condition="$T3 == 1 &amp;&amp; ($T4 &amp; 1) == 1">ViewMatrix {_rows}x{$T2} (Column Major)</DisplayString>
+    <Expand>
+      <CustomListItems Condition="$T4 == 0 || $T4 == 1">
+        <Variable Name="rows" InitialValue="_rows" />
+        <Variable Name="cols" InitialValue="$T3" />
+        <Variable Name="ld" InitialValue="_ld" />
+        <Variable Name="height" InitialValue="0" />
+        <Variable Name="width" InitialValue="0" />
+        <Variable Name="isRowMajor" InitialValue="$T3 == 0"/>
+        <Variable Name="i" InitialValue="0" />
+        <If Condition="isRowMajor">
+          <Exec>height = rows</Exec>
+          <Exec>width = cols</Exec>
+        </If>
+        <If Condition="!isRowMajor">
+          <Exec>height = cols</Exec>
+          <Exec>width = rows</Exec>
+        </If>
+        <Loop>
+          <If Condition="i &lt; height">
+            <Item Condition="isRowMajor" Name="row[{i}]">(_values._data + i * ld),[width]</Item>
+            <Item Condition="!isRowMajor" Name="col[{i}]">(_values._data + i * ld),[width]</Item>
+            <Exec>i++</Exec>
+          </If>
+          <If Condition="i &gt;= height">
+            <Break/>
+          </If>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+  <!-- Matrix  (rows=fixed, cols=dynamic, ld=dynamic) -->
+  <Type Name="mochi::Matrix&lt;*,*,-1,*,*,-1&gt;">
+    <DisplayString Condition="$T3 == 0 &amp;&amp; ($T4 &amp; 1) == 0">Matrix {$T1}x{_cols} (Row Major)</DisplayString>
+    <DisplayString Condition="$T3 == 1 &amp;&amp; ($T4 &amp; 1) == 0">Matrix {$T1}x{_cols} (Column Major)</DisplayString>
+    <DisplayString Condition="$T3 == 0 &amp;&amp; ($T4 &amp; 1) == 1">ViewMatrix {$T1}x{_cols} (Row Major)</DisplayString>
+    <DisplayString Condition="$T3 == 1 &amp;&amp; ($T4 &amp; 1) == 1">ViewMatrix {$T1}x{_cols} (Column Major)</DisplayString>
+    <Expand>
+      <CustomListItems Condition="$T4 == 0 || $T4 == 1">
+        <Variable Name="rows" InitialValue="$T2" />
+        <Variable Name="cols" InitialValue="_cols" />
+        <Variable Name="ld" InitialValue="_ld" />
+        <Variable Name="height" InitialValue="0" />
+        <Variable Name="width" InitialValue="0" />
+        <Variable Name="isRowMajor" InitialValue="$T3 == 0"/>
+        <Variable Name="i" InitialValue="0" />
+        <If Condition="isRowMajor">
+          <Exec>height = rows</Exec>
+          <Exec>width = cols</Exec>
+        </If>
+        <If Condition="!isRowMajor">
+          <Exec>height = cols</Exec>
+          <Exec>width = rows</Exec>
+        </If>
+        <Loop>
+          <If Condition="i &lt; height">
+            <Item Condition="isRowMajor" Name="row[{i}]">(_values._data + i * ld),[width]</Item>
+            <Item Condition="!isRowMajor" Name="col[{i}]">(_values._data + i * ld),[width]</Item>
+            <Exec>i++</Exec>
+          </If>
+          <If Condition="i &gt;= height">
+            <Break/>
+          </If>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+  <!-- Matrix  (rows=dynamic, cols=dynamic, ld=dynamic) -->
+  <Type Name="mochi::Matrix&lt;*,-1,-1,*,*,-1&gt;">
+    <DisplayString Condition="$T2 == 0 &amp;&amp; ($T3 &amp; 1) == 0">Matrix {_rows}x{_cols} (Row Major)</DisplayString>
+    <DisplayString Condition="$T2 == 1 &amp;&amp; ($T3 &amp; 1) == 0">Matrix {_rows}x{_cols} (Column Major)</DisplayString>
+    <DisplayString Condition="$T2 == 0 &amp;&amp; ($T3 &amp; 1) == 1">ViewMatrix {_rows}x{_cols} (Row Major)</DisplayString>
+    <DisplayString Condition="$T2 == 1 &amp;&amp; ($T3 &amp; 1) == 1">ViewMatrix {_rows}x{_cols} (Column Major)</DisplayString>
+    <Expand>
+      <CustomListItems Condition="$T3 == 0 || $T3 == 1">
+        <Variable Name="rows" InitialValue="_rows" />
+        <Variable Name="cols" InitialValue="_cols" />
+        <Variable Name="ld" InitialValue="_ld" />
+        <Variable Name="height" InitialValue="0" />
+        <Variable Name="width" InitialValue="0" />
+        <Variable Name="isRowMajor" InitialValue="$T2 == 0"/>
+        <Variable Name="i" InitialValue="0" />
+        <If Condition="isRowMajor">
+          <Exec>height = rows</Exec>
+          <Exec>width = cols</Exec>
+        </If>
+        <If Condition="!isRowMajor">
+          <Exec>height = cols</Exec>
+          <Exec>width = rows</Exec>
+        </If>
+        <Loop>
+          <If Condition="i &lt; height">
+            <Item Condition="isRowMajor" Name="row[{i}]">(_values._data + i * ld),[width]</Item>
+            <Item Condition="!isRowMajor" Name="col[{i}]">(_values._data + i * ld),[width]</Item>
+          </If>
+          <Exec>i++</Exec>
+          <If Condition="i &gt;= height">
+            <Break/>
+          </If>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+</AutoVisualizer>

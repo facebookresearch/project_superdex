@@ -1,0 +1,86 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+[build-system]
+requires = ["scikit-build-core>=0.11"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "superdex-robotics-fp64"
+version = "1.0.0"
+requires-python = ">=3.12,<3.13"
+authors = [{name = "SuperDex Team"}]
+description = "Double-precision robotics extension for SuperDex"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "thirdparty_licenses/**/*"]
+dependencies = [
+    "superdex-physics-fp64==1.0.0",
+    "superdex-robotics==1.0.0",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+]
+
+[project.urls]
+Homepage = "https://github.com/facebookresearch/project_superdex"
+Repository = "https://github.com/facebookresearch/project_superdex"
+
+[tool.scikit-build]
+build-dir = "../build-fp64/{wheel_tag}"
+wheel.packages = ["superdex_robotics_fp64"]
+wheel.install-dir = "superdex_robotics_fp64/_native"
+build.targets = ["superdex_robotics_pybind"]
+install.components = ["superdex_robotics_pybind"]
+
+[tool.scikit-build.cmake]
+source-dir = ".."
+args = [
+    "-GNinja",
+    "-DMOCHI_BUILD_DEBUGGER=OFF",
+    "-DMOCHI_BUILD_MESH_CLI=OFF",
+    "-DMOCHI_BUILD_RENDERER=OFF",
+    "-DMOCHI_BUILD_SHARED=ON",
+    "-DMOCHI_USE_DOUBLE_PRECISION=ON",
+    "-DMOCHI_USE_PYBIND=ON",
+    "-DSUPERDEX_BUILD_ROBOTICS=ON",
+]
+
+[tool.cibuildwheel]
+build = "cp312-*"
+skip = "*musllinux* *-win32"
+test-skip = "*"
+
+[tool.cibuildwheel.linux]
+environment-pass = ["http_proxy", "https_proxy", "no_proxy"]
+before-all = "yum install -y clang"
+repair-wheel-command = """auditwheel repair -w {dest_dir} {wheel} \
+  --exclude libmochi_physics_double.so --exclude libmochi_pybind_core_double.so --exclude 'libmarl.so*'"""
+
+[tool.cibuildwheel.linux.environment]
+CC = "clang"
+CXX = "clang++"
+
+[tool.cibuildwheel.macos]
+repair-wheel-command = """delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel} \
+  --ignore-missing-dependencies \
+  --exclude libmochi_physics_double.dylib --exclude libmochi_pybind_core_double.dylib --exclude libmarl."""
+
+[tool.cibuildwheel.windows]
+repair-wheel-command = """delvewheel repair -w {dest_dir} -v {wheel} --ignore-existing \
+  --exclude mochi_physics_double.dll --exclude mochi_pybind_core_double.dll --exclude marl.dll"""

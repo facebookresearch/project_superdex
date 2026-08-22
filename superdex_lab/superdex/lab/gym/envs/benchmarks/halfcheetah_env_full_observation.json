@@ -1,0 +1,6 @@
+{
+  "description": "HalfCheetah with the x position kept in the observation, for policies that are allowed to be position-aware.",
+  "env_cfg": {
+    "exclude_current_position_from_observation": false
+  }
+}

@@ -1,0 +1,290 @@
+// @brief Represents a constraint that restricts the degrees of freedom of one or more actors.
+//
+// @details Constraints enforce relationships between actor degrees of freedom (DoFs), such as
+// fixing positions, limiting joint angles, or tracking target poses. They apply forces to maintain
+// desired configurations using spring-damper mechanics controlled by stiffness and damping
+// parameters.
+//
+// @warning Concurrent access to a constraint is illegal.
+//
+// @note Each constraint belongs to exactly one scene.
+// @note Each constraint acts on the degrees of freedom of one or more actors.
+// @note The type of constraint determines which methods are applicable.
+class Constraint [no_init, no_destruct, use_scene] {
+
+  // @brief Get the type of the constraint.
+  //
+  // @return Type of the constraint.
+  //
+  // @note Some methods are only valid for certain constraint types.
+  //
+  // @see ConstraintType
+  fn GetType() -> ConstraintType [pure, virtual, const];
+
+  // @brief Get the handle associated with this constraint.
+  //
+  // @return Handle to this constraint.
+  //
+  // @note Handles are safe to store and remain valid throughout the constraint lifespan.
+  // @note Call @ref Scene::GetConstraint to look up the constraint's pointer from the constraint's
+  // handle.
+  //
+  // @see Scene::GetConstraint
+  fn GetHandle() -> ConstraintHandle [pure, virtual, const];
+
+  // @brief Get the constraint's stiffness parameter.
+  //
+  // @return Stiffness value. [N/m] for translation constraints, [N·m/rad] for rotation constraints.
+  //
+  // @note Higher stiffness results in stronger constraint forces/torques.
+  //
+  // @see SetStiffness, GetDamping, GetSaturation
+  fn GetStiffness() -> real [pure, virtual, const];
+
+  // @brief Set the constraint's stiffness parameter.
+  //
+  // @param[in] stiffness Stiffness value. [N/m] for translation constraints, [N·m/rad] for
+  // rotation constraints. Must be non-negative and finite.
+  //
+  // @see GetStiffness, SetDamping, SetSaturation
+  fn SetStiffness(real stiffness) -> void [pure, virtual, mochi_error];
+
+  // @brief Get the constraint's damping parameter.
+  //
+  // @return Damping value. [N·s/m] for translation constraints, [N·m·s/rad] for rotation constraints.
+  //
+  // @see SetDamping, GetStiffness, GetSaturation
+  fn GetDamping() -> real [pure, virtual, const];
+
+  // @brief Set the constraint's damping parameter.
+  //
+  // @param[in] damping Damping value. [N·s/m] for translation constraints, [N·m·s/rad] for
+  // rotation constraints. Must be non-negative and finite.
+  //
+  // @see GetDamping, SetStiffness, SetSaturation
+  fn SetDamping(real damping) -> void [pure, virtual, mochi_error];
+
+  // @brief Get the constraint's saturation parameter.
+  //
+  // @return Saturation distance [m] for translation constraints or angle [rad] for rotation
+  // constraints, or a negative value if saturation is disabled.
+  //
+  // @note A positive value smoothly limits the magnitude of the elastic (stiffness) contribution to
+  // stiffness * saturation. The damping contribution is separate and is not limited by saturation.
+  //
+  // @see SetSaturation, GetStiffness, GetDamping
+  fn GetSaturation() -> real [pure, virtual, const];
+
+  // @brief Set the constraint's saturation parameter.
+  //
+  // @param[in] saturation Saturation distance [m] for translation constraints or angle [rad] for
+  // rotation constraints, or any negative value to disable saturation. Must be finite and
+  // non-zero.
+  //
+  // @note A positive value smoothly limits the magnitude of the elastic (stiffness) contribution to
+  // stiffness * saturation. The damping contribution is separate and is not limited by saturation.
+  //
+  // @see GetSaturation, SetStiffness, SetDamping
+  fn SetSaturation(real saturation) -> void [pure, virtual, mochi_error];
+
+  // @brief Compute the constraint's current deviation from its target, limits, or coupling
+  // condition.
+  //
+  // @return Vector of constraint deviation values, one per constraint dimension. Units: [m]
+  // for translation constraints or [rad] for rotation constraints. Size equals the number of
+  // scalar constraint equations (e.g., 3 for position/rotation pivots and joints, 1 for
+  // single-DoF range/target constraints).
+  //
+  // @note For constraints with targets: deviation is the distance/angle error from target.
+  // @note For constraints with range limits: deviation indicates how far the current value is
+  // from the valid range.
+  // @note For coupling constraints without a target or range: deviation is the constraint
+  // violation, i.e. how far the coupling is from being satisfied (zero when exactly satisfied).
+  fn GetDeviation() -> DynamicArray<real> [pure, virtual, const];
+
+  // @brief Get the force/torque applied by the constraint.
+  //
+  // @details Values are ordered first by actor (in the order returned by @ref GetActor), then by
+  // DoF within each actor (in the order returned by @ref GetDofIndicesForActor). Each entry has
+  // units conjugate to its DoF: [N] for translational DoFs and [N·m] for rotational DoFs (so a
+  // single returned vector may mix both, e.g. for @ref ConstraintType::RigidPivotPosition the 6
+  // entries are 3 force [N] followed by 3 torque [N·m] components on the rigid actor).
+  //
+  // @return Flattened generalized-force vector. One entry per constrained DoF.
+  //
+  // @note Requires registering @ref QueryType::ConstraintForce before the simulation step. Results are
+  // available after the simulation step completes.
+  // @note If the solver diverged in the last simulation step, the returned force may be inaccurate.
+  //
+  // @see RegisterQuery, QueryType::ConstraintForce, GetDofIndicesForActor
+  fn GetForce() -> Span<real const> [pure, virtual, const, mochi_error];
+
+  // @brief Get the number of actors affected by the constraint.
+  //
+  // @return Number of actors affected by the constraint.
+  fn GetNumActors() -> int [pure, virtual, const];
+
+  // @brief Get one of the actors affected by this constraint.
+  //
+  // @param[in] actorIndex Actor index in the range [0, @ref GetNumActors).
+  //
+  // @return Pointer to the actor.
+  //
+  // @see GetNumActors
+  fn GetActor(int actorIndex) -> Actor* [pure, virtual, overloaded];
+
+  // @brief Get read-only access to one of the actors affected by this constraint.
+  //
+  // @param[in] actorIndex Actor index in the range [0, @ref GetNumActors).
+  //
+  // @return Const pointer to the actor.
+  //
+  // @see GetNumActors
+  fn GetActor(int actorIndex) -> Actor const* [pure, virtual, const, overloaded, no_python];
+
+  // @brief Get the degrees of freedom (DoF) indices affected by this constraint on a specific
+  // actor.
+  //
+  // @param[in] actorIndex Actor index in the range [0, @ref GetNumActors).
+  //
+  // @return Span of DoF indices for the specified actor.
+  //
+  // @see GetNumActors, GetActor
+  fn GetDofIndicesForActor(int actorIndex) -> Span<int const> [pure, virtual, const];
+
+  // @brief Set the constraint's target position in world frame.
+  //
+  // @param[in] position Target position [m] in world frame. Must be finite.
+  //
+  // @note Only applicable to position-target constraints: @ref
+  // ConstraintType::RigidPivotPosition, @ref ConstraintType::DeformableNodePosition, and @ref
+  // ConstraintType::RigidPivotToRigidTarget. For @ref ConstraintType::RigidPivotToRigidTarget,
+  // this updates only the translation of the target center-of-mass transform.
+  // @note Also affects target velocity, which depends on the difference between current and old
+  // target position.
+  //
+  // @see SetTargetRotation, SetTargetDof
+  fn SetTargetPosition(Real3 const& position [units(m)]) -> void [pure, virtual, mochi_error];
+
+  // @brief Set the constraint's target rotation.
+  //
+  // @details The target is interpreted according to the constraint type. For @ref
+  // ConstraintType::RigidPivotRotation, it is the target pivot-frame rotation in world
+  // coordinates. For @ref ConstraintType::RigidPivotToRigidTarget, it is the rotation of the
+  // target center-of-mass transform in world coordinates. For @ref
+  // ConstraintType::Articulated3dRotationTarget, it is the target joint-local rotation. For
+  // @ref ConstraintType::JointRotationTracking, it is the target rotation of @ref
+  // JointRotationTrackingConstraintParams::actorB relative to @ref
+  // JointRotationTrackingConstraintParams::actorA. For @ref
+  // ConstraintType::RodElementRotationToRigid, it is the target rotation of the
+  // constrained rod element relative to the rigid actor.
+  //
+  // @param[in] rotation Target rotation quaternion [x, y, z, w]. Must be finite and non-zero.
+  // Normalized before use.
+  //
+  // @note Also affects target velocity, which depends on the difference between current and old
+  // target rotation.
+  //
+  // @see SetTargetPosition, SetTargetDof, SetRefRelativeRotation
+  fn SetTargetRotation(Quaternion const& rotation) -> void [pure, virtual, mochi_error];
+
+  // @brief Set the constraint's target DoF.
+  //
+  // @param[in] target Target DoF value. Units: [m] for translation DoFs, [rad] for rotation DoFs.
+  //
+  // @note Only applicable to @ref ConstraintType::ArticulatedSingleDofTarget.
+  // @note Also affects target velocity, which depends on the difference between current and old
+  // target DoF.
+  //
+  // @see SetTargetPosition, SetTargetRotation
+  fn SetTargetDof(real target) -> void [pure, virtual, mochi_error];
+
+  // @brief Update the old target to match the current target.
+  //
+  // @details Call this method after changing a target discontinuously, and before stepping the
+  // scene, to prevent that change from contributing to damping during the next simulation step.
+  //
+  // @note Only applicable to constraints with a target.
+  fn UpdateOldTarget() -> void [pure, virtual, mochi_error];
+
+  // @brief Set a relative-rotation target from two rotations expressed in a common frame.
+  //
+  // @details Sets the target to inverse(@ref rotationA) * @ref rotationB.
+  //
+  // @param[in] rotationA First rotation. Represents @ref
+  // JointRotationTrackingConstraintParams::actorA for @ref
+  // ConstraintType::JointRotationTracking and the rigid actor for @ref
+  // ConstraintType::RodElementRotationToRigid. Must be finite and non-zero.
+  // Normalized before use.
+  // @param[in] rotationB Second rotation. Represents @ref
+  // JointRotationTrackingConstraintParams::actorB for @ref
+  // ConstraintType::JointRotationTracking and the selected rod element for @ref
+  // ConstraintType::RodElementRotationToRigid. Must be finite and non-zero.
+  // Normalized before use.
+  //
+  // @note Only applicable to @ref ConstraintType::JointRotationTracking and @ref
+  // ConstraintType::RodElementRotationToRigid.
+  // @note Also affects target velocity, which depends on the difference between current and old
+  // target relative rotation.
+  //
+  // @see SetTargetRotation, UpdateOldTarget
+  fn SetRefRelativeRotation(Quaternion const& rotationA, Quaternion const& rotationB) -> void [pure, virtual, mochi_error];
+
+  // @brief Get the constraint's minimum limit values.
+  //
+  // @return Span of minimum values for each constrained DoF. Units: [m] for translation DoFs,
+  // [rad] for rotation DoFs.
+  //
+  // @note Only applicable to range-based constraints
+  // (@ref ConstraintType::ArticulatedSingleDofRange,
+  // @ref ConstraintType::Articulated3dRotationRange, @ref ConstraintType::JointRotationRange).
+  //
+  // @see GetLimitMaxValues
+  fn GetLimitMinValues() -> Span<real const> [pure, virtual, const, mochi_error];
+
+  // @brief Get the constraint's maximum limit values.
+  //
+  // @return Span of maximum values for each constrained DoF. Units: [m] for translation DoFs,
+  // [rad] for rotation DoFs.
+  //
+  // @note Only applicable to range-based constraints
+  // (@ref ConstraintType::ArticulatedSingleDofRange,
+  // @ref ConstraintType::Articulated3dRotationRange, @ref ConstraintType::JointRotationRange).
+  //
+  // @see GetLimitMinValues
+  fn GetLimitMaxValues() -> Span<real const> [pure, virtual, const, mochi_error];
+
+  // @brief Register a query to compute data for this constraint.
+  //
+  // @param[in] type Type of query to register.
+  //
+  // @return @ref QueryHandle for the registered query.
+  //
+  // @note Queries may add substantial computational overhead. Use only when necessary.
+  // @note Data becomes available after the next simulation step (even if the time-step is zero).
+  // @note Call @ref CancelQuery when the query is not needed again in the future.
+  // @note Queries are reference counted internally, so they will be available as long as there is
+  // one outstanding @ref QueryHandle.
+  //
+  // @see CancelQuery, IsQuerySupported, Actor::RegisterQuery
+  fn RegisterQuery(QueryType type) -> QueryHandle [pure, virtual, mochi_error];
+
+  // @brief Cancel a previously registered query.
+  //
+  // @param[in] handle @ref QueryHandle from a previous @ref RegisterQuery call.
+  //
+  // @note Cancelling queries may improve memory usage and/or performance if the query is no longer
+  // needed.
+  //
+  // @see RegisterQuery, Actor::CancelQuery
+  fn CancelQuery(QueryHandle handle) -> void [pure, virtual];
+
+  // @brief Check whether a query type is supported for this constraint.
+  //
+  // @param[in] type Type of query to check.
+  //
+  // @return True if @ref RegisterQuery would succeed for this query type, false otherwise.
+  //
+  // @see RegisterQuery
+  fn IsQuerySupported(QueryType type) -> bool [pure, virtual, const];
+}

@@ -1,0 +1,141 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <mochi_core/linear_algebra/krylov/pcr.h>
+
+#include <mochi_core/linear_algebra/krylov/identity_prec.h>
+#include <mochi_core/linear_algebra/matrix.h>
+#include <mochi_core/solvers/linear_solver.h>
+#include <mochi_core/test/mochi_test_helpers.h>
+#include <mochi_core/utils/task_scheduler.h>
+
+#include <gtest/gtest.h>
+
+#include <limits>
+#include <memory>
+#include <vector>
+
+#include "krylov_solver_test_helpers.h"
+
+using namespace mochi;
+
+template <typename Scalar, typename StopCriterion, typename Dot>
+static void TestPcr(bool singleThreadedMode) {
+  using Matrix = Matrix<Scalar>;
+  using Vector = ColumnVector<Scalar>;
+
+  Scalar constexpr kAbsTol = KrylovTestConstants<Scalar>::kAbsTol;
+  Scalar constexpr kRelDivTol = KrylovTestConstants<Scalar>::kRelDivTol;
+
+  auto scheduler = SetupScheduler(singleThreadedMode);
+
+  Dot dot{};
+  auto opP = IdentityPreconditioner();
+
+  LinearSolverStatus info;
+  auto factory = krylov::MatrixFactoryType<Vector>{};
+
+  for (int itest = 0; itest < 2; ++itest) {
+    auto problem = GetTestProblem<Scalar>(itest);
+    int const matrixSize = problem.matrix.Rows();
+    int const maxIter = 1000;
+
+    auto b = problem.rhs;
+    auto ref = problem.solution;
+
+    Vector sol(matrixSize);
+    auto solView = AsView(sol);
+
+    auto A = ToMatrix(problem.matrix);
+    auto opA = MakeMatrixOperator(A);
+
+    auto prec = std::make_unique<krylov::IdentityPrec<Scalar>>(A);
+    auto P = details::PrecApplyer<Scalar>{*prec};
+
+    Vector pcrError(matrixSize);
+
+    auto runCommonChecks = [&](Scalar const& resRelTol, Scalar const& solRelTol) {
+      pcrError = ref - sol;
+      EXPECT_TRUE(info.converged);
+      EXPECT_LE(info.numIterDone, maxIter);
+      EXPECT_LT(info.relativeResidualNorm, resRelTol);
+      EXPECT_LT(dot.Norm(pcrError), solRelTol * dot.Norm(ref));
+    };
+
+    //
+    // PCR
+    //
+
+    Scalar const resRelTol = Scalar(100) * std::numeric_limits<Scalar>::epsilon();
+    Scalar solRelTol[2] = {resRelTol, static_cast<Scalar>(2.0e-02)};
+    StopCriterion stopper{resRelTol, kAbsTol, kRelDivTol};
+
+    // With A and opP.
+    sol.SetZero();
+    info = krylov::PCR(
+        A, AsView(b), solView, opP, maxIter, stopper, VerbosityLevel::Warning, dot, factory);
+    runCommonChecks(resRelTol, solRelTol[itest]);
+    EXPECT_LE(info.numIterDone, matrixSize);
+
+    // With the solution as initial guess, opA and P.
+    info = krylov::PCR(opA, b, sol, P, maxIter, stopper, VerbosityLevel::Warning, dot, factory);
+    runCommonChecks(resRelTol, solRelTol[itest]);
+    EXPECT_LT(info.numIterDone, 1);
+
+    // With arbitrary non-zero initial guess, A and P.
+    sol = Scalar(0.3) * ref;
+    info = krylov::PCR(A, b, sol, P, maxIter, stopper, VerbosityLevel::Warning, dot, factory);
+    runCommonChecks(resRelTol, solRelTol[itest]);
+    EXPECT_LE(info.numIterDone, matrixSize);
+  }
+
+  {
+    //
+    // Use the exact inverse as preconditioner to test convergence in 1 iteration
+    //
+    int const n = 10;
+
+    Matrix A(n, n);
+    Vector b(n), x(n);
+    A.SetRandom(1);
+    b.SetRandom(2);
+    x.SetZero();
+
+    Matrix B = A * Transpose(A);
+    Matrix invB = SymInverse(B);
+    auto opInvB = [&invB](auto const& x, auto& Px) { Px = invB * x; };
+    auto opB = [&B](auto const& x, auto& Bx) { Bx = B * x; };
+
+    Scalar const relTol = Scalar(10 * n * n) * std::numeric_limits<Scalar>::epsilon();
+    StopCriterion stopper{relTol, kAbsTol, kRelDivTol};
+    info = krylov::PCR(opB, b, x, opInvB, n, stopper, VerbosityLevel::Warning, dot, factory);
+
+    EXPECT_TRUE(info.converged);
+    EXPECT_EQ(info.numIterDone, 1);
+    EXPECT_LE(info.relativeResidualNorm, relTol);
+  }
+}
+
+TEST(KrylovSolver, Pcr) {
+  TestPcr<real, krylov::StatusResidualL2<krylov::UsualDot, real>, krylov::UsualDot>(
+      /*singleThreadedMode*/ true);
+  TestPcr<real, krylov::StatusResidualL2<krylov::UsualDot, real>, krylov::UsualDot>(
+      /*singleThreadedMode*/ false);
+  TestPcr<real, krylov::StatusPreconditionedResidualL2<krylov::UsualDot, real>, krylov::UsualDot>(
+      /*singleThreadedMode*/ true);
+  TestPcr<real, krylov::StatusPreconditionedResidualL2<krylov::UsualDot, real>, krylov::UsualDot>(
+      /*singleThreadedMode*/ false);
+}

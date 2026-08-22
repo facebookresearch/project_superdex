@@ -1,0 +1,280 @@
+/*
+ * Copyright (C) 2019 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILAMENT_BACKEND_VULKANCONTEXT_H
+#define TNT_FILAMENT_BACKEND_VULKANCONTEXT_H
+
+#include "vulkan/utils/Image.h"
+#include "vulkan/utils/Definitions.h"
+
+#include "vulkan/memory/ResourcePointer.h"
+
+#include <vector>
+
+#include <utils/bitset.h>
+#include <utils/Mutex.h>
+#include <utils/Slice.h>
+
+#include <bluevk/BlueVK.h>
+
+VK_DEFINE_HANDLE(VmaAllocator)
+VK_DEFINE_HANDLE(VmaPool)
+
+namespace filament::backend {
+
+struct VulkanCommandBuffer;
+struct VulkanRenderPass;
+struct VulkanRenderTarget;
+struct VulkanSwapChain;
+struct VulkanTexture;
+class VulkanStagePool;
+struct VulkanTimerQuery;
+
+struct VulkanAttachment {
+    fvkmemory::resource_ptr<VulkanTexture> texture;
+    uint8_t level = 0;
+    uint8_t layerCount = 1;
+    uint8_t layer = 0;
+
+    bool isDepth() const;
+    VkImage getImage() const;
+    VkFormat getFormat() const;
+    VulkanLayout getLayout() const;
+    VkExtent2D getExtent2D() const;
+    VkImageView getImageView();
+    // TODO: maybe embed aspect into the attachment or texture itself.
+    VkImageSubresourceRange getSubresourceRange() const;
+};
+
+struct VulkanRenderPassContext {
+    // Between the begin and end command render pass we cache the command buffer
+    VulkanCommandBuffer* commandBuffer;
+    fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget;
+    fvkmemory::resource_ptr<VulkanRenderPass> renderPass;
+    RenderPassParams params;
+    int currentSubpass;
+};
+
+// This is a collection of immutable data about the vulkan context. This actual handles to the
+// context are stored in VulkanPlatform.
+struct VulkanContext {
+public:
+    static uint32_t selectMemoryType(VkPhysicalDeviceMemoryProperties const& memoryProperties,
+            uint32_t types, VkFlags reqs) {
+        for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
+            if (types & 1) {
+                if ((memoryProperties.memoryTypes[i].propertyFlags & reqs) == reqs) {
+                    return i;
+                }
+            }
+            types >>= 1;
+        }
+        return (uint32_t) VK_MAX_MEMORY_TYPES;
+    }
+
+    inline uint32_t selectMemoryType(uint32_t types, VkFlags reqs) const {
+        if ((reqs & VK_MEMORY_PROPERTY_PROTECTED_BIT) != 0) {
+            assert_invariant(isProtectedMemorySupported());
+        }
+        return selectMemoryType(mMemoryProperties, types, reqs);
+    }
+
+    /**
+     * For pipeline cache prewarming, if external samplers are present, we need to build
+     * the fake pipeline using the proper formats specified. Since there's no way to
+     * get these at material build time, we allow the app to register them before
+     * creating materials.
+     *
+     * @param format The format, containing the external format value which should be
+     *               extracted from an AHardwareBuffer.
+     */
+    inline void addPipelineCachePrewarmExternalFormat(const VulkanPlatform::ExternalYcbcrFormat& format) {
+        mPipelineCachePrewarmExternalFormats.push_back(format);
+    }
+
+    inline fvkutils::VkFormatList const& getAttachmentDepthStencilFormats() const {
+        return mDepthStencilFormats;
+    }
+
+    inline fvkutils::VkFormatList const& getBlittableDepthStencilFormats() const {
+        return mBlittableDepthStencilFormats;
+    }
+
+    inline VkPhysicalDeviceLimits const& getPhysicalDeviceLimits() const noexcept {
+        return mPhysicalDeviceProperties.properties.limits;
+    }
+
+    inline uint32_t getPhysicalDeviceVendorId() const noexcept {
+        return mPhysicalDeviceProperties.properties.vendorID;
+    }
+
+    /**
+     * Fetches a list of pre-registered external formats for prewarming the Vulkan
+     * pipeline cache.
+     *
+     * @return A list containing an external format number, YCbCr color model conversion,
+     *         and YCbCr color range.
+     */
+    inline const std::vector<VulkanPlatform::ExternalYcbcrFormat>&
+    getPipelineCachePrewarmExternalFormats() const noexcept {
+        return mPipelineCachePrewarmExternalFormats;
+    }
+
+    inline VkExternalFenceHandleTypeFlags getFenceExportFlags() const noexcept {
+        return mFenceExportFlags;
+    }
+
+    inline const char* getPhysicalDeviceName() const noexcept {
+        return mPhysicalDeviceProperties.properties.deviceName;
+    }
+
+    inline const char* getDriverName() const noexcept { return mDriverProperties.driverName; }
+
+    inline const char* getDriverInfo() const noexcept { return mDriverProperties.driverInfo; }
+
+    inline bool isImageCubeArraySupported() const noexcept {
+        return mPhysicalDeviceFeatures.features.imageCubeArray == VK_TRUE;
+    }
+
+    inline bool isDepthClampSupported() const noexcept {
+        return mPhysicalDeviceFeatures.features.depthClamp == VK_TRUE;
+    }
+
+    inline bool isDebugMarkersSupported() const noexcept {
+        return mDebugMarkersSupported;
+    }
+
+    inline bool isDebugUtilsSupported() const noexcept {
+        return mDebugUtilsSupported;
+    }
+
+    inline bool isDynamicRenderingSupported() const noexcept {
+        return mDynamicRenderingFeatures.dynamicRendering == VK_TRUE;
+    }
+
+    inline bool isMultiviewEnabled() const noexcept {
+        return mPhysicalDeviceVk11Features.multiview == VK_TRUE;
+    }
+
+    inline bool isClipDistanceSupported() const noexcept {
+        return mPhysicalDeviceFeatures.features.shaderClipDistance == VK_TRUE;
+    }
+
+    inline bool isLazilyAllocatedMemorySupported() const noexcept {
+        return mLazilyAllocatedMemorySupported;
+    }
+
+    inline bool isProtectedMemorySupported() const noexcept {
+        return mProtectedMemorySupported;
+    }
+
+    inline bool isImageView2DOn3DImageSupported() const noexcept {
+        return mPortabilitySubsetFeatures.imageView2DOn3DImage == VK_TRUE;
+    }
+
+    inline bool isUnifiedMemoryArchitecture() const noexcept {
+        return mIsUnifiedMemoryArchitecture;
+    }
+
+    inline bool isVertexInputDynamicStateSupported() const noexcept {
+        return mVertexInputDynamicStateSupported;
+    }
+
+    inline bool pipelineCreationFeedbackSupported() const noexcept {
+        return mPipelineCreationFeedbackSupported;
+    }
+
+    inline bool asyncPipelineCachePrewarmingEnabled() const noexcept {
+        return mAsyncPipelineCachePrewarmingEnabled;
+    }
+
+    inline bool parallelShaderCompilationDisabled() const noexcept {
+        return mParallelShaderCompileDisabled;
+    }
+
+    inline bool stagingBufferBypassEnabled() const noexcept {
+        return mStagingBufferBypassEnabled;
+    }
+
+    inline bool shouldUsePipelineCachePrewarming() const noexcept {
+        return asyncPipelineCachePrewarmingEnabled() &&
+               !parallelShaderCompilationDisabled() &&
+               isVertexInputDynamicStateSupported() &&
+               isDynamicRenderingSupported();
+    }
+
+    inline bool isGlobalPrioritySupported() const noexcept {
+        return mGlobalPrioritySupported;
+    }
+
+    inline bool isDriverPropertiesSupported() const noexcept { return mDriverPropertiesSupported; }
+
+private:
+    VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
+    VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+    };
+    VkPhysicalDeviceDriverProperties mDriverProperties = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES,
+    };
+    VkPhysicalDeviceVulkan11Features mPhysicalDeviceVk11Features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+    };
+    VkPhysicalDeviceFeatures2 mPhysicalDeviceFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+    };
+    VkPhysicalDeviceDynamicRenderingFeaturesKHR mDynamicRenderingFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
+    };
+    VkPhysicalDevicePortabilitySubsetFeaturesKHR mPortabilitySubsetFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR,
+        // By default, on platforms where we don't have portability subset, then this feature must
+        // exists.  We only fill this struct only when portability subset is needed (i.e.
+        // non-conformant vulkan implementation).
+        .imageView2DOn3DImage = VK_TRUE,
+    };
+
+    VkExternalFenceHandleTypeFlags mFenceExportFlags = {};
+
+    // These are options that are either supported or not supported in the current
+    // device and instance.
+    bool mDebugMarkersSupported = false;
+    bool mDebugUtilsSupported = false;
+    bool mIsUnifiedMemoryArchitecture = false;
+    bool mLazilyAllocatedMemorySupported = false;
+    bool mPipelineCreationFeedbackSupported = false;
+    bool mProtectedMemorySupported = false;
+    bool mVertexInputDynamicStateSupported = false;
+    bool mGlobalPrioritySupported = false;
+    bool mDriverPropertiesSupported = false;
+
+    // These are options that can be enabled or disabled at an application level.
+    bool mAsyncPipelineCachePrewarmingEnabled = false;
+    bool mParallelShaderCompileDisabled = false;
+    bool mStagingBufferBypassEnabled = false;
+
+    fvkutils::VkFormatList mDepthStencilFormats;
+    fvkutils::VkFormatList mBlittableDepthStencilFormats;
+
+    std::vector<VulkanPlatform::ExternalYcbcrFormat> mPipelineCachePrewarmExternalFormats;
+
+    // For convenience so that VulkanPlatform can initialize the private fields.
+    friend class VulkanPlatform;
+};
+
+}// namespace filament::backend
+
+#endif// TNT_FILAMENT_BACKEND_VULKANCONTEXT_H

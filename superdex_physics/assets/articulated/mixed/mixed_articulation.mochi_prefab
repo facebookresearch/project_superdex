@@ -1,0 +1,122 @@
+{
+  "actors": {
+    "articulated": [
+      {
+        "joints": [
+          {
+            "name": "jointA",
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.05000000074505806,
+                0,
+                -0.05000000074505806
+              ]
+            },
+            "type": "Free"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "name": "jointB",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.045000001788139343,
+                0.0099999997764825821,
+                0.045000001788139343
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "name": "jointC",
+            "parentLinkFromJoint": {
+              "translation": [
+                0,
+                0.18999999761581421,
+                0.0099999997764825821
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              1,
+              0,
+              0
+            ],
+            "name": "jointD",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.0099999997764825821,
+                0,
+                0.18999999761581421
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "name": "jointE",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.10000000149011612,
+                0,
+                0
+              ]
+            },
+            "type": "Spherical"
+          }
+        ],
+        "links": [
+          {
+            "colliderType": "Box",
+            "density": 1000,
+            "layer": "RigidLink",
+            "name": "base",
+            "shape": "./base.mochi.h5"
+          },
+          {
+            "colliderType": "Box",
+            "density": 1000,
+            "layer": "RigidLink",
+            "name": "link1",
+            "parentLink": 0,
+            "shape": "./link1.mochi.h5"
+          },
+          {
+            "colliderType": "Box",
+            "density": 1000,
+            "layer": "RigidLink",
+            "name": "link2",
+            "parentLink": 1,
+            "shape": "./link2.mochi.h5"
+          },
+          {
+            "colliderType": "Box",
+            "density": 1000,
+            "layer": "RigidLink",
+            "name": "link3",
+            "parentLink": 2,
+            "shape": "./link3.mochi.h5"
+          },
+          {
+            "colliderType": "Box",
+            "density": 1000,
+            "layer": "RigidLink",
+            "name": "link4",
+            "parentLink": 3,
+            "shape": "./link4.mochi.h5"
+          }
+        ],
+        "name": "MixedArticulation"
+      }
+    ]
+  }
+}

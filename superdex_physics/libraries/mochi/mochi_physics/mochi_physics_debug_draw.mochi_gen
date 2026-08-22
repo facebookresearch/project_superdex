@@ -1,0 +1,115 @@
+// @brief Manages debug visualization features for a scene.
+//
+// @details Provides a feature-based system for visualizing various aspects of the physics
+// simulation. The client application is responsible for rendering the generated primitives using
+// its own graphics API. Features can be individually enabled or disabled, such as visualizing
+// contact points, normals, velocities, or AABBs.
+//
+// @warning Debug drawing has significant performance overhead due to geometry generation
+// and data gathering.
+//
+// @note Must be accessed on the same thread as the owning @ref Scene.
+// @note Debug draw is disabled by default.
+// @note If consuming the data on a different thread, the client must deep-copy the underlying
+// data into client-owned buffers before the scene thread calls @ref GatherData again or modifies
+// the @ref Scene. Copying @ref DebugDrawData itself is a shallow copy of @ref Span views into
+// internal buffers and does not transfer ownership.
+//
+// @see Scene::GetDebugDraw, DebugDrawData
+class DebugDraw [no_init, no_destruct] {
+
+  // @brief Check if debug drawing is enabled for the scene.
+  //
+  // @return True if debug drawing is enabled, false otherwise.
+  //
+  // @note When disabled, @ref GatherData returns empty data regardless of feature settings.
+  //
+  // @see Enable
+  fn IsEnabled() -> bool [pure, virtual, const];
+
+  // @brief Enable or disable debug drawing for the entire scene.
+  //
+  // @param[in] enable True to enable, false to disable.
+  //
+  // @note This is a master switch that overrides all individual feature settings.
+  //
+  // @see IsEnabled
+  fn Enable(bool enable) -> void [pure, virtual];
+
+  // @brief Get the number of debug draw features available.
+  //
+  // @return Number of features that can be individually enabled or disabled.
+  //
+  // @see FindFeature, GetFeatureName
+  fn GetNumFeatures() -> int [pure, virtual, const];
+
+  // @brief Find a feature by name.
+  //
+  // @param[in] name Feature name (case sensitive).
+  //
+  // @return Feature index if found, or -1 if not found.
+  //
+  // @see GetFeatureName, EnableFeature
+  fn FindFeature(StringView name) -> int [pure, virtual, const];
+
+  // @brief Get the name of a feature by index.
+  //
+  // @param[in] index Feature index in the range [0, @ref GetNumFeatures).
+  //
+  // @return Name of the feature.
+  //
+  // @see GetNumFeatures, FindFeature
+  fn GetFeatureName(int index) -> StringView [pure, virtual, const];
+
+  // @brief Get the description of a feature by index.
+  //
+  // @param[in] index Feature index in the range [0, @ref GetNumFeatures).
+  //
+  // @return Human-readable description of the feature.
+  //
+  // @see GetNumFeatures, GetFeatureName
+  fn GetFeatureDescription(int index) -> StringView [pure, virtual, const];
+
+  // @brief Check if a feature is currently enabled.
+  //
+  // @param[in] index Feature index in the range [0, @ref GetNumFeatures).
+  //
+  // @return True if the feature is enabled, false otherwise.
+  //
+  // @see EnableFeature
+  fn IsFeatureEnabled(int index) -> bool [pure, virtual, const];
+
+  // @brief Enable or disable a specific feature.
+  //
+  // @param[in] index Feature index in the range [0, @ref GetNumFeatures).
+  // @param[in] enable True to enable the feature, false to disable.
+  //
+  // @note No debug-draw data is generated while the master switch (@ref IsEnabled) is false,
+  // but per-feature settings are remembered and take effect when the master switch is enabled.
+  //
+  // @see IsFeatureEnabled, Enable
+  fn EnableFeature(int index, bool enable) -> void [pure, virtual];
+
+  // @brief Generate debug draw primitives for all currently enabled features.
+  //
+  // @return Collection of primitives to be rendered by the client application. The returned
+  // @ref DebugDrawData contains Spans that reference internal buffers.
+  //
+  // @note Data is valid only until the next call to @ref GatherData or any modification to the
+  // @ref Scene.
+  // @note Returns empty data if @ref IsEnabled is false.
+  //
+  // @see DebugDrawData
+  fn GatherData() -> DebugDrawData [pure, virtual];
+
+  // @brief Enable or disable debug drawing for a specific actor.
+  //
+  // @param[in] actor Handle of the actor to enable or disable debug drawing for.
+  // @param[in] enable True to enable, false to disable.
+  //
+  // @note Enabled by default for all actors, including nested actors (child actors of
+  // articulated, soft-skinned and blended actors).
+  // @note Debug draw data won't be generated for any actor if the master switch, i.e. @ref
+  // IsEnabled, is false.
+  fn EnableActor(ActorHandle actor, bool enable) -> void [pure, virtual, mochi_error];
+}

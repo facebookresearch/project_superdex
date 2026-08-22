@@ -1,0 +1,96 @@
+{
+  "joints": [
+    {
+      "maxLimit": [
+        0,
+        0,
+        0
+      ],
+      "minLimit": [
+        0,
+        0,
+        0
+      ],
+      "name": "world_joint",
+      "type": "Free"
+    },
+    {
+      "maxLimit": [
+        0,
+        0,
+        0
+      ],
+      "minLimit": [
+        0,
+        0,
+        0
+      ],
+      "name": "sensor_joint",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.40557944774627686,
+          0.40557944774627686,
+          -0.57922822237014771,
+          0.57922822237014771
+        ],
+        "translation": [
+          -0.00139999995008111,
+          0,
+          0.0034000000450760126
+        ]
+      },
+      "type": "Hard"
+    }
+  ],
+  "links": [
+    {
+      "centerOfMass": [
+        -0.0022847999352961779,
+        -0.0003596099850255996,
+        -0.0049029998481273651
+      ],
+      "mass": 0.003603002754971385,
+      "momentOfInertia": [
+        2.392299904840911e-07,
+        2.9492999154001609e-09,
+        5.626199595099024e-08,
+        2.1033999075825704e-07,
+        -6.6005996224305363e-09,
+        2.467299964337144e-07
+      ],
+      "name": "mount",
+      "renderModel": "render/dg5f_link_tip_render.glb",
+      "shape": "collision/dg5f_link_tip_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        -5.6267666082021606e-09,
+        -0.00016604308621026576,
+        0.001715468242764473
+      ],
+      "contact": {
+        "coulombFrictionCoefficient": 4.8299999237060547
+      },
+      "mass": 0.0017553999787196517,
+      "momentOfInertia": [
+        6.5066473098340794e-08,
+        8.4509188655237238e-14,
+        -8.9755354976692528e-15,
+        6.068152202942656e-08,
+        -1.5196168767772633e-09,
+        8.4012029333280225e-08
+      ],
+      "name": "sensor",
+      "parentLink": 0,
+      "renderModel": "render/dg5f_link_tip_sensor_render.glb",
+      "sensors": [
+        {
+          "typeName": "SENSOR_SEED_V1_MLP",
+          "paramsFile": "internal/seed.superdex_sensor"
+        }
+      ],
+      "shape": "collision/dg5f_link_tip_sensor_clean_dome_collision.mochi.h5"
+    }
+  ],
+  "name": "dg5f_seed"
+}

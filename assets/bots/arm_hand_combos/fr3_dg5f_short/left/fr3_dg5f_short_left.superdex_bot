@@ -1,0 +1,26 @@
+{
+  "base": "//arms/fr3/fr3.superdex_bot",
+  "modifications": [
+    {
+      "AttachBot": {
+        "enabled": true,
+        "joint": {
+          "name": "dg5f_to_fr3",
+          "parentLinkFromJoint": {
+            "rotation": [
+              0,
+              0,
+              -1,
+              -4.3711388286737929e-08
+            ]
+          },
+          "type": "Hard"
+        },
+        "name": "dg5f",
+        "parentLinkName": "fr3_link8",
+        "path": "//hands/dg5f_short/left/dg5f_short_left.superdex_bot"
+      }
+    }
+  ],
+  "name": "fr3_dg5f_short_left"
+}

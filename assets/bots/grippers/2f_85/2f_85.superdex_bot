@@ -1,0 +1,370 @@
+{
+  "cycles": [
+    {
+      "childLink": 5,
+      "jointFromChildLink": {
+        "translation": [
+          0.017899999395012856,
+          0,
+          -0.0065150000154972076
+        ]
+      },
+      "parentLink": 2
+    },
+    {
+      "childLink": 9,
+      "jointFromChildLink": {
+        "translation": [
+          -0.017899999395012856,
+          0,
+          -0.0065150000154972076
+        ]
+      },
+      "parentLink": 6
+    }
+  ],
+  "defaultPose": [
+    0.3490658700466156,
+    0.3490658700466156,
+    -0.3490658700466156,
+    -0.3490658700466156,
+    -0.3490658700466156,
+    0.3490658700466156
+  ],
+  "joints": [
+    {
+      "name": "2f_85_world_joint",
+      "type": "Free"
+    },
+    {
+      "name": "2f_85_base_joint",
+      "type": "Hard"
+    },
+    {
+      "axis": [
+        0,
+        -1,
+        0
+      ],
+      "name": "2f_85_left_inner_knuckle_joint",
+      "parentLinkFromJoint": {
+        "translation": [
+          0.01269999984651804,
+          0,
+          0.061420001089572906
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        -1,
+        0
+      ],
+      "effortLimit": 50,
+      "maxLimit": [
+        0,
+        -0.80000001192092896,
+        0
+      ],
+      "minLimit": [
+        0,
+        0,
+        0
+      ],
+      "name": "2f_85_left_knuckle_joint",
+      "parentLinkFromJoint": {
+        "translation": [
+          0.030601140111684799,
+          0,
+          0.054904520511627197
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "name": "2f_85_left_finger_joint",
+      "parentLinkFromJoint": {
+        "translation": [
+          0.03152615949511528,
+          0,
+          -0.0037634701002389193
+        ]
+      },
+      "type": "Hard"
+    },
+    {
+      "axis": [
+        0,
+        -1,
+        0
+      ],
+      "name": "2f_85_left_finger_tip_joint",
+      "parentLinkFromJoint": {
+        "translation": [
+          0.0056313402019441128,
+          0,
+          0.047185149043798447
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        -1,
+        0
+      ],
+      "name": "2f_85_right_inner_knuckle_joint",
+      "parentLinkFromJoint": {
+        "translation": [
+          -0.01269999984651804,
+          0,
+          0.061420001089572906
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0,
+        -1,
+        0
+      ],
+      "effortLimit": 50,
+      "maxLimit": [
+        0,
+        0,
+        0
+      ],
+      "minLimit": [
+        0,
+        0.80000001192092896,
+        0
+      ],
+      "name": "2f_85_right_knuckle_joint",
+      "parentLinkFromJoint": {
+        "translation": [
+          -0.030601140111684799,
+          0,
+          0.054904520511627197
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "name": "2f_85_right_finger_joint",
+      "parentLinkFromJoint": {
+        "translation": [
+          -0.03152615949511528,
+          0,
+          -0.0037634701002389193
+        ]
+      },
+      "type": "Hard"
+    },
+    {
+      "axis": [
+        0,
+        -1,
+        0
+      ],
+      "name": "2f_85_right_finger_tip_joint",
+      "parentLinkFromJoint": {
+        "translation": [
+          -0.0056313402019441128,
+          0,
+          0.047185149043798447
+        ]
+      },
+      "type": "Revolute"
+    }
+  ],
+  "links": [
+    {
+      "name": "2f_85_world"
+    },
+    {
+      "centerOfMass": [
+        0,
+        2.2739999621990137e-05,
+        0.032322879880666733
+      ],
+      "mass": 0.66320198774337769,
+      "momentOfInertia": [
+        0.00051617814460769296,
+        2.9360000652900453e-08,
+        0,
+        0.00058802205603569746,
+        -3.2296000540554815e-07,
+        0.0003946277720388025
+      ],
+      "name": "2f_85_base_link",
+      "parentLink": 0,
+      "renderModel": "render/2f_85_robotiq_base.glb",
+      "shape": "collision/2f_85_robotiq_base.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.018976990133523941,
+        0.00015001000429037958,
+        0.022471010684967041
+      ],
+      "mass": 0.029693763703107834,
+      "momentOfInertia": [
+        9.5713603514013812e-06,
+        0,
+        -3.934239884983981e-06,
+        8.6905602074693888e-06,
+        0,
+        8.1914404290728271e-06
+      ],
+      "name": "2f_85_left_inner_knuckle_link",
+      "parentLink": 1,
+      "renderModel": "render/2f_85_left_inner_knuckle.glb",
+      "shape": "collision/2f_85_left_inner_knuckle.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.012131970375776291,
+        0.00019999999494757503,
+        -0.00058647000696510077
+      ],
+      "mass": 0.013847731985151768,
+      "momentOfInertia": [
+        3.5232000072937808e-07,
+        0,
+        1.1744000261160181e-07,
+        2.3194400000647875e-06,
+        0,
+        2.2313599856715882e-06
+      ],
+      "name": "2f_85_left_knuckle_link",
+      "parentLink": 1,
+      "renderModel": "render/2f_85_left_knuckle.glb",
+      "shape": "collision/2f_85_left_knuckle.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.0034689900930970907,
+        -0.00079447001917287707,
+        0.01867121085524559
+      ],
+      "mass": 0.042603768408298492,
+      "momentOfInertia": [
+        1.3857919839210808e-05,
+        0,
+        -2.1726400518673472e-06,
+        1.1832080417661928e-05,
+        0,
+        5.1967199397040531e-06
+      ],
+      "name": "2f_85_left_finger_link",
+      "parentLink": 3,
+      "renderModel": "render/2f_85_left_finger.glb",
+      "shape": "collision/2f_85_left_finger.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        -0.014567060396075249,
+        -0.00079999997979030013,
+        0.016497010365128517
+      ],
+      "mass": 0.042685888707637787,
+      "momentOfInertia": [
+        1.0481519893801305e-05,
+        0,
+        3.5231998936069431e-06,
+        1.1978880138485692e-05,
+        0,
+        4.2278397813788615e-06
+      ],
+      "name": "2f_85_left_finger_tip_link",
+      "parentLink": 4,
+      "renderModel": "render/2f_85_left_finger_tip.glb",
+      "shape": "collision/2f_85_left_finger_tip.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        -0.01926824077963829,
+        5.0009999540634453e-05,
+        0.022221779450774193
+      ],
+      "mass": 0.029693763703107834,
+      "momentOfInertia": [
+        9.4245597210829146e-06,
+        0,
+        3.9636001929466147e-06,
+        8.6905602074693888e-06,
+        0,
+        8.3382401498965919e-06
+      ],
+      "name": "2f_85_right_inner_knuckle_link",
+      "parentLink": 1,
+      "renderModel": "render/2f_85_right_inner_knuckle.glb",
+      "shape": "collision/2f_85_right_inner_knuckle.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        -0.012131970375776291,
+        0.00019999999494757503,
+        -0.00058647000696510077
+      ],
+      "mass": 0.013847731985151768,
+      "momentOfInertia": [
+        3.5232000072937808e-07,
+        0,
+        -1.1744000261160181e-07,
+        2.3194400000647875e-06,
+        0,
+        2.2313599856715882e-06
+      ],
+      "name": "2f_85_right_knuckle_link",
+      "parentLink": 1,
+      "renderModel": "render/2f_85_right_knuckle.glb",
+      "shape": "collision/2f_85_right_knuckle.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        -0.0034689900930970907,
+        -5.5300001804425847e-06,
+        0.01867121085524559
+      ],
+      "mass": 0.042603768408298492,
+      "momentOfInertia": [
+        1.3857919839210808e-05,
+        0,
+        2.1726400518673472e-06,
+        1.1832080417661928e-05,
+        0,
+        5.1967199397040531e-06
+      ],
+      "name": "2f_85_right_finger_link",
+      "parentLink": 7,
+      "renderModel": "render/2f_85_right_finger.glb",
+      "shape": "collision/2f_85_right_finger.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.014567060396075249,
+        4.9999998736893758e-05,
+        0.016497010365128517
+      ],
+      "mass": 0.042685888707637787,
+      "momentOfInertia": [
+        1.0481519893801305e-05,
+        0,
+        -3.5231998936069431e-06,
+        1.1978880138485692e-05,
+        0,
+        4.2278397813788615e-06
+      ],
+      "name": "2f_85_right_finger_tip_link",
+      "parentLink": 8,
+      "renderModel": "render/2f_85_right_finger_tip.glb",
+      "shape": "collision/2f_85_right_finger_tip.mochi.h5"
+    }
+  ],
+  "name": "2f_85"
+}

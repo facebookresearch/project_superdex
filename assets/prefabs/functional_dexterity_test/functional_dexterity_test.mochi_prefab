@@ -1,0 +1,266 @@
+{
+  "actors": {
+    "rigid": [
+      {
+        "contact": {
+          "coulombFrictionCoefficient": 0.25,
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 9.9999997473787516e-05,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "isStatic": true,
+        "name": "FDT_PegBoard",
+        "renderModel": "./render/pegboard.glb",
+        "shape": "./collision/pegboard.mochi.h5",
+        "translation": [
+          0,
+          0,
+          1.2443435171149986e-09
+        ]
+      }
+    ]
+  },
+  "prefabs": [
+    {
+      "name": "FDT_Peg",
+      "path": "./fdt_peg.mochi_prefab",
+      "rotation": [
+        1,
+        0,
+        0,
+        -4.3711388286737929e-08
+      ],
+      "translation": [
+        0.17200000584125519,
+        0.034000001847743988,
+        0.10670997947454453
+      ]
+    },
+    {
+      "name": "FDT_Peg1",
+      "path": "./fdt_peg.mochi_prefab",
+      "rotation": [
+        1,
+        0,
+        0,
+        -4.3711388286737929e-08
+      ],
+      "translation": [
+        0.12700000405311584,
+        0.034000001847743988,
+        0.10670997947454453
+      ]
+    },
+    {
+      "name": "FDT_Peg2",
+      "path": "./fdt_peg.mochi_prefab",
+      "rotation": [
+        1,
+        0,
+        0,
+        -4.3711388286737929e-08
+      ],
+      "translation": [
+        0.080871745944023132,
+        0.034000001847743988,
+        0.10670997947454453
+      ]
+    },
+    {
+      "name": "FDT_Peg3",
+      "path": "./fdt_peg.mochi_prefab",
+      "rotation": [
+        1,
+        0,
+        0,
+        -4.3711388286737929e-08
+      ],
+      "translation": [
+        0.037000000476837158,
+        0.034000001847743988,
+        0.10670997947454453
+      ]
+    },
+    {
+      "name": "FDT_Peg4",
+      "path": "./fdt_peg.mochi_prefab",
+      "rotation": [
+        1,
+        0,
+        0,
+        -4.3711388286737929e-08
+      ],
+      "translation": [
+        0.037000000476837158,
+        0.078542754054069519,
+        0.10670997947454453
+      ]
+    },
+    {
+      "name": "FDT_Peg5",
+      "path": "./fdt_peg.mochi_prefab",
+      "rotation": [
+        1,
+        0,
+        0,
+        -4.3711388286737929e-08
+      ],
+      "translation": [
+        0.080871745944023132,
+        0.078542754054069519,
+        0.10670997947454453
+      ]
+    },
+    {
+      "name": "FDT_Peg6",
+      "path": "./fdt_peg.mochi_prefab",
+      "rotation": [
+        1,
+        0,
+        0,
+        -4.3711388286737929e-08
+      ],
+      "translation": [
+        0.12700000405311584,
+        0.078542754054069519,
+        0.10670997947454453
+      ]
+    },
+    {
+      "name": "FDT_Peg7",
+      "path": "./fdt_peg.mochi_prefab",
+      "rotation": [
+        1,
+        0,
+        0,
+        -4.3711388286737929e-08
+      ],
+      "translation": [
+        0.17200000584125519,
+        0.078542754054069519,
+        0.10670997947454453
+      ]
+    },
+    {
+      "name": "FDT_Peg8",
+      "path": "./fdt_peg.mochi_prefab",
+      "rotation": [
+        1,
+        0,
+        0,
+        -4.3711388286737929e-08
+      ],
+      "translation": [
+        0.037000000476837158,
+        0.12351144850254059,
+        0.10670997947454453
+      ]
+    },
+    {
+      "name": "FDT_Peg9",
+      "path": "./fdt_peg.mochi_prefab",
+      "rotation": [
+        1,
+        0,
+        0,
+        -4.3711388286737929e-08
+      ],
+      "translation": [
+        0.080871745944023132,
+        0.12351144850254059,
+        0.10670997947454453
+      ]
+    },
+    {
+      "name": "FDT_Peg10",
+      "path": "./fdt_peg.mochi_prefab",
+      "rotation": [
+        1,
+        0,
+        0,
+        -4.3711388286737929e-08
+      ],
+      "translation": [
+        0.12700000405311584,
+        0.12351144850254059,
+        0.10670997947454453
+      ]
+    },
+    {
+      "name": "FDT_Peg11",
+      "path": "./fdt_peg.mochi_prefab",
+      "rotation": [
+        1,
+        0,
+        0,
+        -4.3711388286737929e-08
+      ],
+      "translation": [
+        0.17200000584125519,
+        0.12351144850254059,
+        0.10670997947454453
+      ]
+    },
+    {
+      "name": "FDT_Peg12",
+      "path": "./fdt_peg.mochi_prefab",
+      "rotation": [
+        1,
+        0,
+        0,
+        -4.3711388286737929e-08
+      ],
+      "translation": [
+        0.037000000476837158,
+        0.16842371225357056,
+        0.10670997947454453
+      ]
+    },
+    {
+      "name": "FDT_Peg13",
+      "path": "./fdt_peg.mochi_prefab",
+      "rotation": [
+        1,
+        0,
+        0,
+        -4.3711388286737929e-08
+      ],
+      "translation": [
+        0.080871745944023132,
+        0.16842371225357056,
+        0.10670997947454453
+      ]
+    },
+    {
+      "name": "FDT_Peg14",
+      "path": "./fdt_peg.mochi_prefab",
+      "rotation": [
+        1,
+        0,
+        0,
+        -4.3711388286737929e-08
+      ],
+      "translation": [
+        0.12700000405311584,
+        0.16842371225357056,
+        0.10670997947454453
+      ]
+    },
+    {
+      "name": "FDT_Peg15",
+      "path": "./fdt_peg.mochi_prefab",
+      "rotation": [
+        1,
+        0,
+        0,
+        -4.3711388286737929e-08
+      ],
+      "translation": [
+        0.17200000584125519,
+        0.16842371225357056,
+        0.10670997947454453
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+material {
+    name : UnlitSeeThrough,
+    shadingModel : unlit,
+    // transparent (not fade): fade only differs from transparent for lit materials (it fades
+    // specular too); unlit has no specular, so transparent already vanishes cleanly at alpha 0.
+    blending : transparent,
+    depthCulling : false,
+    culling : none,
+    parameters : [
+        {
+            type : float4,
+            name : color
+        }
+    ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        // transparent blending assumes premultiplied alpha, so scale rgb by alpha (unlit is not
+        // auto-premultiplied by Filament; cf. Wireframe.mat).
+        material.baseColor = vec4(materialParams.color.rgb * materialParams.color.a, materialParams.color.a);
+    }
+}

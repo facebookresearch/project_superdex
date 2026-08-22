@@ -1,0 +1,382 @@
+{
+  "actors": {
+    "articulated": [
+      {
+        "joints": [
+          {
+            "name": "Torso",
+            "type": "Free"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "friction": {
+              "viscous": 1
+            },
+            "inertia": 1,
+            "limitDamping": 50,
+            "limitStiffness": 1000,
+            "maxLimit": [
+              0,
+              0.52359879016876221,
+              0
+            ],
+            "minLimit": [
+              0,
+              -0.52359879016876221,
+              0
+            ],
+            "name": "Leg1",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.28279998898506165,
+                0,
+                0
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              -1
+            ],
+            "friction": {
+              "viscous": 1
+            },
+            "inertia": 1,
+            "limitDamping": 50,
+            "limitStiffness": 1000,
+            "maxLimit": [
+              0,
+              0,
+              -1.2217304706573486
+            ],
+            "minLimit": [
+              0,
+              0,
+              -0.52359879016876221
+            ],
+            "name": "Ankle1",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.28279998898506165,
+                0,
+                0
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "friction": {
+              "viscous": 1
+            },
+            "inertia": 1,
+            "limitDamping": 50,
+            "limitStiffness": 1000,
+            "maxLimit": [
+              0,
+              0.52359879016876221,
+              0
+            ],
+            "minLimit": [
+              0,
+              -0.52359879016876221,
+              0
+            ],
+            "name": "Leg2",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0,
+                0.70710676908493042,
+                0,
+                0.70710676908493042
+              ],
+              "translation": [
+                0,
+                0,
+                -0.28279998898506165
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              -1
+            ],
+            "friction": {
+              "viscous": 1
+            },
+            "inertia": 1,
+            "limitDamping": 50,
+            "limitStiffness": 1000,
+            "maxLimit": [
+              0,
+              0,
+              -1.2217304706573486
+            ],
+            "minLimit": [
+              0,
+              0,
+              -0.52359879016876221
+            ],
+            "name": "Ankle2",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.28279998898506165,
+                0,
+                -9.6798311588486285e-09
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "friction": {
+              "viscous": 1
+            },
+            "inertia": 1,
+            "limitDamping": 50,
+            "limitStiffness": 1000,
+            "maxLimit": [
+              0,
+              0.52359879016876221,
+              0
+            ],
+            "minLimit": [
+              0,
+              -0.52359879016876221,
+              0
+            ],
+            "name": "Leg3",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0,
+                1,
+                0,
+                -4.3711388286737929e-08
+              ],
+              "translation": [
+                -0.28279998898506165,
+                0,
+                2.4723160407802425e-08
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              -1
+            ],
+            "friction": {
+              "viscous": 1
+            },
+            "inertia": 1,
+            "limitDamping": 50,
+            "limitStiffness": 1000,
+            "maxLimit": [
+              0,
+              0,
+              -1.2217304706573486
+            ],
+            "minLimit": [
+              0,
+              0,
+              -0.52359879016876221
+            ],
+            "name": "Ankle3",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.28279998898506165,
+                0,
+                -1.5577994691190651e-16
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "friction": {
+              "viscous": 1
+            },
+            "inertia": 1,
+            "limitDamping": 50,
+            "limitStiffness": 1000,
+            "maxLimit": [
+              0,
+              0.52359879016876221,
+              0
+            ],
+            "minLimit": [
+              0,
+              -0.52359879016876221,
+              0
+            ],
+            "name": "Leg4",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0,
+                0.70710676908493042,
+                0,
+                -0.70710676908493042
+              ],
+              "translation": [
+                0,
+                0,
+                0.28279998898506165
+              ]
+            },
+            "type": "Revolute"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              -1
+            ],
+            "friction": {
+              "viscous": 1
+            },
+            "inertia": 1,
+            "limitDamping": 50,
+            "limitStiffness": 1000,
+            "maxLimit": [
+              0,
+              0,
+              -1.2217304706573486
+            ],
+            "minLimit": [
+              0,
+              0,
+              -0.52359879016876221
+            ],
+            "name": "Ankle4",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.28279998898506165,
+                0,
+                9.6798311588486285e-09
+              ]
+            },
+            "type": "Revolute"
+          }
+        ],
+        "links": [
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "None",
+            "density": 5,
+            "layer": "Ant",
+            "name": "Torso",
+            "shape": "benchmarks/ant/mesh_000.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "None",
+            "density": 5,
+            "layer": "Ant",
+            "name": "Leg1",
+            "parentLink": 0,
+            "shape": "benchmarks/ant/mesh_001.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "None",
+            "density": 5,
+            "layer": "Ant",
+            "name": "Ankle1",
+            "parentLink": 1,
+            "shape": "benchmarks/ant/mesh_002.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "None",
+            "density": 5,
+            "layer": "Ant",
+            "name": "Leg2",
+            "parentLink": 0,
+            "shape": "benchmarks/ant/mesh_001.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "None",
+            "density": 5,
+            "layer": "Ant",
+            "name": "Ankle2",
+            "parentLink": 3,
+            "shape": "benchmarks/ant/mesh_002.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "None",
+            "density": 5,
+            "layer": "Ant",
+            "name": "Leg3",
+            "parentLink": 0,
+            "shape": "benchmarks/ant/mesh_001.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "None",
+            "density": 5,
+            "layer": "Ant",
+            "name": "Ankle3",
+            "parentLink": 5,
+            "shape": "benchmarks/ant/mesh_002.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "None",
+            "density": 5,
+            "layer": "Ant",
+            "name": "Leg4",
+            "parentLink": 0,
+            "shape": "benchmarks/ant/mesh_001.mochi.h5"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "None",
+            "density": 5,
+            "layer": "Ant",
+            "name": "Ankle4",
+            "parentLink": 7,
+            "shape": "benchmarks/ant/mesh_002.mochi.h5"
+          }
+        ],
+        "name": "Ant"
+      }
+    ]
+  },
+  "contactFilter": {
+    "actorContactSymmetric": [
+      {
+        "actors": [
+          "Ant",
+          "Ant"
+        ],
+        "enable": false
+      }
+    ]
+  }
+}

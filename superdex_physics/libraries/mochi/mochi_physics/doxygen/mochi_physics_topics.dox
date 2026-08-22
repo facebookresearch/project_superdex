@@ -1,0 +1,961 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * Concept groups for the C++ API reference, rendered as Doxygen's Topics tab.
+ *
+ * Membership is declared here rather than in the headers so that editorial
+ * taxonomy stays out of mochi_core, which other projects also consume. Symbols
+ * are named in the published namespace (superdex), because the Doxygen input
+ * filter rewrites mochi -> superdex before parsing; see
+ * CppDocsConfig.namespace_rewrites.
+ *
+ * Group order here is display order -- doxyfile_cpp sets SORT_GROUP_NAMES = NO.
+ *
+ * Only compounds -- @struct and @class -- can be attached to a group from
+ * here. Doxygen silently ignores @enum, @typedef, @var and @fn in a file that
+ * is not the symbol's declaration site, so enums, aliases, constants and free
+ * functions cannot be grouped without @ingroup in the headers themselves. A
+ * group whose membership would be entirely non-compound is therefore not
+ * declared at all, rather than rendered as an empty page.
+ *
+ * A symbol that is not listed here simply does not appear under Topics; it
+ * remains reachable through Classes, Namespaces, Files and search. Low-value
+ * symbols are deliberately omitted to keep the tree scannable.
+ */
+
+/**
+ * @defgroup context Context
+ * @brief The process-level entry point that owns worker resources and registered shapes, and creates the scenes in which simulation runs.
+ */
+
+/* ---- Context / - (1) ---- */
+/**
+ * @class superdex::Context
+ * @ingroup context
+ */
+
+/**
+ * @defgroup scene Scene
+ * @brief Simulation scenes.
+ */
+
+/* ---- Scene / - (4) ---- */
+/**
+ * @class superdex::AsyncScene
+ * @ingroup scene
+ */
+/**
+ * @struct superdex::AsyncStepParams
+ * @ingroup scene
+ */
+/**
+ * @class superdex::Scene
+ * @ingroup scene
+ */
+/**
+ * @struct superdex::StepInfo
+ * @ingroup scene
+ */
+
+/**
+ * @defgroup handles Handles
+ * @brief Typed handles to engine resources and loaded prefabs.
+ */
+
+/**
+ * @defgroup handles_basics Handle Basics
+ * @ingroup handles
+ * @brief The @ref superdex::Handle base type and @ref superdex::kInvalidHandle sentinel.
+ */
+
+/**
+ * @defgroup handles_typed Typed Handles
+ * @ingroup handles
+ * @brief Specialized handle types.
+ */
+
+/* ---- Handles / Handle Basics (1) ---- */
+/**
+ * @struct superdex::Handle
+ * @ingroup handles_basics
+ */
+
+/* ---- Handles / Typed Handles (8) ---- */
+/**
+ * @struct superdex::ActorHandle
+ * @ingroup handles_typed
+ */
+/**
+ * @struct superdex::CallbackHandle
+ * @ingroup handles_typed
+ */
+/**
+ * @struct superdex::ConstraintHandle
+ * @ingroup handles_typed
+ */
+/**
+ * @struct superdex::PrefabHandle
+ * @ingroup handles_typed
+ */
+/**
+ * @struct superdex::QueryHandle
+ * @ingroup handles_typed
+ */
+/**
+ * @struct superdex::SceneHandle
+ * @ingroup handles_typed
+ */
+/**
+ * @struct superdex::ShapeHandle
+ * @ingroup handles_typed
+ */
+/**
+ * @struct superdex::StateHandle
+ * @ingroup handles_typed
+ */
+
+/**
+ * @defgroup shapes Shapes & Geometry
+ * @brief Caller-owned geometry descriptions used to create immutable, reusable shapes registered with the @ref superdex::Context and referenced by actors through a @ref superdex::ShapeHandle.
+ */
+
+/**
+ * @defgroup shapes_primitives Geometry Primitives
+ * @ingroup shapes
+ * @brief Analytic geometry embedded in model data before shape registration.
+ */
+
+/**
+ * @defgroup shapes_meshdata Mesh & Model Data
+ * @ingroup shapes
+ * @brief Data structures for meshes and model assets.
+ */
+
+/**
+ * @defgroup shapes_sdf Signed Distance Fields
+ * @ingroup shapes
+ * @brief Grid data and baking parameters used to precompute signed-distance fields for registered shapes.
+ */
+
+/* ---- Shapes & Geometry / Geometry Primitives (3) ---- */
+/**
+ * @struct superdex::Box
+ * @ingroup shapes_primitives
+ */
+/**
+ * @class superdex::Plane
+ * @ingroup shapes_primitives
+ */
+/**
+ * @class superdex::Sphere
+ * @ingroup shapes_primitives
+ */
+
+/* ---- Shapes & Geometry / Mesh & Model Data (8) ---- */
+/**
+ * @struct superdex::BlendingData
+ * @ingroup shapes_meshdata
+ */
+/**
+ * @struct superdex::BlendingDataView
+ * @ingroup shapes_meshdata
+ */
+/**
+ * @struct superdex::MeshData
+ * @ingroup shapes_meshdata
+ */
+/**
+ * @struct superdex::MeshDataView
+ * @ingroup shapes_meshdata
+ */
+/**
+ * @struct superdex::ModelData
+ * @ingroup shapes_meshdata
+ */
+/**
+ * @struct superdex::ModelDataView
+ * @ingroup shapes_meshdata
+ */
+/**
+ * @struct superdex::SkinningData
+ * @ingroup shapes_meshdata
+ */
+/**
+ * @struct superdex::SkinningDataView
+ * @ingroup shapes_meshdata
+ */
+/* ---- Shapes & Geometry / Signed Distance Fields (3) ---- */
+/**
+ * @struct superdex::GridSdfData
+ * @ingroup shapes_sdf
+ */
+/**
+ * @struct superdex::GridSdfDataView
+ * @ingroup shapes_sdf
+ */
+/**
+ * @struct superdex::GridSdfParams
+ * @ingroup shapes_sdf
+ */
+
+/**
+ * @defgroup actors Actors
+ * @brief Runtime physical bodies.
+ */
+
+/**
+ * @defgroup actors_rigid Rigid Actors
+ * @ingroup actors
+ * @brief Non-deformable bodies, static or dynamic.
+ */
+
+/**
+ * @defgroup actors_soft Soft Actors
+ * @ingroup actors
+ * @brief Volumetric deformable actors.
+ */
+
+/**
+ * @defgroup actors_soft_materials Soft Materials
+ * @ingroup actors_soft
+ * @brief Uniform and per-element constitutive-model parameters for soft actors. @ref superdex::NeoHookeanMaterialParams is the public alias for @ref superdex::SmithNeoHookeanMaterialParams.
+ */
+
+/**
+ * @defgroup actors_articulated Articulated Actors
+ * @ingroup actors
+ * @brief Actors composed of rigid links connected by joints.
+ */
+
+/**
+ * @defgroup actors_softskinned Soft-Skinned Actors
+ * @ingroup actors
+ * @brief Specialized articulated actors coupling a rigid-link skeleton with deformable soft volumes.
+ */
+
+/* ---- Actors / - (1) ---- */
+/**
+ * @class superdex::Actor
+ * @ingroup actors
+ */
+
+/* ---- Actors / Rigid Actors (1) ---- */
+/**
+ * @struct superdex::RigidActorParams
+ * @ingroup actors_rigid
+ */
+
+/* ---- Actors / Soft Actors (2) ---- */
+/**
+ * @struct superdex::RecenteringParams
+ * @ingroup actors_soft
+ */
+/**
+ * @struct superdex::SoftActorParams
+ * @ingroup actors_soft
+ */
+
+/* ---- Actors / Soft Actors / Soft Materials (10) ---- */
+/**
+ * @struct superdex::ActiveAnisoArapMaterialParams
+ * @ingroup actors_soft_materials
+ */
+/**
+ * @struct superdex::ActiveNeoHookeanMaterialParams
+ * @ingroup actors_soft_materials
+ */
+/**
+ * @struct superdex::ActiveShapeTargetingArapMaterialParams
+ * @ingroup actors_soft_materials
+ */
+/**
+ * @struct superdex::ArapMaterialParams
+ * @ingroup actors_soft_materials
+ */
+/**
+ * @struct superdex::LinearElasticMaterialParams
+ * @ingroup actors_soft_materials
+ */
+/**
+ * @struct superdex::PerElementSoftMaterialData
+ * @ingroup actors_soft_materials
+ */
+/**
+ * @struct superdex::PerElementSoftMaterialDataView
+ * @ingroup actors_soft_materials
+ */
+/**
+ * @struct superdex::SmithNeoHookeanMaterialParams
+ * @ingroup actors_soft_materials
+ */
+/**
+ * @struct superdex::SoftMaterialParams
+ * @ingroup actors_soft_materials
+ */
+/**
+ * @struct superdex::StVenantKirchhoffMaterialParams
+ * @ingroup actors_soft_materials
+ */
+
+/* ---- Actors / Articulated Actors (12) ---- */
+/**
+ * @struct superdex::ArticulatedActorParams
+ * @ingroup actors_articulated
+ */
+/**
+ * @struct superdex::ArticulatedCycleJoint
+ * @ingroup actors_articulated
+ */
+/**
+ * @struct superdex::ArticulatedCycleJointParams
+ * @ingroup actors_articulated
+ */
+/**
+ * @struct superdex::ArticulatedDofInfo
+ * @ingroup actors_articulated
+ */
+/**
+ * @struct superdex::ArticulatedJointFrictionParams
+ * @ingroup actors_articulated
+ */
+/**
+ * @struct superdex::ArticulatedJointParams
+ * @ingroup actors_articulated
+ */
+/**
+ * @struct superdex::ArticulatedLinkParams
+ * @ingroup actors_articulated
+ */
+/**
+ * @struct superdex::ArticulatedShapeInfo
+ * @ingroup actors_articulated
+ */
+/**
+ * @struct superdex::ArticulatedSkinParams
+ * @ingroup actors_articulated
+ */
+/**
+ * @struct superdex::PoseConstraintInfo
+ * @ingroup actors_articulated
+ */
+/**
+ * @struct superdex::PoseControllerParams
+ * @ingroup actors_articulated
+ */
+/**
+ * @struct superdex::PoseTrackingParams
+ * @ingroup actors_articulated
+ */
+
+/* ---- Actors / Soft-Skinned Actors (1) ---- */
+/**
+ * @struct superdex::SoftSkinnedActorParams
+ * @ingroup actors_softskinned
+ */
+
+/**
+ * @defgroup constraints Constraints
+ * @brief Constraints on and between actors.
+ */
+
+/**
+ * @defgroup constraints_rigid Rigid-Body Constraints
+ * @ingroup constraints
+ * @brief Rigid-body constraints.
+ */
+
+/**
+ * @defgroup constraints_deformable Deformable Constraints
+ * @ingroup constraints
+ * @brief Constraints involving deformable actors.
+ */
+
+/**
+ * @defgroup constraints_articulated Articulated Limits & Targets
+ * @ingroup constraints
+ * @brief Range and target constraints on articulated joint degrees of freedom.
+ */
+
+/* ---- Constraints / - (2) ---- */
+/**
+ * @class superdex::Constraint
+ * @ingroup constraints
+ */
+/**
+ * @struct superdex::ConstraintParams
+ * @ingroup constraints
+ */
+
+/* ---- Constraints / Rigid-Body Constraints (7) ---- */
+/**
+ * @struct superdex::JointRotationRangeConstraintParams
+ * @ingroup constraints_rigid
+ */
+/**
+ * @struct superdex::JointRotationTrackingConstraintParams
+ * @ingroup constraints_rigid
+ */
+/**
+ * @struct superdex::RigidPivotPositionConstraintParams
+ * @ingroup constraints_rigid
+ */
+/**
+ * @struct superdex::RigidPivotRotationConstraintParams
+ * @ingroup constraints_rigid
+ */
+/**
+ * @struct superdex::RigidPivotToRigidTargetConstraintParams
+ * @ingroup constraints_rigid
+ */
+/**
+ * @struct superdex::RigidPrismaticJointConstraintParams
+ * @ingroup constraints_rigid
+ */
+/**
+ * @struct superdex::RigidSphericalJointConstraintParams
+ * @ingroup constraints_rigid
+ */
+
+/* ---- Constraints / Deformable Constraints (4) ---- */
+/**
+ * @struct superdex::DeformableNodePositionConstraintParams
+ * @ingroup constraints_deformable
+ */
+/**
+ * @struct superdex::DeformableNodeToDeformableNodeConstraintParams
+ * @ingroup constraints_deformable
+ */
+/**
+ * @struct superdex::DeformableNodeToRigidConstraintParams
+ * @ingroup constraints_deformable
+ */
+/**
+ * @struct superdex::RodElementRotationToRigidConstraintParams
+ * @ingroup constraints_deformable
+ */
+
+/* ---- Constraints / Articulated Limits & Targets (4) ---- */
+/**
+ * @struct superdex::Articulated3dRotationRangeConstraintParams
+ * @ingroup constraints_articulated
+ */
+/**
+ * @struct superdex::Articulated3dRotationTargetConstraintParams
+ * @ingroup constraints_articulated
+ */
+/**
+ * @struct superdex::ArticulatedSingleDofRangeConstraintParams
+ * @ingroup constraints_articulated
+ */
+/**
+ * @struct superdex::ArticulatedSingleDofTargetConstraintParams
+ * @ingroup constraints_articulated
+ */
+
+/**
+ * @defgroup contact Contact & Collision
+ * @brief Contact and collision configuration and results.
+ */
+
+/**
+ * @defgroup contact_params Contact Parameters & Friction
+ * @ingroup contact
+ * @brief Per-actor contact response coefficients and the friction regularization law.
+ */
+
+/**
+ * @defgroup contact_discretization Contact Discretization
+ * @ingroup contact
+ * @brief Quadrature and subsampling settings for contact integration.
+ */
+
+/**
+ * @defgroup contact_results Contact Query Results
+ * @ingroup contact
+ * @brief Query-backed readback describing active contact points, per-node forces and distances at contact samples. Each is produced by registering the matching @ref superdex::QueryType on an actor before the step.
+ */
+
+/* ---- Contact & Collision / Contact Parameters & Friction (1) ---- */
+/**
+ * @struct superdex::ContactParams
+ * @ingroup contact_params
+ */
+
+/* ---- Contact & Collision / Contact Discretization (1) ---- */
+/**
+ * @struct superdex::BoundarySubsamplingParams
+ * @ingroup contact_discretization
+ */
+
+/* ---- Contact & Collision / Contact Query Results (3) ---- */
+/**
+ * @struct superdex::ContactPoint
+ * @ingroup contact_results
+ */
+/**
+ * @struct superdex::NodeContactForce
+ * @ingroup contact_results
+ */
+/**
+ * @struct superdex::SdfDistances
+ * @ingroup contact_results
+ */
+
+/**
+ * @defgroup solver Solver
+ * @brief Configuration and reporting for the implicit stage solve: time-integration scheme, the quasi-Newton iteration and its line search, Jacobian approximation policy, the inner linear solve, and the convergence statistics of the last step.
+ */
+
+/**
+ * @defgroup solver_params Solver Parameters
+ * @ingroup solver
+ * @brief The root solver configuration attached to a scene.
+ */
+
+/**
+ * @defgroup solver_nonlinear Nonlinear Solver
+ * @ingroup solver
+ * @brief Nonlinear solver settings.
+ */
+
+/**
+ * @defgroup solver_jacobian Residual & Jacobian Approximation
+ * @ingroup solver
+ * @brief Policy for how the residual and its Jacobian are formed and conditioned.
+ */
+
+/**
+ * @defgroup solver_linear Linear Solver
+ * @ingroup solver
+ * @brief Linear solver settings.
+ */
+
+/**
+ * @defgroup solver_stats Convergence & Statistics
+ * @ingroup solver
+ * @brief Solver results and statistics.
+ */
+
+/* ---- Solver / Solver Parameters (1) ---- */
+/**
+ * @struct superdex::SolverParams
+ * @ingroup solver_params
+ */
+
+/* ---- Solver / Nonlinear Solver (1) ---- */
+/**
+ * @struct superdex::NonLinearSolverParams
+ * @ingroup solver_nonlinear
+ */
+
+/* ---- Solver / Residual & Jacobian Approximation (2) ---- */
+/**
+ * @struct superdex::ExperimentalEvalParams
+ * @ingroup solver_jacobian
+ */
+/**
+ * @struct superdex::SaturationHessianParams
+ * @ingroup solver_jacobian
+ */
+
+/* ---- Solver / Linear Solver (1) ---- */
+/**
+ * @struct superdex::LinearSolverParams
+ * @ingroup solver_linear
+ */
+
+/* ---- Solver / Convergence & Statistics (1) ---- */
+/**
+ * @struct superdex::SolverStats
+ * @ingroup solver_stats
+ */
+
+/**
+ * @defgroup prefabs Prefabs
+ * @brief Serializable scene descriptions.
+ */
+
+/**
+ * @defgroup prefabs_document Scene Description
+ * @ingroup prefabs
+ * @brief Scene prefab structure and settings.
+ */
+
+/**
+ * @defgroup prefabs_actors Actors
+ * @ingroup prefabs
+ * @brief Actor descriptions.
+ */
+
+/**
+ * @defgroup prefabs_articulation Articulation Components & Controllers
+ * @ingroup prefabs
+ * @brief Articulated actor components and pose controllers.
+ */
+
+/**
+ * @defgroup prefabs_constraints Constraints
+ * @ingroup prefabs
+ * @brief Authoring records for constraints that bind actors by name.
+ */
+
+/**
+ * @defgroup prefabs_filters Contact Filters
+ * @ingroup prefabs
+ * @brief Declarative contact rules over layer and actor names.
+ */
+
+/**
+ * @defgroup prefabs_io Loading, Instantiation & Export
+ * @ingroup prefabs
+ * @brief Prefab loading, instantiation, and export.
+ */
+
+/* ---- Prefabs / Scene Description (5) ---- */
+/**
+ * @struct superdex::prefab::ActorLists
+ * @ingroup prefabs_document
+ */
+/**
+ * @struct superdex::prefab::ConstraintLists
+ * @ingroup prefabs_document
+ */
+/**
+ * @struct superdex::prefab::PrefabReference
+ * @ingroup prefabs_document
+ */
+/**
+ * @struct superdex::prefab::SceneParams
+ * @ingroup prefabs_document
+ */
+/**
+ * @struct superdex::prefab::ScenePrefab
+ * @ingroup prefabs_document
+ */
+
+/* ---- Prefabs / Actors (4) ---- */
+/**
+ * @struct superdex::prefab::ArticulatedActorPrefab
+ * @ingroup prefabs_actors
+ */
+/**
+ * @struct superdex::prefab::RigidActorPrefab
+ * @ingroup prefabs_actors
+ */
+/**
+ * @struct superdex::prefab::SoftActorPrefab
+ * @ingroup prefabs_actors
+ */
+/**
+ * @struct superdex::prefab::SoftSkinnedActorPrefab
+ * @ingroup prefabs_actors
+ */
+
+/* ---- Prefabs / Articulation Components & Controllers (4) ---- */
+/**
+ * @struct superdex::prefab::ArticulatedJointPrefab
+ * @ingroup prefabs_articulation
+ */
+/**
+ * @struct superdex::prefab::ArticulatedLinkPrefab
+ * @ingroup prefabs_articulation
+ */
+/**
+ * @struct superdex::prefab::ArticulatedSkinPrefab
+ * @ingroup prefabs_articulation
+ */
+/**
+ * @struct superdex::prefab::PoseControllerPrefab
+ * @ingroup prefabs_articulation
+ */
+
+/* ---- Prefabs / Constraints (14) ---- */
+/**
+ * @struct superdex::prefab::Articulated3dRotationRangeConstraintPrefab
+ * @ingroup prefabs_constraints
+ */
+/**
+ * @struct superdex::prefab::Articulated3dRotationTargetConstraintPrefab
+ * @ingroup prefabs_constraints
+ */
+/**
+ * @struct superdex::prefab::ArticulatedSingleDofRangeConstraintPrefab
+ * @ingroup prefabs_constraints
+ */
+/**
+ * @struct superdex::prefab::ArticulatedSingleDofTargetConstraintPrefab
+ * @ingroup prefabs_constraints
+ */
+/**
+ * @struct superdex::prefab::DeformableNodePositionConstraintPrefab
+ * @ingroup prefabs_constraints
+ */
+/**
+ * @struct superdex::prefab::DeformableNodeToDeformableNodeConstraintPrefab
+ * @ingroup prefabs_constraints
+ */
+/**
+ * @struct superdex::prefab::DeformableNodeToRigidConstraintPrefab
+ * @ingroup prefabs_constraints
+ */
+/**
+ * @struct superdex::prefab::JointRotationRangeConstraintPrefab
+ * @ingroup prefabs_constraints
+ */
+/**
+ * @struct superdex::prefab::JointRotationTrackingConstraintPrefab
+ * @ingroup prefabs_constraints
+ */
+/**
+ * @struct superdex::prefab::RigidPivotPositionConstraintPrefab
+ * @ingroup prefabs_constraints
+ */
+/**
+ * @struct superdex::prefab::RigidPivotRotationConstraintPrefab
+ * @ingroup prefabs_constraints
+ */
+/**
+ * @struct superdex::prefab::RigidPivotToRigidTargetConstraintPrefab
+ * @ingroup prefabs_constraints
+ */
+/**
+ * @struct superdex::prefab::RigidPrismaticJointConstraintPrefab
+ * @ingroup prefabs_constraints
+ */
+/**
+ * @struct superdex::prefab::RigidSphericalJointConstraintPrefab
+ * @ingroup prefabs_constraints
+ */
+
+/* ---- Prefabs / Contact Filters (3) ---- */
+/**
+ * @struct superdex::prefab::ActorContactEntry
+ * @ingroup prefabs_filters
+ */
+/**
+ * @struct superdex::prefab::ContactFilter
+ * @ingroup prefabs_filters
+ */
+/**
+ * @struct superdex::prefab::LayerContactEntry
+ * @ingroup prefabs_filters
+ */
+
+/* ---- Prefabs / Loading, Instantiation & Export (2) ---- */
+/**
+ * @struct superdex::prefab::AddToSceneResult
+ * @ingroup prefabs_io
+ */
+/**
+ * @struct superdex::prefab::PrefabParams
+ * @ingroup prefabs_io
+ */
+
+/**
+ * @defgroup recording Recording
+ * @brief Capture of per-step simulation data to an HDF5 file for offline analysis, replay and training-data generation. Driven by @ref superdex::Scene::StartRecording, @ref superdex::Scene::StopRecording and @ref superdex::Scene::IsRecording.
+ */
+
+/* ---- Recording / - (1) ---- */
+/**
+ * @struct superdex::RecordingParams
+ * @ingroup recording
+ */
+
+/**
+ * @defgroup debugging Debugging & Diagnostics
+ * @brief Simulation debugging and diagnostics.
+ */
+
+/**
+ * @defgroup debugging_draw Debug Drawing
+ * @ingroup debugging
+ * @brief Per-scene visualization primitives, gathered through @ref superdex::Scene::GetDebugDraw.
+ */
+
+/**
+ * @defgroup debugging_server Remote Debugger
+ * @ingroup debugging
+ * @brief The in-process server used by the external debugger to inspect and, where supported, modify a running scene.
+ */
+
+/**
+ * @defgroup debugging_perf Performance
+ * @ingroup debugging
+ * @brief Per-step wall-clock timings. The solver's own convergence metrics are under @ref solver_stats.
+ */
+
+/* ---- Debugging & Diagnostics / Debug Drawing (4) ---- */
+/**
+ * @class superdex::DebugDraw
+ * @ingroup debugging_draw
+ */
+/**
+ * @struct superdex::DebugDrawData
+ * @ingroup debugging_draw
+ */
+/**
+ * @struct superdex::DebugDrawLineVertices
+ * @ingroup debugging_draw
+ */
+/**
+ * @struct superdex::DebugDrawSpheres
+ * @ingroup debugging_draw
+ */
+
+/* ---- Debugging & Diagnostics / Remote Debugger (1) ---- */
+/**
+ * @class superdex::DebugServer
+ * @ingroup debugging_server
+ */
+
+/* ---- Debugging & Diagnostics / Performance (1) ---- */
+/**
+ * @struct superdex::PerformanceStats
+ * @ingroup debugging_perf
+ */
+
+/**
+ * @defgroup math Math & Spatial Types
+ * @brief Numeric and spatial types.
+ */
+
+/**
+ * @defgroup math_ndarray N-Dimensional Arrays
+ * @ingroup math
+ * @brief Fixed-size multidimensional arrays.
+ */
+
+/**
+ * @defgroup math_rotations Rotations & Transforms
+ * @ingroup math
+ * @brief Quaternion rotations, rigid transforms, and the operations over them.
+ */
+
+/**
+ * @defgroup math_bounds Bounding Volumes
+ * @ingroup math
+ * @brief Axis-aligned and oriented boxes, used as returned bounds and as query volumes.
+ */
+
+/* ---- Math & Spatial Types / - (1) ---- */
+/**
+ * @struct superdex::CoordinateSpace
+ * @ingroup math
+ */
+
+/* ---- Math & Spatial Types / N-Dimensional Arrays (1) ---- */
+/**
+ * @class superdex::NdArray
+ * @ingroup math_ndarray
+ */
+
+/* ---- Math & Spatial Types / Rotations & Transforms (3) ---- */
+/**
+ * @class superdex::MatrixTransformRT
+ * @ingroup math_rotations
+ */
+/**
+ * @class superdex::Quaternion
+ * @ingroup math_rotations
+ */
+/**
+ * @class superdex::TransformRT
+ * @ingroup math_rotations
+ */
+
+/* ---- Math & Spatial Types / Bounding Volumes (2) ---- */
+/**
+ * @class superdex::Aabb
+ * @ingroup math_bounds
+ */
+/**
+ * @class superdex::Obb
+ * @ingroup math_bounds
+ */
+
+/**
+ * @defgroup errors Error Handling
+ * @brief The @ref superdex::Error out-parameter protocol that every fallible SuperDex call follows, and its assert-and-log shorthands.
+ */
+
+/* ---- Error Handling / - (3) ---- */
+/**
+ * @class superdex::Error
+ * @ingroup errors
+ */
+/**
+ * @class superdex::ErrorAssert
+ * @ingroup errors
+ */
+/**
+ * @class superdex::ErrorLog
+ * @ingroup errors
+ */
+
+/**
+ * @defgroup containers Containers & Memory
+ * @brief Allocator-aware containers and non-owning views, and the polymorphic allocator interface they bind to.
+ */
+
+/**
+ * @defgroup containers_views Containers & Views
+ * @ingroup containers
+ * @brief Owning containers and the non-owning views over them.
+ */
+
+/**
+ * @defgroup containers_alloc Allocators
+ * @ingroup containers
+ * @brief Memory allocation interfaces.
+ */
+
+/* ---- Containers & Memory / Containers & Views (2) ---- */
+/**
+ * @class superdex::DynamicArray
+ * @ingroup containers_views
+ */
+/**
+ * @class superdex::Span
+ * @ingroup containers_views
+ */
+
+/* ---- Containers & Memory / Allocators (3) ---- */
+/**
+ * @class superdex::Allocator
+ * @ingroup containers_alloc
+ */
+/**
+ * @class superdex::DefaultAllocator
+ * @ingroup containers_alloc
+ */
+/**
+ * @class superdex::StlAllocator
+ * @ingroup containers_alloc
+ */
+
+/**
+ * @defgroup simd SIMD & Linear Algebra
+ * @brief SIMD and linear algebra.
+ */
+
+/* ---- SIMD & Linear Algebra / - (1) ---- */
+/**
+ * @class superdex::Simd
+ * @ingroup simd
+ */
+

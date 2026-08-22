@@ -1,0 +1,362 @@
+// @brief Type of actor.
+//
+// @see Actor, Actor::GetType
+enum ActorType {
+
+  // @brief Invalid actor type.
+  None,
+
+  // @brief Rigid body actor.
+  Rigid,
+
+  // @brief Volumetric deformable actor.
+  Soft,
+
+  // @brief Articulated actor composed of rigid links connected by joints.
+  Articulated,
+
+  // @brief [Experimental] Thin-shell actor for modeling cloth, membranes, and other thin-walled
+  // objects.
+  //
+  // @warning This is an experimental feature. It may be changed or removed in the future. Use at
+  // your own risk.
+  Shell,
+
+  // @brief [Experimental] Rod actor for thin elastic rods.
+  //
+  // @warning This is an experimental feature. It may be changed or removed in the future. Use at
+  // your own risk.
+  Rod,
+
+  // @brief Number of actor type enum values.
+  Count,
+}
+
+// @brief Strategy for selecting the active boundary faces when subsampling boundary integrals.
+enum BoundarySubsamplingStrategy {
+
+  // @brief Select boundary faces with uniform probability.
+  //
+  // @note Results in sample density following mesh resolution. Areas with more triangles have more
+  // samples.
+  // @note Active boundary faces are selected deterministically using uniformly-spaced indices.
+  UniformProbability,
+
+  // @brief Select boundary faces with probability proportional to their area.
+  //
+  // @note Larger faces have higher selection probability.
+  // @note Results in more uniform spatial distribution of sample points, independent of mesh
+  // resolution.
+  AreaProportional,
+
+  // @brief Number of boundary subsampling strategy enum values.
+  Count,
+}
+
+// @brief Two-dimensional discretization element types for actor boundary integrals.
+//
+// @note PxQy indicates x-th order elements with y quadrature points.
+enum ActorBoundaryElementType {
+
+  // @brief Linear elements (P1), Dunavant quadrature with 1 point (Q1).
+  P1Q1,
+
+  // @brief Linear elements (P1), Dunavant quadrature with 3 points (Q3).
+  P1Q3,
+
+  // @brief Linear elements (P1), Dunavant quadrature with 6 points (Q6).
+  P1Q6,
+
+  // @brief [Experimental] Linear elements (P1), Lyness-Jespersen quadrature with 7 points (Q7).
+  //
+  // @warning This is an experimental feature. It may be changed or removed in the future. Use at
+  // your own risk.
+  ExperimentalP1Q7,
+
+  // @brief [Experimental] Linear elements (P1), Dunavant quadrature with 12 points (Q12).
+  //
+  // @warning This is an experimental feature. It may be changed or removed in the future. Use at
+  // your own risk.
+  ExperimentalP1Q12,
+
+  // @brief [Experimental] Linear elements (P1), Lyness-Jespersen quadrature with 16 points (Q16).
+  //
+  // @warning This is an experimental feature. It may be changed or removed in the future. Use at
+  // your own risk.
+  ExperimentalP1Q16,
+
+  // @brief Number of actor boundary element type enum values.
+  Count,
+
+  // @brief Default actor boundary element type.
+  Default = P1Q3,
+}
+
+// @brief One-dimensional discretization element types for actor segment integrals.
+//
+// @note PxQy indicates x-th order elements with y quadrature points.
+enum ActorSegmentElementType {
+
+  // @brief Linear elements (P1), Gauss-Legendre quadrature with 1 point (Q1).
+  P1Q1,
+
+  // @brief Linear elements (P1), Gauss-Legendre quadrature with 2 points (Q2).
+  P1Q2,
+
+  // @brief Linear elements (P1), Gauss-Legendre quadrature with 3 points (Q3).
+  P1Q3,
+
+  // @brief Number of actor segment element type enum values.
+  Count,
+
+  // @brief Default actor segment element type.
+  Default = P1Q3,
+}
+
+// @brief Type of constraint acting on actors' degrees of freedom.
+//
+// @details Each constraint type enforces specific relationships between actor DoFs, such as fixing
+// positions, limiting joint ranges, or maintaining rigid connections. The type determines which
+// constraint methods are applicable and what parameters are required.
+//
+// @see Constraint, Constraint::GetType
+enum ConstraintType {
+
+  // @brief Invalid constraint type.
+  None,
+
+  // @brief Range constraint on a single articulated DoF. Limits the DoF value to [min, max].
+  //
+  // @see Scene::CreateArticulatedSingleDofRangeConstraint,
+  // ArticulatedSingleDofRangeConstraintParams
+  ArticulatedSingleDofRange,
+
+  // @brief Range constraint on the DoFs of an articulated 3D rotation. Limits DoF values to [min,
+  // max].
+  //
+  // @see Scene::CreateArticulated3dRotationRangeConstraint,
+  // Articulated3dRotationRangeConstraintParams
+  Articulated3dRotationRange,
+
+  // @brief Target constraint on a single articulated DoF. Drives the DoF toward a target value.
+  //
+  // @see Scene::CreateArticulatedSingleDofTargetConstraint,
+  // ArticulatedSingleDofTargetConstraintParams
+  ArticulatedSingleDofTarget,
+
+  // @brief Target constraint on the DoFs of an articulated 3D rotation. Drives rotation DoFs toward
+  // target values.
+  //
+  // @see Scene::CreateArticulated3dRotationTargetConstraint,
+  // Articulated3dRotationTargetConstraintParams
+  Articulated3dRotationTarget,
+
+  // @brief Range constraint on joint rotation. Limits joint angles to specified bounds.
+  //
+  // @see Scene::CreateJointRotationRangeConstraint, JointRotationRangeConstraintParams
+  JointRotationRange,
+
+  // @brief Tracking constraint on joint rotation. Drives joint toward target orientation.
+  //
+  // @see Scene::CreateJointRotationTrackingConstraint, JointRotationTrackingConstraintParams
+  JointRotationTracking,
+
+  // @brief Position constraint on a rigid actor's pivot point. Fixes or tracks a world-space
+  // position.
+  //
+  // @see Scene::CreateRigidPivotPositionConstraint, RigidPivotPositionConstraintParams
+  RigidPivotPosition,
+
+  // @brief Position constraint that drives a rigid actor's pivot point toward where that same local
+  // point would be if the actor's center-of-mass frame matched a target transform.
+  //
+  // @see Scene::CreateRigidPivotToRigidTargetConstraint, RigidPivotToRigidTargetConstraintParams
+  RigidPivotToRigidTarget,
+
+  // @brief Rotation constraint on a rigid actor's pivot frame. Fixes or tracks a world-space
+  // orientation.
+  //
+  // @see Scene::CreateRigidPivotRotationConstraint, RigidPivotRotationConstraintParams
+  RigidPivotRotation,
+
+  // @brief Translational prismatic joint constraint between two rigid actors. Constrains
+  // translation to a single axis. Does not constrain rotation. Pair with @ref
+  // ConstraintType::JointRotationTracking for a full prismatic joint.
+  //
+  // @see Scene::CreateRigidPrismaticJointConstraint, RigidPrismaticJointConstraintParams
+  RigidPrismaticJoint,
+
+  // @brief Spherical joint constraint between two rigid actors. Allows rotation but no translation.
+  //
+  // @see Scene::CreateRigidSphericalJointConstraint, RigidSphericalJointConstraintParams
+  RigidSphericalJoint,
+
+  // @brief Position constraint on a deformable actor node. Fixes or tracks node position in world
+  // space.
+  //
+  // @see Scene::CreateDeformableNodePositionConstraint, DeformableNodePositionConstraintParams
+  DeformableNodePosition,
+
+  // @brief Constraint connecting a deformable node to a rigid actor. Attaches deformable body to
+  // rigid body.
+  //
+  // @see Scene::CreateDeformableNodeToRigidConstraint, DeformableNodeToRigidConstraintParams
+  DeformableNodeToRigid,
+
+  // @brief Constraint connecting two deformable actor nodes.
+  //
+  // @see Scene::CreateDeformableNodeToDeformableNodeConstraint,
+  // DeformableNodeToDeformableNodeConstraintParams
+  DeformableNodeToDeformableNode,
+
+  // @brief Rotation constraint between a rigid actor and a rod element. Tracks relative rotation.
+  //
+  // @see Scene::CreateRodElementRotationToRigidConstraint,
+  // RodElementRotationToRigidConstraintParams
+  RodElementRotationToRigid,
+
+  // @brief Number of constraint type enum values.
+  Count,
+}
+
+// @brief Type of constraint in an articulated pose controller.
+//
+// @details Defines the functional purpose of a pose constraint, not its internal implementation.
+// Pose controllers use these constraints to track target configurations for articulated actors.
+//
+// @see PoseConstraintInfo, PoseTrackingParams, PoseControllerParams
+enum PoseConstraintType {
+
+  // @brief Joint constraint.
+  Joint,
+
+  // @brief Link translation constraint. Controls the position of a link.
+  LinkTranslation,
+
+  // @brief Link rotation constraint. Controls the orientation of a link.
+  LinkRotation,
+
+  // @brief Number of pose constraint type enum values.
+  Count,
+
+  // @brief Invalid constraint type.
+  Invalid = 255,
+}
+
+// @brief Type of query data to compute for an actor or constraint.
+//
+// @details Queries enable on-demand computation of simulation data. Some queries allow immediate
+// retrieval of data; others must be registered beforehand to have the data computed and available
+// for retrieval after the next step. Queries are reference counted, so multiple registrations are
+// acceptable.
+//
+// @note Not all query types are supported for all actor/constraint types. Use @ref
+// Actor::IsQuerySupported or @ref Constraint::IsQuerySupported to check at runtime whether a
+// specific query type is supported for a given actor/constraint.
+//
+// @see Actor::RegisterQuery, Actor::RegisterQueryAndCompute, Constraint::RegisterQuery
+enum QueryType {
+
+  // @brief Positions of all mesh nodes. Available via @ref Actor::GetNodePositionsLocal.
+  //
+  // @note Only supported for soft, soft-skinned and shell actors.
+  NodePositions,
+
+  // @brief Deformation gradients for elements in deformable actors. Available via @ref
+  // Actor::GetElementsDeformationGradient.
+  //
+  // @note Only supported for soft and soft-skinned actors (except ROMs).
+  ElementsDeformationGradient,
+
+  // @brief Positions of surface mesh nodes. Available via @ref
+  // Actor::GetSurfaceMeshNodePositionsLocal.
+  //
+  // @note Not supported for actors without a surface mesh, such as rod actors or rigid actors without a
+  // mesh (e.g. with an implicit shape).
+  SurfaceNodePositions,
+
+  // @brief Normals of surface mesh nodes. Available via @ref Actor::GetSurfaceMeshNodeNormalsLocal.
+  //
+  // @note Not supported for actors without a surface mesh, such as rod actors or rigid actors without a
+  // mesh (e.g. with an implicit shape).
+  SurfaceNodeNormals,
+
+  // @brief Positions of visual mesh nodes. Available via @ref
+  // Actor::GetVisualMeshNodePositionsLocal.
+  //
+  // @note Only supported for actors with a visual mesh. Deformable actors also require a visual
+  // mesh embedding.
+  VisualNodePositions,
+
+  // @brief Normals of visual mesh nodes. Available via @ref Actor::GetVisualMeshNodeNormalsLocal.
+  //
+  // @note Only supported for actors with a visual mesh. Deformable actors also require a visual
+  // mesh embedding.
+  VisualNodeNormals,
+
+  // @brief Contact points between actors. Available via @ref Actor::GetContactPointsWorld.
+  //
+  // @note Immediate computation, i.e. @ref Actor::RegisterQueryAndCompute, is not supported.
+  // @note Not supported for actors without contact sample points or with far SDF evaluation
+  // enabled.
+  ContactPoints,
+
+  // @brief Elastic energy of a deformable actor. Available via @ref Actor::GetElasticEnergy.
+  //
+  // @note Only supported for soft and soft-skinned actors.
+  ElasticEnergy,
+
+  // @brief Contact forces per node. Available via @ref Actor::GetNodeContactForcesWorld.
+  //
+  // @note Immediate computation, i.e. @ref Actor::RegisterQueryAndCompute, is not supported.
+  // @note Not supported for rod actors, actors without contact sample points or actors with
+  // far SDF evaluation enabled.
+  NodeContactForces,
+
+  // @brief Force/torque applied by a constraint. Available via @ref Constraint::GetForce.
+  //
+  // @note Only applicable to @ref Constraint objects.
+  // @note Immediate computation, i.e. @ref Actor::RegisterQueryAndCompute, is not supported.
+  ConstraintForce,
+
+  // @brief Generalized forces applied by an articulated pose controller. Available via @ref
+  // Actor::GetArticulatedControllerForce.
+  //
+  // @note Only applicable to articulated actors with a pose controller.
+  // @note Immediate computation, i.e. @ref Actor::RegisterQueryAndCompute, is not supported.
+  ArticulatedControllerForce,
+
+  // @brief Signed distance field values for contact samples. Available via @ref
+  // Actor::GetSdfDistances.
+  //
+  // @note Immediate computation, i.e. @ref Actor::RegisterQueryAndCompute, is not supported.
+  SdfDistances,
+
+  // @brief Total contact force and torque acting on an actor. Available via @ref
+  // Actor::GetContactForceWorld and @ref Actor::GetContactTorqueWorld.
+  //
+  // @note Immediate computation, i.e. @ref Actor::RegisterQueryAndCompute, is not supported.
+  // @note Not supported for actors without contact sample points or with far SDF evaluation
+  // enabled.
+  TotalContactForce,
+
+  // @brief Number of query type enum values.
+  Count,
+}
+
+// @brief Specifies whether actor-contact filtering also applies to nested actors.
+//
+// @see Scene::EnableActorContactAsymmetric, Scene::EnableActorContactSymmetric
+enum IncludeNestedActors {
+
+  // @brief Affect only the exact actor handles passed to the API.
+  No,
+
+  // @brief Affect the exact actor and, for parent actors, its nested actors.
+  //
+  // @note Actors without nested actors are affected as exact actors.
+  Yes,
+
+  // @brief Number of @ref IncludeNestedActors values.
+  Count,
+}

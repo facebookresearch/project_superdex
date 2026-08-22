@@ -1,0 +1,242 @@
+{
+  "base": "//hands/dg5f_long/left/dg5f_long_left.superdex_bot",
+  "modifications": [
+    {
+      "ReplaceLink": {
+        "enabled": true,
+        "link": {
+          "centerOfMass": [
+            0.00019999999494757503,
+            -0.010499999858438969,
+            -1.4040000273496389e-09
+          ],
+          "mass": 0.032180998474359512,
+          "momentOfInertia": [
+            3.4853999295592075e-06,
+            -6.5144000416239578e-08,
+            -4.9137999441964397e-13,
+            1.9992999114037957e-06,
+            -2.1100000002424735e-13,
+            3.6720000480272574e-06
+          ],
+          "name": "dg5f_link_1_4_mount",
+          "renderModel": "render/dg5f_link_1_4_mount_render.glb",
+          "shape": "collision/dg5f_link_1_4_mount_collision.mochi.h5"
+        },
+        "linkToReplace": "dg5f_link_1_4",
+        "name": "thumb_link"
+      }
+    },
+    {
+      "AttachBot": {
+        "enabled": true,
+        "joint": {
+          "name": "dg5f_link_1_4_seed_mount_joint",
+          "parentLinkFromJoint": {
+            "rotation": [
+              0.5,
+              -0.5,
+              0.5,
+              0.5
+            ],
+            "translation": [
+              0,
+              -0.036299999803304672,
+              0
+            ]
+          },
+          "type": "Hard"
+        },
+        "name": "thumb_seed",
+        "parentLinkName": "dg5f_link_1_4_mount",
+        "path": "//sensors/dg5f_seed/dg5f_seed.superdex_bot",
+        "prefix": "dg5f_link_1_4_seed_"
+      }
+    },
+    {
+      "ReplaceLink": {
+        "enabled": true,
+        "link": {
+          "centerOfMass": [
+            1.3063999659834735e-08,
+            0.00088712002616375685,
+            0.008672899566590786
+          ],
+          "mass": 0.0078250998631119728,
+          "momentOfInertia": [
+            6.2612002693640534e-07,
+            -1.7586999565000205e-12,
+            -3.7394000114258918e-13,
+            3.5030001299674041e-07,
+            4.8654001716386119e-08,
+            5.9994999901391566e-07
+          ],
+          "name": "dg5f_link_2_4_mount",
+          "renderModel": "render/dg5f_link_234_4_mount_render.glb",
+          "shape": "collision/dg5f_link_234_4_mount_collision.mochi.h5"
+        },
+        "linkToReplace": "dg5f_link_2_4",
+        "name": "index_link"
+      }
+    },
+    {
+      "AttachBot": {
+        "enabled": true,
+        "joint": {
+          "name": "dg5f_link_2_4_seed_mount_joint",
+          "parentLinkFromJoint": {
+            "translation": [
+              0,
+              0,
+              0.025499999523162842
+            ]
+          },
+          "type": "Hard"
+        },
+        "name": "index_seed",
+        "parentLinkName": "dg5f_link_2_4_mount",
+        "path": "//sensors/dg5f_seed/dg5f_seed.superdex_bot",
+        "prefix": "dg5f_link_2_4_seed_"
+      }
+    },
+    {
+      "ReplaceLink": {
+        "enabled": true,
+        "link": {
+          "centerOfMass": [
+            1.3063999659834735e-08,
+            0.00088712002616375685,
+            0.008672899566590786
+          ],
+          "mass": 0.0078250998631119728,
+          "momentOfInertia": [
+            6.2612002693640534e-07,
+            -1.7586999565000205e-12,
+            -3.7394000114258918e-13,
+            3.5030001299674041e-07,
+            4.8654001716386119e-08,
+            5.9994999901391566e-07
+          ],
+          "name": "dg5f_link_3_4_mount",
+          "renderModel": "render/dg5f_link_234_4_mount_render.glb",
+          "shape": "collision/dg5f_link_234_4_mount_collision.mochi.h5"
+        },
+        "linkToReplace": "dg5f_link_3_4",
+        "name": "middle_link"
+      }
+    },
+    {
+      "AttachBot": {
+        "enabled": true,
+        "joint": {
+          "name": "dg5f_link_3_4_seed_mount_joint",
+          "parentLinkFromJoint": {
+            "translation": [
+              0,
+              0,
+              0.025499999523162842
+            ]
+          },
+          "type": "Hard"
+        },
+        "name": "middle_seed",
+        "parentLinkName": "dg5f_link_3_4_mount",
+        "path": "//sensors/dg5f_seed/dg5f_seed.superdex_bot",
+        "prefix": "dg5f_link_3_4_seed_"
+      }
+    },
+    {
+      "ReplaceLink": {
+        "enabled": true,
+        "link": {
+          "centerOfMass": [
+            1.3063999659834735e-08,
+            0.00088712002616375685,
+            0.008672899566590786
+          ],
+          "mass": 0.0078250998631119728,
+          "momentOfInertia": [
+            6.2612002693640534e-07,
+            -1.7586999565000205e-12,
+            -3.7394000114258918e-13,
+            3.5030001299674041e-07,
+            4.8654001716386119e-08,
+            5.9994999901391566e-07
+          ],
+          "name": "dg5f_link_4_4_mount",
+          "renderModel": "render/dg5f_link_234_4_mount_render.glb",
+          "shape": "collision/dg5f_link_234_4_mount_collision.mochi.h5"
+        },
+        "linkToReplace": "dg5f_link_4_4",
+        "name": "ring_link"
+      }
+    },
+    {
+      "AttachBot": {
+        "enabled": true,
+        "joint": {
+          "name": "dg5f_link_4_4_seed_mount_joint",
+          "parentLinkFromJoint": {
+            "translation": [
+              0,
+              0,
+              0.025499999523162842
+            ]
+          },
+          "type": "Hard"
+        },
+        "name": "ring_seed",
+        "parentLinkName": "dg5f_link_4_4_mount",
+        "path": "//sensors/dg5f_seed/dg5f_seed.superdex_bot",
+        "prefix": "dg5f_link_4_4_seed_"
+      }
+    },
+    {
+      "ReplaceLink": {
+        "enabled": true,
+        "link": {
+          "centerOfMass": [
+            -1.4040000273496389e-09,
+            -0.00020713999401777983,
+            0.010451000183820724
+          ],
+          "mass": 0.032180998474359512,
+          "momentOfInertia": [
+            3.6720000480272574e-06,
+            -4.9137999441964397e-13,
+            -2.1100000002424735e-13,
+            3.4853999295592075e-06,
+            -6.5144000416239578e-08,
+            1.9992999114037957e-06
+          ],
+          "name": "dg5f_link_5_4_mount",
+          "renderModel": "render/dg5f_link_5_4_mount_render.glb",
+          "shape": "collision/dg5f_link_5_4_mount_collision.mochi.h5"
+        },
+        "linkToReplace": "dg5f_link_5_4",
+        "name": "pinky_link"
+      }
+    },
+    {
+      "AttachBot": {
+        "enabled": true,
+        "joint": {
+          "name": "dg5f_link_5_4_seed_mount_joint",
+          "parentLinkFromJoint": {
+            "translation": [
+              0,
+              0,
+              0.036299999803304672
+            ]
+          },
+          "type": "Hard"
+        },
+        "name": "pinky_seed",
+        "parentLinkName": "dg5f_link_5_4_mount",
+        "path": "//sensors/dg5f_seed/dg5f_seed.superdex_bot",
+        "prefix": "dg5f_link_5_4_seed_"
+      }
+    }
+  ],
+  "name": "dg5f_long_seed_left"
+}

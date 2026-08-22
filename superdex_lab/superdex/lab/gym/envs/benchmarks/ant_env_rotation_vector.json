@@ -1,0 +1,6 @@
+{
+  "description": "Ant with rotations represented as rotation vectors in the observation instead of quaternions.",
+  "env_cfg": {
+    "use_rotation_vector": true
+  }
+}

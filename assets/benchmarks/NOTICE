@@ -1,0 +1,28 @@
+BENCHMARK MODEL NOTICE
+======================
+
+ant/ and half_cheetah/
+----------------------
+
+These models are derived from the MuJoCo reference models distributed with OpenAI Gym:
+
+  https://github.com/openai/gym/blob/master/gym/envs/mujoco/assets/ant.xml
+  https://github.com/openai/gym/blob/master/gym/envs/mujoco/assets/half_cheetah.xml
+
+OpenAI Gym is licensed under the MIT License, Copyright (c) 2016 OpenAI. The full terms are
+reproduced in LICENSE-MIT and are published at
+https://github.com/openai/gym/tree/master?tab=License-1-ov-file
+
+MODIFICATIONS: Meta Platforms, Inc. re-authored the link geometry as simple primitives, generated
+collision and render geometry, adjusted kinematic and dynamics parameters, and assembled the
+bodies into scene and prefab manifests for the SuperDex Physics engine. That Meta-authored content
+is additionally licensed under the CC-BY-4.0 terms in LICENSE.
+
+cart_pole/
+----------
+
+Original work of Meta Platforms, Inc. and affiliates, licensed under the CC-BY-4.0 terms in
+LICENSE. OpenAI Gym's cart-pole environment is defined in Python and ships no model file, so no
+upstream asset is incorporated here; the geometry, kinematics, and dynamics were authored at Meta
+to reproduce the behavior of that environment. The scene description calling it a replica of the
+Gymnasium example refers to that behavior, not to a transcribed model file.

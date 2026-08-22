@@ -1,0 +1,31 @@
+# Ignore generated log files upon CUDA compilation
+*.tlog
+*.user
+*_imgui.ini
+mode/android/*
+mode/linux/*
+mode/mac/*
+mode/platform010/*
+mode/win/*
+mode/dbg*
+mode/dev*
+mode/opt
+mode/cuda/dbg*
+mode/cuda/dev*
+mode/cuda/opt
+build*
+# ...but not the checked-in wheel build driver, which `build*` matches by accident.
+!tools/build_wheels.py
+ref
+*.local.cmake
+cmake-build*
+.idea
+.polyscope.ini
+CMakeUserPresets.json
+imgui.ini
+SuperDexStudio.ini
+*.recording.h5
+*.state.h5
+audit_reports/
+default.profraw
+*.egg-info/

@@ -1,0 +1,18 @@
+{
+  "actors": {
+    "rigid": [
+      {
+        "contact": {
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 9.9999997473787516e-05,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
+        },
+        "mass": 0.0099999997764825821,
+        "name": "Sphere",
+        "renderModel": "./render/sphere.glb",
+        "shape": "./collision/sphere.mochi.h5"
+      }
+    ]
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "editorState": {
+    "cadRotation": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "cadScale": [
+      1,
+      1,
+      1
+    ],
+    "cadTranslation": [
+      0,
+      0,
+      0
+    ]
+  },
+  "modifiers": [
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "From Model Viewer",
+      "modifier": "Source from Render Model",
+      "properties": {}
+    },
+    {
+      "collapsed": true,
+      "enabled": false,
+      "method": "Make Manifold",
+      "modifier": "Refine Mesh",
+      "properties": {
+        "thenMakeWatertight": false
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": false,
+      "method": "Make Watertight",
+      "modifier": "Refine Mesh",
+      "properties": {}
+    },
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "Alpha Wrap",
+      "modifier": "Wrap Mesh",
+      "properties": {
+        "edgeSize": 0.025000000000000001,
+        "relativeAlpha": 1,
+        "relativeOffset": 0,
+        "relativeToMeshSize": true
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": false,
+      "method": "Incremental Isotropic Remesh",
+      "modifier": "Remesh",
+      "properties": {
+        "adaptiveSizingTolerance": 0.01,
+        "detectFeatures": true,
+        "edgeSize": 0.025000000000000001,
+        "maxEdgeSizeFactor": 2,
+        "minEdgeSizeFactor": 0.25,
+        "protectConstraints": false,
+        "relativeToMeshSize": true,
+        "relaxConstraints": false,
+        "relaxationStepsPerIteration": 3,
+        "sharpFeatureAngle": 60,
+        "smoothingIterations": 3,
+        "useAdaptiveSizing": false
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "Edge Flip Optimization",
+      "modifier": "Refine Mesh",
+      "properties": {
+        "referenceIndex": -1,
+        "relativeThreshold": 0.10000000000000001
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "Edge Collapse (Simplification)",
+      "modifier": "Refine Mesh",
+      "properties": {
+        "collapseDistanceMm": 0
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "Tangential Relaxation (Smoothing)",
+      "modifier": "Refine Mesh",
+      "properties": {
+        "angleSmoothingIterations": 0,
+        "tangentialRelaxationIterations": 3
+      }
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "SDF",
+      "modifier": "Export Mochi Model",
+      "properties": {
+        "sdf": {
+          "boundaryPaddingDist": 0.0050000003539025784,
+          "minGridResolution": [
+            6,
+            6,
+            6
+          ],
+          "resolutionDelta": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "resolutionMode": "MeanEdge"
+        }
+      }
+    }
+  ],
+  "referenceModels": [],
+  "version": 1
+}

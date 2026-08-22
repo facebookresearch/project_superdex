@@ -1,0 +1,331 @@
+/*
+ * Copyright (C) 2015 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TNT_FILAMENT_DRIVER_DRIVERBASE_H
+#define TNT_FILAMENT_DRIVER_DRIVERBASE_H
+
+#include <utils/compiler.h>
+#include <utils/CString.h>
+
+#include <backend/Platform.h>
+
+#include <backend/BufferDescriptor.h>
+#include <backend/DriverEnums.h>
+#include <backend/CallbackHandler.h>
+
+#include "private/backend/Dispatcher.h"
+#include "private/backend/Driver.h"
+
+#include <atomic>
+#include <condition_variable>
+#include <memory>
+#include <mutex>
+#include <thread>
+#include <utility>
+#include <vector>
+
+#include <stdint.h>
+
+namespace filament::backend {
+
+struct AcquiredImage;
+
+/*
+ * Hardware handles
+ */
+
+struct HwBase {
+};
+
+
+struct HwVertexBufferInfo : public HwBase {
+    uint8_t bufferCount{};                //   1
+    uint8_t attributeCount{};             //   1
+    bool padding[2]{};                    //   2
+    HwVertexBufferInfo() noexcept = default;
+    HwVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount) noexcept
+            : bufferCount(bufferCount),
+              attributeCount(attributeCount) {
+    }
+};
+
+struct HwVertexBuffer : public HwBase {
+    uint32_t vertexCount{};               //   4
+    uint8_t bufferObjectsVersion{0xff};   //   1
+    bool padding[3]{};                    //   2
+    HwVertexBuffer() noexcept = default;
+    explicit HwVertexBuffer(uint32_t vertextCount) noexcept
+            : vertexCount(vertextCount) {
+    }
+};
+
+struct HwBufferObject : public HwBase {
+    uint32_t byteCount : 31;
+    uint32_t asynchronous : 1;
+
+    HwBufferObject() noexcept = default;
+    explicit HwBufferObject(uint32_t byteCount, bool async) noexcept : byteCount(byteCount), asynchronous(async) {}
+};
+
+struct HwMemoryMappedBuffer : public HwBase {
+};
+
+struct HwIndexBuffer : public HwBase {
+    uint32_t count : 26; // 67M indices
+    uint32_t elementSize : 5;
+    uint32_t asynchronous : 1;
+
+    HwIndexBuffer() noexcept : count{}, elementSize{} { }
+    HwIndexBuffer(uint8_t elementSize, uint32_t indexCount, bool async) noexcept :
+            count(indexCount), elementSize(elementSize), asynchronous(async) {
+        // we could almost store elementSize on 4 bits because it's never > 16 and never 0
+        assert_invariant(elementSize > 0 && elementSize <= 16);
+        assert_invariant(indexCount < (1u << 27));
+    }
+};
+
+struct HwRenderPrimitive : public HwBase {
+    PrimitiveType type = PrimitiveType::TRIANGLES;
+};
+
+struct HwProgram : public HwBase {
+    utils::CString name;
+    explicit HwProgram(utils::CString name) noexcept : name(std::move(name)) { }
+    HwProgram() noexcept = default;
+};
+
+struct HwDescriptorSetLayout : public HwBase {
+    HwDescriptorSetLayout() noexcept = default;
+};
+
+struct HwDescriptorSet : public HwBase {
+    HwDescriptorSet() noexcept = default;
+};
+
+struct HwTexture : public HwBase {
+    uint32_t width{};
+    uint32_t height{};
+    uint32_t depth{};
+    SamplerType target{};
+    uint8_t levels : 4;  // This allows up to 15 levels (max texture size of 32768 x 32768)
+    uint8_t samples : 4; // Sample count per pixel (should always be a power of 2)
+    TextureFormat format{};
+    struct {
+        uint8_t asynchronous : 1;
+        uint8_t reserved : 7;
+    };
+    TextureUsage usage{};
+    uint16_t reserved1 = 0;
+    HwStream* hwStream = nullptr;
+
+    HwTexture() noexcept : levels{}, samples{} {}
+    HwTexture(backend::SamplerType target, uint8_t levels, uint8_t samples, uint32_t width,
+              uint32_t height, uint32_t depth, TextureFormat fmt, TextureUsage usage, bool async) noexcept
+            : width(width), height(height), depth(depth), target(target), levels(levels),
+              samples(samples), format(fmt), asynchronous(async), usage(usage) {}
+};
+
+struct HwRenderTarget : public HwBase {
+    uint32_t width{};
+    uint32_t height{};
+    HwRenderTarget() noexcept = default;
+    HwRenderTarget(uint32_t w, uint32_t h) : width(w), height(h) { }
+};
+
+struct HwFence : public HwBase {
+    Platform::Fence* fence = nullptr;
+};
+
+struct HwSync : public HwBase {
+    Platform::Sync* sync = nullptr;
+};
+
+struct HwSwapChain : public HwBase {
+    Platform::SwapChain* swapChain = nullptr;
+};
+
+struct HwStream : public HwBase {
+    Platform::Stream* stream = nullptr;
+    StreamType streamType = StreamType::ACQUIRED;
+    uint32_t width{};
+    uint32_t height{};
+
+    HwStream() noexcept = default;
+    explicit HwStream(Platform::Stream* stream) noexcept
+            : stream(stream), streamType(StreamType::NATIVE) {
+    }
+};
+
+struct HwTimerQuery : public HwBase {
+};
+
+/*
+ * Base class of all Driver implementations
+ * If multithreading is supported, this class creates a `ServiceThread` responsible for executing
+ * user handlers.
+ */
+
+class DriverBase : public Driver {
+public:
+    explicit DriverBase(const Platform::DriverConfig& driverConfig) noexcept;
+    ~DriverBase() noexcept override;
+
+    void purge() noexcept final;
+
+    // Helpers...
+    struct CallbackData {
+        CallbackData(CallbackData const &) = delete;
+        CallbackData(CallbackData&&) = delete;
+        CallbackData& operator=(CallbackData const &) = delete;
+        CallbackData& operator=(CallbackData&&) = delete;
+        void* storage[8] = {};
+        static CallbackData* obtain(DriverBase* allocator);
+        static void release(CallbackData* data);
+    protected:
+        CallbackData() = default;
+    };
+
+    template<typename T>
+    void scheduleCallback(CallbackHandler* handler, T&& functor) {
+        CallbackData* data = CallbackData::obtain(this);
+        static_assert(sizeof(T) <= sizeof(data->storage), "functor too large");
+        new(data->storage) T(std::forward<T>(functor));
+        scheduleCallback(handler, data, (CallbackHandler::Callback)[](void* data) {
+            CallbackData* details = static_cast<CallbackData*>(data);
+            void* user = details->storage;
+            T& functor = *static_cast<T*>(user);
+            functor();
+            functor.~T();
+            CallbackData::release(details);
+        });
+    }
+
+    void scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) final;
+
+    /**
+     * Waits for a predicate to become true or until a timeout is reached.
+     * Returns ERROR if the driver encountered an unrecoverable error.
+     */
+    template<typename Predicate>
+    FenceStatus waitForFence(Predicate predicate, std::chrono::steady_clock::time_point until) {
+        std::unique_lock lock(mFenceMutex);
+        bool errorObserved = false;
+        bool success = mFenceCondition.wait_until(lock, until, [&]() {
+            return predicate() || 
+                    (errorObserved = UTILS_VERY_UNLIKELY(mHasUnrecoverableError.load(std::memory_order_relaxed)));
+        });
+        
+        if (UTILS_VERY_UNLIKELY(errorObserved)) {
+            return FenceStatus::ERROR;
+        }
+        
+        return success ? FenceStatus::CONDITION_SATISFIED : FenceStatus::TIMEOUT_EXPIRED;
+    }
+
+    /**
+     * Waits for a predicate to become true indefinitely.
+     * Returns ERROR if the driver encountered an unrecoverable error.
+     */
+    template<typename Predicate>
+    FenceStatus waitForFence(Predicate predicate) {
+        std::unique_lock lock(mFenceMutex);
+        bool errorObserved = false;
+        mFenceCondition.wait(lock, [&]() {
+            return predicate() || 
+                    (errorObserved = UTILS_VERY_UNLIKELY(mHasUnrecoverableError.load(std::memory_order_relaxed)));
+        });
+        
+        if (UTILS_VERY_UNLIKELY(errorObserved)) {
+            return FenceStatus::ERROR;
+        }
+        return FenceStatus::CONDITION_SATISFIED;
+    }
+
+    /**
+     * Executes an action that signals a fence and notifies all waiters.
+     */
+    template<typename Action>
+    void signalFence(Action action) {
+        std::lock_guard lock(mFenceMutex);
+        action();
+        mFenceCondition.notify_all();
+    }
+
+    /**
+     * Flags the driver as having encountered an unrecoverable error.
+     */
+    void setUnrecoverableError() noexcept override {
+        std::lock_guard lock(mFenceMutex);
+        mHasUnrecoverableError.store(true, std::memory_order_relaxed);
+        mFenceCondition.notify_all();
+    }
+
+    /**
+     * Returns true if the driver has encountered an unrecoverable error.
+     */
+    bool hasUnrecoverableError() const noexcept {
+        return mHasUnrecoverableError.load(std::memory_order_relaxed);
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // Privates
+    // --------------------------------------------------------------------------------------------
+
+protected:
+    class CallbackDataDetails;
+
+    Platform::DriverConfig const& getDriverConfig() const noexcept {
+        return mDriverConfig;
+    }
+
+    void scheduleDestroy(BufferDescriptor&& buffer) {
+        if (buffer.hasCallback()) {
+            scheduleDestroySlow(std::move(buffer));
+        }
+    }
+
+    void scheduleDestroySlow(BufferDescriptor&& buffer);
+
+    void scheduleRelease(AcquiredImage const& image);
+
+    void debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
+    void debugCommandEnd(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
+
+    // Stops the `ServiceThread`. This method is called during destruction but may be called
+    // explicitly if earlier shutdown is needed. This method is idempotent.
+    void stopServiceThread() noexcept;
+
+private:
+    const Platform::DriverConfig mDriverConfig;
+
+    std::mutex mPurgeLock;
+    std::vector<std::pair<void*, CallbackHandler::Callback>> mCallbacks;
+
+    std::thread mServiceThread;
+    std::mutex mServiceThreadLock;
+    std::condition_variable mServiceThreadCondition;
+    std::vector<std::tuple<CallbackHandler*, CallbackHandler::Callback, void*>> mServiceThreadCallbackQueue;
+    bool mExitRequested = false;
+
+    std::condition_variable mFenceCondition;
+    std::mutex mFenceMutex;
+    std::atomic<bool> mHasUnrecoverableError{false};
+};
+
+
+} // namespace backend::filament
+
+#endif // TNT_FILAMENT_DRIVER_DRIVERBASE_H

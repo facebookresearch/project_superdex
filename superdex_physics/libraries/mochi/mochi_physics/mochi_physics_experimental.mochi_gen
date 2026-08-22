@@ -1,0 +1,516 @@
+namespace experimental;
+
+fn experimental::RestoreStateFromScene(Scene* sceneTo, Scene const* sceneFrom, StateHandle handleFrom) -> void [mochi_error];
+fn experimental::ApplyImprovedConvergenceSettings(Scene* scene) -> void [mochi_error];
+
+fn experimental::GetContactForceWorldBatch(Span<Actor const* const> actors, Span<Actor const* const> colliders) -> real [mochi_error, units(N)];
+fn experimental::EnableNewtonEulerInertia(Actor* actor, bool enable) -> void [mochi_error];
+fn experimental::IsNewtonEulerInertiaEnabled(Actor const* actor) -> bool [mochi_error];
+fn experimental::SetSoftMaterialParamsField(Actor* actor, SoftMaterialParams const& params, int elementIndex) -> void [mochi_error];
+fn experimental::GetSoftMaterialParamsField(Actor const* actor, int elementIndex) -> SoftMaterialParams [mochi_error];
+
+// @brief Control type for individual control channels when setting articulated actor targets.
+//
+// @details Specifies how each control channel passed to @ref
+// experimental::SetArticulatedForceAndTargetPose is interpreted: whether it controls a single DoF
+// or a 3D link quantity (position or rotation), and whether it defines a PD target or applies direct
+// force/torque.
+//
+// @see experimental::SetArticulatedForceAndTargetPose
+enum experimental::ControlType [no_reflection] {
+  // @brief PD target on a single-DoF joint. Consumes 1 value.
+  // dofOrLinkIndices = DoF index.
+  SingleDof,
+  // @brief PD target on a 3D link position in world frame [m]. Consumes 3 values (x, y, z).
+  // dofOrLinkIndices = link index.
+  LinkPos,
+  // @brief PD target on a 3D link rotation in world frame as a rotation vector [rad].
+  // Consumes 3 values. dofOrLinkIndices = link index.
+  LinkRot,
+  // @brief Force/torque on a single-DoF joint. Consumes 1 value.
+  // dofOrLinkIndices = DoF index.
+  Force,
+  // @brief Number of control type enum values.
+  Count,
+}
+
+// @brief Set force, target pose, or other control modes for an articulated actor.
+//
+// @param[in] actor Articulated actor to control.
+// @param[in] target The combined control values. Size must match the sum of values consumed by each
+// control type (1 for single-DoF modes, 3 for 3D modes).
+// @param[in] controlTypes A span indicating the control type for each control channel.
+// @param[in] dofOrLinkIndices A span indicating the DoF index (for single-DoF modes) or link index
+// (for 3D modes) for each control channel. Must be same size as controlTypes.
+//
+// @note Only applicable to articulated actors.
+// @note Supports 4 control types: @ref experimental::ControlType::SingleDof, @ref
+// experimental::ControlType::LinkPos, @ref experimental::ControlType::LinkRot, @ref
+// experimental::ControlType::Force.
+// @note For 3D rotation mode (@ref experimental::ControlType::LinkRot), values are rotation vectors
+// (axis * angle in radians).
+// @note @ref experimental::ControlType::SingleDof, @ref experimental::ControlType::LinkPos, and
+// @ref experimental::ControlType::LinkRot control types require a pose controller. @ref
+// experimental::ControlType::Force does not require a pose controller.
+// @note A link-joint pair cannot be controlled by both link-level (@ref
+// experimental::ControlType::LinkPos, @ref experimental::ControlType::LinkRot) and DoF-level (@ref
+// experimental::ControlType::SingleDof) controls simultaneously.
+// @note Control indices must be unique within their control groups. @ref
+// experimental::ControlType::SingleDof and @ref experimental::ControlType::Force share DoF indices,
+// so a DoF may appear at most once across those modes. @ref experimental::ControlType::LinkPos and
+// @ref experimental::ControlType::LinkRot are checked separately, so each link may have at most one
+// position target and at most one rotation target.
+//
+// @see experimental::ControlType, Actor::SetArticulatedTargetPose,
+// Actor::SetArticulatedTargetLinkTransforms, Actor::SetExternalForcesOnDofs
+fn experimental::SetArticulatedForceAndTargetPose(Actor* actor, Span<real const> target, Span<experimental::ControlType const> controlTypes, Span<int const> dofOrLinkIndices) -> void [mochi_error];
+
+struct experimental::LinearTransmissionParams [no_reflection] {
+  DynamicArray<int> jointIndices;
+  DynamicArray<real> jointCoefficients;
+}
+
+struct experimental::SpatialTendonParams [no_reflection] {
+  DynamicArray<RoutingElement> routingElements;
+}
+
+struct experimental::DisplacementControlActuatorParams [no_reflection] {
+  real targetDisplacement = 0;
+  real stiffness = 1e9;
+  real damping = 0;
+  bool allowCompressiveForce = false;
+}
+
+struct experimental::ForceControlActuatorParams [no_reflection] {
+  real force = 0;
+  bool allowCompressiveForce = false;
+}
+
+struct experimental::McKibbenActuatorParams [no_reflection] {
+  real pressure;
+  real minimumPressure;
+  real threadLength;
+  real numberOfWraps;
+  real deflatedStiffness;
+  real deflatedEquilibriumLength;
+}
+
+fn experimental::AddLinearTransmission(Actor* actor, experimental::LinearTransmissionParams const& params) -> int [mochi_error];
+fn experimental::AddSpatialTendon(Actor* actor, experimental::SpatialTendonParams const& params) -> int [mochi_error];
+fn experimental::AttachDisplacementControlActuator(Actor* actor, int transmissionIndex, experimental::DisplacementControlActuatorParams const& params) -> void [mochi_error];
+fn experimental::AttachForceControlActuator(Actor* actor, int transmissionIndex, experimental::ForceControlActuatorParams const& params) -> void [mochi_error];
+fn experimental::AttachMcKibbenActuator(Actor* actor, int transmissionIndex, experimental::McKibbenActuatorParams const& params) -> void [mochi_error];
+fn experimental::SetTransmissionActuatorStateVariables(Actor* actor, int transmissionIndex, Span<real const> stateVariables) -> void [mochi_error];
+fn experimental::GetTransmissionDisplacement(Actor const* actor, int transmissionIndex) -> real [mochi_error];
+
+// @brief Get a transmission's displacement Jacobian at the actor's current pose.
+//
+// @param[in] actor Articulated actor that owns the transmission.
+// @param[in] transmissionIndex Transmission index returned by
+// @ref experimental::AddLinearTransmission or @ref experimental::AddSpatialTendon.
+// @param[out] outJacobian Scalar-output transmission Jacobian. Its size must equal
+// @ref Actor::GetNumDofs, and every entry is overwritten.
+//
+// @details `outJacobian[j]` is the derivative of transmission displacement with respect to reduced
+// DoF `j`, using the articulated solver's reduced tangent/Lie convention and DoF ordering. Each
+// entry is the transmission moment arm for that DoF.
+//
+// @note A joint's entries begin at the offset in the corresponding item returned by
+// @ref Actor::GetArticulatedShapeInfo. A revolute joint has one entry at that offset.
+fn experimental::GetTransmissionDisplacementJacobian(Actor const* actor, int transmissionIndex, Span<real> outJacobian) -> void [mochi_error];
+fn experimental::GetTransmissionActuatorStateVariables(Actor const* actor, int transmissionIndex, Span<real> outStateVariables) -> void [mochi_error];
+fn experimental::GetNumTransmissionActuatorStateVariables(Actor const* actor, int transmissionIndex) -> int [mochi_error];
+
+// @brief Parameters controlling IK solver behavior.
+//
+// @details These parameters configure the Newton solver used for inverse kinematics optimization.
+// The solver finds quasistatic (time-invariant) configurations that satisfy position and rotation
+// target constraints for articulated bodies.
+struct experimental::IKSolverParams [no_reflection] {
+
+  // @brief Maximum Newton solver iterations. Higher values allow convergence over larger distances.
+  //
+  // @see NonLinearSolverParams::maxIter
+  int maxIter = 20;
+
+  // @brief Verbosity level passed to the Newton solver.
+  //
+  // @see NonLinearSolverParams::verbosity
+  VerbosityLevel verbosity = Warning;
+
+  // @brief Absolute residual-norm tolerance for Newton solver convergence.
+  //
+  // @note IK convergence should be primarily driven by absolute tolerance (not relative tolerance).
+  //
+  // @see NonLinearSolverParams::absTol
+  real absTol = 1e-2;
+
+  // @brief Relative error tolerance for Newton solver convergence.
+  //
+  // @note IK convergence should be primarily driven by absolute tolerance (not relative tolerance).
+  //
+  // @see NonLinearSolverParams::relTol
+  real relTol = 1e-8;
+
+  // @brief Position error threshold [m] for determining if IK targets are reachable.
+  real positionErrorThres [units(m)] = 1e-2;
+
+  // @brief Rotation error threshold [radians] for determining if IK targets are reachable.
+  real rotationErrorThres [units(rad)] = 1e-2;
+
+  // @brief Maximum line search iterations per Newton step.
+  //
+  // @see NonLinearSolverParams::lineSearchMaxIter
+  int lineSearchMaxIter = 10;
+
+  // @brief Maximum elapsed wall-clock time [s] before the solver stops.
+  //
+  // @details When set to a positive value, the solver will stop after this many seconds
+  // have elapsed, regardless of convergence. Useful for real-time applications where
+  // a time budget must be enforced.
+  //
+  // @note A value of 0 (default) means no time limit.
+  //
+  // @see NonLinearSolverParams::maxElapsedTimeSeconds
+  double maxElapsedTimeSeconds = 0;
+}
+
+// @brief Inverse kinematics solver for articulated bodies.
+//
+// @details Performs quasistatic optimization to find time-invariant configurations that optimize a
+// user-provided energy function. Currently supports soft-constraint energy functions for specifying
+// target position and orientation of rigid links in articulated bodies.
+//
+// @note The IK solver takes ownership of the scene passed at creation. The scene is mutated
+// (e.g., gravity zeroed, single-island forced, contact friction zeroed, articulated inertia and joint
+// friction removed) and is unsuitable for general simulation afterward. Use it only via this
+// @ref IKSolver.
+// @note Targets must be set before calling @ref IKSolver::SolveIK.
+//
+// @see experimental::CreateIKSolver, experimental::DestroyIKSolver
+class experimental::IKSolver [no_init, no_destruct, no_reflection] {
+
+  // @brief Set the IK solver parameters.
+  //
+  // @param[in] params IK solver parameters to set.
+  //
+  // @see IKSolver::GetSolverParams
+  fn SetSolverParams(experimental::IKSolverParams const& params) -> void [pure, virtual];
+
+  // @brief Get the current IK solver parameters.
+  //
+  // @return Current IK solver parameters.
+  //
+  // @see IKSolver::SetSolverParams
+  fn GetSolverParams() -> experimental::IKSolverParams [pure, virtual, const];
+
+  // @brief Create a position target constraint for IK.
+  //
+  // @param[in] actor Target articulated actor.
+  // @param[in] localPosition Position [m] in link's local frame.
+  // @param[in] targetPosition Target position [m] in world frame.
+  // @param[in] weight Objective function weight (stiffness) [N/m] for the position target. Must
+  // be non-negative. The relative magnitude between position and rotation weights determines
+  // the tradeoff in mixed problems.
+  //
+  // @return Constraint pointer to update target dynamically.
+  //
+  // @warning Only one position target per actor is supported. Calling this method again for the same
+  // actor replaces the previous target and invalidates the previously returned @ref Constraint
+  // pointer.
+  //
+  // @see IKSolver::ClearPositionTarget, IKSolver::CreateRotationTarget
+  fn CreatePositionTarget(ActorHandle actor, Real3 localPosition, Real3 targetPosition, real weight) -> Constraint* [pure, virtual, mochi_error, nullable];
+
+  // @brief Remove position target constraint for given actor.
+  //
+  // @param[in] actor Handle of the actor whose target constraint is to be removed.
+  //
+  // @see IKSolver::CreatePositionTarget
+  fn ClearPositionTarget(ActorHandle actor) -> void [pure, virtual, mochi_error];
+
+  // @brief Create a rotation target constraint for IK.
+  //
+  // @param[in] actor Target articulated actor.
+  // @param[in] localRotation Rotation vector [radians] in link's local frame.
+  // @param[in] targetRotation Target rotation vector [radians] in world frame.
+  // @param[in] weight Objective function weight (stiffness) [N*m/rad] for the rotation target.
+  // Must be non-negative. The relative magnitude between position and rotation weights determines
+  // the tradeoff in mixed problems.
+  //
+  // @return Constraint pointer to update target dynamically.
+  //
+  // @warning Only one rotation target per actor is supported. Calling this method again for the same
+  // actor replaces the previous target and invalidates the previously returned @ref Constraint
+  // pointer.
+  //
+  // @note Both rotations are rotation vectors (axis * angle).
+  //
+  // @see IKSolver::ClearRotationTarget, IKSolver::CreatePositionTarget
+  fn CreateRotationTarget(ActorHandle actor, Real3 localRotation, Real3 targetRotation, real weight) -> Constraint* [pure, virtual, mochi_error, nullable];
+
+  // @brief Remove rotation target constraint for given actor.
+  //
+  // @param[in] actor Handle of the actor whose target constraint is to be removed.
+  //
+  // @see IKSolver::CreateRotationTarget
+  fn ClearRotationTarget(ActorHandle actor) -> void [pure, virtual, mochi_error];
+
+  // @brief Solve the IK problem to find joint configuration satisfying targets.
+  //
+  // @return True if every target is reached within the per-component error thresholds (the
+  // maximum absolute component is no greater than @ref IKSolverParams::positionErrorThres /
+  // @ref IKSolverParams::rotationErrorThres), false otherwise.
+  //
+  // @note At least one target (position or rotation) must be set before calling.
+  //
+  // @see IKSolverParams::positionErrorThres, IKSolverParams::rotationErrorThres,
+  // IKSolver::CreatePositionTarget, IKSolver::CreateRotationTarget
+  fn SolveIK() -> bool [pure, virtual, mochi_error];
+}
+
+// @brief Create a new inverse kinematics (IK) solver.
+//
+// @param[in] scene Scene containing the articulated and/or rigid actor(s) to perform IK on.
+// @param[in] context @ref Context that owns the @ref Scene.
+//
+// @return Pointer to the created @ref experimental::IKSolver, or nullptr on error.
+//
+// @note The @ref experimental::IKSolver assumes exclusive control of the provided scene. The scene
+// must not be used directly and will be destroyed by @ref experimental::DestroyIKSolver.
+// @note The scene must contain only @ref ActorType::Articulated and @ref ActorType::Rigid actors.
+// @note The scene's solver parameters, gravity, single-island setting, contact friction, and
+// articulated inertia/joint-friction terms are reconfigured for IK and cannot be relied upon
+// afterwards.
+//
+// @see experimental::DestroyIKSolver
+fn experimental::CreateIKSolver(Scene* scene, Context* context) -> experimental::IKSolver* [mochi_error, nullable];
+
+// @brief Destroy an IK solver and the scene it owns.
+//
+// @param[in] solver @ref experimental::IKSolver to destroy.
+// @param[in] context @ref Context that owns the @ref experimental::IKSolver.
+//
+// @warning Do not destroy the IK solver's scene directly with @ref Context::DestroyScene while the
+// @ref experimental::IKSolver exists. Destroy the IK solver with @ref experimental::DestroyIKSolver
+// instead.
+// @warning Do not dereference pointers to the IK solver, its owned scene, or the scene's actors and
+// constraints after this call.
+//
+// @note No-op if @ref solver is null or unknown to this @ref Context.
+// @note Call on any thread.
+// @note Any remaining IK solvers will be cleaned up automatically when the @ref Context is
+// destroyed.
+//
+// @see experimental::CreateIKSolver
+fn experimental::DestroyIKSolver(experimental::IKSolver* solver [nullable], Context* context) -> void [mochi_error];
+
+// @brief Check if an IK solver pointer is valid.
+//
+// @param[in] solver @ref experimental::IKSolver pointer to check.
+// @param[in] context @ref Context that owns the @ref experimental::IKSolver.
+//
+// @return True if the solver is valid (not destroyed) and belongs to this @ref Context, false
+// otherwise.
+//
+// @note Call on any thread.
+//
+// @see experimental::CreateIKSolver, experimental::DestroyIKSolver
+fn experimental::IsValidIKSolver(experimental::IKSolver const* solver [nullable], Context* context) -> bool [mochi_error];
+
+class experimental::NewtonEulerTerms [no_init, no_destruct, no_reflection] {
+  fn Compute(real dt, Span<real const> q, Span<real const> dq, Span<real> outM, Span<real> outC, Span<real> outJ, Span<real> outJtF) -> void [pure, virtual, mochi_error];
+}
+
+fn experimental::CreateNewtonEulerTerms(Actor* robot, Context* context) -> experimental::NewtonEulerTerms* [mochi_error, nullable];
+fn experimental::DestroyNewtonEulerTerms(experimental::NewtonEulerTerms* newtonEulerTerms [nullable], Context* context) -> void [mochi_error];
+fn experimental::IsValidNewtonEulerTerms(experimental::NewtonEulerTerms const* newtonEulerTerms [nullable], Context* context) -> bool [mochi_error];
+
+struct experimental::ExperimentalSoftActorParams [no_reflection] {
+  ColliderType colliderType = None;
+
+  GridSdfParams sdf;
+
+  ShapeHandle flow;
+
+  bool useRecentering = true;
+}
+
+fn experimental::CreateSoftActor(Scene* scene, SoftActorParams const& params, experimental::ExperimentalSoftActorParams const& experimentalParams) -> Actor* [export, mochi_error, nullable];
+
+struct experimental::ExperimentalSoftSkinnedActorParams [no_reflection] {
+  DynamicArray<experimental::ExperimentalSoftActorParams> softParams;
+}
+
+struct experimental::RodMaterialParams [no_reflection] {
+  real linearDensity [units(kg/m)] = 1e-1;
+  real linearRotationalInertia [units(kg*m)] = 1e-6;
+  real axialStiffness [units(N)] = 1e2;
+  real torsionalStiffness [units(N*m^2)] = 5e-4;
+  Real2 flexuralStiffness [units(N*m^2)] = {5e-4, 5e-4};
+  real massDampingCoefficient [units(1/s)] = 0;
+  real stiffnessDampingCoefficient [units(s)] = 0;
+}
+
+struct experimental::PointCloudColliderParams [no_reflection] {
+  real radius [units(m)] = 0.01;
+  real selfContactExclusionRatio = 1.5;
+  real spatialHashLoadFactor = 0.0625;
+  bool selfContact = false;
+  Optional<ActorBoundaryElementType> colliderTriangleElementType;
+  Optional<ActorSegmentElementType> colliderSegmentElementType;
+}
+
+// @brief Parameters for creating an experimental rod actor.
+struct experimental::RodActorParams [no_reflection] {
+
+  // @brief Actor name.
+  String name;
+
+  // @brief Contact layer name.
+  String layer;
+
+  // @brief World-from-local transform applied to the shape.
+  TransformRT worldFromLocal;
+
+  // @brief Shape handle defining the rod geometry. Must be a polyline shape.
+  //
+  // @note Each element's frame axis is interpreted as one cross-sectional principal axis (the other
+  // is the cross product of the segment direction and that axis); the flexural stiffness components
+  // are defined with respect to these axes.
+  ShapeHandle shape;
+
+  // @brief Contact properties for interactions with volume actors.
+  ContactParams contact;
+
+  // @brief Element type controlling the number of contact samples per segment.
+  ActorSegmentElementType contactElementType = Default;
+
+  // @brief Rod material properties.
+  experimental::RodMaterialParams material;
+
+  // @brief Collider type. Set to PointCloud to enable point-cloud contact.
+  ColliderType colliderType = None;
+
+  // @brief Geometric and logical properties of the point-cloud collider.
+  experimental::PointCloudColliderParams pointCloudCollider;
+
+  // @brief Enables gravity.
+  bool hasGravity = true;
+
+  // @brief Places contact samples on the rod's visual (triangular) mesh instead of the centerline.
+  //
+  // @note Forces are transmitted to rod degrees of freedom through the skinning Jacobian. Requires
+  // the rod shape to have a visual mesh with embedding data.
+  bool useVisualMeshContact = false;
+
+  // @brief Element type controlling the number of visual-mesh contact samples per triangle. Only
+  // used when visual-mesh contact is enabled.
+  ActorBoundaryElementType visualMeshContactElementType = Default;
+}
+
+fn experimental::CreateRodActor(Scene* scene, experimental::RodActorParams const& params) -> Actor* [mochi_error, nullable];
+
+fn experimental::GenerateTubularRodModelData(Span<Real3 const> nodes [units(m)], Span<Real3 const> elementFrameAxes, real radius [units(m)], int numCrossSectionSegments, bool isClosedLoop) -> ModelData [mochi_error, no_capi];
+
+struct experimental::ShellMaterialParams [no_reflection] {
+  real membraneLambda [units(Pa*m)] = 300;
+  real membraneMu [units(Pa*m)] = 400;
+  real bendingAlpha [units(Pa*m^3)] = 0.00002;
+  real bendingBeta [units(Pa*m^3)] = 0.00007;
+  real density [units(kg/m^2)] = 1.0;
+  real massDampingCoefficient [units(1/s)] = 0;
+  real stiffnessDampingCoefficient [units(s)] = 0;
+}
+
+// @brief Parameters for creating an experimental shell actor.
+struct experimental::ShellActorParams [no_reflection] {
+
+  // @brief Actor name.
+  String name;
+
+  // @brief Contact layer name.
+  String layer;
+
+  // @brief World-from-local transform applied to the shape.
+  TransformRT worldFromLocal;
+
+  // @brief Shape handle defining the shell geometry.
+  ShapeHandle shape;
+
+  // @brief Shell material properties.
+  experimental::ShellMaterialParams material;
+
+  // @brief Collider type used to represent the shell for contact.
+  //
+  // @note Currently, the only supported values are PointCloud (participates in point-cloud
+  // contact) and None (no contact).
+  ColliderType colliderType = PointCloud;
+
+  // @brief Contact mechanics properties.
+  ContactParams contact;
+
+  // @brief Geometric and logical properties of the point-cloud collider.
+  experimental::PointCloudColliderParams pointCloudCollider;
+
+  // @brief Enables gravity.
+  bool hasGravity = true;
+
+  // @brief Element type controlling the number of contact samples per triangle.
+  ActorBoundaryElementType contactElementType = Default;
+}
+
+fn experimental::CreateShellActor(Scene* scene, experimental::ShellActorParams const& params) -> Actor* [mochi_error, nullable];
+fn experimental::ShellMaterialParamsFrom3dIsotropic(real youngsModulus3d, real poissonsRatio3d, real density3d, real thickness) -> experimental::ShellMaterialParams [mochi_error];
+
+// @brief Calibrate the normal viscous damping coefficient to approximate a target coefficient of
+// restitution (CoR).
+//
+// @details The effective CoR of normal viscous damping is velocity-dependent. For damping
+// coefficient c and impact velocity v, let @code alpha = c * v @endcode. The approximate CoR e
+// satisfies @code alpha = (1 - e) * (1 + a*e) / (e * (1 + b*e)) @endcode, where
+// @code a = 9/2 @endcode and @code b = 8/3 @endcode define a rational fit that matches
+// the analytic limits. Evaluating this relation for the requested CoR gives alpha and hence
+// @code c = alpha / v @endcode. @ref EffectiveCoefficientOfRestitution is its exact inverse.
+// As @code e -> 0 @endcode, @code alpha -> 1/e @endcode, so c diverges for fully inelastic
+// collisions.
+//
+// @param[in] cor Target coefficient of restitution. Must be finite and in (0, 1].
+// @param[in] impactVelocity Characteristic impact velocity [m/s]. Must be finite and positive.
+//
+// @return Normal viscous damping coefficient [s/m]; 0 on error.
+//
+// @see EffectiveCoefficientOfRestitution, ContactParams::normalViscousDampingCoefficient
+fn experimental::CalibrateNormalViscousDampingCoefficient(real cor, real impactVelocity) -> real [mochi_error, units(s/m)];
+
+// @brief Effective coefficient of restitution (CoR) produced by a normal viscous damping
+// coefficient at an impact velocity.
+//
+// @details Exact inverse of @ref CalibrateNormalViscousDampingCoefficient: solves the calibration
+// relation for the positive root:
+// @code
+// e = (-B + sqrt(B^2 + 4A)) / (2A)
+// A = a + b*alpha
+// B = alpha + 1 - a
+// alpha = c * v
+// @endcode
+// where a = 9/2 and b = 8/3.
+//
+// @param[in] normalViscousDampingCoefficient Normal viscous damping coefficient [s/m]. Must be
+//            finite and non-negative.
+// @param[in] impactVelocity Characteristic impact velocity [m/s]. Must be finite and positive.
+//
+// @return Effective coefficient of restitution; 0 on error.
+//
+// @see CalibrateNormalViscousDampingCoefficient, ContactParams::normalViscousDampingCoefficient
+fn experimental::EffectiveCoefficientOfRestitution(real normalViscousDampingCoefficient, real impactVelocity) -> real [mochi_error];
+
+struct experimental::DebugStats [no_reflection] {
+  // @brief Largest relative error of the residual norm across integration stages, simulation
+  // islands and Newton iterations, in the last call to @ref Scene::Step. The error is computed by
+  // finite-difference consistency check. It is disabled by default due to its computational cost,
+  // but it can be activated with @ref ExperimentalEvalParams::consistencyResNorm.
+  real maxResidualNormRelativeError;
+}
+
+fn experimental::GetDebugStats(Scene const* scene) -> experimental::DebugStats [mochi_error];

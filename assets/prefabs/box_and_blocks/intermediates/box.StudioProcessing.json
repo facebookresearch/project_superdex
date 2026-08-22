@@ -1,0 +1,81 @@
+{
+  "editorState": {
+    "cadRotation": [
+      0.70710676908493042,
+      0,
+      0,
+      0.70710676908493042
+    ],
+    "cadScale": [
+      1,
+      1,
+      1
+    ],
+    "cadTranslation": [
+      0,
+      0,
+      0
+    ]
+  },
+  "modifiers": [
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "From Model Viewer",
+      "modifier": "Source from CAD Model",
+      "properties": {
+        "allowPartialFailure": true,
+        "angularDeflection": 0.25,
+        "backend": "CadMesher",
+        "bodySelection": 0,
+        "edgeSampling": "Uniform",
+        "linearDeflection": 0.050000000000000003,
+        "targetEdgeLength": 0,
+        "targetEdgeLengthFraction": 0.02
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": false,
+      "method": "Make Manifold",
+      "modifier": "Refine Mesh",
+      "properties": {
+        "thenMakeWatertight": true
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": false,
+      "method": "Tangential Relaxation (Smoothing)",
+      "modifier": "Refine Mesh",
+      "properties": {
+        "angleSmoothingIterations": 0,
+        "tangentialRelaxationIterations": 3
+      }
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "SDF",
+      "modifier": "Export Mochi Model",
+      "properties": {
+        "sdf": {
+          "boundaryPaddingDist": 0.0050000003539025784,
+          "minGridResolution": [
+            6,
+            6,
+            6
+          ],
+          "resolutionDelta": [
+            0.30000001192092896,
+            0.30000001192092896,
+            0.30000001192092896
+          ],
+          "resolutionMode": "LargestEdge"
+        }
+      }
+    }
+  ],
+  "referenceModels": [],
+  "version": 1
+}

@@ -1,0 +1,18 @@
+VERSION 120
+
+EDIT UG_GATEWAY_MAIN_MENUBAR
+
+MENU UG_APPLICATION
+
+! ***NOTE button name must match the name you registered for
+! your application in the MenuBarManager()->RegisterApplication call
+
+    APPLICATION_BUTTON ROBOT_EXPORTER
+
+    LABEL Robot Exporter
+
+    LIBRARIES RobotExporterButtons
+
+    MENU_FILES RobotExporterButtons.men
+
+END_OF_MENU

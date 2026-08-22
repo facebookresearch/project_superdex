@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Robot Exporter Custom Feature Configuration -->
+<!-- Place this file in $UGII_USER_DIR/application -->
+<!-- Or set UGII_CUSTOM_FEATURE_DIR environment variable to point to this directory -->
+
+<CustomFeatureLib
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="CustomFeatureConfiguration_schema.xsd">
+    <CustomFeature
+        FeatureClass="NXOpen::CustomFeature::RobotExporterConfiguration"
+        FeatureName="Robot Configuration"
+        FeatureIcon="icons/icon_128px"
+        FeatureLibrary="NXRobotExporter"
+        FeatureUILibrary="NXRobotExporter"
+        IsWithoutBody="true"/>
+</CustomFeatureLib>

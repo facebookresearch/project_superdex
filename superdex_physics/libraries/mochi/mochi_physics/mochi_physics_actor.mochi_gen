@@ -1,0 +1,1497 @@
+// @brief Represents a simulated body (actor) in a scene.
+//
+// @warning Concurrent access to the actor or its scene is illegal.
+//
+// @note Every body in the simulation is an actor.
+// @note Actors always belong to exactly one scene.
+// @note Actors can be static or dynamic.
+class Actor [no_init, no_destruct, use_scene] {
+
+  // @brief Get the actor's handle.
+  //
+  // @return Actor's handle.
+  //
+  // @note Handles are safe to store and remain valid throughout the actor lifespan.
+  // @note Call @ref Scene::GetActor to look up the actor's pointer from the actor's handle.
+  //
+  // @see Scene::GetActor
+  fn GetHandle() -> ActorHandle [pure, virtual, const, batchable];
+
+  // @brief Get the @ref Context that owns this actor.
+  //
+  // @return Pointer to the @ref Context that owns this actor.
+  fn GetContext() -> Context* [pure, virtual, overloaded, no_python];
+
+  // @brief Get read-only access to the @ref Context that owns this actor.
+  //
+  // @return Const pointer to the @ref Context that owns this actor.
+  fn GetContext() -> Context const* [pure, virtual, const, overloaded, no_python];
+
+  // @brief Get the @ref Scene that this actor belongs to.
+  //
+  // @return Pointer to the scene that this actor belongs to.
+  fn GetScene() -> Scene* [pure, virtual, overloaded, batchable];
+
+  // @brief Get the @ref Scene that this actor belongs to (read only)
+  //
+  // @return Pointer to the scene that this actor belongs to.
+  fn GetScene() -> Scene const* [pure, virtual, const, overloaded, batchable, no_python];
+
+  // @brief Get the name of the actor.
+  //
+  // @return Name of the actor.
+  //
+  // @note Actor names are not guaranteed to be unique.
+  fn GetName() -> char const* [pure, virtual, const];
+
+  // @brief Get the type of the actor.
+  //
+  // @return Type of the actor.
+  fn GetType() -> ActorType [pure, virtual, const, batchable];
+
+  // @brief Get the convergence status of the actor in the most recent simulation step.
+  //
+  // @return Convergence status of the actor in the most recent simulation step.
+  //
+  // @note Static actors do not participate in the solver and may return @ref ConvergenceStatus::None.
+  //
+  // @see ConvergenceStatus, SolverStats::convergenceStatus
+  fn GetConvergenceStatus() -> ConvergenceStatus [pure, virtual, const, batchable];
+
+  // @brief Check whether the actor is static.
+  //
+  // @return True if the actor is static. False if it's dynamic.
+  fn IsStatic() -> bool [pure, virtual, const, batchable];
+
+  // @brief Get the contact parameters of the actor.
+  //
+  // @return Contact parameters of the actor.
+  fn GetContactParams() -> ContactParams [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Set the contact parameters of the actor.
+  //
+  // @param[in] params Contact parameters to set.
+  fn SetContactParams(ContactParams const& params) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Get the collider type of the actor.
+  //
+  // @return Collider type of the actor.
+  //
+  // @note If @ref ColliderType::Auto was specified when creating the actor, this method returns
+  // the collider type that was automatically selected based on the actor's shape, not Auto.
+  fn GetColliderType() -> ColliderType [pure, virtual, const];
+
+  // @brief Check if the actor has a root transform.
+  //
+  // @return True if the actor has a root transform. False otherwise.
+  //
+  // @note Non-rendered actors may not have a root transform.
+  fn HasRootTransform() -> bool [pure, virtual, const, batchable];
+
+  // @brief Get the actor's world-from-local transform (root transform).
+  //
+  // @return The actor's world-from-local transform.
+  //
+  // @note Returns an identity transform when @ref HasRootTransform returns false.
+  // @note For a top-level articulated actor, the local frame is the articulation root frame, not
+  // the root link's frame. For a nested link actor, the local frame is that link's frame.
+  fn GetRootTransform() -> TransformRT [pure, virtual, const, batchable];
+
+  // @brief Set the actor's world-from-local transform (root transform).
+  //
+  // @param[in] worldFromLocal World-space transform to set.
+  //
+  // @note Not allowed on articulated links.
+  // @note For a top-level articulated actor, the local frame is the articulation root frame, not
+  // the root link's frame.
+  // @note For dynamic actors, it does not change velocity. For static actors, however, it changes
+  // velocity, because it is implicitly defined by the root transform in consecutive time steps.
+  // To cancel the velocity of a static actor, use @ref SetVelocity.
+  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
+  // time step after this method is called.
+  fn SetRootTransform(TransformRT const& worldFromLocal) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Get the position of the center of mass in the actor's local coordinate frame (@ref
+  // GetRootTransform).
+  //
+  // @return Position vector of the center of mass in the actor's local coordinate frame.
+  //
+  // @note Only supported for dynamic rigid actors (including articulated links) and soft actors.
+  //
+  // @see GetRootTransform
+  fn GetRigidCenterOfMassLocal() -> Real3 [pure, virtual, const, mochi_error, units(m), batchable];
+
+  // @brief Get the world-space transform of the actor expressed at the center of mass.
+  //
+  // @details The rotation is the same as in @ref GetRootTransform, but the translation accounts
+  // for the local position of the center of mass with respect to the root transform.
+  //
+  // @return Transform of the actor at the center of mass.
+  //
+  // @note Only supported for dynamic rigid actors.
+  //
+  // @see SetCenterOfMassTransform, GetRootTransform
+  fn GetCenterOfMassTransform() -> TransformRT [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Set the world-space transform of the actor expressed at the center of mass.
+  //
+  // @param[in] worldFromCom World-space transform at the center of mass to set.
+  //
+  // @note Only supported for dynamic rigid actors.
+  // @note Does not change velocity.
+  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
+  // time step after this method is called.
+  //
+  // @see GetCenterOfMassTransform, SetRootTransform
+  fn SetCenterOfMassTransform(TransformRT const& worldFromCom) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Get the moment of inertia tensor of the actor at the center of mass, aligned with the
+  // actor's local reference system (root transform), and using *negative* tensor notation.
+  //
+  // @code
+  //      [ixx, ixy, ixz]   [ +∫(y²+z²)dm, -∫(xy)dm,    -∫(xz)dm     ]
+  //  I = [ixy, iyy, iyz] = [ -∫(xy)dm,    +∫(x²+z²)dm, -∫(yz)dm     ]
+  //      [ixz, iyz, izz]   [ -∫(xz)dm,    -∫(yz)dm,    +∫(x²+y²)dm  ]
+  // @endcode
+  //
+  // @return Upper-right triangle in the form [ixx, ixy, ixz, iyy, iyz, izz]. Units: kg·m².
+  //
+  // @note Only supported for dynamic rigid actors.
+  fn GetRigidMomentOfInertiaLocal() -> Real6 [pure, virtual, const, mochi_error, units(kg*m^2), batchable];
+
+  // @brief Set the world-frame linear and angular velocity of the actor at the center of mass.
+  //
+  // @param[in] linearVel Linear velocity [m/s] of the center of mass in world frame.
+  // @param[in] angularVel Angular velocity [rad/s] at the center of mass in world frame.
+  //
+  // @note Only supported for rigid actors (except articulated links) and soft actors (except ROMs
+  // and soft-skinned actors).
+  // @note For static actors, it only supports setting zero velocity.
+  // @note For soft actors, the angular velocity must be zero.
+  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
+  // time step after this method is called.
+  fn SetVelocity(Real3 const& linearVel [units(m/s)], Real3 const& angularVel [units(rad/s)]) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Get the linear velocity of the actor in world frame.
+  //
+  // @return Linear velocity in world frame [m/s].
+  //
+  // @note Only supported for rigid and soft actors.
+  // @note For rigid actors, it returns the velocity of the center of mass.
+  // @note For soft actors, it returns an estimate of the linear velocity of the root transform.
+  // Requires recentering to be enabled for accurate results.
+  // @note Not supported for ROM actors.
+  fn GetLinearVelocity() -> Real3 [pure, virtual, const, mochi_error, units(m/s), batchable];
+
+  // @brief Get the angular velocity of the actor in world frame.
+  //
+  // @return Angular velocity in world frame [rad/s].
+  //
+  // @note Only supported for rigid and soft actors.
+  // @note For rigid actors, it returns the actual angular velocity.
+  // @note For soft actors, it returns an estimate of the angular velocity of the root transform.
+  // Requires recentering to be enabled for accurate results.
+  // @note Not supported for ROM actors.
+  fn GetAngularVelocity() -> Real3 [pure, virtual, const, mochi_error, units(rad/s), batchable];
+
+  // @brief Get the total mass of the actor.
+  //
+  // @return Mass [kg] of the actor.
+  //
+  // @note Not supported for static actors.
+  fn GetMass() -> real [pure, virtual, const, mochi_error, units(kg), batchable];
+
+  // @brief Get the density of the actor in the undeformed configuration.
+  //
+  // @return Density [kg/m³] of the actor.
+  //
+  // @note Only supported for rigid actors (except static rigid actors), articulated links and soft
+  // actors.
+  //
+  // @see SetDensity, GetSoftMaterialParams
+  fn GetDensity() -> real [pure, virtual, const, mochi_error, units(kg/m^3), batchable];
+
+  // @brief Set the density of the actor in the undeformed configuration.
+  //
+  // @param[in] density Density [kg/m³] to set. Must be positive.
+  //
+  // @note Only supported for rigid actors (except static rigid actors), articulated links and soft
+  // actors.
+  // @note The moment of inertia is updated based on the new density.
+  // The center of mass is left unchanged.
+  //
+  // @see GetDensity, SetInertiaProperties, SetSoftMaterialParams
+  fn SetDensity(real density [units(kg/m^3)]) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Set the mass properties of the actor.
+  //
+  // @details Directly sets mass, center of mass position in local coordinates, and moment of
+  // inertia tensor at the center of mass. This bypasses density-based computation and allows
+  // specifying exact inertia from CAD data or external measurements.
+  //
+  // @param[in] mass Mass [kg] to set. Must be positive and finite.
+  // @param[in] centerOfMass Position of center of mass [m] in actor's local coordinate frame
+  // (@ref GetRootTransform).
+  // @param[in] momentOfInertia Moment of inertia tensor at center of mass [kg·m²], upper-right
+  // triangle [ixx, ixy, ixz, iyy, iyz, izz] using negative tensor notation consistent with
+  // @ref GetRigidMomentOfInertiaLocal. Must be finite.
+  //
+  // @note Only supported for dynamic rigid actors. Not supported for static actors, soft actors,
+  // shell actors, or articulated links.
+  // @note A finite but physically invalid moment of inertia tensor (negative principal moments
+  // or one violating the triangle inequality) is accepted with a warning, not rejected.
+  // @note Re-anchors the density reference state. Subsequent @ref SetDensity calls rescale mass and
+  // moment of inertia proportionally about the new values; center of mass is unchanged by
+  // @ref SetDensity.
+  // @note After this call, @ref GetDensity returns bulk density mass / volume.
+  //
+  // @see GetMass, GetDensity, SetDensity, GetRigidCenterOfMassLocal, GetRigidMomentOfInertiaLocal
+  fn SetInertiaProperties(real mass [units(kg)], Real3 const& centerOfMass [units(m)], Real6 const& momentOfInertia [units(kg*m^2)]) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Get the elastic energy of the actor, measured as the difference with respect to the rest
+  // state.
+  //
+  // @return Elastic energy [J] of the actor.
+  //
+  // @note Requires registering @ref QueryType::ElasticEnergy before the simulation step. Results are
+  // available after the simulation step completes.
+  // @note Requires the actor to support @ref QueryType::ElasticEnergy.
+  //
+  // @see RegisterQuery, QueryType::ElasticEnergy
+  fn GetElasticEnergy() -> real [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Gets the recentering parameters of the actor.
+  //
+  // @return Recentering parameters of the actor.
+  //
+  // @note Recentering is only supported for soft actors (not soft-skinned). For other actor types,
+  // returns default recentering parameters with @ref RecenteringParams::useRecentering set to false.
+  //
+  // @see RecenteringParams, SetRecenteringParams
+  fn GetRecenteringParams() -> RecenteringParams [pure, virtual, const, batchable];
+
+  // @brief Set the recentering parameters of the actor.
+  //
+  // @details When enabled for a soft actor, the root transform automatically moves as the actor's
+  // "rigid pivot" (typically near the center of mass) moves.
+  //
+  // @param[in] params Recentering parameters to set.
+  //
+  // @note Only supported for soft actors (not soft-skinned).
+  //
+  // @see RecenteringParams, GetRecenteringParams
+  fn SetRecenteringParams(RecenteringParams const& params) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Get the node displacements of the actor in the actor's local frame, relative to
+  // reference (rest) positions.
+  //
+  // @return Node displacements in the actor's local frame. Length is 3 × the number of nodes for
+  // soft, shell, and soft-skinned actors, or 4 × the number of nodes for rod actors (3 displacement
+  // [m] + 1 twist [rad] per node). The number of nodes is available from @ref GetMesh.
+  //
+  // @note Only supported for soft, soft-skinned, shell and rod actors.
+  // @note For soft-skinned actors, it returns post-skinning displacements, which may differ from the
+  // pre-skinning elastic deformation component written by @ref SetDisplacements.
+  //
+  // @see SetDisplacements, GetNodePositionsLocal
+  fn GetDisplacements() -> Span<real const> [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Set the node displacements in the actor's local frame, relative to reference (rest)
+  // positions.
+  //
+  // @param[in] displacements Node displacements [m] to set in the actor's local frame. Length
+  // must be 3 × the number of nodes. The number of nodes is available from @ref GetMesh.
+  //
+  // @note Only supported for soft, soft-skinned and shell actors.
+  // @note For soft-skinned actors, displacements are the elastic deformation component only (before
+  // skinning is applied).
+  // @note Does not change node velocities.
+  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
+  // time step after this method is called.
+  //
+  // @see GetDisplacements, SetNodePositionsLocal
+  fn SetDisplacements(Span<real const> displacements [units(m)]) -> void [pure, virtual, mochi_error, batchable];
+
+# Materials
+  // @brief Get the material parameters of a soft actor.
+  //
+  // @return Material parameters of the actor.
+  //
+  // @note Only supported for soft actors.
+  //
+  // @see SetSoftMaterialParams, experimental::GetSoftMaterialParamsField, GetDensity
+  fn GetSoftMaterialParams() -> SoftMaterialParams [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Set the material parameters of a soft actor.
+  //
+  // @param[in] params Material parameters to set.
+  //
+  // @note Only supported for soft actors.
+  // @note If the @ref QueryType::ElasticEnergy query is active, invalidates the elastic energy
+  // baseline. One simulation step must complete before @ref GetElasticEnergy returns valid results.
+  //
+  // @see GetSoftMaterialParams, experimental::SetSoftMaterialParamsField, SetDensity
+  fn SetSoftMaterialParams(SoftMaterialParams const& params) -> void [pure, virtual, mochi_error, batchable];
+
+  # Mesh Info
+  // @brief Get a view of the actor's reference simulation mesh.
+  //
+  // @details For soft actors, returns the tetrahedral mesh. For shell actors, returns the triangle
+  // mesh. For rod actors, returns the polyline mesh. For articulated actors with a skin mesh,
+  // returns the skin mesh. For articulated actors without a skin mesh, returns an empty view. For
+  // soft-skinned actors, returns the blended skin mesh when one is present and an empty view otherwise.
+  // For rigid actors whose shape is a tetrahedral or triangular mesh, returns their surface simulation
+  // mesh. For rigid actors with an implicit shape, such as spheres and planes, returns an empty view.
+  //
+  // @return A non-owning view of the actor's reference simulation mesh, or an empty view if the actor
+  // has no simulation mesh.
+  //
+  // @note The returned coordinates are reference positions in the actor's local frame. They do not
+  // include deformation for deformable actors.
+  // @note For rigid actors with tetrahedral or triangular mesh shapes, returns the same compact
+  // surface view as @ref GetSurfaceMesh. For tetrahedral meshes this is the boundary surface. For
+  // triangular meshes, nodes not referenced by any surface triangle are omitted and remaining nodes
+  // may be reindexed. Use @ref GetReferenceShape and @ref Context::GetShapeMesh to retrieve the
+  // original authored shape mesh.
+  // @note The returned view remains valid until the actor is destroyed.
+  //
+  // @see MeshDataView, GetSurfaceMesh, GetVisualMesh, Context::GetShapeMesh
+  fn GetMesh() -> MeshDataView [pure, virtual, const];
+
+  // @brief Get a view of the actor's reference surface mesh.
+  //
+  // @details Returns a compact triangle mesh for the actor's surface. For volumetric simulation
+  // meshes, the surface is the boundary triangles. For triangular simulation meshes, the surface
+  // has the same triangle elements as the simulation mesh, but nodes not referenced by any surface
+  // triangle are omitted and remaining nodes may be reindexed. Returns an empty view if the actor
+  // does not have a surface mesh.
+  //
+  // @return A non-owning view of the actor's reference surface mesh, or an empty view if the actor
+  // has no surface mesh.
+  //
+  // @note The returned coordinates are reference surface-mesh positions in the actor's local
+  // frame. They do not include deformation for deformable actors.
+  // @note The returned mesh uses compact surface-node ordering. Connectivity indices refer to
+  // this ordering, which may differ from the node ordering returned by @ref GetMesh. Interior
+  // nodes and nodes not referenced by any surface triangle are excluded. Results from @ref
+  // GetSurfaceMeshNodePositionsLocal and @ref GetSurfaceMeshNodeNormalsLocal use this same surface
+  // ordering.
+  // @note The returned view remains valid until the actor is destroyed.
+  //
+  // @see MeshDataView, GetMesh, GetVisualMesh, GetSurfaceMeshNodePositionsLocal,
+  // GetSurfaceMeshNodeNormalsLocal, Context::GetShapeSurfaceMesh
+  fn GetSurfaceMesh() -> MeshDataView [pure, virtual, const];
+
+  // @brief Get a view of the actor's reference visual mesh.
+  //
+  // @details Returns a triangle mesh intended for visual rendering. The mesh may include linear
+  // visual-mesh skinning data when available. Returns an empty view if the actor does not have a
+  // visual mesh.
+  //
+  // @return A non-owning view of the actor's reference visual mesh, or an empty view if the actor
+  // has no visual mesh.
+  //
+  // @note The returned coordinates are reference visual-mesh positions in the actor's local frame.
+  // They do not include deformation for deformable actors.
+  // @note Includes visual mesh nodes not referenced by any visual triangle. Unlike surface mesh
+  // getters, visual mesh getters do not omit unreferenced nodes.
+  // @note When linear visual-mesh skinning data is present, skinning indices refer to the node
+  // ordering returned by @ref GetMesh, not to the compact surface-node ordering returned by @ref
+  // GetSurfaceMesh. Rod visual mesh embeddings are nonlinear and are not exposed through this linear
+  // skinning field.
+  // @note The returned view remains valid until the actor is destroyed.
+  //
+  // @see MeshDataView, GetMesh, GetSurfaceMesh, GetVisualMeshNodePositionsLocal,
+  // GetVisualMeshNodeNormalsLocal, Context::GetShapeVisualMesh
+  fn GetVisualMesh() -> MeshDataView [pure, virtual, const];
+
+  // @brief Get the current position of the nodes (reference + displacements) of the surface mesh in
+  // the actor's local frame.
+  //
+  // @return Current node positions [m] of the surface mesh in the actor's local frame (3 values
+  // per node: x, y, z). The returned node list contains exactly the nodes referenced by @ref
+  // GetSurfaceMesh and is 1-to-1 with @ref GetSurfaceMeshNodeNormalsLocal.
+  //
+  // @note Requires registering @ref QueryType::SurfaceNodePositions before the simulation step. Results
+  // are available after the simulation step completes.
+  // @note Requires the actor to support @ref QueryType::SurfaceNodePositions.
+  // @note The node ordering corresponds to the mesh connectivity from @ref GetSurfaceMesh.
+  //
+  // @see RegisterQuery, QueryType::SurfaceNodePositions, GetSurfaceMesh,
+  // GetSurfaceMeshNodeNormalsLocal
+  fn GetSurfaceMeshNodePositionsLocal() -> Span<real const> [pure, virtual, const, mochi_error, units(m), batchable];
+
+  // @brief Get the normal direction for each node of the surface mesh in the actor's local frame.
+  //
+  // @return Span of normals (3 values per node) in the actor's local frame, computed by normalizing
+  // the area-weighted sum of adjacent triangle normals. The returned node list contains exactly the
+  // nodes referenced by @ref GetSurfaceMesh and is 1-to-1 with @ref
+  // GetSurfaceMeshNodePositionsLocal.
+  //
+  // @note Requires registering @ref QueryType::SurfaceNodeNormals before the simulation step. Results
+  // are available after the simulation step completes.
+  // @note Requires the actor to support @ref QueryType::SurfaceNodeNormals.
+  // @note The node ordering corresponds to the mesh connectivity from @ref GetSurfaceMesh.
+  //
+  // @see RegisterQuery, QueryType::SurfaceNodeNormals, GetSurfaceMesh,
+  // GetSurfaceMeshNodePositionsLocal
+  fn GetSurfaceMeshNodeNormalsLocal() -> Span<real const> [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Get a new @ref ShapeHandle referencing the same shape data used to create this actor.
+  //
+  // @details The returned handle is a new reference to the same underlying shape data. It will
+  // have a different numeric value from the @ref ShapeHandle originally used to create the actor.
+  // The new handle represents a new request to keep the shape data in memory — the shape will
+  // remain valid as long as any handle, actor, or file cache entry references it.
+  //
+  // @return A new @ref ShapeHandle referencing the actor's shape data.
+  //
+  // @note In C++ and Python, the returned @ref ShapeHandle is reference-counted and releases its
+  // reference automatically when destroyed. In the C API, you must call @ref Context::ReleaseShape
+  // when done with the handle to avoid leaks.
+  //
+  // @see Context::ReleaseShape, Context::LoadShapeFromFile
+  fn GetReferenceShape() -> ShapeHandle [pure, virtual, const, mochi_error];
+
+  // @brief Get the name of the contact layer of the actor.
+  //
+  // @return Contact layer name, or an empty string if the actor has no contact layer.
+  //
+  // @see SetContactLayer, Scene::EnableLayerContactAsymmetric, Scene::EnableLayerContactSymmetric
+  fn GetContactLayer() -> StringView [pure, virtual, const];
+
+  // @brief Set the name of the contact layer of the actor.
+  //
+  // @param[in] layer Contact layer name to set.
+  //
+  // @see GetContactLayer, Scene::EnableLayerContactAsymmetric, Scene::EnableLayerContactSymmetric
+  fn SetContactLayer(StringView const& layer) -> void [pure, virtual];
+
+  # Raw DoFs
+  // @brief Get the number of degrees of freedom (DoFs) of the actor.
+  //
+  // @return Number of degrees of freedom of the actor.
+  //
+  // @note Returns zero for actors without degrees of freedom (e.g., static actors).
+  fn GetNumDofs() -> int [pure, virtual, const, batchable];
+
+  // @brief Get the current value of the actor's degrees of freedom (DoFs) corresponding to the
+  // specified indices.
+  //
+  // @param[in] dofIndices DoF indices to query. Each index must be in the range
+  // [0, @ref GetNumDofs). If empty, get the value of all DoFs.
+  // @param[out] outDofValues Output buffer for the DoF values. Size must equal @ref GetNumDofs
+  // when @ref dofIndices is empty, or the size of @ref dofIndices otherwise.
+  //
+  // @note Not supported for static actors, even when both input and output spans are empty.
+  //
+  // @see GetNumDofs
+  fn GetDofValues(Span<int const> dofIndices, Span<real> outDofValues) -> void [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Find the actor's nodes that are inside an axis-aligned bounding box (AABB).
+  //
+  // @param[in] volume Axis-aligned bounding box in the actor's local frame.
+  // @param[in] boundaryOnly If true, only boundary nodes are considered.
+  // @param[in] callback Callback called for each node found. The position is the current node
+  // position [m] in the actor's local frame. The node index uses @ref GetMesh ordering, including
+  // when @ref boundaryOnly is true.
+  //
+  // @warning This is a synchronous call and may be expensive.
+  //
+  // @note When @ref boundaryOnly is false, this function supports only soft and shell actors. When
+  // true, it also supports articulated actors with a skin mesh, soft-skinned actors with a
+  // blended skin mesh, and rigid actors (dynamic or static) with tetrahedral or triangular mesh
+  // shapes. Rod actors and actors without a simulation mesh are not supported.
+  // @note Requires query registration before the simulation step. Register @ref
+  // QueryType::NodePositions when @ref boundaryOnly is false, or @ref QueryType::SurfaceNodePositions
+  // when @ref boundaryOnly is true. Results are available after the simulation step completes.
+  fn QueryNodesInVolumeLocal(Aabb const& volume, bool boundaryOnly, Function<void, int, Real3> const& callback) -> void [pure, virtual, const, mochi_error, overloaded];
+
+  // @brief Find the actor's nodes that are inside an oriented bounding box (OBB).
+  //
+  // @param[in] volume Oriented bounding box in the actor's local frame.
+  // @param[in] boundaryOnly If true, only boundary nodes are considered.
+  // @param[in] callback Callback called for each node found. The position is the current node
+  // position [m] in the actor's local frame. The node index uses @ref GetMesh ordering, including
+  // when @ref boundaryOnly is true.
+  //
+  // @warning This is a synchronous call and may be expensive.
+  //
+  // @note When @ref boundaryOnly is false, this function supports only soft and shell actors. When
+  // true, it also supports articulated actors with a skin mesh, soft-skinned actors with a
+  // blended skin mesh, and rigid actors (dynamic or static) with tetrahedral or triangular mesh
+  // shapes. Rod actors and actors without a simulation mesh are not supported.
+  // @note Requires query registration before the simulation step. Register @ref
+  // QueryType::NodePositions when @ref boundaryOnly is false, or @ref QueryType::SurfaceNodePositions
+  // when @ref boundaryOnly is true. Results are available after the simulation step completes.
+  fn QueryNodesInVolumeLocal(Obb const& volume, bool boundaryOnly, Function<void, int, Real3> const& callback) -> void [pure, virtual, const, mochi_error, overloaded];
+
+  // @brief Find the actor's nodes that are inside a sphere.
+  //
+  // @param[in] volume Sphere in the actor's local frame.
+  // @param[in] boundaryOnly If true, only boundary nodes are considered.
+  // @param[in] callback Callback called for each node found. The position is the current node
+  // position [m] in the actor's local frame. The node index uses @ref GetMesh ordering, including
+  // when @ref boundaryOnly is true.
+  //
+  // @warning This is a synchronous call and may be expensive.
+  //
+  // @note When @ref boundaryOnly is false, this function supports only soft and shell actors. When
+  // true, it also supports articulated actors with a skin mesh, soft-skinned actors with a
+  // blended skin mesh, and rigid actors (dynamic or static) with tetrahedral or triangular mesh
+  // shapes. Rod actors and actors without a simulation mesh are not supported.
+  // @note Requires query registration before the simulation step. Register @ref
+  // QueryType::NodePositions when @ref boundaryOnly is false, or @ref QueryType::SurfaceNodePositions
+  // when @ref boundaryOnly is true. Results are available after the simulation step completes.
+  fn QueryNodesInVolumeLocal(Sphere const& volume, bool boundaryOnly, Function<void, int, Real3> const& callback) -> void [pure, virtual, const, mochi_error, overloaded];
+
+  // @brief Query the signed distance to the closest point on the actor's surface.
+  //
+  // @param[in] pointsWorld Point cloud in world frame.
+  // @param[out] outDistances Output distances [m], in the same order as the input points. Must be
+  // the same size as the input points. Negative values indicate points inside the actor.
+  //
+  // @note Requires the actor to have a collider.
+  // @note For actors with SDF collider, the reported distance is only correct inside the actor's
+  // bounding box. Outside the bounding box, it is an upper bound based on the triangle inequality.
+  // @note This function is not supported for soft actors or for the experimental @ref
+  // ColliderType::PointCloud.
+  fn GetPointsDistanceToSurface(Span<Real3 const> pointsWorld [units(m)], Span<real> outDistances [units(m)]) -> void [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Get an axis-aligned bounding box (AABB) that contains the full volume of the actor, in
+  // the actor's local frame.
+  //
+  // @return AABB in the actor's local frame containing the full actor volume.
+  fn GetAabbLocal() -> Aabb [pure, virtual, const, mochi_error, units(m), batchable];
+
+  // @brief Get an axis-aligned bounding box (AABB) that contains the full volume of the actor, in
+  // world frame.
+  //
+  // @return AABB in world frame containing the full actor volume.
+  fn GetAabbWorld() -> Aabb [pure, virtual, const, mochi_error, units(m), batchable];
+
+  # Soft Deformation
+  // @brief Get the current position (reference + displacements) of each node in the actor's local
+  // frame.
+  //
+  // @return Flattened node positions [m] in the actor's local frame (3 values per node: x, y, z).
+  //
+  // @note Requires registering @ref QueryType::NodePositions before the simulation step. Results are
+  // available after the simulation step completes.
+  // @note Requires the actor to support @ref QueryType::NodePositions.
+  //
+  // @see RegisterQuery, QueryType::NodePositions
+  fn GetNodePositionsLocal() -> Span<real const> [pure, virtual, const, mochi_error, units(m), batchable];
+
+  // @brief Set all local displacement and velocity DoFs to zero.
+  //
+  // @note Only supported for soft, soft-skinned, shell and rod actors.
+  // @note For soft-skinned actors, it zeroes the elastic deformation and velocity only. The
+  // skeleton-driven pose is unaffected.
+  // @note For rod actors, it zeroes both the translational displacement DoFs and the twist-angle DoFs.
+  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
+  // time step after this method is called.
+  fn SetZeroDisplacementsAndVelocities() -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Get the deformation gradient of each element.
+  //
+  // @return Span of deformation gradients. The deformation gradient F of element e is stored at
+  // index e*9 in row-major format: F_00, F_01, F_02, F_10, F_11, F_12, F_20, F_21, F_22.
+  //
+  // @note Requires registering @ref QueryType::ElementsDeformationGradient before the simulation step.
+  // Results are available after the simulation step completes.
+  // @note Requires the actor to support @ref QueryType::ElementsDeformationGradient.
+  //
+  // @see RegisterQuery, QueryType::ElementsDeformationGradient
+  fn GetElementsDeformationGradient() -> Span<real const> [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Set the current position of each node (reference + displacements) in the actor's local
+  // frame.
+  //
+  // @param[in] positionsLocal Node positions [m] to set (3 values per node: x, y, z) in the actor's
+  // local frame.
+  //
+  // @note Only supported for soft (not soft-skinned) and shell actors.
+  // @note Does not change node velocities.
+  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
+  // time step after this method is called.
+  fn SetNodePositionsLocal(Span<real const> positionsLocal [units(m)]) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Set the current velocity of each node in the actor's local frame.
+  //
+  // @param[in] velocitiesLocal Node velocities to set in the actor's local frame.
+  //
+  // @note Only supported for soft (not soft-skinned), shell and rod actors.
+  // @note For soft and shell actors: 3 values per node [m/s] — (vx, vy, vz).
+  // @note For rod actors: 4 values per node — (vx, vy, vz) in [m/s] plus a twist rate [rad/s].
+  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
+  // time step after this method is called.
+  fn SetNodeVelocitiesLocal(Span<real const> velocitiesLocal) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Get the current position (reference + displacements) of the nodes of the visual mesh in
+  // the actor's local frame.
+  //
+  // @return Current node positions [m] of the visual mesh in the actor's local frame (3 values per
+  // node: x, y, z). The number of nodes is available via @ref GetVisualMesh. The order of
+  // the nodes is 1-to-1 with @ref GetVisualMeshNodeNormalsLocal.
+  //
+  // @note Includes visual mesh nodes not referenced by any visual triangle. Unlike surface
+  // mesh getters, visual mesh getters do not omit unreferenced nodes.
+  // @note Requires registering @ref QueryType::VisualNodePositions before the simulation step. Results
+  // are available after the simulation step completes.
+  // @note Requires the actor to support @ref QueryType::VisualNodePositions.
+  //
+  // @see RegisterQuery, QueryType::VisualNodePositions, GetVisualMesh,
+  // GetVisualMeshNodeNormalsLocal
+  fn GetVisualMeshNodePositionsLocal() -> Span<real const> [pure, virtual, const, mochi_error, units(m), batchable];
+
+  // @brief Get the normal direction to each node of the visual mesh in the actor's local frame.
+  //
+  // @return Flattened normals (3 values per node: nx, ny, nz) in the actor's local frame. The
+  // number of nodes is available via @ref GetVisualMesh. The order of the nodes is 1-to-1
+  // with @ref GetVisualMeshNodePositionsLocal. Normals for visual nodes not referenced by any
+  // visual triangle are zero.
+  //
+  // @note Includes visual mesh nodes not referenced by any visual triangle. Unlike surface
+  // mesh getters, visual mesh getters do not omit unreferenced nodes.
+  // @note Requires registering @ref QueryType::VisualNodeNormals before the simulation step. Results
+  // are available after the simulation step completes.
+  // @note Requires the actor to support @ref QueryType::VisualNodeNormals.
+  //
+  // @see RegisterQuery, QueryType::VisualNodeNormals, GetVisualMesh,
+  // GetVisualMeshNodePositionsLocal
+  fn GetVisualMeshNodeNormalsLocal() -> Span<real const> [pure, virtual, const, mochi_error, batchable];
+
+  # Boundary Conditions
+  // @brief Get the DoF indices that are constrained by boundary conditions.
+  //
+  // @return Span of DoF indices with boundary conditions applied.
+  //
+  // @note See @ref AddBoundaryConditionDofsWorld for the DoF layout for each actor type.
+  // @note The returned span contains every boundary-condition entry added through the public
+  // boundary-condition functions that has not been cleared, in the order the entries were added,
+  // including repeated DoF indices. Permanent and clearable entries are both included and are not
+  // distinguishable. Boundary conditions applied automatically by the engine are not included.
+  // @note Adding boundary conditions or calling @ref ClearBoundaryConditions may invalidate the
+  // returned span. Do not retain it across either operation. Permanent entries are retained when
+  // @ref ClearBoundaryConditions is called, but their positions within subsequently returned spans
+  // may change. Do not cache those positions across a call to @ref ClearBoundaryConditions.
+  //
+  // @see GetBoundaryConditionDofValuesWorld, AddBoundaryConditionDofsWorld
+  fn GetBoundaryConditionDofIndices() -> Span<int const> [pure, virtual, const, batchable];
+
+  // @brief Get the target values of DoFs fixed by boundary conditions.
+  //
+  // @return Span of DoF target values in the actor-specific representations documented by
+  // @ref AddBoundaryConditionDofsWorld.
+  //
+  // @note 1-to-1 correspondence with @ref GetBoundaryConditionDofIndices.
+  // @note Adding boundary conditions or calling @ref ClearBoundaryConditions may invalidate the
+  // returned span. Do not retain it across either operation. Permanent entries are retained when
+  // @ref ClearBoundaryConditions is called, but their positions within subsequently returned spans
+  // may change. Do not cache those positions across a call to @ref ClearBoundaryConditions.
+  //
+  // @see GetBoundaryConditionDofIndices, AddBoundaryConditionDofsWorld
+  fn GetBoundaryConditionDofValuesWorld() -> Span<real const> [pure, virtual, const, batchable];
+
+  // @brief Add boundary conditions to specified DoFs.
+  //
+  // @param[in] dofIndices DoF indices to constrain.
+  // @param[in] dofValuesWorld Target values in the actor-specific representations described below.
+  // Length must equal @ref dofIndices.
+  //
+  // @warning Constrained 3D rotations may exhibit small numerical differences due to differences in
+  // the internal representation.
+  // @warning Adding a boundary condition to the same DoF more than once is legal — the most
+  // recently added value wins — but strongly discouraged. Each call adds an entry, so repeatedly
+  // re-adding without an intervening @ref ClearBoundaryConditions grows the per-step cost without
+  // bound. To update a boundary condition, call @ref ClearBoundaryConditions and add it again.
+  //
+  // @note Not supported for nested soft actors (see @ref GetNestedSoftActors).
+  // @note Not supported in differentiable scenes (@ref diffsim::MakeSceneDifferentiable) or for ROM
+  // actors.
+  // @note For soft and shell actors, each node has 3 consecutive DoFs containing its target x, y,
+  // and z position [m] in the world frame. All 3 must be specified together. Consider @ref
+  // AddBoundaryConditionNodesWorld as a more convenient alternative.
+  // @note For rigid and articulated actors, the DoF indices within each call must be sorted in
+  // strictly increasing order (no duplicate indices).
+  // @note Rigid actors have 6 DoFs: indices 0-2 are the target world-space center-of-mass position
+  // [m], and indices 3-5 are the target world-from-local orientation as a rotation vector (axis
+  // multiplied by angle [rad]). Either all or none of the 3 rotation DoFs must be specified.
+  // @note Articulated actors have a number of DoFs that depends on the number of joints and the
+  // DoFs per joint. When setting boundary conditions on the rotation of a free or spherical joint,
+  // either all or none of the 3 DoFs must be specified.
+  // @note Rod actors have 4 DoFs per node: the first 3 values are the target node x, y, and z
+  // position [m] in the world frame, followed by the next element's scalar twist angle [rad]. (For
+  // open rods, the last DoF, i.e., the final node's twist DoF, is included for padding only, does not
+  // affect the physics, and is automatically constrained to zero. This automatic constraint is not
+  // reported by @ref GetBoundaryConditionDofIndices. For closed-loop rods, all twist DoFs are
+  // physical.) Boundary conditions on a rod node's position must specify
+  // all 3 consecutive displacement DoFs for that node. Only zero values are allowed for the scalar
+  // twist angle in this function, with the interpretation that the element's cross-section
+  // material axes rotate by only the minimal amount needed to remain orthogonal to the rod's
+  // centerline. More elaborate control over rod element rotations should use constraints instead of
+  // boundary conditions.
+  // @note Boundary condition APIs add to existing boundary conditions; they do not replace existing
+  // entries. If a DoF has more than one entry, getter APIs return all entries in the order they were
+  // added, and the most recently added value is the effective value during the step.
+  // @note Boundary conditions can be cleared with @ref ClearBoundaryConditions.
+  //
+  // @see ClearBoundaryConditions, AddBoundaryConditionNodesWorld,
+  // AddBoundaryConditionDofsWorldPermanent, GetBoundaryConditionDofIndices,
+  // GetBoundaryConditionDofValuesWorld
+  fn AddBoundaryConditionDofsWorld(Span<int const> dofIndices, Span<real const> dofValuesWorld) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Add permanent boundary conditions to specified DoFs.
+  //
+  // @param[in] dofIndices DoF indices to constrain.
+  // @param[in] dofValuesWorld Target values in the actor-specific representations documented by
+  // @ref AddBoundaryConditionDofsWorld. Length must equal @ref dofIndices.
+  //
+  // @warning Permanent boundary conditions are retained for the lifetime of the actor and cannot
+  // be removed by @ref ClearBoundaryConditions. Adding a permanent boundary condition to the same
+  // DoF more than once is legal but strongly discouraged. The duplicates can never be cleared and
+  // irreversibly grow the per-step cost. Add each permanent boundary condition only once.
+  //
+  // @note Not supported for nested soft actors (see @ref GetNestedSoftActors).
+  // @note Not supported in differentiable scenes (@ref diffsim::MakeSceneDifferentiable) or for ROM
+  // actors.
+  // @note Same as @ref AddBoundaryConditionDofsWorld, except boundary conditions cannot be cleared.
+  // @note If a clearable entry is later added for the same DoF, that clearable entry is the
+  // effective value until @ref ClearBoundaryConditions removes it. The permanent entry is then the
+  // effective value again.
+  //
+  // @see AddBoundaryConditionDofsWorld
+  fn AddBoundaryConditionDofsWorldPermanent(Span<int const> dofIndices, Span<real const> dofValuesWorld) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Add world-space boundary conditions for specified nodes.
+  //
+  // @param[in] nodeIndices Node indices to constrain.
+  // @param[in] nodePositionsWorld Target positions [m] in world frame. Length must be 3 times the
+  // size of @ref nodeIndices.
+  //
+  // @warning Adding boundary conditions to the same nodes repeatedly without clearing grows the
+  // per-step cost without bound. See @ref AddBoundaryConditionDofsWorld.
+  //
+  // @note Only supported for soft and shell actors, except nested soft actors (see @ref
+  // GetNestedSoftActors).
+  // @note Not supported in differentiable scenes (@ref diffsim::MakeSceneDifferentiable) or for ROM
+  // actors.
+  // @note Boundary conditions can be cleared with @ref ClearBoundaryConditions.
+  // @note Equivalent to calling @ref AddBoundaryConditionDofsWorld with DoF indices (3*i, 3*i+1,
+  // 3*i+2) for each node i.
+  // @note This API adds to existing boundary conditions. See @ref AddBoundaryConditionDofsWorld
+  // for behavior when a DoF has more than one entry.
+  //
+  // @see ClearBoundaryConditions, AddBoundaryConditionDofsWorld,
+  // AddBoundaryConditionNodesWorldPermanent, GetBoundaryConditionDofIndices,
+  // GetBoundaryConditionDofValuesWorld
+  fn AddBoundaryConditionNodesWorld(Span<int const> nodeIndices, Span<real const> nodePositionsWorld [units(m)]) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Add permanent world-space boundary conditions for specified nodes.
+  //
+  // @param[in] nodeIndices Node indices to constrain.
+  // @param[in] nodePositionsWorld Target positions [m] in world frame. Length must be 3 times the
+  // size of @ref nodeIndices.
+  //
+  // @warning Add each permanent boundary condition only once. Duplicates can never be cleared and
+  // irreversibly grow the per-step cost. See @ref AddBoundaryConditionDofsWorldPermanent.
+  //
+  // @note Only supported for soft and shell actors, except nested soft actors (see @ref
+  // GetNestedSoftActors).
+  // @note Not supported in differentiable scenes (@ref diffsim::MakeSceneDifferentiable) or for ROM
+  // actors.
+  // @note Same as @ref AddBoundaryConditionNodesWorld, except boundary conditions cannot be
+  // cleared.
+  // @note See @ref AddBoundaryConditionDofsWorldPermanent for interaction with clearable entries
+  // later added to the same DoF.
+  //
+  // @see AddBoundaryConditionNodesWorld, AddBoundaryConditionDofsWorldPermanent
+  fn AddBoundaryConditionNodesWorldPermanent(Span<int const> nodeIndices, Span<real const> nodePositionsWorld [units(m)]) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Fix the "constrained nodes" at their world-space reference positions.
+  //
+  // @warning If the actor's mesh has constrained nodes, calling this repeatedly without clearing
+  // re-adds the same boundary conditions and grows the per-step cost without bound. See @ref
+  // AddBoundaryConditionDofsWorld.
+  //
+  // @note Only supported for soft and shell actors, except nested soft actors (see @ref
+  // GetNestedSoftActors).
+  // @note Not supported in differentiable scenes (@ref diffsim::MakeSceneDifferentiable) or for ROM
+  // actors.
+  // @note Boundary conditions can be cleared with @ref ClearBoundaryConditions.
+  // @note Applies to constrained nodes specified by the actor's mesh. Has no effect if none are
+  // specified.
+  // @note Each target position is computed by transforming the node's mesh reference coordinate by
+  // the actor's root transform.
+  // @note This API adds to existing boundary conditions. See @ref AddBoundaryConditionDofsWorld
+  // for behavior when a DoF has more than one entry.
+  //
+  // @see ClearBoundaryConditions, AddBoundaryConditionConstrainedNodesAtRestPermanent,
+  // AddBoundaryConditionDofsWorld
+  fn AddBoundaryConditionConstrainedNodesAtRest() -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Permanently fix the "constrained nodes" at their world-space reference positions.
+  //
+  // @warning If the actor's mesh has constrained nodes, each call adds a permanent boundary
+  // condition for every constrained node. Call this at most once. Repeated calls create duplicates
+  // that cannot be removed and irreversibly grow the per-step cost. See @ref
+  // AddBoundaryConditionDofsWorldPermanent.
+  //
+  // @note Only supported for soft and shell actors, except nested soft actors (see @ref
+  // GetNestedSoftActors).
+  // @note Not supported in differentiable scenes (@ref diffsim::MakeSceneDifferentiable) or for ROM
+  // actors.
+  // @note Same as @ref AddBoundaryConditionConstrainedNodesAtRest, except boundary conditions
+  // cannot be cleared.
+  // @note See @ref AddBoundaryConditionDofsWorldPermanent for interaction with clearable entries
+  // later added to the same DoF.
+  //
+  // @see AddBoundaryConditionConstrainedNodesAtRest, AddBoundaryConditionDofsWorldPermanent
+  fn AddBoundaryConditionConstrainedNodesAtRestPermanent() -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Remove all clearable boundary conditions previously added.
+  //
+  // @note To replace existing clearable boundary conditions, call this before adding the new
+  // boundary-condition set.
+  // @note May invalidate spans previously returned by @ref GetBoundaryConditionDofIndices and
+  // @ref GetBoundaryConditionDofValuesWorld. Do not retain them across this call.
+  // @note Permanent entries are retained, but this call may change their positions in spans returned
+  // by @ref GetBoundaryConditionDofIndices and @ref GetBoundaryConditionDofValuesWorld. Do not cache
+  // those positions across this call.
+  //
+  // @see AddBoundaryConditionDofsWorld, AddBoundaryConditionNodesWorld,
+  // AddBoundaryConditionConstrainedNodesAtRest
+  fn ClearBoundaryConditions() -> void [pure, virtual, batchable];
+
+  # External Force
+  // @brief Set external forces on specified DoFs.
+  //
+  // @param[in] dofIndices DoF indices to apply forces to. Must be unique.
+  // @param[in] forceValues Force values [N] for translation DoFs, torque values [N·m] for rotation DoFs.
+  // Length must equal the number of DoF indices.
+  //
+  // @note Only supported for rigid, articulated, rod, and shell actors.
+  // @note DoF indices use the same per-actor-type index layout documented by
+  // @ref AddBoundaryConditionDofsWorld.
+  // @note External forces can be cleared with @ref ClearExternalForces.
+  // @note Replaces all previously set external forces, including external forces on DoFs not included in
+  // @ref dofIndices. Passing empty @ref dofIndices and @ref forceValues is equivalent to calling
+  // @ref ClearExternalForces.
+  // @note For rigid and shell actors, values are interpreted in the world frame.
+  // @note For articulated actors, values are generalized forces in the actor's joint-DoF coordinate
+  // basis.
+  // @note For rod actors, forces on displacement DoFs are specified in the world frame, while
+  // (generalized) forces (scalar torques) on element twist-angle DoFs are always oriented along the
+  // corresponding element's current orientation.
+  // @note For open (non-closed-loop) rod actors, the last DoF is padding that does not participate
+  // in physics, so it is invalid to apply a torque to it. For closed-loop rods, the last DoF is a
+  // physical twist angle.
+  //
+  // @see ClearExternalForces, GetExternalForces, AddBoundaryConditionDofsWorld
+  fn SetExternalForcesOnDofs(Span<int const> dofIndices, Span<real const> forceValues) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Remove all the external forces previously added.
+  //
+  // @see SetExternalForcesOnDofs
+  fn ClearExternalForces() -> void [pure, virtual, batchable];
+
+  // @brief Get the external forces currently set on this actor as a dense array over all DoFs.
+  //
+  // @param[out] outForces Dense output array of force values [N] for translation DoFs and torque
+  // values [N·m] for rotation DoFs. One entry per DoF. Size must equal @ref GetNumDofs. DoFs with
+  // no external force set are filled with zero.
+  //
+  // @note Returned values use the same frame convention as @ref SetExternalForcesOnDofs.
+  //
+  // @see SetExternalForcesOnDofs, ClearExternalForces
+  fn GetExternalForces(Span<real> outForces) -> void [pure, virtual, mochi_error];
+
+  # Contact Info
+  // @brief Get all the active contact points of the actor.
+  //
+  // @return Span of active contact points.
+  //
+  // @note Requires registering @ref QueryType::ContactPoints before the simulation step. Results are
+  // available after the simulation step completes.
+  // @note Requires the actor to support @ref QueryType::ContactPoints.
+  // @note If the solver diverged in the last simulation step, results may not be available or may
+  // be stale.
+  //
+  // @see RegisterQuery, ContactPoint, QueryType::ContactPoints
+  fn GetContactPointsWorld() -> Span<ContactPoint const> [pure, virtual, const, mochi_error, units(m), batchable];
+
+  // @brief Get contact forces on nodes.
+  //
+  // @return Span of per-node contact forces [N] in world frame.
+  //
+  // @note Requires registering @ref QueryType::NodeContactForces before the simulation step. Results are
+  // available after the simulation step completes.
+  // @note Requires the actor to support @ref QueryType::NodeContactForces.
+  // @note If the solver diverged in the last simulation step, results may not be available or may
+  // be stale.
+  //
+  // @see RegisterQuery, NodeContactForce, QueryType::NodeContactForces
+  fn GetNodeContactForcesWorld() -> Span<NodeContactForce const> [pure, virtual, const, mochi_error, units(N), batchable];
+
+  // @brief Get the total contact force on the actor.
+  //
+  // @return Total contact force [N] in world frame.
+  //
+  // @note Requires registering @ref QueryType::TotalContactForce before the simulation step. Results are
+  // available after the simulation step completes.
+  // @note Requires the actor to support @ref QueryType::TotalContactForce.
+  // @note If the solver diverged in the last simulation step, results may not be available or may
+  // be stale.
+  //
+  // @see RegisterQuery, GetContactTorqueWorld, GetContactForceFromActorWorld,
+  // QueryType::TotalContactForce
+  fn GetContactForceWorld() -> Real3 [pure, virtual, const, mochi_error, units(N), batchable];
+
+  // @brief Get the total contact torque about the center of mass.
+  //
+  // @return Total contact torque [N·m] in world frame, about the center of mass.
+  //
+  // @note Requires registering @ref QueryType::TotalContactForce before the simulation step. Results are
+  // available after the simulation step completes.
+  // @note Only supported for rigid actors and articulated links that support @ref
+  // QueryType::TotalContactForce.
+  // @note If the solver diverged in the last simulation step, results may not be available or may
+  // be stale.
+  //
+  // @see RegisterQuery, GetContactForceWorld, QueryType::TotalContactForce
+  fn GetContactTorqueWorld() -> Real3 [pure, virtual, const, mochi_error, units(Nm), batchable];
+
+  // @brief Get the total contact force on the actor from another specified actor.
+  //
+  // @param[in] other Actor exerting the contact force on this actor.
+  //
+  // @return Total contact force [N] in world frame from the specified actor.
+  //
+  // @note Requires registering @ref QueryType::TotalContactForce before the simulation step. Results are
+  // available after the simulation step completes.
+  // @note Requires the actor to support @ref QueryType::TotalContactForce.
+  // @note If the solver diverged in the last simulation step, results may not be available or may
+  // be stale.
+  //
+  // @see RegisterQuery, GetContactForceWorld, QueryType::TotalContactForce
+  fn GetContactForceFromActorWorld(Actor const* other) -> Real3 [pure, virtual, const, mochi_error, units(N), batchable];
+
+  // @brief Get SDF distances for contact sample points.
+  //
+  // @return SDF distance information for contact sample points.
+  //
+  // @note Requires registering @ref QueryType::SdfDistances before the simulation step. Results are
+  // available after the simulation step completes.
+  // @note Requires the actor to support @ref QueryType::SdfDistances.
+  // @note If the solver diverged in the last simulation step, results may not be available or may
+  // be stale.
+  //
+  // @see RegisterQuery, SdfDistances, QueryType::SdfDistances
+  fn GetSdfDistances() -> SdfDistances [pure, virtual, const, mochi_error, units(m), batchable];
+
+  # Queries
+  // @brief Register a query to compute data for this actor.
+  //
+  // @param[in] type Type of query to register.
+  //
+  // @return @ref QueryHandle for the registered query, or an invalid handle if registration fails.
+  //
+  // @note Queries may add substantial computational overhead. Use only when necessary.
+  // @note Data is available after the next simulation step, even if its time step is zero.
+  // @note Call @ref CancelQuery when the query is not needed again in the future.
+  // @note Queries are reference counted internally, so they will be available as long as there is
+  // one outstanding @ref QueryHandle.
+  // @note Registration is all-or-nothing: if registration fails, no query is registered.
+  //
+  // @see CancelQuery, RegisterQueryAndCompute, IsQuerySupported, Constraint::RegisterQuery
+  fn RegisterQuery(QueryType type) -> QueryHandle [pure, virtual, mochi_error, batchable];
+
+  // @brief Register a query for this actor and compute the result immediately.
+  //
+  // @param[in] type Type of query to register.
+  //
+  // @return @ref QueryHandle for the registered query.
+  //
+  // @note Same as @ref RegisterQuery, except that the data is computed immediately (blocking)
+  // rather than at the next simulation step.
+  // @note Immediate computation is not supported for all query types. For unsupported types, the
+  // query is still registered successfully, immediate computation is skipped, and data becomes available
+  // after the next simulation step. See @ref QueryType documentation for which types support immediate
+  // computation.
+  // @note Stepping the scene with zero time step is another way to force queries to update, without
+  // advancing the state of the simulation.
+  //
+  // @see RegisterQuery, CancelQuery
+  fn RegisterQueryAndCompute(QueryType type) -> QueryHandle [pure, virtual, mochi_error, batchable];
+
+  // @brief Cancel a previously registered query.
+  //
+  // @param[in] handle @ref QueryHandle from @ref RegisterQuery or @ref RegisterQueryAndCompute.
+  //
+  // @note Cancelling an invalid or already-cancelled handle has no effect.
+  // @note Cancelling queries may improve memory usage and/or performance if the query is no longer
+  // needed.
+  //
+  // @see RegisterQuery, RegisterQueryAndCompute
+  fn CancelQuery(QueryHandle handle) -> void [pure, virtual, batchable];
+
+  // @brief Check whether a query type is supported for this actor.
+  //
+  // @param[in] type Type of query to check.
+  //
+  // @return True if @ref RegisterQuery would succeed for this query type, false otherwise.
+  //
+  // @see RegisterQuery
+  fn IsQuerySupported(QueryType type) -> bool [pure, virtual, const];
+
+  # User Data
+  // @brief Set application-specific user data for this actor.
+  //
+  // @param[in] userData Pointer to user data, or nullptr to clear.
+  //
+  // @see GetUserData
+  fn SetUserData(void* userData [nullable]) -> void [pure, virtual, no_python];
+
+  // @brief Get application-specific user data for this actor.
+  //
+  // @return Pointer to user data, or nullptr if none has been set.
+  //
+  // @see SetUserData
+  fn GetUserData() -> void* [pure, virtual, const, no_python, nullable];
+
+  # Articulated Actors
+  // @brief Get the actor handles for the nested rigid link actors.
+  //
+  // @return Span of actor handles for the nested rigid link actors.
+  //
+  // @note Only applicable to articulated actors.
+  //
+  // @see GetNestedSoftActors, IsNestedLinkActor, GetArticulatedActor
+  fn GetNestedLinkActors() -> Span<ActorHandle const> [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Get the actor handles for the nested soft actors (if any).
+  //
+  // @return Span of actor handles for the nested soft actors, or empty if there are none.
+  //
+  // @note Only applicable to articulated actors.
+  //
+  // @see GetNestedLinkActors, IsNestedSoftActor, GetArticulatedActor
+  fn GetNestedSoftActors() -> Span<ActorHandle const> [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Get articulated shape information about the articulated actor.
+  //
+  // @return Articulated shape information.
+  //
+  // @note Only applicable to articulated actors. Sets error otherwise.
+  // @note This information never changes throughout the actor's lifetime.
+  //
+  // @see ArticulatedShapeInfo, Context::GetArticulatedShapeInfo
+  fn GetArticulatedShapeInfo() -> ArticulatedShapeInfo [pure, virtual, const, mochi_error, batchable, no_capi];
+
+  // @brief Get the joint-limit constraints of the articulated actor.
+  //
+  // @return Span of pointers to joint limit constraints.
+  //
+  // @note Only applicable to articulated actors.
+  //
+  // @see GetArticulatedDofLimits
+  fn GetArticulatedJointLimitConstraints() -> Span<Constraint* const> [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Get the per-joint friction parameters of the articulated actor.
+  //
+  // @return Span of friction parameters, one per joint.
+  //
+  // @note Only applicable to articulated actors.
+  //
+  // @see SetArticulatedJointFrictionParams, ArticulatedJointFrictionParams
+  fn GetArticulatedJointFrictionParams() -> Span<ArticulatedJointFrictionParams const> [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Set the per-joint friction parameters of the articulated actor.
+  //
+  // @param[in] friction Friction parameters, one per joint. Must be of size equal to the number of
+  // joints (matching @ref GetArticulatedJointFrictionParams); all values must be finite and
+  // non-negative.
+  //
+  // @note Only applicable to articulated actors.
+  //
+  // @see GetArticulatedJointFrictionParams, ArticulatedJointFrictionParams
+  fn SetArticulatedJointFrictionParams(Span<ArticulatedJointFrictionParams const> friction) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Get the per-joint inertia coefficients of the articulated actor.
+  //
+  // @return Span of inertia coefficients, one per joint.
+  //
+  // @note Only applicable to articulated actors.
+  //
+  // @see SetArticulatedJointInertiaParams
+  fn GetArticulatedJointInertiaParams() -> Span<real const> [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Set the per-joint inertia coefficients of the articulated actor.
+  //
+  // @param[in] inertia Inertia coefficients, one per joint. Must be of size equal to the number of
+  // joints (matching @ref GetArticulatedJointInertiaParams); all values must be finite and
+  // non-negative.
+  //
+  // @note Only applicable to articulated actors.
+  //
+  // @see GetArticulatedJointInertiaParams
+  fn SetArticulatedJointInertiaParams(Span<real const> inertia) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Get the limit values on all DoFs of the articulated actor.
+  //
+  // @param[out] outDofLimits Output span for DoF limits. Must be of size @ref GetNumDofs.
+  //
+  // @note Only applicable to articulated actors.
+  // @note Each element contains [min, max] limits for the corresponding DoF: [m] for translational
+  // DoFs and [rad] for rotational DoFs.
+  // @note Unconstrained DoFs have limits of ±infinity.
+  //
+  // @see GetArticulatedJointLimitConstraints
+  fn GetArticulatedDofLimits(Span<Real2> outDofLimits) -> void [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Get the pose of an articulated actor expressed as joint DoFs.
+  //
+  // @param[out] outPose Output span for pose as joint DoFs: position [m] for translational DoFs
+  // and angle [rad] for rotational DoFs. Must be of size @ref GetNumDofs.
+  //
+  // @note Only applicable to articulated actors.
+  //
+  // @see SetArticulatedPoseFromJoints
+  fn GetArticulatedPose(Span<real> outPose) -> void [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Get the pose of an articulated actor expressed as world-from-local link transforms.
+  //
+  // @param[out] outWorldFromLinks Output span for pose as world-from-local links transforms. Must
+  // be of size equal to the number of links.
+  //
+  // @note Only applicable to articulated actors.
+  //
+  // @see SetArticulatedPoseFromLinks, GetArticulatedPose
+  fn GetArticulatedLinkTransforms(Span<TransformRT> outWorldFromLinks) -> void [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Get time derivatives of the articulated actor DoFs.
+  //
+  // @param[out] outVelocities Output span for DoF velocities: [m/s] for translational DoFs and
+  // [rad/s] for rotational DoFs. Must be of size @ref GetNumDofs.
+  //
+  // @note Only applicable to articulated actors.
+  //
+  // @see SetArticulatedJointVelocities
+  fn GetArticulatedJointVelocities(Span<real> outVelocities) -> void [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Set the pose of an articulated actor from the world-from-local link transforms.
+  //
+  // @param[in] worldFromLinks World-from-local link transforms. Must be of size equal to the number
+  // of links.
+  //
+  // @warning Round-trip error: @ref SetArticulatedPoseFromLinks followed by @ref
+  // GetArticulatedLinkTransforms may not return identical values due to internal representation
+  // differences.
+  //
+  // @note Only applicable to articulated actors.
+  // @note Transforms are automatically projected onto valid joint space.
+  // @note If the actor has a pose controller, its target pose is reset to the provided transforms
+  // and its target velocity is set to zero. Call @ref SetArticulatedTargetVelocity afterward to use a
+  // non-zero target velocity.
+  // @note Does not affect the actor's velocities.
+  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
+  // time step after this method is called.
+  //
+  // @see GetArticulatedLinkTransforms, SetArticulatedPoseFromJoints
+  fn SetArticulatedPoseFromLinks(Span<TransformRT const> worldFromLinks) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Set the pose of an articulated actor from joint DoFs.
+  //
+  // @param[in] pose Joint DoF values to set. Must be of size @ref GetNumDofs.
+  //
+  // @warning Round-trip error: @ref SetArticulatedPoseFromJoints followed by @ref
+  // GetArticulatedPose may not return identical values due to internal representation differences.
+  //
+  // @note Only applicable to articulated actors.
+  // @note If the actor has a pose controller, its target pose is reset to the provided pose and
+  // its target velocity is set to zero. Call @ref SetArticulatedTargetVelocity afterward to use
+  // a non-zero target velocity.
+  // @note Does not affect the actor's velocities.
+  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
+  // time step after this method is called.
+  //
+  // @see GetArticulatedPose, SetArticulatedPoseFromLinks
+  fn SetArticulatedPoseFromJoints(Span<real const> pose) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Set time derivatives of the articulated actor DoFs.
+  //
+  // @param[in] velocities Joint DoF velocities to set. Must be of size @ref GetNumDofs.
+  //
+  // @note Only applicable to articulated actors.
+  // @note If the actor has a pose controller, target velocity is also set to the provided
+  // velocities.
+  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
+  // time step after this method is called.
+  //
+  // @see GetArticulatedJointVelocities
+  fn SetArticulatedJointVelocities(Span<real const> velocities) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Add a pose delta to a pose using joint-aware composition.
+  //
+  // @param[in] pose Base pose as joint DoFs. Must be of size @ref GetNumDofs.
+  // @param[in] deltaDofs Pose delta to add. Must be of size @ref GetNumDofs.
+  // @param[out] outPose Output pose after adding deltaDofs. Must be of size @ref GetNumDofs.
+  //
+  // @note Only applicable to articulated actors.
+  // @note Deltas cannot be simply added to poses. This function uses joint information to correctly
+  // add the delta.
+  // @note Useful for adding time-stepped velocity to a reference pose.
+  // @note For 3D rotations, delta values are interpreted as Lie-algebra rotation-vector increments.
+  // @note For 3D rotations, angular velocity is not directly the time derivative of the rotation
+  // vector representation.
+  //
+  // @see ComputeArticulatedPoseDelta, GetArticulatedPose, GetArticulatedPoseDistance
+  fn AddArticulatedDeltaToPose(Span<real const> pose, Span<real const> deltaDofs, Span<real> outPose) -> void [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Compute the pose delta from a base pose to a target pose.
+  //
+  // @param[in] poseBase Base pose as joint DoFs. Must be of size @ref GetNumDofs.
+  // @param[in] poseTarget Target pose as joint DoFs. Must be of size @ref GetNumDofs.
+  // @param[out] outDeltaDofs Pose delta. Must be of size @ref GetNumDofs.
+  //
+  // @note Only applicable to articulated actors.
+  // @note Deltas cannot be simply subtracted between poses. This function uses joint information to
+  // correctly subtract the delta.
+  //
+  // @see AddArticulatedDeltaToPose, GetArticulatedPose, GetArticulatedPoseDistance
+  fn ComputeArticulatedPoseDelta(Span<real const> poseBase, Span<real const> poseTarget, Span<real> outDeltaDofs) -> void [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Compute per-joint distances between two poses.
+  //
+  // @param[in] poseA First pose as joint DoFs. Must be of size @ref GetNumDofs.
+  // @param[in] poseB Second pose as joint DoFs. Must be of size @ref GetNumDofs.
+  // @param[out] outTransDistances Translation distances [m] for each joint. Must be of size equal
+  // to the number of joints.
+  // @param[out] outRotDistances Rotation distances [rad] for each joint. Must be of size equal to
+  // the number of joints.
+  //
+  // @note Only applicable to articulated actors.
+  // @note Uses joint-specific distance metrics (Euclidean for translation, angle for rotation).
+  //
+  // @see GetArticulatedPose, AddArticulatedDeltaToPose, ComputeArticulatedPoseDelta
+  fn GetArticulatedPoseDistance(Span<real const> poseA, Span<real const> poseB, Span<real> outTransDistances [units(m)], Span<real> outRotDistances [units(rad)]) -> void [pure, virtual, const, mochi_error, batchable];
+
+  # Pose Controllers
+  // @brief Check if the articulated actor has a pose controller.
+  //
+  // @return True if a pose controller exists, false otherwise.
+  //
+  // @note Only applicable to articulated actors.
+  //
+  // @see AddArticulatedPoseController, RemoveArticulatedPoseController
+  fn HasArticulatedPoseController() -> bool [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Add a pose controller to an articulated actor.
+  //
+  // @param[in] params Parameters defining the pose controller.
+  //
+  // @note Only applicable to articulated actors.
+  // @note Only one pose controller is allowed per actor. Adding a second controller raises an
+  // error.
+  // @note The initial target pose and target velocity are set to the actor's current pose and
+  // velocity.
+  // @note Empty tracking arrays are allowed. Default zero-gain parameters are used for any
+  // empty array.
+  //
+  // @see RemoveArticulatedPoseController, HasArticulatedPoseController
+  fn AddArticulatedPoseController(PoseControllerParams const& params) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Remove the pose controller.
+  //
+  // @note Only applicable to articulated actors.
+  // @note Returns an error if no pose controller exists.
+  //
+  // @see AddArticulatedPoseController, HasArticulatedPoseController
+  fn RemoveArticulatedPoseController() -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Set the target pose for the controller expressed as link transforms.
+  //
+  // @param[in] worldFromTargets Target world-from-link transforms to set. Must be of
+  //   size equal to the number of links.
+  //
+  // @note Only supported for articulated actors with a pose controller.
+  // @note Also affects target velocity, which depends on how the target changes between simulation
+  // steps.
+  //
+  // @see ResetArticulatedTargetLinkTransforms, SetArticulatedTargetPose
+  fn SetArticulatedTargetLinkTransforms(Span<TransformRT const> worldFromTargets) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Set the target pose for the controller expressed as joint DoFs.
+  //
+  // @param[in] pose Target pose as joint DoFs to set. Must be of size @ref GetNumDofs.
+  //
+  // @note Only applicable to articulated actors with a pose controller.
+  // @note Also affects target velocity, which depends on how the target changes between simulation
+  // steps.
+  //
+  // @see ResetArticulatedTargetPose, SetArticulatedTargetLinkTransforms,
+  // GetArticulatedTargetPose, GetArticulatedTargetLinkTransforms, SetArticulatedTargetVelocity
+  fn SetArticulatedTargetPose(Span<real const> pose) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Reset the target pose of the controller expressed as link transforms.
+  //
+  // @param[in] worldFromTargets Target world-from-link transforms to reset to. Must be finite and
+  // of size equal to the number of links.
+  //
+  // @note Only applicable to articulated actors with a pose controller.
+  // @note Sets the target to the provided transforms and the target velocity to zero, so no
+  // velocity kick is introduced.
+  // @note To use a non-zero target velocity, call @ref SetArticulatedTargetVelocity after this
+  // function.
+  //
+  // @see SetArticulatedTargetLinkTransforms, ResetArticulatedTargetPose
+  fn ResetArticulatedTargetLinkTransforms(Span<TransformRT const> worldFromTargets) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Reset the target pose of the controller expressed as joint DoFs.
+  //
+  // @param[in] pose Target pose as joint DoFs to reset to. Must be finite and of size @ref
+  // GetNumDofs.
+  //
+  // @note Only applicable to articulated actors with a pose controller.
+  // @note Sets the target to the provided pose and the target velocity to zero, so no velocity kick
+  // is introduced.
+  // @note To use a non-zero target velocity, call @ref SetArticulatedTargetVelocity after this
+  // function.
+  //
+  // @see SetArticulatedTargetPose, ResetArticulatedTargetLinkTransforms
+  fn ResetArticulatedTargetPose(Span<real const> pose) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Set the target velocity of the controller expressed as joint velocities for the next
+  // simulation step.
+  //
+  // @param[in] velocity Target DoF velocities to set. [m/s] for translational DoFs and
+  // [rad/s] for rotational DoFs. Must be finite and of size @ref GetNumDofs.
+  //
+  // @note Only applicable to articulated actors with a pose controller.
+  // @note Does not change target pose.
+  // @note The velocity override is applied once at the start of the next simulation step to
+  // compute damping, then cleared automatically. To maintain a constant target velocity, call this
+  // function before each step.
+  // @note @ref ResetArticulatedTargetPose and @ref ResetArticulatedTargetLinkTransforms overwrite
+  // any pending target velocity with zero. Call this function after reset to use a non-zero target
+  // velocity.
+  //
+  // @see SetArticulatedTargetPose, ResetArticulatedTargetPose
+  fn SetArticulatedTargetVelocity(Span<real const> velocity) -> void [pure, virtual, mochi_error, batchable];
+
+  // @brief Get the pose controller's constraints.
+  //
+  // @return Span of pose constraint information.
+  //
+  // @note Only applicable to articulated actors with a pose controller.
+  //
+  // @see PoseConstraintInfo, GetArticulatedPoseControllerParams, SetArticulatedPoseControllerParams
+  fn GetArticulatedPoseConstraints() -> Span<PoseConstraintInfo const> [pure, virtual, const, mochi_error, batchable, no_capi];
+
+  // @brief Get the pose controller's tracking parameters.
+  //
+  // @param[in,out] outParams Output tracking parameters grouped by constraint type
+  // (@ref PoseControllerParams::linkPosTracking, @ref PoseControllerParams::linkRotTracking,
+  // @ref PoseControllerParams::jointTracking). All three arrays are link-indexed and must be
+  // pre-sized to numLinks; they are not resized. Entries in @ref PoseControllerParams::jointTracking
+  // for links without a controllable joint are reported as zero gains.
+  //
+  // @note Only applicable to articulated actors with a pose controller.
+  //
+  // @see GetArticulatedPoseConstraints, SetArticulatedPoseControllerParams
+  fn GetArticulatedPoseControllerParams(PoseControllerParams& outParams) -> void [pure, virtual, const, mochi_error, batchable, no_capi];
+
+  // @brief Set the pose controller's tracking parameters.
+  //
+  // @param[in] params Tracking parameters grouped by constraint type. Each array must be empty,
+  // size 1 (broadcast to all links), or size numLinks (per-link). An empty array will broadcast using a
+  // default-constructed PoseTrackingParams (zero gains) to all links.
+  //
+  // @note Only applicable to articulated actors with a pose controller.
+  // @note Setting zero stiffness and damping disables the constraint but does not destroy it.
+  //
+  // @see GetArticulatedPoseControllerParams, GetArticulatedPoseConstraints
+  fn SetArticulatedPoseControllerParams(PoseControllerParams const& params) -> void [pure, virtual, mochi_error, batchable, no_capi];
+
+  // @brief Get the last target pose set to the pose controller.
+  //
+  // @param[out] outPose Output span for the target pose as joint DoFs. Must be of size @ref
+  // GetNumDofs.
+  //
+  // @note Only applicable to articulated actors with a pose controller.
+  //
+  // @see SetArticulatedTargetPose, SetArticulatedTargetLinkTransforms,
+  // GetArticulatedTargetLinkTransforms
+  fn GetArticulatedTargetPose(Span<real> outPose) -> void [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Get the last target pose set to the pose controller, expressed as link transforms.
+  //
+  // @param[out] outWorldFromTargets Output span for the target world-from-link transforms. Must be
+  // of size equal to the number of links.
+  //
+  // @note Only applicable to articulated actors with a pose controller.
+  //
+  // @see SetArticulatedTargetPose, SetArticulatedTargetLinkTransforms, GetArticulatedTargetPose
+  fn GetArticulatedTargetLinkTransforms(Span<TransformRT> outWorldFromTargets) -> void [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Get the generalized forces applied by the pose controller on each joint DoF.
+  //
+  // @return Flattened generalized-force vector for each joint DoF. Size equals @ref GetNumDofs.
+  // Units are [N] for translational DoFs and [N·m] for rotational DoFs.
+  //
+  // @note Only applicable to articulated actors with a pose controller.
+  // @note Requires registering @ref QueryType::ArticulatedControllerForce before the simulation step.
+  // Results are available after the simulation step completes.
+  // @note Requires the actor to support @ref QueryType::ArticulatedControllerForce.
+  // @note Equivalent to using @ref QueryType::ConstraintForce on each of the pose controller's
+  // constraints and projecting the constraint forces through the link Jacobians to joint DoF space
+  // (i.e., Σ Jᵢᵀ · fᵢ for each pose constraint i).
+  // @note If the solver diverged in the last simulation step, the returned generalized forces may
+  // be stale.
+  //
+  // @see RegisterQuery, QueryType::ArticulatedControllerForce
+  fn GetArticulatedControllerForce() -> Span<real const> [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Check if the actor is a rigid link within an articulated actor.
+  //
+  // @return True if the actor is a nested link actor, false otherwise.
+  //
+  // @see GetNestedLinkActors, GetArticulatedActor
+  fn IsNestedLinkActor() -> bool [pure, virtual, const, batchable];
+
+  // @brief Check if the actor is a soft actor nested within a soft skinned articulated actor.
+  //
+  // @return True if the actor is a nested soft actor, false otherwise.
+  //
+  // @see GetNestedSoftActors, GetArticulatedActor
+  fn IsNestedSoftActor() -> bool [pure, virtual, const, batchable];
+
+  // @brief Get the owning articulated actor.
+  //
+  // @return Handle to the owning articulated actor.
+  //
+  // @note Only applicable to nested link or nested soft actors within articulated actors.
+  //
+  // @see IsNestedLinkActor, GetNestedLinkActors, IsNestedSoftActor, GetNestedSoftActors
+  fn GetArticulatedActor() -> ActorHandle [pure, virtual, const, mochi_error, batchable];
+
+  // @brief Get the Jacobian with respect to the articulated DoFs in world frame.
+  //
+  // @return Jacobian matrix in row-major order with shape [6, numArticulatedDoFs], where 6 is the
+  // number of rigid DoFs of the link (3 translation + 3 rotation) and numArticulatedDoFs is
+  // @ref GetNumDofs of the owning articulated actor.
+  //
+  // @note Only applicable to nested link actors within articulated actors.
+  // @note To get the Jacobian in the articulation's root frame, left-multiply the Jacobian by the
+  // 6×6 block-diagonal of the root-from-world rotation:
+  // @code
+  // [ R  0 ] · J
+  // [ 0  R ]
+  // @endcode
+  // where R is the 3×3 root-from-world rotation matrix (i.e., the transpose of the owning
+  // articulated actor's world-from-root rotation).
+  //
+  // @see IsNestedLinkActor
+  fn GetArticulatedJacobian() -> Span<real const> [pure, virtual, const, mochi_error, batchable];
+}

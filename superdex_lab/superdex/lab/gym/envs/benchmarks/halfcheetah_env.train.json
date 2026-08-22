@@ -1,0 +1,25 @@
+{
+  "description": "Training recipe for the HalfCheetah benchmark env. PPO is the recommended workflow. SAC uses the experimental shared baseline.",
+  "normalize_observations": true,
+  "stop_criteria": {
+    "episode_return_mean": 9800,
+    "num_env_steps_sampled_lifetime": 50000000
+  },
+  "ppo": {
+    "env_runners": {
+      "batch_mode": "truncate_episodes"
+    },
+    "training": {
+      "clip_param": 0.2,
+      "gamma": 0.99,
+      "grad_clip": 0.5,
+      "kl_coeff": 1.0,
+      "lambda_": 0.95,
+      "lr": 0.0003,
+      "minibatch_size": 4096,
+      "num_epochs": 32,
+      "train_batch_size": 65536,
+      "vf_loss_coeff": 0.5
+    }
+  }
+}

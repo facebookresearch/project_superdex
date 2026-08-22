@@ -1,0 +1,15 @@
+{
+  "description": "Catch-all for processing general CAD files targeting watertight and manifold results.",
+  "version": 1,
+  "modifiers": [
+    { "modifier": "Source from CAD Model", "method": "From Model Viewer" },
+    { "modifier": "Refine Mesh", "method": "Make Manifold" },
+    { "modifier": "Refine Mesh", "method": "Make Watertight" },
+    { "modifier": "Wrap Mesh", "method": "Alpha Wrap" },
+    { "modifier": "Remesh", "method": "Incremental Isotropic Remesh" },
+    { "modifier": "Refine Mesh", "method": "Edge Flip Optimization" },
+    { "modifier": "Refine Mesh", "method": "Edge Collapse (Simplification)" },
+    { "modifier": "Refine Mesh", "method": "Tangential Relaxation (Smoothing)" },
+    { "modifier": "Export Mochi Model", "method": "SDF" }
+  ]
+}

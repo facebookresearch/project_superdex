@@ -1,0 +1,14 @@
+Allegro Hand - Wonik Robotics Asset License
+===========================================
+
+Copyright (c) 2026 Wonik Robotics
+
+These Allegro Hand assets are provided by Wonik Robotics under the Wonik Robotics
+Asset License (see the LICENSE file), which permits use only for non-commercial
+research, educational, evaluation, and internal-development purposes.
+
+MODIFICATIONS: This distribution contains modified versions of the original Wonik
+Robotics Allegro Hand assets. Meta Platforms, Inc. modified the assets (for example:
+simplified / re-authored collision geometry, adjusted kinematic and dynamic
+parameters, and reformatted meshes for the SuperDex Physics engine). See the
+README for details.
