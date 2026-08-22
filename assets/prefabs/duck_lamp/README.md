@@ -11,7 +11,7 @@ The physical product is sold under various brands including UNEEDE, the example 
 | Field | Value |
 | --- | --- |
 | Product name | LED Benson Night Light |
-| Source / purchase link | [Amazon product B08CVP316Y](https://www.amazon.com/dp/B07BHXTVWC) |
+| Source / purchase link | [Amazon product B08CVP316Y](https://www.amazon.com/dp/B08CVP316Y) |
 | Vendor | [Amazon.com](https://www.amazon.com/) |
 | Brand | UNEEDE |
 | Manufacturer | Not identified in the source materials |
@@ -31,7 +31,7 @@ The Meta-authored digital assets in this directory are distributed under the [Cr
 
 The license applies only to Meta-authored CAD, render meshes, collision data, processing metadata, and prefab manifests in this directory. It does not grant rights in the underlying physical product design, trade dress, product names, logos, or trademarks.
 
-These assets were modeled after a commercially available Box and Block Test kit. While the 3D geometry is Meta's own work, the underlying product design may be protected by copyright, design-patent, or trade-dress rights. Accordingly:
+These assets were modeled after a commercially available Benson Duck Light. While the 3D geometry is Meta's own work, the underlying product design may be protected by copyright, design-patent, or trade-dress rights. Accordingly:
 
 - These assets were created for simulation, research, visualization, and software development. CC-BY-4.0 applies only to copyrightable material Meta owns and may license; it does not grant patent, design-patent, trademark, trade-dress, or other rights in the referenced physical product. Manufacturing physical hardware may require separate permission from the applicable rightsholders.
 - Any manufacturer, vendor, brand, logo, or product name associated with the reference object may not be used to imply endorsement, certification, sponsorship, or an official partnership without prior written permission from the applicable rightsholder.
