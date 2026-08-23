@@ -224,17 +224,4 @@ Certain third party dependencies and third party assets in this repo are license
 
 # Citation
 
-If you use Project SuperDex in your research you may cite:
-
-```
-@misc{mochi2026,
-  author        = {{The Mochi Team}},
-  title         = {An Implicit Physics Engine for Contact-Rich Simulation},
-  year          = {2026},
-  eprint        = {},
-  archivePrefix = {arXiv},
-  primaryClass  = {cs.RO},
-  doi           = {},
-  url           = {},
-}
-```
+Citation details will be added here upon publication.
