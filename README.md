@@ -11,6 +11,8 @@ future releases.
 
 Visit the [Project SuperDex website](https://projectsuperdex.com/) for more.
 
+**Notice:** Project is "soft launched" as of 8/24 and is not yet intended for distribution. Some details may be missing.
+
 | Threaded Screw | Manipulation |
 | :-: | :-: |
 | ![Threaded Screw](https://github.com/user-attachments/assets/ddac8a5f-2f72-4ca0-b555-a090513f224a) | ![Manipulation](https://github.com/user-attachments/assets/406ea05e-6117-4b81-8d0a-0d6ae1cbaebd)|
