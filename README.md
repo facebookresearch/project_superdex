@@ -11,8 +11,6 @@ future releases.
 
 Visit the [Project SuperDex website](https://projectsuperdex.com/) for more.
 
-**Notice:** SuperDex launched on 8/24 and should work as expected. We’re actively testing and verifying the release, but there may be issues we haven’t caught yet. We’re working to resolve any problems as quickly as possible. Thanks for bearing with us while the dust settles.
-
 | Threaded Screw | Manipulation |
 | :-: | :-: |
 | ![Threaded Screw](https://github.com/user-attachments/assets/ddac8a5f-2f72-4ca0-b555-a090513f224a) | ![Manipulation](https://github.com/user-attachments/assets/406ea05e-6117-4b81-8d0a-0d6ae1cbaebd)|
@@ -97,8 +95,6 @@ SuperDex Teleop runs natively on-device on Quest 3. No remote PC, no streaming. 
 ## Quick Start (Python)
 
 Project SuperDex has first-class support for Python across the board. The quickest way to get started is with `uv` and `pypi` wheels.
-
-**Notice:** We’ve just launched and are still publishing the Python wheels to PyPI, so installation via `pip` is not available yet. Please check back soon. In the meantime, you can build SuperDex from source.
 
 1. Install pre-requisites
     * [uv](https://docs.astral.sh/uv/getting-started/installation/)
