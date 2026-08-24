@@ -5,7 +5,7 @@ sidebar_position: 5
 description: 'Authoring collision geometry in SuperDex Studio: the Model Viewer slots, reference models, the mesh processing modifier stack, saved pipelines, and presets.'
 ---
 
-import {FigureNote} from '@site/src/components/Figure';
+import Figure, {FigureRow, FigureLabel, FigureNote, FigureVideo} from '@site/src/components/Figure';
 
 # Model Editor
 
@@ -18,11 +18,32 @@ individually available for inspection so you can refine your model further.
 Creating presets so future models can use the same processing pipeline is
 trivial.
 
+<FigureVideo
+  src="../../img/model_editor/overview.mp4"
+  alt="The Model Editor converting a CAD model into simulation-ready collision geometry: opening a model, stacking modifiers, and building an exported collision mesh."
+  caption="Refining a model into simulation-ready collision geometry in the Model Editor."
+/>
+
 ## Opening a Model
 
 `Double-click` any CAD, render, or collision model in the
 [Asset Browser](./user_interface.mdx#asset-browser) or in a socket associated
 with a bot or prefab and it opens the Model Editor.
+
+<FigureRow cols={2}>
+  <Figure
+    src="../../img/model_editor/open_from_asset_browser.webp"
+    alt="Three thumbnails for the shape_box_body asset in the Asset Browser — the Render Model, Collision Model, and CAD Model variants of the same box."
+    maxWidth={330}
+    caption={<><FigureLabel>From the Asset Browser</FigureLabel>Double-click any model thumbnail.</>}
+  />
+  <Figure
+    src="../../img/model_editor/open_from_bot_prefab.webp"
+    alt="A Render Model socket in a bot or prefab's details panel, holding shape_box_body.glb, with translation, rotation, and scale fields below."
+    maxWidth={458}
+    caption={<><FigureLabel>From bot or prefab details</FigureLabel>Double-click a model socket.</>}
+  />
+</FigureRow>
 
 Opening a file in the model editor will search the nearby folders for a CAD,
 render, and collision model with the same filename and populate all 3 in the
@@ -60,6 +81,21 @@ folder organization structures work but will present friction.
 - **Role-subfolders** — `cad/`, `render/`, `collision/` beside the asset file.
 - **Flat** — every model directly in the base folder.
 
+<FigureRow cols={2}>
+  <Figure
+    src="../../img/model_editor/role_subfolder_layout.webp"
+    alt="The Asset Browser inside a shape_box prefab folder showing cad, collision, intermediates, and render subfolders next to the shape_box prefab, a LICENSE file, and a README."
+    maxWidth={763}
+    caption={<><FigureLabel>Role-subfolders</FigureLabel>Models sorted into cad, render, and collision folders.</>}
+  />
+  <Figure
+    src="../../img/model_editor/open_from_asset_browser.webp"
+    alt="Three thumbnails for the shape_box_body asset in the Asset Browser — the Render Model, Collision Model, and CAD Model variants of the same box, all in one folder."
+    maxWidth={330}
+    caption={<><FigureLabel>Flat</FigureLabel>Every model directly in the base folder.</>}
+  />
+</FigureRow>
+
 The rules behind the filename matching ensure that for any given filename there
 can only be 3 primary associated models. Opening any one of those models will
 always find the same other two if they exist. Multiple models of the same role
@@ -93,26 +129,13 @@ then by path. The preference order matches the table above in
 
 ### Shadowed Models
 
-Association is a partition, not an arbitrary graph: a file is considered a
-primary file for its filename only if searching for **its own role** resolves
-back to itself.
+Each filename can have only one primary file. If two files share the same name but live at different path depths (e.g. `render/block.glb` and `render/internal/block.glb`), the shallower one wins, it becomes the primary, and the deeper one is *shadowed*.
 
-If you open `render/internal/block.glb` while a `render/block.glb` also exists,
-the one you opened is *shadowed* (the rest of the set associates with the
-shallower file). Studio will open `render/internal/block.glb` on its own, with
-the other slots empty, and report the shadowed warning in the
-[Log Console](./user_interface.mdx#log-console). Opening any primary model for a
-filename always opens that same set of primary models; a shadowed copy never
-drags in models that belong to the primary set.
+If you open a shadowed file like `render/internal/block.glb`, Studio will open it on its own with the other slots empty, and report a shadowed warning in the [Log Console](./user_interface.mdx#log-console). The shadowed copy never pulls in models that belong to the primary set.
 
-Shadowed files will still [save their Model Editor state](#saved-pipelines), but
-will do so in `intermediates/` under a set of folders matching their particular
-shadowed path relative to the base folder. And will retain the full filename
-plus extention in their filename `intermediates/render/internal/block.glb.StudioProcessing.json`.
+Shadowed files still [save their Model Editor state](#saved-pipelines), but do so under `intermediates/` in folders that mirror their path relative to the base folder. For example, `intermediates/render/internal/block.glb.StudioProcessing.json`.
 
-You can also work with shadowed files by adding them as a
-[reference model](#additional-reference-models) for viewing, or point a
-[source modifier's slot](#sources) at it for processing.
+You can still work with shadowed files by adding them as a [reference model](#additional-reference-models) for viewing, or pointing a [source modifier's slot](#sources) at them for processing.
 
 ## Editor Windows
 
@@ -314,7 +337,12 @@ replaces the current stack, asking first if the stack is not empty.
 | **Shrink Wrap STEP to Mochi Model** | Assemblies or challenging geometry with high feature density — lots of small holes, open surfaces, sheet metal |
 | **Render Model to Mochi Model** | General mesh geometry rather than CAD, targeting watertight and manifold results |
 
-Hover any entry for its description.
+<Figure
+  src="../../img/model_editor/tool_tips_presets.gif"
+  alt="Tool tips"
+  maxWidth="500px"
+  caption="Hover any entry in Studio for its description"
+/>
 
 #### Adding Your Own
 
@@ -350,7 +378,7 @@ For the most widely usable presets, Sources should pull their mesh
 The stack is written with data flowing from the top to the bottom:
 
 ```
-Source  ->  Refine / Wrap / Remesh / Transform  ->  Export
+Source  →  Refine / Wrap / Remesh / Transform  →  Export
 ```
 
 A **Source Modifier** pulls its input data from outside the processing pipeline.
@@ -367,16 +395,16 @@ because a source reads a *file* and ignores the stage above it, a stack may hold
 several segments end to end.
 
 ```
-Source (STEP)  ->  remesh  ->  Export (.mochi.h5)
-Same Source    ->  remesh  ->  Export other collision
-Same Source    ->  remesh  ->  Export other collision
+Source (STEP)  →  remesh  →  Export (.mochi.h5)
+Same Source    →  remesh  →  Export other collision
+Same Source    →  remesh  →  Export other collision
 ```
 
 or
 
 ```
-Source (STEP)  ->  refine  ->  Export (.glb)
-Source (.glb)  ->  remesh  ->  Export (.mochi.h5)
+Source (STEP)  →  refine  →  Export (.glb)
+Source (.glb)  →  remesh  →  Export (.mochi.h5)
 ```
 
 Build/Export All processes each stage of the pipeline in sequence. Exports are
@@ -384,11 +412,18 @@ done as part of their modifier stage so each following source can pick up what
 the export above it just wrote.
 
 Coordinate spaces are handled for you. The formats disagree about which axis is
-up — `.obj`, `.stl` and `.mochi.h5` are authored Z-up. A `.obj`, an `.stl`, a
+up - `.obj`, `.stl` and `.mochi.h5` are authored Z-up. A `.obj`, an `.stl`, a
 `.glb` and a `.mochi.h5` of the same part all land in the same orientation after
 processing. The **Axis Gizmos** provided in `superdex_studio/assets/axis_gizmos/`
 are a useful tool to verify orientation. They have been carefully authored to be
 consistent.
+
+<Figure
+  src="../../img/model_editor/processing_stack.gif"
+  alt="Processing stack"
+  maxWidth="500px"
+  caption="Disable and/or re-order processing stacks using the handles"
+/>
 
 ### Generating and Building
 
@@ -412,6 +447,13 @@ reports its state to the [Log Console](./user_interface.mdx#log-console). If a
 stage fails, the failure propagates: later stages get no input and stop, rather
 than quietly running on errored geometry. Exports already written above the
 failure stay written.
+
+<Figure
+  src="../../img/model_editor/generating_status.gif"
+  alt="Generating status"
+  maxWidth="500px"
+  caption="Status window showing mesh processing, can be cancelled at any time."
+/>
 
 :::warning
 The staleness detection does not detect file changes **outside** Studio
@@ -455,8 +497,24 @@ be different.
 ### Inspecting a Stage
 
 Every modifier keeps its own output buffer, with the same **Surface** /
-**Wireframe** / **Stats** / **opacity** view controls as in the Model Viewer.
+**Wireframe** / **Stats** / **Opacity** view controls as in the Model Viewer.
 Visualize two stages at once to see exactly what changed.
+
+<FigureRow minWidth={125}>
+  <Figure
+    src="../../img/model_editor/opacity_slider.gif"
+    alt="Opacity slider"
+    maxWidth="500px"
+    caption="Use the opacity slider to compare between stages"
+  />
+
+  <Figure
+    src="../../img/model_editor/stages_stats.png"
+    alt="Stats"
+    maxWidth="350px"
+    caption="Stats provide useful information like estimated file size, triangle count, and watertertightness"
+  />
+</FigureRow>
 
 **Export Mochi Model** shows both the surface mesh and SDF that was generated as
 part of the modifier.
@@ -472,6 +530,13 @@ inspect the processing stage in another tool or as reference for another model.
 Every method's parameters carry hover tooltips in the app, which are the
 authoritative reference. Below is a simple description of each modifier and
 method currently available.
+
+<Figure
+  src="../../img/model_editor/tool_tips.gif"
+  alt="Tool tips"
+  maxWidth="500px"
+  caption="Hover any modifier for its description"
+/>
 
 ### Sources
 
@@ -514,6 +579,29 @@ over solid combining, edge sampling (use **Adaptive** to preserve round holes
 and fillets), target edge length, and whether to keep going when a face fails to
 tessellate.
 
+<FigureRow minWidth={125}>
+  <Figure
+    src="../../img/model_editor/from_cad_input.png"
+    alt="Input mesh"
+    caption={<FigureLabel>Input CAD Model</FigureLabel>}
+  />
+  <Figure
+    src="../../img/model_editor/from_cad_isotropic_uniform.png"
+    alt="Isotropic with Uniform"
+    caption={<><FigureLabel>Isotropic, Uniform</FigureLabel> the front fillet becomes a chamfer due to the edge size target</>}
+  />
+  <Figure
+    src="../../img/model_editor/from_cad_isotropic_adaptive.png"
+    alt="Isotropic with Adaptive"
+    caption={<><FigureLabel>Isotropic, Adaptive</FigureLabel> the front fillet is preserved at the cost of increased mesh density</>}
+  />
+  <Figure
+    src="../../img/model_editor/from_cad_delabella.png"
+    alt="Delabella"
+    caption={<FigureLabel>Delabella</FigureLabel>}
+  />
+</FigureRow>
+
 ### Transforms
 
 #### Refine Mesh
@@ -535,6 +623,52 @@ stage by index. References follow their targets through reorders, inserts, and
 deletes. If you move the Edge Flip Optimization above its reference it will read
 `(invalid source)` and fail until a valid source is picked.
 
+<FigureRow minWidth={125}>
+  <Figure
+    src="../../img/model_editor/refine_mesh_input_missing_face.png"
+    alt="Input mesh"
+    caption={<><FigureLabel>Input Mesh</FigureLabel> with an open boundary</>}
+  />
+  <Figure
+    src="../../img/model_editor/refine_mesh_make_manifold.png"
+    alt="Make Manifold, make watertight off"
+    caption={<><FigureLabel>Make Manifold</FigureLabel> with Then Make Watertight <b>OFF</b> - only coincident vertices are stitched, mesh is <b>NOT</b> watertight</>}
+  />
+  <Figure
+    src="../../img/model_editor/refine_mesh_make_manifold_watertight.png"
+    alt="Make Manifold, make watertight on"
+    caption={<><FigureLabel>Make Manifold</FigureLabel> with Then Make Watertight <b>ON</b> - the open boundary is closed, mesh is now watertight</>}
+  />
+  <Figure
+    src="../../img/model_editor/refine_mesh_watertight.png"
+    alt="Make Watertight"
+    caption={<><FigureLabel>Make Watertight</FigureLabel> the mesh is watertight because there are now internal surfaces that form a closed shell with extremely thin thickness</>}
+  />
+</FigureRow>
+
+<FigureRow minWidth={125}>
+  <Figure
+    src="../../img/model_editor/refine_mesh_input.png"
+    alt="Input mesh"
+    caption={<><FigureLabel>Input Mesh</FigureLabel> processed using Source from CAD Model, Uniform, then made watertight</>}
+  />
+  <Figure
+    src="../../img/model_editor/refine_mesh_edge_flip.png"
+    alt="Edge Flip Optimization"
+    caption={<><FigureLabel>Edge Flip Optimization</FigureLabel></>}
+  />
+  <Figure
+    src="../../img/model_editor/refine_mesh_edge_collapse.png"
+    alt="Edge Collapse (Simplification)"
+    caption={<><FigureLabel>Edge Collapse (Simplification)</FigureLabel></>}
+  />
+  <Figure
+    src="../../img/model_editor/refine_mesh_tangential_relaxation.png"
+    alt="Tangential Relaxation (Smoothing)"
+    caption={<><FigureLabel>Tangential Relaxation (Smoothing)</FigureLabel></>}
+  />
+</FigureRow>
+
 #### Wrap Mesh
 
 Builds a fresh closed envelope around the input rather than repairing it. Reach
@@ -545,6 +679,29 @@ for these when the input is too broken to refine.
 | **Shrink Wrap** | Shrink a hull onto the surface to build a watertight envelope, bridging concavities and covering holes. |
 | **Convex Hull** | Replace the surface with its convex hull, remeshed. No parameters. |
 | **Alpha Wrap** | Alpha-wrap the surface into a watertight envelope; alpha sets the finest detail captured. |
+
+<FigureRow minWidth={125}>
+  <Figure
+    src="../../img/model_editor/wrap_mesh_input.png"
+    alt="Input mesh"
+    caption={<><FigureLabel>Input Mesh</FigureLabel> processed using Source from CAD Model, Uniform, then made watertight. Note the two bodies are fully seperated by 5 mm.</>}
+  />
+  <Figure
+    src="../../img/model_editor/wrap_mesh_shrink_wrap.png"
+    alt="Shrink Wrap"
+    caption={<><FigureLabel>Shrink Wrap</FigureLabel> forms a singular, closed volume; similar to shriking an elastic surface around the entire input model</>}
+  />
+  <Figure
+    src="../../img/model_editor/warp_mesh_convex_hull.png"
+    alt="Convex Hull"
+    caption={<><FigureLabel>Convex Hull</FigureLabel></>}
+  />
+  <Figure
+    src="../../img/model_editor/wrap_mesh_alpha_wrap.png"
+    alt="Alpha Wrap"
+    caption={<><FigureLabel>Alpha Wrap</FigureLabel> unconditionally forms watertight meshes, but does not bridge the two volumes without a large offset</>}
+  />
+</FigureRow>
 
 #### Remesh
 
@@ -560,6 +717,29 @@ ACVD and Surface Delaunay require a closed input, so both fill holes before they
 run. Isotropic remesh can take any input mesh, and is your best brute force
 solution for bad meshes.
 
+<FigureRow minWidth={125}>
+  <Figure
+    src="../../img/model_editor/remesh_input.png"
+    alt="Input mesh"
+    caption={<><FigureLabel>Input Mesh</FigureLabel> which is an STL file exported directly from SolidWorks</>}
+  />
+  <Figure
+    src="../../img/model_editor/remesh_acvd.png"
+    alt="Approx Centroidal Voronoi Diagram (ACVD)"
+    caption={<><FigureLabel>Approx Centroidal Voronoi Diagram (ACVD)</FigureLabel></>}
+  />
+  <Figure
+    src="../../img/model_editor/remesh_surface_delaunay.png"
+    alt="Surface Delaunay Triangulation"
+    caption={<><FigureLabel>Surface Delaunay Triangulation</FigureLabel></>}
+  />
+  <Figure
+    src="../../img/model_editor/remesh_isotropic.png"
+    alt="Incremental Isotropic Remesh"
+    caption={<><FigureLabel>Incremental Isotropic Remesh</FigureLabel></>}
+  />
+</FigureRow>
+
 #### Apply SRT Transformation
 
 | Method | What it does |
@@ -570,10 +750,10 @@ solution for bad meshes.
 
 | Modifier | Method | What it does |
 |----------|--------|--------------|
-| **Export Mochi Model** | Mesh+SDF | Bake a grid SDF from the input surface and export the mesh plus SDF as a `.mochi.h5`. |
+| **Export Collision Model** <br /> (Export Mochi Model) | Mesh+SDF | Bake a grid SDF from the input surface and export the mesh plus SDF as a `.mochi.h5`. |
 | **Export Mesh File** | Mesh File | Export the input mesh to a `.glb` or `.obj` in a chosen material color. |
 
-**Export Mochi Model** is what produces a `.mochi.h5` collision model. Its
+**Export Collision Model** is what produces a `.mochi.h5` collision model. Its
 parameters govern the SDF bake. The stage's output buffer is the surface
 reconstructed from the SDF.
 
@@ -582,6 +762,29 @@ reconstructed from the SDF.
 `.glb` to the provided path. The **Material Color** is written into the glTF
 `baseColorFactor`, so what you see matches what it writes. OBJ stores no
 materials, so the color is ignored there.
+
+<FigureRow minWidth={125}>
+  <Figure
+    src="../../img/model_editor/export_model.png"
+    alt="Export Collision Model"
+    caption={<><FigureLabel>Export Collision Model</FigureLabel> a triangular surface mesh of an M8 screw that has been processed</>}
+  />
+  <Figure
+    src="../../img/model_editor/export_sdf_1mm.png"
+    alt="SDF baked at 1 mm resolution"
+    caption={<><FigureLabel>SDF baked at 1 mm resolution</FigureLabel> high-frequency features of the threads are <b>not</b> captured</>}
+  />
+  <Figure
+    src="../../img/model_editor/export_sdf_500um.png"
+    alt="SDF baked at 0.5 mm resolution"
+    caption={<><FigureLabel>SDF baked at 0.5 mm resolution</FigureLabel> high-frequency features of the threads are <b>not</b> captured</>}
+  />
+  <Figure
+    src="../../img/model_editor/export_sdf_250um.png"
+    alt="SDF baked at 0.25 mm resolution"
+    caption={<><FigureLabel>SDF baked at 0.25 mm resolution</FigureLabel> high-frequency features of the threads are well captured</>}
+  />
+</FigureRow>
 
 :::note
 We have plans to update the mesh exporter to support texture mapping from one
