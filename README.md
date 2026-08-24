@@ -211,6 +211,9 @@ Documentation, getting started guides, and examples are available for all module
 ## How to Contribute
 We welcome contributions! Go to [CONTRIBUTING](/CONTRIBUTING.md) and our [CODE OF CONDUCT](/CODE_OF_CONDUCT.md) for how to get started.
 
+## Reporting Issues
+Please report issues via [GitHub Issues](https://github.com/facebookresearch/project_superdex/issues).
+
 ## License
 First-party SuperDex source code is licensed under [Apache 2.0](/LICENSE). Assets and documentation are licensed under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) except where otherwise noted. Third-party and derived code and assets retain their own terms, recorded in their accompanying `LICENSE` and `NOTICE` files. `superdex_mesh_cli` is an optional, standalone mesh processing CLI tool released under GPLv3 due to use of OCCT and CGAL.
 
