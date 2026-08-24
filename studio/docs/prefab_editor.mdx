@@ -6,6 +6,7 @@ description: 'Authoring a prefab in SuperDex Studio: rigid, soft, articulated, a
 ---
 
 import Figure, {FigureRow, FigureLabel, FigureVideo, FigureNote} from '@site/src/components/Figure';
+import ProjectSuperdexLink from '@site/src/components/ProjectSuperdexLink';
 
 # Prefab Editor
 
@@ -65,14 +66,14 @@ more than this editor can currently author, so here is where the line falls.
 - **[Scene settings](#scene-settings)**: gravity and solver, on a scene prefab.
 
 :::info Not Yet Supported
-- **[Constraints between separate actors](https://www.internalfb.com/intern/staticdocs/mochi_physics/docs/concepts/constraints)**, such as pinning two rigid actors together. Model the pair as one articulated actor in the meantime.
-- **[Pose controllers](https://www.internalfb.com/intern/staticdocs/mochi_physics/docs/concepts/pose_controller)** for articulated actors.
-- **[Soft-skinned actors](https://www.internalfb.com/intern/staticdocs/mochi_physics/docs/concepts/actors/soft_skinned_actors)**, which are neither listed in the hierarchy nor drawn in the viewport.
+- <strong><ProjectSuperdexLink site="physics" path="docs/concepts/constraints/">Constraints between separate actors</ProjectSuperdexLink></strong>, such as pinning two rigid actors together. Model the pair as one articulated actor in the meantime.
+- <strong><ProjectSuperdexLink site="physics" path="docs/concepts/pose_controller/">Pose controllers</ProjectSuperdexLink></strong> for articulated actors.
+- <strong><ProjectSuperdexLink site="physics" path="docs/concepts/actors/soft_skinned_actors/">Soft-skinned actors</ProjectSuperdexLink></strong>, which are neither listed in the hierarchy nor drawn in the viewport.
 - **Closed-loop articulations** and initial joint velocities.
-- **[Tendons](https://www.internalfb.com/intern/staticdocs/mochi_physics/docs/concepts/transmissions), [shells](https://www.internalfb.com/intern/staticdocs/mochi_physics/docs/concepts/actors/shell) (cloth), and [rods](https://www.internalfb.com/intern/staticdocs/mochi_physics/docs/concepts/actors/rod)**, which the prefab format itself cannot express yet, so those need format work before Studio can author them.
+- <strong><ProjectSuperdexLink site="physics" path="docs/concepts/transmissions/">Tendons</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/actors/shell/">shells</ProjectSuperdexLink> (cloth), and <ProjectSuperdexLink site="physics" path="docs/concepts/actors/rod/">rods</ProjectSuperdexLink></strong>, which the prefab format itself cannot express yet, so those need format work before Studio can author them.
 
 These already simulate in
-[SuperDex Physics](https://www.internalfb.com/intern/staticdocs/mochi_physics/docs/overview). Constraints and pose
+<ProjectSuperdexLink site="physics" path="docs/overview/">SuperDex Physics</ProjectSuperdexLink>. Constraints and pose
 controllers already present in a file survive a save and still simulate; you
 just cannot see or edit them here. Closed-loop articulations are the exception:
 adding, deleting, or reparenting a link drops that actor's cycles and joint
@@ -151,7 +152,7 @@ name used by the [Contact Filter](#contact-filter).
 
 Contact and material parameters sit at the bottom of the panel. They mean the
 same thing here as anywhere else in the physics engine, so the full property
-reference lives in [Authoring Prefabs](https://www.internalfb.com/intern/staticdocs/mochi_physics/docs/authoring_scenes/authoring_prefabs) rather than being repeated here.
+reference lives in <ProjectSuperdexLink site="physics" path="docs/authoring_scenes/authoring_prefabs/">Authoring Prefabs</ProjectSuperdexLink> rather than being repeated here.
 
 ### Inertial Properties
 
@@ -192,7 +193,7 @@ three behavior toggles worth knowing: **Has Gravity**, **Has Inertia**, and
 
 Soft bodies cost considerably more to simulate than rigid ones. Use one when the
 deformation is the point, and a rigid everywhere else. The material models and
-their parameters are documented in [Authoring Prefabs](https://www.internalfb.com/intern/staticdocs/mochi_physics/docs/authoring_scenes/authoring_prefabs).
+their parameters are documented in <ProjectSuperdexLink site="physics" path="docs/authoring_scenes/authoring_prefabs/">Authoring Prefabs</ProjectSuperdexLink>.
 
 {/* FIGURE 6: actor_soft — variant="inset" or scroller.
     Actor Details with a soft actor selected: General with the toggles,
@@ -313,5 +314,5 @@ the contact filter rules that used to apply to it.
 - [User Interface](./user_interface.mdx): the viewport camera, the gizmo, and the playback transport.
 - [Bot Editor Guide](./bot_editor/index.mdx): the field-by-field joint and link reference.
 - [Model Editor Guide](./model_editor.mdx): building the collision models a prefab binds.
-- [Prefabs](https://www.internalfb.com/intern/staticdocs/mochi_physics/docs/concepts/prefabs): the concept, as the physics engine defines it.
-- [Authoring Prefabs](https://www.internalfb.com/intern/staticdocs/mochi_physics/docs/authoring_scenes/authoring_prefabs): the full property reference for actors, materials, contacts, and scene settings.
+- <ProjectSuperdexLink site="physics" path="docs/concepts/prefabs/">Prefabs</ProjectSuperdexLink>: the concept, as the physics engine defines it.
+- <ProjectSuperdexLink site="physics" path="docs/authoring_scenes/authoring_prefabs/">Authoring Prefabs</ProjectSuperdexLink>: the full property reference for actors, materials, contacts, and scene settings.
