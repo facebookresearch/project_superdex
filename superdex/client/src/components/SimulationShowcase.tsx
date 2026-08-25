@@ -148,10 +148,10 @@ export default function SimulationShowcase() {
           className="mb-14"
         >
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-            <div className="flex flex-col gap-0">
-              <p className="section-eyebrow m-0 leading-none">Gallery</p>
+            <div className="flex flex-col gap-4">
+              <p className="section-eyebrow">Gallery</p>
               <h2
-                className="display-heading m-0"
+                className="display-heading"
                 style={{ fontSize: "clamp(2rem, 3.5vw, 3rem)" }}
               >
                 See it in action!
