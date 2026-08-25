@@ -6,7 +6,7 @@ sidebar_position: 1
 # Mass on Rod Spring
 
 :::caution Experimental
-Rod actors are experimental. The API may change without notice.
+Rod actors are part of the **experimental** API. Their API may change in future releases.
 :::
 
 This example hangs a rigid cube from a helical spring modeled as an elastic rod. It demonstrates loading a curved rod centerline from a file, deriving rod material parameters from a circular cross-section, and coupling a rod to a rigid actor with position and rotation constraints.

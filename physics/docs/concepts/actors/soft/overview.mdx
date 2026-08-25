@@ -159,8 +159,8 @@ The creation fields are defined by `SoftActorParams` ([C++](pathname:///generate
 | `boundaryElementType` / `boundary_element_type` | `ActorBoundaryElementType` | `Default` (`P1Q3`) | Quadrature order for boundary (surface) element integration. |
 
 :::note Experimental creation parameters
-Some additional parameters controlling the behavior of soft actors are separated into `experimental::ExperimentalSoftActorParams`, because non-default values are considered experimental.
-This additional struct can be passed alongside [`SoftActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html) at actor creation to use non-default values of its fields.
+Additional experimental soft-actor creation parameters are defined in `experimental::ExperimentalSoftActorParams`. These parameters may change or be removed in future releases.
+To configure these parameters, create the actor with `experimental::CreateSoftActor` / `experimental.create_soft_actor`, passing this struct together with [`SoftActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html).
 :::
 
 ### SoftMaterialParams

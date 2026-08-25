@@ -5,8 +5,8 @@ sidebar_position: 1
 
 # Choosing a Tendon Model
 
-:::caution Experimental API
-Rod actors and transmissions are part of the **experimental** API. Their interfaces may change without notice.
+:::caution Experimental
+Rod actors and transmissions are part of the **experimental** API. Their APIs may change in future releases.
 :::
 
 This example compares three ways to model the same tendon-driven articulated mechanism: an elastic rod, a waypoint-routed spatial tendon, and a fixed-coefficient linear transmission. The example places all three models side by side and drives them with the same prescribed slider motion.

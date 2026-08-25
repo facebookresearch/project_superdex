@@ -8,8 +8,8 @@ import TabItem from '@theme/TabItem';
 
 # Transmissions
 
-:::caution Experimental API
-Transmissions are part of the **experimental** API (`mochi_physics_experimental.h`). The API may change without notice in future releases.
+:::caution Experimental
+Transmissions are part of the **experimental** API. Their API may change in future releases.
 :::
 
 A transmission maps the kinematics of an [articulated actor](./actors/articulated_actors.mdx) to a scalar generalized coordinate. An actuator attached to that transmission maps the coordinate and its rate to a potential energy, a dissipation potential, or an applied generalized force. Through the transmission Jacobian, this scalar response contributes forces and stiffness to the actor's overall [dynamics](./dynamics.md).

@@ -6,7 +6,7 @@ sidebar_position: 5
 # Inverse Kinematics
 
 :::caution Experimental
-The IK solver is part of the experimental API. It may change without notice.
+The IK solver is part of the **experimental** API. Its API may change in future releases.
 :::
 
 This example solves inverse kinematics on a five-link articulation with mixed joint types, alternating between a rotation target and a position target on the last link so the arm snaps to a fresh random goal each iteration.

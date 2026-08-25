@@ -266,7 +266,7 @@ For rigid, soft, and articulated actors, the `boundaryElementType` / `boundary_e
 Higher quadrature densities better resolve fine contact geometry and generally produce smoother forces, at the cost of additional distance-field evaluations.
 
 :::note Experimental Quadrature Rules
-Additional experimental quadrature rules (`ExperimentalP1Q7`, `ExperimentalP1Q12`, `ExperimentalP1Q16`) are available for advanced use cases.
+Additional experimental quadrature rules (`ExperimentalP1Q7`, `ExperimentalP1Q12`, `ExperimentalP1Q16`) are available for advanced use cases. These rules may change or be removed in future releases.
 :::
 
 #### Stage-Discrete Dissipation

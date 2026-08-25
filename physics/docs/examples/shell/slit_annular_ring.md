@@ -6,7 +6,7 @@ sidebar_position: 2
 # Slit Annular Ring Benchmark
 
 :::caution Experimental
-Shell actors are experimental. The API may change without notice.
+Shell actors are part of the **experimental** API. Their API may change in future releases.
 :::
 
 This example solves the slit annular ring benchmark described by [Sze et al. (2004)](#references), a standard test for geometrically nonlinear thin-shell analysis from the engineering mechanics literature.

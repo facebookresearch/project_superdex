@@ -6,7 +6,7 @@ sidebar_position: 1
 # T-shirt on Plane
 
 :::caution Experimental
-Shell actors and shell self-contact are experimental. The API may change without notice.
+Shell actors and shell self-contact are part of the **experimental** API. Their APIs may change in future releases.
 :::
 
 This example simulates a triangle-mesh T-shirt falling onto a static ground plane. It demonstrates loading a garment mesh, deriving shell properties from familiar three-dimensional material parameters, and enabling point-cloud self-contact.

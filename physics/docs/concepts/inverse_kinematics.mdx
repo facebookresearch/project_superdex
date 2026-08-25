@@ -9,8 +9,8 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 
 # Inverse Kinematics
 
-:::caution Experimental API
-The IK solver is part of the **experimental** API (`mochi_physics_experimental.h`). The API may change without notice in future releases.
+:::caution Experimental
+The IK solver is part of the **experimental** API. Its API may change in future releases.
 :::
 
 SuperDex Physics' inverse kinematics (IK) system computes joint configurations that place an end-effector at a desired position and/or orientation in world space. Unlike traditional IK solvers that use Jacobian transpose or CCD methods, SuperDex Physics reuses its physics engine as a **quasistatic optimizer** — the same Newton solver that drives simulation is repurposed to minimize a target-reaching objective.
