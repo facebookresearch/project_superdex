@@ -4,19 +4,26 @@ title: Examples
 
 # Examples
 
-The observation, action, reward and termination contract of the three environment
-**classes** that ship in an open-source build. Sizes marked *(default config)* change if
-you change the configuration fields they depend on.
+## Purpose
 
-The config *variants* listed in [the introduction](./intro.md#available-environments)
-(`ant_no_contact`, `half_cheetah_full_observation`, and so on) are alternative
-configurations of these same classes, so they share the contracts below - subject to
-whatever the variant's `env_cfg` changes.
+Use this page after a successful install to look up the exact observation, action,
+reward, termination, configuration, and scene identity contracts for the three
+built-in example environments: CartPole, Ant, and HalfCheetah.
 
-For the shared runtime API implemented by `MochiEnv`, see
-[Environment Class API](./env_reference.mdx).
+## How to use this page
 
-## Task Summary
+1. Use [Quick comparison](#quick-comparison) to choose an environment and confirm its
+   default vector sizes, reward-term count, and termination behavior.
+2. See the environment section for exact configuration defaults, flattened observation
+   order, action bounds, reward terms, termination behavior, and scene identity.
+3. Read [Environment Class API](./env_reference.mdx) before slicing vectors or sending
+   actions, and use its runtime inspection example when configuration variants can
+   change a size.
+
+Every environment also inherits the shared `MochiEnvCfg` fields documented in
+[Authoring a Custom Environment](./environments.mdx#base-configuration).
+
+## Quick comparison
 
 | Environment | Observation | Action | Reward terms | Terminates? |
 | --- | ---: | ---: | --- | --- |
@@ -24,27 +31,18 @@ For the shared runtime API implemented by `MochiEnv`, see
 | [Ant](#ant) | 81 | 8 | 4 | yes |
 | [HalfCheetah](#halfcheetah) | 17 | 6 | 2 | **no** |
 
-Every environment additionally inherits the shared `MochiEnvCfg` fields documented in
-[Creating Custom Environments](./environments.mdx#common-configuration-options).
-
 ## CartPole
 
 `superdex_gym/CartPole-v0` · CLI `cart_pole` ·
 `superdex.lab.gym.envs.benchmarks.cartpole_env.CartPoleEnv`
 
-Balance a pole on a cart moving along a linear rail. The cheapest environment to run
-and the recommended smoke test — it needs only the benchmark scene assets
-(`assets/benchmarks/cart_pole/`), no bot asset.
+CartPole balances a pole on a cart moving along a linear rail. It is the smallest
+environment and the best smoke test. It requires only the benchmark scene assets
+(`assets/benchmarks/cart_pole/`) and no bot asset.
 
 :::note The `superdex-robotics` package is required by *every* environment
-Including this one. `superdex/lab/gym/utils/mochi_helpers.py:25` imports
-`superdex.robotics` at module load and every `*_env` module imports `mochi_helpers`, so
-the `superdex-robotics` package — a declared dependency of `superdex-lab` — is needed by
-CartPole and Ant too, neither of which loads a bot asset. Because it is declared, a
-supported install always has it; but if its native extension was not built, environment
-discovery fails before any `--env` selection takes effect, so choosing a different
-environment is not a workaround. See
-[Verifying the Install](./setup.md#verifying-the-install).
+All environments require `superdex-robotics`, including CartPole and Ant. If its import
+fails, follow [Verifying the Install](./setup.md#verifying-the-install).
 :::
 
 ![CartPole: a pole balanced upright on a cart riding a horizontal rail](/img/superdex_gym/envs/cart_pole.png)
@@ -53,6 +51,7 @@ environment is not a workaround. See
 from superdex.lab.gym.envs.benchmarks.cartpole_env import CartPoleEnv, CartPoleEnvCfg
 
 env = CartPoleEnv(CartPoleEnvCfg())
+env.close()
 ```
 
 ### Configuration
@@ -82,9 +81,9 @@ Listed in flattened order.
 
 ### Action — 1 element
 
-`control`, bounded `[-3.0, 3.0]`. Multiplied by a force scale of 100 and applied as an
-external force on DOF 0 (the cart) or DOF 1 (the pole) depending on
-`actuate_on_pole`.
+`control`, bounded `[-3.0, 3.0]`, is scaled by 100 and applied as a linear force
+on the prismatic cart DOF 0, or as a torque on the revolute pole DOF 1 when
+`actuate_on_pole=True`.
 
 ### Reward
 
@@ -97,15 +96,17 @@ leaves the upright band. Truncates at `steps_per_episode`.
 
 ### Scene identity
 
-`uid_fields = (use_damping, use_gravity, free_pole)` — the three fields that change how
-the prefab is built. Environments matching on all three share one physics scene.
+`uid_fields = (use_damping, use_gravity, free_pole)` contains the three fields that
+change how the prefab is built. When `use_shared_scenes=True`, environments in the
+same process with matching values share one physics scene. Otherwise, each
+environment creates its own scene.
 
 ## Ant
 
 `superdex_gym/Ant-v0` · CLI `ant` · `superdex.lab.gym.envs.benchmarks.ant_env.AntEnv`
 
-Quadrupedal locomotion. Reward forward progress while penalizing control effort and
-contact forces.
+Ant provides quadrupedal locomotion. Its reward favors forward progress and penalizes
+control effort and contact-wrench magnitude.
 
 ![Ant: a four-legged robot standing on a ground plane](/img/superdex_gym/envs/ant.png)
 
@@ -123,7 +124,7 @@ contact forces.
 | `healthy_reward` | `1.0` | Per-step bonus while healthy |
 | `terminate_when_unhealthy` | `True` | |
 | `healthy_y_range` | `(0.2, 1.0)` | Torso height band, in metres |
-| `contact_force_range` | `(-1.0, 1.0)` | Contact forces are clipped to this before the cost |
+| `contact_force_range` | `(-1.0, 1.0)` | Per-component clipping range for each body's contact wrench (force and torque) before the cost |
 | `exclude_current_positions_from_observation` | `True` | Omit x and z, keeping policies translation-invariant |
 | `include_contact_in_observation` | `True` | |
 | `use_rotation_vector` | `False` | |
@@ -134,20 +135,21 @@ contact forces.
 | `init_dist_from_ground` | `0.55` | m |
 | `init_ankle_angle` | `radians(57.30)` | ≈ 1.0 rad |
 
-Note the field name is **plural** here (`exclude_current_positions_from_observation`)
-and singular on HalfCheetah.
+Ant uses the **plural** field name `exclude_current_positions_from_observation`;
+HalfCheetah uses the singular form.
 
 ### Observation — 81 elements (default config)
 
 | Key | Shape | Meaning |
 | --- | ---: | --- |
-| `contact_forces` | 54 | 6 components for each of 9 bodies. Omitted when `include_contact_in_observation=False` |
+| `contact_forces` | 54 | Six contact-wrench components (force and torque) for each of 9 bodies. Omitted when `include_contact_in_observation=False` |
 | `pose` | 13 | `num_dofs (14) - 2` for the excluded positions, `+1` for the quaternion representation |
 | `vel` | 14 | One per DOF |
 
-Listed in flattened order. Turning off `exclude_current_positions_from_observation`
-adds 2; turning off `include_contact_in_observation` removes 54; setting
-`use_rotation_vector=True` removes 1.
+The table lists flattened order. Turning off
+`exclude_current_positions_from_observation` adds 2, turning off
+`include_contact_in_observation` removes 54, and setting `use_rotation_vector=True`
+removes 1.
 
 ### Action — 8 elements
 
@@ -160,10 +162,11 @@ scale of 150.
 | --- | --- |
 | `forward` | `x_velocity × forward_reward_weight` |
 | `ctrl` | `-control_cost_weight × control·control` |
-| `contact` | `-contact_cost_weight × Σ(clipped contact force)²` |
+| `contact` | `-contact_cost_weight × ‖clipped contact-wrench vector‖²` |
 | `survive` | `healthy_reward` while healthy, else `0` |
 
-The scalar reward is the plain sum; `ctrl` and `contact` are already negative.
+The scalar reward sums the four terms directly; `ctrl` and `contact` are already
+negative.
 
 ### Termination
 
@@ -179,7 +182,8 @@ Terminates with `"Unhealthy"` when the torso height leaves `healthy_y_range`, un
 `superdex_gym/HalfCheetah-v0` · CLI `half_cheetah` ·
 `superdex.lab.gym.envs.benchmarks.halfcheetah_env.HalfCheetahEnv`
 
-Planar (2-D) running. Reward forward velocity, penalize control effort.
+HalfCheetah provides planar (2-D) running. Its reward favors forward velocity and
+penalizes control effort.
 
 ![HalfCheetah: a planar two-legged runner in a mid-stride pose](/img/superdex_gym/envs/half_cheetah.png)
 
@@ -220,9 +224,9 @@ There is no contact observation.
 
 ### Termination
 
-:::note HalfCheetah never terminates
-It does not override `_check_stop_criteria`, so the only stop condition is the base
-class's truncation at `steps_per_episode`. `terminated` is never `True`.
+:::note HalfCheetah never terminates; it only truncates
+HalfCheetah does not override `_check_stop_criteria`. The base class only truncates at
+`steps_per_episode`, so `terminated` is never `True`.
 :::
 
 ### Scene identity

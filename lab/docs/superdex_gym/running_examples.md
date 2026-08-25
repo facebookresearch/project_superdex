@@ -13,23 +13,23 @@ These scripts show how to run an environment and are located under `superdex_lab
 - `run_sample.py`: simulates a single sample environment.
 - `run_with_gymnasium_vectorization.py`: runs multiple environment instances in parallel with vectorization.
 
-After [setup](./setup.md) and running `uv sync --extra core`, each script can be run with:
+After [setup](./setup.md), each script can be run with:
 
 ```bash
-uv run --no-sync python [path-to-script] [args]
+uv run python [path-to-script] [args]
 ```
 Or, from the subdirectory:
 
 ```bash
 cd superdex_lab/apps/envs
-uv run --no-sync python [script] [args]
+uv run python [script] [args]
 ```
 
 The rest of this document assumes your working directory is `superdex_lab/apps/envs`.
 
 ## 1. `run_sample.py`
 
-**Main environment runner with multiple environment choices and action-sampling options.**
+**Run one sample environment with a selected action-sampling strategy.**
 
 Runs a sample SuperDex Gym environment through the command line, configurable with different action sampling strategies.
 
@@ -60,24 +60,24 @@ Here are some usage examples before we walk through the available options:
 
 ```bash
 # Run CartPole with random actions for 5 episodes
-uv run --no-sync python run_sample.py cart_pole --action_sampler random --num_episodes 5
+uv run python run_sample.py cart_pole --action_sampler random --num_episodes 5
 
 # Run Ant with sweep actions and record video
-uv run --no-sync python run_sample.py ant --action_sampler sweep --video
+uv run python run_sample.py ant --action_sampler sweep --video
 
 # Record at a custom resolution
-uv run --no-sync python run_sample.py ant --action_sampler random --video --video_size 1920x1080
+uv run python run_sample.py ant --action_sampler random --video --video_size 1920x1080
 
 # Run a config variant
-uv run --no-sync python run_sample.py half_cheetah_full_observation --action_sampler sweep
+uv run python run_sample.py half_cheetah_full_observation --action_sampler sweep
 
 # Start the environment in a paused state
-uv run --no-sync python run_sample.py half_cheetah --start_paused
+uv run python run_sample.py half_cheetah --start_paused
 ```
 
 ### Available Sample Environments
 
-`uv run --no-sync python run_sample.py --help` lists the environments discovered in your current install. The repository currently provides these options:
+`uv run python run_sample.py --help` lists the environments discovered in your current install. The repository currently provides these options:
 
 - **Benchmarks**: `ant`, `ant_full_observation`, `ant_no_contact`,
   `ant_rotation_vector`, `cart_pole`, `cart_pole_actuate_on_pole`, `half_cheetah`,
@@ -114,7 +114,13 @@ These are the options for `--action_sampler`:
 
 ## 2. `run_with_gymnasium_vectorization.py`
 
-**Demonstrates parallel environment execution using vectorization wrappers.**
+**Run multiple environments in parallel through a vectorized API.**
+
+Run the script with:
+
+```bash
+uv run python run_with_gymnasium_vectorization.py
+```
 
 This script shows how to run multiple SuperDex Gym environments in parallel using
 the `HybridVectorEnv` wrapper, which combines asynchronous and synchronous
@@ -146,12 +152,6 @@ Notice also that the script passes a list of seeds to `env.reset()` to seed each
 
 For timing and throughput numbers, use [`benchmark.py`](./benchmarking.md) instead; this
 script has no timing, FPS or profiler code.
-
-Run it with:
-
-```bash
-uv run --no-sync python run_with_gymnasium_vectorization.py
-```
 
 ### Configuration
 
@@ -201,7 +201,7 @@ env = CartPoleEnv(CartPoleEnvCfg(control_frequency=25, simulation_frequency=50))
 See [Creating Custom Environments](./environments.mdx) for the full configuration
 surface.
 
-## Other Tools
+## Related Tools and Modules
 
 Beyond the scripts above for running an environment, these tools and support modules are available under `superdex_lab/apps/`:
 

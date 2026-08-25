@@ -4,157 +4,101 @@ title: Visualizing Training History
 
 # Visualizing Training History
 
-`apps/rllib/visualize_training_history.py` stitches the per-checkpoint rollout
-videos from a Ray Tune trial into a single labelled montage, so you can watch a
-policy improve from its first checkpoint to its last in one clip.
-
-After `uv sync --extra core` and the training-stack installs from
-[Installation and Setup](./setup.md):
-
-```bash
-cd superdex_lab/apps/rllib
-uv run --no-sync python visualize_training_history.py ~/ray_results/PPO/cart_pole_a1b2c3d4 --num_videos 8
-```
-
-By default this writes `<trial_dir>/training_history.mp4`.
-
-![Four frames from a training-history montage, labelled iter=10, 250, 500 and 750, showing a robot hand's grasp on a cube improving as training progresses](/img/superdex_gym/training_history_montage.png)
-
-The montage above shows rendered frames from four checkpoints during policy training on
-an in-hand manipulation task.
+`apps/rllib/visualize_training_history.py` combines per-checkpoint rollout videos
+from one Ray Tune trial into a labeled montage that shows how the policy changed
+during training.
 
 ## Prerequisites
 
-The tool reads and writes video with `imageio`'s FFmpeg plugin and draws its labels
-with Pillow. Both arrive from `uv.lock` with `uv sync --extra core`, but `moviepy`
-— installed alongside Ray — caps Pillow below 12, so keep `pillow>=10.1` in the
-training-stack install listed in [Installation and Setup](./setup.md), which
-carries the pinned versions. Pillow 10.1 is the floor because the label uses
-`ImageFont.load_default(size=...)`.
+Install the core and training dependencies with `uv sync --extra core` and the
+training-stack commands in [Installation and Setup](./setup.md).
 
-The input is the per-checkpoint videos written by `CheckpointVideoGeneratorCallback`
-during training — see [Training with Ray/RLlib](./rllib.md#checkpointvideogeneratorcallback).
-Checkpoint videos are **off by default**; pass `--video_on_checkpoint` to
-`train_samples.py` and each `checkpoint_*/` directory gets a `video_000.mp4` and a
-`video_labels.json`. The renderer has to be available too — if it is not,
-`train_samples.py` warns and drops video generation.
-
-## Input and output
-
-| Flag | Default | Meaning |
-| --- | --- | --- |
-| `trial_dir` | — | **Required positional.** The Ray Tune trial directory holding the `checkpoint_<n>` subdirectories and the training metadata (`result.json` or `progress.csv`). |
-| `--video_name` | `video_000.mp4` | Name of the rollout video to read from each checkpoint directory |
-| `--output` | `<trial_dir>/training_history.mp4` | Output path |
-| `--fps` | source frame rate | Output frame rate; resamples every clip |
-
-Note that `trial_dir` is the **trial** directory — the one containing
-`params.json`, `progress.csv` and the `checkpoint_*` directories — not an individual
-checkpoint.
-
-## Choosing which checkpoints to show
-
-| Flag | Default | Meaning |
-| --- | --- | --- |
-| `--num_videos` | — | **Required.** Number of checkpoints to sample. Clamped to the number available. |
-| `--schedule` | `linear` | `linear` spaces samples evenly; `exponential` concentrates them on early training |
-| `--base` | `2.0` | Curvature of the exponential schedule. Must be `> 1`; larger values front-load more heavily. Ignored for `linear`. |
-
-Both schedules always include the final checkpoint. `exponential` is usually the
-better choice for a long run, because most of the visible change happens early.
-
-Duplicate indices are resolved by bumping forward to the next unused checkpoint, and
-every remaining sample has an index slot reserved before rounding, so you always get
-the number of clips you asked for. When the schedule cannot distinguish them, the
-front of an `exponential` montage degenerates to consecutive checkpoints.
-
-## Backfilling missing videos
-
-If you trained without `--video_on_checkpoint`, which is the default, or the renderer
-was unavailable at training time, the checkpoints have no videos. By default a missing
-video is a hard error:
-
-```
-FileNotFoundError: Selected checkpoint is missing video_000.mp4: <checkpoint>
-```
-
-`--generate_missing` instead shells out to `run_inference.py` for that checkpoint and
-renames the resulting `inference_000.mp4` into place.
-
-| Flag | Default | Meaning |
-| --- | --- | --- |
-| `--generate_missing` | off | Generate a video by running inference instead of failing |
-| `--inference_episodes` | `1` | Episodes to roll out; the first episode's clip is used |
-| `--explore_during_inference` | off | Use the exploration forward pass when generating |
-
-Backfilling runs inference in a subprocess, which keeps torch, Ray and the physics
-engine out of the compositing tool's own process — but they still have to be
-installed, since the subprocess is `run_inference.py`. It also needs a working
-renderer; if inference produces nothing, the tool reports that the renderer may be
-unavailable.
-
-## Appearance
-
-| Flag | Default | Meaning |
-| --- | --- | --- |
-| `--speed` | `1.0` | Playback speed multiplier, applied before other transforms |
-| `--text_height_pct` | `5.0` | Label font size, as a percentage of frame height |
-| `--margin_pct` | `3.0` | Label inset from the frame edges, as a percentage of frame height |
-| `--text_location` | `bottom-left` | One of `bottom-left`, `bottom-right`, `top-left`, `top-right`, `center` |
-| `--font_color` | white | Any name or hex string PIL accepts, e.g. `'#ff0000'` |
-| `--font_path` | PIL's built-in font | A TrueType font file |
-| `--head_seconds` | `1.0` | Hold each clip's first frame before it plays |
-| `--tail_seconds` | `1.0` | Hold each clip's last frame after it plays |
-| `--transition_seconds` | `0.5` | Crossfade between consecutive clips |
-
-:::note
-`--transition_seconds` must not exceed `--head_seconds` or `--tail_seconds`, so the
-blend only ever covers frozen frames and never cuts into the action.
-:::
-
-## How clips are labelled
-
-Each clip is captioned `iter=<training_iteration>, timestep=<num_env_steps>`, with
-the timestep in two-significant-digit scientific notation — e.g.
-`iter=250, timestep=1.02e+06`. The numbers come from one of two sources, in order:
-
-1. **`video_labels.json`**, the sidecar `CheckpointVideoGeneratorCallback` writes
-   next to each video. This is authoritative when present, and the two files
-   deliberately share the same filename constant.
-2. **A timestamp match** against the trial's `result.json` (or `progress.csv`),
-   using the checkpoint's write time. The write time is taken from
-   `rllib_checkpoint.json` if present, then `algorithm_state.pkl`, then the
-   directory's own mtime.
-
-The fallback has a **300-second tolerance**. If the nearest training result is
-further away than that, the tool refuses to guess:
-
-```
-Cannot reliably label <checkpoint>: the nearest training result is <N>s from the
-checkpoint's write time (tolerance 300s) and no video_labels.json sidecar is
-present. Regenerate the checkpoint videos to write a sidecar.
-```
-
-Backfilled videos are the common way to hit this — writing a video into a checkpoint
-directory bumps its mtime, decoupling it from the original training timestamp. The
-fix is to regenerate the checkpoint videos so the sidecar exists.
-
-## Worked example
-
-Train CartPole, checkpointing often so there is something to watch. The
-`--video_on_checkpoint` flag is required: without it no checkpoint contains a video
-and the montage command below fails with the `FileNotFoundError` shown above. The
-renderer must be available as well.
+Checkpoint videos are off by default. Pass `--video_on_checkpoint` to
+`train_samples.py` to write `video_000.mp4` and `video_labels.json` in each
+`checkpoint_*/` directory. The renderer must also be available. For example:
 
 ```bash
-uv run --no-sync python train_samples.py --pattern "cart_pole" --checkpoint_freq 2 --video_on_checkpoint
+cd superdex_lab/apps/rllib
+uv run --no-project python train_samples.py \
+  --pattern "cart_pole" --checkpoint_freq 2 --video_on_checkpoint
 ```
 
-Then build a 10-clip montage weighted toward early training, at half speed, with a
-larger red label in the top-left:
+If the selected checkpoints do not contain videos, the visualization command can
+generate them with `--generate_missing`.
+
+See
+[CheckpointVideoGeneratorCallback](./rllib.md#checkpointvideogeneratorcallback)
+for the training callback details.
+
+## Inputs
+
+Provide the Ray Tune trial directory as `trial_dir`, not an individual checkpoint.
+It contains the `checkpoint_*` directories and normally `params.json`. Each selected
+checkpoint must contain the file named by `--video_name`, which defaults to
+`video_000.mp4`, unless you use `--generate_missing`; generating videos also requires
+the trial's `params.json`.
+
+Labels use `video_labels.json` when present. Otherwise, the tool matches the
+checkpoint write time against `result.json`, or against `progress.csv` when
+`result.json` is absent. One of those metadata files is required only when a
+selected checkpoint lacks a readable label sidecar.
+
+## Run the visualization
+
+Use `superdex_lab/apps/rllib` as the working directory:
 
 ```bash
-uv run --no-sync python visualize_training_history.py \
+cd superdex_lab/apps/rllib
+uv run python visualize_training_history.py \
+  ~/ray_results/PPO/cart_pole_a1b2c3d4 --num_videos 8
+```
+
+The command samples up to eight checkpoints with the default `linear` schedule and
+always includes the final checkpoint.
+
+## Output
+
+By default, the montage is written to
+`<trial_dir>/training_history.mp4`. Use `--output` to choose another path; the
+tool creates missing parent directories. Each clip is labeled
+`iter=<training_iteration>, timestep=<num_env_steps>`, for example
+`iter=250, timestep=1.02e+06`.
+
+![Four frames from a training-history montage, labeled iter=10, 250, 500 and 750, showing a robot hand's grasp on a cube improving as training progresses](/img/superdex_gym/training_history_montage.png)
+
+## Options
+
+### Input and selection
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `trial_dir` | required | Ray Tune trial directory containing `checkpoint_<number>` directories. |
+| `--num_videos` | required | Number of checkpoints to sample. Clamped to the number available. |
+| `--schedule` | `linear` | `linear` spaces checkpoints evenly; `exponential` concentrates samples on early training. Both include the final checkpoint. |
+| `--base` | `2.0` | Curvature for `exponential`; must be greater than `1`. Larger values put more samples early. Ignored for `linear`. |
+| `--video_name` | `video_000.mp4` | Rollout video filename to read from each selected checkpoint. |
+| `--output` | `<trial_dir>/training_history.mp4` | Output video path. |
+| `--fps` | source frame rate | Output frame rate; each clip is resampled when set. Without it, all source videos must have the same frame rate. |
+
+### Appearance
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--speed` | `1.0` | Playback speed multiplier applied before other transforms. |
+| `--text_height_pct` | `5.0` | Label font size as a percentage of frame height. |
+| `--margin_pct` | `3.0` | Label inset from frame edges as a percentage of frame height. |
+| `--text_location` | `bottom-left` | `bottom-left`, `bottom-right`, `top-left`, `top-right`, or `center`. |
+| `--font_color` | white | Any color name or hex string accepted by PIL, such as `'#ff0000'`. |
+| `--font_path` | PIL's built-in font | TrueType font file to use instead. The built-in scalable font requires Pillow 10.1 or newer. |
+| `--head_seconds` | `1.0` | Seconds to hold each clip's first frame before playback. |
+| `--tail_seconds` | `1.0` | Seconds to hold each clip's last frame after playback. |
+| `--transition_seconds` | `0.5` | Crossfade duration between clips. It must not exceed `--head_seconds` or `--tail_seconds`. |
+
+For example, create a 10-clip montage weighted toward early training, at half
+speed, with a larger red label in the top-left:
+
+```bash
+uv run python visualize_training_history.py \
   ~/ray_results/PPO/cart_pole_a1b2c3d4 \
   --num_videos 10 \
   --schedule exponential --base 3.0 \
@@ -162,3 +106,32 @@ uv run --no-sync python visualize_training_history.py \
   --text_height_pct 8 --text_location top-left --font_color '#ff0000' \
   --output ./cart_pole_history.mp4
 ```
+
+## Missing Videos and Label Fallback
+
+By default, a selected checkpoint without `video_000.mp4`, or the filename set by
+`--video_name`, stops with:
+
+```text
+FileNotFoundError: Selected checkpoint is missing video_000.mp4: <checkpoint>
+```
+
+Use `--generate_missing` to run `run_inference.py` for each missing video. The
+inference subprocess writes `inference_000.mp4`, which the tool renames to the
+requested `--video_name`. This fallback requires the training dependencies and a
+working renderer.
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--generate_missing` | off | Run inference instead of failing when a selected checkpoint has no video. |
+| `--inference_episodes` | `1` | Number of episodes to roll out; the first episode's clip is used. Only applies with `--generate_missing`. |
+| `--explore_during_inference` | off | Use the exploration policy while generating missing videos. Only applies with `--generate_missing`. |
+
+When `video_labels.json` is absent or unreadable, label resolution falls back to
+timestamp matching against the trial metadata. The maximum accepted difference is
+300 seconds. If neither `result.json` nor `progress.csv` exists, or the closest
+result is more than 300 seconds away, the tool stops instead of assigning an
+unreliable label.
+
+All selected videos must have the same frame dimensions. Use `--fps` to normalize
+different source frame rates before the clips are joined.

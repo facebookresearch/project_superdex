@@ -16,52 +16,89 @@ ignores any per-environment settings under the recipe's `ppo` key and uses the s
 shared SAC algorithm configuration for every environment.
 :::
 
-## Where the scripts live and how to run them
+## Quickstart
 
-All paths are relative to the `superdex_lab` project root:
+### Dependency requirements
+
+After `uv sync --extra core`, install the supported training dependencies from the
+`project_superdex` root:
+
+```bash
+uv pip install torch==2.7.1 --extra-index-url https://download.pytorch.org/whl/cpu
+uv pip install "ray[rllib]==2.49.0" "moviepy" "pillow>=10.1" "tensorboard"
+```
+
+Run training commands below with `uv run --no-project`. Inference and visualization
+use plain `uv run`. See
+[Dependencies for apps](./setup.md#dependencies-for-apps).
+
+### Working directory
+
+All paths in this guide are relative to the `superdex_lab` project root. Change to the
+RLlib application directory before running the training and inference commands:
+
+```bash
+cd superdex_lab/apps/rllib
+```
+
+`train_samples.py` and `run_inference.py` use bare sibling imports such as
+`from callbacks import ...` and `from utils import ...`. Running either script by path
+from the project root also works because Python adds the script's directory to
+`sys.path`. Package imports and `python -m` execution are unsupported because the
+scripts provide no import fallback. `visualize_training_history.py` has no sibling
+imports and runs from any directory.
+
+### Minimum training run
+
+Run one CartPole PPO iteration with one environment runner:
+
+```bash
+uv run --no-project python train_samples.py \
+  --pattern "cart_pole" --num_env_runners 1 --max_iterations 1
+```
+
+A successful run creates a Tune trial named `cart_pole_<trial_id>` under
+`~/ray_results/PPO/`, writes `params.json` and training logs in that trial directory,
+and writes a final `checkpoint_*` directory. The console reports training progress
+and exits after the first iteration. The final checkpoint is always written even when
+the configured checkpoint frequency has not elapsed.
+
+### Minimum inference run
+
+Pass the absolute path to the generated `checkpoint_*` directory, not its parent trial
+directory:
+
+```bash
+uv run python run_inference.py /path/to/checkpoint
+```
+
+The checkpoint must be a valid RLlib checkpoint with policy weights under
+`learner_group/learner/rl_module/<DEFAULT_MODULE_ID>/`. Its parent trial directory
+must contain `params.json`; pointing the command at the trial directory or another
+level fails. The script uses Ray's `DEFAULT_MODULE_ID` constant instead of a literal
+module name.
+
+A successful default inference run opens an interactive Polyscope window, runs 10
+episodes, prints each episode's return and completion reason, and reports the completed
+episode count. It does not initialize Ray. Add `--video` to record MP4 files instead
+of using the default `"human"` render mode.
+
+## Script locations and runtime behavior
 
 | Script | Location | Purpose |
 | --- | --- | --- |
 | `train_samples.py` | `apps/rllib/train_samples.py` | Train one or more environments |
 | `run_inference.py` | `apps/rllib/run_inference.py` | Roll out a trained checkpoint |
 | `visualize_training_history.py` | `apps/rllib/visualize_training_history.py` | Stitch checkpoint videos into a montage |
-| `callbacks/` | `apps/rllib/` | Supporting package |
 
-`train_samples.py` and `run_inference.py` import their
-siblings by bare name (`from callbacks import ...`, `from utils import ...`).
-Python puts the *script's own directory* on `sys.path`, so
-invoking them by path from the project root works; `cd`-ing into `apps/rllib/` first is
-the convention used throughout these docs. Importing them as a package or running
-`python -m` is what would need a fallback, and neither has one.
-`visualize_training_history.py` has no sibling imports and runs from any directory.
-
-```bash
-cd superdex_lab/apps/rllib
-```
-
-Use `uv run --no-sync` under `apps/rllib/`, as RLlib has different dependency
-versioning. See [Installation and Setup](./setup.md#dependencies-for-apps).
-
-### Ray version
-
-Ray is **not** a declared dependency of `superdex-lab` — `pyproject.toml` lists only
-`gymnasium`, `h5py`, `numpy` and the two SuperDex packages, so nothing under
-`apps/rllib/` runs after a plain install. Install it yourself, at
-**`ray[rllib]==2.49.0`**; [Installation and Setup](./setup.md) gives the full command.
-RLlib's API churns
-hard between releases — the new API stack (`RLModule`, `EnvRunner`, `Learner`) that
-these scripts target is not source-compatible with older Ray. Note that installing
-`ray[rllib]` may move your `gymnasium` version.
-
-`train_samples.py` calls a bare `ray.init()`; `run_inference.py` does not initialise Ray
-at all. There
-is no `--ray-address` flag; to attach `train_samples.py` to an existing cluster, set the
-`RAY_ADDRESS` environment variable, which Ray reads itself.
+`train_samples.py` calls a bare `ray.init()`. It has no `--ray-address` option. To
+attach it to an existing cluster, set the `RAY_ADDRESS` environment variable; Ray
+reads that variable directly. `run_inference.py` does not initialize Ray.
 
 ### Training a custom environment
 
-`train_samples.py` trains what environment discovery finds. To train an environment
-of your own from your own script, register it with Ray Tune first:
+Environment discovery determines what `train_samples.py` trains. A separate custom
+training script must register its environments with Ray Tune first:
 
 ```python
 from utils import register_envs
@@ -69,17 +106,17 @@ from utils import register_envs
 register_envs()
 ```
 
-`register_envs()` calls `register_all_envs()` to populate the Gymnasium registry,
-then registers each id with Tune. It fans out whatever is in the Gymnasium registry
-at the moment it is called, so register your own environment with Gymnasium first.
-The indirection matters: RLlib does not pass its `env_config` to a Gymnasium
-environment's constructor correctly on its own, and the two
-families of environment need different handling. For a `superdex_gym/*` id — every
-environment `train_samples.py` trains — the wrapper **merges** the RLlib `env_config`
-over the `cfg` defaults registered on the Gymnasium spec and passes the result as a
-single `cfg=` mapping, so a variant's defaults survive and are overridden key by key.
-For any other Gymnasium id the wrapper splats the config dict into constructor keyword
-arguments instead.
+Register a custom environment with Gymnasium before calling `register_envs()`.
+`register_envs()` first calls `register_all_envs()` to populate the Gymnasium registry,
+then registers every Gymnasium ID currently in that registry with Tune.
+
+The wrapper handles the two environment families differently because RLlib does not
+pass `env_config` to a Gymnasium environment constructor correctly by itself. For
+`superdex_gym/*` IDs, including every environment selected by `train_samples.py`, the
+wrapper merges the RLlib `env_config` over the `cfg` defaults on the Gymnasium spec.
+It passes the merged values as one `cfg=` mapping, preserving variant defaults unless
+a matching key overrides them. For every other Gymnasium ID, the wrapper expands the
+config dictionary into constructor keyword arguments.
 
 ## Scripts Overview
 
@@ -95,7 +132,7 @@ the discovered environments, skips test-only variants, and keeps those that ship
 `<env_module>[_<variant>].train.json` recipe next to their module. **Config variants
 are trainable too**, each from its own recipe - a variant does *not* inherit the base
 environment's recipe, and a base environment is not trainable unless it has a recipe
-of its own. In an open-source build the trainable set is:
+of its own. The included trainable set is:
 
 | CLI name | Gymnasium ID | Recipe |
 | --- | --- | --- |
@@ -103,11 +140,11 @@ of its own. In an open-source build the trainable set is:
 | `cart_pole` | `superdex_gym/CartPole-v0` | `benchmarks/cartpole_env.train.json` |
 | `half_cheetah` | `superdex_gym/HalfCheetah-v0` | `benchmarks/halfcheetah_env.train.json` |
 
-Note that the base `ant` environment is registered but not
-trainable: no recipe is named after its module. (`cart_pole` and `half_cheetah` *are*
-base environments, trained from base-module recipes; only `ant_no_contact` is a variant.)
+The registered base `ant` environment is not trainable because no recipe is named
+after its module. The `cart_pole` and `half_cheetah` entries are trainable base
+environments with base-module recipes; only `ant_no_contact` is a variant.
 
-All three recipes train from a public checkout — the assets they need ship with it.
+All three recipes use assets included in the checkout.
 
 **Features:**
 
@@ -121,33 +158,33 @@ All three recipes train from a public checkout — the assets they need ship wit
 
 ```bash
 # Train all trainable environments with PPO (default).
-uv run --no-sync python train_samples.py
+uv run --no-project python train_samples.py
 
 # Train specific environments using patterns.
-uv run --no-sync python train_samples.py --pattern "cart_pole"
-uv run --no-sync python train_samples.py --pattern "*cheetah*"
+uv run --no-project python train_samples.py --pattern "cart_pole"
+uv run --no-project python train_samples.py --pattern "*cheetah*"
 
 # Train with a custom configuration.
-uv run --no-sync python train_samples.py --num_env_runners 64 --checkpoint_freq 5
+uv run --no-project python train_samples.py --num_env_runners 64 --checkpoint_freq 5
 
 # Experimental SAC run on CartPole, limited to one training iteration.
 # This checks the training path, not learning or convergence.
-uv run --no-sync python train_samples.py --algorithm SAC --pattern "cart_pole" --max_iterations 1
+uv run --no-project python train_samples.py --algorithm SAC --pattern "cart_pole" --max_iterations 1
 
 # Train selected environments with video recording enabled (off by default)
-uv run --no-sync python train_samples.py --pattern "ant*" --video_on_checkpoint --output_path ./benchmark_results
+uv run --no-project python train_samples.py --pattern "ant*" --video_on_checkpoint --output_path ./benchmark_results
 
 # High-throughput training for benchmarking
-uv run --no-sync python train_samples.py --num_env_runners 128 --checkpoint_freq 20
+uv run --no-project python train_samples.py --num_env_runners 128 --checkpoint_freq 20
 ```
 
 :::caution `--pattern` matches CLI short names
-Patterns are matched with `fnmatch` against the snake_case short names. `"cartpole"`
-and `"halfcheetah"` match nothing, and neither does `"ant"` — the trainable ant entry
-is `ant_no_contact`, and `fnmatch` is not a prefix match. The script then prints
-`No samples to train, exitting...` and exits with a non-zero status rather than
-failing loudly. Use `"cart_pole"` / `"half_cheetah"`, or a glob such as `"cart*"` /
-`"ant*"`.
+Patterns use `fnmatch` against the snake_case short names. Use `"cart_pole"` /
+`"half_cheetah"`, or a glob such as `"cart*"` / `"ant*"`. The names `"cartpole"` and
+`"halfcheetah"` match nothing. The name `"ant"` also matches nothing because the
+trainable ant entry is `ant_no_contact` and `fnmatch` is not a prefix match. With no
+matches, the script prints `No samples to train, exitting...` and exits with a
+non-zero status.
 :::
 
 **Command-line Options:**
@@ -172,23 +209,23 @@ failing loudly. Use `"cart_pole"` / `"half_cheetah"`, or a glob such as `"cart*"
 
 ```bash
 # Basic inference with a trained checkpoint.
-uv run --no-sync python run_inference.py /path/to/checkpoint
+uv run python run_inference.py /path/to/checkpoint
 
 # Use the exploration forward pass.
-uv run --no-sync python run_inference.py /path/to/checkpoint --explore_during_inference
+uv run python run_inference.py /path/to/checkpoint --explore_during_inference
 
 # Record videos of inference episodes.
-uv run --no-sync python run_inference.py /path/to/checkpoint --video
+uv run python run_inference.py /path/to/checkpoint --video
 
 # Custom number of episodes and video path.
-uv run --no-sync python run_inference.py /path/to/checkpoint --num_episodes 20 --video_path ./inference_videos
+uv run python run_inference.py /path/to/checkpoint --num_episodes 20 --video_path ./inference_videos
 ```
 
 **Command-line Options:**
 
 | Option | Default | Notes |
 | --- | --- | --- |
-| `checkpoint_path` | — | **Required positional.** The checkpoint directory. |
+| `checkpoint_path` | — | **Required.** Path to the checkpoint directory. |
 | `--num_episodes` | `10` | |
 | `--explore_during_inference` | off | Samples stochastically from the exploration distribution instead of taking the greedy action. |
 | `--video` | off | Renders offscreen and records MP4 files |
@@ -256,17 +293,8 @@ does not is skipped. This is how you make your own environment trainable by
 ```
 
 A recipe holds training settings only. The top-level observation normalization is
-algorithm-independent, but the per-environment algorithm overrides are PPO-only.
+algorithm-independent, while the per-environment algorithm overrides are PPO-only.
 The bundled stop criteria were selected for PPO and have not been validated for SAC.
-Unknown keys are **rejected, not ignored** — at
-the top level and inside `stop_criteria`, an unrecognised key raises `ValueError`
-naming the offending key and the supported set, on every run. The checks *inside* the
-`ppo` block are different: they run **only under `--algorithm PPO`**, because the whole
-`ppo` section is skipped under SAC. An unrecognised key inside `ppo` therefore raises
-under PPO and trains silently under SAC. An `env_config` section is a hard error in its
-own right, under either algorithm (see [Environment File
-Naming](#environment-file-naming)).
-
 The environment configuration RLlib receives comes from the entry's *config variant*
 JSON, never from the recipe. `train_samples.py` injects `profile` and
 `dump_timings_to_info` into it from `--profile`.
@@ -275,19 +303,28 @@ JSON, never from the recipe. `train_samples.py` injects `profile` and
 | --- | --- |
 | `description` | Human-readable only. The training script never reads it. |
 | `normalize_observations` | When `true`, installs an RLlib `MeanStdFilter` environment-to-module connector for each environment runner. This is algorithm-independent and applies to both PPO and SAC. |
-| `stop_criteria` | Two keys are recognised: `episode_return_mean` maps to RLlib's `env_runners/episode_return_mean`, and `num_env_steps_sampled_lifetime` maps to the metric of the same name. Any other key raises `ValueError`. `--max_iterations` adds a `training_iteration` stop on top. |
-| `ppo` | Overrides layered onto `default_ppo_config`. `ppo["env_runners"]` and `ppo["training"]` are splatted into the corresponding RLlib config calls; the only other accepted key is `train_batch_size_per_runner`, which is not an RLlib setting — the script multiplies it by `--num_env_runners` and writes the product to `train_batch_size`. Setting both `ppo.training.train_batch_size` and `ppo.train_batch_size_per_runner` raises `ValueError`, because they configure the same value; under SAC the `ppo` block is not read at all, so the clash is not detected. |
+| `stop_criteria` | Two keys are recognised: `episode_return_mean` maps to RLlib's `env_runners/episode_return_mean`, and `num_env_steps_sampled_lifetime` maps to the metric of the same name. `--max_iterations` adds a `training_iteration` stop on top. |
+| `ppo` | PPO overrides layered onto `default_ppo_config`. `ppo["env_runners"]` and `ppo["training"]` are splatted into the corresponding RLlib config calls. The only other accepted key is `train_batch_size_per_runner`, which is not an RLlib setting: the script multiplies it by `--num_env_runners` and writes the product to `train_batch_size`. |
 
-:::warning Two properties of the recipe mechanism
-- **A recipe is scoped to exactly one entry.** A variant does not inherit its base
-  module's recipe, and a base env does not pick up a variant's. Point the recipe at
-  the entry you mean by naming it `<module>.train.json` or
-  `<module>_<variant>.train.json`.
-- **The `ppo` block is ignored under SAC.** `--algorithm SAC` uses
-  `default_sac_config` for every environment with no per-environment overrides at
-  all. Because the block is never read, neither is it validated: a misspelled key or
-  a doubled batch size inside `ppo` is an error under PPO and a silent no-op under
-  SAC.
+:::warning Recipe scope and validation
+A recipe is scoped to exactly one entry. A variant does not inherit its base module's
+recipe, and a base environment does not pick up a variant's recipe. Name the target
+recipe `<module>.train.json` or `<module>_<variant>.train.json`.
+
+Under both PPO and SAC, an unrecognised top-level key or `stop_criteria` key raises
+`ValueError` naming the offending key and the supported set. An `env_config` section
+also raises under both algorithms; environment configuration belongs in a config
+variant (see [Environment File Naming](#environment-file-naming)).
+
+Under `--algorithm PPO`, the `ppo` block is applied and validated. An unrecognised key
+inside it raises `ValueError`. Setting both `ppo.training.train_batch_size` and
+`ppo.train_batch_size_per_runner` also raises `ValueError` because both configure
+`train_batch_size`.
+
+Under `--algorithm SAC`, the entire `ppo` block is ignored and not validated.
+`default_sac_config` supplies every environment's settings without per-environment
+overrides. Consequently, a misspelled key or both batch-size settings inside `ppo`
+produce a silent no-op under SAC, although each is an error under PPO.
 :::
 
 ## Environment File Naming
@@ -297,8 +334,8 @@ decides which:
 
 | Filename | Meaning |
 | --- | --- |
-| `<name>_env.py` | Env module. Its `MochiEnv` subclass becomes a Gymnasium id (`AntEnv` &rarr; `superdex_gym/Ant-v0`, short name `ant`) |
-| `<module>_<variant>.json` | Gym config variant &mdash; **the only place env configuration may live**. Registered as its own id and short name (`ant_env_no_contact.json` &rarr; `superdex_gym/AntNoContact-v0`, short name `ant_no_contact`) |
+| `<name>_env.py` | Env module. Its `MochiEnv` subclass becomes a Gymnasium ID (`AntEnv` &rarr; `superdex_gym/Ant-v0`, short name `ant`) |
+| `<module>_<variant>.json` | Gym config variant &mdash; **the only place env configuration may live**. Registered as its own Gymnasium ID and short name (`ant_env_no_contact.json` &rarr; `superdex_gym/AntNoContact-v0`, short name `ant_no_contact`) |
 | `<module>.<kind>.json` | Usage recipe for the base env, where `<kind>` is `train` or `benchmark`. A `train` recipe **may not configure the environment** |
 | `<module>_<variant>.<kind>.json` | Usage recipe for that variant. A variant deliberately does *not* inherit the base env's recipe |
 
@@ -318,10 +355,10 @@ Because training recipes may not configure the environment, every configuration 
 trained is also a named, runnable, smoke-tested environment. Training fails loudly if a
 `train` recipe contains an `env_config` section.
 
-(`benchmark` recipes are the exception: they carry an `env_cfg` measurement baseline,
-read by name through `load_env_config` rather than by the training script. No
-open-source environment ships one; the worker-sweep script `apps/envs/benchmark.py`
-does not read these recipes either.)
+Unlike `train` recipes, `benchmark` recipes carry an `env_cfg` measurement baseline.
+`load_env_config` reads those recipes by name; the training script and the worker-sweep
+script `apps/envs/benchmark.py` do not read them. None of the included environments
+ships a `benchmark` recipe.
 
 ## General Usage Notes
 
@@ -424,12 +461,12 @@ directory.
 
 - Console output with episode returns and completion reasons
 - MP4 files if recording is enabled
-- Summary statistics across inference episodes
+- Completed episode count
 
 ### Debug options
 
 - Ray dashboard at `http://localhost:8265` for cluster monitoring.
-- TensorBoard: `uv run --no-sync tensorboard --logdir ~/ray_results` (or your
+- TensorBoard: `uv run tensorboard --logdir ~/ray_results` (or your
   `--output_path`). Nothing installs the `tensorboard` command — `ray[rllib]`
   brings `tensorboardx`, which writes the event files but does not read them — so
   `uv pip install tensorboard` first.
@@ -444,10 +481,11 @@ callback attached to the tuner.
 
 ### `LogRewardAndInfoCallbacks`
 
-**Detailed episode statistics logging.** An RLlib `DefaultCallbacks` subclass,
-attached to the algorithm config. It hooks `on_episode_end` only.
+**Detailed episode statistics logging for PPO only.** This RLlib `DefaultCallbacks`
+subclass is attached to the PPO algorithm config and hooks `on_episode_end` only. SAC
+uses RLlib's stock `DefaultCallbacks`, so the metrics below do not appear in a SAC run.
 
-At the end of each episode it emits four families of metric, each the mean or
+At the end of each episode, it emits four metric families. Each reports a mean or
 standard deviation **over the steps of that episode**:
 
 | Metric | Meaning |
@@ -466,9 +504,6 @@ Enabling `--profile` also switches on `dump_timings_to_info`, which adds a
 `timings/*` family to `info` and therefore a corresponding set of
 `info_timings/*_mean` series. That is a lot of extra metrics; turn it off once you
 have the numbers you wanted.
-
-**Attached for PPO only.** SAC uses RLlib's stock `DefaultCallbacks`, so none of the
-above appears in a SAC run.
 
 ### `CheckpointVideoGeneratorCallback`
 
@@ -531,14 +566,13 @@ initializing OpenGL/EGL in the child segfaults. This also means the rollout
 environments are constructed fresh, with `render_mode` forced to `"rgb_array"`.
 :::
 
-The sidecar and the TensorBoard logging are both best-effort: Ray runs
-`on_checkpoint` before the checkpoint is registered, so failures **in those two
-helpers** are logged and swallowed rather than aborting training. That does not
-extend to the rest of the callback — `on_checkpoint` itself has no `try`/`except`, so
-a failure loading the module, rendering the rollout or writing the animations
-propagates. If either metric is unavailable the sidecar
-is skipped entirely rather than written with placeholder zeros, which is what lets
-`visualize_training_history.py` fall back to timestamp matching.
+Only the sidecar-writing and TensorBoard-logging helpers are best-effort. Ray runs
+`on_checkpoint` before the checkpoint is registered, so those two helpers log and
+swallow failures instead of aborting training. The rest of `on_checkpoint` has no
+`try`/`except`: failures while loading the module, rendering the rollout, or writing
+the animations propagate. If either metric is unavailable, the sidecar is skipped
+instead of being written with placeholder zeros; `visualize_training_history.py` can
+then fall back to timestamp matching.
 
 **Usage:** both callbacks are wired up by `train_samples.py`:
 

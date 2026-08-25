@@ -7,27 +7,10 @@ title: Environment Class API
 Use this page for the shared runtime API implemented by `MochiEnv`. For the
 shipped environment contracts, see [Examples](./examples.mdx).
 
-:::caution Observations and actions are flattened alphabetically
-`MochiEnv` builds its spaces from a `gymnasium.spaces.Dict`, which **sorts its keys**.
-The flattened vector is therefore the concatenation in **alphabetical key order**, not
-in the order the keys were declared. For `CartPoleEnv` the keys are declared
-`position, vertical_ang, linear_vel, angular_vel` but the vector is
-`[angular_vel, linear_vel, position, vertical_ang]`.
+## Runtime API
 
-This bites anyone hand-slicing an observation, writing a normalizer, or interpreting
-a saved rollout. Use `env.to_structured_observation(obs)` or read
-`env.get_observation_space_structure()` instead of assuming an order.
-:::
-
-:::note Actions are silently clipped
-`step()` clips the incoming action to `action_space.low`/`high` before doing anything
-else. An out-of-range action is not an error and produces no warning.
-:::
-
-## Using an environment
-
-The methods below are for *driving* an environment. For *writing* one, see
-[Creating Custom Environments](./environments.mdx).
+Use these methods to *drive* an environment. To *write* an environment, see
+[Authoring a Custom Environment](./environments.mdx).
 
 ### Gymnasium interface
 
@@ -35,24 +18,38 @@ The methods below are for *driving* an environment. For *writing* one, see
 | --- | --- |
 | `reset(seed=None, options=None)` | Returns `(observation, info)`. Seeds `np_random`, which drives the reset noise. |
 | `step(action)` | Returns `(observation, reward, terminated, truncated, info)`. Clips the action first. |
-| `render()` | Returns an RGB array in `"rgb_array"` mode, and `None` when `render_mode is None`. |
+| `render()` | Returns an RGB array in `"rgb_array"` mode and `None` in `"human"` mode or when `render_mode is None`. |
 | `close()` | Shuts down the renderer and releases the scene. Idempotent. |
 
-`reset`, `step` and `render` raise `gymnasium.error.ClosedEnvironmentError` after
-`close()`.
+After `close()`, `reset`, `step` and `render` raise
+`gymnasium.error.ClosedEnvironmentError`.
 
-`close()` is also called from `__del__` as a best-effort fallback, but relying on
-that is fragile — interpreter shutdown ordering means the Mochi context may already
-be gone. Call `close()` explicitly, or use the environment as a context manager.
+Call `close()` explicitly or use the environment as a context manager. `__del__` also
+calls `close()` as a best-effort fallback, but interpreter shutdown can destroy the context first.
+
+:::note Actions are silently clipped
+`step()` clips each incoming action to `action_space.low`/`high` before any other work.
+Out-of-range actions produce no error or warning.
+:::
 
 ### Spaces and conversion
 
 | Method | Returns |
 | --- | --- |
 | `get_observation_space()` / `get_action_space()` | The flattened `Box`. Equivalent to the attributes, but callable — which matters for Ray remote workers, where attribute access on an actor is not available. |
-| `get_observation_space_structure()` / `get_action_space_structure()` | The un-flattened `spaces.Dict` |
+| `get_observation_space_structure()` / `get_action_space_structure()` | The unflattened `spaces.Dict` |
 | `to_observation(structured)` / `to_structured_observation(flat)` | Convert observations |
 | `to_action(structured)` / `to_structured_action(flat)` | Convert actions |
+
+:::caution Observations and actions are flattened alphabetically
+`MochiEnv` builds its spaces from a `gymnasium.spaces.Dict`, which **sorts its keys**.
+The flattened vector is in **alphabetical key order**, not declaration
+order. E.g. `CartPoleEnv` declares `position, vertical_ang, linear_vel, angular_vel`, but its
+vector is `[angular_vel, linear_vel, position, vertical_ang]`.
+
+Do not assume the ordering when reading a saved rollout. Use `env.to_structured_observation(obs)` or reference
+`env.get_observation_space_structure()`.
+:::
 
 ### Timing and episode state
 
@@ -64,63 +61,63 @@ be gone. Call `close()` explicitly, or use the environment as a context manager.
 | `get_simulation_timestep()` | `1 / simulation_frequency` |
 | `get_control_to_simulation_ratio()` | Substeps per control step |
 | `get_step_count()` | Control steps since the last reset |
-| `get_steps_per_episode()` | The configured truncation limit |
+| `get_steps_per_episode()` | The configured truncation limit; use `-1` for no limit. |
 | `get_episode()` | Episodes started since construction (incremented by `reset()`) |
 | `is_closed()` | Whether `close()` has run |
 
 ### Introspection
 
-`get_last_step()` returns a `StructuredStepResult` named tuple —
-`(action, observation, reward, terminated, truncated, info)` — holding the **structured**
-values from the last step. Note `reward` here is the `RewardTerms` dict, not the
-scalar. After a `reset()`, `action` and `reward` are `None`.
+`get_last_step()` returns a `StructuredStepResult` named tuple containing the
+**structured** values from the last step:
+`(action, observation, reward, terminated, truncated, info)`. Its `reward` value is the
+`RewardTerms` dict, not the scalar. After a `reset()`, `action` and `reward` are `None`.
 
 `get_profiler()` returns the environment's `Profiler`. It is always present; check
 `profiler.enabled`, which follows the `profile` config field.
 
-`get_renderer()` returns the `Viewer`, or `None` when `render_mode is None`.
+`get_renderer()` returns the active `Viewer`, or `None` when rendering is disabled or
+after `close()`.
 
 ### Package exports
 
-`superdex.lab.gym.envs` re-exports the framework types: `MochiEnv`, `MochiEnvCfg`,
+`superdex.lab.gym.envs` re-exports these framework types: `MochiEnv`, `MochiEnvCfg`,
 `VALID_RENDER_MODES`, the deprecated `RenderMode`, and the type aliases `Action`,
 `ActionSpace`, `ActionSpaceStructure`, `Info`, `Observation`, `ObservationSpace`,
 `ObservationSpaceStructure`, `ResetResult`, `RewardTerms`, `StepResult`,
 `StructuredAction`, `StructuredObservation` and `StructuredStepResult`.
 
-Concrete environment classes are **not** re-exported from
-`superdex.lab.gym.envs.benchmarks` or `superdex.lab.gym.envs.robots`; import them from their
-own modules.
+Import concrete environment classes from their own modules. They are **not** re-exported
+from `superdex.lab.gym.envs.benchmarks` or `superdex.lab.gym.envs.robots`.
+Built-in environments are in `envs.benchmarks`; use `envs.robots` for custom robot
+environments.
 
-## Inspecting an environment programmatically
+## Inspecting an environment at runtime
 
-Rather than trusting a table, ask the environment:
+Inspect the configured environment directly:
 
 ```python
 from superdex.lab.gym.envs.benchmarks.cartpole_env import CartPoleEnv, CartPoleEnvCfg
 
-env = CartPoleEnv(CartPoleEnvCfg())
+with CartPoleEnv(CartPoleEnvCfg()) as env:
+    print(env.observation_space.shape)             # (4,)
+    print(env.action_space.low, env.action_space.high)
 
-print(env.observation_space.shape)             # (4,)
-print(env.action_space.low, env.action_space.high)
+    # The structured Dict spaces in flattened alphabetical order.
+    print(env.get_observation_space_structure())
+    print(env.get_action_space_structure())
 
-# The un-flattened Dict spaces, in flattened (alphabetical) order.
-print(env.get_observation_space_structure())
-print(env.get_action_space_structure())
+    obs, info = env.reset(seed=0)
+    print(env.to_structured_observation(obs))      # dict keyed by observation name
 
-obs, info = env.reset(seed=0)
-print(env.to_structured_observation(obs))      # dict keyed by observation name
-
-obs, reward, terminated, truncated, info = env.step(env.action_space.sample())
-print({k: v for k, v in info.items() if k.startswith("reward_")})
+    obs, reward, terminated, truncated, info = env.step(env.action_space.sample())
+    print({k: v for k, v in info.items() if k.startswith("reward_")})
 ```
 
-To enumerate everything your build discovered:
+List every environment available to the CLI in this installation:
 
 ```python
-from superdex.lab.gym.utils.env_discovery import get_env_short_names, register_all_envs
+from superdex.lab.gym.utils.env_discovery import get_env_short_names
 
-register_all_envs()
 for short_name, entry in sorted(get_env_short_names().items()):
     print(f"{short_name:24} {entry.env_id:40} {entry.env_cls.__name__}")
 ```
