@@ -308,7 +308,7 @@ const LAYER_HIGHLIGHTS: readonly LayerHighlight[] = [
       {
         kind: "image",
         slot: "upper",
-        src: layerMedia("studio", "robot_exporter_square.webp"),
+        src: layerMedia("studio", "cad_exporter_square.png"),
         alt: "The SuperDex Robot Configuration Exporter configuring link properties on an OpenArm end effector, with its visual and collision meshes overlaid.",
       },
       {
