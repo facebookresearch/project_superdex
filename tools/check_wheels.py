@@ -13,15 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# PEP 723 inline metadata. The empty dependency list is not a no-op: without a script block,
-# `uv run` treats the surrounding directory as a project and syncs it first, building the
-# editable installs before this script starts. This script imports only the standard library.
-# Auditing a Windows wheel's linkage additionally needs `delvewheel`, but it is run as a
-# subprocess rather than imported, and only for `win_amd64` wheels, so it stays out of the list
-# rather than being installed on the platforms that never reach that check.
+# PEP 723 inline metadata keeps `uv run` from treating the surrounding directory as a project.
+# The static audit checks Windows wheels on every host and invokes `delvewheel` as a subprocess,
+# so it is an execution dependency even though this script does not import it directly.
 # /// script
 # requires-python = ">=3.12"
-# dependencies = []
+# dependencies = ["delvewheel==1.13.0"]
 # ///
 
 """Verify a wheelhouse built by `tools/build_wheels.py`.
