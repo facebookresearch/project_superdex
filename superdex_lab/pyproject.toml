@@ -52,6 +52,5 @@ namespaces = true
 [tool.setuptools.package-data]
 "superdex.lab" = ["py.typed"]
 
-[tool.uv.sources]
-superdex-physics = {workspace = true}
-superdex-robotics = {workspace = true}
+[tool.uv]
+managed = false

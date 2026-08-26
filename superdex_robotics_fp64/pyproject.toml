@@ -41,6 +41,9 @@ classifiers = [
 Homepage = "https://github.com/facebookresearch/project_superdex"
 Repository = "https://github.com/facebookresearch/project_superdex"
 
+[tool.uv]
+managed = false
+
 [tool.scikit-build]
 build-dir = "../build-fp64/{wheel_tag}"
 wheel.packages = ["superdex_robotics_fp64"]

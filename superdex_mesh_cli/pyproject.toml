@@ -40,6 +40,9 @@ classifiers = [
 Homepage = "https://github.com/facebookresearch/project_superdex"
 Repository = "https://github.com/facebookresearch/project_superdex"
 
+[tool.uv]
+managed = false
+
 [tool.scikit-build]
 build-dir = "../build-fp32/{wheel_tag}"
 wheel.packages = ["superdex_mesh_cli"]

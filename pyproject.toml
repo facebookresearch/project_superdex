@@ -29,7 +29,14 @@ dependencies = []
 classifiers = ["Private :: Do Not Upload"]
 
 [project.optional-dependencies]
+build = [
+    "cmake>=3.25",
+    "ninja>=1.5",
+    "scikit-build-core>=0.11",
+]
+
 core = [
+    "superdex-dev[build]",
     "superdex-lab",
     "superdex-physics",
     "superdex-robotics",
@@ -55,14 +62,12 @@ Repository = "https://github.com/facebookresearch/project_superdex"
 [tool.setuptools]
 py-modules = []
 
-[dependency-groups]
-dev = [
-    "cmake>=3.25",
-    "ninja>=1.5",
-    "scikit-build-core>=0.11",
-]
-
 [tool.uv]
+# Wheel users install the published distributions into `.venv` and run the examples
+# from this checkout. Do not replace that environment with the local development
+# project or install source-build tooling unless it is explicitly requested.
+package = false
+
 # The native distributions share one CMake build tree (see `build-dir` in each of their
 # pyproject.toml files) and ninja takes no lock on a build directory. uv builds distributions
 # concurrently by default -- including ones that depend on each other, because a runtime
@@ -82,30 +87,14 @@ no-build-isolation-package = [
     "superdex-studio",
 ]
 
-[tool.uv.workspace]
-# Every distribution in the repo. Without this, uv resolves whatever pyproject.toml is
-# nearest the command -- so running a script inside a distribution roots the resolution
-# there, which then has to satisfy that distribution's own extras from its own sources
-# and fails. Declaring the workspace makes any entry point resolve against one lockfile
-# and one environment, and lets the members below stay in a single place.
-members = [
-    "superdex_lab",
-    "superdex_mesh_cli",
-    "superdex_meta",
-    "superdex_physics_debugger",
-    "superdex_physics_fp64",
-    "superdex_python",
-    "superdex_robotics",
-    "superdex_robotics_fp64",
-    "superdex_studio",
-]
-
 [tool.uv.sources]
-superdex-lab = {workspace = true}
-superdex-mesh-cli = {workspace = true}
-superdex-physics = {workspace = true}
-superdex-physics-debugger = {workspace = true}
-superdex-physics-fp64 = {workspace = true}
-superdex-robotics = {workspace = true}
-superdex-robotics-fp64 = {workspace = true}
-superdex-studio = {workspace = true}
+# Source builds are explicit root-project extras. The component projects are unmanaged
+# so `uv run` never turns a script invocation into an implicit source build.
+superdex-lab = {path = "superdex_lab", editable = true}
+superdex-mesh-cli = {path = "superdex_mesh_cli", editable = true}
+superdex-physics = {path = "superdex_python", editable = true}
+superdex-physics-debugger = {path = "superdex_physics_debugger", editable = true}
+superdex-physics-fp64 = {path = "superdex_physics_fp64", editable = true}
+superdex-robotics = {path = "superdex_robotics", editable = true}
+superdex-robotics-fp64 = {path = "superdex_robotics_fp64", editable = true}
+superdex-studio = {path = "superdex_studio", editable = true}

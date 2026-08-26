@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# PEP 723 inline metadata keeps `uv run` from treating the surrounding directory as a project.
-# The static audit checks Windows wheels on every host and invokes `delvewheel` as a subprocess,
-# so it is an execution dependency even though this script does not import it directly.
+# PEP 723 inline metadata makes this script's empty dependency environment explicit, so
+# running it does not sync whichever uv project contains or invokes it. This script imports
+# only the standard library.
+# Auditing a Windows wheel's linkage additionally needs `delvewheel`, but it is run as a
+# subprocess rather than imported, and only for `win_amd64` wheels, so it stays out of the list
+# rather than being installed on the platforms that never reach that check.
 # /// script
 # requires-python = ">=3.12"
 # dependencies = ["delvewheel==1.13.0"]
