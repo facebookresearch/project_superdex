@@ -19,14 +19,13 @@ SuperDex CAD Exporter is a heavily-modified fork of the original [Solidworks to 
 
 ## Installation
 
-As we currently do not distribute installation binaries, please follow the building instructions found in the [README of the repository](https://github.com/facebookresearch/project_superdex/tree/main/superdex_studio/superdex_cad_exporter) before installation.
-
 ### SolidWorks
 
-1. Make sure SolidWorks is closed before starting.
-2. If you have the original Solidworks to URDF Exporter installed, please uninstall it first. (Add or remove programs → SolidWorks To URDF)
-3. Run the installer and go through the prompts.
-4. After installation, the next time you launch SolidWorks and open an Assembly, there should now be a **Robotics** tab in your ribbon bar.
+1. Download the installer from the latest release on the [Release page](https://github.com/facebookresearch/project_superdex/releases).
+2. Make sure SolidWorks is closed before starting.
+3. If you have the original Solidworks to URDF Exporter installed, please uninstall it first. (Add or remove programs → SolidWorks To URDF)
+4. Run the installer and go through the prompts.
+5. After installation, the next time you launch SolidWorks and open an Assembly, there should now be a **Robotics** tab in your ribbon bar.
    - If not, go to Tools → Add-ins..., then tick 'SuperDex CAD Exporter' at the bottom, along with 'Start Up'. Then **close and restart** SolidWorks.
 
 :::warning Compatibility with the original exporter
@@ -39,10 +38,11 @@ SuperDex CAD Exporter for SolidWorks currently has a known DPI-scaling issue and
 
 ### Siemens NX
 
-1. Make sure Siemens NX or Teamcenter NX is closed before starting
-2. Copy the `application` and `startup` folders from the built folder.
-3. Add `UGII_USER_DIR` to your User or System Environment Variables (System Properties → Environment Variables...) and point it to `C:\NXCustom` or any other location. The `application` and `startup` folders must immediately reside in this folder.
-4. The next time you launch Siemens NX or Teamcenter NX, there should now be a Robotics tab in your ribbon bar.
+1. As we currently do not distribute binaries for the NX plugin, please follow the building instructions shown in the [README](https://github.com/facebookresearch/project_superdex/blob/main/superdex_studio/superdex_cad_exporter/README.md).
+2. Make sure Siemens NX or Teamcenter NX is closed before starting
+3. The build process should deposit `application` and `startup` folders into `C:/NXCustom`.
+4. Add `UGII_USER_DIR` to your User or System Environment Variables (System Properties → Environment Variables...) and point it to `C:/NXCustom`.
+5. The next time you launch Siemens NX or Teamcenter NX, there should now be a Robotics tab in your ribbon bar. If not, reboot your PC and try again.
 
 ## Quickstart
 
