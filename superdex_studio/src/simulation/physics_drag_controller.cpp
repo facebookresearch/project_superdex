@@ -28,6 +28,7 @@
 #include <mochi_core/utils/math_utils.h>
 
 #include <algorithm>
+#include <array>
 #include <cstdio>
 #include <limits>
 #include <utility>
@@ -636,9 +637,9 @@ void PhysicsDragController::DrawDebug(
   debugDraw->DrawSolidSphere(target, sphereRadius, color);
   debugDraw->DrawLine(anchor, target, color);
   if (debugText != nullptr && data.grabbable) {
-    char label[32];
-    std::snprintf(label, sizeof(label), "%.3f N", static_cast<double>(data.forceNewtons));
-    debugText->Draw(target, label, color, kForceLabelOffset);
+    std::array<char, 32> label{};
+    std::snprintf(label.data(), label.size(), "%.3f N", static_cast<double>(data.forceNewtons));
+    debugText->Draw(target, label.data(), color, kForceLabelOffset);
   }
 }
 
