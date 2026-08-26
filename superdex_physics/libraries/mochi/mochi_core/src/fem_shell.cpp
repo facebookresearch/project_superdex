@@ -136,7 +136,8 @@ bool ShellWork(
   bool const needBendingDeriv = (evalRes || evalDRes);
 
   V2x2 curB MOCHI_NO_INIT;
-  NdArray<V2x2, kBendingStencilNodes, kSpaceDim3> db_dv_edges MOCHI_NO_INIT;
+  NdArray<BatchSymMatrix2x2<kBatchSize>, kBendingStencilNodes, kSpaceDim3> db_dv_edges
+      MOCHI_NO_INIT;
   if (needCurB && needBendingDeriv) {
     SecondFundamentalFormAndDEdges<kBatchSize>(curEdges, curB, db_dv_edges);
   } else if (needCurB) {
@@ -180,8 +181,8 @@ bool ShellWork(
         StaticCast<Vd>(refArea);
   }
 
-  NdArray<V2x2, kBendingStencilNodes, kSpaceDim3> db_dx MOCHI_NO_INIT;
-  NdArray<V2x2, kTriangleNodes, kSpaceDim3> da_dx MOCHI_NO_INIT;
+  NdArray<BatchSymMatrix2x2<kBatchSize>, kBendingStencilNodes, kSpaceDim3> db_dx MOCHI_NO_INIT;
+  NdArray<BatchSymMatrix2x2<kBatchSize>, kTriangleNodes, kSpaceDim3> da_dx MOCHI_NO_INIT;
   V2x2 dpsi_da MOCHI_NO_INIT;
   if (needBendingDeriv) {
     db_dx = DSecondFundamentalFormDx<kBatchSize>(db_dv_edges, stencilGlobalNodes);

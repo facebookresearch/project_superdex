@@ -233,6 +233,13 @@ template <typename T, size_t N, size_t M>
     NdArray<T, N, M> const& A,
     NdArray<T, N, M> const& B);
 
+// Colon product (Frobenius inner product) of two symmetric 2x2 matrices stored as raw
+// [a00, a01, a11] components.
+template <typename T>
+[[nodiscard]] MOCHI_FORCE_INLINE constexpr T ColonSym2x2(
+    NdArray<T, 3> const& A,
+    NdArray<T, 3> const& B);
+
 /**************************************************************************************************
   Invert
 */
@@ -322,6 +329,15 @@ template <size_t N, typename T>
 template <size_t N, typename T>
 [[nodiscard]] MOCHI_FORCE_INLINE constexpr NdArray<T, N, N> DiagonalMatrix(
     NdArray<T, N> const& diagonalVector);
+
+// Return raw [a00, a01, a11] components of a symmetric 2x2 matrix.
+template <typename T>
+[[nodiscard]] MOCHI_FORCE_INLINE constexpr NdArray<T, 3> Sym2x2Components(T a00, T a01, T a11);
+
+// Return raw [a00, a01, a11] components of the symmetric part of a 2x2 matrix.
+template <typename T>
+[[nodiscard]] MOCHI_FORCE_INLINE constexpr NdArray<T, 3> Sym2x2Components(
+    NdArray<T, 2, 2> const& m);
 
 // Construct a 2x2 symmetric matrix from upper-triangle components.
 //   [a00 a01]

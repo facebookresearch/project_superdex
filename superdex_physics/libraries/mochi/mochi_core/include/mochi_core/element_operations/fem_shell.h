@@ -158,7 +158,7 @@ template <int kBatchSize>
 }
 
 template <int kBatchSize>
-[[nodiscard]] MOCHI_FORCE_INLINE NdArray<BatchReal2x2<kBatchSize>, kTriangleNodes, kSpaceDim3>
+[[nodiscard]] MOCHI_FORCE_INLINE NdArray<BatchSymMatrix2x2<kBatchSize>, kTriangleNodes, kSpaceDim3>
 DMetricDx(NdArray<BatchReal<kBatchSize>, kBendingStencilDofs> const& pos) {
   using V = BatchReal<kBatchSize>;
   BatchReal3<kBatchSize> e0 MOCHI_NO_INIT, e1 MOCHI_NO_INIT;
@@ -166,40 +166,41 @@ DMetricDx(NdArray<BatchReal<kBatchSize>, kBendingStencilDofs> const& pos) {
     e0[d] = pos[1 * kSpaceDim3 + d] - pos[0 * kSpaceDim3 + d];
     e1[d] = pos[2 * kSpaceDim3 + d] - pos[0 * kSpaceDim3 + d];
   }
-  NdArray<BatchReal2x2<kBatchSize>, kTriangleNodes, kSpaceDim3> da_dx MOCHI_NO_INIT;
+  NdArray<BatchSymMatrix2x2<kBatchSize>, kTriangleNodes, kSpaceDim3> da_dx MOCHI_NO_INIT;
   V const two{2_r};
   for (int i = 0; i < kSpaceDim3; ++i) {
-    da_dx[0][i] = SymMatrix2x2(-two * e0[i], -e0[i] - e1[i], -two * e1[i]);
-    da_dx[1][i] = SymMatrix2x2(two * e0[i], e1[i], V{0_r});
-    da_dx[2][i] = SymMatrix2x2(V{0_r}, e0[i], two * e1[i]);
+    da_dx[0][i] = Sym2x2Components(-two * e0[i], -e0[i] - e1[i], -two * e1[i]);
+    da_dx[1][i] = Sym2x2Components(two * e0[i], e1[i], V{0_r});
+    da_dx[2][i] = Sym2x2Components(V{0_r}, e0[i], two * e1[i]);
   }
   return da_dx;
 }
 
 /// @brief Returns the second derivatives of the metric tensor with respect to nodal positions.
-/// Result is indexed as d2a_dx2[nodeA][nodeB] -> BatchReal2x2, representing the second derivative
-/// d^2(a)/d(x[nodeA][i])d(x[nodeB][i]) for each spatial component i packed into the BatchReal2x2.
+/// Result is indexed as d2a_dx2[nodeA][nodeB] -> raw [00, 01, 11] components representing the
+/// second derivative d^2(a)/d(x[nodeA][i])d(x[nodeB][i]).
 ///
 /// @note The second derivatives are non-zero only when the spatial indices match (i == j). This is
 /// because the metric tensor depends on edge vectors e0 = x[1] - x[0] and e1 = x[2] - x[0], and
 /// de_k[i]/dx[node][j] = delta_{ij} * (coefficient). Therefore, this function returns a 2D array
 /// indexed by [nodeA][nodeB], where each entry stores the diagonal values for all spatial
-/// components i in a single BatchReal2x2 (exploiting the fact that the values are the same for all
-/// i).
+/// components i in one symmetric 2x2 component vector (exploiting that the values are the same for
+/// all i).
 template <int kBatchSize>
-[[nodiscard]] MOCHI_FORCE_INLINE NdArray<BatchReal2x2<kBatchSize>, kTriangleNodes, kTriangleNodes>
-D2MetricDx2() {
+[[nodiscard]] MOCHI_FORCE_INLINE
+    NdArray<BatchSymMatrix2x2<kBatchSize>, kTriangleNodes, kTriangleNodes>
+    D2MetricDx2() {
   using V = BatchReal<kBatchSize>;
-  NdArray<BatchReal2x2<kBatchSize>, kTriangleNodes, kTriangleNodes> d2a MOCHI_NO_INIT;
-  d2a[0][0] = SymMatrix2x2(V{2_r}, V{2_r}, V{2_r});
-  d2a[0][1] = SymMatrix2x2(V{-2_r}, V{-1_r}, V{0_r});
-  d2a[0][2] = SymMatrix2x2(V{0_r}, V{-1_r}, V{-2_r});
+  NdArray<BatchSymMatrix2x2<kBatchSize>, kTriangleNodes, kTriangleNodes> d2a MOCHI_NO_INIT;
+  d2a[0][0] = Sym2x2Components(V{2_r}, V{2_r}, V{2_r});
+  d2a[0][1] = Sym2x2Components(V{-2_r}, V{-1_r}, V{0_r});
+  d2a[0][2] = Sym2x2Components(V{0_r}, V{-1_r}, V{-2_r});
   d2a[1][0] = d2a[0][1];
-  d2a[1][1] = SymMatrix2x2(V{2_r}, V{0_r}, V{0_r});
-  d2a[1][2] = SymMatrix2x2(V{0_r}, V{1_r}, V{0_r});
+  d2a[1][1] = Sym2x2Components(V{2_r}, V{0_r}, V{0_r});
+  d2a[1][2] = Sym2x2Components(V{0_r}, V{1_r}, V{0_r});
   d2a[2][0] = d2a[0][2];
   d2a[2][1] = d2a[1][2];
-  d2a[2][2] = SymMatrix2x2(V{0_r}, V{0_r}, V{2_r});
+  d2a[2][2] = Sym2x2Components(V{0_r}, V{0_r}, V{2_r});
   return d2a;
 }
 
@@ -233,28 +234,47 @@ template <int kBatchSize>
   return lambda * tr * AInv + V{2_r} * mu * sAInv;
 }
 
-/// @brief Second derivative of the SVK energy density w.r.t. the fully-covariant strain tensor
-/// (material tangent). Reused by both membrane and bending.
+/// @brief Reduced SVK material tangent for symmetric 2x2 strain/stress tensors.
+///
+/// @details Rows and columns are ordered as raw [00, 01, 11] components. The six unique tangent
+/// entries use the symmetric 3x3 layout [C00, C11, C22, C01, C02, C12]. Apply this tangent to a
+/// symmetric tensor x using the weighted input [x00, 2*x01, x11]; contract the resulting symmetric
+/// tensor with test tensors using @ref ColonSym2x2.
 template <int kBatchSize>
-[[nodiscard]] MOCHI_FORCE_INLINE NdArray<BatchReal2x2<kBatchSize>, 2, 2> D2PsiSVK(
+[[nodiscard]] MOCHI_FORCE_INLINE BatchSymMatrix3x3<kBatchSize> D2PsiSVKSym2x2(
     BatchReal2x2<kBatchSize> const& AInv,
     BatchReal<kBatchSize> lambda,
     BatchReal<kBatchSize> mu) {
   using V = BatchReal<kBatchSize>;
-  V const twoMu = V{2_r} * mu;
-  NdArray<BatchReal2x2<kBatchSize>, 2, 2> c MOCHI_NO_INIT;
-  for (int i = 0; i < 2; ++i) {
-    for (int j = 0; j < 2; ++j) {
-      V const lambdaAij = lambda * AInv[i][j];
-      for (int k = 0; k < 2; ++k) {
-        for (int l = 0; l < 2; ++l) {
-          c[i][j][k][l] = twoMu * AInv[i][k] * AInv[j][l] + lambdaAij * AInv[k][l];
-        }
-      }
-    }
-  }
-  return c;
+  V const a00 = AInv[0][0];
+  V const a01 = AInv[0][1];
+  V const a11 = AInv[1][1];
+  V const lambdaPlusTwoMu = lambda + V{2_r} * mu;
+
+  V const c00 = lambdaPlusTwoMu * a00 * a00;
+  V const c01 = lambdaPlusTwoMu * a00 * a01;
+  V const c02 = V{2_r} * mu * a01 * a01 + lambda * a00 * a11;
+  V const c11 = mu * (a00 * a11 + a01 * a01) + lambda * a01 * a01;
+  V const c12 = lambdaPlusTwoMu * a01 * a11;
+  V const c22 = lambdaPlusTwoMu * a11 * a11;
+  return {c00, c11, c22, c01, c02, c12};
 }
+
+namespace details {
+
+template <int kBatchSize>
+[[nodiscard]] MOCHI_FORCE_INLINE constexpr BatchSymMatrix2x2<kBatchSize> ApplySym2x2Tangent(
+    BatchSymMatrix3x3<kBatchSize> const& tangent,
+    BatchSymMatrix2x2<kBatchSize> const& x) {
+  using V = BatchReal<kBatchSize>;
+  V const twoX01 = V{2_r} * x[1];
+  return {
+      tangent[0] * x[0] + tangent[3] * twoX01 + tangent[4] * x[2],
+      tangent[3] * x[0] + tangent[1] * twoX01 + tangent[5] * x[2],
+      tangent[4] * x[0] + tangent[5] * twoX01 + tangent[2] * x[2]};
+}
+
+} // namespace details
 
 /**************************************************************************************************
   Membrane residual and dresidual.
@@ -262,20 +282,21 @@ template <int kBatchSize>
 
 template <int kBatchSize>
 MOCHI_FORCE_INLINE void AddMembraneResidual(
-    NdArray<BatchReal2x2<kBatchSize>, kTriangleNodes, kSpaceDim3> const& da_dx,
+    NdArray<BatchSymMatrix2x2<kBatchSize>, kTriangleNodes, kSpaceDim3> const& da_dx,
     BatchReal2x2<kBatchSize> const& dpsi_da,
     BatchReal<kBatchSize> referenceArea,
     NdArray<BatchReal<kBatchSize>, kBendingStencilDofs>& outRes) {
+  BatchSymMatrix2x2<kBatchSize> const dpsi = Sym2x2Components(dpsi_da);
   for (int a = 0; a < kTriangleNodes; ++a) {
     for (int i = 0; i < kSpaceDim3; ++i) {
-      outRes[a * kSpaceDim3 + i] += referenceArea * Colon(da_dx[a][i], dpsi_da);
+      outRes[a * kSpaceDim3 + i] += referenceArea * ColonSym2x2(da_dx[a][i], dpsi);
     }
   }
 }
 
 template <int kBatchSize>
 MOCHI_FORCE_INLINE void AddMembraneDResidual(
-    NdArray<BatchReal2x2<kBatchSize>, kTriangleNodes, kSpaceDim3> const& da_dx,
+    NdArray<BatchSymMatrix2x2<kBatchSize>, kTriangleNodes, kSpaceDim3> const& da_dx,
     BatchReal2x2<kBatchSize> const& dpsi_da,
     BatchReal2x2<kBatchSize> const& AInv,
     BatchReal<kBatchSize> referenceArea,
@@ -287,40 +308,20 @@ MOCHI_FORCE_INLINE void AddMembraneDResidual(
   using V2x2 = BatchReal2x2<kBatchSize>;
 
   // Material stiffness: pre-absorb scale = 0.25 * area (two factors of 0.5 from dε/da).
-  NdArray<V2x2, 2, 2> d2psi = D2PsiSVK<kBatchSize>(AInv, lambda, mu);
-  V const matScale = V{0.25_r} * referenceArea;
-  for (int a = 0; a < 2; ++a) {
-    for (int b = 0; b < 2; ++b) {
-      d2psi[a][b] = matScale * d2psi[a][b];
-    }
-  }
-  // The da_dx blocks are symmetric and the SVK tangent satisfies d2psi[1][0] ==
-  // transpose(d2psi[0][1]). Since Colon(M, S) == Colon(transpose(M), S) for symmetric S, the
-  // (k,l)=(0,1) and (1,0) contributions are equal, so the four (k,l) tangent passes fold into
-  // three, with the (0,1) block doubled to absorb the equal (1,0) term.
-  NdArray<V2x2, 3> const tangent = {V{2_r} * d2psi[0][1], d2psi[1][1], d2psi[0][0]};
-  // Accumulate each stiffness entry in a register across the three folded tangent passes and write
-  // outDRes once per entry.
+  BatchSymMatrix3x3<kBatchSize> d2psi = D2PsiSVKSym2x2<kBatchSize>(AInv, lambda, mu);
+  d2psi *= V{0.25_r} * referenceArea;
   for (int trialNode = 0; trialNode < kTriangleNodes; ++trialNode) {
-    NdArray<V, 3, kSpaceDim3> trialContraction MOCHI_NO_INIT;
-    for (int p = 0; p < 3; ++p) {
-      for (int j = 0; j < kSpaceDim3; ++j) {
-        trialContraction[p][j] = Colon(tangent[p], da_dx[trialNode][j]);
-      }
+    NdArray<BatchSymMatrix2x2<kBatchSize>, kSpaceDim3> tangentApplied MOCHI_NO_INIT;
+    for (int j = 0; j < kSpaceDim3; ++j) {
+      tangentApplied[j] = details::ApplySym2x2Tangent<kBatchSize>(d2psi, da_dx[trialNode][j]);
     }
     for (int testNode = 0; testNode <= trialNode; ++testNode) {
       for (int i = 0; i < kSpaceDim3; ++i) {
-        V const testCoeff01 = da_dx[testNode][i][0][1];
-        V const testCoeff11 = da_dx[testNode][i][1][1];
-        V const testCoeff00 = da_dx[testNode][i][0][0];
+        BatchSymMatrix2x2<kBatchSize> const& test = da_dx[testNode][i];
         int const outBase =
             (testNode * kSpaceDim3 + i) * kBendingStencilDofs + trialNode * kSpaceDim3;
         for (int j = 0; j < kSpaceDim3; ++j) {
-          V acc = outDRes[outBase + j];
-          acc += testCoeff01 * trialContraction[0][j];
-          acc += testCoeff11 * trialContraction[1][j];
-          acc += testCoeff00 * trialContraction[2][j];
-          outDRes[outBase + j] = acc;
+          outDRes[outBase + j] += ColonSym2x2(test, tangentApplied[j]);
         }
       }
     }
@@ -329,11 +330,13 @@ MOCHI_FORCE_INLINE void AddMembraneDResidual(
   // Geometric stiffness: dpsi_da * d2a/dx2 (upper triangle only).
   V2x2 const dpsi_da_proj =
       projectPsd ? BatchedProjectPsdWithMetric<kBatchSize>(dpsi_da, AInv) : dpsi_da;
+  BatchSymMatrix2x2<kBatchSize> const dpsi_da_projSym = Sym2x2Components(dpsi_da_proj);
 
   auto const d2a_dx2 = D2MetricDx2<kBatchSize>();
   for (int testNode = 0; testNode < kTriangleNodes; ++testNode) {
     for (int trialNode = testNode; trialNode < kTriangleNodes; ++trialNode) {
-      V const contraction = referenceArea * Colon(d2a_dx2[testNode][trialNode], dpsi_da_proj);
+      V const contraction =
+          referenceArea * ColonSym2x2(d2a_dx2[testNode][trialNode], dpsi_da_projSym);
       for (int i = 0; i < kSpaceDim3; ++i) {
         outDRes[(testNode * kSpaceDim3 + i) * kBendingStencilDofs + trialNode * kSpaceDim3 + i] +=
             contraction;
@@ -428,10 +431,11 @@ template <int kBatchSize>
 /// edge vectors.
 ///
 /// @param[in] v  Batched edge vectors (6 edges, from @ref EdgeVectors).
-/// @return db_dv[edge][dim] — batched 2×2 matrix derivative per edge per spatial dimension.
+/// @return db_dv[edge][dim] — raw [00, 01, 11] derivative components per edge per spatial
+/// dimension.
 template <int kBatchSize>
 // Not MOCHI_FORCE_INLINE: forced inlining creates oversized ShellWork stack frames on MSVC.
-[[nodiscard]] inline NdArray<BatchReal2x2<kBatchSize>, kBendingStencilNodes, kSpaceDim3>
+[[nodiscard]] inline NdArray<BatchSymMatrix2x2<kBatchSize>, kBendingStencilNodes, kSpaceDim3>
 DSecondFundamentalFormDEdges(NdArray<BatchReal3<kBatchSize>, kBendingStencilNodes> const& v) {
   using V = BatchReal<kBatchSize>;
   using V3 = BatchReal3<kBatchSize>;
@@ -459,13 +463,13 @@ DSecondFundamentalFormDEdges(NdArray<BatchReal3<kBatchSize>, kBendingStencilNode
   NdArray<V3x3, 4> const dnHat_dn = {
       DNormalize(n[0]), DNormalize(n[1]), DNormalize(n[2]), DNormalize(n[3])};
 
-  NdArray<BatchReal2x2<kBatchSize>, kBendingStencilNodes, kSpaceDim3> db_dv{};
+  NdArray<BatchSymMatrix2x2<kBatchSize>, kBendingStencilNodes, kSpaceDim3> db_dv{};
   V const two{2_r};
   V3 const twoNAvg1Minus0 = two * (nAvg[1] - nAvg[0]);
   V3 const twoNAvg0Minus2 = two * (nAvg[0] - nAvg[2]);
   for (int i = 0; i < kSpaceDim3; ++i) {
-    db_dv[0][i][0][0] = twoNAvg1Minus0[i];
-    db_dv[2][i] = SymMatrix2x2(V{0_r}, two * nAvg[0][i], twoNAvg0Minus2[i]);
+    db_dv[0][i][0] = twoNAvg1Minus0[i];
+    db_dv[2][i] = Sym2x2Components(V{0_r}, two * nAvg[0][i], twoNAvg0Minus2[i]);
   }
 
   V3 const v0d1 = DotVecMat(v[0], dnAvg_dnSum[1]);
@@ -499,7 +503,7 @@ DSecondFundamentalFormDEdges(NdArray<BatchReal3<kBatchSize>, kBendingStencilNode
     V3 const v2_dnAvg0 = DotVecMat(v2d0, dnSum_dv_vi[0]);
     V3 const v2_dnAvg2 = DotVecMat(v2d2, dnSum_dv_vi[2]);
     for (int j = 0; j < kSpaceDim3; ++j) {
-      db_dv[vi][j] += SymMatrix2x2(
+      db_dv[vi][j] += Sym2x2Components(
           two * (v0_dnAvg1[j] - v0_dnAvg0[j]),
           two * v2_dnAvg0[j],
           two * (v2_dnAvg0[j] - v2_dnAvg2[j]));
@@ -517,7 +521,7 @@ template <int kBatchSize>
 inline void SecondFundamentalFormAndDEdges(
     NdArray<BatchReal3<kBatchSize>, kBendingStencilNodes> const& v,
     BatchReal2x2<kBatchSize>& outB,
-    NdArray<BatchReal2x2<kBatchSize>, kBendingStencilNodes, kSpaceDim3>& outDb_dv) {
+    NdArray<BatchSymMatrix2x2<kBatchSize>, kBendingStencilNodes, kSpaceDim3>& outDb_dv) {
   using V = BatchReal<kBatchSize>;
   using V3 = BatchReal3<kBatchSize>;
   using V3x3 = BatchReal3x3<kBatchSize>;
@@ -553,8 +557,8 @@ inline void SecondFundamentalFormAndDEdges(
   V3 const twoNAvg1Minus0 = two * d10;
   V3 const twoNAvg0Minus2 = two * d02;
   for (int i = 0; i < kSpaceDim3; ++i) {
-    outDb_dv[0][i][0][0] = twoNAvg1Minus0[i];
-    outDb_dv[2][i] = SymMatrix2x2(V{0_r}, two * nAvg[0][i], twoNAvg0Minus2[i]);
+    outDb_dv[0][i][0] = twoNAvg1Minus0[i];
+    outDb_dv[2][i] = Sym2x2Components(V{0_r}, two * nAvg[0][i], twoNAvg0Minus2[i]);
   }
   V3 const v0d1 = DotVecMat(v[0], dnAvg_dnSum[1]);
   V3 const v0d0 = DotVecMat(v[0], dnAvg_dnSum[0]);
@@ -584,7 +588,7 @@ inline void SecondFundamentalFormAndDEdges(
     V3 const v2_dnAvg0 = DotVecMat(v2d0, dnSum_dv_vi[0]);
     V3 const v2_dnAvg2 = DotVecMat(v2d2, dnSum_dv_vi[2]);
     for (int j = 0; j < kSpaceDim3; ++j) {
-      outDb_dv[vi][j] += SymMatrix2x2(
+      outDb_dv[vi][j] += Sym2x2Components(
           two * (v0_dnAvg1[j] - v0_dnAvg0[j]),
           two * v2_dnAvg0[j],
           two * (v2_dnAvg0[j] - v2_dnAvg2[j]));
@@ -610,14 +614,14 @@ inline void SecondFundamentalFormAndDEdges(
 /// missing opposite stencil node.
 ///
 /// @return db_dx[node][dim] — derivative of the second fundamental form w.r.t. the 6 physical node
-/// positions.
+/// positions, stored as raw [00, 01, 11] components.
 template <int kBatchSize>
-[[nodiscard]] MOCHI_FORCE_INLINE NdArray<BatchReal2x2<kBatchSize>, kBendingStencilNodes, kSpaceDim3>
-DSecondFundamentalFormDx(
-    NdArray<BatchReal2x2<kBatchSize>, kBendingStencilNodes, kSpaceDim3> const& db_dv,
-    NdArray<int, kBendingStencilNodes, kBatchSize> const& stencilGlobalNodes) {
+[[nodiscard]] MOCHI_FORCE_INLINE
+    NdArray<BatchSymMatrix2x2<kBatchSize>, kBendingStencilNodes, kSpaceDim3>
+    DSecondFundamentalFormDx(
+        NdArray<BatchSymMatrix2x2<kBatchSize>, kBendingStencilNodes, kSpaceDim3> const& db_dv,
+        NdArray<int, kBendingStencilNodes, kBatchSize> const& stencilGlobalNodes) {
   using V = BatchReal<kBatchSize>;
-  using V2x2 = BatchReal2x2<kBatchSize>;
 
   alignas(alignof(V)) real staging[V::kSize]{};
   NdArray<V, kTriangleNodes> missingOppositeNode MOCHI_NO_INIT;
@@ -631,7 +635,7 @@ DSecondFundamentalFormDx(
     missingOppositeNode[h] = Load<V>(staging);
   }
 
-  NdArray<V2x2, kBendingStencilNodes, kSpaceDim3> db_dx MOCHI_NO_INIT;
+  NdArray<BatchSymMatrix2x2<kBatchSize>, kBendingStencilNodes, kSpaceDim3> db_dx MOCHI_NO_INIT;
   if (!anyMissingOppositeNode) {
     for (int i = 0; i < kSpaceDim3; ++i) {
       db_dx[0][i] = db_dv[2][i] - db_dv[0][i] - db_dv[5][i];
@@ -668,7 +672,7 @@ DSecondFundamentalFormDx(
 
 template <int kBatchSize>
 MOCHI_FORCE_INLINE void AddBendingResidual(
-    NdArray<BatchReal2x2<kBatchSize>, kBendingStencilNodes, kSpaceDim3> const& db_dx,
+    NdArray<BatchSymMatrix2x2<kBatchSize>, kBendingStencilNodes, kSpaceDim3> const& db_dx,
     BatchReal2x2<kBatchSize> const& s,
     BatchReal2x2<kBatchSize> const& AInv,
     BatchReal<kBatchSize> referenceArea,
@@ -678,58 +682,37 @@ MOCHI_FORCE_INLINE void AddBendingResidual(
   // dψ/db = -dψ/dκ because κ = B - b.
   // Bending uses SVK with (alpha, 0.5*beta) as (lambda, mu).
   BatchReal2x2<kBatchSize> const dpsi_db = -DPsiSVK<kBatchSize>(s, AInv, alpha, 0.5_r * beta);
+  BatchSymMatrix2x2<kBatchSize> const dpsi = Sym2x2Components(dpsi_db);
   for (int a = 0; a < kBendingStencilNodes; ++a) {
     for (int i = 0; i < kSpaceDim3; ++i) {
-      outRes[a * kSpaceDim3 + i] += referenceArea * Colon(db_dx[a][i], dpsi_db);
+      outRes[a * kSpaceDim3 + i] += referenceArea * ColonSym2x2(db_dx[a][i], dpsi);
     }
   }
 }
 
 template <int kBatchSize>
 MOCHI_FORCE_INLINE void AddBendingDResidual(
-    NdArray<BatchReal2x2<kBatchSize>, kBendingStencilNodes, kSpaceDim3> const& db_dx,
+    NdArray<BatchSymMatrix2x2<kBatchSize>, kBendingStencilNodes, kSpaceDim3> const& db_dx,
     BatchReal2x2<kBatchSize> const& AInv,
     BatchReal<kBatchSize> referenceArea,
     BatchReal<kBatchSize> alpha,
     BatchReal<kBatchSize> beta,
     NdArray<BatchReal<kBatchSize>, kBendingStencilDofs * kBendingStencilDofs>& outDRes) {
-  using V = BatchReal<kBatchSize>;
-  using V2x2 = BatchReal2x2<kBatchSize>;
   // Material bending stiffness (pre-absorb referenceArea into d2psi).
-  NdArray<BatchReal2x2<kBatchSize>, 2, 2> d2psi = D2PsiSVK<kBatchSize>(AInv, alpha, 0.5_r * beta);
-  for (int a = 0; a < 2; ++a) {
-    for (int b = 0; b < 2; ++b) {
-      d2psi[a][b] *= referenceArea;
-    }
-  }
-
-  // The db_dx blocks are symmetric and the SVK tangent satisfies d2psi[1][0] ==
-  // transpose(d2psi[0][1]). Since Colon(M, S) == Colon(transpose(M), S) for symmetric S, the
-  // (k,l)=(0,1) and (1,0) contributions are equal, so the four (k,l) tangent passes fold into
-  // three, with the (0,1) block doubled to absorb the equal (1,0) term.
-  NdArray<V2x2, 3> const tangent = {V{2_r} * d2psi[0][1], d2psi[1][1], d2psi[0][0]};
-  // Accumulate each stiffness entry in a register across the three folded tangent passes and write
-  // outDRes once per entry.
+  BatchSymMatrix3x3<kBatchSize> d2psi = D2PsiSVKSym2x2<kBatchSize>(AInv, alpha, 0.5_r * beta);
+  d2psi *= referenceArea;
   for (int trialNode = 0; trialNode < kBendingStencilNodes; ++trialNode) {
-    NdArray<V, 3, kSpaceDim3> trialContraction MOCHI_NO_INIT;
-    for (int p = 0; p < 3; ++p) {
-      for (int j = 0; j < kSpaceDim3; ++j) {
-        trialContraction[p][j] = Colon(tangent[p], db_dx[trialNode][j]);
-      }
+    NdArray<BatchSymMatrix2x2<kBatchSize>, kSpaceDim3> tangentApplied MOCHI_NO_INIT;
+    for (int j = 0; j < kSpaceDim3; ++j) {
+      tangentApplied[j] = details::ApplySym2x2Tangent<kBatchSize>(d2psi, db_dx[trialNode][j]);
     }
     for (int testNode = 0; testNode <= trialNode; ++testNode) {
       for (int i = 0; i < kSpaceDim3; ++i) {
-        V const testCoeff01 = db_dx[testNode][i][0][1];
-        V const testCoeff11 = db_dx[testNode][i][1][1];
-        V const testCoeff00 = db_dx[testNode][i][0][0];
+        BatchSymMatrix2x2<kBatchSize> const& test = db_dx[testNode][i];
         int const outBase =
             (testNode * kSpaceDim3 + i) * kBendingStencilDofs + trialNode * kSpaceDim3;
         for (int j = 0; j < kSpaceDim3; ++j) {
-          V acc = outDRes[outBase + j];
-          acc += testCoeff01 * trialContraction[0][j];
-          acc += testCoeff11 * trialContraction[1][j];
-          acc += testCoeff00 * trialContraction[2][j];
-          outDRes[outBase + j] = acc;
+          outDRes[outBase + j] += ColonSym2x2(test, tangentApplied[j]);
         }
       }
     }

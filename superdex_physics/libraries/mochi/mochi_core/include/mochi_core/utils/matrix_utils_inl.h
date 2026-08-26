@@ -356,6 +356,11 @@ MOCHI_FORCE_INLINE constexpr T Colon(NdArray<T, N, M> const& A, NdArray<T, N, M>
   return result;
 }
 
+template <typename T>
+MOCHI_FORCE_INLINE constexpr T ColonSym2x2(NdArray<T, 3> const& A, NdArray<T, 3> const& B) {
+  return A[0] * B[0] + T{2_r} * A[1] * B[1] + A[2] * B[2];
+}
+
 /**************************************************************************************************
   Invert
 */
@@ -574,6 +579,16 @@ MOCHI_FORCE_INLINE constexpr NdArray<T, N, N> DiagonalMatrix(NdArray<T, N> const
     result[i][i] = diagonalVector[i];
   }
   return result;
+}
+
+template <typename T>
+MOCHI_FORCE_INLINE constexpr NdArray<T, 3> Sym2x2Components(T a00, T a01, T a11) {
+  return {a00, a01, a11};
+}
+
+template <typename T>
+MOCHI_FORCE_INLINE constexpr NdArray<T, 3> Sym2x2Components(NdArray<T, 2, 2> const& m) {
+  return {m[0][0], T{0.5_r} * (m[0][1] + m[1][0]), m[1][1]};
 }
 
 template <typename T>

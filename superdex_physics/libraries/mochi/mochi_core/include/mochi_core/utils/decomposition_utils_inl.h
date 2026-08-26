@@ -1177,7 +1177,7 @@ namespace detail {
 //   Hermitian matrices" (2017). https://hal.science/hal-01501221/document
 template <int kBatchSize>
 MOCHI_FORCE_INLINE void BatchedAnalyticalEigenvalsSym3x3(
-    BatchReal6<kBatchSize> const& mat,
+    BatchSymMatrix3x3<kBatchSize> const& mat,
     BatchReal3<kBatchSize>& eigvalues) {
   using V = BatchReal<kBatchSize>;
 
@@ -1305,7 +1305,7 @@ template <int kBatchSize>
 // WARNING: Eigenvalues must be sorted in descending order.
 template <int kBatchSize>
 MOCHI_FORCE_INLINE void BatchedAnalyticalEigenvecsSym3x3(
-    BatchReal6<kBatchSize> const& mat,
+    BatchSymMatrix3x3<kBatchSize> const& mat,
     BatchReal3<kBatchSize> const& eigvalues,
     BatchReal3x3<kBatchSize>& eigvecs) {
   using V = BatchReal<kBatchSize>;
@@ -1386,7 +1386,7 @@ MOCHI_FORCE_INLINE void BatchedAnalyticalEigenvecsSym3x3(
 // can be rescaled back to the original units.
 template <int kBatchSize>
 [[nodiscard]] MOCHI_FORCE_INLINE BatchReal<kBatchSize> BatchedNormalizeSym3x3(
-    BatchReal6<kBatchSize>& sym) {
+    BatchSymMatrix3x3<kBatchSize>& sym) {
   using V = BatchReal<kBatchSize>;
   V const scale =
       Max(V{1_r / 6_r} *
@@ -1403,7 +1403,7 @@ template <int kBatchSize>
 
 template <int kBatchSize>
 inline void BatchedAnalyticalEigendecompSym3x3(
-    BatchReal6<kBatchSize> sym,
+    BatchSymMatrix3x3<kBatchSize> sym,
     BatchReal3<kBatchSize>& eigvalues,
     BatchReal3x3<kBatchSize>* eigvecs) {
   auto const scale = detail::BatchedNormalizeSym3x3<kBatchSize>(sym);
@@ -1424,7 +1424,7 @@ namespace detail {
 
 // Compute G = F^T * F (symmetric, 6 unique entries).
 template <int kBatchSize>
-[[nodiscard]] MOCHI_FORCE_INLINE BatchReal6<kBatchSize> BatchedComputeGsym(
+[[nodiscard]] MOCHI_FORCE_INLINE BatchSymMatrix3x3<kBatchSize> BatchedComputeGsym(
     BatchReal3x3<kBatchSize> const& fm) {
   return {
       fm[0][0] * fm[0][0] + fm[1][0] * fm[1][0] + fm[2][0] * fm[2][0],
@@ -1559,11 +1559,11 @@ inline void BatchedProjectSymPsd(BatchReal3x3<kBatchSize>& A, real eps) {
   MOCHI_ASSERT_VERBOSE(eps >= 0_r);
   using V = BatchReal<kBatchSize>;
   using V3 = BatchReal3<kBatchSize>;
-  using V6 = BatchReal6<kBatchSize>;
   using V3x3 = BatchReal3x3<kBatchSize>;
+  using VSym3x3 = BatchSymMatrix3x3<kBatchSize>;
 
   // Extract symmetric part: sym = {A00, A11, A22, A01, A02, A12}.
-  V6 const sym = {
+  VSym3x3 const sym = {
       A[0][0],
       A[1][1],
       A[2][2],

@@ -550,6 +550,11 @@ static void ExpectNear2x2Lanes(
   }
 }
 
+template <typename T>
+static NdArray<T, 2, 2> ToMatrix(NdArray<T, 3> const& sym) {
+  return SymMatrix2x2(sym[0], sym[1], sym[2]);
+}
+
 template <int kBS>
 static void ExpectNearVectorLanes(
     ShellBatchVector<kBS> const& ref,
@@ -702,13 +707,13 @@ static void VerifyMetricAndStrainHelpers() {
     auto const da_dx = DMetricDx<kBS>(refPos);
     auto const metricFd = (V{1_r / kMetricEps}) *
         (Metric<kBS>(refPos + V{kMetricEps} * direction) - Metric<kBS>(refPos));
-    BatchReal2x2<kBS> metricDirectional{};
+    BatchSymMatrix2x2<kBS> metricDirectional{};
     for (int node = 0; node < kTriangleNodes; ++node) {
       for (int d = 0; d < kSpaceDim3; ++d) {
         metricDirectional += da_dx[node][d] * direction[node * kSpaceDim3 + d];
       }
     }
-    ExpectNear2x2Lanes<kBS>(metricFd, metricDirectional, kMetricTol, kMetricTol);
+    ExpectNear2x2Lanes<kBS>(metricFd, ToMatrix(metricDirectional), kMetricTol, kMetricTol);
 
     auto const d2a_dx2 = D2MetricDx2<kBS>();
     auto const da_dxPerturbed = DMetricDx<kBS>(refPos + V{kD2MetricEps} * direction);
@@ -716,11 +721,11 @@ static void VerifyMetricAndStrainHelpers() {
       for (int d = 0; d < kSpaceDim3; ++d) {
         auto const fd =
             (V{1_r / kD2MetricEps}) * (da_dxPerturbed[testNode][d] - da_dx[testNode][d]);
-        BatchReal2x2<kBS> directional{};
+        BatchSymMatrix2x2<kBS> directional{};
         for (int trialNode = 0; trialNode < kTriangleNodes; ++trialNode) {
           directional += d2a_dx2[testNode][trialNode] * direction[trialNode * kSpaceDim3 + d];
         }
-        ExpectNear2x2Lanes<kBS>(fd, directional, kD2MetricTol, kD2MetricTol);
+        ExpectNear2x2Lanes<kBS>(ToMatrix(fd), ToMatrix(directional), kD2MetricTol, kD2MetricTol);
       }
     }
   }
@@ -739,12 +744,12 @@ static void VerifyBendingEdgeGeometryHelpers() {
     auto const db_dv = DSecondFundamentalFormDEdges<kBS>(edges);
 
     BatchReal2x2<kBS> fusedB{};
-    NdArray<BatchReal2x2<kBS>, kBendingStencilNodes, kSpaceDim3> fusedDbDv{};
+    NdArray<BatchSymMatrix2x2<kBS>, kBendingStencilNodes, kSpaceDim3> fusedDbDv{};
     SecondFundamentalFormAndDEdges<kBS>(edges, fusedB, fusedDbDv);
     ExpectNear2x2Lanes<kBS>(SecondFundamentalForm<kBS>(edges), fusedB, kTol, kTol);
     for (int edge = 0; edge < kBendingStencilNodes; ++edge) {
       for (int d = 0; d < kSpaceDim3; ++d) {
-        ExpectNear2x2Lanes<kBS>(db_dv[edge][d], fusedDbDv[edge][d], kTol, kTol);
+        ExpectNear2x2Lanes<kBS>(ToMatrix(db_dv[edge][d]), ToMatrix(fusedDbDv[edge][d]), kTol, kTol);
       }
     }
 
@@ -756,13 +761,13 @@ static void VerifyBendingEdgeGeometryHelpers() {
     }
     auto const db_dvFd = (V{1_r / kEps}) *
         (SecondFundamentalForm<kBS>(edgesPerturbed) - SecondFundamentalForm<kBS>(edges));
-    BatchReal2x2<kBS> db_dvDirectional{};
+    BatchSymMatrix2x2<kBS> db_dvDirectional{};
     for (int edge = 0; edge < kBendingStencilNodes; ++edge) {
       for (int d = 0; d < kSpaceDim3; ++d) {
         db_dvDirectional += db_dv[edge][d] * edgeDirection[edge][d];
       }
     }
-    ExpectNear2x2Lanes<kBS>(db_dvFd, db_dvDirectional, kTol, 0_r);
+    ExpectNear2x2Lanes<kBS>(db_dvFd, ToMatrix(db_dvDirectional), kTol, 0_r);
   }
 }
 
@@ -790,14 +795,14 @@ static void VerifyBendingPositionGeometryHelpers() {
     auto const db_dxFd = (V{1_r / kEps}) *
         (SecondFundamentalForm<kBS>(EdgeVectors<kBS>(perturbedPos)) -
          SecondFundamentalForm<kBS>(extrapolatedEdges));
-    BatchReal2x2<kBS> db_dxDirectional{};
+    BatchSymMatrix2x2<kBS> db_dxDirectional{};
     auto const direction = BroadcastNodeValues<kBS>(HelperDirection());
     for (int node = 0; node < kBendingStencilNodes; ++node) {
       for (int d = 0; d < kSpaceDim3; ++d) {
         db_dxDirectional += db_dx[node][d] * direction[node * kSpaceDim3 + d];
       }
     }
-    ExpectNear2x2Lanes<kBS>(db_dxFd, db_dxDirectional, 0_r, kDbDxAbsTol);
+    ExpectNear2x2Lanes<kBS>(db_dxFd, ToMatrix(db_dxDirectional), 0_r, kDbDxAbsTol);
   }
 }
 
@@ -807,37 +812,50 @@ static void VerifySvkHelpers() {
   real constexpr kEps = MOCHI_USE_DOUBLE_PRECISION ? 1e-6_r : 1e-4_r;
   real constexpr kTol = 1e-3_r;
 
-  auto const refPos = ExtrapolatedPositions<kBS>(MakeFlatHelperConfig());
-  auto const A = Metric<kBS>(refPos);
-  auto const AInv = Invert(A, Det(A));
+  BatchReal2x2<kBS> const AInv = SymMatrix2x2(V{2_r}, V{-1_r}, V{3_r});
+  V const lambda{2_r};
+  V const mu{1_r};
   auto const strainFlat = SymMatrix2x2(V{1_r}, V{2_r}, V{3_r});
   auto const direction = SymMatrix2x2(V{4_r}, V{5_r}, V{6_r});
   auto const strain = Dot(AInv, strainFlat);
   auto const strainPerturbed = Dot(AInv, strainFlat + V{kEps} * direction);
 
-  auto const psi = PsiSVK<kBS>(strain, V{1_r}, V{1_r});
-  auto const psiPerturbed = PsiSVK<kBS>(strainPerturbed, V{1_r}, V{1_r});
-  auto const dpsi = DPsiSVK<kBS>(strain, AInv, V{1_r}, V{1_r});
+  auto const psi = PsiSVK<kBS>(strain, lambda, mu);
+  auto const psiPerturbed = PsiSVK<kBS>(strainPerturbed, lambda, mu);
+  auto const dpsi = DPsiSVK<kBS>(strain, AInv, lambda, mu);
   auto const dpsiDirectional = Colon(dpsi, direction);
   for (int b = 0; b < kBS; ++b) {
     real const fd = static_cast<real>((psiPerturbed[b] - psi[b]) / static_cast<double>(kEps));
     EXPECT_NEAR_TOL(fd, dpsiDirectional[b], kTol * Abs(fd));
   }
 
-  auto const dpsiPerturbed = DPsiSVK<kBS>(strainPerturbed, AInv, V{1_r}, V{1_r});
-  auto const dpsiFd = V{1_r / kEps} * (dpsiPerturbed - dpsi);
-  auto const d2psi = D2PsiSVK<kBS>(AInv, V{1_r}, V{1_r});
-  BatchReal2x2<kBS> dpsiFromD2{};
-  for (int i = 0; i < 2; ++i) {
-    for (int j = 0; j < 2; ++j) {
-      for (int k = 0; k < 2; ++k) {
-        for (int l = 0; l < 2; ++l) {
-          dpsiFromD2[i][j] += d2psi[i][j][k][l] * direction[k][l];
-        }
-      }
-    }
+  auto const d2psiSym = D2PsiSVKSym2x2<kBS>(AInv, lambda, mu);
+  std::array<BatchReal2x2<kBS>, 3> const tangentDirections{
+      SymMatrix2x2(V{1_r}, V{0_r}, V{0_r}),
+      // The tangent doubles the raw shear component, so 0.5 is its unit coordinate.
+      SymMatrix2x2(V{0_r}, V{0.5_r}, V{0_r}),
+      SymMatrix2x2(V{0_r}, V{0_r}, V{1_r})};
+  NdArray<BatchSymMatrix2x2<kBS>, 3> tangentColumns MOCHI_NO_INIT;
+  for (int column = 0; column < 3; ++column) {
+    auto const perturbedStrain = V{kEps} * Dot(AInv, tangentDirections[column]);
+    auto const dpsiPerturbed = DPsiSVK<kBS>(perturbedStrain, AInv, lambda, mu);
+    auto const dpsiColumn = V{1_r / kEps} * dpsiPerturbed;
+    tangentColumns[column] = Sym2x2Components(dpsiColumn);
+    auto const applied = fem::details::ApplySym2x2Tangent<kBS>(
+        d2psiSym, Sym2x2Components(tangentDirections[column]));
+    ExpectNear2x2Lanes<kBS>(dpsiColumn, ToMatrix(applied), kTol, 0_r);
   }
-  ExpectNear2x2Lanes<kBS>(dpsiFd, dpsiFromD2, kTol, 0_r);
+
+  BatchSymMatrix3x3<kBS> const expectedD2psiSym{
+      tangentColumns[0][0],
+      tangentColumns[1][1],
+      tangentColumns[2][2],
+      tangentColumns[1][0],
+      tangentColumns[2][0],
+      tangentColumns[2][1]};
+  for (int b = 0; b < kBS; ++b) {
+    ExpectNearL2(GetLane(expectedD2psiSym, b), GetLane(d2psiSym, b), kTol);
+  }
 }
 
 template <int kBS>
@@ -1349,15 +1367,15 @@ TEST(ShellHelpers, DSecondFundamentalFormDxMixedLane) {
     }
   }
 
-  NdArray<BatchReal2x2<8>, kBendingStencilNodes, kSpaceDim3> dbDv8{};
-  NdArray<BatchReal2x2<1>, kBendingStencilNodes, kSpaceDim3> dbDv1{};
+  NdArray<BatchSymMatrix2x2<8>, kBendingStencilNodes, kSpaceDim3> dbDv8{};
+  NdArray<BatchSymMatrix2x2<1>, kBendingStencilNodes, kSpaceDim3> dbDv1{};
   for (int edge = 0; edge < kBendingStencilNodes; ++edge) {
     for (int i = 0; i < kSpaceDim3; ++i) {
       auto const base = static_cast<real>(10 * edge + i + 1);
-      dbDv8[edge][i] =
-          SymMatrix2x2(BatchReal<8>{base}, BatchReal<8>{base + 100_r}, BatchReal<8>{base + 200_r});
-      dbDv1[edge][i] =
-          SymMatrix2x2(BatchReal<1>{base}, BatchReal<1>{base + 100_r}, BatchReal<1>{base + 200_r});
+      dbDv8[edge][i] = Sym2x2Components(
+          BatchReal<8>{base}, BatchReal<8>{base + 100_r}, BatchReal<8>{base + 200_r});
+      dbDv1[edge][i] = Sym2x2Components(
+          BatchReal<1>{base}, BatchReal<1>{base + 100_r}, BatchReal<1>{base + 200_r});
     }
   }
 
@@ -1368,11 +1386,9 @@ TEST(ShellHelpers, DSecondFundamentalFormDxMixedLane) {
         dbDv1, BroadcastStencilNodes<1>(configs[lane].globalNodeIndices));
     for (int n = 0; n < kBendingStencilNodes; ++n) {
       for (int i = 0; i < kSpaceDim3; ++i) {
-        for (int r = 0; r < 2; ++r) {
-          for (int c = 0; c < 2; ++c) {
-            real const ref = homogeneousDbDx[n][i][r][c][0];
-            EXPECT_NEAR_TOL(ref, mixedDbDx[n][i][r][c][lane], Max(kTol, kTol * Abs(ref)));
-          }
+        for (int c = 0; c < 3; ++c) {
+          real const ref = homogeneousDbDx[n][i][c][0];
+          EXPECT_NEAR_TOL(ref, mixedDbDx[n][i][c][lane], Max(kTol, kTol * Abs(ref)));
         }
       }
     }

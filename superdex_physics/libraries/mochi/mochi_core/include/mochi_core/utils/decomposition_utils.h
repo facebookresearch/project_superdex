@@ -167,7 +167,7 @@ inline void ProjectSymPsd(VMatrix3x3r& A, real eps = std::numeric_limits<real>::
 
 template <int kBatchSize>
 inline void BatchedAnalyticalEigendecompSym3x3(
-    BatchReal6<kBatchSize> sym,
+    BatchSymMatrix3x3<kBatchSize> sym,
     BatchReal3<kBatchSize>& eigvalues,
     BatchReal3x3<kBatchSize>* eigvecs);
 
@@ -179,7 +179,7 @@ inline void BatchedAnalyticalEigendecompSym3x3(
 /// @see BatchedRotationVariantSvdVals3x3
 template <int kBatchSize>
 struct BatchedRotationVariantSvdNormalEigensystem3x3 {
-  BatchReal6<kBatchSize> normalizedGsym;
+  BatchSymMatrix3x3<kBatchSize> normalizedGsym;
   BatchReal3<kBatchSize> normalizedEigvals;
 };
 

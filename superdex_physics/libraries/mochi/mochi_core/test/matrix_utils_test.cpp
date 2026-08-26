@@ -661,11 +661,38 @@ TEST(MatrixUtils, Colon) {
   static_assert(NearEqual(Trace(A), Colon(A, Eye<3>())));
 }
 
+TEST(MatrixUtils, ColonSym2x2) {
+  // Raw symmetric 2x2 storage order: [a00, a01, a11].
+  constexpr Real3 A = {1_r, 2_r, 3_r};
+  constexpr Real3 B = {4_r, 5_r, 6_r};
+  static_assert(NearEqual(42_r, ColonSym2x2(A, B)));
+  static_assert(NearEqual(
+      Colon(SymMatrix2x2(1_r, 2_r, 3_r), SymMatrix2x2(4_r, 5_r, 6_r)), ColonSym2x2(A, B)));
+
+  Vec4r const vA0{1_r, 2_r, 3_r, 4_r};
+  Vec4r const vA1{5_r, 6_r, 7_r, 8_r};
+  Vec4r const vA2{9_r, 10_r, 11_r, 12_r};
+  Vec4r const vB0{13_r, 14_r, 15_r, 16_r};
+  Vec4r const vB1{17_r, 18_r, 19_r, 20_r};
+  Vec4r const vB2{21_r, 22_r, 23_r, 24_r};
+  EXPECT_NEAR_EQ(
+      vA0 * vB0 + Vec4r{2_r} * vA1 * vB1 + vA2 * vB2,
+      ColonSym2x2(NdArray<Vec4r, 3>{vA0, vA1, vA2}, NdArray<Vec4r, 3>{vB0, vB1, vB2}));
+}
+
 TEST(MatrixUtils, Colon3x3) {
   Vec4r v = {1_r, 2_r, 3_r, 4_r};
   VMatrix3x3r A = {v, 2_r * v, 3_r * v};
   VMatrix3x3r B = 4_r * A;
   EXPECT_NEAR_EQ(784_r, Colon3x3(A, B));
+}
+
+TEST(MatrixUtils, Sym2x2Components) {
+  constexpr Real3 expected = {1_r, 2_r, 3_r};
+  static_assert(expected == Sym2x2Components(1_r, 2_r, 3_r));
+
+  constexpr Matrix2x2r matrix = {Real2{1_r, 0_r}, Real2{4_r, 3_r}};
+  static_assert(expected == Sym2x2Components(matrix));
 }
 
 TEST(MatrixUtils, SymMatrix2x2) {
