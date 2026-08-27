@@ -30,7 +30,7 @@ For each nested soft actor, the corresponding [`SoftActorParams`](pathname:///ge
 
 ### Building the Chain with a Soft Attach
 
-An articulated skeleton is described by parallel `joints[]` and `links[]` arrays (see [Double Pendulum on Rail](./double_pendulum_on_rail.md) for base). The nested soft actor is an optional [`SoftActorParams`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.SoftActorParams) with a tet-mesh shape that contains [`constrainedNodes`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html). Its rest coordinates are authored in the skeleton's rest frame so the rod overlays the second arm tip at rest.
+An articulated skeleton is described by parallel `joints[]` and `links[]` arrays (see [Double Pendulum on Rail](./double_pendulum_on_rail.md) for base). The nested soft actor is configured by a [`SoftActorParams`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.SoftActorParams) entry with a tet-mesh shape that contains [`constrainedNodes`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html). Its rest coordinates are authored in the skeleton's rest frame so the rod overlays the second arm tip at rest.
 
 ```python
 ROOT_HEIGHT = 0.5  # [m]
@@ -115,7 +115,10 @@ for i in range(len(info.link_names)):
 print(f"softAttachLinks = ['LowerArm']")
 ```
 
-Query support is split: [`is_query_supported`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.is_query_supported) reports that the top-level articulated actor does not support contact queries directly, while the nested soft actor does:
+This example does not configure a blended skin. The following code compares
+query support on the articulated actor and its nested soft actor. In this
+configuration, the listed queries are supported on the nested soft actor, not
+the articulated actor:
 
 ```python
 for q in [

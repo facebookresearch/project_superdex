@@ -259,7 +259,7 @@ See [ArticulatedSkinParams](./articulated_actors.mdx#articulatedskinparams-refer
 
 ## Working with Soft-Skinned Actors at Runtime
 
-Creating a soft-skinned actor returns the top-level articulated actor, so the full [articulated runtime API](./articulated_actors.mdx#working-with-articulations-at-runtime) — [`GetNumDofs`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), [`GetArticulatedShapeInfo`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), [`GetArticulatedPose`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), [`SetArticulatedJointVelocities`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), and so on — applies directly. Beyond that, a soft-skinned actor exposes its nested link actors and nested soft actors, and splits query support between them.
+Creating a soft-skinned actor returns the top-level articulated actor, so the full [articulated runtime API](./articulated_actors.mdx#working-with-articulations-at-runtime) — [`GetNumDofs`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), [`GetArticulatedShapeInfo`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), [`GetArticulatedPose`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), [`SetArticulatedJointVelocities`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), and so on — applies directly. The returned top-level actor also provides handles to its nested link actors and nested soft actors. Query support depends on the target actor and configuration.
 
 ### Nested Link Actors and Nested Soft Actors
 
@@ -296,7 +296,19 @@ for handle in actor.get_nested_soft_actors():
 
 ### Queries and Contact
 
-Deformation and contact queries (e.g. `NodePositions`, `ContactPoints`, `TotalContactForce`) are supported on the **nested soft actor**, not on the articulated actor — use [`is_query_supported`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.is_query_supported) to check. Register the query on the nested soft actor, call [`scene.step`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.step) so the data is computed, then read it back. In the example scene, `ball` is a rigid actor placed within reach of the swinging nested soft actor:
+Register queries for nested soft actor data, such as `NodePositions`,
+`ElementsDeformationGradient`, and `ElasticEnergy`, on nested soft actors. When
+no blended skin is configured, register contact queries, such as
+`ContactPoints` and `TotalContactForce`, on nested soft actors as well. With a
+[blended skin](#blended-skin), register contact queries on the
+articulated actor; contact is reported on the skin surface rather than on the
+individual nested soft actors. When link contact is enabled, nested link actors
+may also support contact queries. Use [`is_query_supported`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.is_query_supported) to determine which actor supports each query.
+
+The following example does not configure a blended skin, so it registers a
+`TotalContactForce` query on the nested soft actor. Call [`scene.step`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.step)
+before reading the query result. Here, `ball` is a rigid actor placed within
+reach of the swinging nested soft actor:
 
 ```python
 soft_actor = scene.get_actor(actor.get_nested_soft_actors()[0])
@@ -306,7 +318,7 @@ force = soft_actor.get_contact_force_from_actor_world(ball)  # net force from th
 soft_actor.cancel_query(force_query)
 ```
 
-The C++ equivalents are [`RegisterQuery`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), [`GetContactForceFromActorWorld`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), and [`CancelQuery`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html). When a [blended skin](#blended-skin) is used, contact is reported on the skin surface instead of the individual nested soft actors.
+The C++ equivalents are [`RegisterQuery`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), [`GetContactForceFromActorWorld`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), and [`CancelQuery`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html).
 
 ## Examples
 
