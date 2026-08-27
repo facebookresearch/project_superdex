@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import os
 import platform
-from pathlib import Path
 
 from superdex.physics._native_payload import PHYSICS_NATIVE_PAYLOAD
 from superdex.physics.loader import forward_module, import_module, native_roots
