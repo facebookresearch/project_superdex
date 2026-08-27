@@ -1443,18 +1443,18 @@
 ///
 /// @brief Export a single actor to a prefab file under `outputDir/exportName/<exportName>.mochi_scene`.
 ///
-/// Extracts creation parameters from the actor and writes the prefab plus any generated mesh assets to disk. Only supported for standalone rigid actors, soft actors and articulated actors.
+/// Extracts creation parameters from the actor and writes the prefab plus any generated mesh assets to disk.
 ///
 /// @param[in] actor The actor to export. Must not be null.
 /// @param[in] exportName Label used for the actor's name, the export subdirectory, and the prefab filename (`<exportName>.mochi_scene`).
 /// @param[in] outputDir Parent directory for the export. The subdirectories `<outputDir>/<exportName>` and `<outputDir>/<exportName>/generated_assets` are created automatically.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Uses the same prefab export path as @ref mochi::prefab::ExportScene "ExportScene". In addition to the soft-skinned restriction above, any limitations documented in @ref mochi::prefab::ExportScene "ExportScene" also apply here.
-/// @note When exporting an articulated actor, pass the top-level articulated actor (the one returned by @ref mochi::Scene::CreateArticulatedActor "Scene::CreateArticulatedActor" or by @ref mochi::Actor::GetArticulatedActor "Actor::GetArticulatedActor" on a nested link), not a nested actor.
+/// @note Uses the same prefab export path as @ref mochi::prefab::ExportScene "ExportScene". Any limitations documented in @ref mochi::prefab::ExportScene "ExportScene" also apply here.
+/// @note When exporting an articulated actor, pass the articulated actor itself (the one returned by @ref mochi::Scene::CreateArticulatedActor "Scene::CreateArticulatedActor" or by @ref mochi::Actor::GetArticulatedActor "Actor::GetArticulatedActor" on a nested link), not a nested actor.
 /// @note Generated mesh files (.mochi.h5) are written under generated_assets/ and referenced from the prefab using "./generated_assets/" paths.
 ///
-/// @warning Only supported for standalone rigid, soft, and articulated actors. Soft-skinned actors are not supported here.
+/// @warning Only supported for standalone rigid actors, standalone soft actors, and articulated actors. Soft-skinned actors are not supported.
 /// @warning Contact-filter settings are not exported. Adding an exported articulated actor to a scene applies automatic adjacent-link filtering, even if contact between adjacent links was explicitly enabled before export. To preserve this behavior, add an equivalent enabling entry to the exported prefab or re-enable the pair after adding the prefab to a scene.
 ///
 /// @see @ref mochi::prefab::ExportScene "ExportScene", @ref mochi::prefab::ExportSceneExcluding "ExportSceneExcluding"
@@ -2691,14 +2691,14 @@
 ///
 /// @brief Optional skinned mesh attached to an articulated actor for collision and rendering.
 ///
-/// @details The skin is a triangle mesh deformed by the underlying articulated links. It acts as a colliding actor (its contact sample points are tested against other actors' collider geometry) but not as a collider actor (other actors' contact sample points are not tested against it).
+/// @details The skin is a triangular or tetrahedral mesh deformed by the articulated links and, for a blended skin, the nested soft actors. The articulated actor acts as a colliding actor through the skin's surface: contact sample points on that surface are tested against other actors' collider geometry. The skin does not provide collider geometry, so other actors' contact sample points are not tested against it.
 ///
 /// @see @ref mochi::ArticulatedActorParams::skin "ArticulatedActorParams::skin"
 ///
 
 /// @var mochi::ArticulatedSkinParams::shape
 ///
-/// @brief Shape handle defining the skinned triangle mesh.
+/// @brief Shape handle defining the skinned triangular or tetrahedral mesh.
 ///
 /// @note A shape can be shared by multiple actors, even actors in different scenes.
 ///
@@ -2868,7 +2868,8 @@
 ///
 /// @brief Enable internal skeleton links as colliding actors.
 ///
-/// @note If false, only the nested soft actors or the skin mesh act as colliding actors.
+/// @note If false, only nested soft actors act as colliding actors when no skin is present; otherwise, only the articulated actor acts as a colliding actor through its skin.
+/// @note This setting does not affect whether the links act as colliders.
 ///
 
 /// @var mochi::SoftSkinnedActorParams::hasGravity
@@ -5037,10 +5038,11 @@
 /// @brief Get the node displacements of the actor in the actor's local frame, relative to reference (rest) positions.
 ///
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
-/// @return Node displacements in the actor's local frame. Length is 3 × the number of nodes for standalone soft actors, nested soft actors, and shell actors, or 4 × the number of nodes for rod actors (3 displacement [m] + 1 twist [rad] per node). The number of nodes is available from @ref mochi::Actor::GetMesh "GetMesh".
+/// @return Node displacements in the actor's local frame. Length is 3 × the number of nodes, except for rod actors, where it is 4 × the number of nodes (3 displacement [m] + 1 twist [rad] per node). The number of nodes is available from @ref mochi::Actor::GetMesh "GetMesh".
 ///
-/// @note Only supported for standalone soft actors, nested soft actors, shell actors, and rod actors.
-/// @note For nested soft actors, it returns post-skinning displacements, which may differ from the pre-skinning elastic deformation component written by @ref mochi::Actor::SetDisplacements "SetDisplacements".
+/// @note Only supported for standalone soft actors, nested soft actors, shell actors, rod actors, and articulated actors with a skin mesh.
+/// @note For articulated actors, returns displacements of the skin mesh.
+/// @note For nested soft actors, returns post-skinning displacements, which may differ from the pre-skinning elastic deformation component written by @ref mochi::Actor::SetDisplacements "SetDisplacements".
 ///
 /// @see @ref mochi::Actor::SetDisplacements "SetDisplacements", @ref mochi::Actor::GetNodePositionsLocal "GetNodePositionsLocal"
 ///

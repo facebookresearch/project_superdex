@@ -3455,8 +3455,7 @@ def export_actor(actor: mochi_physics.Actor, export_name: str, output_dir: str) 
     ``outputDir/exportName/<exportName>.mochi_scene``.
 
     Extracts creation parameters from the actor and writes the prefab plus any
-    generated mesh assets to disk. Only supported for standalone rigid actors, soft
-    actors and articulated actors.
+    generated mesh assets to disk.
 
     Args:
         actor (Actor): The actor to export. Must not be None.
@@ -3471,24 +3470,22 @@ def export_actor(actor: mochi_physics.Actor, export_name: str, output_dir: str) 
 
     Note:
         Uses the same prefab export path as
-        :func:`~superdex.physics.prefab.export_scene`. In addition to the
-        soft-skinned restriction above, any limitations documented in
+        :func:`~superdex.physics.prefab.export_scene`. Any limitations documented in
         :func:`~superdex.physics.prefab.export_scene` also apply here.
 
     Note:
-        When exporting an articulated actor, pass the top-level articulated actor
-        (the one returned by
-        :meth:`~superdex.physics.Scene.create_articulated_actor` or by
-        :meth:`~superdex.physics.Actor.get_articulated_actor` on a nested link), not
-        a nested actor.
+        When exporting an articulated actor, pass the articulated actor itself (the
+        one returned by :meth:`~superdex.physics.Scene.create_articulated_actor` or
+        by :meth:`~superdex.physics.Actor.get_articulated_actor` on a nested link),
+        not a nested actor.
 
     Note:
         Generated mesh files (.mochi.h5) are written under generated_assets/ and
         referenced from the prefab using "./generated_assets/" paths.
 
     Warning:
-        Only supported for standalone rigid, soft, and articulated actors.
-        Soft-skinned actors are not supported here.
+        Only supported for standalone rigid actors, standalone soft actors, and
+        articulated actors. Soft-skinned actors are not supported.
 
     Warning:
         Contact-filter settings are not exported. Adding an exported articulated

@@ -1381,9 +1381,8 @@ fn prefab::ExportSceneExcluding(Scene const* scene, StringView exportName, Strin
 // @brief Export a single actor to a prefab file under
 // @code outputDir/exportName/<exportName>.mochi_scene @endcode.
 //
-// Extracts creation parameters from the actor and writes the prefab plus any generated
-// mesh assets to disk. Only supported for standalone rigid actors, soft actors and articulated
-// actors.
+// Extracts creation parameters from the actor and writes the prefab plus any generated mesh assets
+// to disk.
 //
 // @param[in] actor The actor to export. Must not be null.
 // @param[in] exportName Label used for the actor's name, the export subdirectory, and the
@@ -1392,18 +1391,18 @@ fn prefab::ExportSceneExcluding(Scene const* scene, StringView exportName, Strin
 // @code <outputDir>/<exportName> @endcode and
 // @code <outputDir>/<exportName>/generated_assets @endcode are created automatically.
 //
-// @warning Only supported for standalone rigid, soft, and articulated actors. Soft-skinned
-// actors are not supported here.
+// @warning Only supported for standalone rigid actors, standalone soft actors, and articulated
+// actors. Soft-skinned actors are not supported.
 // @warning Contact-filter settings are not exported. Adding an exported articulated actor to a
 // scene applies automatic adjacent-link filtering, even if contact between adjacent links was
 // explicitly enabled before export. To preserve this behavior, add an equivalent enabling entry to
 // the exported prefab or re-enable the pair after adding the prefab to a scene.
 //
-// @note Uses the same prefab export path as @ref ExportScene. In addition to the soft-skinned
-// restriction above, any limitations documented in @ref ExportScene also apply here.
-// @note When exporting an articulated actor, pass the top-level articulated actor (the one
-// returned by @ref Scene::CreateArticulatedActor or by @ref Actor::GetArticulatedActor on
-// a nested link), not a nested actor.
+// @note Uses the same prefab export path as @ref ExportScene. Any limitations documented in
+// @ref ExportScene also apply here.
+// @note When exporting an articulated actor, pass the articulated actor itself (the one returned by
+// @ref Scene::CreateArticulatedActor or by @ref Actor::GetArticulatedActor on a nested link), not
+// a nested actor.
 // @note Generated mesh files (.mochi.h5) are written under generated_assets/ and referenced
 // from the prefab using "./generated_assets/" paths.
 //

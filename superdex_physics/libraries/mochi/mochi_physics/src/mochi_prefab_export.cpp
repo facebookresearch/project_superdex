@@ -1247,17 +1247,9 @@ MOCHI_API void prefab::ExportActor(
     Error& error) {
   MOCHI_ERROR_IF(actor == nullptr, error, "Actor must not be null");
   MOCHI_ERROR_IF(
-      actor->IsNestedLinkActor(),
-      error,
-      "Actor is a nested link of an articulated body. Pass the top-level articulated actor "
-      "handle (the one returned by Scene::CreateArticulatedActor / Actor::GetArticulatedActor) "
-      "instead.");
+      actor->IsNestedLinkActor(), error, "ExportActor does not support nested link actors.");
   MOCHI_ERROR_IF(
-      actor->IsNestedSoftActor(),
-      error,
-      "Actor is a nested soft sub-actor of an articulated body. Pass the top-level articulated "
-      "actor handle (the one returned by Scene::CreateArticulatedActor / "
-      "Actor::GetArticulatedActor) instead.");
+      actor->IsNestedSoftActor(), error, "ExportActor does not support nested soft actors.");
   MOCHI_ERROR_RETURN(error);
   if (actor->GetType() == ActorType::Articulated) {
     auto const nestedSoftActors = actor->GetNestedSoftActors(ErrorAssert{});

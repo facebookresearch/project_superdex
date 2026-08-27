@@ -283,13 +283,14 @@ class Actor [no_init, no_destruct, use_scene] {
   // @brief Get the node displacements of the actor in the actor's local frame, relative to
   // reference (rest) positions.
   //
-  // @return Node displacements in the actor's local frame. Length is 3 × the number of nodes for
-  // standalone soft actors, nested soft actors, and shell actors, or 4 × the number of nodes for rod actors
-  // (3 displacement [m] + 1 twist [rad] per node). The number of nodes is available from @ref
-  // GetMesh.
+  // @return Node displacements in the actor's local frame. Length is 3 × the number of nodes,
+  // except for rod actors, where it is 4 × the number of nodes (3 displacement [m] + 1 twist [rad]
+  // per node). The number of nodes is available from @ref GetMesh.
   //
-  // @note Only supported for standalone soft actors, nested soft actors, shell actors, and rod actors.
-  // @note For nested soft actors, it returns post-skinning displacements, which may differ from the
+  // @note Only supported for standalone soft actors, nested soft actors, shell actors, rod actors,
+  // and articulated actors with a skin mesh.
+  // @note For articulated actors, returns displacements of the skin mesh.
+  // @note For nested soft actors, returns post-skinning displacements, which may differ from the
   // pre-skinning elastic deformation component written by @ref SetDisplacements.
   //
   // @see SetDisplacements, GetNodePositionsLocal

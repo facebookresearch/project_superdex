@@ -612,13 +612,15 @@ struct ArticulatedLinkParams [equality] {
 
 // @brief Optional skinned mesh attached to an articulated actor for collision and rendering.
 //
-// @details The skin is a triangle mesh deformed by the underlying articulated links. It acts as
-// a colliding actor (its contact sample points are tested against other actors' collider geometry) but
-// not as a collider actor (other actors' contact sample points are not tested against it).
+// @details The skin is a triangular or tetrahedral mesh deformed by the articulated links and, for
+// a blended skin, the nested soft actors. The articulated actor acts as a colliding actor through
+// the skin's surface: contact sample points on that surface are tested against other actors'
+// collider geometry. The skin does not provide collider geometry, so other actors' contact sample
+// points are not tested against it.
 //
 // @see ArticulatedActorParams::skin
 struct ArticulatedSkinParams [equality] {
-  // @brief Shape handle defining the skinned triangle mesh.
+  // @brief Shape handle defining the skinned triangular or tetrahedral mesh.
   //
   // @note A shape can be shared by multiple actors, even actors in different scenes.
   //
@@ -783,7 +785,9 @@ struct SoftSkinnedActorParams {
 
   // @brief Enable internal skeleton links as colliding actors.
   //
-  // @note If false, only the nested soft actors or the skin mesh act as colliding actors.
+  // @note If false, only nested soft actors act as colliding actors when no skin is present;
+  // otherwise, only the articulated actor acts as a colliding actor through its skin.
+  // @note This setting does not affect whether the links act as colliders.
   bool enableCollidingLinks = false;
 
   // @brief Enable gravity evaluation of nested soft actors on posed/skinned positions.

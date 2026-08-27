@@ -5897,16 +5897,18 @@ class ArticulatedSkinParams:
     """Optional skinned mesh attached to an articulated actor for collision and
     rendering.
 
-    The skin is a triangle mesh deformed by the underlying articulated links. It
-    acts as a colliding actor (its contact sample points are tested against other
-    actors' collider geometry) but not as a collider actor (other actors' contact
-    sample points are not tested against it).
+    The skin is a triangular or tetrahedral mesh deformed by the articulated links
+    and, for a blended skin, the nested soft actors. The articulated actor acts as a
+    colliding actor through the skin's surface: contact sample points on that
+    surface are tested against other actors' collider geometry. The skin does not
+    provide collider geometry, so other actors' contact sample points are not tested
+    against it.
 
     See Also:
         :attr:`~superdex.physics.ArticulatedActorParams.skin`
     """
     shape: ShapeHandle
-    """Shape handle defining the skinned triangle mesh.
+    """Shape handle defining the skinned triangular or tetrahedral mesh.
 
     Note:
         A shape can be shared by multiple actors, even actors in different scenes.
@@ -6203,8 +6205,12 @@ class SoftSkinnedActorParams:
     """Enable internal skeleton links as colliding actors.
 
     Note:
-        If false, only the nested soft actors or the skin mesh act as colliding
-        actors.
+        If false, only nested soft actors act as colliding actors when no skin is
+        present; otherwise, only the articulated actor acts as a colliding actor
+        through its skin.
+
+    Note:
+        This setting does not affect whether the links act as colliders.
     """
     has_gravity: bool
     """Enable gravity evaluation of nested soft actors on posed/skinned positions.
@@ -9486,20 +9492,22 @@ class Actor:
 
         Returns:
             Node displacements in the actor's local frame. Length is 3 × the number of
-            nodes for standalone soft actors, nested soft actors, and shell actors, or 4
-            × the number of nodes for rod actors (3 displacement [m] + 1 twist [rad] per
-            node). The number of nodes is available from
-            :meth:`~superdex.physics.Actor.get_mesh`.
+            nodes, except for rod actors, where it is 4 × the number of nodes (3
+            displacement [m] + 1 twist [rad] per node). The number of nodes is available
+            from :meth:`~superdex.physics.Actor.get_mesh`.
 
         Raises:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
             Only supported for standalone soft actors, nested soft actors, shell actors,
-            and rod actors.
+            rod actors, and articulated actors with a skin mesh.
 
         Note:
-            For nested soft actors, it returns post-skinning displacements, which may
+            For articulated actors, returns displacements of the skin mesh.
+
+        Note:
+            For nested soft actors, returns post-skinning displacements, which may
             differ from the pre-skinning elastic deformation component written by
             :meth:`~superdex.physics.Actor.set_displacements`.
 
