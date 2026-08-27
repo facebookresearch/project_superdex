@@ -4838,7 +4838,7 @@
 /// @param[in] worldFromLocal World-space transform to set.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Not allowed on articulated links.
+/// @note Not allowed on nested link actors (@ref mochi::Actor::GetNestedLinkActors "GetNestedLinkActors") or nested soft actors (@ref mochi::Actor::GetNestedSoftActors "GetNestedSoftActors").
 /// @note For a top-level articulated actor, the local frame is the articulation root frame, not the root link's frame.
 /// @note For dynamic actors, it does not change velocity. For static actors, however, it changes velocity, because it is implicitly defined by the root transform in consecutive time steps. To cancel the velocity of a static actor, use @ref mochi::Actor::SetVelocity "SetVelocity".
 /// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
@@ -4877,7 +4877,7 @@
 /// @param[in] worldFromCom World-space transform at the center of mass to set.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Only supported for dynamic rigid actors.
+/// @note Only supported for dynamic rigid actors, except nested link actors.
 /// @note Does not change velocity.
 /// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
 ///
@@ -4908,7 +4908,7 @@
 /// @param[in] angularVel Angular velocity [rad/s] at the center of mass in world frame.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Only supported for rigid actors (except articulated links) and soft actors (except ROMs and soft-skinned actors).
+/// @note Only supported for rigid actors (except nested link actors) and soft actors (except ROMs and nested soft actors).
 /// @note For static actors, it only supports setting zero velocity.
 /// @note For soft actors, the angular velocity must be zero.
 /// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.

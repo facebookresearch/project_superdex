@@ -9146,7 +9146,9 @@ class Actor:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
-            Not allowed on articulated links.
+            Not allowed on nested link actors
+            (:meth:`~superdex.physics.Actor.get_nested_link_actors`) or nested soft
+            actors (:meth:`~superdex.physics.Actor.get_nested_soft_actors`).
 
         Note:
             For a top-level articulated actor, the local frame is the articulation root
@@ -9210,7 +9212,7 @@ class Actor:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
-            Only supported for dynamic rigid actors.
+            Only supported for dynamic rigid actors, except nested link actors.
 
         Note:
             Does not change velocity.
@@ -9258,8 +9260,8 @@ class Actor:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
-            Only supported for rigid actors (except articulated links) and soft actors
-            (except ROMs and soft-skinned actors).
+            Only supported for rigid actors (except nested link actors) and soft actors
+            (except ROMs and nested soft actors).
 
         Note:
             For static actors, it only supports setting zero velocity.

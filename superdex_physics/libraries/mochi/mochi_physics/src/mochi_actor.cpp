@@ -252,11 +252,14 @@ class ActorInterfaceImpl : public ActorInterface {
       entt::entity e,
       TransformRT const& worldFromLocal,
       Error& error) {
-    MOCHI_ERROR_RETURN(error);
     MOCHI_ERROR_IF(
-        (reg.any_of<TagArticulatedLinkActor>(e)),
+        reg.any_of<TagArticulatedLinkActor>(e),
         error,
-        "You cannot set the transform of a link actor directly. Please use the articulated actor's transform and pose instead.");
+        "The transform of a nested link actor cannot be directly set. Please use the articulated actor's transform and pose instead.");
+    MOCHI_ERROR_IF(
+        reg.any_of<TagSoftSkinnedActor>(e),
+        error,
+        "The transform of a nested soft actor cannot be directly set.");
     MOCHI_ERROR_RETURN(error);
 
     // Articulated actors: set the root and recompute derived state.
