@@ -439,7 +439,7 @@ PolylineShape::PolylineShape(
     DynamicArray<Real3> nodes,
     DynamicArray<Real3> elementFrameAxes,
     std::shared_ptr<TriangularMesh const> visualMesh,
-    std::shared_ptr<RodVisualMeshEmbeddingData const> rodVisualEmbedding,
+    std::shared_ptr<RodSurfaceEmbeddingData const> rodVisualEmbedding,
     bool isClosedLoop)
     : _nodes(std::move(nodes)),
       _elementFrameAxes(std::move(elementFrameAxes)),

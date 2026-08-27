@@ -978,22 +978,27 @@ ShapePtr ContextImpl::CreateShapeFromModelData(
         ? DynamicArray<Real3>{Unflatten<Real3>(*model.elementFrameAxes)}
         : mochi::GenerateDiscreteBishopFrame(nodes, isClosedLoop);
 
-    std::shared_ptr<TriangularMesh const> polylineVisMesh;
-    std::shared_ptr<RodVisualMeshEmbeddingData> polylineEmbedding;
+    std::shared_ptr<TriangularMesh const> visualSurfaceMesh;
+    std::shared_ptr<RodSurfaceEmbeddingData const> visualSurfaceEmbedding;
 
     if (model.visualMesh && model.visualMesh->skinning) {
-      polylineVisMesh = std::make_shared<TriangularMesh const>(
+      visualSurfaceMesh = std::make_shared<TriangularMesh const>(
           DynamicArray<Real3>{Unflatten<Real3>(model.visualMesh->coordinates)},
           DynamicArray<Int3>{Unflatten<Int3>(model.visualMesh->connectivity)});
-      polylineEmbedding = ComputeRodVisualMeshEmbedding(
-          nodes, frameAxes, *polylineVisMesh, std::move(*model.visualMesh->skinning), isClosedLoop);
+      visualSurfaceEmbedding =
+          std::make_shared<RodSurfaceEmbeddingData const>(ComputeRodSurfaceEmbedding(
+              nodes,
+              frameAxes,
+              *visualSurfaceMesh,
+              std::move(*model.visualMesh->skinning),
+              isClosedLoop));
     }
 
     return std::make_shared<PolylineShape>(
         std::move(nodes),
         std::move(frameAxes),
-        std::move(polylineVisMesh),
-        std::move(polylineEmbedding),
+        std::move(visualSurfaceMesh),
+        std::move(visualSurfaceEmbedding),
         isClosedLoop);
   } else {
     MOCHI_ERROR_SET(

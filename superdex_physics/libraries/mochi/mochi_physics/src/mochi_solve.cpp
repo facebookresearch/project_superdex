@@ -293,8 +293,8 @@ MOCHI_API void solver::UpdateJacobiansSubpipeline(
       // Update Jacobians for blended actors.
       // This must be called after the update of Jacobians of soft skinned
       blended::UpdateJacobiansPipeline(reg, descendants.blendedActors);
-      // Update skinning Jacobians for rod visual mesh contact.
-      ecs::InvokeForEach(&rod::ResolveRodSkinningJacobian, reg, descendants.rodActors);
+      // Update skinning Jacobians for rod contact skins.
+      ecs::InvokeForEach(&rod::ResolveContactSkinningJacobian, reg, descendants.rodActors);
       // @TODO: ROMs use Jacobians also for velocity computations, so we can't move their Jacobian
       // computation here yet.
     }
@@ -574,11 +574,10 @@ AssembleRodActorPipeline(AssemblyParams const& params, entt::registry& reg, entt
     semComp->asyncContactUpToDate->Wait();
   }
 
-  // Centerline async contact (uses CFemSegmentDiscretization). Visual mesh async contact
+  // Centerline async contact (uses CFemSegmentDiscretization). Contact-skin async contact
   // is assembled at the island level (AssembleIslandRodAsyncContact) to avoid merging
   // contact sparsity into the rod's incompatible pentadiagonal body matrix.
-  // Skip centerline contact for rods with visual mesh contact (use TagUseVisualMeshContact).
-  if (!reg.all_of<TagUseVisualMeshContact>(e)) {
+  if (!reg.all_of<TagRodSurfaceContact>(e)) {
     ecs::TryInvokeOnEntity(rod::AssembleAsyncContact, reg, e, std::cref(params));
   }
 }

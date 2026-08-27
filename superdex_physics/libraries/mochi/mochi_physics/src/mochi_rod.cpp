@@ -90,9 +90,10 @@ void InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<CRodPose<TimeStep::StageStart>>(reg);
   ecs::RegisterComponent<CRodPose<TimeStep::Previous>>(reg);
   ecs::RegisterComponent<CRodVisualMeshEmbedding>(reg);
-  ecs::RegisterComponent<CRodSkinningData>(reg);
-  ecs::RegisterComponent<CRodDeformedVisualNodes>(reg);
-  ecs::RegisterComponent<TagUseVisualMeshContact>(reg);
+  ecs::RegisterComponent<CRodContactSkin>(reg);
+  ecs::RegisterComponent<CRodContactSkinningData>(reg);
+  ecs::RegisterComponent<CRodDeformedContactSkinNodes>(reg);
+  ecs::RegisterComponent<TagRodSurfaceContact>(reg);
 }
 
 // Serializes frame axes to the packed pose vector layout [displacement_twist | axes].
@@ -374,8 +375,8 @@ void ComputeRodNodeCurvatureBinormals(
   }
 }
 
-// Helper: compute deformed visual mesh node positions from rod pose.
-// Writes numVisualNodes × 3 values to outPositions (must be pre-sized).
+// Compute deformed triangular-surface node positions from a rod pose.
+// Writes numSurfaceNodes × 3 values to outPositions (must be pre-sized).
 //
 // Implementation: two passes, with SIMD-friendly per-element transforms.
 //   Pass 1 (per element, with periodic wrap): cache the per-element affine map
@@ -383,27 +384,26 @@ void ComputeRodNodeCurvatureBinormals(
 //     row holding one column of the affine. scaledTDef = (x1 - x0) / referenceLength is the
 //     stretched unit tangent. Lane 3 of each stored row is intentionally unconstrained; it
 //     would correspond to the affine's bottom row, which never reaches outPositions.
-//   Pass 2 (per visual node × per weight): evaluate affine · [xi[0], xi[1], xi[2], 1] via
+//   Pass 2 (per surface node × per weight): evaluate affine · [xi[0], xi[1], xi[2], 1] via
 //     DotVecMat4x4 and accumulate the weighted contribution from each contributing element.
 //     The meaningless homogeneous-output lane is discarded by Store<3>.
-static void ComputeDeformedVisualNodePositions(
-    CVisualMesh const& visualMesh,
-    CRodVisualMeshEmbedding const& rodEmbedding,
+static void ComputeDeformedSurfaceNodePositions(
+    TriangularMesh const& surfaceMesh,
+    RodSurfaceEmbeddingData const& embedding,
     CPolylineMesh const& polylineMesh,
     RodPose const& rodPose,
     Span<real> outPositions) {
-  auto const& embData = *rodEmbedding.data;
-  int const numVisualNodes = visualMesh.mesh->GetNumNodes();
-  int const K = embData.weightsPerNode;
+  int const numSurfaceNodes = surfaceMesh.GetNumNodes();
+  int const K = embedding.weightsPerNode;
   int const numElements = polylineMesh.NumElements();
-  auto const meshNodes = polylineMesh.nodes;
+  auto const centerlineNodes = polylineMesh.nodes;
   auto const& displacements = rodPose.displacements;
   auto const& frameAxes = rodPose.frameAxes;
 
   MOCHI_ASSERT_VERBOSE(
-      isize(outPositions) == kSpaceDim3 * numVisualNodes, "outPositions must be pre-sized");
+      isize(outPositions) == kSpaceDim3 * numSurfaceNodes, "outPositions must be pre-sized");
   MOCHI_ASSERT_VERBOSE(
-      isize(embData.invReferenceLengths) == numElements,
+      isize(embedding.invReferenceLengths) == numElements,
       "invReferenceLengths size must match number of elements");
 
   // Pass 1: per-element affine transform stored as the transpose of a 4x4 (VMatrix4x4r).
@@ -415,103 +415,98 @@ static void ComputeDeformedVisualNodePositions(
   elemTransforms.resize_noinit(numElements);
   for (int e = 0; e < numElements; ++e) {
     Int2 const en = polylineMesh.ElementNodes(e);
-    Vec4r const x0 =
-        ToSimd(meshNodes[en[0]], 0_r) + Load<Vec4r>(&displacements[fem::kNumRodFields * en[0]]);
-    Vec4r const x1 =
-        ToSimd(meshNodes[en[1]], 0_r) + Load<Vec4r>(&displacements[fem::kNumRodFields * en[1]]);
+    Vec4r const x0 = ToSimd(centerlineNodes[en[0]], 0_r) +
+        Load<Vec4r>(&displacements[fem::kNumRodFields * en[0]]);
+    Vec4r const x1 = ToSimd(centerlineNodes[en[1]], 0_r) +
+        Load<Vec4r>(&displacements[fem::kNumRodFields * en[1]]);
     Vec4r const tDef = x1 - x0;
     Vec4r const eHat = Normalize<3>(tDef);
     Vec4r const dDef = ToSimd(frameAxes[e], 0_r);
     Vec4r const bDef = Cross3(eHat, dDef);
-    Vec4r const scaledTDef = embData.invReferenceLengths[e] * tDef;
+    Vec4r const scaledTDef = embedding.invReferenceLengths[e] * tDef;
     Vec4r const midDef = 0.5_r * (x0 + x1);
     elemTransforms[e] = VMatrix4x4r{scaledTDef, dDef, bDef, midDef};
   }
 
-  // Pass 2: per-visual-node skinning. Evaluate affine · [xi, 1] via DotVecMat4x4 on the
+  // Pass 2: per-surface-node skinning. Evaluate affine · [xi, 1] via DotVecMat4x4 on the
   // transposed transform; lane 3 of the result is meaningless and discarded by Store<3>.
-  for (int i = 0; i < numVisualNodes; ++i) {
-    Vec4r xVis{};
+  for (int i = 0; i < numSurfaceNodes; ++i) {
+    Vec4r xSurface{};
     for (int m = 0; m < K; ++m) {
       int const idx = i * K + m;
-      int const elemIdx = embData.elementIndices[idx];
-      real const w = embData.weights[idx];
-      Real3 const xi = embData.localCoordinates[idx];
+      int const elemIdx = embedding.elementIndices[idx];
+      real const w = embedding.weights[idx];
+      Real3 const xi = embedding.localCoordinates[idx];
 
       Vec4r const localHom{xi[0], xi[1], xi[2], 1_r};
       Vec4r const xElem = DotVecMat4x4(localHom, elemTransforms[elemIdx]);
-      xVis += w * xElem;
+      xSurface += w * xElem;
     }
-    Store<3>(&outPositions[kSpaceDim3 * i], xVis);
+    Store<3>(&outPositions[kSpaceDim3 * i], xSurface);
   }
 }
 
 template <TimeStep kTimeStep>
-void UpdateRodVisualMeshContactPositions(
+void UpdateSurfaceContactPositions(
     ecs::Included<TagRodActor>,
-    ecs::RequiredTag<TagUseVisualMeshContact>,
+    ecs::RequiredTag<TagRodSurfaceContact>,
     CRodPose<kTimeStep> const& rodPose,
-    CRodVisualMeshEmbedding const& rodEmbedding,
-    CVisualMesh const& visualMesh,
+    CRodContactSkin const& contactSkin,
     CPolylineMesh const& polylineMesh,
     CFemSurfaceDiscretization const& surfaceDisc,
-    CRodDeformedVisualNodes& deformedNodes,
+    CRodDeformedContactSkinNodes& deformedNodes,
     CContactSamples<kTimeStep>& outSamples) {
   MOCHI_PROFILE_SCOPE();
 
-  // Step 1: Compute deformed visual mesh node displacements
-  ComputeDeformedVisualNodePositions(
-      visualMesh, rodEmbedding, polylineMesh, rodPose.value, MakeSpan(deformedNodes.positions));
+  ComputeDeformedSurfaceNodePositions(
+      *contactSkin.mesh,
+      *contactSkin.embedding,
+      polylineMesh,
+      rodPose.value,
+      MakeSpan(deformedNodes.positions));
 
-  // Sizing heuristic: ~100 centerline rod elements x ~10 visual nodes around the circumference,
-  // with modest safety factor to avoid dynamic allocation fallback.
-  int constexpr kNumVisualNodesEstimate = 2048;
-  MOCHI_FILO_STACK_ALLOCATOR(allocator, kSpaceDim3 * kNumVisualNodesEstimate * sizeof(real));
-  ColumnVector<real> visualNodeDispl(isize(deformedNodes.positions), &allocator);
-  Span<real const> restPositions = Flatten(visualMesh.mesh->GetNodeCoordinates());
-  visualNodeDispl = AsConstView(deformedNodes.positions) - AsConstView(restPositions);
+  int constexpr kNumContactSkinNodesEstimate = 2048;
+  MOCHI_FILO_STACK_ALLOCATOR(allocator, kSpaceDim3 * kNumContactSkinNodesEstimate * sizeof(real));
+  ColumnVector<real> contactSkinNodeDisplacements(isize(deformedNodes.positions), &allocator);
+  Span<real const> restPositions = Flatten(contactSkin.mesh->GetNodeCoordinates());
+  contactSkinNodeDisplacements = AsConstView(deformedNodes.positions) - AsConstView(restPositions);
 
-  // Step 2: Evaluate quadrature positions and weights on the surface
   UpdateCollisionSamplePositionsImpl</*kUpdateOnlyActiveFaces*/ false,
                                      CFemSurfaceDiscretization,
                                      /*kNumFields*/ 3>(
-      visualNodeDispl, surfaceDisc, nullptr, outSamples);
+      contactSkinNodeDisplacements, surfaceDisc, nullptr, outSamples);
 }
 
-// Explicit template instantiations
-template void UpdateRodVisualMeshContactPositions<TimeStep::Current>(
+template void UpdateSurfaceContactPositions<TimeStep::Current>(
     ecs::Included<TagRodActor>,
-    ecs::RequiredTag<TagUseVisualMeshContact>,
+    ecs::RequiredTag<TagRodSurfaceContact>,
     CRodPose<TimeStep::Current> const& rodPose,
-    CRodVisualMeshEmbedding const& rodEmbedding,
-    CVisualMesh const& visualMesh,
+    CRodContactSkin const& contactSkin,
     CPolylineMesh const& polylineMesh,
     CFemSurfaceDiscretization const& surfaceDisc,
-    CRodDeformedVisualNodes& deformedNodes,
+    CRodDeformedContactSkinNodes& deformedNodes,
     CContactSamples<TimeStep::Current>& outSamples);
 
-template void UpdateRodVisualMeshContactPositions<TimeStep::StageStart>(
+template void UpdateSurfaceContactPositions<TimeStep::StageStart>(
     ecs::Included<TagRodActor>,
-    ecs::RequiredTag<TagUseVisualMeshContact>,
+    ecs::RequiredTag<TagRodSurfaceContact>,
     CRodPose<TimeStep::StageStart> const& rodPose,
-    CRodVisualMeshEmbedding const& rodEmbedding,
-    CVisualMesh const& visualMesh,
+    CRodContactSkin const& contactSkin,
     CPolylineMesh const& polylineMesh,
     CFemSurfaceDiscretization const& surfaceDisc,
-    CRodDeformedVisualNodes& deformedNodes,
+    CRodDeformedContactSkinNodes& deformedNodes,
     CContactSamples<TimeStep::StageStart>& outSamples);
 
-void SetupRodVisualMeshCollidingJacobians(
+void SetupSurfaceCollidingJacobians(
     ecs::Included<TagRodActor>,
-    ecs::RequiredTag<TagUseVisualMeshContact>,
+    ecs::RequiredTag<TagRodSurfaceContact>,
     CFemSurfaceDiscretization const& surfaceDisc,
     CRootTransform const& transform,
     CDofOffset const& dofOffset,
-    CRodSkinningData const& skinningData,
+    CRodContactSkinningData const& skinningData,
     CCollJacs<CollRole::Colliding>& outJacobians) {
   MOCHI_PROFILE_SCOPE();
 
-  // Create the skinning data view for DMapSparseSkinning
   auto skinJacView = AsConstView(skinningData.jacobian);
   dmap::DMapSparseSkinning sparseSkinning(0, dofOffset.dofsOffset, skinJacView);
   dmap::DMapRTConst dtransform(transform.worldFromLocal);
@@ -520,117 +515,113 @@ void SetupRodVisualMeshCollidingJacobians(
     using DiscT = std::decay_t<decltype(discImpl)>;
     using DQuad = dmap::DMapQuad<typename DiscT::ElementT>;
 
-    // Collect all non-empty jac pointers for parallel processing (both sync and async).
-    // Use GetPtrsNonEmpty to skip empty jacobian entries.
     MOCHI_FILO_STACK_ALLOCATOR(tempAlloc, 256 * sizeof(JacData*));
     auto allJacs = outJacobians.GetPtrsNonEmpty(&tempAlloc);
     if (allJacs.empty()) {
       return;
     }
 
-    ParallelForEach(
-        "rod::SetupRodVisualMeshCollidingJacobians Range", allJacs, 1, [&](JacData* jac) {
-          DQuad dquad(discImpl.femElements, jac->query->jacColliderFromWorld);
-          dmap::DMap<DQuad, dmap::DMapRTConst, dmap::DMapSparseSkinning> dmap(
-              &dquad, &dtransform, &sparseSkinning);
+    ParallelForEach("rod::SetupSurfaceCollidingJacobians Range", allJacs, 1, [&](JacData* jac) {
+      DQuad dquad(discImpl.femElements, jac->query->jacColliderFromWorld);
+      dmap::DMap<DQuad, dmap::DMapRTConst, dmap::DMapSparseSkinning> dmap(
+          &dquad, &dtransform, &sparseSkinning);
 
-          auto& jacs = *(jac->jacs);
-          dmap.GetJac(jac->query->sampleIndices, jacs);
-          jacs[0].CompressIndices();
-        });
+      auto& jacs = *(jac->jacs);
+      dmap.GetJac(jac->query->sampleIndices, jacs);
+      jacs[0].CompressIndices();
+    });
   });
 }
 
 template <TimeStep kStep>
-void UpdateBoundsVisualMesh(
+void UpdateSurfaceContactBounds(
     ecs::Included<TagRodActor>,
-    ecs::RequiredTag<TagUseVisualMeshContact>,
-    CVisualMesh const& visualMesh,
-    CRodVisualMeshEmbedding const& rodEmbedding,
+    ecs::RequiredTag<TagRodSurfaceContact>,
+    CRodContactSkin const& contactSkin,
     CPolylineMesh const& polylineMesh,
     CRodPose<kStep> const& rodPose,
-    CRodDeformedVisualNodes& deformedNodes,
+    CRodDeformedContactSkinNodes& deformedNodes,
     CBoundingVolume<TimeStep::Current>& outBounds) {
   static_assert(kStep == TimeStep::Current || kStep == TimeStep::StageStart);
   MOCHI_PROFILE_SCOPE();
 
-  int const numVisualNodes = visualMesh.mesh->GetNumNodes();
-  if (numVisualNodes == 0) {
+  if (contactSkin.mesh->GetNumNodes() == 0) {
     return;
   }
 
-  // Compute deformed visual mesh node positions (into pre-allocated buffer)
-  ComputeDeformedVisualNodePositions(
-      visualMesh, rodEmbedding, polylineMesh, rodPose.value, MakeSpan(deformedNodes.positions));
-  auto const deformedVisualNodes = Unflatten<Real3 const>(MakeConstSpan(deformedNodes.positions));
+  ComputeDeformedSurfaceNodePositions(
+      *contactSkin.mesh,
+      *contactSkin.embedding,
+      polylineMesh,
+      rodPose.value,
+      MakeSpan(deformedNodes.positions));
+  auto const deformedNodesView = Unflatten<Real3 const>(MakeConstSpan(deformedNodes.positions));
 
-  Vec4r min = ToSimd(deformedVisualNodes[0], 0_r);
+  Vec4r min = ToSimd(deformedNodesView[0], 0_r);
   Vec4r max = min;
-  for (int i = 1; i < isize(deformedVisualNodes); ++i) {
-    Vec4r const pos = ToSimd(deformedVisualNodes[i], 0_r);
+  for (int i = 1; i < isize(deformedNodesView); ++i) {
+    Vec4r const pos = ToSimd(deformedNodesView[i], 0_r);
     min = Min(min, pos);
     max = Max(max, pos);
   }
   outBounds.localShape = GetObb(Aabb{Set(min, 3, 0_r), Set(max, 3, 0_r)});
 }
 
-template void UpdateBoundsVisualMesh<TimeStep::Current>(
+template void UpdateSurfaceContactBounds<TimeStep::Current>(
     ecs::Included<TagRodActor>,
-    ecs::RequiredTag<TagUseVisualMeshContact>,
-    CVisualMesh const& visualMesh,
-    CRodVisualMeshEmbedding const& rodEmbedding,
+    ecs::RequiredTag<TagRodSurfaceContact>,
+    CRodContactSkin const& contactSkin,
     CPolylineMesh const& polylineMesh,
     CRodPose<TimeStep::Current> const& rodPose,
-    CRodDeformedVisualNodes& deformedNodes,
+    CRodDeformedContactSkinNodes& deformedNodes,
     CBoundingVolume<TimeStep::Current>& outBounds);
 
-template void UpdateBoundsVisualMesh<TimeStep::StageStart>(
+template void UpdateSurfaceContactBounds<TimeStep::StageStart>(
     ecs::Included<TagRodActor>,
-    ecs::RequiredTag<TagUseVisualMeshContact>,
-    CVisualMesh const& visualMesh,
-    CRodVisualMeshEmbedding const& rodEmbedding,
+    ecs::RequiredTag<TagRodSurfaceContact>,
+    CRodContactSkin const& contactSkin,
     CPolylineMesh const& polylineMesh,
     CRodPose<TimeStep::StageStart> const& rodPose,
-    CRodDeformedVisualNodes& deformedNodes,
+    CRodDeformedContactSkinNodes& deformedNodes,
     CBoundingVolume<TimeStep::Current>& outBounds);
 
 } // namespace mochi::rod
 
-std::shared_ptr<RodVisualMeshEmbeddingData> mochi::ComputeRodVisualMeshEmbedding(
+RodSurfaceEmbeddingData mochi::ComputeRodSurfaceEmbedding(
     Span<Real3 const> nodes,
     Span<Real3 const> frameAxes,
-    TriangularMesh const& visualMesh,
+    TriangularMesh const& surfaceMesh,
     SkinningData&& skinning,
     bool isClosedLoop) {
   int const weightsPerNode = skinning.weightsPerNode;
-  int const numVisualNodes = visualMesh.GetNumNodes();
+  int const numSurfaceNodes = surfaceMesh.GetNumNodes();
   int const numNodes = isize(nodes);
   int const numElements = isClosedLoop ? numNodes : numNodes - 1;
   MOCHI_ASSERT(
       isize(frameAxes) == numElements,
       "frameAxes must have one entry per polyline element (caller should generate if needed)");
 
-  auto embedding = std::make_shared<RodVisualMeshEmbeddingData>();
-  embedding->weightsPerNode = weightsPerNode;
-  embedding->elementIndices = std::move(skinning.indices);
-  embedding->weights = std::move(skinning.weights);
-  embedding->localCoordinates.resize(numVisualNodes * weightsPerNode);
+  RodSurfaceEmbeddingData embedding;
+  embedding.weightsPerNode = weightsPerNode;
+  embedding.elementIndices = std::move(skinning.indices);
+  embedding.weights = std::move(skinning.weights);
+  embedding.localCoordinates.resize(numSurfaceNodes * weightsPerNode);
 
-  // Precompute reciprocal reference lengths once per element, so the per-(visual node, element)
+  // Precompute reciprocal reference lengths once per element, so the per-(surface node, element)
   // ξ solve below builds a unit-reference-tangent basis that is well conditioned independent of
   // edge length.
-  embedding->invReferenceLengths.resize_noinit(numElements);
+  embedding.invReferenceLengths.resize_noinit(numElements);
   for (int e = 0; e < numElements; ++e) {
     real const referenceLength = Norm(nodes[(e + 1) % numNodes] - nodes[e]);
     MOCHI_ASSERT_VERBOSE(referenceLength > 0_r, "Rod element has zero reference length");
-    embedding->invReferenceLengths[e] = 1_r / referenceLength;
+    embedding.invReferenceLengths[e] = 1_r / referenceLength;
   }
 
-  auto const visCoords = visualMesh.GetNodeCoordinates();
-  for (int i = 0; i < numVisualNodes; ++i) {
+  auto const surfaceCoordinates = surfaceMesh.GetNodeCoordinates();
+  for (int i = 0; i < numSurfaceNodes; ++i) {
     for (int m = 0; m < weightsPerNode; ++m) {
       int const idx = i * weightsPerNode + m;
-      int const elemIdx = embedding->elementIndices[idx];
+      int const elemIdx = embedding.elementIndices[idx];
       MOCHI_ASSERT_VERBOSE(elemIdx >= 0 && elemIdx < numElements);
 
       Int2 const en = {elemIdx, (elemIdx + 1) % numNodes};
@@ -640,21 +631,21 @@ std::shared_ptr<RodVisualMeshEmbeddingData> mochi::ComputeRodVisualMeshEmbedding
       // Use a *unit* reference tangent so xi[0] is in arc-length units. This makes the local solve
       // independent of the element edge length and keeps the runtime skinning frame well
       // conditioned under stretch (cf. xi[0] is rescaled by invReferenceLengths at runtime).
-      Real3 const unitReferenceT = embedding->invReferenceLengths[elemIdx] * (x1 - x0);
+      Real3 const unitReferenceT = embedding.invReferenceLengths[elemIdx] * (x1 - x0);
       Real3 const d = frameAxes[elemIdx];
       Real3 const b = Cross(unitReferenceT, d);
 
-      Real3 const rhs = visCoords[i] - mid;
+      Real3 const rhs = surfaceCoordinates[i] - mid;
       // Solve [unitReferenceT | d | b] * xi = rhs. Since (unitReferenceT, d, b) form an
       // orthonormal basis, the matrix is a rotation and its inverse equals its transpose.
       Real3 const xi = DotMatVec(Matrix3x3r{unitReferenceT, d, b}, rhs);
-      embedding->localCoordinates[idx] = xi;
+      embedding.localCoordinates[idx] = xi;
     }
   }
   return embedding;
 }
 
-void mochi::rod::UpdateQueryRodVisualNodePositionsAndNormals(
+void mochi::rod::UpdateQueryVisualNodePositionsAndNormals(
     CVisualMesh const& visualMesh,
     CRodVisualMeshEmbedding const& rodEmbedding,
     CPolylineMesh const& polylineMesh,
@@ -667,9 +658,9 @@ void mochi::rod::UpdateQueryRodVisualNodePositionsAndNormals(
   auto const numValues = static_cast<size_t>(kSpaceDim3) * numVisualNodes;
   outVisPosQuery.nodePositions.resize(numValues);
 
-  ComputeDeformedVisualNodePositions(
-      visualMesh,
-      rodEmbedding,
+  ComputeDeformedSurfaceNodePositions(
+      *visualMesh.mesh,
+      *rodEmbedding.data,
       polylineMesh,
       rodPose.value,
       MakeSpan(outVisPosQuery.nodePositions));
@@ -679,26 +670,25 @@ void mochi::rod::UpdateQueryRodVisualNodePositionsAndNormals(
   }
 }
 
-void mochi::rod::InitializeRodSkinningJacobian(
-    CVisualMesh const& visualMesh,
-    CRodVisualMeshEmbedding const& rodEmbedding,
+void mochi::rod::InitializeContactSkinningJacobian(
+    CRodContactSkin const& contactSkin,
     CPolylineMesh const& polylineMesh,
-    CRodSkinningData& outSkinning) {
-  auto const& embData = *rodEmbedding.data;
-  int const numVisualNodes = visualMesh.mesh->GetNumNodes();
+    CRodContactSkinningData& outSkinning) {
+  auto const& embData = *contactSkin.embedding;
+  int const numContactSkinNodes = contactSkin.mesh->GetNumNodes();
   int const K = embData.weightsPerNode;
   int const numNodes = isize(polylineMesh.nodes);
   int const numDofs = numNodes * fem::kNumRodFields;
 
-  // Collect unique, sorted DOF indices per visual node, deduplicating overlapping elements.
-  DynamicArray<DynamicArray<int>> dofIndicesPerNode(numVisualNodes);
+  // Collect unique, sorted DOF indices per contact-skin node, deduplicating overlapping elements.
+  DynamicArray<DynamicArray<int>> dofIndicesPerNode(numContactSkinNodes);
 
-  int const numRows = numVisualNodes;
+  int const numRows = numContactSkinNodes;
   DynamicArray<int> rowPtrs;
   rowPtrs.resize_noinit(numRows + 1);
   rowPtrs[0] = 0;
 
-  for (int i = 0; i < numVisualNodes; ++i) {
+  for (int i = 0; i < numContactSkinNodes; ++i) {
     auto& nodeDofs = dofIndicesPerNode[i];
     nodeDofs.reserve(K * 2 * fem::kNumRodFields);
 
@@ -727,7 +717,7 @@ void mochi::rod::InitializeRodSkinningJacobian(
 
   int const totalNnz = rowPtrs[numRows];
   DynamicArray<int> colIndices(totalNnz);
-  for (int i = 0; i < numVisualNodes; ++i) {
+  for (int i = 0; i < numContactSkinNodes; ++i) {
     auto const& nodeDofs = dofIndicesPerNode[i];
     std::copy_n(nodeDofs.data(), isize(nodeDofs), &colIndices[rowPtrs[i]]);
   }
@@ -737,25 +727,24 @@ void mochi::rod::InitializeRodSkinningJacobian(
       SparseMatrix<Real3>(numDofs, std::move(rowPtrs), std::move(colIndices), std::move(values));
 }
 
-void mochi::rod::ResolveRodSkinningJacobian(
-    CVisualMesh const& visualMesh,
-    CRodVisualMeshEmbedding const& rodEmbedding,
+void mochi::rod::ResolveContactSkinningJacobian(
+    CRodContactSkin const& contactSkin,
     CPolylineMesh const& polylineMesh,
     CRodPose<TimeStep::Current> const& rodPose,
-    CRodSkinningData& outSkinning) {
+    CRodContactSkinningData& outSkinning) {
   MOCHI_PROFILE_SCOPE();
 
-  auto const& embData = *rodEmbedding.data;
-  int const numVisualNodes = visualMesh.mesh->GetNumNodes();
+  auto const& embData = *contactSkin.embedding;
+  int const numContactSkinNodes = contactSkin.mesh->GetNumNodes();
   int const K = embData.weightsPerNode;
-  auto const meshNodes = polylineMesh.nodes;
+  auto const centerlineNodes = polylineMesh.nodes;
   auto const& displacements = rodPose.value.displacements;
   auto const& frameAxes = rodPose.value.frameAxes;
 
   auto& jac = outSkinning.jacobian;
   jac.SetZero();
 
-  for (int i = 0; i < numVisualNodes; ++i) {
+  for (int i = 0; i < numContactSkinNodes; ++i) {
     auto const colIndices = jac.Indices(i);
     auto values = jac.Values(i);
 
@@ -774,8 +763,8 @@ void mochi::rod::ResolveRodSkinningJacobian(
 
       NdArray<real, 3, 8> elemJac;
       fem::ComputeEmbeddedPointElementJacobian(
-          meshNodes[en[0]],
-          meshNodes[en[1]],
+          centerlineNodes[en[0]],
+          centerlineNodes[en[1]],
           xi,
           embData.invReferenceLengths[elemIdx],
           frameAxes[elemIdx],
@@ -1002,7 +991,7 @@ MOCHI_API ModelData mochi::experimental::GenerateTubularRodModelData(
     ringB[r] = Cross(tangent, d);
   }
 
-  // Visual mesh nodes: numCrossSectionSegments vertices per ring, plus 2 cap-center vertices
+  // Visual surface nodes: numCrossSectionSegments vertices per ring, plus 2 cap-center vertices
   int const numVisualNodes = numCrossSectionSegments * numRings + 2;
   DynamicArray<real> visNodePositions;
   visNodePositions.reserve(3 * numVisualNodes);
@@ -1347,42 +1336,45 @@ void mochi::InitRodActor(
       params.contactElementType, shapePtr->GetNodes(), shapePtr->IsClosedLoop());
   int numCollidingSamples = segmentDisc.GetNumQuadPoints();
 
-  // Visual mesh contact: use CFemSurfaceDiscretization on the visual mesh for contact samples.
-  // Do NOT emplace CFemSegmentDiscretization on the entity — only rods using centerline contact
-  // should have it. This prevents the centerline UpdateCollisionSamplePositions system from
-  // matching visual-mesh-contact rods, which would race with UpdateRodVisualMeshContactPositions.
+  std::shared_ptr<TriangularMesh const> contactSkinMesh;
+  std::shared_ptr<RodSurfaceEmbeddingData const> contactSkinEmbedding;
   if (params.useVisualMeshContact) {
     MOCHI_ERROR_IF(
         !shapePtr->GetVisualMesh() || !shapePtr->GetRodVisualEmbedding(),
         error,
         "useVisualMeshContact requires a rod shape with visual mesh and embedding data.");
     MOCHI_ERROR_RETURN(error);
+    contactSkinMesh = shapePtr->GetVisualMesh();
+    contactSkinEmbedding = shapePtr->GetRodVisualEmbedding();
+  }
 
+  if (contactSkinMesh) {
     auto const& surfaceDisc = reg.emplace<CFemSurfaceDiscretization>(
         e,
-        CFemSurfaceDiscretization::Create(
-            params.visualMeshContactElementType, *shapePtr->GetVisualMesh()));
+        CFemSurfaceDiscretization::Create(params.visualMeshContactElementType, *contactSkinMesh));
     numCollidingSamples = surfaceDisc.GetNumQuadPoints();
 
-    reg.emplace<CRodSkinningData>(e);
-    reg.emplace<TagUseVisualMeshContact>(e);
+    auto& contactSkin =
+        reg.emplace<CRodContactSkin>(e, contactSkinMesh, std::move(contactSkinEmbedding));
+    auto& skinningData = reg.emplace<CRodContactSkinningData>(e);
+    rod::InitializeContactSkinningJacobian(contactSkin, mesh, skinningData);
+    reg.emplace<TagRodSurfaceContact>(e);
     reg.emplace<CSkinnedContactSnle>(e);
     reg.emplace<TagSkinnedContact>(e);
 
-    // Pre-allocate buffer for deformed visual node positions to avoid per-frame allocations
-    int const numVisualNodes = shapePtr->GetVisualMesh()->GetNumNodes();
-    auto& deformedNodes = reg.emplace<CRodDeformedVisualNodes>(e);
-    deformedNodes.positions.resize(static_cast<size_t>(kSpaceDim3) * numVisualNodes);
+    auto& deformedNodes = reg.emplace<CRodDeformedContactSkinNodes>(e);
+    deformedNodes.positions.resize(
+        static_cast<size_t>(kSpaceDim3) * contactSkinMesh->GetNumNodes());
   }
 
-  // Contact.
+  // Contact. The point-cloud collider remains discretized on the rod centerline.
   EmplaceRodActorContact(reg, e, params, *shapePtr, segmentDisc, numCollidingSamples, error);
   MOCHI_ERROR_RETURN(error);
 
   // Centerline contact rods.
-  if (!params.useVisualMeshContact) {
-    // Centerline contact assembly uses rod segments as the assembly elements. The visual-mesh
-    // contact path uses the skinned-contact subsystem instead.
+  if (!contactSkinMesh) {
+    // Centerline contact assembly uses rod segments as the assembly elements. The contact-skin
+    // path uses the skinned-contact subsystem instead.
     //
     // L2G has fixed 2-node x kNumDofsPerNode stride, matching CFemSegmentDiscretization. The NBS
     // uses the same segment element order, while sparse indices are computed against the actor's
@@ -1436,17 +1428,10 @@ void mochi::InitRodActor(
     reg.emplace<TagUseGravity>(e);
   }
 
-  // Visual mesh
+  // Visual components are independent of the selected contact representation.
   if (shapePtr->GetVisualMesh() && shapePtr->GetRodVisualEmbedding()) {
     reg.emplace<CVisualMesh>(e, shapePtr->GetVisualMesh(), nullptr);
     reg.emplace<CRodVisualMeshEmbedding>(e, shapePtr->GetRodVisualEmbedding());
-    if (auto* skinningData = reg.try_get<CRodSkinningData>(e)) {
-      rod::InitializeRodSkinningJacobian(
-          reg.get<CVisualMesh const>(e),
-          reg.get<CRodVisualMeshEmbedding const>(e),
-          reg.get<CPolylineMesh const>(e),
-          *skinningData);
-    }
   }
 }
 

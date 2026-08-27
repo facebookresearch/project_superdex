@@ -48,7 +48,7 @@ static void ForEachCurrentBoundsUpdateSystem(Invoke&& invoke) {
   invoke(&soft::UpdateBounds<TimeStep::Current>);
   invoke(&articulated::compound::UpdateBounds<TimeStep::Current>);
   invoke(&shell::UpdateBounds<TimeStep::Current>);
-  invoke(&rod::UpdateBoundsVisualMesh<TimeStep::Current>);
+  invoke(&rod::UpdateSurfaceContactBounds<TimeStep::Current>);
   invoke(&rod::UpdateBounds<TimeStep::Current>);
 }
 
@@ -395,7 +395,11 @@ static void UpdateActorQueriesAsync(TaskSemaphore sem, entt::registry& reg, entt
   // Actors with a visual mesh (and embeddings)
   // Writes CQueryVisualNodePositions, and (optionally) CQueryVisualNodeNormals
   ecs::TryScheduleInvokeOnEntity(
-      sem, "UpdateQueryRodVisual", &rod::UpdateQueryRodVisualNodePositionsAndNormals, reg, e);
+      sem,
+      "rod::UpdateQueryVisualNodePositionsAndNormals",
+      &rod::UpdateQueryVisualNodePositionsAndNormals,
+      reg,
+      e);
   // Reads CQueryNodePositions (for non-rod deformable actors)
   ecs::TryScheduleInvokeOnEntity(
       sem, "UpdateQueryVisual", &UpdateQueryVisualNodePositionsAndNormals, reg, e);

@@ -798,8 +798,8 @@ using ContactAssemblyReg = ecs::PartialRegistry<
     CFemSurfaceDiscretization const,
     TagStaticActor const,
     TagShellActor const,
+    TagRodSurfaceContact const,
     TagRodActor const,
-    TagUseVisualMeshContact const,
     CRootTransform const,
     CRigidState<TimeStep::Current> const,
     CRigidState<TimeStep::StageStart> const,
@@ -808,11 +808,11 @@ using ContactAssemblyReg = ecs::PartialRegistry<
 [[nodiscard]] inline int CollidingIntegralDim(
     ContactAssemblyReg const& reg,
     entt::entity colliding) {
-  // Rod actors with visual mesh contact integrate over a 2D surface. Rod actors using centerline
+  // Rod actors with a contact skin integrate over a 2D surface. Rod actors using centerline
   // contact lump contact traction on the centerline, taking a 1D line integral. All other actor
   // types currently integrate contact on 2D surfaces.
   if (reg.all_of<TagRodActor>(colliding)) {
-    return reg.all_of<TagUseVisualMeshContact>(colliding) ? 2 : 1;
+    return reg.all_of<TagRodSurfaceContact>(colliding) ? 2 : 1;
   }
   return 2;
   // NOTE: Contact with point masses would return 0 here, but it's not supported.

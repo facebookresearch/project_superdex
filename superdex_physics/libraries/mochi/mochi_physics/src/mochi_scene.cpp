@@ -2948,6 +2948,23 @@ void SceneImpl::ValidateNewActorComposition(entt::entity e) const {
         _registry.all_of<CPotentialColliders<ContactType::Sync>>(e), "Missing required component");
   }
 
+  if (_registry.all_of<TagRodActor>(e)) {
+    bool const usesContactSkin = _registry.all_of<TagRodSurfaceContact>(e);
+    bool const hasContactSkinComponents = _registry.all_of<
+        CRodContactSkin,
+        CRodContactSkinningData,
+        CRodDeformedContactSkinNodes,
+        CFemSurfaceDiscretization,
+        CSkinnedContactSnle,
+        TagSkinnedContact>(e);
+    MOCHI_ASSERT(
+        usesContactSkin == hasContactSkinComponents,
+        "Rod contact-skin tag and components must be installed together.");
+    MOCHI_ASSERT(
+        usesContactSkin != _registry.all_of<CFemSegmentDiscretization>(e),
+        "Rod contact must use exactly one of contact-skin or centerline discretization.");
+  }
+
   // All actors must have a CConvergenceStatus, except static actors and internal-only compounds
   // (not accessible through the public API).
   bool const isStatic = _registry.any_of<TagStaticActor>(e);

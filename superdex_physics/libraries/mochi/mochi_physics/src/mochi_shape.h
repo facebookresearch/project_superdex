@@ -49,7 +49,7 @@
 
 namespace mochi {
 
-struct RodVisualMeshEmbeddingData;
+struct RodSurfaceEmbeddingData;
 struct BlendingDataMap;
 
 // Base class for shapes
@@ -461,7 +461,7 @@ class PolylineShape final : public Shape {
       DynamicArray<Real3> nodes,
       DynamicArray<Real3> elementFrameAxes,
       std::shared_ptr<TriangularMesh const> visualMesh,
-      std::shared_ptr<RodVisualMeshEmbeddingData const> rodVisualEmbedding,
+      std::shared_ptr<RodSurfaceEmbeddingData const> rodVisualEmbedding,
       bool isClosedLoop);
 
   AnyShape GetBoundingVolume(Error& error) const override {
@@ -493,7 +493,7 @@ class PolylineShape final : public Shape {
     return _visualMesh;
   }
 
-  std::shared_ptr<RodVisualMeshEmbeddingData const> const& GetRodVisualEmbedding() const {
+  std::shared_ptr<RodSurfaceEmbeddingData const> const& GetRodVisualEmbedding() const {
     return _rodVisualEmbedding;
   }
 
@@ -512,7 +512,7 @@ class PolylineShape final : public Shape {
   bool _isClosedLoop = false;
   DynamicArray<int> _connectivity;
   std::shared_ptr<TriangularMesh const> _visualMesh;
-  std::shared_ptr<RodVisualMeshEmbeddingData const> _rodVisualEmbedding;
+  std::shared_ptr<RodSurfaceEmbeddingData const> _rodVisualEmbedding;
 };
 
 // Define data structure for bones

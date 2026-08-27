@@ -35,10 +35,10 @@
 
 namespace mochi {
 
-// Precomputed data for embedding a visual mesh into a rod's element frames. Each visual node is
-// expressed as a weighted blend of affine transformations from nearby rod elements. The affine
-// transformation for each (visual node, element) pair uses local coordinates ξ that encode the
-// visual node's offset from the element midpoint in the element's *normalized* reference-frame
+// Precomputed data for embedding a triangular mesh into a rod's element frames. Each surface node
+// is expressed as a weighted blend of affine transformations from nearby rod elements. The affine
+// transformation for each (surface node, element) pair uses local coordinates ξ that encode the
+// surface node's offset from the element midpoint in the element's *normalized* reference-frame
 // basis {unit_reference_tangent, frame_axis, binormal}, where
 // unit_reference_tangent = (X1 - X0) / referenceLength has unit length in the reference
 // configuration. ξ[0] is therefore a signed arc-length offset and ξ[1], ξ[2] are length-units
@@ -46,29 +46,29 @@ namespace mochi {
 // invReferenceLengths[elemIdx] when applied to the deformed edge (x1 - x0), to give a
 // stretch-aware skinning that stays well-conditioned under stretch and is independent of
 // element edge length in the reference configuration.
-struct RodVisualMeshEmbeddingData {
+struct RodSurfaceEmbeddingData {
   int weightsPerNode = 0;
-  DynamicArray<int> elementIndices; // flat: numVisualNodes × weightsPerNode
-  DynamicArray<real> weights; // flat: numVisualNodes × weightsPerNode
-  DynamicArray<Real3> localCoordinates; // flat: numVisualNodes × weightsPerNode (precomputed ξ)
+  DynamicArray<int> elementIndices; // flat: numSurfaceNodes × weightsPerNode
+  DynamicArray<real> weights; // flat: numSurfaceNodes × weightsPerNode
+  DynamicArray<Real3> localCoordinates; // flat: numSurfaceNodes × weightsPerNode (precomputed ξ)
   // Per-element reciprocal reference lengths: invReferenceLengths[e] = 1 / |X1_e - X0_e|.
   // Size = numElements. Used to convert ξ[0] (in length units) into a stretched unit-tangent
   // multiplier at runtime.
   DynamicArray<real> invReferenceLengths;
 };
 
-// Forward declarations for ComputeRodVisualMeshEmbedding.
+// Forward declarations for ComputeRodSurfaceEmbedding.
 class TriangularMesh;
 struct SkinningData;
 
-// Precompute the rod visual mesh embedding from a polyline's reference-configuration nodes,
-// element frame axes, visual mesh, and skinning data. Returns a fully-constructed
-// RodVisualMeshEmbeddingData with local coordinates ξ for each (visual node, element) pair.
+// Precompute a rod surface embedding from a polyline's reference-configuration nodes, element
+// frame axes, triangular surface mesh, and skinning data. Returns a fully-constructed
+// RodSurfaceEmbeddingData with local coordinates ξ for each (surface node, element) pair.
 // The skinning indices/weights are moved into the returned embedding to avoid extra copies.
-[[nodiscard]] std::shared_ptr<RodVisualMeshEmbeddingData> ComputeRodVisualMeshEmbedding(
+[[nodiscard]] RodSurfaceEmbeddingData ComputeRodSurfaceEmbedding(
     Span<Real3 const> nodes,
     Span<Real3 const> frameAxes,
-    TriangularMesh const& visualMesh,
+    TriangularMesh const& surfaceMesh,
     SkinningData&& skinning,
     bool isClosedLoop);
 
@@ -76,25 +76,38 @@ struct SkinningData;
 // linear MeshEmbedding used by soft/shell actors, because rod visual node positions depend
 // nonlinearly on element frame axes via per-element affine transformations.
 struct CRodVisualMeshEmbedding : public NoCopy {
-  explicit CRodVisualMeshEmbedding(std::shared_ptr<RodVisualMeshEmbeddingData const> dataIn)
+  explicit CRodVisualMeshEmbedding(std::shared_ptr<RodSurfaceEmbeddingData const> dataIn)
       : data(std::move(dataIn)) {
     MOCHI_ASSERT(data != nullptr);
   }
-  std::shared_ptr<RodVisualMeshEmbeddingData const> data;
+  std::shared_ptr<RodSurfaceEmbeddingData const> data;
 };
 
-// ECS component holding the rod skinning Jacobian ∂x_vis/∂(rod DoFs) as a sparse matrix.
-// The matrix has 1 row per visual node and numRodDofs columns. Each non-zero entry is a
-// Real3 holding (x, y, z) Jacobian components for that (node, DoF) pair.
-// Populated by ResolveRodSkinningJacobian.
-struct CRodSkinningData : public NoCopy {
+// Owns the triangular mesh and rod embedding selected for surface contact. These may alias the
+// rod shape's visual data or describe a dedicated contact skin.
+struct CRodContactSkin : public NoCopy {
+  CRodContactSkin(
+      std::shared_ptr<TriangularMesh const> meshIn,
+      std::shared_ptr<RodSurfaceEmbeddingData const> embeddingIn)
+      : mesh(std::move(meshIn)), embedding(std::move(embeddingIn)) {
+    MOCHI_ASSERT(mesh != nullptr);
+    MOCHI_ASSERT(embedding != nullptr);
+  }
+
+  std::shared_ptr<TriangularMesh const> mesh;
+  std::shared_ptr<RodSurfaceEmbeddingData const> embedding;
+};
+
+// ECS component holding the contact-skin Jacobian ∂x_skin/∂(rod DoFs) as a sparse matrix.
+// The matrix has 1 row per skin node and numRodDofs columns. Each non-zero entry is a Real3
+// holding (x, y, z) Jacobian components for that (node, DoF) pair.
+struct CRodContactSkinningData : public NoCopy {
   SparseMatrix<Real3> jacobian;
 };
 
-// ECS component caching deformed visual mesh node positions for rod actors using visual mesh
-// contact. Stores numVisualNodes × 3 values in a flat array. Pre-allocated at actor creation
+// Caches deformed contact-skin node positions. The flat array is pre-allocated at actor creation
 // to avoid per-frame allocations during contact updates.
-struct CRodDeformedVisualNodes : public NoCopy {
+struct CRodDeformedContactSkinNodes : public NoCopy {
   DynamicArray<real> positions;
 };
 
@@ -365,9 +378,9 @@ void AssembleAsyncContact(
 
 void InitializeOnce(entt::registry& reg);
 
-// Compute deformed visual mesh node positions (and optionally normals) for a rod actor.
+// Compute deformed visual surface node positions (and optionally normals) for a rod actor.
 // Uses the rod-specific affine embedding rather than the linear MeshEmbedding used by soft/shell.
-void UpdateQueryRodVisualNodePositionsAndNormals(
+void UpdateQueryVisualNodePositionsAndNormals(
     CVisualMesh const& visualMesh,
     CRodVisualMeshEmbedding const& rodEmbedding,
     CPolylineMesh const& polylineMesh,
@@ -375,63 +388,56 @@ void UpdateQueryRodVisualNodePositionsAndNormals(
     CQueryVisualNodePositions& outVisPosQuery,
     CQueryVisualNodeNormals* outVisNormQuery);
 
-// Builds the sparsity pattern (CSR row pointers and column indices) of the skinning Jacobian
-// ∂x_vis/∂(rod DoFs). The sparsity depends only on topology-invariant embedding data, so this
-// function is called once at setup time. The resulting SparseMatrix<Real3> in outSkinning.jacobian
-// has correct structure and zero values.
-void InitializeRodSkinningJacobian(
-    CVisualMesh const& visualMesh,
-    CRodVisualMeshEmbedding const& rodEmbedding,
+// Builds the CSR sparsity pattern of the contact-skin Jacobian ∂x_skin/∂(rod DoFs). The sparsity
+// depends only on topology-invariant embedding data, so this runs once during actor setup. The
+// resulting matrix has the correct structure and zero values.
+void InitializeContactSkinningJacobian(
+    CRodContactSkin const& contactSkin,
     CPolylineMesh const& polylineMesh,
-    CRodSkinningData& outSkinning);
+    CRodContactSkinningData& outSkinning);
 
-// Computes the skinning Jacobian values ∂x_vis/∂(rod DoFs) for a rod actor's visual mesh.
-// The sparsity pattern must already be initialized via InitializeRodSkinningJacobian.
-// Uses the current frame axes from CRodPose (not reference axes).
-void ResolveRodSkinningJacobian(
-    CVisualMesh const& visualMesh,
-    CRodVisualMeshEmbedding const& rodEmbedding,
+// Computes contact-skin Jacobian values using the current rod frame axes. The sparsity pattern must
+// already be initialized by InitializeContactSkinningJacobian.
+void ResolveContactSkinningJacobian(
+    CRodContactSkin const& contactSkin,
     CPolylineMesh const& polylineMesh,
     CRodPose<TimeStep::Current> const& rodPose,
-    CRodSkinningData& outSkinning);
+    CRodContactSkinningData& outSkinning);
 
-// Updates contact sample positions for rods using visual mesh contact.
-// Computes deformed visual mesh node positions (into pre-allocated buffer) and evaluates
-// quadrature points.
+// Updates surface-contact samples from the selected triangular mesh. Deformed surface-node
+// positions are computed into the pre-allocated buffer before evaluating the quadrature points.
 template <TimeStep kTimeStep>
-void UpdateRodVisualMeshContactPositions(
+void UpdateSurfaceContactPositions(
     ecs::Included<TagRodActor>,
-    ecs::RequiredTag<TagUseVisualMeshContact>,
+    ecs::RequiredTag<TagRodSurfaceContact>,
     CRodPose<kTimeStep> const& rodPose,
-    CRodVisualMeshEmbedding const& rodEmbedding,
-    CVisualMesh const& visualMesh,
+    CRodContactSkin const& contactSkin,
     CPolylineMesh const& polylineMesh,
     CFemSurfaceDiscretization const& surfaceDisc,
-    CRodDeformedVisualNodes& deformedNodes,
+    CRodDeformedContactSkinNodes& deformedNodes,
     CContactSamples<kTimeStep>& outSamples);
 
-// Sets up colliding Jacobians for rod visual mesh contact.
-// Constructs the DMap chain: DMap<DQuad, DMapRTConst, DMapSparseSkinning>.
-void SetupRodVisualMeshCollidingJacobians(
+// Sets up surface-contact colliding Jacobians through
+// DMap<DQuad, DMapRTConst, DMapSparseSkinning>.
+void SetupSurfaceCollidingJacobians(
     ecs::Included<TagRodActor>,
-    ecs::RequiredTag<TagUseVisualMeshContact>,
+    ecs::RequiredTag<TagRodSurfaceContact>,
     CFemSurfaceDiscretization const& surfaceDisc,
     CRootTransform const& transform,
     CDofOffset const& dofOffset,
-    CRodSkinningData const& skinningData,
+    CRodContactSkinningData const& skinningData,
     CCollJacs<CollRole::Colliding>& outJacobians);
 
-// Update bounding volume from deformed visual mesh positions.
-// Uses pre-allocated deformedNodes buffer to avoid per-frame allocations.
+// Updates the bounding volume from deformed surface-contact positions, reusing the pre-allocated
+// deformed-node buffer to avoid per-frame allocations.
 template <TimeStep kStep>
-void UpdateBoundsVisualMesh(
+void UpdateSurfaceContactBounds(
     ecs::Included<TagRodActor>,
-    ecs::RequiredTag<TagUseVisualMeshContact>,
-    CVisualMesh const& visualMesh,
-    CRodVisualMeshEmbedding const& rodEmbedding,
+    ecs::RequiredTag<TagRodSurfaceContact>,
+    CRodContactSkin const& contactSkin,
     CPolylineMesh const& polylineMesh,
     CRodPose<kStep> const& rodPose,
-    CRodDeformedVisualNodes& deformedNodes,
+    CRodDeformedContactSkinNodes& deformedNodes,
     CBoundingVolume<TimeStep::Current>& outBounds);
 
 // Get the mass of a rod actor.
@@ -459,7 +465,7 @@ void ComputeRodNodeCurvatureBinormals(
 // Note: Rods have 4 DoFs per node (3 displacement + 1 twist), so we extract just the displacement
 // components (stride of 4) to compute the bounding volume.
 // Excluded<CFemSurfaceDiscretization> ensures this only runs for centerline contact rods;
-// visual mesh contact rods use UpdateBoundsVisualMesh instead.
+// contact-skin rods use UpdateSurfaceContactBounds instead.
 template <TimeStep kStep>
 void UpdateBounds(
     ecs::Excluded<CFemSurfaceDiscretization>,

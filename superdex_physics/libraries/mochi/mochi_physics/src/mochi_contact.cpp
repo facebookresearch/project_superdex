@@ -1302,18 +1302,18 @@ static void InitCollidingJacobians(
       &deformable::SetupCollidingJacobians<TagShellActor, CFemSurfaceDiscretization>,
       reg,
       descendants.shellActors);
-  // Centerline Jacobians for rods without visual mesh contact.
+  // Centerline Jacobians for rods without surface contact.
   ecs::ScheduleInvokeForEach(
       sem,
       "deformable::SetupCollidingJacobians<TagRodActor, CFemSegmentDiscretization>",
       &deformable::SetupCollidingJacobians<TagRodActor, CFemSegmentDiscretization>,
       reg,
       descendants.rodActors);
-  // Jacobians for rods with visual mesh contact.
+  // Jacobians for rods with surface contact.
   ecs::ScheduleInvokeForEach(
       sem,
-      "rod::SetupRodVisualMeshCollidingJacobians",
-      &rod::SetupRodVisualMeshCollidingJacobians,
+      "rod::SetupSurfaceCollidingJacobians",
+      &rod::SetupSurfaceCollidingJacobians,
       reg,
       descendants.rodActors);
   ecs::ScheduleInvokeForEach(
@@ -4078,8 +4078,8 @@ void mochi::UpdateStageStartDataPipeline(
   }
   ecs::ScheduleInvokeForEach(
       sem,
-      "rod::UpdateRodVisualMeshContactPositions<TimeStep::StageStart>",
-      rod::UpdateRodVisualMeshContactPositions<TimeStep::StageStart>,
+      "rod::UpdateSurfaceContactPositions<TimeStep::StageStart>",
+      rod::UpdateSurfaceContactPositions<TimeStep::StageStart>,
       reg,
       descendants.rodActors);
   // Update stage-start contact samples of shell and compound actors (with a tri-mesh skin).
@@ -4135,13 +4135,13 @@ MOCHI_API void mochi::CollisionDetectionPipeline(
         descendants.compoundActors);
     ecs::ScheduleInvokeForEach(
         sem, "shell::UpdateBounds", &shell::UpdateBounds<kTimeStep>, reg, descendants.shellActors);
-    // Schedule visual mesh bounds first, then centerline bounds.
-    // ECS component matching ensures rod actors with TagUseVisualMeshContact match
-    // UpdateBoundsVisualMesh; those without match UpdateBounds.
+    // Schedule contact-skin bounds first, then centerline bounds.
+    // ECS component matching ensures rod actors with TagRodSurfaceContact match
+    // UpdateSurfaceContactBounds; those without match UpdateBounds.
     ecs::ScheduleInvokeForEach(
         sem,
-        "rod::UpdateBoundsVisualMesh",
-        &rod::UpdateBoundsVisualMesh<kTimeStep>,
+        "rod::UpdateSurfaceContactBounds",
+        &rod::UpdateSurfaceContactBounds<kTimeStep>,
         reg,
         descendants.rodActors);
     ecs::ScheduleInvokeForEach(
@@ -4224,10 +4224,9 @@ MOCHI_API void mochi::CollisionDetectionPipeline(
           Schedule(sem, "AsyncCollisionAndResponse", [&, e]() { asyncCollisionAndResponse(e); });
           syncCollisionAndResponse(e); // Do the work on this thread
         });
-      } else if (ecs::CanInvokeOnEntity(
-                     rod::UpdateRodVisualMeshContactPositions<kTimeStep>, reg, e)) {
-        Schedule(sem, "rod::UpdateRodVisualMeshContactPositions", [&, e, sem]() {
-          ecs::InvokeOnEntity(rod::UpdateRodVisualMeshContactPositions<kTimeStep>, reg, e);
+      } else if (ecs::CanInvokeOnEntity(rod::UpdateSurfaceContactPositions<kTimeStep>, reg, e)) {
+        Schedule(sem, "rod::UpdateSurfaceContactPositions", [&, e, sem]() {
+          ecs::InvokeOnEntity(rod::UpdateSurfaceContactPositions<kTimeStep>, reg, e);
           Schedule(sem, "AsyncCollisionAndResponse", [&, e]() { asyncCollisionAndResponse(e); });
           syncCollisionAndResponse(e);
         });

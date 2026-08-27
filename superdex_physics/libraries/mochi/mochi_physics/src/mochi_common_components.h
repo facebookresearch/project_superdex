@@ -72,15 +72,14 @@ struct TagHasDeepFlowCollider {};
 // Indicates that an actor participates in the point-cloud contact system.
 struct TagUsePointCloudContact {};
 
-// Indicates that a rod actor uses visual mesh contact instead of centerline contact.
-// When present, contact samples are placed on the visual mesh surface (CFemSurfaceDiscretization)
-// rather than along the rod centerline (CFemSegmentDiscretization).
-struct TagUseVisualMeshContact {};
+// Indicates that a rod actor uses a triangular surface for contact instead of centerline contact.
+// The surface may be the rod's visual mesh or a dedicated contact skin.
+struct TagRodSurfaceContact {};
 
 // Indicates that an actor's contact samples need a non-trivial Jacobian to back-propagate async
 // forces through skinning/embedding (i.e. the actor produces a CSkinnedContactSnle and is
 // dispatched to AssembleAsyncSkinnedContact). Currently emplaced for articulated actors with
-// skinned contact meshes, soft-skinned actors, and rod actors that use visual-mesh contact.
+// skinned contact meshes, soft-skinned actors, and rod actors that use a contact skin.
 struct TagSkinnedContact {};
 
 // Hides an actor from debug draw systems. Emplaced by DebugDraw::EnableActor.
