@@ -158,7 +158,7 @@ struct prefab::SoftActorPrefab(SoftActorParams) [no_reflection] {
   // @note Recentering updates the root transform as the actor moves, keeping local-space
   // displacements small. This improves numerical stability for actors that move far from their
   // initial position.
-  // @note Ignored by soft skinned actors, which do not support recentering.
+  // @note Ignored for nested soft actors in soft-skinned actors, which do not support recentering.
   bool useRecentering = true;
 
   // @brief Scale [x, y, z] to bake into the shape file.
@@ -367,9 +367,9 @@ struct prefab::ArticulatedActorPrefab [equality, no_reflection] {
   Optional<DynamicArray<real>> jointVelocities;
 }
 
-// @brief Prefab parameters for a soft skinned actor.
+// @brief Prefab parameters for a soft-skinned actor.
 //
-// @details A soft skinned actor consists of an articulated skeleton with one
+// @details A soft-skinned actor consists of an articulated skeleton with one
 // or more attached soft bodies.
 struct prefab::SoftSkinnedActorPrefab [no_reflection] {
   // @brief Optional serialized comment.
@@ -378,15 +378,15 @@ struct prefab::SoftSkinnedActorPrefab [no_reflection] {
   // @brief Articulated actor parameters for the skeleton.
   prefab::ArticulatedActorPrefab skeletonParams;
 
-  // @brief Soft body parameters, one per soft actor.
+  // @brief Parameters for each nested soft actor.
   //
-  // @note The per-soft-actor @ref SoftActorPrefab::rotation and @ref
-  // SoftActorPrefab::translation fields are ignored. Soft actor transforms are
-  // determined by the skeleton's link attachments (see @ref softAttachLinks).
-  // @note Each per-soft-actor @ref SoftActorPrefab::scale must be uniform (three equal, strictly
-  // positive, finite values). Non-uniform soft shape scale is not supported for soft-skinned
-  // prefabs.
-  // @note If a per-soft-actor @ref SoftActorPrefab::flowFile is set, that entry's @ref
+  // @note The @ref SoftActorPrefab::rotation and @ref SoftActorPrefab::translation fields for each
+  // nested soft actor are ignored. Nested soft actor transforms are determined by the skeleton's
+  // link attachments (see @ref softAttachLinks).
+  // @note Each nested soft actor's @ref SoftActorPrefab::scale must be uniform (three equal,
+  // strictly positive, finite values). Non-uniform soft shape scale is not supported for
+  // soft-skinned prefabs.
+  // @note If a nested soft actor's @ref SoftActorPrefab::flowFile is set, that entry's @ref
   // SoftActorPrefab::scale must be (1, 1, 1).
   // @note Each entry's inherited name field is a nested soft local name. Explicit non-empty
   // names must be unique across skeleton link local names and other nested soft local names, and
@@ -396,8 +396,8 @@ struct prefab::SoftSkinnedActorPrefab [no_reflection] {
   // otherwise it uses the first available `soft_N` found by scanning upward from `N = 0`.
   DynamicArray<prefab::SoftActorPrefab> softParams;
 
-  // @brief Local link names to attach each soft actor to. Empty or one entry per @ref softParams
-  // element.
+  // @brief Local link names to attach each nested soft actor to. Empty or one entry per @ref
+  // softParams element.
   //
   // @note If provided, each entry must be non-empty and must match a skeleton link local
   // name.
@@ -430,7 +430,7 @@ struct prefab::ActorLists [no_reflection] {
   // @brief Soft actors.
   DynamicArray<prefab::SoftActorPrefab> soft;
 
-  // @brief Soft skinned actors.
+  // @brief Soft-skinned actors.
   DynamicArray<prefab::SoftSkinnedActorPrefab> softSkinned;
 }
 
@@ -1092,8 +1092,8 @@ struct prefab::AddToSceneResult [no_reflection] {
   // actors from the top-level prefab.
   //
   // @note Contains only top-level actors. Articulated actors' nested link actors and soft-skinned
-  // actors' nested link and soft sub-actors are created but not listed here. Reach them via
-  // @ref Actor::GetNestedLinkActors and @ref Actor::GetNestedSoftActors.
+  // actors' nested link actors and nested soft actors are created but not listed here. Reach them
+  // via @ref Actor::GetNestedLinkActors and @ref Actor::GetNestedSoftActors.
   //
   // @see Filter
   DynamicArray<Actor*> actors;
@@ -1113,10 +1113,10 @@ struct prefab::AddToSceneResult [no_reflection] {
   // @return List of actors of the specified type.
   //
   // @note If there were nested prefabs, then actors will be listed in depth-first order.
-  // @note For a single prefab (no nested prefabs) whose actors have no nested link or soft
-  // sub-actors, the result is 1-to-1 with the prefab's actors of that type (same size, same order).
-  // Nested link/soft sub-actors are not listed, and soft-skinned actors are reported under
-  // @ref ActorType::Articulated.
+  // @note For a single prefab (no nested prefabs) whose actors have no nested link actors or nested
+  // soft actors, the result is 1-to-1 with the prefab's actors of that type (same size, same
+  // order). Nested link actors and nested soft actors are not listed, and soft-skinned actors are
+  // reported under @ref ActorType::Articulated.
   fn Filter(ActorType type) -> DynamicArray<Actor*> [const, overloaded, export];
 
   // @brief Return all the newly created constraints of a particular type, in order.
@@ -1358,8 +1358,8 @@ fn prefab::ExportScene(Scene const* scene, StringView exportName, StringView out
 // @code <outputDir>/<exportName>/generated_assets @endcode are created automatically.
 // @param[in] excludeActors Handles of actors that should not be exported.
 // Excluding an articulated actor also excludes all of its nested link actors. Excluding a
-// soft-skinned actor also excludes all of its nested link and soft sub-actors. Any contact
-// filter entries that reference excluded actors are dropped.
+// soft-skinned actor also excludes all of its nested link actors and nested soft actors. Any
+// contact filter entries that reference excluded actors are dropped.
 //
 // @warning Currently exports only rigid, soft, articulated, and soft-skinned actors. Constraints,
 // pose controllers, shell, rod actors, and implicit (non-mesh) shapes are NOT exported.

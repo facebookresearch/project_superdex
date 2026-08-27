@@ -946,7 +946,8 @@ class SoftActorPrefab(mochi_physics.SoftActorParams):
         actors that move far from their initial position.
 
     Note:
-        Ignored by soft skinned actors, which do not support recentering.
+        Ignored for nested soft actors in soft-skinned actors, which do not support
+        recentering.
 
     Warning:
         This is an experimental feature. It may be changed or removed in the future.
@@ -1434,9 +1435,9 @@ class ArticulatedActorPrefab:
     def __ne__(self, other: object) -> bool: ...
 
 class SoftSkinnedActorPrefab:
-    """Prefab parameters for a soft skinned actor.
+    """Prefab parameters for a soft-skinned actor.
 
-    A soft skinned actor consists of an articulated skeleton with one or more
+    A soft-skinned actor consists of an articulated skeleton with one or more
     attached soft bodies.
     """
     comment: Optional[str]
@@ -1445,22 +1446,23 @@ class SoftSkinnedActorPrefab:
     """Articulated actor parameters for the skeleton."""
     @property
     def soft_params(self) -> DynamicArraySoftActorPrefab:
-        """Soft body parameters, one per soft actor.
+        """Parameters for each nested soft actor.
 
         Note:
-            The per-soft-actor :attr:`~superdex.physics.prefab.SoftActorPrefab.rotation`
-            and :attr:`~superdex.physics.prefab.SoftActorPrefab.translation` fields are
-            ignored. Soft actor transforms are determined by the skeleton's link
-            attachments (see
+            The :attr:`~superdex.physics.prefab.SoftActorPrefab.rotation` and
+            :attr:`~superdex.physics.prefab.SoftActorPrefab.translation` fields for each
+            nested soft actor are ignored. Nested soft actor transforms are determined
+            by the skeleton's link attachments (see
             :attr:`~superdex.physics.prefab.SoftSkinnedActorPrefab.soft_attach_links`).
 
         Note:
-            Each per-soft-actor :attr:`~superdex.physics.prefab.SoftActorPrefab.scale`
-            must be uniform (three equal, strictly positive, finite values). Non-uniform
-            soft shape scale is not supported for soft-skinned prefabs.
+            Each nested soft actor's
+            :attr:`~superdex.physics.prefab.SoftActorPrefab.scale` must be uniform
+            (three equal, strictly positive, finite values). Non-uniform soft shape
+            scale is not supported for soft-skinned prefabs.
 
         Note:
-            If a per-soft-actor
+            If a nested soft actor's
             :attr:`~superdex.physics.prefab.SoftActorPrefab.flow_file` is set, that
             entry's :attr:`~superdex.physics.prefab.SoftActorPrefab.scale` must be (1,
             1, 1).
@@ -1481,7 +1483,7 @@ class SoftSkinnedActorPrefab:
     def soft_params(self, value: ArrayLikeSoftActorPrefab) -> None: ...
     @property
     def soft_attach_links(self) -> mochi_physics.DynamicArrayString:
-        """Local link names to attach each soft actor to. Empty or one entry per
+        """Local link names to attach each nested soft actor to. Empty or one entry per
         :attr:`~superdex.physics.prefab.SoftSkinnedActorPrefab.soft_params` element.
 
         Note:
@@ -1534,7 +1536,7 @@ class ActorLists:
     def soft(self, value: ArrayLikeSoftActorPrefab) -> None: ...
     @property
     def soft_skinned(self) -> DynamicArraySoftSkinnedActorPrefab:
-        """Soft skinned actors."""
+        """Soft-skinned actors."""
     @soft_skinned.setter
     def soft_skinned(self, value: ArrayLikeSoftSkinnedActorPrefab) -> None: ...
     @overload
@@ -2803,8 +2805,8 @@ class AddToSceneResult:
 
         Note:
             Contains only top-level actors. Articulated actors' nested link actors and
-            soft-skinned actors' nested link and soft sub-actors are created but not
-            listed here. Reach them via
+            soft-skinned actors' nested link actors and nested soft actors are created
+            but not listed here. Reach them via
             :meth:`~superdex.physics.Actor.get_nested_link_actors` and
             :meth:`~superdex.physics.Actor.get_nested_soft_actors`.
 
@@ -2852,11 +2854,11 @@ class AddToSceneResult:
             order.
 
         Note:
-            For a single prefab (no nested prefabs) whose actors have no nested link or
-            soft sub-actors, the result is 1-to-1 with the prefab's actors of that type
-            (same size, same order). Nested link/soft sub-actors are not listed, and
-            soft-skinned actors are reported under :class:`ARTICULATED
-            <superdex.physics.ActorType>`.
+            For a single prefab (no nested prefabs) whose actors have no nested link
+            actors or nested soft actors, the result is 1-to-1 with the prefab's actors
+            of that type (same size, same order). Nested link actors and nested soft
+            actors are not listed, and soft-skinned actors are reported under
+            :class:`ARTICULATED <superdex.physics.ActorType>`.
         """
     @overload
     def filter(
@@ -3411,8 +3413,8 @@ def export_scene_excluding(
         exclude_actors (ArrayLikeActorHandle): Handles of actors that should not be
             exported. Excluding an articulated actor also excludes all of its nested
             link actors. Excluding a soft-skinned actor also excludes all of its
-            nested link and soft sub-actors. Any contact filter entries that
-            reference excluded actors are dropped.
+            nested link actors and nested soft actors. Any contact filter entries
+            that reference excluded actors are dropped.
 
     Raises:
         :class:`~superdex.physics.Error`: If an error occurs.

@@ -259,13 +259,13 @@ enum QueryType {
 
   // @brief Positions of all mesh nodes. Available via @ref Actor::GetNodePositionsLocal.
   //
-  // @note Only supported for soft, soft-skinned and shell actors.
+  // @note Only supported for standalone soft actors, nested soft actors, and shell actors.
   NodePositions,
 
   // @brief Deformation gradients for elements in deformable actors. Available via @ref
   // Actor::GetElementsDeformationGradient.
   //
-  // @note Only supported for soft and soft-skinned actors (except ROMs).
+  // @note Only supported for standalone and nested soft actors (except ROMs).
   ElementsDeformationGradient,
 
   // @brief Positions of surface mesh nodes. Available via @ref
@@ -303,7 +303,7 @@ enum QueryType {
 
   // @brief Elastic energy of a deformable actor. Available via @ref Actor::GetElasticEnergy.
   //
-  // @note Only supported for soft and soft-skinned actors.
+  // @note Only supported for standalone and nested soft actors.
   ElasticEnergy,
 
   // @brief Contact forces per node. Available via @ref Actor::GetNodeContactForcesWorld.

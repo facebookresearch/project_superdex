@@ -17,7 +17,7 @@ struct SolverParams [equality] {
   ExperimentalEvalParams experimentalEval;
 }
 
-// @brief Parameters controlling recentering behavior for soft actors (not soft-skinned).
+// @brief Parameters controlling recentering behavior for standalone soft actors.
 //
 // @details Recentering automatically updates the root transform as the actor's "rigid pivot"
 // (typically near the center of mass) moves, with corresponding adjustments to local-space
@@ -731,20 +731,20 @@ struct SoftSkinnedActorParams {
   // @brief Parameters for the articulated skeleton.
   //
   // @note If a skin shape is provided, the skin mesh acts as the colliding surface,
-  // not the individual soft actor surfaces. The skin shape must include blending data to
-  // define how the skinned surfaces of the soft actors are blended with the overarching
-  // skin. Each soft actor must be linked to its corresponding blending data via its effective
-  // nested soft local name after default-name assignment.
+  // not the surfaces of individual nested soft actors. The skin shape must include blending data to
+  // define how the skinned surfaces of the nested soft actors are blended with the overarching
+  // skin. Each nested soft actor must be linked to its corresponding blending data via its
+  // effective nested soft local name after default-name assignment.
   //
   // @see ArticulatedActorParams, ArticulatedSkinParams
   ArticulatedActorParams skeletonParams;
 
-  // @brief Parameters for the soft deformable actors.
+  // @brief Parameters for the nested soft actors.
   //
   // @note If a skin shape is provided, the skin mesh acts as the colliding surface,
-  // not the individual soft actor surfaces.
+  // not the surfaces of individual nested soft actors.
   // @note If a skin shape is provided, dynamic hyper-reduction is not allowed on the
-  // soft actors.
+  // nested soft actors.
   // @note If a @ref SoftActorParams entry has its hasInertia set to true, inertia is applied in
   // the unposed configuration of that actor (prior to skinning) and this struct's hasInertia must
   // be false.
@@ -753,10 +753,10 @@ struct SoftSkinnedActorParams {
   // be false.
   // @note Each @ref SoftActorParams entry must have its hasGravity set to false (use this struct's
   // hasGravity instead).
-  // @note Each soft actor must have some DoFs constrained. This can be implemented (a) by
+  // @note Each nested soft actor must have some DoFs constrained. This can be implemented (a) by
   // constraining nodes in the @ref SoftActorParams shape for FOM actors, or (b) by constraining the
   // ROM subspace for ROM actors.
-  // @note Each soft actor must have at least one energy term enabled: either this struct's
+  // @note Each nested soft actor must have at least one energy term enabled: either this struct's
   // @ref hasGravity, @ref hasInertia or @ref hasStress (applied to every entry), or that entry's
   // own @ref SoftActorParams::hasInertia or @ref SoftActorParams::hasStress.
   // @note Each entry's @ref SoftActorParams::name is a nested soft local name. Explicit non-empty
@@ -765,35 +765,35 @@ struct SoftSkinnedActorParams {
   // @note Empty names are assigned deterministically after reserving all skeleton link names and
   // all explicit nested soft names: an empty entry at index `i` uses `soft_i` if available;
   // otherwise it uses the first available `soft_N` found by scanning upward from `N = 0`.
-  // @note Each entry's @ref SoftActorParams::worldFromLocal must be identity. Each soft actor's
-  // shape must be defined directly in the reference frame of the articulated actor. The
+  // @note Each entry's @ref SoftActorParams::worldFromLocal must be identity. Each nested soft
+  // actor's shape must be defined directly in the reference frame of the articulated actor. The
   // soft-skinned actor's placement in scene world is provided by
   // @ref ArticulatedActorParams::worldFromRoot from @ref skeletonParams.
   //
   // @see hasGravity, hasInertia, hasStress
   DynamicArray<SoftActorParams> softParams;
 
-  // @brief Optional local names of the rigid links where soft actors are attached.
+  // @brief Optional local names of the rigid links where nested soft actors are attached.
   //
-  // @note If empty, soft actor shapes must include skinning data.
+  // @note If empty, nested soft actor shapes must include skinning data.
   // @note If provided, must be 1-to-1 with @ref softParams. Each entry must be non-empty
   // and must match a skeleton link local name.
-  // @note Contact is automatically disabled between soft actors and their attachment links.
+  // @note Contact is automatically disabled between nested soft actors and their attachment links.
   DynamicArray<String> softAttachLinks;
 
   // @brief Enable internal skeleton links as colliding actors.
   //
-  // @note If false, only the soft actors or the skin mesh act as colliding actors.
+  // @note If false, only the nested soft actors or the skin mesh act as colliding actors.
   bool enableCollidingLinks = false;
 
-  // @brief Enable gravity evaluation of soft actors on posed/skinned positions.
+  // @brief Enable gravity evaluation of nested soft actors on posed/skinned positions.
   //
   // @note Each @ref SoftActorParams entry must have its hasGravity set to false.
   //
   // @see Scene::SetGravity
   bool hasGravity = false;
 
-  // @brief Enable inertia evaluation of soft actors on posed/skinned positions.
+  // @brief Enable inertia evaluation of nested soft actors on posed/skinned positions.
   //
   // @note If true, each @ref SoftActorParams entry must have its hasInertia set to false.
   // @note If true, inertia is applied in the posed (post-skinning) configuration. This is the
@@ -803,7 +803,7 @@ struct SoftSkinnedActorParams {
   // may improve performance.
   bool hasInertia = false;
 
-  // @brief Enable elasticity evaluation of soft actors on posed/skinned positions.
+  // @brief Enable elasticity evaluation of nested soft actors on posed/skinned positions.
   //
   // @note If true, each @ref SoftActorParams entry must have its hasStress set to false.
   // @note If true, stress forces are applied in the posed (post-skinning) configuration. This is the

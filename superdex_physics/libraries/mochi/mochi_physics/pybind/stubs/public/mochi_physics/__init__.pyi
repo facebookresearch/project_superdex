@@ -4683,14 +4683,15 @@ class QueryType:
     :meth:`~superdex.physics.Actor.get_node_positions_local`.
 
     Note:
-        Only supported for soft, soft-skinned and shell actors.
+        Only supported for standalone soft actors, nested soft actors, and shell
+        actors.
     """
     ELEMENTS_DEFORMATION_GRADIENT: QueryType
     """Deformation gradients for elements in deformable actors. Available via
     :meth:`~superdex.physics.Actor.get_elements_deformation_gradient`.
 
     Note:
-        Only supported for soft and soft-skinned actors (except ROMs).
+        Only supported for standalone and nested soft actors (except ROMs).
     """
     SURFACE_NODE_POSITIONS: QueryType
     """Positions of surface mesh nodes. Available via
@@ -4742,7 +4743,7 @@ class QueryType:
     :meth:`~superdex.physics.Actor.get_elastic_energy`.
 
     Note:
-        Only supported for soft and soft-skinned actors.
+        Only supported for standalone and nested soft actors.
     """
     NODE_CONTACT_FORCES: QueryType
     """Contact forces per node. Available via
@@ -4868,7 +4869,7 @@ class SolverParams:
     def __ne__(self, other: object) -> bool: ...
 
 class RecenteringParams:
-    """Parameters controlling recentering behavior for soft actors (not soft-skinned).
+    """Parameters controlling recentering behavior for standalone soft actors.
 
     Recentering automatically updates the root transform as the actor's "rigid
     pivot" (typically near the center of mass) moves, with corresponding adjustments
@@ -6101,11 +6102,11 @@ class SoftSkinnedActorParams:
 
     Note:
         If a skin shape is provided, the skin mesh acts as the colliding surface,
-        not the individual soft actor surfaces. The skin shape must include blending
-        data to define how the skinned surfaces of the soft actors are blended with
-        the overarching skin. Each soft actor must be linked to its corresponding
-        blending data via its effective nested soft local name after default-name
-        assignment.
+        not the surfaces of individual nested soft actors. The skin shape must
+        include blending data to define how the skinned surfaces of the nested soft
+        actors are blended with the overarching skin. Each nested soft actor must be
+        linked to its corresponding blending data via its effective nested soft
+        local name after default-name assignment.
 
     See Also:
         :class:`~superdex.physics.ArticulatedActorParams`,
@@ -6113,15 +6114,15 @@ class SoftSkinnedActorParams:
     """
     @property
     def soft_params(self) -> DynamicArraySoftActorParams:
-        """Parameters for the soft deformable actors.
+        """Parameters for the nested soft actors.
 
         Note:
             If a skin shape is provided, the skin mesh acts as the colliding surface,
-            not the individual soft actor surfaces.
+            not the surfaces of individual nested soft actors.
 
         Note:
             If a skin shape is provided, dynamic hyper-reduction is not allowed on the
-            soft actors.
+            nested soft actors.
 
         Note:
             If a :class:`~superdex.physics.SoftActorParams` entry has its hasInertia set
@@ -6138,14 +6139,14 @@ class SoftSkinnedActorParams:
             hasGravity set to false (use this struct's hasGravity instead).
 
         Note:
-            Each soft actor must have some DoFs constrained. This can be implemented (a)
-            by constraining nodes in the :class:`~superdex.physics.SoftActorParams`
-            shape for FOM actors, or (b) by constraining the ROM subspace for ROM
-            actors.
+            Each nested soft actor must have some DoFs constrained. This can be
+            implemented (a) by constraining nodes in the
+            :class:`~superdex.physics.SoftActorParams` shape for FOM actors, or (b) by
+            constraining the ROM subspace for ROM actors.
 
         Note:
-            Each soft actor must have at least one energy term enabled: either this
-            struct's :attr:`~superdex.physics.SoftSkinnedActorParams.has_gravity`,
+            Each nested soft actor must have at least one energy term enabled: either
+            this struct's :attr:`~superdex.physics.SoftSkinnedActorParams.has_gravity`,
             :attr:`~superdex.physics.SoftSkinnedActorParams.has_inertia` or
             :attr:`~superdex.physics.SoftSkinnedActorParams.has_stress` (applied to
             every entry), or that entry's own
@@ -6166,7 +6167,7 @@ class SoftSkinnedActorParams:
 
         Note:
             Each entry's :attr:`~superdex.physics.SoftActorParams.world_from_local` must
-            be identity. Each soft actor's shape must be defined directly in the
+            be identity. Each nested soft actor's shape must be defined directly in the
             reference frame of the articulated actor. The soft-skinned actor's placement
             in scene world is provided by
             :attr:`~superdex.physics.ArticulatedActorParams.world_from_root` from
@@ -6181,10 +6182,11 @@ class SoftSkinnedActorParams:
     def soft_params(self, value: ArrayLikeSoftActorParams) -> None: ...
     @property
     def soft_attach_links(self) -> DynamicArrayString:
-        """Optional local names of the rigid links where soft actors are attached.
+        """Optional local names of the rigid links where nested soft actors are
+        attached.
 
         Note:
-            If empty, soft actor shapes must include skinning data.
+            If empty, nested soft actor shapes must include skinning data.
 
         Note:
             If provided, must be 1-to-1 with
@@ -6192,8 +6194,8 @@ class SoftSkinnedActorParams:
             must be non-empty and must match a skeleton link local name.
 
         Note:
-            Contact is automatically disabled between soft actors and their attachment
-            links.
+            Contact is automatically disabled between nested soft actors and their
+            attachment links.
         """
     @soft_attach_links.setter
     def soft_attach_links(self, value: ArrayLikeString) -> None: ...
@@ -6201,10 +6203,11 @@ class SoftSkinnedActorParams:
     """Enable internal skeleton links as colliding actors.
 
     Note:
-        If false, only the soft actors or the skin mesh act as colliding actors.
+        If false, only the nested soft actors or the skin mesh act as colliding
+        actors.
     """
     has_gravity: bool
-    """Enable gravity evaluation of soft actors on posed/skinned positions.
+    """Enable gravity evaluation of nested soft actors on posed/skinned positions.
 
     Note:
         Each :class:`~superdex.physics.SoftActorParams` entry must have its
@@ -6214,7 +6217,7 @@ class SoftSkinnedActorParams:
         :meth:`~superdex.physics.Scene.set_gravity`
     """
     has_inertia: bool
-    """Enable inertia evaluation of soft actors on posed/skinned positions.
+    """Enable inertia evaluation of nested soft actors on posed/skinned positions.
 
     Note:
         If true, each :class:`~superdex.physics.SoftActorParams` entry must have its
@@ -6230,7 +6233,7 @@ class SoftSkinnedActorParams:
         to true. This is an approximation but may improve performance.
     """
     has_stress: bool
-    """Enable elasticity evaluation of soft actors on posed/skinned positions.
+    """Enable elasticity evaluation of nested soft actors on posed/skinned positions.
 
     Note:
         If true, each :class:`~superdex.physics.SoftActorParams` entry must have its
@@ -9212,7 +9215,7 @@ class Actor:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
-            Only supported for dynamic rigid actors, except nested link actors.
+            Only supported for standalone dynamic rigid actors.
 
         Note:
             Does not change velocity.
@@ -9260,14 +9263,14 @@ class Actor:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
-            Only supported for rigid actors (except nested link actors) and soft actors
-            (except ROMs and nested soft actors).
+            Only supported for standalone rigid actors and standalone soft actors
+            (except ROMs).
 
         Note:
             For static actors, it only supports setting zero velocity.
 
         Note:
-            For soft actors, the angular velocity must be zero.
+            For standalone soft actors, the angular velocity must be zero.
 
         Note:
             Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler
@@ -9394,8 +9397,7 @@ class Actor:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
-            Only supported for dynamic rigid actors. Not supported for static actors,
-            soft actors, shell actors, or articulated links.
+            Only supported for standalone dynamic rigid actors.
 
         Note:
             A finite but physically invalid moment of inertia tensor (negative principal
@@ -9450,8 +9452,8 @@ class Actor:
             Recentering parameters of the actor.
 
         Note:
-            Recentering is only supported for soft actors (not soft-skinned). For other
-            actor types, returns default recentering parameters with
+            Recentering is only supported for standalone soft actors. For other actor
+            types, returns default recentering parameters with
             :attr:`~superdex.physics.RecenteringParams.use_recentering` set to false.
 
         See Also:
@@ -9461,8 +9463,8 @@ class Actor:
     def set_recentering_params(self, params: RecenteringParams) -> None:
         """Set the recentering parameters of the actor.
 
-        When enabled for a soft actor, the root transform automatically moves as the
-        actor's "rigid pivot" (typically near the center of mass) moves.
+        When enabled, the root transform automatically moves as the actor's "rigid
+        pivot" (typically near the center of mass) moves.
 
         Args:
             params (RecenteringParams): Recentering parameters to set.
@@ -9471,7 +9473,7 @@ class Actor:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
-            Only supported for soft actors (not soft-skinned).
+            Only supported for standalone soft actors.
 
         See Also:
             :class:`~superdex.physics.RecenteringParams`,
@@ -9484,18 +9486,20 @@ class Actor:
 
         Returns:
             Node displacements in the actor's local frame. Length is 3 × the number of
-            nodes for soft, shell, and soft-skinned actors, or 4 × the number of nodes
-            for rod actors (3 displacement [m] + 1 twist [rad] per node). The number of
-            nodes is available from :meth:`~superdex.physics.Actor.get_mesh`.
+            nodes for standalone soft actors, nested soft actors, and shell actors, or 4
+            × the number of nodes for rod actors (3 displacement [m] + 1 twist [rad] per
+            node). The number of nodes is available from
+            :meth:`~superdex.physics.Actor.get_mesh`.
 
         Raises:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
-            Only supported for soft, soft-skinned, shell and rod actors.
+            Only supported for standalone soft actors, nested soft actors, shell actors,
+            and rod actors.
 
         Note:
-            For soft-skinned actors, it returns post-skinning displacements, which may
+            For nested soft actors, it returns post-skinning displacements, which may
             differ from the pre-skinning elastic deformation component written by
             :meth:`~superdex.physics.Actor.set_displacements`.
 
@@ -9516,10 +9520,11 @@ class Actor:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
-            Only supported for soft, soft-skinned and shell actors.
+            Only supported for standalone soft actors, nested soft actors, and shell
+            actors.
 
         Note:
-            For soft-skinned actors, displacements are the elastic deformation component
+            For nested soft actors, displacements are the elastic deformation component
             only (before skinning is applied).
 
         Note:
@@ -10035,11 +10040,12 @@ class Actor:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
-            Only supported for soft, soft-skinned, shell and rod actors.
+            Only supported for standalone soft actors, nested soft actors, shell actors,
+            and rod actors.
 
         Note:
-            For soft-skinned actors, it zeroes the elastic deformation and velocity
-            only. The skeleton-driven pose is unaffected.
+            For nested soft actors, it zeroes the elastic deformation and velocity only.
+            The skeleton-driven pose is unaffected.
 
         Note:
             For rod actors, it zeroes both the translational displacement DoFs and the
@@ -10086,7 +10092,7 @@ class Actor:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
-            Only supported for soft (not soft-skinned) and shell actors.
+            Only supported for standalone soft actors and shell actors.
 
         Note:
             Does not change node velocities.
@@ -10106,10 +10112,11 @@ class Actor:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
-            Only supported for soft (not soft-skinned), shell and rod actors.
+            Only supported for standalone soft actors, shell actors, and rod actors.
 
         Note:
-            For soft and shell actors: 3 values per node [m/s] — (vx, vy, vz).
+            For standalone soft actors and shell actors: 3 values per node [m/s] — (vx,
+            vy, vz).
 
         Note:
             For rod actors: 4 values per node — (vx, vy, vz) in [m/s] plus a twist rate
@@ -10396,8 +10403,7 @@ class Actor:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
-            Only supported for soft and shell actors, except nested soft actors (see
-            :meth:`~superdex.physics.Actor.get_nested_soft_actors`).
+            Only supported for standalone soft actors and shell actors.
 
         Note:
             Not supported in differentiable scenes
@@ -10446,8 +10452,7 @@ class Actor:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
-            Only supported for soft and shell actors, except nested soft actors (see
-            :meth:`~superdex.physics.Actor.get_nested_soft_actors`).
+            Only supported for standalone soft actors and shell actors.
 
         Note:
             Not supported in differentiable scenes
@@ -10479,8 +10484,7 @@ class Actor:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
-            Only supported for soft and shell actors, except nested soft actors (see
-            :meth:`~superdex.physics.Actor.get_nested_soft_actors`).
+            Only supported for standalone soft actors and shell actors.
 
         Note:
             Not supported in differentiable scenes
@@ -10523,8 +10527,7 @@ class Actor:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
-            Only supported for soft and shell actors, except nested soft actors (see
-            :meth:`~superdex.physics.Actor.get_nested_soft_actors`).
+            Only supported for standalone soft actors and shell actors.
 
         Note:
             Not supported in differentiable scenes
@@ -11714,8 +11717,7 @@ class Actor:
             :meth:`~superdex.physics.Actor.get_articulated_actor`
         """
     def is_nested_soft_actor(self) -> bool:
-        """Check if the actor is a soft actor nested within a soft skinned articulated
-        actor.
+        """Check if the actor is a nested soft actor within a soft-skinned actor.
 
         Returns:
             True if the actor is a nested soft actor, false otherwise.
@@ -12739,11 +12741,11 @@ class Scene:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
-            To access underlying soft actors, use
+            To access nested soft actors, use
             :meth:`~superdex.physics.Actor.get_nested_soft_actors`.
 
         Note:
-            To access underlying rigid link actors, use
+            To access nested link actors, use
             :meth:`~superdex.physics.Actor.get_nested_link_actors`.
 
         Warning:

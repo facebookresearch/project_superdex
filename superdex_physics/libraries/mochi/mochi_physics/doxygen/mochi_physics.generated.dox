@@ -193,7 +193,7 @@
 /// @brief [Experimental] Enable automatic recentering of the local coordinate system.
 ///
 /// @note Recentering updates the root transform as the actor moves, keeping local-space displacements small. This improves numerical stability for actors that move far from their initial position.
-/// @note Ignored by soft skinned actors, which do not support recentering.
+/// @note Ignored for nested soft actors in soft-skinned actors, which do not support recentering.
 ///
 /// @warning This is an experimental feature. It may be changed or removed in the future. Use at your own risk.
 ///
@@ -441,9 +441,9 @@
 
 /// @struct mochi::prefab::SoftSkinnedActorPrefab
 ///
-/// @brief Prefab parameters for a soft skinned actor.
+/// @brief Prefab parameters for a soft-skinned actor.
 ///
-/// @details A soft skinned actor consists of an articulated skeleton with one or more attached soft bodies.
+/// @details A soft-skinned actor consists of an articulated skeleton with one or more attached soft bodies.
 ///
 
 /// @var mochi::prefab::SoftSkinnedActorPrefab::comment
@@ -458,18 +458,18 @@
 
 /// @var mochi::prefab::SoftSkinnedActorPrefab::softParams
 ///
-/// @brief Soft body parameters, one per soft actor.
+/// @brief Parameters for each nested soft actor.
 ///
-/// @note The per-soft-actor @ref mochi::prefab::SoftActorPrefab::rotation "SoftActorPrefab::rotation" and @ref mochi::prefab::SoftActorPrefab::translation "SoftActorPrefab::translation" fields are ignored. Soft actor transforms are determined by the skeleton's link attachments (see @ref mochi::prefab::SoftSkinnedActorPrefab::softAttachLinks "softAttachLinks").
-/// @note Each per-soft-actor @ref mochi::prefab::SoftActorPrefab::scale "SoftActorPrefab::scale" must be uniform (three equal, strictly positive, finite values). Non-uniform soft shape scale is not supported for soft-skinned prefabs.
-/// @note If a per-soft-actor @ref mochi::prefab::SoftActorPrefab::flowFile "SoftActorPrefab::flowFile" is set, that entry's @ref mochi::prefab::SoftActorPrefab::scale "SoftActorPrefab::scale" must be (1, 1, 1).
+/// @note The @ref mochi::prefab::SoftActorPrefab::rotation "SoftActorPrefab::rotation" and @ref mochi::prefab::SoftActorPrefab::translation "SoftActorPrefab::translation" fields for each nested soft actor are ignored. Nested soft actor transforms are determined by the skeleton's link attachments (see @ref mochi::prefab::SoftSkinnedActorPrefab::softAttachLinks "softAttachLinks").
+/// @note Each nested soft actor's @ref mochi::prefab::SoftActorPrefab::scale "SoftActorPrefab::scale" must be uniform (three equal, strictly positive, finite values). Non-uniform soft shape scale is not supported for soft-skinned prefabs.
+/// @note If a nested soft actor's @ref mochi::prefab::SoftActorPrefab::flowFile "SoftActorPrefab::flowFile" is set, that entry's @ref mochi::prefab::SoftActorPrefab::scale "SoftActorPrefab::scale" must be (1, 1, 1).
 /// @note Each entry's inherited name field is a nested soft local name. Explicit non-empty names must be unique across skeleton link local names and other nested soft local names, and must not contain forward slash, backslash, or embedded NUL characters.
 /// @note Empty names are assigned deterministically after reserving all skeleton link names and all explicit nested soft names: an empty entry at index `i` uses `soft_i` if available; otherwise it uses the first available `soft_N` found by scanning upward from `N = 0`.
 ///
 
 /// @var mochi::prefab::SoftSkinnedActorPrefab::softAttachLinks
 ///
-/// @brief Local link names to attach each soft actor to. Empty or one entry per @ref mochi::prefab::SoftSkinnedActorPrefab::softParams "softParams" element.
+/// @brief Local link names to attach each nested soft actor to. Empty or one entry per @ref mochi::prefab::SoftSkinnedActorPrefab::softParams "softParams" element.
 ///
 /// @note If provided, each entry must be non-empty and must match a skeleton link local name.
 ///
@@ -521,7 +521,7 @@
 
 /// @var mochi::prefab::ActorLists::softSkinned
 ///
-/// @brief Soft skinned actors.
+/// @brief Soft-skinned actors.
 ///
 
 /// @struct mochi::prefab::RigidSphericalJointConstraintPrefab
@@ -1144,7 +1144,7 @@
 /// @brief All newly created actors.
 ///
 /// @note Order is not guaranteed except that actors from nested prefabs will be listed before actors from the top-level prefab.
-/// @note Contains only top-level actors. Articulated actors' nested link actors and soft-skinned actors' nested link and soft sub-actors are created but not listed here. Reach them via @ref mochi::Actor::GetNestedLinkActors "Actor::GetNestedLinkActors" and @ref mochi::Actor::GetNestedSoftActors "Actor::GetNestedSoftActors".
+/// @note Contains only top-level actors. Articulated actors' nested link actors and soft-skinned actors' nested link actors and nested soft actors are created but not listed here. Reach them via @ref mochi::Actor::GetNestedLinkActors "Actor::GetNestedLinkActors" and @ref mochi::Actor::GetNestedSoftActors "Actor::GetNestedSoftActors".
 ///
 /// @see @ref mochi::prefab::AddToSceneResult::Filter "Filter"
 ///
@@ -1166,7 +1166,7 @@
 /// @return List of actors of the specified type.
 ///
 /// @note If there were nested prefabs, then actors will be listed in depth-first order.
-/// @note For a single prefab (no nested prefabs) whose actors have no nested link or soft sub-actors, the result is 1-to-1 with the prefab's actors of that type (same size, same order). Nested link/soft sub-actors are not listed, and soft-skinned actors are reported under @ref mochi::ActorType::Articulated "ActorType::Articulated".
+/// @note For a single prefab (no nested prefabs) whose actors have no nested link actors or nested soft actors, the result is 1-to-1 with the prefab's actors of that type (same size, same order). Nested link actors and nested soft actors are not listed, and soft-skinned actors are reported under @ref mochi::ActorType::Articulated "ActorType::Articulated".
 ///
 
 /// @fn DynamicArray<Constraint*> mochi::prefab::AddToSceneResult::Filter(ConstraintType type) const
@@ -1426,7 +1426,7 @@
 /// @param[in] scene The @ref mochi::Scene "Scene" to export.
 /// @param[in] exportName Name for the exported prefab. Used both for the export subdirectory and for the prefab filename (`<exportName>.mochi_scene`).
 /// @param[in] outputDir Directory where the export folder will be created. The subdirectories `<outputDir>/<exportName>` and `<outputDir>/<exportName>/generated_assets` are created automatically.
-/// @param[in] excludeActors Handles of actors that should not be exported. Excluding an articulated actor also excludes all of its nested link actors. Excluding a soft-skinned actor also excludes all of its nested link and soft sub-actors. Any contact filter entries that reference excluded actors are dropped.
+/// @param[in] excludeActors Handles of actors that should not be exported. Excluding an articulated actor also excludes all of its nested link actors. Excluding a soft-skinned actor also excludes all of its nested link actors and nested soft actors. Any contact filter entries that reference excluded actors are dropped.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 /// @note Generated mesh files (.mochi.h5) are written under generated_assets/ and referenced from the prefab using "./generated_assets/" paths.
@@ -1895,14 +1895,14 @@
 ///
 /// @brief Positions of all mesh nodes. Available via @ref mochi::Actor::GetNodePositionsLocal "Actor::GetNodePositionsLocal".
 ///
-/// @note Only supported for soft, soft-skinned and shell actors.
+/// @note Only supported for standalone soft actors, nested soft actors, and shell actors.
 ///
 
 /// @var mochi::QueryType::ElementsDeformationGradient
 ///
 /// @brief Deformation gradients for elements in deformable actors. Available via @ref mochi::Actor::GetElementsDeformationGradient "Actor::GetElementsDeformationGradient".
 ///
-/// @note Only supported for soft and soft-skinned actors (except ROMs).
+/// @note Only supported for standalone and nested soft actors (except ROMs).
 ///
 
 /// @var mochi::QueryType::SurfaceNodePositions
@@ -1945,7 +1945,7 @@
 ///
 /// @brief Elastic energy of a deformable actor. Available via @ref mochi::Actor::GetElasticEnergy "Actor::GetElasticEnergy".
 ///
-/// @note Only supported for soft and soft-skinned actors.
+/// @note Only supported for standalone and nested soft actors.
 ///
 
 /// @var mochi::QueryType::NodeContactForces
@@ -2045,7 +2045,7 @@
 
 /// @struct mochi::RecenteringParams
 ///
-/// @brief Parameters controlling recentering behavior for soft actors (not soft-skinned).
+/// @brief Parameters controlling recentering behavior for standalone soft actors.
 ///
 /// @details Recentering automatically updates the root transform as the actor's "rigid pivot" (typically near the center of mass) moves, with corresponding adjustments to local-space coordinates.
 ///
@@ -2832,48 +2832,48 @@
 ///
 /// @brief Parameters for the articulated skeleton.
 ///
-/// @note If a skin shape is provided, the skin mesh acts as the colliding surface, not the individual soft actor surfaces. The skin shape must include blending data to define how the skinned surfaces of the soft actors are blended with the overarching skin. Each soft actor must be linked to its corresponding blending data via its effective nested soft local name after default-name assignment.
+/// @note If a skin shape is provided, the skin mesh acts as the colliding surface, not the surfaces of individual nested soft actors. The skin shape must include blending data to define how the skinned surfaces of the nested soft actors are blended with the overarching skin. Each nested soft actor must be linked to its corresponding blending data via its effective nested soft local name after default-name assignment.
 ///
 /// @see @ref mochi::ArticulatedActorParams "ArticulatedActorParams", @ref mochi::ArticulatedSkinParams "ArticulatedSkinParams"
 ///
 
 /// @var mochi::SoftSkinnedActorParams::softParams
 ///
-/// @brief Parameters for the soft deformable actors.
+/// @brief Parameters for the nested soft actors.
 ///
-/// @note If a skin shape is provided, the skin mesh acts as the colliding surface, not the individual soft actor surfaces.
-/// @note If a skin shape is provided, dynamic hyper-reduction is not allowed on the soft actors.
+/// @note If a skin shape is provided, the skin mesh acts as the colliding surface, not the surfaces of individual nested soft actors.
+/// @note If a skin shape is provided, dynamic hyper-reduction is not allowed on the nested soft actors.
 /// @note If a @ref mochi::SoftActorParams "SoftActorParams" entry has its hasInertia set to true, inertia is applied in the unposed configuration of that actor (prior to skinning) and this struct's hasInertia must be false.
 /// @note If a @ref mochi::SoftActorParams "SoftActorParams" entry has its hasStress set to true, elasticity is applied in the unposed configuration of that actor (prior to skinning) and this struct's hasStress must be false.
 /// @note Each @ref mochi::SoftActorParams "SoftActorParams" entry must have its hasGravity set to false (use this struct's hasGravity instead).
-/// @note Each soft actor must have some DoFs constrained. This can be implemented (a) by constraining nodes in the @ref mochi::SoftActorParams "SoftActorParams" shape for FOM actors, or (b) by constraining the ROM subspace for ROM actors.
-/// @note Each soft actor must have at least one energy term enabled: either this struct's @ref mochi::SoftSkinnedActorParams::hasGravity "hasGravity", @ref mochi::SoftSkinnedActorParams::hasInertia "hasInertia" or @ref mochi::SoftSkinnedActorParams::hasStress "hasStress" (applied to every entry), or that entry's own @ref mochi::SoftActorParams::hasInertia "SoftActorParams::hasInertia" or @ref mochi::SoftActorParams::hasStress "SoftActorParams::hasStress".
+/// @note Each nested soft actor must have some DoFs constrained. This can be implemented (a) by constraining nodes in the @ref mochi::SoftActorParams "SoftActorParams" shape for FOM actors, or (b) by constraining the ROM subspace for ROM actors.
+/// @note Each nested soft actor must have at least one energy term enabled: either this struct's @ref mochi::SoftSkinnedActorParams::hasGravity "hasGravity", @ref mochi::SoftSkinnedActorParams::hasInertia "hasInertia" or @ref mochi::SoftSkinnedActorParams::hasStress "hasStress" (applied to every entry), or that entry's own @ref mochi::SoftActorParams::hasInertia "SoftActorParams::hasInertia" or @ref mochi::SoftActorParams::hasStress "SoftActorParams::hasStress".
 /// @note Each entry's @ref mochi::SoftActorParams::name "SoftActorParams::name" is a nested soft local name. Explicit non-empty names must be unique across skeleton link local names and other nested soft local names, and must not contain forward slash, backslash, or embedded NUL characters.
 /// @note Empty names are assigned deterministically after reserving all skeleton link names and all explicit nested soft names: an empty entry at index `i` uses `soft_i` if available; otherwise it uses the first available `soft_N` found by scanning upward from `N = 0`.
-/// @note Each entry's @ref mochi::SoftActorParams::worldFromLocal "SoftActorParams::worldFromLocal" must be identity. Each soft actor's shape must be defined directly in the reference frame of the articulated actor. The soft-skinned actor's placement in scene world is provided by @ref mochi::ArticulatedActorParams::worldFromRoot "ArticulatedActorParams::worldFromRoot" from @ref mochi::SoftSkinnedActorParams::skeletonParams "skeletonParams".
+/// @note Each entry's @ref mochi::SoftActorParams::worldFromLocal "SoftActorParams::worldFromLocal" must be identity. Each nested soft actor's shape must be defined directly in the reference frame of the articulated actor. The soft-skinned actor's placement in scene world is provided by @ref mochi::ArticulatedActorParams::worldFromRoot "ArticulatedActorParams::worldFromRoot" from @ref mochi::SoftSkinnedActorParams::skeletonParams "skeletonParams".
 ///
 /// @see @ref mochi::SoftSkinnedActorParams::hasGravity "hasGravity", @ref mochi::SoftSkinnedActorParams::hasInertia "hasInertia", @ref mochi::SoftSkinnedActorParams::hasStress "hasStress"
 ///
 
 /// @var mochi::SoftSkinnedActorParams::softAttachLinks
 ///
-/// @brief Optional local names of the rigid links where soft actors are attached.
+/// @brief Optional local names of the rigid links where nested soft actors are attached.
 ///
-/// @note If empty, soft actor shapes must include skinning data.
+/// @note If empty, nested soft actor shapes must include skinning data.
 /// @note If provided, must be 1-to-1 with @ref mochi::SoftSkinnedActorParams::softParams "softParams". Each entry must be non-empty and must match a skeleton link local name.
-/// @note Contact is automatically disabled between soft actors and their attachment links.
+/// @note Contact is automatically disabled between nested soft actors and their attachment links.
 ///
 
 /// @var mochi::SoftSkinnedActorParams::enableCollidingLinks
 ///
 /// @brief Enable internal skeleton links as colliding actors.
 ///
-/// @note If false, only the soft actors or the skin mesh act as colliding actors.
+/// @note If false, only the nested soft actors or the skin mesh act as colliding actors.
 ///
 
 /// @var mochi::SoftSkinnedActorParams::hasGravity
 ///
-/// @brief Enable gravity evaluation of soft actors on posed/skinned positions.
+/// @brief Enable gravity evaluation of nested soft actors on posed/skinned positions.
 ///
 /// @note Each @ref mochi::SoftActorParams "SoftActorParams" entry must have its hasGravity set to false.
 ///
@@ -2882,7 +2882,7 @@
 
 /// @var mochi::SoftSkinnedActorParams::hasInertia
 ///
-/// @brief Enable inertia evaluation of soft actors on posed/skinned positions.
+/// @brief Enable inertia evaluation of nested soft actors on posed/skinned positions.
 ///
 /// @note If true, each @ref mochi::SoftActorParams "SoftActorParams" entry must have its hasInertia set to false.
 /// @note If true, inertia is applied in the posed (post-skinning) configuration. This is the physically correct behavior.
@@ -2891,7 +2891,7 @@
 
 /// @var mochi::SoftSkinnedActorParams::hasStress
 ///
-/// @brief Enable elasticity evaluation of soft actors on posed/skinned positions.
+/// @brief Enable elasticity evaluation of nested soft actors on posed/skinned positions.
 ///
 /// @note If true, each @ref mochi::SoftActorParams "SoftActorParams" entry must have its hasStress set to false.
 /// @note If true, stress forces are applied in the posed (post-skinning) configuration. This is the physically correct behavior.
@@ -4877,7 +4877,7 @@
 /// @param[in] worldFromCom World-space transform at the center of mass to set.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Only supported for dynamic rigid actors, except nested link actors.
+/// @note Only supported for standalone dynamic rigid actors.
 /// @note Does not change velocity.
 /// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
 ///
@@ -4908,9 +4908,9 @@
 /// @param[in] angularVel Angular velocity [rad/s] at the center of mass in world frame.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Only supported for rigid actors (except nested link actors) and soft actors (except ROMs and nested soft actors).
+/// @note Only supported for standalone rigid actors and standalone soft actors (except ROMs).
 /// @note For static actors, it only supports setting zero velocity.
-/// @note For soft actors, the angular velocity must be zero.
+/// @note For standalone soft actors, the angular velocity must be zero.
 /// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
 ///
 
@@ -4986,7 +4986,7 @@
 /// @param[in] momentOfInertia Moment of inertia tensor at center of mass [kg·m²], upper-right triangle [ixx, ixy, ixz, iyy, iyz, izz] using negative tensor notation consistent with @ref mochi::Actor::GetRigidMomentOfInertiaLocal "GetRigidMomentOfInertiaLocal". Must be finite.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Only supported for dynamic rigid actors. Not supported for static actors, soft actors, shell actors, or articulated links.
+/// @note Only supported for standalone dynamic rigid actors.
 /// @note A finite but physically invalid moment of inertia tensor (negative principal moments or one violating the triangle inequality) is accepted with a warning, not rejected.
 /// @note Re-anchors the density reference state. Subsequent @ref mochi::Actor::SetDensity "SetDensity" calls rescale mass and moment of inertia proportionally about the new values; center of mass is unchanged by @ref mochi::Actor::SetDensity "SetDensity".
 /// @note After this call, @ref mochi::Actor::GetDensity "GetDensity" returns bulk density mass / volume.
@@ -5013,7 +5013,7 @@
 ///
 /// @return Recentering parameters of the actor.
 ///
-/// @note Recentering is only supported for soft actors (not soft-skinned). For other actor types, returns default recentering parameters with @ref mochi::RecenteringParams::useRecentering "RecenteringParams::useRecentering" set to false.
+/// @note Recentering is only supported for standalone soft actors. For other actor types, returns default recentering parameters with @ref mochi::RecenteringParams::useRecentering "RecenteringParams::useRecentering" set to false.
 ///
 /// @see @ref mochi::RecenteringParams "RecenteringParams", @ref mochi::Actor::SetRecenteringParams "SetRecenteringParams"
 ///
@@ -5022,12 +5022,12 @@
 ///
 /// @brief Set the recentering parameters of the actor.
 ///
-/// @details When enabled for a soft actor, the root transform automatically moves as the actor's "rigid pivot" (typically near the center of mass) moves.
+/// @details When enabled, the root transform automatically moves as the actor's "rigid pivot" (typically near the center of mass) moves.
 ///
 /// @param[in] params Recentering parameters to set.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Only supported for soft actors (not soft-skinned).
+/// @note Only supported for standalone soft actors.
 ///
 /// @see @ref mochi::RecenteringParams "RecenteringParams", @ref mochi::Actor::GetRecenteringParams "GetRecenteringParams"
 ///
@@ -5037,10 +5037,10 @@
 /// @brief Get the node displacements of the actor in the actor's local frame, relative to reference (rest) positions.
 ///
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
-/// @return Node displacements in the actor's local frame. Length is 3 × the number of nodes for soft, shell, and soft-skinned actors, or 4 × the number of nodes for rod actors (3 displacement [m] + 1 twist [rad] per node). The number of nodes is available from @ref mochi::Actor::GetMesh "GetMesh".
+/// @return Node displacements in the actor's local frame. Length is 3 × the number of nodes for standalone soft actors, nested soft actors, and shell actors, or 4 × the number of nodes for rod actors (3 displacement [m] + 1 twist [rad] per node). The number of nodes is available from @ref mochi::Actor::GetMesh "GetMesh".
 ///
-/// @note Only supported for soft, soft-skinned, shell and rod actors.
-/// @note For soft-skinned actors, it returns post-skinning displacements, which may differ from the pre-skinning elastic deformation component written by @ref mochi::Actor::SetDisplacements "SetDisplacements".
+/// @note Only supported for standalone soft actors, nested soft actors, shell actors, and rod actors.
+/// @note For nested soft actors, it returns post-skinning displacements, which may differ from the pre-skinning elastic deformation component written by @ref mochi::Actor::SetDisplacements "SetDisplacements".
 ///
 /// @see @ref mochi::Actor::SetDisplacements "SetDisplacements", @ref mochi::Actor::GetNodePositionsLocal "GetNodePositionsLocal"
 ///
@@ -5052,8 +5052,8 @@
 /// @param[in] displacements Node displacements [m] to set in the actor's local frame. Length must be 3 × the number of nodes. The number of nodes is available from @ref mochi::Actor::GetMesh "GetMesh".
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Only supported for soft, soft-skinned and shell actors.
-/// @note For soft-skinned actors, displacements are the elastic deformation component only (before skinning is applied).
+/// @note Only supported for standalone soft actors, nested soft actors, and shell actors.
+/// @note For nested soft actors, displacements are the elastic deformation component only (before skinning is applied).
 /// @note Does not change node velocities.
 /// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
 ///
@@ -5306,8 +5306,8 @@
 ///
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Only supported for soft, soft-skinned, shell and rod actors.
-/// @note For soft-skinned actors, it zeroes the elastic deformation and velocity only. The skeleton-driven pose is unaffected.
+/// @note Only supported for standalone soft actors, nested soft actors, shell actors, and rod actors.
+/// @note For nested soft actors, it zeroes the elastic deformation and velocity only. The skeleton-driven pose is unaffected.
 /// @note For rod actors, it zeroes both the translational displacement DoFs and the twist-angle DoFs.
 /// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
 ///
@@ -5332,7 +5332,7 @@
 /// @param[in] positionsLocal Node positions [m] to set (3 values per node: x, y, z) in the actor's local frame.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Only supported for soft (not soft-skinned) and shell actors.
+/// @note Only supported for standalone soft actors and shell actors.
 /// @note Does not change node velocities.
 /// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
 ///
@@ -5344,8 +5344,8 @@
 /// @param[in] velocitiesLocal Node velocities to set in the actor's local frame.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Only supported for soft (not soft-skinned), shell and rod actors.
-/// @note For soft and shell actors: 3 values per node [m/s] — (vx, vy, vz).
+/// @note Only supported for standalone soft actors, shell actors, and rod actors.
+/// @note For standalone soft actors and shell actors: 3 values per node [m/s] — (vx, vy, vz).
 /// @note For rod actors: 4 values per node — (vx, vy, vz) in [m/s] plus a twist rate [rad/s].
 /// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
 ///
@@ -5453,7 +5453,7 @@
 /// @param[in] nodePositionsWorld Target positions [m] in world frame. Length must be 3 times the size of @p nodeIndices.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Only supported for soft and shell actors, except nested soft actors (see @ref mochi::Actor::GetNestedSoftActors "GetNestedSoftActors").
+/// @note Only supported for standalone soft actors and shell actors.
 /// @note Not supported in differentiable scenes (`diffsim::MakeSceneDifferentiable`) or for ROM actors.
 /// @note Boundary conditions can be cleared with @ref mochi::Actor::ClearBoundaryConditions "ClearBoundaryConditions".
 /// @note Equivalent to calling @ref mochi::Actor::AddBoundaryConditionDofsWorld "AddBoundaryConditionDofsWorld" with DoF indices (3*i, 3*i+1, 3*i+2) for each node i.
@@ -5472,7 +5472,7 @@
 /// @param[in] nodePositionsWorld Target positions [m] in world frame. Length must be 3 times the size of @p nodeIndices.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Only supported for soft and shell actors, except nested soft actors (see @ref mochi::Actor::GetNestedSoftActors "GetNestedSoftActors").
+/// @note Only supported for standalone soft actors and shell actors.
 /// @note Not supported in differentiable scenes (`diffsim::MakeSceneDifferentiable`) or for ROM actors.
 /// @note Same as @ref mochi::Actor::AddBoundaryConditionNodesWorld "AddBoundaryConditionNodesWorld", except boundary conditions cannot be cleared.
 /// @note See @ref mochi::Actor::AddBoundaryConditionDofsWorldPermanent "AddBoundaryConditionDofsWorldPermanent" for interaction with clearable entries later added to the same DoF.
@@ -5488,7 +5488,7 @@
 ///
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Only supported for soft and shell actors, except nested soft actors (see @ref mochi::Actor::GetNestedSoftActors "GetNestedSoftActors").
+/// @note Only supported for standalone soft actors and shell actors.
 /// @note Not supported in differentiable scenes (`diffsim::MakeSceneDifferentiable`) or for ROM actors.
 /// @note Boundary conditions can be cleared with @ref mochi::Actor::ClearBoundaryConditions "ClearBoundaryConditions".
 /// @note Applies to constrained nodes specified by the actor's mesh. Has no effect if none are specified.
@@ -5506,7 +5506,7 @@
 ///
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Only supported for soft and shell actors, except nested soft actors (see @ref mochi::Actor::GetNestedSoftActors "GetNestedSoftActors").
+/// @note Only supported for standalone soft actors and shell actors.
 /// @note Not supported in differentiable scenes (`diffsim::MakeSceneDifferentiable`) or for ROM actors.
 /// @note Same as @ref mochi::Actor::AddBoundaryConditionConstrainedNodesAtRest "AddBoundaryConditionConstrainedNodesAtRest", except boundary conditions cannot be cleared.
 /// @note See @ref mochi::Actor::AddBoundaryConditionDofsWorldPermanent "AddBoundaryConditionDofsWorldPermanent" for interaction with clearable entries later added to the same DoF.
@@ -6164,7 +6164,7 @@
 
 /// @fn bool mochi::Actor::IsNestedSoftActor() const
 ///
-/// @brief Check if the actor is a soft actor nested within a soft skinned articulated actor.
+/// @brief Check if the actor is a nested soft actor within a soft-skinned actor.
 ///
 /// @return True if the actor is a nested soft actor, false otherwise.
 ///
@@ -6793,8 +6793,8 @@
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 /// @return Pointer to the created @ref mochi::Actor "Actor", or nullptr on error.
 ///
-/// @note To access underlying soft actors, use @ref mochi::Actor::GetNestedSoftActors "Actor::GetNestedSoftActors".
-/// @note To access underlying rigid link actors, use @ref mochi::Actor::GetNestedLinkActors "Actor::GetNestedLinkActors".
+/// @note To access nested soft actors, use @ref mochi::Actor::GetNestedSoftActors "Actor::GetNestedSoftActors".
+/// @note To access nested link actors, use @ref mochi::Actor::GetNestedLinkActors "Actor::GetNestedLinkActors".
 ///
 /// @warning The skeleton must have at least one non-Hard joint.
 ///

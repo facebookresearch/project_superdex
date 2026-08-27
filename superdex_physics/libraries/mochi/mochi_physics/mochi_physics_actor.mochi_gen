@@ -138,7 +138,7 @@ class Actor [no_init, no_destruct, use_scene] {
   //
   // @param[in] worldFromCom World-space transform at the center of mass to set.
   //
-  // @note Only supported for dynamic rigid actors, except nested link actors.
+  // @note Only supported for standalone dynamic rigid actors.
   // @note Does not change velocity.
   // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
   // time step after this method is called.
@@ -165,10 +165,9 @@ class Actor [no_init, no_destruct, use_scene] {
   // @param[in] linearVel Linear velocity [m/s] of the center of mass in world frame.
   // @param[in] angularVel Angular velocity [rad/s] at the center of mass in world frame.
   //
-  // @note Only supported for rigid actors (except nested link actors) and soft actors (except ROMs
-  // and nested soft actors).
+  // @note Only supported for standalone rigid actors and standalone soft actors (except ROMs).
   // @note For static actors, it only supports setting zero velocity.
-  // @note For soft actors, the angular velocity must be zero.
+  // @note For standalone soft actors, the angular velocity must be zero.
   // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
   // time step after this method is called.
   fn SetVelocity(Real3 const& linearVel [units(m/s)], Real3 const& angularVel [units(rad/s)]) -> void [pure, virtual, mochi_error, batchable];
@@ -237,8 +236,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // triangle [ixx, ixy, ixz, iyy, iyz, izz] using negative tensor notation consistent with
   // @ref GetRigidMomentOfInertiaLocal. Must be finite.
   //
-  // @note Only supported for dynamic rigid actors. Not supported for static actors, soft actors,
-  // shell actors, or articulated links.
+  // @note Only supported for standalone dynamic rigid actors.
   // @note A finite but physically invalid moment of inertia tensor (negative principal moments
   // or one violating the triangle inequality) is accepted with a warning, not rejected.
   // @note Re-anchors the density reference state. Subsequent @ref SetDensity calls rescale mass and
@@ -265,7 +263,7 @@ class Actor [no_init, no_destruct, use_scene] {
   //
   // @return Recentering parameters of the actor.
   //
-  // @note Recentering is only supported for soft actors (not soft-skinned). For other actor types,
+  // @note Recentering is only supported for standalone soft actors. For other actor types,
   // returns default recentering parameters with @ref RecenteringParams::useRecentering set to false.
   //
   // @see RecenteringParams, SetRecenteringParams
@@ -273,12 +271,11 @@ class Actor [no_init, no_destruct, use_scene] {
 
   // @brief Set the recentering parameters of the actor.
   //
-  // @details When enabled for a soft actor, the root transform automatically moves as the actor's
-  // "rigid pivot" (typically near the center of mass) moves.
+  // @details When enabled, the root transform automatically moves as the actor's "rigid pivot" (typically near the center of mass) moves.
   //
   // @param[in] params Recentering parameters to set.
   //
-  // @note Only supported for soft actors (not soft-skinned).
+  // @note Only supported for standalone soft actors.
   //
   // @see RecenteringParams, GetRecenteringParams
   fn SetRecenteringParams(RecenteringParams const& params) -> void [pure, virtual, mochi_error, batchable];
@@ -287,11 +284,12 @@ class Actor [no_init, no_destruct, use_scene] {
   // reference (rest) positions.
   //
   // @return Node displacements in the actor's local frame. Length is 3 × the number of nodes for
-  // soft, shell, and soft-skinned actors, or 4 × the number of nodes for rod actors (3 displacement
-  // [m] + 1 twist [rad] per node). The number of nodes is available from @ref GetMesh.
+  // standalone soft actors, nested soft actors, and shell actors, or 4 × the number of nodes for rod actors
+  // (3 displacement [m] + 1 twist [rad] per node). The number of nodes is available from @ref
+  // GetMesh.
   //
-  // @note Only supported for soft, soft-skinned, shell and rod actors.
-  // @note For soft-skinned actors, it returns post-skinning displacements, which may differ from the
+  // @note Only supported for standalone soft actors, nested soft actors, shell actors, and rod actors.
+  // @note For nested soft actors, it returns post-skinning displacements, which may differ from the
   // pre-skinning elastic deformation component written by @ref SetDisplacements.
   //
   // @see SetDisplacements, GetNodePositionsLocal
@@ -303,8 +301,8 @@ class Actor [no_init, no_destruct, use_scene] {
   // @param[in] displacements Node displacements [m] to set in the actor's local frame. Length
   // must be 3 × the number of nodes. The number of nodes is available from @ref GetMesh.
   //
-  // @note Only supported for soft, soft-skinned and shell actors.
-  // @note For soft-skinned actors, displacements are the elastic deformation component only (before
+  // @note Only supported for standalone soft actors, nested soft actors, and shell actors.
+  // @note For nested soft actors, displacements are the elastic deformation component only (before
   // skinning is applied).
   // @note Does not change node velocities.
   // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
@@ -586,8 +584,8 @@ class Actor [no_init, no_destruct, use_scene] {
 
   // @brief Set all local displacement and velocity DoFs to zero.
   //
-  // @note Only supported for soft, soft-skinned, shell and rod actors.
-  // @note For soft-skinned actors, it zeroes the elastic deformation and velocity only. The
+  // @note Only supported for standalone soft actors, nested soft actors, shell actors, and rod actors.
+  // @note For nested soft actors, it zeroes the elastic deformation and velocity only. The
   // skeleton-driven pose is unaffected.
   // @note For rod actors, it zeroes both the translational displacement DoFs and the twist-angle DoFs.
   // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
@@ -612,7 +610,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @param[in] positionsLocal Node positions [m] to set (3 values per node: x, y, z) in the actor's
   // local frame.
   //
-  // @note Only supported for soft (not soft-skinned) and shell actors.
+  // @note Only supported for standalone soft actors and shell actors.
   // @note Does not change node velocities.
   // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
   // time step after this method is called.
@@ -622,8 +620,8 @@ class Actor [no_init, no_destruct, use_scene] {
   //
   // @param[in] velocitiesLocal Node velocities to set in the actor's local frame.
   //
-  // @note Only supported for soft (not soft-skinned), shell and rod actors.
-  // @note For soft and shell actors: 3 values per node [m/s] — (vx, vy, vz).
+  // @note Only supported for standalone soft actors, shell actors, and rod actors.
+  // @note For standalone soft actors and shell actors: 3 values per node [m/s] — (vx, vy, vz).
   // @note For rod actors: 4 values per node — (vx, vy, vz) in [m/s] plus a twist rate [rad/s].
   // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
   // time step after this method is called.
@@ -774,8 +772,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @warning Adding boundary conditions to the same nodes repeatedly without clearing grows the
   // per-step cost without bound. See @ref AddBoundaryConditionDofsWorld.
   //
-  // @note Only supported for soft and shell actors, except nested soft actors (see @ref
-  // GetNestedSoftActors).
+  // @note Only supported for standalone soft actors and shell actors.
   // @note Not supported in differentiable scenes (@ref diffsim::MakeSceneDifferentiable) or for ROM
   // actors.
   // @note Boundary conditions can be cleared with @ref ClearBoundaryConditions.
@@ -798,8 +795,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @warning Add each permanent boundary condition only once. Duplicates can never be cleared and
   // irreversibly grow the per-step cost. See @ref AddBoundaryConditionDofsWorldPermanent.
   //
-  // @note Only supported for soft and shell actors, except nested soft actors (see @ref
-  // GetNestedSoftActors).
+  // @note Only supported for standalone soft actors and shell actors.
   // @note Not supported in differentiable scenes (@ref diffsim::MakeSceneDifferentiable) or for ROM
   // actors.
   // @note Same as @ref AddBoundaryConditionNodesWorld, except boundary conditions cannot be
@@ -816,8 +812,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // re-adds the same boundary conditions and grows the per-step cost without bound. See @ref
   // AddBoundaryConditionDofsWorld.
   //
-  // @note Only supported for soft and shell actors, except nested soft actors (see @ref
-  // GetNestedSoftActors).
+  // @note Only supported for standalone soft actors and shell actors.
   // @note Not supported in differentiable scenes (@ref diffsim::MakeSceneDifferentiable) or for ROM
   // actors.
   // @note Boundary conditions can be cleared with @ref ClearBoundaryConditions.
@@ -839,8 +834,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // that cannot be removed and irreversibly grow the per-step cost. See @ref
   // AddBoundaryConditionDofsWorldPermanent.
   //
-  // @note Only supported for soft and shell actors, except nested soft actors (see @ref
-  // GetNestedSoftActors).
+  // @note Only supported for standalone soft actors and shell actors.
   // @note Not supported in differentiable scenes (@ref diffsim::MakeSceneDifferentiable) or for ROM
   // actors.
   // @note Same as @ref AddBoundaryConditionConstrainedNodesAtRest, except boundary conditions
@@ -1461,7 +1455,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @see GetNestedLinkActors, GetArticulatedActor
   fn IsNestedLinkActor() -> bool [pure, virtual, const, batchable];
 
-  // @brief Check if the actor is a soft actor nested within a soft skinned articulated actor.
+  // @brief Check if the actor is a nested soft actor within a soft-skinned actor.
   //
   // @return True if the actor is a nested soft actor, false otherwise.
   //

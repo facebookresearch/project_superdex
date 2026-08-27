@@ -277,8 +277,8 @@ class Scene [no_init, no_destruct] {
   //
   // @warning The skeleton must have at least one non-Hard joint.
   //
-  // @note To access underlying soft actors, use @ref Actor::GetNestedSoftActors.
-  // @note To access underlying rigid link actors, use @ref Actor::GetNestedLinkActors.
+  // @note To access nested soft actors, use @ref Actor::GetNestedSoftActors.
+  // @note To access nested link actors, use @ref Actor::GetNestedLinkActors.
   //
   // @see SoftSkinnedActorParams, DestroyActor
   fn CreateSoftSkinnedActor(SoftSkinnedActorParams const& params) -> Actor* [pure, virtual, mochi_error, expand_struct_params, nullable];
