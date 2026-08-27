@@ -168,7 +168,7 @@ C++ `ExportActor` and Python [`physics.prefab.export_actor()`](pathname:///gener
 - [Rigid Bodies](../examples/basic/rigid_bodies.md) shows direct prefab loading, an instance name, and an instance rotation.
 - [Pose Controller](../examples/articulations/pose_controller.md) shows nested composition and a controller targeting `Pendulum/DoublePendulumOnRail`.
 - [Constraints](../examples/contact_constraints/constraints.md) shows rigid constraints whose actor fields resolve by name.
-- [Soft Skinned](../examples/articulations/soft_skinned_double_pendulum.md) shows the [`softSkinned`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1prefab_1_1ActorLists.html) actor structure and attached soft geometry.
+- [Soft-Skinned](../examples/articulations/soft_skinned_double_pendulum.md) shows the [`softSkinned`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1prefab_1_1ActorLists.html) actor structure and attached soft geometry.
 
 ## Best Practices
 

@@ -1,14 +1,14 @@
 ---
-title: Soft Skinned
+title: Soft-Skinned Actors
 sidebar_position: 5
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Soft Skinned Actors
+# Soft-Skinned Actors
 
-A **soft skinned actor** is an articulated actor that combines the articulated skeleton with one or more soft (deformable FEM) volumes rigidly attached to the skeleton. The skeleton provides the overall pose while the soft volumes add deformation — surface-level dynamics, compression, and contact response.
+A **soft-skinned actor** is an articulated actor that combines the articulated skeleton with one or more soft (deformable) volumes rigidly attached to the skeleton. The skeleton provides the overall pose while the soft volumes add deformation — surface-level dynamics, compression, and contact response.
 
 This one actor type spans three flavors of articulation:
 
@@ -18,18 +18,18 @@ This one actor type spans three flavors of articulation:
 
 ## Architecture
 
-A soft skinned actor is not an actor entity of its own, it couples two actor types:
+A soft-skinned actor is not an actor entity of its own; it couples two actor types:
 
 - The **articulated body actor** is the skeleton: rigid links connected by joints (see [Articulated Actors](./articulated_actors.mdx)).
-- Each **soft FEM actor** is a deformable volume: a tetrahedral mesh with a material model and elastic parameters (see [Soft Actors](./soft/overview.mdx)).
+- Each **nested soft actor** is a deformable volume: a tetrahedral mesh with a material model and elastic parameters (see [Soft Actors](./soft/overview.mdx)).
 
-Multiple soft actors are supported per soft skinned actor (`DynamicArray<SoftActorParams>`), so different regions can use distinct meshes or materials. Every step, the soft volumes are skinned to the current skeletal pose, then their deformation is solved on top of that posed configuration (see [Energy Formulations](#energy-formulations)).
+Multiple nested soft actors are supported per soft-skinned actor (`DynamicArray<SoftActorParams>`), so different regions can use distinct meshes or materials. Every step, the soft volumes are skinned to the current skeletal pose, then their deformation is solved on top of that posed configuration (see [Energy Formulations](#energy-formulations)).
 
 ### Attaching Soft Volumes to the Skeleton
 
-Each soft volume is attached to the skeleton through a two-step mechanism; both steps are always required. First, a subset of its nodes — the **constrained nodes** — are pinned to the articulation. Second, the soft volume is driven via linear blend skinning by a subset of skeleton links. There are two ways to specify skinning, and every soft uses one of them:
+Each soft volume is attached to the skeleton through a two-step mechanism; both steps are always required. First, a subset of its nodes — the **constrained nodes** — are pinned to the articulation. Second, the soft volume is driven via linear blend skinning by a subset of skeleton links. There are two ways to specify skinning, and every nested soft actor uses one of them:
 
-- **Attach to a link** — name the target link in [`softAttachLinks`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html) (1-to-1 with [`softParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html)). The soft is skinned by a single link, hence skinning weights and indices are not explicitly provided. Contact between the soft and its attach link is disabled automatically.
+- **Attach to a link** — name the target link in [`softAttachLinks`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html) (1-to-1 with [`softParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html)). The nested soft actor is skinned by a single link, hence skinning weights and indices are not explicitly provided. Contact between the nested soft actor and its attach link is disabled automatically.
 - **Skinning data** — leave [`softAttachLinks`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html) empty and embed skinning weights in the soft shape, mapping its nodes across multiple links.
 
 ### Contact Surface
@@ -49,7 +49,7 @@ The flavors listed above are combinations of these two choices:
 
 ## Energy Formulations
 
-Simulating a soft skinned actor combines **skinning** — the geometric transform that carries a soft volume along with the skeleton — with the **elastic deformation** solved by the soft FEM. Three things determine the outcome: how the two compose, how the soft is pinned to the skeleton, and where each physical energy is evaluated.
+Simulating a soft-skinned actor combines **skinning** — the geometric transform that carries a soft volume along with the skeleton — with the **elastic deformation** solved by the nested soft actor. Three things determine the outcome: how the two compose, how the nested soft actor is pinned to the skeleton, and where each physical energy is evaluated.
 
 ### Deformation and Skinning
 
@@ -75,7 +75,7 @@ Each physical energy can be evaluated at the **unposed** positions $\mathbf{X} +
 
 | Energy | Posed ([`SoftSkinnedActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html)) | Unposed ([`SoftActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html)) |
 |--------|----------------------------------|------------------------------|
-| Elasticity (`hasStress`) | physically accurate | cheaper — and **exact** when the soft is rigidly attached to a single link via [`softAttachLinks`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html), since a rigid skinning transform preserves elastic energy |
+| Elasticity (`hasStress`) | physically accurate | cheaper — and **exact** when the nested soft actor is rigidly attached to a single link via [`softAttachLinks`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html), since a rigid skinning transform preserves elastic energy |
 | Inertia (`hasInertia`) | physically accurate | cheaper, but a cruder approximation |
 | Gravity ([`hasGravity`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html)) | physically accurate | not available — keep gravity posed on the parent, or disable it |
 
@@ -86,14 +86,14 @@ Contact is **always** posed: it acts on the world-space surface and is not a cho
 - [`SoftActorParams.hasGravity`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html) must be `false`: gravity is only ever posed (on [`SoftSkinnedActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html)) or off.
 :::
 
-## Creating Soft Skinned Actors
+## Creating Soft-Skinned Actors
 
-A soft skinned actor is created in a **single call** to [`CreateSoftSkinnedActor`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) / [`create_soft_skinned_actor`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.create_soft_skinned_actor) from a [`SoftSkinnedActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html), which bundles:
+A soft-skinned actor is created in a **single call** to [`CreateSoftSkinnedActor`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) / [`create_soft_skinned_actor`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.create_soft_skinned_actor) from a [`SoftSkinnedActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html), which bundles:
 
 - a `skeletonParams` ([`ArticulatedActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedActorParams.html)) — the articulated skeleton, built from parallel [`joints`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedActorParams.html) and [`links`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedActorParams.html) arrays (see [Articulated Actors](./articulated_actors.mdx#creating-articulated-actors)); and
 - one or more `softParams` ([`SoftActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html)) — the soft volumes, each a tetrahedral mesh with constrained nodes.
 
-Bind each soft region to a skeleton link with [`softAttachLinks`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html) (1-to-1 with [`softParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html)). Name any link you attach to so it can be referenced; contact between a soft actor and its attach link is disabled automatically.
+Bind each soft region to a skeleton link with [`softAttachLinks`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html) (1-to-1 with [`softParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html)). Name any link you attach to so it can be referenced; contact between a nested soft actor and its attach link is disabled automatically.
 
 <Tabs groupId="language">
 <TabItem value="cpp" label="C++" default>
@@ -104,7 +104,7 @@ skeletonParams.name = "SoftSkinnedDoublePendulum";
 // ... joints and links built as in Articulated Actors; links named
 // "UpperArm"/"LowerArm" on layer "Pendulum" ...
 
-// A soft skin actor: a tet mesh with constrained nodes (softShape). hasGravity must be
+// A nested soft actor: a tet mesh with constrained nodes (softShape). hasGravity must be
 // false; this uses unposed elasticity (hasStress on the soft), accurate when rigidly attached.
 SoftActorParams softParams;
 softParams.name = "SoftArm";
@@ -117,7 +117,7 @@ softParams.hasGravity = false;
 softParams.hasInertia = false;
 softParams.hasStress = true;
 
-// Wrap skeleton + soft into the top-level articulated actor; posed gravity + inertia there.
+// Build the soft-skinned actor with posed gravity and inertia.
 SoftSkinnedActorParams softSkinnedParams;
 softSkinnedParams.skeletonParams = skeletonParams;
 softSkinnedParams.softParams = {softParams};
@@ -138,7 +138,7 @@ skeleton_params = mochi.ArticulatedActorParams(name="SoftSkinnedDoublePendulum")
 # ... joints and links built as in Articulated Actors; links named
 # "UpperArm"/"LowerArm" on layer "Pendulum" ...
 
-# A soft skin actor: a tet mesh with constrained nodes (soft_shape). has_gravity must be
+# A nested soft actor: a tet mesh with constrained nodes (soft_shape). has_gravity must be
 # False; this uses unposed elasticity (has_stress on the soft), accurate when rigidly attached.
 soft_params = mochi.SoftActorParams(
     name="SoftArm", layer="Soft", shape=soft_shape,
@@ -148,7 +148,7 @@ soft_params.material.type = mochi.SoftMaterialType.NEO_HOOKEAN
 soft_params.material.neo_hookean.youngs_modulus = 1e4
 soft_params.material.density = 500.0
 
-# Wrap skeleton + soft into the top-level articulated actor; posed gravity + inertia there.
+# Build the soft-skinned actor with posed gravity and inertia.
 actor = scene.create_soft_skinned_actor(
     skeleton_params=skeleton_params,
     soft_params=[soft_params],
@@ -164,11 +164,11 @@ actor = scene.create_soft_skinned_actor(
 </Tabs>
 
 :::note Mixed energy formulation
-This example mixes the two [energy formulations](#energy-formulations): gravity and inertia are **posed** (on the top-level articulated actor) while elasticity is **unposed** ([`hasStress`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html) on the soft). This is valid as long as no flag is `true` on both sides.
+This example mixes the two [energy formulations](#energy-formulations): gravity and inertia are **posed** (on the top-level articulated actor) while elasticity is **unposed** ([`hasStress`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html) on the nested soft actor). This is valid as long as no flag is `true` on both sides.
 :::
 
 :::tip Declarative alternative
-The same scene can be authored declaratively as a [prefab](../prefabs.mdx) (`.mochi_scene` JSON) and loaded with `prefab::AddToScene` / [`mochi.prefab.add_to_scene`](pathname:///generated/api/v1.0/python/api/prefab.html#superdex.physics.prefab.add_to_scene). The [Soft Skinned Double Pendulum](../../examples/articulations/soft_skinned_double_pendulum.md) example ships both forms.
+The same scene can be authored declaratively as a [prefab](../prefabs.mdx) (`.mochi_scene` JSON) and loaded with `prefab::AddToScene` / [`mochi.prefab.add_to_scene`](pathname:///generated/api/v1.0/python/api/prefab.html#superdex.physics.prefab.add_to_scene). The [Soft-Skinned Double Pendulum](../../examples/articulations/soft_skinned_double_pendulum.md) example ships both forms.
 :::
 
 ## SoftSkinnedActorParams Reference
@@ -178,19 +178,19 @@ The top-level parameters use `SoftSkinnedActorParams` ([C++](pathname:///generat
 | Field | C++ Type | Python Name | Default | Description |
 |-------|----------|-------------|---------|-------------|
 | `skeletonParams` | [`ArticulatedActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedActorParams.html) | `skeleton_params` | -- | The articulated skeleton. See [Skeleton Parameters](#skeleton-parameters). |
-| `softParams` | `DynamicArray<SoftActorParams>` | `soft_params` | `[]` | One entry per deformable skin region. See [Soft Skin Parameters](#soft-skin-parameters). |
-| `softAttachLinks` | `DynamicArray<String>` | `soft_attach_links` | `[]` | Names of skeleton links where soft actors attach. If provided, must be 1-to-1 with [`softParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html). If empty, soft shapes must include skinning data. Contact between a soft actor and its attach link is disabled automatically. |
-| `enableCollidingLinks` | `bool` | `enable_colliding_links` | `false` | Enable internal skeleton links as colliding surfaces. If `false`, only the soft actors (or the blended skin) act as colliding surfaces. |
+| `softParams` | `DynamicArray<SoftActorParams>` | `soft_params` | `[]` | One entry per nested soft actor. See [Nested Soft Actor Parameters](#nested-soft-actor-parameters). |
+| `softAttachLinks` | `DynamicArray<String>` | `soft_attach_links` | `[]` | Names of skeleton links where nested soft actors attach. If provided, must be 1-to-1 with [`softParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html). If empty, soft shapes must include skinning data. Contact between a nested soft actor and its attach link is disabled automatically. |
+| `enableCollidingLinks` | `bool` | `enable_colliding_links` | `false` | Enable internal skeleton links as colliding surfaces. If `false`, only the nested soft actors (or the blended skin) act as colliding surfaces. |
 | `hasGravity` | `bool` | `has_gravity` | `false` | Gravity for the whole actor. Each [`SoftActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html) entry must have `hasGravity = false`. |
 | `hasInertia` | `bool` | `has_inertia` | `false` | Inertia on **posed** (post-skinning) positions. If `true`, each [`SoftActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html) must have `hasInertia = false`. See [Energy Formulations](#energy-formulations). |
 | `hasStress` | `bool` | `has_stress` | `false` | Elasticity on **posed** (post-skinning) positions. If `true`, each [`SoftActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html) must have `hasStress = false`. See [Energy Formulations](#energy-formulations). |
 
 ## Skeleton Parameters
 
-[`skeletonParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html) is a full `ArticulatedActorParams` ([C++](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedActorParams.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.ArticulatedActorParams)); see the [parameter reference](./articulated_actors.mdx#articulatedactorparams-reference). Joints, links, cycles, initial velocities, and root placement all behave exactly as for a standalone [articulated actor](./articulated_actors.mdx). Only two aspects are specific to soft skinned actors:
+[`skeletonParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html) is a full `ArticulatedActorParams` ([C++](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedActorParams.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.ArticulatedActorParams)); see the [parameter reference](./articulated_actors.mdx#articulatedactorparams-reference). Joints, links, cycles, initial velocities, and root placement all behave exactly as for a standalone [articulated actor](./articulated_actors.mdx). Only two aspects are specific to soft-skinned actors:
 
 - **`skin`** ([`ArticulatedSkinParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ArticulatedSkinParams.html)) is the one field with soft-skinned-specific meaning: it enables the **blended skin** coupling mode. See [Blended Skin](#blended-skin).
-- **`worldFromRoot`** places the whole actor. Because each soft actor's [`worldFromLocal`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html) is forced to identity, the skeleton root transform is the single source of global placement — author the soft rest mesh directly in the skeleton's rest frame.
+- **`worldFromRoot`** places the whole actor. Because each nested soft actor's [`worldFromLocal`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html) is forced to identity, the skeleton root transform is the single source of global placement — author the soft rest mesh directly in the skeleton's rest frame.
 
 To keep the rigid links from colliding with each other or the environment (leaving the soft skin as the contact surface), disable their contact layer. In this scene the links share the `Pendulum` layer:
 
@@ -213,17 +213,17 @@ scene.enable_layer_contact_symmetric("Pendulum", "Environment", enable=False)
 </TabItem>
 </Tabs>
 
-## Soft Skin Parameters
+## Nested Soft Actor Parameters
 
 Each entry in [`softParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html) uses `SoftActorParams` ([C++](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html), [Python](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.SoftActorParams)); see [Soft Actors](./soft/overview.mdx) for the full field list. The members that carry soft-skinned-specific requirements:
 
-| Member | Requirement inside a soft skinned actor |
+| Member | Requirement inside a soft-skinned actor |
 |--------|-----------------------------------------|
 | `hasGravity` | **Must be `false`.** Gravity is driven by [`SoftSkinnedActorParams.hasGravity`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html). |
 | `hasInertia` / `hasStress` | Select the unposed side of the [energy formulation](#energy-formulations). Must not both be `true` here *and* on the parent. |
 | `shape` | Tetrahedral mesh with **constrained nodes** baked in — the nodes pinned to the skeleton (always required; see [Architecture](#attaching-soft-volumes-to-the-skeleton)). |
 | `worldFromLocal` | Forced to identity on creation; author the mesh in the skeleton rest frame. |
-| `name` | For a [blended skin](#blended-skin), must match the soft actor's blending data in the skin mesh. |
+| `name` | For a [blended skin](#blended-skin), must match the nested soft actor's blending data in the skin mesh. |
 | `material` | Each region may use its own model (e.g. Neo-Hookean) and parameters (density, Young's modulus). |
 
 ## Blended Skin
@@ -237,7 +237,7 @@ Attach it by setting [`skin`](pathname:///generated/api/v1.0/cpp/structsuperdex_
 
 ```cpp
 skeletonParams.skin = ArticulatedSkinParams{
-    .shape = skinShape,   // triangle mesh with per-soft-actor blending data
+    .shape = skinShape,   // triangle mesh with per-nested-soft-actor blending data
     .layer = "Skin",
 };
 ```
@@ -247,7 +247,7 @@ skeletonParams.skin = ArticulatedSkinParams{
 
 ```python
 skeleton_params.skin = mochi.ArticulatedSkinParams(
-    shape=skin_shape,   # triangle mesh with per-soft-actor blending data
+    shape=skin_shape,   # triangle mesh with per-nested-soft-actor blending data
     layer="Skin",
 )
 ```
@@ -257,13 +257,13 @@ skeleton_params.skin = mochi.ArticulatedSkinParams(
 
 See [ArticulatedSkinParams](./articulated_actors.mdx#articulatedskinparams-reference) for the field reference.
 
-## Working with Soft Skinned Actors at Runtime
+## Working with Soft-Skinned Actors at Runtime
 
-The creation of a soft skinned actor returns the articulated-skeleton actor, so the whole [articulated runtime API](./articulated_actors.mdx#working-with-articulations-at-runtime) — [`GetNumDofs`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), [`GetArticulatedShapeInfo`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), [`GetArticulatedPose`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), [`SetArticulatedJointVelocities`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), and so on — applies directly. Beyond that, a soft skinned actor exposes its nested sub-actors and splits query support between them.
+Creating a soft-skinned actor returns the top-level articulated actor, so the full [articulated runtime API](./articulated_actors.mdx#working-with-articulations-at-runtime) — [`GetNumDofs`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), [`GetArticulatedShapeInfo`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), [`GetArticulatedPose`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), [`SetArticulatedJointVelocities`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), and so on — applies directly. Beyond that, a soft-skinned actor exposes its nested link actors and nested soft actors, and splits query support between them.
 
-### Nested Link and Soft Actors
+### Nested Link Actors and Nested Soft Actors
 
-Enumerate the nested rigid links and soft skins through the parent [`Actor`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) and look them up with [`GetActor`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) / [`get_actor`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.get_actor).
+Enumerate the nested link actors and nested soft actors through the parent [`Actor`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html) and look them up with [`GetActor`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Scene.html) / [`get_actor`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.get_actor).
 
 <Tabs groupId="language">
 <TabItem value="cpp" label="C++" default>
@@ -296,7 +296,7 @@ for handle in actor.get_nested_soft_actors():
 
 ### Queries and Contact
 
-Deformation and contact queries (e.g. `NodePositions`, `ContactPoints`, `TotalContactForce`) are supported on the **nested soft actor**, not on the articulated actor — use [`is_query_supported`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.is_query_supported) to check. Register the query on the nested soft, call [`scene.step`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.step) so the data is computed, then read it back. In the example scene, `ball` is a rigid actor placed within reach of the swinging soft:
+Deformation and contact queries (e.g. `NodePositions`, `ContactPoints`, `TotalContactForce`) are supported on the **nested soft actor**, not on the articulated actor — use [`is_query_supported`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.is_query_supported) to check. Register the query on the nested soft actor, call [`scene.step`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.step) so the data is computed, then read it back. In the example scene, `ball` is a rigid actor placed within reach of the swinging nested soft actor:
 
 ```python
 soft_actor = scene.get_actor(actor.get_nested_soft_actors()[0])
@@ -306,17 +306,17 @@ force = soft_actor.get_contact_force_from_actor_world(ball)  # net force from th
 soft_actor.cancel_query(force_query)
 ```
 
-The C++ equivalents are [`RegisterQuery`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), [`GetContactForceFromActorWorld`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), and [`CancelQuery`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html). When a [blended skin](#blended-skin) is used, contact is reported on the skin surface instead of the individual soft actors.
+The C++ equivalents are [`RegisterQuery`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), [`GetContactForceFromActorWorld`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html), and [`CancelQuery`](pathname:///generated/api/v1.0/cpp/classsuperdex_1_1Actor.html). When a [blended skin](#blended-skin) is used, contact is reported on the skin surface instead of the individual nested soft actors.
 
 ## Examples
 
-**[Soft Skinned Double Pendulum](../../examples/articulations/soft_skinned_double_pendulum.md)**: attaches a tetrahedral soft rod via constrained nodes and [`softAttachLinks`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html), with unposed elasticity.
+**[Soft-Skinned Double Pendulum](../../examples/articulations/soft_skinned_double_pendulum.md)**: attaches a tetrahedral soft rod via constrained nodes and [`softAttachLinks`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html), with unposed elasticity.
   - Python — `uv run --no-project superdex_physics/examples/example_articulations_soft_skinned_double_pendulum.py`
   - Prefab — `superdex_physics/assets/samples/articulations_soft_skinned_double_pendulum.mochi_scene`
 
 ## Related Concepts
 
-- [Articulated Actors](./articulated_actors.mdx) — The skeleton component of a soft skinned actor.
+- [Articulated Actors](./articulated_actors.mdx) — The skeleton component of a soft-skinned actor.
 - [Soft Actors](./soft/overview.mdx) — The deformable skin component.
 - [Contact Filtering](../contact.md#contact-filtering) — Layer-based contact configuration for isolating skeleton and skin.
 - [Pose Controller](../pose_controller.mdx) — Implicit PD control for driving the articulated skeleton toward joint-space or Cartesian link targets.

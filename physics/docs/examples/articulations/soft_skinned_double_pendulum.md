@@ -1,16 +1,16 @@
 ---
-title: Soft Skinned
+title: Soft-Skinned
 sidebar_position: 3
 ---
 
-# Soft Skinned
+# Soft-Skinned
 
 This example builds a **double pendulum carrying a soft body** entirely in code and
 uses it as a guided tour of the SuperDex Physics
 [soft-skinned articulated actor](../../concepts/actors/soft_skinned_actors.mdx) API:
 attaching a tetrahedral soft mesh via constrained nodes and
 [`SoftSkinnedActorParams.soft_attach_links`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.SoftSkinnedActorParams.soft_attach_links), introspecting nested actors, reading the
-deformed soft volume, and using the soft as a contact surface.
+deformed soft volume, and using the nested soft actor as a contact surface.
 
 **Source**: `examples/example_articulations_soft_skinned_double_pendulum.py`
 
@@ -20,17 +20,17 @@ The scene is a soft-skinned actor — a 2-joint / 2-link revolute chain anchored
 world -[Revolute]-> UpperArm (0.25 m) -[Revolute]-> LowerArm (0.125 m) -[soft attached]-> SoftArm (0.1 m)
 ```
 
-The soft is a tetrahedral mesh spanning `X=0.375→0.475` in the skeleton rest frame (total rigid 0.375 + soft 0.1 = 0.475 m). Its first cross-section nodes (4 nodes at X=0.375) are listed as [`constrainedNodes`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html) in the shape JSON and are bound to `LowerArm` via [`SoftSkinnedActorParams.softAttachLinks`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html). Contact between soft and its attachment link is automatically disabled. A ball rests on the ground within reach and is struck by the swinging soft.
+The nested soft actor uses a tetrahedral mesh spanning `X=0.375→0.475` in the skeleton rest frame (total rigid 0.375 + soft 0.1 = 0.475 m). Its first cross-section nodes (4 nodes at X=0.375) are listed as [`constrainedNodes`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html) in the shape JSON and are bound to `LowerArm` via [`SoftSkinnedActorParams.softAttachLinks`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html). Contact between the nested soft actor and its attachment link is automatically disabled. A ball rests on the ground within reach and is struck by the swinging nested soft actor.
 
 :::tip Coordinate frames
-For each nested [`SoftActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html) entry, [`world_from_local`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.SoftActorParams.world_from_local) must be identity, and its mesh must be authored in the root link's local frame at the skeleton's reference pose. Use `skeleton_params.world_from_root` to place the complete soft-skinned actor; it moves the links and soft mesh together. This example puts the 0.5 m pivot height in `joint_0.parent_link_from_joint`, so [`world_from_root`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.ArticulatedActorParams.world_from_root) remains identity.
+For each nested soft actor, the corresponding [`SoftActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftActorParams.html) entry's [`world_from_local`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.SoftActorParams.world_from_local) must be identity, and its mesh must be authored in the root link's local frame at the skeleton's reference pose. Use `skeleton_params.world_from_root` to place the complete soft-skinned actor; it moves the links and soft mesh together. This example puts the 0.5 m pivot height in `joint_0.parent_link_from_joint`, so [`world_from_root`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.ArticulatedActorParams.world_from_root) remains identity.
 :::
 
 ## Implementation
 
 ### Building the Chain with a Soft Attach
 
-An articulated skeleton is described by parallel `joints[]` and `links[]` arrays (see [Double Pendulum on Rail](./double_pendulum_on_rail.md) for base). The soft is an optional [`SoftActorParams`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.SoftActorParams) with a tet-mesh shape that contains [`constrainedNodes`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html). Its rest coordinates are authored in the skeleton's rest frame so the rod overlays the second arm tip at rest.
+An articulated skeleton is described by parallel `joints[]` and `links[]` arrays (see [Double Pendulum on Rail](./double_pendulum_on_rail.md) for base). The nested soft actor is an optional [`SoftActorParams`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.SoftActorParams) with a tet-mesh shape that contains [`constrainedNodes`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html). Its rest coordinates are authored in the skeleton's rest frame so the rod overlays the second arm tip at rest.
 
 ```python
 ROOT_HEIGHT = 0.5  # [m]
@@ -46,7 +46,7 @@ second_arm_shape = physics.load_shape_from_file(
     bake_scale=SECOND_ARM_SCALE,
 )
 
-# Soft tet rod X=0.375..0.475, Y/Z 0..0.025 (center 0.0125 = w/2) with constrainedNodes=[0,1,2,3] at attachment end
+# Soft volume X=0.375..0.475, Y/Z 0..0.025 (center 0.0125 = w/2) with constrainedNodes=[0,1,2,3] at attachment end
 soft_shape = physics.load_shape_from_file(
     file_path=str(resolve_asset("samples/articulations_parts/soft.mochi.json")),
     bake_scale=[1, 1, 1],
@@ -99,7 +99,7 @@ The soft shape JSON carries the attachment information:
 
 ### Introspecting the Soft-Skinned Actor
 
-The top-level articulated actor exposes nested link and soft actors:
+The top-level articulated actor exposes nested link actors and nested soft actors:
 
 ```python
 print(f"num_dofs = {actor.get_num_dofs()}")  # 2
@@ -132,17 +132,17 @@ for q in [
 
 ### Reading the Soft Volume
 
-The nested soft actor's world AABB is available immediately, before any step. The articulated actor itself has **no bounds** because it carries no skin geometry — so query the nested soft instead:
+The nested soft actor's world AABB is available immediately, before any step. The articulated actor itself has **no bounds** because it carries no skin geometry — so query the nested soft actor instead:
 
 ```python
 soft_actor = scene.get_actor(actor.get_nested_soft_actors()[0])
 
-# The nested soft's world AABB is available before stepping.
+# The nested soft actor's world AABB is available before stepping.
 aabb = soft_actor.get_aabb_world()
 print(aabb.min, aabb.max)
 ```
 
-Node positions, by contrast, are query data computed during [`scene.step`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.step), so register on the nested soft, step, then read back:
+Node positions, by contrast, are query data computed during [`scene.step`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Scene.step), so register on the nested soft actor, step, then read back:
 
 ```python
 pos_query = soft_actor.register_query(physics.QueryType.NODE_POSITIONS)
@@ -154,7 +154,7 @@ node_positions = soft_actor.get_node_positions_local()
 soft_actor.cancel_query(pos_query)
 ```
 
-### Controlling Contact with a Soft Actor in the Colliding Role
+### Controlling Contact with a Nested Soft Actor in the Colliding Role
 
 String layers filter contact. Per-link `Pendulum` colliders are disabled vs `Ball` and `Environment`, leaving only `Soft` vs `Ball` active. Contact between `LowerArm` and `SoftArm` is auto-disabled via [`softAttachLinks`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html).
 
@@ -168,7 +168,7 @@ print(scene.is_layer_contact_enabled("Soft", "Ball"))      # True
 print(scene.is_layer_contact_enabled("Pendulum", "Ball"))  # False
 ```
 
-During interactive run the example registers contact queries on the nested soft to report force from the ball:
+During interactive run the example registers contact queries on the nested soft actor to report force from the ball:
 
 ```python
 soft_actor = scene.get_actor(actor.get_nested_soft_actors()[0])
@@ -182,11 +182,11 @@ force = soft_actor.get_contact_force_from_actor_world(ball)
 
 - **Soft-skinned actor**: [`SoftSkinnedActorParams`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1SoftSkinnedActorParams.html) with [`skeleton_params`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.SoftSkinnedActorParams.skeleton_params) (2 revolute joints, 2 links 0.25 m + 0.125 m) and [`soft_params`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.SoftSkinnedActorParams.soft_params) tet mesh with [`constrainedNodes`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html), attached via `soft_attach_links ["LowerArm"]`.
 - **Constrained nodes**: shape JSON carries `constrainedNodes: [0,1,2,3]` at attachment end, required for soft-skinned actors.
-- **Colliding soft actor**: with `enableCollidingLinks=True` both links and soft collide, only links are colliders, but filtering disables Pendulum vs Ball/Environment, leaving Soft vs Ball. Auto-disabled LowerArm↔Soft.
+- **Contact roles**: the nested soft actor is a colliding actor, not a collider. The links are colliders, and `enableCollidingLinks=True` also enables them as colliding actors. Layer filtering disables Pendulum vs Ball/Environment, leaving Soft vs Ball. LowerArm↔Soft is disabled automatically.
 - **Introspection**: [`get_nested_link_actors`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.get_nested_link_actors), [`get_nested_soft_actors`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.get_nested_soft_actors), [`get_articulated_shape_info`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.get_articulated_shape_info), [`is_query_supported`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.is_query_supported) split top-level articulated actor vs. nested actors.
-- **Soft read-back**: [`get_aabb_world`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.get_aabb_world) on nested soft, `NODE_POSITIONS`, `CONTACT_POINTS`, `TOTAL_CONTACT_FORCE` queries on nested soft.
+- **Nested soft actor read-back**: [`get_aabb_world`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.get_aabb_world) on the nested soft actor, `NODE_POSITIONS`, `CONTACT_POINTS`, `TOTAL_CONTACT_FORCE` queries on the nested soft actor.
 - **Contact filtering**: layer enable/disable, enumeration, [`get_contact_force_from_actor_world`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.Actor.get_contact_force_from_actor_world).
-- **Live output**: topology, query support, world AABB, once-per-second joint angles, soft min Y, ball contacts and force.
+- **Live output**: topology, query support, world AABB, once-per-second joint angles, minimum Y of the nested soft actor, ball contacts and force.
 
 ## Running
 
@@ -207,7 +207,7 @@ from superdex.physics.utils.scene_helpers import create_scene_from_prefab
 scene = create_scene_from_prefab("samples/articulations_soft_skinned_double_pendulum.mochi_scene")
 ```
 
-The soft maps directly onto prefab keys — note `actors.softSkinned[].softAttachLinks`, `softParams[].shape` pointing to shared tet asset with [`constrainedNodes`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html), and contact filter:
+The nested soft actor configuration maps directly to prefab keys — note `actors.softSkinned[].softAttachLinks`, `softParams[].shape` pointing to shared tet asset with [`constrainedNodes`](pathname:///generated/api/v1.0/cpp/structsuperdex_1_1ModelData.html), and contact filter:
 
 ```json
 {

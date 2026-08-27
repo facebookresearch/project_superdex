@@ -55,7 +55,7 @@ The discrete incremental potential for the kinetic energy uses the [rigid-actor 
 Aside from these link contributions, several other sources can contribute energy and dissipation to an articulation's dynamics.
 [Joint inertia](#joint-inertia) adds kinetic energy, [joint limits](#joint-limits) and cycle joints add constraint potentials, and [joint friction and damping](#joint-friction-and-damping) add dissipation.
 [Controllers](#controllers), [direct generalized loads](#actuating-without-a-controller), and [transmissions](../transmissions.mdx) contribute through the conservative potential $U$, dissipation potential $R$, or other generalized forces $Q_{\mathrm{other}}$ according to their models.
-[Soft skinned actors](./soft_skinned_actors.mdx#energy-formulations) strongly couple an articulation to a soft body through skinning.
+[Soft-skinned actors](./soft_skinned_actors.mdx#energy-formulations) strongly couple an articulation to a soft body through skinning.
 [Contact](../contact.md#formulation) and external [constraints](../constraints.mdx#mathematical-formulation) may couple the articulation to other actors, so their energies and residuals depend on the coupled system state rather than on $q$ alone. SuperDex Physics assembles all contributions and advances the coupled system with the implicit stages described in [Dynamics](../dynamics.md#implicit-stage-problem).
 
 ## Joint Types
@@ -371,7 +371,7 @@ The skin is configured with `ArticulatedSkinParams` ([C++](pathname:///generated
 | `boundarySubsampling` | `optional<BoundarySubsamplingParams>` | `boundary_subsampling` | Optional subsampling to reduce contact-integral cost. Best combined with `boundaryElementType = P1Q1`. |
 
 :::note
-This surface follows the links via skinning; it is not itself physically deformable. A **deformable** skin is possible, but it requires integrating the articulated actor with soft actors into a [soft skinned actor](./soft_skinned_actors.mdx).
+This surface follows the links via skinning; it is not itself physically deformable. A **deformable** skin is possible, but it requires integrating the articulated actor with soft actors into a [soft-skinned actor](./soft_skinned_actors.mdx).
 :::
 
 ## Working with Articulations at Runtime
@@ -630,4 +630,4 @@ The [Pose Controller](../pose_controller.mdx) adds implicit PD constraints to an
 - [Pose Controller](../pose_controller.mdx) — Implicit PD controller for joint-space and Cartesian link tracking during dynamic simulation.
 - [Shapes](../shapes.mdx) — Collision geometry types available for link shapes.
 - [Rigid Actors](./rigid_actors.mdx) — The underlying rigid body type used for individual links.
-- [Soft Skinned Actors](./soft_skinned_actors.mdx) — Articulated skeletons coupled with deformable FEM skin.
+- [Soft-Skinned Actors](./soft_skinned_actors.mdx) — Articulated skeletons coupled with deformable FEM skin.
