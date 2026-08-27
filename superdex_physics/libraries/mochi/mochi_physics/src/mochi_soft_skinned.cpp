@@ -403,11 +403,7 @@ static void ResolveSkinning(
   }
 }
 
-/*
- * Pipeline to resolve current skinning displacements for all nodes, including inactive nodes when
- * subsampling is enabled.
- */
-static void ResolveAllNodeSkinningDisplacementsPipeline(
+void skinned::ResolveAllNodeSkinningDisplacementsPipeline(
     entt::registry& reg,
     Span<entt::entity const> entities) {
   MOCHI_PROFILE_SCOPE();

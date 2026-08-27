@@ -208,11 +208,7 @@ static void ResolveBlending(
   }
 }
 
-/*
- * Pipeline to resolve current blending displacements for all nodes, including inactive nodes when
- * subsampling is enabled.
- */
-static void ResolveAllNodeBlendingDisplacementsPipeline(
+void blended::ResolveAllNodeBlendingDisplacementsPipeline(
     entt::registry& reg,
     Span<entt::entity const> entities) {
   MOCHI_PROFILE_SCOPE();

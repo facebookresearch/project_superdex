@@ -18,9 +18,11 @@
 
 #include <mochi_core/utils/container_utils.h>
 #include <mochi_core/utils/dynamic_array.h>
+#include <mochi_core/utils/task_scheduler.h>
 
 // This test peaks at the src implementation to verify island behavior which
 // is not directly accessible through the public API
+#include <mochi_physics/src/mochi_articulated_body.h>
 #include <mochi_physics/src/mochi_compound.h>
 #include <mochi_physics/src/mochi_contact.h>
 #include <mochi_physics/src/mochi_island.h>
@@ -232,9 +234,94 @@ class MochiIsland : public test::MochiSceneTestBase {
   }
 };
 
+class MochiIslandParallel : public MochiIsland {
+ public:
+  void SetUp() override {
+    _numWorkerThreads = Min(2, TaskScheduler::GetNumSupportedLogicalProcessors());
+    MochiIsland::SetUp();
+  }
+};
+
 /***************************************************************************************************
   Test Cases
 */
+
+// Verifies that a static articulated link remains stable while serving as an async collider.
+TEST_F(MochiIslandParallel, StaticArticulatedLinkIsStableAsyncCollider) {
+  TransformRT const prescribedRoot{Real3{0.25_r, -0.5_r, 0.75_r}};
+  auto linkShape = test::CreateUnitCubeTetMeshShape(_mochiContext);
+
+  ArticulatedActorParams params;
+  params.worldFromRoot = prescribedRoot;
+  params.joints = {
+      {.type = ArticulatedJointType::Hard},
+      {.type = ArticulatedJointType::Revolute, .axis = Real3{0_r, 0_r, 1_r}}};
+  params.links = {
+      {.parentLink = -1, .shape = linkShape, .layer = "object", .colliderType = ColliderType::Box},
+      {.parentLink = 0, .shape = linkShape, .layer = "object", .colliderType = ColliderType::None}};
+  auto* articulation = _scene->CreateArticulatedActor(params, test::ExpectOK{});
+  ASSERT_NE(nullptr, articulation);
+  ActorHandle const articulationHandle = articulation->GetHandle();
+  ASSERT_EQ(1, articulation->GetNumDofs());
+  articulation->SetArticulatedJointVelocities(DynamicArray<real>{1_r}, test::ExpectOK{});
+
+  auto const& links = articulation->GetNestedLinkActors(test::ExpectOK{});
+  ASSERT_EQ(2, isize(links));
+  ActorHandle const rootHandle = links[0];
+  ActorHandle const childHandle = links[1];
+  auto* root = _scene->GetActor(rootHandle);
+  auto* child = _scene->GetActor(childHandle);
+  ASSERT_NE(nullptr, root);
+  ASSERT_NE(nullptr, child);
+  TransformRT const rootBefore = root->GetRootTransform();
+  TransformRT const childBefore = child->GetRootTransform();
+
+  ActorHandle const cubeHandle = CreateRigidActor();
+  TransformRT cubeTransform = rootBefore;
+  // Center the 0.1 cube inside the unit root collider so bounds overlap without contact response.
+  cubeTransform.SetTranslation(rootBefore.GetTranslation() + Real3{0.45_r, 0.45_r, 0.45_r});
+  _scene->GetActor(cubeHandle)->SetRootTransform(cubeTransform, test::ExpectOK{});
+
+  auto& reg = GetRegistry();
+  entt::entity const rootEntity = GetEntity(rootHandle);
+  entt::entity const childEntity = GetEntity(childHandle);
+  entt::entity const cubeEntity = GetEntity(cubeHandle);
+  EXPECT_TRUE(reg.all_of<TagStaticActor>(rootEntity));
+  EXPECT_FALSE(reg.all_of<TagStaticActor>(childEntity));
+
+  _fakePotentialColliders.emplace_back(cubeHandle, rootHandle, ContactType::Async);
+
+  test::SetSceneIntegrationMethod(_scene, IntegrationMethod::DIRK33);
+  Step();
+  EXPECT_NE(GetIsland(cubeHandle), GetIsland(articulationHandle));
+
+  auto const* potentialColliders =
+      reg.try_get<CPotentialColliders<ContactType::Async> const>(cubeEntity);
+  ASSERT_NE(nullptr, potentialColliders);
+  EXPECT_TRUE(
+      std::any_of(
+          potentialColliders->begin(),
+          potentialColliders->end(),
+          [rootEntity](auto const& collider) { return collider.entity == rootEntity; }));
+
+  int constexpr kNumSteps = 16;
+  for (int step = 1; step < kNumSteps; ++step) {
+    Step();
+  }
+
+  EXPECT_FALSE(
+      NearEqual(childBefore.GetRotation(), child->GetRootTransform().GetRotation(), kTolerance));
+  EXPECT_EQ(rootBefore.GetRotation(), root->GetRootTransform().GetRotation());
+  EXPECT_EQ(rootBefore.GetTranslation(), root->GetRootTransform().GetTranslation());
+  auto const& linkTransforms =
+      reg.get<CArticulatedLinkTransforms<TimeStep::Current> const>(GetEntity(articulationHandle));
+  auto const& rootState = reg.get<CRigidState<TimeStep::Current> const>(rootEntity).value;
+  EXPECT_EQ(linkTransforms[0].GetRotation(), rootState.GetRotation());
+  EXPECT_EQ(linkTransforms[0].GetTranslation(), rootState.GetTranslation());
+
+  _scene->DestroyActor(cubeHandle);
+  _scene->DestroyActor(articulationHandle);
+}
 
 TEST_F(MochiIsland, StaticActorNoIsland) {
   auto& reg = GetRegistry();

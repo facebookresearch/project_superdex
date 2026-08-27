@@ -22,6 +22,7 @@
 
 #include <mochi_core/articulated_body/articulated_body.h>
 #include <mochi_core/utils/constants.h>
+#include <mochi_core/utils/dynamic_array.h>
 #include <mochi_physics/src/mochi_articulated_body.h>
 #include <mochi_physics/src/mochi_context.h>
 #include <mochi_physics/src/mochi_group.h>
@@ -608,6 +609,41 @@ TEST_F(ArticulatedBodyTest, Articulated_LinkTransformsInSync) {
   // Compare after a step.
   _scene->Step(1e-2_r);
   runChecks();
+}
+
+// Guards link-authored pose projection from republishing off-manifold transforms.
+TEST_F(ArticulatedBodyTest, SetPoseFromLinksPublishesCanonicalPose) {
+  auto* actor = _scene->GetActor(GetActorHandle(_eAC, _scene->GetHandle()));
+  ASSERT_NE(nullptr, actor);
+
+  DynamicArray<TransformRT> baseline(4);
+  actor->GetArticulatedLinkTransforms(baseline, test::ExpectOK{});
+
+  int constexpr kRevoluteLink = 2;
+  int constexpr kParentLink = 1;
+  DynamicArray<TransformRT> requested = baseline;
+  Real3 const worldAxis = baseline[kParentLink].GetRotation() * _jointAxes[kRevoluteLink];
+  requested[kRevoluteLink].SetRotation(
+      Quaternion::FromRotationVector(0.25_r * worldAxis) * requested[kRevoluteLink].GetRotation());
+  requested[kRevoluteLink].SetTranslation(
+      requested[kRevoluteLink].GetTranslation() + Real3{0_r, 2_r, 0_r});
+
+  actor->SetArticulatedPoseFromLinks(requested, test::ExpectOK{});
+
+  DynamicArray<TransformRT> canonical(baseline.size());
+  actor->GetArticulatedLinkTransforms(canonical, test::ExpectOK{});
+  EXPECT_FALSE(NearEqual(canonical[kRevoluteLink], requested[kRevoluteLink], kTolerance));
+  EXPECT_FALSE(NearEqual(canonical[kRevoluteLink], baseline[kRevoluteLink], kTolerance));
+
+  DynamicArray<real> pose(actor->GetNumDofs());
+  actor->GetArticulatedPose(pose, test::ExpectOK{});
+  actor->SetArticulatedPoseFromJoints(pose, test::ExpectOK{});
+
+  DynamicArray<TransformRT> replayed(baseline.size());
+  actor->GetArticulatedLinkTransforms(replayed, test::ExpectOK{});
+  for (int i = 0; i < isize(canonical); ++i) {
+    EXPECT_TRUE(NearEqual(canonical[i], replayed[i], kTolerance));
+  }
 }
 
 static void Compare(MatrixView<real const> a, MatrixView<real const> b, real tol = 1e-2_r) {
@@ -2105,6 +2141,23 @@ BoundarySubsamplingParams MakeSubsampling() {
   return subsampling;
 }
 
+[[nodiscard]] bool DisplacementsMatchTranslation(
+    Span<real const> before,
+    Span<real const> after,
+    Real3 const& translation,
+    real tolerance) {
+  if (before.empty() || before.size() != after.size() || before.size() % 3 != 0) {
+    return false;
+  }
+  DynamicArray<real> expected(before);
+  for (int i = 0; i < isize(expected); i += 3) {
+    for (int axis = 0; axis < 3; ++axis) {
+      expected[i + axis] += translation[axis];
+    }
+  }
+  return test::NearEqualSpan(expected, after, tolerance);
+}
+
 } // namespace
 
 class CreateSkinnedArticulatedActorTest : public test::MochiSceneTestBase {
@@ -2125,6 +2178,32 @@ class CreateSkinnedArticulatedActorTest : public test::MochiSceneTestBase {
     return params;
   }
 };
+
+// Guards joint-pose resets from leaving skin-only public displacements stale.
+TEST_F(CreateSkinnedArticulatedActorTest, JointPosePublishesSkinBeforeStep) {
+  auto params = MakeMinimalSkinnedParams(CreateUnitCubeTetMeshShapeWithSkinning(_mochiContext));
+  auto* actor = _scene->CreateArticulatedActor(params, test::ExpectOK{});
+  ASSERT_NE(nullptr, actor);
+
+  auto const initialSpan = actor->GetDisplacements(test::ExpectOK{});
+  DynamicArray<real> const initial(initialSpan);
+  DynamicArray<TransformRT> linkTransforms(1);
+  actor->GetArticulatedLinkTransforms(linkTransforms, test::ExpectOK{});
+  Real3 const linkTranslationBefore = linkTransforms[0].GetTranslation();
+  DynamicArray<real> pose(actor->GetNumDofs());
+  actor->GetArticulatedPose(pose, test::ExpectOK{});
+  ASSERT_FALSE(pose.empty());
+  Real3 constexpr kTranslation{1_r, 0_r, 0_r};
+  pose[0] += kTranslation[0];
+
+  actor->SetArticulatedPoseFromJoints(pose, test::ExpectOK{});
+
+  actor->GetArticulatedLinkTransforms(linkTransforms, test::ExpectOK{});
+  EXPECT_TRUE(NearEqual(
+      linkTranslationBefore + kTranslation, linkTransforms[0].GetTranslation(), kTolerance));
+  EXPECT_TRUE(DisplacementsMatchTranslation(
+      initial, actor->GetDisplacements(test::ExpectOK{}), kTranslation, kTolerance));
+}
 
 // Create a minimal one-bone articulated actor whose skin is a tetrahedral mesh, with
 // boundary subsampling enabled. Exercises the volumetric-skin code path.
@@ -2180,6 +2259,125 @@ class CreateBlendedActorTest : public test::MochiSceneTestBase {
     return params;
   }
 };
+
+class ExternalPoseResetTest : public CreateBlendedActorTest {
+ protected:
+  enum class Route { Links, Joints, Root };
+
+  [[nodiscard]] static DynamicArray<real> CopyDisplacements(Actor const& actor) {
+    return DynamicArray<real>(actor.GetDisplacements(test::ExpectOK{}));
+  }
+
+  void CheckExternalPoseReset(Route route) {
+    _scene->SetGravity({});
+    auto solverParams = _scene->GetSolverParams();
+    solverParams.integrationMethod = IntegrationMethod::BDF3;
+    _scene->SetSolverParams(solverParams, test::ExpectOK{});
+
+    auto params = MakeMinimalBlendedParams(
+        CreateUnitCubeTetBlendedSkinShape(_mochiContext, DynamicString{"soft"}));
+    params.softParams[0].hasInertia = true;
+    params.softParams[0].hasStress = false;
+    params.softParams[0].hasGravity = false;
+
+    auto* parent = _scene->CreateSoftSkinnedActor(params, test::ExpectOK{});
+    ASSERT_NE(nullptr, parent);
+    auto const linkHandles = parent->GetNestedLinkActors(test::ExpectOK{});
+    auto const softHandles = parent->GetNestedSoftActors(test::ExpectOK{});
+    ASSERT_EQ(1, isize(linkHandles));
+    ASSERT_EQ(1, isize(softHandles));
+    auto* link = _scene->GetActor(linkHandles[0]);
+    auto* nested = _scene->GetActor(softHandles[0]);
+    ASSERT_NE(nullptr, link);
+    ASSERT_NE(nullptr, nested);
+
+    TransformRT const linkInitial = link->GetRootTransform();
+    auto const nestedInitial = CopyDisplacements(*nested);
+    DynamicArray<real> elastic(nestedInitial.size(), 0_r);
+    ASSERT_GT(elastic.size(), 3u);
+    elastic[3] = 0.25_r;
+    nested->SetDisplacements(elastic, test::ExpectOK{});
+
+    for (int i = 0; i < 3; ++i) {
+      _scene->Step(1e-3_r);
+    }
+
+    TransformRT const linkBefore = link->GetRootTransform();
+    TransformRT const rootBefore = parent->GetRootTransform();
+    auto const nestedBefore = CopyDisplacements(*nested);
+    auto const parentBefore = CopyDisplacements(*parent);
+    ASSERT_TRUE(NearEqual(linkInitial, linkBefore, kTolerance));
+    ASSERT_FALSE(test::NearEqualSpan(nestedInitial, nestedBefore, kTolerance));
+    ASSERT_TRUE(test::NearEqualSpan(parentBefore, nestedBefore, kTolerance));
+
+    auto& reg = GetRegistry();
+    entt::entity const parentEntity = GetEntity(parent);
+    entt::entity const linkEntity = GetEntity(link);
+    entt::entity const nestedEntity = GetEntity(nested);
+    ASSERT_FALSE(reg.get<CIntegrationArticulatedReducedPose const>(parentEntity).prevSteps.empty());
+    ASSERT_FALSE(reg.get<CIntegrationRigidVels const>(linkEntity).prevSteps.empty());
+    ASSERT_FALSE(reg.get<CIntegrationDisplacementSlices const>(nestedEntity).prevSteps.empty());
+    ASSERT_FALSE(reg.get<CConservativeStepBounds const>(linkEntity).needsNextStepRelaxation);
+    ASSERT_FALSE(reg.get<CConservativeStepBounds const>(nestedEntity).needsNextStepRelaxation);
+
+    Real3 constexpr kTranslation{1_r, 0_r, 0_r};
+    switch (route) {
+      case Route::Links: {
+        DynamicArray<TransformRT> links(1);
+        parent->GetArticulatedLinkTransforms(links, test::ExpectOK{});
+        links[0].SetTranslation(links[0].GetTranslation() + kTranslation);
+        parent->SetArticulatedPoseFromLinks(links, test::ExpectOK{});
+        break;
+      }
+      case Route::Joints: {
+        DynamicArray<real> pose(parent->GetNumDofs());
+        parent->GetArticulatedPose(pose, test::ExpectOK{});
+        ASSERT_FALSE(pose.empty());
+        pose[0] += kTranslation[0];
+        parent->SetArticulatedPoseFromJoints(pose, test::ExpectOK{});
+        break;
+      }
+      case Route::Root: {
+        TransformRT root = rootBefore;
+        root.SetTranslation(root.GetTranslation() + kTranslation);
+        parent->SetRootTransform(root, test::ExpectOK{});
+        break;
+      }
+    }
+
+    Real3 const translationBefore =
+        route == Route::Root ? rootBefore.GetTranslation() : linkBefore.GetTranslation();
+    Real3 const translationAfter = route == Route::Root
+        ? parent->GetRootTransform().GetTranslation()
+        : link->GetRootTransform().GetTranslation();
+    EXPECT_TRUE(NearEqual(translationBefore + kTranslation, translationAfter, kTolerance));
+    auto const nestedAfter = CopyDisplacements(*nested);
+    auto const parentAfter = CopyDisplacements(*parent);
+    EXPECT_TRUE(DisplacementsMatchTranslation(nestedBefore, nestedAfter, kTranslation, kTolerance));
+    EXPECT_TRUE(test::NearEqualSpan(parentAfter, nestedAfter, kTolerance));
+
+    EXPECT_TRUE(reg.get<CIntegrationArticulatedReducedPose const>(parentEntity).prevSteps.empty());
+    EXPECT_TRUE(reg.get<CIntegrationRigidVels const>(linkEntity).prevSteps.empty());
+    EXPECT_TRUE(reg.get<CIntegrationDisplacementSlices const>(nestedEntity).prevSteps.empty());
+    EXPECT_TRUE(reg.get<CConservativeStepBounds const>(linkEntity).needsNextStepRelaxation);
+    EXPECT_TRUE(reg.get<CConservativeStepBounds const>(nestedEntity).needsNextStepRelaxation);
+  }
+};
+
+// Guards link-authored resets against stale dependent state and integration history.
+TEST_F(ExternalPoseResetTest, FromLinksPublishesDerivedState) {
+  CheckExternalPoseReset(Route::Links);
+}
+
+// Guards joint-authored resets against stale dependent state and integration history.
+TEST_F(ExternalPoseResetTest, FromJointsPublishesDerivedState) {
+  CheckExternalPoseReset(Route::Joints);
+}
+
+// Guards root-transform resets against stale dependent state and integration history.
+TEST_F(ExternalPoseResetTest, FromRootPublishesDerivedState) {
+  CheckExternalPoseReset(Route::Root);
+}
 
 TEST_F(CreateBlendedActorTest, TetMesh) {
   auto params = MakeMinimalBlendedParams(

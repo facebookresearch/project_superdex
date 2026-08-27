@@ -17,6 +17,7 @@
 #include "mochi_articulated_body.h"
 
 #include "mochi_actor_convergence.h"
+#include "mochi_blended.h"
 #include "mochi_capture.h"
 #include "mochi_compound.h"
 #include "mochi_constraint.h"
@@ -32,6 +33,7 @@
 #include "mochi_pose_controller.h"
 #include "mochi_simulation.h"
 #include "mochi_skinning.h"
+#include "mochi_soft_skinned.h"
 
 #include <mochi_core/contact/contact_partition.h>
 #include <mochi_core/contact/dmap.h>
@@ -159,6 +161,30 @@ static void UpdateDerivedStateFromPose(
   ecs::InvokeOnEntity(&articulated::compound::UpdateJacobianState<TimeStep::Current>, reg, e);
 }
 
+static void SynchronizeAfterExternalPoseChange(entt::registry& reg, entt::entity e) {
+  MOCHI_ASSERT_VERBOSE(
+      reg.all_of<TagArticulatedActor>(e),
+      "SynchronizeAfterExternalPoseChange requires an articulated actor.");
+
+  ecs::InvokeOnEntity<ecs::policy::AllowFullRegistryAccess>(
+      UpdateDerivedStateFromPose</*kUpdateLinks*/ true>, reg, e);
+  ResolveAllNodeSkinningDisplacementsPipeline(reg, MakeSingletonConstSpan(e));
+
+  if (auto const* composition = reg.try_get<CBlendedComposition const>(e)) {
+    skinned::ResolveAllNodeSkinningDisplacementsPipeline(reg, MakeConstSpan(composition->soft));
+    blended::ResolveAllNodeBlendingDisplacementsPipeline(reg, MakeSingletonConstSpan(e));
+
+    for (auto const soft : composition->soft) {
+      InvalidateActorStepHistory(reg, soft);
+    }
+  }
+
+  for (auto const link : reg.get<CGroupMembers const>(e).actors) {
+    InvalidateActorStepHistory(reg, link);
+  }
+  InvalidateActorStepHistory(reg, e);
+}
+
 void articulated::compound::SetArticulatedPoseFromLinks(entt::registry& reg, entt::entity e) {
   MOCHI_PROFILE_SCOPE();
   // Project the internal rigid links' state onto the reduced pose. This may be lossy if the links
@@ -166,16 +192,7 @@ void articulated::compound::SetArticulatedPoseFromLinks(entt::registry& reg, ent
   ecs::InvokeOnEntity(&SetFullPoseFromBones, reg, e);
   ecs::InvokeOnEntity(&SetReducedPoseFromFullPose, reg, e);
 
-  // Recompute derived state from the projected reduced pose, snapping the links onto the joint
-  // manifold so they stay consistent with it.
-  ecs::InvokeOnEntity<ecs::policy::AllowFullRegistryAccess>(
-      UpdateDerivedStateFromPose</*kUpdateLinks*/ true>, reg, e);
-
-  // External state changes invalidate step history.
-  InvalidateActorStepHistory(reg, e);
-  for (auto const& link : reg.get<CGroupMembers const>(e).actors) {
-    InvalidateActorStepHistory(reg, link);
-  }
+  SynchronizeAfterExternalPoseChange(reg, e);
 }
 
 void articulated::compound::SetArticulatedBodyPose(
@@ -193,15 +210,7 @@ void articulated::compound::SetArticulatedBodyPose(
   // Copy the pose to the actor's component
   current = AsConstView(pose);
 
-  // Recompute all pose-derived state (transforms, link states, Jacobian) from the reduced pose.
-  ecs::InvokeOnEntity<ecs::policy::AllowFullRegistryAccess>(
-      UpdateDerivedStateFromPose</*kUpdateLinks*/ true>, reg, e);
-
-  // External state changes invalidate step history.
-  InvalidateActorStepHistory(reg, e);
-  for (auto const& link : reg.get<CGroupMembers const>(e).actors) {
-    InvalidateActorStepHistory(reg, link);
-  }
+  SynchronizeAfterExternalPoseChange(reg, e);
 }
 
 void articulated::compound::SetArticulatedRootTransform(
@@ -211,15 +220,7 @@ void articulated::compound::SetArticulatedRootTransform(
   // The link world transforms depend on the root transform via forward kinematics.
   reg.get<CRootTransform>(e).worldFromLocal = worldFromRoot;
 
-  // Recompute all pose-derived state (transforms, link states, Jacobian) with the new root.
-  ecs::InvokeOnEntity<ecs::policy::AllowFullRegistryAccess>(
-      UpdateDerivedStateFromPose</*kUpdateLinks*/ true>, reg, e);
-
-  // External state changes invalidate step history.
-  InvalidateActorStepHistory(reg, e);
-  for (auto const& link : reg.get<CGroupMembers const>(e).actors) {
-    InvalidateActorStepHistory(reg, link);
-  }
+  SynchronizeAfterExternalPoseChange(reg, e);
 }
 
 void articulated::compound::GetLinkTransforms(

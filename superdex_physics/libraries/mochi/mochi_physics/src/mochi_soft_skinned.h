@@ -153,6 +153,14 @@ void EntityPostStage(
 void PostLastStagePipeline(entt::registry& reg, Span<entt::entity const> entities);
 
 /*
+ * Pipeline to resolve current skinning displacements for all nodes, including inactive nodes when
+ * subsampling is enabled.
+ */
+void ResolveAllNodeSkinningDisplacementsPipeline(
+    entt::registry& reg,
+    Span<entt::entity const> entities);
+
+/*
  * Pipeline to update quantities that are a function of the state (aka derived state) of the
  * soft skinned actor and make them consistent with the state. Must be called after
  * articulated::compound::UpdateDerivedStatePipeline()

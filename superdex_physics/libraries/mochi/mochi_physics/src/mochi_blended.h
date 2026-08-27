@@ -25,7 +25,8 @@
 
 namespace mochi {
 
-// Actor composition of a blended actor
+// Nested soft actors driven by an articulated actor. Present even when there is no blended
+// surface.
 struct CBlendedComposition : public NoCopy {
   std::vector<entt::entity> soft;
   std::vector<ActorHandle> softHandles;
@@ -61,6 +62,14 @@ void PreStagePipeline(entt::registry& reg, Span<entt::entity const> entities);
  * skinned::PostLastStagePipeline.
  */
 void PostLastStagePipeline(entt::registry& reg, Span<entt::entity const> entities);
+
+/*
+ * Pipeline to resolve current blending displacements for all nodes, including inactive nodes when
+ * subsampling is enabled.
+ */
+void ResolveAllNodeBlendingDisplacementsPipeline(
+    entt::registry& reg,
+    Span<entt::entity const> entities);
 
 /*
  * Pipeline to update quantities that are a function of the state (aka derived state) of the
