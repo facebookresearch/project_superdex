@@ -435,6 +435,10 @@ TEST_IF(MOCHI_HDF5_AND_INTERNAL, PrefabExport, ExportActor_SingleRigid) {
       "Single rigid actor");
 }
 
+TEST(PrefabExport, ExportActor_NullActorReportsError) {
+  prefab::ExportActor(nullptr, "unused", "unused", ExpectNotOK{});
+}
+
 TEST(PrefabExport, ExportActor_UnsupportedActorTypeLeavesNoOutputDirectory) {
   // ExportActor rejects actor types it cannot serialize (e.g. shell). The rejection must happen
   // before any output directory is created, so a failed export leaves nothing on disk.

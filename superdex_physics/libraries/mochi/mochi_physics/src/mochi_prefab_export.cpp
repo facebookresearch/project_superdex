@@ -1246,6 +1246,7 @@ MOCHI_API void prefab::ExportActor(
     std::string_view outputDir,
     Error& error) {
   MOCHI_ERROR_IF(actor == nullptr, error, "Actor must not be null");
+  MOCHI_ERROR_RETURN(error);
   MOCHI_ERROR_IF(
       actor->IsNestedLinkActor(), error, "ExportActor does not support nested link actors.");
   MOCHI_ERROR_IF(
