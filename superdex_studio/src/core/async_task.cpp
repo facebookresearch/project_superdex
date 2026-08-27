@@ -26,6 +26,7 @@
 #include <imgui.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <condition_variable>
 #include <cstdio>
@@ -178,10 +179,10 @@ bool AsyncTaskRunner::ShowModalWindow() {
     int const completed = _completed.load();
     float const fraction =
         _total > 0 ? static_cast<float>(completed) / static_cast<float>(_total) : 1.0f;
-    char overlay[32];
-    std::snprintf(overlay, sizeof(overlay), "%d / %d", completed, _total);
+    std::array<char, 32> overlay{};
+    std::snprintf(overlay.data(), overlay.size(), "%d / %d", completed, _total);
     float const width = 480.0f;
-    ImGui::ProgressBar(fraction, ImVec2(width, 0.0f), overlay);
+    ImGui::ProgressBar(fraction, ImVec2(width, 0.0f), overlay.data());
     ImGui::TextDisabled("Processing %d items", _total);
     ImGui::Spacing();
 
