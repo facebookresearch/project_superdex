@@ -30,6 +30,7 @@
 #include <mochi_core/utils/file_utils.h>
 
 #include <algorithm>
+#include <array>
 #include <filesystem>
 #include <map>
 #include <set>
@@ -469,10 +470,10 @@ void BotEditor::ShowMainMenuItems() {
       mochi::Path const botPath = _botAsset->GetPath();
       mochi::Path defaultPath = botPath;
       defaultPath.ReplaceExtension(".superdex_bot_archive");
-      char const* filters[] = {"*.superdex_bot_archive"};
+      constexpr auto filters = std::to_array<char const*>({"*.superdex_bot_archive"});
       auto outputPath = SuperDexStudio::GetFileDialogPath(
           "Archive Bot",
-          filters,
+          filters.data(),
           1,
           "SuperDex Bot Archive (*.superdex_bot_archive)",
           true,
@@ -495,9 +496,9 @@ void BotEditor::ShowMainMenuItems() {
     }
     // Export URDF
     if (ImGui::MenuItem("Export URDF")) {
-      char const* filters[] = {"*.urdf"};
-      auto path =
-          SuperDexStudio::GetFileDialogPath("Export URDF", filters, 1, "URDF (*.urdf)", true);
+      constexpr auto filters = std::to_array<char const*>({"*.urdf"});
+      auto path = SuperDexStudio::GetFileDialogPath(
+          "Export URDF", filters.data(), 1, "URDF (*.urdf)", true);
       if (!path.IsEmpty()) {
         superdex::robotics::SaveToUrdfFile(
             _botAsset->GetBotPrefab(), path.ToString().c_str(), error);
@@ -1701,9 +1702,9 @@ bool BotEditor::ShowBotPrefabEditorWidgets(superdex::robotics::BotPrefab& botPre
       ImGui::PopStyleVar();
       ImGui::SameLine();
 
-      char label[32];
-      snprintf(label, sizeof(label), "Cycle %zu###Cycle%zu", i, i);
-      if (ImGui::CollapsingHeader(label)) {
+      std::array<char, 32> label{};
+      snprintf(label.data(), label.size(), "Cycle %zu###Cycle%zu", i, i);
+      if (ImGui::CollapsingHeader(label.data())) {
         changed |= linkCombo("Parent Link", cycle.parentLink);
         changed |= linkCombo("Child Link", cycle.childLink);
         if (ImGui::DragTransformRT("Joint From Child Link", cycle.jointFromChildLink)) {
@@ -2000,12 +2001,18 @@ bool BotEditor::ShowModBotPrefabEditorWidgets(
               : std::is_same_v<T, superdex::robotics::ReplaceLink>                ? "Replace Link"
                                                                    : "Replace Link With Bot";
           char const* warnIcon = isFailing ? " " ICON_FA_EXCLAMATION_TRIANGLE : "";
-          char label[128];
+          std::array<char, 128> label{};
           if (m.name.empty()) {
-            snprintf(label, sizeof(label), "%s #%zu%s###Mod%zu", typeName, i, warnIcon, i);
+            snprintf(label.data(), label.size(), "%s #%zu%s###Mod%zu", typeName, i, warnIcon, i);
           } else {
             snprintf(
-                label, sizeof(label), "%s (%s)%s###Mod%zu", typeName, m.name.c_str(), warnIcon, i);
+                label.data(),
+                label.size(),
+                "%s (%s)%s###Mod%zu",
+                typeName,
+                m.name.c_str(),
+                warnIcon,
+                i);
           }
 
           ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(1, 0));
@@ -2035,7 +2042,7 @@ bool BotEditor::ShowModBotPrefabEditorWidgets(
           if (isFailing) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 1.0f));
           }
-          bool const headerOpen = ImGui::CollapsingHeader(label);
+          bool const headerOpen = ImGui::CollapsingHeader(label.data());
           if (isFailing && ImGui::IsItemHovered() && !_modBuildError.empty()) {
             ImGui::SetTooltip("%s", _modBuildError.c_str());
           }
@@ -2225,9 +2232,9 @@ void BotEditor::ShowBotContactWindow(bool* open) {
       float const frac = progress.total > 0
           ? static_cast<float>(progress.completed) / static_cast<float>(progress.total)
           : 0.0f;
-      char overlay[64];
-      snprintf(overlay, sizeof(overlay), "%d / %d", progress.completed, progress.total);
-      ImGui::ProgressBar(frac, ImVec2(-FLT_MIN, 0), overlay);
+      std::array<char, 64> overlay{};
+      snprintf(overlay.data(), overlay.size(), "%d / %d", progress.completed, progress.total);
+      ImGui::ProgressBar(frac, ImVec2(-FLT_MIN, 0), overlay.data());
     }
 
     // Each frame while running: snapshot the worker's last sampled pose and
@@ -2538,23 +2545,23 @@ void BotEditor::ShowBotTransmissionsWindow(bool* open) {
                             char const* idPrefix) -> ItemHeaderResult {
     ItemHeaderResult result;
 
-    char headerLabel[128];
+    std::array<char, 128> headerLabel{};
     if (name.empty()) {
       snprintf(
-          headerLabel,
-          sizeof(headerLabel),
+          headerLabel.data(),
+          headerLabel.size(),
           "%s #%zu###%s%zu",
           defaultPrefix,
           index,
           idPrefix,
           index);
     } else {
-      snprintf(headerLabel, sizeof(headerLabel), "%s###%s%zu", name.c_str(), idPrefix, index);
+      snprintf(headerLabel.data(), headerLabel.size(), "%s###%s%zu", name.c_str(), idPrefix, index);
     }
 
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(1, 0));
     ImGui::SetNextItemAllowOverlap();
-    result.isOpen = ImGui::CollapsingHeader(headerLabel);
+    result.isOpen = ImGui::CollapsingHeader(headerLabel.data());
 
     // Calculate total width of the three buttons to right-align them.
     ImGuiStyle const& style = ImGui::GetStyle();
@@ -2800,13 +2807,13 @@ void BotEditor::ShowBotTransmissionsWindow(bool* open) {
 
     if (ImGui::Button("Add Transmission")) {
       superdex::robotics::BotLinearTransmissionPrefab newTransmission;
-      char defaultName[32];
+      std::array<char, 32> defaultName{};
       snprintf(
-          defaultName,
-          sizeof(defaultName),
+          defaultName.data(),
+          defaultName.size(),
           "transmission_%zu",
           botPrefab.linearTransmissions.size());
-      newTransmission.name = defaultName;
+      newTransmission.name = defaultName.data();
       botPrefab.linearTransmissions.push_back(std::move(newTransmission));
       _linearTransmissionExpanded.push_back(false);
       changed = true;
@@ -3182,9 +3189,10 @@ void BotEditor::ShowBotTransmissionsWindow(bool* open) {
 
     if (ImGui::Button("Add Tendon")) {
       superdex::robotics::BotSpatialTendonPrefab newTendon;
-      char defaultName[32];
-      snprintf(defaultName, sizeof(defaultName), "tendon_%zu", botPrefab.spatialTendons.size());
-      newTendon.name = defaultName;
+      std::array<char, 32> defaultName{};
+      snprintf(
+          defaultName.data(), defaultName.size(), "tendon_%zu", botPrefab.spatialTendons.size());
+      newTendon.name = defaultName.data();
       // Add two default waypoint elements to make the tendon valid
       // (a single waypoint would be isolated and fail validation)
       for (int i = 0; i < 2; ++i) {
