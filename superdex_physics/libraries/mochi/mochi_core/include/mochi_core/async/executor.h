@@ -256,31 +256,16 @@ struct WorkGenerator {
 
   static Task<WorkResult_t, DeathHandler>
   NextTask([[maybe_unused]] DeathCount& dc, FTor& f, auto&&... args)
-    requires(resultIsTask && !isVoidResult)
+    requires(resultIsTask)
   {
     co_return co_await f(args...);
   }
 
   static Task<WorkResult_t, DeathHandler>
   NextTask([[maybe_unused]] DeathCount& dc, FTor& f, auto&&... args)
-    requires(resultIsTask && isVoidResult)
-  {
-    co_await f(args...);
-  }
-
-  static Task<WorkResult_t, DeathHandler>
-  NextTask([[maybe_unused]] DeathCount& dc, FTor& f, auto&&... args)
-    requires(!resultIsTask && !isVoidResult)
+    requires(!resultIsTask)
   {
     co_return f(args...);
-  }
-
-  static Task<WorkResult_t, DeathHandler>
-  NextTask([[maybe_unused]] DeathCount& dc, FTor& f, auto&&... args)
-    requires(!resultIsTask && isVoidResult)
-  {
-    f(args...);
-    co_return;
   }
 };
 
