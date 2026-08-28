@@ -400,12 +400,14 @@ MOCHI_ANY MOCHI_FORCE_INLINE T HMax(Simd<T, N> a) {
 }
 
 #define MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, FN, inVec) \
-  alignas(alignof(Simd<T, N>)) T buf[N];                \
-  Store(buf, inVec);                                    \
-  for (int i = 0; i < N; ++i) {                         \
-    buf[i] = FN(buf[i]);                                \
-  }                                                     \
-  return Load<Simd<T, N>>(buf)
+  ([&]() {                                              \
+    alignas(alignof(Simd<T, N>)) T buf[N];              \
+    Store(buf, inVec);                                  \
+    for (int i = 0; i < N; ++i) {                       \
+      buf[i] = FN(buf[i]);                              \
+    }                                                   \
+    return Load<Simd<T, N>>(buf);                       \
+  }())
 
 template <class T, int N>
 MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, N> Floor(Simd<T, N> a) {
@@ -456,6 +458,15 @@ SinCosImpl(Simd<float, N> xf, Simd<float, N>& outSin, Simd<float, N>& outCos, Si
   // outCos = 1 - (x^2)/2! + (x^4)/4! - (x^6)/6! + (x^8)/8!
   outCos = StaticCast<Simd<float, N>>(c0 + x6 * c2);
 }
+
+// Preserve the documented accuracy bound and keep the quadrant index
+// representable by falling back for larger inputs.
+inline constexpr float kMaxFastSinCosInput = 1e6f;
+
+template <int N>
+MOCHI_ANY MOCHI_FORCE_INLINE bool IsFastSinCosInput(Simd<float, N> a) {
+  return AllTrue(Abs(a) <= Simd<float, N>{kMaxFastSinCosInput});
+}
 } // namespace details
 
 template <class T, int N>
@@ -466,6 +477,10 @@ inline Simd<T, N> Cos(Simd<T, N> a) {
     // There are x64 intrinsics if SVML extension is available
     return Simd<T, N>::Cos(a);
   } else if constexpr (std::is_same_v<T, float>) {
+    if (!details::IsFastSinCosInput(a))
+      MOCHI_UNLIKELY {
+        return MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::cos, a);
+      }
     // Reduce x to [-pi/4, pi/4) in quadrant n and compute Taylor series
     Simd<float, N> sin, cos;
     Simd<int, N> n;
@@ -475,7 +490,7 @@ inline Simd<T, N> Cos(Simd<T, N> a) {
     // Then flip the sign if (n == 1) || (n == 2).
     return result ^ ReinterpretCast<Simd<float, N>>((n ^ ShiftRight<1>(n)) << 31);
   } else {
-    MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::cos, a); // Fallback
+    return MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::cos, a); // Fallback
   }
 }
 
@@ -485,6 +500,10 @@ inline Simd<T, N> Sin(Simd<T, N> a) {
     // There are x64 intrinsics if SVML extension is available
     return Simd<T, N>::Sin(a);
   } else if constexpr (std::is_same_v<T, float>) {
+    if (!details::IsFastSinCosInput(a))
+      MOCHI_UNLIKELY {
+        return MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::sin, a);
+      }
     // Reduce x to [-pi/4, pi/4) in quadrant n and compute Taylor series
     Simd<T, N> sin, cos;
     Simd<int, N> n;
@@ -494,7 +513,7 @@ inline Simd<T, N> Sin(Simd<T, N> a) {
     // Then flip the sign if (n == 2) || (n == 3).
     return result ^ ReinterpretCast<Simd<T, N>>(ShiftRight<1>(n) << 31);
   } else {
-    MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::sin, a);
+    return MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::sin, a);
   }
 }
 
@@ -504,6 +523,10 @@ inline std::pair<Simd<T, N>, Simd<T, N>> SinCos(Simd<T, N> a) {
   // time. However, we still use call Sin and Cos separately when they are implemented with SVML, so
   // that the results will be exactly the same.
   if constexpr (!MOCHI_ARCH_X64_SVML && std::is_same_v<T, float>) {
+    if (!details::IsFastSinCosInput(a))
+      MOCHI_UNLIKELY {
+        return {Sin(a), Cos(a)};
+      }
     Simd<float, N> sin, cos;
     Simd<int, N> n;
     details::SinCosImpl(a, sin, cos, n);
@@ -523,7 +546,7 @@ MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, N> Tan(Simd<T, N> a) {
     // Simd<T, N>::Tan only implemented in this case.
     return Simd<T, N>::Tan(a);
   } else {
-    MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::tan, a);
+    return MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::tan, a);
   }
 }
 
@@ -533,7 +556,7 @@ MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, N> ACos(Simd<T, N> a) {
     // Simd<T, N>::ACos only implemented in this case.
     return Simd<T, N>::ACos(a);
   } else {
-    MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::acos, a);
+    return MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::acos, a);
   }
 }
 
@@ -543,7 +566,7 @@ MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, N> ASin(Simd<T, N> a) {
     // Simd<T, N>::ASin only implemented in this case.
     return Simd<T, N>::ASin(a);
   } else {
-    MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::asin, a);
+    return MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::asin, a);
   }
 }
 
@@ -553,7 +576,7 @@ MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, N> ATan(Simd<T, N> a) {
     // Simd<T, N>::ATan only implemented in this case.
     return Simd<T, N>::ATan(a);
   } else {
-    MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::atan, a);
+    return MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::atan, a);
   }
 }
 
@@ -680,7 +703,7 @@ MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, N> Ln(Simd<T, N> a) {
     // Simd<T, N>::Ln only implemented in this case.
     return Simd<T, N>::Ln(a);
   } else {
-    MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::log, a);
+    return MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::log, a);
   }
 }
 
@@ -690,7 +713,7 @@ MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, N> Tanh(Simd<T, N> a) {
     // Simd<T, N>::Tanh only implemented in this case.
     return Simd<T, N>::Tanh(a);
   } else {
-    MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::tanh, a);
+    return MOCHI_SIMD_MEMBERWISE_FALLBACK(T, N, std::tanh, a);
   }
 }
 
