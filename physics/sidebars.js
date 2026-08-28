@@ -264,6 +264,7 @@ module.exports = {
       id: 'debugging_scenes',
       label: 'Inspecting Scenes',
     },
+    'faq',
     // docs/internal/ is stripped from the open-source export, so guard the whole
     // category: without this the public build renders an empty navigation entry
     // labelled "Internal" whose landing page lists nothing.

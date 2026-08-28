@@ -23,7 +23,7 @@ For the shell formulation and parameter reference, see [Shell Actors](../../conc
 
 ## Benchmark Setup
 
-The benchmark geometry and reference displacement are scaled down by a factor of 10 from the dimensions of the canonical benchmark setup in the literature. Other parameters, including stiffness and load, are scaled in a dimensionally covariant way, preserving the nondimensional equilibrium response while making the geometry a better fit for SuperDex Physics' assumed meter-kilogram-second (MKS) system of units. Following this scaling, the supplied mesh is an annulus with an inner radius of 0.6 m and an outer radius of 1.0 m, and the Python example assigns a thickness of 3 mm, a Young's modulus of 210 MPa, and a Poisson's ratio of zero.
+The benchmark geometry and reference displacement are scaled down by a factor of 10 from the dimensions of the canonical benchmark setup in the literature. This places the geometry near the meter scale for which the debugger's default view and navigation controls are configured. Other parameters, including stiffness and load, are scaled in a dimensionally covariant way, preserving the nondimensional equilibrium response. Following this scaling, the supplied mesh is an annulus with an inner radius of 0.6 m and an outer radius of 1.0 m, and the Python example assigns a thickness of 3 mm, a Young's modulus of 210 MPa, and a Poisson's ratio of zero.
 
 The example loads a prepared asset consisting of a triangular physics mesh with 325 vertices, selected to approach the static solution within a few seconds of wall-clock time while maintaining an acceptable level of displacement error for manipulation problems:
 

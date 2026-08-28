@@ -1,0 +1,142 @@
+---
+title: Frequently Asked Questions
+sidebar_label: FAQs
+---
+
+import TOCInline from '@theme/TOCInline';
+
+# Frequently Asked Questions
+
+For detailed explanations and complete workflows, start with the relevant pages under [Concepts](../category/concepts) and [Examples](./examples/0_getting_started.md). The FAQs below give concise answers to common high-level questions and troubleshooting issues, with links to more detail.
+
+<div className="faq-index">
+  <TOCInline toc={toc} minHeadingLevel={2} maxHeadingLevel={3} />
+</div>
+
+## Performance
+
+### How can I improve performance?
+
+- **Disable unnecessary contact.** Use [contact filtering](./concepts/contact.md#contact-filtering) to exclude actor or layer pairs that should not interact, including links within or across articulated actors—for example, when kinematic constraints prevent a pair of links from coming into contact.
+
+- **Reduce contact samples.** Reduce surface-mesh resolution while retaining finer resolution where contact detail matters. If the mesh cannot be modified, use `P1Q1` instead of the default `P1Q3` [boundary element type](./concepts/contact.md#surface-quadrature), or, where supported, use [boundary subsampling](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.BoundarySubsamplingParams). Verify contact accuracy after either change.
+
+- **Coarsen deformable simulation meshes.** For deformable actors—[soft actors](./concepts/actors/soft/overview.mdx#discretization), [shell actors](./concepts/actors/shell.mdx#discretization), and [rod actors](./concepts/actors/rod.mdx#discretization)—reduce simulation-mesh resolution while retaining sufficient resolution in important deformation and contact regions. For deformable actors with separate simulation and visual meshes, simulation-mesh resolution is independent of [visual-mesh resolution](./examples/advanced/soft_duck_visual_mesh.md#simulation-and-visual-meshes), so the visual mesh may remain finer. For rods that use [visual-mesh contact](./concepts/actors/rod.mdx#contact), visual-mesh resolution still affects contact cost.
+
+- **Disable one of two active contact directions.** When contact is enabled in both directions, use [asymmetric contact filtering](./concepts/contact.md#contact-filtering) to disable contact in one direction. This may reduce contact accuracy compared with enabling both directions, so validate the result; see [Contact Roles](./concepts/contact.md#contact-roles).
+
+- **Increase the time-step size.** Test [larger values](./concepts/dynamics.md#choosing-a-time-step-size) and keep a change only if it improves performance over the same simulated duration while preserving the required accuracy.
+
+- **Reduce the maximum nonlinear iteration count.** Lower the [maximum nonlinear iteration count](./concepts/solvers.md#other-stopping-conditions) and benchmark representative workloads to find the value that gives the best performance while preserving the required simulation accuracy.
+
+- **Reduce the maximum linear iteration count.** For large systems, typically above 1,000 degrees of freedom, ill-conditioning may cause [iterative linear solvers](./concepts/solvers.md#linear-solvers) to spend excessive time on iterations that no longer improve the solution. Lower the limit and benchmark representative workloads to find the value that gives the best end-to-end performance while preserving the required simulation accuracy.
+
+- **Benchmark `ParallelCG` for large deformable systems.** For scenes with deformable actors and many degrees of freedom, the experimental [`ParallelCG`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.LinearSolverType) linear solver may be substantially faster on multicore devices. Benchmark it on the target workload and hardware. `ParallelCG` is nondeterministic and should not be used when exact reproducibility is required.
+
+- **Benchmark single and double precision.** Single precision typically provides higher arithmetic throughput and reduces memory traffic, while double precision may converge in fewer nonlinear iterations. Benchmark both on representative workloads and use the faster precision that meets the accuracy requirements.
+
+- **Tune the worker count.** Start with the [hardware-dependent default](./concepts/context.mdx#worker-configuration), then benchmark several counts on the target device and use the fastest measured configuration. More worker threads are not necessarily faster and can be slower for small scenes.
+
+### What time-step size should I use?
+
+Time steps of 10–25 ms (40–100 physics steps per simulated second) run robustly in most scenes, including complex contact-rich and deformable simulations. This is a practical starting range, not a guarantee. Smaller steps may still be required to resolve fast motion, accurately capture short-duration contact dynamics without excessive numerical dissipation, resolve dynamics associated with small geometric or discretization length scales, or improve nonlinear-solver convergence. See [Choosing a Time-Step Size](./concepts/dynamics.md#choosing-a-time-step-size) for more details.
+
+### How many worker threads should I use?
+
+More worker threads are not necessarily faster. Small scenes and other workloads with limited parallelism may not expose enough parallel work to offset scheduling and synchronization overhead. Larger worker pools can also reduce cache locality, increase memory-bandwidth contention, and compete for CPU resources with threads outside the worker pool and other processes. Treat the [hardware-dependent default](./concepts/context.mdx#worker-configuration) as a starting point, then benchmark representative workloads under representative system load on the target device and tune for the metric of interest, such as step latency or throughput. The optimal worker count may be well below the number of logical processors.
+
+## Modeling and setup
+
+### What unit system should I use?
+
+SuperDex Physics uses the International System of Units (SI) by default. Other consistent unit systems are supported, but every dimensional input must use the chosen system and every dimensional default must be overridden accordingly. Using SI is strongly recommended because it is easy to overlook a dimensional default when using another unit system.
+
+### How should I choose the simulation mesh for a deformable actor?
+
+For [soft actors](./concepts/actors/soft/overview.mdx#discretization), [shell actors](./concepts/actors/shell.mdx#discretization), and [rod actors](./concepts/actors/rod.mdx#discretization), use the coarsest simulation mesh that captures the geometry, deformation, and contact behavior needed by the application. Refine only where additional resolution matters. Finer meshes increase simulation cost, and finer contact surfaces also produce more [contact samples](./concepts/contact.md#surface-quadrature).
+
+Avoid nearly collapsed or highly distorted elements, which can make the simulation slower and less robust. Run the same scenario with a finer mesh and compare the outputs that matter to the application.
+
+When an actor has separate simulation and visual meshes, the visual mesh can remain finer when the simulation mesh is coarsened. This preserves visual detail without adding elements to the simulation mesh.
+
+### Should I use constraints or an articulated actor?
+
+Modeling a jointed structure with [constraints](./concepts/constraints.mdx) is the preferred approach when joints are added or removed at runtime. For a fixed joint structure, prefer an [articulated actor](./concepts/actors/articulated_actors.mdx) instead; it is more efficient and robust.
+
+### How should I choose constraint stiffness?
+
+Use the lowest constraint stiffness that keeps the [constraint deviation](./concepts/constraints.mdx#constraint-value) within the application's requirements. Excessive stiffness can worsen conditioning and slow solver convergence.
+
+Stiffness is measured in N/m for constraints on translation and N·m/rad for constraints on rotation. The default [`ConstraintParams.stiffness`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.ConstraintParams.stiffness) value is `1e6` in either case and may not suit every system. [Mass on Rod Spring](./examples/tendons_rods/mass_on_rod_spring.md#estimate-the-constraint-stiffnesses) illustrates how to match positional and rotational constraint stiffnesses to the stiffness and length scale of a compliant system, using a rod as the example.
+
+### Can I use the Pose Controller with a rigid body?
+
+The [Pose Controller](./concepts/pose_controller.mdx) is available only for articulated actors. To control a [rigid body](./concepts/actors/rigid_actors.mdx) with it, model the body as a single-link articulated actor with a free joint.
+
+## Execution and concurrency
+
+### Should I use `Scene` or `AsyncScene`?
+
+Use [`Scene`](./concepts/scenes.mdx) unless physics must advance while the calling thread continues other work. `Scene::Step()` is synchronous. [`AsyncScene`](./concepts/scenes.mdx#asyncscene) (C++ only) provides asynchronous stepping.
+
+### Is SuperDex Physics thread-safe?
+
+A [`Scene`](./concepts/scenes.mdx#concurrency) and its actors and constraints must be accessed by only one thread at a time. Different scenes may be stepped concurrently. Different threads may access the same scene at different times if the application synchronizes those accesses. In C++, a thread other than the one that created the `Context` must be [bound to it](./concepts/context.mdx#worker-configuration) before calling the API.
+
+### When can I modify a scene?
+
+With a synchronous [`Scene`](./concepts/scenes.mdx#stepping), add or remove actors and constraints before or after `Step()`. [Pre-step and post-step callbacks](./concepts/scenes.mdx#callbacks) may read and update state, but they must not add or remove actors or constraints. With [`AsyncScene`](./concepts/scenes.mdx#safe-access), queue scene changes with `QueueCommand` and actor operations with `QueueActorCommand`. Its step callbacks follow the same restriction.
+
+### Is SuperDex Physics deterministic?
+
+Yes. On the same target device and within a given build, SuperDex Physics is deterministic when it receives the same inputs through the same sequence of API calls, including the worker-thread count. For [`AsyncScene`](./concepts/scenes.mdx#asyncscene), this also requires repeating the same sequence of time-step sizes and applying each queued command before the same simulation step in every run. Features documented as nondeterministic, such as [`ParallelCG`](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.LinearSolverType), are exceptions.
+
+## Troubleshooting
+
+### Why does my simulation become unstable on the first step?
+
+A common cause is an inconsistent initial configuration, such as deeply intersecting actors, large initial constraint or target errors at high stiffness, or mutually incompatible constraints or targets. [Inspect the scene](./debugging_scenes.md) before stepping, correct unintended overlap or inconsistent constraints, and use [contact filtering](./concepts/contact.md#contact-filtering) for pairs that should not interact. If the initial configuration is intentional, try a smaller [time-step size](./concepts/dynamics.md#choosing-a-time-step-size).
+
+### How can I troubleshoot missed contact, excessive penetration, or tunneling?
+
+First verify that [contact filtering](./concepts/contact.md#contact-filtering) permits the intended interaction.
+
+If small features can pass between contact samples, increase the surface-mesh resolution of the colliding actor, select a denser [contact quadrature rule](./concepts/contact.md#surface-quadrature), or increase the [boundary-subsampling density](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.BoundarySubsamplingParams) or disable subsampling. If both actors support both contact roles and [contact is enabled in only one direction](./concepts/contact.md#contact-filtering), test both directions when troubleshooting missed contact.
+
+For a grid-SDF collider, [validate the source mesh](./authoring_scenes/authoring_assets.mdx#input-requirements) used to generate the SDF. Ensure that its surface defines an unambiguous inside and outside, with no holes or flipped triangles, and choose a [grid resolution](./authoring_scenes/authoring_assets.mdx#bake-a-grid-sdf) fine enough to represent the features relevant to contact.
+
+If contact is detected but penetration is excessive, increase [`penaltyThresholdDefault`](./concepts/contact.md#contact-parameter-reference) or reduce [`penaltySmoothingHalfDistance`](./concepts/contact.md#contact-parameter-reference). Increase [`penaltyCoefficient`](./concepts/contact.md#contact-parameter-reference) only as a last resort because excessive contact stiffness can slow solver convergence and reduce robustness.
+
+SuperDex Physics does not use continuous collision detection. If an actor can cross thin geometry between simulation steps, reduce the [time-step size](./concepts/dynamics.md#choosing-a-time-step-size).
+
+### How do I control restitution in collisions?
+
+SuperDex Physics determines rebound from the contact forces during an impact, including [normal viscous damping](./concepts/contact.md#restitution-behavior-of-rigid-collisions). The effective coefficient of restitution therefore varies with impact speed rather than being a fixed input parameter.
+
+For rigid impacts, tune the normal contact damping coefficient for the expected impact-speed range. Contact damping is combined as the geometric mean of the two actors' values, so a value of zero on either actor disables it for the pair. For deformable actors, rebound depends mainly on elasticity and stiffness-proportional material damping rather than contact damping.
+
+Reproducing the intended rebound typically requires at least second-order time integration, such as [`BDF2`](./concepts/dynamics.md#comparison-and-recommendations), and a [time-step size](./concepts/dynamics.md#choosing-a-time-step-size) small enough to resolve the impact over several steps.
+
+### Why does my simulation oscillate or bounce more than expected?
+
+If the motion is unintended, add damping to the mechanism producing it. Use [normal contact damping](./concepts/contact.md#friction-and-damping) for rigid impacts, [viscoelastic stiffness damping](./concepts/actors/soft/overview.mdx#continuous-model) for deformable actors, [viscous joint friction](./concepts/actors/articulated_actors.mdx#joint-friction-and-damping) for articulated joints, damping for [compliant constraints](./concepts/constraints.mdx#parameters) and [joint limits](./concepts/actors/articulated_actors.mdx#joint-limits), and [derivative gain](./concepts/pose_controller.mdx#posetrackingparams) for Pose Controller tracking.
+
+[`BDF2`](./concepts/dynamics.md#comparison-and-recommendations) introduces substantially less numerical dissipation than the default `BackwardEuler`, so missing or insufficient physical damping may become more visible after switching to it.
+
+### Does "Linear solver didn't converge" mean the step failed?
+
+Not necessarily. The warning means that a linear solve within the nonlinear solve did not reach its requested tolerance; it does not by itself mean that the simulation step failed. The resulting Newton step may still be appropriate. However, repeatedly reaching the maximum linear iteration count may indicate that the solver has stagnated and is spending substantial time on iterations that no longer improve the solution. Reducing the [maximum iteration count](pathname:///generated/api/v1.0/python/api/physics.html#superdex.physics.LinearSolverParams.max_iter) can improve performance if it does not materially affect task-relevant results. If the warning persists or accompanies divergence or unacceptable behavior, try double precision or a smaller time-step size.
+
+### Does a nonlinear solver status of `Stopped` mean the step failed?
+
+Not necessarily. `Stopped` means that the nonlinear solve reached one of its configured [stopping conditions](./concepts/solvers.md#other-stopping-conditions) without meeting the residual convergence tolerance. By default, the simulation continues using the latest iterate. This does not necessarily indicate a problem: the configured residual tolerances may be stricter than the workload requires. Evaluate task-relevant results. If the maximum-iteration limit caused the status, increase it only if additional iterations materially change task-relevant results.
+
+### Does a nonlinear solver status of `Diverged` mean the step failed?
+
+Yes. Unlike `Stopped`, which may still produce acceptable results, `Diverged` means that the nonlinear solve failed. Treat the result of that step as invalid.
+
+Return to a known-good state, reduce the [time-step size](./concepts/dynamics.md#choosing-a-time-step-size), and retry. Applications that need automatic recovery can [capture state](./concepts/state_capture.mdx) before stepping and restore it after divergence. If divergence repeats, inspect the scene for deep intersections, conflicting constraints or targets, poor-quality elements, and excessive contact or constraint stiffness.
+
+### What does the "Matrix does not seem to be SPD" warning mean?
+
+The [linear solver](./concepts/solvers.md#linear-solvers) detected that its matrix did not behave as symmetric positive definite. Finite-precision effects can make a mathematically SPD system appear non-SPD to the solver. An isolated warning does not necessarily invalidate the step; if it accompanies instability, try double precision.

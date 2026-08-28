@@ -236,6 +236,36 @@ article h1:first-child {
   line-height: 1.08;
 }
 
+.docs-doc-id-faq .markdown h3 {
+  font-size: 1.15rem;
+}
+
+.docs-doc-id-faq .markdown h3 .hash-link {
+  display: inline;
+  font-size: 0.8em;
+}
+
+.docs-doc-id-faq .faq-index > div > .table-of-contents {
+  padding-left: 0;
+}
+
+.docs-doc-id-faq .faq-index > div > .table-of-contents > li {
+  list-style: none;
+  margin-top: 1rem;
+}
+
+.docs-doc-id-faq .faq-index > div > .table-of-contents > li:first-child {
+  margin-top: 0;
+}
+
+.docs-doc-id-faq .faq-index > div > .table-of-contents > li > a {
+  font-weight: 600;
+}
+
+.docs-doc-id-faq .faq-index > div > .table-of-contents > li > ul > li::marker {
+  color: var(--ifm-font-color-secondary);
+}
+
 /* Body paragraphs in articles */
 .markdown p {
   color: var(--ifm-font-color-secondary);
