@@ -496,22 +496,26 @@ TEST_F(SceneSyncTest, ReenableSyncResendsMeshes) {
   test::WaitUntil([&] { return ClientHasScene(sceneHandle); });
 
   SceneSyncParams params = MeshSyncParams();
+  params.useVisualMesh = false;
   SetSceneSyncParams(params);
   _client->SelectScene(sceneHandle);
   uint64_t const baseCounter = GetSceneSyncData().counter;
   WaitForSync(scene, baseCounter + 1);
   uint64_t const rigidRevision = ExpectActorMeshMatches(scene, rigidActor);
   uint64_t const softRevision = ExpectActorMeshMatches(scene, softActor);
-
-  // Disabling retains the category flags in the request. After processing its immediate mesh reply,
-  // the server must still cancel the debugger-owned deformable mesh query.
-  params.enabled = false;
-  SetSceneSyncParams(params);
-  scene->UpdateDebugger();
   Actor* const soft = scene->GetActor(softActor);
   ASSERT_NE(nullptr, soft);
-  auto const positions = soft->GetVisualMeshNodePositionsLocal(test::ExpectNotOK{});
-  EXPECT_TRUE(positions.empty());
+  EXPECT_FALSE(soft->GetSurfaceMeshNodePositionsLocal(test::ExpectOK{}).empty());
+
+  // Disabling must cancel the debugger-owned deformable mesh query.
+  params.enabled = false;
+  SetSceneSyncParams(params);
+  test::WaitUntil([&] {
+    scene->UpdateDebugger();
+    Error error;
+    auto const positions = soft->GetSurfaceMeshNodePositionsLocal(error);
+    return !error.IsOK() && positions.empty();
+  });
 
   // Re-enabling must start a fresh mesh epoch with complete rigid and deformable meshes.
   uint64_t const disabledCounter = GetSceneSyncData().counter;
@@ -520,6 +524,36 @@ TEST_F(SceneSyncTest, ReenableSyncResendsMeshes) {
   WaitForSync(scene, disabledCounter + 1);
   EXPECT_GT(ExpectActorMeshMatches(scene, rigidActor), rigidRevision);
   EXPECT_GT(ExpectActorMeshMatches(scene, softActor), softRevision);
+}
+
+TEST_F(SceneSyncTest, DisablingMeshCategoryCancelsMeshQuery) {
+  Scene* scene = CreateSceneNoGravity();
+  SceneHandle const sceneHandle = scene->GetHandle();
+  ActorHandle const softActor = CreateSoftActor(scene);
+
+  StartServer();
+  ConnectClient();
+  test::WaitUntil([&] { return ClientHasScene(sceneHandle); });
+
+  SceneSyncParams params = MeshSyncParams();
+  params.useVisualMesh = false;
+  SetSceneSyncParams(params);
+  _client->SelectScene(sceneHandle);
+  uint64_t const baseCounter = GetSceneSyncData().counter;
+  WaitForSync(scene, baseCounter + 1);
+
+  Actor* const soft = scene->GetActor(softActor);
+  ASSERT_NE(nullptr, soft);
+  EXPECT_FALSE(soft->GetSurfaceMeshNodePositionsLocal(test::ExpectOK{}).empty());
+
+  params.syncMeshes = false;
+  SetSceneSyncParams(params);
+  test::WaitUntil([&] {
+    scene->UpdateDebugger();
+    Error error;
+    auto const positions = soft->GetSurfaceMeshNodePositionsLocal(error);
+    return !error.IsOK() && positions.empty();
+  });
 }
 
 TEST_F(SceneSyncTest, SelectSceneThenEnableSync) {

@@ -455,7 +455,7 @@ void SceneDebuggerImpl::OnSceneStepRequest(SceneImpl* scene, protocol::SceneStep
 
 void SceneDebuggerImpl::OnSceneSyncRequest(SceneImpl* scene, protocol::SceneSyncRequest&& request) {
   MOCHI_ASSERT_VERBOSE(request.scene == _sceneHandle, "Received by the wrong scene");
-  bool const disableAutoSync = request.enableAutoSync.has_value() && !*request.enableAutoSync;
+  bool const wasSyncingMeshes = _sync && _sync->syncActors && _sync->syncMeshes;
 
   // If enableAutoSync.has_value() then enable/disable auto-syncing. Otherwise this is a one-time
   // sync request that must not affect the active syncing state.
@@ -486,6 +486,13 @@ void SceneDebuggerImpl::OnSceneSyncRequest(SceneImpl* scene, protocol::SceneSync
     request.syncMeshes = false;
   }
 
+  bool const isSyncingMeshes = _sync && _sync->syncActors && _sync->syncMeshes;
+  bool const preserveMeshQueries = wasSyncingMeshes && isSyncingMeshes;
+  if (!preserveMeshQueries) {
+    UpdateMeshQueries(scene, /*meshesEnabled=*/false, /*useVisualMesh=*/false);
+  }
+  request.syncMeshes = request.syncMeshes && isSyncingMeshes;
+
   // Send a reply immediately
   if (request.sendReply) {
     SendSyncReply(
@@ -495,11 +502,6 @@ void SceneDebuggerImpl::OnSceneSyncRequest(SceneImpl* scene, protocol::SceneSync
         request.syncMeshes,
         request.useVisualMesh,
         request.requestId);
-  }
-
-  if (disableAutoSync) {
-    // The immediate reply may gather meshes, so clean up afterward to end in a disabled state.
-    UpdateMeshQueries(scene, /*meshesEnabled=*/false, /*useVisualMesh=*/false);
   }
 }
 
