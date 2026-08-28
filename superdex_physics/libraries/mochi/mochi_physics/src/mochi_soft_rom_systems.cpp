@@ -72,7 +72,7 @@ static constexpr real kQQTRegularizationCoefficient = 1e-8_r;
 MOCHI_API void mochi::rom::AssembleFullToReduced(
     AssemblyParams const& params,
     ecs::Included<TagSoftActor, TagRomActor>,
-    ecs::OptionalTag<TagSoftSkinnedActor> isSkinned,
+    ecs::OptionalTag<TagNestedSoftActor> isNestedSoft,
     ecs::OptionalTag<TagUseGravity> hasGravityTag,
     ecs::OptionalTag<TagUseInertia> hasInertiaTag,
     ecs::OptionalTag<TagUseStress> hasStressTag,
@@ -87,7 +87,7 @@ MOCHI_API void mochi::rom::AssembleFullToReduced(
   bool const hasGravity = hasGravityTag && !skinnedEnergy.gravity;
   bool const hasInertia = hasInertiaTag && !skinnedEnergy.inertia;
   bool const hasStress = hasStressTag && !skinnedEnergy.stress;
-  bool const hasContact = hasContactTag && !isSkinned;
+  bool const hasContact = hasContactTag && !isNestedSoft;
   if ( // Nothing to project.
       (!hasGravity && !hasInertia && !hasStress && !hasContact) ||
       // Projection is performed element-by-element. Full actor is not explicitly assembled.
@@ -137,7 +137,7 @@ MOCHI_API void mochi::rom::AssembleAndProjectBody(
     ecs::OptionalTag<TagUseGravity> hasGravityTag,
     ecs::OptionalTag<TagUseInertia> hasInertiaTag,
     ecs::OptionalTag<TagUseStress> hasStressTag,
-    [[maybe_unused]] ecs::OptionalTag<TagSoftSkinnedActor> isSkinned,
+    [[maybe_unused]] ecs::OptionalTag<TagNestedSoftActor> isNestedSoft,
     CSkinnedEnergy const& skinnedEnergy,
     CRomProjectionStrategy const& projectionStrategy,
     CLocal2GlobalMap const& l2g,
@@ -163,11 +163,11 @@ MOCHI_API void mochi::rom::AssembleAndProjectBody(
   bool const hasInertia = hasInertiaTag && !skinnedEnergy.inertia;
   bool const hasStress = hasStressTag && !skinnedEnergy.stress;
 
-  // Skinned ROM actors do not currently support element-level projection. If that ever changes, the
-  // "at least one unposed term" assert below must be revisited (a skinned actor with only posed
-  // terms is a legal configuration).
+  // Nested soft ROM actors do not currently support element-level projection. If that ever
+  // changes, the "at least one unposed term" assert below must be revisited (a nested soft actor
+  // with only posed terms is a legal configuration).
   MOCHI_ASSERT_VERBOSE(
-      !isSkinned, "Element-level projection is not supported for soft-skinned ROM actors.");
+      !isNestedSoft, "Element-level projection is not supported for nested soft ROM actors.");
   MOCHI_ASSERT_VERBOSE(
       hasGravity || hasInertia || hasStress,
       "ROM actors with element-level projection must have at least one of inertia, gravity or stress enabled.");
@@ -281,7 +281,7 @@ void mochi::rom::AssembleAndProjectAsyncContact(
     AssemblyParams const& params, // External parameter
     entt::entity e,
     ecs::Included<TagSoftActor, TagRomActor, TagUseContact>,
-    ecs::Excluded<TagSoftSkinnedActor>,
+    ecs::Excluded<TagNestedSoftActor>,
     ecs::OptionalTag<TagQueryActiveContacts> queryActiveContacts,
     ecs::CtxGlobal<CSimulationParams const> simParams,
     ContactAssemblyReg reg,

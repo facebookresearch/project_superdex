@@ -267,7 +267,7 @@ class SceneImpl final : public Scene {
   Actor* CreateSoftActorImpl(
       SoftActorParams const& params,
       experimental::ExperimentalSoftActorParams const& experimentalParams,
-      bool isSkinned,
+      bool isNestedSoft,
       std::shared_ptr<TetrahedralMeshShape const> shapePtr,
       Error& error);
 

@@ -1352,7 +1352,7 @@ Actor* SceneImpl::CreateRigidActor(RigidActorParams const& params, Error& error)
 Actor* SceneImpl::CreateSoftActorImpl(
     SoftActorParams const& params,
     ExperimentalSoftActorParams const& experimentalParams,
-    bool isSkinned,
+    bool isNestedSoft,
     std::shared_ptr<TetrahedralMeshShape const> shapePtr,
     Error& error) {
   MOCHI_ERROR_IF(
@@ -1370,16 +1370,16 @@ Actor* SceneImpl::CreateSoftActorImpl(
   ActorHandle newHandle = GetActorHandle(e, GetHandle());
 
   // Initialize it as a soft actor
-  bool const useContact = !isSkinned;
+  bool const useContact = !isNestedSoft;
   std::shared_ptr<DeepFlowShape const> flow = std::dynamic_pointer_cast<DeepFlowShape const>(
       _context->GetShapeSharedPtr(experimentalParams.flow));
   InitSoftActor(
-      _registry, e, params, experimentalParams, useContact, isSkinned, shapePtr, flow, error);
+      _registry, e, params, experimentalParams, useContact, isNestedSoft, shapePtr, flow, error);
   MOCHI_DESTROY_AND_RETURN_IF_ERROR();
 
   // If necessary, initialize ROM actor
   if (experimentalParams.rom) {
-    bool const hasExternalRigidDofs = isSkinned;
+    bool const hasExternalRigidDofs = isNestedSoft;
     rom::InitSoftActorRom(
         _registry, e, *experimentalParams.rom, shapePtr, flow, hasExternalRigidDofs, error);
     MOCHI_DESTROY_AND_RETURN_IF_ERROR();
@@ -1464,7 +1464,7 @@ MOCHI_API Actor* mochi::experimental::CreateSoftActor(
   MOCHI_ERROR_RETURN(error, {});
 
   return sceneImpl->CreateSoftActorImpl(
-      params, experimentalParams, /* isSkinned */ false, shapePtr, error);
+      params, experimentalParams, /* isNestedSoft */ false, shapePtr, error);
 }
 
 // Store skin params that are consumed during InitSkinMesh and cannot be recovered afterward.
@@ -1589,13 +1589,12 @@ static void ValidateSoftSkinnedActorEnergyParams(
   MOCHI_ERROR_RETURN(error);
 
   for (auto const& softParams : params.softParams) {
-    MOCHI_ERROR_IF(
-        softParams.hasGravity, error, "Must disable gravity for underlying soft skinned actors.");
+    MOCHI_ERROR_IF(softParams.hasGravity, error, "Must disable gravity for nested soft actors.");
     MOCHI_ERROR_IF_NOT(
         params.hasGravity || params.hasInertia || params.hasStress || softParams.hasInertia ||
             softParams.hasStress,
         error,
-        "Each underlying soft skinned actor must have at least one energy term enabled: gravity, "
+        "Each nested soft actor must have at least one energy term enabled: gravity, "
         "inertia or stress on the SoftSkinnedActorParams (posed), or inertia or stress on its "
         "SoftActorParams (unposed).");
   }
@@ -2378,7 +2377,7 @@ Actor* SceneImpl::CreateSoftSkinnedActorImpl(
     experimentalSoftParams.useRecentering = false;
 
     Actor* softActor = CreateSoftActorImpl(
-        softParams, experimentalSoftParams, /* isSkinned */ true, softShapes[i], error);
+        softParams, experimentalSoftParams, /* isNestedSoft */ true, softShapes[i], error);
     MOCHI_ERROR_RETURN(error, {});
     softActors[i] = softActor->GetHandle();
 
@@ -2399,12 +2398,12 @@ Actor* SceneImpl::CreateSoftSkinnedActorImpl(
   DisableContactForAdjacentActors(this, nodes, edges, error);
   MOCHI_ERROR_RETURN(error, {});
 
-  // Initialize the soft-skinned actor components. The entities are the same as the soft actors.
-  bool const useContactSoftSkinned = !blendedShapePtr;
+  // Initialize the nested soft actor components. The entities are the same as the soft actors.
+  bool const useNestedSoftContact = !blendedShapePtr;
   for (int i = 0; i < numSoftActors; ++i) {
     auto entity = GetEntity(_registry, softActors[i], error);
     skinned::InitSkinnedActor(
-        _registry, entity, params, useContactSoftSkinned, skeletonActor->GetHandle(), error);
+        _registry, entity, params, useNestedSoftContact, skeletonActor->GetHandle(), error);
     MOCHI_ERROR_RETURN(error, {});
   }
 

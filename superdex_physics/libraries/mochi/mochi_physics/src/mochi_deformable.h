@@ -181,7 +181,7 @@ template <class ElementT, int kBatchSize = kDefaultFemBatchSize, size_t kMassDof
 template <typename ActorTag, typename DiscretizationType>
 void SetupCollidingJacobians(
     ecs::Included<ActorTag>,
-    ecs::Excluded<TagRomActor, TagSoftSkinnedActor, TagRodSurfaceContact>,
+    ecs::Excluded<TagRomActor, TagNestedSoftActor, TagRodSurfaceContact>,
     DiscretizationType const& discretization,
     CRootTransform const& transform,
     CDofOffset const& dofOffset,

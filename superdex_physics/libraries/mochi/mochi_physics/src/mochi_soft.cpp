@@ -325,7 +325,7 @@ void mochi::soft::AssembleBody(
     ecs::OptionalTag<TagUseInertia> hasInertiaTag,
     ecs::OptionalTag<TagUseStress> hasStressTag,
     ecs::OptionalTag<TagRomActor> isRom,
-    [[maybe_unused]] ecs::OptionalTag<TagSoftSkinnedActor> isSkinned,
+    [[maybe_unused]] ecs::OptionalTag<TagNestedSoftActor> isNestedSoft,
     CSkinnedEnergy const& skinnedEnergy,
     CLocal2GlobalMap const& l2g,
     CNodalBasedStructure const& nbs,
@@ -350,10 +350,10 @@ void mochi::soft::AssembleBody(
       "Please update logic below if RomProjectionStrategy enum changes");
 
   if (!hasGravity && !hasInertia && !hasStress) {
-    // Only soft-skinned actors may reach here. Note their Dresidual in this case must NOT be
+    // Only nested soft actors may reach here. Note their Dresidual in this case must NOT be
     // modified in AssembleBodyImpl to prevent race conditions with skinned::EntityAssembleBody.
     MOCHI_ASSERT_VERBOSE(
-        isSkinned, "Only soft-skinned actors can assemble with no unposed body terms.");
+        isNestedSoft, "Only nested soft actors can assemble with no unposed body terms.");
     return;
   } else if (
       isRom &&
@@ -388,7 +388,7 @@ void mochi::soft::AssembleAsyncContact(
     entt::entity e,
     ecs::Included<TagSoftActor, TagUseContact>,
     ecs::OptionalTag<TagRomActor> isRom,
-    ecs::Excluded<TagSoftSkinnedActor>,
+    ecs::Excluded<TagNestedSoftActor>,
     ecs::OptionalTag<TagQueryActiveContacts> queryActiveContacts,
     ecs::CtxGlobal<CSimulationParams const> simParams,
     CTimeIntegratorState const& intState,
@@ -1077,9 +1077,9 @@ void mochi::SetNodePositionsLocal(
   MOCHI_PROFILE_SCOPE();
 
   MOCHI_ERROR_IF(
-      reg.any_of<TagSoftSkinnedActor>(e),
+      reg.any_of<TagNestedSoftActor>(e),
       error,
-      "SetNodePositionsLocal is not supported for soft-skinned actors.");
+      "SetNodePositionsLocal is not supported for nested soft actors.");
   auto* currDispl = reg.try_get<CDisplacementSlice<real, TimeStep::Current>>(e);
   MOCHI_ERROR_IF(
       currDispl == nullptr, error, "CDisplacementSlice<real, TimeStep::Current> required.");
@@ -1142,9 +1142,9 @@ void mochi::SetNodeVelocitiesLocal(
   MOCHI_PROFILE_SCOPE();
 
   MOCHI_ERROR_IF(
-      reg.any_of<TagSoftSkinnedActor>(e),
+      reg.any_of<TagNestedSoftActor>(e),
       error,
-      "SetNodeVelocitiesLocal is not supported for soft-skinned actors.");
+      "SetNodeVelocitiesLocal is not supported for nested soft actors.");
   auto* prevVel = reg.try_get<CVelocitySlice<real, TimeStep::Previous>>(e);
   MOCHI_ERROR_IF(prevVel == nullptr, error, "Requires CVelocitySlice<real, TimeStep::Previous>.");
   MOCHI_ERROR_IF(

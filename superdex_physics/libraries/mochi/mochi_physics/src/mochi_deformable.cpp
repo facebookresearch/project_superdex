@@ -387,7 +387,7 @@ MOCHI_COMPUTE_ASYNC_CONTACT_RESPONSE_INST(CFemSegmentDiscretization, 4);
 template <typename ActorTag, typename DiscretizationType>
 void deformable::SetupCollidingJacobians(
     ecs::Included<ActorTag>,
-    ecs::Excluded<TagRomActor, TagSoftSkinnedActor, TagRodSurfaceContact>,
+    ecs::Excluded<TagRomActor, TagNestedSoftActor, TagRodSurfaceContact>,
     DiscretizationType const& discretization,
     CRootTransform const& transform,
     CDofOffset const& dofOffset,
@@ -434,7 +434,7 @@ void deformable::SetupCollidingJacobians(
 #define MOCHI_SETUP_COLLIDING_JACOBIANS_INST(ACTOR_TAG, DISCRETIZATION_TYPE)         \
   template void deformable::SetupCollidingJacobians<ACTOR_TAG, DISCRETIZATION_TYPE>( \
       ecs::Included<ACTOR_TAG>,                                                      \
-      ecs::Excluded<TagRomActor, TagSoftSkinnedActor, TagRodSurfaceContact>,         \
+      ecs::Excluded<TagRomActor, TagNestedSoftActor, TagRodSurfaceContact>,          \
       DISCRETIZATION_TYPE const& discretization,                                     \
       CRootTransform const& transform,                                               \
       CDofOffset const& dofOffset,                                                   \

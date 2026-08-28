@@ -1102,8 +1102,8 @@ void AssembleIslandSyncContact(
 
 // Assemble async contact for a single colliding actor whose contact samples are tied to its DoFs
 // through skinning/embedding (i.e. it carries CSkinnedContactSnle). Currently used for articulated
-// actors with skinned contact meshes, soft-skinned actors, and rod actors that use visual-mesh
-// contact. Results are written to CSkinnedContactSnle.
+// actors with skinned contact meshes, nested soft actors configured as colliding actors, and rod
+// actors that use visual-mesh contact. Results are written to CSkinnedContactSnle.
 void AssembleAsyncSkinnedContact(
     AssemblyParams const& params,
     bool useBlockSparse3x3,

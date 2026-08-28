@@ -241,7 +241,7 @@ static void UpdateDerivedStateSubpipeline(
   // - 'articulated::compound' must be called before 'skinned'.
   // - 'skinned' must be called before 'blended'.
   articulated::compound::UpdateDerivedStatePipeline(reg, descendants.compoundActors);
-  skinned::UpdateDerivedStatePipeline(reg, descendants.skinnedActors);
+  skinned::UpdateDerivedStatePipeline(reg, descendants.nestedSoftActors);
   blended::UpdateDerivedStatePipeline(reg, descendants.blendedActors);
 }
 
@@ -287,11 +287,11 @@ MOCHI_API void solver::UpdateJacobiansSubpipeline(
     // The remaining terms are only needed for GradTarget::Current, as they're not supported with
     // differentiability
     if (gradTarget == GradTarget::Current) {
-      // Update Jacobians for soft skinned actors.
+      // Update Jacobians for nested soft actors.
       // This must be called after the update of Jacobians of articulated
-      skinned::UpdateJacobiansPipeline(reg, descendants.skinnedActors);
+      skinned::UpdateJacobiansPipeline(reg, descendants.nestedSoftActors);
       // Update Jacobians for blended actors.
-      // This must be called after the update of Jacobians of soft skinned
+      // This must be called after the update of Jacobians of nested soft actors.
       blended::UpdateJacobiansPipeline(reg, descendants.blendedActors);
       // Update skinning Jacobians for rod contact skins.
       ecs::InvokeForEach(&rod::ResolveContactSkinningJacobian, reg, descendants.rodActors);
@@ -708,9 +708,9 @@ void mochi::solver::AssembleIslandPipeline(
         std::cref(params));
   }
 
-  // Start a task for each skinned actor contact (articulated, soft skinned, or rod).
+  // Start a task for each actor with async skinned contact.
   std::array<Span<entt::entity const>, 3> skinnedActors = {
-      descendants.compoundActors, descendants.skinnedActors, descendants.rodActors};
+      descendants.compoundActors, descendants.nestedSoftActors, descendants.rodActors};
   for (auto actors : skinnedActors) {
     ecs::ScheduleInvokeForEach<ecs::policy::AllowFullRegistryAccess>(
         masterSemaphore,
@@ -744,14 +744,14 @@ void mochi::solver::AssembleIslandPipeline(
     }
   }
 
-  // Start a task for each soft skinned actor body. May need to wait for completion of soft and/or
-  // articulated assembly.
+  // Schedule assembly of each nested soft actor's posed energy terms. This may need to wait for
+  // soft and/or articulated assembly to complete.
   ecs::ScheduleInvokeForEach<ecs::policy::AllowFullRegistryAccess>(
       masterSemaphore,
       "skinned::EntityAssembleBody",
       skinned::EntityAssembleBody,
       reg,
-      descendants.skinnedActors,
+      descendants.nestedSoftActors,
       std::cref(params),
       softCompletionSem,
       artCompletionSem);
@@ -802,7 +802,7 @@ void mochi::solver::PreFirstStageLocalPipeline(
   ecs::InvokeForEach(&articulated::compound::EntityPreFirstStage, reg, descendants.compoundActors);
   ecs::InvokeForEach(&articulated::rigid::EntityPreFirstStage, reg, descendants.rigidActors);
   ecs::InvokeForEach(&rom::EntityPreFirstStage, reg, descendants.softActors);
-  ecs::InvokeForEach(&skinned::EntityPreFirstStage, reg, descendants.skinnedActors);
+  ecs::InvokeForEach(&skinned::EntityPreFirstStage, reg, descendants.nestedSoftActors);
 }
 
 void mochi::solver::PreStageLocalPipeline(
@@ -824,7 +824,7 @@ void mochi::solver::PreStageLocalPipeline(
     // compounds and articulated rigid bodies.
     articulated::compound::PreStagePipeline(reg, descendants.actors);
   }
-  skinned::PreStagePipeline(reg, descendants.skinnedActors);
+  skinned::PreStagePipeline(reg, descendants.nestedSoftActors);
   blended::PreStagePipeline(reg, descendants.blendedActors);
 
   // Once actors have computed their states, copy them to the solution vector.
@@ -863,7 +863,7 @@ void mochi::solver::PostStageLocalPipeline(
   rom::PostStagePipeline(reg, descendants.softActors);
 
   // Must be called after articulated::compound::PostStagePipeline.
-  ecs::InvokeForEach(&skinned::EntityPostStage, reg, descendants.skinnedActors);
+  ecs::InvokeForEach(&skinned::EntityPostStage, reg, descendants.nestedSoftActors);
 }
 
 /*
@@ -888,7 +888,7 @@ static void PostLastStageLocalPipeline(entt::registry& reg, CIslandDescendants c
     articulated::compound::PostLastStagePipeline(reg, descendants.actors);
   }
   ecs::InvokeForEach(&rom::EntityPostLastStage, reg, descendants.softActors);
-  skinned::PostLastStagePipeline(reg, descendants.skinnedActors);
+  skinned::PostLastStagePipeline(reg, descendants.nestedSoftActors);
   blended::PostLastStagePipeline(reg, descendants.blendedActors);
 
   // Update the rigid transform at the specified eval point.

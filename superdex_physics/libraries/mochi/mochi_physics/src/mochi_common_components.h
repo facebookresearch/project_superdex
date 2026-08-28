@@ -59,11 +59,11 @@ struct TagRigidActor {};
 struct TagSoftActor {};
 struct TagShellActor {};
 struct TagRodActor {};
-struct TagDeformableActor {}; // Soft (including soft-skinned), Shell, and Rod actors
+struct TagDeformableActor {}; // Soft (including nested soft), Shell, and Rod actors
 struct TagRomActor {};
 struct TagArticulatedActor {};
 struct TagArticulatedLinkActor {};
-struct TagSoftSkinnedActor {};
+struct TagNestedSoftActor {};
 struct TagBlendedActor {};
 struct TagCompoundActor {};
 struct TagFullyInitialized {}; // Added last when initializing an actor (for reative systems)
@@ -79,7 +79,8 @@ struct TagRodSurfaceContact {};
 // Indicates that an actor's contact samples need a non-trivial Jacobian to back-propagate async
 // forces through skinning/embedding (i.e. the actor produces a CSkinnedContactSnle and is
 // dispatched to AssembleAsyncSkinnedContact). Currently emplaced for articulated actors with
-// skinned contact meshes, soft-skinned actors, and rod actors that use a contact skin.
+// skinned contact meshes, nested soft actors configured as colliding actors, and rod actors that
+// use a contact skin.
 struct TagSkinnedContact {};
 
 // Hides an actor from debug draw systems. Emplaced by DebugDraw::EnableActor.

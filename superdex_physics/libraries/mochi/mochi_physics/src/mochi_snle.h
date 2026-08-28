@@ -155,7 +155,7 @@ struct CActorSnle : ActorSnle {
 };
 
 /**
-    Component storing the objective, residual, and dresidual of an unposed soft skinned actor.
+    Component storing the unposed objective, residual, and dresidual for a nested soft actor.
 */
 struct CSoftSkinnedUnposedSnle : ActorSnle {
   using ActorSnle::ActorSnle;
@@ -198,7 +198,7 @@ struct CIslandContactSnle : InteractionSnle {
 /**
   Component storing the objective, residual, and dresidual for async contact of a skinned
   articulation. TODO: This could be assembled into the actor matrix for articulated bodies (not for
-  soft skinned actors).
+  soft-skinned actors).
 */
 struct CSkinnedContactSnle : InteractionSnle {
   using InteractionSnle::InteractionSnle;

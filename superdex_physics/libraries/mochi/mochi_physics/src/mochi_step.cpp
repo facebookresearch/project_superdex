@@ -352,8 +352,8 @@ static void UpdateActorQueriesAsync(TaskSemaphore sem, entt::registry& reg, entt
     ForEachCurrentBoundsUpdateSystem(
         [&](auto const& system) { ecs::TryInvokeOnEntity(system, reg, e); });
 
-    // Writes CQueryElasticEnergy. For soft or soft-skinned actors with elastic energy, it assembles
-    // the energy. Otherwise, it sets the energy to zero.
+    // Writes CQueryElasticEnergy for soft actors, including nested soft actors. It assembles the
+    // energy when stress is enabled and otherwise sets it to zero.
     ecs::TryScheduleInvokeOnEntity(
         sem, "UpdateQueryElasticEnergy", &soft::UpdateQueryElasticEnergy, reg, e);
 

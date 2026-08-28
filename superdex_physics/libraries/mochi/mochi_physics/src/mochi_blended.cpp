@@ -189,7 +189,7 @@ static void ResolveBlending(
   // Note that displacements are already initialized with the articulated displacements
   auto disp3 = Unflatten<Real3>(MakeSpan(outDisplacements.value));
 
-  // Iterate over soft skinned actors and blend displacements
+  // Iterate over nested soft actors and blend displacements
   for (int s = 0; s < composition.soft.size(); s++) {
     auto const& blending = blendingData[s];
     auto const& softDisp =
@@ -234,7 +234,7 @@ void blended::InitBlendedActor(
   composition.softHandles.reserve(softHandles.size());
   for (auto handle : softHandles) {
     auto entity = GetEntity(reg, handle, ErrorAssert{});
-    MOCHI_ASSERT(reg.all_of<TagSoftSkinnedActor const>(entity), "Not a soft skinned actor.");
+    MOCHI_ASSERT(reg.all_of<TagNestedSoftActor const>(entity), "Not a nested soft actor.");
     composition.soft.emplace_back(entity);
     composition.softHandles.emplace_back(handle);
   }
@@ -277,7 +277,7 @@ static void ResolveJacobianDJoints(
   // Note that the Jacobian is already initialized with the articulated Jacobian
   auto result = AsView(outSkinningData.jacobianDJoints);
 
-  // Iterate over soft skinned actors and blend Jacobians
+  // Iterate over nested soft actors and blend Jacobians
   for (int s = 0; s < composition.soft.size(); s++) {
     auto const& blending = blendingData[s];
     auto const& softJac =

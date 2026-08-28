@@ -257,7 +257,7 @@ class ActorInterfaceImpl : public ActorInterface {
         error,
         "The transform of a nested link actor cannot be directly set. Please use the articulated actor's transform and pose instead.");
     MOCHI_ERROR_IF(
-        reg.any_of<TagSoftSkinnedActor>(e),
+        reg.any_of<TagNestedSoftActor>(e),
         error,
         "The transform of a nested soft actor cannot be directly set.");
     MOCHI_ERROR_RETURN(error);
@@ -349,7 +349,7 @@ class ActorInterfaceImpl : public ActorInterface {
         "Cannot set the velocity of a static actor to any value other than zero.");
     MOCHI_ERROR_IF(
         (!reg.any_of<TagStaticActor, TagRigidActor, TagSoftActor>(e) ||
-         reg.any_of<TagArticulatedLinkActor, TagRomActor, TagSoftSkinnedActor>(e)),
+         reg.any_of<TagArticulatedLinkActor, TagRomActor, TagNestedSoftActor>(e)),
         error,
         "SetVelocity is not supported for this actor type.");
     MOCHI_ERROR_IF_NOT(IsFinite(linearVel), error, "Linear velocity must be finite.");
@@ -1825,7 +1825,7 @@ class ActorInterfaceImpl : public ActorInterface {
       entt::entity e,
       Error& error) {
     MOCHI_ERROR_IF(
-        reg.any_of<TagSoftSkinnedActor>(e),
+        reg.any_of<TagNestedSoftActor>(e),
         error,
         "Boundary condition setters are not supported for nested soft actors.");
   }
@@ -2348,7 +2348,7 @@ class ActorInterfaceImpl : public ActorInterface {
     if (auto const* composition = reg.try_get<CSkinnedComposition const>(e)) {
       return composition->articulatedHandle;
     }
-    MOCHI_ERROR_SET(error, "Actor is not an articulated link or soft skinned actor");
+    MOCHI_ERROR_SET(error, "Actor is not a nested link or nested soft actor.");
     return {};
   }
 
@@ -2359,8 +2359,7 @@ class ActorInterfaceImpl : public ActorInterface {
   MOCHI_ERROR_RETURN(error, __VA_ARGS__);
 
   bool IsNestedSoftActor() const override {
-    // Check if this soft actor is nested within a soft skinned articulation
-    return reg.all_of<TagSoftSkinnedActor>(e);
+    return reg.all_of<TagNestedSoftActor>(e);
   }
 
   Span<real const> GetArticulatedJacobian(Error& error) const override {

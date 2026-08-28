@@ -62,7 +62,7 @@ void InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<TagRigidActor>(reg);
   ecs::RegisterComponent<TagRomActor>(reg);
   ecs::RegisterComponent<TagSoftActor>(reg);
-  ecs::RegisterComponent<TagSoftSkinnedActor>(reg);
+  ecs::RegisterComponent<TagNestedSoftActor>(reg);
   ecs::RegisterComponent<TagShellActor>(reg);
   ecs::RegisterComponent<TagRodActor>(reg);
   ecs::RegisterComponent<TagDeformableActor>(reg);

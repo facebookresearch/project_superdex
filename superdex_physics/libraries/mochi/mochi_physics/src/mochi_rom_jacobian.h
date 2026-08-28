@@ -81,7 +81,7 @@ void mochi::rom::CRomJacobian::Conjugate(
 // Compute the contact Jacobians as colliding actor
 void SetupCollidingJacobians(
     ecs::Included<TagRomActor>,
-    ecs::Excluded<TagSoftSkinnedActor>,
+    ecs::Excluded<TagNestedSoftActor>,
     CFemBoundaryDiscretization const& discretization,
     CRootTransform const& transform,
     CDofOffset const& dofOffset,

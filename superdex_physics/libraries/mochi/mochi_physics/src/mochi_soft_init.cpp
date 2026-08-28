@@ -213,12 +213,12 @@ void mochi::InitSoftActor(
     SoftActorParams const& params,
     ExperimentalSoftActorParams const& experimentalParams,
     bool useContact,
-    bool isSkinned,
+    bool isNestedSoft,
     std::shared_ptr<TetrahedralMeshShape const> shapePtr,
     std::shared_ptr<DeepFlowShape const> flow,
     Error& error) {
   MOCHI_ERROR_IF(
-      !isSkinned && !params.hasInertia && !params.hasGravity && !params.hasStress,
+      !isNestedSoft && !params.hasInertia && !params.hasGravity && !params.hasStress,
       error,
       "Soft actors must have at least one of inertia, gravity or stress enabled.");
   ValidateSoftMaterialParams(params.material, error);

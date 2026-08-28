@@ -92,7 +92,7 @@ void skinned::EntityAssembleBody(
   MOCHI_ASSERT(
       !isRom ||
           romProjectionStrategy->value == experimental::RomProjectionStrategy::ActorLevelProjection,
-      "The dedicated assembly logic for soft skinned actors requires actor-level projection for ROMs.");
+      "The dedicated assembly logic for nested soft actors requires actor-level projection for ROMs.");
 
   // Perform the assembly of energy terms on the soft-actor level
   soft::AssembleBodyImpl(
@@ -247,7 +247,7 @@ InitSoftSkinnedMesh(entt::registry& reg, entt::entity e, bool useContact, Error&
 
   MOCHI_ASSERT(
       reg.all_of<CFemBoundaryDiscretization>(e),
-      "Soft skinned actor with contact must have a boundary discretization");
+      "Nested soft actor with contact must have a boundary discretization");
   int const numCollidingSamples = reg.get<CFemBoundaryDiscretization const>(e).GetNumQuadPoints();
 
   // Initialize components for colliding-actor role.
@@ -317,7 +317,7 @@ InitEnergyTerms(entt::registry& reg, entt::entity e, SoftSkinnedActorParams cons
   auto& softSnle = reg.emplace<CSoftSkinnedUnposedSnle>(e, std::move(softDres));
   softSnle.useInSolver = false;
 
-  // SNLE data for the soft actor terms transformed to the full dofs.
+  // SNLE data for the soft actor terms transformed to the full DoFs.
   int softDofs = reg.get<CActorDofInfo const>(e).dofsSize;
   auto articulated = reg.get<CSkinnedComposition const>(e).articulated;
   int artDofs = reg.get<CActorDofInfo const>(articulated).dofsSize;
@@ -424,20 +424,20 @@ void skinned::InitSkinnedActor(
   MOCHI_ASSERT(reg.all_of<TagSoftActor const>(e), "Not a soft actor.");
   MOCHI_ASSERT(
       (reg.any_of<CDofPositionsBC, TagRomActorFixRigidTransformInSolve>(e)),
-      "Soft skinned actor must have Dirichlet boundary conditions or it must be a ROM with no rigid dofs");
+      "Nested soft actor must have Dirichlet boundary conditions or it must be a ROM with no rigid DoFs.");
   MOCHI_ASSERT(
-      !reg.all_of<CRecenteringParams>(e), "Soft skinned actor must have recentering disabled");
+      !reg.all_of<CRecenteringParams>(e), "Nested soft actor must have recentering disabled");
 
   MOCHI_ERROR_IF(
-      reg.any_of<TagUseGravity>(e), error, "Soft skinned actor cannot use unposed gravity");
+      reg.any_of<TagUseGravity>(e), error, "Nested soft actor cannot use unposed gravity");
   MOCHI_ERROR_IF(
       reg.any_of<TagUseInertia>(e) && params.hasInertia,
       error,
-      "Soft skinned actor cannot use both posed and unposed inertia");
+      "Nested soft actor cannot use both posed and unposed inertia");
   MOCHI_ERROR_IF(
       reg.any_of<TagUseStress>(e) && params.hasStress,
       error,
-      "Soft skinned actor cannot use both posed and unposed stress");
+      "Nested soft actor cannot use both posed and unposed stress");
   MOCHI_ERROR_RETURN(error);
 
   // Add composition component.
@@ -447,8 +447,8 @@ void skinned::InitSkinnedActor(
   composition.articulated = articulated;
   composition.articulatedHandle = articulatedHandle;
 
-  // Add soft skinned actor tag
-  reg.emplace<TagSoftSkinnedActor>(e);
+  // Add nested soft actor tag.
+  reg.emplace<TagNestedSoftActor>(e);
 
   InitSoftSkinnedMesh(reg, e, useContact, error);
   MOCHI_ERROR_RETURN(error);
@@ -464,7 +464,7 @@ void skinned::InitSkinnedActor(
 }
 
 static void ComputeCurrentVelocity(
-    ecs::RequiredTag<TagSoftSkinnedActor>,
+    ecs::RequiredTag<TagNestedSoftActor>,
     CTimeIntegratorState const& intState,
     CDisplacementSlice<real, TimeStep::StageStart, DisplacementLayer::Skinned> const&
         stageStartDispl,
@@ -570,7 +570,7 @@ static void ResolveJacobianDJoints(
 }
 
 /*
- * System to update the Jacobian of a soft skinned mesh wrt soft dofs.
+ * System to update the Jacobian of a soft skinned mesh wrt soft DoFs.
  */
 static void ResolveJacobianDSoft(
     ecs::PartialRegistry<CArticulatedLinkTransforms<TimeStep::Current> const> reg,
@@ -616,7 +616,7 @@ static void ResolveJacobianDSoft(
 }
 
 void skinned::EntityPreFirstStage(
-    ecs::RequiredTag<TagSoftSkinnedActor>,
+    ecs::RequiredTag<TagNestedSoftActor>,
     CTimeIntegratorState const& intState,
     CVelocitySlice<real, TimeStep::Previous, DisplacementLayer::Skinned> const& prevVel,
     CIntegrationVelocitySlices<DisplacementLayer::Skinned>& intVels) {
@@ -627,7 +627,7 @@ void skinned::EntityPreFirstStage(
 }
 
 static void ComputeVelocityAtStageStart(
-    ecs::RequiredTag<TagSoftSkinnedActor>,
+    ecs::RequiredTag<TagNestedSoftActor>,
     CTimeIntegratorState const& intState,
     CIntegrationVelocitySlices<DisplacementLayer::Skinned>& intVels,
     CVelocitySlice<real, TimeStep::StageStart, DisplacementLayer::Skinned>& stageStartVel) {
@@ -637,7 +637,7 @@ static void ComputeVelocityAtStageStart(
 }
 
 static void ComputeVelocityAtTimeStepEnd(
-    ecs::RequiredTag<TagSoftSkinnedActor>,
+    ecs::RequiredTag<TagNestedSoftActor>,
     CTimeIntegratorState const& intState,
     CIntegrationVelocitySlices<DisplacementLayer::Skinned>& intVels,
     CVelocitySlice<real, TimeStep::Current, DisplacementLayer::Skinned>& currVel) {
@@ -647,7 +647,7 @@ static void ComputeVelocityAtTimeStepEnd(
 }
 
 void skinned::EntityIncrementStep(
-    ecs::RequiredTag<TagSoftSkinnedActor>,
+    ecs::RequiredTag<TagNestedSoftActor>,
     CVelocitySlice<real, TimeStep::Current, DisplacementLayer::Skinned>& currVel,
     CVelocitySlice<real, TimeStep::Previous, DisplacementLayer::Skinned>& prevVel) {
   MOCHI_PROFILE_SCOPE();
@@ -668,7 +668,7 @@ void skinned::PreStagePipeline(entt::registry& reg, Span<entt::entity const> ent
 }
 
 void skinned::EntityPostStage(
-    ecs::RequiredTag<TagSoftSkinnedActor>,
+    ecs::RequiredTag<TagNestedSoftActor>,
     CConvergenceStatus const& convergence,
     CTimeIntegratorState const& intState,
     CDisplacementSlice<real, TimeStep::Current, DisplacementLayer::Skinned>& currDispl,
@@ -714,7 +714,7 @@ void skinned::UpdateJacobiansPipeline(entt::registry& reg, Span<entt::entity con
 }
 
 void skinned::SetupCollidingJacobians(
-    ecs::Included<TagSoftSkinnedActor>,
+    ecs::Included<TagNestedSoftActor>,
     ecs::PartialRegistry<CDofOffset const, CArticulatedLinkTransforms<TimeStep::Current> const> reg,
     CSkinnedComposition const& composition,
     CDofOffset const& dofOffset,

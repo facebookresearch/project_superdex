@@ -1339,7 +1339,7 @@ static void InitCollidingJacobians(
       "skinned::SetupCollidingJacobians",
       &skinned::SetupCollidingJacobians,
       reg,
-      descendants.skinnedActors);
+      descendants.nestedSoftActors);
   ecs::ScheduleInvokeForEach(
       sem,
       "blended::SetupCollidingJacobians<CFemBoundaryDiscretization>",

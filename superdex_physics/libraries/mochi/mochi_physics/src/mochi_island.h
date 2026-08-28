@@ -55,7 +55,7 @@ struct CIslandDescendants : NoCopy {
   std::vector<entt::entity> softActors; // TagSoftActor (includes roms)
   std::vector<entt::entity> shellActors; // TagShellActor
   std::vector<entt::entity> rodActors; // TagRodActor
-  std::vector<entt::entity> skinnedActors; // TagSoftSkinnedActor
+  std::vector<entt::entity> nestedSoftActors; // TagNestedSoftActor
   std::vector<entt::entity> blendedActors; // TagBlendedActor
 
   void Clear() {
@@ -65,7 +65,7 @@ struct CIslandDescendants : NoCopy {
     softActors.clear();
     shellActors.clear();
     rodActors.clear();
-    skinnedActors.clear();
+    nestedSoftActors.clear();
     blendedActors.clear();
   }
 };

@@ -797,9 +797,9 @@ static SoftSkinnedActorPrefab ExportSoftSkinnedActor(
     softPrefab.name = GetNestedActorLocalName(softPrefab.name);
     MOCHI_ASSERT(!softPrefab.name.empty(), "Nested soft local name must be non-empty.");
 
-    // Fix soft skinned actor requirements
-    softPrefab.useRecentering = false; // Required for soft skinned actors
-    softPrefab.hasGravity = false; // Required for soft skinned actors
+    // Nested soft actors cannot use recentering or unposed gravity.
+    softPrefab.useRecentering = false;
+    softPrefab.hasGravity = false;
 
     prefab.softParams.push_back(std::move(softPrefab));
   }

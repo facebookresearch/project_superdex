@@ -594,8 +594,8 @@ static void UpdateIslandDescendants(
     if (reg.any_of<TagRodActor>(e)) {
       outDescendants.rodActors.push_back(e);
     }
-    if (reg.any_of<TagSoftSkinnedActor>(e)) {
-      outDescendants.skinnedActors.push_back(e);
+    if (reg.any_of<TagNestedSoftActor>(e)) {
+      outDescendants.nestedSoftActors.push_back(e);
     }
     if (reg.any_of<TagBlendedActor>(e)) {
       outDescendants.blendedActors.push_back(e);
