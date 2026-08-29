@@ -16,13 +16,15 @@
 
 #include <superdex_physics.h>
 
+#include <array>
+
 #include <gtest/gtest.h>
 
 using superdex::operator""_r;
 
 namespace {
 
-constexpr superdex::real kCoordinates[] = {
+constexpr std::array<superdex::real, 24> kCoordinates = {
     -0.1_r, -0.1_r, -0.1_r, // 0
     +0.1_r, -0.1_r, -0.1_r, // 1
     -0.1_r, +0.1_r, -0.1_r, // 2
@@ -33,7 +35,7 @@ constexpr superdex::real kCoordinates[] = {
     +0.1_r, +0.1_r, +0.1_r, // 7
 };
 
-constexpr int kConnectivity[] = {
+constexpr std::array<int, 36> kConnectivity = {
     0, 2, 1, 1, 2, 3, // -Z face
     4, 5, 6, 5, 7, 6, // +Z face
     0, 1, 5, 0, 5, 4, // -Y face
