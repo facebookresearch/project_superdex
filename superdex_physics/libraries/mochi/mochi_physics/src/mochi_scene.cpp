@@ -98,15 +98,116 @@ class ScopedSchedulerBinding {
       _context->UnbindThisThread();
     }
   }
-  ScopedSchedulerBinding(ScopedSchedulerBinding const&) = delete;
-  ScopedSchedulerBinding& operator=(ScopedSchedulerBinding const&) = delete;
-  ScopedSchedulerBinding(ScopedSchedulerBinding&&) = delete;
-  ScopedSchedulerBinding& operator=(ScopedSchedulerBinding&&) = delete;
+
+  MOCHI_DECLARE_NO_COPY_NO_MOVE(ScopedSchedulerBinding);
 
  private:
   ContextImpl* _context;
 };
+
+// Rolls back independent cleanup roots during multi-actor construction. When ownership transfers
+// to an aggregate, replace its children with that owner. Roots are destroyed in reverse
+// registration order so later-registered dependents are removed before actors they reference.
+class ScopedActorCreationRollback {
+ public:
+  explicit ScopedActorCreationRollback(SceneImpl& scene) : _scene(scene) {}
+  ~ScopedActorCreationRollback() noexcept {
+    if (!_active) {
+      return;
+    }
+    for (int i = isize(_actors); i-- > 0;) {
+#if MOCHI_ASSERT_VERBOSE_ENABLED
+      auto const entity = GetEntityUnchecked(_actors[i]);
+      auto const& registry = _scene.GetRegistry();
+      MOCHI_ASSERT_VERBOSE(
+          !registry.valid(entity) || !registry.all_of<CGroupMemberInfo>(entity),
+          "Actor creation rollback cannot directly own a nested actor.");
+#endif // MOCHI_ASSERT_VERBOSE_ENABLED
+      _scene.DestroyActor(_actors[i]);
+    }
+  }
+
+  MOCHI_DECLARE_NO_COPY_NO_MOVE(ScopedActorCreationRollback);
+
+  void Add(ActorHandle actor) {
+    if (actor.IsValid()) {
+      _actors.push_back(actor);
+    }
+  }
+
+  void ReplaceWithOwner(ActorHandle actor) {
+    _actors.clear();
+    Add(actor);
+  }
+
+  void Release() {
+    _active = false;
+  }
+
+ private:
+  SceneImpl& _scene;
+  DynamicArray<ActorHandle> _actors;
+  bool _active = true;
+};
 } // namespace
+
+static void
+DestroyAllItemsInArticulatedActor(SceneImpl& scene, entt::registry& registry, entt::entity e) {
+  MOCHI_ASSERT(
+      registry.valid(e) && registry.all_of<TagArticulatedActor>(e),
+      "Not a valid articulated actor.");
+
+  auto& groupMembers = registry.get<CGroupMembers>(e);
+  std::vector<entt::entity> memberActorsCopy = groupMembers.actors;
+  std::vector<entt::entity> memberConstraintsCopy = groupMembers.constraints;
+
+  // Destroy constraints in the articulation.
+  for (auto const& constraint : memberConstraintsCopy) {
+    scene.DestroyConstraint(GetConstraintHandle(constraint, scene.GetHandle()));
+  }
+
+  // Detach actors from the articulation.
+  groupMembers.actors.clear();
+  for (auto const& actor : memberActorsCopy) {
+    registry.erase<CGroupMemberInfo>(actor);
+  }
+
+  // Destroy actors in the articulation (legal now that they are detached).
+  for (auto const& actor : memberActorsCopy) {
+    scene.DestroyActor(GetActorHandle(actor, scene.GetHandle()));
+  }
+}
+
+static void DestroyActorEntity(SceneImpl& scene, entt::registry& registry, entt::entity e) {
+  // If this actor was affected by constraint, then destroy those constraints.
+  if (auto* constraintMemberInfo = registry.try_get<CConstraintMemberInfo>(e)) {
+    auto constraintsCopy = constraintMemberInfo->constraints;
+    for (entt::entity c : constraintsCopy) {
+      scene.DestroyConstraint(GetConstraintHandle(c, scene.GetHandle()));
+    }
+  }
+
+  // If this actor belongs to a compound, then remove it from that compound.
+  auto* groupInfo = registry.try_get<CGroupMemberInfo>(e);
+  if (groupInfo) {
+    RemoveActorFromCompound(registry, groupInfo->group, e, ErrorAssert{});
+  }
+
+  // If this actor is an articulation, destroy its members.
+  if (registry.all_of<TagArticulatedActor>(e)) {
+    DestroyAllItemsInArticulatedActor(scene, registry, e);
+  }
+
+  // Clean actor-vs-actor contact table
+  auto& contactTable = registry.ctx<CContactFilterTable>();
+  contactTable.RemoveEntity(e);
+
+  // Remove actor from its island (if any)
+  island::RemoveActor(registry, e);
+
+  // Destroy the ECS entity and all components
+  registry.destroy(e);
+}
 
 template <typename EnumT>
 [[nodiscard]] static bool IsValidEnumValue(EnumT value, EnumT count) {
@@ -1288,9 +1389,10 @@ void SceneImpl::GetStepJacobian(
 #define MOCHI_DESTROY_AND_RETURN_IF_ERROR()         \
   if (!error.IsOK()) {                              \
     if (_registry.all_of<TagArticulatedActor>(e)) { \
-      DestroyAllItemsInArticulatedActor(e);         \
+      DestroyActorEntity(*this, _registry, e);      \
+    } else {                                        \
+      _registry.destroy(e);                         \
     }                                               \
-    _registry.destroy(e);                           \
   }                                                 \
   MOCHI_ERROR_RETURN(error, {});
 
@@ -1908,8 +2010,10 @@ void SceneImpl::CreateArticulatedLinkActorsImpl(
     // Create actor and assign to output vector
     Actor* actor = CreateRigidActorImpl(
         linkParams, true /*isArticulatedLink*/, useContactLink, linkShapePtr, error);
+    if (actor) {
+      outLinks[i] = actor->GetHandle();
+    }
     MOCHI_ERROR_RETURN(error);
-    outLinks[i] = actor->GetHandle();
   }
 }
 
@@ -2156,6 +2260,7 @@ Actor* SceneImpl::CreateArticulatedActorImpl(
   DynamicArray<ActorHandle> links(shapePtr->GetNumBones());
   DynamicArray<ShapeHandle> linkShapes(shapePtr->GetNumBones());
   bool const useContactLinks = skinShape == nullptr;
+  ScopedActorCreationRollback actorRollback(*this);
   CreateArticulatedLinkActorsImpl(
       params.name,
       params.links,
@@ -2165,6 +2270,9 @@ Actor* SceneImpl::CreateArticulatedActorImpl(
       links,
       linkShapes,
       error);
+  for (auto link : links) {
+    actorRollback.Add(link);
+  }
   MOCHI_ERROR_RETURN(error, {});
 
   // Disable contact for actors that are adjacent in the hierarchy. Adjacency also considers hard
@@ -2176,8 +2284,14 @@ Actor* SceneImpl::CreateArticulatedActorImpl(
   MOCHI_ERROR_RETURN(error, {});
 
   // Finally create the articulated body actor
-  return CreateArticulatedActorImpl(
-      params, /* useContact */ true, shapePtr, links, skinShape, error);
+  Actor* actor =
+      CreateArticulatedActorImpl(params, /* useContact */ true, shapePtr, links, skinShape, error);
+  if (actor) {
+    actorRollback.ReplaceWithOwner(actor->GetHandle());
+  }
+  MOCHI_ERROR_RETURN(error, {});
+  actorRollback.Release();
+  return actor;
 }
 
 Actor* SceneImpl::CreateArticulatedActor(ArticulatedActorParams const& params, Error& error) {
@@ -2316,6 +2430,7 @@ Actor* SceneImpl::CreateSoftSkinnedActorImpl(
   // Create bone actors. Their names will be formatted like "skeletonName/linkName".
   DynamicArray<ActorHandle> links(articulatedShapePtr->GetNumBones());
   DynamicArray<ShapeHandle> linkShapes(articulatedShapePtr->GetNumBones());
+  ScopedActorCreationRollback actorRollback(*this);
   CreateArticulatedLinkActorsImpl(
       skeletonParams.name,
       skeletonParams.links,
@@ -2325,6 +2440,9 @@ Actor* SceneImpl::CreateSoftSkinnedActorImpl(
       links,
       linkShapes,
       error);
+  for (auto link : links) {
+    actorRollback.Add(link);
+  }
   MOCHI_ERROR_RETURN(error, {});
 
   // Create the articulated body. If there's blending, skin the blended surface.
@@ -2335,6 +2453,9 @@ Actor* SceneImpl::CreateSoftSkinnedActorImpl(
       links,
       blendedShapePtr,
       error);
+  if (skeletonActor) {
+    actorRollback.ReplaceWithOwner(skeletonActor->GetHandle());
+  }
   MOCHI_ERROR_RETURN(error, {});
 
   // If soft actors are externally attached, identify parent links
@@ -2378,8 +2499,11 @@ Actor* SceneImpl::CreateSoftSkinnedActorImpl(
 
     Actor* softActor = CreateSoftActorImpl(
         softParams, experimentalSoftParams, /* isNestedSoft */ true, softShapes[i], error);
+    if (softActor) {
+      softActors[i] = softActor->GetHandle();
+      actorRollback.Add(softActors[i]);
+    }
     MOCHI_ERROR_RETURN(error, {});
-    softActors[i] = softActor->GetHandle();
 
     // If not ROM, set Dirichlet boundary conditions on constrained nodes (as specified by the
     // soft shape) to couple soft actor to articulated actor.
@@ -2412,39 +2536,17 @@ Actor* SceneImpl::CreateSoftSkinnedActorImpl(
   blended::InitBlendedActor(_registry, entity, skeletonParams, softActors, blendedShapePtr, error);
   MOCHI_ERROR_RETURN(error, {});
 
+  // The skeleton can now destroy its nested soft actors, so it is the only rollback root needed.
+  actorRollback.ReplaceWithOwner(skeletonActor->GetHandle());
+
   // Store the soft attachment links in the ECS for export purposes
   if (!softLinkParents.empty()) {
     _registry.emplace<CSoftAttachmentLinks>(entity, std::move(softLinkParents));
   }
 
   // Return the skeleton actor
+  actorRollback.Release();
   return skeletonActor;
-}
-
-void SceneImpl::DestroyAllItemsInArticulatedActor(entt::entity e) {
-  MOCHI_ASSERT(
-      _registry.valid(e) && _registry.all_of<TagArticulatedActor>(e),
-      "Not a valid articulated actor.");
-
-  auto& groupMembers = _registry.get<CGroupMembers>(e);
-  std::vector<entt::entity> memberActorsCopy = groupMembers.actors;
-  std::vector<entt::entity> memberConstraintsCopy = groupMembers.constraints;
-
-  // Destroy constraints in the articulation.
-  for (auto const& constraint : memberConstraintsCopy) {
-    DestroyConstraint(GetConstraintHandle(constraint, GetHandle()));
-  }
-
-  // Detach actors from the articulation.
-  groupMembers.actors.clear();
-  for (auto const& actor : memberActorsCopy) {
-    _registry.erase<CGroupMemberInfo>(actor);
-  }
-
-  // Destroy actors in the articulation (legal now that they are detached).
-  for (auto const& actor : memberActorsCopy) {
-    DestroyActor(GetActorHandle(actor, GetHandle()));
-  }
 }
 
 void SceneImpl::DestroyActor(ActorHandle actorHandle) {
@@ -2492,35 +2594,7 @@ void SceneImpl::DestroyActor(ActorHandle actorHandle) {
 
   MOCHI_ASSERT(_numActors >= 1);
   --_numActors;
-
-  // If this actor was affected by constraint, then destroy those constraints.
-  if (auto* constraintMemberInfo = _registry.try_get<CConstraintMemberInfo>(e)) {
-    auto constraintsCopy = constraintMemberInfo->constraints;
-    for (entt::entity c : constraintsCopy) {
-      DestroyConstraint(GetConstraintHandle(c, GetHandle()));
-    }
-  }
-
-  // If this actor belongs to a compound, then remove it from that compound.
-  auto* groupInfo = _registry.try_get<CGroupMemberInfo>(e);
-  if (groupInfo) {
-    RemoveActorFromCompound(_registry, groupInfo->group, e, ErrorAssert{});
-  }
-
-  // If this actor is an articulation, destroy its members.
-  if (_registry.all_of<TagArticulatedActor>(e)) {
-    DestroyAllItemsInArticulatedActor(e);
-  }
-
-  // Clean actor-vs-actor contact table
-  auto& contactTable = _registry.ctx<CContactFilterTable>();
-  contactTable.RemoveEntity(e);
-
-  // Remove actor from its island (if any)
-  island::RemoveActor(_registry, e);
-
-  // Destroy the ECS entity and all components
-  _registry.destroy(e);
+  DestroyActorEntity(*this, _registry, e);
 }
 
 Actor* SceneImpl::GetActor(ActorHandle actor) {

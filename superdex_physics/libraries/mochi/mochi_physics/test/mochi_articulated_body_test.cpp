@@ -2160,6 +2160,26 @@ BoundarySubsamplingParams MakeSubsampling() {
 
 } // namespace
 
+using CreateArticulatedActorTest = test::MochiSceneTestBase;
+
+TEST_F(CreateArticulatedActorTest, InvalidLinkShapeLeavesSceneUnchanged) {
+  ShapeHandle validShape = test::CreateUnitCubeTetMeshShape(_mochiContext);
+  ShapeHandle missingShape = test::CreateUnitCubeTetMeshShape(_mochiContext);
+  _mochiContext->ReleaseShape(missingShape);
+
+  ArticulatedActorParams params;
+  params.joints = {{.type = ArticulatedJointType::Free}, {.type = ArticulatedJointType::Spherical}};
+  params.links = {
+      {.parentLink = -1, .shape = validShape, .colliderType = ColliderType::None},
+      {.parentLink = 0, .shape = missingShape, .colliderType = ColliderType::None}};
+  int const numActorsBefore = _scene->GetNumActors();
+
+  Actor const* actor = _scene->CreateArticulatedActor(params, test::ExpectNotOK{});
+
+  EXPECT_EQ(nullptr, actor);
+  EXPECT_EQ(numActorsBefore, _scene->GetNumActors());
+}
+
 class CreateSkinnedArticulatedActorTest : public test::MochiSceneTestBase {
  protected:
   // Build minimal ArticulatedActorParams describing a one-bone articulated skeleton with
@@ -2232,6 +2252,43 @@ TEST_F(CreateSkinnedArticulatedActorTest, ZeroDofHardSkeletonWithSkinRejected) {
   params.joints = {{.type = ArticulatedJointType::Hard}};
 
   EXPECT_EQ(nullptr, _scene->CreateArticulatedActor(params, test::ExpectNotOK{}));
+}
+
+TEST_F(CreateSkinnedArticulatedActorTest, InvalidSkinContactLeavesSceneUnchanged) {
+  auto params = MakeMinimalSkinnedParams(CreateUnitCubeTetMeshShapeWithSkinning(_mochiContext));
+  // Skin contact is validated after links are created but before ownership transfer.
+  params.skin->contact.penaltyCoefficient = 0_r;
+  int const numActorsBefore = _scene->GetNumActors();
+
+  Actor const* actor = _scene->CreateArticulatedActor(params, test::ExpectNotOK{});
+
+  EXPECT_EQ(nullptr, actor);
+  EXPECT_EQ(numActorsBefore, _scene->GetNumActors());
+}
+
+TEST_F(CreateSkinnedArticulatedActorTest, UnsupportedDifferentiableSkinLeavesSceneUsable) {
+  auto params = MakeMinimalSkinnedParams(CreateUnitCubeTetMeshShapeWithSkinning(_mochiContext));
+  params.joints[0].type = ArticulatedJointType::Spherical;
+  params.joints[0].minLimit = Real3{-1_r, -1_r, -1_r};
+  params.joints[0].maxLimit = Real3{1_r, 1_r, 1_r};
+
+  // Differentiability rejects skinned articulations late enough to exercise cleanup after link and
+  // joint-limit constraint creation.
+  test::SetSceneIntegrationMethod(_scene, IntegrationMethod::BackwardEuler);
+  MakeSceneDifferentiableInternal(_scene, test::ExpectOK{});
+  int const numActorsBefore = _scene->GetNumActors();
+  int const numConstraintsBefore = _scene->GetNumConstraints();
+
+  Actor const* actor = _scene->CreateArticulatedActor(params, test::ExpectNotOK{});
+
+  EXPECT_EQ(nullptr, actor);
+  EXPECT_EQ(numActorsBefore, _scene->GetNumActors());
+  EXPECT_EQ(numConstraintsBefore, _scene->GetNumConstraints());
+
+  // Step afterward to detect dangling internal simulation state that public counts would miss.
+  double constexpr kTimeStep = 1e-2;
+  _scene->Step(kTimeStep);
+  EXPECT_NEAR_EQ(kTimeStep, _scene->GetTotalSimulationTime());
 }
 
 class CreateBlendedActorTest : public test::MochiSceneTestBase {
@@ -2405,4 +2462,35 @@ TEST_F(CreateBlendedActorTest, ZeroDofHardSkeletonRejected) {
   params.skeletonParams.joints = {{.type = ArticulatedJointType::Hard}};
 
   EXPECT_EQ(nullptr, _scene->CreateSoftSkinnedActor(params, test::ExpectNotOK{}));
+}
+
+// Destroying the blended skeleton must also destroy the nested soft actors it owns.
+TEST_F(CreateBlendedActorTest, DestroyBlendedActorDestroysNestedActors) {
+  auto params = MakeMinimalBlendedParams(
+      CreateUnitCubeTetBlendedSkinShape(_mochiContext, DynamicString{"soft"}));
+
+  Actor const* actor = _scene->CreateSoftSkinnedActor(params, test::ExpectOK{});
+  ASSERT_NE(nullptr, actor);
+  EXPECT_GT(_scene->GetNumActors(), 1);
+
+  _scene->DestroyActor(actor->GetHandle());
+
+  EXPECT_EQ(0, _scene->GetNumActors());
+}
+
+TEST_F(CreateBlendedActorTest, MissingSecondSoftBlendingDataLeavesSceneUnchanged) {
+  auto params = MakeMinimalBlendedParams(
+      CreateUnitCubeTetBlendedSkinShape(_mochiContext, DynamicString{"soft"}));
+  auto secondSoft = params.softParams[0];
+  secondSoft.name = "other_soft";
+  params.softParams.push_back(std::move(secondSoft));
+  int const numActorsBefore = _scene->GetNumActors();
+  int const numConstraintsBefore = _scene->GetNumConstraints();
+
+  // The skin has data for the first soft actor only, so blending fails after both are created.
+  Actor const* actor = _scene->CreateSoftSkinnedActor(params, test::ExpectNotOK{});
+
+  EXPECT_EQ(nullptr, actor);
+  EXPECT_EQ(numActorsBefore, _scene->GetNumActors());
+  EXPECT_EQ(numConstraintsBefore, _scene->GetNumConstraints());
 }

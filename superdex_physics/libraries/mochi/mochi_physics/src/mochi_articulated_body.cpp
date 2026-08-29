@@ -1531,13 +1531,14 @@ void mochi::articulated::compound::InitArticulatedBodyActor(
   // An articulated body is a type of compound. Initialize it as a compound first.
   InitCompoundActor(reg, e, error);
   MOCHI_ERROR_RETURN(error);
+
+  // Tag before adopting links so partial-initialization cleanup recognizes the aggregate.
+  reg.emplace<TagArticulatedActor>(e);
+
   AddLinkActorsToArticulatedCompound(reg, e, bones);
 
   // Update actor info component
   reg.emplace_or_replace<CActorInfo>(e, std::string(params.name), ActorType::Articulated);
-
-  // Add articulated actor tag
-  reg.emplace<TagArticulatedActor>(e);
 
   MOCHI_ASSERT(reg.all_of<CDofOffset>(e), "Expected InitCompoundActor to add CDofOffset already");
 

@@ -346,9 +346,6 @@ class SceneImpl final : public Scene {
   // Return true if those bytes match this scene's ID.
   bool IsProbablyMyCallbackHandle(CallbackHandle handle) const;
 
-  // Destroy all actors and constraints in an articulated actor.
-  void DestroyAllItemsInArticulatedActor(entt::entity e);
-
   // Callbacks:
   uint32_t _nextCallbackId = 1;
   CallbackSet<void(StepInfo const&)> _preStepCallbacks;
