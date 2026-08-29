@@ -31,7 +31,7 @@ enum class RecyclingAlgorithm : uint8_t {
 /**
  * Linear solver parameters.
  */
-inline constexpr int kDefaultLinearSolverMaxIter = 1000;
+inline constexpr int kDefaultLinearSolverMaxIter = 500;
 struct KrylovSolverParams {
   // Absolute convergence tolerance for the (possibly preconditioned) residual norm. Only used for
   // iterative solvers.
