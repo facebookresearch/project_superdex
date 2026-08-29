@@ -1972,8 +1972,76 @@ TEST(Prefab, LoadNestedPrefabs_ReloadsOnPathChange) {
   EXPECT_STREQ("ActorFromB", scenePrefab.prefabs[0].prefab->actors.rigid[0].name.c_str());
 }
 
-// Loads nested prefabs and asserts the load fails with the cyclic-reference error. Cycle detection
-// legitimately logs to LogChannel::Error, so it is suppressed for the duration.
+TEST(Prefab, LoadNestedPrefabs_PreservesPopulatedPathlessReference) {
+  auto tempDir = CreateTempDirectory("pathless_nested_test", ExpectOK{});
+  WriteFile(
+      tempDir.Path() / "grandchild.mochi_scene",
+      R"({"actors": {"rigid": [{"name": "Grandchild"}]}})",
+      ExpectOK{});
+
+  auto child = std::make_shared<prefab::ScenePrefab>();
+  child->prefabs.push_back().path = "grandchild.mochi_scene";
+  prefab::ScenePrefab root;
+  root.prefabs.push_back().prefab = child;
+
+  prefab::LoadNestedPrefabs(root, tempDir.Path().string(), ExpectOK{});
+
+  EXPECT_EQ(child, root.prefabs[0].prefab);
+  ASSERT_NE(nullptr, child->prefabs[0].prefab);
+  ASSERT_EQ(1, child->prefabs[0].prefab->actors.rigid.size());
+  EXPECT_STREQ("Grandchild", child->prefabs[0].prefab->actors.rigid[0].name.c_str());
+}
+
+TEST(Prefab, LoadNestedPrefabs_RejectsUnpopulatedPathlessReference) {
+  prefab::ScenePrefab root;
+  auto& reference = root.prefabs.push_back();
+
+  Error error;
+  {
+    auto suppressError = test::SuppressLogError();
+    prefab::LoadNestedPrefabs(root, test::GetAssetsDir(), error);
+  }
+
+  EXPECT_NOT_OK(error);
+  EXPECT_NE(error.ToString().find("nested prefab reference"), std::string::npos);
+  EXPECT_EQ(nullptr, reference.prefab);
+}
+
+TEST(Prefab, LoadNestedPrefabs_FailedReloadPreservesExistingReference) {
+  auto tempDir = CreateTempDirectory("failed_nested_reload_test", ExpectOK{});
+  auto existing = std::make_shared<prefab::ScenePrefab>();
+  existing->actors.rigid.push_back().name = "Existing";
+
+  prefab::ScenePrefab root;
+  auto& reference = root.prefabs.push_back();
+  reference.path = "missing.mochi_scene";
+  reference.prefab = existing;
+
+  Error missingReplacementError;
+  {
+    auto suppressError = test::SuppressLogError();
+    prefab::LoadNestedPrefabs(root, tempDir.Path().string(), missingReplacementError);
+  }
+  EXPECT_NOT_OK(missingReplacementError);
+  EXPECT_EQ(existing, reference.prefab);
+
+  // The replacement itself loads, but its missing child prevents publication of the replacement.
+  WriteFile(
+      tempDir.Path() / "replacement.mochi_scene",
+      R"({"prefabs": [{"path": "missing.mochi_scene"}]})",
+      ExpectOK{});
+  reference.path = "replacement.mochi_scene";
+  Error missingDescendantError;
+  {
+    auto suppressError = test::SuppressLogError();
+    prefab::LoadNestedPrefabs(root, tempDir.Path().string(), missingDescendantError);
+  }
+  EXPECT_NOT_OK(missingDescendantError);
+  EXPECT_EQ(existing, reference.prefab);
+  ASSERT_EQ(1, reference.prefab->actors.rigid.size());
+  EXPECT_STREQ("Existing", reference.prefab->actors.rigid[0].name.c_str());
+}
+
 static void ExpectPrefabCycleError(Error const& error) {
   EXPECT_NOT_OK(error);
   EXPECT_NE(
@@ -2065,20 +2133,28 @@ TEST(Prefab, LoadNestedPrefabs_DetectsMutualCycle) {
 TEST(Prefab, EnsureFullyLoaded_InMemoryNestedTreeIsNotACycle) {
   auto* context = mochi::CreateContext(0);
   MOCHI_DEFER(mochi::DestroyContext(context));
+  auto tempDir = CreateTempDirectory("in_memory_nested_tree_test", ExpectOK{});
+  WriteFile(tempDir.Path() / "loaded.mochi_scene", R"({})", ExpectOK{});
 
   // Depth-2 tree of in-memory (pathless) prefabs. Their resolved paths all collapse to rootPath, so
   // a cycle guard keyed on the resolved path would falsely reject the inner reference; gating on
   // the reference's own (empty) path treats these as non-file references and skips path-based cycle
   // tracking.
   // Runs through EnsureFullyLoaded (skipLoaded=true), the path where that false positive would
-  // surface.
+  // surface. It also verifies that both pathless handles are retained while their file-backed
+  // descendant is loaded.
   auto grandchild = std::make_shared<prefab::ScenePrefab>();
+  grandchild->prefabs.push_back().path = "loaded.mochi_scene";
   auto child = std::make_shared<prefab::ScenePrefab>();
   child->prefabs.push_back().prefab = grandchild;
   prefab::ScenePrefab root;
   root.prefabs.push_back().prefab = child;
 
-  prefab::EnsureFullyLoaded(root, test::GetAssetsDir(), context, test::ExpectOK{});
+  prefab::EnsureFullyLoaded(root, tempDir.Path().string(), context, test::ExpectOK{});
+
+  EXPECT_EQ(child, root.prefabs[0].prefab);
+  EXPECT_EQ(grandchild, child->prefabs[0].prefab);
+  EXPECT_NE(nullptr, grandchild->prefabs[0].prefab);
 }
 
 TEST(Prefab, SharedInMemoryNestedPrefabIsNotACycle) {
@@ -2104,6 +2180,15 @@ TEST(Prefab, PathlessInMemoryNestedCycle_DetectedByPublicTraversals) {
   MOCHI_DEFER(mochi::DestroyContext(context));
   auto* scene = context->CreateScene("my scene");
   MOCHI_DEFER(context->DestroyScene(scene));
+
+  {
+    auto scenePrefab = MakePathlessSelfCyclePrefab();
+    MOCHI_DEFER(scenePrefab->prefabs.clear());
+    Error error;
+    auto suppressError = test::SuppressLogError();
+    prefab::LoadNestedPrefabs(*scenePrefab, test::GetAssetsDir(), error);
+    ExpectPrefabCycleError(error);
+  }
 
   {
     auto scenePrefab = MakePathlessSelfCyclePrefab();
@@ -4036,7 +4121,7 @@ TEST_IF(MOCHI_INTERNAL, Prefab, AddToSceneResult_NestedPrefabs) {
   {
     auto& nested = topPrefab.prefabs.push_back();
     nested.name = "child";
-    nested.path = "in_memory";
+    // Procedural child with no file backing; leave nested.path empty.
     nested.prefab = childPrefab;
   }
 

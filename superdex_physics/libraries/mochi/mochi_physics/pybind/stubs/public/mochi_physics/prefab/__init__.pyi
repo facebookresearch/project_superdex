@@ -2273,7 +2273,7 @@ class PoseControllerPrefab:
     ) -> None: ...
 
 class PrefabReference:
-    """Reference to another prefab file (scene or actor) for prefab nesting."""
+    """Reference to another prefab (scene or actor) for prefab nesting."""
     comment: Optional[str]
     """Optional serialized comment."""
     name: str
@@ -2289,7 +2289,28 @@ class PrefabReference:
         scope or above.
     """
     path: str
-    """File path of the nested prefab."""
+    """Path to the nested prefab file.
+
+    If non-empty, :func:`~superdex.physics.prefab.load_nested_prefabs` reloads the
+    prefab from this path on every call.
+    :func:`~superdex.physics.prefab.ensure_fully_loaded` loads it from this path
+    only if the reference does not already contain a loaded prefab. If empty, both
+    functions require the reference to already contain a loaded prefab; they keep
+    that prefab and load all prefabs nested within it.
+
+    Note:
+        A reference created with the Python constructor needs a non-empty path
+        before loading because the constructor cannot accept a loaded prefab. C++
+        callers may instead assign a loaded prefab directly and leave this path
+        empty.
+
+    Warning:
+        The loaded prefab is not serialized. After deserialization, an empty-path
+        reference has no loaded prefab and is rejected by
+        :func:`~superdex.physics.prefab.load_nested_prefabs` and
+        :func:`~superdex.physics.prefab.ensure_fully_loaded`. Set a non-empty path
+        before saving if the reference must remain loadable after deserialization.
+    """
     scale: float
     """Uniform scale of the nested prefab, relative to the parent prefab.
 
@@ -3257,12 +3278,21 @@ def load_nested_prefabs(prefab: ScenePrefab, root_path: str) -> None:
         nested content for you.
 
     Note:
-        If called a second time, the nested prefabs will be reloaded. If your
-        intention is to avoid redundant loads, then use
-        :func:`~superdex.physics.prefab.ensure_fully_loaded` instead.
+        A reference with a non-empty path is reloaded from its file on every call. A
+        reference with an empty path must already contain a loaded prefab; this
+        function keeps that prefab and loads all prefabs nested within it. See
+        :attr:`~superdex.physics.prefab.PrefabReference.path` for when a path is
+        required. Use :func:`~superdex.physics.prefab.ensure_fully_loaded` to avoid
+        reloading prefabs that are already loaded.
 
     Note:
         A prefab must not reference itself, directly or indirectly.
+
+    Warning:
+        If this function returns an error, the input prefab may remain partially
+        loaded. A reference with a non-empty path keeps its previously loaded prefab
+        if its file or any prefab nested within it fails to load; if it had no
+        loaded prefab, it remains unloaded.
 
     See Also:
         :func:`~superdex.physics.prefab.ensure_fully_loaded`,
@@ -3341,6 +3371,18 @@ def ensure_fully_loaded(prefab: ScenePrefab, root_path: str) -> None:
 
     Note:
         A prefab must not reference itself, directly or indirectly.
+
+    Note:
+        If a reference already contains a loaded prefab, this function does not
+        reload its file, even when its path is non-empty; it still loads any missing
+        nested prefabs. A reference with neither a path nor a loaded prefab is
+        invalid. See :attr:`~superdex.physics.prefab.PrefabReference.path` for when
+        a path is required.
+
+    Warning:
+        If this function returns an error, the input prefab may remain partially
+        loaded. A reference that was unloaded when the call began remains unloaded
+        if its file or any prefab nested within it fails to load.
 
     See Also:
         :func:`~superdex.physics.prefab.load_nested_prefabs`,

@@ -168,13 +168,13 @@ static void LoadNestedPrefabsWithCycleCheck(
       : std::string_view();
 
   for (auto& nested : prefab.prefabs) {
-    auto const fullPath = GetPrefabFullPath(nested.path, rootPath, prefabFilePath);
-    // Track only file-backed references for cycle detection, keyed on the resolved path but gated
-    // on the reference's own path: an in-memory (pathless) reference resolves to rootPath, which is
-    // non-empty and identical across siblings, so gating on fullPath would falsely flag two
-    // pathless references on one branch as a cycle.
-    bool const tracksActivePath = !nested.path.empty();
-    if (tracksActivePath) {
+    bool const isFileBacked = !nested.path.empty();
+    DynamicString fullPath;
+    // ActivePrefabGuard checks pointer cycles for all prefabs. File-backed references also need
+    // path tracking because reloads can create new pointers. Empty paths are not path-keyed because
+    // they all resolve to rootPath, which can make distinct nested pathless references look cyclic.
+    if (isFileBacked) {
+      fullPath = GetPrefabFullPath(nested.path, rootPath, prefabFilePath);
       auto const pathKey = GetPrefabPathKey(fullPath);
       MOCHI_ERROR_IF(
           Contains(activePrefabPaths, pathKey),
@@ -183,14 +183,29 @@ static void LoadNestedPrefabsWithCycleCheck(
       MOCHI_ERROR_RETURN(error);
       activePrefabPaths.push_back(pathKey);
     }
-    MOCHI_DEFER(if (tracksActivePath) { activePrefabPaths.pop_back(); });
-    if (!skipLoaded || !nested.prefab) {
-      nested.prefab = std::make_shared<ScenePrefab>(ShallowLoadFromFile(fullPath, error));
+    MOCHI_DEFER(if (isFileBacked) { activePrefabPaths.pop_back(); });
+
+    PrefabHandle candidate = nested.prefab;
+    if (isFileBacked && (!skipLoaded || !candidate)) {
+      auto loadedPrefab = ShallowLoadFromFile(fullPath, error);
       MOCHI_ERROR_RETURN(error);
+      candidate = std::make_shared<ScenePrefab>(std::move(loadedPrefab));
     }
-    LoadNestedPrefabsWithCycleCheck(
-        *nested.prefab, rootPath, skipLoaded, activePrefabPaths, activePrefabs, error);
+    if (!candidate) {
+      MOCHI_LOG_ERROR(
+          "Nested prefab reference \"%s\" in prefab \"%s\" has neither a path nor a loaded prefab.",
+          nested.name.empty() ? "<unnamed>" : nested.name.c_str(),
+          prefabFilePath.empty() ? "<in-memory prefab>" : prefabFilePath.data());
+      MOCHI_ERROR_SET(
+          error,
+          "A nested prefab reference must have a non-empty path or an already-loaded prefab.");
+    }
     MOCHI_ERROR_RETURN(error);
+
+    LoadNestedPrefabsWithCycleCheck(
+        *candidate, rootPath, skipLoaded, activePrefabPaths, activePrefabs, error);
+    MOCHI_ERROR_RETURN(error);
+    nested.prefab = std::move(candidate);
   }
 }
 
@@ -534,11 +549,20 @@ static void LoadShapesWithCycleCheck(
           activePrefabs,
           error);
       if (!error.IsOK()) {
-        std::string_view nestedPrefabPath = nested.prefab->sourceFilePath.has_value()
-            ? *nested.prefab->sourceFilePath
-            : nested.path;
+        std::string_view nestedPrefabIdentifier = nested.prefab->sourceFilePath.has_value()
+            ? std::string_view(*nested.prefab->sourceFilePath)
+            : std::string_view();
+        if (nestedPrefabIdentifier.empty()) {
+          nestedPrefabIdentifier = nested.path;
+        }
+        if (nestedPrefabIdentifier.empty()) {
+          nestedPrefabIdentifier = nested.name;
+        }
+        if (nestedPrefabIdentifier.empty()) {
+          nestedPrefabIdentifier = "<unnamed>";
+        }
         MOCHI_LOG_ERROR(
-            "Prefab failed to load shapes for nested prefab \"%s\"", nestedPrefabPath.data());
+            "Prefab failed to load shapes for nested prefab \"%s\"", nestedPrefabIdentifier.data());
         return;
       }
     }

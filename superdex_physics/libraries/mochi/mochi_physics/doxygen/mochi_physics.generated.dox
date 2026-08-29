@@ -851,7 +851,7 @@
 
 /// @struct mochi::prefab::PrefabReference
 ///
-/// @brief Reference to another prefab file (scene or actor) for prefab nesting.
+/// @brief Reference to another prefab (scene or actor) for prefab nesting.
 ///
 
 /// @var mochi::prefab::PrefabReference::comment
@@ -868,7 +868,13 @@
 
 /// @var mochi::prefab::PrefabReference::path
 ///
-/// @brief File path of the nested prefab.
+/// @brief Path to the nested prefab file.
+///
+/// @details If non-empty, @ref mochi::prefab::LoadNestedPrefabs "LoadNestedPrefabs" reloads the prefab from this path on every call. @ref mochi::prefab::EnsureFullyLoaded "EnsureFullyLoaded" loads it from this path only if the reference does not already contain a loaded prefab. If empty, both functions require the reference to already contain a loaded prefab; they keep that prefab and load all prefabs nested within it.
+///
+/// @note A reference created with the Python constructor needs a non-empty path before loading because the constructor cannot accept a loaded prefab. C++ callers may instead assign a loaded prefab directly and leave this path empty.
+///
+/// @warning The loaded prefab is not serialized. After deserialization, an empty-path reference has no loaded prefab and is rejected by @ref mochi::prefab::LoadNestedPrefabs "LoadNestedPrefabs" and @ref mochi::prefab::EnsureFullyLoaded "EnsureFullyLoaded". Set a non-empty path before saving if the reference must remain loadable after deserialization.
 ///
 
 /// @var mochi::prefab::PrefabReference::scale
@@ -900,6 +906,8 @@
 /// @var mochi::prefab::PrefabReference::prefab
 ///
 /// @brief Handle to the loaded nested prefab. Runtime state, populated at load time and never serialized.
+///
+/// @note C++ callers may set this handle and leave @ref mochi::prefab::PrefabReference::path "PrefabReference::path" empty. @ref mochi::prefab::LoadNestedPrefabs "LoadNestedPrefabs" and @ref mochi::prefab::EnsureFullyLoaded "EnsureFullyLoaded" then keep this prefab and load all prefabs nested within it instead of loading this reference from a file.
 ///
 
 /// @struct mochi::prefab::ActorContactEntry
@@ -1359,8 +1367,10 @@
 ///
 /// @note Use this if the file was loaded via @ref mochi::prefab::ShallowLoadFromFile "ShallowLoadFromFile" or @ref mochi::prefab::ShallowLoadFromJsonString "ShallowLoadFromJsonString" or if the @ref mochi::prefab::ScenePrefab "ScenePrefab" was created procedurally.
 /// @note You do not need to call this after @ref mochi::prefab::LoadFromFile "LoadFromFile" or @ref mochi::prefab::LoadFromJsonString "LoadFromJsonString" because they load all nested content for you.
-/// @note If called a second time, the nested prefabs will be reloaded. If your intention is to avoid redundant loads, then use @ref mochi::prefab::EnsureFullyLoaded "EnsureFullyLoaded" instead.
+/// @note A reference with a non-empty path is reloaded from its file on every call. A reference with an empty path must already contain a loaded prefab; this function keeps that prefab and loads all prefabs nested within it. See @ref mochi::prefab::PrefabReference::path "PrefabReference::path" for when a path is required. Use @ref mochi::prefab::EnsureFullyLoaded "EnsureFullyLoaded" to avoid reloading prefabs that are already loaded.
 /// @note A prefab must not reference itself, directly or indirectly.
+///
+/// @warning If this function returns an error, the input prefab may remain partially loaded. A reference with a non-empty path keeps its previously loaded prefab if its file or any prefab nested within it fails to load; if it had no loaded prefab, it remains unloaded.
 ///
 /// @see @ref mochi::prefab::EnsureFullyLoaded "EnsureFullyLoaded", @ref mochi::prefab::LoadShapes "LoadShapes"
 ///
@@ -1396,6 +1406,9 @@
 /// @note Use this if the file was loaded via @ref mochi::prefab::ShallowLoadFromFile "ShallowLoadFromFile" or @ref mochi::prefab::ShallowLoadFromJsonString "ShallowLoadFromJsonString" or if the @ref mochi::prefab::ScenePrefab "ScenePrefab" was created procedurally.
 /// @note You do not need to call this after @ref mochi::prefab::LoadFromFile "LoadFromFile" or @ref mochi::prefab::LoadFromJsonString "LoadFromJsonString" because they load all nested content for you.
 /// @note A prefab must not reference itself, directly or indirectly.
+/// @note If a reference already contains a loaded prefab, this function does not reload its file, even when its path is non-empty; it still loads any missing nested prefabs. A reference with neither a path nor a loaded prefab is invalid. See @ref mochi::prefab::PrefabReference::path "PrefabReference::path" for when a path is required.
+///
+/// @warning If this function returns an error, the input prefab may remain partially loaded. A reference that was unloaded when the call began remains unloaded if its file or any prefab nested within it fails to load.
 ///
 /// @see @ref mochi::prefab::LoadNestedPrefabs "LoadNestedPrefabs", @ref mochi::prefab::LoadShapes "LoadShapes", @ref mochi::prefab::AddToScene "AddToScene"
 ///

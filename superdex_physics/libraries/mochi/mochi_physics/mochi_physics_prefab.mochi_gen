@@ -706,7 +706,7 @@ struct prefab::PoseControllerPrefab [no_reflection] {
   DynamicArray<PoseTrackingParams> jointTracking;
 }
 
-// @brief Reference to another prefab file (scene or actor) for prefab nesting.
+// @brief Reference to another prefab (scene or actor) for prefab nesting.
 struct prefab::PrefabReference [no_reflection] {
   // @brief Optional serialized comment.
   Optional<String> comment;
@@ -721,7 +721,20 @@ struct prefab::PrefabReference [no_reflection] {
   // enclosing (parent) scope or above.
   String name;
 
-  // @brief File path of the nested prefab.
+  // @brief Path to the nested prefab file.
+  //
+  // @details If non-empty, @ref LoadNestedPrefabs reloads the prefab from this path on every call.
+  // @ref EnsureFullyLoaded loads it from this path only if the reference does not already contain a
+  // loaded prefab. If empty, both functions require the reference to already contain a loaded prefab;
+  // they keep that prefab and load all prefabs nested within it.
+  //
+  // @warning The loaded prefab is not serialized. After deserialization, an empty-path reference has
+  // no loaded prefab and is rejected by @ref LoadNestedPrefabs and @ref EnsureFullyLoaded. Set a
+  // non-empty path before saving if the reference must remain loadable after deserialization.
+  //
+  // @note A reference created with the Python constructor needs a non-empty path before loading
+  // because the constructor cannot accept a loaded prefab. C++ callers may instead assign a loaded
+  // prefab directly and leave this path empty.
   String path;
 
   // @brief Uniform scale of the nested prefab, relative to the parent prefab.
@@ -750,6 +763,10 @@ struct prefab::PrefabReference [no_reflection] {
 
   // @brief Handle to the loaded nested prefab. Runtime state, populated at load time and never
   // serialized.
+  //
+  // @note C++ callers may set this handle and leave @ref PrefabReference::path empty. @ref
+  // LoadNestedPrefabs and @ref EnsureFullyLoaded then keep this prefab and load all prefabs nested
+  // within it instead of loading this reference from a file.
   PrefabHandle prefab [no_python];
 }
 
@@ -1265,14 +1282,19 @@ fn prefab::ShallowLoadFromJsonString(StringView json) -> prefab::ScenePrefab [mo
 // @param[in] rootPath Root directory for resolving relative paths, except those resolved against
 // a prefab file.
 //
+// @warning If this function returns an error, the input prefab may remain partially loaded. A
+// reference with a non-empty path keeps its previously loaded prefab if its file or any prefab
+// nested within it fails to load; if it had no loaded prefab, it remains unloaded.
+//
 // @note Use this if the file was loaded via @ref ShallowLoadFromFile or
 // @ref ShallowLoadFromJsonString or if the @ref ScenePrefab was created
 // procedurally.
 // @note You do not need to call this after @ref LoadFromFile or @ref
 // LoadFromJsonString because they load all nested content for you.
-// @note If called a second time, the nested prefabs will be reloaded. If
-// your intention is to avoid redundant loads, then use
-// @ref EnsureFullyLoaded instead.
+// @note A reference with a non-empty path is reloaded from its file on every call. A reference with
+// an empty path must already contain a loaded prefab; this function keeps that prefab and loads all
+// prefabs nested within it. See @ref PrefabReference::path for when a path is required. Use @ref
+// EnsureFullyLoaded to avoid reloading prefabs that are already loaded.
 // @note A prefab must not reference itself, directly or indirectly.
 //
 // @see EnsureFullyLoaded, LoadShapes
@@ -1310,12 +1332,20 @@ fn prefab::LoadShapes(prefab::ScenePrefab& prefab, StringView rootPath, Context*
 // a prefab file.
 // @param[in] context The @ref Context that owns the loaded resources.
 //
+// @warning If this function returns an error, the input prefab may remain partially loaded. A
+// reference that was unloaded when the call began remains unloaded if its file or any prefab nested
+// within it fails to load.
+//
 // @note Use this if the file was loaded via @ref ShallowLoadFromFile or
 // @ref ShallowLoadFromJsonString or if the @ref ScenePrefab was created
 // procedurally.
 // @note You do not need to call this after @ref LoadFromFile or @ref
 // LoadFromJsonString because they load all nested content for you.
 // @note A prefab must not reference itself, directly or indirectly.
+// @note If a reference already contains a loaded prefab, this function does not reload its file,
+// even when its path is non-empty; it still loads any missing nested prefabs. A reference with
+// neither a path nor a loaded prefab is invalid. See @ref PrefabReference::path for when a path is
+// required.
 //
 // @see LoadNestedPrefabs, LoadShapes, AddToScene
 fn prefab::EnsureFullyLoaded(prefab::ScenePrefab& prefab, StringView rootPath, Context* context) -> void [mochi_error];
