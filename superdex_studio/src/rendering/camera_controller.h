@@ -18,6 +18,7 @@
 #include <imgui.h>
 #include <math/quat.h>
 #include <math/vec3.h>
+#include <array>
 #include <memory>
 #include <optional>
 
@@ -92,18 +93,18 @@ class CameraController {
   double _lerpDuration = 0.1f;
 
   bool _lerpingPos = false;
-  filament::math::double3 _lerpPos[2];
-  filament::math::quat _lerpRot[2];
+  std::array<filament::math::double3, 2> _lerpPos;
+  std::array<filament::math::quat, 2> _lerpRot;
   // Optional orthographic height lerp (only used when in ortho mode)
   bool _lerpingOrthoHeight = false;
-  float _lerpOrthoHeight[2] = {0.0f, 0.0f};
+  std::array<float, 2> _lerpOrthoHeight = {0.0f, 0.0f};
 
   bool _lerpingYawPitch = false;
-  double _lerpYaw[2] = {0.0f, 0.0f};
-  double _lerpPitch[2] = {0.0f, 0.0f};
+  std::array<double, 2> _lerpYaw = {0.0f, 0.0f};
+  std::array<double, 2> _lerpPitch = {0.0f, 0.0f};
 
   bool _lerpingOrbit = false;
-  double _lerpOrbitDist[2] = {0.0f, 0.0f};
+  std::array<double, 2> _lerpOrbitDist = {0.0f, 0.0f};
 };
 
 } // namespace superdex::studio
