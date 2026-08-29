@@ -148,10 +148,6 @@ Constraint* IKSolverImpl::CreatePositionTarget(
   MOCHI_ERROR_IF(weight < 0_r, error, "Weight must not be negative");
   MOCHI_ERROR_RETURN(error, {});
 
-  ClearPositionTarget(actor, error);
-  MOCHI_ERROR_RETURN(error, {});
-
-  // Recreate
   RigidPivotPositionConstraintParams conParams;
   conParams.localPosition = localPosition;
   conParams.targetPosition = targetPosition;
@@ -160,6 +156,7 @@ Constraint* IKSolverImpl::CreatePositionTarget(
   auto* con = _scene->CreateRigidPivotPositionConstraint(conParams, error);
   MOCHI_ERROR_RETURN(error, {});
 
+  ClearPositionTarget(actor, ErrorAssert{});
   _positionTargets[actor] = con;
   return con;
 }
@@ -185,10 +182,6 @@ Constraint* IKSolverImpl::CreateRotationTarget(
   MOCHI_ERROR_IF(weight < 0_r, error, "Weight must not be negative");
   MOCHI_ERROR_RETURN(error, {});
 
-  ClearRotationTarget(actor, error);
-  MOCHI_ERROR_RETURN(error, {});
-
-  // Recreate
   RigidPivotRotationConstraintParams conParams;
   conParams.localRotation = localRotation;
   conParams.targetRotation = targetRotation;
@@ -197,6 +190,7 @@ Constraint* IKSolverImpl::CreateRotationTarget(
   auto* con = _scene->CreateRigidPivotRotationConstraint(conParams, error);
   MOCHI_ERROR_RETURN(error, {});
 
+  ClearRotationTarget(actor, ErrorAssert{});
   _rotationTargets[actor] = con;
   return con;
 }

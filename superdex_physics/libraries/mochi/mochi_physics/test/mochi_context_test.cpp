@@ -1422,6 +1422,43 @@ TEST_P(MochiContextTest, CreateSceneMultithreaded) {
   RepeatMultithreaded(_mochiContext, fn, 2);
 }
 
+TEST_P(MochiContextTest, CreateIKTargets_ReplacesOnlyAfterSuccessfulCreation) {
+  Scene* scene = _mochiContext->CreateScene("IK Scene");
+  RigidActorParams actorParams;
+  actorParams.shape = test::CreateUnitCubeTetMeshShape(_mochiContext);
+  actorParams.colliderType = ColliderType::None;
+  Actor* actor = scene->CreateRigidActor(actorParams, ExpectOK{});
+  ASSERT_NE(nullptr, actor);
+
+  auto* solver = experimental::CreateIKSolver(scene, _mochiContext, ExpectOK{});
+  ASSERT_NE(nullptr, solver);
+  MOCHI_DEFER(experimental::DestroyIKSolver(solver, _mochiContext, ErrorAssert{}));
+
+  Constraint* positionTarget =
+      solver->CreatePositionTarget(actor->GetHandle(), {}, {}, 1_r, ExpectOK{});
+  Constraint* rotationTarget =
+      solver->CreateRotationTarget(actor->GetHandle(), {}, {}, 1_r, ExpectOK{});
+  ASSERT_NE(nullptr, positionTarget);
+  ASSERT_NE(nullptr, rotationTarget);
+  ConstraintHandle const positionHandle = positionTarget->GetHandle();
+  ConstraintHandle const rotationHandle = rotationTarget->GetHandle();
+  real const nan = std::numeric_limits<real>::quiet_NaN();
+
+  EXPECT_EQ(nullptr, solver->CreatePositionTarget(actor->GetHandle(), {}, {}, nan, ExpectNotOK{}));
+  EXPECT_EQ(nullptr, solver->CreateRotationTarget(actor->GetHandle(), {}, {}, nan, ExpectNotOK{}));
+
+  EXPECT_EQ(2, scene->GetNumConstraints());
+  EXPECT_EQ(positionTarget, scene->GetConstraint(positionHandle));
+  EXPECT_EQ(rotationTarget, scene->GetConstraint(rotationHandle));
+
+  EXPECT_NE(nullptr, solver->CreatePositionTarget(actor->GetHandle(), {}, {}, 2_r, ExpectOK{}));
+  EXPECT_NE(nullptr, solver->CreateRotationTarget(actor->GetHandle(), {}, {}, 2_r, ExpectOK{}));
+
+  EXPECT_EQ(2, scene->GetNumConstraints());
+  EXPECT_EQ(nullptr, scene->GetConstraint(positionHandle));
+  EXPECT_EQ(nullptr, scene->GetConstraint(rotationHandle));
+}
+
 TEST_P(MochiContextTest, CreateAsyncScene) {
   if (_mochiContext->GetNumThreads() == 0) {
     // If there are no worker threads, then CreateAsyncScene should fail gracefully.

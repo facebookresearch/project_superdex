@@ -219,6 +219,8 @@ class experimental::IKSolver [no_init, no_destruct, no_reflection] {
   // actor replaces the previous target and invalidates the previously returned @ref Constraint
   // pointer.
   //
+  // @note If replacing the previous target fails, the existing target and its pointer remain valid.
+  //
   // @see IKSolver::ClearPositionTarget, IKSolver::CreateRotationTarget
   fn CreatePositionTarget(ActorHandle actor, Real3 localPosition, Real3 targetPosition, real weight) -> Constraint* [pure, virtual, mochi_error, nullable];
 
@@ -244,6 +246,7 @@ class experimental::IKSolver [no_init, no_destruct, no_reflection] {
   // actor replaces the previous target and invalidates the previously returned @ref Constraint
   // pointer.
   //
+  // @note If replacing the previous target fails, the existing target and its pointer remain valid.
   // @note Both rotations are rotation vectors (axis * angle).
   //
   // @see IKSolver::ClearRotationTarget, IKSolver::CreatePositionTarget
