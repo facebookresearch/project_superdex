@@ -489,20 +489,20 @@ void BotControl::ShowWindow(
     int const iJoint = editPrefab._dofIndices[iDof];
     auto const& joint = editPrefab.joints[iJoint];
     ImGui::PushID(static_cast<int>(iDof));
-    char label[256];
-    snprintf(label, sizeof(label), "[%zu] %s", iDof, joint.name.c_str());
+    std::array<char, 256> label{};
+    snprintf(label.data(), label.size(), "[%zu] %s", iDof, joint.name.c_str());
     char const* unitFmt =
         GetUnitFormat(UnitFormat::Effort, joint.type, /* unused for format */ 0.0f);
     auto value = static_cast<float>(_efforts[iDof]);
     auto const limit = static_cast<float>(joint.effortLimit);
     if (limit > 0.0f) {
       // Finite limit: bounded slider [-limit, +limit].
-      if (ImGui::SliderFloat(label, &value, -limit, limit, unitFmt)) {
+      if (ImGui::SliderFloat(label.data(), &value, -limit, limit, unitFmt)) {
         _efforts[iDof] = static_cast<mochi::real>(value);
       }
     } else if (limit < 0.0f) {
       // Unbounded: no finite range, so drag any magnitude instead of a bounded slider.
-      if (ImGui::DragFloat(label, &value, 1.0f, 0.0f, 0.0f, unitFmt)) {
+      if (ImGui::DragFloat(label.data(), &value, 1.0f, 0.0f, 0.0f, unitFmt)) {
         _efforts[iDof] = static_cast<mochi::real>(value);
       }
     } else {
@@ -510,7 +510,7 @@ void BotControl::ShowWindow(
       _efforts[iDof] = static_cast<mochi::real>(0.0f);
       ImGui::BeginDisabled(true);
       float zero = 0.0f;
-      ImGui::SliderFloat(label, &zero, 0.0f, 0.0f, unitFmt);
+      ImGui::SliderFloat(label.data(), &zero, 0.0f, 0.0f, unitFmt);
       ImGui::EndDisabled();
       if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
         ImGui::SetTooltip("Non-actuated joint (effortLimit 0): no effort can be applied");
