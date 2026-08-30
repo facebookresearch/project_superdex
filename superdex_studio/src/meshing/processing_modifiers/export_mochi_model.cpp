@@ -35,10 +35,12 @@
 
 #include <mochi_core/geometry/grid_sdf_params.h>
 #include <mochi_core/geometry/model_data.h>
+#include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/coordinate_space_converter.h>
 #include <mochi_core/utils/dynamic_string.h>
 #include <mochi_physics/utils/mochi_model_utils.h> // BakeSdf, SaveToFile, FileFormat
 
+#include <array>
 #include <cstring>
 #include <memory>
 #include <string>
@@ -155,7 +157,7 @@ class MochiModelExportMethod : public ReflectedMethod<MochiModelExportProps> {
       // text after the last dot, so a "*.mochi.h5" filter makes it re-append ".mochi.h5" to a name
       // that already ends in it (doubling the suffix). "*.h5" matches .mochi.h5 without
       // re-appending.
-      char const* filters[] = {"*.h5"};
+      constexpr std::array<char const*, 1> filters{"*.h5"};
       std::string const defaultPath = processing::ExportDialogStartPath(
           std::string{_props.exportPath.data(), _props.exportPath.size()},
           SuggestedExportPath(gui.sourceFilePath),
@@ -167,8 +169,8 @@ class MochiModelExportMethod : public ReflectedMethod<MochiModelExportProps> {
           defaultPath, mochi::ErrorLog{mochi::LogChannel::Warning});
       mochi::Path const chosen = SuperDexStudio::GetFileDialogPath(
           "Export Mochi Model",
-          filters,
-          1,
+          filters.data(),
+          mochi::isize(filters),
           "Mochi Model (*.mochi.h5)",
           /*isSaveDialog=*/true,
           mochi::Path{defaultPath});
