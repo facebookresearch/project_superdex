@@ -1422,6 +1422,22 @@ TEST_P(MochiContextTest, CreateSceneMultithreaded) {
   RepeatMultithreaded(_mochiContext, fn, 2);
 }
 
+TEST_P(MochiContextTest, CreateIKSolver_InvalidActorPreservesScene) {
+  ShapeHandle shape = test::CreateUnitCubeTetMeshShape(_mochiContext);
+  Scene* scene = _mochiContext->CreateScene("IK Scene");
+  MOCHI_DEFER(if (_mochiContext->IsValidScene(scene)) { _mochiContext->DestroyScene(scene); });
+
+  SoftActorParams params;
+  params.shape = shape;
+  Actor* actor = scene->CreateSoftActor(params, ExpectOK{});
+  ASSERT_NE(nullptr, actor);
+  ActorHandle const actorHandle = actor->GetHandle();
+
+  EXPECT_EQ(nullptr, experimental::CreateIKSolver(scene, _mochiContext, ExpectNotOK{}));
+  ASSERT_TRUE(_mochiContext->IsValidScene(scene));
+  EXPECT_EQ(actor, scene->GetActor(actorHandle));
+}
+
 TEST_P(MochiContextTest, CreateIKTargets_ReplacesOnlyAfterSuccessfulCreation) {
   Scene* scene = _mochiContext->CreateScene("IK Scene");
   RigidActorParams actorParams;

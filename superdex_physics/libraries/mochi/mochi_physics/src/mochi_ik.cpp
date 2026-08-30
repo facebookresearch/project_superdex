@@ -33,16 +33,19 @@ struct IKSolverHandle {
 IKSolverImpl::IKSolverImpl(Scene* scene, Error& error) {
   MOCHI_ERROR_IF(scene == nullptr, error, "Cannot create an IKSolver without a Scene");
   MOCHI_ERROR_RETURN(error);
-  _scene = assert_cast<SceneImpl*>(scene);
+  auto* const sceneImpl = assert_cast<SceneImpl*>(scene);
 
   // Check to ensure that we only have articulated or rigid actors
-  _scene->ForEachActor([&](Actor* actor) {
+  sceneImpl->ForEachActor([&](Actor* actor) {
     MOCHI_ERROR_IF(
         actor->GetType() != ActorType::Articulated && actor->GetType() != ActorType::Rigid,
         error,
         "Cannot create an IKSolver with non-articulated or non-rigid actors");
   });
   MOCHI_ERROR_RETURN(error);
+
+  // Assign _scene only after error checks. ~IKSolverImpl destroys it.
+  _scene = sceneImpl;
 
   // Use default solver params
   SetSolverParams(experimental::IKSolverParams{});

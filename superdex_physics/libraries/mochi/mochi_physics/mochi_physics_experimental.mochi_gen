@@ -281,6 +281,7 @@ class experimental::IKSolver [no_init, no_destruct, no_reflection] {
 //
 // @note The @ref experimental::IKSolver assumes exclusive control of the provided scene. The scene
 // must not be used directly and will be destroyed by @ref experimental::DestroyIKSolver.
+// @note Scene ownership transfers only on success. On error, ownership is unchanged.
 // @note The scene must contain only @ref ActorType::Articulated and @ref ActorType::Rigid actors.
 // @note The scene's solver parameters, gravity, single-island setting, contact friction, and
 // articulated inertia/joint-friction terms are reconfigured for IK and cannot be relied upon
