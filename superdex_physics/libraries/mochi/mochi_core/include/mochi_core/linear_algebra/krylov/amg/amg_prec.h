@@ -27,6 +27,7 @@
 #include <mochi_core/linear_algebra/utils/matrix_concepts.h>
 #include <mochi_core/linear_algebra/utils/matrix_conversions.h>
 #include <mochi_core/mochi_platform.h>
+#include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/graph_views.h>
 #include <mochi_core/utils/rand_utils.h>
 
@@ -349,13 +350,15 @@ Scalar EstimateSpectralRadiusPowerMethod(
 /// @details Runs preconditioned CG on the system (A, D) with zero initial guess and a random RHS.
 /// The Lanczos/Ritz interpretation assumes A and D are SPD. The CG coefficients (alpha, beta)
 /// define a symmetric tridiagonal matrix T whose eigenvalues (Ritz values) approximate the
-/// eigenvalues of D^{-1} A. The largest eigenvalue of T is computed via @ref
-/// SelfAdjointEigenDecomposition. Near-zero residual norm is treated as PCG convergence.
-/// Non-finite values or materially negative curvature/residual norm make the estimate fail.
+/// eigenvalues of D^{-1} A. Runs at most min(numIterations, A.Rows()) iterations unless the
+/// represented residual becomes exactly zero first. Non-positive or non-finite recurrence values
+/// make the estimate fail. The largest eigenvalue of T is computed via @ref
+/// SelfAdjointEigenDecomposition.
 ///
 /// @param[in] A Matrix operator. Must support Apply(v, Av) and Rows().
 /// @param[in] invDiag Diagonal preconditioner D^{-1}. Must support Solve(in, out).
-/// @param[in] numIterations Number of PCG iterations. Determines the size of T.
+/// @param[in] numIterations Requested PCG iteration budget, clamped to the scalar dimension of A.
+/// The completed iteration count determines the dimension of T.
 /// @return Deterministic finite-iteration Ritz estimate of lambda_max(D^{-1} A), or 0 if the
 /// estimate fails.
 ///
@@ -367,6 +370,11 @@ auto EstimateSpectralRadius(MatrixOp const& A, PrecOp const& invDiag, int numIte
   MOCHI_ASSERT_VERBOSE(numIterations > 0, "Number of iterations must be positive.");
 
   int const n = A.Rows();
+  if (n <= 0) {
+    return Scalar(0);
+  }
+
+  int const maxIterations = Min(numIterations, n);
   // Workspace: columns are r, z, p, Ap
   Matrix<Scalar> W(n, 4);
   auto r = W.Col(0);
@@ -377,8 +385,8 @@ auto EstimateSpectralRadius(MatrixOp const& A, PrecOp const& invDiag, int numIte
   // Storage for the CG coefficients
   DynamicArray<Scalar> alphas;
   DynamicArray<Scalar> betas;
-  alphas.reserve(numIterations);
-  betas.reserve(numIterations - 1);
+  alphas.reserve(maxIterations);
+  betas.reserve(maxIterations - 1);
 
   // Initial residual r_0 is random (zero initial guess)
   SetXorShiftRandom(r);
@@ -388,16 +396,15 @@ auto EstimateSpectralRadius(MatrixOp const& A, PrecOp const& invDiag, int numIte
   Scalar rTz = z.Dot(r);
   if (!IsFinite(rTz) || rTz <= Scalar(0)) {
     MOCHI_LOG_WARNING(
-        "Could not estimate the largest eigenvalue when building AMG (non-positive initial r^T z).");
+        "Could not estimate the largest eigenvalue when building AMG (non-positive or non-finite initial r^T z).");
     return Scalar(0);
   }
-  Scalar const rTzConvergenceTolerance = Scalar(64) * std::numeric_limits<Scalar>::epsilon() * rTz;
 
   // p_0 = z_0
   p = z;
 
   int m = 0;
-  for (int iter = 0; iter < numIterations; ++iter) {
+  for (int iter = 0; iter < maxIterations; ++iter) {
     Apply(A, p, Ap);
     Scalar const pTAp = p.Dot(Ap);
     if (!IsFinite(pTAp) || pTAp <= Scalar(0)) {
@@ -406,8 +413,16 @@ auto EstimateSpectralRadius(MatrixOp const& A, PrecOp const& invDiag, int numIte
       return Scalar(0);
     }
     Scalar const alpha = rTz / pTAp;
+    if (!IsFinite(alpha) || alpha <= Scalar(0)) {
+      MOCHI_LOG_WARNING(
+          "Could not estimate the largest eigenvalue when building AMG (non-positive or non-finite alpha).");
+      return Scalar(0);
+    }
     alphas.push_back(alpha);
     ++m;
+    if (iter + 1 == maxIterations) {
+      break;
+    }
 
     // r_{i+1} = r_i - alpha * A * p
     r -= alpha * Ap;
@@ -420,18 +435,26 @@ auto EstimateSpectralRadius(MatrixOp const& A, PrecOp const& invDiag, int numIte
           "Could not estimate the largest eigenvalue when building AMG (non-finite updated r^T z).");
       return Scalar(0);
     }
-    if (rTzNew < -rTzConvergenceTolerance) {
+    if (rTzNew <= Scalar(0)) {
+      auto const rValues = r.GetConstSpan();
+      if (!IsFinite(rValues)) {
+        MOCHI_LOG_WARNING(
+            "Could not estimate the largest eigenvalue when building AMG (non-finite updated residual).");
+        return Scalar(0);
+      }
+      if (rTzNew == Scalar(0) && MaxAbs(rValues) == Scalar(0)) {
+        break;
+      }
       MOCHI_LOG_WARNING(
-          "Could not estimate the largest eigenvalue when building AMG (materially negative updated r^T z).");
+          "Could not estimate the largest eigenvalue when building AMG (non-positive updated r^T z with nonzero residual).");
       return Scalar(0);
     }
-    if (rTzNew <= rTzConvergenceTolerance) {
-      break;
-    }
-    if (iter + 1 == numIterations) {
-      break;
-    }
     Scalar const beta = rTzNew / rTz;
+    if (!IsFinite(beta) || beta <= Scalar(0)) {
+      MOCHI_LOG_WARNING(
+          "Could not estimate the largest eigenvalue when building AMG (non-positive or non-finite beta).");
+      return Scalar(0);
+    }
     betas.push_back(beta);
     rTz = rTzNew;
 
@@ -445,10 +468,24 @@ auto EstimateSpectralRadius(MatrixOp const& A, PrecOp const& invDiag, int numIte
   // T(j,j)   = 1/alpha_j + beta_{j-1}/alpha_{j-1}
   // T(j,j+1) = sqrt(beta_j) / alpha_j
   auto T = Matrix<Scalar>::Zero(m, m);
-  T(0, 0) = Scalar(1) / alphas[0];
+  Scalar const invAlpha0 = Scalar(1) / alphas[0];
+  if (!IsFinite(invAlpha0) || invAlpha0 <= Scalar(0)) {
+    MOCHI_LOG_WARNING("Could not build a positive finite AMG Ritz matrix.");
+    return Scalar(0);
+  }
+  T(0, 0) = invAlpha0;
   for (int j = 1; j < m; ++j) {
-    T(j, j) = Scalar(1) / alphas[j] + betas[j - 1] / alphas[j - 1];
-    Scalar const offDiag = Sqrt(betas[j - 1]) / alphas[j - 1];
+    Scalar const invAlpha = Scalar(1) / alphas[j];
+    Scalar const invAlphaPrev = Scalar(1) / alphas[j - 1];
+    Scalar const betaOverAlpha = betas[j - 1] * invAlphaPrev;
+    Scalar const diag = invAlpha + betaOverAlpha;
+    Scalar const offDiag = Sqrt(betas[j - 1]) * invAlphaPrev;
+    if (invAlpha <= Scalar(0) || betaOverAlpha <= Scalar(0) || !IsFinite(diag) ||
+        !IsFinite(offDiag)) {
+      MOCHI_LOG_WARNING("Could not build a positive finite AMG Ritz matrix.");
+      return Scalar(0);
+    }
+    T(j, j) = diag;
     T(j, j - 1) = offDiag;
     T(j - 1, j) = offDiag;
   }
