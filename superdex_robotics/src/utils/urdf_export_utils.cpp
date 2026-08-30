@@ -407,7 +407,7 @@ GenerateUrdfXml(BotPrefab const& bot, std::filesystem::path const& urdfDir, Erro
 
   tx::XMLPrinter printer;
   doc.Print(&printer);
-  return std::string(printer.CStr(), printer.CStrSize() > 0 ? printer.CStrSize() - 1 : 0);
+  return {printer.CStr(), printer.CStrSize() > 0 ? printer.CStrSize() - 1 : 0};
 }
 
 } // namespace
