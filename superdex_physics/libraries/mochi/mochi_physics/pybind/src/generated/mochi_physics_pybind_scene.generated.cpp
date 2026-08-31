@@ -989,6 +989,53 @@ void mochi::DefineMochiPhysics_MochiPhysicsScene([[maybe_unused]] py::module_& m
       , py::arg("include_nested_actors")
       , "Equivalent to calling\n:meth:`~superdex.physics.Scene.enable_actor_contact_asymmetric` with ``actor_a``\nand ``actor_b`` in both orders using the same ``include_nested_actors``.\n\nArgs:\n    actor_a (ActorHandle): Handle of the first actor.\n    actor_b (ActorHandle): Handle of the second actor.\n    enable (bool): True to enable contact, false to disable it.\n    include_nested_actors (IncludeNestedActors | int): Whether nested actors\n        should be affected by this contact setting. See\n        :meth:`~superdex.physics.Scene.enable_actor_contact_asymmetric` for\n        details.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nSee Also:\n    :meth:`~superdex.physics.Scene.enable_actor_contact_asymmetric`,\n    :meth:`~superdex.physics.Scene.enable_layer_contact_symmetric`"
     )
+    .def("set_contact_pair_params_override", [](mochi::Scene& self, mochi::ActorHandle actor_a, mochi::ActorHandle actor_b, mochi::ContactPairParamsOverride const& params_override) {
+      mochi::Error error;
+      self.SetContactPairParamsOverride(actor_a, actor_b, params_override, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , py::arg("actor_a")
+      , py::arg("actor_b")
+      , py::arg("params_override")
+      , "Set contact parameter overrides for an unordered actor pair.\n\nArgs:\n    actor_a (ActorHandle): Handle of the first actor.\n    actor_b (ActorHandle): Handle of the second actor.\n    params_override (ContactPairParamsOverride): Parameter override with at\n        least one present field. This replaces any existing override for the\n        pair; absent fields use the normal actor-parameter combination.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Both actors must have contact parameters.\n\nNote:\n    The exact actors are used; nested actors are not included automatically.\n\nSee Also:\n    :meth:`~superdex.physics.Scene.clear_contact_pair_params_override`,\n    :meth:`~superdex.physics.Scene.has_contact_pair_params_override`,\n    :meth:`~superdex.physics.Scene.get_contact_pair_params_override`"
+    )
+    .def("clear_contact_pair_params_override", [](mochi::Scene& self, mochi::ActorHandle actor_a, mochi::ActorHandle actor_b) {
+      mochi::Error error;
+      self.ClearContactPairParamsOverride(actor_a, actor_b, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , py::arg("actor_a")
+      , py::arg("actor_b")
+      , "Clear contact parameter overrides for an unordered actor pair.\n\nArgs:\n    actor_a (ActorHandle): Handle of the first actor.\n    actor_b (ActorHandle): Handle of the second actor.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Clearing a valid pair without an override succeeds without changing the\n    scene.\n\nSee Also:\n    :meth:`~superdex.physics.Scene.set_contact_pair_params_override`"
+    )
+    .def("has_contact_pair_params_override", [](mochi::Scene& self, mochi::ActorHandle actor_a, mochi::ActorHandle actor_b) {
+      mochi::Error error;
+      auto result = self.HasContactPairParamsOverride(actor_a, actor_b, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , py::arg("actor_a")
+      , py::arg("actor_b")
+      , "Check whether the exact unordered actor pair has a parameter override.\n\nArgs:\n    actor_a (ActorHandle): Handle of the first actor.\n    actor_b (ActorHandle): Handle of the second actor.\n\nReturns:\n    True if the exact pair has a stored override.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nSee Also:\n    :meth:`~superdex.physics.Scene.get_contact_pair_params_override`"
+    )
+    .def("get_contact_pair_params_override", [](mochi::Scene& self, mochi::ActorHandle actor_a, mochi::ActorHandle actor_b) {
+      mochi::Error error;
+      auto result = self.GetContactPairParamsOverride(actor_a, actor_b, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , py::arg("actor_a")
+      , py::arg("actor_b")
+      , "Get the parameter override for the exact unordered actor pair.\n\nArgs:\n    actor_a (ActorHandle): Handle of the first actor.\n    actor_b (ActorHandle): Handle of the second actor.\n\nReturns:\n    The complete stored override.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Reports an error when a valid pair has no stored override.\n\nSee Also:\n    :meth:`~superdex.physics.Scene.set_contact_pair_params_override`,\n    :meth:`~superdex.physics.Scene.has_contact_pair_params_override`"
+    )
     .def("register_pre_step_callback", &mochi::Scene::RegisterPreStepCallback
       , py::arg("debug_name")
       , py::arg("callback")

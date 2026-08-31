@@ -631,6 +631,37 @@ class TestScene(MochiTestBase):
 
         mochi.destroy_scene(scene)
 
+    def test_scene_contact_pair_params_override(self):
+        scene = mochi.create_scene("Contact Pair Override Scene")
+        handle_a = self._create_rigid_box_actor(scene).get_handle()
+        handle_b = self._create_rigid_box_actor(scene).get_handle()
+        with self.assertRaises(mochi.Error):
+            scene.get_contact_pair_params_override(handle_a, handle_b)
+
+        first = mochi.ContactPairParamsOverride(
+            penalty_coefficient=2e9, coulomb_friction_coefficient=0.0
+        )
+        scene.set_contact_pair_params_override(handle_a, handle_b, first)
+        self.assertTrue(scene.has_contact_pair_params_override(handle_b, handle_a))
+        self.assertEqual(
+            first, scene.get_contact_pair_params_override(handle_b, handle_a)
+        )
+
+        replacement = mochi.ContactPairParamsOverride(viscous_friction_coefficient=0.25)
+        scene.set_contact_pair_params_override(
+            actor_a=handle_b,
+            actor_b=handle_a,
+            params_override=replacement,
+        )
+        self.assertEqual(
+            replacement, scene.get_contact_pair_params_override(handle_a, handle_b)
+        )
+
+        scene.clear_contact_pair_params_override(handle_b, handle_a)
+        self.assertFalse(scene.has_contact_pair_params_override(handle_a, handle_b))
+
+        mochi.destroy_scene(scene)
+
     def test_scene_step_callback(self):
         scene = mochi.create_scene("My Scene")
         history = []

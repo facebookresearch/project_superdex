@@ -25,8 +25,8 @@ namespace mochi {
 /**
  * @brief Parameters for contact mechanics simulation.
  *
- * @note In contact between a colliding actor and a collider, the collider's contact parameters
- * (not the colliding actor's) are used. The exceptions are:
+ * @note For each field without an actor-pair override, contact between a colliding actor and a
+ * collider uses the collider's contact parameter (not the colliding actor's). The exceptions are:
  *   - For friction and dissipation coefficients (viscousFrictionCoefficient,
  *     coulombFrictionCoefficient, normalViscousDampingCoefficient), the geometric mean of the
  *     colliding and collider's coefficients is used. This disables friction/dissipation if either
@@ -34,6 +34,8 @@ namespace mochi {
  *   - For penalty coefficient (penaltyCoefficient) and friction velocity threshold
  *     (frictionFalloffVel), the geometric mean of the colliding and collider's values is used,
  *     except if the collider is static in which case the colliding's values are used.
+ *
+ * @see Scene::SetContactPairParamsOverride
  */
 struct ContactParams {
   ContactParams() = default;
@@ -84,9 +86,9 @@ struct ContactParams {
    * @note The default penalty is appropriate for actors with default density. For actors with much
    * higher/lower density than the default density, the penalty coefficient may need to be
    * increased/decreased accordingly.
-   * @note The penalty coefficient used in a collision is the geometric mean of the colliding and
-   * collider's coefficients. The exception is if the collider is static, in which case the
-   * colliding's penalty is used.
+   * @note Without an actor-pair override for this field, the value used in a collision is the
+   * geometric mean of the colliding and collider's coefficients. The exception is if the collider
+   * is static, in which case the colliding's penalty is used.
    * @note The penalty coefficient is additionally scaled by length-scale corrections when the
    * colliding or collider integrates contact over a non-2D manifold (e.g., rod, shell). See @ref
    * collidingPenaltyLengthScale.
@@ -163,8 +165,9 @@ struct ContactParams {
    * @note Friction force is proportional to contact force and tangential velocity.
    * @note Must not be negative.
    * @note Both viscousFrictionCoefficient and @ref coulombFrictionCoefficient can be >0.
-   * @note The viscous friction coefficient used in a collision is the geometric mean of the
-   * colliding and collider's coefficients. This disables viscous friction if either of them does.
+   * @note Without an actor-pair override for this field, the value used in a collision is the
+   * geometric mean of the colliding and collider's coefficients. This disables viscous friction if
+   * either of them does.
    */
   real viscousFrictionCoefficient = 0_r;
 
@@ -173,8 +176,9 @@ struct ContactParams {
    *
    * @note Must not be negative.
    * @note Both @ref viscousFrictionCoefficient and coulombFrictionCoefficient can be >0.
-   * @note The Coulomb friction coefficient used in a collision is the geometric mean of the
-   * colliding and collider's coefficients. This disables Coulomb friction if either of them does.
+   * @note Without an actor-pair override for this field, the value used in a collision is the
+   * geometric mean of the colliding and collider's coefficients. This disables Coulomb friction if
+   * either of them does.
    */
   real coulombFrictionCoefficient = 0.5_r;
 
@@ -189,9 +193,9 @@ struct ContactParams {
    * @note Must not be negative. For CinfRegularized, a value of zero is clamped internally to
    * avoid numerical issues.
    * @note Smaller velocity thresholds improve physical accuracy but may degrade stability.
-   * @note The velocity threshold used in a collision is the geometric mean of the colliding and
-   * collider's thresholds. The exception is if the collider is static, in which case the
-   * colliding's threshold is used.
+   * @note Without an actor-pair override for this field, the value used in a collision is the
+   * geometric mean of the colliding and collider's thresholds. The exception is if the collider is
+   * static, in which case the colliding's threshold is used.
    */
   real frictionFalloffVel = 0.01_r;
 
@@ -206,8 +210,9 @@ struct ContactParams {
    * when approaching fully-inelastic collisions.
    *
    * @note Must not be negative.
-   * @note The normal viscous damping coefficient used in a collision is the geometric mean of the
-   * colliding and collider's coefficients. This disables normal damping if either of them does.
+   * @note Without an actor-pair override for this field, the value used in a collision is the
+   * geometric mean of the colliding and collider's coefficients. This disables normal damping if
+   * either of them does.
    * @note The resulting coefficient of restitution (CoR) is velocity-dependent. For a
    * characteristic impact velocity,
    * @c experimental::CalibrateNormalViscousDampingCoefficient computes the coefficient that

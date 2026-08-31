@@ -21,6 +21,7 @@
 #include <mochi_physics/mochi_physics_experimental.h>
 
 #include "mochi_common_components.h"
+#include "mochi_contact_pair_params.h"
 #include "mochi_discretization_components.h"
 #include "mochi_ecs.h"
 #include "mochi_query.h"
@@ -792,6 +793,7 @@ inline void ValidateContactParams(ContactParams const& params, Error& error) {
 }
 
 using ContactAssemblyReg = ecs::PartialRegistry<
+    CContactPairParamsOverrideTable const,
     CContactParams const,
     CPointCloudColliderParams const,
     CColliderInfo const,
@@ -854,6 +856,7 @@ using ContactAssemblyReg = ecs::PartialRegistry<
  *
  * @param collidingParams Contact parameters from the colliding actor.
  * @param colliderParams Contact parameters from the collider actor.
+ * @param paramsOverride Optional pair-specific parameter replacements.
  * @param isStaticCollider If true, use the colliding actor's penalty and falloff values directly
  * instead of taking the geometric mean.
  * @param collidingIntegralDim The dimension of the colliding-side contact integral (2 for surfaces,
@@ -867,21 +870,47 @@ using ContactAssemblyReg = ecs::PartialRegistry<
 inline ContactParams CombineContactParams(
     ContactParams const& collidingParams,
     ContactParams const& colliderParams,
+    ContactPairParamsOverride const* paramsOverride,
     bool isStaticCollider,
     int collidingIntegralDim,
     int colliderIntegralDim,
     real colliderPenaltyLengthScale) {
   ContactParams pairParams = colliderParams;
+  if (paramsOverride != nullptr) {
+    pairParams = ApplyContactPairParamsOverride(pairParams, *paramsOverride);
+  }
 
   // Friction coefficients: Use the geometric mean of the colliding and collider actors.
-  pairParams.coulombFrictionCoefficient =
-      Sqrt(collidingParams.coulombFrictionCoefficient * colliderParams.coulombFrictionCoefficient);
-  pairParams.viscousFrictionCoefficient =
-      Sqrt(collidingParams.viscousFrictionCoefficient * colliderParams.viscousFrictionCoefficient);
-  pairParams.normalViscousDampingCoefficient = Sqrt(
-      collidingParams.normalViscousDampingCoefficient *
-      colliderParams.normalViscousDampingCoefficient);
-  if (Max(collidingParams.coulombFrictionCoefficient, collidingParams.viscousFrictionCoefficient) >
+  if (paramsOverride == nullptr || !paramsOverride->coulombFrictionCoefficient) {
+    pairParams.coulombFrictionCoefficient = Sqrt(
+        collidingParams.coulombFrictionCoefficient * colliderParams.coulombFrictionCoefficient);
+  }
+  if (paramsOverride == nullptr || !paramsOverride->viscousFrictionCoefficient) {
+    pairParams.viscousFrictionCoefficient = Sqrt(
+        collidingParams.viscousFrictionCoefficient * colliderParams.viscousFrictionCoefficient);
+  }
+  if (paramsOverride == nullptr || !paramsOverride->normalViscousDampingCoefficient) {
+    pairParams.normalViscousDampingCoefficient = Sqrt(
+        collidingParams.normalViscousDampingCoefficient *
+        colliderParams.normalViscousDampingCoefficient);
+  }
+  // Penalty coefficient and friction falloff velocity: Use the geometric mean if both actors are
+  // dynamic, and the colliding if the collider is static.
+  if (paramsOverride == nullptr || !paramsOverride->penaltyCoefficient) {
+    pairParams.penaltyCoefficient = isStaticCollider
+        ? collidingParams.penaltyCoefficient
+        : Sqrt(collidingParams.penaltyCoefficient * colliderParams.penaltyCoefficient);
+  }
+  if (paramsOverride == nullptr || !paramsOverride->frictionFalloffVel) {
+    pairParams.frictionFalloffVel = isStaticCollider
+        ? collidingParams.frictionFalloffVel
+        : Sqrt(collidingParams.frictionFalloffVel * colliderParams.frictionFalloffVel);
+  }
+
+  bool const hasFrictionOverride = paramsOverride != nullptr &&
+      (paramsOverride->coulombFrictionCoefficient || paramsOverride->viscousFrictionCoefficient);
+  if (!hasFrictionOverride &&
+      Max(collidingParams.coulombFrictionCoefficient, collidingParams.viscousFrictionCoefficient) >
           0_r &&
       Max(colliderParams.coulombFrictionCoefficient, colliderParams.viscousFrictionCoefficient) >
           0_r &&
@@ -889,15 +918,6 @@ inline ContactParams CombineContactParams(
     MOCHI_LOG_WARNING_ONCE(
         "Inconsistent friction coefficients between the contact pair. No friction will be applied.");
   }
-
-  // Penalty coefficient and friction falloff velocity: Use the geometric mean if both actors are
-  // dynamic, and the colliding if the collider is static.
-  pairParams.penaltyCoefficient = isStaticCollider
-      ? collidingParams.penaltyCoefficient
-      : Sqrt(collidingParams.penaltyCoefficient * colliderParams.penaltyCoefficient);
-  pairParams.frictionFalloffVel = isStaticCollider
-      ? collidingParams.frictionFalloffVel
-      : Sqrt(collidingParams.frictionFalloffVel * colliderParams.frictionFalloffVel);
 
   // If penalty tractions are integrated on some colliding manifold other than a 2D surface (e.g.,
   // lumping contact tractions on a thin rod's centerline), we need to correct the penalty factor
@@ -938,10 +958,14 @@ GetContactPairParams(ContactAssemblyReg const& reg, entt::entity colliding, entt
   int const collidingIntegralDim = CollidingIntegralDim(reg, colliding);
   int const colliderIntegralDim = ColliderIntegralDim(reg, collider);
   real const colliderPenaltyLengthScale = ColliderPenaltyLengthScale(reg, collider);
+  auto const& overrideTable = reg.ctx<CContactPairParamsOverrideTable const>();
+  ContactPairParamsOverride const* const paramsOverride =
+      overrideTable.Empty() ? nullptr : overrideTable.Find(colliding, collider);
 
   return CombineContactParams(
       collidingParams,
       colliderParams,
+      paramsOverride,
       isStaticCollider,
       collidingIntegralDim,
       colliderIntegralDim,

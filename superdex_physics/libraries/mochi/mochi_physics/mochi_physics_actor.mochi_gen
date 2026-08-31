@@ -66,6 +66,8 @@ class Actor [no_init, no_destruct, use_scene] {
   // @brief Get the contact parameters of the actor.
   //
   // @return Contact parameters of the actor.
+  //
+  // @note Reports an error if the actor has no contact parameters.
   fn GetContactParams() -> ContactParams [pure, virtual, const, mochi_error, batchable];
 
   // @brief Set the contact parameters of the actor.

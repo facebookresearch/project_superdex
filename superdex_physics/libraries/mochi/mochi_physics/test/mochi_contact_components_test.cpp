@@ -28,10 +28,246 @@
 
 #include <array>
 #include <initializer_list>
+#include <optional>
 #include <utility>
 
 using namespace mochi;
 using namespace mochi::test;
+
+// ---------------------------------------------------------------------------------------
+// Contact pair parameter resolution
+// ---------------------------------------------------------------------------------------
+
+namespace {
+
+ContactParams MakeCollidingContactParams() {
+  ContactParams params;
+  params.penaltyCoefficient = 4_r;
+  params.frictionFalloffVel = 0.04_r;
+  params.viscousFrictionCoefficient = 4_r;
+  params.coulombFrictionCoefficient = 9_r;
+  params.normalViscousDampingCoefficient = 16_r;
+  params.collidingPenaltyLengthScale = 0.5_r;
+  return params;
+}
+
+ContactParams MakeColliderContactParams() {
+  ContactParams params;
+  params.penaltyCoefficient = 9_r;
+  params.frictionFalloffVel = 0.09_r;
+  params.viscousFrictionCoefficient = 9_r;
+  params.coulombFrictionCoefficient = 4_r;
+  params.normalViscousDampingCoefficient = 25_r;
+  params.penaltySmoothingHalfDistance = 0.123_r;
+  params.penaltyThresholdDefault = -0.02_r;
+  params.penaltyThresholdExtraPadding = 0.03_r;
+  params.frictionWithColliderNormal = false;
+  params.maxAlignmentNormals = 0.7_r;
+  params.distanceErrorBound = 0.04_r;
+  params.objScale = 3_r;
+  return params;
+}
+
+void ExpectCombinedFields(
+    ContactParams const& actual,
+    real penalty,
+    real falloff,
+    real viscous,
+    real coulomb,
+    real damping) {
+  EXPECT_NEAR_EQ(penalty, actual.penaltyCoefficient);
+  EXPECT_NEAR_EQ(falloff, actual.frictionFalloffVel);
+  EXPECT_NEAR_EQ(viscous, actual.viscousFrictionCoefficient);
+  EXPECT_NEAR_EQ(coulomb, actual.coulombFrictionCoefficient);
+  EXPECT_NEAR_EQ(damping, actual.normalViscousDampingCoefficient);
+}
+
+void ExpectColliderOwnedFieldsUnchanged(
+    ContactParams const& actual,
+    ContactParams const& collider) {
+  EXPECT_EQ(collider.penaltySmoothingHalfDistance, actual.penaltySmoothingHalfDistance);
+  EXPECT_EQ(collider.penaltyThresholdDefault, actual.penaltyThresholdDefault);
+  EXPECT_EQ(collider.penaltyThresholdExtraPadding, actual.penaltyThresholdExtraPadding);
+  EXPECT_EQ(collider.frictionWithColliderNormal, actual.frictionWithColliderNormal);
+  EXPECT_EQ(collider.maxAlignmentNormals, actual.maxAlignmentNormals);
+  EXPECT_EQ(collider.distanceErrorBound, actual.distanceErrorBound);
+  EXPECT_EQ(collider.objScale, actual.objScale);
+  EXPECT_EQ(collider.collidingPenaltyLengthScale, actual.collidingPenaltyLengthScale);
+}
+
+} // namespace
+
+TEST(ContactPairParams, NoOverridePreservesDynamicAndStaticCombination) {
+  ContactParams const colliding = MakeCollidingContactParams();
+  ContactParams const collider = MakeColliderContactParams();
+
+  ContactParams expectedDynamic = collider;
+  expectedDynamic.coulombFrictionCoefficient =
+      Sqrt(colliding.coulombFrictionCoefficient * collider.coulombFrictionCoefficient);
+  expectedDynamic.viscousFrictionCoefficient =
+      Sqrt(colliding.viscousFrictionCoefficient * collider.viscousFrictionCoefficient);
+  expectedDynamic.normalViscousDampingCoefficient =
+      Sqrt(colliding.normalViscousDampingCoefficient * collider.normalViscousDampingCoefficient);
+  expectedDynamic.penaltyCoefficient =
+      Sqrt(colliding.penaltyCoefficient * collider.penaltyCoefficient);
+  expectedDynamic.frictionFalloffVel =
+      Sqrt(colliding.frictionFalloffVel * collider.frictionFalloffVel);
+
+  ContactParams const dynamic = CombineContactParams(
+      colliding,
+      collider,
+      nullptr,
+      /*isStaticCollider=*/false,
+      /*collidingIntegralDim=*/2,
+      /*colliderIntegralDim=*/0,
+      /*colliderPenaltyLengthScale=*/0_r);
+  EXPECT_EQ(expectedDynamic.penaltyCoefficient, dynamic.penaltyCoefficient);
+  EXPECT_EQ(expectedDynamic.frictionFalloffVel, dynamic.frictionFalloffVel);
+  EXPECT_EQ(expectedDynamic.viscousFrictionCoefficient, dynamic.viscousFrictionCoefficient);
+  EXPECT_EQ(expectedDynamic.coulombFrictionCoefficient, dynamic.coulombFrictionCoefficient);
+  EXPECT_EQ(
+      expectedDynamic.normalViscousDampingCoefficient, dynamic.normalViscousDampingCoefficient);
+  ExpectColliderOwnedFieldsUnchanged(dynamic, collider);
+
+  ContactParams const staticCollider = CombineContactParams(
+      colliding,
+      collider,
+      nullptr,
+      /*isStaticCollider=*/true,
+      /*collidingIntegralDim=*/2,
+      /*colliderIntegralDim=*/0,
+      /*colliderPenaltyLengthScale=*/0_r);
+  ExpectCombinedFields(staticCollider, 4_r, 0.04_r, 6_r, 6_r, 20_r);
+  ExpectColliderOwnedFieldsUnchanged(staticCollider, collider);
+}
+
+TEST(ContactPairParams, EachOverrideFieldReplacesOnlyItsResolvedValue) {
+  ContactParams const colliding = MakeCollidingContactParams();
+  ContactParams const collider = MakeColliderContactParams();
+  struct Case {
+    std::optional<real> ContactPairParamsOverride::* overrideMember;
+    real ContactParams::* resolvedMember;
+  };
+  constexpr std::array cases = {
+      Case{&ContactPairParamsOverride::penaltyCoefficient, &ContactParams::penaltyCoefficient},
+      Case{&ContactPairParamsOverride::frictionFalloffVel, &ContactParams::frictionFalloffVel},
+      Case{
+          &ContactPairParamsOverride::viscousFrictionCoefficient,
+          &ContactParams::viscousFrictionCoefficient},
+      Case{
+          &ContactPairParamsOverride::coulombFrictionCoefficient,
+          &ContactParams::coulombFrictionCoefficient},
+      Case{
+          &ContactPairParamsOverride::normalViscousDampingCoefficient,
+          &ContactParams::normalViscousDampingCoefficient},
+  };
+
+  for (Case const& testCase : cases) {
+    ContactPairParamsOverride paramsOverride;
+    paramsOverride.*testCase.overrideMember = 7_r;
+    ContactParams expected = CombineContactParams(
+        colliding,
+        collider,
+        /*paramsOverride=*/nullptr,
+        /*isStaticCollider=*/false,
+        /*collidingIntegralDim=*/2,
+        /*colliderIntegralDim=*/0,
+        /*colliderPenaltyLengthScale=*/0_r);
+    expected.*testCase.resolvedMember = 7_r;
+
+    ContactParams const actual = CombineContactParams(
+        colliding,
+        collider,
+        &paramsOverride,
+        /*isStaticCollider=*/false,
+        /*collidingIntegralDim=*/2,
+        /*colliderIntegralDim=*/0,
+        /*colliderPenaltyLengthScale=*/0_r);
+    ExpectCombinedFields(
+        actual,
+        expected.penaltyCoefficient,
+        expected.frictionFalloffVel,
+        expected.viscousFrictionCoefficient,
+        expected.coulombFrictionCoefficient,
+        expected.normalViscousDampingCoefficient);
+    ExpectColliderOwnedFieldsUnchanged(actual, collider);
+  }
+}
+
+TEST(ContactPairParams, PartialPatchOverridesStaticSelectionAndRetainsOmittedFields) {
+  ContactParams const colliding = MakeCollidingContactParams();
+  ContactParams const collider = MakeColliderContactParams();
+  ContactPairParamsOverride paramsOverride;
+  paramsOverride.penaltyCoefficient = 12_r;
+  paramsOverride.frictionFalloffVel = 0.25_r;
+  paramsOverride.coulombFrictionCoefficient = 0_r;
+
+  ContactParams const actual = CombineContactParams(
+      colliding,
+      collider,
+      &paramsOverride,
+      /*isStaticCollider=*/true,
+      /*collidingIntegralDim=*/2,
+      /*colliderIntegralDim=*/0,
+      /*colliderPenaltyLengthScale=*/0_r);
+  ExpectCombinedFields(actual, 12_r, 0.25_r, 6_r, 0_r, 20_r);
+  ExpectColliderOwnedFieldsUnchanged(actual, collider);
+}
+
+TEST(ContactPairParams, PenaltyOverridePrecedesBothDimensionalCorrections) {
+  ContactParams const colliding = MakeCollidingContactParams();
+  ContactParams const collider = MakeColliderContactParams();
+  ContactPairParamsOverride paramsOverride;
+  paramsOverride.penaltyCoefficient = 8_r;
+
+  ContactParams const actual = CombineContactParams(
+      colliding,
+      collider,
+      &paramsOverride,
+      /*isStaticCollider=*/false,
+      /*collidingIntegralDim=*/1,
+      /*colliderIntegralDim=*/2,
+      /*colliderPenaltyLengthScale=*/2_r);
+  EXPECT_EQ(1_r, actual.penaltyCoefficient);
+}
+
+TEST(ContactPairParams, RegistryLookupAppliesPairOverrideAndFallsBackForAbsentPair) {
+  entt::registry reg;
+  entt::entity const colliding = reg.create();
+  entt::entity const otherColliding = reg.create();
+  entt::entity const collider = reg.create();
+  ContactParams const collidingParams = MakeCollidingContactParams();
+  ContactParams const otherCollidingParams = MakeCollidingContactParams();
+  ContactParams const colliderParams = MakeColliderContactParams();
+  reg.emplace<CContactParams>(colliding, collidingParams);
+  reg.emplace<CContactParams>(otherColliding, otherCollidingParams);
+  reg.emplace<CContactParams>(collider, colliderParams);
+
+  ContactPairParamsOverride paramsOverride;
+  paramsOverride.penaltyCoefficient = 13_r;
+  reg.set<CContactPairParamsOverrideTable>().Set(collider, colliding, paramsOverride);
+
+  ContactParams const actualOverride = GetContactPairParams(reg, colliding, collider);
+  EXPECT_EQ(13_r, actualOverride.penaltyCoefficient);
+
+  ContactParams const expectedFallback = CombineContactParams(
+      otherCollidingParams,
+      colliderParams,
+      /*paramsOverride=*/nullptr,
+      /*isStaticCollider=*/false,
+      /*collidingIntegralDim=*/2,
+      /*colliderIntegralDim=*/0,
+      /*colliderPenaltyLengthScale=*/0_r);
+  ContactParams const actualFallback = GetContactPairParams(reg, otherColliding, collider);
+  ExpectCombinedFields(
+      actualFallback,
+      expectedFallback.penaltyCoefficient,
+      expectedFallback.frictionFalloffVel,
+      expectedFallback.viscousFrictionCoefficient,
+      expectedFallback.coulombFrictionCoefficient,
+      expectedFallback.normalViscousDampingCoefficient);
+  ExpectColliderOwnedFieldsUnchanged(actualFallback, colliderParams);
+}
 
 // ---------------------------------------------------------------------------------------
 // CDeformablePointAsyncCollisionsResponse

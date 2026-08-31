@@ -35,6 +35,7 @@ void mochi::DeclareMochiPhysics_MochiPhysicsStructs([[maybe_unused]] py::module_
   registry.StoreClass(py::class_<mochi::SolverParams>(m, "SolverParams", "Simulation solver configuration parameters."));
   registry.StoreClass(py::class_<mochi::RecenteringParams>(m, "RecenteringParams", "Parameters controlling recentering behavior for standalone soft actors.\n\nRecentering automatically updates the root transform as the actor's \"rigid\npivot\" (typically near the center of mass) moves, with corresponding adjustments\nto local-space coordinates.\n\nNote:\n    When recentering is disabled, local-space displacement values can become\n    very large if the actor moves far from its starting position. This may be\n    problematic due to finite-precision arithmetic.\n\nNote:\n    When recentering is enabled, the root transform rotates and translates to\n    follow the actor, and local-space displacements reflect only deformation,\n    not global rotation or translation.\n\nSee Also:\n    :meth:`~superdex.physics.Actor.get_recentering_params`,\n    :meth:`~superdex.physics.Actor.set_recentering_params`"));
   registry.StoreClass(py::class_<mochi::BoundarySubsamplingParams>(m, "BoundarySubsamplingParams", "Parameters for subsampling boundary integrals such as contact.\n\nSubsampling reduces the number of boundary sample points used for contact and\nother boundary integrals, which can improve performance at the cost of accuracy."));
+  registry.StoreClass(py::class_<mochi::ContactPairParamsOverride>(m, "ContactPairParamsOverride", "Optional contact-response parameter replacements for an unordered actor pair.\n\nEach present field replaces the value normally combined from the two actors. An\nabsent field retains the existing combination rule.\n\nNote:\n    Present fields have the same validity requirements as the corresponding\n    :class:`~superdex.physics.ContactParams` fields. A present zero is a value\n    subject to those requirements, not an absent field."));
   registry.StoreClass(py::class_<mochi::ArticulatedShapeInfo>(m, "ArticulatedShapeInfo", "Information describing an articulated shape's kinematic structure.\n\nProvides read-only access to an articulated shape's links, joints, and\nhierarchy. This information is immutable once the shape is created and defines\nthe articulation's topology and configuration limits.\n\nNote:\n    Number of joints = number of links + number of cycle joints.\n\nSee Also:\n    :meth:`~superdex.physics.Actor.get_articulated_shape_info`,\n    :func:`~superdex.physics.get_articulated_shape_info`"));
   registry.StoreClass(py::class_<mochi::StepInfo>(m, "StepInfo", "Information passed to per-step callbacks.\n\nSee Also:\n    :meth:`~superdex.physics.Scene.register_pre_step_callback`,\n    :meth:`~superdex.physics.Scene.register_post_step_callback`"));
   registry.StoreClass(py::class_<mochi::RigidActorParams>(m, "RigidActorParams", "Parameters to create a rigid body actor.\n\nRigid actors behave as rigid bodies with 6 degrees of freedom (3 translational,\n3 rotational). They can be static (fixed in space) or dynamic (affected by\nforces and collisions).\n\nNote:\n    Also used to create links in articulated bodies.\n\nSee Also:\n    :meth:`~superdex.physics.Scene.create_rigid_actor`,\n    :class:`~superdex.physics.ArticulatedActorParams`"));
@@ -141,6 +142,35 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] py::module_&
     .def("__deepcopy__", [](mochi::BoundarySubsamplingParams const& self, py::dict) { return mochi::BoundarySubsamplingParams(self); })
     .def_readwrite("subsampling_density", &mochi::BoundarySubsamplingParams::subsamplingDensity, "Subsampling density in the range [0, 1].\n\nNote:\n    0 means no sample points are used. 1 means all sample points are used.")
     .def_readwrite("strategy", &mochi::BoundarySubsamplingParams::strategy, "Strategy for determining which sample points to use.")
+  ;
+
+  registry.GetClass<mochi::ContactPairParamsOverride>()
+    .def(py::init([](py::object penalty_coefficient, py::object friction_falloff_vel, py::object viscous_friction_coefficient, py::object coulomb_friction_coefficient, py::object normal_viscous_damping_coefficient) {
+      mochi::ContactPairParamsOverride result;
+      result.penaltyCoefficient = py::cast<std::optional<mochi::real>>(penalty_coefficient);
+      result.frictionFalloffVel = py::cast<std::optional<mochi::real>>(friction_falloff_vel);
+      result.viscousFrictionCoefficient = py::cast<std::optional<mochi::real>>(viscous_friction_coefficient);
+      result.coulombFrictionCoefficient = py::cast<std::optional<mochi::real>>(coulomb_friction_coefficient);
+      result.normalViscousDampingCoefficient = py::cast<std::optional<mochi::real>>(normal_viscous_damping_coefficient);
+      return result;
+    })
+      , py::kw_only()
+      , py::arg("penalty_coefficient") = mochi::ContactPairParamsOverride{}.penaltyCoefficient
+      , py::arg("friction_falloff_vel") = mochi::ContactPairParamsOverride{}.frictionFalloffVel
+      , py::arg("viscous_friction_coefficient") = mochi::ContactPairParamsOverride{}.viscousFrictionCoefficient
+      , py::arg("coulomb_friction_coefficient") = mochi::ContactPairParamsOverride{}.coulombFrictionCoefficient
+      , py::arg("normal_viscous_damping_coefficient") = mochi::ContactPairParamsOverride{}.normalViscousDampingCoefficient
+    )
+    .def(py::init<>())
+    .def(py::self == py::self)
+    .def(py::self != py::self)
+    .def("__copy__", [](mochi::ContactPairParamsOverride const& self) { return mochi::ContactPairParamsOverride(self); })
+    .def("__deepcopy__", [](mochi::ContactPairParamsOverride const& self, py::dict) { return mochi::ContactPairParamsOverride(self); })
+    .def_readwrite("penalty_coefficient", &mochi::ContactPairParamsOverride::penaltyCoefficient, "Pair penalty coefficient [Pa/m] before role-dependent dimensional corrections.\n\nSee Also:\n    :attr:`~superdex.physics.ContactParams.penalty_coefficient`")
+    .def_readwrite("friction_falloff_vel", &mochi::ContactPairParamsOverride::frictionFalloffVel, "Friction falloff velocity [m/s].\n\nSee Also:\n    :attr:`~superdex.physics.ContactParams.friction_falloff_vel`")
+    .def_readwrite("viscous_friction_coefficient", &mochi::ContactPairParamsOverride::viscousFrictionCoefficient, "Pair viscous friction coefficient [s/m].\n\nSee Also:\n    :attr:`~superdex.physics.ContactParams.viscous_friction_coefficient`")
+    .def_readwrite("coulomb_friction_coefficient", &mochi::ContactPairParamsOverride::coulombFrictionCoefficient, "Pair Coulomb friction coefficient.\n\nSee Also:\n    :attr:`~superdex.physics.ContactParams.coulomb_friction_coefficient`")
+    .def_readwrite("normal_viscous_damping_coefficient", &mochi::ContactPairParamsOverride::normalViscousDampingCoefficient, "Pair normal viscous damping coefficient [s/m].\n\nSee Also:\n    :attr:`~superdex.physics.ContactParams.normal_viscous_damping_coefficient`")
   ;
 
   registry.GetClass<mochi::ArticulatedShapeInfo>()

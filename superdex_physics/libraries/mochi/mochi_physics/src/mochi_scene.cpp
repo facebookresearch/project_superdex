@@ -27,6 +27,7 @@
 #include "mochi_constraint_interface.h"
 #include "mochi_contact.h"
 #include "mochi_contact_filter.h"
+#include "mochi_contact_pair_params.h"
 #include "mochi_context.h"
 #include "mochi_debug_draw.h"
 #include "mochi_differentiable.h"
@@ -198,9 +199,9 @@ static void DestroyActorEntity(SceneImpl& scene, entt::registry& registry, entt:
     DestroyAllItemsInArticulatedActor(scene, registry, e);
   }
 
-  // Clean actor-vs-actor contact table
-  auto& contactTable = registry.ctx<CContactFilterTable>();
-  contactTable.RemoveEntity(e);
+  // Clean actor-vs-actor contact tables.
+  registry.ctx<CContactFilterTable>().RemoveEntity(e);
+  registry.ctx<CContactPairParamsOverrideTable>().RemoveEntity(e);
 
   // Remove actor from its island (if any)
   island::RemoveActor(registry, e);
@@ -1043,6 +1044,64 @@ void SceneImpl::EnableActorContactSymmetric(
     return;
   }
   EnableActorContactAsymmetric(actorB, actorA, enable, includeNestedActors, error);
+}
+
+void SceneImpl::SetContactPairParamsOverride(
+    ActorHandle actorA,
+    ActorHandle actorB,
+    ContactPairParamsOverride const& paramsOverride,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  ValidateContactPairParamsOverride(paramsOverride, error);
+  MOCHI_ERROR_RETURN(error);
+
+  entt::entity const entityA = GetEntity(_registry, actorA, error);
+  entt::entity const entityB = GetEntity(_registry, actorB, error);
+  MOCHI_ERROR_RETURN(error);
+  MOCHI_ERROR_IF_NOT(
+      _registry.all_of<CContactParams>(entityA) && _registry.all_of<CContactParams>(entityB),
+      error,
+      "Both actors must have contact parameters.");
+  MOCHI_ERROR_RETURN(error);
+
+  _registry.ctx<CContactPairParamsOverrideTable>().Set(entityA, entityB, paramsOverride);
+}
+
+void SceneImpl::ClearContactPairParamsOverride(
+    ActorHandle actorA,
+    ActorHandle actorB,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  entt::entity const entityA = GetEntity(_registry, actorA, error);
+  entt::entity const entityB = GetEntity(_registry, actorB, error);
+  MOCHI_ERROR_RETURN(error);
+
+  _registry.ctx<CContactPairParamsOverrideTable>().Clear(entityA, entityB);
+}
+
+bool SceneImpl::HasContactPairParamsOverride(ActorHandle actorA, ActorHandle actorB, Error& error)
+    const {
+  MOCHI_ERROR_RETURN(error, false);
+  entt::entity const entityA = GetEntity(_registry, actorA, error);
+  entt::entity const entityB = GetEntity(_registry, actorB, error);
+  MOCHI_ERROR_RETURN(error, false);
+  return _registry.ctx<CContactPairParamsOverrideTable const>().Find(entityA, entityB) != nullptr;
+}
+
+ContactPairParamsOverride SceneImpl::GetContactPairParamsOverride(
+    ActorHandle actorA,
+    ActorHandle actorB,
+    Error& error) const {
+  MOCHI_ERROR_RETURN(error, {});
+  entt::entity const entityA = GetEntity(_registry, actorA, error);
+  entt::entity const entityB = GetEntity(_registry, actorB, error);
+  MOCHI_ERROR_RETURN(error, {});
+
+  auto const* paramsOverride =
+      _registry.ctx<CContactPairParamsOverrideTable const>().Find(entityA, entityB);
+  MOCHI_ERROR_IF(paramsOverride == nullptr, error, "Contact pair has no parameter override.");
+  MOCHI_ERROR_RETURN(error, {});
+  return *paramsOverride;
 }
 
 void SceneImpl::RestoreStatePair(StateHandle curr, StateHandle prev, Error& err) {

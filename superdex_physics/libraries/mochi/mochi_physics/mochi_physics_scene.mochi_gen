@@ -776,6 +776,51 @@ class Scene [no_init, no_destruct] {
   // @see EnableActorContactAsymmetric, EnableLayerContactSymmetric
   fn EnableActorContactSymmetric(ActorHandle actorA, ActorHandle actorB, bool enable, IncludeNestedActors includeNestedActors) -> void [pure, virtual, mochi_error];
 
+  // @brief Set contact parameter overrides for an unordered actor pair.
+  //
+  // @param[in] actorA Handle of the first actor.
+  // @param[in] actorB Handle of the second actor.
+  // @param[in] paramsOverride Parameter override with at least one present field. This replaces any
+  // existing override for the pair; absent fields use the normal actor-parameter combination.
+  //
+  // @note Both actors must have contact parameters.
+  //
+  // @note The exact actors are used; nested actors are not included automatically.
+  //
+  // @see ClearContactPairParamsOverride, HasContactPairParamsOverride,
+  // GetContactPairParamsOverride
+  fn SetContactPairParamsOverride(ActorHandle actorA, ActorHandle actorB, ContactPairParamsOverride const& paramsOverride) -> void [pure, virtual, mochi_error];
+
+  // @brief Clear contact parameter overrides for an unordered actor pair.
+  //
+  // @param[in] actorA Handle of the first actor.
+  // @param[in] actorB Handle of the second actor.
+  //
+  // @note Clearing a valid pair without an override succeeds without changing the scene.
+  //
+  // @see SetContactPairParamsOverride
+  fn ClearContactPairParamsOverride(ActorHandle actorA, ActorHandle actorB) -> void [pure, virtual, mochi_error];
+
+  // @brief Check whether the exact unordered actor pair has a parameter override.
+  //
+  // @param[in] actorA Handle of the first actor.
+  // @param[in] actorB Handle of the second actor.
+  // @return True if the exact pair has a stored override.
+  //
+  // @see GetContactPairParamsOverride
+  fn HasContactPairParamsOverride(ActorHandle actorA, ActorHandle actorB) -> bool [pure, virtual, const, mochi_error];
+
+  // @brief Get the parameter override for the exact unordered actor pair.
+  //
+  // @param[in] actorA Handle of the first actor.
+  // @param[in] actorB Handle of the second actor.
+  // @return The complete stored override.
+  //
+  // @note Reports an error when a valid pair has no stored override.
+  //
+  // @see SetContactPairParamsOverride, HasContactPairParamsOverride
+  fn GetContactPairParamsOverride(ActorHandle actorA, ActorHandle actorB) -> ContactPairParamsOverride [pure, virtual, const, mochi_error];
+
   # Step Callbacks
   // @brief Default priority for callback ordering. Lower values execute earlier (higher priority).
   constant int kDefaultCallbackPriority = 100;

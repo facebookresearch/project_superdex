@@ -63,7 +63,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsActor([[maybe_unused]] py::module_& m
       }
       return result;
     }
-      , "Get the contact parameters of the actor.\n\nReturns:\n    Contact parameters of the actor.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+      , "Get the contact parameters of the actor.\n\nReturns:\n    Contact parameters of the actor.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Reports an error if the actor has no contact parameters."
     )
     .def("set_contact_params", [](mochi::Actor& self, mochi::ContactParams const& params) {
       mochi::Error error;

@@ -176,6 +176,17 @@ class SceneImpl final : public Scene {
       bool enable,
       IncludeNestedActors includeNestedActors,
       Error& error) override;
+  void SetContactPairParamsOverride(
+      ActorHandle actorA,
+      ActorHandle actorB,
+      ContactPairParamsOverride const& paramsOverride,
+      Error& error) override;
+  void ClearContactPairParamsOverride(ActorHandle actorA, ActorHandle actorB, Error& error)
+      override;
+  bool HasContactPairParamsOverride(ActorHandle actorA, ActorHandle actorB, Error& error)
+      const override;
+  ContactPairParamsOverride
+  GetContactPairParamsOverride(ActorHandle actorA, ActorHandle actorB, Error& error) const override;
   CallbackHandle RegisterPreStepCallback(
       std::string_view debugName,
       std::function<void(StepInfo const&)> callback,

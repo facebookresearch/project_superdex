@@ -16,6 +16,7 @@
 
 #include "mochi_ik.h"
 #include "mochi_articulated_body.h"
+#include "mochi_contact_pair_params.h"
 #include "mochi_context.h"
 #include "mochi_scene.h"
 
@@ -65,6 +66,7 @@ IKSolverImpl::IKSolverImpl(Scene* scene, Error& error) {
     params.coulombFrictionCoefficient = 0_r;
     params.viscousFrictionCoefficient = 0_r;
   });
+  reg.ctx<CContactPairParamsOverrideTable>().DisableFriction();
 
   // Disable joint friction and inertia by zeroing them via the setters. The components are
   // always present on articulated actors, so zeroing (rather than removing them) keeps that

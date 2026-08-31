@@ -249,6 +249,21 @@ class Scene {
       IncludeNestedActors includeNestedActors,
       Error& error) = 0;
 
+  virtual void SetContactPairParamsOverride(
+      ActorHandle actorA,
+      ActorHandle actorB,
+      ContactPairParamsOverride const& paramsOverride,
+      Error& error) = 0;
+
+  virtual void
+  ClearContactPairParamsOverride(ActorHandle actorA, ActorHandle actorB, Error& error) = 0;
+
+  [[nodiscard]] virtual bool
+  HasContactPairParamsOverride(ActorHandle actorA, ActorHandle actorB, Error& error) const = 0;
+
+  [[nodiscard]] virtual ContactPairParamsOverride
+  GetContactPairParamsOverride(ActorHandle actorA, ActorHandle actorB, Error& error) const = 0;
+
   // Callbacks **********************************************************************************
 
   static constexpr int kDefaultCallbackPriority = 100;

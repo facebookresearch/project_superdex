@@ -3877,6 +3877,7 @@ void InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<CColliderInfo>(reg);
   ecs::RegisterComponent<CCollJacs<CollRole::Collider>>(reg);
   ecs::RegisterComponent<CCollJacs<CollRole::Colliding>>(reg);
+  ecs::RegisterComponent<CContactPairParamsOverrideTable>(reg);
   ecs::RegisterComponent<CContactPartitions>(reg);
   ecs::RegisterComponent<CContactSamples<TimeStep::Current>>(reg);
   ecs::RegisterComponent<CContactSamples<TimeStep::StageStart>>(reg);
@@ -3899,6 +3900,7 @@ void InitializeOnce(entt::registry& reg) {
 
   // Global Context
   reg.set<CContactFilterTable>();
+  reg.set<CContactPairParamsOverrideTable>();
   auto& data = reg.set<CTempPotentialColliderData>();
   int constexpr kReserveSize = 128; // Reserve memory for a modest number of actors up front
   data.staticColliders.reserve(kReserveSize);

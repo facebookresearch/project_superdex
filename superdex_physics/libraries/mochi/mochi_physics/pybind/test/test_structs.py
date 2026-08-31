@@ -77,6 +77,40 @@ class TestStructs(MochiTestBase):
         params.penalty_threshold_default = 0.001
         params.penalty_threshold_extra_padding = 0
 
+    def test_contact_pair_params_override(self):
+        params = mochi.ContactPairParamsOverride()
+        self.assertIsNone(params.penalty_coefficient)
+        self.assertIsNone(params.friction_falloff_vel)
+        self.assertIsNone(params.viscous_friction_coefficient)
+        self.assertIsNone(params.coulomb_friction_coefficient)
+        self.assertIsNone(params.normal_viscous_damping_coefficient)
+
+        sparse = mochi.ContactPairParamsOverride(
+            penalty_coefficient=2e9,
+            coulomb_friction_coefficient=0.0,
+        )
+        self.assertAlmostEqual(2e9, sparse.penalty_coefficient)
+        self.assertEqual(0.0, sparse.coulomb_friction_coefficient)
+        self.assertIsNone(sparse.friction_falloff_vel)
+        self.assertIsNone(sparse.viscous_friction_coefficient)
+        self.assertIsNone(sparse.normal_viscous_damping_coefficient)
+
+        params.penalty_coefficient = 1e9
+        params.friction_falloff_vel = 0.01
+        params.viscous_friction_coefficient = 0.1
+        params.coulomb_friction_coefficient = 0.5
+        params.normal_viscous_damping_coefficient = 0.2
+        self.assertAlmostEqual(1e9, params.penalty_coefficient)
+        self.assertAlmostEqual(0.01, params.friction_falloff_vel)
+        self.assertAlmostEqual(0.1, params.viscous_friction_coefficient)
+        self.assertAlmostEqual(0.5, params.coulomb_friction_coefficient)
+        self.assertAlmostEqual(0.2, params.normal_viscous_damping_coefficient)
+
+        params.coulomb_friction_coefficient = 0.0
+        self.assertEqual(0.0, params.coulomb_friction_coefficient)
+        params.coulomb_friction_coefficient = None
+        self.assertIsNone(params.coulomb_friction_coefficient)
+
     def test_grid_sdf_params(self):
         # Test a few default values to prove the C++ constructor ran
         params = mochi.GridSdfParams()

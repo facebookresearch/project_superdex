@@ -63,6 +63,41 @@ struct BoundarySubsamplingParams [equality] {
   BoundarySubsamplingStrategy strategy = UniformProbability;
 }
 
+// @brief Optional contact-response parameter replacements for an unordered actor pair.
+//
+// @details Each present field replaces the value normally combined from the two actors. An absent
+// field retains the existing combination rule.
+//
+// @note Present fields have the same validity requirements as the corresponding @ref ContactParams
+// fields. A present zero is a value subject to those requirements, not an absent field.
+struct ContactPairParamsOverride [equality] {
+
+  // @brief Pair penalty coefficient [Pa/m] before role-dependent dimensional corrections.
+  //
+  // @see ContactParams::penaltyCoefficient
+  Optional<real> penaltyCoefficient [units(Pa/m)];
+
+  // @brief Friction falloff velocity [m/s].
+  //
+  // @see ContactParams::frictionFalloffVel
+  Optional<real> frictionFalloffVel [units(m/s)];
+
+  // @brief Pair viscous friction coefficient [s/m].
+  //
+  // @see ContactParams::viscousFrictionCoefficient
+  Optional<real> viscousFrictionCoefficient [units(s/m)];
+
+  // @brief Pair Coulomb friction coefficient.
+  //
+  // @see ContactParams::coulombFrictionCoefficient
+  Optional<real> coulombFrictionCoefficient;
+
+  // @brief Pair normal viscous damping coefficient [s/m].
+  //
+  // @see ContactParams::normalViscousDampingCoefficient
+  Optional<real> normalViscousDampingCoefficient [units(s/m)];
+}
+
 // @brief Information describing an articulated shape's kinematic structure.
 //
 // @details Provides read-only access to an articulated shape's links, joints, and hierarchy. This

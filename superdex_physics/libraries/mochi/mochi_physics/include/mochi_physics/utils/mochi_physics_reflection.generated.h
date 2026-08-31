@@ -161,6 +161,14 @@ MOCHI_FIELD(subsamplingDensity)
 MOCHI_FIELD(strategy)
 MOCHI_STRUCT_END_EX()
 
+MOCHI_STRUCT_BEGIN_EX(mochi::ContactPairParamsOverride)
+MOCHI_FIELD(penaltyCoefficient) MOCHI_ATTRIBUTE(Units("Pa/m"))
+MOCHI_FIELD(frictionFalloffVel) MOCHI_ATTRIBUTE(Units("m/s"))
+MOCHI_FIELD(viscousFrictionCoefficient) MOCHI_ATTRIBUTE(Units("s/m"))
+MOCHI_FIELD(coulombFrictionCoefficient)
+MOCHI_FIELD(normalViscousDampingCoefficient) MOCHI_ATTRIBUTE(Units("s/m"))
+MOCHI_STRUCT_END_EX()
+
 MOCHI_STRUCT_BEGIN_EX(mochi::ArticulatedShapeInfo)
 // MOCHI_FIELD(rootFromLinksAtRest) // TODO: Span not supported
 // MOCHI_FIELD(linkNames) // TODO: Span not supported

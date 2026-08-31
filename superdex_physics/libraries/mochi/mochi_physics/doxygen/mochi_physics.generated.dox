@@ -2106,6 +2106,50 @@
 /// @brief Strategy for determining which sample points to use.
 ///
 
+/// @struct mochi::ContactPairParamsOverride
+///
+/// @brief Optional contact-response parameter replacements for an unordered actor pair.
+///
+/// @details Each present field replaces the value normally combined from the two actors. An absent field retains the existing combination rule.
+///
+/// @note Present fields have the same validity requirements as the corresponding @ref mochi::ContactParams "ContactParams" fields. A present zero is a value subject to those requirements, not an absent field.
+///
+
+/// @var mochi::ContactPairParamsOverride::penaltyCoefficient
+///
+/// @brief Pair penalty coefficient [Pa/m] before role-dependent dimensional corrections.
+///
+/// @see @ref mochi::ContactParams::penaltyCoefficient "ContactParams::penaltyCoefficient"
+///
+
+/// @var mochi::ContactPairParamsOverride::frictionFalloffVel
+///
+/// @brief Friction falloff velocity [m/s].
+///
+/// @see @ref mochi::ContactParams::frictionFalloffVel "ContactParams::frictionFalloffVel"
+///
+
+/// @var mochi::ContactPairParamsOverride::viscousFrictionCoefficient
+///
+/// @brief Pair viscous friction coefficient [s/m].
+///
+/// @see @ref mochi::ContactParams::viscousFrictionCoefficient "ContactParams::viscousFrictionCoefficient"
+///
+
+/// @var mochi::ContactPairParamsOverride::coulombFrictionCoefficient
+///
+/// @brief Pair Coulomb friction coefficient.
+///
+/// @see @ref mochi::ContactParams::coulombFrictionCoefficient "ContactParams::coulombFrictionCoefficient"
+///
+
+/// @var mochi::ContactPairParamsOverride::normalViscousDampingCoefficient
+///
+/// @brief Pair normal viscous damping coefficient [s/m].
+///
+/// @see @ref mochi::ContactParams::normalViscousDampingCoefficient "ContactParams::normalViscousDampingCoefficient"
+///
+
 /// @struct mochi::ArticulatedShapeInfo
 ///
 /// @brief Information describing an articulated shape's kinematic structure.
@@ -4808,6 +4852,8 @@
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 /// @return Contact parameters of the actor.
 ///
+/// @note Reports an error if the actor has no contact parameters.
+///
 
 /// @fn void mochi::Actor::SetContactParams(ContactParams const& params, Error& error)
 ///
@@ -7322,6 +7368,60 @@
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 /// @see @ref mochi::Scene::EnableActorContactAsymmetric "EnableActorContactAsymmetric", @ref mochi::Scene::EnableLayerContactSymmetric "EnableLayerContactSymmetric"
+///
+
+/// @fn void mochi::Scene::SetContactPairParamsOverride(ActorHandle actorA, ActorHandle actorB, ContactPairParamsOverride const& paramsOverride, Error& error)
+///
+/// @brief Set contact parameter overrides for an unordered actor pair.
+///
+/// @param[in] actorA Handle of the first actor.
+/// @param[in] actorB Handle of the second actor.
+/// @param[in] paramsOverride Parameter override with at least one present field. This replaces any existing override for the pair; absent fields use the normal actor-parameter combination.
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+///
+/// @note Both actors must have contact parameters.
+/// @note The exact actors are used; nested actors are not included automatically.
+///
+/// @see @ref mochi::Scene::ClearContactPairParamsOverride "ClearContactPairParamsOverride", @ref mochi::Scene::HasContactPairParamsOverride "HasContactPairParamsOverride", @ref mochi::Scene::GetContactPairParamsOverride "GetContactPairParamsOverride"
+///
+
+/// @fn void mochi::Scene::ClearContactPairParamsOverride(ActorHandle actorA, ActorHandle actorB, Error& error)
+///
+/// @brief Clear contact parameter overrides for an unordered actor pair.
+///
+/// @param[in] actorA Handle of the first actor.
+/// @param[in] actorB Handle of the second actor.
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+///
+/// @note Clearing a valid pair without an override succeeds without changing the scene.
+///
+/// @see @ref mochi::Scene::SetContactPairParamsOverride "SetContactPairParamsOverride"
+///
+
+/// @fn bool mochi::Scene::HasContactPairParamsOverride(ActorHandle actorA, ActorHandle actorB, Error& error) const
+///
+/// @brief Check whether the exact unordered actor pair has a parameter override.
+///
+/// @param[in] actorA Handle of the first actor.
+/// @param[in] actorB Handle of the second actor.
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+/// @return True if the exact pair has a stored override.
+///
+/// @see @ref mochi::Scene::GetContactPairParamsOverride "GetContactPairParamsOverride"
+///
+
+/// @fn ContactPairParamsOverride mochi::Scene::GetContactPairParamsOverride(ActorHandle actorA, ActorHandle actorB, Error& error) const
+///
+/// @brief Get the parameter override for the exact unordered actor pair.
+///
+/// @param[in] actorA Handle of the first actor.
+/// @param[in] actorB Handle of the second actor.
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+/// @return The complete stored override.
+///
+/// @note Reports an error when a valid pair has no stored override.
+///
+/// @see @ref mochi::Scene::SetContactPairParamsOverride "SetContactPairParamsOverride", @ref mochi::Scene::HasContactPairParamsOverride "HasContactPairParamsOverride"
 ///
 
 /// @fn CallbackHandle mochi::Scene::RegisterPreStepCallback(std::string_view debugName, std::function<void(StepInfo const&)> callback, int priority)
