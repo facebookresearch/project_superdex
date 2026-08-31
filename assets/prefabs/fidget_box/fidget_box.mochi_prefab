@@ -1,0 +1,183 @@
+{
+  "_comment": "Exported from fidget_box.superdex_bot using SuperDex Studio",
+  "actors": {
+    "articulated": [
+      {
+        "joints": [
+          {
+            "name": "world_joint",
+            "type": "Free"
+          },
+          {
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "maxLimit": [
+              0,
+              0,
+              0
+            ],
+            "minLimit": [
+              0,
+              0,
+              -9.9999997473787516e-05
+            ],
+            "name": "joint_cross",
+            "type": "Prismatic"
+          },
+          {
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "maxLimit": [
+              0,
+              0,
+              0
+            ],
+            "minLimit": [
+              0,
+              -9.9999997473787516e-05,
+              0
+            ],
+            "name": "joint_cylinder",
+            "type": "Prismatic"
+          },
+          {
+            "axis": [
+              1,
+              0,
+              0
+            ],
+            "maxLimit": [
+              0,
+              0,
+              0
+            ],
+            "minLimit": [
+              -0.0010000000474974513,
+              0,
+              0
+            ],
+            "name": "joint_triangle",
+            "type": "Prismatic"
+          }
+        ],
+        "links": [
+          {
+            "centerOfMass": [
+              0.00013199726527091116,
+              -0.00027834632783196867,
+              -0.0018000476993620396
+            ],
+            "colliderType": "Sdf",
+            "density": 2000,
+            "momentOfInertia": [
+              4.8254180001094937e-05,
+              -3.1352884732882558e-09,
+              -1.8914887789378554e-07,
+              4.8935991799226031e-05,
+              4.2271981470776154e-08,
+              4.7367240767925978e-05
+            ],
+            "name": "box",
+            "renderModel": "./render/box_render.glb",
+            "shape": "./collision/box_collision.mochi.h5"
+          },
+          {
+            "centerOfMass": [
+              -1.3869332160797787e-18,
+              1.5098697292955988e-18,
+              0.019999999552965164
+            ],
+            "colliderType": "Sdf",
+            "density": 1002.2042236328125,
+            "momentOfInertia": [
+              9.1022781134597608e-07,
+              -6.1152737186448022e-23,
+              2.1810426307550534e-23,
+              9.1022781134597608e-07,
+              -2.9969567318597146e-23,
+              1.1019719750038348e-06
+            ],
+            "name": "cross",
+            "parentLink": 0,
+            "renderModel": "./render/cross_render.glb",
+            "shape": "./collision/cross_collision.mochi.h5"
+          },
+          {
+            "centerOfMass": [
+              -1.6032868188631255e-07,
+              0.019999995827674866,
+              9.5294572233228791e-09
+            ],
+            "colliderType": "Sdf",
+            "density": 1001.8307495117188,
+            "momentOfInertia": [
+              6.8187409851816483e-07,
+              -3.8140656946758153e-14,
+              4.7416614905315679e-12,
+              7.4128109872617642e-07,
+              -1.2459299000497359e-12,
+              6.8194373170626932e-07
+            ],
+            "name": "cylinder",
+            "parentLink": 0,
+            "renderModel": "./render/cylinder_render.glb",
+            "shape": "./collision/cylinder_collision.mochi.h5"
+          },
+          {
+            "centerOfMass": [
+              0.020000159740447998,
+              2.4188278047176937e-08,
+              -0.0017624041065573692
+            ],
+            "colliderType": "Sdf",
+            "density": 1002.2269897460938,
+            "momentOfInertia": [
+              4.0316777472071408e-07,
+              -4.2413034889721146e-13,
+              2.1152656991436924e-13,
+              4.1563959030099795e-07,
+              1.1408470739285304e-12,
+              4.1565536434973183e-07
+            ],
+            "name": "triangle",
+            "parentLink": 0,
+            "renderModel": "./render/triangle_render.glb",
+            "shape": "./collision/triangle_collision.mochi.h5"
+          }
+        ],
+        "name": "fidget_box"
+      }
+    ]
+  },
+  "contactFilter": {
+    "actorContactSymmetric": [
+      {
+        "actors": [
+          "fidget_box/box",
+          "fidget_box/cross"
+        ],
+        "enable": false
+      },
+      {
+        "actors": [
+          "fidget_box/box",
+          "fidget_box/cylinder"
+        ],
+        "enable": false
+      },
+      {
+        "actors": [
+          "fidget_box/box",
+          "fidget_box/triangle"
+        ],
+        "enable": false
+      }
+    ]
+  }
+}
