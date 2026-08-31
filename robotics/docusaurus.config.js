@@ -103,6 +103,7 @@ const darkCodeTheme = {
 };
 
 const isPublicBuild = process.env.SUPERDEX_PUBLIC_BUILD === '1';
+const googleTagId = (process.env.SUPERDEX_GOOGLE_TAG_ID || '').trim();
 const publicOrigin = (
   process.env.SUPERDEX_PUBLIC_ORIGIN || 'https://projectsuperdex.com'
 ).replace(/\/+$/, '');
@@ -177,6 +178,10 @@ const projectSuperdexUrl = projectSuperdexUrls.landing;
         staticDocsProject: 'superdex_robotics',
         trackingFile: 'fbcode/staticdocs/WATCHED_FILES',
         blog: false,
+        gtag:
+          isPublicBuild && googleTagId
+            ? {trackingID: googleTagId, anonymizeIP: true}
+            : undefined,
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },

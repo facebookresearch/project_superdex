@@ -16,7 +16,8 @@
 
 import { Toaster } from "@/components/ui/sonner";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch, Router } from "wouter";
+import { useEffect } from "react";
+import { Route, Router, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
@@ -29,9 +30,30 @@ const internalRoutes = () => []; // @oss-enable
 // Strip trailing slash so wouter's base matching works correctly
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
 
+function PageViewTracker() {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    const gtag = (
+      window as Window & {
+        gtag?: (...args: unknown[]) => void;
+      }
+    ).gtag;
+
+    gtag?.("event", "page_view", {
+      page_title: document.title,
+      page_location: window.location.href,
+      page_path: window.location.pathname,
+    });
+  }, [location]);
+
+  return null;
+}
+
 function AppRouter() {
   return (
     <Router base={BASE}>
+      <PageViewTracker />
       <Switch>
         <Route path={"/"} component={Home} />
         <Route path={"/roadmap"} component={RoadmapPage} />

@@ -105,6 +105,7 @@ const math = require('remark-math').default || require('remark-math');
 const katex = require('rehype-katex').default || require('rehype-katex');
 
 const isPublicBuild = process.env.SUPERDEX_PUBLIC_BUILD === '1';
+const googleTagId = (process.env.SUPERDEX_GOOGLE_TAG_ID || '').trim();
 const publicOrigin = (
   process.env.SUPERDEX_PUBLIC_ORIGIN || 'https://projectsuperdex.com'
 ).replace(/\/+$/, '');
@@ -184,6 +185,10 @@ const projectSuperdexUrl = projectSuperdexUrls.landing;
         staticDocsProject: 'mochi_physics',
         trackingFile: 'fbcode/staticdocs/WATCHED_FILES',
         blog: false,
+        gtag:
+          isPublicBuild && googleTagId
+            ? {trackingID: googleTagId, anonymizeIP: true}
+            : undefined,
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },

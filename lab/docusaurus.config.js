@@ -103,6 +103,7 @@ const darkCodeTheme = {
 };
 
 const isPublicBuild = process.env.SUPERDEX_PUBLIC_BUILD === '1';
+const googleTagId = (process.env.SUPERDEX_GOOGLE_TAG_ID || '').trim();
 
 // A public build must run from the OSS export, where ShipIt has already stripped
 // docs/internal/. If that directory is present the export has not happened, so
@@ -203,6 +204,10 @@ const projectSuperdexUrl = projectSuperdexUrls.landing;
           ? {}
           : {trackingFile: 'fbcode/staticdocs/WATCHED_FILES'}),
         blog: false,
+        gtag:
+          isPublicBuild && googleTagId
+            ? {trackingID: googleTagId, anonymizeIP: true}
+            : undefined,
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },

@@ -16,6 +16,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  SUPERDEX_GOOGLE_TAG_ID: G-4MN3GNNHR7
   SUPERDEX_PUBLIC_BUILD: "1"
   SUPERDEX_PUBLIC_ORIGIN: https://projectsuperdex.com
   SUPERDEX_PUBLIC_BASE_URL: /

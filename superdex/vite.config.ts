@@ -21,11 +21,49 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const googleTagId = process.env.SUPERDEX_GOOGLE_TAG_ID?.trim() ?? "";
+const isPublicBuild = process.env.VITE_PUBLIC_BUILD === "1";
 const publicBaseUrl = process.env.SUPERDEX_PUBLIC_BASE_URL;
 const staticDocsBaseUrl = process.env.STATIC_DOCS_BASE_URL;
+const enableGoogleTag = isPublicBuild && Boolean(googleTagId);
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    {
+      name: "superdex-google-tag",
+      transformIndexHtml() {
+        if (!enableGoogleTag) {
+          return [];
+        }
+
+        return [
+          {
+            tag: "script",
+            attrs: {
+              async: true,
+              src: `https://www.googletagmanager.com/gtag/js?id=${googleTagId}`,
+            },
+            injectTo: "head-prepend",
+          },
+          {
+            tag: "script",
+            children: `
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${googleTagId}', {
+  anonymize_ip: true,
+  send_page_view: false,
+});
+            `.trim(),
+            injectTo: "head-prepend",
+          },
+        ];
+      },
+    },
+  ],
   base: publicBaseUrl || staticDocsBaseUrl || "/",
   define: {
     __SUPERDEX_INTERNAL_STATIC_DOCS__: JSON.stringify(
