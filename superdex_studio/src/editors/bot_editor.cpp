@@ -1224,6 +1224,18 @@ void BotEditor::ShowBotHierarchyWindow(bool* open) {
   ImVec4 warningColorLinks =
       ImVec4(1.0f, 1.0f, 0.0f, isBuiltBot ? ImGui::GetStyle().DisabledAlpha : 1.0f);
 
+  // Inline warning icon for a row that has validation issues, with the issues as its tooltip.
+  auto ShowIssuesWarning = [&](mochi::DynamicArray<mochi::DynamicString> const& issues) {
+    if (issues.empty()) {
+      return;
+    }
+    ImGui::SameLine();
+    ImGui::TextColored(warningColorLinks, ICON_FA_EXCLAMATION_TRIANGLE);
+    if (ImGui::IsItemHovered()) {
+      ImGui::SetTooltip("%s", BuildIssuesText(issues).c_str());
+    }
+  };
+
   ImGui::BeginChild("LinkTreeChild");
   auto tableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable |
       ImGuiTableRowFlags_Headers;
@@ -1279,14 +1291,6 @@ void BotEditor::ShowBotHierarchyWindow(bool* open) {
 
         ImGui::PushStyleColor(ImGuiCol_Text, linkHasIssues ? warningColorLinks : defaultColor);
         bool nodeOpen = ImGui::TreeNodeEx(link.name.c_str(), flags);
-        if (linkHasIssues) {
-          ImGui::SameLine();
-          ImGui::TextColored(warningColorLinks, ICON_FA_EXCLAMATION_TRIANGLE);
-          if (ImGui::IsItemHovered()) {
-            auto text = BuildIssuesText(validateResults.linkIssues[linkIndex]);
-            ImGui::SetTooltip("%s", text.c_str());
-          }
-        }
         ImGui::PopStyleColor();
         if (ImGui::IsItemHovered()) {
           if (linkIndex >= 0 && linkIndex < _stage.GetNumActors()) {
@@ -1315,20 +1319,15 @@ void BotEditor::ShowBotHierarchyWindow(bool* open) {
             ImGui::EndPopup();
           }
         }
+        // Last, so every query above reports on the tree node rather than on this icon.
+        ShowIssuesWarning(validateResults.linkIssues[linkIndex]);
 
         ImGui::TableNextColumn();
 
         ImGui::PushStyleColor(ImGuiCol_Text, jointHasIssues ? warningColorLinks : defaultColor);
         ImGui::TextUnformatted(joint.name.c_str());
-        if (jointHasIssues) {
-          ImGui::SameLine();
-          ImGui::TextColored(warningColorLinks, ICON_FA_EXCLAMATION_TRIANGLE);
-          if (ImGui::IsItemHovered()) {
-            auto text = BuildIssuesText(validateResults.jointIssues[linkIndex]);
-            ImGui::SetTooltip("%s", text.c_str());
-          }
-        }
         ImGui::PopStyleColor();
+        ShowIssuesWarning(validateResults.jointIssues[linkIndex]);
 
         // Scroll to selected item and center it
         if (_forceLinkFocus && selected) {
@@ -1375,14 +1374,6 @@ void BotEditor::ShowBotHierarchyWindow(bool* open) {
           _selectedBotLinkIndex = i;
           FocusWindowIfOpen("Bot Link Details");
         }
-        if (linkHasIssues) {
-          ImGui::SameLine();
-          ImGui::TextColored(warningColorLinks, ICON_FA_EXCLAMATION_TRIANGLE);
-          if (ImGui::IsItemHovered()) {
-            auto text = BuildIssuesText(validateResults.linkIssues[i]);
-            ImGui::SetTooltip("%s", text.c_str());
-          }
-        }
         ImGui::PopStyleColor();
 
         if (!isBuiltBot && !isReadOnly &&
@@ -1397,20 +1388,15 @@ void BotEditor::ShowBotHierarchyWindow(bool* open) {
           ImGui::EndDisabled();
           ImGui::EndPopup();
         }
+        // Last, so the context menu above targets the row rather than this icon.
+        ShowIssuesWarning(validateResults.linkIssues[i]);
 
         ImGui::TableNextColumn();
 
         ImGui::PushStyleColor(ImGuiCol_Text, jointHasIssues ? warningColorLinks : defaultColor);
         ImGui::TextUnformatted(joint->name.c_str());
-        if (jointHasIssues) {
-          ImGui::SameLine();
-          ImGui::TextColored(warningColorLinks, ICON_FA_EXCLAMATION_TRIANGLE);
-          if (ImGui::IsItemHovered()) {
-            auto text = BuildIssuesText(validateResults.jointIssues[i]);
-            ImGui::SetTooltip("%s", text.c_str());
-          }
-        }
         ImGui::PopStyleColor();
+        ShowIssuesWarning(validateResults.jointIssues[i]);
 
         if (_forceLinkFocus && selected) {
           ImGui::SetScrollHereY(0.5f);
