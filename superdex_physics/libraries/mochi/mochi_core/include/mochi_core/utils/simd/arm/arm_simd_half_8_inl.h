@@ -113,8 +113,7 @@ class Simd<Half, 8> {
 
   // IEEE 754 float equality: +0 == -0, NaN != NaN (matches Simd<float> behavior)
   [[nodiscard]] MOCHI_FORCE_INLINE bool operator==(Simd rhs) const {
-    uint16x8_t cmp = vceqq_f16(raw, rhs.raw);
-    return vminvq_u16(cmp) == 0xFFFF;
+    return AllTrue<kSize>(Equal(*this, rhs));
   }
 
   [[nodiscard]] MOCHI_FORCE_INLINE bool operator!=(Simd rhs) const {
@@ -122,7 +121,17 @@ class Simd<Half, 8> {
   }
 
   [[nodiscard]] static MOCHI_FORCE_INLINE Simd Equal(Simd a, Simd b) {
+#if MOCHI_ARCH_ARM_NEON_FP16_ARITHMETIC
     return vreinterpretq_f16_u16(vceqq_f16(a.raw, b.raw));
+#else
+    // Baseline ARMv8-A lacks FP16 vector comparison. Widen exactly to FP32, then narrow
+    // the comparison masks back to the same 16-bit lane representation as vceqq_f16.
+    uint16x4_t const low =
+        vmovn_u32(vceqq_f32(vcvt_f32_f16(vget_low_f16(a.raw)), vcvt_f32_f16(vget_low_f16(b.raw))));
+    uint16x4_t const high = vmovn_u32(
+        vceqq_f32(vcvt_f32_f16(vget_high_f16(a.raw)), vcvt_f32_f16(vget_high_f16(b.raw))));
+    return vreinterpretq_f16_u16(vcombine_u16(low, high));
+#endif
   }
 
   [[nodiscard]] static MOCHI_FORCE_INLINE Simd NotEqual(Simd a, Simd b) {

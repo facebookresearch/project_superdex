@@ -56,6 +56,8 @@
     - MOCHI_ARCH_GPU        Compiling for GPU (CUDA GPU device code)
     - MOCHI_ARCH_ARM        Compiling for an ARM CPU (64-bit ARMv8 or newer)
     - MOCHI_ARCH_ARM_NEON   Compiling for an ARM CPU with NEON (mandatory for ARMv8 or newer)
+    - MOCHI_ARCH_ARM_NEON_FP16_ARITHMETIC
+                            Compiling with the ARM FP16 vector arithmetic feature enabled
     - MOCHI_ARCH_ARM_SVE    Compiling for an ARM CPU with SVE (mandatory for ARMv9 or newer)
     - MOCHI_ARCH_ARM_SME    Compiling for an ARM CPU with SME (scalable matrix extension)
     - MOCHI_ARCH_X64        Compiling for an x64 CPU (64-bit x86, also called x86_64)
@@ -88,6 +90,12 @@
 #define MOCHI_ARCH_ARM_NEON 1
 #else
 #define MOCHI_ARCH_ARM_NEON 0
+#endif
+
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+#define MOCHI_ARCH_ARM_NEON_FP16_ARITHMETIC 1
+#else
+#define MOCHI_ARCH_ARM_NEON_FP16_ARITHMETIC 0
 #endif
 
 // NOTE: The Unreal Engine build system has its own macros.
