@@ -1,0 +1,54 @@
+{
+  "actors": {
+    "articulated": [
+      {
+        "joints": [
+          {
+            "name": "center_joint",
+            "type": "Free"
+          },
+          {
+            "name": "corner_shell_joint",
+            "type": "Hard"
+          }
+        ],
+        "links": [
+          {
+            "contact": {
+              "coulombFrictionCoefficient": 0.0024999999441206455,
+              "frictionFalloffVel": 0.05000000074505806,
+              "penaltyCoefficient": 999999995904,
+              "penaltySmoothingHalfDistance": 0.00075000000651925802,
+              "penaltyThresholdDefault": 9.9999997473787516e-05,
+              "viscousFrictionCoefficient": 0.10000000149011612
+            },
+            "mass": 0.12815000116825104,
+            "name": "center_link",
+            "renderModel": "./render/puzzle_cube_center.glb",
+            "shape": "./collision/puzzle_cube_center.mochi.h5"
+          },
+          {
+            "contact": {
+              "coulombFrictionCoefficient": 0.60000002384185791,
+              "frictionFalloffVel": 0.00025000001187436283,
+              "penaltyCoefficient": 999999995904,
+              "penaltyThresholdDefault": 9.9999997473787516e-05
+            },
+            "mass": 0.021299999207258224,
+            "name": "corner_shell_link",
+            "parentLink": 0,
+            "renderModel": "./render/puzzle_cube_corner_shell.glb",
+            "shape": "./collision/puzzle_cube_corner_shell.mochi.h5"
+          }
+        ],
+        "name": "center",
+        "rotation": [
+          -0.70710676908493042,
+          0.70710676908493042,
+          -2.2197245641564223e-07,
+          2.2197245641564223e-07
+        ]
+      }
+    ]
+  }
+}

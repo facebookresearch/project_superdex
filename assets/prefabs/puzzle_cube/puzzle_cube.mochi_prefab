@@ -1,0 +1,72 @@
+{
+  "prefabs": [
+    {
+      "name": "center",
+      "path": "./puzzle_cube_center.mochi_prefab"
+    },
+    {
+      "name": "corner1",
+      "path": "./puzzle_cube_corner.mochi_prefab"
+    },
+    {
+      "name": "corner2",
+      "path": "./puzzle_cube_corner.mochi_prefab",
+      "rotation": [
+        0,
+        0,
+        0.70710676908493042,
+        0.70710676908493042
+      ]
+    },
+    {
+      "name": "corner3",
+      "path": "./puzzle_cube_corner.mochi_prefab",
+      "rotation": [
+        0,
+        0,
+        1,
+        -4.3711388286737929e-08
+      ]
+    },
+    {
+      "name": "corner4",
+      "path": "./puzzle_cube_corner.mochi_prefab",
+      "rotation": [
+        0,
+        0,
+        0.70710676908493042,
+        -0.70710676908493042
+      ]
+    },
+    {
+      "name": "corner5",
+      "path": "./puzzle_cube_corner.mochi_prefab",
+      "rotation": [
+        -0.70710676908493042,
+        0,
+        0,
+        0.70710676908493042
+      ]
+    },
+    {
+      "name": "corner6",
+      "path": "./puzzle_cube_corner.mochi_prefab",
+      "rotation": [
+        -0.49999991059303284,
+        -0.49999991059303284,
+        0.50000005960464478,
+        0.50000005960464478
+      ]
+    },
+    {
+      "name": "corner7",
+      "path": "./puzzle_cube_corner.mochi_prefab",
+      "rotation": [
+        -0.49999985098838806,
+        0.49999985098838806,
+        -0.50000011920928955,
+        0.50000011920928955
+      ]
+    }
+  ]
+}
