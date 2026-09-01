@@ -115,7 +115,12 @@ if ((_mochi_compiler_clang AND NOT _mochi_compiler_clang_cl) OR _mochi_compiler_
             -mfma
             -mf16c)
         if (MOCHI_USE_AVX512)
-            list(APPEND MOCHI_COMPILE_OPTIONS -mavx512f)
+            list(APPEND MOCHI_COMPILE_OPTIONS
+                -mavx512f
+                -mavx512cd
+                -mavx512bw
+                -mavx512dq
+                -mavx512vl)
         else ()
             list(APPEND MOCHI_COMPILE_OPTIONS -mavx2)
         endif ()
