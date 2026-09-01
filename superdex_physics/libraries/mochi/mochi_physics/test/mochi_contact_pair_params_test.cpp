@@ -20,6 +20,7 @@
 
 #include <array>
 #include <initializer_list>
+#include <limits>
 
 using namespace mochi;
 
@@ -116,6 +117,11 @@ TEST_F(MochiContactPairParams, RejectsEmptyAndInvalidPatchesWithoutMutation) {
     _scene->SetContactPairParamsOverride(actorA, actorB, params, test::ExpectNotOK{});
     ExpectOverride(actorA, actorB, baseline);
   }
+
+  ContactPairParamsOverride nonFinite;
+  nonFinite.penaltyCoefficient = std::numeric_limits<real>::infinity();
+  _scene->SetContactPairParamsOverride(actorA, actorB, nonFinite, test::ExpectNotOK{});
+  ExpectOverride(actorA, actorB, baseline);
 
   ContactPairParamsOverride validZeroes;
   validZeroes.frictionFalloffVel = 0_r;

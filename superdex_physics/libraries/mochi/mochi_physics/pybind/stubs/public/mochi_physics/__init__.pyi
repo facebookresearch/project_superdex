@@ -3244,7 +3244,7 @@ class ContactParams:
     """Stiffness of the contact penalty force [Pa/m].
 
     Note:
-        Must be strictly positive.
+        Must be finite and strictly positive.
 
     Note:
         Higher penalties create stiffer contacts and reduce penetration.
@@ -3277,7 +3277,7 @@ class ContactParams:
     :attr:`~superdex.physics.ContactParams.penalty_smoothing_half_distance`).
 
     Note:
-        Must not be negative.
+        Must be finite and not negative.
 
     Note:
         Larger smoothing distances improve stability but may increase penetration.
@@ -3294,7 +3294,7 @@ class ContactParams:
     :attr:`~superdex.physics.ContactParams.penalty_smoothing_half_distance`).
 
     Note:
-        Negative values are legal.
+        Must be finite. Negative values are legal.
 
     Note:
         If the colliding actor has :class:`NONE <superdex.physics.ColliderType>` or
@@ -3313,7 +3313,7 @@ class ContactParams:
     :class:`POINT_CLOUD <superdex.physics.ColliderType>`.
 
     Note:
-        Must not be negative.
+        Must be finite and not negative.
 
     Note:
         Extra padding is useful to avoid tunneling through thin actors when the
@@ -3341,8 +3341,8 @@ class ContactParams:
     collider when penetration is large.
 
     Note:
-        Valid range is [-1, 1]. -1 allows contact only for perfectly opposing
-        normals, 1 allows all contacts.
+        Must be in [-1, 1]. -1 allows contact only for perfectly opposing normals, 1
+        allows all contacts.
 
     Note:
         For co-dimensional colliding actors with ambiguous normals, contact is not
@@ -3356,7 +3356,7 @@ class ContactParams:
         Friction force is proportional to contact force and tangential velocity.
 
     Note:
-        Must not be negative.
+        Must be finite and not negative.
 
     Note:
         Both viscousFrictionCoefficient and
@@ -3372,7 +3372,7 @@ class ContactParams:
     """Coulomb friction coefficient (dimensionless).
 
     Note:
-        Must not be negative.
+        Must be finite and not negative.
 
     Note:
         Both :attr:`~superdex.physics.ContactParams.viscous_friction_coefficient`
@@ -3393,8 +3393,8 @@ class ContactParams:
     regularization scale.
 
     Note:
-        Must not be negative. For CinfRegularized, a value of zero is clamped
-        internally to avoid numerical issues.
+        Must be finite and not negative. For CinfRegularized, a value of zero is
+        clamped internally to avoid numerical issues.
 
     Note:
         Smaller velocity thresholds improve physical accuracy but may degrade
@@ -3415,7 +3415,7 @@ class ContactParams:
     in the normal direction instead of tangentially.
 
     Note:
-        Must not be negative.
+        Must be finite and not negative.
 
     Note:
         Without an actor-pair override for this field, the value used in a collision
@@ -3445,6 +3445,9 @@ class ContactParams:
     culling.
 
     Note:
+        Must be finite.
+
+    Note:
         Useful, for example, with approximate SDFs (e.g., deep flow map) to
         compensate for potentially overestimating the true distance.
 
@@ -3456,6 +3459,9 @@ class ContactParams:
     """[Experimental] Object scale relative to default size (dimensionless). Used by
     deep flow only.
 
+    Note:
+        Must be finite and strictly positive.
+
     Warning:
         Deep flow is an experimental feature. It may be changed or removed in the
         future. Use at your own risk.
@@ -3466,6 +3472,9 @@ class ContactParams:
     manifold, such as a rod or point mass. E.g., the penalty is scaled by this value
     if the colliding body lumps contact tractions on a line, or this value squared
     if lumping contact forces on a point.
+
+    Note:
+        Must be finite and strictly positive.
 
     Note:
         This value is not used in the most common case, where contact traction is

@@ -1030,7 +1030,7 @@ struct ContactParams [from_mochi_core] {
   ctor ContactParams(real penaltyCoefficient, real penaltySmoothingHalfDistance, real penaltyThresholdDefault, real penaltyThresholdExtraPadding, bool frictionWithColliderNormal, real maxAlignmentNormals, real viscousFrictionCoefficient, real coulombFrictionCoefficient, real frictionFalloffVel, real normalViscousDampingCoefficient, real distanceErrorBound, real objScale, real collidingPenaltyLengthScale) [no_python];
   // @brief Stiffness of the contact penalty force [Pa/m].
   //
-  // @note Must be strictly positive.
+  // @note Must be finite and strictly positive.
   // @note Higher penalties create stiffer contacts and reduce penetration.
   // @note Arbitrarily large penalties may degrade stability.
   // @note The default penalty is appropriate for actors with default density. For actors with much
@@ -1048,7 +1048,7 @@ struct ContactParams [from_mochi_core] {
   // @details The penalty force transitions from 0 to linear over the decreasing distance range
   // (penaltyThreshold, penaltyThreshold - 2 * @ref penaltySmoothingHalfDistance).
   //
-  // @note Must not be negative.
+  // @note Must be finite and not negative.
   // @note Larger smoothing distances improve stability but may increase penetration.
   // @note Smoothing distance is expected to be small relative to the collider geometry.
   real penaltySmoothingHalfDistance [units(m)] = 0.005;
@@ -1057,7 +1057,7 @@ struct ContactParams [from_mochi_core] {
   // @details The penalty force transitions from 0 to linear over the decreasing distance range
   // (penaltyThreshold, penaltyThreshold - 2 * @ref penaltySmoothingHalfDistance).
   //
-  // @note Negative values are legal.
+  // @note Must be finite. Negative values are legal.
   // @note If the colliding actor has @ref ColliderType::None or @ref ColliderType::PointCloud,
   // penaltyThreshold = penaltyThresholdDefault + @ref penaltyThresholdExtraPadding. Otherwise,
   // penaltyThreshold = penaltyThresholdDefault.
@@ -1067,7 +1067,7 @@ struct ContactParams [from_mochi_core] {
   // @brief Extra padding [m] added to the default contact detection threshold if the colliding
   // actor has @ref ColliderType::None or @ref ColliderType::PointCloud.
   //
-  // @note Must not be negative.
+  // @note Must be finite and not negative.
   // @note Extra padding is useful to avoid tunneling through thin actors when the other actor has
   // @ref ColliderType::None or @ref ColliderType::PointCloud.
   //
@@ -1085,15 +1085,15 @@ struct ContactParams [from_mochi_core] {
   // Contact is disabled for sample points whose normal alignment exceeds this threshold. This
   // prevents sample points from being trapped inside the collider when penetration is large.
   //
-  // @note Valid range is [-1, 1]. -1 allows contact only for perfectly opposing normals, 1 allows
-  // all contacts.
+  // @note Must be in [-1, 1]. -1 allows contact only for perfectly opposing normals, 1 allows all
+  // contacts.
   // @note For co-dimensional colliding actors with ambiguous normals, contact is not disabled
   // regardless of maxAlignmentNormals (normal alignment cannot be computed).
   real maxAlignmentNormals = 0;
   // @brief Viscous friction coefficient [s/m].
   //
   // @note Friction force is proportional to contact force and tangential velocity.
-  // @note Must not be negative.
+  // @note Must be finite and not negative.
   // @note Both viscousFrictionCoefficient and @ref coulombFrictionCoefficient can be >0.
   // @note Without an actor-pair override for this field, the value used in a collision is the
   // geometric mean of the colliding and collider's coefficients. This disables viscous friction if
@@ -1101,7 +1101,7 @@ struct ContactParams [from_mochi_core] {
   real viscousFrictionCoefficient [units(s/m)] = 0;
   // @brief Coulomb friction coefficient (dimensionless).
   //
-  // @note Must not be negative.
+  // @note Must be finite and not negative.
   // @note Both @ref viscousFrictionCoefficient and coulombFrictionCoefficient can be >0.
   // @note Without an actor-pair override for this field, the value used in a collision is the
   // geometric mean of the colliding and collider's coefficients. This disables Coulomb friction if
@@ -1114,8 +1114,8 @@ struct ContactParams [from_mochi_core] {
   // CinfRegularized, the force asymptotically approaches full strength with no compact support
   // boundary; frictionFalloffVel controls the regularization scale.
   //
-  // @note Must not be negative. For CinfRegularized, a value of zero is clamped internally to
-  // avoid numerical issues.
+  // @note Must be finite and not negative. For CinfRegularized, a value of zero is clamped
+  // internally to avoid numerical issues.
   // @note Smaller velocity thresholds improve physical accuracy but may degrade stability.
   // @note Without an actor-pair override for this field, the value used in a collision is the
   // geometric mean of the colliding and collider's thresholds. The exception is if the collider is
@@ -1130,7 +1130,7 @@ struct ContactParams [from_mochi_core] {
   // @warning The calibration diverges as CoR approaches zero, which may cause numerical problems
   // when approaching fully-inelastic collisions.
   //
-  // @note Must not be negative.
+  // @note Must be finite and not negative.
   // @note Without an actor-pair override for this field, the value used in a collision is the
   // geometric mean of the colliding and collider's coefficients. This disables normal damping if
   // either of them does.
@@ -1149,6 +1149,7 @@ struct ContactParams [from_mochi_core] {
   // @warning This is an experimental feature. It may be changed or removed in the future. Use at
   // your own risk.
   //
+  // @note Must be finite.
   // @note Useful, for example, with approximate SDFs (e.g., deep flow map) to compensate for
   // potentially overestimating the true distance.
   real distanceErrorBound [units(m)] = 0;
@@ -1157,6 +1158,8 @@ struct ContactParams [from_mochi_core] {
   //
   // @warning Deep flow is an experimental feature. It may be changed or removed in the future. Use
   // at your own risk.
+  //
+  // @note Must be finite and strictly positive.
   real objScale = 1;
   // @brief [Experimental] Length scale [m] used to correct the penalty coefficient when the
   // colliding body integrates contact traction over a lower-than-two-dimensional manifold, such as
@@ -1166,6 +1169,7 @@ struct ContactParams [from_mochi_core] {
   // @warning Contact with lower-dimensional bodies is an experimental feature. It may be changed or
   // removed in the future. Use at your own risk.
   //
+  // @note Must be finite and strictly positive.
   // @note This value is not used in the most common case, where contact traction is integrated over
   // a two-dimensional surface.
   // @note The colliding body's value is always used in a contact pair, because the colliding body

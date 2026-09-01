@@ -28,6 +28,7 @@
 
 #include <array>
 #include <initializer_list>
+#include <limits>
 #include <optional>
 #include <utility>
 
@@ -35,7 +36,7 @@ using namespace mochi;
 using namespace mochi::test;
 
 // ---------------------------------------------------------------------------------------
-// Contact pair parameter resolution
+// Contact parameter validation and pair resolution
 // ---------------------------------------------------------------------------------------
 
 namespace {
@@ -96,6 +97,48 @@ void ExpectColliderOwnedFieldsUnchanged(
 }
 
 } // namespace
+
+TEST(ContactParamsValidation, AcceptsFiniteValuesAtLegalBounds) {
+  ContactParams params;
+  params.penaltyThresholdDefault = -std::numeric_limits<real>::max();
+  params.distanceErrorBound = -1_r;
+  params.maxAlignmentNormals = -1_r;
+  ValidateContactParams(params, ExpectOK{});
+
+  params.maxAlignmentNormals = 1_r;
+  ValidateContactParams(params, ExpectOK{});
+}
+
+TEST(ContactParamsValidation, RejectsNonFiniteValuesForEveryNumericField) {
+  constexpr std::array numericFields = {
+      &ContactParams::penaltyCoefficient,
+      &ContactParams::penaltySmoothingHalfDistance,
+      &ContactParams::penaltyThresholdDefault,
+      &ContactParams::penaltyThresholdExtraPadding,
+      &ContactParams::maxAlignmentNormals,
+      &ContactParams::viscousFrictionCoefficient,
+      &ContactParams::coulombFrictionCoefficient,
+      &ContactParams::frictionFalloffVel,
+      &ContactParams::normalViscousDampingCoefficient,
+      &ContactParams::distanceErrorBound,
+      &ContactParams::objScale,
+      &ContactParams::collidingPenaltyLengthScale,
+  };
+  constexpr std::array nonFiniteValues = {
+      std::numeric_limits<real>::infinity(),
+      -std::numeric_limits<real>::infinity(),
+      std::numeric_limits<real>::quiet_NaN(),
+  };
+
+  ValidateContactParams(ContactParams{}, ExpectOK{});
+  for (auto const field : numericFields) {
+    for (real const value : nonFiniteValues) {
+      ContactParams params;
+      params.*field = value;
+      ValidateContactParams(params, ExpectNotOK{});
+    }
+  }
+}
 
 TEST(ContactPairParams, NoOverridePreservesDynamicAndStaticCombination) {
   ContactParams const colliding = MakeCollidingContactParams();

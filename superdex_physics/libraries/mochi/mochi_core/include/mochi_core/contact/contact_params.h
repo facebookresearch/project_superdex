@@ -80,7 +80,7 @@ struct ContactParams {
   /**
    * @brief Stiffness of the contact penalty force [Pa/m].
    *
-   * @note Must be strictly positive.
+   * @note Must be finite and strictly positive.
    * @note Higher penalties create stiffer contacts and reduce penetration.
    * @note Arbitrarily large penalties may degrade stability.
    * @note The default penalty is appropriate for actors with default density. For actors with much
@@ -101,7 +101,7 @@ struct ContactParams {
    * @details The penalty force transitions from 0 to linear over the decreasing distance range
    * (penaltyThreshold, penaltyThreshold - 2 * @ref penaltySmoothingHalfDistance).
    *
-   * @note Must not be negative.
+   * @note Must be finite and not negative.
    * @note Larger smoothing distances improve stability but may increase penetration.
    * @note Smoothing distance is expected to be small relative to the collider geometry.
    */
@@ -113,7 +113,7 @@ struct ContactParams {
    * @details The penalty force transitions from 0 to linear over the decreasing distance range
    * (penaltyThreshold, penaltyThreshold - 2 * @ref penaltySmoothingHalfDistance).
    *
-   * @note Negative values are legal.
+   * @note Must be finite. Negative values are legal.
    * @note If the colliding actor has @ref ColliderType::None or @ref ColliderType::PointCloud,
    * penaltyThreshold = penaltyThresholdDefault + @ref penaltyThresholdExtraPadding. Otherwise,
    * penaltyThreshold = penaltyThresholdDefault.
@@ -126,7 +126,7 @@ struct ContactParams {
    * @brief Extra padding [m] added to the default contact detection threshold if the colliding
    * actor has @ref ColliderType::None or @ref ColliderType::PointCloud.
    *
-   * @note Must not be negative.
+   * @note Must be finite and not negative.
    * @note Extra padding is useful to avoid tunneling through thin actors when the other actor has
    * @ref ColliderType::None or @ref ColliderType::PointCloud.
    *
@@ -152,8 +152,8 @@ struct ContactParams {
    * Contact is disabled for sample points whose normal alignment exceeds this threshold. This
    * prevents sample points from being trapped inside the collider when penetration is large.
    *
-   * @note Valid range is [-1, 1]. -1 allows contact only for perfectly opposing normals, 1 allows
-   * all contacts.
+   * @note Must be in [-1, 1]. -1 allows contact only for perfectly opposing normals, 1 allows all
+   * contacts.
    * @note For co-dimensional colliding actors with ambiguous normals, contact is not disabled
    * regardless of maxAlignmentNormals (normal alignment cannot be computed).
    */
@@ -163,7 +163,7 @@ struct ContactParams {
    * @brief Viscous friction coefficient [s/m].
    *
    * @note Friction force is proportional to contact force and tangential velocity.
-   * @note Must not be negative.
+   * @note Must be finite and not negative.
    * @note Both viscousFrictionCoefficient and @ref coulombFrictionCoefficient can be >0.
    * @note Without an actor-pair override for this field, the value used in a collision is the
    * geometric mean of the colliding and collider's coefficients. This disables viscous friction if
@@ -174,7 +174,7 @@ struct ContactParams {
   /**
    * @brief Coulomb friction coefficient (dimensionless).
    *
-   * @note Must not be negative.
+   * @note Must be finite and not negative.
    * @note Both @ref viscousFrictionCoefficient and coulombFrictionCoefficient can be >0.
    * @note Without an actor-pair override for this field, the value used in a collision is the
    * geometric mean of the colliding and collider's coefficients. This disables Coulomb friction if
@@ -190,8 +190,8 @@ struct ContactParams {
    * CinfRegularized, the force asymptotically approaches full strength with no compact support
    * boundary; frictionFalloffVel controls the regularization scale.
    *
-   * @note Must not be negative. For CinfRegularized, a value of zero is clamped internally to
-   * avoid numerical issues.
+   * @note Must be finite and not negative. For CinfRegularized, a value of zero is clamped
+   * internally to avoid numerical issues.
    * @note Smaller velocity thresholds improve physical accuracy but may degrade stability.
    * @note Without an actor-pair override for this field, the value used in a collision is the
    * geometric mean of the colliding and collider's thresholds. The exception is if the collider is
@@ -209,7 +209,7 @@ struct ContactParams {
    * @warning The calibration diverges as CoR approaches zero, which may cause numerical problems
    * when approaching fully-inelastic collisions.
    *
-   * @note Must not be negative.
+   * @note Must be finite and not negative.
    * @note Without an actor-pair override for this field, the value used in a collision is the
    * geometric mean of the colliding and collider's coefficients. This disables normal damping if
    * either of them does.
@@ -233,6 +233,7 @@ struct ContactParams {
    * @warning This is an experimental feature. It may be changed or removed in the future. Use at
    * your own risk.
    *
+   * @note Must be finite.
    * @note Useful, for example, with approximate SDFs (e.g., deep flow map) to compensate for
    * potentially overestimating the true distance.
    */
@@ -244,6 +245,8 @@ struct ContactParams {
    *
    * @warning Deep flow is an experimental feature. It may be changed or removed in the future. Use
    * at your own risk.
+   *
+   * @note Must be finite and strictly positive.
    */
   real objScale = 1_r;
 
@@ -256,6 +259,7 @@ struct ContactParams {
    * @warning Contact with lower-dimensional bodies is an experimental feature. It may be changed or
    * removed in the future. Use at your own risk.
    *
+   * @note Must be finite and strictly positive.
    * @note This value is not used in the most common case, where contact traction is integrated over
    * a two-dimensional surface.
    * @note The colliding body's value is always used in a contact pair, because the colliding body

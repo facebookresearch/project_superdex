@@ -1214,6 +1214,7 @@ void mochi::InitRodActor(
           params.material.stiffnessDampingCoefficient < 0_r,
       error,
       "Invalid stiffness damping coefficient");
+  ValidateContactParams(params.contact, error);
   MOCHI_ERROR_RETURN(error);
 
   // Get nodes and element frame axes from the shape

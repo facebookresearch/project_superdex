@@ -25,6 +25,8 @@
 #include "mochi_core/test/mochi_test_helpers.h"
 #include "mochi_physics_test_fixture.h"
 
+#include <limits>
+
 using namespace mochi;
 using namespace mochi::experimental;
 
@@ -2253,6 +2255,24 @@ TEST(MochiClosedLoopRod, BishopFrameNonzeroHolonomy) {
         << "Frame should be continuous across closing edge for " << numNodes
         << " nodes (diff norm: " << Norm(diff) << ")";
   }
+}
+
+// ============================================================================
+// Rod actor creation validation
+// ============================================================================
+
+class MochiRodActorValidationTest : public test::MochiSceneTestBase {};
+
+TEST_F(MochiRodActorValidationTest, CreationRejectsInvalidContactParams) {
+  DynamicArray<Real3> const nodes{{0_r, 0_r, 0_r}, {1_r, 0_r, 0_r}};
+  DynamicArray<Real3> const frameAxes{Real3{0_r, 1_r, 0_r}};
+  ShapeHandle const shape = CreatePolylineShape(
+      _scene->GetContext(), nodes, frameAxes, /*isClosedLoop=*/false, test::ExpectOK{});
+  RodActorParams params;
+  params.shape = shape;
+  params.contact.penaltyThresholdDefault = std::numeric_limits<real>::infinity();
+
+  EXPECT_EQ(nullptr, CreateRodActor(_scene, params, test::ExpectNotOK{}));
 }
 
 class MochiClosedLoopRodActorTest : public test::MochiSceneTestBase {};

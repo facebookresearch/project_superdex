@@ -755,41 +755,57 @@ struct CCollJacs : public std::vector<JacData>, NoCopy {
 
 inline void ValidateContactParams(ContactParams const& params, Error& error) {
   MOCHI_ERROR_IF_NOT(
-      params.penaltyCoefficient > 0_r,
+      IsFinite(params.penaltyCoefficient) && params.penaltyCoefficient > 0_r,
       error,
-      "Contact penalty coefficient (penaltyCoefficient) must be positive.");
+      "Contact penalty coefficient (penaltyCoefficient) must be finite and positive.");
   MOCHI_ERROR_IF_NOT(
-      params.penaltySmoothingHalfDistance >= 0_r,
+      IsFinite(params.penaltySmoothingHalfDistance) && params.penaltySmoothingHalfDistance >= 0_r,
       error,
-      "Contact penalty smoothing half-distance (penaltySmoothingHalfDistance) must not be negative.");
+      "Contact penalty smoothing half-distance (penaltySmoothingHalfDistance) must be finite and not "
+      "negative.");
   MOCHI_ERROR_IF_NOT(
-      params.penaltyThresholdExtraPadding >= 0_r,
+      IsFinite(params.penaltyThresholdDefault),
       error,
-      "Penalty threshold extra padding (penaltyThresholdExtraPadding) must not be negative.");
+      "Contact penalty threshold (penaltyThresholdDefault) must be finite.");
+  MOCHI_ERROR_IF_NOT(
+      IsFinite(params.penaltyThresholdExtraPadding) && params.penaltyThresholdExtraPadding >= 0_r,
+      error,
+      "Penalty threshold extra padding (penaltyThresholdExtraPadding) must be finite and not "
+      "negative.");
   MOCHI_ERROR_IF_NOT(
       params.maxAlignmentNormals >= -1_r && params.maxAlignmentNormals <= 1_r,
       error,
       "Maximum normal alignment (maxAlignmentNormals) must be in [-1, 1].");
   MOCHI_ERROR_IF_NOT(
-      params.coulombFrictionCoefficient >= 0_r,
+      IsFinite(params.coulombFrictionCoefficient) && params.coulombFrictionCoefficient >= 0_r,
       error,
-      "Coulomb friction coefficient (coulombFrictionCoefficient) must not be negative.");
+      "Coulomb friction coefficient (coulombFrictionCoefficient) must be finite and not negative.");
   MOCHI_ERROR_IF_NOT(
-      params.viscousFrictionCoefficient >= 0_r,
+      IsFinite(params.viscousFrictionCoefficient) && params.viscousFrictionCoefficient >= 0_r,
       error,
-      "Viscous friction coefficient (viscousFrictionCoefficient) must not be negative.");
+      "Viscous friction coefficient (viscousFrictionCoefficient) must be finite and not negative.");
   MOCHI_ERROR_IF_NOT(
-      params.frictionFalloffVel >= 0_r,
+      IsFinite(params.frictionFalloffVel) && params.frictionFalloffVel >= 0_r,
       error,
-      "Friction falloff velocity (frictionFalloffVel) must not be negative.");
+      "Friction falloff velocity (frictionFalloffVel) must be finite and not negative.");
   MOCHI_ERROR_IF_NOT(
-      params.normalViscousDampingCoefficient >= 0_r,
+      IsFinite(params.normalViscousDampingCoefficient) &&
+          params.normalViscousDampingCoefficient >= 0_r,
       error,
-      "Normal viscous damping coefficient (normalViscousDampingCoefficient) must not be negative.");
+      "Normal viscous damping coefficient (normalViscousDampingCoefficient) must be finite and not "
+      "negative.");
   MOCHI_ERROR_IF_NOT(
-      params.collidingPenaltyLengthScale > 0_r,
+      IsFinite(params.distanceErrorBound),
       error,
-      "Colliding penalty length scale (collidingPenaltyLengthScale) must be positive.");
+      "Contact distance error bound (distanceErrorBound) must be finite.");
+  MOCHI_ERROR_IF_NOT(
+      IsFinite(params.objScale) && params.objScale > 0_r,
+      error,
+      "Contact object scale (objScale) must be finite and strictly positive.");
+  MOCHI_ERROR_IF_NOT(
+      IsFinite(params.collidingPenaltyLengthScale) && params.collidingPenaltyLengthScale > 0_r,
+      error,
+      "Colliding penalty length scale (collidingPenaltyLengthScale) must be finite and positive.");
 }
 
 using ContactAssemblyReg = ecs::PartialRegistry<
