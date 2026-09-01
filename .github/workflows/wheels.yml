@@ -4,7 +4,7 @@
 # Run it by hand from the Actions tab. The defaults build everything and check it, which is what
 # producing a release set means; narrow the inputs when you are chasing one toolchain problem.
 #
-#   distribution   which wheel. `superdex_python` is a directory name -- it builds the
+#   distribution   which wheel. `superdex_python` is the stable build selector for the
 #                  `superdex-physics` wheel. `pure` is the two py3-none-any wheels together.
 #   platform       which runner. `all` fans out to the three.
 #   verify         run the check stage. Only meaningful on a full matrix, because
@@ -42,7 +42,7 @@ on:
   workflow_dispatch:
     inputs:
       distribution:
-        description: 'Wheel to build (superdex_python builds the superdex-physics wheel)'
+        description: 'Wheel to build (superdex_python selects superdex-physics)'
         type: choice
         default: all
         options:

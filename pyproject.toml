@@ -92,9 +92,9 @@ no-build-isolation-package = [
 # so `uv run` never turns a script invocation into an implicit source build.
 superdex-lab = {path = "superdex_lab", editable = true}
 superdex-mesh-cli = {path = "superdex_mesh_cli", editable = true}
-superdex-physics = {path = "superdex_python", editable = true}
+superdex-physics = {path = "superdex_physics/wheels/superdex-physics", editable = true}
 superdex-physics-debugger = {path = "superdex_physics_debugger", editable = true}
-superdex-physics-fp64 = {path = "superdex_physics_fp64", editable = true}
-superdex-robotics = {path = "superdex_robotics", editable = true}
-superdex-robotics-fp64 = {path = "superdex_robotics_fp64", editable = true}
+superdex-physics-fp64 = {path = "superdex_physics/wheels/superdex-physics-fp64", editable = true}
+superdex-robotics = {path = "superdex_robotics/wheels/superdex-robotics", editable = true}
+superdex-robotics-fp64 = {path = "superdex_robotics/wheels/superdex-robotics-fp64", editable = true}
 superdex-studio = {path = "superdex_studio", editable = true}

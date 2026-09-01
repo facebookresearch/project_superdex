@@ -47,7 +47,8 @@ def _resolve_assets_path_from_env() -> Path | None:
 def _source_tree_assets_root() -> Path | None:
     module_path = Path(__file__).resolve()
     for ancestor in module_path.parents:
-        if not (ancestor / "superdex_python").is_dir():
+        physics_wheel = ancestor / "superdex_physics" / "wheels" / "superdex-physics"
+        if not physics_wheel.is_dir():
             continue
         candidate = ancestor / "assets"
         if candidate.is_dir() and os.access(candidate, os.R_OK):
@@ -82,8 +83,8 @@ def _script_assets_roots() -> Iterator[Path]:
     Assets belong to whichever distribution ships them: the physics examples load from
     ``superdex_physics/assets``, the robotics examples from the top-level ``assets``.
     Walking up from the script finds the one that owns the caller without either of them
-    naming a path. Anchored on the script rather than on this module, which sits in
-    ``superdex_python`` and so would only ever reach the repository root.
+    naming a path. Anchored on the script rather than on this module, which sits in the
+    physics wheel project and so would only ever reach the repository root.
     """
 
     script = sys.argv[0] if sys.argv else ""

@@ -570,11 +570,11 @@ requires-dist = [
     { name = "superdex-dev", extras = ["core"], marker = "extra == 'gui'" },
     { name = "superdex-lab", marker = "extra == 'core'", editable = "superdex_lab" },
     { name = "superdex-mesh-cli", marker = "extra == 'gui'", editable = "superdex_mesh_cli" },
-    { name = "superdex-physics", marker = "extra == 'core'", editable = "superdex_python" },
+    { name = "superdex-physics", marker = "extra == 'core'", editable = "superdex_physics/wheels/superdex-physics" },
     { name = "superdex-physics-debugger", marker = "extra == 'gui'", editable = "superdex_physics_debugger" },
-    { name = "superdex-physics-fp64", marker = "extra == 'double'", editable = "superdex_physics_fp64" },
-    { name = "superdex-robotics", marker = "extra == 'core'", editable = "superdex_robotics" },
-    { name = "superdex-robotics-fp64", marker = "extra == 'double'", editable = "superdex_robotics_fp64" },
+    { name = "superdex-physics-fp64", marker = "extra == 'double'", editable = "superdex_physics/wheels/superdex-physics-fp64" },
+    { name = "superdex-robotics", marker = "extra == 'core'", editable = "superdex_robotics/wheels/superdex-robotics" },
+    { name = "superdex-robotics-fp64", marker = "extra == 'double'", editable = "superdex_robotics/wheels/superdex-robotics-fp64" },
     { name = "superdex-studio", marker = "extra == 'gui'", editable = "superdex_studio" },
 ]
 provides-extras = ["build", "core", "double", "gui"]
@@ -608,7 +608,7 @@ source = { editable = "superdex_mesh_cli" }
 [[package]]
 name = "superdex-physics"
 version = "1.0.0"
-source = { editable = "superdex_python" }
+source = { editable = "superdex_physics/wheels/superdex-physics" }
 dependencies = [
     { name = "imageio", extra = ["ffmpeg"] },
     { name = "numpy" },
@@ -650,7 +650,7 @@ source = { editable = "superdex_physics_debugger" }
 [[package]]
 name = "superdex-physics-fp64"
 version = "1.0.0"
-source = { editable = "superdex_physics_fp64" }
+source = { editable = "superdex_physics/wheels/superdex-physics-fp64" }
 dependencies = [
     { name = "superdex-physics" },
 ]
@@ -661,7 +661,7 @@ requires-dist = [{ name = "superdex-physics", specifier = "==1.0.0" }]
 [[package]]
 name = "superdex-robotics"
 version = "1.0.0"
-source = { editable = "superdex_robotics" }
+source = { editable = "superdex_robotics/wheels/superdex-robotics" }
 dependencies = [
     { name = "superdex-physics" },
 ]
@@ -676,7 +676,7 @@ provides-extras = ["double"]
 [[package]]
 name = "superdex-robotics-fp64"
 version = "1.0.0"
-source = { editable = "superdex_robotics_fp64" }
+source = { editable = "superdex_robotics/wheels/superdex-robotics-fp64" }
 dependencies = [
     { name = "superdex-physics-fp64" },
     { name = "superdex-robotics" },

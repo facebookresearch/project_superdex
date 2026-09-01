@@ -28,6 +28,18 @@ load_physics_module("environment")
 paths = load_physics_module("paths")
 
 
+def _physics_module_path(repo_root: Path) -> Path:
+    return (
+        repo_root
+        / "superdex_physics"
+        / "wheels"
+        / "superdex-physics"
+        / "superdex"
+        / "physics"
+        / "paths.py"
+    )
+
+
 class PathsTest(unittest.TestCase):
     def test_primary_env_wins_over_legacy(self) -> None:
         with tempfile.TemporaryDirectory() as canonical_dir:
@@ -48,13 +60,7 @@ class PathsTest(unittest.TestCase):
     def test_primary_env_wins_over_source_tree(self) -> None:
         with tempfile.TemporaryDirectory() as canonical_dir:
             with tempfile.TemporaryDirectory() as source_root:
-                module_path = (
-                    Path(source_root)
-                    / "superdex_python"
-                    / "superdex"
-                    / "physics"
-                    / "paths.py"
-                )
+                module_path = _physics_module_path(Path(source_root))
                 module_path.parent.mkdir(parents=True)
                 module_path.write_text("# stub\n")
                 (Path(source_root) / "assets").mkdir()
@@ -74,9 +80,7 @@ class PathsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as source_root:
             repo_root = Path(source_root)
             assets_root = repo_root / "assets"
-            module_path = (
-                repo_root / "superdex_python" / "superdex" / "physics" / "paths.py"
-            )
+            module_path = _physics_module_path(repo_root)
             module_path.parent.mkdir(parents=True)
             module_path.write_text("# stub\n")
             assets_root.mkdir()
@@ -87,6 +91,22 @@ class PathsTest(unittest.TestCase):
                         assets_root.resolve(), paths._source_tree_assets_root()
                     )
                     self.assertEqual(assets_root.resolve(), paths._find_assets_path())
+
+    def test_source_tree_fallback_skips_native_physics_assets(self) -> None:
+        with tempfile.TemporaryDirectory() as source_root:
+            repo_root = Path(source_root)
+            assets_root = repo_root / "assets"
+            physics_assets = repo_root / "superdex_physics" / "assets"
+            module_path = _physics_module_path(repo_root)
+            module_path.parent.mkdir(parents=True)
+            module_path.write_text("# stub\n")
+            assets_root.mkdir()
+            physics_assets.mkdir(parents=True)
+
+            with patch.object(paths, "__file__", str(module_path)):
+                self.assertEqual(
+                    assets_root.resolve(), paths._source_tree_assets_root()
+                )
 
     def test_resolve_asset_uses_env_override(self) -> None:
         with tempfile.TemporaryDirectory() as assets_dir:
@@ -109,9 +129,7 @@ class PathsTest(unittest.TestCase):
             repo_root = Path(source_root)
             assets_root = repo_root / "assets"
             asset_path = assets_root / "custom" / "example.asset"
-            module_path = (
-                repo_root / "superdex_python" / "superdex" / "physics" / "paths.py"
-            )
+            module_path = _physics_module_path(repo_root)
             module_path.parent.mkdir(parents=True)
             module_path.write_text("# stub\n")
             asset_path.parent.mkdir(parents=True)
@@ -128,9 +146,7 @@ class PathsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as source_root:
             repo_root = Path(source_root)
             assets_root = repo_root / "assets"
-            module_path = (
-                repo_root / "superdex_python" / "superdex" / "physics" / "paths.py"
-            )
+            module_path = _physics_module_path(repo_root)
             module_path.parent.mkdir(parents=True)
             module_path.write_text("# stub\n")
             assets_root.mkdir()

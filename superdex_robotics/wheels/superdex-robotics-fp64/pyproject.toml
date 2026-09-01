@@ -45,14 +45,14 @@ Repository = "https://github.com/facebookresearch/project_superdex"
 managed = false
 
 [tool.scikit-build]
-build-dir = "../build-fp64/{wheel_tag}"
+build-dir = "../../../build-fp64/{wheel_tag}"
 wheel.packages = ["superdex_robotics_fp64"]
 wheel.install-dir = "superdex_robotics_fp64/_native"
 build.targets = ["superdex_robotics_pybind"]
 install.components = ["superdex_robotics_pybind"]
 
 [tool.scikit-build.cmake]
-source-dir = ".."
+source-dir = "../../.."
 args = [
     "-GNinja",
     "-DMOCHI_BUILD_DEBUGGER=OFF",

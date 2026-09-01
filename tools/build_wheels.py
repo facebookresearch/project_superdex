@@ -62,7 +62,7 @@ import tomllib
 import venv
 from pathlib import Path
 
-# Directory names, not distribution names: these are what cibuildwheel is pointed at.
+# Stable build selectors used by CI and internal wheel jobs.
 NATIVE_DISTRIBUTIONS = (
     "superdex_python",
     "superdex_physics_fp64",
@@ -77,6 +77,18 @@ PURE_DISTRIBUTIONS = (
     "superdex_meta",
 )
 ALL_DISTRIBUTIONS = NATIVE_DISTRIBUTIONS + PURE_DISTRIBUTIONS
+
+DISTRIBUTION_DIRECTORIES = {
+    "superdex_python": Path("superdex_physics/wheels/superdex-physics"),
+    "superdex_physics_fp64": Path("superdex_physics/wheels/superdex-physics-fp64"),
+    "superdex_robotics": Path("superdex_robotics/wheels/superdex-robotics"),
+    "superdex_robotics_fp64": Path("superdex_robotics/wheels/superdex-robotics-fp64"),
+    "superdex_mesh_cli": Path("superdex_mesh_cli"),
+    "superdex_physics_debugger": Path("superdex_physics_debugger"),
+    "superdex_studio": Path("superdex_studio"),
+    "superdex_lab": Path("superdex_lab"),
+    "superdex_meta": Path("superdex_meta"),
+}
 
 # The double-precision payloads. Dropping both halves the native build.
 FP64_DISTRIBUTIONS = ("superdex_physics_fp64", "superdex_robotics_fp64")
@@ -216,15 +228,23 @@ def repository_root() -> Path:
     return Path(__file__).absolute().parent.parent
 
 
+def distribution_path(root: Path, name: str) -> Path:
+    return root / DISTRIBUTION_DIRECTORIES[name]
+
+
 def _check_repository_root(root: Path) -> None:
     """Reject a tree that is not the repo root, or that cibuildwheel cannot copy.
 
-    Both native pyprojects set `source-dir = ".."`, so cibuildwheel has to be invoked from
-    the root naming a package (`cibuildwheel superdex_python`). Invoking it on `.` would
-    build `superdex-dev` instead.
+    Native pyprojects use the repository CMake project, so cibuildwheel has to be invoked
+    from the root naming a distribution directory. Invoking it on `.` would build
+    `superdex-dev` instead.
     """
 
-    missing = [name for name in ALL_DISTRIBUTIONS if not (root / name).is_dir()]
+    missing = [
+        str(DISTRIBUTION_DIRECTORIES[name])
+        for name in ALL_DISTRIBUTIONS
+        if not distribution_path(root, name).is_dir()
+    ]
     if missing:
         raise SystemExit(
             f"{root} does not look like a SuperDex repository root; "
@@ -233,12 +253,19 @@ def _check_repository_root(root: Path) -> None:
 
     # And the other direction: the lists above are what CI builds, so a distribution missing from
     # them is never built and never published, with nothing to notice.
+    registered = set(DISTRIBUTION_DIRECTORIES.values())
+    distribution_roots = (
+        root,
+        root / "superdex_physics" / "wheels",
+        root / "superdex_robotics" / "wheels",
+    )
     unregistered = sorted(
-        path.name
-        for path in root.iterdir()
+        str(path.relative_to(root))
+        for distribution_root in distribution_roots
+        for path in distribution_root.iterdir()
         if path.is_dir()
         and (path / "pyproject.toml").is_file()
-        and path.name not in ALL_DISTRIBUTIONS
+        and path.relative_to(root) not in registered
     )
     if unregistered:
         raise SystemExit(
@@ -259,10 +286,12 @@ def _check_no_symlinked_sources(root: Path) -> None:
     if platform.system() != "Linux":
         return
     symlinked = [
-        name
-        for name in ("CMakeLists.txt", *ALL_DISTRIBUTIONS)
-        if (root / name).is_symlink()
+        str(DISTRIBUTION_DIRECTORIES[name])
+        for name in ALL_DISTRIBUTIONS
+        if distribution_path(root, name).is_symlink()
     ]
+    if (root / "CMakeLists.txt").is_symlink():
+        symlinked.insert(0, "CMakeLists.txt")
     if symlinked:
         raise SystemExit(
             f"{root} is staged with symlinks ({', '.join(symlinked)}). The Linux build "
@@ -309,7 +338,9 @@ def build_system_requires(root: Path, names: list[str]) -> list[str]:
     requirements = set()
     for name in names:
         pyproject = tomllib.loads(
-            (root / name / "pyproject.toml").read_text(encoding="utf-8")
+            (distribution_path(root, name) / "pyproject.toml").read_text(
+                encoding="utf-8"
+            )
         )
         requirements.update(pyproject.get("build-system", {}).get("requires", []))
     return sorted(requirements)
@@ -569,7 +600,12 @@ def build_native(
     name: str, *, root: Path, output: Path, env: dict[str, str], command: list[str]
 ) -> None:
     _run(
-        [*command, "--output-dir", str(output), name],
+        [
+            *command,
+            "--output-dir",
+            str(output),
+            str(DISTRIBUTION_DIRECTORIES[name]),
+        ],
         cwd=root,
         environment=env,
     )
@@ -579,7 +615,13 @@ def build_pure(
     name: str, *, root: Path, output: Path, env: dict[str, str], frontend: list[str]
 ) -> None:
     _run(
-        [*frontend, "--wheel", "--outdir", str(output), name],
+        [
+            *frontend,
+            "--wheel",
+            "--outdir",
+            str(output),
+            str(DISTRIBUTION_DIRECTORIES[name]),
+        ],
         cwd=root,
         environment=env,
     )
@@ -612,7 +654,7 @@ def build_fast(name: str, *, root: Path, output: Path, env: dict[str, str]) -> N
             "--no-isolation",
             "--outdir",
             str(output),
-            name,
+            str(DISTRIBUTION_DIRECTORIES[name]),
         ],
         cwd=root,
         environment=env,
@@ -690,7 +732,7 @@ def _repair_program(program: str) -> list[str]:
 def _pyproject(root: Path, name: str) -> dict:
     """This distribution's parsed `pyproject.toml`."""
 
-    return tomllib.loads((root / name / "pyproject.toml").read_text())
+    return tomllib.loads((distribution_path(root, name) / "pyproject.toml").read_text())
 
 
 def _cibuildwheel_table(root: Path, name: str, table: str) -> dict:
@@ -803,7 +845,7 @@ def build_host(name: str, *, root: Path, output: Path, env: dict[str, str]) -> N
                 *HOST_NO_ISOLATION_FLAGS,
                 "--outdir",
                 str(raw),
-                name,
+                str(DISTRIBUTION_DIRECTORIES[name]),
             ],
             cwd=root,
             environment=env,
@@ -862,9 +904,9 @@ def _parse_args() -> argparse.Namespace:
         "--only",
         action="append",
         choices=ALL_DISTRIBUTIONS,
-        metavar="DIRECTORY",
+        metavar="SELECTOR",
         help=(
-            "Build just this distribution directory; repeatable. "
+            "Build just this distribution; repeatable. "
             f"One of: {', '.join(ALL_DISTRIBUTIONS)}."
         ),
     )

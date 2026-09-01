@@ -17,15 +17,28 @@ requires = ["scikit-build-core>=0.11"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "superdex-physics-fp64"
+name = "superdex-physics"
 version = "1.0.0"
 requires-python = ">=3.12,<3.13"
 authors = [{name = "SuperDex Team"}]
-description = "Double-precision physics extension for SuperDex"
+description = "Physics runtime for SuperDex"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "thirdparty_licenses/**/*"]
-dependencies = ["superdex-physics==1.0.0"]
+dependencies = [
+    "imageio[ffmpeg]>=2.36.1",  # Image/video I/O with FFmpeg support for recordings.
+    "numpy",
+    "pillow",
+    "polyscope>=2.5.0,<2.6",
+    "pycollada",
+    "pyre-extensions",
+    "scikit-image",
+    "scipy",
+    "tabulate",
+    "trimesh",
+    "typing_extensions",
+    "unrealcv",
+]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -33,6 +46,9 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering",
 ]
+
+[project.optional-dependencies]
+double = ["superdex-physics-fp64==1.0.0"]
 
 [project.urls]
 Homepage = "https://github.com/facebookresearch/project_superdex"
@@ -42,21 +58,21 @@ Repository = "https://github.com/facebookresearch/project_superdex"
 managed = false
 
 [tool.scikit-build]
-build-dir = "../build-fp64/{wheel_tag}"
-wheel.packages = ["superdex_physics_fp64"]
-wheel.install-dir = "superdex_physics_fp64/_native"
+build-dir = "../../../build-fp32/{wheel_tag}"
+wheel.packages = ["superdex"]
+wheel.exclude = ["superdex/physics/internal", "superdex/physics/utils/testing/internal"]
+wheel.install-dir = "superdex/physics/_native"
 build.targets = ["mochi_physics_pybind"]
 install.components = ["mochi_physics_pybind"]
 
 [tool.scikit-build.cmake]
-source-dir = ".."
+source-dir = "../../.."
 args = [
     "-GNinja",
     "-DMOCHI_BUILD_DEBUGGER=OFF",
     "-DMOCHI_BUILD_MESH_CLI=OFF",
     "-DMOCHI_BUILD_RENDERER=OFF",
     "-DMOCHI_BUILD_SHARED=ON",
-    "-DMOCHI_USE_DOUBLE_PRECISION=ON",
     "-DMOCHI_USE_PYBIND=ON",
     "-DSUPERDEX_BUILD_ROBOTICS=OFF",
 ]
@@ -75,4 +91,5 @@ CC = "clang"
 CXX = "clang++"
 
 [tool.cibuildwheel.windows]
-repair-wheel-command = "delvewheel repair -w {dest_dir} -v {wheel} --ignore-existing"
+repair-wheel-command = """delvewheel repair -w {dest_dir} -v {wheel} --ignore-existing \
+  --namespace-pkg superdex"""

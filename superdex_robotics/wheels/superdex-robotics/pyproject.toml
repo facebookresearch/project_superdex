@@ -17,28 +17,15 @@ requires = ["scikit-build-core>=0.11"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "superdex-physics"
+name = "superdex-robotics"
 version = "1.0.0"
 requires-python = ">=3.12,<3.13"
 authors = [{name = "SuperDex Team"}]
-description = "Physics runtime for SuperDex"
+description = "Robotics bindings and runtime surfaces for SuperDex"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "thirdparty_licenses/**/*"]
-dependencies = [
-    "imageio[ffmpeg]>=2.36.1",  # Image/video I/O with FFmpeg support for recordings.
-    "numpy",
-    "pillow",
-    "polyscope>=2.5.0,<2.6",
-    "pycollada",
-    "pyre-extensions",
-    "scikit-image",
-    "scipy",
-    "tabulate",
-    "trimesh",
-    "typing_extensions",
-    "unrealcv",
-]
+dependencies = ["superdex-physics==1.0.0"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -48,7 +35,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-double = ["superdex-physics-fp64==1.0.0"]
+double = ["superdex-robotics-fp64==1.0.0"]
 
 [project.urls]
 Homepage = "https://github.com/facebookresearch/project_superdex"
@@ -58,15 +45,14 @@ Repository = "https://github.com/facebookresearch/project_superdex"
 managed = false
 
 [tool.scikit-build]
-build-dir = "../build-fp32/{wheel_tag}"
-wheel.packages = ["superdex"]
-wheel.exclude = ["superdex/physics/internal", "superdex/physics/utils/testing/internal"]
-wheel.install-dir = "superdex/physics/_native"
-build.targets = ["mochi_physics_pybind"]
-install.components = ["mochi_physics_pybind"]
+build-dir = "../../../build-fp32/{wheel_tag}"
+wheel.packages = ["../../superdex"]
+wheel.install-dir = "superdex/robotics/_native"
+build.targets = ["superdex_robotics_pybind"]
+install.components = ["superdex_robotics_pybind"]
 
 [tool.scikit-build.cmake]
-source-dir = ".."
+source-dir = "../../.."
 args = [
     "-GNinja",
     "-DMOCHI_BUILD_DEBUGGER=OFF",
@@ -74,7 +60,7 @@ args = [
     "-DMOCHI_BUILD_RENDERER=OFF",
     "-DMOCHI_BUILD_SHARED=ON",
     "-DMOCHI_USE_PYBIND=ON",
-    "-DSUPERDEX_BUILD_ROBOTICS=OFF",
+    "-DSUPERDEX_BUILD_ROBOTICS=ON",
 ]
 
 [tool.cibuildwheel]
@@ -85,11 +71,19 @@ test-skip = "*"
 [tool.cibuildwheel.linux]
 environment-pass = ["http_proxy", "https_proxy", "no_proxy"]
 before-all = "yum install -y clang"
+repair-wheel-command = """auditwheel repair -w {dest_dir} {wheel} \
+  --exclude libmochi_physics.so --exclude libmochi_pybind_core.so --exclude 'libmarl.so*'"""
 
 [tool.cibuildwheel.linux.environment]
 CC = "clang"
 CXX = "clang++"
 
+[tool.cibuildwheel.macos]
+repair-wheel-command = """delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel} \
+  --ignore-missing-dependencies \
+  --exclude libmochi_physics.dylib --exclude libmochi_pybind_core.dylib --exclude libmarl."""
+
 [tool.cibuildwheel.windows]
 repair-wheel-command = """delvewheel repair -w {dest_dir} -v {wheel} --ignore-existing \
-  --namespace-pkg superdex"""
+  --namespace-pkg superdex \
+  --exclude mochi_physics.dll --exclude mochi_pybind_core.dll --exclude marl.dll"""
