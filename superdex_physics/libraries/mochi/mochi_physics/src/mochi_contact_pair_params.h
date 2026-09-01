@@ -61,10 +61,11 @@ class CContactPairParamsOverrideTable final : public NoCopy {
 
   void RemoveEntity(entt::entity entity);
 
-  void DisableFriction() {
+  void DisableDissipation() {
     for (auto& record : _records) {
       record.second.coulombFrictionCoefficient = 0_r;
       record.second.viscousFrictionCoefficient = 0_r;
+      record.second.normalViscousDampingCoefficient = 0_r;
     }
   }
 

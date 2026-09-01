@@ -182,7 +182,7 @@ struct experimental::IKSolverParams [no_reflection] {
 // target position and orientation of rigid links in articulated bodies.
 //
 // @note The IK solver takes ownership of the scene passed at creation. The scene is mutated
-// (e.g., gravity zeroed, single-island forced, contact friction zeroed, articulated inertia and joint
+// (e.g., gravity zeroed, single-island forced, contact dissipation zeroed, articulated inertia and joint
 // friction removed) and is unsuitable for general simulation afterward. Use it only via this
 // @ref IKSolver.
 // @note Targets must be set before calling @ref IKSolver::SolveIK.
@@ -283,7 +283,7 @@ class experimental::IKSolver [no_init, no_destruct, no_reflection] {
 // must not be used directly and will be destroyed by @ref experimental::DestroyIKSolver.
 // @note Scene ownership transfers only on success. On error, ownership is unchanged.
 // @note The scene must contain only @ref ActorType::Articulated and @ref ActorType::Rigid actors.
-// @note The scene's solver parameters, gravity, single-island setting, contact friction, and
+// @note The scene's solver parameters, gravity, single-island setting, contact dissipation, and
 // articulated inertia/joint-friction terms are reconfigured for IK and cannot be relied upon
 // afterwards.
 //

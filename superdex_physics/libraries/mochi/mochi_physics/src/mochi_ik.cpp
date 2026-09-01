@@ -61,12 +61,13 @@ IKSolverImpl::IKSolverImpl(Scene* scene, Error& error) {
   auto& reg = _scene->GetRegistry();
   reg.set<IKSolverHandle>(this);
 
-  // Disable friction on all actors
+  // Disable contact dissipation on all actors
   reg.view<ContactParams>().each([](ContactParams& params) {
     params.coulombFrictionCoefficient = 0_r;
     params.viscousFrictionCoefficient = 0_r;
+    params.normalViscousDampingCoefficient = 0_r;
   });
-  reg.ctx<CContactPairParamsOverrideTable>().DisableFriction();
+  reg.ctx<CContactPairParamsOverrideTable>().DisableDissipation();
 
   // Disable joint friction and inertia by zeroing them via the setters. The components are
   // always present on articulated actors, so zeroing (rather than removing them) keeps that
