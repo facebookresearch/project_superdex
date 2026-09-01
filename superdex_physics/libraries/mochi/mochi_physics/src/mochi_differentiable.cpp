@@ -332,7 +332,10 @@ static void KrylovSolveZ(
         minresStatusCheck,
         backpropParams.verbosity);
 
-    if (backpropParams.verbosity >= VerbosityLevel::Verbose) {
+    if (outerResult.convergence == LinearSolverConvergenceStatus::Diverged &&
+        backpropParams.verbosity >= VerbosityLevel::Warning) {
+      MOCHI_LOG_WARNING("MINRES diverged at iteration %d.", outerResult.numIterDone);
+    } else if (backpropParams.verbosity >= VerbosityLevel::Verbose) {
       MOCHI_LOG(
           "MINRES: Finished after %d iterations, final resNorm = %f, converged = %d",
           outerResult.numIterDone,
