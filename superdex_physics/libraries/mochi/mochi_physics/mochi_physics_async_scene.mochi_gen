@@ -22,6 +22,9 @@ class AsyncScene [no_init, no_destruct, no_python, no_capi] {
   //
   // @param[in] callback Function to execute. Receives Scene* when executed.
   //
+  // @warning The callback receives borrowed access to the @ref Scene. Do not retain the pointer after
+  // the callback returns or pass it to APIs that take ownership.
+  //
   // @note Executed before the next simulation step when Scene access is safe.
   // @note When using lambdas, capture by value or use @ref WaitForQueuedCommands to ensure object
   // lifespan.

@@ -279,9 +279,12 @@ class experimental::IKSolver [no_init, no_destruct, no_reflection] {
 //
 // @return Pointer to the created @ref experimental::IKSolver, or nullptr on error.
 //
-// @note The @ref experimental::IKSolver assumes exclusive control of the provided scene. The scene
-// must not be used directly and will be destroyed by @ref experimental::DestroyIKSolver.
-// @note Scene ownership transfers only on success. On error, ownership is unchanged.
+// @note The scene must have been created with @ref Context::CreateScene and must not be owned or
+// managed by another API.
+// @note On success, ownership transfers to the @ref experimental::IKSolver, which assumes exclusive
+// control and destroys the scene when @ref experimental::DestroyIKSolver is called. Do not use the
+// scene directly after ownership transfers. On error, ownership is unchanged.
+// @note Returns an error if scene ownership has already been claimed.
 // @note The scene must contain only @ref ActorType::Articulated and @ref ActorType::Rigid actors.
 // @note The scene's solver parameters, gravity, single-island setting, contact dissipation, and
 // articulated inertia/joint-friction terms are reconfigured for IK and cannot be relied upon

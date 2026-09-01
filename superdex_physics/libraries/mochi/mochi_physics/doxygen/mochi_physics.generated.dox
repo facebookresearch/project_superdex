@@ -7545,6 +7545,8 @@
 /// @note Executed before the next simulation step when Scene access is safe.
 /// @note When using lambdas, capture by value or use @ref mochi::AsyncScene::WaitForQueuedCommands "WaitForQueuedCommands" to ensure object lifespan.
 ///
+/// @warning The callback receives borrowed access to the @ref mochi::Scene "Scene". Do not retain the pointer after the callback returns or pass it to APIs that take ownership.
+///
 /// @see @ref mochi::AsyncScene::WaitForQueuedCommands "WaitForQueuedCommands", @ref mochi::AsyncScene::QueueActorCommand "QueueActorCommand"
 ///
 

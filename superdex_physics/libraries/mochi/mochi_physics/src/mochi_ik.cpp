@@ -25,12 +25,6 @@
 
 using namespace mochi;
 
-namespace {
-struct IKSolverHandle {
-  IKSolverImpl* handle = nullptr;
-};
-} // namespace
-
 IKSolverImpl::IKSolverImpl(Scene* scene, Error& error) {
   MOCHI_ERROR_IF(scene == nullptr, error, "Cannot create an IKSolver without a Scene");
   MOCHI_ERROR_RETURN(error);
@@ -45,6 +39,10 @@ IKSolverImpl::IKSolverImpl(Scene* scene, Error& error) {
   });
   MOCHI_ERROR_RETURN(error);
 
+  // AsyncScene and IKSolver both destroy their owned Scene, so ownership must be exclusive.
+  MOCHI_ERROR_IF_NOT(sceneImpl->TryClaimOwnership(), error, "Scene is already owned.");
+  MOCHI_ERROR_RETURN(error);
+
   // Assign _scene only after error checks. ~IKSolverImpl destroys it.
   _scene = sceneImpl;
 
@@ -57,11 +55,8 @@ IKSolverImpl::IKSolverImpl(Scene* scene, Error& error) {
   // Force use single island, so that collisions in another island will not be missed.
   _scene->SetForceSingleIsland(true);
 
-  // Let the scene know that there is an IKSolver attached to it.
-  auto& reg = _scene->GetRegistry();
-  reg.set<IKSolverHandle>(this);
-
   // Disable contact dissipation on all actors
+  auto& reg = _scene->GetRegistry();
   reg.view<ContactParams>().each([](ContactParams& params) {
     params.coulombFrictionCoefficient = 0_r;
     params.viscousFrictionCoefficient = 0_r;

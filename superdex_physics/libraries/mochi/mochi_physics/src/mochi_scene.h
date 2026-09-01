@@ -25,6 +25,7 @@
 #include <mochi_physics/mochi_physics.h>
 #include <mochi_physics/mochi_physics_experimental.h>
 
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <string>
@@ -199,6 +200,7 @@ class SceneImpl final : public Scene {
   void UpdateDebugger() override;
 
   // For internal use only:
+  [[nodiscard]] bool TryClaimOwnership();
   void SetThreadAffinity();
   QueryHandle NewQueryHandle(QueryType type); // thread-safe
   void RegisterActorQuery(
@@ -299,6 +301,7 @@ class SceneImpl final : public Scene {
   ContextImpl* const _context;
   std::string const _name;
   uint64_t const _sceneId;
+  std::atomic<bool> _ownershipClaimed = false;
   entt::registry _registry;
   PerformanceStats _lastPerformanceStats;
   SolverStats _lastSolverStats;

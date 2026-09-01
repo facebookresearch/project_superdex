@@ -42,15 +42,26 @@ class DebugServerInternal : public DebugServer {
   /** @brief Start accepting in-process connections (for unit tests) */
   virtual void StartInProc() = 0;
 
-  /** @brief Called by @ref Context when a new scene is being added to the context. */
+  /**
+   * @brief Called by @ref Context when a new scene is being added to the context.
+   *
+   * @note See @ref protocol::SceneAddRemove for callback restrictions.
+   */
   virtual void OnAddScene(Scene* scene) = 0;
 
-  /** @brief Called by @ref Context when a scene is being removed from the context. */
+  /**
+   * @brief Called by @ref Context when a scene is being removed from the context.
+   *
+   * @note See @ref protocol::SceneAddRemove for callback restrictions.
+   */
   virtual void OnRemoveScene(Scene* scene) = 0;
 
   /**
    * @brief FOR UNIT TESTS ONLY: Get the internal @ref net::MessageServer so that clients can
    * connect to this server after @ref StartInProc.
+   *
+   * @warning In-process callbacks may execute synchronously on the sending thread. See
+   * @ref protocol::SceneAddRemove for restrictions on scene-add/remove notifications.
    */
   virtual net::MessageServer& GetMessageServer_ForTestingOnly() = 0;
 };

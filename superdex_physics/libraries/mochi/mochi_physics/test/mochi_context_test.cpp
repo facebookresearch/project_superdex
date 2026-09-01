@@ -1438,6 +1438,17 @@ TEST_P(MochiContextTest, CreateIKSolver_InvalidActorPreservesScene) {
   EXPECT_EQ(actor, scene->GetActor(actorHandle));
 }
 
+TEST_P(MochiContextTest, CreateIKSolver_SceneAlreadyOwnedReturnsError) {
+  Scene* scene = _mochiContext->CreateScene("IK Scene");
+  auto* solver = experimental::CreateIKSolver(scene, _mochiContext, ExpectOK{});
+  ASSERT_NE(nullptr, solver);
+  MOCHI_DEFER(experimental::DestroyIKSolver(solver, _mochiContext, ErrorAssert{}));
+
+  EXPECT_EQ(nullptr, experimental::CreateIKSolver(scene, _mochiContext, ExpectNotOK{}));
+  EXPECT_TRUE(experimental::IsValidIKSolver(solver, _mochiContext, ExpectOK{}));
+  EXPECT_TRUE(_mochiContext->IsValidScene(scene));
+}
+
 TEST_P(MochiContextTest, CreateIKTargets_ReplacesOnlyAfterSuccessfulCreation) {
   Scene* scene = _mochiContext->CreateScene("IK Scene");
   RigidActorParams actorParams;
@@ -1578,6 +1589,41 @@ static void ExpectCreateAsyncSceneFromMochiWorkerFails(bool startPaused) {
 TEST(MochiAsyncScene, CreateAsyncSceneExpectedFailures) {
   ExpectCreateAsyncSceneFromMochiWorkerFails(/*startPaused*/ false);
   ExpectCreateAsyncSceneFromMochiWorkerFails(/*startPaused*/ true);
+}
+
+TEST(MochiAsyncScene, CreateIKSolver_AsyncSceneOwnedSceneReturnsError) {
+  auto* context = CreateContext(2);
+  ASSERT_NE(nullptr, context);
+  MOCHI_DEFER(DestroyContext(context));
+
+  auto* asyncScene = context->CreateAsyncScenePaused("Async IK Scene", ExpectOK{});
+  ASSERT_NE(nullptr, asyncScene);
+  MOCHI_DEFER(context->DestroyAsyncScene(asyncScene));
+
+  experimental::IKSolver* solver = nullptr;
+  bool errorWasSet = false;
+  bool sceneWasValid = false;
+  Real3 const gravity{1_r, 2_r, 3_r};
+  Real3 observedGravity{};
+
+  asyncScene->QueueCommand([&](Scene* scene) {
+    scene->SetGravity(gravity);
+    Error error;
+    solver = experimental::CreateIKSolver(scene, context, error);
+    errorWasSet = !error.IsOK();
+    sceneWasValid = context->IsValidScene(scene);
+    if (sceneWasValid) {
+      observedGravity = scene->GetGravity();
+    }
+  });
+  asyncScene->WaitForQueuedCommands();
+
+  EXPECT_EQ(nullptr, solver);
+  EXPECT_TRUE(errorWasSet);
+  EXPECT_TRUE(sceneWasValid);
+  EXPECT_EQ(gravity, observedGravity);
+
+  experimental::DestroyIKSolver(solver, context, ErrorAssert{});
 }
 
 namespace {

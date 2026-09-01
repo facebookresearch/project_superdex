@@ -247,6 +247,14 @@ struct PingReply : net::ReplyMessage {
 };
 
 /// @brief [S-->C] Broadcast when a scene is added to or removed from the context.
+///
+/// @warning Receiving this notification does not grant ownership of the referenced scene or extend
+/// its lifetime.
+/// @warning For an in-process connection, the receive callback may run on the thread calling
+/// @ref Context::CreateScene or @ref Context::DestroyScene before that call returns. For an add
+/// notification, do not destroy the announced scene or pass it to an ownership-taking API until
+/// the originating @ref Context::CreateScene call returns, and only then if the caller controls the
+/// scene's lifetime. After a removal notification, do not resolve or access the announced scene.
 struct SceneAddRemove : net::Message {
   SceneHandle scene;
   DynamicString name;

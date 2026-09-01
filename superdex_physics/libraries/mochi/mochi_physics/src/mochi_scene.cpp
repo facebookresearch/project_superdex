@@ -440,6 +440,10 @@ SceneImpl::~SceneImpl() {
   _registry.clear();
 }
 
+bool SceneImpl::TryClaimOwnership() {
+  return !_ownershipClaimed.exchange(true, std::memory_order_relaxed);
+}
+
 char const* SceneImpl::GetName() const {
   return _name.c_str();
 }

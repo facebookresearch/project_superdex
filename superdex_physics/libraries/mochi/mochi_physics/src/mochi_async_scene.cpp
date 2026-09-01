@@ -83,6 +83,10 @@ void AsyncSceneImpl::StartSimLoopTask() {
         // Create and destroy the scene on the thread that will use it
         this->_scene = assert_cast<SceneImpl*>(_context->CreateScene(_name));
 
+        // AsyncScene retains ownership until it destroys the Scene.
+        [[maybe_unused]] bool const ownershipClaimed = _scene->TryClaimOwnership();
+        MOCHI_ASSERT(ownershipClaimed, "A newly created Scene must be unowned.");
+
         // Initialize before signalReady so IsSimThread() is valid when CreateAsyncScene() returns.
         _simThreadId.Store(std::this_thread::get_id());
         signalReady.Done();
