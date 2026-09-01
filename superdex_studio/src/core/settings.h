@@ -231,7 +231,7 @@ struct BotVisualizationSettings {
 struct GraphicsSettings {
   mochi_renderer::SceneViewSettings view;
   Color4 clearColor{0.056f, 0.058f, 0.074f, 1.0f};
-  std::string iblPath{"photo_studio_01_1k.hdr"};
+  std::string iblPath{"studio_small_08_1k.hdr"};
 
   MOCHI_STRUCT_BEGIN(superdex::studio::GraphicsSettings)
   MOCHI_FIELD(view)
