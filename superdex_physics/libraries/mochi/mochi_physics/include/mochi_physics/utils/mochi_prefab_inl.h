@@ -50,6 +50,11 @@ MOCHI_FIELD(actors)
 MOCHI_FIELD(includeNestedActors) MOCHI_ATTRIBUTE(NoSerializeDefaults)
 MOCHI_STRUCT_END_EX()
 
+MOCHI_STRUCT_BEGIN_EX(mochi::prefab::ContactPairParamsOverrideEntry)
+MOCHI_FIELD(actors)
+MOCHI_FIELD(paramsOverride)
+MOCHI_STRUCT_END_EX()
+
 MOCHI_STRUCT_BEGIN_EX(mochi::prefab::LayerContactEntry)
 MOCHI_FIELD(enable)
 MOCHI_FIELD(layers)
@@ -283,6 +288,7 @@ MOCHI_FIELD(controllers) MOCHI_ATTRIBUTE(NoSerializeDefaults)
 MOCHI_FIELD(prefabs) MOCHI_ATTRIBUTE(NoSerializeDefaults)
 MOCHI_FIELD(scene) MOCHI_ATTRIBUTE(NoSerializeDefaults)
 MOCHI_FIELD(contactFilter) // No NoSerializeDefaults - we want enable field always serialized
+MOCHI_FIELD(contactPairParamsOverrides) MOCHI_ATTRIBUTE(NoSerializeDefaults)
 MOCHI_STRUCT_END_EX()
 
     // clang-format on

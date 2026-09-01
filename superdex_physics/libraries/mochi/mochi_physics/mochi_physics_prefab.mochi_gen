@@ -39,8 +39,7 @@ struct prefab::SceneParams [no_reflection] {
 // @ref shapeFile (a path serialized to JSON. The shape is loaded at instantiation time).
 //
 // @note The inherited @ref RigidActorParams::name field need not be unique, but a name
-// shared by more than one actor cannot be referenced by a constraint, pose controller, or
-// contact filter.
+// shared by more than one actor cannot be used by name-based prefab references.
 struct prefab::RigidActorPrefab(RigidActorParams) [no_reflection] {
   // @brief Optional serialized comment.
   Optional<String> comment;
@@ -110,8 +109,8 @@ struct prefab::RigidActorPrefab(RigidActorParams) [no_reflection] {
 // @ref shapeFile (a path serialized to JSON. The shape is loaded at instantiation time).
 //
 // @note When used as a standalone soft actor prefab, the inherited @ref SoftActorParams::name
-// field need not be unique, but a name shared by more than one actor cannot be referenced by a
-// constraint, pose controller, or contact filter.
+// field need not be unique, but a name shared by more than one actor cannot be used by name-based
+// prefab references.
 struct prefab::SoftActorPrefab(SoftActorParams) [no_reflection] {
   // @brief Optional serialized comment.
   Optional<String> comment;
@@ -321,8 +320,7 @@ struct prefab::ArticulatedActorPrefab [equality, no_reflection] {
   // prefab-reference names are prepended during instantiation. They do not resolve through the
   // "unnamed_articulation" fallback. Use a non-empty actor name or enclosing prefab name when
   // prefab references need to target nested actors.
-  // @note A name shared by more than one actor cannot be referenced by a constraint, pose
-  // controller, or contact filter (see @ref PoseControllerPrefab).
+  // @note A name shared by more than one actor cannot be used by name-based prefab references.
   DynamicString name;
 
   // @brief Uniform scale baked into all link and skin shapes when the prefab is instantiated.
@@ -715,10 +713,9 @@ struct prefab::PrefabReference [no_reflection] {
   // in the form "prefabName/actorName".
   //
   // @note Name-reference ambiguity is evaluated per nested subtree. A nested prefab's own
-  // references (from its constraints, pose controllers, and contact filters) resolve within its own
-  // instance first, so a name reused across independent sibling instances is not ambiguous for each
-  // instance's internal references. It becomes ambiguous only for a reference written at the
-  // enclosing (parent) scope or above.
+  // name-based references resolve within its own instance first, so a name reused across independent
+  // sibling instances is not ambiguous for each instance's internal references. It becomes
+  // ambiguous only for a reference written at the enclosing (parent) scope or above.
   String name;
 
   // @brief Path to the nested prefab file.
@@ -818,6 +815,32 @@ struct prefab::ActorContactEntry [equality, no_reflection] {
   // same parent actor, the entry also covers pairs between that parent's nested actors, including
   // adjacent links.
   bool includeNestedActors = true;
+}
+
+// @brief Overrides selected contact parameters for an unordered actor pair.
+//
+// @see Scene::SetContactPairParamsOverride, ContactPairParamsOverride
+struct prefab::ContactPairParamsOverrideEntry [equality, no_reflection] {
+  // @brief Identifies two actors by name or hierarchy path.
+  //
+  // @details If the actor is in this prefab, reference it by name, e.g., "myActor". If the actor
+  // is in a nested prefab, reference it by hierarchy path, e.g., "myPrefab/myActor".
+  //
+  // @warning Must contain exactly 2 elements.
+  //
+  // @note Each referenced name must identify exactly one existing actor. Actor names need not be
+  // unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+  // is invalid and rejected at @ref AddToScene.
+  // @note Both referenced actors must have contact parameters.
+  // @note Parent actor names identify only the parent. Name nested actors explicitly to override
+  // their contact pairs.
+  // @note If both names identify the same actor, the entry applies to that actor's self-pair.
+  DynamicArray<String> actors;
+
+  // @brief Partial contact parameter override for the actor pair.
+  //
+  // @note At least one field must be present.
+  ContactPairParamsOverride paramsOverride;
 }
 
 // @brief Used by @ref ContactFilter to enable or disable contact for a pair of layers.
@@ -937,6 +960,13 @@ struct prefab::ScenePrefab [no_reflection] {
 
   // @brief Contact filter settings for selective contact filtering.
   Optional<prefab::ContactFilter> contactFilter;
+
+  // @brief Optional actor-pair contact parameter overrides.
+  //
+  // @details Entries are applied in array order after all actors in their prefab have been created.
+  // A later entry for the same unordered actor pair replaces the earlier override rather than
+  // merging with it. Nested child prefab entries are applied before parent entries.
+  Optional<DynamicArray<prefab::ContactPairParamsOverrideEntry>> contactPairParamsOverrides;
 }
 
 ## Prefab Serialization
@@ -1050,6 +1080,7 @@ struct prefab::PrefabParams [no_reflection] {
   //   - density (intrinsic material property; mass/density are mutually
   //     exclusive in the prefab API, so no double-application)
   //   - linearVelocity / angularVelocity / jointVelocities
+  //   - Contact-pair parameter overrides, whose authored values are preserved
   //   - Constraint stiffness/damping coefficients and saturation thresholds
   //     inherited from @ref ConstraintParams. These parameters define the
   //     constraint's response, not just geometry: different goals (preserving
@@ -1151,7 +1182,8 @@ struct prefab::AddToSceneResult [no_reflection] {
 // @brief Instantiate a @ref ScenePrefab and add it to a @ref Scene.
 //
 // @details Creates the prefab's actors, constraints, and controllers, applies any scene settings
-// enabled by @ref PrefabParams::applySceneSettings, and applies contact filter entries.
+// enabled by @ref PrefabParams::applySceneSettings, contact filter entries, and contact-pair
+// parameter overrides.
 //
 // @param[in] prefab The fully loaded @ref ScenePrefab to instantiate.
 // @param[in,out] scene The @ref Scene to add things to.
@@ -1389,7 +1421,8 @@ fn prefab::ExportScene(Scene const* scene, StringView exportName, StringView out
 // @param[in] excludeActors Handles of actors that should not be exported.
 // Excluding an articulated actor also excludes all of its nested link actors. Excluding a
 // soft-skinned actor also excludes all of its nested link actors and nested soft actors. Any
-// contact filter entries that reference excluded actors are dropped.
+// contact filter or contact-pair parameter override entries that reference excluded actors are
+// dropped.
 //
 // @warning Currently exports only rigid, soft, articulated, and soft-skinned actors. Constraints,
 // pose controllers, shell, rod actors, and implicit (non-mesh) shapes are NOT exported.
@@ -1423,10 +1456,11 @@ fn prefab::ExportSceneExcluding(Scene const* scene, StringView exportName, Strin
 //
 // @warning Only supported for standalone rigid actors, standalone soft actors, and articulated
 // actors. Soft-skinned actors are not supported.
-// @warning Contact-filter settings are not exported. Adding an exported articulated actor to a
-// scene applies automatic adjacent-link filtering, even if contact between adjacent links was
-// explicitly enabled before export. To preserve this behavior, add an equivalent enabling entry to
-// the exported prefab or re-enable the pair after adding the prefab to a scene.
+// @warning Scene-level contact-filter settings and contact-pair parameter overrides are not
+// exported. Adding an exported articulated actor to a scene applies automatic adjacent-link
+// filtering, even if contact between adjacent links was explicitly enabled before export. To
+// preserve this behavior, add an equivalent enabling entry to the exported prefab or re-enable the
+// pair after adding the prefab to a scene.
 //
 // @note Uses the same prefab export path as @ref ExportScene. Any limitations documented in
 // @ref ExportScene also apply here.

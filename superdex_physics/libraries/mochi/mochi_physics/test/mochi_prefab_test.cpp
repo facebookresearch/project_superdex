@@ -5212,3 +5212,157 @@ TEST(Prefab, LoadShapes_EmptyShapeFileReturnsError) {
   prefab::LoadShapes(scenePrefab, test::GetAssetsDir(), context, test::ExpectNotOK{});
   EXPECT_FALSE(scenePrefab.actors.rigid[0].shape.IsValid());
 }
+
+TEST(Prefab, ContactPairParamsOverride_SerializationPreservesSparseFields) {
+  auto const verify = [](prefab::ScenePrefab const& scenePrefab) {
+    ASSERT_TRUE(scenePrefab.contactPairParamsOverrides.has_value());
+    ASSERT_EQ(2, isize(*scenePrefab.contactPairParamsOverrides));
+
+    auto const& pair = (*scenePrefab.contactPairParamsOverrides)[0];
+    ASSERT_EQ(2, isize(pair.actors));
+    EXPECT_STREQ("ActorA", pair.actors[0].c_str());
+    EXPECT_STREQ("ActorB", pair.actors[1].c_str());
+    EXPECT_EQ(std::optional<real>{12_r}, pair.paramsOverride.penaltyCoefficient);
+    EXPECT_EQ(std::optional<real>{0_r}, pair.paramsOverride.coulombFrictionCoefficient);
+    EXPECT_FALSE(pair.paramsOverride.frictionFalloffVel.has_value());
+    EXPECT_FALSE(pair.paramsOverride.viscousFrictionCoefficient.has_value());
+    EXPECT_FALSE(pair.paramsOverride.normalViscousDampingCoefficient.has_value());
+
+    auto const& self = (*scenePrefab.contactPairParamsOverrides)[1];
+    ASSERT_EQ(2, isize(self.actors));
+    EXPECT_STREQ("Self", self.actors[0].c_str());
+    EXPECT_STREQ("Self", self.actors[1].c_str());
+    EXPECT_EQ(std::optional<real>{0_r}, self.paramsOverride.frictionFalloffVel);
+    EXPECT_FALSE(self.paramsOverride.penaltyCoefficient.has_value());
+  };
+
+  auto scenePrefab = prefab::ShallowLoadFromJsonString(
+      R"({
+        "contactPairParamsOverrides": [
+          {
+            "actors": ["ActorA", "ActorB"],
+            "paramsOverride": {
+              "penaltyCoefficient": 12,
+              "coulombFrictionCoefficient": 0
+            }
+          },
+          {
+            "actors": ["Self", "Self"],
+            "paramsOverride": {"frictionFalloffVel": 0}
+          }
+        ]
+      })",
+      test::ExpectOK{});
+  verify(scenePrefab);
+
+  auto const json = prefab::SaveToJsonString(scenePrefab, test::ExpectOK{});
+  EXPECT_NE(std::string::npos, json.find("\"coulombFrictionCoefficient\": 0"));
+  verify(prefab::ShallowLoadFromJsonString(json, test::ExpectOK{}));
+}
+
+TEST_IF(
+    MOCHI_INTERNAL,
+    Prefab,
+    ContactPairParamsOverride_AppliesNestedPrefabPathsAndLastEntryWins) {
+  auto* context = mochi::CreateContext(0);
+  MOCHI_DEFER(mochi::DestroyContext(context));
+  auto* scene = context->CreateScene("test");
+  MOCHI_DEFER(context->DestroyScene(scene));
+
+  auto child = std::make_shared<prefab::ScenePrefab>();
+  child->actors.rigid.push_back(MakeRigidBox("A"));
+  child->actors.rigid.push_back(MakeRigidBox("B"));
+  auto& childOverrides = child->contactPairParamsOverrides.emplace();
+  auto& childEntry = childOverrides.push_back();
+  childEntry.actors = {"A", "B"};
+  childEntry.paramsOverride.penaltyCoefficient = 3_r;
+  auto& childSelf = childOverrides.push_back();
+  childSelf.actors = {"A", "A"};
+  childSelf.paramsOverride.normalViscousDampingCoefficient = 4_r;
+
+  prefab::ScenePrefab scenePrefab;
+  scenePrefab.actors.rigid.push_back(MakeRigidBox("Self"));
+  auto& childRef = scenePrefab.prefabs.push_back();
+  childRef.name = "child";
+  childRef.prefab = child;
+  childRef.scale = 2_r;
+
+  auto& overrides = scenePrefab.contactPairParamsOverrides.emplace();
+  auto& firstReplacement = overrides.push_back();
+  firstReplacement.actors = {"child/A", "child/B"};
+  firstReplacement.paramsOverride.penaltyCoefficient = 6_r;
+  auto& lastReplacement = overrides.push_back();
+  lastReplacement.actors = {"child/B", "child/A"};
+  lastReplacement.paramsOverride.viscousFrictionCoefficient = 0.25_r;
+  auto& self = overrides.push_back();
+  self.actors = {"Self", "Self"};
+  self.paramsOverride.frictionFalloffVel = 0_r;
+
+  prefab::LoadShapes(scenePrefab, test::GetAssetsDir(), context, test::ExpectOK{});
+  prefab::AddToScene(scenePrefab, scene, {}, test::ExpectOK{});
+
+  auto const actorA = FindActorByName(scene, "child/A");
+  auto const actorB = FindActorByName(scene, "child/B");
+  auto const selfActor = FindActorByName(scene, "Self");
+  auto const pairOverride = scene->GetContactPairParamsOverride(actorB, actorA, test::ExpectOK{});
+  EXPECT_FALSE(pairOverride.penaltyCoefficient.has_value());
+  EXPECT_EQ(std::optional<real>{0.25_r}, pairOverride.viscousFrictionCoefficient);
+  auto const childSelfOverride =
+      scene->GetContactPairParamsOverride(actorA, actorA, test::ExpectOK{});
+  EXPECT_EQ(std::optional<real>{4_r}, childSelfOverride.normalViscousDampingCoefficient);
+  auto const selfOverride =
+      scene->GetContactPairParamsOverride(selfActor, selfActor, test::ExpectOK{});
+  EXPECT_EQ(std::optional<real>{0_r}, selfOverride.frictionFalloffVel);
+}
+
+TEST_IF(MOCHI_INTERNAL, Prefab, ContactPairParamsOverride_RejectsInvalidActorNames) {
+  auto* context = mochi::CreateContext(0);
+  MOCHI_DEFER(mochi::DestroyContext(context));
+
+  auto makeEntry = [](prefab::ScenePrefab& scenePrefab, char const* actorA, char const* actorB) {
+    auto& entry = scenePrefab.contactPairParamsOverrides.emplace().push_back();
+    entry.actors = {actorA, actorB};
+    entry.paramsOverride.penaltyCoefficient = 1_r;
+  };
+
+  {
+    auto* scene = context->CreateScene("missing");
+    MOCHI_DEFER(context->DestroyScene(scene));
+    prefab::ScenePrefab scenePrefab;
+    scenePrefab.actors.rigid.push_back(MakeRigidBox("Cube"));
+    makeEntry(scenePrefab, "Cube", "Missing");
+    prefab::LoadShapes(scenePrefab, test::GetAssetsDir(), context, test::ExpectOK{});
+    auto suppress = test::SuppressLogError();
+    prefab::AddToScene(scenePrefab, scene, {}, test::ExpectNotOK{});
+  }
+
+  {
+    auto* scene = context->CreateScene("ambiguous");
+    MOCHI_DEFER(context->DestroyScene(scene));
+    prefab::ScenePrefab scenePrefab;
+    scenePrefab.actors.rigid.push_back(MakeRigidBox("Cube"));
+    scenePrefab.actors.rigid.push_back(MakeRigidBox("Cube"));
+    makeEntry(scenePrefab, "Cube", "Cube");
+    prefab::LoadShapes(scenePrefab, test::GetAssetsDir(), context, test::ExpectOK{});
+    ExpectAmbiguousActorNameError(scenePrefab, scene);
+  }
+
+  for (int numActors : {0, 1, 3}) {
+    auto* scene = context->CreateScene("wrong-size");
+    MOCHI_DEFER(context->DestroyScene(scene));
+    prefab::ScenePrefab scenePrefab;
+    auto& entry = scenePrefab.contactPairParamsOverrides.emplace().push_back();
+    entry.paramsOverride.penaltyCoefficient = 1_r;
+    for (int i = 0; i < numActors; ++i) {
+      auto const actorName = "Actor" + std::to_string(i);
+      scenePrefab.actors.rigid.push_back(MakeRigidBox(actorName));
+      entry.actors.push_back(DynamicString(actorName));
+    }
+    prefab::LoadShapes(scenePrefab, test::GetAssetsDir(), context, test::ExpectOK{});
+
+    Error error;
+    prefab::AddToScene(scenePrefab, scene, {}, error);
+    EXPECT_STREQ(
+        "ContactPairParamsOverrideEntry must have exactly 2 actors.", error.GetDescription());
+  }
+}

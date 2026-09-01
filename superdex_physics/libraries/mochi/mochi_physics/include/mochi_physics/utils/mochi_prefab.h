@@ -69,6 +69,13 @@ struct ContactFilter {
   bool operator==(ContactFilter const&) const = default;
 };
 
+struct ContactPairParamsOverrideEntry {
+  DynamicArray<DynamicString> actors;
+  ContactPairParamsOverride paramsOverride;
+
+  bool operator==(ContactPairParamsOverrideEntry const&) const = default;
+};
+
 struct RigidActorPrefab : public RigidActorParams {
   std::optional<DynamicString> comment = std::nullopt;
   DynamicString shapeFile{};
@@ -299,6 +306,8 @@ struct ScenePrefab {
   std::optional<SceneParams> scene = std::nullopt;
   std::optional<DynamicString> sourceFilePath = std::nullopt;
   std::optional<ContactFilter> contactFilter = std::nullopt;
+  std::optional<DynamicArray<ContactPairParamsOverrideEntry>> contactPairParamsOverrides =
+      std::nullopt;
 
   bool operator==(ScenePrefab const&) const = default;
 };

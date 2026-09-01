@@ -62,7 +62,7 @@
 ///
 /// @details Extends @ref mochi::RigidActorParams "RigidActorParams". The inherited @ref mochi::RigidActorParams::worldFromLocal "RigidActorParams::worldFromLocal" is replaced by the prefab-relative @ref mochi::prefab::RigidActorPrefab::rotation "rotation" and @ref mochi::prefab::RigidActorPrefab::translation "translation" fields, and the inherited @ref mochi::RigidActorParams::shape "RigidActorParams::shape" (a runtime @ref mochi::ShapeHandle "ShapeHandle") is replaced by @ref mochi::prefab::RigidActorPrefab::shapeFile "shapeFile" (a path serialized to JSON. The shape is loaded at instantiation time).
 ///
-/// @note The inherited @ref mochi::RigidActorParams::name "RigidActorParams::name" field need not be unique, but a name shared by more than one actor cannot be referenced by a constraint, pose controller, or contact filter.
+/// @note The inherited @ref mochi::RigidActorParams::name "RigidActorParams::name" field need not be unique, but a name shared by more than one actor cannot be used by name-based prefab references.
 ///
 
 /// @var mochi::prefab::RigidActorPrefab::comment
@@ -142,7 +142,7 @@
 ///
 /// @details Extends @ref mochi::SoftActorParams "SoftActorParams". The inherited @ref mochi::SoftActorParams::worldFromLocal "SoftActorParams::worldFromLocal" is replaced by the prefab-relative @ref mochi::prefab::SoftActorPrefab::rotation "rotation" and @ref mochi::prefab::SoftActorPrefab::translation "translation" fields, and the inherited @ref mochi::SoftActorParams::shape "SoftActorParams::shape" (a runtime @ref mochi::ShapeHandle "ShapeHandle") is replaced by @ref mochi::prefab::SoftActorPrefab::shapeFile "shapeFile" (a path serialized to JSON. The shape is loaded at instantiation time).
 ///
-/// @note When used as a standalone soft actor prefab, the inherited @ref mochi::SoftActorParams::name "SoftActorParams::name" field need not be unique, but a name shared by more than one actor cannot be referenced by a constraint, pose controller, or contact filter.
+/// @note When used as a standalone soft actor prefab, the inherited @ref mochi::SoftActorParams::name "SoftActorParams::name" field need not be unique, but a name shared by more than one actor cannot be used by name-based prefab references.
 ///
 
 /// @var mochi::prefab::SoftActorPrefab::comment
@@ -387,7 +387,7 @@
 /// @brief Optional actor name. Uniqueness is not enforced.
 ///
 /// @note Nested actor runtime paths use the effective actor name as the parent path, where the effective actor name is this actor name combined with any enclosing @ref mochi::prefab::PrefabParams::name "PrefabParams::name" or @ref mochi::prefab::PrefabReference::name "PrefabReference::name" path. If the effective actor name is empty, runtime nested actor paths use "unnamed_articulation" as the parent path. Prefab actor-reference fields such as contact filters and constraints are authored relative to their containing prefab, and enclosing prefab-reference names are prepended during instantiation. They do not resolve through the "unnamed_articulation" fallback. Use a non-empty actor name or enclosing prefab name when prefab references need to target nested actors.
-/// @note A name shared by more than one actor cannot be referenced by a constraint, pose controller, or contact filter (see @ref mochi::prefab::PoseControllerPrefab "PoseControllerPrefab").
+/// @note A name shared by more than one actor cannot be used by name-based prefab references.
 ///
 
 /// @var mochi::prefab::ArticulatedActorPrefab::scale
@@ -863,7 +863,7 @@
 ///
 /// @brief Name of the nested prefab instance. Used to format the names of nested actors in the form "prefabName/actorName".
 ///
-/// @note Name-reference ambiguity is evaluated per nested subtree. A nested prefab's own references (from its constraints, pose controllers, and contact filters) resolve within its own instance first, so a name reused across independent sibling instances is not ambiguous for each instance's internal references. It becomes ambiguous only for a reference written at the enclosing (parent) scope or above.
+/// @note Name-reference ambiguity is evaluated per nested subtree. A nested prefab's own name-based references resolve within its own instance first, so a name reused across independent sibling instances is not ambiguous for each instance's internal references. It becomes ambiguous only for a reference written at the enclosing (parent) scope or above.
 ///
 
 /// @var mochi::prefab::PrefabReference::path
@@ -948,6 +948,34 @@
 ///
 /// @note Actors without nested actors are affected as exact actors irrespective of this setting.
 /// @note Default contact filtering disables contact between adjacent links in articulated and soft-skinned actors. Actor-contact entries override those defaults for pairs included in the resolved actor sets. If @ref mochi::prefab::ActorContactEntry::includeNestedActors "includeNestedActors" is true and both actor names resolve to the same parent actor, the entry also covers pairs between that parent's nested actors, including adjacent links.
+///
+
+/// @struct mochi::prefab::ContactPairParamsOverrideEntry
+///
+/// @brief Overrides selected contact parameters for an unordered actor pair.
+///
+/// @see @ref mochi::Scene::SetContactPairParamsOverride "Scene::SetContactPairParamsOverride", @ref mochi::ContactPairParamsOverride "ContactPairParamsOverride"
+///
+
+/// @var mochi::prefab::ContactPairParamsOverrideEntry::actors
+///
+/// @brief Identifies two actors by name or hierarchy path.
+///
+/// @details If the actor is in this prefab, reference it by name, e.g., "myActor". If the actor is in a nested prefab, reference it by hierarchy path, e.g., "myPrefab/myActor".
+///
+/// @note Each referenced name must identify exactly one existing actor. Actor names need not be unique, but referencing a name shared by more than one actor, or a name that matches no actor, is invalid and rejected at @ref mochi::prefab::AddToScene "AddToScene".
+/// @note Both referenced actors must have contact parameters.
+/// @note Parent actor names identify only the parent. Name nested actors explicitly to override their contact pairs.
+/// @note If both names identify the same actor, the entry applies to that actor's self-pair.
+///
+/// @warning Must contain exactly 2 elements.
+///
+
+/// @var mochi::prefab::ContactPairParamsOverrideEntry::paramsOverride
+///
+/// @brief Partial contact parameter override for the actor pair.
+///
+/// @note At least one field must be present.
 ///
 
 /// @struct mochi::prefab::LayerContactEntry
@@ -1074,6 +1102,13 @@
 /// @brief Contact filter settings for selective contact filtering.
 ///
 
+/// @var mochi::prefab::ScenePrefab::contactPairParamsOverrides
+///
+/// @brief Optional actor-pair contact parameter overrides.
+///
+/// @details Entries are applied in array order after all actors in their prefab have been created. A later entry for the same unordered actor pair replaces the earlier override rather than merging with it. Nested child prefab entries are applied before parent entries.
+///
+
 /// @struct mochi::prefab::PrefabParams
 ///
 /// @brief Parameters for instantiating a @ref mochi::prefab::ScenePrefab "ScenePrefab" into a @ref mochi::Scene "Scene".
@@ -1111,6 +1146,7 @@
 ///
 /// - density (intrinsic material property; mass/density are mutually exclusive in the prefab API, so no double-application)
 /// - linearVelocity / angularVelocity / jointVelocities
+/// - Contact-pair parameter overrides, whose authored values are preserved
 /// - Constraint stiffness/damping coefficients and saturation thresholds inherited from @ref mochi::ConstraintParams "ConstraintParams". These parameters define the constraint's response, not just geometry: different goals (preserving material behavior, damping ratio, actuator limits, or closed-loop response) imply different scale laws, so prefab scaling preserves authored values.
 /// - Joint inertia, friction, limit stiffness/damping, cycle joint stiffness (characterized actuator / tuned-penalty parameters; bring your own actuator model when scaling a robot)
 /// - Revolute and spherical joint angular limits, rotation-valued targets and ranges in @ref mochi::prefab::Articulated3dRotationTargetConstraintPrefab "Articulated3dRotationTargetConstraintPrefab" and @ref mochi::prefab::Articulated3dRotationRangeConstraintPrefab "Articulated3dRotationRangeConstraintPrefab", and rotational single-DoF target/range values in @ref mochi::prefab::ArticulatedSingleDofTargetConstraintPrefab "ArticulatedSingleDofTargetConstraintPrefab" and @ref mochi::prefab::ArticulatedSingleDofRangeConstraintPrefab "ArticulatedSingleDofRangeConstraintPrefab" (scale invariant)
@@ -1251,7 +1287,7 @@
 ///
 /// @brief Instantiate a @ref mochi::prefab::ScenePrefab "ScenePrefab" and add it to a @ref mochi::Scene "Scene".
 ///
-/// @details Creates the prefab's actors, constraints, and controllers, applies any scene settings enabled by @ref mochi::prefab::PrefabParams::applySceneSettings "PrefabParams::applySceneSettings", and applies contact filter entries.
+/// @details Creates the prefab's actors, constraints, and controllers, applies any scene settings enabled by @ref mochi::prefab::PrefabParams::applySceneSettings "PrefabParams::applySceneSettings", contact filter entries, and contact-pair parameter overrides.
 ///
 /// @param[in] prefab The fully loaded @ref mochi::prefab::ScenePrefab "ScenePrefab" to instantiate.
 /// @param[in,out] scene The @ref mochi::Scene "Scene" to add things to.
@@ -1439,7 +1475,7 @@
 /// @param[in] scene The @ref mochi::Scene "Scene" to export.
 /// @param[in] exportName Name for the exported prefab. Used both for the export subdirectory and for the prefab filename (`<exportName>.mochi_scene`).
 /// @param[in] outputDir Directory where the export folder will be created. The subdirectories `<outputDir>/<exportName>` and `<outputDir>/<exportName>/generated_assets` are created automatically.
-/// @param[in] excludeActors Handles of actors that should not be exported. Excluding an articulated actor also excludes all of its nested link actors. Excluding a soft-skinned actor also excludes all of its nested link actors and nested soft actors. Any contact filter entries that reference excluded actors are dropped.
+/// @param[in] excludeActors Handles of actors that should not be exported. Excluding an articulated actor also excludes all of its nested link actors. Excluding a soft-skinned actor also excludes all of its nested link actors and nested soft actors. Any contact filter or contact-pair parameter override entries that reference excluded actors are dropped.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 /// @note Generated mesh files (.mochi.h5) are written under generated_assets/ and referenced from the prefab using "./generated_assets/" paths.
@@ -1468,7 +1504,7 @@
 /// @note Generated mesh files (.mochi.h5) are written under generated_assets/ and referenced from the prefab using "./generated_assets/" paths.
 ///
 /// @warning Only supported for standalone rigid actors, standalone soft actors, and articulated actors. Soft-skinned actors are not supported.
-/// @warning Contact-filter settings are not exported. Adding an exported articulated actor to a scene applies automatic adjacent-link filtering, even if contact between adjacent links was explicitly enabled before export. To preserve this behavior, add an equivalent enabling entry to the exported prefab or re-enable the pair after adding the prefab to a scene.
+/// @warning Scene-level contact-filter settings and contact-pair parameter overrides are not exported. Adding an exported articulated actor to a scene applies automatic adjacent-link filtering, even if contact between adjacent links was explicitly enabled before export. To preserve this behavior, add an equivalent enabling entry to the exported prefab or re-enable the pair after adding the prefab to a scene.
 ///
 /// @see @ref mochi::prefab::ExportScene "ExportScene", @ref mochi::prefab::ExportSceneExcluding "ExportSceneExcluding"
 ///

@@ -741,13 +741,17 @@
  * @ingroup prefabs_constraints
  */
 
-/* ---- Prefabs / Contact Filters (3) ---- */
+/* ---- Prefabs / Contact Filters (4) ---- */
 /**
  * @struct superdex::prefab::ActorContactEntry
  * @ingroup prefabs_filters
  */
 /**
  * @struct superdex::prefab::ContactFilter
+ * @ingroup prefabs_filters
+ */
+/**
+ * @struct superdex::prefab::ContactPairParamsOverrideEntry
  * @ingroup prefabs_filters
  */
 /**
@@ -958,4 +962,3 @@
  * @class superdex::Simd
  * @ingroup simd
  */
-

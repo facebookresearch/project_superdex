@@ -23,6 +23,7 @@
 #include "mochi_articulated_body.h"
 #include "mochi_constraint.h"
 #include "mochi_contact_filter.h"
+#include "mochi_contact_pair_params.h"
 #include "mochi_ecs_utils.h"
 #include "mochi_scene.h"
 #include "mochi_simulation.h"
@@ -526,6 +527,40 @@ static std::optional<ContactFilter> ExportContactFilter(
   }
 
   return contactFilter;
+}
+
+static std::optional<DynamicArray<ContactPairParamsOverrideEntry>> ExportContactPairParamsOverrides(
+    entt::registry const& registry,
+    std::unordered_map<entt::entity, DynamicString> const& exportedActorNames) {
+  DynamicArray<ContactPairParamsOverrideEntry> entries;
+  auto const& table = registry.ctx<CContactPairParamsOverrideTable const>();
+  entries.reserve(table.GetRecords().size());
+
+  for (auto const& [entities, paramsOverride] : table.GetRecords()) {
+    auto const exportedNameA = exportedActorNames.find(entities.first);
+    auto const exportedNameB = exportedActorNames.find(entities.second);
+    if (exportedNameA == exportedActorNames.end() || exportedNameB == exportedActorNames.end()) {
+      continue;
+    }
+
+    ContactPairParamsOverrideEntry entry;
+    entry.actors = {exportedNameA->second, exportedNameB->second};
+    // Runtime pairs are unordered. Canonicalize by exported name, then sort the unordered table's
+    // entries so semantically identical scenes produce deterministic prefab JSON.
+    if (entry.actors[1] < entry.actors[0]) {
+      std::swap(entry.actors[0], entry.actors[1]);
+    }
+    entry.paramsOverride = paramsOverride;
+    entries.push_back(std::move(entry));
+  }
+
+  std::ranges::sort(entries, {}, [](ContactPairParamsOverrideEntry const& entry) {
+    return std::pair<std::string_view, std::string_view>{entry.actors[0], entry.actors[1]};
+  });
+  if (entries.empty()) {
+    return std::nullopt;
+  }
+  return entries;
 }
 
 static ArticulatedActorPrefab ExportArticulatedActorImpl(
@@ -1233,9 +1268,10 @@ MOCHI_API void prefab::ExportSceneExcluding(
     return a.skeletonParams.name;
   });
 
-  // Export contact filter settings after all actors are named
+  // Export scene-level contact configuration after all actors are named.
   prefab.contactFilter = ExportContactFilter(registry, exportActorNames, error);
   MOCHI_ERROR_RETURN(error);
+  prefab.contactPairParamsOverrides = ExportContactPairParamsOverrides(registry, exportActorNames);
 
   WritePrefabToDisk(prefab, exportDir, exportName, error);
 }

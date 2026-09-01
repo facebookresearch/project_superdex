@@ -73,6 +73,10 @@ class CContactPairParamsOverrideTable final : public NoCopy {
     return _records.empty();
   }
 
+  [[nodiscard]] Records const& GetRecords() const {
+    return _records;
+  }
+
  private:
   Records _records;
 };

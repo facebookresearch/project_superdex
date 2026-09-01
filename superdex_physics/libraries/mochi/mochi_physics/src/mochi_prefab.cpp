@@ -46,10 +46,10 @@ using namespace mochi::prefab;
 
 namespace {
 
-// Maps a prefab-local actor name to the resulting ActorHandle. Used to resolve actors referenced by
-// name by constraints, pose controllers, and contact filters. Names need not be unique within the
-// prefab (nor within the scene). A name claimed by more than one actor is tracked as ambiguous (see
-// ActorNameRegistry) so resolving it fails loudly instead of silently binding to one of them.
+// Maps a prefab-local actor name to the resulting ActorHandle. Used to resolve name-based prefab
+// references. Names need not be unique within the prefab (nor within the scene). A name claimed by
+// more than one actor is tracked as ambiguous (see ActorNameRegistry) so resolving it fails loudly
+// instead of silently binding to one of them.
 using ActorNameToHandleMap = std::unordered_map<std::string, ActorHandle>;
 
 // Actor-name resolution state for one prefab subtree: the name -> handle map plus the set of names
@@ -697,15 +697,43 @@ FindActorHandle(ActorNameRegistry const& actorNames, DynamicString const& fullNa
   std::string const key(fullName);
   if (actorNames.ambiguousNames.contains(key)) {
     MOCHI_LOG_ERROR(
-        "Prefab actor name \"%s\" is used by multiple actors and cannot be referenced by a "
-        "constraint, pose controller, or contact filter.",
+        "Prefab actor name \"%s\" is used by multiple actors and cannot be referenced by name.",
         fullName.c_str());
-    MOCHI_ERROR_SET(
-        error,
-        "Ambiguous prefab actor name referenced by a constraint, pose controller, or contact filter.");
+    MOCHI_ERROR_SET(error, "Ambiguous prefab actor name reference.");
     return actorNames.handles.end();
   }
   return actorNames.handles.find(key);
+}
+
+// Resolves an actor pair in input order and reports caller-specific missing-name diagnostics.
+[[nodiscard]] static std::pair<ActorHandle, ActorHandle> ResolveActorPair(
+    DynamicString const& baseName,
+    DynamicString const& actorNameA,
+    DynamicString const& actorNameB,
+    ActorNameRegistry const& actorNames,
+    char const* referenceDescription,
+    char const* notFoundError,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error, {});
+  auto const fullNameA = CombineNames(baseName, actorNameA);
+  auto const fullNameB = CombineNames(baseName, actorNameB);
+  auto const itA = FindActorHandle(actorNames, fullNameA, error);
+  auto const itB = FindActorHandle(actorNames, fullNameB, error);
+  MOCHI_ERROR_RETURN(error, {});
+
+  if (itA == actorNames.handles.end()) {
+    MOCHI_LOG_ERROR(
+        "%s references actor \"%s\" which was not found.", referenceDescription, fullNameA.c_str());
+    error.SetFirstError(notFoundError, __FILE__, __LINE__);
+    return {};
+  }
+  if (itB == actorNames.handles.end()) {
+    MOCHI_LOG_ERROR(
+        "%s references actor \"%s\" which was not found.", referenceDescription, fullNameB.c_str());
+    error.SetFirstError(notFoundError, __FILE__, __LINE__);
+    return {};
+  }
+  return {itA->second, itB->second};
 }
 
 // Cumulative prefab metric scale, keyed by the concrete actor handle referenced by prefab logic.
@@ -728,28 +756,49 @@ static void ApplyActorContactEntries(
     MOCHI_ERROR_IF(
         entry.actors.size() != 2, error, "ActorContactEntry must have exactly 2 actors.");
     MOCHI_ERROR_RETURN(error);
-    auto nameToFindA = CombineNames(baseName, entry.actors[0]);
-    auto nameToFindB = CombineNames(baseName, entry.actors[1]);
-    auto const itA = FindActorHandle(actorNames, nameToFindA, error);
-    auto const itB = FindActorHandle(actorNames, nameToFindB, error);
+    auto const [actorA, actorB] = ResolveActorPair(
+        baseName,
+        entry.actors[0],
+        entry.actors[1],
+        actorNames,
+        "Actor contact filter",
+        "Failed to find actor referenced by contact filter.",
+        error);
     MOCHI_ERROR_RETURN(error);
-
-    if (itA == actorNames.handles.end()) {
-      MOCHI_LOG_ERROR(
-          "Actor contact filter references actor \"%s\" which was not found.", nameToFindA.c_str());
-      MOCHI_ERROR_SET(error, "Failed to find actor referenced by contact filter.");
-      return;
-    }
-    if (itB == actorNames.handles.end()) {
-      MOCHI_LOG_ERROR(
-          "Actor contact filter references actor \"%s\" which was not found.", nameToFindB.c_str());
-      MOCHI_ERROR_SET(error, "Failed to find actor referenced by contact filter.");
-      return;
-    }
 
     auto const includeNestedActors =
         entry.includeNestedActors ? IncludeNestedActors::Yes : IncludeNestedActors::No;
-    (scene->*enableContact)(itA->second, itB->second, entry.enable, includeNestedActors, error);
+    (scene->*enableContact)(actorA, actorB, entry.enable, includeNestedActors, error);
+    MOCHI_ERROR_RETURN(error);
+  }
+}
+
+static void ApplyContactPairParamsOverrides(
+    DynamicArray<ContactPairParamsOverrideEntry> const& entries,
+    DynamicString const& baseName,
+    ActorNameRegistry const& actorNames,
+    Scene* scene,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error);
+
+  for (auto const& entry : entries) {
+    MOCHI_ERROR_IF(
+        entry.actors.size() != 2,
+        error,
+        "ContactPairParamsOverrideEntry must have exactly 2 actors.");
+    MOCHI_ERROR_RETURN(error);
+
+    auto const [actorA, actorB] = ResolveActorPair(
+        baseName,
+        entry.actors[0],
+        entry.actors[1],
+        actorNames,
+        "Contact pair parameter override",
+        "Failed to find actor referenced by contact pair parameter override.",
+        error);
+    MOCHI_ERROR_RETURN(error);
+
+    scene->SetContactPairParamsOverride(actorA, actorB, entry.paramsOverride, error);
     MOCHI_ERROR_RETURN(error);
   }
 }
@@ -1497,9 +1546,17 @@ static void AddToSceneImpl(
     MOCHI_ERROR_RETURN(error);
   }
 
-  // Apply actor-vs-actor and layer-vs-layer contact settings (must be after all actors are created)
+  // Apply layer settings, actor-pair settings, and parameter overrides after all actors are
+  // created. Recursive child calls reach this point before their parent, so parent settings take
+  // precedence.
   if (prefab.contactFilter.has_value()) {
     ApplyContactFilter(*prefab.contactFilter, params.name, outActorNames, scene, error);
+  }
+  MOCHI_ERROR_RETURN(error);
+
+  if (prefab.contactPairParamsOverrides.has_value()) {
+    ApplyContactPairParamsOverrides(
+        *prefab.contactPairParamsOverrides, params.name, outActorNames, scene, error);
   }
   MOCHI_ERROR_RETURN(error);
 }

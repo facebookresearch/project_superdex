@@ -311,6 +311,46 @@ class TestPrefab(MochiTestBase):
         mochi.destroy_scene(scene)
 
     @requires_internal_assets
+    def test_add_to_scene_contact_pair_params_override(self):
+        prefab_json = """{
+            "actors": {
+                "rigid": [
+                    {"name": "ActorA", "colliderType": "Box",
+                     "shape": "cube/cube_minimal.mochi.json"},
+                    {"name": "ActorB", "colliderType": "Box",
+                     "shape": "cube/cube_minimal.mochi.json"}
+                ]
+            }
+        }"""
+        prefab = mochi.prefab.load_from_json_string(prefab_json, assets_dir)
+        self.assertIsNone(prefab.contact_pair_params_overrides)
+
+        entry = mochi.prefab.ContactPairParamsOverrideEntry(
+            actors=["ActorA", "ActorB"],
+            params_override=mochi.ContactPairParamsOverride(
+                penalty_coefficient=2e9,
+                coulomb_friction_coefficient=0.0,
+            ),
+        )
+        prefab.contact_pair_params_overrides = [entry]
+        self.assertEqual(
+            ["ActorA", "ActorB"],
+            list(prefab.contact_pair_params_overrides[0].actors),
+        )
+
+        scene = mochi.create_scene("test_contact_pair_params_override")
+        result = mochi.prefab.add_to_scene(prefab=prefab, scene=scene)
+        actors = {actor.get_name(): actor.get_handle() for actor in result.actors}
+        stored = scene.get_contact_pair_params_override(
+            actors["ActorB"], actors["ActorA"]
+        )
+        self.assertAlmostEqual(2e9, stored.penalty_coefficient)
+        self.assertEqual(0.0, stored.coulomb_friction_coefficient)
+        self.assertIsNone(stored.viscous_friction_coefficient)
+
+        mochi.destroy_scene(scene)
+
+    @requires_internal_assets
     def test_add_to_scene_file_path_overload(self):
         """Verify the file-path overload of add_to_scene with default and custom params."""
         prefab_path = os.path.join(

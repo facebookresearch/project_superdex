@@ -95,6 +95,7 @@ namespace mochi {
     DefDynamicArray<char>(m, "DynamicArrayChar");
     DefDynamicArray<mochi::Color>(m, "DynamicArrayColor");
     DefDynamicArray<mochi::Constraint*>(m, "DynamicArrayConstraint");
+    DefDynamicArray<mochi::prefab::ContactPairParamsOverrideEntry>(m_prefab, "DynamicArrayContactPairParamsOverrideEntry");
     DefDynamicArray<mochi::ContactPoint>(m, "DynamicArrayContactPoint");
     DefDynamicArray<mochi::experimental::ControlType>(m_experimental, "DynamicArrayControlType");
     DefDynamicArray<mochi::prefab::DeformableNodePositionConstraintPrefab>(m_prefab, "DynamicArrayDeformableNodePositionConstraintPrefab");
