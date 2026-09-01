@@ -33,6 +33,10 @@
 #include <utility>
 #include <vector>
 
+namespace mochi_renderer {
+class IBL;
+} // namespace mochi_renderer
+
 namespace superdex::studio {
 
 class SuperDexStudio;
@@ -79,6 +83,7 @@ class AssetManager {
   //------------------------------------------------------------------------------------------------
   // Thumbnails
   //------------------------------------------------------------------------------------------------
+  void SetThumbnailIbl(mochi_renderer::IBL* ibl);
   void RenderAssetThumbnails(Renderer& renderer, int maxThumbnails = 1);
 
   /// Render @p asset's thumbnail into @p target using the shared thumbnail scene: stages the

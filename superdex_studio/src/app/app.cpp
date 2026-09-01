@@ -44,6 +44,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cfloat>
 #include <chrono>
 #include <cmath>
@@ -97,6 +98,84 @@ static int GetMcpPort() {
   return selection.port;
 }
 #endif
+
+static std::filesystem::path GetIblRootDir() {
+  return SuperDexStudio::GetExecutableDir() / "assets" / "ibl";
+}
+
+static std::string NormalizeIblRelativePath(std::string const& relativePath) {
+  return std::filesystem::path(relativePath).lexically_normal().generic_string();
+}
+
+static bool ResolveIblPath(std::string const& relativePath, std::filesystem::path& resolvedPath) {
+  namespace fs = std::filesystem;
+  fs::path const path{relativePath};
+  if (path.has_root_path()) {
+    return false;
+  }
+  auto const first = path.begin();
+  if (first != path.end() && *first == "..") {
+    return false;
+  }
+
+  std::error_code error;
+  fs::path const root = fs::weakly_canonical(GetIblRootDir(), error);
+  if (error) {
+    return false;
+  }
+  resolvedPath = fs::weakly_canonical(root / path, error);
+  if (error) {
+    return false;
+  }
+  auto rootPart = root.begin();
+  auto resolvedPart = resolvedPath.begin();
+  for (; rootPart != root.end() && resolvedPart != resolvedPath.end(); ++rootPart, ++resolvedPart) {
+    if (*rootPart != *resolvedPart) {
+      return false;
+    }
+  }
+  return rootPart == root.end();
+}
+
+static std::string IblLabelFromRelative(std::string const& relativePath) {
+  auto labelPath = std::filesystem::path(relativePath);
+  labelPath.replace_extension();
+  return labelPath.generic_string();
+}
+
+static bool IsIblFile(std::filesystem::path const& path) {
+  std::string extension = path.extension().string();
+  std::ranges::transform(extension, extension.begin(), [](unsigned char character) {
+    return static_cast<char>(std::tolower(character));
+  });
+  return extension == ".hdr" || extension == ".exr";
+}
+
+static std::vector<std::string> ScanIblFolder() {
+  namespace fs = std::filesystem;
+  fs::path const root = GetIblRootDir();
+  std::vector<std::string> iblPaths;
+  std::error_code error;
+  fs::recursive_directory_iterator iterator{
+      root, fs::directory_options::skip_permission_denied, error};
+  fs::recursive_directory_iterator const end;
+  while (iterator != end) {
+    fs::directory_entry const entry = *iterator;
+    fs::file_status const status = entry.symlink_status(error);
+    if (!error && fs::is_regular_file(status) && IsIblFile(entry.path())) {
+      fs::path const relativePath = entry.path().lexically_relative(root);
+      fs::path resolvedPath;
+      if (!relativePath.empty() && ResolveIblPath(relativePath.generic_string(), resolvedPath)) {
+        iblPaths.push_back(relativePath.generic_string());
+      }
+    }
+    error.clear();
+    iterator.increment(error);
+    error.clear();
+  }
+  std::ranges::sort(iblPaths);
+  return iblPaths;
+}
 
 static mochi::Path const& GetIniFilePath() {
   namespace fs = std::filesystem;
@@ -294,10 +373,7 @@ void SuperDexStudio::OnInitialize() {
     _appSettings.windowVisibility.try_emplace(w.name, w.showByDefault);
   }
 
-  _defaultIbl = GetResourceManager().LoadIbl(GetDefaultIblPath());
-  if (!_defaultIbl) {
-    MOCHI_LOG_ERROR("Failed to load default IBL: %s", GetDefaultIblPath().c_str());
-  }
+  SetCurrentIbl(_appSettings.graphics.iblPath);
 
   _assetManager = AssetManager::Create(this);
   if (!_assetManager) {
@@ -674,14 +750,8 @@ std::filesystem::path SuperDexStudio::GetExecutableDir() {
 #endif
 }
 
-std::string const& SuperDexStudio::GetDefaultIblPath() {
-  static std::string const path =
-      (GetExecutableDir() / "assets" / "ibl" / "studio_small_08_1k.hdr").string();
-  return path;
-}
-
-mochi_renderer::IBL* SuperDexStudio::GetDefaultIbl() const {
-  return _defaultIbl;
+mochi_renderer::IBL* SuperDexStudio::GetCurrentIbl() const {
+  return _currentIbl;
 }
 
 mochi_renderer::SceneViewSettings const& SuperDexStudio::GetViewSettings() const {
@@ -1601,7 +1671,8 @@ void SuperDexStudio::ShowMainMenu() {
 }
 
 bool SuperDexStudio::ShowGraphicsSettings() {
-  auto& view = _appSettings.graphics.view;
+  auto& graphics = _appSettings.graphics;
+  auto& view = graphics.view;
   bool changed = false;
   changed |= ImGui::BoolCombo("MSAA", &view.msaaEnabled);
   ImGui::BeginDisabled(!view.msaaEnabled);
@@ -1651,11 +1722,72 @@ bool SuperDexStudio::ShowGraphicsSettings() {
   }
   ImGui::EndDisabled();
   changed |= ImGui::BoolCombo("Skybox", &view.showSkybox);
+
+  std::string preview =
+      graphics.iblPath.empty() ? "[none]" : IblLabelFromRelative(graphics.iblPath);
+  std::filesystem::path resolvedIblPath;
+  std::error_code existsError;
+  if (!graphics.iblPath.empty() &&
+      (!ResolveIblPath(graphics.iblPath, resolvedIblPath) ||
+       !std::filesystem::exists(resolvedIblPath, existsError))) {
+    preview += " (missing)";
+  }
+  if (ImGui::BeginCombo("IBL", preview.c_str())) {
+    if (ImGui::Selectable("[none]", graphics.iblPath.empty())) {
+      graphics.iblPath.clear();
+      changed = true;
+    }
+    for (std::string const& iblPath : ScanIblFolder()) {
+      std::string const label = IblLabelFromRelative(iblPath);
+      ImGui::PushID(iblPath.c_str());
+      if (ImGui::Selectable(label.c_str(), graphics.iblPath == iblPath)) {
+        graphics.iblPath = iblPath;
+        SetCurrentIbl(graphics.iblPath, true);
+        changed = true;
+      }
+      ImGui::PopID();
+    }
+    ImGui::EndCombo();
+  }
+
   ImGui::BeginDisabled(view.showSkybox);
   changed |= ImGui::ColorEdit4(
-      "Clear Color", _appSettings.graphics.clearColor.data(), ImGuiColorEditFlags_AlphaPreview);
+      "Clear Color", graphics.clearColor.data(), ImGuiColorEditFlags_AlphaPreview);
   ImGui::EndDisabled();
   return changed;
+}
+
+void SuperDexStudio::SetCurrentIbl(std::string const& relativePath, bool forceReload) {
+  std::string const normalizedPath = NormalizeIblRelativePath(relativePath);
+  if (!forceReload && normalizedPath == _currentIblRelativePath) {
+    return;
+  }
+
+  _currentIbl = nullptr;
+  if (!normalizedPath.empty()) {
+    std::filesystem::path absolutePath;
+    if (!ResolveIblPath(normalizedPath, absolutePath)) {
+      MOCHI_LOG_WARNING("Ignoring IBL path outside the IBL folder: %s", normalizedPath.c_str());
+    } else {
+      _currentIbl = GetResourceManager().LoadIbl(absolutePath.string());
+      if (!_currentIbl) {
+        MOCHI_LOG_WARNING("Failed to load selected IBL: %s", absolutePath.string().c_str());
+      }
+    }
+  }
+  _currentIblRelativePath = normalizedPath;
+
+  for (auto const& editor : _assetEditors) {
+    if (auto* viewport = editor->GetViewport()) {
+      if (auto* scene = viewport->GetRenderScene()) {
+        scene->SetIbl(_currentIbl);
+        scene->SetSkyboxVisible(_appSettings.graphics.view.showSkybox);
+      }
+    }
+  }
+  if (_assetManager) {
+    _assetManager->SetThumbnailIbl(_currentIbl);
+  }
 }
 
 void SuperDexStudio::ApplyGraphicsSettings() {
@@ -1663,6 +1795,7 @@ void SuperDexStudio::ApplyGraphicsSettings() {
     editor->ApplySceneViewSettings(_appSettings.graphics.view);
   }
   _renderer->SetClearColor(mochi_renderer::ToFilament(_appSettings.graphics.clearColor));
+  SetCurrentIbl(_appSettings.graphics.iblPath);
 }
 
 bool SuperDexStudio::ShowPhysicsSettings() {

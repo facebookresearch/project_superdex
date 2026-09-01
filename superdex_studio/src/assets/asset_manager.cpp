@@ -41,7 +41,7 @@ AssetManager::AssetManager(SuperDexStudio* studio) : _studio(studio) {
   _thumbnailScene->CreateSkybox();
   _thumbnailScene->CreateSunlight();
   _thumbnailScene->CreateIndirectLight();
-  _thumbnailScene->SetIbl(_studio->GetDefaultIbl());
+  _thumbnailScene->SetIbl(_studio->GetCurrentIbl());
   _thumbnailScene->SetSkyboxVisible(false);
 }
 
@@ -315,6 +315,13 @@ std::vector<Asset*> AssetManager::GetAllAssetsOfType(AssetType type) const {
     }
   }
   return result;
+}
+
+void AssetManager::SetThumbnailIbl(mochi_renderer::IBL* ibl) {
+  if (_thumbnailScene) {
+    _thumbnailScene->SetIbl(ibl);
+    _thumbnailScene->SetSkyboxVisible(false);
+  }
 }
 
 void AssetManager::RenderAssetThumbnails(Renderer& renderer, int maxThumbnails) {

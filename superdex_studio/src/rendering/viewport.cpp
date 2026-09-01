@@ -172,7 +172,7 @@ Viewport::Viewport(SuperDexStudio* studio, mochi_renderer::SceneViewSettings con
   _renderScene->CreateSunlight();
   _renderScene->CreateIndirectLight();
   _renderScene->CreateGroundPlane();
-  _renderScene->SetIbl(_studio->GetDefaultIbl());
+  _renderScene->SetIbl(_studio->GetCurrentIbl());
   _renderScene->SetSkyboxVisible(false);
   _renderScene->CreateDebugDraw();
   auto const& converter = _studio->GetEditorToRendererSpaceConverter();

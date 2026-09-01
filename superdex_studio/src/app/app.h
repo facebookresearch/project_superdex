@@ -41,6 +41,7 @@
 
 #include <chrono>
 #include <filesystem>
+#include <string>
 
 namespace mochi_renderer {
 class IBL;
@@ -75,8 +76,7 @@ class SuperDexStudio : public ImGuios::Application {
   SuperDexStudioBotLoader const& GetBotLoader() const;
   AssetEditor* GetActiveAssetEditor() const;
   bool& GetWindowVisible(std::string const& name);
-  static std::string const& GetDefaultIblPath();
-  mochi_renderer::IBL* GetDefaultIbl() const;
+  mochi_renderer::IBL* GetCurrentIbl() const;
   mochi_renderer::SceneViewSettings const& GetViewSettings() const;
 
   //------------------------------------------------------------------------------------------------
@@ -145,6 +145,8 @@ class SuperDexStudio : public ImGuios::Application {
   void ApplyHighlightOverlayOpacity();
   // Pushes AppSettings::graphics into every open editor and the renderer's clear color.
   void ApplyGraphicsSettings();
+  // Resolves a path relative to assets/ibl and pushes the resulting IBL to every live scene.
+  void SetCurrentIbl(std::string const& relativePath, bool forceReload = false);
   // Broadcasts a committed settings change to every open editor (see
   // AssetEditor::OnAppSettingsChanged).
   void NotifyAppSettingsChanged();
@@ -194,8 +196,9 @@ class SuperDexStudio : public ImGuios::Application {
   std::unique_ptr<LogConsole> _logConsole;
   std::unique_ptr<AssetManager> _assetManager;
   std::unique_ptr<mochi_renderer::MochiRenderer> _mochiRenderer;
-  mochi_renderer::IBL* _defaultIbl =
+  mochi_renderer::IBL* _currentIbl =
       nullptr; // owned by the ResourceManager (inside _mochiRenderer)
+  std::string _currentIblRelativePath;
   std::unique_ptr<Renderer> _renderer;
   std::unique_ptr<SuperDexStudioBotLoader> _botLoader;
   std::vector<std::unique_ptr<AssetEditor>> _assetEditors;
