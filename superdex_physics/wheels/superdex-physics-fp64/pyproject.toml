@@ -21,7 +21,7 @@ name = "superdex-physics-fp64"
 version = "1.0.0"
 requires-python = ">=3.12,<3.13"
 authors = [{name = "SuperDex Team"}]
-description = "Double-precision physics extension for SuperDex"
+description = "FP64 physics extension for SuperDex"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "thirdparty_licenses/**/*"]

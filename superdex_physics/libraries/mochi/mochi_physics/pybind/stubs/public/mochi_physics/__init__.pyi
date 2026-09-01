@@ -14634,7 +14634,7 @@ constraints.
     ...
 def uses_double_precision() -> bool:
     '''Return whether the loaded native library uses double-precision floating-point
-values.'''
+(FP64) values.'''
     ...
 def uses_hdf5() -> bool:
     '''Return whether the loaded native library includes HDF5 support.'''

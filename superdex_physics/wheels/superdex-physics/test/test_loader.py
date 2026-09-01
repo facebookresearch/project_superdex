@@ -57,7 +57,7 @@ def _find_spec_for(installed: dict[str, Path]) -> object:
 
 
 class LoaderTest(unittest.TestCase):
-    def test_packaged_native_dir_uses_the_flat_base_payload_for_single_precision(
+    def test_packaged_native_dir_uses_the_flat_base_payload_for_fp32(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -68,7 +68,7 @@ class LoaderTest(unittest.TestCase):
             with (
                 patch.object(loader, "__file__", str(package_dir / "loader.py")),
                 patch.object(loader, "USE_DOUBLE_PRECISION", False),
-                patch.object(loader, "PRECISION_NAME", "single"),
+                patch.object(loader, "PRECISION_NAME", "fp32"),
             ):
                 self.assertEqual(
                     native_dir,
@@ -84,7 +84,7 @@ class LoaderTest(unittest.TestCase):
             with (
                 patch.object(loader, "__file__", str(package_dir / "loader.py")),
                 patch.object(loader, "USE_DOUBLE_PRECISION", False),
-                patch.object(loader, "PRECISION_NAME", "single"),
+                patch.object(loader, "PRECISION_NAME", "fp32"),
             ):
                 self.assertEqual(
                     native_dir,
@@ -104,7 +104,7 @@ class LoaderTest(unittest.TestCase):
             with (
                 patch.object(loader, "__file__", str(package_dir / "loader.py")),
                 patch.object(loader, "USE_DOUBLE_PRECISION", True),
-                patch.object(loader, "PRECISION_NAME", "double"),
+                patch.object(loader, "PRECISION_NAME", "fp64"),
                 patch.object(
                     loader.importlib.util,
                     "find_spec",
@@ -128,7 +128,7 @@ class LoaderTest(unittest.TestCase):
             with (
                 patch.object(loader, "__file__", str(package_dir / "loader.py")),
                 patch.object(loader, "USE_DOUBLE_PRECISION", True),
-                patch.object(loader, "PRECISION_NAME", "double"),
+                patch.object(loader, "PRECISION_NAME", "fp64"),
                 patch.object(
                     loader.importlib.util,
                     "find_spec",
@@ -148,7 +148,7 @@ class LoaderTest(unittest.TestCase):
             with (
                 patch.object(loader, "__file__", str(package_dir / "loader.py")),
                 patch.object(loader, "USE_DOUBLE_PRECISION", True),
-                patch.object(loader, "PRECISION_NAME", "double"),
+                patch.object(loader, "PRECISION_NAME", "fp64"),
                 patch.object(loader.importlib.util, "find_spec", _find_spec_for({})),
                 # Pinned at an empty tree: a real fp64 install in the interpreter's
                 # site-packages would otherwise answer this lookup.
@@ -174,7 +174,7 @@ class LoaderTest(unittest.TestCase):
             with (
                 patch.object(loader, "__file__", str(source_dir / "loader.py")),
                 patch.object(loader, "USE_DOUBLE_PRECISION", False),
-                patch.object(loader, "PRECISION_NAME", "single"),
+                patch.object(loader, "PRECISION_NAME", "fp32"),
                 patch.object(loader, "site_packages_root", lambda: site_packages),
             ):
                 self.assertEqual(
@@ -197,7 +197,7 @@ class LoaderTest(unittest.TestCase):
             with (
                 patch.object(loader, "__file__", str(source_dir / "loader.py")),
                 patch.object(loader, "USE_DOUBLE_PRECISION", True),
-                patch.object(loader, "PRECISION_NAME", "double"),
+                patch.object(loader, "PRECISION_NAME", "fp64"),
                 patch.object(
                     loader.importlib.util,
                     "find_spec",
@@ -225,7 +225,7 @@ class LoaderTest(unittest.TestCase):
             with (
                 patch.object(loader, "__file__", str(package_dir / "loader.py")),
                 patch.object(loader, "USE_DOUBLE_PRECISION", False),
-                patch.object(loader, "PRECISION_NAME", "single"),
+                patch.object(loader, "PRECISION_NAME", "fp32"),
                 patch.object(loader, "site_packages_root", lambda: site_packages),
             ):
                 self.assertEqual(
@@ -281,14 +281,33 @@ class LoaderTest(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
-                loader.PRECISION_ENV_VAR: "single",
+                loader.PRECISION_ENV_VAR: "fp32",
                 loader.LEGACY_PRECISION_ENV_VAR: "double",
             },
             clear=True,
         ):
             self.assertFalse(loader._get_use_double_precision())
-            self.assertEqual("single", os.environ[loader.PRECISION_ENV_VAR])
-            self.assertEqual("single", os.environ[loader.LEGACY_PRECISION_ENV_VAR])
+            self.assertEqual("fp32", os.environ[loader.PRECISION_ENV_VAR])
+            self.assertEqual("fp32", os.environ[loader.LEGACY_PRECISION_ENV_VAR])
+
+    def test_precision_env_accepts_canonical_and_legacy_values(self) -> None:
+        for value, expected, canonical in (
+            ("fp32", False, "fp32"),
+            ("fp64", True, "fp64"),
+            ("single", False, "fp32"),
+            ("float", False, "fp32"),
+            ("double", True, "fp64"),
+        ):
+            with (
+                self.subTest(value=value),
+                patch.dict(
+                    os.environ,
+                    {loader.PRECISION_ENV_VAR: value},
+                    clear=True,
+                ),
+            ):
+                self.assertEqual(expected, loader._get_use_double_precision())
+                self.assertEqual(canonical, os.environ[loader.PRECISION_ENV_VAR])
 
     def test_legacy_precision_env_is_accepted(self) -> None:
         with patch.dict(
@@ -297,8 +316,8 @@ class LoaderTest(unittest.TestCase):
             clear=True,
         ):
             self.assertTrue(loader._get_use_double_precision())
-            self.assertEqual("double", os.environ[loader.PRECISION_ENV_VAR])
-            self.assertEqual("double", os.environ[loader.LEGACY_PRECISION_ENV_VAR])
+            self.assertEqual("fp64", os.environ[loader.PRECISION_ENV_VAR])
+            self.assertEqual("fp64", os.environ[loader.LEGACY_PRECISION_ENV_VAR])
 
     def test_unknown_precision_is_rejected(self) -> None:
         with (
@@ -330,7 +349,7 @@ class LoaderTest(unittest.TestCase):
 
         self.assertIs(context.exception.__cause__, error)
 
-    def test_import_module_names_the_double_extra_when_fp64_is_not_installed(
+    def test_import_module_names_the_fp64_extra_when_fp64_is_not_installed(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -340,7 +359,7 @@ class LoaderTest(unittest.TestCase):
 
             with (
                 patch.object(loader, "__file__", str(package_dir / "loader.py")),
-                patch.object(loader, "PRECISION_NAME", "double"),
+                patch.object(loader, "PRECISION_NAME", "fp64"),
                 patch.object(loader, "USE_DOUBLE_PRECISION", True),
                 patch.object(
                     loader,
@@ -351,15 +370,15 @@ class LoaderTest(unittest.TestCase):
                 patch.object(loader.importlib, "import_module", side_effect=error),
                 self.assertRaisesRegex(
                     loader.NativeModuleNotFoundError,
-                    r"pip install 'superdex-physics\[double\]'",
+                    r"pip install 'superdex-physics\[fp64\]'",
                 ) as context,
             ):
                 loader.import_module("mochi_physics", payload=_PHYSICS_PAYLOAD)
 
-            self.assertIn("installed: single", str(context.exception))
+            self.assertIn("installed: fp32", str(context.exception))
             self.assertIs(context.exception.__cause__, error)
 
-    def test_import_module_names_the_robotics_double_extra(self) -> None:
+    def test_import_module_names_the_robotics_fp64_extra(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             package_dir = Path(temp_dir) / "superdex" / "physics"
             package_dir.mkdir(parents=True)
@@ -368,7 +387,7 @@ class LoaderTest(unittest.TestCase):
 
             with (
                 patch.object(loader, "__file__", str(package_dir / "loader.py")),
-                patch.object(loader, "PRECISION_NAME", "double"),
+                patch.object(loader, "PRECISION_NAME", "fp64"),
                 patch.object(loader, "USE_DOUBLE_PRECISION", True),
                 patch.object(
                     loader,
@@ -379,7 +398,7 @@ class LoaderTest(unittest.TestCase):
                 patch.object(loader.importlib, "import_module", side_effect=error),
                 self.assertRaisesRegex(
                     loader.NativeModuleNotFoundError,
-                    r"pip install 'superdex-robotics\[double\]'",
+                    r"pip install 'superdex-robotics\[fp64\]'",
                 ),
             ):
                 loader.import_module("superdex_robotics", payload=_ROBOTICS_PAYLOAD)
@@ -396,7 +415,7 @@ class LoaderTest(unittest.TestCase):
 
             with (
                 patch.object(loader, "__file__", str(package_dir / "loader.py")),
-                patch.object(loader, "PRECISION_NAME", "double"),
+                patch.object(loader, "PRECISION_NAME", "fp64"),
                 patch.object(loader, "USE_DOUBLE_PRECISION", True),
                 patch.object(loader.importlib.util, "find_spec", _find_spec_for({})),
                 patch.object(loader.importlib, "import_module", side_effect=error),

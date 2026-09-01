@@ -49,6 +49,7 @@ classifiers = [
 
 [project.optional-dependencies]
 double = ["superdex-physics-fp64==1.0.0"]
+fp64 = ["superdex-physics-fp64==1.0.0"]
 
 [project.urls]
 Homepage = "https://github.com/facebookresearch/project_superdex"

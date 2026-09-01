@@ -45,26 +45,26 @@ def _get_use_double_precision() -> bool:
     the same precision.
     """
 
-    DEFAULT_PRECISION = "single"
+    DEFAULT_PRECISION = "fp32"
 
     value = get_env_var_value(PRECISION_ENV_VAR, LEGACY_PRECISION_ENV_VAR)
     value = (value or DEFAULT_PRECISION).strip().lower()
     if value in ("single", "float", "float32", "fp32", "32"):
-        set_env_var_value(PRECISION_ENV_VAR, LEGACY_PRECISION_ENV_VAR, "single")
+        set_env_var_value(PRECISION_ENV_VAR, LEGACY_PRECISION_ENV_VAR, "fp32")
         return False
     if value in ("double", "float64", "fp64", "64"):
-        set_env_var_value(PRECISION_ENV_VAR, LEGACY_PRECISION_ENV_VAR, "double")
+        set_env_var_value(PRECISION_ENV_VAR, LEGACY_PRECISION_ENV_VAR, "fp64")
         return True
     raise ImportError(
         f"Unknown SuperDex precision: {value!r}. "
-        f"Set {PRECISION_ENV_VAR} to 'single' or 'double'."
+        f"Set {PRECISION_ENV_VAR} to 'fp32' or 'fp64'."
     )
 
 
 USE_DOUBLE_PRECISION = _get_use_double_precision()
-"""Whether to use the double precision variants for SuperDex Physics bindings."""
+"""Whether to use the FP64 variants for SuperDex Physics bindings."""
 
-PRECISION_NAME: str = "double" if USE_DOUBLE_PRECISION else "single"
+PRECISION_NAME: str = "fp64" if USE_DOUBLE_PRECISION else "fp32"
 """The selected precision name."""
 
 
@@ -74,8 +74,8 @@ PRECISION_NAME: str = "double" if USE_DOUBLE_PRECISION else "single"
 class NativePayload(NamedTuple):
     """Where one family of native modules is packaged, per precision.
 
-    Single-precision lives under the ``superdex`` namespace of the base distribution;
-    double-precision is a standalone top-level package installed by the ``[double]`` extra.
+    FP32 lives under the ``superdex`` namespace of the base distribution; FP64 is a
+    standalone top-level package installed by the ``[fp64]`` extra.
     """
 
     subpackage: str
@@ -129,7 +129,7 @@ def _first_directory(candidates: Sequence[Path]) -> Path | None:
 
 
 def _fp32_native_roots(payload: NativePayload) -> list[Path]:
-    """Where the single-precision payload may live, most authoritative first.
+    """Where the FP32 payload may live, most authoritative first.
 
     A wheel puts it next to this facade; an editable install leaves the facade in the
     source tree, which has no `_native/`, and CMake installs the payload under site-packages.
@@ -171,9 +171,9 @@ def _packaged_native_dir(payload: NativePayload) -> Path | None:
 def _available_packaged_precisions(payload: NativePayload) -> list[str]:
     available = []
     if _first_directory(_fp32_native_roots(payload)) is not None:
-        available.append("single")
+        available.append("fp32")
     if _first_directory(_fp64_native_roots(payload)) is not None:
-        available.append("double")
+        available.append("fp64")
     return available
 
 
@@ -201,7 +201,7 @@ def _ensure_packaged_native_search_path(payload: NativePayload) -> Path | None:
 def precision_variant_for_module(module_name: str) -> str:
     """Return a module name for the selected precision."""
     # Precision is process-wide for SuperDex Physics Python facades; every native module lookup uses
-    # the same suffix rule so mixed single/double extension state is not introduced.
+    # the same suffix rule so mixed FP32/FP64 extension state is not introduced.
     return f"{module_name}_double" if USE_DOUBLE_PRECISION else module_name
 
 
@@ -318,12 +318,12 @@ def _missing_payload_guidance(payload: NativePayload) -> str:
     installed = ", ".join(available_precisions)
     if USE_DOUBLE_PRECISION:
         return (
-            f". The double-precision payload is not installed (installed: {installed}). "
-            f"Run `pip install '{payload.distribution}[double]'`, or build from source "
+            f". The FP64 payload is not installed (installed: {installed}). "
+            f"Run `pip install '{payload.distribution}[fp64]'`, or build from source "
             "with MOCHI_USE_DOUBLE_PRECISION=ON"
         )
     return (
-        f". The single-precision payload is not installed (installed: {installed}). "
+        f". The FP32 payload is not installed (installed: {installed}). "
         f"Run `pip install {payload.distribution}`, or build from source with "
         "MOCHI_USE_DOUBLE_PRECISION=OFF"
     )

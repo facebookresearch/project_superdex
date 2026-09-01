@@ -307,7 +307,7 @@ Raises:
   m.def(
       "uses_double_precision",
       []() { return bool(MOCHI_USE_DOUBLE_PRECISION); },
-      "Return whether the loaded native library uses double-precision floating-point values.");
+      "Return whether the loaded native library uses double-precision floating-point (FP64) values.");
   m.def(
       "uses_hdf5",
       []() { return bool(MOCHI_USE_HDF5); },

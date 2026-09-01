@@ -43,6 +43,10 @@ core = [
 ]
 
 double = [
+    "superdex-dev[fp64]",
+]
+
+fp64 = [
     "superdex-dev[core]",
     "superdex-physics-fp64",
     "superdex-robotics-fp64",

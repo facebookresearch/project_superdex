@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Double-precision native payload for :mod:`superdex.robotics`.
+"""FP64 native payload for :mod:`superdex.robotics`.
 
 Not an API: it exists so that ``superdex.physics.loader`` can locate the ``_native/``
 directory beside this file through the import system, without assuming where pip placed it.
 
 Use the facade instead::
 
-    SUPERDEX_PRECISION=double python -c "import superdex.robotics"
+    SUPERDEX_PRECISION=fp64 python -c "import superdex.robotics"
 """
 
 from __future__ import annotations

@@ -249,7 +249,7 @@ def _debugger_exe_name() -> str:
 def _debugger_exe_names() -> tuple[str, ...]:
     """Executable names to look for, most specific first.
 
-    CMake suffixes the double-precision build so one wheel can carry both variants. A Buck
+    CMake suffixes the FP64 build so one wheel can carry both variants. A Buck
     link tree only ever stages one debugger, under the unsuffixed name.
     """
     precision_name = _debugger_exe_name()

@@ -90,7 +90,7 @@ DISTRIBUTION_DIRECTORIES = {
     "superdex_meta": Path("superdex_meta"),
 }
 
-# The double-precision payloads. Dropping both halves the native build.
+# The FP64 payloads. Dropping both halves the native build.
 FP64_DISTRIBUTIONS = ("superdex_physics_fp64", "superdex_robotics_fp64")
 
 # The distributions that build the GPL-isolated mesh helper, and so need CGAL, Boost and OCCT.
@@ -919,7 +919,7 @@ def _parse_args() -> argparse.Namespace:
         "--skip-fp64",
         action="store_true",
         help=(
-            "Leave out the two double-precision distributions, halving the native build. "
+            "Leave out the two FP64 distributions, halving the native build. "
             "The umbrella `superdex` pins them exactly, so it will not install from the "
             "resulting wheelhouse -- ask for `superdex-lab` instead, which pulls robotics "
             "and physics."

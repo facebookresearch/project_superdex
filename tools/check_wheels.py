@@ -1482,7 +1482,7 @@ try:
 finally:
     physics.shutdown()
 
-print("smoke ok:", "double" if reported else "single", physics.__file__)
+print("smoke ok:", "fp64" if reported else "fp32", physics.__file__)
 """
 )
 
@@ -1493,11 +1493,11 @@ try:
     import superdex.physics
 except ImportError as error:
     message = str(error)
-    assert "superdex-physics[double]" in message, f"unhelpful error: {message}"
+    assert "superdex-physics[fp64]" in message, f"unhelpful error: {message}"
     print("missing-payload error ok")
     sys.exit(0)
 
-sys.exit("importing superdex.physics at double precision should have failed")
+sys.exit("importing superdex.physics at FP64 should have failed")
 """
 
 
@@ -1646,25 +1646,43 @@ def check_complete_install(workspace: Path, wheelhouse: Path, deps: Path) -> Non
     _run_script(
         python,
         SMOKE_TEST,
-        {"SUPERDEX_EXPECT_DOUBLE": "1", "SUPERDEX_PRECISION": "double"},
+        {"SUPERDEX_EXPECT_DOUBLE": "1", "SUPERDEX_PRECISION": "fp64"},
     )
 
 
-def check_single_precision_install(
-    workspace: Path, wheelhouse: Path, deps: Path
-) -> None:
-    """Without the `double` extra, asking for double precision explains itself."""
+def check_fp32_install(workspace: Path, wheelhouse: Path, deps: Path) -> None:
+    """Without the `fp64` extra, asking for FP64 explains itself."""
 
-    python = _create_venv(workspace / "single")
+    python = _create_venv(workspace / "fp32")
     _install_offline(python, wheelhouse, deps, "superdex-physics", "superdex-robotics")
     _run_script(python, SMOKE_TEST, {"SUPERDEX_EXPECT_DOUBLE": "0"})
-    _run_script(python, MISSING_PAYLOAD_TEST, {"SUPERDEX_PRECISION": "double"})
+    _run_script(python, MISSING_PAYLOAD_TEST, {"SUPERDEX_PRECISION": "fp64"})
 
 
-def check_double_extra_install(workspace: Path, wheelhouse: Path, deps: Path) -> None:
-    """The `[double]` extra pulls in the fp64 wheel and makes double precision work."""
+def check_fp64_extra_install(workspace: Path, wheelhouse: Path, deps: Path) -> None:
+    """The `[fp64]` extra pulls in the FP64 wheel and makes FP64 work."""
 
     python = _create_venv(workspace / "extra")
+    _install_offline(
+        python,
+        wheelhouse,
+        deps,
+        "superdex-physics[fp64]",
+        "superdex-robotics[fp64]",
+    )
+    _run_script(
+        python,
+        SMOKE_TEST,
+        {"SUPERDEX_EXPECT_DOUBLE": "1", "SUPERDEX_PRECISION": "fp64"},
+    )
+
+
+def check_legacy_double_extra_install(
+    workspace: Path, wheelhouse: Path, deps: Path
+) -> None:
+    """The legacy `[double]` extra and precision value continue to select FP64."""
+
+    python = _create_venv(workspace / "legacy-double-extra")
     _install_offline(
         python,
         wheelhouse,
@@ -1855,8 +1873,9 @@ def _run_runtime_checks(
         if not args.skip_download:
             populate_dependencies(_create_venv(workspace / "download"), wheels, deps)
         check_complete_install(workspace, wheelhouse, deps)
-        check_single_precision_install(workspace, wheelhouse, deps)
-        check_double_extra_install(workspace, wheelhouse, deps)
+        check_fp32_install(workspace, wheelhouse, deps)
+        check_fp64_extra_install(workspace, wheelhouse, deps)
+        check_legacy_double_extra_install(workspace, wheelhouse, deps)
 
 
 def main() -> int:

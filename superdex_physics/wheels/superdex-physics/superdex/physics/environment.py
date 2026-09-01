@@ -37,7 +37,7 @@ LEGACY_LOG_LEVEL_ENV_VAR = "MOCHI_PYTHON_LOG_LEVEL"
 
 # Precision selection.
 PRECISION_ENV_VAR = "SUPERDEX_PRECISION"
-"""Environment variable used to select SuperDex bindings precision (single, double)."""
+"""Environment variable used to select precision (fp32/fp64)."""
 LEGACY_PRECISION_ENV_VAR = "MOCHI_PRECISION"
 """Deprecated environment variable alias for bindings precision."""
 
