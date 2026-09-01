@@ -55,6 +55,13 @@ struct ExportActorNameEntry {
 };
 } // namespace
 
+// Helper function for deterministic serialization of name pairs.
+static void CanonicalizePair(DynamicString& first, DynamicString& second) {
+  if (second < first) {
+    std::swap(first, second);
+  }
+}
+
 // Helper function to make a name unique by appending a number if needed
 static void MakeNameUnique(DynamicString& name, std::unordered_map<std::string, int>& usedNames) {
   auto [it, inserted] = usedNames.try_emplace(std::string(name), 0);
@@ -464,6 +471,7 @@ static std::optional<ContactFilter> ExportContactFilter(
         LayerContactEntry entry;
         entry.enable = false;
         entry.layers = {nameA, nameB};
+        CanonicalizePair(entry.layers[0], entry.layers[1]);
         contactFilter.layerContactSymmetric->push_back(entry);
       }
     } else {
@@ -504,6 +512,7 @@ static std::optional<ContactFilter> ExportContactFilter(
     if (contactTable.entitiesWithNoContact.contains({entityB, entityA})) {
       // Both directions disabled - export as symmetric, only when A <= B to avoid duplicates
       if (entityA <= entityB) {
+        CanonicalizePair(entry.actors[0], entry.actors[1]);
         contactFilter.actorContactSymmetric->push_back(entry);
       }
     } else {
@@ -511,6 +520,19 @@ static std::optional<ContactFilter> ExportContactFilter(
       contactFilter.actorContactAsymmetric->push_back(entry);
     }
   }
+
+  std::ranges::sort(*contactFilter.actorContactAsymmetric, {}, [](ActorContactEntry const& entry) {
+    return std::pair<std::string_view, std::string_view>{entry.actors[0], entry.actors[1]};
+  });
+  std::ranges::sort(*contactFilter.actorContactSymmetric, {}, [](ActorContactEntry const& entry) {
+    return std::pair<std::string_view, std::string_view>{entry.actors[0], entry.actors[1]};
+  });
+  std::ranges::sort(*contactFilter.layerContactAsymmetric, {}, [](LayerContactEntry const& entry) {
+    return std::pair<std::string_view, std::string_view>{entry.layers[0], entry.layers[1]};
+  });
+  std::ranges::sort(*contactFilter.layerContactSymmetric, {}, [](LayerContactEntry const& entry) {
+    return std::pair<std::string_view, std::string_view>{entry.layers[0], entry.layers[1]};
+  });
 
   // Prune empty optional arrays
   if (contactFilter.actorContactAsymmetric->empty()) {
@@ -547,9 +569,7 @@ static std::optional<DynamicArray<ContactPairParamsOverrideEntry>> ExportContact
     entry.actors = {exportedNameA->second, exportedNameB->second};
     // Runtime pairs are unordered. Canonicalize by exported name, then sort the unordered table's
     // entries so semantically identical scenes produce deterministic prefab JSON.
-    if (entry.actors[1] < entry.actors[0]) {
-      std::swap(entry.actors[0], entry.actors[1]);
-    }
+    CanonicalizePair(entry.actors[0], entry.actors[1]);
     entry.paramsOverride = paramsOverride;
     entries.push_back(std::move(entry));
   }

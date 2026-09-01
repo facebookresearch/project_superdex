@@ -898,7 +898,8 @@ struct prefab::LayerContactEntry [equality, no_reflection] {
 // exact JSON representation originally used to author it. Exporting may emit a canonical
 // representation whose contact-filter category differs from the original JSON. For example,
 // self-contact may be emitted as @ref actorContactSymmetric because the forward and reverse
-// resolved actor pair are the same.
+// resolved actor pair are the same. Entry order and duplicate, redundant, or overridden entries
+// from the source prefab are not preserved.
 //
 // @see ActorContactEntry, Scene::EnableActorContactAsymmetric, Scene::EnableActorContactSymmetric,
 // LayerContactEntry, Scene::EnableLayerContactAsymmetric, Scene::EnableLayerContactSymmetric
@@ -1405,6 +1406,9 @@ fn prefab::EnsureFullyLoaded(prefab::ScenePrefab& prefab, StringView rootPath, C
 // from the prefab using "./generated_assets/" paths.
 // @note Exported actor names are made unique: when two actors share a name, later ones receive a
 // numeric suffix (e.g. "box", "box1"), so an exported name may differ from the runtime name.
+// @note Scene export reconstructs supported creation and configuration data from effective runtime
+// state. It is not a lossless or structure-preserving round trip of any prefab used to create the
+// scene.
 //
 // @see ExportSceneExcluding, ExportActor
 fn prefab::ExportScene(Scene const* scene, StringView exportName, StringView outputDir) -> void [mochi_error];
@@ -1462,8 +1466,7 @@ fn prefab::ExportSceneExcluding(Scene const* scene, StringView exportName, Strin
 // preserve this behavior, add an equivalent enabling entry to the exported prefab or re-enable the
 // pair after adding the prefab to a scene.
 //
-// @note Uses the same prefab export path as @ref ExportScene. Any limitations documented in
-// @ref ExportScene also apply here.
+// @note Any limitations documented in @ref ExportScene also apply here.
 // @note When exporting an articulated actor, pass the articulated actor itself (the one returned by
 // @ref Scene::CreateArticulatedActor or by @ref Actor::GetArticulatedActor on a nested link), not
 // a nested actor.

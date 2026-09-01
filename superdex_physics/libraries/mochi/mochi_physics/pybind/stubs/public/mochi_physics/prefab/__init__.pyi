@@ -2627,7 +2627,8 @@ class ContactFilter:
         Exporting may emit a canonical representation whose contact-filter category
         differs from the original JSON. For example, self-contact may be emitted as
         :attr:`actor_contact_symmetric` because the forward and reverse resolved
-        actor pair are the same.
+        actor pair are the same. Entry order and duplicate, redundant, or overridden
+        entries from the source prefab are not preserved.
 
     Warning:
         Scene export does not record explicit settings that enable contact between
@@ -3513,6 +3514,11 @@ def export_scene(scene: mochi_physics.Scene, export_name: str, output_dir: str) 
         ones receive a numeric suffix (e.g. "box", "box1"), so an exported name may
         differ from the runtime name.
 
+    Note:
+        Scene export reconstructs supported creation and configuration data from
+        effective runtime state. It is not a lossless or structure-preserving round
+        trip of any prefab used to create the scene.
+
     Warning:
         Currently exports only rigid, soft, articulated, and soft-skinned actors.
         Constraints, pose controllers, shell, rod actors, and implicit (non-mesh)
@@ -3611,9 +3617,8 @@ def export_actor(actor: mochi_physics.Actor, export_name: str, output_dir: str) 
         :class:`~superdex.physics.Error`: If an error occurs.
 
     Note:
-        Uses the same prefab export path as
-        :func:`~superdex.physics.prefab.export_scene`. Any limitations documented in
-        :func:`~superdex.physics.prefab.export_scene` also apply here.
+        Any limitations documented in :func:`~superdex.physics.prefab.export_scene`
+        also apply here.
 
     Note:
         When exporting an articulated actor, pass the articulated actor itself (the

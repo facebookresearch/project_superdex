@@ -1776,6 +1776,117 @@ TEST_IF(MOCHI_HDF5_AND_INTERNAL, PrefabExport, ExportContactFilter_AsymmetricLay
   EXPECT_TRUE(newScene->IsLayerContactEnabled("LayerY", "LayerX"));
 }
 
+TEST_IF(MOCHI_HDF5_AND_INTERNAL, PrefabExport, ContactFiltersAreDeterministic) {
+  auto* context = CreateContext(0);
+  MOCHI_DEFER(DestroyContext(context));
+  auto tempDirA = CreateTempDirectory("contact_filter_order_a", ExpectOK{});
+  auto tempDirB = CreateTempDirectory("contact_filter_order_b", ExpectOK{});
+  auto const shape = context->LoadShapeFromFile(
+      GetAssetPath("cube/cube_minimal.mochi.json"),
+      Real3{0.1_r, 0.1_r, 0.1_r},
+      TransformRT{},
+      ExpectOK{});
+
+  constexpr int kNumPairs = 24;
+  using NamePair = std::pair<std::string, std::string>;
+  DynamicArray<NamePair> expectedActorAsymmetric;
+  DynamicArray<NamePair> expectedActorSymmetric;
+  DynamicArray<NamePair> expectedLayerAsymmetric;
+  DynamicArray<NamePair> expectedLayerSymmetric;
+  for (int i = 0; i < kNumPairs; ++i) {
+    std::string const actorName = "Actor" + std::to_string(i);
+    std::string const layerName = "Layer" + std::to_string(i);
+    expectedActorAsymmetric.push_back({actorName, "AsymmetricAnchor"});
+    expectedActorSymmetric.push_back({actorName, "SymmetricAnchor"});
+    expectedLayerAsymmetric.push_back({layerName, "AsymmetricLayer"});
+    expectedLayerSymmetric.push_back({layerName, "SymmetricLayer"});
+  }
+  std::sort(expectedActorAsymmetric.begin(), expectedActorAsymmetric.end());
+  std::sort(expectedActorSymmetric.begin(), expectedActorSymmetric.end());
+  std::sort(expectedLayerAsymmetric.begin(), expectedLayerAsymmetric.end());
+  std::sort(expectedLayerSymmetric.begin(), expectedLayerSymmetric.end());
+
+  auto actorPairs = [](DynamicArray<prefab::ActorContactEntry> const& entries) {
+    DynamicArray<NamePair> pairs;
+    pairs.reserve(entries.size());
+    for (auto const& entry : entries) {
+      pairs.push_back({std::string(entry.actors[0]), std::string(entry.actors[1])});
+    }
+    return pairs;
+  };
+  auto layerPairs = [](DynamicArray<prefab::LayerContactEntry> const& entries) {
+    DynamicArray<NamePair> pairs;
+    pairs.reserve(entries.size());
+    for (auto const& entry : entries) {
+      pairs.push_back({std::string(entry.layers[0]), std::string(entry.layers[1])});
+    }
+    return pairs;
+  };
+
+  auto exportWithOrder =
+      [&](std::filesystem::path const& outputDir, bool reverse, std::string& json) {
+        auto* scene = context->CreateScene("contact_filter_determinism");
+        MOCHI_DEFER(context->DestroyScene(scene));
+
+        auto makeActor = [&](char const* name, char const* layer) {
+          RigidActorParams params;
+          params.name = name;
+          params.layer = layer;
+          params.shape = shape;
+          params.colliderType = ColliderType::Box;
+          return scene->CreateRigidActor(params, ExpectOK{});
+        };
+        Actor* const symmetricAnchor = makeActor("SymmetricAnchor", "SymmetricLayer");
+        Actor* const asymmetricAnchor = makeActor("AsymmetricAnchor", "AsymmetricLayer");
+
+        DynamicArray<Actor*> actors;
+        DynamicArray<std::string> layerNames;
+        for (int i = 0; i < kNumPairs; ++i) {
+          std::string const actorName = "Actor" + std::to_string(i);
+          layerNames.push_back("Layer" + std::to_string(i));
+          actors.push_back(makeActor(actorName.c_str(), layerNames.back().c_str()));
+        }
+
+        for (int n = 0; n < kNumPairs; ++n) {
+          int const i = reverse ? kNumPairs - 1 - n : n;
+          scene->EnableActorContactSymmetric(
+              actors[i]->GetHandle(),
+              symmetricAnchor->GetHandle(),
+              false,
+              IncludeNestedActors::No,
+              ExpectOK{});
+          scene->EnableActorContactAsymmetric(
+              actors[i]->GetHandle(),
+              asymmetricAnchor->GetHandle(),
+              false,
+              IncludeNestedActors::No,
+              ExpectOK{});
+          scene->EnableLayerContactSymmetric(layerNames[i], "SymmetricLayer", false, ExpectOK{});
+          scene->EnableLayerContactAsymmetric(layerNames[i], "AsymmetricLayer", false, ExpectOK{});
+        }
+
+        auto const prefabFile = ExportScene(scene, "contact_filter", outputDir);
+        ReadFile(prefabFile, json, ExpectOK{});
+        auto const exported = prefab::ShallowLoadFromFile(prefabFile.string(), ExpectOK{});
+        ASSERT_TRUE(exported.contactFilter.has_value());
+        auto const& filter = *exported.contactFilter;
+        ASSERT_TRUE(filter.actorContactAsymmetric.has_value());
+        ASSERT_TRUE(filter.actorContactSymmetric.has_value());
+        ASSERT_TRUE(filter.layerContactAsymmetric.has_value());
+        ASSERT_TRUE(filter.layerContactSymmetric.has_value());
+        EXPECT_EQ(expectedActorAsymmetric, actorPairs(*filter.actorContactAsymmetric));
+        EXPECT_EQ(expectedActorSymmetric, actorPairs(*filter.actorContactSymmetric));
+        EXPECT_EQ(expectedLayerAsymmetric, layerPairs(*filter.layerContactAsymmetric));
+        EXPECT_EQ(expectedLayerSymmetric, layerPairs(*filter.layerContactSymmetric));
+      };
+
+  std::string jsonA;
+  std::string jsonB;
+  exportWithOrder(tempDirA.Path(), false, jsonA);
+  exportWithOrder(tempDirB.Path(), true, jsonB);
+  EXPECT_EQ(jsonA, jsonB);
+}
+
 TEST_IF(MOCHI_HDF5_AND_INTERNAL, PrefabExport, ContactPairOverridesAreDeterministic) {
   auto* context = CreateContext(0);
   MOCHI_DEFER(DestroyContext(context));
