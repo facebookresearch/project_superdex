@@ -303,11 +303,11 @@ static void KrylovSolveZ(
       /*abortIfNotSpd*/ true,
       backpropParams.verbosity);
 
-  // If PCG aborted due to non-SPD, fall back to MINRES
-  if (!outerResult.converged && outerResult.numIterDone < backpropParams.outerSolverMaxIter) {
+  // If PCG diverged, fall back to MINRES.
+  if (outerResult.convergence == LinearSolverConvergenceStatus::Diverged) {
     if (backpropParams.verbosity >= VerbosityLevel::Warning) {
       MOCHI_LOG_WARNING(
-          "PCG aborted at iteration %d (likely non-SPD). Falling back to MINRES.",
+          "PCG diverged at iteration %d (likely non-SPD). Falling back to MINRES.",
           outerResult.numIterDone);
     }
 
@@ -337,7 +337,7 @@ static void KrylovSolveZ(
           "MINRES: Finished after %d iterations, final resNorm = %f, converged = %d",
           outerResult.numIterDone,
           outerResult.residualNorm,
-          outerResult.converged);
+          IsConverged(outerResult.convergence));
     }
 
     if (backpropParams.verbosity >= VerbosityLevel::Warning && backpropParams.validateFiniteDiff) {
@@ -371,7 +371,7 @@ static void KrylovSolveZ(
         "PCG: Finished after %d iterations, final resNorm = %f, converged = %d",
         outerResult.numIterDone,
         outerResult.residualNorm,
-        outerResult.converged);
+        IsConverged(outerResult.convergence));
   }
 
   // Record statistics

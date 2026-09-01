@@ -50,9 +50,8 @@ namespace mochi::krylov {
  * @param[in] dot The dot operator. Must also handle a matrix-vector operation.
  * @param[in] vectorFactory Factory to create vectors of a given type.
  *
- * @return Linear solver status. Contains the number of iterations and the achieved absolute and
- * relative residuals. "maxIter+1" is used to indicate that the maximum number of iterations was
- * reached without convergence.
+ * @return Linear solver status. Contains the convergence status, number of iterations, and achieved
+ * absolute and relative residuals.
  *
  * @note It uses left preconditioning.
  * @note The norm used in the stop criteria is specified by the object 'statusCheck'.
@@ -121,7 +120,8 @@ LinearSolverStatus PCG(
         .numIterDone = 0,
         .residualNorm = static_cast<double>(statusCheck.GetLatestResidualNorm()),
         .relativeResidualNorm = static_cast<double>(statusCheck.GetLatestRelativeResidualNorm()),
-        .converged = IsConverged(myStatus)};
+        .convergence = IsConverged(myStatus) ? LinearSolverConvergenceStatus::Converged
+                                             : LinearSolverConvergenceStatus::Diverged};
   }
 
   p = z;
@@ -150,7 +150,7 @@ LinearSolverStatus PCG(
               .residualNorm = static_cast<double>(statusCheck.GetLatestResidualNorm()),
               .relativeResidualNorm =
                   static_cast<double>(statusCheck.GetLatestRelativeResidualNorm()),
-              .converged = false};
+              .convergence = LinearSolverConvergenceStatus::Diverged};
         }
       }
 
@@ -187,7 +187,8 @@ LinearSolverStatus PCG(
           .numIterDone = iter,
           .residualNorm = static_cast<double>(statusCheck.GetLatestResidualNorm()),
           .relativeResidualNorm = static_cast<double>(statusCheck.GetLatestRelativeResidualNorm()),
-          .converged = IsConverged(myStatus)};
+          .convergence = IsConverged(myStatus) ? LinearSolverConvergenceStatus::Converged
+                                               : LinearSolverConvergenceStatus::Diverged};
     }
 
     auto const rTz_old = rTz_current;
@@ -208,7 +209,7 @@ LinearSolverStatus PCG(
             .residualNorm = static_cast<double>(statusCheck.GetLatestResidualNorm()),
             .relativeResidualNorm =
                 static_cast<double>(statusCheck.GetLatestRelativeResidualNorm()),
-            .converged = false};
+            .convergence = LinearSolverConvergenceStatus::Diverged};
       }
 
     beta = (rTz_current - beta) / rTz_old;
@@ -216,10 +217,10 @@ LinearSolverStatus PCG(
   } // for (int iter = 1; iter <= maxIter; ++iter)
 
   return LinearSolverStatus{
-      .numIterDone = maxIter + 1,
+      .numIterDone = maxIter,
       .residualNorm = statusCheck.GetLatestResidualNorm(),
       .relativeResidualNorm = statusCheck.GetLatestRelativeResidualNorm(),
-      .converged = false};
+      .convergence = LinearSolverConvergenceStatus::Stopped};
 }
 
 } // namespace mochi::krylov

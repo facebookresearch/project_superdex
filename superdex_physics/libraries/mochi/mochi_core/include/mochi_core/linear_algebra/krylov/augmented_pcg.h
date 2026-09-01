@@ -66,9 +66,8 @@ namespace mochi::krylov {
  * @param[in] dot The dot operator. Must also handle matrix-vector operations.
  * @param[in] vectorFactory Factory to create vectors of a given type.
  *
- * @return Linear solver status. Contains the number of iterations and the achieved absolute and
- * relative residuals. "maxIter+1" is used to indicate that the maximum number of iterations was
- * reached without convergence.
+ * @return Linear solver status. Contains the convergence status, number of iterations, and achieved
+ * absolute and relative residuals.
  *
  * @details It implements Algorithm 3.6 in Y. Saad, M. Yeung, J. Erhel, and F. Guyomarc'H, "A
  * deflated version of the conjugate gradient algorithm", SISC, 21(5), pp. 1909-1926 (2000).

@@ -62,9 +62,8 @@ namespace mochi::krylov {
  * @param[in] restartPeriod Positive integer indicating every how many iterations to restart.
  * Default is 100.
  *
- * @return Linear solver status. Contains the number of iterations and the achieved absolute and
- * relative residuals. "maxIter+1" is used to indicate that the maximum number of iterations was
- * reached without convergence.
+ * @return Linear solver status. Contains the convergence status, number of iterations, and achieved
+ * absolute and relative residuals.
  *
  * @details The algorithm is designed to maximize the amount of work that can be performed in
  * parallel to the matrix-vector product. Similar variations of CG have been proposed in the
@@ -151,7 +150,8 @@ LinearSolverStatus AsyncPCG(
         .numIterDone = 0,
         .residualNorm = static_cast<double>(statusCheck.GetLatestResidualNorm()),
         .relativeResidualNorm = static_cast<double>(statusCheck.GetLatestRelativeResidualNorm()),
-        .converged = IsConverged(status)};
+        .convergence = IsConverged(status) ? LinearSolverConvergenceStatus::Converged
+                                           : LinearSolverConvergenceStatus::Diverged};
   }
 
   p = z; // p_0 = z_0
@@ -313,15 +313,16 @@ LinearSolverStatus AsyncPCG(
           .numIterDone = iter,
           .residualNorm = static_cast<double>(statusCheck.GetLatestResidualNorm()),
           .relativeResidualNorm = static_cast<double>(statusCheck.GetLatestRelativeResidualNorm()),
-          .converged = IsConverged(status)};
+          .convergence = IsConverged(status) ? LinearSolverConvergenceStatus::Converged
+                                             : LinearSolverConvergenceStatus::Diverged};
     }
   }
 
   return LinearSolverStatus{
-      .numIterDone = maxIter + 1,
+      .numIterDone = maxIter,
       .residualNorm = static_cast<double>(statusCheck.GetLatestResidualNorm()),
       .relativeResidualNorm = static_cast<double>(statusCheck.GetLatestRelativeResidualNorm()),
-      .converged = false};
+      .convergence = LinearSolverConvergenceStatus::Stopped};
 }
 
 } // namespace mochi::krylov

@@ -745,16 +745,19 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
       // Solve the linear system.
       dxSolve.SetZero();
       auto linearResult = _linearSolver->Solve(linOp, problem.GetResidual(), dxSolve);
+      MOCHI_ASSERT_VERBOSE(
+          linearResult.convergence != LinearSolverConvergenceStatus::None,
+          "Linear solver convergence status has not been set.");
 
-      if (linearResult.converged && _params.verbosity >= VerbosityLevel::Verbose) {
+      if (IsConverged(linearResult.convergence) && _params.verbosity >= VerbosityLevel::Verbose) {
         MOCHI_LOG(
             "\n\tLinear solver converged after %d iterations: |r|=%.5e, |r|/|r0|=%.5e\n",
             linearResult.numIterDone,
             linearResult.residualNorm,
             linearResult.relativeResidualNorm);
-      } else if (!linearResult.converged) {
+      } else if (!IsConverged(linearResult.convergence)) {
         bool const abortedDueToNonPsd = !projectPsd && _params.lParams.abortIfNotSpd &&
-            (linearResult.numIterDone <= _params.lParams.maxIter);
+            (linearResult.convergence == LinearSolverConvergenceStatus::Diverged);
         if (abortedDueToNonPsd && _params.verbosity >= VerbosityLevel::Verbose) {
           MOCHI_LOG(
               "\n\tLinear solver aborted after %d iterations due to non-PSD matrix.",
@@ -770,7 +773,7 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
 
       linearResidualNorm = static_cast<T>(linearResult.residualNorm);
       status.totalNumLinearIterDone += linearResult.numIterDone;
-      retry = !linearResult.converged;
+      retry = !IsConverged(linearResult.convergence);
 
       // If the Newton-Raphson step is not successful, the iteration will be retried if (a) we did
       // not use a fitted Hessian, (b) we are not doing PSD projection but we could, and/or (c) the
@@ -781,7 +784,7 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
           (status.itersSinceDResidualAssembly == 0);
 
       // Try to take the step only if the linear solver converged or if it's the last try.
-      if (isLastTry || linearResult.converged) {
+      if (isLastTry || IsConverged(linearResult.convergence)) {
         if (MOCHI_ASSERT_VERBOSE_ENABLED && projectPsd) {
           [[maybe_unused]] auto resDot = problem.GetResidual().Dot(dxSolve);
           MOCHI_ASSERT_VERBOSE(resDot >= 0, "NOT PSD: residual.Dot(dxSolve) = %g", resDot);

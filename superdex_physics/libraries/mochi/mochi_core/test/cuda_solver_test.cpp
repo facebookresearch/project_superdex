@@ -212,7 +212,7 @@ TEST(KrylovSolver, CudaPcgFallback) {
   //--- With a burst of 8, the PCG would yield not-finite residual entries
   //--- Uses the fallback
   auto status = krylov::CudaPCG(d_M, d_b, d_x, P, 1000, stopCriterion);
-  EXPECT_TRUE(status.converged);
+  EXPECT_EQ(status.convergence, LinearSolverConvergenceStatus::Converged);
   EXPECT_LT(status.numIterDone, n);
 }
 

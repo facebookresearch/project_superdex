@@ -99,7 +99,7 @@ static void TestParallelMatrixVectorProductPool(
     if (singleThreadedMode) {
       EXPECT_FALSE(opABSp.IsPoolEnabled());
     }
-    EXPECT_TRUE(infoPcg.converged);
+    EXPECT_EQ(infoPcg.convergence, LinearSolverConvergenceStatus::Converged);
     EXPECT_LT(infoPcg.numIterDone, maxIter);
     EXPECT_LT(infoPcg.relativeResidualNorm, relTol);
     opABSp.Reset();
@@ -118,7 +118,7 @@ static void TestParallelMatrixVectorProductPool(
     if (singleThreadedMode) {
       EXPECT_FALSE(opASp.IsPoolEnabled());
     }
-    EXPECT_TRUE(infoPcg.converged);
+    EXPECT_EQ(infoPcg.convergence, LinearSolverConvergenceStatus::Converged);
     EXPECT_LT(infoPcg.numIterDone, maxIter);
     EXPECT_LT(infoPcg.relativeResidualNorm, relTol);
     EXPECT_LT(xDiff.Norm(), relTol * numRows * xBSp.Norm());
@@ -131,7 +131,7 @@ static void TestParallelMatrixVectorProductPool(
     if (singleThreadedMode) {
       EXPECT_FALSE(opADense.IsPoolEnabled());
     }
-    EXPECT_TRUE(infoPcg.converged);
+    EXPECT_EQ(infoPcg.convergence, LinearSolverConvergenceStatus::Converged);
     EXPECT_LT(infoPcg.numIterDone, maxIter);
     EXPECT_LT(infoPcg.relativeResidualNorm, relTol);
     EXPECT_LT(xDiff.Norm(), relTol * numRows * xBSp.Norm());
@@ -144,7 +144,7 @@ static void TestParallelMatrixVectorProductPool(
     if (singleThreadedMode) {
       EXPECT_FALSE(opADenseRow.IsPoolEnabled());
     }
-    EXPECT_TRUE(infoPcg.converged);
+    EXPECT_EQ(infoPcg.convergence, LinearSolverConvergenceStatus::Converged);
     EXPECT_LT(infoPcg.numIterDone, maxIter);
     EXPECT_LT(infoPcg.relativeResidualNorm, relTol);
     EXPECT_LT(xDiff.Norm(), relTol * numRows * xBSp.Norm());
@@ -158,7 +158,7 @@ static void TestParallelMatrixVectorProductPool(
     if (singleThreadedMode) {
       EXPECT_FALSE(opABSp.IsPoolEnabled());
     }
-    EXPECT_TRUE(infoPcg.converged);
+    EXPECT_EQ(infoPcg.convergence, LinearSolverConvergenceStatus::Converged);
     EXPECT_EQ(infoPcg.numIterDone, 1);
     EXPECT_LE(infoPcg.relativeResidualNorm, relTol);
     opABSp.Reset();
@@ -170,7 +170,7 @@ static void TestParallelMatrixVectorProductPool(
     if (singleThreadedMode) {
       EXPECT_FALSE(opABSp.IsPoolEnabled());
     }
-    EXPECT_TRUE(infoGmres.converged);
+    EXPECT_EQ(infoGmres.convergence, LinearSolverConvergenceStatus::Converged);
     EXPECT_LT(infoGmres.numIterDone, maxIter);
     EXPECT_LT(infoGmres.relativeResidualNorm, relTol);
     opABSp.Reset();

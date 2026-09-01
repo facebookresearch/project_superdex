@@ -38,11 +38,9 @@ namespace mochi::krylov {
 
 /// @brief Function for the actual implementation of PCG with on device
 ///
-/// @return
-/// Pair of number of iterations made and boolean to indicate whether the algorithm
-/// converged.
+/// @return Pair of the number of iterations performed and the convergence status.
 template <typename Scalar>
-std::pair<int, bool> CudaPCG_impl(
+std::pair<int, LinearSolverConvergenceStatus> CudaPCG_impl(
     std::function<
         void(mochi::CudaVectorView<Scalar> const& v, mochi::CudaVectorView<Scalar>& Av)> const& A,
     mochi::CudaVectorView<Scalar const> bv,
@@ -77,9 +75,8 @@ std::pair<int, bool> CudaPCG_impl(
  *
  * @return
  * Linear solver status.
- * Contains the number of iterations and the achieved absolute and
- * relative residuals. "maxIter+1" is used to indicate that the maximum number of iterations was
- * reached without convergence.
+ * Contains the convergence status, number of iterations, and achieved absolute and relative
+ * residuals.
  *
  * @note The norm used in the stop criteria is specified by the object 'statusCheck'.
  * @note Complex arithmetic is not supported.
@@ -140,7 +137,7 @@ LinearSolverStatus CudaPCG(
       .numIterDone = std::get<0>(info),
       .residualNorm = statusCheck.GetLatestResidualNorm(),
       .relativeResidualNorm = statusCheck.GetLatestRelativeResidualNorm(),
-      .converged = std::get<1>(info)};
+      .convergence = std::get<1>(info)};
 }
 
 } // namespace mochi::krylov

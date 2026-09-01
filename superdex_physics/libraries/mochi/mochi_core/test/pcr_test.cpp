@@ -69,7 +69,7 @@ static void TestPcr(bool singleThreadedMode) {
 
     auto runCommonChecks = [&](Scalar const& resRelTol, Scalar const& solRelTol) {
       pcrError = ref - sol;
-      EXPECT_TRUE(info.converged);
+      EXPECT_EQ(info.convergence, LinearSolverConvergenceStatus::Converged);
       EXPECT_LE(info.numIterDone, maxIter);
       EXPECT_LT(info.relativeResidualNorm, resRelTol);
       EXPECT_LT(dot.Norm(pcrError), solRelTol * dot.Norm(ref));
@@ -123,7 +123,7 @@ static void TestPcr(bool singleThreadedMode) {
     StopCriterion stopper{relTol, kAbsTol, kRelDivTol};
     info = krylov::PCR(opB, b, x, opInvB, n, stopper, VerbosityLevel::Warning, dot, factory);
 
-    EXPECT_TRUE(info.converged);
+    EXPECT_EQ(info.convergence, LinearSolverConvergenceStatus::Converged);
     EXPECT_EQ(info.numIterDone, 1);
     EXPECT_LE(info.relativeResidualNorm, relTol);
   }

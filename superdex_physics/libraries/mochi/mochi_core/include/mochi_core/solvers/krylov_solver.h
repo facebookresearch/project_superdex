@@ -73,20 +73,38 @@ struct KrylovSolverParams {
   VerbosityLevel verbosity = LinearSolverParams{}.verbosity;
 };
 
+/** @brief Convergence status of a linear solve, ordered by severity. */
+enum struct LinearSolverConvergenceStatus : uint8_t {
+  None, ///< No terminal result has been assigned.
+  Converged, ///< The solver met its requested convergence tolerance.
+  Stopped, ///< The solver stopped normally without meeting its convergence tolerance.
+  Diverged, ///< The solver terminated abnormally and its result is not usable.
+  Count, ///< Number of convergence status enum values.
+};
+static_assert(
+    static_cast<int>(LinearSolverConvergenceStatus::Count) == 4 &&
+        LinearSolverConvergenceStatus::None < LinearSolverConvergenceStatus::Converged &&
+        LinearSolverConvergenceStatus::Converged < LinearSolverConvergenceStatus::Stopped &&
+        LinearSolverConvergenceStatus::Stopped < LinearSolverConvergenceStatus::Diverged,
+    "LinearSolverConvergenceStatus must be ordered by severity.");
+
+[[nodiscard]] inline constexpr bool IsConverged(LinearSolverConvergenceStatus status) {
+  return status == LinearSolverConvergenceStatus::Converged;
+}
+
 /**
  * Output structure of the linear solver.
  */
 struct LinearSolverStatus {
-  // Number of iterations done by the solver. "maxIter+1" is used to indicate that the maximum
-  // number of iterations was reached without convergence. Only populated with iterative solvers.
+  // Number of iterations done by the solver. Only populated with iterative solvers.
   int numIterDone = 0;
   // Norm of the residual at the end of the solve. Only populated with iterative solvers.
   double residualNorm = {};
   // Relative norm of the residual at the end vs. at the beginning of the solve. Only populated with
   // iterative solvers.
   double relativeResidualNorm = {};
-  // Did the solver converge?
-  bool converged = false;
+  // Convergence status after the solve.
+  LinearSolverConvergenceStatus convergence = LinearSolverConvergenceStatus::None;
 };
 
 /**

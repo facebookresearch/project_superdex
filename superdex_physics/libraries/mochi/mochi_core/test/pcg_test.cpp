@@ -71,7 +71,7 @@ static void TestPcg(bool singleThreadedMode) {
 
     auto runCommonChecks = [&](Scalar const& resRelTol, Scalar const& solRelTol) {
       pcgError = ref - sol;
-      EXPECT_TRUE(info.converged);
+      EXPECT_EQ(info.convergence, LinearSolverConvergenceStatus::Converged);
       EXPECT_LE(info.numIterDone, maxIter);
       EXPECT_LT(info.relativeResidualNorm, resRelTol);
       EXPECT_LT(dot.Norm(pcgError), solRelTol * dot.Norm(ref));
@@ -233,7 +233,7 @@ static void TestPcg(bool singleThreadedMode) {
     info = krylov::PCG(
         opB, b, x, opInvB, n, stopper, false, VerbosityLevel::Warning, true, dot, factory);
 
-    EXPECT_TRUE(info.converged);
+    EXPECT_EQ(info.convergence, LinearSolverConvergenceStatus::Converged);
     EXPECT_EQ(info.numIterDone, 1);
     EXPECT_LE(info.relativeResidualNorm, relTol);
   }
@@ -254,8 +254,8 @@ static void TestPcg(bool singleThreadedMode) {
     StopCriterion defaultStopper{Scalar(1e-6), kAbsTol, kRelDivTol};
     info = krylov::PCG(
         opA, b, x, localOpP, n, defaultStopper, false, VerbosityLevel::Warning, true, dot, factory);
-    EXPECT_EQ(info.numIterDone, n + 1);
-    EXPECT_EQ(info.converged, false);
+    EXPECT_EQ(info.numIterDone, n);
+    EXPECT_EQ(info.convergence, LinearSolverConvergenceStatus::Stopped);
   }
 }
 

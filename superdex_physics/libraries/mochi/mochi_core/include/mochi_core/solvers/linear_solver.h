@@ -357,7 +357,9 @@ LinearSolver<T>::Solve(MatrixType const& A, RhsType const& b, SolType& x, bool h
           } else {
             _sparseLdlt = std::monostate{};
           }
-          return LinearSolverStatus{.converged = (info == 0)};
+          return LinearSolverStatus{
+              .convergence = info == 0 ? LinearSolverConvergenceStatus::Converged
+                                       : LinearSolverConvergenceStatus::Diverged};
         }
       }
 
@@ -383,7 +385,9 @@ LinearSolver<T>::Solve(MatrixType const& A, RhsType const& b, SolType& x, bool h
       } else {
         _denseLdlt.reset(nullptr);
       }
-      return LinearSolverStatus{.converged = (info == 0)};
+      return LinearSolverStatus{
+          .convergence = info == 0 ? LinearSolverConvergenceStatus::Converged
+                                   : LinearSolverConvergenceStatus::Diverged};
 
     } else if (_params.solverType == LinearSolverType::LU) {
       if (_lu == nullptr) {
@@ -395,7 +399,7 @@ LinearSolver<T>::Solve(MatrixType const& A, RhsType const& b, SolType& x, bool h
       }
       x = b;
       _lu->LeftSolveInPlace(x);
-      return LinearSolverStatus{.converged = true};
+      return LinearSolverStatus{.convergence = LinearSolverConvergenceStatus::Converged};
     } else if (_params.solverType == LinearSolverType::ExperimentalCudaSparseCholesky) {
 #if MOCHI_USE_CUDA
       if constexpr (IsSparseMatrix<MatrixType> || IsBlockSparseMatrix<MatrixType>) {
@@ -403,7 +407,7 @@ LinearSolver<T>::Solve(MatrixType const& A, RhsType const& b, SolType& x, bool h
         CudaVector<T> bCuda(b), xCuda(x); // Transfer data to the GPU
         Chol(bCuda, xCuda);
         x = xCuda;
-        return LinearSolverStatus{.converged = true};
+        return LinearSolverStatus{.convergence = LinearSolverConvergenceStatus::Converged};
       } else {
         MOCHI_ASSERT(false, "CudaSparseCholesky requires building a sparse matrix type.");
       }
@@ -417,7 +421,7 @@ LinearSolver<T>::Solve(MatrixType const& A, RhsType const& b, SolType& x, bool h
         CudaVector<T> bCuda(b), xCuda(x); // Transfer data to the GPU
         LDLt(bCuda, xCuda);
         x = xCuda;
-        return LinearSolverStatus{.converged = true};
+        return LinearSolverStatus{.convergence = LinearSolverConvergenceStatus::Converged};
       } else {
         MOCHI_ASSERT(false, "CudaSparseLDLt requires a sparse matrix type.");
       }
@@ -431,7 +435,7 @@ LinearSolver<T>::Solve(MatrixType const& A, RhsType const& b, SolType& x, bool h
         CudaVector<T> bCuda(b), xCuda(x); // Transfer data to the GPU
         LU(bCuda, xCuda);
         x = xCuda;
-        return LinearSolverStatus{.converged = true};
+        return LinearSolverStatus{.convergence = LinearSolverConvergenceStatus::Converged};
       } else {
         MOCHI_ASSERT(false, "CudaSparseLU requires a sparse matrix type.");
       }

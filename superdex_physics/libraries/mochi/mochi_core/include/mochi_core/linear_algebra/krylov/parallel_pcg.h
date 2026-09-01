@@ -74,9 +74,8 @@ int GetNumParallelWorkers(MatType const& A) {
  * @param[in] dot The dot operator.
  * @param[in] vectorFactory Factory to create vectors of a given type.
  *
- * @return Linear solver status. Contains the number of iterations and the achieved absolute and
- * relative residuals. "maxIter+1" is used to indicate that the maximum number of iterations was
- * reached without convergence.
+ * @return Linear solver status. Contains the convergence status, number of iterations, and achieved
+ * absolute and relative residuals.
  *
  * @note The preconditioner must implement a 'ConcurrentSolve' method.
  * @note The input matrix must be a supported matrix or linear operator type. Matrix application
@@ -262,7 +261,8 @@ LinearSolverStatus ParallelPCG(
               .numIterDone = iter,
               .residualNorm = workerStatusCheck.GetLatestResidualNorm(),
               .relativeResidualNorm = workerStatusCheck.GetLatestRelativeResidualNorm(),
-              .converged = IsConverged(iterStatus)};
+              .convergence = IsConverged(iterStatus) ? LinearSolverConvergenceStatus::Converged
+                                                     : LinearSolverConvergenceStatus::Diverged};
         }
         return;
       }
@@ -299,7 +299,7 @@ LinearSolverStatus ParallelPCG(
                     .residualNorm = static_cast<double>(workerStatusCheck.GetLatestResidualNorm()),
                     .relativeResidualNorm =
                         static_cast<double>(workerStatusCheck.GetLatestRelativeResidualNorm()),
-                    .converged = false};
+                    .convergence = LinearSolverConvergenceStatus::Diverged};
               }
               return;
             }
@@ -328,7 +328,8 @@ LinearSolverStatus ParallelPCG(
                 .residualNorm = static_cast<double>(workerStatusCheck.GetLatestResidualNorm()),
                 .relativeResidualNorm =
                     static_cast<double>(workerStatusCheck.GetLatestRelativeResidualNorm()),
-                .converged = IsConverged(iterStatus)};
+                .convergence = IsConverged(iterStatus) ? LinearSolverConvergenceStatus::Converged
+                                                       : LinearSolverConvergenceStatus::Diverged};
           }
           return;
         }
@@ -352,7 +353,7 @@ LinearSolverStatus ParallelPCG(
                   .residualNorm = static_cast<double>(workerStatusCheck.GetLatestResidualNorm()),
                   .relativeResidualNorm =
                       static_cast<double>(workerStatusCheck.GetLatestRelativeResidualNorm()),
-                  .converged = false};
+                  .convergence = LinearSolverConvergenceStatus::Diverged};
             }
             return;
           }
@@ -363,11 +364,11 @@ LinearSolverStatus ParallelPCG(
 
       if (isMaster) {
         solverStatus = {
-            .numIterDone = maxIter + 1,
+            .numIterDone = maxIter,
             .residualNorm = static_cast<double>(workerStatusCheck.GetLatestResidualNorm()),
             .relativeResidualNorm =
                 static_cast<double>(workerStatusCheck.GetLatestRelativeResidualNorm()),
-            .converged = false};
+            .convergence = LinearSolverConvergenceStatus::Stopped};
       }
     };
 

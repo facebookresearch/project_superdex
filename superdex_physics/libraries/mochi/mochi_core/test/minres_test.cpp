@@ -154,7 +154,7 @@ TEST(KrylovSolver, MinRes_LuckyBreakdown) {
       kSize,
       krylov::StatusImplicitResidualNorm<real>{real(1e-30), real(1e-30), real(1e10)});
 
-  EXPECT_TRUE(info.converged);
+  EXPECT_EQ(info.convergence, LinearSolverConvergenceStatus::Converged);
   EXPECT_EQ(info.numIterDone, 1);
   EXPECT_NEAR(info.residualNorm, 0.0, 1e-12);
 
@@ -194,7 +194,7 @@ TEST(KrylovSolver, MinRes_NonSpdPreconditioner) {
       krylov::StatusImplicitResidualNorm<real>{real(1e-12), real(1e-12), real(1e10)},
       VerbosityLevel::Silent);
 
-  EXPECT_FALSE(info.converged);
+  EXPECT_EQ(info.convergence, LinearSolverConvergenceStatus::Diverged);
   EXPECT_EQ(info.numIterDone, 0);
 }
 
@@ -238,7 +238,7 @@ TEST_P(MinResNonFinite, PreLoopNonFinitePreconditioner) {
       krylov::StatusImplicitResidualNorm<real>{real(1e-12), real(1e-12), real(1e10)},
       VerbosityLevel::Silent);
 
-  EXPECT_FALSE(info.converged);
+  EXPECT_EQ(info.convergence, LinearSolverConvergenceStatus::Diverged);
   EXPECT_EQ(info.numIterDone, 0);
   EXPECT_TRUE(IsFinite(x.GetConstSpan()));
 }
@@ -273,6 +273,6 @@ TEST_P(MinResNonFinite, InLoopNonFiniteOperator) {
       krylov::StatusImplicitResidualNorm<real>{real(1e-30), real(1e-30), real(1e10)},
       VerbosityLevel::Silent);
 
-  EXPECT_FALSE(info.converged);
+  EXPECT_EQ(info.convergence, LinearSolverConvergenceStatus::Diverged);
   EXPECT_TRUE(IsFinite(x.GetConstSpan()));
 }

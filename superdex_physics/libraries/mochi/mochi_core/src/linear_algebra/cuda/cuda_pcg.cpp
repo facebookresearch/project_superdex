@@ -21,6 +21,7 @@
 #include <mochi_core/linear_algebra/base_enums.h>
 #include <mochi_core/linear_algebra/cuda/cuda_lib.h>
 #include <mochi_core/linear_algebra/krylov/stopping_criterion.h>
+#include <mochi_core/solvers/krylov_solver.h>
 #include <mochi_core/utils/verbosity_params.h>
 
 #include <cublas_v2.h>
@@ -236,11 +237,10 @@ namespace mochi::krylov {
 /// ASSUMPTIONS:
 ///   1. The cuSPARSE and cuBLAS libraries have been initialized.
 ///
-/// @return Pair of number of iterations made and boolean to indicate whether the algorithm
-/// converged
+/// @return Pair of the number of iterations performed and the convergence status.
 ///
 template <typename Scalar>
-std::pair<int, bool> CudaPCG_impl(
+std::pair<int, LinearSolverConvergenceStatus> CudaPCG_impl(
     std::function<
         void(mochi::CudaVectorView<Scalar> const& v, mochi::CudaVectorView<Scalar>& Ax)> const& A,
     mochi::CudaVectorView<Scalar const> bv,
@@ -311,7 +311,10 @@ std::pair<int, bool> CudaPCG_impl(
     MOCHI_CUBLAS_CHECK(cublasSetPointerMode(blasHandle, CUBLAS_POINTER_MODE_HOST));
     MOCHI_CUDA_CHECK(cudaStreamSynchronize(mainStream));
     MOCHI_CUDA_CHECK(cudaStreamDestroy(mainStream));
-    return {0, IsConverged(myStatus)};
+    return {
+        0,
+        IsConverged(myStatus) ? LinearSolverConvergenceStatus::Converged
+                              : LinearSolverConvergenceStatus::Diverged};
   }
   SolverData<Scalar> cgInfo{A, xv, prec, r, z, p, Ap, d_one};
   Scalar* const d_rTzCurrent = cgInfo.d_rTzCurrent;
@@ -360,7 +363,8 @@ std::pair<int, bool> CudaPCG_impl(
   cublasSetStream(blasHandle, mainStream);
 
   bool alphaBad = false;
-  std::pair<int, bool> info{maxIter + 1, false};
+  std::pair<int, LinearSolverConvergenceStatus> info{
+      maxIter, LinearSolverConvergenceStatus::Stopped};
   int iter = 0;
   for (; iter < maxIter;) {
     MOCHI_CUDA_CHECK(cudaGraphLaunch(pcgIterGraphExec, mainStream));
@@ -383,9 +387,13 @@ std::pair<int, bool> CudaPCG_impl(
     myStatus = stopFunction(iter, rv, zv, pv, Apv);
     if (myStatus != IterationStatus::Active) {
       std::get<0>(info) = iter;
-      std::get<1>(info) = IsConverged(myStatus);
+      std::get<1>(info) = IsConverged(myStatus) ? LinearSolverConvergenceStatus::Converged
+                                                : LinearSolverConvergenceStatus::Diverged;
       break;
     }
+  }
+  if (!alphaBad && myStatus == IterationStatus::Active) {
+    std::get<0>(info) = iter;
   }
   // Remove the graph executor
   MOCHI_CUDA_CHECK(cudaGraphExecDestroy(pcgIterGraphExec));
@@ -405,7 +413,7 @@ std::pair<int, bool> CudaPCG_impl(
     // Reset state for the non-burst fallback
     iter = 1;
     myStatus = IterationStatus::Active;
-    info = {maxIter + 1, false};
+    info = {maxIter, LinearSolverConvergenceStatus::Stopped};
     cudaMemsetAsync(cgInfo.d_isAlphaLeq0, 0, sizeof(bool), mainStream);
     // We will try a restart with the initial guess
     cudaMemcpyAsync(xv.data(), xInput, n * sizeof(Scalar), cudaMemcpyDeviceToDevice, mainStream);
@@ -438,7 +446,7 @@ std::pair<int, bool> CudaPCG_impl(
         cudaMemcpy(&alphaBad, cgInfo.d_isAlphaLeq0, sizeof(bool), cudaMemcpyDeviceToHost);
         if (alphaBad) {
           std::get<0>(info) = iter;
-          std::get<1>(info) = false;
+          std::get<1>(info) = LinearSolverConvergenceStatus::Diverged;
           break;
         }
       }
@@ -448,7 +456,8 @@ std::pair<int, bool> CudaPCG_impl(
       myStatus = stopFunction(iter, rv, zv, pv, Apv);
       if (myStatus != IterationStatus::Active) {
         std::get<0>(info) = iter;
-        std::get<1>(info) = IsConverged(myStatus);
+        std::get<1>(info) = IsConverged(myStatus) ? LinearSolverConvergenceStatus::Converged
+                                                  : LinearSolverConvergenceStatus::Diverged;
         break;
       }
     }
@@ -474,7 +483,7 @@ std::pair<int, bool> CudaPCG_impl(
   return info;
 }
 
-template std::pair<int, bool> CudaPCG_impl<double>(
+template std::pair<int, LinearSolverConvergenceStatus> CudaPCG_impl<double>(
     std::function<
         void(mochi::CudaVectorView<double> const& v, mochi::CudaVectorView<double>& Ax)> const& A,
     mochi::CudaVectorView<double const> bv,
@@ -492,7 +501,7 @@ template std::pair<int, bool> CudaPCG_impl<double>(
     VerbosityLevel verbosity,
     bool usePolakRibiere);
 
-template std::pair<int, bool> CudaPCG_impl<float>(
+template std::pair<int, LinearSolverConvergenceStatus> CudaPCG_impl<float>(
     std::function<
         void(mochi::CudaVectorView<float> const& v, mochi::CudaVectorView<float>& Ax)> const& A,
     mochi::CudaVectorView<float const> bv,

@@ -148,9 +148,8 @@ namespace mochi::krylov {
  * @param[in] dot The dot operator. Must also handle a matrix-vector operation.
  * @param[in] vectorFactory Factory to create vectors of a given type.
  *
- * @return Linear solver status. Contains the number of iterations and the achieved absolute and
- * relative residuals. "iterMax+1" is used to indicate that the maximum number of iterations was
- * reached without convergence.
+ * @return Linear solver status. Contains the convergence status, number of iterations, and achieved
+ * absolute and relative residuals.
  *
  * @note It uses right preconditioning.
  * @note The norm used in the stop criteria is specified by the object 'statusCheck'.
@@ -198,7 +197,10 @@ LinearSolverStatus GMRes(
   if (bNorm == 0) {
     SetZero(x);
     return LinearSolverStatus{
-        .numIterDone = 0, .residualNorm = 0.0, .relativeResidualNorm = 0.0, .converged = true};
+        .numIterDone = 0,
+        .residualNorm = 0.0,
+        .relativeResidualNorm = 0.0,
+        .convergence = LinearSolverConvergenceStatus::Converged};
   }
   statusCheck.SetScaling(bNorm);
 
@@ -213,7 +215,8 @@ LinearSolverStatus GMRes(
         .numIterDone = 0,
         .residualNorm = static_cast<double>(resNorm),
         .relativeResidualNorm = static_cast<double>(resNorm / bNorm),
-        .converged = IsConverged(myStatus)};
+        .convergence = IsConverged(myStatus) ? LinearSolverConvergenceStatus::Converged
+                                             : LinearSolverConvergenceStatus::Diverged};
   }
 
   // Note that the vector `b` will be stored on the CPU
@@ -270,7 +273,8 @@ LinearSolverStatus GMRes(
           .numIterDone = totalIter,
           .residualNorm = statusCheck.GetLatestResidualNorm(),
           .relativeResidualNorm = statusCheck.GetLatestRelativeResidualNorm(),
-          .converged = IsConverged(myStatus)};
+          .convergence = IsConverged(myStatus) ? LinearSolverConvergenceStatus::Converged
+                                               : LinearSolverConvergenceStatus::Diverged};
     }
 
     if (normQ == 0)
@@ -285,7 +289,7 @@ LinearSolverStatus GMRes(
             .numIterDone = totalIter,
             .residualNorm = statusCheck.GetLatestResidualNorm(),
             .relativeResidualNorm = statusCheck.GetLatestRelativeResidualNorm(),
-            .converged = false};
+            .convergence = LinearSolverConvergenceStatus::Diverged};
       }
 
     Col(Q, iter) *= Scalar(1) / normQ;
@@ -311,10 +315,10 @@ LinearSolverStatus GMRes(
 
   details::SolveHessenbergSystem(iter - 1, H, b, prec, Q, z, Ap, x, vectorFactory);
   return LinearSolverStatus{
-      .numIterDone = iterMax + 1,
+      .numIterDone = iterMax,
       .residualNorm = Abs(b(iter - 1)),
       .relativeResidualNorm = Abs(b(iter - 1)) / bNorm,
-      .converged = false};
+      .convergence = LinearSolverConvergenceStatus::Stopped};
 }
 
 } // namespace mochi::krylov

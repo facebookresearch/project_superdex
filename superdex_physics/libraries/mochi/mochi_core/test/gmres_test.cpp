@@ -186,7 +186,7 @@ static void TestGmres(bool singleThreadedMode) {
         VerbosityLevel::Warning,
         dot);
 
-    EXPECT_TRUE(info.converged);
+    EXPECT_EQ(info.convergence, LinearSolverConvergenceStatus::Converged);
     EXPECT_EQ(info.numIterDone, 1);
     EXPECT_LE(info.relativeResidualNorm, relTol);
   }
@@ -214,8 +214,8 @@ static void TestGmres(bool singleThreadedMode) {
         {},
         VerbosityLevel::Warning,
         dot);
-    EXPECT_LT(info.numIterDone, n + 1);
-    EXPECT_EQ(info.converged, true);
+    EXPECT_LE(info.numIterDone, n);
+    EXPECT_EQ(info.convergence, LinearSolverConvergenceStatus::Converged);
     EXPECT_NEAR_EQ(x[0], Scalar(0));
     EXPECT_NEAR_EQ(x[1], Scalar(0));
     EXPECT_NEAR_EQ(x[2], Scalar(0));

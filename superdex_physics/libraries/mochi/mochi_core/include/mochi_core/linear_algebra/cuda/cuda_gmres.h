@@ -74,9 +74,8 @@ std::tuple<int, double, double, IterationStatus> CudaGMRes_impl(
  * @param[in] restartSize Size of Krylov space triggering a restart (default = 0 = no restart)
  * @param[in] verbosity Verbosity level for logging output.
  *
- * @return Linear solver status. Contains the number of iterations and the achieved absolute and
- * relative residuals. "iterMax+1" is used to indicate that the maximum number of iterations was
- * reached without convergence.
+ * @return Linear solver status. Contains the convergence status, number of iterations, and achieved
+ * absolute and relative residuals.
  *
  * @note
  * It uses right preconditioning.
@@ -121,17 +120,24 @@ LinearSolverStatus CudaGMRes(
   if (bNorm == 0) {
     SetZero(x);
     return LinearSolverStatus{
-        .numIterDone = 0, .residualNorm = 0.0, .relativeResidualNorm = 0.0, .converged = true};
+        .numIterDone = 0,
+        .residualNorm = 0.0,
+        .relativeResidualNorm = 0.0,
+        .convergence = LinearSolverConvergenceStatus::Converged};
   }
   //--- Run the GMRes algorithm
   auto info = CudaGMRes_impl<NonConstScalar>(
       Afunc, bv, bNorm, xv, prec, iterMax, aTol, rTol, dTol, restartSize);
+  auto const iterationStatus = std::get<3>(info);
   //
   return LinearSolverStatus{
       .numIterDone = std::get<0>(info),
       .residualNorm = std::get<1>(info),
       .relativeResidualNorm = std::get<2>(info),
-      .converged = IsConverged(std::get<3>(info)),
+      .convergence = iterationStatus == IterationStatus::Active
+          ? LinearSolverConvergenceStatus::Stopped
+          : (IsConverged(iterationStatus) ? LinearSolverConvergenceStatus::Converged
+                                          : LinearSolverConvergenceStatus::Diverged),
   };
 }
 
