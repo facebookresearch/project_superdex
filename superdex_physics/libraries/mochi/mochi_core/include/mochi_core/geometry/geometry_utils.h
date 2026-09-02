@@ -293,6 +293,44 @@ TransformShape(TransformRT const& transform, AnyShape const& any) {
   Bounding Spheres
 */
 
+/** @brief Selects the tradeoff between bounding-sphere tightness and computation cost. */
+enum class BoundingSphereAlgorithm {
+  Fastest, ///< Sphere may be larger than necessary. Very fast to compute.
+  Fast, ///< Sphere is typically 5-10% smaller than @ref Fastest. Still quite fast.
+  Best, ///< Smallest sphere within floating-point precision; typically O(N) but slower.
+  Count ///< Number of algorithms; not a valid selection.
+};
+
+/**
+ * @brief Compute a bounding sphere containing all the coordinates.
+ *
+ * @param coordinates 3D coordinates
+ * @param algorithm Algorithm to use for computing the bounding sphere (size vs speed tradeoff)
+ * @return Sphere containing all the coordinates
+ *
+ * @see CalcBoundingSphereIndexed
+ */
+[[nodiscard]] Sphere CalcBoundingSphere(
+    Span<Real3 const> coordinates,
+    BoundingSphereAlgorithm algorithm);
+
+/**
+ * @brief Compute a bounding sphere containing all the coordinates, referenced by index.
+ *
+ * @param coordinates 3D coordinates
+ * @param indices Indices into the @p coordinates array.
+ * @param algorithm Algorithm to use for computing the bounding sphere (size vs speed tradeoff)
+ * @return Bounding sphere
+ *
+ * @pre Every element of @p indices is a valid index into @p coordinates.
+ *
+ * @see CalcBoundingSphere
+ */
+[[nodiscard]] Sphere CalcBoundingSphereIndexed(
+    Span<Real3 const> coordinates,
+    Span<int const> indices,
+    BoundingSphereAlgorithm algorithm);
+
 // Return the same sphere (just so GetBoundingSphere works with any shape)
 [[nodiscard]] MOCHI_FORCE_INLINE Sphere const& GetBoundingSphere(Sphere const& passthru) {
   return passthru;

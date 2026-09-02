@@ -15,13 +15,19 @@
  */
 
 #include <mochi_core/geometry/geometry_utils.h>
+#include <mochi_core/memory/filo_allocator.h>
 #include <mochi_core/utils/decomposition_utils.h>
+#include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/math_utils.h>
+#include <mochi_core/utils/rand_utils.h>
 #include <mochi_core/utils/vmatrix.h>
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <limits>
+#include <numeric>
+#include <type_traits>
 
 using namespace mochi;
 
@@ -278,6 +284,475 @@ Obb mochi::CalcObb(Span<Vec4r const> coordinates) {
   Vec4r translation = DotMatVec3x3(rotation, (minExtents + maxExtents) * 0.5_r);
   Vec4r extents = ((maxExtents - minExtents) * 0.5_r) + kEpsilon;
   return Obb{MatrixTransformRT{rotation, translation}, extents};
+}
+
+/**************************************************************************************************
+  Bounding sphere computation
+*/
+
+// Compute a midpoint without overflowing large values or losing equal subnormal values.
+[[nodiscard]] static Vec4r CalcMidpoint(Vec4r a, Vec4r b) {
+  return Vec4r{
+      std::midpoint(Get<0>(a), Get<0>(b)),
+      std::midpoint(Get<1>(a), Get<1>(b)),
+      std::midpoint(Get<2>(a), Get<2>(b)),
+      std::midpoint(Get<3>(a), Get<3>(b))};
+}
+
+// Measure the farthest AABB corner from the rounded center, which need not be the exact midpoint.
+[[nodiscard]] static real CalcAabbRadiusSqr(Vec4r min, Vec4r max, Vec4r center) {
+  Vec4r const farthestOffset = Max(Abs(min - center), Abs(max - center));
+  return NormSqr<3>(farthestOffset);
+}
+
+// Center on the AABB; Fast uses the farthest input point and Fastest the farthest AABB corner.
+static Sphere CalcBoundingSphere_FromAabb(Span<Real3 const> coordinates, bool shrinkFromCenter) {
+  if (coordinates.empty()) {
+    return {};
+  }
+
+  using V = Simd<real>;
+  using V3 = NdArray<V, 3>;
+  size_t const count = coordinates.size();
+
+  Aabb const aabb = CalcAabb(coordinates);
+  Vec4r const center = CalcMidpoint(aabb.VGetMin(), aabb.VGetMax());
+  real radiusSqr = 0_r;
+
+  if (shrinkFromCenter) {
+    size_t i = 0;
+    V maxDistSqr = {};
+    V3 pt, vCenter = BroadcastEach<V>(ToReal3(center));
+    for (; i + V::kSize <= count; i += V::kSize) {
+      LoadTransposed(&coordinates[i][0], pt);
+      maxDistSqr = Max(maxDistSqr, NormSqr(pt - vCenter));
+    }
+
+    // Pad the tail to one SIMD batch and mask its unused lanes.
+    alignas(V) Real3 buf[V::kSize] = {};
+    std::copy(coordinates.begin() + i, coordinates.end(), buf);
+    LoadTransposed(&buf[0][0], pt);
+    using I = std::conditional_t<sizeof(real) == 8, int64_t, int>;
+    using VI = Simd<I, V::kSize>;
+    I const numRemaining = static_cast<I>(count - i);
+    auto const mask = Sequence<VI>() < numRemaining;
+    maxDistSqr = Max(maxDistSqr, Select(mask, NormSqr(pt - vCenter), V{}));
+
+    radiusSqr = HMax(maxDistSqr);
+  } else {
+    radiusSqr = CalcAabbRadiusSqr(aabb.VGetMin(), aabb.VGetMax(), center);
+  }
+
+  // Ensure both distance and squared-distance tests keep boundary points inside after rounding.
+  real constexpr kPadding = 4_r * std::numeric_limits<real>::epsilon();
+  radiusSqr += radiusSqr * kPadding;
+
+  real const radius = Sqrt(radiusSqr);
+  return Sphere{center, radius};
+}
+
+// Indexed counterpart of CalcBoundingSphere_FromAabb; only selected coordinates affect the sphere.
+static Sphere CalcBoundingSphereIndexed_FromAabb(
+    Span<Real3 const> coordinates,
+    Span<int const> indices,
+    bool shrinkFromCenter) {
+  if (indices.empty()) {
+    return {};
+  }
+
+  Vec4r min, max;
+  min = max = ToSimd(coordinates[indices[0]]);
+  for (size_t i = 1; i < indices.size(); ++i) {
+    Vec4r pt = ToSimd(coordinates[indices[i]]);
+    min = Min(min, pt);
+    max = Max(max, pt);
+  }
+
+  Vec4r const center = CalcMidpoint(min, max);
+  real radiusSqr = 0_r;
+
+  if (shrinkFromCenter) {
+    for (int idx : indices) {
+      Vec4r pt = ToSimd(coordinates[idx]);
+      radiusSqr = Max(radiusSqr, NormSqr(pt - center));
+    }
+  } else {
+    radiusSqr = CalcAabbRadiusSqr(min, max, center);
+  }
+
+  // Ensure both distance and squared-distance tests keep boundary points inside after rounding.
+  real constexpr kPadding = 4_r * std::numeric_limits<real>::epsilon();
+  radiusSqr += radiusSqr * kPadding;
+
+  real const radius = Sqrt(radiusSqr);
+  return Sphere{ToReal3(center), radius};
+}
+
+namespace {
+
+// Best applies Welzl's incremental algorithm to deterministically shuffled, normalized points.
+// Recursion adds at most four boundary constraints; intermediate spheres store squared radii.
+real constexpr kBoundingSphereTolerance = 16_r * std::numeric_limits<real>::epsilon();
+
+struct SphereSqr {
+  Vec4r center{};
+  real radiusSqr{-1_r}; // A negative radius represents no sphere.
+
+  [[nodiscard]] bool IsValid() const {
+    return radiusSqr >= 0_r;
+  }
+
+  [[nodiscard]] bool ContainsPoint(Vec4r point) const {
+    if (!IsValid()) {
+      return false;
+    }
+    real const distSqr = NormSqr<3>(point - center);
+    // Avoid promoting a nominal boundary point because its distance rounded a few ulps upward.
+    return distSqr <= radiusSqr + kBoundingSphereTolerance * Max(distSqr, radiusSqr);
+  }
+};
+
+} // namespace
+
+// Construct the sphere supported by one boundary point.
+[[nodiscard]] static SphereSqr SphereSqrFromPoint(Vec4r point) {
+  return {point, 0_r};
+}
+
+// Construct the diameter sphere supported by two boundary points.
+[[nodiscard]] static SphereSqr SphereSqrFromTwoPoints(Vec4r a, Vec4r b) {
+  Vec4r const center = a + (b - a) * 0.5_r;
+  real const radiusSqr = Max(NormSqr<3>(a - center), NormSqr<3>(b - center));
+  return {center, radiusSqr};
+}
+
+// Construct the circumcircle of three non-collinear boundary points in their plane.
+[[nodiscard]] static SphereSqr SphereSqrFromThreePoints(Vec4r a, Vec4r b, Vec4r c) {
+  Vec4r const ab = b - a;
+  Vec4r const ac = c - a;
+  real const abSqr = NormSqr<3>(ab);
+  real const acSqr = NormSqr<3>(ac);
+  Vec4r const normal = Cross3(ab, ac);
+  real const normalSqr = NormSqr<3>(normal);
+  real const denominator = 2_r * normalSqr;
+  if (denominator == 0_r) {
+    return {};
+  }
+
+  Vec4r const offset = (abSqr * Cross3(ac, normal) + acSqr * Cross3(normal, ab)) / denominator;
+  Vec4r const center = a + offset;
+  real const radiusSqr =
+      Max(NormSqr<3>(a - center), Max(NormSqr<3>(b - center), NormSqr<3>(c - center)));
+  if (!IsFinite(center) || !IsFinite(radiusSqr)) {
+    return {};
+  }
+  return {center, radiusSqr};
+}
+
+// Construct the circumsphere of four affinely independent boundary points.
+[[nodiscard]] static SphereSqr SphereSqrFromFourPoints(Vec4r a, Vec4r b, Vec4r c, Vec4r d) {
+  Vec4r const ab = b - a;
+  Vec4r const ac = c - a;
+  Vec4r const ad = d - a;
+  real const abSqr = NormSqr<3>(ab);
+  real const acSqr = NormSqr<3>(ac);
+  real const adSqr = NormSqr<3>(ad);
+  Vec4r const acCrossAd = Cross3(ac, ad);
+  Vec4r const adCrossAb = Cross3(ad, ab);
+  Vec4r const abCrossAc = Cross3(ab, ac);
+  real const denominator = 2_r * Dot<3>(ab, acCrossAd);
+  if (denominator == 0_r) {
+    return {};
+  }
+
+  Vec4r const offset = (abSqr * acCrossAd + acSqr * adCrossAb + adSqr * abCrossAc) / denominator;
+  Vec4r const center = a + offset;
+  real const radiusSqr =
+      Max(Max(NormSqr<3>(a - center), NormSqr<3>(b - center)),
+          Max(NormSqr<3>(c - center), NormSqr<3>(d - center)));
+  if (!IsFinite(center) || !IsFinite(radiusSqr)) {
+    return {};
+  }
+  return {center, radiusSqr};
+}
+
+// Keep a containing candidate, expanding its radius to absorb any tolerated boundary roundoff.
+static void
+TrySmallerContainingSphere(SphereSqr candidate, Span<Vec4r const> points, SphereSqr& smallest) {
+  if (!candidate.IsValid()) {
+    return;
+  }
+  real maxRadiusSqr = candidate.radiusSqr;
+  for (Vec4r point : points) {
+    real const distSqr = NormSqr<3>(point - candidate.center);
+    if (distSqr >
+        candidate.radiusSqr + kBoundingSphereTolerance * Max(distSqr, candidate.radiusSqr)) {
+      return;
+    }
+    maxRadiusSqr = Max(maxRadiusSqr, distSqr);
+  }
+  candidate.radiusSqr = maxRadiusSqr;
+  if (!smallest.IsValid() || candidate.radiusSqr < smallest.radiusSqr) {
+    smallest = candidate;
+  }
+}
+
+// A dependent support is bounded by a subset of at most three points; enumerate those subsets.
+[[nodiscard]] static SphereSqr CalcDegenerateSupportSphere(Span<Vec4r const> points) {
+  SphereSqr smallest;
+  for (size_t i = 0; i < points.size(); ++i) {
+    TrySmallerContainingSphere(SphereSqrFromPoint(points[i]), points, smallest);
+    for (size_t j = i + 1; j < points.size(); ++j) {
+      TrySmallerContainingSphere(SphereSqrFromTwoPoints(points[i], points[j]), points, smallest);
+      for (size_t k = j + 1; k < points.size(); ++k) {
+        TrySmallerContainingSphere(
+            SphereSqrFromThreePoints(points[i], points[j], points[k]), points, smallest);
+      }
+    }
+  }
+  MOCHI_ASSERT_VERBOSE(smallest.IsValid(), "Failed to bound a degenerate support set.");
+  return smallest;
+}
+
+// Construct the sphere fixed by Welzl's boundary support, with a fallback for dependent points.
+[[nodiscard]] static SphereSqr CalcSupportSphere(Span<Vec4r const> support) {
+  switch (support.size()) {
+    case 0:
+      return {};
+    case 1:
+      return SphereSqrFromPoint(support[0]);
+    case 2:
+      return SphereSqrFromTwoPoints(support[0], support[1]);
+    case 3: {
+      SphereSqr const sphere = SphereSqrFromThreePoints(support[0], support[1], support[2]);
+      return sphere.IsValid() ? sphere : CalcDegenerateSupportSphere(support);
+    }
+    case 4: {
+      SphereSqr const sphere =
+          SphereSqrFromFourPoints(support[0], support[1], support[2], support[3]);
+      return sphere.IsValid() ? sphere : CalcDegenerateSupportSphere(support);
+    }
+  }
+  MOCHI_ASSERT(false, "A 3D bounding sphere has at most four support points.");
+  return {};
+}
+
+// Map a point into the centered, uniformly scaled coordinate system used by the solver.
+[[nodiscard]] static Vec4r NormalizePoint(Vec4r point, Vec4r origin, real invScale) {
+  return (point - origin) * invScale;
+}
+
+// Scan in SIMD batches, then rescan a flagged batch to preserve the first outside point's index.
+[[nodiscard]] static size_t FindFirstPointOutsideSphere(
+    Span<Real3 const> points,
+    size_t begin,
+    size_t end,
+    SphereSqr const& sphere,
+    Vec4r origin,
+    real invScale) {
+  if (!sphere.IsValid()) {
+    return begin;
+  }
+
+  using V = Simd<real>;
+  using V3 = NdArray<V, 3>;
+
+  V3 const vOrigin = BroadcastEach<V>(ToReal3(origin));
+  V3 const vCenter = BroadcastEach<V>(ToReal3(sphere.center));
+  V const vInvScale = invScale;
+  V const vRadiusSqr = sphere.radiusSqr;
+  V const vTolerance = kBoundingSphereTolerance;
+
+  size_t i = begin;
+  for (; i + V::kSize <= end; i += V::kSize) {
+    V3 point;
+    LoadTransposed(&points[i][0], point);
+    V const normalizedDistSqr = NormSqr((point - vOrigin) * vInvScale - vCenter);
+    auto const outside =
+        normalizedDistSqr > vRadiusSqr + vTolerance * Max(normalizedDistSqr, vRadiusSqr);
+    if (AnyTrue(outside)) {
+      for (size_t j = i; j < i + V::kSize; ++j) {
+        if (!sphere.ContainsPoint(NormalizePoint(ToSimd(points[j]), origin, invScale))) {
+          return j;
+        }
+      }
+    }
+  }
+
+  for (; i < end; ++i) {
+    if (!sphere.ContainsPoint(NormalizePoint(ToSimd(points[i]), origin, invScale))) {
+      return i;
+    }
+  }
+  return end;
+}
+
+// Process a prefix incrementally. Each outside point becomes fixed boundary support for a
+// recursive solve of the preceding prefix.
+[[nodiscard]] static SphereSqr CalcBoundingSphereWelzl(
+    Span<Real3 const> points,
+    size_t pointCount,
+    std::array<Vec4r, 4>& support,
+    size_t supportCount,
+    Vec4r origin,
+    real invScale) {
+  // Each recursive call fixes one more support point, so recursion depth is at most four.
+  SphereSqr sphere = CalcSupportSphere(Span<Vec4r const>{support.data(), supportCount});
+  if (supportCount == support.size()) {
+    return sphere;
+  }
+
+  size_t i = 0;
+  while (i < pointCount) {
+    i = FindFirstPointOutsideSphere(points, i, pointCount, sphere, origin, invScale);
+    if (i == pointCount) {
+      break;
+    }
+    support[supportCount] = NormalizePoint(ToSimd(points[i]), origin, invScale);
+    sphere = CalcBoundingSphereWelzl(points, i, support, supportCount + 1, origin, invScale);
+    ++i;
+  }
+  return sphere;
+}
+
+// A reproducible shuffle avoids common order-dependent worst cases without shared RNG.
+static void DeterministicallyShuffle(Span<Real3> points) {
+  constexpr uint32_t kSeed = 0x9E3779B9u;
+  uint64_t const pointCount = points.size();
+  uint32_t const sizeHash =
+      static_cast<uint32_t>(pointCount) ^ static_cast<uint32_t>(pointCount >> 32);
+  auto random = XorShift32Generator(kSeed ^ sizeHash);
+  for (size_t i = points.size(); i > 1; --i) {
+    uint64_t const randomValue =
+        (static_cast<uint64_t>(random()) << 32) | static_cast<uint64_t>(random());
+    std::swap(points[i - 1], points[static_cast<size_t>(randomValue % i)]);
+  }
+}
+
+// Find the farthest input from the final, denormalized center.
+[[nodiscard]] static real CalcMaxDistanceSqr(Span<Real3 const> points, Vec4r center) {
+  using V = Simd<real>;
+  using V3 = NdArray<V, 3>;
+
+  V3 const vCenter = BroadcastEach<V>(ToReal3(center));
+  V maxDistSqr{};
+  size_t i = 0;
+  for (; i + V::kSize <= points.size(); i += V::kSize) {
+    V3 point;
+    LoadTransposed(&points[i][0], point);
+    maxDistSqr = Max(maxDistSqr, NormSqr(point - vCenter));
+  }
+
+  real result = HMax(maxDistSqr);
+  for (; i < points.size(); ++i) {
+    result = Max(result, NormSqr<3>(ToSimd(points[i]) - center));
+  }
+  return result;
+}
+
+// Solve in an AABB-centered, uniformly scaled frame, then recompute the radius in the input frame.
+[[nodiscard]] static Sphere CalcBoundingSphereBestInPlace(Span<Real3> points) {
+  Aabb const aabb = CalcAabb(points);
+  Vec4r const min = aabb.VGetMin();
+  Vec4r const max = aabb.VGetMax();
+  Vec4r const origin = CalcMidpoint(min, max);
+  real const scale = HMax<3>(Max(Abs(min - origin), Abs(max - origin)));
+  if (scale == 0_r) {
+    return Sphere{points[0], 0_r};
+  }
+
+  real const normalizationScale = Max(scale, std::numeric_limits<real>::min());
+  real const invNormalizationScale = 1_r / normalizationScale;
+  DeterministicallyShuffle(points);
+
+  std::array<Vec4r, 4> support{};
+  SphereSqr const normalizedSphere =
+      CalcBoundingSphereWelzl(points, points.size(), support, 0, origin, invNormalizationScale);
+  MOCHI_ASSERT_VERBOSE(normalizedSphere.IsValid(), "Failed to compute a bounding sphere.");
+
+  // Recomputing around the rounded, denormalized center makes the public sphere conservative.
+  Vec4r const center = origin + normalizedSphere.center * normalizationScale;
+  real radiusSqr = CalcMaxDistanceSqr(points, center);
+  real constexpr kPadding = 4_r * std::numeric_limits<real>::epsilon();
+  radiusSqr += radiusSqr * kPadding;
+  return Sphere{center, Sqrt(radiusSqr)};
+}
+
+constexpr size_t kBoundingSphereStackBytes = 16 * 1024;
+
+// Copy the points because the incremental solver shuffles its input.
+[[nodiscard]] static Sphere CalcBoundingSphereBest(Span<Real3 const> coordinates) {
+  if (coordinates.empty()) {
+    return {};
+  }
+
+  MOCHI_FILO_STACK_ALLOCATOR(allocator, kBoundingSphereStackBytes);
+  DynamicArray<Real3> points(&allocator);
+  points.resize_noinit(coordinates.size());
+  std::copy(coordinates.begin(), coordinates.end(), points.begin());
+  return CalcBoundingSphereBestInPlace(points);
+}
+
+// Gather the selected points into mutable scratch space for the shared in-place solver.
+[[nodiscard]] static Sphere CalcBoundingSphereBestIndexed(
+    Span<Real3 const> coordinates,
+    Span<int const> indices) {
+  if (indices.empty()) {
+    return {};
+  }
+
+  MOCHI_FILO_STACK_ALLOCATOR(allocator, kBoundingSphereStackBytes);
+  DynamicArray<Real3> points(&allocator);
+  points.resize_noinit(indices.size());
+  for (size_t i = 0; i < indices.size(); ++i) {
+    points[i] = coordinates[indices[i]];
+  }
+  return CalcBoundingSphereBestInPlace(points);
+}
+
+Sphere mochi::CalcBoundingSphere(Span<Real3 const> coordinates, BoundingSphereAlgorithm algorithm) {
+  static_assert(
+      static_cast<int>(BoundingSphereAlgorithm::Count) == 3,
+      "Please update this code if you add a new algorithm.");
+  switch (algorithm) {
+    case BoundingSphereAlgorithm::Fastest:
+      return CalcBoundingSphere_FromAabb(coordinates, /*shrinkFromCenter*/ false);
+
+    case BoundingSphereAlgorithm::Fast:
+      return CalcBoundingSphere_FromAabb(coordinates, /*shrinkFromCenter*/ true);
+
+    case BoundingSphereAlgorithm::Best:
+      return CalcBoundingSphereBest(coordinates);
+
+    case BoundingSphereAlgorithm::Count:
+      break;
+  }
+  MOCHI_ASSERT(false, "Invalid BoundingSphereAlgorithm");
+  return {};
+}
+
+Sphere mochi::CalcBoundingSphereIndexed(
+    Span<Real3 const> coordinates,
+    Span<int const> indices,
+    BoundingSphereAlgorithm algorithm) {
+  static_assert(
+      static_cast<int>(BoundingSphereAlgorithm::Count) == 3,
+      "Please update this code if you add a new algorithm.");
+  switch (algorithm) {
+    case BoundingSphereAlgorithm::Fastest:
+      return CalcBoundingSphereIndexed_FromAabb(coordinates, indices, /*shrinkFromCenter*/ false);
+
+    case BoundingSphereAlgorithm::Fast:
+      return CalcBoundingSphereIndexed_FromAabb(coordinates, indices, /*shrinkFromCenter*/ true);
+
+    case BoundingSphereAlgorithm::Best:
+      return CalcBoundingSphereBestIndexed(coordinates, indices);
+
+    case BoundingSphereAlgorithm::Count:
+      break;
+  }
+  MOCHI_ASSERT(false, "Invalid BoundingSphereAlgorithm");
+  return {};
 }
 
 /*************************************************************************************************
