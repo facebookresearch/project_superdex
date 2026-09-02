@@ -161,7 +161,7 @@ void UpdateQueryQuadraturePointsPosition(
     CQueryQuadraturePointsPosition& outQuery);
 
 // Compute the TransformRT at the eval point.
-MOCHI_API void ComputeTransformAtEvalPoint(
+void ComputeTransformAtEvalPoint(
     ColumnVectorView<real const> displ,
     CLocal2GlobalMap const& l2g,
     CRigidTransformEvalPoint const& evalPoint,
@@ -177,7 +177,7 @@ inline void UpdateRigidTransformEval(
 }
 
 // Use the information in CRigidTransformEval to perform a recentering of data.
-MOCHI_API void RecenterSolutionUsingRigidTransformEval(
+void RecenterSolutionUsingRigidTransformEval(
     ecs::RequiredTag<TagSoftActor>,
     ecs::Excluded<TagRomActor>,
     CRecenteringParams const& params,
@@ -659,7 +659,7 @@ void EntityPostLastStage(
     CIntegrationVelocitySlices<DisplacementLayer::Default>& intVels);
 
 // Assemble just the volume term into CActorSnle.
-MOCHI_API void AssembleBody(
+void AssembleBody(
     AssemblyParams const& params, // external parameter
     ecs::Included<TagSoftActor>,
     ecs::CtxGlobal<CSceneGravity const> sceneGravity,
@@ -682,7 +682,7 @@ MOCHI_API void AssembleBody(
     CMassMatrix const& massMatrix,
     CRomProjectionStrategy const* romProjectionStrategy,
     CActorSnle& outActorSnle,
-    CActiveVolumeElements const* activeVolumeElems = nullptr);
+    CActiveVolumeElements const* activeVolElems = nullptr);
 
 // Implementation of AssembleBody, which admits different components for the result Snle.
 void AssembleBodyImpl(
@@ -750,7 +750,7 @@ void EntitySetSolution(
     CDisplacementSlice<real, TimeStep::Current>& currSol);
 
 // Update CRigidVelocityLocal by approximating the movement of the center-of-mass
-MOCHI_API void UpdateRigidVelocity(
+void UpdateRigidVelocity(
     ecs::Included<TagSoftActor>,
     ecs::Excluded<TagRomActor>,
     ecs::CtxGlobal<CSceneTime const> time,

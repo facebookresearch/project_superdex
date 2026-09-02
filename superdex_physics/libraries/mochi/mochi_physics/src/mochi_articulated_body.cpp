@@ -3269,7 +3269,7 @@ void articulated::rigid::EntitySetSolution(
   mochi::rigid::EntitySetSolution(actorSol, {}, {}, outCurrPose);
 }
 
-MOCHI_API void articulated::rigid::EntityPreStep(
+void articulated::rigid::EntityPreStep(
     ecs::RequiredTag<TagArticulatedLinkActor>,
     CRigidState<TimeStep::Current> const& currPose,
     CRigidVel<TimeStep::Current>& currVel,
@@ -3320,7 +3320,7 @@ void articulated::rigid::EntityPreStage(
   mochi::rigid::ComputeVelocityAtStageStart(intState, intVels, stageStartVel);
 }
 
-MOCHI_API void articulated::rigid::EntityPostStage(
+void articulated::rigid::EntityPostStage(
     ecs::RequiredTag<TagArticulatedLinkActor>,
     CConvergenceStatus const& convergence,
     CDofOffset const& rigidDofOffset,
@@ -3399,7 +3399,7 @@ static void ApplyBoundaryConditions(
   }
 }
 
-MOCHI_API void mochi::articulated::compound::PreStepArticulatedBodyActorAsync(
+void mochi::articulated::compound::PreStepArticulatedBodyActorAsync(
     entt::registry& reg,
     entt::entity e) {
   MOCHI_PROFILE_SCOPE();

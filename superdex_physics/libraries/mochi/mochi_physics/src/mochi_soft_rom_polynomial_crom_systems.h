@@ -38,7 +38,7 @@ namespace mochi::rom::polynomial_crom {
  *   For order = 2, the function may return:
  *   (0,0,0), (1,0,0), (0,1,0), (0,0,1), (2,0,0), (1,1,0), (1,0,1), (0,2,0), (0,1,1), (0,0,2)
  */
-[[nodiscard]] MOCHI_API std::vector<Int3> ComputeMultiIndexSortedByTotalOrder(int order);
+[[nodiscard]] std::vector<Int3> ComputeMultiIndexSortedByTotalOrder(int order);
 
 /*
  * Constructs and returns a basis matrix of polynomials up to a specified total order computed from
@@ -70,8 +70,6 @@ namespace mochi::rom::polynomial_crom {
  * row 5 | 0   0   1   0   0   f   0   0   g   0   0   h | node1, dof2
  *       +---------------------------------------------+
  */
-[[nodiscard]] MOCHI_API RowMatrix<real> CreateBasisMatrix(
-    int order,
-    Span<Real3 const> nodePositions);
+[[nodiscard]] RowMatrix<real> CreateBasisMatrix(int order, Span<Real3 const> nodePositions);
 
 } // namespace mochi::rom::polynomial_crom

@@ -69,7 +69,7 @@ static constexpr real kQQTRegularizationCoefficient = 1e-8_r;
   Assemble systems
 */
 
-MOCHI_API void mochi::rom::AssembleFullToReduced(
+void mochi::rom::AssembleFullToReduced(
     AssemblyParams const& params,
     ecs::Included<TagSoftActor, TagRomActor>,
     ecs::OptionalTag<TagNestedSoftActor> isNestedSoft,
@@ -130,7 +130,7 @@ MOCHI_API void mochi::rom::AssembleFullToReduced(
   }
 }
 
-MOCHI_API void mochi::rom::AssembleAndProjectBody(
+void mochi::rom::AssembleAndProjectBody(
     AssemblyParams const& params, // External parameter
     ecs::Included<TagSoftActor, TagRomActor>,
     ecs::CtxGlobal<CSceneGravity const> sceneGravity,
@@ -1361,7 +1361,7 @@ static void EntitySetIncrementWrapper(
       referenceVec, incrementVec, {}, isRigidTransformFixedInSolve, currAmplitudes, rigidTransform);
 }
 
-MOCHI_API void mochi::rom::UpdateCurrentRomVelocity(
+void mochi::rom::UpdateCurrentRomVelocity(
     ecs::Included<TagSoftActor, TagRomActor>,
     ecs::OptionalTag<TagRomActorFixRigidTransformInSolve> isRigidTransformFixedInSolve,
     CRomCommonProperties const& /*props*/,

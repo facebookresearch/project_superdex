@@ -119,7 +119,7 @@ class ComponentTypeInfo {
 };
 
 /** @brief Call this once before any components are registered. */
-MOCHI_API void InitializeComponentRegistryOnce(entt::registry& reg);
+void InitializeComponentRegistryOnce(entt::registry& reg);
 
 /**
  * @brief Call RegisterComponent<YourComponentClass> once on startup for each component type.
@@ -136,26 +136,26 @@ void RegisterComponent(entt::registry& reg);
  * @warning If you attempt to use any new component after this point, it will be considered a
  * runtime error.
  */
-MOCHI_API void FinalizeComponentRegistration(entt::registry& reg);
+void FinalizeComponentRegistration(entt::registry& reg);
 
 /**
  * @brief Call this periodically after FinalizeComponentRegistration to ensure that every
  * component type was correctly registered before it was used.
  * @see RegisterComponent, FinalizeComponentRegistration
  */
-MOCHI_API void DetectUnregisteredComponents(entt::registry const& reg);
+void DetectUnregisteredComponents(entt::registry const& reg);
 
 /**
  * @brief Return information about every component type that has been registered.
  */
-MOCHI_API Span<ComponentTypeInfo const> GetAllComponentTypes(entt::registry const& reg);
+Span<ComponentTypeInfo const> GetAllComponentTypes(entt::registry const& reg);
 
 /**
  * @brief Enumerate all component types emplaced on a specific entity.
  * @note Types must first be registered via RegisterComponent.
  * @note Not fast.
  */
-MOCHI_API void EnumerateComponentTypesForEntity(
+void EnumerateComponentTypesForEntity(
     entt::registry const& reg,
     entt::entity e,
     std::function<void(ComponentTypeInfo const& info)> const& onEach);
@@ -166,7 +166,7 @@ MOCHI_API void EnumerateComponentTypesForEntity(
  * @note Types must first be registered via RegisterComponent
  * @note Not fast.
  */
-MOCHI_API void EnumerateGlobalCtxComponentTypes(
+void EnumerateGlobalCtxComponentTypes(
     entt::registry const& reg,
     std::function<void(ComponentTypeInfo const& info)> const& onEach);
 
@@ -183,20 +183,18 @@ void EnumerateComponentsWithAttribute(
  * @brief Enumerate all component types with a specific reflection attribute (non-template version).
  * @note Types must first be registered via RegisterComponent
  */
-MOCHI_API void EnumerateComponentsWithAttribute(
+void EnumerateComponentsWithAttribute(
     entt::registry const& reg,
     SReflect::TypeId attribute,
     std::function<void(ComponentTypeInfo const& info)> const& onEach);
 
 /** @brief Look up type information by reflection type ID. Return nullptr if not found. */
-MOCHI_API ComponentTypeInfo const* TryGetComponentTypeInfo(
+ComponentTypeInfo const* TryGetComponentTypeInfo(
     entt::registry const& reg,
     SReflect::TypeId typeId);
 
 /** @brief Look up type information by entt type ID. Return nullptr if not found. */
-MOCHI_API ComponentTypeInfo const* TryGetComponentTypeInfo(
-    entt::registry const& reg,
-    entt::id_type typeId);
+ComponentTypeInfo const* TryGetComponentTypeInfo(entt::registry const& reg, entt::id_type typeId);
 
 } // namespace mochi::ecs
 

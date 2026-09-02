@@ -1611,7 +1611,7 @@ Actor* SceneImpl::CreateSoftActor(SoftActorParams const& params, Error& error) {
 }
 
 // Experimental API
-MOCHI_API Actor* mochi::experimental::CreateSoftActor(
+Actor* mochi::experimental::CreateSoftActor(
     Scene* scene,
     SoftActorParams const& params,
     ExperimentalSoftActorParams const& experimentalParams,
@@ -1798,7 +1798,7 @@ static void ValidateAndAutoCorrect(SoftSkinnedActorParams& params, Error& error)
 }
 
 // Experimental API
-MOCHI_API Actor* mochi::experimental::CreateSoftSkinnedActor(
+Actor* mochi::experimental::CreateSoftSkinnedActor(
     Scene* scene,
     SoftSkinnedActorParams const& params,
     experimental::ExperimentalSoftSkinnedActorParams const& experimentalParams,
@@ -1825,8 +1825,7 @@ MOCHI_API Actor* mochi::experimental::CreateSoftSkinnedActor(
 }
 
 // Experimental API
-MOCHI_API Actor*
-experimental::CreateShellActor(Scene* scene, ShellActorParams const& params, Error& error) {
+Actor* experimental::CreateShellActor(Scene* scene, ShellActorParams const& params, Error& error) {
   MOCHI_PROFILE_SCOPE();
   MOCHI_ERROR_IF(!scene, error, "Invalid scene");
   MOCHI_ERROR_RETURN(error, {});
@@ -1846,8 +1845,7 @@ Actor* SceneImpl::CreateSoftSkinnedActor(SoftSkinnedActorParams const& params, E
   return experimental::CreateSoftSkinnedActor(this, params, {}, error);
 }
 
-MOCHI_API Actor*
-experimental::CreateRodActor(Scene* scene, RodActorParams const& params, Error& error) {
+Actor* experimental::CreateRodActor(Scene* scene, RodActorParams const& params, Error& error) {
   MOCHI_PROFILE_SCOPE();
   MOCHI_ERROR_IF(!scene, error, "Invalid scene");
   MOCHI_ERROR_RETURN(error, {});
@@ -3151,7 +3149,7 @@ std::shared_ptr<dbg::SceneDebugger> SceneImpl::GetDebugger() const {
   return _debugger.Read(&DebuggerInfo::debugger);
 }
 
-MOCHI_API void experimental::ApplyImprovedConvergenceSettings(Scene* scene, Error& error) {
+void experimental::ApplyImprovedConvergenceSettings(Scene* scene, Error& error) {
   MOCHI_ERROR_IF(!scene, error, "Invalid scene");
   MOCHI_ERROR_RETURN(error);
   auto* sceneImpl = assert_cast<SceneImpl*>(scene);
@@ -3227,7 +3225,7 @@ void MakeSceneDifferentiableInternal(Scene* scene, Error& error) {
   reg.set<CStatePair>();
 }
 
-MOCHI_API void diffsim::MakeSceneDifferentiable(Scene* scene, Error& error) {
+void diffsim::MakeSceneDifferentiable(Scene* scene, Error& error) {
   MakeSceneDifferentiableInternal(scene, error);
 }
 
@@ -3258,7 +3256,7 @@ void experimental::RestoreStateFromScene(
   MOCHI_ERROR_RETURN(error, __VA_ARGS__);
 
 // [Differentiability] Get solver parameters.
-MOCHI_API diffsim::BackPropagationSolverParams diffsim::GetBackPropagationSolverParams(
+diffsim::BackPropagationSolverParams diffsim::GetBackPropagationSolverParams(
     Scene const* scene,
     Error& error) {
   MOCHI_RETURN_IF_NOT_DIFFERENTIABLE(const, {});
@@ -3266,7 +3264,7 @@ MOCHI_API diffsim::BackPropagationSolverParams diffsim::GetBackPropagationSolver
 }
 
 // [Differentiability] Set solver parameters.
-MOCHI_API void diffsim::SetBackPropagationSolverParams(
+void diffsim::SetBackPropagationSolverParams(
     Scene* scene,
     BackPropagationSolverParams const& params,
     Error& error) {
@@ -3275,7 +3273,7 @@ MOCHI_API void diffsim::SetBackPropagationSolverParams(
 }
 
 // [Differentiability] Get the performance metrics of the last back-propagation step.
-[[nodiscard]] MOCHI_API diffsim::BackPropagationSceneStats diffsim::GetBackPropagationSceneStats(
+[[nodiscard]] diffsim::BackPropagationSceneStats diffsim::GetBackPropagationSceneStats(
     Scene const* scene,
     Error& error) {
   MOCHI_RETURN_IF_NOT_DIFFERENTIABLE(const, {});
@@ -3283,12 +3281,12 @@ MOCHI_API void diffsim::SetBackPropagationSolverParams(
 }
 
 // [Differentiability] Reset accumulated gradient containers used during backpropagation.
-MOCHI_API void diffsim::ResetBackPropagation(Scene* scene, Error& error) {
+void diffsim::ResetBackPropagation(Scene* scene, Error& error) {
   MOCHI_RETURN_IF_NOT_DIFFERENTIABLE(, );
   sceneImpl->ResetBackPropagation();
 }
 
-MOCHI_API void diffsim::PrepareBackPropagate(
+void diffsim::PrepareBackPropagate(
     Scene* scene,
     StateHandle stateNew,
     StateHandle stateOld,
@@ -3297,12 +3295,12 @@ MOCHI_API void diffsim::PrepareBackPropagate(
   sceneImpl->PrepareBackPropagate(stateNew, stateOld, error);
 }
 
-MOCHI_API void diffsim::BackPropagate(Scene* scene, Error& error) {
+void diffsim::BackPropagate(Scene* scene, Error& error) {
   MOCHI_RETURN_IF_NOT_DIFFERENTIABLE(, );
   sceneImpl->BackPropagate(error);
 }
 
-MOCHI_API void diffsim::GetStepJacobian(
+void diffsim::GetStepJacobian(
     Scene* scene,
     StateHandle stateNew,
     StateHandle stateCurr,
@@ -3316,7 +3314,7 @@ MOCHI_API void diffsim::GetStepJacobian(
 
 #undef MOCHI_RETURN_IF_NOT_DIFFERENTIABLE
 
-MOCHI_API experimental::DebugStats experimental::GetDebugStats(Scene const* scene, Error& error) {
+experimental::DebugStats experimental::GetDebugStats(Scene const* scene, Error& error) {
   MOCHI_ERROR_IF(scene == nullptr, error, "Invalid scene pointer");
   MOCHI_ERROR_RETURN(error, {});
   return assert_cast<SceneImpl const*>(scene)->GetDebugStats();

@@ -307,7 +307,7 @@ ShapeHandle ContextImpl::LoadShapeFromFile(
 }
 
 // Experimental API
-MOCHI_API ShapeHandle experimental::CreateDeepFlowShape(
+ShapeHandle experimental::CreateDeepFlowShape(
     Context* context,
     DeepModelParams const& params, // Parameters of a deep model
     NeuralComputeType computeType,
@@ -334,7 +334,7 @@ MOCHI_API ShapeHandle experimental::CreateDeepFlowShape(
 }
 
 // Experimental API
-MOCHI_API ShapeHandle experimental::CreatePolylineShape(
+ShapeHandle experimental::CreatePolylineShape(
     Context* context,
     Span<Real3 const> nodes,
     Span<Real3 const> elementFrameAxes,
@@ -824,32 +824,32 @@ int ContextImpl::GetNumThreads() const {
 }
 
 // Static API Method
-MOCHI_API bool Context::IsLogChannelEnabled(LogChannel channel) {
+bool Context::IsLogChannelEnabled(LogChannel channel) {
   return mochi::IsLogChannelEnabled(channel);
 }
 
 // Static API Method
-MOCHI_API void Context::EnableLogChannelInternal(LogChannel channel, bool enable) {
+void Context::EnableLogChannelInternal(LogChannel channel, bool enable) {
   mochi::EnableLogChannel(channel, enable);
 }
 
 // Static API Method
-MOCHI_API LogFn Context::GetLogCallback() {
+LogFn Context::GetLogCallback() {
   return mochi::GetLogCallback();
 }
 
 // Static API Method
-MOCHI_API void Context::SetLogCallbackInternal(LogFn callback) {
+void Context::SetLogCallbackInternal(LogFn callback) {
   mochi::SetLogCallback(callback);
 }
 
 // Static API Method
-MOCHI_API OnAssertFn Context::GetAssertionFailureCallback() {
+OnAssertFn Context::GetAssertionFailureCallback() {
   return mochi::GetAssertionFailureCallback();
 }
 
 // Static API Method
-MOCHI_API void Context::SetAssertionFailureCallbackInternal(OnAssertFn callback) {
+void Context::SetAssertionFailureCallbackInternal(OnAssertFn callback) {
   mochi::SetAssertionFailureCallback(callback);
 }
 
@@ -1032,7 +1032,7 @@ ShapeHandle ContextImpl::RegisterShape(ConstShapePtr newShape, Error& error) {
   return newHandle;
 }
 
-MOCHI_API ConstShapePtr ContextImpl::GetShapeSharedPtr(ShapeHandle shapeHandle) const {
+ConstShapePtr ContextImpl::GetShapeSharedPtr(ShapeHandle shapeHandle) const {
   std::lock_guard lock(_mutex);
   auto it = _shapes.find(shapeHandle.value);
   return (it == _shapes.end()) ? ConstShapePtr{} : it->second;
@@ -1201,7 +1201,7 @@ DebugServer const& ContextImpl::GetDebugServer() const {
   return *_debugServer;
 }
 
-MOCHI_API Context* CreateContext(int numWorkerThreads) {
+Context* CreateContext(int numWorkerThreads) {
   auto* mochiPhysics = new ContextImpl;
   if (numWorkerThreads >= 0) {
     mochiPhysics->SetNumWorkerThreads(numWorkerThreads);
@@ -1210,7 +1210,7 @@ MOCHI_API Context* CreateContext(int numWorkerThreads) {
   return mochiPhysics;
 }
 
-MOCHI_API void DestroyContext(Context* mochiPhysicsInstance) {
+void DestroyContext(Context* mochiPhysicsInstance) {
   if (mochiPhysicsInstance) {
     auto* impl = assert_cast<ContextImpl*>(mochiPhysicsInstance);
     impl->PreShutDown();

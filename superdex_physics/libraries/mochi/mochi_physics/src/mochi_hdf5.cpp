@@ -602,7 +602,7 @@ LoadCromDecoderModel(H5::Group& group, real scale, Error& error) {
   }
 }
 
-MOCHI_API std::optional<std::tuple<ai::Mlp<real>, ColumnVector<real>>> hdf5::LoadCromDecoderModel(
+std::optional<std::tuple<ai::Mlp<real>, ColumnVector<real>>> hdf5::LoadCromDecoderModel(
     std::string_view filePath,
     std::string_view groupName,
     real scale,
@@ -1320,7 +1320,7 @@ int hdf5::ReadMeshTransformsBytesJointCount(Span<char const> /* fileData */, Err
   return 0;
 }
 
-MOCHI_API std::optional<std::tuple<ai::Mlp<real>, ColumnVector<real>>> hdf5::LoadCromDecoderModel(
+std::optional<std::tuple<ai::Mlp<real>, ColumnVector<real>>> hdf5::LoadCromDecoderModel(
     std::string_view /*filePath*/,
     std::string_view /*groupName*/,
     real /*scale*/,

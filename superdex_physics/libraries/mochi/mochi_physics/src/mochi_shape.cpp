@@ -61,12 +61,12 @@ GridSdfShape::~GridSdfShape() {
   _gridSdfSem.Wait();
 }
 
-MOCHI_API std::shared_ptr<GridSdf const> GridSdfShape::GetGridSdf() const {
+std::shared_ptr<GridSdf const> GridSdfShape::GetGridSdf() const {
   std::lock_guard lock(_gridSdfMutex);
   return _gridSdf;
 }
 
-MOCHI_API std::shared_ptr<GridSdf const> GridSdfShape::RequestGridSdf(
+std::shared_ptr<GridSdf const> GridSdfShape::RequestGridSdf(
     GridSdfParams const& params,
     bool* outIsPending) const {
   *outIsPending = false;

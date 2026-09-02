@@ -37,10 +37,10 @@ namespace mochi {
  *
  * @see CSceneTime
  */
-MOCHI_API void PreStepEcs(entt::registry& reg);
+void PreStepEcs(entt::registry& reg);
 
-MOCHI_API void StepEcs(entt::registry& reg);
-MOCHI_API void PostStepEcs(entt::registry& reg);
+void StepEcs(entt::registry& reg);
+void PostStepEcs(entt::registry& reg);
 
 void PreStepIslandAsync(entt::registry& reg, CIslandDescendants const& descendants);
 

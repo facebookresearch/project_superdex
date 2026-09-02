@@ -29,14 +29,14 @@ namespace mochi::rom::rigid_transform {
 namespace details {
 
 // outAuxPositions = meshCoords + displacements
-MOCHI_API void ComputePositions(
+void ComputePositions(
     TetrahedralMesh const& mesh,
     Span<int const> activeNodes,
     ColumnVectorView<real const> displacements,
     ColumnVectorView<real> outAuxPositions);
 
 // displacements -= meshCoords
-MOCHI_API void SubtractMeshCoordinates(
+void SubtractMeshCoordinates(
     TetrahedralMesh const& mesh,
     Span<int const> activeNodes,
     ColumnVectorView<real> displacements);

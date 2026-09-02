@@ -68,14 +68,16 @@ void CContactFilterTable::RemoveEntity(entt::entity e) {
   Utilities
 */
 
-MOCHI_API ContactLayerId
-mochi::GetContactLayerId(CContactFilterTable const& table, std::string_view layerName) {
+ContactLayerId mochi::GetContactLayerId(
+    CContactFilterTable const& table,
+    std::string_view layerName) {
   auto it = table.layerNameToId.find(std::string(layerName));
   return (it == table.layerNameToId.end()) ? ContactLayerId::None : it->second;
 }
 
-MOCHI_API ContactLayerId
-mochi::GetOrAddContactLayerId(CContactFilterTable& table, std::string_view layerName) {
+ContactLayerId mochi::GetOrAddContactLayerId(
+    CContactFilterTable& table,
+    std::string_view layerName) {
   if (layerName.empty()) {
     return ContactLayerId::None;
   } else {

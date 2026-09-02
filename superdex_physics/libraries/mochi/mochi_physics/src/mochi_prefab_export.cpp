@@ -1044,7 +1044,7 @@ static bool ExportActorToPrefab(
   return true;
 }
 
-MOCHI_API void prefab::ExportScene(
+void prefab::ExportScene(
     Scene const* scene,
     std::string_view exportName,
     std::string_view outputDir,
@@ -1052,7 +1052,7 @@ MOCHI_API void prefab::ExportScene(
   ExportSceneExcluding(scene, exportName, outputDir, {}, error);
 }
 
-MOCHI_API void prefab::ExportSceneExcluding(
+void prefab::ExportSceneExcluding(
     Scene const* scene,
     std::string_view exportName,
     std::string_view outputDir,
@@ -1296,7 +1296,7 @@ MOCHI_API void prefab::ExportSceneExcluding(
   WritePrefabToDisk(prefab, exportDir, exportName, error);
 }
 
-MOCHI_API void prefab::ExportActor(
+void prefab::ExportActor(
     Actor const* actor,
     std::string_view exportName,
     std::string_view outputDir,

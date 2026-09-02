@@ -215,7 +215,7 @@ template <typename TriElementLow, typename TriElementHigh>
 }
 
 // Assemble just the volume term into CActorSnle.
-MOCHI_API void AssembleBody(
+void AssembleBody(
     AssemblyParams const& params, // external parameter
     ecs::Included<TagShellActor>,
     ecs::CtxGlobal<CSceneGravity const> sceneGravity,

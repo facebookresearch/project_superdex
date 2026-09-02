@@ -95,7 +95,7 @@ class ActivePrefabGuard {
 
 // Resolve a path referenced inside a prefab to a full path. See the DSL
 // (mochi_physics_prefab.mochi_gen) for documentation.
-MOCHI_API DynamicString prefab::GetPrefabFullPath(
+DynamicString prefab::GetPrefabFullPath(
     std::string_view inputPath,
     std::string_view rootForRelativePath,
     std::string_view prefabFilePath) {
@@ -119,7 +119,7 @@ MOCHI_API DynamicString prefab::GetPrefabFullPath(
   return DynamicString((ec ? inputPath.lexically_normal() : canonicalPath).string());
 }
 
-MOCHI_API ScenePrefab prefab::ShallowLoadFromJsonString(std::string_view json, Error& error) {
+ScenePrefab prefab::ShallowLoadFromJsonString(std::string_view json, Error& error) {
   MOCHI_ERROR_RETURN(error, {});
 
   ScenePrefab prefab;
@@ -132,7 +132,7 @@ MOCHI_API ScenePrefab prefab::ShallowLoadFromJsonString(std::string_view json, E
   return prefab;
 }
 
-MOCHI_API ScenePrefab prefab::ShallowLoadFromFile(std::string_view path, Error& error) {
+ScenePrefab prefab::ShallowLoadFromFile(std::string_view path, Error& error) {
   MOCHI_ERROR_RETURN(error, {});
 
   ScenePrefab prefab;
@@ -222,8 +222,7 @@ static void LoadNestedPrefabsImpl(
       prefab, rootPath, skipLoaded, activePrefabPaths, activePrefabs, error);
 }
 
-MOCHI_API void
-prefab::LoadNestedPrefabs(ScenePrefab& prefab, std::string_view rootPath, Error& error) {
+void prefab::LoadNestedPrefabs(ScenePrefab& prefab, std::string_view rootPath, Error& error) {
   LoadNestedPrefabsImpl(prefab, rootPath, false /*skipLoaded*/, error);
 }
 
@@ -581,13 +580,16 @@ static void LoadShapesImpl(
       prefab, rootPath, context, scaleModifier, skipLoaded, activePrefabs, error);
 }
 
-MOCHI_API void
-prefab::LoadShapes(ScenePrefab& prefab, std::string_view rootPath, Context* context, Error& error) {
+void prefab::LoadShapes(
+    ScenePrefab& prefab,
+    std::string_view rootPath,
+    Context* context,
+    Error& error) {
   return LoadShapesImpl(
       prefab, rootPath, context, 1_r /*scaleModifier*/, false /*skipLoaded*/, error);
 }
 
-MOCHI_API void prefab::EnsureFullyLoaded(
+void prefab::EnsureFullyLoaded(
     ScenePrefab& prefab,
     std::string_view rootPath,
     Context* context,
@@ -615,7 +617,7 @@ static ScenePrefab LoadFromFileImpl(
   return error.IsOK() ? prefab : ScenePrefab{};
 }
 
-MOCHI_API ScenePrefab prefab::LoadFromFile(
+ScenePrefab prefab::LoadFromFile(
     std::string_view prefabPath,
     std::string_view rootPath,
     Context* context,
@@ -623,7 +625,7 @@ MOCHI_API ScenePrefab prefab::LoadFromFile(
   return LoadFromFileImpl(prefabPath, rootPath, context, 1_r /*scaleModifier*/, error);
 }
 
-MOCHI_API ScenePrefab prefab::LoadFromJsonString(
+ScenePrefab prefab::LoadFromJsonString(
     std::string_view json,
     std::string_view rootPath,
     Context* context,
@@ -635,14 +637,13 @@ MOCHI_API ScenePrefab prefab::LoadFromJsonString(
   return error.IsOK() ? prefab : ScenePrefab{};
 }
 
-MOCHI_API void
-prefab::SaveToJsonFile(ScenePrefab const& prefab, std::string_view path, Error& error) {
+void prefab::SaveToJsonFile(ScenePrefab const& prefab, std::string_view path, Error& error) {
   MOCHI_ERROR_RETURN(error);
   auto contents = SaveToJsonString(prefab, error);
   WriteFile(path, contents, error);
 }
 
-MOCHI_API DynamicString prefab::SaveToJsonString(ScenePrefab const& prefab, Error& error) {
+DynamicString prefab::SaveToJsonString(ScenePrefab const& prefab, Error& error) {
   MOCHI_ERROR_RETURN(error, "");
   auto json = SReflect::ToJsonString(prefab, true);
   return DynamicString{json.c_str(), json.size()};
@@ -1573,11 +1574,11 @@ static DynamicArray<T*> FilterImpl(DynamicArray<T*> const& list, TypeEnum type) 
   return result;
 }
 
-MOCHI_API DynamicArray<Actor*> AddToSceneResult::Filter(ActorType type) const {
+DynamicArray<Actor*> AddToSceneResult::Filter(ActorType type) const {
   return FilterImpl<Actor>(actors, type);
 }
 
-MOCHI_API DynamicArray<Constraint*> AddToSceneResult::Filter(ConstraintType type) const {
+DynamicArray<Constraint*> AddToSceneResult::Filter(ConstraintType type) const {
   return FilterImpl<Constraint>(constraints, type);
 }
 
@@ -1601,7 +1602,7 @@ static AddToSceneResult AddToSceneFromLoaded(
   return result;
 }
 
-MOCHI_API AddToSceneResult prefab::AddToScene(
+AddToSceneResult prefab::AddToScene(
     ScenePrefab const& prefab,
     Scene* scene,
     PrefabParams const& params,
@@ -1623,7 +1624,7 @@ MOCHI_API AddToSceneResult prefab::AddToScene(
   return AddToSceneFromLoaded(prefab, scene, identityScaleParams, error);
 }
 
-MOCHI_API AddToSceneResult prefab::AddToScene(
+AddToSceneResult prefab::AddToScene(
     std::string_view prefabPath,
     std::string_view rootPath,
     Scene* scene,

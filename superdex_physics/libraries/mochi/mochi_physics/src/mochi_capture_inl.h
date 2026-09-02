@@ -21,9 +21,7 @@
 namespace mochi::capture {
 namespace details {
 
-MOCHI_API void RegisterPostRestoreCallback(
-    entt::registry& reg,
-    std::function<void(entt::registry&)> fn);
+void RegisterPostRestoreCallback(entt::registry& reg, std::function<void(entt::registry&)> fn);
 
 } // namespace details
 

@@ -1370,7 +1370,7 @@ static void InitCollidingJacobians(
 }
 
 // This system is only used for far SDF queries.
-MOCHI_API void mochi::FarSdfCollisionDetection(
+void mochi::FarSdfCollisionDetection(
     ecs::Included<TagUseContact, CRequiresFarSdfEvaluation>,
     entt::registry& reg,
     entt::entity e) {
@@ -2309,7 +2309,7 @@ static void AssembleCollisionResponseRange(
   }
 }
 
-MOCHI_API void mochi::AssembleCollisionResponse(
+void mochi::AssembleCollisionResponse(
     ContactAssemblyReg reg,
     entt::entity colliding,
     entt::entity collider,
@@ -2440,7 +2440,7 @@ MOCHI_SPECIALIZE_UPDATE_COLLISION_SAMPLES_IMPL(true, CFemSegmentDiscretization, 
 #undef MOCHI_SPECIALIZE_UPDATE_COLLISION_SAMPLES_IMPL
 
 template <typename DiscretizationType, TimeStep kTimeStep, int kNumFields>
-MOCHI_API void mochi::UpdateCollisionSamplePositions(
+void mochi::UpdateCollisionSamplePositions(
     ecs::RequiredTag<TagUseContact>,
     CFinalDisplacementRef<kTimeStep> const& currSol,
     DiscretizationType const& discretization,
@@ -2461,13 +2461,12 @@ MOCHI_API void mochi::UpdateCollisionSamplePositions(
   }
 }
 
-#define MOCHI_SPECIALIZE_UPDATE_COLLISION_SAMPLES(dicretization, timeStep, numFields) \
-  template MOCHI_API void                                                             \
-  mochi::UpdateCollisionSamplePositions<dicretization, timeStep, numFields>(          \
-      ecs::RequiredTag<TagUseContact>,                                                \
-      CFinalDisplacementRef<timeStep> const&,                                         \
-      dicretization const&,                                                           \
-      CActiveBoundaryFaces const*,                                                    \
+#define MOCHI_SPECIALIZE_UPDATE_COLLISION_SAMPLES(dicretization, timeStep, numFields)      \
+  template void mochi::UpdateCollisionSamplePositions<dicretization, timeStep, numFields>( \
+      ecs::RequiredTag<TagUseContact>,                                                     \
+      CFinalDisplacementRef<timeStep> const&,                                              \
+      dicretization const&,                                                                \
+      CActiveBoundaryFaces const*,                                                         \
       CContactSamples<timeStep>&);
 MOCHI_SPECIALIZE_UPDATE_COLLISION_SAMPLES(CFemBoundaryDiscretization, TimeStep::Current, 3);
 MOCHI_SPECIALIZE_UPDATE_COLLISION_SAMPLES(CFemBoundaryDiscretization, TimeStep::StageStart, 3);
@@ -4108,9 +4107,7 @@ void mochi::UpdateStageStartDataPipeline(
 }
 
 template <TimeStep kTimeStep>
-MOCHI_API void mochi::CollisionDetectionPipeline(
-    entt::registry& reg,
-    CIslandDescendants const& descendants) {
+void mochi::CollisionDetectionPipeline(entt::registry& reg, CIslandDescendants const& descendants) {
   MOCHI_PROFILE_SCOPE();
   TaskSemaphore sem;
 
@@ -4277,7 +4274,7 @@ MOCHI_API void mochi::CollisionDetectionPipeline(
   sem.Wait();
 }
 
-MOCHI_API void mochi::ContactJacobiansPipeline(
+void mochi::ContactJacobiansPipeline(
     entt::registry& reg,
     GradTarget gradTarget,
     CIslandDescendants const& descendants,
@@ -4312,11 +4309,11 @@ MOCHI_API void mochi::ContactJacobiansPipeline(
 }
 
 // Explicit instantiations for CollisionDetectionPipeline
-template MOCHI_API void mochi::CollisionDetectionPipeline<TimeStep::Current>(
+template void mochi::CollisionDetectionPipeline<TimeStep::Current>(
     entt::registry& reg,
     CIslandDescendants const& descendants);
 
-template MOCHI_API void mochi::CollisionDetectionPipeline<TimeStep::StageStart>(
+template void mochi::CollisionDetectionPipeline<TimeStep::StageStart>(
     entt::registry& reg,
     CIslandDescendants const& descendants);
 

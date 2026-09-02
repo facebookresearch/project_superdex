@@ -41,7 +41,7 @@ using namespace mochi;
   return result;
 }
 
-[[nodiscard]] MOCHI_API std::vector<Int3> rom::polynomial_crom::ComputeMultiIndexSortedByTotalOrder(
+[[nodiscard]] std::vector<Int3> rom::polynomial_crom::ComputeMultiIndexSortedByTotalOrder(
     int order) {
   MOCHI_ASSERT(order >= 0, "Order must be non-negative.");
 
@@ -65,7 +65,7 @@ using namespace mochi;
   return mi;
 }
 
-[[nodiscard]] MOCHI_API RowMatrix<real> rom::polynomial_crom::CreateBasisMatrix(
+[[nodiscard]] RowMatrix<real> rom::polynomial_crom::CreateBasisMatrix(
     int order,
     Span<Real3 const> nodePositions) {
   MOCHI_ASSERT(order >= 0, "Order must be non-negative.");

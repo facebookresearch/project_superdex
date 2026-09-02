@@ -363,8 +363,10 @@ static void DeserializeEntityComponentData(
   }
 }
 
-MOCHI_API void
-mochi::capture::CaptureState(entt::registry& reg, DynamicArray<uint8_t>& outData, Error& error) {
+void mochi::capture::CaptureState(
+    entt::registry& reg,
+    DynamicArray<uint8_t>& outData,
+    Error& error) {
   MOCHI_ERROR_RETURN(error);
   DynamicArrayStreamWriter outStream(outData);
 
@@ -438,7 +440,7 @@ static void ValidateCaptureFooter(CaptureFooter const& footer, Error& error) {
       "Capture data is malformed. Expected footer tag at the end.");
 }
 
-MOCHI_API void mochi::capture::RestorePartialState(
+void mochi::capture::RestorePartialState(
     entt::registry& reg,
     Span<uint8_t const> data,
     Span<SReflect::TypeId const> excludedAttributes,
@@ -484,12 +486,11 @@ MOCHI_API void mochi::capture::RestorePartialState(
   }
 }
 
-MOCHI_API void
-mochi::capture::RestoreState(entt::registry& reg, Span<uint8_t const> data, Error& error) {
+void mochi::capture::RestoreState(entt::registry& reg, Span<uint8_t const> data, Error& error) {
   RestorePartialState(reg, data, {}, error);
 }
 
-MOCHI_API std::string
+std::string
 mochi::capture::CaptureStateToJson(entt::registry& reg, bool prettyMultiLine, Error& error) {
   MOCHI_ERROR_RETURN(error, "");
 
@@ -651,7 +652,7 @@ static bool IsNextObjectEqual(
   return jsonA == jsonB;
 }
 
-MOCHI_API bool mochi::capture::IsEqualState(
+bool mochi::capture::IsEqualState(
     entt::registry const& reg,
     Span<uint8_t const> stateA,
     Span<uint8_t const> stateB) {
@@ -737,7 +738,7 @@ MOCHI_API bool mochi::capture::IsEqualState(
   return true;
 }
 
-MOCHI_API void mochi::capture::details::RegisterPostRestoreCallback(
+void mochi::capture::details::RegisterPostRestoreCallback(
     entt::registry& reg,
     std::function<void(entt::registry&)> fn) {
   MOCHI_ASSERT(!!fn, "Invalid function");
@@ -751,6 +752,6 @@ MOCHI_API void mochi::capture::details::RegisterPostRestoreCallback(
   callbacks->postRestore.push_back(std::move(fn));
 }
 
-MOCHI_API void mochi::capture::InitializeOnce(entt::registry& reg) {
+void mochi::capture::InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<CCaptureCallbacks>(reg);
 }

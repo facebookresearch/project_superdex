@@ -255,13 +255,18 @@ void InitFullDofProblem(entt::registry& reg, entt::entity e);
 void SetArticulatedPoseFromLinks(entt::registry& reg, entt::entity e);
 
 // Set the articulated body's dofs
-MOCHI_API void
-SetArticulatedBodyPose(entt::registry& reg, entt::entity e, Span<real const> pose, Error& error);
+void SetArticulatedBodyPose(
+    entt::registry& reg,
+    entt::entity e,
+    Span<real const> pose,
+    Error& error);
 
 // Set the articulated body's root transform (world-from-root) and recompute derived state (the link
 // world transforms depend on the root via forward kinematics).
-MOCHI_API void
-SetArticulatedRootTransform(entt::registry& reg, entt::entity e, TransformRT const& worldFromRoot);
+void SetArticulatedRootTransform(
+    entt::registry& reg,
+    entt::entity e,
+    TransformRT const& worldFromRoot);
 
 // Get the link transforms
 void GetLinkTransforms(
@@ -383,13 +388,13 @@ Span<real const>
 GetPoseControllerForce(entt::registry& reg, entt::entity e, Scene const* scene, Error& error);
 
 // To be run pre-simulation step for all articulated body actors
-MOCHI_API void PreStepArticulatedBodyActorAsync(entt::registry& reg, entt::entity e);
+void PreStepArticulatedBodyActorAsync(entt::registry& reg, entt::entity e);
 
 /*
  * Pipeline to update quantities that are a function of the state (aka derived state) of the
  * articulated body actor and make them consistent with the state.
  */
-MOCHI_API void UpdateDerivedStatePipeline(entt::registry& reg, Span<entt::entity const> entities);
+void UpdateDerivedStatePipeline(entt::registry& reg, Span<entt::entity const> entities);
 
 /*
  * Pipelines to update articulated Jacobians, based on state or target input.
@@ -479,7 +484,7 @@ void SetupCollidingJacobians(
  * System to assemble the objective, residual and dresidual of the damping forces acting on joints
  * of the articulated body. Internally called by EntityAssemble.
  */
-MOCHI_API void AssembleDampingForces(
+void AssembleDampingForces(
     AssemblyParams const& params,
     CArticulatedBodyShape const& bodyShape,
     CArticulatedJointPoseInfo const& poseInfo,
@@ -495,7 +500,7 @@ MOCHI_API void AssembleDampingForces(
  * System to assemble the objective, residual, and dresidual of forces from transmissions attached
  * to the articulated body.
  */
-MOCHI_API void AssembleTransmissionForces(
+void AssembleTransmissionForces(
     AssemblyParams const& params,
     CArticulatedLinkTransforms<TimeStep::Current> const& currLinkTxs,
     CArticulatedLinkTransforms<TimeStep::StageStart> const& stageStartLinkTxs,
@@ -511,7 +516,7 @@ MOCHI_API void AssembleTransmissionForces(
  * kinematics. Reads the entity's joint info / parents / rest transforms / root transform from the
  * registry. `outLinkTransformsCom.size()` must equal the number of links.
  */
-MOCHI_API void GetLinkTransformsComFromPose(
+void GetLinkTransformsComFromPose(
     entt::registry const& reg,
     entt::entity e,
     Span<real const> pose,
@@ -521,7 +526,7 @@ MOCHI_API void GetLinkTransformsComFromPose(
  * System to assemble the objective, residual and dresidual of the inertia forces acting on joints
  * of the articulated body. Internally called by EntityAssemble.
  */
-MOCHI_API void AssembleInertiaForces(
+void AssembleInertiaForces(
     AssemblyParams const& params,
     ecs::OptionalTag<TagUseNewtonEulerInertia> useNewtonEulerInertia,
     CArticulatedBodyShape const& bodyShape,
@@ -539,7 +544,7 @@ MOCHI_API void AssembleInertiaForces(
  * System to assemble the objective, residual and dresidual of the friction forces acting on joints
  * of the articulated body. Internally called by EntityAssemble.
  */
-MOCHI_API void AssembleFrictionForces(
+void AssembleFrictionForces(
     AssemblyParams const& params,
     CArticulatedBodyShape const& bodyShape,
     CArticulatedJointPoseInfo const& poseInfo,
@@ -555,7 +560,7 @@ MOCHI_API void AssembleFrictionForces(
  * System to assemble the objective, residual and dresidual of external forces acting on joint dofs.
  * Internally called by EntityAssemble.
  */
-MOCHI_API void AssembleExternalForces(
+void AssembleExternalForces(
     AssemblyParams const& params,
     CArticulatedProps const& props,
     CArticulatedBodyShape const& bodyShape,
@@ -572,7 +577,7 @@ MOCHI_API void AssembleExternalForces(
  * state). The span of reals is usually the components of the non-linear problem solution vector
  * corresponding to the actor, thereby the name.
  */
-MOCHI_API void EntitySetSolution(
+void EntitySetSolution(
     ColumnVectorView<real const> solution,
     ecs::RequiredTag<TagArticulatedActor>,
     CArticulatedBodyShape const& bodyShape,
@@ -591,7 +596,7 @@ MOCHI_API void EntitySetSolution(
  * components of the non-linear problem solution vector corresponding to the actor, thereby the
  * name.
  */
-MOCHI_API void EntityGetSolution(
+void EntityGetSolution(
     ColumnVectorView<real> outSolution,
     ecs::RequiredTag<TagArticulatedActor>,
     CArticulatedReducedPose<TimeStep::Current> const& reducedPose);
@@ -608,7 +613,7 @@ MOCHI_API void EntityGetSolution(
  * Any derived state that is required for assembly and not updated in this system MUST be
  * updated in EntityAssemble or in mochi_solve's UpdateDerivedStateBeforeAssembly.
  */
-MOCHI_API void EntityPostNewSolution(
+void EntityPostNewSolution(
     ColumnVectorView<real const> solution,
     ecs::RequiredTag<TagArticulatedActor>,
     CDofOffset const& dofOffset,
@@ -635,7 +640,7 @@ MOCHI_API void EntityPostNewSolution(
  * Any derived state that is required for assembly and not updated in this system MUST be
  * updated in EntityAssemble or in mochi_solve's UpdateDerivedStateBeforeAssembly.
  */
-MOCHI_API void EntityPostNewIncrement(
+void EntityPostNewIncrement(
     ColumnVectorView<real const> reference,
     ColumnVectorView<real const> increment,
     ecs::RequiredTag<TagArticulatedActor>,
@@ -688,7 +693,7 @@ void PreStepPipeline(entt::registry& reg);
 /*
  * Executed before the first time integration stage of the time step.
  */
-MOCHI_API void EntityPreFirstStage(
+void EntityPreFirstStage(
     ecs::Included<TagArticulatedActor>,
     CArticulatedBodyShape const& bodyShape,
     CArticulatedJointPoseInfo const& poseInfo,
@@ -701,7 +706,7 @@ MOCHI_API void EntityPreFirstStage(
 /*
  * Pipeline executed before each time integration stage.
  */
-MOCHI_API void PreStagePipeline(entt::registry& reg, Span<entt::entity const> entities);
+void PreStagePipeline(entt::registry& reg, Span<entt::entity const> entities);
 
 /*
  * Pipeline executed after each time integration stage.
@@ -815,7 +820,7 @@ namespace articulated::rigid {
 /*
  * System to update Jacobian
  */
-MOCHI_API void EntityUpdateJacobian(
+void EntityUpdateJacobian(
     ecs::Included<TagArticulatedLinkActor>,
     ecs::PartialRegistry<CArticulatedJacobian const> reg,
     CArticulatedEntity const& entArticulated,
@@ -869,20 +874,20 @@ MOCHI_FORCE_INLINE void SetupColliderJacobians(
  * Copies the position state of the articulated actor to the position state of the underlying rigid
  * actors.
  */
-MOCHI_API void EntitySetSolution(
+void EntitySetSolution(
     ecs::RequiredTag<TagArticulatedLinkActor>,
     CDofOffset const& rigidDofOffset,
     CArticulatedFullPoseRef const& fullPoseRef,
     CRigidState<TimeStep::Current>& outCurrPose);
 
-MOCHI_API void EntityPreStep(
+void EntityPreStep(
     ecs::RequiredTag<TagArticulatedLinkActor>,
     CRigidState<TimeStep::Current> const& currPose,
     CRigidVel<TimeStep::Current>& currVel,
     CRigidState<TimeStep::Previous>& prevPose,
     CRigidVel<TimeStep::Previous>& prevVel);
 
-MOCHI_API void EntityPreFirstStage(
+void EntityPreFirstStage(
     ecs::RequiredTag<TagArticulatedLinkActor>,
     CTimeIntegratorState const& intState,
     CRigidVel<TimeStep::Previous> const& prevVel,
@@ -900,7 +905,7 @@ void EntityPreStage(
     CRigidVel<TimeStep::StageStart>& stageStartVel,
     CRootTransform& rootTransform);
 
-MOCHI_API void EntityPostStage(
+void EntityPostStage(
     ecs::RequiredTag<TagArticulatedLinkActor>,
     CConvergenceStatus const& convergence,
     CDofOffset const& rigidDofOffset,
@@ -933,7 +938,7 @@ void EntityPostLastStage(
  * Any derived state that is required for assembly and not updated in this system MUST be
  * updated in EntityAssemble or in mochi_solve's UpdateDerivedStateBeforeAssembly.
  */
-MOCHI_API void EntityPostNewSolution(
+void EntityPostNewSolution(
     ecs::RequiredTag<TagArticulatedLinkActor>,
     ecs::Excluded<TagStaticActor>,
     CRigidBodyInertia const& rigidInertia,

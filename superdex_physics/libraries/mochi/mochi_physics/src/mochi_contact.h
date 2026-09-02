@@ -1000,11 +1000,9 @@ inline bool ValidCollidingNormals(ContactAssemblyReg const& reg, entt::entity co
 void UpdateStageStartDataPipeline(entt::registry& reg, CIslandDescendants const& descendants);
 
 template <TimeStep kTimeStep>
-MOCHI_API void CollisionDetectionPipeline(
-    entt::registry& reg,
-    CIslandDescendants const& descendants);
+void CollisionDetectionPipeline(entt::registry& reg, CIslandDescendants const& descendants);
 
-MOCHI_API void ContactJacobiansPipeline(
+void ContactJacobiansPipeline(
     entt::registry& reg,
     GradTarget gradTarget,
     CIslandDescendants const& descendants,
@@ -1012,7 +1010,7 @@ MOCHI_API void ContactJacobiansPipeline(
 
 // Collision detection for far SDF queries.
 // Handles both ContactType::Async and ContactType::Sync.
-MOCHI_API void FarSdfCollisionDetection(
+void FarSdfCollisionDetection(
     ecs::Included<TagUseContact, CRequiresFarSdfEvaluation>,
     entt::registry& reg,
     entt::entity ent);
@@ -1031,7 +1029,7 @@ void UpdateCollisionSamplePositionsImpl(
 // Updates the collision sample positions, having them match 1:1 the quadrature points of the
 // given discretization. Used for colliding objects with a deforming surface.
 template <typename DiscretizationType, TimeStep kTimeStep, int kNumFields>
-MOCHI_API void UpdateCollisionSamplePositions(
+void UpdateCollisionSamplePositions(
     ecs::RequiredTag<TagUseContact>,
     CFinalDisplacementRef<kTimeStep> const& currSol,
     DiscretizationType const& discretization,
@@ -1114,7 +1112,7 @@ void UpdateQueryActorContactForces(
     CQueryActorContactForces& outQueryActorForces);
 
 // Assemble collision response into DoFs
-MOCHI_API void AssembleCollisionResponse(
+void AssembleCollisionResponse(
     ContactAssemblyReg reg,
     entt::entity colliding,
     entt::entity collider,
@@ -1123,9 +1121,9 @@ MOCHI_API void AssembleCollisionResponse(
     Span<real const> intWeights,
     Span<ContactJac const*> jacs,
     Allocator* filoAllocator, // Will be used in first-in-last-out order
-    double* objective,
-    ColumnVectorView<real> residual,
-    AnyMatrixView<real> dresidual,
+    double* outObj,
+    ColumnVectorView<real> outRes,
+    AnyMatrixView<real> outDRes,
     bool isSyncRigid = false); // Optionally set to 'true' to improve performance when assembling
                                // sync contact between rigid (including articulated rigid) actors.
 

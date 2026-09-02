@@ -3193,7 +3193,7 @@ ActorInterfacePtr CreateActorInterface(entt::registry& reg, entt::entity e, Scen
   return std::make_unique<ActorInterfaceImpl>(reg, e, scene);
 }
 
-MOCHI_API real experimental::GetContactForceWorldBatch(
+real experimental::GetContactForceWorldBatch(
     Span<Actor const* const> actors,
     Span<Actor const* const> colliders,
     Error& error) {

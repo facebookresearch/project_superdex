@@ -871,7 +871,7 @@ DynamicArray<Real3> mochi::GenerateDiscreteBishopFrame(Span<Real3 const> nodes, 
   return elementFrameAxes;
 }
 
-MOCHI_API ModelData mochi::experimental::GenerateTubularRodModelData(
+ModelData mochi::experimental::GenerateTubularRodModelData(
     Span<Real3 const> nodes,
     Span<Real3 const> elementFrameAxes,
     real radius,

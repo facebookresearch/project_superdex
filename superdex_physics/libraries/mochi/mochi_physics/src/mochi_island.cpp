@@ -603,7 +603,7 @@ static void UpdateIslandDescendants(
   });
 }
 
-MOCHI_API void island::PreStep(entt::registry& reg) {
+void island::PreStep(entt::registry& reg) {
   MOCHI_PROFILE_SCOPE();
 
   // Unit test support
@@ -668,13 +668,11 @@ void mochi::island::SetForceSingleIsland(entt::registry& reg, bool forceSingleIs
   reg.ctx<CGlobalIsland>().forceSingleIslandByUserRequest = forceSingleIsland;
 }
 
-MOCHI_API void mochi::island::SetTestCallback_PreIslandUpdate(
-    entt::registry& reg,
-    std::function<void()> fn) {
+void mochi::island::SetTestCallback_PreIslandUpdate(entt::registry& reg, std::function<void()> fn) {
   reg.ctx_or_set<CIslandTestConfig>().preIslandUpdateCallback = std::move(fn);
 }
 
-MOCHI_API void mochi::island::SetTestCallback_PostIslandUpdate(
+void mochi::island::SetTestCallback_PostIslandUpdate(
     entt::registry& reg,
     std::function<void()> fn) {
   reg.ctx_or_set<CIslandTestConfig>().postIslandUpdateCallback = std::move(fn);

@@ -69,12 +69,13 @@ else ()
 endif ()
 
 #-----------------------------------------------------------------------------
-# Additional static library for test/benchmarks (MSVC shared builds only)
+# Additional static library for tests and benchmarks in shared builds
 #
-# Mirrors Buck: test/benchmarks link mochi_physics_static to avoid EnTT
-# type ID issues across DLL boundaries on Windows.
+# Tests and benchmarks link mochi_physics_static so that they can call internal functions without
+# making those symbols visible to the dynamic linker. On Windows, this also avoids EnTT type ID
+# issues across DLL boundaries.
 #-----------------------------------------------------------------------------
-if (MOCHI_BUILD_SHARED AND MSVC AND (MOCHI_BUILD_TESTS OR MOCHI_BUILD_BENCHMARKS))
+if (MOCHI_BUILD_SHARED AND (MOCHI_BUILD_TESTS OR MOCHI_BUILD_BENCHMARKS))
     get_target_property(_SOURCES mochi_physics SOURCES)
     get_target_property(_INCLUDES mochi_physics INCLUDE_DIRECTORIES)
 
@@ -95,11 +96,9 @@ endif ()
 if (MOCHI_BUILD_TESTS)
     target_include_directories(mochi_physics_test PRIVATE ${PROJECT_SOURCE_DIR})
 
-    if (MOCHI_BUILD_SHARED AND MSVC)
+    if (TARGET mochi_physics_static)
         # Re-link tests against static library (DLL still exists for other consumers)
-        get_target_property(_LIBS mochi_physics_test LINK_LIBRARIES)
-        list(REMOVE_ITEM _LIBS mochi_physics)
-        set_target_properties(mochi_physics_test PROPERTIES LINK_LIBRARIES "${_LIBS}")
+        mochi_remove_link_library(mochi_physics_test mochi_physics)
         target_link_libraries(mochi_physics_test PRIVATE mochi_physics_static)
     endif ()
 
@@ -128,11 +127,9 @@ if (MOCHI_BUILD_TESTS)
     target_link_libraries(mochi_physics_differentiable_test PRIVATE
         mochi_physics mochi_diffsim_headers marl EnTT)
 
-    if (MOCHI_BUILD_SHARED AND MSVC)
+    if (TARGET mochi_physics_static)
         # Re-link tests against static library (DLL still exists for other consumers)
-        get_target_property(_LIBS mochi_physics_differentiable_test LINK_LIBRARIES)
-        list(REMOVE_ITEM _LIBS mochi_physics)
-        set_target_properties(mochi_physics_differentiable_test PROPERTIES LINK_LIBRARIES "${_LIBS}")
+        mochi_remove_link_library(mochi_physics_differentiable_test mochi_physics)
         target_link_libraries(mochi_physics_differentiable_test PRIVATE mochi_physics_static)
     endif ()
 endif ()
@@ -143,11 +140,9 @@ endif ()
 if (MOCHI_BUILD_BENCHMARKS)
     target_include_directories(mochi_physics_benchmark PRIVATE ${PROJECT_SOURCE_DIR})
 
-    if (MOCHI_BUILD_SHARED AND MSVC)
+    if (TARGET mochi_physics_static)
         # Re-link benchmarks against static library (DLL still exists for other consumers)
-        get_target_property(_LIBS mochi_physics_benchmark LINK_LIBRARIES)
-        list(REMOVE_ITEM _LIBS mochi_physics)
-        set_target_properties(mochi_physics_benchmark PROPERTIES LINK_LIBRARIES "${_LIBS}")
+        mochi_remove_link_library(mochi_physics_benchmark mochi_physics)
         target_link_libraries(mochi_physics_benchmark PRIVATE mochi_physics_static)
     endif ()
 

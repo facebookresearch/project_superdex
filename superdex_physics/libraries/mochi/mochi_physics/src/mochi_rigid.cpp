@@ -66,7 +66,7 @@ void rigid::EntityGetSolution(
   TransformToRawPose(state.value, outSolution.TopRows<RigidSize::kAll>(RigidSize::kAll));
 }
 
-MOCHI_API void rigid::RigidStateToRootTransform(
+void rigid::RigidStateToRootTransform(
     Vec4r const& comLocal,
     TransformRT const& state,
     TransformRT& worldFromLocal) {
@@ -358,7 +358,7 @@ static void HandleSolverDivergence(
   }
 }
 
-MOCHI_API void mochi::rigid::EntityIncrementStep(
+void mochi::rigid::EntityIncrementStep(
     ecs::Included<TagRigidActor>,
     ecs::Excluded<TagArticulatedLinkActor>,
     CRigidState<TimeStep::Current> const& currPose,
@@ -374,7 +374,7 @@ MOCHI_API void mochi::rigid::EntityIncrementStep(
   currVel.value.SetZero();
 }
 
-MOCHI_API void mochi::rigid::EntityPreFirstStage(
+void mochi::rigid::EntityPreFirstStage(
     ecs::Included<TagRigidActor>,
     ecs::Excluded<TagArticulatedLinkActor>,
     CTimeIntegratorState const& intState,
@@ -387,7 +387,7 @@ MOCHI_API void mochi::rigid::EntityPreFirstStage(
   ComputeVelocityAtStepStart(intState, prevVel, intVels);
 }
 
-MOCHI_API void mochi::rigid::EntityPreStage(
+void mochi::rigid::EntityPreStage(
     ecs::Included<TagRigidActor>,
     ecs::Excluded<TagArticulatedLinkActor>,
     CRigidBodyInertia const& rigidInertia,
@@ -404,7 +404,7 @@ MOCHI_API void mochi::rigid::EntityPreStage(
   ComputeVelocityAtStageStart(intState, intVels, stageStartVel);
 }
 
-MOCHI_API void mochi::rigid::EntityPostStage(
+void mochi::rigid::EntityPostStage(
     ecs::Included<TagRigidActor>,
     ecs::Excluded<TagArticulatedLinkActor>,
     CConvergenceStatus const& convergence,
@@ -430,7 +430,7 @@ MOCHI_API void mochi::rigid::EntityPostStage(
   intVels.stages[intState.currentStage].value = currVel.value;
 }
 
-MOCHI_API void mochi::rigid::EntityPostLastStage(
+void mochi::rigid::EntityPostLastStage(
     ecs::Included<TagRigidActor>,
     ecs::Excluded<TagArticulatedLinkActor>,
     CRigidBodyInertia const& rigidInertia,

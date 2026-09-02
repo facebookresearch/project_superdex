@@ -144,7 +144,7 @@ MOCHI_FORCE_INLINE int constexpr GetNumConstrainedTargets(ConstraintType type) {
 }
 
 // Get the parent articulated actor for a link actor, or entt::null if not a link
-MOCHI_API entt::entity TryGetParentArticulatedActor(
+entt::entity TryGetParentArticulatedActor(
     ecs::PartialRegistry<CArticulatedEntity const> reg,
     entt::entity actor);
 

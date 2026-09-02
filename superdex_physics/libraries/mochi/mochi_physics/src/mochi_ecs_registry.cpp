@@ -97,7 +97,7 @@ ecs::ComponentTypeInfo::ComponentTypeInfo(
       _compactAndGetRawStorage(std::move(compactAndGetRawStorage)),
       _tryCtx(std::move(tryCtx)) {};
 
-MOCHI_API void ecs::InitializeComponentRegistryOnce(entt::registry& reg) {
+void ecs::InitializeComponentRegistryOnce(entt::registry& reg) {
   MOCHI_ASSERT(
       !reg.try_ctx<CComponentMetadata>(), "Redundant call to InitializeComponentRegistryOnce");
   reg.set<CComponentMetadata>();
@@ -118,7 +118,7 @@ static CComponentMetadata const& GetComponentMetadata(
       const_cast<entt::registry&>(reg), finalOnly); // Share non-const implementation
 }
 
-MOCHI_API void ecs::detail::RegisterComponentImpl(
+void ecs::detail::RegisterComponentImpl(
     entt::registry& reg,
     SReflect::TypeInfo const* reflectionInfo,
     entt::type_info const& enttInfo,
@@ -181,7 +181,7 @@ MOCHI_API void ecs::detail::RegisterComponentImpl(
           std::move(tryCtx)});
 }
 
-MOCHI_API void ecs::FinalizeComponentRegistration(entt::registry& reg) {
+void ecs::FinalizeComponentRegistration(entt::registry& reg) {
   auto& metadata = GetComponentMetadata(reg, false /*finalOnly*/);
   MOCHI_ASSERT(!metadata.isFinal, "FinalizeComponentRegistration has already been called.");
   metadata.isFinal = true;
@@ -248,7 +248,7 @@ MOCHI_API void ecs::FinalizeComponentRegistration(entt::registry& reg) {
   }
 }
 
-MOCHI_API void ecs::DetectUnregisteredComponents([[maybe_unused]] entt::registry const& reg) {
+void ecs::DetectUnregisteredComponents([[maybe_unused]] entt::registry const& reg) {
 #if MOCHI_ASSERT_VERBOSE_ENABLED
   auto const& metadata = GetComponentMetadata(reg);
   if (!metadata.hasWarned) {
@@ -272,13 +272,13 @@ MOCHI_API void ecs::DetectUnregisteredComponents([[maybe_unused]] entt::registry
 #endif // MOCHI_ASSERT_VERBOSE_ENABLED
 }
 
-MOCHI_API Span<ComponentTypeInfo const> ecs::GetAllComponentTypes(entt::registry const& reg) {
+Span<ComponentTypeInfo const> ecs::GetAllComponentTypes(entt::registry const& reg) {
   // CComponentMetadata is the first component in the list.
   auto const& metadata = GetComponentMetadata(reg);
   return MakeSpan(metadata.allComponents);
 }
 
-MOCHI_API void ecs::EnumerateComponentsWithAttribute(
+void ecs::EnumerateComponentsWithAttribute(
     entt::registry const& reg,
     SReflect::TypeId attributeId,
     std::function<void(ComponentTypeInfo const& info)> const& onEach) {
@@ -292,7 +292,7 @@ MOCHI_API void ecs::EnumerateComponentsWithAttribute(
   }
 }
 
-MOCHI_API void ecs::EnumerateComponentTypesForEntity(
+void ecs::EnumerateComponentTypesForEntity(
     entt::registry const& reg,
     entt::entity e,
     std::function<void(ComponentTypeInfo const& info)> const& onEach) {
@@ -305,7 +305,7 @@ MOCHI_API void ecs::EnumerateComponentTypesForEntity(
   }
 }
 
-MOCHI_API void ecs::EnumerateGlobalCtxComponentTypes(
+void ecs::EnumerateGlobalCtxComponentTypes(
     entt::registry const& reg,
     std::function<void(ComponentTypeInfo const& info)> const& onEach) {
   MOCHI_ASSERT_VERBOSE(!!onEach, "Invalid callback");
@@ -317,7 +317,7 @@ MOCHI_API void ecs::EnumerateGlobalCtxComponentTypes(
   }
 }
 
-MOCHI_API ComponentTypeInfo const* ecs::TryGetComponentTypeInfo(
+ComponentTypeInfo const* ecs::TryGetComponentTypeInfo(
     entt::registry const& reg,
     SReflect::TypeId typeId) {
   auto const& metadata = GetComponentMetadata(reg);
@@ -326,7 +326,7 @@ MOCHI_API ComponentTypeInfo const* ecs::TryGetComponentTypeInfo(
                                                       : &metadata.allComponents[it->second];
 }
 
-MOCHI_API ComponentTypeInfo const* ecs::TryGetComponentTypeInfo(
+ComponentTypeInfo const* ecs::TryGetComponentTypeInfo(
     entt::registry const& reg,
     entt::id_type typeId) {
   auto const& metadata = GetComponentMetadata(reg);

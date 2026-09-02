@@ -68,7 +68,10 @@ target_include_directories(mochi_mesh PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 # mochi_mesh has no DLL export annotations, so export all symbols when built as a shared library.
 if (MOCHI_BUILD_SHARED)
-    set_target_properties(mochi_mesh PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    set_target_properties(mochi_mesh PROPERTIES
+        C_VISIBILITY_PRESET default
+        CXX_VISIBILITY_PRESET default
+        WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif ()
 
 # The auto-generated test (added by mochi_add_library when MOCHI_BUILD_TESTS is on) includes the

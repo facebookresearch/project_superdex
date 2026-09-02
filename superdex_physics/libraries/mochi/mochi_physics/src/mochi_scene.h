@@ -160,8 +160,7 @@ class SceneImpl final : public Scene {
       std::string_view layerB,
       bool enable,
       Error& error) override;
-  MOCHI_API bool IsLayerContactEnabled(std::string_view layerA, std::string_view layerB)
-      const override;
+  bool IsLayerContactEnabled(std::string_view layerA, std::string_view layerB) const override;
   int GetNumContactLayers() const override;
   void EnumerateContactLayerNames(
       std::function<void(std::string_view name)> const& callback) const override;
@@ -274,7 +273,7 @@ class SceneImpl final : public Scene {
    *
    * @see EnableActorContactAsymmetric, EnableActorContactSymmetric
    */
-  [[nodiscard]] MOCHI_API bool
+  [[nodiscard]] bool
   IsActorContactEnabled(ActorHandle colliding, ActorHandle collider, Error& error) const;
 
   Actor* CreateSoftActorImpl(
@@ -294,7 +293,7 @@ class SceneImpl final : public Scene {
   void SetDebugger(std::shared_ptr<dbg::SceneDebugger> debugger);
 
   // Return a shared_ptr to the current debugger (if any). For unit tests. Thread-safe.
-  MOCHI_API std::shared_ptr<dbg::SceneDebugger> GetDebugger() const;
+  std::shared_ptr<dbg::SceneDebugger> GetDebugger() const;
 
  private:
   // Private Members:

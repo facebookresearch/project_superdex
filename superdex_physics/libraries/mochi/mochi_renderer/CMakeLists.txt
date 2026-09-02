@@ -31,7 +31,10 @@ unset(_mochi_renderer_srcs)
 # on specific symbols. To function as a shared library, it currently exports ALL
 # symbols
 if (MOCHI_BUILD_SHARED)
-    set_target_properties(mochi_renderer PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    set_target_properties(mochi_renderer PROPERTIES
+        C_VISIBILITY_PRESET default
+        CXX_VISIBILITY_PRESET default
+        WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif ()
 
 if (MOCHI_BUILD_TESTS)

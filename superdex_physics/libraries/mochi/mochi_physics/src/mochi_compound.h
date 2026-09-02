@@ -41,10 +41,10 @@ Common ECS systems for compound actors.
 */
 
 // Initializes a compound actor for some active actors and constraint definitions
-MOCHI_API void InitCompoundActor(entt::registry& reg, entt::entity compoundEntity, Error& error);
+void InitCompoundActor(entt::registry& reg, entt::entity compoundEntity, Error& error);
 
 // Add an existing actor to the compound
-MOCHI_API void AddActorToCompound(
+void AddActorToCompound(
     entt::registry& reg,
     entt::entity compoundEntity,
     entt::entity actorEntity,
@@ -57,7 +57,7 @@ void RemoveActorFromCompound(
     Error& error);
 
 // Add an existing contraint to the compound
-MOCHI_API void AddConstraintToCompound(
+void AddConstraintToCompound(
     entt::registry& reg,
     entt::entity compoundEntity,
     entt::entity constraintEntity,
@@ -82,7 +82,7 @@ void AssembleConstraints(
 
 // Update CDofOffset for each actor. If there are constraints, then also update
 // CCompoundConstraintSnle because it depends on the global dofs of each constrained actor.
-MOCHI_API void UpdateDofInfo(
+void UpdateDofInfo(
     entt::registry& reg,
     entt::entity compound,
     CGroupMembers const& members,
@@ -104,7 +104,7 @@ void OnGlobalDofsChanged(
 
 // Updates the size and sparsity of the CCompoundConstraintSnle residual and dresidual.
 // Must be called again if the DOF offset changes for any actor in the compound.
-MOCHI_API void UpdateConstraintGlobalSparsity(
+void UpdateConstraintGlobalSparsity(
     entt::registry& reg,
     CGroupMembers const& members,
     entt::entity compound);
@@ -114,7 +114,7 @@ MOCHI_API void UpdateConstraintGlobalSparsity(
 // Note that we reuse the CCompoundConstraintSnle of regular assembly for input gradient assembly,
 // because its size is always larger. However, we update the sparsity indices stored by each
 // constraint in its CConstraintGlobalInputSparsityCache
-MOCHI_API void UpdateConstraintGlobalInputSparsity(
+void UpdateConstraintGlobalInputSparsity(
     entt::registry& reg,
     CGroupMembers const& members,
     entt::entity compound);

@@ -245,7 +245,7 @@ static void UpdateDerivedStateSubpipeline(
   blended::UpdateDerivedStatePipeline(reg, descendants.blendedActors);
 }
 
-MOCHI_API void solver::UpdateJacobiansSubpipeline(
+void solver::UpdateJacobiansSubpipeline(
     TaskSemaphore& sem,
     entt::registry& reg,
     GradTarget gradTarget,

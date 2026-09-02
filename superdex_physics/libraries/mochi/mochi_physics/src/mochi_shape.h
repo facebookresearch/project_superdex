@@ -252,16 +252,15 @@ class GridSdfShape : public Shape {
   GridSdfShape& operator=(GridSdfShape&&) = delete;
 
   // Return this shape's GridSdf if it has one.
-  MOCHI_API std::shared_ptr<GridSdf const> GetGridSdf() const;
+  std::shared_ptr<GridSdf const> GetGridSdf() const;
 
   // If this shape already has a GridSdf, then return it.
   // Else if this shape does not support GridSdf, then set an error and return nullptr.
   // Else if a GridSdf can be computed, then start an async task (if not already started) and
   // return nullptr with (*outIsPending = true). To get the result of the async task, call
   // GetGridSdfSemaphore().Wait(), then GetGridSdf().
-  MOCHI_API std::shared_ptr<GridSdf const> RequestGridSdf(
-      GridSdfParams const& params,
-      bool* outIsPending) const;
+  std::shared_ptr<GridSdf const> RequestGridSdf(GridSdfParams const& params, bool* outIsPending)
+      const;
 
   // If you RequestGridSdf starts an async job, then you can use this semaphore to wait for
   // completion (see RequestGridSdf above).

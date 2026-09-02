@@ -148,7 +148,7 @@ namespace mochi::island {
 entt::entity CreateEmpty(entt::registry& reg);
 
 // Create an island, then call AddActor (see below).
-MOCHI_API entt::entity CreateForActor(entt::registry& reg, entt::entity actor);
+entt::entity CreateForActor(entt::registry& reg, entt::entity actor);
 
 // Add an actor to an island. It must NOT be a member of another island nor group.
 void AddActor(entt::registry& reg, entt::entity island, entt::entity actor);
@@ -173,7 +173,7 @@ void InitDifferentiableIsland(entt::registry& reg, entt::entity island);
 
 // Call this at the beginning of a simulation step to update all islands.
 // WARNING: Must come AFTER updating CConservativeStepBounds and CPotentialColliders for all actors.
-MOCHI_API void PreStep(entt::registry& reg);
+void PreStep(entt::registry& reg);
 
 // Return whether this island should be stepped in single-threaded mode.
 // WARNING: Must come AFTER island::PreStep, which updates CIslandDofInfo and CIslandDescendants.
@@ -193,10 +193,10 @@ void SetForceSingleIsland(entt::registry& reg, bool forceSingleIsland);
 */
 
 // FOR UNIT TESTS ONLY: Set a function to call at the start of island::PreStep.
-MOCHI_API void SetTestCallback_PreIslandUpdate(entt::registry& reg, std::function<void()> fn);
+void SetTestCallback_PreIslandUpdate(entt::registry& reg, std::function<void()> fn);
 
 // FOR UNIT TESTS ONLY: Set a function to call at the end of island::PreStep.
-MOCHI_API void SetTestCallback_PostIslandUpdate(entt::registry& reg, std::function<void()> fn);
+void SetTestCallback_PostIslandUpdate(entt::registry& reg, std::function<void()> fn);
 
 void InitializeOnce(entt::registry& reg);
 

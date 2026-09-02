@@ -87,7 +87,7 @@ void ReadMeshTransformsBytes(
 int ReadMeshTransformsBytesBodyCount(Span<char const> fileData, Error& error);
 int ReadMeshTransformsBytesJointCount(Span<char const> fileData, Error& error);
 
-MOCHI_API std::optional<std::tuple<ai::Mlp<real>, ColumnVector<real>>> LoadCromDecoderModel(
+std::optional<std::tuple<ai::Mlp<real>, ColumnVector<real>>> LoadCromDecoderModel(
     std::string_view filePath,
     std::string_view groupName,
     real scale,

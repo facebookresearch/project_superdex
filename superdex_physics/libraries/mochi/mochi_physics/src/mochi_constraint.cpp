@@ -1522,14 +1522,14 @@ void mochi::EvalConstraint(
 #undef MOCHI_TRY_CALL_EVAL_CONSTRAINT
 }
 
-template MOCHI_API void mochi::EvalConstraint<TimeStep::Current>(
+template void mochi::EvalConstraint<TimeStep::Current>(
     entt::registry&,
     entt::entity,
     Span<real>,
     Span<real>,
     Span<real>,
     bool&);
-template MOCHI_API void mochi::EvalConstraint<TimeStep::StageStart>(
+template void mochi::EvalConstraint<TimeStep::StageStart>(
     entt::registry&,
     entt::entity,
     Span<real>,
@@ -2025,22 +2025,22 @@ void mochi::AssembleConstraint(
 #undef MOCHI_TRY_INVOKE_ASSEMBLE_CONSTRAINT
 }
 
-template MOCHI_API void mochi::AssembleConstraint<GradTarget::Current>(
+template void mochi::AssembleConstraint<GradTarget::Current>(
     entt::registry&,
     entt::entity,
     AssemblyParams const&,
     CCompoundConstraintSnle&);
-template MOCHI_API void mochi::AssembleConstraint<GradTarget::Previous>(
+template void mochi::AssembleConstraint<GradTarget::Previous>(
     entt::registry&,
     entt::entity,
     AssemblyParams const&,
     CCompoundConstraintSnle&);
-template MOCHI_API void mochi::AssembleConstraint<GradTarget::CurrentInput>(
+template void mochi::AssembleConstraint<GradTarget::CurrentInput>(
     entt::registry&,
     entt::entity,
     AssemblyParams const&,
     CCompoundConstraintSnle&);
-template MOCHI_API void mochi::AssembleConstraint<GradTarget::PreviousInput>(
+template void mochi::AssembleConstraint<GradTarget::PreviousInput>(
     entt::registry&,
     entt::entity,
     AssemblyParams const&,

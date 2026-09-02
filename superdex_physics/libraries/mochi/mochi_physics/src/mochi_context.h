@@ -153,7 +153,7 @@ class ContextImpl final : public Context {
   static ShapePtr
   CreateShapeFromModelData(ModelData&& model, ExperimentalModelData&& experimental, Error& error);
   ShapeHandle RegisterShape(ConstShapePtr shape, Error& error);
-  MOCHI_API ConstShapePtr GetShapeSharedPtr(ShapeHandle shape) const;
+  ConstShapePtr GetShapeSharedPtr(ShapeHandle shape) const;
 
   // The C API needs a way to disable auto-cleanup of shape handles. Currently there is no public
   // option for this in languages that support auto-cleanup.

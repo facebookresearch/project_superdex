@@ -28,6 +28,7 @@ target_sources(mochi_physics_pybind PRIVATE ${mochi_physics_srcs})
 # core:pybind_core shared library. Built SHARED unconditionally: its whole purpose is to be a
 # single shared instance.
 add_library(mochi_pybind_core SHARED core/pybind_core.cpp)
+mochi_set_hidden_symbol_visibility(mochi_pybind_core)
 target_link_libraries(mochi_pybind_core PUBLIC mochi_physics pybind11::module)
 target_include_directories(mochi_pybind_core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/core)
 mochi_set_compiler_options(mochi_pybind_core)

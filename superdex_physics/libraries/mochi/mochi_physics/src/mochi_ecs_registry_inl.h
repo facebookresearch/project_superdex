@@ -21,7 +21,7 @@
 namespace mochi::ecs {
 
 namespace detail {
-MOCHI_API void RegisterComponentImpl(
+void RegisterComponentImpl(
     entt::registry& reg,
     SReflect::TypeInfo const* reflectionInfo,
     entt::type_info const& enttInfo,

@@ -48,7 +48,7 @@ void SetSolutions(
 } // namespace mochi
 
 namespace mochi::solver {
-MOCHI_API void SetTimeIntegratorState(
+void SetTimeIntegratorState(
     entt::registry& reg,
     Span<entt::entity const> actors,
     TimeIntegratorParams const& params,
@@ -69,9 +69,9 @@ void PreStageLocalPipeline(
     CIslandDescendants const& descendants,
     SnleProblem<real>& problem);
 
-MOCHI_API void PostStageLocalPipeline(entt::registry& reg, CIslandDescendants const& descendants);
+void PostStageLocalPipeline(entt::registry& reg, CIslandDescendants const& descendants);
 
-MOCHI_API TimeIntegratorParams CreateIslandTimeIntegrationParams(
+TimeIntegratorParams CreateIslandTimeIntegrationParams(
     entt::registry const& reg,
     CIslandDescendants const& descendants,
     IntegrationMethod const& targetMethod);
@@ -164,7 +164,7 @@ void PostNewIncrementLocalPipeline(
  * Subpipeline to update Jacobians necessary for contact Jacobians. Called from
  * UpdateDerivedStateBeforeAssembly().
  */
-MOCHI_API void UpdateJacobiansSubpipeline(
+void UpdateJacobiansSubpipeline(
     TaskSemaphore& sem,
     entt::registry& reg,
     GradTarget gradTarget,

@@ -24,9 +24,8 @@ target_link_libraries(mochi_debugger_test
     mochi_physics_dbg
     EnTT)
 
-if (MOCHI_BUILD_SHARED AND MSVC)
-    # Link tests against mochi_physics_static to avoid linker errors and EnTT
-    # type ID issues across DLL boundaries on Windows.
+# Unit tests always statically link mochi_physics, even when MOCHI_BUILD_SHARED.
+if (MOCHI_BUILD_SHARED)
     target_link_libraries(mochi_debugger_test PRIVATE mochi_physics_static)
 else ()
     target_link_libraries(mochi_debugger_test PRIVATE mochi_physics)

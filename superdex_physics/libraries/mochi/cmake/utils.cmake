@@ -355,6 +355,35 @@ function (mochi_target_ignore_all_warnings target_name)
 endfunction ()
 
 #-----------------------------------------------------------------------------
+# mochi_set_hidden_symbol_visibility
+#-----------------------------------------------------------------------------
+
+function (mochi_set_hidden_symbol_visibility target_name)
+    if ((_mochi_compiler_clang AND NOT _mochi_compiler_clang_cl) OR _mochi_compiler_gcc)
+        set_target_properties(${target_name} PROPERTIES
+            C_VISIBILITY_PRESET hidden
+            CXX_VISIBILITY_PRESET hidden)
+
+        if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+            target_compile_options(${target_name} PRIVATE -fno-semantic-interposition)
+        endif ()
+    endif ()
+endfunction ()
+
+#-----------------------------------------------------------------------------
+# mochi_remove_link_library
+#-----------------------------------------------------------------------------
+
+function (mochi_remove_link_library target_name library_name)
+    get_property(link_libraries_set TARGET "${target_name}" PROPERTY LINK_LIBRARIES SET)
+    if (link_libraries_set)
+        get_target_property(link_libraries "${target_name}" LINK_LIBRARIES)
+        list(REMOVE_ITEM link_libraries "${library_name}")
+        set_property(TARGET "${target_name}" PROPERTY LINK_LIBRARIES "${link_libraries}")
+    endif ()
+endfunction ()
+
+#-----------------------------------------------------------------------------
 # function (_mochi_add_library_impl lib_name lib_type)
 #-----------------------------------------------------------------------------
 
@@ -423,6 +452,13 @@ function (mochi_add_library lib_name)
         set(lib_type STATIC)
     endif ()
     _mochi_add_library_impl(${lib_name} ${lib_type})
+
+    # When building a shared library, hide all symbols by default. This avoids dynamic linking
+    # overhead within internal library code. The public API functions must be exported
+    # explicitly with macros (e.g. MOCHI_API).
+    if (MOCHI_BUILD_SHARED)
+        mochi_set_hidden_symbol_visibility(${lib_name})
+    endif ()
 endfunction ()
 
 #-----------------------------------------------------------------------------

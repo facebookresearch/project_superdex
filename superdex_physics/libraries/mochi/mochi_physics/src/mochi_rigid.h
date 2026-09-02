@@ -102,7 +102,7 @@ void SetRootTransform(
     CRigidState<TimeStep::Current>& outCurrState);
 
 // Update CRootTransform from rigid body state
-MOCHI_API void RigidStateToRootTransform(
+void RigidStateToRootTransform(
     Vec4r const& comLocal,
     TransformRT const& state,
     TransformRT& worldFromLocal);
@@ -164,7 +164,7 @@ inline void UpdateRigidVelocity_Dynamic(
 }
 
 // System to initialize state (position and velocity) for a new step
-MOCHI_API void EntityIncrementStep(
+void EntityIncrementStep(
     ecs::Included<TagRigidActor>,
     ecs::Excluded<TagArticulatedLinkActor>,
     CRigidState<TimeStep::Current> const& currPose,
@@ -173,7 +173,7 @@ MOCHI_API void EntityIncrementStep(
     CRigidVel<TimeStep::Previous>& prevVel);
 
 // Pre-first-stage callback.
-MOCHI_API void EntityPreFirstStage(
+void EntityPreFirstStage(
     ecs::Included<TagRigidActor>,
     ecs::Excluded<TagArticulatedLinkActor>,
     CTimeIntegratorState const& intState,
@@ -183,7 +183,7 @@ MOCHI_API void EntityPreFirstStage(
     CIntegrationRigidVels& intVels);
 
 // Pre-stage callback.
-MOCHI_API void EntityPreStage(
+void EntityPreStage(
     ecs::Included<TagRigidActor>,
     ecs::Excluded<TagArticulatedLinkActor>,
     CRigidBodyInertia const& rigidInertia,
@@ -195,7 +195,7 @@ MOCHI_API void EntityPreStage(
     CRootTransform& rootTransform);
 
 // Post-stage callback.
-MOCHI_API void EntityPostStage(
+void EntityPostStage(
     ecs::Included<TagRigidActor>,
     ecs::Excluded<TagArticulatedLinkActor>,
     CConvergenceStatus const& convergence,
@@ -210,7 +210,7 @@ MOCHI_API void EntityPostStage(
     CIntegrationRigidVels& intVels);
 
 // Post-last-stage callback.
-MOCHI_API void EntityPostLastStage(
+void EntityPostLastStage(
     ecs::Included<TagRigidActor>,
     ecs::Excluded<TagArticulatedLinkActor>,
     CRigidBodyInertia const& rigidInertia,
@@ -289,7 +289,7 @@ MOCHI_FORCE_INLINE void SetupColliderJacobians(
  * Any derived state that is required for assembly and not updated in this system MUST be
  * updated in EntityAssemble or in mochi_solve's UpdateDerivedStateBeforeAssembly.
  */
-MOCHI_API void EntityPostNewSolution(
+void EntityPostNewSolution(
     ColumnVectorView<real const> solution,
     ecs::Included<TagRigidActor>,
     ecs::Excluded<TagArticulatedLinkActor>,
