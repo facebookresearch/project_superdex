@@ -28,62 +28,68 @@ namespace mochi {
 */
 
 /**
- * @brief Allocator adapter that rounds up all allocation sizes and alignments to a minimum of
- * kMinAlignment bytes. Delegates to an inner allocator for the actual memory operations.
- *
- * @tparam kMinAlignment Minimum alignment in bytes. Must be a power of two.
+ * @brief Allocator adapter that rounds up all allocation sizes and alignments to a specified
+ * minimum value. Delegates to an inner allocator for the actual memory operations.
  */
-template <size_t kMinAlignment>
 class AlignedAllocator final : public Allocator {
-  static_assert(
-      kMinAlignment >= 1 && (kMinAlignment & (kMinAlignment - 1)) == 0,
-      "kMinAlignment must be a power of two");
-
  public:
   /**
-   * @brief Construct an AlignedAllocator using the default allocator.
-   */
-  AlignedAllocator() : _allocator(GetDefaultAllocator()) {}
-
-  /**
-   * @brief Construct an AlignedAllocator with the specified inner allocator.
+   * @brief Construct an AlignedAllocator with the specified minimum alignment.
    *
-   * @param[in] allocator Pointer to the inner allocator. Must not be nullptr.
+   * @param minAlignment All allocation sizes and alignments will be rounded up to this value. Must
+   * be a power of two.
+   * @param innerAllocator Allocator used for backing storage. Defaults to @ref
+   * GetDefaultAllocator().
    *
    * @note The inner allocator must outlive this AlignedAllocator.
+
    */
-  explicit AlignedAllocator(Allocator* allocator) : _allocator(allocator) {
-    MOCHI_ALLOCATOR_ASSERT(allocator != nullptr, "Inner allocator must not be nullptr");
+  explicit AlignedAllocator(size_t minAlignment, Allocator* innerAllocator = GetDefaultAllocator())
+      : _minAlignment(minAlignment), _allocator(innerAllocator) {
+    MOCHI_ASSERT(IsPowerOfTwo(minAlignment), "Minimum alignment must be a power of two");
+    MOCHI_ASSERT(innerAllocator != nullptr, "Inner allocator must not be nullptr");
+  }
+
+  /**
+   * @brief Return this allocator's minimum alignment value
+   */
+  [[nodiscard]] size_t GetMinimumAlignment() const {
+    return _minAlignment;
   }
 
  private:
-  static constexpr std::size_t RoundUpToAlign(std::size_t value) {
-    return (value + kMinAlignment - 1) & ~(kMinAlignment - 1);
+  constexpr std::size_t RoundUpToAlign(std::size_t value) const {
+    return (value + _minAlignment - 1) & ~(_minAlignment - 1);
   }
 
   void* do_allocate(std::size_t sizeInBytes, std::size_t alignment) override {
-    return _allocator->allocate(RoundUpToAlign(sizeInBytes), Max(alignment, kMinAlignment));
+    return _allocator->allocate(RoundUpToAlign(sizeInBytes), Max(alignment, _minAlignment));
   }
 
   void do_deallocate(void* ptr, std::size_t sizeInBytes, std::size_t alignment) override {
-    _allocator->deallocate(ptr, RoundUpToAlign(sizeInBytes), Max(alignment, kMinAlignment));
+    _allocator->deallocate(ptr, RoundUpToAlign(sizeInBytes), Max(alignment, _minAlignment));
   }
 
   bool do_is_equal(Allocator const& other) const noexcept override {
-    auto const* otherAligned = dynamic_cast<AlignedAllocator<kMinAlignment> const*>(&other);
-    return otherAligned != nullptr && _allocator->is_equal(*otherAligned->_allocator);
+    auto const* otherAligned = dynamic_cast<AlignedAllocator const*>(&other);
+    return (otherAligned != nullptr) && (otherAligned->_minAlignment == _minAlignment) &&
+        _allocator->is_equal(*otherAligned->_allocator);
   }
 
+  size_t _minAlignment = 1;
   Allocator* _allocator = nullptr;
 };
 
 /*********************************************************************************************
-  CacheAlignedAllocator
+  GetCacheAlignedAllocator
 */
 
 /**
- * @brief An @ref AlignedAllocator that aligns to the CPU cache line size.
+ * @brief Return a pointer to a @ref AlignedAllocator that will place every allocation at the start
+ * of a data cache line.
+ *
+ * @note This function returns a pointer to a static object. Do not attempt to delete it.
  */
-using CacheAlignedAllocator = AlignedAllocator<MOCHI_CONSERVATIVE_CACHE_LINE_SIZE>;
+[[nodiscard]] AlignedAllocator* GetCacheAlignedAllocator();
 
 } // namespace mochi

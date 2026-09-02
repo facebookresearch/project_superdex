@@ -78,6 +78,7 @@ static void TestFiloAllocator_VariousAlignments(FiloAllocator* alloc) {
   char* e = static_cast<char*>(alloc->allocate(1, 32));
   char* f = static_cast<char*>(alloc->allocate(1, 64));
   char* g = static_cast<char*>(alloc->allocate(1, 128));
+  char* h = static_cast<char*>(alloc->allocate(1, 256));
   EXPECT_EQ(0, reinterpret_cast<size_t>(a) % 2);
   EXPECT_EQ(0, reinterpret_cast<size_t>(b) % 4);
   EXPECT_EQ(0, reinterpret_cast<size_t>(c) % 8);
@@ -85,6 +86,8 @@ static void TestFiloAllocator_VariousAlignments(FiloAllocator* alloc) {
   EXPECT_EQ(0, reinterpret_cast<size_t>(e) % 32);
   EXPECT_EQ(0, reinterpret_cast<size_t>(f) % 64);
   EXPECT_EQ(0, reinterpret_cast<size_t>(g) % 128);
+  EXPECT_EQ(0, reinterpret_cast<size_t>(h) % 256);
+  alloc->deallocate(h, 1, 256);
   alloc->deallocate(g, 1, 128);
   alloc->deallocate(f, 1, 64);
   alloc->deallocate(e, 1, 32);

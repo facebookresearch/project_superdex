@@ -53,7 +53,7 @@ class FiloAllocator final : public Allocator {
 
  public:
   static constexpr size_t kMinAlignment = 8;
-  static constexpr size_t kMaxAlignment = 128;
+  static constexpr size_t kMaxAlignment = 256;
   static constexpr size_t kMinPageSize = kMinAlignment;
   static constexpr size_t kHeaderSize = sizeof(Header);
   static constexpr size_t kMinBufferSize = kMinAlignment + kHeaderSize;
