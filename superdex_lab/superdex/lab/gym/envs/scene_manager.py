@@ -24,7 +24,7 @@ from __future__ import annotations
 import dataclasses
 from collections.abc import Callable
 
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.physics.utils import render_model_registry
 
 ########################################################################################
@@ -41,8 +41,8 @@ class SceneCleanupError(RuntimeError):
 
 
 def destroy_scene_with_cleanup(
-    scene: physics.Scene,
-    initial_state: physics.StateHandle | None,
+    scene: sdp.Scene,
+    initial_state: sdp.StateHandle | None,
     cleanup_callbacks: list[Callable[[], None]],
 ) -> None:
     """Releases all scene-owned resources, then destroys the scene.
@@ -78,7 +78,7 @@ def destroy_scene_with_cleanup(
     # future scene and render an unrelated GLB.
     render_model_registry.clear_scene(scene)
     try:
-        physics.destroy_scene(scene)
+        sdp.destroy_scene(scene)
     except Exception as error:
         first_error = first_error or error
     if first_error is not None:
@@ -89,11 +89,11 @@ def destroy_scene_with_cleanup(
 class SceneData:
     """Container for shared scene data."""
 
-    scene: physics.Scene
+    scene: sdp.Scene
     """Pointer to the shared Mochi scene."""
-    initial_state: physics.StateHandle
+    initial_state: sdp.StateHandle
     """Initial state of the scene upon initialization."""
-    agent: physics.Actor | None
+    agent: sdp.Actor | None
     """Pointer to the agent actor in the scene."""
     ref_count: int
     """Reference count for this scene. Used to manage cleanup."""
@@ -141,8 +141,8 @@ class SceneManager:
     def register_scene(
         self,
         scene_name: str,
-        scene: physics.Scene,
-        agent: physics.Actor,
+        scene: sdp.Scene,
+        agent: sdp.Actor,
         cleanup_callbacks: list[Callable[[], None]] | None = None,
     ) -> SceneData:
         """
@@ -211,7 +211,7 @@ class SceneManager:
 
         scene_data.ref_count -= 1
         if scene_data.ref_count <= 0:
-            assert physics.is_initialized()
+            assert sdp.is_initialized()
             del self._scenes[scene_name]
             cleanup_callbacks = scene_data.cleanup_callbacks
             scene_data.cleanup_callbacks = []

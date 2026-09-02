@@ -21,7 +21,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import superdex.physics as mochi
+import superdex.physics as sdp
 from superdex.physics.utils.logging import (
     configure_logger,
     forward_mochi_logs_to_logger,
@@ -62,7 +62,7 @@ class MochiContext:
 
     def __enter__(self) -> MochiContext:
         """Initialize SuperDex Physics and configure logging."""
-        mochi.initialize(num_worker_threads=self.num_worker_threads)
+        sdp.initialize(num_worker_threads=self.num_worker_threads)
         logger = self.logger
         if logger is not None:
             configure_logger()
@@ -71,4 +71,4 @@ class MochiContext:
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Shut down SuperDex Physics and release all resources."""
-        mochi.shutdown()
+        sdp.shutdown()

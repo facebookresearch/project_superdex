@@ -30,7 +30,7 @@ per-environment gating is required:
 import unittest
 from typing import Callable
 
-import superdex.physics as physics
+import superdex.physics as sdp
 from numpy.testing import assert_array_equal
 from superdex.lab.gym.utils.env_discovery import discover_envs, EnvEntry
 
@@ -49,8 +49,8 @@ class TestSceneSharing(unittest.TestCase):
 
     def tearDown(self) -> None:
         # Force the Mochi context to be shut down after each test.
-        if physics.is_initialized():
-            physics.shutdown()
+        if sdp.is_initialized():
+            sdp.shutdown()
 
 
 def _make_scene_sharing_test(entry: EnvEntry) -> Callable[[TestSceneSharing], None]:

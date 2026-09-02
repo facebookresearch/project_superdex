@@ -17,14 +17,14 @@ from __future__ import annotations
 import unittest
 
 import superdex.lab.gym as gym_namespace
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.lab.gym.envs.benchmarks.cartpole_env import CartPoleEnv, CartPoleEnvCfg
 
 
 class SuperdexLabTest(unittest.TestCase):
     def tearDown(self) -> None:
-        if physics.is_initialized():
-            physics.shutdown()
+        if sdp.is_initialized():
+            sdp.shutdown()
 
     def test_canonical_namespace_exports_env_symbols(self) -> None:
         self.assertIs(gym_namespace.MochiEnv, gym_namespace.envs.MochiEnv)

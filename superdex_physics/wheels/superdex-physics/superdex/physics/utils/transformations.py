@@ -19,7 +19,7 @@ rotations and transformations.
 
 import numpy as np
 import numpy.typing as npt
-import superdex.physics as mochi
+import superdex.physics as sdp
 from scipy.spatial import transform as tr
 
 ########################################################################################
@@ -148,7 +148,7 @@ def orthonormalize_transform(transform: npt.NDArray) -> npt.NDArray[float]:
     return transform
 
 
-def transformrt_to_numpy(transform: mochi.TransformRT) -> npt.NDArray[float]:
+def transformrt_to_numpy(transform: sdp.TransformRT) -> npt.NDArray[float]:
     """Convert a TransformRT to numpy array."""
     return np.stack(
         (

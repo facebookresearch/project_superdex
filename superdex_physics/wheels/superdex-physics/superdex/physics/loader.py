@@ -333,7 +333,7 @@ def _raise_missing_native_module(
     module_name: str,
     precision_module_name: str,
     *,
-    payload: NativePayload,
+    payload: NativePayload | None,
     found_stub_only: bool,
     missing_error: ModuleNotFoundError | None,
     build_error: ModuleNotFoundError | None,
@@ -343,7 +343,8 @@ def _raise_missing_native_module(
         message += "; found only a stub namespace package"
     if build_error is not None:
         message += f"; build error: {build_error}"
-    message += _missing_payload_guidance(payload)
+    if payload is not None:
+        message += _missing_payload_guidance(payload)
     # Preserve the last miss as the cause: prefer the build failure when a source build
     # was attempted, otherwise the original import miss. Parenthesized so the `from` cause
     # is unambiguously the result of the `or`, not a precedence surprise.
@@ -353,7 +354,7 @@ def _raise_missing_native_module(
 def import_module(
     module_name: str,
     *,
-    payload: NativePayload,
+    payload: NativePayload | None = None,
     allow_source_build: bool = False,
 ) -> ModuleType:
     """Import one selected-precision native SuperDex module.
@@ -362,7 +363,8 @@ def import_module(
     """
 
     precision_module_name = precision_variant_for_module(module_name)
-    _ensure_packaged_native_search_path(payload)
+    if payload is not None:
+        _ensure_packaged_native_search_path(payload)
 
     # A prior from-source build (here or in a parent) records sibling shared libraries and
     # extension dirs; applying them first lets a cached import resolve without rebuilding.

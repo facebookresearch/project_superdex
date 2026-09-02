@@ -27,7 +27,15 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
-SUPERDEX_ROOT: Path = Path(__file__).resolve().parents[1] / "superdex"
+_MODULE_PATH = Path(__file__).resolve()
+_PAR_ROOT = next(
+    (parent for parent in _MODULE_PATH.parents if parent.suffix == ".par"), None
+)
+SUPERDEX_ROOT: Path = (
+    _PAR_ROOT / "superdex"
+    if _PAR_ROOT is not None
+    else _MODULE_PATH.parents[1] / "superdex"
+)
 PHYSICS_ROOT: Path = SUPERDEX_ROOT / "physics"
 
 
@@ -48,13 +56,25 @@ def ensure_test_package(name: str, path: Path) -> ModuleType:
 
 
 def load_test_module(qualified_name: str, path: Path) -> ModuleType:
-    spec = importlib.util.spec_from_file_location(qualified_name, path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Could not load test module {qualified_name!r} from {path}")
+    try:
+        source = path.read_bytes()
+    except (FileNotFoundError, NotADirectoryError):
+        loader = globals().get("__loader__")
+        if loader is None or not hasattr(loader, "get_data"):
+            raise
+        archive_path = Path("superdex") / path.relative_to(SUPERDEX_ROOT)
+        source = loader.get_data(archive_path.as_posix())
+
+    spec = importlib.util.spec_from_loader(
+        qualified_name, loader=None, origin=str(path)
+    )
+    if spec is None:
+        raise RuntimeError(f"Could not create module spec for {qualified_name!r}")
 
     module = importlib.util.module_from_spec(spec)
+    module.__file__ = str(path)
     sys.modules[qualified_name] = module
-    spec.loader.exec_module(module)
+    exec(compile(source, str(path), "exec"), module.__dict__)
 
     parent_name, _, child_name = qualified_name.rpartition(".")
     parent = sys.modules.get(parent_name)

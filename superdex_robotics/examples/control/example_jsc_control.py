@@ -29,13 +29,13 @@ Usage:
 """
 
 import numpy as np
-import superdex.physics as physics
-import superdex.robotics as robotics
+import superdex.physics as sdp
+import superdex.robotics as sdr
 
 # The build's `real` type. A pose handed to a controller Target is copied into the
 # Target's own storage, so matching the dtype here keeps that a straight copy rather
 # than an element-by-element conversion.
-np_real = np.float64 if physics.uses_double_precision() else np.float32
+np_real = np.float64 if sdp.uses_double_precision() else np.float32
 from superdex.physics.paths import resolve_asset
 
 # The non-thumb knuckle joints (finger 1 is the thumb). For each of the other
@@ -59,18 +59,18 @@ def main() -> None:
 
     # Initialize the physics engine before creating scenes or actors.
     # num_worker_threads=0 runs single-threaded; pass -1 to auto-select.
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
 
     # Create an empty scene. SuperDex robots use a Z-up convention, so gravity
     # points down the -Z axis.
-    scene = physics.create_scene("JSC Control Example")
+    scene = sdp.create_scene("JSC Control Example")
     scene.set_gravity([0, 0, -9.81])
 
-    bot_prefab = robotics.load_bot_prefab_from_file(bot_path)
+    bot_prefab = sdr.load_bot_prefab_from_file(bot_path)
 
     # The hand ships with a free (6-DoF) world joint at index 0. Make it a Hard
     # (0-DoF weld) joint so the hand is rigidly fixed to the world.
-    bot_prefab.joints[0].type = physics.ArticulatedJointType.HARD
+    bot_prefab.joints[0].type = sdp.ArticulatedJointType.HARD
 
     # Map each actuated joint name to its DOF index. DOFs follow the prefab joint
     # order; after the weld above every remaining moving joint is a 1-DoF revolute
@@ -81,15 +81,15 @@ def main() -> None:
     dof = 0
     for i in range(len(bot_prefab.joints)):
         joint = bot_prefab.joints[i]
-        if joint.type == physics.ArticulatedJointType.REVOLUTE:
+        if joint.type == sdp.ArticulatedJointType.REVOLUTE:
             joint_name_to_dof[joint.name] = dof
             dof += 1
     knuckle_dofs = [joint_name_to_dof[name] for name in KNUCKLE_JOINTS]
 
     # Instantiate the prefab as a live Bot. The robotics context tracks every bot
     # and controller you create.
-    robotics_context = robotics.create_context()
-    bot = robotics.create_bot(scene, bot_prefab, robotics_context)
+    robotics_context = sdr.create_context()
+    bot = sdr.create_bot(scene, bot_prefab, robotics_context)
     bot_actor = bot.get_articulated_actor()
 
     num_dofs = bot_actor.get_num_dofs()
@@ -99,7 +99,7 @@ def main() -> None:
     # create_controller attaches the controller to the bot. JSC spans every DOF;
     # per-joint gains (kp/kd) are the same length as the pose.
     jsc = bot.create_controller("BASIC_JSC_PD")
-    jsc_params = robotics.ControllerBasicJscPdParams()
+    jsc_params = sdr.ControllerBasicJscPdParams()
     jsc_params.kp = np.full(num_dofs, 3.0, dtype=np.float32)  # position gain [Nm/rad]
     jsc_params.kd = np.full(num_dofs, 0.2, dtype=np.float32)  # damping gain [Nms/rad]
     jsc_params.saturation = np.full(num_dofs, 2.0, dtype=np.float32)  # torque clamp
@@ -109,7 +109,7 @@ def main() -> None:
     # Read the hand's default joint pose. get_articulated_pose fills a
     # DynamicArrayReal, which matches the engine's float precision; copy it to a
     # numpy array to build per-step targets.
-    default_pose = physics.DynamicArrayReal(num_dofs)
+    default_pose = sdp.DynamicArrayReal(num_dofs)
     bot_actor.get_articulated_pose(default_pose)
     hold_pose = np.array(default_pose, dtype=np_real)
 
@@ -126,15 +126,15 @@ def main() -> None:
     # Declare the scene's coordinate convention so the debugger renders it the
     # right way up: SuperDex is X-forward, Y-left, Z-up (FLU). Must come before
     # attach(), which starts the server.
-    physics.get_debug_server().set_coordinate_space(
-        physics.CoordinateSpace(axes=physics.CoordinateSpaceAxes.FLU)
+    sdp.get_debug_server().set_coordinate_space(
+        sdp.CoordinateSpace(axes=sdp.CoordinateSpaceAxes.FLU)
     )
 
     # Launch and connect the SuperDex Physics Debugger, a separate desktop app for
     # viewing and interacting with the simulation. The loop runs until you close
     # the debugger; attach() returns False if it can't connect.
-    if physics.debugger.attach():
-        while physics.debugger.is_attached():
+    if sdp.debugger.attach():
+        while sdp.debugger.is_attached():
             # Start from the default pose, then drive the four knuckles with a
             # phase-shifted sine.
             t = scene.get_total_simulation_time()
@@ -151,7 +151,7 @@ def main() -> None:
             tau = np.asarray(
                 jsc.compute_output(
                     obsv,
-                    robotics.ControllerBasicJscPdTarget(target_pose=target_pose),
+                    sdr.ControllerBasicJscPdTarget(target_pose=target_pose),
                 ),
                 dtype=np.float32,
             )
@@ -162,8 +162,8 @@ def main() -> None:
             scene.step(time_step)
 
     # Tear down: destroy the bot, then shut the engine down cleanly.
-    robotics.destroy_bot(scene, bot)
-    physics.shutdown()
+    sdr.destroy_bot(scene, bot)
+    sdp.shutdown()
     print("Simulation complete.")
 
 

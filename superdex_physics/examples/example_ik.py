@@ -41,7 +41,7 @@ from __future__ import annotations
 import random
 import time
 
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.physics import Actor, Scene
 from superdex.physics.paths import resolve_asset, resolve_asset_root
 
@@ -90,9 +90,9 @@ TARGET_HOLD_SECONDS = 1.0  # [s]
 
 def load_articulation(scene: Scene) -> Actor:
     """Load the mixed-joint articulation and pin its free-floating base."""
-    prefab_params = physics.prefab.PrefabParams()
+    prefab_params = sdp.prefab.PrefabParams()
     prefab_params.scale = PREFAB_SCALE
-    result = physics.prefab.add_to_scene(
+    result = sdp.prefab.add_to_scene(
         prefab_path=str(resolve_asset(PREFAB_PATH)),
         root_path=str(resolve_asset_root(PREFAB_PATH)),
         scene=scene,
@@ -106,14 +106,14 @@ def load_articulation(scene: Scene) -> Actor:
 
     root = articulation.get_nested_link_actors()[ROOT_LINK]
 
-    position_params = physics.RigidPivotPositionConstraintParams()
+    position_params = sdp.RigidPivotPositionConstraintParams()
     position_params.local_position = ROOT_PIVOT_LOCAL_POSITION
     position_params.target_position = [0, 0, 0]
     position_params.actor = root
     position_params.stiffness = ROOT_PIVOT_STIFFNESS
     scene.create_rigid_pivot_position_constraint(position_params)
 
-    rotation_params = physics.RigidPivotRotationConstraintParams()
+    rotation_params = sdp.RigidPivotRotationConstraintParams()
     rotation_params.local_rotation = [0, 0, 0]
     rotation_params.target_rotation = [0, 0, 0]
     rotation_params.actor = root
@@ -156,7 +156,7 @@ def set_position_target(
 
 def run_interactive(ik_solver, scene: Scene, end_effector) -> None:
     """Alternate position and rotation targets while the debugger is attached."""
-    if not physics.debugger.attach():
+    if not sdp.debugger.attach():
         return
 
     rng = random.Random(RANDOM_SEED)
@@ -165,7 +165,7 @@ def run_interactive(ik_solver, scene: Scene, end_effector) -> None:
     converged = 0
     want_rotation = True
 
-    while physics.debugger.is_attached():
+    while sdp.debugger.is_attached():
         if want_rotation:
             target = set_rotation_target(ik_solver, end_effector, rng)
             kind = "rotation [rad]"
@@ -183,7 +183,7 @@ def run_interactive(ik_solver, scene: Scene, end_effector) -> None:
         # Whether the Newton solve itself converged, which is independent of
         # whether the target it converged towards was reachable.
         status = scene.get_solver_stats().convergence_status
-        if status == physics.ConvergenceStatus.CONVERGED:
+        if status == sdp.ConvergenceStatus.CONVERGED:
             converged += 1
 
         if solves % REPORT_INTERVAL == 0:
@@ -204,17 +204,17 @@ def run_interactive(ik_solver, scene: Scene, end_effector) -> None:
 
 def main() -> None:
     """Run the interactive inverse-kinematics tutorial."""
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
 
     # The solver reconfigures and takes ownership of this scene.
-    ik_scene = physics.create_scene("Inverse Kinematics Scene")
+    ik_scene = sdp.create_scene("Inverse Kinematics Scene")
     ik_scene.set_gravity([0, 0, 0])
     articulation = load_articulation(ik_scene)
     # SpanConstActorHandle does not support negative indexing.
     links = articulation.get_nested_link_actors()
     end_effector = links[len(links) - 1]
 
-    ik_solver = physics.experimental.create_ik_solver(ik_scene)
+    ik_solver = sdp.experimental.create_ik_solver(ik_scene)
     ik_solver_params = ik_solver.get_solver_params()
     ik_solver_params.max_iter = MAX_ITER
     ik_solver.set_solver_params(ik_solver_params)
@@ -222,9 +222,9 @@ def main() -> None:
     run_interactive(ik_solver, ik_scene, end_effector)
 
     # Destroys ik_scene as well; do not destroy the scene separately.
-    physics.experimental.destroy_ik_solver(ik_solver)
+    sdp.experimental.destroy_ik_solver(ik_solver)
 
-    physics.shutdown()
+    sdp.shutdown()
     print("Simulation complete.")
 
 

@@ -34,8 +34,8 @@ Usage:
 import math
 from typing import NamedTuple
 
-import superdex.physics as physics
-import superdex.robotics as robotics
+import superdex.physics as sdp
+import superdex.robotics as sdr
 from superdex.physics.paths import get_assets_root, resolve_asset
 
 
@@ -140,15 +140,15 @@ def main() -> None:
 
     # Initialize the physics engine before creating scenes or actors.
     # num_worker_threads=0 runs single-threaded; pass -1 to auto-select.
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
 
     # Create an empty scene. SuperDex robots use a Z-up convention, so gravity
     # points down the -Z axis.
-    scene = physics.create_scene("Scene Loading Example")
+    scene = sdp.create_scene("Scene Loading Example")
     scene.set_gravity([0, 0, -9.81])
 
     # Add a static ground plane (normal points up, +Z).
-    plane_shape = physics.create_plane_shape(normal=[0, 0, 1], distance=0)
+    plane_shape = sdp.create_plane_shape(normal=[0, 0, 1], distance=0)
     scene.create_rigid_actor(name="ground", shape=plane_shape, is_static=True)
 
     # --- The bots --------------------------------------------------------------
@@ -156,36 +156,32 @@ def main() -> None:
     # and starting pose are fields on that prefab, so set them before creating the
     # bot: create_bot builds the articulated actor at world_from_root and seeds it
     # with default_pose. The robotics context tracks every bot you create.
-    robotics_context = robotics.create_context()
+    robotics_context = sdr.create_context()
     bots = []
     for placement in BOTS:
-        bot_prefab = robotics.load_bot_prefab_from_file(
-            str(resolve_asset(placement.asset))
-        )
-        bot_prefab.world_from_root = physics.TransformRT(
+        bot_prefab = sdr.load_bot_prefab_from_file(str(resolve_asset(placement.asset)))
+        bot_prefab.world_from_root = sdp.TransformRT(
             rotation=placement.rotation,
             translation=placement.translation,
         )
         bot_prefab.default_pose = placement.initial_pose
 
-        bot = robotics.create_bot(scene, bot_prefab, robotics_context)
+        bot = sdr.create_bot(scene, bot_prefab, robotics_context)
         bots.append(bot)
 
         # Use Mochi's implicit articulated pose controller to hold the pose that
         # create_bot just applied. Empty Cartesian tracking arrays leave link
         # position and rotation control disabled.
-        tracking = physics.PoseTrackingParams(
+        tracking = sdp.PoseTrackingParams(
             stiffness=POSE_STIFFNESS,
             damping=POSE_DAMPING,
         )
-        pose_params = physics.PoseControllerParams(
-            joint_tracking=physics.DynamicArrayPoseTrackingParams([tracking])
+        pose_params = sdp.PoseControllerParams(
+            joint_tracking=sdp.DynamicArrayPoseTrackingParams([tracking])
         )
         pose_controller = bot.create_controller("MOCHI_ARTICULATED_POSE")
         pose_controller.set_params(
-            robotics.ControllerMochiArticulatedPoseParams(
-                pose_controller_params=pose_params
-            )
+            sdr.ControllerMochiArticulatedPoseParams(pose_controller_params=pose_params)
         )
         pose_controller.initialize(True)
 
@@ -198,13 +194,13 @@ def main() -> None:
     # PrefabParams carries its placement and a name prefix, so the actors land as
     # "box_and_blocks/<actor name>". Paths inside the prefab resolve against
     # root_path.
-    prefab_result = physics.prefab.add_to_scene(
+    prefab_result = sdp.prefab.add_to_scene(
         prefab_path=str(resolve_asset(TASK_PREFAB)),
         root_path=assets_root,
         scene=scene,
-        params=physics.prefab.PrefabParams(
+        params=sdp.prefab.PrefabParams(
             name="box_and_blocks",
-            rotation=physics.Quaternion.rotation_z(TASK_PREFAB_YAW),
+            rotation=sdp.Quaternion.rotation_z(TASK_PREFAB_YAW),
             translation=[0.0, TASK_PREFAB_OFFSET_Y, BOTS[0].translation[2]],
         ),
     )
@@ -218,21 +214,21 @@ def main() -> None:
     # Declare the scene's coordinate convention so the debugger renders it the
     # right way up: SuperDex is X-forward, Y-left, Z-up (FLU). Must come before
     # attach(), which starts the server.
-    physics.get_debug_server().set_coordinate_space(
-        physics.CoordinateSpace(axes=physics.CoordinateSpaceAxes.FLU)
+    sdp.get_debug_server().set_coordinate_space(
+        sdp.CoordinateSpace(axes=sdp.CoordinateSpaceAxes.FLU)
     )
 
     # Launch and connect the SuperDex Physics Debugger, a separate desktop app for
     # viewing and interacting with the simulation. The loop runs until you close
     # the debugger; attach() returns False if it can't connect.
-    if physics.debugger.attach():
-        while physics.debugger.is_attached():
+    if sdp.debugger.attach():
+        while sdp.debugger.is_attached():
             scene.step(time_step)
 
     # Tear down: destroy the bots, then shut the engine down cleanly.
     for bot in bots:
-        robotics.destroy_bot(scene, bot)
-    physics.shutdown()
+        sdr.destroy_bot(scene, bot)
+    sdp.shutdown()
     print("Simulation complete.")
 
 

@@ -16,7 +16,7 @@ import unittest
 from contextlib import contextmanager
 from typing import Generator
 
-import superdex.physics as mochi
+import superdex.physics as sdp
 from superdex.physics import Actor, Quaternion, Real3, Scene, TransformRT
 from superdex.physics.paths import resolve_asset
 
@@ -29,14 +29,14 @@ class MochiContextTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         """Initialize SuperDex Physics before running any tests."""
-        if not mochi.is_initialized():
-            mochi.initialize(num_worker_threads=0)
+        if not sdp.is_initialized():
+            sdp.initialize(num_worker_threads=0)
 
     @classmethod
     def tearDownClass(cls) -> None:
         """Shut down SuperDex Physics after all tests have completed."""
-        if mochi.is_initialized():
-            mochi.shutdown()
+        if sdp.is_initialized():
+            sdp.shutdown()
 
 
 ########################################################################################
@@ -53,7 +53,7 @@ def _add_rigid_object(
 
     # Load the shape asset.
     asset_path = resolve_asset(relative_shape_path)
-    shape = mochi.load_shape_from_file(str(asset_path))
+    shape = sdp.load_shape_from_file(str(asset_path))
 
     # Create the rigid actor.
     actor = scene.create_rigid_actor(name=name, shape=shape)
@@ -98,19 +98,19 @@ def add_rigid_sphere(
 @contextmanager
 def make_empty_scene() -> Generator[Scene, None, None]:
     """Creates an empty scene and returns it."""
-    scene = mochi.create_scene("")
+    scene = sdp.create_scene("")
     if scene is None:
         raise RuntimeError("Failed to create empty scene")
     yield scene
-    mochi.destroy_scene(scene)
+    sdp.destroy_scene(scene)
 
 
 @contextmanager
 def make_single_rigid_cube_scene() -> Generator[Scene, None, None]:
     """Creates a scene with a single rigid cube."""
-    scene = mochi.create_scene("")
+    scene = sdp.create_scene("")
     if scene is None:
         raise RuntimeError("Failed to create scene")
     add_rigid_cube(scene, "Cube")
     yield scene
-    mochi.destroy_scene(scene)
+    sdp.destroy_scene(scene)

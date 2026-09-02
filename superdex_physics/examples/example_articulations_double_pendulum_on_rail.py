@@ -39,11 +39,11 @@ simulated second.
 from __future__ import annotations
 
 import numpy as np
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.physics import Actor, Scene
 from superdex.physics.paths import resolve_asset
 
-np_real = np.float64 if physics.uses_double_precision() else np.float32
+np_real = np.float64 if sdp.uses_double_precision() else np.float32
 
 # --- Locked scene spec (mirrors the .mochi_scene prefab) ---------------------
 # Frame: +Y up, rail along +X. The root/CeilingWeld is anchored at the ceiling.
@@ -83,44 +83,44 @@ RAIL_PUSH_FORCE = 1.0  # [N] external force applied to the rail DoF
 DAMP_VISCOUS = 0.022  # [N*m*s/rad] pendulum-joint friction for the damping event
 
 
-def _make_joints() -> list[physics.ArticulatedJointParams]:
+def _make_joints() -> list[sdp.ArticulatedJointParams]:
     """Build the 4 inbound joints of the chain (joints[i] drives links[i])."""
     return [
         # Root weld: fixes the rail housing to the world. Contributes 0 DoFs.
-        physics.ArticulatedJointParams(
+        sdp.ArticulatedJointParams(
             name="CeilingWeld",
-            type=physics.ArticulatedJointType.HARD,
+            type=sdp.ArticulatedJointType.HARD,
         ),
         # Horizontal rail: the cart slides along +X, clamped by joint limits. It
         # is the only joint that carries viscous friction and an armature inertia.
-        physics.ArticulatedJointParams(
+        sdp.ArticulatedJointParams(
             name="Rail",
-            type=physics.ArticulatedJointType.PRISMATIC,
+            type=sdp.ArticulatedJointType.PRISMATIC,
             axis=[1, 0, 0],
-            parent_link_from_joint=physics.TransformRT(
+            parent_link_from_joint=sdp.TransformRT(
                 translation=[RAIL_SCALE[0] / 2, 0, RAIL_SCALE[2] / 2]
             ),
             min_limit=[-0.2, 0, 0],  # scalar limit times axis
             max_limit=[0.2, 0, 0],  # scalar limit times axis
             limit_stiffness=250.0,
             limit_damping=8.8,
-            friction=physics.ArticulatedJointFrictionParams(viscous=0.018),
+            friction=sdp.ArticulatedJointFrictionParams(viscous=0.018),
             inertia=0.125,
         ),
         # Upper pendulum hinge: revolute about Z, swings in the vertical X-Y plane.
-        physics.ArticulatedJointParams(
+        sdp.ArticulatedJointParams(
             name="UpperSwing",
-            type=physics.ArticulatedJointType.REVOLUTE,
+            type=sdp.ArticulatedJointType.REVOLUTE,
             axis=[0, 0, -1],
-            parent_link_from_joint=physics.TransformRT(
+            parent_link_from_joint=sdp.TransformRT(
                 translation=[CART_SCALE[0] / 2, 0, CART_SCALE[2] / 2]
             ),
         ),
         # Lower pendulum joint: a free 3-DoF ball-and-socket.
-        physics.ArticulatedJointParams(
+        sdp.ArticulatedJointParams(
             name="LowerSwing",
-            type=physics.ArticulatedJointType.SPHERICAL,
-            parent_link_from_joint=physics.TransformRT(
+            type=sdp.ArticulatedJointType.SPHERICAL,
+            parent_link_from_joint=sdp.TransformRT(
                 translation=[ARM_SCALE[0] / 2, 0, ARM_SCALE[2] / 2]
             ),
         ),
@@ -128,10 +128,10 @@ def _make_joints() -> list[physics.ArticulatedJointParams]:
 
 
 def _make_links(
-    rail_shape: physics.ShapeHandle,
-    cart_shape: physics.ShapeHandle,
-    arm_shape: physics.ShapeHandle,
-) -> list[physics.ArticulatedLinkParams]:
+    rail_shape: sdp.ShapeHandle,
+    cart_shape: sdp.ShapeHandle,
+    arm_shape: sdp.ShapeHandle,
+) -> list[sdp.ArticulatedLinkParams]:
     """Build the 4 links. Each box is centered on its inbound joint and hangs -Y.
 
     Note on per-link modeling: every link sets ``density`` here, but a link can
@@ -139,47 +139,47 @@ def _make_links(
     ``moment_of_inertia``, or opt out of gravity with ``has_gravity=False``.
     """
     return [
-        physics.ArticulatedLinkParams(
+        sdp.ArticulatedLinkParams(
             name="RailHousing",
             parent_link=-1,
-            parent_joint_from_link=physics.TransformRT(
+            parent_joint_from_link=sdp.TransformRT(
                 translation=[-RAIL_SCALE[0] / 2, -RAIL_SCALE[1] / 2, -RAIL_SCALE[2] / 2]
             ),
             shape=rail_shape,
-            collider_type=physics.ColliderType.BOX,
+            collider_type=sdp.ColliderType.BOX,
             layer="Pendulum",
             density=1000.0,
         ),
-        physics.ArticulatedLinkParams(
+        sdp.ArticulatedLinkParams(
             name="Cart",
             parent_link=0,
-            parent_joint_from_link=physics.TransformRT(
+            parent_joint_from_link=sdp.TransformRT(
                 translation=[-CART_SCALE[0] / 2, -CART_SCALE[1], -CART_SCALE[2] / 2]
             ),
             shape=cart_shape,
-            collider_type=physics.ColliderType.BOX,
+            collider_type=sdp.ColliderType.BOX,
             layer="Pendulum",
             density=1000.0,
         ),
-        physics.ArticulatedLinkParams(
+        sdp.ArticulatedLinkParams(
             name="UpperArm",
             parent_link=1,
-            parent_joint_from_link=physics.TransformRT(
+            parent_joint_from_link=sdp.TransformRT(
                 translation=[-ARM_SCALE[0] / 2, -ARM_SCALE[1], -ARM_SCALE[2] / 2]
             ),
             shape=arm_shape,
-            collider_type=physics.ColliderType.BOX,
+            collider_type=sdp.ColliderType.BOX,
             layer="Pendulum",
             density=1000.0,
         ),
-        physics.ArticulatedLinkParams(
+        sdp.ArticulatedLinkParams(
             name="LowerArm",  # the striking tip
             parent_link=2,
-            parent_joint_from_link=physics.TransformRT(
+            parent_joint_from_link=sdp.TransformRT(
                 translation=[-ARM_SCALE[0] / 2, -ARM_SCALE[1], -ARM_SCALE[2] / 2]
             ),
             shape=arm_shape,
-            collider_type=physics.ColliderType.BOX,
+            collider_type=sdp.ColliderType.BOX,
             layer="EndEffector",
             density=2000.0,  # heavier tip for a firmer strike
         ),
@@ -194,12 +194,12 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
     Returns:
         tuple: (scene, articulation, ball)
     """
-    scene = physics.create_scene("Articulations Scene")
+    scene = sdp.create_scene("Articulations Scene")
 
     # One baked shape per distinct link size (the cube mesh is corner-anchored,
     # so baking the scale gives a box occupying local [0, scale]).
-    def box(scale: list[float]) -> physics.ShapeHandle:
-        return physics.load_shape_from_file(
+    def box(scale: list[float]) -> sdp.ShapeHandle:
+        return sdp.load_shape_from_file(
             file_path=str(resolve_asset("cube/cube_fine_mesh.mochi.json")),
             bake_scale=scale,
         )
@@ -208,8 +208,8 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
     cart_shape = box(CART_SCALE)
     arm_shape = box(ARM_SCALE)  # shared by UpperArm and LowerArm
 
-    params = physics.ArticulatedActorParams(name="DoublePendulumOnRail")
-    params.world_from_root = physics.TransformRT(translation=[0, ROOT_HEIGHT, 0])
+    params = sdp.ArticulatedActorParams(name="DoublePendulumOnRail")
+    params.world_from_root = sdp.TransformRT(translation=[0, ROOT_HEIGHT, 0])
     params.joints = _make_joints()
     params.links = _make_links(rail_shape, cart_shape, arm_shape)
     articulation = scene.create_articulated_actor(params)
@@ -217,7 +217,7 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
     # The actor holds its own reference to each shape, so release our local
     # handles now (shapes are reference-counted and freed at the last release).
     for shape in (rail_shape, cart_shape, arm_shape):
-        physics.release_shape(shape)
+        sdp.release_shape(shape)
 
     # Seed initial joint velocities to set the double pendulum swinging.
     articulation.set_articulated_joint_velocities(
@@ -227,7 +227,7 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
     # Ball on the ground, offset in +X within reach of the swinging/sliding tip.
     # The unit-radius icosphere renders as a real mesh; the analytic Sphere
     # collider handles contact.
-    ball_shape = physics.load_shape_from_file(
+    ball_shape = sdp.load_shape_from_file(
         file_path=str(resolve_asset("sphere/icosphere_4subdiv.1.mochi.json")),
         bake_scale=[BALL_RADIUS, BALL_RADIUS, BALL_RADIUS],
     )
@@ -237,17 +237,17 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
         shape=ball_shape,
         is_static=False,
         density=500.0,
-        world_from_local=physics.TransformRT(translation=BALL_POSITION),
-        collider_type=physics.ColliderType.SPHERE,
+        world_from_local=sdp.TransformRT(translation=BALL_POSITION),
+        collider_type=sdp.ColliderType.SPHERE,
     )
-    physics.release_shape(ball_shape)
+    sdp.release_shape(ball_shape)
 
     # Static ground plane (layer "Environment", matching the prefab).
-    plane_shape = physics.create_plane_shape(normal=[0, 1, 0], distance=0)
+    plane_shape = sdp.create_plane_shape(normal=[0, 1, 0], distance=0)
     scene.create_rigid_actor(
         name="Ground", layer="Environment", shape=plane_shape, is_static=True
     )
-    physics.release_shape(plane_shape)
+    sdp.release_shape(plane_shape)
 
     # Contact filter: only the end-effector tip hits the ball (and the ball
     # rests on the ground). Disable everything else.
@@ -290,16 +290,16 @@ def print_read_state(articulation: Actor) -> None:
     num_dofs = articulation.get_num_dofs()
     num_links = len(articulation.get_nested_link_actors())
 
-    pose = physics.DynamicArrayReal(num_dofs)
+    pose = sdp.DynamicArrayReal(num_dofs)
     articulation.get_articulated_pose(pose)
     print(f"pose (joint-space DoFs) = {[round(x, 3) for x in pose]}")
 
-    transforms = physics.DynamicArrayTransformRT(num_links)
+    transforms = sdp.DynamicArrayTransformRT(num_links)
     articulation.get_articulated_link_transforms(transforms)
     tip = transforms[num_links - 1].translation
     print(f"LowerArm world transform origin = {[round(x, 3) for x in tip]}")
 
-    velocities = physics.DynamicArrayReal(num_dofs)
+    velocities = sdp.DynamicArrayReal(num_dofs)
     articulation.get_articulated_joint_velocities(velocities)
     print(f"joint velocities = {[round(x, 3) for x in velocities]}")
 
@@ -330,10 +330,10 @@ def demonstrate_pose_manipulation(articulation: Actor) -> None:
 
     # Set the pose from link transforms instead (IK-style): read the current
     # link transforms, nudge the end-effector tip in +X, and write them back.
-    transforms = physics.DynamicArrayTransformRT(num_links)
+    transforms = sdp.DynamicArrayTransformRT(num_links)
     articulation.get_articulated_link_transforms(transforms)
     world_from_links = [
-        physics.TransformRT(transforms[i].rotation, transforms[i].translation)
+        sdp.TransformRT(transforms[i].rotation, transforms[i].translation)
         for i in range(num_links)
     ]
     world_from_links[num_links - 1].translation += [0.01, 0.0, 0.0]
@@ -383,7 +383,7 @@ def demonstrate_mass_and_root(scene: Scene, articulation: Actor) -> None:
     )
 
     # set_root_transform teleports the whole articulation; demonstrate and restore.
-    moved = physics.TransformRT(
+    moved = sdp.TransformRT(
         rotation=root.rotation,
         translation=[
             root.translation[0] + 0.05,
@@ -431,7 +431,7 @@ def demonstrate_contact_control(scene: Scene, articulation: Actor, ball: Actor) 
         lower_arm,
         ball.get_handle(),
         enable=True,
-        include_nested_actors=physics.IncludeNestedActors.NO,
+        include_nested_actors=sdp.IncludeNestedActors.NO,
     )
 
 
@@ -447,7 +447,7 @@ def reset_to_initial_state(articulation: Actor) -> None:
 
 
 def _rail_position(articulation: Actor, num_dofs: int) -> float:
-    pose = physics.DynamicArrayReal(num_dofs)
+    pose = sdp.DynamicArrayReal(num_dofs)
     articulation.get_articulated_pose(pose)
     return float(pose[RAIL_DOF])
 
@@ -456,7 +456,7 @@ def _damp_pendulum_joints(articulation: Actor) -> None:
     """Raise the viscous friction on the revolute + spherical joints."""
     friction = list(articulation.get_articulated_joint_friction_params())
     for i in (2, 3):  # UpperSwing (revolute), LowerSwing (spherical)
-        friction[i] = physics.ArticulatedJointFrictionParams(viscous=DAMP_VISCOUS)
+        friction[i] = sdp.ArticulatedJointFrictionParams(viscous=DAMP_VISCOUS)
     articulation.set_articulated_joint_friction_params(friction)
 
 
@@ -470,11 +470,11 @@ def run_interactive(scene: Scene, articulation: Actor) -> None:
     frozen = released = pushing = pushed = damped = False
 
     # Launch and attach the remote debugger for visualization and interaction.
-    if not physics.debugger.attach():
+    if not sdp.debugger.attach():
         return
 
     # Simulate until the debugger detaches.
-    while physics.debugger.is_attached():
+    while sdp.debugger.is_attached():
         # --- Scripted timeline -----------------------------------------------
         if not frozen and sim_time >= T_FREEZE_RAIL:
             # Pin the rail DoF at its current position with a boundary
@@ -513,7 +513,7 @@ def run_interactive(scene: Scene, articulation: Actor) -> None:
 
         # Print the rail position and upper-hinge angle once per second.
         if sim_time >= next_report:
-            pose = physics.DynamicArrayReal(num_dofs)
+            pose = sdp.DynamicArrayReal(num_dofs)
             articulation.get_articulated_pose(pose)
             print(
                 f"t={sim_time:.1f}s: rail={pose[RAIL_DOF]:.3f} m, "
@@ -525,7 +525,7 @@ def run_interactive(scene: Scene, articulation: Actor) -> None:
 def main() -> None:
     """Run the interactive articulations tutorial."""
     # 0 = single-threaded (simplest); -1 = auto; N = N worker threads.
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
 
     scene, articulation, ball = build_scene()
 
@@ -543,8 +543,8 @@ def main() -> None:
     run_interactive(scene, articulation)
 
     # Destroying the scene frees everything it contains.
-    physics.destroy_scene(scene)
-    physics.shutdown()
+    sdp.destroy_scene(scene)
+    sdp.shutdown()
     print("Simulation complete.")
 
 

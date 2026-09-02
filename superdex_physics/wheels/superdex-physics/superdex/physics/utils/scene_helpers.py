@@ -22,11 +22,11 @@ import fnmatch
 import pathlib
 from typing import TYPE_CHECKING
 
-import superdex.physics as mochi
+import superdex.physics as sdp
 from superdex.physics.paths import get_assets_root
 
 if TYPE_CHECKING:
-    import superdex.robotics as robotics  # @manual
+    import superdex.robotics as sdr  # @manual
 
 
 def _strip_win_extended_prefix(path_str: str) -> str:
@@ -44,7 +44,7 @@ def _strip_win_extended_prefix(path_str: str) -> str:
     return path_str[4:] if path_str.startswith("\\\\?\\") else path_str
 
 
-def find_actor(scene: mochi.Scene, pattern: str) -> mochi.Actor:
+def find_actor(scene: sdp.Scene, pattern: str) -> sdp.Actor:
     """Returns an actor whose name matches the given pattern. The pattern is specified
     as a case-sensitive string that may contain shell-style wildcards, such as * and ?.
     For example, "my_actor*" will match any actor whose name starts with "my_actor".
@@ -54,9 +54,9 @@ def find_actor(scene: mochi.Scene, pattern: str) -> mochi.Actor:
     if scene is None:
         raise ValueError("There is no scene.")
 
-    found_actor: mochi.Actor | None = None
+    found_actor: sdp.Actor | None = None
 
-    def check_if_matching_actor(actor: mochi.Actor) -> None:
+    def check_if_matching_actor(actor: sdp.Actor) -> None:
         nonlocal found_actor
         if fnmatch.fnmatchcase(actor.get_name(), pattern):
             if found_actor is not None:
@@ -72,11 +72,11 @@ def find_actor(scene: mochi.Scene, pattern: str) -> mochi.Actor:
 
 
 def create_ground_plane(
-    scene: mochi.Scene,
-    normal: mochi.Real3 | None = None,
+    scene: sdp.Scene,
+    normal: sdp.Real3 | None = None,
     offset: float = 0.0,
-    contact_params: mochi.ContactParams | None = None,
-) -> mochi.Actor:
+    contact_params: sdp.ContactParams | None = None,
+) -> sdp.Actor:
     """Creates a ground plane actor in the scene. By default, the plane is initialized
     pointing at +Y, and an offset of 0. If you want a different plane, you can specify
     the normal and offset. Unless you specify contact parameters, the default values
@@ -84,8 +84,8 @@ def create_ground_plane(
     """
 
     # Initialize the plane shape.
-    normal = normal or mochi.Real3(0.0, 1.0, 0.0)
-    shape = mochi.create_plane_shape(normal, offset)
+    normal = normal or sdp.Real3(0.0, 1.0, 0.0)
+    shape = sdp.create_plane_shape(normal, offset)
 
     # Create the ground plane actor.
     actor = scene.create_rigid_actor(
@@ -93,8 +93,8 @@ def create_ground_plane(
         layer="Environment",
         name="StaticPlane",
         shape=shape,
-        collider_type=mochi.ColliderType.PLANE,
-        contact=contact_params if contact_params is not None else mochi.ContactParams(),
+        collider_type=sdp.ColliderType.PLANE,
+        contact=contact_params if contact_params is not None else sdp.ContactParams(),
     )
     if actor is None:
         raise RuntimeError("Failed to create ground plane actor")
@@ -103,8 +103,8 @@ def create_ground_plane(
 
 def load_bot_scene(
     path: str,
-    bots_ctx: robotics.RoboticsContext,
-) -> robotics.BotScene:
+    bots_ctx: sdr.RoboticsContext,
+) -> sdr.BotScene:
     """Load a .mochi_bot_scene file and instantiate all scene objects.
 
     Creates the physics scene from the base_scene, instantiates all bots with
@@ -121,13 +121,13 @@ def load_bot_scene(
         The loaded BotScene, which owns the physics scene and provides named
         lookup for bots and spawnable prefabs.
     """
-    if not mochi.is_initialized():
+    if not sdp.is_initialized():
         raise RuntimeError(
             "SuperDex Physics is not initialized. Call superdex.physics.initialize() first."
         )
-    import superdex.robotics as robotics  # @manual
+    import superdex.robotics as sdr  # @manual
 
-    return robotics.load_bot_scene(path, bots_ctx)
+    return sdr.load_bot_scene(path, bots_ctx)
 
 
 def load_bot_scene_prefab(path: str):  # noqa: ANN201
@@ -144,9 +144,9 @@ def load_bot_scene_prefab(path: str):  # noqa: ANN201
     Returns:
         The parsed BotScenePrefab.
     """
-    import superdex.robotics as robotics  # @manual
+    import superdex.robotics as sdr  # @manual
 
-    return robotics.load_bot_scene_prefab_from_file(path)
+    return sdr.load_bot_scene_prefab_from_file(path)
 
 
 def load_bot_task_prefab(path: str):  # noqa: ANN201
@@ -162,17 +162,17 @@ def load_bot_task_prefab(path: str):  # noqa: ANN201
         The parsed BotTaskPrefab, whose `spawns` declare the named object
         instances (name, prefab_name, translation, rotation).
     """
-    import superdex.robotics as robotics  # @manual
+    import superdex.robotics as sdr  # @manual
 
-    return robotics.load_bot_task_prefab_from_file(path)
+    return sdr.load_bot_task_prefab_from_file(path)
 
 
 def create_scene_from_prefab(
-    prefab: str | mochi.prefab.ScenePrefab,
+    prefab: str | sdp.prefab.ScenePrefab,
     root_dir: str | pathlib.Path | None = None,
-    params: mochi.prefab.PrefabParams | None = None,
+    params: sdp.prefab.PrefabParams | None = None,
     scene_name: str = "",
-) -> mochi.Scene:
+) -> sdp.Scene:
     """
     Create a SuperDex Physics scene and initialize it using a ScenePrefab object or
     prefab file path.
@@ -210,7 +210,7 @@ def create_scene_from_prefab(
             scene = create_scene_from_prefab(p, root_dir="/custom/path/to/assets")
     """
     if params is None:
-        params = mochi.prefab.PrefabParams()
+        params = sdp.prefab.PrefabParams()
 
     # Decided on the argument as given: `pathlib.Path` defines no `__bool__`, so every Path
     # is truthy and a truthiness test would send `Path("")` -- normalized to `Path(".")` --
@@ -221,7 +221,7 @@ def create_scene_from_prefab(
         root_path = pathlib.Path(root_dir)
 
     # Initialize an empty scene.
-    scene = mochi.create_scene(scene_name)
+    scene = sdp.create_scene(scene_name)
     if scene is None:
         raise RuntimeError("Failed to create scene")
 
@@ -232,15 +232,15 @@ def create_scene_from_prefab(
         path = pathlib.Path(prefab)
         if not path.is_absolute():
             path = root_path / path
-        loaded_prefab = mochi.prefab.load_from_file(
+        loaded_prefab = sdp.prefab.load_from_file(
             _strip_win_extended_prefix(str(path)),
             _strip_win_extended_prefix(str(root_path)),
         )
-    elif isinstance(prefab, mochi.prefab.ScenePrefab):
+    elif isinstance(prefab, sdp.prefab.ScenePrefab):
         # Ensure that all referenced prefabs and model files have been loaded,
         # in case the caller created the ScenePrefab object procedurally or loaded
         # it via shallow_load_from_file.
-        mochi.prefab.ensure_fully_loaded(
+        sdp.prefab.ensure_fully_loaded(
             prefab=prefab, root_path=_strip_win_extended_prefix(str(root_path))
         )
         loaded_prefab = prefab
@@ -250,6 +250,6 @@ def create_scene_from_prefab(
         )
 
     # Add prefab to scene.
-    mochi.prefab.add_to_scene(prefab=loaded_prefab, scene=scene, params=params)
+    sdp.prefab.add_to_scene(prefab=loaded_prefab, scene=scene, params=params)
 
     return scene

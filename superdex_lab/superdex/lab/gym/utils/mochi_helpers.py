@@ -21,8 +21,8 @@ from pathlib import Path
 
 import numpy as np
 import numpy.typing as npt
-import superdex.physics as physics
-import superdex.robotics as robotics
+import superdex.physics as sdp
+import superdex.robotics as sdr
 from superdex.physics.environment import get_env_var_value
 from superdex.physics.paths import get_assets_root
 from superdex.physics.utils import render_model_registry
@@ -37,7 +37,7 @@ from superdex.physics.utils.scene_helpers import (
 #######################################################################################
 
 
-class PrefabParams(physics.prefab.PrefabParams):
+class PrefabParams(sdp.prefab.PrefabParams):
     root_dir: str
     """
     Your prefab file can reference other files like models and nested prefabs. It can use
@@ -58,7 +58,7 @@ class PrefabParams(physics.prefab.PrefabParams):
     If true, a ground plane will be added to the scene at height = 0 and pointing up
     the +Y axis.
     """
-    ground_normal: physics.Real3
+    ground_normal: sdp.Real3
     """
     If add_ground_plane is true, this is the normal of the ground plane.
     """
@@ -66,7 +66,7 @@ class PrefabParams(physics.prefab.PrefabParams):
     """
     If add_ground_plane is true, this is the height of the ground plane.
     """
-    ground_contact_params: physics.ContactParams | None
+    ground_contact_params: sdp.ContactParams | None
     """
     Contact params used to configure the ground plane. If not provided, default values
     will be used.
@@ -77,7 +77,7 @@ class PrefabParams(physics.prefab.PrefabParams):
         self.root_dir = ""
         self.agent_actor_name = ""
         self.add_ground_plane = True
-        self.ground_normal = physics.Real3(0.0, 1.0, 0.0)
+        self.ground_normal = sdp.Real3(0.0, 1.0, 0.0)
         self.ground_offset = 0.0
         self.ground_contact_params = None
 
@@ -88,8 +88,8 @@ class PrefabParams(physics.prefab.PrefabParams):
 
 
 def init_prefab_scene(
-    prefab: str | physics.prefab.ScenePrefab, params: PrefabParams
-) -> [physics.Scene, physics.Actor]:
+    prefab: str | sdp.prefab.ScenePrefab, params: PrefabParams
+) -> [sdp.Scene, sdp.Actor]:
     """
     Initialize a scene using a ScenePrefab object or prefab file path. Any referenced model
     files or nested prefabs will be loaded as necessary. Relative files paths will be resolved
@@ -118,9 +118,9 @@ def init_prefab_scene(
     else:
         agent = None
 
-        def check_if_agent_actor(actor: physics.Actor):
+        def check_if_agent_actor(actor: sdp.Actor):
             nonlocal agent
-            if actor.get_type() == physics.ActorType.ARTICULATED:
+            if actor.get_type() == sdp.ActorType.ARTICULATED:
                 if agent is not None:
                     raise RuntimeError(
                         "Failed to auto-select the agent actor because the scene "
@@ -138,14 +138,14 @@ def init_prefab_scene(
 #######################################################################################
 
 
-def get_actors(scene: physics.Scene) -> list[physics.Actor]:
+def get_actors(scene: sdp.Scene) -> list[sdp.Actor]:
     """Returns pointers to all the actors in the scene."""
     if scene is None:
         raise ValueError("There is no scene.")
 
     actors = []
 
-    def gather_actor(actor: physics.Actor):
+    def gather_actor(actor: sdp.Actor):
         actors.append(actor)
 
     scene.for_each_actor(gather_actor)
@@ -229,10 +229,10 @@ def resolve_bot_asset(relative_path: str | Path) -> Path:
 
 
 def create_bot(
-    scene: physics.Scene,
-    bot_prefab: robotics.BotPrefab,
-    bots_context: robotics.RoboticsContext | None = None,
-) -> robotics.Bot:
+    scene: sdp.Scene,
+    bot_prefab: sdr.BotPrefab,
+    bots_context: sdr.RoboticsContext | None = None,
+) -> sdr.Bot:
     """Creates a bot in the scene and registers each link's visual render model.
 
     Any environment that creates its agent through this helper automatically gets GLB
@@ -255,8 +255,8 @@ def create_bot(
         The created bot.
     """
     if bots_context is None:
-        bots_context = robotics.create_context()
-    bot = robotics.create_bot(scene, bot_prefab, bots_context)
+        bots_context = sdr.create_context()
+    bot = sdr.create_bot(scene, bot_prefab, bots_context)
 
     # Register each link's GLB against its link actor. The bot's own (post-sort) prefab
     # links correspond by index to the articulated actor's nested link actors.
@@ -271,7 +271,7 @@ def create_bot(
         for link_actor_handle, link in zip(link_actors, links):
             if not link.render_model_file:
                 continue
-            local_transform = physics.TransformRT(
+            local_transform = sdp.TransformRT(
                 link.render_model_rotation, link.render_model_translation
             )
             render_model_registry.register(
@@ -285,12 +285,12 @@ def create_bot(
     return bot
 
 
-def destroy_bot(scene: physics.Scene, bot: robotics.Bot) -> None:
+def destroy_bot(scene: sdp.Scene, bot: sdr.Bot) -> None:
     """Unregisters the bot's visual render models, then destroys the bot."""
     agent = bot.get_articulated_actor()
     if agent is not None:
         render_model_registry.unregister_actors(scene, agent.get_nested_link_actors())
-    robotics.destroy_bot(scene, bot)
+    sdr.destroy_bot(scene, bot)
 
 
 ########################################################################################
@@ -299,7 +299,7 @@ def destroy_bot(scene: physics.Scene, bot: robotics.Bot) -> None:
 
 
 def get_contact_force_and_torque_world(
-    actor: physics.Actor,
+    actor: sdp.Actor,
 ) -> npt.NDArray[float]:
     """Gets the contact force and torque on a rigid actor, as a 6D array."""
     return np.concatenate(
@@ -310,23 +310,23 @@ def get_contact_force_and_torque_world(
     )
 
 
-def get_articulated_pose(actor: physics.Actor) -> npt.NDArray[float]:
+def get_articulated_pose(actor: sdp.Actor) -> npt.NDArray[float]:
     """Gets the pose of an articulated actor."""
-    buffer = physics.DynamicArrayReal(actor.get_num_dofs())
+    buffer = sdp.DynamicArrayReal(actor.get_num_dofs())
     actor.get_articulated_pose(buffer)
     return np.array(buffer)
 
 
-def get_articulated_joint_velocities(actor: physics.Actor) -> npt.NDArray[float]:
+def get_articulated_joint_velocities(actor: sdp.Actor) -> npt.NDArray[float]:
     """Gets the velocity of an articulated actor."""
-    buffer = physics.DynamicArrayReal(actor.get_num_dofs())
+    buffer = sdp.DynamicArrayReal(actor.get_num_dofs())
     actor.get_articulated_joint_velocities(buffer)
     return np.array(buffer)
 
 
-def get_articulated_dof_limits(actor: physics.Actor) -> npt.NDArray[float]:
+def get_articulated_dof_limits(actor: sdp.Actor) -> npt.NDArray[float]:
     """Gets the joint limits of an articulated actor."""
-    buffer = physics.DynamicArrayReal2(actor.get_num_dofs())
+    buffer = sdp.DynamicArrayReal2(actor.get_num_dofs())
     actor.get_articulated_dof_limits(buffer)
     return np.array(buffer)
 
@@ -336,6 +336,6 @@ def get_articulated_dof_limits(actor: physics.Actor) -> npt.NDArray[float]:
 #######################################################################################
 
 
-def TransformRT_to_numpy(transform: physics.TransformRT) -> npt.NDArray[float]:
+def TransformRT_to_numpy(transform: sdp.TransformRT) -> npt.NDArray[float]:
     """Convert a TransformRT to numpy array."""
     return np.stack((transform.translation, transform.rotation.to_rotation_vector()))

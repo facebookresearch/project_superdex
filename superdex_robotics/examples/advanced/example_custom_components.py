@@ -48,13 +48,13 @@ import math
 from pathlib import Path
 
 import numpy as np
-import superdex.physics as physics
-import superdex.robotics as robotics
+import superdex.physics as sdp
+import superdex.robotics as sdr
 from superdex.physics.paths import get_assets_root, resolve_asset
 
 # The build's `real` type. Arrays handed to or filled by the engine must match it,
 # or the bindings convert element by element -- and reject out-parameters outright.
-np_real = np.float64 if physics.uses_double_precision() else np.float32
+np_real = np.float64 if sdp.uses_double_precision() else np.float32
 
 # Index into the bot's nested link actors: base_link, link_1, link_2, ball.
 END_EFFECTOR_LINK_INDEX = 3
@@ -137,7 +137,7 @@ class MyVelocityForceController:
 
         link_actor = get_link_actor(self.actor, END_EFFECTOR_LINK_INDEX)
 
-        xforms = physics.DynamicArrayTransformRT(4)
+        xforms = sdp.DynamicArrayTransformRT(4)
         self.actor.get_articulated_link_transforms(xforms)
         x = np.array(xforms[END_EFFECTOR_LINK_INDEX].translation, dtype=np_real)
 
@@ -195,7 +195,7 @@ class MyContactForceSensor:
     def __init__(self, actor, param_args: str):
         self.actor = actor
         if actor is not None:
-            actor.register_query(physics.QueryType.TOTAL_CONTACT_FORCE)
+            actor.register_query(sdp.QueryType.TOTAL_CONTACT_FORCE)
 
     # Required by the framework, even with no state to clear.
     def reset(self) -> None:
@@ -304,13 +304,13 @@ def register_component_types(robotics_context) -> None:
     Names are global to the context. This must run before ``create_bot()``,
     which constructs the sensor and actuators declared in the ``.superdex_bot``.
     """
-    robotics.register_python_controller(
+    sdr.register_python_controller(
         robotics_context, "MY_VELOCITY_FORCE_CONTROLLER", MyVelocityForceController
     )
-    robotics.register_python_sensor(
+    sdr.register_python_sensor(
         robotics_context, "MY_CONTACT_FORCE_SENSOR", MyContactForceSensor
     )
-    robotics.register_python_actuator(
+    sdr.register_python_actuator(
         robotics_context, "MY_VELOCITY_SERVO_ACTUATOR", MyVelocityServoActuator
     )
 
@@ -332,16 +332,16 @@ def run_simulation(scene, bot_actor, controller, sensor, actuators) -> None:
 
     # Declare the coordinate convention so the debugger renders the scene the
     # right way up: SuperDex is X-forward, Y-left, Z-up. Must precede attach().
-    physics.get_debug_server().set_coordinate_space(
-        physics.CoordinateSpace(axes=physics.CoordinateSpaceAxes.FLU)
+    sdp.get_debug_server().set_coordinate_space(
+        sdp.CoordinateSpace(axes=sdp.CoordinateSpaceAxes.FLU)
     )
 
     # The Physics Debugger is a separate desktop app for viewing and interacting
     # with the simulation. attach() returns False if it cannot connect.
-    if not physics.debugger.attach():
+    if not sdp.debugger.attach():
         return
 
-    while physics.debugger.is_attached():
+    while sdp.debugger.is_attached():
         t = scene.get_total_simulation_time()
 
         obsv = controller.get_current_observations()
@@ -373,34 +373,34 @@ def main() -> None:
     """Load the 2-DOF example bot and simulate it."""
     # Initialize the engine before creating scenes or actors.
     # num_worker_threads=0 runs single-threaded; -1 auto-selects.
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
 
     # SuperDex robots are Z-up, so gravity points down -Z.
-    scene = physics.create_scene("Custom Components Example")
+    scene = sdp.create_scene("Custom Components Example")
     scene.set_gravity([0, 0, -9.81])
 
     # A .superdex_bot is a self-contained robot description. Loading it returns
     # a "prefab": a reusable template of the robot's links and joints.
-    bot_prefab = robotics.load_bot_prefab_from_file(get_default_bot_path())
+    bot_prefab = sdr.load_bot_prefab_from_file(get_default_bot_path())
 
     # Instantiate the prefab as a live bot. This builds the articulated actor,
     # seeds its default pose, and constructs the sensor and actuators the bot
     # file declares on its links. The context tracks every bot and component.
-    robotics_context = robotics.create_context()
+    robotics_context = sdr.create_context()
     register_component_types(robotics_context)
-    bot = robotics.create_bot(scene, bot_prefab, robotics_context)
+    bot = sdr.create_bot(scene, bot_prefab, robotics_context)
     bot_actor = bot.get_articulated_actor()
 
     # Static ground plane for the robot to rest on (normal points up, +Z).
-    plane_shape = physics.create_plane_shape(normal=[0, 0, 1], distance=0)
+    plane_shape = sdp.create_plane_shape(normal=[0, 0, 1], distance=0)
     scene.create_rigid_actor(name="ground", shape=plane_shape, is_static=True)
 
     # A static prop for the arm to touch.
-    physics.prefab.add_to_scene(
+    sdp.prefab.add_to_scene(
         prefab_path=str(resolve_asset(DUCK_LAMP_ASSET)),
         root_path=str(get_assets_root()),
         scene=scene,
-        params=physics.prefab.PrefabParams(name="duck_lamp"),
+        params=sdp.prefab.PrefabParams(name="duck_lamp"),
     )
 
     # Bot files cannot declare controllers yet, so this one is built by hand.
@@ -408,16 +408,16 @@ def main() -> None:
     handle = robotics_context.create_controller(
         "MY_VELOCITY_FORCE_CONTROLLER", None, bot_actor, "my_controller"
     )
-    controller = robotics.get_python_controller(robotics_context, handle)
+    controller = sdr.get_python_controller(robotics_context, handle)
 
     # The sensor and actuators already exist -- create_bot() built them from the
     # .superdex_bot. Look them up by name, then unwrap to the Python objects.
-    sensor = robotics.get_python_sensor(
+    sensor = sdr.get_python_sensor(
         robotics_context,
         _one_handle(bot.find_sensors_by_name(SENSOR_NAME), SENSOR_NAME),
     )
     actuators = [
-        robotics.get_python_actuator(
+        sdr.get_python_actuator(
             robotics_context, _one_handle(bot.find_actuators_by_name(name), name)
         )
         for name in ACTUATOR_NAMES
@@ -431,8 +431,8 @@ def main() -> None:
     run_simulation(scene, bot_actor, controller, sensor, actuators)
 
     # Tear down: destroy the bot, then shut the engine down cleanly.
-    robotics.destroy_bot(scene, bot)
-    physics.shutdown()
+    sdr.destroy_bot(scene, bot)
+    sdp.shutdown()
     print("Simulation complete.")
 
 

@@ -29,8 +29,8 @@ Usage:
 """
 
 import numpy as np
-import superdex.physics as physics
-import superdex.robotics as robotics
+import superdex.physics as sdp
+import superdex.robotics as sdr
 from superdex.physics.paths import resolve_asset
 
 # The OSC controller acts on the chain of joints between these two links on the
@@ -51,16 +51,16 @@ def main() -> None:
 
     # Initialize the physics engine before creating scenes or actors.
     # num_worker_threads=0 runs single-threaded; pass -1 to auto-select.
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
 
     # Create an empty scene. SuperDex robots use a Z-up convention, so gravity
     # points down the -Z axis.
-    scene = physics.create_scene("OSC Control Example")
+    scene = sdp.create_scene("OSC Control Example")
     scene.set_gravity([0, 0, -9.81])
 
     # Load the robot and instantiate it as a live Bot. The robotics context
     # tracks every bot and controller you create.
-    bot_prefab = robotics.load_bot_prefab_from_file(bot_path)
+    bot_prefab = sdr.load_bot_prefab_from_file(bot_path)
 
     # Cheap "gravity compensation": disable gravity on every link before spawning.
     # BASIC_OSC_PD is a pure task-space PD with no gravity term, so if the arm has
@@ -69,12 +69,12 @@ def main() -> None:
     for i in range(len(bot_prefab.links)):
         bot_prefab.links[i].has_gravity = False
 
-    robotics_context = robotics.create_context()
-    bot = robotics.create_bot(scene, bot_prefab, robotics_context)
+    robotics_context = sdr.create_context()
+    bot = sdr.create_bot(scene, bot_prefab, robotics_context)
     bot_actor = bot.get_articulated_actor()
 
     # Add a static ground plane for the robot to rest on (normal points up, +Z).
-    plane_shape = physics.create_plane_shape(normal=[0, 0, 1], distance=0)
+    plane_shape = sdp.create_plane_shape(normal=[0, 0, 1], distance=0)
     scene.create_rigid_actor(name="ground", shape=plane_shape, is_static=True)
 
     num_dofs = bot_actor.get_num_dofs()
@@ -118,7 +118,7 @@ def main() -> None:
 
     # Keep the end-effector pointing straight down (its z-axis into the ground):
     # a 180-degree rotation about world X flips local +Z to world -Z.
-    ee_down = physics.Quaternion.rotation_x(np.pi)
+    ee_down = sdp.Quaternion.rotation_x(np.pi)
 
     # Simulation time step in seconds.
     time_step = 1.0 / 200.0
@@ -126,19 +126,19 @@ def main() -> None:
     # Declare the scene's coordinate convention so the debugger renders it the
     # right way up: SuperDex is X-forward, Y-left, Z-up (FLU). Must come before
     # attach(), which starts the server.
-    physics.get_debug_server().set_coordinate_space(
-        physics.CoordinateSpace(axes=physics.CoordinateSpaceAxes.FLU)
+    sdp.get_debug_server().set_coordinate_space(
+        sdp.CoordinateSpace(axes=sdp.CoordinateSpaceAxes.FLU)
     )
 
     # Launch and connect the SuperDex Physics Debugger, a separate desktop app for
     # viewing and interacting with the simulation. The loop runs until you close
     # the debugger; attach() returns False if it can't connect.
-    if physics.debugger.attach():
-        while physics.debugger.is_attached():
+    if sdp.debugger.attach():
+        while sdp.debugger.is_attached():
             # Target end-effector pose in the world frame: a point on the circle,
             # oriented so the EE z-axis points into the ground.
             theta = 2.0 * np.pi * scene.get_total_simulation_time() / circle_period
-            world_from_target_ee = physics.TransformRT()
+            world_from_target_ee = sdp.TransformRT()
             world_from_target_ee.translation = [
                 circle_center[0] + circle_radius * np.cos(theta),
                 circle_center[1] + circle_radius * np.sin(theta),
@@ -156,7 +156,7 @@ def main() -> None:
             arm_tau = np.asarray(
                 osc.compute_output(
                     obsv,
-                    robotics.ControllerBasicOscPdTarget(
+                    sdr.ControllerBasicOscPdTarget(
                         root_from_target_ee=target_root_from_ee
                     ),
                 ),
@@ -169,8 +169,8 @@ def main() -> None:
             scene.step(time_step)
 
     # Tear down: destroy the bot, then shut the engine down cleanly.
-    robotics.destroy_bot(scene, bot)
-    physics.shutdown()
+    sdr.destroy_bot(scene, bot)
+    sdp.shutdown()
     print("Simulation complete.")
 
 

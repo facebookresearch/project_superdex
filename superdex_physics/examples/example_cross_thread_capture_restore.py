@@ -25,11 +25,11 @@ from concurrent.futures import ThreadPoolExecutor, wait
 from threading import Event
 
 import numpy as np
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.physics import Actor, Scene
 from superdex.physics.paths import resolve_asset, resolve_asset_root
 
-np_real = np.float64 if physics.uses_double_precision() else np.float32
+np_real = np.float64 if sdp.uses_double_precision() else np.float32
 
 ARTICULATION_NAME = "DoublePendulumOnRail"
 ARTICULATION_PREFAB = "samples/articulations_double_pendulum_on_rail.mochi_scene"
@@ -69,8 +69,8 @@ HINGE_TARGET = -1.2  # [rad]
 def create_simulation(name: str) -> tuple[Scene, Actor]:
     """Create one scene containing the controlled pendulum and ball."""
 
-    scene = physics.create_scene(name)
-    result = physics.prefab.add_to_scene(
+    scene = sdp.create_scene(name)
+    result = sdp.prefab.add_to_scene(
         prefab_path=str(resolve_asset(ARTICULATION_PREFAB)),
         root_path=str(resolve_asset_root(ARTICULATION_PREFAB)),
         scene=scene,
@@ -79,19 +79,19 @@ def create_simulation(name: str) -> tuple[Scene, Actor]:
     # Add a controller and zero the initial pose and velocity.
     articulation = next(
         actor
-        for actor in result.filter(physics.ActorType.ARTICULATED)
+        for actor in result.filter(sdp.ActorType.ARTICULATED)
         if actor.get_name() == ARTICULATION_NAME
     )
-    params = physics.PoseControllerParams(NUM_LINKS)
-    params.joint_tracking[CART_LINK] = physics.PoseTrackingParams(
+    params = sdp.PoseControllerParams(NUM_LINKS)
+    params.joint_tracking[CART_LINK] = sdp.PoseTrackingParams(
         stiffness=CART_STIFFNESS,
         damping=CART_DAMPING,
     )
-    params.joint_tracking[UPPER_ARM_LINK] = physics.PoseTrackingParams(
+    params.joint_tracking[UPPER_ARM_LINK] = sdp.PoseTrackingParams(
         stiffness=HINGE_STIFFNESS,
         damping=HINGE_DAMPING,
     )
-    params.joint_tracking[LOWER_ARM_LINK] = physics.PoseTrackingParams(
+    params.joint_tracking[LOWER_ARM_LINK] = sdp.PoseTrackingParams(
         stiffness=0.0,
         damping=LOWER_SWING_DAMPING,
     )
@@ -143,7 +143,7 @@ def _repeat_rollout(
     """Own one scene and repeat its restored rollout until disconnection."""
     scene, articulation = create_simulation(name)
     scene.restore_state_from_bytes(state_bytes)
-    while not stop.is_set() and physics.debugger.is_attached():
+    while not stop.is_set() and sdp.debugger.is_attached():
         for _ in range(ROLLOUT_STEPS):
             joint_target = joint_kick_target(
                 scene.get_total_simulation_time(), time_scale
@@ -151,18 +151,18 @@ def _repeat_rollout(
             articulation.set_articulated_target_pose(pose=joint_target)
             scene.step(TIME_STEP)
         scene.restore_state_from_bytes(state_bytes)
-    physics.destroy_scene(scene)
+    sdp.destroy_scene(scene)
 
 
 def main() -> None:
     """Fan one parent checkpoint out to two replaying worker scenes."""
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
     source_scene, _ = create_simulation("Cross-Thread Capture/Restore Source")
-    state_buffer = physics.DynamicArrayUint8()
+    state_buffer = sdp.DynamicArrayUint8()
     source_scene.capture_state_to_bytes(state_buffer)
     state_bytes = bytes(state_buffer)
 
-    if not physics.debugger.attach():
+    if not sdp.debugger.attach():
         raise RuntimeError("Mochi Debugger did not attach; see the logged error.")
 
     stop = Event()
@@ -184,7 +184,7 @@ def main() -> None:
                     stop,
                 ),
             )
-            while physics.debugger.is_attached():
+            while sdp.debugger.is_attached():
                 source_scene.update_debugger()
                 done, _ = wait(workers, timeout=TIME_STEP)
                 for worker in done:
@@ -198,11 +198,11 @@ def main() -> None:
             # A sibling may be parked inside a paused scene.step(). Only stopping
             # the server releases it, so the executor join below cannot hang.
             stop.set()
-            physics.get_debug_server().stop()
+            sdp.get_debug_server().stop()
             raise
 
-    physics.destroy_scene(source_scene)
-    physics.shutdown()
+    sdp.destroy_scene(source_scene)
+    sdp.shutdown()
 
     print("Simulation complete.")
 

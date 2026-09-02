@@ -18,7 +18,7 @@ Simulates a deformable duck falling onto a ground plane using FEM (Finite Elemen
 Method). Demonstrates creating soft body actors from tetrahedral meshes.
 """
 
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.physics import Actor, Scene
 from superdex.physics.paths import resolve_asset
 
@@ -39,7 +39,7 @@ def create_soft_duck_simulation() -> tuple[Scene, Actor, Actor]:
         tuple: (scene, soft_duck_actor, rigid_plane_actor)
     """
     # Create scene
-    scene = physics.create_scene("Soft Duck Scene")
+    scene = sdp.create_scene("Soft Duck Scene")
 
     # SuperDex Physics uses Y-up coordinates and defaults to gravity along -Y:
     # (0, -9.8, 0). Set it explicitly for illustration.
@@ -49,16 +49,16 @@ def create_soft_duck_simulation() -> tuple[Scene, Actor, Actor]:
 
     # Create shapes
     shape_path = str(resolve_asset("duck/duck_1899.mochi.h5"))
-    tet_mesh_shape = physics.load_shape_from_file(
+    tet_mesh_shape = sdp.load_shape_from_file(
         file_path=shape_path,
     )
-    plane_shape = physics.create_plane_shape(normal=[0, 1, 0], distance=-0.5)
+    plane_shape = sdp.create_plane_shape(normal=[0, 1, 0], distance=-0.5)
 
     # Create soft duck
     soft_duck_actor = scene.create_soft_actor(
         name="duck",
         shape=tet_mesh_shape,
-        world_from_local=physics.TransformRT(translation=[-0.5, 0.5, -1.0]),
+        world_from_local=sdp.TransformRT(translation=[-0.5, 0.5, -1.0]),
     )
 
     # Create ground plane
@@ -80,11 +80,11 @@ def cleanup_simulation(
 
     # Destroying this scene is not required immediately before shutdown; this
     # call demonstrates how to release a scene while SuperDex Physics remains active.
-    physics.destroy_scene(scene)
+    sdp.destroy_scene(scene)
 
     # Shutdown releases any remaining global resources. It is shown explicitly
     # so this example can be initialized again in the same process.
-    physics.shutdown()
+    sdp.shutdown()
 
 
 def main() -> None:
@@ -99,15 +99,15 @@ def main() -> None:
     # Run single-threaded to keep the example simple. For scenes with a large
     # number of DoFs (e.g. scenes with high-resolution soft bodies), running
     # with multiple threads will improve performance.
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
 
     # Create simulation
     scene, soft_duck_actor, rigid_plane_actor = create_soft_duck_simulation()
 
     # Launch and attach the remote debugger for visualization and interaction.
-    if physics.debugger.attach():
+    if sdp.debugger.attach():
         # Simulate until the debugger detaches.
-        while physics.debugger.is_attached():
+        while sdp.debugger.is_attached():
             scene.step(TIME_STEP)
         print("Simulation complete.")
 

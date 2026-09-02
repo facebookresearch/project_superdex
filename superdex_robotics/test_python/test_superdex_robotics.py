@@ -16,12 +16,12 @@ from __future__ import annotations
 
 import unittest
 
-import superdex.robotics as robotics
+import superdex.robotics as sdr
 from superdex.robotics import BotPrefab
 
 
 class SuperdexRoboticsTest(unittest.TestCase):
     def test_import_smoke(self) -> None:
-        self.assertTrue(hasattr(robotics, "BotPrefab"))
-        self.assertTrue(hasattr(robotics, "create_context"))
-        self.assertIs(BotPrefab, robotics.BotPrefab)
+        self.assertTrue(hasattr(sdr, "BotPrefab"))
+        self.assertTrue(hasattr(sdr, "create_context"))
+        self.assertIs(BotPrefab, sdr.BotPrefab)

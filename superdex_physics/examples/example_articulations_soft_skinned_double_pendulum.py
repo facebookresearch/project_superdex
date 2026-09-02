@@ -46,11 +46,11 @@ until the debugger detaches.
 from __future__ import annotations
 
 import numpy as np
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.physics import Actor, Scene
 from superdex.physics.paths import resolve_asset
 
-np_real = np.float64 if physics.uses_double_precision() else np.float32
+np_real = np.float64 if sdp.uses_double_precision() else np.float32
 
 # --- Locked scene spec (mirrors the .mochi_scene prefab) ---------------------
 # Frame: +Y up. The pivot is anchored in the world by joint_0's
@@ -77,20 +77,20 @@ SEED_JOINT_VELOCITIES = [4.2, 0.0]  # [rad/s]
 TIME_STEP = 1.0 / 120.0  # [s]
 
 
-def _make_joints() -> list[physics.ArticulatedJointParams]:
+def _make_joints() -> list[sdp.ArticulatedJointParams]:
     """Build the 2 inbound joints of the chain (joints[i] drives links[i])."""
     return [
-        physics.ArticulatedJointParams(
+        sdp.ArticulatedJointParams(
             name="joint_0",
-            type=physics.ArticulatedJointType.REVOLUTE,
+            type=sdp.ArticulatedJointType.REVOLUTE,
             axis=[0, 0, -1],
-            parent_link_from_joint=physics.TransformRT(translation=[0, ROOT_HEIGHT, 0]),
+            parent_link_from_joint=sdp.TransformRT(translation=[0, ROOT_HEIGHT, 0]),
         ),
-        physics.ArticulatedJointParams(
+        sdp.ArticulatedJointParams(
             name="joint_1",
-            type=physics.ArticulatedJointType.REVOLUTE,
+            type=sdp.ArticulatedJointType.REVOLUTE,
             axis=[0, 0, -1],
-            parent_link_from_joint=physics.TransformRT(
+            parent_link_from_joint=sdp.TransformRT(
                 translation=[ARM_LENGTH, ARM_WIDTH / 2, ARM_WIDTH / 2]
             ),
         ),
@@ -98,29 +98,29 @@ def _make_joints() -> list[physics.ArticulatedJointParams]:
 
 
 def _make_links(
-    arm_shape: physics.ShapeHandle, second_arm_shape: physics.ShapeHandle
-) -> list[physics.ArticulatedLinkParams]:
+    arm_shape: sdp.ShapeHandle, second_arm_shape: sdp.ShapeHandle
+) -> list[sdp.ArticulatedLinkParams]:
     """Build the 2 arm links. Second arm is half length."""
     return [
-        physics.ArticulatedLinkParams(
+        sdp.ArticulatedLinkParams(
             name="UpperArm",
             parent_link=-1,
-            parent_joint_from_link=physics.TransformRT(
+            parent_joint_from_link=sdp.TransformRT(
                 translation=[0, -ARM_WIDTH / 2, -ARM_WIDTH / 2]
             ),
             shape=arm_shape,
-            collider_type=physics.ColliderType.BOX,
+            collider_type=sdp.ColliderType.BOX,
             layer="Pendulum",
             density=1000.0,
         ),
-        physics.ArticulatedLinkParams(
+        sdp.ArticulatedLinkParams(
             name="LowerArm",
             parent_link=0,
-            parent_joint_from_link=physics.TransformRT(
+            parent_joint_from_link=sdp.TransformRT(
                 translation=[0, -ARM_WIDTH / 2, -ARM_WIDTH / 2]
             ),
             shape=second_arm_shape,
-            collider_type=physics.ColliderType.BOX,
+            collider_type=sdp.ColliderType.BOX,
             layer="Pendulum",
             density=1000.0,
         ),
@@ -135,31 +135,31 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
     Returns:
         tuple: (scene, soft_skinned_actor, ball)
     """
-    scene = physics.create_scene("Soft Skinned Articulations Scene")
+    scene = sdp.create_scene("Soft Skinned Articulations Scene")
 
-    arm_shape = physics.load_shape_from_file(
+    arm_shape = sdp.load_shape_from_file(
         file_path=str(resolve_asset("cube/cube_fine_mesh.mochi.json")),
         bake_scale=ARM_SCALE,
     )
-    second_arm_shape = physics.load_shape_from_file(
+    second_arm_shape = sdp.load_shape_from_file(
         file_path=str(resolve_asset("cube/cube_fine_mesh.mochi.json")),
         bake_scale=SECOND_ARM_SCALE,
     )
 
     # Soft shape: tet rod X=0.375..0.475 with constrainedNodes=[0,1,2,3] at the attachment end.
-    soft_shape = physics.load_shape_from_file(
+    soft_shape = sdp.load_shape_from_file(
         file_path=str(resolve_asset(SOFT_ASSET)),
         bake_scale=[1, 1, 1],
     )
 
     # Skeleton params (articulated part)
-    skeleton_params = physics.ArticulatedActorParams(name="SoftSkinnedDoublePendulum")
+    skeleton_params = sdp.ArticulatedActorParams(name="SoftSkinnedDoublePendulum")
     skeleton_params.joints = _make_joints()
     skeleton_params.links = _make_links(arm_shape, second_arm_shape)
 
     # Soft params (deformable part) - must have has_gravity=False, constrained via JSON + attach link.
     # Use unposed elasticity (has_stress=True), which is accurate because skinning is rigid.
-    soft_params = physics.SoftActorParams(
+    soft_params = sdp.SoftActorParams(
         name="SoftArm",
         shape=soft_shape,
         layer="Soft",
@@ -168,8 +168,8 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
         has_stress=True,
     )
     # Optional: tune material - softer than default to show large deformation.
-    soft_params.material = physics.SoftMaterialParams()
-    soft_params.material.type = physics.SoftMaterialType.NEO_HOOKEAN
+    soft_params.material = sdp.SoftMaterialParams()
+    soft_params.material.type = sdp.SoftMaterialType.NEO_HOOKEAN
     soft_params.material.neo_hookean.youngs_modulus = 1.5e4
     soft_params.material.density = 500.0
 
@@ -177,7 +177,7 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
     # Use posed gravity and inertia (has_gravity, has_inertia on the articulated actor);
     # physically correct.
     # Enable colliding links as their geometry is not wrapped by the soft actor.
-    ss_params = physics.SoftSkinnedActorParams(
+    ss_params = sdp.SoftSkinnedActorParams(
         skeleton_params=skeleton_params,
         soft_params=[soft_params],
         soft_attach_links=["LowerArm"],
@@ -188,9 +188,9 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
     )
 
     soft_skinned_actor = scene.create_soft_skinned_actor(ss_params)
-    physics.release_shape(arm_shape)
-    physics.release_shape(second_arm_shape)
-    physics.release_shape(soft_shape)
+    sdp.release_shape(arm_shape)
+    sdp.release_shape(second_arm_shape)
+    sdp.release_shape(soft_shape)
 
     # Seed initial joint velocities to set the double pendulum swinging.
     soft_skinned_actor.set_articulated_joint_velocities(
@@ -198,7 +198,7 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
     )
 
     # Ball on the ground, offset in +X within reach of the swinging soft.
-    ball_shape = physics.load_shape_from_file(
+    ball_shape = sdp.load_shape_from_file(
         file_path=str(resolve_asset("sphere/icosphere_4subdiv.1.mochi.json")),
         bake_scale=[BALL_RADIUS, BALL_RADIUS, BALL_RADIUS],
     )
@@ -208,17 +208,17 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
         shape=ball_shape,
         is_static=False,
         density=500.0,
-        world_from_local=physics.TransformRT(translation=BALL_POSITION),
-        collider_type=physics.ColliderType.SPHERE,
+        world_from_local=sdp.TransformRT(translation=BALL_POSITION),
+        collider_type=sdp.ColliderType.SPHERE,
     )
-    physics.release_shape(ball_shape)
+    sdp.release_shape(ball_shape)
 
     # Static ground plane (layer "Environment").
-    plane_shape = physics.create_plane_shape(normal=[0, 1, 0], distance=0)
+    plane_shape = sdp.create_plane_shape(normal=[0, 1, 0], distance=0)
     scene.create_rigid_actor(
         name="Ground", layer="Environment", shape=plane_shape, is_static=True
     )
-    physics.release_shape(plane_shape)
+    sdp.release_shape(plane_shape)
 
     # Contact filter: only the soft is struck by the ball. Disable per-link "Pendulum" colliders
     # against everything, and keep the soft from interacting with the ground. Contact between
@@ -256,10 +256,10 @@ def print_introspection(scene: Scene, actor: Actor) -> None:
     # The soft shape itself carries constrainedNodes=[0,1,2,3] at X=0.375 end.
 
     probes = [
-        physics.QueryType.SURFACE_NODE_POSITIONS,
-        physics.QueryType.CONTACT_POINTS,
-        physics.QueryType.TOTAL_CONTACT_FORCE,
-        physics.QueryType.NODE_POSITIONS,
+        sdp.QueryType.SURFACE_NODE_POSITIONS,
+        sdp.QueryType.CONTACT_POINTS,
+        sdp.QueryType.TOTAL_CONTACT_FORCE,
+        sdp.QueryType.NODE_POSITIONS,
     ]
     for q in probes:
         print(
@@ -289,7 +289,7 @@ def demonstrate_soft_surface(scene: Scene, actor: Actor) -> None:
         f"max={[round(v, 3) for v in aabb.max]}"
     )
     # Register node positions query on nested soft (data computed during step)
-    pos_query = soft_actor.register_query(physics.QueryType.NODE_POSITIONS)
+    pos_query = soft_actor.register_query(sdp.QueryType.NODE_POSITIONS)
     scene.step(TIME_STEP)
     # Read the deformed node positions computed during the step (3 values per node).
     node_positions = soft_actor.get_node_positions_local()
@@ -330,7 +330,7 @@ def run_interactive(scene: Scene, actor: Actor, ball: Actor) -> None:
     sim_time = 0.0
     next_report = 1.0
 
-    if not physics.debugger.attach():
+    if not sdp.debugger.attach():
         return
 
     # Contact queries are supported on the nested soft actor, not the top-level articulated
@@ -340,15 +340,15 @@ def run_interactive(scene: Scene, actor: Actor, ball: Actor) -> None:
     if soft_actor is None:
         return
 
-    contact_points = soft_actor.register_query(physics.QueryType.CONTACT_POINTS)
-    contact_force = soft_actor.register_query(physics.QueryType.TOTAL_CONTACT_FORCE)
+    contact_points = soft_actor.register_query(sdp.QueryType.CONTACT_POINTS)
+    contact_force = soft_actor.register_query(sdp.QueryType.TOTAL_CONTACT_FORCE)
 
-    while physics.debugger.is_attached():
+    while sdp.debugger.is_attached():
         scene.step(TIME_STEP)
         sim_time += TIME_STEP
 
         if sim_time >= next_report:
-            pose = physics.DynamicArrayReal(NUM_DOFS)
+            pose = sdp.DynamicArrayReal(NUM_DOFS)
             actor.get_articulated_pose(pose)
             aabb = soft_actor.get_aabb_world()
             num_contacts = len(soft_actor.get_contact_points_world())
@@ -367,14 +367,14 @@ def run_interactive(scene: Scene, actor: Actor, ball: Actor) -> None:
 
 def main() -> None:
     """Run the interactive soft-skinned-articulations tutorial."""
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
     scene, actor, ball = build_scene()
     print_introspection(scene, actor)
     demonstrate_soft_surface(scene, actor)
     demonstrate_contact_control(scene, actor)
     run_interactive(scene, actor, ball)
-    physics.destroy_scene(scene)
-    physics.shutdown()
+    sdp.destroy_scene(scene)
+    sdp.shutdown()
     print("Simulation complete.")
 
 

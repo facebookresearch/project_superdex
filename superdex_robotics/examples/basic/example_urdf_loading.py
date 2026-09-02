@@ -46,8 +46,8 @@ Usage:
 
 import argparse
 
-import superdex.physics as physics
-import superdex.robotics as robotics
+import superdex.physics as sdp
+import superdex.robotics as sdr
 from superdex.physics.paths import resolve_asset
 
 
@@ -72,31 +72,31 @@ def main() -> None:
 
     # Initialize the physics engine before creating scenes or actors.
     # num_worker_threads=0 runs single-threaded; pass -1 to auto-select.
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
 
     # Create an empty scene. SuperDex robots use a Z-up convention, so gravity
     # points down the -Z axis.
-    scene = physics.create_scene("URDF Bot Loading Example")
+    scene = sdp.create_scene("URDF Bot Loading Example")
     scene.set_gravity([0, 0, -9.81])
 
     # Parse the URDF into a bot prefab: a template describing links and joints.
     # Collision mesh paths are kept as-is; no mesh conversion happens here.
-    bot_prefab = robotics.load_bot_prefab_from_urdf_file(urdf_path)
+    bot_prefab = sdr.load_bot_prefab_from_urdf_file(urdf_path)
 
     # URDF loading adds a free "world_joint" at index 0, leaving the base free to
     # fall. Make it a Hard (0-DoF weld) joint to anchor the base to the world.
     # The arm still sags under gravity since there is no controller.
-    bot_prefab.joints[0].type = physics.ArticulatedJointType.HARD
+    bot_prefab.joints[0].type = sdp.ArticulatedJointType.HARD
 
     # Instantiate the prefab as a live Bot in the scene. This builds the robot's
     # articulated actor and bakes each link's SDF collider from its mesh. The
     # robotics context tracks every bot and controller you create.
-    robotics_context = robotics.create_context()
-    bot = robotics.create_bot(scene, bot_prefab, robotics_context)
+    robotics_context = sdr.create_context()
+    bot = sdr.create_bot(scene, bot_prefab, robotics_context)
     bot_actor = bot.get_articulated_actor()
 
     # Add a static ground plane for the robot to rest on (normal points up, +Z).
-    plane_shape = physics.create_plane_shape(normal=[0, 0, 1], distance=0)
+    plane_shape = sdp.create_plane_shape(normal=[0, 0, 1], distance=0)
     scene.create_rigid_actor(name="ground", shape=plane_shape, is_static=True)
 
     # Print a quick summary of the loaded robot.
@@ -111,20 +111,20 @@ def main() -> None:
     # Declare the scene's coordinate convention so the debugger renders it the
     # right way up: SuperDex is X-forward, Y-left, Z-up (FLU). Must come before
     # attach(), which starts the server.
-    physics.get_debug_server().set_coordinate_space(
-        physics.CoordinateSpace(axes=physics.CoordinateSpaceAxes.FLU)
+    sdp.get_debug_server().set_coordinate_space(
+        sdp.CoordinateSpace(axes=sdp.CoordinateSpaceAxes.FLU)
     )
 
     # Launch and connect the SuperDex Physics Debugger, a separate desktop app for
     # viewing and interacting with the simulation. The loop runs until you close
     # the debugger; attach() returns False if it can't connect.
-    if physics.debugger.attach():
-        while physics.debugger.is_attached():
+    if sdp.debugger.attach():
+        while sdp.debugger.is_attached():
             scene.step(time_step)
 
     # Tear down: destroy the bot, then shut the engine down cleanly.
-    robotics.destroy_bot(scene, bot)
-    physics.shutdown()
+    sdr.destroy_bot(scene, bot)
+    sdp.shutdown()
     print("Simulation complete.")
 
 

@@ -36,11 +36,11 @@ from __future__ import annotations
 import math
 
 import numpy as np
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.physics import Actor, Scene
 from superdex.physics.paths import resolve_asset, resolve_asset_root
 
-np_real = np.float64 if physics.uses_double_precision() else np.float32
+np_real = np.float64 if sdp.uses_double_precision() else np.float32
 
 ARTICULATION_NAME = "DoublePendulumOnRail"
 NUM_DOFS = 5
@@ -90,20 +90,20 @@ CIRCLE_PERIOD = 4.0  # [s]
 
 def _add_hybrid_controller(articulation: Actor) -> None:
     """Add a controller with joint and end-effector tracking."""
-    params = physics.PoseControllerParams(NUM_LINKS)
-    params.joint_tracking[CART_LINK] = physics.PoseTrackingParams(
+    params = sdp.PoseControllerParams(NUM_LINKS)
+    params.joint_tracking[CART_LINK] = sdp.PoseTrackingParams(
         stiffness=RAIL_JOINT_STIFFNESS,
         damping=RAIL_JOINT_DAMPING,
     )
-    params.joint_tracking[UPPER_ARM_LINK] = physics.PoseTrackingParams(
+    params.joint_tracking[UPPER_ARM_LINK] = sdp.PoseTrackingParams(
         stiffness=HINGE_JOINT_STIFFNESS,
         damping=HINGE_JOINT_DAMPING,
     )
-    params.link_pos_tracking[END_EFFECTOR_LINK] = physics.PoseTrackingParams(
+    params.link_pos_tracking[END_EFFECTOR_LINK] = sdp.PoseTrackingParams(
         stiffness=END_EFFECTOR_POSITION_STIFFNESS,
         damping=END_EFFECTOR_POSITION_DAMPING,
     )
-    params.link_rot_tracking[END_EFFECTOR_LINK] = physics.PoseTrackingParams(
+    params.link_rot_tracking[END_EFFECTOR_LINK] = sdp.PoseTrackingParams(
         stiffness=END_EFFECTOR_ROTATION_STIFFNESS,
         damping=END_EFFECTOR_ROTATION_DAMPING,
     )
@@ -112,20 +112,20 @@ def _add_hybrid_controller(articulation: Actor) -> None:
 
 def _set_hybrid_controller(articulation: Actor) -> None:
     """Enable joint and end-effector tracking."""
-    params = physics.PoseControllerParams(NUM_LINKS)
-    params.joint_tracking[CART_LINK] = physics.PoseTrackingParams(
+    params = sdp.PoseControllerParams(NUM_LINKS)
+    params.joint_tracking[CART_LINK] = sdp.PoseTrackingParams(
         stiffness=RAIL_JOINT_STIFFNESS,
         damping=RAIL_JOINT_DAMPING,
     )
-    params.joint_tracking[UPPER_ARM_LINK] = physics.PoseTrackingParams(
+    params.joint_tracking[UPPER_ARM_LINK] = sdp.PoseTrackingParams(
         stiffness=HINGE_JOINT_STIFFNESS,
         damping=HINGE_JOINT_DAMPING,
     )
-    params.link_pos_tracking[END_EFFECTOR_LINK] = physics.PoseTrackingParams(
+    params.link_pos_tracking[END_EFFECTOR_LINK] = sdp.PoseTrackingParams(
         stiffness=END_EFFECTOR_POSITION_STIFFNESS,
         damping=END_EFFECTOR_POSITION_DAMPING,
     )
-    params.link_rot_tracking[END_EFFECTOR_LINK] = physics.PoseTrackingParams(
+    params.link_rot_tracking[END_EFFECTOR_LINK] = sdp.PoseTrackingParams(
         stiffness=END_EFFECTOR_ROTATION_STIFFNESS,
         damping=END_EFFECTOR_ROTATION_DAMPING,
     )
@@ -134,12 +134,12 @@ def _set_hybrid_controller(articulation: Actor) -> None:
 
 def _set_joint_only_controller(articulation: Actor) -> None:
     """Enable joint tracking and disable link tracking."""
-    params = physics.PoseControllerParams(NUM_LINKS)
-    params.joint_tracking[CART_LINK] = physics.PoseTrackingParams(
+    params = sdp.PoseControllerParams(NUM_LINKS)
+    params.joint_tracking[CART_LINK] = sdp.PoseTrackingParams(
         stiffness=RAIL_JOINT_STIFFNESS,
         damping=RAIL_JOINT_DAMPING,
     )
-    params.joint_tracking[UPPER_ARM_LINK] = physics.PoseTrackingParams(
+    params.joint_tracking[UPPER_ARM_LINK] = sdp.PoseTrackingParams(
         stiffness=HINGE_JOINT_STIFFNESS,
         damping=HINGE_JOINT_DAMPING,
     )
@@ -148,12 +148,12 @@ def _set_joint_only_controller(articulation: Actor) -> None:
 
 def _set_link_only_controller(articulation: Actor) -> None:
     """Enable end-effector tracking and disable joint tracking."""
-    params = physics.PoseControllerParams(NUM_LINKS)
-    params.link_pos_tracking[END_EFFECTOR_LINK] = physics.PoseTrackingParams(
+    params = sdp.PoseControllerParams(NUM_LINKS)
+    params.link_pos_tracking[END_EFFECTOR_LINK] = sdp.PoseTrackingParams(
         stiffness=END_EFFECTOR_POSITION_STIFFNESS,
         damping=END_EFFECTOR_POSITION_DAMPING,
     )
-    params.link_rot_tracking[END_EFFECTOR_LINK] = physics.PoseTrackingParams(
+    params.link_rot_tracking[END_EFFECTOR_LINK] = sdp.PoseTrackingParams(
         stiffness=END_EFFECTOR_ROTATION_STIFFNESS,
         damping=END_EFFECTOR_ROTATION_DAMPING,
     )
@@ -162,8 +162,8 @@ def _set_link_only_controller(articulation: Actor) -> None:
 
 def build_scene() -> tuple[Scene, Actor]:
     """Load the plain scene and add the hybrid joint/link pose controller."""
-    scene = physics.create_scene("Articulations Pose Controller Scene")
-    result = physics.prefab.add_to_scene(
+    scene = sdp.create_scene("Articulations Pose Controller Scene")
+    result = sdp.prefab.add_to_scene(
         prefab_path=str(
             resolve_asset("samples/articulations_double_pendulum_on_rail.mochi_scene")
         ),
@@ -176,7 +176,7 @@ def build_scene() -> tuple[Scene, Actor]:
     )
     articulation = next(
         actor
-        for actor in result.filter(physics.ActorType.ARTICULATED)
+        for actor in result.filter(sdp.ActorType.ARTICULATED)
         if actor.get_name() == ARTICULATION_NAME
     )
 
@@ -190,13 +190,13 @@ def _get_pose(articulation: Actor) -> np.ndarray:
     return pose
 
 
-def _get_controller_params(articulation: Actor) -> physics.PoseControllerParams:
-    params = physics.PoseControllerParams(NUM_LINKS)
+def _get_controller_params(articulation: Actor) -> sdp.PoseControllerParams:
+    params = sdp.PoseControllerParams(NUM_LINKS)
     articulation.get_articulated_pose_controller_params(out_params=params)
     return params
 
 
-def _format_gains(gains: physics.PoseTrackingParams) -> str:
+def _format_gains(gains: sdp.PoseTrackingParams) -> str:
     if gains.stiffness == 0.0 and gains.damping == 0.0:
         return "off"
     return f"Kp={gains.stiffness:g}, Kd={gains.damping:g}"
@@ -268,8 +268,8 @@ def _joint_kick_target(sim_time: float, rest_target: np.ndarray) -> np.ndarray:
 
 
 def _circle_link_target(
-    elapsed: float, center_transforms: physics.DynamicArrayTransformRT
-) -> physics.DynamicArrayTransformRT:
+    elapsed: float, center_transforms: sdp.DynamicArrayTransformRT
+) -> sdp.DynamicArrayTransformRT:
     center_transform = center_transforms[END_EFFECTOR_LINK]
     radius = CIRCLE_RADIUS * _smoothstep(elapsed / CIRCLE_RAMP_DURATION)
     angle = 2.0 * math.pi * elapsed / CIRCLE_PERIOD
@@ -280,10 +280,8 @@ def _circle_link_target(
         center[2] + radius * math.sin(angle),
     ]
 
-    targets = physics.DynamicArrayTransformRT(list(center_transforms))
-    targets[END_EFFECTOR_LINK] = physics.TransformRT(
-        center_transform.rotation, position
-    )
+    targets = sdp.DynamicArrayTransformRT(list(center_transforms))
+    targets[END_EFFECTOR_LINK] = sdp.TransformRT(center_transform.rotation, position)
     return targets
 
 
@@ -293,10 +291,10 @@ def _report(
     phase_name: str,
     mode: str,
     joint_target: np.ndarray | None,
-    link_targets: physics.DynamicArrayTransformRT | None,
+    link_targets: sdp.DynamicArrayTransformRT | None,
 ) -> None:
     pose = _get_pose(articulation)
-    link_transforms = physics.DynamicArrayTransformRT(NUM_LINKS)
+    link_transforms = sdp.DynamicArrayTransformRT(NUM_LINKS)
     articulation.get_articulated_link_transforms(out_world_from_links=link_transforms)
     end_effector_position = link_transforms[END_EFFECTOR_LINK].translation
     controller_generalized_forces = articulation.get_articulated_controller_force()
@@ -334,15 +332,15 @@ def _report(
 
 def run_interactive(scene: Scene, articulation: Actor, rest_target: np.ndarray) -> None:
     """Run the three controller phases while the debugger remains attached."""
-    if not physics.debugger.attach():
+    if not sdp.debugger.attach():
         return
 
     sim_time = 0.0
     next_report = REPORT_INTERVAL
     old_mode = HYBRID
-    circle_center_transforms: physics.DynamicArrayTransformRT | None = None
+    circle_center_transforms: sdp.DynamicArrayTransformRT | None = None
 
-    def detect_debugger_reset(step_info: physics.StepInfo) -> None:
+    def detect_debugger_reset(step_info: sdp.StepInfo) -> None:
         nonlocal next_report
         nonlocal old_mode
         nonlocal circle_center_transforms
@@ -356,9 +354,9 @@ def run_interactive(scene: Scene, articulation: Actor, rest_target: np.ndarray) 
     reset_callback = scene.register_pre_step_callback(
         "Detect pose-controller tutorial reset", detect_debugger_reset
     )
-    query = articulation.register_query(physics.QueryType.ARTICULATED_CONTROLLER_FORCE)
+    query = articulation.register_query(sdp.QueryType.ARTICULATED_CONTROLLER_FORCE)
 
-    while physics.debugger.is_attached():
+    while sdp.debugger.is_attached():
         phase_name, mode = _phase_at(sim_time)
         if mode != old_mode:
             if mode == JOINT_ONLY:
@@ -368,7 +366,7 @@ def run_interactive(scene: Scene, articulation: Actor, rest_target: np.ndarray) 
             print(f"t={sim_time:.1f}s: entering {phase_name}; controller mode={mode}")
 
         joint_target: np.ndarray | None = None
-        link_targets: physics.DynamicArrayTransformRT | None = None
+        link_targets: sdp.DynamicArrayTransformRT | None = None
         if mode == HYBRID:
             joint_target = rest_target
         elif mode == JOINT_ONLY:
@@ -377,7 +375,7 @@ def run_interactive(scene: Scene, articulation: Actor, rest_target: np.ndarray) 
         else:  # LINK_ONLY
             if mode != old_mode:
                 # Preserve a valid world-space target for every link at handoff.
-                circle_center_transforms = physics.DynamicArrayTransformRT(NUM_LINKS)
+                circle_center_transforms = sdp.DynamicArrayTransformRT(NUM_LINKS)
                 articulation.get_articulated_link_transforms(
                     out_world_from_links=circle_center_transforms
                 )
@@ -415,15 +413,15 @@ def run_interactive(scene: Scene, articulation: Actor, rest_target: np.ndarray) 
 
 def main() -> None:
     """Run the interactive articulation pose-controller tutorial."""
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
     scene, articulation = build_scene()
 
     print_controller_setup(articulation)
     rest_target = reset_to_initial_state(articulation)
     run_interactive(scene, articulation, rest_target)
 
-    physics.destroy_scene(scene)
-    physics.shutdown()
+    sdp.destroy_scene(scene)
+    sdp.shutdown()
     print("Simulation complete.")
 
 

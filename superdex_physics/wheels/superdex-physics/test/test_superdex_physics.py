@@ -47,13 +47,14 @@ def _drop_superdex_test_stand_ins() -> None:
 
 
 def _import_superdex_physics_modules() -> tuple[
-    ModuleType, ModuleType, ModuleType, ModuleType
+    ModuleType, ModuleType, ModuleType, ModuleType, ModuleType
 ]:
     _drop_superdex_test_stand_ins()
     try:
         physics = importlib.import_module("superdex.physics")
         debugger = importlib.import_module("superdex.physics.debugger")
         mesh = importlib.import_module("superdex.physics.mesh")
+        rerun = importlib.import_module("superdex.physics.rerun")
         viewer = importlib.import_module("superdex.physics.viewer")
     except ImportError as error:
         if _is_missing_native_module(error) and not os.environ.get(
@@ -64,21 +65,28 @@ def _import_superdex_physics_modules() -> tuple[
             ) from error
         raise
 
-    return physics, debugger, mesh, viewer
+    return physics, debugger, mesh, rerun, viewer
 
 
 class SuperdexPhysicsImportTest(unittest.TestCase):
     def test_import_smoke(self) -> None:
-        physics, debugger, mesh, viewer = _import_superdex_physics_modules()
+        physics, debugger, mesh, rerun, viewer = _import_superdex_physics_modules()
 
         self.assertTrue(hasattr(physics, "Actor"))
         self.assertTrue(hasattr(mesh, "remesh_surface"))
+        self.assertTrue(hasattr(rerun, "RerunLogger"))
         self.assertTrue(hasattr(viewer, "Viewer"))
         self.assertTrue(hasattr(debugger, "attach"))
 
     def test_lazy_submodules_are_available_from_physics(self) -> None:
-        physics, debugger, mesh, viewer = _import_superdex_physics_modules()
+        physics, _, _, _, _ = _import_superdex_physics_modules()
 
-        self.assertIs(physics.debugger, debugger)
-        self.assertIs(physics.mesh, mesh)
-        self.assertIs(physics.viewer, viewer)
+        submodules = {}
+        for name in ("debugger", "mesh", "rerun", "viewer"):
+            physics.__dict__.pop(name, None)
+            sys.modules.pop(f"superdex.physics.{name}", None)
+            submodules[name] = getattr(physics, name)
+
+        for name, module in submodules.items():
+            self.assertEqual(module.__name__, f"superdex.physics.{name}")
+            self.assertIs(physics.__dict__[name], module)

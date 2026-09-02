@@ -22,7 +22,7 @@ The visual mesh vertices are embedded in the tetrahedral elements using
 barycentric coordinates, so the visual mesh follows the simulated deformation.
 """
 
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.physics import Actor, Scene
 from superdex.physics.paths import resolve_asset
 
@@ -37,31 +37,31 @@ def create_soft_duck_visual_mesh_simulation() -> tuple[Scene, Actor, Actor, Acto
     Returns:
         tuple: (scene, visual_mesh_actor, simulation_mesh_actor, ground_actor)
     """
-    scene = physics.create_scene("Soft Body Visual Mesh Scene")
+    scene = sdp.create_scene("Soft Body Visual Mesh Scene")
 
     # This asset contains both a coarse tetrahedral simulation mesh and an
     # embedded triangular visual mesh.
-    shape_with_visual_mesh = physics.load_shape_from_file(
+    shape_with_visual_mesh = sdp.load_shape_from_file(
         file_path=str(resolve_asset("duck/duck_coarse.mochi.h5")),
     )
 
     # Create a second shape from only the tetrahedral simulation mesh. Without
     # an embedded visual mesh, the debugger renders its derived boundary surface.
-    simulation_mesh = physics.get_shape_mesh(shape_with_visual_mesh)
-    shape_without_visual_mesh = physics.create_mesh_shape(simulation_mesh)
+    simulation_mesh = sdp.get_shape_mesh(shape_with_visual_mesh)
+    shape_without_visual_mesh = sdp.create_mesh_shape(simulation_mesh)
 
     visual_mesh_actor = scene.create_soft_actor(
         name="duck_with_visual_mesh",
         shape=shape_with_visual_mesh,
-        world_from_local=physics.TransformRT(translation=[-1.0, 0.5, -0.5]),
+        world_from_local=sdp.TransformRT(translation=[-1.0, 0.5, -0.5]),
     )
     simulation_mesh_actor = scene.create_soft_actor(
         name="duck_without_visual_mesh",
         shape=shape_without_visual_mesh,
-        world_from_local=physics.TransformRT(translation=[0.0, 0.5, -0.5]),
+        world_from_local=sdp.TransformRT(translation=[0.0, 0.5, -0.5]),
     )
 
-    plane_shape = physics.create_plane_shape(normal=[0, 1, 0], distance=0.0)
+    plane_shape = sdp.create_plane_shape(normal=[0, 1, 0], distance=0.0)
     ground_actor = scene.create_rigid_actor(
         name="ground", shape=plane_shape, is_static=True
     )
@@ -84,25 +84,25 @@ def cleanup_simulation(
 
     # Destroying this scene is not required immediately before shutdown; this
     # call demonstrates how to release a scene while SuperDex Physics remains active.
-    physics.destroy_scene(scene)
+    sdp.destroy_scene(scene)
 
     # Shutdown releases any remaining global resources. It is shown explicitly
     # so this example can be initialized again in the same process.
-    physics.shutdown()
+    sdp.shutdown()
 
 
 def main() -> None:
     """Run the interactive visual-mesh comparison."""
     # Run single-threaded to keep the example simple. Use -1 to let SuperDex
     # Physics select a worker count, or a positive value to choose it explicitly.
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
 
     scene, visual_mesh_actor, simulation_mesh_actor, ground_actor = (
         create_soft_duck_visual_mesh_simulation()
     )
 
-    if physics.debugger.attach():
-        while physics.debugger.is_attached():
+    if sdp.debugger.attach():
+        while sdp.debugger.is_attached():
             scene.step(TIME_STEP)
         print("Simulation complete.")
 

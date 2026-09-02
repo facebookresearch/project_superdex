@@ -33,11 +33,11 @@ import weakref
 
 from test.conftest import (
     bot_tag_path,
-    bots,
-    mochi,
     MochiTestBase,
     requires_hdf5,
     requires_internal,
+    sdp,
+    sdr,
     write_assets_tag_root_marker,
 )
 
@@ -84,15 +84,15 @@ class PyTestActuator:
 class PurePythonSensorTest(MochiTestBase):
     def test_register_create_drive_and_destroy_without_an_actor(self) -> None:
         sensor_type = "PY_TEST_SENSOR_STANDALONE"
-        bots_ctx = bots.create_context()
-        bots.register_python_sensor(bots_ctx, sensor_type, PyTestSensor)
+        bots_ctx = sdr.create_context()
+        sdr.register_python_sensor(bots_ctx, sensor_type, PyTestSensor)
         self.assertTrue(bots_ctx.is_sensor_type_registered(sensor_type))
 
         # No actor at all: the fusion-sensor case, which needs no scene.
         handle = bots_ctx.create_sensor(sensor_type, None, "fusion", '{"rate": 30}')
         self.assertTrue(handle.is_valid())
 
-        sensor = bots.get_python_sensor(bots_ctx, handle)
+        sensor = sdr.get_python_sensor(bots_ctx, handle)
         self.assertIsInstance(sensor, PyTestSensor)
         self.assertIsNone(sensor.actor)
         # param_args reaches the Python factory verbatim -- a sensor's only config channel.
@@ -120,20 +120,20 @@ class PurePythonSensorTest(MochiTestBase):
     def test_several_python_sensor_types_coexist(self) -> None:
         first_type = "PY_TEST_SENSOR_A"
         second_type = "PY_TEST_SENSOR_B"
-        bots_ctx = bots.create_context()
+        bots_ctx = sdr.create_context()
 
         class OtherPyTestSensor(PyTestSensor):
             pass
 
-        bots.register_python_sensor(bots_ctx, first_type, PyTestSensor)
-        bots.register_python_sensor(bots_ctx, second_type, OtherPyTestSensor)
+        sdr.register_python_sensor(bots_ctx, first_type, PyTestSensor)
+        sdr.register_python_sensor(bots_ctx, second_type, OtherPyTestSensor)
 
         first = bots_ctx.create_sensor(first_type, None, "a", "")
         second = bots_ctx.create_sensor(second_type, None, "b", "")
         try:
-            self.assertIsInstance(bots.get_python_sensor(bots_ctx, first), PyTestSensor)
+            self.assertIsInstance(sdr.get_python_sensor(bots_ctx, first), PyTestSensor)
             self.assertIsInstance(
-                bots.get_python_sensor(bots_ctx, second), OtherPyTestSensor
+                sdr.get_python_sensor(bots_ctx, second), OtherPyTestSensor
             )
             # Each instance is distinct, and the type string routes to the right factory.
             found = bots_ctx.find_sensors_by_type(second_type)
@@ -144,47 +144,47 @@ class PurePythonSensorTest(MochiTestBase):
 
     def test_factory_exception_surfaces_as_an_error(self) -> None:
         sensor_type = "PY_TEST_SENSOR_RAISES"
-        bots_ctx = bots.create_context()
+        bots_ctx = sdr.create_context()
 
         def failing_factory(actor: object, param_args: str) -> PyTestSensor:
             raise ValueError("no sensor for you")
 
-        bots.register_python_sensor(bots_ctx, sensor_type, failing_factory)
+        sdr.register_python_sensor(bots_ctx, sensor_type, failing_factory)
         # The ValueError is logged and reported as a mochi error, not propagated: asserting
         # on that specific type is what proves the factory ran and the error path converted
         # it, rather than the call failing for some unrelated reason.
-        with self.assertRaises(mochi.Error):
+        with self.assertRaises(sdp.Error):
             bots_ctx.create_sensor(sensor_type, None, "doomed", "")
 
     def test_sensor_without_reset_is_rejected(self) -> None:
         sensor_type = "PY_TEST_SENSOR_NO_RESET"
-        bots_ctx = bots.create_context()
+        bots_ctx = sdr.create_context()
 
         class NoResetSensor:
             def __init__(self, actor: object, param_args: str) -> None:
                 self.actor = actor
 
-        bots.register_python_sensor(bots_ctx, sensor_type, NoResetSensor)
+        sdr.register_python_sensor(bots_ctx, sensor_type, NoResetSensor)
         # Every component must implement reset(); the omission is caught at creation, not
         # silently ignored until someone resets between episodes and nothing happens.
-        with self.assertRaises(mochi.Error):
+        with self.assertRaises(sdp.Error):
             bots_ctx.create_sensor(sensor_type, None, "no_reset", "")
 
     def test_get_python_sensor_none_for_invalid_handle(self) -> None:
-        bots_ctx = bots.create_context()
-        self.assertIsNone(bots.get_python_sensor(bots_ctx, bots.SensorHandle()))
+        bots_ctx = sdr.create_context()
+        self.assertIsNone(sdr.get_python_sensor(bots_ctx, sdr.SensorHandle()))
 
     def test_get_python_actuator_none_for_invalid_handle(self) -> None:
-        bots_ctx = bots.create_context()
-        self.assertIsNone(bots.get_python_actuator(bots_ctx, bots.ActuatorHandle()))
+        bots_ctx = sdr.create_context()
+        self.assertIsNone(sdr.get_python_actuator(bots_ctx, sdr.ActuatorHandle()))
 
     def test_get_python_sensor_none_for_cpp_sensor(self) -> None:
-        bots_ctx = bots.create_context()
+        bots_ctx = sdr.create_context()
         handle = bots_ctx.create_sensor(
-            bots.CameraSensor.type_name(), None, "cpp_cam", ""
+            sdr.CameraSensor.type_name(), None, "cpp_cam", ""
         )
         try:
-            self.assertIsNone(bots.get_python_sensor(bots_ctx, handle))
+            self.assertIsNone(sdr.get_python_sensor(bots_ctx, handle))
         finally:
             bots_ctx.destroy_sensor(handle)
 
@@ -197,9 +197,9 @@ class PurePythonComponentsOnABotTest(MochiTestBase):
     def test_python_sensor_and_actuator_on_a_bot(self) -> None:
         sensor_type = "PY_TEST_SENSOR_ON_BOT"
         actuator_type = "PY_TEST_ACTUATOR_ON_BOT"
-        bots_ctx = bots.create_context()
-        bots.register_python_sensor(bots_ctx, sensor_type, PyTestSensor)
-        bots.register_python_actuator(bots_ctx, actuator_type, PyTestActuator)
+        bots_ctx = sdr.create_context()
+        sdr.register_python_sensor(bots_ctx, sensor_type, PyTestSensor)
+        sdr.register_python_actuator(bots_ctx, actuator_type, PyTestActuator)
         self.assertTrue(bots_ctx.is_actuator_type_registered(actuator_type))
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -226,7 +226,7 @@ class PurePythonComponentsOnABotTest(MochiTestBase):
                     )
                 )
 
-            bot_scene = bots.load_bot_scene(scene_file, bots_ctx)
+            bot_scene = sdr.load_bot_scene(scene_file, bots_ctx)
             bot = bot_scene.get_bot("robot")
             self.assertIsNotNone(bot)
             actor = bot.get_articulated_actor()
@@ -245,8 +245,8 @@ class PurePythonComponentsOnABotTest(MochiTestBase):
                 actuator_handle.value, [h.value for h in bot.get_actuator_handles()]
             )
 
-            sensor = bots.get_python_sensor(bots_ctx, sensor_handle)
-            actuator = bots.get_python_actuator(bots_ctx, actuator_handle)
+            sensor = sdr.get_python_sensor(bots_ctx, sensor_handle)
+            actuator = sdr.get_python_actuator(bots_ctx, actuator_handle)
             self.assertIsInstance(sensor, PyTestSensor)
             self.assertIsInstance(actuator, PyTestActuator)
             # Both were handed the live actor they are attached to.
@@ -281,8 +281,8 @@ class PurePythonComponentsOnABotTest(MochiTestBase):
     @requires_hdf5
     def test_scene_level_python_sensor_is_instantiated_by_the_loader(self) -> None:
         sensor_type = "PY_TEST_SENSOR_SCENE_LEVEL"
-        bots_ctx = bots.create_context()
-        bots.register_python_sensor(bots_ctx, sensor_type, PyTestSensor)
+        bots_ctx = sdr.create_context()
+        sdr.register_python_sensor(bots_ctx, sensor_type, PyTestSensor)
 
         with tempfile.TemporaryDirectory() as tmp:
             write_assets_tag_root_marker(tmp)
@@ -317,12 +317,12 @@ class PurePythonComponentsOnABotTest(MochiTestBase):
                     )
                 )
 
-            bot_scene = bots.load_bot_scene(scene_file, bots_ctx)
+            bot_scene = sdr.load_bot_scene(scene_file, bots_ctx)
 
             # The loader built the Python sensor from its type string alone.
             found = bots_ctx.find_sensors_by_name("scene_py_sensor")
             self.assertEqual(len(found), 1)
-            sensor = bots.get_python_sensor(bots_ctx, found[0])
+            sensor = sdr.get_python_sensor(bots_ctx, found[0])
             self.assertIsInstance(sensor, PyTestSensor)
             self.assertEqual(sensor.param_args, '{"fov": 90}')
             # A scene-level sensor has no link actor and belongs to no bot.

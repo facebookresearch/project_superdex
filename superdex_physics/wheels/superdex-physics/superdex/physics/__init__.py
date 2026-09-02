@@ -57,6 +57,7 @@ __all__ = forward_module(_extension, globals())
 _LAZY_IMPORTS = {
     "debugger": "superdex.physics.debugger",
     "mesh": "superdex.physics.mesh",
+    "rerun": "superdex.physics.rerun",
     "utils": "superdex.physics.utils",
     "viewer": "superdex.physics.viewer",
 }

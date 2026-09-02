@@ -34,7 +34,7 @@ from typing import Any, Callable
 
 import numpy as np
 import numpy.typing as npt
-import superdex.physics as physics
+import superdex.physics as sdp
 from gymnasium import Env, spaces
 from gymnasium.error import ClosedEnvironmentError
 from superdex.lab.gym.envs.scene_manager import destroy_scene_with_cleanup, SceneManager
@@ -240,12 +240,12 @@ class MochiEnv(abc.ABC, Env[ObservationSpace, ActionSpace]):
     }
 
     # Protected members
-    _scene: physics.Scene
+    _scene: sdp.Scene
     _scene_name: str | None
     _scene_manager: SceneManager | None
-    _agent: physics.Actor
-    _initial_state_snapshot: physics.StateHandle
-    _state_snapshot: physics.StateHandle
+    _agent: sdp.Actor
+    _initial_state_snapshot: sdp.StateHandle
+    _state_snapshot: sdp.StateHandle
     _control_frequency: int
     _control_dt: float
     _simulation_frequency: int
@@ -540,7 +540,7 @@ class MochiEnv(abc.ABC, Env[ObservationSpace, ActionSpace]):
         # finalized (e.g. GC firing __del__ at interpreter shutdown, after
         # physics.shutdown()); destroy_scene requires a live context and would
         # otherwise raise.
-        if self._scene is not None and physics.is_initialized():
+        if self._scene is not None and sdp.is_initialized():
             self._release_scene()
 
         # Flag as closed.
@@ -559,12 +559,12 @@ class MochiEnv(abc.ABC, Env[ObservationSpace, ActionSpace]):
         environment in this process."""
 
         # Initialize the Mochi context if not already initialized.
-        if not physics.is_initialized():
+        if not sdp.is_initialized():
             logger.info(
                 f"Initializing Mochi context on process {os.getpid()} with "
                 f"{cfg.num_worker_threads} worker threads..."
             )
-            physics.initialize(num_worker_threads=cfg.num_worker_threads)
+            sdp.initialize(num_worker_threads=cfg.num_worker_threads)
             logger.info("Mochi context initialized.")
 
             forward_mochi_logs_to_logger(logger)
@@ -572,15 +572,15 @@ class MochiEnv(abc.ABC, Env[ObservationSpace, ActionSpace]):
 
         # Enable the file cache so that each model is only loaded once and shared
         # between actors and scenes.
-        physics.enable_file_cache(True)
+        sdp.enable_file_cache(True)
 
     def _load_scene(
         self,
         scene_name: str,
         scene_factory: Callable[
             [],
-            tuple[physics.Scene, physics.Actor]
-            | tuple[physics.Scene, physics.Actor, list[Callable[[], None]]],
+            tuple[sdp.Scene, sdp.Actor]
+            | tuple[sdp.Scene, sdp.Actor, list[Callable[[], None]]],
         ],
     ):
         """
@@ -647,7 +647,7 @@ class MochiEnv(abc.ABC, Env[ObservationSpace, ActionSpace]):
             self._scene = scene_data.scene
             self._agent = scene_data.agent
             self._initial_state_snapshot = scene_data.initial_state
-            self._state_snapshot = physics.StateHandle()
+            self._state_snapshot = sdp.StateHandle()
             self._scene.restore_state(
                 handle=self._initial_state_snapshot, release_immediately=False
             )
@@ -682,9 +682,9 @@ class MochiEnv(abc.ABC, Env[ObservationSpace, ActionSpace]):
         cleanup_callbacks = list(cleanup_callbacks)
         logger.debug("Scene created.")
         try:
-            if not isinstance(scene, physics.Scene):
+            if not isinstance(scene, sdp.Scene):
                 raise TypeError("Scene factory must return a valid Mochi scene.")
-            if not isinstance(agent, physics.Actor):
+            if not isinstance(agent, sdp.Actor):
                 raise TypeError("Scene factory must return a valid Mochi agent.")
             return adopt(scene, agent, cleanup_callbacks)
         except Exception:

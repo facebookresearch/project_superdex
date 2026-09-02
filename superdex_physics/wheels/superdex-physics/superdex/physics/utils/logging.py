@@ -214,12 +214,12 @@ def forward_mochi_logs_to_logger(logger: Logger) -> None:
 
     # Import SuperDex Physics bindings inside this function - This allows importing the logging
     # utils module without initializing SuperDex Physics.
-    import superdex.physics as mochi
+    import superdex.physics as sdp
     from superdex.physics import LogChannel
 
     # Verify that a SuperDex Physics context has been initialized. The log callback system
     # requires an active SuperDex Physics context to function properly.
-    if not mochi.is_initialized():
+    if not sdp.is_initialized():
         raise RuntimeError(
             "You must initialize a SuperDex Physics context before attempting to redirect logs."
         )
@@ -260,4 +260,4 @@ def forward_mochi_logs_to_logger(logger: Logger) -> None:
 
     # Register our callback with the SuperDex Physics logging system.
     # From this point on, all SuperDex Physics C++ logs will be forwarded to the Python logger.
-    mochi.set_log_callback(log_callback_impl)
+    sdp.set_log_callback(log_callback_impl)

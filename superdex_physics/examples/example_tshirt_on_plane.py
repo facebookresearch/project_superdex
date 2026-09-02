@@ -23,7 +23,7 @@ It demonstrates:
 - Creating a shell actor with point-cloud self-contact
 """
 
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.physics import Actor, Scene
 from superdex.physics.paths import resolve_asset
 
@@ -47,46 +47,44 @@ def create_tshirt_on_plane_simulation() -> tuple[Scene, Actor, Actor]:
         tuple: (scene, shell_actor, rigid_plane_actor)
     """
     # Create scene
-    scene = physics.create_scene("T-shirt on Plane Scene")
+    scene = sdp.create_scene("T-shirt on Plane Scene")
 
     # Configure the solver for interactive shell contact.
     solver_params = scene.get_solver_params()
     solver_params.non_linear_solver.max_iter = 2
-    solver_params.non_linear_solver.line_search_type = (
-        physics.LineSearchType.WOLFE_STRONG
-    )
+    solver_params.non_linear_solver.line_search_type = sdp.LineSearchType.WOLFE_STRONG
     solver_params.experimental_eval.implicit_normal_force_for_dissipation = True
     scene.set_solver_params(solver_params)
 
     # Static ground plane at y = 0.
-    plane_shape = physics.create_plane_shape(normal=[0, 1, 0], distance=0)
+    plane_shape = sdp.create_plane_shape(normal=[0, 1, 0], distance=0)
     rigid_plane_actor = scene.create_rigid_actor(
         name="ground", shape=plane_shape, is_static=True
     )
 
     # Load the t-shirt mesh.
     shape_path = str(resolve_asset("garments/tshirt_visual_subdiv_2.mochi.h5"))
-    shape = physics.load_shape_from_file(shape_path)
+    shape = sdp.load_shape_from_file(shape_path)
 
     # Convert familiar 3D material properties into thickness-integrated shell
     # stiffnesses and an areal density.
-    material = physics.experimental.shell_material_params_from3d_isotropic(
+    material = sdp.experimental.shell_material_params_from3d_isotropic(
         YOUNGS_MODULUS, POISSON_RATIO, DENSITY, THICKNESS
     )
 
     # Create the shell actor with point-cloud self-contact.
-    shell_params = physics.experimental.ShellActorParams(
+    shell_params = sdp.experimental.ShellActorParams(
         name="T-shirt",
         shape=shape,
         material=material,
-        world_from_local=physics.TransformRT(
+        world_from_local=sdp.TransformRT(
             translation=[INITIAL_X_TRANSLATION, INITIAL_HEIGHT, 0]
         ),
     )
     shell_params.point_cloud_collider.radius = CONTACT_RADIUS
     shell_params.point_cloud_collider.self_contact = True
 
-    shell_actor = physics.experimental.create_shell_actor(scene, shell_params)
+    shell_actor = sdp.experimental.create_shell_actor(scene, shell_params)
 
     return scene, shell_actor, rigid_plane_actor
 
@@ -94,22 +92,22 @@ def create_tshirt_on_plane_simulation() -> tuple[Scene, Actor, Actor]:
 def main():
     """Main function that runs the interactive t-shirt-on-plane simulation."""
     # Use a default worker-thread count based on the CPU hardware.
-    physics.initialize(num_worker_threads=-1)
+    sdp.initialize(num_worker_threads=-1)
 
     # Create simulation
     scene, _, _ = create_tshirt_on_plane_simulation()
 
     # Launch and attach the remote debugger for visualization and interaction.
-    if not physics.debugger.attach():
-        physics.shutdown()
+    if not sdp.debugger.attach():
+        sdp.shutdown()
         return
 
     # Simulate until the debugger detaches
-    while physics.debugger.is_attached():
+    while sdp.debugger.is_attached():
         scene.step(TIME_STEP)
 
     # Shut down SuperDex Physics.
-    physics.shutdown()
+    sdp.shutdown()
     print("Simulation complete.")
 
 

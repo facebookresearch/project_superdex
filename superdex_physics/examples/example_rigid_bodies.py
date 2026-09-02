@@ -25,7 +25,7 @@ four ways to create rigid body actors:
 import math
 
 import numpy as np
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.physics import Actor, Scene
 from superdex.physics.paths import resolve_asset, resolve_asset_root
 from superdex.physics.utils.scene_helpers import find_actor
@@ -38,7 +38,7 @@ from superdex.physics.utils.scene_helpers import find_actor
 TIME_STEP = 1.0 / 60.0  # [s]
 
 
-def create_coarse_cube_shape(size: float) -> physics.ShapeHandle:
+def create_coarse_cube_shape(size: float) -> sdp.ShapeHandle:
     """Create a cube mesh shape from vertex coordinates and face connectivity.
 
     This function demonstrates creating a mesh shape programmatically using
@@ -104,9 +104,7 @@ def create_coarse_cube_shape(size: float) -> physics.ShapeHandle:
         dtype=np.int32,
     ).flatten()
 
-    return physics.create_tri_mesh_shape(
-        coordinates=coordinates, connectivity=connectivity
-    )
+    return sdp.create_tri_mesh_shape(coordinates=coordinates, connectivity=connectivity)
 
 
 def create_rigid_bodies_simulation() -> tuple[Scene, Actor, Actor, Actor, Actor]:
@@ -118,7 +116,7 @@ def create_rigid_bodies_simulation() -> tuple[Scene, Actor, Actor, Actor, Actor]
         tuple: (scene, sphere_actor, cube_actor, ground_actor, table_actor)
     """
     # Create scene
-    scene = physics.create_scene("Rigid Bodies Scene")
+    scene = sdp.create_scene("Rigid Bodies Scene")
 
     # SuperDex Physics uses Y-up coordinates and defaults to gravity along -Y:
     # (0, -9.8, 0). Set it explicitly for illustration.
@@ -131,8 +129,8 @@ def create_rigid_bodies_simulation() -> tuple[Scene, Actor, Actor, Actor, Actor]
     # - Sphere is loaded from a mesh file (icosphere with 3 subdivisions)
     # - Cube uses explicit mesh vertices and faces defined programmatically
     # - Table is directly loaded from a prefab file
-    plane_shape = physics.create_plane_shape(normal=[0, 1, 0], distance=-1.0)
-    sphere_shape = physics.load_shape_from_file(
+    plane_shape = sdp.create_plane_shape(normal=[0, 1, 0], distance=-1.0)
+    sphere_shape = sdp.load_shape_from_file(
         file_path=str(resolve_asset("sphere/icosphere_3subdiv.1.mochi.json")),
         bake_scale=[0.2, 0.2, 0.2],  # Scale to radius 0.2
     )
@@ -144,8 +142,8 @@ def create_rigid_bodies_simulation() -> tuple[Scene, Actor, Actor, Actor, Actor]
         shape=sphere_shape,
         is_static=False,  # Dynamic actor (default)
         density=1000.0,  # Density in kg/m³
-        world_from_local=physics.TransformRT(translation=[-0.5, 0.2, 0]),
-        collider_type=physics.ColliderType.SPHERE,
+        world_from_local=sdp.TransformRT(translation=[-0.5, 0.2, 0]),
+        collider_type=sdp.ColliderType.SPHERE,
     )
 
     # Create dynamic cube (mesh-based shape)
@@ -154,8 +152,8 @@ def create_rigid_bodies_simulation() -> tuple[Scene, Actor, Actor, Actor, Actor]
         shape=cube_shape,
         is_static=False,  # Dynamic actor (default)
         density=1000.0,  # Density in kg/m³
-        world_from_local=physics.TransformRT(translation=[0.5, 0.2, 0]),
-        collider_type=physics.ColliderType.BOX,
+        world_from_local=sdp.TransformRT(translation=[0.5, 0.2, 0]),
+        collider_type=sdp.ColliderType.BOX,
     )
 
     # Create static ground plane (implicit shape)
@@ -172,14 +170,14 @@ def create_rigid_bodies_simulation() -> tuple[Scene, Actor, Actor, Actor, Actor]
     # to other prefabs.
     # Here we load a simple prefab containing one static rigid actor (a table).
     table_prefab_path = str(resolve_asset("table/table.mochi_scene"))
-    physics.prefab.add_to_scene(
+    sdp.prefab.add_to_scene(
         prefab_path=table_prefab_path,
         root_path=str(resolve_asset_root("table/table.mochi_scene")),
         scene=scene,
-        params=physics.prefab.PrefabParams(
+        params=sdp.prefab.PrefabParams(
             name="tablePrefab",
             # Turn the table 90 degrees to make it horizontal
-            rotation=physics.Quaternion.rotation_x(-90 * math.pi / 180),
+            rotation=sdp.Quaternion.rotation_x(-90 * math.pi / 180),
             translation=[0, -1.0, 0],
         ),
     )
@@ -210,11 +208,11 @@ def cleanup_simulation(
 
     # Destroying this scene is not required immediately before shutdown; this
     # call demonstrates how to release a scene while SuperDex Physics remains active.
-    physics.destroy_scene(scene)
+    sdp.destroy_scene(scene)
 
     # Shutdown releases any remaining global resources. It is shown explicitly
     # so this example can be initialized again in the same process.
-    physics.shutdown()
+    sdp.shutdown()
 
 
 def main() -> None:
@@ -229,7 +227,7 @@ def main() -> None:
     # Run single-threaded to keep the example simple. For scenes with a large
     # number of DoFs (e.g. scenes with high-resolution soft bodies), running
     # with multiple threads will improve performance.
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
 
     # Create simulation
     scene, sphere_actor, cube_actor, ground_actor, table_actor = (
@@ -237,9 +235,9 @@ def main() -> None:
     )
 
     # Launch and attach the remote debugger for visualization and interaction.
-    if physics.debugger.attach():
+    if sdp.debugger.attach():
         # Simulate until the debugger detaches.
-        while physics.debugger.is_attached():
+        while sdp.debugger.is_attached():
             scene.step(TIME_STEP)
         print("Simulation complete.")
 

@@ -42,11 +42,11 @@ simulated second, then damp the joints), until the debugger detaches.
 from __future__ import annotations
 
 import numpy as np
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.physics import Actor, Scene
 from superdex.physics.paths import resolve_asset
 
-np_real = np.float64 if physics.uses_double_precision() else np.float32
+np_real = np.float64 if sdp.uses_double_precision() else np.float32
 
 # --- Locked scene spec (mirrors the .mochi_scene prefab) ---------------------
 # Frame: +Y up. The pivot is anchored in the world by joint_0's
@@ -86,54 +86,54 @@ T_DAMP = 12.0  # [s]
 DAMP_VISCOUS = 0.022  # [N*m*s/rad] joint friction for the damping event
 
 
-def _make_joints() -> list[physics.ArticulatedJointParams]:
+def _make_joints() -> list[sdp.ArticulatedJointParams]:
     """Build the 2 inbound joints of the chain (joints[i] drives links[i])."""
     return [
         # Upper hinge: revolute about Z, anchored at the world pivot (the pivot
         # height is baked into this joint so world_from_root stays identity).
-        physics.ArticulatedJointParams(
+        sdp.ArticulatedJointParams(
             name="joint_0",
-            type=physics.ArticulatedJointType.REVOLUTE,
+            type=sdp.ArticulatedJointType.REVOLUTE,
             axis=[0, 0, -1],
-            parent_link_from_joint=physics.TransformRT(translation=[0, ROOT_HEIGHT, 0]),
+            parent_link_from_joint=sdp.TransformRT(translation=[0, ROOT_HEIGHT, 0]),
         ),
         # Elbow: revolute about Z, at the far end of the upper arm on its
         # centerline (link-local [L, w/2, w/2]).
-        physics.ArticulatedJointParams(
+        sdp.ArticulatedJointParams(
             name="joint_1",
-            type=physics.ArticulatedJointType.REVOLUTE,
+            type=sdp.ArticulatedJointType.REVOLUTE,
             axis=[0, 0, -1],
-            parent_link_from_joint=physics.TransformRT(
+            parent_link_from_joint=sdp.TransformRT(
                 translation=[ARM_LENGTH, ARM_WIDTH / 2, ARM_WIDTH / 2]
             ),
         ),
     ]
 
 
-def _make_links(arm_shape: physics.ShapeHandle) -> list[physics.ArticulatedLinkParams]:
+def _make_links(arm_shape: sdp.ShapeHandle) -> list[sdp.ArticulatedLinkParams]:
     """Build the 2 arm links. Each box is centered on its inbound joint in Y/Z
     and extends along +X. Both links keep a per-link Box collider on layer
     "Pendulum" -- these remain the probing colliders; the skin is a collidee."""
     return [
-        physics.ArticulatedLinkParams(
+        sdp.ArticulatedLinkParams(
             name="UpperArm",
             parent_link=-1,
-            parent_joint_from_link=physics.TransformRT(
+            parent_joint_from_link=sdp.TransformRT(
                 translation=[0, -ARM_WIDTH / 2, -ARM_WIDTH / 2]
             ),
             shape=arm_shape,
-            collider_type=physics.ColliderType.BOX,
+            collider_type=sdp.ColliderType.BOX,
             layer="Pendulum",
             density=1000.0,
         ),
-        physics.ArticulatedLinkParams(
+        sdp.ArticulatedLinkParams(
             name="LowerArm",
             parent_link=0,
-            parent_joint_from_link=physics.TransformRT(
+            parent_joint_from_link=sdp.TransformRT(
                 translation=[0, -ARM_WIDTH / 2, -ARM_WIDTH / 2]
             ),
             shape=arm_shape,
-            collider_type=physics.ColliderType.BOX,
+            collider_type=sdp.ColliderType.BOX,
             layer="Pendulum",
             density=1000.0,
         ),
@@ -148,11 +148,11 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
     Returns:
         tuple: (scene, articulation, ball)
     """
-    scene = physics.create_scene("Skinned Articulations Scene")
+    scene = sdp.create_scene("Skinned Articulations Scene")
 
     # One baked cube shape shared by both arm links (corner-anchored, so baking
     # the scale gives a box occupying local [0, scale]).
-    arm_shape = physics.load_shape_from_file(
+    arm_shape = sdp.load_shape_from_file(
         file_path=str(resolve_asset("cube/cube_fine_mesh.mochi.json")),
         bake_scale=ARM_SCALE,
     )
@@ -162,19 +162,19 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
     # centerline at y=z=w/2) so the tube overlays the two arms at rest.
     # bake_scale=1 keeps the authored units (baking only moves positions, never
     # the weights).
-    skin_shape = physics.load_shape_from_file(
+    skin_shape = sdp.load_shape_from_file(
         file_path=str(resolve_asset(SKIN_ASSET)),
         bake_scale=[1, 1, 1],
     )
 
-    params = physics.ArticulatedActorParams(name="SkinnedDoublePendulum")
+    params = sdp.ArticulatedActorParams(name="SkinnedDoublePendulum")
     params.joints = _make_joints()
     params.links = _make_links(arm_shape)
     # Attach the skinned surface. The skin is a contact collidee. Two optional
     # tuning knobs (left at their defaults here) bound its per-step contact cost:
     # pairing boundary_element_type=P1Q1 with boundary_subsampling reduces the
     # number of contact-integration samples on the skin surface.
-    params.skin = physics.ArticulatedSkinParams(
+    params.skin = sdp.ArticulatedSkinParams(
         shape=skin_shape,
         layer="Skin",
     )
@@ -182,8 +182,8 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
 
     # The actor holds its own reference to each shape, so release our local
     # handles now (shapes are reference-counted and freed at the last release).
-    physics.release_shape(arm_shape)
-    physics.release_shape(skin_shape)
+    sdp.release_shape(arm_shape)
+    sdp.release_shape(skin_shape)
 
     # Seed initial joint velocities to set the double pendulum swinging.
     articulation.set_articulated_joint_velocities(
@@ -193,7 +193,7 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
     # Ball on the ground, offset in +X within reach of the swinging skin. The
     # unit-radius icosphere renders as a real mesh; the analytic Sphere collider
     # handles contact (the ball is the collider, the skin the collidee).
-    ball_shape = physics.load_shape_from_file(
+    ball_shape = sdp.load_shape_from_file(
         file_path=str(resolve_asset("sphere/icosphere_4subdiv.1.mochi.json")),
         bake_scale=[BALL_RADIUS, BALL_RADIUS, BALL_RADIUS],
     )
@@ -203,17 +203,17 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
         shape=ball_shape,
         is_static=False,
         density=500.0,
-        world_from_local=physics.TransformRT(translation=BALL_POSITION),
-        collider_type=physics.ColliderType.SPHERE,
+        world_from_local=sdp.TransformRT(translation=BALL_POSITION),
+        collider_type=sdp.ColliderType.SPHERE,
     )
-    physics.release_shape(ball_shape)
+    sdp.release_shape(ball_shape)
 
     # Static ground plane (layer "Environment", matching the prefab).
-    plane_shape = physics.create_plane_shape(normal=[0, 1, 0], distance=0)
+    plane_shape = sdp.create_plane_shape(normal=[0, 1, 0], distance=0)
     scene.create_rigid_actor(
         name="Ground", layer="Environment", shape=plane_shape, is_static=True
     )
-    physics.release_shape(plane_shape)
+    sdp.release_shape(plane_shape)
 
     # Contact filter: only the skin is struck by the ball (which rests on the
     # ground). Disable the per-link "Pendulum" colliders against everything, and
@@ -248,13 +248,13 @@ def print_introspection(scene: Scene, articulation: Actor) -> None:
     # contact queries apply, while volumetric/soft queries (NODE_POSITIONS,
     # ELEMENTS_DEFORMATION_GRADIENT) and VISUAL_NODE_POSITIONS do not.
     probes = [
-        physics.QueryType.SURFACE_NODE_POSITIONS,
-        physics.QueryType.SURFACE_NODE_NORMALS,
-        physics.QueryType.CONTACT_POINTS,
-        physics.QueryType.TOTAL_CONTACT_FORCE,
-        physics.QueryType.NODE_POSITIONS,
-        physics.QueryType.VISUAL_NODE_POSITIONS,
-        physics.QueryType.ELEMENTS_DEFORMATION_GRADIENT,
+        sdp.QueryType.SURFACE_NODE_POSITIONS,
+        sdp.QueryType.SURFACE_NODE_NORMALS,
+        sdp.QueryType.CONTACT_POINTS,
+        sdp.QueryType.TOTAL_CONTACT_FORCE,
+        sdp.QueryType.NODE_POSITIONS,
+        sdp.QueryType.VISUAL_NODE_POSITIONS,
+        sdp.QueryType.ELEMENTS_DEFORMATION_GRADIENT,
     ]
     for q in probes:
         print(f"  is_query_supported({q}) = {articulation.is_query_supported(q)}")
@@ -279,8 +279,8 @@ def demonstrate_skin_surface(scene: Scene, articulation: Actor) -> None:
         f"{mesh.get_num_elements()} triangles"
     )
 
-    pos_query = articulation.register_query(physics.QueryType.SURFACE_NODE_POSITIONS)
-    nrm_query = articulation.register_query(physics.QueryType.SURFACE_NODE_NORMALS)
+    pos_query = articulation.register_query(sdp.QueryType.SURFACE_NODE_POSITIONS)
+    nrm_query = articulation.register_query(sdp.QueryType.SURFACE_NODE_NORMALS)
     scene.step(TIME_STEP)
 
     positions = np.array(articulation.get_surface_mesh_node_positions_local())
@@ -303,7 +303,7 @@ def demonstrate_skin_surface(scene: Scene, articulation: Actor) -> None:
     # lower arm (boundary_only uses the surface-node query registered above). The
     # skin's local frame has the pivot at y=ROOT_HEIGHT, so the arms lie near
     # that height along +X.
-    volume = physics.Aabb(
+    volume = sdp.Aabb(
         min=[0.2, ROOT_HEIGHT - 0.05, -0.05], max=[0.55, ROOT_HEIGHT + 0.05, 0.05]
     )
     hits: list[int] = []
@@ -343,45 +343,45 @@ def demonstrate_non_skinned_rejection(scene: Scene) -> None:
     The skin must carry per-node skinning weights and link indices. Attaching a
     plain triangle mesh (no skinning data) fails gracefully with a physics.Error.
     """
-    plain_tri = physics.create_tri_mesh_shape(
+    plain_tri = sdp.create_tri_mesh_shape(
         coordinates=[0, 0, 0, 1, 0, 0, 0, 1, 0],
         connectivity=[0, 1, 2],
     )
-    link_shape = physics.load_shape_from_file(
+    link_shape = sdp.load_shape_from_file(
         file_path=str(resolve_asset("cube/cube_fine_mesh.mochi.json")),
         bake_scale=ARM_SCALE,
     )
-    params = physics.ArticulatedActorParams(name="BadSkin")
+    params = sdp.ArticulatedActorParams(name="BadSkin")
     params.joints = [
-        physics.ArticulatedJointParams(
-            name="joint_0", type=physics.ArticulatedJointType.REVOLUTE, axis=[0, 0, -1]
+        sdp.ArticulatedJointParams(
+            name="joint_0", type=sdp.ArticulatedJointType.REVOLUTE, axis=[0, 0, -1]
         )
     ]
     params.links = [
-        physics.ArticulatedLinkParams(
+        sdp.ArticulatedLinkParams(
             name="Arm",
             parent_link=-1,
             shape=link_shape,
-            collider_type=physics.ColliderType.BOX,
+            collider_type=sdp.ColliderType.BOX,
             layer="Pendulum",
             density=1000.0,
         )
     ]
-    params.skin = physics.ArticulatedSkinParams(shape=plain_tri, layer="Skin")
+    params.skin = sdp.ArticulatedSkinParams(shape=plain_tri, layer="Skin")
     try:
         scene.create_articulated_actor(params)
         print("non-skinned skin: accepted (unexpected)")
-    except physics.Error:
+    except sdp.Error:
         print("non-skinned skin: rejected (as expected)")
     finally:
-        physics.release_shape(plain_tri)
-        physics.release_shape(link_shape)
+        sdp.release_shape(plain_tri)
+        sdp.release_shape(link_shape)
 
 
 def _damp_joints(articulation: Actor) -> None:
     """Raise the viscous friction on both revolute joints to settle the motion."""
     friction = [
-        physics.ArticulatedJointFrictionParams(viscous=DAMP_VISCOUS)
+        sdp.ArticulatedJointFrictionParams(viscous=DAMP_VISCOUS)
         for _ in range(NUM_DOFS)
     ]
     articulation.set_articulated_joint_friction_params(friction)
@@ -396,16 +396,16 @@ def run_interactive(scene: Scene, articulation: Actor, ball: Actor) -> None:
     damped = False
 
     # Launch and attach the remote debugger for visualization and interaction.
-    if not physics.debugger.attach():
+    if not sdp.debugger.attach():
         return
 
     # Register contact queries so we can read the force the ball exerts on the
     # skin during the run (computed each step).
-    contact_points = articulation.register_query(physics.QueryType.CONTACT_POINTS)
-    contact_force = articulation.register_query(physics.QueryType.TOTAL_CONTACT_FORCE)
+    contact_points = articulation.register_query(sdp.QueryType.CONTACT_POINTS)
+    contact_force = articulation.register_query(sdp.QueryType.TOTAL_CONTACT_FORCE)
 
     # Simulate until the debugger detaches.
-    while physics.debugger.is_attached():
+    while sdp.debugger.is_attached():
         if not damped and sim_time >= T_DAMP:
             _damp_joints(articulation)
             damped = True
@@ -415,7 +415,7 @@ def run_interactive(scene: Scene, articulation: Actor, ball: Actor) -> None:
         sim_time += TIME_STEP
 
         if sim_time >= next_report:
-            pose = physics.DynamicArrayReal(NUM_DOFS)
+            pose = sdp.DynamicArrayReal(NUM_DOFS)
             articulation.get_articulated_pose(pose)
             aabb = articulation.get_aabb_world()
             num_contacts = len(articulation.get_contact_points_world())
@@ -435,7 +435,7 @@ def run_interactive(scene: Scene, articulation: Actor, ball: Actor) -> None:
 def main() -> None:
     """Run the interactive skinned-articulations tutorial."""
     # 0 = single-threaded (simplest); -1 = auto; N = N worker threads.
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
 
     scene, articulation, ball = build_scene()
 
@@ -449,8 +449,8 @@ def main() -> None:
     run_interactive(scene, articulation, ball)
 
     # Destroying the scene frees everything it contains.
-    physics.destroy_scene(scene)
-    physics.shutdown()
+    sdp.destroy_scene(scene)
+    sdp.shutdown()
     print("Simulation complete.")
 
 

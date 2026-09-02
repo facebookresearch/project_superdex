@@ -28,7 +28,7 @@ See website/docs/examples/tendons_rods/mass_on_rod_spring.md.
 
 import math
 
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.physics import Actor, Scene
 from superdex.physics.paths import resolve_asset
 
@@ -56,13 +56,13 @@ def create_mass_on_rod_spring_simulation() -> tuple[Scene, Actor, Actor]:
         tuple: (scene, rod_actor, cube_actor)
     """
     # Create physics scene
-    scene = physics.create_scene("Mass on Rod Spring Scene")
+    scene = sdp.create_scene("Mass on Rod Spring Scene")
 
     # Load the polyline shape from file (helix). The asset's coil radius tapers
     # smoothly to zero at both ends, so the spring is a single analytical space
     # curve terminating on the x axis, and it carries a tubular visual mesh.
     helix_path = str(resolve_asset("rods/helix_with_visual.mochi.h5"))
-    shape = physics.load_shape_from_file(helix_path, bake_scale=[1.0, 1.0, 1.0])
+    shape = sdp.load_shape_from_file(helix_path, bake_scale=[1.0, 1.0, 1.0])
 
     # Calculate material parameters for circular cross-section
     area = math.pi * RADIUS**2
@@ -76,7 +76,7 @@ def create_mass_on_rod_spring_simulation() -> tuple[Scene, Actor, Actor]:
     flexural_stiffness = YOUNGS_MODULUS * second_moment_of_area
 
     # Create rod material parameters
-    material_params = physics.experimental.RodMaterialParams(
+    material_params = sdp.experimental.RodMaterialParams(
         linear_density=DENSITY * area,
         linear_rotational_inertia=DENSITY * polar_moment_of_inertia,
         axial_stiffness=axial_stiffness,
@@ -85,15 +85,15 @@ def create_mass_on_rod_spring_simulation() -> tuple[Scene, Actor, Actor]:
     )
 
     # Create rod actor params
-    rod_params = physics.experimental.RodActorParams(
+    rod_params = sdp.experimental.RodActorParams(
         name="Spring",
         shape=shape,
-        world_from_local=physics.TransformRT(),
+        world_from_local=sdp.TransformRT(),
         material=material_params,
     )
 
     # Create rod actor
-    rod_actor = physics.experimental.create_rod_actor(scene, rod_params)
+    rod_actor = sdp.experimental.create_rod_actor(scene, rod_params)
 
     # Reference node positions of the rod, flattened as [x0, y0, z0, x1, y1, z1, ...].
     # They are in the actor's local frame, which coincides with the world frame here
@@ -124,7 +124,7 @@ def create_mass_on_rod_spring_simulation() -> tuple[Scene, Actor, Actor]:
     cube_half_extent = 0.5 * CUBE_SIZE
     # Load cube mesh from asset file (scaled to CUBE_SIZE)
     cube_mesh_path = str(resolve_asset("cube/cube_mesh.mochi.json"))
-    cube_shape = physics.load_shape_from_file(
+    cube_shape = sdp.load_shape_from_file(
         cube_mesh_path, bake_scale=[CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]
     )
 
@@ -140,8 +140,8 @@ def create_mass_on_rod_spring_simulation() -> tuple[Scene, Actor, Actor]:
         layer="Object",
         shape=cube_shape,
         density=DENSITY,
-        collider_type=physics.ColliderType.BOX,
-        world_from_local=physics.TransformRT(cube_position),
+        collider_type=sdp.ColliderType.BOX,
+        world_from_local=sdp.TransformRT(cube_position),
     )
 
     # Create DeformableNodeToRigidConstraint to attach the last node of the rod
@@ -169,7 +169,7 @@ def create_mass_on_rod_spring_simulation() -> tuple[Scene, Actor, Actor]:
 def main():
     """Main function that runs the mass on rod spring simulation."""
     # Initialize SuperDex Physics.
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
 
     # Create simulation
     scene, _, _ = create_mass_on_rod_spring_simulation()
@@ -178,16 +178,16 @@ def main():
     time_step = 1.0 / 60.0
 
     # Launch and attach the remote debugger for visualization and interaction.
-    if not physics.debugger.attach():
-        physics.shutdown()
+    if not sdp.debugger.attach():
+        sdp.shutdown()
         return
 
     # Simulate until the debugger detaches
-    while physics.debugger.is_attached():
+    while sdp.debugger.is_attached():
         scene.step(time_step)
 
     # Shut down SuperDex Physics.
-    physics.shutdown()
+    sdp.shutdown()
     print("Simulation complete.")
 
 

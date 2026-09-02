@@ -25,7 +25,7 @@ onto a static ground plane:
 
 from __future__ import annotations
 
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.physics import Actor, Scene
 from superdex.physics.paths import resolve_asset
 
@@ -68,31 +68,31 @@ def create_damping_sweep_simulation() -> tuple[Scene, list[Actor], list[Actor]]:
     Returns:
         tuple: (scene, soft_duck_actors, rigid_duck_actors)
     """
-    scene = physics.create_scene("Damping Sweep Scene")
+    scene = sdp.create_scene("Damping Sweep Scene")
 
     # BDF2 is second-order accurate and A-stable. It introduces far less
     # numerical dissipation than the default first-order backward Euler, so the
     # damping seen in the simulation is dominated by the physical damping
     # parameters swept below rather than by the time integrator.
     solver_params = scene.get_solver_params()
-    solver_params.integration_method = physics.IntegrationMethod.BDF2
+    solver_params.integration_method = sdp.IntegrationMethod.BDF2
     scene.set_solver_params(solver_params)
 
     # Static ground plane at y = 0, carrying the reference contact damping
     # coefficient that the rigid ducks' coefficients are paired against.
-    plane_shape = physics.create_plane_shape(normal=[0, 1, 0], distance=0)
+    plane_shape = sdp.create_plane_shape(normal=[0, 1, 0], distance=0)
     scene.create_rigid_actor(
         name="ground",
         shape=plane_shape,
         is_static=True,
-        contact=physics.ContactParams(
+        contact=sdp.ContactParams(
             normal_viscous_damping_coefficient=GROUND_NORMAL_DAMPING_COEFFICIENT
         ),
     )
 
     # Both rows are built from the same tetrahedral mesh asset. Loading it once
     # lets every actor share a single shape, including its baked collider data.
-    duck_shape = physics.load_shape_from_file(
+    duck_shape = sdp.load_shape_from_file(
         file_path=str(resolve_asset("duck/duck_coarse.mochi.h5")),
         bake_scale=[DUCK_SCALE] * 3,
     )
@@ -102,10 +102,10 @@ def create_damping_sweep_simulation() -> tuple[Scene, list[Actor], list[Actor]]:
         scene.create_soft_actor(
             name=f"soft_duck_{1e3 * stiffness_damping:g}ms",
             shape=duck_shape,
-            world_from_local=physics.TransformRT(
+            world_from_local=sdp.TransformRT(
                 translation=[_column_x(index, num_columns), DROP_HEIGHT, SOFT_ROW_Z]
             ),
-            material=physics.SoftMaterialParams(
+            material=sdp.SoftMaterialParams(
                 stiffness_damping_coefficient=stiffness_damping
             ),
         )
@@ -117,10 +117,10 @@ def create_damping_sweep_simulation() -> tuple[Scene, list[Actor], list[Actor]]:
         scene.create_rigid_actor(
             name=f"rigid_duck_{effective_damping:g}spm",
             shape=duck_shape,
-            world_from_local=physics.TransformRT(
+            world_from_local=sdp.TransformRT(
                 translation=[_column_x(index, num_columns), DROP_HEIGHT, RIGID_ROW_Z]
             ),
-            contact=physics.ContactParams(
+            contact=sdp.ContactParams(
                 normal_viscous_damping_coefficient=(
                     effective_damping**2 / GROUND_NORMAL_DAMPING_COEFFICIENT
                 )
@@ -137,20 +137,20 @@ def main():
 
     # Select the number of worker threads automatically for performance with
     # multiple soft actors.
-    physics.initialize(num_worker_threads=-1)
+    sdp.initialize(num_worker_threads=-1)
 
     scene, _, _ = create_damping_sweep_simulation()
 
     # Launch and attach the remote debugger for visualization and interaction.
-    if not physics.debugger.attach():
-        physics.shutdown()
+    if not sdp.debugger.attach():
+        sdp.shutdown()
         return
 
     # Simulate until the debugger detaches
-    while physics.debugger.is_attached():
+    while sdp.debugger.is_attached():
         scene.step(TIME_STEP)
 
-    physics.shutdown()
+    sdp.shutdown()
     print("Simulation complete.")
 
 

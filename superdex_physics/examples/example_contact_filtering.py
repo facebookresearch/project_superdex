@@ -19,7 +19,7 @@ to selectively enable/disable contact between groups of objects and between
 specific actor pairs.
 """
 
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.physics import Actor, Scene
 from superdex.physics.paths import resolve_asset
 
@@ -33,16 +33,16 @@ def create_contact_filtering_simulation() -> tuple[Scene, list[Actor]]:
         tuple: (scene, list of all actors)
     """
     # Create scene
-    scene = physics.create_scene("Contact Filtering Scene")
+    scene = sdp.create_scene("Contact Filtering Scene")
 
     # Create shapes
     # - Cube is loaded from file
     # - Platforms use an implicit plane shape (no mesh data needed)
-    cube_shape = physics.load_shape_from_file(
+    cube_shape = sdp.load_shape_from_file(
         file_path=str(resolve_asset("cube/cube_mesh.mochi.h5")),
         bake_scale=[0.3, 0.3, 0.3],
     )
-    platform_shape = physics.create_plane_shape(normal=[0, 1, 0], distance=0.0)
+    platform_shape = sdp.create_plane_shape(normal=[0, 1, 0], distance=0.0)
 
     actors = []
 
@@ -54,7 +54,7 @@ def create_contact_filtering_simulation() -> tuple[Scene, list[Actor]]:
         layer="layer_1",
         shape=platform_shape,
         is_static=True,
-        world_from_local=physics.TransformRT(translation=[0, 0.5, 0]),
+        world_from_local=sdp.TransformRT(translation=[0, 0.5, 0]),
     )
     actors.append(platform_1)
 
@@ -63,7 +63,7 @@ def create_contact_filtering_simulation() -> tuple[Scene, list[Actor]]:
         layer="layer_2",
         shape=platform_shape,
         is_static=True,
-        world_from_local=physics.TransformRT(translation=[0, 0, 0]),
+        world_from_local=sdp.TransformRT(translation=[0, 0, 0]),
     )
     actors.append(platform_2)
 
@@ -93,7 +93,7 @@ def create_contact_filtering_simulation() -> tuple[Scene, list[Actor]]:
                 name=cube_name,
                 layer=layer,
                 shape=cube_shape,
-                world_from_local=physics.TransformRT(translation=[x_pos, y_pos, 0]),
+                world_from_local=sdp.TransformRT(translation=[x_pos, y_pos, 0]),
             )
             actors.append(cube)
             cubes[cube_name] = cube
@@ -118,7 +118,7 @@ def create_contact_filtering_simulation() -> tuple[Scene, list[Actor]]:
         cubes["bottom_cube_2"].get_handle(),
         cubes["middle_cube_2"].get_handle(),
         enable=False,
-        include_nested_actors=physics.IncludeNestedActors.NO,
+        include_nested_actors=sdp.IncludeNestedActors.NO,
     )
 
     return scene, actors
@@ -138,12 +138,12 @@ def cleanup_simulation(scene: Scene, actors: list[Actor]):
 
     # This is how you destroy an individual scene and everything in it.
     # Not necessary if you're shutting down.
-    physics.destroy_scene(scene)
+    sdp.destroy_scene(scene)
 
     # Shut down SuperDex Physics.
     # Not necessary unless you want to call initialize() again with
     # different values. Shown here just for completeness.
-    physics.shutdown()
+    sdp.shutdown()
 
 
 def main():
@@ -158,7 +158,7 @@ def main():
     # Run single-threaded to keep the example simple. For scenes with a large
     # number of DoFs (e.g. scenes with high-resolution soft bodies), running
     # with multiple threads will improve performance.
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
 
     # Create simulation
     scene, actors = create_contact_filtering_simulation()
@@ -167,12 +167,12 @@ def main():
     time_step = 1.0 / 60.0
 
     # Launch and attach the remote debugger for visualization and interaction.
-    if not physics.debugger.attach():
+    if not sdp.debugger.attach():
         cleanup_simulation(scene, actors)
         return
 
     # Simulate until the debugger detaches
-    while physics.debugger.is_attached():
+    while sdp.debugger.is_attached():
         scene.step(time_step)
 
     # Clean up simulation

@@ -32,13 +32,13 @@ Usage:
 """
 
 import numpy as np
-import superdex.physics as physics
-import superdex.robotics as robotics
+import superdex.physics as sdp
+import superdex.robotics as sdr
 
 # The build's `real` type. A pose handed to a controller Target is copied into the
 # Target's own storage, so matching the dtype here keeps that a straight copy rather
 # than an element-by-element conversion.
-np_real = np.float64 if physics.uses_double_precision() else np.float32
+np_real = np.float64 if sdp.uses_double_precision() else np.float32
 from superdex.physics.paths import resolve_asset
 
 # Each OSC controller acts on the chain of joints between these two links. The
@@ -71,14 +71,14 @@ def main() -> None:
 
     # Initialize the physics engine before creating scenes or actors.
     # num_worker_threads=0 runs single-threaded; pass -1 to auto-select.
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
 
     # Create an empty scene. SuperDex robots use a Z-up convention, so gravity
     # points down the -Z axis.
-    scene = physics.create_scene("Bimanual Control Example")
+    scene = sdp.create_scene("Bimanual Control Example")
     scene.set_gravity([0, 0, -9.81])
 
-    bot_prefab = robotics.load_bot_prefab_from_file(bot_path)
+    bot_prefab = sdr.load_bot_prefab_from_file(bot_path)
 
     # Cheap "gravity compensation": disable gravity on every link before
     # spawning. Neither controller has a gravity term, so the arms would
@@ -96,7 +96,7 @@ def main() -> None:
     dof = 0
     for i in range(len(bot_prefab.joints)):
         joint = bot_prefab.joints[i]
-        if joint.type != physics.ArticulatedJointType.REVOLUTE:
+        if joint.type != sdp.ArticulatedJointType.REVOLUTE:
             continue
         if FINGER_JOINT_TOKEN in joint.name:
             axis = int(np.argmax(np.abs(np.asarray(joint.axis, dtype=float))))
@@ -111,12 +111,12 @@ def main() -> None:
 
     # Instantiate the prefab as a live Bot. The robotics context tracks every
     # bot and controller you create.
-    robotics_context = robotics.create_context()
-    bot = robotics.create_bot(scene, bot_prefab, robotics_context)
+    robotics_context = sdr.create_context()
+    bot = sdr.create_bot(scene, bot_prefab, robotics_context)
     bot_actor = bot.get_articulated_actor()
 
     # Add a static ground plane for the robot to rest on (normal points up, +Z).
-    plane_shape = physics.create_plane_shape(normal=[0, 0, 1], distance=0)
+    plane_shape = sdp.create_plane_shape(normal=[0, 0, 1], distance=0)
     scene.create_rigid_actor(name="ground", shape=plane_shape, is_static=True)
 
     num_dofs = bot_actor.get_num_dofs()
@@ -157,14 +157,14 @@ def main() -> None:
     # JSC has no notion of a sub-chain: its gains, its target pose and its output
     # are all sized to the full actor. We only harvest its finger entries below.
     jsc = bot.create_controller("BASIC_JSC_PD")
-    jsc_params = robotics.ControllerBasicJscPdParams()
+    jsc_params = sdr.ControllerBasicJscPdParams()
     jsc_params.kp = np.full(num_dofs, 0.5, dtype=np.float32)  # position gain [Nm/rad]
     jsc_params.kd = np.full(num_dofs, 0.005, dtype=np.float32)  # damping gain [Nms/rad]
     jsc_params.saturation = np.full(num_dofs, 0.5, dtype=np.float32)  # torque clamp
     jsc_params.deadband = np.zeros(num_dofs, dtype=np.float32)
     jsc.set_params(jsc_params)
 
-    default_pose = physics.DynamicArrayReal(num_dofs)
+    default_pose = sdp.DynamicArrayReal(num_dofs)
     bot_actor.get_articulated_pose(default_pose)
     hold_pose = np.array(default_pose, dtype=np_real)
 
@@ -207,15 +207,15 @@ def main() -> None:
     # Declare the scene's coordinate convention so the debugger renders it the
     # right way up: SuperDex is X-forward, Y-left, Z-up (FLU). Must come before
     # attach(), which starts the server.
-    physics.get_debug_server().set_coordinate_space(
-        physics.CoordinateSpace(axes=physics.CoordinateSpaceAxes.FLU)
+    sdp.get_debug_server().set_coordinate_space(
+        sdp.CoordinateSpace(axes=sdp.CoordinateSpaceAxes.FLU)
     )
 
     # Launch and connect the SuperDex Physics Debugger, a separate desktop app for
     # viewing and interacting with the simulation. The loop runs until you close
     # the debugger; attach() returns False if it can't connect.
-    if physics.debugger.attach():
-        while physics.debugger.is_attached():
+    if sdp.debugger.attach():
+        while sdp.debugger.is_attached():
             t = scene.get_total_simulation_time()
 
             # Pinch: sweep the fingers closed -> open -> closed. The JSC target is
@@ -232,7 +232,7 @@ def main() -> None:
             jsc_tau = np.asarray(
                 jsc.compute_output(
                     jsc_obsv,
-                    robotics.ControllerBasicJscPdTarget(target_pose=target_pose),
+                    sdr.ControllerBasicJscPdTarget(target_pose=target_pose),
                 ),
                 dtype=np.float32,
             )
@@ -245,7 +245,7 @@ def main() -> None:
                 arm_oscs, ee_start_positions, ee_start_rotations, sweep_directions
             ):
                 theta = direction * 2.0 * np.pi * t / circle_period
-                world_from_target_ee = physics.TransformRT(
+                world_from_target_ee = sdp.TransformRT(
                     rotation=start_rot,
                     translation=[
                         start_pos[0],
@@ -256,7 +256,7 @@ def main() -> None:
                 tau += np.asarray(
                     osc.compute_output(
                         osc.get_current_observations_from_mochi(),
-                        robotics.ControllerBasicOscPdTarget(
+                        sdr.ControllerBasicOscPdTarget(
                             root_from_target_ee=root_from_world * world_from_target_ee
                         ),
                     ),
@@ -270,8 +270,8 @@ def main() -> None:
             scene.step(time_step)
 
     # Tear down: destroy the bot, then shut the engine down cleanly.
-    robotics.destroy_bot(scene, bot)
-    physics.shutdown()
+    sdr.destroy_bot(scene, bot)
+    sdp.shutdown()
     print("Simulation complete.")
 
 

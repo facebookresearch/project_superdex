@@ -30,8 +30,8 @@ Usage:
 """
 
 import numpy as np
-import superdex.physics as physics
-import superdex.robotics as robotics
+import superdex.physics as sdp
+import superdex.robotics as sdr
 from superdex.physics.paths import resolve_asset
 
 # The IK targets are placed on this link, the FR3's tool flange. A bot's link
@@ -61,17 +61,17 @@ def get_default_bot_path() -> str:
 
 
 def create_arm(
-    scene: physics.Scene, bot_path: str, robotics_context: robotics.RoboticsContext
-) -> robotics.Bot:
+    scene: sdp.Scene, bot_path: str, robotics_context: sdr.RoboticsContext
+) -> sdr.Bot:
     """Load the arm into a scene, with gravity disabled on every link.
 
     Nothing here compensates for gravity, so switching it off is what lets the arm
     hold exactly the configuration IK asks for.
     """
-    bot_prefab = robotics.load_bot_prefab_from_file(bot_path)
+    bot_prefab = sdr.load_bot_prefab_from_file(bot_path)
     for i in range(len(bot_prefab.links)):
         bot_prefab.links[i].has_gravity = False
-    return robotics.create_bot(scene, bot_prefab, robotics_context)
+    return sdr.create_bot(scene, bot_prefab, robotics_context)
 
 
 def main() -> None:
@@ -80,20 +80,20 @@ def main() -> None:
 
     # Initialize the physics engine before creating scenes or actors.
     # num_worker_threads=0 runs single-threaded; pass -1 to auto-select.
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
 
     # Create an empty scene. SuperDex robots use a Z-up convention, so gravity
     # points down the -Z axis.
-    scene = physics.create_scene("IK + Pose Control Example")
+    scene = sdp.create_scene("IK + Pose Control Example")
     scene.set_gravity([0, 0, -9.81])
 
     # The robotics context tracks every bot and controller you create.
-    robotics_context = robotics.create_context()
+    robotics_context = sdr.create_context()
     bot = create_arm(scene, bot_path, robotics_context)
     bot_actor = bot.get_articulated_actor()
 
     # Add a static ground plane for the robot to rest on (normal points up, +Z).
-    plane_shape = physics.create_plane_shape(normal=[0, 0, 1], distance=0)
+    plane_shape = sdp.create_plane_shape(normal=[0, 0, 1], distance=0)
     scene.create_rigid_actor(name="ground", shape=plane_shape, is_static=True)
 
     # --- IK solver -------------------------------------------------------------
@@ -101,7 +101,7 @@ def main() -> None:
     # quasistatic solving, so it gets a scene of its own holding nothing but a
     # second copy of the arm. Resolve the end-effector link before handing the
     # scene over; targets are addressed by link actor handle.
-    ik_scene = physics.create_scene("IK Solver Scene")
+    ik_scene = sdp.create_scene("IK Solver Scene")
     ik_bot = create_arm(ik_scene, bot_path, robotics_context)
     ik_actor = ik_bot.get_articulated_actor()
     ik_ee_handle = next(
@@ -109,7 +109,7 @@ def main() -> None:
         for handle in ik_actor.get_nested_link_actors()
         if ik_scene.get_actor(handle).get_name().endswith(f"/{ARM_EE_LINK}")
     )
-    ik_solver = physics.experimental.create_ik_solver(ik_scene)
+    ik_solver = sdp.experimental.create_ik_solver(ik_scene)
 
     # Create the two targets once and keep the position one: the solver hands back
     # a constraint whose target is updated in place each step. The rotation target
@@ -128,7 +128,7 @@ def main() -> None:
     )
 
     # Scratch buffer for reading the solved configuration back out.
-    ik_pose = physics.DynamicArrayReal(ik_actor.get_num_dofs())
+    ik_pose = sdp.DynamicArrayReal(ik_actor.get_num_dofs())
 
     # --- Pose controller -------------------------------------------------------
     # The pose controller is an implicit PD: instead of handing torques back for
@@ -141,7 +141,7 @@ def main() -> None:
     # actor is what initialize() does, so the params are set first.
     pose_controller = bot.create_controller("MOCHI_ARTICULATED_POSE")
     pose_controller.set_params(
-        robotics.ControllerMochiArticulatedPoseParams.load_from_file(
+        sdr.ControllerMochiArticulatedPoseParams.load_from_file(
             str(resolve_asset(POSE_CONTROLLER_PARAMS))
         )
     )
@@ -149,8 +149,8 @@ def main() -> None:
 
     # The target pairs a root transform with the non-root joint DOFs. The FR3 base
     # is welded, so the root transform is constant and only the DOFs change.
-    pose_obsv = robotics.ControllerMochiArticulatedPoseObsv()
-    pose_target = robotics.ControllerMochiArticulatedPoseTarget()
+    pose_obsv = sdr.ControllerMochiArticulatedPoseObsv()
+    pose_target = sdr.ControllerMochiArticulatedPoseTarget()
     pose_target.world_from_root = bot_actor.get_root_transform()
 
     # --- Circle target ---------------------------------------------------------
@@ -170,8 +170,8 @@ def main() -> None:
     # Declare the scene's coordinate convention so the debugger renders it the
     # right way up: SuperDex is X-forward, Y-left, Z-up (FLU). Must come before
     # attach(), which starts the server.
-    physics.get_debug_server().set_coordinate_space(
-        physics.CoordinateSpace(axes=physics.CoordinateSpaceAxes.FLU)
+    sdp.get_debug_server().set_coordinate_space(
+        sdp.CoordinateSpace(axes=sdp.CoordinateSpaceAxes.FLU)
     )
 
     # Launch and connect the SuperDex Physics Debugger, a separate desktop app for
@@ -183,8 +183,8 @@ def main() -> None:
     # until both are running. Press play on the IK scene, then switch to this
     # example's scene and press play again. Unchecking "Start Paused" when
     # connecting avoids the dance and brings both up running.
-    if physics.debugger.attach():
-        while physics.debugger.is_attached():
+    if sdp.debugger.attach():
+        while sdp.debugger.is_attached():
             theta = 2.0 * np.pi * scene.get_total_simulation_time() / circle_period
             ik_position_target.set_target_position(
                 [
@@ -207,10 +207,10 @@ def main() -> None:
     # (which destroys the scene it owns), then the simulated bot and the engine.
     ik_solver.clear_position_target(ik_ee_handle)
     ik_solver.clear_rotation_target(ik_ee_handle)
-    robotics.destroy_bot(ik_scene, ik_bot)
-    physics.experimental.destroy_ik_solver(ik_solver)
-    robotics.destroy_bot(scene, bot)
-    physics.shutdown()
+    sdr.destroy_bot(ik_scene, ik_bot)
+    sdp.experimental.destroy_ik_solver(ik_solver)
+    sdr.destroy_bot(scene, bot)
+    sdp.shutdown()
     print("Simulation complete.")
 
 

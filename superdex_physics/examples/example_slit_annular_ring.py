@@ -23,11 +23,11 @@ The tracked outer-edge displacement is compared with the benchmark's steady solu
 from __future__ import annotations
 
 import numpy as np
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.physics import Actor, Scene
 from superdex.physics.paths import resolve_asset
 
-np_real = np.float64 if physics.uses_double_precision() else np.float32
+np_real = np.float64 if sdp.uses_double_precision() else np.float32
 
 # Node indices for the benchmark mesh in slit_annular_ring.mochi.h5.
 FIXED_NODES = np.array(
@@ -56,14 +56,14 @@ REPORT_INTERVAL_STEPS = round(REPORT_INTERVAL / TIME_STEP)
 
 def create_simulation() -> tuple[Scene, Actor]:
     """Create the slit annular ring shell simulation."""
-    scene = physics.create_scene("Slit Annular Ring")
+    scene = sdp.create_scene("Slit Annular Ring")
     scene.set_gravity([0, 0, 0])
 
-    shape = physics.load_shape_from_file(
+    shape = sdp.load_shape_from_file(
         str(resolve_asset("samples/slit_annular_ring.mochi.h5"))
     )
     # Derive shell stiffness and inertia from familiar 3D material properties.
-    material = physics.experimental.shell_material_params_from3d_isotropic(
+    material = sdp.experimental.shell_material_params_from3d_isotropic(
         youngs_modulus3d=YOUNGS_MODULUS,
         poissons_ratio3d=POISSONS_RATIO,
         density3d=DENSITY,
@@ -71,13 +71,13 @@ def create_simulation() -> tuple[Scene, Actor]:
     )
     # Use heavy mass damping to drive the dynamics toward the static solution.
     material.mass_damping_coefficient = MASS_DAMPING_COEFFICIENT
-    actor = physics.experimental.create_shell_actor(
+    actor = sdp.experimental.create_shell_actor(
         scene,
-        physics.experimental.ShellActorParams(
+        sdp.experimental.ShellActorParams(
             name="SlitAnnularRing",
             shape=shape,
             material=material,
-            world_from_local=physics.TransformRT(),
+            world_from_local=sdp.TransformRT(),
             has_gravity=False,
         ),
     )
@@ -85,9 +85,7 @@ def create_simulation() -> tuple[Scene, Actor]:
         raise RuntimeError("Failed to create the slit annular ring shell actor.")
 
     # Fix the first two nodes on each radial ring at their reference positions.
-    coordinates = np.asarray(
-        list(physics.get_shape_mesh(shape).coordinates), dtype=np_real
-    )
+    coordinates = np.asarray(list(sdp.get_shape_mesh(shape).coordinates), dtype=np_real)
     fixed_positions = coordinates.reshape(-1, 3)[FIXED_NODES].reshape(-1)
     actor.add_boundary_condition_nodes_world(
         node_indices=FIXED_NODES, node_positions_world=fixed_positions
@@ -114,12 +112,12 @@ def get_tracked_displacement(actor: Actor) -> list[float]:
 def main() -> None:
     """Run the interactive simulation and report the tracked-node displacement."""
     # Run on the calling thread.
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
     try:
         scene, actor = create_simulation()
 
         # Launch the debugger for visualization and interactive playback control.
-        if not physics.debugger.attach():
+        if not sdp.debugger.attach():
             return
 
         print(
@@ -128,7 +126,7 @@ def main() -> None:
         )
         # Advance until the debugger detaches, reporting once per simulated second.
         step_count = 0
-        while physics.debugger.is_attached():
+        while sdp.debugger.is_attached():
             scene.step(TIME_STEP)
             step_count += 1
             if step_count % REPORT_INTERVAL_STEPS == 0:
@@ -143,7 +141,7 @@ def main() -> None:
         displacement = get_tracked_displacement(actor)
         print(f"Node {TRACKED_NODE} final displacement [m]: {displacement}")
     finally:
-        physics.shutdown()
+        sdp.shutdown()
 
 
 if __name__ == "__main__":

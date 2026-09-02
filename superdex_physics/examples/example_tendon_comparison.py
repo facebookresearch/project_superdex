@@ -21,7 +21,7 @@ import math
 from dataclasses import dataclass
 
 import numpy as np
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.physics import Actor, ActorHandle, Scene
 from superdex.physics.paths import resolve_asset, resolve_asset_root
 
@@ -77,7 +77,7 @@ class TendonArticulation:
 
 
 def _joint_dof_indices(
-    shape_info: physics.ArticulatedShapeInfo, joint_index: int
+    shape_info: sdp.ArticulatedShapeInfo, joint_index: int
 ) -> list[int]:
     """Return the flattened DoF indices belonging to one joint."""
     dof_info = shape_info.dof_info[joint_index]
@@ -90,22 +90,22 @@ def _actuator_stiffness(rest_length: float) -> float:
 
 
 def create_tendon_articulation(
-    prefab: physics.prefab.ScenePrefab,
+    prefab: sdp.prefab.ScenePrefab,
     scene: Scene,
     translation: list[float],
     name: str,
 ) -> TendonArticulation:
     """Instantiate and resolve the shared tendon articulation by semantic names."""
-    result = physics.prefab.add_to_scene(
+    result = sdp.prefab.add_to_scene(
         prefab=prefab,
         scene=scene,
-        params=physics.prefab.PrefabParams(
+        params=sdp.prefab.PrefabParams(
             name=name,
             translation=translation,
             apply_scene_settings=False,
         ),
     )
-    articulated_actors = result.filter(physics.ActorType.ARTICULATED)
+    articulated_actors = result.filter(sdp.ActorType.ARTICULATED)
     assert len(articulated_actors) == 1, (
         "Tendon articulation prefab must create exactly one articulated actor."
     )
@@ -146,7 +146,7 @@ def create_tendon_articulation(
     assert len(root_dof_indices) == 6, "RootFree must provide six DoFs."
     assert len(slider_dof_indices) == 1, "SliderPrismatic must provide one DoF."
 
-    root_values = physics.DynamicArrayReal(len(root_dof_indices))
+    root_values = sdp.DynamicArrayReal(len(root_dof_indices))
     actor.get_dof_values(np.array(root_dof_indices, dtype=np.int32), root_values)
     bc_root_values = list(root_values)
     bc_dof_indices = np.array(root_dof_indices + slider_dof_indices, dtype=np.int32)
@@ -183,10 +183,8 @@ def create_tendon_articulation(
 def add_rod_tendon(scene: Scene, art: TendonArticulation) -> Actor:
     """Build a straight elastic rod between the prefab's attachment frames."""
     world_from_root = art.actor.get_root_transform()
-    world_from_start = world_from_root * physics.TransformRT(
-        translation=art.rod_start_root
-    )
-    world_from_end = world_from_root * physics.TransformRT(translation=art.rod_end_root)
+    world_from_start = world_from_root * sdp.TransformRT(translation=art.rod_start_root)
+    world_from_end = world_from_root * sdp.TransformRT(translation=art.rod_end_root)
     start_world = np.array(world_from_start.translation, dtype=np.float32)
     end_world = np.array(world_from_end.translation, dtype=np.float32)
 
@@ -199,19 +197,19 @@ def add_rod_tendon(scene: Scene, art: TendonArticulation) -> Actor:
 
     # Build a polyline simulation mesh plus a tubular visual mesh (with embedding data)
     # so the rod can use visual-mesh contact.
-    model = physics.experimental.generate_tubular_rod_model_data(
+    model = sdp.experimental.generate_tubular_rod_model_data(
         nodes=nodes,
         element_frame_axes=element_frame_axes,
         radius=ROD_RADIUS,
         num_cross_section_segments=ROD_NUM_CROSS_SECTION_SEGMENTS,
         is_closed_loop=False,
     )
-    shape = physics.create_model_shape(model)
+    shape = sdp.create_model_shape(model)
 
     polar_moment_of_inertia = 0.5 * math.pi * ROD_RADIUS**4
     second_moment_of_area = 0.25 * math.pi * ROD_RADIUS**4
     torsion_constant = 0.5 * math.pi * ROD_RADIUS**4
-    material = physics.experimental.RodMaterialParams(
+    material = sdp.experimental.RodMaterialParams(
         linear_density=ROD_DENSITY * ROD_AREA,
         linear_rotational_inertia=ROD_DENSITY * polar_moment_of_inertia,
         axial_stiffness=ROD_AREA * ROD_YOUNGS_MODULUS,
@@ -222,15 +220,15 @@ def add_rod_tendon(scene: Scene, art: TendonArticulation) -> Actor:
         ],
     )
 
-    rod = physics.experimental.create_rod_actor(
+    rod = sdp.experimental.create_rod_actor(
         scene,
-        physics.experimental.RodActorParams(
+        sdp.experimental.RodActorParams(
             name="TendonRod",
             shape=shape,
-            world_from_local=physics.TransformRT(),
+            world_from_local=sdp.TransformRT(),
             material=material,
             layer="Tendon",
-            contact=physics.ContactParams(penalty_coefficient=PENALTY_COEFFICIENT),
+            contact=sdp.ContactParams(penalty_coefficient=PENALTY_COEFFICIENT),
             use_visual_mesh_contact=True,
         ),
     )
@@ -268,21 +266,21 @@ def add_spatial_tendon(art: TendonArticulation) -> int:
     """Route a spatial tendon through the prefab's semantic attachment frames."""
     route_names = (SLIDER_LINK_NAME, *EYELET_LINK_NAMES)
     elements = [
-        physics.RoutingElement(
-            type=physics.RoutingElementType.WAYPOINT,
+        sdp.RoutingElement(
+            type=sdp.RoutingElementType.WAYPOINT,
             index=art.link_indices[link_name],
             local_position=[0.0, 0.0, 0.0],
         )
         for link_name in route_names
     ]
-    tendon_index = physics.experimental.add_spatial_tendon(
+    tendon_index = sdp.experimental.add_spatial_tendon(
         art.actor,
-        physics.experimental.SpatialTendonParams(routing_elements=elements),
+        sdp.experimental.SpatialTendonParams(routing_elements=elements),
     )
-    physics.experimental.attach_displacement_control_actuator(
+    sdp.experimental.attach_displacement_control_actuator(
         art.actor,
         tendon_index,
-        physics.experimental.DisplacementControlActuatorParams(
+        sdp.experimental.DisplacementControlActuatorParams(
             stiffness=_actuator_stiffness(art.rest_length), target_displacement=0.0
         ),
     )
@@ -297,17 +295,17 @@ def add_linear_transmission(art: TendonArticulation) -> int:
     ]
     joint_coefficients = [1.0] + [-LINEAR_MOMENT_ARM] * len(HINGE_JOINT_NAMES)
 
-    tendon_index = physics.experimental.add_linear_transmission(
+    tendon_index = sdp.experimental.add_linear_transmission(
         art.actor,
-        physics.experimental.LinearTransmissionParams(
+        sdp.experimental.LinearTransmissionParams(
             joint_indices=joint_indices,
             joint_coefficients=joint_coefficients,
         ),
     )
-    physics.experimental.attach_displacement_control_actuator(
+    sdp.experimental.attach_displacement_control_actuator(
         art.actor,
         tendon_index,
-        physics.experimental.DisplacementControlActuatorParams(
+        sdp.experimental.DisplacementControlActuatorParams(
             stiffness=_actuator_stiffness(art.rest_length), target_displacement=0.0
         ),
     )
@@ -319,9 +317,9 @@ def create_tendon_comparison_simulation() -> tuple[Scene, list[TendonArticulatio
 
     Note: physics.initialize() must be called before this function.
     """
-    scene = physics.create_scene("Tendon Fidelity Comparison Scene")
+    scene = sdp.create_scene("Tendon Fidelity Comparison Scene")
 
-    prefab = physics.prefab.load_from_file(
+    prefab = sdp.prefab.load_from_file(
         prefab_path=str(resolve_asset(TENDON_ARTICULATION_PREFAB)),
         root_path=str(resolve_asset_root(TENDON_ARTICULATION_PREFAB)),
     )
@@ -359,9 +357,7 @@ def create_tendon_comparison_simulation() -> tuple[Scene, list[TendonArticulatio
     add_linear_transmission(art_linear)
 
     solver_params = scene.get_solver_params()
-    solver_params.non_linear_solver.line_search_type = (
-        physics.LineSearchType.WOLFE_STRONG
-    )
+    solver_params.non_linear_solver.line_search_type = sdp.LineSearchType.WOLFE_STRONG
     scene.set_solver_params(solver_params)
 
     return scene, [art_rod, art_spatial, art_linear]
@@ -369,7 +365,7 @@ def create_tendon_comparison_simulation() -> tuple[Scene, list[TendonArticulatio
 
 def main():
     """Build the three tendon-fidelity copies and run the interactive comparison."""
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
 
     scene, articulations = create_tendon_comparison_simulation()
 
@@ -382,17 +378,17 @@ def main():
         debug_draw.find_feature("Linear Transmission Terms"), True
     )
 
-    if not physics.debugger.attach():
-        physics.shutdown()
+    if not sdp.debugger.attach():
+        sdp.shutdown()
         return
 
-    while physics.debugger.is_attached():
+    while sdp.debugger.is_attached():
         sim_time = scene.get_total_simulation_time()
         for art in articulations:
             drive_slider(art, sim_time)
         scene.step(TIME_STEP)
 
-    physics.shutdown()
+    sdp.shutdown()
     print("Simulation complete.")
 
 

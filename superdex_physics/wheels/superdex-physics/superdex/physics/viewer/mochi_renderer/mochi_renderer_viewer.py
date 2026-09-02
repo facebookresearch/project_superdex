@@ -26,7 +26,7 @@ import struct
 
 import numpy as np
 import numpy.typing as npt
-import superdex.physics as mochi
+import superdex.physics as sdp
 from superdex.physics import Actor, ActorHandle, ActorType, Scene
 
 from .mochi_renderer_client import CommandEntry, MochiRendererClient
@@ -474,7 +474,7 @@ class MochiRendererViewer:
             )
 
             # Get mesh data
-            actor.register_query_and_compute(mochi.QueryType.SURFACE_NODE_POSITIONS)
+            actor.register_query_and_compute(sdp.QueryType.SURFACE_NODE_POSITIONS)
             positions = np.asarray(
                 actor.get_surface_mesh_node_positions_local(), dtype=np.float32
             ).ravel()
@@ -483,7 +483,7 @@ class MochiRendererViewer:
                 actor.get_surface_mesh().connectivity, dtype=np.int32
             ).ravel()
 
-            actor.register_query_and_compute(mochi.QueryType.SURFACE_NODE_NORMALS)
+            actor.register_query_and_compute(sdp.QueryType.SURFACE_NODE_NORMALS)
             normals = np.asarray(
                 actor.get_surface_mesh_node_normals_local(), dtype=np.float32
             ).ravel()
@@ -532,12 +532,12 @@ class MochiRendererViewer:
 
         if info.actor_type in (ActorType.SOFT, ActorType.SHELL):
             # Re-extract vertex positions and normals
-            actor.register_query_and_compute(mochi.QueryType.SURFACE_NODE_POSITIONS)
+            actor.register_query_and_compute(sdp.QueryType.SURFACE_NODE_POSITIONS)
             positions = np.asarray(
                 actor.get_surface_mesh_node_positions_local(), dtype=np.float32
             ).ravel()
 
-            actor.register_query_and_compute(mochi.QueryType.SURFACE_NODE_NORMALS)
+            actor.register_query_and_compute(sdp.QueryType.SURFACE_NODE_NORMALS)
             normals = np.asarray(
                 actor.get_surface_mesh_node_normals_local(), dtype=np.float32
             ).ravel()

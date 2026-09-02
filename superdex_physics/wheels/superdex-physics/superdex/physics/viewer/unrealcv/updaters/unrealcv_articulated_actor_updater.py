@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import numpy.typing as npt
-import superdex.physics as mochi
+import superdex.physics as sdp
 from scipy.spatial.transform import Rotation
 from superdex.physics.utils.coordinate_systems import (
     COORDINATE_SYSTEMS,
@@ -55,7 +55,7 @@ class UnrealCVArticulatedActorUpdater(UnrealCVUpdater):
     # Members
     ####################################################################################
 
-    _actor: mochi.Actor
+    _actor: sdp.Actor
     """The mochi articulated actor being updated."""
 
     _ue_skeletal_mesh_actor_name: str
@@ -84,7 +84,7 @@ class UnrealCVArticulatedActorUpdater(UnrealCVUpdater):
 
     def __init__(
         self,
-        actor: mochi.Actor,
+        actor: sdp.Actor,
         ue_skeletal_mesh_actor_name: str,
         client: "UnrealCVClient",
         coordinate_transform: CoordinateTransform,
@@ -135,7 +135,7 @@ class UnrealCVArticulatedActorUpdater(UnrealCVUpdater):
         self._link_names = list(shape_info.link_names)
         self._parents = list(shape_info.parents)
         # Pre-allocate transform array for get_articulated_link_transforms
-        self._link_transforms = mochi.DynamicArrayTransformRT(len(self._link_names))
+        self._link_transforms = sdp.DynamicArrayTransformRT(len(self._link_names))
 
         # Build set of UE bone names for hierarchy mismatch handling.
         # If ue_bone_names was provided (e.g. queried from UE), use it.
@@ -258,7 +258,7 @@ class UnrealCVArticulatedActorUpdater(UnrealCVUpdater):
         actor_root_quat_ue = self._convert_rotation_to_ue(np.array(actor_root.rotation))
 
         # First pass: collect all link world transforms
-        world_transforms: list[mochi.TransformRT | None] = []
+        world_transforms: list[sdp.TransformRT | None] = []
 
         for link_idx in range(len(self._link_transforms)):
             try:
@@ -309,9 +309,9 @@ class UnrealCVArticulatedActorUpdater(UnrealCVUpdater):
     def _find_effective_ue_parent_transform(
         self,
         link_idx: int,
-        world_transforms: list["mochi.TransformRT | None"],
-        actor_root: "mochi.TransformRT",
-    ) -> "mochi.TransformRT":
+        world_transforms: list["sdp.TransformRT | None"],
+        actor_root: "sdp.TransformRT",
+    ) -> "sdp.TransformRT":
         """
         Walk up the mochi parent chain from link_idx to find the closest ancestor
         whose UE bone name exists in the UE skeleton.
@@ -429,7 +429,7 @@ class UnrealCVArticulatedActorUpdater(UnrealCVUpdater):
     # Actor Properties
     ####################################################################################
 
-    def get_actor(self) -> mochi.Actor:
+    def get_actor(self) -> sdp.Actor:
         """Returns the mochi actor."""
         return self._actor
 

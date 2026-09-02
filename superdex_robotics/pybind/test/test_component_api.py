@@ -27,11 +27,11 @@ import tempfile
 
 from test.conftest import (
     bot_tag_path,
-    bots,
-    mochi,
     MochiTestBase,
     requires_hdf5,
     requires_internal,
+    sdp,
+    sdr,
     write_assets_tag_root_marker,
 )
 
@@ -47,7 +47,7 @@ def _make_scene_json(bot_path: str) -> str:
                     "name": "robot",
                     "path": bot_path,
                     "controllers": [
-                        {"type": bots.ControllerBasicJscPd.type_name(), "name": "jsc"}
+                        {"type": sdr.ControllerBasicJscPd.type_name(), "name": "jsc"}
                     ],
                 }
             ],
@@ -59,16 +59,16 @@ class ComponentIdentityTest(MochiTestBase):
     """The identity every component reports, on a component that needs no scene."""
 
     def test_actor_less_sensor_reports_its_identity(self) -> None:
-        bots_ctx = bots.create_context()
+        bots_ctx = sdr.create_context()
         handle = bots_ctx.create_sensor(
-            bots.CameraSensor.type_name(), None, "fixed_cam", ""
+            sdr.CameraSensor.type_name(), None, "fixed_cam", ""
         )
         try:
             sensor = bots_ctx.get_sensor(handle)
             assert sensor is not None
             self.assertTrue(sensor.is_valid())
             self.assertEqual(sensor.get_name(), "fixed_cam")
-            self.assertEqual(sensor.get_type_name(), bots.CameraSensor.type_name())
+            self.assertEqual(sensor.get_type_name(), sdr.CameraSensor.type_name())
             # Created with no link actor, so it is bound to nothing and owned by no bot.
             self.assertIsNone(sensor.get_actor())
             self.assertIsNone(sensor.get_owning_bot())
@@ -76,8 +76,8 @@ class ComponentIdentityTest(MochiTestBase):
             bots_ctx.destroy_sensor(handle)
 
     def test_sensor_created_without_a_name_reports_an_empty_one(self) -> None:
-        bots_ctx = bots.create_context()
-        handle = bots_ctx.create_sensor(bots.CameraSensor.type_name(), None, "", "")
+        bots_ctx = sdr.create_context()
+        handle = bots_ctx.create_sensor(sdr.CameraSensor.type_name(), None, "", "")
         try:
             sensor = bots_ctx.get_sensor(handle)
             assert sensor is not None
@@ -88,12 +88,12 @@ class ComponentIdentityTest(MochiTestBase):
 
 class SensorPoseTest(MochiTestBase):
     def test_parent_pose_round_trips_and_resolves_to_world(self) -> None:
-        bots_ctx = bots.create_context()
-        handle = bots_ctx.create_sensor(bots.CameraSensor.type_name(), None, "cam", "")
+        bots_ctx = sdr.create_context()
+        handle = bots_ctx.create_sensor(sdr.CameraSensor.type_name(), None, "cam", "")
         try:
             sensor = bots_ctx.get_sensor(handle)
             assert sensor is not None
-            pose = mochi.TransformRT([1.0, 2.0, 3.0])
+            pose = sdp.TransformRT([1.0, 2.0, 3.0])
             sensor.set_parent_from_sensor(pose)
             self.assertEqual(sensor.get_parent_from_sensor(), pose)
             # With no actor the scene root is the parent, so world == parent_from_sensor.
@@ -108,7 +108,7 @@ class ComponentOnABotTest(MochiTestBase):
     @requires_internal
     @requires_hdf5
     def test_bot_owned_components_report_their_actor_and_owner(self) -> None:
-        bots_ctx = bots.create_context()
+        bots_ctx = sdr.create_context()
         with tempfile.TemporaryDirectory() as tmp:
             write_assets_tag_root_marker(tmp)
             with open(os.path.join(tmp, "empty.mochi_scene"), "w") as f:
@@ -119,7 +119,7 @@ class ComponentOnABotTest(MochiTestBase):
                     _make_scene_json(bot_tag_path("bots/arms/fr3/fr3.superdex_bot"))
                 )
 
-            bot_scene = bots.load_bot_scene(scene_file, bots_ctx)
+            bot_scene = sdr.load_bot_scene(scene_file, bots_ctx)
             bot = bot_scene.get_bot("robot")
 
             controller = bots_ctx.get_controller(
@@ -128,7 +128,7 @@ class ComponentOnABotTest(MochiTestBase):
             assert controller is not None
             self.assertEqual(controller.get_name(), "jsc")
             self.assertEqual(
-                controller.get_type_name(), bots.ControllerBasicJscPd.type_name()
+                controller.get_type_name(), sdr.ControllerBasicJscPd.type_name()
             )
             self.assertIsNotNone(controller.get_actor())
             # The owning bot is inferred from the actor the controller was built on.
@@ -138,24 +138,24 @@ class ComponentOnABotTest(MochiTestBase):
             # A sensor on a bot link resolves its world pose through the link's actor, so
             # it is offset from the pose expressed in the link frame.
             sensor_handle = bots_ctx.create_sensor(
-                bots.CameraSensor.type_name(), bot.get_articulated_actor(), "wrist", ""
+                sdr.CameraSensor.type_name(), bot.get_articulated_actor(), "wrist", ""
             )
             try:
                 sensor = bots_ctx.get_sensor(sensor_handle)
                 assert sensor is not None
-                sensor.set_parent_from_sensor(mochi.TransformRT([0.0, 0.0, 0.5]))
+                sensor.set_parent_from_sensor(sdp.TransformRT([0.0, 0.0, 0.5]))
                 self.assertIsNotNone(sensor.get_actor())
                 sensor_owner = sensor.get_owning_bot()
                 assert sensor_owner is not None
                 self.assertEqual(sensor_owner.get_name(), bot.get_name())
-                self.assertIsInstance(sensor.get_world_transform(), mochi.TransformRT)
+                self.assertIsInstance(sensor.get_world_transform(), sdp.TransformRT)
             finally:
                 bots_ctx.destroy_sensor(sensor_handle)
 
     @requires_internal
     @requires_hdf5
     def test_configure_from_scene_entry_applies_params(self) -> None:
-        bots_ctx = bots.create_context()
+        bots_ctx = sdr.create_context()
         with tempfile.TemporaryDirectory() as tmp:
             write_assets_tag_root_marker(tmp)
             with open(os.path.join(tmp, "empty.mochi_scene"), "w") as f:
@@ -166,7 +166,7 @@ class ComponentOnABotTest(MochiTestBase):
                     _make_scene_json(bot_tag_path("bots/arms/fr3/fr3.superdex_bot"))
                 )
 
-            bot_scene = bots.load_bot_scene(scene_file, bots_ctx)
+            bot_scene = sdr.load_bot_scene(scene_file, bots_ctx)
             controller = bots_ctx.get_controller(
                 bot_scene.get_controller_handle("robot/jsc")
             )

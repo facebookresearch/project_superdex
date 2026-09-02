@@ -1461,8 +1461,8 @@ from pathlib import Path
 
 expect_double = os.environ["SUPERDEX_EXPECT_DOUBLE"] == "1"
 
-import superdex.physics as physics
-import superdex.robotics as robotics
+import superdex.physics as sdp
+import superdex.robotics as sdr
 
 """
     + MODULE_ORIGIN_AUDIT

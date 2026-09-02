@@ -46,7 +46,7 @@ from __future__ import annotations
 import math
 
 import numpy as np
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.physics import Actor, Constraint, Scene
 from superdex.physics.paths import resolve_asset
 
@@ -96,11 +96,11 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
     Returns:
         tuple: (scene, link1, link2)
     """
-    scene = physics.create_scene("Constraints Scene")
+    scene = sdp.create_scene("Constraints Scene")
 
     # Both links share the same box shape. The cube mesh is corner-anchored, so
     # baking the scale gives a box occupying local [0, L] x [0, w] x [0, w].
-    link_shape = physics.load_shape_from_file(
+    link_shape = sdp.load_shape_from_file(
         file_path=str(resolve_asset("cube/cube_mesh.mochi.json")),
         bake_scale=[LINK_LENGTH, LINK_THICKNESS, LINK_THICKNESS],
     )
@@ -113,8 +113,8 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
         shape=link_shape,
         is_static=False,
         density=DENSITY,
-        world_from_local=physics.TransformRT(translation=LINK1_ORIGIN),
-        collider_type=physics.ColliderType.BOX,
+        world_from_local=sdp.TransformRT(translation=LINK1_ORIGIN),
+        collider_type=sdp.ColliderType.BOX,
     )
     link2 = scene.create_rigid_actor(
         name="Link2",
@@ -122,8 +122,8 @@ def build_scene() -> tuple[Scene, Actor, Actor]:
         shape=link_shape,
         is_static=False,
         density=DENSITY,
-        world_from_local=physics.TransformRT(translation=LINK2_ORIGIN),
-        collider_type=physics.ColliderType.BOX,
+        world_from_local=sdp.TransformRT(translation=LINK2_ORIGIN),
+        collider_type=sdp.ColliderType.BOX,
     )
 
     # The two links overlap at the shared joint point; disable contact between
@@ -143,7 +143,7 @@ def create_constraints(
     """
     # C1: pin Link1's upper end (local END_A) to the world anchor. This is the
     # only constraint with a Real3 position target, which we animate later.
-    pivot_params = physics.RigidPivotPositionConstraintParams(
+    pivot_params = sdp.RigidPivotPositionConstraintParams(
         actor=link1.get_handle(),
         local_position=END_A,
         target_position=PIVOT_ANCHOR,
@@ -154,7 +154,7 @@ def create_constraints(
     pivot = scene.create_rigid_pivot_position_constraint(pivot_params)
 
     # C2: tie Link1's lower end (END_B) to Link2's upper end (END_A).
-    spherical_params = physics.RigidSphericalJointConstraintParams(
+    spherical_params = sdp.RigidSphericalJointConstraintParams(
         actor_a=link1.get_handle(),
         actor_b=link2.get_handle(),
         local_pos_a=END_B,
@@ -170,7 +170,7 @@ def create_constraints(
 
 def enumerate_constraints(scene: Scene) -> None:
     """Walk every constraint in the scene via ForEachConstraint."""
-    types: list[physics.ConstraintType] = []
+    types: list[sdp.ConstraintType] = []
     scene.for_each_constraint(lambda c: types.append(c.get_type()))
     print(f"Scene has {len(types)} constraint(s): {[str(t) for t in types]}")
 
@@ -220,31 +220,31 @@ def demonstrate_type_specific_api(pivot: Constraint, spherical: Constraint) -> N
     """
     # The spherical joint has no position target -> graceful error.
     try:
-        spherical.set_target_position(physics.Real3(*PIVOT_ANCHOR))
+        spherical.set_target_position(sdp.Real3(*PIVOT_ANCHOR))
         print("[spherical] set_target_position: accepted (unexpected)")
-    except physics.Error:
+    except sdp.Error:
         print("[spherical] set_target_position: not supported (as expected)")
 
     # Neither constraint tracks a rotation target or exposes DoF limits.
     for label, c in (("pivot", pivot), ("spherical", spherical)):
         try:
-            c.set_target_rotation(physics.Quaternion())
+            c.set_target_rotation(sdp.Quaternion())
             print(f"[{label}] set_target_rotation: accepted (unexpected)")
-        except physics.Error:
+        except sdp.Error:
             print(f"[{label}] set_target_rotation: not supported (as expected)")
         try:
             c.get_limit_min_values()
             print(f"[{label}] get_limit_min_values: accepted (unexpected)")
-        except physics.Error:
+        except sdp.Error:
             print(f"[{label}] get_limit_min_values: not supported (as expected)")
 
     # Constraints support constraint-specific queries (force) but not
     # actor-specific ones (node positions).
     print(
         "[pivot] CONSTRAINT_FORCE supported: "
-        f"{pivot.is_query_supported(physics.QueryType.CONSTRAINT_FORCE)}; "
+        f"{pivot.is_query_supported(sdp.QueryType.CONSTRAINT_FORCE)}; "
         "NODE_POSITIONS supported: "
-        f"{pivot.is_query_supported(physics.QueryType.NODE_POSITIONS)}"
+        f"{pivot.is_query_supported(sdp.QueryType.NODE_POSITIONS)}"
     )
 
 
@@ -267,7 +267,7 @@ def animate_anchor(pivot: Constraint, sim_time: float) -> None:
     # Setting the target each step lets the damping term track the target
     # velocity. (Use update_old_target() only when teleporting the target, to
     # suppress the resulting damping transient.)
-    pivot.set_target_position(physics.Real3(x, PIVOT_ANCHOR[1], z))
+    pivot.set_target_position(sdp.Real3(x, PIVOT_ANCHOR[1], z))
 
 
 def report_diagnostics(
@@ -300,19 +300,19 @@ def run_interactive(
     assert pivot is not None and spherical is not None  # both alive at start
     # Register a force query on each constraint BEFORE stepping; the force is
     # computed during Step and read back with get_force().
-    pivot.register_query(physics.QueryType.CONSTRAINT_FORCE)
-    spherical.register_query(physics.QueryType.CONSTRAINT_FORCE)
+    pivot.register_query(sdp.QueryType.CONSTRAINT_FORCE)
+    spherical.register_query(sdp.QueryType.CONSTRAINT_FORCE)
 
     sim_time = 0.0
     next_report_time = 1.0
     weakened = restored = joint_removed = actor_destroyed = False
 
     # Launch and attach the remote debugger for visualization and interaction.
-    if not physics.debugger.attach():
+    if not sdp.debugger.attach():
         return
 
     # Simulate until the debugger detaches.
-    while physics.debugger.is_attached():
+    while sdp.debugger.is_attached():
         # --- Scripted timeline -----------------------------------------------
         if pivot is not None and not weakened and sim_time >= T_WEAKEN:
             # Lower the pivot stiffness so the spring goes soft: holding the
@@ -357,7 +357,7 @@ def run_interactive(
 def main() -> None:
     """Run the interactive constraints tutorial."""
     # 0 = single-threaded (simplest); -1 = auto; N = N worker threads.
-    physics.initialize(num_worker_threads=0)
+    sdp.initialize(num_worker_threads=0)
 
     scene, link1, link2 = build_scene()
 
@@ -382,8 +382,8 @@ def main() -> None:
     run_interactive(scene, pivot, spherical, link1)
 
     # Destroying the scene frees everything it contains.
-    physics.destroy_scene(scene)
-    physics.shutdown()
+    sdp.destroy_scene(scene)
+    sdp.shutdown()
     print("Simulation complete.")
 
 

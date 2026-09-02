@@ -17,13 +17,13 @@ import os
 import unittest
 
 import numpy as np
-import superdex.physics as mochi
-import superdex.robotics as bots  # noqa: F401
+import superdex.physics as sdp
+import superdex.robotics as sdr  # noqa: F401
 
 
-np_real = np.float64 if mochi.uses_double_precision() else np.float32
+np_real = np.float64 if sdp.uses_double_precision() else np.float32
 
-requires_hdf5 = unittest.skipUnless(mochi.uses_hdf5(), "Requires MOCHI_USE_HDF5=ON")
+requires_hdf5 = unittest.skipUnless(sdp.uses_hdf5(), "Requires MOCHI_USE_HDF5=ON")
 
 # True on an internal (Meta) build. The bots `test` target sets MOCHI_INTERNAL from
 # mochi_is_internal(); on @mode/external it is "0", so the @requires_internal bot-scene
@@ -37,7 +37,7 @@ requires_internal = unittest.skipUnless(
 
 default_num_worker_threads = 0
 
-mochi.initialize(num_worker_threads=default_num_worker_threads)
+sdp.initialize(num_worker_threads=default_num_worker_threads)
 
 
 def find_repo_root() -> str | None:

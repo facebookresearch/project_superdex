@@ -15,7 +15,7 @@
 from typing import Any
 
 import numpy as np
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.lab.gym.envs import (
     ActionSpace,
     Info,
@@ -133,7 +133,7 @@ class CartPoleEnv(MochiEnv):
             prefab_path = (
                 assets_root / "benchmarks" / "cart_pole" / "cart_pole.mochi_scene"
             )
-            prefab = physics.prefab.shallow_load_from_file(str(prefab_path))
+            prefab = sdp.prefab.shallow_load_from_file(str(prefab_path))
 
             # Tweak the prefab according to the supplied configuration.
             if not cfg.use_gravity:

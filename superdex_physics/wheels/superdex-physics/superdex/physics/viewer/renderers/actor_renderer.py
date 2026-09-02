@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import numpy as np
 import numpy.typing as npt
-import superdex.physics as mochi
+import superdex.physics as sdp
 from superdex.physics import Actor, ActorType
 from superdex.physics.utils.coordinate_systems import CoordinateTransform
 from superdex.physics.utils.decorators import override_from
@@ -120,7 +120,7 @@ class ActorRenderer(MeshRenderer):
 
     def _get_actor_coordinates(self) -> npt.NDArray[float]:
         """Gets the Actor's surface mesh coordinates."""
-        self._actor.register_query_and_compute(mochi.QueryType.SURFACE_NODE_POSITIONS)
+        self._actor.register_query_and_compute(sdp.QueryType.SURFACE_NODE_POSITIONS)
         return np.asarray(
             self._actor.get_surface_mesh_node_positions_local(), dtype=np.float32
         ).reshape(-1, 3)

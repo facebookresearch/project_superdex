@@ -15,7 +15,7 @@
 from typing import Any
 
 import numpy as np
-import superdex.physics as physics
+import superdex.physics as sdp
 from superdex.lab.gym.envs import (
     ActionSpace,
     Info,
@@ -105,7 +105,7 @@ class AntEnv(MochiEnv):
     _exclude_current_positions_from_observation: bool
     _include_contact_in_observation: bool
     _use_rotation_vector: bool
-    _contact_actors: list[physics.Actor]
+    _contact_actors: list[sdp.Actor]
 
     ####################################################################################
     # Constructor
@@ -196,12 +196,12 @@ class AntEnv(MochiEnv):
             # Load the Ant prefab.
             assets_root = get_assets_root()
             prefab_path = assets_root / "benchmarks" / "ant" / "ant.mochi_prefab"
-            prefab = physics.prefab.shallow_load_from_file(str(prefab_path))
+            prefab = sdp.prefab.shallow_load_from_file(str(prefab_path))
 
             # Add scene-level settings to the prefab
-            prefab.scene = physics.prefab.SceneParams(
-                solver=physics.SolverParams(
-                    linear_solver=physics.LinearSolverParams(abs_tol=1e-10)
+            prefab.scene = sdp.prefab.SceneParams(
+                solver=sdp.SolverParams(
+                    linear_solver=sdp.LinearSolverParams(abs_tol=1e-10)
                 )
             )
 
@@ -213,14 +213,10 @@ class AntEnv(MochiEnv):
                 prefab.scene.gravity = [0, 0, 0]
             if cfg.use_low_friction:
                 for link in prefab.actors.articulated[0].links:
-                    link.contact = physics.ContactParams(
-                        coulomb_friction_coefficient=0.1
-                    )
+                    link.contact = sdp.ContactParams(coulomb_friction_coefficient=0.1)
             if cfg.use_high_friction:
                 for link in prefab.actors.articulated[0].links:
-                    link.contact = physics.ContactParams(
-                        coulomb_friction_coefficient=2.0
-                    )
+                    link.contact = sdp.ContactParams(coulomb_friction_coefficient=2.0)
 
             # Initialize scene from prefab.
             prefab_params = mochi_helpers.PrefabParams()
@@ -248,7 +244,7 @@ class AntEnv(MochiEnv):
         self._contact_actors = []
         for link_handle in self._agent.get_nested_link_actors():
             link_actor = self._scene.get_actor(link_handle)
-            link_actor.register_query(physics.QueryType.TOTAL_CONTACT_FORCE)
+            link_actor.register_query(sdp.QueryType.TOTAL_CONTACT_FORCE)
             self._contact_actors.append(link_actor)
 
     ####################################################################################
