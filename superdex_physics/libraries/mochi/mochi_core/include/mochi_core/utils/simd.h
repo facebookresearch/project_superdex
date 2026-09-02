@@ -450,9 +450,11 @@ template <class T, int N, class MaskT>
 MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, N>
 Select(Simd<MaskT, N> conditionMask, Simd<T, N> a, Simd<T, N> b);
 
-// Special bit shift operations
+// Return a right-shifted integer vector.
+// Signed integer vectors use arithmetic/sign-extending right shift.
+// Unsigned integer vectors are not currently supported.
 template <int kShift, class T, int N>
-MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, N> ShiftRight(Simd<T, N> a); // return (a >> kShift)
+MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, N> ShiftRight(Simd<T, N> a);
 
 // Shuffle elements in a vector. Returns: {a[i0], a[i1], ... }
 template <int x = 0, int y = 1, class T>

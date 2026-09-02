@@ -17,6 +17,7 @@
 #include "simd_test.h"
 
 #include <array>
+#include <limits>
 #include <type_traits>
 #include <vector>
 
@@ -451,7 +452,17 @@ TEST(Vec2l, ShiftLeft) {
 }
 
 TEST(Vec2l, ShiftRight) {
+  static constexpr int kSingleBitShift = 1;
+  static constexpr int kHalfWidthShift = 8 * sizeof(Vec2l::Scalar) / 2;
+  static constexpr int64_t kHalfWidthScale = int64_t{1} << kHalfWidthShift;
+  static constexpr int64_t kInt64Min = std::numeric_limits<int64_t>::min();
+
   Vec2l v(8, 40);
   EXPECT_VEC2L(1, 5, ShiftRight<3>(v));
   EXPECT_EQ(v, ShiftRight<0>(v));
+  // Shift by one catches logical shifts; half-width catches multi-bit sign fill.
+  // clang-format off
+  EXPECT_VEC2L(-1, -2, ShiftRight<kSingleBitShift>(Vec2l{-1, -3}));
+  EXPECT_VEC2L(-1, kInt64Min / kHalfWidthScale, ShiftRight<kHalfWidthShift>(Vec2l{-1, kInt64Min}));
+  // clang-format on
 }

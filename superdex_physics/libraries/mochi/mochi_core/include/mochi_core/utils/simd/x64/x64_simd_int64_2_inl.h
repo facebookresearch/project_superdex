@@ -310,7 +310,16 @@ class Simd<int64_t, 2> {
 
   template <int kShift>
   [[nodiscard]] MOCHI_FORCE_INLINE static Simd ShiftRight(Simd a) {
-    return _mm_srli_epi64(a.raw, kShift); // SSE2
+    static_assert(kShift >= 0 && kShift < 64, "Shift amount out-of-range");
+    if constexpr (kShift == 0) {
+      return a;
+    } else {
+      // TODO: Use _mm_srai_epi64 for AVX512.
+      auto shifted = _mm_srli_epi64(a.raw, kShift); // SSE2
+      auto signMask = _mm_cmpgt_epi64(_mm_setzero_si128(), a.raw); // SSE4.2
+      auto signFill = _mm_slli_epi64(signMask, 64 - kShift); // SSE2
+      return _mm_or_si128(shifted, signFill); // SSE2
+    }
   }
 
  private:

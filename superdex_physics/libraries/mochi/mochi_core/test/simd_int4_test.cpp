@@ -17,6 +17,7 @@
 #include "simd_test.h"
 
 #include <array>
+#include <limits>
 #include <type_traits>
 #include <vector>
 
@@ -648,7 +649,19 @@ TEST(Vec4i, ShiftLeft) {
 }
 
 TEST(Vec4i, ShiftRight) {
+  static constexpr int kSingleBitShift = 1;
+  static constexpr int kHalfWidthShift = 8 * sizeof(Vec4i::Scalar) / 2;
+  static constexpr int kHalfWidthScale = 1 << kHalfWidthShift;
+  static constexpr int kIntMin = std::numeric_limits<int>::min();
+  static constexpr int kNegativeSample = -100;
+  static constexpr int kPositiveSample = 100;
+
   Vec4i v(8, 40, 56, 88);
   EXPECT_VEC4I(1, 5, 7, 11, ShiftRight<3>(v));
   EXPECT_EQ(v, ShiftRight<0>(v));
+  // Shift by one catches logical shifts; half-width catches multi-bit sign fill.
+  // clang-format off
+  EXPECT_VEC4I(-1, -2, 2, 0, ShiftRight<kSingleBitShift>(Vec4i{-1, -3, 4, 1}));
+  EXPECT_VEC4I(-1, kIntMin / kHalfWidthScale, -1, 0, ShiftRight<kHalfWidthShift>(Vec4i{-1, kIntMin, kNegativeSample, kPositiveSample}));
+  // clang-format on
 }

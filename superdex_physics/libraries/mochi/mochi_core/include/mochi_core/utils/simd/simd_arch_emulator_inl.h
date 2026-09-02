@@ -501,7 +501,16 @@ class Simd<T, N> {
 
   template <int kShift>
   [[nodiscard]] MOCHI_ANY MOCHI_FORCE_INLINE static constexpr Simd ShiftRight(Simd a) {
-    return a >> kShift;
+    static_assert(kShift >= 0 && kShift < (8 * sizeof(Scalar)), "Shift amount out-of-range");
+    if constexpr (std::is_integral_v<Scalar>) {
+      static_assert(std::is_signed_v<Scalar>, "Unsigned integer ShiftRight is not supported.");
+      auto eval = []<size_t... I>(Simd const& v, std::index_sequence<I...>) {
+        return Simd{static_cast<Scalar>(v.raw[I] >> kShift)...};
+      };
+      return eval(a, std::make_index_sequence<N>{});
+    } else {
+      return a >> kShift;
+    }
   }
 
 #undef MOCHI_SIMD_EMULATOR_OP_1

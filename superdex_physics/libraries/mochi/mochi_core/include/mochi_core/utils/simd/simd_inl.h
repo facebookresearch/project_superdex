@@ -258,6 +258,9 @@ Select(Simd<MaskT, N> conditionMask, Simd<T, N> a, Simd<T, N> b) {
 
 template <int kShift, class T, int N>
 MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, N> ShiftRight(Simd<T, N> a) {
+  static_assert(
+      Simd<T, N>::kIsSupported && std::is_integral_v<T> && std::is_signed_v<T>,
+      "ShiftRight requires a supported signed integer Simd type");
   static_assert(kShift >= 0 && kShift < (8 * sizeof(T)), "Shift amount out-of-range");
   if constexpr (kShift == 0) {
     return a;

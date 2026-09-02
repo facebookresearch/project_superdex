@@ -311,6 +311,7 @@ class Simd<int64_t, 2> {
 
   template <int kShift>
   [[nodiscard]] MOCHI_FORCE_INLINE static Simd ShiftRight(Simd a) {
+    static_assert(kShift >= 0 && kShift < 64, "Shift amount out-of-range");
     return vshrq_n_s64(a.raw, kShift);
   }
 };

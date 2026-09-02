@@ -413,7 +413,8 @@ class Simd<int, 4> {
 
   template <int kShift>
   [[nodiscard]] MOCHI_FORCE_INLINE static Simd ShiftRight(Simd a) {
-    return _mm_srli_epi32(a.raw, kShift); // SSE2
+    static_assert(kShift >= 0 && kShift < 32, "Shift amount out-of-range");
+    return _mm_srai_epi32(a.raw, kShift); // SSE2
   }
 
  private:
