@@ -462,18 +462,32 @@
 #endif
 
 /**************************************************************************************************
- Memory Cache:
-  MOCHI_CACHE_LINE_SIZE           Size of a data cache line in bytes. Used to align memory buffers.
-  MOCHI_CACHE_ALIGN               Short for alignas(MOCHI_CACHE_LINE_SIZE)
+ Memory Cache
 */
 
-#ifndef MOCHI_CACHE_LINE_SIZE
-// All currently supported CPUs have a common cache line size.
-// If future CPUs differ, then adjust this number to achieve the intended performance.
-#define MOCHI_CACHE_LINE_SIZE 64
+/**
+ * @brief Conservative upper limit for the size (and alignment) of a data cache line.
+ *
+ * @details Cache line size is a property of the CPU, so it is not known at compile time.
+ * This conservative value can be used when compile-time alignment is needed. For a more
+ * accurate runtime value use @ref GetCacheLineInfo.
+ *
+ * @see MOCHI_CONSERVATIVE_CACHE_ALIGN, GetCacheLineInfo
+ */
+#ifndef MOCHI_CONSERVATIVE_CACHE_LINE_SIZE
+#define MOCHI_CONSERVATIVE_CACHE_LINE_SIZE 256
 #endif
 
-#define MOCHI_CACHE_ALIGN alignas(MOCHI_CACHE_LINE_SIZE)
+/**
+ * @brief Aligns the memory of a variable so it starts at the beginning of a cache line.
+ *
+ * @details Cache line size is a property of the CPU, so it is not known at compile time. This
+ * conservative value will waste some memory on most systems, but that is usually acceptable for
+ * static variables and temporary variables.
+ *
+ * @see MOCHI_CONSERVATIVE_CACHE_LINE_SIZE, GetCacheLineInfo
+ */
+#define MOCHI_CONSERVATIVE_CACHE_ALIGN alignas(MOCHI_CONSERVATIVE_CACHE_LINE_SIZE)
 
 /**************************************************************************************************
   MOCHI_NO_INIT

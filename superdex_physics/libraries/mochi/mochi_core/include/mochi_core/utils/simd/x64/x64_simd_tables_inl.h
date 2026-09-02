@@ -23,7 +23,7 @@
 namespace mochi::x64_simd {
 
 // Shuffle pattern lookup table for StoreSelected. Used by Simd<float, 4>, Simd<int, 4>
-MOCHI_CACHE_ALIGN static const int kStoreSelectedShuffleTableS4[16][4] = {
+MOCHI_CONSERVATIVE_CACHE_ALIGN static const int kStoreSelectedShuffleTableS4[16][4] = {
     {0, 1, 2, 3},
     {0, 1, 2, 3},
     {1, 0, 2, 3},
@@ -42,7 +42,7 @@ MOCHI_CACHE_ALIGN static const int kStoreSelectedShuffleTableS4[16][4] = {
     {0, 1, 2, 3}};
 
 // Shuffle pattern lookup table for StoreSelected. Used by Simd<double, 4>, Simd<int64_t, 4>
-MOCHI_CACHE_ALIGN static const uint8_t kStoreSelectedShuffleTableD4[16][8] = {
+MOCHI_CONSERVATIVE_CACHE_ALIGN static const uint8_t kStoreSelectedShuffleTableD4[16][8] = {
     {0, 1, 2, 3, 4, 5, 6, 7},
     {0, 1, 2, 3, 4, 5, 6, 7},
     {2, 3, 0, 1, 4, 5, 6, 7},
@@ -61,7 +61,7 @@ MOCHI_CACHE_ALIGN static const uint8_t kStoreSelectedShuffleTableD4[16][8] = {
     {0, 1, 2, 3, 4, 5, 6, 7}};
 
 // Shuffle pattern lookup table for StoreSelected. Used by Simd<int, 8>, Simd<float, 8>
-MOCHI_CACHE_ALIGN static const uint8_t kStoreSelectedShuffleTableS8[256][8] = {
+MOCHI_CONSERVATIVE_CACHE_ALIGN static const uint8_t kStoreSelectedShuffleTableS8[256][8] = {
     {0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0, 0},
     {0, 1, 0, 0, 0, 0, 0, 0}, {2, 0, 0, 0, 0, 0, 0, 0}, {0, 2, 0, 0, 0, 0, 0, 0},
     {1, 2, 0, 0, 0, 0, 0, 0}, {0, 1, 2, 0, 0, 0, 0, 0}, {3, 0, 0, 0, 0, 0, 0, 0},

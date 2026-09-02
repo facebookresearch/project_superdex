@@ -17,7 +17,6 @@
 #pragma once
 
 #include <mochi_core/memory/allocator.h>
-#include <mochi_core/mochi_platform.h>
 #include <mochi_core/utils/basic_utils.h>
 
 #include <cstddef>
@@ -85,6 +84,6 @@ class AlignedAllocator final : public Allocator {
 /**
  * @brief An @ref AlignedAllocator that aligns to the CPU cache line size.
  */
-using CacheAlignedAllocator = AlignedAllocator<MOCHI_CACHE_LINE_SIZE>;
+using CacheAlignedAllocator = AlignedAllocator<MOCHI_CONSERVATIVE_CACHE_LINE_SIZE>;
 
 } // namespace mochi
