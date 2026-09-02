@@ -743,14 +743,6 @@ void mochi::model::Validate(ModelDataView const& data, Error& error) {
         error,
         "Visual mesh must have 3 nodes per element (triangles).");
     MOCHI_ERROR_RETURN(error);
-    // Polyline meshes require skinning data to embed the visual mesh into the rod's element frames.
-    if (data.mesh && data.mesh->nodesPerElement == 2) {
-      MOCHI_ERROR_IF_NOT(
-          data.visualMesh->skinning.has_value(),
-          error,
-          "Polyline mesh with visual mesh requires skinning data for embedding.");
-    }
-    MOCHI_ERROR_RETURN(error);
   }
 
   if (data.blending) {

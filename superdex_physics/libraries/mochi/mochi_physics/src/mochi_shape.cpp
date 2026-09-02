@@ -447,9 +447,6 @@ PolylineShape::PolylineShape(
       _connectivity(MakeSequentialPolylineConnectivity(isize(_nodes), isClosedLoop)),
       _visualMesh(std::move(visualMesh)),
       _rodVisualEmbedding(std::move(rodVisualEmbedding)) {
-  MOCHI_ASSERT(
-      static_cast<bool>(_visualMesh) == static_cast<bool>(_rodVisualEmbedding),
-      "Visual mesh and rod visual embedding must be both provided or both null.");
   // Validate polyline geometry defensively so direct callers of this constructor cannot trigger
   // a division by zero or undefined parallel-transport rotation in GenerateDiscreteBishopFrame
   // below. Factory paths (e.g. CreatePolylineShape, CreateShapeFromModelData) validate upstream
@@ -484,10 +481,12 @@ ModelData PolylineShape::GetModelData(Error& error) const {
     outData.visualMesh->nodesPerElement = 3;
     outData.visualMesh->coordinates = Flatten(_visualMesh->GetNodeCoordinates());
     outData.visualMesh->connectivity = _visualMesh->GetFlatConnectivity();
-    outData.visualMesh->skinning.emplace();
-    outData.visualMesh->skinning->weightsPerNode = _rodVisualEmbedding->weightsPerNode;
-    outData.visualMesh->skinning->indices = _rodVisualEmbedding->elementIndices;
-    outData.visualMesh->skinning->weights = _rodVisualEmbedding->weights;
+    if (_rodVisualEmbedding) {
+      outData.visualMesh->skinning.emplace();
+      outData.visualMesh->skinning->weightsPerNode = _rodVisualEmbedding->weightsPerNode;
+      outData.visualMesh->skinning->indices = _rodVisualEmbedding->elementIndices;
+      outData.visualMesh->skinning->weights = _rodVisualEmbedding->weights;
+    }
   }
 
   return outData;

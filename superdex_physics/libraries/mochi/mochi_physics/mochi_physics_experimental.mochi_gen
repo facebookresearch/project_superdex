@@ -385,6 +385,12 @@ struct experimental::RodActorParams [no_reflection] {
   // @note Each element's frame axis is interpreted as one cross-sectional principal axis (the other
   // is the cross product of the segment direction and that axis); the flexural stiffness components
   // are defined with respect to these axes.
+  // @note A rod actor uses a visual mesh only when the shape has embedding data. For shapes created
+  // from @ref ModelData, the embedding is built from the skinning data in @ref
+  // ModelData::visualMesh. Without visual-mesh skinning, @ref Context::GetShapeVisualMesh still
+  // returns the shape's visual mesh, but the rod actor ignores it: @ref Actor::GetVisualMesh returns
+  // an empty view, and @ref QueryType::VisualNodePositions and @ref QueryType::VisualNodeNormals are
+  // unsupported. Setting @ref useVisualMeshContact to true then causes actor creation to fail.
   ShapeHandle shape;
 
   // @brief Contact properties for interactions with volume actors.

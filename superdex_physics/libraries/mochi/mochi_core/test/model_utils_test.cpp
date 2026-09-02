@@ -2217,6 +2217,33 @@ static ModelData GetTetMeshModelWithVisualMesh(int weightsPerNode) {
   return tetMeshModel;
 }
 
+static ModelData GetPolylineModelWithVisualMesh(bool includeSkinning) {
+  ModelData model = model::LoadFromBytes(kPolylineMeshJson, test::ExpectOK{});
+  model.visualMesh.emplace();
+  model.visualMesh->nodesPerElement = 3;
+  model.visualMesh->coordinates = {
+      0_r,
+      0_r,
+      0_r,
+      0.1_r,
+      0.1_r,
+      0_r,
+      0.1_r,
+      0_r,
+      0.1_r,
+  };
+  model.visualMesh->connectivity = {0, 1, 2};
+
+  if (includeSkinning) {
+    model.visualMesh->skinning.emplace();
+    model.visualMesh->skinning->weightsPerNode = 1;
+    model.visualMesh->skinning->indices = {0, 1, 2};
+    model.visualMesh->skinning->weights = {1_r, 1_r, 1_r};
+  }
+
+  return model;
+}
+
 TEST(ModelUtils, SaveLoad_VisualMesh) {
   // Tetrahedral meshes with valid visual meshes
   for (int weightsPerNode = 1; weightsPerNode <= 4; ++weightsPerNode) {
@@ -2231,6 +2258,13 @@ TEST(ModelUtils, SaveLoad_VisualMesh) {
     ModelData model = GetTetMeshModelWithVisualMesh(weightsPerNode);
     model.mesh = model.visualMesh;
     model.mesh->skinning = std::nullopt;
+    model::Validate(model, test::ExpectOK{});
+    TestSerializationRoundTrip(model);
+  }
+
+  // A polyline visual mesh may be stored without skinning, even though a rod actor cannot use it.
+  {
+    ModelData model = GetPolylineModelWithVisualMesh(/*includeSkinning=*/false);
     model::Validate(model, test::ExpectOK{});
     TestSerializationRoundTrip(model);
   }
@@ -2296,6 +2330,20 @@ TEST(ModelUtils, Validate_VisualMesh) {
   {
     ModelData model = srcModel; // copy
     int const kInvalidSkinningIndices[] = {-1, model.mesh->GetNumNodes()};
+    TestValidateSkinningData(model, *model.visualMesh->skinning, kInvalidSkinningIndices);
+  }
+
+  // Polyline visual meshes do not require skinning.
+  {
+    ModelData model = GetPolylineModelWithVisualMesh(/*includeSkinning=*/false);
+    model::Validate(model, test::ExpectOK{});
+  }
+
+  // Supplied polyline skinning must remain valid. Its indices reference elements, so an open
+  // polyline with N nodes accepts [0, N - 2].
+  {
+    ModelData model = GetPolylineModelWithVisualMesh(/*includeSkinning=*/true);
+    int const kInvalidSkinningIndices[] = {-1, model.mesh->GetNumNodes() - 1};
     TestValidateSkinningData(model, *model.visualMesh->skinning, kInvalidSkinningIndices);
   }
 }

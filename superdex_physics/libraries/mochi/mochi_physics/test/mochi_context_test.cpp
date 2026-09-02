@@ -2629,7 +2629,7 @@ TEST_P(MochiContextTest, GetShapeVisualMesh_ReleasedHandle) {
   [[maybe_unused]] auto mesh = _mochiContext->GetShapeVisualMesh(shape, ExpectNotOK{});
 }
 
-static ModelData CreatePolylineModelWithVisualMesh() {
+static ModelData CreatePolylineModelWithVisualMesh(bool includeSkinning = true) {
   auto triMesh = CreateMinimalTriMeshSingleTri();
   int const numVisualNodes = isize(triMesh.first);
 
@@ -2643,11 +2643,12 @@ static ModelData CreatePolylineModelWithVisualMesh() {
   model.visualMesh->coordinates = Flatten(MakeSpan(triMesh.first));
   model.visualMesh->connectivity = Flatten(MakeSpan(triMesh.second));
 
-  // Skinning is required for ComputeRodVisualMeshEmbedding to attach the visual mesh.
-  model.visualMesh->skinning.emplace();
-  model.visualMesh->skinning->weightsPerNode = 1;
-  model.visualMesh->skinning->indices.resize(numVisualNodes, 0);
-  model.visualMesh->skinning->weights.resize(numVisualNodes, 1_r);
+  if (includeSkinning) {
+    model.visualMesh->skinning.emplace();
+    model.visualMesh->skinning->weightsPerNode = 1;
+    model.visualMesh->skinning->indices.resize(numVisualNodes, 0);
+    model.visualMesh->skinning->weights.resize(numVisualNodes, 1_r);
+  }
 
   return model;
 }
@@ -2662,6 +2663,19 @@ TEST_P(MochiContextTest, GetShapeVisualMesh_PolylineWithVisualMesh) {
   EXPECT_EQ(3, visualView.nodesPerElement);
   EXPECT_EQ(model.visualMesh->GetNumNodes(), visualView.GetNumNodes());
   EXPECT_EQ(model.visualMesh->GetNumElements(), visualView.GetNumElements());
+  EXPECT_FALSE(visualView.skinning.has_value());
+}
+
+TEST_P(MochiContextTest, GetShapeVisualMesh_PolylineWithoutSkinningPreservesGeometry) {
+  ModelData model = CreatePolylineModelWithVisualMesh(/*includeSkinning=*/false);
+  ShapeHandle shape = _mochiContext->CreateModelShape(model, ExpectOK{});
+  ASSERT_TRUE(shape.IsValid());
+
+  MeshDataView visualView = _mochiContext->GetShapeVisualMesh(shape, ExpectOK{});
+  ASSERT_TRUE(model.visualMesh.has_value());
+  EXPECT_EQ(model.visualMesh->nodesPerElement, visualView.nodesPerElement);
+  EXPECT_SPAN_EQ(MakeConstSpan(model.visualMesh->coordinates), visualView.coordinates);
+  EXPECT_SPAN_EQ(MakeConstSpan(model.visualMesh->connectivity), visualView.connectivity);
   EXPECT_FALSE(visualView.skinning.has_value());
 }
 

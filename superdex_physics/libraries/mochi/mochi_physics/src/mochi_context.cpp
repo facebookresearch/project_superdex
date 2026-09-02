@@ -981,17 +981,19 @@ ShapePtr ContextImpl::CreateShapeFromModelData(
     std::shared_ptr<TriangularMesh const> visualSurfaceMesh;
     std::shared_ptr<RodSurfaceEmbeddingData const> visualSurfaceEmbedding;
 
-    if (model.visualMesh && model.visualMesh->skinning) {
+    if (model.visualMesh) {
       visualSurfaceMesh = std::make_shared<TriangularMesh const>(
           DynamicArray<Real3>{Unflatten<Real3>(model.visualMesh->coordinates)},
           DynamicArray<Int3>{Unflatten<Int3>(model.visualMesh->connectivity)});
-      visualSurfaceEmbedding =
-          std::make_shared<RodSurfaceEmbeddingData const>(ComputeRodSurfaceEmbedding(
-              nodes,
-              frameAxes,
-              *visualSurfaceMesh,
-              std::move(*model.visualMesh->skinning),
-              isClosedLoop));
+      if (model.visualMesh->skinning) {
+        visualSurfaceEmbedding =
+            std::make_shared<RodSurfaceEmbeddingData const>(ComputeRodSurfaceEmbedding(
+                nodes,
+                frameAxes,
+                *visualSurfaceMesh,
+                std::move(*model.visualMesh->skinning),
+                isClosedLoop));
+      }
     }
 
     return std::make_shared<PolylineShape>(

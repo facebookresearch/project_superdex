@@ -1217,6 +1217,15 @@ void mochi::InitRodActor(
   ValidateContactParams(params.contact, error);
   MOCHI_ERROR_RETURN(error);
 
+  auto const& visualMesh = shapePtr->GetVisualMesh();
+  auto const& visualEmbedding = shapePtr->GetRodVisualEmbedding();
+  bool const hasUsableVisualMesh = visualMesh && visualEmbedding;
+  MOCHI_ERROR_IF(
+      params.useVisualMeshContact && !hasUsableVisualMesh,
+      error,
+      "useVisualMeshContact requires a rod shape with visual mesh and embedding data.");
+  MOCHI_ERROR_RETURN(error);
+
   // Get nodes and element frame axes from the shape
   DynamicArray<Real3> const& elementFrameAxes = shapePtr->GetElementFrameAxes();
 
@@ -1340,13 +1349,8 @@ void mochi::InitRodActor(
   std::shared_ptr<TriangularMesh const> contactSkinMesh;
   std::shared_ptr<RodSurfaceEmbeddingData const> contactSkinEmbedding;
   if (params.useVisualMeshContact) {
-    MOCHI_ERROR_IF(
-        !shapePtr->GetVisualMesh() || !shapePtr->GetRodVisualEmbedding(),
-        error,
-        "useVisualMeshContact requires a rod shape with visual mesh and embedding data.");
-    MOCHI_ERROR_RETURN(error);
-    contactSkinMesh = shapePtr->GetVisualMesh();
-    contactSkinEmbedding = shapePtr->GetRodVisualEmbedding();
+    contactSkinMesh = visualMesh;
+    contactSkinEmbedding = visualEmbedding;
   }
 
   if (contactSkinMesh) {
@@ -1430,9 +1434,13 @@ void mochi::InitRodActor(
   }
 
   // Visual components are independent of the selected contact representation.
-  if (shapePtr->GetVisualMesh() && shapePtr->GetRodVisualEmbedding()) {
-    reg.emplace<CVisualMesh>(e, shapePtr->GetVisualMesh(), nullptr);
-    reg.emplace<CRodVisualMeshEmbedding>(e, shapePtr->GetRodVisualEmbedding());
+  if (hasUsableVisualMesh) {
+    reg.emplace<CVisualMesh>(e, visualMesh, nullptr);
+    reg.emplace<CRodVisualMeshEmbedding>(e, visualEmbedding);
+  } else if (visualMesh) {
+    MOCHI_LOG_WARNING(
+        "Creating rod actor \"%s\" with an unskinned visual mesh. The visual mesh will be ignored.",
+        params.name.c_str());
   }
 }
 
