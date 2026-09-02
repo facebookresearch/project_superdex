@@ -23,6 +23,7 @@
 #include <mochi_core/utils/vmatrix.h>
 
 #include <mochi_core/geometry/grid_sdf.h>
+#include <mochi_core/geometry/sdf_bv.h>
 #include <mochi_core/geometry/tetrahedral_mesh.h>
 #include <mochi_core/geometry/triangular_mesh.h>
 #include <mochi_core/utils/rand_utils.h>
@@ -30,10 +31,14 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstdint>
 #include <functional>
 #include <limits>
+#include <memory>
 #include <tuple>
+#include <type_traits>
 #include <variant>
 
 #include "data/obb_test_data.h"
@@ -1492,6 +1497,173 @@ TEST(Sphere, HasOverlap_Obb) {
         return HasOverlap(sphere2, box2);
       },
       1e1_r * std::numeric_limits<real>::epsilon());
+}
+
+// Pack one Sphere per SIMD lane into a BatchSphere<kBatchSize>.
+template <int kBatchSize>
+static BatchSphere<kBatchSize> MakeBatchSphere(std::array<Sphere, kBatchSize> const& spheres) {
+  using V = BatchReal<kBatchSize>;
+  real radii[V::kSize] = {};
+  Real3 centers[V::kSize] = {};
+  for (int i = 0; i < kBatchSize; ++i) {
+    radii[i] = spheres[i].GetRadius();
+    centers[i] = spheres[i].GetCenter();
+  }
+  BatchSphere<kBatchSize> batch{};
+  batch.radius = Load<V>(radii);
+  LoadTransposed<V::kSize>(&centers[0][0], batch.center);
+  return batch;
+}
+
+// Verify that the batch HasOverlap overload matches its scalar counterpart for every sphere.
+template <int kBatchSize, typename Shape>
+static void TestOverlapShapeBatchSphere(Shape const& shape, Span<Sphere const> spheres) {
+  using V = BatchSphere<kBatchSize>;
+  using I = std::conditional_t<sizeof(real) == 4, int, int64_t>;
+  ASSERT_FALSE(spheres.empty());
+  bool sawOverlap = false;
+  bool sawNoOverlap = false;
+  for (size_t base = 0; base < spheres.size(); base += kBatchSize) {
+    std::array<Sphere, kBatchSize> lanes = {};
+    for (int i = 0; i < kBatchSize; ++i) {
+      lanes[i] = spheres[Min(base + static_cast<size_t>(i), spheres.size() - 1)];
+    }
+    auto const batchSphere = MakeBatchSphere<kBatchSize>(lanes);
+    auto const hasOverlap = ReinterpretCast<Simd<I, V::kSize>>(HasOverlap(shape, batchSphere));
+    for (int i = 0; i < kBatchSize; ++i) {
+      bool const expectedOverlap = HasOverlap(shape, lanes[i]);
+      EXPECT_EQ(!!hasOverlap[i], expectedOverlap);
+      sawOverlap |= expectedOverlap;
+      sawNoOverlap |= !expectedOverlap;
+    }
+  }
+  // The probe set must exercise both outcomes.
+  EXPECT_TRUE(sawOverlap);
+  EXPECT_TRUE(sawNoOverlap);
+}
+
+template <typename Shape>
+static void TestOverlapShapeBatchSphere(Shape const& shape, Span<Sphere const> spheres) {
+  TestOverlapShapeBatchSphere<4>(shape, spheres);
+  TestOverlapShapeBatchSphere<8>(shape, spheres);
+}
+
+TEST(BatchSphere, HasOverlap_Sphere) {
+  Sphere const a{Real3{0_r, 0_r, 0_r}, 1_r};
+  real constexpr kProbeRadius = 0.5_r;
+  real constexpr kTouch = 1_r + kProbeRadius; // center-to-center distance for exact contact
+  Sphere const probes[] = {
+      Sphere{Real3{0_r, 0_r, 0_r}, 0.1_r}, // fully inside a
+      Sphere{Real3{0_r, 0_r, 0_r}, 5_r}, // enclosing a
+      Sphere{Real3{1_r, 0_r, 0_r}, kProbeRadius}, // overlapping
+      Sphere{Real3{kTouch, 0_r, 0_r}, kProbeRadius}, // exactly touching
+      Sphere{Real3{std::nextafter(kTouch, 0_r), 0_r, 0_r}, kProbeRadius}, // just overlapping
+      Sphere{Real3{std::nextafter(kTouch, kInf), 0_r, 0_r}, kProbeRadius}, // just separated
+      Sphere{Real3{10_r, 0_r, 0_r}, kProbeRadius}, // far, separated
+  };
+  TestOverlapShapeBatchSphere(a, probes);
+}
+
+TEST(BatchSphere, HasOverlap_Aabb) {
+  Aabb const aabb{Real3{-1_r, -2_r, -3_r}, Real3{1_r, 2_r, 3_r}};
+  real constexpr kProbeRadius = 0.5_r;
+  real constexpr kTouch = 1_r + kProbeRadius; // x at which a probe grazes the +x face
+  Sphere const probes[] = {
+      Sphere{Real3{0_r, 0_r, 0_r}, 0.5_r}, // fully inside
+      Sphere{Real3{0_r, 0_r, 0_r}, 10_r}, // enclosing
+      Sphere{Real3{1_r, 0_r, 0_r}, kProbeRadius}, // straddling the +x face
+      Sphere{Real3{kTouch, 0_r, 0_r}, kProbeRadius}, // exactly touching the +x face
+      Sphere{Real3{std::nextafter(kTouch, 0_r), 0_r, 0_r}, kProbeRadius}, // just overlapping
+      Sphere{Real3{std::nextafter(kTouch, kInf), 0_r, 0_r}, kProbeRadius}, // just separated
+      Sphere{Real3{10_r, 0_r, 0_r}, kProbeRadius}, // far, separated
+  };
+  TestOverlapShapeBatchSphere(aabb, probes);
+}
+
+TEST(BatchSphere, HasOverlap_Plane) {
+  Plane const plane{Real3{0_r, 1_r, 0_r}, 2_r};
+  real constexpr kProbeRadius = 0.5_r;
+  real constexpr kTouch = 2_r + kProbeRadius; // center y at which the sphere just reaches the plane
+  Sphere const probes[] = {
+      Sphere{Real3{0_r, -5_r, 0_r}, 0.5_r}, // fully below the plane (deep in the half-space)
+      Sphere{Real3{0_r, 2_r, 0_r}, 1_r}, // straddling the plane
+      Sphere{Real3{0_r, kTouch, 0_r}, kProbeRadius}, // exactly touching from above
+      Sphere{Real3{0_r, std::nextafter(kTouch, 0_r), 0_r}, kProbeRadius}, // just overlapping
+      Sphere{Real3{0_r, std::nextafter(kTouch, kInf), 0_r}, kProbeRadius}, // just separated
+      Sphere{Real3{0_r, 10_r, 0_r}, kProbeRadius}, // far above, separated
+  };
+  TestOverlapShapeBatchSphere(plane, probes);
+}
+
+TEST(BatchSphere, HasOverlap_Obb) {
+  TransformRT const transform{
+      Quaternion::FromAxisAngle(Real3{0_r, 1_r, 0_r}, kPI / 5_r) *
+          Quaternion::FromAxisAngle(Real3{1_r, 0_r, 0_r}, kPI / 3_r),
+      Real3{1_r, 2_r, 3_r}};
+  Real3 const halfExtents{1_r, 2_r, 0.5_r};
+  Obb const obb{transform, halfExtents};
+  real constexpr kProbeRadius = 0.5_r;
+  real const touchX = halfExtents[0] + kProbeRadius; // local x at which a probe grazes the +x face
+  auto const world = [&](Real3 const& local) { return obb.GetTransform().TransformPoint(local); };
+
+  Sphere const probes[] = {
+      Sphere{obb.GetCenter(), 0.2_r}, // fully inside
+      Sphere{obb.GetCenter(), 10_r}, // enclosing
+      Sphere{world(Real3{halfExtents[0], 0_r, 0_r}), kProbeRadius}, // straddling the +x face
+      Sphere{world(Real3{touchX - 0.01_r, 0_r, 0_r}), kProbeRadius}, // just overlapping
+      Sphere{world(Real3{touchX + 0.01_r, 0_r, 0_r}), kProbeRadius}, // just separated
+      Sphere{world(Real3{halfExtents[0] + 5_r, 0_r, 0_r}), kProbeRadius}, // far, separated
+  };
+  TestOverlapShapeBatchSphere(obb, probes);
+
+  Obb const axisAlignedObb{TransformRT{Real3{1_r, 2_r, 3_r}}, halfExtents};
+  Sphere const exactTouchProbes[] = {
+      Sphere{Real3{2.5_r, 2_r, 3_r}, kProbeRadius}, // exactly touching the +x face
+      Sphere{Real3{2.51_r, 2_r, 3_r}, kProbeRadius}, // separated
+      Sphere{axisAlignedObb.GetCenter(), 0.2_r}, // fully inside
+  };
+  EXPECT_TRUE(HasOverlap(axisAlignedObb, exactTouchProbes[0]));
+  TestOverlapShapeBatchSphere(axisAlignedObb, exactTouchProbes);
+}
+
+TEST(BatchSphere, HasOverlap_SdfBv) {
+  // Build an SDF for a non-uniform box (AABB min=(0,0,0), max=(1,2,3)).
+  auto const mesh =
+      std::make_shared<TriangularMesh>(test::CreateMinimalTriMeshUnitCube(Real3{1_r, 2_r, 3_r}));
+  GridSdfParams const params;
+  GridSdf const sdf(mesh, params, test::ExpectOK{});
+
+  // Use actor space as the points space, i.e. gridFromPoints == gridFromActor.
+  SdfBv const sdfBv{
+      .gridSdf = &sdf,
+      .distanceThreshold = 0_r,
+      .gridFromPointsT = sdf.GetGridFromActorTranspose()};
+
+  Sphere const nearInside{Real3{0.9_r, 1_r, 1.5_r}, 0.05_r};
+  Sphere const nearOutside{Real3{1.2_r, 1_r, 1.5_r}, 0.05_r};
+  Sphere const probes[] = {
+      Sphere{Real3{0.5_r, 1_r, 1.5_r}, 0.2_r}, // deep inside the box
+      Sphere{Real3{0.5_r, 1_r, 1.5_r}, 5_r}, // enclosing the box
+      Sphere{Real3{1.2_r, 1_r, 1.5_r}, 0.5_r}, // just outside the +x face, overlapping
+      nearInside,
+      nearOutside,
+      Sphere{Real3{2_r, 1_r, 1.5_r}, 0.2_r}, // outside, separated
+      Sphere{Real3{10_r, 1_r, 1.5_r}, 0.2_r}, // far, separated
+  };
+
+  EXPECT_TRUE(HasOverlap(sdfBv, nearInside));
+  EXPECT_FALSE(HasOverlap(sdfBv, nearOutside));
+  TestOverlapShapeBatchSphere(sdfBv, probes);
+
+  SdfBv expandedSdfBv = sdfBv;
+  expandedSdfBv.distanceThreshold = 0.25_r;
+  EXPECT_TRUE(HasOverlap(expandedSdfBv, nearOutside));
+  TestOverlapShapeBatchSphere(expandedSdfBv, probes);
+
+  SdfBv contractedSdfBv = sdfBv;
+  contractedSdfBv.distanceThreshold = -0.25_r;
+  EXPECT_FALSE(HasOverlap(contractedSdfBv, nearInside));
+  TestOverlapShapeBatchSphere(contractedSdfBv, probes);
 }
 
 TEST(Sphere, ExpandShape) {

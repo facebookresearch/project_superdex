@@ -16,12 +16,14 @@
 
 #pragma once
 
+#include <mochi_core/geometry/batch_sphere.h>
 #include <mochi_core/geometry/grid_sdf.h>
 #include <mochi_core/geometry/scalar_field.h>
 #include <mochi_core/geometry/sphere.h>
 #include <mochi_core/mochi_config.h>
 #include <mochi_core/mochi_platform.h>
 #include <mochi_core/utils/basic_utils.h>
+#include <mochi_core/utils/batch_types.h>
 #include <mochi_core/utils/concepts.h>
 #include <mochi_core/utils/debug.h>
 #include <mochi_core/utils/nd_array.h>
@@ -46,10 +48,10 @@ struct SdfBv {
   VMatrix4x4r gridFromPointsT;
 };
 
-// NOTE: HasOverlap(SdfBv, ShapeT) is currently only supported for ShapeT = Sphere.
+// NOTE: SdfBv overlap is currently only supported for Sphere and BatchSphere.
 MOCHI_FORCE_INLINE bool HasOverlap(SdfBv const& sdfBv, Sphere const& sphere) {
   Real3 centerInGrid = ToReal3(DotVecMat4x4(sphere.VGetCenter(), sdfBv.gridFromPointsT));
-  real outDistance;
+  real outDistance MOCHI_NO_INIT;
 
   constexpr auto kSamplerOptions = TrilinearSamplerOptions<GridExtrapolation::LowerBound>{};
   sdfBv.gridSdf->GetDistanceGrid().TrilinearSample(
@@ -100,6 +102,29 @@ void HasOverlapBatch(
     outHasOverlap[i] =
         (outDistance[i] * actorFromGridScale <= spheres[i].GetRadius() + sdfBv.distanceThreshold);
   }
+}
+
+/**
+ * @brief Tests overlap between an @ref SdfBv and each of a batch of spheres.
+ *
+ * @tparam kBatchSize The number of spheres in the batch.
+ * @param sdfBv The SDF bounding volume.
+ * @param sphere The batch of spheres.
+ * @return A per-lane SIMD mask; each sphere's lane is set if overlap was detected.
+ */
+template <int kBatchSize>
+[[nodiscard]] MOCHI_FORCE_INLINE BatchReal<kBatchSize> HasOverlap(
+    SdfBv const& sdfBv,
+    BatchSphere<kBatchSize> const& sphere) {
+  using V = BatchReal<kBatchSize>;
+  auto const matT = Broadcast3x3<V>(sdfBv.gridFromPointsT);
+  auto const trans = Broadcast3<V>(sdfBv.gridFromPointsT[3]);
+  auto const centerInGrid = DotVecMat(sphere.center, matT) + trans;
+  V dist MOCHI_NO_INIT;
+  sdfBv.gridSdf->GetDistanceGrid()
+      .template TrilinearSampleBatch<V::kSize, GridExtrapolation::LowerBound>(centerInGrid, &dist);
+  real const actorFromGridScale = sdfBv.gridSdf->GetActorFromGridScale();
+  return dist * actorFromGridScale <= sphere.radius + sdfBv.distanceThreshold;
 }
 
 namespace details {
