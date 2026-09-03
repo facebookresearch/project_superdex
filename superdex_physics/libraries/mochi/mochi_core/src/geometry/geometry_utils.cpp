@@ -84,6 +84,40 @@ Aabb mochi::CalcAabb(Span<Real3 const> coordinates) {
 
 Aabb mochi::CalcAabbWithSortedIndices(
     Span<Real3 const> coordinates,
+    Span<int const> sortedIndices) {
+  if (sortedIndices.empty()) {
+    return Aabb{};
+  }
+
+#if MOCHI_ASSERT_VERBOSE_ENABLED
+  for (size_t i = 1; i < sortedIndices.size(); ++i) {
+    MOCHI_ASSERT_VERBOSE(
+        sortedIndices[i] > sortedIndices[i - 1], "Expected indices in increasing order.");
+  }
+#endif // MOCHI_ASSERT_VERBOSE_ENABLED
+
+  Vec4r min = ToSimd(coordinates[sortedIndices[0]]);
+  Vec4r max = min;
+
+  size_t i = 1;
+  for (; i < sortedIndices.size() - 1; ++i) {
+    auto v = Load<Vec4r>(coordinates[sortedIndices[i]].data());
+    min = Min(min, v);
+    max = Max(max, v);
+  }
+
+  // Partial SIMD load for the last point
+  if (i < sortedIndices.size()) {
+    auto v = Load<3, Vec4r>(coordinates[sortedIndices[i]].data());
+    min = Min(min, v);
+    max = Max(max, v);
+  }
+
+  return Aabb{min, max};
+}
+
+Aabb mochi::CalcAabbWithDisplacementsAndSortedIndices(
+    Span<Real3 const> coordinates,
     Span<Real3 const> displacements,
     Span<int const> sortedIndices) {
   MOCHI_ASSERT(coordinates.size() == displacements.size());
@@ -91,10 +125,12 @@ Aabb mochi::CalcAabbWithSortedIndices(
     return Aabb{};
   }
 
-  MOCHI_ASSERT_VERBOSE(
-      std::ranges::is_sorted(sortedIndices) &&
-          std::ranges::adjacent_find(sortedIndices) == sortedIndices.end(),
-      "Expected indices in strictly increasing order.");
+#if MOCHI_ASSERT_VERBOSE_ENABLED
+  for (size_t i = 1; i < sortedIndices.size(); ++i) {
+    MOCHI_ASSERT_VERBOSE(
+        sortedIndices[i] > sortedIndices[i - 1], "Expected indices in increasing order.");
+  }
+#endif // MOCHI_ASSERT_VERBOSE_ENABLED
 
   Vec4r min = ToSimd(coordinates[sortedIndices[0]]) + ToSimd(displacements[sortedIndices[0]]);
   Vec4r max = min;

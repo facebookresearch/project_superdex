@@ -15,18 +15,18 @@
  */
 
 #include <mochi_core/geometry/geometry_utils.h>
-#include <mochi_core/test/mochi_test_helpers.h>
-#include <mochi_core/utils/basic_utils.h>
-#include <mochi_core/utils/nd_array.h>
-#include <mochi_core/utils/simd.h>
-#include <mochi_core/utils/span.h>
-#include <mochi_core/utils/vmatrix.h>
-
 #include <mochi_core/geometry/grid_sdf.h>
 #include <mochi_core/geometry/sdf_bv.h>
 #include <mochi_core/geometry/tetrahedral_mesh.h>
 #include <mochi_core/geometry/triangular_mesh.h>
+#include <mochi_core/test/mochi_test_helpers.h>
+#include <mochi_core/utils/basic_utils.h>
+#include <mochi_core/utils/dynamic_array.h>
+#include <mochi_core/utils/nd_array.h>
 #include <mochi_core/utils/rand_utils.h>
+#include <mochi_core/utils/simd.h>
+#include <mochi_core/utils/span.h>
+#include <mochi_core/utils/vmatrix.h>
 
 #include <gtest/gtest.h>
 
@@ -260,9 +260,11 @@ TEST(Aabb, CalcAabb) {
 
   // Now test a larger number of points and vary the location of the min and max values.
   {
-    std::vector<Real3> coords(50);
+    DynamicArray<Real3> coords(50);
     auto coordsSpan = MakeConstSpan(coords);
     for (int sz = 2; sz < isize(coords); ++sz) {
+      DynamicArray<int> indices(sz);
+      std::iota(indices.begin(), indices.end(), 0);
       for (int i = 0; i < sz; ++i) {
         for (int j = 0; j < 3; ++j) {
           // Place the minimum value here
@@ -270,12 +272,16 @@ TEST(Aabb, CalcAabb) {
           Aabb result = CalcAabb(coordsSpan.subspan(0, (size_t)sz));
           EXPECT_EQ(coords[i], result.GetMin());
           EXPECT_EQ(Real3{}, result.GetMax());
+          EXPECT_EQ(
+              result, CalcAabbWithSortedIndices(coordsSpan, MakeConstSpan(indices))); // Equivalent
 
           // Place the maximum value here
           coords[i][j] = 1_r;
           result = CalcAabb(coordsSpan.subspan(0, (size_t)sz));
           EXPECT_EQ(Real3{}, result.GetMin());
           EXPECT_EQ(coords[i], result.GetMax());
+          EXPECT_EQ(
+              result, CalcAabbWithSortedIndices(coordsSpan, MakeConstSpan(indices))); // Equivalent
 
           // Reset
           coords[i][j] = 0_r;
@@ -283,6 +289,34 @@ TEST(Aabb, CalcAabb) {
       }
     }
   }
+}
+
+TEST(Aabb, CalcAabbWithSortedIndices) {
+  Real3 const coords[] = {
+      Real3{1.0_r, 2.0_r, 3.0_r},
+      Real3{1.1_r, 1.9_r, 3.1_r},
+      Real3{0.9_r, 2.1_r, 2.9_r},
+      Real3{1.2_r, 1.8_r, 3.2_r},
+  };
+
+  int const allIndices[] = {0, 1, 2, 3};
+  Aabb bounds = CalcAabbWithSortedIndices(MakeSpan(coords), Span(allIndices, 0_uz));
+  EXPECT_NEAR_EQ(Real3(0.0_r, 0.0_r, 0.0_r), bounds.GetMin());
+  EXPECT_NEAR_EQ(Real3(0.0_r, 0.0_r, 0.0_r), bounds.GetMax());
+
+  int const oneIndex[] = {2};
+  bounds = CalcAabbWithSortedIndices(MakeSpan(coords), MakeSpan(oneIndex));
+  EXPECT_NEAR_EQ(Real3(0.9_r, 2.1_r, 2.9_r), bounds.GetMin());
+  EXPECT_NEAR_EQ(Real3(0.9_r, 2.1_r, 2.9_r), bounds.GetMax());
+
+  int const twoIndices[] = {1, 3};
+  bounds = CalcAabbWithSortedIndices(MakeSpan(coords), MakeSpan(twoIndices));
+  EXPECT_NEAR_EQ(Real3(1.1_r, 1.8_r, 3.1_r), bounds.GetMin());
+  EXPECT_NEAR_EQ(Real3(1.2_r, 1.9_r, 3.2_r), bounds.GetMax());
+
+  bounds = CalcAabbWithSortedIndices(MakeSpan(coords), MakeSpan(allIndices));
+  EXPECT_NEAR_EQ(Real3(0.9_r, 1.8_r, 2.9_r), bounds.GetMin());
+  EXPECT_NEAR_EQ(Real3(1.2_r, 2.1_r, 3.2_r), bounds.GetMax());
 }
 
 TEST(Aabb, CalcAabbWithDisplacements) {
@@ -324,31 +358,17 @@ TEST(Aabb, CalcAabbWithDisplacements) {
     bounds = CalcAabbWithDisplacements(Span(coords, 4_uz), Span(displacements, 4_uz));
     EXPECT_NEAR_EQ(Real3(11.0_r, 22.0_r, 33.0_r), bounds.GetMin());
     EXPECT_NEAR_EQ(Real3(101.2_r, 201.8_r, 303.2_r), bounds.GetMax());
-
-    // CalcAabbWithSortedIndices (and displacements)
-    {
-      int indices[] = {0, 2};
-      bounds =
-          CalcAabbWithSortedIndices(MakeSpan(coords), MakeSpan(displacements), MakeSpan(indices));
-      EXPECT_NEAR_EQ(Real3(11.0_r, 22.0_r, 33.0_r), bounds.GetMin());
-      EXPECT_NEAR_EQ(Real3(70.9_r, 82.1_r, 92.9_r), bounds.GetMax());
-    }
-    {
-      int indices[] = {1, 3};
-      bounds =
-          CalcAabbWithSortedIndices(MakeSpan(coords), MakeSpan(displacements), MakeSpan(indices));
-      EXPECT_NEAR_EQ(Real3(41.1_r, 51.9_r, 63.1_r), bounds.GetMin());
-      EXPECT_NEAR_EQ(Real3(101.2_r, 201.8_r, 303.2_r), bounds.GetMax());
-    }
   }
 
   // Now test a larger number of points and vary the location of the min and max values.
   {
-    std::vector<Real3> coords(50);
-    std::vector<Real3> displacements(50);
+    DynamicArray<Real3> coords(50);
+    DynamicArray<Real3> displacements(50);
     auto coordsSpan = MakeConstSpan(coords);
     auto dispSpan = MakeConstSpan(displacements);
     for (int sz = 2; sz < isize(coords); ++sz) {
+      DynamicArray<int> indices(sz);
+      std::iota(indices.begin(), indices.end(), 0);
       for (int i = 0; i < sz; ++i) {
         for (int j = 0; j < 3; ++j) {
           // Place the minimum value here
@@ -358,6 +378,10 @@ TEST(Aabb, CalcAabbWithDisplacements) {
               coordsSpan.subspan(0, (size_t)sz), dispSpan.subspan(0, (size_t)sz));
           EXPECT_EQ(coords[i] + displacements[i], result.GetMin());
           EXPECT_EQ(Real3{}, result.GetMax());
+          EXPECT_EQ(
+              result,
+              CalcAabbWithDisplacementsAndSortedIndices(
+                  coordsSpan, MakeConstSpan(displacements), MakeConstSpan(indices))); // Equivalent
 
           // Place the maximum value here
           coords[i][j] = 1_r;
@@ -365,6 +389,10 @@ TEST(Aabb, CalcAabbWithDisplacements) {
               coordsSpan.subspan(0, (size_t)sz), dispSpan.subspan(0, (size_t)sz));
           EXPECT_EQ(Real3{}, result.GetMin());
           EXPECT_EQ(coords[i] + displacements[i], result.GetMax());
+          EXPECT_EQ(
+              result,
+              CalcAabbWithDisplacementsAndSortedIndices(
+                  coordsSpan, MakeConstSpan(displacements), MakeConstSpan(indices))); // Equivalent
 
           // Reset
           coords[i][j] = 0_r;
@@ -372,6 +400,37 @@ TEST(Aabb, CalcAabbWithDisplacements) {
         }
       }
     }
+  }
+}
+
+TEST(Aabb, CalcAabbWithDisplacementsAndSortedIndices) {
+  Real3 const coords[] = {
+      Real3{1.0_r, 2.0_r, 3.0_r},
+      Real3{1.1_r, 1.9_r, 3.1_r},
+      Real3{0.9_r, 2.1_r, 2.9_r},
+      Real3{1.2_r, 1.8_r, 3.2_r},
+  };
+  Real3 const displacements[] = {
+      Real3{10.0_r, 20.0_r, 30.0_r},
+      Real3{40.0_r, 50.0_r, 60.0_r},
+      Real3{70.0_r, 80.0_r, 90.0_r},
+      Real3{100.0_r, 200.0_r, 300.0_r},
+  };
+
+  {
+    int indices[] = {0, 2};
+    Aabb bounds = CalcAabbWithDisplacementsAndSortedIndices(
+        MakeSpan(coords), MakeSpan(displacements), MakeSpan(indices));
+    EXPECT_NEAR_EQ(Real3(11.0_r, 22.0_r, 33.0_r), bounds.GetMin());
+    EXPECT_NEAR_EQ(Real3(70.9_r, 82.1_r, 92.9_r), bounds.GetMax());
+  }
+
+  {
+    int indices[] = {1, 3};
+    Aabb bounds = CalcAabbWithDisplacementsAndSortedIndices(
+        MakeSpan(coords), MakeSpan(displacements), MakeSpan(indices));
+    EXPECT_NEAR_EQ(Real3(41.1_r, 51.9_r, 63.1_r), bounds.GetMin());
+    EXPECT_NEAR_EQ(Real3(101.2_r, 201.8_r, 303.2_r), bounds.GetMax());
   }
 }
 

@@ -774,8 +774,8 @@ void UpdateBounds(
   auto boundaryIndices = meshSolver.mesh->GetBoundaryNodes();
   auto nodeCoordinates = meshSolver.mesh->GetNodeCoordinates();
   auto nodeDisplacements = Unflatten<Real3 const>(sol.GetConstSpan());
-  outBounds.localShape =
-      GetObb(CalcAabbWithSortedIndices(nodeCoordinates, nodeDisplacements, boundaryIndices));
+  outBounds.localShape = GetObb(CalcAabbWithDisplacementsAndSortedIndices(
+      nodeCoordinates, nodeDisplacements, boundaryIndices));
 }
 
 // Call once on startup

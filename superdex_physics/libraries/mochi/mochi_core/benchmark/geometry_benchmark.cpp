@@ -106,22 +106,6 @@ BENCHMARK_TEMPLATE(HasOverlap, Obb, Obb, 16)->Name("Geometry/HasOverlap/ObbVsObb
 BENCHMARK_TEMPLATE(HasOverlap, Obb, Plane, 1)->Name("Geometry/HasOverlap/ObbVsPlane/Batch1");
 BENCHMARK_TEMPLATE(HasOverlap, Obb, Plane, 16)->Name("Geometry/HasOverlap/ObbVsPlane/Batch16");
 
-static void CalcAabb(benchmark::State& state, size_t numPoints) {
-  std::vector<Real3> points(numPoints);
-  auto pointsSpan = MakeConstSpan(points);
-  Aabb aabb = {};
-  for (auto _ : state) {
-    aabb = CalcAabb(pointsSpan);
-  }
-  benchmark::DoNotOptimize(aabb);
-}
-
-BENCHMARK_CAPTURE(CalcAabb, 10, 10);
-BENCHMARK_CAPTURE(CalcAabb, 100, 100);
-BENCHMARK_CAPTURE(CalcAabb, 1000, 1000);
-BENCHMARK_CAPTURE(CalcAabb, 10000, 10000);
-BENCHMARK_CAPTURE(CalcAabb, 100000, 100000);
-
 static void RunBoundingSphereBenchmark(
     benchmark::State& state,
     Span<Real3 const> coordinates,
@@ -194,6 +178,22 @@ static void CalcBoundingSphereMesh(
   return true;
 }();
 
+static void CalcAabb(benchmark::State& state, size_t numPoints) {
+  std::vector<Real3> points(numPoints);
+  auto pointsSpan = MakeConstSpan(points);
+  Aabb aabb = {};
+  for (auto _ : state) {
+    aabb = CalcAabb(pointsSpan);
+  }
+  benchmark::DoNotOptimize(aabb);
+}
+
+BENCHMARK_CAPTURE(CalcAabb, 10, 10);
+BENCHMARK_CAPTURE(CalcAabb, 100, 100);
+BENCHMARK_CAPTURE(CalcAabb, 1000, 1000);
+BENCHMARK_CAPTURE(CalcAabb, 10000, 10000);
+BENCHMARK_CAPTURE(CalcAabb, 100000, 100000);
+
 static void CalcAabbWithDisplacements(benchmark::State& state, size_t numPoints) {
   std::vector<Real3> points(numPoints);
   std::vector<Real3> displacements(numPoints);
@@ -212,7 +212,9 @@ BENCHMARK_CAPTURE(CalcAabbWithDisplacements, 1000, 1000);
 BENCHMARK_CAPTURE(CalcAabbWithDisplacements, 10000, 10000);
 BENCHMARK_CAPTURE(CalcAabbWithDisplacements, 100000, 100000);
 
-static void CalcAabbWithSortedIndices(benchmark::State& state, std::string const& meshPath) {
+static void CalcAabbWithDisplacementsAndSortedIndices(
+    benchmark::State& state,
+    std::string const& meshPath) {
   // This overload of CalcAabb takes points, displacements, and indices. In practice, it is used to
   // find the bounds of a deformed soft actor. We load a real mesh to ensure a realistic
   // distribution of boundary indices.
@@ -224,17 +226,17 @@ static void CalcAabbWithSortedIndices(benchmark::State& state, std::string const
 
   Aabb aabb = {};
   for (auto _ : state) {
-    aabb = CalcAabbWithSortedIndices(points, displacementsSpan, indices);
+    aabb = CalcAabbWithDisplacementsAndSortedIndices(points, displacementsSpan, indices);
   }
   benchmark::DoNotOptimize(aabb);
 }
 
 // clang-format off
-BENCHMARK_CAPTURE(CalcAabbWithSortedIndices, icosphere_3subdiv, "sphere/icosphere_3subdiv.1.mochi.json");
-BENCHMARK_CAPTURE(CalcAabbWithSortedIndices, icosphere_4subdiv, "sphere/icosphere_4subdiv.1.mochi.json");
+BENCHMARK_CAPTURE(CalcAabbWithDisplacementsAndSortedIndices, icosphere_3subdiv, "sphere/icosphere_3subdiv.1.mochi.json");
+BENCHMARK_CAPTURE(CalcAabbWithDisplacementsAndSortedIndices, icosphere_4subdiv, "sphere/icosphere_4subdiv.1.mochi.json");
 // The 5-subdivision sphere is not shipped externally.
 #if MOCHI_INTERNAL
-BENCHMARK_CAPTURE(CalcAabbWithSortedIndices, icosphere_5subdiv, "sphere/icosphere_5subdiv.1.mochi.json");
+BENCHMARK_CAPTURE(CalcAabbWithDisplacementsAndSortedIndices, icosphere_5subdiv, "sphere/icosphere_5subdiv.1.mochi.json");
 #endif
 // clang-format on
 

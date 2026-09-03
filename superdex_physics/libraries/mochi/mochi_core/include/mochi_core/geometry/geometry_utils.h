@@ -182,9 +182,15 @@ TransformShape(TransformRT const& transform, AnyShape const& any) {
 // Compute an Aabb that contains all the coordinates
 [[nodiscard]] Aabb CalcAabb(Span<Real3 const> coordinates);
 
-// Compute an Aabb that contains the (coordinates + displacements) specified by index.
+// Compute an Aabb that contains the coordinates specified by index.
 // WARNING: The indices must be strictly increasing.
 [[nodiscard]] Aabb CalcAabbWithSortedIndices(
+    Span<Real3 const> coordinates,
+    Span<int const> sortedIndices);
+
+// Compute an Aabb that contains the (coordinates + displacements) specified by index.
+// WARNING: The indices must be strictly increasing.
+[[nodiscard]] Aabb CalcAabbWithDisplacementsAndSortedIndices(
     Span<Real3 const> coordinates,
     Span<Real3 const> displacement,
     Span<int const> sortedIndices);
