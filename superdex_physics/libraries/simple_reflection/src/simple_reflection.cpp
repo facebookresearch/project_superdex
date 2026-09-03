@@ -859,43 +859,44 @@ struct CoreTypeInfo {
   TypeInfo const* primitiveTypeInfo;
 };
 
-// clang-format off
-SR_WARNING_PUSH()
-SR_WARNING_IGNORE_CLANG(clang diagnostic ignored "-Wglobal-constructors")
-static const CoreTypeInfo kCoreTypeInfo[] = {
-    {"Invalid",  nullptr},
-    {"string",   nullptr}, // Not a primitive type
-    {"bool",     MakePrimitiveInfo(CoreType::CT_bool, "bool")},
-    {"uint8",    MakePrimitiveInfo(CoreType::CT_uint8, "uint8")},
-    {"int8",     MakePrimitiveInfo(CoreType::CT_int8, "int8")},
-    {"uint16",   MakePrimitiveInfo(CoreType::CT_uint16, "uint16")},
-    {"int16",    MakePrimitiveInfo(CoreType::CT_int16, "int16")},
-    {"uint32",   MakePrimitiveInfo(CoreType::CT_uint32, "uint32")},
-    {"int32",    MakePrimitiveInfo(CoreType::CT_int32, "int32")},
-    {"uint64",   MakePrimitiveInfo(CoreType::CT_uint64, "uint64")},
-    {"int64",    MakePrimitiveInfo(CoreType::CT_int64, "int64")},
-    {"float",    MakePrimitiveInfo(CoreType::CT_float, "float")},
-    {"double",   MakePrimitiveInfo(CoreType::CT_double, "double")},
-    {"enum",     nullptr}, // Not a primitive type
-    {"array",    nullptr}, // Not a primitive type
-    {"matrix",   nullptr}, // Not a primitive type
-    {"struct",   nullptr}, // Not a primitive type
-    {"field",    nullptr}, // Not a primitive type
-    {"map",      nullptr}, // Not a primitive type
-    {"optional", nullptr}, // Not a primitive type
-    {"variant",  nullptr}, // Not a primitive type
-    {"other",    nullptr}, // Not a primitive type
-};
-SR_WARNING_POP()
-// clang-format on
+static CoreTypeInfo const& GetCoreTypeInfo(CoreType coreType) {
+  // clang-format off
+  static const CoreTypeInfo kCoreTypeInfo[] = {
+      {"Invalid",  nullptr},
+      {"string",   nullptr}, // Not a primitive type
+      {"bool",     MakePrimitiveInfo(CoreType::CT_bool, "bool")},
+      {"uint8",    MakePrimitiveInfo(CoreType::CT_uint8, "uint8")},
+      {"int8",     MakePrimitiveInfo(CoreType::CT_int8, "int8")},
+      {"uint16",   MakePrimitiveInfo(CoreType::CT_uint16, "uint16")},
+      {"int16",    MakePrimitiveInfo(CoreType::CT_int16, "int16")},
+      {"uint32",   MakePrimitiveInfo(CoreType::CT_uint32, "uint32")},
+      {"int32",    MakePrimitiveInfo(CoreType::CT_int32, "int32")},
+      {"uint64",   MakePrimitiveInfo(CoreType::CT_uint64, "uint64")},
+      {"int64",    MakePrimitiveInfo(CoreType::CT_int64, "int64")},
+      {"float",    MakePrimitiveInfo(CoreType::CT_float, "float")},
+      {"double",   MakePrimitiveInfo(CoreType::CT_double, "double")},
+      {"enum",     nullptr}, // Not a primitive type
+      {"array",    nullptr}, // Not a primitive type
+      {"matrix",   nullptr}, // Not a primitive type
+      {"struct",   nullptr}, // Not a primitive type
+      {"field",    nullptr}, // Not a primitive type
+      {"map",      nullptr}, // Not a primitive type
+      {"optional", nullptr}, // Not a primitive type
+      {"variant",  nullptr}, // Not a primitive type
+      {"other",    nullptr}, // Not a primitive type
+  };
+  // clang-format on
 
-static_assert(
-    std::size(kCoreTypeInfo) == (size_t)CoreType::X_Count,
-    "Please update this list if the SReflect::CoreType enum changes.");
+  static_assert(
+      std::size(kCoreTypeInfo) == (size_t)CoreType::X_Count,
+      "Please update this list if the SReflect::CoreType enum changes.");
+
+  SR_ASSERT((size_t)coreType < std::size(kCoreTypeInfo), "Invalid CoreType");
+  return kCoreTypeInfo[static_cast<size_t>(coreType)];
+}
 
 char const* CoreTypeToString(CoreType coreType) {
-  SR_ASSERT((size_t)coreType < std::size(kCoreTypeInfo), "Invalid CoreType for CoreTypeToString");
-  return kCoreTypeInfo[(size_t)coreType].name;
+  return GetCoreTypeInfo(coreType).name;
 }
 
 uint64_t CalcHash64(void const* src, size_t numBytes) {
@@ -3153,8 +3154,7 @@ char const* detail::MakeTypeName(
 }
 
 TypeInfo const& GetPrimitiveInfo(CoreType type) {
-  SR_ASSERT((size_t)type < std::size(kCoreTypeInfo), "Invalid CoreType for GetPrimitiveInfo");
-  TypeInfo const* info = kCoreTypeInfo[(size_t)type].primitiveTypeInfo;
+  TypeInfo const* info = GetCoreTypeInfo(type).primitiveTypeInfo;
   SR_ASSERT(info != nullptr, "Not a primitive type");
   return *info;
 }

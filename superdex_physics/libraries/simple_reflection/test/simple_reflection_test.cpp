@@ -79,7 +79,7 @@ static void ExpectJson(std::string const& expectedJson, std::string const& actua
 // Example Usage Syntax
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
-enum class MyFruit { Apple, Orange, Kumquat };
+enum class MyFruit : int32_t { Apple, Orange, Kumquat };
 
 } // namespace SReflectTest
 
@@ -93,6 +93,15 @@ SR_EnumItem(Kumquat);
 SR_EndEnum();
 
 namespace SReflectTest {
+
+// Prove that we can access type information at static initialization time.
+static const bool kTypeInfoSuccessfullyAccessedBeforeMain = []() {
+  auto const& enumInfo = SReflect::GetTypeInfo<MyFruit>();
+  char const* enumName = enumInfo._nameWithNamespace;
+  char const* innerName = enumInfo._innerTypeInfo ? enumInfo._innerTypeInfo->_name : nullptr;
+  return enumName && (std::string_view{enumName} == "SReflectTest::MyFruit") && innerName &&
+      (std::string_view{innerName} == "int32");
+}();
 
 struct MyPoint {
   int x = 0;
@@ -137,6 +146,10 @@ class MyDerivedClass : public MyClass {
   SR_Field(oneMoreThing);
   SR_EndClass();
 };
+
+TEST(SReflect, GetTypeInfoBeforeMain) {
+  EXPECT_TRUE(kTypeInfoSuccessfullyAccessedBeforeMain);
+}
 
 TEST(SReflect, Example1) {
   static_assert(sizeof(MyPoint) == 2 * sizeof(int), "No v-table. No padding");
