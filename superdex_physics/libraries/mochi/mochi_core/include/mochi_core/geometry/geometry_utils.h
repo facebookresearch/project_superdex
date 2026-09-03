@@ -27,6 +27,7 @@
 #include <mochi_core/utils/batch_types.h>
 #include <mochi_core/utils/math_utils.h>
 #include <mochi_core/utils/matrix_utils.h>
+#include <mochi_core/utils/reflection.h>
 #include <mochi_core/utils/transform_rt.h>
 #include <mochi_core/utils/transform_srt.h>
 #include <mochi_core/utils/vmatrix.h>
@@ -300,6 +301,17 @@ enum class BoundingSphereAlgorithm {
   Best, ///< Smallest sphere within floating-point precision; typically O(N) but slower.
   Count ///< Number of algorithms; not a valid selection.
 };
+
+} // namespace mochi
+
+MOCHI_ENUM_BEGIN(mochi::BoundingSphereAlgorithm)
+MOCHI_ENUM_ITEM(Fastest)
+MOCHI_ENUM_ITEM(Fast)
+MOCHI_ENUM_ITEM(Best)
+MOCHI_ENUM_COUNT(Count)
+MOCHI_ENUM_END()
+
+namespace mochi {
 
 /**
  * @brief Compute a bounding sphere containing all the coordinates.

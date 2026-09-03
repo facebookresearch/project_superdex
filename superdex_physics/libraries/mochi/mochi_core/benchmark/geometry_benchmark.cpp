@@ -17,10 +17,17 @@
 #include "config.h"
 
 #include <mochi_core/geometry/geometry_utils.h>
+#include <mochi_core/geometry/model_utils.h>
 #include <mochi_core/geometry/tetrahedral_mesh.h>
+#include <mochi_core/utils/dynamic_array.h>
+#include <mochi_core/utils/rand_utils.h>
+#include <mochi_core/utils/reflection.h>
+#include <mochi_core/utils/string_utils.h>
 
 #include <functional>
 #include <numeric>
+#include <string>
+#include <string_view>
 #include <vector>
 
 using namespace mochi;
@@ -114,6 +121,78 @@ BENCHMARK_CAPTURE(CalcAabb, 100, 100);
 BENCHMARK_CAPTURE(CalcAabb, 1000, 1000);
 BENCHMARK_CAPTURE(CalcAabb, 10000, 10000);
 BENCHMARK_CAPTURE(CalcAabb, 100000, 100000);
+
+static void RunBoundingSphereBenchmark(
+    benchmark::State& state,
+    Span<Real3 const> coordinates,
+    BoundingSphereAlgorithm algorithm) {
+  Sphere sphere{};
+  for (auto _ : state) {
+    sphere = mochi::CalcBoundingSphere(coordinates, algorithm);
+    MOCHI_NO_DISCARD_IN_LOOP(sphere);
+  }
+  state.counters["points_per_second"] = benchmark::Counter(
+      static_cast<double>(coordinates.size()), benchmark::Counter::kIsIterationInvariantRate);
+}
+
+static void CalcBoundingSphereRandomPoints(
+    benchmark::State& state,
+    BoundingSphereAlgorithm algorithm,
+    size_t numPoints) {
+  DynamicArray<Real3> coordinates(numPoints);
+  auto random = RandomGenerator(42);
+  SetRandom(random, -1_r, 1_r, MakeSpan(coordinates));
+  RunBoundingSphereBenchmark(state, MakeConstSpan(coordinates), algorithm);
+}
+
+static void CalcBoundingSphereMesh(
+    benchmark::State& state,
+    BoundingSphereAlgorithm algorithm,
+    std::string_view meshPath) {
+  ModelData const modelData =
+      model::LoadFromFile(GetAssetPath(std::string{meshPath}), ErrorAssert{});
+  if (!modelData.mesh.has_value()) {
+    state.SkipWithError("Model does not contain mesh coordinates.");
+    return;
+  }
+
+  auto const coordinates = Unflatten<Real3 const>(MakeConstSpan(modelData.mesh->coordinates));
+  RunBoundingSphereBenchmark(state, coordinates, algorithm);
+}
+
+[[maybe_unused]] static bool const kBoundingSphereBenchmarksRegistered = [] {
+  constexpr size_t kBoundingSphereRandomPointCounts[] = {10, 100, 1000, 10000};
+  constexpr char const* kBoundingSphereMeshes[] = {
+      "cube/cube_fine_mesh.mochi.json",
+      "duck/duck_1899.mochi.h5",
+  };
+  constexpr char const* kNamePrefix = "Geometry/CalcBoundingSphere";
+
+  for (int iAlgorithm = 0; iAlgorithm < static_cast<int>(BoundingSphereAlgorithm::Count);
+       ++iAlgorithm) {
+    auto const algorithm = static_cast<BoundingSphereAlgorithm>(iAlgorithm);
+    char const* algorithmName = SReflect::EnumToString(algorithm);
+    for (size_t numPoints : kBoundingSphereRandomPointCounts) {
+      benchmark::RegisterBenchmark(
+          Format("%s/Random/%s/Points%zu", kNamePrefix, algorithmName, numPoints).c_str(),
+          CalcBoundingSphereRandomPoints,
+          algorithm,
+          numPoints);
+    }
+
+    for (char const* meshPath : kBoundingSphereMeshes) {
+      if (!MOCHI_USE_HDF5 && std::string_view{meshPath}.ends_with(".h5")) {
+        continue;
+      }
+      benchmark::RegisterBenchmark(
+          Format("%s/Mesh/%s/%s", kNamePrefix, algorithmName, meshPath).c_str(),
+          CalcBoundingSphereMesh,
+          algorithm,
+          meshPath);
+    }
+  }
+  return true;
+}();
 
 static void CalcAabbWithDisplacements(benchmark::State& state, size_t numPoints) {
   std::vector<Real3> points(numPoints);
