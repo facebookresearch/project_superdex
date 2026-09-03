@@ -80,6 +80,11 @@ module.exports = {
         'examples/control/bimanual_control',
       ],
     },
+    {
+      type: 'category',
+      label: 'Advanced',
+      items: ['examples/advanced/custom_components'],
+    },
   ],
   apiSidebar: [
     'api_reference/cpp',
