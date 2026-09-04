@@ -1,0 +1,57 @@
+material {
+    name : InstancedSphere,
+    shadingModel : lit,
+    blending : fade,
+    transparency : twoPassesOneSide,
+    culling : back,
+    depthCulling : true,
+    instanced : true,
+    parameters : [
+        {
+            type : sampler2d,
+            name : sphereData
+        },
+        {
+            type : int,
+            name : sphereDataTextureWidth
+        },
+        {
+            type : int,
+            name : activeCount
+        }
+    ],
+    variables : [color]
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        int instanceIndex = getInstanceIndex();
+        if (instanceIndex >= materialParams.activeCount) {
+            material.worldPosition.xyz = vec3(1.0e20);
+            material.color = vec4(0.0);
+            return;
+        }
+
+        int centerTexel = instanceIndex * 2;
+        ivec2 centerCoord = ivec2(
+            centerTexel % materialParams.sphereDataTextureWidth,
+            centerTexel / materialParams.sphereDataTextureWidth);
+        ivec2 colorCoord = ivec2(
+            (centerTexel + 1) % materialParams.sphereDataTextureWidth,
+            (centerTexel + 1) / materialParams.sphereDataTextureWidth);
+        vec4 centerRadius = texelFetch(materialParams_sphereData, centerCoord, 0);
+        material.worldPosition.xyz =
+            getPosition().xyz * centerRadius.w + centerRadius.xyz - getWorldOffset();
+        material.color = texelFetch(materialParams_sphereData, colorCoord, 0);
+    }
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        vec4 color = variable_color;
+        material.baseColor = vec4(color.rgb * color.a, color.a);
+        material.roughness = 0.6;
+        material.metallic = 0.0;
+    }
+}

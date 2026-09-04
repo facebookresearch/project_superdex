@@ -28,6 +28,10 @@
 
 #include <gtest/gtest.h>
 
+#include <filament/RenderableManager.h>
+#include <filament/Scene.h>
+
+#include <array>
 #include <cmath>
 #include <filesystem>
 #include <memory>
@@ -35,6 +39,20 @@
 #include <vector>
 
 #include "test_assets.h"
+
+namespace mochi_renderer {
+
+struct DebugDrawTestAccess {
+  static size_t GetSolidSphereBatchCount(DebugDraw const& debugDraw) {
+    return debugDraw.GetSolidSphereBatchCount();
+  }
+
+  static utils::Entity GetSolidSphereBatchEntity(DebugDraw const& debugDraw, size_t batchIndex) {
+    return debugDraw.GetSolidSphereBatchEntity(batchIndex);
+  }
+};
+
+} // namespace mochi_renderer
 
 using namespace mochi_renderer;
 
@@ -52,6 +70,42 @@ static bool IsGpuAvailable() {
       GTEST_SKIP() << "No GPU available"; \
     }                                     \
   } while (false)
+
+class DebugDrawTest : public testing::Test {
+ protected:
+  void SetUp() override {
+    if (!IsGpuAvailable()) {
+      GTEST_SKIP() << "No GPU available";
+    }
+
+    _renderer = MochiRenderer::Create();
+    ASSERT_NE(_renderer, nullptr);
+    _scene = _renderer->GetScene();
+    ASSERT_NE(_scene, nullptr);
+    _debugDraw = _scene->CreateDebugDraw();
+    ASSERT_NE(_debugDraw, nullptr);
+  }
+
+  void DrawAndCommitTestSpheres(size_t count) {
+    for (size_t i = 0; i < count; ++i) {
+      _debugDraw->DrawSolidSphere({0.0f, 0.0f, -3.0f}, 0.1f, {1.0f, 0.0f, 0.0f, 1.0f});
+    }
+    _debugDraw->Commit();
+  }
+
+  utils::Entity GetSphereBatchEntity(size_t batchIndex) const {
+    return DebugDrawTestAccess::GetSolidSphereBatchEntity(*_debugDraw, batchIndex);
+  }
+
+  uint32_t GetSphereBatchInstanceCount(size_t batchIndex) const {
+    auto& renderables = _renderer->GetEngine()->getRenderableManager();
+    return renderables.getInstanceCount(renderables.getInstance(GetSphereBatchEntity(batchIndex)));
+  }
+
+  std::unique_ptr<MochiRenderer> _renderer;
+  Scene* _scene = nullptr;
+  DebugDraw* _debugDraw = nullptr;
+};
 
 TEST(MochiRendererTest, CreateAndDestroy) {
   SKIP_IF_NO_GPU();
@@ -129,6 +183,74 @@ TEST(MochiRendererTest, SynchronizedRenderAndReadback) {
   EXPECT_EQ(result.height, 64);
   EXPECT_EQ(result.channels, 4);
   EXPECT_EQ(result.pixels.size(), 64 * 64 * 4);
+}
+
+TEST_F(DebugDrawTest, SpheresShareOneInstancedRenderable) {
+  _debugDraw->DrawSolidSphere({-1.0f, 0.0f, -3.0f}, 0.5f, {1.0f, 0.0f, 0.0f, 1.0f});
+  _debugDraw->DrawSolidSphere({1.0f, 0.0f, -3.0f}, 0.5f, {0.0f, 1.0f, 0.0f, 0.5f});
+  _debugDraw->Commit();
+
+  EXPECT_EQ(GetSphereBatchInstanceCount(0), 2);
+}
+
+TEST_F(DebugDrawTest, SphereOverflowCreatesMultipleBatches) {
+  constexpr size_t kSphereCount = 65535;
+  DrawAndCommitTestSpheres(kSphereCount);
+
+  ASSERT_EQ(DebugDrawTestAccess::GetSolidSphereBatchCount(*_debugDraw), 3);
+  EXPECT_NE(GetSphereBatchEntity(0), GetSphereBatchEntity(1));
+  EXPECT_TRUE(_scene->GetFilamentScene()->hasEntity(GetSphereBatchEntity(0)));
+  EXPECT_TRUE(_scene->GetFilamentScene()->hasEntity(GetSphereBatchEntity(1)));
+  EXPECT_TRUE(_scene->GetFilamentScene()->hasEntity(GetSphereBatchEntity(2)));
+  EXPECT_EQ(GetSphereBatchInstanceCount(0), 32767);
+  EXPECT_EQ(GetSphereBatchInstanceCount(1), 32767);
+  EXPECT_EQ(GetSphereBatchInstanceCount(2), 1);
+}
+
+TEST_F(DebugDrawTest, SphereBatchDrawCountShrinksAfterUsageDrops) {
+  constexpr size_t kPeakSphereCount = 20000;
+  DrawAndCommitTestSpheres(kPeakSphereCount);
+
+  auto const entity = GetSphereBatchEntity(0);
+  EXPECT_EQ(GetSphereBatchInstanceCount(0), 32767);
+
+  _debugDraw->Clear();
+  EXPECT_EQ(GetSphereBatchInstanceCount(0), 32767);
+  EXPECT_FALSE(_scene->GetFilamentScene()->hasEntity(entity));
+
+  constexpr size_t kReducedSphereCount = 10;
+  DrawAndCommitTestSpheres(kReducedSphereCount);
+
+  EXPECT_EQ(GetSphereBatchEntity(0), entity);
+  EXPECT_EQ(GetSphereBatchInstanceCount(0), 16);
+  EXPECT_TRUE(_scene->GetFilamentScene()->hasEntity(entity));
+}
+
+TEST_F(DebugDrawTest, SphereOverflowBatchesAreReusedAfterClear) {
+  constexpr size_t kSphereCount = 32768;
+  DrawAndCommitTestSpheres(kSphereCount);
+
+  ASSERT_EQ(DebugDrawTestAccess::GetSolidSphereBatchCount(*_debugDraw), 2);
+  auto const firstEntity = GetSphereBatchEntity(0);
+  auto const secondEntity = GetSphereBatchEntity(1);
+  uint32_t const firstInstanceCount = GetSphereBatchInstanceCount(0);
+  uint32_t const secondInstanceCount = GetSphereBatchInstanceCount(1);
+  auto* filamentScene = _scene->GetFilamentScene();
+  _debugDraw->Clear();
+  EXPECT_FALSE(filamentScene->hasEntity(firstEntity));
+  EXPECT_FALSE(filamentScene->hasEntity(secondEntity));
+  EXPECT_EQ(GetSphereBatchInstanceCount(0), firstInstanceCount);
+  EXPECT_EQ(GetSphereBatchInstanceCount(1), secondInstanceCount);
+
+  DrawAndCommitTestSpheres(kSphereCount);
+
+  ASSERT_EQ(DebugDrawTestAccess::GetSolidSphereBatchCount(*_debugDraw), 2);
+  EXPECT_EQ(GetSphereBatchEntity(0), firstEntity);
+  EXPECT_EQ(GetSphereBatchEntity(1), secondEntity);
+  EXPECT_TRUE(filamentScene->hasEntity(firstEntity));
+  EXPECT_TRUE(filamentScene->hasEntity(secondEntity));
+  EXPECT_EQ(GetSphereBatchInstanceCount(0), firstInstanceCount);
+  EXPECT_EQ(GetSphereBatchInstanceCount(1), secondInstanceCount);
 }
 
 TEST(MochiRendererTest, PipelineModeSwitch) {

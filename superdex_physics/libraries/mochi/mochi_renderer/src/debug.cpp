@@ -20,8 +20,14 @@
 
 #include <filament/Box.h>
 #include <filament/IndexBuffer.h>
+#include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
+#include <filament/Scene.h>
+#include <filament/Texture.h>
+#include <filament/TextureSampler.h>
 #include <filament/VertexBuffer.h>
+#include <math/mat3.h>
+#include <math/norm.h>
 #include <utils/EntityManager.h>
 
 #include <mochi_core/utils/debug.h>
@@ -31,12 +37,39 @@
 #include <numbers>
 #include <numeric>
 
+#include <utils/unwindows.h>
+
 #include "filament/Material.h"
 #include "materials.h"
 
 namespace mochi_renderer {
 
-DebugDraw::DebugDraw(filament::Engine* engine) : _engine(engine) {
+static constexpr int kInstancedSphereStacks = 12;
+static constexpr int kInstancedSphereSlices = 24;
+static constexpr uint32_t kMaxSphereInstancesPerBatch = 32767;
+static constexpr uint32_t kSphereDataTexelsPerInstance = 2;
+static constexpr uint32_t kSphereDataTextureWidth = 512;
+
+static filament::math::short4 PackNormalTangentFrame(filament::math::float3 normal) {
+  normal = normalize(normal);
+  filament::math::float3 const tangent = normalize(
+      std::abs(normal.y) < 0.999f ? cross(filament::math::float3{0.0f, 1.0f, 0.0f}, normal)
+                                  : filament::math::float3{1.0f, 0.0f, 0.0f});
+  filament::math::float3 const bitangent = cross(normal, tangent);
+  return filament::math::packSnorm16(
+      filament::math::mat3f::packTangentFrame(filament::math::mat3f{tangent, bitangent, normal})
+          .xyzw);
+}
+
+static filament::math::short4* PackNormalTangentFrames(
+    std::vector<filament::math::float3> const& normals) {
+  auto* tangents = new filament::math::short4[normals.size()];
+  std::transform(normals.begin(), normals.end(), tangents, PackNormalTangentFrame);
+  return tangents;
+}
+
+DebugDraw::DebugDraw(filament::Engine* engine, filament::Scene* scene)
+    : _engine(engine), _scene(scene) {
   // Material for wireframe (lines)
   _material = filament::Material::Builder()
                   .package(
@@ -44,7 +77,13 @@ DebugDraw::DebugDraw(filament::Engine* engine) : _engine(engine) {
                       MOCHI_RENDERER_MATERIALS_UNLITVERTEXCOLOR_SIZE)
                   .build(*_engine);
 
-  // Material for solid geometry (lit triangles with vertex colors)
+  _sphereMaterial = filament::Material::Builder()
+                        .package(
+                            MOCHI_RENDERER_MATERIALS_INSTANCEDSPHERE_DATA,
+                            MOCHI_RENDERER_MATERIALS_INSTANCEDSPHERE_SIZE)
+                        .build(*_engine);
+
+  // Material for solid geometry
   _solidMaterial = filament::Material::Builder()
                        .package(
                            MOCHI_RENDERER_MATERIALS_LITVERTEXCOLOR_DATA,
@@ -60,6 +99,7 @@ DebugDraw::DebugDraw(filament::Engine* engine) : _engine(engine) {
   _positions.reserve(4096);
   _colors.reserve(4096);
   _indices.reserve(8192);
+  _sphereData.reserve(4096 * kSphereDataTexelsPerInstance);
 
   _solidPositions.reserve(4096);
   _solidNormals.reserve(4096);
@@ -102,7 +142,8 @@ DebugDraw::DebugDraw(filament::Engine* engine) : _engine(engine) {
           .attribute(
               filament::VertexAttribute::POSITION, 0, filament::VertexBuffer::AttributeType::FLOAT3)
           .attribute(
-              filament::VertexAttribute::TANGENTS, 1, filament::VertexBuffer::AttributeType::FLOAT3)
+              filament::VertexAttribute::TANGENTS, 1, filament::VertexBuffer::AttributeType::SHORT4)
+          .normalized(filament::VertexAttribute::TANGENTS)
           .attribute(
               filament::VertexAttribute::COLOR, 2, filament::VertexBuffer::AttributeType::FLOAT4)
           .build(*_engine);
@@ -120,7 +161,8 @@ DebugDraw::DebugDraw(filament::Engine* engine) : _engine(engine) {
           .attribute(
               filament::VertexAttribute::POSITION, 0, filament::VertexBuffer::AttributeType::FLOAT3)
           .attribute(
-              filament::VertexAttribute::TANGENTS, 1, filament::VertexBuffer::AttributeType::FLOAT3)
+              filament::VertexAttribute::TANGENTS, 1, filament::VertexBuffer::AttributeType::SHORT4)
+          .normalized(filament::VertexAttribute::TANGENTS)
           .attribute(
               filament::VertexAttribute::COLOR, 2, filament::VertexBuffer::AttributeType::FLOAT4)
           .build(*_engine);
@@ -142,6 +184,84 @@ DebugDraw::DebugDraw(filament::Engine* engine) : _engine(engine) {
       .castShadows(false)
       .geometryType(filament::RenderableManager::Builder::GeometryType::DYNAMIC)
       .build(*_engine, _entity);
+
+  // One immutable unit sphere is shared by every debug sphere instance.
+  _sphereUnitPositions.reserve((kInstancedSphereStacks + 1) * (kInstancedSphereSlices + 1));
+  _sphereUnitTangents.reserve((kInstancedSphereStacks + 1) * (kInstancedSphereSlices + 1));
+  _sphereUnitIndices.reserve(kInstancedSphereStacks * kInstancedSphereSlices * 6);
+  constexpr float k2Pi = 2.0f * std::numbers::pi_v<float>;
+  constexpr float kPi = std::numbers::pi_v<float>;
+  for (int stack = 0; stack <= kInstancedSphereStacks; ++stack) {
+    float const phi = kPi * static_cast<float>(stack) / static_cast<float>(kInstancedSphereStacks);
+    float const sinPhi = std::sin(phi);
+    float const cosPhi = std::cos(phi);
+    for (int slice = 0; slice <= kInstancedSphereSlices; ++slice) {
+      float const theta =
+          k2Pi * static_cast<float>(slice) / static_cast<float>(kInstancedSphereSlices);
+      filament::math::float3 const normal{
+          sinPhi * std::cos(theta), cosPhi, sinPhi * std::sin(theta)};
+      _sphereUnitPositions.push_back(normal);
+      _sphereUnitTangents.push_back(PackNormalTangentFrame(normal));
+    }
+  }
+  for (int stack = 0; stack < kInstancedSphereStacks; ++stack) {
+    for (int slice = 0; slice < kInstancedSphereSlices; ++slice) {
+      auto const current = static_cast<uint16_t>(stack * (kInstancedSphereSlices + 1) + slice);
+      auto const next = static_cast<uint16_t>(current + kInstancedSphereSlices + 1);
+      auto const currentRight = static_cast<uint16_t>(current + 1);
+      auto const nextRight = static_cast<uint16_t>(next + 1);
+      _sphereUnitIndices.insert(
+          _sphereUnitIndices.end(), {current, currentRight, next, currentRight, nextRight, next});
+    }
+  }
+
+  _sphereVertexBuffer =
+      filament::VertexBuffer::Builder()
+          .vertexCount(static_cast<uint32_t>(_sphereUnitPositions.size()))
+          .bufferCount(2)
+          .attribute(
+              filament::VertexAttribute::POSITION, 0, filament::VertexBuffer::AttributeType::FLOAT3)
+          .attribute(
+              filament::VertexAttribute::TANGENTS, 1, filament::VertexBuffer::AttributeType::SHORT4)
+          .normalized(filament::VertexAttribute::TANGENTS)
+          .build(*_engine);
+  auto* spherePositions = new filament::math::float3[_sphereUnitPositions.size()];
+  std::copy(_sphereUnitPositions.begin(), _sphereUnitPositions.end(), spherePositions);
+  _sphereVertexBuffer->setBufferAt(
+      *_engine,
+      0,
+      filament::VertexBuffer::BufferDescriptor(
+          spherePositions,
+          _sphereUnitPositions.size() * sizeof(filament::math::float3),
+          [](void* buffer, size_t, void*) {
+            delete[] static_cast<filament::math::float3*>(buffer);
+          }));
+
+  auto* sphereTangents = new filament::math::short4[_sphereUnitTangents.size()];
+  std::copy(_sphereUnitTangents.begin(), _sphereUnitTangents.end(), sphereTangents);
+  _sphereVertexBuffer->setBufferAt(
+      *_engine,
+      1,
+      filament::VertexBuffer::BufferDescriptor(
+          sphereTangents,
+          _sphereUnitTangents.size() * sizeof(filament::math::short4),
+          [](void* buffer, size_t, void*) {
+            delete[] static_cast<filament::math::short4*>(buffer);
+          }));
+  _sphereIndexBuffer = filament::IndexBuffer::Builder()
+                           .indexCount(static_cast<uint32_t>(_sphereUnitIndices.size()))
+                           .bufferType(filament::IndexBuffer::IndexType::USHORT)
+                           .build(*_engine);
+  auto* sphereIndices = new uint16_t[_sphereUnitIndices.size()];
+  std::copy(_sphereUnitIndices.begin(), _sphereUnitIndices.end(), sphereIndices);
+  _sphereIndexBuffer->setBuffer(
+      *_engine,
+      filament::IndexBuffer::BufferDescriptor(
+          sphereIndices,
+          _sphereUnitIndices.size() * sizeof(uint16_t),
+          [](void* buffer, size_t, void*) { delete[] static_cast<uint16_t*>(buffer); }));
+
+  CreateSolidSphereBatch();
 
   // Create solid geometry entity
   _solidEntity = utils::EntityManager::get().create();
@@ -181,24 +301,41 @@ DebugDraw::DebugDraw(filament::Engine* engine) : _engine(engine) {
 }
 
 DebugDraw::~DebugDraw() {
+  auto& entityManager = utils::EntityManager::get();
+  for (auto& batch : _sphereBatches) {
+    SetSolidSphereBatchSceneMembership(batch, false);
+    _engine->destroy(batch.entity);
+    _engine->destroy(batch.materialInstance);
+    _engine->destroy(batch.dataTexture);
+    entityManager.destroy(batch.entity);
+  }
+
   _engine->destroy(_entity);
   _engine->destroy(_solidEntity);
   _engine->destroy(_overlayEntity);
+  entityManager.destroy(_entity);
+  entityManager.destroy(_solidEntity);
+  entityManager.destroy(_overlayEntity);
   _engine->destroy(_material->getDefaultInstance());
   _engine->destroy(_material);
+  _engine->destroy(_sphereMaterial);
   _engine->destroy(_overlayMaterialInstance);
   _engine->destroy(_solidMaterial->getDefaultInstance());
   _engine->destroy(_solidMaterial);
   _engine->destroy(_vertexBuffer);
   _engine->destroy(_indexBuffer);
+  _engine->destroy(_sphereVertexBuffer);
+  _engine->destroy(_sphereIndexBuffer);
   _engine->destroy(_solidVertexBuffer);
   _engine->destroy(_solidIndexBuffer);
   _engine->destroy(_overlayVertexBuffer);
   _engine->destroy(_overlayIndexBuffer);
 }
 
-std::unique_ptr<DebugDraw> DebugDraw::Create(filament::Engine* engine) {
-  return std::unique_ptr<DebugDraw>(new DebugDraw(engine));
+std::unique_ptr<DebugDraw> DebugDraw::Create(filament::Engine* engine, filament::Scene* scene) {
+  MOCHI_ASSERT(engine != nullptr);
+  MOCHI_ASSERT(scene != nullptr);
+  return std::unique_ptr<DebugDraw>(new DebugDraw(engine, scene));
 }
 
 void DebugDraw::BuildOrthonormalBasis(
@@ -234,11 +371,6 @@ void DebugDraw::DrawSphere(
     int segments) {
   constexpr float k2Pi = 2.0f * std::numbers::pi_v<float>;
 
-  size_t reserve = static_cast<size_t>(segments) * 6;
-  _positions.reserve(_positions.size() + reserve);
-  _colors.reserve(_colors.size() + reserve);
-  _indices.reserve(_indices.size() + reserve);
-
   for (int i = 0; i < segments; ++i) {
     float a0 = k2Pi * static_cast<float>(i) / static_cast<float>(segments);
     float a1 = k2Pi * static_cast<float>(i + 1) / static_cast<float>(segments);
@@ -259,13 +391,18 @@ void DebugDraw::DrawSphere(
   }
 }
 
+void DebugDraw::DrawSolidSphere(
+    filament::math::float3 center,
+    float radius,
+    filament::math::float4 color) {
+  _sphereData.push_back({center, radius});
+  _sphereData.push_back(color);
+  _sphereDirty = true;
+}
+
 void DebugDraw::DrawBox(filament::Box const& box, filament::math::float4 color) {
   auto center = box.center;
   auto half = box.halfExtent;
-  size_t reserve = 24;
-  _positions.reserve(_positions.size() + reserve);
-  _colors.reserve(_colors.size() + reserve);
-  _indices.reserve(_indices.size() + reserve);
   // 8 corners of the box
   filament::math::float3 corners[8] = {
       center + filament::math::float3{-half.x, -half.y, -half.z},
@@ -837,6 +974,10 @@ void DebugDraw::Commit(std::optional<filament::math::float3> overlaySortViewPos)
     _dirty = false;
     UpdateBuffers();
   }
+  if (_sphereDirty) {
+    _sphereDirty = false;
+    UpdateSolidSphereInstances();
+  }
   if (_solidDirty) {
     _solidDirty = false;
     UpdateSolidBuffers();
@@ -855,6 +996,9 @@ void DebugDraw::Clear() {
     _dirty = false;
     UpdateBuffers();
   }
+  _sphereData.clear();
+  _sphereDirty = false;
+  UpdateSolidSphereInstances();
   if (!_solidPositions.empty()) {
     _solidPositions.clear();
     _solidNormals.clear();
@@ -875,6 +1019,15 @@ void DebugDraw::Clear() {
 
 utils::Entity DebugDraw::GetEntity() const {
   return _entity;
+}
+
+size_t DebugDraw::GetSolidSphereBatchCount() const {
+  return _sphereBatches.size();
+}
+
+utils::Entity DebugDraw::GetSolidSphereBatchEntity(size_t batchIndex) const {
+  MOCHI_ASSERT(batchIndex < _sphereBatches.size());
+  return _sphereBatches[batchIndex].entity;
 }
 
 utils::Entity DebugDraw::GetSolidEntity() const {
@@ -967,6 +1120,136 @@ void DebugDraw::UpdateBuffers() {
       indexCount);
 }
 
+void DebugDraw::CreateSolidSphereBatch() {
+  SphereBatch& batch = _sphereBatches.emplace_back();
+  batch.entity = utils::EntityManager::get().create();
+  batch.materialInstance = _sphereMaterial->createInstance();
+  RebuildSolidSphereInstances(batch, 1);
+}
+
+void DebugDraw::RebuildSolidSphereInstances(
+    SphereBatch& batch,
+    uint32_t requiredInstances,
+    bool shrinkRenderable) {
+  requiredInstances = std::clamp(requiredInstances, 1u, kMaxSphereInstancesPerBatch);
+  if (!shrinkRenderable && requiredInstances <= batch.drawInstanceCount) {
+    return;
+  }
+
+  uint32_t newDrawInstanceCount = 1;
+  while (newDrawInstanceCount < requiredInstances) {
+    newDrawInstanceCount *= 2;
+  }
+  newDrawInstanceCount = std::min(newDrawInstanceCount, kMaxSphereInstancesPerBatch);
+
+  bool const wasInScene = _scene->hasEntity(batch.entity);
+  SetSolidSphereBatchSceneMembership(batch, false);
+  if (batch.drawInstanceCount > 0) {
+    _engine->getRenderableManager().destroy(batch.entity);
+  }
+
+  if (newDrawInstanceCount > batch.instanceCapacity) {
+    uint32_t const texelCapacity = newDrawInstanceCount * kSphereDataTexelsPerInstance;
+    uint32_t const textureHeight =
+        (texelCapacity + kSphereDataTextureWidth - 1) / kSphereDataTextureWidth;
+    filament::Texture* const oldDataTexture = batch.dataTexture;
+    batch.dataTexture = filament::Texture::Builder()
+                            .width(kSphereDataTextureWidth)
+                            .height(textureHeight)
+                            .levels(1)
+                            .sampler(filament::Texture::Sampler::SAMPLER_2D)
+                            .format(filament::Texture::InternalFormat::RGBA32F)
+                            .usage(filament::Texture::Usage::DEFAULT)
+                            .build(*_engine);
+
+    filament::TextureSampler const sampler(
+        filament::TextureSampler::MinFilter::NEAREST, filament::TextureSampler::MagFilter::NEAREST);
+    batch.materialInstance->setParameter("sphereData", batch.dataTexture, sampler);
+    batch.materialInstance->setParameter(
+        "sphereDataTextureWidth", static_cast<int32_t>(kSphereDataTextureWidth));
+    batch.instanceCapacity = newDrawInstanceCount;
+    _engine->destroy(oldDataTexture);
+  }
+  batch.materialInstance->setParameter("activeCount", 0);
+
+  filament::RenderableManager::Builder(1)
+      .boundingBox({{-1e6f, -1e6f, -1e6f}, {1e6f, 1e6f, 1e6f}})
+      .material(0, batch.materialInstance)
+      .geometry(
+          0,
+          filament::RenderableManager::PrimitiveType::TRIANGLES,
+          _sphereVertexBuffer,
+          _sphereIndexBuffer)
+      .instances(newDrawInstanceCount)
+      .culling(false)
+      .receiveShadows(false)
+      .castShadows(false)
+      .geometryType(filament::RenderableManager::Builder::GeometryType::STATIC)
+      .build(*_engine, batch.entity);
+  batch.drawInstanceCount = newDrawInstanceCount;
+  SetSolidSphereBatchSceneMembership(batch, wasInScene);
+}
+
+void DebugDraw::SetSolidSphereBatchSceneMembership(SphereBatch const& batch, bool shouldBeInScene) {
+  bool const isInScene = _scene->hasEntity(batch.entity);
+  if (shouldBeInScene && !isInScene) {
+    _scene->addEntity(batch.entity);
+  } else if (!shouldBeInScene && isInScene) {
+    _scene->remove(batch.entity);
+  }
+}
+
+void DebugDraw::UpdateSolidSphereInstances() {
+  size_t const sphereCount = _sphereData.size() / kSphereDataTexelsPerInstance;
+  size_t const activeBatchCount =
+      (sphereCount + kMaxSphereInstancesPerBatch - 1) / kMaxSphereInstancesPerBatch;
+  while (_sphereBatches.size() < activeBatchCount) {
+    CreateSolidSphereBatch();
+  }
+
+  for (size_t batchIndex = 0; batchIndex < _sphereBatches.size(); ++batchIndex) {
+    SphereBatch& batch = _sphereBatches[batchIndex];
+    if (batchIndex >= activeBatchCount) {
+      batch.materialInstance->setParameter("activeCount", 0);
+      SetSolidSphereBatchSceneMembership(batch, false);
+      continue;
+    }
+
+    size_t const sphereOffset = batchIndex * kMaxSphereInstancesPerBatch;
+    size_t const batchSphereCount =
+        std::min(sphereCount - sphereOffset, static_cast<size_t>(kMaxSphereInstancesPerBatch));
+    bool const shrinkRenderable =
+        batch.drawInstanceCount > 1 && batchSphereCount * 4 <= batch.drawInstanceCount;
+    RebuildSolidSphereInstances(batch, static_cast<uint32_t>(batchSphereCount), shrinkRenderable);
+    batch.materialInstance->setParameter("activeCount", static_cast<int32_t>(batchSphereCount));
+
+    size_t const texelOffset = sphereOffset * kSphereDataTexelsPerInstance;
+    size_t const texelCount = batchSphereCount * kSphereDataTexelsPerInstance;
+    auto const uploadHeight =
+        static_cast<uint32_t>((texelCount + kSphereDataTextureWidth - 1) / kSphereDataTextureWidth);
+    size_t const uploadTexelCount = static_cast<size_t>(kSphereDataTextureWidth) * uploadHeight;
+    // The shader cannot sample the padding after the active sphere data.
+    auto* uploadData = new filament::math::float4[uploadTexelCount]{};
+    std::copy_n(_sphereData.data() + texelOffset, texelCount, uploadData);
+    batch.dataTexture->setImage(
+        *_engine,
+        0,
+        0,
+        0,
+        kSphereDataTextureWidth,
+        uploadHeight,
+        filament::Texture::PixelBufferDescriptor(
+            uploadData,
+            uploadTexelCount * sizeof(filament::math::float4),
+            filament::Texture::Format::RGBA,
+            filament::Texture::Type::FLOAT,
+            [](void* buffer, size_t, void*) {
+              delete[] static_cast<filament::math::float4*>(buffer);
+            }));
+    SetSolidSphereBatchSceneMembership(batch, true);
+  }
+}
+
 void DebugDraw::RebuildSolidBuffers(uint32_t requiredVertices, uint32_t requiredIndices) {
   auto& rcm = _engine->getRenderableManager();
 
@@ -984,7 +1267,8 @@ void DebugDraw::RebuildSolidBuffers(uint32_t requiredVertices, uint32_t required
             .attribute(
                 filament::VertexAttribute::TANGENTS,
                 1,
-                filament::VertexBuffer::AttributeType::FLOAT3)
+                filament::VertexBuffer::AttributeType::SHORT4)
+            .normalized(filament::VertexAttribute::TANGENTS)
             .attribute(
                 filament::VertexAttribute::COLOR, 2, filament::VertexBuffer::AttributeType::FLOAT4)
             .build(*_engine);
@@ -1039,11 +1323,16 @@ void DebugDraw::UpdateSolidBuffers() {
       filament::VertexBuffer::BufferDescriptor(
           _solidPositions.data(), vertexCount * sizeof(filament::math::float3)));
 
+  auto* solidTangents = PackNormalTangentFrames(_solidNormals);
   _solidVertexBuffer->setBufferAt(
       *_engine,
       1,
       filament::VertexBuffer::BufferDescriptor(
-          _solidNormals.data(), vertexCount * sizeof(filament::math::float3)));
+          solidTangents,
+          vertexCount * sizeof(filament::math::short4),
+          [](void* buffer, size_t, void*) {
+            delete[] static_cast<filament::math::short4*>(buffer);
+          }));
 
   _solidVertexBuffer->setBufferAt(
       *_engine,
@@ -1082,7 +1371,8 @@ void DebugDraw::RebuildOverlayBuffers(uint32_t requiredVertices, uint32_t requir
             .attribute(
                 filament::VertexAttribute::TANGENTS,
                 1,
-                filament::VertexBuffer::AttributeType::FLOAT3)
+                filament::VertexBuffer::AttributeType::SHORT4)
+            .normalized(filament::VertexAttribute::TANGENTS)
             .attribute(
                 filament::VertexAttribute::COLOR, 2, filament::VertexBuffer::AttributeType::FLOAT4)
             .build(*_engine);
@@ -1143,11 +1433,16 @@ void DebugDraw::UpdateOverlayBuffers() {
       filament::VertexBuffer::BufferDescriptor(
           _overlayPositions.data(), vertexCount * sizeof(filament::math::float3)));
 
+  auto* overlayTangents = PackNormalTangentFrames(_overlayNormals);
   _overlayVertexBuffer->setBufferAt(
       *_engine,
       1,
       filament::VertexBuffer::BufferDescriptor(
-          _overlayNormals.data(), vertexCount * sizeof(filament::math::float3)));
+          overlayTangents,
+          vertexCount * sizeof(filament::math::short4),
+          [](void* buffer, size_t, void*) {
+            delete[] static_cast<filament::math::short4*>(buffer);
+          }));
 
   _overlayVertexBuffer->setBufferAt(
       *_engine,

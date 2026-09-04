@@ -80,6 +80,7 @@ set(_mochi_renderer_materials
     FlatLitSeeThrough
     GroundShadow
     HighlightComposite
+    InstancedSphere
     LitOpaque
     LitSeeThrough
     LitVertexColor

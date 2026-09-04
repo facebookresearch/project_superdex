@@ -455,7 +455,7 @@ void MochiAsyncScene::DrawDebug(
       auto r = data.debugSpheres.radii[i];
       auto const& c = data.debugSpheres.colors[i];
       auto pf = ToFilament<float>(converter.TranslationToOutput(p));
-      debugDraw->DrawSphere(
+      debugDraw->DrawSolidSphere(
           pf, float(r), {c[0] / 255.0f, c[1] / 255.0f, c[2] / 255.0f, c[3] / 255.0f});
     }
   }

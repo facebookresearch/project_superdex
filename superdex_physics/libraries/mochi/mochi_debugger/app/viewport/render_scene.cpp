@@ -722,9 +722,9 @@ void RenderScene::IssueDebugDraw(Float3 cameraPos) {
           color);
     }
 
-    // Synced debug spheres (wireframe).
+    // Synced debug spheres.
     for (size_t i = 0; i < _dbgSphereRadii.size(); ++i) {
-      _debugDraw->DrawSphere(
+      _debugDraw->DrawSolidSphere(
           toView(PositionAt(_dbgSpherePositions, i)),
           FilamentFromSim(_dbgSphereRadii[i]),
           FlatColorAt(_dbgSphereColors, i));

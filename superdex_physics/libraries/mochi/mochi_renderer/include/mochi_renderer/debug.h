@@ -25,17 +25,22 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#include <cstddef>
 #include <optional>
 #include <vector>
+
+namespace filament {
+class Scene;
+}
 
 namespace mochi_renderer {
 
 class DebugDraw {
  public:
-  static std::unique_ptr<DebugDraw> Create(filament::Engine* engine);
+  static std::unique_ptr<DebugDraw> Create(filament::Engine* engine, filament::Scene* scene);
   ~DebugDraw();
 
-  // Wireframe drawing methods (existing)
+  // Debug drawing methods
   void DrawLine(
       filament::math::float3 worldStart,
       filament::math::float3 worldEnd,
@@ -127,19 +132,25 @@ class DebugDraw {
       bool capped = true,
       bool overlay = false);
 
-  /// Draws a solid sphere
+  /// Draws solid spheres using shared instanced geometry.
   /// @param center Center of the sphere
   /// @param radius Radius of the sphere
   /// @param color RGBA color (alpha < 1 for translucency)
-  /// @param stacks Number of latitude divisions (default 16)
-  /// @param slices Number of longitude divisions (default 24)
+  void DrawSolidSphere(filament::math::float3 center, float radius, filament::math::float4 color);
+
+  /// Draws a tessellated solid sphere.
+  /// @param center Center of the sphere
+  /// @param radius Radius of the sphere
+  /// @param color RGBA color (alpha < 1 for translucency)
+  /// @param stacks Number of latitude divisions
+  /// @param slices Number of longitude divisions
   /// @param overlay If true, renders on top of everything (no depth testing)
   void DrawSolidSphere(
       filament::math::float3 center,
       float radius,
       filament::math::float4 color,
-      int stacks = 16,
-      int slices = 24,
+      int stacks,
+      int slices,
       bool overlay = false);
 
   // Enable/disable depth testing for wireframe (line) drawing. When enabled, lines depth-test and
@@ -159,9 +170,28 @@ class DebugDraw {
   utils::Entity GetOverlayEntity() const;
 
  private:
-  DebugDraw(filament::Engine* engine);
+  friend struct DebugDrawTestAccess;
+
+  size_t GetSolidSphereBatchCount() const;
+  utils::Entity GetSolidSphereBatchEntity(size_t batchIndex) const;
+  struct SphereBatch {
+    utils::Entity entity;
+    filament::MaterialInstance* materialInstance = nullptr;
+    filament::Texture* dataTexture = nullptr;
+    uint32_t instanceCapacity = 0;
+    uint32_t drawInstanceCount = 0;
+  };
+
+  DebugDraw(filament::Engine* engine, filament::Scene* scene);
   void RebuildBuffers(uint32_t requiredVertices, uint32_t requiredIndices);
   void UpdateBuffers();
+  void CreateSolidSphereBatch();
+  void RebuildSolidSphereInstances(
+      SphereBatch& batch,
+      uint32_t requiredInstances,
+      bool shrinkRenderable = false);
+  void SetSolidSphereBatchSceneMembership(SphereBatch const& batch, bool shouldBeInScene);
+  void UpdateSolidSphereInstances();
   void RebuildSolidBuffers(uint32_t requiredVertices, uint32_t requiredIndices);
   void UpdateSolidBuffers();
   void RebuildOverlayBuffers(uint32_t requiredVertices, uint32_t requiredIndices);
@@ -178,9 +208,10 @@ class DebugDraw {
   static constexpr uint32_t kInitialMaxVertices = 64 * 1024;
   static constexpr uint32_t kInitialMaxIndices = 64 * 1024;
 
-  filament::Engine* _engine;
+  filament::Engine* _engine = nullptr;
+  filament::Scene* _scene = nullptr;
 
-  // Wireframe (lines) rendering
+  // Wireframe
   utils::Entity _entity;
   filament::Material* _material = nullptr;
   filament::VertexBuffer* _vertexBuffer = nullptr;
@@ -191,6 +222,18 @@ class DebugDraw {
   uint32_t _bufferMaxVertices = 0;
   uint32_t _bufferMaxIndices = 0;
   bool _dirty = false;
+
+  // Instanced solid sphere rendering. Each sphere uses two RGBA32F texels:
+  // center/radius followed by color.
+  filament::Material* _sphereMaterial = nullptr;
+  filament::VertexBuffer* _sphereVertexBuffer = nullptr;
+  filament::IndexBuffer* _sphereIndexBuffer = nullptr;
+  std::vector<filament::math::float3> _sphereUnitPositions;
+  std::vector<filament::math::short4> _sphereUnitTangents;
+  std::vector<uint16_t> _sphereUnitIndices;
+  std::vector<filament::math::float4> _sphereData;
+  std::vector<SphereBatch> _sphereBatches;
+  bool _sphereDirty = false;
 
   // Solid (triangles) rendering
   utils::Entity _solidEntity;

@@ -47,6 +47,7 @@
 #include "view_settings.h"
 
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <numbers>
 
@@ -105,7 +106,7 @@ Scene::~Scene() {
         _debugDraw->GetSolidEntity(),
         _debugDraw->GetOverlayEntity(),
     };
-    _scene->removeEntities(debugEntities, 3);
+    _scene->removeEntities(debugEntities, std::size(debugEntities));
     _debugDraw.reset();
   }
   _scene->removeAllEntities();
@@ -475,7 +476,7 @@ DebugDraw* Scene::CreateDebugDraw() {
   if (_debugDraw) {
     return _debugDraw.get();
   }
-  _debugDraw = DebugDraw::Create(_engine);
+  _debugDraw = DebugDraw::Create(_engine, _scene);
   _scene->addEntity(_debugDraw->GetEntity());
   _scene->addEntity(_debugDraw->GetSolidEntity());
   _scene->addEntity(_debugDraw->GetOverlayEntity());
