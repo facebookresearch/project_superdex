@@ -32,7 +32,7 @@ classifiers = ["Private :: Do Not Upload"]
 build = [
     "cmake>=3.25",
     "ninja>=1.5",
-    "scikit-build-core>=0.11",
+    "scikit-build-core>=1.0",
 ]
 
 core = [

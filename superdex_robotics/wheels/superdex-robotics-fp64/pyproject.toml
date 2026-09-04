@@ -13,7 +13,7 @@
 # limitations under the License.
 
 [build-system]
-requires = ["scikit-build-core>=0.11"]
+requires = ["scikit-build-core>=1.0"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -50,6 +50,10 @@ wheel.packages = ["superdex_robotics_fp64"]
 wheel.install-dir = "superdex_robotics_fp64/_native"
 build.targets = ["superdex_robotics_pybind"]
 install.components = ["superdex_robotics_pybind"]
+
+[tool.scikit-build.env]
+CC = { env = "CC" }
+CXX = { env = "CXX" }
 
 [tool.scikit-build.cmake]
 source-dir = "../../.."

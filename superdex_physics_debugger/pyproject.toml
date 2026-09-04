@@ -13,7 +13,7 @@
 # limitations under the License.
 
 [build-system]
-requires = ["scikit-build-core>=0.11"]
+requires = ["scikit-build-core>=1.0"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -50,6 +50,10 @@ wheel.packages = ["superdex_physics_debugger"]
 wheel.install-dir = "superdex_physics_debugger/_native"
 build.targets = ["mochi_debugger"]
 install.components = ["mochi_debugger"]
+
+[tool.scikit-build.env]
+CC = { env = "CC" }
+CXX = { env = "CXX" }
 
 [tool.scikit-build.cmake]
 source-dir = ".."

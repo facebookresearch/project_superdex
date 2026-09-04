@@ -13,7 +13,7 @@
 # limitations under the License.
 
 [build-system]
-requires = ["scikit-build-core>=0.11"]
+requires = ["scikit-build-core>=1.0"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -66,6 +66,10 @@ wheel.exclude = ["superdex/physics/internal", "superdex/physics/utils/testing/in
 wheel.install-dir = "superdex/physics/_native"
 build.targets = ["mochi_physics_pybind"]
 install.components = ["mochi_physics_pybind"]
+
+[tool.scikit-build.env]
+CC = { env = "CC" }
+CXX = { env = "CXX" }
 
 [tool.scikit-build.cmake]
 source-dir = "../../.."

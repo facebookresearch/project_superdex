@@ -13,7 +13,7 @@
 # limitations under the License.
 
 [build-system]
-requires = ["scikit-build-core>=0.11"]
+requires = ["scikit-build-core>=1.0"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -52,6 +52,10 @@ wheel.packages = ["superdex_studio"]
 wheel.install-dir = "superdex_studio/_native"
 build.targets = ["superdex_studio"]
 install.components = ["superdex_studio"]
+
+[tool.scikit-build.env]
+CC = { env = "CC" }
+CXX = { env = "CXX" }
 
 [tool.scikit-build.cmake]
 source-dir = ".."

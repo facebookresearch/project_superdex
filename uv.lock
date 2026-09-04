@@ -574,7 +574,7 @@ gui = [
 requires-dist = [
     { name = "cmake", marker = "extra == 'build'", specifier = ">=3.25" },
     { name = "ninja", marker = "extra == 'build'", specifier = ">=1.5" },
-    { name = "scikit-build-core", marker = "extra == 'build'", specifier = ">=0.11" },
+    { name = "scikit-build-core", marker = "extra == 'build'", specifier = ">=1.0" },
     { name = "superdex-dev", extras = ["build"], marker = "extra == 'core'" },
     { name = "superdex-dev", extras = ["core"], marker = "extra == 'fp64'" },
     { name = "superdex-dev", extras = ["core"], marker = "extra == 'gui'" },

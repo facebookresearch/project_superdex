@@ -16,7 +16,7 @@
 # `license` field below.
 
 [build-system]
-requires = ["scikit-build-core>=0.11"]
+requires = ["scikit-build-core>=1.0"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -49,6 +49,10 @@ wheel.packages = ["superdex_mesh_cli"]
 wheel.install-dir = "superdex_mesh_cli/_native"
 build.targets = ["superdex_mesh_cli"]
 install.components = ["superdex_mesh_cli"]
+
+[tool.scikit-build.env]
+CC = { env = "CC" }
+CXX = { env = "CXX" }
 
 [tool.scikit-build.cmake]
 source-dir = ".."
