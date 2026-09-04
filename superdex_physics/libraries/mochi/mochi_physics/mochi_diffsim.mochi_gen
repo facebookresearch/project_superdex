@@ -18,8 +18,8 @@ struct diffsim::BackPropagationSolverParams [no_reflection] {
   // @brief Relative convergence tolerance for the outer solver.
   real outerSolverRelTol = 1e-10;
 
-  // @brief Convergence-checking mode for the outer solver.
   # TODO(T273020090): Enable NonLinearSolverConvergenceMode::PerActorWeighted.
+  // @brief Convergence-checking mode for the outer solver.
   NonLinearSolverConvergenceMode outerSolverConvergenceMode = Global;
 
   // @brief Absolute convergence tolerance for the inner (linear) solver.
