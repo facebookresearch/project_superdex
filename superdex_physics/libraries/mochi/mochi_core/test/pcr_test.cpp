@@ -86,18 +86,47 @@ static void TestPcr(bool singleThreadedMode) {
     // With A and opP.
     sol.SetZero();
     info = krylov::PCR(
-        A, AsView(b), solView, opP, maxIter, stopper, VerbosityLevel::Warning, dot, factory);
+        A,
+        AsView(b),
+        solView,
+        opP,
+        maxIter,
+        stopper,
+        VerbosityLevel::Warning,
+        InitialGuessHint::Zero,
+        dot,
+        factory);
     runCommonChecks(resRelTol, solRelTol[itest]);
     EXPECT_LE(info.numIterDone, matrixSize);
 
     // With the solution as initial guess, opA and P.
-    info = krylov::PCR(opA, b, sol, P, maxIter, stopper, VerbosityLevel::Warning, dot, factory);
+    info = krylov::PCR(
+        opA,
+        b,
+        sol,
+        P,
+        maxIter,
+        stopper,
+        VerbosityLevel::Warning,
+        InitialGuessHint::Unknown,
+        dot,
+        factory);
     runCommonChecks(resRelTol, solRelTol[itest]);
     EXPECT_LT(info.numIterDone, 1);
 
     // With arbitrary non-zero initial guess, A and P.
     sol = Scalar(0.3) * ref;
-    info = krylov::PCR(A, b, sol, P, maxIter, stopper, VerbosityLevel::Warning, dot, factory);
+    info = krylov::PCR(
+        A,
+        b,
+        sol,
+        P,
+        maxIter,
+        stopper,
+        VerbosityLevel::Warning,
+        InitialGuessHint::Unknown,
+        dot,
+        factory);
     runCommonChecks(resRelTol, solRelTol[itest]);
     EXPECT_LE(info.numIterDone, matrixSize);
   }
@@ -121,7 +150,17 @@ static void TestPcr(bool singleThreadedMode) {
 
     Scalar const relTol = Scalar(10 * n * n) * std::numeric_limits<Scalar>::epsilon();
     StopCriterion stopper{relTol, kAbsTol, kRelDivTol};
-    info = krylov::PCR(opB, b, x, opInvB, n, stopper, VerbosityLevel::Warning, dot, factory);
+    info = krylov::PCR(
+        opB,
+        b,
+        x,
+        opInvB,
+        n,
+        stopper,
+        VerbosityLevel::Warning,
+        InitialGuessHint::Unknown,
+        dot,
+        factory);
 
     EXPECT_EQ(info.convergence, LinearSolverConvergenceStatus::Converged);
     EXPECT_EQ(info.numIterDone, 1);
@@ -138,4 +177,46 @@ TEST(KrylovSolver, Pcr) {
       /*singleThreadedMode*/ true);
   TestPcr<real, krylov::StatusPreconditionedResidualL2<krylov::UsualDot, real>, krylov::UsualDot>(
       /*singleThreadedMode*/ false);
+}
+
+TEST(KrylovSolver, Pcr_InitialGuessHint) {
+  constexpr int kSize = 4;
+  using Vector = ColumnVector<real>;
+
+  Vector b(kSize);
+  b.SetRandom(1);
+  auto x = Vector::Zero(kSize);
+
+  int operatorApplications = 0;
+  auto opA = [&](auto const& input, auto& output) {
+    ++operatorApplications;
+    output = input;
+  };
+  int preconditionerApplications = 0;
+  auto opP = [&](auto const& input, auto& output) {
+    ++preconditionerApplications;
+    output = input;
+  };
+
+  auto runSolve = [&](InitialGuessHint initialGuessHint) {
+    x.SetZero();
+    operatorApplications = 0;
+    preconditionerApplications = 0;
+    krylov::StatusPreconditionedResidualL2<krylov::UsualDot, real> stopCriterion{
+        10_r * std::numeric_limits<real>::epsilon(), 0_r, 1e10_r};
+    auto const status =
+        krylov::PCR(opA, b, x, opP, kSize, stopCriterion, VerbosityLevel::Silent, initialGuessHint);
+
+    EXPECT_EQ(status.convergence, LinearSolverConvergenceStatus::Converged);
+    ColumnVector<real> error = b - x;
+    EXPECT_NEAR_TOL(error.Norm(), 0_r, 10_r * std::numeric_limits<real>::epsilon() * b.Norm());
+  };
+
+  runSolve(InitialGuessHint::Unknown);
+  int const generalOperatorApplications = operatorApplications;
+  int const generalPreconditionerApplications = preconditionerApplications;
+  runSolve(InitialGuessHint::Zero);
+
+  EXPECT_EQ(generalOperatorApplications, operatorApplications + 1);
+  EXPECT_EQ(generalPreconditionerApplications, preconditionerApplications + 1);
 }

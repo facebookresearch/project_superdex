@@ -47,6 +47,8 @@ namespace mochi::krylov {
  * @param[in] verbosity Verbosity level for logging output.
  * @param[in] usePolakRibiere Boolean for using the Polak-Ribiere definition of beta
  * as opposed to the Fletcher-Reeves formula (default = true)
+ * @param[in] initialGuessHint Indicates whether @p x is known to be zero. The zero hint skips the
+ * initial matrix-vector product and requires @p x to be exactly zero.
  * @param[in] dot The dot operator. Must also handle a matrix-vector operation.
  * @param[in] vectorFactory Factory to create vectors of a given type.
  *
@@ -75,6 +77,7 @@ LinearSolverStatus PCG(
     bool abortIfNotSpd = false,
     VerbosityLevel verbosity = VerbosityLevel::Warning,
     bool usePolakRibiere = true,
+    InitialGuessHint initialGuessHint = InitialGuessHint::Unknown,
     Dot dot = {},
     VectorFactory vectorFactory = {}) {
   auto r = vectorFactory.GetCopy(b);
@@ -94,16 +97,24 @@ LinearSolverStatus PCG(
       std::is_same_v<StopCriterion, StatusResidualPreconditionerInduced<Dot, Scalar>>;
   constexpr bool kCheckStatusComputesRTz =
       std::is_same_v<StopCriterion, StatusResidualPreconditionerInduced<Dot, Scalar>>;
+  MOCHI_ASSERT_VERBOSE(
+      initialGuessHint != InitialGuessHint::Zero || dot(x, x) == 0,
+      "InitialGuessHint::Zero requires an exactly zero initial guess.");
 
   statusCheck.SetScaling(r, prec, z);
 
-  Apply(A, x, Ap);
-  r -= Ap;
+  if (initialGuessHint != InitialGuessHint::Zero) {
+    Apply(A, x, Ap);
+    r -= Ap;
+  }
 
   IterationStatus myStatus{};
 
   if constexpr (kNeedPrecResidual) {
-    Solve(prec, r, z); // z_0 = Prec^{-1} r_0
+    // With x_0 = 0, r_0 = b, so SetScaling() already computed z_0 = Prec^{-1} r_0.
+    if (initialGuessHint != InitialGuessHint::Zero) {
+      Solve(prec, r, z); // z_0 = Prec^{-1} r_0
+    }
     //--- p and Ap will not be stored when iter = 0
     myStatus = statusCheck.CheckStatus(0, r, z, p, Ap);
   } else {

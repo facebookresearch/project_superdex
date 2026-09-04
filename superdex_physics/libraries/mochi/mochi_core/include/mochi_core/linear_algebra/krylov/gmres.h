@@ -145,6 +145,8 @@ namespace mochi::krylov {
  * @param[in] statusCheck A functor called at each iteration to check the stop criteria.
  * @param[in] restartSize Size of Krylov space triggering a restart (default = no restart)
  * @param[in] verbosity Verbosity level for logging output.
+ * @param[in] initialGuessHint Indicates whether @p x is known to be zero. The zero hint skips the
+ * initial matrix-vector product and requires @p x to be exactly zero.
  * @param[in] dot The dot operator. Must also handle a matrix-vector operation.
  * @param[in] vectorFactory Factory to create vectors of a given type.
  *
@@ -172,6 +174,7 @@ LinearSolverStatus GMRes(
     StopCriterion statusCheck = {},
     int restartSize = 0,
     VerbosityLevel verbosity = VerbosityLevel::Warning,
+    InitialGuessHint initialGuessHint = InitialGuessHint::Unknown,
     Dot dot = {},
     VectorFactory vectorFactory = {}) {
   using namespace details;
@@ -184,6 +187,9 @@ LinearSolverStatus GMRes(
 
   int n = static_cast<int>(NumRows(x));
   MOCHI_ASSERT_VERBOSE(NumRows(x) == NumRows(rhs));
+  MOCHI_ASSERT_VERBOSE(
+      initialGuessHint != InitialGuessHint::Zero || dot(x, x) == 0,
+      "InitialGuessHint::Zero requires an exactly zero initial guess.");
 
   restartSize = Min(n, (restartSize <= 0) ? iterMax : restartSize, iterMax);
 
@@ -204,8 +210,10 @@ LinearSolverStatus GMRes(
   }
   statusCheck.SetScaling(bNorm);
 
-  Apply(A, x, Ap);
-  residual -= Ap;
+  if (initialGuessHint != InitialGuessHint::Zero) {
+    Apply(A, x, Ap);
+    residual -= Ap;
+  }
 
   auto resNorm = dot.Norm(residual);
   //--- when iter = 0, z and Ap are ignored

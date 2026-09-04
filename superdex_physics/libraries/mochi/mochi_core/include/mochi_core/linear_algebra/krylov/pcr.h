@@ -43,6 +43,8 @@ namespace mochi::krylov {
  * @param[in] maxIter Maximum number of iterations.
  * @param[in,out] statusCheck A functor called at each iteration to check the stop criteria.
  * @param[in] verbosity Verbosity level for logging.
+ * @param[in] initialGuessHint Indicates whether @p x is known to be zero. The zero hint skips the
+ * initial matrix-vector product and requires @p x to be exactly zero.
  * @param[in] dot The dot operator. Must also handle a matrix-vector operation.
  * @param[in] vectorFactory Factory to create vectors of a given type.
  *
@@ -69,6 +71,7 @@ LinearSolverStatus PCR(
     int maxIter,
     StopCriterion& statusCheck,
     VerbosityLevel verbosity = VerbosityLevel::Warning,
+    InitialGuessHint initialGuessHint = InitialGuessHint::Unknown,
     Dot dot = {},
     VectorFactory vectorFactory = {}) {
   auto r = vectorFactory.GetCopy(b);
@@ -87,16 +90,24 @@ LinearSolverStatus PCR(
       "The type 'StopCriterion' is currently not supported by PCR.");
   constexpr bool kNeedPrecResidual =
       std::is_same_v<StopCriterion, StatusPreconditionedResidualL2<Dot, RealScalar>>;
+  MOCHI_ASSERT_VERBOSE(
+      initialGuessHint != InitialGuessHint::Zero || dot(x, x) == 0,
+      "InitialGuessHint::Zero requires an exactly zero initial guess.");
 
   statusCheck.SetScaling(r, prec, z);
 
-  Apply(A, x, Ap);
-  r -= Ap;
+  if (initialGuessHint != InitialGuessHint::Zero) {
+    Apply(A, x, Ap);
+    r -= Ap;
+  }
 
   IterationStatus myStatus{};
 
   if constexpr (kNeedPrecResidual) {
-    Solve(prec, r, z); // z_0 = Prec^{-1} r_0
+    // With x_0 = 0, r_0 = b, so SetScaling() already computed z_0 = Prec^{-1} r_0.
+    if (initialGuessHint != InitialGuessHint::Zero) {
+      Solve(prec, r, z); // z_0 = Prec^{-1} r_0
+    }
     //--- p and Ap will not be stored when iter = 0
     myStatus = statusCheck.CheckStatus(0, r, z, p, Ap);
   } else {

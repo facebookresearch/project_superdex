@@ -47,6 +47,8 @@ namespace mochi::krylov {
  *            iterMax must be between 0 and the size of A.
  * @param[in] statusCheck A functor called at each iteration to check the stop criteria.
  * @param[in] verbosity Verbosity level for logging output.
+ * @param[in] initialGuessHint Indicates whether @p x is known to be zero. The zero hint skips the
+ * initial matrix-vector product and requires @p x to be exactly zero.
  * @param[in] dot The dot operator. Must also handle a matrix-vector operation.
  * @param[in] vectorFactory Factory to create vectors of a given type.
  *
@@ -78,6 +80,7 @@ LinearSolverStatus MinRes(
     int iterMax,
     StopCriterion statusCheck = {},
     VerbosityLevel verbosity = VerbosityLevel::Warning,
+    InitialGuessHint initialGuessHint = InitialGuessHint::Unknown,
     Dot dot = {},
     VectorFactory vectorFactory = {}) {
   using Scalar = decltype(dot(rhs, rhs));
@@ -88,6 +91,9 @@ LinearSolverStatus MinRes(
 
   int n = static_cast<int>(NumRows(x));
   MOCHI_ASSERT_VERBOSE(NumRows(x) == NumRows(rhs));
+  MOCHI_ASSERT_VERBOSE(
+      initialGuessHint != InitialGuessHint::Zero || dot(x, x) == 0,
+      "InitialGuessHint::Zero requires an exactly zero initial guess.");
 
   iterMax = Min(n, iterMax);
 
@@ -120,7 +126,8 @@ LinearSolverStatus MinRes(
 
   auto Az = vectorFactory.GetSameAs(x);
   auto v = vectorFactory.GetSameAs(x);
-  if (dot(x, x) == 0) {
+  if (initialGuessHint == InitialGuessHint::Zero) {
+    // With x_0 = 0, v_0 = rhs, so the solve above already computed z_0 = Prec^{-1} v_0.
     v = rhs;
   } else {
     Apply(A, x, Az);

@@ -280,7 +280,8 @@ static void KrylovSolveZ(
   // Create callable preconditioner: solves hat(dres) * z = r using the inner linear solver
   auto precOp = [&](ColumnVectorView<real const> in, ColumnVectorView<real> out) {
     out.SetZero();
-    precLinearSolver.Solve(approxHessian, in, out, /*hasOperatorChanged*/ false);
+    precLinearSolver.Solve(
+        approxHessian, in, out, /*hasOperatorChanged*/ false, InitialGuessHint::Zero);
   };
 
   // Initialize solution
@@ -301,7 +302,9 @@ static void KrylovSolveZ(
       backpropParams.outerSolverMaxIter,
       pcgStatusCheck,
       /*abortIfNotSpd*/ true,
-      backpropParams.verbosity);
+      backpropParams.verbosity,
+      /*usePolakRibiere*/ true,
+      InitialGuessHint::Zero);
 
   // If PCG diverged, fall back to MINRES.
   if (outerResult.convergence == LinearSolverConvergenceStatus::Diverged) {
@@ -330,7 +333,8 @@ static void KrylovSolveZ(
         precOp,
         backpropParams.outerSolverMaxIter,
         minresStatusCheck,
-        backpropParams.verbosity);
+        backpropParams.verbosity,
+        InitialGuessHint::Zero);
 
     if (outerResult.convergence == LinearSolverConvergenceStatus::Diverged &&
         backpropParams.verbosity >= VerbosityLevel::Warning) {

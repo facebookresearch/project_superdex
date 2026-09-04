@@ -57,6 +57,9 @@ namespace mochi::krylov {
  * @param[in] abortIfNotSpd Boolean to abort the solve if the matrix is detected not to be symmetric
  * positive definite. Default is false.
  * @param[in] verbosity Verbosity level for logging output.
+ * @param[in] initialGuessHint Indicates whether @p x is known to be zero. The zero hint skips the
+ * initial matrix-vector product when no recycling subspace is available and requires @p x to be
+ * exactly zero.
  * @param[in] projectEveryIteration Controls the projection strategy in the augmented
  * preconditioner. When true, projects the residual at every iteration, maintaining consistent
  * preconditioner behavior. When false, alternates between projecting and not projecting
@@ -103,6 +106,7 @@ LinearSolverStatus AugmentedPCG(
     RecyclingStatusType& recyclingStatus,
     bool abortIfNotSpd = false,
     VerbosityLevel verbosity = VerbosityLevel::Warning,
+    InitialGuessHint initialGuessHint = InitialGuessHint::Unknown,
     bool projectEveryIteration = true,
     Dot dot = {},
     VectorFactory vectorFactory = {}) {
@@ -138,9 +142,13 @@ LinearSolverStatus AugmentedPCG(
             abortIfNotSpd,
             verbosity,
             /*usePolakRibiere*/ true,
+            initialGuessHint,
             dot,
             vectorFactory);
   } else {
+    MOCHI_ASSERT_VERBOSE(
+        initialGuessHint != InitialGuessHint::Zero || dot(x, x) == 0,
+        "InitialGuessHint::Zero requires an exactly zero initial guess.");
     MOCHI_ASSERT_VERBOSE(
         (recyclingStatus.V.Rows() == A.Cols()) && (recyclingStatus.AV.Rows() == A.Rows()) &&
         (recyclingStatus.V.Cols() >= recyclingSubspaceSize) &&
@@ -189,7 +197,9 @@ LinearSolverStatus AugmentedPCG(
     //--- Update the initial guess.
     ColumnVector<Scalar> Qdot(Qn.Cols(), 1);
     Qdot = (Qn.Transpose() * b);
-    Qdot -= (AQn.Transpose() * x);
+    if (initialGuessHint != InitialGuessHint::Zero) {
+      Qdot -= (AQn.Transpose() * x);
+    }
     invQtAQ.LeftSolveInPlace(Qdot);
     x += Qn * Qdot;
     //--- Invert QntQn.
@@ -216,7 +226,6 @@ LinearSolverStatus AugmentedPCG(
       //--- Update Px.
       Px -= Qn * Qdot;
     };
-    //--- Solve with PCG and the augmented preconditioner.
     status =
         PCG(A,
             b,
@@ -227,6 +236,8 @@ LinearSolverStatus AugmentedPCG(
             abortIfNotSpd,
             verbosity,
             /*usePolakRibiere*/ true,
+            // Projection can make x nonzero even if it was initially zero.
+            InitialGuessHint::Unknown,
             dot,
             vectorFactory);
   }

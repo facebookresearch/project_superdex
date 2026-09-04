@@ -65,8 +65,12 @@ TEST_IF(MOCHI_USE_EIGEN, KrylovSolver, AugmentedCG) {
     int initNumIter = -1;
     for (int ii = 0; ii < 3; ++ii) {
       outputVec.SetZero();
-      auto dcgStatus =
-          dcgSolver.Solve(inputMat, inputVec, outputVec, /* hasOperatorChanged */ ii % 2 == 0);
+      auto dcgStatus = dcgSolver.Solve(
+          inputMat,
+          inputVec,
+          outputVec,
+          /*hasOperatorChanged*/ ii % 2 == 0,
+          InitialGuessHint::Zero);
       ColumnVector<Scalar> delta = expected - outputVec;
       EXPECT_NEAR_TOL(delta.Norm(), Scalar(0), kErrorRelTol * expected.Norm());
       if (ii == 0) {
@@ -78,7 +82,7 @@ TEST_IF(MOCHI_USE_EIGEN, KrylovSolver, AugmentedCG) {
   }
 
   {
-    //--- Test Augmented PCG with compression
+    //--- Test Augmented PCG with compression and non-zero initial guesses
     KrylovSolverParams dcgParams(params);
     dcgParams.solverType = LinearSolverType::AugmentedCG;
     dcgParams.preconditionerType = params.preconditionerType;
@@ -89,9 +93,13 @@ TEST_IF(MOCHI_USE_EIGEN, KrylovSolver, AugmentedCG) {
     EXPECT_EQ(dcgSolver.GetParams().solverType, LinearSolverType::AugmentedCG);
     int initNumIter = -1;
     for (int ii = 0; ii < 3; ++ii) {
-      outputVec.SetZero();
-      auto dcgStatus =
-          dcgSolver.Solve(inputMat, inputVec, outputVec, /* hasOperatorChanged */ ii % 2 == 0);
+      outputVec = Scalar(0.3) * expected;
+      auto dcgStatus = dcgSolver.Solve(
+          inputMat,
+          inputVec,
+          outputVec,
+          /*hasOperatorChanged*/ ii % 2 == 0,
+          InitialGuessHint::Unknown);
       ColumnVector<Scalar> delta = expected - outputVec;
       EXPECT_NEAR_TOL(delta.Norm(), Scalar(0), kErrorRelTol * expected.Norm());
       if (ii == 0) {

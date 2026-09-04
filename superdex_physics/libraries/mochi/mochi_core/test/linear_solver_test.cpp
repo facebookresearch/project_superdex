@@ -119,7 +119,7 @@ static void LinearSolve_PsdMatrix(PreconditionerType precType) {
     cgParams.solverType = LinearSolverType::CG;
     pcgSolver.SetParams(cgParams); // Set params through 'SetParams'.
     EXPECT_EQ(pcgSolver.GetParams().solverType, LinearSolverType::CG);
-    outputVec.SetZero();
+    outputVec = 0.3_r * expected;
     auto pcgStatus = pcgSolver.Solve(inputMat, inputVec, outputVec);
     EXPECT_EQ(pcgStatus.convergence, LinearSolverConvergenceStatus::Converged);
     ColumnVector<real> delta = expected - outputVec;
@@ -132,7 +132,12 @@ static void LinearSolve_PsdMatrix(PreconditionerType precType) {
     cgPrecInnerParams.normType = LinearSolverConvergenceNorm::ResidualPreconditionerInduced;
     LinearSolver<real> pcgPrecInnerSolver(cgPrecInnerParams);
     outputVec.SetZero();
-    auto pcgPrecInnerStatus = pcgPrecInnerSolver.Solve(inputMat, inputVec, outputVec);
+    auto pcgPrecInnerStatus = pcgPrecInnerSolver.Solve(
+        inputMat,
+        inputVec,
+        outputVec,
+        /*hasOperatorChanged*/ true,
+        InitialGuessHint::Zero);
     EXPECT_EQ(pcgPrecInnerStatus.convergence, LinearSolverConvergenceStatus::Converged);
     ColumnVector<real> delta = expected - outputVec;
     EXPECT_NEAR_TOL(delta.Norm(), 0_r, kErrorRelTol * expected.Norm());
@@ -144,7 +149,12 @@ static void LinearSolve_PsdMatrix(PreconditionerType precType) {
     LinearSolver<real> gmresSolver(gmresParams); // Set params through the constructor.
     EXPECT_EQ(gmresSolver.GetParams().solverType, LinearSolverType::GMRES);
     outputVec.SetZero();
-    auto gmresStatus = gmresSolver.Solve(inputMat, inputVec, outputVec);
+    auto gmresStatus = gmresSolver.Solve(
+        inputMat,
+        inputVec,
+        outputVec,
+        /*hasOperatorChanged*/ true,
+        InitialGuessHint::Zero);
     EXPECT_EQ(gmresStatus.convergence, LinearSolverConvergenceStatus::Converged);
     ColumnVector<real> delta = expected - outputVec;
     EXPECT_NEAR_TOL(delta.Norm(), 0_r, kErrorRelTol * expected.Norm());
@@ -164,8 +174,12 @@ static void LinearSolve_PsdMatrix(PreconditionerType precType) {
     int initNumIter = -1;
     for (int ii = 0; ii < 4; ++ii) {
       outputVec.SetZero();
-      auto dcgStatus =
-          dcgSolver.Solve(inputMat, inputVec, outputVec, /* hasOperatorChanged */ ii % 2 == 0);
+      auto dcgStatus = dcgSolver.Solve(
+          inputMat,
+          inputVec,
+          outputVec,
+          /*hasOperatorChanged*/ ii % 2 == 0,
+          InitialGuessHint::Zero);
       ColumnVector<real> delta = expected - outputVec;
       EXPECT_NEAR_TOL(delta.Norm(), 0_r, kErrorRelTol * expected.Norm());
       if (ii == 0) {

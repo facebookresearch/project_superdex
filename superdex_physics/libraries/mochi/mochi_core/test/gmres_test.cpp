@@ -70,6 +70,7 @@ static void TestGmres(bool singleThreadedMode) {
         StopCriterion{relativeTol, kAbsTol, kRelDivTol},
         maxIter,
         VerbosityLevel::Warning,
+        InitialGuessHint::Zero,
         dot);
 
     int fullIter = info.numIterDone;
@@ -94,6 +95,7 @@ static void TestGmres(bool singleThreadedMode) {
         StopCriterion{relativeTol, kAbsTol, kRelDivTol},
         maxIter,
         VerbosityLevel::Warning,
+        InitialGuessHint::Unknown,
         dot);
 
     EXPECT_LT(info.numIterDone, 1);
@@ -112,6 +114,7 @@ static void TestGmres(bool singleThreadedMode) {
         StopCriterion{relativeTol, kAbsTol, kRelDivTol},
         maxIter,
         VerbosityLevel::Warning,
+        InitialGuessHint::Unknown,
         dot);
 
     EXPECT_LT(info.numIterDone, maxIter);
@@ -130,6 +133,7 @@ static void TestGmres(bool singleThreadedMode) {
         StopCriterion{relativeTol, kAbsTol, kRelDivTol},
         fullIter,
         VerbosityLevel::Warning,
+        InitialGuessHint::Zero,
         dot);
     EXPECT_EQ(info.numIterDone, fullIter);
     EXPECT_LT(info.relativeResidualNorm, relativeTol);
@@ -148,6 +152,7 @@ static void TestGmres(bool singleThreadedMode) {
           StopCriterion{relativeTol, kAbsTol, kRelDivTol},
           (3 * fullIter) / 4,
           VerbosityLevel::Warning,
+          InitialGuessHint::Zero,
           dot);
       EXPECT_GE(info.numIterDone, fullIter);
       EXPECT_LT(info.relativeResidualNorm, relativeTol);
@@ -184,6 +189,7 @@ static void TestGmres(bool singleThreadedMode) {
         StopCriterion{relTol, kAbsTol, kRelDivTol},
         {},
         VerbosityLevel::Warning,
+        InitialGuessHint::Zero,
         dot);
 
     EXPECT_EQ(info.convergence, LinearSolverConvergenceStatus::Converged);
@@ -213,6 +219,7 @@ static void TestGmres(bool singleThreadedMode) {
         StopCriterion{relTol, kAbsTol, kRelDivTol},
         {},
         VerbosityLevel::Warning,
+        InitialGuessHint::Zero,
         dot);
     EXPECT_LE(info.numIterDone, n);
     EXPECT_EQ(info.convergence, LinearSolverConvergenceStatus::Converged);
@@ -230,4 +237,45 @@ TEST(KrylovSolver, GMRes) {
       /*singleThreadedMode*/ true);
   TestGmres<real, krylov::StatusImplicitResidualNorm<real>, krylov::UsualDot>(
       /*singleThreadedMode*/ false);
+}
+
+TEST(KrylovSolver, GMRes_InitialGuessHint) {
+  constexpr int kSize = 4;
+  using Vector = ColumnVector<real>;
+
+  Vector b(kSize);
+  b.SetRandom(1);
+  auto x = Vector::Zero(kSize);
+  int operatorApplications = 0;
+  auto opA = [&](auto const& input, auto& output) {
+    ++operatorApplications;
+    output = input;
+  };
+  auto opP = IdentityPreconditioner();
+
+  auto runSolve = [&](InitialGuessHint initialGuessHint) {
+    x.SetZero();
+    operatorApplications = 0;
+    auto const status = krylov::GMRes(
+        opA,
+        b,
+        x,
+        opP,
+        kSize,
+        krylov::StatusImplicitResidualNorm<real>{
+            10_r * std::numeric_limits<real>::epsilon(), 0_r, 1e10_r},
+        0,
+        VerbosityLevel::Silent,
+        initialGuessHint);
+
+    EXPECT_EQ(status.convergence, LinearSolverConvergenceStatus::Converged);
+    ColumnVector<real> error = b - x;
+    EXPECT_NEAR_TOL(error.Norm(), 0_r, 10_r * std::numeric_limits<real>::epsilon() * b.Norm());
+  };
+
+  runSolve(InitialGuessHint::Unknown);
+  int const generalOperatorApplications = operatorApplications;
+  runSolve(InitialGuessHint::Zero);
+
+  EXPECT_EQ(generalOperatorApplications, operatorApplications + 1);
 }

@@ -23,6 +23,14 @@
 
 namespace mochi {
 
+/// @brief Indicates whether the initial guess supplied to an iterative linear solver is zero.
+/// @warning Passing @ref InitialGuessHint::Zero with a nonzero initial guess may produce an
+/// incorrect solution.
+enum class InitialGuessHint : uint8_t {
+  Unknown, ///< No zero-value guarantee; use the general initialization path.
+  Zero, ///< The initial guess is exactly zero, enabling optimized initialization.
+};
+
 /// @brief Enum for choosing which directions to keep in recycling subspace iterative solvers.
 enum class RecyclingAlgorithm : uint8_t {
   LiFo = 0, // Last In First Out - keeps the initial directions

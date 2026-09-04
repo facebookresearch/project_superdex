@@ -744,7 +744,12 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
 
       // Solve the linear system.
       dxSolve.SetZero();
-      auto linearResult = _linearSolver->Solve(linOp, problem.GetResidual(), dxSolve);
+      auto linearResult = _linearSolver->Solve(
+          linOp,
+          problem.GetResidual(),
+          dxSolve,
+          /*hasOperatorChanged*/ true,
+          InitialGuessHint::Zero);
       MOCHI_ASSERT_VERBOSE(
           linearResult.convergence != LinearSolverConvergenceStatus::None,
           "Linear solver convergence status has not been set.");

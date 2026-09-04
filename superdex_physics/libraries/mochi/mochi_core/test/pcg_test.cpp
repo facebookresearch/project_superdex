@@ -97,6 +97,7 @@ static void TestPcg(bool singleThreadedMode) {
         false,
         VerbosityLevel::Warning,
         true,
+        InitialGuessHint::Zero,
         dot,
         factory);
     runCommonChecks(pcgResRelTol, pcgSolRelTol[itest]);
@@ -105,20 +106,53 @@ static void TestPcg(bool singleThreadedMode) {
     // With Fletcher-Reeves formula, A and opP.
     sol.SetZero();
     info = krylov::PCG(
-        A, b, sol, opP, maxIter, pcgStopper, false, VerbosityLevel::Warning, false, dot, factory);
+        A,
+        b,
+        sol,
+        opP,
+        maxIter,
+        pcgStopper,
+        /*abortIfNotSpd*/ false,
+        VerbosityLevel::Warning,
+        /*usePolakRibiere*/ false,
+        InitialGuessHint::Zero,
+        dot,
+        factory);
     runCommonChecks(pcgResRelTol, pcgSolRelTol[itest]);
     EXPECT_LE(info.numIterDone, matrixSize);
 
     // With the solution as initial guess, opA and P.
     info = krylov::PCG(
-        opA, b, sol, P, maxIter, pcgStopper, false, VerbosityLevel::Warning, true, dot, factory);
+        opA,
+        b,
+        sol,
+        P,
+        maxIter,
+        pcgStopper,
+        /*abortIfNotSpd*/ false,
+        VerbosityLevel::Warning,
+        /*usePolakRibiere*/ true,
+        InitialGuessHint::Unknown,
+        dot,
+        factory);
     runCommonChecks(pcgResRelTol, pcgSolRelTol[itest]);
     EXPECT_LT(info.numIterDone, 1);
 
     // With arbitrary non-zero initial guess, A and P.
     sol = Scalar(0.3) * ref;
     info = krylov::PCG(
-        A, b, sol, P, maxIter, pcgStopper, false, VerbosityLevel::Warning, true, dot, factory);
+        A,
+        b,
+        sol,
+        P,
+        maxIter,
+        pcgStopper,
+        /*abortIfNotSpd*/ false,
+        VerbosityLevel::Warning,
+        /*usePolakRibiere*/ true,
+        InitialGuessHint::Unknown,
+        dot,
+        factory);
     runCommonChecks(pcgResRelTol, pcgSolRelTol[itest]);
     EXPECT_LE(info.numIterDone, matrixSize);
 
@@ -138,6 +172,7 @@ static void TestPcg(bool singleThreadedMode) {
         false,
         VerbosityLevel::Warning,
         true,
+        InitialGuessHint::Zero,
         dot,
         factory);
     runCommonChecks(pcgResRelTol, pcgSolRelTol[itest]);
@@ -146,20 +181,53 @@ static void TestPcg(bool singleThreadedMode) {
     // With Fletcher-Reeves formula.
     sol.SetZero();
     info = krylov::ParallelPCG(
-        A, b, sol, P, maxIter, pcgStopper, false, VerbosityLevel::Warning, false, dot, factory);
+        A,
+        b,
+        sol,
+        P,
+        maxIter,
+        pcgStopper,
+        /*abortIfNotSpd*/ false,
+        VerbosityLevel::Warning,
+        /*usePolakRibiere*/ false,
+        InitialGuessHint::Zero,
+        dot,
+        factory);
     runCommonChecks(pcgResRelTol, pcgSolRelTol[itest]);
     EXPECT_LE(info.numIterDone, matrixSize);
 
     // With the solution as initial guess.
     info = krylov::ParallelPCG(
-        A, b, sol, P, maxIter, pcgStopper, false, VerbosityLevel::Warning, true, dot, factory);
+        A,
+        b,
+        sol,
+        P,
+        maxIter,
+        pcgStopper,
+        /*abortIfNotSpd*/ false,
+        VerbosityLevel::Warning,
+        /*usePolakRibiere*/ true,
+        InitialGuessHint::Unknown,
+        dot,
+        factory);
     runCommonChecks(pcgResRelTol, pcgSolRelTol[itest]);
     EXPECT_LT(info.numIterDone, 1);
 
     // With an arbitrary non-zero initial guess.
     sol = Scalar(0.3) * ref;
     info = krylov::ParallelPCG(
-        A, b, sol, P, maxIter, pcgStopper, false, VerbosityLevel::Warning, true, dot, factory);
+        A,
+        b,
+        sol,
+        P,
+        maxIter,
+        pcgStopper,
+        /*abortIfNotSpd*/ false,
+        VerbosityLevel::Warning,
+        /*usePolakRibiere*/ true,
+        InitialGuessHint::Unknown,
+        dot,
+        factory);
     runCommonChecks(pcgResRelTol, pcgSolRelTol[itest]);
     EXPECT_LE(info.numIterDone, matrixSize);
 
@@ -186,14 +254,15 @@ static void TestPcg(bool singleThreadedMode) {
         false,
         VerbosityLevel::Warning,
         true,
+        InitialGuessHint::Zero,
         dot,
         factory,
         restartPeriod);
     runCommonChecks(asyncPcgResRelTol, asyncPcgSolRelTol[itest]);
     EXPECT_GT(info.numIterDone, restartPeriod); // Restart codepaths are tested
 
-    // With Fletcher-Reeves formula and P.
-    sol.SetZero();
+    // With Fletcher-Reeves formula, P, and an arbitrary non-zero initial guess.
+    sol = Scalar(0.3) * ref;
     info = krylov::AsyncPCG(
         A,
         b,
@@ -204,6 +273,7 @@ static void TestPcg(bool singleThreadedMode) {
         false,
         VerbosityLevel::Warning,
         false,
+        InitialGuessHint::Unknown,
         dot,
         factory,
         restartPeriod);
@@ -231,7 +301,18 @@ static void TestPcg(bool singleThreadedMode) {
     Scalar const relTol = Scalar(10 * n * n) * std::numeric_limits<Scalar>::epsilon();
     StopCriterion stopper{relTol, kAbsTol, kRelDivTol};
     info = krylov::PCG(
-        opB, b, x, opInvB, n, stopper, false, VerbosityLevel::Warning, true, dot, factory);
+        opB,
+        b,
+        x,
+        opInvB,
+        n,
+        stopper,
+        /*abortIfNotSpd*/ false,
+        VerbosityLevel::Warning,
+        /*usePolakRibiere*/ true,
+        InitialGuessHint::Unknown,
+        dot,
+        factory);
 
     EXPECT_EQ(info.convergence, LinearSolverConvergenceStatus::Converged);
     EXPECT_EQ(info.numIterDone, 1);
@@ -253,7 +334,18 @@ static void TestPcg(bool singleThreadedMode) {
     auto localOpP = IdentityPreconditioner();
     StopCriterion defaultStopper{Scalar(1e-6), kAbsTol, kRelDivTol};
     info = krylov::PCG(
-        opA, b, x, localOpP, n, defaultStopper, false, VerbosityLevel::Warning, true, dot, factory);
+        opA,
+        b,
+        x,
+        localOpP,
+        n,
+        defaultStopper,
+        /*abortIfNotSpd*/ false,
+        VerbosityLevel::Warning,
+        /*usePolakRibiere*/ true,
+        InitialGuessHint::Unknown,
+        dot,
+        factory);
     EXPECT_EQ(info.numIterDone, n);
     EXPECT_EQ(info.convergence, LinearSolverConvergenceStatus::Stopped);
   }
@@ -269,4 +361,92 @@ TEST(KrylovSolver, Pcg) {
   TestPcg<real, krylov::StatusPreconditionedResidualL2<krylov::UsualDot, real>, krylov::UsualDot>( /*singleThreadedMode*/ false);
   TestPcg<real, krylov::StatusResidualPreconditionerInduced<krylov::UsualDot, real>, krylov::UsualDot>( /*singleThreadedMode*/ false);
   // clang-format on
+}
+
+TEST(KrylovSolver, Pcg_InitialGuessHint) {
+  constexpr int kSize = 4;
+  using Vector = ColumnVector<real>;
+
+  Vector b(kSize);
+  b.SetRandom(1);
+  auto x = Vector::Zero(kSize);
+
+  int operatorApplications = 0;
+  auto opA = [&](auto const& input, auto& output) {
+    ++operatorApplications;
+    output = input;
+  };
+  int preconditionerApplications = 0;
+  auto opP = [&](auto const& input, auto& output) {
+    ++preconditionerApplications;
+    output = input;
+  };
+
+  auto runSolve = [&](InitialGuessHint initialGuessHint) {
+    x.SetZero();
+    operatorApplications = 0;
+    preconditionerApplications = 0;
+    krylov::StatusPreconditionedResidualL2<krylov::UsualDot, real> stopCriterion{
+        10_r * std::numeric_limits<real>::epsilon(), 0_r, 1e10_r};
+    auto const status = krylov::PCG(
+        opA,
+        b,
+        x,
+        opP,
+        kSize,
+        stopCriterion,
+        /*abortIfNotSpd*/ false,
+        VerbosityLevel::Silent,
+        /*usePolakRibiere*/ true,
+        initialGuessHint);
+
+    EXPECT_EQ(status.convergence, LinearSolverConvergenceStatus::Converged);
+    ColumnVector<real> error = b - x;
+    EXPECT_NEAR_TOL(error.Norm(), 0_r, 10_r * std::numeric_limits<real>::epsilon() * b.Norm());
+  };
+
+  runSolve(InitialGuessHint::Unknown);
+  int const generalOperatorApplications = operatorApplications;
+  int const generalPreconditionerApplications = preconditionerApplications;
+  runSolve(InitialGuessHint::Zero);
+
+  EXPECT_EQ(generalOperatorApplications, operatorApplications + 1);
+  EXPECT_EQ(generalPreconditionerApplications, preconditionerApplications + 1);
+}
+
+TEST(KrylovSolver, Pcg_ZeroRhsWithKnownZeroHint) {
+  constexpr int kSize = 4;
+  using Vector = ColumnVector<real>;
+
+  auto const b = Vector::Zero(kSize);
+  auto x = Vector::Zero(kSize);
+  int operatorApplications = 0;
+  auto opA = [&](auto const& input, auto& output) {
+    ++operatorApplications;
+    output = input;
+  };
+  int preconditionerApplications = 0;
+  auto opP = [&](auto const& input, auto& output) {
+    ++preconditionerApplications;
+    output = input;
+  };
+  krylov::StatusPreconditionedResidualL2<krylov::UsualDot, real> stopCriterion{1e-6_r, 0_r, 1e10_r};
+
+  auto const status = krylov::PCG(
+      opA,
+      b,
+      x,
+      opP,
+      kSize,
+      stopCriterion,
+      /*abortIfNotSpd*/ false,
+      VerbosityLevel::Silent,
+      /*usePolakRibiere*/ true,
+      InitialGuessHint::Zero);
+
+  EXPECT_EQ(status.convergence, LinearSolverConvergenceStatus::Converged);
+  EXPECT_EQ(status.numIterDone, 0);
+  EXPECT_EQ(operatorApplications, 0);
+  EXPECT_EQ(preconditionerApplications, 1);
+  EXPECT_EQ(x.Norm(), 0_r);
 }
