@@ -20,6 +20,7 @@
 #include "mochi_articulated_actor_params.h"
 #include "mochi_articulated_body.h"
 #include "mochi_blended.h"
+#include "mochi_constraint.h"
 #include "mochi_contact.h"
 #include "mochi_contact_filter.h"
 #include "mochi_context.h"
@@ -1619,6 +1620,11 @@ class ActorInterfaceImpl : public ActorInterface {
     // Destroy controller constraints
     auto const& constraints = reg.get<CControllerConstraints>(e).impl;
     for (auto const& constraint : constraints) {
+      auto& constraintInfo =
+          reg.get<CConstraintInfo>(GetEntityUnchecked(constraint.constraint->GetHandle()));
+      MOCHI_ASSERT_VERBOSE(
+          constraintInfo.isActorOwned, "Pose-controller constraints must be actor-owned.");
+      constraintInfo.isActorOwned = false;
       scene->DestroyConstraint(constraint.constraint);
     }
 

@@ -164,6 +164,7 @@ DestroyAllItemsInArticulatedActor(SceneImpl& scene, entt::registry& registry, en
 
   // Destroy constraints in the articulation.
   for (auto const& constraint : memberConstraintsCopy) {
+    registry.get<CConstraintInfo>(constraint).isActorOwned = false;
     scene.DestroyConstraint(GetConstraintHandle(constraint, scene.GetHandle()));
   }
 
@@ -184,6 +185,7 @@ static void DestroyActorEntity(SceneImpl& scene, entt::registry& registry, entt:
   if (auto* constraintMemberInfo = registry.try_get<CConstraintMemberInfo>(e)) {
     auto constraintsCopy = constraintMemberInfo->constraints;
     for (entt::entity c : constraintsCopy) {
+      registry.get<CConstraintInfo>(c).isActorOwned = false;
       scene.DestroyConstraint(GetConstraintHandle(c, scene.GetHandle()));
     }
   }
@@ -2125,8 +2127,11 @@ void SceneImpl::CreateArticulatedActorJointLimitsImpl(
         dofRangeParams.damping = params.joints[i].limitDamping;
 
         // Create constraint
-        constraints.emplace_back(
-            CreateArticulated3dRotationRangeConstraint(dofRangeParams, ErrorAssert{}));
+        auto* constraint =
+            CreateArticulated3dRotationRangeConstraint(dofRangeParams, ErrorAssert{});
+        _registry.get<CConstraintInfo>(GetEntityUnchecked(constraint->GetHandle())).isActorOwned =
+            true;
+        constraints.emplace_back(constraint);
       } break;
 
       case ArticulatedJointType::Prismatic: // Fallthrough
@@ -2165,8 +2170,10 @@ void SceneImpl::CreateArticulatedActorJointLimitsImpl(
         dofRangeParams.damping = params.joints[i].limitDamping;
 
         // Create constraint
-        constraints.emplace_back(
-            CreateArticulatedSingleDofRangeConstraint(dofRangeParams, ErrorAssert{}));
+        auto* constraint = CreateArticulatedSingleDofRangeConstraint(dofRangeParams, ErrorAssert{});
+        _registry.get<CConstraintInfo>(GetEntityUnchecked(constraint->GetHandle())).isActorOwned =
+            true;
+        constraints.emplace_back(constraint);
       } break;
 
       case ArticulatedJointType::Cycle: // Fallthrough
@@ -2217,6 +2224,8 @@ void SceneImpl::CreateArticulatedActorCycleJointsImpl(
       jointParams.stiffness = params.cycles[i - numLinks].stiffness;
       auto* newConstraint = CreateRigidSphericalJointConstraint(jointParams, error);
       MOCHI_ERROR_RETURN(error);
+      _registry.get<CConstraintInfo>(GetEntityUnchecked(newConstraint->GetHandle())).isActorOwned =
+          true;
       constraints.push_back(newConstraint->GetHandle());
     }
   }
@@ -2928,9 +2937,15 @@ void SceneImpl::DestroyConstraint(ConstraintHandle constraint) {
     return;
   }
 
+  auto& constraintInfo = _registry.get<CConstraintInfo>(constraintEntity);
+  if (constraintInfo.isActorOwned) {
+    MOCHI_LOG_WARNING(
+        "Constraints created automatically while creating or configuring an actor cannot be destroyed individually. Remove the corresponding actor feature, if supported, or destroy the actor.");
+    return;
+  }
+
   // Update CConstraintMemberInfo on each affected actor, so that they no longer point
   // back to this constraint entity.
-  auto& constraintInfo = _registry.get<CConstraintInfo>(constraintEntity);
   std::unordered_set<entt::entity> processedActors;
   for (entt::entity actor : constraintInfo.actors) {
     if (!processedActors.insert(actor).second) {

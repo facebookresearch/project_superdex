@@ -592,6 +592,10 @@ void articulated::compound::AddPoseController(
     WarnOnIgnoredJointTrackingParams(joints->jointTypes, params.jointTracking, isize(links));
   }
 
+  for (auto const& constraint : info) {
+    reg.get<CConstraintInfo>(GetEntityUnchecked(constraint.handle)).isActorOwned = true;
+  }
+
   // Emplace component with all pose constraints
   reg.emplace<CControllerConstraints>(e, std::move(info), std::move(impl));
 

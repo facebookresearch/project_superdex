@@ -209,6 +209,11 @@ struct CConstraintInfo : NoCopy {
   real stiffness = 1_r;
   real damping = 0_r;
   real saturation = -1_r; // Negative means no saturation
+  // Set to true when a constraint is created automatically while creating or configuring an actor.
+  // The flag remains false for all other constraints. While the flag is true,
+  // Scene::DestroyConstraint leaves the constraint intact. Destroying the actor or removing the
+  // corresponding actor feature sets the flag to false before destroying the constraint.
+  bool isActorOwned = false;
   // True if the constraint involves link actors from different articulations or a mix of link
   // actors and non-link actors.
   bool hasMixedLinks = false;

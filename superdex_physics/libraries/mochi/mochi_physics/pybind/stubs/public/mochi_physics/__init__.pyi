@@ -11077,6 +11077,11 @@ class Actor:
         Note:
             Only applicable to articulated actors.
 
+        Note:
+            These constraints are owned by the articulated actor and cannot be destroyed
+            directly with :meth:`~superdex.physics.Scene.destroy_constraint`. They are
+            destroyed with the actor.
+
         See Also:
             :meth:`~superdex.physics.Actor.get_articulated_dof_limits`
         """
@@ -11650,6 +11655,13 @@ class Actor:
 
         Note:
             Only applicable to articulated actors with a pose controller.
+
+        Note:
+            These constraints are owned by the pose controller and cannot be destroyed
+            individually with :meth:`~superdex.physics.Scene.destroy_constraint`.
+            Removing the pose controller with
+            :meth:`~superdex.physics.Actor.remove_articulated_pose_controller` destroys
+            all of its constraints.
 
         See Also:
             :class:`~superdex.physics.PoseConstraintInfo`,
@@ -13506,6 +13518,13 @@ class Scene:
             If ``constraint`` is None, this function has no effect.
 
         Note:
+            Use this function to destroy constraints created through the scene's
+            constraint-creation APIs. It has no effect on constraints created
+            automatically while creating or configuring an actor, such as joint-limit,
+            cycle-joint, or pose-controller constraints. To remove such a constraint,
+            remove the corresponding actor feature, if supported, or destroy the actor.
+
+        Note:
             After the constraint is destroyed, do not use the pointer or its handle.
 
         Warning:
@@ -13528,6 +13547,13 @@ class Scene:
         Note:
             An invalid handle or one that does not currently identify a constraint in
             the scene has no effect.
+
+        Note:
+            Use this function to destroy constraints created through the scene's
+            constraint-creation APIs. It has no effect on constraints created
+            automatically while creating or configuring an actor, such as joint-limit,
+            cycle-joint, or pose-controller constraints. To remove such a constraint,
+            remove the corresponding actor feature, if supported, or destroy the actor.
 
         Note:
             After the constraint is destroyed, do not use its handle.

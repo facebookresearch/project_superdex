@@ -126,6 +126,81 @@ TEST_F(ArticulatedRigidTest, ZeroDof_AllHardMultiLink_NoActorSnle) {
   _scene->Step(1e-2_r);
 }
 
+TEST_F(
+    ArticulatedRigidTest,
+    DestroyConstraint_ActorGeneratedConstraintsCannotBeDestroyedIndividually) {
+  ArticulatedActorParams params;
+  params.joints = {
+      {.type = ArticulatedJointType::Spherical,
+       .minLimit = Real3{-1_r, -1_r, -1_r},
+       .maxLimit = Real3{1_r, 1_r, 1_r}},
+      {.type = ArticulatedJointType::Revolute,
+       .axis = kReal3ZAxis,
+       .minLimit = Real3{0_r, 0_r, -1_r},
+       .maxLimit = Real3{0_r, 0_r, 1_r}}};
+  params.links = {
+      {.parentLink = -1, .shape = _cubeShape, .colliderType = ColliderType::Box},
+      {.parentLink = 0, .shape = _cubeShape, .colliderType = ColliderType::Box}};
+  params.cycles = {{.parentLink = 0, .childLink = 1}};
+  auto* actor = _scene->CreateArticulatedActor(params, test::ExpectOK{});
+  ActorHandle const actorHandle = actor->GetHandle();
+
+  auto const jointLimits = actor->GetArticulatedJointLimitConstraints(test::ExpectOK{});
+  ASSERT_EQ(2, isize(jointLimits));
+  ConstraintHandle const jointLimitHandle = jointLimits[0]->GetHandle();
+
+  DynamicArray<ConstraintHandle> structuralHandles;
+  ConstraintHandle cycleHandle;
+  _scene->ForEachConstraint([&](Constraint* constraint) {
+    structuralHandles.push_back(constraint->GetHandle());
+    if (constraint->GetType() == ConstraintType::RigidSphericalJoint) {
+      cycleHandle = constraint->GetHandle();
+    }
+  });
+  ASSERT_EQ(3, isize(structuralHandles));
+  ASSERT_TRUE(cycleHandle.IsValid());
+
+  actor->AddArticulatedPoseController({}, test::ExpectOK{});
+  auto const poseConstraints = actor->GetArticulatedPoseConstraints(test::ExpectOK{});
+  ASSERT_FALSE(poseConstraints.empty());
+  DynamicArray<ConstraintHandle> poseHandles;
+  poseHandles.reserve(poseConstraints.size());
+  for (auto const& constraint : poseConstraints) {
+    poseHandles.push_back(constraint.handle);
+  }
+
+  DynamicArray<ConstraintHandle> allHandles;
+  _scene->ForEachConstraint(
+      [&](Constraint* constraint) { allHandles.push_back(constraint->GetHandle()); });
+  int const numConstraints = _scene->GetNumConstraints();
+  {
+    test::ExpectLoggingInScope expectWarning(_mochiContext, LogChannel::Warning);
+    _scene->DestroyConstraint(jointLimits[0]);
+    for (ConstraintHandle handle : allHandles) {
+      if (handle != jointLimitHandle) {
+        _scene->DestroyConstraint(handle);
+      }
+    }
+  }
+
+  EXPECT_EQ(numConstraints, _scene->GetNumConstraints());
+  for (ConstraintHandle handle : allHandles) {
+    EXPECT_NE(nullptr, _scene->GetConstraint(handle));
+  }
+
+  actor->RemoveArticulatedPoseController(test::ExpectOK{});
+  for (ConstraintHandle handle : poseHandles) {
+    EXPECT_EQ(nullptr, _scene->GetConstraint(handle));
+  }
+  EXPECT_NE(nullptr, _scene->GetConstraint(jointLimitHandle));
+  EXPECT_NE(nullptr, _scene->GetConstraint(cycleHandle));
+  EXPECT_EQ(3, _scene->GetNumConstraints());
+
+  _scene->DestroyActor(actorHandle);
+  EXPECT_EQ(0, _scene->GetNumActors());
+  EXPECT_EQ(0, _scene->GetNumConstraints());
+}
+
 TEST_F(ArticulatedRigidTest, Rigid_EntitySetSolution) {
   // Get registry
   entt::registry& reg = GetRegistry();

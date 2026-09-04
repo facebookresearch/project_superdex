@@ -690,7 +690,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsActor([[maybe_unused]] py::module_& m
       }
       return result;
     }
-      , "Get the joint-limit constraints of the articulated actor.\n\nReturns:\n    Span of pointers to joint limit constraints.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Only applicable to articulated actors.\n\nSee Also:\n    :meth:`~superdex.physics.Actor.get_articulated_dof_limits`"
+      , "Get the joint-limit constraints of the articulated actor.\n\nReturns:\n    Span of pointers to joint limit constraints.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Only applicable to articulated actors.\n\nNote:\n    These constraints are owned by the articulated actor and cannot be destroyed\n    directly with :meth:`~superdex.physics.Scene.destroy_constraint`. They are\n    destroyed with the actor.\n\nSee Also:\n    :meth:`~superdex.physics.Actor.get_articulated_dof_limits`"
     )
     .def("get_articulated_joint_friction_params", [](mochi::Actor& self) {
       mochi::Error error;
@@ -926,7 +926,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsActor([[maybe_unused]] py::module_& m
       }
       return result;
     }
-      , "Get the pose controller's constraints.\n\nReturns:\n    Span of pose constraint information.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Only applicable to articulated actors with a pose controller.\n\nSee Also:\n    :class:`~superdex.physics.PoseConstraintInfo`,\n    :meth:`~superdex.physics.Actor.get_articulated_pose_controller_params`,\n    :meth:`~superdex.physics.Actor.set_articulated_pose_controller_params`"
+      , "Get the pose controller's constraints.\n\nReturns:\n    Span of pose constraint information.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Only applicable to articulated actors with a pose controller.\n\nNote:\n    These constraints are owned by the pose controller and cannot be destroyed\n    individually with :meth:`~superdex.physics.Scene.destroy_constraint`.\n    Removing the pose controller with\n    :meth:`~superdex.physics.Actor.remove_articulated_pose_controller` destroys\n    all of its constraints.\n\nSee Also:\n    :class:`~superdex.physics.PoseConstraintInfo`,\n    :meth:`~superdex.physics.Actor.get_articulated_pose_controller_params`,\n    :meth:`~superdex.physics.Actor.set_articulated_pose_controller_params`"
     )
     .def("get_articulated_pose_controller_params", [](mochi::Actor& self, mochi::PoseControllerParams& out_params) {
       mochi::Error error;

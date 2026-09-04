@@ -1092,6 +1092,8 @@ class Actor [no_init, no_destruct, use_scene] {
   // @return Span of pointers to joint limit constraints.
   //
   // @note Only applicable to articulated actors.
+  // @note These constraints are owned by the articulated actor and cannot be destroyed directly
+  // with @ref Scene::DestroyConstraint. They are destroyed with the actor.
   //
   // @see GetArticulatedDofLimits
   fn GetArticulatedJointLimitConstraints() -> Span<Constraint* const> [pure, virtual, const, mochi_error, batchable];
@@ -1383,6 +1385,9 @@ class Actor [no_init, no_destruct, use_scene] {
   // @return Span of pose constraint information.
   //
   // @note Only applicable to articulated actors with a pose controller.
+  // @note These constraints are owned by the pose controller and cannot be destroyed individually
+  // with @ref Scene::DestroyConstraint. Removing the pose controller with
+  // @ref RemoveArticulatedPoseController destroys all of its constraints.
   //
   // @see PoseConstraintInfo, GetArticulatedPoseControllerParams, SetArticulatedPoseControllerParams
   fn GetArticulatedPoseConstraints() -> Span<PoseConstraintInfo const> [pure, virtual, const, mochi_error, batchable, no_capi];

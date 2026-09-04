@@ -5866,6 +5866,7 @@
 /// @return Span of pointers to joint limit constraints.
 ///
 /// @note Only applicable to articulated actors.
+/// @note These constraints are owned by the articulated actor and cannot be destroyed directly with @ref mochi::Scene::DestroyConstraint "Scene::DestroyConstraint". They are destroyed with the actor.
 ///
 /// @see @ref mochi::Actor::GetArticulatedDofLimits "GetArticulatedDofLimits"
 ///
@@ -6182,6 +6183,7 @@
 /// @return Span of pose constraint information.
 ///
 /// @note Only applicable to articulated actors with a pose controller.
+/// @note These constraints are owned by the pose controller and cannot be destroyed individually with @ref mochi::Scene::DestroyConstraint "Scene::DestroyConstraint". Removing the pose controller with @ref mochi::Actor::RemoveArticulatedPoseController "RemoveArticulatedPoseController" destroys all of its constraints.
 ///
 /// @see @ref mochi::PoseConstraintInfo "PoseConstraintInfo", @ref mochi::Actor::GetArticulatedPoseControllerParams "GetArticulatedPoseControllerParams", @ref mochi::Actor::SetArticulatedPoseControllerParams "SetArticulatedPoseControllerParams"
 ///
@@ -7196,6 +7198,7 @@
 /// @param[in] constraint Pointer to the constraint to destroy.
 ///
 /// @note If @p constraint is null, this function has no effect.
+/// @note Use this function to destroy constraints created through the scene's constraint-creation APIs. It has no effect on constraints created automatically while creating or configuring an actor, such as joint-limit, cycle-joint, or pose-controller constraints. To remove such a constraint, remove the corresponding actor feature, if supported, or destroy the actor.
 /// @note After the constraint is destroyed, do not use the pointer or its handle.
 ///
 /// @warning The pointer must be null or point to a live constraint owned by this scene. Passing a pointer to a constraint that has been destroyed is undefined behavior.
@@ -7210,6 +7213,7 @@
 /// @param[in] constraint Handle of the constraint to destroy. If valid, it must be owned by this scene.
 ///
 /// @note An invalid handle or one that does not currently identify a constraint in the scene has no effect.
+/// @note Use this function to destroy constraints created through the scene's constraint-creation APIs. It has no effect on constraints created automatically while creating or configuring an actor, such as joint-limit, cycle-joint, or pose-controller constraints. To remove such a constraint, remove the corresponding actor feature, if supported, or destroy the actor.
 /// @note After the constraint is destroyed, do not use its handle.
 ///
 /// @see @ref mochi::Scene::GetConstraint "GetConstraint", @ref mochi::Constraint::GetHandle "Constraint::GetHandle"
