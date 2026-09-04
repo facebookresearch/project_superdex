@@ -19,25 +19,19 @@ import tempfile
 import unittest
 
 import numpy as np
+from arvr.libraries.mochi.mochi_python.rerun_timeline_test_support import (
+    check_default_overlay_timeline,
+    check_overlay_preroll_timeline,
+    check_scene_snapshot_timeline,
+    flush_and_load_rrd as _flush_and_load_rrd,
+    ROOT_JOINT_OFFSET as _ROOT_JOINT_OFFSET,
+)
 from superdex.physics.utils.testing.testcases import (
     add_rigid_cube,
     make_empty_scene,
     make_single_rigid_cube_scene,
     MochiContextTestCase,
 )
-
-
-def _flush_and_load_rrd(save_path):
-    """Flush the active rerun recording and load the .rrd file."""
-    import gc
-    import time
-
-    import rerun as rr
-
-    rr.init("test_flush", recording_id="flush")
-    gc.collect()
-    time.sleep(0.5)
-    return rr.experimental.RrdReader(save_path).stream().collect()
 
 
 def _create_revolute_chain(scene, num_joints=3):
@@ -115,7 +109,7 @@ def _create_revolute_chain(scene, num_joints=3):
         )
         if i == 0:
             joint.parent_link_from_joint = sdp.TransformRT(
-                translation=sdp.Real3(0, 0.2, 0)
+                translation=sdp.Real3(*_ROOT_JOINT_OFFSET)
             )
         joints.append(joint)
         links.append(
@@ -311,6 +305,17 @@ class TestRigidOverlay(MochiContextTestCase):
                 f"Expected 'ghost' in paths: {entity_paths}",
             )
 
+    def test_scene_snapshot_logs_preroll_without_advancing_frame(self):
+        import superdex.physics as sdp
+
+        check_scene_snapshot_timeline(
+            self,
+            create_logger=self._create_logger,
+            make_empty_scene=make_empty_scene,
+            add_rigid_cube=add_rigid_cube,
+            physics_module=sdp,
+        )
+
 
 # ── Articulated overlay tests (playback path) ────────────────────────────
 
@@ -427,26 +432,22 @@ class TestArticulatedOverlay(MochiContextTestCase):
             )
 
     def test_undriven_overlay_poses_land_on_frame_timeline(self):
-        """create_overlay anchors construction-time poses at frame/sim_time 0.
+        """Default overlay construction stays at frame and simulation time zero."""
+        check_default_overlay_timeline(
+            self,
+            create_logger=self._create_logger,
+            make_empty_scene=make_empty_scene,
+            create_revolute_chain=_create_revolute_chain,
+        )
 
-        Regression test: an overlay entity never driven per frame had its
-        initial pose logged only on log_time -- absent from the frame/sim_time
-        timelines the viewer scrubs, so it rendered at the origin there. Nothing
-        here calls log_frame or an update method, so the frame/sim_time
-        timelines exist in the recording only if create_overlay anchored them.
-        """
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = os.path.join(tmpdir, "test.rrd")
-            with (
-                self._create_logger(path) as logger,
-                make_empty_scene() as scene,
-            ):
-                _create_revolute_chain(scene, num_joints=3)
-                logger.create_overlay("ghost", scene=scene)  # deliberately undriven
-            recording = _flush_and_load_rrd(path)
-            index_names = {col.name for col in recording.schema().index_columns()}
-            self.assertIn("frame", index_names, f"index columns: {index_names}")
-            self.assertIn("sim_time", index_names, f"index columns: {index_names}")
+    def test_overlay_setup_preroll_does_not_duplicate_frame_zero_source(self):
+        """Setup poses stay on pre-roll when frame zero receives source poses."""
+        check_overlay_preroll_timeline(
+            self,
+            create_logger=self._create_logger,
+            make_empty_scene=make_empty_scene,
+            create_revolute_chain=_create_revolute_chain,
+        )
 
     def test_hierarchical_entity_paths(self):
         """Links are nested hierarchically, not flat."""

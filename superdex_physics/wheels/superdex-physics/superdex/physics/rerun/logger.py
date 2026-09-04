@@ -357,6 +357,19 @@ class RerunLogger:
 
         self._frame_count += 1
 
+    def log_scene_snapshot(self, *, frame_idx: int, sim_time: float) -> None:
+        """Log the current scene pose without advancing the frame counter."""
+        if self._scene is None:
+            return
+
+        self._sim_time = sim_time
+        if self._cfg.use_timeline:
+            rr.set_time("frame", sequence=frame_idx)
+            rr.set_time("sim_time", duration=sim_time)
+
+        self._update_actor_loggers()
+        self._emit_actor_frame()
+
     def _emit_actor_frame(self) -> None:
         """Emit every actor's current state (and debug draw) at the current
         timeline position.
@@ -462,6 +475,9 @@ class RerunLogger:
         scene: Scene | None = None,
         flat_shading: bool = True,
         anchors: dict[str, str] | None = None,
+        *,
+        setup_frame: int = 0,
+        setup_sim_time: float = 0.0,
     ) -> OverlayLogger:
         """Create a ghost/overlay visualization of the current scene.
 
@@ -483,6 +499,8 @@ class RerunLogger:
                 entity tree starts at the anchor; upstream links are omitted.
                 Supply the anchor's world pose per frame via
                 ``OverlayLogger.set_articulated_pose``.
+            setup_frame: Frame timeline value for construction-time poses.
+            setup_sim_time: Simulation-time value [s] for construction-time poses.
 
         Returns:
             OverlayLogger ready for per-frame transform updates.
@@ -509,13 +527,13 @@ class RerunLogger:
             anchors=anchors or {},
         )
         # OverlayLogger logs static structure + initial (dynamic) poses during
-        # construction. Anchor the frame/sim_time cursor at 0 first so those
+        # construction. Anchor the frame/sim_time cursor first so those
         # initial poses land on the real timelines rather than only log_time
         # (log_frame advances them from here). axis_length is logged static and
         # is unaffected by the cursor.
         if self._cfg.use_timeline:
-            rr.set_time("frame", sequence=0)
-            rr.set_time("sim_time", duration=0.0)
+            rr.set_time("frame", sequence=setup_frame)
+            rr.set_time("sim_time", duration=setup_sim_time)
         return OverlayLogger(
             cfg=cfg,
             scene=target_scene,
