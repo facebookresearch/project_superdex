@@ -272,10 +272,13 @@ MOCHI_FORCE_INLINE void ApplyUm1OnRight(UT&& U, XT&& X) {
   }
 }
 
-template <typename Scalar, typename CheckFtor = AlwaysFalseFtor>
+template <typename Scalar, typename CheckFtor = AlwaysFalseFtor, int kRowsAtCT, int kColsAtCT>
 MOCHI_FORCE_INLINE int Factor(
-    MatrixViewDynLD<Scalar, krylov::kDynamic, krylov::kDynamic, Direction::ColMajor> A,
+    MatrixViewDynLD<Scalar, kRowsAtCT, kColsAtCT, Direction::ColMajor> A,
     CheckFtor&& singularDetection = {}) {
+  static_assert(
+      kRowsAtCT == krylov::kDynamic || kColsAtCT == krylov::kDynamic || kRowsAtCT == kColsAtCT,
+      "A fixed-sized input matrix must be square.");
   MOCHI_ASSERT_VERBOSE(A.Rows() == A.Cols(), "Input matrix must be square.");
   using VType = Simd<Scalar>;
   int singularities = 0;
