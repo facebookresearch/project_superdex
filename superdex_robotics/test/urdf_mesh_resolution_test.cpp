@@ -69,6 +69,37 @@ class UrdfMeshResolutionTest : public testing::Test {
 )";
   }
 
+  // Same, but the mesh is the <collision> geometry instead of <visual>.
+  static std::string SingleMeshCollisionUrdf(std::string_view packageMeshUri) {
+    return std::string(R"(<?xml version="1.0"?>
+<robot name="test_robot">
+  <link name="base_link">
+    <collision>
+      <geometry>
+        <mesh filename=")") +
+        std::string(packageMeshUri) + R"("/>
+      </geometry>
+    </collision>
+  </link>
+</robot>
+)";
+  }
+
+  // Primitive-only collision geometry (no mesh).
+  static std::string SinglePrimitiveCollisionUrdf() {
+    return std::string(R"(<?xml version="1.0"?>
+<robot name="test_robot">
+  <link name="base_link">
+    <collision>
+      <geometry>
+        <cylinder length="0.1" radius="0.02"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>
+)");
+  }
+
   mochi::TempDirCleanup _tempDirCleanup =
       mochi::CreateTempDirectory("urdf_mesh_resolution_test", ExpectOK{});
   fs::path _tempDir = _tempDirCleanup.Path();
@@ -163,4 +194,40 @@ TEST_F(UrdfMeshResolutionTest, UnresolvableMeshPreservesRawReference) {
   EXPECT_EQ(
       std::string(meshRefs.links[0].visual.c_str()), "package://ur_description/meshes/base.dae");
   EXPECT_TRUE(meshRefs.links[0].collision.empty());
+}
+
+// A mesh-bearing <collision> must enable the collider: ColliderType::None is the
+// prefab default, which left imported robots contactless (contact queries and
+// contact forces unavailable).
+TEST_F(UrdfMeshResolutionTest, MeshCollisionEnablesColliderType) {
+  auto const packageDir = _tempDir / "ur_description";
+  auto const urdfPath = packageDir / "urdf" / "robot.urdf";
+  auto const meshPath = packageDir / "meshes" / "base.dae";
+
+  WriteFileText(meshPath, "dummy");
+  WriteFileText(
+      urdfPath, SingleMeshCollisionUrdf("package://ur_description/meshes/base.dae"));
+
+  BotPrefab const prefab = LoadBotPrefabFromUrdfFile(urdfPath.string(), ExpectOK{});
+
+  ASSERT_FALSE(prefab.links.empty());
+  EXPECT_FALSE(prefab.links[0].shapeFile.empty());
+  EXPECT_EQ(static_cast<int>(prefab.links[0].colliderType),
+              static_cast<int>(ColliderType::Auto));
+}
+
+// Primitive-only <collision> geometry keeps the prefab default: the field is not
+// touched and the bot stays contactless.
+TEST_F(UrdfMeshResolutionTest, PrimitiveCollisionKeepsDefaultColliderType) {
+  auto const packageDir = _tempDir / "some_other_dir";
+  auto const urdfPath = packageDir / "urdf" / "robot.urdf";
+
+  WriteFileText(urdfPath, SinglePrimitiveCollisionUrdf());
+
+  BotPrefab const prefab = LoadBotPrefabFromUrdfFile(urdfPath.string(), ExpectOK{});
+
+  ASSERT_FALSE(prefab.links.empty());
+  EXPECT_TRUE(prefab.links[0].shapeFile.empty());
+  EXPECT_EQ(static_cast<int>(prefab.links[0].colliderType),
+              static_cast<int>(ColliderType::None));
 }
