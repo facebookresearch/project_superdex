@@ -48,8 +48,8 @@ static void TestParallelDot(bool singleThreadedMode) {
       return static_cast<bool>(sem1.IsDone());
     };
 
-    krylov::ParallelDot<real> parDot(
-        numWorkers + 3); // Overallocate workers to test 'ReduceNumWorkers'.
+    // Overallocate to test ReduceNumWorkers except when exercising the single-worker fast path.
+    krylov::ParallelDot<real> parDot(numWorkers == 1 ? 1 : numWorkers + 3);
     ParallelBarrier barrier(numWorkers);
     krylov::UsualDot dot = {};
     TaskSemaphore sem(numWorkers);
@@ -97,4 +97,15 @@ static void TestParallelDot(bool singleThreadedMode) {
 TEST(TensorFunctions, ParallelDot) {
   TestParallelDot(/*singleThreadedMode*/ true);
   TestParallelDot(/*singleThreadedMode*/ false);
+}
+
+TEST(TensorFunctions, ParallelDotReducedToSingleWorker) {
+  krylov::ParallelDot<real> parDot(2);
+  parDot.ReduceNumWorkers(1, /*isMaster*/ true);
+
+  krylov::UsualDot dot = {};
+  ColumnVector<real> const x = {{2_r, 3_r}};
+  ColumnVector<real> const y = {{4_r, 5_r}};
+
+  EXPECT_NEAR_EQ(23_r, parDot.Dot(dot, x, y, 0, 2, 0));
 }

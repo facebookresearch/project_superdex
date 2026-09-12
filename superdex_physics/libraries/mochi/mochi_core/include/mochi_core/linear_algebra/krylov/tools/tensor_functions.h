@@ -254,17 +254,26 @@ class ParallelDot final {
   ParallelDot(ParallelDot&&) noexcept = default;
   MOCHI_DECLARE_NO_ASSIGN(ParallelDot);
 
-  explicit ParallelDot(int numWorkers) : _numWorkers(numWorkers) {
+  explicit ParallelDot(int numWorkers)
+      : _numWorkers(numWorkers),
+        _workspace(
+            numWorkers > 1 ? std::make_shared<std::array<std::vector<Scalar>, kStride>>()
+                           : nullptr),
+        _count(
+            numWorkers > 1 ? std::make_shared<std::array<std::atomic<int>, kStride>>() : nullptr) {
     MOCHI_ASSERT_VERBOSE(_numWorkers > 0, "Number of workers must be positive.");
-    for (auto& ws : *_workspace) {
-      ws.resize(_numWorkers);
+    if (_numWorkers > 1) {
+      for (auto& ws : *_workspace) {
+        ws.resize(_numWorkers);
+      }
+      (*_count)[0] = _numWorkers; // Mark 1st dot product as ready.
     }
-    (*_count)[0] = _numWorkers; // Mark 1st dot product as ready.
   }
 
   // Reduce the number of workers that use the parallel dot.
   void ReduceNumWorkers(int numWorkers, bool isMaster) {
-    MOCHI_ASSERT_VERBOSE(numWorkers <= _numWorkers, "Invalid new number of workers.");
+    MOCHI_ASSERT_VERBOSE(
+        numWorkers > 0 && numWorkers <= _numWorkers, "Invalid new number of workers.");
     if (isMaster && numWorkers < _numWorkers) {
       (*_count)[_idx] -= (_numWorkers - numWorkers);
     }
@@ -276,12 +285,16 @@ class ParallelDot final {
       const {
     MOCHI_ASSERT_VERBOSE((workerIdx >= 0) && (workerIdx < _numWorkers));
     MOCHI_ASSERT_VERBOSE((rowStart >= 0) && (rowStart <= rowEnd));
-    auto& workspace = (*_workspace)[_idx];
-    auto& count = (*_count)[_idx];
 
     // Compute contribution from this worker.
     auto const partialResult = static_cast<Scalar>(dot(
         v1.MiddleRows(rowStart, rowEnd - rowStart), v2.MiddleRows(rowStart, rowEnd - rowStart)));
+    if (_numWorkers == 1) {
+      return partialResult;
+    }
+
+    auto& workspace = (*_workspace)[_idx];
+    auto& count = (*_count)[_idx];
 
     // Wait for previous dot product to be completed.
     auto nonZeroCounter = [&count]() { return count != 0; };
@@ -312,10 +325,8 @@ class ParallelDot final {
 
  private:
   int _numWorkers = {};
-  std::shared_ptr<std::array<std::vector<Scalar>, kStride>> const _workspace =
-      std::make_shared<std::array<std::vector<Scalar>, kStride>>();
-  std::shared_ptr<std::array<std::atomic<int>, kStride>> const _count =
-      std::make_shared<std::array<std::atomic<int>, kStride>>();
+  std::shared_ptr<std::array<std::vector<Scalar>, kStride>> _workspace;
+  std::shared_ptr<std::array<std::atomic<int>, kStride>> _count;
   mutable int _idx = 0;
 };
 
