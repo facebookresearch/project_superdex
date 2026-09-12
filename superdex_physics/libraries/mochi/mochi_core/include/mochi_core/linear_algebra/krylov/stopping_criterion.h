@@ -236,8 +236,12 @@ class StatusPreconditionedResidualL2 {
       Idx rowEnd,
       int workerIdx,
       ParallelDot<DotScalar> const& parDot) {
-    MOCHI_ASSERT(!_container.has_value(), "Parallel status check does not support recycling.");
     auto zNormSqr = static_cast<Scalar>(parDot.Dot(_dot, z, z, rowStart, rowEnd, workerIdx));
+    return ParallelCheckStatus(iter, zNormSqr);
+  }
+
+  [[nodiscard]] IterationStatus ParallelCheckStatus(int iter, Scalar zNormSqr) {
+    MOCHI_ASSERT(!_container.has_value(), "Parallel status check does not support recycling.");
     return _check.CheckStatus(iter, zNormSqr);
   }
 

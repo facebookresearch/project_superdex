@@ -71,6 +71,9 @@ static void TestParallelDot(bool singleThreadedMode) {
             }
             auto result = parDot.Dot(dot, x, y, startRow, endRow, workerId);
             EXPECT_NEAR_EQ(static_cast<real>(2 * numWorkers * iter), result);
+            auto const pair = parDot.DotPair(dot, x, x, dot, x, y, startRow, endRow, workerId);
+            EXPECT_NEAR_EQ(static_cast<real>(2 * numWorkers), pair[0]);
+            EXPECT_NEAR_EQ(static_cast<real>(2 * numWorkers * iter), pair[1]);
           }
 
           if (numWorkers > 1) {

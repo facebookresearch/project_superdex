@@ -224,10 +224,14 @@ struct UsualDot {
 };
 
 /* Utility to perform dot products using an existing pool of parallel workers. It can be used to
- * perform an arbitrary number of dot products, one after another. The dot product is a runtime
- * argument so that subsequent dot products can be of different type.
+ * perform an arbitrary number of dot products, one after another, or two dot products in one
+ * reduction. The dot product is a runtime argument so that subsequent dot products can be of
+ * different type.
  *
- * WARNING: Each worker must have a COPY (not a reference) of the parallel dot object.
+ * WARNINGS:
+ * - Each worker must have a COPY (not a reference) of the parallel dot object.
+ * - All workers must make the same collective call in each phase, with matching operations.
+ *   Mixing calls or operations produces invalid results.
  *
  * EXAMPLE:
  *     ParallelDot<real> parDot(5);
@@ -264,7 +268,7 @@ class ParallelDot final {
     MOCHI_ASSERT_VERBOSE(_numWorkers > 0, "Number of workers must be positive.");
     if (_numWorkers > 1) {
       for (auto& ws : *_workspace) {
-        ws.resize(_numWorkers);
+        ws.resize(kMaxDotsPerReduction * _numWorkers);
       }
       (*_count)[0] = _numWorkers; // Mark 1st dot product as ready.
     }
@@ -286,11 +290,53 @@ class ParallelDot final {
     MOCHI_ASSERT_VERBOSE((workerIdx >= 0) && (workerIdx < _numWorkers));
     MOCHI_ASSERT_VERBOSE((rowStart >= 0) && (rowStart <= rowEnd));
 
-    // Compute contribution from this worker.
     auto const partialResult = static_cast<Scalar>(dot(
         v1.MiddleRows(rowStart, rowEnd - rowStart), v2.MiddleRows(rowStart, rowEnd - rowStart)));
+    return Reduce(std::array{partialResult}, workerIdx)[0];
+  }
+
+  // Returns the reduced results as {dot1(v11, v12), dot2(v21, v22)}.
+  template <
+      typename DotType1,
+      typename Vec11,
+      typename Vec12,
+      typename DotType2,
+      typename Vec21,
+      typename Vec22,
+      typename Idx>
+  std::array<Scalar, 2> DotPair(
+      DotType1& dot1,
+      Vec11 const& v11,
+      Vec12 const& v12,
+      DotType2& dot2,
+      Vec21 const& v21,
+      Vec22 const& v22,
+      Idx rowStart,
+      Idx rowEnd,
+      int workerIdx) const {
+    MOCHI_ASSERT_VERBOSE((workerIdx >= 0) && (workerIdx < _numWorkers));
+    MOCHI_ASSERT_VERBOSE((rowStart >= 0) && (rowStart <= rowEnd));
+
+    auto const numRows = rowEnd - rowStart;
+    return Reduce(
+        std::array{
+            static_cast<Scalar>(
+                dot1(v11.MiddleRows(rowStart, numRows), v12.MiddleRows(rowStart, numRows))),
+            static_cast<Scalar>(
+                dot2(v21.MiddleRows(rowStart, numRows), v22.MiddleRows(rowStart, numRows)))},
+        workerIdx);
+  }
+
+ private:
+  static constexpr int kMaxDotsPerReduction = 2;
+
+  template <size_t kNumDots>
+  std::array<Scalar, kNumDots> Reduce(
+      std::array<Scalar, kNumDots> const& partialResults,
+      int workerIdx) const {
+    static_assert(kNumDots <= kMaxDotsPerReduction);
     if (_numWorkers == 1) {
-      return partialResult;
+      return partialResults;
     }
 
     auto& workspace = (*_workspace)[_idx];
@@ -301,29 +347,31 @@ class ParallelDot final {
     BusyWaitFor(nonZeroCounter);
 
     // Update shared workspace, decrease counter and wait for all other workers to be done.
-    workspace[workerIdx] = partialResult;
+    for (size_t i = 0; i < kNumDots; ++i) {
+      workspace[i * _numWorkers + workerIdx] = partialResults[i];
+    }
     int const newCount = --count;
     MOCHI_ASSERT_VERBOSE(newCount >= 0);
     bool const isLast = (newCount == 0);
     auto zeroCounter = [&count]() { return count == 0; };
     BusyWaitFor(zeroCounter);
 
-    // Add contributions from all workers.
-    Scalar const result = HSum(Span(workspace.data(), _numWorkers));
+    std::array<Scalar, kNumDots> results MOCHI_NO_INIT;
+    for (size_t i = 0; i < kNumDots; ++i) {
+      results[i] = HSum(Span(workspace.data() + i * _numWorkers, _numWorkers));
+    }
 
     // Switch index for the next dot product.
     _idx = (_idx + 1) % kStride;
 
-    // Increase counter for the next dot product to indicate it's ready.
+    // Increase counter for the next dot product to indicate it is ready.
     if (isLast) {
       auto& nextCounter = (*_count)[_idx];
       MOCHI_ASSERT_VERBOSE(nextCounter == 0);
       nextCounter += _numWorkers;
     }
-    return result;
+    return results;
   }
-
- private:
   int _numWorkers = {};
   std::shared_ptr<std::array<std::vector<Scalar>, kStride>> _workspace;
   std::shared_ptr<std::array<std::atomic<int>, kStride>> _count;

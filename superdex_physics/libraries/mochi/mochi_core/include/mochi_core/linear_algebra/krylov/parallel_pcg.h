@@ -128,6 +128,11 @@ LinearSolverStatus ParallelPCG(
       std::is_same_v<StopCriterion, StatusResidualPreconditionerInduced<Dot, NonConstScalar>>;
   constexpr bool kCheckStatusComputesRTz =
       std::is_same_v<StopCriterion, StatusResidualPreconditionerInduced<Dot, NonConstScalar>>;
+  // Pairing replaces the status criterion's Dot object with the solver's. This is valid only when
+  // all Dot objects produce identical results for the same inputs. Stateless UsualDot guarantees
+  // it.
+  constexpr bool kPairStatusAndRTz = std::is_same_v<Dot, UsualDot> &&
+      std::is_same_v<StopCriterion, StatusPreconditionedResidualL2<Dot, NonConstScalar>>;
   MOCHI_ASSERT_VERBOSE(
       initialGuessHint != InitialGuessHint::Zero || dot(x, x) == 0,
       "InitialGuessHint::Zero requires an exactly zero initial guess.");
@@ -231,6 +236,7 @@ LinearSolverStatus ParallelPCG(
 
       IterationStatus iterStatus = {};
       NonConstScalar beta = 0;
+      NonConstScalar rTz = 0;
       int iter = 0;
 
       auto computeBetaAndPrecResidual = [&]() {
@@ -245,6 +251,18 @@ LinearSolverStatus ParallelPCG(
         // 'r' from being modified before the solve is complete.
       };
 
+      auto checkPreconditionedStatus = [&]() {
+        if constexpr (kPairStatusAndRTz) {
+          auto const [zNormSqr, rTzNew] =
+              workerParDot.DotPair(dot, z, z, dot, r, z, rowBegin, rowEnd, workerIdx);
+          rTz = rTzNew;
+          return workerStatusCheck.ParallelCheckStatus(iter, zNormSqr);
+        } else {
+          return workerStatusCheck.ParallelCheckStatus(
+              iter, r, z, {}, {}, rowBegin, rowEnd, workerIdx, workerParDot);
+        }
+      };
+
       if (initialGuessHint != InitialGuessHint::Zero) {
         // Pre- and post-ApplyToRange barriers not needed: 'x' is up-to-date and the next 'Dot'
         // prevents 'x' from being modified before the product is complete.
@@ -257,8 +275,7 @@ LinearSolverStatus ParallelPCG(
         // whereas ParallelPCG uses ConcurrentSolve(). Reuse could therefore give iteration 0 a
         // different effective preconditioner from subsequent iterations.
         computeBetaAndPrecResidual();
-        iterStatus = workerStatusCheck.ParallelCheckStatus(
-            iter, r, z, {}, {}, rowBegin, rowEnd, workerIdx, workerParDot);
+        iterStatus = checkPreconditionedStatus();
       } else {
         iterStatus = workerStatusCheck.ParallelCheckStatus(
             iter, r, {}, {}, {}, rowBegin, rowEnd, workerIdx, workerParDot);
@@ -279,10 +296,9 @@ LinearSolverStatus ParallelPCG(
       }
 
       pWorker = zWorker;
-      NonConstScalar rTz{}; // r_0^T z_0
       if constexpr (kCheckStatusComputesRTz) {
         rTz = workerStatusCheck.GetLatestResidualNormSqr();
-      } else {
+      } else if constexpr (!kPairStatusAndRTz) {
         rTz = workerParDot.Dot(dot, r, z, rowBegin, rowEnd, workerIdx);
       }
       for (iter = 1; iter <= maxIter; ++iter) {
@@ -319,11 +335,11 @@ LinearSolverStatus ParallelPCG(
         auto const alpha = rTz / pTAp;
         xWorker += alpha * pWorker; // x_i = x_{i-1} + alpha_i p_i
         rWorker -= alpha * ApWorker; // r_i = r_{i-1} - alpha_i A * p_i
+        auto const rTzPrev = rTz; // The status check may update rTz.
 
         if constexpr (kNeedPrecResidual) {
           computeBetaAndPrecResidual();
-          iterStatus = workerStatusCheck.ParallelCheckStatus(
-              iter, r, z, {}, {}, rowBegin, rowEnd, workerIdx, workerParDot);
+          iterStatus = checkPreconditionedStatus();
         } else {
           iterStatus = workerStatusCheck.ParallelCheckStatus(
               iter, r, {}, {}, {}, rowBegin, rowEnd, workerIdx, workerParDot);
@@ -345,10 +361,9 @@ LinearSolverStatus ParallelPCG(
           return;
         }
 
-        auto const rTzPrev = rTz;
         if constexpr (kCheckStatusComputesRTz) {
           rTz = workerStatusCheck.GetLatestResidualNormSqr();
-        } else {
+        } else if constexpr (!kPairStatusAndRTz) {
           rTz = workerParDot.Dot(dot, r, z, rowBegin, rowEnd, workerIdx);
         }
 
