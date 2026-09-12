@@ -19,6 +19,7 @@
 #include <mochi_core/geometry/any_shape.h>
 #include <mochi_core/geometry/geometry_utils.h>
 #include <mochi_core/geometry/grid_sdf_params.h>
+#include <mochi_core/geometry/scalar_field.h>
 #include <mochi_core/geometry/sdf.h>
 #include <mochi_core/geometry/triangular_mesh.h>
 #include <mochi_core/utils/error.h>
@@ -107,7 +108,7 @@ class GridSdf final : public Sdf {
       std::shared_ptr<TriangularMesh const> const& mesh,
       DenseGrid3D<real>& outDistanceGrid);
 
-  template <class SamplerT>
+  template <GridExtrapolation kExtrapolationType>
   void FindPointContactsImpl(
       Span<Real3 const> points,
       TransformRT const& pointsFromActor,

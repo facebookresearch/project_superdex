@@ -991,6 +991,51 @@ TEST(MochiContact, FindPointContacts_GridSdf) {
       kExpectUnitNormal);
 }
 
+TEST(MochiContact, FindPointContacts_GridSdfBatchSizes) {
+  constexpr Int3 kGridSize{2, 2, 2};
+  Aabb const gridBounds{Real3{-1_r, -1_r, -1_r}, Real3{1_r, 1_r, 1_r}};
+  Aabb const negativeValueBounds{Real3{-1_r, -1_r, -1_r}, Real3{0.5_r, 1_r, 1_r}};
+  auto grid = std::make_shared<DenseGrid3D<real>>(kGridSize, gridBounds, negativeValueBounds);
+  for (int x = 0; x < kGridSize[0]; ++x) {
+    for (int y = 0; y < kGridSize[1]; ++y) {
+      for (int z = 0; z < kGridSize[2]; ++z) {
+        Int3 const index{x, y, z};
+        (*grid)(index) = grid->GetPointOf(index)[0] - 0.5_r;
+      }
+    }
+  }
+  GridSdf const collider{grid, VEye<4>()};
+
+  auto const testCount = [&](int numPoints, real tolerance) {
+    DynamicArray<Real3> points;
+    points.resize_noinit(numPoints);
+    for (int i = 0; i < numPoints; ++i) {
+      auto const t = static_cast<real>(i + 1) / static_cast<real>(numPoints + 1);
+      points[i] = {0.5_r, t - 0.5_r, 0.25_r};
+    }
+
+    ContactDetectionParams const params{.tolerance = tolerance};
+    ContactDetectionResult result;
+    TestPointContactsImpl(points, collider, params, TransformRT{}, result);
+
+    ASSERT_EQ(numPoints, result.sampleIndices.size());
+    for (int i = 0; i < numPoints; ++i) {
+      EXPECT_EQ(i, result.sampleIndices[i]);
+      EXPECT_NEAR_EQ(points[i], result.posColliding[i]);
+      EXPECT_NEAR_EQ(0_r, result.sdfInfo.val[i]);
+      EXPECT_NEAR_EQ(Real3(1_r, 0_r, 0_r), result.sdfInfo.grad[i]);
+    }
+  };
+
+  constexpr int kSize = Simd<real>::kSize;
+  for (real tolerance : {0_r, 0.1_r}) {
+    for (int numPoints = 1; numPoints <= kSize + 1; ++numPoints) {
+      testCount(numPoints, tolerance);
+    }
+    testCount(64 * kSize + kSize + 1, tolerance);
+  }
+}
+
 TEST(MochiContact, FindPointContacts_Sphere) {
   constexpr Real3 kCenter = {1_r, 2_r, 3_r};
   constexpr real kRadius = 0.5_r;

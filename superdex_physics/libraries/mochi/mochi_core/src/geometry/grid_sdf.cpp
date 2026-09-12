@@ -18,6 +18,7 @@
 
 #include <mochi_core/contact/contact_utils.h>
 #include <mochi_core/geometry/model_data.h>
+#include <mochi_core/utils/batch_types.h>
 #include <mochi_core/utils/matrix_utils.h>
 #include <mochi_core/utils/nd_array_utils.h>
 #include <mochi_core/utils/profile.h>
@@ -318,7 +319,7 @@ bool GridSdf::InitializeBruteForce(
   return meshCollider.IsMeshClosed();
 }
 
-template <class SamplerT>
+template <GridExtrapolation kExtrapolationType>
 void GridSdf::FindPointContactsImpl(
     Span<Real3 const> points,
     TransformRT const& pointsFromActor,
@@ -360,7 +361,8 @@ void GridSdf::FindPointContactsImpl(
     boundsInPointSpace = TransformShape_Transposed(pointsFromGridT, boundsInGridSpace);
   }
 
-  static constexpr int kMaxBatchSize = 64 * Simd<real>::kSize;
+  using V = Simd<real>;
+  constexpr int kMaxBatchSize = 64 * V::kSize;
 
   // We will perform a batch of signed distance calculations when this fills up
   int sdBatchSize = 0;
@@ -374,8 +376,6 @@ void GridSdf::FindPointContactsImpl(
   real gradDistances[kMaxBatchSize] MOCHI_NO_INIT;
   int gradIndices[kMaxBatchSize] MOCHI_NO_INIT;
 
-  SamplerT sampler;
-
   auto flushGradBatch = [&]() {
     if (!hasReserved) {
       // Reserve memory the first time we know we have points to add.
@@ -385,29 +385,77 @@ void GridSdf::FindPointContactsImpl(
       outSdf.reserve(numPoints);
       hasReserved = true;
     }
-    Real3 gradients[kMaxBatchSize + 1] MOCHI_NO_INIT; // +1 for SIMD padding
-    sampler.Gradient(
-        *_distanceGrid, Span{&gradPoints[0], gradBatchSize}, Span{&gradients[0], gradBatchSize});
-    for (int i = 0; i < gradBatchSize; ++i) {
-      int pointIndex = gradIndices[i];
-      // The caller expects results in actor-space.
-      Vec4r point = DotVecMat4x4(ToSimd(gradPoints[i], 1_r), _actorFromGridMatT);
-      // Rotate the gradient vector into actor-space using DotVecMat3x3 with the transpose of the
-      // rotation matrix on the right (the transpose is the inverse in this case).
-      Vec4r grad = DotVecMat3x3(Load<Vec4r>(gradients[i].data()), actorFromGridRotT);
-      real sd = gradDistances[i] * _actorFromGridScale;
+    int const outputOffset = isize(outIndices);
+    int const newOutputSize = outputOffset + gradBatchSize;
+    outIndices.resize_noinit(newOutputSize);
+    outContacts.resize_noinit(newOutputSize);
+    outSdf.resize_noinit(newOutputSize);
+    std::copy_n(&gradIndices[0], gradBatchSize, &outIndices[outputOffset]);
 
-      // Output the result
-      outIndices.push_back(pointIndex);
-      outContacts.push_back(ToReal3(point));
-      outSdf.push_back(sd, ToReal3(grad));
+    int constexpr kGradientBatchSize = V::kSize;
+    auto const actorFromGridLinearBatchT = Broadcast3x3<V>(_actorFromGridMatT);
+    auto const actorFromGridTranslationBatch = Broadcast3<V>(_actorFromGridMatT[3]);
+    auto const actorFromGridRotBatchT = Broadcast3x3<V>(actorFromGridRotT);
+
+    int i = 0;
+    for (; i + kGradientBatchSize <= gradBatchSize; i += kGradientBatchSize) {
+      using V3 = BatchReal3<kGradientBatchSize>;
+      V3 pointsInGridSpace MOCHI_NO_INIT;
+      LoadTransposed(&gradPoints[i][0], pointsInGridSpace);
+
+      V3 gradientsInGridSpace MOCHI_NO_INIT;
+      _distanceGrid->TrilinearSampleBatch<
+          kGradientBatchSize,
+          kExtrapolationType,
+          /*kComputeValues*/ false,
+          /*kComputeGradients*/ true>(pointsInGridSpace, nullptr, &gradientsInGridSpace);
+
+      // The caller expects results in actor-space.
+      auto const pointsInActorSpace =
+          DotVecMat(pointsInGridSpace, actorFromGridLinearBatchT) + actorFromGridTranslationBatch;
+      // Rotate gradients using the transpose of the rotation matrix on the right (the transpose is
+      // the inverse in this case).
+      auto const gradientsInActorSpace = DotVecMat(gradientsInGridSpace, actorFromGridRotBatchT);
+      V const signedDistances = Load<V>(&gradDistances[i]) * _actorFromGridScale;
+
+      StoreTransposed(&outContacts[outputOffset + i][0], pointsInActorSpace);
+      Store(&outSdf.val[outputOffset + i], signedDistances);
+      StoreTransposed(&outSdf.grad[outputOffset + i][0], gradientsInActorSpace);
+    }
+
+    // Processing the tail point-by-point is faster than padding it to a full batch based on
+    // measured workloads.
+    if (i < gradBatchSize) {
+      int const tailSize = gradBatchSize - i;
+      MOCHI_ASSERT_VERBOSE(
+          tailSize < kGradientBatchSize, "Gradient tail must be smaller than the SIMD batch size.");
+
+      // The unused final slot keeps the tail's last Vec4r load in bounds.
+      Real3 gradients[kGradientBatchSize] MOCHI_NO_INIT;
+      _distanceGrid->TrilinearSampleGradient(
+          Span{&gradPoints[i], tailSize},
+          Span{&gradients[0], tailSize},
+          TrilinearSamplerOptions<kExtrapolationType>{});
+      for (int tailIndex = 0; tailIndex < tailSize; ++tailIndex) {
+        int const inputIndex = i + tailIndex;
+        int const outputIndex = outputOffset + inputIndex;
+        Vec4r const point = DotVecMat4x4(ToSimd(gradPoints[inputIndex], 1_r), _actorFromGridMatT);
+        Vec4r const grad =
+            DotVecMat3x3(Load<Vec4r>(gradients[tailIndex].data()), actorFromGridRotT);
+
+        outContacts[outputIndex] = ToReal3(point);
+        outSdf.val[outputIndex] = gradDistances[inputIndex] * _actorFromGridScale;
+        outSdf.grad[outputIndex] = ToReal3(grad);
+      }
     }
     gradBatchSize = 0;
   };
 
   auto flushSdBatch = [&]() {
-    // Transpose points
-    sampler(*_distanceGrid, Span{&sdPoints[0], sdBatchSize}, Span{&distances[0], sdBatchSize});
+    _distanceGrid->TrilinearSample(
+        Span{&sdPoints[0], sdBatchSize},
+        Span{&distances[0], sdBatchSize},
+        TrilinearSamplerOptions<kExtrapolationType>{});
     for (int i = 0; i < sdBatchSize; ++i) {
       if (distances[i] <= toleranceInGridSpace) {
         MOCHI_ASSERT_VERBOSE(gradBatchSize < std::size(gradPoints));
@@ -500,10 +548,10 @@ void GridSdf::FindPointContacts(
       "Grid SDF negative-value bounds must be finite and contained within grid bounds.");
   real const toleranceInGridSpace = params.tolerance / _actorFromGridScale;
   if (minGridPadding >= toleranceInGridSpace) {
-    FindPointContactsImpl<TrilinearSdfGridInteriorSampler<real>>(
+    FindPointContactsImpl<GridExtrapolation::Unsupported>(
         points, pointsFromActor, params, outIndices, outContacts, outSdf);
   } else {
-    FindPointContactsImpl<TrilinearSdfGridUpperBoundSampler<real>>(
+    FindPointContactsImpl<GridExtrapolation::UpperBound>(
         points, pointsFromActor, params, outIndices, outContacts, outSdf);
   }
 }
