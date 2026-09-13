@@ -16,19 +16,16 @@
 
 #include <mochi_core/linear_algebra/krylov/async_pcg.h>
 #include <mochi_core/linear_algebra/krylov/identity_prec.h>
-#include <mochi_core/linear_algebra/krylov/parallel_pcg.h>
 #include <mochi_core/linear_algebra/krylov/pcg.h>
 #include <mochi_core/linear_algebra/matrix.h>
 #include <mochi_core/solvers/krylov_solver.h>
 #include <mochi_core/solvers/linear_solver.h>
 #include <mochi_core/test/mochi_test_helpers.h>
-#include <mochi_core/utils/task_scheduler.h>
 
 #include <gtest/gtest.h>
 
 #include <limits>
 #include <memory>
-#include <vector>
 
 #include "krylov_solver_test_helpers.h"
 
@@ -141,81 +138,6 @@ static void TestPcg(bool singleThreadedMode) {
     // With arbitrary non-zero initial guess, A and P.
     sol = Scalar(0.3) * ref;
     info = krylov::PCG(
-        A,
-        b,
-        sol,
-        P,
-        maxIter,
-        pcgStopper,
-        /*abortIfNotSpd*/ false,
-        VerbosityLevel::Warning,
-        /*usePolakRibiere*/ true,
-        InitialGuessHint::Unknown,
-        dot,
-        factory);
-    runCommonChecks(pcgResRelTol, pcgSolRelTol[itest]);
-    EXPECT_LE(info.numIterDone, matrixSize);
-
-    //
-    // Parallel PCG
-    //
-
-    // With Polak-Ribiere formula.
-    sol.SetZero();
-    info = krylov::ParallelPCG(
-        A,
-        AsView(b),
-        solView,
-        P,
-        maxIter,
-        pcgStopper,
-        false,
-        VerbosityLevel::Warning,
-        true,
-        InitialGuessHint::Zero,
-        dot,
-        factory);
-    runCommonChecks(pcgResRelTol, pcgSolRelTol[itest]);
-    EXPECT_LE(info.numIterDone, matrixSize);
-
-    // With Fletcher-Reeves formula.
-    sol.SetZero();
-    info = krylov::ParallelPCG(
-        A,
-        b,
-        sol,
-        P,
-        maxIter,
-        pcgStopper,
-        /*abortIfNotSpd*/ false,
-        VerbosityLevel::Warning,
-        /*usePolakRibiere*/ false,
-        InitialGuessHint::Zero,
-        dot,
-        factory);
-    runCommonChecks(pcgResRelTol, pcgSolRelTol[itest]);
-    EXPECT_LE(info.numIterDone, matrixSize);
-
-    // With the solution as initial guess.
-    info = krylov::ParallelPCG(
-        A,
-        b,
-        sol,
-        P,
-        maxIter,
-        pcgStopper,
-        /*abortIfNotSpd*/ false,
-        VerbosityLevel::Warning,
-        /*usePolakRibiere*/ true,
-        InitialGuessHint::Unknown,
-        dot,
-        factory);
-    runCommonChecks(pcgResRelTol, pcgSolRelTol[itest]);
-    EXPECT_LT(info.numIterDone, 1);
-
-    // With an arbitrary non-zero initial guess.
-    sol = Scalar(0.3) * ref;
-    info = krylov::ParallelPCG(
         A,
         b,
         sol,
