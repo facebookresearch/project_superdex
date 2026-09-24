@@ -72,10 +72,10 @@ class LogRewardAndInfoCallbacks(DefaultCallbacks):
 
         # Log the mean and stdev of each info value.
         for k, v in aggregate_info.items():
-            metrics_logger.log_value(f"info_{k}_mean", np.mean(v), clear_on_reduce=True)
-            metrics_logger.log_value(f"info_{k}_stdev", np.std(v), clear_on_reduce=True)
+            metrics_logger.log_value(f"info_{k}_mean", np.mean(v), reduce="mean")
+            metrics_logger.log_value(f"info_{k}_stdev", np.std(v), reduce="mean")
 
         # Log the mean and stdev rewards.
         rewards = episode.get_rewards()
-        metrics_logger.log_value("reward_mean", np.mean(rewards), clear_on_reduce=True)
-        metrics_logger.log_value("reward_stdev", np.std(rewards), clear_on_reduce=True)
+        metrics_logger.log_value("reward_mean", np.mean(rewards), reduce="mean")
+        metrics_logger.log_value("reward_stdev", np.std(rewards), reduce="mean")
