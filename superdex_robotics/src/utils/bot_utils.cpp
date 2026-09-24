@@ -436,6 +436,31 @@ void superdex::robotics::ApplyMod(
     }
     botPrefab.cycles.push_back(offsetCycle);
   }
+  // Append child linear transmissions and spatial tendons (e.g. a hand's coupled finger
+  // joints), prefixing their names like joints and links. Joint i travels with link i, so
+  // joint references (jointIndices, LinearJoint routing) and link references (Waypoint
+  // routing) take the same offset. Preserve malformed indices for validation.
+  auto offsetChildIndex = [&](int& idx) {
+    if (idx >= 0 && idx < childNumLinks) {
+      idx += linkOffset;
+    }
+  };
+  for (auto const& transmission : child.linearTransmissions) {
+    BotLinearTransmissionPrefab offsetTransmission = transmission;
+    offsetTransmission.name = mod.prefix + transmission.name;
+    for (int& jointIdx : offsetTransmission.jointIndices) {
+      offsetChildIndex(jointIdx);
+    }
+    botPrefab.linearTransmissions.push_back(std::move(offsetTransmission));
+  }
+  for (auto const& tendon : child.spatialTendons) {
+    BotSpatialTendonPrefab offsetTendon = tendon;
+    offsetTendon.name = mod.prefix + tendon.name;
+    for (auto& element : offsetTendon.routingElements) {
+      offsetChildIndex(element.index);
+    }
+    botPrefab.spatialTendons.push_back(std::move(offsetTendon));
+  }
 }
 
 void superdex::robotics::ApplyMod(

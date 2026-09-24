@@ -650,6 +650,74 @@ TEST_F(SortBotPrefabTest, ApplyMod_AttachBot_PrefixesContactOverrides) {
   EXPECT_TRUE(base.contactOverrides[0].enable);
 }
 
+// ApplyMod(AttachBot) appends the attached child's linear transmissions and spatial
+// tendons (e.g. a hand's coupled finger joints), prefixing their names and offsetting
+// their joint/link indices into the merged arrays, so the coupling survives mounting.
+TEST_F(SortBotPrefabTest, ApplyMod_AttachBot_OffsetsTransmissionAndTendonIndices) {
+  // Base bot: root -> link, so the child's indices must be offset by two.
+  BotPrefab base;
+  base.name = "base";
+  base.links.push_back(MakeLink("root", kIndexNone));
+  base.links.push_back(MakeLink("link", 0));
+  base.joints.push_back(MakeHardJoint("root_joint"));
+  base.joints.push_back(MakeRevoluteJoint("link_joint"));
+  base.defaultPose = {0.0_r};
+  RebuildBotData(base, ExpectOK{});
+
+  // Child bot: croot -> proximal -> distal, with the distal joint coupled to the
+  // proximal one and a tendon routed from croot over the proximal joint.
+  InMemoryBotLoader loader;
+  loader.child.name = "child";
+  loader.child.links.push_back(MakeLink("croot", kIndexNone));
+  loader.child.links.push_back(MakeLink("proximal", 0));
+  loader.child.links.push_back(MakeLink("distal", 1));
+  loader.child.joints.push_back(MakeHardJoint("croot_joint"));
+  loader.child.joints.push_back(MakeRevoluteJoint("proximal_joint"));
+  loader.child.joints.push_back(MakeRevoluteJoint("distal_joint"));
+  loader.child.defaultPose = {0.0_r, 0.0_r};
+  BotLinearTransmissionPrefab mimic;
+  mimic.name = "distal_mimic";
+  mimic.jointIndices = {1, 2};
+  mimic.jointCoefficients = {1.2_r, -1.0_r};
+  mimic.jointAxisDisps = {0.0_r, 0.0_r};
+  loader.child.linearTransmissions.push_back(mimic);
+  BotSpatialTendonPrefab tendon;
+  tendon.name = "flexor";
+  RoutingElement waypoint;
+  waypoint.type = RoutingElementType::Waypoint;
+  waypoint.index = 0; // link croot
+  RoutingElement linearJoint;
+  linearJoint.type = RoutingElementType::LinearJoint;
+  linearJoint.index = 1; // joint proximal_joint
+  linearJoint.coefficient = 0.01_r;
+  tendon.routingElements = {waypoint, linearJoint};
+  loader.child.spatialTendons.push_back(tendon);
+  RebuildBotData(loader.child, ExpectOK{});
+
+  AttachBot mod;
+  mod.parentLinkName = "link";
+  mod.prefix = "hand/";
+  mod.path = "child.superdex_bot";
+  mod.joint = MakeHardJoint("attach_joint");
+  ApplyMod(base, mod, loader, /*validate=*/false, ExpectOK{});
+  RebuildBotData(base, ExpectOK{});
+
+  ASSERT_EQ(isize(base.linearTransmissions), 1);
+  auto const& transmission = base.linearTransmissions[0];
+  EXPECT_EQ(transmission.name, "hand/distal_mimic");
+  ASSERT_EQ(isize(transmission.jointIndices), 2);
+  EXPECT_EQ(base.joints[transmission.jointIndices[0]].name, "hand/proximal_joint");
+  EXPECT_EQ(base.joints[transmission.jointIndices[1]].name, "hand/distal_joint");
+  EXPECT_EQ(transmission.jointCoefficients[0], 1.2_r);
+
+  ASSERT_EQ(isize(base.spatialTendons), 1);
+  auto const& elements = base.spatialTendons[0].routingElements;
+  EXPECT_EQ(base.spatialTendons[0].name, "hand/flexor");
+  ASSERT_EQ(isize(elements), 2);
+  EXPECT_EQ(base.links[elements[0].index].name, "hand/croot");
+  EXPECT_EQ(base.joints[elements[1].index].name, "hand/proximal_joint");
+}
+
 // Single-link bot: the root is the only link and therefore the only leaf.
 TEST_F(SortBotPrefabTest, FindLeafLinkIndices_SingleLink) {
   BotPrefab bp;
