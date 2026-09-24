@@ -16,6 +16,7 @@
 
 from superdex.lab.sensors.tactile import (
     TACTILE_PAD_SENSOR_TYPE,
+    SdfProximityTarget,
     TactilePadParams,
     TactilePadSensor,
     TactileReading,
@@ -25,6 +26,7 @@ from superdex.lab.sensors.tactile import (
 
 __all__ = [
     "TACTILE_PAD_SENSOR_TYPE",
+    "SdfProximityTarget",
     "TactilePadParams",
     "TactilePadSensor",
     "TactileReading",

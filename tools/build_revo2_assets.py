@@ -43,7 +43,7 @@ Run from the repository root. Writes ``assets/bots/hands/revo2/{left,right}/``:
 - ``render/<link>_render.glb`` -- visual mesh (Y-up glTF, as SuperDex expects).
 - ``revo2_<side>.superdex_bot`` -- kinematics, dynamics, the five mimic couplings as rigid
   linear transmissions, rest-pose contact overrides, and a ``TACTILE_PAD`` sensor on every
-  fingertip ``*_touch_link``.
+  fingertip ``*_touch_link``, modeled on the Revo2 Touch (capacitive) sensor.
 
 The build is deterministic for a given upstream commit, so rerunning it after an upstream
 bump regenerates every file and the diff shows what changed.
@@ -82,9 +82,16 @@ FINGERS = ("thumb", "index", "middle", "ring", "pinky")
 # Registered by superdex.lab.sensors.tactile; a build without it skips the sensor with a
 # warning and still loads the bot.
 TACTILE_SENSOR_TYPE = "TACTILE_PAD"
-# Taxel grid (rows along the finger, columns across it). The Revo2 does not publish a
-# taxel layout, so this is a simulation choice sized to ~2 mm taxels on the finger pads.
-TACTILE_GRID = {"thumb": (8, 8), "default": (8, 6)}
+# Revo2 Touch (capacitive) fingertip sensor: one sensing element per finger reporting a
+# 3D force (normal, tangential, direction) and proximity. Specs: 0-25 N, 0.1 N
+# resolution, 0-1 cm proximity (BrainCo; see assets/bots/hands/revo2/README.md).
+TACTILE_PARAMS = {
+    "rows": 1,
+    "cols": 1,
+    "saturation": 25.0,
+    "resolution": 0.1,
+    "proximity_range": 0.01,
+}
 
 # Silicone fingertip pads grip; the housing is hard plastic.
 PAD_FRICTION = 1.0
@@ -560,7 +567,6 @@ def build_side(
             frame = pad_sensor_frame(
                 colliders[name], colliders[distal], pad_from_distal
             )
-            rows, cols = TACTILE_GRID.get(finger, TACTILE_GRID["default"])
             entry["contact"]["coulombFrictionCoefficient"] = PAD_FRICTION
             entry["sensors"] = [
                 {
@@ -577,8 +583,7 @@ def build_side(
                                 "translation": rounded(frame["translation"]),
                             },
                             "size": rounded(frame["size"]),
-                            "rows": rows,
-                            "cols": cols,
+                            **TACTILE_PARAMS,
                         },
                         sort_keys=True,
                     ),

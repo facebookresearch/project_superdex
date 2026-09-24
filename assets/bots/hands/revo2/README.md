@@ -10,22 +10,34 @@ assets (commit `92cc697`).
 | | |
 | :-- | :-- |
 | Degrees of freedom | 11 joints, 6 actuated (thumb metacarpal, thumb flexion, index, middle, ring, pinky); each distal joint is coupled to its proximal joint |
-| Tactile sensing | One `TACTILE_PAD` taxel-array sensor on each fingertip pad (`*_touch_link`): 8 x 8 taxels on the thumb, 8 x 6 on the fingers |
+| Tactile sensing | One `TACTILE_PAD` sensor per fingertip pad (`*_touch_link`), modeled on the Revo2 Touch (capacitive): a single sensing element reporting normal force, tangential force and its direction, and proximity |
 | Bot files | `right/revo2_right.superdex_bot`, `left/revo2_left.superdex_bot` |
 | Mounted on an FR3 | [`../../arm_hand_combos/fr3_v2_revo2`](../../arm_hand_combos/fr3_v2_revo2) |
 
 ## Tactile sensors
 
+The sensors model the **Revo2 Touch (capacitive)** fingertip module: one sensing element
+per finger reporting a 3D force (normal force, tangential force and its direction) and
+proximity. As in BrainCo's SDK (`TouchFingerItem`: `normal_force1`,
+`tangential_force1`, `tangential_direction1`, `self_proximity1`), each fingertip is a
+single sensing point, with the published range of 0-25 N, 0.1 N resolution and 0-1 cm
+proximity. The internal electrode layout (6 capacitive channels per finger) is not
+published and is not modeled.
+
 The Revo2's fingertips carry separate pad links (`*_touch_link`) that sit in a pocket on
 the volar side of each distal link and protrude 4-7 mm, so contacts on the grasping
-surface land on the pad. Each pad declares a `TACTILE_PAD` sensor whose frame lies on the
-pad surface (+z outward, +y toward the fingertip). The sensor type is implemented in
-Python by [`superdex.lab.sensors.tactile`](../../../../superdex_lab/superdex/lab/sensors/tactile.py)
+surface land on the pad. Each pad declares a `TACTILE_PAD` sensor with a `1 x 1` grid;
+its frame lies on the pad surface (+z outward, +y toward the fingertip), and proximity is
+measured from the frame origin to the nearest registered object (1.0 while touching). The
+sensor type is implemented in Python by
+[`superdex.lab.sensors.tactile`](../../../../superdex_lab/superdex/lab/sensors/tactile.py)
 and must be registered on the robotics context before `create_bot()`; builds without it
-skip the sensors with a warning and still load the hand.
+skip the sensors with a warning and still load the hand. The same sensor type supports
+denser grids (e.g. the pressure-sensitive Revo2 variant's 9-point fingertips) through
+the `rows`/`cols` parameters.
 
-The taxel layout is a simulation choice (about 2 mm taxels): BrainCo does not publish
-one, and the model is geometric rather than calibrated against the Revo2 Touch hardware.
+The model is geometric (ideal contact forces, clipped and quantized to the spec), not a
+calibration of the hardware's capacitance-to-force response.
 
 ## Modifications
 

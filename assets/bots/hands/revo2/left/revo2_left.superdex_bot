@@ -912,7 +912,7 @@
       "sensors": [
         {
           "name": "index_tactile",
-          "params": "{\"cols\": 6, \"pad_from_sensor\": {\"rotation\": [0.43161881, 0.393679103, 0.594647831, 0.552372992], \"translation\": [-9.0093e-05, 1.474e-05, 0.002590291]}, \"rows\": 8, \"size\": [0.01175984, 0.018026602]}",
+          "params": "{\"cols\": 1, \"pad_from_sensor\": {\"rotation\": [0.43161881, 0.393679103, 0.594647831, 0.552372992], \"translation\": [-9.0093e-05, 1.474e-05, 0.002590291]}, \"proximity_range\": 0.01, \"resolution\": 0.1, \"rows\": 1, \"saturation\": 25.0, \"size\": [0.01175984, 0.018026602]}",
           "parentFromSensor": {
             "rotation": [
               0.43161881,
@@ -1025,7 +1025,7 @@
       "sensors": [
         {
           "name": "middle_tactile",
-          "params": "{\"cols\": 6, \"pad_from_sensor\": {\"rotation\": [0.426518406, 0.410120305, 0.57660748, 0.56338903], \"translation\": [-7.1025e-05, -9.75e-07, 0.00291076]}, \"rows\": 8, \"size\": [0.01219834, 0.019859962]}",
+          "params": "{\"cols\": 1, \"pad_from_sensor\": {\"rotation\": [0.426518406, 0.410120305, 0.57660748, 0.56338903], \"translation\": [-7.1025e-05, -9.75e-07, 0.00291076]}, \"proximity_range\": 0.01, \"resolution\": 0.1, \"rows\": 1, \"saturation\": 25.0, \"size\": [0.01219834, 0.019859962]}",
           "parentFromSensor": {
             "rotation": [
               0.426518406,
@@ -1138,7 +1138,7 @@
       "sensors": [
         {
           "name": "pinky_tactile",
-          "params": "{\"cols\": 6, \"pad_from_sensor\": {\"rotation\": [0.41827021, 0.423035164, 0.55949759, 0.577108073], \"translation\": [3.497e-05, -6.7094e-05, 0.001641211]}, \"rows\": 8, \"size\": [0.011849051, 0.018020914]}",
+          "params": "{\"cols\": 1, \"pad_from_sensor\": {\"rotation\": [0.41827021, 0.423035164, 0.55949759, 0.577108073], \"translation\": [3.497e-05, -6.7094e-05, 0.001641211]}, \"proximity_range\": 0.01, \"resolution\": 0.1, \"rows\": 1, \"saturation\": 25.0, \"size\": [0.011849051, 0.018020914]}",
           "parentFromSensor": {
             "rotation": [
               0.41827021,
@@ -1251,7 +1251,7 @@
       "sensors": [
         {
           "name": "ring_tactile",
-          "params": "{\"cols\": 6, \"pad_from_sensor\": {\"rotation\": [0.423485314, 0.410130451, 0.577645731, 0.564604828], \"translation\": [-8.0844e-05, 1.5558e-05, 0.002984606]}, \"rows\": 8, \"size\": [0.011855516, 0.019128519]}",
+          "params": "{\"cols\": 1, \"pad_from_sensor\": {\"rotation\": [0.423485314, 0.410130451, 0.577645731, 0.564604828], \"translation\": [-8.0844e-05, 1.5558e-05, 0.002984606]}, \"proximity_range\": 0.01, \"resolution\": 0.1, \"rows\": 1, \"saturation\": 25.0, \"size\": [0.011855516, 0.019128519]}",
           "parentFromSensor": {
             "rotation": [
               0.423485314,
@@ -1389,7 +1389,7 @@
       "sensors": [
         {
           "name": "thumb_tactile",
-          "params": "{\"cols\": 8, \"pad_from_sensor\": {\"rotation\": [-0.008260114, -0.012158912, 0.993886362, 0.109425003], \"translation\": [-0.001176411, -0.001877699, 8.0668e-05]}, \"rows\": 8, \"size\": [0.020484576, 0.024388359]}",
+          "params": "{\"cols\": 1, \"pad_from_sensor\": {\"rotation\": [-0.008260114, -0.012158912, 0.993886362, 0.109425003], \"translation\": [-0.001176411, -0.001877699, 8.0668e-05]}, \"proximity_range\": 0.01, \"resolution\": 0.1, \"rows\": 1, \"saturation\": 25.0, \"size\": [0.020484576, 0.024388359]}",
           "parentFromSensor": {
             "rotation": [
               -0.008260114,

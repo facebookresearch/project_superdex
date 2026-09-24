@@ -22,7 +22,11 @@ import unittest
 import numpy as np
 import superdex.physics as physics
 import trimesh
-from superdex.lab.sensors.tactile import TactilePadParams, TactilePadSensor
+from superdex.lab.sensors.tactile import (
+    SdfProximityTarget,
+    TactilePadParams,
+    TactilePadSensor,
+)
 
 GRAVITY = 9.81
 WEIGHT_MASS = 0.1  # [kg]
@@ -185,6 +189,52 @@ class TestTactilePadSensor(unittest.TestCase):
             if fast.taxels.sum() > 0:
                 break
         self.assertLess(slow.taxels.sum(), fast.taxels.sum())
+
+    def test_single_element_sensor_reports_the_whole_load(self) -> None:
+        # A 1 x 1 grid is a single sensing element, like a Revo2 Touch fingertip.
+        reading = self._settle(self._sensor(rows=1, cols=1))
+        weight = WEIGHT_MASS * GRAVITY
+        self.assertEqual(reading.taxels.shape, (1, 1))
+        self.assertAlmostEqual(float(reading.taxels[0, 0]), weight, delta=0.1 * weight)
+
+    def test_full_scale_and_resolution_apply_to_the_forces(self) -> None:
+        reading = self._settle(self._sensor(saturation=0.5, resolution=0.1))
+        self.assertAlmostEqual(reading.normal_force, 0.5, places=5)
+        for value in (*reading.force, *reading.taxels.ravel()):
+            self.assertAlmostEqual(value * 10, round(value * 10), places=4)
+
+    def test_proximity_reads_distance_within_range(self) -> None:
+        sensor = self._sensor(proximity_range=0.01)
+        box = _box([0.008] * 3)
+        model = physics.ModelData()
+        model.mesh = physics.MeshData(
+            nodes_per_element=3,
+            coordinates=box.vertices.ravel(),
+            connectivity=box.faces.ravel(),
+        )
+        physics.model.bake_sdf(
+            model,
+            physics.GridSdfParams(
+                resolution_mode=physics.GridSdfResolutionMode.EXPLICIT,
+                resolution_delta=[0.0005] * 3,
+                boundary_padding_dist=0.012,
+                min_grid_resolution=[6, 6, 6],
+            ),
+        )
+        sensor.set_proximity_targets([SdfProximityTarget(self.weight, model.sdf)])
+        top = PAD_SIZE[2]
+        for gap, expected in ((0.004, 0.6), (0.02, 0.0)):
+            # The weight's 8 mm cube sits ``gap`` above the sensing face, at its origin.
+            self.weight.set_root_transform(
+                physics.TransformRT(
+                    physics.Quaternion.identity(), [0.0, 0.0, top + 0.004 + gap]
+                )
+            )
+            self.scene.step(1e-5)  # contact results exist only after a step
+            reading = sensor.compute_signal()
+            self.assertAlmostEqual(reading.proximity, expected, delta=0.05)
+        # Touching reads full scale.
+        self.assertEqual(self._settle(sensor).proximity, 1.0)
 
 
 if __name__ == "__main__":

@@ -12,7 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Taxel-array tactile sensor for fingertip pads, built on SuperDex contact points.
+"""Fingertip tactile pad sensor, built on SuperDex contact points.
+
+One sensor type covers both single-point force sensors and taxel arrays: a ``1 x 1``
+grid models a single sensing element (e.g. the BrainCo Revo2 Touch fingertip, which
+reports one 3D force and a proximity value per finger), a larger grid a pressure array.
 
 A ``TACTILE_PAD`` sensor is declared on a pad link in a ``.superdex_bot`` as
 ``{"type": "TACTILE_PAD", "name": "index_tactile", "params": "<json>"}``, where the params
@@ -37,9 +41,13 @@ the pad link is resolved into its compressive normal load (along the local conta
 normal) and splatted bilinearly onto a ``rows x cols`` grid of taxels covering the pad
 footprint in the sensor x-y plane. Row index grows along +y, column index along +x.
 
+Proximity (optional, ``proximity_range`` > 0) mimics a capacitive electrode: the distance
+from the sensor origin to the nearest registered target object, sampled from the target's
+SDF grid (see :meth:`TactilePadSensor.set_proximity_targets`).
+
 The model is geometric, not calibrated against a particular hardware sensor: it reports
-what an ideal pressure array would see, with optional noise, dead band, saturation and a
-first-order lag to approximate a real sensor's non-idealities.
+what an ideal sensor would see, with optional noise, dead band, resolution, saturation and
+a first-order lag to approximate a real sensor's non-idealities.
 """
 
 from __future__ import annotations
@@ -82,7 +90,11 @@ class TactilePadParams:
     threshold: float = 0.0
     """Dead band [N]: taxel readings below this are reported as zero."""
     saturation: float = float("inf")
-    """Per-taxel full-scale reading [N]."""
+    """Full-scale reading [N]: caps each taxel, the normal force and the shear force."""
+    resolution: float = 0.0
+    """Output quantization step [N] for the taxels and the force summary; 0 disables."""
+    proximity_range: float = 0.0
+    """Proximity sensing range [m]; 0 disables proximity."""
     noise_std: float = 0.0
     """Standard deviation of additive Gaussian noise on each taxel [N]."""
     time_constant: float = 0.0
@@ -134,18 +146,26 @@ class TactileReading:
     """Load-weighted contact location in the sensor x-y plane [m]; zeros without load."""
     num_contacts: int
     """Number of loaded contact points on the pad this step."""
+    proximity: float = 0.0
+    """Closeness of the nearest target within ``proximity_range``: 0 when nothing is in
+    range, rising linearly to 1 at contact, and 1 whenever the pad is loaded (a stand-in
+    for a capacitance change)."""
+    proximity_distance: float = float("inf")
+    """Distance from the sensor origin to the nearest target [m]; inf when out of range
+    or proximity is disabled."""
     in_contact: bool = field(init=False)
 
     def __post_init__(self) -> None:
         self.in_contact = self.num_contacts > 0
 
     def to_vector(self) -> npt.NDArray[np.float32]:
-        """Summary features ``[force(3), normal, tangential, cop(2)]`` as float32."""
+        """Summary features ``[force(3), normal, tangential, cop(2), proximity]``."""
         return np.concatenate(
             [
                 self.force,
                 [self.normal_force, self.tangential_force],
                 self.center_of_pressure,
+                [self.proximity],
             ]
         ).astype(np.float32)
 
@@ -170,6 +190,7 @@ class TactilePadSensor:
         self._pitch = self._size / np.array([p.cols, p.rows], dtype=np.float64)
         self._filtered: npt.NDArray[np.float64] | None = None
         self._rng = np.random.default_rng(p.seed)
+        self._proximity_targets: list[SdfProximityTarget] = []
         # Queries must be registered before the step whose results they report.
         actor.register_query(physics.QueryType.CONTACT_POINTS)
 
@@ -177,6 +198,10 @@ class TactilePadSensor:
     def reset(self) -> None:
         self._filtered = None
         self._rng = np.random.default_rng(self.params.seed)
+
+    def set_proximity_targets(self, targets: list[SdfProximityTarget]) -> None:
+        """Objects the proximity channel can sense (requires ``proximity_range`` > 0)."""
+        self._proximity_targets = list(targets)
 
     @property
     def shape(self) -> tuple[int, int]:
@@ -209,8 +234,15 @@ class TactilePadSensor:
             self._splat(load_map, xy, fn)
 
         load_map = self._apply_response(load_map, dt)
+        net_force = self._limit_force(net_force)
         normal = max(0.0, -float(net_force[2]))
         shear = net_force[:2]
+        distance = self._proximity_distance()
+        if num_contacts and p.proximity_range > 0.0:
+            distance = 0.0  # a touching electrode reads full scale
+        proximity = 0.0
+        if distance < p.proximity_range:
+            proximity = 1.0 - max(distance, 0.0) / p.proximity_range
         return TactileReading(
             taxels=load_map.astype(np.float32),
             force=net_force.astype(np.float32),
@@ -219,7 +251,27 @@ class TactilePadSensor:
             tangential_direction=float(np.arctan2(shear[1], shear[0])),
             center_of_pressure=cop.astype(np.float32),
             num_contacts=num_contacts,
+            proximity=proximity,
+            proximity_distance=distance if distance < p.proximity_range else np.inf,
         )
+
+    def _limit_force(self, force: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+        """Apply the full-scale limit to the normal and shear parts, then quantize."""
+        p = self.params
+        force = force.copy()
+        force[2] = max(force[2], -p.saturation)
+        shear = np.linalg.norm(force[:2])
+        if shear > p.saturation:
+            force[:2] *= p.saturation / shear
+        if p.resolution > 0.0:
+            force = np.round(force / p.resolution) * p.resolution
+        return force
+
+    def _proximity_distance(self) -> float:
+        if self.params.proximity_range <= 0.0 or not self._proximity_targets:
+            return np.inf
+        _, origin = self.world_from_sensor()
+        return min(target.distance(origin) for target in self._proximity_targets)
 
     def _gather_contacts(self):
         """Positions and forces of the contacts on the pad's sensing face, in the sensor
@@ -286,8 +338,50 @@ class TactilePadSensor:
         if p.noise_std > 0.0:
             load_map = load_map + self._rng.normal(0.0, p.noise_std, load_map.shape)
         load_map = np.clip(load_map, 0.0, p.saturation)
+        if p.resolution > 0.0:
+            load_map = np.round(load_map / p.resolution) * p.resolution
         load_map[load_map < p.threshold] = 0.0
         return load_map
+
+
+class SdfProximityTarget:
+    """An object a sensor's proximity channel can sense, via the object's SDF grid.
+
+    Distances come from trilinear interpolation of the precomputed grid, so they reach
+    only as far as the grid's boundary padding; farther points read as out of range.
+    """
+
+    def __init__(self, actor: physics.Actor, sdf: physics.GridSdfData):
+        dims = tuple(int(d) for d in sdf.dims)
+        # Grid values are stored x-major (z varies fastest).
+        self._values = np.asarray(sdf.values, dtype=np.float64).reshape(dims)
+        self._lo = np.asarray(sdf.bounds.min, dtype=np.float64)
+        self._hi = np.asarray(sdf.bounds.max, dtype=np.float64)
+        self._cell = (self._hi - self._lo) / (np.asarray(dims) - 1)
+        if sdf.rotation is not None or sdf.translation is not None or sdf.scale:
+            raise ValueError("transformed SDF grids are not supported")
+        self.actor = actor
+
+    @staticmethod
+    def from_model_file(actor: physics.Actor, path: str) -> SdfProximityTarget:
+        return SdfProximityTarget(actor, physics.model.load_from_file(path).sdf)
+
+    def distance(self, point_world: npt.ArrayLike) -> float:
+        """Signed distance from a world point to the object surface [m]; inf outside
+        the grid."""
+        T = self.actor.get_root_transform()
+        R = Rotation.from_quat(list(T.rotation)).as_matrix()
+        local = (np.asarray(point_world) - np.asarray(T.translation)) @ R
+        if np.any(local < self._lo) or np.any(local > self._hi):
+            return np.inf
+        g = (local - self._lo) / self._cell
+        i0 = np.minimum(np.floor(g).astype(int), np.asarray(self._values.shape) - 2)
+        w = g - i0
+        value = 0.0
+        for corner in np.ndindex(2, 2, 2):
+            weight = np.prod(np.where(corner, w, 1.0 - w))
+            value += weight * self._values[tuple(i0 + corner)]
+        return float(value)
 
 
 def register_tactile_pad_sensor(robotics_context: robotics.RoboticsContext) -> None:
