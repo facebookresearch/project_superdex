@@ -68,9 +68,9 @@ class TestFr3Revo2Env(unittest.TestCase):
 
     def test_spaces(self) -> None:
         structure = self.env.get_observation_space_structure()
-        self.assertEqual(structure["tactile"].shape, (len(FINGERS) * 7,))
-        # 8 x 8 thumb pad plus four 8 x 6 finger pads.
-        self.assertEqual(structure["taxels"].shape, (64 + 4 * 48,))
+        # Per finger, the Revo2 Touch channels: normal, tangential, cos, sin, proximity.
+        self.assertEqual(structure["tactile"].shape, (len(FINGERS) * 5,))
+        self.assertNotIn("taxels", structure)
         self.assertEqual(self.env.action_space.shape, (13,))
 
     def test_reset_is_seeded_and_starts_at_home(self) -> None:
@@ -84,6 +84,18 @@ class TestFr3Revo2Env(unittest.TestCase):
         offset = np.abs(obs["object_pos"][:2] - np.asarray(cfg.object_xy))
         self.assertTrue(np.all(offset <= cfg.object_xy_noise + 1e-6))
 
+    def test_object_rests_on_the_table(self) -> None:
+        obs, info = self.env.reset(seed=0)
+        for _ in range(5):
+            obs, _, _, _, info = self.env.step(_action(self.env))
+        # The paper cup is 11.2 cm tall and stands on the tabletop at z = 0.
+        self.assertAlmostEqual(
+            float(self.env.to_structured_observation(obs)["object_pos"][2]),
+            0.056,
+            delta=0.003,
+        )
+        self.assertLess(abs(info["object_height"]), 0.002)
+
     def test_idle_hold_senses_nothing(self) -> None:
         self.env.reset(seed=0)
         for _ in range(10):
@@ -92,7 +104,9 @@ class TestFr3Revo2Env(unittest.TestCase):
         self.assertFalse(terminated)
         np.testing.assert_allclose(obs["arm_qpos"], ARM_HOME["right"], atol=2e-3)
         self.assertEqual(info["fingers_in_contact"], [])
-        self.assertFalse(obs["taxels"].any())
+        tactile = obs["tactile"].reshape(len(FINGERS), 5)
+        # No force and nothing within the 1 cm proximity range.
+        np.testing.assert_array_equal(tactile[:, [0, 1, 4]], 0.0)
 
     def test_hand_respects_rated_joint_speeds(self) -> None:
         self.env.reset(seed=0)
@@ -125,21 +139,33 @@ class TestFr3Revo2Env(unittest.TestCase):
         self.assertTrue(success)
         self.assertGreater(info["object_height"], 0.1)
         self.assertIn("thumb", info["fingers_in_contact"])
-        self.assertGreaterEqual(len(info["fingers_in_contact"]), 3)
+        self.assertGreaterEqual(len(info["fingers_in_contact"]), 2)
         self.assertGreater(self.env._last_reward["lift"], 0.0)
+        # The tactile grip regulates each touching fingertip near its target force,
+        # within the sensor's 0-25 N range, and a touching pad reads full proximity.
+        for finger in info["fingers_in_contact"]:
+            self.assertLess(info["tactile_normal_force"][finger], 10.0)
+            self.assertEqual(info["tactile_proximity"][finger], 1.0)
 
 
 class TestFr3Revo2EnvVariants(unittest.TestCase):
     def test_tactile_noise_is_seeded_per_env(self) -> None:
-        cfg = Fr3Revo2EnvCfg(tactile_noise_std=0.05)
+        cfg = Fr3Revo2EnvCfg(tactile_noise_std=0.2)
+
+        def forces(env, seed):
+            obs = env.to_structured_observation(env.reset(seed=seed)[0])
+            return obs["tactile"].reshape(len(FINGERS), 5)[:, :2]
+
         with Fr3Revo2Env(cfg) as env_1, Fr3Revo2Env(cfg) as env_2:
             # The two envs share one scene and its sensors; noise must still be per env.
             self.assertIs(env_1._scene, env_2._scene)
-            first = env_1.to_structured_observation(env_1.reset(seed=1)[0])["taxels"]
-            env_2.reset(seed=2)
-            again = env_1.to_structured_observation(env_1.reset(seed=1)[0])["taxels"]
+            first = forces(env_1, 1)
+            forces(env_2, 2)
+            again = forces(env_1, 1)
             self.assertTrue(first.any())  # noise shows up even without contact
             self.assertTrue(np.all(first >= 0))
+            # Still quantized to the sensor's 0.1 N resolution.
+            np.testing.assert_allclose(first * 10, np.round(first * 10), atol=1e-4)
             np.testing.assert_array_equal(first, again)
 
     def test_batched_stepping_on_a_shared_scene_matches_a_lone_env(self) -> None:
@@ -168,16 +194,16 @@ class TestFr3Revo2EnvVariants(unittest.TestCase):
                 for action in actions[i : i + 4]:
                     env_2.step(action)
             for env in (env_1, env_2):
-                for key in ("arm_qpos", "hand_qpos", "object_pos", "taxels"):
+                for key in ("arm_qpos", "hand_qpos", "object_pos", "tactile"):
                     np.testing.assert_array_equal(
                         final_obs(env)[key], expected[key], key
                     )
 
-    def test_without_taxels(self) -> None:
-        with Fr3Revo2Env(Fr3Revo2EnvCfg(include_taxels=False)) as env:
-            self.assertNotIn("taxels", env.get_observation_space_structure())
+    def test_box_object(self) -> None:
+        with Fr3Revo2Env(Fr3Revo2EnvCfg(object_name="box")) as env:
             obs, _ = env.reset(seed=0)
-            self.assertEqual(obs.shape, env.observation_space.shape)
+            center_z = env.to_structured_observation(obs)["object_pos"][2]
+            self.assertAlmostEqual(float(center_z), 0.045, delta=0.003)
 
 
 if __name__ == "__main__":

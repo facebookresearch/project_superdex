@@ -1,0 +1,6 @@
+{
+  "description": "Lift a 4.5 x 4.5 x 9 cm, 100 g box instead of the paper cup.",
+  "env_cfg": {
+    "object_name": "box"
+  }
+}

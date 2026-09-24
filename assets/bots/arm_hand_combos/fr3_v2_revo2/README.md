@@ -26,6 +26,7 @@ through `superdex.lab.gym.utils.bot_loading.load_bot_prefab`, which restores the
 ## Simulation environment
 
 `superdex_gym/Fr3Revo2-v0` (`superdex_lab/superdex/lab/gym/envs/robots/fr3_revo2_env.py`)
-wraps this robot in a grasp-and-lift task with the five tactile pads in the observation.
+wraps this robot in a tabletop grasp-and-lift task (a paper cup on a desk) with the five
+fingertip sensors (force and proximity) in the observation.
 
 **You are responsible for ensuring your use is compatible with all third-party licenses of the referenced sub-assets.**
