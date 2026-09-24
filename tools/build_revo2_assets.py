@@ -25,6 +25,7 @@
 #     "trimesh",
 #     "manifold3d",
 #     "rtree",
+#     "libigl",
 # ]
 # ///
 
@@ -61,6 +62,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import igl
 import manifold3d
 import numpy as np
 import scipy.ndimage as ndi
@@ -389,9 +391,46 @@ def write_collider(mesh: trimesh.Trimesh, recipe: MeshRecipe, path: Path) -> Non
             min_grid_resolution=[6, 6, 6],
         ),
     )
+    repair_sdf_signs(model, mesh)
     physics.model.validate(model)
     path.parent.mkdir(parents=True, exist_ok=True)
     physics.model.save_to_file(model, str(path), physics.FileFormat.H5)
+
+
+def repair_sdf_signs(model: physics.ModelData, mesh: trimesh.Trimesh) -> None:
+    """Re-sign the baked SDF with the mesh's winding number.
+
+    The baker signs each sample by the orientation of its closest triangle, which is
+    ambiguous next to sharp edges: on some of these colliders it left pockets of samples
+    up to 12 mm from the surface with the wrong sign, which made contact pull objects
+    into a link, or let them sink into it. The distances themselves are right, so only
+    their signs change. Afterward the grid must be 1-Lipschitz: a wrong sign would show
+    up as a jump from -d to +d between neighboring samples."""
+    sdf = model.sdf
+    dims = tuple(int(d) for d in sdf.dims)
+    lo = np.asarray(sdf.bounds.min, dtype=np.float64)
+    hi = np.asarray(sdf.bounds.max, dtype=np.float64)
+    axes = [np.linspace(lo[i], hi[i], dims[i]) for i in range(3)]
+    # Grid values are stored x-major (z varies fastest).
+    samples = np.stack(np.meshgrid(*axes, indexing="ij"), axis=-1).reshape(-1, 3)
+    inside = (
+        igl.winding_number(
+            np.asarray(mesh.vertices, dtype=np.float64),
+            np.asarray(mesh.faces, dtype=np.int64),
+            samples,
+        )
+        > 0.5
+    )
+    values = np.abs(np.asarray(sdf.values, dtype=np.float32))
+    values = np.where(inside, -values, values)
+    grid = values.astype(np.float64).reshape(dims)
+    voxel = (hi - lo) / (np.asarray(dims) - 1)
+    for axis in range(3):
+        step = np.abs(np.diff(grid, axis=axis)).max() / voxel[axis]
+        if step > 1.01:
+            raise RuntimeError(f"SDF is not a distance field along axis {axis}")
+    sdf.values = values
+    model.sdf = sdf
 
 
 def write_render_glb(

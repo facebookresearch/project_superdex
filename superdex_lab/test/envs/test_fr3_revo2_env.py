@@ -23,6 +23,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 import numpy as np
+import superdex.physics as physics
 from superdex.lab.gym.envs.robots.fr3_revo2_env import (
     ARM_HOME,
     FINGERS,
@@ -31,6 +32,7 @@ from superdex.lab.gym.envs.robots.fr3_revo2_env import (
     Fr3Revo2EnvCfg,
 )
 from superdex.lab.gym.utils import mochi_helpers
+from superdex.physics.paths import get_assets_root
 
 _GRASP_DEMO = (
     Path(__file__).resolve().parents[2] / "apps" / "envs" / "run_fr3_revo2_grasp.py"
@@ -204,6 +206,32 @@ class TestFr3Revo2EnvVariants(unittest.TestCase):
             obs, _ = env.reset(seed=0)
             center_z = env.to_structured_observation(obs)["object_pos"][2]
             self.assertAlmostEqual(float(center_z), 0.045, delta=0.003)
+
+
+class TestRevo2Colliders(unittest.TestCase):
+    def test_collider_sdfs_have_consistent_signs(self) -> None:
+        """A signed distance changes by at most one voxel between neighboring grid
+        samples. A sample with the wrong sign breaks that (the value jumps from -d to
+        +d), and makes contact pull objects into the link, or let them sink into it."""
+        assets = Path(get_assets_root())
+        paths = sorted(
+            [
+                *assets.glob("bots/hands/revo2/*/collision/*.mochi.h5"),
+                *assets.glob("bots/arm_hand_combos/fr3_v2_revo2/collision/*.mochi.h5"),
+            ]
+        )
+        self.assertEqual(len(paths), 35)  # 17 links per hand, and the FR3 mount
+        for path in paths:
+            with self.subTest(collider=path.name):
+                sdf = physics.model.load_from_file(str(path)).sdf
+                dims = tuple(int(d) for d in sdf.dims)
+                values = np.asarray(sdf.values, dtype=np.float64).reshape(dims)
+                lo = np.asarray(sdf.bounds.min, dtype=np.float64)
+                hi = np.asarray(sdf.bounds.max, dtype=np.float64)
+                voxel = (hi - lo) / (np.asarray(dims) - 1)
+                for axis in range(3):
+                    step = np.abs(np.diff(values, axis=axis)).max() / voxel[axis]
+                    self.assertLessEqual(step, 1.01, f"axis {axis}")
 
 
 if __name__ == "__main__":
