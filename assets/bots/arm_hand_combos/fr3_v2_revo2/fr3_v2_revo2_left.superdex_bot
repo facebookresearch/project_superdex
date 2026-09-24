@@ -1,0 +1,63 @@
+{
+  "base": "//arms/fr3_v2/fr3_v2.superdex_bot",
+  "modifications": [
+    {
+      "AttachLink": {
+        "enabled": true,
+        "joint": {
+          "name": "fr3_revo2_mount_joint",
+          "type": "Hard",
+          "parentLinkFromJoint": {
+            "rotation": [
+              0.0,
+              0.0,
+              -0.382683432,
+              0.923879533
+            ]
+          }
+        },
+        "link": {
+          "centerOfMass": [
+            0.0,
+            0.0,
+            0.006573505
+          ],
+          "mass": 0.101062,
+          "momentOfInertia": [
+            2.2777813e-05,
+            0.0,
+            0.0,
+            2.2777813e-05,
+            0.0,
+            4.2041285e-05
+          ],
+          "name": "fr3_revo2_mount",
+          "renderModel": "render/fr3_revo2_mount_render.glb",
+          "shape": "collision/fr3_revo2_mount_collision.mochi.h5"
+        },
+        "name": "fr3_revo2_mount",
+        "parentLinkName": "fr3_link8"
+      }
+    },
+    {
+      "AttachBot": {
+        "enabled": true,
+        "joint": {
+          "name": "mount_to_revo2_left",
+          "type": "Hard",
+          "parentLinkFromJoint": {
+            "translation": [
+              0.0,
+              0.0,
+              0.015
+            ]
+          }
+        },
+        "name": "revo2_left",
+        "parentLinkName": "fr3_revo2_mount",
+        "path": "//hands/revo2/left/revo2_left.superdex_bot"
+      }
+    }
+  ],
+  "name": "fr3_v2_revo2_left"
+}

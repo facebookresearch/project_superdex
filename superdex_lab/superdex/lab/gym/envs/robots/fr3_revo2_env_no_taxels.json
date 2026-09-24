@@ -1,0 +1,6 @@
+{
+  "description": "Tactile summary features only (per-pad force, shear and center of pressure), without the taxel maps.",
+  "env_cfg": {
+    "include_taxels": false
+  }
+}

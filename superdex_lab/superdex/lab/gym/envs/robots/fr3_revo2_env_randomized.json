@@ -1,0 +1,8 @@
+{
+  "description": "Domain randomization for sim-to-real: noisy taxels, perturbed initial arm pose and a wider object placement.",
+  "env_cfg": {
+    "tactile_noise_std": 0.05,
+    "arm_pose_noise": 0.05,
+    "object_xy_noise": 0.04
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "description": "FR3 with the left-hand Revo2.",
+  "env_cfg": {
+    "hand_side": "left"
+  }
+}
