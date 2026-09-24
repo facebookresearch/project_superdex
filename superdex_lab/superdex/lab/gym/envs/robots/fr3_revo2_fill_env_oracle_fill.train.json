@@ -8,6 +8,7 @@
     "env_runners": {
       "batch_mode": "truncate_episodes"
     },
+    "train_batch_size_per_runner": 1024,
     "training": {
       "clip_param": 0.2,
       "gamma": 0.99,
@@ -16,7 +17,6 @@
       "lr": 0.0003,
       "minibatch_size": 1024,
       "num_epochs": 10,
-      "train_batch_size": 8192,
       "vf_loss_coeff": 0.5
     }
   }
