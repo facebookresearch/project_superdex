@@ -41,7 +41,8 @@ def _load_demo():
 
 @pytest.fixture(scope="module")
 def env():
-    with Fr3Revo2FillEnv(Fr3Revo2FillEnvCfg()) as env:
+    # The scripted grips command absolute targets.
+    with Fr3Revo2FillEnv(Fr3Revo2FillEnvCfg(hand_action="absolute")) as env:
         yield env
 
 
@@ -65,6 +66,18 @@ def test_spaces(env):
         structure = ablation.get_observation_space_structure()
         assert "tactile" not in structure
         assert structure["fill"].shape == (1,)
+
+
+def test_random_delta_actions_explore_without_crushing_at_once():
+    """With delta actions (the default), a random policy does not slam the hand shut:
+    it survives the first 0.6 s (with absolute targets it crushes the cup in ~4 steps)."""
+    with Fr3Revo2FillEnv(Fr3Revo2FillEnvCfg()) as env:
+        env.action_space.seed(0)
+        for seed in range(3):
+            env.reset(seed=seed)
+            for step in range(15):
+                *_, terminated, _, info = env.step(env.action_space.sample())
+                assert not terminated, (seed, step, info.get("terminated_reason"))
 
 
 def test_cup_holds_about_410_ml():

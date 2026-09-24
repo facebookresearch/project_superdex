@@ -35,8 +35,9 @@ less squeeze. A learned policy should beat all of them.
 
 Action (in [-1, 1]):
 
-- ``hand`` (6): absolute targets for the Revo2's actuated joints (thumb metacarpal, thumb
-  flexion, index, middle, ring, pinky). With ``lock_thumb_opposition`` (the default) the
+- ``hand`` (6): changes of the targets of the Revo2's actuated joints (thumb metacarpal,
+  thumb flexion, index, middle, ring, pinky), up to ``hand_action_step`` per step; or,
+  with ``hand_action="absolute"``, the targets themselves. With ``lock_thumb_opposition`` (the default) the
   metacarpal stays fully opposed and its action is ignored.
 
 Observation:
@@ -200,6 +201,13 @@ class Fr3Revo2FillEnvCfg(Fr3Revo2EnvCfg):
     (1 cm/s) lets a held cup creep down by millimeters per second; a paper cup held
     within its friction cone does not move."""
 
+    hand_action: str = "delta"
+    """``"delta"``: each action moves the hand's joint targets by up to
+    ``hand_action_step``, so random exploration drifts instead of slamming the fingers
+    shut (with absolute targets a random policy crushes the cup within a few steps).
+    ``"absolute"``: actions are the targets themselves, mapped onto the joint ranges."""
+    hand_action_step: float = 0.05
+    """Largest joint-target change per control step with delta actions [rad]."""
     lock_thumb_opposition: bool = True
     """Keep the thumb metacarpal fully opposed (its action is ignored)."""
     observe_fill: bool = False
@@ -257,6 +265,10 @@ class Fr3Revo2FillEnv(Fr3Revo2Env):
             cfg = Fr3Revo2FillEnvCfg(**cfg)
         if cfg.object_name != "paper_cup":
             raise ValueError("Fr3Revo2FillEnv fills the paper cup")
+        if cfg.hand_action not in ("delta", "absolute"):
+            raise ValueError(
+                f"hand_action must be 'delta' or 'absolute', got {cfg.hand_action!r}"
+            )
         super().__init__(cfg)
         self._cfg: Fr3Revo2FillEnvCfg = cfg
 
@@ -474,7 +486,12 @@ class Fr3Revo2FillEnv(Fr3Revo2Env):
         goal = self._goal
         goal[self._arm_dofs] = self._arm_script()
         lo, hi = self._hand_lo, self._hand_hi
-        goal[self._hand_dofs] = lo + 0.5 * (hand + 1.0) * (hi - lo)
+        if cfg.hand_action == "delta":
+            goal[self._hand_dofs] = np.clip(
+                self._target[self._hand_dofs] + hand * cfg.hand_action_step, lo, hi
+            )
+        else:
+            goal[self._hand_dofs] = lo + 0.5 * (hand + 1.0) * (hi - lo)
         if cfg.lock_thumb_opposition:
             goal[self._hand_dofs[0]] = hi[0]
         np.clip(goal, self._dof_min, self._dof_max, out=goal)

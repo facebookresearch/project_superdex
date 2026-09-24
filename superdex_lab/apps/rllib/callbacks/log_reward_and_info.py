@@ -50,20 +50,25 @@ class LogRewardAndInfoCallbacks(DefaultCallbacks):
         Upon the end of an episode, log the rewards and info values for that episode.
         """
 
-        # NOTE: This criterion is simplistic, but good enough for now. Change as needed.
         def is_reducible(val) -> bool:
-            return not isinstance(val, str)
+            return isinstance(val, (int, float, bool, np.number, np.bool_))
+
+        def reducible_items(info: dict):
+            """Numeric info values, with dicts of numbers (e.g. one value per finger)
+            expanded to one key per entry. Other values (strings, lists) are skipped."""
+            for key, value in info.items():
+                if is_reducible(value):
+                    yield key, value
+                elif isinstance(value, dict):
+                    for sub, v in value.items():
+                        if is_reducible(v):
+                            yield f"{key}_{sub}", v
 
         # Aggregate all info values per key.
         aggregate_info = {}
         for info in episode.get_infos():
-            for key, value in info.items():
-                if is_reducible(value):
-                    buffer = aggregate_info.get(key, None)
-                    if buffer is None:
-                        aggregate_info[key] = buffer = [value]
-                    else:
-                        buffer.append(value)
+            for key, value in reducible_items(info):
+                aggregate_info.setdefault(key, []).append(value)
 
         # Log the mean and stdev of each info value.
         for k, v in aggregate_info.items():

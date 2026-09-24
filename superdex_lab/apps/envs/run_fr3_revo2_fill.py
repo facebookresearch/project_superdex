@@ -168,7 +168,9 @@ def main() -> None:
 
     env = Fr3Revo2FillEnv(
         Fr3Revo2FillEnvCfg(
-            hand_side=args.side, render_mode="human" if args.render else None
+            hand_side=args.side,
+            hand_action="absolute",  # the grips below command targets directly
+            render_mode="human" if args.render else None,
         )
     )
     grips = ("light", "firm", "tactile") if args.grip == "all" else (args.grip,)
