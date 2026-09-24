@@ -1,0 +1,9 @@
+[Attribution Notice]
+BrainCo Revo2 dexterous hand models provided by BrainCo Inc.
+Product: Revo2 (left and right hands)
+Source: revo2_description (https://github.com/BrainCoTech/revo2_description),
+        commit 92cc697c7fa691db59404ce52344f3969a5ef7a6
+Licensed under the Apache License, Version 2.0; see LICENSE.
+
+The collision, render, and bot files in this directory are derived from those URDF and
+STL assets by tools/build_revo2_assets.py. See README.md for the modifications.

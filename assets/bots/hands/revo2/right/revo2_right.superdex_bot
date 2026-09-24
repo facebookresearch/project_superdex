@@ -1,0 +1,1401 @@
+{
+  "contactOverrides": [
+    {
+      "enable": false,
+      "linkA": "right_base_link",
+      "linkB": "right_thumb_proximal_link"
+    }
+  ],
+  "defaultPose": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "joints": [
+    {
+      "name": "world_joint",
+      "type": "Free"
+    },
+    {
+      "axis": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "effortLimit": 2.0,
+      "friction": {
+        "coulomb": 0.002,
+        "viscous": 0.005
+      },
+      "inertia": 2e-05,
+      "maxLimit": [
+        0.0,
+        1.41,
+        0.0
+      ],
+      "minLimit": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "name": "right_index_proximal_joint",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.052280683,
+          0.078365246,
+          -0.082278934,
+          0.992147063
+        ],
+        "translation": [
+          -0.0021181,
+          0.029568,
+          0.080876
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "effortLimit": 2.0,
+      "friction": {
+        "coulomb": 0.002,
+        "viscous": 0.005
+      },
+      "inertia": 2e-05,
+      "maxLimit": [
+        0.0,
+        1.69297,
+        0.0
+      ],
+      "minLimit": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "name": "right_index_distal_joint",
+      "parentLinkFromJoint": {
+        "translation": [
+          0.0,
+          0.0,
+          0.032
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "maxLimit": [
+        0,
+        0,
+        0
+      ],
+      "minLimit": [
+        0,
+        0,
+        0
+      ],
+      "name": "right_index_tip_joint",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.0,
+          0.235565109,
+          0.0,
+          0.97185857
+        ],
+        "translation": [
+          0.011097,
+          0.0,
+          0.035739
+        ]
+      },
+      "type": "Hard"
+    },
+    {
+      "maxLimit": [
+        0,
+        0,
+        0
+      ],
+      "minLimit": [
+        0,
+        0,
+        0
+      ],
+      "name": "right_index_touch_joint",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.734769295,
+          0.154181855,
+          -0.17809794,
+          0.636099963
+        ],
+        "translation": [
+          0.014497,
+          0.0,
+          0.023303
+        ]
+      },
+      "type": "Hard"
+    },
+    {
+      "axis": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "effortLimit": 2.0,
+      "friction": {
+        "coulomb": 0.002,
+        "viscous": 0.005
+      },
+      "inertia": 2e-05,
+      "maxLimit": [
+        0.0,
+        1.41,
+        0.0
+      ],
+      "minLimit": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "name": "right_middle_proximal_joint",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.017523494,
+          0.074606879,
+          -0.027436944,
+          0.996681471
+        ],
+        "translation": [
+          -0.0045767,
+          0.010051,
+          0.084993
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "effortLimit": 2.0,
+      "friction": {
+        "coulomb": 0.002,
+        "viscous": 0.005
+      },
+      "inertia": 2e-05,
+      "maxLimit": [
+        0.0,
+        1.69297,
+        0.0
+      ],
+      "minLimit": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "name": "right_middle_distal_joint",
+      "parentLinkFromJoint": {
+        "translation": [
+          0.0,
+          0.0,
+          0.037
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "maxLimit": [
+        0,
+        0,
+        0
+      ],
+      "minLimit": [
+        0,
+        0,
+        0
+      ],
+      "name": "right_middle_tip_joint",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.0,
+          0.235565109,
+          0.0,
+          0.97185857
+        ],
+        "translation": [
+          0.012558,
+          0.0,
+          0.040442
+        ]
+      },
+      "type": "Hard"
+    },
+    {
+      "maxLimit": [
+        0,
+        0,
+        0
+      ],
+      "minLimit": [
+        0,
+        0,
+        0
+      ],
+      "name": "right_middle_touch_joint",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.0,
+          0.235566189,
+          0.0,
+          0.971858308
+        ],
+        "translation": [
+          0.015975872,
+          0.0,
+          0.026589427
+        ]
+      },
+      "type": "Hard"
+    },
+    {
+      "axis": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "effortLimit": 2.0,
+      "friction": {
+        "coulomb": 0.002,
+        "viscous": 0.005
+      },
+      "inertia": 2e-05,
+      "maxLimit": [
+        0.0,
+        1.41,
+        0.0
+      ],
+      "minLimit": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "name": "right_pinky_proximal_joint",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.052386955,
+          0.077106528,
+          0.082213567,
+          0.992245494
+        ],
+        "translation": [
+          -0.0023566,
+          -0.029366,
+          0.078694
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "effortLimit": 2.0,
+      "friction": {
+        "coulomb": 0.002,
+        "viscous": 0.005
+      },
+      "inertia": 2e-05,
+      "maxLimit": [
+        0.0,
+        1.69297,
+        0.0
+      ],
+      "minLimit": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "name": "right_pinky_distal_joint",
+      "parentLinkFromJoint": {
+        "translation": [
+          0.0,
+          0.0,
+          0.029
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "maxLimit": [
+        0,
+        0,
+        0
+      ],
+      "minLimit": [
+        0,
+        0,
+        0
+      ],
+      "name": "right_pinky_tip_joint",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.0,
+          0.235565109,
+          0.0,
+          0.97185857
+        ],
+        "translation": [
+          0.010221,
+          0.0,
+          0.032918
+        ]
+      },
+      "type": "Hard"
+    },
+    {
+      "maxLimit": [
+        0,
+        0,
+        0
+      ],
+      "minLimit": [
+        0,
+        0,
+        0
+      ],
+      "name": "right_pinky_touch_joint",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.0,
+          0.235565109,
+          0.0,
+          0.97185857
+        ],
+        "translation": [
+          0.01401,
+          0.0,
+          0.021124
+        ]
+      },
+      "type": "Hard"
+    },
+    {
+      "axis": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "effortLimit": 2.0,
+      "friction": {
+        "coulomb": 0.002,
+        "viscous": 0.005
+      },
+      "inertia": 2e-05,
+      "maxLimit": [
+        0.0,
+        1.41,
+        0.0
+      ],
+      "minLimit": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "name": "right_ring_proximal_joint",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.01753864,
+          0.074063264,
+          0.027427623,
+          0.996722005
+        ],
+        "translation": [
+          -0.0046709,
+          -0.010037,
+          0.083982
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "effortLimit": 2.0,
+      "friction": {
+        "coulomb": 0.002,
+        "viscous": 0.005
+      },
+      "inertia": 2e-05,
+      "maxLimit": [
+        0.0,
+        1.69297,
+        0.0
+      ],
+      "minLimit": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "name": "right_ring_distal_joint",
+      "parentLinkFromJoint": {
+        "translation": [
+          0.0,
+          0.0,
+          0.035
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "maxLimit": [
+        0,
+        0,
+        0
+      ],
+      "minLimit": [
+        0,
+        0,
+        0
+      ],
+      "name": "right_ring_tip_joint",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.0,
+          0.235565109,
+          0.0,
+          0.97185857
+        ],
+        "translation": [
+          0.012266,
+          0.0,
+          0.039501
+        ]
+      },
+      "type": "Hard"
+    },
+    {
+      "maxLimit": [
+        0,
+        0,
+        0
+      ],
+      "minLimit": [
+        0,
+        0,
+        0
+      ],
+      "name": "right_ring_touch_joint",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.0,
+          0.235566189,
+          0.0,
+          0.971858308
+        ],
+        "translation": [
+          0.015439232,
+          0.0,
+          0.026056104
+        ]
+      },
+      "type": "Hard"
+    },
+    {
+      "axis": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "effortLimit": 0.5,
+      "friction": {
+        "coulomb": 0.002,
+        "viscous": 0.005
+      },
+      "inertia": 2e-05,
+      "maxLimit": [
+        0.0,
+        0.0,
+        -1.55334
+      ],
+      "minLimit": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "name": "right_thumb_metacarpal_joint",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.0,
+          0.0,
+          -0.109892605,
+          0.993943467
+        ],
+        "translation": [
+          0.005619,
+          0.019867,
+          0.027825
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "effortLimit": 1.1,
+      "friction": {
+        "coulomb": 0.002,
+        "viscous": 0.005
+      },
+      "inertia": 2e-05,
+      "maxLimit": [
+        1.0472,
+        0.0,
+        0.0
+      ],
+      "minLimit": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "name": "right_thumb_proximal_joint",
+      "parentLinkFromJoint": {
+        "rotation": [
+          0.153479077,
+          0.130103768,
+          0.062637345,
+          0.977544754
+        ],
+        "translation": [
+          0.0,
+          0.014227,
+          0.0
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "axis": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "effortLimit": 1.1,
+      "friction": {
+        "coulomb": 0.002,
+        "viscous": 0.005
+      },
+      "inertia": 2e-05,
+      "maxLimit": [
+        1.15192,
+        0.0,
+        0.0
+      ],
+      "minLimit": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "name": "right_thumb_distal_joint",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.052336079,
+          0.0,
+          0.0,
+          0.998629528
+        ],
+        "translation": [
+          0.0,
+          0.052,
+          0.0
+        ]
+      },
+      "type": "Revolute"
+    },
+    {
+      "maxLimit": [
+        0,
+        0,
+        0
+      ],
+      "minLimit": [
+        0,
+        0,
+        0
+      ],
+      "name": "right_thumb_tip_joint",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.03336903,
+          0.0,
+          0.0,
+          0.999443099
+        ],
+        "translation": [
+          0.0,
+          0.026528781,
+          -0.001773443
+        ]
+      },
+      "type": "Hard"
+    },
+    {
+      "maxLimit": [
+        0,
+        0,
+        0
+      ],
+      "minLimit": [
+        0,
+        0,
+        0
+      ],
+      "name": "right_thumb_touch_joint",
+      "parentLinkFromJoint": {
+        "rotation": [
+          -0.03336903,
+          0.0,
+          0.0,
+          0.999443099
+        ],
+        "translation": [
+          0.0,
+          0.013792752,
+          0.007676599
+        ]
+      },
+      "type": "Hard"
+    }
+  ],
+  "linearTransmissions": [
+    {
+      "allowCompressiveForce": true,
+      "damping": 0.05,
+      "jointAxisDisps": [
+        0.0,
+        0.0
+      ],
+      "jointCoefficients": [
+        1.0945,
+        -1.0
+      ],
+      "jointIndices": [
+        18,
+        19
+      ],
+      "name": "right_thumb_distal_joint_mimic",
+      "stiffness": 50.0
+    },
+    {
+      "allowCompressiveForce": true,
+      "damping": 0.05,
+      "jointAxisDisps": [
+        0.0,
+        0.0
+      ],
+      "jointCoefficients": [
+        1.131,
+        -1.0
+      ],
+      "jointIndices": [
+        1,
+        2
+      ],
+      "name": "right_index_distal_joint_mimic",
+      "stiffness": 50.0
+    },
+    {
+      "allowCompressiveForce": true,
+      "damping": 0.05,
+      "jointAxisDisps": [
+        0.0,
+        0.0
+      ],
+      "jointCoefficients": [
+        1.267,
+        -1.0
+      ],
+      "jointIndices": [
+        5,
+        6
+      ],
+      "name": "right_middle_distal_joint_mimic",
+      "stiffness": 50.0
+    },
+    {
+      "allowCompressiveForce": true,
+      "damping": 0.05,
+      "jointAxisDisps": [
+        0.0,
+        0.0
+      ],
+      "jointCoefficients": [
+        1.252,
+        -1.0
+      ],
+      "jointIndices": [
+        13,
+        14
+      ],
+      "name": "right_ring_distal_joint_mimic",
+      "stiffness": 50.0
+    },
+    {
+      "allowCompressiveForce": true,
+      "damping": 0.05,
+      "jointAxisDisps": [
+        0.0,
+        0.0
+      ],
+      "jointCoefficients": [
+        1.271,
+        -1.0
+      ],
+      "jointIndices": [
+        9,
+        10
+      ],
+      "name": "right_pinky_distal_joint_mimic",
+      "stiffness": 50.0
+    }
+  ],
+  "links": [
+    {
+      "boundaryElementType": "P1Q1",
+      "centerOfMass": [
+        -0.005243781,
+        -0.003403803,
+        0.052126677
+      ],
+      "contact": {
+        "penaltySmoothingHalfDistance": 0.0005,
+        "penaltyThresholdDefault": 0.0005
+      },
+      "mass": 0.238,
+      "momentOfInertia": [
+        2.1091166667e-05,
+        3.8632205e-08,
+        9.3639915e-08,
+        1.4462191476e-05,
+        -1.09576502e-06,
+        7.998114995e-06
+      ],
+      "name": "right_base_link",
+      "renderModel": "render/right_base_link_render.glb",
+      "shape": "collision/right_base_link_collision.mochi.h5"
+    },
+    {
+      "boundaryElementType": "P1Q1",
+      "centerOfMass": [
+        -0.002234952,
+        3.159e-06,
+        0.017640202
+      ],
+      "contact": {
+        "penaltySmoothingHalfDistance": 0.0005,
+        "penaltyThresholdDefault": 0.0005
+      },
+      "mass": 0.009,
+      "momentOfInertia": [
+        2.51945688e-07,
+        1.1977e-11,
+        -6.372756e-09,
+        2.36435336e-07,
+        1.65019e-10,
+        9.3035105e-08
+      ],
+      "name": "right_index_proximal_link",
+      "parentLink": 0,
+      "renderModel": "render/right_index_proximal_link_render.glb",
+      "shape": "collision/right_index_proximal_link_collision.mochi.h5"
+    },
+    {
+      "boundaryElementType": "P1Q1",
+      "centerOfMass": [
+        0.0033017,
+        1.81e-07,
+        0.01420769
+      ],
+      "contact": {
+        "penaltySmoothingHalfDistance": 0.0005,
+        "penaltyThresholdDefault": 0.0005
+      },
+      "mass": 0.009,
+      "momentOfInertia": [
+        3.39968051e-07,
+        -2.724e-12,
+        -8.7504119e-08,
+        3.62244794e-07,
+        -3.692e-12,
+        9.1034511e-08
+      ],
+      "name": "right_index_distal_link",
+      "parentLink": 1,
+      "renderModel": "render/right_index_distal_link_render.glb",
+      "shape": "collision/right_index_distal_link_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mass": 0.0,
+      "momentOfInertia": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "name": "right_index_tip_link",
+      "parentLink": 2
+    },
+    {
+      "centerOfMass": [
+        -0.002999116,
+        0.002497426,
+        -0.000361458
+      ],
+      "contact": {
+        "coulombFrictionCoefficient": 1.0,
+        "penaltySmoothingHalfDistance": 0.0005,
+        "penaltyThresholdDefault": 0.0005
+      },
+      "mass": 0.002,
+      "momentOfInertia": [
+        6.776917e-09,
+        1.499251e-09,
+        -2.16894e-10,
+        3.238013e-09,
+        3.14647e-10,
+        5.367915e-09
+      ],
+      "name": "right_index_touch_link",
+      "parentLink": 2,
+      "renderModel": "render/right_index_touch_link_render.glb",
+      "sensors": [
+        {
+          "name": "index_tactile",
+          "params": "{\"cols\": 6, \"pad_from_sensor\": {\"rotation\": [-0.158927101, 0.709800403, 0.076259081, 0.681989822], \"translation\": [-3.9285e-05, 0.00262083, -0.00044028]}, \"rows\": 8, \"size\": [0.011727402, 0.018151911]}",
+          "parentFromSensor": {
+            "rotation": [
+              -0.158927101,
+              0.709800403,
+              0.076259081,
+              0.681989822
+            ],
+            "translation": [
+              -3.9285e-05,
+              0.00262083,
+              -0.00044028
+            ]
+          },
+          "type": "TACTILE_PAD"
+        }
+      ],
+      "shape": "collision/right_index_touch_link_collision.mochi.h5"
+    },
+    {
+      "boundaryElementType": "P1Q1",
+      "centerOfMass": [
+        -0.002225111,
+        5.256e-06,
+        0.020300778
+      ],
+      "contact": {
+        "penaltySmoothingHalfDistance": 0.0005,
+        "penaltyThresholdDefault": 0.0005
+      },
+      "mass": 0.009,
+      "momentOfInertia": [
+        3.66996237e-07,
+        2.6834e-11,
+        -9.798366e-09,
+        3.52645348e-07,
+        2.57866e-10,
+        1.12233933e-07
+      ],
+      "name": "right_middle_proximal_link",
+      "parentLink": 0,
+      "renderModel": "render/right_middle_proximal_link_render.glb",
+      "shape": "collision/right_middle_proximal_link_collision.mochi.h5"
+    },
+    {
+      "boundaryElementType": "P1Q1",
+      "centerOfMass": [
+        0.004008152,
+        -2.9e-08,
+        0.016497398
+      ],
+      "contact": {
+        "penaltySmoothingHalfDistance": 0.0005,
+        "penaltyThresholdDefault": 0.0005
+      },
+      "mass": 0.009,
+      "momentOfInertia": [
+        5.12550472e-07,
+        2.496e-12,
+        -1.3656937e-07,
+        5.49827694e-07,
+        1.151e-12,
+        1.23560211e-07
+      ],
+      "name": "right_middle_distal_link",
+      "parentLink": 5,
+      "renderModel": "render/right_middle_distal_link_render.glb",
+      "shape": "collision/right_middle_distal_link_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mass": 0.0,
+      "momentOfInertia": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "name": "right_middle_tip_link",
+      "parentLink": 6
+    },
+    {
+      "centerOfMass": [
+        -0.003192892,
+        -1.9e-08,
+        0.002978604
+      ],
+      "contact": {
+        "coulombFrictionCoefficient": 1.0,
+        "penaltySmoothingHalfDistance": 0.0005,
+        "penaltyThresholdDefault": 0.0005
+      },
+      "mass": 0.002,
+      "momentOfInertia": [
+        1.0048666e-08,
+        -7.9e-14,
+        2.259178e-09,
+        8.232281e-09,
+        1.51e-13,
+        4.412722e-09
+      ],
+      "name": "right_middle_touch_link",
+      "parentLink": 6,
+      "renderModel": "render/right_middle_touch_link_render.glb",
+      "sensors": [
+        {
+          "name": "middle_tactile",
+          "params": "{\"cols\": 6, \"pad_from_sensor\": {\"rotation\": [0.426518406, 0.410120305, 0.57660748, 0.56338903], \"translation\": [-7.1025e-05, -9.75e-07, 0.00291076]}, \"rows\": 8, \"size\": [0.01219834, 0.019859962]}",
+          "parentFromSensor": {
+            "rotation": [
+              0.426518406,
+              0.410120305,
+              0.57660748,
+              0.56338903
+            ],
+            "translation": [
+              -7.1025e-05,
+              -9.75e-07,
+              0.00291076
+            ]
+          },
+          "type": "TACTILE_PAD"
+        }
+      ],
+      "shape": "collision/right_middle_touch_link_collision.mochi.h5"
+    },
+    {
+      "boundaryElementType": "P1Q1",
+      "centerOfMass": [
+        -0.00213212,
+        7.75e-06,
+        0.016067158
+      ],
+      "contact": {
+        "penaltySmoothingHalfDistance": 0.0005,
+        "penaltyThresholdDefault": 0.0005
+      },
+      "mass": 0.009,
+      "momentOfInertia": [
+        1.97563214e-07,
+        2.234e-11,
+        -4.584257e-09,
+        1.82023043e-07,
+        1.08028e-10,
+        8.2162471e-08
+      ],
+      "name": "right_pinky_proximal_link",
+      "parentLink": 0,
+      "renderModel": "render/right_pinky_proximal_link_render.glb",
+      "shape": "collision/right_pinky_proximal_link_collision.mochi.h5"
+    },
+    {
+      "boundaryElementType": "P1Q1",
+      "centerOfMass": [
+        0.003079742,
+        -1.55e-07,
+        0.013024697
+      ],
+      "contact": {
+        "penaltySmoothingHalfDistance": 0.0005,
+        "penaltyThresholdDefault": 0.0005
+      },
+      "mass": 0.009,
+      "momentOfInertia": [
+        2.70050429e-07,
+        1.68e-12,
+        -6.7078025e-08,
+        2.85275082e-07,
+        5.106e-12,
+        7.9079871e-08
+      ],
+      "name": "right_pinky_distal_link",
+      "parentLink": 9,
+      "renderModel": "render/right_pinky_distal_link_render.glb",
+      "shape": "collision/right_pinky_distal_link_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mass": 0.0,
+      "momentOfInertia": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "name": "right_pinky_tip_link",
+      "parentLink": 10
+    },
+    {
+      "centerOfMass": [
+        -0.002891424,
+        -2.01e-07,
+        0.00165388
+      ],
+      "contact": {
+        "coulombFrictionCoefficient": 1.0,
+        "penaltySmoothingHalfDistance": 0.0005,
+        "penaltyThresholdDefault": 0.0005
+      },
+      "mass": 0.002,
+      "momentOfInertia": [
+        6.919118e-09,
+        1.22e-13,
+        1.427486e-09,
+        5.343647e-09,
+        7.2e-14,
+        3.282897e-09
+      ],
+      "name": "right_pinky_touch_link",
+      "parentLink": 10,
+      "renderModel": "render/right_pinky_touch_link_render.glb",
+      "sensors": [
+        {
+          "name": "pinky_tactile",
+          "params": "{\"cols\": 6, \"pad_from_sensor\": {\"rotation\": [0.41827021, 0.423035164, 0.55949759, 0.577108073], \"translation\": [3.497e-05, -6.7094e-05, 0.001641211]}, \"rows\": 8, \"size\": [0.011849051, 0.018020914]}",
+          "parentFromSensor": {
+            "rotation": [
+              0.41827021,
+              0.423035164,
+              0.55949759,
+              0.577108073
+            ],
+            "translation": [
+              3.497e-05,
+              -6.7094e-05,
+              0.001641211
+            ]
+          },
+          "type": "TACTILE_PAD"
+        }
+      ],
+      "shape": "collision/right_pinky_touch_link_collision.mochi.h5"
+    },
+    {
+      "boundaryElementType": "P1Q1",
+      "centerOfMass": [
+        -0.002344945,
+        5.88e-06,
+        0.019177403
+      ],
+      "contact": {
+        "penaltySmoothingHalfDistance": 0.0005,
+        "penaltyThresholdDefault": 0.0005
+      },
+      "mass": 0.009,
+      "momentOfInertia": [
+        3.14177685e-07,
+        3.3438e-11,
+        -7.789818e-09,
+        2.9761317e-07,
+        2.41252e-10,
+        1.02115432e-07
+      ],
+      "name": "right_ring_proximal_link",
+      "parentLink": 0,
+      "renderModel": "render/right_ring_proximal_link_render.glb",
+      "shape": "collision/right_ring_proximal_link_collision.mochi.h5"
+    },
+    {
+      "boundaryElementType": "P1Q1",
+      "centerOfMass": [
+        0.0038246,
+        7.8e-08,
+        0.016034376
+      ],
+      "contact": {
+        "penaltySmoothingHalfDistance": 0.0005,
+        "penaltyThresholdDefault": 0.0005
+      },
+      "mass": 0.009,
+      "momentOfInertia": [
+        4.71792497e-07,
+        -6.95e-13,
+        -1.26948441e-07,
+        5.06071999e-07,
+        -2.194e-12,
+        1.15762768e-07
+      ],
+      "name": "right_ring_distal_link",
+      "parentLink": 13,
+      "renderModel": "render/right_ring_distal_link_render.glb",
+      "shape": "collision/right_ring_distal_link_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mass": 0.0,
+      "momentOfInertia": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "name": "right_ring_tip_link",
+      "parentLink": 14
+    },
+    {
+      "centerOfMass": [
+        -0.003023458,
+        -4.4e-08,
+        0.00304076
+      ],
+      "contact": {
+        "coulombFrictionCoefficient": 1.0,
+        "penaltySmoothingHalfDistance": 0.0005,
+        "penaltyThresholdDefault": 0.0005
+      },
+      "mass": 0.002,
+      "momentOfInertia": [
+        8.20181e-09,
+        -2.6e-14,
+        1.832113e-09,
+        6.63652e-09,
+        1.13e-13,
+        3.61926e-09
+      ],
+      "name": "right_ring_touch_link",
+      "parentLink": 14,
+      "renderModel": "render/right_ring_touch_link_render.glb",
+      "sensors": [
+        {
+          "name": "ring_tactile",
+          "params": "{\"cols\": 6, \"pad_from_sensor\": {\"rotation\": [0.423485314, 0.410130451, 0.577645731, 0.564604828], \"translation\": [-8.0844e-05, 1.5558e-05, 0.002984606]}, \"rows\": 8, \"size\": [0.011855516, 0.019128519]}",
+          "parentFromSensor": {
+            "rotation": [
+              0.423485314,
+              0.410130451,
+              0.577645731,
+              0.564604828
+            ],
+            "translation": [
+              -8.0844e-05,
+              1.5558e-05,
+              0.002984606
+            ]
+          },
+          "type": "TACTILE_PAD"
+        }
+      ],
+      "shape": "collision/right_ring_touch_link_collision.mochi.h5"
+    },
+    {
+      "boundaryElementType": "P1Q1",
+      "centerOfMass": [
+        1.5111e-05,
+        0.007072425,
+        -0.004208473
+      ],
+      "contact": {
+        "penaltySmoothingHalfDistance": 0.0005,
+        "penaltyThresholdDefault": 0.0005
+      },
+      "mass": 0.01,
+      "momentOfInertia": [
+        1.59239837e-07,
+        -4.691008e-09,
+        4.92934e-10,
+        1.60913457e-07,
+        -1.4814673e-08,
+        5.1355026e-08
+      ],
+      "name": "right_thumb_metacarpal_link",
+      "parentLink": 0,
+      "renderModel": "render/right_thumb_metacarpal_link_render.glb",
+      "shape": "collision/right_thumb_metacarpal_link_collision.mochi.h5"
+    },
+    {
+      "boundaryElementType": "P1Q1",
+      "centerOfMass": [
+        -4.7e-07,
+        0.027701501,
+        -0.002026563
+      ],
+      "contact": {
+        "penaltySmoothingHalfDistance": 0.0005,
+        "penaltyThresholdDefault": 0.0005
+      },
+      "mass": 0.05,
+      "momentOfInertia": [
+        2.404519525e-06,
+        -1.31093e-10,
+        8.325e-12,
+        5.12323838e-07,
+        -2.8915475e-08,
+        2.562542196e-06
+      ],
+      "name": "right_thumb_proximal_link",
+      "parentLink": 17,
+      "renderModel": "render/right_thumb_proximal_link_render.glb",
+      "shape": "collision/right_thumb_proximal_link_collision.mochi.h5"
+    },
+    {
+      "boundaryElementType": "P1Q1",
+      "centerOfMass": [
+        -6e-09,
+        0.011754472,
+        1.1332e-05
+      ],
+      "contact": {
+        "penaltySmoothingHalfDistance": 0.0005,
+        "penaltyThresholdDefault": 0.0005
+      },
+      "mass": 0.01,
+      "momentOfInertia": [
+        1.67793545e-07,
+        7.159e-12,
+        -6.801e-12,
+        1.15362129e-07,
+        1.2517499e-08,
+        2.19553178e-07
+      ],
+      "name": "right_thumb_distal_link",
+      "parentLink": 18,
+      "renderModel": "render/right_thumb_distal_link_render.glb",
+      "shape": "collision/right_thumb_distal_link_collision.mochi.h5"
+    },
+    {
+      "centerOfMass": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mass": 0.0,
+      "momentOfInertia": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "name": "right_thumb_tip_link",
+      "parentLink": 19
+    },
+    {
+      "centerOfMass": [
+        -1.2e-08,
+        -0.001522527,
+        -0.007784178
+      ],
+      "contact": {
+        "coulombFrictionCoefficient": 1.0,
+        "penaltySmoothingHalfDistance": 0.0005,
+        "penaltyThresholdDefault": 0.0005
+      },
+      "mass": 0.002,
+      "momentOfInertia": [
+        1.67793545e-07,
+        7.559e-12,
+        -6.385e-12,
+        1.14159538e-07,
+        5.471959e-09,
+        2.20755769e-07
+      ],
+      "name": "right_thumb_touch_link",
+      "parentLink": 19,
+      "renderModel": "render/right_thumb_touch_link_render.glb",
+      "sensors": [
+        {
+          "name": "thumb_tactile",
+          "params": "{\"cols\": 8, \"pad_from_sensor\": {\"rotation\": [-0.070619841, 0.000583337, 0.045912308, 0.996445963], \"translation\": [-0.00060451, 0.002418638, -0.000158823]}, \"rows\": 8, \"size\": [0.019725424, 0.024117667]}",
+          "parentFromSensor": {
+            "rotation": [
+              -0.070619841,
+              0.000583337,
+              0.045912308,
+              0.996445963
+            ],
+            "translation": [
+              -0.00060451,
+              0.002418638,
+              -0.000158823
+            ]
+          },
+          "type": "TACTILE_PAD"
+        }
+      ],
+      "shape": "collision/right_thumb_touch_link_collision.mochi.h5"
+    }
+  ],
+  "name": "revo2_right"
+}

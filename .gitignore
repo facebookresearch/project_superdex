@@ -16,6 +16,7 @@ mode/cuda/opt
 build*
 # ...but not the checked-in wheel build driver, which `build*` matches by accident.
 !tools/build_wheels.py
+!tools/build_revo2_assets.py
 ref
 *.local.cmake
 cmake-build*
