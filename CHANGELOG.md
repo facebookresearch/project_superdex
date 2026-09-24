@@ -14,6 +14,10 @@ All notable changes to this repository will be documented here.
 - Added the `superdex_gym/Fr3Revo2-v0` environment (FR3 + Revo2 on a desk, lifting a
   paper cup) with fingertip tactile observations, and a scripted grasp demo with
   tactile force control (`superdex_lab/apps/envs/run_fr3_revo2_grasp.py`).
+- Added the `superdex_gym/Fr3Revo2Fill-v0` environment: hold a paper cup, without
+  crushing or dropping it, while water is poured in (simulated as a growing mass, drawn
+  as a pour), with fingertip tactile observations, ablation variants, a PPO training
+  recipe, and scripted grip baselines (`superdex_lab/apps/envs/run_fr3_revo2_fill.py`).
 - Added `superdex.lab.gym.utils.render_materials`, which paints render-model material
   colors in the default viewer.
 - Fixed `AttachBot` dropping the attached bot's linear transmissions and spatial tendons

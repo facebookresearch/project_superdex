@@ -263,11 +263,21 @@ class Fr3Revo2Env(MochiEnv):
     # Scene
     ####################################################################################
 
+    # Scenes are shared between envs with the same key; subclasses that set the scene
+    # up differently (e.g. another home pose) use their own prefix.
+    SCENE_PREFIX = "fr3_revo2"
+
+    @classmethod
+    def arm_home(cls, side: str) -> tuple[float, ...]:
+        """The arm's initial joint positions [rad] for the given hand side."""
+        return ARM_HOME[side]
+
     def _init_scene(self, cfg: Fr3Revo2EnvCfg):
         scene_key = (
-            f"fr3_revo2_{cfg.hand_side}_{cfg.object_name}_{cfg.object_extents}_"
-            f"{cfg.object_mass}_{cfg.object_friction}"
+            f"{self.SCENE_PREFIX}_{cfg.hand_side}_{cfg.object_name}_"
+            f"{cfg.object_extents}_{cfg.object_mass}_{cfg.object_friction}"
         )
+        self._scene_key = scene_key
         self._load_scene(scene_key, lambda: self._build_scene(scene_key, cfg))
         handles = _SCENE_HANDLES[scene_key]
         self._bot = handles.bot
@@ -316,7 +326,7 @@ class Fr3Revo2Env(MochiEnv):
         )
 
         self._initial_pose = np.zeros(num_dofs, dtype=np.float32)
-        self._initial_pose[self._arm_dofs] = ARM_HOME[side]
+        self._initial_pose[self._arm_dofs] = self.arm_home(side)
         self._initial_velocity = np.zeros(num_dofs, dtype=np.float32)
         self._target = self._initial_pose.astype(np.float64)
         self._goal = self._target.copy()
@@ -324,8 +334,8 @@ class Fr3Revo2Env(MochiEnv):
         self._pose_target.world_from_root = self._agent.get_root_transform()
         self._pose_obsv = robotics.ControllerMochiArticulatedPoseObsv()
 
-    @staticmethod
-    def _build_scene(scene_key: str, cfg: Fr3Revo2EnvCfg):
+    @classmethod
+    def _build_scene(cls, scene_key: str, cfg: Fr3Revo2EnvCfg):
         scene = physics.create_scene(scene_key)
         scene.set_gravity([0.0, 0.0, -9.81])
         context = robotics.create_context()
@@ -337,7 +347,7 @@ class Fr3Revo2Env(MochiEnv):
         for i in range(len(prefab.links)):
             prefab.links[i].has_gravity = False
         pose = list(prefab.default_pose)
-        pose[:7] = ARM_HOME[cfg.hand_side]
+        pose[:7] = cls.arm_home(cfg.hand_side)
         prefab.default_pose = pose
         bot = mochi_helpers.create_bot(scene, prefab, context)
         try:
@@ -500,7 +510,7 @@ class Fr3Revo2Env(MochiEnv):
     def _reset_scene(self):
         cfg = self._cfg
         self._initial_pose[self._arm_dofs] = np.asarray(
-            ARM_HOME[cfg.hand_side]
+            self.arm_home(cfg.hand_side)
         ) + self.np_random.uniform(-cfg.arm_pose_noise, cfg.arm_pose_noise, 7)
         super()._reset_scene()
 
@@ -606,6 +616,7 @@ class Fr3Revo2Env(MochiEnv):
         readings = {
             f: self._sensors[f].compute_signal(self._control_dt) for f in FINGERS
         }
+        self._readings = readings  # noise-free, before the env's sensor noise
         tactile, normals = self._tactile_features(readings)
         touching = [
             f for f in FINGERS if normals[f] >= self._cfg.contact_force_threshold

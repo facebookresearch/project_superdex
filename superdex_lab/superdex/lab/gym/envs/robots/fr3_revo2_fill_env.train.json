@@ -1,0 +1,23 @@
+{
+  "description": "Training recipe for holding a paper cup while it fills (FR3 + Revo2, fingertip tactile sensing). PPO is the recommended workflow.",
+  "normalize_observations": true,
+  "stop_criteria": {
+    "num_env_steps_sampled_lifetime": 20000000
+  },
+  "ppo": {
+    "env_runners": {
+      "batch_mode": "truncate_episodes"
+    },
+    "training": {
+      "clip_param": 0.2,
+      "gamma": 0.99,
+      "grad_clip": 0.5,
+      "lambda_": 0.95,
+      "lr": 0.0003,
+      "minibatch_size": 2048,
+      "num_epochs": 10,
+      "train_batch_size": 16384,
+      "vf_loss_coeff": 0.5
+    }
+  }
+}

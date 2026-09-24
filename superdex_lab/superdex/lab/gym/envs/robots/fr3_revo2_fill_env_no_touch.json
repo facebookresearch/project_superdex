@@ -1,0 +1,6 @@
+{
+  "description": "Ablation: no fingertip sensors in the observation. The policy has to hold the cup from joint states alone.",
+  "env_cfg": {
+    "observe_tactile": false
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "description": "The arm holds still while the cup fills. Easier: standing still, the tapered cup wedges in the hand.",
+  "env_cfg": {
+    "arm_shake_amplitude": 0.0
+  }
+}

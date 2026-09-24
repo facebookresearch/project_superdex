@@ -1,0 +1,6 @@
+{
+  "description": "Ablation: the policy is told the fill level (privileged), as an upper bound for what touch has to infer.",
+  "env_cfg": {
+    "observe_fill": true
+  }
+}

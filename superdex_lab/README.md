@@ -64,3 +64,34 @@ for. It is a baseline, not a tuned policy (about 5/5 lifts per hand on its seeds
 In the default viewer, render models are drawn with their base material colors; heavy
 grasping contact simulates at roughly 4-5x slower than real time on one core (free
 motion runs faster than real time).
+
+### Hold a paper cup while it fills
+
+`superdex_gym/Fr3Revo2Fill-v0` is a tactile grip-force task. The Revo2 holds a paper cup
+from the side (thumb up), the arm lifts it and sways gently, and water pours in at a
+random rate to a random level (up to ~0.37 kg). The policy commands only the hand. It
+has to squeeze just hard enough for the current, unobserved load: too light and the cup
+slides out, too hard and it crushes (a fingertip above 6 N or a total squeeze above 25 N).
+The fingertip shear the Revo2 Touch reports is what tells it the cup is getting heavier.
+
+Variants: `Fr3Revo2FillLeft`, `Fr3Revo2FillStill` (no sway: easier, since the tapered cup
+wedges in the hand), `Fr3Revo2FillRandomized` (sensor noise, stronger sway), and two
+ablations: `Fr3Revo2FillNoTouch` (no tactile observation) and `Fr3Revo2FillOracleFill`
+(told the fill level). Comparing a policy trained on the default against both ablations
+shows what touch adds.
+
+```bash
+uv run --no-project superdex_lab/apps/envs/run_fr3_revo2_fill.py --render   # baselines
+cd superdex_lab/apps/rllib && python train_samples.py -p fr3_revo2_fill     # PPO
+```
+
+Scripted baselines, 12 episodes each:
+
+| Grip | Held | Mean squeeze |
+|---|---|---|
+| fixed light (0.4 N per fingertip) | 0 (4 dropped, 8 slid) | 3.3 N |
+| fixed firm (3 N) | 0 (crushes the empty cup) | - |
+| fixed medium (1 N) | 10 | 8.1 N |
+| tactile (squeeze follows the load the fingertips sense) | 11 | 6.3 N |
+
+Episodes run at about real time on one core (10 s simulated in ~8 s).

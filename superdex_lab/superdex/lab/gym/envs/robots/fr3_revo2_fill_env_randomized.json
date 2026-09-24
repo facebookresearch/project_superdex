@@ -1,0 +1,7 @@
+{
+  "description": "Domain randomization for sim-to-real: noisy fingertip forces and a stronger sway.",
+  "env_cfg": {
+    "tactile_noise_std": 0.1,
+    "arm_shake_amplitude": 0.04
+  }
+}

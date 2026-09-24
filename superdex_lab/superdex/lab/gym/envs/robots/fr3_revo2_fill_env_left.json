@@ -1,0 +1,6 @@
+{
+  "description": "The left-hand Revo2.",
+  "env_cfg": {
+    "hand_side": "left"
+  }
+}
