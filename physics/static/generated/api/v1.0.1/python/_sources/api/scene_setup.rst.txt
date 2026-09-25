@@ -1,0 +1,89 @@
+.. @generated
+
+Scene Setup, Assets & Runtime
+=============================
+
+**Modules:** ``superdex.physics.paths``, ``superdex.physics.environment``, ``superdex.physics.loader``, ``superdex.physics.utils.context``, ``superdex.physics.utils.scene_helpers``
+
+Find assets, select the runtime, and build a scene in one call.
+
+superdex.physics.paths
+----------------------
+
+.. automodule:: superdex.physics.paths
+   :no-members:
+
+.. autofunction:: superdex.physics.paths.get_assets_root
+
+.. autofunction:: superdex.physics.paths.resolve_asset
+
+.. autofunction:: superdex.physics.paths.resolve_asset_root
+
+superdex.physics.environment
+----------------------------
+
+.. automodule:: superdex.physics.environment
+   :no-members:
+
+.. autodata:: superdex.physics.environment.ASSETS_PATH_ENV_VAR
+   :no-value:
+
+.. autodata:: superdex.physics.environment.DEBUGGER_PATH_ENV_VAR
+   :no-value:
+
+.. autodata:: superdex.physics.environment.LEGACY_ASSETS_PATH_ENV_VAR
+   :no-value:
+
+.. autodata:: superdex.physics.environment.LEGACY_DEBUGGER_PATH_ENV_VAR
+   :no-value:
+
+.. autodata:: superdex.physics.environment.LEGACY_LOG_LEVEL_ENV_VAR
+   :no-value:
+
+.. autodata:: superdex.physics.environment.LEGACY_PRECISION_ENV_VAR
+   :no-value:
+
+.. autodata:: superdex.physics.environment.LOG_LEVEL_ENV_VAR
+   :no-value:
+
+.. autodata:: superdex.physics.environment.PRECISION_ENV_VAR
+   :no-value:
+
+.. autofunction:: superdex.physics.environment.get_env_var_value
+
+.. autofunction:: superdex.physics.environment.set_env_var_value
+
+superdex.physics.loader
+-----------------------
+
+.. automodule:: superdex.physics.loader
+   :no-members:
+
+.. autodata:: superdex.physics.loader.PRECISION_NAME
+   :no-value:
+
+.. autodata:: superdex.physics.loader.USE_DOUBLE_PRECISION
+   :no-value:
+
+superdex.physics.utils.context
+------------------------------
+
+.. automodule:: superdex.physics.utils.context
+   :no-members:
+
+.. autoclass:: superdex.physics.utils.context.MochiContext
+   :members:
+   :show-inheritance:
+
+superdex.physics.utils.scene_helpers
+------------------------------------
+
+.. automodule:: superdex.physics.utils.scene_helpers
+   :no-members:
+
+.. autofunction:: superdex.physics.utils.scene_helpers.create_ground_plane
+
+.. autofunction:: superdex.physics.utils.scene_helpers.create_scene_from_prefab
+
+.. autofunction:: superdex.physics.utils.scene_helpers.find_actor
+
