@@ -54,7 +54,7 @@ spherical = scene.create_rigid_spherical_joint_constraint(
 
 ### Enumerating and Looking Up Constraints
 
-Every constraint has a stable handle. Enumerate all constraints in a scene with [`for_each_constraint`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.for_each_constraint), and look one up with [`get_constraint`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.get_constraint):
+Every constraint has a stable handle. Enumerate all constraints in a scene with [`for_each_constraint`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.for_each_constraint), and look one up with [`get_constraint`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.get_constraint):
 
 ```python
 types = []
@@ -65,7 +65,7 @@ assert scene.get_constraint(pivot.get_handle()) == pivot
 
 ### Introspecting a Constraint
 
-The generic interface reports how a constraint is wired up. [`get_num_actors`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Constraint.get_num_actors) is a handy discriminator — the pivot involves **one** actor, the spherical joint **two**:
+The generic interface reports how a constraint is wired up. [`get_num_actors`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Constraint.get_num_actors) is a handy discriminator — the pivot involves **one** actor, the spherical joint **two**:
 
 ```python
 for i in range(constraint.get_num_actors()):
@@ -87,7 +87,7 @@ constraint.set_saturation(saturation=constraint.get_saturation())
 
 ### Reading Diagnostics Each Step
 
-[`get_deviation`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Constraint.get_deviation) returns the current constraint error and needs no setup. [`get_force`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Constraint.get_force) requires a `CONSTRAINT_FORCE` query registered **before** stepping:
+[`get_deviation`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Constraint.get_deviation) returns the current constraint error and needs no setup. [`get_force`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Constraint.get_force) requires a `CONSTRAINT_FORCE` query registered **before** stepping:
 
 ```python
 pivot.register_query(sdp.QueryType.CONSTRAINT_FORCE)   # once, before stepping
@@ -108,7 +108,7 @@ turning the fixed pendulum base into a moving one:
 pivot.set_target_position(sdp.Real3(x, y, z))
 ```
 
-Only target-bearing constraints support this. Calling [`set_target_position`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Constraint.set_target_position) on the spherical joint (which has no position target) raises a graceful error — the interface is uniform, but capabilities are type-specific:
+Only target-bearing constraints support this. Calling [`set_target_position`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Constraint.set_target_position) on the spherical joint (which has no position target) raises a graceful error — the interface is uniform, but capabilities are type-specific:
 
 ```python
 try:
@@ -119,7 +119,7 @@ except sdp.Error:
 
 ### Destroying Constraints
 
-Remove a constraint explicitly with [`destroy_constraint`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.destroy_constraint); destroying an actor **auto-destroys** the constraints attached to it:
+Remove a constraint explicitly with [`destroy_constraint`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.destroy_constraint); destroying an actor **auto-destroys** the constraints attached to it:
 
 ```python
 scene.destroy_constraint(spherical)   # Link2 detaches and falls away
@@ -130,8 +130,8 @@ scene.destroy_actor(link1)            # also removes the pivot constraint
 
 - **World-anchor constraint** (`RigidPivotPosition`) pins a rigid body to a world point with a free rotation.
 - **Body-to-body joint** (`RigidSphericalJoint`) couples two rigid bodies at a shared pivot.
-- **Full interface tour**: creation, [`for_each_constraint`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.for_each_constraint) enumeration, [`get_constraint`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.get_constraint) lookup, introspection ([`get_type`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Constraint.get_type) / [`get_num_actors`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Constraint.get_num_actors) / [`get_actor`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Constraint.get_actor) / [`get_dof_indices_for_actor`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Constraint.get_dof_indices_for_actor)), parameter tuning, per-step [`get_deviation`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Constraint.get_deviation) / [`get_force`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Constraint.get_force), target animation, and destruction.
-- **Moving base**: a time-varying [`set_target_position`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Constraint.set_target_position) drives the anchor along a circle.
+- **Full interface tour**: creation, [`for_each_constraint`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.for_each_constraint) enumeration, [`get_constraint`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.get_constraint) lookup, introspection ([`get_type`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Constraint.get_type) / [`get_num_actors`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Constraint.get_num_actors) / [`get_actor`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Constraint.get_actor) / [`get_dof_indices_for_actor`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Constraint.get_dof_indices_for_actor)), parameter tuning, per-step [`get_deviation`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Constraint.get_deviation) / [`get_force`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Constraint.get_force), target animation, and destruction.
+- **Moving base**: a time-varying [`set_target_position`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Constraint.set_target_position) drives the anchor along a circle.
 - **Live diagnostics**: each constraint's force and the pivot deviation are printed to the console as the simulation runs.
 - **Scripted timeline**: the example weakens the pivot (via stiffness), removes the middle joint, then destroys `Link1` to show its constraint auto-destroy.
 
@@ -149,7 +149,7 @@ The same scene ships as a declarative [prefab](../../concepts/prefabs.mdx) — t
 
 **Source**: `assets/samples/constraints_double_pendulum.mochi_scene`
 
-Load it into a fresh scene (or use [`sdp.prefab.add_to_scene(...)`](pathname:///generated/api/v1.0.0/python/api/prefab.html#superdex.physics.prefab.add_to_scene) / C++ `prefab::AddToScene(...)` to add it into an existing one):
+Load it into a fresh scene (or use [`sdp.prefab.add_to_scene(...)`](pathname:///generated/api/v1.0.1/python/api/prefab.html#superdex.physics.prefab.add_to_scene) / C++ `prefab::AddToScene(...)` to add it into an existing one):
 
 ```python
 from superdex.physics.utils.scene_helpers import create_scene_from_prefab
@@ -157,7 +157,7 @@ from superdex.physics.utils.scene_helpers import create_scene_from_prefab
 scene = create_scene_from_prefab("samples/constraints_double_pendulum.mochi_scene")
 ```
 
-The two constraints map directly onto prefab keys — [`rigidPivotPosition`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1prefab_1_1ConstraintLists.html) and [`rigidSphericalJoint`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1prefab_1_1ConstraintLists.html) — mirroring the programmatic parameters above (actors are referenced by name):
+The two constraints map directly onto prefab keys — [`rigidPivotPosition`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1prefab_1_1ConstraintLists.html) and [`rigidSphericalJoint`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1prefab_1_1ConstraintLists.html) — mirroring the programmatic parameters above (actors are referenced by name):
 
 ```json
 "constraints": {

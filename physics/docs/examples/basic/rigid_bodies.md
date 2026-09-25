@@ -112,7 +112,7 @@ sphere_actor = scene.create_rigid_actor(
 )
 ```
 
-The [`collider_type`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.RigidActorParams.collider_type) selects the geometry queried by other actors during [contact](../../concepts/contact.md#collider-representations).
+The [`collider_type`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.RigidActorParams.collider_type) selects the geometry queried by other actors during [contact](../../concepts/contact.md#collider-representations).
 
 ### Simulation and Visualization
 
@@ -127,7 +127,7 @@ if sdp.debugger.attach():
 
 ### Lifecycle Cleanup
 
-The example explicitly destroys actors, the scene, and global engine state to illustrate each lifecycle operation. Destroying individual actors is unnecessary immediately before destroying their scene, and destroying the scene is unnecessary immediately before [`sdp.shutdown()`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.shutdown).
+The example explicitly destroys actors, the scene, and global engine state to illustrate each lifecycle operation. Destroying individual actors is unnecessary immediately before destroying their scene, and destroying the scene is unnecessary immediately before [`sdp.shutdown()`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.shutdown).
 
 ```python
 scene.destroy_actor(sphere_actor)

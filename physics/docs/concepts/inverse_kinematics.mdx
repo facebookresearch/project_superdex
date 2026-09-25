@@ -28,7 +28,7 @@ The IK solver reconfigures a physics scene into a static optimization problem by
 - Contact dissipation (Coulomb and viscous friction, plus normal damping) is disabled
 - Inertia and joint friction are disabled
 
-The solver then calls [`Scene::Step`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.html) with an infinite timestep, which reduces the equations of motion to the quasistatic equilibrium condition:
+The solver then calls [`Scene::Step`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html) with an infinite timestep, which reduces the equations of motion to the quasistatic equilibrium condition:
 
 $$
 \mathbf{F}_{\text{internal}}(q) + \mathbf{F}_{\text{external}}(q) = \mathbf{0}~,
@@ -397,7 +397,7 @@ The `weight` parameter on `CreatePositionTarget` / `CreateRotationTarget` is map
 
 **Use a separate scene for IK.** The IK solver sets the scene to infinite timestep and zero gravity, and disables contact dissipation, inertia, and joint friction. This makes the scene unusable for visualization or dynamic simulation.
 
-**Dual-scene pattern.** Create one scene for rendering/simulation and a second scene for IK. After each `SolveIK` call, copy the resulting pose to the visualization scene with [`SetArticulatedPoseFromJoints`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Actor.html). Suppress velocities on the visualization actor after copying to prevent drift.
+**Dual-scene pattern.** Create one scene for rendering/simulation and a second scene for IK. After each `SolveIK` call, copy the resulting pose to the visualization scene with [`SetArticulatedPoseFromJoints`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Actor.html). Suppress velocities on the visualization actor after copying to prevent drift.
 
 **Suppress velocities after copying.** The IK scene uses an infinite timestep, so velocities in that scene are meaningless. After transferring the pose to your visualization scene, zero out the joint velocities.
 

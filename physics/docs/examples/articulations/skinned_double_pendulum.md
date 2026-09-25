@@ -28,14 +28,14 @@ A thin rectangular tube along +X spans both arms in the root-local rest frame. V
 The skin is **colliding-only**: it probes other actors for contact, but it does not act as a collider. The links act as colliders.
 
 :::tip Coordinate frames
-[`world_from_root`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.ArticulatedActorParams.world_from_root) places the complete articulated actor, moving the links and skin together without changing their alignment. This example instead puts the 0.5 m pivot height in `joint_0.parent_link_from_joint` and leaves [`world_from_root`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.ArticulatedActorParams.world_from_root) at identity to match the reference `doublependulum` prefab.
+[`world_from_root`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.ArticulatedActorParams.world_from_root) places the complete articulated actor, moving the links and skin together without changing their alignment. This example instead puts the 0.5 m pivot height in `joint_0.parent_link_from_joint` and leaves [`world_from_root`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.ArticulatedActorParams.world_from_root) at identity to match the reference `doublependulum` prefab.
 :::
 
 ## Implementation
 
 ### Building the Articulated Chain with a Skin
 
-An articulated actor is described by parallel `joints[]` and `links[]` arrays (see [Double Pendulum on Rail](./double_pendulum_on_rail.md) for the base pattern). The skin is an optional [`ArticulatedSkinParams`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.ArticulatedSkinParams) holding a triangle-mesh shape that **contains skinning weights and link indices**. Its rest coordinates are authored in the skeleton's rest frame so the tube overlays the arms at rest.
+An articulated actor is described by parallel `joints[]` and `links[]` arrays (see [Double Pendulum on Rail](./double_pendulum_on_rail.md) for the base pattern). The skin is an optional [`ArticulatedSkinParams`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.ArticulatedSkinParams) holding a triangle-mesh shape that **contains skinning weights and link indices**. Its rest coordinates are authored in the skeleton's rest frame so the tube overlays the arms at rest.
 
 ```python
 ROOT_HEIGHT = 0.5  # [m]
@@ -88,7 +88,7 @@ articulation.set_articulated_joint_velocities(velocities=[4.2, 0.0])
 
 ### Introspecting the Articulation and Probing Query Support
 
-The topology API is identical to plain articulations ([`get_num_dofs`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_num_dofs), [`get_nested_link_actors`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_nested_link_actors), [`get_articulated_shape_info`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_articulated_shape_info)), but the skin surface itself lives on the top-level articulated actor and only supports surface / contact queries.
+The topology API is identical to plain articulations ([`get_num_dofs`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_num_dofs), [`get_nested_link_actors`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_nested_link_actors), [`get_articulated_shape_info`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_articulated_shape_info)), but the skin surface itself lives on the top-level articulated actor and only supports surface / contact queries.
 
 ```python
 print(f"num_dofs = {articulation.get_num_dofs()}")  # 2
@@ -115,7 +115,7 @@ for q in [
 
 ### Reading the Skin Surface
 
-Query data is computed during [`scene.step`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.step), so you register the query, step, then read back. The reference topology is always available via [`get_surface_mesh`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_surface_mesh).
+Query data is computed during [`scene.step`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.step), so you register the query, step, then read back. The reference topology is always available via [`get_surface_mesh`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_surface_mesh).
 
 ```python
 mesh = articulation.get_surface_mesh()
@@ -167,10 +167,10 @@ force = articulation.get_contact_force_from_actor_world(ball)
 
 ### Tuning Contact Cost (Optional)
 
-[`ArticulatedSkinParams`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.ArticulatedSkinParams) exposes two knobs that bound per-step contact cost, left at defaults in this example but documented in the [API](../../concepts/actors/articulated_actors.mdx#articulatedskinparams-reference):
+[`ArticulatedSkinParams`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.ArticulatedSkinParams) exposes two knobs that bound per-step contact cost, left at defaults in this example but documented in the [API](../../concepts/actors/articulated_actors.mdx#articulatedskinparams-reference):
 
-- [`boundary_element_type`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.ArticulatedSkinParams.boundary_element_type): e.g. `P1Q1`
-- [`boundary_subsampling`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.ArticulatedSkinParams.boundary_subsampling): reduces integration samples on the surface — best paired with `P1Q1`.
+- [`boundary_element_type`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.ArticulatedSkinParams.boundary_element_type): e.g. `P1Q1`
+- [`boundary_subsampling`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.ArticulatedSkinParams.boundary_subsampling): reduces integration samples on the surface — best paired with `P1Q1`.
 
 ### Validation — A Non-Skinned Shape Is Rejected
 
@@ -193,11 +193,11 @@ except sdp.Error:
 
 ## Features
 
-- **Skinned articulated actor**: [`ArticulatedSkinParams`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.ArticulatedSkinParams) with a triangle-mesh shape carrying LBS weights and link indices, sharing the same `skin.mochi.json` asset as the prefab.
+- **Skinned articulated actor**: [`ArticulatedSkinParams`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.ArticulatedSkinParams) with a triangle-mesh shape carrying LBS weights and link indices, sharing the same `skin.mochi.json` asset as the prefab.
 - **Colliding-only surface**: skin detects contact against other actors (ball), while per-link boxes remain colliders.
-- **Introspection**: [`get_articulated_shape_info`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_articulated_shape_info), [`get_num_dofs`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_num_dofs), [`get_nested_link_actors`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_nested_link_actors), and [`is_query_supported`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.is_query_supported) probe showing surface queries supported, volumetric queries not.
-- **Surface read-back**: [`get_surface_mesh`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_surface_mesh), [`get_surface_mesh_node_positions_local`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_surface_mesh_node_positions_local) / [`get_surface_mesh_node_normals_local`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_surface_mesh_node_normals_local), [`get_aabb_world`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_aabb_world), [`query_nodes_in_volume_local`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.query_nodes_in_volume_local).
-- **Contact filtering**: layer-level enable/disable, enumeration of layers, [`get_contact_force_from_actor_world`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_contact_force_from_actor_world) for ball impact.
+- **Introspection**: [`get_articulated_shape_info`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_articulated_shape_info), [`get_num_dofs`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_num_dofs), [`get_nested_link_actors`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_nested_link_actors), and [`is_query_supported`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.is_query_supported) probe showing surface queries supported, volumetric queries not.
+- **Surface read-back**: [`get_surface_mesh`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_surface_mesh), [`get_surface_mesh_node_positions_local`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_surface_mesh_node_positions_local) / [`get_surface_mesh_node_normals_local`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_surface_mesh_node_normals_local), [`get_aabb_world`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_aabb_world), [`query_nodes_in_volume_local`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.query_nodes_in_volume_local).
+- **Contact filtering**: layer-level enable/disable, enumeration of layers, [`get_contact_force_from_actor_world`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_contact_force_from_actor_world) for ball impact.
 - **Validation**: C++ guard `GetMeshSkinning() != nullptr` and taught error path for plain meshes.
 - **Live console output**: topology, supported queries, surface extents, and once-per-second skin AABB, joint angles, contact counts and force.
 - **Scripted timeline**: chaotic swing from seeded velocities, then joint friction damping at `T_DAMP=12s`.
@@ -216,7 +216,7 @@ The same scene ships as a declarative [prefab](../../concepts/prefabs.mdx) — t
 
 **Source**: `assets/samples/articulations_skinned_double_pendulum.mochi_scene`
 
-Load it into a fresh scene (or use [`sdp.prefab.add_to_scene(...)`](pathname:///generated/api/v1.0.0/python/api/prefab.html#superdex.physics.prefab.add_to_scene) / C++ `prefab::AddToScene(...)` to add it into an existing one):
+Load it into a fresh scene (or use [`sdp.prefab.add_to_scene(...)`](pathname:///generated/api/v1.0.1/python/api/prefab.html#superdex.physics.prefab.add_to_scene) / C++ `prefab::AddToScene(...)` to add it into an existing one):
 
 ```python
 from superdex.physics.utils.scene_helpers import create_scene_from_prefab

@@ -21,11 +21,11 @@ $$
 
 ### Passive Isotropic Component
 
-The [`passiveIsotropic`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ActiveNeoHookeanMaterialParams.html) component uses the inversion-robust [Neo-Hookean formulation](./neo_hookean.md) of [Smith et al. (2018)](#references).
+The [`passiveIsotropic`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ActiveNeoHookeanMaterialParams.html) component uses the inversion-robust [Neo-Hookean formulation](./neo_hookean.md) of [Smith et al. (2018)](#references).
 
 ### Active Anisotropic Component
 
-The [`activeAnisotropic`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ActiveNeoHookeanMaterialParams.html) component follows [Kim et al. (2019)](#references) and penalizes deviation of the fiber stretch from a target length:
+The [`activeAnisotropic`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ActiveNeoHookeanMaterialParams.html) component follows [Kim et al. (2019)](#references) and penalizes deviation of the fiber stretch from a target length:
 
 - `anisoDir` is the unit fiber direction.
 - `alpha` is the anisotropic stiffness.

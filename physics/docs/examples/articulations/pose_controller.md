@@ -54,7 +54,7 @@ articulation = next(
 
 ## Configuring Tracking
 
-[`PoseControllerParams(num_links)`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.PoseControllerParams) creates three link-indexed arrays initialized with zero stiffness and damping. Entry `i` configures link `i` or its inbound joint.
+[`PoseControllerParams(num_links)`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.PoseControllerParams) creates three link-indexed arrays initialized with zero stiffness and damping. Entry `i` configures link `i` or its inbound joint.
 
 ```python
 params = sdp.PoseControllerParams(NUM_LINKS)
@@ -82,9 +82,9 @@ params.link_rot_tracking[END_EFFECTOR_LINK] = sdp.PoseTrackingParams(
 articulation.add_articulated_pose_controller(params)
 ```
 
-The [`joint_tracking`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.PoseControllerParams.joint_tracking) array is not DoF-indexed. Its `UpperArm` entry controls the revolute inbound joint, while the single `LowerArm` entry would configure all three DoFs of the spherical inbound joint. The root link also keeps an entry even though its `Hard` joint has no controllable DoFs.
+The [`joint_tracking`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.PoseControllerParams.joint_tracking) array is not DoF-indexed. Its `UpperArm` entry controls the revolute inbound joint, while the single `LowerArm` entry would configure all three DoFs of the spherical inbound joint. The root link also keeps an entry even though its `Hard` joint has no controllable DoFs.
 
-A default [`PoseTrackingParams`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.PoseTrackingParams) has zero stiffness and damping, which disables that tracking entry. To switch modes, the example constructs a complete parameter set and replaces the controller parameters:
+A default [`PoseTrackingParams`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.PoseTrackingParams) has zero stiffness and damping, which disables that tracking entry. To switch modes, the example constructs a complete parameter set and replaces the controller parameters:
 
 ```python
 def set_joint_only_controller(articulation: sdp.Actor) -> None:
@@ -100,11 +100,11 @@ def set_joint_only_controller(articulation: sdp.Actor) -> None:
     articulation.set_articulated_pose_controller_params(params)
 ```
 
-The link-only configuration does the converse: it fills only the end-effector entries in [`link_pos_tracking`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.PoseControllerParams.link_pos_tracking) and [`link_rot_tracking`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.PoseControllerParams.link_rot_tracking). Replacing the full object turns tracking slices on or off without removing and re-adding the controller.
+The link-only configuration does the converse: it fills only the end-effector entries in [`link_pos_tracking`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.PoseControllerParams.link_pos_tracking) and [`link_rot_tracking`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.PoseControllerParams.link_rot_tracking). Replacing the full object turns tracking slices on or off without removing and re-adding the controller.
 
 ## Updating Targets
 
-The target input representation is independent of what the controller tracks. The active [`joint_tracking`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.PoseControllerParams.joint_tracking), [`link_pos_tracking`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.PoseControllerParams.link_pos_tracking), and [`link_rot_tracking`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.PoseControllerParams.link_rot_tracking) entries determine which constraints apply; choosing a joint-space or link-space target API only determines how the desired pose is supplied.
+The target input representation is independent of what the controller tracks. The active [`joint_tracking`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.PoseControllerParams.joint_tracking), [`link_pos_tracking`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.PoseControllerParams.link_pos_tracking), and [`link_rot_tracking`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.PoseControllerParams.link_rot_tracking) entries determine which constraints apply; choosing a joint-space or link-space target API only determines how the desired pose is supplied.
 
 SuperDex Physics maintains feasible joint-space and link-space representations of the same target. A joint-space target is converted through forward kinematics to link targets, including for active link tracking. A link-space target is converted to a feasible joint target, including for active joint tracking. Hybrid controllers can therefore use either target input representation without changing which tracking slices are enabled.
 
@@ -129,7 +129,7 @@ articulation.set_articulated_target_pose(pose=joint_target)
 scene.step(TIME_STEP)
 ```
 
-[`set_articulated_target_pose`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.set_articulated_target_pose) infers target velocity from how the target changes between simulation steps. This lets damping respond to a smoothly moving trajectory rather than treating every update as a stationary target.
+[`set_articulated_target_pose`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.set_articulated_target_pose) infers target velocity from how the target changes between simulation steps. This lets damping respond to a smoothly moving trajectory rather than treating every update as a stationary target.
 
 ### Link-Space Targets
 
@@ -152,7 +152,7 @@ articulation.reset_articulated_target_link_transforms(
 )
 ```
 
-Resetting sets the supplied transforms and clears inferred target velocity, avoiding an artificial velocity kick at the mode boundary. Later frames use [`set_articulated_target_link_transforms`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.set_articulated_target_link_transforms), allowing the controller to infer the velocity of the smooth circular trajectory.
+Resetting sets the supplied transforms and clears inferred target velocity, avoiding an artificial velocity kick at the mode boundary. Later frames use [`set_articulated_target_link_transforms`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.set_articulated_target_link_transforms), allowing the controller to infer the velocity of the smooth circular trajectory.
 
 ## Reading Controller Generalized Force
 

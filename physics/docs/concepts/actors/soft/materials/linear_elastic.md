@@ -49,7 +49,7 @@ $$
 + \mu\left(\delta_{ik}\delta_{jl} + \delta_{il}\delta_{jk}\right)~.
 $$
 
-This tangent is positive semidefinite, so [`LinearElasticMaterialParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1LinearElasticMaterialParams.html) has no material-level `psdStrategy` field.
+This tangent is positive semidefinite, so [`LinearElasticMaterialParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1LinearElasticMaterialParams.html) has no material-level `psdStrategy` field.
 
 The linear-elastic potential $\Psi$ cannot be expressed as a function of the nonlinear Green–Lagrange strain, but, motivated by the fact that $\boldsymbol{\varepsilon} \approx \mathbf{E}$ in the limit of $\Vert\nabla\mathbf{u}\Vert \ll 1$ where this model is appropriate, viscoelastic stiffness damping uses the above tangent as $\mathbb{C}_0$.
 
@@ -62,4 +62,4 @@ The linear-elastic potential $\Psi$ cannot be expressed as a function of the non
 
 ## Interaction With Recentering
 
-By default, soft actors update the rigid local frame in which their displacements are defined, to prevent finite precision effects from polluting the strain. This is benign for most supported materials, since their energy densities are invariant under rigid transformations. However, the `LinearElastic` potential is not, because the linearized strain $\boldsymbol{\varepsilon}$ may be nonzero for rigid motions (unlike the nonlinear Green–Lagrange strain, which remains exactly zero). Recentering therefore alters the continuous problem being solved in an ad hoc way. To run a pure simulation of classical linear elasticity, disable recentering using [`Actor::SetRecenteringParams()`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Actor.html) or set `ExperimentalSoftActorParams::useRecentering` to `false` during creation with `experimental::CreateSoftActor()`.
+By default, soft actors update the rigid local frame in which their displacements are defined, to prevent finite precision effects from polluting the strain. This is benign for most supported materials, since their energy densities are invariant under rigid transformations. However, the `LinearElastic` potential is not, because the linearized strain $\boldsymbol{\varepsilon}$ may be nonzero for rigid motions (unlike the nonlinear Green–Lagrange strain, which remains exactly zero). Recentering therefore alters the continuous problem being solved in an ad hoc way. To run a pure simulation of classical linear elasticity, disable recentering using [`Actor::SetRecenteringParams()`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Actor.html) or set `ExperimentalSoftActorParams::useRecentering` to `false` during creation with `experimental::CreateSoftActor()`.

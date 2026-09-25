@@ -10,7 +10,7 @@ Most documented Python [examples](./examples/0_getting_started.md) open the debu
 
 ## Connecting from Python
 
-Call [`sdp.debugger.attach()`](pathname:///generated/api/v1.0.0/python/api/debugger.html#superdex.physics.debugger.attach) after creating the scene, then step the scene while the debugger remains connected:
+Call [`sdp.debugger.attach()`](pathname:///generated/api/v1.0.1/python/api/debugger.html#superdex.physics.debugger.attach) after creating the scene, then step the scene while the debugger remains connected:
 
 ```python
 import superdex.physics as sdp
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     main()
 ```
 
-[`attach()`](pathname:///generated/api/v1.0.0/python/api/debugger.html#superdex.physics.debugger.attach) launches or focuses the debugger and waits briefly for it to connect. It returns `False` if no connection is established. Closing or disconnecting the debugger makes [`is_attached()`](pathname:///generated/api/v1.0.0/python/api/debugger.html#superdex.physics.debugger.is_attached) return `False`, allowing the application to leave its simulation loop and clean up.
+[`attach()`](pathname:///generated/api/v1.0.1/python/api/debugger.html#superdex.physics.debugger.attach) launches or focuses the debugger and waits briefly for it to connect. It returns `False` if no connection is established. Closing or disconnecting the debugger makes [`is_attached()`](pathname:///generated/api/v1.0.1/python/api/debugger.html#superdex.physics.debugger.is_attached) return `False`, allowing the application to leave its simulation loop and clean up.
 
 ## Controlling Debug Draw
 
@@ -55,7 +55,7 @@ Click the viewport before using the camera controls.
 
 ## Controlling Playback
 
-Scenes start paused unless you choose otherwise when connecting. The application still calls [`scene.step()`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.step), as shown above; the debugger controls when each call proceeds.
+Scenes start paused unless you choose otherwise when connecting. The application still calls [`scene.step()`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.step), as shown above; the debugger controls when each call proceeds.
 
 | Control | Behavior |
 | --- | --- |

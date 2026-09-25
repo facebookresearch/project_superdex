@@ -143,16 +143,16 @@ soft_actor = scene.create_soft_actor(
 
 ### SoftActorParams
 
-The creation fields are defined by `SoftActorParams` ([C++](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1SoftActorParams.html), [Python](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.SoftActorParams)).
+The creation fields are defined by `SoftActorParams` ([C++](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1SoftActorParams.html), [Python](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.SoftActorParams)).
 
 | Parameter | C++ Type | Default | Description |
 |-----------|----------|---------|-------------|
 | `name` | `DynamicString` | `""` | Display name for the actor. |
 | `layer` | `DynamicString` | `""` | Layer name, used for grouping and filtering. |
-| `worldFromLocal` / `world_from_local` | [`TransformRT`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1TransformRT.html) | Identity | Transform placing the actor in world space. |
-| `shape` | [`ShapeHandle`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ShapeHandle.html) | -- | Handle to the tetrahedral mesh shape (**required**). |
-| `material` | [`SoftMaterialParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1SoftMaterialParams.html) | Neo-Hookean | Homogeneous material parameters (see below). |
-| `contact` | [`ContactParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ContactParams.html) | -- | Contact parameters (friction, restitution, etc.). |
+| `worldFromLocal` / `world_from_local` | [`TransformRT`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1TransformRT.html) | Identity | Transform placing the actor in world space. |
+| `shape` | [`ShapeHandle`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ShapeHandle.html) | -- | Handle to the tetrahedral mesh shape (**required**). |
+| `material` | [`SoftMaterialParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1SoftMaterialParams.html) | Neo-Hookean | Homogeneous material parameters (see below). |
+| `contact` | [`ContactParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ContactParams.html) | -- | Contact parameters (friction, restitution, etc.). |
 | `hasGravity` / `has_gravity` | `bool` | `true` | Whether the actor is affected by gravity. |
 | `hasInertia` / `has_inertia` | `bool` | `true` | Whether the actor has inertial (mass) terms. Set to `false` for quasistatic solves. |
 | `hasStress` / `has_stress` | `bool` | `true` | Whether internal elastic and viscoelastic stress/strain forces affect the actor. |
@@ -160,31 +160,31 @@ The creation fields are defined by `SoftActorParams` ([C++](pathname:///generate
 
 :::note Experimental creation parameters
 Additional experimental soft-actor creation parameters are defined in `experimental::ExperimentalSoftActorParams`. These parameters may change or be removed in future releases.
-To configure these parameters, create the actor with `experimental::CreateSoftActor` / `experimental.create_soft_actor`, passing this struct together with [`SoftActorParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1SoftActorParams.html).
+To configure these parameters, create the actor with `experimental::CreateSoftActor` / `experimental.create_soft_actor`, passing this struct together with [`SoftActorParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1SoftActorParams.html).
 :::
 
 ### SoftMaterialParams
 
-Material selection is configured with `SoftMaterialParams` ([C++](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1SoftMaterialParams.html), [Python](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.SoftMaterialParams)).
+Material selection is configured with `SoftMaterialParams` ([C++](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1SoftMaterialParams.html), [Python](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.SoftMaterialParams)).
 
 | Parameter | C++ Type | Default | Description |
 |-----------|----------|---------|-------------|
 | `type` | `SoftMaterialType` | `NeoHookean` | Constitutive model selector (see [Material Models](./materials/overview.md#available-models)). |
-| `neoHookean` / `neo_hookean` | [`NeoHookeanMaterialParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1SmithNeoHookeanMaterialParams.html) | $E = 10^5$, $\nu = 0.45$ | Parameters used when `type = NeoHookean`. |
-| `stVenantKirchhoff` / `st_venant_kirchhoff` | [`StVenantKirchhoffMaterialParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1StVenantKirchhoffMaterialParams.html) | $E = 10^5$, $\nu = 0.45$ | Parameters used when `type = StVenantKirchhoff`. |
-| `linearElastic` / `linear_elastic` | [`LinearElasticMaterialParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1LinearElasticMaterialParams.html) | $E = 10^5$, $\nu = 0.45$ | Parameters used when `type = LinearElastic`. |
-| `arap` | [`ArapMaterialParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ArapMaterialParams.html) | $\mu = 1000$ | Parameters used when `type = Arap`. |
-| `activeNeoHookean` / `active_neo_hookean` | [`ActiveNeoHookeanMaterialParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ActiveNeoHookeanMaterialParams.html) | -- | Parameters used when `type = ActiveNeoHookean`. |
-| `activeShapeTargetingArap` / `active_shape_targeting_arap` | [`ActiveShapeTargetingArapMaterialParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ActiveShapeTargetingArapMaterialParams.html) | -- | Parameters used when `type = ActiveShapeTargetingArap`. |
+| `neoHookean` / `neo_hookean` | [`NeoHookeanMaterialParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1SmithNeoHookeanMaterialParams.html) | $E = 10^5$, $\nu = 0.45$ | Parameters used when `type = NeoHookean`. |
+| `stVenantKirchhoff` / `st_venant_kirchhoff` | [`StVenantKirchhoffMaterialParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1StVenantKirchhoffMaterialParams.html) | $E = 10^5$, $\nu = 0.45$ | Parameters used when `type = StVenantKirchhoff`. |
+| `linearElastic` / `linear_elastic` | [`LinearElasticMaterialParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1LinearElasticMaterialParams.html) | $E = 10^5$, $\nu = 0.45$ | Parameters used when `type = LinearElastic`. |
+| `arap` | [`ArapMaterialParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ArapMaterialParams.html) | $\mu = 1000$ | Parameters used when `type = Arap`. |
+| `activeNeoHookean` / `active_neo_hookean` | [`ActiveNeoHookeanMaterialParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ActiveNeoHookeanMaterialParams.html) | -- | Parameters used when `type = ActiveNeoHookean`. |
+| `activeShapeTargetingArap` / `active_shape_targeting_arap` | [`ActiveShapeTargetingArapMaterialParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ActiveShapeTargetingArapMaterialParams.html) | -- | Parameters used when `type = ActiveShapeTargetingArap`. |
 | `density` | `real` / `float` | `1000.0` | Mass density in the undeformed configuration [kg/m^3]. |
-| `massDampingCoefficient` / `mass_damping_coefficient` | `real` / `float` | `0` | Mass-proportional damping coefficient $\alpha_R$ [1/s] in the [continuum dissipation potential](#continuous-model). Must be non-negative; active only when [`hasInertia`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1SoftActorParams.html) / [`has_inertia`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.SoftActorParams.has_inertia) is `true`. |
-| `stiffnessDampingCoefficient` / `stiffness_damping_coefficient` | `real` / `float` | `0` | Stiffness-proportional damping coefficient $\beta_R$ [s] in the [continuum dissipation potential](#continuous-model). Must be non-negative; active only when [`hasStress`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1SoftActorParams.html) / [`has_stress`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.SoftActorParams.has_stress) is `true`. |
+| `massDampingCoefficient` / `mass_damping_coefficient` | `real` / `float` | `0` | Mass-proportional damping coefficient $\alpha_R$ [1/s] in the [continuum dissipation potential](#continuous-model). Must be non-negative; active only when [`hasInertia`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1SoftActorParams.html) / [`has_inertia`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.SoftActorParams.has_inertia) is `true`. |
+| `stiffnessDampingCoefficient` / `stiffness_damping_coefficient` | `real` / `float` | `0` | Stiffness-proportional damping coefficient $\beta_R$ [s] in the [continuum dissipation potential](#continuous-model). Must be non-negative; active only when [`hasStress`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1SoftActorParams.html) / [`has_stress`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.SoftActorParams.has_stress) is `true`. |
 | `stiffnessDampingIncludeGeometricTerm` / `stiffness_damping_include_geometric_term` | `bool` | `false` | **Experimental.** Whether the stiffness-damping tangent includes its geometric term. This affects the Newton Jacobian, but not the energy, residual, or converged solution. |
 
 :::note
-Only the parameters corresponding to the selected [`type`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1SoftMaterialParams.html) are used at runtime. The other material parameter structs are ignored.
+Only the parameters corresponding to the selected [`type`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1SoftMaterialParams.html) are used at runtime. The other material parameter structs are ignored.
 
-If the shape provides per-element data for the selected material type, it takes precedence at creation. [`Actor::SetSoftMaterialParams()`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Actor.html) replaces it with a homogeneous material; use `experimental::GetSoftMaterialParamsField()` and `experimental::SetSoftMaterialParamsField()` for per-element updates.
+If the shape provides per-element data for the selected material type, it takes precedence at creation. [`Actor::SetSoftMaterialParams()`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Actor.html) replaces it with a homogeneous material; use `experimental::GetSoftMaterialParamsField()` and `experimental::SetSoftMaterialParamsField()` for per-element updates.
 :::
 
 ## Examples

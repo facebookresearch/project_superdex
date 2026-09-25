@@ -37,7 +37,7 @@ The current normal load is used for dissipation because it improves the accuracy
 This is technically inconsistent with the mathematical assumptions behind the `WOLFE_STRONG` line search, because contact dissipation with an implicit normal force does not derive exactly from an incremental potential.
 However, the potential-based line search nonetheless improves convergence in spite of this inconsistency, since most terms of the formulation do derive from a potential.
 
-This example uses the default linear solver, but using the experimental [`sdp.LinearSolverType.PARALLEL_CG`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.LinearSolverType) linear solver can improve performance even further in applications where strict bit-level determinism is not required and a suitable multi-core environment is available.
+This example uses the default linear solver, but using the experimental [`sdp.LinearSolverType.PARALLEL_CG`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.LinearSolverType) linear solver can improve performance even further in applications where strict bit-level determinism is not required and a suitable multi-core environment is available.
 
 The ground plane that the T-shirt falls onto is modeled as a static rigid actor with an infinite half-space geometry.
 
@@ -57,7 +57,7 @@ shape_path = str(resolve_asset("garments/tshirt_visual_subdiv_2.mochi.h5"))
 shape = sdp.load_shape_from_file(shape_path)
 ```
 
-This example uses a preprepared model asset for brevity. The [Authoring Assets](../../authoring_scenes/authoring_assets.mdx) workflow shows how to load an OBJ physics mesh into [`ModelData`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.ModelData), validate it, and save it in HDF5 format. (That path does not create the optional subdivided visual mesh included in this example's asset.)
+This example uses a preprepared model asset for brevity. The [Authoring Assets](../../authoring_scenes/authoring_assets.mdx) workflow shows how to load an OBJ physics mesh into [`ModelData`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.ModelData), validate it, and save it in HDF5 format. (That path does not create the optional subdivided visual mesh included in this example's asset.)
 
 ### Define the Shell Material
 

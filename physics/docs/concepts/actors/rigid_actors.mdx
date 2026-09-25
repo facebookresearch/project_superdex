@@ -10,11 +10,11 @@ import TabItem from '@theme/TabItem';
 
 Rigid actors represent non-deformable bodies. They serve as standalone dynamic or static objects and as the building blocks for more complex constructs such as [articulated bodies](./articulated_actors.mdx).
 
-A rigid actor's state is fully described by a position (`Real3`) and an orientation ([`Quaternion`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Quaternion.html)), and solution updates can be parameterized in terms of 6 independent degrees of freedom (DoFs; 3 translational and 3 rotational).
+A rigid actor's state is fully described by a position (`Real3`) and an orientation ([`Quaternion`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Quaternion.html)), and solution updates can be parameterized in terms of 6 independent degrees of freedom (DoFs; 3 translational and 3 rotational).
 
 ## Static vs. Dynamic
 
-Certain rigid actors can have their positions prescribed directly by setting the [`isStatic`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html) / [`is_static`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.RigidActorParams.is_static) flag.
+Certain rigid actors can have their positions prescribed directly by setting the [`isStatic`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html) / [`is_static`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.RigidActorParams.is_static) flag.
 Static actors may still act as colliders for other actors, but they do not respond to contact reactions or other external forces.
 While the term "static" may suggest that static actors are stationary (and this is often true), they can still move with nonzero velocity if their prescribed positions are updated at each time step.
 Common use cases for static actors are environmental obstacles such as ground planes, walls, tables, and similar.
@@ -32,8 +32,8 @@ m=\int_{\mathcal B}\rho\,d\mathbf{X}
 $$
 where $\rho$ is the mass density field and $\mathbf{X}$ is a material point in the body.
 For the remainder of this discussion, use a **body frame** centered at the center of mass, with axes aligned with the actor's local frame, and define the body-frame offset $\mathbf{r}=\mathbf{X}-\mathbf{X}_\mathrm{CoM}$.
-Let $\mathbf{c}$ be the world-space center of mass and let $\mathbf{R}\in\mathrm{SO}(3)$ be the world-from-body rotation, which is also the rotation of the actor's [`worldFromLocal`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html) transform.
-The position $\mathbf{c}$ is the world-space image of the [`centerOfMass`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html) parameter and, in general, differs from the translation of [`worldFromLocal`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html).
+Let $\mathbf{c}$ be the world-space center of mass and let $\mathbf{R}\in\mathrm{SO}(3)$ be the world-from-body rotation, which is also the rotation of the actor's [`worldFromLocal`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html) transform.
+The position $\mathbf{c}$ is the world-space image of the [`centerOfMass`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html) parameter and, in general, differs from the translation of [`worldFromLocal`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html).
 
 The mass second-moment tensor in the body frame is
 $$
@@ -286,18 +286,18 @@ projectile = scene.create_rigid_actor(
 
 ### RigidActorParams
 
-The creation fields are defined by `RigidActorParams` ([C++](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html), [Python](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.RigidActorParams)).
+The creation fields are defined by `RigidActorParams` ([C++](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html), [Python](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.RigidActorParams)).
 
 | Parameter | C++ Type | Python Name | Default | Description |
 |-----------|----------|-------------|---------|-------------|
 | `name` | `DynamicString` | `name` | `""` | Human-readable name for the actor. |
 | `layer` | `DynamicString` | `layer` | `""` | Contact layer. Contact can be selectively enabled or disabled between actors on the same or different layers. |
-| `shape` | [`ShapeHandle`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ShapeHandle.html) | `shape` | *(none)* | Handle to the shape geometry. Created via [`LoadShapeFromFile`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Context.html), [`CreatePlaneShape`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Context.html), [`CreateTriMeshShape`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Context.html), etc. |
-| `worldFromLocal` | [`TransformRT`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1TransformRT.html) | `world_from_local` | Identity | Initial transform (rotation + translation) of the actor in world space. |
+| `shape` | [`ShapeHandle`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ShapeHandle.html) | `shape` | *(none)* | Handle to the shape geometry. Created via [`LoadShapeFromFile`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Context.html), [`CreatePlaneShape`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Context.html), [`CreateTriMeshShape`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Context.html), etc. |
+| `worldFromLocal` | [`TransformRT`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1TransformRT.html) | `world_from_local` | Identity | Initial transform (rotation + translation) of the actor in world space. |
 | `colliderType` | `ColliderType` | `collider_type` | `Auto` | Collision geometry representation used by *other* actors to detect contact with this actor. See [Collider Representations](../contact.md#collider-representations). |
 | `isStatic` | `bool` | `is_static` | `false` | If `true`, the actor has infinite mass and is not moved by the solver. |
-| `contact` | [`ContactParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ContactParams.html) | `contact` | *(defaults)* | Contact and friction parameters. See [Contact Parameter Reference](../contact.md#contact-parameter-reference). |
-| `sdf` | [`GridSdfParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1GridSdfParams.html) | `sdf` | *(defaults)* | Grid SDF resolution and padding parameters. Only relevant when [`colliderType`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html) is `Sdf`. |
+| `contact` | [`ContactParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ContactParams.html) | `contact` | *(defaults)* | Contact and friction parameters. See [Contact Parameter Reference](../contact.md#contact-parameter-reference). |
+| `sdf` | [`GridSdfParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1GridSdfParams.html) | `sdf` | *(defaults)* | Grid SDF resolution and padding parameters. Only relevant when [`colliderType`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html) is `Sdf`. |
 | `hasGravity` | `bool` | `has_gravity` | `true` | Whether gravity is applied to this actor. Ignored for static actors. |
 | `density` | `optional<real>` | `density` | *(unset)* | Material density in kg/m^3. Used to compute mass, center of mass, and inertia from the shape geometry. |
 | `mass` | `optional<real>` | `mass` | *(unset)* | Total mass in kg. Overrides density-based mass computation. |
@@ -310,14 +310,14 @@ The creation fields are defined by `RigidActorParams` ([C++](pathname:///generat
 
 ### Mass and Inertia
 
-For dynamic rigid actors, mass properties are required for integration. The [`density`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html), [`mass`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html), [`centerOfMass`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html), and [`momentOfInertia`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html) parameters can be combined in several ways:
+For dynamic rigid actors, mass properties are required for integration. The [`density`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html), [`mass`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html), [`centerOfMass`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html), and [`momentOfInertia`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html) parameters can be combined in several ways:
 
-1. **From density** — Provide [`density`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html) and SuperDex Physics computes total mass, center of mass, and rotational inertia from the shape geometry automatically.
-2. **Explicit mass** — Set [`mass`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html) directly. If the inertia tensor is not provided, it is derived from the shape geometry and scaled to match the specified mass.
-3. **Explicit mass and inertia** — Set [`mass`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html), [`centerOfMass`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html), and [`momentOfInertia`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html) directly. Useful when mass properties are known from a CAD model or URDF file.
+1. **From density** — Provide [`density`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html) and SuperDex Physics computes total mass, center of mass, and rotational inertia from the shape geometry automatically.
+2. **Explicit mass** — Set [`mass`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html) directly. If the inertia tensor is not provided, it is derived from the shape geometry and scaled to match the specified mass.
+3. **Explicit mass and inertia** — Set [`mass`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html), [`centerOfMass`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html), and [`momentOfInertia`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html) directly. Useful when mass properties are known from a CAD model or URDF file.
 
 :::caution
-Do not set both [`density`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html) and [`mass`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html) at the same time. If neither is specified, a default density is used. If [`centerOfMass`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html) or [`momentOfInertia`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html) is provided without the other, the missing value is computed assuming uniform density.
+Do not set both [`density`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html) and [`mass`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html) at the same time. If neither is specified, a default density is used. If [`centerOfMass`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html) or [`momentOfInertia`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html) is provided without the other, the missing value is computed assuming uniform density.
 :::
 
 ## Shapes
@@ -326,19 +326,19 @@ Rigid actors support several shape types:
 
 | Shape Type | Creation Method | Typical Use |
 |------------|----------------|-------------|
-| **Plane** | [`CreatePlaneShape`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Context.html) / [`create_plane_shape`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.create_plane_shape) | Ground planes, infinite walls |
-| **Triangle mesh** | [`CreateTriMeshShape`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Context.html) / [`create_tri_mesh_shape`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.create_tri_mesh_shape) | Arbitrary surface geometry defined programmatically |
-| **Mesh from file** | [`LoadShapeFromFile`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Context.html) / [`load_shape_from_file`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.load_shape_from_file) | Pre-built mesh assets (`.mochi.json`, `.mochi.h5`) |
-| **Sphere** (implicit) | [`CreateSphereShape`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Context.html) / [`create_sphere_shape`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.create_sphere_shape) | Analytically defined spheres |
+| **Plane** | [`CreatePlaneShape`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Context.html) / [`create_plane_shape`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.create_plane_shape) | Ground planes, infinite walls |
+| **Triangle mesh** | [`CreateTriMeshShape`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Context.html) / [`create_tri_mesh_shape`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.create_tri_mesh_shape) | Arbitrary surface geometry defined programmatically |
+| **Mesh from file** | [`LoadShapeFromFile`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Context.html) / [`load_shape_from_file`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.load_shape_from_file) | Pre-built mesh assets (`.mochi.json`, `.mochi.h5`) |
+| **Sphere** (implicit) | [`CreateSphereShape`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Context.html) / [`create_sphere_shape`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.create_sphere_shape) | Analytically defined spheres |
 | **Box** (from tetmesh) | Tetmesh utility functions | Box colliders with volumetric mesh |
 
-The shape defines the visual and collision geometry. The [`colliderType`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html) parameter then controls which collision representation is used at runtime (SDF, bounding sphere, AABB, etc.).
+The shape defines the visual and collision geometry. The [`colliderType`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html) parameter then controls which collision representation is used at runtime (SDF, bounding sphere, AABB, etc.).
 
 For full details on shape creation and management, see the [Shapes](../shapes.mdx) page.
 
 ## Role in Articulated Bodies
 
-Rigid actors also serve as the **links** (bones) within articulated body actors. In that context, individual rigid links do not own independent degrees of freedom — their transforms are derived from the joint states of the parent articulated actor. The [`RigidActorParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1RigidActorParams.html) struct is reused as the `linkParams` array in [`ArticulatedActorParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ArticulatedActorParams.html). See [Articulated Actors](./articulated_actors.mdx) for details.
+Rigid actors also serve as the **links** (bones) within articulated body actors. In that context, individual rigid links do not own independent degrees of freedom — their transforms are derived from the joint states of the parent articulated actor. The [`RigidActorParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1RigidActorParams.html) struct is reused as the `linkParams` array in [`ArticulatedActorParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ArticulatedActorParams.html). See [Articulated Actors](./articulated_actors.mdx) for details.
 
 ## Examples
 

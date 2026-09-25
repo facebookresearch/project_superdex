@@ -153,7 +153,7 @@ The continuous energies are integrated by multiplying the edge stretching densit
 
 ## Parameters Reference
 
-Pass `RodActorParams` to the experimental free function `CreateRodActor` / `create_rod_actor`; unlike standard actor types, rods are not created through a [`Scene`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.html) method.
+Pass `RodActorParams` to the experimental free function `CreateRodActor` / `create_rod_actor`; unlike standard actor types, rods are not created through a [`Scene`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html) method.
 
 ### `RodActorParams`
 
@@ -161,9 +161,9 @@ Pass `RodActorParams` to the experimental free function `CreateRodActor` / `crea
 |-----------|------|---------|-------------|
 | `name` | `DynamicString` | `""` | Actor name for identification. |
 | `layer` | `DynamicString` | `""` | Contact layer name. |
-| `worldFromLocal` | [`TransformRT`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1TransformRT.html) | Identity | Transform from local (shape) space to world space. |
-| `shape` | [`ShapeHandle`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ShapeHandle.html) | -- | Polyline shape defining the rod centerline. **Required.** |
-| `contact` | [`ContactParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ContactParams.html) | Default | Contact properties. |
+| `worldFromLocal` | [`TransformRT`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1TransformRT.html) | Identity | Transform from local (shape) space to world space. |
+| `shape` | [`ShapeHandle`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ShapeHandle.html) | -- | Polyline shape defining the rod centerline. **Required.** |
+| `contact` | [`ContactParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ContactParams.html) | Default | Contact properties. |
 | `contactElementType` | `ActorSegmentElementType` | `Default` (`P1Q3`) | Contact sampling along centerline segments. |
 | `material` | `RodMaterialParams` | Default | Material properties (see below). |
 | `colliderType` | `ColliderType` | `None` | `PointCloud` or `Auto` enables a point-cloud collider. |
@@ -188,7 +188,7 @@ See [Parameter Selection](#parameter-selection) for formulas relating these para
 
 ## Contact
 
-By default, a rod's colliding samples lie along its centerline. Set `useContactSkin` to place them on the triangular [`ModelData::contactSkinMesh`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ModelData.html) instead and transmit contact forces to the rod DoFs through its skinning Jacobian. The contact skin and its rod embedding data are required. It is independent of the optional visual mesh, which remains rendering geometry.
+By default, a rod's colliding samples lie along its centerline. Set `useContactSkin` to place them on the triangular [`ModelData::contactSkinMesh`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ModelData.html) instead and transmit contact forces to the rod DoFs through its skinning Jacobian. The contact skin and its rod embedding data are required. It is independent of the optional visual mesh, which remains rendering geometry.
 
 Rods have no collider by default. Set `colliderType` to `PointCloud` or `Auto` to enable a [point-cloud collider](../contact.md#double-integral-generalization), whose collider integral is taken over the centerline. See [Contact Roles](../contact.md#contact-roles) for the distinction between colliding samples and colliders.
 

@@ -19,7 +19,7 @@ The separation of roles allows SuperDex Physics to handle **asymmetric contact c
 
 ### Collider Representations
 
-The `colliderType` / `collider_type` setting selects how an actor supplies distance fields. Its values are defined by the [`ColliderType`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.ColliderType) enum:
+The `colliderType` / `collider_type` setting selects how an actor supplies distance fields. Its values are defined by the [`ColliderType`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.ColliderType) enum:
 
 | Setting | Representation | Notes |
 |---|---|---|
@@ -32,7 +32,7 @@ The `colliderType` / `collider_type` setting selects how an actor supplies dista
 | `Sdf` | Precomputed grid SDF | Supports complex geometry; approximates the exact SDF using trilinear interpolation, with a resolution-memory trade-off. |
 | `PointCloud` | Spherical SDFs about material points | Quadrature discretization of the double-integral generalization below; interacts only with other point-cloud actors. |
 
-Grid SDF construction is controlled by `GridSdfParams` ([C++](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1GridSdfParams.html), [Python](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.GridSdfParams)): [`resolutionMode`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1GridSdfParams.html) / [`resolution_mode`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.GridSdfParams.resolution_mode) selects the reference length used to size voxels, [`resolutionDelta`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1GridSdfParams.html) / [`resolution_delta`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.GridSdfParams.resolution_delta) scales that length per axis, [`minGridResolution`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1GridSdfParams.html) / [`min_grid_resolution`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.GridSdfParams.min_grid_resolution) sets the minimum voxel count per axis, and [`boundaryPaddingDist`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1GridSdfParams.html) / [`boundary_padding_dist`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.GridSdfParams.boundary_padding_dist) extends the grid beyond the shape bounds.
+Grid SDF construction is controlled by `GridSdfParams` ([C++](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1GridSdfParams.html), [Python](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.GridSdfParams)): [`resolutionMode`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1GridSdfParams.html) / [`resolution_mode`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.GridSdfParams.resolution_mode) selects the reference length used to size voxels, [`resolutionDelta`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1GridSdfParams.html) / [`resolution_delta`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.GridSdfParams.resolution_delta) scales that length per axis, [`minGridResolution`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1GridSdfParams.html) / [`min_grid_resolution`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.GridSdfParams.min_grid_resolution) sets the minimum voxel count per axis, and [`boundaryPaddingDist`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1GridSdfParams.html) / [`boundary_padding_dist`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.GridSdfParams.boundary_padding_dist) extends the grid beyond the shape bounds.
 
 ### Default Roles by Actor Type
 
@@ -41,15 +41,15 @@ Grid SDF construction is controlled by `GridSdfParams` ([C++](pathname:///genera
 | Rigid (dynamic) | Yes | Yes (`colliderType = Auto`, which resolves to `Sdf` for mesh shapes) |
 | Rigid (static) | No | Yes (`colliderType = Auto`, which resolves to `Sdf` for mesh shapes) |
 | Soft | Yes | No (set `colliderType` to `Sdf` or `Auto` to enable a grid SDF mapped by the deformation; this is experimental and may be slow) |
-| Articulated links | Yes (dynamic links only) | Yes by default; each link has its own [`colliderType`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ArticulatedLinkParams.html), which defaults to `Auto` |
+| Articulated links | Yes (dynamic links only) | Yes by default; each link has its own [`colliderType`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ArticulatedLinkParams.html), which defaults to `Auto` |
 | Shell | Yes | Yes (`colliderType = PointCloud` by default) |
 | Rod | Yes | No (set `colliderType` to `PointCloud` or `Auto` to enable) |
 
 ## Contact Filtering
 
-Filtering controls which ordered actor interactions are eligible. Each actor has an arbitrary string contact layer, assigned at creation or changed with [`Actor::SetContactLayer`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Actor.html) ([`set_contact_layer`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.set_contact_layer) in Python).
+Filtering controls which ordered actor interactions are eligible. Each actor has an arbitrary string contact layer, assigned at creation or changed with [`Actor::SetContactLayer`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Actor.html) ([`set_contact_layer`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.set_contact_layer) in Python).
 
-The C++ [`Scene`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.html) API and corresponding Python methods provide four controls:
+The C++ [`Scene`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html) API and corresponding Python methods provide four controls:
 
 - `Scene::EnableLayerContactAsymmetric(layerA, layerB, enable, error)` (`enable_layer_contact_asymmetric` in Python) controls the ordered interaction with `layerA` colliding against `layerB` as collider. It does not change the reverse direction.
 - `Scene::EnableLayerContactSymmetric(layerA, layerB, enable, error)` (`enable_layer_contact_symmetric` in Python) applies the setting to both directions.
@@ -58,7 +58,7 @@ The C++ [`Scene`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.ht
 
 Both layer-level and actor-pair contact must be enabled for an interaction to occur; actor-pair settings cannot re-enable a layer-disabled interaction. Actor-pair filtering is useful when constrained actors overlap and would otherwise generate contact forces that oppose the constraint. Asymmetric filtering specifies which actor supplies samples and which supplies the collider field.
 
-When `includeNestedActors` is `IncludeNestedActors::No`, these APIs affect only the exact handles passed. With `IncludeNestedActors::Yes`, a parent actor resolves to the parent plus its nested actors, and the setting is applied to every ordered pair in the cross-product of the two resolved handle sets. No pair outside that cross-product is affected. If the sets overlap, overlap pairs, including self-pairs, are affected. Python exposes the containing [`IncludeNestedActors`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.IncludeNestedActors) enum.
+When `includeNestedActors` is `IncludeNestedActors::No`, these APIs affect only the exact handles passed. With `IncludeNestedActors::Yes`, a parent actor resolves to the parent plus its nested actors, and the setting is applied to every ordered pair in the cross-product of the two resolved handle sets. No pair outside that cross-product is affected. If the sets overlap, overlap pairs, including self-pairs, are affected. Python exposes the containing [`IncludeNestedActors`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.IncludeNestedActors) enum.
 
 SuperDex Physics automatically disables contact between adjacent links when articulated or soft-skinned actors are created. A later actor-contact setting can override that automatic disable for any pair in the resolved sets. In particular, enabling contact between a parent and itself with `IncludeNestedActors::Yes` enables contact between its nested actors, including adjacent links, unless a later setting disables those pairs again.
 
@@ -207,13 +207,13 @@ $$
 provides an explicit formula that holds to high accuracy and captures the two limits mentioned above. It is recommended for calibrating $c_n$ in practice, where approximation error from this formula will typically be smaller than discretization error in the simulation. This formula can also be inverted in closed form to estimate the effective CoR corresponding to a given damping coefficient and impact velocity.
 For deformable bodies, restitution behavior is expected to depend mainly on the bulk elasticity and stiffness damping properties, not damping of the contact formulation.
 
-This restitution behavior is a property of the continuous-time [dynamics](./dynamics.md#system-dynamics) of the formulation and is not guaranteed to be reproduced with discrete time-stepping. Observing it in practice typically requires at least second-order time integration (e.g., the C++ `IntegrationMethod::BDF2` or corresponding Python [`IntegrationMethod`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.IntegrationMethod) value). The time-step size must also be sufficiently small to resolve the contact event over several steps.
+This restitution behavior is a property of the continuous-time [dynamics](./dynamics.md#system-dynamics) of the formulation and is not guaranteed to be reproduced with discrete time-stepping. Observing it in practice typically requires at least second-order time integration (e.g., the C++ `IntegrationMethod::BDF2` or corresponding Python [`IntegrationMethod`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.IntegrationMethod) value). The time-step size must also be sufficiently small to resolve the contact event over several steps.
 
 #### Contact Parameter Combination
 
 For a contact pair, friction and damping coefficients are the geometric means of the actors' values. The penalty coefficient and friction falloff velocity are also geometric means when both actors are dynamic, but are taken from the colliding actor when the collider is static. Other contact parameters, including the smoothing distance and contact threshold, are taken from the collider.
 
-The geometric-mean heuristic for combining per-actor contact parameters reduces the dimensionality of a scene's parameter space, but it can limit precise calibration of quantities such as friction coefficients, which are properties of material pairs rather than individual materials. When the parameter-combination heuristic is insufficient, use [`Scene::SetContactPairParamsOverride`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.html) / [`set_contact_pair_params_override`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.set_contact_pair_params_override) with a `ContactPairParamsOverride` ([C++](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ContactPairParamsOverride.html), [Python](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.ContactPairParamsOverride)) to override the combined penalty coefficient, friction falloff velocity, viscous and Coulomb friction coefficients, or normal viscous damping coefficient for an exact unordered actor pair. Unset fields retain the normal combination rule. Setting another override replaces the pair's complete override; it does not merge with the previous value.
+The geometric-mean heuristic for combining per-actor contact parameters reduces the dimensionality of a scene's parameter space, but it can limit precise calibration of quantities such as friction coefficients, which are properties of material pairs rather than individual materials. When the parameter-combination heuristic is insufficient, use [`Scene::SetContactPairParamsOverride`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html) / [`set_contact_pair_params_override`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.set_contact_pair_params_override) with a `ContactPairParamsOverride` ([C++](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ContactPairParamsOverride.html), [Python](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.ContactPairParamsOverride)) to override the combined penalty coefficient, friction falloff velocity, viscous and Coulomb friction coefficients, or normal viscous damping coefficient for an exact unordered actor pair. Unset fields retain the normal combination rule. Setting another override replaces the pair's complete override; it does not merge with the previous value.
 
 ```python
 scene.set_contact_pair_params_override(
@@ -223,7 +223,7 @@ scene.set_contact_pair_params_override(
 )
 ```
 
-The corresponding `Clear`, `Has`, and `Get` methods manage the stored override. Like the single-actor setter [`Actor::SetContactParams`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Actor.html) / [`set_contact_params`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.set_contact_params), the pair-override setter applies only to the exact actors passed; it does not expand parent actors to their nested actors. This differs from [actor-pair contact filtering](#contact-filtering), which includes nested actors by default.
+The corresponding `Clear`, `Has`, and `Get` methods manage the stored override. Like the single-actor setter [`Actor::SetContactParams`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Actor.html) / [`set_contact_params`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.set_contact_params), the pair-override setter applies only to the exact actors passed; it does not expand parent actors to their nested actors. This differs from [actor-pair contact filtering](#contact-filtering), which includes nested actors by default.
 
 #### Double-Integral Generalization
 
@@ -267,7 +267,7 @@ $$
 $$
 This discretization explains the asymmetric actor roles introduced above: actor $A$ must provide surface quadrature samples, while actor $B$ must provide a distance field that can be evaluated at their current positions. An actor may support either capability without supporting the other; for example, an infinite plane has an analytic SDF but no finite surface to sample. The asymmetry also makes [contact filtering](#contact-filtering) directional.
 
-For rigid, soft, and articulated actors, the `boundaryElementType` / `boundary_element_type` parameter controls the quadrature rule on each surface face. Its values are defined by the [`ActorBoundaryElementType`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.ActorBoundaryElementType) enum. Shells use the equivalent `contactElementType` parameter. Rod centerline contact also uses `contactElementType`, but with segment rules rather than the surface rules below:
+For rigid, soft, and articulated actors, the `boundaryElementType` / `boundary_element_type` parameter controls the quadrature rule on each surface face. Its values are defined by the [`ActorBoundaryElementType`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.ActorBoundaryElementType) enum. Shells use the equivalent `contactElementType` parameter. Rod centerline contact also uses `contactElementType`, but with segment rules rather than the surface rules below:
 
 | Setting | Quadrature Points per Face | Use Case |
 |---|---|---|
@@ -295,16 +295,16 @@ $$
 $$
 Only the second term, $\partial R/\partial v$, contributes to the residual, but $\partial R/\partial q$ may be nonzero.  It is possible to recover consistency between the potential and residual by using explicit stage-start predictors to eliminate certain state-dependencies, similar to the treatment of [Li et al. (2020)](#references).  This may improve the performance of the nonlinear algebraic solver used for the implicit stage, but it can decrease accuracy and stability of the time integration at large time steps.
 
-Two Boolean fields in `ExperimentalEvalParams` ([C++](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ExperimentalEvalParams.html), [Python](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.ExperimentalEvalParams)) control the time levels used to evaluate the dissipative terms:
+Two Boolean fields in `ExperimentalEvalParams` ([C++](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ExperimentalEvalParams.html), [Python](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.ExperimentalEvalParams)) control the time levels used to evaluate the dissipative terms:
 
 - `explicitNormals` selects the geometric data used for dissipation. When `true`, SuperDex Physics uses stage-start normals, alignment, and friction plane, and retains stage-start contacts alongside contacts detected in the current configuration. When `false` (default), it uses current geometry and reconstructs the stage-start distance to first order with the current field gradient.
 - `implicitNormalForceForDissipation` selects the normal load used to scale dissipation. When `false` (default), SuperDex Physics uses the true or reconstructed stage-start normal-load scalar. When `true`, it uses the current normal-load scalar.
 
-Separately, [`fadeFriction`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ExperimentalEvalParams.html) enables alignment-based attenuation of dissipative terms and defaults to `true`. Its state dependence is frozen when `explicitNormals = true`; with current normals it is another reason the default residual is not the gradient of the assembled scalar dissipation energy.
+Separately, [`fadeFriction`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ExperimentalEvalParams.html) enables alignment-based attenuation of dissipative terms and defaults to `true`. Its state dependence is frozen when `explicitNormals = true`; with current normals it is another reason the default residual is not the gradient of the assembled scalar dissipation energy.
 
 Their supported combinations are:
 
-| [`explicitNormals`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ExperimentalEvalParams.html) | [`implicitNormalForceForDissipation`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ExperimentalEvalParams.html) | Evaluation | Incremental-potential status |
+| [`explicitNormals`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ExperimentalEvalParams.html) | [`implicitNormalForceForDissipation`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ExperimentalEvalParams.html) | Evaluation | Incremental-potential status |
 |---|---|---|---|
 | `true` | `false` | Stage-start normals, alignment, friction plane, and true stage-start normal load. | The dissipative residual is exactly the gradient of $\Delta t_iR_i$. |
 | `false` (default) | `false` (default) | Current geometry and reconstructed stage-start normal load. | Does not derive from an incremental potential. |
@@ -317,7 +317,7 @@ For `PointCloud` colliders discretizing the [double-integral generalization](#do
 
 ### `ContactParams`
 
-`ContactParams` ([C++](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ContactParams.html), [Python](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.ContactParams)) configures contact response per actor. The following table provides a correspondence between the C++ API names of parameters and the mathematical notation used in this document. Python uses the corresponding `snake_case` property names.
+`ContactParams` ([C++](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ContactParams.html), [Python](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.ContactParams)) configures contact response per actor. The following table provides a correspondence between the C++ API names of parameters and the mathematical notation used in this document. Python uses the corresponding `snake_case` property names.
 
 | Parameter | C++ Type | Default | Units | Description |
 |---|---|---|---|---|

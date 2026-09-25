@@ -11,7 +11,7 @@ Active Shape Targeting ARAP extends [ARAP](./arap.md) with a user-controlled loc
 
 ## Formulation
 
-The six [`shapeTargetTensor`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ActiveShapeTargetingArapMaterialParams.html) values define the symmetric target tensor
+The six [`shapeTargetTensor`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ActiveShapeTargetingArapMaterialParams.html) values define the symmetric target tensor
 
 $$
 \mathbf{S}_t
@@ -49,7 +49,7 @@ When all target parameters are zero, $\mathbf{S}_t=\mathbf{1}$ and the model red
 
 ## Parameters
 
-The public parameter type is [`ActiveShapeTargetingArapMaterialParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ActiveShapeTargetingArapMaterialParams.html).
+The public parameter type is [`ActiveShapeTargetingArapMaterialParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ActiveShapeTargetingArapMaterialParams.html).
 
 | Parameter | Default | Units | Description |
 |---|---|---|---|
@@ -61,7 +61,7 @@ Supported concrete PSD strategies: `None`, `Projection`, `PerTermProjection`, `A
 
 ## Controlling Actuation
 
-Actuation is application-driven: supply a nonzero [`shapeTargetTensor`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ActiveShapeTargetingArapMaterialParams.html) at creation time, or vary it at runtime to change the desired local contraction, expansion, or shear. To update a homogeneous target, call [`Actor::GetSoftMaterialParams()`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Actor.html), modify `activeShapeTargetingArap.shapeTargetTensor`, and pass the result to [`Actor::SetSoftMaterialParams()`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Actor.html). For actors with [per-element material data](../overview.mdx#softmaterialparams), use `experimental::GetSoftMaterialParamsField()` and `experimental::SetSoftMaterialParamsField()` instead.
+Actuation is application-driven: supply a nonzero [`shapeTargetTensor`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ActiveShapeTargetingArapMaterialParams.html) at creation time, or vary it at runtime to change the desired local contraction, expansion, or shear. To update a homogeneous target, call [`Actor::GetSoftMaterialParams()`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Actor.html), modify `activeShapeTargetingArap.shapeTargetTensor`, and pass the result to [`Actor::SetSoftMaterialParams()`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Actor.html). For actors with [per-element material data](../overview.mdx#softmaterialparams), use `experimental::GetSoftMaterialParamsField()` and `experimental::SetSoftMaterialParamsField()` instead.
 
 ## When to Use
 

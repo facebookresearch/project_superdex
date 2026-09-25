@@ -49,7 +49,7 @@ scene.create_rigid_actor(
 
 See [Contact Parameter Combination](../../concepts/contact.md#contact-parameter-combination) for the full set of combination rules.
 
-The soft ducks leave [`normal_viscous_damping_coefficient`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.ContactParams.normal_viscous_damping_coefficient) at its default of zero (dissipating energy instead through their bulk viscoelasticity), so the ground's coefficient has no effect on them.
+The soft ducks leave [`normal_viscous_damping_coefficient`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.ContactParams.normal_viscous_damping_coefficient) at its default of zero (dissipating energy instead through their bulk viscoelasticity), so the ground's coefficient has no effect on them.
 
 ### Load the Shared Shape
 
@@ -68,7 +68,7 @@ duck_shape = sdp.load_shape_from_file(
 
 ### Sweep the Soft Material Damping
 
-The parameter [`stiffness_damping_coefficient`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.SoftMaterialParams.stiffness_damping_coefficient) is the coefficient $\beta_R$ of the strain-rate dissipation potential, with units of time. It is swept from 1 ms to 4 ms across the row.
+The parameter [`stiffness_damping_coefficient`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.SoftMaterialParams.stiffness_damping_coefficient) is the coefficient $\beta_R$ of the strain-rate dissipation potential, with units of time. It is swept from 1 ms to 4 ms across the row.
 
 ```python
 STIFFNESS_DAMPING_COEFFICIENTS = (0.001, 0.002, 0.003, 0.004)  # [s]
@@ -93,7 +93,7 @@ Mass-proportional damping is also available, but it adds drag in world space, an
 
 ### Sweep the Normal Contact Damping
 
-The parameter [`normal_viscous_damping_coefficient`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.ContactParams.normal_viscous_damping_coefficient) is the coefficient $c_n$ of the Hunt–Crossley impact model, with units of inverse velocity. The sweep is specified in terms of the effective coefficient of each duck-ground pair; each duck stores the value that produces it under the geometric mean.
+The parameter [`normal_viscous_damping_coefficient`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.ContactParams.normal_viscous_damping_coefficient) is the coefficient $c_n$ of the Hunt–Crossley impact model, with units of inverse velocity. The sweep is specified in terms of the effective coefficient of each duck-ground pair; each duck stores the value that produces it under the geometric mean.
 
 ```python
 EFFECTIVE_NORMAL_DAMPING_COEFFICIENTS = (0.1, 0.2, 0.3, 0.4)  # [s/m]

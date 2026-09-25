@@ -68,7 +68,7 @@ articulation.set_articulated_joint_velocities(velocities=[0.3, 4.2, 0, 0, 0])
 
 ### Introspecting the Articulation
 
-[`get_articulated_shape_info`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_articulated_shape_info) is a one-stop dump of the topology. Each link is also a queryable rigid **sub-actor**, and joint limits are exposed as inspectable constraints.
+[`get_articulated_shape_info`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_articulated_shape_info) is a one-stop dump of the topology. Each link is also a queryable rigid **sub-actor**, and joint limits are exposed as inspectable constraints.
 
 ```python
 info = articulation.get_articulated_shape_info()
@@ -146,7 +146,7 @@ articulation.clear_boundary_conditions()
 
 ### Mass, Root, and Center of Mass
 
-Mass and the root transform are whole-articulation queries; center of mass and velocity are **per-rigid-body** queries, so read them from a nested link sub-actor rather than the top-level articulated actor. (The articulated equivalent of [`set_velocity`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.set_velocity) is [`set_articulated_joint_velocities`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.set_articulated_joint_velocities).)
+Mass and the root transform are whole-articulation queries; center of mass and velocity are **per-rigid-body** queries, so read them from a nested link sub-actor rather than the top-level articulated actor. (The articulated equivalent of [`set_velocity`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.set_velocity) is [`set_articulated_joint_velocities`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.set_articulated_joint_velocities).)
 
 ```python
 articulation.get_mass()                 # total mass of the chain
@@ -190,7 +190,7 @@ scene.enable_actor_contact_symmetric(
 ## Features
 
 - **Build-time modeling**: all joint types (`Hard` / `Prismatic` / `Revolute` / `Spherical`), joint limits, per-joint friction and armature inertia, and per-link shape / collider / layer / density.
-- **Introspection**: [`get_articulated_shape_info`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_articulated_shape_info), [`get_num_dofs`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_num_dofs), [`get_nested_link_actors`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_nested_link_actors), and joint limits as inspectable constraints.
+- **Introspection**: [`get_articulated_shape_info`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_articulated_shape_info), [`get_num_dofs`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_num_dofs), [`get_nested_link_actors`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_nested_link_actors), and joint limits as inspectable constraints.
 - **Forward kinematics**: read pose, link transforms, and joint velocities.
 - **Direct state manipulation**: set the pose from joints or from link transforms, add a tangent-space delta, and set joint velocities.
 - **Live joint modeling**: read/write per-joint friction and armature inertia mid-simulation.
@@ -214,7 +214,7 @@ The same scene ships as a declarative [prefab](../../concepts/prefabs.mdx) — t
 
 **Source**: `assets/samples/articulations_double_pendulum_on_rail.mochi_scene`
 
-Load it into a fresh scene (or use [`sdp.prefab.add_to_scene(...)`](pathname:///generated/api/v1.0.0/python/api/prefab.html#superdex.physics.prefab.add_to_scene) / C++ `prefab::AddToScene(...)` to add it into an existing one):
+Load it into a fresh scene (or use [`sdp.prefab.add_to_scene(...)`](pathname:///generated/api/v1.0.1/python/api/prefab.html#superdex.physics.prefab.add_to_scene) / C++ `prefab::AddToScene(...)` to add it into an existing one):
 
 ```python
 from superdex.physics.utils.scene_helpers import create_scene_from_prefab

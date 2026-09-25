@@ -45,7 +45,7 @@ scene.enable_layer_contact_symmetric("layer_1", "layer_2", enable=False)
 
 This means objects in `layer_1` will pass through objects in `layer_2` (and vice versa). In this example, the stack of cubes in `layer_2` passes through the higher `platform_1` and lands on the lower `platform_2`.
 
-**Symmetric vs asymmetric**: [`enable_layer_contact_symmetric`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.enable_layer_contact_symmetric) disables contact in both directions. For one-directional filtering, use [`enable_layer_contact_asymmetric(layer_a, layer_b, enable=False)`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.enable_layer_contact_asymmetric).
+**Symmetric vs asymmetric**: [`enable_layer_contact_symmetric`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.enable_layer_contact_symmetric) disables contact in both directions. For one-directional filtering, use [`enable_layer_contact_asymmetric(layer_a, layer_b, enable=False)`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.enable_layer_contact_asymmetric).
 
 ### Actor-Based Filtering
 

@@ -8,7 +8,7 @@ import TabItem from '@theme/TabItem';
 
 # Actors Overview
 
-Actors ([`Actor`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Actor.html)) represent physical objects in a SuperDex Physics scene.
+Actors ([`Actor`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Actor.html)) represent physical objects in a SuperDex Physics scene.
 See [Contact](../contact.md) and [Constraints](../constraints.mdx) for details on how they interact with each other. Actor state is read through actor methods; some derived quantities require [registering a query](../queries.mdx) before the corresponding getter can return data.
 
 ## Actor Types
@@ -30,7 +30,7 @@ Many references on physics simulation use the terms "soft" and "deformable" inte
 
 ## Creating Actors
 
-Stable actor types are generally created through a corresponding `Create<ActorType>Actor` factory method on the [`Scene`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.html) object. Experimental shell and rod actors are created through analogous free functions in the `experimental` API.
+Stable actor types are generally created through a corresponding `Create<ActorType>Actor` factory method on the [`Scene`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html) object. Experimental shell and rod actors are created through analogous free functions in the `experimental` API.
 
 <Tabs groupId="language">
 <TabItem value="cpp" label="C++" default>
@@ -56,7 +56,7 @@ art_actor = scene.create_articulated_actor(art_actor_params)
 </TabItem>
 </Tabs>
 
-[Soft-skinned actors](./soft_skinned_actors.mdx) are an exception to this naming pattern. They are a specialized creation mode rather than a separate `ActorType`: [`CreateSoftSkinnedActor`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.html) / [`create_soft_skinned_actor`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.create_soft_skinned_actor) combines an articulated skeleton with soft actors and returns the skeleton as a top-level `Articulated` actor that owns them; the API calls them nested soft actors.
+[Soft-skinned actors](./soft_skinned_actors.mdx) are an exception to this naming pattern. They are a specialized creation mode rather than a separate `ActorType`: [`CreateSoftSkinnedActor`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html) / [`create_soft_skinned_actor`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.create_soft_skinned_actor) combines an articulated skeleton with soft actors and returns the skeleton as a top-level `Articulated` actor that owns them; the API calls them nested soft actors.
 
 <Tabs groupId="language">
 <TabItem value="cpp" label="C++" default>
@@ -76,9 +76,9 @@ soft_skinned_actor = scene.create_soft_skinned_actor(soft_skinned_actor_params)
 </TabItem>
 </Tabs>
 
-The creation methods return an [`Actor*`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Actor.html) pointer (or an [`Actor`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor) wrapper in Python).
-Some queries and API calls use a lightweight, strongly-typed reference called an [`ActorHandle`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ActorHandle.html) to access actors.
-Handles can be obtained from pointers using the [`Actor::GetHandle()`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Actor.html) / [`Actor.get_handle()`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_handle) method.
+The creation methods return an [`Actor*`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Actor.html) pointer (or an [`Actor`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor) wrapper in Python).
+Some queries and API calls use a lightweight, strongly-typed reference called an [`ActorHandle`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ActorHandle.html) to access actors.
+Handles can be obtained from pointers using the [`Actor::GetHandle()`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Actor.html) / [`Actor.get_handle()`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_handle) method.
 
 ## Common Properties
 
@@ -110,4 +110,4 @@ The typical lifecycle of an actor follows five stages:
 2. **Mutate** – Use API calls to directly update state associated with the actor, such as applying constraints and boundary conditions.
 3. **Simulate** – Advance the scene forward in time. The solver integrates forces, resolves contacts, and updates actor states.
 4. **Query** – Read back the updated state (e.g., positions, velocities, and forces) through actor methods. Some derived quantities require [registering a query](../queries.mdx) beforehand.
-5. **Destroy** – Remove the actor with [`Scene::DestroyActor`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.html) / [`scene.destroy_actor`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.destroy_actor). Destroying a top-level articulated actor also destroys its nested link actors and nested soft actors, along with attached constraints; nested actors cannot be destroyed individually.
+5. **Destroy** – Remove the actor with [`Scene::DestroyActor`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html) / [`scene.destroy_actor`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.destroy_actor). Destroying a top-level articulated actor also destroys its nested link actors and nested soft actors, along with attached constraints; nested actors cannot be destroyed individually.

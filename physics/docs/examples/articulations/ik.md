@@ -160,7 +160,7 @@ while sdp.debugger.is_attached():
 
 `solve_ik` reports `True` only when every active target lands within `positionErrorThres` and `rotationErrorThres`. Those thresholds gate the reachability report, not the solve itself; see [Parameters Reference](../../concepts/inverse_kinematics.mdx#parameters-reference) for tuning them.
 
-The solved pose stays in the IK actor, where [`get_articulated_pose()`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_articulated_pose) would read it back for transfer to a visualization scene. On exit, destroying the solver destroys the scene it owns, so the scene is never destroyed separately:
+The solved pose stays in the IK actor, where [`get_articulated_pose()`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_articulated_pose) would read it back for transfer to a visualization scene. On exit, destroying the solver destroys the scene it owns, so the scene is never destroyed separately:
 
 ```python
 sdp.experimental.destroy_ik_solver(ik_solver)

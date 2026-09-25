@@ -35,7 +35,7 @@ $$
 
 ## Parameters
 
-The public parameter type is [`StVenantKirchhoffMaterialParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1StVenantKirchhoffMaterialParams.html).
+The public parameter type is [`StVenantKirchhoffMaterialParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1StVenantKirchhoffMaterialParams.html).
 
 | Parameter | Default | Description |
 |---|---|---|

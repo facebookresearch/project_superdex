@@ -81,7 +81,7 @@ actor.add_boundary_condition_nodes_world(
 )
 ```
 
-[`add_boundary_condition_nodes_world`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.add_boundary_condition_nodes_world) prescribes the world-space position of each selected node. Here, the target positions are copied from the undeformed mesh, so all three translational DoFs of every selected node remain fixed.
+[`add_boundary_condition_nodes_world`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.add_boundary_condition_nodes_world) prescribes the world-space position of each selected node. Here, the target positions are copied from the undeformed mesh, so all three translational DoFs of every selected node remain fixed.
 
 ## Apply External Nodal Forces
 

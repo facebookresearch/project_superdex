@@ -41,14 +41,14 @@ Compression and inversion can make the material tangent indefinite. The public [
 
 ## Parameters
 
-The public parameter type is [`ArapMaterialParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ArapMaterialParams.html).
+The public parameter type is [`ArapMaterialParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ArapMaterialParams.html).
 
 | Parameter | Default | Description |
 |---|---|---|
 | `stiffness` | 1,000 Pa | Resistance to non-rigid deformation |
 | `psdStrategy` | `Projection` | [PSD enforcement strategy](./overview.md#psd-enforcement) |
 
-The default [`stiffness`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ArapMaterialParams.html) is numerically 100 times smaller than the default Young's modulus $E=100{,}000$ Pa used by the isotropic models. These parameters belong to different constitutive models and are not directly equivalent.
+The default [`stiffness`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ArapMaterialParams.html) is numerically 100 times smaller than the default Young's modulus $E=100{,}000$ Pa used by the isotropic models. These parameters belong to different constitutive models and are not directly equivalent.
 
 Supported concrete PSD strategies: `None`, `Projection`, `AbsEigenProjection`. `MaterialDefault` resolves to the model's default, `Projection`.
 

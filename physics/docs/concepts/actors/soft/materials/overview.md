@@ -16,7 +16,7 @@ Most isotropic material models use the following constitutive parameters:
 | Young's modulus | $E$ | Pa | Overall stiffness. Higher values produce stiffer objects. Must be finite and positive. |
 | Poisson's ratio | $\nu$ | -- | Compressibility. Must be finite and satisfy $-1 < \nu < 0.5$. |
 
-[`SoftMaterialParams::density`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1SoftMaterialParams.html) is an actor-wide parameter shared by every material model, rather than a field of a model-specific `*MaterialParams` struct. It specifies mass per unit reference volume in kg/m$^3$ and defaults to 1000.
+[`SoftMaterialParams::density`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1SoftMaterialParams.html) is an actor-wide parameter shared by every material model, rather than a field of a model-specific `*MaterialParams` struct. It specifies mass per unit reference volume in kg/m$^3$ and defaults to 1000.
 
 Young's modulus and Poisson's ratio define the Lamé parameters
 $$
@@ -67,7 +67,7 @@ Here $\varepsilon > 0$ is a small eigenvalue floor, and each diagonal entry $\la
 
 PSD projection is controlled by two parameters:
 
-- [`NonLinearSolverParams::psdProjMode`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1NonLinearSolverParams.html) decides when the nonlinear solve requests PSD projection. Its default is `PsdProjectionMode::Always`; retry modes request projection only after an iteration of [Newton's method](../../../solvers.md#newtons-method) fails, while `PsdProjectionMode::Never` never requests it.
+- [`NonLinearSolverParams::psdProjMode`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1NonLinearSolverParams.html) decides when the nonlinear solve requests PSD projection. Its default is `PsdProjectionMode::Always`; retry modes request projection only after an iteration of [Newton's method](../../../solvers.md#newtons-method) fails, while `PsdProjectionMode::Never` never requests it.
 - Each material's `MaterialPsdStrategy` decides how that material responds to a request. `MaterialPsdStrategy::None` ignores the request and leaves the material tangent unmodified.
 
 The available material-level PSD strategies are summarized in the following table:

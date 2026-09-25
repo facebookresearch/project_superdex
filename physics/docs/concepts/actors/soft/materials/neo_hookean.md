@@ -55,7 +55,7 @@ Because $I_C + 1$ is positive for every real deformation gradient, the logarithm
 
 Supported concrete PSD strategies: `None`, `Projection`, `Fast`, `AbsEigenProjection`. `MaterialDefault` resolves to the model's default, `Projection`.
 
-The public parameter type is `NeoHookeanMaterialParams`, an alias for [`SmithNeoHookeanMaterialParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1SmithNeoHookeanMaterialParams.html).
+The public parameter type is `NeoHookeanMaterialParams`, an alias for [`SmithNeoHookeanMaterialParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1SmithNeoHookeanMaterialParams.html).
 
 ## When to Use
 

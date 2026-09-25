@@ -97,11 +97,11 @@ If an edge is at a boundary of the mesh, the missing face normal is set to the n
 |-----------|------|---------|-------------|
 | `name` | `DynamicString` | `""` | Actor name for identification |
 | `layer` | `DynamicString` | `""` | Layer name for grouping |
-| `worldFromLocal` | [`TransformRT`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1TransformRT.html) | Identity | Initial world-space transform |
-| `shape` | [`ShapeHandle`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ShapeHandle.html) | -- | **Required.** Must be a `TriangularMeshShape` created with [`CreateTriMeshShape`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Context.html). |
+| `worldFromLocal` | [`TransformRT`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1TransformRT.html) | Identity | Initial world-space transform |
+| `shape` | [`ShapeHandle`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ShapeHandle.html) | -- | **Required.** Must be a `TriangularMeshShape` created with [`CreateTriMeshShape`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Context.html). |
 | `material` | `ShellMaterialParams` | See below | Material properties (membrane Lamé parameters, bending, density) |
 | `colliderType` | `ColliderType` | `PointCloud` | Must be `ColliderType::PointCloud` or `ColliderType::None`. Controls shell-to-shell contact participation. |
-| `contact` | [`ContactParams`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ContactParams.html) | Default | Contact properties for interactions with volume (non-shell) actors. Friction settings also apply to shell-shell contact. |
+| `contact` | [`ContactParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ContactParams.html) | Default | Contact properties for interactions with volume (non-shell) actors. Friction settings also apply to shell-shell contact. |
 | `pointCloudCollider` | `PointCloudColliderParams` | Default | [Point-cloud collider parameters](../contact.md#pointcloudcolliderparams). |
 | `hasGravity` | `bool` | `true` | Whether gravity affects this actor |
 | `contactElementType` | `ActorBoundaryElementType` | `Default` | Quadrature type for contact element sampling |

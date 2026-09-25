@@ -18,7 +18,7 @@ A prefab can contain:
 - Optional gravity and solver settings for the destination scene.
 - Actor- and layer-based contact filters.
 
-For the JSON authoring workflow, see [Authoring Prefabs](../authoring_scenes/authoring_prefabs.md). For authoritative fields and defaults, see the generated [C++ Prefabs API reference](pathname:///generated/api/v1.0.0/cpp/group__prefabs.html).
+For the JSON authoring workflow, see [Authoring Prefabs](../authoring_scenes/authoring_prefabs.md). For authoritative fields and defaults, see the generated [C++ Prefabs API reference](pathname:///generated/api/v1.0.1/cpp/group__prefabs.html).
 
 ## Composition and Names
 
@@ -28,7 +28,7 @@ Instance names become hierarchy prefixes. If an instance named `Table` contains 
 
 Any name or hierarchy path used by a constraint, controller, or contact filter must identify exactly one actor in that prefab scope. To reference an articulated link or nested soft actor, give its parent actor or an enclosing prefab instance a non-empty name. Instance names may otherwise be empty or repeated.
 
-Only the top-level prefab can apply its `scene` settings. Scene settings in nested prefabs are ignored. To preserve the destination scene's gravity and solver configuration, set C++ [`PrefabParams::applySceneSettings`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1prefab_1_1PrefabParams.html) to `false` or Python [`PrefabParams.apply_scene_settings`](pathname:///generated/api/v1.0.0/python/api/prefab.html#superdex.physics.prefab.PrefabParams.apply_scene_settings) to `False`.
+Only the top-level prefab can apply its `scene` settings. Scene settings in nested prefabs are ignored. To preserve the destination scene's gravity and solver configuration, set C++ [`PrefabParams::applySceneSettings`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1prefab_1_1PrefabParams.html) to `false` or Python [`PrefabParams.apply_scene_settings`](pathname:///generated/api/v1.0.1/python/api/prefab.html#superdex.physics.prefab.PrefabParams.apply_scene_settings) to `False`.
 
 ## Path Resolution
 
@@ -56,7 +56,7 @@ The resolver may select among packaged asset roots, so the correct `asset_root` 
 
 ## Contact Filters
 
-The [`contactFilter`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1prefab_1_1ScenePrefab.html) object can enable or disable contact in four categories:
+The [`contactFilter`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1prefab_1_1ScenePrefab.html) object can enable or disable contact in four categories:
 
 - `layerContactAsymmetric`: one ordered layer pair.
 - `layerContactSymmetric`: both directions for a layer pair.
@@ -67,11 +67,11 @@ Contact occurs only when both the actor-pair table and the layer-pair table allo
 
 Actor entries identify actors by name or hierarchy path. With `includeNestedActors: true` (the default), an articulated or soft-skinned parent expands to the parent and its nested actors. The entry applies to the complete ordered cross-product of the two resolved sets, including self-pairs when the sets overlap. A path to a nested actor, such as `Robot/forearm`, resolves only that actor. Set `includeNestedActors: false` to prevent parent expansion.
 
-Nested prefab filters are applied before parent filters, so a parent can override a child in the same actor or layer table. Within a prefab, categories are applied in this order: [`layerContactAsymmetric`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1prefab_1_1ContactFilter.html), [`layerContactSymmetric`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1prefab_1_1ContactFilter.html), [`actorContactAsymmetric`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1prefab_1_1ContactFilter.html), then [`actorContactSymmetric`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1prefab_1_1ContactFilter.html). Entries within each array are applied in order, and later entries can override earlier entries in the same table. Actor entries can also re-enable automatically disabled adjacent-link pairs.
+Nested prefab filters are applied before parent filters, so a parent can override a child in the same actor or layer table. Within a prefab, categories are applied in this order: [`layerContactAsymmetric`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1prefab_1_1ContactFilter.html), [`layerContactSymmetric`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1prefab_1_1ContactFilter.html), [`actorContactAsymmetric`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1prefab_1_1ContactFilter.html), then [`actorContactSymmetric`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1prefab_1_1ContactFilter.html). Entries within each array are applied in order, and later entries can override earlier entries in the same table. Actor entries can also re-enable automatically disabled adjacent-link pairs.
 
 ## Contact Parameter Overrides
 
-The optional [`contactPairParamsOverrides`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1prefab_1_1ScenePrefab.html) array sets partial contact-parameter overrides for exact unordered actor pairs. Each `ContactPairParamsOverrideEntry` ([C++](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1prefab_1_1ContactPairParamsOverrideEntry.html), [Python](pathname:///generated/api/v1.0.0/python/api/prefab.html#superdex.physics.prefab.ContactPairParamsOverrideEntry)) names exactly two actors and supplies a non-empty `paramsOverride`; omitted parameters retain their normal actor-pair combination. Names and hierarchy paths resolve like actor contact-filter entries, but parent actors do not expand to their nested actors. Entries are applied in order after actor creation, with parent-prefab entries applied after nested-prefab entries; a later entry for the same pair replaces the earlier override rather than merging with it.
+The optional [`contactPairParamsOverrides`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1prefab_1_1ScenePrefab.html) array sets partial contact-parameter overrides for exact unordered actor pairs. Each `ContactPairParamsOverrideEntry` ([C++](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1prefab_1_1ContactPairParamsOverrideEntry.html), [Python](pathname:///generated/api/v1.0.1/python/api/prefab.html#superdex.physics.prefab.ContactPairParamsOverrideEntry)) names exactly two actors and supplies a non-empty `paramsOverride`; omitted parameters retain their normal actor-pair combination. Names and hierarchy paths resolve like actor contact-filter entries, but parent actors do not expand to their nested actors. Entries are applied in order after actor creation, with parent-prefab entries applied after nested-prefab entries; a later entry for the same pair replaces the earlier override rather than merging with it.
 
 ## Loading
 
@@ -109,13 +109,13 @@ result = sdp.prefab.add_to_scene(
 </TabItem>
 </Tabs>
 
-The file overload loads nested prefabs and shapes before instantiation. C++ `AddToScene` and Python [`sdp.prefab.add_to_scene()`](pathname:///generated/api/v1.0.0/python/api/prefab.html#superdex.physics.prefab.add_to_scene) apply enabled top-level scene settings first, instantiate nested prefabs depth-first, then create each prefab's actors, constraints, and controllers before applying its contact filter and contact-pair parameter overrides. The operation is not transactional: if loading or instantiation reports an error, earlier scene-setting changes and created objects may remain in the scene.
+The file overload loads nested prefabs and shapes before instantiation. C++ `AddToScene` and Python [`sdp.prefab.add_to_scene()`](pathname:///generated/api/v1.0.1/python/api/prefab.html#superdex.physics.prefab.add_to_scene) apply enabled top-level scene settings first, instantiate nested prefabs depth-first, then create each prefab's actors, constraints, and controllers before applying its contact filter and contact-pair parameter overrides. The operation is not transactional: if loading or instantiation reports an error, earlier scene-setting changes and created objects may remain in the scene.
 
-For repeated instances, load a `ScenePrefab` ([C++](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1prefab_1_1ScenePrefab.html), [Python](pathname:///generated/api/v1.0.0/python/api/prefab.html#superdex.physics.prefab.ScenePrefab)) once and add it multiple times. The preloaded overload requires `PrefabParams::scale == 1`; use the file-path overload to scale the whole instance. C++ `LoadShapes` and Python [`sdp.prefab.load_shapes()`](pathname:///generated/api/v1.0.0/python/api/prefab.html#superdex.physics.prefab.load_shapes) bake nested-reference and per-actor scales into geometry, so call them again on the top-level `ScenePrefab` after changing either.
+For repeated instances, load a `ScenePrefab` ([C++](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1prefab_1_1ScenePrefab.html), [Python](pathname:///generated/api/v1.0.1/python/api/prefab.html#superdex.physics.prefab.ScenePrefab)) once and add it multiple times. The preloaded overload requires `PrefabParams::scale == 1`; use the file-path overload to scale the whole instance. C++ `LoadShapes` and Python [`sdp.prefab.load_shapes()`](pathname:///generated/api/v1.0.1/python/api/prefab.html#superdex.physics.prefab.load_shapes) bake nested-reference and per-actor scales into geometry, so call them again on the top-level `ScenePrefab` after changing either.
 
 ## Exporting
 
-Scenes can be exported to a prefab folder with C++ `ExportScene` or Python [`sdp.prefab.export_scene()`](pathname:///generated/api/v1.0.0/python/api/prefab.html#superdex.physics.prefab.export_scene):
+Scenes can be exported to a prefab folder with C++ `ExportScene` or Python [`sdp.prefab.export_scene()`](pathname:///generated/api/v1.0.1/python/api/prefab.html#superdex.physics.prefab.export_scene):
 
 <Tabs groupId="language">
 <TabItem value="cpp" label="C++" default>
@@ -145,7 +145,7 @@ Export reconstructs selected scene and actor data; it is not a lossless snapshot
 
 ## Support Boundary
 
-Prefab loading represents rigid, soft, articulated, and soft-skinned actors, [supported prefab constraints](pathname:///generated/api/v1.0.0/cpp/group__prefabs__constraints.html), [pose controllers](pathname:///generated/api/v1.0.0/cpp/group__prefabs__articulation.html), nested prefabs, [scene settings](pathname:///generated/api/v1.0.0/cpp/group__prefabs__document.html), and [contact filters](#contact-filters).
+Prefab loading represents rigid, soft, articulated, and soft-skinned actors, [supported prefab constraints](pathname:///generated/api/v1.0.1/cpp/group__prefabs__constraints.html), [pose controllers](pathname:///generated/api/v1.0.1/cpp/group__prefabs__articulation.html), nested prefabs, [scene settings](pathname:///generated/api/v1.0.1/cpp/group__prefabs__document.html), and [contact filters](#contact-filters).
 
 The format does not represent experimental actor types (shell and rod), constraints specific to them, or experimental transmissions. Scene export can emit the supported actor types, but it does not emit constraints or pose controllers. Additional export omissions are listed in the [authoring guide](../authoring_scenes/authoring_prefabs.md#export-limitations).
 

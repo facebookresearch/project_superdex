@@ -42,7 +42,7 @@ Tracking slices can be combined. For example, joint tracking can regulate a robo
 
 ### PoseTrackingParams
 
-Each tracking entry has spring-damper parameters defined by `PoseTrackingParams` ([C++](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1PoseTrackingParams.html), [Python](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.PoseTrackingParams)):
+Each tracking entry has spring-damper parameters defined by `PoseTrackingParams` ([C++](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1PoseTrackingParams.html), [Python](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.PoseTrackingParams)):
 
 | Parameter | Default | Description |
 |---|---:|---|
@@ -54,7 +54,7 @@ When enabled, saturation smoothly limits the elastic contribution to approximate
 
 ### PoseControllerParams
 
-The `PoseControllerParams` constructors ([C++](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1PoseControllerParams.html), [Python](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.PoseControllerParams)) accept `num_links`, pre-size these arrays to the articulation's number of links, and fill them with zero-gain entries:
+The `PoseControllerParams` constructors ([C++](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1PoseControllerParams.html), [Python](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.PoseControllerParams)) accept `num_links`, pre-size these arrays to the articulation's number of links, and fill them with zero-gain entries:
 
 - `linkPosTracking` / `link_pos_tracking`
 - `linkRotTracking` / `link_rot_tracking`
@@ -110,8 +110,8 @@ Only one pose controller can be attached to an actor. Adding it initializes both
 
 The controller stores one target pose that can be expressed in either joint space or link space:
 
-- Joint targets contain [`actor->GetNumDofs()`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Actor.html) values ([`get_num_dofs`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.get_num_dofs) in Python). Translational DoFs are `[m]` and rotational DoFs are `[rad]`.
-- Link targets contain one world-from-link `TransformRT` ([C++](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1TransformRT.html), [Python](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.TransformRT)) per link, including links whose tracking gains are zero.
+- Joint targets contain [`actor->GetNumDofs()`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Actor.html) values ([`get_num_dofs`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.get_num_dofs) in Python). Translational DoFs are `[m]` and rotational DoFs are `[rad]`.
+- Link targets contain one world-from-link `TransformRT` ([C++](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1TransformRT.html), [Python](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.TransformRT)) per link, including links whose tracking gains are zero.
 
 <Tabs groupId="language">
 <TabItem value="cpp" label="C++" default>
@@ -136,9 +136,9 @@ actor.set_articulated_target_link_transforms(
 
 ### Set Versus Reset
 
-[`SetArticulatedTargetPose`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Actor.html) and [`SetArticulatedTargetLinkTransforms`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Actor.html) infer target velocity from how the target changes between simulation steps. Their Python equivalents are [`set_articulated_target_pose`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.set_articulated_target_pose) and [`set_articulated_target_link_transforms`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.set_articulated_target_link_transforms). Use them for continuous trajectories, updating the target before each step.
+[`SetArticulatedTargetPose`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Actor.html) and [`SetArticulatedTargetLinkTransforms`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Actor.html) infer target velocity from how the target changes between simulation steps. Their Python equivalents are [`set_articulated_target_pose`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.set_articulated_target_pose) and [`set_articulated_target_link_transforms`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.set_articulated_target_link_transforms). Use them for continuous trajectories, updating the target before each step.
 
-[`ResetArticulatedTargetPose`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Actor.html) and [`ResetArticulatedTargetLinkTransforms`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Actor.html) set the supplied target and clear target velocity for the next step. Their Python equivalents are [`reset_articulated_target_pose`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.reset_articulated_target_pose) and [`reset_articulated_target_link_transforms`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.reset_articulated_target_link_transforms). Use them for discontinuous handoffs, teleports, or initialization to a target different from the pose captured when the controller was added.
+[`ResetArticulatedTargetPose`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Actor.html) and [`ResetArticulatedTargetLinkTransforms`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Actor.html) set the supplied target and clear target velocity for the next step. Their Python equivalents are [`reset_articulated_target_pose`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.reset_articulated_target_pose) and [`reset_articulated_target_link_transforms`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.reset_articulated_target_link_transforms). Use them for discontinuous handoffs, teleports, or initialization to a target different from the pose captured when the controller was added.
 
 <Tabs groupId="language">
 <TabItem value="cpp" label="C++" default>
@@ -169,11 +169,11 @@ scene.step(dt)
 </TabItem>
 </Tabs>
 
-To supply a non-zero target velocity after reset, call [`SetArticulatedTargetVelocity`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Actor.html) / [`set_articulated_target_velocity`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Actor.set_articulated_target_velocity) after the reset. This override is consumed by the next simulation step and then cleared, so set it before every step that needs an explicit target velocity.
+To supply a non-zero target velocity after reset, call [`SetArticulatedTargetVelocity`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Actor.html) / [`set_articulated_target_velocity`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Actor.set_articulated_target_velocity) after the reset. This override is consumed by the next simulation step and then cleared, so set it before every step that needs an explicit target velocity.
 
 ## Runtime Tuning
 
-Replace the complete parameter object to change gains or turn tracking slices on and off at runtime. A freshly constructed [`PoseControllerParams(num_links)`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1PoseControllerParams.html) begins with every entry disabled, so filling only one slice naturally creates a joint-only or link-only configuration.
+Replace the complete parameter object to change gains or turn tracking slices on and off at runtime. A freshly constructed [`PoseControllerParams(num_links)`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1PoseControllerParams.html) begins with every entry disabled, so filling only one slice naturally creates a joint-only or link-only configuration.
 
 To inspect the current gains, provide pre-sized output arrays:
 
@@ -208,7 +208,7 @@ The getter does not resize its output arrays. Entries for links without a contro
 
 ## Querying Controller Generalized Force
 
-The controller-force query returns a generalized-force vector ordered by articulation DoF. It is identified by the C++ `QueryType::ArticulatedControllerForce` or corresponding Python [`QueryType`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.QueryType) value. Translational entries use `[N]`; rotational entries use `[N·m]`. Register before stepping, read after the step completes, and cancel the query when it is no longer needed:
+The controller-force query returns a generalized-force vector ordered by articulation DoF. It is identified by the C++ `QueryType::ArticulatedControllerForce` or corresponding Python [`QueryType`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.QueryType) value. Translational entries use `[N]`; rotational entries use `[N·m]`. Register before stepping, read after the step completes, and cancel the query when it is no longer needed:
 
 <Tabs groupId="language">
 <TabItem value="cpp" label="C++" default>

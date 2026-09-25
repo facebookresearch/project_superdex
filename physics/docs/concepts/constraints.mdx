@@ -32,7 +32,7 @@ J=\frac{\partial g}{\partial q}\in\mathbb R^{m\times n}~,
 $$
 
 taken with respect to the $n$ degrees of freedom of the involved actors. The
-[Constraint Types](#constraint-types) below give $g$ for each type; [`GetDeviation`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Constraint.html) ([`get_deviation`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Constraint.get_deviation) in Python) returns its
+[Constraint Types](#constraint-types) below give $g$ for each type; [`GetDeviation`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Constraint.html) ([`get_deviation`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Constraint.get_deviation) in Python) returns its
 current value.
 
 Bilateral constraints (joints, attachments, kinematic targets) have a smooth $g$ that may take
@@ -66,7 +66,7 @@ $$
 Two properties follow. First, the difference is taken on $g$ itself rather than as $Jv$, which
 makes the discrete dissipation term exactly integrable in $q$ and therefore admits an incremental
 potential. Second, $\Delta g$ also differences the **target**: moving a target between stages
-produces a damping force. Use [`UpdateOldTarget`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Constraint.html) ([`update_old_target`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Constraint.update_old_target) in Python) to reset $\hat p_i^0$ when teleporting a target, so
+produces a damping force. Use [`UpdateOldTarget`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Constraint.html) ([`update_old_target`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Constraint.update_old_target) in Python) to reset $\hat p_i^0$ when teleporting a target, so
 that no spurious damping transient is generated.
 
 ### Incremental Potential
@@ -126,7 +126,7 @@ k, & \text{saturation disabled}~, \\
 $$
 
 where the ratio $\rho'(x)/x$ is evaluated in a form that stays regular as $x\to0$. The generalized
-constraint force is $-r^{\mathrm{c}}$, which is what [`GetForce`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Constraint.html) ([`get_force`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Constraint.get_force) in Python) reports.
+constraint force is $-r^{\mathrm{c}}$, which is what [`GetForce`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Constraint.html) ([`get_force`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Constraint.get_force) in Python) reports.
 
 The residual derivative drops the term involving the second derivative of $g$, which is indefinite
 in general, yielding the Gauss–Newton approximation
@@ -204,7 +204,7 @@ $s_3-l$ below the lower one, and zero in between.
 
 :::warning
 This constraint does **not** restrict relative rotation, and its travel limits are not reported by
-[`GetLimitMinValues`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Constraint.html) / [`GetLimitMaxValues`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Constraint.html). Combine it with a
+[`GetLimitMinValues`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Constraint.html) / [`GetLimitMaxValues`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Constraint.html). Combine it with a
 [`JointRotationTracking`](#jointrotationtracking) constraint to obtain a full prismatic joint.
 :::
 
@@ -220,7 +220,7 @@ $$
 $$
 
 Each $g_j$ is the one-sided violation of $\mathbf{r}_{AB,j}$ against its bounds. By default
-([`rangeAroundRest`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1JointRotationRangeConstraintParams.html)), $R_{\mathrm{ref}}$ is the relative rotation observed at creation, so the bounds
+([`rangeAroundRest`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1JointRotationRangeConstraintParams.html)), $R_{\mathrm{ref}}$ is the relative rotation observed at creation, so the bounds
 are relative to the rest pose rather than absolute in the joint frame.
 
 #### JointRotationTracking
@@ -233,7 +233,7 @@ g=\mathrm{Log}\!\left(\left(R_A\hat R R_0\right)^{-1}R_B R_0\right)~.
 $$
 
 The target is initialized to the relative rotation observed at creation, so the constraint starts
-satisfied, and is updated at runtime with [`SetTargetRotation`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Constraint.html). It is used both to track measured
+satisfied, and is updated at runtime with [`SetTargetRotation`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Constraint.html). It is used both to track measured
 joint angles, such as finger joints driven by a hand tracking system, and to supply the missing
 rotational restriction of a [`RigidPrismaticJoint`](#rigidprismaticjoint).
 
@@ -307,7 +307,7 @@ $$
 g = T_R(\mathbf{r}) - T_D(\mathbf{X} + \mathbf{u})~.
 $$
 
-By default ([`fixToDeformablePos`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1DeformableNodeToRigidConstraintParams.html)), the rigid-frame pivot $\mathbf{r}$ is computed at creation so
+By default ([`fixToDeformablePos`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1DeformableNodeToRigidConstraintParams.html)), the rigid-frame pivot $\mathbf{r}$ is computed at creation so
 that the constraint starts at zero deviation, rather than being supplied by the caller.
 
 ### Articulated Constraints
@@ -360,7 +360,7 @@ $$
 
 where $R_R$ is the rigid body rotation and $R_e$ is the world-space rotation of the rod element's
 material frame. As with [`JointRotationTracking`](#jointrotationtracking), the target is initialized
-to the relative rotation observed at creation and updated with [`SetTargetRotation`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Constraint.html); the default
+to the relative rotation observed at creation and updated with [`SetTargetRotation`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Constraint.html); the default
 behavior therefore preserves the creation-time relative rotation rather than aligning the rod
 element with the body frame. The $n=11$ coupled DoFs are the 3 rigid rotational DoFs and the 8 DoFs
 of the rod element's two nodes.
@@ -466,11 +466,11 @@ constraint = scene.create_deformable_node_to_rigid_constraint(
 
 ## Working with Constraints at Runtime
 
-The [Constraint Types](#constraint-types) above describe how to *define* a constraint at creation time. Every [`Constraint`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Constraint.html) also exposes a **uniform runtime interface**: the same methods work on all types, but many are type-specific and report a graceful [`Error`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Error.html) (in Python, methods on [`Constraint`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Constraint) raise [`sdp.Error`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Error)) when they don't apply. The [constraints](../examples/contact_constraints/constraints.md) page tours this whole interface as a worked example.
+The [Constraint Types](#constraint-types) above describe how to *define* a constraint at creation time. Every [`Constraint`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Constraint.html) also exposes a **uniform runtime interface**: the same methods work on all types, but many are type-specific and report a graceful [`Error`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Error.html) (in Python, methods on [`Constraint`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Constraint) raise [`sdp.Error`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Error)) when they don't apply. The [constraints](../examples/contact_constraints/constraints.md) page tours this whole interface as a worked example.
 
 ### Lifecycle and Identity
 
-C++ [`Scene`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.html) constraint factory methods return a `Constraint*` and a stable [`ConstraintHandle`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ConstraintHandle.html). Look a constraint back up with [`GetConstraint`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.html), iterate all of them with [`ForEachConstraint`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.html), and remove one with [`DestroyConstraint`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.html) (by pointer or handle). Python provides the corresponding [`get_constraint`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.get_constraint), [`for_each_constraint`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.for_each_constraint), and [`destroy_constraint`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.destroy_constraint) methods. Direct removal applies only to constraints created through scene factory methods; automatically created joint-limit, cycle-joint, and pose-controller constraints are removed with the corresponding actor feature, if supported, or when the actor is destroyed. A constraint is **auto-destroyed** when any actor it references is destroyed.
+C++ [`Scene`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html) constraint factory methods return a `Constraint*` and a stable [`ConstraintHandle`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ConstraintHandle.html). Look a constraint back up with [`GetConstraint`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html), iterate all of them with [`ForEachConstraint`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html), and remove one with [`DestroyConstraint`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html) (by pointer or handle). Python provides the corresponding [`get_constraint`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.get_constraint), [`for_each_constraint`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.for_each_constraint), and [`destroy_constraint`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.destroy_constraint) methods. Direct removal applies only to constraints created through scene factory methods; automatically created joint-limit, cycle-joint, and pose-controller constraints are removed with the corresponding actor feature, if supported, or when the actor is destroyed. A constraint is **auto-destroyed** when any actor it references is destroyed.
 
 <Tabs groupId="language">
 <TabItem value="cpp" label="C++" default>
@@ -499,7 +499,7 @@ scene.destroy_constraint(handle)               # remove a scene-created constrai
 
 ### Introspection
 
-The generic interface reports how a constraint is wired up, regardless of its type. [`GetNumActors`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Constraint.html) ([`get_num_actors`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Constraint.get_num_actors) in Python) is a useful discriminator — a world-anchored `RigidPivotPosition` involves **one** actor, while a body-to-body `RigidSphericalJoint` involves **two**.
+The generic interface reports how a constraint is wired up, regardless of its type. [`GetNumActors`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Constraint.html) ([`get_num_actors`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Constraint.get_num_actors) in Python) is a useful discriminator — a world-anchored `RigidPivotPosition` involves **one** actor, while a body-to-body `RigidSphericalJoint` involves **two**.
 
 <Tabs groupId="language">
 <TabItem value="cpp" label="C++" default>
@@ -556,7 +556,7 @@ constraint.set_saturation(saturation=-1.0)   # force cap = stiffness * saturatio
 
 ### Kinematic Targets
 
-Target-bearing constraints track a prescribed target. Updating the target each step animates it — for example, driving a `RigidPivotPosition` anchor along a path to create a *moving base*. Use [`UpdateOldTarget`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Constraint.html) to teleport the target without producing a spurious damping transient.
+Target-bearing constraints track a prescribed target. Updating the target each step animates it — for example, driving a `RigidPivotPosition` anchor along a path to create a *moving base*. Use [`UpdateOldTarget`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Constraint.html) to teleport the target without producing a spurious damping transient.
 
 <Tabs groupId="language">
 <TabItem value="cpp" label="C++" default>
@@ -579,7 +579,7 @@ pivot.set_target_position(sdp.Real3(x, y, z))  # RigidPivotPosition
 
 ### Diagnostics and Queries
 
-[`GetDeviation`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Constraint.html) returns the current constraint value $g$ (the position/rotation error) and needs no setup. [`GetForce`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Constraint.html) returns the constraint force but requires a `ConstraintForce` query to be registered **before** stepping. The query is identified by the C++ `QueryType::ConstraintForce` or corresponding Python [`QueryType`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.QueryType) value. [`IsQuerySupported`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Constraint.html) reports whether a query type applies.
+[`GetDeviation`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Constraint.html) returns the current constraint value $g$ (the position/rotation error) and needs no setup. [`GetForce`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Constraint.html) returns the constraint force but requires a `ConstraintForce` query to be registered **before** stepping. The query is identified by the C++ `QueryType::ConstraintForce` or corresponding Python [`QueryType`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.QueryType) value. [`IsQuerySupported`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Constraint.html) reports whether a query type applies.
 
 <Tabs groupId="language">
 <TabItem value="cpp" label="C++" default>
@@ -606,4 +606,4 @@ force = constraint.get_force()            # needs the query above
 
 ### Limits
 
-Range constraints (e.g. `JointRotationRange`, `ArticulatedSingleDofRange`) expose their bounds via [`GetLimitMinValues`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Constraint.html) / [`GetLimitMaxValues`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Constraint.html); unconstrained components report $\pm\infty$. Python provides [`get_limit_min_values`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Constraint.get_limit_min_values) / [`get_limit_max_values`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Constraint.get_limit_max_values).
+Range constraints (e.g. `JointRotationRange`, `ArticulatedSingleDofRange`) expose their bounds via [`GetLimitMinValues`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Constraint.html) / [`GetLimitMaxValues`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Constraint.html); unconstrained components report $\pm\infty$. Python provides [`get_limit_min_values`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Constraint.get_limit_min_values) / [`get_limit_max_values`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Constraint.get_limit_max_values).

@@ -28,12 +28,12 @@ State capture does not reconstruct scene topology or restore persistent configur
 
 | Option | Storage and ownership | Restore destination | Intended use |
 |---|---|---|---|
-| [`StateHandle`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1StateHandle.html) | Scene-owned memory | The scene that captured it | Fast same-scene replay and repeated branching |
+| [`StateHandle`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1StateHandle.html) | Scene-owned memory | The scene that captured it | Fast same-scene replay and repeated branching |
 | Byte buffer | Caller-owned memory | The capturing scene or a compatible scene | Cross-thread, cross-process, or external caching |
 
 ## Scene-Owned Handles
 
-[`CaptureState`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.html) / [`capture_state`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.capture_state) returns a handle to memory owned by the capturing scene. Restore it only into that same scene.
+[`CaptureState`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html) / [`capture_state`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.capture_state) returns a handle to memory owned by the capturing scene. Restore it only into that same scene.
 
 <Tabs groupId="language">
 <TabItem value="cpp" label="C++" default>
@@ -74,7 +74,7 @@ The `releaseImmediately` / `release_immediately` argument controls handle lifeti
 - `false` keeps the handle valid for repeated restores. Release it explicitly when finished.
 - `true` releases the handle after the restore attempt, even if restoration fails. Use this for a one-shot checkpoint.
 
-[`ReleaseState`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.html) / [`release_state`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.release_state) frees one handle; redundant releases are ignored. [`ReleaseAllStates`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.html) / [`release_all_states`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.release_all_states) frees every captured state owned by the scene and invalidates all prior handles.
+[`ReleaseState`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html) / [`release_state`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.release_state) frees one handle; redundant releases are ignored. [`ReleaseAllStates`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html) / [`release_all_states`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.release_all_states) frees every captured state owned by the scene and invalidates all prior handles.
 
 ## Caller-Owned Bytes
 
@@ -127,13 +127,13 @@ Successful restoration does not guarantee that subsequent simulation will match 
 
 ## Thread Safety
 
-Scenes are not thread-safe. Capture and restore each scene only from its owning thread or under external synchronization. Do not pass a [`Scene`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.html), actor, or scene-owned [`StateHandle`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1StateHandle.html) to another worker for unsynchronized access.
+Scenes are not thread-safe. Capture and restore each scene only from its owning thread or under external synchronization. Do not pass a [`Scene`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html), actor, or scene-owned [`StateHandle`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1StateHandle.html) to another worker for unsynchronized access.
 
-For cross-thread workflows, capture to a caller-owned byte buffer, transfer a copied buffer, and call [`RestoreStateFromBytes`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.html) / [`restore_state_from_bytes`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.restore_state_from_bytes) on the destination scene's owning thread.
+For cross-thread workflows, capture to a caller-owned byte buffer, transfer a copied buffer, and call [`RestoreStateFromBytes`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html) / [`restore_state_from_bytes`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.restore_state_from_bytes) on the destination scene's owning thread.
 
 ## Inspection and Comparison
 
-[`IsEqualState`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.html) / [`is_equal_state`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.is_equal_state) returns true only when both handles are valid in the scene and their captured state is identical at full precision:
+[`IsEqualState`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html) / [`is_equal_state`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.is_equal_state) returns true only when both handles are valid in the scene and their captured state is identical at full precision:
 
 <Tabs groupId="language">
 <TabItem value="cpp" label="C++" default>
@@ -154,7 +154,7 @@ scene.capture_state_to_file("state.json")
 </TabItem>
 </Tabs>
 
-[`CaptureStateToFile`](pathname:///generated/api/v1.0.0/cpp/classsuperdex_1_1Scene.html) / [`capture_state_to_file`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.Scene.capture_state_to_file) writes a human-readable JSON representation for manual inspection. It is not a restorable checkpoint and is not one-to-one with the binary byte format.
+[`CaptureStateToFile`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html) / [`capture_state_to_file`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.Scene.capture_state_to_file) writes a human-readable JSON representation for manual inspection. It is not a restorable checkpoint and is not one-to-one with the binary byte format.
 
 ## Examples
 

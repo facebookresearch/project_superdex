@@ -61,7 +61,7 @@ No example-specific contact setup is required. The duck supplies deformable surf
 
 ### Simulation and Lifecycle
 
-The example attaches the remote debugger and advances the scene at 60 Hz. Its cleanup function explicitly demonstrates actor, scene, and global resource destruction. Destroying actors is unnecessary immediately before destroying their scene, and destroying the scene is unnecessary immediately before [`sdp.shutdown()`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.shutdown).
+The example attaches the remote debugger and advances the scene at 60 Hz. Its cleanup function explicitly demonstrates actor, scene, and global resource destruction. Destroying actors is unnecessary immediately before destroying their scene, and destroying the scene is unnecessary immediately before [`sdp.shutdown()`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.shutdown).
 
 ```python
 TIME_STEP = 1.0 / 60.0  # [s]

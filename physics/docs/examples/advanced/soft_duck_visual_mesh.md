@@ -22,7 +22,7 @@ As the simulation mesh deforms, SuperDex Physics maps its node positions through
 
 :::note
 This example uses a prepared asset for simplicity.
-For C++ asset-authoring workflows, `superdex::model_utils::GenerateVisualMeshEmbedding()` can generate the embedding for a [`ModelData`](pathname:///generated/api/v1.0.0/cpp/structsuperdex_1_1ModelData.html) containing a tetrahedral physics mesh and triangular visual mesh in the same coordinate frame. This utility is not currently exposed in Python.
+For C++ asset-authoring workflows, `superdex::model_utils::GenerateVisualMeshEmbedding()` can generate the embedding for a [`ModelData`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ModelData.html) containing a tetrahedral physics mesh and triangular visual mesh in the same coordinate frame. This utility is not currently exposed in Python.
 :::
 
 ```python
@@ -74,7 +74,7 @@ The left duck therefore renders the embedded visual mesh, while the right duck e
 
 ## Simulation and Lifecycle
 
-The example attaches the remote debugger and advances both actors at 60 Hz. As in the basic examples, explicit actor and scene destruction demonstrates each lifecycle operation; destroying the scene also destroys its actors, and [`sdp.shutdown()`](pathname:///generated/api/v1.0.0/python/api/physics.html#superdex.physics.shutdown) also destroys remaining scenes.
+The example attaches the remote debugger and advances both actors at 60 Hz. As in the basic examples, explicit actor and scene destruction demonstrates each lifecycle operation; destroying the scene also destroys its actors, and [`sdp.shutdown()`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.shutdown) also destroys remaining scenes.
 
 ```python
 TIME_STEP = 1.0 / 60.0  # [s]
