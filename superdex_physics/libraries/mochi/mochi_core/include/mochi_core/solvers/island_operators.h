@@ -339,6 +339,12 @@ void IslandOperators<T>::ApplyToRange(InVector const& x, OutVector&& Ax, Idx row
   }
 }
 
+// TODO(T290274539): Rows are split evenly by count, but the matrix-vector product's cost per row
+// varies with the stored values of the actor and interaction matrices in that row, plus a fixed
+// cost per row and per actor. The per-actor preconditioner favors the same ranges, since writing
+// rows another worker owns costs cache-line transfers and a final all-worker barrier, but its cost
+// per row differs (e.g., block Jacobi's is uniform). Choose ranges that balance both. See
+// D121889725.
 template <typename T>
 std::vector<int> GetRowRangesPerWorker(IslandOperators<T> const& ops, int numWorkers) {
   MOCHI_ASSERT_VERBOSE(numWorkers > 0, "Invalid number of workers.");

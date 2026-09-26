@@ -984,7 +984,7 @@ struct PerActorPrec final : Preconditioner<T> {
   // include waiting for teammates, team barriers, and, if any worker writes rows that another
   // worker owns for the matrix-vector product, the final all-worker barrier.
   //
-  // TODO: Known planner gaps:
+  // TODO(T290274539): Known planner gaps:
   // - MakeActorOrder orders by serial cost, ignoring how widely each actor can spread. An actor
   //   with a long shortest duration, such as a single-worker actor, that is slightly cheaper than
   //   spreadable actors is scheduled after them on top of the loads they balanced, approaching
@@ -999,6 +999,10 @@ struct PerActorPrec final : Preconditioner<T> {
   //   least-loaded worker with the local owner. The first nonlocal assignment adds one full-worker
   //   barrier every time the preconditioner is applied and can cost more than the load imbalance
   //   it removes.
+  // - Tasks writing rows another worker owns for the matrix-vector product are charged only the
+  //   final all-worker barrier, not the cache-line transfers: reading the owner's input rows,
+  //   taking ownership of the output rows, and the owner reading them back in the next dot product.
+  //   Add this cost to predictions. See D121889725.
   // - Skip simulating Broad when reusing the matvec ranges reaches a lower bound on any plan's
   //   duration.
   // - For an independent-row actor, adding a worker never increases predicted cost: fixedCost is
@@ -1007,8 +1011,6 @@ struct PerActorPrec final : Preconditioner<T> {
   // - Short actors holding more than half a worker still reserve a whole one, so at 2 workers a
   //   dominant actor stays on one worker while the other worker finishes the short actors early
   //   and waits.
-  // - Recalibrate AMGActorPrec::GetConcurrentSolveCost against measured durations, including team
-  //   overhead for small AMGs.
   // - PrepareConcurrentSolve replans on every call, adding a few microseconds per solve, which is
   //   significant for small systems. Caching would amortize this and could justify a costlier
   //   planner, but ParallelPCG's worker count is nondeterministic, so it needs one plan per worker

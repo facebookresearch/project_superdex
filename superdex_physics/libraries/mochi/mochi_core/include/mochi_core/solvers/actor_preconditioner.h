@@ -368,6 +368,13 @@ class AMGActorPrec : public ActorPreconditioner<T> {
     // and 1.62-1.64x for shell meshes. Worker-0-only shares are 6-7% and 3-4%, respectively.
     // Scale the (conservative) soft case to the observed ~3x runtime of AMG solve w.r.t. matvec:
     // 0.2 fixed and 2.8 parallel matvec-equivalents.
+    // TODO(T290274539): Derive the costs from the hierarchy instead of fixed multiples of the
+    // fine-level cost. Only worker 0 runs the levels below the first coarsening, so fixedCost is
+    // their work, which varies across meshes. Also model the cache-line transfers after each
+    // barrier: workers read fine-level rows that other workers wrote near their range boundaries,
+    // and worker 0 gathers the first coarse-level vector from all workers. These grow with the
+    // worker count, so small AMGs otherwise get more workers than pay off. See D121889727 and
+    // D121889728.
     double const fixedCost = 0.2 * fineMatVecCost;
     double const parallelCost = 2.8 * fineMatVecCost;
     return ActorPreconditionerCost{
