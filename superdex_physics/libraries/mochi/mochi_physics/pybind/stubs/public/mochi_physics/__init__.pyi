@@ -7512,6 +7512,13 @@ class SolverStats:
     actors exist, :meth:`~superdex.physics.Scene.step` has not been called yet or
     the last call to :meth:`~superdex.physics.Scene.step` was with zero time step.
 
+    Note:
+        Unlike :class:`DIVERGED <superdex.physics.ConvergenceStatus>`,
+        :class:`STOPPED <superdex.physics.ConvergenceStatus>` does not indicate that
+        the step failed. It means that the nonlinear solve reached a stopping
+        criterion, such as the maximum number of iterations, before meeting its
+        residual tolerances, which may be stricter than the scene requires.
+
     See Also:
         :class:`~superdex.physics.ConvergenceStatus`,
         :meth:`~superdex.physics.Actor.get_convergence_status`
@@ -9276,6 +9283,13 @@ class Actor:
         Note:
             Static actors do not participate in the solver and may return :class:`NONE
             <superdex.physics.ConvergenceStatus>`.
+
+        Note:
+            Unlike :class:`DIVERGED <superdex.physics.ConvergenceStatus>`,
+            :class:`STOPPED <superdex.physics.ConvergenceStatus>` does not indicate a
+            failure. It means that the nonlinear solve reached a stopping criterion,
+            such as the maximum number of iterations, before meeting its residual
+            tolerances, which may be stricter than the actor requires.
 
         See Also:
             :class:`~superdex.physics.ConvergenceStatus`,

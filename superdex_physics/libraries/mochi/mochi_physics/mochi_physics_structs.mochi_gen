@@ -1562,6 +1562,11 @@ struct SolverStats [equality] {
   // @ref ConvergenceStatus::None if no dynamic actors exist, @ref Scene::Step has not been called yet or
   // the last call to @ref Scene::Step was with zero time step.
   //
+  // @note Unlike @ref ConvergenceStatus::Diverged, @ref ConvergenceStatus::Stopped does not
+  // indicate that the step failed. It means that the nonlinear solve reached a stopping criterion,
+  // such as the maximum number of iterations, before meeting its residual tolerances, which may be
+  // stricter than the scene requires.
+  //
   // @see ConvergenceStatus, Actor::GetConvergenceStatus
   ConvergenceStatus convergenceStatus;
 }

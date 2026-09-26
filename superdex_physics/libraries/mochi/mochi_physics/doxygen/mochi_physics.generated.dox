@@ -3783,6 +3783,8 @@
 ///
 /// @details Returns the worst convergence status across all dynamic actors: @ref mochi::ConvergenceStatus::Diverged "ConvergenceStatus::Diverged" if any actor diverged, @ref mochi::ConvergenceStatus::Stopped "ConvergenceStatus::Stopped" if any actor's solver was stopped, @ref mochi::ConvergenceStatus::Converged "ConvergenceStatus::Converged" if all dynamic actors converged, @ref mochi::ConvergenceStatus::None "ConvergenceStatus::None" if no dynamic actors exist, @ref mochi::Scene::Step "Scene::Step" has not been called yet or the last call to @ref mochi::Scene::Step "Scene::Step" was with zero time step.
 ///
+/// @note Unlike @ref mochi::ConvergenceStatus::Diverged "ConvergenceStatus::Diverged", @ref mochi::ConvergenceStatus::Stopped "ConvergenceStatus::Stopped" does not indicate that the step failed. It means that the nonlinear solve reached a stopping criterion, such as the maximum number of iterations, before meeting its residual tolerances, which may be stricter than the scene requires.
+///
 /// @see @ref mochi::ConvergenceStatus "ConvergenceStatus", @ref mochi::Actor::GetConvergenceStatus "Actor::GetConvergenceStatus"
 ///
 
@@ -4903,6 +4905,7 @@
 /// @return Convergence status of the actor in the most recent simulation step.
 ///
 /// @note Static actors do not participate in the solver and may return @ref mochi::ConvergenceStatus::None "ConvergenceStatus::None".
+/// @note Unlike @ref mochi::ConvergenceStatus::Diverged "ConvergenceStatus::Diverged", @ref mochi::ConvergenceStatus::Stopped "ConvergenceStatus::Stopped" does not indicate a failure. It means that the nonlinear solve reached a stopping criterion, such as the maximum number of iterations, before meeting its residual tolerances, which may be stricter than the actor requires.
 ///
 /// @see @ref mochi::ConvergenceStatus "ConvergenceStatus", @ref mochi::SolverStats::convergenceStatus "SolverStats::convergenceStatus"
 ///

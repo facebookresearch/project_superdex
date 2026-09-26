@@ -51,7 +51,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsActor([[maybe_unused]] nb::module_& m
       , "Get the type of the actor.\n\nReturns:\n    Type of the actor."
     )
     .def("get_convergence_status", &mochi::Actor::GetConvergenceStatus
-      , "Get the convergence status of the actor in the most recent simulation step.\n\nReturns:\n    Convergence status of the actor in the most recent simulation step.\n\nNote:\n    Static actors do not participate in the solver and may return :class:`NONE\n    <superdex.physics.ConvergenceStatus>`.\n\nSee Also:\n    :class:`~superdex.physics.ConvergenceStatus`,\n    :attr:`~superdex.physics.SolverStats.convergence_status`"
+      , "Get the convergence status of the actor in the most recent simulation step.\n\nReturns:\n    Convergence status of the actor in the most recent simulation step.\n\nNote:\n    Static actors do not participate in the solver and may return :class:`NONE\n    <superdex.physics.ConvergenceStatus>`.\n\nNote:\n    Unlike :class:`DIVERGED <superdex.physics.ConvergenceStatus>`,\n    :class:`STOPPED <superdex.physics.ConvergenceStatus>` does not indicate a\n    failure. It means that the nonlinear solve reached a stopping criterion,\n    such as the maximum number of iterations, before meeting its residual\n    tolerances, which may be stricter than the actor requires.\n\nSee Also:\n    :class:`~superdex.physics.ConvergenceStatus`,\n    :attr:`~superdex.physics.SolverStats.convergence_status`"
     )
     .def("is_static", &mochi::Actor::IsStatic
       , "Check whether the actor is static.\n\nReturns:\n    True if the actor is static. False if it's dynamic."

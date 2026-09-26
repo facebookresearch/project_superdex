@@ -68,6 +68,10 @@ class Actor [no_init, no_destruct, use_scene] {
   // @return Convergence status of the actor in the most recent simulation step.
   //
   // @note Static actors do not participate in the solver and may return @ref ConvergenceStatus::None.
+  // @note Unlike @ref ConvergenceStatus::Diverged, @ref ConvergenceStatus::Stopped does not
+  // indicate a failure. It means that the nonlinear solve reached a stopping criterion, such as the
+  // maximum number of iterations, before meeting its residual tolerances, which may be stricter
+  // than the actor requires.
   //
   // @see ConvergenceStatus, SolverStats::convergenceStatus
   fn GetConvergenceStatus() -> ConvergenceStatus [pure, virtual, const, batchable];
