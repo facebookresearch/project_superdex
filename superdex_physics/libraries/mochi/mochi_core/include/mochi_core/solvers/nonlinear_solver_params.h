@@ -38,6 +38,10 @@ enum struct ConvergenceStatus {
   /**
    * @brief Solver met at least one stopping criterion without converging to the requested
    * tolerance.
+   *
+   * @note This does not necessarily indicate a problem: the residual tolerances may be stricter
+   * than required. If the maximum-iteration limit (@ref NonLinearSolverParams::maxIter) caused the
+   * status, increase it only if additional iterations materially change the results.
    */
   Stopped,
 

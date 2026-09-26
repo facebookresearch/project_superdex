@@ -63,7 +63,7 @@ void mochi::DeclareMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_
   nb::enum_<mochi::ConvergenceStatus>(m, "ConvergenceStatus", "Convergence status of the non-linear solver.\n\nNote:\n    Values are ordered by severity: ``None < Converged < Stopped < Diverged``.")
     .value("NONE", mochi::ConvergenceStatus::None, "Convergence status has not been set.")
     .value("CONVERGED", mochi::ConvergenceStatus::Converged, "Solver converged to the requested tolerance.")
-    .value("STOPPED", mochi::ConvergenceStatus::Stopped, "Solver met at least one stopping criterion without converging to the requested\n    tolerance.")
+    .value("STOPPED", mochi::ConvergenceStatus::Stopped, "Solver met at least one stopping criterion without converging to the requested\n    tolerance.\n    \n    Note:\n        This does not necessarily indicate a problem: the residual tolerances may be\n        stricter than required. If the maximum-iteration limit\n        (:attr:`~superdex.physics.NonLinearSolverParams.max_iter`) caused the\n        status, increase it only if additional iterations materially change the\n        results.")
     .value("DIVERGED", mochi::ConvergenceStatus::Diverged, "Solver diverged. Some form of solution reset may have been used.")
     .value("COUNT", mochi::ConvergenceStatus::Count, "Number of convergence status enum values.")
   ;

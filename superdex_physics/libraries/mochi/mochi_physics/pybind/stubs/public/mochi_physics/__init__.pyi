@@ -757,6 +757,13 @@ class ConvergenceStatus:
     STOPPED: ConvergenceStatus
     """Solver met at least one stopping criterion without converging to the requested
     tolerance.
+
+    Note:
+        This does not necessarily indicate a problem: the residual tolerances may be
+        stricter than required. If the maximum-iteration limit
+        (:attr:`~superdex.physics.NonLinearSolverParams.max_iter`) caused the
+        status, increase it only if additional iterations materially change the
+        results.
     """
     DIVERGED: ConvergenceStatus
     """Solver diverged. Some form of solution reset may have been used."""
