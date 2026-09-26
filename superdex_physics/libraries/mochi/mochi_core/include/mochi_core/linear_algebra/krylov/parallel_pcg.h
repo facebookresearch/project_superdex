@@ -40,8 +40,8 @@ namespace parallel_pcg {
 template <typename MatType>
 int GetNumParallelWorkers(MatType const& A) {
   // Empirically chosen values: ~100k FLOPs per worker for dense matrices, ~25k otherwise.
-  // TODO: Revisit this threshold. When it selects only two or three workers, ParallelPCG's
-  // synchronization overhead can exceed the work saved by parallel execution.
+  // TODO(T290274539): Revisit this threshold. When it selects only two or three workers,
+  // ParallelPCG's synchronization overhead can exceed the work saved by parallel execution.
   int const numTargetFlopsPerWorker = IsMatrix<MatType> ? 100000 : 25000;
   int const numTargetWorkers = Min(FlopsPerApply(A) / numTargetFlopsPerWorker, GetNumRows(A));
   return Min(numTargetWorkers, TaskScheduler::StaticGetNumOtherThreads() + 1);

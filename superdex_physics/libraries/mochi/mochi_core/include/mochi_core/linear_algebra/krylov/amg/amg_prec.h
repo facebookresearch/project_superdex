@@ -767,6 +767,8 @@ void AMGPrec<Scalar, kDofsPerNode>::CoarseCorrection(
   auto const nodeEnd = data.rEnd / kDofsPerNode;
 
   // Uniform division of rows in the coarser level among workers.
+  // TODO(T290274539): Divide by the stored values of PtA and the restriction instead; preliminary
+  // analysis on synthetic meshes found both gains and losses.
   auto const N = _coarsenings[s].PtAP.Rows(); // Coarse size
   MOCHI_ASSERT_VERBOSE(N % kDofsPerNode == 0, "Inconsistent coarse size.");
   auto const numCoarseNodes = N / kDofsPerNode;
