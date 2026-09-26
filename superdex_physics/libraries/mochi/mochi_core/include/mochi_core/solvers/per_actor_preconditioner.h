@@ -1050,9 +1050,12 @@ struct PerActorPrec final : Preconditioner<T> {
     double const finalBarrierCost = EstimatedBarrierCost(numWorkers);
 
     SimulationScratch scratch(numWorkers, &planningAllocator);
-    ConcurrentSolvePlan plan{
-        .workerTasks = DynamicArray<DynamicArray<ConcurrentSolveTask>>(numWorkers),
-        .requiresFinalBarrier = false};
+    auto const makeEmptyPlan = [numWorkers] {
+      return ConcurrentSolvePlan{
+          .workerTasks = DynamicArray<DynamicArray<ConcurrentSolveTask>>(numWorkers),
+          .requiresFinalBarrier = false};
+    };
+    ConcurrentSolvePlan plan = makeEmptyPlan();
     auto const simulateBroad = [&](ConcurrentSolvePlan* target) {
       return SimulateBroad(
           workerRowRanges,
@@ -1064,31 +1067,59 @@ struct PerActorPrec final : Preconditioner<T> {
           target);
     };
 
-    // Broad is the only valid plan unless every actor supports independent row ranges.
+    // The candidates are:
+    // - Broad, which gives each actor at most its width cap in workers: its entry in baseCaps,
+    //   raised near the end of the order to the remaining actors' even share of the workers.
+    // - Broad with the spare worker: when rounding in MakeBaseCaps leaves at least half a worker
+    //   idle, the cap of the actor at spareInfoIndex is raised by one.
+    // - Reusing the matrix-vector row ranges. Reuse is possible when every actor supports
+    //   independent rows and the ranges respect every actor's worker limit.
+    // Simulating a candidate predicts its duration and, if given a plan, also builds it; building
+    // adds less time than a second simulation. If reuse is possible, Broad candidates are only
+    // predicted and the fastest is simulated again to build it, so no Broad plan is built and then
+    // discarded for reuse. Otherwise, each Broad candidate is built as it is simulated.
     auto const reuseDuration = allIndependent
         ? TrySimulateReuseMatVecRanges(workerRowRanges, MakeConstSpan(infos), scratch, nullptr)
         : std::nullopt;
-    if (reuseDuration.has_value() || spareInfoIndex >= 0) {
-      // Compare with Broad before trying the spare worker. In benchmarks, reusing the matvec ranges
-      // was faster in the cases where only the spare made Broad predicted faster.
-      double const broadDuration = simulateBroad(nullptr);
-      if (reuseDuration.has_value() && *reuseDuration <= broadDuration) {
-        [[maybe_unused]] auto const duration =
-            TrySimulateReuseMatVecRanges(workerRowRanges, MakeConstSpan(infos), scratch, &plan);
-        MOCHI_ASSERT(duration.has_value(), "Selected matvec row ranges must remain valid.");
-        return plan;
-      }
+    bool const buildEachBroadCandidate = !reuseDuration.has_value();
+    double bestBroadDuration = simulateBroad(buildEachBroadCandidate ? &plan : nullptr);
 
-      // The spare worker can still lose, e.g., by pushing short actors onto loaded workers or by
-      // adding the final barrier.
-      if (spareInfoIndex >= 0) {
-        ++baseCaps[spareInfoIndex];
-        if (simulateBroad(nullptr) >= broadDuration) {
-          --baseCaps[spareInfoIndex];
-        }
+    // Reuse is compared with Broad before the spare worker is tried: in benchmarks, when only Broad
+    // with the spare worker was predicted faster than reuse, reuse was measured faster.
+    if (reuseDuration.has_value() && *reuseDuration <= bestBroadDuration) {
+      [[maybe_unused]] auto const duration =
+          TrySimulateReuseMatVecRanges(workerRowRanges, MakeConstSpan(infos), scratch, &plan);
+      MOCHI_ASSERT(duration.has_value(), "Selected matvec row ranges must remain valid.");
+      return plan;
+    }
+
+    // Simulates Broad with the current width caps and keeps the result only if it is predicted
+    // strictly faster than the best Broad candidate so far.
+    auto const keepBroadIfFaster = [&] {
+      ConcurrentSolvePlan candidate =
+          buildEachBroadCandidate ? makeEmptyPlan() : ConcurrentSolvePlan{};
+      double const duration = simulateBroad(buildEachBroadCandidate ? &candidate : nullptr);
+      if (duration >= bestBroadDuration) {
+        return false;
+      }
+      bestBroadDuration = duration;
+      if (buildEachBroadCandidate) {
+        plan = std::move(candidate);
+      }
+      return true;
+    };
+
+    // The spare worker can still lose, e.g., by pushing short actors onto loaded workers or by
+    // adding the final barrier.
+    if (spareInfoIndex >= 0) {
+      ++baseCaps[spareInfoIndex];
+      if (!keepBroadIfFaster()) {
+        --baseCaps[spareInfoIndex];
       }
     }
-    simulateBroad(&plan);
+    if (!buildEachBroadCandidate) {
+      simulateBroad(&plan);
+    }
     return plan;
   }
 
