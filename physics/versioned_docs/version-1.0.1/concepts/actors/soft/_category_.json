@@ -1,0 +1,8 @@
+{
+  "label": "Soft",
+  "position": 3,
+  "link": {
+    "type": "doc",
+    "id": "concepts/actors/soft/overview"
+  }
+}

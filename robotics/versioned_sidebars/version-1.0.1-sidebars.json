@@ -1,0 +1,45 @@
+{
+  "docsSidebar": [
+    "overview",
+    "getting_started",
+    "bots",
+    "modifying_bots",
+    "bot_context_lifetime",
+    "bot_components",
+    "bot_assets"
+  ],
+  "examplesSidebar": [
+    "examples/overview",
+    {
+      "type": "category",
+      "label": "Basic",
+      "items": [
+        "examples/basic/loading_a_bot",
+        "examples/basic/loading_a_scene",
+        "examples/basic/loading_from_urdf"
+      ]
+    },
+    {
+      "type": "category",
+      "label": "Control",
+      "items": [
+        "examples/control/jsc_control",
+        "examples/control/osc_control",
+        "examples/control/ik_pose_control",
+        "examples/control/osc_jsc_control",
+        "examples/control/bimanual_control"
+      ]
+    },
+    {
+      "type": "category",
+      "label": "Advanced",
+      "items": [
+        "examples/advanced/custom_components"
+      ]
+    }
+  ],
+  "apiSidebar": [
+    "api_reference/cpp",
+    "api_reference/python"
+  ]
+}

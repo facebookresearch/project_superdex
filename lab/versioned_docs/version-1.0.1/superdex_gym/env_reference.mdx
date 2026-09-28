@@ -1,0 +1,124 @@
+---
+title: Environment Class API
+---
+
+# Environment Class API
+
+Use this page for the shared runtime API implemented by `MochiEnv`. For the
+shipped environment contracts, see the [Gallery of Environments](./envs/overview.mdx).
+
+## Runtime API
+
+Use these methods to *drive* an environment. To *write* an environment, see
+[Authoring a Custom Environment](./environments.mdx).
+
+### Gymnasium interface
+
+| Method | Notes |
+| --- | --- |
+| `reset(seed=None, options=None)` | Returns `(observation, info)`. Seeds `np_random`, which drives the reset noise. |
+| `step(action)` | Returns `(observation, reward, terminated, truncated, info)`. Clips the action first. |
+| `render()` | Returns an RGB array in `"rgb_array"` mode and `None` in `"human"` mode or when `render_mode is None`. |
+| `close()` | Shuts down the renderer and releases the scene. Idempotent. |
+
+After `close()`, `reset`, `step` and `render` raise
+`gymnasium.error.ClosedEnvironmentError`.
+
+Call `close()` explicitly or use the environment as a context manager. `__del__` also
+calls `close()` as a best-effort fallback, but interpreter shutdown can destroy the context first.
+
+:::note Actions are silently clipped
+`step()` clips each incoming action to `action_space.low`/`high` before any other work.
+Out-of-range actions produce no error or warning.
+:::
+
+### Spaces and conversion
+
+| Method | Returns |
+| --- | --- |
+| `get_observation_space()` / `get_action_space()` | The flattened `Box`. Equivalent to the attributes, but callable — which matters for Ray remote workers, where attribute access on an actor is not available. |
+| `get_observation_space_structure()` / `get_action_space_structure()` | The unflattened `spaces.Dict` |
+| `to_observation(structured)` / `to_structured_observation(flat)` | Convert observations |
+| `to_action(structured)` / `to_structured_action(flat)` | Convert actions |
+
+:::caution Observations and actions are flattened alphabetically
+`MochiEnv` builds its spaces from a `gymnasium.spaces.Dict`, which **sorts its keys**.
+The flattened vector is in **alphabetical key order**, not declaration
+order. E.g. `CartPoleEnv` declares `position, vertical_ang, linear_vel, angular_vel`, but its
+vector is `[angular_vel, linear_vel, position, vertical_ang]`.
+
+Do not assume the ordering when reading a saved rollout. Use `env.to_structured_observation(obs)` or reference
+`env.get_observation_space_structure()`.
+:::
+
+### Timing and episode state
+
+| Method | Returns |
+| --- | --- |
+| `get_control_frequency()` | Control steps per second |
+| `get_simulation_frequency()` | Simulation substeps per second |
+| `get_control_timestep()` | `1 / control_frequency` |
+| `get_simulation_timestep()` | `1 / simulation_frequency` |
+| `get_control_to_simulation_ratio()` | Substeps per control step |
+| `get_step_count()` | Control steps since the last reset |
+| `get_steps_per_episode()` | The configured truncation limit; use `-1` for no limit. |
+| `get_episode()` | Episodes started since construction (incremented by `reset()`) |
+| `is_closed()` | Whether `close()` has run |
+
+### Introspection
+
+`get_last_step()` returns a `StructuredStepResult` named tuple containing the
+**structured** values from the last step:
+`(action, observation, reward, terminated, truncated, info)`. Its `reward` value is the
+`RewardTerms` dict, not the scalar. After a `reset()`, `action` and `reward` are `None`.
+
+`get_profiler()` returns the environment's `Profiler`. It is always present; check
+`profiler.enabled`, which follows the `profile` config field.
+
+`get_renderer()` returns the active `Viewer`, or `None` when rendering is disabled or
+after `close()`.
+
+### Package exports
+
+`superdex.lab.gym.envs` re-exports these framework types: `MochiEnv`, `MochiEnvCfg`,
+`VALID_RENDER_MODES`, the deprecated `RenderMode`, and the type aliases `Action`,
+`ActionSpace`, `ActionSpaceStructure`, `Info`, `Observation`, `ObservationSpace`,
+`ObservationSpaceStructure`, `ResetResult`, `RewardTerms`, `StepResult`,
+`StructuredAction`, `StructuredObservation` and `StructuredStepResult`.
+
+Import concrete environment classes from their own modules. They are **not** re-exported
+from `superdex.lab.gym.envs.benchmarks` or `superdex.lab.gym.envs.robots`.
+Built-in environments are in `envs.benchmarks`; use `envs.robots` for custom robot
+environments.
+
+## Inspecting an environment at runtime
+
+Inspect the configured environment directly:
+
+```python
+from superdex.lab.gym.envs.benchmarks.cartpole_env import CartPoleEnv, CartPoleEnvCfg
+
+with CartPoleEnv(CartPoleEnvCfg()) as env:
+    print(env.observation_space.shape)             # (4,)
+    print(env.action_space.low, env.action_space.high)
+
+    # The structured Dict spaces in flattened alphabetical order.
+    print(env.get_observation_space_structure())
+    print(env.get_action_space_structure())
+
+    obs, info = env.reset(seed=0)
+    print(env.to_structured_observation(obs))      # dict keyed by observation name
+
+    obs, reward, terminated, truncated, info = env.step(env.action_space.sample())
+    print({k: v for k, v in info.items() if k.startswith("reward_")})
+```
+
+List every SuperDex environment registered in this installation -- these canonical IDs are exactly what the CLI accepts:
+
+```python
+from superdex.lab.gym.registration import get_env_specs, register_envs
+
+register_envs()  # idempotent; registers the public SuperDex specs with Gymnasium
+for spec in sorted(get_env_specs(), key=lambda spec: spec.id):
+    print(spec.id)
+```

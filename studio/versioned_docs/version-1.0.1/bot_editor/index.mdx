@@ -1,0 +1,40 @@
+---
+title: Bot Editor
+sidebar_label: Bot Editor
+sidebar_position: 3
+slug: /bot_editor
+---
+
+import Figure from '@site/src/components/Figure';
+
+# Bot Editor
+
+<Figure
+  src="../../img/bot_editor/bot_editor.webp"
+  alt="SuperDex Studio with a Franka arm and a five-finger hand open in the Bot Editor: viewport at center, Bot Hierarchy and Bot Link Details docked right, Asset Browser along the bottom."
+/>
+
+The **Bot Editor** is a complete toolkit for authoring simulation-ready
+`.superdex_bot` assets. Import a robot, tune its physical properties against a
+live simulation, and compose it with others — all from a set of dockable windows
+arranged around an instantly simulatable bot, so every edit is immediately
+visible in motion.
+
+## What's here
+
+The guides below follow the workflow end to end, from a raw robot description to
+a bot you can drive.
+
+| Guide | What it covers |
+|-------|----------------|
+| [Importing](./import.mdx) | Bringing a robot into Studio with the URDF import wizard. |
+| [Editing](./editing.mdx) | Creating a bot, and editing its hierarchy, links, joints, and contact. |
+| [Modding](./modding.mdx) | Composing Mod Bots from a base bot and a chain of modifications. |
+| [Visualization](./visualization.mdx) | Visualization settings and physics debug draw for bots. |
+| [Simulation and Control](./simulation_and_control.mdx) | Running live physics and driving the bot with the Bot Control window. |
+| [Archive and Export](./archive_and_export.mdx) | Freezing a bot and everything it references into a self-contained snapshot, and exporting it. |
+
+## See also
+
+- [Prefab Editor Guide](../prefab_editor.mdx) — composing actors into a prefab.
+- [Model Editor Guide](../model_editor.mdx) — the modifier stack that builds collision geometry.

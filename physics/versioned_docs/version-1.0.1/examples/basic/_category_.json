@@ -1,0 +1,8 @@
+{
+  "label": "Basic",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "Rigid and soft body examples for the SuperDex Physics simulation library."
+  }
+}

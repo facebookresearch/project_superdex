@@ -1,0 +1,810 @@
+---
+title: Controllers, Sensors & Actuators
+sidebar_label: Controllers, Sensors & Actuators
+sidebar_position: 4
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Controllers, Sensors & Actuators
+
+A **controller** turns a goal into motion: using observations to compute its
+outputs in the form of **efforts** (torques for revolute joints, forces for
+prismatic). A **sensor** produces a signal or surfaces the data needed to
+produce one: a camera image, a contact reading, a fused estimate. An
+**actuator** takes a command and models hardware outputs: a servo, a brush DC
+motor, a pneumatic piston.
+
+The three are deliberately implemented in the same shape. Everything on this
+page that is not explicitly called out as a difference applies to all of them.
+
+## One shape, three kinds
+
+Every component, whatever its kind:
+
+- is identified by a **registered type name** (`"BASIC_JSC_PD"`,
+  `"SENSOR_CAMERA"`, or one of your own), and is created by that name;
+- is **owned by the [`RoboticsContext`](./bot_context_lifetime.mdx)**, which
+  destroys it when you destroy it, its bot, or the context;
+- carries an **instance name** you give it at creation, which the finders match
+  on (uniqueness is not required);
+- is referred to by a **handle** you resolve back to the live object;
+- is **attributed to a bot** when it is created on an actor that belongs to one.
+
+That common surface is the same for all three:
+
+| Python | What it reports |
+|---|---|
+| `is_valid()` | Whether the component is still alive |
+| `get_name()` | The instance name given at creation |
+| `get_type_name()` | The registered type name |
+| `get_actor()` | The actor it is bound to, or `None` |
+| `get_owning_bot()` | The bot that owns it, or `None` |
+| `reset()` | Clears internal state between episodes; keeps params |
+
+The C++ names are the PascalCase equivalents (`IsValid()`, `GetName()`, …).
+
+## How the three differ
+
+| | Actor | Where it can live | How params arrive |
+|---|---|---|---|
+| Controller | Optional | On a bot, or on nothing at all | After construction, via `configure_from_scene_entry` |
+| Sensor | Optional | On a bot link, or at scene level | At construction, as `param_args` |
+| Actuator | **Required** | On a bot link only | At construction, as `param_args` |
+
+**Controllers** may be created with or without a mochi actor. When supplying a
+mochi actor (directly or through a bot) it can use the mochi APIs to auto
+harvest values like the Jacobian, DOF counts, or joint angles from the simulated
+articualtion. Creating a controller without an actor means the application will
+supply all necessary inputs. This allows you to use the same controller to drive
+a real robot with the same code as your simulated robot. Controllers utilize a
+post-construction configuration hook to allow initialization after the
+controller and bot have fully been created.
+
+**Sensors** may be attached to a bot link or stand alone in the scene. Either
+way, a sensor carries a **pose relative to its parent frame**, placing it
+relative to the link's actor for a bot-owned sensor, and the scene root for an
+actor-less one. `get_world_transform()` resolves the sensor pose to world space,
+chaining through the actor's transform when there is one.
+
+**Actuators** must be attached to a bot link actor. The actuator is expected to
+act on or with respect to the joint of that link. There is no scene-level
+actuator as an actuator with nothing to act on is not meaningful.
+
+## What the framework does, and what you wire
+
+The framework **creates and owns** components. Loading a `.superdex_bot` will
+create and associate any sensors and actuators declared on that bot. The context
+will handle destruction of the components at the right time.
+
+It does **not** run them. Nothing calls your sensor's read method, feeds that
+reading to a controller, computes the actuator efforts, or applies the resulting
+efforts to the articulation. **That glue is yours to write.**
+
+This is deliberate. The useful ways to wire sensors, controllers and actuators
+together are effectively unbounded — which sensor feeds which controller, at
+what rate, through what filters, with what arbitration between several
+controllers on one bot. A framework that ran the loop for you would have to pick
+one of those shapes and would rule out the rest or become unweldy and overly
+complex. Owning the loop costs you a few lines of code and gives you the
+flexability to research the way you want.
+
+So the division is:
+
+- **The framework**: registration, creation, ownership, lookup, teardown.
+- **You**: reading sensors, computing outputs, applying them, and the order it
+  all happens in.
+
+## The anatomy of a component
+
+Every component is assembled from the same three pieces:
+
+| Piece | Lifetime | What it carries |
+|---|---|---|
+| **Params** | Persistent | The configuration that governs behaviour — PD gains, saturation, a deadband, a torch model path. |
+| **Observations** | Per step | What the component reads this step — joint velocities, a Jacobian, contact points. |
+| **Targets** | Per step | The goal you are asking for this step — a joint pose, an end-effector transform, desired force/torque. Sensors have none; they measure rather than aim. |
+
+Each component should name all 3 as needed: `ControllerBasicJscPd` exposes
+`Params`, `Obsv` and `Target` (`ControllerBasicJscPdParams` and friends in
+Python). Sensors and actuators function the same way.
+
+They all drive through the same four beats.
+
+1. **Configure** — `set_params(...)`. You may set params whenever the component
+   permits. This can be used to dynamically adjust the impedance of a controller
+   or alter behaviour as part of domain randomization between episodes as some
+   examples. Sensors and actuators can take in params `param_args` at creation.
+   Controllers take in `param_args` and `init_args` as part of
+   `configure_from_scene_entry`.
+2. **Gather observations** — assemble this step's inputs. Components may offer
+   `get_current_observations_from_mochi()` to harvest the needed observations
+   directly from the live simulation; you can equally populate them yourself.
+   This enables the same component code to run off-sim on a real robot setup.
+   Populating observations and targets from the robot's host framework as
+   needed. This also allows you to feed the output of one component into another
+   when linking together a more complex model of your system. *Observations* are
+   not persistent *state*, nothing carries between steps unless your glue code
+   causes it.
+3. **Compute** — `compute_output(obsv, target)` on a controller;
+   `compute_signal(obsv)` on a sensor; and `compute_effort(obsv, target)` on an
+   actuator. Output is a function of params, observations, and targets, that you
+   invoke as needed to drive your system.
+4. **Apply** — push the result somewhere: `compute_output` on a controller with
+   observations gotten from a sensor; `compute_effort` on an actuator based on
+   controller outputs; calling `set_external_forces_on_dofs(...)` to push
+   controller or actuator outputs into the simulation; set the drive torques on
+   a real robot.
+
+A controller is expected to return one effort per DOF of the **whole**
+articulation, zero on the DOFs it does not drive. That convention is what lets
+several controllers share a bot without extra messy glue code. Simply add their
+vectors and apply the sum. Watch out for unintended overlap due to controller
+configuration as this can cause controllers to fight over DOFs or make the sum
+exceed your robot's effort limits.
+
+## Built-in types
+
+| Type name | Kind | What it does |
+|-----------|------|--------------|
+| `BASIC_JSC_PD` | Controller | Per-joint PD toward target joint positions, with per-joint gains, output saturation, and a deadband. The simplest way to hold or drive a pose. |
+| `BASIC_OSC_PD` | Controller | Drives the **end-effector** to a target pose using Jacobian-transpose impedance: `τ = Jᵀ·F`, where `F = Kp·(pose error) + Kd·(velocity error)`. Robot-agnostic; no nullspace posture or gravity compensation. |
+| `MOCHI_ARTICULATED_POSE` | Controller | Drives Mochi's built-in articulated-pose controller from per-link transforms or pose DOFs. Applies control internally, so it returns an empty effort vector — you do not apply efforts for it. It also rejects a null actor, since it cannot run without a simulation. |
+| `SENSOR_CAMERA` | Sensor | A camera with a pose and intrinsics, configured from a `.superdex_sensor` params file. It produces nothing in the physics loop — a renderer reads its params to place its own camera. |
+
+:::note Actuators
+No concrete actuator types ship yet, but all the APIs are in place and you can
+register your own. Additional controllers, sensors, and actuators will also be
+coming soon.
+:::
+
+## Wiring it together
+
+A complete drive loop: create the components on a bot, configure them, then run
+the four beats every step. This is the glue code the framework leaves to you.
+
+<Tabs groupId="language">
+<TabItem value="python" label="Python">
+
+```python
+import numpy as np
+import superdex.physics as physics
+import superdex.robotics as robotics
+
+# Create the components. Each is owned by the bot and destroyed with it.
+jsc = bot.create_controller("BASIC_JSC_PD", "hold_pose")
+wrist_cam = bot.create_sensor("SENSOR_CAMERA", "link8", "wrist_cam")
+
+actor = bot.get_articulated_actor()
+num_dofs = actor.get_num_dofs()
+
+# 1. Configure: per-joint PD gains, one value per actuated DOF.
+params = robotics.ControllerBasicJscPdParams()
+params.kp = [40.0] * num_dofs
+params.kd = [4.0] * num_dofs
+jsc.set_params(params)
+
+all_dof_indices = np.arange(num_dofs, dtype=np.int32)
+
+# Hold the pose the bot spawned in. Read it off the actor so this works for a
+# floating base too: bot DOFs exclude the root joint's, so default_pose is
+# 6 entries short of the actor's on a bot with a free root.
+target_pose = physics.DynamicArrayReal(num_dofs)
+actor.get_articulated_pose(target_pose)
+
+STEP_DT = 1.0 / 60.0
+NUM_STEPS = 240
+for _ in range(NUM_STEPS):
+    # 2. Gather inputs. Nothing reads a sensor for you. A camera exposes its
+    #    placement; other sensor types expose their own signal.
+    pose = wrist_cam.get_world_transform()
+
+    # 3. Compute. Read this step's robot state off the simulation, then supply
+    #    the control period, which can differ from the actual loop speed.
+    obsv = jsc.get_current_observations_from_mochi()
+    obsv.dt = STEP_DT
+    efforts = jsc.compute_output(
+        obsv, robotics.ControllerBasicJscPdTarget(target_pose=target_pose)
+    )
+
+    # 4. Apply. Efforts are a per-step input, so this runs before every step.
+    actor.set_external_forces_on_dofs(
+        dof_indices=all_dof_indices,
+        force_values=np.asarray(efforts, dtype=np.float32),
+    )
+    scene.step(STEP_DT)
+```
+
+</TabItem>
+<TabItem value="cpp" label="C++">
+
+```cpp
+// superdex_robotics.h gives you the context and bot APIs. Each concrete component type
+// has its own header, deliberately: one umbrella header that pulled in every controller,
+// sensor and actuator would cost compile time and pollute the namespace for everyone.
+#include <superdex_robotics/controllers/controller_basic_jsc_pd.h>
+#include <superdex_robotics/superdex_robotics.h>
+
+using namespace mochi;
+using namespace superdex::robotics;
+
+superdex::Error error;
+
+// Create the components. Each is owned by the bot and destroyed with it.
+auto* jsc = static_cast<ControllerBasicJscPd*>(
+    bot->CreateController("BASIC_JSC_PD", "hold_pose", error));
+SensorBase* wristCam = bot->CreateSensor("SENSOR_CAMERA", "link8", "wrist_cam", "", error);
+
+Actor* actor = bot->GetArticulatedActor();
+int const numDofs = actor->GetNumDofs();
+
+// 1. Configure: per-joint PD gains, one value per actuated DOF.
+ControllerBasicJscPd::Params params;
+params.Kp.assign(numDofs, 40.0_r);
+params.Kd.assign(numDofs, 4.0_r);
+jsc->SetParams(params, error);
+
+DynamicArray<int> allDofIndices(numDofs);
+for (int i = 0; i < numDofs; ++i) {
+  allDofIndices[i] = i;
+}
+
+// Hold the pose the bot spawned in. Read it off the actor so this works for a
+// floating base too: bot DOFs exclude the root joint's, so defaultPose is
+// 6 entries short of the actor's on a bot with a free root.
+DynamicArray<real> targetPose(numDofs);
+actor->GetArticulatedPose(targetPose, error);
+
+constexpr real kStepDt = 1.0_r / 60.0_r;
+constexpr int kNumSteps = 240;
+for (int step = 0; step < kNumSteps; ++step) {
+  // 2. Gather inputs. Nothing reads a sensor for you. A camera exposes its
+  //    placement and params; other sensor types expose their own signal.
+  TransformRT const pose = wristCam->GetWorldTransform();
+
+  // 3. Compute. Read this step's robot state off the simulation, then supply
+  //    the control period, which can differ from the actual loop speed.
+  ControllerBasicJscPd::Obsv obsv = jsc->GetCurrentObservationsFromMochi(error);
+  obsv.dt = kStepDt;
+  ControllerBasicJscPd::Target target;
+  target.targetPose = targetPose;
+  Span<real const> const efforts = jsc->ComputeOutput(obsv, target, error);
+
+  // 4. Apply. Efforts are a per-step input, so this runs before every step.
+  actor->SetExternalForcesOnDofs(allDofIndices, efforts, error);
+  scene->Step(kStepDt, error);
+}
+```
+
+</TabItem>
+</Tabs>
+
+A bot can carry several controllers at once — an OSC driving an arm's
+end-effector plus a joint-space PD driving the hand's fingers, which is exactly
+what the [OSC + JSC control](./examples/control/osc_jsc_control.md) example does.
+Arbitrating between them is part of the glue you own.
+
+## Writing & registering your own components
+
+The built-in components cover common cases; beyond them you write your own types
+or use types created by others. You can **register** your new types with the
+`RoboticsContext` under a type name, and from then on your new component is
+created by that name exactly like a built-in component. This includes being
+declared in a `.superdex_bot` link or in future combined scene descriptions.
+Built-in types are registered automatically by the context in its constructor.
+
+Every type you write supplies the same four things:
+
+- a static **`TypeName()`** — the name it is registered and created by;
+- a **`GetTypeName()`** override returning it;
+- a **`Reset()`** override — resets the internal state of your component while
+  keeping params. Used when resetting your scene between episodes. An empty body
+  states that your type carries no per-episode state. Requiring Reset forces all
+  implementers to either support it or intentionally forgo it;
+- the **uniform constructor** for its kind and initializers:
+
+| Kind | Construction |
+|---|---|
+| Controller | `MyController(BotPrefab const* prefab, Actor* actor, Error& error)`<br />then `ConfigureFromSceneEntry(std::string_view paramArgs, std::string_view initArgs, Error& error)` |
+| Sensor | `MySensor(Actor* actor, std::string_view paramArgs, Error& error)` |
+| Actuator | `MyActuator(Actor* actor, std::string_view paramArgs, Error& error)` |
+
+`ConfigureFromSceneEntry` is a general initializer that allows setting the
+arguments to the type specialized initialize function and setting params. A
+controller is not fully built until it has initialized.
+
+Use the naming conventions from [the anatomy above](#the-anatomy-of-a-component)
+to help your type be easily readable by others — `Params`, `Obsv`, `Target`.
+Everything else (the methods that actually do the work) is free to use whatever
+signature suits it best.
+
+### A controller
+
+A controller adds the one hook the other kinds do not have:
+`ConfigureFromSceneEntry`. C++ requires it; the Python shim calls it only if
+your class defines it.
+
+<Tabs groupId="language">
+<TabItem value="python" label="Python">
+
+```python
+# There is no base class to inherit. You register a plain Python class, and the C++ shim
+# PythonController -- a PythonComponent<ControllerBase> that the RoboticsContext owns --
+# wraps your instance and stands in as the ControllerBase the framework sees. It forwards
+# only the virtuals the framework invokes: reset(), the registered type name, and
+# configure_from_scene_entry() when you define it. Everything else is your own API, called
+# straight on your instance.
+from dataclasses import dataclass
+
+import superdex.robotics as robotics
+
+
+# Params: the persistent configuration that governs behaviour.
+@dataclass
+class MyControllerParams: ...
+
+
+# InitArgs: the type-specific setup the scene entry carries alongside the params.
+@dataclass
+class MyControllerInitArgs: ...
+
+
+# Obsv: this step's inputs, routinely built each step.
+@dataclass
+class MyControllerObsv: ...
+
+
+# Target: what goals the controller is targeting this step.
+@dataclass
+class MyControllerTarget: ...
+
+
+class MyController:
+    # The factory. Python receives only the actor (None when created without one); a
+    # controller's params arrive later, in configure_from_scene_entry.
+    def __init__(self, actor):
+        self.actor = actor
+        self.params = MyControllerParams()
+        # Anything else stateful in your controller
+
+    # Optional in Python, required in C++ -- completes construction at scene load.
+    # param_args is a params file path or inline JSON; init_args is the same but
+    # carries type-specific setup.
+    def configure_from_scene_entry(self, param_args: str, init_args: str) -> None:
+        # Decode params and init args
+        self.initialize(...)  # decoded init args
+        self.set_params(...)  # decoded param args
+
+    # Required -- clears internal state, leaving params alone.
+    def reset(self) -> None: ...
+
+    # Your own API. You call these, not the framework. Observations come in as an
+    # argument rather than being read from the simulation inside compute, so the same
+    # code runs on a real robot and you choose when state is sampled.
+    def initialize(self, *init_args) -> None: ...
+
+    def set_params(self, params: MyControllerParams) -> None: ...
+
+    def compute_output(self, obsv: MyControllerObsv, target: MyControllerTarget): ...
+
+    def get_current_observations_from_mochi(self) -> MyControllerObsv: ...
+
+
+# Register your type on the context.
+bots_context = robotics.create_context()
+robotics.register_python_controller(bots_context, "MY_CONTROLLER", MyController)
+assert bots_context.is_controller_type_registered("MY_CONTROLLER")
+
+# Create it by name, then resolve the handle back to your object. The second argument
+# is the optional bot prefab; pass None to create on a bare actor.
+handle = bots_context.create_controller("MY_CONTROLLER", None, actor, "my_controller")
+my_controller = robotics.get_python_controller(bots_context, handle)
+efforts = my_controller.compute_output(obsv, target)
+```
+
+</TabItem>
+<TabItem value="cpp" label="C++">
+
+```cpp
+#include <superdex_robotics/controllers/controller_base.h>
+#include <superdex_robotics/utils/file_utils.h>
+
+#include <mochi_core/utils/reflection.h>
+
+using namespace mochi;
+using namespace superdex::robotics;
+
+// Params: the persistent configuration that governs behaviour.
+struct MyControllerParams { ... };
+
+// InitArgs: the type-specific setup the scene entry carries alongside the params.
+struct MyControllerInitArgs { ... };
+
+// Obsv: this step's inputs, routinely built each step.
+struct MyControllerObsv { ... };
+
+// Target: what goals the controller is targeting this step.
+struct MyControllerTarget { ... };
+
+class MyController final : public ControllerBase {
+ public:
+  // The name your controller is registered and created by.
+  static constexpr std::string_view TypeName() { return "MY_CONTROLLER"; }
+  std::string_view GetTypeName() const override { return TypeName(); }
+
+  using Params = MyControllerParams;
+  using Obsv = MyControllerObsv;
+  using Target = MyControllerTarget;
+
+  // The uniform constructor: the optional bot prefab and the robot actor. A null actor
+  // is allowed, so guard actor-dependent setup.
+  MyController(BotPrefab const* prefab, Actor* actor, superdex::Error& error)
+      : ControllerBase(prefab, actor, error);
+
+  // Required -- completes construction; called at scene load. paramArgs is a params
+  // file path or inline JSON; initArgs is the same but carries type-specific setup.
+  void ConfigureFromSceneEntry(
+      std::string_view paramArgs, std::string_view initArgs, superdex::Error& error) override {
+    // Decode params and init args
+    Initialize( /* decoded init args */ );
+    SetParams( /* decoded param args */ );
+  }
+
+  // Required -- clears internal state, leaving params alone.
+  void Reset() override {}
+
+  // Your own API. You call these, not the framework. Observations come in as an
+  // argument rather than being read from the simulation inside compute, so the same
+  // code runs on a real robot and you choose when state is sampled.
+  void Initialize( /* controller's unique initialization args */ );
+  void SetParams(Params const& params, superdex::Error& error);
+  Span<real const> ComputeOutput(Obsv const& obsv, Target const& target, superdex::Error& error);
+  Obsv GetCurrentObservationsFromMochi(superdex::Error& error);
+
+ private:
+  Params _params;
+  // Anything else stateful in your controller
+};
+
+// Register your type on the context.
+auto* botsContext = CreateRoboticsContext();
+botsContext->RegisterController<MyController>();
+
+// Create it by name, then resolve the handle back to your object. The second argument
+// is the optional bot prefab; pass nullptr to create on a bare actor.
+superdex::Error error;
+ControllerHandle const handle = botsContext->CreateController(
+    MyController::TypeName(), nullptr, actor, "my_controller", error);
+auto* myController = static_cast<MyController*>(botsContext->GetController(handle));
+Span<real const> const efforts = myController->ComputeOutput(obsv, target, error);
+```
+
+</TabItem>
+</Tabs>
+
+### A sensor
+
+A sensor's params arrive at construction. It does not have a `Target` since it
+measures rather than drives. The signal type is yours: there is no common
+`ComputeSignal` signature. The timing and contents of the sensor call are also
+yours to author. A `SENSOR_CAMERA` only carries params and a pose for a renderer
+to use when rendering frames.
+
+<Tabs groupId="language">
+<TabItem value="python" label="Python">
+
+```python
+# There is no base class to inherit. You register a plain Python class, and the C++ shim
+# PythonSensor -- a PythonComponent<SensorBase> that the RoboticsContext owns -- wraps your
+# instance and stands in as the SensorBase the framework sees. It forwards only the virtuals
+# the framework invokes: reset() and the registered type name. Everything else is your own
+# API, called straight on your instance.
+from dataclasses import dataclass
+
+import superdex.robotics as robotics
+
+
+# Params: the persistent configuration that governs behaviour.
+@dataclass
+class MySensorParams: ...
+
+
+# Obsv: this step's inputs, routinely built each step.
+@dataclass
+class MySensorObsv: ...
+
+
+# No Target: a sensor measures rather than drives.
+
+# MySignal: whatever your sensor produces; the type is yours to pick.
+MySignal = ...
+
+
+class MySensor:
+    # The factory: the link actor (None when there is no link) and the params string,
+    # exactly as a C++ sensor's constructor receives them.
+    def __init__(self, actor, param_args: str):
+        self.actor = actor
+        # Decode params
+        self.set_params(...)  # decoded param args
+        # Anything else stateful in your sensor
+
+    # Required -- clears internal state, leaving params alone.
+    def reset(self) -> None: ...
+
+    # Your own API. You call these, not the framework. Observations come in as an
+    # argument rather than being read from the simulation inside compute, so the same
+    # code runs on a real robot and you choose when state is sampled.
+    def set_params(self, params: MySensorParams) -> None: ...
+
+    def compute_signal(self, obsv: MySensorObsv) -> MySignal: ...
+
+    def get_current_observations_from_mochi(self) -> MySensorObsv: ...
+
+
+# Register your type on the context.
+bots_context = robotics.create_context()
+robotics.register_python_sensor(bots_context, "MY_SENSOR", MySensor)
+assert bots_context.is_sensor_type_registered("MY_SENSOR")
+
+# Create it by name, then resolve the handle back to your object. Pass None for the
+# actor to create a scene-level sensor bound to no link.
+handle = bots_context.create_sensor("MY_SENSOR", link_actor, "my_sensor", param_args)
+my_sensor = robotics.get_python_sensor(bots_context, handle)
+signal = my_sensor.compute_signal(obsv)
+```
+
+</TabItem>
+<TabItem value="cpp" label="C++">
+
+```cpp
+#include <superdex_robotics/sensors/sensor_base.h>
+#include <superdex_robotics/utils/file_utils.h>
+
+#include <mochi_core/utils/reflection.h>
+
+using namespace mochi;
+using namespace superdex::robotics;
+
+// Params: the persistent configuration that governs behaviour.
+struct MySensorParams { ... };
+
+// Obsv: this step's inputs, routinely built each step.
+struct MySensorObsv { ... };
+
+// No Target: a sensor measures rather than drives.
+
+// MySignal: whatever your sensor produces; the type is yours to pick.
+using MySignal = ...;
+
+class MySensor final : public SensorBase {
+ public:
+  // The name your sensor is registered and created by.
+  static constexpr std::string_view TypeName() { return "MY_SENSOR"; }
+  std::string_view GetTypeName() const override { return TypeName(); }
+
+  using Params = MySensorParams;
+  using Obsv = MySensorObsv;
+
+  // The uniform constructor: the link actor and the params string, a params file path
+  // or inline JSON. A sensor has no post-construction hook, so it decodes here. A null
+  // actor is allowed, so guard actor-dependent setup.
+  MySensor(Actor* actor, std::string_view paramArgs, superdex::Error& error)
+      : SensorBase(actor, error) {
+    // Decode params
+    SetParams( /* decoded param args */ );
+  }
+
+  // Recommended alongside it: build from already-loaded params, so programmatic
+  // creation need not go through a file or a JSON string.
+  MySensor(Actor* actor, Params const& params, superdex::Error& error);
+
+  // Required -- clears internal state, leaving params alone.
+  void Reset() override {}
+
+  // Your own API. You call these, not the framework. Observations come in as an
+  // argument rather than being read from the simulation inside compute, so the same
+  // code runs on a real robot and you choose when state is sampled.
+  void SetParams(Params const& params, superdex::Error& error);
+  MySignal ComputeSignal(Obsv const& obsv, superdex::Error& error);
+  Obsv GetCurrentObservationsFromMochi(superdex::Error& error);
+
+ private:
+  Params _params;
+  // Anything else stateful in your sensor
+};
+
+// Register your type on the context.
+auto* botsContext = CreateRoboticsContext();
+botsContext->RegisterSensor<MySensor>();
+
+// Create it by name, then resolve the handle back to your object. Pass nullptr for the
+// actor to create a scene-level sensor bound to no link.
+superdex::Error error;
+SensorHandle const handle = botsContext->CreateSensor(
+    MySensor::TypeName(), linkActor, "my_sensor", paramArgs, error);
+auto* mySensor = static_cast<MySensor*>(botsContext->GetSensor(handle));
+MySignal const signal = mySensor->ComputeSignal(obsv, error);
+```
+
+</TabItem>
+</Tabs>
+
+### An actuator
+
+An actuator models one joint's hardware: it takes the effort something upstream
+asked for and returns what that joint would actually deliver, after a gear
+ratio, a saturation limit, a friction or thermal model. An actuator is not always needed.
+Unless there is something you are trying to explicitly model you could just pass your
+controller output as external forces to the physics system. It is written like a sensor,
+with two differences. It carries a `Target` and **requires an associated link actor**.
+
+Its output shape differs from a controller's too. A controller returns one
+effort per DOF of the whole articulation; an actuator returns the effort for the
+single joint it models. Assembling those per-joint outputs into something you
+apply is glue you own, like the rest of the loop.
+
+<Tabs groupId="language">
+<TabItem value="python" label="Python">
+
+```python
+# There is no base class to inherit. You register a plain Python class, and the C++ shim
+# PythonActuator -- a PythonComponent<ActuatorBase> that the RoboticsContext owns -- wraps
+# your instance and stands in as the ActuatorBase the framework sees. It forwards only the
+# virtuals the framework invokes: reset() and the registered type name. Everything else is
+# your own API, called straight on your instance.
+from dataclasses import dataclass
+
+import superdex.robotics as robotics
+
+
+# Params: the persistent configuration that governs behaviour.
+@dataclass
+class MyActuatorParams: ...
+
+
+# Obsv: this step's inputs, routinely built each step.
+@dataclass
+class MyActuatorObsv: ...
+
+
+# Target: what this joint is being asked for this step -- typically one entry of a
+# controller's effort vector, once you have decided which controller drives it.
+@dataclass
+class MyActuatorTarget: ...
+
+
+class MyActuator:
+    # The factory: the link actor -- an actuator always has one -- and the params
+    # string, exactly as a C++ actuator's constructor receives them.
+    def __init__(self, actor, param_args: str):
+        self.actor = actor
+        # Decode params
+        self.set_params(...)  # decoded param args
+        # Anything else stateful in your actuator
+
+    # Required -- clears internal state, leaving params alone.
+    def reset(self) -> None: ...
+
+    # Your own API. You call these, not the framework. Observations come in as an
+    # argument rather than being read from the simulation inside compute, so the same
+    # code runs on a real robot and you choose when state is sampled.
+    def set_params(self, params: MyActuatorParams) -> None: ...
+
+    def compute_effort(self, obsv: MyActuatorObsv, target: MyActuatorTarget) -> float: ...
+
+    def get_current_observations_from_mochi(self) -> MyActuatorObsv: ...
+
+
+# Register your type on the context.
+bots_context = robotics.create_context()
+robotics.register_python_actuator(bots_context, "MY_ACTUATOR", MyActuator)
+assert bots_context.is_actuator_type_registered("MY_ACTUATOR")
+
+# Create it by name, then resolve the handle back to your object. The link actor is
+# required -- there is no scene-level actuator.
+handle = bots_context.create_actuator("MY_ACTUATOR", link_actor, "my_actuator", param_args)
+my_actuator = robotics.get_python_actuator(bots_context, handle)
+effort = my_actuator.compute_effort(obsv, target)
+```
+
+</TabItem>
+<TabItem value="cpp" label="C++">
+
+```cpp
+#include <superdex_robotics/actuators/actuator_base.h>
+#include <superdex_robotics/utils/file_utils.h>
+
+#include <mochi_core/utils/reflection.h>
+
+using namespace mochi;
+using namespace superdex::robotics;
+
+// Params: the persistent configuration that governs behaviour.
+struct MyActuatorParams { ... };
+
+// Obsv: this step's inputs, routinely built each step.
+struct MyActuatorObsv { ... };
+
+// Target: what this joint is being asked for this step -- typically one entry of a
+// controller's effort vector, once you have decided which controller drives it.
+struct MyActuatorTarget { ... };
+
+class MyActuator final : public ActuatorBase {
+ public:
+  // The name your actuator is registered and created by.
+  static constexpr std::string_view TypeName() { return "MY_ACTUATOR"; }
+  std::string_view GetTypeName() const override { return TypeName(); }
+
+  using Params = MyActuatorParams;
+  using Obsv = MyActuatorObsv;
+  using Target = MyActuatorTarget;
+
+  // The uniform constructor: the link actor and the params string, a params file path
+  // or inline JSON. An actuator has no post-construction hook, so it decodes here. The
+  // base rejects a null actor, so there is nothing to guard.
+  MyActuator(Actor* actor, std::string_view paramArgs, superdex::Error& error)
+      : ActuatorBase(actor, error) {
+    // Decode params
+    SetParams( /* decoded param args */ );
+  }
+
+  // Recommended alongside it: build from already-loaded params, so programmatic
+  // creation need not go through a file or a JSON string.
+  MyActuator(Actor* actor, Params const& params, superdex::Error& error);
+
+  // Required -- clears internal state, leaving params alone.
+  void Reset() override {}
+
+  // Your own API. You call these, not the framework. Observations come in as an
+  // argument rather than being read from the simulation inside compute, so the same
+  // code runs on a real robot and you choose when state is sampled.
+  void SetParams(Params const& params, superdex::Error& error);
+  real ComputeEffort(Obsv const& obsv, Target const& target, superdex::Error& error);
+  Obsv GetCurrentObservationsFromMochi(superdex::Error& error);
+
+ private:
+  Params _params;
+  // Anything else stateful in your actuator
+};
+
+// Register your type on the context.
+auto* botsContext = CreateRoboticsContext();
+botsContext->RegisterActuator<MyActuator>();
+
+// Create it by name, then resolve the handle back to your object. The link actor is
+// required -- there is no scene-level actuator.
+superdex::Error error;
+ActuatorHandle const handle = botsContext->CreateActuator(
+    MyActuator::TypeName(), linkActor, "my_actuator", paramArgs, error);
+auto* myActuator = static_cast<MyActuator*>(botsContext->GetActuator(handle));
+real const effort = myActuator->ComputeEffort(obsv, target, error);
+```
+
+</TabItem>
+</Tabs>
+
+:::note Retrieving a Python component
+Resolving a handle with `bots_context.get_sensor(handle)` gives you the
+`SensorBase` — only the shared surface from
+[One shape, three kinds](#one-shape-three-kinds), not your `compute_signal` or
+`set_params`. To reach your own methods call
+`get_python_sensor(bots_context, handle)`: it returns your Python instance, or
+`None` if the handle is invalid or names a C++ sensor. `get_python_controller`
+and `get_python_actuator` do the same for their kinds.
+
+A Python type uses the same type string and factory as its C++ counterpart. In
+the initial release, custom sensors and actuators can be declared on a
+`.superdex_bot` link. Declaring controllers and scene-level sensors in a
+combined scene description is planned for a future release.
+:::
+
+## See Also
+
+- [Bots](./bots.mdx) — define a bot, declare components on its links, and get a
+  runtime `Bot`.
+- [Bot Context & Lifetime](./bot_context_lifetime.mdx) — creating, finding and
+  destroying components, and who owns what.
+- [OSC + JSC Control](./examples/control/osc_jsc_control.md) — a full
+  two-controller-per-bot drive loop.

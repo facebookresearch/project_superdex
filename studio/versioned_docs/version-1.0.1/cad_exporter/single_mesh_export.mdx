@@ -1,0 +1,74 @@
+---
+title: Single Mesh Export
+sidebar_label: Single Mesh Export
+sidebar_position: 3
+---
+
+import Figure, {FigureRow, FigureLabel, FigureVideo} from '@site/src/components/Figure';
+
+# Exporting Single Meshes from CAD
+
+<Figure
+  src="../../../img/cad_exporter/single_mesh_banner.jpg"
+  alt="SolidWorks Save As dropdown"
+/>
+
+SuperDex CAD Exporter includes mesh export tools accessed separately from the robot configuration and export pipeline. This is an alternative to the CAD-native mesh exports as our meshing tools may provide better tessellation for specific use-cases.
+
+## Exporting from SolidWorks
+
+You can export individual meshes from either Parts or Assemblies. Before exporting, select either the bodies or components you wish to export.
+
+Then using the **File → Save As...** menu, then selecting the file type as **superdex_mesh_cli mesh (.glb, .obj, .stl)**. Set the filename here.
+
+<Figure
+  src="../../../img/cad_exporter/sw_single_mesh_menu.png"
+  alt="SolidWorks Save As dropdown"
+  maxWidth="600px"
+/>
+
+From here, you can configure the meshing options, as well as select an output coordinate system. For creating SuperDex assets, export a GLB for the visual mesh as well as a STEP file for meshing directly from CAD for the collision mesh.
+
+<Figure
+  src="../../../img/cad_exporter/sw_single_mesh_example.png"
+  alt="SolidWorks Save As dropdown"
+  maxWidth="700px"
+/>
+
+The resulting files can then be loaded in SuperDex Studio.
+
+<Figure
+  src="../../../img/cad_exporter/sw_single_mesh_imported.png"
+  alt="SolidWorks Save As dropdown"
+  maxWidth="700px"
+/>
+
+## Exporting from Siemens NX
+
+You can export individual meshes from either Parts or Assemblies. Start the mesh exporter using **Robot Exporter Tools → SuperDex Mesh Exporter** in the Robotics tab.
+
+<Figure
+  src="../../../img/cad_exporter/nx_single_mesh_menu.png"
+  alt="SolidWorks Save As dropdown"
+  maxWidth="600px"
+/>
+
+From the dialog, you can select the bodies you want to export, configure the meshing options, as well as select an output coordinate system. For creating SuperDex assets, export a GLB for the visual mesh as well as a STEP file for meshing directly from CAD for the collision mesh.
+
+<Figure
+  src="../../../img/cad_exporter/nx_single_mesh_example.png"
+  alt="SolidWorks Save As dropdown"
+  maxWidth="700px"
+/>
+
+The resulting files can then be loaded in SuperDex Studio.
+
+<Figure
+  src="../../../img/cad_exporter/nx_single_mesh_imported.png"
+  alt="SolidWorks Save As dropdown"
+  maxWidth="700px"
+/>
+
+## See Also
+
+- [Model Editor Guide](../model_editor.mdx) — post-export processing in SuperDex Studio

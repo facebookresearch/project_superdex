@@ -1,0 +1,175 @@
+{
+  "docsSidebar": [
+    "overview",
+    "getting_started",
+    {
+      "type": "category",
+      "label": "Concepts",
+      "items": [
+        "concepts/context",
+        "concepts/scenes",
+        "concepts/dynamics",
+        {
+          "type": "category",
+          "label": "Actors",
+          "items": [
+            "concepts/actors/overview",
+            "concepts/actors/rigid_actors",
+            {
+              "type": "category",
+              "label": "Soft",
+              "items": [
+                "concepts/actors/soft/overview",
+                {
+                  "type": "category",
+                  "label": "Materials",
+                  "items": [
+                    "concepts/actors/soft/materials/overview",
+                    "concepts/actors/soft/materials/linear_elastic",
+                    "concepts/actors/soft/materials/neo_hookean",
+                    "concepts/actors/soft/materials/stvk",
+                    "concepts/actors/soft/materials/arap",
+                    "concepts/actors/soft/materials/active_stable_neo_hookean",
+                    "concepts/actors/soft/materials/active_shape_targeting_arap"
+                  ],
+                  "link": {
+                    "type": "generated-index",
+                    "description": "Materials documentation for the SuperDex Physics simulation library."
+                  }
+                }
+              ],
+              "link": {
+                "type": "doc",
+                "id": "concepts/actors/soft/overview"
+              }
+            },
+            "concepts/actors/articulated_actors",
+            "concepts/actors/soft_skinned_actors",
+            "concepts/actors/shell",
+            "concepts/actors/rod"
+          ],
+          "link": {
+            "type": "generated-index",
+            "description": "Actors documentation for the SuperDex Physics simulation library."
+          }
+        },
+        "concepts/shapes",
+        "concepts/queries",
+        "concepts/constraints",
+        "concepts/contact",
+        "concepts/pose_controller",
+        "concepts/inverse_kinematics",
+        "concepts/prefabs",
+        "concepts/solvers",
+        "concepts/transmissions",
+        "concepts/state_capture"
+      ],
+      "link": {
+        "type": "generated-index",
+        "description": "Core concepts of the SuperDex Physics simulation library."
+      }
+    },
+    {
+      "type": "category",
+      "label": "Authoring Scenes",
+      "items": [
+        "authoring_scenes/authoring_assets",
+        "authoring_scenes/authoring_prefabs"
+      ],
+      "link": {
+        "type": "generated-index",
+        "description": "Prepare simulation-ready model assets with SuperDex Physics, then compose actors and settings into reusable prefabs."
+      }
+    },
+    {
+      "type": "doc",
+      "id": "debugging_scenes",
+      "label": "Inspecting Scenes"
+    },
+    "faq"
+  ],
+  "examplesSidebar": [
+    "examples/getting_started",
+    {
+      "type": "category",
+      "label": "Basic",
+      "items": [
+        "examples/basic/rigid_bodies",
+        "examples/basic/soft_duck",
+        "examples/basic/state_capture"
+      ],
+      "link": {
+        "type": "generated-index",
+        "description": "Rigid and soft body examples for the SuperDex Physics simulation library."
+      }
+    },
+    {
+      "type": "category",
+      "label": "Contact & Constraints",
+      "items": [
+        "examples/contact_constraints/contact_filtering",
+        "examples/contact_constraints/constraints"
+      ],
+      "link": {
+        "type": "generated-index",
+        "description": "Contact filtering and constraint examples for the SuperDex Physics simulation library."
+      }
+    },
+    {
+      "type": "category",
+      "label": "Articulations",
+      "items": [
+        "examples/articulations/double_pendulum_on_rail",
+        "examples/articulations/skinned_double_pendulum",
+        "examples/articulations/soft_skinned_double_pendulum",
+        "examples/articulations/pose_controller",
+        "examples/articulations/ik"
+      ],
+      "link": {
+        "type": "generated-index",
+        "description": "Examples for plain, skinned, soft-skinned, and pose-controlled articulated actors, and for inverse kinematics."
+      }
+    },
+    {
+      "type": "category",
+      "label": "Shell",
+      "items": [
+        "examples/shell/tshirt_on_plane",
+        "examples/shell/slit_annular_ring"
+      ],
+      "link": {
+        "type": "generated-index",
+        "description": "Shell examples for the SuperDex Physics simulation library."
+      }
+    },
+    {
+      "type": "category",
+      "label": "Tendons & Rods",
+      "items": [
+        "examples/tendons_rods/mass_on_rod_spring",
+        "examples/tendons_rods/tendon_model_fidelity"
+      ],
+      "link": {
+        "type": "generated-index",
+        "description": "Tendon and rod examples for the SuperDex Physics simulation library."
+      }
+    },
+    {
+      "type": "category",
+      "label": "Advanced",
+      "items": [
+        "examples/advanced/soft_duck_visual_mesh",
+        "examples/advanced/damping_sweep",
+        "examples/advanced/cross_thread_capture_restore"
+      ],
+      "link": {
+        "type": "generated-index",
+        "description": "Advanced documentation for the SuperDex Physics simulation library."
+      }
+    }
+  ],
+  "apiSidebar": [
+    "api_reference/cpp",
+    "api_reference/python"
+  ]
+}

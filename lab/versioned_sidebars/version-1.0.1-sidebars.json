@@ -1,0 +1,39 @@
+{
+  "docsSidebar": [
+    "overview",
+    {
+      "type": "category",
+      "label": "SuperDex Gym",
+      "collapsed": false,
+      "link": {
+        "type": "generated-index",
+        "description": "SuperDex Physics implementation of the Gymnasium interface — a reinforcement-learning framework for training agent controllers."
+      },
+      "items": [
+        "superdex_gym/intro",
+        "superdex_gym/setup",
+        "superdex_gym/running_examples",
+        {
+          "type": "category",
+          "label": "Gallery of Environments",
+          "link": {
+            "type": "doc",
+            "id": "superdex_gym/envs/overview"
+          },
+          "items": [
+            "superdex_gym/envs/ant",
+            "superdex_gym/envs/cart_pole",
+            "superdex_gym/envs/half_cheetah"
+          ]
+        },
+        "superdex_gym/env_reference",
+        "superdex_gym/benchmarking",
+        "superdex_gym/environments",
+        "superdex_gym/batching",
+        "superdex_gym/rllib",
+        "superdex_gym/render",
+        "superdex_gym/visualize_training_history"
+      ]
+    }
+  ]
+}
