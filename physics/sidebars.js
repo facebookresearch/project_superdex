@@ -35,9 +35,9 @@ function parseFrontmatter(filePath) {
     const frontmatter = {};
 
     // Simple YAML parsing for sidebar_position
-    const lines = frontmatterText.split('\n');
+    const lines = frontmatterText.split(/\r?\n/);
     for (const line of lines) {
-      const match = line.match(/^\s*sidebar_position\s*:\s*(.+)$/);
+      const match = line.match(/^\s*sidebar_position\s*:\s*(.+?)\s*$/);
       if (match) {
         const value = match[1].trim();
         // Parse as number if it's numeric, otherwise keep as string
