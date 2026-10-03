@@ -481,6 +481,9 @@ void PopulateFromParsedModel(
           ParsedMesh const& mesh = *parsedLink.collision;
           if (auto const resolved = ResolveMeshPath(mesh.filename, meshBasePath)) {
             link->shapeFile = DynamicString{*resolved};
+            // Enable the collider for mesh-bearing links: ColliderType::None is
+            // the prefab default, which leaves the robot contactless.
+            link->colliderType = ColliderType::Auto;
           }
           if (meshRefs != nullptr) {
             meshRefs->links[iLink].collision = DynamicString{mesh.filename};
