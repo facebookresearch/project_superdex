@@ -190,6 +190,8 @@ See [Parameter Selection](#parameter-selection) for formulas relating these para
 
 By default, a rod's colliding samples lie along its centerline. Set `useContactSkin` to place them on the triangular [`ModelData::contactSkinMesh`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ModelData.html) instead and transmit contact forces to the rod DoFs through its skinning Jacobian. The contact skin and its rod embedding data are required. It is independent of the optional visual mesh, which remains rendering geometry.
 
+Whenever the shape has a contact skin with rod embedding data, `Actor::GetContactSkinMesh` and the `ContactSkinNodePositions` / `ContactSkinNodeNormals` queries expose it, regardless of `useContactSkin`. Rods have no surface mesh.
+
 Rods have no collider by default. Set `colliderType` to `PointCloud` or `Auto` to enable a [point-cloud collider](../contact.md#double-integral-generalization), whose collider integral is taken over the centerline. See [Contact Roles](../contact.md#contact-roles) for the distinction between colliding samples and colliders.
 
 ## Examples
