@@ -407,6 +407,29 @@ fight for the same space.
 The field-by-field reference lives in the [Bot Editor](./bot_editor/index.mdx) and
 [Prefab Editor](./prefab_editor.mdx) guides.
 
+## Screenshots from the Command Line
+
+`superdex-studio --screenshot` opens a file, waits until it has loaded, saves a
+PNG and exits, so a script or a test can capture an asset without using the UI:
+
+```bash
+superdex-studio --screenshot out.png --open robot.superdex_bot --size 1280x720 --viewport-only
+```
+
+It frames the whole scene, unless `--focus <actor>` frames one actor and
+everything under it (for example `board/screw`) or
+`--camera eye=x,y,z target=x,y,z` places the camera. `--viewport-only` saves the
+3D view alone at the requested size; without it, the whole window is saved at
+that size, except on macOS, which always saves the 3D view. The command prints
+the camera it used, so a later run can repeat the shot with `--camera`.
+
+Studio runs in its normal window, so a machine without a display needs a
+virtual one, for example:
+
+```bash
+xvfb-run -a -s "-screen 0 1920x1080x24" superdex-studio --screenshot out.png --open robot.superdex_bot
+```
+
 ## Assets, File Types, and Editors
 
 Opening an asset launches the editor registered for its type:

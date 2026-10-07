@@ -494,6 +494,23 @@ checkbox is off. Two enabled exports aimed at the same file warn inline and in
 the log, since one would silently overwrite the other. Alter one of the paths to
 be different.
 
+### Building from the Command Line
+
+`superdex-studio --process` runs a saved pipeline the way **Build/Export All**
+does, without opening a window, so a script or a machine without a display can
+build collision and render models:
+
+```bash
+superdex-studio --process <base>/intermediates/<name>.StudioProcessing.json
+```
+
+It finds the models next to the pipeline the way the Model Editor does, prints a
+line for each stage, and exits with 0 only when every stage and export
+succeeded. `--out <folder>` writes every export into one folder, keeping each
+file name; a pipeline whose later source reads what an earlier export writes has
+to run without it. `--cad`, `--render` and `--mochi` name a model to use instead
+of the one it would find. Run `superdex-studio --help` for the full list.
+
 ### Inspecting a Stage
 
 Every modifier keeps its own output buffer, with the same **Surface** /
