@@ -509,7 +509,9 @@ line for each stage, and exits with 0 only when every stage and export
 succeeded. `--out <folder>` writes every export into one folder, keeping each
 file name; a pipeline whose later source reads what an earlier export writes has
 to run without it. `--cad`, `--render` and `--mochi` name a model to use instead
-of the one it would find. Run `superdex-studio --help` for the full list.
+of the one it would find. A pipeline whose exports would write the same file is refused
+before anything runs; `--override` lets it run the way the Model Editor does,
+with the later export winning. Run `superdex-studio --help` for the full list.
 
 ### Inspecting a Stage
 
