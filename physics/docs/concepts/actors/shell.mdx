@@ -104,7 +104,8 @@ If an edge is at a boundary of the mesh, the missing face normal is set to the n
 | `contact` | [`ContactParams`](pathname:///generated/api/v1.0.1/cpp/structsuperdex_1_1ContactParams.html) | Default | Contact properties for interactions with volume (non-shell) actors. Friction settings also apply to shell-shell contact. |
 | `pointCloudCollider` | `PointCloudColliderParams` | Default | [Point-cloud collider parameters](../contact.md#pointcloudcolliderparams). |
 | `hasGravity` | `bool` | `true` | Whether gravity affects this actor |
-| `contactElementType` | `ActorBoundaryElementType` | `Default` | Quadrature type for contact element sampling |
+| `contactElementType` | `ActorBoundaryElementType` | `Default` | Quadrature type for contact element sampling on the shell mesh, or on the contact skin when `useContactSkin` is enabled |
+| `useContactSkin` | `bool` | `false` | Samples contact on the shape's contact skin instead of the shell mesh. Requires a triangular contact skin with linear embedding data. |
 
 ### `ShellMaterialParams`
 

@@ -156,7 +156,15 @@ The creation fields are defined by `SoftActorParams` ([C++](pathname:///generate
 | `hasGravity` / `has_gravity` | `bool` | `true` | Whether the actor is affected by gravity. |
 | `hasInertia` / `has_inertia` | `bool` | `true` | Whether the actor has inertial (mass) terms. Set to `false` for quasistatic solves. |
 | `hasStress` / `has_stress` | `bool` | `true` | Whether internal elastic and viscoelastic stress/strain forces affect the actor. |
-| `boundaryElementType` / `boundary_element_type` | `ActorBoundaryElementType` | `Default` (`P1Q3`) | Quadrature order for boundary (surface) element integration. |
+| `useContactSkin` / `use_contact_skin` | `bool` | `false` | **Experimental.** Use the shape's embedded contact skin for colliding samples. Not supported for ROM or nested soft actors. |
+| `boundaryElementType` / `boundary_element_type` | `ActorBoundaryElementType` | `Default` (`P1Q3`) | Quadrature order on the selected contact surface: the tetrahedral boundary by default, or the contact skin when `useContactSkin` is enabled. |
+
+When `useContactSkin` is enabled, the shape must contain a triangular `contactSkinMesh` with
+node-based linear skinning data referencing the tetrahedral mesh. Contact samples and contact
+normals use that embedded skin, while colliders continue to use the tetrahedral mesh. Independently
+of `useContactSkin`, such a contact skin is exposed through `Actor::GetContactSkinMesh` and the
+`ContactSkinNodePositions` / `ContactSkinNodeNormals` queries, while `Actor::GetSurfaceMesh` stays
+the tetrahedral boundary.
 
 :::note Experimental creation parameters
 Additional experimental soft-actor creation parameters are defined in `experimental::ExperimentalSoftActorParams`. These parameters may change or be removed in future releases.
