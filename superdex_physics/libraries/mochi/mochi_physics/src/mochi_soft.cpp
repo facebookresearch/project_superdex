@@ -1399,7 +1399,7 @@ void soft::UpdateRigidVelocity(
   // TODO[Nate]: This only works if recentering is enabled with zero tolerance.
   //             It may be better to track the movement of CRigidTransformEval instead.
   outRigidVel.centerOfMassLocal = GetAabb(bounds.localShape).VGetCenter();
-  ComputeRigidVelocityWorldSpace(
+  FiniteDifferenceRigidTransformLie(
       static_cast<real>(time->DeltaTime()),
       root.worldFromLocal,
       root.worldFromLocalPrev,

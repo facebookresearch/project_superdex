@@ -133,7 +133,7 @@ inline void UpdateRigidVelocity_Static(
     ecs::CtxGlobal<CSceneTime const> time,
     CRootTransform const& root,
     CPrevRigidVelocity& outRigidVelocity) {
-  ComputeRigidVelocityWorldSpace(
+  FiniteDifferenceRigidTransformLie(
       static_cast<real>(time->DeltaTime()),
       root.worldFromLocal,
       root.worldFromLocalPrev,

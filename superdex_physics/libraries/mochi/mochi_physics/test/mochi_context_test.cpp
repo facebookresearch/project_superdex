@@ -2034,9 +2034,8 @@ TEST_F(ActorTest, GetVelocitySoft) {
   Real3 linVel{-1_r, 2_r, 1_r};
   Real3 angVel{0.5_r, -0.5_r, 1_r};
   real constexpr kDt = CSceneTime::kDefaultTimeStep;
-  Quaternion rotation = Quaternion::FromRotationVector(angVel * kDt);
-  Real3 translation = pivotLocal + linVel * kDt - rotation * pivotLocal;
-  TransformRT transform{rotation, translation};
+  TransformRT const transform = IntegrateRigidTransformLie(
+      kDt, TransformRT{}, ToSimd(pivotLocal), ToSimd(linVel), ToSimd(angVel));
   auto const& rest = reg.get<CTetrahedralMesh const>(entity).mesh->GetNodeCoordinates();
   auto disp = Unflatten<Real3>(
       MakeSpan(reg.get<CDisplacementSlice<real, TimeStep::Current>>(entity).value));

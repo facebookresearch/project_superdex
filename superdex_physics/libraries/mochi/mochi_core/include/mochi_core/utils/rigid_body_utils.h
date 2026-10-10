@@ -506,27 +506,45 @@ ComputeSecondMomentOfInertiaCuboid(real density, Vec4r const& sizes, VMatrix3x3r
   outInertia = (VEye<3>() * 0.5_r * Trace3x3(I)) - I;
 }
 
-// Computes linear velocity of a pivot (e.g. the center of mass) and angular velocity in world
-// coordinates. The pivot is defined in local coordinates. The velocities are obtained by
-// finite-differencing a rigid transform.
-inline void ComputeRigidVelocityWorldSpace(
+// Moves a rigid transform for time dt at constant velocity in Lie coordinates: linear velocity of a
+// pivot (defined in local coordinates) and angular velocity, both in world coordinates. The
+// rotation is the exponential of the rotation vector angularVelocityWorld * dt, so steps compose
+// exactly. Exact inverse of FiniteDifferenceRigidTransformLie for rotations smaller than pi.
+// WARNING: Do not use for transforms and velocities that carry rigid-body inertia (e.g., dynamic
+// rigid actors, articulated links, free and spherical joints). Their velocities must use
+// RigidBodyVel, whose convention matches the inertia terms.
+[[nodiscard]] inline TransformRT IntegrateRigidTransformLie(
+    real dt,
+    TransformRT const& worldFromLocal,
+    Vec4r const& pivotLocal,
+    Vec4r const& linearVelocityWorld,
+    Vec4r const& angularVelocityWorld) {
+  Quaternion const rotation = Normalize(
+      Quaternion::FromRotationVector(angularVelocityWorld * dt) * worldFromLocal.GetRotation());
+  Vec4r const pivotWorld = worldFromLocal.TransformPoint(pivotLocal) + linearVelocityWorld * dt;
+  return TransformRT{rotation, pivotWorld - rotation * pivotLocal};
+}
+
+// Computes the constant linear velocity of a pivot (defined in local coordinates) and the constant
+// angular velocity in Lie coordinates, both in world coordinates, that move worldFromLocalPrev to
+// worldFromLocal in time dt. Exact inverse of IntegrateRigidTransformLie.
+// WARNING: Do not use for transforms and velocities that carry rigid-body inertia (e.g., dynamic
+// rigid actors, articulated links, free and spherical joints). Their velocities must use
+// RigidBodyVel, whose convention matches the inertia terms.
+inline void FiniteDifferenceRigidTransformLie(
     real dt,
     TransformRT const& worldFromLocal,
     TransformRT const& worldFromLocalPrev,
     Vec4r const& pivotLocal,
     Vec4r& outLinearVelocityWorld,
     Vec4r& outAngularVelocityWorld) {
-  Vec4r pivotWorld = worldFromLocal.TransformPoint(pivotLocal);
-  Vec4r pivotWorldPrev = worldFromLocalPrev.TransformPoint(pivotLocal);
-  outLinearVelocityWorld = (pivotWorld - pivotWorldPrev) / dt;
-
-  // For W(t) = (Wx(t), Wy(t), Wz(t), 0), angular velocity quaternion in world coordinates
-  //    dq(t)/dt = (1/2) * W(t) * q(t) = (q(t) - qprev)/h
-  // Therefore, W(t) = (2/h) * (q(t) - qprev) * Inv(q(t))
-  auto const& qrot = worldFromLocal.GetRotation();
-  auto const& qrotPrev = worldFromLocalPrev.GetRotation();
-  Quaternion dqrotdt = (qrot - qrotPrev) * (2_r / dt);
-  outAngularVelocityWorld = (dqrotdt * Conjugate(qrot)).data;
+  real const invDt = 1_r / dt;
+  outLinearVelocityWorld =
+      (worldFromLocal.TransformPoint(pivotLocal) - worldFromLocalPrev.TransformPoint(pivotLocal)) *
+      invDt;
+  Quaternion const rotationDelta =
+      worldFromLocal.GetRotation() * worldFromLocalPrev.GetRotation().GetConjugate();
+  outAngularVelocityWorld = rotationDelta.VToRotationVector() * invDt;
 }
 
 // Convert a pose (using quaternion) to dofs (using rotation vector)

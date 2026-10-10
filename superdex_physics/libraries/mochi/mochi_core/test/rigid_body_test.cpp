@@ -156,41 +156,40 @@ static void TestReal3(Real3 const& a, Real3 const& b, real tol) {
   EXPECT_NEAR(0_r, error, tol);
 }
 
-TEST(RigidBody, ComputeRigidVelocityWorldSpace) {
-  // Define an initial transform
-  TransformRT transformPrev{
+// IntegrateRigidTransformLie and FiniteDifferenceRigidTransformLie are exact inverses, even for
+// large rotations, and integration steps compose exactly.
+TEST(RigidBody, IntegrateAndFiniteDifferenceRigidTransformLie) {
+  TransformRT const transformPrev{
       Quaternion::FromRotationVector(Real3{0.5_r, -1_r, 1_r}), Real3{2_r, -0.5_r, -1_r}};
+  Vec4r const pivotLocal = ToSimd(Real3{1_r, 0.5_r, -0.5_r});
+  Vec4r const linVel = ToSimd(Real3{-1_r, 2_r, 1_r});
+  Vec4r const angVel = ToSimd(Real3{5_r, -5_r, 10_r});
+  real constexpr kDt = 0.2_r; // Rotation angle of about 2.4 rad
 
-  // Define the position of the pivot in local coordinates
-  Real3 pivotLocal{1_r, 0.5_r, -0.5_r};
+  TransformRT const transform =
+      IntegrateRigidTransformLie(kDt, transformPrev, pivotLocal, linVel, angVel);
+  real constexpr kTolerance = 1e-4_r;
+  TestReal3(
+      ToReal3(transformPrev.TransformPoint(pivotLocal) + linVel * kDt),
+      ToReal3(transform.TransformPoint(pivotLocal)),
+      kTolerance);
 
-  // Define linear and angular velocity in global coordinates
-  Real3 linVel{-1_r, 2_r, 1_r};
-  Real3 angVel{0.5_r, -0.5_r, 1_r};
-
-  // Compute the old and new positions of the pivot
-  real dt = 1e-3_r;
-  Real3 pivotGlobalPrev = transformPrev.TransformPoint(pivotLocal);
-  Real3 pivotGlobal = pivotGlobalPrev + linVel * dt;
-
-  // Compute the new rotation by integrating the angular velocity
-  Quaternion rotation = Quaternion::FromRotationVector(angVel * dt) * transformPrev.GetRotation();
-
-  // Compute the new translation based on the new pivot position
-  Real3 translation = pivotGlobal - rotation * pivotLocal;
-
-  // Define the new transform
-  TransformRT transform{rotation, translation};
-
-  // Get the velocities of the pivot in local coordinates
   Vec4r linVelTest;
   Vec4r angVelTest;
-  ComputeRigidVelocityWorldSpace(
-      dt, transform, transformPrev, ToSimd(pivotLocal), linVelTest, angVelTest);
+  FiniteDifferenceRigidTransformLie(
+      kDt, transform, transformPrev, pivotLocal, linVelTest, angVelTest);
+  TestReal3(ToReal3(linVel), ToReal3(linVelTest), kTolerance);
+  TestReal3(ToReal3(angVel), ToReal3(angVelTest), kTolerance);
 
-  real tolerance = 100_r * kDefaultNearEqualEpsilon<real>;
-  TestReal3(linVel, ToReal3(linVelTest), tolerance);
-  TestReal3(angVel, ToReal3(angVelTest), tolerance);
+  // Two half steps land on the full step.
+  TransformRT const halfSteps = IntegrateRigidTransformLie(
+      0.5_r * kDt,
+      IntegrateRigidTransformLie(0.5_r * kDt, transformPrev, pivotLocal, linVel, angVel),
+      pivotLocal,
+      linVel,
+      angVel);
+  TestReal3(transform.GetTranslation(), halfSteps.GetTranslation(), kTolerance);
+  EXPECT_TRUE(NearEqual(transform.GetRotation(), halfSteps.GetRotation(), kTolerance));
 }
 
 // Wrapper of RigidBodyVel::EvalTimeSteppedRotation()
@@ -222,7 +221,10 @@ static void EvalFiniteDifferenceRotationVelocityAccurate(
     Quaternion const& qNew,
     real dtStage,
     RigidBodyVel& outVel) {
-  outVel.SetOmega((qNew * qOld.GetConjugate()).VToRotationVector() / dtStage);
+  Vec4r linVel, angVel;
+  FiniteDifferenceRigidTransformLie(
+      dtStage, TransformRT{qNew}, TransformRT{qOld}, SimdZero(), linVel, angVel);
+  outVel.SetOmega(angVel);
   outVel.UpdateVSymIfDirty(dtStage);
 }
 
