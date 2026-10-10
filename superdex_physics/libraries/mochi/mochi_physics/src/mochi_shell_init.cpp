@@ -242,6 +242,10 @@ void mochi::InitShellActor(
       params.useContactSkin && !shapeContactSkinMesh,
       error,
       "useContactSkin requires a shell shape with a contact skin.");
+  MOCHI_ERROR_IF(
+      shapePtr->GetMesh()->GetNumActiveNodes() != shapePtr->GetMesh()->GetNumNodes(),
+      error,
+      "Shell mesh must not contain nodes that are unreferenced by its triangles.");
   MOCHI_ERROR_RETURN(error);
 
   // Identification

@@ -5567,7 +5567,8 @@ class SoftActorParams:
     """Shape handle defining the actor's geometry and other metadata.
 
     Note:
-        Must be a TetrahedralMeshShape for soft actors.
+        Actor creation fails if the shape is not a tetrahedral mesh shape or has a
+        node that no tetrahedron references.
 
     Note:
         A shape can be shared by multiple actors, even actors in different scenes.

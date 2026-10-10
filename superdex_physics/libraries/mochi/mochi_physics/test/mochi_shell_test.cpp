@@ -376,17 +376,21 @@ TEST(ShellMaterialValidation, ShellMaterialParamsFrom3dIsotropic) {
 
 class MochiShellCreateActorValidationScene : public test::MochiSceneTestBase {};
 
-TEST_F(MochiShellCreateActorValidationScene, CreateShellActor_RejectsInvalidMaterial) {
+TEST_F(MochiShellCreateActorValidationScene, CreateShellActor_RejectsInvalidParams) {
   auto&& [coords, conn] = test::CreateMinimalTriMeshUnitCube();
   ShellActorParams params;
   params.shape = _scene->GetContext()->CreateTriMeshShape(
       Flatten(MakeSpan(coords)), Flatten(MakeSpan(conn)), ErrorAssert{});
-  params.material.membraneMu = -1_r; // Invalid
+  EXPECT_NE(nullptr, CreateShellActor(_scene, params, test::ExpectOK{}));
 
-  Error error;
-  Actor* actor = CreateShellActor(_scene, params, error);
-  EXPECT_FALSE(error.IsOK());
-  EXPECT_EQ(actor, nullptr);
+  ShellActorParams invalidMaterial = params;
+  invalidMaterial.material.membraneMu = -1_r;
+  EXPECT_EQ(nullptr, CreateShellActor(_scene, invalidMaterial, test::ExpectNotOK{}));
+
+  coords.emplace_back(2_r, 2_r, 2_r); // Not referenced by any triangle.
+  params.shape = _scene->GetContext()->CreateTriMeshShape(
+      Flatten(MakeSpan(coords)), Flatten(MakeSpan(conn)), ErrorAssert{});
+  EXPECT_EQ(nullptr, CreateShellActor(_scene, params, test::ExpectNotOK{}));
 }
 
 // ---------------------------------------------------------------------------

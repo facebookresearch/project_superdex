@@ -226,6 +226,14 @@ TEST_F(MochiSoftActorScene, DampingCoefficientsRoundTrip) {
   EXPECT_NEAR_RTOL(params.stiffnessDampingCoefficient, out.stiffnessDampingCoefficient, 1e-6_r);
 }
 
+TEST_F(MochiSoftActorScene, RejectsUnreferencedNodes) {
+  _coords.emplace_back(2_r, 2_r, 2_r); // Not referenced by any tetrahedron.
+  SoftActorParams params;
+  params.shape = _mochiContext->CreateTetMeshShape(
+      Flatten(MakeSpan(_coords)), Flatten(MakeSpan(_connect)), test::ExpectOK{});
+  EXPECT_EQ(nullptr, _scene->CreateSoftActor(params, test::ExpectNotOK{}));
+}
+
 // ---------------------------------------------------------------------------
 // Soft mass damping: backward Euler velocity decay
 // ---------------------------------------------------------------------------

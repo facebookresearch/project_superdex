@@ -494,6 +494,9 @@ struct experimental::ShellActorParams {
   TransformRT worldFromLocal;
 
   // @brief Shape handle defining the shell geometry.
+  //
+  // @note Actor creation fails if the shape is not a triangular mesh shape or has a node that no
+  // triangle references.
   ShapeHandle shape [no_reflection];  # REFLECTION TODO: shape handles do not serialize yet.
 
   // @brief Shell material properties.

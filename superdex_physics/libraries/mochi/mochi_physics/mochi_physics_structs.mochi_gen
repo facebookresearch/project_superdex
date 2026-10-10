@@ -397,7 +397,8 @@ struct SoftActorParams [equality] {
 
   // @brief Shape handle defining the actor's geometry and other metadata.
   //
-  // @note Must be a TetrahedralMeshShape for soft actors.
+  // @note Actor creation fails if the shape is not a tetrahedral mesh shape or has a node that no
+  // tetrahedron references.
   // @note A shape can be shared by multiple actors, even actors in different scenes.
   //
   // @see ShapeHandle, Context::LoadShapeFromFile

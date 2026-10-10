@@ -239,6 +239,10 @@ void mochi::InitSoftActor(
       params.useContactSkin && !shapePtr->GetContactSkin(),
       error,
       "useContactSkin requires a soft shape with a contact skin.");
+  MOCHI_ERROR_IF(
+      shapePtr->GetMesh()->GetNumActiveNodes() != shapePtr->GetMesh()->GetNumNodes(),
+      error,
+      "Soft mesh must not contain nodes that are unreferenced by its tetrahedra.");
   MOCHI_ERROR_RETURN(error);
   if (!params.hasInertia && params.material.massDampingCoefficient > 0_r) {
     MOCHI_LOG_WARNING("Nonzero soft mass damping inactive because hasInertia is false.");

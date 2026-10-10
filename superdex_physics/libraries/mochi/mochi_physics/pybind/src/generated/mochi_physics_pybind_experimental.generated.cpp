@@ -513,7 +513,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     .def_rw("name", &mochi::experimental::ShellActorParams::name, "Actor name.")
     .def_rw("layer", &mochi::experimental::ShellActorParams::layer, "Contact layer name.")
     .def_rw("world_from_local", &mochi::experimental::ShellActorParams::worldFromLocal, "World-from-local transform applied to the shape.")
-    .def_rw("shape", &mochi::experimental::ShellActorParams::shape, "Shape handle defining the shell geometry.")
+    .def_rw("shape", &mochi::experimental::ShellActorParams::shape, "Shape handle defining the shell geometry.\n\nNote:\n    Actor creation fails if the shape is not a triangular mesh shape or has a\n    node that no triangle references.")
     .def_rw("material", &mochi::experimental::ShellActorParams::material, "Shell material properties.")
     .def_rw("collider_type", &mochi::experimental::ShellActorParams::colliderType, "Collider type used to represent the shell for contact.\n\nNote:\n    Currently, the only supported values are PointCloud (participates in\n    point-cloud contact) and None (no contact).")
     .def_rw("contact", &mochi::experimental::ShellActorParams::contact, "Contact mechanics properties.")
