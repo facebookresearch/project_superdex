@@ -161,94 +161,6 @@ static std::vector<Int2> FindAllEdges(Span<int const> connectivity, int numNodes
   return uniqueEdgeList;
 }
 
-static std::vector<int> BuildBoundaryFaceAdjacency(size_t numNodes, Span<Int3 const> faces) {
-  // For each node, build a set of unique faces that share it.
-  std::vector<std::unordered_set<int>> adjacencySets;
-  adjacencySets.resize(numNodes);
-  for (int iFace = 0; iFace < isize(faces); ++iFace) {
-    for (int iNode : faces[iFace]) {
-      adjacencySets[iNode].insert(iFace);
-    }
-  }
-
-  // Calculate the space needed
-  size_t adjacencyDataSize = numNodes + 1; // +1 to store the end offset
-  for (auto const& set : adjacencySets) {
-    adjacencyDataSize += set.size();
-  }
-
-  // adjacency[i] is the offset of the start of the adjacency data for node i.
-  // (adjacency[i+1] - adjacency[i]) is the number of adjacent face indices.
-  std::vector<int> adjacency;
-  adjacency.reserve(adjacencyDataSize);
-  adjacency.resize(numNodes + 1);
-  for (size_t i = 0; i < numNodes; ++i) {
-    auto const& adjacentFaces = adjacencySets[i];
-    adjacency[i] = isize(adjacency);
-    adjacency.insert(adjacency.end(), adjacentFaces.begin(), adjacentFaces.end());
-  }
-  MOCHI_ASSERT_VERBOSE(
-      adjacency.size() == adjacencyDataSize, "Adjacency table offsets are incorrect");
-  adjacency[numNodes] = isize(adjacency); // The end offset
-
-  // Sort each span of adjacent indices. This may have a performance benefit, but
-  // it is not strictly necessary. For now it is nice just to have a well
-  // defined order.
-  for (size_t i = 0; i < numNodes; ++i) {
-    auto rangeBegin = adjacency.begin() + adjacency[i];
-    auto rangeEnd = adjacency.begin() + adjacency[i + 1];
-    std::sort(rangeBegin, rangeEnd);
-  }
-
-  return adjacency;
-}
-
-static std::vector<int> BuildNodeAdjacency(size_t numNodes, Span<Int4 const> connectivity) {
-  // For each node, build a set of unique nodes adjacent to it
-  std::vector<std::unordered_set<int>> nodeAdjacencySets;
-  nodeAdjacencySets.resize(numNodes);
-  for (Int4 const& elem : connectivity) {
-    for (int i : elem) {
-      for (int j : elem) {
-        if (j != i) {
-          nodeAdjacencySets[i].insert(j);
-        }
-      }
-    }
-  }
-
-  // Calculate the space needed
-  size_t nodeAdjacencyDataSize = numNodes + 1; // +1 to store the end offset
-  for (auto const& set : nodeAdjacencySets) {
-    nodeAdjacencyDataSize += set.size();
-  }
-
-  // nodeAdjacency[i] is the offset of the start of the adjacency data for node
-  // i. nodeAdjacency[i+1] - nodeAdjacency[i] is the number of adjacent nodes.
-  std::vector<int> nodeAdjacency;
-  nodeAdjacency.reserve(nodeAdjacencyDataSize);
-  nodeAdjacency.resize(numNodes + 1);
-  for (size_t i = 0; i < numNodes; ++i) {
-    auto const& adjacentNodes = nodeAdjacencySets[i];
-    nodeAdjacency[i] = isize(nodeAdjacency);
-    nodeAdjacency.insert(nodeAdjacency.end(), adjacentNodes.begin(), adjacentNodes.end());
-  }
-  MOCHI_ASSERT_VERBOSE(
-      nodeAdjacency.size() == nodeAdjacencyDataSize, "Adjacency table offsets are incorrect");
-  nodeAdjacency[numNodes] = isize(nodeAdjacency); // The end offset
-
-  // Sort each span of adjacent nodes. This may have a performance benefit, but
-  // it is not strictly necessary. For now it is nice just to have a well
-  // defined order.
-  for (size_t i = 0; i < numNodes; ++i) {
-    auto rangeBegin = nodeAdjacency.begin() + nodeAdjacency[i];
-    auto rangeEnd = nodeAdjacency.begin() + nodeAdjacency[i + 1];
-    std::sort(rangeBegin, rangeEnd);
-  }
-
-  return nodeAdjacency;
-}
-
 std::unique_ptr<TetrahedralMesh> LoadTetrahedralMesh(std::string const& filename, Error& error) {
   MOCHI_ERROR_RETURN(error, {});
 
@@ -324,9 +236,6 @@ TetrahedralMesh::TetrahedralMesh(
   size_t const numElements = connectivity.size();
   _numNodesPerFace = 3;
 
-  // For each node, find all adjacent nodes. Store it all in _nodeAdjacency
-  _nodeAdjacency = BuildNodeAdjacency(_coordinates.size(), connectivity);
-
   // For a TetrahedralMesh, each element is one "volume"
   _numVolumes = (int)numElements;
 
@@ -384,10 +293,6 @@ TetrahedralMesh::TetrahedralMesh(
 
 void TetrahedralMesh::FindAllBoundaryInformation() {
   _numBoundaryFaces = _boundaryFacesConnectivity.size();
-
-  // For each node, find all boundary faces that share it. Store it all in _boundaryFaceAdjacency
-  _boundaryFaceAdjacency =
-      BuildBoundaryFaceAdjacency(_coordinates.size(), _boundaryFacesConnectivity);
 
   // Edges (stored in the base class)
   _edges = FindAllEdges(GetFlatConnectivity(), kNodesPerElement);

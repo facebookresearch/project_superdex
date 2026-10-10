@@ -234,38 +234,6 @@ TEST(TetrahedralMesh, Cube) {
     Real3 const centerToFace = coordinates[face[0]] - mesh.GetBarycenter();
     EXPECT_LT(0_r, Dot(faceNormal, centerToFace));
   }
-
-  // Boundary face adjacency (list of boundary faces that share a vertex)
-  Span<Int3 const> boundaryFaceConnectivity = mesh.GetBoundaryFacesConnectivity();
-  for (int iNode = 0; iNode < mesh.GetNumNodes(); ++iNode) {
-    Span<int const> adjacentBoundaryFaces = mesh.GetAdjacentBoundaryFaces(iNode);
-    for (int iFace = 0; iFace < (int)boundaryFaceConnectivity.size(); ++iFace) {
-      Int3 const& nodesInFace = boundaryFaceConnectivity[iFace];
-      bool expectFaceContainsNode =
-          (std::find(adjacentBoundaryFaces.begin(), adjacentBoundaryFaces.end(), iFace) !=
-           adjacentBoundaryFaces.end());
-      bool faceActuallyContainsNode =
-          (nodesInFace[0] == iNode) || (nodesInFace[1] == iNode) || (nodesInFace[2] == iNode);
-      EXPECT_EQ(expectFaceContainsNode, faceActuallyContainsNode);
-    }
-  }
-
-  // Vert adjacency (list of other verts that share an edge).
-  // NOTE: Verts 1, 2, 4, & 7 are the tips of the corner tets. They are only used by one
-  //       tet each. The other verts are shared between two more more tets.
-  std::vector<int> expectedAdjacency[8] = {
-      {1, 2, 3, 4, 5, 6},
-      {0, 3, 5},
-      {0, 3, 6},
-      {0, 1, 2, 5, 6, 7},
-      {0, 5, 6},
-      {0, 1, 3, 4, 6, 7},
-      {0, 2, 3, 4, 5, 7},
-      {3, 5, 6},
-  };
-  for (int i = 0; i < mesh.GetNumElements(); ++i) {
-    EXPECT_TRUE(test::EqualSpanUnordered(expectedAdjacency[i], mesh.GetAdjacentNodes(i)));
-  }
 }
 
 TEST(TetrahedralMesh, UnitGridDefaultMatchesUnitCube) {

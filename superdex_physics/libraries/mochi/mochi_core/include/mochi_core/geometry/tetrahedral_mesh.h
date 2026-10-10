@@ -73,12 +73,6 @@ class TetrahedralMesh final : public SimplicialMesh {
   // tetrahedral element.
   Span<Int3 const> GetBoundaryFacesConnectivity() const;
 
-  // Given the index of a node, return the indices of all boundary faces that share it.
-  Span<int const> GetAdjacentBoundaryFaces(int nodeIndex) const;
-
-  // Given the index of a node, return the indices of all other nodes that share and edge with it.
-  Span<int const> GetAdjacentNodes(int nodeIndex) const;
-
   // Returns the number of boundary faces
   size_t GetNumBoundaryFaces() const;
 
@@ -112,8 +106,6 @@ class TetrahedralMesh final : public SimplicialMesh {
   std::shared_ptr<TriangularMesh const> _boundaryMesh;
   size_t _numBoundaryFaces = 0;
   std::vector<Int3> _boundaryFacesConnectivity;
-  std::vector<int> _boundaryFaceAdjacency;
-  std::vector<int> _nodeAdjacency;
 };
 
 /*********************************************************************************
@@ -145,14 +137,6 @@ inline Span<Int4 const> TetrahedralMesh::GetElementConnectivity() const {
 
 inline Span<Int3 const> TetrahedralMesh::GetBoundaryFacesConnectivity() const {
   return {_boundaryFacesConnectivity};
-}
-
-inline Span<int const> TetrahedralMesh::GetAdjacentBoundaryFaces(int nodeIndex) const {
-  return mochi::GetAdjacentIndices(nodeIndex, _boundaryFaceAdjacency);
-}
-
-inline Span<int const> TetrahedralMesh::GetAdjacentNodes(int nodeIndex) const {
-  return mochi::GetAdjacentIndices(nodeIndex, _nodeAdjacency);
 }
 
 inline size_t TetrahedralMesh::GetNumBoundaryFaces() const {
