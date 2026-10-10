@@ -85,9 +85,17 @@ class NdArray final {
   MOCHI_ANY MOCHI_FORCE_INLINE constexpr auto end() const { return _data + D0; }
   // clang-format on
 
-  // Index operator
-  MOCHI_ANY MOCHI_FORCE_INLINE constexpr value_type const& operator[](size_t i) const;
-  MOCHI_ANY MOCHI_FORCE_INLINE constexpr value_type& operator[](size_t i);
+  // Index operator. Defined in the class: some compilers (e.g. MSVC) do not instantiate
+  // out-of-class members of the extern templates below, so translation units would call
+  // them out of line.
+  MOCHI_ANY MOCHI_FORCE_INLINE constexpr value_type const& operator[](size_t i) const {
+    MOCHI_ASSERT_VERBOSE(i < D0, "Index out-of-range");
+    return _data[i];
+  }
+  MOCHI_ANY MOCHI_FORCE_INLINE constexpr value_type& operator[](size_t i) {
+    MOCHI_ASSERT_VERBOSE(i < D0, "Index out-of-range");
+    return _data[i];
+  }
 
  private:
   value_type _data[D0];
@@ -209,20 +217,6 @@ MOCHI_FORCE_INLINE constexpr bool operator==(
     }
   }
   return isEqual;
-}
-
-template <typename T, size_t D0, size_t... DIMS>
-MOCHI_FORCE_INLINE constexpr typename NdArray<T, D0, DIMS...>::value_type const&
-NdArray<T, D0, DIMS...>::operator[](size_t i) const {
-  MOCHI_ASSERT_VERBOSE(i < D0, "Index out-of-range");
-  return _data[i];
-}
-
-template <typename T, size_t D0, size_t... DIMS>
-MOCHI_FORCE_INLINE constexpr typename NdArray<T, D0, DIMS...>::value_type&
-NdArray<T, D0, DIMS...>::operator[](size_t i) {
-  MOCHI_ASSERT_VERBOSE(i < D0, "Index out-of-range");
-  return _data[i];
 }
 
 template <typename T, size_t D0, size_t... DIMS>
