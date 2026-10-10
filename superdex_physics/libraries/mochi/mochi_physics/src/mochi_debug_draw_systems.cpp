@@ -603,7 +603,7 @@ static void RegisterDebugDrawSystem_MeshSurfaceLocal(DebugDrawInternal& debugDra
         if (query && !query->nodePositions.empty()) {
           out.AddWireframeMesh(
               Unflatten<Real3 const>(MakeSpan(query->nodePositions)),
-              mesh.mesh->GetBoundaryEdges(),
+              mesh.mesh->GetActiveNodesEdges(),
               colors::kWhite,
               meshTransform);
         }
