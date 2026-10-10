@@ -98,8 +98,14 @@ Environments resolve their scenes and meshes through
 ## Dependencies for apps/
 
 Complete `uv sync --extra core` first. It installs `superdex-lab` and the rest of the
-workspace lock, including `polyscope`, `imageio`, `imageio-ffmpeg`, `pillow` and
-`psutil`.
+workspace lock, including `imageio`, `imageio-ffmpeg`, and `pillow`, among others.
+Rendering additionally requires the native Filament `mochi_viewer_app` binary, which is
+built from the Project SuperDex source (see the build instructions above); `uv sync`
+does not install it. When the binary is not available,
+`superdex.physics.viewer.mochi_renderer.MOCHI_RENDERER_VIEWER_AVAILABLE` is `False` and
+the app scripts run without rendering or recording. Interactive `render_mode="human"`
+visualization is not available, so without `--video` the app scripts also run without
+rendering.
 
 The scripts under `apps/` have additional requirements. The `apps/envs` benchmarks
 require `tqdm>=4.67.1`. The `apps/rllib` training and video scripts require

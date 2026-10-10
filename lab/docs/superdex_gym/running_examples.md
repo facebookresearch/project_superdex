@@ -33,7 +33,7 @@ The rest of this document assumes your working directory is `superdex_lab/apps/e
 
 Runs a sample SuperDex Gym environment through the command line, configurable with different action sampling strategies.
 
-Polyscope is required for both interactive viewing and offscreen recording. When it is available, the script opens an interactive window by default or records video offscreen when `--video` or `--video_path` is set. Otherwise, the script runs without rendering or recording.
+Offscreen video recording requires the native `mochi_viewer_app` binary. When it is available and `--video` or `--video_path` is set, the script records video offscreen; otherwise, it runs without rendering. Interactive viewing is not available: `--render-mode auto` (the default) falls back to no rendering with a warning, and `--render-mode human` exits with an error. Pass `--render-mode none` to run headless without the warning.
 
 The essential logic in the script for running an environment is:
 
@@ -71,8 +71,8 @@ uv run python run_sample.py superdex_gym/Ant-v0 --action_sampler random --video 
 # Run a config variant
 uv run python run_sample.py superdex_gym/HalfCheetahFullObservation-v0 --action_sampler sweep
 
-# Start the environment in a paused state
-uv run python run_sample.py superdex_gym/HalfCheetah-v0 --start_paused
+# Run headless (no display backend required)
+uv run python run_sample.py superdex_gym/HalfCheetah-v0 --render-mode none
 
 ```
 
@@ -99,11 +99,11 @@ The canonical environment ID is a required argument. The remaining options are:
 | --- | --- | --- |
 | `--action_sampler {zero,random,sweep}` | `sweep` | Action sampling strategy: `zero`, `random`, or `sweep`. |
 | `--num_episodes NUM` | `10` | Number of episodes to simulate. |
-
+| `--render-mode {auto,human,rgb_array,none}` | `auto` | `auto` records offscreen with `--video` and otherwise runs without rendering. `rgb_array` and `human` require the `mochi_viewer_app` binary and exit with an error when it is unavailable; `human` is not available. `none` runs headless and ignores any video request. |
 | `--video` | off | Enables video recording and switches rendering offscreen. |
-| `--video_size WIDTHxHEIGHT` | none | Sets the recorded frame resolution (e.g., `1280x720`) when `--video` or `--video_path` is used; otherwise, sets the interactive window size. |
+| `--video_size WIDTHxHEIGHT` | none | Sets the recorded frame resolution (e.g., `1280x720`) when `--video` or `--video_path` is used. |
 | `--video_path DIR` | none (`apps/envs/output/` when `--video` is passed) | Enables video recording and saves the videos to an output directory. The default directory is resolved relative to the script, not to your working directory. |
-| `--start_paused` | off | Starts the interactive simulation paused. |
+| `--start_paused` | off | Starts the interactive simulation paused. Has no effect while interactive viewing is unavailable. |
 | `--profile` | off | Toggles `cProfile` around the single run. The environment's own profiler is enabled unconditionally and always prints a summary at the end. |
 
 

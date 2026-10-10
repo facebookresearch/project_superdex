@@ -4,58 +4,47 @@ title: Rendering
 
 # Rendering
 
-SuperDex Gym environments use `superdex.physics.viewer.Viewer`, the SuperDex
-Physics viewer built on [Polyscope](https://polyscope.run/), for interactive
-debugging, evaluation, and programmatic video generation. SuperDex Gym
-instantiates and drives the viewer; rendering lives in `superdex-physics`.
+SuperDex Gym environments render with the Filament-based `mochi_viewer_app`, driven
+through `superdex.physics.viewer.mochi_renderer.MochiRendererViewer`. The viewer
+renders offscreen and returns RGBA frames for programmatic access and video
+generation.
 
 ## Before You Render
 
 ### Check Platform and Headless Constraints
 
 :::note Requirements
-Polyscope rendering needs **`polyscope>=2.5.0,<2.6`**, declared by
-`superdex-physics`. Availability is a feature probe, not a version parse: the
-viewer checks for `polyscope.get_ui_scale`. When the probe fails,
-`superdex.physics.viewer.VIEWER_AVAILABLE` is `False`, and the scripts fall back
-to headless operation. See
+Rendering needs the native `mochi_viewer_app` binary. Availability is a
+binary-discovery probe, not a package-version parse:
+`superdex.physics.viewer.mochi_renderer.MOCHI_RENDERER_VIEWER_AVAILABLE` is `True`
+when the binary can be located on disk. When it cannot, the probe is `False` and the
+scripts fall back to headless operation. See
 [Requirements and Failure Modes](#requirements-and-failure-modes).
 :::
 
 Linux, macOS, and Windows follow the same code path; the viewer has no platform
-gate. A usable GL/EGL context is required for Polyscope, including on headless
-hosts. Forked subprocesses can deadlock with multithreaded simulation and can
-segfault when Ray Tune initializes rendering. `HybridVectorEnv` forces the `spawn`
-start method, so each spawned worker can create a context, but rendering more than
-one environment per process is unsupported.
+gate. `MochiRendererViewer` can launch its own `mochi_viewer_app` server
+(`auto_launch`), which requires a usable GPU context to render, including on
+headless hosts. Rendering more than one environment per process is unsupported.
+`HybridVectorEnv` forces the `spawn` start method so each spawned worker can create
+its own context, but keep `render_mode=None` when batching.
 
 ### Choose a Render Mode
 
 The `render_mode` environment configuration accepts:
 
-- **`"human"`**: Interactive visualization in a GUI window, recommended for
-  debugging. `reset()` and `step()` call `render()` automatically.
+- **`"human"`**: Interactive visualization in a GUI window. This is not available.
 - **`"rgb_array"`**: Offscreen rendering for programmatic access and video
   generation. Call `env.render()` explicitly for each frame.
 - **`None`**: No renderer. This is the **default** and the mode for training.
 
-![The Polyscope viewer in human render mode, showing the Ant environment alongside the Scene panel's actor list and the Environment tab](/img/superdex_gym/polyscope_viewer_ui.png)
+## Offscreen Rendering
 
-## Interactive and Offscreen Rendering
-
-These configurations use the Polyscope renderer. Choose one when creating
-an environment: `"human"` requires a GUI-capable GL context, `"rgb_array"` requires
-explicit `env.render()` calls, and `None` creates no renderer.
+Create an environment with `render_mode="rgb_array"` to render offscreen (call
+`env.render()` for each frame) or `render_mode=None` to disable rendering.
 
 ```python
 from superdex.lab.gym.envs.benchmarks.cartpole_env import CartPoleEnv
-
-# Interactive visualization (opens a GUI window)
-human_config = {
-    "render_mode": "human",
-    "render_size": (1280, 720),  # Optional: set window size
-    "start_paused": False,       # Optional: start simulation paused
-}
 
 # Offscreen rendering (for video generation)
 video_config = {
@@ -63,12 +52,7 @@ video_config = {
     "render_size": (1920, 1080),  # Video resolution
 }
 
-# No rendering (training mode)
-training_config = {
-    "render_mode": None,  # Maximum performance
-}
-
-env = CartPoleEnv(human_config)
+env = CartPoleEnv(video_config)
 env.close()
 ```
 
@@ -110,7 +94,7 @@ for step in range(1000):
     action = env.action_space.sample()  # Substitute your policy here.
     obs, reward, terminated, truncated, info = env.step(action)
 
-    # Capture an RGB frame.
+    # Capture an RGBA frame.
     frame = env.render()
     writer.add(frame)
 
@@ -159,127 +143,79 @@ def record_multiple_episodes(env_config, num_episodes=10):
     env.close()
 ```
 
-## Configuring Default Render Items
+## What Gets Rendered by Default
 
 SuperDex Gym renders scene actors with mesh geometry by default.
-
-### What Gets Rendered by Default
 
 - **All Actor Types**: Rigid bodies, articulated actors, and soft actors are
   automatically included.
 - **Surface Meshes**: Solid surfaces are the primary visual representation.
+- **Distinct Colors**: Each actor is given a distinct color, so, for example, robot
+  links are individually visible.
 
-The Polyscope viewer draws an actor when any of these conditions holds:
+The viewer draws an actor when its `get_surface_mesh()` is non-empty; a registered
+glTF visual, when present, then replaces that actor's physics mesh. Static
+infinite-plane colliders are a special case: they have an empty surface mesh, so the
+viewer renders each one as a checker grid (a `double_sided` ground plane derived
+from the plane's orientation). This is how scenes with a ground plane get a floor.
 
-1. It has a registered GLB visual model.
-2. Its `get_surface_mesh()` is non-empty.
-3. It is a static infinite-plane collider. A dedicated `StaticPlaneRenderer`
-   draws these actors **despite** an empty surface mesh, which is how ground
-   planes appear.
+### Controlling Per-Actor Visibility
 
-### Default Rendering Settings
+The viewer controls per-actor visibility by actor handle, via
+`set_actor_visible(handle, visible)` and `is_actor_visible(handle)` on the renderer,
+rather than the per-actor renderer objects of the retired viewer.
 
-Solid mesh surfaces are shown. Wireframe edges, individual mesh vertices, and
-coordinate-frame axes are off unless enabled. Each toggle gets its initial state
-when the Polyscope structure is constructed; the Scene panel on the first frame
-is authoritative for a given build.
-
-### Interactive Configuration
-
-This UI is available in `render_mode="human"`:
-
-- **Scene Panel**: Toggle surface, edges, nodes, and axes for each actor.
-- **Batch Controls**: Apply visibility changes to all actors simultaneously.
-- **Actor Selection**: Click actors to inspect and modify individual settings.
-
-### Configuring Through Code
-
-#### Excluding Actors from Rendering
-
-```python
-from superdex.lab.gym.envs import MochiEnv
-
-
-class MyCustomEnv(MochiEnv):
-    def _reset_renderer(self):
-        # Exclude specific actors by name or pattern
-        self._renderer.set_excluded_actors([
-            "GroundPlane",      # Exclude by exact name
-            "Debug_*",          # Exclude using wildcard patterns
-            "Sensor*",          # Hide all sensor-related actors
-        ])
-```
-
-#### Configuring Default Display Options
-
-`get_actor_renderers()` returns `ActorRenderer` **and** `StaticPlaneRenderer`
-objects.
-
-:::note Ground planes ignore these toggles
-`StaticPlaneRenderer` overrides `set_enable_edges`, `set_enable_axes`,
-`set_enable_nodes`, and `set_show_axes_at_com` as no-ops. It does not implement
-`set_transparency`; calling that method on a ground-plane renderer raises
-`AttributeError`.
+:::note Retired renderer API
+`get_actor_renderers()`, `get_actor_renderer()`, and `set_excluded_actors()`, along
+with the per-actor `set_enable_edges`/`set_enable_axes`/`set_enable_nodes`/
+`set_transparency` toggles, belonged to the previous renderer and are no longer
+available.
 :::
 
-:::note `set_show_axes_at_com` does not stick
-Whether axes are drawn at the origin or at the centre of mass is a **global**
-viewer setting. The viewer rewrites every actor renderer from it each frame, so
-a per-actor `set_show_axes_at_com(...)` call is overwritten before it is drawn.
-Toggle it in the viewer UI instead.
-:::
+## Setting the Background Color
+
+The viewer uses a neutral background by default (`(0.92, 0.92, 0.94)`). Configure it
+through `MochiRendererViewerCfg.background_color`, or change it at runtime with
+`set_background_color`. Supplying your own `mochi_renderer_cfg` opts out of the
+automatic server launch, so set `auto_launch=True` when you need the viewer to start
+its own server:
 
 ```python
-from superdex.lab.gym.envs import MochiEnv
+from superdex.lab.gym.envs.benchmarks.cartpole_env import CartPoleEnv, CartPoleEnvCfg
+from superdex.physics.viewer.mochi_renderer import MochiRendererViewerCfg
 
-
-class MyCustomEnv(MochiEnv):
-    def _reset_renderer(self):
-        # Get all actor renderers
-        actor_renderers = self._renderer.get_actor_renderers()
-
-        # Configure rendering for all actors
-        for actor_renderer in actor_renderers:
-            # Enable wireframe edges for debugging
-            actor_renderer.set_enable_edges(True)
-
-            # Show coordinate axes
-            actor_renderer.set_enable_axes(True)
-
-            # Enable vertex visualization for soft bodies
-            if "Soft" in actor_renderer.get_name():
-                actor_renderer.set_enable_nodes(True)
+env = CartPoleEnv(
+    CartPoleEnvCfg(
+        render_mode="rgb_array",
+        mochi_renderer_cfg=MochiRendererViewerCfg(
+            auto_launch=True,
+            background_color=(0.15, 0.17, 0.20),  # None leaves the server default
+        ),
+    )
+)
 ```
 
-#### Per-Actor Configuration
+## Choosing a Coordinate System
 
-Do not call `set_transparency()` on a `StaticPlaneRenderer`.
+The viewer assumes scene coordinates are right-handed, with +Y up and -Z forward. For
+a scene in another convention, set `MochiRendererViewerCfg.coordinate_system` to a
+preset name (`"mochi"`, `"polyscope"`, `"unity"`, `"unreal"`, `"blender"`, or `"ros"`)
+or to a `CoordinateSystem`. The viewer converts actor meshes and transforms, grids,
+camera configs, and camera poses such as `set_camera_view` from that convention:
 
 ```python
-from superdex.physics.utils.scene_helpers import find_actor
-from superdex.lab.gym.envs import MochiEnv
+from superdex.physics.utils.coordinate_systems import CoordinateSystem
+from superdex.physics.viewer.mochi_renderer import MochiRendererViewerCfg
 
-
-class MyCustomEnv(MochiEnv):
-    def _update_renderer(self):
-        if self._renderer is None:
-            return
-
-        # Configure specific actors individually
-        robot_actor = find_actor(self._scene, "Robot")
-        robot_renderer = self._renderer.get_actor_renderer(robot_actor)
-        if robot_renderer:
-            # Show robot coordinate frames
-            robot_renderer.set_enable_axes(True)
-            # Do not call set_show_axes_at_com here - see the note above; the
-            # viewer rewrites it from the global setting every frame.
-
-        # Make debugging objects semi-transparent
-        debug_actor = find_actor(self._scene, "DebugObject")
-        debug_renderer = self._renderer.get_actor_renderer(debug_actor)
-        if debug_renderer:
-            debug_renderer.set_transparency(0.5)
+renderer_cfg = MochiRendererViewerCfg(
+    auto_launch=True,
+    coordinate_system="blender",  # or CoordinateSystem(right="+x", up="+z", forward="+y")
+)
 ```
+
+The setting describes your scene's data; it does not rotate a scene authored in
+another convention. Left-handed systems (`"unity"`, `"unreal"`) mirror the scene, so
+they cannot be combined with glTF assets.
 
 ## Adding Custom Render Items
 
@@ -291,9 +227,6 @@ debugging by overriding renderer hooks.
 `render()` runs `_reset_renderer()` when the render scene is dirty, then runs
 `_update_renderer()`.
 
-- In `"human"` mode, `reset()` and `step()` call `render()` automatically.
-  `_update_renderer()` runs once per step, and `_reset_renderer()` runs once per
-  episode during the `render()` triggered by `reset()`.
 - In `"rgb_array"` mode, `reset()` marks the render scene dirty, but neither hook
   runs until you call `env.render()`.
 - With `render_mode=None`, no renderer exists and neither hook runs. Do not
@@ -304,8 +237,7 @@ debugging by overriding renderer hooks.
 #### `_reset_renderer()`
 
 Use this hook for visualization setup that changes only between episodes. It
-runs on the first `render()` after each `reset()`; in `"human"` mode, that
-`render()` occurs inside `reset()`.
+runs on the first `render()` after each `reset()`.
 
 #### `_update_renderer()`
 
@@ -333,10 +265,12 @@ class MyCustomEnv(MochiEnv):
             axes="xz",
         )
 
-        # Set camera view
+        # Set camera view. up_dir controls the world up vector, which keeps
+        # off-axis views from rolling.
         self._renderer.set_camera_view(
             look_from=np.array([5, 3, 5]),
             look_at=np.array([0, 1, 0]),
+            up_dir=np.array([0, 1, 0]),
         )
 
         # Enable follow camera for dynamic scenes
@@ -371,6 +305,8 @@ is one of `"xy"`, `"xz"`, or `"yz"`; `style` is `"grid"` or `"checker"`.
 ### Advanced Renderer Features
 
 ```python
+import numpy as np
+
 from superdex.lab.gym.envs import MochiEnv
 
 
@@ -387,16 +323,14 @@ class MyCustomEnv(MochiEnv):
         self._renderer.set_enable_follow_camera(True)
         self._renderer.set_compute_automatic_distance(True)
 
-        # Get renderer information
-        actors = self._renderer.get_actors()
-        scene_bounds = self._renderer.get_scene_bounds()
+        # Frame the scene along a fixed view direction
+        self._renderer.frame_scene(look_dir=np.array([1, 1, 1]))
 ```
 
 ## Performance Considerations
 
 - **Training**: Use `render_mode=None` for maximum performance.
-- **Evaluation**: Use `"human"` for interactive debugging and `"rgb_array"` for
-  video generation.
+- **Evaluation**: Use `"rgb_array"` for video generation.
 - **Memory**: High-resolution rendering uses significant GPU/CPU resources.
 - **Batch Training**: Rendering more than one environment per process is
   **unsupported**, not merely slow. Keep `render_mode=None` with
@@ -404,25 +338,27 @@ class MyCustomEnv(MochiEnv):
 
 ## Requirements and Failure Modes
 
-Polyscope rendering requires **`polyscope>=2.5.0,<2.6`**, declared by
-`superdex-physics`. `superdex.physics.viewer.VIEWER_AVAILABLE` reports a feature
-probe rather than a version parse: it is `True` when `polyscope` imports and
-exposes `get_ui_scale`. Constructing a viewer without it raises:
+Rendering requires the native `mochi_viewer_app` binary.
+`superdex.physics.viewer.mochi_renderer.MOCHI_RENDERER_VIEWER_AVAILABLE` reports a
+binary-discovery probe: it is `True` when the executable can be located on disk. It
+does not confirm that a GPU context will start. The environment itself does not check
+the probe: constructing one with `render_mode="rgb_array"` when the binary cannot be
+found raises an error. Check the probe first if your code must run either way.
 
-```
-RuntimeError: Failed to initialize the renderer. Polyscope is not installed in the current environment, or it's an incompatible version. Please install Polyscope >= 2.5.0 to enable the renderer.
-```
+The app scripts check the probe and degrade gracefully instead of failing:
 
-Callers handle an unavailable viewer differently:
-
-- `run_sample.py` warns and falls back to `render_mode=None`, dropping any video
-  request.
-- `run_inference.py` does the same for a `superdex_gym/*` checkpoint, prints
-  `Renderer not available, setting render mode to None...`, and records nothing.
+- `run_sample.py` with `--render-mode auto` (the default) warns and falls back to
+  `render_mode=None`, dropping any video request. An explicit `--render-mode rgb_array`
+  exits with an error instead.
+- `run_inference.py` does the same for a `superdex_gym/*` checkpoint and records
+  nothing.
 - For RLlib, `train_samples.py` warns and **skips attaching**
-  `CheckpointVideoGeneratorCallback`. Checkpoint video generation is disabled,
-  not made headless. The callback never checks the flag; when it runs, it forces
-  `render_mode="rgb_array"` unconditionally.
+  `CheckpointVideoGeneratorCallback`, disabling checkpoint video generation.
 
-For platform behavior, GL/EGL context requirements, and forked versus spawned
-workers, see [Check Platform and Headless Constraints](#check-platform-and-headless-constraints).
+:::note `render_mode="human"` is not available
+Interactive human-mode rendering is not available. Use `render_mode="rgb_array"` for
+offscreen rendering and video, or `render_mode=None` for training.
+:::
+
+For platform behavior and GPU-context requirements, see
+[Check Platform and Headless Constraints](#check-platform-and-headless-constraints).

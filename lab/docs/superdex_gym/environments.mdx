@@ -277,7 +277,6 @@ both immediately after loading the scene, as in the example above. The first
 | `_check_stop_criteria(action, observation, reward, info)` | Truncates the episode at `steps_per_episode`. |
 | `_reset_renderer()` | No-op; called before the first rendered frame after a reset. |
 | `_update_renderer()` | No-op; called before every rendered frame. |
-| `_init_ui()` | Adds the built-in Environment panel in the Polyscope viewer. |
 
 When overriding `_reset_scene()` or `_check_stop_criteria()`, call the base
 implementation to preserve state restoration or the episode-length limit. Call

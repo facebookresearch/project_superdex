@@ -69,6 +69,7 @@ function internalCategoryItems() {
           items: [
             'internal/superdex_gym/internal_environments',
             ...generatedEnvsCategory('internal/superdex_gym/envs'),
+            'internal/superdex_gym/interactive_viewer',
             'internal/superdex_gym/setup_meta',
             'internal/superdex_gym/benchmarking_meta',
           ],

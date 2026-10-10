@@ -44,7 +44,7 @@ them use the SuperDex Physics engine for high-fidelity simulation.
 - **Environment Suite**: Classic-control and locomotion benchmark environments
 - **Flexible Configuration**: Extensive configuration options for environments and
   training
-- **Visualization**: Built-in Polyscope rendering and video generation
+- **Visualization**: Built-in Filament-based rendering and video generation
 - **Cross-platform Support**: Runs on Linux, macOS and Windows
 
 ## Available Environments
