@@ -407,9 +407,9 @@ struct CDeformedContactSkinNodes : public NoCopy {
  *
  * @note Actors whose sample points are fixed (i.e. rigid actors) use
  * CContactSamples<TimeStep::Current> for all time slices. Actors with a deforming surface need
- * CContactSamples<TimeStep::Current> and CContactSamples<TimeStep::StageStart>. However,
- * CContactSamples<TimeStep::StageStart> is updated only if ExperimentalEvalParams.explicitNormals =
- * true.
+ * CContactSamples<TimeStep::Current> and CContactSamples<TimeStep::StageStart>. The latter is
+ * updated every stage: each contact found at the current time is also evaluated at its stage-start
+ * position, and ExperimentalEvalParams.explicitNormals = true detects contacts at stage start too.
  */
 template <TimeStep kStep>
 struct CContactSamples : public ContactSamples {};

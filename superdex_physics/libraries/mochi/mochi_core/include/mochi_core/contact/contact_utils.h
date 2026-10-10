@@ -328,8 +328,8 @@ struct ContactDetectionResult {
 
   /**
    * @brief Position of the contact point in the collider's local space at stage start.
-   * @note Empty after current-time collision detection; 1-to-1 with sampleIndices after stage-start
-   * collision detection.
+   * @note 1-to-1 with sampleIndices after current-time collision detection; empty after far-SDF
+   * detection, and after stage-start collision detection, whose posColliding is at stage start.
    */
   DynamicArray<Real3> posCollidingStageStart = {};
 

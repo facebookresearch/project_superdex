@@ -44,7 +44,7 @@ enum class ContactLayerId : int { None = 0 };
  */
 struct CContactLayer : public NoCopy {
   ContactLayerId id = {};
-  std::string name; // kept for debugging
+  std::string name;
 };
 
 /**

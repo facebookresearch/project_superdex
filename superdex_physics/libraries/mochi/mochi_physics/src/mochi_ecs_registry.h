@@ -83,11 +83,11 @@ class ComponentTypeInfo {
    * @brief [ADVANCED] Ensure that components are stored contiguously within each page, then return
    * the address of the start of the page table. Return nullptr if this is a tag component.
    *
-   * @note EnTT components are stored in pages of up to ENTT_PACKED_PAGE element each.
+   * @note EnTT components are stored in pages of up to ENTT_PACKED_PAGE elements each.
    * @note Component storage is 1:1 with GetEntities().
    * @note For components of type T, the component with index 'i' is stored at:
-   * auto const* pageTable = static_cast<T*const*>(TryGetDensePageTable(reg));
-   * auto const& component = pageTable[i % ENTT_PACKED_PAGE][i];
+   * auto const* pageTable = reinterpret_cast<T* const*>(TryGetPageTable(reg));
+   * auto const& component = pageTable[i / ENTT_PACKED_PAGE][i % ENTT_PACKED_PAGE];
    */
   void* const* TryGetPageTable(entt::registry& reg) const;
 
