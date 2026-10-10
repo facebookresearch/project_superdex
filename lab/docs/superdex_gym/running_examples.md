@@ -73,6 +73,7 @@ uv run python run_sample.py superdex_gym/HalfCheetahFullObservation-v0 --action_
 
 # Start the environment in a paused state
 uv run python run_sample.py superdex_gym/HalfCheetah-v0 --start_paused
+
 ```
 
 ### Available Sample Environments
@@ -98,6 +99,7 @@ The canonical environment ID is a required argument. The remaining options are:
 | --- | --- | --- |
 | `--action_sampler {zero,random,sweep}` | `sweep` | Action sampling strategy: `zero`, `random`, or `sweep`. |
 | `--num_episodes NUM` | `10` | Number of episodes to simulate. |
+
 | `--video` | off | Enables video recording and switches rendering offscreen. |
 | `--video_size WIDTHxHEIGHT` | none | Sets the recorded frame resolution (e.g., `1280x720`) when `--video` or `--video_path` is used; otherwise, sets the interactive window size. |
 | `--video_path DIR` | none (`apps/envs/output/` when `--video` is passed) | Enables video recording and saves the videos to an output directory. The default directory is resolved relative to the script, not to your working directory. |

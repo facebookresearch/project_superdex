@@ -159,65 +159,6 @@ def record_multiple_episodes(env_config, num_episodes=10):
     env.close()
 ```
 
-## Configuring the Coordinate System
-
-Set `MochiEnvCfg.render_coordinate_system` when assets or data use a coordinate
-convention different from the default Polyscope convention.
-
-### Available Coordinate Systems
-
-| Preset Name             | Handedness   | Up Axis | Forward Axis | Used By / Convention         | Axis Mapping                      |
-|-------------------------|--------------|---------|--------------|------------------------------|-----------------------------------|
-| `"polyscope"` or `None` | Right-handed | Y       | -Z           | OpenGL, Polyscope (default)  | Right = +X, Up = +Y, Forward = -Z |
-| `"blender"`             | Right-handed | Z       | Y            | Blender                      | Right = +X, Up = +Z, Forward = +Y |
-| `"unity"`               | Left-handed  | Y       | Z            | Unity                        | Right = +X, Up = +Y, Forward = +Z |
-| `"unreal"`              | Left-handed  | Z       | X            | Unreal Engine                | Right = +Y, Up = +Z, Forward = +X |
-| `"mochi"`               | Right-handed | Y       | -Z           | SuperDex Physics engine      | Right = +X, Up = +Y, Forward = -Z |
-| `"ros"`                 | Right-handed | Z       | X            | ROS (Robot Operating System) | Right = -Y, Up = +Z, Forward = +X |
-
-### Using Preset Coordinate Systems
-
-Pass a preset name as a string:
-
-```python
-from superdex.lab.gym.envs.benchmarks.cartpole_env import CartPoleEnv
-
-# Use Unity coordinate system
-env = CartPoleEnv({
-    "render_mode": "human",
-    "render_coordinate_system": "unity",
-})
-
-# Use Unreal coordinate system
-env = CartPoleEnv({
-    "render_mode": "human",
-    "render_coordinate_system": "unreal",
-})
-```
-
-### Custom Coordinate Systems
-
-Pass a `CoordinateSystem` for a custom convention:
-
-```python
-from superdex.lab.gym.envs.benchmarks.cartpole_env import CartPoleEnv
-from superdex.physics.utils.coordinate_systems import CoordinateSystem
-
-# Define a custom coordinate system
-custom_system = CoordinateSystem(right="+X", up="+Z", forward="-Y")
-
-env = CartPoleEnv({
-    "render_mode": "human",
-    "render_coordinate_system": custom_system,
-})
-```
-
-### Default Behavior
-
-If `render_coordinate_system` is not specified or is `None`, the renderer uses
-the legacy OpenGL coordinate system, which matches Polyscope's internal
-convention. No coordinate transformations are applied.
-
 ## Configuring Default Render Items
 
 SuperDex Gym renders scene actors with mesh geometry by default.
