@@ -1181,10 +1181,10 @@ void mochi::InitRigidActor(
         } else if (auto* bvObb = std::get_if<Obb>(&bv)) {
           // Use the sphere that inscribes the box. It should be a good match for the mesh, if the
           // mesh really is in the approximate shape of a sphere
-          sphereColl.shape = Sphere{bvObb->GetCenter(), bvObb->GetHalfExtents()[0]};
+          sphereColl.shape = Sphere{bvObb->GetCenter(), Min(bvObb->GetHalfExtents())};
         } else if (auto* bvAabb = std::get_if<Aabb>(&bv)) {
           // Similarly, use the sphere that inscribes the AABB.
-          sphereColl.shape = Sphere{bvAabb->GetCenter(), bvAabb->GetHalfExtents()[0]};
+          sphereColl.shape = Sphere{bvAabb->GetCenter(), Min(bvAabb->GetHalfExtents())};
         } else {
           // Fallback: Just wrap the shape in a sphere. Expand bv to make sure it is large enough
           // to contain both.

@@ -1792,6 +1792,18 @@ TEST_F(ActorQueryTest, GetPointsDistanceToSurface) {
       kBoxExpectedDistances);
   // Sphere
   RunTest(CreateStaticSphere(_scene, 1_r, kPosition), kSpherePoints, kSphereExpectedDistances);
+  // Sphere inscribed in a box mesh: same center and radius as the sphere above
+  Real3 constexpr kHalfExtents = {3_r, 2_r, 1_r};
+  auto [coordinates, connectivity] = test::CreateMinimalTetMeshUnitCube(2_r * kHalfExtents);
+  RigidActorParams const boxParams{
+      .shape = _mochiContext->CreateTetMeshShape(
+          Flatten(MakeSpan(coordinates)), Flatten(MakeSpan(connectivity)), test::ExpectOK{}),
+      .worldFromLocal = TransformRT{kPosition - kHalfExtents},
+      .colliderType = ColliderType::Sphere};
+  RunTest(
+      _scene->CreateRigidActor(boxParams, test::ExpectOK{}),
+      kSpherePoints,
+      kSphereExpectedDistances);
   // Plane
   RunTest(CreateStaticGroundPlane(_scene, kHeight), kPlanePoints, kPlaneExpectedDistances);
 }
