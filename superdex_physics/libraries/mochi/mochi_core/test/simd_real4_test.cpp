@@ -925,37 +925,7 @@ MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec4r, Sqrt, ([](auto a) { return std:
 // clang-format on
 
 TEST(Vec4r, Store) {
-  std::vector<real> result(
-      5); // NOTE: Changed from an array on the stack to work around an MSVC optimizer bug.
-  auto const v = Vec4r{1_r, 2_r, 3_r, 4_r};
-  Store<0>((real*)nullptr, v);
-  Store<0>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<real, 4>{0_r, 0_r, 0_r, 0_r}), Span(&result[1], 4));
-  Store<1>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<real, 4>{1_r, 0_r, 0_r, 0_r}), Span(&result[1], 4));
-  Store<2>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<real, 4>{1_r, 2_r, 0_r, 0_r}), Span(&result[1], 4));
-  Store<3>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<real, 4>{1_r, 2_r, 3_r, 0_r}), Span(&result[1], 4));
-  Store<4>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<real, 4>{1_r, 2_r, 3_r, 4_r}), Span(&result[1], 4));
-  result.clear();
-  result.resize(5);
-  Store(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<real, 4>{1_r, 2_r, 3_r, 4_r}), Span(&result[1], 4));
-
-  result.clear();
-  result.resize(5);
-  Store(&result[1], v, 0);
-  EXPECT_SPAN_EQ((std::array<real, 4>{0_r, 0_r, 0_r, 0_r}), Span(&result[1], 4));
-  Store(&result[1], v, 1);
-  EXPECT_SPAN_EQ((std::array<real, 4>{1_r, 0_r, 0_r, 0_r}), Span(&result[1], 4));
-  Store(&result[1], v, 2);
-  EXPECT_SPAN_EQ((std::array<real, 4>{1_r, 2_r, 0_r, 0_r}), Span(&result[1], 4));
-  Store(&result[1], v, 3);
-  EXPECT_SPAN_EQ((std::array<real, 4>{1_r, 2_r, 3_r, 0_r}), Span(&result[1], 4));
-  Store(&result[1], v, 4);
-  EXPECT_SPAN_EQ((std::array<real, 4>{1_r, 2_r, 3_r, 4_r}), Span(&result[1], 4));
+  TestStore(Vec4r{1_r, 2_r, 3_r, 4_r});
 }
 
 TEST(Vec4r, StoreSelected) {

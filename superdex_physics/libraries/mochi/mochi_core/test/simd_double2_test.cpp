@@ -637,29 +637,8 @@ MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec2d, Sqrt, ([](auto a) { return std:
 // clang-format on
 
 TEST(Vec2d, Store) {
-  std::vector<double> result(
-      3); // NOTE: Changed from an array on the stack to work around an MSVC optimizer bug.
-  Store<0>((double*)nullptr, Vec2d(1.0, 2.0));
   Store(static_cast<double*>(nullptr), Vec2d(1.0, 2.0), 0);
-  Store<0>(&result[1], Vec2d(1.0, 2.0));
-  EXPECT_SPAN_EQ((std::array<double, 2>{0.0, 0.0}), Span(&result[1], 2));
-  Store<1>(&result[1], Vec2d(1.0, 2.0));
-  EXPECT_SPAN_EQ((std::array<double, 2>{1.0, 0.0}), Span(&result[1], 2));
-  Store<2>(&result[1], Vec2d(1.0, 2.0));
-  EXPECT_SPAN_EQ((std::array<double, 2>{1.0, 2.0}), Span(&result[1], 2));
-  result.clear();
-  result.resize(3);
-  Store(&result[1], Vec2d(1.0, 2.0));
-  EXPECT_SPAN_EQ((std::array<double, 2>{1.0, 2.0}), Span(&result[1], 2));
-
-  result.clear();
-  result.resize(3);
-  Store(&result[1], Vec2d(1.0, 2.0), 0);
-  EXPECT_SPAN_EQ((std::array<double, 2>{0.0, 0.0}), Span(&result[1], 2));
-  Store(&result[1], Vec2d(1.0, 2.0), 1);
-  EXPECT_SPAN_EQ((std::array<double, 2>{1.0, 0.0}), Span(&result[1], 2));
-  Store(&result[1], Vec2d(1.0, 2.0), 2);
-  EXPECT_SPAN_EQ((std::array<double, 2>{1.0, 2.0}), Span(&result[1], 2));
+  TestStore(Vec2d(1.0, 2.0));
 }
 
 TEST(Vec2d, StoreSelected) {

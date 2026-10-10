@@ -386,27 +386,7 @@ MOCHI_SIMD_TEST_BINARY_FN_EXACT(Vec2l, Max, ([](auto a, auto b) { return std::ma
 MOCHI_SIMD_TEST_BINARY_FN_EXACT(Vec2l, Min, ([](auto a, auto b) { return std::min(a, b); }));
 
 TEST(Vec2l, Store) {
-  std::vector<int64_t> result(
-      5); // NOTE: Changed from an array on the stack to work around an MSVC optimizer bug.
-  auto const v = Vec2l{1, 2};
-  Store<0>((int64_t*)nullptr, v);
-  Store<0>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int64_t, 2>{0, 0}), Span(&result[1], 2));
-  Store<1>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int64_t, 2>{1, 0}), Span(&result[1], 2));
-  Store<2>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int64_t, 2>{1, 2}), Span(&result[1], 2));
-  for (int n = 0; n <= Vec2l::kSize; ++n) {
-    result.assign(4, 911);
-    auto expected = result;
-    for (int i = 0; i < n; ++i) {
-      expected[i + 1] = i + 1;
-    }
-    Store(&result[1], v, n);
-    EXPECT_EQ(expected, result);
-  }
-  Store(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int64_t, 2>{1, 2}), Span(&result[1], 2));
+  TestStore(Vec2l{1, 2});
 }
 
 TEST(Vec2l, StoreSelected) {

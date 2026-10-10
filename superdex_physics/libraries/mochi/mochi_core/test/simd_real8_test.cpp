@@ -1133,54 +1133,7 @@ MOCHI_SIMD_TEST_LIMIT_RANGE_UNARY_FN_NEAR(Vec8r, Sqrt, ([](auto a) { return std:
 // clang-format on
 
 TEST(Vec8r, Store) {
-  // clang-format off
-  std::vector<real> result(9); // NOTE: Changed from an array on the stack to work around an MSVC optimizer bug.
-  auto const v = Vec8r{1_r, 2_r, 3_r, 4_r, 5_r, 6_r, 7_r, 8_r};
-  Store<0>((real*)nullptr, v);
-  Store<0>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<real, 8>{0_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r}), Span(&result[1], 8));
-  Store<1>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<real, 8>{1_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r}), Span(&result[1], 8));
-  Store<2>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<real, 8>{1_r, 2_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r}), Span(&result[1], 8));
-  Store<3>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<real, 8>{1_r, 2_r, 3_r, 0_r, 0_r, 0_r, 0_r, 0_r}), Span(&result[1], 8));
-  Store<4>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<real, 8>{1_r, 2_r, 3_r, 4_r, 0_r, 0_r, 0_r, 0_r}), Span(&result[1], 8));
-  Store<5>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<real, 8>{1_r, 2_r, 3_r, 4_r, 5_r, 0_r, 0_r, 0_r}), Span(&result[1], 8));
-  Store<6>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<real, 8>{1_r, 2_r, 3_r, 4_r, 5_r, 6_r, 0_r, 0_r}), Span(&result[1], 8));
-  Store<7>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<real, 8>{1_r, 2_r, 3_r, 4_r, 5_r, 6_r, 7_r, 0_r}), Span(&result[1], 8));
-  Store<8>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<real, 8>{1_r, 2_r, 3_r, 4_r, 5_r, 6_r, 7_r, 8_r}), Span(&result[1], 8));
-  result.clear();
-  result.resize(9);
-  Store(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<real, 8>{1_r, 2_r, 3_r, 4_r, 5_r, 6_r, 7_r, 8_r}), Span(&result[1], 8));
-
-  result.clear();
-  result.resize(9);
-  Store(&result[1], v, 0);
-  EXPECT_SPAN_EQ((std::array<real, 8>{0_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r}), Span(&result[1], 8));
-  Store(&result[1], v, 1);
-  EXPECT_SPAN_EQ((std::array<real, 8>{1_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r}), Span(&result[1], 8));
-  Store(&result[1], v, 2);
-  EXPECT_SPAN_EQ((std::array<real, 8>{1_r, 2_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r}), Span(&result[1], 8));
-  Store(&result[1], v, 3);
-  EXPECT_SPAN_EQ((std::array<real, 8>{1_r, 2_r, 3_r, 0_r, 0_r, 0_r, 0_r, 0_r}), Span(&result[1], 8));
-  Store(&result[1], v, 4);
-  EXPECT_SPAN_EQ((std::array<real, 8>{1_r, 2_r, 3_r, 4_r, 0_r, 0_r, 0_r, 0_r}), Span(&result[1], 8));
-  Store(&result[1], v, 5);
-  EXPECT_SPAN_EQ((std::array<real, 8>{1_r, 2_r, 3_r, 4_r, 5_r, 0_r, 0_r, 0_r}), Span(&result[1], 8));
-  Store(&result[1], v, 6);
-  EXPECT_SPAN_EQ((std::array<real, 8>{1_r, 2_r, 3_r, 4_r, 5_r, 6_r, 0_r, 0_r}), Span(&result[1], 8));
-  Store(&result[1], v, 7);
-  EXPECT_SPAN_EQ((std::array<real, 8>{1_r, 2_r, 3_r, 4_r, 5_r, 6_r, 7_r, 0_r}), Span(&result[1], 8));
-  Store(&result[1], v, 8);
-  EXPECT_SPAN_EQ((std::array<real, 8>{1_r, 2_r, 3_r, 4_r, 5_r, 6_r, 7_r, 8_r}), Span(&result[1], 8));
-  // clang-format on
+  TestStore(Vec8r{1_r, 2_r, 3_r, 4_r, 5_r, 6_r, 7_r, 8_r});
 }
 
 TEST(Vec8r, StoreSelected) {

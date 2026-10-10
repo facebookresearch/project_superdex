@@ -542,31 +542,7 @@ TEST(Vec4i, Shuffle) {
 MOCHI_SIMD_TEST_UNARY_FN_EXACT(Vec4i, Sqr, ([](auto a) { return a * a; }));
 
 TEST(Vec4i, Store) {
-  std::vector<int> result(
-      5); // NOTE: Changed from an array on the stack to work around an MSVC optimizer bug.
-  auto const v = Vec4i{1, 2, 3, 4};
-  Store<0>((int*)nullptr, v);
-  Store<0>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int, 4>{0, 0, 0, 0}), Span(&result[1], 4));
-  Store<1>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int, 4>{1, 0, 0, 0}), Span(&result[1], 4));
-  Store<2>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int, 4>{1, 2, 0, 0}), Span(&result[1], 4));
-  Store<3>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int, 4>{1, 2, 3, 0}), Span(&result[1], 4));
-  Store<4>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int, 4>{1, 2, 3, 4}), Span(&result[1], 4));
-  for (int n = 0; n <= Vec4i::kSize; ++n) {
-    result.assign(6, 911);
-    auto expected = result;
-    for (int i = 0; i < n; ++i) {
-      expected[i + 1] = i + 1;
-    }
-    Store(&result[1], v, n);
-    EXPECT_EQ(expected, result);
-  }
-  Store(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int, 4>{1, 2, 3, 4}), Span(&result[1], 4));
+  TestStore(Vec4i{1, 2, 3, 4});
 }
 
 TEST(Vec4i, StoreSelected) {

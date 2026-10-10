@@ -26,6 +26,7 @@
 #include <array>
 #include <functional>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #if defined(_MSC_VER) && !defined(__AVX2__)
@@ -366,6 +367,43 @@ static void ExpectEqual(bool expect, V a, V b) {
     EXPECT_EQ(expect, (a == b));
     EXPECT_EQ(!expect, (a != b));
   }
+}
+
+// Expects store(ptr), with ptr in a buffer of 911s, to write 1, 2, ..., n to the first n
+// elements of ptr and nothing else.
+template <class V, class StoreFn>
+static void ExpectStoresFirstLanes(int n, StoreFn store) {
+  using Scalar = typename V::Scalar;
+  // NOTE: A vector rather than an array on the stack, to work around an MSVC optimizer bug.
+  std::vector<Scalar> result(V::kSize + 2, Scalar(911));
+  auto expected = result;
+  for (int i = 0; i < n; ++i) {
+    expected[i + 1] = Scalar(i + 1);
+  }
+  store(result.data() + 1);
+  EXPECT_EQ(expected, result);
+}
+
+template <int N, class V>
+static void ExpectStoreN(V v) {
+  ExpectStoresFirstLanes<V>(N, [&](auto* ptr) { Store<N>(ptr, v); });
+}
+
+template <class V, size_t... Is>
+static void ExpectStoreNForEachN(V v, std::index_sequence<Is...>) {
+  (ExpectStoreN<static_cast<int>(Is)>(v), ...);
+}
+
+// Tests Store<N> for every N, Store with a runtime count, and the full Store, on a vector v that
+// holds 1, 2, 3, ...
+template <class V>
+static void TestStore(V v) {
+  Store<0>(static_cast<typename V::Scalar*>(nullptr), v);
+  ExpectStoreNForEachN(v, std::make_index_sequence<V::kSize + 1>{});
+  for (int n = 0; n <= V::kSize; ++n) {
+    ExpectStoresFirstLanes<V>(n, [&](auto* ptr) { Store(ptr, v, n); });
+  }
+  ExpectStoresFirstLanes<V>(V::kSize, [&](auto* ptr) { Store(ptr, v); });
 }
 
 // Build a list of values useful for testing functions like sin and cos.

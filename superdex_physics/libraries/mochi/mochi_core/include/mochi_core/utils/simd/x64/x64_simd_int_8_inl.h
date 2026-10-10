@@ -272,10 +272,17 @@ class Simd<int, 8> {
   template <int N = kSize>
   static MOCHI_FORCE_INLINE void Store(Scalar* ptr, Simd v) {
     static_assert(N >= 0 && N <= kSize);
+    // Partial stores write the lanes straight from the register. With AVX2, masked stores are
+    // several times slower on AMD and block store-to-load forwarding on Intel. With AVX-512, they
+    // block forwarding on both. Measured on Zen 4 and Sapphire Rapids. A memcpy of the vector can
+    // go through the stack.
+    using HalfT = Simd<Scalar, 4>;
     if constexpr (N == 0) {
+    } else if constexpr (N <= 4) {
+      HalfT::Store<N>(ptr, HalfT(_mm256_castsi256_si128(v.raw))); // AVX
     } else if constexpr (N < kSize) {
-      // About 3X faster than a masked store on older AMD CPUs. About the same on others.
-      memcpy(ptr, &v, sizeof(Scalar) * N);
+      HalfT::Store<N - 4>(ptr + 4, HalfT(_mm256_extracti128_si256(v.raw, 1))); // AVX2
+      HalfT::Store<4>(ptr, HalfT(_mm256_castsi256_si128(v.raw))); // AVX
     } else {
       return _mm256_storeu_si256(reinterpret_cast<__m256i*>(ptr), v.raw); // AVX
     }

@@ -702,53 +702,7 @@ TEST(Vec8i, SimdZero) {
 MOCHI_SIMD_TEST_UNARY_FN_EXACT(Vec8i, Sqr, ([](auto a) { return a * a; }));
 
 TEST(Vec8i, Store) {
-  std::vector<int> result(9); // NOTE: Changed from an array on the stack to work around an MSVC
-                              // optimizer bug.
-  auto const v = Vec8i{1, 2, 3, 4, 5, 6, 7, 8};
-  Store<0>((int*)nullptr, v);
-  Store<0>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int, 8>{0, 0, 0, 0, 0, 0, 0, 0}), Span(&result[1], 8));
-  Store<1>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int, 8>{1, 0, 0, 0, 0, 0, 0, 0}), Span(&result[1], 8));
-  Store<2>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int, 8>{1, 2, 0, 0, 0, 0, 0, 0}), Span(&result[1], 8));
-  Store<3>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int, 8>{1, 2, 3, 0, 0, 0, 0, 0}), Span(&result[1], 8));
-  Store<4>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int, 8>{1, 2, 3, 4, 0, 0, 0, 0}), Span(&result[1], 8));
-  Store<5>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int, 8>{1, 2, 3, 4, 5, 0, 0, 0}), Span(&result[1], 8));
-  Store<6>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int, 8>{1, 2, 3, 4, 5, 6, 0, 0}), Span(&result[1], 8));
-  Store<7>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int, 8>{1, 2, 3, 4, 5, 6, 7, 0}), Span(&result[1], 8));
-  Store<8>(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int, 8>{1, 2, 3, 4, 5, 6, 7, 8}), Span(&result[1], 8));
-  result.clear();
-  result.resize(9);
-  Store(&result[1], v);
-  EXPECT_SPAN_EQ((std::array<int, 8>{1, 2, 3, 4, 5, 6, 7, 8}), Span(&result[1], 8));
-
-  result.clear();
-  result.resize(9);
-  Store(&result[1], v, 0);
-  EXPECT_SPAN_EQ((std::array<int, 8>{0, 0, 0, 0, 0, 0, 0, 0}), Span(&result[1], 8));
-  Store(&result[1], v, 1);
-  EXPECT_SPAN_EQ((std::array<int, 8>{1, 0, 0, 0, 0, 0, 0, 0}), Span(&result[1], 8));
-  Store(&result[1], v, 2);
-  EXPECT_SPAN_EQ((std::array<int, 8>{1, 2, 0, 0, 0, 0, 0, 0}), Span(&result[1], 8));
-  Store(&result[1], v, 3);
-  EXPECT_SPAN_EQ((std::array<int, 8>{1, 2, 3, 0, 0, 0, 0, 0}), Span(&result[1], 8));
-  Store(&result[1], v, 4);
-  EXPECT_SPAN_EQ((std::array<int, 8>{1, 2, 3, 4, 0, 0, 0, 0}), Span(&result[1], 8));
-  Store(&result[1], v, 5);
-  EXPECT_SPAN_EQ((std::array<int, 8>{1, 2, 3, 4, 5, 0, 0, 0}), Span(&result[1], 8));
-  Store(&result[1], v, 6);
-  EXPECT_SPAN_EQ((std::array<int, 8>{1, 2, 3, 4, 5, 6, 0, 0}), Span(&result[1], 8));
-  Store(&result[1], v, 7);
-  EXPECT_SPAN_EQ((std::array<int, 8>{1, 2, 3, 4, 5, 6, 7, 0}), Span(&result[1], 8));
-  Store(&result[1], v, 8);
-  EXPECT_SPAN_EQ((std::array<int, 8>{1, 2, 3, 4, 5, 6, 7, 8}), Span(&result[1], 8));
+  TestStore(Vec8i{1, 2, 3, 4, 5, 6, 7, 8});
 }
 
 TEST(Vec8i, StoreSelected) {
