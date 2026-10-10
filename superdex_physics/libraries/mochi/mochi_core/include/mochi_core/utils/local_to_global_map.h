@@ -23,6 +23,8 @@
 #include <mochi_core/utils/interval.h>
 #include <mochi_core/utils/span.h>
 
+#include <cstddef>
+
 namespace mochi {
 
 /**
@@ -101,14 +103,21 @@ class Local2GlobalMap {
   [[nodiscard]] int GetElementOffset(int eleIdx) const;
 
   /** @brief Returns a span with the global indices of an element. */
-  [[nodiscard]] Span<int const> GetGlobalIndices(int eleIdx) const;
+  [[nodiscard]] Span<int const> GetGlobalIndices(int eleIdx) const {
+    MOCHI_ASSERT_VERBOSE(eleIdx < isize(_eleSizes), "Invalid element index");
+    return {_indices.data() + _eleOffsets[eleIdx], static_cast<size_t>(_eleSizes[eleIdx])};
+  }
 
   /**
    * @brief Returns the stencil indices of each local DoF for an element. Requires @ref
    * InitializeStencilIndices, which macro-element stencils (e.g., bending stiffness in shells) use.
    * Maps without them, as in standard FEM, implicitly use [0, ..., (# of local DoFs) - 1].
    */
-  [[nodiscard]] Span<int const> GetStencilIndices(int eleIdx) const;
+  [[nodiscard]] Span<int const> GetStencilIndices(int eleIdx) const {
+    MOCHI_ASSERT_VERBOSE(eleIdx >= 0 && eleIdx < isize(_eleSizes), "Invalid element index");
+    MOCHI_ASSERT_VERBOSE(!_stencilIndices.empty(), "Stencil indices not initialized");
+    return {_stencilIndices.data() + _eleOffsets[eleIdx], static_cast<size_t>(_eleSizes[eleIdx])};
+  }
 
   /** @brief Gets the global nodes of an element. */
   void GetElementNodes(int eleIdx, Span<int> outNodes) const;

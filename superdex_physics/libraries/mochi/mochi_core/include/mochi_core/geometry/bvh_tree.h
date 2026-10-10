@@ -158,7 +158,10 @@ class BvhTree {
   /**
    * Returns the bounding volume of the root.
    */
-  Bv const& GetRootBv() const;
+  Bv const& GetRootBv() const {
+    MOCHI_ASSERT_VERBOSE(IsValid(), "Invalid BVH Tree");
+    return _nodes[kRootNode].bv;
+  }
 
   /**
    * Refits the nodes of the tree to reflect the deformations the object underwent.
@@ -204,7 +207,9 @@ class BvhTree {
   /**
    * Get the elements associated with this leaf node.
    */
-  RangeByIterators<std::vector<int>::const_iterator> GetElements(Node const& node) const;
+  RangeByIterators<std::vector<int>::const_iterator> GetElements(Node const& node) const {
+    return _elements.begin() + node.elementIndexRange;
+  }
 
   /**
    * Compute the Bv of a certain node.

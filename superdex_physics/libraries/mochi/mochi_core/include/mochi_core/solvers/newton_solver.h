@@ -80,7 +80,9 @@ class NewtonSolver {
   void SetParams(Params const& params);
 
   /** @brief Gets the solver parameters. */
-  Params const& GetParams() const;
+  Params const& GetParams() const {
+    return _params;
+  }
 
   /** @brief Solves the specified system of non-linear equations. */
   Status Solve(Problem& problem);

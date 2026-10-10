@@ -172,12 +172,6 @@ BvhTreeParams const& BvhTree<Bv>::GetParams() const {
 }
 
 template <typename Bv>
-Bv const& BvhTree<Bv>::GetRootBv() const {
-  MOCHI_ASSERT_VERBOSE(IsValid(), "Invalid BVH Tree");
-  return _nodes[kRootNode].bv;
-}
-
-template <typename Bv>
 void BvhTree<Bv>::Refit() {
   MOCHI_PROFILE_SCOPE();
   MOCHI_ASSERT_VERBOSE(IsValid(), "Invalid BVH Tree");
@@ -231,12 +225,6 @@ int BvhTree<Bv>::VFindClosest(Vec4r queryPoint, real* outDistanceSqr) const {
 template <typename Bv>
 size_t BvhTree<Bv>::GetNodeCount() const {
   return _nodes.size();
-}
-
-template <typename Bv>
-RangeByIterators<std::vector<int>::const_iterator> BvhTree<Bv>::GetElements(
-    Node const& node) const {
-  return _elements.begin() + node.elementIndexRange;
 }
 
 template <typename Bv>

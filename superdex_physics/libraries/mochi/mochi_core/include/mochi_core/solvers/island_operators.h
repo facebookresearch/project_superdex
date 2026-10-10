@@ -189,10 +189,24 @@ struct IslandOperators {
   }
 
   // Return the number of rows of the global system.
-  [[nodiscard]] int Rows() const;
+  [[nodiscard]] int Rows() const {
+    if (_actorMatrices.empty()) {
+      return 0;
+    } else {
+      auto const& [offset, lastMatrix] = _actorMatrices.back();
+      return offset + GetNumRows(lastMatrix);
+    }
+  }
 
   // Return the number of columns of the global system.
-  [[nodiscard]] int Cols() const;
+  [[nodiscard]] int Cols() const {
+    if (_actorMatrices.empty()) {
+      return 0;
+    } else {
+      auto const& [offset, lastMatrix] = _actorMatrices.back();
+      return offset + GetNumCols(lastMatrix);
+    }
+  }
 
   // Const reference to the actor matrices.
   [[nodiscard]] auto const& GetActorMatrices() const;
@@ -238,26 +252,6 @@ void PerActorPrec<T>::Update(IslandOperators<T> const& A) {
   _actorPrecs = A.MakePerActorPreconditionerEntries();
   UpdateSolveItems();
   _concurrentSolvePlan.reset();
-}
-
-template <typename T>
-int IslandOperators<T>::Rows() const {
-  if (_actorMatrices.empty()) {
-    return 0;
-  } else {
-    auto const& [offset, lastMatrix] = _actorMatrices.back();
-    return offset + GetNumRows(lastMatrix);
-  }
-}
-
-template <typename T>
-int IslandOperators<T>::Cols() const {
-  if (_actorMatrices.empty()) {
-    return 0;
-  } else {
-    auto const& [offset, lastMatrix] = _actorMatrices.back();
-    return offset + GetNumCols(lastMatrix);
-  }
 }
 
 template <typename T>

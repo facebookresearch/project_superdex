@@ -349,11 +349,6 @@ void NewtonSolver<T>::SetParams(NewtonSolverParams const& params) {
 }
 
 template <typename T>
-NewtonSolverParams const& NewtonSolver<T>::GetParams() const {
-  return _params;
-}
-
-template <typename T>
 bool NewtonSolver<T>::TakeStep(
     Problem& problem,
     Status& status,

@@ -73,17 +73,6 @@ namespace mochi {
   return _eleOffsets[eleIdx];
 }
 
-[[nodiscard]] Span<int const> Local2GlobalMap::GetGlobalIndices(int eleIdx) const {
-  MOCHI_ASSERT_VERBOSE(eleIdx < isize(_eleSizes), "Invalid element index");
-  return {_indices.data() + _eleOffsets[eleIdx], static_cast<size_t>(_eleSizes[eleIdx])};
-}
-
-[[nodiscard]] Span<int const> Local2GlobalMap::GetStencilIndices(int eleIdx) const {
-  MOCHI_ASSERT_VERBOSE(eleIdx >= 0 && eleIdx < isize(_eleSizes), "Invalid element index");
-  MOCHI_ASSERT_VERBOSE(!_stencilIndices.empty(), "Stencil indices not initialized");
-  return {_stencilIndices.data() + _eleOffsets[eleIdx], static_cast<size_t>(_eleSizes[eleIdx])};
-}
-
 void Local2GlobalMap::GetElementNodes(int eleIdx, Span<int> outNodes) const {
   MOCHI_ASSERT_VERBOSE(eleIdx >= 0 && eleIdx < isize(_eleSizes), "Invalid element index.");
   MOCHI_ASSERT_VERBOSE(_numFields > 0, "Number of fields not initialized.");
