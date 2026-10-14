@@ -25,27 +25,40 @@ Elastic potential energy $U$ is given in terms of a density $W$ per unit referen
 $$
 U = \int_{\Gamma_\mathbf{X}} W\,d\mathbf{X}~.
 $$
-The energy density $W$ is the sum of two terms:
+The energy density $W$ is the sum of three terms:
 $$
-W = W_{\text{membrane}}(\bm{\varepsilon}) + W_{\text{bend}}(\bm{\kappa})~,
+W = W_{\text{membrane}}(\bm{\varepsilon}) + W_{\text{bend}}(\bm{\kappa}) + W_{\text{collapse}}(\bm{\varepsilon})~,
 $$
-where $W_{\text{membrane}}$ is the membrane energy, depending on the membrane Green–Lagrange strain $\bm{\varepsilon}$, and $W_{\text{bend}}$ is the bending energy, depending on a curvature strain $\bm{\kappa}$.  Expressed with respect to the standard curvilinear basis $\left\{\mathbf{E}_\alpha = \frac{\partial\mathbf{X}}{\partial\xi^\alpha}\right\}_{\alpha=0,1}$ of the reference configuration, these strains are
+where $W_{\text{membrane}}$ is the membrane energy, depending on the membrane Green–Lagrange strain $\bm{\varepsilon}$, $W_{\text{bend}}$ is the bending energy, depending on a curvature strain $\bm{\kappa}$, and $W_{\text{collapse}}$ is a barrier potential to block a membrane collapse instability (discussed further below).  Expressed with respect to the standard curvilinear basis $\left\{\mathbf{E}_\alpha = \frac{\partial\mathbf{X}}{\partial\xi^\alpha}\right\}_{\alpha=0,1}$ of the reference configuration, these strains are
 $$
 \varepsilon_{\alpha\beta} = \frac{1}{2}(a_{\alpha\beta} - A_{\alpha\beta})~,\qquad\kappa_{\alpha\beta} = B_{\alpha\beta} - b_{\alpha\beta}~,
 $$
 where $\mathbf{A}$ and $\mathbf{B}$ are the metric tensor and second fundamental form of $\Gamma_\mathbf{X}$ and $\mathbf{a}$ and $\mathbf{b}$ are the corresponding tensors on the deformed surface, pulled back to $\Gamma_\mathbf{X}$.  We follow the Einstein summation convention, with tensor indices $\alpha,\beta\in\{0, 1\}$.
 
-Both energy terms are isotropic St. Venant–Kirchhoff materials, with energies given by
+The membrane and bending terms are isotropic St. Venant–Kirchhoff models, with energies given by
 $$
 W_{\text{membrane}} = \frac{\lambda}{2}(\text{tr}\,\bm{\varepsilon})^2 + \mu\,\text{tr}(\bm{\varepsilon}^2)~,\qquad W_{\text{bend}} = \frac{1}{2}\left(\alpha(\text{tr}\,\bm{\kappa})^2 + \beta\,\text{tr}(\bm{\kappa}^2)\right)~,
 $$
 where $\lambda$ and $\mu$ are 2D Lamé parameters, $\alpha$ and $\beta$ are bending stiffness coefficients, and the trace operator is defined as $\text{tr}\,\bm{\tau} = {\tau^\alpha}_\alpha = A^{\alpha\beta}\tau_{\beta\alpha}$ for a tensor $\bm{\tau}$.
+
+The St. Venant–Kirchhoff membrane model can become unstable under extreme in-plane compression.
+This material instability is usually avoided in practice, because the *structural* instability of buckling occurs earlier for thin shells with realistic ratios of membrane to bending stiffness.
+However, it can still be encountered in certain scenarios, especially when artificially reducing membrane stiffness relative to bending (to improve conditioning or avoid membrane locking) or when a single discrete element becomes pinched through complex contact interactions.
+The barrier term in $W$ prevents this membrane collapse instability:
+$$
+W_{\text{collapse}} = 2\eta\mu\left\langle A_{\alpha\beta}a^{\alpha\beta} - 2\right\rangle^3~,
+$$
+where $\eta \geq 0$ is a dimensionless scale and $\langle\cdot\rangle = \max(\cdot, 0)$ denotes Macaulay brackets.
+The barrier is active only under compressive deformations, diverges as the membrane collapses, and contributes no stiffness in the reference configuration, leaving the small-strain response unchanged.
+The default $\eta = 10^{-3}$ suffices for membrane materials derived from plane-stress reduction of a valid isotropic 3D material, while exotic 2D materials with $\lambda/\mu > 2$ may require larger values.
+Setting $\eta = 0$ disables the barrier, recovering the plain St. Venant–Kirchhoff membrane.
 
 Mass and stiffness dissipation are given by the dissipation potential
 $$
 R = \int_{\Gamma_\mathbf{X}} \left(\alpha_R\frac{1}{2}(\rho_{A0}\Vert\dot{\mathbf{u}}\Vert_2^2) + \beta_R\left(W_\text{membrane}(\dot{\bm{\varepsilon}}) + W_\text{bend}(\dot{\bm{\kappa}})\right)\right)\,d\mathbf{X}~,
 $$
 where $\alpha_R$ and $\beta_R$ are mass and stiffness dissipation coefficients. This potential is the natural shell generalization of the [soft-actor dissipation model](./soft/overview.mdx#continuous-model).
+The collapse barrier $W_\text{collapse}$ is not included in stiffness dissipation, following the soft-actor approach of defining damping through the reference-configuration material stiffness.
 
 ### Parameter Selection
 
@@ -111,13 +124,14 @@ If an edge is at a boundary of the mesh, the missing face normal is set to the n
 
 | Parameter | Type | Default | Units | Description |
 |-----------|------|---------|-------|-------------|
-| `membraneLambda` | `real` | `300` | Pa*m | 2D Lamé first parameter (plane-stress StVK, thickness-integrated) |
-| `membraneMu` | `real` | `400` | Pa*m | 2D Lamé second parameter (plane-stress StVK, thickness-integrated) |
+| `membraneLambda` | `real` | `300` | Pa*m | 2D Lamé first parameter $\lambda$ (thickness-integrated) |
+| `membraneMu` | `real` | `400` | Pa*m | 2D Lamé second parameter $\mu$ (thickness-integrated) |
 | `bendingAlpha` | `real` | `0.00002` | Pa*m^3 | First bending stiffness parameter |
 | `bendingBeta` | `real` | `0.00007` | Pa*m^3 | Second bending stiffness parameter |
 | `density` | `real` | `1.0` | kg/m^2 | Mass per unit surface area |
 | `massDampingCoefficient` | `real` | `0` | 1/s | Mass-proportional damping coefficient $\alpha_R$ |
 | `stiffnessDampingCoefficient` | `real` | `0` | s | Stiffness-proportional damping coefficient $\beta_R$ |
+| `membraneCollapseBarrierScale` | `real` | `0.001` | -- | Dimensionless scale $\eta$ of the [membrane collapse barrier](#continuous-model) $W_\text{collapse}$, which resists in-plane collapse. `0` disables it. |
 
 ## Examples
 
