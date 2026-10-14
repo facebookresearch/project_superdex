@@ -198,17 +198,17 @@ Actor* ikBone = ikScene->GetActor(
 // Position target: place the end-effector at (0.5, 0.3, 0.0)
 Constraint* posConstraint = ikSolver->CreatePositionTarget(
     ikBone->GetHandle(),
-    Real3{0, 0, 0},           // local position on the link
-    Real3{0.5, 0.3, 0.0},     // target position in world frame
-    1.0,                       // weight (stiffness)
+    Real3{0_r, 0_r, 0_r},       // local position on the link
+    Real3{0.5_r, 0.3_r, 0.0_r}, // target position in world frame
+    1.0,                        // weight (stiffness)
     error);
 
 // Optional: rotation target
 Constraint* rotConstraint = ikSolver->CreateRotationTarget(
     ikBone->GetHandle(),
-    Real3{0, 0, 0},           // local rotation (rotation vector)
-    Real3{0, 0, 1.57},        // target rotation (rotation vector)
-    1.0,                       // weight
+    Real3{0_r, 0_r, 0_r},       // local rotation (rotation vector)
+    Real3{0_r, 0_r, 1.57_r},    // target rotation (rotation vector)
+    1.0,                        // weight
     error);
 ```
 

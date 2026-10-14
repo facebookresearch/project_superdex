@@ -106,7 +106,7 @@ tet_mesh_shape = sdp.load_shape_from_file(file_path="duck.mochi.h5")
 SoftActorParams params;
 params.name = "duck";
 params.shape = meshShape;
-params.worldFromLocal = TransformRT(Real3{0, 1, 0});
+params.worldFromLocal = TransformRT(Real3{0_r, 1_r, 0_r});
 
 // Optional: override material (default is Neo-Hookean)
 params.material.type = SoftMaterialType::NeoHookean;
