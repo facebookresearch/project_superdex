@@ -18,5 +18,7 @@ var searchData=
   ['controllermochiarticulatedpose_14',['ControllerMochiArticulatedPose',['../classsuperdex_1_1robotics_1_1ControllerMochiArticulatedPose.html',1,'superdex::robotics']]],
   ['controllermochiarticulatedposeobsv_15',['ControllerMochiArticulatedPoseObsv',['../structsuperdex_1_1robotics_1_1ControllerMochiArticulatedPoseObsv.html',1,'superdex::robotics']]],
   ['controllermochiarticulatedposeparams_16',['ControllerMochiArticulatedPoseParams',['../structsuperdex_1_1robotics_1_1ControllerMochiArticulatedPoseParams.html',1,'superdex::robotics']]],
-  ['controllermochiarticulatedposetarget_17',['ControllerMochiArticulatedPoseTarget',['../structsuperdex_1_1robotics_1_1ControllerMochiArticulatedPoseTarget.html',1,'superdex::robotics']]]
+  ['controllermochiarticulatedposetarget_17',['ControllerMochiArticulatedPoseTarget',['../structsuperdex_1_1robotics_1_1ControllerMochiArticulatedPoseTarget.html',1,'superdex::robotics']]],
+  ['controllerrecordingsink_18',['ControllerRecordingSink',['../classsuperdex_1_1robotics_1_1ControllerRecordingSink.html',1,'superdex::robotics']]],
+  ['controllerscalarvalues_19',['ControllerScalarValues',['../structsuperdex_1_1robotics_1_1ControllerScalarValues.html',1,'superdex::robotics']]]
 ];

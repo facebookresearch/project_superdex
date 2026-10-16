@@ -252,6 +252,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a8219b32af8e0defc8848d9239060dc50"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the contact parameters of the actor.  <br /></td></tr>
 <tr class="memitem:af71944bd3007d8e5a9b092c4f8cc1bce" id="r_af71944bd3007d8e5a9b092c4f8cc1bce"><td class="memItemLeft">virtual <a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="structsuperdex_1_1ContactPoint.html">ContactPoint</a> const &gt;&#160;</td><td class="memItemRight"><a class="el" href="#af71944bd3007d8e5a9b092c4f8cc1bce">GetContactPointsWorld</a> (<a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error) const =0</td></tr>
 <tr class="memdesc:af71944bd3007d8e5a9b092c4f8cc1bce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get all the active contact points of the actor.  <br /></td></tr>
+<tr class="memitem:a63bb41aedf1ce5e6d2bb5412517bb9eb" id="r_a63bb41aedf1ce5e6d2bb5412517bb9eb"><td class="memItemLeft">virtual <a class="el" href="structsuperdex_1_1MeshDataView.html">MeshDataView</a>&#160;</td><td class="memItemRight"><a class="el" href="#a63bb41aedf1ce5e6d2bb5412517bb9eb">GetContactSkinMesh</a> () const =0</td></tr>
+<tr class="memdesc:a63bb41aedf1ce5e6d2bb5412517bb9eb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a view of the actor's reference contact skin mesh.  <br /></td></tr>
+<tr class="memitem:a789c4e5b6be8e821044491e7e5e4a708" id="r_a789c4e5b6be8e821044491e7e5e4a708"><td class="memItemLeft">virtual <a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> const &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a789c4e5b6be8e821044491e7e5e4a708">GetContactSkinMeshNodeNormalsLocal</a> (<a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error) const =0</td></tr>
+<tr class="memdesc:a789c4e5b6be8e821044491e7e5e4a708"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the normal direction to each node of the contact skin mesh in the actor's local frame.  <br /></td></tr>
+<tr class="memitem:ab35f4e770c9115621ee5fc94222a30c1" id="r_ab35f4e770c9115621ee5fc94222a30c1"><td class="memItemLeft">virtual <a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> const &gt;&#160;</td><td class="memItemRight"><a class="el" href="#ab35f4e770c9115621ee5fc94222a30c1">GetContactSkinMeshNodePositionsLocal</a> (<a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error) const =0</td></tr>
+<tr class="memdesc:ab35f4e770c9115621ee5fc94222a30c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the current positions of the contact skin mesh nodes in the actor's local frame.  <br /></td></tr>
 <tr class="memitem:a1c70423267f0eb83850ec5902efe86de" id="r_a1c70423267f0eb83850ec5902efe86de"><td class="memItemLeft">virtual <a class="el" href="namespacesuperdex.html#a9577ed9f0b93b82ce29a8ab5f4985b32">Real3</a>&#160;</td><td class="memItemRight"><a class="el" href="#a1c70423267f0eb83850ec5902efe86de">GetContactTorqueWorld</a> (<a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error) const =0</td></tr>
 <tr class="memdesc:a1c70423267f0eb83850ec5902efe86de"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the total contact torque about the center of mass.  <br /></td></tr>
 <tr class="memitem:a4c8cf731885e4bcdce36610ccc7063dd" id="r_a4c8cf731885e4bcdce36610ccc7063dd"><td class="memItemLeft">virtual <a class="el" href="classsuperdex_1_1Context.html">Context</a> const *&#160;</td><td class="memItemRight"><a class="el" href="#a4c8cf731885e4bcdce36610ccc7063dd">GetContext</a> () const =0</td></tr>
@@ -2099,6 +2105,119 @@ If the solver diverged in the last simulation step, results may not be available
 
 </div>
 </div>
+<a id="a63bb41aedf1ce5e6d2bb5412517bb9eb" name="a63bb41aedf1ce5e6d2bb5412517bb9eb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a63bb41aedf1ce5e6d2bb5412517bb9eb">&#9670;&#160;</a></span>GetContactSkinMesh()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual <a class="el" href="structsuperdex_1_1MeshDataView.html">MeshDataView</a> superdex::Actor::GetContactSkinMesh </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span><span class="mlabel pure-virtual">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Get a view of the actor's reference contact skin mesh. </p>
+<p>Returns the <a class="el" href="structsuperdex_1_1ModelData.html#aa452c1d459ba0619a1e5c23b3004a70e" title="superdex::ModelData::contactSkinMesh">ModelData::contactSkinMesh</a> of the actor's shape, regardless of whether the actor selected it as its collision representation. Only deformable actors expose it. Other actors return an empty view. For soft and shell actors, the mesh includes the linear contact-skin skinning data.</p>
+<dl class="section return"><dt>Returns</dt><dd>A non-owning view of the actor's reference contact skin mesh, or an empty view if the actor has no contact skin.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>The returned coordinates are reference contact-skin positions in the actor's local frame. Deformed contact-skin positions are only available through <a class="el" href="#ab35f4e770c9115621ee5fc94222a30c1" title="superdex::Actor::GetContactSkinMeshNodePositionsLocal">GetContactSkinMeshNodePositionsLocal</a>. </dd>
+<dd>
+The node ordering matches <a class="el" href="classsuperdex_1_1Context.html#afcda64ddc543cea1e8032518b3af6c42" title="superdex::Context::GetShapeContactSkinMesh">Context::GetShapeContactSkinMesh</a>. </dd>
+<dd>
+When linear contact-skin skinning data is present, skinning indices refer to the node ordering returned by <a class="el" href="#a88745d7a8c15875010458a15dbd339c3" title="superdex::Actor::GetMesh">GetMesh</a>. Rod contact skin embeddings are nonlinear and are not exposed through this linear skinning field. </dd>
+<dd>
+The returned view remains valid until the actor is destroyed.</dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1MeshDataView.html" title="superdex::MeshDataView">MeshDataView</a>, <a class="el" href="#a88745d7a8c15875010458a15dbd339c3" title="superdex::Actor::GetMesh">GetMesh</a>, <a class="el" href="#aa957985e5f68f29f94dbb083bba5ca3c" title="superdex::Actor::GetSurfaceMesh">GetSurfaceMesh</a>, <a class="el" href="#a55e31cae5e3dc623714dca180db8feef" title="superdex::Actor::GetVisualMesh">GetVisualMesh</a>, <a class="el" href="#ab35f4e770c9115621ee5fc94222a30c1" title="superdex::Actor::GetContactSkinMeshNodePositionsLocal">GetContactSkinMeshNodePositionsLocal</a>, <a class="el" href="#a789c4e5b6be8e821044491e7e5e4a708" title="superdex::Actor::GetContactSkinMeshNodeNormalsLocal">GetContactSkinMeshNodeNormalsLocal</a>, <a class="el" href="classsuperdex_1_1Context.html#afcda64ddc543cea1e8032518b3af6c42" title="superdex::Context::GetShapeContactSkinMesh">Context::GetShapeContactSkinMesh</a> </dd></dl>
+
+</div>
+</div>
+<a id="a789c4e5b6be8e821044491e7e5e4a708" name="a789c4e5b6be8e821044491e7e5e4a708"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a789c4e5b6be8e821044491e7e5e4a708">&#9670;&#160;</a></span>GetContactSkinMeshNodeNormalsLocal()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual <a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> const  &gt; superdex::Actor::GetContactSkinMeshNodeNormalsLocal </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>error</em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span><span class="mlabel pure-virtual">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Get the normal direction to each node of the contact skin mesh in the actor's local frame. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td><a class="el" href="classsuperdex_1_1Error.html">Error</a> status. Check <a class="el" href="classsuperdex_1_1Error.html#a463cb4f3428a7a2dd779a2f6c5d153b2" title="superdex::Error::IsOK">Error::IsOK</a> for success. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Flattened normals (3 values per node: nx, ny, nz) in the actor's local frame, computed by normalizing the area-weighted sum of adjacent triangle normals. The number of nodes is available via <a class="el" href="#a63bb41aedf1ce5e6d2bb5412517bb9eb" title="superdex::Actor::GetContactSkinMesh">GetContactSkinMesh</a>. The order of the nodes is 1-to-1 with <a class="el" href="#ab35f4e770c9115621ee5fc94222a30c1" title="superdex::Actor::GetContactSkinMeshNodePositionsLocal">GetContactSkinMeshNodePositionsLocal</a>.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Requires registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba7ff37a20ae4e0bb6cd660c7cd15553df" title="superdex::QueryType::ContactSkinNodeNormals">QueryType::ContactSkinNodeNormals</a> before the simulation step. Results are available after the simulation step completes. </dd>
+<dd>
+Requires the actor to support <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba7ff37a20ae4e0bb6cd660c7cd15553df" title="superdex::QueryType::ContactSkinNodeNormals">QueryType::ContactSkinNodeNormals</a>.</dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="#ae14afba92874f6489d293460662bcd73" title="superdex::Actor::RegisterQuery">RegisterQuery</a>, <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba7ff37a20ae4e0bb6cd660c7cd15553df" title="superdex::QueryType::ContactSkinNodeNormals">QueryType::ContactSkinNodeNormals</a>, <a class="el" href="#a63bb41aedf1ce5e6d2bb5412517bb9eb" title="superdex::Actor::GetContactSkinMesh">GetContactSkinMesh</a>, <a class="el" href="#ab35f4e770c9115621ee5fc94222a30c1" title="superdex::Actor::GetContactSkinMeshNodePositionsLocal">GetContactSkinMeshNodePositionsLocal</a> </dd></dl>
+
+</div>
+</div>
+<a id="ab35f4e770c9115621ee5fc94222a30c1" name="ab35f4e770c9115621ee5fc94222a30c1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab35f4e770c9115621ee5fc94222a30c1">&#9670;&#160;</a></span>GetContactSkinMeshNodePositionsLocal()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual <a class="el" href="classsuperdex_1_1Span.html">Span</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> const  &gt; superdex::Actor::GetContactSkinMeshNodePositionsLocal </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>error</em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span><span class="mlabel pure-virtual">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Get the current positions of the contact skin mesh nodes in the actor's local frame. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td><a class="el" href="classsuperdex_1_1Error.html">Error</a> status. Check <a class="el" href="classsuperdex_1_1Error.html#a463cb4f3428a7a2dd779a2f6c5d153b2" title="superdex::Error::IsOK">Error::IsOK</a> for success. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Current node positions [m] of the contact skin mesh in the actor's local frame (3 values per node: x, y, z). The number of nodes is available via <a class="el" href="#a63bb41aedf1ce5e6d2bb5412517bb9eb" title="superdex::Actor::GetContactSkinMesh">GetContactSkinMesh</a>. The order of the nodes is 1-to-1 with <a class="el" href="#a789c4e5b6be8e821044491e7e5e4a708" title="superdex::Actor::GetContactSkinMeshNodeNormalsLocal">GetContactSkinMeshNodeNormalsLocal</a>.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Requires registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba39c7a275fa219c9f8bc7dcd8b87423d3" title="superdex::QueryType::ContactSkinNodePositions">QueryType::ContactSkinNodePositions</a> before the simulation step. Results are available after the simulation step completes. </dd>
+<dd>
+Requires the actor to support <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba39c7a275fa219c9f8bc7dcd8b87423d3" title="superdex::QueryType::ContactSkinNodePositions">QueryType::ContactSkinNodePositions</a>.</dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="#ae14afba92874f6489d293460662bcd73" title="superdex::Actor::RegisterQuery">RegisterQuery</a>, <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba39c7a275fa219c9f8bc7dcd8b87423d3" title="superdex::QueryType::ContactSkinNodePositions">QueryType::ContactSkinNodePositions</a>, <a class="el" href="#a63bb41aedf1ce5e6d2bb5412517bb9eb" title="superdex::Actor::GetContactSkinMesh">GetContactSkinMesh</a>, <a class="el" href="#a789c4e5b6be8e821044491e7e5e4a708" title="superdex::Actor::GetContactSkinMeshNodeNormalsLocal">GetContactSkinMeshNodeNormalsLocal</a> </dd></dl>
+
+</div>
+</div>
 <a id="a1c70423267f0eb83850ec5902efe86de" name="a1c70423267f0eb83850ec5902efe86de"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a1c70423267f0eb83850ec5902efe86de">&#9670;&#160;</a></span>GetContactTorqueWorld()</h2>
 
@@ -2220,7 +2339,11 @@ If the solver diverged in the last simulation step, results may not be available
 
 <p>Get the convergence status of the actor in the most recent simulation step. </p>
 <dl class="section return"><dt>Returns</dt><dd>Convergence status of the actor in the most recent simulation step.</dd></dl>
-<dl class="section note"><dt>Note</dt><dd>Static actors do not participate in the solver and may return <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592ca6adf97f83acf6453d4a6a4b1070f3754" title="superdex::ConvergenceStatus::None">ConvergenceStatus::None</a>.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Static actors do not participate in the solver and may return <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592ca6adf97f83acf6453d4a6a4b1070f3754" title="superdex::ConvergenceStatus::None">ConvergenceStatus::None</a>. </dd>
+<dd>
+Actors in sleeping islands are not solved and return <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592ca6adf97f83acf6453d4a6a4b1070f3754" title="superdex::ConvergenceStatus::None">ConvergenceStatus::None</a>. See <span class="tt">experimental::SleepParams</span>. </dd>
+<dd>
+Unlike <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592ca531b4ea128144242345020b6115538ce" title="superdex::ConvergenceStatus::Diverged">ConvergenceStatus::Diverged</a>, <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592cac23e2b09ebe6bf4cb5e2a9abe85c0be2" title="superdex::ConvergenceStatus::Stopped">ConvergenceStatus::Stopped</a> does not indicate a failure. It means that the nonlinear solve reached a stopping criterion, such as the maximum number of iterations, before meeting its residual tolerances, which may be stricter than the actor requires.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592c" title="superdex::ConvergenceStatus">ConvergenceStatus</a>, <a class="el" href="structsuperdex_1_1SolverStats.html#a37cb48870c08f45a7cd7cac135c9961d" title="superdex::SolverStats::convergenceStatus">SolverStats::convergenceStatus</a> </dd></dl>
 
 </div>
@@ -2599,7 +2722,9 @@ Not supported for ROM actors. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>A non-owning view of the actor's reference simulation mesh, or an empty view if the actor has no simulation mesh.</dd></dl>
 <dl class="section note"><dt>Note</dt><dd>The returned coordinates are reference positions in the actor's local frame. They do not include deformation for deformable actors. </dd>
 <dd>
-For rigid actors with tetrahedral or triangular mesh shapes, returns the same compact surface view as <a class="el" href="#aa957985e5f68f29f94dbb083bba5ca3c" title="superdex::Actor::GetSurfaceMesh">GetSurfaceMesh</a>. For tetrahedral meshes this is the boundary surface. For triangular meshes, nodes not referenced by any surface triangle are omitted and remaining nodes may be reindexed. Use <a class="el" href="#ace8a73dc5670fce04753118477953b83" title="superdex::Actor::GetReferenceShape">GetReferenceShape</a> and <a class="el" href="classsuperdex_1_1Context.html#a1bd416296006cc1efd1346472308bcb7" title="superdex::Context::GetShapeMesh">Context::GetShapeMesh</a> to retrieve the original authored shape mesh. </dd>
+For rigid actors with tetrahedral or triangular mesh shapes, returns the same compact surface view as <a class="el" href="#aa957985e5f68f29f94dbb083bba5ca3c" title="superdex::Actor::GetSurfaceMesh">GetSurfaceMesh</a>, which is the boundary surface for tetrahedral meshes. It omits interior nodes and nodes that no element references, and keeps the remaining nodes in their original relative order. Use <a class="el" href="#ace8a73dc5670fce04753118477953b83" title="superdex::Actor::GetReferenceShape">GetReferenceShape</a> and <a class="el" href="classsuperdex_1_1Context.html#a1bd416296006cc1efd1346472308bcb7" title="superdex::Context::GetShapeMesh">Context::GetShapeMesh</a> to retrieve the original authored shape mesh. </dd>
+<dd>
+The returned mesh has only the nodes that its elements reference. </dd>
 <dd>
 The returned view remains valid until the actor is destroyed.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1MeshDataView.html" title="superdex::MeshDataView">MeshDataView</a>, <a class="el" href="#aa957985e5f68f29f94dbb083bba5ca3c" title="superdex::Actor::GetSurfaceMesh">GetSurfaceMesh</a>, <a class="el" href="#a55e31cae5e3dc623714dca180db8feef" title="superdex::Actor::GetVisualMesh">GetVisualMesh</a>, <a class="el" href="classsuperdex_1_1Context.html#a1bd416296006cc1efd1346472308bcb7" title="superdex::Context::GetShapeMesh">Context::GetShapeMesh</a> </dd></dl>
@@ -3191,14 +3316,14 @@ If the solver diverged in the last simulation step, results may not be available
 </div><div class="memdoc">
 
 <p>Get a view of the actor's reference surface mesh. </p>
-<p>Returns a compact triangle mesh for the actor's surface. For volumetric simulation meshes, the surface is the boundary triangles. For triangular simulation meshes, the surface has the same triangle elements as the simulation mesh, but nodes not referenced by any surface triangle are omitted and remaining nodes may be reindexed. For shell and rod actors with an embedded <a class="el" href="structsuperdex_1_1ModelData.html#aa452c1d459ba0619a1e5c23b3004a70e" title="superdex::ModelData::contactSkinMesh">ModelData::contactSkinMesh</a>, returns that contact skin regardless of the actor's selected collision representation. For articulated actors with a skinned simulation surface, returns that surface. Returns an empty view if the actor does not have a surface mesh.</p>
+<p>Returns a compact triangle mesh for the actor's surface. For volumetric simulation meshes, the surface is the boundary triangles. For triangular simulation meshes, the surface is the simulation mesh. For articulated actors with a skinned simulation surface, returns that surface. Returns an empty view if the actor does not have a surface mesh, e.g. for rod actors. Contact skins are exposed by <a class="el" href="#a63bb41aedf1ce5e6d2bb5412517bb9eb" title="superdex::Actor::GetContactSkinMesh">GetContactSkinMesh</a> instead.</p>
 <dl class="section return"><dt>Returns</dt><dd>A non-owning view of the actor's reference surface mesh, or an empty view if the actor has no surface mesh.</dd></dl>
 <dl class="section note"><dt>Note</dt><dd>The returned coordinates are reference surface-mesh positions in the actor's local frame. They do not include deformation for deformable actors. </dd>
 <dd>
-The returned mesh uses compact surface-node ordering. Connectivity indices refer to this ordering, which may differ from the node ordering returned by <a class="el" href="#a88745d7a8c15875010458a15dbd339c3" title="superdex::Actor::GetMesh">GetMesh</a>. Interior nodes and nodes not referenced by any surface triangle are excluded. Results from <a class="el" href="#af4e978fc6049cae81405ae880325875b" title="superdex::Actor::GetSurfaceMeshNodePositionsLocal">GetSurfaceMeshNodePositionsLocal</a> and <a class="el" href="#a599cc94ec33a8a3c337bc43d85a6957e" title="superdex::Actor::GetSurfaceMeshNodeNormalsLocal">GetSurfaceMeshNodeNormalsLocal</a> use this same surface ordering. </dd>
+The returned mesh has only the nodes that its triangles reference, in the same relative order as in <a class="el" href="#a88745d7a8c15875010458a15dbd339c3" title="superdex::Actor::GetMesh">GetMesh</a>. Results from <a class="el" href="#af4e978fc6049cae81405ae880325875b" title="superdex::Actor::GetSurfaceMeshNodePositionsLocal">GetSurfaceMeshNodePositionsLocal</a> and <a class="el" href="#a599cc94ec33a8a3c337bc43d85a6957e" title="superdex::Actor::GetSurfaceMeshNodeNormalsLocal">GetSurfaceMeshNodeNormalsLocal</a> use this node order. </dd>
 <dd>
 The returned view remains valid until the actor is destroyed.</dd></dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1MeshDataView.html" title="superdex::MeshDataView">MeshDataView</a>, <a class="el" href="#a88745d7a8c15875010458a15dbd339c3" title="superdex::Actor::GetMesh">GetMesh</a>, <a class="el" href="#a55e31cae5e3dc623714dca180db8feef" title="superdex::Actor::GetVisualMesh">GetVisualMesh</a>, <a class="el" href="#af4e978fc6049cae81405ae880325875b" title="superdex::Actor::GetSurfaceMeshNodePositionsLocal">GetSurfaceMeshNodePositionsLocal</a>, <a class="el" href="#a599cc94ec33a8a3c337bc43d85a6957e" title="superdex::Actor::GetSurfaceMeshNodeNormalsLocal">GetSurfaceMeshNodeNormalsLocal</a>, <a class="el" href="classsuperdex_1_1Context.html#a130f5883bf2318cb3d4500493dab6a46" title="superdex::Context::GetShapeSurfaceMesh">Context::GetShapeSurfaceMesh</a> </dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1MeshDataView.html" title="superdex::MeshDataView">MeshDataView</a>, <a class="el" href="#a88745d7a8c15875010458a15dbd339c3" title="superdex::Actor::GetMesh">GetMesh</a>, <a class="el" href="#a55e31cae5e3dc623714dca180db8feef" title="superdex::Actor::GetVisualMesh">GetVisualMesh</a>, <a class="el" href="#a63bb41aedf1ce5e6d2bb5412517bb9eb" title="superdex::Actor::GetContactSkinMesh">GetContactSkinMesh</a>, <a class="el" href="#af4e978fc6049cae81405ae880325875b" title="superdex::Actor::GetSurfaceMeshNodePositionsLocal">GetSurfaceMeshNodePositionsLocal</a>, <a class="el" href="#a599cc94ec33a8a3c337bc43d85a6957e" title="superdex::Actor::GetSurfaceMeshNodeNormalsLocal">GetSurfaceMeshNodeNormalsLocal</a>, <a class="el" href="classsuperdex_1_1Context.html#a130f5883bf2318cb3d4500493dab6a46" title="superdex::Context::GetShapeSurfaceMesh">Context::GetShapeSurfaceMesh</a> </dd></dl>
 
 </div>
 </div>
@@ -3237,10 +3362,8 @@ The returned view remains valid until the actor is destroyed.</dd></dl>
 <dd>
 Requires the actor to support <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba5d8fb19888497a6b953ad49914197655" title="superdex::QueryType::SurfaceNodeNormals">QueryType::SurfaceNodeNormals</a>. </dd>
 <dd>
-The node ordering corresponds to the mesh connectivity from <a class="el" href="#aa957985e5f68f29f94dbb083bba5ca3c" title="superdex::Actor::GetSurfaceMesh">GetSurfaceMesh</a>. </dd>
-<dd>
-Supported for shell and rod actors whose shape has an authored usable contact skin, regardless of whether that skin is selected for collision.</dd></dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="#ae14afba92874f6489d293460662bcd73" title="superdex::Actor::RegisterQuery">RegisterQuery</a>, <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba5d8fb19888497a6b953ad49914197655" title="superdex::QueryType::SurfaceNodeNormals">QueryType::SurfaceNodeNormals</a>, <a class="el" href="#aa957985e5f68f29f94dbb083bba5ca3c" title="superdex::Actor::GetSurfaceMesh">GetSurfaceMesh</a>, <a class="el" href="#af4e978fc6049cae81405ae880325875b" title="superdex::Actor::GetSurfaceMeshNodePositionsLocal">GetSurfaceMeshNodePositionsLocal</a> </dd></dl>
+The node ordering corresponds to the mesh connectivity from <a class="el" href="#aa957985e5f68f29f94dbb083bba5ca3c" title="superdex::Actor::GetSurfaceMesh">GetSurfaceMesh</a>.</dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="#ae14afba92874f6489d293460662bcd73" title="superdex::Actor::RegisterQuery">RegisterQuery</a>, <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba5d8fb19888497a6b953ad49914197655" title="superdex::QueryType::SurfaceNodeNormals">QueryType::SurfaceNodeNormals</a>, <a class="el" href="#aa957985e5f68f29f94dbb083bba5ca3c" title="superdex::Actor::GetSurfaceMesh">GetSurfaceMesh</a>, <a class="el" href="#af4e978fc6049cae81405ae880325875b" title="superdex::Actor::GetSurfaceMeshNodePositionsLocal">GetSurfaceMeshNodePositionsLocal</a>, <a class="el" href="#a789c4e5b6be8e821044491e7e5e4a708" title="superdex::Actor::GetContactSkinMeshNodeNormalsLocal">GetContactSkinMeshNodeNormalsLocal</a> </dd></dl>
 
 </div>
 </div>
@@ -3279,10 +3402,8 @@ Supported for shell and rod actors whose shape has an authored usable contact sk
 <dd>
 Requires the actor to support <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebab08ada2a238aa5b8439550796728cc52" title="superdex::QueryType::SurfaceNodePositions">QueryType::SurfaceNodePositions</a>. </dd>
 <dd>
-The node ordering corresponds to the mesh connectivity from <a class="el" href="#aa957985e5f68f29f94dbb083bba5ca3c" title="superdex::Actor::GetSurfaceMesh">GetSurfaceMesh</a>. </dd>
-<dd>
-Supported for shell and rod actors whose shape has an authored usable contact skin, regardless of whether that skin is selected for collision.</dd></dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="#ae14afba92874f6489d293460662bcd73" title="superdex::Actor::RegisterQuery">RegisterQuery</a>, <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebab08ada2a238aa5b8439550796728cc52" title="superdex::QueryType::SurfaceNodePositions">QueryType::SurfaceNodePositions</a>, <a class="el" href="#aa957985e5f68f29f94dbb083bba5ca3c" title="superdex::Actor::GetSurfaceMesh">GetSurfaceMesh</a>, <a class="el" href="#a599cc94ec33a8a3c337bc43d85a6957e" title="superdex::Actor::GetSurfaceMeshNodeNormalsLocal">GetSurfaceMeshNodeNormalsLocal</a> </dd></dl>
+The node ordering corresponds to the mesh connectivity from <a class="el" href="#aa957985e5f68f29f94dbb083bba5ca3c" title="superdex::Actor::GetSurfaceMesh">GetSurfaceMesh</a>.</dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="#ae14afba92874f6489d293460662bcd73" title="superdex::Actor::RegisterQuery">RegisterQuery</a>, <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebab08ada2a238aa5b8439550796728cc52" title="superdex::QueryType::SurfaceNodePositions">QueryType::SurfaceNodePositions</a>, <a class="el" href="#aa957985e5f68f29f94dbb083bba5ca3c" title="superdex::Actor::GetSurfaceMesh">GetSurfaceMesh</a>, <a class="el" href="#a599cc94ec33a8a3c337bc43d85a6957e" title="superdex::Actor::GetSurfaceMeshNodeNormalsLocal">GetSurfaceMeshNodeNormalsLocal</a>, <a class="el" href="#ab35f4e770c9115621ee5fc94222a30c1" title="superdex::Actor::GetContactSkinMeshNodePositionsLocal">GetContactSkinMeshNodePositionsLocal</a> </dd></dl>
 
 </div>
 </div>
@@ -3371,12 +3492,12 @@ Supported for shell and rod actors whose shape has an authored usable contact sk
 <dl class="section return"><dt>Returns</dt><dd>A non-owning view of the actor's reference visual mesh, or an empty view if the actor has no visual mesh.</dd></dl>
 <dl class="section note"><dt>Note</dt><dd>The returned coordinates are reference visual-mesh positions in the actor's local frame. They do not include deformation for deformable actors. </dd>
 <dd>
-Includes visual mesh nodes not referenced by any visual triangle. Unlike surface mesh getters, visual mesh getters do not omit unreferenced nodes. </dd>
+Unlike surface mesh getters, visual mesh getters include any nodes that no visual triangle references. </dd>
 <dd>
 When linear visual-mesh skinning data is present, skinning indices refer to the node ordering returned by <a class="el" href="#a88745d7a8c15875010458a15dbd339c3" title="superdex::Actor::GetMesh">GetMesh</a>, not to the compact surface-node ordering returned by <a class="el" href="#aa957985e5f68f29f94dbb083bba5ca3c" title="superdex::Actor::GetSurfaceMesh">GetSurfaceMesh</a>. Rod visual mesh embeddings are nonlinear and are not exposed through this linear skinning field. </dd>
 <dd>
 The returned view remains valid until the actor is destroyed.</dd></dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1MeshDataView.html" title="superdex::MeshDataView">MeshDataView</a>, <a class="el" href="#a88745d7a8c15875010458a15dbd339c3" title="superdex::Actor::GetMesh">GetMesh</a>, <a class="el" href="#aa957985e5f68f29f94dbb083bba5ca3c" title="superdex::Actor::GetSurfaceMesh">GetSurfaceMesh</a>, <a class="el" href="#a7bb0080a24550e1ce3377c4358ed19d5" title="superdex::Actor::GetVisualMeshNodePositionsLocal">GetVisualMeshNodePositionsLocal</a>, <a class="el" href="#a32534e6342ae65c2db9d13327c17cf7a" title="superdex::Actor::GetVisualMeshNodeNormalsLocal">GetVisualMeshNodeNormalsLocal</a>, <a class="el" href="classsuperdex_1_1Context.html#ae28bb3db015766d22dc677100d24c6e7" title="superdex::Context::GetShapeVisualMesh">Context::GetShapeVisualMesh</a> </dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1MeshDataView.html" title="superdex::MeshDataView">MeshDataView</a>, <a class="el" href="#a88745d7a8c15875010458a15dbd339c3" title="superdex::Actor::GetMesh">GetMesh</a>, <a class="el" href="#aa957985e5f68f29f94dbb083bba5ca3c" title="superdex::Actor::GetSurfaceMesh">GetSurfaceMesh</a>, <a class="el" href="#a63bb41aedf1ce5e6d2bb5412517bb9eb" title="superdex::Actor::GetContactSkinMesh">GetContactSkinMesh</a>, <a class="el" href="#a7bb0080a24550e1ce3377c4358ed19d5" title="superdex::Actor::GetVisualMeshNodePositionsLocal">GetVisualMeshNodePositionsLocal</a>, <a class="el" href="#a32534e6342ae65c2db9d13327c17cf7a" title="superdex::Actor::GetVisualMeshNodeNormalsLocal">GetVisualMeshNodeNormalsLocal</a>, <a class="el" href="classsuperdex_1_1Context.html#ae28bb3db015766d22dc677100d24c6e7" title="superdex::Context::GetShapeVisualMesh">Context::GetShapeVisualMesh</a> </dd></dl>
 
 </div>
 </div>
@@ -3410,8 +3531,8 @@ The returned view remains valid until the actor is destroyed.</dd></dl>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Flattened normals (3 values per node: nx, ny, nz) in the actor's local frame. The number of nodes is available via <a class="el" href="#a55e31cae5e3dc623714dca180db8feef" title="superdex::Actor::GetVisualMesh">GetVisualMesh</a>. The order of the nodes is 1-to-1 with <a class="el" href="#a7bb0080a24550e1ce3377c4358ed19d5" title="superdex::Actor::GetVisualMeshNodePositionsLocal">GetVisualMeshNodePositionsLocal</a>. Normals for visual nodes not referenced by any visual triangle are zero.</dd></dl>
-<dl class="section note"><dt>Note</dt><dd>Includes visual mesh nodes not referenced by any visual triangle. Unlike surface mesh getters, visual mesh getters do not omit unreferenced nodes. </dd>
+<dl class="section return"><dt>Returns</dt><dd>Flattened normals (3 values per node: nx, ny, nz) in the actor's local frame. The number of nodes is available via <a class="el" href="#a55e31cae5e3dc623714dca180db8feef" title="superdex::Actor::GetVisualMesh">GetVisualMesh</a>. The order of the nodes is 1-to-1 with <a class="el" href="#a7bb0080a24550e1ce3377c4358ed19d5" title="superdex::Actor::GetVisualMeshNodePositionsLocal">GetVisualMeshNodePositionsLocal</a>. Normals of nodes that no visual triangle references are zero.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Unlike surface mesh getters, visual mesh getters include any nodes that no visual triangle references. </dd>
 <dd>
 Requires registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebac877891e4fc440725a9dae9bee7f9094" title="superdex::QueryType::VisualNodeNormals">QueryType::VisualNodeNormals</a> before the simulation step. Results are available after the simulation step completes. </dd>
 <dd>
@@ -3451,7 +3572,7 @@ Requires the actor to support <a class="el" href="namespacesuperdex.html#aed26e5
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Current node positions [m] of the visual mesh in the actor's local frame (3 values per node: x, y, z). The number of nodes is available via <a class="el" href="#a55e31cae5e3dc623714dca180db8feef" title="superdex::Actor::GetVisualMesh">GetVisualMesh</a>. The order of the nodes is 1-to-1 with <a class="el" href="#a32534e6342ae65c2db9d13327c17cf7a" title="superdex::Actor::GetVisualMeshNodeNormalsLocal">GetVisualMeshNodeNormalsLocal</a>.</dd></dl>
-<dl class="section note"><dt>Note</dt><dd>Includes visual mesh nodes not referenced by any visual triangle. Unlike surface mesh getters, visual mesh getters do not omit unreferenced nodes. </dd>
+<dl class="section note"><dt>Note</dt><dd>Unlike surface mesh getters, visual mesh getters include any nodes that no visual triangle references. </dd>
 <dd>
 Requires registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebabe3de1dd0501bfc110e59bbaaf52d0a5" title="superdex::QueryType::VisualNodePositions">QueryType::VisualNodePositions</a> before the simulation step. Results are available after the simulation step completes. </dd>
 <dd>
@@ -3695,7 +3816,7 @@ Requires the actor to support <a class="el" href="namespacesuperdex.html#aed26e5
 </dl>
 <dl class="section note"><dt>Note</dt><dd>When <code class="param">boundaryOnly</code> is false, this function supports only soft and shell actors. When true, it also supports articulated actors with a skin mesh, soft-skinned actors with a blended skin mesh, and rigid actors (dynamic or static) with tetrahedral or triangular mesh shapes. Rod actors and actors without a simulation mesh are not supported. </dd>
 <dd>
-When <code class="param">boundaryOnly</code> is false, requires registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba37dec7cb524e3361c59e40111038ab7f" title="superdex::QueryType::NodePositions">QueryType::NodePositions</a> before the simulation step. When true, requires registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebab08ada2a238aa5b8439550796728cc52" title="superdex::QueryType::SurfaceNodePositions">QueryType::SurfaceNodePositions</a> unless the surface mesh is linearly embedded in the simulation mesh. Results are available after the simulation step completes.</dd></dl>
+When <code class="param">boundaryOnly</code> is false, requires registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba37dec7cb524e3361c59e40111038ab7f" title="superdex::QueryType::NodePositions">QueryType::NodePositions</a> before the simulation step. When true, requires registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebab08ada2a238aa5b8439550796728cc52" title="superdex::QueryType::SurfaceNodePositions">QueryType::SurfaceNodePositions</a>. Results are available after the simulation step completes.</dd></dl>
 <dl class="section warning"><dt>Warning</dt><dd>This is a synchronous call and may be expensive. </dd></dl>
 
 </div>
@@ -3749,7 +3870,7 @@ When <code class="param">boundaryOnly</code> is false, requires registering <a c
 </dl>
 <dl class="section note"><dt>Note</dt><dd>When <code class="param">boundaryOnly</code> is false, this function supports only soft and shell actors. When true, it also supports articulated actors with a skin mesh, soft-skinned actors with a blended skin mesh, and rigid actors (dynamic or static) with tetrahedral or triangular mesh shapes. Rod actors and actors without a simulation mesh are not supported. </dd>
 <dd>
-When <code class="param">boundaryOnly</code> is false, requires registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba37dec7cb524e3361c59e40111038ab7f" title="superdex::QueryType::NodePositions">QueryType::NodePositions</a> before the simulation step. When true, requires registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebab08ada2a238aa5b8439550796728cc52" title="superdex::QueryType::SurfaceNodePositions">QueryType::SurfaceNodePositions</a> unless the surface mesh is linearly embedded in the simulation mesh. Results are available after the simulation step completes.</dd></dl>
+When <code class="param">boundaryOnly</code> is false, requires registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba37dec7cb524e3361c59e40111038ab7f" title="superdex::QueryType::NodePositions">QueryType::NodePositions</a> before the simulation step. When true, requires registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebab08ada2a238aa5b8439550796728cc52" title="superdex::QueryType::SurfaceNodePositions">QueryType::SurfaceNodePositions</a>. Results are available after the simulation step completes.</dd></dl>
 <dl class="section warning"><dt>Warning</dt><dd>This is a synchronous call and may be expensive. </dd></dl>
 
 </div>
@@ -3803,7 +3924,7 @@ When <code class="param">boundaryOnly</code> is false, requires registering <a c
 </dl>
 <dl class="section note"><dt>Note</dt><dd>When <code class="param">boundaryOnly</code> is false, this function supports only soft and shell actors. When true, it also supports articulated actors with a skin mesh, soft-skinned actors with a blended skin mesh, and rigid actors (dynamic or static) with tetrahedral or triangular mesh shapes. Rod actors and actors without a simulation mesh are not supported. </dd>
 <dd>
-When <code class="param">boundaryOnly</code> is false, requires registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba37dec7cb524e3361c59e40111038ab7f" title="superdex::QueryType::NodePositions">QueryType::NodePositions</a> before the simulation step. When true, requires registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebab08ada2a238aa5b8439550796728cc52" title="superdex::QueryType::SurfaceNodePositions">QueryType::SurfaceNodePositions</a> unless the surface mesh is linearly embedded in the simulation mesh. Results are available after the simulation step completes.</dd></dl>
+When <code class="param">boundaryOnly</code> is false, requires registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba37dec7cb524e3361c59e40111038ab7f" title="superdex::QueryType::NodePositions">QueryType::NodePositions</a> before the simulation step. When true, requires registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebab08ada2a238aa5b8439550796728cc52" title="superdex::QueryType::SurfaceNodePositions">QueryType::SurfaceNodePositions</a>. Results are available after the simulation step completes.</dd></dl>
 <dl class="section warning"><dt>Warning</dt><dd>This is a synchronous call and may be expensive. </dd></dl>
 
 </div>
@@ -4458,7 +4579,9 @@ The velocity override is applied once at the start of the next simulation step t
 <dd>
 Does not change velocity. </dd>
 <dd>
-Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.</dd></dl>
+Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called. </dd>
+<dd>
+Moves the actor without changing where the center of mass is within the actor (<a class="el" href="#a62c3b8bea02231f1711ba6e977a502f2" title="superdex::Actor::GetRigidCenterOfMassLocal">GetRigidCenterOfMassLocal</a>). To change that, use <a class="el" href="#a53a647002f2457dc46e2d35e8b653758" title="superdex::Actor::SetInertiaProperties">SetInertiaProperties</a>.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#adeddb626c4b8fefb946a31f454708d47" title="superdex::Actor::GetCenterOfMassTransform">GetCenterOfMassTransform</a>, <a class="el" href="#ad5cda8874277a833d7a1ade811022443" title="superdex::Actor::SetRootTransform">SetRootTransform</a> </dd></dl>
 
 </div>
@@ -4737,7 +4860,11 @@ A finite but physically invalid moment of inertia tensor (negative principal mom
 <dd>
 Re-anchors the density reference state. Subsequent <a class="el" href="#a7d14590d4c8235721d9f2bce477c77b0" title="superdex::Actor::SetDensity">SetDensity</a> calls rescale mass and moment of inertia proportionally about the new values; center of mass is unchanged by <a class="el" href="#a7d14590d4c8235721d9f2bce477c77b0" title="superdex::Actor::SetDensity">SetDensity</a>. </dd>
 <dd>
-After this call, <a class="el" href="#adf056a687623798bb4f83d1e2433bde0" title="superdex::Actor::GetDensity">GetDensity</a> returns bulk density mass / volume.</dd></dl>
+After this call, <a class="el" href="#adf056a687623798bb4f83d1e2433bde0" title="superdex::Actor::GetDensity">GetDensity</a> returns bulk density mass / volume. </dd>
+<dd>
+The root transform (<a class="el" href="#a39d4ab5ed8a534693247388a519152aa" title="superdex::Actor::GetRootTransform">GetRootTransform</a>) and the velocity of every material point are preserved, so changing the center of mass does not move the actor. <a class="el" href="#a8d59ac838a12c0254df800193e774e5f" title="superdex::Actor::GetLinearVelocity">GetLinearVelocity</a>, the center-of-mass velocity, changes accordingly when the actor is rotating. To place the new center of mass at the previous center-of-mass pose instead, call <a class="el" href="#adeddb626c4b8fefb946a31f454708d47" title="superdex::Actor::GetCenterOfMassTransform">GetCenterOfMassTransform</a> before this call and pass the result to <a class="el" href="#aae78c9d9f304182ece7c9c5159d62f16" title="superdex::Actor::SetCenterOfMassTransform">SetCenterOfMassTransform</a> afterwards. </dd>
+<dd>
+The center of mass cannot be changed while the actor has constraints or translation boundary conditions. Set the center of mass before adding them. Changing only mass or moment of inertia remains supported.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#ab1894d28269b8811cf34a0663a310561" title="superdex::Actor::GetMass">GetMass</a>, <a class="el" href="#adf056a687623798bb4f83d1e2433bde0" title="superdex::Actor::GetDensity">GetDensity</a>, <a class="el" href="#a7d14590d4c8235721d9f2bce477c77b0" title="superdex::Actor::SetDensity">SetDensity</a>, <a class="el" href="#a62c3b8bea02231f1711ba6e977a502f2" title="superdex::Actor::GetRigidCenterOfMassLocal">GetRigidCenterOfMassLocal</a>, <a class="el" href="#ac32647b329cc3c01399dbc6a0c9fc7bf" title="superdex::Actor::GetRigidMomentOfInertiaLocal">GetRigidMomentOfInertiaLocal</a> </dd></dl>
 
 </div>
@@ -5077,7 +5204,7 @@ Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in th
 <dd>
 For nested soft actors, it zeroes only elastic displacement and velocity. Skeleton-driven displacement and velocity are preserved. </dd>
 <dd>
-For rod actors, it zeroes both the translational displacement DoFs and the twist-angle DoFs. </dd>
+For rod actors, it zeroes both the translational displacement DoFs and the twist-angle DoFs, and returns each element's cross-section to its rest orientation. </dd>
 <dd>
 Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called. </dd></dl>
 

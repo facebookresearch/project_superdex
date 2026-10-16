@@ -3286,7 +3286,9 @@ The exact actors are used; nested actors are not included automatically.</dd></d
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Enabling additional recording features will generally increase the recording file size and degrade performance. </dd>
 <dd>
-If the scene is already recording, the previous recording is stopped before starting the new one.</dd></dl>
+If the scene is already recording, the previous recording is stopped before starting the new one. </dd>
+<dd>
+Islands do not sleep while the scene is recording, so recording can change the simulation results.</dd></dl>
 <dl class="section warning"><dt>Warning</dt><dd>Requires a build with HDF5 support. </dd>
 <dd>
 The recording system may undergo a substantial refactor to expand its capabilities. Its API and recorded file format may change in future releases.</dd></dl>

@@ -185,7 +185,7 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a4a4f21370b2f8f155c977169f3b05d62" id="r_a4a4f21370b2f8f155c977169f3b05d62"><td class="memItemLeft">std::optional&lt; <a class="el" href="classsuperdex_1_1DynamicArray.html">DynamicArray</a>&lt; int &gt; &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a4a4f21370b2f8f155c977169f3b05d62">constrainedNodes</a></td></tr>
 <tr class="memdesc:a4a4f21370b2f8f155c977169f3b05d62"><td class="mdescLeft">&#160;</td><td class="mdescRight">Indices of mesh nodes that are constrained.  <br /></td></tr>
 <tr class="memitem:aa452c1d459ba0619a1e5c23b3004a70e" id="r_aa452c1d459ba0619a1e5c23b3004a70e"><td class="memItemLeft">std::optional&lt; <a class="el" href="structsuperdex_1_1MeshData.html">MeshData</a> &gt;&#160;</td><td class="memItemRight"><a class="el" href="#aa452c1d459ba0619a1e5c23b3004a70e">contactSkinMesh</a></td></tr>
-<tr class="memdesc:aa452c1d459ba0619a1e5c23b3004a70e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Optional triangular mesh used for surface queries and, when selected as a shell or rod actor's contact geometry, for contact quadrature.  <br /></td></tr>
+<tr class="memdesc:aa452c1d459ba0619a1e5c23b3004a70e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Optional triangular mesh exposed through the contact-skin queries and, when selected as a deformable actor's contact geometry, for contact quadrature.  <br /></td></tr>
 <tr class="memitem:a7df5512bbf21d491cbb8ac9c79248d29" id="r_a7df5512bbf21d491cbb8ac9c79248d29"><td class="memItemLeft">std::optional&lt; <a class="el" href="classsuperdex_1_1DynamicArray.html">DynamicArray</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> &gt; &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a7df5512bbf21d491cbb8ac9c79248d29">elementFrameAxes</a></td></tr>
 <tr class="memdesc:a7df5512bbf21d491cbb8ac9c79248d29"><td class="mdescLeft">&#160;</td><td class="mdescRight">Per-element reference frame axes for polyline meshes.  <br /></td></tr>
 <tr class="memitem:a473ad2cc11af6b5106ce0f8f795d3dc1" id="r_a473ad2cc11af6b5106ce0f8f795d3dc1"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a473ad2cc11af6b5106ce0f8f795d3dc1">experimentalDataDetected</a> = false</td></tr>
@@ -327,7 +327,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00207">207</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00208">208</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
 
 </div>
 </div>
@@ -343,7 +343,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00222">222</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00223">223</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
 
 </div>
 </div>
@@ -361,7 +361,7 @@ Public Attributes</h2></td></tr>
 
 <p>Indices of mesh nodes that are constrained. </p>
 
-<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00210">210</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00211">211</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
 
 </div>
 </div>
@@ -377,10 +377,10 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Optional triangular mesh used for surface queries and, when selected as a shell or rod actor's contact geometry, for contact quadrature. </p>
-<p>For triangular and tetrahedral primary meshes, the skinning data is a node-based linear embedding whose indices reference primary-mesh nodes. For polylines, the indices reference primary-mesh elements and define the rod's element-based embedding. </p>
+<p>Optional triangular mesh exposed through the contact-skin queries and, when selected as a deformable actor's contact geometry, for contact quadrature. </p>
+<p>Skinning data is required. For triangular and tetrahedral primary meshes, it is a node-based linear embedding whose indices reference primary-mesh nodes. For polylines, the indices reference primary-mesh elements and define the rod's element-based embedding. Every contact-skin node must be referenced by at least one triangle. </p>
 
-<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00206">206</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00207">207</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
 
 </div>
 </div>
@@ -399,7 +399,7 @@ Public Attributes</h2></td></tr>
 <p>Per-element reference frame axes for polyline meshes. </p>
 <p>Flat array of unit vectors (3 reals per element), each orthogonal to its element's tangent. Only valid when the mesh is a polyline (<a class="el" href="structsuperdex_1_1MeshData.html#a6eda616c7e590123360b8ab40b2c48d3" title="MeshData::nodesPerElement">MeshData::nodesPerElement</a> == 2). </p>
 
-<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00219">219</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00220">220</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
 
 </div>
 </div>
@@ -418,7 +418,7 @@ Public Attributes</h2></td></tr>
 <p>True if the loaded model contains unsupported experimental data. </p>
 <p>Some model files contain additional data for experimental features (e.g. ROMs), which cannot be represented by this struct. This flag is set during loading when such data is detected. </p>
 
-<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00239">239</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00240">240</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
 
 </div>
 </div>
@@ -434,7 +434,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00230">230</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00231">231</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
 
 </div>
 </div>
@@ -466,7 +466,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00223">223</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00224">224</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
 
 </div>
 </div>
@@ -482,7 +482,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00227">227</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00228">228</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
 
 </div>
 </div>
@@ -498,7 +498,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00224">224</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="model__data_8h_source.html#l00225">225</a> of file <a class="el" href="model__data_8h_source.html">model_data.h</a>.</p>
 
 </div>
 </div>

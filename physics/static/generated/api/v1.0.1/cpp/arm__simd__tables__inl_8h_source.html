@@ -179,35 +179,39 @@ $(function(){initNavTree('arm__simd__tables__inl_8h_source.html','',''); });
 <div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span> </div>
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="keyword">namespace </span>superdex::arm_simd {</div>
 <div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span> </div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="comment">// Byte shuffle pattern lookup table for StoreSelected. Used Simd&lt;double, 2&gt;, Simd&lt;int64_t, 4&gt;</span></div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><a class="code hl_define" href="mochi__platform_8h.html#ae611825897f4f5923275d7f6b0b4301a">MOCHI_CONSERVATIVE_CACHE_ALIGN</a> <span class="keyword">static</span> <span class="keyword">const</span> uint8_t kStoreSelectedShuffleTableD2[4][16] = {</div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},</div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},</div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    {8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7},</div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}};</div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span><span class="comment">// Byte shuffle pattern lookup table for StoreSelected. Used Simd&lt;float, 4&gt;, Simd&lt;int, 4&gt;</span></div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span><a class="code hl_define" href="mochi__platform_8h.html#ae611825897f4f5923275d7f6b0b4301a">MOCHI_CONSERVATIVE_CACHE_ALIGN</a> <span class="keyword">static</span> <span class="keyword">const</span> uint8_t kStoreSelectedShuffleTableS4[16][16] = {</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},</div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},</div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    {4, 5, 6, 7, 0, 1, 2, 3, 8, 9, 10, 11, 12, 13, 14, 15},</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    {8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 6, 7, 12, 13, 14, 15},</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    {0, 1, 2, 3, 8, 9, 10, 11, 4, 5, 6, 7, 12, 13, 14, 15},</div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    {4, 5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 12, 13, 14, 15},</div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="comment">// Inactive lanes of the runtime-count LoadTransposed load from here, so they are zero.</span></div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span><a class="code hl_define" href="mochi__platform_8h.html#ae611825897f4f5923275d7f6b0b4301a">MOCHI_CONSERVATIVE_CACHE_ALIGN</a> <span class="keyword">inline</span> <span class="keyword">constexpr</span> T kZeroTuple[3] = {};</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span> </div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span><span class="comment">// Byte shuffle pattern lookup table for StoreSelected. Used Simd&lt;double, 2&gt;, Simd&lt;int64_t, 4&gt;</span></div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span><a class="code hl_define" href="mochi__platform_8h.html#ae611825897f4f5923275d7f6b0b4301a">MOCHI_CONSERVATIVE_CACHE_ALIGN</a> <span class="keyword">static</span> <span class="keyword">const</span> uint8_t kStoreSelectedShuffleTableD2[4][16] = {</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    {8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7},</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}};</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> </div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span><span class="comment">// Byte shuffle pattern lookup table for StoreSelected. Used Simd&lt;float, 4&gt;, Simd&lt;int, 4&gt;</span></div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span><a class="code hl_define" href="mochi__platform_8h.html#ae611825897f4f5923275d7f6b0b4301a">MOCHI_CONSERVATIVE_CACHE_ALIGN</a> <span class="keyword">static</span> <span class="keyword">const</span> uint8_t kStoreSelectedShuffleTableS4[16][16] = {</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    {4, 5, 6, 7, 0, 1, 2, 3, 8, 9, 10, 11, 12, 13, 14, 15},</div>
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},</div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    {12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},</div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    {0, 1, 2, 3, 12, 13, 14, 15, 4, 5, 6, 7, 8, 9, 10, 11},</div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    {4, 5, 6, 7, 12, 13, 14, 15, 0, 1, 2, 3, 8, 9, 10, 11},</div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    {0, 1, 2, 3, 4, 5, 6, 7, 12, 13, 14, 15, 8, 9, 10, 11},</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    {8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7},</div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    {0, 1, 2, 3, 8, 9, 10, 11, 12, 13, 14, 15, 4, 5, 6, 7},</div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    {4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3},</div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}};</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span> </div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>} <span class="comment">// namespace superdex::arm_simd</span></div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span> </div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span><span class="preprocessor">#endif </span><span class="comment">// MOCHI_USE_SIMD &amp;&amp; MOCHI_ARCH_ARM_NEON</span></div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    {8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 6, 7, 12, 13, 14, 15},</div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    {0, 1, 2, 3, 8, 9, 10, 11, 4, 5, 6, 7, 12, 13, 14, 15},</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    {4, 5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 12, 13, 14, 15},</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    {12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    {0, 1, 2, 3, 12, 13, 14, 15, 4, 5, 6, 7, 8, 9, 10, 11},</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    {4, 5, 6, 7, 12, 13, 14, 15, 0, 1, 2, 3, 8, 9, 10, 11},</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    {0, 1, 2, 3, 4, 5, 6, 7, 12, 13, 14, 15, 8, 9, 10, 11},</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    {8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7},</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    {0, 1, 2, 3, 8, 9, 10, 11, 12, 13, 14, 15, 4, 5, 6, 7},</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    {4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3},</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}};</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span> </div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>} <span class="comment">// namespace superdex::arm_simd</span></div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span> </div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span><span class="preprocessor">#endif </span><span class="comment">// MOCHI_USE_SIMD &amp;&amp; MOCHI_ARCH_ARM_NEON</span></div>
 <div class="ttc" id="aarm__simd__inl_8h_html"><div class="ttname"><a href="arm__simd__inl_8h.html">arm_simd_inl.h</a></div></div>
 <div class="ttc" id="amochi__platform_8h_html_ae611825897f4f5923275d7f6b0b4301a"><div class="ttname"><a href="mochi__platform_8h.html#ae611825897f4f5923275d7f6b0b4301a">MOCHI_CONSERVATIVE_CACHE_ALIGN</a></div><div class="ttdeci">#define MOCHI_CONSERVATIVE_CACHE_ALIGN</div><div class="ttdoc">Aligns the memory of a variable so it starts at the beginning of a cache line.</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00502">mochi_platform.h:502</a></div></div>
 </div><!-- fragment --></div><!-- contents -->

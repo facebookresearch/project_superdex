@@ -179,17 +179,17 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a37cb48870c08f45a7cd7cac135c9961d" id="r_a37cb48870c08f45a7cd7cac135c9961d"><td class="memItemLeft"><a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592c">ConvergenceStatus</a>&#160;</td><td class="memItemRight"><a class="el" href="#a37cb48870c08f45a7cd7cac135c9961d">convergenceStatus</a> = <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592ca6adf97f83acf6453d4a6a4b1070f3754">ConvergenceStatus::None</a></td></tr>
 <tr class="memdesc:a37cb48870c08f45a7cd7cac135c9961d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Aggregate convergence status of the scene in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>.  <br /></td></tr>
 <tr class="memitem:a6d5d09f153ecec1c8adc2aa87534c9fa" id="r_a6d5d09f153ecec1c8adc2aa87534c9fa"><td class="memItemLeft">int&#160;</td><td class="memItemRight"><a class="el" href="#a6d5d09f153ecec1c8adc2aa87534c9fa">maxLineSearchIters</a> = 0</td></tr>
-<tr class="memdesc:a6d5d09f153ecec1c8adc2aa87534c9fa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Maximum number of line-search iterations per Newton solve across all islands and integration stages in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>.  <br /></td></tr>
+<tr class="memdesc:a6d5d09f153ecec1c8adc2aa87534c9fa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Maximum number of line-search iterations per Newton solve across all awake islands and integration stages in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>.  <br /></td></tr>
 <tr class="memitem:a74fa55ba7727bd5292bebd8230ed12d9" id="r_a74fa55ba7727bd5292bebd8230ed12d9"><td class="memItemLeft">int&#160;</td><td class="memItemRight"><a class="el" href="#a74fa55ba7727bd5292bebd8230ed12d9">maxNonLinearIters</a> = 0</td></tr>
-<tr class="memdesc:a74fa55ba7727bd5292bebd8230ed12d9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Maximum number of non-linear solver iterations across all islands and integration stages in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>.  <br /></td></tr>
+<tr class="memdesc:a74fa55ba7727bd5292bebd8230ed12d9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Maximum number of non-linear solver iterations across all awake islands and integration stages in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>.  <br /></td></tr>
 <tr class="memitem:af5e85c4c3c8a53b539a529a0e99035aa" id="r_af5e85c4c3c8a53b539a529a0e99035aa"><td class="memItemLeft">double&#160;</td><td class="memItemRight"><a class="el" href="#af5e85c4c3c8a53b539a529a0e99035aa">residualNorm</a> = 0.0</td></tr>
-<tr class="memdesc:af5e85c4c3c8a53b539a529a0e99035aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Aggregate residual norm across all islands and integration stages in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>.  <br /></td></tr>
+<tr class="memdesc:af5e85c4c3c8a53b539a529a0e99035aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Aggregate residual norm across all awake islands and integration stages in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Solver convergence metrics from the last simulation step. </p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classsuperdex_1_1Scene.html#a51ee469cd49c001611bb8ca9763de4bc" title="superdex::Scene::GetSolverStats">Scene::GetSolverStats</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00530">530</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00536">536</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 </div><a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
 <a id="aa9dd3d4e50ecec646787c3b754928716" name="aa9dd3d4e50ecec646787c3b754928716"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aa9dd3d4e50ecec646787c3b754928716">&#9670;&#160;</a></span>operator==()</h2>
@@ -230,10 +230,11 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Aggregate convergence status of the scene in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>. </p>
-<p>Returns the worst convergence status across all dynamic actors: <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592ca531b4ea128144242345020b6115538ce" title="superdex::ConvergenceStatus::Diverged">ConvergenceStatus::Diverged</a> if any actor diverged, <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592cac23e2b09ebe6bf4cb5e2a9abe85c0be2" title="superdex::ConvergenceStatus::Stopped">ConvergenceStatus::Stopped</a> if any actor's solver was stopped, <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592cada5418b1eb4e80d05f2c1c7c4fa1b6ec" title="superdex::ConvergenceStatus::Converged">ConvergenceStatus::Converged</a> if all dynamic actors converged, <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592ca6adf97f83acf6453d4a6a4b1070f3754" title="superdex::ConvergenceStatus::None">ConvergenceStatus::None</a> if no dynamic actors exist, <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a> has not been called yet or the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a> was with zero time step.</p>
+<p>Returns the worst convergence status across all dynamic actors in awake islands: <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592ca531b4ea128144242345020b6115538ce" title="superdex::ConvergenceStatus::Diverged">ConvergenceStatus::Diverged</a> if any actor diverged, <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592cac23e2b09ebe6bf4cb5e2a9abe85c0be2" title="superdex::ConvergenceStatus::Stopped">ConvergenceStatus::Stopped</a> if any actor's solver was stopped, <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592cada5418b1eb4e80d05f2c1c7c4fa1b6ec" title="superdex::ConvergenceStatus::Converged">ConvergenceStatus::Converged</a> if all dynamic actors in awake islands converged, <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592ca6adf97f83acf6453d4a6a4b1070f3754" title="superdex::ConvergenceStatus::None">ConvergenceStatus::None</a> if no dynamic actors exist, all islands are asleep, <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a> has not been called yet or the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a> was with zero time step.</p>
+<dl class="section note"><dt>Note</dt><dd>Unlike <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592ca531b4ea128144242345020b6115538ce" title="superdex::ConvergenceStatus::Diverged">ConvergenceStatus::Diverged</a>, <a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592cac23e2b09ebe6bf4cb5e2a9abe85c0be2" title="superdex::ConvergenceStatus::Stopped">ConvergenceStatus::Stopped</a> does not indicate that the step failed. It means that the nonlinear solve reached a stopping criterion, such as the maximum number of iterations, before meeting its residual tolerances, which may be stricter than the scene requires.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="namespacesuperdex.html#a38f8f32d5dc7f9828210a4ea756f592c" title="superdex::ConvergenceStatus">ConvergenceStatus</a>, <a class="el" href="classsuperdex_1_1Actor.html#af15c889d60a02d6faf4bf57c21c9a70d" title="superdex::Actor::GetConvergenceStatus">Actor::GetConvergenceStatus</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00537">537</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00543">543</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -249,9 +250,9 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Maximum number of line-search iterations per Newton solve across all islands and integration stages in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>. </p>
+<p>Maximum number of line-search iterations per Newton solve across all awake islands and integration stages in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00535">535</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00541">541</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -267,9 +268,9 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Maximum number of non-linear solver iterations across all islands and integration stages in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>. </p>
+<p>Maximum number of non-linear solver iterations across all awake islands and integration stages in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00531">531</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00537">537</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -285,10 +286,10 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Aggregate residual norm across all islands and integration stages in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>. </p>
+<p>Aggregate residual norm across all awake islands and integration stages in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>. </p>
 <p>Computed as the root mean square across integration stages of the L2 norm of per-island residual norms. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00533">533</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00539">539</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>

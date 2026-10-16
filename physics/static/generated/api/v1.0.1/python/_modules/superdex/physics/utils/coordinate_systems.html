@@ -489,6 +489,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_target_system</span> <span class="o">=</span> <span class="n">target_system</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_source_to_target</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_source_to_target</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">target_axes</span> <span class="o">@</span> <span class="n">source_axes</span><span class="o">.</span><span class="n">T</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_encodes_reflection</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">det</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_source_to_target</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mf">0.0</span>
+        <span class="p">)</span>
 
 <div class="viewcode-block" id="CoordinateTransform.source_system"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateTransform.source_system">[docs]</a>    <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">source_system</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CoordinateSystem</span><span class="p">:</span>
@@ -513,7 +516,7 @@
 <div class="viewcode-block" id="CoordinateTransform.encodes_reflection"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateTransform.encodes_reflection">[docs]</a>    <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">encodes_reflection</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Determines if the coordinate transform encodes a reflection.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">det</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_source_to_target</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mf">0.0</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_encodes_reflection</span></div>
 
 <div class="viewcode-block" id="CoordinateTransform.direction_to_target"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateTransform.direction_to_target">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">direction_to_target</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">direction</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">]</span>
@@ -524,12 +527,13 @@
 <span class="sd">        the rotation/reflection component of the transformation.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            direction: A 3D direction vector in source coordinates.</span>
+<span class="sd">            direction: A 3D direction vector, or an (N, 3) array of them, in</span>
+<span class="sd">                source coordinates.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            The direction vector transformed to target coordinates.</span>
+<span class="sd">            The direction vector(s) transformed to target coordinates.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_to_target</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">@</span> <span class="n">direction</span></div>
+        <span class="k">return</span> <span class="n">direction</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_to_target</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">T</span></div>
 
 <div class="viewcode-block" id="CoordinateTransform.position_to_target"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateTransform.position_to_target">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">position_to_target</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -542,13 +546,14 @@
 <span class="sd">        (e.g., for meters to centimeters conversion).</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            position: A 3D position in source coordinates.</span>
+<span class="sd">            position: A 3D position, or an (N, 3) array of them, in source</span>
+<span class="sd">                coordinates.</span>
 <span class="sd">            scale: Optional scale factor to apply (default 1.0).</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            The position transformed to target coordinates.</span>
+<span class="sd">            The position(s) transformed to target coordinates.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_to_target</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">@</span> <span class="n">position</span> <span class="o">*</span> <span class="n">scale</span></div>
+        <span class="k">return</span> <span class="n">position</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_to_target</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">scale</span></div>
 
 <div class="viewcode-block" id="CoordinateTransform.rotation_to_target"><a class="viewcode-back" href="../../../../api/utilities.html#superdex.physics.utils.coordinate_systems.CoordinateTransform.rotation_to_target">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">rotation_to_target</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">quaternion</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">]</span>
@@ -567,23 +572,20 @@
 <span class="sd">        3. Keep the scalar component (w) unchanged.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            quaternion: A rotation quaternion in [x, y, z, w] format (scipy convention).</span>
+<span class="sd">            quaternion: A rotation quaternion in [x, y, z, w] format (scipy</span>
+<span class="sd">                convention), or an (N, 4) array of them.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            The quaternion transformed to target coordinates in [x, y, z, w] format.</span>
+<span class="sd">            The quaternion(s) transformed to target coordinates in [x, y, z, w]</span>
+<span class="sd">            format.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">quaternion</span>
-
-        <span class="c1"># If handedness flips, negate the quaternion axis</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">encodes_reflection</span><span class="p">:</span>
-            <span class="n">axis</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="n">x</span><span class="p">,</span> <span class="o">-</span><span class="n">y</span><span class="p">,</span> <span class="o">-</span><span class="n">z</span><span class="p">])</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">axis</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">])</span>
-
-        <span class="c1"># Transform the axis using the direction transformation</span>
-        <span class="n">axis_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">direction_to_target</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">axis_out</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis_out</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis_out</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">w</span><span class="p">])</span></div></div>
+        <span class="n">quaternion</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">quaternion</span><span class="p">)</span>
+        <span class="n">axis</span> <span class="o">=</span> <span class="n">quaternion</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_encodes_reflection</span><span class="p">:</span>
+            <span class="n">axis</span> <span class="o">=</span> <span class="o">-</span><span class="n">axis</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+            <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">direction_to_target</span><span class="p">(</span><span class="n">axis</span><span class="p">),</span> <span class="n">quaternion</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">3</span><span class="p">:]],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span>
+        <span class="p">)</span></div></div>
 
 
 <span class="c1">########################################################################################</span>

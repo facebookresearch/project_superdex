@@ -186,7 +186,7 @@ Public Attributes</h2></td></tr>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Parameters for instantiating a <a class="el" href="structsuperdex_1_1prefab_1_1ScenePrefab.html" title="superdex::prefab::ScenePrefab">ScenePrefab</a> into a <a class="el" href="classsuperdex_1_1Scene.html" title="superdex::Scene">Scene</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00339">339</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00340">340</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 </div><a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
 <a id="a820b8de463fcd1da305b93b3819b83e1" name="a820b8de463fcd1da305b93b3819b83e1"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a820b8de463fcd1da305b93b3819b83e1">&#9670;&#160;</a></span>applySceneSettings</h2>
@@ -203,7 +203,7 @@ Public Attributes</h2></td></tr>
 <p>Whether to apply top-level scene settings. </p>
 <p>When true, <a class="el" href="namespacesuperdex_1_1prefab.html#a4d9b7d18b6e1a0fe549bd1b37d1a2b37" title="superdex::prefab::AddToScene">AddToScene</a> applies gravity and solver overrides from the <a class="el" href="structsuperdex_1_1prefab_1_1SceneParams.html" title="superdex::prefab::SceneParams">SceneParams</a> of the top-level prefab. Omitted overrides preserve existing scene values. When false, neither override is applied. <a class="el" href="classsuperdex_1_1Scene.html" title="Represents a simulation scene.">Scene</a> settings from nested prefabs are always ignored. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00344">344</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00345">345</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -222,7 +222,7 @@ Public Attributes</h2></td></tr>
 <p>Optional name prefix for created actors. </p>
 <p><a class="el" href="classsuperdex_1_1Actor.html" title="Represents a simulated body (actor) in a scene.">Actor</a> names are formatted based on their hierarchy paths. If this string is not empty, it will be used as the first token in the path ("prefabName/actorName", "prefabName/nestedPrefabName/actorName", etc.) </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00340">340</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00341">341</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -241,7 +241,7 @@ Public Attributes</h2></td></tr>
 <p>Rotation quaternion [x, y, z, w] of the new prefab in world-space. </p>
 <dl class="section note"><dt>Note</dt><dd>Must be finite and non-zero. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00342">342</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00343">343</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -284,7 +284,7 @@ Public Attributes</h2></td></tr>
 <dd>
 Authoring with <a class="el" href="structsuperdex_1_1RigidActorParams.html#a47020b23ea29d745e1d249e6b6e37477" title="superdex::RigidActorParams::mass">RigidActorParams::mass</a> = M is equivalent to authoring with the implied density M / V_unit; under prefab scale the density is preserved and mass scales with the absolute volume scale, so the result is "the same material at a bigger size." For a purely uniform effective scale s, this mass factor is s^3. If you need a fixed mass that does NOT scale with the prefab, set the mass at runtime via <a class="el" href="classsuperdex_1_1Actor.html#a7d14590d4c8235721d9f2bce477c77b0" title="superdex::Actor::SetDensity">Actor::SetDensity</a> after the actor is instantiated. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00341">341</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00342">342</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -303,7 +303,7 @@ Authoring with <a class="el" href="structsuperdex_1_1RigidActorParams.html#a4702
 <p>Translation (position) of the new prefab in world-space. </p>
 <dl class="section note"><dt>Note</dt><dd>Must be finite. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00343">343</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00344">344</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>

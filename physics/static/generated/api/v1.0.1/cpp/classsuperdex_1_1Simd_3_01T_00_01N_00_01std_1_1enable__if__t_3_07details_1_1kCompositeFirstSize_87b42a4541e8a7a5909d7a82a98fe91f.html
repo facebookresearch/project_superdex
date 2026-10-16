@@ -268,6 +268,7 @@ Static Public Member Functions</h2></td></tr>
 <tr class="memitem:a19dcb969e4a3a94134bd0a53133812e7 template"><td class="memItemLeft">static <a class="el" href="#a7de62be5aa174d06fd11c64cde7c04fe">Scalar</a>&#160;</td><td class="memItemRight"><a class="el" href="#a19dcb969e4a3a94134bd0a53133812e7">HProd</a> (<a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> a)</td></tr>
 <tr class="memitem:a8eced5e1f023e6a3892b2724ffd1c553" id="r_a8eced5e1f023e6a3892b2724ffd1c553"><td class="memTemplParams" colspan="2">template&lt;int SZ = kSize&gt; </td></tr>
 <tr class="memitem:a8eced5e1f023e6a3892b2724ffd1c553 template"><td class="memItemLeft">static <a class="el" href="#a7de62be5aa174d06fd11c64cde7c04fe">Scalar</a>&#160;</td><td class="memItemRight"><a class="el" href="#a8eced5e1f023e6a3892b2724ffd1c553">HSum</a> (<a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> a)</td></tr>
+<tr class="memitem:a0df0f7214d57c5b77c1adb7263b390c1" id="r_a0df0f7214d57c5b77c1adb7263b390c1"><td class="memItemLeft">static <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&#160;</td><td class="memItemRight"><a class="el" href="#a0df0f7214d57c5b77c1adb7263b390c1">HSumEach</a> (<a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> a, <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> b, <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> c, <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> d)</td></tr>
 <tr class="memitem:ab1d7b9299b3019e6676c3844e6daa85e" id="r_ab1d7b9299b3019e6676c3844e6daa85e"><td class="memItemLeft">static <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&#160;</td><td class="memItemRight"><a class="el" href="#ab1d7b9299b3019e6676c3844e6daa85e">Ln</a> (<a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> a)</td></tr>
 <tr class="memitem:a4105709cdfa81490ec2118c9971ac90a" id="r_a4105709cdfa81490ec2118c9971ac90a"><td class="memItemLeft">static <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&#160;</td><td class="memItemRight"><a class="el" href="#a4105709cdfa81490ec2118c9971ac90a">Load</a> (<a class="el" href="#a7de62be5aa174d06fd11c64cde7c04fe">Scalar</a> const *ptr, int n)</td></tr>
 <tr class="memitem:afd8f344d9b0317d173bd85918dd8e273" id="r_afd8f344d9b0317d173bd85918dd8e273"><td class="memTemplParams" colspan="2">template&lt;int SZ = kSize&gt; </td></tr>
@@ -276,6 +277,7 @@ Static Public Member Functions</h2></td></tr>
 <tr class="memitem:a4ec9299495f72fc4511dc34b7c8377c2 template"><td class="memItemLeft">static <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&#160;</td><td class="memItemRight"><a class="el" href="#a4ec9299495f72fc4511dc34b7c8377c2">LoadIndexed</a> (<a class="el" href="#a7de62be5aa174d06fd11c64cde7c04fe">Scalar</a> const *ptr, <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&lt; IntT, <a class="el" href="#a4b026f86e0e80712f85511149f922252">kSize</a> &gt; const &amp;indices)</td></tr>
 <tr class="memitem:abd58b873fbf98b6daf5c8fb790ec5967" id="r_abd58b873fbf98b6daf5c8fb790ec5967"><td class="memTemplParams" colspan="2">template&lt;int kTupleCount = kSize, class... OutputVectors&gt; </td></tr>
 <tr class="memitem:abd58b873fbf98b6daf5c8fb790ec5967 template"><td class="memItemLeft">static void&#160;</td><td class="memItemRight"><a class="el" href="#abd58b873fbf98b6daf5c8fb790ec5967">LoadTransposed</a> (<a class="el" href="#a7de62be5aa174d06fd11c64cde7c04fe">Scalar</a> const *ptr, OutputVectors &amp;... out)</td></tr>
+<tr class="memitem:a90b6189c42a98d399dd223584ced6979" id="r_a90b6189c42a98d399dd223584ced6979"><td class="memItemLeft">static void&#160;</td><td class="memItemRight"><a class="el" href="#a90b6189c42a98d399dd223584ced6979">LoadTransposed</a> (<a class="el" href="#a7de62be5aa174d06fd11c64cde7c04fe">Scalar</a> const *ptr, <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> &amp;out0, <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> &amp;out1, <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> &amp;out2, int count)</td></tr>
 <tr class="memitem:a7fddfed9dab2d9bd068b49fec114af9c" id="r_a7fddfed9dab2d9bd068b49fec114af9c"><td class="memItemLeft">static <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&#160;</td><td class="memItemRight"><a class="el" href="#a7fddfed9dab2d9bd068b49fec114af9c">Max</a> (<a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> a, <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> b)</td></tr>
 <tr class="memitem:a9311c563a3b31f82bd4a7153151103ee" id="r_a9311c563a3b31f82bd4a7153151103ee"><td class="memItemLeft">static <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&#160;</td><td class="memItemRight"><a class="el" href="#a9311c563a3b31f82bd4a7153151103ee">Min</a> (<a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> a, <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> b)</td></tr>
 <tr class="memitem:a7329271b7c09c8b81d16c0d50e9add93" id="r_a7329271b7c09c8b81d16c0d50e9add93"><td class="memItemLeft">static <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&#160;</td><td class="memItemRight"><a class="el" href="#a7329271b7c09c8b81d16c0d50e9add93">MulAdd</a> (<a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> a, <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> b, <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> c)</td></tr>
@@ -308,6 +310,7 @@ Static Public Member Functions</h2></td></tr>
 <tr class="memitem:a6cb1ca6ef1a7e0e4ddec55155d495d08" id="r_a6cb1ca6ef1a7e0e4ddec55155d495d08"><td class="memItemLeft">static int&#160;</td><td class="memItemRight"><a class="el" href="#a6cb1ca6ef1a7e0e4ddec55155d495d08">StoreSelected</a> (<a class="el" href="#a7de62be5aa174d06fd11c64cde7c04fe">Scalar</a> *ptr, <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> condition, <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> values)</td></tr>
 <tr class="memitem:a35fbaec16383e39079cf0e5de2b17223" id="r_a35fbaec16383e39079cf0e5de2b17223"><td class="memTemplParams" colspan="2">template&lt;int kTupleCount = kSize, class... InputVectors&gt; </td></tr>
 <tr class="memitem:a35fbaec16383e39079cf0e5de2b17223 template"><td class="memItemLeft">static void&#160;</td><td class="memItemRight"><a class="el" href="#a35fbaec16383e39079cf0e5de2b17223">StoreTransposed</a> (<a class="el" href="#a7de62be5aa174d06fd11c64cde7c04fe">Scalar</a> *ptr, InputVectors... v)</td></tr>
+<tr class="memitem:aa46ee41eae5f6c6a309a47210dad472e" id="r_aa46ee41eae5f6c6a309a47210dad472e"><td class="memItemLeft">static void&#160;</td><td class="memItemRight"><a class="el" href="#aa46ee41eae5f6c6a309a47210dad472e">StoreTransposed</a> (<a class="el" href="#a7de62be5aa174d06fd11c64cde7c04fe">Scalar</a> *ptr, <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> a, <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> b, <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> c, int count)</td></tr>
 <tr class="memitem:aaa1c536aade4b29628ccc45bcd7d6595" id="r_aaa1c536aade4b29628ccc45bcd7d6595"><td class="memItemLeft">static <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&#160;</td><td class="memItemRight"><a class="el" href="#aaa1c536aade4b29628ccc45bcd7d6595">Tan</a> (<a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> a)</td></tr>
 <tr class="memitem:aada76f2439c3cee25640ea5f3e178362" id="r_aada76f2439c3cee25640ea5f3e178362"><td class="memItemLeft">static <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&#160;</td><td class="memItemRight"><a class="el" href="#aada76f2439c3cee25640ea5f3e178362">Tanh</a> (<a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> a)</td></tr>
 <tr class="memitem:af432ffe9cdde9c26d71491772dd3df62" id="r_af432ffe9cdde9c26d71491772dd3df62"><td class="memItemLeft">static <a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&#160;</td><td class="memItemRight"><a class="el" href="#af432ffe9cdde9c26d71491772dd3df62">Zero</a> ()</td></tr>
@@ -953,7 +956,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00704">704</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00737">737</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -982,7 +985,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00705">705</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00738">738</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -1102,7 +1105,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00706">706</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00739">739</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -1160,7 +1163,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00707">707</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00740">740</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -1313,7 +1316,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00711">711</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00744">744</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -1348,7 +1351,7 @@ template&lt;int SZ = kSize&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00606">606</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00639">639</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -1381,7 +1384,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00723">723</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00756">756</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -1410,7 +1413,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00708">708</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00741">741</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -1439,7 +1442,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00710">710</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00743">743</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -1468,7 +1471,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00709">709</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00742">742</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -1561,7 +1564,7 @@ template&lt;int SZ = kSize&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00538">538</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00563">563</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -1592,7 +1595,7 @@ template&lt;int SZ = kSize&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00510">510</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00535">535</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -1623,7 +1626,7 @@ template&lt;int SZ = kSize&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00590">590</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00623">623</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -1654,7 +1657,50 @@ template&lt;int SZ = kSize&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00566">566</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00591">591</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+
+</div>
+</div>
+<a id="a0df0f7214d57c5b77c1adb7263b390c1" name="a0df0f7214d57c5b77c1adb7263b390c1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0df0f7214d57c5b77c1adb7263b390c1">&#9670;&#160;</a></span>HSumEach()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class T, int N&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a> <a class="el" href="classsuperdex_1_1Simd.html">superdex::Simd</a>&lt; T, N, std::enable_if_t&lt;(details::kCompositeFirstSize&lt; T, N &gt; &gt; 0), <a class="el" href="structsuperdex_1_1SimdConcept.html">SimdConcept</a> &gt; &gt;::HSumEach </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&lt; T, N, std::enable_if_t&lt;(details::kCompositeFirstSize&lt; T, N &gt; &gt; 0), <a class="el" href="structsuperdex_1_1SimdConcept.html">SimdConcept</a> &gt; &gt;</td>          <td class="paramname"><span class="paramname"><em>a</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&lt; T, N, std::enable_if_t&lt;(details::kCompositeFirstSize&lt; T, N &gt; &gt; 0), <a class="el" href="structsuperdex_1_1SimdConcept.html">SimdConcept</a> &gt; &gt;</td>          <td class="paramname"><span class="paramname"><em>b</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&lt; T, N, std::enable_if_t&lt;(details::kCompositeFirstSize&lt; T, N &gt; &gt; 0), <a class="el" href="structsuperdex_1_1SimdConcept.html">SimdConcept</a> &gt; &gt;</td>          <td class="paramname"><span class="paramname"><em>c</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&lt; T, N, std::enable_if_t&lt;(details::kCompositeFirstSize&lt; T, N &gt; &gt; 0), <a class="el" href="structsuperdex_1_1SimdConcept.html">SimdConcept</a> &gt; &gt;</td>          <td class="paramname"><span class="paramname"><em>d</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00614">614</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -1683,7 +1729,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00712">712</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00745">745</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -1787,7 +1833,7 @@ template&lt;typename IntT, std::enable_if_t&lt; std::is_integral_v&lt; IntT &gt;
 </div>
 </div>
 <a id="abd58b873fbf98b6daf5c8fb790ec5967" name="abd58b873fbf98b6daf5c8fb790ec5967"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abd58b873fbf98b6daf5c8fb790ec5967">&#9670;&#160;</a></span>LoadTransposed()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#abd58b873fbf98b6daf5c8fb790ec5967">&#9670;&#160;</a></span>LoadTransposed() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1821,6 +1867,54 @@ template&lt;int kTupleCount = kSize, class... OutputVectors&gt; </div>
 
 </div>
 </div>
+<a id="a90b6189c42a98d399dd223584ced6979" name="a90b6189c42a98d399dd223584ced6979"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a90b6189c42a98d399dd223584ced6979">&#9670;&#160;</a></span>LoadTransposed() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class T, int N&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void <a class="el" href="classsuperdex_1_1Simd.html">superdex::Simd</a>&lt; T, N, std::enable_if_t&lt;(details::kCompositeFirstSize&lt; T, N &gt; &gt; 0), <a class="el" href="structsuperdex_1_1SimdConcept.html">SimdConcept</a> &gt; &gt;::LoadTransposed </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#a7de62be5aa174d06fd11c64cde7c04fe">Scalar</a> const *</td>          <td class="paramname"><span class="paramname"><em>ptr</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&lt; T, N, std::enable_if_t&lt;(details::kCompositeFirstSize&lt; T, N &gt; &gt; 0), <a class="el" href="structsuperdex_1_1SimdConcept.html">SimdConcept</a> &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>out0</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&lt; T, N, std::enable_if_t&lt;(details::kCompositeFirstSize&lt; T, N &gt; &gt; 0), <a class="el" href="structsuperdex_1_1SimdConcept.html">SimdConcept</a> &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>out1</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&lt; T, N, std::enable_if_t&lt;(details::kCompositeFirstSize&lt; T, N &gt; &gt; 0), <a class="el" href="structsuperdex_1_1SimdConcept.html">SimdConcept</a> &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>out2</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>count</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00457">457</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+
+</div>
+</div>
 <a id="a7fddfed9dab2d9bd068b49fec114af9c" name="a7fddfed9dab2d9bd068b49fec114af9c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a7fddfed9dab2d9bd068b49fec114af9c">&#9670;&#160;</a></span>Max()</h2>
 
@@ -1850,7 +1944,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00722">722</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00755">755</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -1883,7 +1977,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00721">721</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00754">754</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -1921,7 +2015,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00727">727</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00760">760</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -1959,7 +2053,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00728">728</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00761">761</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -1997,7 +2091,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00729">729</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00762">762</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2035,7 +2129,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00730">730</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00763">763</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2068,7 +2162,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00724">724</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00757">757</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2097,7 +2191,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00633">633</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00666">666</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2126,7 +2220,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00745">745</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00778">778</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2172,7 +2266,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00761">761</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00794">794</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2201,7 +2295,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00743">743</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00776">776</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2230,7 +2324,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00759">759</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00792">792</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2259,7 +2353,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00759">759</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00792">792</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2288,7 +2382,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00741">741</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00774">774</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2317,7 +2411,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00757">757</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00790">790</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2346,7 +2440,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00757">757</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00790">790</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2375,7 +2469,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00734">734</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00767">767</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2404,7 +2498,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00742">742</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00775">775</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2433,7 +2527,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00758">758</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00791">791</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2462,7 +2556,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00758">758</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00791">791</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2491,7 +2585,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00744">744</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00777">777</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2520,7 +2614,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00760">760</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00793">793</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2549,7 +2643,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00760">760</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00793">793</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2578,7 +2672,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00737">737</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00770">770</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2607,7 +2701,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00642">642</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00675">675</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2636,7 +2730,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00646">646</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00679">679</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2665,7 +2759,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00739">739</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00772">772</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2723,7 +2817,7 @@ template&lt;class U, std::enable_if_t&lt;(std::is_convertible_v&lt; U, <a class=
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00617">617</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00650">650</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2752,7 +2846,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00623">623</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00656">656</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2781,7 +2875,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00738">738</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00771">771</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2810,7 +2904,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00740">740</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00773">773</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2839,7 +2933,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00652">652</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00685">685</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2868,7 +2962,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00656">656</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00689">689</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2897,7 +2991,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00637">637</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00670">670</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2926,7 +3020,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00747">747</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00780">780</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2955,7 +3049,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00763">763</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00796">796</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -2984,7 +3078,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00746">746</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00779">779</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -3013,7 +3107,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00762">762</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00795">795</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -3059,7 +3153,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00733">733</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00766">766</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -3088,7 +3182,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00714">714</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00747">747</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -3117,7 +3211,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00715">715</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00748">748</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -3155,7 +3249,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00456">456</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00469">469</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -3319,7 +3413,7 @@ template&lt;int kShift&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00463">463</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00476">476</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -3414,7 +3508,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00505">505</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00530">530</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -3443,7 +3537,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00713">713</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00746">746</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -3501,7 +3595,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00716">716</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00749">749</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -3536,7 +3630,7 @@ template&lt;int SZ = kSize&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00475">475</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00488">488</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -3574,7 +3668,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00484">484</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00497">497</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -3612,12 +3706,12 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00490">490</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00503">503</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
 <a id="a35fbaec16383e39079cf0e5de2b17223" name="a35fbaec16383e39079cf0e5de2b17223"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a35fbaec16383e39079cf0e5de2b17223">&#9670;&#160;</a></span>StoreTransposed()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a35fbaec16383e39079cf0e5de2b17223">&#9670;&#160;</a></span>StoreTransposed() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -3647,7 +3741,55 @@ template&lt;int kTupleCount = kSize, class... InputVectors&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00497">497</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00510">510</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+
+</div>
+</div>
+<a id="aa46ee41eae5f6c6a309a47210dad472e" name="aa46ee41eae5f6c6a309a47210dad472e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa46ee41eae5f6c6a309a47210dad472e">&#9670;&#160;</a></span>StoreTransposed() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class T, int N&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void <a class="el" href="classsuperdex_1_1Simd.html">superdex::Simd</a>&lt; T, N, std::enable_if_t&lt;(details::kCompositeFirstSize&lt; T, N &gt; &gt; 0), <a class="el" href="structsuperdex_1_1SimdConcept.html">SimdConcept</a> &gt; &gt;::StoreTransposed </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#a7de62be5aa174d06fd11c64cde7c04fe">Scalar</a> *</td>          <td class="paramname"><span class="paramname"><em>ptr</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&lt; T, N, std::enable_if_t&lt;(details::kCompositeFirstSize&lt; T, N &gt; &gt; 0), <a class="el" href="structsuperdex_1_1SimdConcept.html">SimdConcept</a> &gt; &gt;</td>          <td class="paramname"><span class="paramname"><em>a</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&lt; T, N, std::enable_if_t&lt;(details::kCompositeFirstSize&lt; T, N &gt; &gt; 0), <a class="el" href="structsuperdex_1_1SimdConcept.html">SimdConcept</a> &gt; &gt;</td>          <td class="paramname"><span class="paramname"><em>b</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="#ae101e9052fa939ff99af580c02134a3e">Simd</a>&lt; T, N, std::enable_if_t&lt;(details::kCompositeFirstSize&lt; T, N &gt; &gt; 0), <a class="el" href="structsuperdex_1_1SimdConcept.html">SimdConcept</a> &gt; &gt;</td>          <td class="paramname"><span class="paramname"><em>c</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>count</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00519">519</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -3676,7 +3818,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00717">717</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00750">750</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -3705,7 +3847,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00718">718</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00751">751</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>
@@ -3734,7 +3876,7 @@ template&lt;class T, int N&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00610">610</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="simd__composite__inl_8h_source.html#l00643">643</a> of file <a class="el" href="simd__composite__inl_8h_source.html">simd_composite_inl.h</a>.</p>
 
 </div>
 </div>

@@ -130,9 +130,6 @@ Geometry data and registered shapes.
 .. autodata:: superdex.physics.GRID_SDF_DEFAULT_BOUNDARY_PADDING
    :no-value:
 
-.. autodata:: superdex.physics.GRID_SDF_PARAMS_DEFAULT
-   :no-value:
-
 .. autoclass:: superdex.physics.GridSdfData
    :members:
    :show-inheritance:
@@ -703,9 +700,6 @@ Numeric and spatial types, constants, and operations.
    :members:
    :show-inheritance:
 
-.. autodata:: superdex.physics.QUATERNION_IDENTITY
-   :no-value:
-
 .. autoclass:: superdex.physics.Quaternion
    :members:
    :show-inheritance:
@@ -730,9 +724,6 @@ Numeric and spatial types, constants, and operations.
 .. autoclass:: superdex.physics.Real6
    :members:
    :show-inheritance:
-
-.. autodata:: superdex.physics.TRANSFORM_RT_IDENTITY
-   :no-value:
 
 .. autoclass:: superdex.physics.TransformRT
    :members:

@@ -213,15 +213,13 @@ Macros</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">if</span> (condition)                                                   \</div>
-<div class="line">  <a class="code hl_define" href="mochi__platform_8h.html#a0a9b35f5fd941aeea6decfc221538249">MOCHI_UNLIKELY</a> {                                               \</div>
-<div class="line">    MOCHI_ERROR_SET(error, descriptionStringLiteral);            \</div>
-<div class="line">  }                                                              \</div>
-<div class="line"><span class="keywordflow">else</span> {                                                           \</div>
+<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">if</span> (condition) <a class="code hl_define" href="mochi__platform_8h.html#a0a9b35f5fd941aeea6decfc221538249">MOCHI_UNLIKELY</a> {                                  \</div>
+<div class="line">  MOCHI_ERROR_SET(error, descriptionStringLiteral);              \</div>
+<div class="line">} <span class="keywordflow">else</span> {                                                         \</div>
 <div class="line">}</div>
-<div class="ttc" id="amochi__platform_8h_html_a0a9b35f5fd941aeea6decfc221538249"><div class="ttname"><a href="mochi__platform_8h.html#a0a9b35f5fd941aeea6decfc221538249">MOCHI_UNLIKELY</a></div><div class="ttdeci">#define MOCHI_UNLIKELY</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00817">mochi_platform.h:817</a></div></div>
+<div class="ttc" id="amochi__platform_8h_html_a0a9b35f5fd941aeea6decfc221538249"><div class="ttname"><a href="mochi__platform_8h.html#a0a9b35f5fd941aeea6decfc221538249">MOCHI_UNLIKELY</a></div><div class="ttdeci">#define MOCHI_UNLIKELY</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00830">mochi_platform.h:830</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="error_8h_source.html#l00146">146</a> of file <a class="el" href="error_8h_source.html">error.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="error_8h_source.html#l00145">145</a> of file <a class="el" href="error_8h_source.html">error.h</a>.</p>
 
 </div>
 </div>
@@ -249,9 +247,9 @@ Macros</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line"><a class="code hl_define" href="#a97b7f767d81a3a810f5020d44a314e26">MOCHI_ERROR_IF</a>(!(condition), error, descriptionStringLiteral)</div>
-<div class="ttc" id="aerror_8h_html_a97b7f767d81a3a810f5020d44a314e26"><div class="ttname"><a href="#a97b7f767d81a3a810f5020d44a314e26">MOCHI_ERROR_IF</a></div><div class="ttdeci">#define MOCHI_ERROR_IF(condition, error, descriptionStringLiteral)</div><div class="ttdef"><b>Definition</b> <a href="error_8h_source.html#l00146">error.h:146</a></div></div>
+<div class="ttc" id="aerror_8h_html_a97b7f767d81a3a810f5020d44a314e26"><div class="ttname"><a href="#a97b7f767d81a3a810f5020d44a314e26">MOCHI_ERROR_IF</a></div><div class="ttdeci">#define MOCHI_ERROR_IF(condition, error, descriptionStringLiteral)</div><div class="ttdef"><b>Definition</b> <a href="error_8h_source.html#l00145">error.h:145</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="error_8h_source.html#l00155">155</a> of file <a class="el" href="error_8h_source.html">error.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="error_8h_source.html#l00152">152</a> of file <a class="el" href="error_8h_source.html">error.h</a>.</p>
 
 </div>
 </div>
@@ -272,7 +270,7 @@ Macros</h2></td></tr>
 <b>Value:</b><div class="fragment"><div class="line"><span class="keyword">static_cast&lt;</span><a class="code hl_class" href="classsuperdex_1_1Error.html">superdex::Error</a>&amp;<span class="keyword">&gt;</span>(error).SetFirstError(<span class="stringliteral">&quot;Not implemented&quot;</span>, __FILE__, __LINE__)</div>
 <div class="ttc" id="aclasssuperdex_1_1Error_html"><div class="ttname"><a href="classsuperdex_1_1Error.html">superdex::Error</a></div><div class="ttdef"><b>Definition</b> <a href="error_8h_source.html#l00065">error.h:65</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="error_8h_source.html#l00166">166</a> of file <a class="el" href="error_8h_source.html">error.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="error_8h_source.html#l00163">163</a> of file <a class="el" href="error_8h_source.html">error.h</a>.</p>
 
 </div>
 </div>
@@ -294,10 +292,9 @@ Macros</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">if</span> (!<span class="keyword">static_cast&lt;</span><a class="code hl_class" href="classsuperdex_1_1Error.html">superdex::Error</a> const&amp;<span class="keyword">&gt;</span>(error).IsOK()) \</div>
-<div class="line">  <a class="code hl_define" href="mochi__platform_8h.html#a0a9b35f5fd941aeea6decfc221538249">MOCHI_UNLIKELY</a> {                                   \</div>
-<div class="line">    <span class="keywordflow">return</span> __VA_ARGS__;                              \</div>
-<div class="line">  }</div>
+<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">if</span> (!<span class="keyword">static_cast&lt;</span><a class="code hl_class" href="classsuperdex_1_1Error.html">superdex::Error</a> const&amp;<span class="keyword">&gt;</span>(error).IsOK()) <a class="code hl_define" href="mochi__platform_8h.html#a0a9b35f5fd941aeea6decfc221538249">MOCHI_UNLIKELY</a> { \</div>
+<div class="line">  <span class="keywordflow">return</span> __VA_ARGS__;                                                 \</div>
+<div class="line">}</div>
 </div><!-- fragment -->
 <p class="definition">Definition at line <a class="el" href="error_8h_source.html#l00133">133</a> of file <a class="el" href="error_8h_source.html">error.h</a>.</p>
 
@@ -323,7 +320,7 @@ Macros</h2></td></tr>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line"><span class="keyword">static_cast&lt;</span><a class="code hl_class" href="classsuperdex_1_1Error.html">superdex::Error</a>&amp;<span class="keyword">&gt;</span>(error).SetFirstError(<span class="stringliteral">&quot;&quot;</span> descriptionStringLiteral, __FILE__, __LINE__);</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="error_8h_source.html#l00142">142</a> of file <a class="el" href="error_8h_source.html">error.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="error_8h_source.html#l00141">141</a> of file <a class="el" href="error_8h_source.html">error.h</a>.</p>
 
 </div>
 </div>

@@ -2166,6 +2166,11 @@ file size and degrade performance.</p>
 <p>If the scene is already recording, the previous recording is stopped before
 starting the new one.</p>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Islands do not sleep while the scene is recording, so recording can change
+the simulation results.</p>
+</div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>Requires a build with HDF5 support.</p>
@@ -2703,12 +2708,6 @@ mesh.</p>
 <dt class="sig sig-object py" id="superdex.physics.GRID_SDF_DEFAULT_BOUNDARY_PADDING">
 <span class="sig-name descname"><span class="pre">GRID_SDF_DEFAULT_BOUNDARY_PADDING</span></span><a class="headerlink" href="#superdex.physics.GRID_SDF_DEFAULT_BOUNDARY_PADDING" title="Permalink to this definition"></a></dt>
 <dd><p>Default boundary padding distance [m] for grid-based SDF construction.</p>
-</dd></dl>
-
-<dl class="py data">
-<dt class="sig sig-object py" id="superdex.physics.GRID_SDF_PARAMS_DEFAULT">
-<span class="sig-name descname"><span class="pre">GRID_SDF_PARAMS_DEFAULT</span></span><a class="headerlink" href="#superdex.physics.GRID_SDF_PARAMS_DEFAULT" title="Permalink to this definition"></a></dt>
-<dd><p>Default grid SDF construction parameters.</p>
 </dd></dl>
 
 <dl class="py class">
@@ -3257,12 +3256,13 @@ measurements scaled by <a class="reference internal" href="#superdex.physics.Gri
 <dl class="py property">
 <dt class="sig sig-object py" id="superdex.physics.ModelData.contact_skin_mesh">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">contact_skin_mesh</span></span><a class="headerlink" href="#superdex.physics.ModelData.contact_skin_mesh" title="Permalink to this definition"></a></dt>
-<dd><p>Optional triangular mesh used for surface queries and, when selected as a shell
-or rod actor’s contact geometry, for contact quadrature.</p>
-<p>For triangular and tetrahedral primary meshes, the skinning data is a node-based
-linear embedding whose indices reference primary-mesh nodes. For polylines, the
-indices reference primary-mesh elements and define the rod’s element-based
-embedding.</p>
+<dd><p>Optional triangular mesh exposed through the contact-skin queries and, when
+selected as a deformable actor’s contact geometry, for contact quadrature.</p>
+<p>Skinning data is required. For triangular and tetrahedral primary meshes, it is
+a node-based linear embedding whose indices reference primary-mesh nodes. For
+polylines, the indices reference primary-mesh elements and define the rod’s
+element-based embedding. Every contact-skin node must be referenced by at least
+one triangle.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -3342,12 +3342,13 @@ element’s tangent. Only valid when the mesh is a polyline with
 <dl class="py property">
 <dt class="sig sig-object py" id="superdex.physics.ModelDataView.contact_skin_mesh">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">contact_skin_mesh</span></span><a class="headerlink" href="#superdex.physics.ModelDataView.contact_skin_mesh" title="Permalink to this definition"></a></dt>
-<dd><p>Optional triangular mesh used for surface queries and, when selected as a shell
-or rod actor’s contact geometry, for contact quadrature.</p>
-<p>For triangular and tetrahedral primary meshes, the skinning data is a node-based
-linear embedding whose indices reference primary-mesh nodes. For polylines, the
-indices reference primary-mesh elements and define the rod’s element-based
-embedding.</p>
+<dd><p>Optional triangular mesh exposed through the contact-skin queries and, when
+selected as a deformable actor’s contact geometry, for contact quadrature.</p>
+<p>Skinning data is required. For triangular and tetrahedral primary meshes, it is
+a node-based linear embedding whose indices reference primary-mesh nodes. For
+polylines, the indices reference primary-mesh elements and define the rod’s
+element-based embedding. Every contact-skin node must be referenced by at least
+one triangle.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -4076,11 +4077,11 @@ articulated shapes — query their link shapes individually instead).</p>
 <span class="sig-name descname"><span class="pre">get_shape_mesh</span></span><a class="headerlink" href="#superdex.physics.get_shape_mesh" title="Permalink to this definition"></a></dt>
 <dd><p>superdex.physics.ShapeHandle) -&gt; superdex.physics.MeshDataView</p>
 <p>Get a view of the shape’s main mesh data.</p>
-<p>For tetrahedral mesh shapes, returns the volume mesh (4 nodes per element). For
-triangular mesh shapes, returns the surface mesh (3 nodes per element). For
+<p>For tetrahedral mesh shapes, returns the tetrahedral mesh (4 nodes per element).
+For triangular mesh shapes, returns the triangle mesh (3 nodes per element). For
 polyline shapes, returns the polyline mesh (2 nodes per element). For shapes
 without a main mesh, including implicit shapes such as spheres and planes,
-returns an empty view.</p>
+returns an empty view. The view includes any nodes that no element references.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>shape</strong> (<a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><em>ShapeHandle</em></a>) – Handle to a valid shape.</p>
@@ -4124,9 +4125,8 @@ shape has no mesh.</p>
 The coordinate array contains exactly the surface nodes referenced by the
 returned connectivity; nodes present in the underlying main mesh but not
 referenced by any surface triangle are omitted. Connectivity values are indices
-into this returned coordinate array. For polyline shapes with an authored
-contact skin, returns that skin. For shapes without a surface mesh, returns an
-empty view.</p>
+into this returned coordinate array. For shapes without a surface mesh, such as
+polyline shapes, returns an empty view.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>shape</strong> (<a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><em>ShapeHandle</em></a>) – Handle to a valid shape.</p>
@@ -4141,10 +4141,10 @@ shape has no surface mesh.</p>
 </dl>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>For triangular mesh shapes, this may differ from
-<a class="reference internal" href="#superdex.physics.get_shape_mesh" title="superdex.physics.get_shape_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_mesh()</span></code></a> if the main mesh contains
-unreferenced nodes. For tetrahedral mesh shapes, this is the boundary
-surface of the volume mesh, with non-boundary volume nodes omitted.</p>
+<p>For triangular mesh shapes, this differs from
+<a class="reference internal" href="#superdex.physics.get_shape_mesh" title="superdex.physics.get_shape_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_mesh()</span></code></a> only if the main mesh has nodes
+that no element references. For tetrahedral mesh shapes, this is the
+boundary surface of the volume mesh, with non-boundary volume nodes omitted.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -4177,9 +4177,9 @@ surface of the volume mesh, with non-boundary volume nodes omitted.</p>
 available.</p>
 <p>Returns a triangle mesh (3 nodes per element) intended for visual rendering.
 Coordinates and connectivity are returned in visual-mesh node-index space,
-including any visual mesh nodes not referenced by the visual connectivity. The
-mesh may include linear skinning data for deformation. For shapes without a
-visual mesh, returns an empty view.</p>
+including any nodes that no visual triangle references. The mesh includes the
+authored skinning data when available. For shapes without a visual mesh, returns
+an empty view.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>shape</strong> (<a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><em>ShapeHandle</em></a>) – Handle to a valid shape.</p>
@@ -4202,12 +4202,11 @@ shape has no visual mesh.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>When linear visual-mesh skinning data is present, skinning indices refer to
-the node ordering returned by <a class="reference internal" href="#superdex.physics.get_shape_mesh" title="superdex.physics.get_shape_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_mesh()</span></code></a>, not
-to the compact surface-node ordering returned by
-<a class="reference internal" href="#superdex.physics.get_shape_surface_mesh" title="superdex.physics.get_shape_surface_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_surface_mesh()</span></code></a>. Polyline visual mesh
-embeddings are nonlinear and are not exposed through this linear skinning
-field.</p>
+<p>For tetrahedral and triangular mesh shapes, skinning indices refer to the
+node ordering returned by <a class="reference internal" href="#superdex.physics.get_shape_mesh" title="superdex.physics.get_shape_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_mesh()</span></code></a>, not to
+the compact surface-node ordering returned by
+<a class="reference internal" href="#superdex.physics.get_shape_surface_mesh" title="superdex.physics.get_shape_surface_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_surface_mesh()</span></code></a>. For polyline shapes,
+skinning indices refer to polyline elements.</p>
 </div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
@@ -6301,6 +6300,129 @@ available or may be stale.</p>
 </dd></dl>
 
 <dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.Actor.get_contact_skin_mesh">
+<span class="sig-name descname"><span class="pre">get_contact_skin_mesh</span></span><a class="headerlink" href="#superdex.physics.Actor.get_contact_skin_mesh" title="Permalink to this definition"></a></dt>
+<dd><p>Get a view of the actor’s reference contact skin mesh.</p>
+<p>Returns the <a class="reference internal" href="#superdex.physics.ModelData.contact_skin_mesh" title="superdex.physics.ModelData.contact_skin_mesh"><code class="xref py py-attr docutils literal notranslate"><span class="pre">contact_skin_mesh</span></code></a> of the actor’s
+shape, regardless of whether the actor selected it as its collision
+representation. Only deformable actors expose it. Other actors return an empty
+view. For soft and shell actors, the mesh includes the linear contact-skin
+skinning data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A non-owning view of the actor’s reference contact skin mesh, or an empty
+view if the actor has no contact skin.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The returned coordinates are reference contact-skin positions in the actor’s
+local frame. Deformed contact-skin positions are only available through
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh_node_positions_local" title="superdex.physics.Actor.get_contact_skin_mesh_node_positions_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh_node_positions_local()</span></code></a>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The node ordering matches
+<a class="reference internal" href="#superdex.physics.get_shape_contact_skin_mesh" title="superdex.physics.get_shape_contact_skin_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_contact_skin_mesh()</span></code></a>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When linear contact-skin skinning data is present, skinning indices refer to
+the node ordering returned by <a class="reference internal" href="#superdex.physics.Actor.get_mesh" title="superdex.physics.Actor.get_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_mesh()</span></code></a>. Rod
+contact skin embeddings are nonlinear and are not exposed through this
+linear skinning field.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The returned view remains valid until the actor is destroyed.</p>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#superdex.physics.MeshDataView" title="superdex.physics.MeshDataView"><code class="xref py py-class docutils literal notranslate"><span class="pre">MeshDataView</span></code></a>,
+<a class="reference internal" href="#superdex.physics.Actor.get_mesh" title="superdex.physics.Actor.get_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_mesh()</span></code></a>,
+<a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh" title="superdex.physics.Actor.get_surface_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh()</span></code></a>,
+<a class="reference internal" href="#superdex.physics.Actor.get_visual_mesh" title="superdex.physics.Actor.get_visual_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_visual_mesh()</span></code></a>,
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh_node_positions_local" title="superdex.physics.Actor.get_contact_skin_mesh_node_positions_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh_node_positions_local()</span></code></a>,
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh_node_normals_local" title="superdex.physics.Actor.get_contact_skin_mesh_node_normals_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh_node_normals_local()</span></code></a>,
+<a class="reference internal" href="#superdex.physics.get_shape_contact_skin_mesh" title="superdex.physics.get_shape_contact_skin_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_contact_skin_mesh()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.Actor.get_contact_skin_mesh_node_normals_local">
+<span class="sig-name descname"><span class="pre">get_contact_skin_mesh_node_normals_local</span></span><a class="headerlink" href="#superdex.physics.Actor.get_contact_skin_mesh_node_normals_local" title="Permalink to this definition"></a></dt>
+<dd><p>Get the normal direction to each node of the contact skin mesh in the actor’s
+local frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>nx, ny, nz) in the actor’s local
+frame, computed by normalizing the area-weighted sum of adjacent triangle
+normals. The number of nodes is available via
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh" title="superdex.physics.Actor.get_contact_skin_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh()</span></code></a>. The order of the
+nodes is 1-to-1 with
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh_node_positions_local" title="superdex.physics.Actor.get_contact_skin_mesh_node_positions_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh_node_positions_local()</span></code></a>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>Flattened normals (3 values per node</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Requires registering <a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">CONTACT_SKIN_NODE_NORMALS</span></code></a> before the simulation step. Results are
+available after the simulation step completes.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Requires the actor to support <a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">CONTACT_SKIN_NODE_NORMALS</span></code></a>.</p>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#superdex.physics.Actor.register_query" title="superdex.physics.Actor.register_query"><code class="xref py py-meth docutils literal notranslate"><span class="pre">register_query()</span></code></a>,
+<a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">CONTACT_SKIN_NODE_NORMALS</span></code></a>,
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh" title="superdex.physics.Actor.get_contact_skin_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh()</span></code></a>,
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh_node_positions_local" title="superdex.physics.Actor.get_contact_skin_mesh_node_positions_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh_node_positions_local()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.Actor.get_contact_skin_mesh_node_positions_local">
+<span class="sig-name descname"><span class="pre">get_contact_skin_mesh_node_positions_local</span></span><a class="headerlink" href="#superdex.physics.Actor.get_contact_skin_mesh_node_positions_local" title="Permalink to this definition"></a></dt>
+<dd><p>Get the current positions of the contact skin mesh nodes in the actor’s local
+frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Current node positions [m] of the contact skin mesh in the actor’s local
+frame (3 values per node: x, y, z). The number of nodes is available via
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh" title="superdex.physics.Actor.get_contact_skin_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh()</span></code></a>. The order of the
+nodes is 1-to-1 with
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh_node_normals_local" title="superdex.physics.Actor.get_contact_skin_mesh_node_normals_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh_node_normals_local()</span></code></a>.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Requires registering <a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">CONTACT_SKIN_NODE_POSITIONS</span></code></a> before the simulation step. Results are
+available after the simulation step completes.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Requires the actor to support <a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">CONTACT_SKIN_NODE_POSITIONS</span></code></a>.</p>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#superdex.physics.Actor.register_query" title="superdex.physics.Actor.register_query"><code class="xref py py-meth docutils literal notranslate"><span class="pre">register_query()</span></code></a>,
+<a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">CONTACT_SKIN_NODE_POSITIONS</span></code></a>,
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh" title="superdex.physics.Actor.get_contact_skin_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh()</span></code></a>,
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh_node_normals_local" title="superdex.physics.Actor.get_contact_skin_mesh_node_normals_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh_node_normals_local()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
 <dt class="sig sig-object py" id="superdex.physics.Actor.get_contact_torque_world">
 <span class="sig-name descname"><span class="pre">get_contact_torque_world</span></span><a class="headerlink" href="#superdex.physics.Actor.get_contact_torque_world" title="Permalink to this definition"></a></dt>
 <dd><p>Get the total contact torque about the center of mass.</p>
@@ -6347,6 +6469,19 @@ available or may be stale.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Static actors do not participate in the solver and may return <a class="reference internal" href="#superdex.physics.ConvergenceStatus" title="superdex.physics.ConvergenceStatus"><code class="xref py py-class docutils literal notranslate"><span class="pre">NONE</span></code></a>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Actors in sleeping islands are not solved and return <a class="reference internal" href="#superdex.physics.ConvergenceStatus" title="superdex.physics.ConvergenceStatus"><code class="xref py py-class docutils literal notranslate"><span class="pre">NONE</span></code></a>. See
+<code class="xref py py-class docutils literal notranslate"><span class="pre">SleepParams</span></code>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Unlike <a class="reference internal" href="#superdex.physics.ConvergenceStatus" title="superdex.physics.ConvergenceStatus"><code class="xref py py-class docutils literal notranslate"><span class="pre">DIVERGED</span></code></a>,
+<a class="reference internal" href="#superdex.physics.ConvergenceStatus" title="superdex.physics.ConvergenceStatus"><code class="xref py py-class docutils literal notranslate"><span class="pre">STOPPED</span></code></a> does not indicate a
+failure. It means that the nonlinear solve reached a stopping criterion,
+such as the maximum number of iterations, before meeting its residual
+tolerances, which may be stricter than the actor requires.</p>
 </div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
@@ -6635,12 +6770,16 @@ They do not include deformation for deformable actors.</p>
 <p class="admonition-title">Note</p>
 <p>For rigid actors with tetrahedral or triangular mesh shapes, returns the
 same compact surface view as
-<a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh" title="superdex.physics.Actor.get_surface_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh()</span></code></a>. For tetrahedral meshes
-this is the boundary surface. For triangular meshes, nodes not referenced by
-any surface triangle are omitted and remaining nodes may be reindexed. Use
-<a class="reference internal" href="#superdex.physics.Actor.get_reference_shape" title="superdex.physics.Actor.get_reference_shape"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_reference_shape()</span></code></a> and
+<a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh" title="superdex.physics.Actor.get_surface_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh()</span></code></a>, which is the boundary
+surface for tetrahedral meshes. It omits interior nodes and nodes that no
+element references, and keeps the remaining nodes in their original relative
+order. Use <a class="reference internal" href="#superdex.physics.Actor.get_reference_shape" title="superdex.physics.Actor.get_reference_shape"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_reference_shape()</span></code></a> and
 <a class="reference internal" href="#superdex.physics.get_shape_mesh" title="superdex.physics.get_shape_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_mesh()</span></code></a> to retrieve the original authored
 shape mesh.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The returned mesh has only the nodes that its elements reference.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -7038,13 +7177,10 @@ available or may be stale.</p>
 <dd><p>Get a view of the actor’s reference surface mesh.</p>
 <p>Returns a compact triangle mesh for the actor’s surface. For volumetric
 simulation meshes, the surface is the boundary triangles. For triangular
-simulation meshes, the surface has the same triangle elements as the simulation
-mesh, but nodes not referenced by any surface triangle are omitted and remaining
-nodes may be reindexed. For shell and rod actors with an embedded
-<a class="reference internal" href="#superdex.physics.ModelData.contact_skin_mesh" title="superdex.physics.ModelData.contact_skin_mesh"><code class="xref py py-attr docutils literal notranslate"><span class="pre">contact_skin_mesh</span></code></a>, returns that contact skin
-regardless of the actor’s selected collision representation. For articulated
-actors with a skinned simulation surface, returns that surface. Returns an empty
-view if the actor does not have a surface mesh.</p>
+simulation meshes, the surface is the simulation mesh. For articulated actors
+with a skinned simulation surface, returns that surface. Returns an empty view
+if the actor does not have a surface mesh, e.g. for rod actors. Contact skins
+are exposed by <a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh" title="superdex.physics.Actor.get_contact_skin_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh()</span></code></a> instead.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>A non-owning view of the actor’s reference surface mesh, or an empty view if
@@ -7058,13 +7194,11 @@ local frame. They do not include deformation for deformable actors.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The returned mesh uses compact surface-node ordering. Connectivity indices
-refer to this ordering, which may differ from the node ordering returned by
-<a class="reference internal" href="#superdex.physics.Actor.get_mesh" title="superdex.physics.Actor.get_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_mesh()</span></code></a>. Interior nodes and nodes not
-referenced by any surface triangle are excluded. Results from
-<a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh_node_positions_local" title="superdex.physics.Actor.get_surface_mesh_node_positions_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh_node_positions_local()</span></code></a> and
-<a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh_node_normals_local" title="superdex.physics.Actor.get_surface_mesh_node_normals_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh_node_normals_local()</span></code></a> use this
-same surface ordering.</p>
+<p>The returned mesh has only the nodes that its triangles reference, in the
+same relative order as in <a class="reference internal" href="#superdex.physics.Actor.get_mesh" title="superdex.physics.Actor.get_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_mesh()</span></code></a>. Results
+from <a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh_node_positions_local" title="superdex.physics.Actor.get_surface_mesh_node_positions_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh_node_positions_local()</span></code></a>
+and <a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh_node_normals_local" title="superdex.physics.Actor.get_surface_mesh_node_normals_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh_node_normals_local()</span></code></a> use
+this node order.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -7075,6 +7209,7 @@ same surface ordering.</p>
 <p><a class="reference internal" href="#superdex.physics.MeshDataView" title="superdex.physics.MeshDataView"><code class="xref py py-class docutils literal notranslate"><span class="pre">MeshDataView</span></code></a>,
 <a class="reference internal" href="#superdex.physics.Actor.get_mesh" title="superdex.physics.Actor.get_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_mesh()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.Actor.get_visual_mesh" title="superdex.physics.Actor.get_visual_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_visual_mesh()</span></code></a>,
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh" title="superdex.physics.Actor.get_contact_skin_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh_node_positions_local" title="superdex.physics.Actor.get_surface_mesh_node_positions_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh_node_positions_local()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh_node_normals_local" title="superdex.physics.Actor.get_surface_mesh_node_normals_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh_node_normals_local()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.get_shape_surface_mesh" title="superdex.physics.get_shape_surface_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_surface_mesh()</span></code></a></p>
@@ -7112,16 +7247,12 @@ available after the simulation step completes.</p>
 <p>The node ordering corresponds to the mesh connectivity from
 <a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh" title="superdex.physics.Actor.get_surface_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh()</span></code></a>.</p>
 </div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Supported for shell and rod actors whose shape has an authored usable
-contact skin, regardless of whether that skin is selected for collision.</p>
-</div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.Actor.register_query" title="superdex.physics.Actor.register_query"><code class="xref py py-meth docutils literal notranslate"><span class="pre">register_query()</span></code></a>, <a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">SURFACE_NODE_NORMALS</span></code></a>,
 <a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh" title="superdex.physics.Actor.get_surface_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh()</span></code></a>,
-<a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh_node_positions_local" title="superdex.physics.Actor.get_surface_mesh_node_positions_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh_node_positions_local()</span></code></a></p>
+<a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh_node_positions_local" title="superdex.physics.Actor.get_surface_mesh_node_positions_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh_node_positions_local()</span></code></a>,
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh_node_normals_local" title="superdex.physics.Actor.get_contact_skin_mesh_node_normals_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh_node_normals_local()</span></code></a></p>
 </div>
 </dd></dl>
 
@@ -7155,17 +7286,13 @@ available after the simulation step completes.</p>
 <p>The node ordering corresponds to the mesh connectivity from
 <a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh" title="superdex.physics.Actor.get_surface_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh()</span></code></a>.</p>
 </div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Supported for shell and rod actors whose shape has an authored usable
-contact skin, regardless of whether that skin is selected for collision.</p>
-</div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.Actor.register_query" title="superdex.physics.Actor.register_query"><code class="xref py py-meth docutils literal notranslate"><span class="pre">register_query()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">SURFACE_NODE_POSITIONS</span></code></a>,
 <a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh" title="superdex.physics.Actor.get_surface_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh()</span></code></a>,
-<a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh_node_normals_local" title="superdex.physics.Actor.get_surface_mesh_node_normals_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh_node_normals_local()</span></code></a></p>
+<a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh_node_normals_local" title="superdex.physics.Actor.get_surface_mesh_node_normals_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh_node_normals_local()</span></code></a>,
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh_node_positions_local" title="superdex.physics.Actor.get_contact_skin_mesh_node_positions_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh_node_positions_local()</span></code></a></p>
 </div>
 </dd></dl>
 
@@ -7200,8 +7327,8 @@ local frame. They do not include deformation for deformable actors.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Includes visual mesh nodes not referenced by any visual triangle. Unlike
-surface mesh getters, visual mesh getters do not omit unreferenced nodes.</p>
+<p>Unlike surface mesh getters, visual mesh getters include any nodes that no
+visual triangle references.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -7220,6 +7347,7 @@ are nonlinear and are not exposed through this linear skinning field.</p>
 <p><a class="reference internal" href="#superdex.physics.MeshDataView" title="superdex.physics.MeshDataView"><code class="xref py py-class docutils literal notranslate"><span class="pre">MeshDataView</span></code></a>,
 <a class="reference internal" href="#superdex.physics.Actor.get_mesh" title="superdex.physics.Actor.get_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_mesh()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh" title="superdex.physics.Actor.get_surface_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh()</span></code></a>,
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh" title="superdex.physics.Actor.get_contact_skin_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.Actor.get_visual_mesh_node_positions_local" title="superdex.physics.Actor.get_visual_mesh_node_positions_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_visual_mesh_node_positions_local()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.Actor.get_visual_mesh_node_normals_local" title="superdex.physics.Actor.get_visual_mesh_node_normals_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_visual_mesh_node_normals_local()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.get_shape_visual_mesh" title="superdex.physics.get_shape_visual_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_visual_mesh()</span></code></a></p>
@@ -7238,7 +7366,7 @@ frame. The number of nodes is available via
 <a class="reference internal" href="#superdex.physics.Actor.get_visual_mesh" title="superdex.physics.Actor.get_visual_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_visual_mesh()</span></code></a>. The order of the nodes is
 1-to-1 with
 <a class="reference internal" href="#superdex.physics.Actor.get_visual_mesh_node_positions_local" title="superdex.physics.Actor.get_visual_mesh_node_positions_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_visual_mesh_node_positions_local()</span></code></a>.
-Normals for visual nodes not referenced by any visual triangle are zero.</p>
+Normals of nodes that no visual triangle references are zero.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>Flattened normals (3 values per node</p>
@@ -7249,8 +7377,8 @@ Normals for visual nodes not referenced by any visual triangle are zero.</p>
 </dl>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Includes visual mesh nodes not referenced by any visual triangle. Unlike
-surface mesh getters, visual mesh getters do not omit unreferenced nodes.</p>
+<p>Unlike surface mesh getters, visual mesh getters include any nodes that no
+visual triangle references.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -7288,8 +7416,8 @@ values per node: x, y, z). The number of nodes is available via
 </dl>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Includes visual mesh nodes not referenced by any visual triangle. Unlike
-surface mesh getters, visual mesh getters do not omit unreferenced nodes.</p>
+<p>Unlike surface mesh getters, visual mesh getters include any nodes that no
+visual triangle references.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -7444,9 +7572,8 @@ without a simulation mesh are not supported.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>When <code class="docutils literal notranslate"><span class="pre">boundary_only</span></code> is false, requires registering <a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">NODE_POSITIONS</span></code></a> before the simulation step. When true,
-requires registering <a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">SURFACE_NODE_POSITIONS</span></code></a> unless the surface mesh is linearly embedded
-in the simulation mesh. Results are available after the simulation step
-completes.</p>
+requires registering <a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">SURFACE_NODE_POSITIONS</span></code></a>. Results are available after the simulation
+step completes.</p>
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
@@ -7483,9 +7610,8 @@ without a simulation mesh are not supported.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>When <code class="docutils literal notranslate"><span class="pre">boundary_only</span></code> is false, requires registering <a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">NODE_POSITIONS</span></code></a> before the simulation step. When true,
-requires registering <a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">SURFACE_NODE_POSITIONS</span></code></a> unless the surface mesh is linearly embedded
-in the simulation mesh. Results are available after the simulation step
-completes.</p>
+requires registering <a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">SURFACE_NODE_POSITIONS</span></code></a>. Results are available after the simulation
+step completes.</p>
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
@@ -7522,9 +7648,8 @@ without a simulation mesh are not supported.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>When <code class="docutils literal notranslate"><span class="pre">boundary_only</span></code> is false, requires registering <a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">NODE_POSITIONS</span></code></a> before the simulation step. When true,
-requires registering <a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">SURFACE_NODE_POSITIONS</span></code></a> unless the surface mesh is linearly embedded
-in the simulation mesh. Results are available after the simulation step
-completes.</p>
+requires registering <a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">SURFACE_NODE_POSITIONS</span></code></a>. Results are available after the simulation
+step completes.</p>
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
@@ -8058,6 +8183,12 @@ set.</p>
 <p>Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler
 in the first time step after this method is called.</p>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Moves the actor without changing where the center of mass is within the
+actor (<a class="reference internal" href="#superdex.physics.Actor.get_rigid_center_of_mass_local" title="superdex.physics.Actor.get_rigid_center_of_mass_local"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_rigid_center_of_mass_local()</span></code></a>). To
+change that, use <a class="reference internal" href="#superdex.physics.Actor.set_inertia_properties" title="superdex.physics.Actor.set_inertia_properties"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_inertia_properties()</span></code></a>.</p>
+</div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.Actor.get_center_of_mass_transform" title="superdex.physics.Actor.get_center_of_mass_transform"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_center_of_mass_transform()</span></code></a>,
@@ -8281,6 +8412,24 @@ inertia proportionally about the new values; center of mass is unchanged by
 <p class="admonition-title">Note</p>
 <p>After this call, <a class="reference internal" href="#superdex.physics.Actor.get_density" title="superdex.physics.Actor.get_density"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_density()</span></code></a> returns bulk
 density mass / volume.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The root transform (<a class="reference internal" href="#superdex.physics.Actor.get_root_transform" title="superdex.physics.Actor.get_root_transform"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_root_transform()</span></code></a>) and
+the velocity of every material point are preserved, so changing the center
+of mass does not move the actor.
+<a class="reference internal" href="#superdex.physics.Actor.get_linear_velocity" title="superdex.physics.Actor.get_linear_velocity"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_linear_velocity()</span></code></a>, the center-of-mass
+velocity, changes accordingly when the actor is rotating. To place the new
+center of mass at the previous center-of-mass pose instead, call
+<a class="reference internal" href="#superdex.physics.Actor.get_center_of_mass_transform" title="superdex.physics.Actor.get_center_of_mass_transform"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_center_of_mass_transform()</span></code></a> before this
+call and pass the result to
+<a class="reference internal" href="#superdex.physics.Actor.set_center_of_mass_transform" title="superdex.physics.Actor.set_center_of_mass_transform"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_center_of_mass_transform()</span></code></a> afterwards.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The center of mass cannot be changed while the actor has constraints or
+translation boundary conditions. Set the center of mass before adding them.
+Changing only mass or moment of inertia remains supported.</p>
 </div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
@@ -8508,7 +8657,8 @@ Skeleton-driven displacement and velocity are preserved.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>For rod actors, it zeroes both the translational displacement DoFs and the
-twist-angle DoFs.</p>
+twist-angle DoFs, and returns each element’s cross-section to its rest
+orientation.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -9350,6 +9500,12 @@ provided. A soft-skinned actor enables link contact when
 <a class="reference internal" href="#superdex.physics.SoftSkinnedActorParams.enable_colliding_links" title="superdex.physics.SoftSkinnedActorParams.enable_colliding_links"><code class="xref py py-attr docutils literal notranslate"><span class="pre">enable_colliding_links</span></code></a> is
 true.</p>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A tetrahedral or triangular mesh shape may have nodes that no element
+references. The link actor’s <a class="reference internal" href="#superdex.physics.Actor.get_mesh" title="superdex.physics.Actor.get_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_mesh()</span></code></a> omits
+them.</p>
+</div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShapeHandle</span></code></a>,
@@ -9636,7 +9792,18 @@ flag in sole control.</p>
 <dd><p>Shape handle defining the skinned triangular or tetrahedral mesh.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
+<p>Actor creation fails if the shape is not a triangular or tetrahedral mesh
+shape with skinning data, or has a node that no element references.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
 <p>A shape can be shared by multiple actors, even actors in different scenes.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The number of skinning links per vertex impacts performance. Keep it as low
+as possible to maximize performance, e.g., by clamping tiny skinning weights
+to zero.</p>
 </div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
@@ -9908,7 +10075,8 @@ their respective thresholds.</p>
 forces and collisions).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Also used to create links in articulated bodies.</p>
+<p>Articulated links are created from
+<a class="reference internal" href="#superdex.physics.ArticulatedLinkParams" title="superdex.physics.ArticulatedLinkParams"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedLinkParams</span></code></a> instead.</p>
 </div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
@@ -9921,7 +10089,7 @@ forces and collisions).</p>
 <dd><p>Optional initial angular velocity in world frame [rad/s], zero otherwise.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Not valid for static rigid actors or articulated links.</p>
+<p>Not valid for static rigid actors.</p>
 </div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
@@ -10066,7 +10234,7 @@ takes precedence and density is ignored.</p>
 zero otherwise.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Not valid for static rigid actors or articulated links.</p>
+<p>Not valid for static rigid actors.</p>
 </div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
@@ -10169,6 +10337,11 @@ shape doesn’t already have one.</p>
 <p class="admonition-title">Note</p>
 <p>Dynamic rigid actors require a shape with a surface mesh.</p>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A tetrahedral or triangular mesh shape may have nodes that no element
+references. <a class="reference internal" href="#superdex.physics.Actor.get_mesh" title="superdex.physics.Actor.get_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_mesh()</span></code></a> omits them.</p>
+</div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShapeHandle</span></code></a>,
@@ -10218,10 +10391,12 @@ colliders. To create a soft actor with a collider, use
 <dl class="py property">
 <dt class="sig sig-object py" id="superdex.physics.SoftActorParams.boundary_element_type">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">boundary_element_type</span></span><a class="headerlink" href="#superdex.physics.SoftActorParams.boundary_element_type" title="Permalink to this definition"></a></dt>
-<dd><p>Finite element type for boundary discretization.</p>
+<dd><p>Finite element type for contact discretization.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Affects accuracy and performance of contact and boundary integrals.</p>
+<p>Selects quadrature on the tetrahedral boundary, or on the authored contact
+skin when <a class="reference internal" href="#superdex.physics.SoftActorParams.use_contact_skin" title="superdex.physics.SoftActorParams.use_contact_skin"><code class="xref py py-attr docutils literal notranslate"><span class="pre">use_contact_skin</span></code></a> is
+true.</p>
 </div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
@@ -10355,7 +10530,8 @@ requirements and defaulting behavior.</p>
 <dd><p>Shape handle defining the actor’s geometry and other metadata.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Must be a TetrahedralMeshShape for soft actors.</p>
+<p>Actor creation fails if the shape is not a tetrahedral mesh shape or has a
+node that no element references.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -10365,6 +10541,29 @@ requirements and defaulting behavior.</p>
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShapeHandle</span></code></a>,
 <a class="reference internal" href="#superdex.physics.load_shape_from_file" title="superdex.physics.load_shape_from_file"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_shape_from_file()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="superdex.physics.SoftActorParams.use_contact_skin">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">use_contact_skin</span></span><a class="headerlink" href="#superdex.physics.SoftActorParams.use_contact_skin" title="Permalink to this definition"></a></dt>
+<dd><p>[Experimental] Use the shape’s authored contact skin for colliding contact
+samples.</p>
+<p>Actor creation fails unless the shape has a contact skin. The tetrahedral
+boundary remains the collider geometry when an SDF or Deep Flow collider is
+enabled. This option is not supported for ROM or nested soft actors.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The contact skin is exposed through
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh" title="superdex.physics.Actor.get_contact_skin_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh()</span></code></a> and
+<a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">CONTACT_SKIN_NODE_POSITIONS</span></code></a> /
+<a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">CONTACT_SKIN_NODE_NORMALS</span></code></a>
+independently of this flag.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This is an experimental feature. It may be changed or removed in the future.
+Use at your own risk.</p>
 </div>
 </dd></dl>
 
@@ -13455,15 +13654,10 @@ is inside (i.e. actors overlap).</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="superdex.physics.ContactPoint.element_index">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">element_index</span></span><a class="headerlink" href="#superdex.physics.ContactPoint.element_index" title="Permalink to this definition"></a></dt>
-<dd><p>Element index in the mesh used for colliding samples on
-<a class="reference internal" href="#superdex.physics.ContactPoint.actor_a" title="superdex.physics.ContactPoint.actor_a"><code class="xref py py-attr docutils literal notranslate"><span class="pre">actor_a</span></code></a>.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>For shell actors, this is the physics mesh returned by
-<a class="reference internal" href="#superdex.physics.Actor.get_mesh" title="superdex.physics.Actor.get_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_mesh()</span></code></a> unless contact-skin contact is
-enabled, in which case it is the compact contact skin returned by
-<a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh" title="superdex.physics.Actor.get_surface_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh()</span></code></a>.</p>
-</div>
+<dd><p>Index of the triangle of <a class="reference internal" href="#superdex.physics.ContactPoint.actor_a" title="superdex.physics.ContactPoint.actor_a"><code class="xref py py-attr docutils literal notranslate"><span class="pre">actor_a</span></code></a> in
+<a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh" title="superdex.physics.Actor.get_surface_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh()</span></code></a>, or in
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh" title="superdex.physics.Actor.get_contact_skin_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh()</span></code></a> when contact uses the
+contact skin.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>For rod actors, this field is not populated and is reported as 0. Use
@@ -13659,14 +13853,10 @@ after registering <a class="reference internal" href="#superdex.physics.QueryTyp
 <dl class="py property">
 <dt class="sig sig-object py" id="superdex.physics.NodeContactForce.index">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">index</span></span><a class="headerlink" href="#superdex.physics.NodeContactForce.index" title="Permalink to this definition"></a></dt>
-<dd><p>Node index in the volumetric mesh or the mesh used for colliding samples.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>For shell actors, this is the physics mesh returned by
-<a class="reference internal" href="#superdex.physics.Actor.get_mesh" title="superdex.physics.Actor.get_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_mesh()</span></code></a> unless contact-skin contact is
-enabled, in which case it is the compact contact skin returned by
-<a class="reference internal" href="#superdex.physics.Actor.get_surface_mesh" title="superdex.physics.Actor.get_surface_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_surface_mesh()</span></code></a>.</p>
-</div>
+<dd><p>Index of the node in the node list returned by
+<a class="reference internal" href="#superdex.physics.Actor.get_mesh" title="superdex.physics.Actor.get_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_mesh()</span></code></a>, or by
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh" title="superdex.physics.Actor.get_contact_skin_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh()</span></code></a> when contact uses the
+contact skin.</p>
 </dd></dl>
 
 </dd></dl>
@@ -14036,8 +14226,9 @@ given time step size.</p>
 <p>Norm types for the stopping criteria of the linear solver.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>This setting only applies to <a class="reference internal" href="#superdex.physics.LinearSolverType" title="superdex.physics.LinearSolverType"><code class="xref py py-class docutils literal notranslate"><span class="pre">CG</span></code></a>, <a class="reference internal" href="#superdex.physics.LinearSolverType" title="superdex.physics.LinearSolverType"><code class="xref py py-class docutils literal notranslate"><span class="pre">CUDA_CG</span></code></a>, <a class="reference internal" href="#superdex.physics.LinearSolverType" title="superdex.physics.LinearSolverType"><code class="xref py py-class docutils literal notranslate"><span class="pre">PARALLEL_CG</span></code></a> and <a class="reference internal" href="#superdex.physics.LinearSolverType" title="superdex.physics.LinearSolverType"><code class="xref py py-class docutils literal notranslate"><span class="pre">ASYNC_CG</span></code></a>. <a class="reference internal" href="#superdex.physics.LinearSolverType" title="superdex.physics.LinearSolverType"><code class="xref py py-class docutils literal notranslate"><span class="pre">GMRES</span></code></a>, <a class="reference internal" href="#superdex.physics.LinearSolverType" title="superdex.physics.LinearSolverType"><code class="xref py py-class docutils literal notranslate"><span class="pre">CUDA_GMRES</span></code></a>, <a class="reference internal" href="#superdex.physics.LinearSolverType" title="superdex.physics.LinearSolverType"><code class="xref py py-class docutils literal notranslate"><span class="pre">MINRES</span></code></a>, and <a class="reference internal" href="#superdex.physics.LinearSolverType" title="superdex.physics.LinearSolverType"><code class="xref py py-class docutils literal notranslate"><span class="pre">AUGMENTED_CG</span></code></a> always use the L2-norm of the residual
-regardless of this setting. Direct solvers do not have stop criteria.</p>
+<p>This setting only applies to <a class="reference internal" href="#superdex.physics.LinearSolverType" title="superdex.physics.LinearSolverType"><code class="xref py py-class docutils literal notranslate"><span class="pre">CG</span></code></a>, <a class="reference internal" href="#superdex.physics.LinearSolverType" title="superdex.physics.LinearSolverType"><code class="xref py py-class docutils literal notranslate"><span class="pre">CUDA_CG</span></code></a>, <a class="reference internal" href="#superdex.physics.LinearSolverType" title="superdex.physics.LinearSolverType"><code class="xref py py-class docutils literal notranslate"><span class="pre">PARALLEL_CG</span></code></a> and <a class="reference internal" href="#superdex.physics.LinearSolverType" title="superdex.physics.LinearSolverType"><code class="xref py py-class docutils literal notranslate"><span class="pre">ASYNC_CG</span></code></a>. <a class="reference internal" href="#superdex.physics.LinearSolverType" title="superdex.physics.LinearSolverType"><code class="xref py py-class docutils literal notranslate"><span class="pre">GMRES</span></code></a>, <a class="reference internal" href="#superdex.physics.LinearSolverType" title="superdex.physics.LinearSolverType"><code class="xref py py-class docutils literal notranslate"><span class="pre">CUDA_GMRES</span></code></a>, and <a class="reference internal" href="#superdex.physics.LinearSolverType" title="superdex.physics.LinearSolverType"><code class="xref py py-class docutils literal notranslate"><span class="pre">AUGMENTED_CG</span></code></a> always use the L2-norm of the residual
+regardless of this setting. <a class="reference internal" href="#superdex.physics.LinearSolverType" title="superdex.physics.LinearSolverType"><code class="xref py py-class docutils literal notranslate"><span class="pre">MINRES</span></code></a> always uses the preconditioner-induced
+norm of the residual. Direct solvers do not have stop criteria.</p>
 </div>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="superdex.physics.LinearSolverConvergenceNorm.COUNT">
@@ -14134,8 +14325,8 @@ maximum number of iterations based on the problem.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="superdex.physics.LinearSolverParams.rel_div_tol">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">rel_div_tol</span></span><a class="headerlink" href="#superdex.physics.LinearSolverParams.rel_div_tol" title="Permalink to this definition"></a></dt>
-<dd><p>Relative residual norm tolerance for divergence, relative to the initial
-residual.</p>
+<dd><p>Relative residual norm tolerance for divergence, relative to the same norm of
+the right-hand side.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Applies only to iterative solvers.</p>
@@ -14145,8 +14336,8 @@ residual.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="superdex.physics.LinearSolverParams.rel_tol">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">rel_tol</span></span><a class="headerlink" href="#superdex.physics.LinearSolverParams.rel_tol" title="Permalink to this definition"></a></dt>
-<dd><p>Relative residual norm tolerance for convergence, relative to the initial
-residual.</p>
+<dd><p>Relative residual norm tolerance for convergence, relative to the same norm of
+the right-hand side.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Applies only to iterative solvers.</p>
@@ -14857,11 +15048,21 @@ Use at your own risk.</p>
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">convergence_status</span></span><a class="headerlink" href="#superdex.physics.SolverStats.convergence_status" title="Permalink to this definition"></a></dt>
 <dd><p>Aggregate convergence status of the scene in the last call to
 <a class="reference internal" href="#superdex.physics.Scene.step" title="superdex.physics.Scene.step"><code class="xref py py-meth docutils literal notranslate"><span class="pre">step()</span></code></a>.</p>
-<p>Returns the worst convergence status across all dynamic actors: <a class="reference internal" href="#superdex.physics.ConvergenceStatus" title="superdex.physics.ConvergenceStatus"><code class="xref py py-class docutils literal notranslate"><span class="pre">DIVERGED</span></code></a> if any actor diverged, <a class="reference internal" href="#superdex.physics.ConvergenceStatus" title="superdex.physics.ConvergenceStatus"><code class="xref py py-class docutils literal notranslate"><span class="pre">STOPPED</span></code></a> if any actor’s solver was stopped,
-<a class="reference internal" href="#superdex.physics.ConvergenceStatus" title="superdex.physics.ConvergenceStatus"><code class="xref py py-class docutils literal notranslate"><span class="pre">CONVERGED</span></code></a> if all dynamic actors
-converged, <a class="reference internal" href="#superdex.physics.ConvergenceStatus" title="superdex.physics.ConvergenceStatus"><code class="xref py py-class docutils literal notranslate"><span class="pre">NONE</span></code></a> if no dynamic
-actors exist, <a class="reference internal" href="#superdex.physics.Scene.step" title="superdex.physics.Scene.step"><code class="xref py py-meth docutils literal notranslate"><span class="pre">step()</span></code></a> has not been called yet or
-the last call to <a class="reference internal" href="#superdex.physics.Scene.step" title="superdex.physics.Scene.step"><code class="xref py py-meth docutils literal notranslate"><span class="pre">step()</span></code></a> was with zero time step.</p>
+<p>Returns the worst convergence status across all dynamic actors in awake islands:
+<a class="reference internal" href="#superdex.physics.ConvergenceStatus" title="superdex.physics.ConvergenceStatus"><code class="xref py py-class docutils literal notranslate"><span class="pre">DIVERGED</span></code></a> if any actor diverged,
+<a class="reference internal" href="#superdex.physics.ConvergenceStatus" title="superdex.physics.ConvergenceStatus"><code class="xref py py-class docutils literal notranslate"><span class="pre">STOPPED</span></code></a> if any actor’s solver was
+stopped, <a class="reference internal" href="#superdex.physics.ConvergenceStatus" title="superdex.physics.ConvergenceStatus"><code class="xref py py-class docutils literal notranslate"><span class="pre">CONVERGED</span></code></a> if all dynamic
+actors in awake islands converged, <a class="reference internal" href="#superdex.physics.ConvergenceStatus" title="superdex.physics.ConvergenceStatus"><code class="xref py py-class docutils literal notranslate"><span class="pre">NONE</span></code></a> if no dynamic actors exist, all islands
+are asleep, <a class="reference internal" href="#superdex.physics.Scene.step" title="superdex.physics.Scene.step"><code class="xref py py-meth docutils literal notranslate"><span class="pre">step()</span></code></a> has not been called yet or the
+last call to <a class="reference internal" href="#superdex.physics.Scene.step" title="superdex.physics.Scene.step"><code class="xref py py-meth docutils literal notranslate"><span class="pre">step()</span></code></a> was with zero time step.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Unlike <a class="reference internal" href="#superdex.physics.ConvergenceStatus" title="superdex.physics.ConvergenceStatus"><code class="xref py py-class docutils literal notranslate"><span class="pre">DIVERGED</span></code></a>,
+<a class="reference internal" href="#superdex.physics.ConvergenceStatus" title="superdex.physics.ConvergenceStatus"><code class="xref py py-class docutils literal notranslate"><span class="pre">STOPPED</span></code></a> does not indicate that
+the step failed. It means that the nonlinear solve reached a stopping
+criterion, such as the maximum number of iterations, before meeting its
+residual tolerances, which may be stricter than the scene requires.</p>
+</div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.ConvergenceStatus" title="superdex.physics.ConvergenceStatus"><code class="xref py py-class docutils literal notranslate"><span class="pre">ConvergenceStatus</span></code></a>,
@@ -14872,23 +15073,24 @@ the last call to <a class="reference internal" href="#superdex.physics.Scene.ste
 <dl class="py property">
 <dt class="sig sig-object py" id="superdex.physics.SolverStats.max_line_search_iters">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">max_line_search_iters</span></span><a class="headerlink" href="#superdex.physics.SolverStats.max_line_search_iters" title="Permalink to this definition"></a></dt>
-<dd><p>Maximum number of line-search iterations per Newton solve across all islands and
-integration stages in the last call to <a class="reference internal" href="#superdex.physics.Scene.step" title="superdex.physics.Scene.step"><code class="xref py py-meth docutils literal notranslate"><span class="pre">step()</span></code></a>.</p>
+<dd><p>Maximum number of line-search iterations per Newton solve across all awake
+islands and integration stages in the last call to
+<a class="reference internal" href="#superdex.physics.Scene.step" title="superdex.physics.Scene.step"><code class="xref py py-meth docutils literal notranslate"><span class="pre">step()</span></code></a>.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="superdex.physics.SolverStats.max_non_linear_iters">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">max_non_linear_iters</span></span><a class="headerlink" href="#superdex.physics.SolverStats.max_non_linear_iters" title="Permalink to this definition"></a></dt>
-<dd><p>Maximum number of non-linear solver iterations across all islands and
+<dd><p>Maximum number of non-linear solver iterations across all awake islands and
 integration stages in the last call to <a class="reference internal" href="#superdex.physics.Scene.step" title="superdex.physics.Scene.step"><code class="xref py py-meth docutils literal notranslate"><span class="pre">step()</span></code></a>.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="superdex.physics.SolverStats.residual_norm">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">residual_norm</span></span><a class="headerlink" href="#superdex.physics.SolverStats.residual_norm" title="Permalink to this definition"></a></dt>
-<dd><p>Aggregate residual norm across all islands and integration stages in the last
-call to <a class="reference internal" href="#superdex.physics.Scene.step" title="superdex.physics.Scene.step"><code class="xref py py-meth docutils literal notranslate"><span class="pre">step()</span></code></a>. Computed as the root mean square
-across integration stages of the L2 norm of per-island residual norms.</p>
+<dd><p>Aggregate residual norm across all awake islands and integration stages in the
+last call to <a class="reference internal" href="#superdex.physics.Scene.step" title="superdex.physics.Scene.step"><code class="xref py py-meth docutils literal notranslate"><span class="pre">step()</span></code></a>. Computed as the root mean
+square across integration stages of the L2 norm of per-island residual norms.</p>
 </dd></dl>
 
 </dd></dl>
@@ -14953,27 +15155,37 @@ whether a specific query type is supported for a given actor/constraint.</p>
 </div>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="superdex.physics.QueryType.ARTICULATED_CONTROLLER_FORCE">
-<span class="sig-name descname"><span class="pre">ARTICULATED_CONTROLLER_FORCE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">10</span></em><a class="headerlink" href="#superdex.physics.QueryType.ARTICULATED_CONTROLLER_FORCE" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">ARTICULATED_CONTROLLER_FORCE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">12</span></em><a class="headerlink" href="#superdex.physics.QueryType.ARTICULATED_CONTROLLER_FORCE" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="superdex.physics.QueryType.CONSTRAINT_FORCE">
-<span class="sig-name descname"><span class="pre">CONSTRAINT_FORCE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">9</span></em><a class="headerlink" href="#superdex.physics.QueryType.CONSTRAINT_FORCE" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">CONSTRAINT_FORCE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">11</span></em><a class="headerlink" href="#superdex.physics.QueryType.CONSTRAINT_FORCE" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="superdex.physics.QueryType.CONTACT_POINTS">
-<span class="sig-name descname"><span class="pre">CONTACT_POINTS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">6</span></em><a class="headerlink" href="#superdex.physics.QueryType.CONTACT_POINTS" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">CONTACT_POINTS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">8</span></em><a class="headerlink" href="#superdex.physics.QueryType.CONTACT_POINTS" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.QueryType.CONTACT_SKIN_NODE_NORMALS">
+<span class="sig-name descname"><span class="pre">CONTACT_SKIN_NODE_NORMALS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">7</span></em><a class="headerlink" href="#superdex.physics.QueryType.CONTACT_SKIN_NODE_NORMALS" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="superdex.physics.QueryType.CONTACT_SKIN_NODE_POSITIONS">
+<span class="sig-name descname"><span class="pre">CONTACT_SKIN_NODE_POSITIONS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">6</span></em><a class="headerlink" href="#superdex.physics.QueryType.CONTACT_SKIN_NODE_POSITIONS" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="superdex.physics.QueryType.COUNT">
-<span class="sig-name descname"><span class="pre">COUNT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">13</span></em><a class="headerlink" href="#superdex.physics.QueryType.COUNT" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">COUNT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">15</span></em><a class="headerlink" href="#superdex.physics.QueryType.COUNT" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="superdex.physics.QueryType.ELASTIC_ENERGY">
-<span class="sig-name descname"><span class="pre">ELASTIC_ENERGY</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">7</span></em><a class="headerlink" href="#superdex.physics.QueryType.ELASTIC_ENERGY" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">ELASTIC_ENERGY</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">9</span></em><a class="headerlink" href="#superdex.physics.QueryType.ELASTIC_ENERGY" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -14983,7 +15195,7 @@ whether a specific query type is supported for a given actor/constraint.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="superdex.physics.QueryType.NODE_CONTACT_FORCES">
-<span class="sig-name descname"><span class="pre">NODE_CONTACT_FORCES</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">8</span></em><a class="headerlink" href="#superdex.physics.QueryType.NODE_CONTACT_FORCES" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">NODE_CONTACT_FORCES</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">10</span></em><a class="headerlink" href="#superdex.physics.QueryType.NODE_CONTACT_FORCES" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -14993,7 +15205,7 @@ whether a specific query type is supported for a given actor/constraint.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="superdex.physics.QueryType.SDF_DISTANCES">
-<span class="sig-name descname"><span class="pre">SDF_DISTANCES</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">11</span></em><a class="headerlink" href="#superdex.physics.QueryType.SDF_DISTANCES" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">SDF_DISTANCES</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">13</span></em><a class="headerlink" href="#superdex.physics.QueryType.SDF_DISTANCES" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -15008,7 +15220,7 @@ whether a specific query type is supported for a given actor/constraint.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="superdex.physics.QueryType.TOTAL_CONTACT_FORCE">
-<span class="sig-name descname"><span class="pre">TOTAL_CONTACT_FORCE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">12</span></em><a class="headerlink" href="#superdex.physics.QueryType.TOTAL_CONTACT_FORCE" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">TOTAL_CONTACT_FORCE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">14</span></em><a class="headerlink" href="#superdex.physics.QueryType.TOTAL_CONTACT_FORCE" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -15052,12 +15264,6 @@ releases.</p>
 <dt class="sig sig-object py" id="superdex.physics.RecordingParams.record_actor_local_to_global_map">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">record_actor_local_to_global_map</span></span><a class="headerlink" href="#superdex.physics.RecordingParams.record_actor_local_to_global_map" title="Permalink to this definition"></a></dt>
 <dd><p>Include the local-to-global map (if any) when recording actor creation events.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="superdex.physics.RecordingParams.record_actor_mass_matrix">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">record_actor_mass_matrix</span></span><a class="headerlink" href="#superdex.physics.RecordingParams.record_actor_mass_matrix" title="Permalink to this definition"></a></dt>
-<dd><p>Include the mass matrix (if any) when recording actor creation events.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -15619,7 +15825,8 @@ callbacks.</p>
 <dt class="sig sig-object py" id="superdex.physics.PerformanceStats.total_step_duration_sec">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">total_step_duration_sec</span></span><a class="headerlink" href="#superdex.physics.PerformanceStats.total_step_duration_sec" title="Permalink to this definition"></a></dt>
 <dd><p>Total wall-clock time [s] spent in the last call to
-<a class="reference internal" href="#superdex.physics.Scene.step" title="superdex.physics.Scene.step"><code class="xref py py-meth docutils literal notranslate"><span class="pre">step()</span></code></a>.</p>
+<a class="reference internal" href="#superdex.physics.Scene.step" title="superdex.physics.Scene.step"><code class="xref py py-meth docutils literal notranslate"><span class="pre">step()</span></code></a>, excluding time spent in the remote physics
+debugger.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Includes time spent in user-defined pre-step and post-step callbacks.</p>
@@ -16208,12 +16415,6 @@ and positive Z, respectively. For example, <a class="reference internal" href="#
 
 </dd></dl>
 
-<dl class="py data">
-<dt class="sig sig-object py" id="superdex.physics.QUATERNION_IDENTITY">
-<span class="sig-name descname"><span class="pre">QUATERNION_IDENTITY</span></span><a class="headerlink" href="#superdex.physics.QUATERNION_IDENTITY" title="Permalink to this definition"></a></dt>
-<dd><p>Identity quaternion (no rotation).</p>
-</dd></dl>
-
 <dl class="py class">
 <dt class="sig sig-object py" id="superdex.physics.Quaternion">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Quaternion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.Quaternion" title="Permalink to this definition"></a></dt>
@@ -16323,12 +16524,6 @@ and positive Z, respectively. For example, <a class="reference internal" href="#
 <span class="sig-name descname"><span class="pre">tolist</span></span><a class="headerlink" href="#superdex.physics.Real6.tolist" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
-</dd></dl>
-
-<dl class="py data">
-<dt class="sig sig-object py" id="superdex.physics.TRANSFORM_RT_IDENTITY">
-<span class="sig-name descname"><span class="pre">TRANSFORM_RT_IDENTITY</span></span><a class="headerlink" href="#superdex.physics.TRANSFORM_RT_IDENTITY" title="Permalink to this definition"></a></dt>
-<dd><p>Identity transform (no rotation, no translation).</p>
 </dd></dl>
 
 <dl class="py class">
@@ -18408,14 +18603,13 @@ spatial tendon.</p>
 <dt class="sig sig-object py" id="superdex.physics.get_shape_contact_skin_mesh">
 <span class="sig-name descname"><span class="pre">get_shape_contact_skin_mesh</span></span><a class="headerlink" href="#superdex.physics.get_shape_contact_skin_mesh" title="Permalink to this definition"></a></dt>
 <dd><p>superdex.physics.ShapeHandle) -&gt; superdex.physics.MeshDataView</p>
-<p>Get a view of the shape’s contact-skin mesh data, including linear skinning data
-if available.</p>
-<p>Returns a triangle mesh (3 nodes per element) intended for contact handling.
-Coordinates and connectivity are returned in contact-skin node-index space,
-including any contact-skin nodes not referenced by the contact-skin
-connectivity. The mesh includes linear skinning data for deformation when
-available. Nonlinear skinning data, such as rod contact-skin embeddings, is not
-exposed. For shapes without a contact skin, returns an empty view.</p>
+<p>Get a view of the shape’s contact-skin mesh data, including its skinning data.</p>
+<p>Returns a triangle mesh (3 nodes per element). Every contact-skin node is
+referenced by the contact-skin connectivity, so
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh" title="superdex.physics.Actor.get_contact_skin_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh()</span></code></a> has the same node
+ordering. The mesh includes the authored skinning data, in the format of
+<a class="reference internal" href="#superdex.physics.ModelData.contact_skin_mesh" title="superdex.physics.ModelData.contact_skin_mesh"><code class="xref py py-attr docutils literal notranslate"><span class="pre">contact_skin_mesh</span></code></a>. For shapes without a
+contact skin, returns an empty view.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>shape</strong> (<a class="reference internal" href="#superdex.physics.ShapeHandle" title="superdex.physics.ShapeHandle"><em>ShapeHandle</em></a>) – Handle to a valid shape.</p>
@@ -18438,17 +18632,19 @@ the shape has no contact skin.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>When linear contact-skin skinning data is present, skinning indices refer to
-the node ordering returned by <a class="reference internal" href="#superdex.physics.get_shape_mesh" title="superdex.physics.get_shape_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_mesh()</span></code></a>, not
-to the compact surface-node ordering returned by
-<a class="reference internal" href="#superdex.physics.get_shape_surface_mesh" title="superdex.physics.get_shape_surface_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_surface_mesh()</span></code></a>.</p>
+<p>For tetrahedral and triangular mesh shapes, skinning indices refer to the
+node ordering returned by <a class="reference internal" href="#superdex.physics.get_shape_mesh" title="superdex.physics.get_shape_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_mesh()</span></code></a>, not to
+the compact surface-node ordering returned by
+<a class="reference internal" href="#superdex.physics.get_shape_surface_mesh" title="superdex.physics.get_shape_surface_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_surface_mesh()</span></code></a>. For polyline shapes,
+skinning indices refer to polyline elements.</p>
 </div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.MeshDataView" title="superdex.physics.MeshDataView"><code class="xref py py-class docutils literal notranslate"><span class="pre">MeshDataView</span></code></a>,
 <a class="reference internal" href="#superdex.physics.get_shape_mesh" title="superdex.physics.get_shape_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_mesh()</span></code></a>,
 <a class="reference internal" href="#superdex.physics.get_shape_surface_mesh" title="superdex.physics.get_shape_surface_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_surface_mesh()</span></code></a>,
-<a class="reference internal" href="#superdex.physics.get_shape_visual_mesh" title="superdex.physics.get_shape_visual_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_visual_mesh()</span></code></a></p>
+<a class="reference internal" href="#superdex.physics.get_shape_visual_mesh" title="superdex.physics.get_shape_visual_mesh"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_shape_visual_mesh()</span></code></a>,
+<a class="reference internal" href="#superdex.physics.Actor.get_contact_skin_mesh" title="superdex.physics.Actor.get_contact_skin_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_contact_skin_mesh()</span></code></a></p>
 </div>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>

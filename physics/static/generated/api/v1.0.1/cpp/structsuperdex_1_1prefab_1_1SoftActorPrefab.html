@@ -215,7 +215,7 @@ Public Attributes</h2></td></tr>
 <tr class="memdesc:a721db1d14add3dccdd121a09391a8c5e"><td class="mdescLeft">&#160;</td><td class="mdescRight">[Experimental] Enable automatic recentering of the local coordinate system.  <br /></td></tr>
 <tr class="inherit_header pub_attribs_structsuperdex_1_1SoftActorParams"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_attribs_structsuperdex_1_1SoftActorParams')"><span class="dynarrow"><span class="arrowhead closed"></span></span>Public Attributes inherited from <a class="el" href="structsuperdex_1_1SoftActorParams.html">superdex::SoftActorParams</a></td></tr>
 <tr class="memitem:a7637ab4f7de1fb4f2ad93d4ab695f15c inherit pub_attribs_structsuperdex_1_1SoftActorParams" id="r_a7637ab4f7de1fb4f2ad93d4ab695f15c"><td class="memItemLeft"><a class="el" href="namespacesuperdex.html#a7ff767caee9a23cb97b864fd2ebb8fa4">ActorBoundaryElementType</a>&#160;</td><td class="memItemRight"><a class="el" href="structsuperdex_1_1SoftActorParams.html#a7637ab4f7de1fb4f2ad93d4ab695f15c">boundaryElementType</a> = <a class="el" href="namespacesuperdex.html#a7ff767caee9a23cb97b864fd2ebb8fa4a7a1920d61156abc05a60135aefe8bc67">ActorBoundaryElementType::Default</a></td></tr>
-<tr class="memdesc:a7637ab4f7de1fb4f2ad93d4ab695f15c inherit pub_attribs_structsuperdex_1_1SoftActorParams"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finite element type for boundary discretization.  <br /></td></tr>
+<tr class="memdesc:a7637ab4f7de1fb4f2ad93d4ab695f15c inherit pub_attribs_structsuperdex_1_1SoftActorParams"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finite element type for contact discretization.  <br /></td></tr>
 <tr class="memitem:a7035b3cfc4db19e4794be4c87c8cfa61 inherit pub_attribs_structsuperdex_1_1SoftActorParams" id="r_a7035b3cfc4db19e4794be4c87c8cfa61"><td class="memItemLeft"><a class="el" href="structsuperdex_1_1ContactParams.html">ContactParams</a>&#160;</td><td class="memItemRight"><a class="el" href="structsuperdex_1_1SoftActorParams.html#a7035b3cfc4db19e4794be4c87c8cfa61">contact</a></td></tr>
 <tr class="memdesc:a7035b3cfc4db19e4794be4c87c8cfa61 inherit pub_attribs_structsuperdex_1_1SoftActorParams"><td class="mdescLeft">&#160;</td><td class="mdescRight">Contact mechanics parameters.  <br /></td></tr>
 <tr class="memitem:add14642b281857b072343c323d35c301 inherit pub_attribs_structsuperdex_1_1SoftActorParams" id="r_add14642b281857b072343c323d35c301"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="structsuperdex_1_1SoftActorParams.html#add14642b281857b072343c323d35c301">hasGravity</a> = true</td></tr>
@@ -232,6 +232,8 @@ Public Attributes</h2></td></tr>
 <tr class="memdesc:a49cc3bdca1cc88abc650d9de0113ebec inherit pub_attribs_structsuperdex_1_1SoftActorParams"><td class="mdescLeft">&#160;</td><td class="mdescRight">Optional actor name.  <br /></td></tr>
 <tr class="memitem:a2783c8c7989d98fe7abd11fff1347816 inherit pub_attribs_structsuperdex_1_1SoftActorParams" id="r_a2783c8c7989d98fe7abd11fff1347816"><td class="memItemLeft"><a class="el" href="structsuperdex_1_1ShapeHandle.html">ShapeHandle</a>&#160;</td><td class="memItemRight"><a class="el" href="structsuperdex_1_1SoftActorParams.html#a2783c8c7989d98fe7abd11fff1347816">shape</a></td></tr>
 <tr class="memdesc:a2783c8c7989d98fe7abd11fff1347816 inherit pub_attribs_structsuperdex_1_1SoftActorParams"><td class="mdescLeft">&#160;</td><td class="mdescRight">Shape handle defining the actor's geometry and other metadata.  <br /></td></tr>
+<tr class="memitem:aa21d85e608390a3c1564f581478a1878 inherit pub_attribs_structsuperdex_1_1SoftActorParams" id="r_aa21d85e608390a3c1564f581478a1878"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="structsuperdex_1_1SoftActorParams.html#aa21d85e608390a3c1564f581478a1878">useContactSkin</a> = false</td></tr>
+<tr class="memdesc:aa21d85e608390a3c1564f581478a1878 inherit pub_attribs_structsuperdex_1_1SoftActorParams"><td class="mdescLeft">&#160;</td><td class="mdescRight">[Experimental] Use the shape's authored contact skin for colliding contact samples.  <br /></td></tr>
 <tr class="memitem:ab23fc8af21d81bd22998bad8a4c1b7af inherit pub_attribs_structsuperdex_1_1SoftActorParams" id="r_ab23fc8af21d81bd22998bad8a4c1b7af"><td class="memItemLeft"><a class="el" href="classsuperdex_1_1TransformRT.html">TransformRT</a>&#160;</td><td class="memItemRight"><a class="el" href="structsuperdex_1_1SoftActorParams.html#ab23fc8af21d81bd22998bad8a4c1b7af">worldFromLocal</a></td></tr>
 <tr class="memdesc:ab23fc8af21d81bd22998bad8a4c1b7af inherit pub_attribs_structsuperdex_1_1SoftActorParams"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initial rotation and translation of the actor's local frame with respect to world frame.  <br /></td></tr>
 </table><table class="memberdecls">
@@ -245,7 +247,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Extends <a class="el" href="structsuperdex_1_1SoftActorParams.html" title="superdex::SoftActorParams">SoftActorParams</a>. The inherited <a class="el" href="structsuperdex_1_1SoftActorParams.html#ab23fc8af21d81bd22998bad8a4c1b7af" title="superdex::SoftActorParams::worldFromLocal">SoftActorParams::worldFromLocal</a> is replaced by the prefab-relative <a class="el" href="#ae02ed4fb8cc90b52d2e27b81d1c78e45" title="superdex::prefab::SoftActorPrefab::rotation">rotation</a> and <a class="el" href="#a2b9415e0fd7c749749bd4762af2e1f0b" title="superdex::prefab::SoftActorPrefab::translation">translation</a> fields, and the inherited <a class="el" href="structsuperdex_1_1SoftActorParams.html#a2783c8c7989d98fe7abd11fff1347816" title="superdex::SoftActorParams::shape">SoftActorParams::shape</a> (a runtime <a class="el" href="structsuperdex_1_1ShapeHandle.html" title="superdex::ShapeHandle">ShapeHandle</a>) is replaced by <a class="el" href="#a28b1ff58c5b76b3ff8cabac4672a8098" title="superdex::prefab::SoftActorPrefab::shapeFile">shapeFile</a> (a path serialized to JSON. The shape is loaded at instantiation time).</p>
 <dl class="section note"><dt>Note</dt><dd>When used as a standalone soft actor prefab, the inherited <a class="el" href="structsuperdex_1_1SoftActorParams.html#a49cc3bdca1cc88abc650d9de0113ebec" title="superdex::SoftActorParams::name">SoftActorParams::name</a> field need not be unique, but a name shared by more than one actor cannot be used by name-based prefab references. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00093">93</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00094">94</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 </div><a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
 <a id="acb5d980552e9dd62fd6844b658358cab" name="acb5d980552e9dd62fd6844b658358cab"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#acb5d980552e9dd62fd6844b658358cab">&#9670;&#160;</a></span>colliderType</h2>
@@ -263,7 +265,7 @@ Additional Inherited Members</h2></td></tr>
 <dl class="section note"><dt>Note</dt><dd>Determines how OTHER actors detect contact with this actor. It does not affect how this actor detects contact with other actors.</dd></dl>
 <dl class="section warning"><dt>Warning</dt><dd>This is an experimental feature. It may be changed or removed in the future. Use at your own risk. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00096">96</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00097">97</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -281,7 +283,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Optional serialized comment. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00094">94</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00095">95</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -300,7 +302,7 @@ Additional Inherited Members</h2></td></tr>
 <p>[Experimental] Optional deep flow shape handle loaded from <a class="el" href="#aa3ab961e154bdc9155b77976ce9437b9" title="superdex::prefab::SoftActorPrefab::flowFile">flowFile</a>. </p>
 <dl class="section warning"><dt>Warning</dt><dd>This is an experimental feature. It may be changed or removed in the future. Use at your own risk. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00099">99</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00100">100</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -319,7 +321,7 @@ Additional Inherited Members</h2></td></tr>
 <p>[Experimental] Optional path to a deep flow shape handle for collision detection. </p>
 <dl class="section warning"><dt>Warning</dt><dd>This is an experimental feature. It may be changed or removed in the future. Use at your own risk. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00098">98</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00099">99</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -339,7 +341,7 @@ Additional Inherited Members</h2></td></tr>
 <p>.glb) for visualization.</p>
 <dl class="section note"><dt>Note</dt><dd>SuperDex Physics does not use this field for simulation. It provides additional metadata for visualization in supported tools. Ignored if empty. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00106">106</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00107">107</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -358,7 +360,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Rotation quaternion [x, y, z, w] to apply to the render model. </p>
 <dl class="section note"><dt>Note</dt><dd>Ignored if <a class="el" href="#a05a5960e16b15ead0fb6719b003dceb4" title="superdex::prefab::SoftActorPrefab::renderModelFile">renderModelFile</a> is empty. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00108">108</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00109">109</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -377,7 +379,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Scale [x, y, z] to apply to the render model. </p>
 <dl class="section note"><dt>Note</dt><dd>Ignored if <a class="el" href="#a05a5960e16b15ead0fb6719b003dceb4" title="superdex::prefab::SoftActorPrefab::renderModelFile">renderModelFile</a> is empty. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00107">107</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00108">108</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -396,7 +398,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Translation [x, y, z] to apply to the render model. </p>
 <dl class="section note"><dt>Note</dt><dd>Ignored if <a class="el" href="#a05a5960e16b15ead0fb6719b003dceb4" title="superdex::prefab::SoftActorPrefab::renderModelFile">renderModelFile</a> is empty. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00109">109</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00110">110</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -418,7 +420,7 @@ Additional Inherited Members</h2></td></tr>
 <dd>
 Ignored when used in <a class="el" href="structsuperdex_1_1prefab_1_1SoftSkinnedActorPrefab.html#a27e45d26b146e1077881c75e56c357d6" title="superdex::prefab::SoftSkinnedActorPrefab::softParams">SoftSkinnedActorPrefab::softParams</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00104">104</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00105">105</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -441,7 +443,7 @@ If <a class="el" href="#aa3ab961e154bdc9155b77976ce9437b9" title="superdex::pref
 <dd>
 Non-uniform scale is supported only for shape data that supports arbitrary per-axis bake scale. Unsupported scale values are rejected when the shape is loaded. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00101">101</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00102">102</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -463,7 +465,7 @@ Non-uniform scale is supported only for shape data that supports arbitrary per-a
 Ignored if the shape already has a grid-based SDF.</dd></dl>
 <dl class="section warning"><dt>Warning</dt><dd>This is an experimental feature. It may be changed or removed in the future. Use at your own risk. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00097">97</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00098">98</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -481,7 +483,7 @@ Ignored if the shape already has a grid-based SDF.</dd></dl>
 
 <p>Path to a model file that will be loaded and referenced via <a class="el" href="structsuperdex_1_1ShapeHandle.html" title="superdex::ShapeHandle">ShapeHandle</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00095">95</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00096">96</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -499,7 +501,7 @@ Ignored if the shape already has a grid-based SDF.</dd></dl>
 
 <p>Rotation quaternion [x, y, z, w] to bake into the shape file. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00102">102</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00103">103</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -517,7 +519,7 @@ Ignored if the shape already has a grid-based SDF.</dd></dl>
 
 <p>Translation [x, y, z] to bake into the shape file. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00103">103</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00104">104</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -539,7 +541,7 @@ Ignored if the shape already has a grid-based SDF.</dd></dl>
 <dd>
 Ignored when used in <a class="el" href="structsuperdex_1_1prefab_1_1SoftSkinnedActorPrefab.html#a27e45d26b146e1077881c75e56c357d6" title="superdex::prefab::SoftSkinnedActorPrefab::softParams">SoftSkinnedActorPrefab::softParams</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00105">105</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00106">106</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -561,7 +563,7 @@ Ignored when used in <a class="el" href="structsuperdex_1_1prefab_1_1SoftSkinned
 Ignored for nested soft actors in soft-skinned actors, which do not support recentering.</dd></dl>
 <dl class="section warning"><dt>Warning</dt><dd>This is an experimental feature. It may be changed or removed in the future. Use at your own risk. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00100">100</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00101">101</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>

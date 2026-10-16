@@ -70,6 +70,8 @@ var mochi__enums_8h =
       [ "superdex::QueryType::SurfaceNodeNormals", "namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba5d8fb19888497a6b953ad49914197655", null ],
       [ "superdex::QueryType::VisualNodePositions", "namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebabe3de1dd0501bfc110e59bbaaf52d0a5", null ],
       [ "superdex::QueryType::VisualNodeNormals", "namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebac877891e4fc440725a9dae9bee7f9094", null ],
+      [ "superdex::QueryType::ContactSkinNodePositions", "namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba39c7a275fa219c9f8bc7dcd8b87423d3", null ],
+      [ "superdex::QueryType::ContactSkinNodeNormals", "namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba7ff37a20ae4e0bb6cd660c7cd15553df", null ],
       [ "superdex::QueryType::ContactPoints", "namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebaa5a95a45154fa9633bfe9c1653de6fe2", null ],
       [ "superdex::QueryType::ElasticEnergy", "namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba81bdc703864b4d8552ddfec8ed3b1654", null ],
       [ "superdex::QueryType::NodeContactForces", "namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5eba4354a9bb146f7cb3eb3eb8bb55e88725", null ],

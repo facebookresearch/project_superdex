@@ -3,6 +3,7 @@ var group__actors__soft =
 [
     [ "Soft Materials", "group__actors__soft__materials.html", "group__actors__soft__materials" ],
     [ "superdex::RecenteringParams", "structsuperdex_1_1RecenteringParams.html", [
+      [ "operator==", "structsuperdex_1_1RecenteringParams.html#a5fafa48862bd0541e3c047acaf56d4eb", null ],
       [ "rotationEpsilonDeg", "structsuperdex_1_1RecenteringParams.html#abf193ba93053a83ef2b7e0e9a656dd3e", null ],
       [ "translationEpsilon", "structsuperdex_1_1RecenteringParams.html#a6984ce1dfba7f55ec4ab183e6df569c9", null ],
       [ "useRecentering", "structsuperdex_1_1RecenteringParams.html#a7264484a429cd297762bd92499c92fdd", null ]
@@ -18,6 +19,7 @@ var group__actors__soft =
       [ "material", "structsuperdex_1_1SoftActorParams.html#a0f3c1688c3107bf1cbb8b81f2bc8038d", null ],
       [ "name", "structsuperdex_1_1SoftActorParams.html#a49cc3bdca1cc88abc650d9de0113ebec", null ],
       [ "shape", "structsuperdex_1_1SoftActorParams.html#a2783c8c7989d98fe7abd11fff1347816", null ],
+      [ "useContactSkin", "structsuperdex_1_1SoftActorParams.html#aa21d85e608390a3c1564f581478a1878", null ],
       [ "worldFromLocal", "structsuperdex_1_1SoftActorParams.html#ab23fc8af21d81bd22998bad8a4c1b7af", null ]
     ] ]
 ];

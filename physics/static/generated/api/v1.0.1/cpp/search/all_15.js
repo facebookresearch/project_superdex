@@ -17,6 +17,7 @@ var searchData=
   ['updateoldtarget_13',['UpdateOldTarget',['../classsuperdex_1_1Constraint.html#aeb08066f548af4fb712e24a22d9461e3',1,'superdex::Constraint']]],
   ['urb_14',['URB',['../namespacesuperdex.html#a569effbbe9b57cc9efb15352ac1d06e6aee731e1f1e2c2ae4ac4d91c9b1667210',1,'superdex']]],
   ['urf_15',['URF',['../namespacesuperdex.html#a569effbbe9b57cc9efb15352ac1d06e6a3e7628100f1ffe31e6eaa3c167e437fa',1,'superdex']]],
-  ['usefixedtimestep_16',['useFixedTimeStep',['../structsuperdex_1_1AsyncStepParams.html#aa909fab7f74626bc2ca6a148aab718c6',1,'superdex::AsyncStepParams']]],
-  ['userecentering_17',['useRecentering',['../structsuperdex_1_1prefab_1_1SoftActorPrefab.html#a721db1d14add3dccdd121a09391a8c5e',1,'superdex::prefab::SoftActorPrefab::useRecentering'],['../structsuperdex_1_1RecenteringParams.html#a7264484a429cd297762bd92499c92fdd',1,'superdex::RecenteringParams::useRecentering']]]
+  ['usecontactskin_16',['useContactSkin',['../structsuperdex_1_1SoftActorParams.html#aa21d85e608390a3c1564f581478a1878',1,'superdex::SoftActorParams']]],
+  ['usefixedtimestep_17',['useFixedTimeStep',['../structsuperdex_1_1AsyncStepParams.html#aa909fab7f74626bc2ca6a148aab718c6',1,'superdex::AsyncStepParams']]],
+  ['userecentering_18',['useRecentering',['../structsuperdex_1_1prefab_1_1SoftActorPrefab.html#a721db1d14add3dccdd121a09391a8c5e',1,'superdex::prefab::SoftActorPrefab::useRecentering'],['../structsuperdex_1_1RecenteringParams.html#a7264484a429cd297762bd92499c92fdd',1,'superdex::RecenteringParams::useRecentering']]]
 ];

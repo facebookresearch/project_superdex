@@ -9,6 +9,5 @@ var searchData=
   ['posecontrollerparams_5',['PoseControllerParams',['../structsuperdex_1_1PoseControllerParams.html#ab7b1ff616bb95647a13c37a2c43d00d2',1,'superdex::PoseControllerParams::PoseControllerParams()=default'],['../structsuperdex_1_1PoseControllerParams.html#a5fe3cbb4aa1b24a87414e5bbe3fbc17d',1,'superdex::PoseControllerParams::PoseControllerParams(int numLinks)']]],
   ['pow_6',['Pow',['../namespacesuperdex.html#add0cd41e44fa73164be01b7841bc1218',1,'superdex']]],
   ['prod_7',['Prod',['../namespacesuperdex.html#ad081769f22a72e787c7085432806d968',1,'superdex']]],
-  ['pseudoinvert_8',['PseudoInvert',['../namespacesuperdex.html#a7cd52cad1ca80d5a2a142ea116268828',1,'superdex']]],
-  ['push_5fback_9',['push_back',['../classsuperdex_1_1DynamicArray.html#aa2857bd835c519b6e9ec6ce5179c8587',1,'superdex::DynamicArray::push_back(T const &amp;value)'],['../classsuperdex_1_1DynamicArray.html#a4bb09b811fcddc2491ef7153b8bf2af0',1,'superdex::DynamicArray::push_back(T &amp;&amp;value)'],['../classsuperdex_1_1DynamicArray.html#a3f09e048d0c88597734e9a3ca056b224',1,'superdex::DynamicArray::push_back()']]]
+  ['push_5fback_8',['push_back',['../classsuperdex_1_1DynamicArray.html#aa2857bd835c519b6e9ec6ce5179c8587',1,'superdex::DynamicArray::push_back(T const &amp;value)'],['../classsuperdex_1_1DynamicArray.html#a4bb09b811fcddc2491ef7153b8bf2af0',1,'superdex::DynamicArray::push_back(T &amp;&amp;value)'],['../classsuperdex_1_1DynamicArray.html#a3f09e048d0c88597734e9a3ca056b224',1,'superdex::DynamicArray::push_back()']]]
 ];

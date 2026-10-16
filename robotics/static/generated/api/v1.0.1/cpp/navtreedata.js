@@ -61,10 +61,10 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "actuator__base_8h.html",
-"classsuperdex_1_1robotics_1_1ControllerMochiArticulatedPose.html",
-"functions_w.html",
-"structsuperdex_1_1robotics_1_1BotLinkPrefab.html#adba3645f3626494ecaf514c0c4ff8e3b",
-"structsuperdex_1_1robotics_1_1RoboticsHandle.html#a239e49507245e5f0b57204ef6f352e13"
+"classsuperdex_1_1robotics_1_1ControllerBasicOscPd.html#acb7b1df75a076698dab8922924ab8255",
+"functions.html",
+"structsuperdex_1_1robotics_1_1BotArchiveMetadata.html#abd680c64147e0aacd6d64d9870d7f770",
+"structsuperdex_1_1robotics_1_1IBotLoader.html#ae0bf1669c492a0a84eb4b1e5d77aa847"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

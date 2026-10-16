@@ -197,7 +197,7 @@ Public Attributes</h2></td></tr>
 <p>Contact is automatically disabled between links that are: (a) directly adjacent, (b) reachable via hard joints, or (c) reachable via (dummy) shapeless links. To enable or disable contact for specific pairs of links, see <a class="el" href="classsuperdex_1_1Scene.html#a99da767ec8d49664cfdc8e4e6e276542" title="superdex::Scene::EnableActorContactSymmetric">Scene::EnableActorContactSymmetric</a>.</p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classsuperdex_1_1Scene.html#af295465382495ad78390697b8ecdb111" title="superdex::Scene::CreateArticulatedActor">Scene::CreateArticulatedActor</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00262">262</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00268">268</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 </div><a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
 <a id="a91921f00fd1a600e502987f91e2007eb" name="a91921f00fd1a600e502987f91e2007eb"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a91921f00fd1a600e502987f91e2007eb">&#9670;&#160;</a></span>operator==()</h2>
@@ -240,7 +240,7 @@ Public Attributes</h2></td></tr>
 <p>Optional cycle joints creating closed kinematic loops. </p>
 <p>Empty if no cycles exist. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00265">265</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00271">271</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -259,7 +259,7 @@ Public Attributes</h2></td></tr>
 <p>Joint parameters (one per joint). </p>
 <dl class="section note"><dt>Note</dt><dd>Size must match <a class="el" href="#a01961709373b79e3f6575aa0766082f3" title="superdex::ArticulatedActorParams::links">links</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00266">266</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00272">272</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -278,7 +278,7 @@ Public Attributes</h2></td></tr>
 <p>Optional initial joint velocity per DoF [m/s or rad/s]. </p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classsuperdex_1_1Actor.html#aa7680e583e9e72c8720b390e51d2471f" title="superdex::Actor::GetArticulatedJointVelocities">Actor::GetArticulatedJointVelocities</a>, <a class="el" href="classsuperdex_1_1Actor.html#a9ee620d48e04296a642d1812bb8b2162" title="superdex::Actor::SetArticulatedJointVelocities">Actor::SetArticulatedJointVelocities</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00269">269</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00275">275</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -300,7 +300,7 @@ Public Attributes</h2></td></tr>
 <dd>
 Links must be listed in parent-first order: the root link is at index 0 with <span class="tt">parentLink == -1</span>, and any other link's <span class="tt">parentLink</span> must be smaller than its own index. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00267">267</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00273">273</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -321,7 +321,7 @@ Links must be listed in parent-first order: the root link is at index 0 with <sp
 <dd>
 Link actor names have the form "articulatedActorName/linkLocalName", where <span class="tt">linkLocalName</span> is the link's local name. If the articulated actor name is empty, link actors use "unnamed_articulation" as the parent name. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00263">263</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00269">269</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -339,7 +339,7 @@ Link actor names have the form "articulatedActorName/linkLocalName", where <span
 
 <p>Optional skinned mesh parameters. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00268">268</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00274">274</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -357,7 +357,7 @@ Link actor names have the form "articulatedActorName/linkLocalName", where <span
 
 <p>Initial rotation and translation of the articulated actor's local frame with respect to world frame. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00264">264</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00270">270</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>

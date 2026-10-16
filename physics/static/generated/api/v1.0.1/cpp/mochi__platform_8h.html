@@ -201,6 +201,7 @@ Macros</h2></td></tr>
 <tr class="memdesc:ae611825897f4f5923275d7f6b0b4301a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Aligns the memory of a variable so it starts at the beginning of a cache line.  <br /></td></tr>
 <tr class="memitem:acaa9c91efdce6bbb04d0dbe8f0d47f1b" id="r_acaa9c91efdce6bbb04d0dbe8f0d47f1b"><td class="memItemLeft">#define&#160;</td><td class="memItemRight"><a class="el" href="#acaa9c91efdce6bbb04d0dbe8f0d47f1b">MOCHI_CONSERVATIVE_CACHE_LINE_SIZE</a>&#160;&#160;&#160;256</td></tr>
 <tr class="memdesc:acaa9c91efdce6bbb04d0dbe8f0d47f1b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Conservative upper limit for the size (and alignment) of a data cache line.  <br /></td></tr>
+<tr class="memitem:a5fa4e92d3fe173aad1b5ce4709613035" id="r_a5fa4e92d3fe173aad1b5ce4709613035"><td class="memItemLeft">#define&#160;</td><td class="memItemRight"><a class="el" href="#a5fa4e92d3fe173aad1b5ce4709613035">MOCHI_CONSTEXPR_NO_INIT</a>&#160;&#160;&#160;<a class="el" href="#aea05cc6a760369cdafecffdfab76ef28">MOCHI_NO_INIT</a></td></tr>
 <tr class="memitem:a71ab24d7de68ccba45a012b8a6ad8d0a" id="r_a71ab24d7de68ccba45a012b8a6ad8d0a"><td class="memItemLeft">#define&#160;</td><td class="memItemRight"><a class="el" href="#a71ab24d7de68ccba45a012b8a6ad8d0a">MOCHI_CPU</a></td></tr>
 <tr class="memitem:a2e0dcf142bab3888e16406d2721c3292" id="r_a2e0dcf142bab3888e16406d2721c3292"><td class="memItemLeft">#define&#160;</td><td class="memItemRight"><a class="el" href="#a2e0dcf142bab3888e16406d2721c3292">MOCHI_DEBUG_BREAK</a>()</td></tr>
 <tr class="memitem:a38cbefed0fa1682fd5438cdd2ccc899f" id="r_a38cbefed0fa1682fd5438cdd2ccc899f"><td class="memItemLeft">#define&#160;</td><td class="memItemRight"><a class="el" href="#a38cbefed0fa1682fd5438cdd2ccc899f">MOCHI_DEBUG_RTCHECKS_DISABLE</a>()</td></tr>
@@ -619,9 +620,9 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line">std::enable_if_t&lt;a, superdex::ConceptMatch&gt; = <a class="code hl_enumvalue" href="namespacesuperdex.html#a7ea272a83a8735b87040e9ec6a61392faf827cf462f62848df37c5e1e94a4da74">superdex::ConceptMatch::True</a></div>
-<div class="ttc" id="anamespacesuperdex_html_a7ea272a83a8735b87040e9ec6a61392faf827cf462f62848df37c5e1e94a4da74"><div class="ttname"><a href="namespacesuperdex.html#a7ea272a83a8735b87040e9ec6a61392faf827cf462f62848df37c5e1e94a4da74">superdex::ConceptMatch::True</a></div><div class="ttdeci">@ True</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00791">mochi_platform.h:791</a></div></div>
+<div class="ttc" id="anamespacesuperdex_html_a7ea272a83a8735b87040e9ec6a61392faf827cf462f62848df37c5e1e94a4da74"><div class="ttname"><a href="namespacesuperdex.html#a7ea272a83a8735b87040e9ec6a61392faf827cf462f62848df37c5e1e94a4da74">superdex::ConceptMatch::True</a></div><div class="ttdeci">@ True</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00804">mochi_platform.h:804</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00803">803</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00816">816</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -641,7 +642,7 @@ Enumerations</h2></td></tr>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line">std::enable_if_t&lt;a, superdex::ConceptMatch&gt;</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00806">806</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00819">819</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -685,6 +686,22 @@ Enumerations</h2></td></tr>
 
 </div>
 </div>
+<a id="a5fa4e92d3fe173aad1b5ce4709613035" name="a5fa4e92d3fe173aad1b5ce4709613035"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5fa4e92d3fe173aad1b5ce4709613035">&#9670;&#160;</a></span>MOCHI_CONSTEXPR_NO_INIT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define MOCHI_CONSTEXPR_NO_INIT&#160;&#160;&#160;<a class="el" href="#aea05cc6a760369cdafecffdfab76ef28">MOCHI_NO_INIT</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00527">527</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+
+</div>
+</div>
 <a id="a71ab24d7de68ccba45a012b8a6ad8d0a" name="a71ab24d7de68ccba45a012b8a6ad8d0a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a71ab24d7de68ccba45a012b8a6ad8d0a">&#9670;&#160;</a></span>MOCHI_CPU</h2>
 
@@ -717,7 +734,7 @@ Enumerations</h2></td></tr>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line">__builtin_trap()</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00532">532</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00545">545</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -736,7 +753,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00696">696</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00709">709</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -755,7 +772,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00695">695</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00708">708</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -776,7 +793,7 @@ Enumerations</h2></td></tr>
 <b>Value:</b><div class="fragment"><div class="line">Name(Name <span class="keyword">const</span>&amp;) = <span class="keywordflow">default</span>;   \</div>
 <div class="line">Name&amp; operator=(Name <span class="keyword">const</span>&amp;) = <span class="keywordflow">default</span>;</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00747">747</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00760">760</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -797,7 +814,7 @@ Enumerations</h2></td></tr>
 <b>Value:</b><div class="fragment"><div class="line">Name(Name&amp;&amp;) noexcept = default; \</div>
 <div class="line">Name&amp; operator=(Name&amp;&amp;) = default;</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00736">736</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00749">749</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -817,9 +834,9 @@ Enumerations</h2></td></tr>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line"><a class="code hl_define" href="#a1a77eb456fe3652f220c0fab0a951530">MOCHI_DECLARE_MOVE</a>(Name);           \</div>
 <div class="line">MOCHI_DECLARE_NO_COPY(Name)</div>
-<div class="ttc" id="amochi__platform_8h_html_a1a77eb456fe3652f220c0fab0a951530"><div class="ttname"><a href="#a1a77eb456fe3652f220c0fab0a951530">MOCHI_DECLARE_MOVE</a></div><div class="ttdeci">#define MOCHI_DECLARE_MOVE(Name)</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00736">mochi_platform.h:736</a></div></div>
+<div class="ttc" id="amochi__platform_8h_html_a1a77eb456fe3652f220c0fab0a951530"><div class="ttname"><a href="#a1a77eb456fe3652f220c0fab0a951530">MOCHI_DECLARE_MOVE</a></div><div class="ttdeci">#define MOCHI_DECLARE_MOVE(Name)</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00749">mochi_platform.h:749</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00765">765</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00778">778</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -840,7 +857,7 @@ Enumerations</h2></td></tr>
 <b>Value:</b><div class="fragment"><div class="line">Name&amp; operator=(Name <span class="keyword">const</span>&amp;) = <span class="keyword">delete</span>; \</div>
 <div class="line">Name&amp; operator=(Name&amp;&amp;) = <span class="keyword">delete</span>;</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00772">772</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00785">785</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -861,7 +878,7 @@ Enumerations</h2></td></tr>
 <b>Value:</b><div class="fragment"><div class="line">Name(Name <span class="keyword">const</span>&amp;) = <span class="keyword">delete</span>;       \</div>
 <div class="line">Name&amp; operator=(Name <span class="keyword">const</span>&amp;) = <span class="keyword">delete</span>;</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00752">752</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00765">765</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -881,9 +898,9 @@ Enumerations</h2></td></tr>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line"><a class="code hl_define" href="#aec86f3cb78ebffc23d7aa13753a03ec3">MOCHI_DECLARE_NO_COPY</a>(Name)               \</div>
 <div class="line">MOCHI_DECLARE_NO_MOVE(Name)</div>
-<div class="ttc" id="amochi__platform_8h_html_aec86f3cb78ebffc23d7aa13753a03ec3"><div class="ttname"><a href="#aec86f3cb78ebffc23d7aa13753a03ec3">MOCHI_DECLARE_NO_COPY</a></div><div class="ttdeci">#define MOCHI_DECLARE_NO_COPY(Name)</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00752">mochi_platform.h:752</a></div></div>
+<div class="ttc" id="amochi__platform_8h_html_aec86f3cb78ebffc23d7aa13753a03ec3"><div class="ttname"><a href="#aec86f3cb78ebffc23d7aa13753a03ec3">MOCHI_DECLARE_NO_COPY</a></div><div class="ttdeci">#define MOCHI_DECLARE_NO_COPY(Name)</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00765">mochi_platform.h:765</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00759">759</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00772">772</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -904,7 +921,7 @@ Enumerations</h2></td></tr>
 <b>Value:</b><div class="fragment"><div class="line">Name(Name&amp;&amp;) = <span class="keyword">delete</span>;            \</div>
 <div class="line">Name&amp; operator=(Name&amp;&amp;) = <span class="keyword">delete</span>;</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00741">741</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00754">754</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -923,7 +940,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00645">645</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00658">658</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -939,7 +956,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00781">781</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00794">794</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1099,7 +1116,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00816">816</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00829">829</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1151,7 +1168,7 @@ Enumerations</h2></td></tr>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line">__asm__ __volatile__(<span class="stringliteral">&quot;nop&quot;</span>);</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00707">707</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00720">720</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1171,9 +1188,9 @@ Enumerations</h2></td></tr>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line"><a class="code hl_define" href="#a0b0f450ed09049d4dfa533c6341010af">MOCHI_NOP</a>(); <a class="code hl_define" href="#a0b0f450ed09049d4dfa533c6341010af">MOCHI_NOP</a>(); <a class="code hl_define" href="#a0b0f450ed09049d4dfa533c6341010af">MOCHI_NOP</a>(); <a class="code hl_define" href="#a0b0f450ed09049d4dfa533c6341010af">MOCHI_NOP</a>(); <a class="code hl_define" href="#a0b0f450ed09049d4dfa533c6341010af">MOCHI_NOP</a>(); \</div>
 <div class="line">MOCHI_NOP(); <a class="code hl_define" href="#a0b0f450ed09049d4dfa533c6341010af">MOCHI_NOP</a>(); <a class="code hl_define" href="#a0b0f450ed09049d4dfa533c6341010af">MOCHI_NOP</a>(); <a class="code hl_define" href="#a0b0f450ed09049d4dfa533c6341010af">MOCHI_NOP</a>(); <a class="code hl_define" href="#a0b0f450ed09049d4dfa533c6341010af">MOCHI_NOP</a>();</div>
-<div class="ttc" id="amochi__platform_8h_html_a0b0f450ed09049d4dfa533c6341010af"><div class="ttname"><a href="#a0b0f450ed09049d4dfa533c6341010af">MOCHI_NOP</a></div><div class="ttdeci">#define MOCHI_NOP()</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00707">mochi_platform.h:707</a></div></div>
+<div class="ttc" id="amochi__platform_8h_html_a0b0f450ed09049d4dfa533c6341010af"><div class="ttname"><a href="#a0b0f450ed09049d4dfa533c6341010af">MOCHI_NOP</a></div><div class="ttdeci">#define MOCHI_NOP()</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00720">mochi_platform.h:720</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00710">710</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00723">723</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1192,9 +1209,9 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line"><a class="code hl_define" href="#ac411620e2b492cb7e090628e96eb7bad">MOCHI_NOP_50</a>(); <a class="code hl_define" href="#ac411620e2b492cb7e090628e96eb7bad">MOCHI_NOP_50</a>(); <a class="code hl_define" href="#ac411620e2b492cb7e090628e96eb7bad">MOCHI_NOP_50</a>(); <a class="code hl_define" href="#ac411620e2b492cb7e090628e96eb7bad">MOCHI_NOP_50</a>(); <a class="code hl_define" href="#ac411620e2b492cb7e090628e96eb7bad">MOCHI_NOP_50</a>();</div>
-<div class="ttc" id="amochi__platform_8h_html_ac411620e2b492cb7e090628e96eb7bad"><div class="ttname"><a href="#ac411620e2b492cb7e090628e96eb7bad">MOCHI_NOP_50</a></div><div class="ttdeci">#define MOCHI_NOP_50()</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00713">mochi_platform.h:713</a></div></div>
+<div class="ttc" id="amochi__platform_8h_html_ac411620e2b492cb7e090628e96eb7bad"><div class="ttname"><a href="#ac411620e2b492cb7e090628e96eb7bad">MOCHI_NOP_50</a></div><div class="ttdeci">#define MOCHI_NOP_50()</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00726">mochi_platform.h:726</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00715">715</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00728">728</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1213,9 +1230,9 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line"><a class="code hl_define" href="#a013baf0ceec46908a567fa907f016c7c">MOCHI_NOP_10</a>(); <a class="code hl_define" href="#a013baf0ceec46908a567fa907f016c7c">MOCHI_NOP_10</a>(); <a class="code hl_define" href="#a013baf0ceec46908a567fa907f016c7c">MOCHI_NOP_10</a>(); <a class="code hl_define" href="#a013baf0ceec46908a567fa907f016c7c">MOCHI_NOP_10</a>(); <a class="code hl_define" href="#a013baf0ceec46908a567fa907f016c7c">MOCHI_NOP_10</a>();</div>
-<div class="ttc" id="amochi__platform_8h_html_a013baf0ceec46908a567fa907f016c7c"><div class="ttname"><a href="#a013baf0ceec46908a567fa907f016c7c">MOCHI_NOP_10</a></div><div class="ttdeci">#define MOCHI_NOP_10()</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00710">mochi_platform.h:710</a></div></div>
+<div class="ttc" id="amochi__platform_8h_html_a013baf0ceec46908a567fa907f016c7c"><div class="ttname"><a href="#a013baf0ceec46908a567fa907f016c7c">MOCHI_NOP_10</a></div><div class="ttdeci">#define MOCHI_NOP_10()</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00723">mochi_platform.h:723</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00713">713</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00726">726</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1302,9 +1319,9 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line"><a class="code hl_define" href="#ac22aeb773509c6d67b8ab1f1b11d8c60">MOCHI_PP_CAT_IMPL</a>(a, b)</div>
-<div class="ttc" id="amochi__platform_8h_html_ac22aeb773509c6d67b8ab1f1b11d8c60"><div class="ttname"><a href="#ac22aeb773509c6d67b8ab1f1b11d8c60">MOCHI_PP_CAT_IMPL</a></div><div class="ttdeci">#define MOCHI_PP_CAT_IMPL(a, b)</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00725">mochi_platform.h:725</a></div></div>
+<div class="ttc" id="amochi__platform_8h_html_ac22aeb773509c6d67b8ab1f1b11d8c60"><div class="ttname"><a href="#ac22aeb773509c6d67b8ab1f1b11d8c60">MOCHI_PP_CAT_IMPL</a></div><div class="ttdeci">#define MOCHI_PP_CAT_IMPL(a, b)</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00738">mochi_platform.h:738</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00724">724</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00737">737</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1328,7 +1345,7 @@ Enumerations</h2></td></tr>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line">a##b</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00725">725</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00738">738</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1347,9 +1364,9 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line"><a class="code hl_define" href="#acdf5127eb67acd95210d683449457c20">MOCHI_PP_STRINGIFY_IMPL</a>(X)</div>
-<div class="ttc" id="amochi__platform_8h_html_acdf5127eb67acd95210d683449457c20"><div class="ttname"><a href="#acdf5127eb67acd95210d683449457c20">MOCHI_PP_STRINGIFY_IMPL</a></div><div class="ttdeci">#define MOCHI_PP_STRINGIFY_IMPL(X)</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00729">mochi_platform.h:729</a></div></div>
+<div class="ttc" id="amochi__platform_8h_html_acdf5127eb67acd95210d683449457c20"><div class="ttname"><a href="#acdf5127eb67acd95210d683449457c20">MOCHI_PP_STRINGIFY_IMPL</a></div><div class="ttdeci">#define MOCHI_PP_STRINGIFY_IMPL(X)</div><div class="ttdef"><b>Definition</b> <a href="mochi__platform_8h_source.html#l00742">mochi_platform.h:742</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00728">728</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00741">741</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1369,7 +1386,7 @@ Enumerations</h2></td></tr>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line"><span class="preprocessor">#X</span></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00729">729</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00742">742</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1433,7 +1450,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00648">648</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00661">661</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1449,7 +1466,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00817">817</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00830">830</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1519,7 +1536,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00602">602</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00615">615</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1538,7 +1555,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00632">632</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00645">645</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1557,7 +1574,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00594">594</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00607">607</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1576,7 +1593,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00611">611</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00624">624</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1595,7 +1612,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00586">586</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00599">599</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1614,7 +1631,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00601">601</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00614">614</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1633,7 +1650,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00631">631</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00644">644</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1652,7 +1669,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00593">593</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00606">606</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1671,7 +1688,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00610">610</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00623">623</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1690,7 +1707,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00585">585</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00598">598</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1709,7 +1726,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00578">578</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00591">591</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1728,7 +1745,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00576">576</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00589">589</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1747,7 +1764,7 @@ Enumerations</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00577">577</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00590">590</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1783,7 +1800,7 @@ Enumerations</h2></td></tr>
 <div class="line"><span class="comment">   in constexpr functions. Fixed in later versions of CUDA (&gt;11.1). */</span> \</div>
 <div class="line">MOCHI_WARNING_IGNORE_CUDA(implicit_return_from_non_void_function)</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00653">653</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00666">666</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>
@@ -1810,7 +1827,7 @@ Enumerations</h2></td></tr>
 <div class="line"><span class="comment">/* annotation ignored on a function that is explicitly defaulted */</span>                       \</div>
 <div class="line">MOCHI_WARNING_IGNORE_CUDA(esa_on_defaulted_function_ignored)</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00675">675</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__platform_8h_source.html#l00688">688</a> of file <a class="el" href="mochi__platform_8h_source.html">mochi_platform.h</a>.</p>
 
 </div>
 </div>

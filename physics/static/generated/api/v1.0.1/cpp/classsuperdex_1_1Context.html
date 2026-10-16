@@ -223,7 +223,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a9a1a4b431e3351c61ef32881d25dfbf3" id="r_a9a1a4b431e3351c61ef32881d25dfbf3"><td class="memItemLeft">virtual <a class="el" href="classsuperdex_1_1Aabb.html">Aabb</a>&#160;</td><td class="memItemRight"><a class="el" href="#a9a1a4b431e3351c61ef32881d25dfbf3">GetShapeAabb</a> (<a class="el" href="structsuperdex_1_1ShapeHandle.html">ShapeHandle</a> shape, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error) const =0</td></tr>
 <tr class="memdesc:a9a1a4b431e3351c61ef32881d25dfbf3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get an axis-aligned bounding box (AABB) that contains the shape, in its local coordinate frame.  <br /></td></tr>
 <tr class="memitem:afcda64ddc543cea1e8032518b3af6c42" id="r_afcda64ddc543cea1e8032518b3af6c42"><td class="memItemLeft">virtual <a class="el" href="structsuperdex_1_1MeshDataView.html">MeshDataView</a>&#160;</td><td class="memItemRight"><a class="el" href="#afcda64ddc543cea1e8032518b3af6c42">GetShapeContactSkinMesh</a> (<a class="el" href="structsuperdex_1_1ShapeHandle.html">ShapeHandle</a> shape, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error) const =0</td></tr>
-<tr class="memdesc:afcda64ddc543cea1e8032518b3af6c42"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a view of the shape's contact-skin mesh data, including linear skinning data if available.  <br /></td></tr>
+<tr class="memdesc:afcda64ddc543cea1e8032518b3af6c42"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a view of the shape's contact-skin mesh data, including its skinning data.  <br /></td></tr>
 <tr class="memitem:a1bd416296006cc1efd1346472308bcb7" id="r_a1bd416296006cc1efd1346472308bcb7"><td class="memItemLeft">virtual <a class="el" href="structsuperdex_1_1MeshDataView.html">MeshDataView</a>&#160;</td><td class="memItemRight"><a class="el" href="#a1bd416296006cc1efd1346472308bcb7">GetShapeMesh</a> (<a class="el" href="structsuperdex_1_1ShapeHandle.html">ShapeHandle</a> shape, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error) const =0</td></tr>
 <tr class="memdesc:a1bd416296006cc1efd1346472308bcb7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a view of the shape's main mesh data.  <br /></td></tr>
 <tr class="memitem:a130f5883bf2318cb3d4500493dab6a46" id="r_a130f5883bf2318cb3d4500493dab6a46"><td class="memItemLeft">virtual <a class="el" href="structsuperdex_1_1MeshDataView.html">MeshDataView</a>&#160;</td><td class="memItemRight"><a class="el" href="#a130f5883bf2318cb3d4500493dab6a46">GetShapeSurfaceMesh</a> (<a class="el" href="structsuperdex_1_1ShapeHandle.html">ShapeHandle</a> shape, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error) const =0</td></tr>
@@ -1495,8 +1495,8 @@ Sets an error for shapes that do not have a bounding volume (e.g., articulated s
 </table>
 </div><div class="memdoc">
 
-<p>Get a view of the shape's contact-skin mesh data, including linear skinning data if available. </p>
-<p>Returns a triangle mesh (3 nodes per element) intended for contact handling. Coordinates and connectivity are returned in contact-skin node-index space, including any contact-skin nodes not referenced by the contact-skin connectivity. The mesh includes linear skinning data for deformation when available. Nonlinear skinning data, such as rod contact-skin embeddings, is not exposed. For shapes without a contact skin, returns an empty view.</p>
+<p>Get a view of the shape's contact-skin mesh data, including its skinning data. </p>
+<p>Returns a triangle mesh (3 nodes per element). Every contact-skin node is referenced by the contact-skin connectivity, so <a class="el" href="classsuperdex_1_1Actor.html#a63bb41aedf1ce5e6d2bb5412517bb9eb" title="superdex::Actor::GetContactSkinMesh">Actor::GetContactSkinMesh</a> has the same node ordering. The mesh includes the authored skinning data, in the format of <a class="el" href="structsuperdex_1_1ModelData.html#aa452c1d459ba0619a1e5c23b3004a70e" title="superdex::ModelData::contactSkinMesh">ModelData::contactSkinMesh</a>. For shapes without a contact skin, returns an empty view.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">shape</td><td><a class="el" href="structsuperdex_1_1Handle.html" title="Generic 64-bit handle providing base functionality for strongly-typed handles.">Handle</a> to a valid shape. </td></tr>
@@ -1509,8 +1509,8 @@ Sets an error for shapes that do not have a bounding volume (e.g., articulated s
 <dd>
 The returned view will be invalid after the shape handle has been released. </dd>
 <dd>
-When linear contact-skin skinning data is present, skinning indices refer to the node ordering returned by <a class="el" href="#a1bd416296006cc1efd1346472308bcb7" title="superdex::Context::GetShapeMesh">GetShapeMesh</a>, not to the compact surface-node ordering returned by <a class="el" href="#a130f5883bf2318cb3d4500493dab6a46" title="superdex::Context::GetShapeSurfaceMesh">GetShapeSurfaceMesh</a>.</dd></dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1MeshDataView.html" title="superdex::MeshDataView">MeshDataView</a>, <a class="el" href="#a1bd416296006cc1efd1346472308bcb7" title="superdex::Context::GetShapeMesh">GetShapeMesh</a>, <a class="el" href="#a130f5883bf2318cb3d4500493dab6a46" title="superdex::Context::GetShapeSurfaceMesh">GetShapeSurfaceMesh</a>, <a class="el" href="#ae28bb3db015766d22dc677100d24c6e7" title="superdex::Context::GetShapeVisualMesh">GetShapeVisualMesh</a> </dd></dl>
+For tetrahedral and triangular mesh shapes, skinning indices refer to the node ordering returned by <a class="el" href="#a1bd416296006cc1efd1346472308bcb7" title="superdex::Context::GetShapeMesh">GetShapeMesh</a>, not to the compact surface-node ordering returned by <a class="el" href="#a130f5883bf2318cb3d4500493dab6a46" title="superdex::Context::GetShapeSurfaceMesh">GetShapeSurfaceMesh</a>. For polyline shapes, skinning indices refer to polyline elements.</dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1MeshDataView.html" title="superdex::MeshDataView">MeshDataView</a>, <a class="el" href="#a1bd416296006cc1efd1346472308bcb7" title="superdex::Context::GetShapeMesh">GetShapeMesh</a>, <a class="el" href="#a130f5883bf2318cb3d4500493dab6a46" title="superdex::Context::GetShapeSurfaceMesh">GetShapeSurfaceMesh</a>, <a class="el" href="#ae28bb3db015766d22dc677100d24c6e7" title="superdex::Context::GetShapeVisualMesh">GetShapeVisualMesh</a>, <a class="el" href="classsuperdex_1_1Actor.html#a63bb41aedf1ce5e6d2bb5412517bb9eb" title="superdex::Actor::GetContactSkinMesh">Actor::GetContactSkinMesh</a> </dd></dl>
 
 </div>
 </div>
@@ -1542,7 +1542,7 @@ When linear contact-skin skinning data is present, skinning indices refer to the
 </div><div class="memdoc">
 
 <p>Get a view of the shape's main mesh data. </p>
-<p>For tetrahedral mesh shapes, returns the volume mesh (4 nodes per element). For triangular mesh shapes, returns the surface mesh (3 nodes per element). For polyline shapes, returns the polyline mesh (2 nodes per element). For shapes without a main mesh, including implicit shapes such as spheres and planes, returns an empty view.</p>
+<p>For tetrahedral mesh shapes, returns the tetrahedral mesh (4 nodes per element). For triangular mesh shapes, returns the triangle mesh (3 nodes per element). For polyline shapes, returns the polyline mesh (2 nodes per element). For shapes without a main mesh, including implicit shapes such as spheres and planes, returns an empty view. The view includes any nodes that no element references.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">shape</td><td><a class="el" href="structsuperdex_1_1Handle.html" title="Generic 64-bit handle providing base functionality for strongly-typed handles.">Handle</a> to a valid shape. </td></tr>
@@ -1586,7 +1586,7 @@ The returned view will be invalid after the shape handle has been released.</dd>
 </div><div class="memdoc">
 
 <p>Get a view of the shape's surface mesh data. </p>
-<p>Returns a triangle mesh (3 nodes per element) representing the shape's surface. The coordinate array contains exactly the surface nodes referenced by the returned connectivity; nodes present in the underlying main mesh but not referenced by any surface triangle are omitted. Connectivity values are indices into this returned coordinate array. For polyline shapes with an authored contact skin, returns that skin. For shapes without a surface mesh, returns an empty view.</p>
+<p>Returns a triangle mesh (3 nodes per element) representing the shape's surface. The coordinate array contains exactly the surface nodes referenced by the returned connectivity; nodes present in the underlying main mesh but not referenced by any surface triangle are omitted. Connectivity values are indices into this returned coordinate array. For shapes without a surface mesh, such as polyline shapes, returns an empty view.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">shape</td><td><a class="el" href="structsuperdex_1_1Handle.html" title="Generic 64-bit handle providing base functionality for strongly-typed handles.">Handle</a> to a valid shape. </td></tr>
@@ -1595,7 +1595,7 @@ The returned view will be invalid after the shape handle has been released.</dd>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>A non-owning view of the shape's surface mesh data, or an empty view if the shape has no surface mesh.</dd></dl>
-<dl class="section note"><dt>Note</dt><dd>For triangular mesh shapes, this may differ from <a class="el" href="#a1bd416296006cc1efd1346472308bcb7" title="superdex::Context::GetShapeMesh">GetShapeMesh</a> if the main mesh contains unreferenced nodes. For tetrahedral mesh shapes, this is the boundary surface of the volume mesh, with non-boundary volume nodes omitted. </dd>
+<dl class="section note"><dt>Note</dt><dd>For triangular mesh shapes, this differs from <a class="el" href="#a1bd416296006cc1efd1346472308bcb7" title="superdex::Context::GetShapeMesh">GetShapeMesh</a> only if the main mesh has nodes that no element references. For tetrahedral mesh shapes, this is the boundary surface of the volume mesh, with non-boundary volume nodes omitted. </dd>
 <dd>
 Can be called on any thread. </dd>
 <dd>
@@ -1632,7 +1632,7 @@ The returned view will be invalid after the shape handle has been released.</dd>
 </div><div class="memdoc">
 
 <p>Get a view of the shape's visual mesh data, including skinning data if available. </p>
-<p>Returns a triangle mesh (3 nodes per element) intended for visual rendering. Coordinates and connectivity are returned in visual-mesh node-index space, including any visual mesh nodes not referenced by the visual connectivity. The mesh may include linear skinning data for deformation. For shapes without a visual mesh, returns an empty view.</p>
+<p>Returns a triangle mesh (3 nodes per element) intended for visual rendering. Coordinates and connectivity are returned in visual-mesh node-index space, including any nodes that no visual triangle references. The mesh includes the authored skinning data when available. For shapes without a visual mesh, returns an empty view.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">shape</td><td><a class="el" href="structsuperdex_1_1Handle.html" title="Generic 64-bit handle providing base functionality for strongly-typed handles.">Handle</a> to a valid shape. </td></tr>
@@ -1645,7 +1645,7 @@ The returned view will be invalid after the shape handle has been released.</dd>
 <dd>
 The returned view will be invalid after the shape handle has been released. </dd>
 <dd>
-When linear visual-mesh skinning data is present, skinning indices refer to the node ordering returned by <a class="el" href="#a1bd416296006cc1efd1346472308bcb7" title="superdex::Context::GetShapeMesh">GetShapeMesh</a>, not to the compact surface-node ordering returned by <a class="el" href="#a130f5883bf2318cb3d4500493dab6a46" title="superdex::Context::GetShapeSurfaceMesh">GetShapeSurfaceMesh</a>. Polyline visual mesh embeddings are nonlinear and are not exposed through this linear skinning field.</dd></dl>
+For tetrahedral and triangular mesh shapes, skinning indices refer to the node ordering returned by <a class="el" href="#a1bd416296006cc1efd1346472308bcb7" title="superdex::Context::GetShapeMesh">GetShapeMesh</a>, not to the compact surface-node ordering returned by <a class="el" href="#a130f5883bf2318cb3d4500493dab6a46" title="superdex::Context::GetShapeSurfaceMesh">GetShapeSurfaceMesh</a>. For polyline shapes, skinning indices refer to polyline elements.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1MeshDataView.html" title="superdex::MeshDataView">MeshDataView</a>, <a class="el" href="#a1bd416296006cc1efd1346472308bcb7" title="superdex::Context::GetShapeMesh">GetShapeMesh</a>, <a class="el" href="#a130f5883bf2318cb3d4500493dab6a46" title="superdex::Context::GetShapeSurfaceMesh">GetShapeSurfaceMesh</a>, <a class="el" href="classsuperdex_1_1Actor.html#a55e31cae5e3dc623714dca180db8feef" title="superdex::Actor::GetVisualMesh">Actor::GetVisualMesh</a> </dd></dl>
 
 </div>

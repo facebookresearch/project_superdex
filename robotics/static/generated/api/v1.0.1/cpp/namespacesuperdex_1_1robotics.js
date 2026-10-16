@@ -39,6 +39,8 @@ var namespacesuperdex_1_1robotics =
     [ "ControllerMochiArticulatedPoseObsv", "structsuperdex_1_1robotics_1_1ControllerMochiArticulatedPoseObsv.html", null ],
     [ "ControllerMochiArticulatedPoseParams", "structsuperdex_1_1robotics_1_1ControllerMochiArticulatedPoseParams.html", "structsuperdex_1_1robotics_1_1ControllerMochiArticulatedPoseParams" ],
     [ "ControllerMochiArticulatedPoseTarget", "structsuperdex_1_1robotics_1_1ControllerMochiArticulatedPoseTarget.html", "structsuperdex_1_1robotics_1_1ControllerMochiArticulatedPoseTarget" ],
+    [ "ControllerRecordingSink", "classsuperdex_1_1robotics_1_1ControllerRecordingSink.html", "classsuperdex_1_1robotics_1_1ControllerRecordingSink" ],
+    [ "ControllerScalarValues", "structsuperdex_1_1robotics_1_1ControllerScalarValues.html", "structsuperdex_1_1robotics_1_1ControllerScalarValues" ],
     [ "FileBotLoader", "structsuperdex_1_1robotics_1_1FileBotLoader.html", "structsuperdex_1_1robotics_1_1FileBotLoader" ],
     [ "IBotLoader", "structsuperdex_1_1robotics_1_1IBotLoader.html", "structsuperdex_1_1robotics_1_1IBotLoader" ],
     [ "ModBotPrefab", "structsuperdex_1_1robotics_1_1ModBotPrefab.html", "structsuperdex_1_1robotics_1_1ModBotPrefab" ],

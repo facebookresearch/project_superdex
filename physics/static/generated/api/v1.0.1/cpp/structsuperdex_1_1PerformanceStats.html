@@ -185,13 +185,13 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a85055209c52257bbe2d9850c8b65eea6" id="r_a85055209c52257bbe2d9850c8b65eea6"><td class="memItemLeft">double&#160;</td><td class="memItemRight"><a class="el" href="#a85055209c52257bbe2d9850c8b65eea6">solveStepDurationSec</a> = 0.0</td></tr>
 <tr class="memdesc:a85055209c52257bbe2d9850c8b65eea6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Wall-clock time [s] spent solving physics in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>.  <br /></td></tr>
 <tr class="memitem:a39b3885d93ade32ccef2252ed7a05368" id="r_a39b3885d93ade32ccef2252ed7a05368"><td class="memItemLeft">double&#160;</td><td class="memItemRight"><a class="el" href="#a39b3885d93ade32ccef2252ed7a05368">totalStepDurationSec</a> = 0.0</td></tr>
-<tr class="memdesc:a39b3885d93ade32ccef2252ed7a05368"><td class="mdescLeft">&#160;</td><td class="mdescRight">Total wall-clock time [s] spent in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>.  <br /></td></tr>
+<tr class="memdesc:a39b3885d93ade32ccef2252ed7a05368"><td class="mdescLeft">&#160;</td><td class="mdescRight">Total wall-clock time [s] spent in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>, excluding time spent in the remote physics debugger.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Timing and profiling metrics from the last simulation step. </p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classsuperdex_1_1Scene.html#a55171e13deca20ec25ca0e4ebff79f0e" title="superdex::Scene::GetPerformanceStats">Scene::GetPerformanceStats</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00514">514</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00520">520</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 </div><a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
 <a id="a34a21bf5a8327c123942f316238d2774" name="a34a21bf5a8327c123942f316238d2774"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a34a21bf5a8327c123942f316238d2774">&#9670;&#160;</a></span>operator==()</h2>
@@ -233,7 +233,7 @@ Public Attributes</h2></td></tr>
 
 <p>Wall-clock time [s] spent executing user-defined post-step callbacks in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00521">521</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00527">527</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -251,7 +251,7 @@ Public Attributes</h2></td></tr>
 
 <p>Wall-clock time [s] spent executing user-defined pre-step callbacks in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00519">519</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00525">525</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -269,7 +269,7 @@ Public Attributes</h2></td></tr>
 
 <p>Wall-clock time [s] spent on recording in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00523">523</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00529">529</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -288,7 +288,7 @@ Public Attributes</h2></td></tr>
 <p>Wall-clock time [s] spent solving physics in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>. </p>
 <dl class="section note"><dt>Note</dt><dd>Does not include time spent in user-defined pre-step and post-step callbacks. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00517">517</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00523">523</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -304,10 +304,10 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Total wall-clock time [s] spent in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>. </p>
+<p>Total wall-clock time [s] spent in the last call to <a class="el" href="classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4" title="superdex::Scene::Step">Scene::Step</a>, excluding time spent in the remote physics debugger. </p>
 <dl class="section note"><dt>Note</dt><dd>Includes time spent in user-defined pre-step and post-step callbacks. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00515">515</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00521">521</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>

@@ -1123,10 +1123,10 @@
         <li><a href="api/prefab.html#superdex.physics.prefab.SoftActorPrefab.collider_type">(SoftActorPrefab property)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/physics.html#superdex.physics.ColliderType">ColliderType (class in superdex.physics)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/physics.html#superdex.physics.ContactParams.colliding_penalty_length_scale">colliding_penalty_length_scale (ContactParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Color">Color (class in superdex.physics)</a>
@@ -1243,6 +1243,10 @@
         <li><a href="api/physics.html#superdex.physics.ModelDataView.contact_skin_mesh">(ModelDataView property)</a>
 </li>
       </ul></li>
+      <li><a href="api/physics.html#superdex.physics.QueryType.CONTACT_SKIN_NODE_NORMALS">CONTACT_SKIN_NODE_NORMALS (QueryType attribute)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.QueryType.CONTACT_SKIN_NODE_POSITIONS">CONTACT_SKIN_NODE_POSITIONS (QueryType attribute)</a>
+</li>
       <li><a href="api/prefab.html#superdex.physics.prefab.ContactFilter">ContactFilter (class in superdex.physics.prefab)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.ContactPairParamsOverride">ContactPairParamsOverride (class in superdex.physics)</a>
@@ -2295,6 +2299,12 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.Actor.get_contact_points_world">get_contact_points_world (Actor attribute)</a>
 </li>
+      <li><a href="api/physics.html#superdex.physics.Actor.get_contact_skin_mesh">get_contact_skin_mesh (Actor attribute)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.Actor.get_contact_skin_mesh_node_normals_local">get_contact_skin_mesh_node_normals_local (Actor attribute)</a>
+</li>
+      <li><a href="api/physics.html#superdex.physics.Actor.get_contact_skin_mesh_node_positions_local">get_contact_skin_mesh_node_positions_local (Actor attribute)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.Actor.get_contact_torque_world">get_contact_torque_world (Actor attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.Actor.get_convergence_status">get_convergence_status (Actor attribute)</a>
@@ -2413,14 +2423,14 @@
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.Viewer.get_meshes">get_meshes() (Viewer method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/physics.html#superdex.physics.Actor.get_name">get_name (Actor attribute)</a>
 
       <ul>
         <li><a href="api/physics.html#superdex.physics.Scene.get_name">(Scene attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.GridRenderer.get_name">get_name() (GridRenderer method)</a>
 
       <ul>
@@ -2666,8 +2676,6 @@
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.MeshRenderer.Colormap.GRAY">GRAY (MeshRenderer.Colormap attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.GRID_SDF_DEFAULT_BOUNDARY_PADDING">GRID_SDF_DEFAULT_BOUNDARY_PADDING (in module superdex.physics)</a>
-</li>
-      <li><a href="api/physics.html#superdex.physics.GRID_SDF_PARAMS_DEFAULT">GRID_SDF_PARAMS_DEFAULT (in module superdex.physics)</a>
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.renderers.GridRenderer">GridRenderer (class in superdex.physics.viewer.renderers)</a>
 </li>
@@ -3037,6 +3045,8 @@
 </li>
       <li><a href="api/scene_setup.html#superdex.physics.environment.LEGACY_PRECISION_ENV_VAR">LEGACY_PRECISION_ENV_VAR (in module superdex.physics.environment)</a>
 </li>
+      <li><a href="api/scene_setup.html#superdex.physics.environment.LEGACY_VIEWER_APP_PATH_ENV_VAR">LEGACY_VIEWER_APP_PATH_ENV_VAR (in module superdex.physics.environment)</a>
+</li>
       <li><a href="api/viewer.html#superdex.physics.viewer.PlotState.legend">legend (PlotState attribute)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.ActiveAnisoArapMaterialParams.length">length (ActiveAnisoArapMaterialParams property)</a>
@@ -3075,10 +3085,10 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.SolverParams.linear_solver">linear_solver (SolverParams property)</a>
 </li>
-      <li><a href="api/physics.html#superdex.physics.NonLinearSolverParams.linear_tolerance_strategy">linear_tolerance_strategy (NonLinearSolverParams property)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/physics.html#superdex.physics.NonLinearSolverParams.linear_tolerance_strategy">linear_tolerance_strategy (NonLinearSolverParams property)</a>
+</li>
       <li><a href="api/physics.html#superdex.physics.RigidActorParams.linear_velocity">linear_velocity (RigidActorParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.LinearElasticMaterialParams">LinearElasticMaterialParams (class in superdex.physics)</a>
@@ -3818,12 +3828,10 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/physics.html#superdex.physics.Quaternion">Quaternion (class in superdex.physics)</a>
 </li>
-      <li><a href="api/physics.html#superdex.physics.QUATERNION_IDENTITY">QUATERNION_IDENTITY (in module superdex.physics)</a>
+      <li><a href="api/physics.html#superdex.physics.Actor.query_nodes_in_volume_local">query_nodes_in_volume_local (Actor attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/physics.html#superdex.physics.Actor.query_nodes_in_volume_local">query_nodes_in_volume_local (Actor attribute)</a>
-</li>
       <li><a href="api/physics.html#superdex.physics.QueryHandle">QueryHandle (class in superdex.physics)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.QueryType">QueryType (class in superdex.physics)</a>
@@ -3873,8 +3881,6 @@
       <li><a href="api/utilities.html#superdex.physics.utils.profiling.Profiler.record">record() (Profiler method)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.RecordingParams.record_actor_local_to_global_map">record_actor_local_to_global_map (RecordingParams property)</a>
-</li>
-      <li><a href="api/physics.html#superdex.physics.RecordingParams.record_actor_mass_matrix">record_actor_mass_matrix (RecordingParams property)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.RecordingParams.record_actor_meshes">record_actor_meshes (RecordingParams property)</a>
 </li>
@@ -5497,8 +5503,6 @@
 </li>
       <li><a href="api/physics.html#superdex.physics.TransformRT.transform_point_inverse">transform_point_inverse (TransformRT attribute)</a>
 </li>
-      <li><a href="api/physics.html#superdex.physics.TRANSFORM_RT_IDENTITY">TRANSFORM_RT_IDENTITY (in module superdex.physics)</a>
-</li>
       <li><a href="api/physics.html#superdex.physics.TransformRT">TransformRT (class in superdex.physics)</a>
 </li>
       <li><a href="api/utilities.html#superdex.physics.utils.transformations.transformrt_to_numpy">transformrt_to_numpy() (in module superdex.physics.utils.transformations)</a>
@@ -5609,6 +5613,8 @@
 </li>
       <li><a href="api/models.html#superdex.physics.mesh.SurfaceRemeshingParams.use_adaptive_sizing">use_adaptive_sizing (SurfaceRemeshingParams property)</a>
 </li>
+      <li><a href="api/physics.html#superdex.physics.SoftActorParams.use_contact_skin">use_contact_skin (SoftActorParams property)</a>
+</li>
       <li><a href="api/scene_setup.html#superdex.physics.loader.USE_DOUBLE_PRECISION">USE_DOUBLE_PRECISION (in module superdex.physics.loader)</a>
 </li>
       <li><a href="api/physics.html#superdex.physics.RecenteringParams.use_recentering">use_recentering (RecenteringParams property)</a>
@@ -5657,11 +5663,13 @@
         <li><a href="api/physics.html#superdex.physics.NonLinearSolverParams.verbosity">(NonLinearSolverParams property)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/physics.html#superdex.physics.VerbosityLevel">VerbosityLevel (class in superdex.physics)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/viewer.html#superdex.physics.viewer.Viewer">Viewer (class in superdex.physics.viewer)</a>
+</li>
+      <li><a href="api/scene_setup.html#superdex.physics.environment.VIEWER_APP_PATH_ENV_VAR">VIEWER_APP_PATH_ENV_VAR (in module superdex.physics.environment)</a>
 </li>
       <li><a href="api/viewer.html#superdex.physics.viewer.VIEWER_AVAILABLE">VIEWER_AVAILABLE (in module superdex.physics.viewer)</a>
 </li>

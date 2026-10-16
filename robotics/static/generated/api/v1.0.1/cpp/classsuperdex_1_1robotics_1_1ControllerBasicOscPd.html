@@ -192,6 +192,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:acc45ca68de78cc6104b7ea46566b6e7b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute control efforts from observation state and target setpoint.  <br /></td></tr>
 <tr class="memitem:a6f8a3c7f3b53c4a85d2f0a040ed90ec9" id="r_a6f8a3c7f3b53c4a85d2f0a040ed90ec9"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a6f8a3c7f3b53c4a85d2f0a040ed90ec9">ConfigureFromSceneEntry</a> (std::string_view paramArgs, std::string_view initArgs, superdex::Error &amp;error) override</td></tr>
 <tr class="memdesc:a6f8a3c7f3b53c4a85d2f0a040ed90ec9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Configure this controller from serialized parameter and initialization arguments.  <br /></td></tr>
+<tr class="memitem:a1e2c43dc2ecde9530238e6a3a6494470" id="r_a1e2c43dc2ecde9530238e6a3a6494470"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a1e2c43dc2ecde9530238e6a3a6494470">ConfigureRecording</a> (<a class="el" href="classsuperdex_1_1robotics_1_1ControllerRecordingSink.html">ControllerRecordingSink</a> &amp;sink, superdex::Error &amp;error) const override</td></tr>
 <tr class="memitem:a307963d0d62f1ee02ca83897fe6d8e5f" id="r_a307963d0d62f1ee02ca83897fe6d8e5f"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="#a307963d0d62f1ee02ca83897fe6d8e5f">ControllerBasicOscPd</a> (<a class="el" href="structsuperdex_1_1robotics_1_1BotPrefab.html">BotPrefab</a> const *prefab, Actor *robot, superdex::Error &amp;error)</td></tr>
 <tr class="memitem:a8f7caddd0a203299f6d762c56437df38" id="r_a8f7caddd0a203299f6d762c56437df38"><td class="memItemLeft">Span&lt; int const &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a8f7caddd0a203299f6d762c56437df38">GetControlledDofs</a> ()</td></tr>
 <tr class="memdesc:a8f7caddd0a203299f6d762c56437df38"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the controlled DOF indices (between base and end-effector links).  <br /></td></tr>
@@ -207,6 +208,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:afa5eb4fe0e5f4a43aed7f29456ff9680"><td class="mdescLeft">&#160;</td><td class="mdescRight">This component's registered type name (e.g.  <br /></td></tr>
 <tr class="memitem:a5c8cf632c250a4a3b06cfa407c6800d8" id="r_a5c8cf632c250a4a3b06cfa407c6800d8"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a5c8cf632c250a4a3b06cfa407c6800d8">Initialize</a> (std::string_view baseLinkName, std::string_view eeLinkName, superdex::Error &amp;error)</td></tr>
 <tr class="memdesc:a5c8cf632c250a4a3b06cfa407c6800d8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Two-phase initialization: resolve base and end-effector links by name.  <br /></td></tr>
+<tr class="memitem:aa460e95696ffe6a5631a657f800730fd" id="r_aa460e95696ffe6a5631a657f800730fd"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#aa460e95696ffe6a5631a657f800730fd">Record</a> (<a class="el" href="classsuperdex_1_1robotics_1_1ControllerRecordingSink.html">ControllerRecordingSink</a> &amp;sink, superdex::Error &amp;error) const override</td></tr>
 <tr class="memitem:aa76e20f01a3a81baed3fe22afff8e830" id="r_aa76e20f01a3a81baed3fe22afff8e830"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#aa76e20f01a3a81baed3fe22afff8e830">Reset</a> () override</td></tr>
 <tr class="memdesc:aa76e20f01a3a81baed3fe22afff8e830"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reset internal state without destroying the component.  <br /></td></tr>
 <tr class="memitem:a61727f756fc75a7b1d8131c5122e3f33" id="r_a61727f756fc75a7b1d8131c5122e3f33"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a61727f756fc75a7b1d8131c5122e3f33">SetParams</a> (<a class="el" href="#a112dbe73c7ce9e47e4045d1a482b3753">Params</a> const &amp;params, superdex::Error &amp;error)</td></tr>
@@ -260,7 +262,9 @@ Protected Attributes</h2></td></tr>
 <tr class="memitem:ac5b24ca5ee007ad449614e56cd37c6bb" id="r_ac5b24ca5ee007ad449614e56cd37c6bb"><td class="memItemLeft">DynamicArray&lt; real &gt;&#160;</td><td class="memItemRight"><a class="el" href="#ac5b24ca5ee007ad449614e56cd37c6bb">_effortLimits</a></td></tr>
 <tr class="memitem:a8ac06a3c87dcf34b6df69aa5330770fd" id="r_a8ac06a3c87dcf34b6df69aa5330770fd"><td class="memItemLeft">ColumnVector&lt; real &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a8ac06a3c87dcf34b6df69aa5330770fd">_efforts</a></td></tr>
 <tr class="memitem:ad52461b3bcd36a8614d4bf8cae5eb3d3" id="r_ad52461b3bcd36a8614d4bf8cae5eb3d3"><td class="memItemLeft">ColumnVector&lt; real &gt;&#160;</td><td class="memItemRight"><a class="el" href="#ad52461b3bcd36a8614d4bf8cae5eb3d3">_effortsArm</a></td></tr>
+<tr class="memitem:a9ec8b07d2bb99b9687cf0f1d6fcc1acb" id="r_a9ec8b07d2bb99b9687cf0f1d6fcc1acb"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a9ec8b07d2bb99b9687cf0f1d6fcc1acb">_hasLastOutput</a> = false</td></tr>
 <tr class="memitem:aad730e5ec645c2aa5dca401b7df0dc0f" id="r_aad730e5ec645c2aa5dca401b7df0dc0f"><td class="memItemLeft">Matrix&lt; real &gt;&#160;</td><td class="memItemRight"><a class="el" href="#aad730e5ec645c2aa5dca401b7df0dc0f">_jArm</a></td></tr>
+<tr class="memitem:a72c5aeba8fc68a6ffdbf9c8f93e3af6b" id="r_a72c5aeba8fc68a6ffdbf9c8f93e3af6b"><td class="memItemLeft"><a class="el" href="#a5f60776691e0ae0b945f219337070b0b">Target</a>&#160;</td><td class="memItemRight"><a class="el" href="#a72c5aeba8fc68a6ffdbf9c8f93e3af6b">_lastTarget</a></td></tr>
 <tr class="memitem:ad07e8c60052fb53bfb209e24ae6283ba" id="r_ad07e8c60052fb53bfb209e24ae6283ba"><td class="memItemLeft">DynamicArray&lt; int &gt;&#160;</td><td class="memItemRight"><a class="el" href="#ad07e8c60052fb53bfb209e24ae6283ba">_linkIndices</a></td></tr>
 <tr class="memitem:ab6f4b6691060885a9f560a4d490c538e" id="r_ab6f4b6691060885a9f560a4d490c538e"><td class="memItemLeft"><a class="el" href="#a112dbe73c7ce9e47e4045d1a482b3753">Params</a>&#160;</td><td class="memItemRight"><a class="el" href="#ab6f4b6691060885a9f560a4d490c538e">_params</a></td></tr>
 <tr class="memitem:acb7b1df75a076698dab8922924ab8255" id="r_acb7b1df75a076698dab8922924ab8255"><td class="memItemLeft">ColumnVector&lt; real &gt;&#160;</td><td class="memItemRight"><a class="el" href="#acb7b1df75a076698dab8922924ab8255">_positionsArm</a></td></tr>
@@ -496,6 +500,37 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="a1e2c43dc2ecde9530238e6a3a6494470" name="a1e2c43dc2ecde9530238e6a3a6494470"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1e2c43dc2ecde9530238e6a3a6494470">&#9670;&#160;</a></span>ConfigureRecording()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void superdex::robotics::ControllerBasicOscPd::ConfigureRecording </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classsuperdex_1_1robotics_1_1ControllerRecordingSink.html">ControllerRecordingSink</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>sink</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">superdex::Error &amp;</td>          <td class="paramname"><span class="paramname"><em>error</em></span>&#160;) const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel override">override</span><span class="mlabel virtual">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented from <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBase.html#abb65b35ac076afddc3859f16d752203b">superdex::robotics::ControllerBase</a>.</p>
+
+</div>
+</div>
 <a id="a8f7caddd0a203299f6d762c56437df38" name="a8f7caddd0a203299f6d762c56437df38"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a8f7caddd0a203299f6d762c56437df38">&#9670;&#160;</a></span>GetControlledDofs()</h2>
 
@@ -688,6 +723,37 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="aa460e95696ffe6a5631a657f800730fd" name="aa460e95696ffe6a5631a657f800730fd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa460e95696ffe6a5631a657f800730fd">&#9670;&#160;</a></span>Record()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void superdex::robotics::ControllerBasicOscPd::Record </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classsuperdex_1_1robotics_1_1ControllerRecordingSink.html">ControllerRecordingSink</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>sink</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">superdex::Error &amp;</td>          <td class="paramname"><span class="paramname"><em>error</em></span>&#160;) const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel override">override</span><span class="mlabel virtual">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented from <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBase.html#a0b2c4a3e897c1eec979b040d13299588">superdex::robotics::ControllerBase</a>.</p>
+
+</div>
+</div>
 <a id="aa76e20f01a3a81baed3fe22afff8e830" name="aa76e20f01a3a81baed3fe22afff8e830"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aa76e20f01a3a81baed3fe22afff8e830">&#9670;&#160;</a></span>Reset()</h2>
 
@@ -799,7 +865,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00226">226</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00229">229</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
 
 </div>
 </div>
@@ -823,7 +889,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00227">227</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00230">230</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
 
 </div>
 </div>
@@ -847,7 +913,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00232">232</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00235">235</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
 
 </div>
 </div>
@@ -871,7 +937,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00233">233</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00236">236</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
 
 </div>
 </div>
@@ -895,7 +961,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00220">220</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00223">223</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
 
 </div>
 </div>
@@ -919,7 +985,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00243">243</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00246">246</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
 
 </div>
 </div>
@@ -943,7 +1009,31 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00252">252</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00257">257</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
+
+</div>
+</div>
+<a id="a9ec8b07d2bb99b9687cf0f1d6fcc1acb" name="a9ec8b07d2bb99b9687cf0f1d6fcc1acb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9ec8b07d2bb99b9687cf0f1d6fcc1acb">&#9670;&#160;</a></span>_hasLastOutput</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool superdex::robotics::ControllerBasicOscPd::_hasLastOutput = false</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel protected">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00248">248</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
 
 </div>
 </div>
@@ -967,7 +1057,31 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00241">241</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00244">244</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
+
+</div>
+</div>
+<a id="a72c5aeba8fc68a6ffdbf9c8f93e3af6b" name="a72c5aeba8fc68a6ffdbf9c8f93e3af6b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a72c5aeba8fc68a6ffdbf9c8f93e3af6b">&#9670;&#160;</a></span>_lastTarget</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="#a5f60776691e0ae0b945f219337070b0b">Target</a> superdex::robotics::ControllerBasicOscPd::_lastTarget</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel protected">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00247">247</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
 
 </div>
 </div>
@@ -991,7 +1105,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00238">238</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00241">241</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
 
 </div>
 </div>
@@ -1015,7 +1129,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00215">215</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00218">218</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
 
 </div>
 </div>
@@ -1039,7 +1153,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00246">246</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00251">251</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
 
 </div>
 </div>
@@ -1063,7 +1177,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00251">251</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00256">256</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
 
 </div>
 </div>
@@ -1087,7 +1201,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00248">248</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__basic__osc__pd_8h_source.html#l00253">253</a> of file <a class="el" href="controller__basic__osc__pd_8h_source.html">controller_basic_osc_pd.h</a>.</p>
 
 </div>
 </div>

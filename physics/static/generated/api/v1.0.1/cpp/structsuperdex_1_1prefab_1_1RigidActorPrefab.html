@@ -249,7 +249,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Extends <a class="el" href="structsuperdex_1_1RigidActorParams.html" title="superdex::RigidActorParams">RigidActorParams</a>. The inherited <a class="el" href="structsuperdex_1_1RigidActorParams.html#aa328db9298cefcab08f3cc0182a8bab2" title="superdex::RigidActorParams::worldFromLocal">RigidActorParams::worldFromLocal</a> is replaced by the prefab-relative <a class="el" href="#a43cd4ccf56bc322456c2792547e77d56" title="superdex::prefab::RigidActorPrefab::rotation">rotation</a> and <a class="el" href="#a1495b7c180c98a71527a3fe8ef398987" title="superdex::prefab::RigidActorPrefab::translation">translation</a> fields, and the inherited <a class="el" href="structsuperdex_1_1RigidActorParams.html#a3ef57f681e2d4ef4d8cba358bd0fa686" title="superdex::RigidActorParams::shape">RigidActorParams::shape</a> (a runtime <a class="el" href="structsuperdex_1_1ShapeHandle.html" title="superdex::ShapeHandle">ShapeHandle</a>) is replaced by <a class="el" href="#ac77c482eb83850e54a8df5c62aed6f84" title="superdex::prefab::RigidActorPrefab::shapeFile">shapeFile</a> (a path serialized to JSON. The shape is loaded at instantiation time).</p>
 <dl class="section note"><dt>Note</dt><dd>The inherited <a class="el" href="structsuperdex_1_1RigidActorParams.html#afe058d83d5d1860bdb1337f66632f5b3" title="superdex::RigidActorParams::name">RigidActorParams::name</a> field need not be unique, but a name shared by more than one actor cannot be used by name-based prefab references. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00079">79</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00080">80</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 </div><a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
 <a id="acea317a3a2adbb03af0d39e052d53162" name="acea317a3a2adbb03af0d39e052d53162"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#acea317a3a2adbb03af0d39e052d53162">&#9670;&#160;</a></span>comment</h2>
@@ -265,7 +265,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Optional serialized comment. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00080">80</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00081">81</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -285,7 +285,7 @@ Additional Inherited Members</h2></td></tr>
 <p>.glb) for visualization.</p>
 <dl class="section note"><dt>Note</dt><dd>SuperDex Physics does not use this field for simulation. It provides additional metadata for visualization in supported tools. Ignored if empty. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00087">87</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00088">88</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -304,7 +304,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Rotation quaternion [x, y, z, w] to apply to the render model. </p>
 <dl class="section note"><dt>Note</dt><dd>Ignored if <a class="el" href="#adcd1be8aa58ab6f068cb87e8289564dc" title="superdex::prefab::RigidActorPrefab::renderModelFile">renderModelFile</a> is empty. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00089">89</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00090">90</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -323,7 +323,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Scale [x, y, z] to apply to the render model. </p>
 <dl class="section note"><dt>Note</dt><dd>Ignored if <a class="el" href="#adcd1be8aa58ab6f068cb87e8289564dc" title="superdex::prefab::RigidActorPrefab::renderModelFile">renderModelFile</a> is empty. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00088">88</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00089">89</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -342,7 +342,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Translation [x, y, z] to apply to the render model. </p>
 <dl class="section note"><dt>Note</dt><dd>Ignored if <a class="el" href="#adcd1be8aa58ab6f068cb87e8289564dc" title="superdex::prefab::RigidActorPrefab::renderModelFile">renderModelFile</a> is empty. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00090">90</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00091">91</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -362,7 +362,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Composes with <a class="el" href="structsuperdex_1_1prefab_1_1PrefabParams.html#a425bbcd14a8bbc810ad6ce92917de39e" title="superdex::prefab::PrefabParams::rotation">PrefabParams::rotation</a> to produce the final world-from-local rotation.</p>
 <dl class="section note"><dt>Note</dt><dd>Must be finite and non-zero. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00085">85</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00086">86</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -385,7 +385,7 @@ Some shape data cannot bake arbitrary non-uniform scale. Unsupported scale value
 <dd>
 Precomputed grid SDF data is preserved only when <a class="el" href="#ac23d3975a531102aa95057ca34837fdb" title="superdex::prefab::RigidActorPrefab::scale">scale</a> is uniform by absolute value. Non-uniform scale by absolute value discards the precomputed SDF. If an SDF collider is used, SuperDex Physics regenerates the SDF from the transformed mesh at runtime, which may be expensive. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00082">82</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00083">83</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -403,7 +403,7 @@ Precomputed grid SDF data is preserved only when <a class="el" href="#ac23d3975a
 
 <p>Path to a model file that will be loaded and referenced via <a class="el" href="structsuperdex_1_1ShapeHandle.html" title="superdex::ShapeHandle">ShapeHandle</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00081">81</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00082">82</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -421,7 +421,7 @@ Precomputed grid SDF data is preserved only when <a class="el" href="#ac23d3975a
 
 <p>Rotation quaternion [x, y, z, w] to bake into the shape file. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00083">83</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00084">84</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -439,7 +439,7 @@ Precomputed grid SDF data is preserved only when <a class="el" href="#ac23d3975a
 
 <p>Translation [x, y, z] to bake into the shape file. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00084">84</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00085">85</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -459,7 +459,7 @@ Precomputed grid SDF data is preserved only when <a class="el" href="#ac23d3975a
 <p>Composes with <a class="el" href="structsuperdex_1_1prefab_1_1PrefabParams.html#a71d6fec67a434de495beeb4c69a3cc59" title="superdex::prefab::PrefabParams::scale">PrefabParams::scale</a>, <a class="el" href="structsuperdex_1_1prefab_1_1PrefabParams.html#a425bbcd14a8bbc810ad6ce92917de39e" title="superdex::prefab::PrefabParams::rotation">PrefabParams::rotation</a>, and <a class="el" href="structsuperdex_1_1prefab_1_1PrefabParams.html#a349c16572bc7f7f1c5d3c1bb7821d4da" title="superdex::prefab::PrefabParams::translation">PrefabParams::translation</a> to produce the final world-from-local translation.</p>
 <dl class="section note"><dt>Note</dt><dd>Must be finite. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00086">86</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00087">87</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>

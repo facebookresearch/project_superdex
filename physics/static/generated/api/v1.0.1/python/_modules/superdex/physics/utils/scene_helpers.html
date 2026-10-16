@@ -328,7 +328,7 @@
         <span class="p">)</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">superdex.robotics</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sdr</span>  <span class="c1"># @manual</span>
 
-    <span class="k">return</span> <span class="n">sdr</span><span class="o">.</span><span class="n">load_bot_scene</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">bots_ctx</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">sdr</span><span class="o">.</span><span class="n">load_bot_scene</span><span class="p">(</span><span class="n">_strip_win_extended_prefix</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">bots_ctx</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">load_bot_scene_prefab</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>  <span class="c1"># noqa: ANN201</span>
@@ -347,7 +347,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">superdex.robotics</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sdr</span>  <span class="c1"># @manual</span>
 
-    <span class="k">return</span> <span class="n">sdr</span><span class="o">.</span><span class="n">load_bot_scene_prefab_from_file</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">sdr</span><span class="o">.</span><span class="n">load_bot_scene_prefab_from_file</span><span class="p">(</span><span class="n">_strip_win_extended_prefix</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">load_bot_task_prefab</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>  <span class="c1"># noqa: ANN201</span>
@@ -365,7 +365,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">superdex.robotics</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sdr</span>  <span class="c1"># @manual</span>
 
-    <span class="k">return</span> <span class="n">sdr</span><span class="o">.</span><span class="n">load_bot_task_prefab_from_file</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">sdr</span><span class="o">.</span><span class="n">load_bot_task_prefab_from_file</span><span class="p">(</span><span class="n">_strip_win_extended_prefix</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
 
 
 <div class="viewcode-block" id="create_scene_from_prefab"><a class="viewcode-back" href="../../../../api/scene_setup.html#superdex.physics.utils.scene_helpers.create_scene_from_prefab">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">create_scene_from_prefab</span><span class="p">(</span>

@@ -8,7 +8,6 @@ var searchData=
   ['isnonconst_4',['IsNonConst',['../conceptsuperdex_1_1IsNonConst.html',1,'superdex']]],
   ['isnotvoidobject_5',['IsNotVoidObject',['../conceptsuperdex_1_1IsNotVoidObject.html',1,'superdex']]],
   ['isprimitiveshape_6',['IsPrimitiveShape',['../conceptsuperdex_1_1IsPrimitiveShape.html',1,'superdex']]],
-  ['issdfbv_7',['IsSdfBv',['../conceptsuperdex_1_1IsSdfBv.html',1,'superdex']]],
-  ['issimd_8',['IsSimd',['../conceptsuperdex_1_1IsSimd.html',1,'superdex']]],
-  ['issimdsupportedtype_9',['IsSimdSupportedType',['../conceptsuperdex_1_1IsSimdSupportedType.html',1,'superdex']]]
+  ['issimd_7',['IsSimd',['../conceptsuperdex_1_1IsSimd.html',1,'superdex']]],
+  ['issimdsupportedtype_8',['IsSimdSupportedType',['../conceptsuperdex_1_1IsSimdSupportedType.html',1,'superdex']]]
 ];

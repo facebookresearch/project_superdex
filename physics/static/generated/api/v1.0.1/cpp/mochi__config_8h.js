@@ -8,7 +8,7 @@ var mochi__config_8h =
     [ "MOCHI_INCLUDE_PYBIND_SUPPORT", "mochi__config_8h.html#ae767b1dae4e1aae12086e1cd3eae7a40", null ],
     [ "MOCHI_LOG_ENABLED", "mochi__config_8h.html#aeb944ae424fe26dc67cfda73204c5882", null ],
     [ "MOCHI_OPTIMIZED", "mochi__config_8h.html#a381c81865c038af120496140a5075be9", null ],
-    [ "MOCHI_PMR_USES_JEMALLOC", "mochi__config_8h.html#a50b539ca5a0c5a76f59d0cb6e44f6486", null ],
+    [ "MOCHI_PMR_ENABLE_JEMALLOC_COMPATIBILITY", "mochi__config_8h.html#a2c6a44eaba5ad1e5d5b09fe963db82c6", null ],
     [ "MOCHI_PROFILE_ENABLE", "mochi__config_8h.html#afd124131d137e9c24bb02a34957a71c8", null ],
     [ "MOCHI_SIMD_REGISTER_COUNT", "mochi__config_8h.html#a789164645e1bd79fa7163a78e2c79f5e", null ],
     [ "MOCHI_SIMD_REGISTER_SIZE_BYTES", "mochi__config_8h.html#ae8b98f703981385b4921c8a62c0394f6", null ],

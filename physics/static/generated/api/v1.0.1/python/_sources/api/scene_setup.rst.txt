@@ -43,10 +43,16 @@ superdex.physics.environment
 .. autodata:: superdex.physics.environment.LEGACY_PRECISION_ENV_VAR
    :no-value:
 
+.. autodata:: superdex.physics.environment.LEGACY_VIEWER_APP_PATH_ENV_VAR
+   :no-value:
+
 .. autodata:: superdex.physics.environment.LOG_LEVEL_ENV_VAR
    :no-value:
 
 .. autodata:: superdex.physics.environment.PRECISION_ENV_VAR
+   :no-value:
+
+.. autodata:: superdex.physics.environment.VIEWER_APP_PATH_ENV_VAR
    :no-value:
 
 .. autofunction:: superdex.physics.environment.get_env_var_value

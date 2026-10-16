@@ -512,10 +512,11 @@ point in space regardless of the underlying coordinate system representation.</p
 the rotation/reflection component of the transformation.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>direction</strong> – A 3D direction vector in source coordinates.</p>
+<dd class="field-odd"><p><strong>direction</strong> – A 3D direction vector, or an (N, 3) array of them, in
+source coordinates.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The direction vector transformed to target coordinates.</p>
+<dd class="field-even"><p>The direction vector(s) transformed to target coordinates.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -529,12 +530,13 @@ the rotation/reflection component of the transformation.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>position</strong> – A 3D position in source coordinates.</p></li>
+<li><p><strong>position</strong> – A 3D position, or an (N, 3) array of them, in source
+coordinates.</p></li>
 <li><p><strong>scale</strong> – Optional scale factor to apply (default 1.0).</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The position transformed to target coordinates.</p>
+<dd class="field-even"><p>The position(s) transformed to target coordinates.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -555,10 +557,12 @@ quaternion’s imaginary components (x, y, z).</p></li>
 </ol>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>quaternion</strong> – A rotation quaternion in [x, y, z, w] format (scipy convention).</p>
+<dd class="field-odd"><p><strong>quaternion</strong> – A rotation quaternion in [x, y, z, w] format (scipy
+convention), or an (N, 4) array of them.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The quaternion transformed to target coordinates in [x, y, z, w] format.</p>
+<dd class="field-even"><p>The quaternion(s) transformed to target coordinates in [x, y, z, w]
+format.</p>
 </dd>
 </dl>
 </dd></dl>

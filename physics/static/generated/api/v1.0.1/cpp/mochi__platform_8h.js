@@ -26,6 +26,7 @@ var mochi__platform_8h =
     [ "MOCHI_CONCEPT_DEF", "mochi__platform_8h.html#a95871e4a92f8875d09fd87c027ce2e92", null ],
     [ "MOCHI_CONSERVATIVE_CACHE_ALIGN", "mochi__platform_8h.html#ae611825897f4f5923275d7f6b0b4301a", null ],
     [ "MOCHI_CONSERVATIVE_CACHE_LINE_SIZE", "mochi__platform_8h.html#acaa9c91efdce6bbb04d0dbe8f0d47f1b", null ],
+    [ "MOCHI_CONSTEXPR_NO_INIT", "mochi__platform_8h.html#a5fa4e92d3fe173aad1b5ce4709613035", null ],
     [ "MOCHI_CPU", "mochi__platform_8h.html#a71ab24d7de68ccba45a012b8a6ad8d0a", null ],
     [ "MOCHI_DEBUG_BREAK", "mochi__platform_8h.html#a2e0dcf142bab3888e16406d2721c3292", null ],
     [ "MOCHI_DEBUG_RTCHECKS_DISABLE", "mochi__platform_8h.html#a38cbefed0fa1682fd5438cdd2ccc899f", null ],

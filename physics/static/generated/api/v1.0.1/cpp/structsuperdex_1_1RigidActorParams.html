@@ -223,10 +223,10 @@ Public Attributes</h2></td></tr>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Parameters to create a rigid body actor. </p>
 <p>Rigid actors behave as rigid bodies with 6 degrees of freedom (3 translational, 3 rotational). They can be static (fixed in space) or dynamic (affected by forces and collisions).</p>
-<dl class="section note"><dt>Note</dt><dd>Also used to create links in articulated bodies.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Articulated links are created from <a class="el" href="structsuperdex_1_1ArticulatedLinkParams.html" title="superdex::ArticulatedLinkParams">ArticulatedLinkParams</a> instead.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classsuperdex_1_1Scene.html#ab869cf1d1134f61fafbffc68e554bc8f" title="superdex::Scene::CreateRigidActor">Scene::CreateRigidActor</a>, <a class="el" href="structsuperdex_1_1ArticulatedActorParams.html" title="superdex::ArticulatedActorParams">ArticulatedActorParams</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00134">134</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00138">138</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 </div><a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
 <a id="a46f6ea51c3fe4cbfd8547680a359a0ef" name="a46f6ea51c3fe4cbfd8547680a359a0ef"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a46f6ea51c3fe4cbfd8547680a359a0ef">&#9670;&#160;</a></span>operator==()</h2>
@@ -267,10 +267,10 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Optional initial angular velocity in world frame [rad/s], zero otherwise. </p>
-<dl class="section note"><dt>Note</dt><dd>Not valid for static rigid actors or articulated links.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Not valid for static rigid actors.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classsuperdex_1_1Actor.html#acd6f398e24eb8c919d7bcdd6f8327575" title="superdex::Actor::GetAngularVelocity">Actor::GetAngularVelocity</a>, <a class="el" href="classsuperdex_1_1Actor.html#a97f46d4ea21a6cbebddad73bf08e4c98" title="superdex::Actor::SetVelocity">Actor::SetVelocity</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00167">167</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00171">171</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -290,7 +290,7 @@ Public Attributes</h2></td></tr>
 <dl class="section note"><dt>Note</dt><dd>Affects accuracy and performance of contact and boundary integrals.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="namespacesuperdex.html#a7ff767caee9a23cb97b864fd2ebb8fa4" title="superdex::ActorBoundaryElementType">ActorBoundaryElementType</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00161">161</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00165">165</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -312,7 +312,7 @@ Public Attributes</h2></td></tr>
 For best performance, combine subsampling with <a class="el" href="#a4917345e8661d57b6bc6e1912d7fda7f" title="superdex::RigidActorParams::boundaryElementType">boundaryElementType</a> = <a class="el" href="namespacesuperdex.html#a7ff767caee9a23cb97b864fd2ebb8fa4a34c54e53c7144d38a048f4a75e4f4272" title="superdex::ActorBoundaryElementType::P1Q1">ActorBoundaryElementType::P1Q1</a>.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1BoundarySubsamplingParams.html" title="superdex::BoundarySubsamplingParams">BoundarySubsamplingParams</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00163">163</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00167">167</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -334,7 +334,7 @@ For best performance, combine subsampling with <a class="el" href="#a4917345e866
 Usually combined with explicit momentOfInertia.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#a92fdb8da1f65f41355344ad12e9316f4" title="superdex::RigidActorParams::momentOfInertia">momentOfInertia</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00157">157</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00161">161</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -354,7 +354,7 @@ Usually combined with explicit momentOfInertia.</dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Determines how OTHER actors detect contact with this actor. It does not affect how this actor detects contact with other actors.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="namespacesuperdex.html#adb4f68ea1e9bbc8eb3dab90ea51f3dba" title="superdex::ColliderType">ColliderType</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00143">143</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00147">147</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -373,7 +373,7 @@ Usually combined with explicit momentOfInertia.</dd></dl>
 <p>Contact mechanics parameters. </p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ContactParams.html" title="superdex::ContactParams">ContactParams</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00147">147</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00151">151</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -398,7 +398,7 @@ If only density is set, mass is computed automatically from volume. </dd>
 If neither is set, <a class="el" href="namespacesuperdex.html#a8e99edad0be4d2ec52f2617e4e3dd9a6" title="superdex::kDefaultDensity">kDefaultDensity</a> is used.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#a47020b23ea29d745e1d249e6b6e37477" title="superdex::RigidActorParams::mass">mass</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00153">153</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00157">157</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -417,7 +417,7 @@ If neither is set, <a class="el" href="namespacesuperdex.html#a8e99edad0be4d2ec5
 <p>If true, actor is affected by gravity. </p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classsuperdex_1_1Scene.html#a8f9f303817187294235f7fefa3db3158" title="superdex::Scene::SetGravity">Scene::SetGravity</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00151">151</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00155">155</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -436,7 +436,7 @@ If neither is set, <a class="el" href="namespacesuperdex.html#a8e99edad0be4d2ec5
 <p>If true, actor will be static (fixed in space). </p>
 <p>If false, actor will be dynamic. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00145">145</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00149">149</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -455,7 +455,7 @@ If neither is set, <a class="el" href="namespacesuperdex.html#a8e99edad0be4d2ec5
 <p>Contact layer name for filtering contacts between actors. </p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classsuperdex_1_1Scene.html#a5474be1c30817e8a85870e6bbea834fc" title="superdex::Scene::EnableLayerContactAsymmetric">Scene::EnableLayerContactAsymmetric</a>, <a class="el" href="classsuperdex_1_1Scene.html#af4f387a0fe7dbd46e2fde2056b815478" title="superdex::Scene::EnableLayerContactSymmetric">Scene::EnableLayerContactSymmetric</a>, <a class="el" href="classsuperdex_1_1Scene.html#a7e629062b7b06e4110ae5449f96ee6c9" title="superdex::Scene::EnableActorContactAsymmetric">Scene::EnableActorContactAsymmetric</a>, <a class="el" href="classsuperdex_1_1Scene.html#a99da767ec8d49664cfdc8e4e6e276542" title="superdex::Scene::EnableActorContactSymmetric">Scene::EnableActorContactSymmetric</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00137">137</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00141">141</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -472,10 +472,10 @@ If neither is set, <a class="el" href="namespacesuperdex.html#a8e99edad0be4d2ec5
 </div><div class="memdoc">
 
 <p>Optional initial linear velocity of the center of mass in world frame [m/s], zero otherwise. </p>
-<dl class="section note"><dt>Note</dt><dd>Not valid for static rigid actors or articulated links.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Not valid for static rigid actors.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classsuperdex_1_1Actor.html#a8d59ac838a12c0254df800193e774e5f" title="superdex::Actor::GetLinearVelocity">Actor::GetLinearVelocity</a>, <a class="el" href="classsuperdex_1_1Actor.html#a97f46d4ea21a6cbebddad73bf08e4c98" title="superdex::Actor::SetVelocity">Actor::SetVelocity</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00165">165</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00169">169</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -498,7 +498,7 @@ If neither is set, <a class="el" href="namespacesuperdex.html#a8e99edad0be4d2ec5
 If only mass is set, density is computed automatically from volume.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#ac8e91ce477dab80842f372f290e3c553" title="superdex::RigidActorParams::density">density</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00155">155</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00159">159</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -530,7 +530,7 @@ If not set, computed automatically from geometry and density. </dd>
 Usually combined with explicit centerOfMass.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#ae26fb6f433927b50b832c2c6e3dfa871" title="superdex::RigidActorParams::centerOfMass">centerOfMass</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00159">159</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00163">163</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -549,7 +549,7 @@ Usually combined with explicit centerOfMass.</dd></dl>
 <p>Optional actor name. </p>
 <p>Uniqueness of names is not enforced. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00135">135</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00139">139</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -570,7 +570,7 @@ Usually combined with explicit centerOfMass.</dd></dl>
 <dd>
 Ignored if the shape already has a grid-based SDF. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00149">149</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00153">153</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -589,10 +589,12 @@ Ignored if the shape already has a grid-based SDF. </dd></dl>
 <p>Shape handle defining the actor's geometry and other metadata. </p>
 <dl class="section note"><dt>Note</dt><dd>A shape can be shared by multiple actors, even actors in different scenes. </dd>
 <dd>
-Dynamic rigid actors require a shape with a surface mesh.</dd></dl>
+Dynamic rigid actors require a shape with a surface mesh. </dd>
+<dd>
+A tetrahedral or triangular mesh shape may have nodes that no element references. <a class="el" href="classsuperdex_1_1Actor.html#a88745d7a8c15875010458a15dbd339c3" title="superdex::Actor::GetMesh">Actor::GetMesh</a> omits them.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ShapeHandle.html" title="superdex::ShapeHandle">ShapeHandle</a>, <a class="el" href="classsuperdex_1_1Context.html#afe47833d9b34791e5af8e689f5059aa6" title="superdex::Context::LoadShapeFromFile">Context::LoadShapeFromFile</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00139">139</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00143">143</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -612,7 +614,7 @@ Dynamic rigid actors require a shape with a surface mesh.</dd></dl>
 <dl class="section note"><dt>Note</dt><dd>The actor's center of mass may be located elsewhere, since it is not necessarily at the origin of the actor's local coordinate frame.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#ae26fb6f433927b50b832c2c6e3dfa871" title="superdex::RigidActorParams::centerOfMass">centerOfMass</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00141">141</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00145">145</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>

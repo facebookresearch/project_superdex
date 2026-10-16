@@ -203,7 +203,7 @@ Public Attributes</h2></td></tr>
 <dl class="section note"><dt>Note</dt><dd>Number of joints = number of links + number of cycle joints.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classsuperdex_1_1Actor.html#ae14a096113faf4814afa7a197d5e4d32" title="superdex::Actor::GetArticulatedShapeInfo">Actor::GetArticulatedShapeInfo</a>, <a class="el" href="classsuperdex_1_1Context.html#ac0d79cc236fd81d3827e1251d4702ecb" title="superdex::Context::GetArticulatedShapeInfo">Context::GetArticulatedShapeInfo</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00102">102</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00106">106</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 </div><a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
 <a id="acea6983d77a35a24a977a3fd8f66a217" name="acea6983d77a35a24a977a3fd8f66a217"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#acea6983d77a35a24a977a3fd8f66a217">&#9670;&#160;</a></span>cycles</h2>
@@ -223,7 +223,7 @@ Public Attributes</h2></td></tr>
 Cycle entries appear at indices [numLinks, numLinks + numCycles) of the per-joint arrays (<a class="el" href="#a4f21825ba8ae25c15a30ff7680e37fe0" title="superdex::ArticulatedShapeInfo::jointTypes">jointTypes</a>, <a class="el" href="#ab984a366927d9eb467766d982d3031a6" title="superdex::ArticulatedShapeInfo::jointAxes">jointAxes</a>, <a class="el" href="#ac12b625eb18597c0a80a7d6c42c27ab0" title="superdex::ArticulatedShapeInfo::jointFromChildLink">jointFromChildLink</a>, <a class="el" href="#a13e5c1b4def7485693e667f3e315d433" title="superdex::ArticulatedShapeInfo::parentLinkFromJoint">parentLinkFromJoint</a>, <a class="el" href="#a2f9f128afd3b8fa1a7af5b72c1f70b10" title="superdex::ArticulatedShapeInfo::jointMinLimits">jointMinLimits</a>, <a class="el" href="#a4b2c430ccf0a477ac9f5fff9811d7976" title="superdex::ArticulatedShapeInfo::jointMaxLimits">jointMaxLimits</a>, <a class="el" href="#aeffbbf5b69ae0efd0bfb440b5666c2b2" title="superdex::ArticulatedShapeInfo::jointNames">jointNames</a>).</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structsuperdex_1_1ArticulatedCycleJoint.html" title="superdex::ArticulatedCycleJoint">ArticulatedCycleJoint</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00111">111</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00115">115</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -242,7 +242,7 @@ Cycle entries appear at indices [numLinks, numLinks + numCycles) of the per-join
 <p>DoF information of each joint (offset within the full pose, number of translation DoFs, number of rotation DoFs). </p>
 <p>Size must be numLinks + numCycles. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00115">115</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00119">119</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -261,7 +261,7 @@ Cycle entries appear at indices [numLinks, numLinks + numCycles) of the per-join
 <p>Axis of each joint in the joint's local frame. </p>
 <p>Size must be numLinks + numCycles. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00113">113</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00117">117</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -281,7 +281,7 @@ Cycle entries appear at indices [numLinks, numLinks + numCycles) of the per-join
 <p>Size must be numLinks + numCycles.</p>
 <p>This is the transform from the child link to the joint. <a class="el" href="structsuperdex_1_1ArticulatedLinkParams.html#a17389a089f6d8a8d3a3bfa09cf8153ff" title="superdex::ArticulatedLinkParams::parentJointFromLink">ArticulatedLinkParams::parentJointFromLink</a> for tree joints and <a class="el" href="structsuperdex_1_1ArticulatedCycleJointParams.html#a0d979af9a966ac5c72f8628074b4066e" title="superdex::ArticulatedCycleJointParams::jointFromChildLink">ArticulatedCycleJointParams::jointFromChildLink</a> for cycle joints. The joint axis (<a class="el" href="#ab984a366927d9eb467766d982d3031a6" title="superdex::ArticulatedShapeInfo::jointAxes">jointAxes</a>) and joint motion are interpreted in this joint frame. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00117">117</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00121">121</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -304,7 +304,7 @@ Cycle entries appear at indices [numLinks, numLinks + numCycles) of the per-join
 <dd>
 Size of <a class="el" href="#a2f9f128afd3b8fa1a7af5b72c1f70b10" title="superdex::ArticulatedShapeInfo::jointMinLimits">jointMinLimits</a> and <a class="el" href="#a4b2c430ccf0a477ac9f5fff9811d7976" title="superdex::ArticulatedShapeInfo::jointMaxLimits">jointMaxLimits</a> must be the same. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00123">123</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00127">127</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -327,7 +327,7 @@ Size of <a class="el" href="#a2f9f128afd3b8fa1a7af5b72c1f70b10" title="superdex:
 <dd>
 Size of <a class="el" href="#a2f9f128afd3b8fa1a7af5b72c1f70b10" title="superdex::ArticulatedShapeInfo::jointMinLimits">jointMinLimits</a> and <a class="el" href="#a4b2c430ccf0a477ac9f5fff9811d7976" title="superdex::ArticulatedShapeInfo::jointMaxLimits">jointMaxLimits</a> must be the same. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00121">121</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00125">125</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -346,7 +346,7 @@ Size of <a class="el" href="#a2f9f128afd3b8fa1a7af5b72c1f70b10" title="superdex:
 <p>Name of each joint. </p>
 <p>Size must be numLinks + numCycles. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00125">125</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00129">129</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -366,7 +366,7 @@ Size of <a class="el" href="#a2f9f128afd3b8fa1a7af5b72c1f70b10" title="superdex:
 <p>Size must be numLinks + numCycles.</p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="namespacesuperdex.html#a63ad0aa8bee97973da54ef377666a942" title="superdex::ArticulatedJointType">ArticulatedJointType</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00109">109</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00113">113</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -384,7 +384,7 @@ Size of <a class="el" href="#a2f9f128afd3b8fa1a7af5b72c1f70b10" title="superdex:
 
 <p>Name of each link. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00105">105</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00109">109</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -404,7 +404,7 @@ Size of <a class="el" href="#a2f9f128afd3b8fa1a7af5b72c1f70b10" title="superdex:
 <p>Size must be numLinks + numCycles.</p>
 <p>This is the transform from the joint to the parent link, corresponding to <a class="el" href="structsuperdex_1_1ArticulatedJointParams.html#af7089ca7fe6e0af6c8d06d9f7b2c2361" title="superdex::ArticulatedJointParams::parentLinkFromJoint">ArticulatedJointParams::parentLinkFromJoint</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00119">119</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00123">123</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -426,7 +426,7 @@ Size of <a class="el" href="#a2f9f128afd3b8fa1a7af5b72c1f70b10" title="superdex:
 <dd>
 Use -1 for links with no parent. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00107">107</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00111">111</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -445,7 +445,7 @@ Use -1 for links with no parent. </dd></dl>
 <p>Rotation and translation of each link in rest configuration relative to the local reference system of the articulated shape. </p>
 <p>Size must equal the number of links. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00103">103</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00107">107</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>

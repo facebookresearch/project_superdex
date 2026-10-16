@@ -177,31 +177,31 @@ $(function(){initNavTree('superdex__robotics__reflection_8generated_8h_source.ht
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span> </div>
 <div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="preprocessor">#pragma once</span></div>
 <div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span> </div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="preprocessor">#include &lt;limits&gt;</span></div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="preprocessor">#include &lt;mochi_core/utils/reflection.h&gt;</span></div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="preprocessor">#include &lt;<a class="code" href="superdex__robotics_8h.html">superdex_robotics/superdex_robotics.h</a>&gt;</span></div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span> </div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>MOCHI_ENUM_BEGIN(<a class="code hl_enumeration" href="namespacesuperdex_1_1robotics.html#a171858753984e50df1c90fd6774506d2">superdex::robotics::BotFileType</a>)</div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>MOCHI_ENUM_ITEM(BotPrefab)</div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>MOCHI_ENUM_ITEM(ModBotPrefab)</div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>MOCHI_ENUM_COUNT(Count)</div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>MOCHI_ENUM_END()</div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="preprocessor">#include &lt;mochi_core/utils/reflection.h&gt;</span></div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="preprocessor">#include &lt;<a class="code" href="actuator__base_8h.html">superdex_robotics/actuators/actuator_base.h</a>&gt;</span></div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="preprocessor">#include &lt;<a class="code" href="controller__basic__jsc__pd_8h.html">superdex_robotics/controllers/controller_basic_jsc_pd.h</a>&gt;</span></div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="preprocessor">#include &lt;<a class="code" href="controller__basic__osc__pd_8h.html">superdex_robotics/controllers/controller_basic_osc_pd.h</a>&gt;</span></div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span><span class="preprocessor">#include &lt;<a class="code" href="controller__mochi__articulated__pose_8h.html">superdex_robotics/controllers/controller_mochi_articulated_pose.h</a>&gt;</span></div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span><span class="preprocessor">#include &lt;<a class="code" href="camera__sensor_8h.html">superdex_robotics/sensors/camera_sensor.h</a>&gt;</span></div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span><span class="preprocessor">#include &lt;<a class="code" href="superdex__robotics_8h.html">superdex_robotics/superdex_robotics.h</a>&gt;</span></div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span><span class="preprocessor">#include &lt;<a class="code" href="bot__utils_8h.html">superdex_robotics/utils/bot_utils.h</a>&gt;</span></div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span><span class="preprocessor">#include &lt;superdex_robotics/utils/superdex_robotics_api_checks.generated.h&gt;</span></div>
 <div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span> </div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>MOCHI_ENUM_BEGIN(<a class="code hl_namespace" href="namespacesuperdex.html">superdex</a>::robotics::LinkTransformSpace)</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>MOCHI_ENUM_ITEM(ParentFromLink)</div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>MOCHI_ENUM_ITEM(RootFromParent)</div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>MOCHI_ENUM_COUNT(Count)</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>MOCHI_ENUM_END()</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span> </div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span><span class="preprocessor">#include &lt;superdex_robotics/controllers/controller_basic_jsc_pd.h&gt;</span></div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span><span class="preprocessor">#include &lt;<a class="code" href="controller__basic__osc__pd_8h.html">superdex_robotics/controllers/controller_basic_osc_pd.h</a>&gt;</span></div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span><span class="preprocessor">#include &lt;<a class="code" href="controller__mochi__articulated__pose_8h.html">superdex_robotics/controllers/controller_mochi_articulated_pose.h</a>&gt;</span></div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span><span class="preprocessor">#include &lt;<a class="code" href="camera__sensor_8h.html">superdex_robotics/sensors/camera_sensor.h</a>&gt;</span></div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span><span class="preprocessor">#include &lt;<a class="code" href="actuator__base_8h.html">superdex_robotics/actuators/actuator_base.h</a>&gt;</span></div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span><span class="preprocessor">#include &lt;<a class="code" href="bot__utils_8h.html">superdex_robotics/utils/bot_utils.h</a>&gt;</span></div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span><span class="preprocessor">#include &lt;superdex_robotics/utils/superdex_robotics_api_checks.generated.h&gt;</span></div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span><span class="preprocessor">#include &lt;limits&gt;</span></div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span> </div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>MOCHI_ENUM_BEGIN(<a class="code hl_enumeration" href="namespacesuperdex_1_1robotics.html#a171858753984e50df1c90fd6774506d2">superdex::robotics::BotFileType</a>)</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>MOCHI_ENUM_ITEM(BotPrefab)</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>MOCHI_ENUM_ITEM(ModBotPrefab)</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>MOCHI_ENUM_COUNT(Count)</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>MOCHI_ENUM_END()</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span> </div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>MOCHI_ENUM_BEGIN(<a class="code hl_namespace" href="namespacesuperdex.html">superdex</a>::robotics::LinkTransformSpace)</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>MOCHI_ENUM_ITEM(ParentFromLink)</div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>MOCHI_ENUM_ITEM(RootFromParent)</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>MOCHI_ENUM_COUNT(Count)</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>MOCHI_ENUM_END()</div>
 <div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>MOCHI_STRUCT_BEGIN_EX(<a class="code hl_struct" href="structsuperdex_1_1robotics_1_1RoboticsHandle.html">superdex::robotics::RoboticsHandle</a>)</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>MOCHI_STRUCT_BEGIN_EX(<a class="code hl_namespace" href="namespacesuperdex.html">superdex</a>::robotics::RoboticsHandle)</div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>MOCHI_FIELD(value)</div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>MOCHI_STRUCT_END_EX()</div>
 <div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span> </div>
@@ -293,11 +293,11 @@ $(function(){initNavTree('superdex__robotics__reflection_8generated_8h_source.ht
 <div class="ttc" id="aactuator__base_8h_html"><div class="ttname"><a href="actuator__base_8h.html">actuator_base.h</a></div></div>
 <div class="ttc" id="abot__utils_8h_html"><div class="ttname"><a href="bot__utils_8h.html">bot_utils.h</a></div></div>
 <div class="ttc" id="acamera__sensor_8h_html"><div class="ttname"><a href="camera__sensor_8h.html">camera_sensor.h</a></div></div>
+<div class="ttc" id="acontroller__basic__jsc__pd_8h_html"><div class="ttname"><a href="controller__basic__jsc__pd_8h.html">controller_basic_jsc_pd.h</a></div></div>
 <div class="ttc" id="acontroller__basic__osc__pd_8h_html"><div class="ttname"><a href="controller__basic__osc__pd_8h.html">controller_basic_osc_pd.h</a></div></div>
 <div class="ttc" id="acontroller__mochi__articulated__pose_8h_html"><div class="ttname"><a href="controller__mochi__articulated__pose_8h.html">controller_mochi_articulated_pose.h</a></div></div>
 <div class="ttc" id="anamespacesuperdex_1_1robotics_html_a171858753984e50df1c90fd6774506d2"><div class="ttname"><a href="namespacesuperdex_1_1robotics.html#a171858753984e50df1c90fd6774506d2">superdex::robotics::BotFileType</a></div><div class="ttdeci">BotFileType</div><div class="ttdoc">Type of content stored in a .superdex_bot file.</div><div class="ttdef"><b>Definition</b> <a href="superdex__robotics_8h_source.html#l00046">superdex_robotics.h:46</a></div></div>
 <div class="ttc" id="anamespacesuperdex_html"><div class="ttname"><a href="namespacesuperdex.html">superdex</a></div><div class="ttdef"><b>Definition</b> <a href="superdex__robotics_8h_source.html#l00032">superdex_robotics.h:32</a></div></div>
-<div class="ttc" id="astructsuperdex_1_1robotics_1_1RoboticsHandle_html"><div class="ttname"><a href="structsuperdex_1_1robotics_1_1RoboticsHandle.html">superdex::robotics::RoboticsHandle</a></div><div class="ttdoc">Shared base handle for bots, controllers, sensors, and actuators.</div><div class="ttdef"><b>Definition</b> <a href="context_8h_source.html#l00051">context.h:51</a></div></div>
 <div class="ttc" id="asuperdex__robotics_8h_html"><div class="ttname"><a href="superdex__robotics_8h.html">superdex_robotics.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->

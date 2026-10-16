@@ -44,6 +44,8 @@ var hierarchy =
     [ "superdex::robotics::ControllerMochiArticulatedPoseObsv", "structsuperdex_1_1robotics_1_1ControllerMochiArticulatedPoseObsv.html", null ],
     [ "superdex::robotics::ControllerMochiArticulatedPoseParams", "structsuperdex_1_1robotics_1_1ControllerMochiArticulatedPoseParams.html", null ],
     [ "superdex::robotics::ControllerMochiArticulatedPoseTarget", "structsuperdex_1_1robotics_1_1ControllerMochiArticulatedPoseTarget.html", null ],
+    [ "superdex::robotics::ControllerRecordingSink", "classsuperdex_1_1robotics_1_1ControllerRecordingSink.html", null ],
+    [ "superdex::robotics::ControllerScalarValues", "structsuperdex_1_1robotics_1_1ControllerScalarValues.html", null ],
     [ "superdex::experimental::DisplacementControlActuatorParams", null, [
       [ "superdex::robotics::BotTransmissionPrefab", "structsuperdex_1_1robotics_1_1BotTransmissionPrefab.html", [
         [ "superdex::robotics::BotLinearTransmissionPrefab", "structsuperdex_1_1robotics_1_1BotLinearTransmissionPrefab.html", null ],

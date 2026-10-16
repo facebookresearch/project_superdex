@@ -186,7 +186,9 @@ Inheritance diagram for superdex::robotics::ControllerBase:</div>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a826ed3d59158522c4fa094782565d8f7" id="r_a826ed3d59158522c4fa094782565d8f7"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#a826ed3d59158522c4fa094782565d8f7">ConfigureFromSceneEntry</a> (std::string_view paramArgs, std::string_view initArgs, superdex::Error &amp;error)=0</td></tr>
 <tr class="memdesc:a826ed3d59158522c4fa094782565d8f7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Configure this controller from serialized parameter and initialization arguments.  <br /></td></tr>
+<tr class="memitem:abb65b35ac076afddc3859f16d752203b" id="r_abb65b35ac076afddc3859f16d752203b"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#abb65b35ac076afddc3859f16d752203b">ConfigureRecording</a> (<a class="el" href="classsuperdex_1_1robotics_1_1ControllerRecordingSink.html">ControllerRecordingSink</a> &amp;sink, superdex::Error &amp;error) const</td></tr>
 <tr class="memitem:a9c7aa5922e66f4dbd5d538a49a5c77aa" id="r_a9c7aa5922e66f4dbd5d538a49a5c77aa"><td class="memItemLeft"><a class="el" href="structsuperdex_1_1robotics_1_1BotPrefab.html">BotPrefab</a> const *&#160;</td><td class="memItemRight"><a class="el" href="#a9c7aa5922e66f4dbd5d538a49a5c77aa">GetBotPrefab</a> () const</td></tr>
+<tr class="memitem:a0b2c4a3e897c1eec979b040d13299588" id="r_a0b2c4a3e897c1eec979b040d13299588"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#a0b2c4a3e897c1eec979b040d13299588">Record</a> (<a class="el" href="classsuperdex_1_1robotics_1_1ControllerRecordingSink.html">ControllerRecordingSink</a> &amp;sink, superdex::Error &amp;error) const</td></tr>
 <tr class="memitem:a178e4e49cd2409faec081227e29502ab" id="r_a178e4e49cd2409faec081227e29502ab"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a178e4e49cd2409faec081227e29502ab">Reset</a> () override=0</td></tr>
 <tr class="memdesc:a178e4e49cd2409faec081227e29502ab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reset internal state without destroying the component.  <br /></td></tr>
 <tr class="inherit_header pub_methods_classsuperdex_1_1robotics_1_1ComponentBase"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classsuperdex_1_1robotics_1_1ComponentBase')"><span class="dynarrow"><span class="arrowhead closed"></span></span>Public Member Functions inherited from <a class="el" href="classsuperdex_1_1robotics_1_1ComponentBase.html">superdex::robotics::ComponentBase</a></td></tr>
@@ -229,7 +231,7 @@ Additional Inherited Members</h2></td></tr>
 <div class="textblock"><p>Base class for all controllers. </p>
 <p>Inherits common lifecycle from <a class="el" href="classsuperdex_1_1robotics_1_1ComponentBase.html" title="Base class for all bots components (controllers, sensors, actuators).">ComponentBase</a>. Controllers are identified by string names via <a class="el" href="classsuperdex_1_1robotics_1_1RoboticsContext.html" title="Resource owner for bots, controllers, sensors, and actuators.">RoboticsContext</a> registration, not enums. </p>
 
-<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00032">32</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00033">33</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
 </div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a27315c2ef82b7f9fece85d9aae8eea6a" name="a27315c2ef82b7f9fece85d9aae8eea6a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a27315c2ef82b7f9fece85d9aae8eea6a">&#9670;&#160;</a></span>ControllerBase()</h2>
@@ -263,7 +265,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00068">68</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00075">75</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
 
 </div>
 </div>
@@ -316,6 +318,37 @@ Additional Inherited Members</h2></td></tr>
 
 </div>
 </div>
+<a id="abb65b35ac076afddc3859f16d752203b" name="abb65b35ac076afddc3859f16d752203b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abb65b35ac076afddc3859f16d752203b">&#9670;&#160;</a></span>ConfigureRecording()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void superdex::robotics::ControllerBase::ConfigureRecording </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classsuperdex_1_1robotics_1_1ControllerRecordingSink.html">ControllerRecordingSink</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>sink</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">superdex::Error &amp;</td>          <td class="paramname"><span class="paramname"><em>error</em></span>&#160;) const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel virtual">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented in <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicJscPd.html#a7eabb1e8283e5f7ad22aa7b01bbca011">superdex::robotics::ControllerBasicJscPd</a>, and <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicOscPd.html#a1e2c43dc2ecde9530238e6a3a6494470">superdex::robotics::ControllerBasicOscPd</a>.</p>
+
+</div>
+</div>
 <a id="a9c7aa5922e66f4dbd5d538a49a5c77aa" name="a9c7aa5922e66f4dbd5d538a49a5c77aa"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a9c7aa5922e66f4dbd5d538a49a5c77aa">&#9670;&#160;</a></span>GetBotPrefab()</h2>
 
@@ -339,7 +372,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00040">40</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00041">41</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
 
 </div>
 </div>
@@ -366,7 +399,38 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00078">78</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00085">85</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
+
+</div>
+</div>
+<a id="a0b2c4a3e897c1eec979b040d13299588" name="a0b2c4a3e897c1eec979b040d13299588"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0b2c4a3e897c1eec979b040d13299588">&#9670;&#160;</a></span>Record()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void superdex::robotics::ControllerBase::Record </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classsuperdex_1_1robotics_1_1ControllerRecordingSink.html">ControllerRecordingSink</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>sink</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">superdex::Error &amp;</td>          <td class="paramname"><span class="paramname"><em>error</em></span>&#160;) const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel virtual">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented in <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicJscPd.html#aaf41b135fb95a15437e2f035973c6b68">superdex::robotics::ControllerBasicJscPd</a>, and <a class="el" href="classsuperdex_1_1robotics_1_1ControllerBasicOscPd.html#aa460e95696ffe6a5631a657f800730fd">superdex::robotics::ControllerBasicOscPd</a>.</p>
 
 </div>
 </div>
@@ -423,7 +487,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00086">86</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="controller__base_8h_source.html#l00093">93</a> of file <a class="el" href="controller__base_8h_source.html">controller_base.h</a>.</p>
 
 </div>
 </div>
