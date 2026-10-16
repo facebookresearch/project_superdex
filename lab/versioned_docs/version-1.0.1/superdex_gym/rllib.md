@@ -79,10 +79,10 @@ must contain `params.json`; pointing the command at the trial directory or anoth
 level fails. The script uses Ray's `DEFAULT_MODULE_ID` constant instead of a literal
 module name.
 
-A successful default inference run opens an interactive Polyscope window, runs 10
-episodes, prints each episode's return and completion reason, and reports the completed
-episode count. It does not initialize Ray. Add `--video` to record MP4 files instead
-of using the default `"human"` render mode.
+A successful inference run runs 10 episodes, prints each episode's return and
+completion reason, and reports the completed episode count. It does not initialize
+Ray. Pass `--video` to render offscreen and record MP4 files. Without `--video`,
+inference runs without rendering, because interactive viewing is not available.
 
 ## Script locations and runtime behavior
 
@@ -230,8 +230,8 @@ uv run python run_inference.py /path/to/checkpoint --num_episodes 20 --video_pat
 | `--video` | off | Renders offscreen and records MP4 files |
 | `--video_path` | the checkpoint directory | Implies `--video` |
 
-Without `--video`, inference **opens an interactive Polyscope window** — the render
-mode defaults to `"human"`, not `None`.
+Without `--video`, inference runs without rendering, because interactive viewing is not
+available. Pass `--video` to render offscreen instead.
 
 :::note How actions are selected
 The action distribution class is taken from the restored module via

@@ -49,6 +49,7 @@ material = sdp.experimental.shell_material_params_from3d_isotropic(
     thickness=THICKNESS,
 )
 material.mass_damping_coefficient = MASS_DAMPING_COEFFICIENT
+material.membrane_collapse_barrier_scale = 0.0
 
 actor = sdp.experimental.create_shell_actor(
     scene,
@@ -63,6 +64,7 @@ actor = sdp.experimental.create_shell_actor(
 ```
 
 The example uses a mass density of 1,000 kg/m³ to perform a dynamic solve and adds mass-proportional damping to dissipate transient motion.
+It also disables the [membrane collapse barrier](../../concepts/actors/shell.mdx#continuous-model) to solve the same plain St. Venant–Kirchhoff problem as the literature benchmark.
 In certain cases, especially for cloth simulation, mass damping may have a physical interpretation as a drag force from the surrounding air.
 In this problem, however, mass and damping are artificial regularization parameters that drive the solution toward static equilibrium, since the original benchmark is static and has no inertial response.
 

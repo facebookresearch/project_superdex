@@ -28,7 +28,7 @@ The `colliderType` / `collider_type` setting selects how an actor supplies dista
 | `Sphere` | Analytic sphere SDF | Exact and inexpensive. |
 | `Box` | Analytic box SDF | Exact for box geometry. |
 | `Plane` | Analytic halfspace SDF | Infinite plane, commonly used for ground and boundaries. |
-| `Mesh` | Triangle-mesh distance queries | Supports non-convex geometry, but is experimental, relatively slow, and limited to rigid actors and articulated links. |
+| `Mesh` | Triangle-mesh distance queries | Experimental; can be prohibitively slow during simulation. For mesh-backed actors, prefer `Auto` or `Sdf` unless measurements justify using `Mesh`. Only supported for rigid actors and articulated links. |
 | `Sdf` | Precomputed grid SDF | Supports complex geometry; approximates the exact SDF using trilinear interpolation, with a resolution-memory trade-off. |
 | `PointCloud` | Spherical SDFs about material points | Quadrature discretization of the double-integral generalization below; interacts only with other point-cloud actors. |
 

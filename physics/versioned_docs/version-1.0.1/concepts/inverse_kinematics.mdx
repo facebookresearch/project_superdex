@@ -21,12 +21,14 @@ Because the IK solve runs inside a full physics scene, **collision-aware IK come
 
 ### Quasistatic Optimization
 
-The IK solver reconfigures a physics scene into a static optimization problem by removing all dynamic effects:
+The IK solver reconfigures a physics scene for quasistatic optimization:
 
 - Timestep is set to infinity ($dt = \infty$)
 - Gravity is zeroed out
 - Contact dissipation (Coulomb and viscous friction, plus normal damping) is disabled
-- Inertia and joint friction are disabled
+- Constraint damping is disabled
+- Rigid-body inertia, articulated joint inertia, and joint friction are disabled
+- Pending pose-controller target velocities are ignored
 
 The solver then calls [`Scene::Step`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Scene.html) with an infinite timestep, which reduces the equations of motion to the quasistatic equilibrium condition:
 
@@ -168,7 +170,7 @@ ik_actor = ik_scene.create_articulated_actor(actor_params)
 <TabItem value="cpp" label="C++" default>
 
 ```cpp
-mochi::experimental::IKSolver* ikSolver = mochi::experimental::CreateIKSolver(ikScene, context, error);
+superdex::experimental::IKSolver* ikSolver = superdex::experimental::CreateIKSolver(ikScene, context, error);
 ```
 
 </TabItem>
@@ -196,17 +198,17 @@ Actor* ikBone = ikScene->GetActor(
 // Position target: place the end-effector at (0.5, 0.3, 0.0)
 Constraint* posConstraint = ikSolver->CreatePositionTarget(
     ikBone->GetHandle(),
-    Real3{0, 0, 0},           // local position on the link
-    Real3{0.5, 0.3, 0.0},     // target position in world frame
-    1.0,                       // weight (stiffness)
+    Real3{0_r, 0_r, 0_r},       // local position on the link
+    Real3{0.5_r, 0.3_r, 0.0_r}, // target position in world frame
+    1.0,                        // weight (stiffness)
     error);
 
 // Optional: rotation target
 Constraint* rotConstraint = ikSolver->CreateRotationTarget(
     ikBone->GetHandle(),
-    Real3{0, 0, 0},           // local rotation (rotation vector)
-    Real3{0, 0, 1.57},        // target rotation (rotation vector)
-    1.0,                       // weight
+    Real3{0_r, 0_r, 0_r},       // local rotation (rotation vector)
+    Real3{0_r, 0_r, 1.57_r},    // target rotation (rotation vector)
+    1.0,                        // weight
     error);
 ```
 
@@ -323,7 +325,7 @@ scene_actor.set_articulated_joint_velocities(zero_vel)
 <TabItem value="cpp" label="C++" default>
 
 ```cpp
-mochi::experimental::DestroyIKSolver(ikSolver, context, error);  // also destroys ikScene
+superdex::experimental::DestroyIKSolver(ikSolver, context, error);  // also destroys ikScene
 ```
 
 </TabItem>
@@ -344,24 +346,61 @@ Because the IK solver runs inside a full physics scene, collision avoidance work
 <TabItem value="cpp" label="C++" default>
 
 ```cpp
-// Create a static box obstacle in the IK scene
-Obb box(TransformRT{rotation, translation}, Real3{0.3, 0.15, 0.3});
-util::CreateActor_StaticBox(ikScene, box);
+// Create a static box obstacle in the IK scene, built as a triangle mesh
+// with half-extents (0.3, 0.15, 0.3) m.
+real const hx = 0.3_r, hy = 0.15_r, hz = 0.3_r;
+real const coordinates[] = {
+    -hx, -hy, -hz,  hx, -hy, -hz,  hx, hy, -hz,  -hx, hy, -hz,
+    -hx, -hy,  hz,  hx, -hy,  hz,  hx, hy,  hz,  -hx, hy,  hz,
+};
+int const connectivity[] = {
+    0, 2, 1,  0, 3, 2,  // -Z face
+    4, 5, 6,  4, 6, 7,  // +Z face
+    0, 4, 7,  0, 7, 3,  // -X face
+    1, 2, 6,  1, 6, 5,  // +X face
+    0, 1, 5,  0, 5, 4,  // -Y face
+    2, 3, 7,  2, 7, 6,  // +Y face
+};
+RigidActorParams obstacleParams;
+obstacleParams.name = "obstacle";
+obstacleParams.shape = context->CreateTriMeshShape(coordinates, connectivity, error);
+obstacleParams.worldFromLocal = TransformRT{rotation, translation};
+obstacleParams.isStatic = true;
+obstacleParams.colliderType = ColliderType::Box;
+ikScene->CreateRigidActor(obstacleParams, error);
 
 // Then create the IK solver as usual
-mochi::experimental::IKSolver* ikSolver = mochi::experimental::CreateIKSolver(ikScene, context, error);
+superdex::experimental::IKSolver* ikSolver = superdex::experimental::CreateIKSolver(ikScene, context, error);
 ```
 
 </TabItem>
 <TabItem value="python" label="Python">
 
 ```python
-# Add a static box obstacle to the IK scene
-obstacle_params = sdp.RigidActorParams()
-obstacle_params.shape = sdp.BoxShape(half_extents=[0.3, 0.15, 0.3])
-obstacle_params.transform = obstacle_transform
-obstacle_params.body_type = sdp.BodyType.STATIC
-ik_scene.create_rigid_actor(obstacle_params)
+# Create a static box obstacle in the IK scene, built as a triangle mesh
+# with half-extents (0.3, 0.15, 0.3) m.
+hx, hy, hz = 0.3, 0.15, 0.3
+obstacle_shape = sdp.create_tri_mesh_shape(
+    coordinates=[
+        -hx, -hy, -hz,  hx, -hy, -hz,  hx, hy, -hz,  -hx, hy, -hz,
+        -hx, -hy,  hz,  hx, -hy,  hz,  hx, hy,  hz,  -hx, hy,  hz,
+    ],
+    connectivity=[
+        0, 2, 1,  0, 3, 2,  # -Z face
+        4, 5, 6,  4, 6, 7,  # +Z face
+        0, 4, 7,  0, 7, 3,  # -X face
+        1, 2, 6,  1, 6, 5,  # +X face
+        0, 1, 5,  0, 5, 4,  # -Y face
+        2, 3, 7,  2, 7, 6,  # +Y face
+    ],
+)
+ik_scene.create_rigid_actor(
+    name="obstacle",
+    shape=obstacle_shape,
+    world_from_local=obstacle_transform,
+    is_static=True,
+    collider_type=sdp.ColliderType.BOX,
+)
 
 # Then create the IK solver as usual
 ik_solver = sdp.experimental.create_ik_solver(ik_scene)
@@ -395,7 +434,7 @@ The `weight` parameter on `CreatePositionTarget` / `CreateRotationTarget` is map
 
 ## Tips and Best Practices
 
-**Use a separate scene for IK.** The IK solver sets the scene to infinite timestep and zero gravity, and disables contact dissipation, inertia, and joint friction. This makes the scene unusable for visualization or dynamic simulation.
+**Use a separate scene for IK.** The solver reconfigures the scene for quasistatic optimization as described above, making it unusable for visualization or dynamic simulation.
 
 **Dual-scene pattern.** Create one scene for rendering/simulation and a second scene for IK. After each `SolveIK` call, copy the resulting pose to the visualization scene with [`SetArticulatedPoseFromJoints`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Actor.html). Suppress velocities on the visualization actor after copying to prevent drift.
 

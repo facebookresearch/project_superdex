@@ -94,12 +94,12 @@ using namespace mochi;
 // A 2-link arm: Free root + Revolute child (hinge about Z).
 ArticulatedActorParams params;
 params.name = "arm";
-params.worldFromRoot = TransformRT{Real3{0, 0.2, 0}};
+params.worldFromRoot = TransformRT{Real3{0_r, 0.2_r, 0_r}};
 params.joints = {
     {.type = ArticulatedJointType::Free},
     {.type = ArticulatedJointType::Revolute,
-     .parentLinkFromJoint = TransformRT{Real3{0.1, 0, 0}},
-     .axis = Real3{0, 0, 1}},
+     .parentLinkFromJoint = TransformRT{Real3{0.1_r, 0_r, 0_r}},
+     .axis = Real3{0_r, 0_r, 1_r}},
 };
 params.links = {
     {.parentLink = -1, .shape = rootShape, .colliderType = ColliderType::Box, .density = 1000_r},
@@ -270,10 +270,10 @@ To create a closed loop (e.g., a four-bar linkage), define the tree topology as 
 ArticulatedActorParams params;
 // 4 revolute-jointed links forming an open chain ...
 params.joints = {
-    {.type = ArticulatedJointType::Revolute, .axis = Real3{0, 0, 1}},
-    {.type = ArticulatedJointType::Revolute, .axis = Real3{0, 0, 1}},
-    {.type = ArticulatedJointType::Revolute, .axis = Real3{0, 0, 1}},
-    {.type = ArticulatedJointType::Revolute, .axis = Real3{0, 0, 1}},
+    {.type = ArticulatedJointType::Revolute, .axis = Real3{0_r, 0_r, 1_r}},
+    {.type = ArticulatedJointType::Revolute, .axis = Real3{0_r, 0_r, 1_r}},
+    {.type = ArticulatedJointType::Revolute, .axis = Real3{0_r, 0_r, 1_r}},
+    {.type = ArticulatedJointType::Revolute, .axis = Real3{0_r, 0_r, 1_r}},
 };
 params.links = {
     {.parentLink = -1, .shape = barShape, .density = 1000_r},
@@ -283,7 +283,7 @@ params.links = {
 };
 // ... closed into a loop by tying link 3 back to link 0.
 params.cycles = {
-    {.parentLink = 0, .childLink = 3, .jointFromChildLink = TransformRT{Real3{0.1_r, 0, 0}}},
+    {.parentLink = 0, .childLink = 3, .jointFromChildLink = TransformRT{Real3{0.1_r, 0_r, 0_r}}},
 };
 ```
 

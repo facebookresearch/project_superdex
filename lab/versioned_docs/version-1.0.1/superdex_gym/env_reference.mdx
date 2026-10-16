@@ -18,7 +18,7 @@ Use these methods to *drive* an environment. To *write* an environment, see
 | --- | --- |
 | `reset(seed=None, options=None)` | Returns `(observation, info)`. Seeds `np_random`, which drives the reset noise. |
 | `step(action)` | Returns `(observation, reward, terminated, truncated, info)`. Clips the action first. |
-| `render()` | Returns an RGB array in `"rgb_array"` mode and `None` in `"human"` mode or when `render_mode is None`. |
+| `render()` | Returns an RGBA array in `"rgb_array"` mode and `None` in `"human"` mode or when `render_mode is None`. |
 | `close()` | Shuts down the renderer and releases the scene. Idempotent. |
 
 After `close()`, `reset`, `step` and `render` raise
