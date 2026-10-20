@@ -1,0 +1,23 @@
+{
+  "ant": {
+    "env_id": "superdex_gym/Ant-v0",
+    "import_path": "superdex.lab.gym.envs.benchmarks.ant_env.AntEnv",
+    "num_frames": 150,
+    "render_version": 2,
+    "sha256": "0023b4a2dc292a5b76bda9638bfa2773cfc4e92a6c0fcda4a1c8f840fd9a7e0a"
+  },
+  "cart_pole": {
+    "env_id": "superdex_gym/CartPole-v0",
+    "import_path": "superdex.lab.gym.envs.benchmarks.cartpole_env.CartPoleEnv",
+    "num_frames": 150,
+    "render_version": 2,
+    "sha256": "573c9cf015a21c045e51f8272c86d55ec22f2314c58531c2653a0d8cf90262df"
+  },
+  "half_cheetah": {
+    "env_id": "superdex_gym/HalfCheetah-v0",
+    "import_path": "superdex.lab.gym.envs.benchmarks.halfcheetah_env.HalfCheetahEnv",
+    "num_frames": 150,
+    "render_version": 2,
+    "sha256": "b7e3551aaaaae22a251cf833218ae5ef73407ea93af9be25d483b95b4d8af2f7"
+  }
+}

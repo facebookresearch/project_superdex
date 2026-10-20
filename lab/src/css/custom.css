@@ -674,7 +674,7 @@ html[data-theme='dark'] .docusaurus-highlight-code-line {
   margin: 0;
 }
 
-/* Environment gallery: uniform two-column cards with each GIF scaled to fit
+/* Environment gallery: uniform two-column cards with each preview scaled to fit
    the card while preserving aspect ratio. */
 .env-card {
   height: 100%;
