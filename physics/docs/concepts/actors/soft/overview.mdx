@@ -126,7 +126,7 @@ soft_actor = scene.create_soft_actor(
     shape=tet_mesh_shape,
     world_from_local=sdp.TransformRT(translation=[0, 1, 0]),
     material=sdp.SoftMaterialParams(
-        type=sdp.SoftMaterialType.NeoHookean,
+        type=sdp.SoftMaterialType.NEO_HOOKEAN,
         neo_hookean=sdp.NeoHookeanMaterialParams(
             youngs_modulus=1e5,
             poisson_ratio=0.45,
