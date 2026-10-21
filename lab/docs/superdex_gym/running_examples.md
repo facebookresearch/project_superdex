@@ -144,7 +144,7 @@ However, `env` is now a `HybridVectorEnv`. Observations, rewards, and terminatio
 flags are batched arrays, while `infos` is a dictionary of batched values rather than
 a list of per-environment dictionaries.
 
-Notice also that the script passes a list of seeds to `env.reset()` to seed each environment explicitly; a scalar seed can lead to duplicates across the vectorization layers.
+Notice also that the script passes a list of seeds to `env.reset()` to choose each environment's seed explicitly; a scalar seed is expanded to `seed + i` for global environment `i`.
 
 
 ### Key Features
