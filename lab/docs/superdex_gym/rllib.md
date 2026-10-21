@@ -328,33 +328,21 @@ registered defaults.
 
 ## Environment configuration and RLlib recipe manifests {#environment-file-naming}
 
-Environment implementation and variant files remain separate from RLlib recipe data:
+Environment configuration lives in registered Gymnasium specs, separate from RLlib
+recipe data:
 
 | Artifact | Meaning |
 | --- | --- |
-| `<name>_env.py` | Env module. Its `MochiEnv` subclass becomes a Gymnasium ID (`AntEnv` &rarr; `superdex_gym/Ant-v0`, short name `ant`) |
-| `<module>_<variant>.json` | Gym config variant &mdash; **the only place env configuration may live**. Registered as its own Gymnasium ID and short name (`ant_env_no_contact.json` &rarr; `superdex_gym/AntNoContact-v0`, short name `ant_no_contact`) |
+| `<name>_env.py` | Env module that defines a `MochiEnv` subclass, such as `AntEnv` in `ant_env.py` |
+| `EnvSpec` in `superdex.lab.gym.registration` | One per base environment and per config variant &mdash; **the only place env configuration may live**. Each spec names its class in `kwargs["env_cls"]`, its configuration in `kwargs["cfg"]`, and its canonical Gymnasium ID (`superdex_gym/AntNoContact-v0` is `AntEnv` with `{"include_contact_in_observation": False}`) |
 | `superdex/lab/rllib/recipes/manifest.json` | Public exact-ID mapping to slugs and explicit recipe paths, loaded through `superdex.lab.rllib.recipe_manifest` |
 
-`<variant>` must be a snake_case token, with three rules on its segments:
-
-- **No segment may be `env`.** Every env module ends in the `_env` segment, so this is what
-  keeps a longer sibling module's files (`foo_env_extra_env.json`) from reading as a
-  variant of the shorter one (`foo_env.py`).
-- **No segment may be `train` or `benchmark`.** These usage categories remain reserved
-  even though RLlib recipe paths are selected explicitly by the manifest above.
-- **A `test` segment marks the variant test-only.** It is discovered and smoke-tested, but
-  never registered with Gymnasium and never listed by a CLI. Use this for degenerate
-  configurations (no gravity, no damping) that are worth crash-checking but are not
-  shippable tasks.
+Registration is explicit; SuperDex does not scan for env modules or variant files. See
+[Registration](./environments.mdx#registration) for how to declare a spec.
 
 Because training recipes may not configure the environment, every configuration that gets
-trained is also a named, runnable, smoke-tested environment. Training fails loudly if a
-`train` recipe contains an `env_config` section.
-
-`benchmark` recipes are the exception to the training-only schema: they may carry an
-`env_cfg` measurement baseline. No public environment ships a benchmark recipe. The
-separate worker-sweep script `apps/envs/benchmark.py` owns its baseline independently.
+trained is also a registered, runnable environment. Training fails loudly if a recipe
+contains an `env_config` section; select the canonical variant ID in the manifest instead.
 
 ## General Usage Notes
 

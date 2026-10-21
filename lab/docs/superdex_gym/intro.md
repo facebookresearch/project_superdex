@@ -59,9 +59,9 @@ tools; there are no short names.
 | **CartPole** | `superdex_gym/CartPole-v0` | Classic pole balancing task benchmark |
 | **HalfCheetah** | `superdex_gym/HalfCheetah-v0` | Planar running task benchmark |
 
-Base environments come from `*_env.py` modules. Sibling JSON files define
-configuration variants and recipes. This catalog reflects a source checkout; follow
-[setup](./setup.md) for the install route.
+Base environments are `MochiEnv` subclasses in `*_env.py` modules. Each one is
+registered explicitly as an `EnvSpec` in `superdex.lab.gym.registration`. This catalog
+reflects a source checkout; follow [setup](./setup.md) for the install route.
 
 To print the exact environments available in your install, run this command from the
 `superdex_lab` project root:
@@ -74,7 +74,8 @@ Python adds the script's own directory to `sys.path`, so the script's sibling im
 resolve regardless of the directory from which you invoke it.
 
 A **config variant** is an alternative configuration of an existing environment
-class. Each registered variant has its own Gymnasium ID.
+class: another registered `EnvSpec` that reuses the same class with a different `cfg`.
+Each variant has its own Gymnasium ID.
 
 | Variant Gymnasium ID |
 | --- |
@@ -84,9 +85,8 @@ class. Each registered variant has its own Gymnasium ID.
 | `superdex_gym/CartPoleActuateOnPole-v0` |
 | `superdex_gym/HalfCheetahFullObservation-v0` |
 
-See [Environment file naming](./rllib.md#environment-file-naming) for how variants are
-declared. Variants with a `test` segment in their names are smoke-tested but never
-registered, so they never appear in a CLI listing.
+See [Config variants are additional specs](./environments.mdx#config-variants-are-additional-specs)
+for how variants are declared.
 
 
 :::note Environment prerequisites
