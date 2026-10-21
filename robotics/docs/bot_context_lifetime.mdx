@@ -114,7 +114,7 @@ osc = bot.create_controller("BASIC_OSC_PD", "arm_osc")
 
 # Add a sensor to a named link at runtime; it is owned and destroyed with the bot,
 # like the prefab-declared ones.
-wrist_cam = bot.create_sensor("SENSOR_CAMERA", "link8", "wrist_cam")
+wrist_cam = bot.create_sensor("SENSOR_CAMERA", "fr3_link8", "wrist_cam")
 
 # Create a scene-level camera on the context with no link actor, so it has no owning
 # bot; the context owns it. "scene_cam" is its instance name (what finders match);
@@ -147,7 +147,7 @@ ControllerBase* osc = bot->CreateController("BASIC_OSC_PD", "arm_osc", error);
 
 // Add a sensor to a named link at runtime; it is owned and destroyed with the bot,
 // like the prefab-declared ones.
-SensorBase* wristCam = bot->CreateSensor("SENSOR_CAMERA", "link8", "wrist_cam", "", error);
+SensorBase* wristCam = bot->CreateSensor("SENSOR_CAMERA", "fr3_link8", "wrist_cam", "", error);
 
 // Create a scene-level camera on the context with no link actor, so it has no owning
 // bot; the context owns it. "scene_cam" is its instance name (what finders match);

@@ -174,15 +174,18 @@ import superdex.robotics as robotics
 
 # Create the components. Each is owned by the bot and destroyed with it.
 jsc = bot.create_controller("BASIC_JSC_PD", "hold_pose")
-wrist_cam = bot.create_sensor("SENSOR_CAMERA", "link8", "wrist_cam")
+wrist_cam = bot.create_sensor("SENSOR_CAMERA", "fr3_link8", "wrist_cam")
 
 actor = bot.get_articulated_actor()
 num_dofs = actor.get_num_dofs()
 
-# 1. Configure: per-joint PD gains, one value per actuated DOF.
+# 1. Configure: per-joint PD gains, one value per actuated DOF. set_params requires
+# kp, kd, saturation and deadband to all have one entry per DOF.
 params = robotics.ControllerBasicJscPdParams()
 params.kp = [40.0] * num_dofs
 params.kd = [4.0] * num_dofs
+params.saturation = [-1.0] * num_dofs  # negative = no output limit
+params.deadband = [0.0] * num_dofs
 jsc.set_params(params)
 
 all_dof_indices = np.arange(num_dofs, dtype=np.int32)
@@ -234,15 +237,18 @@ superdex::Error error;
 // Create the components. Each is owned by the bot and destroyed with it.
 auto* jsc = static_cast<ControllerBasicJscPd*>(
     bot->CreateController("BASIC_JSC_PD", "hold_pose", error));
-SensorBase* wristCam = bot->CreateSensor("SENSOR_CAMERA", "link8", "wrist_cam", "", error);
+SensorBase* wristCam = bot->CreateSensor("SENSOR_CAMERA", "fr3_link8", "wrist_cam", "", error);
 
 Actor* actor = bot->GetArticulatedActor();
 int const numDofs = actor->GetNumDofs();
 
-// 1. Configure: per-joint PD gains, one value per actuated DOF.
+// 1. Configure: per-joint PD gains, one value per actuated DOF. SetParams requires
+// Kp, Kd, saturation and deadband to all have one entry per DOF.
 ControllerBasicJscPd::Params params;
 params.Kp.assign(numDofs, 40.0_r);
 params.Kd.assign(numDofs, 4.0_r);
+params.saturation.assign(numDofs, -1.0_r);  // negative = no output limit
+params.deadband.assign(numDofs, 0.0_r);
 jsc->SetParams(params, error);
 
 DynamicArray<int> allDofIndices(numDofs);
