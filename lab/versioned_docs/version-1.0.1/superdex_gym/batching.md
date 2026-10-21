@@ -195,24 +195,23 @@ how actions are applied.
   `ValueError: Reset mask is not supported for this vectorization.` Use Gymnasium's
   `AsyncVectorEnv` or `SyncVectorEnv` directly for selective resets.
 
-:::warning Use per-environment seeds for independent rollouts
-A scalar `int` seed is expanded twice: once by the outer `AsyncVectorEnv` and again by
-each inner `SyncVectorEnv`. Environment `(w, k)` receives `seed + w + k`. Therefore,
-`W × K` environments receive only `W + K - 1` distinct seeds. With 8 workers and 125
-environments per worker, 1000 environments receive only 132 distinct seeds. The
-wrapper emits no error or warning, and rollouts become silently correlated.
+:::note Seeding a batched environment
+A scalar `int` seed is expanded once into one seed per environment: global environment
+`i` receives `seed + i`, so `W × K` environments receive `W × K` distinct seeds.
+`env.reset(seed=42)` on 1000 environments seeds them with `42` through `1041`.
+
+To choose each seed yourself, pass a list or tuple containing one seed per
+environment. `reset()` validates its length and distributes the values across workers
+so global environment `i` receives `seed[i]`.
 
 ```python
-# Wrong: 1000 environments, 132 distinct seeds.
-env.reset(seed=42)
-
-# Right: one seed per environment.
-env.reset(seed=list(range(env.num_envs)))
+env.reset(seed=42)                          # environment i gets 42 + i
+env.reset(seed=list(range(env.num_envs)))   # environment i gets i
 ```
 
-Pass a list or tuple containing one seed per environment. `reset()` validates its
-length and distributes the values across workers so global environment `i` receives
-`seed[i]`. NumPy arrays do not take this sequence-chunking path and are unsupported.
+Only a Python `int` is expanded and only a list or tuple is chunked. NumPy integer
+scalars and NumPy arrays take neither path and are unsupported; convert them with
+`int(...)` or `.tolist()` first.
 :::
 
 ### Shared-scene correctness

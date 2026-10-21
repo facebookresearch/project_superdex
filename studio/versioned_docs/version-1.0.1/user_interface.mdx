@@ -17,7 +17,7 @@ your applications. This page will show you what each region of the window is for
 drive the viewport.
 
 <Figure
-  src="../../img/user_interface/main.webp"
+  src="../../img/versioned/1.0.1/user_interface/main.webp"
   alt="The SuperDex Studio main window: a Franka arm with an attached hand in the central viewport, the Bot Hierarchy and Bot Details panels docked on the right, and the Asset Browser across the bottom."
 />
 
@@ -28,7 +28,7 @@ stacked down the right, and the Asset Browser and Log Console tabbed together
 along the bottom.
 
 <Figure
-  src="../../img/user_interface/ui_areas.webp"
+  src="../../img/versioned/1.0.1/user_interface/ui_areas.webp"
   alt="The Studio window with five regions outlined and numbered: the menu and tab bar across the top, the viewport in the center, the Asset Browser at the bottom, and the Bot Hierarchy and Bot Details panels down the right."
   caption="The five regions of the default layout."
 />
@@ -67,7 +67,7 @@ it has unsaved changes. Click a tab to switch, or use `PgUp` and `PgDn`. Note
 that `PgUp` moves *right* along the bar. `Ctrl+W` closes the active tab.
 
 <Figure
-  src="../../img/user_interface/menu_tab_bar.webp"
+  src="../../img/versioned/1.0.1/user_interface/menu_tab_bar.webp"
   alt="The menu bar reading File, Edit, Window, above a tab bar with two tabs: fr3_dg5f_short_right, and nist_task_board_1 which is active and underlined."
 />
 
@@ -78,7 +78,7 @@ the editors that support it, physics runs live in the same view, so an edit and
 its consequences appear together.
 
 <Figure
-  src="../../img/user_interface/viewport.webp"
+  src="../../img/versioned/1.0.1/user_interface/viewport.webp"
   alt="A NIST task board rendered in the Studio viewport, seen from a raised three-quarter angle."
 />
 
@@ -102,10 +102,10 @@ of the Viewport.
 | Snap to a view | Shortcut | On-screen |
 |----------------|----------|-----------|
 | Center to object | `F`, or `Numpad .` | — |
-| Home view | `Home` | <InlineImage src="../../img/user_interface/icon_home.webp" alt="The home button" className="sdx-inline-icon sdx-inline-icon--round" /> |
-| Axis-aligned views | `Numpad 1` front, `3` right, `7` top. Add `Ctrl` for the opposite face | <InlineImage src="../../img/user_interface/icon_axes.webp" alt="The coordinate system" className="sdx-inline-icon" /> |
+| Home view | `Home` | <InlineImage src="../../img/versioned/1.0.1/user_interface/icon_home.webp" alt="The home button" className="sdx-inline-icon sdx-inline-icon--round" /> |
+| Axis-aligned views | `Numpad 1` front, `3` right, `7` top. Add `Ctrl` for the opposite face | <InlineImage src="../../img/versioned/1.0.1/user_interface/icon_axes.webp" alt="The coordinate system" className="sdx-inline-icon" /> |
 | Flip to the opposite side | `Numpad 9` | — |
-| Perspective / orthographic | `Numpad 5` | <InlineImage src="../../img/user_interface/icon_projection.webp" alt="The camera button" className="sdx-inline-icon sdx-inline-icon--round" /> |
+| Perspective / orthographic | `Numpad 5` | <InlineImage src="../../img/versioned/1.0.1/user_interface/icon_projection.webp" alt="The camera button" className="sdx-inline-icon sdx-inline-icon--round" /> |
 
 Snapping re-frames as well as rotates: the camera centers on whatever is
 selected, or on the whole scene if nothing is.
@@ -138,7 +138,7 @@ are the fastest way to see the difference between what you are rendering and
 what you are simulating.
 
 <Figure
-  src="../../img/user_interface/show_menu.webp"
+  src="../../img/versioned/1.0.1/user_interface/show_menu.webp"
   alt="The Show menu listing Physics Debug Draw with P, Render Only with 1, Collision Only with 2, and Render (Collision Fallback) with 3."
   variant="inset"
   maxWidth={440}
@@ -157,17 +157,17 @@ Editor registers none, so the Show button does not appear there at all.
 
 <FigureRow cols={3}>
   <Figure
-    src="../../img/user_interface/view_render_model.webp"
+    src="../../img/versioned/1.0.1/user_interface/view_render_model.webp"
     alt="A bolt on the NIST board drawn with its render mesh: smooth, shaded, and textured."
     caption={<><FigureLabel>Render Model</FigureLabel>What ships to the renderer.</>}
   />
   <Figure
-    src="../../img/user_interface/view_mochi_model.webp"
+    src="../../img/versioned/1.0.1/user_interface/view_mochi_model.webp"
     alt="The same scene drawn as collision geometry: flat-shaded colored meshes with visible tessellation."
     caption={<><FigureLabel>Collision Model</FigureLabel>What the solver actually sees.</>}
   />
   <Figure
-    src="../../img/user_interface/view_mochi_debug_draw.webp"
+    src="../../img/versioned/1.0.1/user_interface/view_mochi_debug_draw.webp"
     alt="The scene with the physics debug overlay: translucent collision volumes drawn over the parts."
     caption={<><FigureLabel>Physics Debug Draw</FigureLabel>Physics overlaid on the current mode.</>}
   />
@@ -181,7 +181,7 @@ never picks by accident, and clicking the only selected object clears the
 selection.
 
 <Figure
-  src="../../img/user_interface/transform_gizmo.webp"
+  src="../../img/versioned/1.0.1/user_interface/transform_gizmo.webp"
   alt="Three views of the same bolt showing the translate, rotate, and scale gizmos in turn, each with the matching toolbar button highlighted in blue."
   variant="inset"
   caption="Translate, rotate, and scale, with the matching toolbar button active."
@@ -204,7 +204,7 @@ Editor. In the Bot Editor, link and joint transforms are edited numerically in
 ### Simulating Physics
 
 <Figure
-  src="../../img/user_interface/play_step_pause_stop.webp"
+  src="../../img/versioned/1.0.1/user_interface/play_step_pause_stop.webp"
   alt="The viewport transport in two states: stopped, showing play, step, and stop; and running, showing pause, step, and stop."
   variant="float"
   maxWidth={440}
@@ -219,7 +219,7 @@ run physics, so a Model Editor tab never shows one.
 
 <FigureVideo
   src="../../img/user_interface/force_drag.mp4"
-  poster="../../img/user_interface/force_drag_poster.webp"
+  poster="../../img/versioned/1.0.1/user_interface/force_drag_poster.webp"
   alt="A gravity-compensated Franka arm being dragged around by the cursor during a live simulation, the arm following the pointer and settling when released."
   caption="Force-dragging a gravity-compensated arm during playback."
   variant="float"
@@ -247,7 +247,7 @@ to enter it, an asset to open it in an editor, or an importable file to start
 the import wizard. The mouse's back and forward buttons navigate folder history.
 
 <Figure
-  src="../../img/user_interface/asset_browser.webp"
+  src="../../img/versioned/1.0.1/user_interface/asset_browser.webp"
   alt="The Asset Browser showing the nist/task_board_1 folder: a folder tree on the left, a column of type filters in the middle, and a grid holding the cad, collision, intermediates and render subfolders alongside three prefab tiles."
   caption="The task_board_1 folder with no filter applied: four subfolders and three prefabs."
 />
@@ -273,13 +273,13 @@ its subfolders*, hiding folders while it is active. It is the quickest way to
 find all the collision meshes in a tree.
 
 <Figure
-  src="../../img/user_interface/asset_browser_filters.webp"
+  src="../../img/versioned/1.0.1/user_interface/asset_browser_filters.webp"
   alt="The same folder with the Render Model filter active, highlighted green. The subfolders have disappeared and the grid instead shows sixteen individual render meshes with thumbnails of bars, gears, hex nuts and screws, each tagged Render Model."
   caption="The same folder with the Render Model filter on: every render mesh from every subfolder, and no folders."
 />
 
 <Figure
-  src="../../img/user_interface/asset_browser_settings.webp"
+  src="../../img/versioned/1.0.1/user_interface/asset_browser_settings.webp"
   alt="The Asset Browser settings menu: toggles for the directory tree, filters, importable files and unknown files; sort by path or type; load all visible assets; save thumbnails; refresh; and stats."
   variant="float"
   maxWidth={230}
@@ -316,13 +316,13 @@ are grayed out with a tooltip explaining which reference is holding it.
 
 <FigureRow cols={2}>
   <Figure
-    src="../../img/user_interface/asset_browser_asset_menu.webp"
+    src="../../img/versioned/1.0.1/user_interface/asset_browser_asset_menu.webp"
     alt="The right-click menu on an asset, with Save, Unload and Reload grayed out and Rename, Duplicate, Replace With, Cut, Copy, Delete, Copy Filename, Copy Path, Save Thumbnail and Open in File Browser available."
     caption="On an asset."
     maxWidth={212}
   />
   <Figure
-    src="../../img/user_interface/asset_browser_folder_menu.webp"
+    src="../../img/versioned/1.0.1/user_interface/asset_browser_folder_menu.webp"
     alt="The right-click menu on a folder, offering Rename, Duplicate, Cut, Copy, Delete, Copy Filename, Copy Path and Open in File Browser."
     caption="On a folder."
     maxWidth={223}
@@ -356,7 +356,7 @@ tab, and what it contains follows the asset type. Selection is shared with the
 viewport in both directions.
 
 <Figure
-  src="../../img/user_interface/bot_hierarchy.webp"
+  src="../../img/versioned/1.0.1/user_interface/bot_hierarchy.webp"
   alt="The Bot Hierarchy panel for the fr3 bot, a two-column Link and Joint table with the tree indented from base through fr3_link8, each link showing its inbound joint beside it."
   variant="inset"
   maxWidth={444}
@@ -383,13 +383,13 @@ fight for the same space.
 
 <FigureRow minWidth={434}>
   <Figure
-    src="../../img/user_interface/bot_details.webp"
+    src="../../img/versioned/1.0.1/user_interface/bot_details.webp"
     alt="The Bot Details panel for the fr3 bot, showing the Name field, a World Transform section with translation and rotation, Cycle Joints, and a Default Pose section with a slider per joint."
     maxWidth={446}
     caption={<><FigureLabel>Bot Details</FigureLabel>The bot as a whole, down to its default pose.</>}
   />
   <Figure
-    src="../../img/user_interface/bot_link_details.webp"
+    src="../../img/versioned/1.0.1/user_interface/bot_link_details.webp"
     alt="The Bot Link Details panel for fr3_link7, scrolling from the Parent dropdown through the Joint section with its info, local transform, axis limits and dynamics, then the Link section with inertial properties, the collision and render model slots, and the collision and contact parameters."
     maxWidth={434}
     maxHeight={644}

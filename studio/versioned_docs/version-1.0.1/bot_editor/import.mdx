@@ -35,7 +35,7 @@ Studio knows how to import appear alongside your assets and can be imported in
 place, without leaving the browser.
 
 <Figure
-  src="../../../img/bot_editor/urdf_import_wizard.webp"
+  src="../../../img/versioned/1.0.1/bot_editor/urdf_import_wizard.webp"
   alt="The URDF import wizard open over Studio, showing the General tab with Name, World Joint, render source and destination, collision source and destination, and the Remesh and Bake SDF checkboxes."
   caption="However it is started, the import wizard opens with the source file named at the top."
 />
@@ -49,7 +49,7 @@ here, applied in bulk across every link, and for most URDFs you can set these
 few fields and hit **Import**.
 
 <Figure
-  src="../../../img/bot_editor/urdf_import_wizard_general.webp"
+  src="../../../img/versioned/1.0.1/bot_editor/urdf_import_wizard_general.webp"
   alt="The General tab of the URDF import wizard, with a Name field, a World Joint dropdown, a Render section with Source and Destination, and a Collision section with Source, Destination, and the Remesh and Bake SDF checkboxes."
   variant="inset"
   maxWidth={368}
@@ -108,12 +108,12 @@ collision source, once with **Visual**:
 
 <FigureRow cols={2}>
   <Figure
-    src="../../../img/bot_editor/urdf_import_collision_src.webp"
+    src="../../../img/versioned/1.0.1/bot_editor/urdf_import_collision_src.webp"
     alt="The same gripper from the URDF's collision meshes: every link is a convex hull, so the fingertip hooks and palm recesses are filled in and the fingers become smooth tapered blocks."
     caption={<><FigureLabel>Collision source</FigureLabel>Convex hulls of the same links.</>}
   />
   <Figure
-    src="../../../img/bot_editor/urdf_import_visual_src.webp"
+    src="../../../img/versioned/1.0.1/bot_editor/urdf_import_visual_src.webp"
     alt="Robotiq gripper collision geometry generated from the URDF's visual meshes: fingertips keep their hooked profile, the palm keeps its recesses, and the linkage bars are separate slender parts."
     caption={<><FigureLabel>Visual source</FigureLabel>The real part shape.</>}
   />
@@ -178,12 +178,12 @@ a single gripper finger needs different treatment — the **Render Models** and
 
 <FigureRow cols={2}>
   <Figure
-    src="../../../img/bot_editor/urdf_import_wizard_render.webp"
+    src="../../../img/versioned/1.0.1/bot_editor/urdf_import_wizard_render.webp"
     alt="The Render Models tab: Source and Operation radio rows, a Destination field, and a table of links with a per-link Source and Operation column."
     caption={<><FigureLabel>Render Models</FigureLabel>Per-link control over the <code>.glb</code> output.</>}
   />
   <Figure
-    src="../../../img/bot_editor/urdf_import_wizard_collision.webp"
+    src="../../../img/versioned/1.0.1/bot_editor/urdf_import_wizard_collision.webp"
     alt="The Collision Models tab: Source and Operation radio rows, a Destination field, Remesh and Bake SDF checkboxes, and a table of links with a per-link Source and Operation column."
     caption={<><FigureLabel>Collision Models</FigureLabel>Per-link control over the <code>.mochi.h5</code> output.</>}
   />

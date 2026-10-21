@@ -17,7 +17,7 @@ covered in its own section below. In the figure, Bot Details and Bot Link Detail
 share a dockspace, but all tabs can be arranged however you like.
 
 <Figure
-  src="../../../img/bot_editor/bot_editor2.webp"
+  src="../../../img/versioned/1.0.1/bot_editor/bot_editor2.webp"
   alt="A robot open in the SuperDex Bot Editor, loaded into a live simulation with the editor's dockable windows arranged around the viewport."
   caption="The viewport with Bot Hierarchy, Bot Details, and Bot Link Details docked around it."
 />
@@ -37,7 +37,7 @@ right-click in the Asset Browser and choose **Create > Bot...**, which makes a
 new, empty bot and opens it in the Bot Editor.
 
 <Figure
-  src="../../../img/bot_editor/create_bot.webp"
+  src="../../../img/versioned/1.0.1/bot_editor/create_bot.webp"
   alt="The Asset Browser right-click menu with Create expanded to show Bot, Mod Bot, Prefab, and Bot Scene; Bot is highlighted."
   maxWidth={264}
   caption="The Asset Browser's Create menu, with Bot selected."
@@ -53,7 +53,7 @@ However a bot was made, open it for editing by double-clicking its asset tile in
 the Asset Browser.
 
 <Figure
-  src="../../../img/bot_editor/open_bot.webp"
+  src="../../../img/versioned/1.0.1/bot_editor/open_bot.webp"
   alt="A bot asset tile in the Asset Browser: a robot-hand thumbnail labelled dg5f_long_right with an orange Bot type tag."
   maxWidth={115}
   caption="A bot tile in the Asset Browser; double-click to open it."
@@ -80,12 +80,12 @@ links and joints flat, in the order they are stored in the `.superdex_bot` asset
 
 <FigureRow cols={2}>
   <Figure
-    src="../../../img/bot_editor/bot_hierarchy.webp"
+    src="../../../img/versioned/1.0.1/bot_editor/bot_hierarchy.webp"
     alt="The Bot Hierarchy window in hierarchical order: a two-column Link/Joint tree with the World Joint on the first row and each link nested under its parent, shown beside its inbound joint."
     caption="Each link nested under its parent."
   />
   <Figure
-    src="../../../img/bot_editor/bot_hierarchy_data_order.webp"
+    src="../../../img/versioned/1.0.1/bot_editor/bot_hierarchy_data_order.webp"
     alt="The Bot Hierarchy window in data order: the same links and joints listed flat, in the order they are stored in the .superdex_bot asset."
     caption="Links and joints in stored order."
   />
@@ -99,7 +99,7 @@ forward. Clicking any link row below it selects that link: the link highlights
 Right-click any link in the tree to edit the bot's structure directly:
 
 <Figure
-  src="../../../img/bot_editor/hierarchy_link_menu.webp"
+  src="../../../img/versioned/1.0.1/bot_editor/hierarchy_link_menu.webp"
   alt="The Bot Hierarchy tree with a link right-clicked, showing the Add Child Link and Delete Link menu."
   maxWidth={440}
   caption="Right-click a link for Add Child Link and Delete Link."
@@ -131,7 +131,7 @@ The tree can't be rearranged by dragging rows. To change a link's parent, use th
 the bot as a whole rather than to any particular link or joint.
 
 <Figure
-  src="../../../img/bot_editor/bot_details.webp"
+  src="../../../img/versioned/1.0.1/bot_editor/bot_details.webp"
   alt="The Bot Details window, showing the bot's top-level properties: World Transform, Cycle Joints, and Default Pose."
   maxWidth={574}
   caption="The bot's top-level properties."
@@ -165,12 +165,12 @@ trash button beside it removes it.
 
 <FigureRow cols={2}>
   <Figure
-    src="../../../img/bot_editor/cycle_joint_robotiq.webp"
+    src="../../../img/versioned/1.0.1/bot_editor/cycle_joint_robotiq.webp"
     alt="A Robotiq parallel gripper in the viewport, whose finger linkage forms a closed kinematic loop."
     caption="Its cycle joint connection points are visualized as purple spheres."
   />
   <Figure
-    src="../../../img/bot_editor/cycle_joint_panel.webp"
+    src="../../../img/versioned/1.0.1/bot_editor/cycle_joint_panel.webp"
     alt="The Cycle Joints panel, showing an expanded cycle with Parent Link and Child Link dropdowns, a Joint From Child Link transform, and a Stiffness field."
     caption="One cycle, expanded for editing."
   />
@@ -203,7 +203,7 @@ reorganize a bot's kinematic structure directly in Studio, without going back to
 the source description and re-importing.
 
 <Figure
-  src="../../../img/bot_editor/bot_link_details_parent.webp"
+  src="../../../img/versioned/1.0.1/bot_editor/bot_link_details_parent.webp"
   alt="The Parent dropdown at the top of Bot Link Details, used to choose the selected link's parent."
   maxWidth={524}
   caption="Reassign a link's parent to restructure the bot."
@@ -226,7 +226,7 @@ the root link it is labeled **World Joint**). Rather than a flat list, its
 properties are organized into groups:
 
 <Figure
-  src="../../../img/bot_editor/bot_link_details_joint.webp"
+  src="../../../img/versioned/1.0.1/bot_editor/bot_link_details_joint.webp"
   alt="The Joint section of Bot Link Details, with Info, Local Transform, Axis / Limits, and Dynamics groups."
   maxWidth={575}
   caption="Joint properties, organized by group."
@@ -261,7 +261,7 @@ The **Link** section covers the link itself: its identity, placement, mass, and
 collision geometry.
 
 <Figure
-  src="../../../img/bot_editor/bot_link_details_link_1.webp"
+  src="../../../img/versioned/1.0.1/bot_editor/bot_link_details_link_1.webp"
   alt="The top of the Link section, with Info, Local Transform, and Inertial Properties groups."
   maxWidth={544}
   caption="Info, Local Transform, and Inertial Properties."
@@ -299,7 +299,7 @@ shape used for physics) and the **Render Model** (the `.glb` mesh used for
 display).
 
 <Figure
-  src="../../../img/bot_editor/bot_link_details_link_2.webp"
+  src="../../../img/versioned/1.0.1/bot_editor/bot_link_details_link_2.webp"
   alt="The Collision Model and Render Model slots, each with a thumbnail, a magnifier, trash, and link button, and its own translation, rotation, and scale."
   maxWidth={548}
   caption="The Collision Model and Render Model slots."
@@ -335,7 +335,7 @@ collision properties that SuperDex Physics uses to resolve contact for this link
 They are tuned for typical robots and can almost always be left at their defaults.
 
 <Figure
-  src="../../../img/bot_editor/bot_link_details_link_3.webp"
+  src="../../../img/versioned/1.0.1/bot_editor/bot_link_details_link_3.webp"
   alt="The Collision / Contact section: Collider Type, the penalty and friction parameters, and the boundary element type."
   maxWidth={731}
   caption="The Collision / Contact properties."
@@ -375,7 +375,7 @@ self-collisions, letting the links that are meant to touch interact while stoppi
 neighboring or overlapping links from fighting each other.
 
 <Figure
-  src="../../../img/bot_editor/bot_contact.webp"
+  src="../../../img/versioned/1.0.1/bot_editor/bot_contact.webp"
   alt="The Bot Contact window: an upper-triangular matrix of checkboxes, one per pair of the bot's links, with bulk-action buttons across the top."
   caption="The per-link contact matrix."
 />
@@ -436,7 +436,7 @@ joints are handled independently on their own **Links** and **Joints** tabs, so
 switch tabs to rename each set.
 
 <Figure
-  src="../../../img/bot_editor/batch_rename.webp"
+  src="../../../img/versioned/1.0.1/bot_editor/batch_rename.webp"
   alt="The Batch Rename Links & Joints dialog with Links and Joints tabs, Find, Replace, Trim Front/Back, Prefix, Suffix, and Case Change fields, and a preview table mapping each old name to its new name."
   maxWidth={534}
   caption="Batch Rename Links & Joints, with links and joints on separate tabs and a live old-to-new preview."

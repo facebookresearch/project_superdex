@@ -16,7 +16,7 @@ collision and render geometry, decide what collides with what, then press
 panel edits which part of it, and how to arrange actors with ease.
 
 <Figure
-  src="../../img/prefab_editor/prefab_main.webp"
+  src="../../img/versioned/1.0.1/prefab_editor/prefab_main.webp"
   alt="The SuperDex Studio window with the nist_task_board_1 prefab open: the task board in the viewport with a transform gizmo on a selected bolt, the Prefab Hierarchy listing its parts on the right, and Actor Details below showing the selected nut."
 />
 
@@ -44,7 +44,7 @@ match whatever you have selected.
 | [Nested Prefab](#nested-prefabs) | You include an existing prefab inside another. |
 
 <Figure
-  src="../../img/prefab_editor/prefab_hierarchy.webp"
+  src="../../img/versioned/1.0.1/prefab_editor/prefab_hierarchy.webp"
   alt="The Prefab Hierarchy panel with Name and Type columns: Articulated1 expanded into root, new_link, and new_link_1 as Articulated Links, followed by Nested1 as a Nested Prefab, Rigid1 as Rigid, and Soft1 as Soft."
   variant="inset"
   maxWidth={570}
@@ -107,7 +107,7 @@ attaches a block of scene settings to the prefab, covering gravity and solver
 configuration. Turning it off strips them again.
 
 <Figure
-  src="../../img/prefab_editor/prefab_details_scene.webp"
+  src="../../img/versioned/1.0.1/prefab_editor/prefab_details_scene.webp"
   alt="The Prefab Details panel for nist_task_board_1 with the Scene Prefab box checked, and a Scene Settings group below it holding rows for _comment, Description, Gravity, and Solver, each with its own enable box left unchecked and its value field grayed out."
   variant="inset"
   maxWidth={575}
@@ -139,7 +139,7 @@ flag for geometry that should not move, such as a table or a wall, and a **Layer
 name used by the [Contact Filter](#contact-filter).
 
 <Figure
-  src="../../img/prefab_editor/actor_rigid.webp"
+  src="../../img/versioned/1.0.1/prefab_editor/actor_rigid.webp"
   alt="Actor Details for the rigid actor Bar12, scrolling from General with its Type, Name, and Layer fields and its Static and Has Gravity toggles, through Transform, Inertial Properties set to Default, a collision model slot and a render model slot each with their own translation, rotation, and scale, and finally the Collision / Contact parameters."
   maxWidth={575}
   maxHeight={644}
@@ -175,7 +175,7 @@ you specify and how much Studio derives from the collision geometry.
 
 <FigureVideo
   src="../../img/prefab_editor/soft_deform.mp4"
-  poster="../../img/prefab_editor/soft_deform_poster.webp"
+  poster="../../img/versioned/1.0.1/prefab_editor/soft_deform_poster.webp"
   alt="Letters spelling SUPER standing upright at the start of playback, each one a soft body with its tetrahedral mesh visible on the surface. They sag under their own weight as the simulation runs: the orange S buckles and settles into a flattened ribbon on the ground, the teal U slumps and rounds out, and the olive P tips forward while the white E and magenta R lean but stay standing."
   caption="Soft bodies settling under gravity. What you see is the simulated surface, not a render model."
   variant="float"
@@ -242,13 +242,13 @@ ways to express a rule:
 
 <FigureRow minWidth={574}>
   <Figure
-    src="../../img/prefab_editor/contact_filter_actors.webp"
+    src="../../img/versioned/1.0.1/prefab_editor/contact_filter_actors.webp"
     alt="The Contact Filter window on the Actors tab, with one row pairing Board with Bar12. Its Type dropdown is open on Asymmetric, with Symmetric listed below, and the row carries an Enable check and a delete button."
     maxWidth={574}
     caption={<><FigureLabel>Actors</FigureLabel>One named pair, excused from colliding with each other.</>}
   />
   <Figure
-    src="../../img/prefab_editor/contact_filter_layers.webp"
+    src="../../img/versioned/1.0.1/prefab_editor/contact_filter_layers.webp"
     alt="The Contact Filter window on the Layers tab, with one row pairing Layer_1 with Layer_2. Its Type dropdown is open on Asymmetric, with Symmetric listed below, and the row carries an Enable check and a delete button."
     maxWidth={574}
     caption={<><FigureLabel>Layers</FigureLabel>One rule, covering every actor on either layer.</>}
