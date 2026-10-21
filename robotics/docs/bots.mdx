@@ -248,6 +248,9 @@ import superdex.physics as physics
 import superdex.robotics as robotics
 from superdex.physics.paths import resolve_asset
 
+# Initialize the physics engine before creating scenes or actors.
+physics.initialize(num_worker_threads=0)
+
 # Create a physics scene to instantiate the bot into.
 scene = physics.create_scene("Bot Loading Example")
 

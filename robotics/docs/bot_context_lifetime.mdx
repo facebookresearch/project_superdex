@@ -33,6 +33,9 @@ import superdex.physics as physics
 import superdex.robotics as robotics
 from superdex.physics.paths import resolve_asset
 
+# Initialize the physics engine before creating scenes or actors.
+physics.initialize(num_worker_threads=0)
+
 # The physics scene owns the simulated actors; the RoboticsContext owns the bots,
 # controllers, and sensors layered on top of them.
 scene = physics.create_scene("Lifetime Example")
