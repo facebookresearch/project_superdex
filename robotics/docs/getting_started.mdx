@@ -47,6 +47,26 @@ robotics.destroy_bot(scene, bot)
 physics.shutdown()
 ```
 
+:::note Where the bot files come from
+The bot files live in the `assets/` directory of the Project SuperDex source; the
+wheels do not include them. `resolve_asset` looks for them in this order:
+
+1. The directory in `SUPERDEX_ASSETS_PATH`, when it names an existing, readable
+   directory. Nothing else is searched. A value that does not name one is ignored, and
+   the search continues with steps 2 and 3.
+2. An `assets/` directory above the running script, such as when the script is inside
+   your `project_superdex` checkout.
+3. The `assets/` directory of the checkout SuperDex was built from, for an editable
+   source install.
+
+If you run the script from outside the checkout with a wheel install, set the variable
+first:
+
+```bash
+export SUPERDEX_ASSETS_PATH=<path-to-project_superdex>/assets
+```
+:::
+
 Running the OSC control example opens the SuperDex Physics debugger, where you can
 watch the bot simulate in real time:
 
