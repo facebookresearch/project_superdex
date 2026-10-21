@@ -146,9 +146,21 @@ Install the test requirement:
 uv pip install pytest
 ```
 
-Then run the test suite from the same directory:
+The packaging tests in `test/packaging/` read the `superdex_lab` project root from the
+`SUPERDEX_LAB_SOURCE` environment variable and fail with `KeyError` when it is unset.
+Set it to the current directory, then run the test suite from the same directory.
+
+On macOS or Linux:
 
 ```bash
+export SUPERDEX_LAB_SOURCE="$PWD"
+uv run python -m pytest test
+```
+
+With PowerShell:
+
+```powershell
+$env:SUPERDEX_LAB_SOURCE = (Get-Location).Path
 uv run python -m pytest test
 ```
 
