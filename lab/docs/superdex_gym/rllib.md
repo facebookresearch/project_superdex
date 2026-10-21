@@ -23,6 +23,12 @@ shared SAC algorithm configuration for every environment.
 After `uv sync --extra core`, install the supported training dependencies from the
 `project_superdex` root:
 
+:::note Python version for training
+The pinned `torch==2.7.1` publishes no Python 3.14 wheels, so this install fails in a
+Python 3.14 environment even though SuperDex itself supports 3.14. Create the
+environment with Python 3.12 for training: `uv sync --python 3.12 --extra core`.
+:::
+
 ```bash
 uv pip install torch==2.7.1 --extra-index-url https://download.pytorch.org/whl/cpu
 uv pip install "ray[rllib]==2.49.0" "moviepy" "pillow>=10.1" "tensorboard"

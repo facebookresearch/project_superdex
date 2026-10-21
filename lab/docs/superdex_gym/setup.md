@@ -110,6 +110,8 @@ rendering.
 The scripts under `apps/` have additional requirements. The `apps/envs` benchmarks
 require `tqdm>=4.67.1`. The `apps/rllib` training and video scripts require
 `torch==2.7.1`, `ray[rllib]==2.49.0`, `moviepy`, `pillow>=10.1` and `tensorboard`.
+`torch==2.7.1` publishes no Python 3.14 wheels, so for `apps/rllib` create the
+environment with Python 3.12 (`uv sync --python 3.12 --extra core`).
 Use the `project_superdex` root as your working directory, then run:
 
 ```bash
