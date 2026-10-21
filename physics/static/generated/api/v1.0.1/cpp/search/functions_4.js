@@ -24,8 +24,7 @@ var searchData=
   ['errorassert_20',['ErrorAssert',['../classsuperdex_1_1ErrorAssert.html#a43af8440de202bed67eda1f68e41688f',1,'superdex::ErrorAssert']]],
   ['errorlog_21',['ErrorLog',['../classsuperdex_1_1ErrorLog.html#a7ab111182692375f64e74fef1d7720dc',1,'superdex::ErrorLog']]],
   ['exp_22',['Exp',['../classsuperdex_1_1Simd_3_01T_00_01N_00_01std_1_1enable__if__t_3_07details_1_1kCompositeFirstSize_87b42a4541e8a7a5909d7a82a98fe91f.html#a7e5ff9291359d2311f70d1581357b9ae',1,'superdex::Simd&lt; T, N, std::enable_if_t&lt;(details::kCompositeFirstSize&lt; T, N &gt; &gt; 0), SimdConcept &gt; &gt;::Exp()'],['../namespacesuperdex.html#a4c7dc1f956f3d37a2b4a3cf0aa9e7cb3',1,'superdex::Exp(T a)'],['../namespacesuperdex.html#acadf670a8393bdf2ec571cadd617f3ab',1,'superdex::Exp(Simd&lt; T, N &gt; a)']]],
-  ['exportactor_23',['ExportActor',['../namespacesuperdex_1_1prefab.html#ad743472252a0adbc7be95f73909ca89f',1,'superdex::prefab']]],
-  ['exportscene_24',['ExportScene',['../namespacesuperdex_1_1prefab.html#acad2fa0dba4f3a546e64911eeb7aa38d',1,'superdex::prefab']]],
-  ['exportsceneexcluding_25',['ExportSceneExcluding',['../namespacesuperdex_1_1prefab.html#a9b04f2516c2d58c450274dbdbecae840',1,'superdex::prefab']]],
-  ['eye_26',['Eye',['../namespacesuperdex.html#a66ccde3b78d4524c6a25902aaa10d572',1,'superdex']]]
+  ['exportactor_23',['ExportActor',['../namespacesuperdex_1_1prefab.html#ad7b596413f7e797040f1d6faf3584164',1,'superdex::prefab::ExportActor(Actor const *actor, std::string_view exportName, std::string_view outputDir, ExportParams const &amp;params, Error &amp;error)'],['../namespacesuperdex_1_1prefab.html#ad743472252a0adbc7be95f73909ca89f',1,'superdex::prefab::ExportActor(Actor const *actor, std::string_view exportName, std::string_view outputDir, Error &amp;error)']]],
+  ['exportscene_24',['ExportScene',['../namespacesuperdex_1_1prefab.html#af2a5267dfb7adb0052a1db59dd7cc535',1,'superdex::prefab::ExportScene(Scene const *scene, std::string_view exportName, std::string_view outputDir, ExportParams const &amp;params, Error &amp;error)'],['../namespacesuperdex_1_1prefab.html#acad2fa0dba4f3a546e64911eeb7aa38d',1,'superdex::prefab::ExportScene(Scene const *scene, std::string_view exportName, std::string_view outputDir, Error &amp;error)']]],
+  ['eye_25',['Eye',['../namespacesuperdex.html#a66ccde3b78d4524c6a25902aaa10d572',1,'superdex']]]
 ];

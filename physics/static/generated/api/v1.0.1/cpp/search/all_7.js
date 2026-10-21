@@ -149,11 +149,10 @@ var searchData=
   ['getvisualmeshnodepositionslocal_145',['GetVisualMeshNodePositionsLocal',['../classsuperdex_1_1Actor.html#a7bb0080a24550e1ce3377c4358ed19d5',1,'superdex::Actor']]],
   ['global_146',['Global',['../namespacesuperdex.html#af28ac7f29bed21cbcaa47c2035494994a4cc6684df7b4a92b1dec6fce3264fac8',1,'superdex']]],
   ['gmres_147',['GMRES',['../namespacesuperdex.html#abff39d229a5fb631aa4a3d5f40f63aa5ac1bfd84e7215afa3204b8e1cdb21a2bd',1,'superdex']]],
-  ['gradientdescentfallback_148',['gradientDescentFallback',['../structsuperdex_1_1NonLinearSolverParams.html#aca0bceb673d486c9959f521a59ae0a25',1,'superdex::NonLinearSolverParams']]],
-  ['gravity_149',['gravity',['../structsuperdex_1_1prefab_1_1SceneParams.html#a0a19865cd9de39a953b2c85ae5e2a868',1,'superdex::prefab::SceneParams']]],
-  ['grid_5fsdf_5fparams_2eh_150',['grid_sdf_params.h',['../grid__sdf__params_8h.html',1,'']]],
-  ['gridsdfdata_151',['GridSdfData',['../structsuperdex_1_1GridSdfData.html',1,'superdex::GridSdfData'],['../structsuperdex_1_1GridSdfData.html#aec37c8577dc04f29ae20a659f7f725bd',1,'superdex::GridSdfData::GridSdfData()=default'],['../structsuperdex_1_1GridSdfData.html#a973ff147fd873402b21d2a66afa403de',1,'superdex::GridSdfData::GridSdfData(GridSdfDataView const &amp;src)']]],
-  ['gridsdfdataview_152',['GridSdfDataView',['../structsuperdex_1_1GridSdfDataView.html',1,'superdex::GridSdfDataView'],['../structsuperdex_1_1GridSdfDataView.html#ad36535a25d8ce9ea57ccec980490e27b',1,'superdex::GridSdfDataView::GridSdfDataView()=default'],['../structsuperdex_1_1GridSdfDataView.html#aedb659fb34374a36793e97542a6b66ed',1,'superdex::GridSdfDataView::GridSdfDataView(GridSdfData const &amp;src)']]],
-  ['gridsdfparams_153',['GridSdfParams',['../structsuperdex_1_1GridSdfParams.html',1,'superdex']]],
-  ['gridsdfresolutionmode_154',['GridSdfResolutionMode',['../namespacesuperdex.html#a6076047b3ac8124cc6b6878491279c41',1,'superdex']]]
+  ['gravity_148',['gravity',['../structsuperdex_1_1prefab_1_1SceneParams.html#a0a19865cd9de39a953b2c85ae5e2a868',1,'superdex::prefab::SceneParams']]],
+  ['grid_5fsdf_5fparams_2eh_149',['grid_sdf_params.h',['../grid__sdf__params_8h.html',1,'']]],
+  ['gridsdfdata_150',['GridSdfData',['../structsuperdex_1_1GridSdfData.html',1,'superdex::GridSdfData'],['../structsuperdex_1_1GridSdfData.html#aec37c8577dc04f29ae20a659f7f725bd',1,'superdex::GridSdfData::GridSdfData()=default'],['../structsuperdex_1_1GridSdfData.html#a973ff147fd873402b21d2a66afa403de',1,'superdex::GridSdfData::GridSdfData(GridSdfDataView const &amp;src)']]],
+  ['gridsdfdataview_151',['GridSdfDataView',['../structsuperdex_1_1GridSdfDataView.html',1,'superdex::GridSdfDataView'],['../structsuperdex_1_1GridSdfDataView.html#ad36535a25d8ce9ea57ccec980490e27b',1,'superdex::GridSdfDataView::GridSdfDataView()=default'],['../structsuperdex_1_1GridSdfDataView.html#aedb659fb34374a36793e97542a6b66ed',1,'superdex::GridSdfDataView::GridSdfDataView(GridSdfData const &amp;src)']]],
+  ['gridsdfparams_152',['GridSdfParams',['../structsuperdex_1_1GridSdfParams.html',1,'superdex']]],
+  ['gridsdfresolutionmode_153',['GridSdfResolutionMode',['../namespacesuperdex.html#a6076047b3ac8124cc6b6878491279c41',1,'superdex']]]
 ];

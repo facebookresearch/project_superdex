@@ -32,11 +32,10 @@ var searchData=
   ['ispaused_28',['IsPaused',['../classsuperdex_1_1AsyncScene.html#a40d249d20d90c72d5caa1c61a9428c4b',1,'superdex::AsyncScene']]],
   ['ispoweroftwo_29',['IsPowerOfTwo',['../namespacesuperdex.html#a1120cdc742780a6d2f354c8771702987',1,'superdex']]],
   ['isquerysupported_30',['IsQuerySupported',['../classsuperdex_1_1Actor.html#a7bde80690b32de91b261e36d354a02fc',1,'superdex::Actor::IsQuerySupported()'],['../classsuperdex_1_1Constraint.html#a82e5df73de7696b241cdb13562732a2a',1,'superdex::Constraint::IsQuerySupported()']]],
-  ['isrecording_31',['IsRecording',['../classsuperdex_1_1Scene.html#a554978d128f01823434d61e54fed1394',1,'superdex::Scene']]],
-  ['issinglethreaded_32',['IsSingleThreaded',['../classsuperdex_1_1Context.html#a6eab0cf71dda4c2e86b5537b810a0555',1,'superdex::Context']]],
-  ['isstatic_33',['IsStatic',['../classsuperdex_1_1Actor.html#a9f41ede8985f4228831910dad270a03c',1,'superdex::Actor']]],
-  ['istrue_34',['IsTrue',['../namespacesuperdex.html#a5c2747167b28fbda28eb8bd9ca41d3f5',1,'superdex']]],
-  ['isvalid_35',['IsValid',['../structsuperdex_1_1Handle.html#ae72e60dec17d34d01b926ed5949b2f1c',1,'superdex::Handle']]],
-  ['isvalidasyncscene_36',['IsValidAsyncScene',['../classsuperdex_1_1Context.html#a6ab4646e82f933f7bd3f4bbf110709f4',1,'superdex::Context']]],
-  ['isvalidscene_37',['IsValidScene',['../classsuperdex_1_1Context.html#a45011ec62ff46cdfcb87df0ff21795f1',1,'superdex::Context']]]
+  ['issinglethreaded_31',['IsSingleThreaded',['../classsuperdex_1_1Context.html#a6eab0cf71dda4c2e86b5537b810a0555',1,'superdex::Context']]],
+  ['isstatic_32',['IsStatic',['../classsuperdex_1_1Actor.html#a9f41ede8985f4228831910dad270a03c',1,'superdex::Actor']]],
+  ['istrue_33',['IsTrue',['../namespacesuperdex.html#a5c2747167b28fbda28eb8bd9ca41d3f5',1,'superdex']]],
+  ['isvalid_34',['IsValid',['../structsuperdex_1_1Handle.html#ae72e60dec17d34d01b926ed5949b2f1c',1,'superdex::Handle']]],
+  ['isvalidasyncscene_35',['IsValidAsyncScene',['../classsuperdex_1_1Context.html#a6ab4646e82f933f7bd3f4bbf110709f4',1,'superdex::Context']]],
+  ['isvalidscene_36',['IsValidScene',['../classsuperdex_1_1Context.html#a45011ec62ff46cdfcb87df0ff21795f1',1,'superdex::Context']]]
 ];

@@ -193,7 +193,7 @@ Public Attributes</h2></td></tr>
 </ol>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classsuperdex_1_1AsyncScene.html#ab35e9c5a54613b258487db8f03774719" title="superdex::AsyncScene::GetAsyncStepParams">AsyncScene::GetAsyncStepParams</a>, <a class="el" href="classsuperdex_1_1AsyncScene.html#a9bf78f8089f9a206180f8d3c4fefdb3a" title="superdex::AsyncScene::SetAsyncStepParams">AsyncScene::SetAsyncStepParams</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00508">508</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00564">564</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 </div><a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
 <a id="a358efcc745ebc8239c04b67c22ef4d20" name="a358efcc745ebc8239c04b67c22ef4d20"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a358efcc745ebc8239c04b67c22ef4d20">&#9670;&#160;</a></span>dynamicTimeStepMaxSeconds</h2>
@@ -212,7 +212,7 @@ Public Attributes</h2></td></tr>
 <dd>
 Must be finite. Negative values are clamped to zero. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00515">515</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00571">571</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -233,7 +233,7 @@ Must be finite. Negative values are clamped to zero. </dd></dl>
 <dd>
 Must be finite. Negative values are clamped to zero. Values greater than <a class="el" href="#a358efcc745ebc8239c04b67c22ef4d20" title="superdex::AsyncStepParams::dynamicTimeStepMaxSeconds">dynamicTimeStepMaxSeconds</a> are clamped down to that maximum. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00513">513</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00569">569</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -257,7 +257,7 @@ Used when <a class="el" href="#aa909fab7f74626bc2ca6a148aab718c6" title="superde
 Also used by <a class="el" href="classsuperdex_1_1AsyncScene.html#a6b685abad13947abf151ee4f8b06b960" title="superdex::AsyncScene::RequestStepThenPause">AsyncScene::RequestStepThenPause</a> when <a class="el" href="#a1721d2c8bb8acdf36bff4728bf248484" title="superdex::AsyncStepParams::timeStepCallback">timeStepCallback</a> is not set or returns a negative value, even if dynamic-time-step mode is configured.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classsuperdex_1_1AsyncScene.html#a6b685abad13947abf151ee4f8b06b960" title="superdex::AsyncScene::RequestStepThenPause">AsyncScene::RequestStepThenPause</a>, <a class="el" href="#aa909fab7f74626bc2ca6a148aab718c6" title="superdex::AsyncStepParams::useFixedTimeStep">AsyncStepParams::useFixedTimeStep</a>, <a class="el" href="#a1721d2c8bb8acdf36bff4728bf248484" title="superdex::AsyncStepParams::timeStepCallback">AsyncStepParams::timeStepCallback</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00511">511</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00567">567</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -281,7 +281,7 @@ If set and it returns a non-negative value, overrides both fixed and dynamic mod
 If it returns a negative value, the async scene falls back to the configured fixed or dynamic time-step behavior.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#a7f739ee6d46ef5a479b0d4fff509bdca" title="superdex::AsyncStepParams::fixedTimeStepSeconds">AsyncStepParams::fixedTimeStepSeconds</a>, <a class="el" href="#aa909fab7f74626bc2ca6a148aab718c6" title="superdex::AsyncStepParams::useFixedTimeStep">AsyncStepParams::useFixedTimeStep</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00517">517</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00573">573</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -303,7 +303,7 @@ If it returns a negative value, the async scene falls back to the configured fix
 Ignored if <a class="el" href="#a1721d2c8bb8acdf36bff4728bf248484" title="superdex::AsyncStepParams::timeStepCallback">timeStepCallback</a> is set and returns a non-negative value.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#a7f739ee6d46ef5a479b0d4fff509bdca" title="superdex::AsyncStepParams::fixedTimeStepSeconds">AsyncStepParams::fixedTimeStepSeconds</a>, <a class="el" href="#a1721d2c8bb8acdf36bff4728bf248484" title="superdex::AsyncStepParams::timeStepCallback">AsyncStepParams::timeStepCallback</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00509">509</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00565">565</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>

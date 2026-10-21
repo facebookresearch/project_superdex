@@ -8,7 +8,6 @@ var group__solver__nonlinear =
       [ "convergenceMode", "structsuperdex_1_1NonLinearSolverParams.html#aa1b8143cd7dc09410a3c4d1ff0734f04", null ],
       [ "dResidualAssemblyPeriod", "structsuperdex_1_1NonLinearSolverParams.html#af7528f67f1277887ff81c4e37ae2aff4", null ],
       [ "explosionControl", "structsuperdex_1_1NonLinearSolverParams.html#a2626d7d778664b5d9ca33f169803312c", null ],
-      [ "gradientDescentFallback", "structsuperdex_1_1NonLinearSolverParams.html#aca0bceb673d486c9959f521a59ae0a25", null ],
       [ "linearToleranceStrategy", "structsuperdex_1_1NonLinearSolverParams.html#adc7f3066262e53b84a595af91ad05843", null ],
       [ "lineSearchAlpha", "structsuperdex_1_1NonLinearSolverParams.html#aaeb49f0ff2f588ad5f104978dad84af8", null ],
       [ "lineSearchMaxIter", "structsuperdex_1_1NonLinearSolverParams.html#af5134aa445c94afec9e5a715047e461f", null ],

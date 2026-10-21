@@ -372,6 +372,9 @@ Functions</h2></td></tr>
 <tr class="memdesc:ad700a274837b66419feb2c62302d34cf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find the index of a link by name.  <br /></td></tr>
 <tr class="memitem:a28fcf05b62ca970cefb37939c7567979" id="r_a28fcf05b62ca970cefb37939c7567979"><td class="memItemLeft">std::optional&lt; std::filesystem::path &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a28fcf05b62ca970cefb37939c7567979">FindRootMarker</a> (std::filesystem::path const &amp;dir)</td></tr>
 <tr class="memdesc:a28fcf05b62ca970cefb37939c7567979"><td class="mdescLeft">&#160;</td><td class="mdescRight">Locate the bots-root marker file within a single directory.  <br /></td></tr>
+<tr class="memitem:a14ea984fc00b6e31a423c5db1d47cb8b" id="r_a14ea984fc00b6e31a423c5db1d47cb8b"><td class="memItemLeft">std::string&#160;</td><td class="memItemRight"><a class="el" href="#a14ea984fc00b6e31a423c5db1d47cb8b">GetBotSceneBaseRoot</a> (std::string_view sceneFilePath, std::string_view baseScenePath)</td></tr>
+<tr class="memdesc:a14ea984fc00b6e31a423c5db1d47cb8b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Root that a bot scene's base-scene prefab resolves its non-<span class="tt">.
+</span> <br /></td></tr>
 <tr class="memitem:abecf7f72bfeb11af7b4b78aa4da51ad6" id="r_abecf7f72bfeb11af7b4b78aa4da51ad6"><td class="memItemLeft">std::string_view&#160;</td><td class="memItemRight"><a class="el" href="#abecf7f72bfeb11af7b4b78aa4da51ad6">GetBotSkinName</a> (<a class="el" href="structsuperdex_1_1robotics_1_1BotPrefab.html">BotPrefab</a> const &amp;botPrefab)</td></tr>
 <tr class="memdesc:abecf7f72bfeb11af7b4b78aa4da51ad6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve the name used to reference a bot's skin in contact overrides.  <br /></td></tr>
 <tr class="memitem:ad7eb083748bef44132a55cfe5c8d6659" id="r_ad7eb083748bef44132a55cfe5c8d6659"><td class="memItemLeft">DynamicArray&lt; real &gt;&#160;</td><td class="memItemRight"><a class="el" href="#ad7eb083748bef44132a55cfe5c8d6659">GetEffortLimitsPerDof</a> (<a class="el" href="structsuperdex_1_1robotics_1_1BotPrefab.html">BotPrefab</a> const &amp;botPrefab, superdex::Error &amp;error)</td></tr>
@@ -532,7 +535,7 @@ Variables</h2></td></tr>
 </td></tr>
 </table>
 
-<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00076">76</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00077">77</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
 
 </div>
 </div>
@@ -1759,7 +1762,7 @@ Variables</h2></td></tr>
 <p>Case-insensitive string equality. </p>
 <p>The asset layout is compared this way throughout &ndash; role folder names here, asset base names in Studio's discovery &ndash; so that a tree authored on a case-insensitive filesystem resolves the same way on a case-sensitive one. </p>
 
-<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00090">90</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00091">91</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
 
 </div>
 </div>
@@ -1973,6 +1976,47 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The path to the marker file present in <code class="param">dir</code>, or <code>std::nullopt</code> if none. </dd></dl>
+
+</div>
+</div>
+<a id="a14ea984fc00b6e31a423c5db1d47cb8b" name="a14ea984fc00b6e31a423c5db1d47cb8b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a14ea984fc00b6e31a423c5db1d47cb8b">&#9670;&#160;</a></span>GetBotSceneBaseRoot()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string superdex::robotics::GetBotSceneBaseRoot </td>
+          <td>(</td>
+          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>sceneFilePath</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>baseScenePath</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Root that a bot scene's base-scene prefab resolves its non-<span class="tt">.
+</span></p>
+<p>/, non-absolute references (nested prefabs, shapes, render models) against: the scene file's <span class="tt">.superdex_root</span> directory, else the base scene's own directory.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">sceneFilePath</td><td>The <span class="tt">.mochi_bot_scene</span> file. For an archive, its extracted target. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">baseScenePath</td><td>Absolute path of the scene's base-scene prefab.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The root directory. </dd></dl>
 
 </div>
 </div>
@@ -3753,12 +3797,12 @@ Variables</h2></td></tr>
 <div class="line"><a class="code hl_variable" href="#acf74895ed6a98b878232d1883f4e75cb">kCollisionSubdir</a>,</div>
 <div class="line"><a class="code hl_variable" href="#ae19514e18e8c521c4feebf8d1112273d">kRenderSubdir</a>,</div>
 <div class="line"><a class="code hl_variable" href="#aa6940d84cad112cacd06531baab5529c">kIntermediatesSubdir</a>}</div>
-<div class="ttc" id="anamespacesuperdex_1_1robotics_html_a5b3e387994f3dd63cebea3bab1623334"><div class="ttname"><a href="#a5b3e387994f3dd63cebea3bab1623334">superdex::robotics::kCadSubdir</a></div><div class="ttdeci">constexpr std::string_view kCadSubdir</div><div class="ttdef"><b>Definition</b> <a href="file__utils_8h_source.html#l00050">file_utils.h:50</a></div></div>
-<div class="ttc" id="anamespacesuperdex_1_1robotics_html_aa6940d84cad112cacd06531baab5529c"><div class="ttname"><a href="#aa6940d84cad112cacd06531baab5529c">superdex::robotics::kIntermediatesSubdir</a></div><div class="ttdeci">constexpr std::string_view kIntermediatesSubdir</div><div class="ttdef"><b>Definition</b> <a href="file__utils_8h_source.html#l00051">file_utils.h:51</a></div></div>
-<div class="ttc" id="anamespacesuperdex_1_1robotics_html_acf74895ed6a98b878232d1883f4e75cb"><div class="ttname"><a href="#acf74895ed6a98b878232d1883f4e75cb">superdex::robotics::kCollisionSubdir</a></div><div class="ttdeci">constexpr std::string_view kCollisionSubdir</div><div class="ttdef"><b>Definition</b> <a href="file__utils_8h_source.html#l00048">file_utils.h:48</a></div></div>
-<div class="ttc" id="anamespacesuperdex_1_1robotics_html_ae19514e18e8c521c4feebf8d1112273d"><div class="ttname"><a href="#ae19514e18e8c521c4feebf8d1112273d">superdex::robotics::kRenderSubdir</a></div><div class="ttdeci">constexpr std::string_view kRenderSubdir</div><div class="ttdef"><b>Definition</b> <a href="file__utils_8h_source.html#l00049">file_utils.h:49</a></div></div>
+<div class="ttc" id="anamespacesuperdex_1_1robotics_html_a5b3e387994f3dd63cebea3bab1623334"><div class="ttname"><a href="#a5b3e387994f3dd63cebea3bab1623334">superdex::robotics::kCadSubdir</a></div><div class="ttdeci">constexpr std::string_view kCadSubdir</div><div class="ttdef"><b>Definition</b> <a href="file__utils_8h_source.html#l00051">file_utils.h:51</a></div></div>
+<div class="ttc" id="anamespacesuperdex_1_1robotics_html_aa6940d84cad112cacd06531baab5529c"><div class="ttname"><a href="#aa6940d84cad112cacd06531baab5529c">superdex::robotics::kIntermediatesSubdir</a></div><div class="ttdeci">constexpr std::string_view kIntermediatesSubdir</div><div class="ttdef"><b>Definition</b> <a href="file__utils_8h_source.html#l00052">file_utils.h:52</a></div></div>
+<div class="ttc" id="anamespacesuperdex_1_1robotics_html_acf74895ed6a98b878232d1883f4e75cb"><div class="ttname"><a href="#acf74895ed6a98b878232d1883f4e75cb">superdex::robotics::kCollisionSubdir</a></div><div class="ttdeci">constexpr std::string_view kCollisionSubdir</div><div class="ttdef"><b>Definition</b> <a href="file__utils_8h_source.html#l00049">file_utils.h:49</a></div></div>
+<div class="ttc" id="anamespacesuperdex_1_1robotics_html_ae19514e18e8c521c4feebf8d1112273d"><div class="ttname"><a href="#ae19514e18e8c521c4feebf8d1112273d">superdex::robotics::kRenderSubdir</a></div><div class="ttdeci">constexpr std::string_view kRenderSubdir</div><div class="ttdef"><b>Definition</b> <a href="file__utils_8h_source.html#l00050">file_utils.h:50</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00056">56</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00057">57</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
 
 </div>
 </div>
@@ -3808,7 +3852,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00044">44</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00045">45</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
 
 </div>
 </div>
@@ -3832,7 +3876,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00067">67</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00068">68</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
 
 </div>
 </div>
@@ -3856,7 +3900,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00045">45</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00046">46</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
 
 </div>
 </div>
@@ -3880,7 +3924,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00046">46</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00047">47</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
 
 </div>
 </div>
@@ -3904,7 +3948,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00050">50</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00051">51</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
 
 </div>
 </div>
@@ -3928,7 +3972,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00048">48</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00049">49</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
 
 </div>
 </div>
@@ -4006,7 +4050,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00051">51</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00052">52</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
 
 </div>
 </div>
@@ -4030,7 +4074,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00049">49</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00050">50</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
 
 </div>
 </div>
@@ -4054,7 +4098,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00043">43</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00044">44</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
 
 </div>
 </div>
@@ -4078,7 +4122,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00041">41</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00042">42</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
 
 </div>
 </div>
@@ -4102,7 +4146,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00042">42</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00043">43</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
 
 </div>
 </div>
@@ -4126,7 +4170,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00047">47</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="file__utils_8h_source.html#l00048">48</a> of file <a class="el" href="file__utils_8h_source.html">file_utils.h</a>.</p>
 
 </div>
 </div>

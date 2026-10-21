@@ -682,7 +682,7 @@ See <a class="el" href="#a9e6d257ef4d1833e875c50617e709d4a" title="superdex::Act
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">dofIndices</td><td>DoF indices to constrain. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">dofValuesWorld</td><td>Target values in the actor-specific representations described below. Length must equal <code class="param">dofIndices</code>. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">dofValuesWorld</td><td>Target values in the actor-specific representations described below. Length must equal <code class="param">dofIndices</code>. Values must be finite. </td></tr>
     <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td><a class="el" href="classsuperdex_1_1Error.html">Error</a> status. Check <a class="el" href="classsuperdex_1_1Error.html#a463cb4f3428a7a2dd779a2f6c5d153b2" title="superdex::Error::IsOK">Error::IsOK</a> for success.</td></tr>
   </table>
   </dd>
@@ -747,7 +747,7 @@ Adding a boundary condition to the same DoF more than once is legal — the most
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">dofIndices</td><td>DoF indices to constrain. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">dofValuesWorld</td><td>Target values in the actor-specific representations documented by <a class="el" href="#a6cb472c6f16b92d61b21d05cf60dd7d9" title="superdex::Actor::AddBoundaryConditionDofsWorld">AddBoundaryConditionDofsWorld</a>. Length must equal <code class="param">dofIndices</code>. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">dofValuesWorld</td><td>Target values in the actor-specific representations documented by <a class="el" href="#a6cb472c6f16b92d61b21d05cf60dd7d9" title="superdex::Actor::AddBoundaryConditionDofsWorld">AddBoundaryConditionDofsWorld</a>. Length must equal <code class="param">dofIndices</code>. Values must be finite. </td></tr>
     <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td><a class="el" href="classsuperdex_1_1Error.html">Error</a> status. Check <a class="el" href="classsuperdex_1_1Error.html#a463cb4f3428a7a2dd779a2f6c5d153b2" title="superdex::Error::IsOK">Error::IsOK</a> for success.</td></tr>
   </table>
   </dd>
@@ -800,7 +800,7 @@ If a clearable entry is later added for the same DoF, that clearable entry is th
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">nodeIndices</td><td>Node indices to constrain. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">nodePositionsWorld</td><td>Target positions [m] in world frame. Length must be 3 times the size of <code class="param">nodeIndices</code>. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">nodePositionsWorld</td><td>Target positions [m] in world frame. Length must be 3 times the size of <code class="param">nodeIndices</code>. Values must be finite. </td></tr>
     <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td><a class="el" href="classsuperdex_1_1Error.html">Error</a> status. Check <a class="el" href="classsuperdex_1_1Error.html#a463cb4f3428a7a2dd779a2f6c5d153b2" title="superdex::Error::IsOK">Error::IsOK</a> for success.</td></tr>
   </table>
   </dd>
@@ -855,7 +855,7 @@ This API adds to existing boundary conditions. See <a class="el" href="#a6cb472c
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">nodeIndices</td><td>Node indices to constrain. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">nodePositionsWorld</td><td>Target positions [m] in world frame. Length must be 3 times the size of <code class="param">nodeIndices</code>. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">nodePositionsWorld</td><td>Target positions [m] in world frame. Length must be 3 times the size of <code class="param">nodeIndices</code>. Values must be finite. </td></tr>
     <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td><a class="el" href="classsuperdex_1_1Error.html">Error</a> status. Check <a class="el" href="classsuperdex_1_1Error.html#a463cb4f3428a7a2dd779a2f6c5d153b2" title="superdex::Error::IsOK">Error::IsOK</a> for success.</td></tr>
   </table>
   </dd>
@@ -2690,7 +2690,7 @@ Not supported for ROM actors. </dd></dl>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Mass [kg] of the actor.</dd></dl>
-<dl class="section note"><dt>Note</dt><dd>Not supported for static actors. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Not supported for standalone static actors. </dd></dl>
 
 </div>
 </div>
@@ -4694,6 +4694,8 @@ Moves the actor without changing where the center of mass is within the actor (<
   </dd>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Only supported for rigid actors (except static rigid actors), articulated links and soft actors. </dd>
+<dd>
+Has no effect on links of articulated actors without a shape. </dd>
 <dd>
 The moment of inertia is updated based on the new density. The center of mass is left unchanged.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#adf056a687623798bb4f83d1e2433bde0" title="superdex::Actor::GetDensity">GetDensity</a>, <a class="el" href="#a53a647002f2457dc46e2d35e8b653758" title="superdex::Actor::SetInertiaProperties">SetInertiaProperties</a>, <a class="el" href="#aecc4dd1b29497dbe6fa9d4d429d16f27" title="superdex::Actor::SetSoftMaterialParams">SetSoftMaterialParams</a> </dd></dl>

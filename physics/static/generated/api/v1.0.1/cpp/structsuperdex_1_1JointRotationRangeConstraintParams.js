@@ -1,6 +1,7 @@
 // @generated
 var structsuperdex_1_1JointRotationRangeConstraintParams =
 [
+    [ "operator==", "structsuperdex_1_1JointRotationRangeConstraintParams.html#adaf774fe3abbe7464d2174bcfafce117", null ],
     [ "actorA", "structsuperdex_1_1JointRotationRangeConstraintParams.html#aa3602590564f825dacffeadd4e93c17c", null ],
     [ "actorB", "structsuperdex_1_1JointRotationRangeConstraintParams.html#a8a5e2e60d03b688b698a22124c4857a0", null ],
     [ "angleRangeX", "structsuperdex_1_1JointRotationRangeConstraintParams.html#a940ea9284cea9f68713e0c9c11d69340", null ],

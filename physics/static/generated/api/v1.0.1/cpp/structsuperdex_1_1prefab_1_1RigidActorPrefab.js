@@ -1,6 +1,7 @@
 // @generated
 var structsuperdex_1_1prefab_1_1RigidActorPrefab =
 [
+    [ "operator==", "structsuperdex_1_1prefab_1_1RigidActorPrefab.html#a5a138a02e61d99018fc290a6b5176da3", null ],
     [ "comment", "structsuperdex_1_1prefab_1_1RigidActorPrefab.html#acea317a3a2adbb03af0d39e052d53162", null ],
     [ "renderModelFile", "structsuperdex_1_1prefab_1_1RigidActorPrefab.html#adcd1be8aa58ab6f068cb87e8289564dc", null ],
     [ "renderModelRotation", "structsuperdex_1_1prefab_1_1RigidActorPrefab.html#abc2ef98eafd9684552387d4ea1f3af84", null ],

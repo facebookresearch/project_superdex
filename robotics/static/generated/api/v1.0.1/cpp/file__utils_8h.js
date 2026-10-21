@@ -19,6 +19,7 @@ var file__utils_8h =
     [ "superdex::robotics::FindAssetBaseFolder", "namespacesuperdex_1_1robotics.html#a37dd30a7ebc0d78c72147b219ff03295", null ],
     [ "superdex::robotics::FindBotsRoot", "namespacesuperdex_1_1robotics.html#a50e3603ef3c5b1239a8649ae7db7e57f", null ],
     [ "superdex::robotics::FindRootMarker", "namespacesuperdex_1_1robotics.html#a28fcf05b62ca970cefb37939c7567979", null ],
+    [ "superdex::robotics::GetBotSceneBaseRoot", "namespacesuperdex_1_1robotics.html#a14ea984fc00b6e31a423c5db1d47cb8b", null ],
     [ "superdex::robotics::HashBotFile", "namespacesuperdex_1_1robotics.html#a400e2e7c622d2b7759e3000fab5cb51b", null ],
     [ "superdex::robotics::HashGenericFile", "namespacesuperdex_1_1robotics.html#a1e0c2089546a0540bbf66940524c6cbc", null ],
     [ "superdex::robotics::IsAssetRoleSubdirName", "namespacesuperdex_1_1robotics.html#a9f09b9097ac14dc26a3124d7a551221f", null ],

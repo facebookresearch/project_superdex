@@ -1,6 +1,7 @@
 // @generated
 var NAVTREEINDEX3 =
 {
+"structsuperdex_1_1robotics_1_1BotArchiveMetadata.html#a63af7b5ca5263b52896695bf617743d0":[1,0,1,0,9,3],
 "structsuperdex_1_1robotics_1_1BotArchiveMetadata.html#abd680c64147e0aacd6d64d9870d7f770":[0,0,0,0,9,0],
 "structsuperdex_1_1robotics_1_1BotArchiveMetadata.html#abd680c64147e0aacd6d64d9870d7f770":[1,0,1,0,9,0],
 "structsuperdex_1_1robotics_1_1BotArchiveMetadata.html#ac8c4ecb39ef40021d68390fd0717112c":[0,0,0,0,9,1],
@@ -249,6 +250,5 @@ var NAVTREEINDEX3 =
 "structsuperdex_1_1robotics_1_1IBotLoader.html#a136868a5e1e6d31ff731de7c2d80d9ca":[1,0,1,0,41,2],
 "structsuperdex_1_1robotics_1_1IBotLoader.html#a4208b90282a165d4b4863ba968100cec":[0,0,0,0,41,1],
 "structsuperdex_1_1robotics_1_1IBotLoader.html#a4208b90282a165d4b4863ba968100cec":[1,0,1,0,41,1],
-"structsuperdex_1_1robotics_1_1IBotLoader.html#a4ed49c35aee28be008a298aaafaa1c58":[0,0,0,0,41,4],
-"structsuperdex_1_1robotics_1_1IBotLoader.html#a4ed49c35aee28be008a298aaafaa1c58":[1,0,1,0,41,4]
+"structsuperdex_1_1robotics_1_1IBotLoader.html#a4ed49c35aee28be008a298aaafaa1c58":[0,0,0,0,41,4]
 };

@@ -205,7 +205,7 @@ Public Attributes</h2></td></tr>
 <dl class="section note"><dt>Note</dt><dd>Available via <a class="el" href="classsuperdex_1_1Actor.html#af71944bd3007d8e5a9b092c4f8cc1bce" title="superdex::Actor::GetContactPointsWorld">Actor::GetContactPointsWorld</a> after registering <a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebaa5a95a45154fa9633bfe9c1653de6fe2" title="superdex::QueryType::ContactPoints">QueryType::ContactPoints</a>.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="namespacesuperdex.html#aed26e55b2a9ac698fffe268c8cd9f5ebaa5a95a45154fa9633bfe9c1653de6fe2" title="superdex::QueryType::ContactPoints">QueryType::ContactPoints</a>, <a class="el" href="classsuperdex_1_1Actor.html#ae14afba92874f6489d293460662bcd73" title="superdex::Actor::RegisterQuery">Actor::RegisterQuery</a>, <a class="el" href="classsuperdex_1_1Actor.html#af71944bd3007d8e5a9b092c4f8cc1bce" title="superdex::Actor::GetContactPointsWorld">Actor::GetContactPointsWorld</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00462">462</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00518">518</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 </div><a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
 <a id="aedc0475d849711c51b3b0eaa4c3bae7d" name="aedc0475d849711c51b3b0eaa4c3bae7d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aedc0475d849711c51b3b0eaa4c3bae7d">&#9670;&#160;</a></span>actorA</h2>
@@ -224,7 +224,7 @@ Public Attributes</h2></td></tr>
 <dd>
 May be the same as <a class="el" href="#aa76823d2b760a137028c99f2059cbe40" title="superdex::ContactPoint::actorB">actorB</a> in the case of self-contact. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00463">463</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00519">519</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -245,7 +245,7 @@ May be the same as <a class="el" href="#aa76823d2b760a137028c99f2059cbe40" title
 <dd>
 May be the same as <a class="el" href="#aedc0475d849711c51b3b0eaa4c3bae7d" title="superdex::ContactPoint::actorA">actorA</a> in the case of self-contact. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00465">465</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00521">521</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -264,7 +264,7 @@ May be the same as <a class="el" href="#aedc0475d849711c51b3b0eaa4c3bae7d" title
 <p>Signed separation distance [m] between <a class="el" href="#a0485689d0e61f6ee692b8957edf50f70" title="superdex::ContactPoint::posA">posA</a> (on <a class="el" href="#aedc0475d849711c51b3b0eaa4c3bae7d" title="superdex::ContactPoint::actorA">actorA</a>) and the closest point on the surface of <a class="el" href="#aa76823d2b760a137028c99f2059cbe40" title="superdex::ContactPoint::actorB">actorB</a>. </p>
 <p>Negative if the point is inside (i.e. actors overlap). </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00467">467</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00523">523</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -283,7 +283,7 @@ May be the same as <a class="el" href="#aedc0475d849711c51b3b0eaa4c3bae7d" title
 <p>Index of the triangle of <a class="el" href="#aedc0475d849711c51b3b0eaa4c3bae7d" title="superdex::ContactPoint::actorA">actorA</a> in <a class="el" href="classsuperdex_1_1Actor.html#aa957985e5f68f29f94dbb083bba5ca3c" title="superdex::Actor::GetSurfaceMesh">Actor::GetSurfaceMesh</a>, or in <a class="el" href="classsuperdex_1_1Actor.html#a63bb41aedf1ce5e6d2bb5412517bb9eb" title="superdex::Actor::GetContactSkinMesh">Actor::GetContactSkinMesh</a> when contact uses the contact skin. </p>
 <dl class="section note"><dt>Note</dt><dd>For rod actors, this field is not populated and is reported as 0. Use <a class="el" href="#a121c86012df8a5b369f818f6b614502a" title="superdex::ContactPoint::sampleIndex">sampleIndex</a> to identify the contact location. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00485">485</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00541">541</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -301,7 +301,7 @@ May be the same as <a class="el" href="#aedc0475d849711c51b3b0eaa4c3bae7d" title
 
 <p>Contact force [N] applied to <a class="el" href="#aedc0475d849711c51b3b0eaa4c3bae7d" title="superdex::ContactPoint::actorA">actorA</a> from <a class="el" href="#aa76823d2b760a137028c99f2059cbe40" title="superdex::ContactPoint::actorB">actorB</a> in world frame. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00475">475</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00531">531</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -326,7 +326,7 @@ Useful for contact area/length estimation and other post-processing. </dd>
 <dd>
 <a class="el" href="#ad3d7998068403bc52a4668a07671e22f" title="superdex::ContactPoint::force">force</a> is already weighted by this value. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00483">483</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00539">539</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -345,7 +345,7 @@ Useful for contact area/length estimation and other post-processing. </dd>
 <p>Contact normal in world frame pointing away from <a class="el" href="#aa76823d2b760a137028c99f2059cbe40" title="superdex::ContactPoint::actorB">actorB</a>. </p>
 <p>Unit length. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00473">473</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00529">529</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -370,7 +370,7 @@ Allows interpolation of functions defined on triangle vertices. </dd>
 <dd>
 For rod actors, this field is not populated and is reported as {0, 0, 0}. Use <a class="el" href="#a121c86012df8a5b369f818f6b614502a" title="superdex::ContactPoint::sampleIndex">sampleIndex</a> to identify the contact location. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00487">487</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00543">543</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -388,7 +388,7 @@ For rod actors, this field is not populated and is reported as {0, 0, 0}. Use <a
 
 <p>Velocity [m/s] of the contact point on <a class="el" href="#aedc0475d849711c51b3b0eaa4c3bae7d" title="superdex::ContactPoint::actorA">actorA</a> in world frame. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00477">477</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00533">533</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -406,7 +406,7 @@ For rod actors, this field is not populated and is reported as {0, 0, 0}. Use <a
 
 <p>Velocity [m/s] of the contact point on <a class="el" href="#aa76823d2b760a137028c99f2059cbe40" title="superdex::ContactPoint::actorB">actorB</a> in world frame. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00479">479</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00535">535</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -424,7 +424,7 @@ For rod actors, this field is not populated and is reported as {0, 0, 0}. Use <a
 
 <p>Contact position [m] on <a class="el" href="#aedc0475d849711c51b3b0eaa4c3bae7d" title="superdex::ContactPoint::actorA">actorA</a> in world frame. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00469">469</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00525">525</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -443,7 +443,7 @@ For rod actors, this field is not populated and is reported as {0, 0, 0}. Use <a
 <p>Approximate contact position [m] on <a class="el" href="#aa76823d2b760a137028c99f2059cbe40" title="superdex::ContactPoint::actorB">actorB</a> in world frame. </p>
 <dl class="section note"><dt>Note</dt><dd>Equivalent to (posA - normal * distance). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00471">471</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00527">527</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -461,7 +461,7 @@ For rod actors, this field is not populated and is reported as {0, 0, 0}. Use <a
 
 <p>Sample point index of <a class="el" href="#aedc0475d849711c51b3b0eaa4c3bae7d" title="superdex::ContactPoint::actorA">actorA</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00481">481</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00537">537</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>

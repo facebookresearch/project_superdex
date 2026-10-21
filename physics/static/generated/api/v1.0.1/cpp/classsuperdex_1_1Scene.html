@@ -298,8 +298,6 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a588e936f1fc21f8d19966a59451e103c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return true if both StateHandles are valid and refer to identical state information (full precision).  <br /></td></tr>
 <tr class="memitem:ac102328219ba3b9876ec40ca27f4452a" id="r_ac102328219ba3b9876ec40ca27f4452a"><td class="memItemLeft">virtual bool&#160;</td><td class="memItemRight"><a class="el" href="#ac102328219ba3b9876ec40ca27f4452a">IsLayerContactEnabled</a> (std::string_view layerA, std::string_view layerB) const =0</td></tr>
 <tr class="memdesc:ac102328219ba3b9876ec40ca27f4452a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if collision detection is enabled for an ordered pair of contact layer names.  <br /></td></tr>
-<tr class="memitem:a554978d128f01823434d61e54fed1394" id="r_a554978d128f01823434d61e54fed1394"><td class="memItemLeft">virtual bool&#160;</td><td class="memItemRight"><a class="el" href="#a554978d128f01823434d61e54fed1394">IsRecording</a> () const =0</td></tr>
-<tr class="memdesc:a554978d128f01823434d61e54fed1394"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if the scene is currently recording.  <br /></td></tr>
 <tr class="memitem:a30444a5ca79f67a2344a5609d37e5176" id="r_a30444a5ca79f67a2344a5609d37e5176"><td class="memItemLeft">virtual <a class="el" href="structsuperdex_1_1CallbackHandle.html">CallbackHandle</a>&#160;</td><td class="memItemRight"><a class="el" href="#a30444a5ca79f67a2344a5609d37e5176">RegisterPostStepCallback</a> (std::string_view debugName, std::function&lt; void(<a class="el" href="structsuperdex_1_1StepInfo.html">StepInfo</a> const &amp;)&gt; callback, int priority=<a class="el" href="#ac1400d748f580e1e97dbb9aa37b78b8f">kDefaultCallbackPriority</a>)=0</td></tr>
 <tr class="memdesc:a30444a5ca79f67a2344a5609d37e5176"><td class="mdescLeft">&#160;</td><td class="mdescRight">Register a callback to execute after each simulation step.  <br /></td></tr>
 <tr class="memitem:a41c34347811c93811dfe45415f3dbd4a" id="r_a41c34347811c93811dfe45415f3dbd4a"><td class="memItemLeft">virtual <a class="el" href="structsuperdex_1_1CallbackHandle.html">CallbackHandle</a>&#160;</td><td class="memItemRight"><a class="el" href="#a41c34347811c93811dfe45415f3dbd4a">RegisterPreStepCallback</a> (std::string_view debugName, std::function&lt; void(<a class="el" href="structsuperdex_1_1StepInfo.html">StepInfo</a> const &amp;)&gt; callback, int priority=<a class="el" href="#ac1400d748f580e1e97dbb9aa37b78b8f">kDefaultCallbackPriority</a>)=0</td></tr>
@@ -320,12 +318,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a8f9f303817187294235f7fefa3db3158"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the gravity vector in world frame.  <br /></td></tr>
 <tr class="memitem:a77f5be34e91e952ec7df3820d0a364f6" id="r_a77f5be34e91e952ec7df3820d0a364f6"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#a77f5be34e91e952ec7df3820d0a364f6">SetSolverParams</a> (<a class="el" href="structsuperdex_1_1SolverParams.html">SolverParams</a> const &amp;params, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)=0</td></tr>
 <tr class="memdesc:a77f5be34e91e952ec7df3820d0a364f6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the solver parameters.  <br /></td></tr>
-<tr class="memitem:abf0923a841178a69b090dc1d9a3990c5" id="r_abf0923a841178a69b090dc1d9a3990c5"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#abf0923a841178a69b090dc1d9a3990c5">StartRecording</a> (std::string_view filePath, <a class="el" href="structsuperdex_1_1RecordingParams.html">RecordingParams</a> const &amp;params, <a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;error)=0</td></tr>
-<tr class="memdesc:abf0923a841178a69b090dc1d9a3990c5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create or replace the specified file and start recording the scene to an HDF5 file.  <br /></td></tr>
 <tr class="memitem:ab2ebf00d9b282dd85bc1ed59747471c4" id="r_ab2ebf00d9b282dd85bc1ed59747471c4"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#ab2ebf00d9b282dd85bc1ed59747471c4">Step</a> (double timeStepSec)=0</td></tr>
 <tr class="memdesc:ab2ebf00d9b282dd85bc1ed59747471c4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Advance the simulation of the <a class="el" href="classsuperdex_1_1Scene.html" title="superdex::Scene">Scene</a> one step.  <br /></td></tr>
-<tr class="memitem:afa60e0481d0de5e6133196cacad32504" id="r_afa60e0481d0de5e6133196cacad32504"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#afa60e0481d0de5e6133196cacad32504">StopRecording</a> ()=0</td></tr>
-<tr class="memdesc:afa60e0481d0de5e6133196cacad32504"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stop recording the scene and close the recording file.  <br /></td></tr>
 <tr class="memitem:a900e7417d699fe9569e3383ac614b681" id="r_a900e7417d699fe9569e3383ac614b681"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#a900e7417d699fe9569e3383ac614b681">UpdateDebugger</a> ()=0</td></tr>
 <tr class="memdesc:a900e7417d699fe9569e3383ac614b681"><td class="mdescLeft">&#160;</td><td class="mdescRight">This gives the debugger a chance to process messages that require reading or writing scene state.  <br /></td></tr>
 </table><table class="memberdecls">
@@ -2785,36 +2779,6 @@ This only checks the layer filter. Actor-to-actor contact can still be disabled 
 
 </div>
 </div>
-<a id="a554978d128f01823434d61e54fed1394" name="a554978d128f01823434d61e54fed1394"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a554978d128f01823434d61e54fed1394">&#9670;&#160;</a></span>IsRecording()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual bool superdex::Scene::IsRecording </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span><span class="mlabel pure-virtual">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Check if the scene is currently recording. </p>
-<dl class="section return"><dt>Returns</dt><dd>True if recording is active, false otherwise.</dd></dl>
-<dl class="section note"><dt>Note</dt><dd>A recording write failure does not end the recording session.</dd></dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="#abf0923a841178a69b090dc1d9a3990c5" title="superdex::Scene::StartRecording">StartRecording</a>, <a class="el" href="#afa60e0481d0de5e6133196cacad32504" title="superdex::Scene::StopRecording">StopRecording</a> </dd></dl>
-
-</div>
-</div>
 <a id="a30444a5ca79f67a2344a5609d37e5176" name="a30444a5ca79f67a2344a5609d37e5176"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a30444a5ca79f67a2344a5609d37e5176">&#9670;&#160;</a></span>RegisterPostStepCallback()</h2>
 
@@ -3243,59 +3207,6 @@ The exact actors are used; nested actors are not included automatically.</dd></d
 
 </div>
 </div>
-<a id="abf0923a841178a69b090dc1d9a3990c5" name="abf0923a841178a69b090dc1d9a3990c5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abf0923a841178a69b090dc1d9a3990c5">&#9670;&#160;</a></span>StartRecording()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual void superdex::Scene::StartRecording </td>
-          <td>(</td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>filePath</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="structsuperdex_1_1RecordingParams.html">RecordingParams</a> const &amp;</td>          <td class="paramname"><span class="paramname"><em>params</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="classsuperdex_1_1Error.html">Error</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>error</em></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel pure-virtual">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Create or replace the specified file and start recording the scene to an HDF5 file. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">filePath</td><td>Path to the output recording file (case sensitive on some filesystems). File will be created or replaced. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">params</td><td>Parameters controlling what data to record. </td></tr>
-    <tr><td class="paramdir">[in,out]</td><td class="paramname">error</td><td><a class="el" href="classsuperdex_1_1Error.html">Error</a> status. Check <a class="el" href="classsuperdex_1_1Error.html#a463cb4f3428a7a2dd779a2f6c5d153b2" title="superdex::Error::IsOK">Error::IsOK</a> for success.</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section note"><dt>Note</dt><dd>Enabling additional recording features will generally increase the recording file size and degrade performance. </dd>
-<dd>
-If the scene is already recording, the previous recording is stopped before starting the new one. </dd>
-<dd>
-Islands do not sleep while the scene is recording, so recording can change the simulation results.</dd></dl>
-<dl class="section warning"><dt>Warning</dt><dd>Requires a build with HDF5 support. </dd>
-<dd>
-The recording system may undergo a substantial refactor to expand its capabilities. Its API and recorded file format may change in future releases.</dd></dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="#afa60e0481d0de5e6133196cacad32504" title="superdex::Scene::StopRecording">StopRecording</a>, <a class="el" href="#a554978d128f01823434d61e54fed1394" title="superdex::Scene::IsRecording">IsRecording</a>, <a class="el" href="structsuperdex_1_1RecordingParams.html" title="superdex::RecordingParams">RecordingParams</a> </dd></dl>
-
-</div>
-</div>
 <a id="ab2ebf00d9b282dd85bc1ed59747471c4" name="ab2ebf00d9b282dd85bc1ed59747471c4"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab2ebf00d9b282dd85bc1ed59747471c4">&#9670;&#160;</a></span>Step()</h2>
 
@@ -3335,34 +3246,6 @@ If the time step is zero, then the state of the simulation will not change, but 
 <dd>
 If the time step is negative or NaN, no step is taken and an error is logged.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="namespacesuperdex.html#aba7db404f336978480a0790044d1f900" title="superdex::IntegrationMethod">IntegrationMethod</a> </dd></dl>
-
-</div>
-</div>
-<a id="afa60e0481d0de5e6133196cacad32504" name="afa60e0481d0de5e6133196cacad32504"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afa60e0481d0de5e6133196cacad32504">&#9670;&#160;</a></span>StopRecording()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual void superdex::Scene::StopRecording </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel pure-virtual">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Stop recording the scene and close the recording file. </p>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="#abf0923a841178a69b090dc1d9a3990c5" title="superdex::Scene::StartRecording">StartRecording</a>, <a class="el" href="#a554978d128f01823434d61e54fed1394" title="superdex::Scene::IsRecording">IsRecording</a> </dd></dl>
 
 </div>
 </div>
@@ -3419,7 +3302,7 @@ If the time step is negative or NaN, no step is taken and an error is logged.</d
 <p>Default priority for callback ordering. </p>
 <p>Lower values execute earlier (higher priority). </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__scene_8h_source.html#l00269">269</a> of file <a class="el" href="mochi__scene_8h_source.html">mochi_scene.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__scene_8h_source.html#l00260">260</a> of file <a class="el" href="mochi__scene_8h_source.html">mochi_scene.h</a>.</p>
 
 </div>
 </div>

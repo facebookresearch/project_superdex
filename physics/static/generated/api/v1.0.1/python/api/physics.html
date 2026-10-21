@@ -116,7 +116,6 @@
 <li class="toctree-l2"><a class="reference internal" href="#contact-collision">Contact &amp; Collision</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#solver">Solver</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#query-types">Query Types</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#recording-options">Recording Options</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#debugging-diagnostics">Debugging &amp; Diagnostics</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#build-information">Build Information</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#core-value-spatial-types">Core Value &amp; Spatial Types</a></li>
@@ -1822,26 +1821,6 @@ disabled with
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="superdex.physics.Scene.is_recording">
-<span class="sig-name descname"><span class="pre">is_recording</span></span><a class="headerlink" href="#superdex.physics.Scene.is_recording" title="Permalink to this definition"></a></dt>
-<dd><p>Check if the scene is currently recording.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>True if recording is active, false otherwise.</p>
-</dd>
-</dl>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>A recording write failure does not end the recording session.</p>
-</div>
-<div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><a class="reference internal" href="#superdex.physics.Scene.start_recording" title="superdex.physics.Scene.start_recording"><code class="xref py py-meth docutils literal notranslate"><span class="pre">start_recording()</span></code></a>,
-<a class="reference internal" href="#superdex.physics.Scene.stop_recording" title="superdex.physics.Scene.stop_recording"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stop_recording()</span></code></a></p>
-</div>
-</dd></dl>
-
-<dl class="py attribute">
 <dt class="sig sig-object py" id="superdex.physics.Scene.register_post_step_callback">
 <span class="sig-name descname"><span class="pre">register_post_step_callback</span></span><a class="headerlink" href="#superdex.physics.Scene.register_post_step_callback" title="Permalink to this definition"></a></dt>
 <dd><p>Register a callback to execute after each simulation step.</p>
@@ -2140,56 +2119,6 @@ simulation island.</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="superdex.physics.Scene.start_recording">
-<span class="sig-name descname"><span class="pre">start_recording</span></span><a class="headerlink" href="#superdex.physics.Scene.start_recording" title="Permalink to this definition"></a></dt>
-<dd><p>Create or replace the specified file and start recording the scene to an HDF5
-file.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>file_path</strong> (<em>str</em>) – Path to the output recording file (case sensitive on some
-filesystems). File will be created or replaced.</p></li>
-<li><p><strong>params</strong> (<a class="reference internal" href="#superdex.physics.RecordingParams" title="superdex.physics.RecordingParams"><em>RecordingParams</em></a>) – Parameters controlling what data to record.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="#superdex.physics.Error" title="superdex.physics.Error"><strong>Error</strong></a> – If an error occurs.</p>
-</dd>
-</dl>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Enabling additional recording features will generally increase the recording
-file size and degrade performance.</p>
-</div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>If the scene is already recording, the previous recording is stopped before
-starting the new one.</p>
-</div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Islands do not sleep while the scene is recording, so recording can change
-the simulation results.</p>
-</div>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Requires a build with HDF5 support.</p>
-</div>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>The recording system may undergo a substantial refactor to expand its
-capabilities. Its API and recorded file format may change in future
-releases.</p>
-</div>
-<div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><a class="reference internal" href="#superdex.physics.Scene.stop_recording" title="superdex.physics.Scene.stop_recording"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stop_recording()</span></code></a>,
-<a class="reference internal" href="#superdex.physics.Scene.is_recording" title="superdex.physics.Scene.is_recording"><code class="xref py py-meth docutils literal notranslate"><span class="pre">is_recording()</span></code></a>,
-<a class="reference internal" href="#superdex.physics.RecordingParams" title="superdex.physics.RecordingParams"><code class="xref py py-class docutils literal notranslate"><span class="pre">RecordingParams</span></code></a></p>
-</div>
-</dd></dl>
-
-<dl class="py attribute">
 <dt class="sig sig-object py" id="superdex.physics.Scene.step">
 <span class="sig-name descname"><span class="pre">step</span></span><a class="headerlink" href="#superdex.physics.Scene.step" title="Permalink to this definition"></a></dt>
 <dd><p>Advance the simulation of the <a class="reference internal" href="#superdex.physics.Scene" title="superdex.physics.Scene"><code class="xref py py-class docutils literal notranslate"><span class="pre">Scene</span></code></a> one step.</p>
@@ -2230,17 +2159,6 @@ logged.</p>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.IntegrationMethod" title="superdex.physics.IntegrationMethod"><code class="xref py py-class docutils literal notranslate"><span class="pre">IntegrationMethod</span></code></a></p>
-</div>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="superdex.physics.Scene.stop_recording">
-<span class="sig-name descname"><span class="pre">stop_recording</span></span><a class="headerlink" href="#superdex.physics.Scene.stop_recording" title="Permalink to this definition"></a></dt>
-<dd><p>Stop recording the scene and close the recording file.</p>
-<div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><a class="reference internal" href="#superdex.physics.Scene.start_recording" title="superdex.physics.Scene.start_recording"><code class="xref py py-meth docutils literal notranslate"><span class="pre">start_recording()</span></code></a>,
-<a class="reference internal" href="#superdex.physics.Scene.is_recording" title="superdex.physics.Scene.is_recording"><code class="xref py py-meth docutils literal notranslate"><span class="pre">is_recording()</span></code></a></p>
 </div>
 </dd></dl>
 
@@ -5148,7 +5066,8 @@ grow the per-step cost. See
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>dof_indices</strong> (<em>ArrayLikeInt</em>) – DoF indices to constrain.</p></li>
 <li><p><strong>dof_values_world</strong> (<em>ArrayLikeReal</em>) – Target values in the actor-specific
-representations described below. Length must equal <code class="docutils literal notranslate"><span class="pre">dof_indices</span></code>.</p></li>
+representations described below. Length must equal <code class="docutils literal notranslate"><span class="pre">dof_indices</span></code>.
+Values must be finite.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
@@ -5257,7 +5176,7 @@ cost without bound. To update a boundary condition, call
 <li><p><strong>dof_values_world</strong> (<em>ArrayLikeReal</em>) – Target values in the actor-specific
 representations documented by
 <a class="reference internal" href="#superdex.physics.Actor.add_boundary_condition_dofs_world" title="superdex.physics.Actor.add_boundary_condition_dofs_world"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_boundary_condition_dofs_world()</span></code></a>.
-Length must equal <code class="docutils literal notranslate"><span class="pre">dof_indices</span></code>.</p></li>
+Length must equal <code class="docutils literal notranslate"><span class="pre">dof_indices</span></code>. Values must be finite.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
@@ -5311,7 +5230,8 @@ grow the per-step cost. Add each permanent boundary condition only once.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>node_indices</strong> (<em>ArrayLikeInt</em>) – Node indices to constrain.</p></li>
 <li><p><strong>node_positions_world</strong> (<em>ArrayLikeReal</em>) – Target positions [m] in world frame.
-Length must be 3 times the size of <code class="docutils literal notranslate"><span class="pre">node_indices</span></code>.</p></li>
+Length must be 3 times the size of <code class="docutils literal notranslate"><span class="pre">node_indices</span></code>. Values must be
+finite.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
@@ -5370,7 +5290,8 @@ grows the per-step cost without bound. See
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>node_indices</strong> (<em>ArrayLikeInt</em>) – Node indices to constrain.</p></li>
 <li><p><strong>node_positions_world</strong> (<em>ArrayLikeReal</em>) – Target positions [m] in world frame.
-Length must be 3 times the size of <code class="docutils literal notranslate"><span class="pre">node_indices</span></code>.</p></li>
+Length must be 3 times the size of <code class="docutils literal notranslate"><span class="pre">node_indices</span></code>. Values must be
+finite.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
@@ -6739,7 +6660,7 @@ transform. Requires recentering to be enabled for accurate results.</p>
 </dl>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Not supported for static actors.</p>
+<p>Not supported for standalone static actors.</p>
 </div>
 </dd></dl>
 
@@ -8243,6 +8164,10 @@ change that, use <a class="reference internal" href="#superdex.physics.Actor.set
 <p class="admonition-title">Note</p>
 <p>Only supported for rigid actors (except static rigid actors), articulated
 links and soft actors.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Has no effect on links of articulated actors without a shape.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -10316,12 +10241,19 @@ warning, not rejected.</p>
 shape doesn’t already have one.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Ignored if <a class="reference internal" href="#superdex.physics.RigidActorParams.collider_type" title="superdex.physics.RigidActorParams.collider_type"><code class="xref py py-attr docutils literal notranslate"><span class="pre">collider_type</span></code></a> is not
-<a class="reference internal" href="#superdex.physics.ColliderType" title="superdex.physics.ColliderType"><code class="xref py py-class docutils literal notranslate"><span class="pre">SDF</span></code></a>.</p>
+<p>Ignored unless <a class="reference internal" href="#superdex.physics.RigidActorParams.shape" title="superdex.physics.RigidActorParams.shape"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shape</span></code></a> is a
+tetrahedral or triangular mesh shape and
+<a class="reference internal" href="#superdex.physics.RigidActorParams.collider_type" title="superdex.physics.RigidActorParams.collider_type"><code class="xref py py-attr docutils literal notranslate"><span class="pre">collider_type</span></code></a> is <a class="reference internal" href="#superdex.physics.ColliderType" title="superdex.physics.ColliderType"><code class="xref py py-class docutils literal notranslate"><span class="pre">SDF</span></code></a> or <a class="reference internal" href="#superdex.physics.ColliderType" title="superdex.physics.ColliderType"><code class="xref py py-class docutils literal notranslate"><span class="pre">AUTO</span></code></a>.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Ignored if the shape already has a grid-based SDF.</p>
+<p>Ignored if the shape already has a grid-based SDF, or one is already being
+computed.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Actor creation fails if these parameters are used but cannot produce an SDF
+for the shape.</p>
 </div>
 </dd></dl>
 
@@ -14613,12 +14545,6 @@ dresidual.</p>
 </dd></dl>
 
 <dl class="py property">
-<dt class="sig sig-object py" id="superdex.physics.NonLinearSolverParams.gradient_descent_fallback">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">gradient_descent_fallback</span></span><a class="headerlink" href="#superdex.physics.NonLinearSolverParams.gradient_descent_fallback" title="Permalink to this definition"></a></dt>
-<dd><p>Fall back to gradient descent direction if the solver search direction fails.</p>
-</dd></dl>
-
-<dl class="py property">
 <dt class="sig sig-object py" id="superdex.physics.NonLinearSolverParams.line_search_alpha">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">line_search_alpha</span></span><a class="headerlink" href="#superdex.physics.NonLinearSolverParams.line_search_alpha" title="Permalink to this definition"></a></dt>
 <dd><p>Step length reduction factor for line search.</p>
@@ -15236,87 +15162,6 @@ whether a specific query type is supported for a given actor/constraint.</p>
 </dd></dl>
 
 </section>
-<section id="recording-options">
-<h2>Recording Options<a class="headerlink" href="#recording-options" title="Permalink to this heading"></a></h2>
-<p>Configure which scene data Scene.start_recording writes.</p>
-<dl class="py class">
-<dt class="sig sig-object py" id="superdex.physics.RecordingParams">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">RecordingParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.RecordingParams" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Parameters controlling what data gets included in a scene recording.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>The recording system may undergo a substantial refactor to expand its
-capabilities. Its API and recorded file format may change in future
-releases.</p>
-</div>
-<div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><a class="reference internal" href="#superdex.physics.Scene.start_recording" title="superdex.physics.Scene.start_recording"><code class="xref py py-meth docutils literal notranslate"><span class="pre">start_recording()</span></code></a>,
-<a class="reference internal" href="#superdex.physics.Scene.stop_recording" title="superdex.physics.Scene.stop_recording"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stop_recording()</span></code></a></p>
-</div>
-<dl class="py attribute">
-<dt class="sig sig-object py" id="superdex.physics.RecordingParams.all">
-<span class="sig-name descname"><span class="pre">all</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;nanobind.nb_func</span> <span class="pre">object&gt;</span></em><a class="headerlink" href="#superdex.physics.RecordingParams.all" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="superdex.physics.RecordingParams.record_actor_local_to_global_map">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">record_actor_local_to_global_map</span></span><a class="headerlink" href="#superdex.physics.RecordingParams.record_actor_local_to_global_map" title="Permalink to this definition"></a></dt>
-<dd><p>Include the local-to-global map (if any) when recording actor creation events.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="superdex.physics.RecordingParams.record_actor_meshes">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">record_actor_meshes</span></span><a class="headerlink" href="#superdex.physics.RecordingParams.record_actor_meshes" title="Permalink to this definition"></a></dt>
-<dd><p>Include the meshes (if any) when recording actor creation events.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="superdex.physics.RecordingParams.record_contact_points">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">record_contact_points</span></span><a class="headerlink" href="#superdex.physics.RecordingParams.record_contact_points" title="Permalink to this definition"></a></dt>
-<dd><p>Record results from <a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">CONTACT_POINTS</span></code></a> for
-each dynamic actor every step.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="superdex.physics.RecordingParams.record_dynamic_actor_state">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">record_dynamic_actor_state</span></span><a class="headerlink" href="#superdex.physics.RecordingParams.record_dynamic_actor_state" title="Permalink to this definition"></a></dt>
-<dd><p>Record the state of dynamic actors every step.</p>
-<p>This includes position, rotation, and velocity. For soft actors, it includes the
-node displacements and velocities.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="superdex.physics.RecordingParams.record_node_contact_forces">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">record_node_contact_forces</span></span><a class="headerlink" href="#superdex.physics.RecordingParams.record_node_contact_forces" title="Permalink to this definition"></a></dt>
-<dd><p>Record results for <a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">NODE_CONTACT_FORCES</span></code></a> for
-each soft actor every step.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="superdex.physics.RecordingParams.record_sdf_distances">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">record_sdf_distances</span></span><a class="headerlink" href="#superdex.physics.RecordingParams.record_sdf_distances" title="Permalink to this definition"></a></dt>
-<dd><p>Record SDF distances for <a class="reference internal" href="#superdex.physics.QueryType" title="superdex.physics.QueryType"><code class="xref py py-class docutils literal notranslate"><span class="pre">SDF_DISTANCES</span></code></a> for
-each dynamic actor every step.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="superdex.physics.RecordingParams.record_static_actor_state">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">record_static_actor_state</span></span><a class="headerlink" href="#superdex.physics.RecordingParams.record_static_actor_state" title="Permalink to this definition"></a></dt>
-<dd><p>Record the state of static actors every step. This includes position and
-rotation.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="superdex.physics.RecordingParams.record_target_state">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">record_target_state</span></span><a class="headerlink" href="#superdex.physics.RecordingParams.record_target_state" title="Permalink to this definition"></a></dt>
-<dd><p>Record articulated pose controller targets and tracking parameters every step.</p>
-</dd></dl>
-
-</dd></dl>
-
-</section>
 <section id="debugging-diagnostics">
 <h2>Debugging &amp; Diagnostics<a class="headerlink" href="#debugging-diagnostics" title="Permalink to this heading"></a></h2>
 <p>Simulation debugging and diagnostics.</p>
@@ -15807,6 +15652,16 @@ call to <a class="reference internal" href="#superdex.physics.Scene.step" title=
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">recording_step_duration_sec</span></span><a class="headerlink" href="#superdex.physics.PerformanceStats.recording_step_duration_sec" title="Permalink to this definition"></a></dt>
 <dd><p>Wall-clock time [s] spent on recording in the last call to
 <a class="reference internal" href="#superdex.physics.Scene.step" title="superdex.physics.Scene.step"><code class="xref py py-meth docutils literal notranslate"><span class="pre">step()</span></code></a>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Recording is an experimental feature. It may be changed or removed without
+notice.</p>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><code class="xref py py-func docutils literal notranslate"><span class="pre">start_recording()</span></code>,
+<code class="xref py py-class docutils literal notranslate"><span class="pre">RecordingParams</span></code></p>
+</div>
 </dd></dl>
 
 <dl class="py property">

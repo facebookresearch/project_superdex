@@ -103,6 +103,7 @@ var hierarchy =
     [ "superdex::ErrorAssert", "classsuperdex_1_1ErrorAssert.html", null ],
     [ "superdex::ErrorLog", "classsuperdex_1_1ErrorLog.html", null ],
     [ "superdex::ExperimentalEvalParams", "structsuperdex_1_1ExperimentalEvalParams.html", null ],
+    [ "superdex::prefab::ExportParams", "structsuperdex_1_1prefab_1_1ExportParams.html", null ],
     [ "std::false_type", null, [
       [ "superdex::IsNdArray< NdArray< T, D0, DIMS... > >", "structsuperdex_1_1IsNdArray_3_01NdArray_3_01T_00_01D0_00_01DIMS_8_8_8_01_4_01_4.html", null ],
       [ "superdex::IsNdArray< T >", "structsuperdex_1_1IsNdArray.html", null ]
@@ -149,7 +150,6 @@ var hierarchy =
     [ "superdex::prefab::PrefabReference", "structsuperdex_1_1prefab_1_1PrefabReference.html", null ],
     [ "superdex::Quaternion", "classsuperdex_1_1Quaternion.html", null ],
     [ "superdex::RecenteringParams", "structsuperdex_1_1RecenteringParams.html", null ],
-    [ "superdex::RecordingParams", "structsuperdex_1_1RecordingParams.html", null ],
     [ "superdex::RigidActorParams", "structsuperdex_1_1RigidActorParams.html", [
       [ "superdex::prefab::RigidActorPrefab", "structsuperdex_1_1prefab_1_1RigidActorPrefab.html", null ]
     ] ],

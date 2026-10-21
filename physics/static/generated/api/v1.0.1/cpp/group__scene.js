@@ -90,7 +90,6 @@ var group__scene =
       [ "HasContactPairParamsOverride", "classsuperdex_1_1Scene.html#acf02752b529b50bf0f509e5357099424", null ],
       [ "IsEqualState", "classsuperdex_1_1Scene.html#a588e936f1fc21f8d19966a59451e103c", null ],
       [ "IsLayerContactEnabled", "classsuperdex_1_1Scene.html#ac102328219ba3b9876ec40ca27f4452a", null ],
-      [ "IsRecording", "classsuperdex_1_1Scene.html#a554978d128f01823434d61e54fed1394", null ],
       [ "RegisterPostStepCallback", "classsuperdex_1_1Scene.html#a30444a5ca79f67a2344a5609d37e5176", null ],
       [ "RegisterPreStepCallback", "classsuperdex_1_1Scene.html#a41c34347811c93811dfe45415f3dbd4a", null ],
       [ "ReleaseAllStates", "classsuperdex_1_1Scene.html#a282246e53d85a9092331bc8427eaf67f", null ],
@@ -101,9 +100,7 @@ var group__scene =
       [ "SetForceSingleIsland", "classsuperdex_1_1Scene.html#afd28a390864f6f711cc4ae192c77daff", null ],
       [ "SetGravity", "classsuperdex_1_1Scene.html#a8f9f303817187294235f7fefa3db3158", null ],
       [ "SetSolverParams", "classsuperdex_1_1Scene.html#a77f5be34e91e952ec7df3820d0a364f6", null ],
-      [ "StartRecording", "classsuperdex_1_1Scene.html#abf0923a841178a69b090dc1d9a3990c5", null ],
       [ "Step", "classsuperdex_1_1Scene.html#ab2ebf00d9b282dd85bc1ed59747471c4", null ],
-      [ "StopRecording", "classsuperdex_1_1Scene.html#afa60e0481d0de5e6133196cacad32504", null ],
       [ "UpdateDebugger", "classsuperdex_1_1Scene.html#a900e7417d699fe9569e3383ac614b681", null ],
       [ "kDefaultCallbackPriority", "classsuperdex_1_1Scene.html#ac1400d748f580e1e97dbb9aa37b78b8f", null ]
     ] ],

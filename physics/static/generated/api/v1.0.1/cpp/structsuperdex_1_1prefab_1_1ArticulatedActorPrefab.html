@@ -180,6 +180,8 @@ Public Attributes</h2></td></tr>
 <tr class="memdesc:a52d3c50d273e893486e1399ab104c8df"><td class="mdescLeft">&#160;</td><td class="mdescRight">Optional serialized comment.  <br /></td></tr>
 <tr class="memitem:a5fee46e1efab898792e28e2e1c48e5f4" id="r_a5fee46e1efab898792e28e2e1c48e5f4"><td class="memItemLeft"><a class="el" href="classsuperdex_1_1DynamicArray.html">DynamicArray</a>&lt; <a class="el" href="structsuperdex_1_1ArticulatedCycleJointParams.html">ArticulatedCycleJointParams</a> &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a5fee46e1efab898792e28e2e1c48e5f4">cycles</a></td></tr>
 <tr class="memdesc:a5fee46e1efab898792e28e2e1c48e5f4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cycle joints creating closed kinematic loops.  <br /></td></tr>
+<tr class="memitem:a84bc206000f3f989b8c8c676e22ca6a8" id="r_a84bc206000f3f989b8c8c676e22ca6a8"><td class="memItemLeft">std::optional&lt; <a class="el" href="classsuperdex_1_1DynamicArray.html">DynamicArray</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> &gt; &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a84bc206000f3f989b8c8c676e22ca6a8">jointPose</a></td></tr>
+<tr class="memdesc:a84bc206000f3f989b8c8c676e22ca6a8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Optional initial joint pose, one value per DoF in joint order.  <br /></td></tr>
 <tr class="memitem:a5e36c297a26c403076823280294885b5" id="r_a5e36c297a26c403076823280294885b5"><td class="memItemLeft"><a class="el" href="classsuperdex_1_1DynamicArray.html">DynamicArray</a>&lt; <a class="el" href="structsuperdex_1_1prefab_1_1ArticulatedJointPrefab.html">ArticulatedJointPrefab</a> &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a5e36c297a26c403076823280294885b5">joints</a></td></tr>
 <tr class="memdesc:a5e36c297a26c403076823280294885b5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Joint parameters (one per joint).  <br /></td></tr>
 <tr class="memitem:a98bf6daabd32db90e3d63a5b2ca969f1" id="r_a98bf6daabd32db90e3d63a5b2ca969f1"><td class="memItemLeft">std::optional&lt; <a class="el" href="classsuperdex_1_1DynamicArray.html">DynamicArray</a>&lt; <a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a> &gt; &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a98bf6daabd32db90e3d63a5b2ca969f1">jointVelocities</a></td></tr>
@@ -200,7 +202,7 @@ Public Attributes</h2></td></tr>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Prefab parameters for an articulated actor. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00146">146</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00171">171</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 </div><a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
 <a id="a202426b384eaf3486824e82a4a4c85b8" name="a202426b384eaf3486824e82a4a4c85b8"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a202426b384eaf3486824e82a4a4c85b8">&#9670;&#160;</a></span>operator==()</h2>
@@ -242,7 +244,7 @@ Public Attributes</h2></td></tr>
 
 <p>Optional serialized comment. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00147">147</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00172">172</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -261,7 +263,27 @@ Public Attributes</h2></td></tr>
 <p>Cycle joints creating closed kinematic loops. </p>
 <p>Empty if no cycles exist. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00152">152</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00177">177</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+
+</div>
+</div>
+<a id="a84bc206000f3f989b8c8c676e22ca6a8" name="a84bc206000f3f989b8c8c676e22ca6a8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a84bc206000f3f989b8c8c676e22ca6a8">&#9670;&#160;</a></span>jointPose</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt;<a class="el" href="classsuperdex_1_1DynamicArray.html">DynamicArray</a>&lt;<a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a>&gt; &gt; superdex::prefab::ArticulatedActorPrefab::jointPose</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Optional initial joint pose, one value per DoF in joint order. </p>
+<p>Units depend on joint type: [rad] for revolute, [m] for prismatic, and a rotation vector [rad] for spherical joints and the rotational part of free joints. The translational part of free joints is in [m]. Translational DoFs scale with the articulated effective scale (<a class="el" href="#a0f7636215225c5abed699e145399ff28" title="superdex::prefab::ArticulatedActorPrefab::scale">scale</a> times the effective prefab scale). Rotational DoFs are not scaled. Applied right after the actor is created, see <a class="el" href="classsuperdex_1_1Actor.html#a5d0346d7bcd196b6026202102ac3a6f1" title="superdex::Actor::SetArticulatedPoseFromJoints">Actor::SetArticulatedPoseFromJoints</a>.</p>
+<dl class="section note"><dt>Note</dt><dd>Ignored if unset or empty. Otherwise, must contain <a class="el" href="classsuperdex_1_1Actor.html#ac9329a0295b6df27653b53e794d866ff" title="superdex::Actor::GetNumDofs">Actor::GetNumDofs</a> finite values. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00182">182</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -279,7 +301,7 @@ Public Attributes</h2></td></tr>
 
 <p>Joint parameters (one per joint). </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00153">153</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00178">178</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -298,7 +320,7 @@ Public Attributes</h2></td></tr>
 <p>Optional initial velocity per DoF. </p>
 <dl class="section note"><dt>Note</dt><dd>Units depend on joint type: [rad/s] for revolute and spherical, [m/s] for prismatic. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00156">156</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00181">181</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -316,7 +338,7 @@ Public Attributes</h2></td></tr>
 
 <p>Link parameters (one per link). </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00154">154</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00179">179</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -338,7 +360,7 @@ Public Attributes</h2></td></tr>
 <dd>
 A name shared by more than one actor cannot be used by name-based prefab references. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00148">148</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00173">173</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -358,7 +380,7 @@ A name shared by more than one actor cannot be used by name-based prefab referen
 <p>Composes with <a class="el" href="structsuperdex_1_1prefab_1_1PrefabParams.html#a425bbcd14a8bbc810ad6ce92917de39e" title="superdex::prefab::PrefabParams::rotation">PrefabParams::rotation</a> to produce the final world-from-root rotation.</p>
 <dl class="section note"><dt>Note</dt><dd>Must be finite and non-zero. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00150">150</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00175">175</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -379,7 +401,7 @@ A name shared by more than one actor cannot be used by name-based prefab referen
 <dd>
 This scale is not applied to <a class="el" href="#a65b91eb351539676e0e7c8f44651456b" title="superdex::prefab::ArticulatedActorPrefab::rotation">rotation</a> and <a class="el" href="#a5e0c6afa9793220d14bf320fe850f0a9" title="superdex::prefab::ArticulatedActorPrefab::translation">translation</a>. It scales each link's baked shape by multiplying both <a class="el" href="structsuperdex_1_1prefab_1_1ArticulatedLinkPrefab.html#a486c58fdffcb2234df8437c22cdd0bdf" title="superdex::prefab::ArticulatedLinkPrefab::shapeScale">ArticulatedLinkPrefab::shapeScale</a> and <a class="el" href="structsuperdex_1_1prefab_1_1ArticulatedLinkPrefab.html#a63e13580b19161e1e6506ba7d93c1d6c" title="superdex::prefab::ArticulatedLinkPrefab::shapeTranslation">ArticulatedLinkPrefab::shapeTranslation</a>. It also uniformly scales the skin shape. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00149">149</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00174">174</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -397,7 +419,7 @@ This scale is not applied to <a class="el" href="#a65b91eb351539676e0e7c8f446514
 
 <p>Optional skinned mesh parameters. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00155">155</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00180">180</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>
@@ -417,7 +439,7 @@ This scale is not applied to <a class="el" href="#a65b91eb351539676e0e7c8f446514
 <p>Composes with <a class="el" href="structsuperdex_1_1prefab_1_1PrefabParams.html#a71d6fec67a434de495beeb4c69a3cc59" title="superdex::prefab::PrefabParams::scale">PrefabParams::scale</a>, <a class="el" href="structsuperdex_1_1prefab_1_1PrefabParams.html#a425bbcd14a8bbc810ad6ce92917de39e" title="superdex::prefab::PrefabParams::rotation">PrefabParams::rotation</a>, and <a class="el" href="structsuperdex_1_1prefab_1_1PrefabParams.html#a349c16572bc7f7f1c5d3c1bb7821d4da" title="superdex::prefab::PrefabParams::translation">PrefabParams::translation</a> to produce the final world-from-root translation.</p>
 <dl class="section note"><dt>Note</dt><dd>Must be finite. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00151">151</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__prefab_8h_source.html#l00176">176</a> of file <a class="el" href="mochi__prefab_8h_source.html">mochi_prefab.h</a>.</p>
 
 </div>
 </div>

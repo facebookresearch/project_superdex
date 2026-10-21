@@ -180,6 +180,12 @@ Inheritance diagram for superdex::DeformableNodeToRigidConstraintParams:</div>
   </map>
 </div></div>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
+Public Member Functions</h2></td></tr>
+<tr class="memitem:a74ee5bec8400dbf3548090b26a230be4" id="r_a74ee5bec8400dbf3548090b26a230be4"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a74ee5bec8400dbf3548090b26a230be4">operator==</a> (<a class="el" href="structsuperdex_1_1DeformableNodeToRigidConstraintParams.html">DeformableNodeToRigidConstraintParams</a> const &amp;) const =default</td></tr>
+<tr class="inherit_header pub_methods_structsuperdex_1_1ConstraintParams"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_structsuperdex_1_1ConstraintParams')"><span class="dynarrow"><span class="arrowhead closed"></span></span>Public Member Functions inherited from <a class="el" href="structsuperdex_1_1ConstraintParams.html">superdex::ConstraintParams</a></td></tr>
+<tr class="memitem:a672d5f048486cf4d2c1bfa4be67c6150 inherit pub_methods_structsuperdex_1_1ConstraintParams" id="r_a672d5f048486cf4d2c1bfa4be67c6150"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="structsuperdex_1_1ConstraintParams.html#a672d5f048486cf4d2c1bfa4be67c6150">operator==</a> (<a class="el" href="structsuperdex_1_1ConstraintParams.html">ConstraintParams</a> const &amp;) const =default</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-attribs" class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:ae86fe36ba19e7574cfb0e9740b6c92a0" id="r_ae86fe36ba19e7574cfb0e9740b6c92a0"><td class="memItemLeft"><a class="el" href="structsuperdex_1_1ActorHandle.html">ActorHandle</a>&#160;</td><td class="memItemRight"><a class="el" href="#ae86fe36ba19e7574cfb0e9740b6c92a0">deformableActor</a> {}</td></tr>
@@ -201,18 +207,39 @@ Public Attributes</h2></td></tr>
 <tr class="memdesc:a311ee4d0708639058dff62cc16ec585b inherit pub_attribs_structsuperdex_1_1ConstraintParams"><td class="mdescLeft">&#160;</td><td class="mdescRight">Saturation distance [m] or angle [rad].  <br /></td></tr>
 <tr class="memitem:a54ab2a5da72f58d59f0e880d135648f3 inherit pub_attribs_structsuperdex_1_1ConstraintParams" id="r_a54ab2a5da72f58d59f0e880d135648f3"><td class="memItemLeft"><a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a>&#160;</td><td class="memItemRight"><a class="el" href="structsuperdex_1_1ConstraintParams.html#a54ab2a5da72f58d59f0e880d135648f3">stiffness</a> = 1e6_r</td></tr>
 <tr class="memdesc:a54ab2a5da72f58d59f0e880d135648f3 inherit pub_attribs_structsuperdex_1_1ConstraintParams"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="classsuperdex_1_1Constraint.html" title="Represents a constraint that restricts the degrees of freedom of one or more actors.">Constraint</a> stiffness coefficient.  <br /></td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 id="header-inherited" class="groupheader"><a id="inherited" name="inherited"></a>
-Additional Inherited Members</h2></td></tr>
-<tr class="inherit_header pub_methods_structsuperdex_1_1ConstraintParams"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_structsuperdex_1_1ConstraintParams')"><span class="dynarrow"><span class="arrowhead closed"></span></span>Public Member Functions inherited from <a class="el" href="structsuperdex_1_1ConstraintParams.html">superdex::ConstraintParams</a></td></tr>
-<tr class="memitem:a672d5f048486cf4d2c1bfa4be67c6150 inherit pub_methods_structsuperdex_1_1ConstraintParams" id="r_a672d5f048486cf4d2c1bfa4be67c6150"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="structsuperdex_1_1ConstraintParams.html#a672d5f048486cf4d2c1bfa4be67c6150">operator==</a> (<a class="el" href="structsuperdex_1_1ConstraintParams.html">ConstraintParams</a> const &amp;) const =default</td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Parameters for creating a constraint coupling a deformable node to a rigid actor. </p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classsuperdex_1_1Scene.html#ab5ddf38804f7cd9bfb2fbac896e0edae" title="superdex::Scene::CreateDeformableNodeToRigidConstraint">Scene::CreateDeformableNodeToRigidConstraint</a>, <a class="el" href="namespacesuperdex.html#ab92ef8aafce41557fa7fe97e7aad73a9af85eb3a5bbe4902f470e87324ffd5a22" title="superdex::ConstraintType::DeformableNodeToRigid">ConstraintType::DeformableNodeToRigid</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00348">348</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
-</div><a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00364">364</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+</div><a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
+<a id="a74ee5bec8400dbf3548090b26a230be4" name="a74ee5bec8400dbf3548090b26a230be4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a74ee5bec8400dbf3548090b26a230be4">&#9670;&#160;</a></span>operator==()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool superdex::DeformableNodeToRigidConstraintParams::operator== </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structsuperdex_1_1DeformableNodeToRigidConstraintParams.html">DeformableNodeToRigidConstraintParams</a> const &amp;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel default">default</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
 <a id="ae86fe36ba19e7574cfb0e9740b6c92a0" name="ae86fe36ba19e7574cfb0e9740b6c92a0"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ae86fe36ba19e7574cfb0e9740b6c92a0">&#9670;&#160;</a></span>deformableActor</h2>
 
@@ -227,7 +254,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p><a class="el" href="classsuperdex_1_1Actor.html" title="Represents a simulated body (actor) in a scene.">Actor</a> handle identifying the deformable actor. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00355">355</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00371">371</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -246,7 +273,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Node index in the deformable actor's reference simulation mesh, as returned by <a class="el" href="classsuperdex_1_1Actor.html#a88745d7a8c15875010458a15dbd339c3" title="superdex::Actor::GetMesh">Actor::GetMesh</a>. </p>
 <p>Ignored if <a class="el" href="#ac65b893d8dfc338cb12398c7f213cd7d" title="superdex::DeformableNodeToRigidConstraintParams::findClosest">findClosest</a> is true; otherwise it must identify a node in that mesh. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00351">351</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00367">367</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -267,7 +294,7 @@ Additional Inherited Members</h2></td></tr>
 <dd>
 When true, the deformable actor must be a soft actor (shell and rod actors are not supported). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00357">357</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00373">373</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -286,7 +313,7 @@ When true, the deformable actor must be a soft actor (shell and rod actors are n
 <p>When true, the coupling position on the rigid actor is auto-computed to match the deformable node's initial position (in the rigid actor's frame), so the constraint starts at zero deviation, and <a class="el" href="#aeb9d3b456ea0ff265030b40a962ba773" title="superdex::DeformableNodeToRigidConstraintParams::rigidLocalPos">rigidLocalPos</a> is ignored. </p>
 <dl class="section note"><dt>Note</dt><dd>When <a class="el" href="#ac65b893d8dfc338cb12398c7f213cd7d" title="superdex::DeformableNodeToRigidConstraintParams::findClosest">findClosest</a> is also true, <a class="el" href="#aeb9d3b456ea0ff265030b40a962ba773" title="superdex::DeformableNodeToRigidConstraintParams::rigidLocalPos">rigidLocalPos</a> is still used as the search point that selects which deformable node is picked. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00359">359</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00375">375</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -304,7 +331,7 @@ When true, the deformable actor must be a soft actor (shell and rod actors are n
 
 <p><a class="el" href="classsuperdex_1_1Actor.html" title="Represents a simulated body (actor) in a scene.">Actor</a> handle identifying the rigid actor. </p>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00353">353</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00369">369</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>
@@ -325,7 +352,7 @@ When true, the deformable actor must be a soft actor (shell and rod actors are n
 <dd>
 When <a class="el" href="#ac65b893d8dfc338cb12398c7f213cd7d" title="superdex::DeformableNodeToRigidConstraintParams::findClosest">findClosest</a> is also true, this field is still used as the search point that selects which deformable node is picked. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00349">349</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00365">365</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 
 </div>
 </div>

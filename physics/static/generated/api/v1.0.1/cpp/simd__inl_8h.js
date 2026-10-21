@@ -30,7 +30,7 @@ var simd__inl_8h =
     [ "superdex::HProd", "namespacesuperdex.html#ab419ed4dbd16c00948a4d08662dc9d13", null ],
     [ "superdex::HSum", "namespacesuperdex.html#a26d8a52d12170ee0cf74bb16e037f07a", null ],
     [ "superdex::HSumEach", "namespacesuperdex.html#a0fc853770ece3d5db2e2d8f62c213f67", null ],
-    [ "superdex::HSumEach", "namespacesuperdex.html#a5853286f88923ccbbd6f0dbc0a027731", null ],
+    [ "superdex::HSumEach", "namespacesuperdex.html#a5e21f05cd186a05f01598dd259e86f3f", null ],
     [ "superdex::IsTrue", "namespacesuperdex.html#a5c2747167b28fbda28eb8bd9ca41d3f5", null ],
     [ "superdex::Ln", "namespacesuperdex.html#a82981f39dd5a16068eb0da75c9c01aca", null ],
     [ "superdex::Load", "namespacesuperdex.html#aa8daa8ba1a32d514f1f2c814c15f15a3", null ],

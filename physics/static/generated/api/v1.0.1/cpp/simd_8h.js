@@ -50,7 +50,7 @@ var simd_8h =
     [ "superdex::HProd", "namespacesuperdex.html#ab419ed4dbd16c00948a4d08662dc9d13", null ],
     [ "superdex::HSum", "namespacesuperdex.html#a26d8a52d12170ee0cf74bb16e037f07a", null ],
     [ "superdex::HSumEach", "namespacesuperdex.html#a0fc853770ece3d5db2e2d8f62c213f67", null ],
-    [ "superdex::HSumEach", "namespacesuperdex.html#a5853286f88923ccbbd6f0dbc0a027731", null ],
+    [ "superdex::HSumEach", "namespacesuperdex.html#a5e21f05cd186a05f01598dd259e86f3f", null ],
     [ "superdex::IsFinite", "namespacesuperdex.html#a044bd27ae252b99abbdf0d860953cee1", null ],
     [ "superdex::IsTrue", "namespacesuperdex.html#a5c2747167b28fbda28eb8bd9ca41d3f5", null ],
     [ "superdex::Ln", "namespacesuperdex.html#a82981f39dd5a16068eb0da75c9c01aca", null ],
@@ -112,5 +112,7 @@ var simd_8h =
     [ "superdex::VNormSqr", "namespacesuperdex.html#a5ba549ed7324c7e997554e5475ae61a1", null ],
     [ "superdex::VNotEqual", "namespacesuperdex.html#a5dc3e8a92787d2d8f9c8d8e444ddd851", null ],
     [ "superdex::kDefaultNearEqualEpsilon< Simd< T, N > >", "namespacesuperdex.html#ac36dee9a451ce93494063f7e3f617228", null ],
+    [ "superdex::kHasHSumEach", "namespacesuperdex.html#a583991168f9811b406205309aa256f37", null ],
+    [ "superdex::kHasHSumEach< Simd< T, N > >", "namespacesuperdex.html#ace08bf669296245fad5d61f64593599a", null ],
     [ "superdex::kSimdDefaultSize", "namespacesuperdex.html#a0b1f3b4b6a33ba1d9dfb1dbb5e0f9acd", null ]
 ];

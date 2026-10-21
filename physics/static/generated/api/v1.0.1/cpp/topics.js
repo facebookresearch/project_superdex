@@ -10,7 +10,6 @@ var topics =
     [ "Contact &amp; Collision", "group__contact.html", "group__contact" ],
     [ "Solver", "group__solver.html", "group__solver" ],
     [ "Prefabs", "group__prefabs.html", "group__prefabs" ],
-    [ "Recording", "group__recording.html", "group__recording" ],
     [ "Debugging &amp; Diagnostics", "group__debugging.html", "group__debugging" ],
     [ "Math &amp; Spatial Types", "group__math.html", "group__math" ],
     [ "Error Handling", "group__errors.html", "group__errors" ],

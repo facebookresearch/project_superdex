@@ -111,6 +111,7 @@ var namespacesuperdex_1_1robotics =
     [ "FindLeafLinkIndices", "namespacesuperdex_1_1robotics.html#a8daed6f102653f121ad5b7627d119188", null ],
     [ "FindLinkIndexByName", "namespacesuperdex_1_1robotics.html#ad700a274837b66419feb2c62302d34cf", null ],
     [ "FindRootMarker", "namespacesuperdex_1_1robotics.html#a28fcf05b62ca970cefb37939c7567979", null ],
+    [ "GetBotSceneBaseRoot", "namespacesuperdex_1_1robotics.html#a14ea984fc00b6e31a423c5db1d47cb8b", null ],
     [ "GetBotSkinName", "namespacesuperdex_1_1robotics.html#abecf7f72bfeb11af7b4b78aa4da51ad6", null ],
     [ "GetEffortLimitsPerDof", "namespacesuperdex_1_1robotics.html#ad7eb083748bef44132a55cfe5c8d6659", null ],
     [ "GetExtractedBotArchiveTarget", "namespacesuperdex_1_1robotics.html#ad9d6504f10ffe5d5ef0f79aee08e94af", null ],

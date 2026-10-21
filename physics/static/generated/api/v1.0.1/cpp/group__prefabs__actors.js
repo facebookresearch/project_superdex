@@ -5,6 +5,7 @@ var group__prefabs__actors =
       [ "operator==", "structsuperdex_1_1prefab_1_1ArticulatedActorPrefab.html#a202426b384eaf3486824e82a4a4c85b8", null ],
       [ "comment", "structsuperdex_1_1prefab_1_1ArticulatedActorPrefab.html#a52d3c50d273e893486e1399ab104c8df", null ],
       [ "cycles", "structsuperdex_1_1prefab_1_1ArticulatedActorPrefab.html#a5fee46e1efab898792e28e2e1c48e5f4", null ],
+      [ "jointPose", "structsuperdex_1_1prefab_1_1ArticulatedActorPrefab.html#a84bc206000f3f989b8c8c676e22ca6a8", null ],
       [ "joints", "structsuperdex_1_1prefab_1_1ArticulatedActorPrefab.html#a5e36c297a26c403076823280294885b5", null ],
       [ "jointVelocities", "structsuperdex_1_1prefab_1_1ArticulatedActorPrefab.html#a98bf6daabd32db90e3d63a5b2ca969f1", null ],
       [ "links", "structsuperdex_1_1prefab_1_1ArticulatedActorPrefab.html#a30f9afe2d87162510d19894a81ca9bce", null ],
@@ -15,6 +16,7 @@ var group__prefabs__actors =
       [ "translation", "structsuperdex_1_1prefab_1_1ArticulatedActorPrefab.html#a5e0c6afa9793220d14bf320fe850f0a9", null ]
     ] ],
     [ "superdex::prefab::RigidActorPrefab", "structsuperdex_1_1prefab_1_1RigidActorPrefab.html", [
+      [ "operator==", "structsuperdex_1_1prefab_1_1RigidActorPrefab.html#a5a138a02e61d99018fc290a6b5176da3", null ],
       [ "comment", "structsuperdex_1_1prefab_1_1RigidActorPrefab.html#acea317a3a2adbb03af0d39e052d53162", null ],
       [ "renderModelFile", "structsuperdex_1_1prefab_1_1RigidActorPrefab.html#adcd1be8aa58ab6f068cb87e8289564dc", null ],
       [ "renderModelRotation", "structsuperdex_1_1prefab_1_1RigidActorPrefab.html#abc2ef98eafd9684552387d4ea1f3af84", null ],
@@ -28,10 +30,12 @@ var group__prefabs__actors =
       [ "translation", "structsuperdex_1_1prefab_1_1RigidActorPrefab.html#a1495b7c180c98a71527a3fe8ef398987", null ]
     ] ],
     [ "superdex::prefab::SoftActorPrefab", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html", [
+      [ "operator==", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html#a2f7407fc8441efc9e9de77aa7b89642b", null ],
       [ "colliderType", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html#acb5d980552e9dd62fd6844b658358cab", null ],
       [ "comment", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html#ad782f8495d1ba3112bb0a4fca1ca7576", null ],
       [ "flow", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html#a13f4d0b3936fbcd256e24d0eef51f093", null ],
       [ "flowFile", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html#aa3ab961e154bdc9155b77976ce9437b9", null ],
+      [ "nodeDisplacements", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html#a0bc2647e763a5080ba13fe724d41f42c", null ],
       [ "renderModelFile", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html#a05a5960e16b15ead0fb6719b003dceb4", null ],
       [ "renderModelRotation", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html#a669f5bf1e31bccedfe58f30a2ae42a77", null ],
       [ "renderModelScale", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html#af277aadf40b144195d750501d7c9231b", null ],

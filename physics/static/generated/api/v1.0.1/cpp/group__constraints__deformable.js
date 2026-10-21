@@ -8,6 +8,7 @@ var group__constraints__deformable =
       [ "position", "structsuperdex_1_1DeformableNodePositionConstraintParams.html#a932f0b7ead4d0233f59ca1fba56d4871", null ]
     ] ],
     [ "superdex::DeformableNodeToDeformableNodeConstraintParams", "structsuperdex_1_1DeformableNodeToDeformableNodeConstraintParams.html", [
+      [ "operator==", "structsuperdex_1_1DeformableNodeToDeformableNodeConstraintParams.html#a86dac34796687f6a418e5432b2be77e0", null ],
       [ "actorA", "structsuperdex_1_1DeformableNodeToDeformableNodeConstraintParams.html#aa413a11a53a3bc04212ab6b05c96126a", null ],
       [ "actorB", "structsuperdex_1_1DeformableNodeToDeformableNodeConstraintParams.html#a9a3bc394dec0071df66fc1753838f1d6", null ],
       [ "findClosest", "structsuperdex_1_1DeformableNodeToDeformableNodeConstraintParams.html#ae96ac9c85e5a4e5a8f1930571058a72f", null ],
@@ -15,6 +16,7 @@ var group__constraints__deformable =
       [ "nodeIndexB", "structsuperdex_1_1DeformableNodeToDeformableNodeConstraintParams.html#a8d2b4010feffe08313603231f28ae63c", null ]
     ] ],
     [ "superdex::DeformableNodeToRigidConstraintParams", "structsuperdex_1_1DeformableNodeToRigidConstraintParams.html", [
+      [ "operator==", "structsuperdex_1_1DeformableNodeToRigidConstraintParams.html#a74ee5bec8400dbf3548090b26a230be4", null ],
       [ "deformableActor", "structsuperdex_1_1DeformableNodeToRigidConstraintParams.html#ae86fe36ba19e7574cfb0e9740b6c92a0", null ],
       [ "deformableNodeIndex", "structsuperdex_1_1DeformableNodeToRigidConstraintParams.html#acb12b6499988d8877cfd24e0fe972f05", null ],
       [ "findClosest", "structsuperdex_1_1DeformableNodeToRigidConstraintParams.html#ac65b893d8dfc338cb12398c7f213cd7d", null ],
@@ -23,6 +25,7 @@ var group__constraints__deformable =
       [ "rigidLocalPos", "structsuperdex_1_1DeformableNodeToRigidConstraintParams.html#aeb9d3b456ea0ff265030b40a962ba773", null ]
     ] ],
     [ "superdex::RodElementRotationToRigidConstraintParams", "structsuperdex_1_1RodElementRotationToRigidConstraintParams.html", [
+      [ "operator==", "structsuperdex_1_1RodElementRotationToRigidConstraintParams.html#a80f6d98ea7dd757e2d174d0abfa50667", null ],
       [ "elementIndex", "structsuperdex_1_1RodElementRotationToRigidConstraintParams.html#ad154a7c7304637ce6c6a45d8d4a66237", null ],
       [ "refFrameRotVec", "structsuperdex_1_1RodElementRotationToRigidConstraintParams.html#ac853689100eb83fcb52c0087fa9cfa10", null ],
       [ "rigidActor", "structsuperdex_1_1RodElementRotationToRigidConstraintParams.html#a3cf9047f7047cbcf0ea537f32df63856", null ],

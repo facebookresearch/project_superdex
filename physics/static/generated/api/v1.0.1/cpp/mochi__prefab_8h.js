@@ -1,14 +1,16 @@
 // @generated
 var mochi__prefab_8h =
 [
+    [ "superdex::prefab::ExportParams", "structsuperdex_1_1prefab_1_1ExportParams.html", "structsuperdex_1_1prefab_1_1ExportParams" ],
     [ "superdex::prefab::AddToScene", "namespacesuperdex_1_1prefab.html#a17eac331a420660520148d46216f2104", null ],
     [ "superdex::prefab::AddToScene", "namespacesuperdex_1_1prefab.html#a4d9b7d18b6e1a0fe549bd1b37d1a2b37", null ],
     [ "superdex::prefab::AddToScene", "namespacesuperdex_1_1prefab.html#a5ee0bb9807d2167ec91cf85998d75ad8", null ],
     [ "superdex::prefab::AddToScene", "namespacesuperdex_1_1prefab.html#afb865d8e934f85bb93c94bbe11e7e9b1", null ],
     [ "superdex::prefab::EnsureFullyLoaded", "namespacesuperdex_1_1prefab.html#af4b044e11a7c6a9806817ac29e626b81", null ],
     [ "superdex::prefab::ExportActor", "namespacesuperdex_1_1prefab.html#ad743472252a0adbc7be95f73909ca89f", null ],
+    [ "superdex::prefab::ExportActor", "namespacesuperdex_1_1prefab.html#ad7b596413f7e797040f1d6faf3584164", null ],
     [ "superdex::prefab::ExportScene", "namespacesuperdex_1_1prefab.html#acad2fa0dba4f3a546e64911eeb7aa38d", null ],
-    [ "superdex::prefab::ExportSceneExcluding", "namespacesuperdex_1_1prefab.html#a9b04f2516c2d58c450274dbdbecae840", null ],
+    [ "superdex::prefab::ExportScene", "namespacesuperdex_1_1prefab.html#af2a5267dfb7adb0052a1db59dd7cc535", null ],
     [ "superdex::prefab::GetPrefabFullPath", "namespacesuperdex_1_1prefab.html#a5e34f772a11d44c56bbdc633453533bf", null ],
     [ "superdex::prefab::LoadFromFile", "namespacesuperdex_1_1prefab.html#aacd760f09c6d2e8085f2fa9d1fc8a5a9", null ],
     [ "superdex::prefab::LoadFromJsonString", "namespacesuperdex_1_1prefab.html#ac0335ab1b884df0bb1bd183f069c8415", null ],

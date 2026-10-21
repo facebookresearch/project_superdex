@@ -173,6 +173,7 @@ $(function(){initNavTree('file__utils_8h.html','',''); });
 <code>#include &lt;map&gt;</code><br />
 <code>#include &lt;optional&gt;</code><br />
 <code>#include &lt;string&gt;</code><br />
+<code>#include &lt;string_view&gt;</code><br />
 </div>
 <p><a href="file__utils_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -220,6 +221,9 @@ Functions</h2></td></tr>
 <tr class="memdesc:a50e3603ef3c5b1239a8649ae7db7e57f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find the bots root by walking up from a starting path.  <br /></td></tr>
 <tr class="memitem:a28fcf05b62ca970cefb37939c7567979" id="r_a28fcf05b62ca970cefb37939c7567979"><td class="memItemLeft">std::optional&lt; std::filesystem::path &gt;&#160;</td><td class="memItemRight"><a class="el" href="namespacesuperdex_1_1robotics.html#a28fcf05b62ca970cefb37939c7567979">superdex::robotics::FindRootMarker</a> (std::filesystem::path const &amp;dir)</td></tr>
 <tr class="memdesc:a28fcf05b62ca970cefb37939c7567979"><td class="mdescLeft">&#160;</td><td class="mdescRight">Locate the bots-root marker file within a single directory.  <br /></td></tr>
+<tr class="memitem:a14ea984fc00b6e31a423c5db1d47cb8b" id="r_a14ea984fc00b6e31a423c5db1d47cb8b"><td class="memItemLeft">std::string&#160;</td><td class="memItemRight"><a class="el" href="namespacesuperdex_1_1robotics.html#a14ea984fc00b6e31a423c5db1d47cb8b">superdex::robotics::GetBotSceneBaseRoot</a> (std::string_view sceneFilePath, std::string_view baseScenePath)</td></tr>
+<tr class="memdesc:a14ea984fc00b6e31a423c5db1d47cb8b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Root that a bot scene's base-scene prefab resolves its non-<span class="tt">.
+</span> <br /></td></tr>
 <tr class="memitem:a400e2e7c622d2b7759e3000fab5cb51b" id="r_a400e2e7c622d2b7759e3000fab5cb51b"><td class="memItemLeft">DynamicString&#160;</td><td class="memItemRight"><a class="el" href="namespacesuperdex_1_1robotics.html#a400e2e7c622d2b7759e3000fab5cb51b">superdex::robotics::HashBotFile</a> (std::string_view path, superdex::Error &amp;error)</td></tr>
 <tr class="memdesc:a400e2e7c622d2b7759e3000fab5cb51b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute a composite xxHash (XXH3, 64-bit) of a <span class="tt">.superdex_bot</span> or <span class="tt">.superdex_bot_archive</span> file's effective content and all referenced model assets.  <br /></td></tr>
 <tr class="memitem:a1e0c2089546a0540bbf66940524c6cbc" id="r_a1e0c2089546a0540bbf66940524c6cbc"><td class="memItemLeft">DynamicString&#160;</td><td class="memItemRight"><a class="el" href="namespacesuperdex_1_1robotics.html#a1e0c2089546a0540bbf66940524c6cbc">superdex::robotics::HashGenericFile</a> (std::string_view path, superdex::Error &amp;error)</td></tr>

@@ -186,8 +186,6 @@ Public Attributes</h2></td></tr>
 <tr class="memdesc:af7528f67f1277887ff81c4e37ae2aff4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Every how many non-linear iterations to assemble the dresidual matrix.  <br /></td></tr>
 <tr class="memitem:a2626d7d778664b5d9ca33f169803312c" id="r_a2626d7d778664b5d9ca33f169803312c"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a2626d7d778664b5d9ca33f169803312c">explosionControl</a> = true</td></tr>
 <tr class="memdesc:a2626d7d778664b5d9ca33f169803312c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable heuristic explosion prevention.  <br /></td></tr>
-<tr class="memitem:aca0bceb673d486c9959f521a59ae0a25" id="r_aca0bceb673d486c9959f521a59ae0a25"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#aca0bceb673d486c9959f521a59ae0a25">gradientDescentFallback</a> = false</td></tr>
-<tr class="memdesc:aca0bceb673d486c9959f521a59ae0a25"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fall back to gradient descent direction if the solver search direction fails.  <br /></td></tr>
 <tr class="memitem:adc7f3066262e53b84a595af91ad05843" id="r_adc7f3066262e53b84a595af91ad05843"><td class="memItemLeft"><a class="el" href="namespacesuperdex.html#a18f9503a3732c254dc7cb92b817d5e3c">LinearToleranceStrategy</a>&#160;</td><td class="memItemRight"><a class="el" href="#adc7f3066262e53b84a595af91ad05843">linearToleranceStrategy</a> = <a class="el" href="namespacesuperdex.html#a18f9503a3732c254dc7cb92b817d5e3ca7a1920d61156abc05a60135aefe8bc67">LinearToleranceStrategy::Default</a></td></tr>
 <tr class="memdesc:adc7f3066262e53b84a595af91ad05843"><td class="mdescLeft">&#160;</td><td class="mdescRight">Strategy for adaptive linear solver tolerance (forcing term).  <br /></td></tr>
 <tr class="memitem:aaeb49f0ff2f588ad5f104978dad84af8" id="r_aaeb49f0ff2f588ad5f104978dad84af8"><td class="memItemLeft"><a class="el" href="namespacesuperdex.html#ab1cf40739516aea925c8ebe213131a5d">real</a>&#160;</td><td class="memItemRight"><a class="el" href="#aaeb49f0ff2f588ad5f104978dad84af8">lineSearchAlpha</a> = 0.5_r</td></tr>
@@ -269,7 +267,7 @@ Public Attributes</h2></td></tr>
 <dd>
 Used only if <a class="el" href="#a2626d7d778664b5d9ca33f169803312c" title="explosionControl">explosionControl</a> is true. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00404">404</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00401">401</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -345,25 +343,7 @@ For quasi-Newton methods (e.g., BFGS, SR1), it must be &gt;1 and indicates every
 
 <p>Enable heuristic explosion prevention. </p>
 
-<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00396">396</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
-
-</div>
-</div>
-<a id="aca0bceb673d486c9959f521a59ae0a25" name="aca0bceb673d486c9959f521a59ae0a25"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aca0bceb673d486c9959f521a59ae0a25">&#9670;&#160;</a></span>gradientDescentFallback</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool superdex::NonLinearSolverParams::gradientDescentFallback = false</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Fall back to gradient descent direction if the solver search direction fails. </p>
-
-<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00391">391</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00393">393</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -381,7 +361,7 @@ For quasi-Newton methods (e.g., BFGS, SR1), it must be &gt;1 and indicates every
 
 <p>Strategy for adaptive linear solver tolerance (forcing term). </p>
 
-<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00461">461</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00458">458</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -400,7 +380,7 @@ For quasi-Newton methods (e.g., BFGS, SR1), it must be &gt;1 and indicates every
 <p>Step length reduction factor for line search. </p>
 <dl class="section note"><dt>Note</dt><dd>Must be in (0, 1). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00428">428</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00425">425</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -419,7 +399,7 @@ For quasi-Newton methods (e.g., BFGS, SR1), it must be &gt;1 and indicates every
 <p>Maximum number of line search iterations. </p>
 <dl class="section note"><dt>Note</dt><dd>Must be &gt;= 1 unless <a class="el" href="#ae2a46b8f2b0284a50e9698fa49d1c5c9" title="lineSearchType">lineSearchType</a> is <a class="el" href="namespacesuperdex.html#ab1e65537a0c9a09ecf7db46f01977326a6adf97f83acf6453d4a6a4b1070f3754" title="LineSearchType::None">LineSearchType::None</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00421">421</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00418">418</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -438,7 +418,7 @@ For quasi-Newton methods (e.g., BFGS, SR1), it must be &gt;1 and indicates every
 <p>Maximum relative increase in the objective to accept the step. </p>
 <dl class="section note"><dt>Note</dt><dd>Only applies to <a class="el" href="namespacesuperdex.html#ab1e65537a0c9a09ecf7db46f01977326a1fbb1e3943c2c6c560247ac8f9289780" title="LineSearchType::Simple">LineSearchType::Simple</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00453">453</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00450">450</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -456,7 +436,7 @@ For quasi-Newton methods (e.g., BFGS, SR1), it must be &gt;1 and indicates every
 
 <p>Line search type. </p>
 
-<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00456">456</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00453">453</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -477,7 +457,7 @@ For quasi-Newton methods (e.g., BFGS, SR1), it must be &gt;1 and indicates every
 <dd>
 Used only by <a class="el" href="namespacesuperdex.html#ab1e65537a0c9a09ecf7db46f01977326a7d0e9b05c56e4fda03b731a5da026776" title="LineSearchType::Armijo">LineSearchType::Armijo</a>, <a class="el" href="namespacesuperdex.html#ab1e65537a0c9a09ecf7db46f01977326af9f0e79c5e109b3f321dd039f864e7db" title="LineSearchType::WolfeWeak">LineSearchType::WolfeWeak</a>, <a class="el" href="namespacesuperdex.html#ab1e65537a0c9a09ecf7db46f01977326a25727e2210a26cbab660e606edf4bd1c" title="LineSearchType::WolfeStrong">LineSearchType::WolfeStrong</a>, and <a class="el" href="namespacesuperdex.html#ab1e65537a0c9a09ecf7db46f01977326a1245b1ed7a0c0a829a66222f20b2f11e" title="LineSearchType::ArmijoOrResidualNorm">LineSearchType::ArmijoOrResidualNorm</a> line search types. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00437">437</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00434">434</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -498,7 +478,7 @@ Used only by <a class="el" href="namespacesuperdex.html#ab1e65537a0c9a09ecf7db46
 <dd>
 Used only by <a class="el" href="namespacesuperdex.html#ab1e65537a0c9a09ecf7db46f01977326af9f0e79c5e109b3f321dd039f864e7db" title="LineSearchType::WolfeWeak">LineSearchType::WolfeWeak</a> and <a class="el" href="namespacesuperdex.html#ab1e65537a0c9a09ecf7db46f01977326a25727e2210a26cbab660e606edf4bd1c" title="LineSearchType::WolfeStrong">LineSearchType::WolfeStrong</a> line search types. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00446">446</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00443">443</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -576,7 +556,7 @@ Used only by <a class="el" href="namespacesuperdex.html#ab1e65537a0c9a09ecf7db46
 <dd>
 Used only if <a class="el" href="#a2626d7d778664b5d9ca33f169803312c" title="explosionControl">explosionControl</a> is true. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00412">412</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00409">409</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
 
 </div>
 </div>
@@ -671,7 +651,7 @@ Default is <a class="el" href="namespacesuperdex.html#adedc30995f02753532ca45ec5
 
 <p>Verbosity level for logging output. </p>
 
-<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00466">466</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nonlinear__solver__params_8h_source.html#l00463">463</a> of file <a class="el" href="nonlinear__solver__params_8h_source.html">nonlinear_solver_params.h</a>.</p>
 
 </div>
 </div>

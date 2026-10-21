@@ -566,9 +566,11 @@ Usually combined with explicit centerOfMass.</dd></dl>
 </div><div class="memdoc">
 
 <p>Parameters used to construct a grid-based Signed Distance Field (SDF) if the shape doesn't already have one. </p>
-<dl class="section note"><dt>Note</dt><dd>Ignored if <a class="el" href="#a313b66f70ecbee83ebf520f4b7323476" title="superdex::RigidActorParams::colliderType">colliderType</a> is not <a class="el" href="namespacesuperdex.html#adb4f68ea1e9bbc8eb3dab90ea51f3dbaa8112f5cfd81b80c1dc999d51ec3b1c24" title="superdex::ColliderType::Sdf">ColliderType::Sdf</a>. </dd>
+<dl class="section note"><dt>Note</dt><dd>Ignored unless <a class="el" href="#a3ef57f681e2d4ef4d8cba358bd0fa686" title="superdex::RigidActorParams::shape">shape</a> is a tetrahedral or triangular mesh shape and <a class="el" href="#a313b66f70ecbee83ebf520f4b7323476" title="superdex::RigidActorParams::colliderType">colliderType</a> is <a class="el" href="namespacesuperdex.html#adb4f68ea1e9bbc8eb3dab90ea51f3dbaa8112f5cfd81b80c1dc999d51ec3b1c24" title="superdex::ColliderType::Sdf">ColliderType::Sdf</a> or <a class="el" href="namespacesuperdex.html#adb4f68ea1e9bbc8eb3dab90ea51f3dbaa06b9281e396db002010bde1de57262eb" title="superdex::ColliderType::Auto">ColliderType::Auto</a>. </dd>
 <dd>
-Ignored if the shape already has a grid-based SDF. </dd></dl>
+Ignored if the shape already has a grid-based SDF, or one is already being computed. </dd>
+<dd>
+<a class="el" href="classsuperdex_1_1Actor.html" title="Represents a simulated body (actor) in a scene.">Actor</a> creation fails if these parameters are used but cannot produce an SDF for the shape. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="mochi__structs_8h_source.html#l00153">153</a> of file <a class="el" href="mochi__structs_8h_source.html">mochi_structs.h</a>.</p>
 

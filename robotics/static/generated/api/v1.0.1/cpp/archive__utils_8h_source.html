@@ -374,39 +374,43 @@ $(function(){initNavTree('archive__utils_8h_source.html','',''); });
 <div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span><span class="comment"> * models, flow files, and nested prefabs, transitively -- as canonical absolute paths. These are</span></div>
 <div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span><span class="comment"> * the files @ref ArchiveBotScene archives for a base scene or spawnable prefab.</span></div>
 <div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span><span class="comment"> *</span></div>
-<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span><span class="comment"> * @param[in] prefabPath The .mochi_scene or .mochi_prefab file.</span></div>
-<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span><span class="comment"> * @param[in,out] error Error status. Check @ref Error::IsOK for success.</span></div>
-<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span><span class="comment"> * @return The prefab file and its dependencies, or an empty set on failure. */</span></div>
-<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>[[nodiscard]] MOCHI_API std::set&lt;std::filesystem::path&gt; CollectPrefabFiles(</div>
-<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    std::filesystem::path <span class="keyword">const</span>&amp; prefabPath,</div>
-<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>    superdex::Error&amp; error);</div>
-<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span> </div>
-<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span><span class="comment">/* @brief Extract a .mochi_bot_scene_archive to a content-hash-keyed cache directory.</span></div>
-<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span><span class="comment"> *</span></div>
-<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span><span class="comment"> * @param[in] archiveFile Path to the .mochi_bot_scene_archive file.</span></div>
-<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span><span class="comment"> * @param[in,out] error Error status.</span></div>
-<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span><span class="comment"> * @return Path to the extracted directory, or empty on failure. */</span></div>
-<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>[[nodiscard]] MOCHI_API DynamicString</div>
-<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>ExtractBotSceneArchiveToCache(std::string_view archiveFile, superdex::Error&amp; error);</div>
-<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span> </div>
-<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span><span class="comment">/* @brief Get the target .mochi_bot_scene path inside an extracted scene archive.</span></div>
-<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span><span class="comment"> *</span></div>
-<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span><span class="comment"> * @param[in] extractedDir Directory produced by ExtractBotSceneArchiveToCache.</span></div>
-<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span><span class="comment"> * @param[in,out] error Error status.</span></div>
-<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span><span class="comment"> * @return Absolute path to the target .mochi_bot_scene file, or empty on failure. */</span></div>
-<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>[[nodiscard]] MOCHI_API DynamicString</div>
-<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>GetExtractedBotSceneArchiveTarget(std::string_view extractedDir, superdex::Error&amp; error);</div>
-<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span> </div>
-<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span><span class="comment">/* @brief Read metadata from an extracted bot scene archive.</span></div>
-<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span><span class="comment"> *</span></div>
-<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span><span class="comment"> * @param[in] extractedDir Directory produced by ExtractBotSceneArchiveToCache.</span></div>
-<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span><span class="comment"> * @param[in,out] error Error status.</span></div>
-<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span><span class="comment"> * @return The archive metadata, or default-constructed on failure. */</span></div>
-<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>[[nodiscard]] MOCHI_API BotSceneArchiveMetadata</div>
-<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>ReadBotSceneArchiveMetadata(std::string_view extractedDir, superdex::Error&amp; error);</div>
-<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span><span class="preprocessor">#endif </span><span class="comment">// SUPERDEXROBOTICS_WITH_BOT_SCENE</span></div>
-<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span> </div>
-<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>} <span class="comment">// namespace superdex::robotics</span></div>
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span><span class="comment"> * References resolve exactly as prefab::AddToScene resolves them when the prefab loads: `./` from</span></div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span><span class="comment"> * the referencing prefab&#39;s directory, absolute as-is, anything else from @p prefabPath&#39;s own</span></div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span><span class="comment"> * directory.</span></div>
+<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span><span class="comment"> *</span></div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span><span class="comment"> * @param[in] prefabPath The .mochi_scene or .mochi_prefab file.</span></div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span><span class="comment"> * @param[in,out] error Error status. Check @ref Error::IsOK for success.</span></div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span><span class="comment"> * @return The prefab file and its dependencies, or an empty set on failure. */</span></div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>[[nodiscard]] MOCHI_API std::set&lt;std::filesystem::path&gt; CollectPrefabFiles(</div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>    std::filesystem::path <span class="keyword">const</span>&amp; prefabPath,</div>
+<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>    superdex::Error&amp; error);</div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span> </div>
+<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span><span class="comment">/* @brief Extract a .mochi_bot_scene_archive to a content-hash-keyed cache directory.</span></div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span><span class="comment"> *</span></div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span><span class="comment"> * @param[in] archiveFile Path to the .mochi_bot_scene_archive file.</span></div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span><span class="comment"> * @param[in,out] error Error status.</span></div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span><span class="comment"> * @return Path to the extracted directory, or empty on failure. */</span></div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>[[nodiscard]] MOCHI_API DynamicString</div>
+<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>ExtractBotSceneArchiveToCache(std::string_view archiveFile, superdex::Error&amp; error);</div>
+<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span> </div>
+<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span><span class="comment">/* @brief Get the target .mochi_bot_scene path inside an extracted scene archive.</span></div>
+<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span><span class="comment"> *</span></div>
+<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span><span class="comment"> * @param[in] extractedDir Directory produced by ExtractBotSceneArchiveToCache.</span></div>
+<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span><span class="comment"> * @param[in,out] error Error status.</span></div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span><span class="comment"> * @return Absolute path to the target .mochi_bot_scene file, or empty on failure. */</span></div>
+<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>[[nodiscard]] MOCHI_API DynamicString</div>
+<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>GetExtractedBotSceneArchiveTarget(std::string_view extractedDir, superdex::Error&amp; error);</div>
+<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span> </div>
+<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span><span class="comment">/* @brief Read metadata from an extracted bot scene archive.</span></div>
+<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span><span class="comment"> *</span></div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span><span class="comment"> * @param[in] extractedDir Directory produced by ExtractBotSceneArchiveToCache.</span></div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span><span class="comment"> * @param[in,out] error Error status.</span></div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span><span class="comment"> * @return The archive metadata, or default-constructed on failure. */</span></div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>[[nodiscard]] MOCHI_API BotSceneArchiveMetadata</div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>ReadBotSceneArchiveMetadata(std::string_view extractedDir, superdex::Error&amp; error);</div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span><span class="preprocessor">#endif </span><span class="comment">// SUPERDEXROBOTICS_WITH_BOT_SCENE</span></div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span> </div>
+<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>} <span class="comment">// namespace superdex::robotics</span></div>
 <div class="ttc" id="afile__utils_8h_html"><div class="ttname"><a href="file__utils_8h.html">file_utils.h</a></div></div>
 <div class="ttc" id="anamespacesuperdex_1_1robotics_html"><div class="ttname"><a href="namespacesuperdex_1_1robotics.html">superdex::robotics</a></div><div class="ttdef"><b>Definition</b> <a href="superdex__robotics_8h_source.html#l00032">superdex_robotics.h:32</a></div></div>
 <div class="ttc" id="anamespacesuperdex_1_1robotics_html_a84796315b939666ebe7da90d2a817012"><div class="ttname"><a href="namespacesuperdex_1_1robotics.html#a84796315b939666ebe7da90d2a817012">superdex::robotics::IsBotArchivePath</a></div><div class="ttdeci">bool IsBotArchivePath(std::string_view path)</div><div class="ttdoc">Recognize a bot archive file path by extension.</div></div>

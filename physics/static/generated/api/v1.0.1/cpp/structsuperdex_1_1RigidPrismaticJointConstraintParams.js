@@ -1,6 +1,7 @@
 // @generated
 var structsuperdex_1_1RigidPrismaticJointConstraintParams =
 [
+    [ "operator==", "structsuperdex_1_1RigidPrismaticJointConstraintParams.html#a44b7ee1f8aa8459d005af0fdcf39d0a7", null ],
     [ "actorA", "structsuperdex_1_1RigidPrismaticJointConstraintParams.html#aee082fc321c8f063375c3f07681c65b0", null ],
     [ "actorB", "structsuperdex_1_1RigidPrismaticJointConstraintParams.html#afb97217c5bf6e81e75094aab9a4793b5", null ],
     [ "freeAxis", "structsuperdex_1_1RigidPrismaticJointConstraintParams.html#a57c905d6296be9f0495f4b7400ec5af1", null ],

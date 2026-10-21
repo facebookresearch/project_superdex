@@ -1,10 +1,12 @@
 // @generated
 var structsuperdex_1_1prefab_1_1SoftActorPrefab =
 [
+    [ "operator==", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html#a2f7407fc8441efc9e9de77aa7b89642b", null ],
     [ "colliderType", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html#acb5d980552e9dd62fd6844b658358cab", null ],
     [ "comment", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html#ad782f8495d1ba3112bb0a4fca1ca7576", null ],
     [ "flow", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html#a13f4d0b3936fbcd256e24d0eef51f093", null ],
     [ "flowFile", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html#aa3ab961e154bdc9155b77976ce9437b9", null ],
+    [ "nodeDisplacements", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html#a0bc2647e763a5080ba13fe724d41f42c", null ],
     [ "renderModelFile", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html#a05a5960e16b15ead0fb6719b003dceb4", null ],
     [ "renderModelRotation", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html#a669f5bf1e31bccedfe58f30a2ae42a77", null ],
     [ "renderModelScale", "structsuperdex_1_1prefab_1_1SoftActorPrefab.html#af277aadf40b144195d750501d7c9231b", null ],

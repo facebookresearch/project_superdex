@@ -1,6 +1,7 @@
 // @generated
 var NAVTREEINDEX4 =
 {
+"structsuperdex_1_1robotics_1_1IBotLoader.html#a4ed49c35aee28be008a298aaafaa1c58":[1,0,1,0,41,4],
 "structsuperdex_1_1robotics_1_1IBotLoader.html#ae0bf1669c492a0a84eb4b1e5d77aa847":[0,0,0,0,41,3],
 "structsuperdex_1_1robotics_1_1IBotLoader.html#ae0bf1669c492a0a84eb4b1e5d77aa847":[1,0,1,0,41,3],
 "structsuperdex_1_1robotics_1_1IBotLoader.html#af183800ddface59835a7cbe41cf1a6e3":[0,0,0,0,41,0],

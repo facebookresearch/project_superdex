@@ -63,8 +63,8 @@ var NAVTREEINDEX =
 "actuator__base_8h.html",
 "classsuperdex_1_1robotics_1_1ControllerBasicOscPd.html#acb7b1df75a076698dab8922924ab8255",
 "functions.html",
-"structsuperdex_1_1robotics_1_1BotArchiveMetadata.html#abd680c64147e0aacd6d64d9870d7f770",
-"structsuperdex_1_1robotics_1_1IBotLoader.html#ae0bf1669c492a0a84eb4b1e5d77aa847"
+"structsuperdex_1_1robotics_1_1BotArchiveMetadata.html#a63af7b5ca5263b52896695bf617743d0",
+"structsuperdex_1_1robotics_1_1IBotLoader.html#a4ed49c35aee28be008a298aaafaa1c58"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

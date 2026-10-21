@@ -206,13 +206,14 @@ Serialization & Export
 
 Serialize prefab documents and export live scenes or actors.
 
+.. autoclass:: superdex.physics.prefab.ExportParams
+   :members:
+   :show-inheritance:
+
 .. autodata:: superdex.physics.prefab.export_actor
    :no-value:
 
 .. autodata:: superdex.physics.prefab.export_scene
-   :no-value:
-
-.. autodata:: superdex.physics.prefab.export_scene_excluding
    :no-value:
 
 .. autodata:: superdex.physics.prefab.save_to_json_file
