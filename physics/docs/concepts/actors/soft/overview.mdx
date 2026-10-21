@@ -63,7 +63,7 @@ $$
 \mathbf{x}(\mathbf{X}) = \sum_{i=1}^{4} N_i(\mathbf{X}) \, \mathbf{x}_i~,
 $$
 where $\mathbf{x}_i$ are the current nodal positions.
-The potentials $T$, $U$, and $R$ are then integrated numerically over each element using appropriate Gaussian quadrature rules.
+The potentials $T$, $U$, and $R$ are then integrated exactly over each element.
 
 The resulting dynamics are discretized in time using the general [implicit-stage formulation](../../dynamics.md#mechanical-variables), with a slight modification to accommodate the strain rate in the viscoelastic damping term.
 During stage $i$, the strain rate is approximated as
