@@ -397,7 +397,7 @@ scene->DestroyActor(actor->GetHandle());
 ```python
 actor = scene.create_articulated_actor(params)
 links = actor.get_nested_link_actors()
-end_effector = scene.get_actor(links[-1])
+end_effector = scene.get_actor(links[len(links) - 1])
 scene.destroy_actor(actor)
 ```
 

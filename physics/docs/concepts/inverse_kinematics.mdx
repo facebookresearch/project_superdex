@@ -217,8 +217,9 @@ Constraint* rotConstraint = ikSolver->CreateRotationTarget(
 
 ```python
 # Get the end-effector bone
-ik_bone = ik_scene.get_actor(
-    ik_actor.get_nested_link_actors()[-1])
+links
+links = ik_actor.get_nested_link_actors()
+ik_bone = ik_scene.get_actor(links[len(links) - 1])
 
 # Position target: place the end-effector at (0.5, 0.3, 0.0)
 pos_constraint = ik_solver.create_position_target(
@@ -281,7 +282,8 @@ ikActor->GetArticulatedPose(pose, error);
 <TabItem value="python" label="Python">
 
 ```python
-pose = ik_actor.get_articulated_pose()
+pose = sdp.DynamicArrayReal(ik_actor.get_num_dofs())
+ik_actor.get_articulated_pose(pose)
 ```
 
 </TabItem>
