@@ -621,6 +621,19 @@ tessellate.
   />
 </FigureRow>
 
+#### Source from Parts
+
+| Method | What it does |
+|--------|--------------|
+| Parts | Assembles a list of parts, each a mesh file (OBJ, STL, DAE, GLB, or `.mochi.h5`) or a primitive (box, sphere, cylinder, capsule, ellipsoid), placed in the model's frame. |
+
+Each part has a placement (translation in meters, rotation) in the model's frame,
+which is Z-up like the bot's link frames, and a mesh scale or a primitive size.
+The output keeps each part a separate piece, for a **Merge** below to combine.
+The URDF and MJCF importers write this source into the recipe of every collision
+model built from several geoms or a primitive (see
+[Importing](./bot_editor/import.mdx#collision-recipes)).
+
 ### Transforms
 
 #### Refine Mesh
@@ -687,6 +700,22 @@ deletes. If you move the Edge Flip Optimization above its reference it will read
     caption={<><FigureLabel>Tangential Relaxation (Smoothing)</FigureLabel></>}
   />
 </FigureRow>
+
+#### Merge
+
+Combines the separate pieces of its input, such as the parts of a **Source from
+Parts**, into one closed surface. A piece is a set of connected triangles.
+
+| Method | What it does |
+|--------|--------------|
+| **Union** | The exact boolean union of the pieces: one watertight surface that may be non-convex. Each piece is repaired first; one that cannot be repaired is wrapped. |
+| **Shrink Wrap** | One envelope shrunk onto all the pieces at once, as **Wrap Mesh**'s Shrink Wrap. Fast, but it bridges the gaps and concavities between pieces. |
+
+**Union** has two settings. **Wrap If Union Fails** wraps all the pieces in one
+closed surface when the exact union fails, instead of failing. **Wrap Detail** is
+the narrowest concavity such a wrap keeps, as a fraction of the wrapped mesh's
+bounding-box diagonal. The exact union can take many minutes when pieces touch
+exactly; **Shrink Wrap** is the fast alternative.
 
 #### Wrap Mesh
 
@@ -773,8 +802,10 @@ solution for bad meshes.
 | **Export Mesh File** | Mesh File | Export the input mesh to a `.glb` or `.obj` in a chosen material color. |
 
 **Export Collision Model** is what produces a `.mochi.h5` collision model. Its
-parameters govern the SDF bake. The stage's output buffer is the surface
-reconstructed from the SDF.
+parameters govern the SDF bake; with **Bake SDF** off it exports the mesh alone,
+and SuperDex Physics bakes an SDF each time it loads the model. The stage's output buffer is the surface
+reconstructed from the SDF, or the input surface with **Bake SDF** off. Vertices at identical
+positions are welded on export, so a model read from an STL is one connected surface.
 
 **Export Mesh File** picks its format from the extension given in the filepath.
 `.obj` and `.glb` are supported, anything else is exported as GLB by appending

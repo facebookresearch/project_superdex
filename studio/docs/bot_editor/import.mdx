@@ -219,6 +219,40 @@ default parameters — you can fine-tune either one per model after import in th
 
 Both only apply during conversion; copied collision models are left as they are.
 
+#### Collision recipes
+
+Studio builds each converted collision model with a processing recipe, the same
+kind of modifier stack you build in the [Model Editor](../model_editor.mdx). A
+recipe reads the link's collision geometry: a single mesh with the source for its
+file type (**Source from CAD Model**, **Render Model**, or **Mochi Model**, From
+File), placed by an **Apply SRT Transformation**, and anything else with a
+**Source from Parts**. It combines the geometry with a **Merge** (Union or Shrink
+Wrap) when there are several geoms or the operation is Shrink-Wrap, remeshes it
+(**Alpha Wrap**, then **Incremental Isotropic Remesh**) when **Remesh** is on,
+and writes the `.mochi.h5` with **Export Mochi Model**. A model whose recipe fails
+(for example a missing mesh file, or a remesh that fails) is not built, and the
+import reports it.
+
+With **Keep Recipes** on (the default), each recipe stays in the bot's
+`intermediates` folder as `<model>.StudioProcessing.json`, and the files it reads
+are copied into a `src` folder beside the collision models (`collision/src` by
+default). A collision model built from a single STL is the exception: the STL is
+copied to `cad/<model>.stl`, so the Model Editor shows it as the model's CAD
+Model, and the recipe reads it with **Source from CAD Model** (From Model Viewer),
+placed by the CAD Model's transform. And when a link's collision model is built from
+the same single geom as its render model (for example with the collision **Source**
+set to **Visual**), the recipe reads the render model with **Source from Render
+Model** (From Model Viewer), copying nothing. Open a collision model in the Model Editor and its recipe loads with it:
+change a part, switch Union to Shrink Wrap, tune the remesh or the SDF, and press
+**Build/Export All** to rebuild the model. A recipe also runs without the window:
+
+```bash
+superdex_studio --process <bot>/intermediates/<model>.StudioProcessing.json
+```
+
+With **Keep Recipes** off, the recipes run from a temporary folder and nothing is
+kept but the collision models. Render models are built directly, without recipes.
+
 ### Per-link control
 
 If the blanket choices are not enough — say one link's visual mesh is missing, or
