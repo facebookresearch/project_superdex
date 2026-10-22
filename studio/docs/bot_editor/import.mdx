@@ -13,9 +13,9 @@ authoring a robot from scratch, you bring in an existing robot description and
 let Studio convert it into a native `.superdex_bot` with preprocessed render and
 collision assets.
 
-Studio ships with a **URDF importer** today, and support for additional robot
-description formats is planned. This guide walks through importing a `.urdf`
-file and the options available along the way.
+Studio ships with a **URDF importer** and an **MJCF (MuJoCo) importer**. This
+guide walks through importing a `.urdf` file and the options available along the
+way, then covers [what differs for MJCF](#mjcf-mujoco).
 
 ## Import Methods
 
@@ -25,9 +25,12 @@ directory**.
 
 | Method | How |
 |--------|-----|
-| **Drag and drop** | Drag a `.urdf` file from your file manager onto the Studio window. |
-| **File menu** | **File → Import → URDF...**, then pick the file in the dialog. |
-| **Asset Browser** | Double-click an un-imported `.urdf` shown in the Asset Browser. |
+| **Drag and drop** | Drag a `.urdf` or MuJoCo `.xml` file from your file manager onto the Studio window. |
+| **File menu** | **File → Import → URDF...** (or **MJCF...**), then pick the file in the dialog. |
+| **Asset Browser** | Double-click an un-imported `.urdf` or MuJoCo `.xml` shown in the Asset Browser. |
+
+An `.xml` file counts as MJCF when its root element is `<mujoco>`; other XML
+files are left alone.
 
 The third method requires **Show Importable Files** to be enabled — it lives in
 the Asset Browser's settings cog, and is on by default. With it enabled, files
@@ -206,6 +209,72 @@ Per link, **Source** picks between that link's visual and collision mesh, and
 A warning icon marks any link whose selected mesh is referenced by the URDF but
 missing on disk. Those links import with that slot left empty rather than
 failing the whole import.
+
+## MJCF (MuJoCo)
+
+The MJCF importer opens the same wizard with the same tabs, and produces the
+same kind of `.superdex_bot`. Most of what differs comes from how MuJoCo
+describes geometry.
+
+**Every body becomes a link.** Joints, limits, damping (`damping`), joint
+friction (`frictionloss`), rotor inertia (`armature`), and `<inertial>` mass
+properties carry over. A body with several joints becomes a chain of massless
+links, one per joint. The **World Joint** defaults to **Free** when the root body
+has a `<freejoint>` and **Hard** otherwise. The `home` keyframe (or the first
+one) becomes the bot's default pose, and `<equality connect>` constraints become
+cycle joints.
+
+**A body can have many geoms.** MuJoCo bodies usually carry several visual and
+collision geoms, including primitives (boxes, capsules, cylinders, ellipsoids,
+spheres), all of which are imported. Each link's render model merges its
+visual geoms into one `.glb`. Colors come from the MJCF `material` or `rgba`, as
+in MuJoCo, and 2D material textures are applied when the mesh has texture
+coordinates. A body with no visual geoms is rendered from its collision geoms.
+A body with no collision geoms does not collide in MuJoCo, so it gets no
+collision model.
+
+**Collision geoms are merged.** A Mochi link holds one collision shape, so the
+collision **Operation** (on the General tab, or per link) decides how a body's
+collision geoms become one, or **Ignore** skips the link's collision model. The
+**Source** column lists each geom a model is built from: a mesh file, or a
+primitive's type and name. Hover one to see its full path.
+
+| Operation | Result |
+|-----------|--------|
+| **Union** (default) | One watertight mesh, the exact boolean union of the geoms. It may be non-convex, which SuperDex Physics handles directly. |
+| **Shrink-Wrap** | One mesh wrapped tightly around the geoms: a convex hull deflated toward them. Fast and robust, but it fills deep concavities. |
+| **Separate Links** | Each extra geom on its own child link, welded to the body with a Hard joint and given a negligible mass. Matches MuJoCo's geoms most literally. |
+
+Collision meshes are used as they are, concavities included, even though MuJoCo
+itself collides each mesh as its convex hull. A body with a single collision
+geom is converted like a URDF mesh. When there are several, the exact union
+needs closed meshes that do not intersect themselves, so each one is rebuilt and
+its holes are filled first. A mesh that still cannot be used, or a union that
+fails, is replaced by a tight wrap that keeps concavities wider than about 1% of
+the body's size, and the import notes say so.
+
+:::note If a Union seems stuck
+The exact union is fast in most builds, but on Windows and in CMake builds it
+can take many minutes for a body whose collision pieces touch exactly, such as
+pads lying flush on a finger (the Franka Panda's `left_finger` and
+`right_finger`). Those builds use CGAL without GMP, so its exact arithmetic is
+much slower. If a **Build _link_.mochi.h5** task stalls, cancel the import, set
+the collision **Operation** to **Custom**, and choose **Shrink-Wrap** for that
+link. Shrink-Wrap is fast on every build, at the cost of filling the link's deep
+concavities.
+:::
+
+**Self-contact follows MuJoCo.** MuJoCo's rules (parent and child bodies never
+collide; `contype`/`conaffinity` bitmasks; `<contact>` `exclude` and `pair`)
+are written into the bot as contact overrides wherever they differ from Studio's
+defaults.
+
+:::warning Not supported
+Tendons, sensors, cameras, lights, sites (other than as `connect` anchors),
+`weld` and `joint` equality constraints, joint springs, contact solver settings
+(`solref`, `solimp`), and actuator gains are skipped. Actuator force limits are
+kept as joint effort limits. Everything skipped is listed under **Import Notes** on the General tab.
+:::
 
 ## Import
 
