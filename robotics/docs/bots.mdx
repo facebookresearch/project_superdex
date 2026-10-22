@@ -301,6 +301,8 @@ bot = robotics.create_bot(scene, bot_prefab, bots_context)
 :::warning Runtime URDF caveats
 - Only `<mesh>` geometry is imported; primitive collision shapes (`<box>`,
   `<cylinder>`, `<sphere>`) are silently ignored.
+- A link with several `<visual>` or `<collision>` meshes gets one Hard-jointed
+  child link per extra mesh (`<link>_collision_<k>`, `<link>_visual_<k>`).
 - The base is imported as a `Free` joint at index `0`. Anchor it with a `Hard`
   joint (as above) unless you actually want a floating base.
 - Colliders are baked on the fly, which is convenient but lower quality than

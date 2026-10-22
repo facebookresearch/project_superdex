@@ -13,9 +13,9 @@ authoring a robot from scratch, you bring in an existing robot description and
 let Studio convert it into a native `.superdex_bot` with preprocessed render and
 collision assets.
 
-Studio ships with a **URDF importer** and an **MJCF (MuJoCo) importer**. This
-guide walks through importing a `.urdf` file and the options available along the
-way, then covers [what differs for MJCF](#mjcf-mujoco).
+Studio ships with a **URDF importer** and an **MJCF (MuJoCo) importer**. Both
+open the same wizard. This guide walks through importing a `.urdf` file and the
+options available along the way, then covers [what differs for MJCF](#mjcf-mujoco).
 
 ## Import Methods
 
@@ -48,19 +48,19 @@ place, without leaving the browser.
 ### General
 
 The **General** tab is the one-stop shop. Everything a typical robot needs is
-here, applied in bulk across every link, and for most URDFs you can set these
+here, applied in bulk across every link, and for most robots you can set these
 few fields and hit **Import**.
 
 <Figure
-  src="../../../img/bot_editor/urdf_import_wizard_general.webp"
-  alt="The General tab of the URDF import wizard, with a Name field, a World Joint dropdown, a Render section with Source and Destination, and a Collision section with Source, Destination, and the Remesh and Bake SDF checkboxes."
+  src="../../../img/bot_editor/import_wizard_general.webp"
+  alt="The General tab of the import wizard, here for an MJCF file: a Name field, a World Joint dropdown, a Render section with Source and Destination, a Collision section with Source, Destination, Operation, and the Remesh and Bake SDF checkboxes, and a collapsible Import Notes list."
   variant="inset"
   maxWidth={368}
   caption={<><FigureLabel>General</FigureLabel>Set these few fields and hit Import.</>}
 />
 
 **Name** is the output bot name, producing `<name>.superdex_bot`. It defaults to
-the robot name declared in the URDF, made unique against what is already in the
+the robot name declared in the file, made unique against what is already in the
 destination folder. You can override it freely; if you type a name that would
 overwrite an existing bot, the field turns red and **Import** is blocked.
 
@@ -72,14 +72,17 @@ and is limited to two choices:
 | **Free** | A 6-DoF joint. The bot has a floating base and is free to translate and rotate — use this for mobile bases, humanoids, and anything that should fall or be pushed around. |
 | **Hard** | A 0-DoF weld. The root link is rigidly pinned in place — use this for a fixed-base manipulator bolted to a table. |
 
+**Import Notes** lists anything in the file that Studio skipped, and any mesh it
+references that could not be found.
+
 #### Render and Collision sources
 
-A URDF link describes its geometry twice: a `<visual>` mesh for display (usually
-COLLADA `.dae`) and a `<collision>` mesh for physics (usually `.stl`). Studio
-keeps the same split, but in its own preferred formats — **`.glb`** for render
-models and **`.mochi.h5`** for collision models.
+A URDF link describes its geometry twice: `<visual>` geometry for display
+(usually COLLADA `.dae` meshes) and `<collision>` geometry for physics (usually
+`.stl` meshes). Studio keeps the same split, but in its own preferred formats —
+**`.glb`** for render models and **`.mochi.h5`** for collision models.
 
-Each section has a **Source** picker choosing which URDF slot to pull from for
+Each section has a **Source** picker choosing which geometry to pull from for
 *every* link, and a **Destination** subfolder for the generated files (blank
 writes into the bot's folder directly):
 
@@ -88,21 +91,17 @@ writes into the bot's folder directly):
 | **Render** | Visual | `render` | `.glb` |
 | **Collision** | Collision | `collision` | `.mochi.h5` |
 
-Studio converts as needed: a source that is already in the target format is
-copied through untouched, and anything else is converted. Coordinate spaces are
-handled for you — render and physics use different conventions, and the importer
-applies the right transform based on the source format.
+A link without visual geometry is rendered from its collision geometry, and a
+URDF link without collision geometry gets its collision model from its visuals.
 
-:::warning Not supported
-Only `<mesh>` geometry is imported, and only one mesh per slot:
+Studio converts as needed: a link whose only mesh is already in the target
+format is copied through untouched, and anything else is converted. Coordinate
+spaces are handled for you — render and physics use different conventions, and
+the importer applies the right transform based on the source format.
 
-- **Primitive shapes.** `<box>`, `<cylinder>`, and `<sphere>` geometry is
-  skipped. A link whose `<collision>` is a primitive has no collision mesh to
-  draw from, so the importer falls back to that link's visual mesh instead.
-- **Multiple mesh definitions.** A link may legally declare several `<visual>`
-  or `<collision>` elements, but only the first mesh-bearing one of each is
-  used. The rest are dropped.
-:::
+Render models keep their colors. A COLLADA, GLB, or OBJ mesh with a material
+library keeps its own materials; a mesh without any, such as an STL, takes the
+color of its URDF `<material>`, as RViz does.
 
 :::note When to use Visual for Collision
 URDF collision meshes are very often convex stand-ins for the real part.
@@ -159,6 +158,54 @@ cannot be resolved shows up in the wizard as a missing mesh with its original
 text, rather than silently reading as "no mesh here".
 :::
 
+#### Links with several geometries
+
+A link can carry several pieces of geometry: a URDF link may declare several
+`<visual>` and `<collision>` elements, and MuJoCo bodies usually do. Pieces can be
+meshes or primitives (URDF boxes, cylinders, and spheres; MuJoCo also has
+capsules and ellipsoids), and Studio imports them all. Each link's render model
+merges its visual pieces into one `.glb`.
+
+A Mochi link holds one collision shape, so the collision **Operation** (on the
+General tab, or per link) decides how a link's collision pieces become one:
+
+| Operation | Result |
+|-----------|--------|
+| **Union** (default) | One watertight mesh, the exact boolean union of the pieces. It may be non-convex, which SuperDex Physics handles directly. |
+| **Shrink-Wrap** | One mesh wrapped tightly around the pieces: a convex hull deflated toward them. Fast and robust, but it fills deep concavities. |
+| **Separate Links** | Each extra piece on its own child link, welded to the link with a Hard joint. When the link has explicit inertia (a URDF `<inertial>`, or MJCF inertia), the pieces get a negligible mass; otherwise each weighs its own shape. This is also how bots loaded from URDF or MJCF at runtime are laid out. |
+| **Copy** (URDF only) | Keep a link's only mesh file as it is, byte for byte. As a blanket choice, links that cannot be copied get Union. |
+| **Ignore** | No collision model for the link. |
+
+A link with a single collision piece is converted the same way by every merging
+operation. When there are several, the exact union needs closed meshes that do
+not intersect themselves, so each one is rebuilt and its holes are filled first.
+A mesh that still cannot be used, or a union that fails, is replaced by a tight
+wrap that keeps concavities wider than about 1% of the link's size, and the Log
+Console says so.
+
+<FigureRow cols={2}>
+  <Figure
+    src="../../../img/bot_editor/mjcf_import_union.webp"
+    alt="The Franka Panda imported with Union: the Bot Hierarchy lists one link per body, link0 through link7, hand, left_finger, and right_finger, each with one collision mesh."
+    caption={<><FigureLabel>Union</FigureLabel>One collision mesh per link. Shrink-Wrap gives the same hierarchy.</>}
+  />
+  <Figure
+    src="../../../img/bot_editor/mjcf_import_separate_links.webp"
+    alt="The same Panda imported with Separate Links: link5 gains link5_collision_1 and link5_collision_2, and each finger gains five collision child links for its pads."
+    caption={<><FigureLabel>Separate Links</FigureLabel>A child link per extra piece.</>}
+  />
+</FigureRow>
+
+:::note If a Union seems stuck
+The exact union can take many minutes for a link whose collision pieces touch
+exactly, such as pads lying flush on a finger (the Franka Panda's `left_finger`
+and `right_finger`). If a **Build _link_.mochi.h5** task stalls, cancel the
+import, set the collision **Operation** to **Custom**, and choose
+**Shrink-Wrap** for that link. Shrink-Wrap is fast, at the cost of filling the
+link's deep concavities.
+:::
+
 #### Remesh and Bake SDF
 
 Two checkboxes refine the collision meshes as they are converted. Both use
@@ -167,11 +214,10 @@ default parameters — you can fine-tune either one per model after import in th
 
 | Option | What it does |
 |--------|--------------|
-| **Remesh** | Rebuilds the surface into a clean, watertight collision mesh. Raw URDF meshes are frequently open, self-intersecting, or needlessly dense, none of which simulate well. |
+| **Remesh** | Rebuilds the surface into a clean, watertight collision mesh. Raw meshes are frequently open, self-intersecting, or needlessly dense, none of which simulate well. |
 | **Bake SDF** | Computes a signed distance field and stores it alongside the collision mesh. SDF colliders give SuperDex Physics fast, stable, dense contact — this is what you want for contact-rich manipulation. |
 
-Both only apply during conversion, so they gray out if the collision models are
-being copied rather than converted.
+Both only apply during conversion; copied collision models are left as they are.
 
 ### Per-link control
 
@@ -181,88 +227,67 @@ a single gripper finger needs different treatment — the **Render Models** and
 
 <FigureRow cols={2}>
   <Figure
-    src="../../../img/bot_editor/urdf_import_wizard_render.webp"
-    alt="The Render Models tab: Source and Operation radio rows, a Destination field, and a table of links with a per-link Source and Operation column."
+    src="../../../img/bot_editor/import_wizard_render.webp"
+    alt="The Render Models tab: Source and Operation radio rows, a Destination field, and a table of links whose Source column lists every mesh a link's render model is built from, one per line."
     caption={<><FigureLabel>Render Models</FigureLabel>Per-link control over the <code>.glb</code> output.</>}
   />
   <Figure
-    src="../../../img/bot_editor/urdf_import_wizard_collision.webp"
-    alt="The Collision Models tab: Source and Operation radio rows, a Destination field, Remesh and Bake SDF checkboxes, and a table of links with a per-link Source and Operation column."
+    src="../../../img/bot_editor/import_wizard_collision.webp"
+    alt="The Collision Models tab: a Source radio row, an Operation dropdown set to Union, a Destination field, Remesh and Bake SDF checkboxes, and a table of links with a per-link Source and Operation column."
     caption={<><FigureLabel>Collision Models</FigureLabel>Per-link control over the <code>.mochi.h5</code> output.</>}
   />
 </FigureRow>
 
-Each tab repeats the blanket **Source** and **Operation** rows at the top, and
-adds a table with one row per link. Selecting **Custom** on either row unlocks
-the matching table column so you can configure links one at a time; the other
+Each tab repeats the blanket **Source** and **Operation** choices at the top, and
+adds a table with one row per link. Selecting **Custom** on either unlocks the
+matching table column so you can configure links one at a time; the other
 choices overwrite every row, so switch to Custom before making per-link edits.
 
-Per link, **Source** picks between that link's visual and collision mesh, and
-**Operation** is one of:
+Per link, **Source** picks between that link's visual and collision geometry,
+and lists every piece the model is built from: a mesh file, or a primitive's
+type and name. Hover one to see its full path. A render model's **Operation** is
+one of:
 
 | Operation | Result |
 |-----------|--------|
-| **Convert** | Run the mesh through the conversion pipeline into `.glb` or `.mochi.h5`. |
-| **Copy** | Copy the source file through byte-for-byte, no conversion. |
-| **Ignore** | Produce nothing for that slot — the link gets no render or no collision model. |
+| **Convert to GLB** | Merge the link's pieces into one `.glb`. |
+| **Copy** (URDF only) | Copy the link's only mesh file through byte-for-byte, no conversion. |
+| **Ignore** | No render model for the link. |
 
-A warning icon marks any link whose selected mesh is referenced by the URDF but
-missing on disk. Those links import with that slot left empty rather than
-failing the whole import.
+A collision model's **Operation** is one of the
+[collision operations](#links-with-several-geometries). The URDF importer's
+**Copy All** choice copies every link it can and converts the rest.
+
+A warning icon marks any link with a mesh that is referenced but missing on
+disk. Those links import without that mesh rather than failing the whole import.
 
 ## MJCF (MuJoCo)
 
 The MJCF importer opens the same wizard with the same tabs, and produces the
-same kind of `.superdex_bot`. Most of what differs comes from how MuJoCo
-describes geometry.
+same kind of `.superdex_bot`. What differs comes from how MuJoCo describes a
+robot.
+
+<Figure
+  src="../../../img/bot_editor/mjcf_import_fr3.webp"
+  alt="The Franka FR3 v2 imported from MJCF with the default options, open in the Bot Editor in its home pose, with the Bot Hierarchy listing base, fr3v2_link0 through fr3v2_link8 and their joints."
+  caption="An MJCF import with the default options, in the model's home keyframe pose."
+/>
 
 **Every body becomes a link.** Joints, limits, damping (`damping`), joint
 friction (`frictionloss`), rotor inertia (`armature`), and `<inertial>` mass
-properties carry over. A body with several joints becomes a chain of massless
+properties carry over. A body without an `<inertial>` takes its mass from its
+geoms, as in MuJoCo. A body with several joints becomes a chain of massless
 links, one per joint. The **World Joint** defaults to **Free** when the root body
 has a `<freejoint>` and **Hard** otherwise. The `home` keyframe (or the first
 one) becomes the bot's default pose, and `<equality connect>` constraints become
 cycle joints.
 
-**A body can have many geoms.** MuJoCo bodies usually carry several visual and
-collision geoms, including primitives (boxes, capsules, cylinders, ellipsoids,
-spheres), all of which are imported. Each link's render model merges its
-visual geoms into one `.glb`. Colors come from the MJCF `material` or `rgba`, as
-in MuJoCo, and 2D material textures are applied when the mesh has texture
-coordinates. A body with no visual geoms is rendered from its collision geoms.
-A body with no collision geoms does not collide in MuJoCo, so it gets no
-collision model.
-
-**Collision geoms are merged.** A Mochi link holds one collision shape, so the
-collision **Operation** (on the General tab, or per link) decides how a body's
-collision geoms become one, or **Ignore** skips the link's collision model. The
-**Source** column lists each geom a model is built from: a mesh file, or a
-primitive's type and name. Hover one to see its full path.
-
-| Operation | Result |
-|-----------|--------|
-| **Union** (default) | One watertight mesh, the exact boolean union of the geoms. It may be non-convex, which SuperDex Physics handles directly. |
-| **Shrink-Wrap** | One mesh wrapped tightly around the geoms: a convex hull deflated toward them. Fast and robust, but it fills deep concavities. |
-| **Separate Links** | Each extra geom on its own child link, welded to the body with a Hard joint and given a negligible mass. Matches MuJoCo's geoms most literally. |
-
-Collision meshes are used as they are, concavities included, even though MuJoCo
-itself collides each mesh as its convex hull. A body with a single collision
-geom is converted like a URDF mesh. When there are several, the exact union
-needs closed meshes that do not intersect themselves, so each one is rebuilt and
-its holes are filled first. A mesh that still cannot be used, or a union that
-fails, is replaced by a tight wrap that keeps concavities wider than about 1% of
-the body's size, and the import notes say so.
-
-:::note If a Union seems stuck
-The exact union is fast in most builds, but on Windows and in CMake builds it
-can take many minutes for a body whose collision pieces touch exactly, such as
-pads lying flush on a finger (the Franka Panda's `left_finger` and
-`right_finger`). Those builds use CGAL without GMP, so its exact arithmetic is
-much slower. If a **Build _link_.mochi.h5** task stalls, cancel the import, set
-the collision **Operation** to **Custom**, and choose **Shrink-Wrap** for that
-link. Shrink-Wrap is fast on every build, at the cost of filling the link's deep
-concavities.
-:::
+**Geoms follow MuJoCo.** Colors come from the MJCF `material` or `rgba`, as in
+MuJoCo, replacing a mesh's own materials, and 2D material textures are applied
+when the mesh has texture coordinates. A body with no collision geoms does not
+collide in MuJoCo, so it gets no collision model. There is no **Copy**: geoms are
+always converted. Collision meshes are used as they are, concavities included,
+even though MuJoCo itself collides each mesh as its convex hull.
 
 **Self-contact follows MuJoCo.** MuJoCo's rules (parent and child bodies never
 collide; `contype`/`conaffinity` bitmasks; `<contact>` `exclude` and `pair`)
