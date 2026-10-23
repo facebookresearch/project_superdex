@@ -9267,6 +9267,12 @@ versa).</p>
 <p class="admonition-title">Note</p>
 <p>If neither is set, <a class="reference internal" href="#superdex.physics.DEFAULT_DENSITY" title="superdex.physics.DEFAULT_DENSITY"><code class="xref py py-const docutils literal notranslate"><span class="pre">DEFAULT_DENSITY</span></code></a> is used.</p>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Ignored for links without a
+<a class="reference internal" href="#superdex.physics.ArticulatedLinkParams.shape" title="superdex.physics.ArticulatedLinkParams.shape"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shape</span></code></a>, which have no volume.
+Use <a class="reference internal" href="#superdex.physics.ArticulatedLinkParams.mass" title="superdex.physics.ArticulatedLinkParams.mass"><code class="xref py py-attr docutils literal notranslate"><span class="pre">mass</span></code></a> instead.</p>
+</div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#superdex.physics.ArticulatedLinkParams.mass" title="superdex.physics.ArticulatedLinkParams.mass"><code class="xref py py-attr docutils literal notranslate"><span class="pre">mass</span></code></a></p>
@@ -9308,6 +9314,14 @@ versa).</p>
 <p class="admonition-title">Note</p>
 <p>If mass is set, density is computed automatically from volume (and vice
 versa).</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A link without a <a class="reference internal" href="#superdex.physics.ArticulatedLinkParams.shape" title="superdex.physics.ArticulatedLinkParams.shape"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shape</span></code></a> is
+massless unless it sets a positive mass together with
+<a class="reference internal" href="#superdex.physics.ArticulatedLinkParams.center_of_mass" title="superdex.physics.ArticulatedLinkParams.center_of_mass"><code class="xref py py-attr docutils literal notranslate"><span class="pre">center_of_mass</span></code></a> and
+<a class="reference internal" href="#superdex.physics.ArticulatedLinkParams.moment_of_inertia" title="superdex.physics.ArticulatedLinkParams.moment_of_inertia"><code class="xref py py-attr docutils literal notranslate"><span class="pre">moment_of_inertia</span></code></a>. Otherwise
+its mass properties are ignored.</p>
 </div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
@@ -9430,6 +9444,14 @@ true.</p>
 <p>A tetrahedral or triangular mesh shape may have nodes that no element
 references. The link actor’s <a class="reference internal" href="#superdex.physics.Actor.get_mesh" title="superdex.physics.Actor.get_mesh"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_mesh()</span></code></a> omits
 them.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>May be left empty. A link without a shape has no contact and is massless
+unless it specifies an explicit
+<a class="reference internal" href="#superdex.physics.ArticulatedLinkParams.mass" title="superdex.physics.ArticulatedLinkParams.mass"><code class="xref py py-attr docutils literal notranslate"><span class="pre">mass</span></code></a>,
+<a class="reference internal" href="#superdex.physics.ArticulatedLinkParams.center_of_mass" title="superdex.physics.ArticulatedLinkParams.center_of_mass"><code class="xref py py-attr docutils literal notranslate"><span class="pre">center_of_mass</span></code></a>, and
+<a class="reference internal" href="#superdex.physics.ArticulatedLinkParams.moment_of_inertia" title="superdex.physics.ArticulatedLinkParams.moment_of_inertia"><code class="xref py py-attr docutils literal notranslate"><span class="pre">moment_of_inertia</span></code></a>.</p>
 </div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
@@ -14104,6 +14126,12 @@ given time step size.</p>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">LineSearchType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">_not_given</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#superdex.physics.LineSearchType" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
 <p>Line-search strategy used by the non-linear solver.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In the line searches that test the objective (<a class="reference internal" href="#superdex.physics.LineSearchType" title="superdex.physics.LineSearchType"><code class="xref py py-class docutils literal notranslate"><span class="pre">SIMPLE</span></code></a>, <a class="reference internal" href="#superdex.physics.LineSearchType" title="superdex.physics.LineSearchType"><code class="xref py py-class docutils literal notranslate"><span class="pre">ARMIJO</span></code></a>, <a class="reference internal" href="#superdex.physics.LineSearchType" title="superdex.physics.LineSearchType"><code class="xref py py-class docutils literal notranslate"><span class="pre">WOLFE_WEAK</span></code></a>, <a class="reference internal" href="#superdex.physics.LineSearchType" title="superdex.physics.LineSearchType"><code class="xref py py-class docutils literal notranslate"><span class="pre">WOLFE_STRONG</span></code></a> and <a class="reference internal" href="#superdex.physics.LineSearchType" title="superdex.physics.LineSearchType"><code class="xref py py-class docutils literal notranslate"><span class="pre">ARMIJO_OR_RESIDUAL_NORM</span></code></a>), a step that fails the test but changes
+the objective by no more than an estimate of its rounding error is tested on
+the slope of the objective along the step instead.</p>
+</div>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="superdex.physics.LineSearchType.ARMIJO">
 <span class="sig-name descname"><span class="pre">ARMIJO</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#superdex.physics.LineSearchType.ARMIJO" title="Permalink to this definition"></a></dt>
@@ -14573,6 +14601,12 @@ dresidual.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Only applies to <a class="reference internal" href="#superdex.physics.LineSearchType" title="superdex.physics.LineSearchType"><code class="xref py py-class docutils literal notranslate"><span class="pre">SIMPLE</span></code></a>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>An increase beyond this maximum but within an estimate of the objective’s
+rounding error is tested on the slope of the objective along the step
+instead (see <a class="reference internal" href="#superdex.physics.LineSearchType" title="superdex.physics.LineSearchType"><code class="xref py py-class docutils literal notranslate"><span class="pre">LineSearchType</span></code></a>).</p>
 </div>
 </dd></dl>
 
