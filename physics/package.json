@@ -34,7 +34,7 @@
     "docusaurus-plugin-internaldocs-fb": "^1.19.2",
     "dom-iterator": "1.0.1",
     "express": "4.19.2",
-    "follow-redirects": "1.16.0",
+    "follow-redirects": "1.16.1",
     "got": "11.8.5",
     "http-proxy-middleware": "3.0.7",
     "js-yaml": "4.3.2",
