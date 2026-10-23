@@ -36,8 +36,9 @@ shortcut you can use without opening the menu.
 | Render Only | `1` | Show only the render meshes. |
 | Collision Only | `2` | Show only the collision meshes. |
 | Render (Collision Fallback) | `3` | Show render meshes, falling back to the collision mesh for links that have none. |
+| SDF (Collision Fallback) | `4` | Show the surface of each collision model's SDF, falling back to the collision mesh for links without one. |
 
-The last three are mutually exclusive display modes that choose which geometry the
+The last four are mutually exclusive display modes that choose which geometry the
 viewport draws.
 
 ### Joint Limits
@@ -108,8 +109,14 @@ The model options at the bottom of the Show menu choose which geometry the viewp
 draws. **Collision Only** (`2`) hides the render meshes and shows just the
 collision meshes that SuperDex Physics simulates, each link in its own color so
 neighboring parts are easy to separate. It is the fastest way to confirm the
-physics geometry matches the robot you see. **Render Only** (`1`) and
-**Render (Collision Fallback)** (`3`) switch back to the render meshes.
+physics geometry matches the robot you see. **SDF (Collision Fallback)** (`4`)
+shows instead the surface each collision model's SDF reconstructs to, in its own
+color, so you can check what SDF contacts will see; links whose collision model
+has no SDF keep their collision mesh. The surfaces are built the first time you
+switch to it (with a progress dialog for a large bot) and shared with every other
+open editor, which follows along when a model is remeshed or its SDF re-baked.
+**Render Only** (`1`) and **Render (Collision Fallback)** (`3`) switch back to the
+render meshes.
 
 <Figure
   src="../../../img/bot_editor/viz_collision.webp"
