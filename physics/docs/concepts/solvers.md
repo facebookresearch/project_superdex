@@ -55,6 +55,10 @@ The classical Newton–Raphson iteration with $\lambda_k = 1$ is only provably g
 
 The default line search strategy is `LineSearchType::ResidualNorm`, which only evaluates the residual, while some other strategies make use of the incremental potential. Potential-based line searches such as `LineSearchType::WolfeStrong` may improve results, especially in settings where the dominant residual contributions derive exactly from a potential (e.g., the elastic energy of a large deformable actor). Python exposes these choices through the [`LineSearchType`](pathname:///generated/api/v1.0.1/python/api/physics.html#superdex.physics.LineSearchType) enum.
 
+The potential-based line searches (`LineSearchType::Simple`, `LineSearchType::Armijo`, `LineSearchType::WolfeWeak` and `LineSearchType::WolfeStrong`) don't reject a trial on rounding error alone: a trial that fails their decrease test but changes the potential by no more than an estimate of its rounding error is tested on the slope of the potential along the step instead.
+
+The Wolfe line searches, `LineSearchType::WolfeWeak` and `LineSearchType::WolfeStrong`, never take a step longer than the full Newton step ($\lambda_k \le 1$). If no trial meets both Wolfe conditions, they take the longest trial, if any, that met the sufficient-decrease condition while the potential was still decreasing too steeply for the curvature condition.
+
 ## Linear Solvers
 
 Every (quasi-)Newton iteration requires the solution of a linear system. Linear solvers fall into two broad categories:
