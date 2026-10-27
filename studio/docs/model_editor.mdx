@@ -252,7 +252,8 @@ read-only, copyable summary of its geometry:
 |------|---------|
 | **File Size** / **Est. File/Export Size** | The file on disk, or an estimate of what a stage would write |
 | **SDF grid** | Baked SDF grid dimensions, if one is present |
-| **Vertices · Edges · Triangles** | Counts for the geometry as displayed |
+| **Tet mesh** | Node and tetrahedron counts, for a tetrahedral mesh |
+| **Vertices · Edges · Triangles** | Counts for the geometry as displayed. For a tetrahedral mesh, these and the lines below them describe its boundary, under a **Boundary surface** heading |
 | **Watertight** | Whether the surface is closed/watertight |
 | **AABB (m)** | Bounding-box size, in meters |
 | **Edge len (m)** / **Angle (deg)** | Mean, standard deviation, min and max |
@@ -336,6 +337,7 @@ replaces the current stack, asking first if the stack is not empty.
 | **Clean STEP to Mochi Model** | Clean, often single-body CAD with simple geometry — no bolt holes, closed volumes, no small features |
 | **Shrink Wrap STEP to Mochi Model** | Assemblies or challenging geometry with high feature density — lots of small holes, open surfaces, sheet metal |
 | **Render Model to Mochi Model** | General mesh geometry rather than CAD, targeting watertight and manifold results |
+| **STEP to Soft Mochi Model** | CAD meant to deform as a soft actor; wraps it into a closed surface and fills it with tetrahedra |
 
 <Figure
   src="../../img/model_editor/tool_tips_presets.gif"
@@ -543,6 +545,10 @@ to a `.glb` or `.obj` for inspection. This defaults into the asset's
 `intermediates/` folder and matches the filename with a suffix based on the
 Modifier and pipeline ordering. This is incredibly helpful if you need to
 inspect the processing stage in another tool or as reference for another model.
+A tetrahedral output (from **Tetrahedralize** onward) is saved instead as a
+legacy VTK `.vtk` (ASCII) holding its tetrahedra, in the same Z-up coordinates
+as an exported `.mochi.h5`, so it opens in ParaView, Gmsh, and other meshing
+tools.
 
 ## Modifier Reference
 
@@ -788,6 +794,32 @@ solution for bad meshes.
   />
 </FigureRow>
 
+#### Tetrahedralize
+
+Fills a closed surface with tetrahedra, producing the volume mesh a
+[soft actor](./prefab_editor.mdx#soft-actors) needs.
+
+| Method | What it does |
+|--------|--------------|
+| **Delaunay Refinement** | Tetrahedralize the input surface with CGAL's Delaunay refinement mesher. |
+
+Its input must be a closed surface with no self-intersections, so put **Wrap
+Mesh** ahead of it; the **STEP to Soft Mochi Model** preset does this. **Edge
+Size** sets the target tetrahedron edge length, and **Facet Distance** bounds how
+far the boundary may deviate from the input surface. Both are a percentage of the
+mesh's average bounding-box dimension, or millimeters when **Relative to Mesh
+Size** is off. A zero **Facet Distance** automatically uses one fifth of **Edge
+Size**. **Min Facet Angle** and **Max Radius-Edge Ratio** trade element quality
+against element count, and sharp features are preserved when **Detect Features**
+is on.
+
+Its output is a tetrahedral mesh. The stage shows and measures the mesh's
+boundary surface, its stats add the node and tetrahedron counts, and **Save**
+writes the tetrahedra to a legacy VTK `.vtk`.
+Only **Apply SRT Transformation** and **Export Collision Model** take a
+tetrahedral mesh as input; any other modifier placed after **Tetrahedralize**
+fails with an error asking you to move it above.
+
 #### Apply SRT Transformation
 
 | Method | What it does |
@@ -798,14 +830,16 @@ solution for bad meshes.
 
 | Modifier | Method | What it does |
 |----------|--------|--------------|
-| **Export Collision Model** <br /> (Export Mochi Model) | Mesh+SDF | Bake a grid SDF from the input surface and export the mesh plus SDF as a `.mochi.h5`. |
+| **Export Collision Model** <br /> (Export Mochi Model) | SDF | Bake a grid SDF from the input mesh and export the mesh plus SDF as a `.mochi.h5`, or the mesh alone with **Bake SDF** off. |
 | **Export Mesh File** | Mesh File | Export the input mesh to a `.glb` or `.obj` in a chosen material color. |
 
-**Export Collision Model** is what produces a `.mochi.h5` collision model. Its
-parameters govern the SDF bake; with **Bake SDF** off it exports the mesh alone,
-and SuperDex Physics bakes an SDF each time it loads the model. The stage's output buffer is the surface
-reconstructed from the SDF, or the input surface with **Bake SDF** off. Vertices at identical
-positions are welded on export, so a model read from an STL is one connected surface.
+**Export Collision Model** is what produces a `.mochi.h5` collision model, from
+either a triangle surface or a tetrahedral mesh. Its parameters govern the SDF
+bake; with **Bake SDF** off it exports the mesh alone, and SuperDex Physics bakes
+an SDF each time it loads the model. That is the usual choice for a soft actor's
+tetrahedral mesh. The stage's output buffer is the surface reconstructed from the
+SDF, or the input mesh with **Bake SDF** off. Vertices at identical positions are
+welded on export, so a model read from an STL is one connected surface.
 
 **Export Mesh File** picks its format from the extension given in the filepath.
 `.obj` and `.glb` are supported, anything else is exported as GLB by appending

@@ -184,7 +184,10 @@ you specify and how much Studio derives from the collision geometry.
 
 A soft actor deforms. It takes the same collision model slot as a rigid, but
 Studio rebuilds a surface mesh from it, which is why changing the shape or its
-scale is a heavier edit than moving a rigid around.
+scale is a heavier edit than moving a rigid around. The model must be a
+tetrahedral mesh; make one in the Model Editor with the
+[Tetrahedralize](./model_editor.mdx#tetrahedralize) modifier followed by **Export
+Collision Model**, for example via the **STEP to Soft Mochi Model** preset.
 
 Soft actors have no render model slot. What you see is the simulated surface.
 They also carry their own material, separate from the contact parameters, and
