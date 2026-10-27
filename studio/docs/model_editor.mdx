@@ -816,9 +816,21 @@ is on.
 Its output is a tetrahedral mesh. The stage shows and measures the mesh's
 boundary surface, its stats add the node and tetrahedron counts, and **Save**
 writes the tetrahedra to a legacy VTK `.vtk`.
-Only **Apply SRT Transformation** and **Export Collision Model** take a
-tetrahedral mesh as input; any other modifier placed after **Tetrahedralize**
-fails with an error asking you to move it above.
+Only **Extract Surface**, **Apply SRT Transformation** and **Export Collision
+Model** take a tetrahedral mesh as input; any other modifier placed after
+**Tetrahedralize** fails with an error asking you to move it above.
+
+#### Extract Surface
+
+Converts a tetrahedral mesh into a triangle mesh of its boundary surface, so
+surface modifiers can follow **Tetrahedralize**.
+
+| Method | What it does |
+|--------|--------------|
+| **Boundary** | Replace the tetrahedral input with its boundary triangles. Interior nodes are dropped. No parameters. |
+
+Its input must be a tetrahedral mesh; a triangle surface fails with an error
+asking you to place it after **Tetrahedralize**.
 
 #### Apply SRT Transformation
 
