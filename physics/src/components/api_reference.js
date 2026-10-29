@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
-import useBaseUrl from '@docusaurus/useBaseUrl';
 import APIFrame from '@site/src/components/api_frame';
 
 function ApiReferenceStatus({ children }) {
@@ -27,91 +26,19 @@ function ApiReferenceStatus({ children }) {
   );
 }
 
-function ApiReferenceFrame({ apiVersion, language, title }) {
+// Current documentation passes apiVersion="latest"; numbered documentation
+// snapshots pass the concrete artifact selected when they were created.
+function ApiReferenceInner({ apiVersion, language, title }) {
+  if (!apiVersion) {
+    return (
+      <ApiReferenceStatus>
+        API reference is unavailable for this version.
+      </ApiReferenceStatus>
+    );
+  }
   return (
     <APIFrame
       src={`/generated/api/${apiVersion}/${language}/index.html`}
-      title={title}
-    />
-  );
-}
-
-// Resolves the mutable API artifact only for current documentation. Numbered
-// documentation snapshots pass a concrete artifact and never consult this manifest.
-function LatestApiReference({ language, title }) {
-  const manifestUrl = useBaseUrl('/generated/api/versions.json');
-  const [apiVersion, setApiVersion] = useState(null);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(manifestUrl)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (cancelled) {
-          return;
-        }
-        if (
-          data &&
-          Array.isArray(data.versions) &&
-          data.versions.includes(data.latest)
-        ) {
-          setApiVersion(data.latest);
-        }
-        setLoaded(true);
-      })
-      .catch((err) => {
-        // Logged so a malformed manifest is diagnosable (a dev-server SPA can
-        // return 200 with index.html, making res.json() reject).
-        if (!cancelled) {
-          console.error(
-            `Failed to load API version manifest from ${manifestUrl}:`,
-            err,
-          );
-          setLoaded(true);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [manifestUrl]);
-
-  if (!loaded) {
-    return <ApiReferenceStatus>Loading API reference...</ApiReferenceStatus>;
-  }
-
-  if (!apiVersion) {
-    return (
-      <ApiReferenceStatus>
-        API reference is unavailable for this version.
-      </ApiReferenceStatus>
-    );
-  }
-
-  return (
-    <ApiReferenceFrame
-      apiVersion={apiVersion}
-      language={language}
-      title={title}
-    />
-  );
-}
-
-function ApiReferenceInner({ apiVersion, language, title }) {
-  if (apiVersion === 'latest') {
-    return <LatestApiReference language={language} title={title} />;
-  }
-  if (!apiVersion) {
-    return (
-      <ApiReferenceStatus>
-        API reference is unavailable for this version.
-      </ApiReferenceStatus>
-    );
-  }
-  return (
-    <ApiReferenceFrame
-      apiVersion={apiVersion}
-      language={language}
       title={title}
     />
   );
