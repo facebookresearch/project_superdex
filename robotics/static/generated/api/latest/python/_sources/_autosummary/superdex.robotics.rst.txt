@@ -1,0 +1,76 @@
+# @generated
+﻿superdex.robotics
+=================
+
+.. automodule:: superdex.robotics
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      BotFileType
+      LinkTransformSpace
+      RoboticsHandle
+      BotHandle
+      ControllerHandle
+      SensorHandle
+      ActuatorHandle
+      BotJointPrefab
+      BotSensorPrefab
+      BotActuatorPrefab
+      BotLinkPrefab
+      BotContactOverride
+      BotTransmissionPrefab
+      BotLinearTransmissionPrefab
+      BotSpatialTendonPrefab
+      BotPrefab
+      RoboticsContext
+      ComponentBase
+      ControllerBase
+      ControllerBasicOscPdParams
+      ControllerBasicOscPdObsv
+      ControllerBasicOscPdTarget
+      ControllerBasicOscPd
+      ControllerMochiArticulatedPoseParams
+      ControllerMochiArticulatedPoseObsv
+      ControllerMochiArticulatedPoseTarget
+      ControllerMochiArticulatedPose
+      Bot
+      ControllerBasicJscPdParams
+      ControllerBasicJscPdObsv
+      ControllerBasicJscPdTarget
+      CameraSensorParams
+      ControllerBasicJscPd
+      SensorBase
+      ActuatorBase
+      CameraSensor
+      DynamicArrayActuatorHandle
+      DynamicArrayBotActuatorPrefab
+      DynamicArrayBotContactOverride
+      DynamicArrayBotHandle
+      DynamicArrayBotJointPrefab
+      DynamicArrayBotLinearTransmissionPrefab
+      DynamicArrayBotLinkPrefab
+      DynamicArrayBotSensorPrefab
+      DynamicArrayBotSpatialTendonPrefab
+      DynamicArrayControllerHandle
+      DynamicArraySensorHandle
+   
+   
+
+   
+   
+   
+
+
+

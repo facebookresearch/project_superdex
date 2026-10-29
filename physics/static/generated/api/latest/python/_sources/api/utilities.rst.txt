@@ -1,0 +1,131 @@
+.. @generated
+
+Utilities
+=========
+
+**Modules:** ``superdex.physics.utils.configclasses``, ``superdex.physics.utils.decorators``, ``superdex.physics.utils.deprecation``, ``superdex.physics.utils.json``, ``superdex.physics.utils.coordinate_systems``, ``superdex.physics.utils.transformations``, ``superdex.physics.utils.profiling``, ``superdex.physics.utils.logging``
+
+Python utilities for configuring and working with SuperDex Physics.
+
+superdex.physics.utils.configclasses
+------------------------------------
+
+.. automodule:: superdex.physics.utils.configclasses
+   :no-members:
+
+.. autofunction:: superdex.physics.utils.configclasses.configclass
+
+superdex.physics.utils.decorators
+---------------------------------
+
+.. automodule:: superdex.physics.utils.decorators
+   :no-members:
+
+.. autofunction:: superdex.physics.utils.decorators.override_from
+
+superdex.physics.utils.deprecation
+----------------------------------
+
+.. automodule:: superdex.physics.utils.deprecation
+   :no-members:
+
+.. autoclass:: superdex.physics.utils.deprecation.DeprecatedField
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.utils.deprecation.deprecated
+   :members:
+   :show-inheritance:
+
+superdex.physics.utils.json
+---------------------------
+
+.. automodule:: superdex.physics.utils.json
+   :no-members:
+
+.. autoclass:: superdex.physics.utils.json.ExtendedJSONEncoder
+   :members:
+   :show-inheritance:
+
+superdex.physics.utils.coordinate_systems
+-----------------------------------------
+
+.. automodule:: superdex.physics.utils.coordinate_systems
+   :no-members:
+
+.. autoclass:: superdex.physics.utils.coordinate_systems.Axis
+   :members:
+   :show-inheritance:
+
+.. autodata:: superdex.physics.utils.coordinate_systems.COORDINATE_SYSTEMS
+   :no-value:
+
+.. autoclass:: superdex.physics.utils.coordinate_systems.CoordinateSystem
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.utils.coordinate_systems.CoordinateTransform
+   :members:
+   :show-inheritance:
+
+.. autodata:: superdex.physics.utils.coordinate_systems.DEFAULT_COORDINATE_SYSTEM
+   :no-value:
+
+.. autoclass:: superdex.physics.utils.coordinate_systems.Handedness
+   :members:
+   :show-inheritance:
+
+superdex.physics.utils.transformations
+--------------------------------------
+
+.. automodule:: superdex.physics.utils.transformations
+   :no-members:
+
+.. autofunction:: superdex.physics.utils.transformations.apply_affine_transform
+
+.. autofunction:: superdex.physics.utils.transformations.apply_linear_map
+
+.. autofunction:: superdex.physics.utils.transformations.is_pure_rotation
+
+.. autofunction:: superdex.physics.utils.transformations.make_transform
+
+.. autofunction:: superdex.physics.utils.transformations.orthonormalize_transform
+
+.. autofunction:: superdex.physics.utils.transformations.rotvec_to_mat
+
+.. autofunction:: superdex.physics.utils.transformations.rotvec_to_quat
+
+.. autofunction:: superdex.physics.utils.transformations.transformrt_to_numpy
+
+superdex.physics.utils.profiling
+--------------------------------
+
+.. automodule:: superdex.physics.utils.profiling
+   :no-members:
+
+.. autoclass:: superdex.physics.utils.profiling.Profiler
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.utils.profiling.ProfilerSection
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.utils.profiling.ProfilerStackEntry
+   :members:
+   :show-inheritance:
+
+superdex.physics.utils.logging
+------------------------------
+
+.. automodule:: superdex.physics.utils.logging
+   :no-members:
+
+.. autoclass:: superdex.physics.utils.logging.ColoredFormatter
+   :members:
+   :show-inheritance:
+
+.. autofunction:: superdex.physics.utils.logging.configure_logger
+
+.. autofunction:: superdex.physics.utils.logging.forward_mochi_logs_to_logger
+

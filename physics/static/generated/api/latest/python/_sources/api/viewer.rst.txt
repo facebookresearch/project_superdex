@@ -1,0 +1,123 @@
+.. @generated
+
+Viewer
+======
+
+**Modules:** ``superdex.physics.viewer``, ``superdex.physics.viewer.renderers``, ``superdex.physics.viewer.utils``, ``superdex.physics.utils.render_model_registry``
+
+Lightweight Python viewer and rendering helpers for visualization and debugging. Prefer Mochi Debugger for full simulation inspection.
+
+superdex.physics.viewer
+-----------------------
+
+.. automodule:: superdex.physics.viewer
+   :no-members:
+
+.. autoclass:: superdex.physics.viewer.Axis
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.viewer.CoordinateSystem
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.viewer.PlotAxisInfo
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.viewer.PlotState
+   :members:
+   :show-inheritance:
+
+.. autodata:: superdex.physics.viewer.RenderFrame
+   :no-value:
+
+.. autodata:: superdex.physics.viewer.VIEWER_AVAILABLE
+   :no-value:
+
+.. autoclass:: superdex.physics.viewer.Viewer
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.viewer.ViewerCfg
+   :members:
+   :show-inheritance:
+
+superdex.physics.viewer.renderers
+---------------------------------
+
+.. automodule:: superdex.physics.viewer.renderers
+   :no-members:
+
+.. autoclass:: superdex.physics.viewer.renderers.ActorRenderer
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.viewer.renderers.AxesRenderer
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.viewer.renderers.CurveNetworkRenderer
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.viewer.renderers.DebugDrawRenderer
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.viewer.renderers.GlbActorRenderer
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.viewer.renderers.GridRenderer
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.viewer.renderers.MeshRenderer
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.viewer.renderers.PointCloudRenderer
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.viewer.renderers.Renderer
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.viewer.renderers.StaticPlaneRenderer
+   :members:
+   :show-inheritance:
+
+superdex.physics.viewer.utils
+-----------------------------
+
+.. automodule:: superdex.physics.viewer.utils
+   :no-members:
+
+.. autoclass:: superdex.physics.viewer.utils.AABB
+   :members:
+   :show-inheritance:
+
+.. autoclass:: superdex.physics.viewer.utils.AnimationWriter
+   :members:
+   :show-inheritance:
+
+superdex.physics.utils.render_model_registry
+--------------------------------------------
+
+.. automodule:: superdex.physics.utils.render_model_registry
+   :no-members:
+
+.. autoclass:: superdex.physics.utils.render_model_registry.RenderModelEntry
+   :members:
+   :show-inheritance:
+
+.. autofunction:: superdex.physics.utils.render_model_registry.clear_scene
+
+.. autofunction:: superdex.physics.utils.render_model_registry.get
+
+.. autofunction:: superdex.physics.utils.render_model_registry.register
+
+.. autofunction:: superdex.physics.utils.render_model_registry.unregister_actors
+
