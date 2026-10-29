@@ -148,7 +148,7 @@ V_n = \mathbf{V}_{\mathrm{rel}} \cdot \mathbf{N}_B~,
 \qquad
 V_t=\Vert\mathbf{V}_t\Vert_2~.
 $$
-The non-default setting `frictionWithColliderNormal = false` replaces $\mathbf{N}_B$ in the above with $-\mathbf{N}_A = -\mathbf{F}_B^{-1}\mathbf{n}_A$, where $\mathbf{n}_A$ is the colliding actor's outward-facing unit normal.
+The non-default setting `frictionWithColliderNormal = false` replaces $\mathbf{N}_B$ in the above with the unit vector along $-\mathbf{N}_A = -\mathbf{F}_B^{-1}\mathbf{n}_A$, where $\mathbf{n}_A$ is the colliding actor's outward-facing unit normal.
 For exact contact between smooth surfaces, we expect $\mathbf{N}_A = -\mathbf{N}_B$.  However, for compliant contact with SDFs, this relation is only approximate.  Large deviations from this may lead to spurious contact tractions, so significantly misaligned contacts can be rejected entirely, and the dissipative response of accepted contacts can be attenuated as the rejection threshold is approached.  When the colliding-surface normal is available, define its alignment with the collider field as $s=\mathbf{G}_B\cdot\mathbf{N}_A$. A contact is rejected when $s>m$, where $m\in[-1,1]$ is the collider's maximum-normal-alignment parameter. For an accepted contact, the dissipative alignment factor is
 $$
 a=\frac{m-s}{m+1}
@@ -325,7 +325,7 @@ For `PointCloud` colliders discretizing the [double-integral generalization](#do
 | `penaltySmoothingHalfDistance` | `real` | `0.005` | m | Smoothing half-width $\epsilon$ of the ramp $h_{\epsilon,\delta}$. Larger values improve stability but may increase penetration. |
 | `penaltyThresholdDefault` | `real` | `0.001` | m | Default contact threshold $\delta$ at which the penalty activates. |
 | `penaltyThresholdExtraPadding` | `real` | `0` | m | Additional contribution to $\delta$ when the colliding actor uses `None` or `PointCloud`; helps prevent tunneling through thin actors. |
-| `frictionWithColliderNormal` | `bool` | `true` | -- | Use the collider-field direction $\mathbf{N}_B$ for the normal/tangential split; when `false`, use $-\mathbf{N}_A$ where available. |
+| `frictionWithColliderNormal` | `bool` | `true` | -- | Use the collider-field direction $\mathbf{N}_B$ for the normal/tangential split; when `false`, use the unit vector along $-\mathbf{N}_A$ where available. |
 | `maxAlignmentNormals` | `real` | `0` | -- | Maximum-normal-alignment parameter $m$; contact is rejected when $s > m$. Valid range: [-1, 1]. |
 | `viscousFrictionCoefficient` | `real` | `0` | s/m | Tangential viscous friction coefficient $c_t$. |
 | `coulombFrictionCoefficient` | `real` | `0.5` | -- | Coulomb friction coefficient $\mu$. |
