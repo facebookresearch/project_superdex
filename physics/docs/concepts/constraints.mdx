@@ -161,6 +161,7 @@ while satisfied. **Target** marks the types that carry a runtime-settable
 | [`Articulated3dRotationTarget`](#articulated3drotationtarget) | 1 | 3 | 3 | Bilateral | ✓ |
 | [`Articulated3dRotationRange`](#articulated3drotationrange) | 1 | 3 | 3 | Unilateral | |
 | [`RodElementRotationToRigid`](#rodelementrotationtorigid) | 2 | 3 | 11 | Bilateral | ✓ |
+| [`RodElementRotation`](#rodelementrotation) | 1 | 3 | 8 | Bilateral | ✓ |
 
 The formulas below use the following notation. $T_A$ is the world transform of body $A$, with
 translation $\mathbf t_A$ and rotation $R_A$, so $T_A(\mathbf r)$ is the world position of a point
@@ -364,6 +365,20 @@ to the relative rotation observed at creation and updated with [`SetTargetRotati
 behavior therefore preserves the creation-time relative rotation rather than aligning the rod
 element with the body frame. The $n=11$ coupled DoFs are the 3 rigid rotational DoFs and the 8 DoFs
 of the rod element's two nodes.
+
+#### RodElementRotation
+
+Drives the world-space rotation of a rod element toward a target rotation $\hat R$. The reference
+frame $R_0$ is expressed in world coordinates:
+
+$$
+g=\mathrm{Log}\!\left(\left(\hat R R_0\right)^{-1}R_e R_0\right)~,
+$$
+
+where $R_e$ is the world-space rotation of the rod element's material frame. The target is
+initialized to the rod element's rotation at creation and updated
+with [`SetTargetRotation`](pathname:///generated/api/v1.0.1/cpp/classsuperdex_1_1Constraint.html).
+The $n=8$ coupled DoFs are those of the rod element's two nodes.
 
 ## Code Examples
 
