@@ -21,8 +21,8 @@ The table identifies each shape's primary geometry. A registered shape may also 
 | **Tetrahedral mesh** | Four node indices per volume element. | Rigid, articulated link, and soft. | [`CreateTetMeshShape`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Context.html) / [`create_tet_mesh_shape`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.create_tet_mesh_shape), or generic mesh creation with [`nodesPerElement`](pathname:///generated/api/latest/cpp/structsuperdex_1_1MeshData.html) / [`nodes_per_element`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.MeshData.nodes_per_element) set to `4`. |
 | **Triangle mesh** | Three node indices per surface element. | Rigid, articulated link, and shell. | [`CreateTriMeshShape`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Context.html) / [`create_tri_mesh_shape`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.create_tri_mesh_shape), or generic mesh creation with [`nodesPerElement`](pathname:///generated/api/latest/cpp/structsuperdex_1_1MeshData.html) / [`nodes_per_element`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.MeshData.nodes_per_element) set to `3`. |
 | **Polyline mesh** | Two node indices per line element. | Rod. | [`CreateMeshShape`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Context.html) / [`create_mesh_shape`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.create_mesh_shape) with [`nodesPerElement`](pathname:///generated/api/latest/cpp/structsuperdex_1_1MeshData.html) / [`nodes_per_element`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.MeshData.nodes_per_element) set to `2`. |
-| **Sphere** | Analytic center and radius. | Rigid and articulated link. | [`CreateSphereShape`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Context.html) / [`create_sphere_shape`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.create_sphere_shape). |
-| **Plane** | Analytic infinite plane. | Rigid and articulated link. | [`CreatePlaneShape`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Context.html) / [`create_plane_shape`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.create_plane_shape). |
+| **Sphere** | Analytic center and radius. | Static rigid actor. | [`CreateSphereShape`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Context.html) / [`create_sphere_shape`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.create_sphere_shape). |
+| **Plane** | Analytic infinite plane. | Static rigid actor. | [`CreatePlaneShape`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Context.html) / [`create_plane_shape`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.create_plane_shape). |
 
 [`ModelData.box`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ModelData.html) can be registered as an oriented-box shape, but no actor factory currently accepts that shape type.
 
@@ -194,7 +194,7 @@ Pass a [`ShapeHandle`](pathname:///generated/api/latest/cpp/structsuperdex_1_1Sh
 
 ```cpp
 RigidActorParams params;
-params.shape = sphereShape;
+params.shape = tetShape;
 params.worldFromLocal = TransformRT{Real3{0_r, 1_r, 0_r}};
 Actor* actor = scene->CreateRigidActor(params, error);
 ```
@@ -204,7 +204,7 @@ Actor* actor = scene->CreateRigidActor(params, error);
 
 ```python
 actor = scene.create_rigid_actor(
-    shape=sphere_shape,
+    shape=tet_shape,
     world_from_local=sdp.TransformRT(translation=[0, 1, 0]),
 )
 ```
