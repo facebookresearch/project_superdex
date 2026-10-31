@@ -76,15 +76,9 @@ auto CallWithErrorResult(Function&& function) {
 }
 
 using RealArray = nb::ndarray<mochi::real const, nb::ndim<1>, nb::c_contig, nb::device::cpu>;
-using DoubleArray = nb::ndarray<double const, nb::ndim<1>, nb::c_contig, nb::device::cpu>;
 
 mochi::Span<mochi::real const> AsSpan(RealArray const& values) {
   return {values.data(), values.size()};
-}
-
-template <typename T, typename Array>
-std::vector<T> ToVector(Array const& values) {
-  return {values.data(), values.data() + values.size()};
 }
 
 superdex::recorder::SampleTime Sample(uint64_t frame, double simulationTimeSec) {
@@ -202,72 +196,6 @@ NB_MODULE(SUPERDEX_RECORDER_MODULE_NAME, module) {
           nb::arg("frame"),
           nb::arg("simulation_time_sec"));
 
-  // Native core of the Python EpisodeRestorer.
-  nb::class_<RestoredActor>(module, "_RestoredActor")
-      .def(
-          nb::new_([](mochi::ActorHandle handle,
-                      bool isArticulated,
-                      RealArray const& rootRotations,
-                      RealArray const& comTranslations,
-                      RealArray const& linearVelocities,
-                      RealArray const& angularVelocities,
-                      RealArray const& rootTranslations,
-                      RealArray const& jointPositions,
-                      RealArray const& jointVelocities,
-                      RealArray const& controllerTargets,
-                      RealArray const& jointEfforts) {
-            return RestoredActor{
-                .handle = handle,
-                .isArticulated = isArticulated,
-                .rootRotations = ToVector<mochi::real>(rootRotations),
-                .comTranslations = ToVector<mochi::real>(comTranslations),
-                .linearVelocities = ToVector<mochi::real>(linearVelocities),
-                .angularVelocities = ToVector<mochi::real>(angularVelocities),
-                .rootTranslations = ToVector<mochi::real>(rootTranslations),
-                .jointPositions = ToVector<mochi::real>(jointPositions),
-                .jointVelocities = ToVector<mochi::real>(jointVelocities),
-                .controllerTargets = ToVector<mochi::real>(controllerTargets),
-                .jointEfforts = ToVector<mochi::real>(jointEfforts)};
-          }),
-          nb::arg("handle"),
-          nb::arg("is_articulated"),
-          nb::arg("root_rotations"),
-          nb::arg("com_translations"),
-          nb::arg("linear_velocities"),
-          nb::arg("angular_velocities"),
-          nb::arg("root_translations"),
-          nb::arg("joint_positions"),
-          nb::arg("joint_velocities"),
-          nb::arg("controller_targets"),
-          nb::arg("joint_efforts"));
-
-  nb::class_<EpisodeRestorer>(module, "_EpisodeRestorer")
-      .def(
-          nb::new_([](mochi::Scene& scene,
-                      DoubleArray const& simulationTimesSec,
-                      DoubleArray const& stepDtsSec,
-                      std::vector<RestoredActor> actors) {
-            return CallWithErrorResult([&](mochi::Error& error) {
-              return std::make_unique<EpisodeRestorer>(
-                  scene,
-                  ToVector<double>(simulationTimesSec),
-                  ToVector<double>(stepDtsSec),
-                  std::move(actors),
-                  error);
-            });
-          }),
-          nb::arg("scene"),
-          nb::arg("simulation_times_sec"),
-          nb::arg("step_dts_sec"),
-          nb::arg("actors"),
-          nb::keep_alive<0, 1>())
-      .def(
-          "restore_frame",
-          [](EpisodeRestorer& self, size_t frameIndex) {
-            CallWithError([&](mochi::Error& error) { self.RestoreFrame(frameIndex, error); });
-          },
-          nb::arg("frame_index"));
-
   // Native episode reader, which the parity tests compare with Rerun's own reader.
   nb::class_<EpisodeComponent>(module, "_EpisodeComponent")
       .def_ro("entity_path", &EpisodeComponent::entityPath)
@@ -301,6 +229,39 @@ NB_MODULE(SUPERDEX_RECORDER_MODULE_NAME, module) {
           ReadComponent<&EpisodeReader::ReadScalars>(),
           nb::arg("entity_path"),
           nb::arg("component"));
+
+  // Native core of the Python EpisodeRestorer.
+  nb::class_<RecordedActor>(module, "_RecordedActor")
+      .def_ro("path", &RecordedActor::path)
+      .def_ro("handle", &RecordedActor::handle)
+      .def_ro("is_articulated", &RecordedActor::isArticulated)
+      .def_ro("is_static", &RecordedActor::isStatic);
+  module.def(
+      "_bind_recorded_actors",
+      [](mochi::Scene& scene, EpisodeReader const& recording) {
+        return CallWithErrorResult(
+            [&](mochi::Error& error) { return BindRecordedActors(scene, recording, error); });
+      },
+      nb::arg("scene"),
+      nb::arg("recording"));
+  nb::class_<EpisodeRestorer>(module, "_EpisodeRestorer")
+      .def(
+          nb::new_([](mochi::Scene& scene, EpisodeReader const& recording) {
+            return CallWithErrorResult([&](mochi::Error& error) {
+              return EpisodeRestorer::Create(scene, recording, error);
+            });
+          }),
+          nb::arg("scene"),
+          nb::arg("recording"),
+          nb::keep_alive<0, 1>())
+      .def_prop_ro("frames", &EpisodeRestorer::GetFrames)
+      .def("actors", &EpisodeRestorer::GetActors)
+      .def(
+          "restore_frame",
+          [](EpisodeRestorer& self, size_t frameIndex) {
+            CallWithError([&](mochi::Error& error) { self.RestoreFrame(frameIndex, error); });
+          },
+          nb::arg("frame_index"));
 
   // Content hash that the Unreal recorder stores for the scene archive and task files.
   module.def(

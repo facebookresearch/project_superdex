@@ -233,7 +233,10 @@ class EpisodeRestorerTest(unittest.TestCase):
                 values = states.take([recorded for _, recorded in rows])
                 stream.send_columns(
                     entity_path,
-                    indexes=[rr.TimeColumn("frame", sequence=[f for f, _ in rows])],
+                    indexes=[
+                        rr.TimeColumn("frame", sequence=[f for f, _ in rows]),
+                        rr.TimeColumn("sim_time", duration=[DT * f for f, _ in rows]),
+                    ],
                     columns=[
                         rr.ComponentColumn(
                             name,
@@ -421,10 +424,10 @@ class EpisodeRestorerTest(unittest.TestCase):
         reader = EpisodeReader(self.record_sliding_cube(method, 2).path)
 
         scene, _ = self.make_cube_scene(method, cube_name="block")
-        with self.assertRaisesRegex(ValueError, "missing recorded actor 'cube'"):
+        with self.assertRaisesRegex(sdp.Error, "missing recorded actor 'cube'"):
             recorder.EpisodeRestorer(reader, scene)
         scene, _ = self.make_cube_scene(method, ground_height=0.01)
-        with self.assertRaisesRegex(ValueError, "'ground' differs from its recorded"):
+        with self.assertRaisesRegex(sdp.Error, "'ground' differs from its recorded"):
             recorder.EpisodeRestorer(reader, scene)
         scene, _ = self.make_cube_scene(method)
         with self.assertRaisesRegex(ValueError, "Frame 3 was not recorded"):
@@ -444,9 +447,7 @@ class EpisodeRestorerTest(unittest.TestCase):
             ),
             world_from_local=sdp.TransformRT(translation=[1, 1, 0]),
         )
-        with self.assertRaisesRegex(
-            ValueError, r"unrecorded dynamic actors \['pebble'\]"
-        ):
+        with self.assertRaisesRegex(sdp.Error, "unrecorded dynamic actors 'pebble'"):
             recorder.EpisodeRestorer(reader, scene)
 
     def test_rejects_recorded_actors_that_bind_to_one_scene_actor(self) -> None:
@@ -465,7 +466,7 @@ class EpisodeRestorerTest(unittest.TestCase):
         episode.commit()
 
         scene, _ = self.make_cube_scene(method)
-        with self.assertRaisesRegex(ValueError, "both bind to scene actor 'ground'"):
+        with self.assertRaisesRegex(sdp.Error, "both bind to scene actor 'ground'"):
             recorder.EpisodeRestorer(EpisodeReader(episode.output_path), scene)
 
     def test_restores_states_written_out_of_frame_order(self) -> None:
@@ -475,7 +476,7 @@ class EpisodeRestorerTest(unittest.TestCase):
         chunks = [[(4, 4), (2, 4), (3, 3)], [(2, 2), (0, 0)]]
         scene, cube = self.make_cube_scene(method)
         with self.assertRaisesRegex(
-            ValueError, "'cube' has no 'root_quaternion_xyzw' at frame 1"
+            sdp.Error, "'cube' has no 'root_quaternion_xyzw' at frame 1"
         ):
             recorder.EpisodeRestorer(
                 self.copy_with_cube_states(recording.path, chunks), scene

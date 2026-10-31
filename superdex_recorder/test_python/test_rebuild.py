@@ -424,7 +424,7 @@ class RebuildSceneTest(unittest.TestCase):
 
         # Without the property the spawn falls back to its nominal prefab.
         unnamed_path, _ = self.record(physics_scene(live), spawned, 1)
-        with self.assertRaisesRegex(ValueError, "missing recorded actor"):
+        with self.assertRaisesRegex(sdp.Error, "missing recorded actor"):
             recorder.rebuild_scene(
                 EpisodeReader(unnamed_path),
                 BOT_SCENE_PATH,
@@ -542,7 +542,7 @@ class RebuildSceneTest(unittest.TestCase):
     def test_requires_recorded_bot_task(self) -> None:
         live, spawned = self.load_live_scene()
         kinematic_path, _ = self.record(physics_scene(live), spawned, 1)
-        with self.assertRaisesRegex(ValueError, "missing recorded actor"):
+        with self.assertRaisesRegex(sdp.Error, "missing recorded actor"):
             recorder.rebuild_scene(
                 EpisodeReader(kinematic_path), BOT_SCENE_PATH, self.context
             )

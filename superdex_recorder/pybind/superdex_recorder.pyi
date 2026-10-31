@@ -108,34 +108,6 @@ class SkeletonShadow:
     ) -> None: ...
     def record_untracked(self, frame: int, simulation_time_sec: float) -> None: ...
 
-# Native core of superdex.recorder.EpisodeRestorer. Per-frame values are concatenated in frame
-# order.
-class _RestoredActor:
-    def __init__(
-        self,
-        handle: Any,
-        is_articulated: bool,
-        root_rotations: npt.NDArray[np.floating[Any]],
-        com_translations: npt.NDArray[np.floating[Any]],
-        linear_velocities: npt.NDArray[np.floating[Any]],
-        angular_velocities: npt.NDArray[np.floating[Any]],
-        root_translations: npt.NDArray[np.floating[Any]],
-        joint_positions: npt.NDArray[np.floating[Any]],
-        joint_velocities: npt.NDArray[np.floating[Any]],
-        controller_targets: npt.NDArray[np.floating[Any]],
-        joint_efforts: npt.NDArray[np.floating[Any]],
-    ) -> None: ...
-
-class _EpisodeRestorer:
-    def __init__(
-        self,
-        scene: Any,
-        simulation_times_sec: npt.NDArray[np.float64],
-        step_dts_sec: npt.NDArray[np.float64],
-        actors: list[_RestoredActor],
-    ) -> None: ...
-    def restore_frame(self, frame_index: int) -> None: ...
-
 # Native episode reader, which the parity tests compare with Rerun's own reader.
 class _EpisodeComponent:
     entity_path: str
@@ -155,5 +127,23 @@ class _EpisodeReader:
     def read_static_texts(self, entity_path: str, component: str) -> list[str]: ...
     def read_static_scalars(self, entity_path: str, component: str) -> list[float]: ...
     def read_scalars(self, entity_path: str, component: str) -> _ScalarRows: ...
+
+# Native core of superdex.recorder.EpisodeRestorer.
+class _RecordedActor:
+    path: str
+    handle: Any
+    is_articulated: bool
+    is_static: bool
+
+def _bind_recorded_actors(
+    scene: Any, recording: _EpisodeReader
+) -> list[_RecordedActor]: ...
+
+class _EpisodeRestorer:
+    def __init__(self, scene: Any, recording: _EpisodeReader) -> None: ...
+    @property
+    def frames(self) -> list[int]: ...
+    def actors(self) -> list[_RecordedActor]: ...
+    def restore_frame(self, frame_index: int) -> None: ...
 
 def _hash_file(path: str) -> str: ...

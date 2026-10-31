@@ -62,7 +62,7 @@ add_library(superdex_recorder_physics STATIC
     include/superdex_recorder/physics_recorder.h
 )
 target_include_directories(superdex_recorder_physics PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
-target_link_libraries(superdex_recorder_physics PUBLIC superdex_recorder_core mochi_physics)
+target_link_libraries(superdex_recorder_physics PUBLIC superdex_recorder_core superdex_recorder_reader mochi_physics)
 target_compile_features(superdex_recorder_physics PUBLIC cxx_std_17)
 mochi_set_compiler_options(superdex_recorder_physics)
 set_target_properties(superdex_recorder_physics PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -120,6 +120,15 @@ if (MOCHI_BUILD_TESTS)
     mochi_set_compiler_options(superdex_recorder_physics_test)
     mochi_set_output_directories(superdex_recorder_physics_test)
     add_test(NAME superdex_recorder_physics_test COMMAND superdex_recorder_physics_test)
+
+    add_executable(superdex_recorder_restorer_test test/episode_restorer_test.cpp)
+    target_link_libraries(
+        superdex_recorder_restorer_test
+        PRIVATE superdex_recorder_physics superdex_physics gtest_main
+    )
+    mochi_set_compiler_options(superdex_recorder_restorer_test)
+    mochi_set_output_directories(superdex_recorder_restorer_test)
+    add_test(NAME superdex_recorder_restorer_test COMMAND superdex_recorder_restorer_test)
 
     add_executable(superdex_recorder_reader_test test/episode_reader_test.cpp)
     target_link_libraries(
