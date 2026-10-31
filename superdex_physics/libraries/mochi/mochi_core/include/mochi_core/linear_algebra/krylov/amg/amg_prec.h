@@ -662,7 +662,8 @@ std::optional<Scalar> AutoRelaxationFactor(
   // max |1 - omega lambda| on the model high-frequency interval [lambda_max / 2, lambda_max]. The
   // safety factor makes the choice more conservative because the Ritz value is only an estimate
   // and is computed independently on each smoothed operator.
-  // TODO: Bound the relaxation factor with a certified upper bound on the spectral radius.
+  // TODO: Explore bounding the relaxation factor with a certified upper bound on the spectral
+  // radius. See D128767873.
   auto const relaxationFactor = Scalar(4.0 / 3.0) / (options.spectralRadiusSafetyFactor * estimate);
   if (!IsFinite(relaxationFactor) || relaxationFactor <= Scalar(0)) {
     MOCHI_LOG_WARNING(
