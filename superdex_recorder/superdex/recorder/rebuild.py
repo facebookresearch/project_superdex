@@ -33,7 +33,9 @@ if TYPE_CHECKING:
     import superdex.robotics as sdr  # @manual
 
 _BOT_ARCHIVE_SUFFIXES = (".superdex_bot_archive", ".mochi_bot_archive")
-_MASS_RELATIVE_TOLERANCE = 1e-5
+# Unreal recordings of small parts differ from rebuilt masses by up to 2.6e-5, while
+# mismatched geometry differs by far more.
+_MASS_RELATIVE_TOLERANCE = 1e-4
 _PHYSICAL_COMPONENTS = (
     "superdex.physics.contact_params",
     "superdex.physics.density",
@@ -60,6 +62,7 @@ def rebuild_scene(
 ) -> RebuiltScene:
     """Load a bot scene and a bot task, then apply an episode's recorded setup to it.
 
+    Bots that the recorded slot selections did not choose are removed, as in Unreal.
     Static actors move to their recorded poses, and every recorded body gets its
     recorded contact parameters and density (see :func:`apply_recorded_physics`).
     This reproduces domain randomization applied when the episode was recorded.
@@ -75,6 +78,7 @@ def rebuild_scene(
     if bot_task_path is not None:
         _check_recorded_file(properties, "scene.task", Path(bot_task_path))
     bot_scene = load_bot_scene(str(bot_scene_path), robotics_context)
+    _retire_unselected_bots(bot_scene, properties)
     scene = bot_scene.get_scene()
     assert scene is not None
     spawned = (
@@ -174,6 +178,41 @@ def _recorded_prefabs(properties: dict[str, str]) -> dict[str, str]:
         for key, value in properties.items()
         if key.startswith(prefix)
     }
+
+
+def _retire_unselected_bots(
+    bot_scene: sdr.BotScene, properties: dict[str, str]
+) -> None:
+    """Remove the alternatives to the bots the recording selected for its slots.
+
+    A scene slot offers several bots, which may share an articulated actor name. Unreal
+    records each slot's choice as ``scene.slot.<slot>`` and retires the offered bots
+    that no slot selected, so the rebuilt scene does the same. A bot stays if any slot
+    selected it or a slot without a recorded choice offers it, so recordings made before
+    slots were recorded keep every bot.
+    """
+    offered = {
+        str(slot.name): [str(bot) for bot in slot.controlled_bots]
+        for slot in bot_scene.get_bot_scene_prefab().slots
+    }
+    selected = {
+        slot: properties[f"scene.slot.{slot}"]
+        for slot in offered
+        if f"scene.slot.{slot}" in properties
+    }
+    for slot, bot in selected.items():
+        if bot not in offered[slot]:
+            raise ValueError(
+                f"The recording selects bot {bot!r} for slot {slot!r}, which offers "
+                f"{offered[slot]}."
+            )
+    kept = set(selected.values()).union(
+        *(bots for slot, bots in offered.items() if slot not in selected)
+    )
+    for slot in selected:
+        for bot in offered[slot]:
+            if bot not in kept and bot_scene.get_bot(bot) is not None:
+                bot_scene.remove_bot(bot)
 
 
 def _spawn_bot_task(

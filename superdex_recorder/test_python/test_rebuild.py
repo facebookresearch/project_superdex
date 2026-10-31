@@ -29,6 +29,7 @@ import superdex.robotics as sdr
 from superdex.physics.paths import resolve_asset
 from superdex.physics.utils.scene_helpers import load_bot_scene
 from superdex.recorder.reader import EpisodeReader
+from superdex.recorder.rebuild import _retire_unselected_bots
 
 BOT_SCENE_PATH = resolve_asset(
     "bots/internal/tests/bot_scene/test_bot_scene.mochi_bot_scene"
@@ -57,6 +58,9 @@ KNOB_SPAWN_NAME = "knob"
 # `BOT_SCENE_PATH`'s knob pose, just above the foam.
 KNOB_ROTATION = [0.0, -math.sqrt(0.5), -math.sqrt(0.5), 0.0]
 KNOB_TRANSLATION = [0.0075, -0.245, 0.8355]
+SLOT_ARM_PATH = "@bots/internal/t3/right/t3_right.superdex_bot"
+# Alternatives for one slot that share the arm's articulated actor name.
+SLOT_BOTS = ("t3_right", "t3_right_osc_v2")
 
 
 def physics_scene(bot_scene: sdr.BotScene) -> sdp.Scene:
@@ -457,6 +461,79 @@ class RebuildSceneTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "with its recorded density"):
             recorder.rebuild_scene(
                 EpisodeReader(kinematic_path),
+                BOT_SCENE_PATH,
+                self.context,
+                bot_task_path=self.task_path,
+            )
+
+    def write_slot_scene(self, slots: list[dict[str, object]] | None = None) -> Path:
+        """A bot scene whose right slot offers two bots built from the same arm."""
+        (self.directory / ".superdex_root").write_text(
+            json.dumps({"@bots": str(resolve_asset("bots"))})
+        )
+        path = self.directory / "slots.mochi_bot_scene"
+        path.write_text(
+            json.dumps(
+                {
+                    "metadata": {"name": "slots"},
+                    "scene": {
+                        "baseScene": "@bots/internal/tests/bot_scene/base_scene/"
+                        "base_scene.mochi_scene"
+                    },
+                    "bots": [
+                        {"name": name, "path": SLOT_ARM_PATH} for name in SLOT_BOTS
+                    ],
+                    "slots": slots
+                    or [{"name": "right", "controlledBots": list(SLOT_BOTS)}],
+                }
+            )
+        )
+        return path
+
+    def record_slot_choice(self, scene_path: Path, choice: str) -> Path:
+        live = load_bot_scene(str(scene_path), self.context)
+        # Unreal retires the alternatives before it records.
+        for bot in SLOT_BOTS:
+            if bot != choice:
+                live.remove_bot(bot)
+        path, _ = self.record(
+            physics_scene(live),
+            [],
+            1,
+            recorder.EpisodeMetadata({"scene.slot.right": choice}),
+        )
+        return path
+
+    def test_keeps_only_the_bots_recorded_slots_selected(self) -> None:
+        scene_path = self.write_slot_scene()
+        path = self.record_slot_choice(scene_path, SLOT_BOTS[1])
+        rebuilt = recorder.rebuild_scene(EpisodeReader(path), scene_path, self.context)
+        self.assertIsNone(rebuilt.bot_scene.get_bot(SLOT_BOTS[0]))
+        self.assertIsNotNone(rebuilt.bot_scene.get_bot(SLOT_BOTS[1]))
+
+    def test_slots_without_a_recorded_choice_keep_their_bots(self) -> None:
+        scene_path = self.write_slot_scene(
+            [
+                {"name": "right", "controlledBots": list(SLOT_BOTS)},
+                {"name": "spare", "controlledBots": [SLOT_BOTS[1]]},
+            ]
+        )
+        bot_scene = load_bot_scene(str(scene_path), self.context)
+        _retire_unselected_bots(bot_scene, {"scene.slot.right": SLOT_BOTS[0]})
+        for bot in SLOT_BOTS:
+            self.assertIsNotNone(bot_scene.get_bot(bot))
+
+    def test_rejects_slot_choice_the_scene_does_not_offer(self) -> None:
+        live, spawned = self.load_live_scene()
+        path, _ = self.record(
+            physics_scene(live),
+            spawned,
+            1,
+            recorder.EpisodeMetadata({"scene.slot.right": "t3_left"}),
+        )
+        with self.assertRaisesRegex(ValueError, "slot 'right', which offers"):
+            recorder.rebuild_scene(
+                EpisodeReader(path),
                 BOT_SCENE_PATH,
                 self.context,
                 bot_task_path=self.task_path,
