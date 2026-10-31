@@ -458,9 +458,8 @@ void TaskScheduler::AddTaskVerboseProfile(
   if (ProfilerIsConnected()) {
     MOCHI_PROFILE_SCOPE();
     uint64_t id = ++_profileTaskCounter; // Give each task a unique identifier
-    // Warning: std::string_view is not necessarily null-terminated, but it is supposed to come from
-    // a string literal in which case this is OK.
-    std::string zoneName = Format("AddTask %s (%llx)", debugNameStringLiteral.data(), id);
+    std::string zoneName =
+        Format("AddTask %s (%llx)", std::string(debugNameStringLiteral).c_str(), id);
     MOCHI_PROFILE_LABEL(zoneName);
     // "Replace "Add" with "Run"
     memcpy(zoneName.data(), "Run", 3);
