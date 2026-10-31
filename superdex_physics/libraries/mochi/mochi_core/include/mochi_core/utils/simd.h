@@ -536,6 +536,9 @@ inline constexpr bool kHasHSumEach<Simd<T, N>> = N >= 4 && IsPowerOfTwo(N);
 
 /// @brief Returns {HSum(a), HSum(b), HSum(c), HSum(d)}. Native SIMD backends compute the four sums
 /// together, in fewer instructions than four @ref HSum calls. Requires @ref kHasHSumEach.
+///
+/// @note Results may not be bitwise equal to @ref HSum for floating-point types: the lanes may be
+/// added in a different order.
 template <class T, int N>
 MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, 4>
 HSumEach(Simd<T, N> a, Simd<T, N> b, Simd<T, N> c, Simd<T, N> d);
