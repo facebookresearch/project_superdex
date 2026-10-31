@@ -120,7 +120,7 @@ class SubsetMap {
   // instead!
   inline SubsetMap(std::vector<int> subset_, int N)
       : subset(std::move(subset_)), originalRangeCount(N) {
-    MOCHI_ASSERT(std::is_sorted(subset.begin(), subset.end()), "Unsorted subset.");
+    MOCHI_ASSERT_VERBOSE(std::is_sorted(subset.begin(), subset.end()), "Unsorted subset.");
   }
 
   auto begin() {
