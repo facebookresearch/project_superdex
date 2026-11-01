@@ -742,8 +742,9 @@ TEST_IF_P(
 using MochiDifferentiableSettings = MochiSceneTestBase;
 
 // MakeSceneDifferentiable keeps ContactParams.frictionWithColliderNormal = false, and BackPropagate
-// warns about it.
-TEST_F(MochiDifferentiableSettings, KeepsFrictionWithCollidingNormalAndWarns) {
+// warns about it. SetSolverParams rejects implicitNormalForceForDissipation = true, even with
+// explicitNormals = false.
+TEST_F(MochiDifferentiableSettings, HandlesUnsupportedSettings) {
   test::SetSceneIntegrationMethod(_scene, IntegrationMethod::BackwardEuler);
   RigidActorParams params;
   params.shape = test::CreateUnitCubeTetMeshShape(_mochiContext);
@@ -751,6 +752,13 @@ TEST_F(MochiDifferentiableSettings, KeepsFrictionWithCollidingNormalAndWarns) {
   Actor* actor = _scene->CreateRigidActor(params, test::ExpectOK{});
   MakeSceneDifferentiable(_scene, test::ExpectOK{});
   EXPECT_FALSE(actor->GetContactParams(test::ExpectOK{}).frictionWithColliderNormal);
+
+  SolverParams const before = _scene->GetSolverParams();
+  SolverParams solverParams = before;
+  solverParams.experimentalEval.explicitNormals = false;
+  solverParams.experimentalEval.implicitNormalForceForDissipation = true;
+  _scene->SetSolverParams(solverParams, test::ExpectNotOK{});
+  EXPECT_EQ(before, _scene->GetSolverParams());
 
   StateHandle const stateOld = _scene->CaptureState(test::ExpectOK{});
   _scene->Step(kDt);

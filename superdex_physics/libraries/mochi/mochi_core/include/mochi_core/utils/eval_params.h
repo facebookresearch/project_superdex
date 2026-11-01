@@ -115,6 +115,7 @@ struct ExperimentalEvalParams {
    * @note Dissipative contact terms include Coulomb friction, viscous friction, and normal viscous
    * damping. Using an implicit normal force for normal damping can improve the accuracy of the
    * effective coefficient of restitution at a given time step size.
+   * @note A differentiable scene requires implicitNormalForceForDissipation = false.
    */
   bool implicitNormalForceForDissipation = false;
 

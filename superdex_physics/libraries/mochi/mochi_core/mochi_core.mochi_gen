@@ -1449,6 +1449,7 @@ struct ExperimentalEvalParams [equality(default), from_mochi_core] {
   // @note Dissipative contact terms include Coulomb friction, viscous friction, and normal viscous
   // damping. Using an implicit normal force for normal damping can improve the accuracy of the
   // effective coefficient of restitution at a given time step size.
+  // @note A differentiable scene requires implicitNormalForceForDissipation = false.
   bool implicitNormalForceForDissipation = false;
   // @brief Controls whether force-saturation terms use a fitted quadratic Hessian (more stable) or
   // the exact analytical Hessian (faster convergence but less stable), independently for each

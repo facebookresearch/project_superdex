@@ -586,6 +586,11 @@ void SceneImpl::SetSolverParams(SolverParams const& params, Error& error) {
           params.experimentalEval.explicitNormals,
       error,
       "implicitNormalForceForDissipation = true with explicitNormals = true is not supported.");
+  MOCHI_ERROR_IF(
+      params.experimentalEval.implicitNormalForceForDissipation &&
+          _registry.try_ctx<TagDifferentiableScene>(),
+      error,
+      "implicitNormalForceForDissipation = true is not supported in differentiable scenes.");
   MOCHI_ERROR_RETURN(error);
 
   // After validation, since NaN can compare equal under MSVC /fp:fast.

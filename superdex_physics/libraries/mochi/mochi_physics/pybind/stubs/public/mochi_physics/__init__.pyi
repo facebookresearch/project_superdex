@@ -3845,6 +3845,9 @@ class ExperimentalEvalParams:
         normal viscous damping. Using an implicit normal force for normal damping
         can improve the accuracy of the effective coefficient of restitution at a
         given time step size.
+
+    Note:
+        A differentiable scene requires implicitNormalForceForDissipation = false.
     """
     fitted_saturation_hessian: SaturationHessianParams
     """Controls whether force-saturation terms use a fitted quadratic Hessian (more
