@@ -46,7 +46,7 @@ namespace mochi::test {
   Expect that no error has been set on a mochi::Error object.
   Prints the error details if any.
 */
-#define EXPECT_OK(error) EXPECT_TRUE((error).IsOK()) << "UNEXPECTED ERROR:\n%s" << error.ToString();
+#define EXPECT_OK(error) EXPECT_TRUE((error).IsOK()) << "UNEXPECTED ERROR:\n" << error.ToString();
 
 /**
   Expect that an error HAS been set on a mochi::Error object.
