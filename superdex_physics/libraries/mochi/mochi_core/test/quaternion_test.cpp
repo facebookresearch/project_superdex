@@ -171,9 +171,11 @@ TEST(Quaternion, AxisAngle) {
       // arbitrary vector
       expectedAxis = Normalize(Real3{1_r, 2_r, 3_r});
     }
-    real constexpr kEps = std::numeric_limits<real>::epsilon();
-    real constexpr kTestAngles[] = {-kPI - kEps, -kPI, -kPI + kEps, kPI - kEps, kPI, kPI + kEps};
-    for (auto expectedAngle : kTestAngles) {
+    // kPI's neighbors; kPI +/- epsilon rounds to kPI itself in double precision.
+    real const belowPi = std::nextafter(kPI, 0_r);
+    real const abovePi = std::nextafter(kPI, std::numeric_limits<real>::infinity());
+    real const testAngles[] = {-abovePi, -kPI, -belowPi, belowPi, kPI, abovePi};
+    for (auto expectedAngle : testAngles) {
       q = Quaternion::FromAxisAngle(expectedAxis, expectedAngle);
       q.ToAxisAngle(&axis, &angle);
       // axis and -axis are equivalent.
