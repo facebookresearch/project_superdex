@@ -788,7 +788,7 @@ TEST(TaskScheduler, NumThreads3) {
   TestTaskScheduler(3);
 }
 
-TEST(TaskScheduler, ParallelForRangeCallerRunsUnstartedSubRanges) {
+TEST(TaskScheduler, ParallelForRangeClaimsUnstartedSubRanges) {
   // The only worker stays busy until ParallelForRange returns, so the calling thread must run every
   // sub-range. Waiting for the worker instead would deadlock.
   TaskScheduler scheduler(1);
@@ -810,6 +810,21 @@ TEST(TaskScheduler, ParallelForRangeCallerRunsUnstartedSubRanges) {
   EXPECT_GT(numSubRanges, 1);
   release.set_value();
   busy.Wait();
+
+  // Conversely, the calling thread stays in its own sub-range until the worker has run a task added
+  // from there. The worker runs its tasks in order, so the ParallelForRange task queued on it
+  // before must have run every other sub-range by then.
+  std::atomic<int> numItemsRun = 0;
+  ParallelForRange("Test", 0, 64, 1, std::numeric_limits<int>::max(), [&](int begin, int end) {
+    if (end < 64) {
+      numItemsRun += end - begin;
+    } else {
+      TaskSemaphore laterTaskDone;
+      scheduler.AddTask(laterTaskDone, "Later", []() {});
+      laterTaskDone.Wait();
+      EXPECT_EQ(begin, numItemsRun);
+    }
+  });
 }
 
 TEST(TaskScheduler, IsCurrentThreadAWorker) {

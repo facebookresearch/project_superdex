@@ -379,8 +379,9 @@ void Schedule(TaskSemaphore const& sem, std::string_view debugNameStringLiteral,
   subRangeEnd) one or more time. If it distributes work to any async tasks, then it will wait for
   completion before returning. Thus the operation is synchronous, from the caller's perspective.
 
-  If each call is very expensive then set minPerTask to 1 to indicate it is OK to create a task for
-  each index. If each call is very cheap, then set minPerTask to a larger value to reduce overhead.
+  If each call is very expensive then set minPerTask to 1 to indicate it is OK to give each index
+  its own sub-range. If each call is very cheap, then set minPerTask to a larger value to reduce
+  overhead.
 
   The calling thread runs the last sub-range itself. Callers may rely on this, e.g. to keep work on
   the calling thread. It then runs every sub-range no worker has started, so it waits only for
@@ -400,8 +401,9 @@ void ParallelForRange(
   tasks, then it will wait for completion before returning. Thus the operation is synchronous, from
   the caller's perspective.
 
-  If each call is very expensive then set minPerTask to 1 to indicate it is OK to create a task for
-  each index. If each call is very cheap, then set minPerTask to a larger value to reduce overhead.
+  If each call is very expensive then set minPerTask to 1 to indicate it is OK to give each index
+  its own sub-range. If each call is very cheap, then set minPerTask to a larger value to reduce
+  overhead.
 
   The calling thread runs the sub-range containing index n - 1. Callers may rely on this, e.g. to
   keep work on the calling thread. It then runs every sub-range no worker has started.
@@ -427,8 +429,9 @@ void ParallelForN(
   will wait for completion before returning. Thus the operation is synchronous, from the caller's
   perspective.
 
-  If each call is very expensive then set minPerTask to 1 to indicate it is OK to create a task for
-  each index. If each call is very cheap, then set minPerTask to a larger value to reduce overhead.
+  If each call is very expensive then set minPerTask to 1 to indicate it is OK to give each index
+  its own sub-range. If each call is very cheap, then set minPerTask to a larger value to reduce
+  overhead.
 
   Example:
     std::vector<MyClass> vec;

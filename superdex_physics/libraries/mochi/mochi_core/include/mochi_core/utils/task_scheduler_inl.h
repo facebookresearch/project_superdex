@@ -18,6 +18,8 @@
 
 #include "task_scheduler.h" // Reverse include for Intellisense
 
+#include <mochi_core/utils/basic_utils.h>
+
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -142,55 +144,59 @@ void ParallelForRange(
     return;
   }
 
-  // We have to decide how to subdivide the index range into tasks. If all threads are idle and
+  // We have to decide how to subdivide the index range into sub-ranges. If all threads are idle and
   // all callbacks are equally fast, then the optimal subdivision would split the work evenly with
-  // one task per thread. However, some threads may already be busy or some callbacks may take
+  // one sub-range per thread. However, some threads may already be busy or some callbacks may take
   // longer than others. In that case, an even subdivision would be sub-optimal because we could
-  // end up waiting for one task long after the others finish.
+  // end up waiting for one sub-range long after the others finish.
   //
-  // Therefore, lets shoot for two tasks per worker thread as a general target, unless we are forced
+  // Therefore, let's shoot for two sub-ranges per thread as a general target, unless we are forced
   // to do otherwise by minPerTask, maxPerTask, or count.
   int count = globalRangeEnd - globalRangeBegin;
   int numThreads = numOtherThreads + 1; // +1 for the current thread
-  int numTasksTarget = std::min(count, 2 * numThreads);
-  int numPerTask =
-      numTasksTarget ? std::min(std::max(count / numTasksTarget, minPerTask), maxPerTask) : count;
+  int const numSubRangesTarget = Min(count, 2 * numThreads);
+  int const numPerSubRange =
+      numSubRangesTarget ? Clamp(count / numSubRangesTarget, minPerTask, maxPerTask) : count;
 
-  // Schedule tasks to handle each sub-range except the last one, which this thread will handle.
-  // Each task claims the next unclaimed sub-range when it starts. After its own sub-range, this
-  // thread claims and handles the rest, so it never waits for a busy or sleeping worker to start
-  // one. A task that starts after every sub-range is claimed does nothing, so it never touches
-  // forRange after this call returns. The tasks keep the claim state alive until they finish.
-  int numTasks = numPerTask ? (count - 1) / numPerTask : 0;
+  // Split off every sub-range except the last one, which this thread will handle, and add one task
+  // for each of up to numClaimableSubRanges other threads. Each task claims unclaimed sub-ranges
+  // until none is left. After its own sub-range, this thread claims and handles the rest too, so it
+  // never waits for a busy or sleeping worker to start one. A task that starts after every
+  // sub-range is claimed does nothing, so it never touches forRange after this call returns. The
+  // tasks keep the claim state alive until they finish.
+  int const numClaimableSubRanges = numPerSubRange ? (count - 1) / numPerSubRange : 0;
+  int const numTasks = Min(numClaimableSubRanges, numOtherThreads);
   std::shared_ptr<mochi::details::ParallelForClaims> claims;
-  auto claimRange = [&forRange, globalRangeBegin, numPerTask, numTasks](
-                        mochi::details::ParallelForClaims& state) {
-    int const range = state.next.fetch_add(1, std::memory_order_relaxed);
-    if (range >= numTasks) {
-      return false;
+  auto claimRanges = [&forRange, globalRangeBegin, numPerSubRange, numClaimableSubRanges](
+                         mochi::details::ParallelForClaims& state) {
+    while (true) {
+      int const range = state.next.fetch_add(1, std::memory_order_relaxed);
+      if (range >= numClaimableSubRanges) {
+        return;
+      }
+      int const localRangeBegin = globalRangeBegin + range * numPerSubRange;
+      forRange(localRangeBegin, localRangeBegin + numPerSubRange);
+      state.unfinished.Done();
     }
-    int const localRangeBegin = globalRangeBegin + range * numPerTask;
-    forRange(localRangeBegin, localRangeBegin + numPerTask);
-    state.unfinished.Done();
-    return true;
   };
   if (numTasks > 0) {
-    claims = std::make_shared<mochi::details::ParallelForClaims>(numTasks);
+    claims = std::make_shared<mochi::details::ParallelForClaims>(numClaimableSubRanges);
 #if MOCHI_TASK_PROFILE_VERBOSITY == MOCHI_TASK_PROFILE_VERBOSITY_HIGH
-    MOCHI_PROFILE_DESCRIPTION_F("%d items, %d tasks", count, numTasks);
+    MOCHI_PROFILE_DESCRIPTION_F(
+        "%d items, %d sub-ranges, %d tasks", count, numClaimableSubRanges + 1, numTasks);
 #endif
     for (int i = 0; i < numTasks; ++i) {
 #if MOCHI_TASK_PROFILE_VERBOSITY == MOCHI_TASK_PROFILE_VERBOSITY_HIGH
       // TaskScheduler will wrap our std::function in another one, which will add custom formatted
       // profile labels.
-      scheduler->AddTask(debugName, [claimRange, claims]() { claimRange(*claims); });
+      scheduler->AddTask(debugName, [claimRanges, claims]() { claimRanges(*claims); });
 #else
       scheduler->AddTaskNoProfile(
-          [claimRange, claims]() {
+          [claimRanges, claims]() {
 #if MOCHI_TASK_PROFILE_VERBOSITY == MOCHI_TASK_PROFILE_VERBOSITY_LOW
             MOCHI_PROFILE_SCOPE_N("RunTask");
 #endif
-            claimRange(*claims);
+            claimRanges(*claims);
           },
           false);
 #endif
@@ -202,8 +208,10 @@ void ParallelForRange(
   // Unfortunately, marl's task scheduling algorithm sometimes doubles them up on a single thread.
   // Hacky work-around: schedule dummy jobs to wake up more worker threads. They will then enter
   // the spin-for-work state and have the opportunity to steal work from the doubled up thread(s).
+  // Waking more than numOtherThreads - numTasks threads cost more than it saved in benchmarks.
   if (minPerTask == 1) {
-    scheduler->TryToWakeUpMoreWorkers(numTasks / 2); // Wake up more workers please
+    scheduler->TryToWakeUpMoreWorkers(
+        Min(numClaimableSubRanges / 2, numOtherThreads - numTasks)); // Wake up more workers please
   }
 
   // Since this is a blocking call, we might as well do part of the work here.
@@ -214,10 +222,9 @@ void ParallelForRange(
 #elif MOCHI_TASK_PROFILE_VERBOSITY == MOCHI_TASK_PROFILE_VERBOSITY_LOW
     MOCHI_PROFILE_SCOPE_N("RunTask");
 #endif
-    forRange(globalRangeBegin + numTasks * numPerTask, globalRangeEnd);
+    forRange(globalRangeBegin + numClaimableSubRanges * numPerSubRange, globalRangeEnd);
     if (numTasks > 0) {
-      while (claimRange(*claims)) {
-      }
+      claimRanges(*claims);
     }
   }
 
