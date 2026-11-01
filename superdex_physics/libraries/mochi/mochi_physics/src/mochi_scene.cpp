@@ -34,6 +34,7 @@
 #include "mochi_ecs_init.h"
 #include "mochi_ecs_utils.h"
 #include "mochi_hdf5.h"
+#include "mochi_integration.h"
 #include "mochi_island.h"
 #include "mochi_query.h"
 #include "mochi_rigid.h"
@@ -60,6 +61,7 @@
 #include <mochi_core/utils/file_utils.h>
 #include <mochi_core/utils/group_rw.h>
 #include <mochi_core/utils/profile.h>
+#include <mochi_core/utils/reflection.h>
 #include <mochi_core/utils/time.h>
 
 #include <mochi_physics/diffsim/mochi_diffsim.h>
@@ -270,19 +272,12 @@ static void ComputeAggregateSolverSceneStats(
     entt::registry& reg,
     SolverStats& outStats,
     DebugStats& outDebugStats) {
-  // Retrieve the integration method from solver parameters to determine how many integration
-  // stages are used in the time-stepping scheme (e.g., backward Euler has 1 stage, while
-  // higher-order methods may have multiple stages).
-  auto const intMethod = reg.ctx<CSimulationParams const>().integrationMethod;
-  auto const numStages = GetNumStages(intMethod);
-  MOCHI_ASSERT(numStages <= kMaxIntegrationStages, "Unexpected number of integration stages");
-
   // Aggregate solver statistics across all awake islands in the scene. We compute:
-  // 1. The total squared residual norm across all islands and integration stages.
+  // 1. The sum across islands of the mean squared residual norm across each island's integration
+  //    stages. Each island records the stages it solved, which may differ from the integration
+  //    method's (e.g., quasistatic steps use backward Euler).
   // 2. The maximum number of non-linear solver iterations across all islands and stages.
   // 3. The worst convergence status across all islands and stages.
-  // NOTE: We accumulate squared residual norms (without taking the square root) because we'll
-  // compute the root-mean-square (RMS) across all stages at the end.
   outStats.residualNorm = 0.0;
   outStats.maxNonLinearIters = 0;
   outStats.maxLineSearchIters = 0;
@@ -290,22 +285,26 @@ static void ComputeAggregateSolverSceneStats(
   outDebugStats.maxResidualNormRelativeError = 0_r;
   // Sleeping islands were not solved during this step, so they are excluded.
   reg.view<CIslandSolverStats const, TagIslandIsAwake const>().each(
-      [numStages, &outStats, &outDebugStats](auto const& islandSolverStats) {
+      [&outStats, &outDebugStats](auto const& islandSolverStats) {
         int const islandNumStages = isize(islandSolverStats.stages);
-        MOCHI_ASSERT(islandNumStages == numStages, "Unexpected number of integration stages");
+        MOCHI_ASSERT(
+            islandNumStages > 0 && islandNumStages <= kMaxIntegrationStages,
+            "Unexpected number of integration stages");
+        double islandSqrResidualNormSum = 0.0;
         for (int stageIdx = 0; stageIdx < islandNumStages; ++stageIdx) {
           auto const& stage = islandSolverStats.stages[stageIdx];
-          outStats.residualNorm += Sqr((double)stage.resNorm);
+          islandSqrResidualNormSum += Sqr((double)stage.resNorm);
           outStats.maxNonLinearIters = Max(outStats.maxNonLinearIters, stage.numIterDone);
           outStats.maxLineSearchIters = Max(outStats.maxLineSearchIters, stage.numLSIterDone);
           outStats.convergenceStatus = Max(outStats.convergenceStatus, stage.convergence);
           outDebugStats.maxResidualNormRelativeError =
               Max(outDebugStats.maxResidualNormRelativeError, stage.resNormError);
         }
+        outStats.residualNorm += islandSqrResidualNormSum / islandNumStages;
       });
 
   // Compute the final RMS residual norm.
-  outStats.residualNorm = Sqrt(outStats.residualNorm / numStages);
+  outStats.residualNorm = Sqrt(outStats.residualNorm);
 }
 
 // Helper function to compute the aggregate backprop solver stats for a step.
@@ -678,10 +677,30 @@ void SceneImpl::Step(double timeStepSec) {
   double stepDuration = 0.0;
   dbg::StepProfileTimers stepProfile;
   if (timeStepSec > 0.0) {
+    // Quasistatic steps use backward Euler (see solver::CreateIslandTimeIntegrationParams).
+    auto const method = _registry.ctx<CSimulationParams const>().integrationMethod;
+    if (!IsFinite(timeStepSec) && method != IntegrationMethod::BackwardEuler) {
+      MOCHI_LOG_WARNING_ONCE(
+          "Quasistatic steps (infinite time step) use backward Euler instead of the requested "
+          "integration method (%s). Set SolverParams::integrationMethod to BackwardEuler to "
+          "silence this warning.",
+          SReflect::EnumToString(method));
+    }
+
     timer.Reset();
 
+    // A quasistatic step leaves no history to extrapolate from, so multi-step methods cold-start
+    // after it. Clearing the history in the next finite step lets Step(0.0) still reproduce the
+    // quasistatic step.
+    auto& sceneTime = _registry.ctx<CSceneTime>();
+    if (IsFinite(timeStepSec) && !IsFinite(sceneTime.DeltaTime())) {
+      for (entt::entity const e : _registry.view<CTimeIntegratorState const>()) {
+        integration::ClearMultiStepIntegrationData(_registry, e);
+      }
+    }
+
     // Store time step
-    _registry.ctx<CSceneTime>().Advance(timeStepSec);
+    sceneTime.Advance(timeStepSec);
 
     // ECS compute velocities and prepare actors
     Timer phaseTimer;

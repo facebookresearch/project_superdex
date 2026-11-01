@@ -1093,7 +1093,12 @@ TimeIntegratorParams mochi::solver::CreateIslandTimeIntegrationParams(
   };
 
   IntegrationMethod method = targetMethod;
-  if (targetMethod == IntegrationMethod::BDF2) {
+  if (!IsFinite(reg.ctx<CSceneTime const>().DeltaTime())) {
+    // A quasistatic step (infinite time step) is one solve for the static equilibrium at the step
+    // end, i.e., backward Euler. Other methods would start from extrapolated history, solve several
+    // stages, or combine them into a step end other than the equilibrium.
+    method = IntegrationMethod::BackwardEuler;
+  } else if (targetMethod == IntegrationMethod::BDF2) {
     method = (getNumPrevStepsAvailable() >= 2) ? IntegrationMethod::BDF2
                                                : IntegrationMethod::BackwardEuler;
   } else if (targetMethod == IntegrationMethod::BDF3) {

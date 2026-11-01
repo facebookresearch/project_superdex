@@ -23,14 +23,17 @@
 #include <mochi_core/articulated_body/articulated_body.h>
 #include <mochi_core/integration/integration_utils.h>
 #include <mochi_core/linear_algebra/matrix.h>
+#include <mochi_core/test/log_suppression.h>
 #include <mochi_core/test/mochi_test_helpers.h>
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/dtransform.h>
+#include <mochi_core/utils/reflection.h>
 #include <mochi_core/utils/rodrigues_utils.h>
 #include <mochi_core/utils/simd.h>
 
 #include <gtest/gtest.h>
 
+#include <limits>
 #include <string>
 #include <variant>
 
@@ -830,6 +833,49 @@ TYPED_TEST(ReconstructFallbackTest, ExtrapolatesFromCurrent) {
   c.SetupFallback(dt);
   InvokeReconstruct(c, kFallbackMethod, time);
   c.CheckFallback(dt);
+}
+
+class IntegrationMethodTest : public test::MochiSceneTestBase,
+                              public ::testing::WithParamInterface<int> {};
+
+INSTANTIATE_TEST_SUITE_P(
+    IntegrationMethods,
+    IntegrationMethodTest,
+    ::testing::Range(0, static_cast<int>(IntegrationMethod::Count)),
+    [](::testing::TestParamInfo<int> const& info) {
+      return std::string(SReflect::EnumToString(static_cast<IntegrationMethod>(info.param)));
+    });
+
+// A quasistatic step ends a motion at rest at the static equilibrium.
+TEST_P(IntegrationMethodTest, QuasistaticStepEndsAtRestAtEquilibrium) {
+  test::SetSceneIntegrationMethod(_scene, static_cast<IntegrationMethod>(GetParam()));
+  _scene->SetGravity(Real3{});
+  RigidActorParams params;
+  params.shape = test::CreateUnitCubeTetMeshShape(_mochiContext);
+  Actor* box = _scene->CreateRigidActor(params, test::ExpectOK{});
+  RigidPivotPositionConstraintParams position;
+  position.actor = box->GetHandle();
+  _scene->CreateRigidPivotPositionConstraint(position, test::ExpectOK{});
+  RigidPivotRotationConstraintParams rotation;
+  rotation.actor = box->GetHandle();
+  _scene->CreateRigidPivotRotationConstraint(rotation, test::ExpectOK{});
+  box->SetVelocity(Real3{0.6_r, -0.4_r, 0.7_r}, Real3{0.5_r, 0.2_r, 0.3_r}, test::ExpectOK{});
+  // Enough dynamic steps for every multi-step method to have a full history.
+  for (int i = 0; i < kMaxIntegrationSteps; ++i) {
+    _scene->Step(0.01);
+  }
+
+  {
+    // Methods other than backward Euler warn, once per process, that it replaces them.
+    auto suppressWarning = test::SuppressLogWarning();
+    _scene->Step(std::numeric_limits<double>::infinity());
+  }
+  real constexpr kTol = 1e-4_r;
+  EXPECT_NEAR_TOL(TransformRT::Identity(), box->GetRootTransform(), kTol);
+  for (int i = 0; i < kMaxIntegrationSteps; ++i) {
+    _scene->Step(0.01);
+    EXPECT_NEAR_TOL(TransformRT::Identity(), box->GetRootTransform(), kTol);
+  }
 }
 
 } // namespace
