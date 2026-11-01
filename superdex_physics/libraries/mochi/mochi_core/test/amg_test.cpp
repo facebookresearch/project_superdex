@@ -29,7 +29,10 @@
 #include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/constants.h>
 #include <mochi_core/utils/container_utils.h>
+#include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/dynamic_array.h>
+#include <mochi_core/utils/graph.h>
+#include <mochi_core/utils/log.h>
 #include <mochi_core/utils/span.h>
 #include <mochi_core/utils/task_scheduler.h>
 
@@ -510,12 +513,18 @@ class RigidModesAMGUnderTest : public krylov::RigidBodyModesAMGPrec<real> {
 };
 
 // X is an accurate inverse of A: |A X - I| <= tol |A| |X| entrywise, as for a backward stable
-// inverse.
+// inverse. With translationsOnly, A has 6 DoFs per node, and X is such an inverse of its
+// translation block, over the first 3 DoFs of every node, and zero elsewhere.
 template <typename MatA, typename MatX>
-static void ExpectAccurateInverse(MatA const& A, MatX const& X, double tol) {
+static void
+ExpectAccurateInverse(MatA const& A, MatX const& X, double tol, bool translationsOnly = false) {
   int const n = A.Rows();
   for (int i = 0; i < n; ++i) {
     for (int j = 0; j < n; ++j) {
+      if (translationsOnly && (i % 6 >= 3 || j % 6 >= 3)) {
+        EXPECT_EQ(double(X(i, j)), 0.0);
+        continue;
+      }
       double residual = (i == j) ? -1.0 : 0.0;
       double scale = 0.0;
       for (int k = 0; k < n; ++k) {
@@ -543,18 +552,25 @@ template <typename MatrixType, typename Prec>
                                                                         : kMaxPCGIterations;
 }
 
-// Properties every AMG preconditioner has. Returns its PCG iteration count.
+// Properties every AMG preconditioner has, given the coarse level kept after stiffening, or 0 if
+// none, and whether the coarsest level is solved on its translations alone. Returns its PCG
+// iteration count.
 template <typename AMG, typename MatrixType>
-static int ExpectAMGProperties(AMGProblem<MatrixType> const& problem) {
+static int ExpectAMGProperties(
+    AMGProblem<MatrixType> const& problem,
+    int stiffenedLevel = 0,
+    bool translationsOnly = false) {
   AMG prec(problem);
   // The rounding of sums of up to a few hundred products in real.
   real const tol = 1000 * std::numeric_limits<real>::epsilon();
-  // The levels down to the first one that fails the numerical check, below which none is formed.
+  // The levels down to the first one that still fails the numerical checks after any repair, below
+  // which none is formed.
   int const numFormedLevels = Min(prec.NumAcceptedCoarseLevels() + 1, prec.NumCoarseLevels());
   for (int s = 0; s < numFormedLevels; ++s) {
-    // The restriction is the interpolation's transpose. The stored P^T A and the coarse matrix are
-    // the Galerkin products, with J on the coarse DoFs that do not interpolate, the rotations of a
-    // 6-DoF node: the identity times the mean diagonal entry of the node's translation block.
+    // The restriction is the interpolation's transpose. The stored P^T A and, unless stiffened, the
+    // coarse matrix are the Galerkin products, with J on the coarse DoFs that do not interpolate,
+    // the rotations of a 6-DoF node: the identity times the mean diagonal entry of the node's
+    // translation block.
     auto const A = prec.LevelMatrix(s);
     auto const coarseA = prec.LevelMatrix(s + 1);
     auto const P = MakeDense(
@@ -582,7 +598,13 @@ static int ExpectAMGProperties(AMGProblem<MatrixType> const& problem) {
             3.0;
       }
     }
-    EXPECT_LE(MaxAbsDifference(coarseA, galerkin), tol * productScale * MaxAbs(P));
+    if (s + 1 == stiffenedLevel) {
+      // A stiffened level dominates the exact product: the difference is positive definite, J on
+      // the DoFs that do not interpolate.
+      EXPECT_GT(MinPivot(coarseA - PtA * P), 0.0);
+    } else {
+      EXPECT_LE(MaxAbsDifference(coarseA, galerkin), tol * productScale * MaxAbs(P));
+    }
     if constexpr (AMG::kExactlySymmetricCoarseMatrices) {
       Matrix<double> const coarseAt = coarseA.Transpose();
       EXPECT_EQ(MaxAbsDifference(coarseA, coarseAt), 0.0);
@@ -601,12 +623,11 @@ static int ExpectAMGProperties(AMGProblem<MatrixType> const& problem) {
   }
   double symmetryTol = Sqrt(double(std::numeric_limits<real>::epsilon()));
   if (prec.NumAcceptedCoarseLevels() == prec.NumCoarseLevels()) {
-    // The coarsest inverse X is accurate: |A X - I| <= tol |A| |X| entrywise, as for a backward
-    // stable inverse.
+    // The coarsest inverse is accurate, on the translation block alone with translationsOnly.
     auto const coarsest = prec.LevelMatrix(prec.NumCoarseLevels());
     int const m = coarsest.Rows();
     auto const inverse = MakeDense(m, m, [&](auto const& u, auto& v) { prec.SolveCoarsest(u, v); });
-    ExpectAccurateInverse(coarsest, inverse, tol);
+    ExpectAccurateInverse(coarsest, inverse, tol, translationsOnly);
     for (int i = 0; i < m; ++i) {
       for (int j = 0; j < m; ++j) {
         symmetryTol =
@@ -618,9 +639,10 @@ static int ExpectAMGProperties(AMGProblem<MatrixType> const& problem) {
   }
 
   // The preconditioner M is positive definite, and symmetric to rounding, which the explicit
-  // inverse X of the coarsest matrix C amplifies by up to max |X_ij| sqrt(C_ii C_jj). The
-  // eigenvalues of M A, at most 1 for a V-cycle with symmetric smoothing and Galerkin coarse
-  // matrices, stay below 1.5: 1.5 M - M A M is positive definite.
+  // inverse X of the coarsest matrix C, or of its translation block, amplifies by up to
+  // max |X_ij| sqrt(C_ii C_jj). The eigenvalues of M A, at most 1 for a V-cycle with symmetric
+  // smoothing and coarse corrections no larger than the Galerkin ones, stay below 1.5:
+  // 1.5 M - M A M is positive definite.
   auto const A = prec.LevelMatrix(0);
   int const n = A.Rows();
   auto const M = MakeDense(n, n, [&](auto const& r, auto& z) { prec.Solve(r, z); });
@@ -724,6 +746,14 @@ static int ExpectAMGProperties(AMGProblem<MatrixType> const& problem) {
   return y;
 }
 
+// Anchors node 0 with stiffness 1 / e, e = epsilon / 128.
+static void PinNode0(BlockSparseMatrix<real, 3>& A) {
+  real const e = std::numeric_limits<real>::epsilon() / 128;
+  for (int d = 0; d < 3; ++d) {
+    A.Values(0)[krylov::details::BlockIndex(A.Indices(0), 0)](d, d) += 1_r / e;
+  }
+}
+
 enum class AMGFixture {
   Laplacian1D,
   TwoLaplacians1D,
@@ -733,6 +763,7 @@ enum class AMGFixture {
   FloatingBar,
   HeavierFloatingBar,
   PinnedBar,
+  NonFiniteBar,
   Strip,
   MovedStrip,
   CollinearCurrent,
@@ -751,12 +782,15 @@ enum class AMGFixture {
 // with mass 8 epsilon at three corner nodes, so that the coarsest matrix, on which the rigid
 // motions of the whole bar have that energy, rounds to a singular one, while the springs keep the
 // first coarse level's smoother blocks, which are all that its acceptance checks, positive
-// definite; the matrix is SPD as represented. Heavier floating: mass 24 epsilon there, so that
-// AMGPrec's coarsest matrix passes the positive-definiteness check but its explicit inverse fails
-// it. Pinned: node 0 anchored with stiffness 1 / e, so that the first coarse block of its aggregate
-// rounds to rank 3. Collinear: the strip, with its current positions collapsed onto a skew line, or
-// its reference positions onto a narrow strip along it, whose aggregates' margins, 0.047 to 0.058,
-// lie between 0 and the member-only threshold.
+// definite; the matrix is SPD as represented. Since the bar's translations are among those motions,
+// the coarsest translation block rounds to singular too. Heavier floating: mass 24 epsilon there,
+// so that AMGPrec's coarsest matrix passes the positive-definiteness check but its explicit inverse
+// fails it. Pinned: node 0 anchored with stiffness 1 / e, so that the first coarse block of its
+// aggregate rounds to rank 3 until that level is stiffened. Non-finite: a NaN and an infinite
+// displacement coordinate at nodes 40 and 41, as from a diverged step, so that the first coarse
+// level is not finite, even once stiffened. Collinear: the strip, with its current positions
+// collapsed onto a skew line, or its reference positions onto a narrow strip along it, whose
+// aggregates' margins, 0.047 to 0.058, lie between 0 and the member-only threshold.
 [[nodiscard]] static AMGProblem<BlockSparseMatrix<real, 3>> MakeProblemWithPositions(
     AMGFixture fixture) {
   using enum AMGFixture;
@@ -767,7 +801,8 @@ enum class AMGFixture {
   real const e = std::numeric_limits<real>::epsilon() / 128;
   DynamicArray<std::array<double, 3>> reference;
   DynamicArray<DynamicArray<int>> groups;
-  if (fixture == Bar || fixture == MovedBar || floating || fixture == PinnedBar) {
+  if (fixture == Bar || fixture == MovedBar || floating || fixture == PinnedBar ||
+      fixture == NonFiniteBar) {
     auto const [coordinates, tets] =
         mochi::test::CreateMinimalTetMeshUnitGrid({5_r, 1_r, 1_r}, {10, 2, 2});
     for (auto const& x : coordinates) {
@@ -787,7 +822,8 @@ enum class AMGFixture {
   } else if (tinyScale) {
     // Three nearly collinear nodes on the z axis, whose x and y stiffness is 100 times the smallest
     // normal number, so that the energy of the coarse rotation about their line, the last coarse
-    // DoF, is subnormal and its reciprocal overflows. Chain: four of these joined into a path.
+    // DoF, is subnormal and its reciprocal overflows, while their translations stay normal. Chain:
+    // four of these joined into a path, whose first coarse level fails even once stiffened.
     for (int g = 0; g < (fixture == TinyScale ? 1 : 4); ++g) {
       reference.push_back({0.0, 0.0, 3.0 * g - 1.0});
       reference.push_back({0.01, 0.0, 3.0 * g});
@@ -799,12 +835,18 @@ enum class AMGFixture {
     }
   } else if (roundsToSingular) {
     // diag(1, 6e, 6e, 6e) with off-diagonal -e on four nodes, whose coarse matrix rounds to a
-    // singular one. Chain: four of these joined into a path, whose first coarse level fails.
-    for (int g = 0; g < (fixture == RoundsToSingular ? 1 : 4); ++g) {
-      reference.push_back({3.0 * g + 1.0, 0.0, 0.0});
-      reference.push_back({3.0 * g - 1.0, 0.0, 0.0});
-      reference.push_back({3.0 * g, 1.0, 0.0});
-      reference.push_back({3.0 * g, -1.0, 0.0});
+    // singular one while its translation block stays positive definite. Chain: ten of these, each
+    // with its diagonal-1 node at its centroid, joined into a path and moved as MovedBar, so that
+    // the first coarse level passes and the second, a smoothed level, rounds to singular.
+    constexpr std::array<double, 2> kSingleOffsets[] = {
+        {1.0, 0.0}, {-1.0, 0.0}, {0.0, 1.0}, {0.0, -1.0}};
+    constexpr std::array<double, 2> kChainOffsets[] = {
+        {0.0, 0.0}, {1.0, 0.0}, {-0.5, 1.0}, {-0.5, -1.0}};
+    auto const& offsets = (fixture == RoundsToSingular) ? kSingleOffsets : kChainOffsets;
+    for (int g = 0; g < (fixture == RoundsToSingular ? 1 : 10); ++g) {
+      for (auto const& offset : offsets) {
+        reference.push_back({3.0 * g + offset[0], offset[1], 0.0});
+      }
       groups.push_back({4 * g, 4 * g + 1, 4 * g + 2, 4 * g + 3});
       if (g > 0) {
         groups.push_back({4 * g - 1, 4 * g + 3});
@@ -855,7 +897,7 @@ enum class AMGFixture {
     }
   }
   auto positions = reference;
-  if (fixture == MovedBar || fixture == MovedStrip) {
+  if (fixture == MovedBar || fixture == MovedStrip || fixture == RoundsToSingularChain) {
     for (auto& x : positions) {
       x = RotateAboutSkewAxis(x);
       x[0] += 1000.0;
@@ -879,9 +921,7 @@ enum class AMGFixture {
     }
   }
   if (fixture == PinnedBar) {
-    for (int d = 0; d < 3; ++d) {
-      problem.A.Values(0)[krylov::details::BlockIndex(problem.A.Indices(0), 0)](d, d) += 1_r / e;
-    }
+    PinNode0(problem.A);
   }
   if (nearlyCollinear || tinyScale || roundsToSingular) {
     real const tiny = 100 * std::numeric_limits<real>::min();
@@ -916,6 +956,10 @@ enum class AMGFixture {
       problem.referencePositions.push_back(static_cast<real>(reference[i][k]));
       problem.displacements.push_back(static_cast<real>(positions[i][k] - reference[i][k]));
     }
+  }
+  if (fixture == NonFiniteBar) {
+    problem.displacements[3 * 40] = std::numeric_limits<real>::quiet_NaN();
+    problem.displacements[3 * 41 + 1] = kInf;
   }
   return problem;
 }
@@ -1225,9 +1269,10 @@ constexpr AMGRow kAMGRows[] = {
 INSTANTIATE_TEST_SUITE_P(AMG, AMGTest, testing::ValuesIn(kAMGRows), RowName<AMGRow>);
 
 // RigidBodyModesAMGPrec on a fixture: the expected numbers of level-0 aggregates with member-only
-// weights and with decoupled rotations, of coarse levels and of accepted coarse levels, and the
-// most PCG iterations it may take: on the bar and the strip, about a third above the measured
-// counts.
+// weights and with decoupled rotations, of coarse levels and of accepted coarse levels, the coarse
+// level kept after stiffening, if any, whether the coarsest level is solved on its translations
+// alone, and the most PCG iterations it may take: on the bar and the strip, about a third above the
+// measured counts.
 struct RigidModesRow {
   char const* name;
   AMGFixture fixture;
@@ -1235,6 +1280,8 @@ struct RigidModesRow {
   int numDecoupled;
   int numCoarseLevels;
   int numAcceptedCoarseLevels;
+  int stiffenedLevel = 0;
+  bool translationsOnly = false;
   int maxPCGIterations = kMaxPCGIterations;
 };
 
@@ -1242,8 +1289,21 @@ class RigidModesAMGTest : public testing::TestWithParam<RigidModesRow> {};
 
 TEST_P(RigidModesAMGTest, Properties) {
   auto const& row = GetParam();
+  // Only the rows that drop a coarse level log warnings:
+  // count them, and forward every other channel.
+  int numWarnings = 0;
+  LogFn const logFn = GetLogCallback();
+  SetLogCallback([&](LogChannel channel, char const* message, char const* file, int line) {
+    if (channel == LogChannel::Warning) {
+      ++numWarnings;
+    } else {
+      logFn(channel, message, file, line);
+    }
+  });
+  MOCHI_DEFER(SetLogCallback(logFn));
   auto const problem = MakeProblemWithPositions(row.fixture);
-  int const numPCGIterations = ExpectAMGProperties<RigidModesAMGUnderTest>(problem);
+  int const numPCGIterations = ExpectAMGProperties<RigidModesAMGUnderTest>(
+      problem, row.stiffenedLevel, row.translationsOnly);
   RigidModesAMGUnderTest const prec(problem);
   auto const [numMemberOnly, numDecoupled] = ExpectRigidModesDefinitions(problem, prec);
   EXPECT_EQ(numMemberOnly, row.numMemberOnly);
@@ -1277,25 +1337,108 @@ TEST_P(RigidModesAMGTest, Properties) {
     EXPECT_TRUE(NearEqualVectors(x, z));
   }
   EXPECT_LE(numPCGIterations, row.maxPCGIterations);
+  EXPECT_EQ(numWarnings > 0, row.numAcceptedCoarseLevels < row.numCoarseLevels);
 }
 
 constexpr RigidModesRow kRigidModesRows[] = {
-    // Name, fixture, member-only, decoupled, coarse levels, accepted, PCG iterations if bounded.
-    {"Bar", AMGFixture::Bar, 5, 0, 2, 2, 16},
-    {"MovedBar", AMGFixture::MovedBar, 5, 0, 2, 2, 16},
-    {"FloatingBar", AMGFixture::FloatingBar, 5, 0, 2, 1},
-    {"PinnedBar", AMGFixture::PinnedBar, 5, 0, 2, 0},
-    {"Strip", AMGFixture::Strip, 0, 0, 1, 1, 25},
-    {"MovedStrip", AMGFixture::MovedStrip, 0, 0, 1, 1, 25},
-    {"CollinearCurrent", AMGFixture::CollinearCurrent, 0, 3, 1, 1},
-    {"CollinearReference", AMGFixture::CollinearReference, 3, 0, 1, 1},
-    {"TenNodes", AMGFixture::TenNodes, 9, 7, 2, 2},
-    {"NearlyCollinear", AMGFixture::NearlyCollinear, 1, 1, 1, 1},
-    {"CoupledNearlyCollinear", AMGFixture::CoupledNearlyCollinear, 1, 0, 1, 1},
-    {"RoundsToSingular", AMGFixture::RoundsToSingular, 0, 0, 1, 0},
-    {"RoundsToSingularChain", AMGFixture::RoundsToSingularChain, 0, 0, 2, 0},
-    {"TinyScale", AMGFixture::TinyScale, 1, 0, 1, 0},
-    {"TinyScaleChain", AMGFixture::TinyScaleChain, 4, 0, 2, 0},
+    {.name = "Bar",
+     .fixture = AMGFixture::Bar,
+     .numMemberOnly = 5,
+     .numDecoupled = 0,
+     .numCoarseLevels = 2,
+     .numAcceptedCoarseLevels = 2,
+     .maxPCGIterations = 16},
+    {.name = "MovedBar",
+     .fixture = AMGFixture::MovedBar,
+     .numMemberOnly = 5,
+     .numDecoupled = 0,
+     .numCoarseLevels = 2,
+     .numAcceptedCoarseLevels = 2,
+     .maxPCGIterations = 16},
+    {.name = "FloatingBar",
+     .fixture = AMGFixture::FloatingBar,
+     .numMemberOnly = 5,
+     .numDecoupled = 0,
+     .numCoarseLevels = 2,
+     .numAcceptedCoarseLevels = 1},
+    {.name = "PinnedBar",
+     .fixture = AMGFixture::PinnedBar,
+     .numMemberOnly = 5,
+     .numDecoupled = 0,
+     .numCoarseLevels = 2,
+     .numAcceptedCoarseLevels = 2,
+     .stiffenedLevel = 1},
+    {.name = "Strip",
+     .fixture = AMGFixture::Strip,
+     .numMemberOnly = 0,
+     .numDecoupled = 0,
+     .numCoarseLevels = 1,
+     .numAcceptedCoarseLevels = 1,
+     .maxPCGIterations = 25},
+    {.name = "MovedStrip",
+     .fixture = AMGFixture::MovedStrip,
+     .numMemberOnly = 0,
+     .numDecoupled = 0,
+     .numCoarseLevels = 1,
+     .numAcceptedCoarseLevels = 1,
+     .maxPCGIterations = 25},
+    {.name = "CollinearCurrent",
+     .fixture = AMGFixture::CollinearCurrent,
+     .numMemberOnly = 0,
+     .numDecoupled = 3,
+     .numCoarseLevels = 1,
+     .numAcceptedCoarseLevels = 1},
+    {.name = "CollinearReference",
+     .fixture = AMGFixture::CollinearReference,
+     .numMemberOnly = 3,
+     .numDecoupled = 0,
+     .numCoarseLevels = 1,
+     .numAcceptedCoarseLevels = 1},
+    {.name = "TenNodes",
+     .fixture = AMGFixture::TenNodes,
+     .numMemberOnly = 9,
+     .numDecoupled = 7,
+     .numCoarseLevels = 2,
+     .numAcceptedCoarseLevels = 2},
+    {.name = "NearlyCollinear",
+     .fixture = AMGFixture::NearlyCollinear,
+     .numMemberOnly = 1,
+     .numDecoupled = 1,
+     .numCoarseLevels = 1,
+     .numAcceptedCoarseLevels = 1},
+    {.name = "CoupledNearlyCollinear",
+     .fixture = AMGFixture::CoupledNearlyCollinear,
+     .numMemberOnly = 1,
+     .numDecoupled = 0,
+     .numCoarseLevels = 1,
+     .numAcceptedCoarseLevels = 1},
+    {.name = "RoundsToSingular",
+     .fixture = AMGFixture::RoundsToSingular,
+     .numMemberOnly = 0,
+     .numDecoupled = 0,
+     .numCoarseLevels = 1,
+     .numAcceptedCoarseLevels = 1,
+     .translationsOnly = true},
+    {.name = "RoundsToSingularChain",
+     .fixture = AMGFixture::RoundsToSingularChain,
+     .numMemberOnly = 0,
+     .numDecoupled = 0,
+     .numCoarseLevels = 3,
+     .numAcceptedCoarseLevels = 3,
+     .stiffenedLevel = 2},
+    {.name = "TinyScale",
+     .fixture = AMGFixture::TinyScale,
+     .numMemberOnly = 1,
+     .numDecoupled = 0,
+     .numCoarseLevels = 1,
+     .numAcceptedCoarseLevels = 1,
+     .translationsOnly = true},
+    {.name = "TinyScaleChain",
+     .fixture = AMGFixture::TinyScaleChain,
+     .numMemberOnly = 4,
+     .numDecoupled = 0,
+     .numCoarseLevels = 2,
+     .numAcceptedCoarseLevels = 0},
 };
 INSTANTIATE_TEST_SUITE_P(
     AMG,
@@ -1303,11 +1446,14 @@ INSTANTIATE_TEST_SUITE_P(
     testing::ValuesIn(kRigidModesRows),
     RowName<RigidModesRow>);
 
-// Update moves between full, partial and no acceptance of the coarse levels, as construction does.
+// Update moves between full acceptance, no accepted coarse level, a dropped coarsest and a
+// stiffened level, as construction does.
 TEST(AMG, RigidModesAcceptanceTransitions) {
   using enum AMGFixture;
   constexpr std::pair<AMGFixture, int> kSequence[] = {
-      {Bar, 2}, {FloatingBar, 1}, {PinnedBar, 0}, {Bar, 2}};
+      {Bar, 2}, {NonFiniteBar, 0}, {FloatingBar, 1}, {PinnedBar, 2}, {Bar, 2}};
+  // Dropping a coarse level warns.
+  auto const suppressWarnings = mochi::test::SuppressLogWarning();
   DynamicArray<AMGProblem<BlockSparseMatrix<real, 3>>> problems;
   for (auto const& [fixture, numAccepted] : kSequence) {
     problems.push_back(MakeProblemWithPositions(fixture));
@@ -1333,10 +1479,12 @@ TEST(AMG, RigidModesAcceptanceTransitions) {
 // With a bound task scheduler, construction and an update with moved positions match the
 // single-threaded results. The bar, 2084 x 2 x 2 nodes, is just long enough for each parallel loop
 // of the setup over the fine nodes, their weights or their aggregates to split into several tasks.
+// Node 0 is pinned as in the pinned bar, so that its first coarse level is stiffened and kept.
 TEST(AMG, RigidModesParallelSetup) {
   constexpr Int3 kCells{2083, 1, 1};
   AMGProblem<BlockSparseMatrix<real, 3>> problem{
       .A = mochi::test::MakeBlockSparseMatrix<real, 3>(kCells[0], kCells[1], kCells[2])};
+  PinNode0(problem.A);
   // The matrix's nodes, in its order, on unit cells.
   auto const nodes =
       mochi::test::CreateMinimalTetMeshUnitGrid(StaticCast<Real3>(kCells), kCells).first;
@@ -1350,6 +1498,7 @@ TEST(AMG, RigidModesParallelSetup) {
   for (int k = 0; k < isize(moved.displacements); ++k) {
     moved.displacements[k] = 0.01_r * Sin(real(k));
   }
+
   int const n = problem.A.Rows();
   ColumnVector<real> r(n);
   r.SetRandom(1);
@@ -1357,8 +1506,10 @@ TEST(AMG, RigidModesParallelSetup) {
   auto const solveOutputs = [&]() {
     ColumnVector<real> z(2 * n);
     RigidModesAMGUnderTest prec(problem);
+    EXPECT_GT(prec.NumAcceptedCoarseLevels(), 0);
     prec.Solve(r, z.TopRows(n));
     prec.Update(moved);
+    EXPECT_GT(prec.NumAcceptedCoarseLevels(), 0);
     prec.Solve(r, z.BottomRows(n));
     return z;
   };
@@ -1437,9 +1588,67 @@ TEST(AMG, RigidModeMargin) {
   EXPECT_FALSE(RigidModeMarginAtLeast(3, sum, sumOuter, 0.1));
 }
 
+// The rounding bound on a hand-built pattern: identity blocks of A on the diagonal and between
+// nodes 0 and 1, and coefficients w = 1, r = 1 and, for node i, q the i-th unit axis, with nodes 0
+// and 1 interpolating from both aggregates and node 2 from aggregate 0 alone. So n_1 = 2 for both
+// aggregates, n_2 = 3, from aggregate 0, and z = |P|^T |A| |P| 1 is (14, 14, 17, 10, 10, 12) and
+// (12, 12, 16, 8, 8, 12) from 3 fine DoFs, or (14, 14, 17, 19, 19, 21) and (12, 12, 16, 16, 16, 20)
+// from 6. With p = 2 or 3, each shift is at least alpha z and within 0.1% of it; one count more or
+// less moves it by over 10%.
+TEST(AMG, RigidModesRoundingBound) {
+  using Coefficients = krylov::details::RigidModeCoefficients<real>;
+  Coefficients const e0{.w = 1_r, .q = {1_r, 0_r, 0_r}, .r = 1_r};
+  Coefficients const e1{.w = 1_r, .q = {0_r, 1_r, 0_r}, .r = 1_r};
+  Coefficients const e2{.w = 1_r, .q = {0_r, 0_r, 1_r}, .r = 1_r};
+  krylov::details::RigidModeTransfer<real> T;
+  T.numNodes = 3;
+  T.numAggregates = 2;
+  T.pointers = {0, 2, 4, 5};
+  T.aggregates = {0, 1, 0, 1, 0};
+  T.coefficients = {e0, e0, e1, e1, e2};
+  T.restrictionPointers = {0, 3, 5};
+  T.restrictionNodes = {0, 1, 2, 0, 1};
+  T.restrictionCoefficients = {e0, e1, e2, e0, e1};
+
+  // Row a of P^T A has a block for each node of R(a).
+  Graph<int, int> const ptAPattern({0, 3, 5}, {0, 1, 2, 0, 1});
+  auto const coupled = [](int k) {
+    Matrix<real> A(3 * k, 3 * k);
+    A.SetIdentity();
+    A.Block(0, k, k, k).SetIdentity();
+    A.Block(k, 0, k, k).SetIdentity();
+    return A;
+  };
+
+  double const u = 0.5 * double(std::numeric_limits<real>::epsilon());
+  auto const gamma = [u](int m) { return m * u / (1.0 - m * u); };
+  auto const expectShift = [&](auto const& A, std::array<std::array<double, 6>, 2> const& z) {
+    auto Ac = ToBlockSparseMatrix<6>(Matrix<real>::Zero(12, 12), /*pruneZeros*/ false);
+    krylov::details::AddGalerkinRoundingBound(T, A, ptAPattern, Ac);
+
+    int const p = (A.kBlockSize == 3) ? 2 : 3;
+    double const gammaG = gamma(2 * p) + gamma(3 * p) + gamma(2 * p) * gamma(3 * p);
+    double const alpha = (gammaG + u * (1.0 + gammaG)) / Sqr(1.0 - u);
+    for (int a = 0; a < 2; ++a) {
+      auto const shift = Ac.Values(a)[krylov::details::BlockIndex(Ac.Indices(a), a)];
+      for (int r = 0; r < 6; ++r) {
+        EXPECT_GE(shift(r, r), alpha * z[a][r]);
+        EXPECT_LE(shift(r, r), 1.001 * alpha * z[a][r]);
+      }
+    }
+  };
+
+  expectShift(
+      ToBlockSparseMatrix<3>(coupled(3), /*pruneZeros*/ true),
+      {{{14.0, 14.0, 17.0, 10.0, 10.0, 12.0}, {12.0, 12.0, 16.0, 8.0, 8.0, 12.0}}});
+  expectShift(
+      ToBlockSparseMatrix<6>(coupled(6), /*pruneZeros*/ true),
+      {{{14.0, 14.0, 17.0, 19.0, 19.0, 21.0}, {12.0, 12.0, 16.0, 16.0, 16.0, 20.0}}});
+}
+
 // The positive-definiteness checks of RigidBodyModesAMGPrec accept a pivot only above n epsilon
-// times its row's diagonal entry, and the inverses from the 6x6 factors and from the coarsest
-// matrix's check are accurate.
+// times its row's diagonal entry, and the inverses from the 6x6 factors, from the coarsest matrix's
+// check and from its translation block's are accurate.
 TEST(AMG, RigidModesFactorChecks) {
   real const eps = std::numeric_limits<real>::epsilon();
   real const nan = std::numeric_limits<real>::quiet_NaN();
@@ -1472,6 +1681,7 @@ TEST(AMG, RigidModesFactorChecks) {
         smoother.Update(ToBlockSparseMatrix<6>(smootherBlock, /*pruneZeros*/ false)), accepted);
     EXPECT_EQ(krylov::details::IsPositiveDefinite(smootherBlock), accepted);
   }
+
   real block[36];
   for (int k = 0; k < 36; ++k) {
     block[k] = (k / 6 == k % 6) ? 7_r : 1_r / real(1 + Abs(k / 6 - k % 6));
@@ -1491,17 +1701,35 @@ TEST(AMG, RigidModesFactorChecks) {
       EXPECT_NEAR(product, i == j ? 1.0 : 0.0, 10 * eps);
     }
   }
+
+  auto const diagonallyDominant = [](int n) {
+    Matrix<real> M(n, n);
+    for (int i = 0; i < n; ++i) {
+      for (int j = 0; j < n; ++j) {
+        M(i, j) = (i == j) ? real(n) : 1_r / real(1 + Abs(i - j));
+      }
+    }
+    return M;
+  };
+
   // From kSmallLDLtInverseSizeThreshold rows, the inverse comes from LDLt's factors.
   int const n = kSmallLDLtInverseSizeThreshold;
-  Matrix<real> M(n, n);
-  for (int i = 0; i < n; ++i) {
-    for (int j = 0; j < n; ++j) {
-      M(i, j) = (i == j) ? real(n) : 1_r / real(1 + Abs(i - j));
-    }
-  }
+  Matrix<real> const M = diagonallyDominant(n);
   Matrix<real> coarsestInverse;
   ASSERT_TRUE(krylov::details::InvertIfPositiveDefinite(M, coarsestInverse));
   ExpectAccurateInverse(M, coarsestInverse, n * eps);
+
+  // The translation-only solve of three 6-DoF nodes is accurate, and fails if an entry outside the
+  // translation block, here the last one, is not finite.
+  Matrix<real> const coarsest = diagonallyDominant(18);
+  ASSERT_TRUE(krylov::details::InvertTranslationsIfPositiveDefinite(coarsest, coarsestInverse));
+  ExpectAccurateInverse(coarsest, coarsestInverse, 18 * eps, /*translationsOnly*/ true);
+  for (real const nonFinite : {nan, kInf}) {
+    Matrix<real> withNonFinite = coarsest;
+    withNonFinite(17, 17) = nonFinite;
+    EXPECT_FALSE(
+        krylov::details::InvertTranslationsIfPositiveDefinite(withNonFinite, coarsestInverse));
+  }
 }
 
 TEST(AMG, Partition1D) {

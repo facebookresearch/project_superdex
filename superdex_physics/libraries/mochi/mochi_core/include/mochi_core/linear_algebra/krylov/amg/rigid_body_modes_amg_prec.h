@@ -25,18 +25,21 @@
 #include <mochi_core/linear_algebra/matrix_operations.h>
 #include <mochi_core/linear_algebra/utils/matrix_conversions.h>
 #include <mochi_core/mochi_config.h>
+#include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/container_utils.h>
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/graph.h>
 #include <mochi_core/utils/graph_utils.h>
 #include <mochi_core/utils/graph_views.h>
+#include <mochi_core/utils/log.h>
 #include <mochi_core/utils/simd.h>
 #include <mochi_core/utils/span.h>
 #include <mochi_core/utils/task_scheduler.h>
 
 #include <algorithm>
 #include <bit>
+#include <cmath>
 #include <cstdint>
 #include <limits>
 #include <optional>
@@ -74,21 +77,46 @@ struct CheckedBlockJacobi6;
  * - Degenerate positions: when the pure rows of a level-0 aggregate are nearly collinear at the
  *   current positions (see @ref DecoupleMargin), its rotation DoFs are decoupled. They do not
  *   interpolate, and their diagonal block of the first coarse matrix is J, the identity times the
- *   mean diagonal entry of the block's translation part, so that A_1 = P^T A_0 P + J, and the
- *   interpolation reproduces only the aggregate's translations. With this, in exact arithmetic, no
- *   coarse matrix is singular for an SPD A and any positions. The coarser interpolations need no
- *   such tests: each aggregate's root, whose neighbors all belong to it (@ref details::Aggregate),
- *   interpolates from it alone with weight 1 and an invertible block (r > 0). Since J scales with
- *   A, the preconditioner of α A is the preconditioner of A divided by α.
- * - Numerical acceptance: each update uses the coarse levels, from the first, while their smoother
- *   blocks, or the coarsest matrix, and the inverses the cycle applies are positive definite to
- *   working precision (@ref details::IsPositiveDefinite). The level above the first that fails
- *   smooths without coarse correction. This covers rounding, which the geometric tests cannot; the
- *   cycle is then positive definite if the damping keeps every smoother convergent (@ref
- *   AMGOptions::relaxationFactor).
+ *   mean diagonal entry of the block's translation part in P^T A_0 P, so that A_1 = P^T A_0 P + J,
+ *   and the interpolation reproduces only the aggregate's translations. With this, in exact
+ *   arithmetic, no coarse matrix is singular for an SPD A and any positions. The coarser
+ *   interpolations need no such tests: each aggregate's root, whose neighbors all belong to it
+ *   (@ref details::Aggregate), interpolates from it alone with weight 1 and an invertible block
+ *   (r > 0). Since J scales with A, the preconditioner of α A is that of A divided by α.
+ * - Numerical acceptance: each update checks the coarse levels from the first. The smoother blocks
+ *   of a smoothed level, the coarsest matrix, and the inverses the cycle applies must be positive
+ *   definite to working precision (@ref details::IsPositiveDefinite). A smoothed level that fails
+ *   is stiffened: a bound on its Galerkin product's rounding error is added to its diagonal (@ref
+ *   details::AddGalerkinRoundingBound). It is kept if it is then finite and passes, and the coarser
+ *   levels are built from it. A coarsest level that fails is solved on its translation block alone,
+ *   with zero rotation correction, if it is finite and that block passes. Either repair also needs
+ *   the cached P^T A that restricts to the level, if any, to be finite. A level that still fails is
+ *   dropped with the coarser ones, with a logged warning, and the level above smooths without
+ *   coarse correction. This covers rounding, which the geometric tests cannot; the cycle is then
+ *   positive definite if the damping keeps every smoother convergent
+ *   (@ref AMGOptions::relaxationFactor).
+ *
+ *   The checks certify only what keeps the cycle positive definite: positive definite smoother
+ *   blocks and a positive semidefinite coarsest correction. The stiffening certifies that a level
+ *   dominates the exact product of its stored finer level and interpolation, under the assumptions
+ *   of @ref details::AddGalerkinRoundingBound: an exactly symmetric finer level, finite arithmetic
+ *   rounded to nearest, no subnormal numbers and bounded sum lengths. None certifies accuracy. A
+ *   smoothed level needs no more: its smoother is damped, the coarser levels correct what it
+ *   misses, and when the exact product is positive definite, the exact inverse of the stiffened
+ *   level is bounded above by that product's exact inverse, so its correction never exceeds the
+ *   exact product's. The coarsest level is not stiffened: it is inverted explicitly, with nothing
+ *   coarser to correct it, and when its finer level is indefinite, which the smoother checks allow,
+ *   the stiffening need not make it positive definite, so a stiffened coarsest could be worse than
+ *   none. Its translations are the fallback because stiff point terms, such as pins and contact,
+ *   cancel in floating point in the rotations about each aggregate's centroid but not in the
+ *   translations. Stiff springs within an aggregate can still cancel in them; if the translation
+ *   block then fails too, dropping the level is the safe choice. Even when it passes, translations
+ *   can be a poor coarse space: where stiff contact holds an aggregate on a curved surface, its
+ *   soft motion along the curve is a rotation, which translations can't reproduce, so the fallback
+ *   can take more iterations than dropping the level.
  * - Cycle: a V(1,1) cycle with damped block Jacobi smoothing, the automatic damping of @ref
- *   AMGOptions, restriction of the fine residual, and the coarsest matrix's explicit inverse. The
- *   coarse levels run on the first worker of @ref ConcurrentSolve.
+ *   AMGOptions, restriction of the fine residual, and the explicit inverse of the coarsest matrix,
+ *   or of its translation block. The coarse levels run on the first worker of @ref ConcurrentSolve.
  * - Every coarse matrix is stored exactly symmetric.
  *
  * @warning The matrix storage passed to the constructor or latest @ref Update call must outlive
@@ -249,6 +277,8 @@ struct RigidBodyModesAMGPrec : Preconditioner<Scalar> {
   DynamicArray<CoarseLevel> _levels = {};
   /// @brief Number of coarse levels, from the first, that the latest update accepted.
   int _numAcceptedCoarseLevels = 0;
+  /// @brief Inverse of the coarsest matrix, or of its translation block, padded with zero rotation
+  /// rows and columns.
   Matrix<Scalar> _coarsestInverse;
 
   /// @brief Fine-level temporaries of the cycle, which @ref ConcurrentSolve overwrites.
@@ -698,6 +728,10 @@ void MirrorUpperTriangle(BlockSparseMatrix<Scalar, kBlockSize, int, int>& M) {
 /// per fine node, the block size of A. Row a of P^T A, with the pattern @p ptAPattern, is
 /// accumulated in scratch storage, copied to @p ptA unless it is null, and multiplied by P right
 /// away.
+///
+/// @note @ref AddGalerkinRoundingBound bounds this product's rounding from its summation
+/// structure, the nodes each entry sums over in each stage and the products each node adds, so a
+/// change to the summation must update the bound.
 template <typename Scalar, typename MatrixType, typename PatternType>
 void Galerkin(
     RigidModeTransfer<Scalar> const& T,
@@ -837,6 +871,155 @@ void Galerkin(
   MirrorUpperTriangle(Ac);
 }
 
+/// @brief Add to the diagonal of A_next, as @ref Galerkin computes it from @p T, @p A and
+/// @p ptAPattern, a bound on its rounding error, so that A_next ⪰ P^T A P, the exact product of the
+/// stored A and P.
+///
+/// @details Row r gets δ_r = α z_r, with z = |P|^T |A| |P| 1, α = (γ_G + u (1 + γ_G)) / (1 - u)^2,
+/// γ_G = γ(m_1) + γ(m_2) + γ(m_1) γ(m_2), γ(m) = m u / (1 - m u) and u the unit roundoff of Scalar.
+/// @ref Galerkin sums each entry of row a of P^T A over the nodes of R(a) (the restriction of
+/// aggregate a) whose row of A holds the entry's column, and each entry of block (a, b) of A_next
+/// over the nodes of R(b) in the pattern of row a of P^T A: at most |R(b)|. Each node adds at most
+/// p products, p = 2 from 3 fine DoFs and 3 from 6, so with n_1 and n_2 the most nodes per sum of
+/// each stage, at most m_i = p n_i roundings reach a product in any summation order. @ref Galerkin
+/// computes the upper triangle and mirrors it, so for an exactly symmetric A, its result G
+/// satisfies |G - P^T A P| <= γ_G |P|^T |A| |P| entrywise, and Gershgorin's theorem gives
+/// G + diag(γ_G z) ⪰ P^T A P; α also covers rounding δ_r to Scalar and adding it. Rows that do not
+/// interpolate, such as decoupled rotations, get no shift, so a term J set there after
+/// @ref Galerkin carries over: A_next ⪰ P^T A P + J. Assumes finite arithmetic, rounding to
+/// nearest, no subnormal numbers and m_i u < 1. Non-finite entries of A or P make A_next
+/// non-finite.
+template <typename Scalar, typename MatrixType, typename PatternType>
+void AddGalerkinRoundingBound(
+    RigidModeTransfer<Scalar> const& T,
+    MatrixType const& A,
+    PatternType const& ptAPattern,
+    BlockSparseMatrix<Scalar, 6, int, int>& Ac) {
+  constexpr int kFineDofs = MatrixType::kBlockSize;
+  constexpr int kMinOpsPerTask = 30000; // 20 μs @ 1.5 G operations/s.
+  int const numNodes = A.BlockRows();
+  int const numAggregates = T.numAggregates;
+  // TODO: Use Abs once it clears the sign bit like std::fabs instead of comparing with zero, which
+  // can branch on the entries' signs. That needs a constexpr std::fabs (C++23).
+  auto const absolute = [](Scalar x) { return std::fabs(static_cast<double>(x)); };
+
+  // v = |P| 1. A translation row of an interpolation block [w I | -[q]x] holds |w| and the other
+  // two components of |q|; a rotation row, |r|.
+  DynamicArray<double> v(kFineDofs * numNodes, 0.0);
+  // About 20 absolute values and sums per coefficient: 18 from 3 fine DoFs, 24 from 6.
+  constexpr int kOpsPerCoefficient = 20;
+  ParallelForN(
+      "RigidModeAMGBoundRowSums",
+      numNodes,
+      RowsPerTask(numNodes, isize(T.coefficients), kMinOpsPerTask / kOpsPerCoefficient),
+      [&](int i) {
+        for (int k = T.pointers[i]; k < T.pointers[i + 1]; ++k) {
+          auto const& p = T.coefficients[k];
+          for (int d = 0; d < 3; ++d) {
+            int const d1 = (d + 1) % 3;
+            int const d2 = (d + 2) % 3;
+            v[kFineDofs * i + d] += absolute(p.w) + absolute(p.q[d1]) + absolute(p.q[d2]);
+            if constexpr (kFineDofs == 6) {
+              v[kFineDofs * i + 3 + d] += absolute(p.r);
+            }
+          }
+        }
+      });
+
+  // y = |A| v.
+  DynamicArray<double> y(kFineDofs * numNodes, 0.0);
+  // An absolute value, a product and a sum per entry of a block of A.
+  constexpr int kOpsPerBlock = 3 * kFineDofs * kFineDofs;
+  ParallelForN(
+      "RigidModeAMGBoundProduct",
+      numNodes,
+      RowsPerTask(numNodes, A.NumNonZeroBlocks(), kMinOpsPerTask / kOpsPerBlock),
+      [&](int i) {
+        auto const columns = A.Indices(i);
+        auto const blocks = A.Values(i);
+        for (int k = 0; k < isize(columns); ++k) {
+          double const* vj = &v[kFineDofs * columns[k]];
+          for (int r = 0; r < kFineDofs; ++r) {
+            for (int c = 0; c < kFineDofs; ++c) {
+              y[kFineDofs * i + r] += absolute(blocks[k](r, c)) * vj[c];
+            }
+          }
+        }
+      });
+
+  // z = |P|^T y, and for each aggregate a, the most nodes of R(a) whose rows of A hold one column,
+  // counted as in Galerkin's first stage.
+  DynamicArray<double> z(6 * numAggregates, 0.0);
+  DynamicArray<int> n1PerAggregate(numAggregates, 0);
+  // About 20 operations per block of P^T A: an increment and a maximum from each of the several
+  // restriction nodes whose rows of A hold its column, its reset, and a share of z's 27 or 36
+  // operations per restriction node.
+  constexpr int kOpsPerPtABlock = 20;
+  ParallelForRange(
+      "RigidModeAMGBoundRestriction",
+      0,
+      numAggregates,
+      RowsPerTask(numAggregates, ptAPattern.NumTargets(), kMinOpsPerTask / kOpsPerPtABlock),
+      numAggregates,
+      [&](int aggregateBegin, int aggregateEnd) {
+        // Number of nodes of R(a) whose row of A holds each column.
+        DynamicArray<int> count(numNodes, 0);
+        for (int a = aggregateBegin; a < aggregateEnd; ++a) {
+          for (int t = T.restrictionPointers[a]; t < T.restrictionPointers[a + 1]; ++t) {
+            int const i = T.restrictionNodes[t];
+            for (int const j : A.Indices(i)) {
+              n1PerAggregate[a] = Max(n1PerAggregate[a], ++count[j]);
+            }
+            auto const& p = T.restrictionCoefficients[t];
+            double const* yi = &y[kFineDofs * i];
+            for (int d = 0; d < 3; ++d) {
+              int const d1 = (d + 1) % 3;
+              int const d2 = (d + 2) % 3;
+              z[6 * a + d] += absolute(p.w) * yi[d];
+              z[6 * a + 3 + d] += absolute(p.q[d1]) * yi[d2] + absolute(p.q[d2]) * yi[d1];
+              if constexpr (kFineDofs == 6) {
+                z[6 * a + 3 + d] += absolute(p.r) * yi[3 + d];
+              }
+            }
+          }
+          for (int const j : ptAPattern[a]) {
+            count[j] = 0;
+          }
+        }
+      });
+
+  // α from n_1 and n_2.
+  int n1 = 0;
+  int n2 = 0;
+  for (int a = 0; a < numAggregates; ++a) {
+    n1 = Max(n1, n1PerAggregate[a]);
+    n2 = Max(n2, T.restrictionPointers[a + 1] - T.restrictionPointers[a]);
+  }
+
+  static_assert(kFineDofs == 3 || kFineDofs == 6, "Expected 3 or 6 DoFs per fine node.");
+  constexpr int kProductsPerNode = (kFineDofs == 3) ? 2 : 3;
+  // v, y, z and α are nonnegative doubles, and the only subtractions, 1 - m u and 1 - u in α, are
+  // exact. v, y and z sum at most 3, 6 and 3 terms per entry of an int-indexed array, which has
+  // fewer than 2^31 entries, so each δ_r goes through fewer than 2^35 roundings in any order: a
+  // relative error below 2^-18. This factor, exact in double, thus keeps each δ_r at least α z_r.
+  constexpr double kDoublePrecisionFactor = 1.0 + 0x1p-16;
+  double const u = 0.5 * static_cast<double>(std::numeric_limits<Scalar>::epsilon());
+  int const m1 = kProductsPerNode * n1;
+  int const m2 = kProductsPerNode * n2;
+  MOCHI_ASSERT_VERBOSE(Max(m1, m2) * u < 1.0, "Too many products for the rounding bound.");
+  auto const gamma = [u](int m) { return m * u / (1.0 - m * u); };
+  double const gammaG = gamma(m1) + gamma(m2) + gamma(m1) * gamma(m2);
+  double const alpha = (gammaG + u * (1.0 + gammaG)) / Sqr(1.0 - u) * kDoublePrecisionFactor;
+
+  // δ = α z on the diagonal.
+  for (int a = 0; a < numAggregates; ++a) {
+    auto block = Ac.Values(a)[BlockIndex(Ac.Indices(a), a)];
+    for (int r = 0; r < 6; ++r) {
+      block(r, r) += static_cast<Scalar>(alpha * z[6 * a + r]);
+    }
+  }
+}
+
 /// @brief Block Jacobi preconditioner with 6x6 blocks, as @ref BlockJacobiPrec, whose update checks
 /// that the blocks and their computed inverses are positive definite.
 template <typename Scalar>
@@ -868,6 +1051,46 @@ struct CheckedBlockJacobi6 {
 
   DynamicArray<Matrix<Scalar, 6, 6>> inverses;
 };
+
+/// @brief Whether a matrix with 6 DoFs per node is finite and its translation block, over the
+/// first 3 DoFs of every node, passes @ref InvertIfPositiveDefinite. If so, sets @p inverse to that
+/// block's inverse on the translation DoFs and to zero elsewhere.
+///
+/// @note The entries outside the translation block must be finite too: at level 1, which has no
+/// cached P^T A to check, non-finite interpolation coefficients appear only there, and would make
+/// the restricted residual non-finite, which zero rotation rows and columns don't mask.
+template <typename Scalar>
+[[nodiscard]] bool InvertTranslationsIfPositiveDefinite(
+    Matrix<Scalar> const& A,
+    Matrix<Scalar>& inverse) {
+  MOCHI_ASSERT_VERBOSE(A.Rows() == A.Cols() && A.Rows() % 6 == 0, "Expected 6 DoFs per node.");
+  if (!IsFinite(MakeConstSpan(A))) {
+    return false;
+  }
+
+  int const numNodes = A.Rows() / 6;
+  Matrix<Scalar> translations(3 * numNodes, 3 * numNodes);
+  for (int b = 0; b < numNodes; ++b) {
+    for (int a = 0; a < numNodes; ++a) {
+      translations.template Block<3, 3>(3 * a, 3 * b, 3, 3) =
+          A.template Block<3, 3>(6 * a, 6 * b, 3, 3);
+    }
+  }
+
+  Matrix<Scalar> translationInverse;
+  if (!InvertIfPositiveDefinite(translations, translationInverse)) {
+    return false;
+  }
+
+  inverse = Matrix<Scalar>::Zero(A.Rows(), A.Cols());
+  for (int b = 0; b < numNodes; ++b) {
+    for (int a = 0; a < numNodes; ++a) {
+      inverse.template Block<3, 3>(6 * a, 6 * b, 3, 3) =
+          translationInverse.template Block<3, 3>(3 * a, 3 * b, 3, 3);
+    }
+  }
+  return true;
+}
 
 /// @brief e_i = Σ_a P(i, a) h_a for the fine nodes [nodeBegin, nodeEnd), with kFineDofs = 3 or 6
 /// DoFs per fine node.
@@ -1126,18 +1349,38 @@ void RigidBodyModesAMGPrec<Scalar>::UpdateNumerics() {
     if (_decoupled[a]) {
       auto block = level1.A.Values(a)[details::BlockIndex(level1.A.Indices(a), a)];
       Scalar const scale = (block(0, 0) + block(1, 1) + block(2, 2)) / 3;
-      block.Block(3, 3, 3, 3).SetIdentity();
-      block.Block(3, 3, 3, 3) *= scale;
+      block.template Block<3, 3>(3, 3, 3, 3).SetIdentity();
+      block.template Block<3, 3>(3, 3, 3, 3) *= scale;
     }
   }
 
   int const numLevels = isize(_levels);
+  // Whether the cached P^T A that the cycle applies to restrict to coarse level s + 1 is finite.
+  // The restriction to level 1 applies none.
+  auto const restrictsWithFinitePtA = [this](int s) {
+    return s == 0 || IsFinite(_levels[s - 1].PtA.Values());
+  };
+
   // Each coarse level is formed once the levels above it are accepted.
   _numAcceptedCoarseLevels = 0;
   for (int s = 0; s + 1 < numLevels; ++s) {
     auto& current = _levels[s];
     if (!current.smoother.Update(current.A)) {
-      return;
+      if (s == 0) {
+        details::AddGalerkinRoundingBound(current.transfer, _A0, _PtA0Pattern, current.A);
+      } else {
+        auto const& finer = _levels[s - 1];
+        details::AddGalerkinRoundingBound(
+            current.transfer, finer.A, AsGraphView(finer.PtA), current.A);
+      }
+      if (!IsFinite(current.A.Values()) || !restrictsWithFinitePtA(s) ||
+          !current.smoother.Update(current.A)) {
+        MOCHI_LOG_WARNING(
+            "AMG: coarse level %d fails its positive-definiteness or finiteness checks, even once "
+            "stiffened. It and the coarser levels are dropped, so convergence may slow.",
+            s + 1);
+        return;
+      }
     }
     _numAcceptedCoarseLevels = s + 1;
     current.relaxationFactor =
@@ -1148,10 +1391,18 @@ void RigidBodyModesAMGPrec<Scalar>::UpdateNumerics() {
     details::Galerkin(next.transfer, current.A, AsGraphView(current.PtA), &current.PtA, next.A);
   }
 
-  if (details::InvertIfPositiveDefinite(ToMatrix(_levels.back().A), _coarsestInverse)) {
+  auto const coarsest = ToMatrix(_levels.back().A);
+  if (details::InvertIfPositiveDefinite(coarsest, _coarsestInverse) ||
+      (restrictsWithFinitePtA(numLevels - 1) &&
+       details::InvertTranslationsIfPositiveDefinite(coarsest, _coarsestInverse))) {
     // TODO: Explore regularizing the coarsest inverse when the accepted matrix still has
     // eigenvalues below its rounding floor. See D128281511.
     _numAcceptedCoarseLevels = numLevels;
+  } else {
+    MOCHI_LOG_WARNING(
+        "AMG: coarse level %d, the coarsest, fails its positive-definiteness or finiteness checks, "
+        "even on its translations. It is dropped, so convergence may slow.",
+        numLevels);
   }
 }
 
