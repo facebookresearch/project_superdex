@@ -217,3 +217,18 @@ TEST(IntegrationUtils, GetNumStages) {
   EXPECT_EQ(1, GetNumStages(IntegrationMethod::SymplecticDIRK12));
   EXPECT_EQ(2, GetNumStages(IntegrationMethod::SymplecticDIRK22));
 }
+
+TEST(IntegrationUtils, GetMethodEndingAtLastStage) {
+  static_assert(
+      GetMethodEndingAtLastStage(IntegrationMethod::BackwardEuler) ==
+      IntegrationMethod::BackwardEuler);
+  static_assert(GetMethodEndingAtLastStage(IntegrationMethod::BDF2) == IntegrationMethod::BDF2);
+  static_assert(GetMethodEndingAtLastStage(IntegrationMethod::BDF3) == IntegrationMethod::BDF3);
+  static_assert(GetMethodEndingAtLastStage(IntegrationMethod::DIRK22) == IntegrationMethod::DIRK22);
+  static_assert(GetMethodEndingAtLastStage(IntegrationMethod::DIRK23) == IntegrationMethod::DIRK33);
+  static_assert(GetMethodEndingAtLastStage(IntegrationMethod::DIRK33) == IntegrationMethod::DIRK33);
+  static_assert(
+      GetMethodEndingAtLastStage(IntegrationMethod::SymplecticDIRK12) == IntegrationMethod::DIRK22);
+  static_assert(
+      GetMethodEndingAtLastStage(IntegrationMethod::SymplecticDIRK22) == IntegrationMethod::DIRK22);
+}

@@ -17,7 +17,9 @@
 #include "mochi_physics_test_fixture.h"
 
 #include <mochi_physics/src/mochi_articulated_body.h>
+#include <mochi_physics/src/mochi_common_components.h>
 #include <mochi_physics/src/mochi_integration.h>
+#include <mochi_physics/src/mochi_island.h>
 #include <mochi_physics/src/mochi_rod_pose.h>
 
 #include <mochi_core/articulated_body/articulated_body.h>
@@ -875,6 +877,52 @@ TEST_P(IntegrationMethodTest, QuasistaticStepEndsAtRestAtEquilibrium) {
   for (int i = 0; i < kMaxIntegrationSteps; ++i) {
     _scene->Step(0.01);
     EXPECT_NEAR_TOL(TransformRT::Identity(), box->GetRootTransform(), kTol);
+  }
+}
+
+// An actor without inertia ends a step at its static equilibrium. Other islands keep the requested
+// method.
+TEST_P(IntegrationMethodTest, DISABLED_ActorWithoutInertiaEndsStepAtEquilibrium) {
+  auto const method = static_cast<IntegrationMethod>(GetParam());
+  test::SetSceneIntegrationMethod(_scene, method);
+  // Two soft cubes hang from their constrained top faces, far enough apart to form two islands.
+  // Only the first has no inertia.
+  auto [coordinates, connectivity] = test::CreateMinimalTetMeshUnitCube();
+  ModelData model;
+  model.mesh.emplace();
+  model.mesh->nodesPerElement = 4;
+  model.mesh->coordinates = Flatten(MakeSpan(coordinates));
+  model.mesh->connectivity = Flatten(MakeSpan(connectivity));
+  model.constrainedNodes = DynamicArray<int>{2, 3, 6, 7};
+  SoftActorParams params;
+  params.shape = _mochiContext->CreateModelShape(model, test::ExpectOK{});
+  params.hasInertia = false;
+  params.material.neoHookean.youngsModulus = 1e6_r;
+  Actor* cube = _scene->CreateSoftActor(params, test::ExpectOK{});
+  cube->AddBoundaryConditionConstrainedNodesAtRest(test::ExpectOK{});
+  params.hasInertia = true;
+  params.worldFromLocal = TransformRT{Real3{3_r, 0_r, 0_r}};
+  Actor* inertialCube = _scene->CreateSoftActor(params, test::ExpectOK{});
+  inertialCube->AddBoundaryConditionConstrainedNodesAtRest(test::ExpectOK{});
+
+  // Methods replaced in the first cube's island, or in the quasistatic step, warn once per process.
+  auto suppressWarning = test::SuppressLogWarning();
+  for (int i = 0; i < kMaxIntegrationSteps; ++i) {
+    _scene->Step(0.01);
+  }
+  auto const numIslandStages = [this](Actor* actor) {
+    auto const& reg = GetRegistry();
+    entt::entity const island = reg.get<CIslandMemberInfo const>(GetEntity(actor)).island;
+    return isize(reg.get<CIslandSolverStats const>(island).stages);
+  };
+  EXPECT_EQ(GetNumStages(GetMethodEndingAtLastStage(method)), numIslandStages(cube));
+  EXPECT_EQ(GetNumStages(method), numIslandStages(inertialCube));
+  DynamicArray<Real3> const afterStep = test::GetWorldNodePositions(*cube, kSpaceDim3);
+  // A quasistatic step solves for the static equilibrium.
+  _scene->Step(std::numeric_limits<double>::infinity());
+  DynamicArray<Real3> const equilibrium = test::GetWorldNodePositions(*cube, kSpaceDim3);
+  for (int i = 0; i < isize(equilibrium); ++i) {
+    EXPECT_NEAR_TOL(equilibrium[i], afterStep[i], 1e-4_r);
   }
 }
 

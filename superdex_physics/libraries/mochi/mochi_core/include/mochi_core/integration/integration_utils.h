@@ -290,4 +290,27 @@ struct TimeIntegratorState {
       method == IntegrationMethod::BDF3;
 }
 
+// `method` if its step ends at its last stage (b is the last row of A), otherwise the one-step
+// method of the same order whose step does.
+[[nodiscard]] constexpr IntegrationMethod GetMethodEndingAtLastStage(IntegrationMethod method) {
+  static_assert(
+      static_cast<int>(IntegrationMethod::Count) == 8,
+      "Please update the switch statement below if IntegrationMethod enumerator changes");
+  switch (method) {
+    case IntegrationMethod::SymplecticDIRK12:
+    case IntegrationMethod::SymplecticDIRK22:
+      return IntegrationMethod::DIRK22;
+    case IntegrationMethod::DIRK23:
+      return IntegrationMethod::DIRK33;
+    case IntegrationMethod::BackwardEuler:
+    case IntegrationMethod::BDF2:
+    case IntegrationMethod::BDF3:
+    case IntegrationMethod::DIRK22:
+    case IntegrationMethod::DIRK33:
+    case IntegrationMethod::Count:
+      break;
+  }
+  return method;
+}
+
 } // namespace mochi

@@ -44,7 +44,9 @@
 #include <mochi_core/linear_algebra/block_sparse_matrix_utils.h>
 #include <mochi_core/solvers/newton_solver.h>
 #include <mochi_core/utils/profile.h>
+#include <mochi_core/utils/reflection.h>
 
+#include <algorithm>
 #include <array>
 #include <functional>
 #include <memory>
@@ -1113,6 +1115,26 @@ TimeIntegratorParams mochi::solver::CreateIslandTimeIntegrationParams(
       static_cast<int>(IntegrationMethod::Count) == 8,
       "Please update the if statement above if IntegrationMethod enumerator changes");
 
+  // Without inertia, an actor's stage solves give static equilibria, so a step end extrapolated
+  // from the stages misses the one at the step end.
+  IntegrationMethod const replacement = GetMethodEndingAtLastStage(method);
+  if (replacement != method) {
+    // A skinned parent's posed inertia also tags its nested soft actors.
+    auto const it = std::ranges::find_if(descendants.softActors, [&reg](entt::entity actor) {
+      return !reg.all_of<TagUseInertia>(actor);
+    });
+    if (it != descendants.softActors.end()) {
+      MOCHI_LOG_WARNING_ONCE(
+          "Actor '%s' has no inertia, so its island uses %s instead of %s, whose step end "
+          "extrapolates the stages and needs inertia. Enable the actor's inertia, or set "
+          "SolverParams::integrationMethod to %s, to avoid this.",
+          reg.get<CActorInfo const>(*it).name.c_str(),
+          SReflect::EnumToString(replacement),
+          SReflect::EnumToString(method),
+          SReflect::EnumToString(replacement));
+      method = replacement;
+    }
+  }
   return CreateTimeIntegratorParams(method);
 }
 
