@@ -122,14 +122,14 @@ void MochiAsyncSceneTestBase::TearDown() {
 ExpectLoggingInScope::ExpectLoggingInScope(Context* mochiContext, LogChannel channel)
     : _mochiContext(mochiContext),
       _channel(channel),
-      _prevCallbackForThisModule(mochi::GetLogCallback()),
-      _prevCallbackForMochiPhysics(mochiContext ? mochiContext->GetLogCallback() : LogFn{}) {
-  LogFn ourCallback =
-      [this](LogChannel channel, char const* /*message*/, char const* /*file*/, int /*line*/) {
-        if (channel == _channel) {
-          ++_messagesReceived;
-        }
-      };
+      _prevCallbackForMochiPhysics(mochi::Context::GetLogCallback()) {
+  LogFn ourCallback = [this](LogChannel channel, char const* message, char const* file, int line) {
+    if (channel == _channel) {
+      ++_messagesReceived;
+    } else {
+      _prevCallbackForMochiPhysics(channel, message, file, line);
+    }
+  };
   mochi::Context::SetLogCallback(ourCallback);
 }
 

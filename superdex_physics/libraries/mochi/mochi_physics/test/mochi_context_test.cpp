@@ -2549,6 +2549,25 @@ TEST(Context, EnableLogChannel) {
   EXPECT_FALSE(Context::IsLogChannelEnabled((LogChannel)(int)LogChannel::Count));
 }
 
+// ExpectLoggingInScope absorbs its channel, forwards the others, then restores the callback.
+TEST(ExpectLoggingInScope, ForwardsOtherChannels) {
+  std::vector<LogChannel> received;
+  auto prevFn = Context::GetLogCallback();
+  MOCHI_DEFER(Context::SetLogCallback(prevFn));
+  Context::SetLogCallback(
+      [&](LogChannel ch, char const* /*msg*/, char const* /*file*/, int /*line*/) {
+        received.push_back(ch);
+      });
+  {
+    ExpectLoggingInScope expectWarning(nullptr, LogChannel::Warning);
+    MOCHI_LOG_WARNING("absorbed");
+    MOCHI_LOG_ERROR("forwarded");
+  }
+  EXPECT_EQ(std::vector{LogChannel::Error}, received);
+  MOCHI_LOG_WARNING("restored");
+  EXPECT_EQ((std::vector{LogChannel::Error, LogChannel::Warning}), received);
+}
+
 // Verify GetShapeMesh returns correct volume mesh data (4 nodes/element) for a tet mesh shape.
 TEST_P(MochiContextTest, GetShapeMesh_TetMesh) {
   auto unitCube = CreateMinimalTetMeshUnitCube();

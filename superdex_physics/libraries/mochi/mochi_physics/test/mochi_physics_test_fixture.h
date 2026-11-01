@@ -284,13 +284,13 @@ class MochiAsyncSceneTestBase : public MochiContextTestBase {
 };
 
 // Normally logging to the Error or Warning channel will automatically fail the test.
-// If you want to explicitly test logging, you can create a temporary variable of this type.
+// If you want to explicitly test logging, you can create a temporary variable of this type. It
+// expects at least one message on `channel`; messages on other channels behave as usual.
 struct ExpectLoggingInScope {
   ExpectLoggingInScope(Context* mochiContext, LogChannel channel);
   ~ExpectLoggingInScope();
   Context* _mochiContext = nullptr;
   LogChannel _channel = LogChannel::Warning;
-  LogFn _prevCallbackForThisModule;
   LogFn _prevCallbackForMochiPhysics;
   int _messagesReceived = 0;
 };
