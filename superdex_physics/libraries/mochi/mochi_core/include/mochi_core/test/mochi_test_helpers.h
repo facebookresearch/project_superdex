@@ -96,7 +96,7 @@ class ExpectOK final {
 
 /**
   You can pass ExpectNotOK{} in place of an Error& function parameter. The test will fail if the
-  function sets an error.
+  function does not set an error.
 */
 class ExpectNotOK final {
  public:
