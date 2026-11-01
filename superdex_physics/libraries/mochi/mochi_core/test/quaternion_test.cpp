@@ -283,6 +283,19 @@ TEST(Quaternion, ToRotationVector) {
 
   // Identity -> zero rotation vector
   EXPECT_NEAR_EQ(Real3(0_r, 0_r, 0_r), Quaternion::Identity().ToRotationVector());
+
+  // Tiny rotations on both sides of angle 2e-9 (vector part norm 1e-9), one of 2e-6, for which the
+  // limit 2 q.xyz would be off by 1.7e-13 relative in FP64, and one whose vector part's squared
+  // norm underflows
+  Real3 const yAxis{0_r, 1_r, 0_r};
+  real constexpr kTinyAngles[] = {
+      1e-12_r, 1e-9_r, 1e-8_r, 2e-6_r, 2_r * std::numeric_limits<real>::min()};
+  for (real const tinyAngle : kTinyAngles) {
+    EXPECT_NEAR_TOL(
+        tinyAngle * yAxis,
+        Quaternion::FromAxisAngle(yAxis, tinyAngle).ToRotationVector(),
+        16_r * std::numeric_limits<real>::epsilon() * tinyAngle);
+  }
 }
 
 TEST(Quaternion, AdditionSubtraction) {

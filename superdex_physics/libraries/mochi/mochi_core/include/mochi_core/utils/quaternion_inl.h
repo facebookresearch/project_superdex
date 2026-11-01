@@ -132,10 +132,14 @@ inline void Quaternion::ToAxisAngle(Vec4r* outAxis, real* outAngleRad) const {
 }
 
 inline Vec4r Quaternion::VToRotationVector() const {
-  Vec4r outAxis MOCHI_NO_INIT; // NOLINT(cppcoreguidelines-init-variables)
-  real outAngle MOCHI_NO_INIT; // NOLINT(cppcoreguidelines-init-variables)
-  this->ToAxisAngle(&outAxis, &outAngle);
-  return outAxis * outAngle;
+  Quaternion qPositiveNormalized MOCHI_NO_INIT;
+  real vectorMag MOCHI_NO_INIT;
+  real const angle = GetAngleImpl(qPositiveNormalized, vectorMag);
+  // For small rotations angle = 2 asin(vectorMag), so angle / vectorMag tends to 2 as
+  // vectorMag vanishes. Below 1e-9, the limit's relative error, vectorMag^2 / 6, is below rounding
+  // in FP32 and FP64.
+  real const scale = vectorMag > 1e-9_r ? angle / vectorMag : 2_r;
+  return ToSimdDirection(qPositiveNormalized.data * scale);
 }
 
 MOCHI_FORCE_INLINE Real3 Quaternion::ToRotationVector() const {
