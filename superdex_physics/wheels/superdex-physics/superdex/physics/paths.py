@@ -106,12 +106,11 @@ def _asset_roots() -> Iterator[Path]:
     """Yields the roots a relative asset may live under, in priority order."""
 
     env_root = _resolve_assets_path_from_env()
+    seen: set[Path] = set()
     if env_root is not None:
-        # An explicit override is the whole search; falling back would mix asset trees.
         yield env_root
-        return
+        seen.add(env_root)
 
-    seen = set()
     for root in (*_script_assets_roots(), _source_tree_assets_root()):
         if root is None or root in seen:
             continue
