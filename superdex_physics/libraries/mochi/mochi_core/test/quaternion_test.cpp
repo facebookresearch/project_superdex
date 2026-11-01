@@ -161,6 +161,24 @@ TEST(Quaternion, AxisAngle) {
   EXPECT_NEAR_EQ(1_r, Norm(axis));
   EXPECT_EQ(0_r, angle);
 
+  // Tiny rotations on both sides of angle 2e-9 (vector part norm 1e-9), one whose vector part has
+  // an inexact subnormal squared norm (506.25 denorm_min), and one whose squared norm underflows
+  Real3 const tinyAxis = Normalize(Real3{-1_r, -2_r, -3_r});
+  real const kTinyAngles[] = {
+      1.999e-9_r,
+      2.001e-9_r,
+      45_r * Sqrt(std::numeric_limits<real>::denorm_min()),
+      2_r * std::numeric_limits<real>::min()};
+  real constexpr kTol = 16_r * std::numeric_limits<real>::epsilon();
+  for (real const tinyAngle : kTinyAngles) {
+    Quaternion const tinyRotation = Quaternion::FromAxisAngle(tinyAxis, tinyAngle);
+    for (Quaternion const& sameRotation : {tinyRotation, -tinyRotation}) {
+      sameRotation.ToAxisAngle(&axis, &angle);
+      EXPECT_NEAR_TOL(tinyAxis, axis, kTol);
+      EXPECT_NEAR_TOL(tinyAngle, angle, kTol * tinyAngle);
+    }
+  }
+
   // Test +/- 180 degree rotation on various axes
   for (int i = 0; i < 4; ++i) {
     Real3 expectedAxis = {};

@@ -120,8 +120,22 @@ inline void Quaternion::ToAxisAngle(Real3* outAxis, real* outAngleRad) const {
   Quaternion qPositiveNormalized MOCHI_NO_INIT;
   real vectorMag MOCHI_NO_INIT;
   *outAngleRad = GetAngleImpl(qPositiveNormalized, vectorMag);
-  auto axis =
-      vectorMag > 1e-9_r ? (qPositiveNormalized.data / vectorMag) : Vec4r{1_r, 0_r, 0_r, 0_r};
+  Vec4r axis{1_r, 0_r, 0_r, 0_r};
+  // Above 1e-9, the squared vector magnitude is well within the normal range in FP32 and FP64.
+  // For smaller magnitudes, dividing by the largest absolute vector component protects the norm
+  // from subnormal precision loss and underflow. The angle uses the small-angle approximation
+  // 2 |v|, where |v| is the original vector magnitude.
+  if (vectorMag > 1e-9_r) MOCHI_LIKELY {
+    axis = qPositiveNormalized.data / vectorMag;
+  } else {
+    real const maxComponent = HMax<3>(Abs(qPositiveNormalized.data));
+    if (maxComponent > 0_r) {
+      Vec4r const scaled = ToSimdDirection(qPositiveNormalized.data) / maxComponent;
+      real const scaledMag = Norm<3>(scaled);
+      axis = scaled / scaledMag;
+      *outAngleRad = 2_r * (maxComponent * scaledMag);
+    }
+  }
   *outAxis = Real3{axis[0], axis[1], axis[2]};
 }
 
