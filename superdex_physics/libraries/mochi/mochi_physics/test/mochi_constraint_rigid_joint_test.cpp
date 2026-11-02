@@ -16,6 +16,8 @@
 
 #include "mochi_constraint_test.h"
 
+#include <limits>
+
 using namespace mochi;
 using namespace mochi::test;
 using namespace mochi::constraint_test;
@@ -251,7 +253,7 @@ TEST_F(ConstraintRigidPrismaticJoint, Test) {
   RunAllTests();
 }
 
-TEST_F(ConstraintRigidPrismaticJoint, RejectsZeroFreeAxis) {
+TEST_F(ConstraintRigidPrismaticJoint, FreeAxis) {
   RigidPrismaticJointConstraintParams params;
   params.actorA = GetActorHandle(_entitiesActors[0], _scene->GetHandle());
   params.actorB = GetActorHandle(_entitiesActors[1], _scene->GetHandle());
@@ -261,4 +263,21 @@ TEST_F(ConstraintRigidPrismaticJoint, RejectsZeroFreeAxis) {
 
   params.freeAxis = {0.5_r * kDefaultNearEqualEpsilon<real>, 0_r, 0_r};
   _scene->CreateRigidPrismaticJointConstraint(params, ExpectNotOK{});
+
+  // The local frame maps the free axis onto +Z: at +Z, at -Z, and tilted from -Z inside and outside
+  // the 1e-3 rad cone where the frame flips first. Actor A is unrotated, so the axis is also local.
+  for (Real3 const freeAxis :
+       {kReal3ZAxis,
+        Real3{0_r, 0_r, -1_r},
+        Real3{3e-4_r, -4e-4_r, -1_r},
+        Real3{1.2e-3_r, -1.6e-3_r, -1_r}}) {
+    params.freeAxis = freeAxis;
+    auto const* constraint = _scene->CreateRigidPrismaticJointConstraint(params, ExpectOK{});
+    auto const& data = GetRegistry().get<CConstraintData<ConstraintType::RigidPrismaticJoint>>(
+        GetEntity(constraint->GetHandle()));
+    EXPECT_NEAR_TOL(
+        data.localFrame * Normalize(freeAxis),
+        kReal3ZAxis,
+        8_r * std::numeric_limits<real>::epsilon());
+  }
 }

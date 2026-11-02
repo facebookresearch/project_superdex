@@ -182,18 +182,17 @@ void mochi::InitConstraint_RigidPrismaticJoint(
   auto const& stateA = reg.get<CRigidState<TimeStep::Current> const>(objA).value;
   auto localAxis = stateA.GetRotation().GetConjugate() * params.freeAxis;
   localAxis = Normalize(localAxis);
-  // Compute local frame
-  Real3 axisZ = {0_r, 0_r, 1_r};
-  Real3 axis = Cross(localAxis, axisZ);
-  real normSqr = NormSqr(axis);
-  if (normSqr > 1e-6_r) {
-    real const angle = ACos(Clamp(Dot(localAxis, axisZ), -1_r, 1_r));
-    axis *= angle / Sqrt(normSqr);
-  } else if (Dot(localAxis, axisZ) < 0_r) {
-    // localAxis ≈ -Z: rotate π around X (any perpendicular axis works)
-    axis = {kPI, 0_r, 0_r};
+  // Compute local frame, the rotation taking localAxis onto +Z. Within 1e-3 rad of -Z, where the
+  // minimal rotation's twist about Z depends on the tilt direction, it first flips π around X.
+  bool const nearMinusZ = localAxis[2] < 0_r && NormSqr(Cross(localAxis, kReal3ZAxis)) <= 1e-6_r;
+  Quaternion const flip = nearMinusZ ? Quaternion{1_r, 0_r, 0_r, 0_r} : Quaternion{};
+  Real3 const flippedAxis = flip * localAxis;
+  Real3 axis = Cross(flippedAxis, kReal3ZAxis);
+  real const sinAngle = Norm(axis);
+  if (sinAngle > 0_r) {
+    axis *= ATan2(sinAngle, flippedAxis[2]) / sinAngle;
   }
-  data.localFrame = Quaternion::FromRotationVector(axis);
+  data.localFrame = Quaternion::FromRotationVector(axis) * flip;
   // Compute reference translation
   auto const& stateB = reg.get<CRigidState<TimeStep::Current> const>(objB).value;
   Real3 trel =
