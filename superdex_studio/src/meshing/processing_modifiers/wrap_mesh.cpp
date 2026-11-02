@@ -32,6 +32,9 @@ namespace superdex::studio {
 
 namespace {
 
+// GUI lengths are entered in millimeters; processed meshes are in meters.
+constexpr double kMillimetersToMeters = 0.001;
+
 // --- reflected per-method parameter structs (defaults mirror SurfaceRemeshingParams) -------------
 struct WrapShrinkWrapProps {
   double tightness = 1.0;
@@ -104,7 +107,7 @@ class ShrinkWrapMethod : public ReflectedMethod<WrapShrinkWrapProps> {
     cp.mode = mm::MeshClosureMode::ShrinkWrap;
     cp.shrinkWrapTightness = _props.tightness;
     cp.shrinkWrapSnap = _props.snap;
-    cp.shrinkWrapTargetEdgeLength = _props.targetEdgeLength;
+    cp.shrinkWrapTargetEdgeLength = _props.targetEdgeLength * kMillimetersToMeters;
     cp.shrinkWrapTargetEdgeLengthFraction = _props.targetEdgeLengthFraction;
     return mm::CloseMesh(input, cp, error);
   }
