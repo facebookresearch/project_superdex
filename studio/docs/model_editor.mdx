@@ -206,18 +206,23 @@ picker.
 ### Collision Model
 
 Holds a `.mochi.h5` collision model. This contains the data that our physics
-engine simulates with. The section shows two things:
+engine simulates with. The section shows up to four things, each with its own
+pair of toggles in the section header:
 
 | Sub-section | What it draws |
 |-------------|---------------|
 | **Mochi Model Visualization** | The collision surface mesh stored in the file. |
 | **SDF Visualization** | The surface reconstructed from the file's baked signed distance field, in its own color. Disabled when the model has no SDF. |
+| **Contact Skin Visualization** | The [soft actor](./prefab_editor.mdx#soft-actors) contact skin stored in the file, in its own color. Disabled when the model has no contact skin. |
+| **Visual Mesh Visualization** | The soft actor visual mesh stored in the file, in its own color. Disabled when the model has no visual mesh. |
 
-Both the surface model and SDF have an impact on the simulation with the surface
-mesh of one model colliding with the SDF of another and vice versa. The relative
-modeling error between the two influences how collision resolves so it is useful
-to be able to visualize both independently. The SDF visualization is implemented
-through a marching cubes algorithm.
+The surface and SDF both affect collision: the active collision surface of one
+model is tested against the SDF of another, and vice versa. A model normally
+uses its primary surface; a soft actor with **Use Contact Skin** enabled uses
+its contact skin instead. The visual mesh affects rendering only. Modeling
+error between a model's active collision surface and its SDF influences how
+contacts resolve, so visualizing them independently is useful. The SDF
+visualization uses marching cubes.
 
 ### Additional Reference Models
 
