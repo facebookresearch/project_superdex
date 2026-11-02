@@ -1699,7 +1699,11 @@ static void AddExternalForces(
   constexpr int kBatchSize = kDefaultFemBatchSize;
   constexpr int kStencilDofs = fem::kNumRodStencilDofs;
   real const dtfi2 = 1_r / Sqr(dtStage);
-  bool const hasMassDamping = materialParams.massDampingCoefficient > 0_r;
+
+  // Inertia vanishes in quasistatic steps, whose time step is infinite.
+  bool const hasInertia = IsFinite(dtStage);
+
+  bool const hasMassDamping = hasInertia && materialParams.massDampingCoefficient > 0_r;
   bool const hasStiffnessDamping = materialParams.stiffnessDampingCoefficient > 0_r;
   real const massDampingScale =
       hasMassDamping ? materialParams.massDampingCoefficient / dtStage : 0_r;
@@ -1759,33 +1763,35 @@ static void AddExternalForces(
     }
 
     // --- Inertia on stencil node 0 ---
-    // Left uninitialized: RodInertia reads the target only in its energy/residual branch, which
-    // populates this below. The dresidual-only path never reads it, so the gather is skipped.
-    NdArray<V, fem::kNumRodFields> batchPredTarget MOCHI_NO_INIT;
-    if (outEnergy || outRes) {
-      alignas(alignof(V)) real staging[fem::kNumRodFields][V::kSize]{};
-      for (int b = 0; b < kBatchSize; ++b) {
-        int const globalDof = indicesFlat[elemIndices[b] * kStencilDofs];
+    if (hasInertia) {
+      // Left uninitialized: RodInertia reads the target only in its energy/residual branch, which
+      // populates this below. The dresidual-only path never reads it, so the gather is skipped.
+      NdArray<V, fem::kNumRodFields> batchPredTarget MOCHI_NO_INIT;
+      if (outEnergy || outRes) {
+        alignas(alignof(V)) real staging[fem::kNumRodFields][V::kSize]{};
+        for (int b = 0; b < kBatchSize; ++b) {
+          int const globalDof = indicesFlat[elemIndices[b] * kStencilDofs];
+          for (int f = 0; f < fem::kNumRodFields; ++f) {
+            staging[f][b] = stageStartDispl[globalDof + f] + dtStage * stageStartVel[globalDof + f];
+          }
+        }
         for (int f = 0; f < fem::kNumRodFields; ++f) {
-          staging[f][b] = stageStartDispl[globalDof + f] + dtStage * stageStartVel[globalDof + f];
+          batchPredTarget[f] = Load<V>(staging[f]);
         }
       }
-      for (int f = 0; f < fem::kNumRodFields; ++f) {
-        batchPredTarget[f] = Load<V>(staging[f]);
-      }
-    }
 
-    out |= fem::RodInertia<kBatchSize>(
-        nodalMasses,
-        elementRotationalInertias,
-        displ,
-        batchPredTarget,
-        elemIndices,
-        indicesFlat,
-        outEnergy,
-        outRes,
-        outDRes,
-        dtfi2);
+      out |= fem::RodInertia<kBatchSize>(
+          nodalMasses,
+          elementRotationalInertias,
+          displ,
+          batchPredTarget,
+          elemIndices,
+          indicesFlat,
+          outEnergy,
+          outRes,
+          outDRes,
+          dtfi2);
+    }
 
     if (hasMassDamping) {
       // Mass-proportional damping C = α·M, added as a second inertia term whose target is the

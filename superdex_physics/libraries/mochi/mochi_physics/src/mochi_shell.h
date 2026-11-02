@@ -61,8 +61,8 @@ using FemInfo = CFemSurfaceDiscretizationP1Q1;
  * DoFs 0–8). Their 9-DoF contributions are extracted from / accumulated into the 18-DoF stencil
  * vectors. Stress (membrane + bending) operates on the full 6-node stencil.
  *
- * @param[in] predTarget Predicted target u₀ + dt·v₀ of each DoF, read for the objective and
- * residual.
+ * @param[in] predTarget Predicted target u₀ + dt·v₀ of each DoF. Read only for a finite @p dtStage,
+ * for the objective and residual.
  */
 template <typename TriElementT>
 [[nodiscard]] ElOpFnType<ShellStencilElement> MakeBatchedBodyOp(
@@ -90,6 +90,10 @@ template <typename TriElementT>
   constexpr int kBatchSize = kDefaultFemBatchSize;
   constexpr int kStencilDofs = fem::kBendingStencilDofs;
   real const dtfi2 = 1_r / Sqr(dtStage);
+
+  // Inertia vanishes in quasistatic steps, whose time step is infinite.
+  bool const hasInertia = IsFinite(dtStage);
+
   real const massScale = dtfi2 + massDampingScale;
 
   return [= /*All copies are inexpensive*/, &l2g](
@@ -103,7 +107,7 @@ template <typename TriElementT>
     bool out = false;
 
     constexpr int kTriangleDofs = ShellTriangleElement::kNumDofs * ShellTriangleElement::kSpaceDim;
-    bool const hasMassDamping = massDampingScale > 0_r;
+    bool const hasMassDamping = hasInertia && massDampingScale > 0_r;
     bool const hasStiffnessDamping = stiffnessDampingFactor > 0_r;
 
     // --- Gather the stencil global nodes and the stage-start displacements once ---
@@ -162,21 +166,25 @@ template <typename TriElementT>
             density);
       }
 
-      // Gather the predicted target with the stride-18 padded L2G. GatherBatchElementVector reads
-      // only the first 3 nodes at the stride-18 offsets.
-      fem::BatchElementVector<kBatchSize, ShellTriangleElement> predTargetBatch MOCHI_NO_INIT;
-      fem::
-          GatherBatchElementVector<kBatchSize, ShellTriangleElement, fem::kSpaceDim3, kStencilDofs>(
-              indicesFlat, elemIndices, predTarget, predTargetBatch);
-      out |= fem::InertiaWork<kBatchSize>(
-          elemIndices,
-          triElements,
-          triDisp,
-          MakeConstSpan(predTargetBatch),
-          outEnergy,
-          triRes,
-          density,
-          dtfi2);
+      if (hasInertia) {
+        // Gather the predicted target with the stride-18 padded L2G. GatherBatchElementVector reads
+        // only the first 3 nodes at the stride-18 offsets.
+        fem::BatchElementVector<kBatchSize, ShellTriangleElement> predTargetBatch MOCHI_NO_INIT;
+        fem::GatherBatchElementVector<
+            kBatchSize,
+            ShellTriangleElement,
+            fem::kSpaceDim3,
+            kStencilDofs>(indicesFlat, elemIndices, predTarget, predTargetBatch);
+        out |= fem::InertiaWork<kBatchSize>(
+            elemIndices,
+            triElements,
+            triDisp,
+            MakeConstSpan(predTargetBatch),
+            outEnergy,
+            triRes,
+            density,
+            dtfi2);
+      }
 
       if (hasMassDamping) {
         // Mass damping: α/dt · M · (d - d_stageStart). Reuse the first 9 DoFs of the gathered
@@ -212,7 +220,7 @@ template <typename TriElementT>
         hasStiffnessDamping ? &stageStartDispBatch : nullptr);
 
     // --- Inertia and mass-damping dresidual on the 3-node triangle sub-stencil ---
-    if (outDRes) {
+    if (hasInertia && outDRes) {
       out |= fem::AddMassToDRes<kBatchSize, ShellStencilElement>(
           elemIndices, triElements, density * massScale, *outDRes);
     }

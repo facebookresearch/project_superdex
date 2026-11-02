@@ -211,6 +211,9 @@ void mochi::shell::AssembleBody(
     CActorSnle& outActorSnle) {
   bool const hasGravity = hasGravityTag;
 
+  // Inertia vanishes in quasistatic steps, whose time step is infinite.
+  bool const hasInertia = IsFinite(intState.dtStage);
+
   bool const hasMassDamping = materialParams.massDampingCoefficient > 0_r;
   bool const hasStiffnessDamping = materialParams.stiffnessDampingCoefficient > 0_r;
   real const massDampingScale =
@@ -242,7 +245,7 @@ void mochi::shell::AssembleBody(
 
     // The elements gather the predicted target u₀ + dt·v₀, computed once per assembly.
     ColumnVector<real> predTarget;
-    if (params.assemObj || params.assemRes) {
+    if (hasInertia && (params.assemObj || params.assemRes)) {
       predTarget = stageStartDispl.value + intState.dtStage * stageStartVel.value;
     }
 

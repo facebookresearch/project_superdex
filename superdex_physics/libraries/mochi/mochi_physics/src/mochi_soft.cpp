@@ -245,9 +245,12 @@ void mochi::soft::AssembleBodyImpl(
       hasGravity || hasInertia || hasStress,
       "AssembleBodyImpl expects at least one body term. No-term cases must be filtered by the caller.");
 
+  // Inertia vanishes in quasistatic steps, whose time step is infinite.
+  bool const assembleInertia = hasInertia && IsFinite(intState.dtStage);
+
   // Damping scales. Mass damping requires inertia; stiffness damping requires stress.
   auto const dampingScales =
-      soft::ComputeSoftDampingScales(materialParams, intState.dtStage, hasInertia, hasStress);
+      soft::ComputeSoftDampingScales(materialParams, intState.dtStage, assembleInertia, hasStress);
   real const massDampingScale = dampingScales.massDampingScale;
   real const stiffnessDampingFactor = dampingScales.stiffnessDampingFactor;
   bool const includeStiffnessDampingGeometricTerm =
@@ -270,7 +273,7 @@ void mochi::soft::AssembleBodyImpl(
     // With inertia but no stress, the dresidual is the stored mass matrix scaled by
     // 1/dt² + massDampingScale. It is copied rather than added element by element; the element loop
     // runs only for the rest.
-    bool const copyMass = hasInertia && !hasStress;
+    bool const copyMass = assembleInertia && !hasStress;
     real const massScale = 1_r / Sqr(intState.dtStage) + massDampingScale;
     Span<real const> const massValues =
         massMatrix ? MakeConstSpan(massMatrix->values) : Span<real const>{};
@@ -299,7 +302,7 @@ void mochi::soft::AssembleBodyImpl(
 
   // The elements gather the predicted target u₀ + dt·v₀, computed once per assembly.
   ColumnVector<real> predTarget;
-  if (hasInertia && (bodyParams.assemObj || bodyParams.assemRes)) {
+  if (assembleInertia && (bodyParams.assemObj || bodyParams.assemRes)) {
     predTarget = stageStartDispl + intState.dtStage * stageStartVel;
   }
 
@@ -320,7 +323,7 @@ void mochi::soft::AssembleBodyImpl(
             materialParams.referenceMaterialStiffness,
             hasStress,
             hasGravity,
-            hasInertia,
+            assembleInertia,
             gravity,
             materialParams.density,
             predTarget.GetConstSpan(),

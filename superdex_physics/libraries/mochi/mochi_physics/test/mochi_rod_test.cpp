@@ -2582,13 +2582,9 @@ TEST_F(MochiRodSurfaceMeshes, SkinningUnderRotation) {
   // Step to static equilibrium (quasi-static)
   _scene->SetGravity({0_r, 0_r, 0_r});
 
-  // The huge quasi-static steps below reach static equilibrium via backward Euler's damping.
+  // Quasistatic steps warn unless the scene uses backward Euler.
   test::SetSceneIntegrationMethod(_scene, IntegrationMethod::BackwardEuler);
-
-  real constexpr kLargeStep = 1e6_r;
-  for (int i = 0; i < 10; ++i) {
-    _scene->Step(kLargeStep);
-  }
+  _scene->Step(std::numeric_limits<double>::infinity());
 
   // Query visual mesh positions
   auto positions = actor->GetVisualMeshNodePositionsLocal(ErrorAssert{});

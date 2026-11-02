@@ -177,6 +177,9 @@ void mochi::rom::AssembleAndProjectBody(
   MOCHI_ASSERT_VERBOSE(
       jacobian.template TryGet<CRomJacobian::DenseT>(), "Expected dense ROM Jacobian.");
 
+  // Inertia vanishes in quasistatic steps, whose time step is infinite.
+  bool const assembleInertia = hasInertia && IsFinite(intState.dtStage);
+
   // Clear SNLE data.
   auto& JtDJ = std::get<Matrix<real>>(outSnle.reducedDResidual);
   if (params.assemObj) {
@@ -195,13 +198,14 @@ void mochi::rom::AssembleAndProjectBody(
   }
 
   AssemblyParams bodyParams = params;
-  bodyParams.assemDRes &= (hasInertia || hasStress); // Only inertia and stress contribute to DRes
+  // Only inertia and stress contribute to DRes.
+  bodyParams.assemDRes &= (assembleInertia || hasStress);
   if (!bodyParams.assemObj && !bodyParams.assemRes && !bodyParams.assemDRes) {
     return;
   }
 
   auto const dampingScales =
-      soft::ComputeSoftDampingScales(materialParams, intState.dtStage, hasInertia, hasStress);
+      soft::ComputeSoftDampingScales(materialParams, intState.dtStage, assembleInertia, hasStress);
   real const massDampingScale = dampingScales.massDampingScale;
   real const stiffnessDampingFactor = dampingScales.stiffnessDampingFactor;
   bool const includeStiffnessDampingGeometricTerm =
@@ -209,7 +213,7 @@ void mochi::rom::AssembleAndProjectBody(
 
   // The elements gather the predicted target u₀ + dt·v₀, computed once per assembly.
   ColumnVector<real> predTarget;
-  if (hasInertia && (bodyParams.assemObj || bodyParams.assemRes)) {
+  if (assembleInertia && (bodyParams.assemObj || bodyParams.assemRes)) {
     predTarget = stageStartDispl.value + intState.dtStage * stageStartVel.value;
   }
 
@@ -233,7 +237,7 @@ void mochi::rom::AssembleAndProjectBody(
             materialParams.referenceMaterialStiffness,
             hasStress,
             hasGravity,
-            hasInertia,
+            assembleInertia,
             gravity,
             materialParams.density,
             predTarget.GetConstSpan(),

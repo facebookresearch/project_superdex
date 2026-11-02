@@ -2857,8 +2857,8 @@ void articulated::compound::EntityAssemble(
         outCompoundSnle);
   }
 
-  // Add inertial forces on joints.
-  if (HasJointInertia(inertiaParams) &&
+  // Add inertial forces on joints. They vanish in quasistatic steps, whose time step is infinite.
+  if (HasJointInertia(inertiaParams) && IsFinite(intState.dtStage) &&
       IsAssemblyNeeded(StateDependency::SecondOrder, false /*inputDependency*/, gradTarget)) {
     AssembleInertiaForces(
         params,

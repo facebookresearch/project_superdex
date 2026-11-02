@@ -16,6 +16,7 @@
 
 #include "mochi_physics_test_fixture.h"
 
+#include <mochi_physics/mochi_physics_experimental.h>
 #include <mochi_physics/src/mochi_articulated_body.h>
 #include <mochi_physics/src/mochi_common_components.h>
 #include <mochi_physics/src/mochi_integration.h>
@@ -35,8 +36,10 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <limits>
 #include <string>
+#include <utility>
 #include <variant>
 
 using namespace mochi;
@@ -852,6 +855,7 @@ INSTANTIATE_TEST_SUITE_P(
 TEST_P(IntegrationMethodTest, QuasistaticStepEndsAtRestAtEquilibrium) {
   test::SetSceneIntegrationMethod(_scene, static_cast<IntegrationMethod>(GetParam()));
   _scene->SetGravity(Real3{});
+  Real3 constexpr kVelocity{0.6_r, -0.4_r, 0.7_r};
   RigidActorParams params;
   params.shape = test::CreateUnitCubeTetMeshShape(_mochiContext);
   Actor* box = _scene->CreateRigidActor(params, test::ExpectOK{});
@@ -861,7 +865,76 @@ TEST_P(IntegrationMethodTest, QuasistaticStepEndsAtRestAtEquilibrium) {
   RigidPivotRotationConstraintParams rotation;
   rotation.actor = box->GetHandle();
   _scene->CreateRigidPivotRotationConstraint(rotation, test::ExpectOK{});
-  box->SetVelocity(Real3{0.6_r, -0.4_r, 0.7_r}, Real3{0.5_r, 0.2_r, 0.3_r}, test::ExpectOK{});
+  box->SetVelocity(kVelocity, Real3{0.5_r, 0.2_r, 0.3_r}, test::ExpectOK{});
+
+  // Deformables pinned so that their rest shape is their only static equilibrium: soft and shell
+  // cubes on one face, and a rod at its first node, twist included, and its second node.
+  SoftActorParams softParams;
+  softParams.shape = params.shape;
+  softParams.worldFromLocal.SetTranslation(Real3{2_r, 0_r, 0_r});
+  Actor* soft = _scene->CreateSoftActor(softParams, test::ExpectOK{});
+  auto const [triCoordinates, triConnectivity] = test::CreateMinimalTriMeshUnitCube();
+  experimental::ShellActorParams shellParams;
+  shellParams.shape = _mochiContext->CreateTriMeshShape(
+      Flatten(MakeSpan(triCoordinates)), Flatten(MakeSpan(triConnectivity)), test::ExpectOK{});
+  shellParams.worldFromLocal.SetTranslation(Real3{4_r, 0_r, 0_r});
+  Actor* shell = experimental::CreateShellActor(_scene, shellParams, test::ExpectOK{});
+  for (Actor* cube : {soft, shell}) {
+    real const faceX = cube->GetRootTransform().GetTranslation()[0];
+    experimental::ConstrainNodesByPosition(
+        cube, [faceX](int, Real3 const& node) { return node[0] == faceX; }, test::ExpectOK{});
+  }
+
+  experimental::RodActorParams rodParams;
+  rodParams.shape = experimental::CreatePolylineShape(
+      _mochiContext,
+      MakeRodNodes(3),
+      DynamicArray<Real3>(2, Real3{0_r, 1_r, 0_r}),
+      /*isClosedLoop=*/false,
+      test::ExpectOK{});
+  rodParams.worldFromLocal.SetTranslation(Real3{0_r, 3_r, 0_r});
+  // Stiff enough for the solve to stop within kTol of the rest shape.
+  rodParams.material.flexuralStiffness = Real2{1_r, 1_r};
+  Actor* rod = experimental::CreateRodActor(_scene, rodParams, test::ExpectOK{});
+  DynamicArray<int> const rodPinnedDofs = {0, 1, 2, 3, 4, 5, 6};
+  DynamicArray<real> const rodPinnedValues = {0_r, 3_r, 0_r, 0_r, 1_r, 3_r, 0_r};
+  rod->AddBoundaryConditionDofsWorld(
+      MakeConstSpan(rodPinnedDofs), MakeConstSpan(rodPinnedValues), test::ExpectOK{});
+
+  std::array const deformables = {
+      std::pair{soft, kSpaceDim3},
+      std::pair{shell, kSpaceDim3},
+      std::pair{rod, fem::kNumRodFields}};
+  DynamicArray<DynamicArray<Real3>> restNodes;
+  for (auto const& [deformable, numFieldsPerNode] : deformables) {
+    // Every node moves at kVelocity, without twisting.
+    DynamicArray<real> velocities(deformable->GetNumDofs(), 0_r);
+    for (int dof = 0; dof < isize(velocities); ++dof) {
+      int const field = dof % numFieldsPerNode;
+      velocities[dof] = field < kSpaceDim3 ? kVelocity[field] : 0_r;
+    }
+    deformable->SetNodeVelocitiesLocal(MakeConstSpan(velocities), test::ExpectOK{});
+    restNodes.push_back(test::GetWorldNodePositions(*deformable, numFieldsPerNode));
+  }
+
+  // An articulated link on a spherical joint with inertia, which a pose controller holds at its
+  // rest pose.
+  ArticulatedActorParams articulatedParams;
+  articulatedParams.worldFromRoot.SetTranslation(Real3{6_r, 0_r, 0_r});
+  articulatedParams.joints.resize(1);
+  articulatedParams.joints[0].type = ArticulatedJointType::Spherical;
+  articulatedParams.joints[0].inertia = 0.1_r;
+  articulatedParams.links.resize(1);
+  articulatedParams.links[0].shape = params.shape;
+  articulatedParams.links[0].colliderType = ColliderType::None;
+  articulatedParams.jointVelocities = DynamicArray<real>{0.5_r, 0.2_r, 0.3_r};
+  Actor* articulated = _scene->CreateArticulatedActor(articulatedParams, test::ExpectOK{});
+  PoseControllerParams controllerParams;
+  controllerParams.jointTracking = {{.stiffness = 1e3_r}};
+  articulated->AddArticulatedPoseController(controllerParams, test::ExpectOK{});
+  Actor const* link = _scene->GetActor(articulated->GetNestedLinkActors(test::ExpectOK{})[0]);
+  TransformRT const linkRest = link->GetRootTransform();
+
   // Enough dynamic steps for every multi-step method to have a full history.
   for (int i = 0; i < kMaxIntegrationSteps; ++i) {
     _scene->Step(0.01);
@@ -872,17 +945,29 @@ TEST_P(IntegrationMethodTest, QuasistaticStepEndsAtRestAtEquilibrium) {
     auto suppressWarning = test::SuppressLogWarning();
     _scene->Step(std::numeric_limits<double>::infinity());
   }
+
   real constexpr kTol = 1e-4_r;
-  EXPECT_NEAR_TOL(TransformRT::Identity(), box->GetRootTransform(), kTol);
+  auto const expectAtEquilibrium = [&] {
+    EXPECT_NEAR_TOL(TransformRT::Identity(), box->GetRootTransform(), kTol);
+    EXPECT_NEAR_TOL(linkRest, link->GetRootTransform(), kTol);
+    for (int i = 0; i < isize(deformables); ++i) {
+      auto const [deformable, numFieldsPerNode] = deformables[i];
+      DynamicArray<Real3> const nodes = test::GetWorldNodePositions(*deformable, numFieldsPerNode);
+      for (int n = 0; n < isize(nodes); ++n) {
+        EXPECT_NEAR_TOL(restNodes[i][n], nodes[n], kTol);
+      }
+    }
+  };
+  expectAtEquilibrium();
   for (int i = 0; i < kMaxIntegrationSteps; ++i) {
     _scene->Step(0.01);
-    EXPECT_NEAR_TOL(TransformRT::Identity(), box->GetRootTransform(), kTol);
+    expectAtEquilibrium();
   }
 }
 
 // An actor without inertia ends a step at its static equilibrium. Other islands keep the requested
 // method.
-TEST_P(IntegrationMethodTest, DISABLED_ActorWithoutInertiaEndsStepAtEquilibrium) {
+TEST_P(IntegrationMethodTest, ActorWithoutInertiaEndsStepAtEquilibrium) {
   auto const method = static_cast<IntegrationMethod>(GetParam());
   test::SetSceneIntegrationMethod(_scene, method);
   // Two soft cubes hang from their constrained top faces, far enough apart to form two islands.
