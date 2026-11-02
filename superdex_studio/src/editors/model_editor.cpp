@@ -20,6 +20,7 @@
 #include "assets/mochi_model_asset.h"
 #include "assets/render_model_asset.h"
 #include "core/async_task.h"
+#include "meshing/processing_modifiers/embed_mesh.h" // MeasureEmbeddedMesh
 #include "meshing/processing_modifiers/preset_discovery.h"
 #include "meshing/processing_modifiers/processing_mesh_utils.h"
 #include "meshing/processing_modifiers/processing_serialization.h"
@@ -292,10 +293,10 @@ std::string FormatByteSize(int64_t bytes) {
 }
 
 // Composites a MeshStats' display string from its base summary plus its annotations: the file-size
-// line first (when set), then SDF grid and tet mesh lines (when set), then the base summary (headed
-// as the boundary surface for a tet mesh), and a Hausdorff line appended (when >= 0). Cheap;
-// recompute whenever the base or an annotation changes (e.g. when the async Hausdorff result
-// arrives). Extend here to add future annotations.
+// line first (when set), then SDF grid, tet mesh and embedded mesh lines (when set), then the base
+// summary (headed as the boundary surface for a tet mesh), and a Hausdorff line appended (when >=
+// 0). Cheap; recompute whenever the base or an annotation changes (e.g. when the async Hausdorff
+// result arrives). Extend here to add future annotations.
 void ComposeStats(MeshStats& stats) {
   std::ostringstream out;
   if (stats.fileSizeBytes.has_value()) {
@@ -309,6 +310,12 @@ void ComposeStats(MeshStats& stats) {
   if (stats.tetMesh.has_value()) {
     out << "Tet mesh:     " << (*stats.tetMesh)[0] << " nodes, " << (*stats.tetMesh)[1] << " tets\n"
         << "Boundary surface:\n";
+  }
+  if (stats.embeddedMesh.has_value()) {
+    EmbeddedMeshStats const& mesh = *stats.embeddedMesh;
+    out << "Contact skin: " << mesh.nodes << " nodes, " << mesh.triangles
+        << " tris, max extrapolation " << std::fixed << std::setprecision(2)
+        << mesh.maxExtrapolation << "\n";
   }
   out << stats.base;
   if (stats.hausdorff >= 0.0) {
@@ -1358,6 +1365,7 @@ void ModelEditor::ResetStageBuffers() {
     DestroyStageBufferMeshes(modifier->output);
     modifier->output.sections.clear();
     modifier->output.tetMesh = {};
+    modifier->output.embedded = {};
     modifier->output.stats = {};
     // The optional input-view buffer (Export Mochi Model) is invalidated with the output.
     DestroyStageBufferMeshes(modifier->inputView);
@@ -2252,9 +2260,17 @@ void ModelEditor::RunGenerationCascade(
       ctx,
       [this](std::size_t index) {
         StageBuffer const& output = _modifiers[index]->output;
-        return processing::BufferedStageOutput(output.tetMesh, output.sections);
+        return StageMesh{
+            .mesh = processing::BufferedStageOutput(output.tetMesh, output.sections),
+            .embedded = output.embedded};
       },
-      [this](std::size_t index) { return SectionsToMeshData(_modifiers[index]->output.sections); },
+      [this](std::size_t index) {
+        MeshProcessingModifier const& modifier = *_modifiers[index];
+        // An Embed stage displays the mesh it embedded, not the boundary of its output.
+        return modifier.ActiveMethod().EmbeddedRole().has_value()
+            ? processing::DisplaySurface(modifier.output.tetMesh)
+            : SectionsToMeshData(modifier.output.sections);
+      },
       processing::DisplaySurface);
 
   // One pass in chain order, each stage's export queued directly after the stage itself rather than
@@ -2310,8 +2326,9 @@ void ModelEditor::RunGenerationCascade(
                        mochi::ErrorLog error;
                        return run->Export(p, error);
                      }};
-      if (inputTask(p) >= 0) {
-        task.dependsOn.push_back(inputTask(p));
+      int const prerequisite = generateTask[p] >= 0 ? generateTask[p] : inputTask(p);
+      if (prerequisite >= 0) {
+        task.dependsOn.push_back(prerequisite);
       }
       exportTasks.emplace_back(static_cast<int>(tasks.size()), mod.ExportPath());
       tasks.push_back(std::move(task));
@@ -2352,8 +2369,17 @@ void ModelEditor::RunGenerationCascade(
                 ? previousOutputSurface
                 : processing::DisplaySurface(run->Output(p - 1));
           }
-          mod.output.sections = {MeshDataToSection(outputSurface)};
+          // An Embed stage shows the mesh it embedded rather than the mesh it passes on unchanged.
+          std::optional<EmbeddedMeshRole> const embeddedRole = mod.ActiveMethod().EmbeddedRole();
+          std::optional<mochi::MeshData> const* const embeddedMesh =
+              embeddedRole.has_value() ? &run->Embedded(p).Mesh(*embeddedRole) : nullptr;
+          mochi::MeshData const* const shownEmbedded =
+              embeddedMesh != nullptr && embeddedMesh->has_value() ? &**embeddedMesh : nullptr;
+          mochi::MeshData const& shownSurface =
+              shownEmbedded != nullptr ? *shownEmbedded : outputSurface;
+          mod.output.sections = {MeshDataToSection(shownSurface)};
           mod.output.tetMesh = output.nodesPerElement == 4 ? output : mochi::MeshData{};
+          mod.output.embedded = run->Embedded(p);
           mod.outputGenId = _nextGenerationId++;
           mod.inputGenIdAtLastGen =
               (!isSource && p > 0) ? _modifiers[chain[p - 1]]->outputGenId : 0;
@@ -2389,7 +2415,10 @@ void ModelEditor::RunGenerationCascade(
               ? processing::EstimateVtkSizeBytes(output)
               : processing::EstimateGlbSizeBytes(outputSurface);
           mod.output.stats.fileSizeLabel = "Est. File Size";
-          mod.output.stats.tetMesh = TetCounts(output);
+          mod.output.stats.tetMesh = shownEmbedded != nullptr ? std::nullopt : TetCounts(output);
+          mod.output.stats.embeddedMesh = shownEmbedded != nullptr
+              ? std::optional{MeasureEmbeddedMesh(*embeddedRole, *shownEmbedded)}
+              : std::nullopt;
           mod.output.stats.sdfGrid = std::nullopt;
           // Let the modifier contribute output-specific stats (e.g. the baked SDF grid), then
           // recomposite the display string around the base summary RebuildStageMeshes set.
@@ -2404,9 +2433,14 @@ void ModelEditor::RunGenerationCascade(
             ComposeStats(mod.inputView.stats);
           }
           // Kick off the hidden input<->output Hausdorff for this stage (a source has no input);
-          // it updates the stats and recomposites when it returns.
-          if (inputSurface.GetNumElements() > 0 && outputSurface.GetNumElements() > 0) {
-            KickoffModifierHausdorff(mod, std::move(inputSurface), outputSurface);
+          // it updates the stats and recomposites when it returns. For an Embed stage it measures
+          // how far the embedded mesh strays from its input's surface.
+          if (inputSurface.GetNumElements() > 0 && shownSurface.GetNumElements() > 0) {
+            // The distance needs only the geometry. An embedded mesh's skinning refers to another
+            // mesh's nodes, which the distance computation would otherwise validate it against.
+            mochi::MeshData shownGeometry = shownSurface;
+            shownGeometry.skinning.reset();
+            KickoffModifierHausdorff(mod, std::move(inputSurface), std::move(shownGeometry));
           }
           // Cache the boundary for an adjacent regenerated stage's input.
           previousOutputSurface = std::move(outputSurface);

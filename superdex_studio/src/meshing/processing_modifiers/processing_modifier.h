@@ -52,8 +52,11 @@ struct StageVisualization {
 // the modifier so the buffer travels with the element when the stack is reordered.
 struct StageBuffer {
   std::vector<mochi_renderer::MeshSection> sections;
-  // The stage's output when it is tetrahedral (`sections` then hold its boundary); empty otherwise.
+  // The stage's output when it is tetrahedral (`sections` then hold its boundary, or for an Embed
+  // stage the mesh it embedded); empty otherwise.
   mochi::MeshData tetMesh;
+  // The meshes embedded in the stage's output (see EmbeddedMeshes).
+  EmbeddedMeshes embedded;
   mochi_renderer::SceneObject* surfaceMesh = nullptr;
   mochi_renderer::SceneObject* wireframeMesh = nullptr;
   StageVisualization viz;
@@ -115,19 +118,18 @@ class MeshProcessingModifier {
   void ShowParams(ModifierGuiContext const& gui) {
     ActiveMethod().ShowParams(gui);
   }
-  mochi::MeshData
-  Run(mochi::MeshData const& input, ModifierRunContext const& ctx, mochi::Error& error) const {
+  StageMesh Run(StageMesh const& input, ModifierRunContext const& ctx, mochi::Error& error) const {
     // Non-source modifiers consume their input mesh. If an upstream modifier failed and produced no
     // output, fail fast here with a clear error instead of running an op on empty geometry -- this
     // propagates the original failure cleanly down the chain (each later stage in turn gets no
     // input and stops). Sources ignore the input (they generate geometry from a file/slot), so they
     // are exempt.
-    if (_kind != ModifierKind::Source && input.GetNumElements() == 0) {
+    if (_kind != ModifierKind::Source && input.mesh.GetNumElements() == 0) {
       MOCHI_ERROR_SET(
           error, "Modifier received no input mesh (an upstream modifier produced no output).");
       return {};
     }
-    if (_kind != ModifierKind::Source && input.nodesPerElement == 4 &&
+    if (_kind != ModifierKind::Source && input.mesh.nodesPerElement == 4 &&
         !ActiveMethod().AcceptsTetrahedralInput()) {
       MOCHI_ERROR_SET(
           error,
@@ -135,7 +137,15 @@ class MeshProcessingModifier {
           "Tetrahedralize.");
       return {};
     }
-    return ActiveMethod().Run(input, ctx, error);
+    if (_kind != ModifierKind::Source && !input.embedded.IsEmpty() &&
+        !ActiveMethod().AcceptsEmbeddedMeshes()) {
+      MOCHI_ERROR_SET(
+          error,
+          "Modifier would invalidate the meshes embedded above it, which hold only for the exact "
+          "mesh they were embedded in. Move the Embed modifiers below it.");
+      return {};
+    }
+    return ActiveMethod().RunStage(input, ctx, error);
   }
   bool NeedsReferenceMesh() const {
     return ActiveMethod().NeedsReferenceMesh();

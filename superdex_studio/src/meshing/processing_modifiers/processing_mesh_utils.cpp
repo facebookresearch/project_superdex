@@ -34,8 +34,10 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <initializer_list>
 #include <iomanip>
 #include <limits>
+#include <optional>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -142,15 +144,26 @@ int64_t EstimateObjSizeBytes(mochi::MeshData const& mesh) {
   return numVerts * kObjBytesPerVertex + numTris * kObjBytesPerTriangle;
 }
 
-int64_t EstimateMochiH5SizeBytes(mochi::MeshData const& mesh, int64_t sdfValueCount) {
-  int64_t const coordBytes =
-      static_cast<int64_t>(mesh.coordinates.size()) * static_cast<int64_t>(sizeof(mochi::real));
-  int64_t const connBytes =
-      static_cast<int64_t>(mesh.connectivity.size()) * static_cast<int64_t>(sizeof(int32_t));
+int64_t EstimateMochiH5SizeBytes(mochi::ModelData const& model) {
+  auto const bytes = [](std::size_t count, std::size_t size) {
+    return static_cast<int64_t>(count * size);
+  };
+  int64_t meshBytes = 0;
+  for (std::optional<mochi::MeshData> const* mesh :
+       {&model.mesh, &model.contactSkinMesh, &model.visualMesh}) {
+    if (!mesh->has_value()) {
+      continue;
+    }
+    meshBytes += bytes((*mesh)->coordinates.size(), sizeof(mochi::real)) +
+        bytes((*mesh)->connectivity.size(), sizeof(int32_t));
+    if ((*mesh)->skinning.has_value()) {
+      meshBytes += bytes((*mesh)->skinning->indices.size(), sizeof(int32_t)) +
+          bytes((*mesh)->skinning->weights.size(), sizeof(mochi::real));
+    }
+  }
   int64_t const sdfBytes =
-      std::max<int64_t>(0, sdfValueCount) * static_cast<int64_t>(sizeof(mochi::real));
-  double const compressed = kH5OverheadBytes +
-      static_cast<double>(coordBytes + connBytes) * kH5MeshCompression +
+      model.sdf.has_value() ? bytes(model.sdf->values.size(), sizeof(mochi::real)) : 0;
+  double const compressed = kH5OverheadBytes + static_cast<double>(meshBytes) * kH5MeshCompression +
       static_cast<double>(sdfBytes) * kH5SdfCompression;
   return static_cast<int64_t>(compressed);
 }

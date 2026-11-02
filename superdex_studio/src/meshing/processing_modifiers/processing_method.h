@@ -50,10 +50,47 @@ class value;
 
 namespace superdex::studio {
 
+// What a mesh embedded in another is for: the field of mochi::ModelData it is exported as.
+enum class EmbeddedMeshRole { ContactSkin };
+
+// Triangle meshes embedded in a stage's mesh, each by skinning that gives its nodes as weighted
+// combinations of that mesh's nodes. They are valid only for the exact mesh they were embedded in,
+// so they pass down the stack from the Embed modifier that made them only through stages that
+// accept them (see MeshProcessingMethod::AcceptsEmbeddedMeshes). Named after, and exported as, the
+// mochi::ModelData fields of the same names.
+struct EmbeddedMeshes {
+  std::optional<mochi::MeshData> contactSkinMesh;
+
+  // The field holding the mesh embedded in @p role.
+  [[nodiscard]] static std::optional<mochi::MeshData> EmbeddedMeshes::* Field(
+      EmbeddedMeshRole role) {
+    switch (role) {
+      case EmbeddedMeshRole::ContactSkin:
+        return &EmbeddedMeshes::contactSkinMesh;
+    }
+    return nullptr;
+  }
+  [[nodiscard]] std::optional<mochi::MeshData>& Mesh(EmbeddedMeshRole role) {
+    return this->*Field(role);
+  }
+  [[nodiscard]] std::optional<mochi::MeshData> const& Mesh(EmbeddedMeshRole role) const {
+    return this->*Field(role);
+  }
+  [[nodiscard]] bool IsEmpty() const {
+    return !contactSkinMesh.has_value();
+  }
+};
+
+// What one stage hands the next: its mesh, plus the meshes embedded in it.
+struct StageMesh {
+  mochi::MeshData mesh;
+  EmbeddedMeshes embedded;
+};
+
 // Everything a method's Run may need beyond its own params and input, supplied by the editor.
 struct ModifierRunContext {
-  mochi::MeshData
-      referenceMesh; // resolved upstream reference mesh for Edge Flip (see ReferenceIndex)
+  // Resolved upstream reference mesh, for methods that NeedsReferenceMesh (see ReferenceIndex).
+  mochi::MeshData referenceMesh;
   std::string cadFilePath; // CAD (STEP) file for the CAD source
   std::string renderModelPath; // editor's current Render Model slot (From Model Viewer)
   std::string mochiModelPath; // editor's current Mochi Model slot (From Model Viewer)
@@ -131,6 +168,15 @@ struct ModifierGuiContext {
   bool exportPathCollides = false;
 };
 
+// Size of a triangle mesh embedded in a tetrahedral mesh, and how far its nodes reach outside the
+// tetrahedra (mochi::model::MaxAuxiliaryMeshExtrapolation, in element heights).
+struct EmbeddedMeshStats {
+  EmbeddedMeshRole role = EmbeddedMeshRole::ContactSkin;
+  int nodes = 0;
+  int triangles = 0;
+  double maxExtrapolation = 0.0;
+};
+
 // Statistics shown in a mesh's viz "Stats" block. `base` is the geometry-derived summary (verts /
 // edges / tris / AABB / edge-length / angles), recomputed only when the mesh changes. Annotations
 // known separately -- an SDF grid (from the producing modifier at generation) or a Hausdorff
@@ -140,6 +186,7 @@ struct MeshStats {
   std::string base; // FormatMeshStats output; the geometry summary
   std::optional<mochi::Int3> sdfGrid; // prepended "SDF grid" line when set
   std::optional<mochi::Int2> tetMesh; // prepended "Tet mesh" line (nodes, tets) when set
+  std::optional<EmbeddedMeshStats> embeddedMesh; // prepended line named after its role when set
   // File-size line shown first, when fileSizeBytes is set. `fileSizeLabel` is its caption ("File
   // Size" for an on-disk Model Viewer slot, "Est. File Size" for a method's GLB estimate, "Est.
   // Export Size" for an export modifier). See ComposeStats (model_editor.cpp).
@@ -175,6 +222,13 @@ class MeshProcessingMethod {
   // Produces this method's output mesh. Source methods ignore @p input.
   virtual mochi::MeshData
   Run(mochi::MeshData const& input, ModifierRunContext const& ctx, mochi::Error& error) const = 0;
+  // Produces this method's output with the meshes embedded in it, which is what the stack runs. The
+  // default runs Run and embeds nothing; methods that AcceptsEmbeddedMeshes override it to read and
+  // pass on the meshes embedded in @p input.
+  virtual StageMesh
+  RunStage(StageMesh const& input, ModifierRunContext const& ctx, mochi::Error& error) const {
+    return {.mesh = Run(input.mesh, ctx, error)};
+  }
 
   // JSON (de)serialization of this method's parameters. ReflectedMethod implements these from a
   // reflected Props struct; the unknown-placeholder method implements them by hand to round-trip
@@ -197,8 +251,7 @@ class MeshProcessingMethod {
   }
 
   // --- optional capabilities (defaults suit most methods) ---------------------------------------
-  // True for Edge Flip, which fits toward an upstream reference mesh resolved into
-  // ctx.referenceMesh.
+  // True for methods that read an upstream reference mesh resolved into ctx.referenceMesh.
   [[nodiscard]] virtual bool NeedsReferenceMesh() const {
     return false;
   }
@@ -210,6 +263,18 @@ class MeshProcessingMethod {
   // operate on triangle surfaces only.
   [[nodiscard]] virtual bool AcceptsTetrahedralInput() const {
     return false;
+  }
+  // Whether RunStage reads the meshes embedded in its input: the Embed modifiers, which add to
+  // them, and Export Mochi Model, which writes them. The stack refuses to run any other method on
+  // an input carrying embedded meshes, since its output mesh would no longer be the one they are
+  // embedded in.
+  [[nodiscard]] virtual bool AcceptsEmbeddedMeshes() const {
+    return false;
+  }
+  // The role of the mesh this method embeds (the Embed modifiers), which the editor shows as its
+  // output in place of the unchanged mesh it passes on. nullopt for every other method.
+  [[nodiscard]] virtual std::optional<EmbeddedMeshRole> EmbeddedRole() const {
+    return std::nullopt;
   }
   // Whether this method can currently produce output given @p ctx (sources check their file /
   // slot).
@@ -272,6 +337,16 @@ class MeshProcessingMethod {
   }
   [[nodiscard]] virtual char const* OutputVisualizationLabel() const {
     return "Output Visualization";
+  }
+
+ protected:
+  // RemapReferences for a method storing one reference index: follows the referenced element to its
+  // new index, and falls back to the preceding source if it was removed.
+  static void RemapReferenceIndex(int& referenceIndex, std::vector<int> const& oldToNew) {
+    if (referenceIndex < 0 || referenceIndex >= static_cast<int>(oldToNew.size())) {
+      return; // preceding-source sentinel, or (defensively) out of range: leave unchanged
+    }
+    referenceIndex = oldToNew[static_cast<std::size_t>(referenceIndex)];
   }
 };
 

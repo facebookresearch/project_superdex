@@ -36,7 +36,7 @@
 #include <mochi_core/geometry/model_data.h>
 #include <mochi_core/utils/coordinate_space_converter.h>
 #include <mochi_core/utils/dynamic_string.h>
-#include <mochi_physics/utils/mochi_model_utils.h> // BakeSdf, SaveToFile, FileFormat
+#include <mochi_physics/utils/mochi_model_utils.h> // BakeSdf, Validate, SaveToFile, FileFormat
 
 #include <array>
 #include <cstdint>
@@ -44,6 +44,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace superdex::studio {
@@ -76,13 +77,17 @@ std::string NormalizeMochiModelExportPath(std::string path) {
   return path;
 }
 
-// The input mesh converted from the pipeline's renderer (Y-up) space to Mochi (Z-up) space, which
-// is what a .mochi.h5 stores. Triangle surfaces keep their established section-based conversion;
-// tetrahedral meshes are converted directly so their connectivity is kept.
-mochi::ModelData MochiSpaceModel(mochi::MeshData const& input) {
-  if (input.nodesPerElement == 4) {
+// The input mesh, and the meshes embedded in it, converted from the pipeline's renderer (Y-up)
+// space to Mochi (Z-up) space, which is what a .mochi.h5 stores. Triangle surfaces keep their
+// established section-based conversion; tetrahedral meshes, and meshes carrying embedded meshes,
+// are converted directly so their nodes and connectivity are kept.
+mochi::ModelData MochiSpaceModel(mochi::MeshData const& input, EmbeddedMeshes const& embedded) {
+  if (input.nodesPerElement == 4 || !embedded.IsEmpty()) {
     mochi::ModelData model;
     model.mesh = processing::ToMochiSpace(input);
+    if (embedded.contactSkinMesh.has_value()) {
+      model.contactSkinMesh = processing::ToMochiSpace(*embedded.contactSkinMesh);
+    }
     return model;
   }
   std::vector<MeshSection> const sections{processing::SectionFromMeshData(input)};
@@ -137,6 +142,11 @@ class MochiModelExportMethod : public ReflectedMethod<MochiModelExportProps> {
   }
 
   [[nodiscard]] bool AcceptsTetrahedralInput() const override {
+    return true;
+  }
+
+  // Writes the meshes embedded in its input (see EmbeddedMeshes) into the model.
+  [[nodiscard]] bool AcceptsEmbeddedMeshes() const override {
     return true;
   }
 
@@ -234,39 +244,11 @@ class MochiModelExportMethod : public ReflectedMethod<MochiModelExportProps> {
       mochi::MeshData const& input,
       ModifierRunContext const& /*ctx*/,
       mochi::Error& error) const override {
-    // Bake the SDF once, in Mochi (Z-up) space -- what a .mochi.h5 stores -- and cache the baked
-    // model so Export reuses it without re-baking. The preview surface returned to the stack is
-    // converted back to render space.
-    _bakedModel = {};
-    mochi::ModelData md = MochiSpaceModel(input);
-    if (!md.mesh.has_value()) {
-      MOCHI_ERROR_SET(error, "Export Mochi Model: no input geometry.");
-      return {};
-    }
-    // Render and CAD sources leave triangles unjoined at seams (an STL entirely), which a Mochi
-    // model must not be.
-    processing::WeldIdenticalVertices(*md.mesh);
-    if (!_props.bakeSdf) {
-      _bakedModel = std::move(md);
-      return input;
-    }
-    mochi::model_utils::BakeSdf(md, _props.sdf, error);
-    if (!error.IsOK() || !md.sdf.has_value()) {
-      return {};
-    }
-
-    mochi::MeshData const surface = mochi::mesh::ReconstructSurfaceFromSdf(*md.sdf, error);
-    if (!error.IsOK()) {
-      return {};
-    }
-    // The reconstructed surface is in Mochi space; convert back to render space for the in-stack
-    // preview.
-    std::vector<MeshSection> previewSections{processing::SectionFromMeshData(surface)};
-    mochi::CoordinateSpaceConverter const mochiToRender(
-        mochi::CoordinateSpace::Default(), mochi_renderer::RenderSpace());
-    mochi_renderer::ConvertMeshSectionsSpace(previewSections, mochiToRender);
-    _bakedModel = std::move(md);
-    return processing::MeshDataFromSections(previewSections);
+    return Bake(input, {}, error);
+  }
+  StageMesh RunStage(StageMesh const& input, ModifierRunContext const& /*ctx*/, mochi::Error& error)
+      const override {
+    return {.mesh = Bake(input.mesh, input.embedded, error)};
   }
 
   // Writes the cached, already-baked Mochi-space model (mesh + SDF from the last Run). Does NOT
@@ -290,21 +272,61 @@ class MochiModelExportMethod : public ReflectedMethod<MochiModelExportProps> {
   }
 
   // The in-stack output is the reconstructed surface of the SDF baked by the last Run; report that
-  // SDF's grid dimensions in the stats, plus the estimated .mochi.h5 export size (surface mesh +
-  // SDF grid). The editor composites them into the display string.
+  // SDF's grid dimensions in the stats, plus the estimated .mochi.h5 export size (meshes + SDF
+  // grid). The editor composites them into the display string.
   void AnnotateStats(MeshStats& stats) const override {
     if (_bakedModel.sdf.has_value()) {
       stats.sdfGrid = _bakedModel.sdf->dims;
     }
     if (_bakedModel.mesh.has_value()) {
-      stats.fileSizeBytes = processing::EstimateMochiH5SizeBytes(
-          *_bakedModel.mesh,
-          _bakedModel.sdf.has_value() ? static_cast<int64_t>(_bakedModel.sdf->values.size()) : 0);
+      stats.fileSizeBytes = processing::EstimateMochiH5SizeBytes(_bakedModel);
       stats.fileSizeLabel = "Est. Export Size";
     }
   }
 
  private:
+  // Bakes the SDF once, in Mochi (Z-up) space -- what a .mochi.h5 stores -- and caches the baked
+  // model, with the meshes embedded in @p input, so Export reuses it without re-baking. The preview
+  // surface returned to the stack is converted back to render space.
+  mochi::MeshData
+  Bake(mochi::MeshData const& input, EmbeddedMeshes const& embedded, mochi::Error& error) const {
+    _bakedModel = {};
+    mochi::ModelData md = MochiSpaceModel(input, embedded);
+    if (!md.mesh.has_value()) {
+      MOCHI_ERROR_SET(error, "Export Mochi Model: no input geometry.");
+      return {};
+    }
+    // Render and CAD sources leave triangles unjoined at seams (an STL entirely), which a Mochi
+    // model must not be. Embedded meshes refer to the input's nodes as they are, so a mesh carrying
+    // them is not welded.
+    if (embedded.IsEmpty()) {
+      processing::WeldIdenticalVertices(*md.mesh);
+    }
+    mochi::model_utils::Validate(md, error);
+    MOCHI_ERROR_RETURN(error, {});
+    if (!_props.bakeSdf) {
+      _bakedModel = std::move(md);
+      return input;
+    }
+    mochi::model_utils::BakeSdf(md, _props.sdf, error);
+    if (!error.IsOK() || !md.sdf.has_value()) {
+      return {};
+    }
+
+    mochi::MeshData const surface = mochi::mesh::ReconstructSurfaceFromSdf(*md.sdf, error);
+    if (!error.IsOK()) {
+      return {};
+    }
+    // The reconstructed surface is in Mochi space; convert back to render space for the in-stack
+    // preview.
+    std::vector<MeshSection> previewSections{processing::SectionFromMeshData(surface)};
+    mochi::CoordinateSpaceConverter const mochiToRender(
+        mochi::CoordinateSpace::Default(), mochi_renderer::RenderSpace());
+    mochi_renderer::ConvertMeshSectionsSpace(previewSections, mochiToRender);
+    _bakedModel = std::move(md);
+    return processing::MeshDataFromSections(previewSections);
+  }
+
   // The path Browse offers, and what RefreshAutoExportPath keeps the field at while Auto is on.
   static std::string SuggestedExportPath(std::string const& sourceFilePath) {
     return processing::DefaultExportPath(

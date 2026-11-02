@@ -20,8 +20,43 @@
 
 #include <algorithm>
 #include <string>
+#include <vector>
 
 namespace superdex::studio::processing {
+
+void ShowReferenceCombo(char const* label, int& referenceIndex, ModifierGuiContext const& gui) {
+  std::vector<std::string> items;
+  std::vector<int> itemRefIndex;
+  items.emplace_back("Preceding Source");
+  itemRefIndex.push_back(MeshProcessingMethod::kReferencePrecedingSource);
+  if (gui.modifierNames != nullptr) {
+    for (std::size_t j = 0; j < gui.selfIndex && j < gui.modifierNames->size(); ++j) {
+      items.push_back("[" + std::to_string(j) + "] " + (*gui.modifierNames)[j]);
+      itemRefIndex.push_back(static_cast<int>(j));
+    }
+  }
+  int current = -1;
+  for (std::size_t k = 0; k < itemRefIndex.size(); ++k) {
+    if (itemRefIndex[k] == referenceIndex) {
+      current = static_cast<int>(k);
+      break;
+    }
+  }
+  char const* const preview =
+      current < 0 ? "(invalid source)" : items[static_cast<std::size_t>(current)].c_str();
+  if (ImGui::BeginCombo(label, preview)) {
+    for (std::size_t k = 0; k < items.size(); ++k) {
+      bool const selected = static_cast<int>(k) == current;
+      if (ImGui::Selectable(items[k].c_str(), selected)) {
+        referenceIndex = itemRefIndex[k];
+      }
+      if (selected) {
+        ImGui::SetItemDefaultFocus();
+      }
+    }
+    ImGui::EndCombo();
+  }
+}
 
 void ShowLengthControl(
     char const* name,

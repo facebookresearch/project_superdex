@@ -242,8 +242,9 @@ ProcessReport RunPipeline(
     }
   });
 
+  auto const noCurrentOutput = [](std::size_t /*modifierIndex*/) { return StageMesh{}; };
   auto const noCurrentMesh = [](std::size_t /*modifierIndex*/) { return mochi::MeshData{}; };
-  StackRun run(stack, chain, ctx, noCurrentMesh, noCurrentMesh, processing::DisplaySurface);
+  StackRun run(stack, chain, ctx, noCurrentOutput, noCurrentMesh, processing::DisplaySurface);
   report.succeeded = true;
   for (std::size_t p = 0; p < chain.size(); ++p) {
     MeshProcessingModifier const& modifier = *stack.at(chain[p]);

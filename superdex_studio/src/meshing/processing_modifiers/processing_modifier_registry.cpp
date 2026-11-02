@@ -16,6 +16,7 @@
 
 #include "meshing/processing_modifiers/processing_modifier.h"
 
+#include "meshing/processing_modifiers/embed_mesh.h"
 #include "meshing/processing_modifiers/export_mesh_file.h"
 #include "meshing/processing_modifiers/export_mochi_model.h"
 #include "meshing/processing_modifiers/extract_surface.h"
@@ -54,6 +55,7 @@ std::vector<ModifierRegistryEntry> const& ProcessingModifierRegistry() {
     entries.push_back(MakeTetrahedralizeEntry());
     entries.push_back(MakeExtractSurfaceEntry());
     entries.push_back(MakeTransformEntry());
+    entries.push_back(MakeEmbedContactSkinEntry());
     // Exports
     entries.push_back(MakeMochiModelExportEntry());
     entries.push_back(MakeExportMeshFileEntry());

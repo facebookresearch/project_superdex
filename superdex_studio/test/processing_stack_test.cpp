@@ -25,6 +25,7 @@
 #include <filesystem>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -49,6 +50,8 @@ struct ModifierSpec {
   RunFunction run; // passes the input through when empty
   std::vector<mochi::MeshData>* saved = nullptr; // receives each SaveToFile input
   bool acceptsTets = false;
+  bool acceptsEmbedded = false; // passes the meshes embedded in its input on
+  std::optional<mochi::MeshData> contactSkin; // embedded by a stage that acceptsEmbedded
 };
 
 // A method that does whatever its spec says. Its Auto export path is the source path plus ".out".
@@ -66,6 +69,17 @@ class TestMethod : public MeshProcessingMethod {
       mochi::Error& error) const override {
     return _spec.run ? _spec.run(input, ctx, error) : input;
   }
+  StageMesh RunStage(StageMesh const& input, ModifierRunContext const& ctx, mochi::Error& error)
+      const override {
+    if (!_spec.acceptsEmbedded) {
+      return MeshProcessingMethod::RunStage(input, ctx, error);
+    }
+    StageMesh output{.mesh = Run(input.mesh, ctx, error), .embedded = input.embedded};
+    if (_spec.contactSkin.has_value()) {
+      output.embedded.contactSkinMesh = _spec.contactSkin;
+    }
+    return output;
+  }
   void SerializeProps(picojson::value& /*out*/) const override {}
   int DeserializeProps(picojson::value const& /*in*/) override {
     return 0;
@@ -78,6 +92,9 @@ class TestMethod : public MeshProcessingMethod {
   }
   [[nodiscard]] bool AcceptsTetrahedralInput() const override {
     return _spec.acceptsTets;
+  }
+  [[nodiscard]] bool AcceptsEmbeddedMeshes() const override {
+    return _spec.acceptsEmbedded;
   }
   [[nodiscard]] int ReferenceIndex() const override {
     return _spec.referenceIndex;
@@ -184,6 +201,12 @@ mochi::MeshData ReturnReference(
 
 mochi::MeshData NoCurrentOutput(std::size_t /*modifierIndex*/) {
   return {};
+}
+
+// StackRun's current outputs from @p mesh, each modifier's mesh, with nothing embedded in them.
+std::function<StageMesh(std::size_t)> CurrentMeshes(
+    std::function<mochi::MeshData(std::size_t)> mesh) {
+  return [mesh = std::move(mesh)](std::size_t index) { return StageMesh{.mesh = mesh(index)}; };
 }
 
 mochi::MeshData SameReferenceMesh(mochi::MeshData const& output) {
@@ -319,7 +342,8 @@ TEST(ProcessingStackTest, StackRunFeedsEachStageThePreviousOutput) {
       {{.kind = kSource, .run = ProduceTriangle(1)},
        {.kind = kTransform, .run = AddOne},
        {.kind = kExport, .exportPath = "out.glb", .saved = &saved}});
-  StackRun run(stack, {0, 1, 2}, {}, NoCurrentOutput, NoCurrentOutput, SameReferenceMesh);
+  StackRun run(
+      stack, {0, 1, 2}, {}, CurrentMeshes(NoCurrentOutput), NoCurrentOutput, SameReferenceMesh);
 
   mochi::Error error;
   EXPECT_TRUE(run.Generate(0, error));
@@ -340,7 +364,7 @@ TEST(ProcessingStackTest, StackRunDoesNotExportAfterFailedRegeneration) {
   auto const currentOutput = [](std::size_t index) {
     return Triangle(static_cast<mochi::real>(10 + index));
   };
-  StackRun run(stack, {0, 1}, {}, currentOutput, NoCurrentOutput, SameReferenceMesh);
+  StackRun run(stack, {0, 1}, {}, CurrentMeshes(currentOutput), NoCurrentOutput, SameReferenceMesh);
 
   mochi::Error sourceError;
   mochi::Error generationError;
@@ -360,7 +384,8 @@ TEST(ProcessingStackTest, OnlyStagesThatAcceptTetsRunOnATetMesh) {
       {{.kind = kSource, .run = ProduceTetrahedron},
        {.kind = kTransform, .acceptsTets = true},
        {.kind = kTransform}});
-  StackRun run(stack, {0, 1, 2}, {}, NoCurrentOutput, NoCurrentOutput, SameReferenceMesh);
+  StackRun run(
+      stack, {0, 1, 2}, {}, CurrentMeshes(NoCurrentOutput), NoCurrentOutput, SameReferenceMesh);
 
   mochi::Error acceptingError;
   mochi::Error rejectingError;
@@ -381,7 +406,8 @@ TEST(ProcessingStackTest, SkippedCachedTetKeepsTetTypeChecksForRegeneratedStages
       stack,
       {0, 1, 2},
       {},
-      [&cachedTet](std::size_t index) { return index == 0 ? cachedTet : mochi::MeshData{}; },
+      CurrentMeshes(
+          [&cachedTet](std::size_t index) { return index == 0 ? cachedTet : mochi::MeshData{}; }),
       NoCurrentOutput,
       SameReferenceMesh);
 
@@ -403,7 +429,8 @@ TEST(ProcessingStackTest, StackRunFailureLeavesNothingForTheStagesBelow) {
   auto const currentOutput = [](std::size_t index) {
     return Triangle(static_cast<mochi::real>(10 * index));
   };
-  StackRun run(stack, {0, 1, 2}, {}, currentOutput, currentOutput, SameReferenceMesh);
+  StackRun run(
+      stack, {0, 1, 2}, {}, CurrentMeshes(currentOutput), currentOutput, SameReferenceMesh);
 
   mochi::Error sourceError;
   mochi::Error failError;
@@ -426,7 +453,8 @@ TEST(ProcessingStackTest, StackRunPassesOnTheCurrentOutputOfStagesItSkips) {
   auto const currentOutput = [](std::size_t index) {
     return Triangle(static_cast<mochi::real>(10 * index));
   };
-  StackRun run(stack, {0, 1, 2}, {}, currentOutput, currentOutput, SameReferenceMesh);
+  StackRun run(
+      stack, {0, 1, 2}, {}, CurrentMeshes(currentOutput), currentOutput, SameReferenceMesh);
 
   mochi::Error error;
   EXPECT_TRUE(run.Generate(2, error));
@@ -447,7 +475,8 @@ TEST(ProcessingStackTest, StackRunResolvesReferencesInsideAndOutsideTheChain) {
       stack,
       BuildGenerationChain(stack, 3),
       {},
-      [&cachedTet](std::size_t index) { return index == 0 ? cachedTet : mochi::MeshData{}; },
+      CurrentMeshes(
+          [&cachedTet](std::size_t index) { return index == 0 ? cachedTet : mochi::MeshData{}; }),
       [](std::size_t index) { return Triangle(static_cast<mochi::real>(100 + index)); },
       SameReferenceMesh);
 
@@ -470,7 +499,7 @@ TEST(ProcessingStackTest, StackRunBuildsReferenceSurfacesForGeneratedTetStages) 
       stack,
       BuildFullGenerationChain(stack),
       {},
-      NoCurrentOutput,
+      CurrentMeshes(NoCurrentOutput),
       NoCurrentOutput,
       [](mochi::MeshData const& output) {
         return output.nodesPerElement == 4 ? Triangle(50) : output;
@@ -483,4 +512,72 @@ TEST(ProcessingStackTest, StackRunBuildsReferenceSurfacesForGeneratedTetStages) 
 
   EXPECT_EQ(run.Output(2).nodesPerElement, 3);
   EXPECT_EQ(run.Output(2).coordinates[0], 50);
+}
+
+TEST(ProcessingStackTest, EmbeddedMeshesReachOnlyStagesThatAcceptThem) {
+  ModifierStack const stack = MakeStack(
+      {{.kind = kSource, .run = ProduceTetrahedron},
+       {.kind = kTransform,
+        .acceptsTets = true,
+        .acceptsEmbedded = true,
+        .contactSkin = Triangle(7)},
+       {.kind = kTransform, .acceptsTets = true, .acceptsEmbedded = true},
+       {.kind = kTransform, .acceptsTets = true}});
+  StackRun run(
+      stack, {0, 1, 2, 3}, {}, CurrentMeshes(NoCurrentOutput), NoCurrentOutput, SameReferenceMesh);
+
+  mochi::Error acceptingError;
+  mochi::Error rejectingError;
+  EXPECT_TRUE(run.Generate(0, acceptingError));
+  EXPECT_TRUE(run.Generate(1, acceptingError));
+  EXPECT_TRUE(run.Generate(2, acceptingError));
+  EXPECT_FALSE(run.Generate(3, rejectingError));
+
+  ASSERT_TRUE(run.Embedded(2).contactSkinMesh.has_value());
+  EXPECT_EQ(run.Embedded(2).contactSkinMesh->coordinates[0], 7);
+  EXPECT_FALSE(rejectingError.IsOK());
+  EXPECT_EQ(run.Output(3).GetNumElements(), 0);
+}
+
+TEST(ProcessingStackTest, StackRunPassesOnTheEmbeddedMeshesOfStagesItSkips) {
+  ModifierStack const stack = MakeStack(
+      {{.kind = kSource, .run = ProduceTetrahedron},
+       {.kind = kTransform, .acceptsTets = true, .acceptsEmbedded = true}});
+  StackRun run(
+      stack,
+      {0, 1},
+      {},
+      [](std::size_t /*index*/) {
+        StageMesh output{.mesh = Tetrahedron()};
+        output.embedded.contactSkinMesh = Triangle(3);
+        return output;
+      },
+      NoCurrentOutput,
+      SameReferenceMesh);
+
+  mochi::Error error;
+  EXPECT_TRUE(run.Generate(1, error));
+
+  ASSERT_TRUE(run.Embedded(1).contactSkinMesh.has_value());
+  EXPECT_EQ(run.Embedded(1).contactSkinMesh->coordinates[0], 3);
+}
+
+TEST(ProcessingStackTest, ASourceRestartsWithoutTheEmbeddedMeshesAboveIt) {
+  ModifierStack const stack = MakeStack(
+      {{.kind = kSource, .run = ProduceTetrahedron},
+       {.kind = kTransform,
+        .acceptsTets = true,
+        .acceptsEmbedded = true,
+        .contactSkin = Triangle(7)},
+       {.kind = kSource, .run = ProduceTriangle(2)}});
+  StackRun run(
+      stack, {0, 1, 2}, {}, CurrentMeshes(NoCurrentOutput), NoCurrentOutput, SameReferenceMesh);
+
+  mochi::Error error;
+  EXPECT_TRUE(run.Generate(0, error));
+  EXPECT_TRUE(run.Generate(1, error));
+  EXPECT_TRUE(run.Generate(2, error));
+
+  EXPECT_TRUE(run.Embedded(1).contactSkinMesh.has_value());
+  EXPECT_TRUE(run.Embedded(2).IsEmpty());
 }

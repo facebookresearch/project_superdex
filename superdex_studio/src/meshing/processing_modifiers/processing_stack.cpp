@@ -156,7 +156,7 @@ StackRun::StackRun(
     ModifierStack const& stack,
     std::vector<std::size_t> chain,
     ModifierRunContext ctx,
-    std::function<mochi::MeshData(std::size_t modifierIndex)> const& currentOutput,
+    std::function<StageMesh(std::size_t modifierIndex)> const& currentOutput,
     std::function<mochi::MeshData(std::size_t modifierIndex)> const& currentReferenceMesh,
     std::function<mochi::MeshData(mochi::MeshData const& output)> referenceMeshFromOutput)
     : _referenceMeshFromOutput(std::move(referenceMeshFromOutput)), _ctx(std::move(ctx)) {
@@ -190,20 +190,20 @@ bool StackRun::Generate(std::size_t p, mochi::Error& error) {
   if (modifier.NeedsReferenceMesh()) {
     Reference const& ref = _references[p];
     runCtx.referenceMesh = ref.chainPos >= 0
-        ? _referenceMeshFromOutput(_outputs[static_cast<std::size_t>(ref.chainPos)])
+        ? _referenceMeshFromOutput(_outputs[static_cast<std::size_t>(ref.chainPos)].mesh)
         : ref.currentMesh;
   }
-  mochi::MeshData out = modifier.Run(Input(p), runCtx, error);
-  if (error.IsOK() && out.nodesPerElement == 4) {
+  StageMesh out = modifier.Run(Input(p), runCtx, error);
+  if (error.IsOK() && out.mesh.nodesPerElement == 4) {
     // Rejected here so that extracting the boundary surface later (DisplaySurface) cannot fail.
     mochi::ModelDataView model;
-    model.mesh = out;
+    model.mesh = out.mesh;
     mochi::model::Validate(model, error);
   }
-  if (!error.IsOK() || out.GetNumElements() == 0) {
+  if (!error.IsOK() || out.mesh.GetNumElements() == 0) {
     // Leave no output, so the next stage receives an empty input and stops too (see
     // MeshProcessingModifier::Run) instead of running on this stage's stale mesh.
-    _outputs[p] = mochi::MeshData{};
+    _outputs[p] = StageMesh{};
     return false;
   }
   _outputs[p] = std::move(out);
@@ -211,16 +211,16 @@ bool StackRun::Generate(std::size_t p, mochi::Error& error) {
 }
 
 bool StackRun::Export(std::size_t p, mochi::Error& error) const {
-  if (_outputs[p].GetNumElements() == 0) {
+  if (_outputs[p].mesh.GetNumElements() == 0) {
     MOCHI_ERROR_SET(error, "Cannot export a modifier that did not generate successfully.");
     return false;
   }
-  _modifiers[p]->SaveToFile(Input(p), error);
+  _modifiers[p]->SaveToFile(Input(p).mesh, error);
   return error.IsOK();
 }
 
-mochi::MeshData const& StackRun::Input(std::size_t p) const {
-  static mochi::MeshData const kNoInput;
+StageMesh const& StackRun::Input(std::size_t p) const {
+  static StageMesh const kNoInput;
   return p > 0 ? _outputs[p - 1] : kNoInput;
 }
 

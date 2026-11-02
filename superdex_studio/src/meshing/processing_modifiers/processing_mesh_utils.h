@@ -22,6 +22,7 @@
 // mesh_modifier.cpp so multiple modifier files can share them without duplicating code.
 
 #include <mochi_core/geometry/mesh_data.h>
+#include <mochi_core/geometry/model_data.h>
 #include <mochi_core/utils/error.h>
 #include <mochi_core/utils/nd_array.h>
 #include <mochi_core/utils/quaternion.h>
@@ -55,17 +56,17 @@ int64_t EstimateVtkSizeBytes(mochi::MeshData const& mesh);
 // face lines. Coarser than the GLB estimate (text size depends on coordinate magnitudes).
 int64_t EstimateObjSizeBytes(mochi::MeshData const& mesh);
 
-// Estimated size in bytes of a .mochi.h5 holding @p mesh (surface) plus an SDF grid of
-// @p sdfValueCount values. Models the writer's gzip (deflate) + shuffle compression via the
-// mesh / SDF compression factors in the .cpp; the SDF term normally dominates.
-int64_t EstimateMochiH5SizeBytes(mochi::MeshData const& mesh, int64_t sdfValueCount);
+// Estimated size in bytes of @p model written as a .mochi.h5: its mesh, contact skin and visual
+// mesh (with their skinning) and its SDF grid. Models the writer's gzip (deflate) + shuffle
+// compression via the mesh / SDF compression factors in the .cpp; an SDF normally dominates.
+int64_t EstimateMochiH5SizeBytes(mochi::ModelData const& model);
 
 // Concatenate renderer sections into a neutral triangle MeshData (positions + indices).
 mochi::MeshData MeshDataFromSections(std::vector<mochi_renderer::MeshSection> const& sections);
 
 // Recover a stage's processing output from its display buffer. A non-empty tetrahedral output is
-// authoritative because the displayed sections hold only its boundary; otherwise concatenate the
-// displayed triangle sections.
+// authoritative because the displayed sections hold only its boundary, or a mesh embedded in it;
+// otherwise concatenate the displayed triangle sections.
 mochi::MeshData BufferedStageOutput(
     mochi::MeshData const& tetMesh,
     std::vector<mochi_renderer::MeshSection> const& sections);

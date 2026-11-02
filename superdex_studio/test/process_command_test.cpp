@@ -39,6 +39,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -52,18 +53,20 @@ constexpr int kCubeTriangles = 12;
 constexpr double kFileSizeEstimateTolerance = 0.1;
 
 // Writes a binary STL of the cube, outward-wound.
-void WriteCubeStl(fs::path const& path) {
+void WriteCubeStl(
+    fs::path const& path,
+    std::array<float, 3> const& center = std::array<float, 3>{}) {
   fs::create_directories(path.parent_path());
   float const h = kHalfSide;
   std::array<std::array<float, 3>, 8> const corner{{
-      {-h, -h, -h},
-      {h, -h, -h},
-      {-h, h, -h},
-      {h, h, -h},
-      {-h, -h, h},
-      {h, -h, h},
-      {-h, h, h},
-      {h, h, h},
+      {center[0] - h, center[1] - h, center[2] - h},
+      {center[0] + h, center[1] - h, center[2] - h},
+      {center[0] - h, center[1] + h, center[2] - h},
+      {center[0] + h, center[1] + h, center[2] - h},
+      {center[0] - h, center[1] - h, center[2] + h},
+      {center[0] + h, center[1] - h, center[2] + h},
+      {center[0] - h, center[1] + h, center[2] + h},
+      {center[0] + h, center[1] + h, center[2] + h},
   }};
   // Two triangles per side (-x, +x, -y, +y, -z, +z), corners indexed as bit 0 = x, 1 = y, 2 = z.
   std::array<std::array<int, 4>, 6> const side{{
@@ -128,6 +131,11 @@ constexpr char const* kMakeWatertight =
     R"({"modifier": "Refine Mesh", "method": "Make Watertight", "enabled": true,
         "collapsed": true, "properties": {}})";
 
+// Embeds the source surface (the cube) as the contact skin.
+constexpr char const* kEmbedSourceAsContactSkin =
+    R"({"modifier": "Embed Contact Skin", "method": "Upstream Surface", "enabled": true,
+        "collapsed": true, "properties": {"referenceIndex": 0}})";
+
 constexpr char const* kSdfExport =
     R"({"modifier": "Export Mochi Model", "method": "SDF", "enabled": true, "collapsed": true,
         "properties": {"sdf": {"resolutionMode": "Explicit", "resolutionDelta": [0.01, 0.01, 0.01],
@@ -140,6 +148,10 @@ constexpr char const* kZeroAxisSrt =
 constexpr char const* kMirroredSrt =
     R"({"modifier": "Apply SRT Transformation", "method": "SRT Transform", "enabled": true,
         "collapsed": true, "properties": {"scale": [-2, 1, 1]}})";
+
+constexpr char const* kTranslatedSrt =
+    R"({"modifier": "Apply SRT Transformation", "method": "SRT Transform", "enabled": true,
+        "collapsed": true, "properties": {"translation": [0.01, 0.02, 0.03]}})";
 
 // The translation overflows float, so the output coordinates are infinite.
 constexpr char const* kNonFiniteSrt =
@@ -385,6 +397,161 @@ TEST_F(ProcessCommandTest, MirroredTetSrtRestoresPositiveOrientation) {
     maxAbsX = std::max(maxAbsX, std::abs(NodePosition(*model.mesh, node)[0]));
   }
   EXPECT_NEAR(maxAbsX, 2 * kHalfSide, 1e-5f);
+}
+
+TEST_F(ProcessCommandTest, NoSdfExportEmbedsAContactSkinInTheTetMesh) {
+  std::array<float, 3> const center{0.01f, 0.02f, 0.03f};
+  WriteCubeStl(_root / "cad" / "cube.stl", center);
+  fs::path const pipeline = _root / "intermediates" / "cube.StudioProcessing.json";
+  WriteModifiers(
+      pipeline, {kSourceFromModelViewer, kTetrahedralize, kEmbedSourceAsContactSkin, kNoSdfExport});
+
+  mochi::Error error;
+  ProcessReport const report = RunProcessingPipeline({.pipelinePath = pipeline.string()}, error);
+
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  EXPECT_TRUE(report.succeeded);
+  fs::path const modelPath = _root / "collision" / "cube.mochi.h5";
+  mochi::ModelData const model = mochi::model_utils::LoadFromFile(modelPath.string(), error);
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  ASSERT_TRUE(model.mesh.has_value());
+  EXPECT_EQ(model.mesh->nodesPerElement, 4);
+  ASSERT_TRUE(model.contactSkinMesh.has_value());
+  EXPECT_EQ(model.contactSkinMesh->GetNumElements(), kCubeTriangles);
+  ASSERT_TRUE(model.contactSkinMesh->skinning.has_value());
+  EXPECT_EQ(
+      model.contactSkinMesh->skinning->indices.size(),
+      4 * static_cast<std::size_t>(model.contactSkinMesh->GetNumNodes()));
+  for (int axis = 0; axis < 3; ++axis) {
+    mochi::real lowest = std::numeric_limits<mochi::real>::max();
+    mochi::real highest = std::numeric_limits<mochi::real>::lowest();
+    for (int node = 0; node < model.contactSkinMesh->GetNumNodes(); ++node) {
+      mochi::real const coordinate = NodePosition(*model.contactSkinMesh, node)[axis];
+      lowest = std::min(lowest, coordinate);
+      highest = std::max(highest, coordinate);
+    }
+    EXPECT_NEAR((lowest + highest) / 2, center[axis], 1e-6f);
+  }
+  mochi::ModelData meshOnly = model;
+  meshOnly.contactSkinMesh.reset();
+  EXPECT_GT(
+      processing::EstimateMochiH5SizeBytes(model), processing::EstimateMochiH5SizeBytes(meshOnly));
+
+  mochi::Context* const context = mochi::CreateContext(0);
+  MOCHI_DEFER(mochi::DestroyContext(context));
+  mochi::Scene* const scene = context->CreateScene("contact_skin_export");
+  MOCHI_DEFER(context->DestroyScene(scene));
+  mochi::SoftActorParams params;
+  params.shape = context->LoadShapeFromFile(modelPath.string(), error);
+  params.useContactSkin = true;
+  MOCHI_DEFER(context->ReleaseShape(params.shape));
+  EXPECT_NE(scene->CreateSoftActor(params, error), nullptr);
+  EXPECT_TRUE(error.IsOK()) << error.GetDescription();
+}
+
+// The usual soft-model pipeline: the wrapped surface, embedded in the tetrahedral mesh that fills
+// it, as its contact skin.
+TEST_F(ProcessCommandTest, AWrappedSurfaceIsEmbeddedInItsTetrahedralization) {
+  WriteCubeStl(_root / "cad" / "cube.stl");
+  fs::path const pipeline = _root / "intermediates" / "cube.StudioProcessing.json";
+  WriteModifiers(
+      pipeline,
+      {kSourceFromModelViewer,
+       R"({"modifier": "Wrap Mesh", "method": "Alpha Wrap", "enabled": true, "collapsed": true,
+           "properties": {}})",
+       R"({"modifier": "Tetrahedralize", "method": "Delaunay Refinement", "enabled": true,
+           "collapsed": true, "properties": {}})",
+       R"({"modifier": "Embed Contact Skin", "method": "Upstream Surface", "enabled": true,
+           "collapsed": true, "properties": {"referenceIndex": 1}})",
+       kNoSdfExport});
+
+  mochi::Error error;
+  ProcessReport const report = RunProcessingPipeline({.pipelinePath = pipeline.string()}, error);
+
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  for (ProcessStageReport const& stage : report.stages) {
+    EXPECT_TRUE(stage.succeeded) << stage.label << ": " << stage.error;
+  }
+  mochi::ModelData const model =
+      mochi::model_utils::LoadFromFile((_root / "collision" / "cube.mochi.h5").string(), error);
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  EXPECT_TRUE(model.contactSkinMesh.has_value());
+}
+
+TEST_F(ProcessCommandTest, SdfExportEmbedsAContactSkinInTheTetMesh) {
+  WriteCubeStl(_root / "cad" / "cube.stl");
+  fs::path const pipeline = _root / "intermediates" / "cube.StudioProcessing.json";
+  WriteModifiers(
+      pipeline, {kSourceFromModelViewer, kTetrahedralize, kEmbedSourceAsContactSkin, kSdfExport});
+
+  mochi::Error error;
+  ProcessReport const report = RunProcessingPipeline({.pipelinePath = pipeline.string()}, error);
+
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  ASSERT_TRUE(report.succeeded);
+  mochi::ModelData const model =
+      mochi::model_utils::LoadFromFile((_root / "collision" / "cube.mochi.h5").string(), error);
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  EXPECT_TRUE(model.sdf.has_value());
+  EXPECT_TRUE(model.contactSkinMesh.has_value());
+}
+
+TEST_F(ProcessCommandTest, AnSrtBelowAnEmbedIsRejected) {
+  WriteCubeStl(_root / "cad" / "cube.stl");
+  fs::path const pipeline = _root / "intermediates" / "cube.StudioProcessing.json";
+  WriteModifiers(
+      pipeline,
+      {kSourceFromModelViewer,
+       kTetrahedralize,
+       kEmbedSourceAsContactSkin,
+       kTranslatedSrt,
+       kNoSdfExport});
+
+  mochi::Error error;
+  ProcessReport const report = RunProcessingPipeline({.pipelinePath = pipeline.string()}, error);
+
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  EXPECT_FALSE(report.succeeded);
+  ASSERT_EQ(report.stages.size(), 5u);
+  EXPECT_TRUE(report.stages[2].succeeded) << report.stages[2].error;
+  EXPECT_FALSE(report.stages[3].succeeded);
+  EXPECT_NE(report.stages[3].error.find("embedded"), std::string::npos) << report.stages[3].error;
+}
+
+TEST_F(ProcessCommandTest, AMeshIsEmbeddedOnlyOncePerRole) {
+  WriteCubeStl(_root / "cad" / "cube.stl");
+  fs::path const pipeline = _root / "intermediates" / "cube.StudioProcessing.json";
+  WriteModifiers(
+      pipeline,
+      {kSourceFromModelViewer,
+       kTetrahedralize,
+       kEmbedSourceAsContactSkin,
+       kEmbedSourceAsContactSkin,
+       kNoSdfExport});
+
+  mochi::Error error;
+  ProcessReport const report = RunProcessingPipeline({.pipelinePath = pipeline.string()}, error);
+
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  EXPECT_FALSE(report.succeeded);
+  ASSERT_EQ(report.stages.size(), 5u);
+  EXPECT_FALSE(report.stages[3].succeeded);
+  EXPECT_NE(report.stages[3].error.find("already"), std::string::npos) << report.stages[3].error;
+}
+
+TEST_F(ProcessCommandTest, AContactSkinNeedsATetMesh) {
+  WriteCubeStl(_root / "cad" / "cube.stl");
+  fs::path const pipeline = _root / "intermediates" / "cube.StudioProcessing.json";
+  WriteModifiers(pipeline, {kSourceFromModelViewer, kEmbedSourceAsContactSkin, kNoSdfExport});
+
+  mochi::Error error;
+  ProcessReport const report = RunProcessingPipeline({.pipelinePath = pipeline.string()}, error);
+
+  EXPECT_FALSE(report.succeeded);
+  ASSERT_EQ(report.stages.size(), 3u);
+  EXPECT_FALSE(report.stages[1].succeeded);
+  EXPECT_NE(report.stages[1].error.find("Tetrahedralize"), std::string::npos)
+      << report.stages[1].error;
 }
 
 TEST_F(ProcessCommandTest, SdfExportOfATetMeshWritesBoth) {

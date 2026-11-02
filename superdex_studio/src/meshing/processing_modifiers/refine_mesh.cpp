@@ -16,6 +16,8 @@
 
 #include "meshing/processing_modifiers/refine_mesh.h"
 
+#include "meshing/processing_modifiers/remesh_params_ui.h" // ShowReferenceCombo
+
 #include <imgui.h>
 
 #include <mochi_mesh/step_mesh_stages.h> // CleanupMesh / CloseMesh / EdgeSwapMesh / DecimateMesh
@@ -23,7 +25,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <string>
 #include <vector>
 
 namespace superdex::studio {
@@ -157,54 +158,15 @@ class EdgeFlipMethod : public ReflectedMethod<RefineEdgeFlipProps> {
     return _props.referenceIndex;
   }
   void RemapReferences(std::vector<int> const& oldToNew) override {
-    if (_props.referenceIndex < 0 || _props.referenceIndex >= static_cast<int>(oldToNew.size())) {
-      return; // preceding-source sentinel, or (defensively) out of range: leave unchanged
-    }
-    // Follow the referenced element to its new index; -1 (removed) falls back to preceding source.
-    _props.referenceIndex = oldToNew[static_cast<std::size_t>(_props.referenceIndex)];
+    RemapReferenceIndex(_props.referenceIndex, oldToNew);
   }
 
   void ShowParams(ModifierGuiContext const& gui) override {
     ModifierTooltip const& tooltip = gui.tooltip;
 
-    // Reference dropdown: item 0 walks up to the nearest preceding source; the rest are the
-    // specific elements above this one (by array index). Only these valid options are selectable.
-    std::vector<std::string> items;
-    std::vector<int> itemRefIndex;
-    items.emplace_back("Preceding Source");
-    itemRefIndex.push_back(kReferencePrecedingSource);
-    if (gui.modifierNames != nullptr) {
-      for (std::size_t j = 0; j < gui.selfIndex && j < gui.modifierNames->size(); ++j) {
-        items.push_back("[" + std::to_string(j) + "] " + (*gui.modifierNames)[j]);
-        itemRefIndex.push_back(static_cast<int>(j));
-      }
-    }
-    // Locate the stored reference among the valid options. If it is an explicit index that is not
-    // one of them, this modifier was moved above the element it references: show a non-selectable
-    // "(invalid source)" preview so the state is obvious. While invalid the edge flip fails
-    // generation (no output), which propagates downstream (see Run + ReferenceModifierIndex).
-    int current = -1;
-    for (std::size_t k = 0; k < itemRefIndex.size(); ++k) {
-      if (itemRefIndex[k] == _props.referenceIndex) {
-        current = static_cast<int>(k);
-        break;
-      }
-    }
-    bool const invalid = current < 0;
-    char const* const preview =
-        invalid ? "(invalid source)" : items[static_cast<std::size_t>(current)].c_str();
-    if (ImGui::BeginCombo("Reference", preview)) {
-      for (std::size_t k = 0; k < items.size(); ++k) {
-        bool const selected = static_cast<int>(k) == current;
-        if (ImGui::Selectable(items[k].c_str(), selected)) {
-          _props.referenceIndex = itemRefIndex[k];
-        }
-        if (selected) {
-          ImGui::SetItemDefaultFocus();
-        }
-      }
-      ImGui::EndCombo();
-    }
+    // While the reference is invalid the edge flip fails generation (no output), which propagates
+    // downstream (see Run + ReferenceModifierIndex).
+    processing::ShowReferenceCombo("Reference", _props.referenceIndex, gui);
     tooltip(
         "The upstream mesh this edge flip fits toward. 'Preceding Source' uses the nearest source "
         "above; otherwise pick a specific element. '(invalid source)' means this modifier was moved "

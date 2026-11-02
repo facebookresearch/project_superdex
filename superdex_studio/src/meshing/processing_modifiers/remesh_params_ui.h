@@ -16,14 +16,18 @@
 
 #pragma once
 
-// Shared meshing parameter widgets used by the Wrap Mesh (alpha wrap), Remesh (ACVD / surface
-// Delaunay / incremental isotropic), and Tetrahedralize methods. They operate on primitive refs so
-// each method can own its own reflected props struct (the neutral mochi::mesh parameter structs are
-// not reflected).
+// Shared meshing parameter widgets used by several methods. They operate on primitive refs so each
+// method can own its own reflected props struct (the neutral mochi::mesh parameter structs are not
+// reflected).
 
-#include "meshing/processing_modifiers/processing_method.h" // ModifierTooltip
+#include "meshing/processing_modifiers/processing_method.h" // ModifierTooltip, ModifierGuiContext
 
 namespace superdex::studio::processing {
+
+// Combo labeled @p label choosing an upstream reference (see MeshProcessingMethod::ReferenceIndex):
+// "Preceding Source" or one of the elements above this one. A stored index that is not one of them
+// (this modifier was moved above its reference) shows as a non-selectable "(invalid source)".
+void ShowReferenceCombo(char const* label, int& referenceIndex, ModifierGuiContext const& gui);
 
 // Length input labeled @p name: percent of the bbox average dimension when @p relativeToMeshSize,
 // else mm. @p description starts its tooltip.

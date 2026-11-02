@@ -16,10 +16,11 @@
 
 #pragma once
 
-// "Export Mochi Model" modifier: writes its input mesh (a triangle surface or a tetrahedral volume)
-// to a .mochi.h5 file on Export, by default with a baked grid SDF whose reconstructed surface is
-// the in-stack output (preview). With Bake SDF off it writes the mesh alone and passes its input
-// through. This header exposes only the registry entry.
+// "Export Mochi Model" modifier: writes its input mesh (a triangle surface or a tetrahedral
+// volume), with the meshes embedded in it (see EmbeddedMeshes), to a .mochi.h5 file on Export, by
+// default with a baked grid SDF whose reconstructed surface is the in-stack output (preview). With
+// Bake SDF off it writes the meshes alone and passes its input mesh through. This header exposes
+// only the registry entry.
 
 #include "meshing/processing_modifiers/processing_modifier.h"
 

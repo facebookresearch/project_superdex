@@ -48,8 +48,8 @@ using ModifierStack = std::vector<std::unique_ptr<MeshProcessingModifier>>;
 // spanning every source->...->export segment. Empty when no enabled source exists.
 [[nodiscard]] std::vector<std::size_t> BuildFullGenerationChain(ModifierStack const& stack);
 
-// The modifier index whose output an edge-swap at @p index references (its explicit upstream
-// target, else the nearest preceding source), or -1 if none.
+// The modifier index whose output the stage at @p index references (its explicit upstream target,
+// else the nearest preceding source), or -1 if none. See MeshProcessingMethod::NeedsReferenceMesh.
 [[nodiscard]] int ReferenceModifierIndex(ModifierStack const& stack, std::size_t index);
 
 // The file the stack's source (first) modifier reads, which every export modifier derives its
@@ -91,14 +91,15 @@ void RedirectExports(ModifierStack& stack, std::filesystem::path const& folder);
 // order, one at a time; the stack must outlive this object and stay unchanged while it runs.
 class StackRun {
  public:
-  // @p currentOutput returns a modifier's complete current output by stack index and seeds every
-  // chain position. @p currentReferenceMesh returns cached triangle surfaces for references outside
-  // @p chain; @p referenceMeshFromOutput obtains one from an in-chain output on demand.
+  // @p currentOutput returns a modifier's complete current output, with the meshes embedded in it,
+  // by stack index and seeds every chain position. @p currentReferenceMesh returns cached triangle
+  // surfaces for references outside @p chain; @p referenceMeshFromOutput obtains one from an
+  // in-chain output on demand.
   StackRun(
       ModifierStack const& stack,
       std::vector<std::size_t> chain,
       ModifierRunContext ctx,
-      std::function<mochi::MeshData(std::size_t modifierIndex)> const& currentOutput,
+      std::function<StageMesh(std::size_t modifierIndex)> const& currentOutput,
       std::function<mochi::MeshData(std::size_t modifierIndex)> const& currentReferenceMesh,
       std::function<mochi::MeshData(mochi::MeshData const& output)> referenceMeshFromOutput);
 
@@ -110,21 +111,25 @@ class StackRun {
   bool Export(std::size_t p, mochi::Error& error) const;
 
   [[nodiscard]] mochi::MeshData const& Output(std::size_t p) const {
-    return _outputs[p];
+    return _outputs[p].mesh;
+  }
+  // The meshes embedded in the output of chain position @p p.
+  [[nodiscard]] EmbeddedMeshes const& Embedded(std::size_t p) const {
+    return _outputs[p].embedded;
   }
 
  private:
-  // Where an edge-flip stage's reference comes from: a position in the chain, else a mesh captured
-  // up front because the referenced modifier is not in the chain.
+  // Where a stage's reference comes from: a position in the chain, else a mesh captured up front
+  // because the referenced modifier is not in the chain.
   struct Reference {
     int chainPos = -1;
     mochi::MeshData currentMesh;
   };
 
-  [[nodiscard]] mochi::MeshData const& Input(std::size_t p) const;
+  [[nodiscard]] StageMesh const& Input(std::size_t p) const;
 
   std::vector<MeshProcessingModifier const*> _modifiers; // by chain position
-  std::vector<mochi::MeshData> _outputs; // by chain position
+  std::vector<StageMesh> _outputs; // by chain position
   std::vector<Reference> _references; // by chain position
   std::function<mochi::MeshData(mochi::MeshData const& output)> _referenceMeshFromOutput;
   ModifierRunContext _ctx;
