@@ -50,13 +50,16 @@ Vec4r InvRodrigues(VMatrix3x3r const& R) {
     // yields f(θ) ≈ 0.5 + |v|^2 / 48.
     return (0.5_r + NormSqr<3>(v) / 48_r) * v;
 
-  } else if (cosTheta < -kNearZeroThreshold) {
-    // Angle is near π (trace is close to -1).
+  } else if (cosTheta < 0_r) {
+    // Angle is above π/2 (trace is below 1).
     //
-    // θ ≈ π: R = 2·n·n^T − I. Pick the pivot p with the largest diagonal (= largest |n_p|²) and
-    // recover the other two components from R[p][k] + R[k][p] = 4·n_p·n_k. A fixed pivot would lose
-    // sign information when the axis is orthogonal to it (e.g. n = (0, 1/√2, −1/√2) with a pivot on
-    // x).
+    // As θ → π, v = 2·sin(θ)·n vanishes, and a sine from c = cos(θ) carries the rounding error of
+    // the trace relative to 1 + c. Instead, take the axis from the symmetric part of R and θ from
+    // ATan2.
+    //
+    // Pick the pivot p with the largest diagonal R[p][p] = c + (1 − c)·n_p² (= largest |n_p|²). A
+    // fixed pivot would lose sign information when the axis is orthogonal to it (e.g.
+    // n = (0, 1/√2, −1/√2) with a pivot on x).
     int p = 0;
     if (R[1][1] > R[p][p]) {
       p = 1;
@@ -71,15 +74,15 @@ Vec4r InvRodrigues(VMatrix3x3r const& R) {
 
     // The symmetric part of R is R + R^T = 2cI + 2(1-c)n*n^T. We can extract an unnormalized axis
     // directly from the p-th column of R + R^T - 2cI. This avoids square roots, divisions, and is
-    // exactly parallel to n for ANY c.
+    // exactly parallel to n for ANY c. Its norm, 2(1-c)|n_p| ≥ 2/√3 for c ≤ 0, keeps it accurate.
     real n[3];
     for (int k = 0; k < 3; ++k) {
       n[k] = (k == p) ? 2_r * (R[p][p] - cosTheta) : R[p][k] + R[k][p];
     }
     Vec4r axis{n[0], n[1], n[2]};
 
-    // Sign resolution to match the regular branch's limit for θ → π⁻, preserving orientation
-    // continuity.
+    // Sign resolution to match v = 2·sin(θ)·n, which the regular branch scales, preserving
+    // orientation continuity.
     if (Dot<3>(axis, v) < 0_r) {
       axis = -axis;
     }
@@ -93,9 +96,10 @@ Vec4r InvRodrigues(VMatrix3x3r const& R) {
     return axis;
 
   } else {
-    // Regular range.
+    // Regular range. Unlike 1 - c², (1 - c)(1 + c) is accurate near c = 1, so the rounding error of
+    // c = cos(θ) cancels in θ / (2·sin(θ)).
     real const theta = ACos(cosTheta);
-    real const twoSinTheta = 2_r * Sqrt(1_r - Sqr(cosTheta));
+    real const twoSinTheta = 2_r * Sqrt((1_r - cosTheta) * (1_r + cosTheta));
     return (theta / twoSinTheta) * v;
   }
 }

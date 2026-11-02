@@ -77,7 +77,7 @@ TEST(Rodrigues, Rodrigues) {
 }
 
 TEST(Rodrigues, InvRodrigues) {
-  constexpr real kRelTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-14_r : 1e-5_r;
+  constexpr real kRelTol = 4_r * std::numeric_limits<real>::epsilon();
 
   for (auto testVector : kTestVectors) {
     Vec4r const p = ToSimd(testVector);
@@ -95,13 +95,14 @@ TEST(Rodrigues, InvRodrigues) {
       Real3{1_r, -1_r, 1_r},
   };
 
-  // Test the near-zero branch.
+  // Test the near-zero branch and the regular range just above its thresholds.
   real const kNearZeroThetas[] = {
       0_r,
       1e-5_r,
       -1e-5_r,
       MOCHI_USE_DOUBLE_PRECISION ? 2e-4_r : 0.03_r, // Just below the thresholds
       MOCHI_USE_DOUBLE_PRECISION ? -2e-4_r : -0.03_r, // Just below the thresholds
+      MOCHI_USE_DOUBLE_PRECISION ? 2.5e-4_r : 0.043_r, // Just above the thresholds
   };
   for (real const theta : kNearZeroThetas) {
     for (auto const& a : kAxes) {
@@ -110,14 +111,15 @@ TEST(Rodrigues, InvRodrigues) {
     }
   }
 
-  // Test the near-π branch.
+  // Test angles near π, where v vanishes and a sine from cos(θ) is inaccurate.
   real const kNearPiThetas[] = {
       kPI,
       -kPI,
       kPI - 1e-5_r,
       -kPI + 1e-5_r,
-      kPI - (MOCHI_USE_DOUBLE_PRECISION ? 2e-4_r : 0.03_r), // Just below the thresholds
-      -kPI + (MOCHI_USE_DOUBLE_PRECISION ? 2e-4_r : 0.03_r), // Just below the thresholds
+      kPI - (MOCHI_USE_DOUBLE_PRECISION ? 2e-4_r : 0.03_r),
+      -kPI + (MOCHI_USE_DOUBLE_PRECISION ? 2e-4_r : 0.03_r),
+      kPI - 0.15_r,
   };
   for (real const theta : kNearPiThetas) {
     for (auto const& a : kAxes) {
