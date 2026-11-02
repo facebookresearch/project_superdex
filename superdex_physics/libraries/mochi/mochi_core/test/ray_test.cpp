@@ -20,7 +20,9 @@
 
 #include <algorithm>
 #include <array>
+#include <initializer_list>
 #include <iterator>
+#include <limits>
 #include <random>
 
 using namespace mochi;
@@ -64,20 +66,53 @@ static TriangleSoup BoxTriangleSoup() {
 }
 
 TEST(Ray, RayTriangleIntersection) {
-  auto tri =
-      Triangle{Real3{0.0_r, 0.0_r, 0.0_r}, Real3{1.0_r, 0.0_r, 0.0_r}, Real3{0.0_r, 1.0_r, 0.0_r}};
+  // Scaling the whole ray cast by a power of two is exact, so hits must scale exactly, from metre
+  // to micrometre triangles.
+  Real3 const target{0.25_r, 0.25_r, 0.0_r};
+  for (real const scale : {1.0_r, 0x1p-10_r, 0x1p-20_r}) {
+    auto const tri = Triangle{
+        Real3{0.0_r, 0.0_r, 0.0_r},
+        scale * Real3{1.0_r, 0.0_r, 0.0_r},
+        scale * Real3{0.0_r, 1.0_r, 0.0_r}};
 
-  auto ray1 = Ray{Real3{0.2_r, 0.2_r, 1.0_r}, Real3{0.0_r, 0.0_r, -1.0_r}};
-  auto ray2 = Ray{Real3{0.0_r, 0.0_r, 1.0_r}, Real3{1.0_r, 0.0_r, 0.0_r}};
+    // Normal incidence, and grazing incidence 2⁻²⁰ rad from parallel
+    for (Real3 const& direction : {Real3{0.0_r, 0.0_r, -1.0_r}, Real3{1.0_r, 0.0_r, -0x1p-20_r}}) {
+      auto const hit = RayCast(Ray{scale * (target - direction), scale * direction}, tri);
+      ASSERT_TRUE(hit.has_value());
+      EXPECT_EQ(hit->t, 1.0_r);
+      EXPECT_EQ(ToReal3(hit->intersection), scale * target);
+    }
 
-  auto rayResult1 = RayCast(ray1, tri);
-  auto rayResult2 = RayCast(ray2, tri);
+    // A ray in the triangle's plane is parallel to it and misses
+    auto const inPlane = Ray{scale * Real3{-1.0_r, 0.25_r, 0.0_r}, Real3{1.0_r, 0.0_r, 0.0_r}};
+    EXPECT_FALSE(RayCast(inPlane, tri).has_value());
+  }
+}
 
-  EXPECT_TRUE(rayResult1.has_value());
-  EXPECT_NEAR_EQ(rayResult1->t, 1.0_r);
-  EXPECT_NEAR_EQ(ToReal3(rayResult1->intersection), (Real3{0.2_r, 0.2_r, 0.0_r}));
+TEST(Ray, BarycentricCoordinates) {
+  // Needle with tip angle α = √ε, where an error of order ε / α² would leave no correct digit
+  real constexpr kEpsilon = std::numeric_limits<real>::epsilon();
+  real const angle = Sqrt(kEpsilon);
+  Real3 const axis = Normalize(Real3{1.0_r, 2.0_r, 3.0_r});
+  Real3 const halfWidth = 0.5_r * angle * Normalize(Cross(axis, Real3{0.0_r, 0.0_r, 1.0_r}));
+  std::array<Real3, 3> const needle = {Real3{}, axis + halfWidth, axis - halfWidth};
+  Real3 const weights{0.2_r, 0.3_r, 0.5_r};
+  Vec4r const point =
+      ToSimd(weights[0] * needle[0] + weights[1] * needle[1] + weights[2] * needle[2]);
 
-  EXPECT_FALSE(rayResult2.has_value());
+  // The tip at each vertex label
+  for (int tip = 0; tip < 3; ++tip) {
+    auto const label = [tip](int i) { return (i + 3 - tip) % 3; };
+    auto const tri = Triangle{needle[label(0)], needle[label(1)], needle[label(2)]};
+    Real3 const expected{weights[label(0)], weights[label(1)], weights[label(2)]};
+    EXPECT_NEAR_TOL(ToReal3(BarycentricCoordinates(tri, point)), expected, 8_r * kEpsilon / angle);
+  }
+
+  // Degenerate triangles get all-negative coordinates, even when rounding leaves a nonzero normal
+  auto const collinear =
+      Triangle{Real3{0.0_r, 0.0_r, 0.0_r}, Real3{0.1_r, 0.2_r, 0.3_r}, Real3{0.2_r, 0.4_r, 0.6_r}};
+  EXPECT_EQ(
+      ToReal3(BarycentricCoordinates(collinear, collinear.v2)), (Real3{-1.0_r, -1.0_r, -1.0_r}));
 }
 
 TEST(Ray, RayBoxIntersection) {

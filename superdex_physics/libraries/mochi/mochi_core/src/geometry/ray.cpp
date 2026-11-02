@@ -17,6 +17,7 @@
 #include <mochi_core/geometry/geometry_utils.h>
 #include <mochi_core/geometry/ray.h>
 
+#include <limits>
 #include <optional>
 
 using namespace mochi;
@@ -54,25 +55,22 @@ std::optional<RayHit> mochi::RayCast(Ray const& ray, Aabb const& box) {
 }
 
 Vec4r mochi::BarycentricCoordinates(Triangle const& triangle, Vec4r const& point) {
-  Vec4r v0 = triangle.v2 - triangle.v1;
-  Vec4r v1 = triangle.v3 - triangle.v1;
-  Vec4r v2 = point - triangle.v1;
+  Vec4r const e1 = triangle.v2 - triangle.v1;
+  Vec4r const e2 = triangle.v3 - triangle.v1;
+  Vec4r const w = point - triangle.v1;
 
-  real dot00 = Dot<3>(v0, v0);
-  real dot01 = Dot<3>(v0, v1);
-  real dot02 = Dot<3>(v0, v2);
-  real dot11 = Dot<3>(v1, v1);
-  real dot12 = Dot<3>(v1, v2);
-
-  real const scale = dot00 * dot11;
-  real const denom = scale - dot01 * dot01;
-  if (NearZero(denom, kDefaultNearEqualEpsilon<real> * scale)) MOCHI_UNLIKELY {
+  // Ratios of signed areas, accurate to about ε / sin(α) for the triangle's smallest angle α,
+  // whatever the vertex order
+  Vec4r const normal = Cross3(e1, e2);
+  real const normalSqr = NormSqr<3>(normal);
+  // Zero area up to rounding: for collinear edges, a fused cross product can be up to ε/2·|e1||e2|
+  if (normalSqr <= Sqr(std::numeric_limits<real>::epsilon()) * NormSqr<3>(e1) * NormSqr<3>(e2))
+      MOCHI_UNLIKELY {
     return {-1_r, -1_r, -1_r};
   }
 
-  real const invDenom = 1_r / denom;
-  real const u = (dot11 * dot02 - dot01 * dot12) * invDenom;
-  real const v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+  real const u = Dot<3>(Cross3(w, e2), normal) / normalSqr;
+  real const v = Dot<3>(Cross3(e1, w), normal) / normalSqr;
 
   return {1_r - u - v, u, v};
 }
@@ -85,9 +83,10 @@ std::optional<RayHit> mochi::RayCast(Ray const& ray, Triangle const& triangle) {
   // Calculate the normal of the triangle
   Vec4r normal = Cross3(e1, e2);
 
-  // Check if the ray is parallel to the triangle
+  // Check if the ray is parallel to the triangle, up to rounding
   real dot = Dot<3>(ray.direction, normal);
-  if (NearZero(dot)) {
+  if (NearZero(
+          dot, std::numeric_limits<real>::epsilon() * Norm<3>(ray.direction) * Norm<3>(normal))) {
     return std::nullopt; // Ray is parallel to the triangle
   }
 
