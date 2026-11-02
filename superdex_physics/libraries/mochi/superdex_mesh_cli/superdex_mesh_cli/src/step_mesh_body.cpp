@@ -272,8 +272,9 @@ bool TryFuse(
 // the larger accumulator on a later pass, since a weld that fails early can succeed once
 // neighbouring geometry is present. Whatever never fuses is returned as its own body -- one
 // uncooperative solid does not force the whole group apart, and no step can silently destroy
-// geometry.
-std::vector<TopoDS_Shape> FuseGroup(std::vector<TopoDS_Shape> const& solids, double fuzzyValue) {
+// geometry. Sets @p outFused when any two solids were welded.
+std::vector<TopoDS_Shape>
+FuseGroup(std::vector<TopoDS_Shape> const& solids, double fuzzyValue, bool& outFused) {
   TopoDS_Shape accumulator = solids.front();
   std::vector<TopoDS_Shape> pending(solids.begin() + 1, solids.end());
   bool fusedAny = false;
@@ -308,6 +309,7 @@ std::vector<TopoDS_Shape> FuseGroup(std::vector<TopoDS_Shape> const& solids, dou
   bodies.reserve(pending.size() + 1);
   bodies.push_back(fusedAny ? HealShape(accumulator) : accumulator);
   bodies.insert(bodies.end(), pending.begin(), pending.end());
+  outFused = outFused || fusedAny;
   return bodies;
 }
 
@@ -346,8 +348,8 @@ bool LoadStepShape(std::string const& path, TopoDS_Shape& outShape, CliError& er
 // Fuses groups of touching solids into single bodies. Adjacency is detected first by shared faces
 // (topologically coincident), then by geometric proximity for solids that touch without sharing
 // topology. A group that cannot be fused as a whole is fused as far as it can be, and the solids
-// that resist are kept as separate bodies.
-TopoDS_Shape CombineSolids(TopoDS_Shape const& shape, double proximityTolerance) {
+// that resist are kept as separate bodies. Sets @p outFused when any solids were welded.
+TopoDS_Shape CombineSolids(TopoDS_Shape const& shape, double proximityTolerance, bool& outFused) {
   TopTools_IndexedMapOfShape solidMap;
   TopExp::MapShapes(shape, TopAbs_SOLID, solidMap);
 
@@ -413,7 +415,7 @@ TopoDS_Shape CombineSolids(TopoDS_Shape const& shape, double proximityTolerance)
       groupSolids.push_back(solidMap(idx + 1));
     }
 
-    for (TopoDS_Shape const& body : FuseGroup(groupSolids, proximityTolerance)) {
+    for (TopoDS_Shape const& body : FuseGroup(groupSolids, proximityTolerance, outFused)) {
       builder.Add(result, body);
     }
   }
@@ -426,7 +428,8 @@ TopoDS_Shape CombineSolids(TopoDS_Shape const& shape, double proximityTolerance)
 
 // Normalizes topology via a STEP write/read round-trip. The reader rebuilds all pcurves by
 // projecting 3D curves onto surfaces, recomputes tolerances, and fixes wire orientations -- which
-// the per-face mesher relies on. On any failure the original shape is returned unchanged.
+// the per-face mesher relies on after a boolean fuse. On any failure the original shape is
+// returned unchanged.
 TopoDS_Shape NormalizeShape(TopoDS_Shape const& shape) {
 #if defined(_WIN32)
   int const pid = _getpid();
@@ -628,10 +631,14 @@ MeshData mochi::mesh::cli::MeshStepBody(
       MOCHI_MESH_CLI_ERROR_RETURN(error, {});
     }
 
+    // Only fused shapes are normalized via round-trip STEP export/import
+    bool fused = false;
     if (params.combineTouchingSolids) {
-      shape = CombineSolids(shape, kCombineProximityTolerance);
+      shape = CombineSolids(shape, kCombineProximityTolerance, fused);
     }
-    shape = NormalizeShape(shape);
+    if (fused) {
+      shape = NormalizeShape(shape);
+    }
 
     // The global target and every face color's fraction are relative to this one box.
     Bnd_Box modelBox;
