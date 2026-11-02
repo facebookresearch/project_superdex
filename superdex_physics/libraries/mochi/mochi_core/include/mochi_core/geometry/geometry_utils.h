@@ -230,24 +230,29 @@ TransformShape(TransformRT const& transform, AnyShape const& any) {
 }
 
 // For collision detection, we consider the volume of a plane to include everything below it
-// (opposite direction from the plane's normal). This is only really useful for axis-aligned
-// planes since an arbitrarily rotated plane would have infinite bounds in all directions.
+// (opposite direction from the plane's normal). Its Aabb is bounded, along the normal, only if the
+// plane is axis-aligned up to rounding: any tilt makes the Aabb unbounded in all directions.
 [[nodiscard]] inline Aabb GetAabb(Plane const& plane) {
-  real constexpr one = 0.99999_r; // close enough
+  // Rotations and Normalize leave axis-aligned normals a few eps off-axis. The bounded box ignores
+  // a tilt within kTol, which the contact paddings cover up to about 1 km from the plane's origin.
+  real constexpr kTol = 8_r * std::numeric_limits<real>::epsilon();
   real constexpr inf = std::numeric_limits<real>::infinity();
   real const dist = plane.GetDistanceFromOrigin();
   Real3 const norm = plane.GetNormal();
-  if (norm[0] >= one) { // +x
+  bool const alongX = Abs(norm[1]) <= kTol && Abs(norm[2]) <= kTol;
+  bool const alongY = Abs(norm[0]) <= kTol && Abs(norm[2]) <= kTol;
+  bool const alongZ = Abs(norm[0]) <= kTol && Abs(norm[1]) <= kTol;
+  if (alongX && norm[0] > 0_r) { // +x
     return {Real3{-inf, -inf, -inf}, Real3{dist, inf, inf}};
-  } else if (norm[1] >= one) { // +y
+  } else if (alongY && norm[1] > 0_r) { // +y
     return {Real3{-inf, -inf, -inf}, Real3{inf, dist, inf}};
-  } else if (norm[2] >= one) { // +z
+  } else if (alongZ && norm[2] > 0_r) { // +z
     return {Real3{-inf, -inf, -inf}, Real3{inf, inf, dist}};
-  } else if (norm[0] <= -one) { // -x
+  } else if (alongX && norm[0] < 0_r) { // -x
     return {Real3{-dist, -inf, -inf}, Real3{inf, inf, inf}};
-  } else if (norm[1] <= -one) { // -y
+  } else if (alongY && norm[1] < 0_r) { // -y
     return {Real3{-inf, -dist, -inf}, Real3{inf, inf, inf}};
-  } else if (norm[2] <= -one) { // -z
+  } else if (alongZ && norm[2] < 0_r) { // -z
     return {Real3{-inf, -inf, -dist}, Real3{inf, inf, inf}};
   } else {
     return {Real3{-inf, -inf, -inf}, Real3{inf, inf, inf}};

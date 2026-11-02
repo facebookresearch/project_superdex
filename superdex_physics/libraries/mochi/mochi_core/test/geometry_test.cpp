@@ -1160,6 +1160,33 @@ TEST(Plane, TransformShape) {
   ExpectPlane(Real3{0_r, 1_r, 0_r}, 7_r, p2);
 }
 
+TEST(Plane, GetAabb) {
+  real constexpr kEps = std::numeric_limits<real>::epsilon();
+  auto const planeAabb = [](Real3 const& normal) { return GetAabb(Plane{normal, 2_r}); };
+
+  // Three full turns leave this normal 4.4 eps off the y axis in FP32, from the rounding of 2 pi.
+  Quaternion const fullTurn = Quaternion::RotationX(2_r * kPI);
+  Real3 const turnedUp = fullTurn * fullTurn * fullTurn * Real3{0_r, 1_r, 0_r};
+
+  // A plane that is axis-aligned up to rounding gets an Aabb bounded along its normal.
+  EXPECT_EQ(Aabb(-kInf3, Real3{2_r, kInf, kInf}), planeAabb(Real3{1_r, kEps, -kEps}));
+  EXPECT_EQ(Aabb(-kInf3, Real3{kInf, 2_r, kInf}), planeAabb(turnedUp));
+  EXPECT_EQ(Aabb(-kInf3, Real3{kInf, kInf, 2_r}), planeAabb(Real3{kEps, -kEps, 1_r}));
+  EXPECT_EQ(Aabb(Real3{-2_r, -kInf, -kInf}, kInf3), planeAabb(Real3{-1_r, kEps, -kEps}));
+  EXPECT_EQ(Aabb(Real3{-kInf, -2_r, -kInf}, kInf3), planeAabb(Real3{kEps, -1_r, -kEps}));
+  EXPECT_EQ(Aabb(Real3{-kInf, -kInf, -2_r}, kInf3), planeAabb(Real3{kEps, -kEps, -1_r}));
+
+  // Any tilt beyond rounding, here twice the tolerance, makes its Aabb unbounded in all directions.
+  Aabb const unbounded{-kInf3, kInf3};
+  real const tilt = 16_r * kEps;
+  EXPECT_EQ(unbounded, planeAabb(Normalize(Real3{1_r, tilt, 0_r})));
+  EXPECT_EQ(unbounded, planeAabb(Normalize(Real3{-1_r, 0_r, tilt})));
+  EXPECT_EQ(unbounded, planeAabb(Normalize(Real3{0_r, 1_r, tilt})));
+  EXPECT_EQ(unbounded, planeAabb(Normalize(Real3{tilt, -1_r, 0_r})));
+  EXPECT_EQ(unbounded, planeAabb(Normalize(Real3{tilt, 0_r, 1_r})));
+  EXPECT_EQ(unbounded, planeAabb(Normalize(Real3{0_r, tilt, -1_r})));
+}
+
 TEST(Plane, HasOverlap_Aabb) {
   Plane p;
   Aabb aabb;
