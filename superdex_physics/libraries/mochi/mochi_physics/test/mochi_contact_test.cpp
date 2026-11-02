@@ -627,6 +627,8 @@ struct TestParams {
   // Stretch of the soft collider along its local x axis at stage start.
   real colliderStretch = 0_r;
   real colliderShear = 0_r;
+  std::optional<ActorBoundaryElementType> collidingBoundaryElementType = {};
+  bool ignoreColliderDres = false;
 };
 } // namespace
 
@@ -929,6 +931,14 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
   bool _largeColliders = false;
   static constexpr real kLargeColliderScale = 3_r;
 
+  // A collider cube of scale kShallowColliderScale with ShallowColliderTransform() lies under the
+  // colliding unit cube and overlaps its bottom face by less than the penalty threshold.
+  static constexpr real kShallowColliderScale = 3_r;
+  static TransformRT ShallowColliderTransform() {
+    real constexpr kOverlap = 1e-3_r;
+    return TransformRT{Real3{-1_r, -1_r, kOverlap - kShallowColliderScale}};
+  }
+
  public:
   virtual void InitState() = 0;
 
@@ -1032,6 +1042,8 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
 
   void InitializeSceneFromParams() {
     auto const& params = GetParam();
+    _collidingBoundaryElementType =
+        params.collidingBoundaryElementType.value_or(_collidingBoundaryElementType);
 
     auto solverParams = _scene->GetSolverParams();
     solverParams.experimentalEval.fittedSaturationHessian = SaturationHessianParams::All(false);
@@ -1100,15 +1112,21 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
       }
     }
 
-    if (params.gradTarget == GradTarget::Current && params.ignoreColliderRotDres) {
+    if (params.gradTarget == GradTarget::Current &&
+        (params.ignoreColliderRotDres || params.ignoreColliderDres)) {
       auto const colliderDofOffset = GetRegistry().get<CDofOffset const>(_collider).dofsOffset;
-      std::vector<int> colliderRotDofs(RigidSize::kDRot);
-      std::iota(
-          colliderRotDofs.begin(), colliderRotDofs.end(), colliderDofOffset + RigidSize::kDTrans);
-      SetZeroOnCols(AsView(dres), colliderRotDofs, 0, AsConstView(dres));
-      SetZeroOnCols(AsView(dresFD), colliderRotDofs, 0, AsConstView(dresFD));
-      SetZeroOnRows(AsView(dres), colliderRotDofs, 0, 1.0);
-      SetZeroOnRows(AsView(dresFD), colliderRotDofs, 0, 1.0);
+      std::vector<int> ignoredDofs;
+      if (params.ignoreColliderDres) {
+        ignoredDofs.resize(_numDofsB);
+        std::iota(ignoredDofs.begin(), ignoredDofs.end(), colliderDofOffset);
+      } else {
+        ignoredDofs.resize(RigidSize::kDRot);
+        std::iota(ignoredDofs.begin(), ignoredDofs.end(), colliderDofOffset + RigidSize::kDTrans);
+      }
+      SetZeroOnCols(AsView(dres), ignoredDofs, 0, AsConstView(dres));
+      SetZeroOnCols(AsView(dresFD), ignoredDofs, 0, AsConstView(dresFD));
+      SetZeroOnRows(AsView(dres), ignoredDofs, 0, 1.0);
+      SetZeroOnRows(AsView(dresFD), ignoredDofs, 0, 1.0);
     }
 
     auto const resTol = params.resTol;
@@ -1156,14 +1174,17 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
     reg.remove<CLinearContactSkinElementMap>(_colliding);
   }
 
-  // Compares the mapped contact-skin assembly with the legacy one through colliding contact
-  // Jacobians, which runs once the linear element map is removed.
+  // Compares the mapped contact-skin assembly, with contacts detected only as sync or only as
+  // async, with the legacy one through colliding contact Jacobians, which runs once the linear
+  // element map is removed.
+  template <bool kIsSync>
   void RunMappedVsLegacyContactSkinTest() {
     auto const gradTarget = GetParam().gradTarget;
     InitializeSceneFromParams();
     InitState();
     PreStep();
     ComputeResponse(gradTarget);
+    ExpectMappedContactSkinCollisions<kIsSync>();
     double const mappedObjective = _objective;
     ColumnVector<real> const mappedResidual = _residual.Duplicate();
     SparseMatrix<real> const mappedDResidual = _dresidual.Duplicate();
@@ -1918,11 +1939,10 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Values(TestParams{.name = "NoFriction"}),
     [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
 
-// A skinned articulated actor against a link of another articulated actor, in sync contact. The
-// collider slice maps the rigid DoFs of the link to the articulated DoFs through its auxiliary
-// Jacobian.
-class MochiSkinnedArticulatedLinkContact : public MochiContactTestBase {
-  ColumnVector<real> _skinPose;
+// Contact with an articulated collider of two links: a free root link away from the colliding
+// actor, and a child link on a spherical joint that overlaps it. The collider slice maps the rigid
+// DoFs of the child link to the articulated DoFs through its auxiliary Jacobian.
+class MochiLinkColliderContactTestBase : public MochiContactTestBase {
   ColumnVector<real> _colliderPose;
   DynamicArray<entt::entity> _colliderLinks;
 
@@ -1943,28 +1963,20 @@ class MochiSkinnedArticulatedLinkContact : public MochiContactTestBase {
     }
   }
 
- public:
-  MochiSkinnedArticulatedLinkContact() {
-    _numDofsA = 6;
-    _numDofsB = 9; // A free root and a spherical joint.
-    _numDofs = _numDofsA + _numDofsB;
-  }
+ protected:
+  static constexpr int kNumColliderDofs = 9; // A free root and a spherical joint.
 
-  void InitializeScene(real coulombCoefficient, real viscousCoefficient, real dampingCoefficient)
-      override {
-    Actor* const skinnedActor = CreateThreeBoneSkinnedActor(
-        _mochiContext,
-        _scene,
-        coulombCoefficient,
-        viscousCoefficient,
-        dampingCoefficient,
-        _collidingBoundaryElementType);
+  // Scale and transform of the child link, before any enlargement requested by _largeColliders.
+  real _childLinkScale = 1_r;
+  TransformRT _childLinkTransform{
+      Quaternion::FromRotationVector(Real3{0.1_r, -0.1_r, 0.2_r}),
+      Real3{0.6_r, 0.6_r, 0.6_r}};
 
-    // The child link overlaps the skin, and the root link is away from it.
+  Actor*
+  InitLinkCollider(real coulombCoefficient, real viscousCoefficient, real dampingCoefficient) {
     TransformRT const rootTransform{Real3{1.8_r, 0.6_r, 0.6_r}};
-    TransformRT childTransform{
-        Quaternion::FromRotationVector(Real3{0.1_r, -0.1_r, 0.2_r}), Real3{0.6_r, 0.6_r, 0.6_r}};
-    real childScale = 1_r;
+    TransformRT childTransform = _childLinkTransform;
+    real childScale = _childLinkScale;
     EnlargeColliderIfRequested(childScale, childTransform);
     ArticulatedActorParams colliderParams;
     colliderParams.joints.resize(2);
@@ -2002,13 +2014,56 @@ class MochiSkinnedArticulatedLinkContact : public MochiContactTestBase {
       reg.get<CTimeIntegratorState>(entity).dtStage = kDtStage;
       _colliderLinks.push_back(entity);
     }
+    return colliderActor;
+  }
+
+  // Updates the collider links from the current articulated pose and saves it for
+  // ResetColliderPose. Must be called after InitActors.
+  void SaveColliderPose() {
+    UpdateColliderLinks();
+    _colliderPose =
+        GetRegistry().get<CArticulatedReducedPose<TimeStep::Current>>(_collider).value.Duplicate();
+  }
+
+  void ResetColliderPose() {
+    GetRegistry().get<CArticulatedReducedPose<TimeStep::Current>>(_collider).value = _colliderPose;
+    UpdateColliderLinks();
+  }
+
+  void AddToColliderPose(int localDof, real eps) {
+    AddToArticulatedPose(GetRegistry(), _collider, localDof, eps);
+    UpdateColliderLinks();
+  }
+};
+
+// A skinned articulated actor against a link of another articulated actor, in sync contact.
+class MochiSkinnedArticulatedLinkContact : public MochiLinkColliderContactTestBase {
+  ColumnVector<real> _skinPose;
+
+ public:
+  MochiSkinnedArticulatedLinkContact() {
+    _numDofsA = 6;
+    _numDofsB = kNumColliderDofs;
+    _numDofs = _numDofsA + _numDofsB;
+  }
+
+  void InitializeScene(real coulombCoefficient, real viscousCoefficient, real dampingCoefficient)
+      override {
+    Actor* const skinnedActor = CreateThreeBoneSkinnedActor(
+        _mochiContext,
+        _scene,
+        coulombCoefficient,
+        viscousCoefficient,
+        dampingCoefficient,
+        _collidingBoundaryElementType);
+    Actor* const colliderActor =
+        InitLinkCollider(coulombCoefficient, viscousCoefficient, dampingCoefficient);
     InitActors(skinnedActor, colliderActor);
 
+    auto& reg = GetRegistry();
     UpdateArticulatedFullPose(reg, _colliding);
-    UpdateColliderLinks();
+    SaveColliderPose();
     _skinPose = reg.get<CArticulatedReducedPose<TimeStep::Current>>(_colliding).value.Duplicate();
-    _colliderPose =
-        reg.get<CArticulatedReducedPose<TimeStep::Current>>(_collider).value.Duplicate();
     island::PreStep(reg, /*updateSleepState*/ true);
   }
 
@@ -2016,15 +2071,15 @@ class MochiSkinnedArticulatedLinkContact : public MochiContactTestBase {
     auto& reg = GetRegistry();
     reg.get<CArticulatedReducedPose<TimeStep::Current>>(_colliding).value = _skinPose;
     UpdateArticulatedFullPose(reg, _colliding);
-    reg.get<CArticulatedReducedPose<TimeStep::Current>>(_collider).value = _colliderPose;
-    UpdateColliderLinks();
+    ResetColliderPose();
   }
 
   void AddToState(int globalDof, real eps) override {
     auto [entity, localDof] = GetEntityAndLocalDofFromGlobalDof(globalDof);
-    AddToArticulatedPose(GetRegistry(), entity, localDof, eps);
-    if (entity == _collider) {
-      UpdateColliderLinks();
+    if (entity == _colliding) {
+      AddToArticulatedPose(GetRegistry(), _colliding, localDof, eps);
+    } else {
+      AddToColliderPose(localDof, eps);
     }
   }
 };
@@ -2603,7 +2658,7 @@ TEST_P(MochiSkinnedSoftStaticContact, ContactAssembly) {
 }
 
 TEST_P(MochiSkinnedSoftStaticContact, MappedMatchesLegacyAssembly) {
-  RunMappedVsLegacyContactSkinTest();
+  RunMappedVsLegacyContactSkinTest</*kIsSync*/ false>();
 }
 
 // Finite differences of the dresidual through the contact skin have float rounding error near 1e-3
@@ -2672,6 +2727,12 @@ class MochiSoftRigidContact : public MochiContactTestBase {
   ColumnVector<real> _posA;
   TransformRT _posB;
 
+ protected:
+  real _colliderScale = 1_r;
+  TransformRT _colliderTransform{
+      Quaternion::FromRotationVector(Real3(0.1_r, -0.1_r, 0.2_r)),
+      Real3(0.6_r, 0.6_r, 0.6_r)};
+
  public:
   MochiSoftRigidContact() {
     _numDofsA = 24; // a soft with 8 nodes
@@ -2684,10 +2745,13 @@ class MochiSoftRigidContact : public MochiContactTestBase {
     auto& reg = GetRegistry();
 
     // Create the rigid cube first so that the soft cube's DoFs are offset.
-    auto transform = TransformRT(
-        Quaternion::FromRotationVector(Real3(0.1_r, -0.1_r, 0.2_r)), Real3(0.6_r, 0.6_r, 0.6_r));
     auto* actorB = InitRigidCube(
-        1_r, transform, true, coulombCoefficient, viscousCoefficient, dampingCoefficient);
+        _colliderScale,
+        _colliderTransform,
+        true,
+        coulombCoefficient,
+        viscousCoefficient,
+        dampingCoefficient);
     auto* actorA =
         InitSoftCube({}, false, {}, coulombCoefficient, viscousCoefficient, dampingCoefficient);
     InitActors(actorA, actorB);
@@ -2807,7 +2871,7 @@ TEST_P(MochiSkinnedSoftRigidContact, ContactAssembly) {
 }
 
 TEST_P(MochiSkinnedSoftRigidContact, MappedMatchesLegacyAssembly) {
-  RunMappedVsLegacyContactSkinTest();
+  RunMappedVsLegacyContactSkinTest</*kIsSync*/ true>();
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -2877,6 +2941,129 @@ INSTANTIATE_TEST_SUITE_P(
     FrictionVariations,
     MochiParallelSkinnedSoftRigidContact,
     ::testing::Values(TestParams{.name = "Coulomb", .coulombCoefficient = 0.5_r}),
+    [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
+
+// An enlarged rigid cube under the soft cube overlaps it by less than the penalty threshold, so
+// that all samples of its bottom face have a nonzero response and the coupling blocks of each
+// element sum several contacts.
+class MochiDenseSkinnedSoftRigidContact : public MochiSkinnedSoftRigidContact {
+ public:
+  MochiDenseSkinnedSoftRigidContact() {
+    _colliderScale = kShallowColliderScale;
+    _colliderTransform = ShallowColliderTransform();
+  }
+};
+
+TEST_P(MochiDenseSkinnedSoftRigidContact, MappedMatchesLegacyAssembly) {
+  RunMappedVsLegacyContactSkinTest</*kIsSync*/ true>();
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    FrictionVariations,
+    MochiDenseSkinnedSoftRigidContact,
+    ::testing::Values(
+        TestParams{.name = "Coulomb", .coulombCoefficient = 0.5_r},
+        TestParams{
+            .name = "CoulombP1Q6",
+            .coulombCoefficient = 0.5_r,
+            .collidingBoundaryElementType = ActorBoundaryElementType::P1Q6}),
+    [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
+
+// The soft cube contacts a link of an articulated actor through a linear contact skin, in sync
+// contact.
+class MochiSkinnedSoftLinkContact : public MochiLinkColliderContactTestBase {
+  ColumnVector<real> _softDispl;
+
+ public:
+  MochiSkinnedSoftLinkContact() {
+    _numDofsA = 24; // A soft cube with 8 nodes.
+    _numDofsB = kNumColliderDofs;
+    _numDofs = _numDofsA + _numDofsB;
+    _useContactSkin = true;
+  }
+
+  void InitializeScene(real coulombCoefficient, real viscousCoefficient, real dampingCoefficient)
+      override {
+    Actor* const softActor =
+        InitSoftCube({}, false, {}, coulombCoefficient, viscousCoefficient, dampingCoefficient);
+    Actor* const colliderActor =
+        InitLinkCollider(coulombCoefficient, viscousCoefficient, dampingCoefficient);
+    InitActors(softActor, colliderActor);
+
+    auto& reg = GetRegistry();
+    SaveColliderPose();
+    _softDispl =
+        reg.get<CDisplacementSlice<real, TimeStep::Current> const>(_colliding).value.Duplicate();
+    InitSoftCubeStageStart(_colliding);
+    island::PreStep(reg, /*updateSleepState*/ true);
+  }
+
+  void InitState() override {
+    GetRegistry().get<CDisplacementSlice<real, TimeStep::Current>>(_colliding).value = _softDispl;
+    ResetColliderPose();
+  }
+
+  void AddToState(int globalDof, real eps) override {
+    auto [entity, localDof] = GetEntityAndLocalDofFromGlobalDof(globalDof);
+    if (entity == _colliding) {
+      GetRegistry().get<CDisplacementSlice<real, TimeStep::Current>>(_colliding).value[localDof] +=
+          eps;
+    } else {
+      AddToColliderPose(localDof, eps);
+    }
+  }
+};
+
+TEST_P(MochiSkinnedSoftLinkContact, ContactAssembly) {
+  RunTest();
+  ExpectMappedContactSkinCollisions</*kIsSync*/ true>();
+}
+
+TEST_P(MochiSkinnedSoftLinkContact, MappedMatchesLegacyAssembly) {
+  RunMappedVsLegacyContactSkinTest</*kIsSync*/ true>();
+}
+
+// The dresidual omits the second derivative of the map from the link DoFs to the contact points,
+// whose lever arm depends on both the link pose and the skin samples, so it differs from the finite
+// differences in every row and column of the link DoFs. Only the soft block, whose skin map is
+// linear, is compared. Its finite differences have float rounding error near 1e-3 that varies
+// across build configurations.
+INSTANTIATE_TEST_SUITE_P(
+    FrictionVariations,
+    MochiSkinnedSoftLinkContact,
+    ::testing::Values(
+        TestParams{.name = "NoFriction", .dresTol = 2e-3_r, .ignoreColliderDres = true},
+        TestParams{
+            .name = "Viscous",
+            .viscousCoefficient = 1_r,
+            .dresTol = 2e-3_r,
+            .ignoreColliderDres = true}),
+    [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
+
+// An enlarged child link under the soft cube overlaps it by less than the penalty threshold, so
+// that all samples of its bottom face have a nonzero response and the coupling blocks of each
+// element sum several contacts.
+class MochiDenseSkinnedSoftLinkContact : public MochiSkinnedSoftLinkContact {
+ public:
+  MochiDenseSkinnedSoftLinkContact() {
+    _childLinkScale = kShallowColliderScale;
+    _childLinkTransform = ShallowColliderTransform();
+  }
+};
+
+TEST_P(MochiDenseSkinnedSoftLinkContact, MappedMatchesLegacyAssembly) {
+  RunMappedVsLegacyContactSkinTest</*kIsSync*/ true>();
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    FrictionVariations,
+    MochiDenseSkinnedSoftLinkContact,
+    ::testing::Values(
+        TestParams{.name = "Coulomb", .coulombCoefficient = 0.5_r},
+        TestParams{
+            .name = "CoulombP1Q6",
+            .coulombCoefficient = 0.5_r,
+            .collidingBoundaryElementType = ActorBoundaryElementType::P1Q6}),
     [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
 
 class MochiRigidSoftContact : public MochiContactTestBase {
