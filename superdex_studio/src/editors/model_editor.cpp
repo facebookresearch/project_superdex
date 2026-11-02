@@ -50,6 +50,7 @@
 #include <mochi_core/geometry/model_utils.h>
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/container_utils.h>
+#include <mochi_core/utils/coordinate_space_converter.h>
 #include <mochi_core/utils/dynamic_string.h>
 #include <mochi_core/utils/log.h>
 #include <mochi_core/utils/nd_array.h>
@@ -64,6 +65,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <initializer_list>
 #include <iomanip>
 #include <mutex>
 #include <optional>
@@ -108,6 +110,9 @@ std::filesystem::file_time_type FileMtimeOrDefault(mochi::DynamicString const& p
 // Model section and the Export Mochi Model modifier so the two reads look identical.
 constexpr std::string_view kInputMeshColorRole = " input mesh";
 constexpr std::string_view kOutputSdfColorRole = kSdfSurfaceColorRole;
+// Role suffixes hashed with a collision model's path to color its contact skin and visual mesh.
+constexpr std::string_view kContactSkinColorRole = " contact skin";
+constexpr std::string_view kVisualMeshColorRole = " visual mesh";
 
 // Deterministic surface color for a mesh identified by @p seed (a file path or stage label) in a
 // given @p role: hashing seed+role keeps related meshes distinct yet stable across sessions. The
@@ -138,6 +143,15 @@ MeshSection MeshDataToSection(mochi::MeshData const& mesh) {
   }
   section.indices.assign(mesh.connectivity.begin(), mesh.connectivity.end());
   section.hasNormals = false;
+  return section;
+}
+
+// MeshDataToSection for a triangle mesh of a Mochi model, converted from Mochi to renderer space.
+MeshSection ModelMeshToSection(
+    mochi::MeshData const& mesh,
+    mochi::CoordinateSpaceConverter const& converter) {
+  MeshSection section = MeshDataToSection(mesh);
+  converter.TranslationsToOutput(mochi::MakeSpan(section.positions), mochi::ErrorAssert{});
   return section;
 }
 
@@ -813,6 +827,10 @@ void ModelEditor::Shutdown() {
   _mochiModelWireframeMesh = nullptr;
   _sdfSurfaceMesh = nullptr;
   _sdfWireframeMesh = nullptr;
+  for (StageBuffer* buffer : {&_contactSkinBuffer, &_visualMeshBuffer}) {
+    buffer->surfaceMesh = nullptr;
+    buffer->wireframeMesh = nullptr;
+  }
   for (auto const& modifier : _modifiers) {
     modifier->output.surfaceMesh = nullptr;
     modifier->output.wireframeMesh = nullptr;
@@ -837,8 +855,9 @@ bool ModelEditor::RepresentsAsset(Asset const* asset) const {
 
 void ModelEditor::OnReopenedFor(Asset* asset) {
   // Focus visualization on the reopened slot, matching a fresh open: show that slot's default
-  // visualization and hide the other two slots (and the SDF sub-viz). The slot meshes already exist
-  // (built on open), so apply the new flags to them directly.
+  // visualization and hide the other two slots (and the collision model's SDF, contact skin and
+  // visual mesh). The slot meshes already exist (built on open), so apply the new flags to them
+  // directly.
   bool const isCad = asset != nullptr && asset == _cadModelAsset;
   bool const isRender = asset != nullptr && asset == _renderModelAsset;
   bool const isMochi = asset != nullptr && asset == _mochiModelAsset;
@@ -877,6 +896,12 @@ void ModelEditor::OnReopenedFor(Asset* asset) {
   }
   if (_sdfWireframeMesh) {
     _sdfWireframeMesh->SetVisible(_showSdfWireframe);
+  }
+  for (StageBuffer* buffer : {&_contactSkinBuffer, &_visualMeshBuffer}) {
+    buffer->viz.showSurface = false;
+    buffer->viz.showWireframe = false;
+    ApplySurfaceVisibility(*buffer);
+    ApplyWireframeVisibility(*buffer);
   }
 }
 
@@ -1275,6 +1300,33 @@ void ModelEditor::RebuildStageMeshes(StageBuffer& stage, mochi::Real3 const& sur
   }
 }
 
+void ModelEditor::DrawStageVizControls(
+    char const* idScope,
+    StageBuffer& buffer,
+    std::function<mochi::Real3()> const& colorFn) {
+  DrawMeshVizControls(
+      idScope,
+      buffer.viz.showSurface,
+      buffer.viz.showWireframe,
+      buffer.viz.showStats,
+      buffer.viz.opacity,
+      buffer.stats.display,
+      _studio->GetFont("Roboto Mono"),
+      [&buffer] { ApplySurfaceVisibility(buffer); },
+      [&buffer] { ApplyWireframeVisibility(buffer); },
+      [this, &buffer, &colorFn] {
+        if (!buffer.surfaceMesh) {
+          return;
+        }
+        auto& resourceManager = _studio->GetResourceManager();
+        filament::math::float3 const color = ToFloat3(colorFn());
+        buffer.surfaceMesh->SetMaterial(
+            buffer.viz.opacity >= 1.0f
+                ? resourceManager.CreateFlatLitOpaqueMaterial(color)
+                : resourceManager.CreateFlatLitSeeThroughMaterial(color, buffer.viz.opacity));
+      });
+}
+
 void ModelEditor::RecolorWireframe(
     mochi_renderer::WireframeMesh* wireframe,
     mochi::Real3 const& surfaceColor) {
@@ -1402,10 +1454,16 @@ void ModelEditor::RebuildRenderModelSurface() {
 
 void ModelEditor::UpdateMochiModel() {
   auto* scene = _viewport->GetRenderScene();
-  // The wireframe and SDF meshes derive from the mochi model, so tear them down before swapping it.
+  // The wireframe, SDF, contact skin and visual mesh derive from the mochi model, so tear them down
+  // before swapping it.
   DestroyMochiModelWireframeMesh();
   DestroySdfMesh();
   DestroySdfWireframeMesh();
+  for (StageBuffer* buffer : {&_contactSkinBuffer, &_visualMeshBuffer}) {
+    DestroyStageBufferMeshes(*buffer);
+    buffer->sections.clear();
+    buffer->stats = {};
+  }
   if (_mochiModelSurfaceMesh) {
     scene->DestroySceneObject(_mochiModelSurfaceMesh);
     _mochiModelSurfaceMesh = nullptr;
@@ -1424,6 +1482,8 @@ void ModelEditor::UpdateMochiModel() {
     _mochiColor = {mochiHashColor.x, mochiHashColor.y, mochiHashColor.z};
     filament::math::float3 const sdfColor = _mochiModelAsset->GetSdfSurfaceColor();
     _sdfColor = {sdfColor.x, sdfColor.y, sdfColor.z};
+    _contactSkinColor = HashedMeshColor(colorSeed, kContactSkinColorRole);
+    _visualMeshColor = HashedMeshColor(colorSeed, kVisualMeshColorRole);
     // Working geometry backing (for future mesh processing). The surface/wireframe below are still
     // built from the model data directly.
     {
@@ -1455,6 +1515,16 @@ void ModelEditor::UpdateMochiModel() {
     RebuildMochiModelSurfaceMesh();
     RebuildMochiModelWireframeMesh();
     RebuildSdfMeshes();
+    mochi::ModelData const& modelData = _mochiModelAsset->GetModelData();
+    auto const& converter = _studio->GetEditorToRendererSpaceConverter();
+    if (modelData.contactSkinMesh.has_value()) {
+      _contactSkinBuffer.sections = {ModelMeshToSection(*modelData.contactSkinMesh, converter)};
+      RebuildStageMeshes(_contactSkinBuffer, _contactSkinColor);
+    }
+    if (modelData.visualMesh.has_value()) {
+      _visualMeshBuffer.sections = {ModelMeshToSection(*modelData.visualMesh, converter)};
+      RebuildStageMeshes(_visualMeshBuffer, _visualMeshColor);
+    }
     ApplyModelTransform();
     if (_mochiModelSurfaceMesh) {
       _mochiModelSurfaceMesh->SetVisible(_showMochiModelSurface);
@@ -1701,6 +1771,13 @@ void ModelEditor::ApplyModelTransform() {
   }
   if (_sdfWireframeMesh) {
     _sdfWireframeMesh->SetLocalTransform(_modelRotation, _modelTranslation, _modelScale, converter);
+  }
+  for (StageBuffer const* buffer : {&_contactSkinBuffer, &_visualMeshBuffer}) {
+    for (mochi_renderer::SceneObject* object : {buffer->surfaceMesh, buffer->wireframeMesh}) {
+      if (object) {
+        object->SetLocalTransform(_modelRotation, _modelTranslation, _modelScale, converter);
+      }
+    }
   }
 }
 
@@ -1951,49 +2028,21 @@ void ModelEditor::ShowMeshModifierStack() {
       ImGui::EndDisabled(); // !enabled
 
       // Visualization controls stay active even when disabled, so a stale buffer can be inspected.
-      // Shared drawing for one buffer's Surface/Wireframe/Stats + Opacity, recoloring via colorFn.
-      auto drawStageViz = [this](
-                              char const* idScope,
-                              StageBuffer& buffer,
-                              std::function<mochi::Real3()> const& colorFn) {
-        DrawMeshVizControls(
-            idScope,
-            buffer.viz.showSurface,
-            buffer.viz.showWireframe,
-            buffer.viz.showStats,
-            buffer.viz.opacity,
-            buffer.stats.display,
-            _studio->GetFont("Roboto Mono"),
-            [&buffer] { ApplySurfaceVisibility(buffer); },
-            [&buffer] { ApplyWireframeVisibility(buffer); },
-            [this, &buffer, colorFn] {
-              if (!buffer.surfaceMesh) {
-                return;
-              }
-              auto& resourceManager = _studio->GetResourceManager();
-              filament::math::float3 const color = ToFloat3(colorFn());
-              buffer.surfaceMesh->SetMaterial(
-                  buffer.viz.opacity >= 1.0f
-                      ? resourceManager.CreateFlatLitOpaqueMaterial(color)
-                      : resourceManager.CreateFlatLitSeeThroughMaterial(color, buffer.viz.opacity));
-            });
-      };
-
       MeshProcessingMethod const& method = modifier.ActiveMethod();
       if (method.ShowsInputVisualization()) {
         // Export Mochi Model: show the captured input surface then the reconstructed SDF, each
         // under its own heading -- mirroring the Model Viewer's Mochi Model / SDF Visualization
         // sections.
         ImGui::SeparatorText(method.InputVisualizationLabel());
-        drawStageViz("inputViz", modifier.inputView, [this, &modifier] {
+        DrawStageVizControls("inputViz", modifier.inputView, [this, &modifier] {
           return StageRoleColor(modifier, kInputMeshColorRole);
         });
         ImGui::SeparatorText(method.OutputVisualizationLabel());
-        drawStageViz("stageViz", modifier.output, [this, &modifier] {
+        DrawStageVizControls("stageViz", modifier.output, [this, &modifier] {
           return StageRoleColor(modifier, kOutputSdfColorRole);
         });
       } else {
-        drawStageViz(
+        DrawStageVizControls(
             "stageViz", modifier.output, [this, &modifier] { return StageOutputColor(modifier); });
       }
     }
@@ -3091,10 +3140,15 @@ void ModelEditor::ShowModelViewerWindow(bool* open) {
   }
 
   flags = _mochiModelPath.empty() ? 0 : ImGuiTreeNodeFlags_DefaultOpen;
-  // A collision model holds two meshes, like Export Mochi Model: the triangle mesh, then the SDF.
-  bool const mochiHasSdf = _mochiModelAsset && _mochiModelAsset->GetModelData().sdf.has_value();
+  // A collision model holds a triangle mesh and an SDF, like Export Mochi Model, then optionally a
+  // contact skin and a visual mesh.
+  mochi::ModelData const* const mochiModelData =
+      _mochiModelAsset ? &_mochiModelAsset->GetModelData() : nullptr;
+  bool const mochiHasSdf = mochiModelData && mochiModelData->sdf.has_value();
+  bool const mochiHasContactSkin = mochiModelData && mochiModelData->contactSkinMesh.has_value();
+  bool const mochiHasVisualMesh = mochiModelData && mochiModelData->visualMesh.has_value();
   bool const mochiOpen = CollapsingHeaderWithToggles(
-      "Collision Model", "###CollisionModelHeader", flags, false, 2, [&] {
+      "Collision Model", "###CollisionModelHeader", flags, false, 4, [&] {
         ImGui::BeginDisabled(_mochiModelPath.empty());
         DrawVizToggles(
             "mochiHeaderViz",
@@ -3114,6 +3168,14 @@ void ModelEditor::ShowModelViewerWindow(bool* open) {
             showSdfSurface,
             showSdfWireframe);
         ImGui::EndDisabled();
+        SameLineAfterTogglePair();
+        ImGui::BeginDisabled(!mochiHasContactSkin);
+        DrawVizToggles("contactSkinHeaderViz", "contact skin", _contactSkinBuffer);
+        ImGui::EndDisabled();
+        SameLineAfterTogglePair();
+        ImGui::BeginDisabled(!mochiHasVisualMesh);
+        DrawVizToggles("visualMeshHeaderViz", "visual mesh", _visualMeshBuffer);
+        ImGui::EndDisabled();
       });
   if (mochiOpen) {
     ImGui::PushID("MochiModel");
@@ -3127,8 +3189,6 @@ void ModelEditor::ShowModelViewerWindow(bool* open) {
         /*acceptDragDropPayload=*/false,
         /*showClearButton=*/false);
     if (_mochiModelAsset) {
-      auto const& modelData = _mochiModelAsset->GetModelData();
-
       auto applyMochiMaterial = [this]() {
         if (!_mochiModelSurfaceMesh) {
           return;
@@ -3169,8 +3229,7 @@ void ModelEditor::ShowModelViewerWindow(bool* open) {
       // back to the file. The SDF viz mesh is reconstructed on open (in UpdateMochiModel) when
       // present.
       ImGui::SeparatorText("SDF Visualization");
-      bool const hasSdf = modelData.sdf.has_value();
-      ImGui::BeginDisabled(!hasSdf);
+      ImGui::BeginDisabled(!mochiHasSdf);
       DrawMeshVizControls(
           "sdfViz",
           _showSdfSurface,
@@ -3191,6 +3250,17 @@ void ModelEditor::ShowModelViewerWindow(bool* open) {
                 _sdfOpacity >= 1.0f ? rm.CreateFlatLitOpaqueMaterial(color)
                                     : rm.CreateFlatLitSeeThroughMaterial(color, _sdfOpacity));
           });
+      ImGui::EndDisabled();
+
+      ImGui::SeparatorText("Contact Skin Visualization");
+      ImGui::BeginDisabled(!mochiHasContactSkin);
+      DrawStageVizControls(
+          "contactSkinViz", _contactSkinBuffer, [this] { return _contactSkinColor; });
+      ImGui::EndDisabled();
+
+      ImGui::SeparatorText("Visual Mesh Visualization");
+      ImGui::BeginDisabled(!mochiHasVisualMesh);
+      DrawStageVizControls("visualMeshViz", _visualMeshBuffer, [this] { return _visualMeshColor; });
       ImGui::EndDisabled();
     }
     ImGui::PopID();

@@ -112,7 +112,7 @@ class ModelEditor : public AssetEditor {
   // them focuses this editor rather than opening a second instance.
   bool RepresentsAsset(Asset const* asset) const override;
   // Reopening one of the slotted models focuses its visualization: show that slot, hide the other
-  // two (and the SDF sub-viz), matching a fresh open.
+  // two (and the collision model's SDF, contact skin and visual mesh), matching a fresh open.
   void OnReopenedFor(Asset* asset) override;
   // Re-resolve the slotted models from their current paths and rebuild their visualizations after
   // an external edit (e.g. a slot's model was replaced/renamed elsewhere in the app).
@@ -217,6 +217,12 @@ class ModelEditor : public AssetEditor {
   // honoring the stage's visualization toggles and opacity. The wireframe color is derived from
   // @p surfaceColor via WireframeColorForSurface (the shared app-wide scheme).
   void RebuildStageMeshes(StageBuffer& stage, mochi::Real3 const& surfaceColor);
+  // Surface / Wireframe / Stats toggles and the Opacity slider for a buffer built by
+  // RebuildStageMeshes. An opacity edit recolors its surface with @p colorFn.
+  void DrawStageVizControls(
+      char const* idScope,
+      StageBuffer& buffer,
+      std::function<mochi::Real3()> const& colorFn);
   // Destroys a stage buffer's surface + wireframe scene objects (and nulls the pointers). Shared by
   // the reset / remove paths for both a modifier's output and its optional input-view buffer.
   void DestroyStageBufferMeshes(StageBuffer& stage);
@@ -397,6 +403,13 @@ class ModelEditor : public AssetEditor {
   // with an "output SDF" role so the mochi surface and its SDF get distinct but stable colors. Set
   // in UpdateMochiModel; the wireframe uses a darker shade.
   mochi::Real3 _sdfColor = {1.0f, 0.0f, 0.0f};
+  // The collision model's optional contact skin and visual mesh (ModelData::contactSkinMesh /
+  // visualMesh), each in a color hashed from the model path with its own role. A buffer holds no
+  // geometry when the model has no such mesh.
+  StageBuffer _contactSkinBuffer;
+  StageBuffer _visualMeshBuffer;
+  mochi::Real3 _contactSkinColor = {1.0f, 0.0f, 0.0f};
+  mochi::Real3 _visualMeshColor = {1.0f, 0.0f, 0.0f};
   // scene objects
   mochi_renderer::SceneObject* _cadModelSurfaceMesh = nullptr;
   // Per-section PBR render model behind _cadModelSurfaceMesh while ShowsCadFileColors(); null when
