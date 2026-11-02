@@ -51,7 +51,8 @@ inline Actor* AddGroundPlane(Scene* scene) {
 inline Actor* AddRigidCube(Scene* scene, real* offsetX = nullptr) {
   auto* context = scene->GetContext();
   real constexpr kBoxScale = 0.2_r;
-  real constexpr kBoxLift = 0.3_r;
+  // At the default offset, the tilted ground is 11.1 mm high under the cube's -x edge.
+  real constexpr kBoxLift = 0.0115_r;
   real const x = offsetX ? *offsetX : 0_r;
 
   RigidActorParams params;
@@ -68,7 +69,7 @@ inline Actor* AddRigidCube(Scene* scene, real* offsetX = nullptr) {
   auto* actor = scene->CreateRigidActor(params, test::ExpectOK{});
 
   // Add an initial velocity to test that the full velocity is correctly restored.
-  actor->SetVelocity({0.6_r, -0.4_r, 0.7_r}, {0.5_r, 0.2_r, 0.3_r}, test::ExpectOK{});
+  actor->SetVelocity({0.06_r, -0.04_r, 0.07_r}, {0.05_r, 0.02_r, 0.03_r}, test::ExpectOK{});
 
   if (offsetX) {
     *offsetX += 1.1_r * kBoxScale;
@@ -77,11 +78,13 @@ inline Actor* AddRigidCube(Scene* scene, real* offsetX = nullptr) {
   return actor;
 }
 
-// Dynamic soft duck just above the ground plane.
-inline Actor* AddSoftDuck(Scene* scene, real* offsetX = nullptr) {
+// Dynamic soft duck just above the ground plane, or just above the top of a support actor and
+// moving with it.
+inline Actor* AddSoftDuck(Scene* scene, real* offsetX = nullptr, Actor const* support = nullptr) {
   auto* context = scene->GetContext();
   real constexpr kDuckScale = 0.1_r;
   real constexpr kDuckLift = 0.1_r;
+  real constexpr kSupportGap = 0.0001_r;
   real const x = offsetX ? *offsetX : 0_r;
 
   SoftActorParams params;
@@ -96,8 +99,18 @@ inline Actor* AddSoftDuck(Scene* scene, real* offsetX = nullptr) {
   params.material.type = SoftMaterialType::NeoHookean;
   params.material.neoHookean.poissonRatio = 0.3_r;
   params.material.neoHookean.youngsModulus = 10000_r;
-  params.worldFromLocal.SetTranslation(Real3{x, kDuckScale + kDuckLift, 0_r});
+  Real3 translation{x, kDuckScale + kDuckLift, 0_r};
+  if (support) {
+    // Centers the duck, about kDuckScale wide from its origin, on the support's top.
+    Aabb const bounds = support->GetAabbWorld(test::ExpectOK{});
+    translation = bounds.GetCenter() +
+        Real3{-0.5_r * kDuckScale, 0.5_r * bounds.GetSize()[1] + kSupportGap, -0.5_r * kDuckScale};
+  }
+  params.worldFromLocal.SetTranslation(translation);
   auto* actor = scene->CreateSoftActor(params, test::ExpectOK{});
+  if (support) {
+    actor->SetVelocity(support->GetLinearVelocity(test::ExpectOK{}), Real3{}, test::ExpectOK{});
+  }
 
   if (offsetX) {
     *offsetX += 2.2_r * kDuckScale;
@@ -343,7 +356,12 @@ inline void AddPoseController(Actor* agent) {
 }
 
 // Complex soft skinned actor
-inline Actor* AddSoftAllegro(Context* context, Scene* scene) {
+inline Actor* AddSoftAllegro(Context* context, Scene* scene, real* offsetX = nullptr) {
+  // Extent of the hand along x around its root, fingertips included.
+  real constexpr kHandMinX = -0.075_r;
+  real constexpr kHandMaxX = 0.215_r;
+  real const x = offsetX ? *offsetX : 0_r;
+
   int constexpr kNumBonesAllegroSoft = 21;
   std::array<std::string, kNumBonesAllegroSoft> const kObjectTetMeshFilePaths = {
       "allegro_soft/mesh_000.mochi.h5", "allegro_soft/mesh_001.mochi.h5",
@@ -373,7 +391,8 @@ inline Actor* AddSoftAllegro(Context* context, Scene* scene) {
   ArticulatedActorParams skeletonParams;
   skeletonParams.name = "allegro_hand";
   skeletonParams.worldFromRoot = TransformRT{
-      Quaternion(0_r, 0_r, -1_r / Sqrt(2.0_r), 1_r / Sqrt(2.0_r)), Real3{0_r, 0.5_r, 0_r}};
+      Quaternion(0_r, 0_r, -1_r / Sqrt(2.0_r), 1_r / Sqrt(2.0_r)),
+      Real3{x - kHandMinX, 0.5_r, 0_r}};
   skeletonParams.joints = {
       {
           .name = "", //
@@ -780,7 +799,13 @@ inline Actor* AddSoftAllegro(Context* context, Scene* scene) {
   softSkinnedActorParams.hasStress = true;
 
   // Create the soft skinned actor
-  return scene->CreateSoftSkinnedActor(softSkinnedActorParams, test::ExpectOK{});
+  auto* actor = scene->CreateSoftSkinnedActor(softSkinnedActorParams, test::ExpectOK{});
+
+  if (offsetX) {
+    *offsetX += 1.1_r * (kHandMaxX - kHandMinX);
+  }
+
+  return actor;
 }
 
 // Creates a scene with various actor types and configures the integration method.
@@ -801,8 +826,9 @@ inline std::tuple<Scene*, Actor*> CreateSceneActorTypes(
 
   real offsetX = 0_r;
   AddGroundPlane(scene);
-  AddRigidCube(scene, &offsetX);
-  AddSoftDuck(scene, &offsetX);
+  Actor* cube = AddRigidCube(scene, &offsetX);
+  // The duck rests on the cube, so that two dynamic actors are in contact.
+  AddSoftDuck(scene, /*offsetX=*/nullptr, cube);
   AddShellDuck(scene, &offsetX);
   AddRod(scene, &offsetX);
   AddNChainBody(
@@ -813,7 +839,7 @@ inline std::tuple<Scene*, Actor*> CreateSceneActorTypes(
   AddSoftContactSkinCube(scene, &offsetX);
   AddShellContactSkinBox(scene, &offsetX);
   AddRod(scene, &offsetX, /*useContactSkin=*/true);
-  AddSoftAllegro(mochiContext, scene);
+  AddSoftAllegro(mochiContext, scene, &offsetX);
   // TODO: Add a ROM actor to the scene.
 
   return {scene, agent};

@@ -1272,7 +1272,9 @@ TEST_F(ArticulatedBodyDynamicsTest, RetriesForJointFrictionOnlyWithJointDryFrict
 
 // GetIslandNewtonParams marks the joint-friction pathway fitted on islands without joint dry
 // friction, so no other term may read it: with every actor type, its Hessian choice changes exactly
-// the dresiduals of islands with joint dry friction.
+// the dresiduals of islands with joint dry friction. Some island without joint dry friction must
+// also have contact friction whose own Hessian choice matters, so that the test catches the scene's
+// contact friction reading the joint-friction choice.
 TEST_IF_F(
     MOCHI_HDF5_AND_INTERNAL,
     ArticulatedBodyDynamicsTest,
@@ -1290,9 +1292,10 @@ TEST_IF_F(
   test::AdvanceScene(scene, 3);
 
   auto& reg = test::GetRegistry(scene);
+  bool contactFrictionChoiceMatters = false;
   for (entt::entity island : reg.view<CIslandDescendants const>()) {
     auto const& descendants = reg.get<CIslandDescendants const>(island);
-    auto const assembleDResidual = [&](bool fittedJointFriction) {
+    auto const assembleDResidual = [&](SaturationHessianParams const& fitted) {
       SnleProblemFunctions<real> functions;
       functions.assemble = [&](SnleProblem<real>& problem, AssemblyParams const& params) {
         solver::AssembleIslandPipeline(reg, island, params, problem);
@@ -1300,13 +1303,19 @@ TEST_IF_F(
       auto const& dofInfo = reg.get<CIslandDofInfo const>(island);
       SnleProblem<real> problem(dofInfo.dofsSize, dofInfo.poseSize, std::move(functions));
       GetSolutions(problem.solution, reg, descendants.actors, /*baseOffset*/ 0);
-      problem.UpdateDResidual(/*psdDRes*/ false, {.jointFriction = fittedJointFriction});
+      problem.UpdateDResidual(/*psdDRes*/ false, fitted);
       return ToMatrix(problem.GetDResidual());
     };
+    auto const dResidual = assembleDResidual({});
+    bool const readsJointFriction =
+        articulated::ReadsJointFrictionHessianChoice(reg, descendants.compoundActors);
     EXPECT_EQ(
-        articulated::ReadsJointFrictionHessianChoice(reg, descendants.compoundActors),
-        !test::NearEqualMatrices(assembleDResidual(false), assembleDResidual(true), 0_r));
+        readsJointFriction,
+        !test::NearEqualMatrices(dResidual, assembleDResidual({.jointFriction = true}), 0_r));
+    contactFrictionChoiceMatters |= !readsJointFriction &&
+        !test::NearEqualMatrices(dResidual, assembleDResidual({.contactFriction = false}), 0_r);
   }
+  EXPECT_TRUE(contactFrictionChoiceMatters);
   _mochiContext->DestroyScene(scene);
 }
 
