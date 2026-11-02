@@ -183,16 +183,23 @@ you specify and how much Studio derives from the collision geometry.
 />
 
 A soft actor deforms. It takes the same collision model slot as a rigid, but
-Studio rebuilds a surface mesh from it, which is why changing the shape or its
-scale is a heavier edit than moving a rigid around. The model must be a
+Studio rebuilds deforming meshes from it, which is why changing the shape or
+its scale is a heavier edit than moving a rigid around. The model must be a
 tetrahedral mesh; make one in the Model Editor with the
 [Tetrahedralize](./model_editor.mdx#tetrahedralize) modifier followed by **Export
 Collision Model**, for example via the **STEP to Soft Mochi Model** preset.
 
-Soft actors have no render model slot. What you see is the simulated surface.
-They also carry their own material, separate from the contact parameters, and
-three behavior toggles worth knowing: **Has Gravity**, **Has Inertia**, and
-**Has Stress**.
+Soft actors have no render model slot. What you see is the simulated model,
+drawn with the mesh a renderer would use: its visual mesh when that mesh has a
+deformation embedding, otherwise its contact skin, otherwise the surface of its tetrahedral mesh.
+**Rendered As** in Actor Details says which. The
+[**Collision Only**](./user_interface.mdx#view-modes) view (`2`) shows what the
+actor collides with: its contact skin when it has one and **Use Contact Skin**
+is on, otherwise its surface.
+
+Soft actors also carry their own material, separate from the contact
+parameters, and three behavior toggles worth knowing: **Has Gravity**, **Has
+Inertia**, and **Has Stress**.
 
 Soft bodies cost considerably more to simulate than rigid ones. Use one when the
 deformation is the point, and a rigid everywhere else. The material models and
