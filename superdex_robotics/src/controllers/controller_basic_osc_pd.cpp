@@ -19,6 +19,7 @@
 #include <superdex_robotics/utils/file_utils.h>
 #include "mochi_core/linear_algebra/matrix_operations.h"
 
+#include <algorithm>
 #include <array>
 
 using namespace mochi;
@@ -133,7 +134,7 @@ void ControllerBasicOscPd::Initialize(
   MOCHI_ERROR_RETURN(error);
 
   /* Reverse so that link indices are in ascending order */
-  std::reverse(_linkIndices.begin(), _linkIndices.end());
+  std::ranges::reverse(_linkIndices);
 
   /* Get the DOF indices associated with the link indices */
   _dofIndices.clear();
