@@ -201,11 +201,12 @@ MOCHI_FORCE_INLINE void CinfRegularized(T const& x, T const& eps, T& f, T& df, T
   // The factor of 1/4 (i.e., dividing eps by 2) ensures that ddf(0) = 2/eps, matching the
   // second derivative of IPCstepC1 at x = 0 (with t = eps) for consistent regularization.
   T const eps2 = epsClamped * epsClamped / 4_r;
-  T const s2 = x * x + eps2;
+  T const x2 = x * x;
+  T const s2 = x2 + eps2;
   T const s = Sqrt(s2);
   T const invS = T{1} / s;
 
-  f = s - epsClamped / 2_r; // energy smoother, shifted so f(0) = 0
+  f = x2 / (s + epsClamped / 2_r); // energy smoother s - eps/2, without cancellation
   df = x * invS; // first derivative
   ddf = eps2 * (invS * invS * invS); // eps^2 / s^3
   df_x = invS; // 1/s (robust, no division by x)

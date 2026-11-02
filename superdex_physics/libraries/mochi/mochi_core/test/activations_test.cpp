@@ -19,6 +19,8 @@
 
 #include <mochi_core/test/mochi_test_helpers.h>
 
+#include <limits>
+
 using namespace mochi;
 
 using Scalar = real;
@@ -119,6 +121,15 @@ static void TestCinfRegularized() {
       EXPECT_NEAR_TOL((fP - f) / delta, df, kFdTol * (T(1) + Abs(df)));
       EXPECT_NEAR_TOL((dfP - df) / delta, ddf, kFdTol * (T(1) + Abs(ddf)));
       EXPECT_NEAR_TOL(df / x, df_x, kTol * (T(1) + Abs(df_x)));
+    }
+
+    // Small x: f approaches x^2/eps, to full relative precision
+    {
+      T const x = Scalar(1e-9) * eps;
+      T f{}, df{}, ddf{}, df_x{};
+      CinfRegularized<T>(x, eps, f, df, ddf, df_x);
+      T const fRef = x * x / eps;
+      EXPECT_NEAR_TOL(fRef, f, Scalar(4) * std::numeric_limits<Scalar>::epsilon() * fRef);
     }
 
     // Large x: f approaches x - eps/2, df approaches 1, ddf approaches 0, df_x approaches 1/x
