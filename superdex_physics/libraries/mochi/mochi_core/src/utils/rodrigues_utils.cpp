@@ -19,6 +19,7 @@
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/matrix_utils.h>
 #include <mochi_core/utils/nd_array_utils.h>
+#include <mochi_core/utils/quaternion_utils.h>
 
 #include <cmath>
 

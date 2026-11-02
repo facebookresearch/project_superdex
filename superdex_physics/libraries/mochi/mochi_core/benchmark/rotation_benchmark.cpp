@@ -17,6 +17,7 @@
 #include "config.h"
 
 #include <mochi_core/utils/quaternion.h>
+#include <mochi_core/utils/quaternion_utils.h>
 #include <mochi_core/utils/rodrigues_utils.h>
 
 #include <functional>

@@ -310,8 +310,6 @@ TEST(Lie, D2TrMultRotMatDRot2Transport) {
   auto derivative1 = [&](Quaternion const& R, Vec4r const& delta) {
     Quaternion deltaR = Quaternion::FromRotationVector(delta);
     auto grad = DTrMultRotMatDRot(Dot3x3(ToVMatrix3x3(deltaR * R), mat));
-    // Confirm that the transport uses the fast version of DRotIncrementDRotVector
-    EXPECT_LT(NormSqr<3>(delta), drotvector::kThresholdDRotIncrementDRotVector<real>);
     TransportInputOfLieJacobian(delta, AsColumnVectorView<RigidSize::kDRot>(grad).Transpose());
     return grad;
   };

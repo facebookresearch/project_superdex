@@ -168,15 +168,14 @@ void EvalRotationFixedConstraint(
   }
 
   if (outJac || outJacTarget) {
-    auto Rd = ToVMatrix3x3(qd);
-    auto DrdDRd = DRotVectorDRotIncrement(rd, Rd);
+    auto DrdDRd = DRotVectorDRotIncrement(rd);
     if (outJac) {
       // DRd/DR = eye
       *outJac = AsMatrixView(DrdDRd);
     }
     if (outJacTarget) {
       // DRd/DRt = -Rd
-      *outJacTarget = AsMatrixView(Dot3x3(DrdDRd, lie::DMultRotaRotTRotbDRot(Rd)));
+      *outJacTarget = AsMatrixView(Dot3x3(DrdDRd, lie::DMultRotaRotTRotbDRot(ToVMatrix3x3(qd))));
     }
   }
 }
@@ -299,7 +298,7 @@ void EvalJointRotationTargetConstraint(
     // dRd/dRb = R0^T * Rr^T * Ra^T = Ra0^T
     // dRd/dRr = - R0^T * Rr^T
 
-    VMatrix3x3r DrdDRd = DRotVectorDRotIncrement(rd, qd);
+    VMatrix3x3r DrdDRd = DRotVectorDRotIncrement(rd);
     if (outJac) {
       VMatrix3x3r DRdDRb = lie::DMultRotaRotRotbDRot(ToVMatrix3x3(qA0Conj));
       VMatrix3x3r DrdDRb = Dot3x3(DrdDRd, DRdDRb);
@@ -446,7 +445,7 @@ void EvalJointRotationRangeConstraint(
     // Then drab/dRa = - drab/dRb
     // drab/dRab is the derivative of rotation vector wrt incremental rotation.
 
-    VMatrix3x3r DrabDRab = DRotVectorDRotIncrement(rab, qab);
+    VMatrix3x3r DrabDRab = DRotVectorDRotIncrement(rab);
     Quaternion qa0T = (rotA * refFrame).GetConjugate();
     VMatrix3x3r DrabDRb = Dot3x3(DrabDRab, lie::DMultRotaRotRotbDRot(ToVMatrix3x3(qa0T)));
 

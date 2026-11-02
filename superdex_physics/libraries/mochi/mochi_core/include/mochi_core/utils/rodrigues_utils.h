@@ -19,15 +19,14 @@
 #include <mochi_core/mochi_config.h>
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/constants.h>
-#include <mochi_core/utils/debug.h>
 #include <mochi_core/utils/matrix_utils.h>
 #include <mochi_core/utils/nd_array.h>
 #include <mochi_core/utils/quaternion.h>
-#include <mochi_core/utils/quaternion_utils.h>
 #include <mochi_core/utils/simd.h>
 #include <mochi_core/utils/vmatrix.h>
 
 #include <limits>
+#include <type_traits>
 
 namespace mochi {
 
@@ -57,94 +56,49 @@ template <typename T>
 
 // Given a rotation r in rotation vector representation, an incremental change of the rotation
 // can be expressed as R(theta) * R(r) = R(r + dr), for a differential rotation vector theta -> 0.
-// The following functions compute the partial derivatives dr/dtheta and dtheta/dr.
+// The following functions compute the partial derivatives dtheta/dr, the left Jacobian J_l(r) of
+// SO(3), and its inverse dr/dtheta. Both have the form eye + a sk(r) + b sk(r)^2, with
+// sk(r)^2 = r rT - |r|^2 eye.
 
 namespace drotvector {
-
-// Accurate methods for large r.
-// dtheta/dr = inv(sk(r) + r rT) * (R(r) - eye + r rT).
+// Below this |r|^2, a and b use truncated series instead of trigonometric functions. Scaled by |r|
+// for sk(r) and |r|^2 for sk(r)^2, the truncation of the series and the cancellation in the closed
+// forms are below rounding.
 template <typename T>
-[[nodiscard]] NdArray<Simd<T, 4>, 3> DThetaDLargeR(Simd<T, 4> r, NdArray<Simd<T, 4>, 3> const& R) {
-  MOCHI_ASSERT_VERBOSE(NearEqual(Rodrigues(r), R, Simd<T, 4>(T(1e-5))), "Inconsistent inputs");
-  NdArray<Simd<T, 4>, 3> skew = Skew3(r);
-  NdArray<Simd<T, 4>, 3> outer = Outer3(r, r);
-  return Dot3x3(Invert3x3(skew + outer), R - VEye<3, T>() + outer);
-}
-// dr/dtheta = inv(R(r) - eye + r rT) * (sk(r) + r rT).
-template <typename T>
-[[nodiscard]] NdArray<Simd<T, 4>, 3> DLargeRDTheta(Simd<T, 4> r, NdArray<Simd<T, 4>, 3> const& R) {
-  MOCHI_ASSERT_VERBOSE(NearEqual(Rodrigues(r), R, Simd<T, 4>(T(1e-5))), "Inconsistent inputs");
-  NdArray<Simd<T, 4>, 3> skew = Skew3(r);
-  NdArray<Simd<T, 4>, 3> outer = Outer3(r, r);
-  return Dot3x3(Invert3x3(R - VEye<3, T>() + outer), skew + outer);
-}
-
-// Approximate methods for small r, using R(r) approx eye + sk(r) + 0.5 sk2(r).
-// dtheta/dr approx eye + 0.5 sk(r)
-template <typename T>
-[[nodiscard]] MOCHI_FORCE_INLINE NdArray<Simd<T, 4>, 3> DThetaDSmallR(Simd<T, 4> r) {
-  return VEye<3, T>() + T(0.5) * Skew3(r);
-}
-// dr/dtheta approx inv(eye + 0.5 sk(r)) approx eye - 0.5 sk(r)
-template <typename T>
-[[nodiscard]] MOCHI_FORCE_INLINE NdArray<Simd<T, 4>, 3> DSmallRDTheta(Simd<T, 4> r) {
-  return VEye<3, T>() - T(0.5) * Skew3(r);
-}
-
-// Default thresholds for choosing the full methods or the approximate methods, based on their
-// accuracy with single precision. The thresholds are validated in the test
-// Rodrigues.DRotVectorThresholds.
-template <typename T>
-static constexpr T kThresholdDRotIncrementDRotVector = T(0.0003227);
-template <typename T>
-static constexpr T kThresholdDRotVectorDRotIncrement = T(0.0003437);
+inline constexpr T kSeriesSwitchNormSqr = std::is_same_v<T, float> ? T(0.04) : T(1e-3);
 } // namespace drotvector
 
-// General methods, redirecting to the appropriate method depending on the size of r.
-// Methods that take a quaternion are not templatized and must use the default type 'real'.
+// dtheta/dr, with a = (1 - cos|r|) / |r|^2 and b = (|r| - sin|r|) / |r|^3.
 template <typename T>
-[[nodiscard]] MOCHI_FORCE_INLINE NdArray<Simd<T, 4>, 3> DRotIncrementDRotVector(
-    Simd<T, 4> r,
-    NdArray<Simd<T, 4>, 3> const& R,
-    T threshold = drotvector::kThresholdDRotIncrementDRotVector<T>) {
-  return (NormSqr<3>(r) < threshold) ? drotvector::DThetaDSmallR(r)
-                                     : drotvector::DThetaDLargeR(r, R);
+[[nodiscard]] MOCHI_FORCE_INLINE NdArray<Simd<T, 4>, 3> DRotIncrementDRotVector(Simd<T, 4> r) {
+  T const angleSqr = NormSqr<3>(r);
+  T a MOCHI_NO_INIT;
+  T b MOCHI_NO_INIT;
+  if (angleSqr < drotvector::kSeriesSwitchNormSqr<T>) {
+    a = T(1) / T(2) -
+        angleSqr * (T(1) / T(24) - angleSqr * (T(1) / T(720) - angleSqr * (T(1) / T(40320))));
+    b = T(1) / T(6) - angleSqr * (T(1) / T(120) - angleSqr * (T(1) / T(5040)));
+  } else {
+    T const angle = Sqrt(angleSqr);
+    // 1 - cos|r| = 2 sin^2(|r| / 2), without cancellation.
+    a = T(2) * Sqr(Sin(T(0.5) * angle)) / angleSqr;
+    b = (angle - Sin(angle)) / (angleSqr * angle);
+  }
+  return VDiagonalMatrix<3>(T(1) - b * angleSqr) + a * Skew3(r) + b * Outer3(r, r);
 }
-[[nodiscard]] MOCHI_FORCE_INLINE VMatrix3x3r DRotIncrementDRotVector(
-    Vec4r r,
-    Quaternion const& q,
-    real threshold = drotvector::kThresholdDRotIncrementDRotVector<real>) {
-  return (NormSqr<3>(r) < threshold) ? drotvector::DThetaDSmallR(r)
-                                     : drotvector::DThetaDLargeR(r, ToVMatrix3x3(q));
-}
+
+// dr/dtheta, the inverse of dtheta/dr, with a = -1/2 and b = (1 - (|r| / 2) cot(|r| / 2)) / |r|^2.
 template <typename T>
-[[nodiscard]] MOCHI_FORCE_INLINE NdArray<Simd<T, 4>, 3> DRotIncrementDRotVector(
-    Simd<T, 4> r,
-    T threshold = drotvector::kThresholdDRotIncrementDRotVector<T>) {
-  return (NormSqr<3>(r) < threshold) ? drotvector::DThetaDSmallR(r)
-                                     : drotvector::DThetaDLargeR(r, Rodrigues(r));
-}
-template <typename T>
-[[nodiscard]] MOCHI_FORCE_INLINE NdArray<Simd<T, 4>, 3> DRotVectorDRotIncrement(
-    Simd<T, 4> r,
-    NdArray<Simd<T, 4>, 3> const& R,
-    T threshold = drotvector::kThresholdDRotVectorDRotIncrement<T>) {
-  return (NormSqr<3>(r) < threshold) ? drotvector::DSmallRDTheta(r)
-                                     : drotvector::DLargeRDTheta(r, R);
-}
-[[nodiscard]] MOCHI_FORCE_INLINE VMatrix3x3r DRotVectorDRotIncrement(
-    Vec4r r,
-    Quaternion const& q,
-    real threshold = drotvector::kThresholdDRotVectorDRotIncrement<real>) {
-  return (NormSqr<3>(r) < threshold) ? drotvector::DSmallRDTheta(r)
-                                     : drotvector::DLargeRDTheta(r, ToVMatrix3x3(q));
-}
-template <typename T>
-[[nodiscard]] MOCHI_FORCE_INLINE NdArray<Simd<T, 4>, 3> DRotVectorDRotIncrement(
-    Simd<T, 4> r,
-    T threshold = drotvector::kThresholdDRotVectorDRotIncrement<T>) {
-  return (NormSqr<3>(r) < threshold) ? drotvector::DSmallRDTheta(r)
-                                     : drotvector::DLargeRDTheta(r, Rodrigues(r));
+[[nodiscard]] MOCHI_FORCE_INLINE NdArray<Simd<T, 4>, 3> DRotVectorDRotIncrement(Simd<T, 4> r) {
+  T const angleSqr = NormSqr<3>(r);
+  T b MOCHI_NO_INIT;
+  if (angleSqr < drotvector::kSeriesSwitchNormSqr<T>) {
+    b = T(1) / T(12) + angleSqr * (T(1) / T(720) + angleSqr * (T(1) / T(30240)));
+  } else {
+    T const halfAngle = T(0.5) * Sqrt(angleSqr);
+    b = (T(1) - halfAngle / Tan(halfAngle)) / angleSqr;
+  }
+  return VDiagonalMatrix<3>(T(1) - b * angleSqr) - T(0.5) * Skew3(r) + b * Outer3(r, r);
 }
 
 // Given two rotations qa, qb, and a reference frame q0, in quaternion representation, computes the

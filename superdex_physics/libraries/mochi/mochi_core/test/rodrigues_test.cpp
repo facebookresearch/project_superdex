@@ -212,11 +212,6 @@ TEST(Rodrigues, DRotVectorDRotIncrement) {
   // No rotation
   TestDRotVectorDRotIncrement(Vec4r(0_r, 0_r, 0_r));
 
-  // Small, which redirects to drotvector::DSmallRDTheta
-  Vec4r r{0.5_r * Sqrt(drotvector::kThresholdDRotVectorDRotIncrement<real> / 3_r)};
-  EXPECT_TRUE(NormSqr<3>(r) < drotvector::kThresholdDRotVectorDRotIncrement<real>);
-  TestDRotVectorDRotIncrement(r);
-
   // Positive
   TestDRotVectorDRotIncrement(Vec4r(k90, 0_r, 0_r));
   TestDRotVectorDRotIncrement(Vec4r(0_r, k90, 0_r));
@@ -268,11 +263,6 @@ TEST(Rodrigues, DRotIncrementDRotVector) {
   // No rotation
   TestDRotIncrementDRotVector(Vec4r(0_r, 0_r, 0_r));
 
-  // Small, which redirects to drotvector::DThetaDSmallR
-  Vec4r r{0.5_r * Sqrt(drotvector::kThresholdDRotIncrementDRotVector<real> / 3_r)};
-  EXPECT_TRUE(NormSqr<3>(r) < drotvector::kThresholdDRotIncrementDRotVector<real>);
-  TestDRotVectorDRotIncrement(r);
-
   // Positive
   TestDRotIncrementDRotVector(Vec4r(k90, 0_r, 0_r));
   TestDRotIncrementDRotVector(Vec4r(0_r, k90, 0_r));
@@ -315,59 +305,27 @@ TEST(Rodrigues, DRotIncrementDRotVector) {
   }
 }
 
-template <typename ApproxFunc, typename FullFunc, typename GoldFunc>
-static bool IsApproximationMoreAccurate(
-    double normSqr,
-    ApproxFunc approxFunc,
-    FullFunc fullFunc,
-    GoldFunc goldFunc) {
-  double val = Sqrt(normSqr / 3.0);
-  Vec4d rotVecd(val);
-  auto resultGold = goldFunc(rotVecd, Rodrigues(rotVecd));
-  Vec4f rotVecf(static_cast<float>(val));
-  auto resultApprox = StaticCast<VMatrix3x3d>(approxFunc(rotVecf));
-  auto resultFull = StaticCast<VMatrix3x3d>(fullFunc(rotVecf, Rodrigues(rotVecf)));
-  real errorApprox = Norm3x3(resultApprox - resultGold);
-  real errorFull = Norm3x3(resultFull - resultGold);
-  return errorApprox < errorFull;
-}
-
-template <typename ApproxFunc, typename FullFunc, typename GoldFunc>
-static void
-TestThreshold(ApproxFunc approxFunc, FullFunc fullFunc, GoldFunc goldFunc, real threshold) {
-  // Geometric bisection search for the turning point
-  double maxVal = 1e-3;
-  double minVal = 1e-5;
-  EXPECT_FALSE(IsApproximationMoreAccurate(maxVal, approxFunc, fullFunc, goldFunc));
-  EXPECT_TRUE(IsApproximationMoreAccurate(minVal, approxFunc, fullFunc, goldFunc));
-  double midVal = Sqrt(maxVal * minVal);
-  for (int i = 0; i < 10; ++i) {
-    if (IsApproximationMoreAccurate(midVal, approxFunc, fullFunc, goldFunc)) {
-      minVal = midVal;
-    } else {
-      maxVal = midVal;
-    }
-    midVal = Sqrt(maxVal * minVal);
+// Just above each series switch, where the closed forms are least accurate, and just below the
+// double one, where the series is, the double Jacobians are inverses of each other and the float
+// ones match them, to rounding.
+TEST(Rodrigues, DRotVectorJacobiansAccuracy) {
+  double const switchF = Sqrt(static_cast<double>(drotvector::kSeriesSwitchNormSqr<float>));
+  double const switchD = Sqrt(drotvector::kSeriesSwitchNormSqr<double>);
+  double const kAngles[] = {1.001 * switchF, 0.999 * switchD, 1.001 * switchD};
+  double constexpr kTolD = 4.0 * std::numeric_limits<double>::epsilon();
+  double constexpr kTolF = 4.0 * std::numeric_limits<float>::epsilon();
+  for (double const angle : kAngles) {
+    // (2, 3, 6) / 7 is a unit axis.
+    Vec4f const rf = static_cast<float>(angle / 7.0) * Vec4f{2.0f, 3.0f, 6.0f, 0.0f};
+    Vec4d const r = StaticCast<Vec4d>(rf);
+    VMatrix3x3d const dRotDInc = DRotVectorDRotIncrement(r);
+    VMatrix3x3d const dIncDRot = DRotIncrementDRotVector(r);
+    EXPECT_NEAR(Norm3x3(Dot3x3(dRotDInc, dIncDRot) - VEye<3, double>()), 0.0, kTolD);
+    EXPECT_NEAR(
+        Norm3x3(StaticCast<VMatrix3x3d>(DRotVectorDRotIncrement(rf)) - dRotDInc), 0.0, kTolF);
+    EXPECT_NEAR(
+        Norm3x3(StaticCast<VMatrix3x3d>(DRotIncrementDRotVector(rf)) - dIncDRot), 0.0, kTolF);
   }
-  EXPECT_FALSE(IsApproximationMoreAccurate(maxVal, approxFunc, fullFunc, goldFunc));
-  EXPECT_TRUE(IsApproximationMoreAccurate(minVal, approxFunc, fullFunc, goldFunc));
-
-  // Validate that the threshold is within the interval
-  EXPECT_LT(threshold, static_cast<real>(maxVal));
-  EXPECT_GT(threshold, static_cast<real>(minVal));
-}
-
-TEST(Rodrigues, DRotVectorThresholds) {
-  TestThreshold(
-      drotvector::DSmallRDTheta<float>,
-      drotvector::DLargeRDTheta<float>,
-      drotvector::DLargeRDTheta<double>,
-      drotvector::kThresholdDRotVectorDRotIncrement<real>);
-  TestThreshold(
-      drotvector::DThetaDSmallR<float>,
-      drotvector::DThetaDLargeR<float>,
-      drotvector::DThetaDLargeR<double>,
-      drotvector::kThresholdDRotIncrementDRotVector<real>);
 }
 
 TEST(Rodrigues, SincNearZero) {

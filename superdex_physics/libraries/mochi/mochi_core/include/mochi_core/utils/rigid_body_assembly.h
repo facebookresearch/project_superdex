@@ -571,7 +571,7 @@ inline void AddRigidBodyFriction(
   // 3. GradTarget::Previous: dRotDeltadRotOld for the rotation.
   // In GradTarget::Current, dRotDeltadRot = eye, so nothing to do.
   if (outGradient || outHessian) {
-    VMatrix3x3r chainRotation = DRotVectorDRotIncrement(dtStage * velRotation, rotDelta);
+    VMatrix3x3r chainRotation = DRotVectorDRotIncrement(dtStage * velRotation);
     if constexpr (kGradTarget == GradTarget::Previous) {
       if (outGradient) {
         gradTranslation = -gradTranslation;
