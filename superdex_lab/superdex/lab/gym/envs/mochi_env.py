@@ -418,7 +418,7 @@ class MochiEnv(abc.ABC, Env[ObservationSpace, ActionSpace]):
 
             # Perform a very small step to initialize step-dependent data (e.g. contacts)
             self._check_valid_scene()
-            self._scene.step(self._dummy_step)
+            self._step_native_scene(self._dummy_step, "reset")
 
             # Store the current state of the scene.
             if self._state_snapshot is not None:
@@ -684,7 +684,7 @@ class MochiEnv(abc.ABC, Env[ObservationSpace, ActionSpace]):
         # Perform dummy step to force the scene initialization to complete.
         # Only needed if the scene was just created.
         if perform_initialization_step:
-            self._scene.step(self._dummy_step)
+            self._step_native_scene(self._dummy_step, "initialize")
             self._scene.restore_state(
                 handle=self._initial_state_snapshot, release_immediately=False
             )
@@ -813,6 +813,15 @@ class MochiEnv(abc.ABC, Env[ObservationSpace, ActionSpace]):
     # Functions handling time stepping and sampling of the environment.
     ####################################################################################
 
+    def _step_native_scene(self, time_step: float, phase: str) -> None:
+        """Step once, before a snapshot restore or another physics step can occur.
+
+        Subclasses may inspect the completed step and raise here. ``phase`` is
+        ``initialize``, ``reset`` or ``control``. Raising prevents the caller
+        from restoring state or counting an incomplete control interval.
+        """
+        self._scene.step(time_step)
+
     def _simulate(self, action: StructuredAction):
         """
         Runs the simulation by a number of steps (determined by the simulation and
@@ -830,7 +839,7 @@ class MochiEnv(abc.ABC, Env[ObservationSpace, ActionSpace]):
             self._check_valid_scene()
             self._apply_action(action)
             with self._profiler.enter("step_scene"):
-                self._scene.step(self._sim_dt)
+                self._step_native_scene(self._sim_dt, "control")
 
             if self._profiler.enabled:
                 stats = self._scene.get_performance_stats()
