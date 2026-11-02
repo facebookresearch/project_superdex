@@ -596,7 +596,7 @@ void RenderScene::BuildMeshObject(MeshState& st) {
 }
 
 void RenderScene::SetCamera(Camera const& camera, int width, int height) {
-  Real3 camPos = StaticCast<Real3>(camera.position); // simulation units
+  auto camPos = StaticCast<Real3>(camera.position); // simulation units
   float const fovDeg = camera.verticalFov * static_cast<float>(kDegreesPerRadian);
   // Filament's world stays metric, so its metre-denominated settings (ambient-occlusion
   // radius, shadow bias and near/far hints) keep working; distances scale on the way in.
@@ -673,7 +673,7 @@ void RenderScene::ApplyLighting() {
   // -- and the meaning of the UI sliders -- is the same in every simulation space.
   float const yaw = _params.directionalLightYawDeg * static_cast<float>(kRadiansPerDegree);
   float const pitch = _params.directionalLightPitchDeg * static_cast<float>(kRadiansPerDegree);
-  Real3 const dir = StaticCast<Real3>(Camera::DirectionFromYawPitch(_simSpace, yaw, pitch));
+  auto const dir = StaticCast<Real3>(Camera::DirectionFromYawPitch(_simSpace, yaw, pitch));
 
   _scene->CreateSunlight(
       _params.directionalLightIntensity * kSunIntensityScale,
