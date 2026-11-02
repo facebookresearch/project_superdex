@@ -224,7 +224,7 @@ enum struct LinearToleranceStrategy {
   Constant,
 
   /**
-   * @brief Eisenstat-Walker strategy no. 1.
+   * @brief Eisenstat-Walker strategy 1.
    *
    * @note Should be used with @ref LinearSolverConvergenceNorm::ResidualL2. Other norms may yield
    * suboptimal forcing terms.
@@ -237,7 +237,7 @@ enum struct LinearToleranceStrategy {
   EisenstatWalker1,
 
   /**
-   * @brief Eisenstat-Walker strategy no. 2.
+   * @brief Eisenstat-Walker strategy 2.
    *
    * @note Not recommended for use with quasi-Newton methods (e.g., @ref NonLinearSolverType::BFGS,
    * @ref NonLinearSolverType::SR1).

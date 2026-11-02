@@ -1608,7 +1608,7 @@ enum LineSearchType [from_mochi_core] {
 enum LinearToleranceStrategy [from_mochi_core] {
   // @brief Constant relative tolerance.
   Constant,
-  // @brief Eisenstat-Walker strategy no. 1.
+  // @brief Eisenstat-Walker strategy 1.
   //
   // @note Should be used with @ref LinearSolverConvergenceNorm::ResidualL2. Other norms may yield
   // suboptimal forcing terms.
@@ -1618,7 +1618,7 @@ enum LinearToleranceStrategy [from_mochi_core] {
   // Reference: [Choosing the Forcing Terms in an Inexact Newton Method, Choice 1 (Eisenstat and
   // Walker, 1994)](https://softlib.rice.edu/pub/CRPC-TRs/reports/CRPC-TR94463.pdf)
   EisenstatWalker1,
-  // @brief Eisenstat-Walker strategy no. 2.
+  // @brief Eisenstat-Walker strategy 2.
   //
   // @note Not recommended for use with quasi-Newton methods (e.g., @ref NonLinearSolverType::BFGS,
   // @ref NonLinearSolverType::SR1).

@@ -1435,7 +1435,7 @@ class LinearToleranceStrategy:
     CONSTANT: LinearToleranceStrategy
     """Constant relative tolerance."""
     EISENSTAT_WALKER1: LinearToleranceStrategy
-    """Eisenstat-Walker strategy no. 1.
+    """Eisenstat-Walker strategy 1.
 
     Note:
         Should be used with :class:`RESIDUAL_L2
@@ -1452,7 +1452,7 @@ class LinearToleranceStrategy:
         1994)](https://softlib.rice.edu/pub/CRPC-TRs/reports/CRPC-TR94463.pdf)
     """
     EISENSTAT_WALKER2: LinearToleranceStrategy
-    """Eisenstat-Walker strategy no. 2.
+    """Eisenstat-Walker strategy 2.
 
     Note:
         Not recommended for use with quasi-Newton methods (e.g., :class:`BFGS
