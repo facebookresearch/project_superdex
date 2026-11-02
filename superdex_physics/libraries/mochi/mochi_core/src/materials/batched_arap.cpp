@@ -61,6 +61,9 @@ void BatchedArapConstitutiveResponse(
   V const mu = params.stiffness;
 
   if (outEnergy) {
+    // σ from FᵀF can have O(√ε‖F‖) absolute error near zero. In energy-only calls, a close pair
+    // near zero can have O(ε^¼‖F‖) (see BatchedRotationVariantSvdVals3x3). The computed energy may
+    // be numerically inconsistent with PK1 = μ(F − U·VT).
     V const one{1_r};
     V3 const d = {sigma[0] - one, sigma[1] - one, sigma[2] - one};
     *outEnergy = StaticCast<Vd>(V{0.5_r} * mu * NormSqr(d));
