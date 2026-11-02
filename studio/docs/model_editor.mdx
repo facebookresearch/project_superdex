@@ -821,8 +821,9 @@ is on.
 Its output is a tetrahedral mesh. The stage shows and measures the mesh's
 boundary surface, its stats add the node and tetrahedron counts, and **Save**
 writes the tetrahedra to a legacy VTK `.vtk`.
-Only **Extract Surface**, **Apply SRT Transformation** and **Export Collision
-Model** take a tetrahedral mesh as input; any other modifier placed after
+Only **Extract Surface**, **Apply SRT Transformation**,
+[**Embed Contact Skin**](#embed-contact-skin) and **Export Collision Model**
+take a tetrahedral mesh as input; any other modifier placed after
 **Tetrahedralize** fails with an error asking you to move it above.
 
 #### Extract Surface
@@ -843,6 +844,37 @@ asking you to place it after **Tetrahedralize**.
 |--------|--------------|
 | **SRT Transform** | Apply a scale, then a rotation, then a translation to the mesh. The output mesh has the transform baked into its verts. |
 
+#### Embed Contact Skin
+
+Passes its input mesh on unchanged, with one more triangle mesh embedded in it:
+the [soft actor](./prefab_editor.mdx#soft-actors)'s contact skin, which
+**Export Collision Model** writes alongside the tetrahedral mesh. A soft actor
+with **Use Contact Skin** on takes its contact samples from its contact skin
+instead of the tetrahedral mesh's boundary, which stays the collider geometry
+when an SDF collider is enabled.
+
+| Method | What it does |
+|--------|--------------|
+| **Upstream Surface** | Embed the triangle surface of a stage above in the tetrahedral mesh. |
+
+**Upstream Surface** picks its **Surface** like Edge Flip Optimization's
+**Reference**; pick the **Wrap Mesh** stage that Tetrahedralize filled to use
+the wrapped surface itself. It must follow **Tetrahedralize**. The surface is
+embedded where it is, so an **Apply SRT Transformation** between it and the
+Embed Contact Skin modifier moves only the tetrahedral mesh, which shows as a
+large maximum extrapolation in the stats.
+
+The stage shows the embedded mesh. Its stats report the mesh's node and
+triangle counts, how far its nodes reach outside the tetrahedra, in element
+heights, and its Hausdorff distance from the input's boundary surface. **Save**
+writes the mesh the stage passes on.
+
+An embedded mesh holds only for the exact mesh it was embedded in. The next
+enabled stage must therefore be **Export Collision Model**, which writes it, or
+a source, which starts a new segment without it. Any other modifier fails with
+an error asking you to move the Embed modifier below it. Each mesh can carry
+only one contact skin.
+
 ### Exports
 
 | Modifier | Method | What it does |
@@ -856,7 +888,10 @@ bake; with **Bake SDF** off it exports the mesh alone, and SuperDex Physics bake
 an SDF each time it loads the model. That is the usual choice for a soft actor's
 tetrahedral mesh. The stage's output buffer is the surface reconstructed from the
 SDF, or the input mesh with **Bake SDF** off. Vertices at identical positions are
-welded on export, so a model read from an STL is one connected surface.
+welded on export, so a model read from an STL is one connected surface. It also
+writes the contact skin that [**Embed Contact Skin**](#embed-contact-skin)
+above it embedded in its input, which is then not welded, since the contact
+skin refers to its vertices as they are.
 
 **Export Mesh File** picks its format from the extension given in the filepath.
 `.obj` and `.glb` are supported, anything else is exported as GLB by appending
