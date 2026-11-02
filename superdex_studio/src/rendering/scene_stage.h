@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include "rendering/soft_surface.h"
+
 #if MOCHI_INTERNAL
 #include <superdex_robotics/internal/bot_scene.h>
 #endif
@@ -134,14 +136,16 @@ struct StagedActor {
   int sourceActorIndex = -1;
   int sourceLinkIndex = -1;
   // Soft actors only: two deforming dynamic meshes -- a solid `mochi_renderer::Mesh` (render slot,
-  // shown in StageType 1/2) and a `mochi_renderer::WireframeMesh` (shape slot, shown in StageType
-  // 3). Their SceneObjects live in `render.sceneObject` / `shape.sceneObject` (so
-  // picking/highlighting/visibility reuse the existing machinery); the pointers here are non-owning
-  // back-pointers used to push per-frame vertex updates during simulation. Null for non-soft
-  // actors. `softAsset` is the (non-owning) MochiModelAsset that re-bakes the rest surface for idle
-  // edits and rest-pose restore after simulation, using the per-instance `softBakeScale` /
-  // `softShapeTransform`. `softMeshVertexCount` is the surface node count (used by the reuse check
-  // to force a rebuild when the topology changes).
+  // shown in RenderModelOnly / RenderModelFallbackToMochiModel) of `softSurfaces.rendered` and a
+  // `mochi_renderer::WireframeMesh` (shape slot, shown in MochiModelOnly) of
+  // `softSurfaces.collision`. Their SceneObjects live in
+  // `render.sceneObject` / `shape.sceneObject` (so picking/highlighting/visibility reuse the
+  // existing machinery); the pointers here are non-owning back-pointers used to push per-frame
+  // vertex updates during simulation. Null for non-soft actors. `softAsset` is the (non-owning)
+  // MochiModelAsset that re-bakes the rest surfaces for idle edits and rest-pose restore after
+  // simulation, using the per-instance `softBakeScale` / `softShapeTransform`.
+  // `softMeshVertexCount` / `softCollisionVertexCount` are the two meshes' node counts (used by the
+  // reuse check to force a rebuild when the topology changes).
   mochi_renderer::Mesh* dynamicSolidMesh = nullptr;
   mochi_renderer::WireframeMesh* dynamicWireframeMesh = nullptr;
   // Skinned articulated skin only: the shape slot has two interchangeable surfaces. A GPU-skinned
@@ -162,7 +166,9 @@ struct StagedActor {
   mochi_renderer::SceneObject* shapeSkinnedSurface = nullptr;
   mochi_renderer::SceneObject* shapeSimSurface = nullptr;
   MochiModelAsset* softAsset = nullptr;
+  SoftSurfaces softSurfaces;
   int softMeshVertexCount = 0;
+  int softCollisionVertexCount = 0;
   mochi::Real3 softBakeScale = {mochi::real(1), mochi::real(1), mochi::real(1)};
   mochi::TransformRT softShapeTransform = {};
   // Skinned articulated skin only: the GPU-skinned render model in `render.sceneObject`, kept as a
@@ -198,14 +204,19 @@ struct ResolvedTaskSpawn {
 };
 #endif
 
-// A per-frame deformation update for one soft actor's dynamic mesh: produced by the simulation
+// A per-frame deformation update for one soft actor's dynamic meshes: produced by the simulation
 // post-step callback and consumed by SceneStage::ApplySoftMeshUpdates. Position/normal buffers are
-// flat (3 floats per vertex) in renderer space; `worldTransform` is the soft actor's root transform
-// (Mochi space, converted on apply). Matched to a staged actor by `name`.
+// flat (3 floats per vertex) in renderer space: `positions`/`normals` for the solid mesh
+// (StagedActor::softSurfaces.rendered) and `collisionPositions`/`collisionNormals` for the
+// wireframe (softSurfaces.collision), left empty when the two are the same mesh.
+// `worldTransform` is the soft actor's root transform (Mochi space, converted on apply). Matched to
+// a staged actor by `name`.
 struct SoftMeshUpdate {
   std::string name;
   std::vector<float> positions;
   std::vector<float> normals;
+  std::vector<float> collisionPositions;
+  std::vector<float> collisionNormals;
   mochi::TransformRT worldTransform = {};
 };
 
@@ -247,14 +258,17 @@ struct StageRequest {
   int sourceActorIndex = -1;
   int sourceLinkIndex = -1;
   // Soft actors only: `isSoft` marks this request as a soft actor whose solid + wireframe deforming
-  // meshes are created/colored by the MochiModelAsset at `shapeModelFile` (which also forms part of
-  // the reuse key). `softBakeScale` / `softShapeTransform` are the per-instance bake parameters the
-  // asset uses to (re)generate the rest surface; `softVertexCount` is the surface node count used
-  // to detect topology changes for the reuse check. No ordinary shape/render instance is loaded.
+  // meshes (of `softSurfaces`) are created/colored by the MochiModelAsset at `shapeModelFile`
+  // (which also forms part of the reuse key). `softBakeScale` / `softShapeTransform` are the
+  // per-instance bake parameters the asset uses to (re)generate the rest surfaces;
+  // `softVertexCount` / `softCollisionVertexCount` are the two meshes' node counts, used to detect
+  // topology changes for the reuse check. No ordinary shape/render instance is loaded.
   bool isSoft = false;
   mochi::Real3 softBakeScale = {mochi::real(1), mochi::real(1), mochi::real(1)};
   mochi::TransformRT softShapeTransform = {};
+  SoftSurfaces softSurfaces;
   int softVertexCount = 0;
+  int softCollisionVertexCount = 0;
   // Skinned skin only: per-link WORLD transforms (Mochi space) in the GLB's joint order (== nested
   // link / link-declaration order), captured at build time. Populated for ANY articulated skin
   // (independent of whether a render GLB is present) so the collision skin can be posed. SceneStage
@@ -358,7 +372,7 @@ struct SceneStage {
 
   // Apply per-soft-actor deforming-mesh updates (from simulation), matched by name. For each update
   // both dynamic meshes (solid + wireframe) are deformed and the actor's world transform is set.
-  // Unknown names and non-soft actors are ignored; a vertex-count mismatch skips that update.
+  // Unknown names and non-soft actors are ignored; a vertex-count mismatch skips that mesh.
   void ApplySoftMeshUpdates(
       mochi::Span<SoftMeshUpdate const> updates,
       mochi::CoordinateSpaceConverter const& converter);

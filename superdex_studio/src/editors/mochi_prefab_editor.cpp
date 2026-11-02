@@ -134,6 +134,7 @@ void MochiPrefabEditor::Initialize() {
   // Initialize Mochi scene and callbacks
   _mochiScene.Initialize(_studio->GetMochiContext(), "MochiPrefabEditor");
   _mochiScene.SetSettings(_studio->GetAppSettings().physics);
+  _mochiScene.onStartPhysics = [this]() { _simSync.CaptureStagedSurfaces(_stage); };
   _mochiScene.createPhysicsActors = [this](mochi::Scene* s) { CreatePhysicsActors(s); };
   _mochiScene.destroyPhysicsActors = [this](mochi::Scene* s) { DestroyPhysicsActors(s); };
   _mochiScene.registerPostStepCallback = [this](mochi::AsyncScene* a) {
@@ -451,13 +452,21 @@ SceneObject* MochiPrefabEditor::StagedObjectForSource(
     StagedActorSource source,
     int actorIndex,
     int linkIndex) const {
+  StagedActor const* const staged = StagedActorForSource(source, actorIndex, linkIndex);
+  return staged ? staged->sceneObject : nullptr;
+}
+
+StagedActor const* MochiPrefabEditor::StagedActorForSource(
+    StagedActorSource source,
+    int actorIndex,
+    int linkIndex) const {
   if (actorIndex < 0) {
     return nullptr;
   }
   for (auto const& staged : _stage.GetActors()) {
     if (staged.source == source && staged.sourceActorIndex == actorIndex &&
         (linkIndex < 0 || staged.sourceLinkIndex == linkIndex)) {
-      return staged.sceneObject;
+      return &staged;
     }
   }
   return nullptr;
@@ -2769,6 +2778,10 @@ void MochiPrefabEditor::ShowSoftActorDetails(int softIndex) {
   if (ImGui::DragTransformRT("Shape Offset", actor->shapeRotation, actor->shapeTranslation)) {
     modelChanged = true;
   }
+  // Which of the model's meshes the actor is drawn with (see ChooseSoftSurfaces).
+  if (StagedActor const* staged = StagedActorForSource(StagedActorSource::Soft, softIndex)) {
+    ImGui::LabelText("Rendered As", "%s", SoftSurfaceLabel(staged->softSurfaces.rendered));
+  }
 
   changed |= ShowSoftMaterialEditor(actor->material);
 
@@ -2776,6 +2789,11 @@ void MochiPrefabEditor::ShowSoftActorDetails(int softIndex) {
   changed |= ImGui::SimpleReflectionEnum("Collider Type", actor->colliderType);
   changed |= ImGui::SimpleReflectionStruct(actor->contact);
   changed |= ImGui::SimpleReflectionEnum("Boundary Element Type", actor->boundaryElementType);
+  // Restages because the Collision Only view shows the contact skin only when it is used.
+  if (ImGui::Checkbox("Use Contact Skin", &actor->useContactSkin)) {
+    changed = true;
+    restage = true;
+  }
 
   if (modelChanged) {
     // Invalidate the cached shape so the stage rebuilds geometry with the new model/scale/offset.

@@ -123,6 +123,9 @@ class MochiPrefabEditor : public AssetEditor {
   // articulated links, link index). Pass linkIndex < 0 to match any link.
   mochi_renderer::SceneObject*
   StagedObjectForSource(StagedActorSource source, int actorIndex, int linkIndex = -1) const;
+  // The staged actor itself, or null.
+  StagedActor const*
+  StagedActorForSource(StagedActorSource source, int actorIndex, int linkIndex = -1) const;
 
   //------------------------------------------------------------------------------------------------
   // Viewport
@@ -278,7 +281,6 @@ class MochiPrefabEditor : public AssetEditor {
   // child indices.
   std::vector<HierarchyRow> _hierarchyRows;
   std::vector<std::vector<int>> _linkChildrenScratch;
-  // One-shot flag
   // One-shot flag: when set, the hierarchy expands ancestors of and scrolls to the selected
   // articulated link (set on viewport pick, consumed while rendering the tree).
   bool _forceLinkFocus = false;

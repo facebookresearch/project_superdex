@@ -18,7 +18,86 @@
 
 #include <mochi_core/utils/basic_utils.h>
 
+#include <tuple>
+#include <utility>
+
 namespace superdex::studio {
+
+// Registers the node position and normal queries of one of @p actor's meshes.
+static std::pair<mochi::QueryHandle, mochi::QueryHandle>
+RegisterSoftSurfaceQueries(mochi::Actor& actor, SoftSurface surface, mochi::Error& error) {
+  using mochi::QueryType;
+  auto const registerPair = [&](QueryType positions, QueryType normals) {
+    return std::pair{actor.RegisterQuery(positions, error), actor.RegisterQuery(normals, error)};
+  };
+  switch (surface) {
+    case SoftSurface::Visual:
+      return registerPair(QueryType::VisualNodePositions, QueryType::VisualNodeNormals);
+    case SoftSurface::ContactSkin:
+      return registerPair(QueryType::ContactSkinNodePositions, QueryType::ContactSkinNodeNormals);
+    case SoftSurface::Surface:
+      return registerPair(QueryType::SurfaceNodePositions, QueryType::SurfaceNodeNormals);
+  }
+  return {};
+}
+
+// Reads the deformed nodes of one of @p actor's meshes, from the queries RegisterSoftSurfaceQueries
+// registered, into flat renderer-space buffers (resized in place).
+static void ReadSoftSurfaceNodes(
+    mochi::Actor const& actor,
+    SoftSurface surface,
+    mochi::CoordinateSpaceConverter const& converter,
+    std::vector<float>& outPositions,
+    std::vector<float>& outNormals,
+    mochi::Error& error) {
+  using namespace mochi;
+  Span<real const> positions;
+  Span<real const> normals;
+  switch (surface) {
+    case SoftSurface::Visual:
+      positions = actor.GetVisualMeshNodePositionsLocal(error);
+      normals = actor.GetVisualMeshNodeNormalsLocal(error);
+      break;
+    case SoftSurface::ContactSkin:
+      positions = actor.GetContactSkinMeshNodePositionsLocal(error);
+      normals = actor.GetContactSkinMeshNodeNormalsLocal(error);
+      break;
+    case SoftSurface::Surface:
+      positions = actor.GetSurfaceMeshNodePositionsLocal(error);
+      normals = actor.GetSurfaceMeshNodeNormalsLocal(error);
+      break;
+  }
+  int const numNodes = isize(positions) / 3;
+  int const numNormals = isize(normals) / 3;
+  outPositions.resize(static_cast<size_t>(numNodes) * 3);
+  outNormals.resize(static_cast<size_t>(numNodes) * 3);
+  for (int n = 0; n < numNodes; ++n) {
+    auto const p = converter.TranslationToOutput(
+        StaticCast<Float3>(
+            Real3{positions[3 * n + 0], positions[3 * n + 1], positions[3 * n + 2]}));
+    outPositions[3 * n + 0] = p[0];
+    outPositions[3 * n + 1] = p[1];
+    outPositions[3 * n + 2] = p[2];
+    Float3 nm{0.0f, 1.0f, 0.0f};
+    if (n < numNormals) {
+      nm = {
+          static_cast<float>(normals[3 * n + 0]),
+          static_cast<float>(normals[3 * n + 1]),
+          static_cast<float>(normals[3 * n + 2])};
+    }
+    nm = converter.DirectionToOutput(nm);
+    outNormals[3 * n + 0] = nm[0];
+    outNormals[3 * n + 1] = nm[1];
+    outNormals[3 * n + 2] = nm[2];
+  }
+}
+
+void PrefabSimSync::CaptureStagedSurfaces(SceneStage const& stage) {
+  _stagedSurfaces.clear();
+  for (StagedActor const& staged : stage.GetActors()) {
+    _stagedSurfaces.try_emplace(staged.name, staged.softSurfaces);
+  }
+}
 
 bool PrefabSimSync::Track(mochi::Span<mochi::Actor* const> actors) {
   _actors.clear();
@@ -27,13 +106,12 @@ bool PrefabSimSync::Track(mochi::Span<mochi::Actor* const> actors) {
   for (auto* actor : actors) {
     _actors.push_back(actor->GetHandle());
   }
-  // Register per-soft-actor surface queries so the deforming mesh can be read each step. Kept until
+  // Register per-soft-actor node queries so the deforming meshes can be read each step. Kept until
   // the actors are torn down (cancelled in Untrack).
   for (auto* actor : actors) {
-    // Soft actors expose their whole deforming surface; articulated actors expose a surface only
-    // when they carry a skin (folded into the compound entity, sharing the actor's handle). Both
-    // are read the same way and emitted as SoftMeshUpdates each step, so they share this query
-    // list.
+    // Soft actors expose their deforming meshes; articulated actors expose a surface only when they
+    // carry a skin (folded into the compound entity, sharing the actor's handle). Both are read the
+    // same way and emitted as SoftMeshUpdates each step, so they share this query list.
     bool const isSoft = actor->GetType() == mochi::ActorType::Soft;
     bool const isSkinnedArticulated =
         actor->GetType() == mochi::ActorType::Articulated && !actor->GetSurfaceMesh().IsEmpty();
@@ -42,29 +120,49 @@ bool PrefabSimSync::Track(mochi::Span<mochi::Actor* const> actors) {
     }
     SoftQueryState state;
     state.actor = actor->GetHandle();
-    state.positions = actor->RegisterQuery(mochi::QueryType::SurfaceNodePositions, e);
-    state.normals = actor->RegisterQuery(mochi::QueryType::SurfaceNodeNormals, e);
-    if (!e.IsOK()) {
-      // Abort setup rather than storing a half-registered actor whose per-frame mesh update would
-      // read nothing.
-      MOCHI_LOG_ERROR("Failed to register actor surface queries");
-      return false;
-    }
     char const* const name = actor->GetName();
     std::string const actorName = name ? name : "";
     // The skin has no independent actor, so it is identified by its skin staged name to match the
     // deforming mesh SceneStage staged for it (ApplySoftMeshUpdates matches by name).
     state.name = isSkinnedArticulated ? SkinStagedName(actorName) : actorName;
+    // Query the meshes the staged actor was built from, so each query feeds its staged mesh.
+    auto const staged = _stagedSurfaces.find(state.name);
+    if (staged == _stagedSurfaces.end()) {
+      MOCHI_LOG_ERROR(
+          "PrefabSimSync::Track: no staged actor named '%s'; skipping surface queries.",
+          state.name.c_str());
+      continue;
+    }
+    state.surfaces = staged->second;
+    std::tie(state.positions, state.normals) =
+        RegisterSoftSurfaceQueries(*actor, state.surfaces.rendered, e);
+    if (state.surfaces.collision != state.surfaces.rendered) {
+      std::tie(state.collisionPositions, state.collisionNormals) =
+          RegisterSoftSurfaceQueries(*actor, state.surfaces.collision, e);
+    }
+    if (!e.IsOK()) {
+      // Abort setup rather than storing a half-registered actor whose per-frame mesh update would
+      // read nothing.
+      MOCHI_LOG_ERROR("Failed to register actor surface queries");
+      state.CancelQueries(*actor);
+      return false;
+    }
     _softQueryState.push_back(std::move(state));
   }
   return true;
 }
 
+void PrefabSimSync::SoftQueryState::CancelQueries(mochi::Actor& owner) const {
+  owner.CancelQuery(positions);
+  owner.CancelQuery(normals);
+  owner.CancelQuery(collisionPositions);
+  owner.CancelQuery(collisionNormals);
+}
+
 void PrefabSimSync::Untrack(mochi::Scene* scene) {
   for (auto const& state : _softQueryState) {
     if (auto* actor = scene->GetActor(state.actor)) {
-      actor->CancelQuery(state.positions);
-      actor->CancelQuery(state.normals);
+      state.CancelQueries(*actor);
     }
   }
 }
@@ -115,11 +213,11 @@ void PrefabSimSync::Produce(mochi::Scene* scene) {
       data.actorNames.emplace_back(name ? name : "");
     }
   }
-  // Soft actors: overwrite per-vertex surface deformations (matched to staged meshes by
-  // name), converting local positions/normals to renderer space. The SoftMeshUpdate entries
-  // and their position/normal buffers are kept resident across steps and resized/overwritten
-  // in place to avoid per-step reallocation; the vector is trimmed to the number of live soft
-  // actors so the consumer sees exactly the valid updates.
+  // Soft actors: overwrite per-vertex mesh deformations (matched to staged meshes by name),
+  // converting local positions/normals to renderer space. The SoftMeshUpdate entries and their
+  // position/normal buffers are kept resident across steps and resized/overwritten in place to
+  // avoid per-step reallocation; the vector is trimmed to the number of live soft actors so the
+  // consumer sees exactly the valid updates.
   data.softMeshUpdates.resize(_softQueryState.size());
   int updateCount = 0;
   for (auto const& state : _softQueryState) {
@@ -127,33 +225,22 @@ void PrefabSimSync::Produce(mochi::Scene* scene) {
     if (!actor) {
       continue;
     }
-    auto const positions = actor->GetSurfaceMeshNodePositionsLocal(e);
-    auto const normals = actor->GetSurfaceMeshNodeNormalsLocal(e);
-    int const numNodes = static_cast<int>(positions.size() / 3);
-    int const numNormals = static_cast<int>(normals.size() / 3);
     SoftMeshUpdate& update = data.softMeshUpdates[updateCount++];
     update.name = state.name;
     update.worldTransform = actor->GetRootTransform();
-    update.positions.resize(static_cast<size_t>(numNodes) * 3);
-    update.normals.resize(static_cast<size_t>(numNodes) * 3);
-    for (int n = 0; n < numNodes; ++n) {
-      auto const p = _editorToRenderer.TranslationToOutput(
-          mochi::StaticCast<mochi::Float3>(
-              mochi::Real3{positions[3 * n + 0], positions[3 * n + 1], positions[3 * n + 2]}));
-      update.positions[3 * n + 0] = p[0];
-      update.positions[3 * n + 1] = p[1];
-      update.positions[3 * n + 2] = p[2];
-      mochi::Float3 nm{0.0f, 1.0f, 0.0f};
-      if (n < numNormals) {
-        nm = {
-            static_cast<float>(normals[3 * n + 0]),
-            static_cast<float>(normals[3 * n + 1]),
-            static_cast<float>(normals[3 * n + 2])};
-      }
-      nm = _editorToRenderer.DirectionToOutput(nm);
-      update.normals[3 * n + 0] = nm[0];
-      update.normals[3 * n + 1] = nm[1];
-      update.normals[3 * n + 2] = nm[2];
+    ReadSoftSurfaceNodes(
+        *actor, state.surfaces.rendered, _editorToRenderer, update.positions, update.normals, e);
+    if (state.surfaces.collision != state.surfaces.rendered) {
+      ReadSoftSurfaceNodes(
+          *actor,
+          state.surfaces.collision,
+          _editorToRenderer,
+          update.collisionPositions,
+          update.collisionNormals,
+          e);
+    } else {
+      update.collisionPositions.clear();
+      update.collisionNormals.clear();
     }
   }
   // Trim any trailing entries left over from soft actors that were missing this step (rare;

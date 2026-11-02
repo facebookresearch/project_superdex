@@ -17,6 +17,7 @@
 #pragma once
 
 #include "assets/asset.h"
+#include "rendering/soft_surface.h"
 
 #include <mochi_physics/cpp_api/mochi_context.h>
 #include <mochi_renderer/resource.h>
@@ -67,16 +68,22 @@ class MochiModelAsset : public Asset {
 
   // Soft Dynamic Mesh Utils
   int GetSoftSurfaceVertexCount();
-  // Surface node count of the shape's render surface (tetrahedral boundary or triangle surface),
-  // regardless of element type. Used to stage an articulated skin (a triangle surface) through the
-  // same deforming dynamic-mesh path as soft actors.
-  int GetSurfaceVertexCount();
+  // Node count of one of the shape's triangle meshes, regardless of element type, or 0 if the shape
+  // has no such mesh. SoftSurface::Surface is the tetrahedral boundary or the triangle surface
+  // itself.
+  int GetSurfaceVertexCount(SoftSurface surface);
+  // The meshes a soft actor of this model is drawn with (see ChooseSoftSurfaces).
+  SoftSurfaces GetSoftSurfaces(bool useContactSkin) const;
+  // A solid mesh of `surfaces.rendered` and a wireframe of `surfaces.collision`, both deformable.
   bool CreateSoftDynamicMeshes(
+      SoftSurfaces const& surfaces,
       mochi::Real3 const& bakeScale,
       mochi::TransformRT const& shapeTransform,
       std::unique_ptr<mochi_renderer::Mesh>& outSolid,
       std::unique_ptr<mochi_renderer::WireframeMesh>& outWireframe);
+  // Restores meshes made by CreateSoftDynamicMeshes with the same `surfaces` to their rest pose.
   void UpdateSoftDynamicMeshes(
+      SoftSurfaces const& surfaces,
       mochi_renderer::Mesh* solid,
       mochi_renderer::WireframeMesh* wireframe,
       mochi::Real3 const& bakeScale,
@@ -147,17 +154,20 @@ class MochiModelAsset : public Asset {
       AssetManager* manager,
       mochi_renderer::ResourceManager& resourceManager);
 
-  // Load the shape's render surface (native, unbaked): the tetrahedral boundary for a tet mesh, or
-  // the triangle surface itself for a surface mesh. Vertex ordering matches the physics engine's
-  // SurfaceNodePositions query, so the same buffer can be updated in place during simulation.
-  mochi::MeshDataView GetNativeSurfaceMesh(mochi::Error& error);
+  // Load one of the shape's triangle meshes (native, unbaked). SoftSurface::Surface is the
+  // tetrahedral boundary for a tet mesh, or the triangle surface itself for a surface mesh. Vertex
+  // ordering matches the physics engine's node queries for that mesh (e.g. SurfaceNodePositions),
+  // so the same buffer can be updated in place during simulation. Empty if the shape has no such
+  // mesh.
+  mochi::MeshDataView GetNativeSurfaceMesh(SoftSurface surface, mochi::Error& error);
   // Load the model's tetrahedral boundary surface (native, unbaked); empty view + one warning if
   // the model is not a tetrahedral mesh.
   mochi::MeshDataView GetNativeSoftSurface(mochi::Error& error);
-  // Bake the native surface for `bakeScale` + `shapeTransform` into flat renderer-space buffers
+  // Bake a native triangle mesh for `bakeScale` + `shapeTransform` into flat renderer-space buffers
   // (area-weighted normals). Works for both tetrahedral boundaries and triangle surfaces (soft
-  // callers are already gated to tet meshes upstream). Returns false if the shape has no surface.
+  // callers are already gated to tet meshes upstream). Returns false if the shape has no such mesh.
   bool BakeSoftSurface(
+      SoftSurface surface,
       mochi::Real3 const& bakeScale,
       mochi::TransformRT const& shapeTransform,
       std::vector<float>& positions,

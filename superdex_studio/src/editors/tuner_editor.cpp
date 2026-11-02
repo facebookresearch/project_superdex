@@ -535,6 +535,7 @@ void TunerEditor::Initialize() {
 
   _mochiScene.Initialize(_studio->GetMochiContext(), "TunerEditor");
   ApplyRunSettings();
+  _mochiScene.onStartPhysics = [this]() { _simSync.CaptureStagedSurfaces(_stage); };
   _mochiScene.createPhysicsActors = [this](mochi::Scene* s) { CreatePhysicsActors(s); };
   _mochiScene.destroyPhysicsActors = [this](mochi::Scene* s) { DestroyPhysicsActors(s); };
   // Runs on the UI thread once the actors exist: start the per-session drag controller and reset
