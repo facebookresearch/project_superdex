@@ -22,7 +22,7 @@ As the simulation mesh deforms, SuperDex Physics maps its node positions through
 
 :::note
 This example uses a prepared asset for simplicity.
-For C++ asset-authoring workflows, `superdex::model_utils::EmbedInTetrahedralMesh()` can generate the embedding of a triangular visual mesh into the tetrahedral physics mesh of a [`ModelData`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ModelData.html), given both in the same coordinate frame. It embeds a contact skin the same way. This utility is not currently exposed in Python.
+To author a similar asset, use SuperDex Studio's Model Editor to embed a visual mesh in a tetrahedral mesh while authoring it, then export the result as a `.mochi.h5` model.
 :::
 
 ```python
