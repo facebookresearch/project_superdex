@@ -948,6 +948,17 @@ TEST(Obb, HasOverlap_Obb) {
       EXPECT_EQ(HasOverlap(a, b), kObbTest_Overlaps[i][j]);
     }
   }
+
+  // A box resting 1 mm deep on a plank rotated about two axes. They share an axis that isn't a
+  // world axis, so R's rounding must not report a separation along their null cross product.
+  Quaternion const plankRotation = Quaternion::RotationY(5.75_r) * Quaternion::RotationX(0.6_r);
+  Obb const plank{TransformRT{plankRotation}, Real3{1_r, 0.025_r, 0.1_r}};
+  Obb const box{
+      TransformRT{
+          plankRotation * Quaternion::RotationY(3.22_r),
+          plankRotation * Real3{0.95_r, 0.034_r, 0_r}},
+      Real3{0.01_r, 0.01_r, 0.01_r}};
+  EXPECT_TRUE(HasOverlap(box, plank));
 }
 
 TEST(Obb, GetAabb) {

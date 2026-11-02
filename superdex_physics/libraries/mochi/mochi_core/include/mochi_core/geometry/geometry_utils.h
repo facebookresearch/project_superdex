@@ -610,10 +610,12 @@ template <class ShapeT, MOCHI_CONCEPT(IsPrimitiveShape<ShapeT>)>
   Vec4r t = DotVecMat3x3(Tb.VGetTranslation() - Ta.VGetTranslation(), Ta.VGetRotation());
   VMatrix3x3r R = Dot3x3(Transpose3x3(Ta.VGetRotation()), Tb.VGetRotation());
 
-  // Add in an epsilon term to counteract arithmetic errors when two edges are parallel and their
-  // cross product is (near) null.
-  auto eps = std::numeric_limits<real>::epsilon();
-  VMatrix3x3r Rabs = {Abs(R[0]) + eps, Abs(R[1]) + eps, Abs(R[2]) + eps};
+  // Pad |R| to counteract arithmetic errors when two edges are parallel and their cross product is
+  // (near) null: the edge-edge tests multiply R's rounding by offsets up to the boxes' extents.
+  // R carries about 2 ulps of rounding for unit quaternions and more for ones a few ulps off unit
+  // norm, which 16 ulps still covers.
+  real constexpr kEps = 16_r * std::numeric_limits<real>::epsilon();
+  VMatrix3x3r Rabs = {Abs(R[0]) + kEps, Abs(R[1]) + kEps, Abs(R[2]) + kEps};
 
   // Retrieve extents of both Obbs.
   Vec4r ea = a.VGetHalfExtents();
