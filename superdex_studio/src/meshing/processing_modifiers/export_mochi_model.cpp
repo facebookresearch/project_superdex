@@ -88,6 +88,9 @@ mochi::ModelData MochiSpaceModel(mochi::MeshData const& input, EmbeddedMeshes co
     if (embedded.contactSkinMesh.has_value()) {
       model.contactSkinMesh = processing::ToMochiSpace(*embedded.contactSkinMesh);
     }
+    if (embedded.visualMesh.has_value()) {
+      model.visualMesh = processing::ToMochiSpace(*embedded.visualMesh);
+    }
     return model;
   }
   std::vector<MeshSection> const sections{processing::SectionFromMeshData(input)};

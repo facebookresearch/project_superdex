@@ -86,8 +86,14 @@ class EmbedMethod : public ReflectedMethod<Props> {
 
   // What the embedded mesh is for, shown above each method's parameters.
   [[nodiscard]] char const* RoleSummary() const {
-    return "A soft actor with Use Contact Skin on takes its contact samples from its contact skin "
-           "instead of its tetrahedral mesh's boundary.";
+    switch (_role) {
+      case EmbeddedMeshRole::ContactSkin:
+        return "A soft actor with Use Contact Skin on takes its contact samples from its contact "
+               "skin instead of its tetrahedral mesh's boundary.";
+      case EmbeddedMeshRole::VisualMesh:
+        return "Renderers draw a soft actor by its visual mesh, which deforms with the simulation.";
+    }
+    return "";
   }
 
  private:
@@ -156,15 +162,22 @@ class UpstreamSurfaceMethod : public EmbedMethod<UpstreamSurfaceProps> {
   }
 };
 
+ModifierRegistryEntry MakeEmbedEntry(char const* name, EmbeddedMeshRole role) {
+  return ModifierRegistryEntry{name, ModifierKind::Transform, [role]() {
+                                 std::vector<std::unique_ptr<MeshProcessingMethod>> methods;
+                                 methods.push_back(std::make_unique<UpstreamSurfaceMethod>(role));
+                                 return methods;
+                               }};
+}
+
 } // namespace
 
 ModifierRegistryEntry MakeEmbedContactSkinEntry() {
-  return ModifierRegistryEntry{
-      "Embed Contact Skin", ModifierKind::Transform, []() {
-        std::vector<std::unique_ptr<MeshProcessingMethod>> methods;
-        methods.push_back(std::make_unique<UpstreamSurfaceMethod>(EmbeddedMeshRole::ContactSkin));
-        return methods;
-      }};
+  return MakeEmbedEntry("Embed Contact Skin", EmbeddedMeshRole::ContactSkin);
+}
+
+ModifierRegistryEntry MakeEmbedVisualMeshEntry() {
+  return MakeEmbedEntry("Embed Visual Mesh", EmbeddedMeshRole::VisualMesh);
 }
 
 EmbeddedMeshStats MeasureEmbeddedMesh(EmbeddedMeshRole role, mochi::MeshData const& mesh) {

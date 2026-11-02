@@ -115,6 +115,8 @@ TEST_F(ProcessingSerializationTest, TetrahedralizeAndNoSdfExportRoundTrip) {
                     "facetDistanceBound": 0.04, "facetAngleBound": 24,
                     "cellRadiusEdgeRatio": 2.5, "detectFeatures": false,
                     "sharpFeatureAngle": 45, "perturb": false, "exude": false, "odt": true}},
+    {"modifier": "Embed Visual Mesh", "method": "Upstream Surface", "enabled": true,
+     "collapsed": true, "properties": {"referenceIndex": 0}},
     {"modifier": "Export Mochi Model", "method": "SDF", "enabled": true, "collapsed": true,
      "properties": {"bakeSdf": false}}
   ]
@@ -124,7 +126,7 @@ TEST_F(ProcessingSerializationTest, TetrahedralizeAndNoSdfExportRoundTrip) {
   picojson::object const saved = Save(loaded);
 
   EXPECT_EQ(loaded.issues, std::vector<std::string>{});
-  ASSERT_EQ(loaded.modifiers.size(), 2u);
+  ASSERT_EQ(loaded.modifiers.size(), 3u);
   EXPECT_EQ(Modifier(saved, 0).at("modifier").get<std::string>(), "Tetrahedralize");
   EXPECT_EQ(Modifier(saved, 0).at("method").get<std::string>(), "Delaunay Refinement");
   picojson::object const& tet = Properties(saved, 0);
@@ -138,13 +140,16 @@ TEST_F(ProcessingSerializationTest, TetrahedralizeAndNoSdfExportRoundTrip) {
   EXPECT_FALSE(tet.at("perturb").get<bool>());
   EXPECT_FALSE(tet.at("exude").get<bool>());
   EXPECT_TRUE(tet.at("odt").get<bool>());
-  EXPECT_EQ(Modifier(saved, 1).at("modifier").get<std::string>(), "Export Mochi Model");
-  EXPECT_EQ(Modifier(saved, 1).at("method").get<std::string>(), "SDF");
-  EXPECT_FALSE(Properties(saved, 1).at("bakeSdf").get<bool>());
+  EXPECT_EQ(Modifier(saved, 1).at("modifier").get<std::string>(), "Embed Visual Mesh");
+  EXPECT_EQ(Modifier(saved, 1).at("method").get<std::string>(), "Upstream Surface");
+  EXPECT_EQ(Properties(saved, 1).at("referenceIndex").get<double>(), 0.0);
+  EXPECT_EQ(Modifier(saved, 2).at("modifier").get<std::string>(), "Export Mochi Model");
+  EXPECT_EQ(Modifier(saved, 2).at("method").get<std::string>(), "SDF");
+  EXPECT_FALSE(Properties(saved, 2).at("bakeSdf").get<bool>());
   EXPECT_EQ(
-      loaded.modifiers[1]->ExportPath(),
+      loaded.modifiers[2]->ExportPath(),
       (_rootCleanup.Path() / "collision" / "part.mochi.h5").string());
-  EXPECT_EQ(Properties(saved, 1).count("exportPath"), 0u);
+  EXPECT_EQ(Properties(saved, 2).count("exportPath"), 0u);
 }
 
 TEST_F(ProcessingSerializationTest, ListsWhatItCannotReadAndLoadsTheRest) {

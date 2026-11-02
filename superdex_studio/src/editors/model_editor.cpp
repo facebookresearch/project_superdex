@@ -292,6 +292,17 @@ std::string FormatByteSize(int64_t bytes) {
   return out.str();
 }
 
+// The stats heading of a mesh embedded in @p role, padded to line up with the other headings.
+char const* EmbeddedMeshStatsHeading(EmbeddedMeshRole role) {
+  switch (role) {
+    case EmbeddedMeshRole::ContactSkin:
+      return "Contact skin: ";
+    case EmbeddedMeshRole::VisualMesh:
+      return "Visual mesh:  ";
+  }
+  return "";
+}
+
 // Composites a MeshStats' display string from its base summary plus its annotations: the file-size
 // line first (when set), then SDF grid, tet mesh and embedded mesh lines (when set), then the base
 // summary (headed as the boundary surface for a tet mesh), and a Hausdorff line appended (when >=
@@ -313,7 +324,7 @@ void ComposeStats(MeshStats& stats) {
   }
   if (stats.embeddedMesh.has_value()) {
     EmbeddedMeshStats const& mesh = *stats.embeddedMesh;
-    out << "Contact skin: " << mesh.nodes << " nodes, " << mesh.triangles
+    out << EmbeddedMeshStatsHeading(mesh.role) << mesh.nodes << " nodes, " << mesh.triangles
         << " tris, max extrapolation " << std::fixed << std::setprecision(2)
         << mesh.maxExtrapolation << "\n";
   }

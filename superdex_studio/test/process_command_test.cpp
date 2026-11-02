@@ -23,11 +23,13 @@
 
 #include <mochi_core/geometry/model_data.h>
 #include <mochi_core/test/mochi_test_helpers.h>
+#include <mochi_core/utils/coordinate_space_converter.h>
 #include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/file_utils.h>
 #include <mochi_core/utils/math_utils.h>
 #include <mochi_physics/mochi_physics.h>
 #include <mochi_physics/utils/mochi_model_utils.h>
+#include <mochi_renderer/render_space.h>
 #include <mochi_renderer/utils.h>
 
 #include <gtest/gtest.h>
@@ -52,31 +54,39 @@ constexpr float kHalfSide = 0.05f; // a 10 cm cube centered on the origin
 constexpr int kCubeTriangles = 12;
 constexpr double kFileSizeEstimateTolerance = 0.1;
 
+// The cube's corners, indexed as bit 0 = x, 1 = y, 2 = z.
+constexpr std::array<std::array<float, 3>, 8> kCorner{{
+    {-kHalfSide, -kHalfSide, -kHalfSide},
+    {kHalfSide, -kHalfSide, -kHalfSide},
+    {-kHalfSide, kHalfSide, -kHalfSide},
+    {kHalfSide, kHalfSide, -kHalfSide},
+    {-kHalfSide, -kHalfSide, kHalfSide},
+    {kHalfSide, -kHalfSide, kHalfSide},
+    {-kHalfSide, kHalfSide, kHalfSide},
+    {kHalfSide, kHalfSide, kHalfSide},
+}};
+
+// The cube's sides (-x, +x, -y, +y, -z, +z) as outward-wound corner quads.
+constexpr std::array<std::array<int, 4>, 6> kSide{{
+    {0, 4, 6, 2},
+    {1, 3, 7, 5},
+    {0, 1, 5, 4},
+    {2, 6, 7, 3},
+    {0, 2, 3, 1},
+    {4, 5, 7, 6},
+}};
+
 // Writes a binary STL of the cube, outward-wound.
 void WriteCubeStl(
     fs::path const& path,
     std::array<float, 3> const& center = std::array<float, 3>{}) {
   fs::create_directories(path.parent_path());
-  float const h = kHalfSide;
-  std::array<std::array<float, 3>, 8> const corner{{
-      {center[0] - h, center[1] - h, center[2] - h},
-      {center[0] + h, center[1] - h, center[2] - h},
-      {center[0] - h, center[1] + h, center[2] - h},
-      {center[0] + h, center[1] + h, center[2] - h},
-      {center[0] - h, center[1] - h, center[2] + h},
-      {center[0] + h, center[1] - h, center[2] + h},
-      {center[0] - h, center[1] + h, center[2] + h},
-      {center[0] + h, center[1] + h, center[2] + h},
-  }};
-  // Two triangles per side (-x, +x, -y, +y, -z, +z), corners indexed as bit 0 = x, 1 = y, 2 = z.
-  std::array<std::array<int, 4>, 6> const side{{
-      {0, 4, 6, 2},
-      {1, 3, 7, 5},
-      {0, 1, 5, 4},
-      {2, 6, 7, 3},
-      {0, 2, 3, 1},
-      {4, 5, 7, 6},
-  }};
+  auto corner = kCorner;
+  for (auto& position : corner) {
+    for (int axis = 0; axis < 3; ++axis) {
+      position[axis] += center[axis];
+    }
+  }
   std::ofstream out(path, std::ios::binary);
   std::array<char, 80> const header{};
   out.write(header.data(), header.size());
@@ -91,10 +101,29 @@ void WriteCubeStl(
     uint16_t const attribute = 0;
     out.write(reinterpret_cast<char const*>(&attribute), sizeof(attribute));
   };
-  for (auto const& quad : side) {
+  for (auto const& quad : kSide) {
     writeTriangle(quad[0], quad[1], quad[2]);
     writeTriangle(quad[0], quad[2], quad[3]);
   }
+}
+
+// Writes the cube as a .glb of two primitives, the x sides and the other four, each with its own
+// copy of the corners, as a render model split by material would be. Returns the primitives.
+std::vector<mochi_renderer::MeshSection> WriteCubeGlb(fs::path const& path) {
+  fs::create_directories(path.parent_path());
+  std::vector<mochi_renderer::MeshSection> primitives(2);
+  for (mochi_renderer::MeshSection& primitive : primitives) {
+    for (auto const& corner : kCorner) {
+      primitive.positions.insert(primitive.positions.end(), corner.begin(), corner.end());
+    }
+  }
+  for (std::size_t s = 0; s < kSide.size(); ++s) {
+    auto const& quad = kSide[s];
+    std::vector<int>& indices = primitives[s < 2 ? 0 : 1].indices;
+    indices.insert(indices.end(), {quad[0], quad[1], quad[2], quad[0], quad[2], quad[3]});
+  }
+  EXPECT_TRUE(mochi_renderer::WriteGlbToFile(path.string().c_str(), primitives));
+  return primitives;
 }
 
 // A pipeline: a CAD source, a mesh export, and an SDF export with 1 cm voxels. The mesh export
@@ -131,10 +160,18 @@ constexpr char const* kMakeWatertight =
     R"({"modifier": "Refine Mesh", "method": "Make Watertight", "enabled": true,
         "collapsed": true, "properties": {}})";
 
-// Embeds the source surface (the cube) as the contact skin.
+// Embed the source surface (the cube) as the contact skin or the visual mesh.
 constexpr char const* kEmbedSourceAsContactSkin =
     R"({"modifier": "Embed Contact Skin", "method": "Upstream Surface", "enabled": true,
         "collapsed": true, "properties": {"referenceIndex": 0}})";
+
+constexpr char const* kEmbedSourceAsVisualMesh =
+    R"({"modifier": "Embed Visual Mesh", "method": "Upstream Surface", "enabled": true,
+        "collapsed": true, "properties": {"referenceIndex": 0}})";
+
+constexpr char const* kRenderSourceFromModelViewer =
+    R"({"modifier": "Source from Render Model", "method": "From Model Viewer", "enabled": true,
+        "collapsed": true, "properties": {}})";
 
 constexpr char const* kSdfExport =
     R"({"modifier": "Export Mochi Model", "method": "SDF", "enabled": true, "collapsed": true,
@@ -518,6 +555,31 @@ TEST_F(ProcessCommandTest, AnSrtBelowAnEmbedIsRejected) {
   EXPECT_NE(report.stages[3].error.find("embedded"), std::string::npos) << report.stages[3].error;
 }
 
+TEST_F(ProcessCommandTest, AContactSkinAndAVisualMeshAreEmbeddedTogether) {
+  WriteCubeStl(_root / "cad" / "cube.stl");
+  fs::path const pipeline = _root / "intermediates" / "cube.StudioProcessing.json";
+  WriteModifiers(
+      pipeline,
+      {kSourceFromModelViewer,
+       kTetrahedralize,
+       kEmbedSourceAsContactSkin,
+       kEmbedSourceAsVisualMesh,
+       kNoSdfExport});
+
+  mochi::Error error;
+  ProcessReport const report = RunProcessingPipeline({.pipelinePath = pipeline.string()}, error);
+
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  ASSERT_TRUE(report.succeeded);
+  mochi::ModelData const model =
+      mochi::model_utils::LoadFromFile((_root / "collision" / "cube.mochi.h5").string(), error);
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  ASSERT_TRUE(model.contactSkinMesh.has_value());
+  ASSERT_TRUE(model.visualMesh.has_value());
+  EXPECT_EQ(model.visualMesh->coordinates, model.contactSkinMesh->coordinates);
+  EXPECT_TRUE(model.visualMesh->skinning.has_value());
+}
+
 TEST_F(ProcessCommandTest, AMeshIsEmbeddedOnlyOncePerRole) {
   WriteCubeStl(_root / "cad" / "cube.stl");
   fs::path const pipeline = _root / "intermediates" / "cube.StudioProcessing.json";
@@ -552,6 +614,69 @@ TEST_F(ProcessCommandTest, AContactSkinNeedsATetMesh) {
   EXPECT_FALSE(report.stages[1].succeeded);
   EXPECT_NE(report.stages[1].error.find("Tetrahedralize"), std::string::npos)
       << report.stages[1].error;
+}
+
+// The render model's own source, ahead of the CAD source the tetrahedral mesh is built from,
+// provides the surface to embed vertex for vertex in file order.
+TEST_F(ProcessCommandTest, AnUpstreamRenderModelIsEmbeddedVertexForVertex) {
+  WriteCubeStl(_root / "cad" / "cube.stl");
+  std::vector<mochi_renderer::MeshSection> const primitives =
+      WriteCubeGlb(_root / "render" / "cube.glb");
+  fs::path const pipeline = _root / "intermediates" / "cube.StudioProcessing.json";
+  WriteModifiers(
+      pipeline,
+      {kRenderSourceFromModelViewer,
+       kSourceFromModelViewer,
+       kTetrahedralize,
+       kEmbedSourceAsVisualMesh,
+       kNoSdfExport});
+
+  mochi::Error error;
+  ProcessReport const report = RunProcessingPipeline({.pipelinePath = pipeline.string()}, error);
+
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  EXPECT_TRUE(report.succeeded);
+  fs::path const modelPath = _root / "collision" / "cube.mochi.h5";
+  mochi::ModelData const model = mochi::model_utils::LoadFromFile(modelPath.string(), error);
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  ASSERT_TRUE(model.visualMesh.has_value());
+  // The render model's vertices, in file order, converted from its Y-up space to Mochi's.
+  mochi::CoordinateSpaceConverter const renderToMochi(
+      mochi_renderer::RenderSpace(), mochi::CoordinateSpace::Default());
+  std::vector<mochi::real> coordinates;
+  std::vector<int> connectivity;
+  for (mochi_renderer::MeshSection const& primitive : primitives) {
+    int const base = static_cast<int>(coordinates.size() / 3);
+    for (std::size_t i = 0; i < primitive.positions.size(); i += 3) {
+      mochi::Real3 const p = renderToMochi.TranslationToOutput(
+          mochi::Real3{
+              primitive.positions[i], primitive.positions[i + 1], primitive.positions[i + 2]});
+      coordinates.insert(coordinates.end(), p.begin(), p.end());
+    }
+    for (int const index : primitive.indices) {
+      connectivity.push_back(base + index);
+    }
+  }
+  EXPECT_EQ(
+      std::vector<int>(
+          model.visualMesh->connectivity.begin(), model.visualMesh->connectivity.end()),
+      connectivity);
+  ASSERT_EQ(model.visualMesh->coordinates.size(), coordinates.size());
+  for (std::size_t i = 0; i < coordinates.size(); ++i) {
+    EXPECT_NEAR(model.visualMesh->coordinates[i], coordinates[i], 1e-6f) << i;
+  }
+  ASSERT_TRUE(model.visualMesh->skinning.has_value());
+  EXPECT_EQ(model.visualMesh->skinning->indices.size(), coordinates.size() / 3 * 4);
+
+  mochi::Context* const context = mochi::CreateContext(0);
+  MOCHI_DEFER(mochi::DestroyContext(context));
+  mochi::Scene* const scene = context->CreateScene("visual_mesh_export");
+  MOCHI_DEFER(context->DestroyScene(scene));
+  mochi::SoftActorParams params;
+  params.shape = context->LoadShapeFromFile(modelPath.string(), error);
+  MOCHI_DEFER(context->ReleaseShape(params.shape));
+  EXPECT_NE(scene->CreateSoftActor(params, error), nullptr);
+  EXPECT_TRUE(error.IsOK()) << error.GetDescription();
 }
 
 TEST_F(ProcessCommandTest, SdfExportOfATetMeshWritesBoth) {

@@ -56,6 +56,7 @@ std::vector<ModifierRegistryEntry> const& ProcessingModifierRegistry() {
     entries.push_back(MakeExtractSurfaceEntry());
     entries.push_back(MakeTransformEntry());
     entries.push_back(MakeEmbedContactSkinEntry());
+    entries.push_back(MakeEmbedVisualMeshEntry());
     // Exports
     entries.push_back(MakeMochiModelExportEntry());
     entries.push_back(MakeExportMeshFileEntry());

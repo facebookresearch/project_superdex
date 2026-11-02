@@ -50,8 +50,8 @@ class value;
 
 namespace superdex::studio {
 
-// What a mesh embedded in another is for: the field of mochi::ModelData it is exported as.
-enum class EmbeddedMeshRole { ContactSkin };
+// What a mesh embedded in another is for: the fields of mochi::ModelData it is exported as.
+enum class EmbeddedMeshRole { ContactSkin, VisualMesh };
 
 // Triangle meshes embedded in a stage's mesh, each by skinning that gives its nodes as weighted
 // combinations of that mesh's nodes. They are valid only for the exact mesh they were embedded in,
@@ -60,6 +60,7 @@ enum class EmbeddedMeshRole { ContactSkin };
 // mochi::ModelData fields of the same names.
 struct EmbeddedMeshes {
   std::optional<mochi::MeshData> contactSkinMesh;
+  std::optional<mochi::MeshData> visualMesh;
 
   // The field holding the mesh embedded in @p role.
   [[nodiscard]] static std::optional<mochi::MeshData> EmbeddedMeshes::* Field(
@@ -67,6 +68,8 @@ struct EmbeddedMeshes {
     switch (role) {
       case EmbeddedMeshRole::ContactSkin:
         return &EmbeddedMeshes::contactSkinMesh;
+      case EmbeddedMeshRole::VisualMesh:
+        return &EmbeddedMeshes::visualMesh;
     }
     return nullptr;
   }
@@ -77,7 +80,7 @@ struct EmbeddedMeshes {
     return this->*Field(role);
   }
   [[nodiscard]] bool IsEmpty() const {
-    return !contactSkinMesh.has_value();
+    return !contactSkinMesh.has_value() && !visualMesh.has_value();
   }
 };
 
