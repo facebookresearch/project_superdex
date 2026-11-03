@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <string>
+#include <string_view>
 
 using namespace mochi;
 using namespace superdex::robotics;
@@ -227,6 +228,25 @@ TEST(UrdfRoundtrip, NonIdentityParentJointFromLinkFolds) {
   Real3 const expectedAxis =
       bot.links[1].parentJointFromLink.GetRotation().GetConjugate() * bot.joints[1].axis;
   EXPECT_NEAR_TOL(re.joints[1].axis, expectedAxis, kTolerance);
+}
+
+// URDF has no density, so a link with a density instead of a mass gets no <inertial>, rather than
+// a zero mass that SuperDex rejects.
+TEST(UrdfRoundtrip, DensityLinkHasNoInertial) {
+  BotPrefab bot;
+  bot.name = "density_bot";
+  bot.links.emplace_back();
+  bot.links[0].name = "base";
+  bot.links[0].parentLink = kIndexNone;
+  bot.links[0].density = 500_r;
+  bot.links[0].centerOfMass = Real3{0.1_r, 0_r, 0_r};
+  bot.links[0].momentOfInertia = Real6{0.1_r, 0_r, 0_r, 0.1_r, 0_r, 0.1_r};
+  bot.joints.emplace_back();
+  bot.joints[0].name = "world_joint";
+  bot.joints[0].type = ArticulatedJointType::Free;
+
+  DynamicString const xml = SaveToUrdfString(bot, ExpectOK{});
+  EXPECT_EQ(std::string_view(xml).find("<inertial"), std::string_view::npos);
 }
 
 // A joint origin at +90 deg pitch (rotation about Y) drives the exporter's FormatRpy into its

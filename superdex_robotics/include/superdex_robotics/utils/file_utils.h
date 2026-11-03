@@ -28,6 +28,7 @@
 #include <array>
 #include <cctype>
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <optional>
 #include <string>
@@ -798,6 +799,111 @@ SaveToUrdfFile(BotPrefab const& botPrefab, std::string_view path, superdex::Erro
  */
 [[nodiscard]] MOCHI_API DynamicString
 SaveToUrdfString(BotPrefab const& botPrefab, superdex::Error& error);
+
+#if SUPERDEXROBOTICS_WITH_BOT_SCENE
+/* @brief Velocity limit for every exported joint whose SuperDex name (after
+ * @ref SceneUrdfOptions::stripIndexPrefixes) is @ref joint. */
+struct SceneUrdfJointVelocityLimit {
+  /* @brief SuperDex joint name, e.g. "Joint1_L" or "thumb_cmc_flex". */
+  DynamicString joint;
+  /* @brief Velocity limit [rad/s or m/s]. */
+  real velocity = 0_r;
+};
+
+/* @brief An extra URDF frame rigidly attached to every exported link named @ref link. */
+struct SceneUrdfLinkAlias {
+  /* @brief SuperDex link name (after @ref SceneUrdfOptions::stripIndexPrefixes). */
+  DynamicString link;
+  /* @brief Alias name, prefixed like the link it is attached to. */
+  DynamicString alias;
+};
+
+/* @brief Options for @ref SaveBotSceneToUrdfString. */
+struct SceneUrdfOptions {
+  /* @brief URDF robot name. Empty uses the scene's metadata name, or "scene". */
+  DynamicString robotName;
+  /* @brief Links and joints of a bot that fills a slot are named "{slot}_{instanceName}_{name}",
+   * and other bots' "{entry}_{name}". Base-scene actors keep their names, prefixed with
+   * "{prefab}_" for each nested prefab. */
+  DynamicString instanceName = DynamicString("real");
+  /* @brief Strip a leading "link_NN_" or "joint_NN_" index from SuperDex names. */
+  bool stripIndexPrefixes = false;
+  /* @brief Velocity limits by joint name. @ref BotJointPrefab has none of its own. */
+  DynamicArray<SceneUrdfJointVelocityLimit> jointVelocityLimits;
+  /* @brief Fail if a joint with position limits has no entry in @ref jointVelocityLimits. When
+   * false, such joints get a placeholder velocity of 1, as @ref SaveToUrdfFile writes. */
+  bool requireVelocityLimits = true;
+  /* @brief Extra frames to add, e.g. ROS names for a bot's base and tool links. */
+  DynamicArray<SceneUrdfLinkAlias> linkAliases;
+};
+
+/* @brief How a URDF refers to a mesh that a @ref SceneUrdfMeshWriter wrote. */
+struct SceneUrdfMesh {
+  /* @brief URDF mesh `filename`, or empty to omit the element. */
+  DynamicString filename;
+  /* @brief Visual material color (RGBA), or nullopt for no `<material>`. */
+  std::optional<Real4> rgba;
+};
+
+/* @brief Writes the mesh of @p link's render model (@p visual) or collision shape, for the URDF
+ * link named @p urdfLink. */
+using SceneUrdfMeshWriter = std::function<SceneUrdfMesh(
+    BotLinkPrefab const& link,
+    std::string_view urdfLink,
+    bool visual,
+    superdex::Error& error)>;
+
+/**
+ * @brief Export a bot scene to one URDF XML string.
+ *
+ * @details The URDF is rooted at a `world` link, the scene root. Each bot entry, base-scene
+ * articulated actor and static rigid actor hangs from it by a `fixed` joint named
+ * `{root link}_placement`, with its own links and joints unchanged below. Dynamic and soft actors,
+ * tasks and spawnable prefabs are skipped, and skins are not exported, so a skinned hand is rigid.
+ * SuperDex, unlike URDF, needs joint names to differ from link names, so a joint named like a link
+ * (e.g. "joint_01_wrist" beside "link_01_wrist", with @ref SceneUrdfOptions::stripIndexPrefixes)
+ * gets a `_joint` suffix.
+ *
+ * Each sensor becomes a `{name}_frame` link at its `parentFromSensor` on its link (bot sensors)
+ * or on `world` (scene sensors). A sensor whose name another sensor shares takes its bot's prefix,
+ * as the bot's links do, and an unnamed sensor is named `{link}_sensor_{index}`, after its URDF
+ * link and its index on that link. A camera's `parentFromSensor` is its optical frame (Z forward,
+ * X right, Y down): it gets a `{name}_optical_frame` link there, and `{name}_frame` follows ROS
+ * REP-103 (X forward, Z up). Intrinsics are not exported.
+ *
+ * @param[in] scene Path-resolved scene, as returned by @ref LoadBotScenePrefabFromFile.
+ * @param[in] rootPath Root directory for the base scene's relative paths (see
+ * @ref GetBotSceneBaseRoot).
+ * @param[in] options Export options.
+ * @param[in] mesh Writes each link's meshes. Null omits `<visual>` and `<collision>` elements.
+ * @param[in,out] error Error status. Check @ref Error::IsOK for success.
+ * @return The URDF XML.
+ */
+[[nodiscard]] MOCHI_API DynamicString SaveBotSceneToUrdfString(
+    BotScenePrefab const& scene,
+    std::string_view rootPath,
+    SceneUrdfOptions const& options,
+    SceneUrdfMeshWriter const& mesh,
+    superdex::Error& error);
+
+/**
+ * @brief Export a bot scene to a URDF XML string, without meshes.
+ *
+ * @details Same as the overload with a @ref SceneUrdfMeshWriter, with no `<visual>` or
+ * `<collision>` elements.
+ *
+ * @param[in] scene Path-resolved scene, as returned by @ref LoadBotScenePrefabFromFile.
+ * @param[in] rootPath Root directory for the base scene's relative paths.
+ * @param[in] options Export options.
+ * @param[in,out] error Error status. Check @ref Error::IsOK for success.
+ * @return The URDF XML.
+ */
+[[nodiscard]] MOCHI_API DynamicString SaveBotSceneToUrdfString(
+    BotScenePrefab const& scene,
+    std::string_view rootPath,
+    SceneUrdfOptions const& options,
+    superdex::Error& error);
+#endif // SUPERDEXROBOTICS_WITH_BOT_SCENE
 
 // ---------------------------------------------------------------------------
 // MJCF
