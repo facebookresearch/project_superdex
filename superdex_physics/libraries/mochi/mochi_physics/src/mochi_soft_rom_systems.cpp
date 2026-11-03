@@ -1540,11 +1540,8 @@ static void SwapActiveElementsBshStrategy(
 
     DynamicArray<Real3> result(&allocator);
     result.reserve(boundaryFaces.size());
-    std::transform(
-        boundaryFaces.begin(),
-        boundaryFaces.end(),
-        std::back_inserter(result),
-        [&](Int3 const& face) -> Real3 {
+    std::ranges::transform(
+        boundaryFaces, std::back_inserter(result), [&](Int3 const& face) -> Real3 {
           auto p1 = positionAt(face[0]);
           auto p2 = positionAt(face[1]);
           auto p3 = positionAt(face[2]);

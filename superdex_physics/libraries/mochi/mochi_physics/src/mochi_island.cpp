@@ -249,7 +249,7 @@ void island::RemoveActor(entt::registry& reg, entt::entity actor) {
   // Remove the actor from CIslandMembers unless it was nested within a compound (in which case it
   // shouldn't be listed there).
   auto& members = reg.get<CIslandMembers>(island);
-  auto foundIt = std::find(members.actors.begin(), members.actors.end(), actor);
+  auto foundIt = std::ranges::find(members.actors, actor);
   if (info->isNested) {
     MOCHI_ASSERT(foundIt == members.actors.end(), "CIslandMemberInfo::isNested was incorrect");
   } else {
@@ -441,7 +441,7 @@ static void TrySplitIslands(entt::registry& reg) {
                 // Merge the greater partition index into the lesser one
                 auto replaceThis = Max(actorPartitions[i], actorPartitions[j]);
                 auto withThis = Min(actorPartitions[i], actorPartitions[j]);
-                std::replace(actorPartitions.begin(), actorPartitions.end(), replaceThis, withThis);
+                std::ranges::replace(actorPartitions, replaceThis, withThis);
                 ++numUnusedPartitionIds;
               }
             }
@@ -580,7 +580,7 @@ static bool UpdateForceGlobalIsland(entt::registry& reg) {
 static void SortIslandMembers(CIslandMembers& outMembers) {
   // Sort actors and constraints by entity value for deterministic ordering
   auto sortMembers = [](std::vector<entt::entity>& members) {
-    std::sort(members.begin(), members.end(), [&](entt::entity a, entt::entity b) {
+    std::ranges::sort(members, [&](entt::entity a, entt::entity b) {
       return static_cast<uint32_t>(a) < static_cast<uint32_t>(b);
     });
   };

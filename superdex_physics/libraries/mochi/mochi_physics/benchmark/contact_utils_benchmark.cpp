@@ -654,8 +654,8 @@ static void BenchmarkFindPointContact_SdfWithBsh(
   for (int i = 0; i < isize(resultIndices); ++i) {
     actualResultIndices[i] = culledIndices[resultIndices[i]];
   }
-  std::sort(expectedResultIndices.begin(), expectedResultIndices.end());
-  std::sort(actualResultIndices.begin(), actualResultIndices.end());
+  std::ranges::sort(expectedResultIndices);
+  std::ranges::sort(actualResultIndices);
   if (actualResultIndices != expectedResultIndices) {
     state.SkipWithError("BSH culling changed the contact result");
     return;

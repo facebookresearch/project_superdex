@@ -548,9 +548,7 @@ class ActorInterfaceImpl : public ActorInterface {
     // component without removing it.
     auto const* bc = reg.try_get<CDofPositionsBC const>(e);
     bool const hasTranslationBC =
-        bc && std::any_of(bc->poseIndices.begin(), bc->poseIndices.end(), [](int i) {
-          return i < RigidSize::kTrans;
-        });
+        bc && std::ranges::any_of(bc->poseIndices, [](int i) { return i < RigidSize::kTrans; });
     MOCHI_ERROR_IF(
         comChanged && (reg.all_of<CConstraintMemberInfo>(e) || hasTranslationBC),
         error,
@@ -1169,7 +1167,7 @@ class ActorInterfaceImpl : public ActorInterface {
       return; // No change
     }
 
-    std::copy(friction.begin(), friction.end(), current.begin());
+    std::ranges::copy(friction, current.begin());
     WakeUp();
   }
 
@@ -1208,7 +1206,7 @@ class ActorInterfaceImpl : public ActorInterface {
       return; // No change
     }
 
-    std::copy(inertia.begin(), inertia.end(), current.begin());
+    std::ranges::copy(inertia, current.begin());
     WakeUp();
   }
 
@@ -1904,7 +1902,7 @@ class ActorInterfaceImpl : public ActorInterface {
 
     // Copy the pose or convert pose to dofs if necessary
     if (pose.size() == outPose.size()) {
-      std::copy(pose.begin(), pose.end(), outPose.begin());
+      std::ranges::copy(pose, outPose.begin());
     } else {
       auto const* joints = reg.get<CArticulatedBodyShape const>(e).shape->GetJointsData();
       auto const& poseInfo = reg.get<CArticulatedJointPoseInfo const>(e);
@@ -2201,7 +2199,7 @@ class ActorInterfaceImpl : public ActorInterface {
     };
 
     auto hasAllRotations = [&](Span<int const> rotInds) {
-      return std::includes(dofIndices.begin(), dofIndices.end(), rotInds.begin(), rotInds.end());
+      return std::ranges::includes(dofIndices, rotInds);
     };
 
     auto hasPartialRotationBCs = [&](Span<int const> rotInds) {
@@ -2463,7 +2461,7 @@ class ActorInterfaceImpl : public ActorInterface {
     int const numDofs = GetNumDofs();
     MOCHI_ERROR_IF(isize(outForces) != numDofs, error, "outForces size must equal number of DOFs.");
     MOCHI_ERROR_RETURN(error);
-    std::fill(outForces.begin(), outForces.end(), real{});
+    std::ranges::fill(outForces, real{});
     auto const* ef = reg.try_get<CExternalForces const>(e);
     if (ef && !ef->Empty()) {
       for (int i = 0; i < isize(ef->dofs); ++i) {

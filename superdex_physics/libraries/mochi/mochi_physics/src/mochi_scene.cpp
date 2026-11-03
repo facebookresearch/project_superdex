@@ -3053,8 +3053,7 @@ Constraint* SceneImpl::CreateConstraintImpl(
   for (entt::entity actor : info.actors) {
     auto& actorInfo = _registry.get_or_emplace<CConstraintMemberInfo>(actor);
     // It's possible that a constraint acts on two nodes of the same actor. Skip if already present
-    if (std::find(actorInfo.constraints.begin(), actorInfo.constraints.end(), e) ==
-        actorInfo.constraints.end()) {
+    if (std::ranges::find(actorInfo.constraints, e) == actorInfo.constraints.end()) {
       actorInfo.constraints.push_back(e);
     }
   }
@@ -3310,7 +3309,7 @@ void SceneImpl::DestroyConstraint(ConstraintHandle constraint) {
     }
 
     auto& actorConstraints = _registry.get<CConstraintMemberInfo>(actor).constraints;
-    auto itr = std::find(actorConstraints.begin(), actorConstraints.end(), constraintEntity);
+    auto itr = std::ranges::find(actorConstraints, constraintEntity);
     MOCHI_ASSERT(
         itr != actorConstraints.end(),
         "CConstraintInfo on the constraint entity is out-of-sync with CConstraintMemberInfo on the actor");

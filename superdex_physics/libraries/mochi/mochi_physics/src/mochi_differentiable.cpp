@@ -31,6 +31,7 @@
 #include <mochi_core/utils/assembly_params.h>
 #include <mochi_core/utils/task_scheduler.h>
 
+#include <algorithm>
 #include <limits>
 #include <variant>
 
@@ -534,7 +535,7 @@ static void PrepareBackPropagationIslandAsync(
   solver::PreStageLocalPipeline(reg, descendants, problem);
 
   // Run collision detection if some actor has queries enabled
-  if (std::any_of(descendants.actors.begin(), descendants.actors.end(), [&](auto const& e) {
+  if (std::ranges::any_of(descendants.actors, [&](auto const& e) {
         return reg.any_of<CQueryActorContactForces>(e);
       })) {
     // We must visit the full island, to account for cases where the queried actors act as
@@ -731,7 +732,7 @@ void mochi::PrepareContactForceAdjoints(
   auto prepareAdjoints = [](ContactDetectionResult& collisionResult) {
     auto& adjoints = collisionResult.forcePerUnitArea;
     adjoints.resize_noinit(collisionResult.sampleIndices.size());
-    std::fill(adjoints.begin(), adjoints.end(), Real3{});
+    std::ranges::fill(adjoints, Real3{});
   };
 
   for (auto& collision : outActiveCollisionsAsync) {

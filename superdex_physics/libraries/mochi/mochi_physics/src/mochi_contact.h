@@ -582,9 +582,8 @@ struct JacData {
   }
 
   [[nodiscard]] bool HasSolverDoFs() const {
-    return std::any_of(_jacs.begin(), _jacs.end(), [](ContactJac const& jac) {
-      return jac.nContacts > 0 && jac.nDoFsState > 0;
-    });
+    return std::ranges::any_of(
+        _jacs, [](ContactJac const& jac) { return jac.nContacts > 0 && jac.nDoFsState > 0; });
   }
 
   // Signal that the pair may no longer be in contact, before its contact Jacobian is registered and

@@ -514,7 +514,7 @@ class CActiveVolumeElements : public NoCopy {
     _indices.assign(newActiveIndices.begin(), newActiveIndices.end());
 
     // recompute the "indicator" vector that for each element stores if it is active or not
-    std::fill(_isActive.begin(), _isActive.end(), 0);
+    std::ranges::fill(_isActive, 0);
     for (auto i : _indices) {
       _isActive[i] = true;
     }
@@ -544,16 +544,13 @@ class CActiveVolumeElements : public NoCopy {
     MOCHI_ASSERT_VERBOSE(isize(_weights) == _mesh->GetNumElements());
 
     real activeSum = {};
-    std::for_each(_indices.cbegin(), _indices.cend(), [&](int i) {
-      activeSum += _mesh->GetElementMeasure(i);
-    });
+    std::ranges::for_each(_indices, [&](int i) { activeSum += _mesh->GetElementMeasure(i); });
     MOCHI_ASSERT(activeSum > 0, "Active measure must be positive.");
 
     // Only need to store the weights for the active elements.
     real const totalMeasure = _mesh->GetTotalMeasure();
-    std::for_each(_indices.cbegin(), _indices.cend(), [&](int elemIndex) {
-      _weights[elemIndex] = totalMeasure / activeSum;
-    });
+    std::ranges::for_each(
+        _indices, [&](int elemIndex) { _weights[elemIndex] = totalMeasure / activeSum; });
   }
 };
 
@@ -710,7 +707,7 @@ class CActiveBoundaryFaces : public NoCopy {
 
   void UpdateActiveSet(Span<int const> newActiveFaceIndices) {
     _activeBoundaryFaceInds.assign(newActiveFaceIndices.begin(), newActiveFaceIndices.end());
-    std::fill(_isActive.begin(), _isActive.end(), 0);
+    std::ranges::fill(_isActive, 0);
     for (auto i : _activeBoundaryFaceInds) {
       _isActive[i] = true;
     }
@@ -749,17 +746,16 @@ class CActiveBoundaryFaces : public NoCopy {
       MOCHI_ASSERT(isize(_weights) == _boundaryMesh->GetNumElements());
 
       real activeMeasure = 0_r;
-      std::for_each(_activeBoundaryFaceInds.cbegin(), _activeBoundaryFaceInds.cend(), [&](int i) {
+      std::ranges::for_each(_activeBoundaryFaceInds, [&](int i) {
         activeMeasure += _boundaryMesh->GetElementMeasure(i);
       });
       MOCHI_ASSERT(activeMeasure > 0, "Active measure must be positive.");
 
       // Only need to store the weights for the active boundary faces.
       real const totalMeasure = _boundaryMesh->GetTotalMeasure();
-      std::for_each(
-          _activeBoundaryFaceInds.cbegin(), _activeBoundaryFaceInds.cend(), [&](int bdFaceIdx) {
-            _weights[bdFaceIdx] = totalMeasure / activeMeasure;
-          });
+      std::ranges::for_each(_activeBoundaryFaceInds, [&](int bdFaceIdx) {
+        _weights[bdFaceIdx] = totalMeasure / activeMeasure;
+      });
     } else {
       // Only need to store the weights for the active boundary faces.
       for (int i = 0; i < isize(newActiveFaceIndices); ++i) {

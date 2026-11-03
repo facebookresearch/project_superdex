@@ -1051,8 +1051,8 @@ static void RegisterDebugDrawSystem_ContactDistances(DebugDrawInternal& debugDra
         if (query.distances.empty()) {
           return; // Avoid dereferencing if distances are empty
         }
-        auto maxDist = *std::max_element(query.distances.begin(), query.distances.end());
-        auto minDist = *std::min_element(query.distances.begin(), query.distances.end());
+        auto maxDist = *std::ranges::max_element(query.distances);
+        auto minDist = *std::ranges::min_element(query.distances);
 
         for (int i = 0; i < isize(query.distances); ++i) {
           DebugDrawSphere s;

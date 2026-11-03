@@ -410,9 +410,7 @@ class DebugDrawImpl final : public DebugDrawInternal {
   void FinalizeSystems() override {
     MOCHI_ASSERT(!_hasFinalizedSystems, "Redundant call");
     _hasFinalizedSystems = true;
-    std::sort(_systems.begin(), _systems.end(), [](auto const& a, auto const& b) {
-      return a->name < b->name;
-    });
+    std::ranges::sort(_systems, [](auto const& a, auto const& b) { return a->name < b->name; });
   }
 
  private:
@@ -592,7 +590,7 @@ DebugDrawData DebugDrawImpl::GatherData() {
       }
     }
     // Sort by decreasing depth so that low depth draws last
-    std::sort(_enabledSystems.begin(), _enabledSystems.end(), [](auto const* a, auto const* b) {
+    std::ranges::sort(_enabledSystems, [](auto const* a, auto const* b) {
       return a->sortingDepth > b->sortingDepth;
     });
     _enabledSystemsDirty = false;

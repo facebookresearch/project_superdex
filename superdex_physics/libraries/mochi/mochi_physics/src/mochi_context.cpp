@@ -593,8 +593,7 @@ void ContextImpl::DestroyScene(Scene* scene) {
   std::unique_ptr<SceneImpl> sceneToDestroy;
   {
     std::scoped_lock lock(_mutex);
-    auto it = std::find_if(
-        _scenes.begin(), _scenes.end(), [scene](auto& ptr) { return ptr.get() == scene; });
+    auto it = std::ranges::find_if(_scenes, [scene](auto& ptr) { return ptr.get() == scene; });
     if (it == _scenes.end()) {
       return;
     }
@@ -637,8 +636,7 @@ void ContextImpl::DestroyIKSolver(experimental::IKSolver* solver) {
   std::unique_ptr<IKSolverImpl> IKSolverToDestroy;
   {
     std::scoped_lock lock(_mutex);
-    auto it = std::find_if(
-        _ikSolvers.begin(), _ikSolvers.end(), [solver](auto& ptr) { return ptr.get() == solver; });
+    auto it = std::ranges::find_if(_ikSolvers, [solver](auto& ptr) { return ptr.get() == solver; });
     if (it == _ikSolvers.end()) {
       return;
     }
@@ -656,8 +654,7 @@ bool ContextImpl::IsValidIKSolver(experimental::IKSolver const* solver) const {
     return false;
   }
   std::scoped_lock lock(_mutex);
-  auto it = std::find_if(
-      _ikSolvers.begin(), _ikSolvers.end(), [solver](auto& ptr) { return ptr.get() == solver; });
+  auto it = std::ranges::find_if(_ikSolvers, [solver](auto& ptr) { return ptr.get() == solver; });
   return (it != _ikSolvers.end());
 }
 
@@ -682,8 +679,8 @@ void ContextImpl::DestroyOperationalSpaceController(OperationalSpaceController* 
   std::unique_ptr<OperationalSpaceControllerImpl> OSCToDestroy;
   {
     std::scoped_lock lock(_mutex);
-    auto it = std::find_if(
-        _OSCs.begin(), _OSCs.end(), [controller](auto& ptr) { return ptr.get() == controller; });
+    auto it =
+        std::ranges::find_if(_OSCs, [controller](auto& ptr) { return ptr.get() == controller; });
     if (it == _OSCs.end()) {
       return;
     }
@@ -702,8 +699,8 @@ bool ContextImpl::IsValidOperationalSpaceController(
     return false;
   }
   std::scoped_lock lock(_mutex);
-  auto it = std::find_if(
-      _OSCs.begin(), _OSCs.end(), [controller](auto& ptr) { return ptr.get() == controller; });
+  auto it =
+      std::ranges::find_if(_OSCs, [controller](auto& ptr) { return ptr.get() == controller; });
   return (it != _OSCs.end());
 }
 #endif
@@ -725,10 +722,8 @@ void ContextImpl::DestroyNewtonEulerTerms(NewtonEulerTerms* newtonEulerTerms) {
   std::unique_ptr<NewtonEulerTermsImpl> toDestroy;
   {
     std::scoped_lock lock(_mutex);
-    auto it = std::find_if(
-        _newtonEulerTerms.begin(), _newtonEulerTerms.end(), [newtonEulerTerms](auto& ptr) {
-          return ptr.get() == newtonEulerTerms;
-        });
+    auto it = std::ranges::find_if(
+        _newtonEulerTerms, [newtonEulerTerms](auto& ptr) { return ptr.get() == newtonEulerTerms; });
     if (it == _newtonEulerTerms.end()) {
       return;
     }
@@ -746,10 +741,8 @@ bool ContextImpl::IsValidNewtonEulerTerms(NewtonEulerTerms const* newtonEulerTer
     return false;
   }
   std::scoped_lock lock(_mutex);
-  auto it = std::find_if(
-      _newtonEulerTerms.begin(), _newtonEulerTerms.end(), [newtonEulerTerms](auto& ptr) {
-        return ptr.get() == newtonEulerTerms;
-      });
+  auto it = std::ranges::find_if(
+      _newtonEulerTerms, [newtonEulerTerms](auto& ptr) { return ptr.get() == newtonEulerTerms; });
   return (it != _newtonEulerTerms.end());
 }
 
@@ -788,9 +781,7 @@ void ContextImpl::DestroyAsyncScene(AsyncScene* scene) {
   std::unique_ptr<AsyncSceneImpl> victim;
   {
     std::scoped_lock lock(_mutex);
-    auto it = std::find_if(_asyncScenes.begin(), _asyncScenes.end(), [scene](auto& ptr) {
-      return ptr.get() == scene;
-    });
+    auto it = std::ranges::find_if(_asyncScenes, [scene](auto& ptr) { return ptr.get() == scene; });
     if (it == _asyncScenes.end()) {
       return;
     }
@@ -1234,8 +1225,8 @@ Scene* ContextImpl::GetScene(SceneHandle handle) {
     return nullptr;
   }
   std::scoped_lock lock(_mutex);
-  auto it = std::find_if(
-      _scenes.begin(), _scenes.end(), [handle](auto& ptr) { return ptr->GetHandle() == handle; });
+  auto it =
+      std::ranges::find_if(_scenes, [handle](auto& ptr) { return ptr->GetHandle() == handle; });
   if (it != _scenes.end()) {
     return (*it).get();
   }
@@ -1252,8 +1243,7 @@ bool ContextImpl::IsValidScene(Scene const* scene) const {
     return false;
   }
   std::scoped_lock lock(_mutex);
-  auto it = std::find_if(
-      _scenes.begin(), _scenes.end(), [scene](auto& ptr) { return ptr.get() == scene; });
+  auto it = std::ranges::find_if(_scenes, [scene](auto& ptr) { return ptr.get() == scene; });
   return (it != _scenes.end());
 }
 
@@ -1262,8 +1252,7 @@ bool ContextImpl::IsValidAsyncScene(AsyncScene const* scene) const {
     return false;
   }
   std::scoped_lock lock(_mutex);
-  auto it = std::find_if(
-      _asyncScenes.begin(), _asyncScenes.end(), [scene](auto& ptr) { return ptr.get() == scene; });
+  auto it = std::ranges::find_if(_asyncScenes, [scene](auto& ptr) { return ptr.get() == scene; });
   return (it != _asyncScenes.end());
 }
 

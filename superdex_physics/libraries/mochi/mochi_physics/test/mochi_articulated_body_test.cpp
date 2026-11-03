@@ -310,12 +310,12 @@ TEST_F(ArticulatedRigidTest, Rigid_EntityPostNewSolution) {
   NormalizeQuaternion(AsView(solB).BottomRows<RigidSize::kRot>(RigidSize::kRot));
   std::vector<real> sol;
   sol.reserve(solA.size() + solB.size());
-  std::copy(solA.begin(), solA.end(), std::back_inserter(sol));
-  std::copy(solB.begin(), solB.end(), std::back_inserter(sol));
+  std::ranges::copy(solA, std::back_inserter(sol));
+  std::ranges::copy(solB, std::back_inserter(sol));
 
   // Create individual problem objects for each separate rigid
   ColumnVector<real, 2 * RigidSize::kAll> solutionAB;
-  std::copy(sol.begin(), sol.end(), solutionAB.data());
+  std::ranges::copy(sol, solutionAB.data());
   SnleProblem<real> problemAB;
   problemAB.solution.Reset(AsView(solutionAB));
 
@@ -623,8 +623,7 @@ TEST_F(ArticulatedBodyTest, Articulated_EntityGetSolution) {
   // Collect components
   auto& reducedPose = reg.get<CArticulatedReducedPose<TimeStep::Current>>(_eAC);
   Span<real> reducedPoseSpan = reducedPose.value.GetSpan();
-  std::copy(
-      _expectedReducedDofsData.begin(), _expectedReducedDofsData.end(), reducedPoseSpan.begin());
+  std::ranges::copy(_expectedReducedDofsData, reducedPoseSpan.begin());
 
   // Call EntityGetSolution
   std::vector<real> solData(_expectedReducedDofsData.size());

@@ -597,9 +597,9 @@ static void AddConstraints(
     std::vector<PoseConstraintInfo>& outInfo,
     std::vector<PoseConstraintImpl>& outImpl) {
   outInfo.reserve(outInfo.size() + info.size());
-  std::copy(info.begin(), info.end(), std::back_inserter(outInfo));
+  std::ranges::copy(info, std::back_inserter(outInfo));
   outImpl.reserve(outImpl.size() + impl.size());
-  std::copy(impl.begin(), impl.end(), std::back_inserter(outImpl));
+  std::ranges::copy(impl, std::back_inserter(outImpl));
 }
 
 static void
@@ -678,9 +678,8 @@ void articulated::compound::AddPoseController(
   auto const& parents = reg.get<CArticulatedParents const>(e);
   auto const& props = reg.get<CArticulatedProps const>(e);
   std::vector<ActorHandle> links(actors.size());
-  std::transform(actors.begin(), actors.end(), links.begin(), [&](auto e) {
-    return GetActorHandle(e, sceneHandle);
-  });
+  std::ranges::transform(
+      actors, links.begin(), [&](auto e) { return GetActorHandle(e, sceneHandle); });
   auto const& linkTransformsCom = reg.get<CArticulatedLinkTransforms<TimeStep::Current> const>(e);
   auto const& pose = reg.get<CArticulatedReducedPose<TimeStep::Current> const>(e).value;
 
@@ -1127,7 +1126,7 @@ void articulated::compound::GetPoseControllerParams(
 
   // Links without a controllable joint have no joint constraint, so default their slots to zero
   // gains. Link translation/rotation have a constraint per link and are fully overwritten below.
-  std::fill(outParams.jointTracking.begin(), outParams.jointTracking.end(), PoseTrackingParams{});
+  std::ranges::fill(outParams.jointTracking, PoseTrackingParams{});
 
   for (int i = 0; i < isize(constraints.info); ++i) {
     PoseTrackingParams const tp{
@@ -1224,7 +1223,7 @@ Span<real const> articulated::compound::GetPoseControllerForce(
   SceneHandle sceneHandle = reg.ctx<CSceneHandle const>().value;
   auto const& actors = reg.get<CGroupMembers const>(e).actors;
   std::vector<Actor const*> links(actors.size());
-  std::transform(actors.begin(), actors.end(), links.begin(), [&](auto e) {
+  std::ranges::transform(actors, links.begin(), [&](auto e) {
     return scene->GetActor(GetActorHandle(e, sceneHandle));
   });
   auto const linksSpan = MakeConstSpan(links);
@@ -1484,7 +1483,7 @@ void InitContactSampleBonePoints(
       auto const boneIds =
           MakeConstSpan(std::get<DynamicArray<int>>(partition.GetDofDescriptors()[0]));
       MOCHI_ASSERT_VERBOSE(points.size() == boneIds.size());
-      std::fill(points.begin(), points.end(), Vec4r{});
+      std::ranges::fill(points, Vec4r{});
       auto const nodes = GetNodeInfo(femElements, sample);
       NdArray<real, ElementT::kNumNodes> const quadratureWeights =
           GetWeightInfo(femElements, sample);
@@ -2531,15 +2530,13 @@ void articulated::compound::EntityPostNewIncrement(
 
 // Whether any joint has nonzero viscous damping, requiring damping-force assembly.
 static bool HasViscousDamping(CArticulatedJointFrictionParams const& friction) {
-  return std::any_of(
-      friction.begin(), friction.end(), [](auto const& fp) { return fp.viscous != 0_r; });
+  return std::ranges::any_of(friction, [](auto const& fp) { return fp.viscous != 0_r; });
 }
 
 // Whether any joint has nonzero dry friction, requiring friction-force assembly.
 static bool HasDryFriction(CArticulatedJointFrictionParams const& friction) {
-  return std::any_of(friction.begin(), friction.end(), [](auto const& fp) {
-    return (fp.coulomb + fp.stictionExtra) != 0_r;
-  });
+  return std::ranges::any_of(
+      friction, [](auto const& fp) { return (fp.coulomb + fp.stictionExtra) != 0_r; });
 }
 
 bool articulated::ReadsJointFrictionHessianChoice(
@@ -2553,7 +2550,7 @@ bool articulated::ReadsJointFrictionHessianChoice(
 
 // Whether any joint has nonzero joint inertia, requiring inertia-force assembly.
 static bool HasJointInertia(CArticulatedInertiaParams const& inertia) {
-  return std::any_of(inertia.begin(), inertia.end(), [](real value) { return value != 0_r; });
+  return std::ranges::any_of(inertia, [](real value) { return value != 0_r; });
 }
 
 // Assembles the reduced dresidual outJtDJ = J^T * D * J. D, the full-DoF dresidual, is block
@@ -2641,7 +2638,7 @@ static void AssembleReducedDResidual(
 
     auto const& linkJacobian = reg.get<CArticulatedRigidJacobian const>(links[i]);
     auto const& dofs = linkJacobian.dofs;
-    MOCHI_ASSERT_VERBOSE(std::is_sorted(dofs.begin(), dofs.end()), "Expected ascending link DoFs.");
+    MOCHI_ASSERT_VERBOSE(std::ranges::is_sorted(dofs), "Expected ascending link DoFs.");
     int const numLinkDofs = isize(dofs);
     RowMatrixView<real const, RigidSize::kDAll> const Ji = linkJacobian.value;
     if (isCoupled) {

@@ -19,6 +19,7 @@
 #include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/dynamic_array.h>
 
+#include <algorithm>
 #include <atomic>
 #include <unordered_map>
 
@@ -194,10 +195,8 @@ void ecs::FinalizeComponentRegistration(entt::registry& reg) {
   metadata.isFinal = true;
 
   // It is nice to have all component types in a stable order, so sort them by name.
-  std::sort(
-      metadata.allComponents.begin(),
-      metadata.allComponents.end(),
-      [](ComponentTypeInfo const& a, ComponentTypeInfo const& b) {
+  std::ranges::sort(
+      metadata.allComponents, [](ComponentTypeInfo const& a, ComponentTypeInfo const& b) {
         return a.GetTypeName() < b.GetTypeName();
       });
 

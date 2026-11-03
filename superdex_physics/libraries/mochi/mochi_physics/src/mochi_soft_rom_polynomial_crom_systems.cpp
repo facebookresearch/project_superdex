@@ -58,9 +58,8 @@ using namespace mochi;
   }
 
   // Sort by total order without regard to the order of terms with the same total order.
-  std::sort(mi.begin(), mi.end(), [](auto const& a, auto const& b) {
-    return (a[0] + a[1] + a[2]) < (b[0] + b[1] + b[2]);
-  });
+  std::ranges::sort(
+      mi, [](auto const& a, auto const& b) { return (a[0] + a[1] + a[2]) < (b[0] + b[1] + b[2]); });
 
   return mi;
 }
@@ -101,7 +100,7 @@ using namespace mochi;
     for (int k = 0; k < kSpaceDim3; ++k) {
       int const dofInd = i * kSpaceDim3 + k;
       int colShift = k;
-      std::for_each(expansionTerms.cbegin(), expansionTerms.cend(), [&](double value) {
+      std::ranges::for_each(expansionTerms, [&](double value) {
         M(dofInd, colShift) = static_cast<real>(value);
         colShift += kSpaceDim3;
       });

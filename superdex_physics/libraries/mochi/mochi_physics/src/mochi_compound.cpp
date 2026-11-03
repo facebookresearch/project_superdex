@@ -107,7 +107,7 @@ void compound::AssembleConstraints(
     if (resIndices.empty()) {
       return -1;
     }
-    return *std::max_element(resIndices.begin(), resIndices.end());
+    return *std::ranges::max_element(resIndices);
   };
 
   int maxDofIndex = -1;
@@ -298,7 +298,7 @@ void mochi::RemoveActorFromCompound(
 
   // Remove actor from CGroupMembers
   auto& groupMembers = reg.get<CGroupMembers>(compound);
-  auto it = std::find(groupMembers.actors.begin(), groupMembers.actors.end(), actor);
+  auto it = std::ranges::find(groupMembers.actors, actor);
   MOCHI_ERROR_IF(it == groupMembers.actors.end(), error, "Actor is not a member of the compound.");
   MOCHI_ERROR_RETURN(error);
 
@@ -375,7 +375,7 @@ void mochi::AddConstraintToCompound(
   for (auto constraintActor : info.actors) {
     entt::entity actorToCheck = GetActorForCompoundFormation(reg, constraintActor, constraint);
     auto const& actors = members.actors;
-    auto itr = std::find(actors.begin(), actors.end(), actorToCheck);
+    auto itr = std::ranges::find(actors, actorToCheck);
     MOCHI_ERROR_IF(itr == actors.end(), error, "Actor in constraint is not compound member");
     MOCHI_ERROR_RETURN(error);
   }
@@ -416,7 +416,7 @@ void mochi::RemoveConstraintFromCompound(
   // Remove constraint from the group
   auto& members = reg.get<CGroupMembers>(compound);
   {
-    auto itr = std::find(members.constraints.begin(), members.constraints.end(), constraint);
+    auto itr = std::ranges::find(members.constraints, constraint);
     MOCHI_ASSERT(itr != members.constraints.end(), "CGroupMembers out-of-sync");
     members.constraints.erase(itr);
   }

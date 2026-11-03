@@ -175,11 +175,9 @@ struct CQueryNodeContactForces : RefCounted {
 
   void FinalizeContactForces() {
     nodeContactForces.resize(nodeContactForcesMap.size());
-    std::transform(
-        nodeContactForcesMap.cbegin(),
-        nodeContactForcesMap.cend(),
-        nodeContactForces.begin(),
-        [](auto const& pair) { return NodeContactForce{pair.first, pair.second}; });
+    std::ranges::transform(nodeContactForcesMap, nodeContactForces.begin(), [](auto const& pair) {
+      return NodeContactForce{pair.first, pair.second};
+    });
     isInitialized = true;
   }
 
@@ -208,13 +206,11 @@ class CQueryActorContactForces : public RefCounted {
   DynamicArray<ForceAndTorque> _entries;
 
   MOCHI_FORCE_INLINE auto Find(entt::entity actor) const {
-    return std::find_if(
-        _entries.begin(), _entries.end(), [actor](auto const& entry) { return entry.e == actor; });
+    return std::ranges::find_if(_entries, [actor](auto const& entry) { return entry.e == actor; });
   }
 
   MOCHI_FORCE_INLINE auto Find(entt::entity actor) {
-    return std::find_if(
-        _entries.begin(), _entries.end(), [actor](auto const& entry) { return entry.e == actor; });
+    return std::ranges::find_if(_entries, [actor](auto const& entry) { return entry.e == actor; });
   }
 
  public:

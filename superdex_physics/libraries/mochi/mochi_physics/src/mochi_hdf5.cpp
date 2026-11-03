@@ -798,7 +798,7 @@ LoadBsh(H5::Group const& group, LoadBshUserData data, Error& error) {
         "ids_to_triangle_elements length does not match the number of triangles on this tetrahedral mesh.");
 
     auto sortInt3 = [](Int3 a) -> Int3 {
-      std::sort(a.begin(), a.end());
+      std::ranges::sort(a);
       return a;
     };
 

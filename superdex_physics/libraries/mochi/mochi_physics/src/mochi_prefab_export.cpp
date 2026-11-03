@@ -93,16 +93,14 @@ static std::pair<DynamicString, std::filesystem::path> GenerateShapeFilePaths(
     std::unordered_map<std::string, int>& usedFileNames) {
   auto toLowercase = [](std::string_view str) {
     DynamicString result{str};
-    std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) {
-      return std::tolower(c);
-    });
+    std::ranges::transform(result, result.begin(), [](unsigned char c) { return std::tolower(c); });
     return result;
   };
 
   DynamicString safeName = toLowercase(actorName);
-  std::replace(safeName.begin(), safeName.end(), '/', '_');
-  std::replace(safeName.begin(), safeName.end(), '\\', '_');
-  std::replace(safeName.begin(), safeName.end(), ' ', '_');
+  std::ranges::replace(safeName, '/', '_');
+  std::ranges::replace(safeName, '\\', '_');
+  std::ranges::replace(safeName, ' ', '_');
 
   // Generate base filename
   DynamicString stem = suffix.empty()
