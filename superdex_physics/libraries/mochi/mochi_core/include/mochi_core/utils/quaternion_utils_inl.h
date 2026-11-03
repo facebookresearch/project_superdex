@@ -90,43 +90,27 @@ inline Quaternion QuaternionFromMatrix(Matrix3x3r const& matrix) {
   // Shepperd's branches below agree only for an orthonormal matrix, so a matrix that is slightly
   // off, e.g. from rounding, would make the result jump where the branch changes. Gram-Schmidt on
   // the columns, keeping the first column's direction, removes that.
-  Matrix3x3r columns = Transpose(matrix);
-  columns[0] = Normalize(columns[0]);
-  columns[1] = Normalize(columns[1] - Dot(columns[1], columns[0]) * columns[0]);
-  columns[2] = Cross(columns[0], columns[1]);
-  Matrix3x3r const rotation = Transpose(columns);
+  Real3 const col0 = Normalize(Real3{matrix[0][0], matrix[1][0], matrix[2][0]});
+  Real3 col1{matrix[0][1], matrix[1][1], matrix[2][1]};
+  col1 = Normalize(col1 - Dot(col1, col0) * col0);
+  Real3 const col2 = Cross(col0, col1);
 
-  // Shepperd's method. 4 w^2 = 1 + trace and 4 x^2 = 1 + 2 m00 - trace (likewise y and z), and the
-  // off-diagonal pairs give the other products, e.g. m21 - m12 = 4 x w and m01 + m10 = 4 x y. Each
-  // branch builds 4 c q for the component c with the largest 4 c^2, which is at least 1, and the
-  // normalization below divides out 4 c.
-  real const trace = rotation[0][0] + rotation[1][1] + rotation[2][2];
-  real const diagMax = Max(rotation[0][0], rotation[1][1], rotation[2][2]);
+  // Shepperd's method on the rotation with columns col0, col1 and col2, so m_ij = colj[i].
+  // 4 w^2 = 1 + trace and 4 x^2 = 1 + 2 m00 - trace (likewise y and z), and the off-diagonal pairs
+  // give the other products, e.g. m21 - m12 = 4 x w and m01 + m10 = 4 x y. Each branch builds 4 c q
+  // for the component c with the largest 4 c^2, which is at least 1, and the normalization below
+  // divides out 4 c.
+  real const trace = col0[0] + col1[1] + col2[2];
+  real const diagMax = Max(col0[0], col1[1], col2[2]);
   Real4 xyzw MOCHI_NO_INIT;
   if (trace >= diagMax) { // 4 w q
-    xyzw = {
-        rotation[2][1] - rotation[1][2],
-        rotation[0][2] - rotation[2][0],
-        rotation[1][0] - rotation[0][1],
-        1_r + trace};
-  } else if (rotation[0][0] == diagMax) { // 4 x q
-    xyzw = {
-        1_r + 2_r * rotation[0][0] - trace,
-        rotation[0][1] + rotation[1][0],
-        rotation[0][2] + rotation[2][0],
-        rotation[2][1] - rotation[1][2]};
-  } else if (rotation[1][1] == diagMax) { // 4 y q
-    xyzw = {
-        rotation[0][1] + rotation[1][0],
-        1_r + 2_r * rotation[1][1] - trace,
-        rotation[1][2] + rotation[2][1],
-        rotation[0][2] - rotation[2][0]};
+    xyzw = {col1[2] - col2[1], col2[0] - col0[2], col0[1] - col1[0], 1_r + trace};
+  } else if (col0[0] == diagMax) { // 4 x q
+    xyzw = {1_r + 2_r * col0[0] - trace, col1[0] + col0[1], col2[0] + col0[2], col1[2] - col2[1]};
+  } else if (col1[1] == diagMax) { // 4 y q
+    xyzw = {col1[0] + col0[1], 1_r + 2_r * col1[1] - trace, col2[1] + col1[2], col2[0] - col0[2]};
   } else { // 4 z q
-    xyzw = {
-        rotation[0][2] + rotation[2][0],
-        rotation[1][2] + rotation[2][1],
-        1_r + 2_r * rotation[2][2] - trace,
-        rotation[1][0] - rotation[0][1]};
+    xyzw = {col2[0] + col0[2], col2[1] + col1[2], 1_r + 2_r * col2[2] - trace, col0[1] - col1[0]};
   }
 
   // w >= 0 as for an angle in [0, pi]
