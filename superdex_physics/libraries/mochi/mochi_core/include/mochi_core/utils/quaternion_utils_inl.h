@@ -82,72 +82,56 @@ MOCHI_FORCE_INLINE Quaternion Conjugate(Quaternion const& a) {
   return a.GetConjugate();
 }
 
-inline Quaternion QuaternionFromMatrix(VMatrix3x3r const& matrix, real eps) {
-  return QuaternionFromMatrix(ToNdArray3x3(matrix), eps);
+inline Quaternion QuaternionFromMatrix(VMatrix3x3r const& matrix) {
+  return QuaternionFromMatrix(ToNdArray3x3(matrix));
 }
 
-namespace details {
-inline Real4 MatrixToAxisAngleImpl(Matrix3x3r const& matrix, real eps) {
-  // Find axis and angle of rotation. Adapted from:
-  //  https://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToAngle/
-  real t = 0.5_r * (matrix[0][0] + matrix[1][1] + matrix[2][2] - 1_r);
-  real theta = ACos(Clamp(t, -1_r, 1_r));
-  Real3 axis{};
-  if (NearEqual(theta, 0_r)) MOCHI_UNLIKELY {
-    // Singularity at zero degree rotation. Any axis will do.
-    theta = 0_r;
-    axis = {1_r, 0_r, 0_r};
-  } else if (NearEqual(Abs(theta), kPI, eps)) MOCHI_UNLIKELY {
-    // Singularity at +/- 180 degree rotation (sign does not matter). Compute the axis.
-    theta = kPI;
-    real xx = (matrix[0][0] + 1_r) * 0.5_r;
-    real yy = (matrix[1][1] + 1_r) * 0.5_r;
-    real zz = (matrix[2][2] + 1_r) * 0.5_r;
-    real xy = (matrix[0][1] + matrix[1][0]) * 0.25_r;
-    real xz = (matrix[0][2] + matrix[2][0]) * 0.25_r;
-    real yz = (matrix[1][2] + matrix[2][1]) * 0.25_r;
-    real constexpr kSqrt2Over2 = kSqrt2 * 0.5_r;
-    if ((xx > yy) && (xx > zz)) { // matrix[0][0] is the largest diagonal term
-      if (xx < eps) {
-        axis = Real3{0_r, kSqrt2Over2, kSqrt2Over2};
-      } else {
-        real x = Sqrt(Clamp(xx, 0_r, 1_r));
-        axis = Real3{x, xy / x, xz / x};
-      }
-    } else if (yy > zz) { // matrix[1][1] is the largest diagonal term
-      if (yy < eps) {
-        axis = Real3{kSqrt2Over2, 0_r, kSqrt2Over2};
-      } else {
-        real y = Sqrt(Clamp(yy, 0_r, 1_r));
-        axis = Real3{xy / y, y, yz / y};
-      }
-    } else { // matrix[2][2] is the largest diagonal term so base result on this
-      if (zz < eps) {
-        axis = Real3{kSqrt2Over2, kSqrt2Over2, 0_r};
-      } else {
-        real z = Sqrt(Clamp(zz, 0_r, 1_r));
-        axis = Real3{xz / z, yz / z, z};
-      }
-    }
-  } else {
-    // No singularity. This is the normal case.
-    real scale = 0.5_r / Sin(theta);
-    axis = {
-        (matrix[2][1] - matrix[1][2]) * scale,
-        (matrix[0][2] - matrix[2][0]) * scale,
-        (matrix[1][0] - matrix[0][1]) * scale};
+inline Quaternion QuaternionFromMatrix(Matrix3x3r const& matrix) {
+  // Shepperd's branches below agree only for an orthonormal matrix, so a matrix that is slightly
+  // off, e.g. from rounding, would make the result jump where the branch changes. Gram-Schmidt on
+  // the columns, keeping the first column's direction, removes that.
+  Matrix3x3r columns = Transpose(matrix);
+  columns[0] = Normalize(columns[0]);
+  columns[1] = Normalize(columns[1] - Dot(columns[1], columns[0]) * columns[0]);
+  columns[2] = Cross(columns[0], columns[1]);
+  Matrix3x3r const rotation = Transpose(columns);
+
+  // Shepperd's method. 4 w^2 = 1 + trace and 4 x^2 = 1 + 2 m00 - trace (likewise y and z), and the
+  // off-diagonal pairs give the other products, e.g. m21 - m12 = 4 x w and m01 + m10 = 4 x y. Each
+  // branch builds 4 c q for the component c with the largest 4 c^2, which is at least 1, and the
+  // normalization below divides out 4 c.
+  real const trace = rotation[0][0] + rotation[1][1] + rotation[2][2];
+  real const diagMax = Max(rotation[0][0], rotation[1][1], rotation[2][2]);
+  Real4 xyzw MOCHI_NO_INIT;
+  if (trace >= diagMax) { // 4 w q
+    xyzw = {
+        rotation[2][1] - rotation[1][2],
+        rotation[0][2] - rotation[2][0],
+        rotation[1][0] - rotation[0][1],
+        1_r + trace};
+  } else if (rotation[0][0] == diagMax) { // 4 x q
+    xyzw = {
+        1_r + 2_r * rotation[0][0] - trace,
+        rotation[0][1] + rotation[1][0],
+        rotation[0][2] + rotation[2][0],
+        rotation[2][1] - rotation[1][2]};
+  } else if (rotation[1][1] == diagMax) { // 4 y q
+    xyzw = {
+        rotation[0][1] + rotation[1][0],
+        1_r + 2_r * rotation[1][1] - trace,
+        rotation[1][2] + rotation[2][1],
+        rotation[0][2] - rotation[2][0]};
+  } else { // 4 z q
+    xyzw = {
+        rotation[0][2] + rotation[2][0],
+        rotation[1][2] + rotation[2][1],
+        1_r + 2_r * rotation[2][2] - trace,
+        rotation[1][0] - rotation[0][1]};
   }
 
-  // store axis+angle as Real4 instead of as rotation vector for smaller numerical errors
-  return Real4{axis[0], axis[1], axis[2], theta};
-}
-} // namespace details
-
-inline Quaternion QuaternionFromMatrix(Matrix3x3r const& matrix, real eps) {
-  Real4 const axisAngle = mochi::details::MatrixToAxisAngleImpl(matrix, eps);
-  Real3 const axis{axisAngle[0], axisAngle[1], axisAngle[2]};
-  real const angle = axisAngle[3];
-  return Quaternion::FromAxisAngle(axis, angle);
+  // w >= 0 as for an angle in [0, pi]
+  Quaternion const q = Normalize(Quaternion{xyzw});
+  return xyzw[3] < 0_r ? -q : q;
 }
 
 MOCHI_FORCE_INLINE VMatrix3x3r ToVMatrix3x3Transpose(Quaternion const& q) {

@@ -430,6 +430,13 @@ TEST(TransformRT, DecomposeMatrixTransform) {
       Real3{-0.1_r, -0.2_r, 0.3_r},
       Real3{0.1_r, -0.2_r, -0.3_r},
       Real3{-0.1_r, -0.2_r, -0.3_r},
+      Real3{0_r, 1_r, 2_r},
+      Real3{1_r, 0_r, 2_r},
+      Real3{1_r, 2_r, 0_r},
+      Real3{0_r, 0_r, 2_r},
+      Real3{0_r, 2_r, 0_r},
+      Real3{2_r, 0_r, 0_r},
+      Real3{0_r, 0_r, 0_r},
   };
   Real3 constexpr kAxes[] = {
       Real3{1_r, 0_r, 0_r},

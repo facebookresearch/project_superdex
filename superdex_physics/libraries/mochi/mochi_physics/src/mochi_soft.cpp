@@ -1388,7 +1388,6 @@ void mochi::soft::ComputeTransformAtEvalPoint(
     outTransform.SetTranslation(b);
   } else {
     // Build an orthonormal frame before converting to a quaternion
-    // (FromOrthoNormalTranspose assumes an exactly orthonormal input).
     Vec4r const row2 = Normalize<3>(RT[2]);
     Vec4r const row0 = cross12; // = Normalize<3>(Cross3(RT[1], RT[2])), orthogonal to RT[2]
     Vec4r const row1 = Cross3(row2, row0);

@@ -109,7 +109,7 @@ class TransformRT {
 // Equivalent to Transpose4x4(ToVMatrix4x4(a)) only faster.
 [[nodiscard]] MOCHI_FORCE_INLINE VMatrix4x4r ToVMatrix4x4Transpose(TransformRT const& a);
 
-// Take a 4x4 matrix consisting of scale (possibly non-uniform, possibly negative), rotation, and
+// Take a 4x4 matrix consisting of scale (possibly non-uniform, negative or zero), rotation, and
 // translation. Return the scale and TransformRT that could be re-combined to form the same matrix.
 std::pair<Real3, TransformRT> DecomposeMatrixTransform(VMatrix4x4r const& matrixTransform);
 

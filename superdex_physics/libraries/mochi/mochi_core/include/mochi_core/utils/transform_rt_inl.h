@@ -18,7 +18,6 @@
 
 #include <mochi_core/utils/transform_rt.h> // for intellisense
 
-#include <cmath>
 #include <limits>
 
 namespace mochi {
@@ -68,62 +67,7 @@ MOCHI_FORCE_INLINE TransformRT TransformRT::Identity() {
 }
 
 inline TransformRT TransformRT::FromOrthoNormalTranspose(VMatrix4x4r const& mT) {
-  // Note: Implementation adapted from RTech's <graphics/vector.h>
-  //       For a faster implementation, it might be worth measuring the
-  //       performance compared to the raw assembly code described here:
-  //       https://www.fd.cvut.cz/personal/voracsar/geometriepg/pgr020/matrix2quaternions.pdf
-  alignas(alignof(Vec4r)) real x[4];
-  alignas(alignof(Vec4r)) real y[4];
-  alignas(alignof(Vec4r)) real z[4];
-  VMatrix4x4r const& matColumns = mT;
-  Store(x, matColumns[0]);
-  Store(y, matColumns[1]);
-  Store(z, matColumns[2]);
-
-  alignas(alignof(Vec4r)) real q[4];
-  int k0 = 0, k1 = 0, k2 = 0, k3 = 0;
-  real s0 = 0_r, s1 = 0_r, s2 = 0_r;
-  if (x[0] + y[1] + z[2] > 0_r) {
-    k0 = 3;
-    k1 = 2;
-    k2 = 1;
-    k3 = 0;
-    s0 = 1.0_r;
-    s1 = 1.0_r;
-    s2 = 1.0_r;
-  } else if (x[0] > y[1] && x[0] > z[2]) {
-    k0 = 0;
-    k1 = 1;
-    k2 = 2;
-    k3 = 3;
-    s0 = 1.0_r;
-    s1 = -1.0_r;
-    s2 = -1.0_r;
-  } else if (y[1] > z[2]) {
-    k0 = 1;
-    k1 = 0;
-    k2 = 3;
-    k3 = 2;
-    s0 = -1.0_r;
-    s1 = 1.0_r;
-    s2 = -1.0_r;
-  } else {
-    k0 = 2;
-    k1 = 3;
-    k2 = 0;
-    k3 = 1;
-    s0 = -1.0_r;
-    s1 = -1.0_r;
-    s2 = 1.0_r;
-  }
-  real t = (s0 * x[0]) + (s1 * y[1]) + (s2 * z[2]) + 1.0_r;
-  real s = (1.0_r / std::sqrt(t)) * 0.5_r;
-  q[k0] = s * t;
-  q[k1] = (x[1] - s2 * y[0]) * s;
-  q[k2] = (z[0] - s1 * x[2]) * s;
-  q[k3] = (y[2] - s0 * z[1]) * s;
-
-  return TransformRT{Quaternion{q[0], q[1], q[2], q[3]}, matColumns[3]};
+  return TransformRT{QuaternionFromMatrix(Transpose3x3(mT)), mT[3]};
 }
 
 MOCHI_FORCE_INLINE TransformRT TransformRT::FromOrthoNormal(VMatrix4x4r const& mat) {
@@ -282,6 +226,18 @@ inline std::pair<Real3, TransformRT> DecomposeMatrixTransform(VMatrix4x4r const&
   matrixT[0] /= scale[0] + std::numeric_limits<real>::min();
   matrixT[1] /= scale[1] + std::numeric_limits<real>::min();
   matrixT[2] /= scale[2] + std::numeric_limits<real>::min();
+
+  // Zero scales leave their columns zero. Complete the rotation from the remaining columns.
+  for (int i = 0; i < 3; ++i) {
+    int const j = (i + 1) % 3;
+    int const k = (i + 2) % 3;
+    if (scale[i] == 0_r && scale[j] != 0_r && scale[k] != 0_r) {
+      matrixT[i] = Cross3(matrixT[j], matrixT[k]);
+    } else if (scale[i] != 0_r && scale[j] == 0_r && scale[k] == 0_r) {
+      matrixT[j] = Normalize<3>(OrthogonalVector3(matrixT[i]));
+      matrixT[k] = Cross3(matrixT[i], matrixT[j]);
+    }
+  }
   auto rotation = QuaternionFromMatrix(Transpose3x3(matrixT));
 
   return std::make_pair(scale, TransformRT{rotation, translation});

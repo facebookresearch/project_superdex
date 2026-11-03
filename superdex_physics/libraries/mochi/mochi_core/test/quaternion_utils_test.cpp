@@ -193,8 +193,9 @@ TEST(QuaternionUtils, Conjugate) {
   EXPECT_EQ(Quaternion(1_r, -2_r, 3_r, -4_r), Quaternion(-1_r, 2_r, -3_r, -4_r).GetConjugate());
 }
 
-// TODO[T270054587] - Investigate proper fix for test failure in optimized MSVC builds
-TEST(QuaternionUtils, DISABLED_FromMatrix) {
+TEST(QuaternionUtils, FromMatrix) {
+  real constexpr kTol = 100_r * std::numeric_limits<real>::epsilon();
+
   // Identity quaternion
   {
     Quaternion q;
@@ -219,17 +220,29 @@ TEST(QuaternionUtils, DISABLED_FromMatrix) {
       // Axis-angle to VMatrix3x3r
       auto q = Quaternion::FromAxisAngle(axis, angle);
       auto vmat = ToVMatrix3x3(q);
-      // VMatrix3x3r to Quaternion. Use a tolerance > kEps to ensure that the code path for +/- 180
-      // degree rotations is taken for all of kTestAngles.
-      auto q2 = QuaternionFromMatrix(vmat, 2 * kEps);
+      // VMatrix3x3r to Quaternion
+      auto q2 = QuaternionFromMatrix(vmat);
       EXPECT_TRUE(EquivalentRotation(q, q2, kEps));
       // Repeat with Matrix3x3r
-      auto q3 = QuaternionFromMatrix(ToNdArray3x3(vmat), 2 * kEps);
+      auto q3 = QuaternionFromMatrix(ToNdArray3x3(vmat));
       EXPECT_TRUE(EquivalentRotation(q, q3, kEps));
     }
   }
 
-  // Random rotation
+  // Rotations near 0 and 180 degrees are recovered to rounding error
+  {
+    // The negative largest component exercises the flip to w >= 0 near 180 degrees
+    Real3 const axis = Normalize(Real3{1_r, 2_r, -3_r});
+    for (real const angle : {1e-8_r, 1e-6_r, 1e-4_r, 1e-2_r, kPI - 1e-4_r, kPI - 1e-6_r}) {
+      Quaternion const q =
+          QuaternionFromMatrix(ToVMatrix3x3(Quaternion::FromAxisAngle(axis, angle)));
+      EXPECT_TRUE(NearEqual(q.ToRotationVector(), angle * axis, kTol * angle));
+      EXPECT_GE(q.data[3], 0_r);
+    }
+  }
+
+  // Random rotations R are recovered, also from R U for an upper triangular U with a positive
+  // diagonal, whose Gram-Schmidt orthonormalization is R
   {
     auto rng = RandomGenerator(42);
     for (int i = 0; i < 100; ++i) {
@@ -239,7 +252,17 @@ TEST(QuaternionUtils, DISABLED_FromMatrix) {
       real angle = RandomUniformValue(rng, -1_r * kPI, 1_r * kPI);
       Quaternion q = Quaternion::FromAxisAngle(axis, angle);
       Quaternion q2 = QuaternionFromMatrix(ToVMatrix3x3(q));
-      EXPECT_TRUE(EquivalentRotation(q, q2, 1e2_r * kDefaultNearEqualEpsilon<real>));
+      EXPECT_TRUE(EquivalentRotation(q, q2, kTol));
+      EXPECT_GE(q2.data[3], 0_r);
+      Real3 diagonal{};
+      Real3 offDiagonal{};
+      SetRandom(rng, 0.5_r, 2_r, diagonal);
+      SetRandom(rng, -0.1_r, 0.1_r, offDiagonal);
+      Matrix3x3r const upper{
+          Real3{diagonal[0], offDiagonal[0], offDiagonal[1]},
+          Real3{0_r, diagonal[1], offDiagonal[2]},
+          Real3{0_r, 0_r, diagonal[2]}};
+      EXPECT_TRUE(EquivalentRotation(q, QuaternionFromMatrix(Dot(ToMatrix3x3(q), upper)), kTol));
     }
   }
 }

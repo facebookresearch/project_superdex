@@ -66,10 +66,11 @@ EquivalentRotation(Quaternion const& a, Quaternion const& b, Vec4r epsilon);
 // Conjugate Quaternion (opposite rotation)
 [[nodiscard]] MOCHI_FORCE_INLINE Quaternion Conjugate(Quaternion const& a);
 
-// Construct a quaternion from a rotation matrix. Must be orthonormal.
-// eps is used to determine whether the angle is close to +/- 180deg
-[[nodiscard]] inline Quaternion QuaternionFromMatrix(VMatrix3x3r const& matrix, real eps = 1e-3_r);
-[[nodiscard]] inline Quaternion QuaternionFromMatrix(Matrix3x3r const& matrix, real eps = 1e-3_r);
+// Construct a unit quaternion with w >= 0 from a rotation matrix. A matrix that is slightly off,
+// e.g. from rounding, gives the rotation of its Gram-Schmidt orthonormalization, which keeps the
+// direction of the first column.
+[[nodiscard]] inline Quaternion QuaternionFromMatrix(VMatrix3x3r const& matrix);
+[[nodiscard]] inline Quaternion QuaternionFromMatrix(Matrix3x3r const& matrix);
 
 // Compute a Matrix3x3r from Quaternion. The resulting matrix can be used to rotate vectors by
 // calling DotMatVec3x3(VMatrix3x3r, Vec4r), which is equivalent to (Quaternion * Real3). However,
