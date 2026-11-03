@@ -1100,6 +1100,7 @@ struct ContactParams [equality(default), from_mochi_core] {
   // @param[in] penaltySmoothingHalfDistance See @ref penaltySmoothingHalfDistance.
   // @param[in] penaltyThresholdDefault See @ref penaltyThresholdDefault.
   // @param[in] penaltyThresholdExtraPadding See @ref penaltyThresholdExtraPadding.
+  // @param[in] collidingPenaltyThresholdPadding See @ref collidingPenaltyThresholdPadding.
   // @param[in] frictionWithColliderNormal See @ref frictionWithColliderNormal.
   // @param[in] maxAlignmentNormals See @ref maxAlignmentNormals.
   // @param[in] viscousFrictionCoefficient See @ref viscousFrictionCoefficient.
@@ -1111,7 +1112,7 @@ struct ContactParams [equality(default), from_mochi_core] {
   // @param[in] collidingPenaltyLengthScale See @ref collidingPenaltyLengthScale.
   //
   // @note Must take every parameter in order.
-  ctor ContactParams(real penaltyCoefficient, real penaltySmoothingHalfDistance, real penaltyThresholdDefault, real penaltyThresholdExtraPadding, bool frictionWithColliderNormal, real maxAlignmentNormals, real viscousFrictionCoefficient, real coulombFrictionCoefficient, real frictionFalloffVel, real normalViscousDampingCoefficient, real distanceErrorBound, real objScale, real collidingPenaltyLengthScale) [no_python];
+  ctor ContactParams(real penaltyCoefficient, real penaltySmoothingHalfDistance, real penaltyThresholdDefault, real penaltyThresholdExtraPadding, real collidingPenaltyThresholdPadding, bool frictionWithColliderNormal, real maxAlignmentNormals, real viscousFrictionCoefficient, real coulombFrictionCoefficient, real frictionFalloffVel, real normalViscousDampingCoefficient, real distanceErrorBound, real objScale, real collidingPenaltyLengthScale) [no_python];
   // @brief Stiffness of the contact penalty force [Pa/m].
   //
   // @note Must be finite and strictly positive.
@@ -1145,8 +1146,10 @@ struct ContactParams [equality(default), from_mochi_core] {
   // @note If the colliding actor has @ref ColliderType::None or @ref ColliderType::PointCloud,
   // penaltyThreshold = penaltyThresholdDefault + @ref penaltyThresholdExtraPadding. Otherwise,
   // penaltyThreshold = penaltyThresholdDefault.
+  // @note The colliding actor's @ref collidingPenaltyThresholdPadding, if applicable, is added to
+  // penaltyThreshold.
   //
-  // @see penaltyThresholdExtraPadding, GetPenaltyThresholdDist
+  // @see penaltyThresholdExtraPadding, collidingPenaltyThresholdPadding, GetPenaltyThresholdDist
   real penaltyThresholdDefault [units("m")] = 0.001;
   // @brief Extra padding [m] added to the default contact detection threshold if the colliding
   // actor has @ref ColliderType::None or @ref ColliderType::PointCloud.
@@ -1157,6 +1160,20 @@ struct ContactParams [equality(default), from_mochi_core] {
   //
   // @see penaltyThresholdDefault, GetPenaltyThresholdDist
   real penaltyThresholdExtraPadding [units("m")] = 0;
+  // @brief [Experimental] Padding [m] added to the collider's contact detection threshold when this
+  // actor is the colliding actor.
+  //
+  // @warning This is an experimental feature. It may be changed or removed in the future. Use at
+  // your own risk.
+  //
+  // @note Must be finite and not negative.
+  // @note Unlike @ref penaltyThresholdExtraPadding, which the collider applies to some colliding
+  // actors, this padding is applied by the colliding actor to any collider, except colliders with
+  // @ref ColliderType::PointCloud and SDF colliders of soft actors, which ignore it.
+  // @note Padding is useful to avoid tunneling of thin or coarsely sampled colliding actors.
+  //
+  // @see penaltyThresholdDefault, penaltyThresholdExtraPadding
+  real collidingPenaltyThresholdPadding [units("m")] = 0;
   // @brief Use collider's normal (normalized SDF gradient) for friction direction if true, or the
   // colliding's surface normal at the sample point if false.
   //

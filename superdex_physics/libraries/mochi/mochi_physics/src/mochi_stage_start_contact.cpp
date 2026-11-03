@@ -144,10 +144,10 @@ static void TransformToColliderSpaceRigid(
 template <bool kIsSync>
 static void AddPerCollisionMissingStageStartContacts(
     entt::registry const& reg,
+    entt::entity colliding,
     entt::entity collider,
     CContactSamples<TimeStep::Current> const& samples,
     TransformRT const& worldFromColliding,
-    bool addPadding,
     ContactDetectionResult const& stageStart,
     ContactDetectionResult& current,
     CContactCorrespondence<kIsSync>& correspondence) {
@@ -231,8 +231,7 @@ static void AddPerCollisionMissingStageStartContacts(
 
   // Append missing stage-start contacts.
   // As the point is not colliding, use the distance tolerance and the stage-start gradient.
-  auto const& colliderContactParams = reg.get<CContactParams const>(collider);
-  real const distanceTolerance = colliderContactParams.GetPenaltyThresholdDist(addPadding);
+  real const distanceTolerance = GetPairPenaltyThresholdDist(reg, colliding, collider);
   for (int i = 0; i < numMissing; ++i) {
     auto const& [sampleIdx, contactIdx] = missingSamples[i];
     current.sampleIndices.push_back(sampleIdx);
@@ -260,9 +259,9 @@ static void AddPerCollisionMissingStageStartContacts(
 template <bool kIsSync>
 static void AddMissingStageStartContacts(
     entt::registry const& reg,
+    entt::entity colliding,
     CContactSamples<TimeStep::Current> const& samples,
     TransformRT const& worldFromColliding,
-    bool addPadding,
     CActiveCollisions<kIsSync, TimeStep::StageStart> const& stageStartCollisions,
     CActiveCollisions<kIsSync, TimeStep::Current>& outCurrentCollisions,
     CContactCorrespondence<kIsSync>& correspondence) {
@@ -278,10 +277,10 @@ static void AddMissingStageStartContacts(
             ColliderPartitionLess::GetKey(outCurrentCollisions[c])) {
       AddPerCollisionMissingStageStartContacts(
           reg,
+          colliding,
           outCurrentCollisions[c].colliderEntity,
           samples,
           worldFromColliding,
-          addPadding,
           stageStartCollisions[s].collisionResult,
           outCurrentCollisions[c].collisionResult,
           correspondence);
@@ -294,19 +293,17 @@ template <bool kIsSync>
 void mochi::AddStageStartCollisionDetection(
     entt::registry const& reg,
     entt::entity e,
-    CColliderInfo const& colliderInfo,
     CContactSamples<TimeStep::Current> const& samples,
     CActiveCollisions<kIsSync, TimeStep::StageStart> const& stageStartCollisions,
     CActiveCollisions<kIsSync, TimeStep::Current>& outCurrentCollisions,
     CContactCorrespondence<kIsSync>& correspondence) {
-  bool const addPadding = ShouldAddPenaltyPadding(colliderInfo.type);
   auto const& worldFromColliding = GetRootTransform<TimeStep::Current>(reg, e);
   AddMissingStageStartCollisions(stageStartCollisions, outCurrentCollisions);
   AddMissingStageStartContacts(
       reg,
+      e,
       samples,
       worldFromColliding,
-      addPadding,
       stageStartCollisions,
       outCurrentCollisions,
       correspondence);
@@ -316,7 +313,6 @@ void mochi::AddStageStartCollisionDetection(
 template void mochi::AddStageStartCollisionDetection</*kIsSync*/ false>(
     entt::registry const& reg,
     entt::entity e,
-    CColliderInfo const& colliderInfo,
     CContactSamples<TimeStep::Current> const& samples,
     CActiveCollisions</*kIsSync*/ false, TimeStep::StageStart> const& stageStartCollisions,
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current>& outCurrentCollisions,
@@ -325,7 +321,6 @@ template void mochi::AddStageStartCollisionDetection</*kIsSync*/ false>(
 template void mochi::AddStageStartCollisionDetection</*kIsSync*/ true>(
     entt::registry const& reg,
     entt::entity e,
-    CColliderInfo const& colliderInfo,
     CContactSamples<TimeStep::Current> const& samples,
     CActiveCollisions</*kIsSync*/ true, TimeStep::StageStart> const& stageStartCollisions,
     CActiveCollisions</*kIsSync*/ true, TimeStep::Current>& outCurrentCollisions,

@@ -3361,8 +3361,14 @@ class ContactParams:
         :attr:`~superdex.physics.ContactParams.penalty_threshold_extra_padding`.
         Otherwise, penaltyThreshold = penaltyThresholdDefault.
 
+    Note:
+        The colliding actor's
+        :attr:`~superdex.physics.ContactParams.colliding_penalty_threshold_padding`,
+        if applicable, is added to penaltyThreshold.
+
     See Also:
         :attr:`~superdex.physics.ContactParams.penalty_threshold_extra_padding`,
+        :attr:`~superdex.physics.ContactParams.colliding_penalty_threshold_padding`,
         :meth:`~superdex.physics.ContactParams.get_penalty_threshold_dist`
     """
     penalty_threshold_extra_padding: float
@@ -3381,6 +3387,33 @@ class ContactParams:
     See Also:
         :attr:`~superdex.physics.ContactParams.penalty_threshold_default`,
         :meth:`~superdex.physics.ContactParams.get_penalty_threshold_dist`
+    """
+    colliding_penalty_threshold_padding: float
+    """[Experimental] Padding [m] added to the collider's contact detection threshold
+    when this actor is the colliding actor.
+
+    Note:
+        Must be finite and not negative.
+
+    Note:
+        Unlike
+        :attr:`~superdex.physics.ContactParams.penalty_threshold_extra_padding`,
+        which the collider applies to some colliding actors, this padding is applied
+        by the colliding actor to any collider, except colliders with
+        :class:`POINT_CLOUD <superdex.physics.ColliderType>` and SDF colliders of
+        soft actors, which ignore it.
+
+    Note:
+        Padding is useful to avoid tunneling of thin or coarsely sampled colliding
+        actors.
+
+    Warning:
+        This is an experimental feature. It may be changed or removed in the future.
+        Use at your own risk.
+
+    See Also:
+        :attr:`~superdex.physics.ContactParams.penalty_threshold_default`,
+        :attr:`~superdex.physics.ContactParams.penalty_threshold_extra_padding`
     """
     friction_with_collider_normal: bool
     """Use collider's normal (normalized SDF gradient) for friction direction if true,
@@ -3555,6 +3588,7 @@ class ContactParams:
         penalty_smoothing_half_distance: float = ...,
         penalty_threshold_default: float = ...,
         penalty_threshold_extra_padding: float = ...,
+        colliding_penalty_threshold_padding: float = ...,
         friction_with_collider_normal: bool = ...,
         max_alignment_normals: float = ...,
         viscous_friction_coefficient: float = ...,

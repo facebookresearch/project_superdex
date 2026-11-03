@@ -960,6 +960,15 @@ static DynamicArray<WakeCase> const& GetWakeCases() {
          params.coulombFrictionCoefficient = 0.25_r;
          c.actor->SetContactParams(params, test::ExpectOK{});
        }},
+      {.name = "SetContactParams_CollidingPadding",
+       .types = kWithContactParams,
+       .onRepeat = OnRepeat::NoWake,
+       .apply =
+           [](WakeContext& c) {
+             auto params = c.actor->GetContactParams(test::ExpectOK{});
+             params.collidingPenaltyThresholdPadding = 0.01_r;
+             c.actor->SetContactParams(params, test::ExpectOK{});
+           }},
       {"SetContactLayer",
        kWithContactParams,
        OnRepeat::NoWake,

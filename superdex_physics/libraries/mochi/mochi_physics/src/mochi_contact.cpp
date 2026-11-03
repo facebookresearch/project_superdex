@@ -311,6 +311,11 @@ static void UpdatePotentialColliders(
   // Get colliding transform
   TransformRT const& worldFromColliding = GetRootTransform<kTimeStep>(reg, colliding);
 
+  // The colliding padding pads the colliding bounds, because the collider bounds are shared by all
+  // colliding actors. Colliders that ignore it are culled conservatively.
+  real const collidingPadding =
+      reg.get<CContactParams const>(colliding).collidingPenaltyThresholdPadding;
+
   if constexpr (kAllowFarSdfQuery) {
     // (kAllowFarSdfQuery == true) requires is to consider contact with actors that are outside of
     // the normal bounding volume. This means we can't use CConservativePotentialColliders. Instead,
@@ -319,7 +324,8 @@ static void UpdatePotentialColliders(
     real farEvaluationDistance = GetFarSdfEvaluationDistance<kAllowFarSdfQuery>(reg, colliding);
 
     AnyShape const worldBoundsColliding = TransformShape(
-        worldFromColliding, ExpandShape(boundsColliding.localShape, farEvaluationDistance));
+        worldFromColliding,
+        ExpandShape(boundsColliding.localShape, farEvaluationDistance + collidingPadding));
 
     auto const& contactTable = reg.ctx<CContactFilterTable const>();
 
@@ -378,8 +384,8 @@ static void UpdatePotentialColliders(
     // actor. Collider types and contact filtering have already been taken into account. We simply
     // have to find the subset of those actors which also overlap the colliding's tight fitting
     // bounds.
-    AnyShape const worldBoundsColliding =
-        TransformShape(worldFromColliding, boundsColliding.localShape);
+    AnyShape const worldBoundsColliding = TransformShape(
+        worldFromColliding, ExpandShape(boundsColliding.localShape, collidingPadding));
 #if MOCHI_ASSERT_VERBOSE_ENABLED
     for (entt::entity const collider : conservativeColliders) {
       MOCHI_ASSERT_VERBOSE(
@@ -1119,7 +1125,8 @@ template <TimeStep kTimeStep, bool kAllowFarSdfQuery>
           auto const& contactParams = reg.get<CContactParams const>(collider);
           colliderBvForCulling = SdfBv{
               .gridSdf = gridSdf,
-              .distanceThreshold = GetColliderPadding(contactParams) + farSdfDistance,
+              .distanceThreshold = GetColliderPadding(contactParams) +
+                  GetCollidingPadding(reg, colliding, collider) + farSdfDistance,
               .gridFromPointsT = gridFromCollidingT};
         }
       } break;
@@ -1203,8 +1210,9 @@ static void DetectCollisionsWithSingleCollider(
   auto const& colliderContactParams = reg.get<CContactParams const>(collider);
   auto const& worldFromCollider = GetRootTransform<kTimeStep>(reg, collider);
   auto const& colliderBounds = reg.get<CBoundingVolume const>(collider).localShape;
-  AnyShape expandedColliderBounds =
-      ExpandColliderBoundsForContact(colliderBounds, colliderContactParams);
+  AnyShape expandedColliderBounds = ExpandShape(
+      colliderBounds,
+      GetColliderPadding(colliderContactParams) + GetCollidingPadding(reg, colliding, collider));
   auto collidingFromCollider = Invert(worldFromColliding) * worldFromCollider;
 
   // List of sample points to be tested.
@@ -1224,13 +1232,11 @@ static void DetectCollisionsWithSingleCollider(
     return;
   }
 
-  // Set tolerance depending on penalty threshold distance. Add extra padding (if any) if this actor
-  // has no collider or a point-cloud collider.
+  // Set tolerance depending on the penalty threshold distance of the pair.
   ContactDetectionParams detectionParams;
-  bool const addPadding = ShouldAddPenaltyPadding(reg.get<CColliderInfo const>(colliding).type);
   real const farSdfDistance = GetFarSdfEvaluationDistance<kAllowFarSdfQuery>(reg, colliding);
   detectionParams.tolerance =
-      colliderContactParams.GetPenaltyThresholdDist(addPadding) + farSdfDistance;
+      GetPairPenaltyThresholdDist(reg, colliding, collider) + farSdfDistance;
 
   // Initialize outResult.jacColliderFromWorld assuming a rigid collider. This will be overwritten
   // for deformable colliders.
@@ -4845,8 +4851,15 @@ Aabb mochi::ExpandConservativeBoundsWithContactPadding(
   real farSdfDistance = GetFarSdfEvaluationDistance<true>(reg, e);
 
   // Point-cloud collider radii are already included in the actors' local bounding volumes.
+  // Bounds overlap if their distance is at most the sum of their paddings. Padding each actor by
+  // the max of its collider and colliding paddings covers the threshold in both pair directions,
+  // e.g., max(colliderA, collidingA) + max(colliderB, collidingB) >= colliderA + collidingB.
+  // Without colliding padding, keep the collider padding even if it is negative.
   if (contactParams) {
-    bounds = ExpandColliderBoundsForContact(bounds, *contactParams);
+    real const colliderPadding = GetColliderPadding(*contactParams);
+    real const collidingPadding = contactParams->collidingPenaltyThresholdPadding;
+    bounds = ExpandShape(
+        bounds, collidingPadding > 0_r ? Max(colliderPadding, collidingPadding) : colliderPadding);
   }
 
   return ExpandShape(bounds, farSdfDistance);

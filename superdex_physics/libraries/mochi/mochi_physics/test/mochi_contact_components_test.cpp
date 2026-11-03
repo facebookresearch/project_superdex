@@ -117,6 +117,7 @@ TEST(ContactParamsValidation, RejectsNonFiniteValuesForEveryNumericField) {
       &ContactParams::penaltySmoothingHalfDistance,
       &ContactParams::penaltyThresholdDefault,
       &ContactParams::penaltyThresholdExtraPadding,
+      &ContactParams::collidingPenaltyThresholdPadding,
       &ContactParams::maxAlignmentNormals,
       &ContactParams::viscousFrictionCoefficient,
       &ContactParams::coulombFrictionCoefficient,
@@ -138,6 +139,83 @@ TEST(ContactParamsValidation, RejectsNonFiniteValuesForEveryNumericField) {
       ContactParams params;
       params.*field = value;
       ValidateContactParams(params, ExpectNotOK{});
+    }
+  }
+}
+
+TEST(ContactParamsValidation, RejectsNegativePaddings) {
+  for (auto const field :
+       {&ContactParams::penaltyThresholdExtraPadding,
+        &ContactParams::collidingPenaltyThresholdPadding}) {
+    ContactParams params;
+    params.*field = 0_r;
+    ValidateContactParams(params, ExpectOK{});
+    params.*field = -1e-6_r;
+    ValidateContactParams(params, ExpectNotOK{});
+  }
+}
+
+TEST(ContactPairParams, CollidingPaddingAppliesToDetectionAndForceThresholdsAlike) {
+  real constexpr kCollidingPadding = 0.25_r;
+  ContactParams colliderParams = MakeColliderContactParams();
+  // The collider's own colliding padding must not apply.
+  colliderParams.collidingPenaltyThresholdPadding = 2_r * kCollidingPadding;
+
+  struct ColliderCase {
+    ColliderType type;
+    bool hasSdfMapping;
+    bool appliesCollidingPadding;
+  };
+  constexpr std::array colliderCases = {
+      ColliderCase{
+          .type = ColliderType::Sphere, .hasSdfMapping = false, .appliesCollidingPadding = true},
+      ColliderCase{
+          .type = ColliderType::Box, .hasSdfMapping = false, .appliesCollidingPadding = true},
+      ColliderCase{
+          .type = ColliderType::Mesh, .hasSdfMapping = false, .appliesCollidingPadding = true},
+      ColliderCase{
+          .type = ColliderType::Plane, .hasSdfMapping = false, .appliesCollidingPadding = true},
+      ColliderCase{
+          .type = ColliderType::Sdf, .hasSdfMapping = false, .appliesCollidingPadding = true},
+      ColliderCase{
+          .type = ColliderType::Sdf, .hasSdfMapping = true, .appliesCollidingPadding = false},
+      ColliderCase{
+          .type = ColliderType::PointCloud,
+          .hasSdfMapping = false,
+          .appliesCollidingPadding = false},
+  };
+  // The collider's extra padding applies only to these colliding types.
+  constexpr std::array collidingTypes = {
+      ColliderType::None, ColliderType::Sdf, ColliderType::PointCloud};
+
+  for (ColliderCase const& colliderCase : colliderCases) {
+    for (ColliderType const collidingType : collidingTypes) {
+      for (real const collidingPadding : {0_r, kCollidingPadding}) {
+        entt::registry reg;
+        entt::entity const colliding = reg.create();
+        entt::entity const collider = reg.create();
+        ContactParams collidingParams = MakeCollidingContactParams();
+        collidingParams.collidingPenaltyThresholdPadding = collidingPadding;
+        reg.emplace<CContactParams>(colliding, collidingParams);
+        reg.emplace<CContactParams>(collider, colliderParams);
+        reg.emplace<CColliderInfo>(colliding).type = collidingType;
+        reg.emplace<CColliderInfo>(collider).type = colliderCase.type;
+        if (colliderCase.hasSdfMapping) {
+          reg.emplace<CSdfMapping<TimeStep::Current>>(collider);
+        }
+        reg.set<CContactPairParamsOverrideTable>();
+
+        bool const addPadding = ShouldAddPenaltyPadding(collidingType);
+        real const expectedCollidingPadding =
+            colliderCase.appliesCollidingPadding ? collidingPadding : 0_r;
+        real const expectedThreshold =
+            colliderParams.GetPenaltyThresholdDist(addPadding) + expectedCollidingPadding;
+        EXPECT_EQ(expectedCollidingPadding, GetCollidingPadding(reg, colliding, collider));
+        EXPECT_EQ(expectedThreshold, GetPairPenaltyThresholdDist(reg, colliding, collider));
+        EXPECT_NEAR_EQ(
+            expectedThreshold,
+            GetContactPairParams(reg, colliding, collider).GetPenaltyThresholdDist(addPadding));
+      }
     }
   }
 }
@@ -165,7 +243,8 @@ TEST(ContactPairParams, NoOverridePreservesDynamicAndStaticCombination) {
       /*isStaticCollider=*/false,
       /*collidingIntegralDim=*/2,
       /*colliderIntegralDim=*/0,
-      /*colliderPenaltyLengthScale=*/0_r);
+      /*colliderPenaltyLengthScale=*/0_r,
+      /*collidingPadding=*/0_r);
   EXPECT_EQ(expectedDynamic.penaltyCoefficient, dynamic.penaltyCoefficient);
   EXPECT_EQ(expectedDynamic.frictionFalloffVel, dynamic.frictionFalloffVel);
   EXPECT_EQ(expectedDynamic.viscousFrictionCoefficient, dynamic.viscousFrictionCoefficient);
@@ -181,7 +260,8 @@ TEST(ContactPairParams, NoOverridePreservesDynamicAndStaticCombination) {
       /*isStaticCollider=*/true,
       /*collidingIntegralDim=*/2,
       /*colliderIntegralDim=*/0,
-      /*colliderPenaltyLengthScale=*/0_r);
+      /*colliderPenaltyLengthScale=*/0_r,
+      /*collidingPadding=*/0_r);
   ExpectCombinedFields(staticCollider, 4_r, 0.04_r, 6_r, 6_r, 20_r);
   ExpectColliderOwnedFieldsUnchanged(staticCollider, collider);
 }
@@ -217,7 +297,8 @@ TEST(ContactPairParams, EachOverrideFieldReplacesOnlyItsResolvedValue) {
         /*isStaticCollider=*/false,
         /*collidingIntegralDim=*/2,
         /*colliderIntegralDim=*/0,
-        /*colliderPenaltyLengthScale=*/0_r);
+        /*colliderPenaltyLengthScale=*/0_r,
+        /*collidingPadding=*/0_r);
     expected.*testCase.resolvedMember = 7_r;
 
     ContactParams const actual = CombineContactParams(
@@ -227,7 +308,8 @@ TEST(ContactPairParams, EachOverrideFieldReplacesOnlyItsResolvedValue) {
         /*isStaticCollider=*/false,
         /*collidingIntegralDim=*/2,
         /*colliderIntegralDim=*/0,
-        /*colliderPenaltyLengthScale=*/0_r);
+        /*colliderPenaltyLengthScale=*/0_r,
+        /*collidingPadding=*/0_r);
     ExpectCombinedFields(
         actual,
         expected.penaltyCoefficient,
@@ -254,7 +336,8 @@ TEST(ContactPairParams, PartialPatchOverridesStaticSelectionAndRetainsOmittedFie
       /*isStaticCollider=*/true,
       /*collidingIntegralDim=*/2,
       /*colliderIntegralDim=*/0,
-      /*colliderPenaltyLengthScale=*/0_r);
+      /*colliderPenaltyLengthScale=*/0_r,
+      /*collidingPadding=*/0_r);
   ExpectCombinedFields(actual, 12_r, 0.25_r, 6_r, 0_r, 20_r);
   ExpectColliderOwnedFieldsUnchanged(actual, collider);
 }
@@ -272,7 +355,8 @@ TEST(ContactPairParams, PenaltyOverridePrecedesBothDimensionalCorrections) {
       /*isStaticCollider=*/false,
       /*collidingIntegralDim=*/1,
       /*colliderIntegralDim=*/2,
-      /*colliderPenaltyLengthScale=*/2_r);
+      /*colliderPenaltyLengthScale=*/2_r,
+      /*collidingPadding=*/0_r);
   EXPECT_EQ(1_r, actual.penaltyCoefficient);
 }
 
@@ -302,7 +386,8 @@ TEST(ContactPairParams, RegistryLookupAppliesPairOverrideAndFallsBackForAbsentPa
       /*isStaticCollider=*/false,
       /*collidingIntegralDim=*/2,
       /*colliderIntegralDim=*/0,
-      /*colliderPenaltyLengthScale=*/0_r);
+      /*colliderPenaltyLengthScale=*/0_r,
+      /*collidingPadding=*/0_r);
   ContactParams const actualFallback = GetContactPairParams(reg, otherColliding, collider);
   ExpectCombinedFields(
       actualFallback,

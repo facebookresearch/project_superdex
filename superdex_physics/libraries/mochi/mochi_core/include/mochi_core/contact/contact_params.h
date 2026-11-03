@@ -47,6 +47,7 @@ struct ContactParams {
    * @param[in] penaltySmoothingHalfDistance See @ref penaltySmoothingHalfDistance.
    * @param[in] penaltyThresholdDefault See @ref penaltyThresholdDefault.
    * @param[in] penaltyThresholdExtraPadding See @ref penaltyThresholdExtraPadding.
+   * @param[in] collidingPenaltyThresholdPadding See @ref collidingPenaltyThresholdPadding.
    * @param[in] frictionWithColliderNormal See @ref frictionWithColliderNormal.
    * @param[in] maxAlignmentNormals See @ref maxAlignmentNormals.
    * @param[in] viscousFrictionCoefficient See @ref viscousFrictionCoefficient.
@@ -65,6 +66,7 @@ struct ContactParams {
       real penaltySmoothingHalfDistance,
       real penaltyThresholdDefault,
       real penaltyThresholdExtraPadding,
+      real collidingPenaltyThresholdPadding,
       bool frictionWithColliderNormal,
       real maxAlignmentNormals,
       real viscousFrictionCoefficient,
@@ -117,8 +119,10 @@ struct ContactParams {
    * @note If the colliding actor has @ref ColliderType::None or @ref ColliderType::PointCloud,
    * penaltyThreshold = penaltyThresholdDefault + @ref penaltyThresholdExtraPadding. Otherwise,
    * penaltyThreshold = penaltyThresholdDefault.
+   * @note The colliding actor's @ref collidingPenaltyThresholdPadding, if applicable, is added to
+   * penaltyThreshold.
    *
-   * @see penaltyThresholdExtraPadding, GetPenaltyThresholdDist
+   * @see penaltyThresholdExtraPadding, collidingPenaltyThresholdPadding, GetPenaltyThresholdDist
    */
   real penaltyThresholdDefault = 0.001_r;
 
@@ -133,6 +137,23 @@ struct ContactParams {
    * @see penaltyThresholdDefault, GetPenaltyThresholdDist
    */
   real penaltyThresholdExtraPadding = 0_r;
+
+  /**
+   * @brief [Experimental] Padding [m] added to the collider's contact detection threshold when this
+   * actor is the colliding actor.
+   *
+   * @warning This is an experimental feature. It may be changed or removed in the future. Use at
+   * your own risk.
+   *
+   * @note Must be finite and not negative.
+   * @note Unlike @ref penaltyThresholdExtraPadding, which the collider applies to some colliding
+   * actors, this padding is applied by the colliding actor to any collider, except colliders with
+   * @ref ColliderType::PointCloud and SDF colliders of soft actors, which ignore it.
+   * @note Padding is useful to avoid tunneling of thin or coarsely sampled colliding actors.
+   *
+   * @see penaltyThresholdDefault, penaltyThresholdExtraPadding
+   */
+  real collidingPenaltyThresholdPadding = 0_r;
 
   // Parameters for friction
 
@@ -286,6 +307,7 @@ struct ContactParams {
   MOCHI_FIELD(penaltySmoothingHalfDistance) MOCHI_ATTRIBUTE(Units("m"))
   MOCHI_FIELD(penaltyThresholdDefault) MOCHI_ATTRIBUTE(Units("m"))
   MOCHI_FIELD(penaltyThresholdExtraPadding) MOCHI_ATTRIBUTE(Units("m"))
+  MOCHI_FIELD(collidingPenaltyThresholdPadding) MOCHI_ATTRIBUTE(Units("m"))
   MOCHI_FIELD(frictionWithColliderNormal)
   MOCHI_FIELD(maxAlignmentNormals)
   MOCHI_FIELD(viscousFrictionCoefficient) MOCHI_ATTRIBUTE(Units("s/m"))

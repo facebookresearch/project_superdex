@@ -637,6 +637,12 @@ inline void ValidateContactParams(ContactParams const& params, Error& error) {
       "Penalty threshold extra padding (penaltyThresholdExtraPadding) must be finite and not "
       "negative.");
   MOCHI_ERROR_IF_NOT(
+      IsFinite(params.collidingPenaltyThresholdPadding) &&
+          params.collidingPenaltyThresholdPadding >= 0_r,
+      error,
+      "Colliding penalty threshold padding (collidingPenaltyThresholdPadding) must be finite and "
+      "not negative.");
+  MOCHI_ERROR_IF_NOT(
       params.maxAlignmentNormals >= -1_r && params.maxAlignmentNormals <= 1_r,
       error,
       "Maximum normal alignment (maxAlignmentNormals) must be in [-1, 1].");
@@ -677,6 +683,7 @@ using ContactAssemblyReg = ecs::PartialRegistry<
     CContactParams const,
     CPointCloudColliderParams const,
     CColliderInfo const,
+    CSdfMapping<TimeStep::Current> const,
     CFemSurfaceDiscretization const,
     TagStaticActor const,
     TagRigidActor const,
@@ -744,6 +751,24 @@ using ContactAssemblyReg = ecs::PartialRegistry<
 }
 
 /**
+ * @brief Returns the colliding actor's @ref ContactParams::collidingPenaltyThresholdPadding if the
+ * collider applies it, and 0 otherwise.
+ *
+ * Point-cloud and mapped SDF colliders ignore it.
+ */
+[[nodiscard]] inline real
+GetCollidingPadding(ContactAssemblyReg const& reg, entt::entity colliding, entt::entity collider) {
+  real const padding = reg.get<CContactParams const>(colliding).collidingPenaltyThresholdPadding;
+  if (padding == 0_r) {
+    return 0_r;
+  }
+  bool const ignoresPadding =
+      reg.get<CColliderInfo const>(collider).type == ColliderType::PointCloud ||
+      reg.all_of<CSdfMapping<TimeStep::Current>>(collider);
+  return ignoresPadding ? 0_r : padding;
+}
+
+/**
  * @brief Combines contact parameters from two actors into a single set of contact parameters.
  *
  * This function implements the combination logic for friction coefficients, penalty coefficient,
@@ -761,6 +786,8 @@ using ContactAssemblyReg = ecs::PartialRegistry<
  * collider params, 0 for standard colliders with no collider-side integration).
  * @param colliderPenaltyLengthScale Length scale [m] for the collider-side dimensional correction.
  * For point-cloud colliders, this is the contact radius.
+ * @param collidingPadding Colliding padding [m] added to the collider's penalty threshold, as
+ * returned by @ref GetCollidingPadding.
  * @return Combined contact parameters for the pair.
  */
 inline ContactParams CombineContactParams(
@@ -770,7 +797,8 @@ inline ContactParams CombineContactParams(
     bool isStaticCollider,
     int collidingIntegralDim,
     int colliderIntegralDim,
-    real colliderPenaltyLengthScale) {
+    real colliderPenaltyLengthScale,
+    real collidingPadding) {
   ContactParams pairParams = colliderParams;
   if (paramsOverride != nullptr) {
     pairParams = ApplyContactPairParamsOverride(pairParams, *paramsOverride);
@@ -834,10 +862,14 @@ inline ContactParams CombineContactParams(
   real const colliderDimCorrection = Pow(colliderPenaltyLengthScale, -colliderIntegralDim);
   pairParams.penaltyCoefficient *= colliderDimCorrection;
 
+  // Must match the threshold used for collision detection (GetPairPenaltyThresholdDist), up to
+  // rounding.
+  pairParams.penaltyThresholdDefault += collidingPadding;
+
   // All other parameters are those of the collider.
-  // TODO: Penalty distance threshold and smoothing distance are those of the collider. For static
-  // colliders, it may be beneficial to use those of the colliding actor. That would require changes
-  // to (at least) the collision detection pipelines.
+  // TODO: Penalty distance threshold (except the colliding padding) and smoothing distance are
+  // those of the collider. For static colliders, it may be beneficial to use those of the colliding
+  // actor. That would require changes to (at least) the collision detection pipelines.
 
   return pairParams;
 }
@@ -865,7 +897,8 @@ GetContactPairParams(ContactAssemblyReg const& reg, entt::entity colliding, entt
       isStaticCollider,
       collidingIntegralDim,
       colliderIntegralDim,
-      colliderPenaltyLengthScale);
+      colliderPenaltyLengthScale,
+      GetCollidingPadding(reg, colliding, collider));
 }
 
 inline bool ValidCollidingNormals(ContactAssemblyReg const& reg, entt::entity colliding) {
@@ -937,7 +970,6 @@ template <bool kIsSync>
 void AddStageStartCollisionDetection(
     entt::registry const& reg,
     entt::entity e,
-    CColliderInfo const& colliderInfo,
     CContactSamples<TimeStep::Current> const& samples,
     CActiveCollisions<kIsSync, TimeStep::StageStart> const& stageStartCollisions,
     CActiveCollisions<kIsSync, TimeStep::Current>& outCurrentCollisions,
@@ -1089,13 +1121,24 @@ inline constexpr bool ShouldAddPenaltyPadding(ColliderType type) {
   return type == ColliderType::None || type == ColliderType::PointCloud;
 }
 
+/// @brief Returns the contact detection threshold [m] between a colliding actor and a collider.
+[[nodiscard]] inline real GetPairPenaltyThresholdDist(
+    ContactAssemblyReg const& reg,
+    entt::entity colliding,
+    entt::entity collider) {
+  bool const addPadding = ShouldAddPenaltyPadding(reg.get<CColliderInfo const>(colliding).type);
+  return reg.get<CContactParams const>(collider).GetPenaltyThresholdDist(addPadding) +
+      GetCollidingPadding(reg, colliding, collider);
+}
+
 // Expand a collider's bounding volume to include contact penalty falloff. Any point outside of this
 // volume should receive zero contact penalty.
 template <class ShapeT>
 auto ExpandColliderBoundsForContact(
     ShapeT const& colliderBounds,
     ContactParams const& colliderContactParams) {
-  return ExpandShape(colliderBounds, GetColliderPadding(colliderContactParams));
+  // Eroding collider bounds is not conservative when padding a rotated colliding volume.
+  return ExpandShape(colliderBounds, Max(0_r, GetColliderPadding(colliderContactParams)));
 }
 
 // World-space bounds of a static collider over a step, swept from its previous to its current root
