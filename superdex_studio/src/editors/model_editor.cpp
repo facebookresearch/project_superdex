@@ -2614,7 +2614,7 @@ void ModelEditor::LoadProcessingPipelineOnOpen() {
   for (ReferenceModelState const& s : loaded.referenceModels) {
     ReferenceModel rm;
     rm.uiId = _nextReferenceModelId++;
-    rm.type = AssetTypeFromToken(s.type.c_str());
+    rm.type = AssetTypeFromToken(s.type);
     if (rm.type == AssetType::Unknown) {
       rm.type = AssetType::RenderModel;
     }

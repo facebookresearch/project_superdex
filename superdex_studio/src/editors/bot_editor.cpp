@@ -573,8 +573,7 @@ void BotEditor::ShowMainMenuItems() {
       auto path = SuperDexStudio::GetFileDialogPath(
           "Export URDF", filters.data(), 1, "URDF (*.urdf)", true);
       if (!path.IsEmpty()) {
-        superdex::robotics::SaveToUrdfFile(
-            _botAsset->GetBotPrefab(), path.ToString().c_str(), error);
+        superdex::robotics::SaveToUrdfFile(_botAsset->GetBotPrefab(), path.ToString(), error);
       }
     }
     // Export Skeletal GLB
@@ -755,7 +754,7 @@ void BotEditor::ApplyBatchRename(bool applyLinks) {
   // Remap a name-valued field through the map if it matches a changed (old) name. Uses assign() to
   // preserve the DynamicString's allocator.
   auto remap = [&nameMap](mochi::DynamicString& value) {
-    auto const it = nameMap.find(std::string(value.c_str()));
+    auto const it = nameMap.find(std::string(value));
     if (it != nameMap.end()) {
       value.assign(it->second.c_str(), it->second.size());
     }
@@ -1956,10 +1955,10 @@ void BotEditor::ShowBotSkinWindow(bool* open) {
         if (skin.nonCollidingLinks.has_value()) {
           std::unordered_set<std::string> inList;
           for (auto const& n : *skin.nonCollidingLinks) {
-            inList.insert(std::string(n.c_str()));
+            inList.insert(std::string(n));
           }
           for (int i = 0; i < numLinks; ++i) {
-            nonColliding[i] = inList.count(std::string(links[i].name.c_str())) > 0;
+            nonColliding[i] = inList.count(std::string(links[i].name)) > 0;
           }
         }
         bool listChanged = false;
@@ -2346,7 +2345,7 @@ static std::string ModificationLabel(superdex::robotics::BotMod const& mod) {
                                                                 : "Replace Link With Bot";
         if (!m.name.empty()) {
           label += " (";
-          label += m.name.c_str();
+          label += m.name;
           label += ")";
         }
         return label;

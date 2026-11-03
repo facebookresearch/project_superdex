@@ -585,7 +585,7 @@ void MochiAsyncScene::ShowPlayToolbarOverViewport() {
   bool playing = simulating && !IsPaused();
   if (!simulating) {
     if (ImGui::Button(ICON_FA_PLAY "###play")) {
-      CreateScene(_sceneName.c_str(), false);
+      CreateScene(_sceneName, false);
     }
     if (ImGui::IsItemHovered()) {
       ImGui::SetTooltip("Play (Space)");
@@ -609,7 +609,7 @@ void MochiAsyncScene::ShowPlayToolbarOverViewport() {
   ImGui::SameLine();
   if (ImGui::Button(ICON_FA_STEP_FORWARD "###step")) {
     if (!simulating) {
-      CreateScene(_sceneName.c_str(), true);
+      CreateScene(_sceneName, true);
     }
     if (IsSimulating()) {
       RequestStepThenPause();
