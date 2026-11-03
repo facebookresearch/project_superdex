@@ -16,6 +16,10 @@ mode/cuda/opt
 build*
 # ...but not the checked-in wheel build driver, which `build*` matches by accident.
 !tools/build_wheels.py
+# ...nor a prefab's own `src/build.py`, the generator that rebuilds its CAD. `build*` matched
+# those by accident too, so `sl add` silently skipped every new prefab's builder and several
+# shipped with no way to rebuild them.
+!assets/prefabs/**/src/build.py
 ref
 *.local.cmake
 cmake-build*
