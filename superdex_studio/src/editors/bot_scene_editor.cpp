@@ -356,6 +356,8 @@ bool ResolveTaskSpawns(
     }
   }
 
+  mochi::TransformRT const worldFromTask =
+      superdex::robotics::ComputeWorldFromTask(scene.scene, task);
   out.clear();
   out.resize(task.resetState.size());
   std::vector<int> resolveState(task.resetState.size());
@@ -377,7 +379,7 @@ bool ResolveTaskSpawns(
       return false;
     }
 
-    mochi::TransformRT worldFromParent;
+    mochi::TransformRT worldFromParent = worldFromTask;
     std::string const parent{spawn.parent};
     if (!parent.empty() && parent != superdex::robotics::kTaskRootParentName) {
       auto const parentIt = spawnIndices.find(parent);
@@ -2006,6 +2008,20 @@ void BotSceneEditor::ShowInfoWindow(bool* open) {
     }
     if (auto const& problem = GetReferenceProblem(prefab.scene.baseScene); !problem.empty()) {
       ShowWarning(problem);
+    }
+
+    // Task root: where every task's root-level spawns are placed.
+    bool hasTaskRoot = prefab.scene.taskRoot.has_value();
+    if (ImGui::Checkbox("Task Root", &hasTaskRoot)) {
+      if (hasTaskRoot) {
+        prefab.scene.taskRoot.emplace();
+      } else {
+        prefab.scene.taskRoot.reset();
+      }
+      structural = true;
+    }
+    if (prefab.scene.taskRoot.has_value()) {
+      changed |= ImGui::DragTransformRT("Task Root Transform", *prefab.scene.taskRoot);
     }
 
     // Spawnable prefabs (add / remove / reorder).
