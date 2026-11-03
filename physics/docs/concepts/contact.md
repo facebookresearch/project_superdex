@@ -325,6 +325,7 @@ For `PointCloud` colliders discretizing the [double-integral generalization](#do
 | `penaltySmoothingHalfDistance` | `real` | `0.005` | m | Smoothing half-width $\epsilon$ of the ramp $h_{\epsilon,\delta}$. Larger values improve stability but may increase penetration. |
 | `penaltyThresholdDefault` | `real` | `0.001` | m | Default contact threshold $\delta$ at which the penalty activates. |
 | `penaltyThresholdExtraPadding` | `real` | `0` | m | Additional contribution to $\delta$ when the colliding actor uses `None` or `PointCloud`; helps prevent tunneling through thin actors. |
+| `collidingPenaltyThresholdPadding` | `real` | `0` | m | **Experimental.** Additional contribution to $\delta$ taken from the colliding actor, for any collider except `PointCloud` colliders and SDF colliders of soft actors; helps prevent tunneling of thin or coarsely sampled colliding actors. |
 | `frictionWithColliderNormal` | `bool` | `true` | -- | Use the collider-field direction $\mathbf{N}_B$ for the normal/tangential split; when `false`, use the unit vector along $-\mathbf{N}_A$ where available. |
 | `maxAlignmentNormals` | `real` | `0` | -- | Maximum-normal-alignment parameter $m$; contact is rejected when $s > m$. Valid range: [-1, 1]. |
 | `viscousFrictionCoefficient` | `real` | `0` | s/m | Tangential viscous friction coefficient $c_t$. |
