@@ -623,7 +623,7 @@ void PopulateFromParsedModel(
 
         // Sort child links alphanumerically, then recurse.
         DynamicArray<int> childLinks = childrenByLink[linkIdx];
-        std::sort(childLinks.begin(), childLinks.end(), [&](int a, int b) {
+        std::ranges::sort(childLinks, [&](int a, int b) {
           return AlphaNumCompare(model.links[a].name.c_str(), model.links[b].name.c_str()) < 0;
         });
         for (int child : childLinks) {
@@ -647,7 +647,7 @@ void PopulateFromParsedModel(
   worldJoint.name = "world_joint";
   worldJoint.type = ArticulatedJointType::Free;
   outJoints.push_back(worldJoint);
-  std::rotate(outJoints.begin(), outJoints.end() - 1, outJoints.end());
+  std::ranges::rotate(outJoints, outJoints.end() - 1);
   superdex::robotics::RebuildBotData(outData, error);
   MOCHI_ERROR_RETURN(error);
   MOCHI_ERROR_IF(

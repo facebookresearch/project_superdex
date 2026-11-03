@@ -452,10 +452,9 @@ TEST(UrdfRoundtrip, AllBotsRoundTrip) {
     }
 
     // URDF has no spherical joint type, so the exporter rejects bots that use them.
-    bool const hasSphericalJoint =
-        std::any_of(original.joints.begin(), original.joints.end(), [](BotJointPrefab const& j) {
-          return j.type == ArticulatedJointType::Spherical;
-        });
+    bool const hasSphericalJoint = std::ranges::any_of(
+        original.joints,
+        [](BotJointPrefab const& j) { return j.type == ArticulatedJointType::Spherical; });
     if (hasSphericalJoint) {
       (void)SaveToUrdfString(original, ExpectNotOK{});
       continue;

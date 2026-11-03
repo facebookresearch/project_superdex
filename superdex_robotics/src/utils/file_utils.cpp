@@ -94,10 +94,9 @@ std::filesystem::path superdex::robotics::NormalizeBotPath(std::filesystem::path
 }
 
 bool superdex::robotics::IsAssetRoleSubdirName(std::string_view name) {
-  return std::any_of(
-      kAssetRoleSubdirs.begin(), kAssetRoleSubdirs.end(), [name](std::string_view subdir) {
-        return EqualsCaseInsensitive(name, subdir);
-      });
+  return std::ranges::any_of(kAssetRoleSubdirs, [name](std::string_view subdir) {
+    return EqualsCaseInsensitive(name, subdir);
+  });
 }
 
 std::filesystem::path superdex::robotics::FindAssetBaseFolder(
@@ -199,7 +198,7 @@ static bool IsValidTagIdentifier(std::string_view name) {
 // UNC root-name (which would hide a following ".." from the iterator).
 static int CountParentDirComponents(std::string_view path) {
   std::string normalized(path);
-  std::replace(normalized.begin(), normalized.end(), '\\', '/');
+  std::ranges::replace(normalized, '\\', '/');
   size_t const firstNonSlash = normalized.find_first_not_of('/');
   normalized.erase(0, firstNonSlash == std::string::npos ? normalized.size() : firstNonSlash);
   int count = 0;
@@ -218,7 +217,7 @@ static bool ContainsParentDirComponent(std::string_view path) {
 
 // Used to determine of a .superdex_root file should be parsed.
 static bool IsWhitespaceOnly(std::string_view s) {
-  return std::all_of(s.begin(), s.end(), [](unsigned char c) { return std::isspace(c) != 0; });
+  return std::ranges::all_of(s, [](unsigned char c) { return std::isspace(c) != 0; });
 }
 
 ParsedRootFile superdex::robotics::ParseRootFile(

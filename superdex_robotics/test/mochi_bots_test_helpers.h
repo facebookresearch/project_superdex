@@ -34,7 +34,7 @@ inline DynamicArray<std::filesystem::path> FindAllBotFiles(bool returnAbsolutePa
       f = botsDir / f;
     }
   }
-  std::sort(files.begin(), files.end());
+  std::ranges::sort(files);
   return files;
 }
 
