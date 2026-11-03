@@ -37,8 +37,8 @@ namespace {
 
 TEST(PybindContextTeardownRegistry, RunsTeardownsInReverseRegistrationOrder) {
   auto events = std::make_shared<std::vector<std::string>>();
-  RegisterContextDependent([events]() { events->push_back("a"); });
-  RegisterContextDependent([events]() { events->push_back("b"); });
+  RegisterContextDependent([events]() { events->emplace_back("a"); });
+  RegisterContextDependent([events]() { events->emplace_back("b"); });
 
   RunContextDependentTeardowns();
 
@@ -48,7 +48,7 @@ TEST(PybindContextTeardownRegistry, RunsTeardownsInReverseRegistrationOrder) {
 
 TEST(PybindContextTeardownRegistry, ThrowingTeardownDoesNotBlockOthers) {
   auto events = std::make_shared<std::vector<std::string>>();
-  RegisterContextDependent([events]() { events->push_back("ok"); });
+  RegisterContextDependent([events]() { events->emplace_back("ok"); });
   // Registered last, so it runs first; its exception must not prevent the earlier teardown.
   RegisterContextDependent([]() { throw std::runtime_error("boom"); });
 

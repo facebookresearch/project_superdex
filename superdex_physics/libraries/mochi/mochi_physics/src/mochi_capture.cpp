@@ -685,7 +685,7 @@ mochi::capture::CaptureStateToJson(entt::registry& reg, bool prettyMultiLine, Er
   // Built a JSON dictionary of any misc components (usually none)
   auto misc = picojson::array();
   for (auto&& [e, components] : miscComponents) {
-    misc.push_back(picojson::object());
+    misc.emplace_back(picojson::object());
     auto& obj = misc.back();
     obj["_handle"] = static_cast<double>(e);
     obj["components"] = components;
