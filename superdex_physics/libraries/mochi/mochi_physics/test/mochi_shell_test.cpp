@@ -953,9 +953,8 @@ TEST_P(MochiShellActorExternalForcesScene, ShellActorUniaxialEndLoad) {
   // incident edges, so that corner nodes receive half the load of interior nodes.
   Real3 const forceLocalDir{0_r, -1_r, 0_r};
   Real3 const forceWorldDir = _worldFromLocal.TransformDirection(forceLocalDir);
-  std::sort(tipNodes.begin(), tipNodes.end(), [this](int a, int b) {
-    return _nodeCoordsLocal[a][0] < _nodeCoordsLocal[b][0];
-  });
+  std::ranges::sort(
+      tipNodes, [this](int a, int b) { return _nodeCoordsLocal[a][0] < _nodeCoordsLocal[b][0]; });
   int const numTipEdges = isize(tipNodes) - 1;
   ASSERT_GT(numTipEdges, 0);
   real const halfForcePerEdge = 0.5_r * kTipForce / static_cast<real>(numTipEdges);

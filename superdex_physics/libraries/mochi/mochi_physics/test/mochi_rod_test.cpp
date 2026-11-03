@@ -27,6 +27,7 @@
 #include "mochi_core/test/mochi_test_helpers.h"
 #include "mochi_physics_test_fixture.h"
 
+#include <algorithm>
 #include <array>
 #include <limits>
 #include <string>
@@ -1492,7 +1493,7 @@ class MochiRodSurfaceMeshes : public test::MochiSceneTestBase {
       for (int surfaceNodeIdx = 0; surfaceNodeIdx < numSurfaceNodes; ++surfaceNodeIdx) {
         auto const colIndices = jac.Indices(surfaceNodeIdx);
 
-        auto const* it = std::find(colIndices.begin(), colIndices.end(), dofIdx);
+        auto const* it = std::ranges::find(colIndices, dofIdx);
 
         if (it == colIndices.end()) {
           for (int d = 0; d < 3; ++d) {
@@ -1845,7 +1846,7 @@ TEST_F(MochiRodSurfaceMeshes, ContactSkinContact_InitializesSkinningJacobianSpar
       expectedDofs.push_back(node0Start + d);
       expectedDofs.push_back(node1Start + d);
     }
-    std::sort(expectedDofs.begin(), expectedDofs.end());
+    std::ranges::sort(expectedDofs);
 
     ASSERT_EQ(isize(colIndices), isize(expectedDofs));
     for (int j = 0; j < isize(expectedDofs); ++j) {

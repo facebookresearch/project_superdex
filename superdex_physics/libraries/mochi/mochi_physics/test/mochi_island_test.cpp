@@ -624,7 +624,7 @@ TEST_F(MochiIsland, SplitPermutation) {
             // hopefully show it.
             switch (order) {
               case 1:
-                std::reverse(_fakePotentialColliders.begin(), _fakePotentialColliders.end());
+                std::ranges::reverse(_fakePotentialColliders);
                 break;
               case 2:
                 reg.view<CIslandMembers>().each([](auto& members) {
@@ -632,7 +632,7 @@ TEST_F(MochiIsland, SplitPermutation) {
                 });
                 break;
               case 3:
-                std::reverse(_fakePotentialColliders.begin(), _fakePotentialColliders.end());
+                std::ranges::reverse(_fakePotentialColliders);
                 reg.view<CIslandMembers>().each([](auto& members) {
                   std::reverse(members.actors.begin(), members.actors.end());
                 });

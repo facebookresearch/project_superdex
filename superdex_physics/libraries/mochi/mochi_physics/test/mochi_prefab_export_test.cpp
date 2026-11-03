@@ -289,9 +289,7 @@ TEST_IF(MOCHI_HDF5_AND_INTERNAL, PrefabExport, ExportScene_RigidActors) {
 
   // Sort original actors by name to match the alphabetical sorting done during export
   auto sortedOriginal = originalPrefab.actors.rigid;
-  std::sort(sortedOriginal.begin(), sortedOriginal.end(), [](auto const& a, auto const& b) {
-    return a.name < b.name;
-  });
+  std::ranges::sort(sortedOriginal, [](auto const& a, auto const& b) { return a.name < b.name; });
 
   // Actors were sorted alphabetically
   for (size_t i = 0; i < exportedPrefab.actors.rigid.size(); ++i) {
@@ -1881,10 +1879,10 @@ TEST_IF(MOCHI_HDF5_AND_INTERNAL, PrefabExport, ContactFiltersAreDeterministic) {
     expectedLayerAsymmetric.push_back({layerName, "AsymmetricLayer"});
     expectedLayerSymmetric.push_back({layerName, "SymmetricLayer"});
   }
-  std::sort(expectedActorAsymmetric.begin(), expectedActorAsymmetric.end());
-  std::sort(expectedActorSymmetric.begin(), expectedActorSymmetric.end());
-  std::sort(expectedLayerAsymmetric.begin(), expectedLayerAsymmetric.end());
-  std::sort(expectedLayerSymmetric.begin(), expectedLayerSymmetric.end());
+  std::ranges::sort(expectedActorAsymmetric);
+  std::ranges::sort(expectedActorSymmetric);
+  std::ranges::sort(expectedLayerAsymmetric);
+  std::ranges::sort(expectedLayerSymmetric);
 
   auto actorPairs = [](DynamicArray<prefab::ActorContactEntry> const& entries) {
     DynamicArray<NamePair> pairs;
@@ -1978,7 +1976,7 @@ TEST_IF(MOCHI_HDF5_AND_INTERNAL, PrefabExport, ContactPairOverridesAreDeterminis
   for (int i = 0; i < kNumPairs; ++i) {
     expectedEntries.push_back({"Actor" + std::to_string(i), static_cast<real>(i) * 0.01_r});
   }
-  std::sort(expectedEntries.begin(), expectedEntries.end());
+  std::ranges::sort(expectedEntries);
 
   auto exportWithOrder = [&](std::filesystem::path const& outputDir,
                              bool reverse,

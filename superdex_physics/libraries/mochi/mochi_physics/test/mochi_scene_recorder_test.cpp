@@ -814,7 +814,7 @@ static void TestPoseController(Context* mochiContext, IntegrationMethod integrat
 
     auto applyTargetAndAdvance = [&](Scene* scene, Actor* agent, int stepBegin, int stepEnd) {
       for (int i = stepBegin; i < stepEnd; ++i) {
-        std::fill(target.begin(), target.end(), 0.01_r * i);
+        std::ranges::fill(target, 0.01_r * i);
         agent->SetArticulatedTargetPose(target, test::ExpectOK{});
         AdvanceScene(scene, 1);
       }

@@ -309,7 +309,7 @@ TEST_P(MochiSoftMassDampingScene, VelocityDecay) {
       real const vel = (currDispl[i] - prevDispl[i]) / kDt;
       EXPECT_NEAR_RTOL(expectedVel, vel, kVelRtol);
     }
-    std::copy(currDispl.begin(), currDispl.end(), prevDispl.begin());
+    std::ranges::copy(currDispl, prevDispl.begin());
   }
 
   test::ExpectUniformTranslationAssembly(_scene, _actor, kMassRtol);

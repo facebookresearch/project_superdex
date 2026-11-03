@@ -164,7 +164,7 @@ TEST_F(MochiContactFilter, EnumerateContactLayerNames) {
   _scene->EnableLayerContactAsymmetric("A", "B", false, test::ExpectOK{});
   _scene->EnableLayerContactAsymmetric("A", "B", true, test::ExpectOK{});
   _scene->EnumerateContactLayerNames([&](auto name) { names.emplace_back(name); });
-  std::sort(names.begin(), names.end());
+  std::ranges::sort(names);
   EXPECT_EQ(2, names.size());
   EXPECT_EQ("A", names[0]);
   EXPECT_EQ("B", names[1]);
@@ -180,7 +180,7 @@ TEST_F(MochiContactFilter, EnumerateContactLayerNames) {
   MOCHI_DEFER(_scene->DestroyActor(actorC));
   names.clear();
   _scene->EnumerateContactLayerNames([&](auto name) { names.emplace_back(name); });
-  std::sort(names.begin(), names.end());
+  std::ranges::sort(names);
   EXPECT_EQ(3, names.size());
   EXPECT_EQ("A", names[0]);
   EXPECT_EQ("B", names[1]);
