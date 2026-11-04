@@ -113,7 +113,7 @@ class ComponentOnABotTest(MochiTestBase):
             write_assets_tag_root_marker(tmp)
             with open(os.path.join(tmp, "empty.mochi_scene"), "w") as f:
                 f.write('{ "scene": { "description": "empty" } }')
-            scene_file = os.path.join(tmp, "components.mochi_bot_scene")
+            scene_file = os.path.join(tmp, "components.superdex_scene")
             with open(scene_file, "w") as f:
                 f.write(
                     _make_scene_json(bot_tag_path("bots/arms/fr3/fr3.superdex_bot"))
@@ -160,7 +160,7 @@ class ComponentOnABotTest(MochiTestBase):
             write_assets_tag_root_marker(tmp)
             with open(os.path.join(tmp, "empty.mochi_scene"), "w") as f:
                 f.write('{ "scene": { "description": "empty" } }')
-            scene_file = os.path.join(tmp, "configure.mochi_bot_scene")
+            scene_file = os.path.join(tmp, "configure.superdex_scene")
             with open(scene_file, "w") as f:
                 f.write(
                     _make_scene_json(bot_tag_path("bots/arms/fr3/fr3.superdex_bot"))

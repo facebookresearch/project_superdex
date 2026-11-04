@@ -941,7 +941,7 @@ TEST_F(PathResolutionTest, RoundTrip_ModBotPrefab_ViaMakePathsAbsoluteAndRelativ
 TEST_F(PathResolutionTest, MakeParamsPath_InlineJsonIsLeftUntouched) {
   auto const root = _tempDir / "root";
   WriteEmptyRootMarker(root);
-  auto const base = root / "scene.mochi_bot_scene";
+  auto const base = root / "scene.superdex_scene";
 
   std::string const objectJson = R"({"kp": 1.0, "kd": 0.1})";
   std::string const arrayJson = R"([1, 2, 3])";
@@ -962,7 +962,7 @@ TEST_F(PathResolutionTest, MakeParamsPath_FilePathRoundTrips) {
   auto const root = _tempDir / "root";
   WriteEmptyRootMarker(root);
   auto const sub = root / "sub";
-  auto const base = sub / "scene.mochi_bot_scene";
+  auto const base = sub / "scene.superdex_scene";
   fs::create_directories(sub / "params");
   TouchFile(base);
   TouchFile(sub / "params" / "ctrl.superdex_sensor");
@@ -981,7 +981,7 @@ TEST_F(PathResolutionTest, MakeParamsPath_FilePathRoundTrips) {
 TEST_F(PathResolutionTest, MakeParamsPath_EmptyIsNoOp) {
   auto const root = _tempDir / "root";
   WriteEmptyRootMarker(root);
-  auto const base = root / "scene.mochi_bot_scene";
+  auto const base = root / "scene.superdex_scene";
   DynamicString params{};
   MakeParamsPathAbsolute(params, base, ExpectOK{});
   EXPECT_TRUE(params.empty());

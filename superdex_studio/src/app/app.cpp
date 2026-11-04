@@ -1018,7 +1018,7 @@ void SuperDexStudio::CreateSceneArchive(mochi::Path const& scenePath) {
       "Create Scene Archive",
       filters.data(),
       numFilters,
-      "Bot Scene Archive (*.mochi_bot_scene_archive)",
+      "Bot Scene Archive (*.superdex_scene_archive)",
       true,
       scenePath.GetParentPath() / (GetAssetNameFromPath(scenePath) + extension));
   if (selected.IsEmpty()) {
@@ -1671,8 +1671,8 @@ void SuperDexStudio::ShowMainMenu() {
   if (ImGui::BeginMainMenuBar()) {
     // MenuBar -> File
     if (ImGui::BeginMenu("File")) {
-      // Generic open (.superdex_bot / .mochi_scene / .mochi_prefab / .mochi_bot_scene / .urdf;
-      // legacy .mochi_bot / .mochi_bot_archive still accepted)
+      // Generic open (.superdex_bot / .mochi_scene / .mochi_prefab / .superdex_scene / .urdf;
+      // legacy .mochi_bot / .mochi_bot_archive / .mochi_bot_scene still accepted)
       if (ImGui::MenuItem("Open...", "Ctrl+O")) {
         char const* filters[] = {
             "*.superdex_bot",
@@ -1683,6 +1683,8 @@ void SuperDexStudio::ShowMainMenu() {
             "*.mochi_prefab",
             "*.superdex_tuner",
 #if MOCHI_INTERNAL
+            "*.superdex_scene",
+            "*.superdex_scene_archive",
             "*.mochi_bot_scene",
             "*.mochi_bot_scene_archive",
 #endif

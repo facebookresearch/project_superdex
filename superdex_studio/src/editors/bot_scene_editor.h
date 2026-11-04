@@ -38,7 +38,7 @@ namespace superdex::studio {
 
 class BotSceneAsset;
 
-// Editor for .mochi_bot_scene and .mochi_bot_scene_archive files.
+// Editor for .superdex_scene and .superdex_scene_archive files.
 // Visualizes and edits the base scene, spawnable prefabs, and placed bots, and can simulate them
 // (play/step/stop). Edits are undoable and restage the viewport live.
 class BotSceneEditor : public AssetEditor {

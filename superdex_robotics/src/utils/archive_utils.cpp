@@ -598,11 +598,26 @@ void superdex::robotics::ArchiveBot(ArchiveParams const& params, Error& error) {
   ZipEntries(entries, dstPath, error);
 }
 
+// The archive metadata file in `dir`: the first of `metadataFiles` present there, else the first of
+// `metadataFiles`.
+static std::filesystem::path FindArchiveMetadata(
+    std::filesystem::path const& dir,
+    Span<std::string_view const> metadataFiles) {
+  for (auto const metadataFile : metadataFiles) {
+    auto path = dir / metadataFile;
+    if (std::filesystem::exists(path)) {
+      return path;
+    }
+  }
+  return dir / metadataFiles[0];
+}
+
 // Shared implementation for content-hash-keyed archive extraction with atomic rename.
+// `metadataFiles` lists the names the archive's metadata file may have.
 static DynamicString ExtractArchiveToCacheImpl(
     std::string_view archiveFile,
     std::string_view cacheSubdir,
-    std::string_view metadataFile,
+    Span<std::string_view const> metadataFiles,
     Error& error) {
   MOCHI_ERROR_RETURN(error, {});
   // The archive path is user-supplied and may be unreadable (e.g. a macOS privacy-protected
@@ -628,7 +643,7 @@ static DynamicString ExtractArchiveToCacheImpl(
   // last and only appears at dstDir via the atomic rename below, so its presence
   // means the extraction is complete. The recovery logic in tryRename relies on
   // this: a dstDir without metadata is always safe to discard and re-publish.
-  if (std::filesystem::exists(dstDir / metadataFile)) {
+  if (std::filesystem::exists(FindArchiveMetadata(dstDir, metadataFiles))) {
     return DynamicString(dstDir.generic_string());
   }
   // Cache miss. Extract into a unique sibling temp dir, then atomically rename.
@@ -661,7 +676,7 @@ static DynamicString ExtractArchiveToCacheImpl(
       // A peer process may have concurrently published a complete extraction
       // (metadata present means complete, per the sentinel invariant above);
       // accept it as a cache hit.
-      if (std::filesystem::exists(dstDir / metadataFile)) {
+      if (std::filesystem::exists(FindArchiveMetadata(dstDir, metadataFiles))) {
         return true;
       }
       // Otherwise the destination is occupied by a stale or incomplete
@@ -692,11 +707,11 @@ static DynamicString ExtractArchiveToCacheImpl(
 template <typename MetadataT>
 static DynamicString GetExtractedArchiveTargetImpl(
     std::string_view extractedDir,
-    std::string_view metadataFile,
+    Span<std::string_view const> metadataFiles,
     Error& error) {
   MOCHI_ERROR_RETURN(error, {});
   std::filesystem::path extractedDirPath(extractedDir);
-  std::string const metadataPath = (extractedDirPath / metadataFile).string();
+  std::string const metadataPath = FindArchiveMetadata(extractedDirPath, metadataFiles).string();
   MetadataT metadata;
   int numIssues = 0;
   bool const parsed = SReflect::LoadFromJsonFile(
@@ -710,14 +725,15 @@ static DynamicString GetExtractedArchiveTargetImpl(
 DynamicString superdex::robotics::ExtractBotArchiveToCache(
     std::string_view archiveFile,
     Error& error) {
-  return ExtractArchiveToCacheImpl(archiveFile, "bot_archive_cache", kArchiveMetadataFile, error);
+  return ExtractArchiveToCacheImpl(
+      archiveFile, "bot_archive_cache", MakeSingletonConstSpan(kArchiveMetadataFile), error);
 }
 
 [[nodiscard]] DynamicString superdex::robotics::GetExtractedBotArchiveTarget(
     std::string_view extractedDir,
     Error& error) {
   return GetExtractedArchiveTargetImpl<BotArchiveMetadata>(
-      extractedDir, kArchiveMetadataFile, error);
+      extractedDir, MakeSingletonConstSpan(kArchiveMetadataFile), error);
 }
 
 BotArchiveMetadata superdex::robotics::ReadBotArchiveMetadata(
@@ -735,10 +751,30 @@ BotArchiveMetadata superdex::robotics::ReadBotArchiveMetadata(
 }
 
 // ---------------------------------------------------------------------------
-// Bot scene archives (.mochi_bot_scene_archive)
+// Bot scene archives (.superdex_scene_archive)
 // ---------------------------------------------------------------------------
 
 #if SUPERDEXROBOTICS_WITH_BOT_SCENE
+bool superdex::robotics::IsSceneArchivePath(std::string_view path) {
+  if (path.ends_with(kSceneArchiveExtension)) {
+    return true;
+  }
+#if MOCHI_INTERNAL
+  if (path.ends_with(kSceneArchiveExtensionLegacy)) {
+    return true;
+  }
+#endif
+  return false;
+}
+
+// The names a scene archive's metadata file may have, newest first.
+constexpr std::array kSceneArchiveMetadataFiles{
+    kSceneArchiveMetadataFile,
+#if MOCHI_INTERNAL
+    kSceneArchiveMetadataFileLegacy,
+#endif
+};
+
 /* Collect `scenePath` and everything it references, resolving each reference exactly as
  * prefab::AddToScene will when the scene loads: `./` from the referencing prefab's directory,
  * absolute as-is, anything else from `rootPath` (shared by the whole nested tree). */
@@ -828,7 +864,7 @@ std::filesystem::path ToBotArchivePath(std::filesystem::path botPath) {
   return botPath.replace_extension(kBotArchiveExtension);
 }
 
-// Points every raw bot path in a .mochi_bot_scene JSON document at its archive (see
+// Points every raw bot path in a .superdex_scene JSON document at its archive (see
 // ToBotArchivePath), keeping the path's relative or tagged form.
 void RewriteRawBotPaths(picojson::value& sceneJson) {
   if (!sceneJson.is<picojson::object>()) {
@@ -857,21 +893,16 @@ void RewriteRawBotPaths(picojson::value& sceneJson) {
 
 void superdex::robotics::ArchiveBotScene(ArchiveParams const& params, Error& error) {
   MOCHI_ERROR_RETURN(error);
+  MOCHI_ERROR_IF(!IsBotScenePath(params.src), error, "Source must be a .superdex_scene file.");
   MOCHI_ERROR_IF(
-      !std::string_view(params.src).ends_with(kBotSceneExtension),
-      error,
-      "Source must be a .mochi_bot_scene file.");
-  MOCHI_ERROR_IF(
-      !std::string_view(params.dst).ends_with(kSceneArchiveExtension),
-      error,
-      "Destination must end with .mochi_bot_scene_archive.");
+      !IsSceneArchivePath(params.dst), error, "Destination must end with .superdex_scene_archive.");
   MOCHI_ERROR_RETURN(error);
 
   auto const sceneCanonical = std::filesystem::weakly_canonical(std::string(params.src));
   MOCHI_ERROR_IF(
       !std::filesystem::exists(sceneCanonical),
       error,
-      "Source .mochi_bot_scene file does not exist.");
+      "Source .superdex_scene file does not exist.");
   MOCHI_ERROR_RETURN(error);
 
   // Load the scene prefab (paths resolved to absolute).
@@ -919,7 +950,7 @@ void superdex::robotics::ArchiveBotScene(ArchiveParams const& params, Error& err
   // Collect all transitive dependencies.
   std::set<std::filesystem::path> collectedFiles;
 
-  // 1. The .mochi_bot_scene file itself.
+  // 1. The .superdex_scene file itself.
   collectedFiles.insert(sceneCanonical);
 
   // 2. Base scene and its transitive shape/prefab dependencies, resolved against the same root
@@ -1054,7 +1085,7 @@ void superdex::robotics::ArchiveBotScene(ArchiveParams const& params, Error& err
     AddDataEntry(JoinArchivePath(thisArchiveRel, kRootMarkerFile), std::move(rootJson));
   }
 
-  // Compute the archive-relative path of the source .mochi_bot_scene.
+  // Compute the archive-relative path of the source .superdex_scene.
   auto const& srcRoot = fileToRoot.at(sceneCanonical);
   auto const srcArchivePath = JoinArchivePath(
       rootToArchiveRel.at(srcRoot),
@@ -1096,14 +1127,14 @@ DynamicString superdex::robotics::ExtractBotSceneArchiveToCache(
     std::string_view archiveFile,
     Error& error) {
   return ExtractArchiveToCacheImpl(
-      archiveFile, "scene_archive_cache", kSceneArchiveMetadataFile, error);
+      archiveFile, "scene_archive_cache", kSceneArchiveMetadataFiles, error);
 }
 
 DynamicString superdex::robotics::GetExtractedBotSceneArchiveTarget(
     std::string_view extractedDir,
     Error& error) {
   return GetExtractedArchiveTargetImpl<BotSceneArchiveMetadata>(
-      extractedDir, kSceneArchiveMetadataFile, error);
+      extractedDir, kSceneArchiveMetadataFiles, error);
 }
 
 BotSceneArchiveMetadata superdex::robotics::ReadBotSceneArchiveMetadata(
@@ -1111,7 +1142,7 @@ BotSceneArchiveMetadata superdex::robotics::ReadBotSceneArchiveMetadata(
     Error& error) {
   MOCHI_ERROR_RETURN(error, {});
   auto const metadataPath =
-      (std::filesystem::path(extractedDir) / kSceneArchiveMetadataFile).string();
+      FindArchiveMetadata(std::filesystem::path(extractedDir), kSceneArchiveMetadataFiles).string();
   BotSceneArchiveMetadata metadata;
   int numIssues = 0;
   bool const parsed = SReflect::LoadFromJsonFile(

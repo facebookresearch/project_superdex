@@ -44,7 +44,7 @@ constexpr std::string_view kRootPrefix = "//";
 constexpr std::string_view kTagPrefix = "@";
 constexpr std::string_view kRootMarkerFile = ".superdex_root";
 constexpr std::string_view kBotExtension = ".superdex_bot";
-constexpr std::string_view kBotSceneExtension = ".mochi_bot_scene";
+constexpr std::string_view kBotSceneExtension = ".superdex_scene";
 constexpr std::string_view kBotTaskExtension = ".mochi_bot_task";
 constexpr std::string_view kUrdfExtension = ".urdf";
 constexpr std::string_view kMjcfExtension = ".xml";
@@ -180,6 +180,19 @@ DetectAssetFolderLayout(std::filesystem::path const& originDir);
  */
 [[nodiscard]] MOCHI_API bool IsBotPath(std::string_view path);
 
+#if SUPERDEXROBOTICS_WITH_BOT_SCENE
+/**
+ * @brief Recognize a bot scene file path by extension.
+ *
+ * Always accepts the canonical @ref kBotSceneExtension (`.superdex_scene`). In internal
+ * builds (@c MOCHI_INTERNAL) it additionally accepts the legacy `.mochi_bot_scene` extension.
+ *
+ * @param[in] path The file path to test.
+ * @return @c true if @p path ends with a recognized bot scene extension.
+ */
+[[nodiscard]] MOCHI_API bool IsBotScenePath(std::string_view path);
+#endif
+
 /**
  * @brief Parsed contents of a `.superdex_root` file.
  *
@@ -225,7 +238,7 @@ struct ParsedRootFile {
  * (nested prefabs, shapes, render models) against: the scene file's `.superdex_root` directory,
  * else the base scene's own directory.
  *
- * @param[in] sceneFilePath The `.mochi_bot_scene` file. For an archive, its extracted target.
+ * @param[in] sceneFilePath The `.superdex_scene` file. For an archive, its extracted target.
  * @param[in] baseScenePath Absolute path of the scene's base-scene prefab.
  *
  * @return The root directory.
@@ -292,7 +305,7 @@ ParseRootFile(std::filesystem::path const& rootFilePath, superdex::Error& error)
  * - Anything else -> join with @p basePath.parent_path() and
  *   @c weakly_canonical.
  *
- * @param[in] input Raw path string (e.g. from a `.superdex_bot` or .mochi_bot_scene field).
+ * @param[in] input Raw path string (e.g. from a `.superdex_bot` or .superdex_scene field).
  * @param[in] basePath The referencing file (its parent directory is used as
  *                     the search/join origin).
  * @param[in] maxParentDepth Maximum number of parent (`..`) directories a file-relative path may
@@ -585,12 +598,12 @@ SaveToFile(ModBotPrefab const& modBotPrefab, std::string_view path, superdex::Er
 // ---------------------------------------------------------------------------
 
 #if SUPERDEXROBOTICS_WITH_BOT_SCENE
-/* @brief Save bot scene prefab to a .mochi_bot_scene JSON file.
+/* @brief Save bot scene prefab to a .superdex_scene JSON file.
  *
  * Creates parent directories if they do not exist.
  *
  * @param[in] prefab The bot scene parameters to save.
- * @param[in] path File path (should end with .mochi_bot_scene).
+ * @param[in] path File path (should end with .superdex_scene).
  * @param[in,out] error Error status. */
 MOCHI_API void
 SaveToFile(BotScenePrefab const& scenePrefab, std::string_view path, superdex::Error& error);

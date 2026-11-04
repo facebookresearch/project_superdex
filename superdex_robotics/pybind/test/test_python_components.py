@@ -17,7 +17,7 @@
 The controller counterpart lives in test/internal/test_python_controller.py; these cover the
 other two component kinds -- registered with register_python_sensor / register_python_actuator,
 created directly, created on a bot's actor, and (for sensors) declared at scene level in a
-.mochi_bot_scene so the scene loader instantiates them by type string.
+.superdex_scene so the scene loader instantiates them by type string.
 
 The bots context is a process-wide singleton, so every test registers its own type names and
 destroys what it creates.
@@ -206,7 +206,7 @@ class PurePythonComponentsOnABotTest(MochiTestBase):
             write_assets_tag_root_marker(tmp)
             with open(os.path.join(tmp, "empty.mochi_scene"), "w") as f:
                 f.write('{ "scene": { "description": "empty" } }')
-            scene_file = os.path.join(tmp, "bot.mochi_bot_scene")
+            scene_file = os.path.join(tmp, "bot.superdex_scene")
             with open(scene_file, "w") as f:
                 f.write(
                     json.dumps(
@@ -288,7 +288,7 @@ class PurePythonComponentsOnABotTest(MochiTestBase):
             write_assets_tag_root_marker(tmp)
             with open(os.path.join(tmp, "empty.mochi_scene"), "w") as f:
                 f.write('{ "scene": { "description": "empty" } }')
-            scene_file = os.path.join(tmp, "scene_sensor.mochi_bot_scene")
+            scene_file = os.path.join(tmp, "scene_sensor.superdex_scene")
             with open(scene_file, "w") as f:
                 f.write(
                     json.dumps(

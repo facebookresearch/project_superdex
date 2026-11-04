@@ -163,14 +163,26 @@ GetExtractedBotArchiveTarget(std::string_view extractedDir, superdex::Error& err
 ReadBotArchiveMetadata(std::string_view extractedDir, superdex::Error& error);
 
 // ---------------------------------------------------------------------------
-// Bot scene archives (.mochi_bot_scene_archive)
+// Bot scene archives (.superdex_scene_archive)
 // ---------------------------------------------------------------------------
 
 #if SUPERDEXROBOTICS_WITH_BOT_SCENE
-constexpr std::string_view kSceneArchiveMetadataFile = ".mochi_bot_scene_archive_metadata";
-constexpr std::string_view kSceneArchiveExtension = ".mochi_bot_scene_archive";
+constexpr std::string_view kSceneArchiveMetadataFile = ".superdex_scene_archive_metadata";
+constexpr std::string_view kSceneArchiveExtension = ".superdex_scene_archive";
 
-/* @brief Metadata stored at the root of every .mochi_bot_scene_archive file. */
+/**
+ * @brief Recognize a bot scene archive file path by extension.
+ *
+ * Always accepts the canonical @ref kSceneArchiveExtension (`.superdex_scene_archive`). In
+ * internal builds (@c MOCHI_INTERNAL) it additionally accepts the legacy
+ * `.mochi_bot_scene_archive` extension.
+ *
+ * @param[in] path The file path to test.
+ * @return @c true if @p path ends with a recognized bot scene archive extension.
+ */
+[[nodiscard]] MOCHI_API bool IsSceneArchivePath(std::string_view path);
+
+/* @brief Metadata stored at the root of every .superdex_scene_archive file. */
 struct BotSceneArchiveMetadata {
   DynamicString date;
   DynamicString sceneHash;
@@ -187,8 +199,8 @@ struct BotSceneArchiveMetadata {
   MOCHI_STRUCT_END()
 };
 
-/* @brief Archive a .mochi_bot_scene file and all its transitive dependencies into a
- * self-contained .mochi_bot_scene_archive zip file.
+/* @brief Archive a .superdex_scene file and all its transitive dependencies into a
+ * self-contained .superdex_scene_archive zip file.
  *
  * Collects all transitive dependencies — the base scene and its nested prefabs/shapes,
  * spawnable prefabs, bot archives, and controller param files — then mirrors the on-disk
@@ -201,11 +213,11 @@ struct BotSceneArchiveMetadata {
  *
  * Requirements:
  *  - Every bots[].path must reference a .superdex_bot or .superdex_bot_archive.
- *  - params.src must end with .mochi_bot_scene.
- *  - params.dst must end with .mochi_bot_scene_archive.
+ *  - params.src must be a bot scene path (see @ref IsBotScenePath).
+ *  - params.dst must be a bot scene archive path (see @ref IsSceneArchivePath).
  *
- * @param[in] params Archive parameters (source `.mochi_bot_scene`, destination
- *     `.mochi_bot_scene_archive` path).
+ * @param[in] params Archive parameters (source `.superdex_scene`, destination
+ *     `.superdex_scene_archive` path).
  * @param[in,out] error Error status. Check @ref Error::IsOK for success. */
 MOCHI_API void ArchiveBotScene(ArchiveParams const& params, superdex::Error& error);
 
@@ -224,19 +236,19 @@ MOCHI_API void ArchiveBotScene(ArchiveParams const& params, superdex::Error& err
     std::filesystem::path const& prefabPath,
     superdex::Error& error);
 
-/* @brief Extract a .mochi_bot_scene_archive to a content-hash-keyed cache directory.
+/* @brief Extract a .superdex_scene_archive to a content-hash-keyed cache directory.
  *
- * @param[in] archiveFile Path to the .mochi_bot_scene_archive file.
+ * @param[in] archiveFile Path to the .superdex_scene_archive file.
  * @param[in,out] error Error status.
  * @return Path to the extracted directory, or empty on failure. */
 [[nodiscard]] MOCHI_API DynamicString
 ExtractBotSceneArchiveToCache(std::string_view archiveFile, superdex::Error& error);
 
-/* @brief Get the target .mochi_bot_scene path inside an extracted scene archive.
+/* @brief Get the target .superdex_scene path inside an extracted scene archive.
  *
  * @param[in] extractedDir Directory produced by ExtractBotSceneArchiveToCache.
  * @param[in,out] error Error status.
- * @return Absolute path to the target .mochi_bot_scene file, or empty on failure. */
+ * @return Absolute path to the target .superdex_scene file, or empty on failure. */
 [[nodiscard]] MOCHI_API DynamicString
 GetExtractedBotSceneArchiveTarget(std::string_view extractedDir, superdex::Error& error);
 

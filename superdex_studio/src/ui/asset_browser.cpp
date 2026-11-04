@@ -821,7 +821,7 @@ void AssetBrowser::ShowItemContextMenuContents(TileItem const& item, Asset const
   }
 #if MOCHI_INTERNAL
   if (selectedCount == 1 && folderCount == 0 &&
-      item.fullPath.GetFilename().ends_with(superdex::robotics::kBotSceneExtension)) {
+      superdex::robotics::IsBotScenePath(item.fullPath.GetFilename())) {
     bool const unsaved = asset != nullptr && asset->IsDirty();
     ImGui::BeginDisabled(unsaved);
     if (ImGui::IconSelectable("Create Scene Archive...", ICON_FA_FILE_ARCHIVE)) {

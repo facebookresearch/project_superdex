@@ -71,7 +71,7 @@ struct AssetTypeExtension {
 //
 // Order is significant twice over: the first matching entry wins, so an extension must precede any
 // shorter one that is its own suffix; and within a type, earlier means preferred.
-constexpr std::array<AssetTypeExtension, 18> kAssetTypeExtensions{
+constexpr std::array<AssetTypeExtension, 20> kAssetTypeExtensions{
     {{".glb", AssetType::RenderModel},
      {".gltf", AssetType::RenderModel},
      {".dae", AssetType::RenderModel},
@@ -83,6 +83,8 @@ constexpr std::array<AssetTypeExtension, 18> kAssetTypeExtensions{
      {".stl", AssetType::CadModel},
      {".mochi.h5", AssetType::MochiModel},
      // Bot scenes and tasks are an internal-build concept; public builds do not classify these.
+     {".superdex_scene", AssetType::BotScene},
+     {".superdex_scene_archive", AssetType::BotScene},
      {".mochi_bot_scene", AssetType::BotScene},
      {".mochi_bot_scene_archive", AssetType::BotScene},
      {.extension = ".mochi_bot_task", .type = AssetType::BotTask},

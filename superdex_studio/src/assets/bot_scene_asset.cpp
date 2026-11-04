@@ -367,7 +367,7 @@ BotSceneAsset::Create(std::string const& name, mochi::Path const& path, AssetMan
 
   // Archive case: load from the shared extraction cache while keeping the archive as asset
   // identity.
-  bool const isArchive = path.GetExtensionLowercase() == superdex::robotics::kSceneArchiveExtension;
+  bool const isArchive = superdex::robotics::IsSceneArchivePath(path.GetExtensionLowercase());
   std::string loadPath = path.ToString();
   std::string extractedDirPath;
   std::optional<mochi::DynamicString> archiveComment;
@@ -623,8 +623,8 @@ bool BotSceneAsset::SaveAs(mochi::Path const& path) {
 }
 
 bool BotSceneAsset::SaveArchiveCopy(mochi::Path const& path) const {
-  if (!_isArchive || path.GetExtensionLowercase() != superdex::robotics::kSceneArchiveExtension) {
-    MOCHI_LOG_ERROR("Bot scene archive output must end with .mochi_bot_scene_archive");
+  if (!_isArchive || !superdex::robotics::IsSceneArchivePath(path.GetExtensionLowercase())) {
+    MOCHI_LOG_ERROR("Bot scene archive output must end with .superdex_scene_archive");
     return false;
   }
 
@@ -733,6 +733,9 @@ bool BotSceneAsset::ExtractArchiveToLooseFiles(mochi::Path const& directory, moc
     return false;
   }
   std::filesystem::remove(destination / superdex::robotics::kSceneArchiveMetadataFile, error);
+#if MOCHI_INTERNAL
+  std::filesystem::remove(destination / superdex::robotics::kSceneArchiveMetadataFileLegacy, error);
+#endif
   scenePath = mochi::Path{editableTarget};
   return true;
 }

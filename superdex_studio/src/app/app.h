@@ -96,7 +96,7 @@ class SuperDexStudio : public ImGuios::Application {
   void SaveActiveAssetEditorAs();
   void SaveAllAssetEditors();
 #if MOCHI_INTERNAL
-  // Archives a saved .mochi_bot_scene and the files it references into a .mochi_bot_scene_archive
+  // Archives a saved .superdex_scene and the files it references into a .superdex_scene_archive
   // chosen with a save dialog.
   void CreateSceneArchive(mochi::Path const& scenePath);
 #endif // MOCHI_INTERNAL

@@ -53,6 +53,20 @@ bool superdex::robotics::IsBotPath(std::string_view path) {
   return false;
 }
 
+#if SUPERDEXROBOTICS_WITH_BOT_SCENE
+bool superdex::robotics::IsBotScenePath(std::string_view path) {
+  if (path.ends_with(kBotSceneExtension)) {
+    return true;
+  }
+#if MOCHI_INTERNAL
+  if (path.ends_with(kBotSceneExtensionLegacy)) {
+    return true;
+  }
+#endif
+  return false;
+}
+#endif
+
 static std::filesystem::path GetDirectoryPath(std::filesystem::path const& path) {
   return path.parent_path();
 }
@@ -882,10 +896,7 @@ void superdex::robotics::SaveToFile(
     std::string_view path,
     Error& error) {
   MOCHI_ERROR_RETURN(error);
-  MOCHI_ERROR_IF(
-      !path.ends_with(kBotSceneExtension),
-      error,
-      "Unsupported file format; expected .mochi_bot_scene");
+  MOCHI_ERROR_IF(!IsBotScenePath(path), error, "Unsupported file format; expected .superdex_scene");
   MOCHI_ERROR_RETURN(error);
   EnsureDirectoriesCreated(std::filesystem::path(std::string(path)), error);
   MOCHI_ERROR_RETURN(error);

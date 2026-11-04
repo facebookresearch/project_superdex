@@ -105,14 +105,14 @@ def load_bot_scene(
     path: str,
     bots_ctx: sdr.RoboticsContext,
 ) -> sdr.BotScene:
-    """Load a .mochi_bot_scene file and instantiate all scene objects.
+    """Load a .superdex_scene file and instantiate all scene objects.
 
     Creates the physics scene from the base_scene, instantiates all bots with
     placement and initial pose, and creates controllers via the provided
     RoboticsContext.
 
     Args:
-        path: File path to the .mochi_bot_scene file.
+        path: File path to the .superdex_scene file.
         bots_ctx: RoboticsContext for controller lifetime management. The caller
             owns this — create before loading, destroy after all scenes are
             closed.
@@ -131,7 +131,7 @@ def load_bot_scene(
 
 
 def load_bot_scene_prefab(path: str):  # noqa: ANN201
-    """Parse a .mochi_bot_scene file into a BotScenePrefab (no scene instantiation).
+    """Parse a .superdex_scene file into a BotScenePrefab (no scene instantiation).
 
     Unlike load_bot_scene, this only deserializes and validates the file; it does
     not require SuperDex Physics to be initialized and creates no physics scene. Useful for
@@ -139,7 +139,7 @@ def load_bot_scene_prefab(path: str):  # noqa: ANN201
     unreal_blueprint_name.
 
     Args:
-        path: File path to the .mochi_bot_scene file.
+        path: File path to the .superdex_scene file.
 
     Returns:
         The parsed BotScenePrefab.
