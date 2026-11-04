@@ -68,9 +68,10 @@ struct GlbExportOptions {
 // geometry with its real per-vertex weights and its bone indices remapped onto the composed
 // skeleton (so an attached hand's skin lands correctly on the arm), and its full PBR material
 // (base color, metallic-roughness, normal, occlusion and emissive textures and factors) is
-// re-embedded. The links the skin covers carry no separate rigid mesh; links it does not cover
-// (e.g. hard couplings and nails) keep their own. The skin's nonCollidingLinks, when set, names
-// exactly the covered links; when unset, every link the skin binds to is covered.
+// re-embedded. The links the skin stands in for carry no separate rigid mesh; other links (e.g.
+// hard couplings and nails) keep their own: render meshes are skipped for the links the skin's
+// render model hides (see robotics::ComputeSkinHiddenLinks), collision meshes for the links whose
+// collision the skin's collision mesh covers (see robotics::ComputeSkinCoveredLinks).
 //
 // Geometry and joints are converted from Mochi's Z-up basis (@ref mochi::CoordinateSpace::Default)
 // into the Y-up one the render meshes use (@ref mochi_renderer::RenderSpace).

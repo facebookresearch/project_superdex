@@ -219,7 +219,10 @@ class BotEditor : public AssetEditor {
     mochi::QueryHandle positions;
     mochi::QueryHandle normals;
     std::string name;
-    bool active = false;
+    // Whether the surface queries are registered: the skin has a collision shape.
+    bool queriesRegistered = false;
+    // Whether the staged skin is posed from the link transforms each step: the bot has a skin.
+    bool posed = false;
     // For a composed (mod) bot that adopted a sub-bot's skin, maps skin bone index (== GLB joint
     // order) to the merged articulation's link index, so per-step link transforms can be reordered
     // into skin-bone order before posing the GPU-skinned skin. Empty for a natively skinned bot

@@ -198,11 +198,10 @@ void PhysicsDragController::BuildActorMap(mochi::Scene* scene) {
       }
       // A skin is folded into the compound entity (it shares this actor's handle and is not a
       // link), so register it under its skin staged name; a pick there resolves to the nearest link
-      // at grab time (see OnPreStep).
-      if (!actor->GetSurfaceMesh().IsEmpty()) {
-        if (char const* name = actor->GetName()) {
-          _skinNameToArticulated[SkinStagedName(name)] = actor->GetHandle();
-        }
+      // at grab time (see OnPreStep). A render-only skin has no surface in the actor but is staged
+      // all the same, so register every articulated actor; the name matches nothing without a skin.
+      if (char const* name = actor->GetName()) {
+        _skinNameToArticulated[SkinStagedName(name)] = actor->GetHandle();
       }
     }
   });

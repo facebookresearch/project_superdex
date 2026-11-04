@@ -270,11 +270,11 @@ struct StageRequest {
   int softVertexCount = 0;
   int softCollisionVertexCount = 0;
   // Skinned skin only: per-link WORLD transforms (Mochi space) in the GLB's joint order (== nested
-  // link / link-declaration order), captured at build time. Populated for ANY articulated skin
-  // (independent of whether a render GLB is present) so the collision skin can be posed. SceneStage
-  // converts them to renderer space and makes them root-relative against `worldTransform` to drive
-  // both the render model's joints and the collision wireframe's bones. Simulation supplies fresh
-  // transforms via ApplySkinnedPose.
+  // link / link-declaration order), captured at build time. Populated for ANY articulated skin,
+  // with a collision shape (then also `isSoft`), a render GLB, or both, so either can be posed.
+  // SceneStage converts them to renderer space and makes them root-relative against
+  // `worldTransform` to drive both the render model's joints and the collision wireframe's bones.
+  // Simulation supplies fresh transforms via ApplySkinnedPose.
   std::vector<mochi::TransformRT> skinLinkWorldTransforms;
   // Skinned skin only: per-link WORLD transforms at the articulation's ZERO/rest (bind) joint
   // configuration, in the SAME order/frame as skinLinkWorldTransforms. This is the pose the skin
@@ -302,9 +302,10 @@ struct SceneStage {
   // Stage (or re-stage) a bot prefab's render objects into the bound render scene at its default
   // pose, using Mochi forward kinematics. Reuses existing objects when the actor set and active
   // model files are unchanged (pure pose/param edits); otherwise rebuilds. No-op if no scene is
-  // bound. With hideSkinCoveredLinks, the links the bot's skin covers (see
-  // superdex::robotics::ComputeSkinCoveredLinks) are staged hidden, leaving the skin to stand in
-  // for them.
+  // bound. With hideSkinCoveredLinks, the links the bot's skin stands in for are staged hidden:
+  // where the skin's render model is drawn, the links it hides (see
+  // superdex::robotics::ComputeSkinHiddenLinks); where only its collision surface is drawn, the
+  // links whose collision it covers (see superdex::robotics::ComputeSkinCoveredLinks).
   // Returns true if the staged objects were rebuilt (pointers invalidated), false if reused.
   bool StageBot(
       superdex::robotics::BotPrefab const& prefab,

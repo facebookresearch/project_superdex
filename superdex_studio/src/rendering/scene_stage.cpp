@@ -815,11 +815,15 @@ static void BuildBotRequests(
   // transforms by index and an extra staged actor would break that alignment. The skin has no baked
   // transform (identity scale/offset); its rest surface sits in the articulation's root frame,
   // placed by worldFromRoot.
-  if (stageSkin && prefab.skin.has_value() && !prefab.skin->shapeFile.empty()) {
+  // A skin may have only a collision shape, only a render model, or both.
+  if (stageSkin && prefab.skin.has_value()) {
     mochi::Path const skinShapePath(prefab.skin->shapeFile);
-    auto* asset = studio->GetAssetManager().LoadMochiModelAsset(skinShapePath);
+    auto* asset = skinShapePath.IsEmpty()
+        ? nullptr
+        : studio->GetAssetManager().LoadMochiModelAsset(skinShapePath);
     int const skinVertexCount = asset ? asset->GetSurfaceVertexCount(SoftSurface::Surface) : 0;
-    if (skinVertexCount > 0) {
+    bool const hasSkinShape = skinVertexCount > 0;
+    if (hasSkinShape || !prefab.skin->renderModelFile.empty()) {
       StageRequest req;
       char const* const skinActorName = bot->GetArticulatedActor()->GetName();
       req.name = SkinStagedName(skinActorName ? skinActorName : "");
@@ -832,10 +836,12 @@ static void BuildBotRequests(
       req.worldTransform =
           bindLinkWorldTransforms.empty() ? prefab.worldFromRoot : bindLinkWorldTransforms.front();
       req.worldScale = Real3{1_r, 1_r, 1_r};
-      req.shapeModelFile = skinShapePath;
-      req.isSoft = true;
-      req.softVertexCount = skinVertexCount;
-      req.softCollisionVertexCount = skinVertexCount;
+      if (hasSkinShape) {
+        req.shapeModelFile = skinShapePath;
+        req.isSoft = true;
+        req.softVertexCount = skinVertexCount;
+        req.softCollisionVertexCount = skinVertexCount;
+      }
       req.softBakeScale = Real3{prefab.scale, prefab.scale, prefab.scale};
       req.softShapeTransform = TransformRT{};
       // Populate link transforms for ANY articulated skin so the collision skin can be posed
@@ -887,32 +893,39 @@ static void BuildBotRequests(
         req.renderModelFile = mochi::Path(prefab.skin->renderModelFile);
         req.renderModelScale = Real3{prefab.scale, prefab.scale, prefab.scale};
       }
-      // The collision wireframe (shape slot) always exists; the render GLB is optional. Route
-      // visibility on the real render presence so fallback mode shows the collision when no GLB.
+      // Route visibility on the real render and collision presence so fallback mode shows the
+      // collision when no GLB.
       ComputeStageVisibility(
           /*hasRender=*/!req.renderModelFile.IsEmpty(),
-          /*hasShape=*/true,
+          hasSkinShape,
           stageType,
           req.renderVisible,
           req.shapeVisible);
-      // The skin stands in for the links it covers, so hide them where the skin is drawn, as the
-      // skeletal GLB export and the Unreal importer leave them out. A view that draws no skin (the
-      // render view of a skin without a render model) keeps them. They stay staged and still bound
-      // the scene, but cannot be picked while hidden.
+      // The skin stands in for some links, so hide them where the skin is drawn, as the skeletal
+      // GLB export and the Unreal importer leave them out: where its render model is drawn, the
+      // links it hides (ComputeSkinHiddenLinks); where only its collision surface is, the links
+      // whose collision it covers (ComputeSkinCoveredLinks). A view that draws no skin keeps them.
+      // They stay staged and still bound the scene, but cannot be picked while hidden.
       if (hideSkinCoveredLinks && (req.renderVisible || req.shapeVisible)) {
         DynamicArray<DynamicString> linkNames;
         linkNames.reserve(prefab.links.size());
         for (auto const& link : prefab.links) {
           linkNames.push_back(link.name);
         }
-        auto const& skinMesh = asset->GetModelData().mesh;
-        DynamicArray<bool> const coveredLinks = superdex::robotics::ComputeSkinCoveredLinks(
-            prefab,
-            MakeConstSpan(linkNames),
-            skinMesh.has_value() && skinMesh->skinning.has_value() ? &*skinMesh->skinning
-                                                                   : nullptr);
-        for (int i = 0; i < isize(coveredLinks); ++i) {
-          if (coveredLinks[i]) {
+        DynamicArray<bool> standInLinks;
+        if (req.renderVisible) {
+          standInLinks =
+              superdex::robotics::ComputeSkinHiddenLinks(prefab, MakeConstSpan(linkNames));
+        } else {
+          auto const& skinMesh = asset->GetModelData().mesh;
+          standInLinks = superdex::robotics::ComputeSkinCoveredLinks(
+              prefab,
+              MakeConstSpan(linkNames),
+              skinMesh.has_value() && skinMesh->skinning.has_value() ? &*skinMesh->skinning
+                                                                     : nullptr);
+        }
+        for (int i = 0; i < isize(standInLinks); ++i) {
+          if (standInLinks[i]) {
             out[firstLinkRequest + i].renderVisible = false;
             out[firstLinkRequest + i].shapeVisible = false;
           }
@@ -1187,7 +1200,8 @@ bool SceneStage::ApplyStageRequests(
       // A skinned skin bakes scale/shape-offset into its GPU-skinned collision geometry, which has
       // no in-place vertex update, so a change to those params forces a full rebuild (pose edits,
       // the common case, keep the same params and reuse).
-      if (_actors[i].skinnedCollisionMesh != nullptr &&
+      if ((_actors[i].skinnedCollisionMesh != nullptr ||
+           _actors[i].skinnedRenderObject != nullptr) &&
           (_actors[i].softBakeScale[0] != requests[i].softBakeScale[0] ||
            _actors[i].softBakeScale[1] != requests[i].softBakeScale[1] ||
            _actors[i].softBakeScale[2] != requests[i].softBakeScale[2] ||
@@ -1251,14 +1265,14 @@ bool SceneStage::ApplyStageRequests(
       // so the highlight clone can match each base's shading.
       actor.render.flatShaded = false;
       actor.shape.flatShaded = true;
-      if (req.isSoft && !req.skinLinkWorldTransforms.empty()) {
-        // Skinned articulated skin: a GPU-skinned collision wireframe occupies the shape slot (the
-        // Collision view), GPU skinned by the articulation link transforms (via SetBoneMatrices) so
-        // it deforms at editor time and tracks physics at sim time without CPU re-baking. An
-        // optional GPU-skinned render GLB (posed each frame via SetBoneMatrices) occupies the
-        // render slot -- but the collision skin is fully independent of it and is always created
-        // here.
-        auto* asset = manager.LoadMochiModelAsset(req.shapeModelFile);
+      if (!req.skinLinkWorldTransforms.empty()) {
+        // Skinned articulated skin: an optional GPU-skinned collision wireframe occupies the shape
+        // slot (the Collision view), GPU skinned by the articulation link transforms (via
+        // SetBoneMatrices) so it deforms at editor time and tracks physics at sim time without CPU
+        // re-baking. An optional GPU-skinned render GLB (posed each frame via SetBoneMatrices)
+        // occupies the render slot. The two are fully independent of each other.
+        bool const hasCollisionSkin = !req.shapeModelFile.IsEmpty();
+        auto* asset = hasCollisionSkin ? manager.LoadMochiModelAsset(req.shapeModelFile) : nullptr;
         std::unique_ptr<mochi_renderer::WireframeMesh> wireframe;
         int const boneCount = isize(req.skinLinkWorldTransforms);
         if (asset) {
@@ -1282,7 +1296,7 @@ bool SceneStage::ApplyStageRequests(
         actor.softSurfaces = req.softSurfaces;
         actor.softMeshVertexCount = req.softVertexCount;
         actor.softCollisionVertexCount = req.softCollisionVertexCount;
-        if (!actor.skinnedCollisionMesh) {
+        if (hasCollisionSkin && !actor.skinnedCollisionMesh) {
           MOCHI_LOG_ERROR_ONCE(
               "SceneStage: skin collision surface has no skinning; the Collision view will not "
               "deform with the pose.");
