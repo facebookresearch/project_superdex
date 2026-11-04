@@ -1280,14 +1280,23 @@ void BotSceneEditor::CreatePhysicsActors(mochi::Scene* scene) {
 
   auto const& prefab = _physicsScenePrefab;
 
+  // Each physics actor's skin bone remap (see ComputeSkinBoneLinkRemap), empty for all but bots
+  // with a composed skin. Parallel to _physicsActors.
+  std::vector<mochi::DynamicArray<int>> skinBoneLinkRemaps;
+  auto const addActor = [&](mochi::ActorHandle handle, mochi::DynamicArray<int> skinBoneLinkRemap) {
+    _physicsActors.push_back(handle);
+    skinBoneLinkRemaps.push_back(std::move(skinBoneLinkRemap));
+  };
+
   // Physics actor order must match SceneStage: base actors, spawnables/task instances, then bots.
   _physicsActors.clear();
+  _skinSyncs.clear();
   _taskRuntimeSpawns.clear();
   _taskBots.clear();
   _taskPrefabActors.clear();
   _taskPrefabConstraints.clear();
   for (auto const& handle : _botScene->GetBaseSceneActorHandles()) {
-    _physicsActors.push_back(handle);
+    addActor(handle, {});
   }
 
   if (_taskPrefab.has_value()) {
@@ -1321,7 +1330,7 @@ void BotSceneEditor::CreatePhysicsActors(mochi::Scene* scene) {
         }
         auto* primary = bot->GetArticulatedActor();
         auto const handle = primary->GetHandle();
-        _physicsActors.push_back(handle);
+        addActor(handle, ComputeSkinBoneLinkRemap(botPrefab));
         _taskRuntimeSpawns[i].primaryActor = handle;
         _taskRuntimeSpawns[i].spawnFromPrimary =
             mochi::Invert(spawn.worldFromSpawn) * primary->GetRootTransform();
@@ -1351,7 +1360,7 @@ void BotSceneEditor::CreatePhysicsActors(mochi::Scene* scene) {
         return;
       }
       for (auto* actor : result.actors) {
-        _physicsActors.push_back(actor->GetHandle());
+        addActor(actor->GetHandle(), {});
       }
       auto* primary = result.actors.front();
       _taskRuntimeSpawns[i].primaryActor = primary->GetHandle();
@@ -1361,13 +1370,40 @@ void BotSceneEditor::CreatePhysicsActors(mochi::Scene* scene) {
   }
   for (auto const& botEntry : prefab.bots) {
     auto* bot = _botScene->GetBot(std::string(botEntry.name));
-    if (bot && bot->GetArticulatedActor()) {
-      _physicsActors.push_back(bot->GetArticulatedActor()->GetHandle());
+    auto* actor = bot != nullptr ? bot->GetArticulatedActor() : nullptr;
+    if (actor != nullptr) {
+      auto const* botPrefab = findBotPrefab(std::string_view(botEntry.path));
+      addActor(
+          actor->GetHandle(),
+          botPrefab != nullptr ? ComputeSkinBoneLinkRemap(*botPrefab) : mochi::DynamicArray<int>{});
+    }
+  }
+
+  // Track the skins SceneStage staged. Rows follow the per-step transform list: an articulated
+  // actor's links, then its skin if one was staged; a rigid actor's root.
+  int row = 0;
+  for (int i = 0; i < mochi::isize(_physicsActors); ++i) {
+    auto* actor = scene->GetActor(_physicsActors[i]);
+    if (actor == nullptr) {
+      continue;
+    }
+    if (actor->GetType() == mochi::ActorType::Articulated) {
+      row += mochi::isize(actor->GetNestedLinkActors(e));
+      if (row < mochi::isize(_stagedSkinRows) && _stagedSkinRows[row]) {
+        _skinSyncs.emplace_back().Track(*actor, std::move(skinBoneLinkRemaps[i]), row);
+        ++row;
+      }
+    } else if (actor->GetType() == mochi::ActorType::Rigid) {
+      ++row;
     }
   }
 }
 
 void BotSceneEditor::DestroyPhysicsActors(mochi::Scene* scene) {
+  for (auto& skinSync : _skinSyncs) {
+    skinSync.Untrack(scene);
+  }
+  _skinSyncs.clear();
   // Destroy bots/controllers before the async scene destroys the scene. The BotScene is non-owning,
   // so the scene itself is left intact for MochiAsyncScene to destroy.
   for (auto* bot : _taskBots) {
@@ -1395,9 +1431,20 @@ mochi::CallbackHandle BotSceneEditor::RegisterPostStepCallback(mochi::AsyncScene
         data.actorTransforms.clear();
         data.actorNames.clear();
         data.taskTransforms.clear();
+        auto const& converter = _studio->GetEditorToRendererSpaceConverter();
+        // Skin updates are filled in place to reuse their buffers, then trimmed below.
+        int numSkinPoses = 0;
+        int numSkinSurfaces = 0;
+        auto const nextUpdate = [](auto& updates, int& count) -> auto& {
+          if (mochi::isize(updates) <= count) {
+            updates.emplace_back();
+          }
+          return updates[count++];
+        };
         // Build the ordered transform list
-        // actors expand to their nested link transforms, rigid actors push their root transform,
-        // and everything else (e.g. soft) is skipped.
+        // actors expand to their nested link transforms (then their staged skin's row, at the
+        // actor's root), rigid actors push their root transform, and everything else (e.g. soft) is
+        // skipped.
         for (auto const& handle : _physicsActors) {
           auto* actor = info.scene->GetActor(handle);
           if (!actor) {
@@ -1411,6 +1458,21 @@ mochi::CallbackHandle BotSceneEditor::RegisterPostStepCallback(mochi::AsyncScene
               data.actorTransforms.push_back(linkTransforms[i]);
               char const* const linkName = info.scene->GetActor(links[i])->GetName();
               data.actorNames.emplace_back(linkName ? linkName : "");
+            }
+            auto const skinSync =
+                std::ranges::find(_skinSyncs, handle, &SkinSimSync::GetActorHandle);
+            if (skinSync != _skinSyncs.end()) {
+              data.actorTransforms.push_back(actor->GetRootTransform());
+              data.actorNames.push_back(skinSync->GetName());
+              SoftMeshUpdate* const surface = skinSync->HasSurface()
+                  ? &nextUpdate(data.skinSurfaces, numSkinSurfaces)
+                  : nullptr;
+              skinSync->Produce(
+                  *actor,
+                  mochi::MakeConstSpan(linkTransforms),
+                  converter,
+                  nextUpdate(data.skinPoses, numSkinPoses),
+                  surface);
             }
           } else if (actor->GetType() == mochi::ActorType::Rigid) {
             data.actorTransforms.push_back(actor->GetRootTransform());
@@ -1429,6 +1491,8 @@ mochi::CallbackHandle BotSceneEditor::RegisterPostStepCallback(mochi::AsyncScene
               primary ? primary->GetRootTransform() * mochi::Invert(runtime.spawnFromPrimary)
                       : _taskSpawns[i].worldFromSpawn);
         }
+        data.skinPoses.resize(numSkinPoses);
+        data.skinSurfaces.resize(numSkinSurfaces);
         _simData.Produce();
       });
 }
@@ -1451,6 +1515,10 @@ std::string const& BotSceneEditor::GetReferenceProblem(std::string_view path) {
 void BotSceneEditor::OnStartPhysics() {
   // Staged from the same prefab, so the staged and physics actors stay in step.
   _physicsScenePrefab = WithActiveSlotBots(_sceneAsset->GetPrefab(), _activeSlotBots);
+  _stagedSkinRows.clear();
+  for (auto const& staged : _stage.GetActors()) {
+    _stagedSkinRows.push_back(IsSkinStagedName(staged.name));
+  }
   auto& paramsCache = _sceneAsset->GetControllerParams();
   for (auto& bot : _physicsScenePrefab.bots) {
     for (auto& controller : bot.controllers) {
@@ -1492,9 +1560,11 @@ void BotSceneEditor::OnStopPhysics() {
 
 void BotSceneEditor::SyncFromPhysics() {
   if (_simData.Consume()) {
-    _stage.ApplyWorldTransforms(
-        mochi::MakeConstSpan(_simData.GetConsumerData().actorTransforms),
-        _studio->GetEditorToRendererSpaceConverter());
+    auto const& data = _simData.GetConsumerData();
+    auto const& converter = _studio->GetEditorToRendererSpaceConverter();
+    _stage.ApplyWorldTransforms(mochi::MakeConstSpan(data.actorTransforms), converter);
+    _stage.ApplySoftMeshUpdates(mochi::MakeConstSpan(data.skinSurfaces), converter);
+    _stage.ApplySkinnedPose(mochi::MakeConstSpan(data.skinPoses), converter);
   }
 }
 

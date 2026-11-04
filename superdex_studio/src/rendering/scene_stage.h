@@ -210,9 +210,10 @@ struct ResolvedTaskSpawn {
 // (StagedActor::softSurfaces.rendered) and `collisionPositions`/`collisionNormals` for the
 // wireframe (softSurfaces.collision), left empty when the two are the same mesh.
 // `worldTransform` is the soft actor's root transform (Mochi space, converted on apply). Matched to
-// a staged actor by `name`.
+// the staged actor at `stagedIndex`, or by `name` when it is negative.
 struct SoftMeshUpdate {
   std::string name;
+  int stagedIndex = -1;
   std::vector<float> positions;
   std::vector<float> normals;
   std::vector<float> collisionPositions;
@@ -224,10 +225,12 @@ struct SoftMeshUpdate {
 // (rest FK) and the simulation post-step callback, consumed by SceneStage::ApplySkinnedPose.
 // `linkWorldTransforms` are per-link WORLD transforms (Mochi space) in the GLB's joint order
 // (== nested link order); SceneStage makes them root-relative against the staged actor's current
-// world transform and converts them to renderer space before driving the GPU bones. Matched to a
-// staged actor by `name` (the SkinStagedName of the articulated actor).
+// world transform and converts them to renderer space before driving the GPU bones. Matched to the
+// staged actor at `stagedIndex`, or by `name` (the SkinStagedName of the articulated actor) when it
+// is negative.
 struct SkinnedPoseUpdate {
   std::string name;
+  int stagedIndex = -1;
   std::vector<mochi::TransformRT> linkWorldTransforms;
 };
 
@@ -237,6 +240,8 @@ struct SkinnedPoseUpdate {
 // staging (SceneStage), the per-step surface query (editors), and force-drag resolution
 // (PhysicsDragController) must all agree on.
 [[nodiscard]] std::string SkinStagedName(std::string_view articulatedActorName);
+// Whether `stagedName` is a SkinStagedName.
+[[nodiscard]] bool IsSkinStagedName(std::string_view stagedName);
 
 // A single resolved staging instruction produced by traversing a prefab tree. Carries both the
 // render and shape representations (either file may be empty) plus which is visible for the
@@ -332,8 +337,11 @@ struct SceneStage {
   // render scene at rest pose. Spawnable-prefab declarations are not instances and are omitted
   // until StageBotTask is called. The base scene and each bot are resolved internally via the
   // AssetManager. The staged-actor order is the base scene (prefab::AddToScene order) followed by
-  // each bot's links in declaration order — matching superdex::robotics::LoadBotScene so that
-  // index-based ApplyWorldTransforms aligns with the simulated actors. No-op if no scene is bound.
+  // each bot's links, then its skin if it has one, in declaration order — matching
+  // superdex::robotics::LoadBotScene so that index-based ApplyWorldTransforms aligns with the
+  // simulated actors (a skin's row carries its articulation's root transform). The links each skin
+  // stands in for are staged hidden, as StageBot does with hideSkinCoveredLinks. No-op if no scene
+  // is bound.
   // Returns true if the staged objects were rebuilt (pointers invalidated), false if reused.
   bool StageBotScene(superdex::robotics::BotScenePrefab const& scene, StageType stageType);
 
@@ -371,14 +379,16 @@ struct SceneStage {
   // Re-apply the default-pose transforms captured during staging.
   void ResetWorldTransforms(mochi::CoordinateSpaceConverter const& converter);
 
-  // Apply per-soft-actor deforming-mesh updates (from simulation), matched by name. For each update
+  // Apply per-soft-actor deforming-mesh updates (from simulation), matched by staged index or name
+  // (see SoftMeshUpdate). For each update
   // both dynamic meshes (solid + wireframe) are deformed and the actor's world transform is set.
   // Unknown names and non-soft actors are ignored; a vertex-count mismatch skips that mesh.
   void ApplySoftMeshUpdates(
       mochi::Span<SoftMeshUpdate const> updates,
       mochi::CoordinateSpaceConverter const& converter);
 
-  // Apply per-skin joint poses (from simulation or editor FK), matched by name. For each update the
+  // Apply per-skin joint poses (from simulation or editor FK), matched by staged index or name (see
+  // SkinnedPoseUpdate). For each update the
   // named skinned actor's render model has its joints posed (making the link world transforms
   // root-relative against the actor's current world transform, then converting to renderer space).
   // Unknown names and actors without a skinned render model are ignored. Call after
@@ -439,6 +449,10 @@ struct SceneStage {
       const;
 
  private:
+  // The staged actor a per-frame update targets: the one at `stagedIndex` if it still has `name`,
+  // else -1; by name when `stagedIndex` is negative.
+  int FindUpdateTarget(std::string_view name, int stagedIndex) const;
+
   // Apply a list of staging requests: reuse existing staged objects when the actor set (by name)
   // and active model files are unchanged, otherwise rebuild. Shared by StageBot, StagePrefab, and
   // StageBotScene.

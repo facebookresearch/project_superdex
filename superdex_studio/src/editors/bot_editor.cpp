@@ -543,8 +543,8 @@ void BotEditor::ShowAuxiliaryWindows() {
     std::vector<std::string>* simNames = nullptr;
     if (_mochiScene.IsSimulating()) {
       simNamesStorage = _simData.GetConsumerData().linkNames;
-      if (_skinQuery.queriesRegistered) {
-        simNamesStorage.push_back(_skinQuery.name);
+      if (_skinSync.has_value()) {
+        simNamesStorage.push_back(_skinSync->GetName());
       }
       simNames = &simNamesStorage;
     }
@@ -1299,53 +1299,11 @@ void BotEditor::CreatePhysicsActors(mochi::Scene* scene) {
   _bot = botsContext->CreateBot(scene, botPrefab, _studio->GetBotLoader(), e);
   _botControl.SetBot(_bot);
 
-  // If the bot has a skin, pose its staged skin from the link transforms each step, and, when the
-  // skin has a collision shape (and so is part of the physics actor), register surface queries on
-  // the articulated actor so its deformed (linear-blend-skinned) collision surface can be read each
-  // step and pushed to the staged skin dynamic mesh. The skin is the top-level actor's own surface
-  // (not a nested link), so it is named after that actor plus " (Skin)" -- this must match the
-  // staged name in SceneStage::BuildBotRequests so ApplySoftMeshUpdates and ApplySkinnedPose find
-  // it. Cancelled in DestroyPhysicsActors while the actor is still alive.
-  _skinQuery = {};
-  if (_bot && botPrefab.skin.has_value()) {
-    if (auto* actor = _bot->GetArticulatedActor()) {
-      char const* const skinActorName = actor->GetName();
-      _skinQuery.name = SkinStagedName(skinActorName ? skinActorName : "");
-      _skinQuery.posed = true;
-      // If this bot adopted a sub-bot's skin (composed mod bot), precompute the map from skin bone
-      // index (== GLB joint order) to merged-articulation link index, so per-step link transforms
-      // can be reordered into skin-bone order before posing the GPU-skinned skin (see the
-      // skinned-pose emission in ProduceSimData). A natively skinned bot leaves this empty (bone i
-      // == link i), meaning the link transforms are used as-is.
-      if (!botPrefab._skinBoneLinks.empty()) {
-        mochi::DynamicArray<mochi::DynamicString> linkNames;
-        for (auto const& link : botPrefab.links) {
-          linkNames.push_back(link.name);
-        }
-        mochi::DynamicArray<int> const boneLinks = superdex::robotics::ComputeSkinBoneLinkIndices(
-            botPrefab, mochi::MakeConstSpan(linkNames));
-        for (int b = 0; b < mochi::isize(boneLinks); ++b) {
-          if (boneLinks[b] == superdex::robotics::kIndexNone) {
-            // Mirrors the SceneStage path, which reports the same mismatch. Posing falls back to
-            // identity for this bone rather than mis-addressing another link.
-            MOCHI_LOG_ERROR_ONCE(
-                "BotEditor: skin bone references link '%s', which is not in the built bot; that "
-                "bone will not deform.",
-                botPrefab._skinBoneLinks[b].c_str());
-          }
-        }
-        _skinQuery.boneRemap.assign(boneLinks.begin(), boneLinks.end());
-      }
-      if (!botPrefab.skin->shapeFile.empty()) {
-        _skinQuery.positions = actor->RegisterQuery(mochi::QueryType::SurfaceNodePositions, e);
-        _skinQuery.normals = actor->RegisterQuery(mochi::QueryType::SurfaceNodeNormals, e);
-        if (e.IsOK()) {
-          _skinQuery.queriesRegistered = true;
-        } else {
-          MOCHI_LOG_ERROR("Failed to register bot skin surface queries");
-        }
-      }
-    }
+  // If the bot has a skin, its staged skin follows the bot (see SkinSimSync). Untracked in
+  // DestroyPhysicsActors while the actor is still alive.
+  _skinSync.reset();
+  if (_bot && _bot->GetArticulatedActor() && botPrefab.skin.has_value()) {
+    _skinSync.emplace().Track(*_bot->GetArticulatedActor(), ComputeSkinBoneLinkRemap(botPrefab));
   }
 }
 
@@ -1354,13 +1312,10 @@ void BotEditor::DestroyPhysicsActors(mochi::Scene* scene) {
     return;
   }
   // Release the skin surface queries while the actor is still alive (this runs before teardown).
-  if (_skinQuery.queriesRegistered) {
-    if (auto* actor = _bot->GetArticulatedActor()) {
-      actor->CancelQuery(_skinQuery.positions);
-      actor->CancelQuery(_skinQuery.normals);
-    }
+  if (_skinSync.has_value()) {
+    _skinSync->Untrack(scene);
+    _skinSync.reset();
   }
-  _skinQuery = {};
   _botControl.SetBot(nullptr);
   superdex::robotics::DestroyBot(scene, _bot);
   _bot = nullptr;
@@ -1420,67 +1375,19 @@ mochi::CallbackHandle BotEditor::RegisterPostStepCallback(mochi::AsyncScene* sce
               static_cast<float>(mochi::experimental::GetTransmissionDisplacement(
                   actor, static_cast<int>(transmissionIndex), e));
         }
-        // Skin: read the deformed (skinned) collision surface into a single SoftMeshUpdate matched
-        // to the staged skin dynamic mesh by name (_skinQuery.name). Local positions/normals are
-        // converted to renderer space; worldTransform is the articulated root (worldFromRoot).
-        if (_skinQuery.queriesRegistered) {
-          auto const& converter = _studio->GetEditorToRendererSpaceConverter();
-          auto const positions = actor->GetSurfaceMeshNodePositionsLocal(e);
-          auto const normals = actor->GetSurfaceMeshNodeNormalsLocal(e);
-          int const numNodes = static_cast<int>(positions.size() / 3);
-          int const numNormals = static_cast<int>(normals.size() / 3);
-          data.softMeshUpdates.resize(1);
-          SoftMeshUpdate& update = data.softMeshUpdates[0];
-          update.name = _skinQuery.name;
-          update.worldTransform = actor->GetRootTransform();
-          update.positions.resize(static_cast<size_t>(numNodes) * 3);
-          update.normals.resize(static_cast<size_t>(numNodes) * 3);
-          for (int n = 0; n < numNodes; ++n) {
-            auto const p = converter.TranslationToOutput(
-                mochi::StaticCast<mochi::Float3>(mochi::Real3{
-                    positions[3 * n + 0], positions[3 * n + 1], positions[3 * n + 2]}));
-            update.positions[3 * n + 0] = p[0];
-            update.positions[3 * n + 1] = p[1];
-            update.positions[3 * n + 2] = p[2];
-            mochi::Float3 nm{0.0f, 1.0f, 0.0f};
-            if (n < numNormals) {
-              nm = {
-                  static_cast<float>(normals[3 * n + 0]),
-                  static_cast<float>(normals[3 * n + 1]),
-                  static_cast<float>(normals[3 * n + 2])};
-            }
-            nm = converter.DirectionToOutput(nm);
-            update.normals[3 * n + 0] = nm[0];
-            update.normals[3 * n + 1] = nm[1];
-            update.normals[3 * n + 2] = nm[2];
-          }
-        } else {
-          data.softMeshUpdates.clear();
-        }
-        // Skin render model: pose its joints from the link world transforms (nested-link order ==
-        // GLB joint order). Emitted whenever the skin is staged; ApplySkinnedPose no-ops if the
-        // skin has no skinned render model.
-        if (_skinQuery.posed) {
+        // Skin: its pose and, with a collision surface, its deformed surface (0 or 1 entry each).
+        if (_skinSync.has_value()) {
           data.skinnedPoseUpdates.resize(1);
-          data.skinnedPoseUpdates[0].name = _skinQuery.name;
-          if (_skinQuery.boneRemap.empty()) {
-            data.skinnedPoseUpdates[0].linkWorldTransforms = data.linkTransforms;
-          } else {
-            // Composed skin: reorder the merged link transforms into skin-bone (GLB joint) order so
-            // the GPU-skinned skin's child-local bone indices address the correct links.
-            auto& poseTransforms = data.skinnedPoseUpdates[0].linkWorldTransforms;
-            poseTransforms.clear();
-            poseTransforms.reserve(_skinQuery.boneRemap.size());
-            for (int const linkIndex : _skinQuery.boneRemap) {
-              if (linkIndex >= 0 && linkIndex < static_cast<int>(data.linkTransforms.size())) {
-                poseTransforms.push_back(data.linkTransforms[linkIndex]);
-              } else {
-                poseTransforms.push_back(mochi::TransformRT{});
-              }
-            }
-          }
+          data.softMeshUpdates.resize(_skinSync->HasSurface() ? 1 : 0);
+          _skinSync->Produce(
+              *actor,
+              mochi::MakeConstSpan(data.linkTransforms),
+              _studio->GetEditorToRendererSpaceConverter(),
+              data.skinnedPoseUpdates[0],
+              data.softMeshUpdates.empty() ? nullptr : &data.softMeshUpdates[0]);
         } else {
           data.skinnedPoseUpdates.clear();
+          data.softMeshUpdates.clear();
         }
         _simData.Produce();
       });
@@ -1491,7 +1398,7 @@ void BotEditor::OnStopPhysics() {
   // Tear down the per-session force-drag controller. Runs after the async scene (and its callbacks)
   // are destroyed, so the controller's callback is already gone.
   _dragController.reset();
-  _skinQuery = {};
+  _skinSync.reset();
   _stage.ResetWorldTransforms(_studio->GetEditorToRendererSpaceConverter());
   _simData.Consume();
   // Hide and reset the Control window so the next sim starts at zero effort.

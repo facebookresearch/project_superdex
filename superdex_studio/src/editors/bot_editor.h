@@ -25,6 +25,7 @@
 #include "rendering/viewport.h"
 #include "simulation/mochi_async_scene.h"
 #include "simulation/physics_drag_controller.h"
+#include "simulation/skin_sim_sync.h"
 #include "ui/imgui_widgets.h"
 #include "ui/reorderable_list.h"
 
@@ -34,6 +35,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 namespace superdex::studio {
@@ -211,25 +213,8 @@ class BotEditor : public AssetEditor {
     std::vector<SkinnedPoseUpdate> skinnedPoseUpdates;
   };
   mochi_renderer::ProducerConsumerBuffer<SimData> _simData;
-  // Skin surface queries held while simulating: registered on the articulated actor in
-  // CreatePhysicsActors when the bot has a skin, cancelled in DestroyPhysicsActors. The deformed
-  // (linear-blend-skinned) collision surface is read each step into SimData::softMeshUpdates and
-  // applied to the staged "Skin" dynamic mesh by name.
-  struct SkinQueryState {
-    mochi::QueryHandle positions;
-    mochi::QueryHandle normals;
-    std::string name;
-    // Whether the surface queries are registered: the skin has a collision shape.
-    bool queriesRegistered = false;
-    // Whether the staged skin is posed from the link transforms each step: the bot has a skin.
-    bool posed = false;
-    // For a composed (mod) bot that adopted a sub-bot's skin, maps skin bone index (== GLB joint
-    // order) to the merged articulation's link index, so per-step link transforms can be reordered
-    // into skin-bone order before posing the GPU-skinned skin. Empty for a natively skinned bot
-    // (bone i == link i), meaning "use link transforms as-is".
-    std::vector<int> boneRemap;
-  };
-  SkinQueryState _skinQuery;
+  // Mirrors the simulated skin into the staged one while simulating a bot that has a skin.
+  std::optional<SkinSimSync> _skinSync;
   // UI state
   int _selectedBotLinkIndex = -1;
   bool _forceLinkFocus = false;

@@ -191,8 +191,14 @@ static std::string CombineNames(std::string const& path, std::string const& name
   return path + "/" + name;
 }
 
+static constexpr std::string_view kSkinStagedNameSuffix = " (Skin)";
+
 std::string SkinStagedName(std::string_view articulatedActorName) {
-  return std::string(articulatedActorName) + " (Skin)";
+  return std::string(articulatedActorName) + std::string(kSkinStagedNameSuffix);
+}
+
+bool IsSkinStagedName(std::string_view stagedName) {
+  return stagedName.ends_with(kSkinStagedNameSuffix);
 }
 
 // Recursively append staging requests for a prefab level, mirroring prefab::AddToScene's creation
@@ -703,7 +709,6 @@ static void BuildBotRequests(
     SuperDexStudio* studio,
     superdex::robotics::BotPrefab const& prefab,
     StageType stageType,
-    bool stageSkin,
     bool hideSkinCoveredLinks,
     std::vector<StageRequest>& out) {
   using namespace mochi;
@@ -727,7 +732,7 @@ static void BuildBotRequests(
     link.momentOfInertia.reset();
   }
   // The skin is not part of forward kinematics; drop it so the cheap FK-only bot does not load the
-  // skin shape. When requested, it is staged separately below as a deforming dynamic mesh.
+  // skin shape. It is staged separately below as a deforming dynamic mesh.
   prefabCopy.skin.reset();
   // Contact overrides are irrelevant to these shapeless FK-only links and a skin<->link override
   // still references the skin we just dropped (its party is the bot name), so it would fail to
@@ -807,16 +812,15 @@ static void BuildBotRequests(
 
   // Skin (optional). The skin is a deformable surface skinned over the links; it is staged through
   // the same deforming dynamic-mesh path as soft actors (a solid mesh in the render slot, a
-  // wireframe in the shape slot), and updated each simulation step -- matched by name -- via
-  // SceneStage::ApplySoftMeshUpdates from the articulated actor's skinned surface. The staged name
-  // is the top-level articulated actor's name plus " (Skin)": the skin is that actor's own surface
-  // (not a nested link), so BotEditor must derive _skinQuery.name identically for the match. Only
-  // the single-bot editor stages the skin (stageSkin): the bot-scene path applies simulated
-  // transforms by index and an extra staged actor would break that alignment. The skin has no baked
-  // transform (identity scale/offset); its rest surface sits in the articulation's root frame,
-  // placed by worldFromRoot.
-  // A skin may have only a collision shape, only a render model, or both.
-  if (stageSkin && prefab.skin.has_value()) {
+  // wireframe in the shape slot), and updated each simulation step -- matched by staged index or
+  // name -- via SceneStage::ApplySoftMeshUpdates from the articulated actor's skinned surface. The
+  // staged name is the top-level articulated actor's name plus " (Skin)": the skin is that actor's
+  // own surface (not a nested link), so SkinSimSync derives its name identically. It is staged
+  // right after the bot's links, so editors that apply simulated transforms by index give it a row
+  // of its own there (the articulation root, which its bone matrices cancel). Its rest surface is
+  // rooted at skin bone 0's bind-pose frame with the bot scale baked in (see below). A skin may
+  // have only a collision shape, only a render model, or both.
+  if (prefab.skin.has_value()) {
     mochi::Path const skinShapePath(prefab.skin->shapeFile);
     auto* asset = skinShapePath.IsEmpty()
         ? nullptr
@@ -972,8 +976,7 @@ bool SceneStage::StageBot(
     return false;
   }
   std::vector<StageRequest> requests;
-  BuildBotRequests(
-      _scene, _studio, prefab, stageType, /*stageSkin=*/true, hideSkinCoveredLinks, requests);
+  BuildBotRequests(_scene, _studio, prefab, stageType, hideSkinCoveredLinks, requests);
   return ApplyStageRequests(requests, stageType);
 }
 
@@ -1084,13 +1087,7 @@ bool SceneStage::StageBotSceneImpl(
           botPrefab.name = name;
           botPrefab.worldFromRoot = worldFromSpawn;
           BuildBotRequests(
-              _scene,
-              _studio,
-              botPrefab,
-              stageType,
-              /*stageSkin=*/false,
-              /*hideSkinCoveredLinks=*/false,
-              requests);
+              _scene, _studio, botPrefab, stageType, /*hideSkinCoveredLinks=*/true, requests);
           return;
         }
 
@@ -1151,13 +1148,7 @@ bool SceneStage::StageBotSceneImpl(
       botPrefab.defaultPose = botEntry.initialPose;
     }
     BuildBotRequests(
-        _scene,
-        _studio,
-        botPrefab,
-        stageType,
-        /*stageSkin=*/false,
-        /*hideSkinCoveredLinks=*/false,
-        requests);
+        _scene, _studio, botPrefab, stageType, /*hideSkinCoveredLinks=*/true, requests);
   }
 
   return ApplyStageRequests(requests, stageType);
@@ -1656,7 +1647,7 @@ void SceneStage::ApplySoftMeshUpdates(
     mochi::Span<SoftMeshUpdate const> updates,
     mochi::CoordinateSpaceConverter const& converter) {
   for (auto const& update : updates) {
-    int const index = FindIndexByName(update.name);
+    int const index = FindUpdateTarget(update.name, update.stagedIndex);
     if (index < 0) {
       continue;
     }
@@ -1699,7 +1690,7 @@ void SceneStage::ApplySkinnedPose(
     mochi::CoordinateSpaceConverter const& converter) {
   using namespace mochi;
   for (auto const& update : updates) {
-    int const index = FindIndexByName(update.name);
+    int const index = FindUpdateTarget(update.name, update.stagedIndex);
     if (index < 0) {
       continue;
     }
@@ -1726,6 +1717,14 @@ int SceneStage::GetNumActors() const {
 int SceneStage::FindIndexByName(std::string_view name) const {
   auto it = _nameToIndex.find(std::string(name));
   return it == _nameToIndex.end() ? -1 : it->second;
+}
+
+int SceneStage::FindUpdateTarget(std::string_view name, int stagedIndex) const {
+  if (stagedIndex < 0) {
+    return FindIndexByName(name);
+  }
+  // A staged index is only meaningful for the actor set it was taken from.
+  return stagedIndex < GetNumActors() && _actors[stagedIndex].name == name ? stagedIndex : -1;
 }
 
 void SceneStage::EnsureSimSurface(

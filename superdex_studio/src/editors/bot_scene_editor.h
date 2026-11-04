@@ -22,6 +22,7 @@
 #include "rendering/scene_stage.h"
 #include "simulation/mochi_async_scene.h"
 #include "simulation/physics_drag_controller.h"
+#include "simulation/skin_sim_sync.h"
 
 #include <superdex_robotics/internal/bot_scene.h>
 #include <superdex_robotics/internal/bot_task.h>
@@ -153,10 +154,17 @@ class BotSceneEditor : public AssetEditor {
   std::vector<mochi::ActorHandle> _taskPrefabActors;
   std::vector<mochi::ConstraintHandle> _taskPrefabConstraints;
   std::unique_ptr<PhysicsDragController> _dragController;
+  // Whether each staged actor is a skin, captured by OnStartPhysics for CreatePhysicsActors.
+  std::vector<bool> _stagedSkinRows;
+  // One per simulated articulated actor whose skin is staged, so the staged skin follows it.
+  std::vector<SkinSimSync> _skinSyncs;
   struct SimData {
+    // In staged-actor order: a skin's row follows its articulation's links.
     std::vector<std::string> actorNames;
     std::vector<mochi::TransformRT> actorTransforms;
     std::vector<mochi::TransformRT> taskTransforms;
+    std::vector<SoftMeshUpdate> skinSurfaces;
+    std::vector<SkinnedPoseUpdate> skinPoses;
   };
   mochi_renderer::ProducerConsumerBuffer<SimData> _simData;
   mochi::Path _taskPath;
