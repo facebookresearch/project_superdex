@@ -703,6 +703,8 @@ TEST_F(SortBotPrefabTest, ApplyMod_AttachBot_AdoptsChildSkin) {
   loader.child.skin.emplace();
   loader.child.skin->nonCollidingLinks.emplace();
   loader.child.skin->nonCollidingLinks->push_back(DynamicString("tip"));
+  loader.child.skin->hiddenLinks.emplace();
+  loader.child.skin->hiddenLinks->push_back(DynamicString("croot"));
   RebuildBotData(loader.child, ExpectOK{});
 
   AttachBot mod;
@@ -717,10 +719,13 @@ TEST_F(SortBotPrefabTest, ApplyMod_AttachBot_AdoptsChildSkin) {
   // link names with the mod prefix, in link order.
   DynamicArray<DynamicString> const expectedBoneLinks = {"arm/croot", "arm/tip"};
   EXPECT_EQ(base._skinBoneLinks, expectedBoneLinks);
-  // The names of the links the skin covers are forwarded with the same prefix.
+  // The names of the links the skin stands in for are forwarded with the same prefix.
   ASSERT_TRUE(base.skin->nonCollidingLinks.has_value());
   ASSERT_EQ(isize(*base.skin->nonCollidingLinks), 1);
   EXPECT_EQ((*base.skin->nonCollidingLinks)[0], "arm/tip");
+  ASSERT_TRUE(base.skin->hiddenLinks.has_value());
+  ASSERT_EQ(isize(*base.skin->hiddenLinks), 1);
+  EXPECT_EQ((*base.skin->hiddenLinks)[0], "arm/croot");
 }
 
 // ApplyMod(AttachBot) rejects attaching a skinned child onto a bot that already has a skin: a bot

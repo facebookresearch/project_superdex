@@ -16,10 +16,7 @@
 
 #include <mochi_core/geometry/model_data.h>
 #include <mochi_core/test/mochi_test_helpers.h>
-#include <superdex_robotics/core/loader.h>
 #include <superdex_robotics/utils/bot_utils.h>
-
-#include <optional>
 
 using namespace mochi;
 using namespace superdex::robotics;
@@ -30,7 +27,13 @@ DynamicArray<DynamicString> const kLinkNames = {"palm", "finger", "tip"};
 
 BotPrefab MakeSkinnedBot() {
   BotPrefab bot;
-  bot.skin.emplace();
+  bot.skin.emplace().shapeFile = "skin.mochi.h5";
+  return bot;
+}
+
+BotPrefab MakeRenderSkinnedBot() {
+  BotPrefab bot = MakeSkinnedBot();
+  bot.skin->renderModelFile = "skin_render.glb";
   return bot;
 }
 
@@ -41,25 +44,6 @@ MakeSkinning(int weightsPerNode, DynamicArray<int> indices, DynamicArray<real> w
   skinning.indices = std::move(indices);
   skinning.weights = std::move(weights);
   return skinning;
-}
-
-/* Serves one collision model (or a load failure when there is none) for any path, recording the
- * paths it was asked for. */
-struct FakeModelLoader : FileBotLoader {
-  std::optional<ModelData> model;
-  mutable DynamicArray<std::string> requestedPaths;
-
-  ModelData LoadModelData(std::string_view path, superdex::Error& error) const override {
-    requestedPaths.emplace_back(path);
-    MOCHI_ERROR_IF(!model.has_value(), error, "no such model");
-    return model.value_or(ModelData{});
-  }
-};
-
-ModelData MakeSkinnedModel(SkinningData skinning) {
-  ModelData model;
-  model.mesh.emplace().skinning = std::move(skinning);
-  return model;
 }
 
 } // namespace
@@ -121,69 +105,65 @@ TEST(SkinCoverageTest, CoveredLinks_FromWeightedBones) {
   EXPECT_EQ(ComputeSkinCoveredLinks(bot, MakeConstSpan(kLinkNames), &skinning), expected);
 }
 
+// A render-only skin is not part of the physics actor, so it covers no link's collision, even when
+// it lists nonCollidingLinks.
+TEST(SkinCoverageTest, CoveredLinks_NoneWithoutCollisionShape) {
+  BotPrefab bot = MakeSkinnedBot();
+  bot.skin->shapeFile.clear();
+  bot.skin->nonCollidingLinks = DynamicArray<DynamicString>{"finger"};
+  SkinningData const skinning = MakeSkinning(1, {0, 1, 2}, {1_r, 1_r, 1_r});
+  DynamicArray<bool> const expected = {false, false, false};
+  EXPECT_EQ(ComputeSkinCoveredLinks(bot, MakeConstSpan(kLinkNames), &skinning), expected);
+}
+
 TEST(SkinCoverageTest, CoveredLinks_NoneWithoutSkinning) {
   DynamicArray<bool> const expected = {false, false, false};
   EXPECT_EQ(
       ComputeSkinCoveredLinks(MakeSkinnedBot(), MakeConstSpan(kLinkNames), nullptr), expected);
 }
 
-// With nonCollidingLinks set, the skin's collision mesh is not read.
-TEST(SkinCoverageTest, MapSkinOntoLinks_NonCollidingLinksNeedNoCollisionMesh) {
-  BotPrefab bot = MakeSkinnedBot();
-  bot.skin->shapeFile = "skin.mochi.h5";
-  bot.skin->nonCollidingLinks = DynamicArray<DynamicString>{"tip"};
-  FakeModelLoader const loader;
-  Error error;
-  SkinLinkMapping const mapping = MapSkinOntoLinks(bot, MakeConstSpan(kLinkNames), loader, error);
-  ASSERT_TRUE(error.IsOK()) << error.ToString();
-  DynamicArray<int> const expectedBones = {0, 1, 2};
-  DynamicArray<bool> const expectedCovered = {false, false, true};
-  EXPECT_EQ(mapping.boneLinks, expectedBones);
-  EXPECT_EQ(mapping.coveredLinks, expectedCovered);
-  EXPECT_TRUE(loader.requestedPaths.empty());
+TEST(SkinCoverageTest, HiddenLinks_NoneWithoutSkin) {
+  DynamicArray<bool> const expected = {false, false, false};
+  EXPECT_EQ(ComputeSkinHiddenLinks(BotPrefab{}, MakeConstSpan(kLinkNames)), expected);
 }
 
-// Without nonCollidingLinks, coverage comes from the collision mesh the loader serves.
-TEST(SkinCoverageTest, MapSkinOntoLinks_CoverageFromCollisionMeshThroughLoader) {
+// A skin without a render model draws nothing in place of the links, so it hides none, even when
+// it lists them.
+TEST(SkinCoverageTest, HiddenLinks_NoneWithoutRenderModel) {
   BotPrefab bot = MakeSkinnedBot();
-  bot.skin->shapeFile = "skin.mochi.h5";
-  FakeModelLoader loader;
-  loader.model = MakeSkinnedModel(MakeSkinning(1, {1, 2}, {1_r, 1_r}));
-  Error error;
-  SkinLinkMapping const mapping = MapSkinOntoLinks(bot, MakeConstSpan(kLinkNames), loader, error);
-  ASSERT_TRUE(error.IsOK()) << error.ToString();
-  DynamicArray<bool> const expectedCovered = {false, true, true};
-  DynamicArray<std::string> const expectedPaths = {"skin.mochi.h5"};
-  EXPECT_EQ(mapping.coveredLinks, expectedCovered);
-  EXPECT_EQ(loader.requestedPaths, expectedPaths);
+  bot.skin->hiddenLinks = DynamicArray<DynamicString>{"finger"};
+  DynamicArray<bool> const expected = {false, false, false};
+  EXPECT_EQ(ComputeSkinHiddenLinks(bot, MakeConstSpan(kLinkNames)), expected);
 }
 
-// Coverage that depends on a collision mesh that cannot be read, or that has no skinning, fails
-// rather than covering nothing.
-TEST(SkinCoverageTest, MapSkinOntoLinks_FailsWithoutReadableSkinning) {
-  BotPrefab bot = MakeSkinnedBot();
-  bot.skin->shapeFile = "skin.mochi.h5";
-
-  FakeModelLoader const missing;
-  Error missingError;
-  EXPECT_TRUE(
-      MapSkinOntoLinks(bot, MakeConstSpan(kLinkNames), missing, missingError).boneLinks.empty());
-  EXPECT_FALSE(missingError.IsOK());
-
-  FakeModelLoader unskinned;
-  unskinned.model.emplace().mesh.emplace();
-  Error unskinnedError;
-  EXPECT_TRUE(MapSkinOntoLinks(bot, MakeConstSpan(kLinkNames), unskinned, unskinnedError)
-                  .boneLinks.empty());
-  EXPECT_FALSE(unskinnedError.IsOK());
+// hiddenLinks names the hidden links exactly, independently of nonCollidingLinks.
+TEST(SkinCoverageTest, HiddenLinks_ListedLinks) {
+  BotPrefab bot = MakeRenderSkinnedBot();
+  bot.skin->hiddenLinks = DynamicArray<DynamicString>{"finger", "unknown"};
+  bot.skin->nonCollidingLinks = DynamicArray<DynamicString>{"palm", "tip"};
+  DynamicArray<bool> const expected = {false, true, false};
+  EXPECT_EQ(ComputeSkinHiddenLinks(bot, MakeConstSpan(kLinkNames)), expected);
 }
 
-TEST(SkinCoverageTest, MapSkinOntoLinks_EmptyWithoutSkin) {
-  FakeModelLoader const loader;
-  Error error;
-  SkinLinkMapping const mapping =
-      MapSkinOntoLinks(BotPrefab{}, MakeConstSpan(kLinkNames), loader, error);
-  EXPECT_TRUE(error.IsOK()) << error.ToString();
-  EXPECT_TRUE(mapping.boneLinks.empty());
-  EXPECT_TRUE(mapping.coveredLinks.empty());
+TEST(SkinCoverageTest, HiddenLinks_EmptyListHidesNothing) {
+  BotPrefab bot = MakeRenderSkinnedBot();
+  bot.skin->hiddenLinks = DynamicArray<DynamicString>{};
+  DynamicArray<bool> const expected = {false, false, false};
+  EXPECT_EQ(ComputeSkinHiddenLinks(bot, MakeConstSpan(kLinkNames)), expected);
+}
+
+// Unset, a standalone skin hides every link, whatever nonCollidingLinks says.
+TEST(SkinCoverageTest, HiddenLinks_UnsetHidesEveryLink) {
+  BotPrefab bot = MakeRenderSkinnedBot();
+  bot.skin->nonCollidingLinks = DynamicArray<DynamicString>{};
+  DynamicArray<bool> const expected = {true, true, true};
+  EXPECT_EQ(ComputeSkinHiddenLinks(bot, MakeConstSpan(kLinkNames)), expected);
+}
+
+// Unset, a composed bot's skin hides only the links it is skinned over.
+TEST(SkinCoverageTest, HiddenLinks_UnsetHidesSkinBoneLinks) {
+  BotPrefab bot = MakeRenderSkinnedBot();
+  bot._skinBoneLinks = {"tip", "finger", "removed"};
+  DynamicArray<bool> const expected = {false, true, true};
+  EXPECT_EQ(ComputeSkinHiddenLinks(bot, MakeConstSpan(kLinkNames)), expected);
 }

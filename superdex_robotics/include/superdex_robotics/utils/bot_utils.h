@@ -300,13 +300,14 @@ int MOCHI_API FindLinkIndexByName(BotPrefab const& bot, std::string_view name);
     Span<DynamicString const> linkNames);
 
 /**
- * @brief Find the links a bot's skin covers: the links the skin stands in for, whose own rigid
- * geometry a renderer or exporter should omit.
+ * @brief Find the links whose collision a bot's skin stands in for. A collision view or exporter
+ * should omit their rigid collision geometry.
  *
  * @details Mirrors @ref ArticulatedSkinParams::nonCollidingLinks. When set, the skin covers exactly
  * the links it names. When unset, no link collides and the skin is the bot's only collider, so it
  * covers every link its collision mesh puts a positive weight on, through
- * @ref ComputeSkinBoneLinkIndices.
+ * @ref ComputeSkinBoneLinkIndices. For the links whose render models the skin's render model stands
+ * in for, see @ref ComputeSkinHiddenLinks.
  *
  * @param[in] botPrefab Bot whose skin to query.
  * @param[in] linkNames Link names, in the order of the returned flags.
@@ -314,7 +315,7 @@ int MOCHI_API FindLinkIndexByName(BotPrefab const& bot, std::string_view name);
  * ArticulatedSkinPrefab::shapeFile), or nullptr if it is unavailable. Only read when
  * @ref ArticulatedSkinParams::nonCollidingLinks is unset.
  * @return One flag per entry of @p linkNames, true for a covered link. All false if the bot has no
- * skin.
+ * skin or its skin has no collision shape.
  */
 [[nodiscard]] MOCHI_API DynamicArray<bool> ComputeSkinCoveredLinks(
     BotPrefab const& botPrefab,
@@ -322,35 +323,22 @@ int MOCHI_API FindLinkIndexByName(BotPrefab const& bot, std::string_view name);
     SkinningData const* skinning);
 
 /**
- * @brief A bot's skin mapped onto its links (see @ref MapSkinOntoLinks).
- */
-struct SkinLinkMapping {
-  /// One link index per skin bone, as @ref ComputeSkinBoneLinkIndices returns.
-  DynamicArray<int> boneLinks;
-  /// One flag per link, true for a link the skin covers, as @ref ComputeSkinCoveredLinks returns.
-  DynamicArray<bool> coveredLinks;
-};
-
-/**
- * @brief Map a bot's skin onto its links: the link each skin bone binds to, and the links the skin
- * covers.
+ * @brief Find the links whose render models a bot's skin render model stands in for. A renderer or
+ * exporter should hide them wherever it draws the skin's render model.
  *
- * @details Combines @ref ComputeSkinBoneLinkIndices and @ref ComputeSkinCoveredLinks, loading the
- * skin's collision mesh through @p loader when coverage depends on its skinning (that is, when
- * @ref ArticulatedSkinParams::nonCollidingLinks is unset).
+ * @details Mirrors @ref ArticulatedSkinPrefab::hiddenLinks. When set, the skin hides exactly the
+ * links it names. When unset, the skin hides every link it is skinned over, through
+ * @ref ComputeSkinBoneLinkIndices: every link of a standalone skinned bot, or every link of the bot
+ * the skin was attached with in a composed bot.
  *
- * @param[in] botPrefab Bot whose skin to map.
- * @param[in] linkNames Link names, in the order the mapping refers to.
- * @param[in] loader Loader for the skin's collision mesh, e.g. the one the bot was created with.
- * @param[in,out] error Error status. Fails if coverage depends on a collision mesh that cannot be
- * read or has no skinning: covering nothing would show a skin's render model over every link.
- * @return The mapping; empty if the bot has no skin or on error.
+ * @param[in] botPrefab Bot whose skin to query.
+ * @param[in] linkNames Link names, in the order of the returned flags.
+ * @return One flag per entry of @p linkNames, true for a hidden link. All false if the bot has no
+ * skin or its skin has no render model.
  */
-[[nodiscard]] MOCHI_API SkinLinkMapping MapSkinOntoLinks(
+[[nodiscard]] MOCHI_API DynamicArray<bool> ComputeSkinHiddenLinks(
     BotPrefab const& botPrefab,
-    Span<DynamicString const> linkNames,
-    IBotLoader const& loader,
-    superdex::Error& error);
+    Span<DynamicString const> linkNames);
 
 /**
  * @brief Find the indices of all leaf links (links that are not referenced as a parent by any

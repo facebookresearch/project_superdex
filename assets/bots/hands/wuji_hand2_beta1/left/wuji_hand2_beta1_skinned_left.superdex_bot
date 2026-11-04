@@ -172,6 +172,28 @@
             "penaltyThresholdExtraPadding": 0,
             "viscousFrictionCoefficient": 0
           },
+          "hiddenLinks": [
+            "link_02_thumb_proximal",
+            "link_03_thumb_proximal_abd",
+            "link_04_thumb_middle",
+            "link_08_thumb_tip",
+            "link_09_index_finger_proximal",
+            "link_10_index_finger_proximal_abd",
+            "link_11_index_finger_middle",
+            "link_15_index_finger_tip",
+            "link_16_middle_finger_proximal",
+            "link_17_middle_finger_proximal_abd",
+            "link_18_middle_finger_middle",
+            "link_22_middle_finger_tip",
+            "link_23_ring_finger_proximal",
+            "link_24_ring_finger_proximal_abd",
+            "link_25_ring_finger_middle",
+            "link_29_ring_finger_tip",
+            "link_30_pinky_proximal",
+            "link_31_pinky_proximal_abd",
+            "link_32_pinky_middle",
+            "link_36_pinky_tip"
+          ],
           "layer": "",
           "nonCollidingLinks": [
             "link_02_thumb_proximal",

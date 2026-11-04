@@ -485,10 +485,13 @@ void superdex::robotics::ApplyMod(
         botPrefab._skinBoneLinks.push_back(mod.prefix + child.links[iLink].name);
       }
     }
-    // Forward the names of the links the skin covers, prefixed to match the merged link names.
-    if (botPrefab.skin->nonCollidingLinks.has_value()) {
-      for (auto& name : *botPrefab.skin->nonCollidingLinks) {
-        name = mod.prefix + name;
+    // Forward the names of the links the skin stands in for, prefixed to match the merged link
+    // names.
+    for (auto* links : {&botPrefab.skin->nonCollidingLinks, &botPrefab.skin->hiddenLinks}) {
+      if (links->has_value()) {
+        for (auto& name : **links) {
+          name = mod.prefix + name;
+        }
       }
     }
   }
@@ -1478,10 +1481,12 @@ ArticulatedActorParams superdex::robotics::BuildArticulatedActorParams(
 
   // Skin (optional). The skin has no baked transform (see ArticulatedSkinPrefab), so the shape is
   // loaded with only BotPrefab::scale baked in.
-  if (botPrefab.skin.has_value() && botPrefab.skin->shapeFile.empty()) {
-    // Every other failure in this block is reported; make the drop diagnosable too.
+  if (botPrefab.skin.has_value() && botPrefab.skin->shapeFile.empty() &&
+      botPrefab.skin->renderModelFile.empty()) {
+    // A skin with only a render model is a valid render-only skin; one with neither is not.
     MOCHI_LOG_WARNING(
-        "BuiltBot: bot '%s' has a skin with no shape file; instantiating without a skin.",
+        "BuiltBot: bot '%s' has a skin with no shape or render model file; instantiating without a "
+        "skin.",
         botPrefab.name.c_str());
   }
   if (botPrefab.skin.has_value() && !botPrefab.skin->shapeFile.empty()) {
@@ -1639,6 +1644,21 @@ static std::unordered_map<std::string_view, int> MakeLinkIndexByName(
   return linkIndexByName;
 }
 
+// Flag the entries of linkNames that names lists; names that match no link are ignored.
+static DynamicArray<bool> FlagNamedLinks(
+    Span<DynamicString const> names,
+    Span<DynamicString const> linkNames) {
+  DynamicArray<bool> flags(isize(linkNames), false);
+  auto const linkIndexByName = MakeLinkIndexByName(linkNames);
+  for (auto const& name : names) {
+    auto const it = linkIndexByName.find(std::string_view(name));
+    if (it != linkIndexByName.end()) {
+      flags[it->second] = true;
+    }
+  }
+  return flags;
+}
+
 DynamicArray<int> superdex::robotics::ComputeSkinBoneLinkIndices(
     BotPrefab const& botPrefab,
     Span<DynamicString const> linkNames) {
@@ -1664,20 +1684,14 @@ DynamicArray<bool> superdex::robotics::ComputeSkinCoveredLinks(
     BotPrefab const& botPrefab,
     Span<DynamicString const> linkNames,
     SkinningData const* skinning) {
-  DynamicArray<bool> covered(isize(linkNames), false);
-  if (!botPrefab.skin.has_value()) {
-    return covered;
+  // A skin without a collision shape is not part of the physics actor, so it covers nothing.
+  if (!botPrefab.skin.has_value() || botPrefab.skin->shapeFile.empty()) {
+    return DynamicArray<bool>(isize(linkNames), false);
   }
   if (botPrefab.skin->nonCollidingLinks.has_value()) {
-    auto const linkIndexByName = MakeLinkIndexByName(linkNames);
-    for (auto const& name : *botPrefab.skin->nonCollidingLinks) {
-      auto const it = linkIndexByName.find(std::string_view(name));
-      if (it != linkIndexByName.end()) {
-        covered[it->second] = true;
-      }
-    }
-    return covered;
+    return FlagNamedLinks(MakeConstSpan(*botPrefab.skin->nonCollidingLinks), linkNames);
   }
+  DynamicArray<bool> covered(isize(linkNames), false);
   if (skinning == nullptr) {
     return covered;
   }
@@ -1697,30 +1711,22 @@ DynamicArray<bool> superdex::robotics::ComputeSkinCoveredLinks(
   return covered;
 }
 
-SkinLinkMapping superdex::robotics::MapSkinOntoLinks(
+DynamicArray<bool> superdex::robotics::ComputeSkinHiddenLinks(
     BotPrefab const& botPrefab,
-    Span<DynamicString const> linkNames,
-    IBotLoader const& loader,
-    superdex::Error& error) {
-  MOCHI_ERROR_RETURN(error, {});
-  if (!botPrefab.skin.has_value()) {
-    return {};
+    Span<DynamicString const> linkNames) {
+  if (!botPrefab.skin.has_value() || botPrefab.skin->renderModelFile.empty()) {
+    return DynamicArray<bool>(isize(linkNames), false);
   }
-  ModelData collisionModel;
-  SkinningData const* skinning = nullptr;
-  if (!botPrefab.skin->nonCollidingLinks.has_value()) {
-    collisionModel = loader.LoadModelData(botPrefab.skin->shapeFile, error);
-    MOCHI_ERROR_RETURN(error, {});
-    MOCHI_ERROR_IF(
-        !collisionModel.mesh.has_value() || !collisionModel.mesh->skinning.has_value(),
-        error,
-        "The skin's collision mesh, which decides the links the skin covers, has no skinning");
-    MOCHI_ERROR_RETURN(error, {});
-    skinning = &*collisionModel.mesh->skinning;
+  if (botPrefab.skin->hiddenLinks.has_value()) {
+    return FlagNamedLinks(MakeConstSpan(*botPrefab.skin->hiddenLinks), linkNames);
   }
-  return SkinLinkMapping{
-      .boneLinks = ComputeSkinBoneLinkIndices(botPrefab, linkNames),
-      .coveredLinks = ComputeSkinCoveredLinks(botPrefab, linkNames, skinning)};
+  DynamicArray<bool> hidden(isize(linkNames), false);
+  for (int const link : ComputeSkinBoneLinkIndices(botPrefab, linkNames)) {
+    if (link != kIndexNone) {
+      hidden[link] = true;
+    }
+  }
+  return hidden;
 }
 
 static void ApplyBotContactOverrides(
