@@ -38,7 +38,7 @@ class BotTaskUtilsTest : public testing::Test {
  protected:
   mochi::TempDirCleanup _tempDirCleanup =
       mochi::CreateTempDirectory("bot_task_utils_test", ExpectOK{});
-  std::string _path = (_tempDirCleanup.Path() / "task.mochi_bot_task").generic_string();
+  std::string _path = (_tempDirCleanup.Path() / "task.superdex_task").generic_string();
 
   [[nodiscard]] BotTaskPrefab ReadTask() const {
     return superdex::robotics::LoadBotTaskPrefabFromFile(_path, ExpectOK{});

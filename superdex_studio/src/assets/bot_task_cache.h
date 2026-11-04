@@ -23,7 +23,7 @@
 
 namespace superdex::studio {
 
-// .mochi_bot_task files edited in a bot scene's editor, keyed by path. Values are JSON as
+// .superdex_task files edited in a bot scene's editor, keyed by path. Values are JSON as
 // SReflect::ToJsonString writes a BotTaskPrefab, so equal tasks compare equal as strings. Whether
 // an entry is modified is derived by comparing it with the value last loaded or saved.
 class BotTaskCache {

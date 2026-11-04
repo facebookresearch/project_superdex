@@ -65,6 +65,18 @@ bool superdex::robotics::IsBotScenePath(std::string_view path) {
 #endif
   return false;
 }
+
+bool superdex::robotics::IsBotTaskPath(std::string_view path) {
+  if (path.ends_with(kBotTaskExtension)) {
+    return true;
+  }
+#if MOCHI_INTERNAL
+  if (path.ends_with(kBotTaskExtensionLegacy)) {
+    return true;
+  }
+#endif
+  return false;
+}
 #endif
 
 static std::filesystem::path GetDirectoryPath(std::filesystem::path const& path) {

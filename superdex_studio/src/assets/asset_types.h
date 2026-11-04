@@ -71,7 +71,7 @@ struct AssetTypeExtension {
 //
 // Order is significant twice over: the first matching entry wins, so an extension must precede any
 // shorter one that is its own suffix; and within a type, earlier means preferred.
-constexpr std::array<AssetTypeExtension, 20> kAssetTypeExtensions{
+constexpr std::array<AssetTypeExtension, 21> kAssetTypeExtensions{
     {{".glb", AssetType::RenderModel},
      {".gltf", AssetType::RenderModel},
      {".dae", AssetType::RenderModel},
@@ -87,6 +87,7 @@ constexpr std::array<AssetTypeExtension, 20> kAssetTypeExtensions{
      {".superdex_scene_archive", AssetType::BotScene},
      {".mochi_bot_scene", AssetType::BotScene},
      {".mochi_bot_scene_archive", AssetType::BotScene},
+     {.extension = ".superdex_task", .type = AssetType::BotTask},
      {.extension = ".mochi_bot_task", .type = AssetType::BotTask},
      {".superdex_bot_archive", AssetType::Bot},
      {".superdex_bot", AssetType::Bot},

@@ -38,7 +38,7 @@ class BotTaskCacheTest : public testing::Test {
  protected:
   mochi::TempDirCleanup _tempDirCleanup =
       mochi::CreateTempDirectory("bot_task_cache_test", ExpectOK{});
-  std::string _path = (_tempDirCleanup.Path() / "task.mochi_bot_task").generic_string();
+  std::string _path = (_tempDirCleanup.Path() / "task.superdex_task").generic_string();
 
   static BotTaskPrefab TaskWithSpawn(std::string const& name) {
     BotTaskPrefab task;
@@ -137,7 +137,7 @@ TEST_F(BotTaskCacheTest, SaveAsMovesEditsToTheCopy) {
   auto* original = cache.GetOrLoad(_path, error);
   ASSERT_NE(original, nullptr) << error;
   original->json = SReflect::ToJsonString(TaskWithSpawn("b"), true);
-  std::string const copyPath = (_tempDirCleanup.Path() / "copy.mochi_bot_task").generic_string();
+  std::string const copyPath = (_tempDirCleanup.Path() / "copy.superdex_task").generic_string();
   ASSERT_TRUE(cache.SaveAs(_path, copyPath, error)) << error;
 
   EXPECT_FALSE(BotTaskCache::IsModified(*original));
@@ -152,7 +152,7 @@ TEST_F(BotTaskCacheTest, SaveAsMovesEditsToTheCopy) {
 }
 
 TEST_F(BotTaskCacheTest, SaveAsOverLoadedTaskKeepsItsLoadedValue) {
-  std::string const copyPath = (_tempDirCleanup.Path() / "copy.mochi_bot_task").generic_string();
+  std::string const copyPath = (_tempDirCleanup.Path() / "copy.superdex_task").generic_string();
   WriteTask(TaskWithSpawn("a"));
   superdex::robotics::SaveParamsToFile(TaskWithSpawn("c"), copyPath, ExpectOK{});
   BotTaskCache cache;

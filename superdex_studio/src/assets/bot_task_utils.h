@@ -23,10 +23,10 @@
 
 namespace superdex::studio {
 
-// Writes a new .mochi_bot_task at @p path with no spawns and its metadata name set to @p name.
+// Writes a new .superdex_task at @p path with no spawns and its metadata name set to @p name.
 bool CreateBotTaskFile(std::string const& path, std::string_view name, std::string& error);
 
-// Sets the metadata name of the .mochi_bot_task at @p path, keeping the rest of the task.
+// Sets the metadata name of the .superdex_task at @p path, keeping the rest of the task.
 bool SetBotTaskName(std::string const& path, std::string_view name, std::string& error);
 
 } // namespace superdex::studio

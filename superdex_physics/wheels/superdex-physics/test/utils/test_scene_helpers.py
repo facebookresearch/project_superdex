@@ -148,7 +148,7 @@ class LoadBotTaskPrefabTest(unittest.TestCase):
 
     def test_spawns_round_trip(self) -> None:
         path = self._write(
-            "two_spawns.mochi_bot_task",
+            "two_spawns.superdex_task",
             {
                 "metadata": {"name": "Tiny Task", "version": "1.0"},
                 "resetState": [
@@ -196,7 +196,7 @@ class LoadBotTaskPrefabTest(unittest.TestCase):
 
     def test_empty_name_raises(self) -> None:
         path = self._write(
-            "empty_name.mochi_bot_task",
+            "empty_name.superdex_task",
             {"resetState": [{"name": "", "prefabName": "Foam"}]},
         )
         with self.assertRaises(sdp.Error):  # pyre-ignore[16]
@@ -204,7 +204,7 @@ class LoadBotTaskPrefabTest(unittest.TestCase):
 
     def test_task_root_name_raises(self) -> None:
         path = self._write(
-            "task_root_name.mochi_bot_task",
+            "task_root_name.superdex_task",
             {"resetState": [{"name": "task_root", "prefabName": "Foam"}]},
         )
         with self.assertRaises(sdp.Error):  # pyre-ignore[16]
@@ -212,7 +212,7 @@ class LoadBotTaskPrefabTest(unittest.TestCase):
 
     def test_duplicate_name_raises(self) -> None:
         path = self._write(
-            "duplicate_name.mochi_bot_task",
+            "duplicate_name.superdex_task",
             {
                 "resetState": [
                     {"name": "obj", "prefabName": "Foam"},

@@ -150,13 +150,13 @@ def load_bot_scene_prefab(path: str):  # noqa: ANN201
 
 
 def load_bot_task_prefab(path: str):  # noqa: ANN201
-    """Parse a .mochi_bot_task file into a BotTaskPrefab.
+    """Parse a .superdex_task file into a BotTaskPrefab.
 
     Deserializes and validates the task file (spawn names non-empty/unique,
     prefab names non-empty). Does not require SuperDex Physics to be initialized.
 
     Args:
-        path: File path to the .mochi_bot_task file.
+        path: File path to the .superdex_task file.
 
     Returns:
         The parsed BotTaskPrefab, whose `spawns` declare the named object

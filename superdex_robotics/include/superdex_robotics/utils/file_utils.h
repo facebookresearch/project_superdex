@@ -45,7 +45,7 @@ constexpr std::string_view kTagPrefix = "@";
 constexpr std::string_view kRootMarkerFile = ".superdex_root";
 constexpr std::string_view kBotExtension = ".superdex_bot";
 constexpr std::string_view kBotSceneExtension = ".superdex_scene";
-constexpr std::string_view kBotTaskExtension = ".mochi_bot_task";
+constexpr std::string_view kBotTaskExtension = ".superdex_task";
 constexpr std::string_view kUrdfExtension = ".urdf";
 constexpr std::string_view kMjcfExtension = ".xml";
 constexpr std::string_view kCollisionSubdir = "collision";
@@ -191,6 +191,17 @@ DetectAssetFolderLayout(std::filesystem::path const& originDir);
  * @return @c true if @p path ends with a recognized bot scene extension.
  */
 [[nodiscard]] MOCHI_API bool IsBotScenePath(std::string_view path);
+
+/**
+ * @brief Recognize a bot task file path by extension.
+ *
+ * Always accepts the canonical @ref kBotTaskExtension (`.superdex_task`). In internal
+ * builds (@c MOCHI_INTERNAL) it additionally accepts the legacy `.mochi_bot_task` extension.
+ *
+ * @param[in] path The file path to test.
+ * @return @c true if @p path ends with a recognized bot task extension.
+ */
+[[nodiscard]] MOCHI_API bool IsBotTaskPath(std::string_view path);
 #endif
 
 /**

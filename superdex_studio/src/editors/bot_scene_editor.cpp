@@ -1202,13 +1202,13 @@ void BotSceneEditor::SyncTaskFromCache() {
 
 void BotSceneEditor::SaveTaskAs() {
   std::string const extension{superdex::robotics::kBotTaskExtension};
-  std::array<char const*, 1> const filters{{"*.mochi_bot_task"}};
+  std::array<char const*, 1> const filters{{"*.superdex_task"}};
   int const numFilters = MOCHI_PLATFORM_MACOS ? 0 : static_cast<int>(filters.size());
   mochi::Path selected = SuperDexStudio::GetFileDialogPath(
       "Save Bot Task As",
       filters.data(),
       numFilters,
-      "Mochi Bot Task (*.mochi_bot_task)",
+      "SuperDex Task (*.superdex_task)",
       true,
       _taskPath.GetParentPath() / (GetAssetNameFromPath(_taskPath) + "_copy" + extension));
   if (selected.IsEmpty()) {
@@ -1587,7 +1587,7 @@ void BotSceneEditor::ShowTaskWindow(bool* open) {
   bool const simulating = _mochiScene.IsSimulating();
   ImGui::BeginDisabled(simulating);
   if (ImGui::Button(_taskPrefab.has_value() ? "Replace Task..." : "Load Task...")) {
-    std::array<char const*, 1> const filters{{"*.mochi_bot_task"}};
+    std::array<char const*, 2> const filters{{"*.superdex_task", "*.mochi_bot_task"}};
     int const numFilters = MOCHI_PLATFORM_MACOS ? 0 : static_cast<int>(filters.size());
     mochi::Path const initialPath =
         _taskPath.IsEmpty() ? _sceneAsset->GetPath().GetParentPath() : _taskPath;
@@ -1595,7 +1595,7 @@ void BotSceneEditor::ShowTaskWindow(bool* open) {
         "Select Bot Task",
         filters.data(),
         numFilters,
-        "Mochi Bot Task (*.mochi_bot_task)",
+        "SuperDex Task (*.superdex_task, *.mochi_bot_task)",
         false,
         initialPath);
     if (!selectedPath.IsEmpty()) {
@@ -1632,7 +1632,7 @@ void BotSceneEditor::ShowTaskWindow(bool* open) {
   }
 
   if (!_taskPrefab.has_value()) {
-    ImGui::TextWrapped("Load a .mochi_bot_task to place its spawnable objects into this scene.");
+    ImGui::TextWrapped("Load a .superdex_task to place its spawnable objects into this scene.");
     ImGui::End();
     return;
   }
