@@ -681,9 +681,8 @@ void AssetBrowser::ShowSettingsCog() {
             // asset gets its own PNG instead of silently overwriting a previous one.
             std::unordered_set<std::string> usedNames;
             auto toLowerKey = [](std::string s) {
-              std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
-                return static_cast<char>(std::tolower(c));
-              });
+              std::ranges::transform(
+                  s, s.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
               return s;
             };
             for (int const idx : _visibleIndices) {

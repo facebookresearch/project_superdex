@@ -56,7 +56,7 @@ std::vector<ProcessingPreset> DiscoverProcessingPresets(
     }
     ProcessingPreset preset;
     preset.name = dirIt->path().stem().string();
-    std::replace(preset.name.begin(), preset.name.end(), '_', ' '); // underscores -> spaces
+    std::ranges::replace(preset.name, '_', ' '); // underscores -> spaces
     preset.path = dirIt->path().string();
 
     std::ifstream file(dirIt->path());
@@ -74,10 +74,9 @@ std::vector<ProcessingPreset> DiscoverProcessingPresets(
 
     presets.push_back(std::move(preset));
   }
-  std::sort(
-      presets.begin(), presets.end(), [](ProcessingPreset const& a, ProcessingPreset const& b) {
-        return a.name < b.name;
-      });
+  std::ranges::sort(presets, [](ProcessingPreset const& a, ProcessingPreset const& b) {
+    return a.name < b.name;
+  });
   return presets;
 }
 

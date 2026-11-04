@@ -407,7 +407,7 @@ void AsyncTaskRunner::ShowTaskTable(float width, float height) {
       sortSpecs != nullptr && sortSpecs->SpecsCount > 0) {
     ImGuiTableColumnSortSpecs const& spec = sortSpecs->Specs[0];
     bool const ascending = spec.SortDirection == ImGuiSortDirection_Ascending;
-    std::sort(rows.begin(), rows.end(), [&](int ia, int ib) {
+    std::ranges::sort(rows, [&](int ia, int ib) {
       TaskInfo const& a = tasks[static_cast<size_t>(ia)];
       TaskInfo const& b = tasks[static_cast<size_t>(ib)];
       int primary = 0;

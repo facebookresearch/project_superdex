@@ -98,7 +98,7 @@ void MjcfImporter::PrepareGeoms(std::vector<std::string>& notes) {
     for (GeomReference& geom : body.geoms) {
       std::string extension =
           std::filesystem::path(std::string(geom.meshFile)).extension().string();
-      std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) {
+      std::ranges::transform(extension, extension.begin(), [](unsigned char c) {
         return static_cast<char>(std::tolower(c));
       });
       if (extension == ".obj") {

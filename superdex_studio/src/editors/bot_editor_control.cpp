@@ -173,7 +173,7 @@ mochi::CallbackHandle BotControl::RegisterPreStepCallback(mochi::AsyncScene* sce
 void BotControl::OnStopPhysics() {
   // Drop the session's commanded state. The window re-seeds the pose from the prefab's default pose
   // while stopped, so the next session starts from the spawn pose at zero effort.
-  std::fill(_efforts.begin(), _efforts.end(), mochi::real{0});
+  std::ranges::fill(_efforts, mochi::real{0});
   _poseTarget.clear();
 }
 

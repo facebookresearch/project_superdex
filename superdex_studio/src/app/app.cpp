@@ -865,12 +865,10 @@ void SuperDexStudio::RefreshEditors(std::vector<IAssetReferencer*> const& refere
     AssetEditor* editor = editorPtr.get();
     // Refresh the editor if it directly referenced a rewritten path, or if it represents an asset
     // whose references changed.
-    bool const refresh =
-        std::find(referencers.begin(), referencers.end(), static_cast<IAssetReferencer*>(editor)) !=
+    bool const refresh = std::ranges::find(referencers, static_cast<IAssetReferencer*>(editor)) !=
             referencers.end() ||
-        std::any_of(affectedAssets.begin(), affectedAssets.end(), [&](Asset* asset) {
-          return editor->RepresentsAsset(asset);
-        });
+        std::ranges::any_of(affectedAssets,
+                            [&](Asset* asset) { return editor->RepresentsAsset(asset); });
     if (refresh) {
       editor->Refresh();
     }
@@ -1533,8 +1531,7 @@ void SuperDexStudio::RegisterImporter(std::unique_ptr<Importer> importer) {
 
 Importer* SuperDexStudio::FindImporterForPath(mochi::Path const& path) const {
   auto ext = path.GetExtension();
-  std::transform(
-      ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return std::tolower(c); });
+  std::ranges::transform(ext, ext.begin(), [](unsigned char c) { return std::tolower(c); });
   for (auto const& importer : _importers) {
     for (auto const& candidate : importer->GetExtensions()) {
       if (ext == candidate && importer->CanImportFile(path)) {

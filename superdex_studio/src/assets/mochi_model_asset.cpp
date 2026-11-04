@@ -561,8 +561,7 @@ bool MochiModelAsset::Save() {
     return false;
   }
   std::string ext = _path.GetExtension();
-  std::transform(
-      ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return std::tolower(c); });
+  std::ranges::transform(ext, ext.begin(), [](unsigned char c) { return std::tolower(c); });
   mochi::FileFormat const format = ext == ".h5" ? mochi::FileFormat::H5 : mochi::FileFormat::JSON;
   mochi::ErrorLog error;
   mochi::model_utils::SaveToFile(_modelData, _path.ToString(), format, error);

@@ -336,7 +336,7 @@ void WriteInverseBindMatrix(float* out, mochi::TransformRT const& rootFromLink) 
 int FindOrAddMaterial(
     mochi::DynamicArray<MaterialFactors>& materials,
     MaterialFactors const& factors) {
-  auto const it = std::find(materials.begin(), materials.end(), factors);
+  auto const it = std::ranges::find(materials, factors);
   if (it != materials.end()) {
     return static_cast<int>(it - materials.begin());
   }

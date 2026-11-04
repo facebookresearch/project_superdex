@@ -124,7 +124,7 @@ void BuildFacets(MeasureMesh& mesh, real angleToleranceDeg) {
       edges.emplace_back(EdgeKey(mesh.triangles[base + e], mesh.triangles[base + (e + 1) % 3]), t);
     }
   }
-  std::sort(edges.begin(), edges.end());
+  std::ranges::sort(edges);
 
   real const cosTolerance = std::cos(angleToleranceDeg / kRadToDeg);
   std::vector<int> stack;
@@ -143,10 +143,8 @@ void BuildFacets(MeasureMesh& mesh, real angleToleranceDeg) {
       int const base = t * 3;
       for (int e = 0; e < 3; ++e) {
         int64_t const key = EdgeKey(mesh.triangles[base + e], mesh.triangles[base + (e + 1) % 3]);
-        auto it = std::lower_bound(
-            edges.begin(),
-            edges.end(),
-            std::pair<int64_t, int>{key, std::numeric_limits<int>::min()});
+        auto it = std::ranges::lower_bound(
+            edges, std::pair<int64_t, int>{key, std::numeric_limits<int>::min()});
         for (; it != edges.end() && it->first == key; ++it) {
           int const other = it->second;
           if (mesh.triangleFacets[other] != -1 || mesh.triangleAreas[other] <= 0) {

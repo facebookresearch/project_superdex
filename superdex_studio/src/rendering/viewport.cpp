@@ -163,7 +163,7 @@ Viewport::Viewport(SuperDexStudio* studio, mochi_renderer::SceneViewSettings con
   // we give the user access to the scene, so we need to know when they
   // destroy objects so we can clean selection state.
   _renderScene->onDestroySceneObject = [this](SceneObject* object) {
-    auto it = std::find(_selectedObjects.begin(), _selectedObjects.end(), object);
+    auto it = std::ranges::find(_selectedObjects, object);
     if (it != _selectedObjects.end()) {
       _selectedObjects.erase(it);
       if (onSceneSelectionChanged) {
@@ -604,7 +604,7 @@ void Viewport::SetSelectedSceneObjects(std::vector<SceneObject*> objects, bool i
   std::vector<SceneObject*> deduped;
   deduped.reserve(objects.size());
   for (SceneObject* object : objects) {
-    if (object != nullptr && std::find(deduped.begin(), deduped.end(), object) == deduped.end()) {
+    if (object != nullptr && std::ranges::find(deduped, object) == deduped.end()) {
       deduped.push_back(object);
     }
   }
@@ -621,7 +621,7 @@ void Viewport::ToggleSceneObjectSelection(SceneObject* object, bool invokeCallba
   if (object == nullptr) {
     return;
   }
-  auto it = std::find(_selectedObjects.begin(), _selectedObjects.end(), object);
+  auto it = std::ranges::find(_selectedObjects, object);
   if (it != _selectedObjects.end()) {
     _selectedObjects.erase(it);
   } else {
@@ -634,8 +634,7 @@ void Viewport::ToggleSceneObjectSelection(SceneObject* object, bool invokeCallba
 
 void Viewport::SelectNeighborAndDestroy(SceneObject* object) {
   auto& objects = _renderScene->GetSceneObjects();
-  if (std::find(_selectedObjects.begin(), _selectedObjects.end(), object) !=
-      _selectedObjects.end()) {
+  if (std::ranges::find(_selectedObjects, object) != _selectedObjects.end()) {
     int idx = -1;
     for (int i = 0; i < (int)objects.size(); ++i) {
       if (objects[i] == object) {
@@ -1252,8 +1251,7 @@ void Viewport::ShowSceneHierarchyWindow(char const* name, bool* open) {
       MOCHI_LOG_ERROR("Encountered hidden SceneObject %s", object->GetName().c_str());
       continue;
     }
-    bool const isSelected = std::find(_selectedObjects.begin(), _selectedObjects.end(), object) !=
-        _selectedObjects.end();
+    bool const isSelected = std::ranges::find(_selectedObjects, object) != _selectedObjects.end();
     ImGui::PushID(i);
     if (ImGui::Selectable(object->GetName().c_str(), isSelected)) {
       if (allowMultiSelect && ImGui::GetIO().KeyCtrl) {

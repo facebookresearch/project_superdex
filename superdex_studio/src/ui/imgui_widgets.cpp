@@ -123,13 +123,11 @@ std::string superdex::studio::ComputeBatchRenamedName(
   }
   result = params.prefix + result + params.suffix;
   if (params.caseChange == BatchRenameCase::Uppercase) {
-    std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) {
-      return static_cast<char>(std::toupper(c));
-    });
+    std::ranges::transform(
+        result, result.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
   } else if (params.caseChange == BatchRenameCase::Lowercase) {
-    std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) {
-      return static_cast<char>(std::tolower(c));
-    });
+    std::ranges::transform(
+        result, result.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
   }
   return result;
 }
@@ -1476,7 +1474,7 @@ bool ImGui::AssetSlot(
     bool showClearButton) {
   constexpr float thumbnailSize = 64;
   auto const accepts = [assetTypes](AssetType type) {
-    return std::find(assetTypes.begin(), assetTypes.end(), type) != assetTypes.end();
+    return std::ranges::find(assetTypes, type) != assetTypes.end();
   };
   bool changed = false;
   // Scope all internal widget IDs under the slot label so this widget's icon-only buttons

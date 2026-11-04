@@ -70,7 +70,7 @@ std::vector<std::size_t> BuildGenerationChain(ModifierStack const& stack, std::s
   if (stack[chain.back()]->Kind() != ModifierKind::Source) {
     return {};
   }
-  std::reverse(chain.begin(), chain.end());
+  std::ranges::reverse(chain);
   return chain;
 }
 

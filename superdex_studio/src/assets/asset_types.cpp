@@ -267,7 +267,7 @@ FindAssetForSlot(std::string const& baseName, AssetType type, mochi::Path const&
   // models fill another's slots.
   auto search = [&](mochi::Path const& dir, bool recurse) -> std::string {
     std::string key = dir.ToString();
-    if (std::find(searched.begin(), searched.end(), key) != searched.end()) {
+    if (std::ranges::find(searched, key) != searched.end()) {
       return {};
     }
     searched.push_back(std::move(key));

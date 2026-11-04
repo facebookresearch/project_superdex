@@ -467,7 +467,7 @@ static bool IsWellFormedPath(std::string const& path) {
     return false;
   }
   std::string const tail = std::filesystem::path(path).relative_path().generic_string();
-  return std::none_of(tail.begin(), tail.end(), [](char const c) {
+  return std::ranges::none_of(tail, [](char const c) {
     return static_cast<unsigned char>(c) < 0x20 ||
         std::string_view(R"(<>:"|?*)").find(c) != std::string_view::npos;
   });

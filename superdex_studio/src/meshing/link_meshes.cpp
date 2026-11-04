@@ -281,7 +281,7 @@ bool BuildLinkGlb(
   std::vector<mochi_renderer::MeshSection> sections;
   for (GeomReference const& geom : geoms) {
     std::vector<mochi_renderer::MeshSection> geomSections = GeomRenderSections(geom, warnings);
-    std::move(geomSections.begin(), geomSections.end(), std::back_inserter(sections));
+    std::ranges::move(geomSections, std::back_inserter(sections));
   }
   if (sections.empty()) {
     return false;
@@ -348,9 +348,8 @@ struct LegacyMeshVolume {
 
 std::optional<LegacyMeshVolume> ComputeLegacyMeshVolume(mochi::MeshData mesh) {
   int const numNodes = mesh.GetNumNodes();
-  if (std::any_of(mesh.connectivity.begin(), mesh.connectivity.end(), [&](int index) {
-        return index < 0 || index >= numNodes;
-      })) {
+  if (std::ranges::any_of(
+          mesh.connectivity, [&](int index) { return index < 0 || index >= numNodes; })) {
     return std::nullopt;
   }
   mochi::Span<mochi::Real3> const coordinates{
