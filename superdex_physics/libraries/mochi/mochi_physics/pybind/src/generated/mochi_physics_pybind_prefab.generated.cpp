@@ -370,7 +370,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
   ;
 
   registry.GetClass<mochi::prefab::ArticulatedSkinPrefab, mochi::ArticulatedSkinParams>()
-    .def("__init__", [](mochi::prefab::ArticulatedSkinPrefab* self, nb::object shape, nb::object layer, nb::object contact, nb::object boundary_element_type, nb::object boundary_subsampling, nb::object non_colliding_links, nb::object shape_file, nb::object render_model_file, nb::object render_model_scale, nb::object render_model_rotation, nb::object render_model_translation) {
+    .def("__init__", [](mochi::prefab::ArticulatedSkinPrefab* self, nb::object shape, nb::object layer, nb::object contact, nb::object boundary_element_type, nb::object boundary_subsampling, nb::object non_colliding_links, nb::object shape_file, nb::object render_model_file, nb::object render_model_scale, nb::object render_model_rotation, nb::object render_model_translation, nb::object hidden_links) {
       mochi::prefab::ArticulatedSkinPrefab result{};
       result.shape = nb::cast<mochi::ShapeHandle>(shape);
       result.layer = nb::cast<mochi::DynamicString>(layer);
@@ -383,6 +383,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
       result.renderModelScale = nb::cast<mochi::Real3>(render_model_scale);
       result.renderModelRotation = nb::cast<mochi::Quaternion>(render_model_rotation);
       result.renderModelTranslation = nb::cast<mochi::Real3>(render_model_translation);
+      result.hiddenLinks = nb::cast<std::optional<mochi::DynamicArray<mochi::DynamicString>>>(hidden_links);
       new (self) mochi::prefab::ArticulatedSkinPrefab(std::move(result));
     }
       , nb::kw_only()
@@ -397,6 +398,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
       , nb::arg("render_model_scale").sig("...") = mochi::prefab::ArticulatedSkinPrefab{}.renderModelScale
       , nb::arg("render_model_rotation").sig("...") = mochi::prefab::ArticulatedSkinPrefab{}.renderModelRotation
       , nb::arg("render_model_translation").sig("...") = mochi::prefab::ArticulatedSkinPrefab{}.renderModelTranslation
+      , nb::arg("hidden_links").sig("...") = mochi::prefab::ArticulatedSkinPrefab{}.hiddenLinks
     )
     .def(nb::init<>())
     .def(nb::self == nb::self)
@@ -408,6 +410,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_prop_rw("render_model_scale", [](mochi::prefab::ArticulatedSkinPrefab& self) -> mochi::Real3& { return self.renderModelScale; }, [](mochi::prefab::ArticulatedSkinPrefab& self, nb::object val) { self.renderModelScale = nb::cast<mochi::Real3>(val); }, "Scale [x, y, z] to apply to the render model.\n\nNote:\n    Ignored if\n    :attr:`~superdex.physics.prefab.ArticulatedSkinPrefab.render_model_file` is\n    empty.")
     .def_prop_rw("render_model_rotation", [](mochi::prefab::ArticulatedSkinPrefab& self) -> mochi::Quaternion& { return self.renderModelRotation; }, [](mochi::prefab::ArticulatedSkinPrefab& self, nb::object val) { self.renderModelRotation = nb::cast<mochi::Quaternion>(val); }, "Rotation quaternion [x, y, z, w] to apply to the render model.\n\nNote:\n    Ignored if\n    :attr:`~superdex.physics.prefab.ArticulatedSkinPrefab.render_model_file` is\n    empty.")
     .def_prop_rw("render_model_translation", [](mochi::prefab::ArticulatedSkinPrefab& self) -> mochi::Real3& { return self.renderModelTranslation; }, [](mochi::prefab::ArticulatedSkinPrefab& self, nb::object val) { self.renderModelTranslation = nb::cast<mochi::Real3>(val); }, "Translation [x, y, z] to apply to the render model.\n\nNote:\n    Ignored if\n    :attr:`~superdex.physics.prefab.ArticulatedSkinPrefab.render_model_file` is\n    empty.")
+    .def_prop_rw("hidden_links", [](mochi::prefab::ArticulatedSkinPrefab& self) -> std::optional<mochi::DynamicArray<mochi::DynamicString>>& { return self.hiddenLinks; }, [](mochi::prefab::ArticulatedSkinPrefab& self, nb::handle val) { self.hiddenLinks = val.is_none() ? std::optional<mochi::DynamicArray<mochi::DynamicString>>{} : nb::cast<std::optional<mochi::DynamicArray<mochi::DynamicString>>>(val); }, "Local names of links whose render models the skin's render model stands in for.\n\nVisualization tools hide the render models of the listed links wherever they\ndraw the skin's render model.\n\nNote:\n    Unset means the skin's render model stands in for every link, while an empty\n    list means every link keeps its render model. Names that match no link are\n    ignored.\n\nNote:\n    Independent of\n    :attr:`~superdex.physics.ArticulatedSkinParams.non_colliding_links`.\n\nNote:\n    Ignored if\n    :attr:`~superdex.physics.prefab.ArticulatedSkinPrefab.render_model_file` is\n    empty.", nb::for_setter(nb::arg("value").none()))
   ;
 
   registry.GetClass<mochi::prefab::ArticulatedActorPrefab>()

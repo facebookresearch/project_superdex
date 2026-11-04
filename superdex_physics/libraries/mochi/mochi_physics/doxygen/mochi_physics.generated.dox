@@ -384,6 +384,17 @@
 /// @note Ignored if @ref mochi::prefab::ArticulatedSkinPrefab::renderModelFile "renderModelFile" is empty.
 ///
 
+/// @var mochi::prefab::ArticulatedSkinPrefab::hiddenLinks
+///
+/// @brief Local names of links whose render models the skin's render model stands in for.
+///
+/// @details Visualization tools hide the render models of the listed links wherever they draw the skin's render model.
+///
+/// @note Unset means the skin's render model stands in for every link, while an empty list means every link keeps its render model. Names that match no link are ignored.
+/// @note Independent of @ref mochi::ArticulatedSkinParams::nonCollidingLinks "ArticulatedSkinParams::nonCollidingLinks".
+/// @note Ignored if @ref mochi::prefab::ArticulatedSkinPrefab::renderModelFile "renderModelFile" is empty.
+///
+
 /// @struct mochi::prefab::ArticulatedActorPrefab
 ///
 /// @brief Prefab parameters for an articulated actor.

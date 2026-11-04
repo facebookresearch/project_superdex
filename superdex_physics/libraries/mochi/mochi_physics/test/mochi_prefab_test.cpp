@@ -200,7 +200,9 @@ TEST(Prefab, ArticulatedActor_Serialization) {
               "subsamplingDensity": 0.25,
               "strategy": "AreaProportional"
             },
-            "nonCollidingLinks": ["parentLink", "childLink"]
+            "nonCollidingLinks": ["parentLink", "childLink"],
+            "renderModel": "some/dir/skin_render.glb",
+            "hiddenLinks": ["childLink"]
           }
         }
       ]
@@ -257,6 +259,10 @@ TEST(Prefab, ArticulatedActor_Serialization) {
     ASSERT_EQ(2, static_cast<int>(art.skin->nonCollidingLinks->size()));
     EXPECT_STREQ("parentLink", (*art.skin->nonCollidingLinks)[0].c_str());
     EXPECT_STREQ("childLink", (*art.skin->nonCollidingLinks)[1].c_str());
+    EXPECT_STREQ("some/dir/skin_render.glb", art.skin->renderModelFile.c_str());
+    ASSERT_TRUE(art.skin->hiddenLinks.has_value());
+    ASSERT_EQ(1, static_cast<int>(art.skin->hiddenLinks->size()));
+    EXPECT_STREQ("childLink", (*art.skin->hiddenLinks)[0].c_str());
   };
 
   // Load one articulated actor from JSON.
@@ -271,6 +277,23 @@ TEST(Prefab, ArticulatedActor_Serialization) {
   prefab::ScenePrefab content2 = prefab::ShallowLoadFromJsonString(json2, test::ExpectOK{});
   EXPECT_EQ(1, content2.actors.articulated.size());
   expectArticulatedActor(content2.actors.articulated[0]);
+}
+
+// An empty hiddenLinks list (no link hidden) and an unset one (every link hidden) mean opposite
+// things, so both must survive a round trip as they are.
+TEST(Prefab, ArticulatedSkin_HiddenLinksEmptyAndUnsetRoundTrip) {
+  prefab::ScenePrefab content;
+  content.actors.articulated.push_back().skin.emplace().hiddenLinks.emplace();
+  content.actors.articulated.push_back().skin.emplace();
+
+  auto const json = prefab::SaveToJsonString(content, test::ExpectOK{});
+  prefab::ScenePrefab const loaded = prefab::ShallowLoadFromJsonString(json, test::ExpectOK{});
+  ASSERT_EQ(2, loaded.actors.articulated.size());
+  ASSERT_TRUE(loaded.actors.articulated[0].skin.has_value());
+  ASSERT_TRUE(loaded.actors.articulated[0].skin->hiddenLinks.has_value());
+  EXPECT_TRUE(loaded.actors.articulated[0].skin->hiddenLinks->empty());
+  ASSERT_TRUE(loaded.actors.articulated[1].skin.has_value());
+  EXPECT_FALSE(loaded.actors.articulated[1].skin->hiddenLinks.has_value());
 }
 
 TEST_IF(MOCHI_HDF5_AND_INTERNAL, Prefab, ArticulatedActor_AddToScene) {

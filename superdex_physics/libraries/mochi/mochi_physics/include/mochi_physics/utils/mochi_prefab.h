@@ -162,6 +162,7 @@ struct ArticulatedSkinPrefab : ArticulatedSkinParams {
   Real3 renderModelScale = {1_r, 1_r, 1_r};
   Quaternion renderModelRotation;
   Real3 renderModelTranslation = {};
+  std::optional<DynamicArray<DynamicString>> hiddenLinks;
 
 #if MOCHI_LANGUAGE_CPP20
   bool operator==(ArticulatedSkinPrefab const&) const = default;

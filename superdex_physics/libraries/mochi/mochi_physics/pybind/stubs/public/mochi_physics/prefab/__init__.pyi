@@ -1375,6 +1375,30 @@ class ArticulatedSkinPrefab(mochi_physics.ArticulatedSkinParams):
         """
     @render_model_translation.setter
     def render_model_translation(self, value: mochi_physics.Real3Like) -> None: ...
+    @property
+    def hidden_links(self) -> Optional[mochi_physics.DynamicArrayString]:
+        """Local names of links whose render models the skin's render model stands in
+        for.
+
+        Visualization tools hide the render models of the listed links wherever they
+        draw the skin's render model.
+
+        Note:
+            Unset means the skin's render model stands in for every link, while an empty
+            list means every link keeps its render model. Names that match no link are
+            ignored.
+
+        Note:
+            Independent of
+            :attr:`~superdex.physics.ArticulatedSkinParams.non_colliding_links`.
+
+        Note:
+            Ignored if
+            :attr:`~superdex.physics.prefab.ArticulatedSkinPrefab.render_model_file` is
+            empty.
+        """
+    @hidden_links.setter
+    def hidden_links(self, value: Optional[mochi_physics.ArrayLikeString]) -> None: ...
     @overload
     def __init__(self) -> None: ...
     @overload
@@ -1391,6 +1415,7 @@ class ArticulatedSkinPrefab(mochi_physics.ArticulatedSkinParams):
         render_model_scale: mochi_physics.Real3Like = ...,
         render_model_rotation: mochi_physics.QuaternionLike = ...,
         render_model_translation: mochi_physics.Real3Like = ...,
+        hidden_links: Optional[mochi_physics.ArrayLikeString] = ...,
     ) -> None: ...
     def __eq__(self, other: object) -> bool: ...
     def __ne__(self, other: object) -> bool: ...

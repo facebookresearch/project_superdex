@@ -92,6 +92,7 @@ MOCHI_FIELD_NAME(renderModelFile, "renderModel")
 MOCHI_FIELD(renderModelScale)
 MOCHI_FIELD(renderModelRotation)
 MOCHI_FIELD(renderModelTranslation) MOCHI_ATTRIBUTE(Units("m"))
+MOCHI_FIELD(hiddenLinks)
 MOCHI_STRUCT_END_EX()
 
 MOCHI_STRUCT_BEGIN_EX(mochi::prefab::ArticulatedActorPrefab)
