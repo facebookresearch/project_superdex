@@ -150,6 +150,9 @@ class NewtonSolver {
     ColumnVector<T> y; // Action of the linear operator on 'deltaSol'.
     Matrix<T> U; // Left vectors for the next low-rank update.
     Matrix<T> V; // Right vectors for the next low-rank update.
+    ColumnVector<T> residualWeights; // Weights of the linear residual norm, or empty if unused.
+    DynamicArray<T> actorScales; // Per-actor scales in 'residualWeights'.
+    T weightedResNorm = {}; // Residual in the norm of 'residualWeights'.
   };
 
   /**
@@ -200,12 +203,28 @@ class NewtonSolver {
       Status& status) const;
 
   /**
-   * @brief Sets the relative tolerance of the linear solver (aka forcing term).
+   * @brief Non-linear residual norms for the forcing term. With residual weights, both use the
+   * weights of the previous linear solve. Otherwise, both are L2-norms.
+   */
+  struct ForcingTermNorms {
+    T res; // Current residual.
+    T prevRes; // Residual at the previous iteration.
+  };
+
+  /**
+   * @brief Returns the relative tolerance of the linear solver (aka forcing term).
    *
    * @see [Choosing the forcing terms in an inexact Newton method (Eisenstat and Walker,
    * 1996)](https://softlib.rice.edu/pub/CRPC-TRs/reports/CRPC-TR94463.pdf)
    */
-  void SetLinearSolverRelativeTolerance(Status const& status, T linearResidualNorm);
+  [[nodiscard]] double
+  ForcingTerm(Status const& status, ForcingTermNorms const& norms, T linearResidualNorm) const;
+
+  /**
+   * @brief Sets the parameters of the next linear solve: the forcing term, the absolute tolerance
+   * and, if the solver uses them, the per-actor residual weights.
+   */
+  void SetLinearSolverParams(Problem const& problem, Status const& status, T linearResidualNorm);
 
   NewtonSolverParams _params;
   std::unique_ptr<LinearSolver<T>> _linearSolver;

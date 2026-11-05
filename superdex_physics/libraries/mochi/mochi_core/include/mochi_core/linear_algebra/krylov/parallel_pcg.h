@@ -125,13 +125,11 @@ LinearSolverStatus ParallelPCG(
   static_assert(!mochi::IsCuda<MatType>, "CUDA matrices not supported with parallel PCG");
   using NonConstScalar = typename MatType::NonConstScalar;
   static_assert(
-      std::is_same_v<StopCriterion, StatusResidualL2<Dot, NonConstScalar>> ||
+      kIsResidualCriterion<StopCriterion, NonConstScalar> ||
           std::is_same_v<StopCriterion, StatusPreconditionedResidualL2<Dot, NonConstScalar>> ||
           std::is_same_v<StopCriterion, StatusResidualPreconditionerInduced<Dot, NonConstScalar>>,
       "Unsupported stop criterion");
-  constexpr bool kNeedPrecResidual =
-      std::is_same_v<StopCriterion, StatusPreconditionedResidualL2<Dot, NonConstScalar>> ||
-      std::is_same_v<StopCriterion, StatusResidualPreconditionerInduced<Dot, NonConstScalar>>;
+  constexpr bool kNeedPrecResidual = !kIsResidualCriterion<StopCriterion, NonConstScalar>;
   // The criterion owns a separate Dot. Reusing its rTz or replacing its Dot with the solver's is
   // safe only when both instances produce identical results. UsualDot guarantees this.
   constexpr bool kCanReuseCriterionRTz = std::is_same_v<Dot, UsualDot> &&
@@ -369,6 +367,16 @@ LinearSolverStatus ParallelPCG(
         if constexpr (kNeedPrecResidual) {
           computeBetaAndPrecResidual();
           iterStatus = checkPreconditionedStatus();
+        } else if (usePolakRibiere && (iter > 1)) {
+          // One reduction for the status and r_i^T z_{i-1}. It completes all reads of z, so the
+          // preconditioner solve may then overwrite z without a barrier.
+          auto const [rNormSqr, rTzOld] = workerParDot.DotPair(
+              workerStatusCheck.GetDot(), r, r, dot, r, z, rowBegin, rowEnd, workerIdx);
+          beta = rTzOld; // r_i^T z_{i-1}
+          iterStatus = workerStatusCheck.ParallelCheckStatus(iter, rNormSqr);
+          if (iterStatus == IterationStatus::Active) {
+            prec.ConcurrentSolve(r, z, workerInfo); // z_{i} = Prec^{-1} r_{i}
+          }
         } else {
           iterStatus = workerStatusCheck.ParallelCheckStatus(
               iter, r, {}, {}, {}, rowBegin, rowEnd, workerIdx, workerParDot);

@@ -21,7 +21,9 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <limits>
+#include <utility>
 
 #include "krylov_solver_test_helpers.h"
 
@@ -63,6 +65,40 @@ TEST(KrylovSolver, IsIterativeSolver) {
   static_assert(
       static_cast<int>(LinearSolverType::Count) == 14,
       "Please update this unit test if LinearSolverType enumerator changes");
+}
+
+TEST(KrylovSolver, EffectiveConvergenceNorm) {
+  using Norm = LinearSolverConvergenceNorm;
+  using Type = LinearSolverType;
+  Norm constexpr kL2 = Norm::ResidualL2, kPrec = Norm::PreconditionedResidualL2,
+                 kInduced = Norm::ResidualPreconditionerInduced,
+                 kWeighted = Norm::ResidualPerActorWeighted;
+  // Effective norm of each requested norm, in enumerator order.
+  std::array<Norm, 4> constexpr kRequested = {kL2, kPrec, kInduced, kWeighted};
+  std::pair<Type, std::array<Norm, 4>> const kTable[] = {
+      {Type::CG, kRequested},
+      {Type::ParallelCG, kRequested},
+      {Type::AsyncCG, kRequested},
+      {Type::LDLT, kRequested}, // Direct solvers don't use residual weights.
+      {Type::CudaCG, {kL2, kPrec, kInduced, kPrec}},
+      {Type::GMRES, {kL2, kL2, kL2, kL2}},
+      {Type::CudaGMRES, {kL2, kL2, kL2, kL2}},
+      {Type::AugmentedCG, {kL2, kL2, kL2, kL2}},
+      {Type::MINRES, {kInduced, kInduced, kInduced, kInduced}}};
+  for (auto const& [solverType, expectedNorms] : kTable) {
+    for (int i = 0; i < isize(expectedNorms); ++i) {
+      KrylovSolverParams params;
+      params.solverType = solverType;
+      params.normType = kRequested[i];
+      EXPECT_EQ(expectedNorms[i], details::EffectiveConvergenceNorm(params));
+      EXPECT_EQ(
+          details::IsIterativeSolver(solverType) && expectedNorms[i] == kWeighted,
+          details::UsesResidualWeights(params));
+    }
+  }
+  static_assert(
+      static_cast<int>(Type::Count) == 14 && static_cast<int>(Norm::Count) == 4,
+      "Please update this unit test if either enumerator changes");
 }
 
 TEST(KrylovSolver, IsIterationStatusConverged) {
@@ -113,10 +149,15 @@ static void LinearSolve_PsdMatrix(PreconditionerType precType) {
 
   real constexpr kErrorRelTol = 2e-2_r;
 
-  {
+  for (auto const normType :
+       {LinearSolverConvergenceNorm::ResidualL2,
+        LinearSolverConvergenceNorm::PreconditionedResidualL2,
+        LinearSolverConvergenceNorm::ResidualPreconditionerInduced,
+        LinearSolverConvergenceNorm::ResidualPerActorWeighted}) {
     LinearSolver<real> pcgSolver(params);
     KrylovSolverParams cgParams(params);
     cgParams.solverType = LinearSolverType::CG;
+    cgParams.normType = normType;
     pcgSolver.SetParams(cgParams); // Set params through 'SetParams'.
     EXPECT_EQ(pcgSolver.GetParams().solverType, LinearSolverType::CG);
     outputVec = 0.3_r * expected;
@@ -127,20 +168,37 @@ static void LinearSolve_PsdMatrix(PreconditionerType precType) {
   }
 
   {
-    KrylovSolverParams cgPrecInnerParams(params);
-    cgPrecInnerParams.solverType = LinearSolverType::CG;
-    cgPrecInnerParams.normType = LinearSolverConvergenceNorm::ResidualPreconditionerInduced;
-    LinearSolver<real> pcgPrecInnerSolver(cgPrecInnerParams);
-    outputVec.SetZero();
-    auto pcgPrecInnerStatus = pcgPrecInnerSolver.Solve(
-        inputMat,
-        inputVec,
-        outputVec,
-        /*hasOperatorChanged*/ true,
-        InitialGuessHint::Zero);
-    EXPECT_EQ(pcgPrecInnerStatus.convergence, LinearSolverConvergenceStatus::Converged);
-    ColumnVector<real> delta = expected - outputVec;
-    EXPECT_NEAR_TOL(delta.Norm(), 0_r, kErrorRelTol * expected.Norm());
+    // A heavily weighted row makes the relative residuals in the weighted norm and the L2-norm
+    // differ by more than 10x.
+    ColumnVector<real> weights(size);
+    weights.SetConstant(1_r);
+    weights[90] = 1e6_r;
+    auto relativeResidual = [&](Span<real const> w) {
+      ColumnVector<real> const residual = inputVec - inputMat * outputVec;
+      krylov::WeightedDot<real> const dot{w};
+      return Sqrt(dot.NormSqr(residual) / dot.NormSqr(inputVec));
+    };
+    KrylovSolverParams weightedParams(params);
+    weightedParams.normType = LinearSolverConvergenceNorm::ResidualPerActorWeighted;
+    weightedParams.relTol = 1e-3;
+    AnyMatrix<real> const anyMat = inputMat;
+    for (auto const solverType :
+         {LinearSolverType::CG, LinearSolverType::ParallelCG, LinearSolverType::AsyncCG}) {
+      weightedParams.solverType = solverType;
+      LinearSolver<real> weightedSolver(weightedParams);
+      outputVec.SetZero();
+      auto const status = weightedSolver.Solve(
+          anyMat,
+          inputVec,
+          outputVec,
+          /*hasOperatorChanged*/ true,
+          InitialGuessHint::Zero,
+          MakeConstSpan(weights));
+      EXPECT_EQ(status.convergence, LinearSolverConvergenceStatus::Converged);
+      real const rel = relativeResidual(MakeConstSpan(weights));
+      EXPECT_NEAR(rel, status.relativeResidualNorm, 5e-2 * rel);
+      EXPECT_GE(relativeResidual({}), 10 * rel);
+    }
   }
 
   {
@@ -168,7 +226,6 @@ static void LinearSolve_PsdMatrix(PreconditionerType precType) {
     dcgParams.solverType = LinearSolverType::AugmentedCG;
     dcgParams.maxSubspaceSize = 40;
     dcgParams.numRecyclingDir = 8;
-    dcgParams.normType = LinearSolverConvergenceNorm::ResidualL2;
     dcgSolver.SetParams(dcgParams); // Set params through 'SetParams'.
     EXPECT_EQ(dcgSolver.GetParams().solverType, LinearSolverType::AugmentedCG);
     int initNumIter = -1;

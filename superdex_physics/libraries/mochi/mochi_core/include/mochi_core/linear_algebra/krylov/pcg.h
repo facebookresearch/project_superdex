@@ -88,13 +88,11 @@ LinearSolverStatus PCG(
 
   using Scalar = decltype(Abs(dot(r, r)));
   static_assert(
-      std::is_same_v<StopCriterion, StatusResidualL2<Dot, Scalar>> ||
+      kIsResidualCriterion<StopCriterion, Scalar> ||
           std::is_same_v<StopCriterion, StatusPreconditionedResidualL2<Dot, Scalar>> ||
           std::is_same_v<StopCriterion, StatusResidualPreconditionerInduced<Dot, Scalar>>,
       "The type 'StopCriterion' is currently not supported by PCG.");
-  constexpr bool kNeedPrecResidual =
-      std::is_same_v<StopCriterion, StatusPreconditionedResidualL2<Dot, Scalar>> ||
-      std::is_same_v<StopCriterion, StatusResidualPreconditionerInduced<Dot, Scalar>>;
+  constexpr bool kNeedPrecResidual = !kIsResidualCriterion<StopCriterion, Scalar>;
   // The criterion owns a separate Dot. Reusing its rTz is safe only when both instances produce
   // identical results. UsualDot guarantees this.
   constexpr bool kCanReuseCriterionRTz = std::is_same_v<Dot, UsualDot> &&

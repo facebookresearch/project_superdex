@@ -81,7 +81,9 @@ struct NewtonSolverParams {
   bool consistencyResNorm = false;
   real consistencyResNormStep = ExperimentalEvalParams{}.consistencyResNormStep;
 
-  KrylovSolverParams lParams;                                       // Linear solver params
+  // Linear solver params. For solves that stop on ResidualPerActorWeighted, their absTol bounds
+  // every actor's weighted residual.
+  KrylovSolverParams lParams;
 };
 // clang-format on
 

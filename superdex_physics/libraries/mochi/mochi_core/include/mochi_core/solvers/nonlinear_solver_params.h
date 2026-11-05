@@ -226,8 +226,9 @@ enum struct LinearToleranceStrategy {
   /**
    * @brief Eisenstat-Walker strategy 1.
    *
-   * @note Should be used with @ref LinearSolverConvergenceNorm::ResidualL2. Other norms may yield
-   * suboptimal forcing terms.
+   * @note Should be used with @ref LinearSolverConvergenceNorm::ResidualL2 or @ref
+   * LinearSolverConvergenceNorm::ResidualPerActorWeighted. Other norms may yield suboptimal forcing
+   * terms.
    * @note Not recommended for use with quasi-Newton methods (e.g., @ref NonLinearSolverType::BFGS,
    * @ref NonLinearSolverType::SR1).
    *
@@ -355,7 +356,12 @@ struct NonLinearSolverParams {
    */
   NonLinearSolverConvergenceMode convergenceMode = NonLinearSolverConvergenceMode::Default;
 
-  /** @brief Absolute residual norm tolerance for convergence. */
+  /**
+   * @brief Absolute residual norm tolerance for convergence.
+   *
+   * @note Also the residual below which @ref LinearSolverConvergenceNorm::ResidualPerActorWeighted
+   * stops normalizing an actor by its own residual.
+   */
   real absTol = 1e-3_r;
 
   /** @brief Relative residual norm tolerance for convergence, relative to the initial residual. */

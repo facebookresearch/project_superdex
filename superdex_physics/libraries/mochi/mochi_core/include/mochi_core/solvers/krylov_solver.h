@@ -41,15 +41,13 @@ enum class RecyclingAlgorithm : uint8_t {
  */
 inline constexpr int kDefaultLinearSolverMaxIter = 500;
 struct KrylovSolverParams {
-  // Absolute convergence tolerance for the (possibly preconditioned) residual norm. Only used for
-  // iterative solvers.
+  // Absolute convergence tolerance in the solver's stopping norm. Only used for iterative solvers.
   double absTol = static_cast<double>(LinearSolverParams{}.absTol);
-  // Relative convergence tolerance for the decrease in the (possibly preconditioned) residual norm.
-  // Only used for iterative solvers.
+  // Relative convergence tolerance for the decrease in the solver's stopping norm. Only used for
+  // iterative solvers.
   double relTol = static_cast<double>(LinearSolverParams{}.relTol);
-  // Relative divergence tolerance, i.e. how much the (possibly preconditioned) residual norm can
-  // increase before the solver concludes that the method is diverging. Only used for iterative
-  // solvers.
+  // Relative divergence tolerance, i.e. how much the solver's stopping norm can increase before the
+  // solver concludes that the method is diverging. Only used for iterative solvers.
   double relDivTol = static_cast<double>(LinearSolverParams{}.relDivTol);
   // Maximum number of iterations for iterative solvers. Must be positive.
   int maxIter = kDefaultLinearSolverMaxIter; // LinearSolverParams defaults to "Auto".
@@ -61,8 +59,8 @@ struct KrylovSolverParams {
   // LinearSolverParams since some preconditioners (e.g. PerActor) are not supported for all
   // operator types.
   PreconditionerType preconditionerType = PreconditionerType::Jacobi;
-  // Norm to monitor convergence and divergence. Only used for CG-like iterative solvers. Unused for
-  // GMRES (in which the implicit L2-norm is always used) and direct solvers.
+  // Norm to monitor convergence and divergence. See LinearSolverConvergenceNorm for the norm that
+  // each solver uses.
   LinearSolverConvergenceNorm normType = LinearSolverParams{}.normType;
   // Maximum size (dimensionality) of the recycling subspace. Only used for augmented solvers.
   int maxSubspaceSize = 32;

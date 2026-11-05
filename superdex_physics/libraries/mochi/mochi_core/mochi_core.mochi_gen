@@ -1627,8 +1627,9 @@ enum LinearToleranceStrategy [from_mochi_core] {
   Constant,
   // @brief Eisenstat-Walker strategy 1.
   //
-  // @note Should be used with @ref LinearSolverConvergenceNorm::ResidualL2. Other norms may yield
-  // suboptimal forcing terms.
+  // @note Should be used with @ref LinearSolverConvergenceNorm::ResidualL2 or @ref
+  // LinearSolverConvergenceNorm::ResidualPerActorWeighted. Other norms may yield suboptimal forcing
+  // terms.
   // @note Not recommended for use with quasi-Newton methods (e.g., @ref NonLinearSolverType::BFGS,
   // @ref NonLinearSolverType::SR1).
   //
@@ -1673,6 +1674,9 @@ struct NonLinearSolverParams [equality(default), from_mochi_core] {
   // @note Applies to @ref absTol and @ref relTol.
   NonLinearSolverConvergenceMode convergenceMode = NonLinearSolverConvergenceMode::Default;
   // @brief Absolute residual norm tolerance for convergence.
+  //
+  // @note Also the residual below which @ref LinearSolverConvergenceNorm::ResidualPerActorWeighted
+  // stops normalizing an actor by its own residual.
   real absTol = 1e-3;
   // @brief Relative residual norm tolerance for convergence, relative to the initial residual.
   real relTol = 1e-6;
@@ -1919,10 +1923,12 @@ enum PreconditionerType [from_mochi_core] {
 
 // @brief Norm types for the stopping criteria of the linear solver.
 //
-// @note This setting only applies to @ref LinearSolverType::CG, @ref LinearSolverType::CudaCG, @ref
-// LinearSolverType::ParallelCG and @ref LinearSolverType::AsyncCG. @ref LinearSolverType::GMRES,
-// @ref LinearSolverType::CudaGMRES, and @ref LinearSolverType::AugmentedCG always use the L2-norm
-// of the residual regardless of this setting. @ref LinearSolverType::MINRES always uses the
+// @note @ref LinearSolverType::CG, @ref LinearSolverType::ParallelCG and @ref
+// LinearSolverType::AsyncCG support every norm. @ref LinearSolverType::CudaCG supports every norm
+// except @ref LinearSolverConvergenceNorm::ResidualPerActorWeighted, for which it uses @ref
+// LinearSolverConvergenceNorm::PreconditionedResidualL2. @ref LinearSolverType::GMRES, @ref
+// LinearSolverType::CudaGMRES, and @ref LinearSolverType::AugmentedCG always use the L2-norm of the
+// residual regardless of this setting. @ref LinearSolverType::MINRES always uses the
 // preconditioner-induced norm of the residual. Direct solvers do not have stop criteria.
 enum LinearSolverConvergenceNorm [from_mochi_core] {
   // @brief L2-norm of the residual: @code ‖r‖₂ @endcode.
@@ -1933,6 +1939,18 @@ enum LinearSolverConvergenceNorm [from_mochi_core] {
   // @brief Preconditioner-induced norm of the residual: @code √⟨r, z⟩ @endcode where
   // @code z = M⁻¹r @endcode.
   ResidualPreconditionerInduced,
+  // @brief Per-actor weighted L2-norm of the residual, each actor normalized by its own non-linear
+  // residual, so actors have comparable influence regardless of the magnitude of their residuals.
+  //
+  // @details @code ‖r‖ = √(Σ_a ‖r_a‖²_W / s_a²) @endcode, where
+  // @code ‖r_a‖_W = √(Σᵢ wᵢ·rᵢ²) @endcode uses actor a's weights from @ref
+  // NonLinearSolverConvergenceMode::PerActorWeighted, and s_a is the larger of actor a's non-linear
+  // residual in that norm and @ref NonLinearSolverParams::absTol, or, if both are zero, the largest
+  // actor's residual.
+  //
+  // @note In @ref NonLinearSolverConvergenceMode::Global mode, the solvers that support it use @ref
+  // LinearSolverConvergenceNorm::ResidualL2 instead.
+  ResidualPerActorWeighted,
   // @brief Number of linear solver convergence norm enum values.
   Count,
   // @brief Default linear solver convergence norm.
@@ -1954,6 +1972,9 @@ struct LinearSolverParams [equality(default), from_mochi_core] {
   // @brief Absolute residual norm tolerance for convergence.
   //
   // @note Applies only to iterative solvers.
+  // @note When the solver stops on @ref LinearSolverConvergenceNorm::ResidualPerActorWeighted, the
+  // absolute stop ends the solve only once every actor's weighted residual @code ‖r_a‖_W @endcode
+  // is at most @ref absTol. Otherwise, it bounds the solver's stopping norm.
   real absTol = 1e-9;
   // @brief Relative residual norm tolerance for convergence, relative to the same norm of the
   // right-hand side.

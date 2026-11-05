@@ -104,8 +104,9 @@ class StopTest {
 
 namespace mochi::krylov {
 
-/// @brief Structure to monitor convergence with the L2-norm of the residual: \f$\|r\|_2\f$.
-/// This structure is helpful for PCG (where the residual is explicitly available).
+/// @brief Structure to monitor convergence with the norm of the residual induced by the
+/// criterion-owned dot operation \f$D\f$: \f$\sqrt{D(r,r)}\f$, e.g. the L2-norm \f$\|r\|_2\f$ with
+/// @ref UsualDot. This structure is helpful for PCG (where the residual is explicitly available).
 template <typename Dot = UsualDot, typename Scalar = real>
 class StatusResidualL2 {
  protected:
@@ -115,19 +116,24 @@ class StatusResidualL2 {
 
  public:
   /// @brief Constructor
-  /// @param relTol Relative tolerance for the convergence criterion ||r||_2 <= max( relTol ||b||_2,
+  /// @param relTol Relative tolerance for the convergence criterion ||r|| <= max( relTol ||b||,
   /// absTol )
   /// @param absTol Absolute tolerance for the convergence criterion (see above).
-  /// @param relDivTol Relative tolerance for the divergence criterion ||r||_2 > relDivTol ||b||_2
+  /// @param relDivTol Relative tolerance for the divergence criterion ||r|| > relDivTol ||b||
   explicit StatusResidualL2(
       Scalar relTol,
       Scalar absTol,
       Scalar relDivTol,
-      int retainedDirections = 0)
-      : _check{relTol, absTol, relDivTol}, _container{std::nullopt} {
+      int retainedDirections = 0,
+      Dot dot = Dot{})
+      : _check{relTol, absTol, relDivTol}, _dot(dot), _container{std::nullopt} {
     if (retainedDirections > 0) {
       _container.emplace(retainedDirections);
     }
+  }
+
+  [[nodiscard]] Dot const& GetDot() const {
+    return _dot;
   }
 
   /// @brief Sets the tolerance scaling to \f$D(b,b)\f$, where \f$D\f$ is the criterion-owned
@@ -186,8 +192,12 @@ class StatusResidualL2 {
       Idx rowEnd,
       int workerIdx,
       ParallelDot<DotScalar> const& parDot) {
-    MOCHI_ASSERT(!_container.has_value(), "Parallel status check does not support recycling.");
     auto const rNormSqr = static_cast<Scalar>(parDot.Dot(_dot, r, r, rowStart, rowEnd, workerIdx));
+    return ParallelCheckStatus(iter, rNormSqr);
+  }
+
+  [[nodiscard]] IterationStatus ParallelCheckStatus(int iter, Scalar rNormSqr) {
+    MOCHI_ASSERT(!_container.has_value(), "Parallel status check does not support recycling.");
     return _check.CheckStatus(iter, rNormSqr);
   }
 
@@ -425,6 +435,33 @@ class StatusResidualPreconditionerInduced {
     _check.SetScaling(bTz);
   }
 };
+
+/// @brief Whether the stop criterion @p C, one of those that PCG supports, monitors the residual
+/// itself (@ref StatusResidualL2 with scalar type @p Scalar and any dot operation) rather than a
+/// norm that needs the preconditioned residual.
+///
+/// @note Undefined for other criteria, so that querying them doesn't compile.
+template <typename C, typename Scalar>
+struct IsResidualCriterion;
+
+template <typename Dot, typename Scalar>
+struct IsResidualCriterion<StatusResidualL2<Dot, Scalar>, Scalar> {
+  static constexpr bool kValue = true;
+};
+
+template <typename Dot, typename Scalar>
+struct IsResidualCriterion<StatusPreconditionedResidualL2<Dot, Scalar>, Scalar> {
+  static constexpr bool kValue = false;
+};
+
+template <typename Dot, typename Scalar>
+struct IsResidualCriterion<StatusResidualPreconditionerInduced<Dot, Scalar>, Scalar> {
+  static constexpr bool kValue = false;
+};
+
+/// @brief Shorthand for @ref IsResidualCriterion.
+template <typename C, typename Scalar>
+inline constexpr bool kIsResidualCriterion = IsResidualCriterion<C, Scalar>::kValue;
 
 /// @brief Structure to monitor convergence
 /// This structure is helpful for GMRes where the norm of the residual

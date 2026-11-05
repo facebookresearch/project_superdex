@@ -1439,6 +1439,8 @@ class LinearToleranceStrategy:
 
     Note:
         Should be used with :class:`RESIDUAL_L2
+        <superdex.physics.LinearSolverConvergenceNorm>` or
+        :class:`RESIDUAL_PER_ACTOR_WEIGHTED
         <superdex.physics.LinearSolverConvergenceNorm>`. Other norms may yield
         suboptimal forcing terms.
 
@@ -1772,11 +1774,14 @@ class LinearSolverConvergenceNorm:
     """Norm types for the stopping criteria of the linear solver.
 
     Note:
-        This setting only applies to :class:`CG
-        <superdex.physics.LinearSolverType>`, :class:`CUDA_CG
-        <superdex.physics.LinearSolverType>`, :class:`PARALLEL_CG
+        :class:`CG <superdex.physics.LinearSolverType>`, :class:`PARALLEL_CG
         <superdex.physics.LinearSolverType>` and :class:`ASYNC_CG
-        <superdex.physics.LinearSolverType>`. :class:`GMRES
+        <superdex.physics.LinearSolverType>` support every norm. :class:`CUDA_CG
+        <superdex.physics.LinearSolverType>` supports every norm except
+        :class:`RESIDUAL_PER_ACTOR_WEIGHTED
+        <superdex.physics.LinearSolverConvergenceNorm>`, for which it uses
+        :class:`PRECONDITIONED_RESIDUAL_L2
+        <superdex.physics.LinearSolverConvergenceNorm>`. :class:`GMRES
         <superdex.physics.LinearSolverType>`, :class:`CUDA_GMRES
         <superdex.physics.LinearSolverType>`, and :class:`AUGMENTED_CG
         <superdex.physics.LinearSolverType>` always use the L2-norm of the residual
@@ -1790,6 +1795,23 @@ class LinearSolverConvergenceNorm:
     """L2-norm of the preconditioned residual: ``‖z‖₂`` where ``z = M⁻¹r``."""
     RESIDUAL_PRECONDITIONER_INDUCED: LinearSolverConvergenceNorm
     """Preconditioner-induced norm of the residual: ``√⟨r, z⟩`` where ``z = M⁻¹r``."""
+    RESIDUAL_PER_ACTOR_WEIGHTED: LinearSolverConvergenceNorm
+    """Per-actor weighted L2-norm of the residual, each actor normalized by its own
+    non-linear residual, so actors have comparable influence regardless of the
+    magnitude of their residuals.
+
+    ``‖r‖ = √(Σ_a ‖r_a‖²_W / s_a²)``, where ``‖r_a‖_W = √(Σᵢ wᵢ·rᵢ²)`` uses actor
+    a's weights from :class:`PER_ACTOR_WEIGHTED
+    <superdex.physics.NonLinearSolverConvergenceMode>`, and s_a is the larger of
+    actor a's non-linear residual in that norm and
+    :attr:`~superdex.physics.NonLinearSolverParams.abs_tol`, or, if both are zero,
+    the largest actor's residual.
+
+    Note:
+        In :class:`GLOBAL <superdex.physics.NonLinearSolverConvergenceMode>` mode,
+        the solvers that support it use :class:`RESIDUAL_L2
+        <superdex.physics.LinearSolverConvergenceNorm>` instead.
+    """
     COUNT: LinearSolverConvergenceNorm
     """Number of linear solver convergence norm enum values."""
     DEFAULT: LinearSolverConvergenceNorm
@@ -3958,7 +3980,13 @@ class NonLinearSolverParams:
         :attr:`~superdex.physics.NonLinearSolverParams.rel_tol`.
     """
     abs_tol: float
-    """Absolute residual norm tolerance for convergence."""
+    """Absolute residual norm tolerance for convergence.
+
+    Note:
+        Also the residual below which :class:`RESIDUAL_PER_ACTOR_WEIGHTED
+        <superdex.physics.LinearSolverConvergenceNorm>` stops normalizing an actor
+        by its own residual.
+    """
     rel_tol: float
     """Relative residual norm tolerance for convergence, relative to the initial
     residual.
@@ -4112,6 +4140,13 @@ class LinearSolverParams:
 
     Note:
         Applies only to iterative solvers.
+
+    Note:
+        When the solver stops on :class:`RESIDUAL_PER_ACTOR_WEIGHTED
+        <superdex.physics.LinearSolverConvergenceNorm>`, the absolute stop ends the
+        solve only once every actor's weighted residual ``‖r_a‖_W`` is at most
+        :attr:`~superdex.physics.LinearSolverParams.abs_tol`. Otherwise, it bounds
+        the solver's stopping norm.
     """
     rel_tol: float
     """Relative residual norm tolerance for convergence, relative to the same norm of

@@ -59,7 +59,6 @@ TEST_IF(MOCHI_USE_EIGEN, KrylovSolver, AugmentedCG) {
     dcgParams.preconditionerType = params.preconditionerType;
     dcgParams.maxSubspaceSize = 32;
     dcgParams.numRecyclingDir = 8;
-    dcgParams.normType = LinearSolverConvergenceNorm::ResidualL2;
     LinearSolver<Scalar> dcgSolver(dcgParams);
     EXPECT_EQ(dcgSolver.GetParams().solverType, LinearSolverType::AugmentedCG);
     int initNumIter = -1;
@@ -88,7 +87,6 @@ TEST_IF(MOCHI_USE_EIGEN, KrylovSolver, AugmentedCG) {
     dcgParams.preconditionerType = params.preconditionerType;
     dcgParams.maxSubspaceSize = 16;
     dcgParams.numRecyclingDir = 8;
-    dcgParams.normType = LinearSolverConvergenceNorm::ResidualL2;
     LinearSolver<Scalar> dcgSolver(dcgParams);
     EXPECT_EQ(dcgSolver.GetParams().solverType, LinearSolverType::AugmentedCG);
     int initNumIter = -1;

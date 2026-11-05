@@ -153,12 +153,14 @@ struct PcgProblem {
   ColumnVector<real> initialGuess;
   ColumnVector<real> expectedSolution;
   DynamicArray<real> inversePrecDiagonal;
+  DynamicArray<real> residualWeights;
 };
 
 static PcgProblem MakeProblem(bool identity = false) {
   Matrix<real> A = Matrix<real>::Zero(kParallelSize, kParallelSize);
   ColumnVector<real> expectedSolution(kParallelSize);
   DynamicArray<real> inversePrecDiagonal(kParallelSize);
+  DynamicArray<real> residualWeights(kParallelSize);
   for (int row = 0; row < kParallelSize; ++row) {
     A(row, row) = identity ? 1_r : static_cast<real>(1 << (row % 4));
     inversePrecDiagonal[row] = 1_r / A(row, row);
@@ -167,6 +169,7 @@ static PcgProblem MakeProblem(bool identity = false) {
       A(row + 1, row) = -0.1_r;
     }
     expectedSolution[row] = 0.25_r + 0.1_r * static_cast<real>(row % 7);
+    residualWeights[row] = 1_r + static_cast<real>(row % 3);
   }
   ColumnVector<real> b = A * expectedSolution;
   return {
@@ -174,7 +177,8 @@ static PcgProblem MakeProblem(bool identity = false) {
       .b = std::move(b),
       .initialGuess = ColumnVector<real>::Zero(kParallelSize),
       .expectedSolution = std::move(expectedSolution),
-      .inversePrecDiagonal = std::move(inversePrecDiagonal)};
+      .inversePrecDiagonal = std::move(inversePrecDiagonal),
+      .residualWeights = std::move(residualWeights)};
 }
 
 struct SolveOptions {
@@ -197,6 +201,15 @@ struct SolveResult {
 template <template <typename, typename> class Criterion, typename Dot = krylov::UsualDot>
 [[nodiscard]] static auto MakeCriterion(real relativeTolerance = kRelativeTolerance) {
   return Criterion<Dot, real>{relativeTolerance, 0_r, kDivergenceTolerance};
+}
+
+[[nodiscard]] static auto MakeWeightedResidualCriterion(PcgProblem const& problem) {
+  return krylov::StatusResidualL2<krylov::WeightedDot<real>, real>{
+      kRelativeTolerance,
+      0_r,
+      kDivergenceTolerance,
+      /*retainedDirections*/ 0,
+      {MakeConstSpan(problem.residualWeights)}};
 }
 
 template <typename StopCriterion, typename Dot = krylov::UsualDot>
@@ -249,13 +262,18 @@ static void ExpectValidExecution(SolveResult const& result, int numRows) {
 }
 
 enum class CriterionKind { ResidualL2, PreconditionedResidualL2, PreconditionerInduced };
-enum class DotKind { Usual, Scaled };
+enum class DotKind { Usual, Scaled, Weighted };
 using ConvergenceParam = std::tuple<CriterionKind, DotKind, InitialGuessHint, bool>;
 
 [[nodiscard]] static real ExpectedRelativeResidualNorm(
     CriterionKind criterion,
     PcgProblem const& problem,
-    ColumnVector<real> const& residual) {
+    ColumnVector<real> const& residual,
+    DotKind dot = DotKind::Usual) {
+  if (dot == DotKind::Weighted) {
+    krylov::WeightedDot<real> const weightedDot{MakeConstSpan(problem.residualWeights)};
+    return Sqrt(weightedDot.NormSqr(residual) / weightedDot.NormSqr(problem.b));
+  }
   if (criterion == CriterionKind::ResidualL2) {
     return residual.Norm() / problem.b.Norm();
   }
@@ -308,6 +326,10 @@ template <typename Dot>
       // distinct ScaledDot scale 1 so the test detects incorrect reuse of a dot product across the
       // two instances.
       return RunCriterion<ScaledDot>(criterion, problem, options, ScaledDot{1_r});
+    case DotKind::Weighted:
+      // Only the residual criterion supports a dot product other than the solver's.
+      MOCHI_ASSERT(criterion == CriterionKind::ResidualL2, "Invalid stopping criterion.");
+      return RunParallelPcg(problem, MakeWeightedResidualCriterion(problem), options);
   }
   MOCHI_ASSERT(false, "Invalid dot type.");
   return {};
@@ -317,7 +339,7 @@ template <typename Dot>
     testing::TestParamInfo<ConvergenceParam> const& info) {
   static constexpr char const* kCriterionNames[]{
       "ResidualL2", "PreconditionedResidualL2", "PreconditionerInduced"};
-  static constexpr char const* kDotNames[]{"UsualDot", "ScaledDot"};
+  static constexpr char const* kDotNames[]{"UsualDot", "ScaledDot", "WeightedDot"};
   auto const [criterion, dot, initialGuessHint, usePolakRibiere] = info.param;
   return std::string{kCriterionNames[static_cast<int>(criterion)]} + "_" +
       kDotNames[static_cast<int>(dot)] + "_" +
@@ -342,7 +364,8 @@ TEST_P(ParallelPcgConvergenceTest, SolvesKnownSystem) {
   real const relativeResidual = residual.Norm() / problem.b.Norm();
   EXPECT_LE(relativeResidual, 6_r * kRelativeTolerance);
   EXPECT_NEAR(
-      ExpectedRelativeResidualNorm(std::get<0>(GetParam()), problem, residual),
+      ExpectedRelativeResidualNorm(
+          std::get<0>(GetParam()), problem, residual, std::get<1>(GetParam())),
       result.status.relativeResidualNorm,
       5_r * kRelativeTolerance);
   ExpectValidExecution(result, problem.A.Rows());
@@ -365,6 +388,16 @@ INSTANTIATE_TEST_SUITE_P(
             CriterionKind::PreconditionedResidualL2,
             CriterionKind::PreconditionerInduced),
         testing::Values(DotKind::Usual, DotKind::Scaled),
+        testing::Values(InitialGuessHint::Zero, InitialGuessHint::Unknown),
+        testing::Bool()),
+    GetConvergenceParamName);
+
+INSTANTIATE_TEST_SUITE_P(
+    WeightedResidual,
+    ParallelPcgConvergenceTest,
+    testing::Combine(
+        testing::Values(CriterionKind::ResidualL2),
+        testing::Values(DotKind::Weighted),
         testing::Values(InitialGuessHint::Zero, InitialGuessHint::Unknown),
         testing::Bool()),
     GetConvergenceParamName);
@@ -475,30 +508,49 @@ TEST_F(ParallelPcgTest, ReportsSingularPreconditionerBreakdown) {
   ExpectValidExecution(result, problem.A.Rows());
 }
 
+// The weighted residual criterion stops at its second iteration, whose status check is fused with
+// the r^T z reduction. Both runs apply the preconditioner three times.
 TEST_F(ParallelPcgTest, StopsAtIterationLimit) {
   auto problem = MakeProblem();
   problem.initialGuess = 0.25_r * problem.expectedSolution;
   ASSERT_GE(krylov::parallel_pcg::GetNumParallelWorkers(problem.A), 3);
-  auto criterion = MakeCriterion<krylov::StatusPreconditionedResidualL2, ScaledDot>();
-  auto const result = RunParallelPcg(
-      problem,
-      criterion,
-      {.maxIter = 1, .initialGuessHint = InitialGuessHint::Unknown},
-      ScaledDot{1_r});
+  auto expectStopsAtLimit = [&](auto criterion,
+                                auto solverDot,
+                                int maxIter,
+                                CriterionKind criterionKind,
+                                DotKind dotKind) {
+    auto const result = RunParallelPcg(
+        problem,
+        criterion,
+        {.maxIter = maxIter, .initialGuessHint = InitialGuessHint::Unknown},
+        solverDot);
 
-  EXPECT_EQ(LinearSolverConvergenceStatus::Stopped, result.status.convergence);
-  EXPECT_EQ(1, result.status.numIterDone);
-  EXPECT_FALSE(mochi::test::NearEqualMatrices(result.x, problem.initialGuess));
-  auto const residual = problem.b - problem.A * result.x;
-  EXPECT_NEAR(
-      ExpectedRelativeResidualNorm(CriterionKind::PreconditionedResidualL2, problem, residual),
-      result.status.relativeResidualNorm,
-      kRelativeTolerance);
-  EXPECT_EQ(criterion.GetLatestRelativeResidualNorm(), result.status.relativeResidualNorm);
-  ExpectValidExecution(result, problem.A.Rows());
-  if (result.prepareCalls != 0) {
-    EXPECT_EQ(3 * (isize(result.workerRowRanges) - 1), result.concurrentSolveCalls);
-  }
+    EXPECT_EQ(LinearSolverConvergenceStatus::Stopped, result.status.convergence);
+    EXPECT_EQ(maxIter, result.status.numIterDone);
+    EXPECT_FALSE(mochi::test::NearEqualMatrices(result.x, problem.initialGuess));
+    auto const residual = problem.b - problem.A * result.x;
+    EXPECT_NEAR(
+        ExpectedRelativeResidualNorm(criterionKind, problem, residual, dotKind),
+        result.status.relativeResidualNorm,
+        kRelativeTolerance);
+    EXPECT_EQ(criterion.GetLatestRelativeResidualNorm(), result.status.relativeResidualNorm);
+    ExpectValidExecution(result, problem.A.Rows());
+    if (result.prepareCalls != 0) {
+      EXPECT_EQ(3 * (isize(result.workerRowRanges) - 1), result.concurrentSolveCalls);
+    }
+  };
+  expectStopsAtLimit(
+      MakeCriterion<krylov::StatusPreconditionedResidualL2, ScaledDot>(),
+      ScaledDot{1_r},
+      /*maxIter*/ 1,
+      CriterionKind::PreconditionedResidualL2,
+      DotKind::Usual);
+  expectStopsAtLimit(
+      MakeWeightedResidualCriterion(problem),
+      krylov::UsualDot{},
+      /*maxIter*/ 2,
+      CriterionKind::ResidualL2,
+      DotKind::Weighted);
 }
 
 TEST(ParallelPcg, FallsBackWhenWorkIsInsufficient) {

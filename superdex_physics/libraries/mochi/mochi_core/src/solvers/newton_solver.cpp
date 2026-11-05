@@ -79,6 +79,25 @@ ActorConvergenceResult<T> CheckWeightedConvergence(
 
 } // namespace
 
+/** @brief Whether convergence is checked per actor, without the fallback to Global mode. */
+template <typename T>
+[[nodiscard]] static bool UsesPerActorConvergence(
+    SnleProblem<T> const& problem,
+    NewtonSolverParams const& params) {
+  return params.convergenceMode == NonLinearSolverConvergenceMode::PerActorWeighted &&
+      isize(problem.actorConvergenceWeights) == isize(problem.actorResiduals);
+}
+
+/** @brief Whether the linear solver stops on the residual's L2-norm or per-actor weighted norm. */
+[[nodiscard]] static bool StopsOnUnpreconditionedResidual(KrylovSolverParams const& params) {
+  static_assert(
+      static_cast<int>(LinearSolverConvergenceNorm::Count) == 4,
+      "Please update this function if LinearSolverConvergenceNorm enumerator changes");
+  auto const norm = details::EffectiveConvergenceNorm(params);
+  return norm == LinearSolverConvergenceNorm::ResidualL2 ||
+      norm == LinearSolverConvergenceNorm::ResidualPerActorWeighted;
+}
+
 template <typename T>
 NewtonSolver<T>::NewtonSolver(
     NewtonSolverParams const& params,
@@ -97,15 +116,14 @@ bool NewtonSolver<T>::StopCriterionType::StopCriterion_ResNorm(
   static_assert(
       static_cast<int>(NonLinearSolverConvergenceMode::Count) == 2,
       "Please update this function if NonLinearSolverConvergenceMode enumerator changes");
-  bool usePerActor = (params.convergenceMode == NonLinearSolverConvergenceMode::PerActorWeighted);
+  bool const usePerActor = UsesPerActorConvergence(problem, params);
 
-  if (usePerActor && isize(problem.actorConvergenceWeights) != isize(problem.actorResiduals)) {
+  if (!usePerActor && params.convergenceMode == NonLinearSolverConvergenceMode::PerActorWeighted) {
     MOCHI_LOG_WARNING_ONCE(
         "PerActorWeighted convergence mode is active but actorConvergenceWeights size "
         "does not match actorResiduals size. Falling back to Global mode. Either populate "
         "actorConvergenceWeights in the assembly callback, or set "
         "convergenceMode = NonLinearSolverConvergenceMode::Global.");
-    usePerActor = false;
   }
 
   bool isConverged = false;
@@ -114,8 +132,12 @@ bool NewtonSolver<T>::StopCriterionType::StopCriterion_ResNorm(
 
     if (status.numIterDone == 0) {
       status.actorResidualWeightedNorm0.resize_noinit(actorResiduals.size());
+      status.actorResidualWeightedNorm.resize_noinit(actorResiduals.size());
       status.actorConvergence.resize_noinit(actorResiduals.size());
     }
+    MOCHI_ASSERT_VERBOSE(
+        isize(status.actorResidualWeightedNorm) == isize(actorResiduals),
+        "The number of actors changed during the solve.");
 
     // Compute per-actor convergence and accumulate global residual norm.
     status.resNorm = {};
@@ -142,6 +164,7 @@ bool NewtonSolver<T>::StopCriterionType::StopCriterion_ResNorm(
           params.absTolRes,
           params.relTolRes);
       status.resNorm += result.resNormSqr;
+      status.actorResidualWeightedNorm[i] = result.weightedResNorm;
 
       // Store the actor weighted norm on first iteration.
       if (status.numIterDone == 0) {
@@ -260,10 +283,11 @@ void NewtonSolver<T>::SetParams(NewtonSolverParams const& params) {
   MOCHI_PROFILE_SCOPE();
 
   if ((params.linearToleranceStrategy == LinearToleranceStrategy::EisenstatWalker1) &&
-      (params.lParams.normType != LinearSolverConvergenceNorm::ResidualL2)) {
+      !StopsOnUnpreconditionedResidual(params.lParams)) {
     MOCHI_LOG_WARNING_ONCE(
         "Inconsistent solver settings: Eisenstat-Walker Choice #1 requires using the L2-norm of "
-        "the residual to monitor convergence of the linear solver."); // Could be fixed if needed.
+        "the residual or its per-actor weighted variant to monitor convergence of the linear "
+        "solver."); // Could be fixed if needed.
   }
 
   if ((params.solverType == NonLinearSolverType::BFGS ||
@@ -414,7 +438,10 @@ bool NewtonSolver<T>::IsSolverDone(
 }
 
 template <typename T>
-void NewtonSolver<T>::SetLinearSolverRelativeTolerance(Status const& status, T linearResidualNorm) {
+double NewtonSolver<T>::ForcingTerm(
+    Status const& status,
+    ForcingTermNorms const& norms,
+    T linearResidualNorm) const {
   // Maximum eta. Default in Eisenstat-Walker is 0.9. Using 0.01 since the assembly cost dominates
   // and solving the linear system to a lower tolerance pays off.
   // TODO:
@@ -435,12 +462,11 @@ void NewtonSolver<T>::SetLinearSolverRelativeTolerance(Status const& status, T l
   static_assert(
       kMaxEta >= kSafeguardEtaTh && kSafeguardEtaTh >= kMinEta, "Inconsistent parameters");
 
-  auto linearParams(_linearSolver->GetParams());
-  T const prevEta = static_cast<T>(linearParams.relTol);
+  T const prevEta = static_cast<T>(_linearSolver->GetParams().relTol);
   T eta = {};
   switch (_params.linearToleranceStrategy) {
     case LinearToleranceStrategy::Constant: {
-      return;
+      return _params.lParams.relTol;
     }
     case LinearToleranceStrategy::EisenstatWalker1: {
       // 'Choice 1' in https://softlib.rice.edu/pub/CRPC-TRs/reports/CRPC-TR94463.pdf
@@ -448,7 +474,7 @@ void NewtonSolver<T>::SetLinearSolverRelativeTolerance(Status const& status, T l
         eta = kMaxEta;
       } else {
         T const safeguardEta = Pow(prevEta, T(0.5) + T(0.5) * Sqrt(T(5)));
-        eta = Abs(status.resNorm - linearResidualNorm) / status.prevResNorm;
+        eta = Abs(norms.res - linearResidualNorm) / norms.prevRes;
         if (safeguardEta > kSafeguardEtaTh) {
           eta = Max(eta, safeguardEta);
         }
@@ -464,7 +490,7 @@ void NewtonSolver<T>::SetLinearSolverRelativeTolerance(Status const& status, T l
         T const alpha = T(0.5) + T(0.5) * Sqrt(T(5));
         T const gamma = T(0.9);
         T const safeguardEta = gamma * Pow(prevEta, alpha);
-        eta = gamma * Pow(status.resNorm / status.prevResNorm, alpha);
+        eta = gamma * Pow(norms.res / norms.prevRes, alpha);
         if (safeguardEta > kSafeguardEtaTh) {
           eta = Max(eta, safeguardEta);
         }
@@ -480,8 +506,75 @@ void NewtonSolver<T>::SetLinearSolverRelativeTolerance(Status const& status, T l
   static_assert(
       static_cast<int>(LinearToleranceStrategy::Count) == 3,
       "Please update the switch statement above if LinearToleranceStrategy enum changes");
+  return eta;
+}
 
-  linearParams.relTol = static_cast<real>(eta);
+template <typename T>
+void NewtonSolver<T>::SetLinearSolverParams(
+    Problem const& problem,
+    Status const& status,
+    T linearResidualNorm) {
+  // Read the user's absTol from _params: an earlier iteration replaced the linear solver's copy
+  // with a normalized one.
+  double absTol = _params.lParams.absTol;
+  ForcingTermNorms norms{.res = status.resNorm, .prevRes = status.prevResNorm};
+
+  if (details::UsesResidualWeights(_params.lParams) && UsesPerActorConvergence(problem, _params)) {
+    auto const actorNorms = MakeConstSpan(status.actorResidualWeightedNorm);
+    T const maxActorNorm = Max(actorNorms);
+    MOCHI_ASSERT_VERBOSE(
+        !IsFinite(status.resNorm) || maxActorNorm > T{0},
+        "Every actor converged, so the solve should have stopped.");
+
+    _workspace.actorScales.resize_noinit(actorNorms.size());
+    _workspace.residualWeights.Resize(problem.GetResidual().Rows());
+
+    T const actorAbsTol = static_cast<T>(absTol);
+    T normalizedAbsTol = std::numeric_limits<T>::max();
+    T resSqr = 0;
+    T weightedResSqr = 0;
+    [[maybe_unused]] int numRows = 0;
+    for (int i = 0; i < isize(actorNorms); ++i) {
+      // The forcing term uses the previous scales, which this iteration then replaces.
+      resSqr += (status.numIterDone == 0) ? T{0} : Sqr(actorNorms[i] / _workspace.actorScales[i]);
+
+      T scale = Max(actorNorms[i], _params.absTolRes);
+      if (scale == T{0}) {
+        // Unloaded actor with absTol = 0. The largest actor norm scales it instead.
+        scale = maxActorNorm;
+      }
+      _workspace.actorScales[i] = scale;
+
+      // |r_a|_W <= scale |r|_N, so an absolute stop leaves this actor within actorAbsTol.
+      normalizedAbsTol = Min(normalizedAbsTol, actorAbsTol / scale);
+      weightedResSqr += Sqr(actorNorms[i] / scale);
+
+      auto const& [offset, weights] = problem.actorConvergenceWeights[i];
+      // Compute w / scale² in double to avoid FP32 intermediate overflow. Clamp before converting
+      // to T so zero residuals do not form 0 * inf.
+      double const invScaleSqr = 1.0 / Sqr(static_cast<double>(scale));
+      for (int k = 0; k < weights->Rows(); ++k) {
+        _workspace.residualWeights[offset + k] = static_cast<T>(
+            Min(static_cast<double>((*weights)[k]) * invScaleSqr,
+                static_cast<double>(std::numeric_limits<T>::max())));
+      }
+      numRows += weights->Rows();
+    }
+
+    // The actors' residuals tile the residual, and their weights have the same offsets and sizes.
+    MOCHI_ASSERT_VERBOSE(
+        numRows == _workspace.residualWeights.Rows(), "Rows without residual weights.");
+
+    norms = {.res = Sqrt(resSqr), .prevRes = _workspace.weightedResNorm};
+    _workspace.weightedResNorm = Sqrt(weightedResSqr);
+    absTol = normalizedAbsTol;
+  } else {
+    _workspace.residualWeights.Resize(0);
+  }
+
+  auto linearParams = _linearSolver->GetParams();
+  linearParams.relTol = ForcingTerm(status, norms, linearResidualNorm);
+  linearParams.absTol = absTol;
   _linearSolver->SetParams(linearParams);
 }
 
@@ -698,9 +791,9 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
       return status;
     }
 
-    // Set the relative tolerance of the linear solver and advance the iteration state for the next
-    // iteration. Order matters: SetLinearSolverRelativeTolerance reads prevResNorm and numIterDone.
-    SetLinearSolverRelativeTolerance(status, linearResidualNorm);
+    // Set the parameters of the linear solver and advance the iteration state for the next
+    // iteration. Order matters: SetLinearSolverParams reads prevResNorm and numIterDone.
+    SetLinearSolverParams(problem, status, linearResidualNorm);
     status.prevResNorm = status.resNorm;
     status.numIterDone++;
 
@@ -728,7 +821,8 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
           problem.GetResidual(),
           dxSolve,
           /*hasOperatorChanged*/ true,
-          InitialGuessHint::Zero);
+          InitialGuessHint::Zero,
+          MakeConstSpan(_workspace.residualWeights));
       status.linearSolveSec += ToSeconds(Timer::Now() - linearSolveStart);
       MOCHI_ASSERT_VERBOSE(
           linearResult.convergence != LinearSolverConvergenceStatus::None,

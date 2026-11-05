@@ -48,6 +48,11 @@ struct NewtonSolverStatus {
   /// NewtonSolverParams::convergenceMode is @ref NonLinearSolverConvergenceMode::PerActorWeighted.
   DynamicArray<T> actorResidualWeightedNorm0;
 
+  /// @brief Per-actor weighted residual norms |r|_W of the final solution, or of the solution
+  /// before the last Newton step if an explosion stopped the solve. Only populated if @ref
+  /// NewtonSolverParams::convergenceMode is @ref NonLinearSolverConvergenceMode::PerActorWeighted.
+  DynamicArray<T> actorResidualWeightedNorm;
+
   /// @brief Per-actor convergence status. Only populated if @ref
   /// NewtonSolverParams::convergenceMode is @ref NonLinearSolverConvergenceMode::PerActorWeighted.
   DynamicArray<ConvergenceStatus> actorConvergence;

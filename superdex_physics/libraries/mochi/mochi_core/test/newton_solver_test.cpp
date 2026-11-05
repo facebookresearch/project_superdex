@@ -595,9 +595,9 @@ TEST(NewtonSolver, LinearToleranceStrategy2) {
 
 /**
  * Two-actor problem with mixed linear/nonlinear actors for testing PerActorWeighted convergence.
- * Actor 0 owns DoF 0: r₀ = a·x₀ - b         (linear, converges in 1 Newton iteration)
- * Actor 1 owns DoF 1: r₁ = x₁² - c          (nonlinear, solution x₁ = √c)
- * The two actors are decoupled (diagonal dresidual).
+ * Actor 0 owns DoF 0: r₀ = x₀ - b + c·x₁    (linear, converges in 1 Newton iteration if c = 0)
+ * Actor 1 owns DoF 1: r₁ = x₁² - 2 + c·x₀   (nonlinear, solution x₁ = √2 if c = 0)
+ * By default, b = 2 and c = 0, which decouples the actors (diagonal dresidual).
  *
  * If populateConvergenceWeights is false, actorConvergenceWeights is left empty so that
  * PerActorWeighted mode triggers the size-mismatch fallback-to-Global path.
@@ -606,7 +606,9 @@ static SnleProblem<real> GetTwoActorMixedProblem(
     ColumnVector<real> const& weight0,
     ColumnVector<real> const& weight1,
     bool populateConvergenceWeights = true,
-    bool reverseActorOrder = false) {
+    bool reverseActorOrder = false,
+    real coupling = 0_r,
+    real load0 = 2_r) {
   auto residual0 = ColumnVector<real>::Zero(1);
   auto residual1 = ColumnVector<real>::Zero(1);
   auto dresidual = AnyMatrix<real>{Matrix<real>::Zero(2, 2)};
@@ -615,11 +617,12 @@ static SnleProblem<real> GetTwoActorMixedProblem(
                         SnleProblem<real>& problem, AssemblyParams const& params) mutable {
     auto const x = problem.GetSolution();
     if (params.assemObj) {
-      problem.objective = 0.5 * x[0] * x[0] - 2_r * x[0] + x[1] * x[1] * x[1] / 3.0 - 2_r * x[1];
+      problem.objective = 0.5 * x[0] * x[0] - load0 * x[0] + x[1] * x[1] * x[1] / 3.0 - 2_r * x[1] +
+          coupling * x[0] * x[1];
     }
     if (params.assemRes) {
-      residual0[0] = x[0] - 2_r;
-      residual1[0] = x[1] * x[1] - 2_r;
+      residual0[0] = x[0] - load0 + coupling * x[1];
+      residual1[0] = x[1] * x[1] - 2_r + coupling * x[0];
       problem.actorResiduals.clear();
       problem.actorConvergenceWeights.clear();
       auto addActor =
@@ -641,8 +644,8 @@ static SnleProblem<real> GetTwoActorMixedProblem(
       auto& d = std::get<Matrix<real>>(dresidual);
       d(0, 0) = 1_r;
       d(1, 1) = 2_r * x[1];
-      d(0, 1) = 0_r;
-      d(1, 0) = 0_r;
+      d(0, 1) = coupling;
+      d(1, 0) = coupling;
       problem.actorMatrices.clear();
       problem.actorMatrices.emplace_back(0, &dresidual);
     }
@@ -765,6 +768,196 @@ TEST(NewtonSolver, PerActorWeighted_FallbackToGlobal) {
 
   EXPECT_EQ(ConvergenceStatus::Converged, status.convergence); // Solver converged.
   EXPECT_TRUE(status.actorConvergence.empty()); // Empty after fallback.
+}
+
+/**
+ * Parameters and residual weights of the last linear solve in @p numNewtonIters Newton iterations.
+ * Each linear solve stops after one CG iteration and each step skips the line search, so every
+ * linear solver norm follows the same Newton iterates.
+ */
+[[nodiscard]] static std::pair<KrylovSolverParams, ColumnVector<real>> GetLastLinearSolve(
+    SnleProblem<real>& problem,
+    ColumnVector<real> const& x0,
+    NewtonSolverParams params,
+    int numNewtonIters) {
+  struct Solver : NewtonSolver<real> {
+    using NewtonSolver<real>::NewtonSolver;
+
+    [[nodiscard]] std::pair<KrylovSolverParams, ColumnVector<real>> GetLinearSolve() const {
+      return {_linearSolver->GetParams(), _workspace.residualWeights};
+    }
+  };
+
+  params.maxIter = numNewtonIters;
+  params.lineSearch.type = LineSearchType::None;
+  params.lParams.solverType = LinearSolverType::CG;
+  params.lParams.preconditionerType = PreconditionerType::Jacobi;
+  params.lParams.maxIter = 1;
+  params.verbosity = VerbosityLevel::Error; // The linear solves stop without converging.
+
+  problem.SetSolution(x0);
+  Solver solver(params);
+  solver.Solve(problem);
+  return solver.GetLinearSolve();
+}
+
+/**
+ * Forcing terms, absolute tolerances and residual weights against an oracle in double precision for
+ * the Jacobi-preconditioned CG iteration. Actor 0 starts with a residual below absTol, which then
+ * scales it, and the coupling leaves it a linear residual. Global mode solves on the L2-norm.
+ */
+TEST(NewtonSolver, ForcingTermNorms) {
+  double constexpr kCoupling = 1e-4;
+  double constexpr kLoad0 = 9.3e-5;
+  double constexpr kAbsTol = 1e-4;
+  double constexpr kRelTol = 1e-5;
+  double constexpr kLinearAbsTol = 1e-6;
+  std::array<double, 2> constexpr kWeights = {1, 4};
+  std::array<double, 2> constexpr kX0 = {0, 1.43};
+  double const kTol = 1e5 * std::numeric_limits<real>::epsilon();
+
+  auto residual = [](std::array<double, 2> const& x) {
+    return std::array<double, 2>{
+        x[0] - kLoad0 + kCoupling * x[1], x[1] * x[1] - 2 + kCoupling * x[0]};
+  };
+  std::array<double, 2> const f0 = residual(kX0);
+  std::array<double, 2> const z = {f0[0], f0[1] / (2 * kX0[1])};
+  std::array<double, 2> const jz = {z[0] + kCoupling * z[1], kCoupling * z[0] + 2 * kX0[1] * z[1]};
+  double const alpha = (f0[0] * z[0] + f0[1] * z[1]) / (z[0] * jz[0] + z[1] * jz[1]);
+  std::array<double, 2> const r0 = {f0[0] - alpha * jz[0], f0[1] - alpha * jz[1]};
+  std::array<double, 2> const f1 = residual({kX0[0] - alpha * z[0], kX0[1] - alpha * z[1]});
+
+  auto scale = [&](std::array<double, 2> const& f, int i) {
+    return Max(Sqrt(kWeights[i]) * Abs(f[i]), kAbsTol);
+  };
+  auto norm = [&](std::array<double, 2> const& v, bool perActor) {
+    double normSqr = 0;
+    for (int i = 0; i < 2; ++i) {
+      normSqr += perActor ? kWeights[i] * Sqr(v[i] / scale(f0, i)) : Sqr(v[i]);
+    }
+    return Sqrt(normSqr);
+  };
+  auto expectedForcingTerm = [&](LinearToleranceStrategy strategy, bool perActor) {
+    if (strategy == LinearToleranceStrategy::EisenstatWalker1) {
+      return Abs(norm(f1, perActor) - norm(r0, perActor)) / norm(f0, perActor);
+    } else if (strategy == LinearToleranceStrategy::EisenstatWalker2) {
+      return 0.9 * Pow(norm(f1, perActor) / norm(f0, perActor), 0.5 + 0.5 * Sqrt(5.0));
+    } else {
+      return kRelTol;
+    }
+  };
+
+  auto const weight0 = ColumnVector<real>({{real(kWeights[0])}});
+  auto const weight1 = ColumnVector<real>({{real(kWeights[1])}});
+  auto twoActors = GetTwoActorMixedProblem(
+      weight0,
+      weight1,
+      /*populateConvergenceWeights*/ true,
+      /*reverseActorOrder*/ false,
+      real(kCoupling),
+      real(kLoad0));
+  ColumnVector<real> const x0({{real(kX0[0]), real(kX0[1])}});
+
+  NewtonSolverParams params;
+  params.absTolRes = real(kAbsTol);
+  params.lParams.relTol = kRelTol;
+  params.lParams.absTol = kLinearAbsTol;
+
+  using Norm = LinearSolverConvergenceNorm;
+  using Mode = NonLinearSolverConvergenceMode;
+  for (auto const strategy :
+       {LinearToleranceStrategy::EisenstatWalker1,
+        LinearToleranceStrategy::EisenstatWalker2,
+        LinearToleranceStrategy::Constant}) {
+    params.linearToleranceStrategy = strategy;
+    double const expectedL2 = expectedForcingTerm(strategy, false);
+    double const expectedPerActor = expectedForcingTerm(strategy, true);
+
+    for (auto const& [normType, mode] :
+         {std::pair{Norm::ResidualL2, Mode::PerActorWeighted},
+          std::pair{Norm::ResidualPerActorWeighted, Mode::PerActorWeighted},
+          std::pair{Norm::ResidualPerActorWeighted, Mode::Global}}) {
+      params.lParams.normType = normType;
+      params.convergenceMode = mode;
+      auto const [linearParams, weights] =
+          GetLastLinearSolve(twoActors, x0, params, /*numNewtonIters*/ 2);
+      bool const perActor =
+          (normType == Norm::ResidualPerActorWeighted && mode == Mode::PerActorWeighted);
+
+      double const expected = perActor ? expectedPerActor : expectedL2;
+      // Constant keeps relTol exactly.
+      double const tol = (strategy == LinearToleranceStrategy::Constant) ? 0 : kTol * expected;
+      EXPECT_NEAR(expected, linearParams.relTol, tol);
+
+      // The per-actor norm takes absTol in Newton's units, which the largest scale converts.
+      double const expectedAbsTol =
+          perActor ? kLinearAbsTol / Max(scale(f1, 0), scale(f1, 1)) : kLinearAbsTol;
+      EXPECT_NEAR(expectedAbsTol, linearParams.absTol, kTol * expectedAbsTol);
+
+      // The second solve's weights use the scales of the second iterate.
+      ASSERT_EQ(perActor ? 2 : 0, weights.Rows());
+      for (int i = 0; i < weights.Rows(); ++i) {
+        double const expectedWeight = kWeights[i] / Sqr(scale(f1, i));
+        EXPECT_NEAR(expectedWeight, weights[i], kTol * expectedWeight);
+      }
+    }
+
+    if (strategy != LinearToleranceStrategy::Constant) {
+      EXPECT_GT(Max(expectedL2, expectedPerActor), 1.4 * Min(expectedL2, expectedPerActor));
+    }
+  }
+}
+
+/**
+ * With absTol = 0, an actor without residual takes the largest actor norm as its scale, in the
+ * first iteration and after a step. A residual weight beyond the largest finite value is clamped to
+ * it. With a tiny scale, a weight that fits stays exact even where 1/scale² overflows in FP32, and
+ * a zero weight stays 0.
+ */
+TEST(NewtonSolver, PerActorWeighted_ZeroAbsTol) {
+  NewtonSolverParams params;
+  params.convergenceMode = NonLinearSolverConvergenceMode::PerActorWeighted;
+  params.lParams.normType = LinearSolverConvergenceNorm::ResidualPerActorWeighted;
+  params.absTolRes = 0_r;
+  params.lParams.absTol = 1e-9;
+
+  // At x = (2, 2), the residual is (0, 2). A step leaves actor 0 at exactly 0, since its
+  // preconditioned residual is 0, and actor 1 at 1/4. Actor 1's norm scales both actors.
+  ColumnVector<real> const x0({{2_r, 2_r}});
+  auto const weight1 = ColumnVector<real>::Ones(1);
+  real constexpr kMaxReal = std::numeric_limits<real>::max();
+  for (real const w0 : {100_r, kMaxReal}) {
+    auto const weight0 = ColumnVector<real>({{w0}});
+    auto problem = GetTwoActorMixedProblem(weight0, weight1);
+    for (auto const& [numNewtonIters, actor1Norm] : {std::pair{1, 2_r}, std::pair{2, 0.25_r}}) {
+      auto const [linearParams, weights] = GetLastLinearSolve(problem, x0, params, numNewtonIters);
+      ASSERT_EQ(2, weights.Rows());
+      EXPECT_EQ(Min(w0 / Sqr(actor1Norm), kMaxReal), weights[0]);
+      EXPECT_EQ(1_r / Sqr(actor1Norm), weights[1]);
+      EXPECT_EQ(static_cast<double>(1e-9_r / actor1Norm), linearParams.absTol);
+    }
+  }
+
+  // A tiny absTol scales actor 0, so that 1/scale² overflows in FP32.
+  struct Case {
+    real absTol;
+    real w0;
+    real expected;
+  };
+  for (auto const& [absTol, w0, expected] :
+       {Case{
+            .absTol = std::ldexp(1_r, -68),
+            .w0 = std::ldexp(1_r, -16),
+            .expected = std::ldexp(1_r, 120)},
+        Case{.absTol = std::ldexp(1_r, -149), .w0 = 0_r, .expected = 0_r}}) {
+    params.absTolRes = absTol;
+    auto const weight0 = ColumnVector<real>({{w0}});
+    auto problem = GetTwoActorMixedProblem(weight0, weight1);
+    auto const [linearParams, weights] = GetLastLinearSolve(problem, x0, params, 1);
+    ASSERT_EQ(2, weights.Rows());
+    EXPECT_EQ(expected, weights[0]);
+    EXPECT_EQ(0.25_r, weights[1]);
+  }
 }
 
 // ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯

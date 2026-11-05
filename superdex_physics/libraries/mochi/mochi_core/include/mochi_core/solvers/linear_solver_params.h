@@ -313,10 +313,12 @@ namespace mochi {
 /**
  * @brief Norm types for the stopping criteria of the linear solver.
  *
- * @note This setting only applies to @ref LinearSolverType::CG, @ref LinearSolverType::CudaCG, @ref
- * LinearSolverType::ParallelCG and @ref LinearSolverType::AsyncCG. @ref LinearSolverType::GMRES,
- * @ref LinearSolverType::CudaGMRES, and @ref LinearSolverType::AugmentedCG always use the L2-norm
- * of the residual regardless of this setting. @ref LinearSolverType::MINRES always uses the
+ * @note @ref LinearSolverType::CG, @ref LinearSolverType::ParallelCG and @ref
+ * LinearSolverType::AsyncCG support every norm. @ref LinearSolverType::CudaCG supports every norm
+ * except @ref LinearSolverConvergenceNorm::ResidualPerActorWeighted, for which it uses @ref
+ * LinearSolverConvergenceNorm::PreconditionedResidualL2. @ref LinearSolverType::GMRES, @ref
+ * LinearSolverType::CudaGMRES, and @ref LinearSolverType::AugmentedCG always use the L2-norm of the
+ * residual regardless of this setting. @ref LinearSolverType::MINRES always uses the
  * preconditioner-induced norm of the residual. Direct solvers do not have stop criteria.
  */
 enum struct LinearSolverConvergenceNorm {
@@ -325,6 +327,20 @@ enum struct LinearSolverConvergenceNorm {
                             ///< \f$z = M^{-1}r\f$.
   ResidualPreconditionerInduced, ///< Preconditioner-induced norm of the residual:
                                  ///< \f$\sqrt{\langle r, z \rangle}\f$ where \f$z = M^{-1}r\f$.
+  /**
+   * @brief Per-actor weighted L2-norm of the residual, each actor normalized by its own non-linear
+   * residual, so actors have comparable influence regardless of the magnitude of their residuals.
+   *
+   * @details \f$\|r\| = \sqrt{\sum_a \|r_a\|_W^2 / s_a^2}\f$, where
+   * \f$\|r_a\|_W = \sqrt{\sum_i w_i r_i^2}\f$ uses actor \f$a\f$'s weights from @ref
+   * NonLinearSolverConvergenceMode::PerActorWeighted, and \f$s_a\f$ is the larger of actor
+   * \f$a\f$'s non-linear residual in that norm and @ref NonLinearSolverParams::absTol, or, if both
+   * are zero, the largest actor's residual.
+   *
+   * @note In @ref NonLinearSolverConvergenceMode::Global mode, the solvers that support it use @ref
+   * LinearSolverConvergenceNorm::ResidualL2 instead.
+   */
+  ResidualPerActorWeighted,
   Count, ///< Number of linear solver convergence norm enum values.
   Default = PreconditionedResidualL2 ///< Default linear solver convergence norm.
 };
@@ -334,6 +350,7 @@ MOCHI_ENUM_BEGIN(mochi::LinearSolverConvergenceNorm)
 MOCHI_ENUM_ITEM(ResidualL2)
 MOCHI_ENUM_ITEM(PreconditionedResidualL2)
 MOCHI_ENUM_ITEM(ResidualPreconditionerInduced)
+MOCHI_ENUM_ITEM(ResidualPerActorWeighted)
 MOCHI_ENUM_COUNT(Count)
 MOCHI_ENUM_END()
 
@@ -366,6 +383,9 @@ struct LinearSolverParams {
    * @brief Absolute residual norm tolerance for convergence.
    *
    * @note Applies only to iterative solvers.
+   * @note When the solver stops on @ref LinearSolverConvergenceNorm::ResidualPerActorWeighted, the
+   * absolute stop ends the solve only once every actor's weighted residual \f$\|r_a\|_W\f$ is at
+   * most @ref absTol. Otherwise, it bounds the solver's stopping norm.
    */
   real absTol = 1e-9_r;
 

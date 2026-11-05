@@ -46,6 +46,7 @@
 #include <mochi_core/solvers/krylov_solver.h>
 #include <mochi_core/solvers/linear_solver_params.h>
 #include <mochi_core/utils/log.h>
+#include <mochi_core/utils/span.h>
 #include <mochi_core/utils/task_scheduler.h>
 
 #include <functional>
@@ -138,20 +139,58 @@ inline constexpr bool UseIslandOperators(KrylovSolverParams const& params) {
        (params.preconditionerType == PreconditionerType::PerActor));
 }
 
-/// @brief Dispatches a runtime LinearSolverConvergenceNorm to the corresponding compile-time
+/// @brief Returns the norm that the stop criterion of the solver selected by @p params uses (see
+/// @ref LinearSolverConvergenceNorm).
+[[nodiscard]] inline constexpr LinearSolverConvergenceNorm EffectiveConvergenceNorm(
+    KrylovSolverParams const& params) {
+  static_assert(
+      static_cast<int>(LinearSolverType::Count) == 14 &&
+          static_cast<int>(LinearSolverConvergenceNorm::Count) == 4,
+      "Please update this function if either enumerator changes");
+  LinearSolverType const solverType = params.solverType;
+  if (solverType == LinearSolverType::MINRES) {
+    return LinearSolverConvergenceNorm::ResidualPreconditionerInduced;
+  } else if (
+      solverType == LinearSolverType::GMRES || solverType == LinearSolverType::CudaGMRES ||
+      solverType == LinearSolverType::AugmentedCG) {
+    return LinearSolverConvergenceNorm::ResidualL2;
+  } else if (
+      solverType == LinearSolverType::CudaCG &&
+      params.normType == LinearSolverConvergenceNorm::ResidualPerActorWeighted) {
+    return LinearSolverConvergenceNorm::PreconditionedResidualL2;
+  } else {
+    return params.normType;
+  }
+}
+
+/// @brief Whether the solver selected by @p params stops on per-row residual weights, i.e. on @ref
+/// LinearSolverConvergenceNorm::ResidualPerActorWeighted.
+[[nodiscard]] inline constexpr bool UsesResidualWeights(KrylovSolverParams const& params) {
+  return IsIterativeSolver(params.solverType) &&
+      EffectiveConvergenceNorm(params) == LinearSolverConvergenceNorm::ResidualPerActorWeighted;
+}
+
+/// @brief Dispatches the runtime @ref EffectiveConvergenceNorm to the corresponding compile-time
 /// stop criterion type and invokes the given callable with it. The callable must accept a reference
 /// to a stop criterion object (use a generic lambda) and return a LinearSolverStatus.
-template <typename T, typename Fn>
-LinearSolverStatus DispatchConvergenceNorm(KrylovSolverParams const& params, Fn&& fn) {
+///
+/// @param[in] residualDot Dot operation of the residual's norm, for @ref
+/// LinearSolverConvergenceNorm::ResidualL2 and @ref
+/// LinearSolverConvergenceNorm::ResidualPerActorWeighted.
+template <typename T, typename ResidualDot, typename Fn>
+[[nodiscard]] LinearSolverStatus
+DispatchConvergenceNorm(KrylovSolverParams const& params, ResidualDot const& residualDot, Fn&& fn) {
   static_assert(
-      static_cast<int>(LinearSolverConvergenceNorm::Count) == 3,
+      static_cast<int>(LinearSolverConvergenceNorm::Count) == 4,
       "Please update DispatchConvergenceNorm if LinearSolverConvergenceNorm enumerator changes");
   auto const relTol = static_cast<T>(params.relTol);
   auto const absTol = static_cast<T>(params.absTol);
   auto const relDivTol = static_cast<T>(params.relDivTol);
-  switch (params.normType) {
-    case LinearSolverConvergenceNorm::ResidualL2: {
-      krylov::StatusResidualL2<krylov::UsualDot, T> stopCriterion(relTol, absTol, relDivTol);
+  switch (EffectiveConvergenceNorm(params)) {
+    case LinearSolverConvergenceNorm::ResidualL2:
+    case LinearSolverConvergenceNorm::ResidualPerActorWeighted: {
+      krylov::StatusResidualL2<ResidualDot, T> stopCriterion(
+          relTol, absTol, relDivTol, /*retainedDirections*/ 0, residualDot);
       return fn(stopCriterion);
     }
     case LinearSolverConvergenceNorm::PreconditionedResidualL2: {
@@ -279,13 +318,17 @@ class LinearSolver {
   /// false for a changed operator is incorrect. Default is true.
   /// @param[in] initialGuessHint Indicates whether @p x is known to be zero. The zero hint enables
   /// iterative solvers to skip work and requires @p x to be exactly zero.
+  /// @param[in] residualWeights Per-row weights of @ref
+  /// LinearSolverConvergenceNorm::ResidualPerActorWeighted, one per row of @p b. Must be empty
+  /// unless the solver stops on that norm, where empty weights stop on the L2-norm of the residual.
   template <int kPrecBlockSize = 3, typename MatrixType, typename RhsType, typename SolType>
   LinearSolverStatus Solve(
       MatrixType const& A,
       RhsType const& b,
       SolType& x,
       bool hasOperatorChanged = true,
-      InitialGuessHint initialGuessHint = InitialGuessHint::Unknown);
+      InitialGuessHint initialGuessHint = InitialGuessHint::Unknown,
+      Span<T const> residualWeights = {});
 
  protected:
   template <typename MatrixType, typename RhsType, typename SolType, typename PrecType>
@@ -294,7 +337,8 @@ class LinearSolver {
       RhsType const& b,
       SolType& x,
       PrecType const& prec,
-      InitialGuessHint initialGuessHint);
+      InitialGuessHint initialGuessHint,
+      Span<T const> weights);
 
   template <int kPrecBlockSize, typename MatrixType, typename RhsType, typename SolType>
   LinearSolverStatus CudaIterativeSolve(MatrixType const& A, RhsType const& b, SolType& x);
@@ -340,13 +384,18 @@ LinearSolverStatus LinearSolver<T>::Solve(
     RhsType const& b,
     SolType& x,
     bool hasOperatorChanged,
-    InitialGuessHint initialGuessHint) {
+    InitialGuessHint initialGuessHint,
+    Span<T const> residualWeights) {
   if constexpr (IsLinearOperator<MatrixType>) {
     static_assert(!IsCuda<MatrixType>, "CUDA matrices not supported yet");
     MOCHI_PROFILE_SCOPE();
     MOCHI_ASSERT_VERBOSE(A.Rows() == A.Cols(), "Input matrix must be square.");
     MOCHI_ASSERT_VERBOSE((A.Cols() == x.Rows()) && (x.Rows() == b.Rows()), "Inconsistent sizes.");
     MOCHI_ASSERT_VERBOSE(_precRecyclingMgr, "Invalid preconditioner recycling pointer.");
+    MOCHI_ASSERT_VERBOSE(
+        residualWeights.empty() ||
+            (details::UsesResidualWeights(_params) && isize(residualWeights) == b.Rows()),
+        "Residual weights require a solver that uses them and one weight per row.");
 
     if (hasOperatorChanged) {
       // Factorizations are no longer valid.
@@ -487,7 +536,8 @@ LinearSolverStatus LinearSolver<T>::Solve(
           b,
           x,
           details::PrecApplyer<T>{*_precRecyclingMgr->GetPreconditioner()},
-          initialGuessHint);
+          initialGuessHint,
+          residualWeights);
     } else if (
         _params.solverType == LinearSolverType::CudaCG ||
         _params.solverType == LinearSolverType::CudaGMRES) {
@@ -500,7 +550,8 @@ LinearSolverStatus LinearSolver<T>::Solve(
     // specialization with the actual implementation, i.e. the 'if' branch above.
     return std::visit(
         [&](auto const& mat) {
-          return Solve<kPrecBlockSize>(mat, b, x, hasOperatorChanged, initialGuessHint);
+          return Solve<kPrecBlockSize>(
+              mat, b, x, hasOperatorChanged, initialGuessHint, residualWeights);
         },
         A);
   }
@@ -513,9 +564,11 @@ LinearSolverStatus LinearSolver<T>::IterativeSolve(
     RhsType const& b,
     SolType& x,
     PrecType const& prec,
-    InitialGuessHint initialGuessHint) {
+    InitialGuessHint initialGuessHint,
+    Span<T const> weights) {
+  krylov::WeightedDot<T> const residualDot{weights};
   if (_params.solverType == LinearSolverType::CG) {
-    return details::DispatchConvergenceNorm<T>(_params, [&](auto& stopCriterion) {
+    return details::DispatchConvergenceNorm<T>(_params, residualDot, [&](auto& stopCriterion) {
       return krylov::PCG(
           A,
           b,
@@ -530,7 +583,7 @@ LinearSolverStatus LinearSolver<T>::IterativeSolve(
     });
   } else if (_params.solverType == LinearSolverType::ParallelCG) {
     if constexpr (!IsCuda<MatrixType>) {
-      return details::DispatchConvergenceNorm<T>(_params, [&](auto& stopCriterion) {
+      return details::DispatchConvergenceNorm<T>(_params, residualDot, [&](auto& stopCriterion) {
         return krylov::ParallelPCG(
             A,
             b,
@@ -548,7 +601,7 @@ LinearSolverStatus LinearSolver<T>::IterativeSolve(
     }
   } else if (_params.solverType == LinearSolverType::AsyncCG) {
     if constexpr (!IsCuda<MatrixType>) {
-      return details::DispatchConvergenceNorm<T>(_params, [&](auto& stopCriterion) {
+      return details::DispatchConvergenceNorm<T>(_params, residualDot, [&](auto& stopCriterion) {
         return krylov::AsyncPCG(
             A,
             b,
@@ -566,12 +619,6 @@ LinearSolverStatus LinearSolver<T>::IterativeSolve(
     }
   } else if (_params.solverType == LinearSolverType::AugmentedCG) {
     if constexpr (!IsCuda<MatrixType>) {
-      if (_params.normType != LinearSolverConvergenceNorm::ResidualL2) {
-        MOCHI_LOG_WARNING_ONCE(
-            "Augmented PCG requires the L2-norm of the residual to monitor convergence. The requested "
-            "convergence norm type (%i) is different and will be ignored.",
-            static_cast<int>(_params.normType));
-      }
       krylov::StatusResidualL2<krylov::UsualDot, T> stopCriterion(
           static_cast<T>(_params.relTol),
           static_cast<T>(_params.absTol),
@@ -636,7 +683,8 @@ LinearSolverStatus LinearSolver<T>::CudaIterativeSolve(
         details::CreateCudaPreconditioner<T, kPrecBlockSize>(ACuda, _params.preconditionerType);
 
     if (_params.solverType == LinearSolverType::CudaCG) {
-      status = details::DispatchConvergenceNorm<T>(_params, [&](auto& stopCriterion) {
+      krylov::UsualDot const residualDot = {};
+      status = details::DispatchConvergenceNorm<T>(_params, residualDot, [&](auto& stopCriterion) {
         return krylov::CudaPCG(
             ACuda,
             bCuda,

@@ -110,13 +110,12 @@ LinearSolverStatus AsyncPCG(
   using NonConstScalar = typename MatType::NonConstScalar;
   using OwnerSolType = decltype(vectorFactory.GetSameAs(x));
   static_assert(
-      std::is_same_v<StopCriterion, StatusResidualL2<Dot, NonConstScalar>> ||
+      kIsResidualCriterion<StopCriterion, NonConstScalar> ||
           std::is_same_v<StopCriterion, StatusPreconditionedResidualL2<Dot, NonConstScalar>> ||
           std::is_same_v<StopCriterion, StatusResidualPreconditionerInduced<Dot, NonConstScalar>>,
       "Unsupported stop criterion");
   constexpr bool kStatusCheckNeedsPrecResidual =
-      std::is_same_v<StopCriterion, StatusPreconditionedResidualL2<Dot, NonConstScalar>> ||
-      std::is_same_v<StopCriterion, StatusResidualPreconditionerInduced<Dot, NonConstScalar>>;
+      !kIsResidualCriterion<StopCriterion, NonConstScalar>;
   // The criterion owns a separate Dot. Reusing its rTz is safe only when both instances produce
   // identical results. UsualDot guarantees this.
   constexpr bool kCanReuseCriterionRTz = std::is_same_v<Dot, UsualDot> &&
