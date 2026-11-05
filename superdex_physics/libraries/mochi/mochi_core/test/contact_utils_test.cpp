@@ -19,6 +19,7 @@
 #include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/rand_utils.h>
+#include <mochi_core/utils/spmat_utils.h>
 
 #include <gtest/gtest.h>
 
@@ -1535,6 +1536,34 @@ TEST(ContactJac, CoalesceColumnsByCachedMapping) {
       groupedColumns += group.count;
     }
     EXPECT_EQ(kNewWidth, groupedColumns);
+  }
+}
+
+TEST(ContactJac, CompressIndicesOfRepeatedRows) {
+  // Rows 0 and 1 are equal, as are rows 3 and 4, like the rows of contacts on one surface element.
+  // Row 2 differs from row 1 only in its first triplet and from row 3 only in its last index. Each
+  // row must get the groups of its own DoF indices, also when the group counts differ.
+  constexpr int kWidth = 6;
+  std::array<std::array<int, kWidth>, 5> const rows = {{
+      {9, 10, 11, 3, 4, 5},
+      {9, 10, 11, 3, 4, 5},
+      {0, 1, 2, 3, 4, 5},
+      {0, 1, 2, 3, 4, 3},
+      {0, 1, 2, 3, 4, 3},
+  }};
+  ContactJac jac;
+  // Per-contact DoFs, so CompressIndices forces triplets.
+  jac.Resize(/*sharedDoFs*/ false, /*sharedJacs*/ false, kWidth, isize(rows));
+  for (int contact = 0; contact < isize(rows); ++contact) {
+    std::copy(rows[contact].begin(), rows[contact].end(), jac.Inds(contact).begin());
+  }
+
+  jac.CompressIndices();
+
+  EXPECT_TRUE(jac.groupsInitialized);
+  for (int contact = 0; contact < isize(rows); ++contact) {
+    EXPECT_SPAN_EQ(
+        CreateIndexGroups(rows[contact], /*forceTriplets*/ true), jac.IndGroups(contact));
   }
 }
 

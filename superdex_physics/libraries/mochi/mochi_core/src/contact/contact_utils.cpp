@@ -1606,16 +1606,22 @@ void mochi::ContactJac::CompressIndices() {
   // object, only groups of 3 indices share the same sparsity pattern.
   bool forceTriplets = !hasSharedDoFs;
 
-  // Prepare index groups. Create a temporary data structure that stores index groups for all
-  // contacts.
+  // Prepare index groups. Create a temporary data structure that stores the index groups of each
+  // row that differs from the previous one. Consecutive contacts often act on the same DoFs (e.g.,
+  // samples of one surface element), so a repeated row reuses the previous row's groups. Until the
+  // final storage is filled, indGroupCounts holds the index of each row's groups in indGroupsAll.
   MOCHI_FILO_STACK_ALLOCATOR(tempAlloc, 16 * 1024); // Probably more than enough
   DynamicArray<IndexGroups> indGroupsAll(&tempAlloc);
   indGroupsAll.reserve(numRows);
+  _data.indGroupCounts.resize_noinit(numRows);
   int maxGroups = 0;
   for (int i = 0; i < numRows; i++) {
-    auto groups = CreateIndexGroups(Inds(i), forceTriplets, &tempAlloc);
-    maxGroups = Max(maxGroups, isize(groups));
-    indGroupsAll.emplace_back(std::move(groups));
+    if (i == 0 || Inds(i) != Inds(i - 1)) {
+      auto groups = CreateIndexGroups(Inds(i), forceTriplets, &tempAlloc);
+      maxGroups = Max(maxGroups, isize(groups));
+      indGroupsAll.emplace_back(std::move(groups));
+    }
+    _data.indGroupCounts[i] = isize(indGroupsAll) - 1;
   }
 
   // Create final storage. Use the maximum group count across all contacts, since different
@@ -1624,11 +1630,11 @@ void mochi::ContactJac::CompressIndices() {
   // IndGroups(i) returns only the valid entries for each contact.
   _data.indGroups.clear();
   _data.indGroups.resize_noinit(numRows * maxGroups);
-  _data.indGroupCounts.resize_noinit(numRows);
   _indGroups.Reset(_data.indGroups.data(), numRows, maxGroups);
   for (int i = 0; i < numRows; i++) {
-    _data.indGroupCounts[i] = isize(indGroupsAll[i]);
-    std::copy(indGroupsAll[i].begin(), indGroupsAll[i].end(), _indGroups.Row(i).Data());
+    auto const& groups = indGroupsAll[_data.indGroupCounts[i]];
+    _data.indGroupCounts[i] = isize(groups);
+    std::copy_n(groups.begin(), groups.size(), _indGroups.Row(i).Data());
   }
 
   // The index groups are properly initialized

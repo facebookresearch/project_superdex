@@ -42,6 +42,8 @@ struct IndexGroup {
   int src = 0; // DoF index in the source data (the ContactJac data structure)
   int dst = 0; // DoF index in the destination data (res or dres)
   int count = 0; // Size of the DoF group
+
+  bool operator==(IndexGroup const&) const = default;
 };
 
 struct IndexGroups : public DynamicArray<IndexGroup> {
