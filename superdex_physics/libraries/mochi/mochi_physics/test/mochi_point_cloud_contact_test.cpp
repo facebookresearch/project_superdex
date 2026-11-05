@@ -281,10 +281,11 @@ TEST_P(MochiPointCloudColliderTest, SpatialHashTablePopulationAndContactIndexQue
       [](auto const& disc) { return disc.femElements[0].mapEvaluated[0]; });
 
   // Use 257 matching points to exercise ordered merging across the 256-point range boundary, then
-  // append one out-of-range point to verify it is rejected.
+  // append 256 out-of-range points to verify they are rejected, which leaves the last range without
+  // query points.
   int constexpr kNumExpectedContacts = 257;
   DynamicArray<Real3> collidingPointPositions(kNumExpectedContacts, contactPosition);
-  collidingPointPositions.push_back(Real3{10_r, 10_r, 10_r});
+  collidingPointPositions.resize(kNumExpectedContacts + 256, Real3{10_r, 10_r, 10_r});
 
   DynamicArray<int> pointIndices;
   DynamicArray<int> colliderPointIndices;

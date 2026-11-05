@@ -247,6 +247,13 @@ static void ComputePointCloudContactIndicesImpl(
           .referencePosition = {}};
     }
 
+    // Against another actor, a range often has no point inside the query bounds, and so no pairs:
+    // skip the sorts below, which zero-fill and prefix-sum kCollidingPointsPerRange + 1 counters
+    // each even without points.
+    if (numQueryPoints == 0) {
+      return;
+    }
+
     // Look up each query point's reference position for the self-contact exclusion test below,
     // which skips pairs whose reference positions are closer than the exclusion range: neighbors on
     // the same surface or rod, not contacts. Visit dispatches through a std::visit that some
