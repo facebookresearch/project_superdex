@@ -677,8 +677,8 @@ static real ComputeMaxSkinSpeed(
     Vec4r const frameAxis = ToSimd(frameAxes[e], 0_r);
     auto const differential = fem::ComputeRodElementFrameDifferential(x1 - x0, frameAxis);
 
-    Vec4r const velocity0 = Load<Vec4r>(&dofVelocity[node0Offset]);
-    Vec4r const velocity1 = Load<Vec4r>(&dofVelocity[node1Offset]);
+    auto const velocity0 = Load<Vec4r>(&dofVelocity[node0Offset]);
+    auto const velocity1 = Load<Vec4r>(&dofVelocity[node1Offset]);
     Vec4r const edgeVelocity = velocity1 - velocity0;
     real const twistVelocity = velocity0[fem::kRodThetaDofOffset];
     real finiteTwistRate = twistVelocity;
