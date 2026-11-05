@@ -32,6 +32,7 @@
 #include "mochi_query.h"
 #include "mochi_rigid.h"
 #include "mochi_rod.h"
+#include "mochi_scene_profiler.h"
 #include "mochi_shell.h"
 #include "mochi_sleep.h"
 #include "mochi_snle.h"
@@ -526,8 +527,12 @@ void mochi::StepEcs(entt::registry& reg) {
           MOCHI_DEFER(
               if (useLocalSingleThreadedMode) { TaskScheduler::PopLocalSingleThreadedMode(); });
 
+          if (auto* stats = reg.try_get<CIslandStats>(island)) {
+            *stats = {};
+          }
           PreStepIslandAsync(reg, descendants);
           solver::StepIslandNewtonAsync(reg, island, descendants);
+          profiler::ScopedIslandTimer const queryTimer(reg, island, &CIslandStats::queriesSec);
           PostStepIslandAsync(reg, descendants);
         });
       });

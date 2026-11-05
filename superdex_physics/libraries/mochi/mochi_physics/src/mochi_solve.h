@@ -66,6 +66,7 @@ void PreFirstStageLocalPipeline(entt::registry& reg, CIslandDescendants const& d
  */
 void PreStageLocalPipeline(
     entt::registry& reg,
+    entt::entity island,
     CIslandDescendants const& descendants,
     SnleProblem<real>& problem);
 
@@ -86,6 +87,7 @@ TimeIntegratorParams CreateIslandTimeIntegrationParams(
  */
 void UpdateDerivedStateBeforeAssembly(
     entt::registry& reg,
+    entt::entity island,
     GradTarget gradTarget,
     CIslandDescendants const& descendants);
 

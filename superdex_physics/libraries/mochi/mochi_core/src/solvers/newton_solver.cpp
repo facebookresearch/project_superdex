@@ -718,6 +718,7 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
       }
 
       bool const useIslandOperators = details::UseIslandOperators(_params.lParams);
+      TimePoint const linearSolveStart = Timer::Now();
       PrepareLinearOperator(problem, status, useIslandOperators, projectPsd, linOp);
 
       // Solve the linear system.
@@ -728,6 +729,7 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
           dxSolve,
           /*hasOperatorChanged*/ true,
           InitialGuessHint::Zero);
+      status.linearSolveSec += ToSeconds(Timer::Now() - linearSolveStart);
       MOCHI_ASSERT_VERBOSE(
           linearResult.convergence != LinearSolverConvergenceStatus::None,
           "Linear solver convergence status has not been set.");

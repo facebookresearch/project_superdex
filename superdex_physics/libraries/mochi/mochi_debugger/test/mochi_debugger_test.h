@@ -49,6 +49,7 @@ class MochiDebuggerTest : public ::testing::Test {
   void ConnectClient();
   void DisconnectClient();
 
+  int _numWorkerThreads = -1;
   Context* _context = nullptr;
   DebugServerInternal* _server = nullptr;
   std::unique_ptr<DebugClient> _client;

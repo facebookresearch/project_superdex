@@ -439,7 +439,8 @@ Context const* SceneImpl::GetContext() const {
 }
 
 SceneHandle SceneImpl::GetHandle() const {
-  MOCHI_ASSERT_VERBOSE(_registry.ctx<CSceneHandle>().value == SceneHandle{_sceneId});
+  // NOTE: This function is called asynchronously by the DebugServer. It must not access the
+  // ECS registry.
   return SceneHandle{_sceneId};
 }
 
@@ -690,6 +691,7 @@ void SceneImpl::Step(double timeStepSec) {
 
     double stepDuration = 0.0;
     dbg::StepProfileTimers stepProfile;
+    stepProfile.numWorkerThreads = TaskScheduler::StaticGetNumThreads();
     if (timeStepSec > 0.0) {
       // Quasistatic steps use backward Euler (see solver::CreateIslandTimeIntegrationParams).
       auto const method = _registry.ctx<CSimulationParams const>().integrationMethod;
@@ -717,21 +719,16 @@ void SceneImpl::Step(double timeStepSec) {
       sceneTime.Advance(timeStepSec);
 
       // ECS compute velocities and prepare actors
-      Timer phaseTimer;
       PreStepEcs(_registry);
-      stepProfile.preStepSec = ToSeconds(phaseTimer.GetElapsed());
 
       // ECS (step actors):
-      phaseTimer.Reset();
       StepEcs(_registry);
-      stepProfile.stepSec = ToSeconds(phaseTimer.GetElapsed());
 
       // ECS
-      phaseTimer.Reset();
       PostStepEcs(_registry);
-      stepProfile.postStepSec = ToSeconds(phaseTimer.GetElapsed());
 
       stepDuration = ToSeconds(timer.GetElapsed());
+      stepProfile.stepSec = stepDuration;
 
       ComputeAggregateSolverSceneStats(_registry, _lastSolverStats, _lastDebugStats);
     } else {

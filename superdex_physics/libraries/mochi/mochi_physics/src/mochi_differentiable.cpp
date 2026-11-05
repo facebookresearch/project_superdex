@@ -532,7 +532,7 @@ static void PrepareBackPropagationIslandAsync(
 
   // Set the stage-start state
   solver::PreFirstStageLocalPipeline(reg, descendants);
-  solver::PreStageLocalPipeline(reg, descendants, problem);
+  solver::PreStageLocalPipeline(reg, island, descendants, problem);
 
   // Run collision detection if some actor has queries enabled
   if (std::ranges::any_of(descendants.actors, [&](auto const& e) {
@@ -540,7 +540,7 @@ static void PrepareBackPropagationIslandAsync(
       })) {
     // We must visit the full island, to account for cases where the queried actors act as
     // colliders.
-    solver::UpdateDerivedStateBeforeAssembly(reg, GradTarget::Current, descendants);
+    solver::UpdateDerivedStateBeforeAssembly(reg, island, GradTarget::Current, descendants);
   }
 }
 

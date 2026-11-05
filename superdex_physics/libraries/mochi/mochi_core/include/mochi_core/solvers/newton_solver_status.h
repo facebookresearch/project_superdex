@@ -83,6 +83,10 @@ struct NewtonSolverStatus {
   /// @ref NewtonSolverParams::consistencyResNorm is true.
   T resNormError = T(0);
 
+  /// @brief Wall time spent setting up the linear operator and solving the linear system across all
+  /// Newton iterations [s].
+  double linearSolveSec = 0.0;
+
   /// @brief Solver timer.
   Timer timer;
 };

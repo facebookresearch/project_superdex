@@ -22,6 +22,7 @@
 #include "mochi_differentiable.h"
 #include "mochi_ecs.h"
 #include "mochi_ecs_utils.h"
+#include "mochi_scene_profiler.h"
 #include "mochi_simulation.h"
 #include "mochi_sleep.h"
 #include "mochi_snle.h"
@@ -158,6 +159,10 @@ entt::entity island::CreateEmpty(entt::registry& reg) {
   sleep::InitIsland(reg, island);
   if (reg.try_ctx<TagDifferentiableScene>()) {
     InitDifferentiableIsland(reg, island);
+  }
+
+  if (profiler::IsEnabled(reg)) {
+    reg.emplace<CIslandStats>(island);
   }
 
   // Let other systems (e.g. debug draw) know that this island is ready for inspection.

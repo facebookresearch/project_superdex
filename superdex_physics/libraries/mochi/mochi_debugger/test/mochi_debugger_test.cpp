@@ -26,7 +26,7 @@ void MochiDebuggerTest::SetUp() {
   // Save the test harness's global log callback (installed by InitUnitTest), because the
   // DebugServer will override it.
   _prevLogCallback = GetLogCallback();
-  _context = mochi::CreateContext();
+  _context = mochi::CreateContext(_numWorkerThreads);
 
   // Store a pointer to the server. It is owned by the Context.
   _server = assert_cast<DebugServerInternal*>(&_context->GetDebugServer());

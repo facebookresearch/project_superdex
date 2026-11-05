@@ -18,13 +18,16 @@
 
 #include <mochi_core/geometry/mesh_data.h>
 #include <mochi_core/test/wait_until.h>
+#include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/span.h>
+#include <mochi_core/utils/task_scheduler.h>
 #include <mochi_physics/dbg/protocol.h>
 #include <mochi_physics/mochi_physics_experimental.h>
 #include <mochi_physics/src/mochi_context.h>
 #include <mochi_physics/src/mochi_island.h>
 #include <mochi_physics/src/mochi_scene.h>
 #include <mochi_physics/src/mochi_scene_debugger.h>
+#include <mochi_physics/src/mochi_scene_profiler.h>
 #include <mochi_physics/src/mochi_shape.h>
 #include <mochi_physics/src/mochi_sleep.h>
 
@@ -1292,6 +1295,11 @@ TEST_F(SceneSyncTest, SyncInitialStatePaused) {
   // Unpause so the thread can finish.
   _client->SetSceneStepMode(StepMode::Play);
   thread.join();
+
+  assert_cast<SceneImpl*>(scene)->SetThreadAffinity();
+  ASSERT_EQ(1, isize(syncData.actors));
+  ExpectActorData(scene, rigidActor, syncData.actors[0]);
+  ExpectActorMeshMatches(scene, rigidActor);
 }
 
 TEST_F(SceneSyncTest, PerformanceSyncSendsEveryStepSinceLastSync) {
@@ -1315,7 +1323,7 @@ TEST_F(SceneSyncTest, PerformanceSyncSendsEveryStepSinceLastSync) {
   EXPECT_TRUE(GetProfileHistory().empty());
   _clockSec += 2.0 * kSyncInterval;
   for (auto const& profile : WaitForProfileHistory(scene, kNumSteps)) {
-    EXPECT_EQ(static_cast<float>(kTimeStep), profile.timeStepSec);
+    EXPECT_EQ(static_cast<float>(kTimeStep), profile.simTimeStepSec);
   }
 }
 
@@ -1358,6 +1366,7 @@ TEST_F(SceneSyncTest, OneShotRequestDoesNotDrainPendingProfiles) {
 }
 
 TEST_F(SceneSyncTest, PerformanceSyncReportsOnlyActiveIslands) {
+  _context->SetIsSingleThreaded(true);
   Scene* scene = _context->CreateScene("ActiveCounts");
   scene->SetForceSingleIsland(true); // Fixes the island layout from the first step
   ShapeHandle const cube = CreateUnitCube();
@@ -1401,6 +1410,13 @@ TEST_F(SceneSyncTest, PerformanceSyncReportsOnlyActiveIslands) {
   EXPECT_EQ(1, awake.activeIslands);
   EXPECT_NE(ConvergenceStatus::None, awake.convergenceStatus);
   EXPECT_EQ(awakeConvergence, awake.convergenceStatus);
+  EXPECT_GT(awake.sceneContactSec, 0.0f);
+  EXPECT_GT(awake.sceneAssemblySec, 0.0f);
+  EXPECT_GT(awake.sceneSolveSec, 0.0f);
+  // Each field is rounded to float separately, so allow for rounding.
+  EXPECT_LE(
+      awake.sceneContactSec + awake.sceneAssemblySec + awake.sceneSolveSec + awake.sceneQueriesSec,
+      awake.sceneStepSec * (1.0f + 1e-5f));
 
   // Nothing in sleeping islands is active.
   ForceSleepAllIslands(scene);
@@ -1412,6 +1428,9 @@ TEST_F(SceneSyncTest, PerformanceSyncReportsOnlyActiveIslands) {
   EXPECT_EQ(0, asleep.activeDofs);
   EXPECT_EQ(0, asleep.activeIslands);
   EXPECT_EQ(ConvergenceStatus::None, asleep.convergenceStatus); // Nothing was solved
+  EXPECT_EQ(0.0f, asleep.sceneContactSec);
+  EXPECT_EQ(0.0f, asleep.sceneAssemblySec);
+  EXPECT_EQ(0.0f, asleep.sceneSolveSec);
 }
 
 TEST_F(SceneSyncTest, PerformanceProfileIsCapturedBeforePostStepCallbacks) {
@@ -1478,7 +1497,7 @@ TEST_F(SceneSyncTest, ZeroTimeStepDoesNotCaptureProfile) {
   scene->Step(kTimeStep);
   protocol::StepProfileData const profile = WaitForProfileHistory(scene, 1).back();
   EXPECT_EQ(1, profile.sequence);
-  EXPECT_EQ(static_cast<float>(kTimeStep), profile.timeStepSec);
+  EXPECT_EQ(static_cast<float>(kTimeStep), profile.simTimeStepSec);
 }
 
 TEST_F(SceneSyncTest, PerformanceSyncLimitsPendingProfiles) {
@@ -1615,13 +1634,13 @@ TEST_F(SceneSyncTest, ProfileHistoryKeepsNewestUpToCapacity) {
   test::WaitUntil([&] {
     scene->UpdateDebugger();
     auto const profiles = GetProfileHistory();
-    return !profiles.empty() && profiles.back().timeStepSec == timeStep(kNumSteps - 1);
+    return !profiles.empty() && profiles.back().simTimeStepSec == timeStep(kNumSteps - 1);
   });
 
   auto const getTimeSteps = [&] {
     DynamicArray<float> timeSteps;
     for (auto const& profile : GetProfileHistory()) {
-      timeSteps.push_back(profile.timeStepSec);
+      timeSteps.push_back(profile.simTimeStepSec);
     }
     return timeSteps;
   };
@@ -1642,3 +1661,90 @@ TEST_F(SceneSyncTest, ProfileHistoryKeepsNewestUpToCapacity) {
     EXPECT_EQ(6, history.GetEndSequence());
   });
 }
+
+namespace {
+class SceneProfileThreadingTest : public SceneSyncTest, public ::testing::WithParamInterface<int> {
+ public:
+  void SetUp() override {
+    _numWorkerThreads = GetParam();
+    SceneSyncTest::SetUp();
+  }
+};
+} // namespace
+
+TEST_P(SceneProfileThreadingTest, ReportsEffectiveWorkersForEachStep) {
+  Scene* scene = CreateSceneNoGravity();
+  for (int i = 0; i < 2; ++i) {
+    SoftActorParams params;
+    params.shape = CreateUnitCube();
+    params.worldFromLocal.SetTranslation(Real3{100_r * i, 0_r, 0_r});
+    scene->CreateSoftActor(params, test::ExpectOK{});
+  }
+  StartServer();
+  ConnectClient();
+  ClientSelectScene(scene->GetHandle());
+  ApplySyncParamsAndWait(scene, PerformanceSyncParams());
+
+  int numProfiles = 0;
+  auto const checkStep = [&](int expectedWorkers) {
+    scene->Step(kTimeStep);
+    auto const profile = WaitForProfileHistory(scene, ++numProfiles).back();
+    EXPECT_EQ(expectedWorkers, profile.numWorkerThreads);
+    EXPECT_GT(profile.sceneStepSec, 0.0f);
+    EXPECT_EQ(2, profile.activeIslands);
+    auto const& reg = assert_cast<SceneImpl*>(scene)->GetRegistry();
+    CIslandStats totals;
+    for (auto&& [island, stats] : reg.view<CIslandStats const, TagIslandIsAwake const>().each()) {
+      EXPECT_GT(stats.assemblySec, 0.0);
+      EXPECT_GT(stats.queriesSec, 0.0);
+      totals.contactSec += stats.contactSec;
+      totals.assemblySec += stats.assemblySec;
+      totals.solveSec += stats.solveSec;
+      totals.queriesSec += stats.queriesSec;
+    }
+    EXPECT_FLOAT_EQ(
+        static_cast<float>(scene->GetPerformanceStats().solveStepDurationSec),
+        profile.sceneStepSec);
+    if (expectedWorkers == 0) {
+      EXPECT_FLOAT_EQ(static_cast<float>(totals.contactSec), profile.sceneContactSec);
+      EXPECT_FLOAT_EQ(static_cast<float>(totals.assemblySec), profile.sceneAssemblySec);
+      EXPECT_FLOAT_EQ(static_cast<float>(totals.solveSec), profile.sceneSolveSec);
+      EXPECT_FLOAT_EQ(static_cast<float>(totals.queriesSec), profile.sceneQueriesSec);
+    } else {
+      EXPECT_EQ(0.0f, profile.sceneContactSec);
+      EXPECT_EQ(0.0f, profile.sceneAssemblySec);
+      EXPECT_EQ(0.0f, profile.sceneSolveSec);
+      EXPECT_EQ(0.0f, profile.sceneQueriesSec);
+    }
+  };
+
+  checkStep(GetParam());
+  _context->SetIsSingleThreaded(true);
+  checkStep(0);
+  _context->SetIsSingleThreaded(false);
+  checkStep(GetParam());
+  {
+    TaskScheduler::PushLocalSingleThreadedMode();
+    MOCHI_DEFER(TaskScheduler::PopLocalSingleThreadedMode());
+    checkStep(0);
+  }
+  checkStep(GetParam());
+
+  auto settings = _client->GetSettings();
+  settings.scene.forceSingleThreaded = true;
+  _client->SetSettings(settings);
+  test::WaitUntil([&] {
+    scene->UpdateDebugger();
+    return assert_cast<SceneImpl*>(scene)->GetDebugger()->IsForceSingleThreaded();
+  });
+  checkStep(0);
+  settings.scene.forceSingleThreaded = false;
+  _client->SetSettings(settings);
+  test::WaitUntil([&] {
+    scene->UpdateDebugger();
+    return !assert_cast<SceneImpl*>(scene)->GetDebugger()->IsForceSingleThreaded();
+  });
+  checkStep(GetParam());
+}
+
+INSTANTIATE_TEST_SUITE_P(Workers, SceneProfileThreadingTest, ::testing::Values(0, 2));

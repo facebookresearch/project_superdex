@@ -31,6 +31,7 @@
 #include "mochi_rigid.h"
 #include "mochi_rod.h"
 #include "mochi_rom_jacobian.h"
+#include "mochi_scene_profiler.h"
 #include "mochi_scene_recorder.h"
 #include "mochi_shell.h"
 #include "mochi_sleep.h"
@@ -324,6 +325,7 @@ void solver::UpdateJacobiansSubpipeline(
 
 void solver::UpdateDerivedStateBeforeAssembly(
     entt::registry& reg,
+    entt::entity island,
     GradTarget gradTarget,
     CIslandDescendants const& descendants) {
   MOCHI_PROFILE_SCOPE();
@@ -347,6 +349,8 @@ void solver::UpdateDerivedStateBeforeAssembly(
 
   // Collision detection is needed only for first-order terms.
   if (IsAssemblyNeeded(StateDependency::FirstOrder, false /*inputDependency*/, gradTarget)) {
+    profiler::ScopedIslandTimer const timer(reg, island, &CIslandStats::contactSec);
+
     // Perform collision detection.
     CollisionDetectionPipeline<TimeStep::Current>(reg, descendants);
 
@@ -679,6 +683,10 @@ void mochi::solver::AssembleIslandPipeline(
       static_cast<int>(params.assemRes),
       static_cast<int>(params.assemDRes));
 
+  auto* stats = reg.try_get<CIslandStats>(island);
+  double const contactSecAtStart = stats ? stats->contactSec : 0.0;
+  TimePoint const assemblyStart = stats ? Timer::Now() : TimePoint{};
+
   auto const& descendants = reg.get<CIslandDescendants const>(island);
 
   // Used to wait for async tasks
@@ -702,7 +710,7 @@ void mochi::solver::AssembleIslandPipeline(
     // Update derived state and perform collision detection.
     startOtherAssemblySemaphore.Add(1);
     Schedule(masterSemaphore, "UpdateDerivedStateBeforeAssembly", [&]() {
-      UpdateDerivedStateBeforeAssembly(reg, params.gradTarget, descendants);
+      UpdateDerivedStateBeforeAssembly(reg, island, params.gradTarget, descendants);
       startOtherAssemblySemaphore.Done();
     });
   }
@@ -874,6 +882,13 @@ void mochi::solver::AssembleIslandPipeline(
 
   // Apply Dirichlet Boundary Conditions
   ApplyBoundaryConditionsToProblem(reg, descendants.actors, params, problem);
+
+  // The completion waits above order the contact task's writes before this read.
+  // Overlapping body assembly is assigned to Contact to keep the buckets exclusive.
+  if (stats) {
+    stats->assemblySec +=
+        ToSeconds(Timer::Now() - assemblyStart) - (stats->contactSec - contactSecAtStart);
+  }
 }
 
 void mochi::solver::SetTimeIntegratorState(
@@ -914,6 +929,7 @@ void mochi::solver::PreFirstStageLocalPipeline(
 
 void mochi::solver::PreStageLocalPipeline(
     entt::registry& reg,
+    entt::entity island,
     CIslandDescendants const& descendants,
     SnleProblem<real>& problem) {
   MOCHI_PROFILE_SCOPE();
@@ -940,6 +956,7 @@ void mochi::solver::PreStageLocalPipeline(
   if (explicitNormals) {
     // Run collision detection pipeline with stage-start configuration.
     // This populates CActiveCollisions<*, TimeStep::StageStart> for all actors.
+    profiler::ScopedIslandTimer const timer(reg, island, &CIslandStats::contactSec);
     CollisionDetectionPipeline<TimeStep::StageStart>(reg, descendants);
   } else {
     // Update colliding samples and mapped colliders at stage start.
@@ -1202,7 +1219,7 @@ SnleProblem<real> mochi::solver::InitIslandAssembly(
 
   PreFirstStageLocalPipeline(reg, descendants);
 
-  PreStageLocalPipeline(reg, descendants, problem);
+  PreStageLocalPipeline(reg, island, descendants, problem);
 
   if (syncCurrentState) {
     PostNewSolutionLocalPipeline(reg, island, problem.solution);
@@ -1284,11 +1301,14 @@ bool mochi::solver::StepIslandNewtonAsync(
       PreFirstStageLocalPipeline(reg, descendants);
     }
 
-    PreStageLocalPipeline(reg, descendants, problem);
+    PreStageLocalPipeline(reg, island, descendants, problem);
 
     // Stage solve: the non-linear problem is solved. Islands have no knowledge on the physical
     // problem being solved here, they only serve as a brigde between solver and actors.
     NewtonSolverStatus<real> result = snleSolver.Solve(problem);
+    if (auto* stats = reg.try_get<CIslandStats>(island)) {
+      stats->solveSec += result.linearSolveSec;
+    }
     success &= (result.convergence == ConvergenceStatus::Converged);
     restValue = Min(restValue, sleep::StageRestValue(result));
     islandSolverStats.stages.emplace_back(StageSolverStats::FromNewtonSolverStatus(result));

@@ -17,6 +17,7 @@
 #include "profiling_panel.h"
 
 #include "gui/gui.h"
+#include "gui/ui_helpers.h"
 
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/debug.h>
@@ -33,12 +34,19 @@ using namespace mochi;
 using namespace mochi::dbg;
 using StepProfileData = protocol::StepProfileData;
 
+static float ContactSec(StepProfileData const& profile);
+static float AssemblySec(StepProfileData const& profile);
+static float SolveSec(StepProfileData const& profile);
+static float QueriesSec(StepProfileData const& profile);
+static float OtherSec(StepProfileData const& profile);
+static float TotalSec(StepProfileData const& profile);
+
 namespace {
 
 struct Segment {
-  char const* name = nullptr;
+  char const* name = {};
   ImVec4 color = {};
-  float StepProfileData::* durationSec = nullptr;
+  float (*durationSec)(StepProfileData const&) = {};
 };
 
 struct BarGetterData {
@@ -54,11 +62,18 @@ struct StatsSnapshot {
 
 // Bar segments in display order: the legend, the stats and each bar list them top to bottom.
 Segment const kSegments[] = {
-    {"PreStep", ImVec4(0.90f, 0.62f, 0.25f, 1.0f), &StepProfileData::preStepSec},
-    {"Step", ImVec4(0.30f, 0.60f, 0.90f, 1.0f), &StepProfileData::stepSec},
-    {"PostStep", ImVec4(0.55f, 0.80f, 0.40f, 1.0f), &StepProfileData::postStepSec},
+    {"Contact", ImVec4(0.90f, 0.62f, 0.25f, 1.0f), &ContactSec},
+    {"Assembly", ImVec4(0.55f, 0.80f, 0.40f, 1.0f), &AssemblySec},
+    {"Linear Solve", ImVec4(0.65f, 0.45f, 0.85f, 1.0f), &SolveSec},
+    {"Queries", ImVec4(0.25f, 0.78f, 0.75f, 1.0f), &QueriesSec},
+    {"Other", ImVec4(0.55f, 0.60f, 0.70f, 1.0f), &OtherSec},
 };
 int constexpr kNumSegments = isize(kSegments);
+
+ImVec4 constexpr kStepColor(0.30f, 0.60f, 0.90f, 1.0f);
+char const* const kBreakdownTooltip =
+    "Performance is broken down by category when single-threaded. "
+    "Enable Force Single Threaded to see the breakdown.";
 
 ImVec4 constexpr kDivergedColor(0.90f, 0.20f, 0.20f, 1.0f);
 
@@ -76,21 +91,56 @@ int constexpr kMaxHistorySize = 1'000'000;
 
 } // namespace
 
+static bool HasBreakdown(StepProfileData const& profile) {
+  return profile.numWorkerThreads == 0;
+}
+
+static float ContactSec(StepProfileData const& profile) {
+  return profile.sceneContactSec;
+}
+
+static float AssemblySec(StepProfileData const& profile) {
+  return profile.sceneAssemblySec;
+}
+
+static float SolveSec(StepProfileData const& profile) {
+  return profile.sceneSolveSec;
+}
+
+static float QueriesSec(StepProfileData const& profile) {
+  return profile.sceneQueriesSec;
+}
+
+static float TotalSec(StepProfileData const& profile) {
+  return profile.sceneStepSec;
+}
+
+static float OtherSec(StepProfileData const& profile) {
+  return Max(
+      0.0f,
+      TotalSec(profile) -
+          (ContactSec(profile) + AssemblySec(profile) + SolveSec(profile) + QueriesSec(profile)));
+}
+
 static float ToMs(float sec) {
   return 1000.0f * sec;
 }
 
 // Height of a bar at the top of `segment`: that segment plus every segment below it [s].
 static float StackedSec(StepProfileData const& profile, int segment) {
+  if (!HasBreakdown(profile)) {
+    return 0.0f;
+  }
   float sum = 0.0f;
   for (int i = segment; i < kNumSegments; ++i) {
-    sum += profile.*kSegments[i].durationSec;
+    sum += kSegments[i].durationSec(profile);
   }
   return sum;
 }
 
-static float TotalSec(StepProfileData const& profile) {
-  return StackedSec(profile, 0);
+static ImPlotPoint GetTotalBar(int index, void* userData) {
+  auto const& panel = *static_cast<ProfilerPanelState const*>(userData);
+  return {static_cast<double>(panel.window[index].sequence), ToMs(TotalSec(panel.window[index]))};
 }
 
 static ImPlotPoint GetStackedBar(int index, void* userData) {
@@ -100,24 +150,30 @@ static ImPlotPoint GetStackedBar(int index, void* userData) {
       ToMs(StackedSec(data.panel->window[index], data.segment))};
 }
 
-// Full-height bar of a diverged step.
-static ImPlotPoint GetDivergedBar(int index, void* userData) {
-  auto const& panel = *static_cast<ProfilerPanelState const*>(userData);
-  int const step = panel.divergedSteps[index];
-  return {static_cast<double>(panel.window[step].sequence), ToMs(TotalSec(panel.window[step]))};
-}
-
-static void
-PlotBars(char const* label, ImVec4 const& color, ImPlotGetter getter, void* data, int count) {
+static void PlotBars(
+    char const* label,
+    ImVec4 const& color,
+    ImPlotGetter getter,
+    void* data,
+    int count,
+    bool showInLegend) {
   double constexpr kBarSize = 1.0; // Adjacent bars touch
   ImPlotSpec spec;
   spec.FillColor = color;
   spec.LineColor = color;
+  spec.Flags = showInLegend ? ImPlotItemFlags_None : ImPlotItemFlags_NoLegend;
   ImPlot::PlotBarsG(label, getter, data, count, kBarSize, spec);
 }
 
 static bool HasDiverged(StepProfileData const& profile) {
   return profile.convergenceStatus == ConvergenceStatus::Diverged;
+}
+
+static ImPlotPoint GetDivergedBar(int index, void* userData) {
+  auto const& panel = *static_cast<ProfilerPanelState const*>(userData);
+  auto const& profile = panel.window[index];
+  return {
+      static_cast<double>(profile.sequence), HasDiverged(profile) ? ToMs(TotalSec(profile)) : 0.0};
 }
 
 // Copy the visible steps and summarize the newest steps from the client's history.
@@ -221,7 +277,9 @@ static void TextDurationAndRate(float sec) {
 
 // The value is left blank if there is no step to show.
 static void AddStepTimeRow(StepProfileData const* profile, float stepSec) {
-  AddRowLabel("Step Time");
+  AddRowLabel(
+      "Step Time",
+      profile && !HasBreakdown(*profile) ? kStepColor : ImGui::GetStyleColorVec4(ImGuiCol_Text));
   if (profile) {
     TextDurationAndRate(stepSec);
   }
@@ -235,17 +293,20 @@ AddCountRow(char const* label, StepProfileData const* profile, int32_t StepProfi
   }
 }
 
-// Rows describing one step, shared by the tooltip and the stats. Values are blank without a step.
-static void AddStepRows(StepProfileData const* profile) {
+static void AddSimDeltaTimeRow(StepProfileData const* profile) {
   AddRowLabel("Sim Dt");
   if (profile) {
-    TextDurationAndRate(profile->timeStepSec);
+    TextDurationAndRate(profile->simTimeStepSec);
   }
-  float const totalSec = profile ? TotalSec(*profile) : 0.0f;
-  for (auto const& segment : kSegments) {
-    AddRowLabel(segment.name, segment.color);
-    if (profile) {
-      float const sec = profile->*segment.durationSec;
+}
+
+// Rows describing one step, shared by the tooltip and the stats. Values are blank without a step.
+static void AddStepRows(StepProfileData const* profile) {
+  if (profile && HasBreakdown(*profile)) {
+    float const totalSec = TotalSec(*profile);
+    for (auto const& segment : kSegments) {
+      AddRowLabel(segment.name, segment.color);
+      float const sec = segment.durationSec(*profile);
       ImGui::Text("%.3f ms (%.0f%%)", ToMs(sec), totalSec > 0.0f ? 100.0f * sec / totalSec : 0.0f);
     }
   }
@@ -268,6 +329,7 @@ static void BuildStepTooltip(StepProfileData const& profile) {
         "%s",
         SReflect::EnumToString(profile.convergenceStatus));
     AddStepTimeRow(&profile, TotalSec(profile));
+    AddSimDeltaTimeRow(&profile);
     AddStepRows(&profile);
   }
 }
@@ -306,15 +368,18 @@ static char const* GetEmptyGraphMessage(DebugClient const& client) {
 }
 
 // Draw the stacked bar graph, with a tooltip for the hovered step.
-static void BuildGraph(UiState& state, ImVec2 size) {
+static void BuildGraph(UiState& state, ImVec2 size, StatsSnapshot const& stats) {
   auto& panel = state.profiler;
   UpdateYMax(panel);
 
   StepProfileData const* hovered = nullptr;
   bool openContextMenu = false;
+  bool const hasBreakdown = std::any_of(panel.window.begin(), panel.window.end(), &HasBreakdown);
+  bool const latestHasBreakdown = stats.hasProfile && HasBreakdown(stats.latest);
   ImPlotFlags constexpr kPlotFlags =
       ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMouseText;
-  if (ImPlot::BeginPlot("##Profiler", size, kPlotFlags)) {
+  if (ImPlot::BeginPlot(
+          "##Profiler", size, kPlotFlags | (stats.hasProfile ? 0 : ImPlotFlags_NoLegend))) {
     MOCHI_DEFER(ImPlot::EndPlot());
 
     // We own the view: the wheel sets the bar width and the scrollbar sets the position.
@@ -331,19 +396,30 @@ static void BuildGraph(UiState& state, ImVec2 size) {
 
     // Tallest first: each bar is then covered by the shorter bars of the segments below it.
     int const numSteps = isize(panel.window);
-    for (int segment = 0; segment < kNumSegments; ++segment) {
-      BarGetterData data{&panel, segment};
-      PlotBars(kSegments[segment].name, kSegments[segment].color, &GetStackedBar, &data, numSteps);
-    }
-
-    // Diverged steps are covered entirely in red. "##" hides them from the legend.
-    panel.divergedSteps.clear();
-    for (int i = 0; i < numSteps; ++i) {
-      if (HasDiverged(panel.window[i])) {
-        panel.divergedSteps.push_back(i);
+    PlotBars(
+        "Step Time",
+        kStepColor,
+        &GetTotalBar,
+        &panel,
+        numSteps,
+        stats.hasProfile && !latestHasBreakdown);
+    // Register the category key even when the latest serial step is outside the visible window.
+    if (hasBreakdown || latestHasBreakdown) {
+      for (int segment = 0; segment < kNumSegments; ++segment) {
+        BarGetterData data{&panel, segment};
+        PlotBars(
+            kSegments[segment].name,
+            kSegments[segment].color,
+            &GetStackedBar,
+            &data,
+            numSteps,
+            latestHasBreakdown);
       }
     }
-    PlotBars("##Diverged", kDivergedColor, &GetDivergedBar, &panel, isize(panel.divergedSteps));
+
+    // Draw last so divergence stays visible over both total and category bars.
+    PlotBars("##Diverged", kDivergedColor, &GetDivergedBar, &panel, numSteps, false);
+
     if (panel.window.empty()) {
       ImPlot::PlotText(
           GetEmptyGraphMessage(*state.client), 0.5 * (left + right), 0.5 * panel.yMaxMs);
@@ -425,7 +501,9 @@ static void BuildStats(UiState& state, StatsSnapshot const& stats) {
     panel.statsProfile = stats.latest;
     panel.statsStepSec = TotalSec(panel.statsProfile);
     panel.statsUpdateTime = -1.0; // Refresh immediately when playback resumes
-  } else if (panel.statsUpdateTime < 0.0 || now - panel.statsUpdateTime >= kStatsUpdatePeriodSec) {
+  } else if (
+      panel.statsUpdateTime < 0.0 || now - panel.statsUpdateTime >= kStatsUpdatePeriodSec ||
+      stats.latest.numWorkerThreads != panel.statsProfile.numWorkerThreads) {
     panel.statsProfile = stats.latest;
     panel.statsStepSec = stats.averageStepSec;
     panel.statsUpdateTime = now;
@@ -433,15 +511,27 @@ static void BuildStats(UiState& state, StatsSnapshot const& stats) {
 
   StepProfileData const* profile = stats.hasProfile ? &panel.statsProfile : nullptr;
 
-  if (!ImGui::BeginTable("##Stats", 2, ImGuiTableFlags_SizingFixedFit)) {
-    return;
+  {
+    // Keep the checkbox frame at font height without shrinking its label.
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
+    MOCHI_DEFER(ImGui::PopStyleVar());
+    auto settings = state.client->GetSettings();
+    if (UiCheckbox(
+            "Force Single Threaded", &settings.scene.forceSingleThreaded, kBreakdownTooltip)) {
+      state.client->SetSettings(settings);
+    }
   }
-  MOCHI_DEFER(ImGui::EndTable());
-  AddStepTimeRow(profile, panel.statsStepSec);
-  if (profile && !isPaused && ImGui::IsItemHovered()) {
-    ImGui::SetTooltip("Averaged over recent steps");
+  ImGui::Separator();
+
+  if (ImGui::BeginTable("##Stats", 2, ImGuiTableFlags_SizingFixedFit)) {
+    MOCHI_DEFER(ImGui::EndTable());
+    AddSimDeltaTimeRow(profile);
+    AddStepTimeRow(profile, panel.statsStepSec);
+    if (profile && !isPaused && ImGui::IsItemHovered()) {
+      ImGui::SetTooltip("Averaged over recent steps");
+    }
+    AddStepRows(profile);
   }
-  AddStepRows(profile);
 }
 
 void dbg::BuildProfilerPanel(UiState& state) {
@@ -461,7 +551,7 @@ void dbg::BuildProfilerPanel(UiState& state) {
   {
     float const graphHeight = ImGui::GetContentRegionAvail().y - ImGui::GetStyle().ScrollbarSize -
         ImGui::GetStyle().ItemSpacing.y;
-    BuildGraph(state, ImVec2(-1.0f, Max(1.0f, graphHeight)));
+    BuildGraph(state, ImVec2(-1.0f, Max(1.0f, graphHeight)), stats);
     BuildScrollbar(panel, numVisible);
   }
   ImGui::EndChild();

@@ -36,11 +36,10 @@ class MessageServer;
 
 namespace mochi::dbg {
 
-// Durations of the simulation phases of one SceneImpl::Step [s]. Zero if nothing was simulated.
+// Simulation duration of one SceneImpl::Step [s], excluding callbacks. Zero if not simulated.
 struct StepProfileTimers {
-  double preStepSec = 0.0; // PreStepEcs
-  double stepSec = 0.0; // StepEcs
-  double postStepSec = 0.0; // PostStepEcs
+  int numWorkerThreads = 0; // Effective workers when simulation begins
+  double stepSec = 0.0;
 };
 
 class SceneDebugger {

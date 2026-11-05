@@ -226,10 +226,13 @@ struct SceneList {
 /// @brief Profiling data for one simulation step. "Active" counts only include awake islands.
 struct StepProfileData {
   uint64_t sequence = 0; ///< Monotonically increasing sequence within the scene debugger
-  float timeStepSec = 0.0f; ///< Simulated time step [s]
-  float preStepSec = 0.0f; ///< Duration of the pre-step phase [s]
-  float stepSec = 0.0f; ///< Duration of the step phase [s]
-  float postStepSec = 0.0f; ///< Duration of the post-step phase [s]
+  float simTimeStepSec = 0.0f; ///< Simulated time step [s]
+  float sceneStepSec = 0.0f; ///< Total simulation duration, excluding callbacks [s]
+  // Exclusive category durations [s]. Available only when numWorkerThreads is zero.
+  float sceneContactSec = 0.0f;
+  float sceneAssemblySec = 0.0f;
+  float sceneSolveSec = 0.0f;
+  float sceneQueriesSec = 0.0f;
   int32_t activeActors = 0; ///< Top-level actors (direct island members)
   int32_t activeConstraints = 0;
   int32_t activeContacts = 0; ///< Contact points, both sync and async
@@ -243,10 +246,12 @@ struct StepProfileData {
 
   MOCHI_STRUCT_BEGIN(mochi::dbg::protocol::StepProfileData)
   MOCHI_FIELD(sequence)
-  MOCHI_FIELD(timeStepSec)
-  MOCHI_FIELD(preStepSec)
-  MOCHI_FIELD(stepSec)
-  MOCHI_FIELD(postStepSec)
+  MOCHI_FIELD(simTimeStepSec)
+  MOCHI_FIELD(sceneStepSec)
+  MOCHI_FIELD(sceneContactSec)
+  MOCHI_FIELD(sceneAssemblySec)
+  MOCHI_FIELD(sceneSolveSec)
+  MOCHI_FIELD(sceneQueriesSec)
   MOCHI_FIELD(activeActors)
   MOCHI_FIELD(activeConstraints)
   MOCHI_FIELD(activeContacts)

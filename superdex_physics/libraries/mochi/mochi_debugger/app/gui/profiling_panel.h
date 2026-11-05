@@ -34,7 +34,6 @@ struct ProfilerPanelState {
 
   // Copied from the client's history each frame, so the graph is drawn without holding its lock.
   DynamicArray<protocol::StepProfileData> window; // Visible steps, oldest first
-  DynamicArray<int> divergedSteps; // Indices into window of steps whose solve diverged
   uint64_t windowBeginSequence = 0;
   uint64_t historyBeginSequence = 0;
   uint64_t historyEndSequence = 0;

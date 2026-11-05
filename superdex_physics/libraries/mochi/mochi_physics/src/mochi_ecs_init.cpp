@@ -38,6 +38,7 @@ namespace differentiable { void InitializeOnce(entt::registry& reg); }
 namespace discretization { void InitializeOnce(entt::registry& reg); }
 namespace group { void InitializeOnce(entt::registry& reg); }
 namespace island { void InitializeOnce(entt::registry& reg); }
+namespace profiler { void InitializeOnce(entt::registry& reg); }
 namespace query { void InitializeOnce(entt::registry& reg); }
 namespace rigid { void InitializeOnce(entt::registry& reg); }
 namespace rom { void InitializeOnce(entt::registry& reg); }
@@ -73,6 +74,7 @@ void ecs::InitializeOnce(entt::registry& reg) {
   group::InitializeOnce(reg);
   island::InitializeOnce(reg);
   material::InitializeOnce(reg);
+  profiler::InitializeOnce(reg);
   query::InitializeOnce(reg);
   rigid::InitializeOnce(reg);
   rom::hyper::InitializeOnce(reg);

@@ -20,6 +20,7 @@
 #include "mochi_constraint.h"
 #include "mochi_island.h"
 #include "mochi_scene.h"
+#include "mochi_scene_profiler.h"
 #include "mochi_sleep.h"
 
 #include <mochi_core/geometry/mesh_data.h>
@@ -104,20 +105,32 @@ static protocol::StepProfileData RecordStepProfileData(
     StepProfileTimers const& stepProfile) {
   entt::registry const& reg = scene.GetRegistry();
   protocol::StepProfileData profile;
-  profile.timeStepSec = StaticCast<float>(step.timeStepSec);
-  profile.preStepSec = StaticCast<float>(stepProfile.preStepSec);
-  profile.stepSec = StaticCast<float>(stepProfile.stepSec);
-  profile.postStepSec = StaticCast<float>(stepProfile.postStepSec);
+  profile.simTimeStepSec = StaticCast<float>(step.timeStepSec);
+  profile.sceneStepSec = StaticCast<float>(stepProfile.stepSec);
+  CIslandStats totals;
+  bool const hasBreakdown = step.timeStepSec > 0.0 && stepProfile.numWorkerThreads == 0;
   for (auto&& [island, members, dofs] :
        reg.view<CIslandMembers const, CIslandDofInfo const, TagIslandIsAwake const>().each()) {
     ++profile.activeIslands;
     profile.activeActors += isize(members.actors);
     profile.activeDofs += dofs.dofsSize;
+    if (hasBreakdown) {
+      if (auto const* stats = reg.try_get<CIslandStats const>(island)) {
+        totals.contactSec += stats->contactSec;
+        totals.assemblySec += stats->assemblySec;
+        totals.solveSec += stats->solveSec;
+        totals.queriesSec += stats->queriesSec;
+      }
+    }
   }
   profile.activeConstraints = CountActiveConstraints(reg);
   profile.activeContacts = CountActiveContacts<false>(reg) + CountActiveContacts<true>(reg);
   profile.convergenceStatus = scene.GetSolverStats().convergenceStatus;
-  profile.numWorkerThreads = scene.GetContext()->GetNumThreads();
+  profile.numWorkerThreads = stepProfile.numWorkerThreads;
+  profile.sceneContactSec = StaticCast<float>(totals.contactSec);
+  profile.sceneAssemblySec = StaticCast<float>(totals.assemblySec);
+  profile.sceneSolveSec = StaticCast<float>(totals.solveSec);
+  profile.sceneQueriesSec = StaticCast<float>(totals.queriesSec);
   return profile;
 }
 
@@ -253,6 +266,9 @@ class SceneDebuggerImpl final : public SceneDebugger {
 
   bool _forceSingleThreaded = false; // Scene-thread only
 
+  // Whether this instance enabled the scene profiler (scene-thread only).
+  bool _profilerEnabled = false;
+
   // Real-time tracking state
   struct RealTimeTracking {
     std::optional<double> realTimeStart; // Real start time for real-time tracking
@@ -337,6 +353,12 @@ void SceneDebuggerImpl::SetClock(ClockFn clock) {
 
 void SceneDebuggerImpl::UpdateOnSceneThreadImpl(SceneImpl* scene) {
   MOCHI_ASSERT_VERBOSE(scene);
+
+  // Enabled here rather than in the constructor, which does not run on the scene's thread.
+  if (!_profilerEnabled) {
+    profiler::Enable(scene->GetRegistry());
+    _profilerEnabled = true;
+  }
 
   // Acquire new messages from the inbox
   _newMessages.clear();
@@ -1005,6 +1027,11 @@ void SceneDebuggerImpl::ShutdownOnSceneThread(SceneImpl* scene) {
 
   // Cancel all queries
   UpdateMeshQueries(scene, /*meshesEnabled*/ false, /*useVisualMesh*/ false);
+
+  if (_profilerEnabled) {
+    profiler::Disable(scene->GetRegistry());
+    _profilerEnabled = false;
+  }
 }
 
 std::shared_ptr<SceneDebugger>
