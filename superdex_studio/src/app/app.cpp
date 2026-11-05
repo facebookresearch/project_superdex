@@ -1671,7 +1671,8 @@ void SuperDexStudio::ShowMainMenu() {
   if (ImGui::BeginMainMenuBar()) {
     // MenuBar -> File
     if (ImGui::BeginMenu("File")) {
-      // Generic open (.superdex_bot / .mochi_scene / .mochi_prefab / .superdex_scene / .urdf;
+      // Generic open (.superdex_bot / .mochi_scene / .superdex_prefab / .mochi_prefab /
+      // .superdex_scene / .urdf;
       // legacy .mochi_bot / .mochi_bot_archive / .mochi_bot_scene still accepted)
       if (ImGui::MenuItem("Open...", "Ctrl+O")) {
         char const* filters[] = {
@@ -1680,6 +1681,7 @@ void SuperDexStudio::ShowMainMenu() {
             "*.mochi_bot",
             "*.mochi_bot_archive",
             "*.mochi_scene",
+            "*.superdex_prefab",
             "*.mochi_prefab",
             "*.superdex_tuner",
 #if MOCHI_INTERNAL

@@ -20,6 +20,7 @@
 #include "app/app.h"
 #include "assets/asset.h"
 #include "assets/asset_manager.h"
+#include "assets/asset_types.h"
 #include "assets/bot_asset.h"
 #include "assets/mochi_prefab_asset.h"
 #include "editors/bot_scene_editor.h"
@@ -274,8 +275,7 @@ bool ImportExternalReferences(
       return false;
     }
     std::set<std::filesystem::path> files{path};
-    auto const extension = path.extension();
-    if (extension == ".mochi_prefab" || extension == ".mochi_scene") {
+    if (ClassifyAssetTypeByFilename(path.filename().string()) == AssetType::MochiPrefab) {
       mochi::ErrorLog error;
       files = superdex::robotics::CollectPrefabFiles(path, error);
       if (!error.IsOK()) {

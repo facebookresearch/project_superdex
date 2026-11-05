@@ -82,6 +82,7 @@ TEST_F(AssetDiscoveryTest, ClassifiesEveryKnownExtension) {
   EXPECT_EQ(ClassifyAssetTypeByFilename("x.mochi_bot"), AssetType::Bot);
   EXPECT_EQ(ClassifyAssetTypeByFilename("x.mochi_bot_archive"), AssetType::Bot);
   EXPECT_EQ(ClassifyAssetTypeByFilename("x.mochi_scene"), AssetType::MochiPrefab);
+  EXPECT_EQ(ClassifyAssetTypeByFilename("x.superdex_prefab"), AssetType::MochiPrefab);
   EXPECT_EQ(ClassifyAssetTypeByFilename("x.mochi_prefab"), AssetType::MochiPrefab);
 
   EXPECT_EQ(ClassifyAssetTypeByFilename("x.h5"), AssetType::Unknown);
