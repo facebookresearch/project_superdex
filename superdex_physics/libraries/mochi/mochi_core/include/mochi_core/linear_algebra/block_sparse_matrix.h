@@ -962,10 +962,9 @@ struct RowMultiplier {
         results[k] = MulAdd(matData, vecData, results[k]);
       }
     }
-    //--- Store result.
-    for (int k = 0; k < kBlockSize; ++k) {
-      Ax.Store(k + br * kBlockSize, c, HSum(results[k]));
-    }
+    // The fourth sum is unused.
+    Ax.template StoreColVector<kBlockSize>(
+        br * kBlockSize, c, HSumEach(results[0], results[1], results[2], results[2]));
   }
 
   /// @brief Dedicated kernel for the product between a block row with block size of 3 and a column
@@ -1045,10 +1044,8 @@ struct RowMultiplier {
       r1 += Load<kBlockSize, V4>(&rowValues[1 * rowLeadDim + j]) * v0;
       r2 += Load<kBlockSize, V4>(&rowValues[2 * rowLeadDim + j]) * v0;
     }
-    //--- Store result.
-    Ax.Store(0 + br * kBlockSize, c, HSum(r0));
-    Ax.Store(1 + br * kBlockSize, c, HSum(r1));
-    Ax.Store(2 + br * kBlockSize, c, HSum(r2));
+    // The fourth sum is unused.
+    Ax.template StoreColVector<kBlockSize>(br * kBlockSize, c, HSumEach(r0, r1, r2, r2));
   }
 
   /// @brief Kernel for the product between a block row with block size of 4 and a column vector.
