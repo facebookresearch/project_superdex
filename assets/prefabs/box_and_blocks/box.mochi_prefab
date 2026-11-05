@@ -1,0 +1,18 @@
+{
+  "actors": {
+    "rigid": [
+      {
+        "boundaryElementType": "P1Q1",
+        "isStatic": true,
+        "name": "Box",
+        "renderModel": "./render/box.glb",
+        "shape": "./collision/box.mochi.h5",
+        "translation": [
+          -0.2685,
+          -0.127,
+          0
+        ]
+      }
+    ]
+  }
+}
