@@ -25,6 +25,7 @@
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/constants.h>
 #include <mochi_core/utils/dynamic_array.h>
+#include <mochi_core/utils/math_utils.h>
 #include <mochi_core/utils/profile.h>
 #include <mochi_core/utils/spmat_utils.h>
 
@@ -647,9 +648,61 @@ class LinearContactSkinResponseRange {
   DynamicArray<int> _activeElementIndices;
 };
 
-// Accumulates the contact responses of pointRange by sample, in the colliding actor's local frame.
-LinearContactSkinResponseRange MakeLinearContactSkinResponseRange(
+// Returns the contact indices of pointRange sorted by sample index, so that the contacts of each
+// element are contiguous.
+DynamicArray<int> SortContactsBySample(
     Interval<int> pointRange,
+    ContactDetectionResult const& query,
+    Allocator* allocator) {
+  DynamicArray<int> sortedContactIndices(allocator);
+  sortedContactIndices.reserve(pointRange.Size());
+  for (int contactIndex : pointRange) {
+    sortedContactIndices.push_back(contactIndex);
+  }
+  std::ranges::sort(sortedContactIndices, {}, [&](int contactIndex) {
+    return std::pair{query.sampleIndices[contactIndex], contactIndex};
+  });
+  return sortedContactIndices;
+}
+
+// Calls fn(elementIndex, contactIndices) for each element with contacts, given contact indices
+// sorted by sample index.
+template <class Fn>
+void ForEachElementContacts(
+    Span<int const> sortedContactIndices,
+    ContactDetectionResult const& query,
+    int samplesPerElement,
+    Fn const& fn) {
+  int const numContacts = isize(sortedContactIndices);
+  int begin = 0;
+  while (begin < numContacts) {
+    int const elementIndex = query.sampleIndices[sortedContactIndices[begin]] / samplesPerElement;
+    int end = begin + 1;
+    while (end < numContacts &&
+           query.sampleIndices[sortedContactIndices[end]] / samplesPerElement == elementIndex) {
+      ++end;
+    }
+    fn(elementIndex, sortedContactIndices.subspan(begin, end - begin));
+    begin = end;
+  }
+}
+
+// Returns the largest number of physics nodes among the elements of contactIndices.
+int MaxPhysicsNodes(
+    CLinearContactSkinElementMap const& elementMap,
+    ContactDetectionResult const& query,
+    Span<int const> contactIndices) {
+  int maxPhysicsNodes = 0;
+  for (int contactIndex : contactIndices) {
+    int const elementIndex = query.sampleIndices[contactIndex] / elementMap.samplesPerElement;
+    maxPhysicsNodes = Max(maxPhysicsNodes, isize(elementMap.PhysicsNodeIndices(elementIndex)));
+  }
+  return maxPhysicsNodes;
+}
+
+// Accumulates the contact responses by sample, in the colliding actor's local frame.
+LinearContactSkinResponseRange MakeLinearContactSkinResponseRange(
+    Span<int const> sortedContactIndices,
     ContactDetectionResult const& query,
     CollisionResponseResult const& response,
     int samplesPerElement,
@@ -659,16 +712,7 @@ LinearContactSkinResponseRange MakeLinearContactSkinResponseRange(
     VMatrix3x3r const& worldFromCollidingRotation,
     Allocator* allocator) {
   LinearContactSkinResponseRange out(
-      pointRange.Size(), samplesPerElement, assemObj, assemRes, assemDRes, allocator);
-  DynamicArray<int> sortedContactIndices(allocator);
-  sortedContactIndices.reserve(pointRange.Size());
-  for (int contactIndex : pointRange) {
-    sortedContactIndices.push_back(contactIndex);
-  }
-  std::ranges::sort(sortedContactIndices, {}, [&](int contactIndex) {
-    return std::pair{query.sampleIndices[contactIndex], contactIndex};
-  });
-
+      isize(sortedContactIndices), samplesPerElement, assemObj, assemRes, assemDRes, allocator);
   auto const colliderFromCollidingRotation =
       MakeColliderFromCollidingRotation(query, worldFromCollidingRotation);
   for (int contactIndex : sortedContactIndices) {
@@ -693,13 +737,15 @@ LinearContactSkinResponseRange MakeLinearContactSkinResponseRange(
   return out;
 }
 
-// Assembles the sync dresidual blocks that couple the mapped skin DoFs with the collider DoFs.
+// Assembles the sync dresidual blocks that couple the mapped skin DoFs with the collider DoFs. For
+// a collider whose contacts share DoFs, the blocks of each element's contacts share their
+// destination, so they are summed and scattered once per element.
 template <class ElementT>
 void AssembleLinearContactSkinMixedBlocks(
     CLinearContactSkinElementMap const& elementMap,
     Span<ElementT const> elements,
     int dofOffset,
-    Interval<int> pointRange,
+    Span<int const> sortedContactIndices,
     ContactDetectionResult const& query,
     CollisionResponseResult const& response,
     Span<real const> sampleWeights,
@@ -709,11 +755,7 @@ void AssembleLinearContactSkinMixedBlocks(
     AnyMatrixView<real>& outDRes) {
   static_assert(ElementT::kNumNodes == 3, "Linear contact-skin assembly requires triangles.");
   MOCHI_ASSERT_VERBOSE(elementMap.samplesPerElement == ElementT::kNumQuadPoints);
-  int maxPhysicsNodes = 0;
-  for (int contactIndex : pointRange) {
-    int const elementIndex = query.sampleIndices[contactIndex] / elementMap.samplesPerElement;
-    maxPhysicsNodes = Max(maxPhysicsNodes, isize(elementMap.PhysicsNodeIndices(elementIndex)));
-  }
+  int const maxPhysicsNodes = MaxPhysicsNodes(elementMap, query, sortedContactIndices);
   int maxStateDofs = 0;
   for (ContactJac const* colliderJac : colliderJacs) {
     maxStateDofs = Max(maxStateDofs, colliderJac->nDoFsState);
@@ -732,66 +774,81 @@ void AssembleLinearContactSkinMixedBlocks(
 
   auto const colliderFromCollidingRotation =
       MakeColliderFromCollidingRotation(query, worldFromCollidingRotation);
-  for (int contactIndex : pointRange) {
-    int const sampleIndex = query.sampleIndices[contactIndex];
-    int const elementIndex = sampleIndex / elementMap.samplesPerElement;
-    int const quadIndex = sampleIndex % elementMap.samplesPerElement;
-    auto const physicsNodes = elementMap.PhysicsNodeIndices(elementIndex);
-    auto const skinWeights = elementMap.SkinNodeWeights(elementIndex);
-    auto const& element = elements[elementIndex];
+  ForEachElementContacts(
+      sortedContactIndices,
+      query,
+      elementMap.samplesPerElement,
+      [&](int elementIndex, Span<int const> contactIndices) {
+        auto const physicsNodes = elementMap.PhysicsNodeIndices(elementIndex);
+        auto const skinWeights = elementMap.SkinNodeWeights(elementIndex);
+        auto const& element = elements[elementIndex];
+        MakeOffsetElementIndexGroups(elementMap, elementIndex, dofOffset, skinGroups);
+        int const skinDofs = kSpaceDim3 * isize(physicsNodes);
+        mappedBasis.resize_noinit(physicsNodes.size());
 
-    mappedBasis.resize_noinit(physicsNodes.size());
-    for (int physicsNode = 0; physicsNode < isize(physicsNodes); ++physicsNode) {
-      real basis = 0_r;
-      for (int skinNode = 0; skinNode < ElementT::kNumNodes; ++skinNode) {
-        basis += skinWeights[physicsNode][skinNode] * element.basisEvaluated[quadIndex][skinNode];
-      }
-      mappedBasis[physicsNode] = basis;
-    }
+        for (ContactJac const* colliderJac : colliderJacs) {
+          MOCHI_ASSERT_VERBOSE(colliderJac && colliderJac->groupsInitialized);
+          int const colliderDofs = colliderJac->nDoFsState;
+          contactToStateValues.resize_noinit(kSpaceDim3 * colliderDofs);
+          mixedValues.resize_noinit(skinDofs * colliderDofs);
+          transposeValues.resize_noinit(colliderDofs * skinDofs);
+          RowMatrixView<real, kSpaceDim3> contactToState(
+              contactToStateValues.data(), kSpaceDim3, colliderDofs);
+          RowMatrixView<real> mixed(mixedValues.data(), skinDofs, colliderDofs);
+          RowMatrixView<real> mixedTranspose(transposeValues.data(), colliderDofs, skinDofs);
 
-    VMatrix3x3r const leftDResSimd = Dot3x3(
-        Transpose3x3(colliderFromCollidingRotation(contactIndex)),
-        -sampleWeights[sampleIndex] * response.dforce[contactIndex]);
-    Matrix<real, kSpaceDim3, kSpaceDim3> const leftDRes(AsMatrixView(leftDResSimd));
+          int const numContacts = isize(contactIndices);
+          for (int contact = 0; contact < numContacts; ++contact) {
+            int const contactIndex = contactIndices[contact];
+            int const sampleIndex = query.sampleIndices[contactIndex];
+            int const quadIndex = sampleIndex % elementMap.samplesPerElement;
+            for (int physicsNode = 0; physicsNode < isize(physicsNodes); ++physicsNode) {
+              mappedBasis[physicsNode] =
+                  Dot(skinWeights[physicsNode], element.basisEvaluated[quadIndex]);
+            }
 
-    MakeOffsetElementIndexGroups(elementMap, elementIndex, dofOffset, skinGroups);
-    int const skinDofs = kSpaceDim3 * isize(physicsNodes);
-    for (ContactJac const* colliderJac : colliderJacs) {
-      MOCHI_ASSERT_VERBOSE(colliderJac && colliderJac->groupsInitialized);
-      int const colliderDofs = colliderJac->nDoFsState;
-      auto const pointJac = colliderJac->Jac(contactIndex);
-      contactToStateValues.resize_noinit(kSpaceDim3 * colliderDofs);
-      RowMatrixView<real, kSpaceDim3> contactToState(
-          contactToStateValues.data(), kSpaceDim3, colliderDofs);
-      if (auto const auxiliaryJac = colliderJac->JacAux()) {
-        MOCHI_ASSERT_VERBOSE(colliderJac->nDoFsInternal == RigidSize::kDAll);
-        RowMatrix<real, kSpaceDim3, RigidSize::kDAll> const contactToInternal(
-            leftDRes * pointJac.LeftCols<RigidSize::kDAll>(RigidSize::kDAll));
-        contactToState = contactToInternal * auxiliaryJac;
-      } else {
-        MOCHI_ASSERT_VERBOSE(colliderJac->nDoFsInternal == colliderDofs);
-        contactToState = leftDRes * pointJac;
-      }
-      mixedValues.resize_noinit(skinDofs * colliderDofs);
-      transposeValues.resize_noinit(colliderDofs * skinDofs);
-      RowMatrixView<real> mixed(mixedValues.data(), skinDofs, colliderDofs);
-      RowMatrixView<real> mixedTranspose(transposeValues.data(), colliderDofs, skinDofs);
-      for (int physicsNode = 0; physicsNode < isize(physicsNodes); ++physicsNode) {
-        mixed.MiddleRows<kSpaceDim3>(kSpaceDim3 * physicsNode, kSpaceDim3) =
-            mappedBasis[physicsNode] * contactToState;
-      }
-      mixedTranspose = mixed.Transpose();
+            VMatrix3x3r const leftDResSimd = Dot3x3(
+                Transpose3x3(colliderFromCollidingRotation(contactIndex)),
+                -sampleWeights[sampleIndex] * response.dforce[contactIndex]);
+            Matrix<real, kSpaceDim3, kSpaceDim3> const leftDRes(AsMatrixView(leftDResSimd));
+            auto const pointJac = colliderJac->Jac(contactIndex);
+            if (auto const auxiliaryJac = colliderJac->JacAux()) {
+              MOCHI_ASSERT_VERBOSE(colliderJac->nDoFsInternal == RigidSize::kDAll);
+              RowMatrix<real, kSpaceDim3, RigidSize::kDAll> const contactToInternal(
+                  leftDRes * pointJac.LeftCols<RigidSize::kDAll>(RigidSize::kDAll));
+              contactToState = contactToInternal * auxiliaryJac;
+            } else {
+              MOCHI_ASSERT_VERBOSE(colliderJac->nDoFsInternal == colliderDofs);
+              contactToState = leftDRes * pointJac;
+            }
 
-      auto const colliderGroups = colliderJac->IndGroups(contactIndex);
-      MatAddSubBlocks(
-          outDRes, MakeConstSpan(skinGroups), colliderGroups, RowMatrixView<real const>(mixed));
-      MatAddSubBlocks(
-          outDRes,
-          colliderGroups,
-          MakeConstSpan(skinGroups),
-          RowMatrixView<real const>(mixedTranspose));
-    }
-  }
+            bool const startsBlock = !colliderJac->hasSharedDoFs || contact == 0;
+            bool const endsBlock = !colliderJac->hasSharedDoFs || contact == numContacts - 1;
+            for (int physicsNode = 0; physicsNode < isize(physicsNodes); ++physicsNode) {
+              auto mixedBlock = mixed.MiddleRows<kSpaceDim3>(kSpaceDim3 * physicsNode, kSpaceDim3);
+              if (startsBlock) {
+                mixedBlock = mappedBasis[physicsNode] * contactToState;
+              } else {
+                mixedBlock += mappedBasis[physicsNode] * contactToState;
+              }
+            }
+            if (endsBlock) {
+              mixedTranspose = mixed.Transpose();
+              auto const colliderGroups = colliderJac->IndGroups(contactIndex);
+              MatAddSubBlocks(
+                  outDRes,
+                  MakeConstSpan(skinGroups),
+                  colliderGroups,
+                  RowMatrixView<real const>(mixed));
+              MatAddSubBlocks(
+                  outDRes,
+                  colliderGroups,
+                  MakeConstSpan(skinGroups),
+                  RowMatrixView<real const>(mixedTranspose));
+            }
+          }
+        }
+      });
 }
 
 } // namespace
@@ -817,8 +874,9 @@ void mochi::linear_contact_skin::AssembleContactResponseRange(
   bool const assemDRes = GetNumValues(results.outDRes) > 0;
   auto const worldFromCollidingRotation = ToVMatrix3x3(rootTransform.worldFromLocal.GetRotation());
 
+  auto const sortedContactIndices = SortContactsBySample(pointRange, query, allocator);
   auto const rangeResponse = MakeLinearContactSkinResponseRange(
-      pointRange,
+      MakeConstSpan(sortedContactIndices),
       query,
       response,
       elementMap.samplesPerElement,
@@ -842,7 +900,7 @@ void mochi::linear_contact_skin::AssembleContactResponseRange(
           elementMap,
           elements,
           dofOffset,
-          pointRange,
+          MakeConstSpan(sortedContactIndices),
           query,
           response,
           sampleWeights,
