@@ -19,20 +19,16 @@
 #include "mochi_deformable.h"
 #include "mochi_discretization_functions.h"
 
-#include <mochi_core/element_operations/batched_element_utils.h>
 #include <mochi_core/geometry/geometry_utils.h>
 #include <mochi_core/memory/filo_allocator.h>
 #include <mochi_core/utils/basic_utils.h>
-#include <mochi_core/utils/constants.h>
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/math_utils.h>
+#include <mochi_core/utils/matrix_utils.h>
 #include <mochi_core/utils/profile.h>
 #include <mochi_core/utils/spmat_utils.h>
 
 #include <algorithm>
-#include <bit>
-#include <cstddef>
-#include <cstdint>
 #include <type_traits>
 #include <utility>
 
@@ -355,7 +351,7 @@ auto MakeColliderFromCollidingRotation(
   };
 }
 
-// Index groups that scatter the rows of an element's projected block, ordered as its physics
+// Index groups that scatter the rows of an element's physics-space block, ordered as its physics
 // nodes, to the actor DoFs at dofOffset.
 void MakeOffsetElementIndexGroups(
     CLinearContactSkinElementMap const& elementMap,
@@ -372,281 +368,6 @@ void MakeOffsetElementIndexGroups(
          .count = kSpaceDim3});
   }
 }
-
-// Applies an element's skin-node weights, tensor I_3, to its skin DoFs: calls
-// out(node, component, sum_k weights[node][k] * in(kSpaceDim3 * k + component)) for each physics
-// node and spatial component.
-template <int kNumSkinNodes, class InFn, class OutFn>
-MOCHI_FORCE_INLINE void
-MapSkinToPhysicsDofs(Span<Real3 const> weights, InFn const& in, OutFn const& out) {
-  for (int node = 0; node < isize(weights); ++node) {
-    for (int component = 0; component < kSpaceDim3; ++component) {
-      real mapped = 0_r;
-      for (int skinNode = 0; skinNode < kNumSkinNodes; ++skinNode) {
-        mapped += weights[node][skinNode] * in(kSpaceDim3 * skinNode + component);
-      }
-      out(node, component, mapped);
-    }
-  }
-}
-
-// Assembles the active skin elements with batchedElementOp and projects each element's
-// contribution onto the physics DoFs through the element map.
-template <class ElementT, int kBatchSize = kDefaultFemBatchSize>
-void AssembleAndProjectLinearContactSkin(
-    [[maybe_unused]] Span<ElementT const> elements,
-    CLinearContactSkinElementMap const& elementMap,
-    NoDispElOpFnType<ElementT, kSpaceDim3, kBatchSize> const& batchedElementOp,
-    AssemblyResults<real> results,
-    Span<int const> activeElementIndices,
-    int dofOffset,
-    Allocator* allocator) {
-  static_assert(ElementT::kNumNodes == 3, "Linear contact-skin assembly requires triangles.");
-  static constexpr int kSkinDofs = ElementT::kNumNodes * kSpaceDim3;
-  // Assemble only the outputs that the caller provides.
-  bool const assemObj = results.outObj != nullptr;
-  bool const assemRes = !results.outRes.empty();
-  bool const assemDRes = GetNumValues(results.outDRes) > 0;
-  MOCHI_ASSERT_VERBOSE(assemObj || assemRes || assemDRes, "Must assemble something.");
-  MOCHI_ASSERT_VERBOSE(
-      elementMap.NumElements() == isize(elements) &&
-          elementMap.samplesPerElement == ElementT::kNumQuadPoints,
-      "Linear contact-skin map does not match the surface discretization.");
-  int const numActive = isize(activeElementIndices);
-
-  DynamicArray<real> projectedDresValues(allocator);
-  DynamicArray<IndexGroup> offsetGroups(allocator);
-  DynamicArray<real> leftProjectedDresValues(allocator);
-  if (assemDRes) {
-    int maxPhysicsNodes = 0;
-    for (int elementIndex : activeElementIndices) {
-      maxPhysicsNodes = Max(maxPhysicsNodes, isize(elementMap.PhysicsNodeIndices(elementIndex)));
-    }
-    int const maxProjectedDofs = kSpaceDim3 * maxPhysicsNodes;
-    projectedDresValues.reserve(maxProjectedDofs * maxProjectedDofs);
-    offsetGroups.reserve(maxPhysicsNodes);
-    leftProjectedDresValues.reserve(maxProjectedDofs * kSkinDofs);
-  }
-
-  for (int batchBegin = 0; batchBegin < numActive; batchBegin += kBatchSize) {
-    int const actualBatchSize = Min(kBatchSize, numActive - batchBegin);
-    NdArray<int, kBatchSize> elementIndices MOCHI_NO_INIT;
-    for (int lane = 0; lane < kBatchSize; ++lane) {
-      elementIndices[lane] = activeElementIndices[batchBegin + Min(lane, actualBatchSize - 1)];
-    }
-
-    BatchDouble<kBatchSize> elementEnergy MOCHI_NO_INIT;
-    fem::BatchElementVector<kBatchSize, ElementT, kSpaceDim3> elementResidual MOCHI_NO_INIT;
-    fem::BatchElementMatrix<kBatchSize, ElementT, kSpaceDim3> elementDResidual MOCHI_NO_INIT;
-    if (assemObj) {
-      elementEnergy = {};
-    }
-    if (assemRes) {
-      elementResidual = {};
-    }
-    if (assemDRes) {
-      elementDResidual = {};
-    }
-    bool const hasOutput = batchedElementOp(
-        elementIndices,
-        {},
-        assemObj ? &elementEnergy : nullptr,
-        assemRes ? &elementResidual : nullptr,
-        assemDRes ? &elementDResidual : nullptr,
-        results.params.psdDRes);
-    if (!hasOutput) {
-      continue;
-    }
-
-    for (int lane = 0; lane < actualBatchSize; ++lane) {
-      int const elementIndex = elementIndices[lane];
-      auto const physicsNodes = elementMap.PhysicsNodeIndices(elementIndex);
-      auto const weights = elementMap.SkinNodeWeights(elementIndex);
-      MOCHI_ASSERT_VERBOSE(physicsNodes.size() == weights.size());
-
-      if (assemObj) {
-        *results.outObj += elementEnergy[lane];
-      }
-
-      if (assemRes) {
-        MapSkinToPhysicsDofs<ElementT::kNumNodes>(
-            weights,
-            [&](int skinDof) { return elementResidual[skinDof][lane]; },
-            [&](int node, int component, real value) {
-              results.outRes[dofOffset + kSpaceDim3 * physicsNodes[node] + component] += value;
-            });
-      }
-
-      if (assemDRes) {
-        // Project W^T K W as (W^T K) W, contracting skin rows first and skin columns second.
-        int const projectedDofs = kSpaceDim3 * isize(physicsNodes);
-        leftProjectedDresValues.resize_noinit(projectedDofs * kSkinDofs);
-        RowMatrixView<real, krylov::kDynamic, kSkinDofs> leftProjectedDres(
-            leftProjectedDresValues.data(), projectedDofs, kSkinDofs);
-        for (int localCol = 0; localCol < kSkinDofs; ++localCol) {
-          MapSkinToPhysicsDofs<ElementT::kNumNodes>(
-              weights,
-              [&](int skinDof) { return elementDResidual[skinDof * kSkinDofs + localCol][lane]; },
-              [&](int node, int component, real value) {
-                leftProjectedDres(kSpaceDim3 * node + component, localCol) = value;
-              });
-        }
-        projectedDresValues.resize_noinit(projectedDofs * projectedDofs);
-        RowMatrixView<real> projectedDres(projectedDresValues.data(), projectedDofs, projectedDofs);
-        for (int row = 0; row < projectedDofs; ++row) {
-          MapSkinToPhysicsDofs<ElementT::kNumNodes>(
-              weights,
-              [&](int skinDof) { return leftProjectedDres(row, skinDof); },
-              [&](int node, int component, real value) {
-                projectedDres(row, kSpaceDim3 * node + component) = value;
-              });
-        }
-        MakeOffsetElementIndexGroups(elementMap, elementIndex, dofOffset, offsetGroups);
-        MatAddSubBlocks(
-            results.outDRes,
-            MakeConstSpan(offsetGroups),
-            MakeConstSpan(offsetGroups),
-            RowMatrixView<real const>(projectedDres));
-      }
-    }
-  }
-}
-
-// Per-sample contact responses for one contact range, accumulated by sample index and looked up
-// through an open-addressing hash table sized by contact count rather than by sample count. Add()
-// must be called with non-decreasing sample indices.
-class LinearContactSkinResponseRange {
- public:
-  static constexpr int kInvalidIndex = kSentinelIndex;
-  // Keeps the lookup table load factor at most 1/2.
-  static constexpr size_t kLookupCapacityFactor = 2;
-
-  LinearContactSkinResponseRange(
-      int capacity,
-      int samplesPerElement,
-      bool storeEnergy,
-      bool storeGradient,
-      bool storeHessian,
-      Allocator* allocator)
-      : _samplesPerElement(samplesPerElement),
-        _sampleIndices(allocator),
-        _lookupSampleIndices(allocator),
-        _lookupResponseIndices(allocator),
-        _energies(allocator),
-        _gradients(allocator),
-        _hessians(allocator),
-        _activeElementIndices(allocator) {
-    MOCHI_ASSERT_VERBOSE(capacity >= 0, "Response capacity must be non-negative.");
-    MOCHI_ASSERT_VERBOSE(samplesPerElement > 0, "Samples per element must be positive.");
-    _sampleIndices.reserve(capacity);
-    size_t const lookupCapacity =
-        NextPowerOfTwo(kLookupCapacityFactor * static_cast<size_t>(capacity));
-    int const lookupBits = std::countr_zero(lookupCapacity);
-    MOCHI_ASSERT_VERBOSE(lookupBits <= 32, "Lookup table exceeds the 32-bit hash range.");
-    _lookupMask = lookupCapacity - 1;
-    _lookupShift = 32 - lookupBits;
-    _lookupSampleIndices.resize(lookupCapacity, kInvalidIndex);
-    _lookupResponseIndices.resize_noinit(lookupCapacity);
-    if (storeEnergy) {
-      _energies.reserve(capacity);
-    }
-    if (storeGradient) {
-      _gradients.reserve(capacity);
-    }
-    if (storeHessian) {
-      _hessians.reserve(capacity);
-    }
-    _activeElementIndices.reserve(capacity);
-  }
-
-  void
-  Add(int sampleIndex, double const* energy, Real3 const* gradient, VMatrix3x3r const* hessian) {
-    MOCHI_ASSERT_VERBOSE(
-        _sampleIndices.empty() || _sampleIndices.back() <= sampleIndex,
-        "Responses must be added in non-decreasing sample order.");
-    if (!_sampleIndices.empty() && _sampleIndices.back() == sampleIndex) {
-      int const responseIndex = isize(_sampleIndices) - 1;
-      if (energy) {
-        _energies[responseIndex] += *energy;
-      }
-      if (gradient) {
-        _gradients[responseIndex] += *gradient;
-      }
-      if (hessian) {
-        _hessians[responseIndex] += ToNdArray3x3(*hessian);
-      }
-      return;
-    }
-
-    int const responseIndex = isize(_sampleIndices);
-    size_t const lookupSlot = FindLookupSlot(sampleIndex);
-    MOCHI_ASSERT_VERBOSE(
-        _lookupSampleIndices[lookupSlot] == kInvalidIndex,
-        "New response sample must have an empty lookup slot.");
-    _lookupSampleIndices[lookupSlot] = sampleIndex;
-    _lookupResponseIndices[lookupSlot] = responseIndex;
-    _sampleIndices.push_back(sampleIndex);
-    if (energy) {
-      _energies.push_back(*energy);
-    }
-    if (gradient) {
-      _gradients.push_back(*gradient);
-    }
-    if (hessian) {
-      _hessians.push_back(ToNdArray3x3(*hessian));
-    }
-    int const elementIndex = sampleIndex / _samplesPerElement;
-    if (_activeElementIndices.empty() || _activeElementIndices.back() != elementIndex) {
-      _activeElementIndices.push_back(elementIndex);
-    }
-  }
-
-  [[nodiscard]] MOCHI_FORCE_INLINE int GetResponseIndexFromSampleIndex(int sampleIndex) const {
-    size_t const lookupSlot = FindLookupSlot(sampleIndex);
-    return _lookupSampleIndices[lookupSlot] == sampleIndex ? _lookupResponseIndices[lookupSlot]
-                                                           : kInvalidIndex;
-  }
-
-  [[nodiscard]] MOCHI_FORCE_INLINE double GetEnergy(int responseIndex) const {
-    return _energies[responseIndex];
-  }
-
-  [[nodiscard]] MOCHI_FORCE_INLINE Real3 const& GetGradient(int responseIndex) const {
-    return _gradients[responseIndex];
-  }
-
-  [[nodiscard]] MOCHI_FORCE_INLINE Matrix3x3r const& GetHessian(int responseIndex) const {
-    return _hessians[responseIndex];
-  }
-
-  [[nodiscard]] MOCHI_FORCE_INLINE Span<int const> ActiveElementIndices() const {
-    return MakeConstSpan(_activeElementIndices);
-  }
-
- private:
-  [[nodiscard]] MOCHI_FORCE_INLINE size_t FindLookupSlot(int sampleIndex) const {
-    MOCHI_ASSERT_VERBOSE(sampleIndex >= 0, "Sample index must be non-negative.");
-    // Fibonacci hashing: the top bits of the product spread consecutive indices across slots.
-    uint32_t const hash = static_cast<uint32_t>(sampleIndex) * kGoldenRatio32;
-    auto lookupSlot = static_cast<size_t>(uint64_t{hash} >> _lookupShift);
-    while (_lookupSampleIndices[lookupSlot] != kInvalidIndex &&
-           _lookupSampleIndices[lookupSlot] != sampleIndex) {
-      lookupSlot = (lookupSlot + 1) & _lookupMask;
-    }
-    return lookupSlot;
-  }
-
-  int _samplesPerElement = 0;
-  size_t _lookupMask = 0;
-  int _lookupShift = 32;
-  DynamicArray<int> _sampleIndices;
-  DynamicArray<int> _lookupSampleIndices;
-  DynamicArray<int> _lookupResponseIndices;
-  DynamicArray<double> _energies;
-  DynamicArray<Real3> _gradients;
-  DynamicArray<Matrix3x3r> _hessians;
-  DynamicArray<int> _activeElementIndices;
-};
 
 // Returns the contact indices of pointRange sorted by sample index, so that the contacts of each
 // element are contiguous.
@@ -700,41 +421,124 @@ int MaxPhysicsNodes(
   return maxPhysicsNodes;
 }
 
-// Accumulates the contact responses by sample, in the colliding actor's local frame.
-LinearContactSkinResponseRange MakeLinearContactSkinResponseRange(
+// Assembles the contact response of each element with contacts onto its physics DoFs. The residual
+// is accumulated over the element's contacts as skin-node forces, which are then mapped through the
+// skin-node weights. The dresidual is accumulated directly in physics space as the sum over
+// contacts of -w (b b^T) tensor K, where w is the sample weight, b = W^T N(sample) holds the
+// physics-node basis values, and K is the contact dforce in the colliding actor's local frame.
+template <class ElementT>
+void AssembleElementContactResponses(
+    Span<ElementT const> elements,
+    CLinearContactSkinElementMap const& elementMap,
     Span<int const> sortedContactIndices,
     ContactDetectionResult const& query,
     CollisionResponseResult const& response,
-    int samplesPerElement,
-    bool assemObj,
-    bool assemRes,
-    bool assemDRes,
+    Span<real const> sampleWeights,
     VMatrix3x3r const& worldFromCollidingRotation,
-    Allocator* allocator) {
-  LinearContactSkinResponseRange out(
-      isize(sortedContactIndices), samplesPerElement, assemObj, assemRes, assemDRes, allocator);
+    int dofOffset,
+    Allocator* allocator,
+    AssemblyResults<real> results) {
+  static_assert(ElementT::kNumNodes == 3, "Linear contact-skin assembly requires triangles.");
+  bool const assemObj = results.outObj != nullptr;
+  bool const assemRes = !results.outRes.empty();
+  bool const assemDRes = GetNumValues(results.outDRes) > 0;
+  MOCHI_ASSERT_VERBOSE(assemObj || assemRes || assemDRes, "Must assemble something.");
+  MOCHI_ASSERT_VERBOSE(
+      elementMap.NumElements() == isize(elements) &&
+          elementMap.samplesPerElement == ElementT::kNumQuadPoints,
+      "Linear contact-skin map does not match the surface discretization.");
+  int const samplesPerElement = elementMap.samplesPerElement;
+
+  DynamicArray<real> mappedBasis(allocator);
+  DynamicArray<real> elementDResValues(allocator);
+  DynamicArray<IndexGroup> elementGroups(allocator);
+  if (assemDRes) {
+    int const maxPhysicsNodes = MaxPhysicsNodes(elementMap, query, sortedContactIndices);
+    int const maxElementDofs = kSpaceDim3 * maxPhysicsNodes;
+    mappedBasis.reserve(maxPhysicsNodes);
+    elementDResValues.reserve(maxElementDofs * maxElementDofs);
+    elementGroups.reserve(maxPhysicsNodes);
+  }
+
   auto const colliderFromCollidingRotation =
       MakeColliderFromCollidingRotation(query, worldFromCollidingRotation);
-  for (int contactIndex : sortedContactIndices) {
-    VMatrix3x3r const colliderFromColliding = colliderFromCollidingRotation(contactIndex);
-    double const* energy = assemObj ? &response.energy[contactIndex] : nullptr;
-    Real3 force MOCHI_NO_INIT;
-    VMatrix3x3r dforce MOCHI_NO_INIT;
-    if (assemRes) {
-      force = TransformContactForceToCollidingLocal(
-          colliderFromColliding, response.force[contactIndex]);
-    }
-    if (assemDRes) {
-      dforce = TransformContactDForceToCollidingLocal(
-          colliderFromColliding, response.dforce[contactIndex]);
-    }
-    out.Add(
-        query.sampleIndices[contactIndex],
-        energy,
-        assemRes ? &force : nullptr,
-        assemDRes ? &dforce : nullptr);
-  }
-  return out;
+  ForEachElementContacts(
+      sortedContactIndices,
+      query,
+      samplesPerElement,
+      [&](int elementIndex, Span<int const> contactIndices) {
+        auto const physicsNodes = elementMap.PhysicsNodeIndices(elementIndex);
+        auto const weights = elementMap.SkinNodeWeights(elementIndex);
+        MOCHI_ASSERT_VERBOSE(physicsNodes.size() == weights.size());
+        auto const& element = elements[elementIndex];
+        int const numNodes = isize(physicsNodes);
+        int const elementDofs = kSpaceDim3 * numNodes;
+        NdArray<real, ElementT::kNumNodes, kSpaceDim3> skinForces{};
+        RowMatrixView<real> elementDRes;
+        if (assemDRes) {
+          mappedBasis.resize_noinit(numNodes);
+          elementDResValues.resize_noinit(elementDofs * elementDofs);
+          elementDRes.Reset(elementDResValues.data(), elementDofs, elementDofs);
+          elementDRes.SetZero();
+        }
+
+        for (int contactIndex : contactIndices) {
+          int const sampleIndex = query.sampleIndices[contactIndex];
+          real const sampleWeight = sampleWeights[sampleIndex];
+          auto const& basis = element.basisEvaluated[sampleIndex % samplesPerElement];
+          if (assemObj) {
+            MOCHI_ASSERT_VERBOSE(
+                IsFinite(response.energy[contactIndex]), "Contact energy must be finite.");
+            *results.outObj += response.energy[contactIndex] * sampleWeight;
+          }
+          if (!assemRes && !assemDRes) {
+            continue;
+          }
+          VMatrix3x3r const colliderFromColliding = colliderFromCollidingRotation(contactIndex);
+          if (assemRes) {
+            Real3 const force = TransformContactForceToCollidingLocal(
+                colliderFromColliding, response.force[contactIndex]);
+            skinForces -= Outer(sampleWeight * basis, force);
+          }
+          if (assemDRes) {
+            Matrix3x3r const dforce = ToNdArray3x3(TransformContactDForceToCollidingLocal(
+                colliderFromColliding, response.dforce[contactIndex]));
+            for (int node = 0; node < numNodes; ++node) {
+              mappedBasis[node] = Dot(weights[node], basis);
+            }
+            for (int row = 0; row < numNodes; ++row) {
+              real const weightedBasis = sampleWeight * mappedBasis[row];
+              for (int r = 0; r < kSpaceDim3; ++r) {
+                Real3 const rowDForce = weightedBasis * dforce[r];
+                for (int col = 0; col < numNodes; ++col) {
+                  for (int c = 0; c < kSpaceDim3; ++c) {
+                    elementDRes(kSpaceDim3 * row + r, kSpaceDim3 * col + c) -=
+                        rowDForce[c] * mappedBasis[col];
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        if (assemRes) {
+          for (int node = 0; node < numNodes; ++node) {
+            Real3 const nodeRes = DotVecMat(weights[node], skinForces);
+            int const dof = dofOffset + kSpaceDim3 * physicsNodes[node];
+            for (int component = 0; component < kSpaceDim3; ++component) {
+              results.outRes[dof + component] += nodeRes[component];
+            }
+          }
+        }
+        if (assemDRes) {
+          MakeOffsetElementIndexGroups(elementMap, elementIndex, dofOffset, elementGroups);
+          MatAddSubBlocks(
+              results.outDRes,
+              MakeConstSpan(elementGroups),
+              MakeConstSpan(elementGroups),
+              RowMatrixView<real const>(elementDRes));
+        }
+      });
 }
 
 // Assembles the sync dresidual blocks that couple the mapped skin DoFs with the collider DoFs. For
@@ -869,32 +673,23 @@ void mochi::linear_contact_skin::AssembleContactResponseRange(
   if (pointRange.Size() == 0) {
     return;
   }
-  bool const assemObj = results.outObj != nullptr;
-  bool const assemRes = !results.outRes.empty();
   bool const assemDRes = GetNumValues(results.outDRes) > 0;
   auto const worldFromCollidingRotation = ToVMatrix3x3(rootTransform.worldFromLocal.GetRotation());
 
   auto const sortedContactIndices = SortContactsBySample(pointRange, query, allocator);
-  auto const rangeResponse = MakeLinearContactSkinResponseRange(
-      MakeConstSpan(sortedContactIndices),
-      query,
-      response,
-      elementMap.samplesPerElement,
-      assemObj,
-      assemRes,
-      assemDRes,
-      worldFromCollidingRotation,
-      allocator);
-
-  auto const activeElementIndices = rangeResponse.ActiveElementIndices();
   surfaceDisc.Visit([&](auto const& disc) {
-    using DiscT = std::decay_t<decltype(disc)>;
-    using ElementT = typename DiscT::ElementT;
     auto const elements = MakeConstSpan(disc.femElements);
-    auto const boundaryOp =
-        deformable::MakeBatchedBoundaryOp(elements, rangeResponse, Span<real const>{});
-    AssembleAndProjectLinearContactSkin<ElementT>(
-        elements, elementMap, boundaryOp, results, activeElementIndices, dofOffset, allocator);
+    AssembleElementContactResponses(
+        elements,
+        elementMap,
+        MakeConstSpan(sortedContactIndices),
+        query,
+        response,
+        sampleWeights,
+        worldFromCollidingRotation,
+        dofOffset,
+        allocator,
+        results);
     if (assemDRes && !colliderJacs.empty()) {
       AssembleLinearContactSkinMixedBlocks(
           elementMap,

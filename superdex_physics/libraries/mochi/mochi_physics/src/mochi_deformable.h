@@ -99,19 +99,14 @@ void ComputeAsyncContactResponse(
 
 /**
  * @brief Creates a batched boundary (traction/contact) assembly operator.
- *
- * @details @p response provides `kInvalidIndex` and `GetResponseIndexFromSampleIndex(sampleIndex)`,
- * which returns `kInvalidIndex` for samples without a response, plus `GetEnergy`, `GetGradient`,
- * and `GetHessian` by response index.
  */
 template <
     class ElementT,
     int kNumFields = ElementT::kSpaceDim,
-    int kBatchSize = kDefaultFemBatchSize,
-    class ContactResponseT>
+    int kBatchSize = kDefaultFemBatchSize>
 [[nodiscard]] NoDispElOpFnType<ElementT, kNumFields, kBatchSize> MakeBatchedBoundaryOp(
     Span<ElementT const> elements,
-    ContactResponseT const& response,
+    CDeformablePointAsyncCollisionsResponse const& response,
     Span<real const> bdFaceWeights) {
   using V = BatchReal<kBatchSize>;
   using Vd = BatchDouble<kBatchSize>;
@@ -142,7 +137,7 @@ template <
         int const sampleIdx = eleIndices[b] * ElementT::kNumQuadPoints + q;
         int const respIdx = response.GetResponseIndexFromSampleIndex(sampleIdx);
         respIdxByLane[b] = respIdx;
-        hasForce[b] = (respIdx != ContactResponseT::kInvalidIndex);
+        hasForce[b] = (respIdx != CDeformablePointAsyncCollisionsResponse::kInvalidIndex);
         if (!hasForce[b]) {
           continue;
         }

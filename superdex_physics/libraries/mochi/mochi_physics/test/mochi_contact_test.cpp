@@ -849,7 +849,11 @@ struct IslandAssembly {
   Matrix<real> dresidual;
 };
 
-static IslandAssembly AssembleSingleIsland(entt::registry& reg, GradTarget gradTarget) {
+static IslandAssembly AssembleSingleIsland(
+    entt::registry& reg,
+    GradTarget gradTarget,
+    bool assemRes = true,
+    bool assemDRes = true) {
   // There should be exactly one island.
   entt::entity island = entt::null;
   for (auto [e] : reg.view<TagIsland>().each()) {
@@ -880,13 +884,12 @@ static IslandAssembly AssembleSingleIsland(entt::registry& reg, GradTarget gradT
   // Initialize solution to zero
   problem.solution.SetZero();
 
-  // Request full assembly (objective, residual, and dresidual) for GradTarget::Current, partial
-  // assembly (objective and residual) for GradTarget::Previous.
-  bool const assemDRes = gradTarget == GradTarget::Current;
+  // Request the objective, and the residual and dresidual if requested. The dresidual is assembled
+  // only for GradTarget::Current.
   AssemblyParams params = {
       .assemObj = true,
-      .assemRes = true,
-      .assemDRes = assemDRes,
+      .assemRes = assemRes,
+      .assemDRes = assemDRes && gradTarget == GradTarget::Current,
       .psdDRes = false,
       .fittedSaturationHessian = SaturationHessianParams::All(false),
       .gradTarget = gradTarget};
@@ -894,8 +897,10 @@ static IslandAssembly AssembleSingleIsland(entt::registry& reg, GradTarget gradT
 
   IslandAssembly assembly;
   assembly.objective = problem.GetObjective();
-  assembly.residual = problem.GetResidual();
-  if (assemDRes) {
+  if (params.assemRes) {
+    assembly.residual = problem.GetResidual();
+  }
+  if (params.assemDRes) {
     assembly.dresidual = ToMatrix(problem.GetDResidual());
   }
   return assembly;
@@ -1189,13 +1194,24 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
     ColumnVector<real> const mappedResidual = _residual.Duplicate();
     SparseMatrix<real> const mappedDResidual = _dresidual.Duplicate();
 
+    // Assemblies without the dresidual, as in line searches, or without the residual, must match
+    // the full one.
+    real constexpr kRelTol = 1e-5_r;
+    IslandAssembly const objRes =
+        AssembleSingleIsland(GetRegistry(), gradTarget, /*assemRes*/ true, /*assemDRes*/ false);
+    IslandAssembly const objOnly =
+        AssembleSingleIsland(GetRegistry(), gradTarget, /*assemRes*/ false, /*assemDRes*/ false);
+    EXPECT_NEAR(objRes.objective, mappedObjective, kRelTol * Abs(mappedObjective));
+    EXPECT_NEAR(objOnly.objective, mappedObjective, kRelTol * Abs(mappedObjective));
+    ColumnVector<real> const objResDelta = objRes.residual - mappedResidual;
+    EXPECT_LE(objResDelta.Norm(), kRelTol * mappedResidual.Norm());
+
     RemoveLinearContactSkinMap();
     InitState();
     PreStep();
     ComputeResponse(gradTarget);
 
     // Both paths evaluate the same contacts and differ only in summation order.
-    real constexpr kRelTol = 1e-5_r;
     EXPECT_NEAR(mappedObjective, _objective, kRelTol * Abs(mappedObjective));
     ColumnVector<real> const resDelta = mappedResidual - _residual;
     EXPECT_LE(resDelta.Norm(), kRelTol * mappedResidual.Norm());
