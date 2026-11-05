@@ -75,6 +75,24 @@ char const* const kBreakdownTooltip =
     "Performance is broken down by category when single-threaded. "
     "Enable Force Single Threaded to see the breakdown.";
 
+struct CountRow {
+  char const* label = {};
+  int32_t StepProfileData::* count = {};
+};
+
+CountRow const kCountRows[] = {
+    {"Active Actors", &StepProfileData::activeActors},
+    {"Active Constraints", &StepProfileData::activeConstraints},
+    {"Active Contacts", &StepProfileData::activeContacts},
+    {"Active DoFs", &StepProfileData::activeDofs},
+    {"Active Islands", &StepProfileData::activeIslands},
+    {"Worker Threads", &StepProfileData::numWorkerThreads},
+};
+
+// Maximum: Step Dt, Step Time, the single-threaded categories and the counts.
+int constexpr kMaxNumStatsRows = 2 + kNumSegments + isize(kCountRows);
+float constexpr kThreadControlTopGapPx = 2.0f;
+
 ImVec4 constexpr kDivergedColor(0.90f, 0.20f, 0.20f, 1.0f);
 
 int constexpr kSmoothingSteps = 30;
@@ -223,6 +241,9 @@ CopySteps(DebugClient const& client, ProfilerPanelState& panel, int numVisible) 
       stats.hasProfile = true;
     }
 
+    if (end != panel.windowEndSequence) {
+      panel.windowEndOffset = 0.0;
+    }
     panel.historyBeginSequence = historyBegin;
     panel.historyEndSequence = historyEnd;
     panel.windowBeginSequence = begin;
@@ -242,19 +263,32 @@ static void UpdateYMax(ProfilerPanelState& panel) {
   panel.yMaxMs = (target > panel.yMaxMs) ? target : Lerp(panel.yMaxMs, target, kYReleasePerFrame);
 }
 
-// Change the bar width. While scrolled back, keep the step under the cursor in place.
-static void Zoom(ProfilerPanelState& panel, float wheel, float cursorFromLeftPx) {
+// Right edge of the plot in sequence units. Bar centers are at integer sequences.
+static double PlotRight(ProfilerPanelState const& panel) {
+  return static_cast<double>(panel.windowEndSequence) - 0.5 - panel.windowEndOffset;
+}
+
+// Change the bar width, keeping the plot position `cursorX` (in sequence units) under the cursor.
+// The view is clamped to the history next frame, which resumes following past the latest step.
+static void Zoom(ProfilerPanelState& panel, float wheel, double cursorX) {
   float const barWidthPx =
       Clamp(panel.barWidthPx * std::pow(kZoomPerWheelStep, wheel), kMinBarWidthPx, kMaxBarWidthPx);
-  if (!panel.followLatest) {
-    double const cursorToRightPx = panel.plotWidthPx - cursorFromLeftPx;
-    double const cursorSequence =
-        static_cast<double>(panel.windowEndSequence) - cursorToRightPx / panel.barWidthPx;
-    double const newEnd = Max(0.0, std::round(cursorSequence + cursorToRightPx / barWidthPx));
-    panel.windowEndSequence = static_cast<uint64_t>(newEnd);
-    panel.followLatest = panel.windowEndSequence >= panel.historyEndSequence;
-  }
+  double const right = cursorX + (PlotRight(panel) - cursorX) * panel.barWidthPx / barWidthPx;
+  double const end = Max(0.0, right + 0.5);
+  panel.windowEndSequence = static_cast<uint64_t>(std::ceil(end));
+  panel.windowEndOffset = static_cast<double>(panel.windowEndSequence) - end;
+  panel.followLatest = panel.windowEndSequence >= panel.historyEndSequence;
   panel.barWidthPx = barWidthPx;
+}
+
+// Packs table rows as tightly as the graph legend.
+static float CompactCellPaddingY() {
+  return 0.5f * ImPlot::GetStyle().LegendSpacing.y;
+}
+
+// Pop with ImGui::PopStyleVar().
+static void PushCompactRows() {
+  ImGui::PushStyleVarY(ImGuiStyleVar_CellPadding, CompactCellPaddingY());
 }
 
 static void AddRowLabel(
@@ -285,14 +319,6 @@ static void AddStepTimeRow(StepProfileData const* profile, float stepSec) {
   }
 }
 
-static void
-AddCountRow(char const* label, StepProfileData const* profile, int32_t StepProfileData::* count) {
-  AddRowLabel(label);
-  if (profile) {
-    ImGui::Text("%d", profile->*count);
-  }
-}
-
 static void AddSimDeltaTimeRow(StepProfileData const* profile) {
   AddRowLabel("Sim Dt");
   if (profile) {
@@ -310,17 +336,19 @@ static void AddStepRows(StepProfileData const* profile) {
       ImGui::Text("%.3f ms (%.0f%%)", ToMs(sec), totalSec > 0.0f ? 100.0f * sec / totalSec : 0.0f);
     }
   }
-  AddCountRow("Active Actors", profile, &StepProfileData::activeActors);
-  AddCountRow("Active Constraints", profile, &StepProfileData::activeConstraints);
-  AddCountRow("Active Contacts", profile, &StepProfileData::activeContacts);
-  AddCountRow("Active DoFs", profile, &StepProfileData::activeDofs);
-  AddCountRow("Active Islands", profile, &StepProfileData::activeIslands);
-  AddCountRow("Worker Threads", profile, &StepProfileData::numWorkerThreads);
+  for (auto const& row : kCountRows) {
+    AddRowLabel(row.label);
+    if (profile) {
+      ImGui::Text("%d", profile->*row.count);
+    }
+  }
 }
 
 static void BuildStepTooltip(StepProfileData const& profile) {
   ImGui::BeginTooltip();
   MOCHI_DEFER(ImGui::EndTooltip());
+  PushCompactRows();
+  MOCHI_DEFER(ImGui::PopStyleVar());
   if (ImGui::BeginTable("##Step", 2, ImGuiTableFlags_SizingFixedFit)) {
     MOCHI_DEFER(ImGui::EndTable());
     AddRowLabel("Convergence");
@@ -388,7 +416,7 @@ static void BuildGraph(UiState& state, ImVec2 size, StatsSnapshot const& stats) 
         "ms",
         ImPlotAxisFlags_Lock | ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_NoGridLines,
         ImPlotAxisFlags_Lock);
-    double const right = static_cast<double>(panel.windowEndSequence) - 0.5;
+    double const right = PlotRight(panel);
     double const left = right - panel.plotWidthPx / panel.barWidthPx;
     ImPlot::SetupAxisLimits(ImAxis_X1, left, right, ImPlotCond_Always);
     ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, panel.yMaxMs, ImPlotCond_Always);
@@ -438,7 +466,7 @@ static void BuildGraph(UiState& state, ImVec2 size, StatsSnapshot const& stats) 
         hovered = &*it;
       }
       if (float const wheel = ImGui::GetIO().MouseWheel; wheel != 0.0f) {
-        Zoom(panel, wheel, ImGui::GetMousePos().x - ImPlot::GetPlotPos().x);
+        Zoom(panel, wheel, ImPlot::GetPlotMousePos().x);
       }
       openContextMenu = ImGui::IsMouseClicked(ImGuiMouseButton_Right);
     }
@@ -484,6 +512,7 @@ static void BuildScrollbar(ProfilerPanelState& panel, int numVisible) {
     MOCHI_ASSERT_VERBOSE(scroll + numVisible >= 0, "Invalid profiler scrollbar position");
     panel.windowEndSequence =
         panel.historyBeginSequence + static_cast<uint64_t>(scroll + numVisible);
+    panel.windowEndOffset = 0.0;
     panel.followLatest = panel.windowEndSequence >= panel.historyEndSequence;
   }
 }
@@ -511,6 +540,7 @@ static void BuildStats(UiState& state, StatsSnapshot const& stats) {
 
   StepProfileData const* profile = stats.hasProfile ? &panel.statsProfile : nullptr;
 
+  ImGui::SetCursorPosY(ImGui::GetCursorPosY() + kThreadControlTopGapPx);
   {
     // Keep the checkbox frame at font height without shrinking its label.
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
@@ -523,6 +553,8 @@ static void BuildStats(UiState& state, StatsSnapshot const& stats) {
   }
   ImGui::Separator();
 
+  PushCompactRows();
+  MOCHI_DEFER(ImGui::PopStyleVar());
   if (ImGui::BeginTable("##Stats", 2, ImGuiTableFlags_SizingFixedFit)) {
     MOCHI_DEFER(ImGui::EndTable());
     AddSimDeltaTimeRow(profile);
@@ -531,7 +563,19 @@ static void BuildStats(UiState& state, StatsSnapshot const& stats) {
       ImGui::SetTooltip("Averaged over recent steps");
     }
     AddStepRows(profile);
+    MOCHI_ASSERT_VERBOSE(
+        ImGui::TableGetRowIndex() + 1 ==
+            kMaxNumStatsRows - (profile && HasBreakdown(*profile) ? 0 : kNumSegments),
+        "Profiler stats row count is out of date");
   }
+}
+
+float dbg::GetProfilerStatsHeightPx() {
+  float const controlsHeight =
+      kThreadControlTopGapPx + ImGui::GetTextLineHeight() + 2.0f * ImGui::GetStyle().ItemSpacing.y;
+  return controlsHeight +
+      static_cast<float>(kMaxNumStatsRows) *
+      (ImGui::GetTextLineHeight() + 2.0f * CompactCellPaddingY());
 }
 
 void dbg::BuildProfilerPanel(UiState& state) {
@@ -540,7 +584,8 @@ void dbg::BuildProfilerPanel(UiState& state) {
   if (panel.plotWidthPx <= 0.0f) {
     panel.plotWidthPx = Max(1.0f, ImGui::GetContentRegionAvail().x - statsWidth);
   }
-  int const numVisible = Max(1, static_cast<int>(std::ceil(panel.plotWidthPx / panel.barWidthPx)));
+  int const numVisible = Max(
+      1, static_cast<int>(std::ceil(panel.plotWidthPx / panel.barWidthPx + panel.windowEndOffset)));
   StatsSnapshot const stats = CopySteps(*state.client, panel, numVisible);
 
   ImGui::BeginChild(

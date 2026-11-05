@@ -29,6 +29,7 @@ struct ProfilerPanelState {
   float barWidthPx = 1.0f; // Changed with the mouse wheel over the graph
   bool followLatest = true; // Keep the newest step at the right edge of the graph
   uint64_t windowEndSequence = 0; // History sequence one past the rightmost visible bar
+  double windowEndOffset = 0.0; // Fraction of a bar [0, 1) the view is shifted left of the end
   float plotWidthPx = 0.0f; // Plot area width from the previous frame
   float yMaxMs = 0.0f; // Smoothed y-axis limit [ms]
 
@@ -46,5 +47,8 @@ struct ProfilerPanelState {
 
 // Profiler panel: a per-step timing graph and simulation statistics for the selected scene.
 void BuildProfilerPanel(UiState& state);
+
+// Maximum height of the threading control and stats, including the serial breakdown [px].
+float GetProfilerStatsHeightPx();
 
 } // namespace mochi::dbg

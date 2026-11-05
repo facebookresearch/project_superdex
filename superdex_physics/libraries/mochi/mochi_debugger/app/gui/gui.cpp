@@ -23,6 +23,7 @@
 #include "terminal_panel.h"
 #include "viewport_panel.h"
 
+#include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/defer.h>
 #include <mochi_debugger/lib/debug_client.h>
 
@@ -170,8 +171,18 @@ static void BuildDefaultLayout(UiState& state, ImGuiID dockspaceId) {
   ImGuiID const left = ImGui::DockBuilderSplitNode(center, ImGuiDir_Left, 0.18f, nullptr, &center);
   ImGuiID const right =
       ImGui::DockBuilderSplitNode(center, ImGuiDir_Right, 0.24f, nullptr, &center);
+
+  // Fit the Profiler's stats without scrolling, but keep most of the height for the Viewport.
+  // The extra pixel absorbs truncation in the split.
+  float constexpr kMaxBottomRatio = 0.28f;
+  float const bottomHeightPx = ImGui::GetFrameHeight() +
+      2.0f * state.panels.at(kPanelNameProfiler).windowPadding + GetProfilerStatsHeightPx() + 1.0f;
+  float const splitHeightPx =
+      ImGui::DockBuilderGetNode(center)->Size.y - ImGui::GetStyle().DockingSeparatorSize;
+  float const bottomRatio =
+      splitHeightPx > 0.0f ? Min(kMaxBottomRatio, bottomHeightPx / splitHeightPx) : kMaxBottomRatio;
   ImGuiID const bottom =
-      ImGui::DockBuilderSplitNode(center, ImGuiDir_Down, 0.28f, nullptr, &center);
+      ImGui::DockBuilderSplitNode(center, ImGuiDir_Down, bottomRatio, nullptr, &center);
 
   auto dock = [&](char const* key, ImGuiID node) {
     auto it = state.panels.find(key);
