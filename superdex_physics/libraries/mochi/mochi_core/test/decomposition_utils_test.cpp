@@ -34,6 +34,7 @@ using namespace mochi::test;
 
 static constexpr auto kScalings =
     kPI * NdArray<real, 9>{1e-12_r, 1e-9_r, 1e-6_r, 1e-3_r, 1e0_r, 1e3_r, 1e6_r, 1e9_r, 1e12_r};
+
 // kScalings, and a scaling near overflow, at which the entries of some test matrices sum past the
 // largest finite number.
 static constexpr auto kEigenScalings = [] {
@@ -44,11 +45,27 @@ static constexpr auto kEigenScalings = [] {
   scalings[9] = std::numeric_limits<real>::max() / 16_r;
   return scalings;
 }();
+
+// kScalings up to π·1e6, and ε/16, which scales most test matrices to norms below ε. At larger
+// scalings, det(F) overflows in single precision for some test matrices, and the SVDs take the sign
+// of the smallest singular value from it.
+static constexpr NdArray<real, 8> kSvdScalings = {
+    kPI * 1e-12_r,
+    kPI * 1e-9_r,
+    kPI * 1e-6_r,
+    kPI * 1e-3_r,
+    kPI,
+    kPI * 1e3_r,
+    kPI * 1e6_r,
+    std::numeric_limits<real>::epsilon() / 16_r};
+
 static real const eigenRelTol = 10_r * Sqrt(std::numeric_limits<real>::epsilon());
+
 // The eigendecompositions with eigenvectors are backward stable. Without, the 3x3 closed form
 // resolves the two closest eigenvalues of a clustered spectrum only to O(√ε‖A‖).
 static constexpr real kStableEigenRelTol = 16_r * std::numeric_limits<real>::epsilon();
 static real const clusteredValsOnlyRelTol = 2_r * Sqrt(std::numeric_limits<real>::epsilon());
+
 static constexpr real kUlpTol = 4_r * std::numeric_limits<real>::epsilon();
 static real const svdRelTol = 50_r * Sqrt(std::numeric_limits<real>::epsilon());
 static constexpr real kPsdRelTol = 2e2_r * std::numeric_limits<real>::epsilon();
@@ -181,6 +198,11 @@ static constexpr real kCholeskyRelTol = 1e2_r * std::numeric_limits<real>::epsil
         Real3{0.116823693_r,  0.540012926_r, 0.640019728_r},
         Real3{0.0671524922_r, 0.310257392_r, 0.367557496_r},
         Real3{0.0306674764_r, 0.141722573_r, 0.167986967_r}},
+    // Round needle (σ = 1, 16ε, 16ε): σ₁/σ₀ is just above U's rank threshold, ε.
+    Matrix3x3r{
+        Real3{1_r, 0_r, 0_r},
+        Real3{0_r, 16_r * std::numeric_limits<real>::epsilon(), 0_r},
+        Real3{0_r, 0_r, 16_r * std::numeric_limits<real>::epsilon()}},
     // Rank-0 cases
     Matrix3x3r{
         Real3{0_r, 0_r, 0_r},
@@ -452,12 +474,14 @@ VerifySvd3x3(Matrix3x3r const& mat, Matrix3x3r const& U, Real3 const& sigma, Mat
   }
   EXPECT_LE(Norm(D), kStableEigenRelTol * Norm(G));
   Matrix3x3r const reconstructed = Dot(U, Dot(DiagonalMatrix(sigma), VT));
-  // NOTE: The absolute floor (svdRelTol) handles near-zero matrices at extreme scalings where the
-  // relative term vanishes but reconstruction error remains O(eps × singular values).
-  real const absTol = svdRelTol;
-  EXPECT_LE(Norm(reconstructed - mat), svdRelTol * Norm(mat) + absTol);
-  EXPECT_LE(Norm(Dot(Transpose(U), U) - Eye<3>()), svdRelTol);
+  EXPECT_LE(Norm(reconstructed - mat), svdRelTol * Norm(mat));
+  EXPECT_LE(Norm(Dot(Transpose(U), U) - Eye<3>()), kStableEigenRelTol);
   EXPECT_LE(Norm(Dot(VT, Transpose(VT)) - Eye<3>()), svdRelTol);
+  // The polar factor U·Vᵀ of a diagonal 𝐅 with positive entries is the identity.
+  Real3 const diagonal{mat[0][0], mat[1][1], mat[2][2]};
+  if (mat == DiagonalMatrix(diagonal) && Min(diagonal) > 0_r) {
+    EXPECT_LE(Norm(Dot(U, VT) - Eye<3>()), svdRelTol);
+  }
   real const matNorm = Norm(mat);
   if (matNorm > 0_r) {
     real const detF = Det(mat);
@@ -596,29 +620,31 @@ TEST(DecompositionUtils, EigendecompSym_TransposeFlag) {
 */
 
 TEST(DecompositionUtils, RotationVariantSvd3x3_Scalar) {
-  // TODO: Consider a scale-relative rank threshold in the scalar SVD, then enable the kScalings
-  // loop.
-  for (auto const& mat : kTestMatrices3x3) {
-    Real3 sigma, valsOnly;
-    Matrix3x3r U, VT;
-    RotationVariantSvd(mat, U, sigma, VT);
-    RotationVariantSvdVals(mat, valsOnly);
-    VerifySvd3x3(mat, U, sigma, VT);
-    VerifySvdValsOnly(mat, valsOnly, sigma);
+  for (real scaling : kSvdScalings) {
+    for (auto const& mat0 : kTestMatrices3x3) {
+      Matrix3x3r const mat = mat0 * scaling;
+      Real3 sigma, valsOnly;
+      Matrix3x3r U, VT;
+      RotationVariantSvd(mat, U, sigma, VT);
+      RotationVariantSvdVals(mat, valsOnly);
+      VerifySvd3x3(mat, U, sigma, VT);
+      VerifySvdValsOnly(mat, valsOnly, sigma);
+    }
   }
 }
 
 TEST(DecompositionUtils, RotationVariantSvd3x3_SIMD) {
-  // TODO: Consider Gram-Schmidt on U's rows and a scale-relative rank threshold in the SVDs, then
-  // enable the kScalings loop.
-  for (auto const& mat : kTestMatrices3x3) {
-    VMatrix3x3r const F = ToSimdMatrix(mat);
-    Vec4r sigma, valsOnly;
-    VMatrix3x3r U, VT;
-    RotationVariantSvd3x3(F, U, sigma, VT);
-    RotationVariantSvdVals3x3(F, valsOnly);
-    VerifySvd3x3(mat, ToNdArray3x3(U), ToReal3(sigma), ToNdArray3x3(VT));
-    VerifySvdValsOnly(mat, ToReal3(valsOnly), ToReal3(sigma));
+  for (real scaling : kSvdScalings) {
+    for (auto const& mat0 : kTestMatrices3x3) {
+      Matrix3x3r const mat = mat0 * scaling;
+      VMatrix3x3r const F = ToSimdMatrix(mat);
+      Vec4r sigma, valsOnly;
+      VMatrix3x3r U, VT;
+      RotationVariantSvd3x3(F, U, sigma, VT);
+      RotationVariantSvdVals3x3(F, valsOnly);
+      VerifySvd3x3(mat, ToNdArray3x3(U), ToReal3(sigma), ToNdArray3x3(VT));
+      VerifySvdValsOnly(mat, ToReal3(valsOnly), ToReal3(sigma));
+    }
   }
 }
 
@@ -636,7 +662,7 @@ TEST(DecompositionUtils, LeftPolarDecomposition3x3) {
     EXPECT_LE(Norm3x3(Dot3x3(U, P) - A), relTol * Norm3x3(A));
 
     // Check U is unitary.
-    EXPECT_LE(Norm3x3(Dot3x3(Transpose3x3(U), U) - VEye<3>()), relTol);
+    EXPECT_LE(Norm3x3(Dot3x3(Transpose3x3(U), U) - VEye<3>()), kStableEigenRelTol);
 
     // Check P is symmetric positive semi-definite.
     EXPECT_LE(Norm3x3(Transpose3x3(P) - P), relTol * Norm3x3(P));
@@ -644,10 +670,10 @@ TEST(DecompositionUtils, LeftPolarDecomposition3x3) {
     AnalyticalEigendecompSym3x3(SimdFullToSym(P), eigsP, /*Q*/ nullptr);
     EXPECT_GE(HMin<3>(eigsP), -relTol * Norm3x3(P)); // PSD to within tolerance.
   };
-  // TODO: Consider Gram-Schmidt on U's rows and a scale-relative rank threshold in the SVDs, then
-  // enable the kScalings loop.
-  for (auto const& mat : kTestMatrices3x3) {
-    verify(mat, 50_r * Sqrt(std::numeric_limits<real>::epsilon()));
+  for (real scaling : kSvdScalings) {
+    for (auto const& mat : kTestMatrices3x3) {
+      verify(mat * scaling, svdRelTol);
+    }
   }
   // Clustered singular values away from zero, where the SVD is backward stable.
   for (auto const& test : symTestMatrices3x3) {
@@ -1045,24 +1071,24 @@ MOCHI_BATCH_TEST(
 
 template <int kBatchSize>
 static void TestBatchedSvd3x3() {
-  // TODO: Consider Gram-Schmidt on U's rows and a scale-relative rank threshold in the SVDs, then
-  // enable the kScalings loop.
-  for (int batch = 0; batch < kNumMats3x3; batch += kBatchSize) {
-    std::array<Matrix3x3r, kBatchSize> mats{};
-    for (int i = 0; i < kBatchSize; ++i) {
-      mats[i] = kTestMatrices3x3[(batch + i) % kNumMats3x3];
-    }
+  for (real scaling : kSvdScalings) {
+    for (int batch = 0; batch < kNumMats3x3; batch += kBatchSize) {
+      std::array<Matrix3x3r, kBatchSize> mats{};
+      for (int i = 0; i < kBatchSize; ++i) {
+        mats[i] = kTestMatrices3x3[(batch + i) % kNumMats3x3] * scaling;
+      }
 
-    std::array<Matrix3x3r, kBatchSize> U{}, VT{};
-    std::array<Real3, kBatchSize> sigma{};
-    BatchedRotationVariantSvd3x3<kBatchSize>(
-        MakeConstSpan(mats), MakeSpan(U), MakeSpan(sigma), MakeSpan(VT));
-    std::array<Real3, kBatchSize> valsOnly{};
-    BatchedRotationVariantSvdVals3x3<kBatchSize>(MakeConstSpan(mats), MakeSpan(valsOnly));
+      std::array<Matrix3x3r, kBatchSize> U{}, VT{};
+      std::array<Real3, kBatchSize> sigma{};
+      BatchedRotationVariantSvd3x3<kBatchSize>(
+          MakeConstSpan(mats), MakeSpan(U), MakeSpan(sigma), MakeSpan(VT));
+      std::array<Real3, kBatchSize> valsOnly{};
+      BatchedRotationVariantSvdVals3x3<kBatchSize>(MakeConstSpan(mats), MakeSpan(valsOnly));
 
-    for (int i = 0; i < kBatchSize; ++i) {
-      VerifySvd3x3(mats[i], U[i], sigma[i], VT[i]);
-      VerifySvdValsOnly(mats[i], valsOnly[i], sigma[i]);
+      for (int i = 0; i < kBatchSize; ++i) {
+        VerifySvd3x3(mats[i], U[i], sigma[i], VT[i]);
+        VerifySvdValsOnly(mats[i], valsOnly[i], sigma[i]);
+      }
     }
   }
 }
@@ -1216,8 +1242,6 @@ TEST(DecompositionUtils, BatchedEigendecompSym3x3_CrossValidation) {
   }
 }
 
-// TODO: Consider Gram-Schmidt on U's rows and a scale-relative rank threshold in the SVDs, then
-// enable the kScalings loop.
 TEST(DecompositionUtils, BatchedSvd3x3_CrossValidation) {
   constexpr int kBatch = 4;
   for (int batch = 0; batch < kNumMats3x3; batch += kBatch) {

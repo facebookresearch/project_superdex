@@ -481,8 +481,7 @@ AnalyticalEigendecompSym3x3(VSymMatrix3x3r const& mat, Vec4r& eigvalues, VMatrix
   Singular-Value Decomposition: Scalar
 */
 
-// WARNING: Results may be inaccurate if the matrix entries are several orders of magnitude above or
-// below 1.
+// WARNING: Results may be inaccurate if 𝐅ᵀ𝐅 or det(𝐅) overflows or underflows.
 inline void RotationVariantSvdVals(Matrix3x3r const& F, Real3& Sg) {
   // Form normal matrix 𝐆 = 𝐅ᵀ𝐅. Perform eigendecomposition of 𝐆.
   Real3 eigvalues;
@@ -502,8 +501,7 @@ inline void RotationVariantSvdVals(Matrix3x3r const& F, Real3& Sg) {
   }
 }
 
-// WARNING: Results may be inaccurate if the matrix entries are several orders of magnitude above or
-// below 1.
+// WARNING: Results may be inaccurate if 𝐅ᵀ𝐅 or det(𝐅) overflows or underflows.
 inline void RotationVariantSvd(Matrix3x3r const& F, Matrix3x3r& U, Real3& Sg, Matrix3x3r& VT) {
   // Form normal matrix 𝐆 = 𝐅ᵀ𝐅. Perform eigendecomposition of 𝐆.
   Real3 eigvalues;
@@ -524,25 +522,28 @@ inline void RotationVariantSvd(Matrix3x3r const& F, Matrix3x3r& U, Real3& Sg, Ma
   }
 
   // Compute singular vectors 𝐔=𝐅𝐕𝚺⁻¹
+  real constexpr kEpsilon = std::numeric_limits<real>::epsilon();
+  real constexpr kMin = std::numeric_limits<real>::min();
+  real const invSigma0 = 1_r / (Sg[0] + kMin);
 
-  // Compute first row of UT
-  U[0] = DotMatVec(F, VT[0]);
-  real u0norm = Norm(U[0]);
-  if (u0norm < std::numeric_limits<real>::epsilon()) MOCHI_UNLIKELY {
+  // Compute first row of UT. It is unit to rounding, since σ₀² is the eigenvalue of 𝐆 for VT[0].
+  if (Sg[0] * Sg[0] <= kMin) MOCHI_UNLIKELY {
     U[0] = Real3{1.0_r, 0.0_r, 0.0_r};
   } else {
-    U[0] /= u0norm;
+    U[0] = DotMatVec(F, VT[0]) * invSigma0;
   }
 
-  // Compute second row of UT. For a rank-deficient F, rounding in VT[1] leaves a component along
-  // U[0] that the test below would mistake for a nonzero singular value.
-  U[1] = DotMatVec(F, VT[1]);
+  // Compute second row of UT: 𝐅VT[1]/σ₀ minus its component along U[0]. Rounding leaves that
+  // component at about ε, which would tilt U[1] by about εσ₀/σ₁, and which the rank test below
+  // would mistake for a nonzero σ₁ if 𝐅 is rank-deficient. Divided by σ₀, the test is relative,
+  // and a U[1] that passes it has a squared norm of at least ε², far from underflow.
+  U[1] = DotMatVec(F, VT[1]) * invSigma0;
   U[1] -= Dot(U[0], U[1]) * U[0];
-  real u1norm = Norm(U[1]);
-  if (u1norm < std::numeric_limits<real>::epsilon()) MOCHI_UNLIKELY {
+  real const u1normSqr = NormSqr(U[1]);
+  if (u1normSqr <= kEpsilon * kEpsilon) MOCHI_UNLIKELY {
     U[1] = Normalize(OrthogonalVector(U[0]));
   } else {
-    U[1] /= u1norm;
+    U[1] /= Sqrt(u1normSqr);
   }
 
   // Compute third row of UT
@@ -556,8 +557,7 @@ inline void RotationVariantSvd(Matrix3x3r const& F, Matrix3x3r& U, Real3& Sg, Ma
   Singular-Value Decomposition: SIMD
 */
 
-// WARNING: Results may be inaccurate if the matrix entries are several orders of magnitude above or
-// below 1.
+// WARNING: Results may be inaccurate if 𝐅ᵀ𝐅 or det(𝐅) overflows or underflows.
 inline void RotationVariantSvdVals3x3(VMatrix3x3r const& F, Vec4r& Sg) {
   // Compute F^T*F
   VSymMatrix3x3r Gsym = SimdFullToSym(Dot3x3(Transpose3x3(F), F));
@@ -577,8 +577,7 @@ inline void RotationVariantSvdVals3x3(VMatrix3x3r const& F, Vec4r& Sg) {
   }
 }
 
-// WARNING: Results may be inaccurate if the matrix entries are several orders of magnitude above or
-// below 1.
+// WARNING: Results may be inaccurate if 𝐅ᵀ𝐅 or det(𝐅) overflows or underflows.
 inline void
 RotationVariantSvd3x3(VMatrix3x3r const& F, VMatrix3x3r& U, Vec4r& Sg, VMatrix3x3r& VT) {
   // Compute F^T * F
@@ -601,20 +600,25 @@ RotationVariantSvd3x3(VMatrix3x3r const& F, VMatrix3x3r& U, Vec4r& Sg, VMatrix3x
 
   // Compute singular vectors 𝐔=𝐅𝐕𝚺⁻¹.
   real constexpr kEpsilon = std::numeric_limits<real>::epsilon();
+  real constexpr kMin = std::numeric_limits<real>::min();
+  real const sigma0 = Get<0>(Sg);
+  real const invSigma0 = 1_r / (sigma0 + kMin);
 
-  // Compute first row of UT
-  U[0] = DotVecMat3x3(VT[0], FT); // Faster than DotMatVec3x3
-  real const u0normSqr = NormSqr<3>(U[0]);
-  if (u0normSqr > kEpsilon) MOCHI_LIKELY {
-    U[0] = Normalize(U[0], u0normSqr);
+  // Compute first row of UT. It is unit to rounding, since σ₀² is the eigenvalue of 𝐆 for VT[0].
+  if (sigma0 * sigma0 > kMin) MOCHI_LIKELY {
+    U[0] = DotVecMat3x3(VT[0], FT) * invSigma0; // Faster than DotMatVec3x3
   } else MOCHI_UNLIKELY {
     U[0] = SimdBasisVector<0>();
   }
 
-  // Compute second row of UT
-  U[1] = DotVecMat3x3(VT[1], FT); // Faster than DotMatVec3x3
+  // Compute second row of UT: 𝐅VT[1]/σ₀ minus its component along U[0]. Rounding leaves that
+  // component at about ε, which would tilt U[1] by about εσ₀/σ₁, and which the rank test below
+  // would mistake for a nonzero σ₁ if 𝐅 is rank-deficient. Divided by σ₀, the test is relative,
+  // and a U[1] that passes it has a squared norm of at least ε², far from underflow.
+  U[1] = DotVecMat3x3(VT[1], FT) * invSigma0; // Faster than DotMatVec3x3
+  U[1] -= VDot<3>(U[0], U[1]) * U[0];
   real const u1normSqr = NormSqr<3>(U[1]);
-  if (u1normSqr > kEpsilon) MOCHI_LIKELY {
+  if (u1normSqr > kEpsilon * kEpsilon) MOCHI_LIKELY {
     U[1] = Normalize(U[1], u1normSqr);
   } else MOCHI_UNLIKELY {
     U[1] = Normalize<3>(OrthogonalVector3(U[0]));
@@ -789,8 +793,7 @@ inline void BatchedAnalyticalEigendecompSym3x3(
 /**************************************************************************************************
   Batched SVD
 
-  WARNING: Results may be inaccurate if the matrix entries are several orders of magnitude above
-  or below 1.
+  WARNING: Results may be inaccurate if 𝐅ᵀ𝐅 or det(𝐅) overflows or underflows.
 */
 
 namespace detail {
@@ -808,37 +811,41 @@ template <int kBatchSize>
       fm[0][1] * fm[0][2] + fm[1][1] * fm[1][2] + fm[2][1] * fm[2][2]};
 }
 
-// Compute U from F and VT (eigenvectors of G). Only VT rows 0 and 1 are used since U₂ = cross(U₀,
-// U₁).
+// Compute U from F, VT (eigenvectors of G) and σ₀. Only VT rows 0 and 1 are used since U₂ =
+// cross(U₀, U₁).
 template <int kBatchSize>
 MOCHI_FORCE_INLINE void BatchedComputeU(
     BatchReal3x3<kBatchSize> const& fm,
     BatchReal3x3<kBatchSize> const& VT,
+    BatchReal<kBatchSize> const& sigma0,
     BatchReal3x3<kBatchSize>& U) {
   using V = BatchReal<kBatchSize>;
   using V3 = BatchReal3<kBatchSize>;
   using V3x3 = BatchReal3x3<kBatchSize>;
-  V const eps = std::numeric_limits<real>::epsilon();
+  real constexpr kEpsilon = std::numeric_limits<real>::epsilon();
+  V const epsSqr = kEpsilon * kEpsilon;
   V const min = std::numeric_limits<real>::min();
   V const zero = V{0_r};
   V const one = V{1_r};
+  V const invSigma0 = one / (sigma0 + min);
 
-  // UT row 0: u0 = F * v0
-  V3 u0 = DotMatVec(fm, VT[0]);
+  // UT row 0: u0 = F * v0 / σ₀, unit to rounding, since σ₀² is the eigenvalue of G for v0.
+  V3 u0 = DotMatVec(fm, VT[0]) * invSigma0;
+  V const u0zero = sigma0 * sigma0 <= min;
+  u0[0] = Select(u0zero, one, u0[0]);
+  u0[1] = Select(u0zero, zero, u0[1]);
+  u0[2] = Select(u0zero, zero, u0[2]);
 
-  V const u0normSqr = NormSqr(u0);
-  V const u0invNorm = one / (Sqrt(u0normSqr) + min);
-  V const u0zero = u0normSqr <= eps;
-  u0[0] = Select(u0zero, one, u0[0] * u0invNorm);
-  u0[1] = Select(u0zero, zero, u0[1] * u0invNorm);
-  u0[2] = Select(u0zero, zero, u0[2] * u0invNorm);
-
-  // UT row 1: u1 = F * v1
-  V3 u1 = DotMatVec(fm, VT[1]);
+  // UT row 1: u1 = F * v1 / σ₀ minus its component along u0. Rounding leaves that component at
+  // about ε, which would tilt u1 by about εσ₀/σ₁, and which the rank test below would mistake for
+  // a nonzero σ₁ if F is rank-deficient. Divided by σ₀, the test is relative, and a u1 that passes
+  // it has a squared norm of at least ε², far from underflow.
+  V3 u1 = DotMatVec(fm, VT[1]) * invSigma0;
+  u1 -= Dot(u0, u1) * u0;
 
   V const u1normSqr = NormSqr(u1);
   V const u1invNorm = one / (Sqrt(u1normSqr) + min);
-  V const u1zero = u1normSqr <= eps;
+  V const u1zero = u1normSqr <= epsSqr;
   u1[0] *= u1invNorm;
   u1[1] *= u1invNorm;
   u1[2] *= u1invNorm;
@@ -901,7 +908,6 @@ inline void BatchedRotationVariantSvdValsAndVT3x3(
   Sg = detail::BatchedSingularValues<kBatchSize>(F, eigvals, scale);
 }
 
-// WARNING: The left singular vectors U may be inaccurate when the largest singular value is small.
 template <int kBatchSize>
 inline void BatchedRotationVariantSvd3x3(
     BatchReal3x3<kBatchSize> const& F,
@@ -909,7 +915,7 @@ inline void BatchedRotationVariantSvd3x3(
     BatchReal3<kBatchSize>& Sg,
     BatchReal3x3<kBatchSize>& VT) {
   BatchedRotationVariantSvdValsAndVT3x3<kBatchSize>(F, Sg, VT);
-  detail::BatchedComputeU<kBatchSize>(F, VT, U);
+  detail::BatchedComputeU<kBatchSize>(F, VT, Sg[0], U);
 }
 
 template <int kBatchSize>

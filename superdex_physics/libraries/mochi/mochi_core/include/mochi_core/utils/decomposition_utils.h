@@ -68,7 +68,7 @@ inline void AnalyticalEigendecompSym3x3(
 /**************************************************************************************************
   Singular-Value Decomposition
 
-  Performs the rotation-variant singular value decomposition 𝐔𝚺𝐕ᵀ of a matrix 𝐅. Inversions i.e.
+  Performs the rotation-variant singular value decomposition 𝐔𝚺𝐕ᵀ of a matrix 𝐅. Inversions (i.e.
   when det(𝐅) < 0) are encoded as negative singular values on the smallest entry of 𝚺. 𝐔 and 𝐕 are
   guaranteed to be reflection-free rotations (i.e. det(𝐔) = det(𝐕) = 1). For the sake of efficiency,
   the function outputs 𝐕ᵀ instead of 𝐕. The *Vals functions compute 𝚺 from the eigenvalues of 𝐅ᵀ𝐅
@@ -76,7 +76,7 @@ inline void AnalyticalEigendecompSym3x3(
   O(√ε‖𝐅‖²), and a pair near zero, as for a rank-1 𝐅, only to O(ε^¼‖𝐅‖). RotationVariantSvd and
   RotationVariantSvd3x3 compute them accurately.
 
-  WARNING: May be inaccurate if the matrix entries are several orders of magnitude above or below 1.
+  WARNING: May be inaccurate if 𝐅ᵀ𝐅 or det(𝐅) overflows or underflows.
 */
 
 inline void RotationVariantSvdVals(Matrix3x3r const& F, Real3& Sg);
@@ -94,7 +94,7 @@ inline void RotationVariantSvd3x3(
 /**************************************************************************************************
   Polar Decomposition
 
-  WARNING: May be inaccurate if the matrix entries are several orders of magnitude above or below 1.
+  WARNING: May be inaccurate if 𝐀ᵀ𝐀 or det(𝐀) overflows or underflows.
 */
 
 // Left polar decomposition of A = U * P, where U is orthogonal and P is symmetric positive
