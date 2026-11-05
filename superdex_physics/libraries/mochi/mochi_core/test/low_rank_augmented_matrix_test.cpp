@@ -90,6 +90,13 @@ static void TestLowRankAugmentedMatrix(MatrixType const& A0) {
   EXPECT_TRUE(NearEqualMatrices(yExpected, y1, applyTol));
   EXPECT_TRUE(NearEqualMatrices(yExpected, y2, applyTol));
 
+  // Apply to a column vector, as the Newton solver and PCG do.
+  ColumnVector<real> const xVec = x.Col(0);
+  ColumnVector<real> yVec(numRows);
+  yVec.SetRandom(5);
+  augMat.Apply(xVec, yVec);
+  EXPECT_TRUE(NearEqualMatrices(yExpected.Col(0), yVec, applyTol));
+
   // ApplyToRange.
   int const rowBegin = 3 * (numRows / 9); // Multiple of 3 for BlockSparseMatrix tests.
   int const rowEnd = 6 * (numRows / 9); // Multiple of 3 for BlockSparseMatrix tests.
@@ -104,6 +111,14 @@ static void TestLowRankAugmentedMatrix(MatrixType const& A0) {
   yExpected.BottomRows(numRows - rowEnd).SetZero();
   EXPECT_TRUE(NearEqualMatrices(yExpected, y1, applyTol));
   EXPECT_TRUE(NearEqualMatrices(yExpected, y2, applyTol));
+
+  // ApplyToRange over many small ranges, as in a parallel product.
+  int const rangeSize = 3; // Multiple of 3 for BlockSparseMatrix tests.
+  y1.SetRandom(4);
+  for (int begin = 0; begin < numRows; begin += rangeSize) {
+    augMat.ApplyToRange(x, y1, begin, Min(begin + rangeSize, numRows));
+  }
+  EXPECT_TRUE(NearEqualMatrices(Matrix<real>(asMatrix * x), y1, applyTol));
 
   // ToMatrix.
   EXPECT_TRUE(NearEqualMatrices(asMatrix, ToMatrix(LowRankAugmentedMatrix<MatrixType>(A0, U, V))));

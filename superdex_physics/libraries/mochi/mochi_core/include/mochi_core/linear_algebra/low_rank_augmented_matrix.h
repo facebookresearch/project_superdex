@@ -29,8 +29,8 @@ namespace mochi {
 /// @tparam MatrixType Matrix or linear operator type.
 /// @details The operator is equivalent to A + U * V^T, where
 /// A \in \mathbb{R}^{m \times n} is a matrix or linear operator, and
-/// U \in \mathbb{R}^{m \times k} and V \in \mathbb{R}^{n \ times k} are dense matrices representing
-/// a k-rank update.
+/// U \in \mathbb{R}^{m \times r} and V \in \mathbb{R}^{n \times r} are dense matrices representing
+/// a rank-r update.
 template <typename MatrixType>
 struct LowRankAugmentedMatrix {
   static_assert(!IsCuda<MatrixType>, "CUDA matrices not supported");
@@ -122,44 +122,22 @@ struct LowRankAugmentedMatrix {
   }
 
   /// @brief Application of the augmented matrix to a dense matrix, including a column vector.
-  /// @note Parallelization has NOT been optimized yet.
+  /// @note The unaugmented matrix is applied in parallel if its type supports it (e.g., @ref
+  /// IslandOperators). The low-rank term U (V^T x) is added on the calling thread.
   template <typename VectorIn, typename VectorOut>
   void Apply(VectorIn const& x, VectorOut&& Ax) const {
-    ApplyToRange(x, Ax, 0, Rows());
+    krylov::Apply(_A, x, Ax);
+    AddLowRankProductToRange(x, Ax, 0, Rows());
   }
 
   /// @brief Partial application of the augmented matrix to a dense matrix, including a column
   /// vector. Only the row range [rowBegin, rowEnd) of the output matrix is computed.
-  /// @note Parallelization has NOT been optimized yet.
+  /// @note Each call computes all of V^T x, so a product split into row ranges computes it once per
+  /// range. Sharing it across the ranges of a parallel product has not been optimized yet.
   template <typename VectorIn, typename VectorOut, typename Idx>
   void ApplyToRange(VectorIn const& x, VectorOut&& Ax, Idx rowBegin, Idx rowEnd) const {
     krylov::ApplyToRange(_A, x, Ax, rowBegin, rowEnd);
-    if (_numRankOneUpdates > 0) {
-      Idx const numRows = rowEnd - rowBegin;
-      if (Ax.Cols() * _numRankOneUpdates * (numRows + Cols()) <=
-          numRows * Cols() * (Ax.Cols() + _numRankOneUpdates)) {
-        // TODO: In concurrent algorithms, computing
-        // _V.LeftCols(_numRankOneUpdates).Transpose() * x in all workers is inefficient.
-        //
-        // This expression creates a temporary of size r x k (for the product _V^T x)
-        // Number of flops ~ 2 (numRows + n) k r
-        // where _U has dimensions m x r,  _V has dimensions n x r, x has dimensions n x k, and r =
-        // _numRankOneUpdates, numRows <= m.
-        //
-        Ax.MiddleRows(rowBegin, numRows) += _U.Block(rowBegin, 0, numRows, _numRankOneUpdates) *
-            (_V.LeftCols(_numRankOneUpdates).Transpose() * x);
-      } else {
-        //
-        // This expression creates a temporary of size numRows x n (for the product _U _V^T)
-        // Number of flops ~ 2 (k + r) numRows n
-        // where _U has dimensions m x r,  _V has dimensions n x r, x has dimensions n x k, and r =
-        // _numRankOneUpdates, numRows <= m.      }
-        //
-        Ax.MiddleRows(rowBegin, numRows) += (_U.Block(rowBegin, 0, numRows, _numRankOneUpdates) *
-                                             _V.LeftCols(_numRankOneUpdates).Transpose()) *
-            x;
-      }
-    }
+    AddLowRankProductToRange(x, Ax, rowBegin, rowEnd);
   }
 
   auto Rows() const {
@@ -187,6 +165,17 @@ struct LowRankAugmentedMatrix {
   }
 
  private:
+  // Adds rows [rowBegin, rowEnd) of U (V^T x), where U is m x r, V is n x r, x is n x k and r =
+  // _numRankOneUpdates. The r x k temporary V^T x keeps the cost at ~2 (numRows + n) r k FLOPs.
+  template <typename VectorIn, typename VectorOut, typename Idx>
+  void AddLowRankProductToRange(VectorIn const& x, VectorOut&& Ax, Idx rowBegin, Idx rowEnd) const {
+    if (_numRankOneUpdates > 0) {
+      Idx const numRows = rowEnd - rowBegin;
+      Ax.MiddleRows(rowBegin, numRows) += _U.Block(rowBegin, 0, numRows, _numRankOneUpdates) *
+          (_V.LeftCols(_numRankOneUpdates).Transpose() * x);
+    }
+  }
+
   MatrixType _A;
   Matrix<NonConstScalar> _U = {};
   Matrix<NonConstScalar> _V = {};
