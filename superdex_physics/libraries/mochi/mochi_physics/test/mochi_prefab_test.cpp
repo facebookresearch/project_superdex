@@ -2264,6 +2264,26 @@ TEST(Prefab, LoadNestedPrefabs_ReloadsOnPathChange) {
   EXPECT_STREQ("ActorFromB", scenePrefab.prefabs[0].prefab->actors.rigid[0].name.c_str());
 }
 
+TEST(Prefab, LoadNestedPrefabs_AcceptsSuperDexPrefabExtension) {
+  auto tempDir = CreateTempDirectory("superdex_prefab_extension_test", ExpectOK{});
+  WriteFile(
+      tempDir.Path() / "child.superdex_prefab",
+      R"({"actors": {"rigid": [{"name": "Child"}]}})",
+      ExpectOK{});
+  WriteFile(
+      tempDir.Path() / "top.superdex_prefab",
+      R"({"prefabs": [{"name": "child", "path": "child.superdex_prefab"}]})",
+      ExpectOK{});
+
+  auto scenePrefab =
+      prefab::ShallowLoadFromFile((tempDir.Path() / "top.superdex_prefab").string(), ExpectOK{});
+  prefab::LoadNestedPrefabs(scenePrefab, tempDir.Path().string(), ExpectOK{});
+
+  ASSERT_NE(nullptr, scenePrefab.prefabs[0].prefab);
+  ASSERT_EQ(1, scenePrefab.prefabs[0].prefab->actors.rigid.size());
+  EXPECT_STREQ("Child", scenePrefab.prefabs[0].prefab->actors.rigid[0].name.c_str());
+}
+
 TEST(Prefab, LoadNestedPrefabs_PreservesPopulatedPathlessReference) {
   auto tempDir = CreateTempDirectory("pathless_nested_test", ExpectOK{});
   WriteFile(
