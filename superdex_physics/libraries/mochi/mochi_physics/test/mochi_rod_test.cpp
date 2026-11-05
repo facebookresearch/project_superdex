@@ -31,7 +31,6 @@
 #include <array>
 #include <limits>
 #include <string>
-#include <tuple>
 
 using namespace mochi;
 using namespace mochi::experimental;
@@ -79,6 +78,22 @@ inline DynamicArray<RodTransformParam> GetRodTransformTestCases() {
           Real3{-0.5_r, 1.2_r, 2.1_r},
           "FullTransform"),
   };
+}
+
+static void PinRodNode(Scene* scene, Actor* rod, int nodeIndex, Real3 const& positionWorld) {
+  DeformableNodePositionConstraintParams params;
+  params.actor = rod->GetHandle();
+  params.nodeIndex = nodeIndex;
+  params.position = positionWorld;
+  scene->CreateDeformableNodePositionConstraint(params, ErrorAssert{});
+}
+
+// Holds the world rotation of a rod element at its value when this is called.
+static void FixRodElementRotation(Scene* scene, Actor* rod, int elementIndex) {
+  RodElementRotationConstraintParams params;
+  params.actor = rod->GetHandle();
+  params.elementIndex = elementIndex;
+  scene->CreateRodElementRotationConstraint(params, ErrorAssert{});
 }
 
 class MochiRodActorStraightRodScene : public test::MochiSceneTestBase,
@@ -282,23 +297,10 @@ TEST_P(MochiRodActorAxialStretchScene, RodActorAxialStretch) {
   // No gravity for this test
   _scene->SetGravity({0_r, 0_r, 0_r});
 
-  // Fix the position of the first node - BCs are in world space
-  DynamicArray<int> bcDofIndices;
-  DynamicArray<real> bcDofValues;
-
-  // The first node is at local position (0, 0, 0), transform to world space
-  Real3 const firstNodeLocal{0_r, 0_r, 0_r};
-  Real3 const firstNodeWorld = _worldFromLocal.TransformPoint(firstNodeLocal);
-  for (int dof = 0; dof < 3; ++dof) {
-    bcDofIndices.push_back(dof);
-    bcDofValues.push_back(firstNodeWorld[dof]);
-  }
-  // Fix twist of first node to remove rigid spinning mode
-  bcDofIndices.push_back(3);
-  bcDofValues.push_back(0_r);
-
-  _actor->AddBoundaryConditionDofsWorld(
-      MakeConstSpan(bcDofIndices), MakeConstSpan(bcDofValues), ErrorAssert{});
+  // Fix the position of the first node, and the rotation of the first element to remove the rigid
+  // spinning mode. The first node is at local position (0, 0, 0).
+  PinRodNode(_scene, _actor, 0, _worldFromLocal.GetTranslation());
+  FixRodElementRotation(_scene, _actor, 0);
 
   // Apply axial force on the last node in the local +x direction (transformed to world)
   // The force DoF API uses local coordinates, so we need to apply force in all 3 world directions
@@ -340,12 +342,13 @@ TEST_P(MochiRodActorAxialStretchScene, RodActorAxialStretch) {
   DynamicArray<real> const dofValues =
       test::GetDofValuesRelativeToInitialFrame(*_actor, _worldFromLocal, fem::kNumRodFields);
 
-  // Get the displacement of the last node in local coordinates
-  // DoF values are displacements in local coordinates
+  // Get the displacement of the last node relative to the first node in local coordinates, which
+  // excludes the compliance of the constraint on the first node. DoF values are displacements in
+  // local coordinates.
   Real3 const lastNodeDisplacementLocal{
-      dofValues[4 * lastNodeIndex + 0],
-      dofValues[4 * lastNodeIndex + 1],
-      dofValues[4 * lastNodeIndex + 2]};
+      dofValues[4 * lastNodeIndex + 0] - dofValues[0],
+      dofValues[4 * lastNodeIndex + 1] - dofValues[1],
+      dofValues[4 * lastNodeIndex + 2] - dofValues[2]};
 
   // The displacement direction should match the local x-axis (rod axis)
   // Project the displacement onto the local x-axis to get the axial displacement
@@ -445,33 +448,13 @@ TEST_P(MochiRodActorTorsionScene, RodActorTorsion) {
   // No gravity for this test
   _scene->SetGravity({0_r, 0_r, 0_r});
 
-  // Fix the position of the first node - BCs are in world space
-  DynamicArray<int> bcDofIndices;
-  DynamicArray<real> bcDofValues;
-
-  // The first node is at local position (0, 0, 0), transform to world space
-  Real3 const firstNodeLocal{0_r, 0_r, 0_r};
-  Real3 const firstNodeWorld = _worldFromLocal.TransformPoint(firstNodeLocal);
-  for (int dof = 0; dof < 3; ++dof) {
-    bcDofIndices.push_back(dof);
-    bcDofValues.push_back(firstNodeWorld[dof]);
-  }
-  // Fix twist of first node (this is the BC for the "first element" which is grouped with node 0)
-  bcDofIndices.push_back(3);
-  bcDofValues.push_back(0_r);
-
-  // Fix the end positions of the rod to remove rotational rigid body modes.
-  // For pure torsion, the centerline doesn't deform, so these constraints don't affect the physics.
-  int const lastNodeIndex = kNumNodes - 1;
-  Real3 const lastNodeLocal{kLength, 0_r, 0_r};
-  Real3 const lastNodeWorld = _worldFromLocal.TransformPoint(lastNodeLocal);
-  for (int i = 0; i < 3; ++i) {
-    bcDofIndices.push_back(4 * lastNodeIndex + i);
-    bcDofValues.push_back(lastNodeWorld[i]);
-  }
-
-  _actor->AddBoundaryConditionDofsWorld(
-      MakeConstSpan(bcDofIndices), MakeConstSpan(bcDofValues), ErrorAssert{});
+  // Fix the rotation of the first element, and the end positions of the rod to remove rotational
+  // rigid body modes. For pure torsion, the centerline doesn't deform, so the position constraints
+  // don't affect the physics.
+  FixRodElementRotation(_scene, _actor, 0);
+  PinRodNode(_scene, _actor, 0, _worldFromLocal.TransformPoint(Real3{0_r, 0_r, 0_r}));
+  PinRodNode(
+      _scene, _actor, kNumNodes - 1, _worldFromLocal.TransformPoint(Real3{kLength, 0_r, 0_r}));
 
   // Apply torque to the last element's twist DoF (grouped with the second-to-last node)
   DynamicArray<int> forceDofs;
@@ -569,7 +552,6 @@ class MochiRodActorCantileverScene : public test::MochiSceneTestBase,
   static real constexpr kHeight = 1e-2_r; // Cross-section height in z-direction
   static int constexpr kNumElements = 64;
   static int constexpr kNumNodes = kNumElements + 1;
-  static real constexpr kElementLength = kLength / kNumElements;
   static real constexpr kShearModulus = 1e5_r;
   static real constexpr kYoungsModulus = 1e5_r;
   static real constexpr kDensity = 1e0_r;
@@ -644,24 +626,9 @@ TEST_P(MochiRodActorCantileverScene, RodActorCantileverBending) {
   Real3 const gravityWorld = _worldFromLocal.TransformDirection(gravityDirLocal) * kGravity;
   _scene->SetGravity(gravityWorld);
 
-  // Apply cantilever boundary conditions: fix first two nodes in world space
-  DynamicArray<int> bcDofIndices;
-  DynamicArray<real> bcDofValues;
-  for (int i = 0; i < 2; ++i) {
-    for (int dof = 0; dof < 3; ++dof) {
-      bcDofIndices.push_back(i * 4 + dof);
-      // Transform local position to world for position BCs
-      Real3 localPos{(real)i * kElementLength, 0_r, 0_r};
-      Real3 worldPos = _worldFromLocal.TransformPoint(localPos);
-      bcDofValues.push_back(worldPos[dof]);
-    }
-  }
-  // Fix twist of first element
-  bcDofIndices.push_back(3);
-  bcDofValues.push_back(0_r);
-
-  _actor->AddBoundaryConditionDofsWorld(
-      MakeConstSpan(bcDofIndices), MakeConstSpan(bcDofValues), ErrorAssert{});
+  // Cantilever support: fix the position of the first node and the rotation of the first element
+  PinRodNode(_scene, _actor, 0, _worldFromLocal.GetTranslation());
+  FixRodElementRotation(_scene, _actor, 0);
 
   // Increase number of non-linear iterations for accurate static solution.
   auto solverParams = _scene->GetSolverParams();
@@ -1419,10 +1386,7 @@ class MochiRodSurfaceMeshes : public test::MochiSceneTestBase {
     VerifySkinningJacobianFD(actor);
 
     // Pin the first node to ensure a non-trivial deformation (not just rigid-body translation)
-    DynamicArray<int> bcDofs = {0, 1, 2, 3};
-    DynamicArray<real> bcVals = {0_r, 0_r, 0_r, 0_r};
-    actor->AddBoundaryConditionDofsWorld(
-        MakeConstSpan(bcDofs), MakeConstSpan(bcVals), ErrorAssert{});
+    PinRodNode(_scene, actor, 0, Real3{0_r, 0_r, 0_r});
     _scene->SetGravity({1e2_r, 2e2_r, 3e2_r});
     _scene->Step(0.1_r);
 
@@ -1991,10 +1955,8 @@ TEST_F(MochiRodSurfaceMeshes, ContactSkinQueries) {
     EXPECT_NEAR(immediateNormals[3 * i + 2], 0_r, kTolerance);
   }
 
-  DynamicArray<int> const bcDofs = {4, 5, 6, 7, 8, 9, 10, 11};
-  DynamicArray<real> const bcValues = {0.25_r, 0_r, 0_r, 0_r, 0.5_r, 0.1_r, 0_r, 0_r};
-  actor->AddBoundaryConditionDofsWorld(
-      MakeConstSpan(bcDofs), MakeConstSpan(bcValues), test::ExpectOK{});
+  PinRodNode(_scene, actor, 1, Real3{0.25_r, 0_r, 0_r});
+  PinRodNode(_scene, actor, 2, Real3{0.5_r, 0.1_r, 0_r});
   TransformRT const worldFromLocalInitial = actor->GetRootTransform();
   _scene->Step(0.1_r);
 
@@ -2555,20 +2517,12 @@ TEST_F(MochiRodSurfaceMeshes, SkinningUnderRotation) {
   Actor* actor = CreateTestRodActor(shape);
   actor->RegisterQuery(QueryType::VisualNodePositions, ErrorAssert{});
 
-  // Fix the first node and its twist to zero
-  DynamicArray<int> bcDofIndices = {0, 1, 2, 3};
-  DynamicArray<real> bcDofValues = {0_r, 0_r, 0_r, 0_r};
-  actor->AddBoundaryConditionDofsWorld(
-      MakeConstSpan(bcDofIndices), MakeConstSpan(bcDofValues), ErrorAssert{});
+  // Fix the first node and the rotation of the first element
+  PinRodNode(_scene, actor, 0, _rodNodes[0]);
+  FixRodElementRotation(_scene, actor, 0);
 
-  // Fix the last node position at its reference position with twist = 0
-  int const lastNodeDofOffset = 4 * (kNumNodes - 1);
-  DynamicArray<int> lastNodeBcDofIndices = {
-      lastNodeDofOffset, lastNodeDofOffset + 1, lastNodeDofOffset + 2, lastNodeDofOffset + 3};
-  DynamicArray<real> lastNodeBcDofValues = {
-      _rodNodes[kNumNodes - 1][0], _rodNodes[kNumNodes - 1][1], _rodNodes[kNumNodes - 1][2], 0_r};
-  actor->AddBoundaryConditionDofsWorld(
-      MakeConstSpan(lastNodeBcDofIndices), MakeConstSpan(lastNodeBcDofValues), ErrorAssert{});
+  // Fix the last node position at its reference position
+  PinRodNode(_scene, actor, kNumNodes - 1, _rodNodes[kNumNodes - 1]);
 
   // Apply a torque to the middle nodes to induce twist
   real constexpr kTorque = 5_r;
@@ -2698,30 +2652,15 @@ TEST_F(MochiRodSurfaceMeshes, DistinctVisualAndContactMeshesSupportMultiElementS
   // Apply a small displacement to the middle node (node 1) to create different deformations
   // in elements 0 and 1.
   _scene->SetGravity({0_r, 0_r, 0_r});
-  DynamicArray<int> bcDofIndices;
-  DynamicArray<real> bcDofValues;
-  // Fix nodes 0, 2, 3 at reference position
+  // Fix nodes 0, 2, 3 at reference position, and the rotation of the last element, which spans
+  // nodes 2 and 3, to remove the rigid spinning mode.
   for (int node : {0, 2, 3}) {
-    for (int d = 0; d < 3; ++d) {
-      bcDofIndices.push_back(4 * node + d);
-      bcDofValues.push_back(_rodNodes[node][d]);
-    }
-    bcDofIndices.push_back(4 * node + 3);
-    bcDofValues.push_back(0_r);
+    PinRodNode(_scene, actor, node, _rodNodes[node]);
   }
+  FixRodElementRotation(_scene, actor, 2);
   // Move node 1 slightly in the y direction
   real constexpr kDisplacement = 0.02_r;
-  bcDofIndices.push_back(4);
-  bcDofValues.push_back(_rodNodes[1][0]);
-  bcDofIndices.push_back(5);
-  bcDofValues.push_back(_rodNodes[1][1] + kDisplacement);
-  bcDofIndices.push_back(6);
-  bcDofValues.push_back(_rodNodes[1][2]);
-  bcDofIndices.push_back(7);
-  bcDofValues.push_back(0_r);
-
-  actor->AddBoundaryConditionDofsWorld(
-      MakeConstSpan(bcDofIndices), MakeConstSpan(bcDofValues), ErrorAssert{});
+  PinRodNode(_scene, actor, 1, _rodNodes[1] + Real3{0_r, kDisplacement, 0_r});
 
   TransformRT const worldFromLocalInitial = actor->GetRootTransform();
   _scene->Step(1e6_r);
@@ -3541,10 +3480,7 @@ TEST_F(MochiRodDampingTest, AxialStiffnessDampingDecayRatio) {
     Actor* actor = CreateStraightRod(2, m);
     MOCHI_DEFER(_scene->DestroyActor(actor));
 
-    DynamicArray<int> const bcDofs{0, 1, 2, 3}; // fix node 0
-    DynamicArray<real> const bcVals{0_r, 0_r, 0_r, 0_r};
-    actor->AddBoundaryConditionDofsWorld(
-        MakeConstSpan(bcDofs), MakeConstSpan(bcVals), ErrorAssert{});
+    PinRodNode(_scene, actor, 0, Real3{0_r, 0_r, 0_r});
 
     DynamicArray<real> vel(2 * 4, 0_r);
     vel[1 * 4 + 0] = kRatioV0; // axial velocity on the free node
@@ -3577,20 +3513,11 @@ TEST_F(MochiRodDampingTest, BendingStiffnessDampingDecayRatio) {
     Actor* actor = CreateStraightRod(kNumNodes, m);
     MOCHI_DEFER(_scene->DestroyActor(actor));
 
-    // Cantilever clamp: constrain the translations of the first two nodes (fixes the root position
-    // and tangent) and leave the rest free. Translation BCs take world positions, so pin each node
-    // at its reference position.
-    DynamicArray<int> bcDofs;
-    DynamicArray<real> bcVals;
+    // Cantilever clamp: pin the first two nodes at their reference positions (x = node index),
+    // which fixes the root position and tangent, and leave the rest free.
     for (int node : {0, 1}) {
-      for (int d = 0; d < 3; ++d) {
-        bcDofs.push_back(node * 4 + d);
-        bcVals.push_back(
-            d == 0 ? static_cast<real>(node) : 0_r); // node reference position (x=node)
-      }
+      PinRodNode(_scene, actor, node, Real3{static_cast<real>(node), 0_r, 0_r});
     }
-    actor->AddBoundaryConditionDofsWorld(
-        MakeConstSpan(bcDofs), MakeConstSpan(bcVals), ErrorAssert{});
 
     DynamicArray<real> vel(kNumNodes * 4, 0_r);
     vel[kTip * 4 + 1] = kRatioV0; // transverse (y) velocity at the tip
@@ -3622,22 +3549,13 @@ TEST_F(MochiRodDampingTest, TwistStiffnessDampingDecayRatio) {
     Actor* actor = CreateStraightRod(3, m);
     MOCHI_DEFER(_scene->DestroyActor(actor));
 
-    // Fix all translations (no bending/axial motion) and anchor the first element's twist (node 0).
-    // Translation BCs take world positions, so pin each node at its reference position. The second
-    // element's twist (node 1) is free and feels the torsional restoring force.
-    DynamicArray<int> bcDofs;
-    DynamicArray<real> bcVals;
+    // Pin all nodes at their reference positions (x = node index), so there is no bending/axial
+    // motion, and fix the first element's rotation. The second element's twist (node 1) is free and
+    // feels the torsional restoring force.
     for (int node = 0; node < 3; ++node) {
-      for (int d = 0; d < 3; ++d) {
-        bcDofs.push_back(node * 4 + d);
-        bcVals.push_back(
-            d == 0 ? static_cast<real>(node) : 0_r); // node reference position (x=node)
-      }
+      PinRodNode(_scene, actor, node, Real3{static_cast<real>(node), 0_r, 0_r});
     }
-    bcDofs.push_back(0 * 4 + 3); // first element's twist
-    bcVals.push_back(0_r);
-    actor->AddBoundaryConditionDofsWorld(
-        MakeConstSpan(bcDofs), MakeConstSpan(bcVals), ErrorAssert{});
+    FixRodElementRotation(_scene, actor, 0);
 
     DynamicArray<real> vel(3 * 4, 0_r);
     vel[1 * 4 + 3] = kRatioV0; // twist rate on the second element (grouped with node 1)
@@ -3655,21 +3573,16 @@ TEST_F(MochiRodDampingTest, TwistStiffnessDampingDecayRatio) {
 }
 
 // Translational recentering must not change the world-space motion of a rod. The rod translates,
-// spins, and twists under gravity with a multistep integrator, optionally with a node pinned by a
-// world-space boundary condition and with a nonzero recentering translation epsilon.
+// spins, and twists under gravity with a multistep integrator, optionally with a nonzero
+// recentering translation epsilon.
 class MochiRodRecenteringTest : public test::MochiSceneTestBase,
-                                public ::testing::WithParamInterface<std::tuple<bool, real>> {
+                                public ::testing::WithParamInterface<real> {
  protected:
   static constexpr int kNumNodes = 9;
   static constexpr real kLength = 2_r;
   static constexpr Real3 kInitialVelocity{0.5_r, 0_r, 1_r};
   static constexpr Real3 kAngularVelocity{0_r, 2_r, 1_r};
   static constexpr real kTwistRate = 1_r;
-  static constexpr int kPinnedNode = 0;
-
-  static bool IsPinned() {
-    return std::get<0>(GetParam());
-  }
 
   Actor* CreateRod() {
     DynamicArray<Real3> nodes;
@@ -3699,17 +3612,6 @@ class MochiRodRecenteringTest : public test::MochiSceneTestBase,
       velocities[fem::kNumRodFields * n + fem::kRodThetaDofOffset] = kTwistRate;
     }
     actor->SetNodeVelocitiesLocal(MakeConstSpan(velocities), ErrorAssert{});
-
-    if (IsPinned()) {
-      Real3 const pinWorld = params.worldFromLocal.TransformPoint(nodes[kPinnedNode]);
-      std::array<int, 3> const pinDofs{
-          fem::kNumRodFields * kPinnedNode,
-          fem::kNumRodFields * kPinnedNode + 1,
-          fem::kNumRodFields * kPinnedNode + 2};
-      std::array<real, 3> const pinValues{pinWorld[0], pinWorld[1], pinWorld[2]};
-      actor->AddBoundaryConditionDofsWorldPermanent(
-          MakeConstSpan(pinDofs), MakeConstSpan(pinValues), ErrorAssert{});
-    }
     return actor;
   }
 };
@@ -3718,16 +3620,15 @@ TEST_P(MochiRodRecenteringTest, WorldMotionMatchesNonRecentered) {
   test::ExpectRecenteringPreservesWorldMotion(
       _scene,
       [this] { return CreateRod(); },
-      RecenteringParams{.translationEpsilon = std::get<1>(GetParam())},
+      RecenteringParams{.translationEpsilon = GetParam()},
       fem::kNumRodFields,
-      /*minRecenteringDistance=*/IsPinned() ? 1e-2_r : 0.5_r);
+      /*minRecenteringDistance=*/0.5_r);
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    BoundaryConditionsAndEpsilons,
+    TranslationEpsilons,
     MochiRodRecenteringTest,
-    ::testing::Combine(::testing::Bool(), ::testing::Values(0_r, 0.1_r)),
-    [](::testing::TestParamInfo<std::tuple<bool, real>> const& info) {
-      return std::string(std::get<0>(info.param) ? "Pinned" : "Free") +
-          (std::get<1>(info.param) > 0_r ? "WithTranslationEpsilon" : "");
+    ::testing::Values(0_r, 0.1_r),
+    [](::testing::TestParamInfo<real> const& info) {
+      return info.param > 0_r ? "WithTranslationEpsilon" : "Default";
     });

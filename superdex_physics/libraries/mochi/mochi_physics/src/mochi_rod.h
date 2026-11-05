@@ -514,10 +514,4 @@ void UpdateBounds(
 
 } // namespace rod
 
-/*
- * System to prepare rod actor for simulation step.
- * Updates boundary conditions from CDofPositionsBC to CDirichletBC.
- */
-void PreStepRodActorAsync(entt::registry& reg, entt::entity e);
-
 } // namespace mochi

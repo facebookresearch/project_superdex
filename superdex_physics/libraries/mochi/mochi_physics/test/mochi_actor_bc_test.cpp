@@ -19,6 +19,7 @@
 */
 
 #include "mochi_physics_test_fixture.h"
+#include "mochi_test_scene_builders.h"
 
 #include <mochi_core/utils/reflection.h>
 #include <mochi_physics/mochi_physics_experimental.h>
@@ -50,6 +51,43 @@ class MochiActorBC : public test::MochiSceneTestBase {
 
   void TearDown() override {
     BaseClass::TearDown();
+  }
+
+  static void ExpectBoundaryConditionSettersRejected(Actor* actor, char const* expectedError) {
+    auto const expectRejected = [&](auto setBoundaryCondition) {
+      auto const numDofIndicesBefore = actor->GetBoundaryConditionDofIndices().size();
+      auto const numDofValuesBefore = actor->GetBoundaryConditionDofValuesWorld().size();
+
+      Error error;
+      setBoundaryCondition(error);
+      EXPECT_FALSE(error.IsOK());
+      EXPECT_STREQ(expectedError, error.GetDescription());
+      EXPECT_EQ(numDofIndicesBefore, actor->GetBoundaryConditionDofIndices().size());
+      EXPECT_EQ(numDofValuesBefore, actor->GetBoundaryConditionDofValuesWorld().size());
+    };
+
+    int const dofIndices[] = {0, 1, 2};
+    int const nodeIndex = 0;
+    Real3 const positionWorld{};
+
+    expectRejected([&](Error& error) {
+      actor->AddBoundaryConditionDofsWorld(MakeConstSpan(dofIndices), positionWorld, error);
+    });
+    expectRejected([&](Error& error) {
+      actor->AddBoundaryConditionDofsWorldPermanent(
+          MakeConstSpan(dofIndices), positionWorld, error);
+    });
+    expectRejected([&](Error& error) {
+      actor->AddBoundaryConditionNodesWorld(
+          MakeSingletonConstSpan(nodeIndex), positionWorld, error);
+    });
+    expectRejected([&](Error& error) {
+      actor->AddBoundaryConditionNodesWorldPermanent(
+          MakeSingletonConstSpan(nodeIndex), positionWorld, error);
+    });
+    expectRejected([&](Error& error) { actor->AddBoundaryConditionConstrainedNodesAtRest(error); });
+    expectRejected(
+        [&](Error& error) { actor->AddBoundaryConditionConstrainedNodesAtRestPermanent(error); });
   }
 
   ShapeHandle _cubeShape;
@@ -501,49 +539,19 @@ TEST_F(MochiActorBC, BoundaryConditionSettersRejectNestedActors) {
   ASSERT_NE(nullptr, nestedLinkActor);
   EXPECT_TRUE(nestedLinkActor->IsNestedLinkActor());
 
-  int const dofIndices[] = {0, 1, 2};
-  int const nodeIndex = 0;
-  Real3 const positionWorld{};
-
-  auto const expectSettersRejected = [&](Actor* nestedActor, char const* message) {
-    auto const expectRejected = [&](auto setBoundaryCondition) {
-      auto const numDofIndicesBefore = nestedActor->GetBoundaryConditionDofIndices().size();
-      auto const numDofValuesBefore = nestedActor->GetBoundaryConditionDofValuesWorld().size();
-
-      Error error;
-      setBoundaryCondition(error);
-      EXPECT_FALSE(error.IsOK());
-      EXPECT_STREQ(message, error.GetDescription());
-      EXPECT_EQ(numDofIndicesBefore, nestedActor->GetBoundaryConditionDofIndices().size());
-      EXPECT_EQ(numDofValuesBefore, nestedActor->GetBoundaryConditionDofValuesWorld().size());
-    };
-
-    expectRejected([&](Error& error) {
-      nestedActor->AddBoundaryConditionDofsWorld(MakeConstSpan(dofIndices), positionWorld, error);
-    });
-    expectRejected([&](Error& error) {
-      nestedActor->AddBoundaryConditionDofsWorldPermanent(
-          MakeConstSpan(dofIndices), positionWorld, error);
-    });
-    expectRejected([&](Error& error) {
-      nestedActor->AddBoundaryConditionNodesWorld(
-          MakeSingletonConstSpan(nodeIndex), positionWorld, error);
-    });
-    expectRejected([&](Error& error) {
-      nestedActor->AddBoundaryConditionNodesWorldPermanent(
-          MakeSingletonConstSpan(nodeIndex), positionWorld, error);
-    });
-    expectRejected(
-        [&](Error& error) { nestedActor->AddBoundaryConditionConstrainedNodesAtRest(error); });
-    expectRejected([&](Error& error) {
-      nestedActor->AddBoundaryConditionConstrainedNodesAtRestPermanent(error);
-    });
-  };
-  expectSettersRejected(
+  ExpectBoundaryConditionSettersRejected(
       nestedSoftActor, "Boundary condition setters are not supported for nested soft actors.");
-  expectSettersRejected(
+  ExpectBoundaryConditionSettersRejected(
       nestedLinkActor,
       "Boundary condition setters are not supported for nested link actors. Set boundary conditions on the articulated actor instead.");
+}
+
+TEST_F(MochiActorBC, BoundaryConditionSettersRejectRodActors) {
+  Actor* rod = test::AddRod(_scene);
+  ASSERT_NE(nullptr, rod);
+
+  ExpectBoundaryConditionSettersRejected(
+      rod, "Boundary conditions are not supported for rod actors. Use constraints instead.");
 }
 
 TEST_F(MochiActorBC, BoundaryConditionSettersRejectPartialRotations) {
@@ -606,21 +614,14 @@ TEST_P(MochiActorBCFixedDofs, FixedDofsStayAtBoundaryValues) {
     actor = _scene->CreateSoftActor(params, test::ExpectOK{});
     // Recentering would move the soft actor's local frame, and with it every DoF value.
     actor->SetRecenteringParams({.useRecentering = false}, test::ExpectOK{});
-  } else if (actorType == ActorType::Shell) {
+  } else {
+    ASSERT_EQ(ActorType::Shell, actorType);
     auto [coordinates, connectivity] =
         test::CreateMinimalTriMeshUnitCube(Real3{kBoxWidth, kBoxWidth, kBoxWidth});
     experimental::ShellActorParams params;
     params.shape = _mochiContext->CreateTriMeshShape(
         Flatten(MakeSpan(coordinates)), Flatten(MakeSpan(connectivity)), test::ExpectOK{});
     actor = experimental::CreateShellActor(_scene, params, test::ExpectOK{});
-  } else {
-    ASSERT_EQ(ActorType::Rod, actorType);
-    DynamicArray<Real3> const nodes = {
-        {0_r, 0_r, 0_r}, {kBoxWidth, 0_r, 0_r}, {2_r * kBoxWidth, 0_r, 0_r}};
-    experimental::RodActorParams params;
-    params.shape = experimental::CreatePolylineShape(
-        _mochiContext, nodes, {}, /*isClosedLoop*/ false, test::ExpectOK{});
-    actor = experimental::CreateRodActor(_scene, params, test::ExpectOK{});
   }
   DeformableNodeToRigidConstraintParams attachment;
   attachment.rigidActor = firstActor->GetHandle();
@@ -658,13 +659,13 @@ TEST_P(MochiActorBCFixedDofs, FixedDofsStayAtBoundaryValues) {
   EXPECT_NE(offset.poseOffset, offset.dofsOffset);
 }
 
-// Soft, shell and rod actors add the increment to their state. Rigid and articulated actors reset
+// Soft and shell actors add the increment to their state. Rigid and articulated actors reset
 // their fixed DoFs after every increment, so their state can't show a leaked increment, and nested
 // soft actors apply it through the same path as soft actors.
 INSTANTIATE_TEST_SUITE_P(
     AddIncrementToState,
     MochiActorBCFixedDofs,
-    ::testing::Values(ActorType::Soft, ActorType::Shell, ActorType::Rod),
+    ::testing::Values(ActorType::Soft, ActorType::Shell),
     [](::testing::TestParamInfo<ActorType> const& info) {
       return std::string(SReflect::EnumToString(info.param));
     });

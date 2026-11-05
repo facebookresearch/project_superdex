@@ -868,7 +868,7 @@ TEST_P(IntegrationMethodTest, QuasistaticStepEndsAtRestAtEquilibrium) {
   box->SetVelocity(kVelocity, Real3{0.5_r, 0.2_r, 0.3_r}, test::ExpectOK{});
 
   // Deformables pinned so that their rest shape is their only static equilibrium: soft and shell
-  // cubes on one face, and a rod at its first node, twist included, and its second node.
+  // cubes on one face, and a rod clamped at its first node.
   SoftActorParams softParams;
   softParams.shape = params.shape;
   softParams.worldFromLocal.SetTranslation(Real3{2_r, 0_r, 0_r});
@@ -896,10 +896,14 @@ TEST_P(IntegrationMethodTest, QuasistaticStepEndsAtRestAtEquilibrium) {
   // Stiff enough for the solve to stop within kTol of the rest shape.
   rodParams.material.flexuralStiffness = Real2{1_r, 1_r};
   Actor* rod = experimental::CreateRodActor(_scene, rodParams, test::ExpectOK{});
-  DynamicArray<int> const rodPinnedDofs = {0, 1, 2, 3, 4, 5, 6};
-  DynamicArray<real> const rodPinnedValues = {0_r, 3_r, 0_r, 0_r, 1_r, 3_r, 0_r};
-  rod->AddBoundaryConditionDofsWorld(
-      MakeConstSpan(rodPinnedDofs), MakeConstSpan(rodPinnedValues), test::ExpectOK{});
+  DeformableNodePositionConstraintParams rodPin;
+  rodPin.actor = rod->GetHandle();
+  rodPin.nodeIndex = 0;
+  rodPin.position = rodParams.worldFromLocal.GetTranslation();
+  _scene->CreateDeformableNodePositionConstraint(rodPin, test::ExpectOK{});
+  RodElementRotationConstraintParams rodRotation;
+  rodRotation.actor = rod->GetHandle();
+  _scene->CreateRodElementRotationConstraint(rodRotation, test::ExpectOK{});
 
   std::array const deformables = {
       std::pair{soft, kSpaceDim3},

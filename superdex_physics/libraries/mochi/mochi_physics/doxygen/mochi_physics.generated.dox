@@ -5695,12 +5695,12 @@
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 /// @note Not supported for nested link actors (see @ref mochi::Actor::GetNestedLinkActors "GetNestedLinkActors") or nested soft actors (see @ref mochi::Actor::GetNestedSoftActors "GetNestedSoftActors").
+/// @note Not supported for rod actors. Use @ref mochi::Scene::CreateDeformableNodePositionConstraint "Scene::CreateDeformableNodePositionConstraint" and @ref mochi::Scene::CreateRodElementRotationConstraint "Scene::CreateRodElementRotationConstraint" instead.
 /// @note Not supported in differentiable scenes (`diffsim::MakeSceneDifferentiable`) or for ROM actors.
 /// @note For soft and shell actors, each node has 3 consecutive DoFs containing its target x, y, and z position [m] in the world frame. All 3 must be specified together. Consider @ref mochi::Actor::AddBoundaryConditionNodesWorld "AddBoundaryConditionNodesWorld" as a more convenient alternative.
 /// @note For rigid and articulated actors, the DoF indices within each call must be sorted in strictly increasing order (no duplicate indices).
 /// @note Rigid actors have 6 DoFs: indices 0-2 are the target world-space center-of-mass position [m], and indices 3-5 are the target world-from-local orientation as a rotation vector (axis multiplied by angle [rad]). Either all or none of the 3 rotation DoFs must be specified.
 /// @note Articulated actors have a number of DoFs that depends on the number of joints and the DoFs per joint. When setting boundary conditions on the rotation of a free or spherical joint, either all or none of the 3 DoFs must be specified.
-/// @note Rod actors have 4 DoFs per node: the first 3 values are the target node x, y, and z position [m] in the world frame, followed by the next element's scalar twist angle [rad]. (For open rods, the last DoF, i.e., the final node's twist DoF, is included for padding only, does not affect the physics, and is automatically constrained to zero. This automatic constraint is not reported by @ref mochi::Actor::GetBoundaryConditionDofIndices "GetBoundaryConditionDofIndices". For closed-loop rods, all twist DoFs are physical.) Boundary conditions on a rod node's position must specify all 3 consecutive displacement DoFs for that node. Only zero values are allowed for the scalar twist angle in this function, with the interpretation that the element's cross-section material axes rotate by only the minimal amount needed to remain orthogonal to the rod's centerline. More elaborate control over rod element rotations should use constraints instead of boundary conditions.
 /// @note Boundary condition APIs add to existing boundary conditions; they do not replace existing entries. If a DoF has more than one entry, getter APIs return all entries in the order they were added, and the most recently added value is the effective value during the step.
 /// @note Boundary conditions can be cleared with @ref mochi::Actor::ClearBoundaryConditions "ClearBoundaryConditions".
 ///
@@ -5719,6 +5719,7 @@
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 /// @note Not supported for nested link actors (see @ref mochi::Actor::GetNestedLinkActors "GetNestedLinkActors") or nested soft actors (see @ref mochi::Actor::GetNestedSoftActors "GetNestedSoftActors").
+/// @note Not supported for rod actors. Use @ref mochi::Scene::CreateDeformableNodePositionConstraint "Scene::CreateDeformableNodePositionConstraint" and @ref mochi::Scene::CreateRodElementRotationConstraint "Scene::CreateRodElementRotationConstraint" instead.
 /// @note Not supported in differentiable scenes (`diffsim::MakeSceneDifferentiable`) or for ROM actors.
 /// @note Same as @ref mochi::Actor::AddBoundaryConditionDofsWorld "AddBoundaryConditionDofsWorld", except boundary conditions cannot be cleared.
 /// @note If a clearable entry is later added for the same DoF, that clearable entry is the effective value until @ref mochi::Actor::ClearBoundaryConditions "ClearBoundaryConditions" removes it. The permanent entry is then the effective value again.

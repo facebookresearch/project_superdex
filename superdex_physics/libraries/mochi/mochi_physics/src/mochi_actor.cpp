@@ -2045,6 +2045,10 @@ class ActorInterfaceImpl : public ActorInterface {
         reg.any_of<TagArticulatedLinkActor>(e),
         error,
         "Boundary condition setters are not supported for nested link actors. Set boundary conditions on the articulated actor instead.");
+    MOCHI_ERROR_IF(
+        reg.any_of<TagRodActor>(e),
+        error,
+        "Boundary conditions are not supported for rod actors. Use constraints instead.");
   }
 
   void AddBoundaryConditionDofsWorldImpl(
@@ -2146,42 +2150,6 @@ class ActorInterfaceImpl : public ActorInterface {
             "For soft and shell actors, you must specify all 3 DOFs for each node, in order.");
       }
       MOCHI_ERROR_RETURN(error);
-      addBCs();
-      return;
-    }
-
-    if (reg.any_of<TagRodActor>(e)) {
-      // Validity checking specific to rod actors:
-      int const numBcDofs = isize(dofIndices);
-      for (int i = 0; i < numBcDofs; i++) {
-        int const dofIndex = dofIndices[i];
-        int const component = dofIndex % 4;
-        bool const isTwist = (component == 3);
-        if (!isTwist) {
-          // Displacement DoFs must be given in ordered blocks of 3, to be able to transform the
-          // world-space positions here to local displacements.
-          bool invalidDisplacementDofs = (component != 0) || (i + 3 > numBcDofs) ||
-              (dofIndices[i + 1] != dofIndex + 1) || (dofIndices[i + 2] != dofIndex + 2);
-          MOCHI_ERROR_IF(
-              invalidDisplacementDofs,
-              error,
-              "Displacement boundary conditions on rod actor nodes must specify all "
-              "displacement components of constrained node in order");
-          MOCHI_ERROR_RETURN(error);
-          i += 2;
-        } else {
-          // Scalar torsional DoFs are incremental, and do not have a notion of transformation
-          // independent of position DoFs. They are only allowed to be fixed to zero by this type
-          // of hard DoF-level boundary condition. Imposing nonzero rotations in world space
-          // requires a more elaborate constraint involving both twist and position DoFs.
-          MOCHI_ERROR_IF(
-              dofValuesWorld[i] != 0_r,
-              error,
-              "Twist degrees of freedom on rod actors may only be constrained to zero by boundary "
-              "conditions");
-          MOCHI_ERROR_RETURN(error);
-        }
-      }
       addBCs();
       return;
     }

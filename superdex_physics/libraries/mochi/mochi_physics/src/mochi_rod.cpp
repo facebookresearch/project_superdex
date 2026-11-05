@@ -344,65 +344,6 @@ void EntityPostLastStage(
   mochi::integration::ApplyTimeIntegration<TimeTarget::StepEnd>(intState, intVels, currVel);
 }
 
-// Update CDirichletBC based on CDofPositionsBC (if any)
-static void UpdateDirichletBC(
-    CRootTransform const& root,
-    CActorSnle const& actorSnle,
-    CDofPositionsBC const* inWorldBC,
-    CDirichletBC<real>& outLocalBC,
-    CPolylineMesh const& mesh) {
-  outLocalBC.Clear();
-  if (inWorldBC && !inWorldBC->poseIndices.empty()) {
-    TransformRT localFromWorld = Invert(root.worldFromLocal);
-    VMatrix4x4r worldToLocalT = ToVMatrix4x4Transpose(localFromWorld);
-
-    outLocalBC.dofIndices = inWorldBC->dofIndices;
-    outLocalBC.poseIndices = inWorldBC->poseIndices;
-    outLocalBC.colValueIndices = inWorldBC->colValueIndices;
-
-    int const numBcDofs = isize(inWorldBC->dofIndices);
-    outLocalBC.poseValues.resize_noinit(numBcDofs);
-    for (int i = 0; i < numBcDofs; ++i) {
-      int const dofIndex = inWorldBC->dofIndices[i];
-      int const component = dofIndex % fem::kNumRodFields;
-      if (component == 0) {
-        // It is enforced through the public API that displacement BCs are specified in full ordered
-        // blocks of three components for nodes.
-        MOCHI_ASSERT_VERBOSE(
-            (i + 2 < numBcDofs) && (inWorldBC->dofIndices[i + 1] == dofIndex + 1) &&
-                (inWorldBC->dofIndices[i + 2] == dofIndex + 2),
-            "Displacement BCs must be in ordered blocks of 3 for nodes of rod actors.");
-        Vec4r const posWorld = ToSimdPoint(Load<3, Vec4r>(&(inWorldBC->poseValues[i])));
-        Vec4r const posLocal = DotVecMat4x4(posWorld, worldToLocalT);
-        Vec4r const posRef = ToSimd(mesh.nodes[dofIndex / fem::kNumRodFields], 1_r);
-        Store<3>(&outLocalBC.poseValues[i], posLocal - posRef);
-        // Next two DoF values have been handled; skip over them in the outer loop.
-        i += 2;
-      } else {
-        // Twist DoF BCs (with values enforced by the public API to be zero) can be applied
-        // directly.
-        MOCHI_ASSERT_VERBOSE(
-            component == fem::kRodThetaDofOffset, "Unexpected BC component for twist DoF");
-        MOCHI_ASSERT_VERBOSE(inWorldBC->poseValues[i] == 0_r, "Twist BCs must be zero");
-        outLocalBC.poseValues[i] = 0_r;
-      }
-    }
-  } // Non-empty BC input
-
-  // For open rods, always fix the last twist DoF, which is artificial padding for the block
-  // structure. For closed-loop rods, all twist DOFs are physical — no padding needed.
-  if (!mesh.isClosedLoop) {
-    int const numDofs = fem::kNumRodFields * isize(mesh.nodes);
-    outLocalBC.dofIndices.push_back(numDofs - 1);
-    outLocalBC.poseIndices.push_back(numDofs - 1);
-    outLocalBC.poseValues.push_back(0_r);
-    AppendColValueIndexCache(
-        AsConstView(actorSnle.fullDResidual),
-        MakeSingletonConstSpan(outLocalBC.dofIndices.back()),
-        outLocalBC.colValueIndices);
-  }
-}
-
 real GetActorMass(entt::registry const& reg, entt::entity actor) {
   MOCHI_ASSERT(reg.all_of<TagRodActor>(actor), "Expected rod actor.");
   auto const& nodalMasses = reg.get<CNodalMasses>(actor);
@@ -1292,12 +1233,6 @@ ModelData mochi::experimental::GenerateTubularRodModelData(
   return model;
 }
 
-void mochi::PreStepRodActorAsync(entt::registry& reg, entt::entity e) {
-  MOCHI_PROFILE_SCOPE();
-  // Called to prepare a rod actor for simulation step
-  ecs::InvokeOnEntity(&rod::UpdateDirichletBC, reg, e);
-}
-
 static void EmplaceRodActorContact(
     entt::registry& reg,
     entt::entity e,
@@ -1505,9 +1440,6 @@ void mochi::InitRodActor(
   reg.emplace<CFinalDisplacementRef<TimeStep::StageStart>>(
       e, rodPoseStageStart.value.displacements);
 
-  // Boundary conditions
-  reg.emplace<CDirichletBC<real>>(e);
-
   // External forces
   reg.emplace<CExternalForces>(e);
 
@@ -1530,13 +1462,27 @@ void mochi::InitRodActor(
       e, BuildPaddedNodalBasedStructure<fem::kNumRodStencilNodes>(connectivity, stencilGraph));
 
   // Actor SNLE data
-  reg.emplace<CActorSnle>(
+  auto const& actorSnle = reg.emplace<CActorSnle>(
       e,
       BlockSparseMatrix<real, kNumDofsPerNode>(numNodes, nbs.GetNToN()),
       // Use ILU0 actor preconditioner (O(n) and exact for rods).
       // NOTE: IC0 is also O(n) and exact, but (a) performance is slightly worse for pentadiagonal
       // systems and (b) it may break down with AssemblyParams::psdDRes = false.
       PreconditionerType::ILU0);
+
+  // For open rods, the last twist DoF is artificial padding for the block structure, so it is
+  // permanently fixed to zero. For closed-loop rods, all twist DoFs are physical.
+  auto& dirichletBC = reg.emplace<CDirichletBC<real>>(e);
+  if (!mesh.isClosedLoop) {
+    int const paddingDofIndex = totalDofs - 1;
+    dirichletBC.dofIndices.push_back(paddingDofIndex);
+    dirichletBC.poseIndices.push_back(paddingDofIndex);
+    dirichletBC.poseValues.push_back(0_r);
+    AppendColValueIndexCache(
+        AsConstView(actorSnle.fullDResidual),
+        MakeSingletonConstSpan(paddingDofIndex),
+        dirichletBC.colValueIndices);
+  }
 
   // Non-linear solver convergence weights (lazily initialized).
   reg.emplace<CActorConvergenceWeights>(e);

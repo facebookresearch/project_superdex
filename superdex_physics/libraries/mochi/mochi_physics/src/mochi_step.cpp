@@ -333,7 +333,6 @@ void mochi::PreStepIslandAsync(entt::registry& reg, CIslandDescendants const& de
     if (advanceStep) {
       ecs::TryInvokeOnEntity(&rod::RecenterSolutionUsingPivotNode, reg, e);
     }
-    PreStepRodActorAsync(reg, e);
   }
 
   // PreStepRigidActorAsync is used for both (normal) rigid bodies and for articulated rigid bodies.

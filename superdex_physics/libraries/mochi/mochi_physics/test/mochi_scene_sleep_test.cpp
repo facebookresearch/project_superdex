@@ -337,8 +337,9 @@ class SceneSleep : public test::MochiSceneTestBase {
     return positions;
   }
 
-  // Hold every position DoF of the actor in place with boundary conditions.
-  static void ConstrainInPlace(Actor* actor) {
+  // Hold every position DoF of the actor in place with boundary conditions, or with constraints for
+  // rods, which do not support boundary conditions.
+  static void ConstrainInPlace(Scene* scene, Actor* actor) {
     ActorType const type = actor->GetType();
     if (type == ActorType::Rigid || type == ActorType::Articulated) {
       auto const values = GetAllDofValues(actor);
@@ -350,16 +351,16 @@ class SceneSleep : public test::MochiSceneTestBase {
     }
     auto const positions = GetRestNodePositionsWorld(actor);
     if (type == ActorType::Rod) {
-      // Rods do not support node boundary conditions. Their DoFs are 4 per node: the position, then
-      // the twist.
-      DynamicArray<int> dofs;
+      DeformableNodePositionConstraintParams params;
+      params.actor = actor->GetHandle();
+      // Softer than the default, so that single-precision roundoff in the penalty forces at rest
+      // stays below the solver tolerance and the island can fall asleep.
+      params.stiffness = 1e4_r;
       for (int i = 0; i < isize(positions); ++i) {
-        for (int k = 0; k < 3; ++k) {
-          dofs.push_back(4 * i + k);
-        }
+        params.nodeIndex = i;
+        params.position = positions[i];
+        scene->CreateDeformableNodePositionConstraint(params, test::ExpectOK{});
       }
-      actor->AddBoundaryConditionDofsWorld(
-          MakeConstSpan(dofs), Flatten(MakeConstSpan(positions)), test::ExpectOK{});
       return;
     }
     DynamicArray<int> nodes(isize(positions));
@@ -543,7 +544,7 @@ TEST_P(SceneSleepPerType, ThrownUpwardStaysAwakeThroughApexAndFall) {
 
 TEST_P(SceneSleepPerType, FullyConstrainedSleeps) {
   Actor* actor = CreateTestActor(GetParam(), /*bottomHeight=*/1_r);
-  ConstrainInPlace(actor);
+  ConstrainInPlace(_scene, actor);
   StepUntilAsleep(actor);
 }
 
@@ -858,6 +859,8 @@ static DynamicArray<WakeCase> const& GetWakeCases() {
       ActorType::Rigid, ActorType::Soft, ActorType::Shell, ActorType::Rod};
   DynamicArray<ActorType> const kWithExternalForces = {
       ActorType::Rigid, ActorType::Shell, ActorType::Rod, ActorType::Articulated};
+  DynamicArray<ActorType> const kWithBoundaryConditions = {
+      ActorType::Rigid, ActorType::Soft, ActorType::Shell, ActorType::Articulated};
   static DynamicArray<WakeCase> const cases = {
       // Actor state
       {"SetRootTransform",
@@ -1030,10 +1033,10 @@ static DynamicArray<WakeCase> const& GetWakeCases() {
              MakeConstSpan(nodes), Flatten(MakeConstSpan(positions)), test::ExpectOK{});
        }},
       {"ClearBoundaryConditions",
-       kAll,
+       kWithBoundaryConditions,
        OnRepeat::NoWake,
        [](WakeContext& c) { c.actor->ClearBoundaryConditions(); },
-       [](WakeContext& c) { SceneSleep::ConstrainInPlace(c.actor); }},
+       [](WakeContext& c) { SceneSleep::ConstrainInPlace(c.scene, c.actor); }},
       {"RegisterQuery",
        kRigidAndSoft,
        OnRepeat::WakeUp,

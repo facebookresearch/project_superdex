@@ -10881,6 +10881,12 @@ class Actor:
             actors (see :meth:`~superdex.physics.Actor.get_nested_soft_actors`).
 
         Note:
+            Not supported for rod actors. Use
+            :meth:`~superdex.physics.Scene.create_deformable_node_position_constraint`
+            and :meth:`~superdex.physics.Scene.create_rod_element_rotation_constraint`
+            instead.
+
+        Note:
             Not supported in differentiable scenes
             (:func:`~superdex.physics.diffsim.make_scene_differentiable`) or for ROM
             actors.
@@ -10907,22 +10913,6 @@ class Actor:
             joints and the DoFs per joint. When setting boundary conditions on the
             rotation of a free or spherical joint, either all or none of the 3 DoFs must
             be specified.
-
-        Note:
-            Rod actors have 4 DoFs per node: the first 3 values are the target node x,
-            y, and z position [m] in the world frame, followed by the next element's
-            scalar twist angle [rad]. (For open rods, the last DoF, i.e., the final
-            node's twist DoF, is included for padding only, does not affect the physics,
-            and is automatically constrained to zero. This automatic constraint is not
-            reported by
-            :meth:`~superdex.physics.Actor.get_boundary_condition_dof_indices`. For
-            closed-loop rods, all twist DoFs are physical.) Boundary conditions on a rod
-            node's position must specify all 3 consecutive displacement DoFs for that
-            node. Only zero values are allowed for the scalar twist angle in this
-            function, with the interpretation that the element's cross-section material
-            axes rotate by only the minimal amount needed to remain orthogonal to the
-            rod's centerline. More elaborate control over rod element rotations should
-            use constraints instead of boundary conditions.
 
         Note:
             Boundary condition APIs add to existing boundary conditions; they do not
@@ -10974,6 +10964,12 @@ class Actor:
             Not supported for nested link actors (see
             :meth:`~superdex.physics.Actor.get_nested_link_actors`) or nested soft
             actors (see :meth:`~superdex.physics.Actor.get_nested_soft_actors`).
+
+        Note:
+            Not supported for rod actors. Use
+            :meth:`~superdex.physics.Scene.create_deformable_node_position_constraint`
+            and :meth:`~superdex.physics.Scene.create_rod_element_rotation_constraint`
+            instead.
 
         Note:
             Not supported in differentiable scenes
