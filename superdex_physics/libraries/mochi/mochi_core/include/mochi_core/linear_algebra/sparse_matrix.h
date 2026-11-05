@@ -747,6 +747,7 @@ void SparseMatrix<Scalar, CRIdx, Ptr, Storage>::AccessorApplyToRange(
         SparseMatrixView<Scalar const, CRIdx const, Ptr const> const A(*this);
         auto const XLocal = X;
         auto AXLocal = AX;
+        constexpr bool kSkipEmptyRows = details::kIsAccumulatingDestination<decltype(AXLocal)>;
         constexpr auto kCostsX = AccessorIn::RowColCosts();
         if constexpr (kCostsX.first == 1) {
           //--- X is col-major
@@ -758,6 +759,8 @@ void SparseMatrix<Scalar, CRIdx, Ptr, Storage>::AccessorApplyToRange(
                 auto const valRow = A.Values(r);
                 details::AddRowSparseTimesColumnVector<NonConstScalar, NonConstIdx>(
                     rowIndices, valRow, &XLocal(0, c), result);
+              } else if constexpr (kSkipEmptyRows) {
+                continue;
               }
               AXLocal.Store(r, c, result);
             }
@@ -771,7 +774,7 @@ void SparseMatrix<Scalar, CRIdx, Ptr, Storage>::AccessorApplyToRange(
               auto const rowValues = A.Values(r);
               details::RowSparseTimesRowMajorDense<Scalar, CRIdx>(
                   r, rowIndices, rowValues, XLocal, AXLocal, numColsX);
-            } else {
+            } else if constexpr (!kSkipEmptyRows) {
               for (int c = 0; c < numColsX; ++c) {
                 AXLocal.Store(r, c, 0);
               }

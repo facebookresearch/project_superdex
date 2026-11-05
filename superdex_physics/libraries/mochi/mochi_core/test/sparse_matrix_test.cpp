@@ -26,6 +26,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <iterator>
 #include <limits>
@@ -354,6 +355,23 @@ static void TestSparseMatrixVectorProduct() {
         EXPECT_NEAR(X4(ii, jj), XD(ii, jj), absTol);
         EXPECT_NEAR(X5(ii, jj), XD(ii, jj), absTol);
         EXPECT_NEAR(X6(ii, jj), XD(ii, jj), absTol);
+      }
+    }
+
+    // Row 0 of C is empty.
+    X10 = X1;
+    X40 = X4;
+    X1(0, 0) = -Scalar(0);
+    X1 += C * U;
+    X4 -= C * U;
+    EXPECT_TRUE(std::signbit(X1(0, 0)));
+    for (CRIdx ii = 0; ii < XD.Rows(); ++ii) {
+      CRIdx const nonZerosInRow = ii;
+      Scalar const absTol = Scalar(2 * (nonZerosInRow + nonZerosInRow * (nonZerosInRow + 1) / 2)) *
+          std::numeric_limits<Scalar>::epsilon();
+      for (CRIdx jj = 0; jj < XD.Cols(); ++jj) {
+        EXPECT_NEAR(X1(ii, jj), X10(ii, jj) + XD(ii, jj), absTol);
+        EXPECT_NEAR(X4(ii, jj), X40(ii, jj) - XD(ii, jj), absTol);
       }
     }
 

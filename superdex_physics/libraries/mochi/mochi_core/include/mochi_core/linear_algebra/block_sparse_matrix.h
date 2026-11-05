@@ -1231,6 +1231,7 @@ void BlockSparseMatrix<Scalar, kBlockSize, CRIdx, Ptr, Storage>::AccessorApplyTo
         BlockSparseMatrixView<Scalar const, kBlockSize, CRIdx const, Ptr const> const A(*this);
         auto const xLocal = x;
         auto AxLocal = Ax;
+        constexpr bool kSkipEmptyRows = details::kIsAccumulatingDestination<decltype(AxLocal)>;
         constexpr auto kCostsX = AccessorIn::RowColCosts();
         if constexpr (kCostsX.first == 1) {
           //--- Col-major X.
@@ -1252,7 +1253,9 @@ void BlockSparseMatrix<Scalar, kBlockSize, CRIdx, Ptr, Storage>::AccessorApplyTo
                 vPtr += kBlockSize * rowLeadDim;
               } else {
                 MOCHI_ASSERT_VERBOSE(numBlocksInRow == 0, "Number of blocks must not be negative.");
-                details::SetBlockRowToZero<kBlockSize>(AxLocal, br, nCols);
+                if constexpr (!kSkipEmptyRows) {
+                  details::SetBlockRowToZero<kBlockSize>(AxLocal, br, nCols);
+                }
               }
             }
           }
@@ -1263,7 +1266,7 @@ void BlockSparseMatrix<Scalar, kBlockSize, CRIdx, Ptr, Storage>::AccessorApplyTo
             if (!A.IsBlockRowEmpty(br)) {
               details::RowMultiplier<NonConstScalar, kBlockSize>::ApplyToRowMajor(
                   A.Indices(br), A.Values(br), xLocal, AxLocal, br, nCols);
-            } else {
+            } else if constexpr (!kSkipEmptyRows) {
               details::SetBlockRowToZero<kBlockSize>(AxLocal, br, nCols);
             }
           }

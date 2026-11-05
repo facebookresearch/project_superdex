@@ -354,9 +354,11 @@ static void TestBlockSparseMatrixVectorProduct() {
     EXPECT_LT(DX2.Norm(), xNorm * relTol);
     EXPECT_LT(DX3.Norm(), xNorm * relTol);
 
+    BX1(0, 0) = -Scalar(0); // Block row 0 of B is empty.
     BX1view += B * Xview;
     BX2view += BAsView * Xview;
     BX3view += BAsConstView * Xview;
+    EXPECT_TRUE(std::signbit(BX1(0, 0)));
     DX1 = BX1 - Scalar(2) * CX;
     DX2 = BX2 - Scalar(2) * CX;
     DX3 = BX3 - Scalar(2) * CX;
@@ -368,6 +370,7 @@ static void TestBlockSparseMatrixVectorProduct() {
     BX1view -= B * Xview;
     BX2view -= BAsView * Xview;
     BX3view -= BAsConstView * Xview;
+    EXPECT_TRUE(std::signbit(BX1(0, 0)));
     DX1 = BX1;
     DX2 = BX2;
     DX3 = BX3;

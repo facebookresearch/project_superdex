@@ -49,6 +49,15 @@ static_assert(AfterSet(DestOp::NegSet, true) == DestOp::Add);
 static_assert(AfterSet(DestOp::Add, true) == DestOp::Sub);
 static_assert(AfterSet(DestOp::Sub, true) == DestOp::Add);
 
+template <DestOp kOp, typename T>
+struct DestinationAccessor;
+
+template <typename T>
+inline constexpr bool kIsAccumulatingDestination = false;
+template <DestOp kOp, typename T>
+inline constexpr bool kIsAccumulatingDestination<DestinationAccessor<kOp, T>> =
+    kOp == DestOp::Add || kOp == DestOp::Sub;
+
 /// @brief Data about matrices, including a scaling factor for linear combinations.
 /// @tparam Scalar
 ///
