@@ -369,23 +369,6 @@ void MakeOffsetElementIndexGroups(
   }
 }
 
-// Returns the contact indices of pointRange sorted by sample index, so that the contacts of each
-// element are contiguous.
-DynamicArray<int> SortContactsBySample(
-    Interval<int> pointRange,
-    ContactDetectionResult const& query,
-    Allocator* allocator) {
-  DynamicArray<int> sortedContactIndices(allocator);
-  sortedContactIndices.reserve(pointRange.Size());
-  for (int contactIndex : pointRange) {
-    sortedContactIndices.push_back(contactIndex);
-  }
-  std::ranges::sort(sortedContactIndices, {}, [&](int contactIndex) {
-    return std::pair{query.sampleIndices[contactIndex], contactIndex};
-  });
-  return sortedContactIndices;
-}
-
 // Calls fn(elementIndex, contactIndices) for each element with contacts, given contact indices
 // sorted by sample index.
 template <class Fn>
@@ -657,6 +640,24 @@ void AssembleLinearContactSkinMixedBlocks(
 
 } // namespace
 
+// Returns the contact indices of pointRange sorted by sample index, so that the contacts of each
+// element are contiguous.
+DynamicArray<int> mochi::linear_contact_skin::details::SortContactsBySample(
+    Interval<int> pointRange,
+    ContactDetectionResult const& query,
+    Allocator* allocator) {
+  DynamicArray<int> sortedContactIndices(pointRange, allocator);
+  // Contacts usually arrive in sample order, so sort only when they don't. Having producers sort
+  // all their per-contact arrays instead would cost more than sorting these indices.
+  auto const sampleThenContact = [&](int contactIndex) {
+    return std::pair{query.sampleIndices[contactIndex], contactIndex};
+  };
+  if (!std::ranges::is_sorted(sortedContactIndices, {}, sampleThenContact)) {
+    std::ranges::sort(sortedContactIndices, {}, sampleThenContact);
+  }
+  return sortedContactIndices;
+}
+
 // Assembles the contact response of pointRange through the linear element map.
 void mochi::linear_contact_skin::AssembleContactResponseRange(
     ContactDetectionResult const& query,
@@ -676,7 +677,7 @@ void mochi::linear_contact_skin::AssembleContactResponseRange(
   bool const assemDRes = GetNumValues(results.outDRes) > 0;
   auto const worldFromCollidingRotation = ToVMatrix3x3(rootTransform.worldFromLocal.GetRotation());
 
-  auto const sortedContactIndices = SortContactsBySample(pointRange, query, allocator);
+  auto const sortedContactIndices = details::SortContactsBySample(pointRange, query, allocator);
   surfaceDisc.Visit([&](auto const& disc) {
     auto const elements = MakeConstSpan(disc.femElements);
     AssembleElementContactResponses(

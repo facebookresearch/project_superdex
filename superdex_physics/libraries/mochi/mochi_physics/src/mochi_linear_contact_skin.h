@@ -114,4 +114,13 @@ void AssembleContactResponseRange(
     Allocator* allocator,
     AssemblyResults<real> results);
 
+namespace details {
+// Returns the contact indices of pointRange sorted by (sample index, contact index), so that the
+// contacts of each element are contiguous.
+DynamicArray<int> SortContactsBySample(
+    Interval<int> pointRange,
+    ContactDetectionResult const& query,
+    Allocator* allocator);
+} // namespace details
+
 } // namespace mochi::linear_contact_skin

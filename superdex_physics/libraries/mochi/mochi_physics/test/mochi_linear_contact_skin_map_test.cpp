@@ -182,3 +182,16 @@ TEST(CLinearContactSkinElementMap, AppliesDofOffsetOnlyWhenBuildingScalarAndBsr3
   collisions.front().collisionResult.sampleIndices = {0, 1, 2, 3, 0};
   expectGraphs();
 }
+
+TEST(LinearContactSkin, SortContactsBySample) {
+  ContactDetectionResult query;
+  query.sampleIndices = {7, 4, 2, 4, 9, 1};
+  // Contacts 1 to 4 are out of sample order and contacts 1 and 3 share a sample, so contact order
+  // breaks the tie. Contacts 2 to 4 are already in order.
+  DynamicArray<int> const unsorted = linear_contact_skin::details::SortContactsBySample(
+      Interval<int>{1, 5}, query, GetDefaultAllocator());
+  DynamicArray<int> const sorted = linear_contact_skin::details::SortContactsBySample(
+      Interval<int>{2, 5}, query, GetDefaultAllocator());
+  EXPECT_SPAN_EQ(MakeConstSpan(std::array{2, 1, 3, 4}), MakeConstSpan(unsorted));
+  EXPECT_SPAN_EQ(MakeConstSpan(std::array{2, 3, 4}), MakeConstSpan(sorted));
+}
