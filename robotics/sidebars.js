@@ -40,6 +40,7 @@ function internalCategoryItems() {
       items: [
         'internal/agents',
         'internal/scenes_and_tasks',
+        'internal/asset_versioning',
         {
           type: 'category',
           label: 'SuperDex Teleop (internal)',
