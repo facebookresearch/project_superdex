@@ -39,6 +39,7 @@ function internalCategoryItems() {
       },
       items: [
         'internal/agents',
+        'internal/scenes_and_tasks',
         {
           type: 'category',
           label: 'SuperDex Teleop (internal)',
