@@ -174,6 +174,6 @@ This example launches or focuses the SuperDex Physics Debugger and runs while it
 
 ## Related
 
-- [Rod Actors](../../concepts/actors/rod.mdx) — Formulation, parameter reference, and boundary conditions for rods.
+- [Rod Actors](../../concepts/actors/rod.mdx) — Formulation and parameter reference for rods.
 - [Constraints](../../concepts/constraints.mdx) — Penalty formulation, the full list of constraint types, and runtime parameter access.
 - [Choosing a Tendon Model](./tendon_model_fidelity.md) — When a rod is worth its cost compared with reduced tendon models.
