@@ -46,7 +46,6 @@ MOCHI_FORCE_INLINE Quaternion Lerp(Quaternion a, Quaternion b, real t) {
 }
 
 inline Quaternion Slerp(Quaternion a, Quaternion b, real t) {
-  constexpr real kDotThreshold = 1e-6_r;
   real dot = Dot<4>(a.data, b.data);
 
   // If the dot product is negative, then they have opposite handedness
@@ -56,15 +55,22 @@ inline Quaternion Slerp(Quaternion a, Quaternion b, real t) {
     b = -b;
   }
 
-  // Use linear interpolation and normalize if the angle is small enough
-  if (dot < 1_r - kDotThreshold) MOCHI_LIKELY {
-    dot = Clamp(dot, -1.0_r, 1.0_r);
-    real theta = ACos(dot) * (real)t;
-    b.data = Normalize<4>(b.data - a.data * dot);
-    return Quaternion{a.data * std::cos(theta) + b.data * std::sin(theta)};
-  } else {
-    return Lerp(a, b, t);
+  // For b = a, b - a·dot below is rounding residue, which a large t would amplify.
+  if (a == b) {
+    return a;
   }
+
+  // b = a·cos(θ) + u·sin(θ) with u a unit quaternion orthogonal to a. ACos(dot) is inaccurate for
+  // small θ and ASin(sinTheta) near π/2, so θ comes from whichever argument is smaller.
+  Vec4r const bOrtho = b.data - a.data * dot;
+  real const sinTheta = Norm<4>(bOrtho);
+  // If bOrtho is zero or its norm underflows, return the θ → 0 limit of the result below.
+  if (sinTheta == 0_r) MOCHI_UNLIKELY {
+    return Quaternion{a.data + bOrtho * t};
+  }
+  real const theta = dot < sinTheta ? ACos(dot) : ASin(sinTheta);
+  real const angle = theta * t;
+  return Quaternion{a.data * Cos(angle) + bOrtho * (Sin(angle) / sinTheta)};
 }
 
 MOCHI_FORCE_INLINE real NormSqr(Quaternion a) {

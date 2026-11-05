@@ -110,6 +110,30 @@ TEST(QuaternionUtils, Slerp) {
   EXPECT_NEAR_EQ(Rot(-89.5_r), Slerp(Rot(0_r), Rot(181_r), 0.5_r));
   EXPECT_NEAR_EQ(Rot(-134.25_r), Slerp(Rot(0_r), Rot(181_r), 0.75_r));
   EXPECT_NEAR_EQ(Rot(-179.0_r), Slerp(Rot(0_r), Rot(181_r), 1.0_r));
+
+  // Small rotations take θ from ASin, where ACos(dot) would lose accuracy, and rotations close to
+  // 180 degrees take it from ACos. Both stay accurate and unit; extrapolating to t = 1.5 amplifies
+  // errors.
+  real constexpr kTol = 8_r * std::numeric_limits<real>::epsilon();
+  Quaternion const a = Rot(70_r);
+  Real3 const axisB{3_r, -1_r, 2_r};
+  for (real const angle : {1e-6_r, 2.7e-3_r, 3.5e-3_r, 0.05_r, kPI - 1e-3_r}) {
+    Quaternion const b = Quaternion::FromAxisAngle(axisB, angle) * a;
+    Quaternion const expected = Quaternion::FromAxisAngle(axisB, 1.5_r * angle) * a;
+    EXPECT_TRUE(EquivalentRotation(Slerp(a, b, 1.5_r), expected, kTol));
+  }
+
+  // Equal and opposite inputs give the input itself at any t, although the rounded dot product of c
+  // with itself isn't 1. So does a parallel input, for which b - a·dot is zero.
+  Quaternion const c = Normalize(Quaternion{1_r, 1_r, 0_r, 0_r});
+  EXPECT_EQ(c, Slerp(c, c, 65536_r));
+  EXPECT_EQ(c, Slerp(c, -c, 65536_r));
+  Quaternion const longIdentity{0_r, 0_r, 0_r, 1_r + std::numeric_limits<real>::epsilon()};
+  EXPECT_EQ(Rot(0_r), Slerp(Rot(0_r), longIdentity, 0.5_r));
+
+  // A rotation so small that the norm of b - a·dot underflows to zero still interpolates.
+  Quaternion const tiny = Quaternion::RotationX(4_r * std::numeric_limits<real>::min());
+  EXPECT_EQ(tiny, Slerp(Rot(0_r), tiny, 1_r));
 }
 
 TEST(QuaternionUtils, Norm) {
