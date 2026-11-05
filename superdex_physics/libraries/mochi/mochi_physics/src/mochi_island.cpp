@@ -60,6 +60,7 @@ struct CIslandTestConfig {
 struct CGlobalIsland {
   entt::entity island = entt::null;
   bool forceSingleIslandByUserRequest = false;
+  bool forceSingleIslandByDebugger = false;
 };
 
 } // namespace
@@ -550,9 +551,10 @@ static void UpdateIslandDifferentiabilityInfo(
 static bool UpdateForceGlobalIsland(entt::registry& reg) {
   auto& global = reg.ctx<CGlobalIsland>();
 
-  // We need one global island if the user requested it, or TagForceSingleIsland is present.
-  bool needsGlobalIsland =
-      global.forceSingleIslandByUserRequest || !reg.view<TagForceSingleIsland>().empty();
+  // We need one global island if the user or debugger requested it, or TagForceSingleIsland is
+  // present.
+  bool needsGlobalIsland = global.forceSingleIslandByUserRequest ||
+      global.forceSingleIslandByDebugger || !reg.view<TagForceSingleIsland>().empty();
 
   if (needsGlobalIsland) {
     // Ensure that the global island exists, unless it would be empty. The handle may outlive the
@@ -698,6 +700,14 @@ bool mochi::island::GetForceSingleIsland(entt::registry const& reg) {
 
 void mochi::island::SetForceSingleIsland(entt::registry& reg, bool forceSingleIsland) {
   reg.ctx<CGlobalIsland>().forceSingleIslandByUserRequest = forceSingleIsland;
+}
+
+bool mochi::island::GetForceSingleIslandByDebugger(entt::registry const& reg) {
+  return reg.ctx<CGlobalIsland const>().forceSingleIslandByDebugger;
+}
+
+void mochi::island::SetForceSingleIslandByDebugger(entt::registry& reg, bool forceSingleIsland) {
+  reg.ctx<CGlobalIsland>().forceSingleIslandByDebugger = forceSingleIsland;
 }
 
 void mochi::island::SetTestCallback_PreIslandUpdate(entt::registry& reg, std::function<void()> fn) {

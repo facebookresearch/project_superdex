@@ -254,6 +254,7 @@ static void AddStepRows(StepProfileData const* profile) {
   AddCountRow("Active Contacts", profile, &StepProfileData::activeContacts);
   AddCountRow("Active DoFs", profile, &StepProfileData::activeDofs);
   AddCountRow("Active Islands", profile, &StepProfileData::activeIslands);
+  AddCountRow("Worker Threads", profile, &StepProfileData::numWorkerThreads);
 }
 
 static void BuildStepTooltip(StepProfileData const& profile) {
@@ -441,10 +442,6 @@ static void BuildStats(UiState& state, StatsSnapshot const& stats) {
     ImGui::SetTooltip("Averaged over recent steps");
   }
   AddStepRows(profile);
-  AddRowLabel("Worker Threads");
-  if (profile) {
-    ImGui::Text("%d", state.client->GetServerNumWorkerThreads());
-  }
 }
 
 void dbg::BuildProfilerPanel(UiState& state) {

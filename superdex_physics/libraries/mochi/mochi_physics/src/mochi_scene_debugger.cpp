@@ -117,6 +117,7 @@ static protocol::StepProfileData RecordStepProfileData(
   profile.activeConstraints = CountActiveConstraints(reg);
   profile.activeContacts = CountActiveContacts<false>(reg) + CountActiveContacts<true>(reg);
   profile.convergenceStatus = scene.GetSolverStats().convergenceStatus;
+  profile.numWorkerThreads = scene.GetContext()->GetNumThreads();
   return profile;
 }
 
@@ -138,6 +139,9 @@ class SceneDebuggerImpl final : public SceneDebugger {
   // SceneDebugger API
   void UpdateOnSceneThread(SceneImpl* scene) override;
   void OnPreStep(SceneImpl* scene, StepInfo const& step) override;
+  bool IsForceSingleThreaded() const override {
+    return !IsShutdown() && _forceSingleThreaded;
+  }
   void CaptureStepProfile(
       SceneImpl* scene,
       StepInfo const& step,
@@ -199,6 +203,7 @@ class SceneDebuggerImpl final : public SceneDebugger {
 
   // Message Handlers (called on the scene's thread)
   void OnDebugDrawRequest(SceneImpl* scene, protocol::DebugDrawRequest&& request);
+  void OnSceneSettingsRequest(SceneImpl* scene, protocol::SceneSettingsRequest&& request);
   void OnSceneStepRequest(SceneImpl* scene, protocol::SceneStepRequest&& request);
   void OnSceneSyncRequest(SceneImpl* scene, protocol::SceneSyncRequest&& request);
   void OnSleepParamsRequest(SceneImpl* scene, protocol::SleepParamsRequest&& request);
@@ -246,6 +251,8 @@ class SceneDebuggerImpl final : public SceneDebugger {
   std::atomic<StepMode> _stepMode = StepMode::Pause;
   bool _singleStepRequested = false;
 
+  bool _forceSingleThreaded = false; // Scene-thread only
+
   // Real-time tracking state
   struct RealTimeTracking {
     std::optional<double> realTimeStart; // Real start time for real-time tracking
@@ -285,6 +292,9 @@ void SceneDebuggerImpl::Init(SceneImpl* scene) {
   // Register message handlers
   _dispatcher.Register<protocol::DebugDrawRequest>([this](auto* scene, auto&& msg) {
     OnDebugDrawRequest(scene, std::forward<decltype(msg)>(msg));
+  });
+  _dispatcher.Register<protocol::SceneSettingsRequest>([this](auto* scene, auto&& msg) {
+    OnSceneSettingsRequest(scene, std::forward<decltype(msg)>(msg));
   });
   _dispatcher.Register<protocol::SceneStepRequest>([this](auto* scene, auto&& msg) {
     OnSceneStepRequest(scene, std::forward<decltype(msg)>(msg));
@@ -488,6 +498,7 @@ void SceneDebuggerImpl::CaptureStepProfile(
 void SceneDebuggerImpl::OnPostStep(SceneImpl* scene, StepInfo const& step) {
   // It is safe to process messages and access the scene at this time.
   std::lock_guard lock{_sceneThreadMutex};
+
   if (IsShutdown()) {
     return;
   }
@@ -542,6 +553,31 @@ void SceneDebuggerImpl::OnDebugDrawRequest(SceneImpl* scene, protocol::DebugDraw
   }
 
   if (request.sendReply) {
+    SendToClient(reply);
+  }
+}
+
+void SceneDebuggerImpl::OnSceneSettingsRequest(
+    SceneImpl* scene,
+    protocol::SceneSettingsRequest&& request) {
+  MOCHI_ASSERT_VERBOSE(request.scene == _sceneHandle, "Received by the wrong scene");
+  entt::registry& reg = scene->GetRegistry();
+
+  if (request.forceSingleThreaded.has_value()) {
+    _forceSingleThreaded = *request.forceSingleThreaded; // Takes effect on the next step
+  }
+
+  bool forceSingleIsland = island::GetForceSingleIslandByDebugger(reg);
+  if (request.forceSingleIsland.has_value() && *request.forceSingleIsland != forceSingleIsland) {
+    forceSingleIsland = *request.forceSingleIsland;
+    island::SetForceSingleIslandByDebugger(reg, forceSingleIsland);
+    ++_stepCounter; // Send a fresh sync even while paused
+  }
+
+  if (request.sendReply) {
+    protocol::SceneSettingsReply reply(request);
+    reply.forceSingleThreaded = _forceSingleThreaded;
+    reply.forceSingleIsland = forceSingleIsland;
     SendToClient(reply);
   }
 }
@@ -962,6 +998,10 @@ void SceneDebuggerImpl::ShutdownOnSceneThread(SceneImpl* scene) {
   for (int i = 0; i < debugDraw.GetNumFeatures(); ++i) {
     debugDraw.EnableFeature(i, false);
   }
+
+  // Release the debugger's scene settings. Single-threaded mode is step-scoped, so it needs no
+  // cleanup.
+  island::SetForceSingleIslandByDebugger(scene->GetRegistry(), false);
 
   // Cancel all queries
   UpdateMeshQueries(scene, /*meshesEnabled*/ false, /*useVisualMesh*/ false);

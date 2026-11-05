@@ -208,10 +208,32 @@ static void AddIslandProperties(UiState& state) {
   sendOnRelease("Number of consecutive rest steps required before an island goes to sleep.");
 }
 
+static void AddPerformanceProperties(UiState& state) {
+  auto settings = state.client->GetSettings();
+  bool changed = UiCheckbox(
+      "Force Single Threaded",
+      &settings.scene.forceSingleThreaded,
+      "Step the selected scene on a single thread. Released when the scene is deselected or the "
+      "debugger disconnects.");
+  changed |= UiCheckbox(
+      "Force Single Island",
+      &settings.scene.forceSingleIsland,
+      "Merge all islands of the selected scene into one, in addition to the application's own "
+      "setting. Released when the scene is deselected or the debugger disconnects.");
+  if (changed) {
+    state.client->SetSettings(settings);
+  }
+}
+
 void dbg::BuildPropertiesPanel(UiState& state) {
   if (ImGui::TreeNode("Islands")) {
     MOCHI_DEFER(ImGui::TreePop());
     AddIslandProperties(state);
+  }
+
+  if (ImGui::TreeNode("Performance")) {
+    MOCHI_DEFER(ImGui::TreePop());
+    AddPerformanceProperties(state);
   }
 
   ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);

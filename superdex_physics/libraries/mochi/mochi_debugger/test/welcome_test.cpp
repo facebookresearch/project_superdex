@@ -93,12 +93,3 @@ TEST_F(WelcomeTest, ServerCoordinateSpaceReachesTheClient) {
   ConnectClient();
   EXPECT_EQ(CoordinateSpace::Unreal(), _client->GetCoordinateSpace());
 }
-
-TEST_F(WelcomeTest, ServerWorkerThreadCountReachesTheClient) {
-  StartServer();
-  ConnectClient();
-  EXPECT_EQ(_context->GetNumThreads(), _client->GetServerNumWorkerThreads());
-
-  DisconnectClient();
-  EXPECT_EQ(0, _client->GetServerNumWorkerThreads());
-}

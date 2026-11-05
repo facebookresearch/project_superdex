@@ -193,6 +193,11 @@ bool GetForceSingleIsland(entt::registry const& reg);
 // Debugging feature exposed to the public API as Scene::SetForceSingleIsland.
 void SetForceSingleIsland(entt::registry& reg, bool forceSingleIsland);
 
+// Debugger override, combined (OR) with the application's SetForceSingleIsland, which it does not
+// change.
+bool GetForceSingleIslandByDebugger(entt::registry const& reg);
+void SetForceSingleIslandByDebugger(entt::registry& reg, bool forceSingleIsland);
+
 /**************************************************************************
   Unit Testing Support
 */

@@ -58,10 +58,12 @@
 #include <mochi_core/mochi_platform.h>
 #include <mochi_core/solvers/linear_solver.h>
 #include <mochi_core/utils/cuda_utils.h>
+#include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/file_utils.h>
 #include <mochi_core/utils/group_rw.h>
 #include <mochi_core/utils/profile.h>
 #include <mochi_core/utils/reflection.h>
+#include <mochi_core/utils/task_scheduler.h>
 #include <mochi_core/utils/time.h>
 
 #include <mochi_physics/diffsim/mochi_diffsim.h>
@@ -658,120 +660,128 @@ void SceneImpl::Step(double timeStepSec) {
   if (debugger) {
     debugger->OnPreStep(this, stepInfo);
   }
+  bool const forceSingleThreaded = debugger && debugger->IsForceSingleThreaded();
 
-  Timer totalStepTimer;
-  Timer timer;
-
-  if (_recorder) {
-    _recorder->OnStepBegin(timeStepSec, GetGravity());
-  }
-
-  TimeSpan recordingStepDuration = timer.GetElapsed();
-
-  timer.Reset();
-
-  // Fire pre-step callbacks one at a time
   {
-    MOCHI_PROFILE_SCOPE_N("PreStepCallbacks");
-    _preStepCallbacks.Call(stepInfo);
-  }
-
-  TimeSpan preStepDuration = timer.GetElapsed();
-  _lastPerformanceStats.preStepCallbacksDurationSec = ToSeconds(preStepDuration);
-
-  double stepDuration = 0.0;
-  dbg::StepProfileTimers stepProfile;
-  if (timeStepSec > 0.0) {
-    // Quasistatic steps use backward Euler (see solver::CreateIslandTimeIntegrationParams).
-    auto const method = _registry.ctx<CSimulationParams const>().integrationMethod;
-    if (!IsFinite(timeStepSec) && method != IntegrationMethod::BackwardEuler) {
-      MOCHI_LOG_WARNING_ONCE(
-          "Quasistatic steps (infinite time step) use backward Euler instead of the requested "
-          "integration method (%s). Set SolverParams::integrationMethod to BackwardEuler to "
-          "silence this warning.",
-          SReflect::EnumToString(method));
+    if (forceSingleThreaded) {
+      TaskScheduler::PushLocalSingleThreadedMode();
     }
+    MOCHI_DEFER(if (forceSingleThreaded) { TaskScheduler::PopLocalSingleThreadedMode(); });
+
+    Timer totalStepTimer;
+    Timer timer;
+
+    if (_recorder) {
+      _recorder->OnStepBegin(timeStepSec, GetGravity());
+    }
+
+    TimeSpan recordingStepDuration = timer.GetElapsed();
 
     timer.Reset();
 
-    // A quasistatic step leaves no history to extrapolate from, so multi-step methods cold-start
-    // after it. Clearing the history in the next finite step lets Step(0.0) still reproduce the
-    // quasistatic step.
-    auto& sceneTime = _registry.ctx<CSceneTime>();
-    if (IsFinite(timeStepSec) && !IsFinite(sceneTime.DeltaTime())) {
-      for (entt::entity const e : _registry.view<CTimeIntegratorState const>()) {
-        integration::ClearMultiStepIntegrationData(_registry, e);
+    // Fire pre-step callbacks one at a time
+    {
+      MOCHI_PROFILE_SCOPE_N("PreStepCallbacks");
+      _preStepCallbacks.Call(stepInfo);
+    }
+
+    TimeSpan preStepDuration = timer.GetElapsed();
+    _lastPerformanceStats.preStepCallbacksDurationSec = ToSeconds(preStepDuration);
+
+    double stepDuration = 0.0;
+    dbg::StepProfileTimers stepProfile;
+    if (timeStepSec > 0.0) {
+      // Quasistatic steps use backward Euler (see solver::CreateIslandTimeIntegrationParams).
+      auto const method = _registry.ctx<CSimulationParams const>().integrationMethod;
+      if (!IsFinite(timeStepSec) && method != IntegrationMethod::BackwardEuler) {
+        MOCHI_LOG_WARNING_ONCE(
+            "Quasistatic steps (infinite time step) use backward Euler instead of the requested "
+            "integration method (%s). Set SolverParams::integrationMethod to BackwardEuler to "
+            "silence this warning.",
+            SReflect::EnumToString(method));
       }
+
+      timer.Reset();
+
+      // A quasistatic step leaves no history to extrapolate from, so multi-step methods cold-start
+      // after it. Clearing the history in the next finite step lets Step(0.0) still reproduce the
+      // quasistatic step.
+      auto& sceneTime = _registry.ctx<CSceneTime>();
+      if (IsFinite(timeStepSec) && !IsFinite(sceneTime.DeltaTime())) {
+        for (entt::entity const e : _registry.view<CTimeIntegratorState const>()) {
+          integration::ClearMultiStepIntegrationData(_registry, e);
+        }
+      }
+
+      // Store time step
+      sceneTime.Advance(timeStepSec);
+
+      // ECS compute velocities and prepare actors
+      Timer phaseTimer;
+      PreStepEcs(_registry);
+      stepProfile.preStepSec = ToSeconds(phaseTimer.GetElapsed());
+
+      // ECS (step actors):
+      phaseTimer.Reset();
+      StepEcs(_registry);
+      stepProfile.stepSec = ToSeconds(phaseTimer.GetElapsed());
+
+      // ECS
+      phaseTimer.Reset();
+      PostStepEcs(_registry);
+      stepProfile.postStepSec = ToSeconds(phaseTimer.GetElapsed());
+
+      stepDuration = ToSeconds(timer.GetElapsed());
+
+      ComputeAggregateSolverSceneStats(_registry, _lastSolverStats, _lastDebugStats);
+    } else {
+      // Zero time-step: the simulation does not advance. Pre-step callbacks have already run, so
+      // their changes are part of the evaluated conditions.
+      Error error;
+      UpdateQueries(error);
+      if (!error.IsOK()) {
+        MOCHI_LOG_WARNING_ONCE("Step(0.0): %s", error.ToString().c_str());
+      }
+
+      // Clear the stats
+      _lastSolverStats.maxNonLinearIters = 0;
+      _lastSolverStats.residualNorm = 0.0;
+      _lastSolverStats.maxLineSearchIters = 0;
+      _lastSolverStats.convergenceStatus = ConvergenceStatus::None;
+      _lastDebugStats.maxResidualNormRelativeError = 0.0;
     }
 
-    // Store time step
-    sceneTime.Advance(timeStepSec);
+    _lastPerformanceStats.solveStepDurationSec = stepDuration;
 
-    // ECS compute velocities and prepare actors
-    Timer phaseTimer;
-    PreStepEcs(_registry);
-    stepProfile.preStepSec = ToSeconds(phaseTimer.GetElapsed());
+    TimeSpan totalStepDuration = totalStepTimer.GetElapsed();
+    if (debugger) {
+      debugger->CaptureStepProfile(this, stepInfo, stepProfile);
+    }
+    totalStepTimer.Reset();
 
-    // ECS (step actors):
-    phaseTimer.Reset();
-    StepEcs(_registry);
-    stepProfile.stepSec = ToSeconds(phaseTimer.GetElapsed());
+    timer.Reset();
 
-    // ECS
-    phaseTimer.Reset();
-    PostStepEcs(_registry);
-    stepProfile.postStepSec = ToSeconds(phaseTimer.GetElapsed());
-
-    stepDuration = ToSeconds(timer.GetElapsed());
-
-    ComputeAggregateSolverSceneStats(_registry, _lastSolverStats, _lastDebugStats);
-  } else {
-    // Zero time-step: the simulation does not advance. Pre-step callbacks have already run, so
-    // their changes are part of the evaluated conditions.
-    Error error;
-    UpdateQueries(error);
-    if (!error.IsOK()) {
-      MOCHI_LOG_WARNING_ONCE("Step(0.0): %s", error.ToString().c_str());
+    // Fire post-step callbacks one at a time
+    {
+      MOCHI_PROFILE_SCOPE_N("PostStepCallbacks");
+      _postStepCallbacks.Call(stepInfo);
     }
 
-    // Clear the stats
-    _lastSolverStats.maxNonLinearIters = 0;
-    _lastSolverStats.residualNorm = 0.0;
-    _lastSolverStats.maxLineSearchIters = 0;
-    _lastSolverStats.convergenceStatus = ConvergenceStatus::None;
-    _lastDebugStats.maxResidualNormRelativeError = 0.0;
+    TimeSpan postStepDuration = timer.GetElapsed();
+    _lastPerformanceStats.postStepCallbacksDurationSec = ToSeconds(postStepDuration);
+
+    timer.Reset();
+
+    if (_recorder) {
+      _recorder->OnStepEnd();
+    }
+
+    recordingStepDuration += timer.GetElapsed();
+    _lastPerformanceStats.recordingStepDurationSec = ToSeconds(recordingStepDuration);
+
+    totalStepDuration += totalStepTimer.GetElapsed();
+    _lastPerformanceStats.totalStepDurationSec = ToSeconds(totalStepDuration);
   }
-
-  _lastPerformanceStats.solveStepDurationSec = stepDuration;
-
-  TimeSpan totalStepDuration = totalStepTimer.GetElapsed();
-  if (debugger) {
-    debugger->CaptureStepProfile(this, stepInfo, stepProfile);
-  }
-  totalStepTimer.Reset();
-
-  timer.Reset();
-
-  // Fire post-step callbacks one at a time
-  {
-    MOCHI_PROFILE_SCOPE_N("PostStepCallbacks");
-    _postStepCallbacks.Call(stepInfo);
-  }
-
-  TimeSpan postStepDuration = timer.GetElapsed();
-  _lastPerformanceStats.postStepCallbacksDurationSec = ToSeconds(postStepDuration);
-
-  timer.Reset();
-
-  if (_recorder) {
-    _recorder->OnStepEnd();
-  }
-
-  recordingStepDuration += timer.GetElapsed();
-  _lastPerformanceStats.recordingStepDurationSec = ToSeconds(recordingStepDuration);
-
-  totalStepDuration += totalStepTimer.GetElapsed();
-  _lastPerformanceStats.totalStepDurationSec = ToSeconds(totalStepDuration);
 
   if (debugger) {
     debugger->OnPostStep(this, stepInfo);

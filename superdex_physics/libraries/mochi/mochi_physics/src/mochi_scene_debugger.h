@@ -55,6 +55,9 @@ class SceneDebugger {
   // throttling to real time.
   virtual void OnPreStep(SceneImpl* scene, StepInfo const& step) = 0;
 
+  // Check the debugger's threading override on the scene's controlling thread.
+  virtual bool IsForceSingleThreaded() const = 0;
+
   // Capture profiling data after simulation finishes, before user post-step callbacks mutate the
   // scene.
   virtual void CaptureStepProfile(

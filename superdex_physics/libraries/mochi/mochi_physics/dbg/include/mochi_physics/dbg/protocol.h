@@ -62,6 +62,7 @@ namespace mochi::dbg::protocol {
 // Forwards
 struct DebugDrawReply;
 struct PingReply;
+struct SceneSettingsReply;
 struct SceneStepReply;
 struct SceneSyncReply;
 struct SleepParamsReply;
@@ -235,6 +236,8 @@ struct StepProfileData {
   int32_t activeDofs = 0;
   int32_t activeIslands = 0;
   ConvergenceStatus convergenceStatus = ConvergenceStatus::None; ///< Worst over active islands
+  /// Effective task scheduler worker threads during the step. Zero if single-threaded.
+  int32_t numWorkerThreads = 0;
 
   bool operator==(StepProfileData const& rhs) const = default;
 
@@ -250,6 +253,7 @@ struct StepProfileData {
   MOCHI_FIELD(activeDofs)
   MOCHI_FIELD(activeIslands)
   MOCHI_FIELD(convergenceStatus)
+  MOCHI_FIELD(numWorkerThreads)
   MOCHI_STRUCT_END()
 };
 
@@ -473,20 +477,53 @@ struct SleepParamsReply : SceneReply {
   MOCHI_STRUCT_END()
 };
 
+/// @brief [S<--C] Query, and optionally modify, the debugger's overrides of scene settings.
+///
+/// @details Each field is applied only if it has a value, so an empty request is a query. The
+/// overrides are owned by the debugger and are released when it detaches from the scene.
+struct SceneSettingsRequest : SceneRequest {
+  using Reply = SceneSettingsReply;
+
+  /// Step the scene on a single thread, regardless of the application's threading mode.
+  std::optional<bool> forceSingleThreaded;
+
+  /// Merge all islands into one, in addition to the application's @ref Scene::SetForceSingleIsland.
+  std::optional<bool> forceSingleIsland;
+
+  MOCHI_STRUCT_BEGIN(mochi::dbg::protocol::SceneSettingsRequest)
+  MOCHI_BASE_CLASS(SceneRequest)
+  MOCHI_FIELD(forceSingleThreaded)
+  MOCHI_FIELD(forceSingleIsland)
+  MOCHI_STRUCT_END()
+};
+
+/// @brief [S-->C] Reply to @ref SceneSettingsRequest with the debugger's values after the request
+/// is applied.
+struct SceneSettingsReply : SceneReply {
+  using SceneReply::SceneReply;
+
+  bool forceSingleThreaded = false;
+  bool forceSingleIsland = false;
+
+  MOCHI_STRUCT_BEGIN(mochi::dbg::protocol::SceneSettingsReply)
+  MOCHI_BASE_CLASS(SceneReply)
+  MOCHI_FIELD(forceSingleThreaded)
+  MOCHI_FIELD(forceSingleIsland)
+  MOCHI_STRUCT_END()
+};
+
 /// @brief [S-->C] First message sent from the server to the client. The client does not consider
 /// themselves to be fully connected until this arrives.
 struct WelcomeMessage : net::Message {
   DbgDrawFeatures debugDraw; ///< Debug draw feature catalog; enable fields are initially false.
   SceneList scenes; ///< Information about all scenes that already exist.
   CoordinateSpace coordinateSpace = {}; ///< The server's coordinate space convention.
-  int32_t numWorkerThreads = 0; ///< Task scheduler worker threads. Zero if single-threaded.
 
   MOCHI_STRUCT_BEGIN(mochi::dbg::protocol::WelcomeMessage)
   MOCHI_BASE_CLASS(net::Message)
   MOCHI_FIELD(debugDraw)
   MOCHI_FIELD(scenes)
   MOCHI_FIELD(coordinateSpace)
-  MOCHI_FIELD(numWorkerThreads)
   MOCHI_STRUCT_END()
 };
 

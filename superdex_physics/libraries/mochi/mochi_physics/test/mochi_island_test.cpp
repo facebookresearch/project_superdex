@@ -736,6 +736,24 @@ TEST_F(MochiIsland, ForceSingleIsland) {
   Step();
   expectSingleIsland(false);
 
+  // The debugger override merges islands without changing the application's value. The two are
+  // combined, so either one keeps a single island.
+  island::SetForceSingleIslandByDebugger(reg, true);
+  Step();
+  expectSingleIsland(true);
+  EXPECT_FALSE(_scene->GetForceSingleIsland());
+  _scene->SetForceSingleIsland(true);
+  island::SetForceSingleIslandByDebugger(reg, false);
+  Step();
+  expectSingleIsland(true); // Still one island because of public API call
+  island::SetForceSingleIslandByDebugger(reg, true);
+  _scene->SetForceSingleIsland(false);
+  Step();
+  expectSingleIsland(true); // Still one island because of the debugger
+  island::SetForceSingleIslandByDebugger(reg, false);
+  Step();
+  expectSingleIsland(false);
+
   // With a single island forced, removing every dynamic actor removes the island, even if another
   // entity recycles its handle, and new dynamic actors join one island on their first step. Also in
   // a differentiable scene.

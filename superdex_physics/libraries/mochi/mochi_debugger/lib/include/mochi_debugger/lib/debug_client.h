@@ -66,10 +66,23 @@ struct SceneSyncParams {
   bool operator==(SceneSyncParams const& rhs) const = default;
 };
 
+/// @brief Debugger overrides of the selected scene's settings. Released when the scene is
+/// deselected or the client disconnects.
+struct SceneSettings {
+  bool forceSingleThreaded = false; ///< Step the scene on a single thread.
+  bool forceSingleIsland = false; ///< Merge all islands into one, in addition to the application's
+                                  ///< @ref Scene::SetForceSingleIsland.
+
+  bool operator==(SceneSettings const& rhs) const = default;
+};
+
 /// @brief Customizable settings for DebugClient
 struct DebugClientSettings {
   /// @brief Parameters to control automatic synchronization of scene state
   SceneSyncParams sync;
+
+  /// @brief Overrides applied to the selected scene
+  SceneSettings scene;
 
   /// @brief Number of step profiles retained by @ref DebugClient::ReadProfileHistory.
   int maxProfileHistory = 2500;
@@ -333,12 +346,6 @@ class DebugClient {
   void ClearProfileHistory();
 
   /**
-   * @brief Return the number of task scheduler worker threads reported by the server. Zero if the
-   * server is single-threaded or this client is not fully connected.
-   */
-  [[nodiscard]] int GetServerNumWorkerThreads() const;
-
-  /**
    * @brief Set the playback mode for all scenes.
    *
    * @details The mode is remembered while disconnected, and is applied to each scene as the
@@ -464,8 +471,6 @@ class DebugClient {
 
     // Selected scene's step profiles, oldest first. At most settings.maxProfileHistory.
     StepProfileHistory profileHistory;
-
-    int serverNumWorkerThreads = 0; // From the WelcomeMessage
   };
 
   void InitProtocol();
@@ -479,6 +484,9 @@ class DebugClient {
   void ValidatePath(Span<std::string const> path, Error& error);
   static protocol::SceneSyncRequest MakeSyncRequest(State const& state);
   static protocol::DebugDrawRequest MakeDebugDrawRequest(State const& state);
+  static protocol::SceneSettingsRequest MakeSceneSettingsRequest(
+      SceneHandle scene,
+      SceneSettings const& settings);
   static bool IsAutoSelectableScene(SceneInfo const& scene);
   static SceneHandle FindAutoSelectableScene(Span<SceneInfo const> scenes);
   static void SetSelectedScene(
@@ -486,7 +494,8 @@ class DebugClient {
       SceneHandle handle,
       DynamicArray<protocol::SceneSyncRequest>& outSyncRequests,
       DynamicArray<protocol::DebugDrawRequest>& outDebugDrawRequests,
-      DynamicArray<protocol::SleepParamsRequest>& outSleepRequests);
+      DynamicArray<protocol::SleepParamsRequest>& outSleepRequests,
+      DynamicArray<protocol::SceneSettingsRequest>& outSettingsRequests);
   static void UpdateActorMeshes(
       protocol::SceneSyncReply const& reply,
       std::unordered_map<ActorHandle, MeshInfo>& meshCache,
@@ -509,6 +518,7 @@ class DebugClient {
   void OnWelcomeMessage(protocol::WelcomeMessage&& msg);
   void OnDebugDrawReply(protocol::DebugDrawReply&& reply);
   void OnSceneAddRemove(protocol::SceneAddRemove&& msg);
+  void OnSceneSettingsReply(protocol::SceneSettingsReply&& reply);
   void OnSceneStepReply(protocol::SceneStepReply&& reply);
   void OnSceneSyncReply(protocol::SceneSyncReply&& reply);
   void OnSleepParamsReply(protocol::SleepParamsReply&& reply);

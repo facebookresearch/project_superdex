@@ -103,7 +103,6 @@ class DebugServerImpl : public DebugServerInternal {
       std::unique_ptr<protocol::SceneRequest>&& request,
       protocol::SceneReply&& reply);
 
-  ContextImpl* const _context;
   net::MessageServer _server;
   RecursiveGuarded<State> _state;
 };
@@ -136,7 +135,8 @@ static DynamicString FormatLabel(DebugServerImpl::State const& state) {
   }
 }
 
-DebugServerImpl::DebugServerImpl(ContextImpl* context) : _context(context) {
+DebugServerImpl::DebugServerImpl([[maybe_unused]] ContextImpl* context) {
+  // In the future, we will need to store the context pointer. For now, it is unused.
   MOCHI_ASSERT_VERBOSE(context);
 
   // NOTE: Protocol registration is deferred until StartImpl to minimize the cost
@@ -307,7 +307,6 @@ void DebugServerImpl::OnClientConnect(net::ClientId client) {
     protocol::WelcomeMessage welcome;
     FillSceneList(state, welcome.scenes);
     welcome.coordinateSpace = state.coordinateSpace;
-    welcome.numWorkerThreads = _context->GetNumThreads();
     FillDbgDrawFeatures(welcome.debugDraw);
     _server.SendTo(client, welcome);
   });
@@ -375,6 +374,8 @@ void DebugServerImpl::RegisterProtocol() {
   _server.Register<protocol::PingRequest>(
       [this](net::ClientId client, auto&& request) { OnPingRequest(client, request); });
   _server.Register<protocol::SceneAddRemove>();
+  _server.Register<protocol::SceneSettingsReply>();
+  RegisterSceneRequest<protocol::SceneSettingsRequest>();
   _server.Register<protocol::SceneStepReply>();
   RegisterSceneRequest<protocol::SceneStepRequest>();
   _server.Register<protocol::SceneSyncReply>();
