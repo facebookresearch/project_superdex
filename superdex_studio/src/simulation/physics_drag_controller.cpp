@@ -642,7 +642,7 @@ void PhysicsDragController::OnPreStep(mochi::StepInfo const& info) {
   } else if (!_simStatic) {
     // Advance the virtual hand toward the cursor: rate-limit its speed, then leash it to the grab
     // point so a jammed body can't let the target (and thus the damping force) run away.
-    mochi::real const dt = static_cast<mochi::real>(info.timeStepSec);
+    auto const dt = static_cast<mochi::real>(info.timeStepSec);
     _simTarget = _simTarget + ClampMagnitude(target - _simTarget, settings.maxTargetSpeed * dt);
     if (mochi::Actor* grabbed = scene->GetActor(actor)) {
       mochi::Real3 const anchorWorld = currentAnchorWorld(grabbed);

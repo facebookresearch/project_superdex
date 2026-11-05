@@ -657,7 +657,7 @@ void MeasureTool::ShowOptions() {
     RecomputeReport();
   }
 
-  float coplanarTolerance = static_cast<float>(_meshParams.facetAngleToleranceDeg);
+  auto coplanarTolerance = static_cast<float>(_meshParams.facetAngleToleranceDeg);
   if (ImGui::SliderFloat("Coplanar tol.", &coplanarTolerance, 0.05f, 45.0f, "%.2f deg")) {
     _meshParams.facetAngleToleranceDeg = static_cast<real>(coplanarTolerance);
     ApplyMeshParams();
@@ -666,7 +666,7 @@ void MeasureTool::ShowOptions() {
       "How far two neighbouring triangles' normals may differ and still belong to the same facet. "
       "Raise it to treat a gently curved surface as one face.");
 
-  float parallelTolerance = static_cast<float>(_reportParams.parallelAngleToleranceDeg);
+  auto parallelTolerance = static_cast<float>(_reportParams.parallelAngleToleranceDeg);
   if (ImGui::SliderFloat("Parallel tol.", &parallelTolerance, 0.01f, 10.0f, "%.2f deg")) {
     _reportParams.parallelAngleToleranceDeg = static_cast<real>(parallelTolerance);
     RecomputeReport();

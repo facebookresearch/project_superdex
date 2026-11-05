@@ -680,7 +680,7 @@ static void ApplySkinnedJointPose(
     real const renderScale = actor.render.modelScale[0];
     std::vector<filament::math::mat4f> renderBoneMatrices = boneMatrices;
     if (renderScale != 1_r) {
-      float const inverseScale = static_cast<float>(1_r / renderScale);
+      auto const inverseScale = static_cast<float>(1_r / renderScale);
       for (auto& bone : renderBoneMatrices) {
         bone[3].xyz *= inverseScale;
       }

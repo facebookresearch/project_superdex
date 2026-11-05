@@ -97,8 +97,8 @@ void DebugText::Show(
     if (clip.w <= 0.0) {
       continue; // behind the camera; projecting would mirror it to the wrong side of the screen
     }
-    float const ndcX = static_cast<float>(clip.x / clip.w);
-    float const ndcY = static_cast<float>(clip.y / clip.w);
+    auto const ndcX = static_cast<float>(clip.x / clip.w);
+    auto const ndcY = static_cast<float>(clip.y / clip.w);
     PlacedLabel label;
     label.begin = item.text.c_str();
     label.end = label.begin + item.text.size();
