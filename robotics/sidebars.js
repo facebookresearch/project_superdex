@@ -37,7 +37,14 @@ function internalCategoryItems() {
         type: 'generated-index',
         description: 'Internal documentation for SuperDex Robotics developers.',
       },
-      items: ['internal/agents'],
+      items: [
+        'internal/agents',
+        {
+          type: 'category',
+          label: 'SuperDex Teleop (internal)',
+          items: ['internal/superdex_teleop/pick_place_loop'],
+        },
+      ],
     },
   ];
 }
