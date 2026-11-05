@@ -5,7 +5,7 @@ title: "Authoring Prefabs"
 
 # Authoring Prefabs
 
-SuperDex Physics prefabs are JSON documents, commonly named `.mochi_scene` or `.mochi_prefab`, that describe complete scenes or reusable scene fragments. This guide focuses on the authoring workflow. See [Prefabs](../concepts/prefabs.mdx) for composition and contact configuration.
+SuperDex Physics prefabs are JSON documents (`.mochi_scene`, `.mochi_prefab`, or `.superdex_prefab`) that describe complete scenes or reusable scene fragments. This guide focuses on the authoring workflow. See [Prefabs](../concepts/prefabs.mdx) for composition and contact configuration.
 
 For authoritative fields, defaults, units, and supported constraint types, see the generated [C++ Prefabs API reference](pathname:///generated/api/latest/cpp/group__prefabs.html).
 
