@@ -2373,8 +2373,9 @@ void AssetBrowser::ShowContents() {
       }
       if (ImGui::Selectable("Prefab...")) {
         auto dir = _currentPath;
-        std::string prefabName = MakeUniqueFileName("Prefab", dir, ".mochi_prefab");
-        auto newPath = dir / (prefabName + ".mochi_prefab");
+        std::string const extension{superdex::robotics::kPrefabExtension};
+        std::string prefabName = MakeUniqueFileName("Prefab", dir, extension);
+        auto newPath = dir / (prefabName + extension);
         mochi::prefab::ScenePrefab prefab;
         mochi::prefab::SaveToJsonFile(prefab, newPath.ToString(), mochi::ErrorLog{});
         BeginRenaming(newPath, prefabName, [this](std::string const& newName) {

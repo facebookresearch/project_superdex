@@ -22,6 +22,7 @@
 #include "ui/imgui_widgets.h"
 
 #include <superdex_robotics/utils/bot_utils.h>
+#include <superdex_robotics/utils/file_utils.h>
 #include <superdex_robotics/utils/math_utils.h>
 #include "superdex_robotics/utils/archive_utils.h"
 
@@ -216,7 +217,8 @@ static void ExportMochiPrefab(
     }
   }
 
-  fs::path const outPath = prefabDir / (exportName + ".mochi_prefab");
+  fs::path const outPath =
+      prefabDir / (exportName + std::string{superdex::robotics::kPrefabExtension});
   mochi::prefab::SaveToJsonFile(prefab, outPath.string(), error);
   MOCHI_ERROR_RETURN(error);
 }

@@ -46,6 +46,7 @@ constexpr std::string_view kRootMarkerFile = ".superdex_root";
 constexpr std::string_view kBotExtension = ".superdex_bot";
 constexpr std::string_view kBotSceneExtension = ".superdex_scene";
 constexpr std::string_view kBotTaskExtension = ".superdex_task";
+constexpr std::string_view kPrefabExtension = ".superdex_prefab";
 constexpr std::string_view kUrdfExtension = ".urdf";
 constexpr std::string_view kMjcfExtension = ".xml";
 constexpr std::string_view kCollisionSubdir = "collision";
