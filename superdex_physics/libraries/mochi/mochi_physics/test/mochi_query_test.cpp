@@ -23,6 +23,7 @@
 
 #include <mochi_physics/mochi_physics_experimental.h>
 #include <mochi_physics/src/mochi_constraint.h>
+#include <mochi_physics/src/mochi_discretization_components.h>
 #include <mochi_physics/src/mochi_query.h>
 #include <mochi_physics/src/mochi_simulation.h>
 #include <mochi_physics/src/mochi_soft_rom_components.h>
@@ -191,7 +192,8 @@ static Actor* CreateSoftCube(
   return scene->CreateSoftActor(caparams, ErrorAssert{});
 }
 
-static Actor* CreateRomDuck(Context* context, Scene* scene, real scale, Real3 position) {
+static Actor*
+CreateRomDuck(Context* context, Scene* scene, real scale, Real3 position, int sampleStepSize = 5) {
   constexpr char const* kDuckMesh = "duck/duck_1899.mochi.h5";
   auto duckShape = context->LoadShapeFromFile(
       test::GetAssetPath(kDuckMesh),
@@ -201,8 +203,8 @@ static Actor* CreateRomDuck(Context* context, Scene* scene, real scale, Real3 po
   RomParams rom;
   rom.source = "rigidsoft_10";
   SampleMeshInitRandomSampling hrStrategy;
-  hrStrategy.stepSizeForBoundaryElementsSelection = 5;
-  hrStrategy.stepSizeForInteriorElementsSelection = 5;
+  hrStrategy.stepSizeForBoundaryElementsSelection = sampleStepSize;
+  hrStrategy.stepSizeForInteriorElementsSelection = sampleStepSize;
   rom.hyperReduction = HyperReductionParams{hrStrategy, {}};
   SoftActorParams caparams;
   caparams.name = "RomDuck";
@@ -1259,6 +1261,41 @@ TEST_IF_F(MOCHI_TEST_ROM_HDF5, ActorQueryTest, ElasticEnergy) {
       _scene, actorA, actorB, QueryType::ElasticEnergy, [](bool expectResults, Actor const* a) {
         return ExpectedElasticEnergy(expectResults, a);
       });
+}
+
+TEST_IF_F(MOCHI_TEST_ROM_HDF5, ActorQueryTest, RomNodeVelocitiesCoverInactiveNodes) {
+  test::SetSceneIntegrationMethod(_scene, IntegrationMethod::BackwardEuler);
+  auto& reg = GetRegistry();
+  // Sampling every 40th element leaves most nodes outside the hyper-reduction sample mesh.
+  Actor* const duck = CreateRomDuck(_mochiContext, _scene, 2_r, Real3{}, 40);
+  entt::entity const entity = mochi::GetEntity(reg, duck->GetHandle(), test::ExpectOK{});
+  reg.get<CVelocitySlice<real, TimeStep::Current>>(entity).value.SetRandom(234, -1_r, 1_r);
+  constexpr real kDt = 0.01_r;
+  _scene->Step(kDt);
+  DynamicArray<real> const before{duck->GetDisplacements(ErrorAssert{})};
+  _scene->Step(kDt);
+  DynamicArray<real> const after{duck->GetDisplacements(ErrorAssert{})};
+  Span<real const> const velocities = duck->GetNodeVelocitiesLocal(ErrorAssert{});
+
+  // Under backward Euler, every node's velocity is its displacement change over the step.
+  DynamicArray<real> expected(after.size());
+  for (size_t i = 0; i < after.size(); ++i) {
+    expected[i] = (after[i] - before[i]) / kDt;
+  }
+  EXPECT_TRUE(test::NearEqualSpan(velocities, MakeConstSpan(expected)));
+
+  std::vector<bool> isActive(after.size() / 3, false);
+  for (int const node : reg.get<CActiveUniqueNodes const>(entity).ViewIds()) {
+    isActive[node] = true;
+  }
+  real maxInactiveVelocity = 0_r;
+  for (size_t i = 0; i < velocities.size(); ++i) {
+    if (!isActive[i / 3]) {
+      maxInactiveVelocity = Max(maxInactiveVelocity, Abs(velocities[i]));
+    }
+  }
+  EXPECT_GT(std::ranges::count(isActive, false), isize(isActive) / 2);
+  EXPECT_GT(maxInactiveVelocity, 0.01_r);
 }
 
 TEST_IF_F(MOCHI_HDF5_AND_INTERNAL, ActorQueryTest, ElementsGradients) {

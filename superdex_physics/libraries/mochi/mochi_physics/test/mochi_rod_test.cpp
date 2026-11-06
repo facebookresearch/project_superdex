@@ -915,6 +915,14 @@ class MochiRodRotationalInertiaTest : public test::MochiSceneTestBase {
   }
 };
 
+TEST_F(MochiRodRotationalInertiaTest, GetSetNodeVelocitiesLocal) {
+  // Each node has a translational velocity and a twist rate.
+  ColumnVector<real> velocities(kNumNodes * fem::kNumRodFields);
+  velocities.SetRandom(123);
+  _actor->SetNodeVelocitiesLocal(velocities, ErrorAssert{});
+  EXPECT_SPAN_EQ(_actor->GetNodeVelocitiesLocal(ErrorAssert{}), MakeConstSpan(velocities));
+}
+
 TEST_F(MochiRodRotationalInertiaTest, FreeSpinningRodWithBDF3) {
   // No gravity.
   _scene->SetGravity({0_r, 0_r, 0_r});

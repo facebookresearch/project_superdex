@@ -1997,6 +1997,20 @@ class ActorInterfaceImpl : public ActorInterface {
     WakeUp();
   }
 
+  Span<real const> GetNodeVelocitiesLocal(Error& error) const override {
+    MOCHI_ERROR_IF_NOT(
+        reg.any_of<TagDeformableActor>(e),
+        error,
+        "GetNodeVelocitiesLocal is only supported for soft, shell and rod actors.");
+    MOCHI_ERROR_IF(
+        reg.any_of<TagNestedSoftActor>(e),
+        error,
+        "GetNodeVelocitiesLocal is not currently implemented for nested soft actors, whose "
+        "velocities combine their links' motion with their own deformation.");
+    MOCHI_ERROR_RETURN(error, {});
+    return reg.get<CVelocitySlice<real, TimeStep::Current> const>(e).value;
+  }
+
   void SetNodeVelocitiesLocal(Span<real const> velocitiesLocal, Error& error) override {
     mochi::SetNodeVelocitiesLocal(reg, e, velocitiesLocal, error);
     MOCHI_ERROR_RETURN(error);

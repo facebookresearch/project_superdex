@@ -162,6 +162,15 @@ TEST_F(CreateSoftSkinnedActorNameTest, PreservesContactSkinWhenCloningAttachedSo
   EXPECT_TRUE(softActor->IsQuerySupported(QueryType::ContactSkinNodePositions));
 }
 
+TEST_F(CreateSoftSkinnedActorNameTest, NestedSoftActorsDoNotGetNodeVelocities) {
+  Actor const* actor = _scene->CreateSoftSkinnedActor(MakeParams({"soft"}), test::ExpectOK{});
+  ASSERT_NE(nullptr, actor);
+  Actor const* const soft = _scene->GetActor(actor->GetNestedSoftActors(test::ExpectOK{})[0]);
+  ASSERT_NE(nullptr, soft);
+
+  EXPECT_TRUE(soft->GetNodeVelocitiesLocal(test::ExpectNotOK{}).empty());
+}
+
 TEST_F(CreateSoftSkinnedActorNameTest, AssignsCollisionFreeEmptyNestedSoftLocalNames) {
   auto params = MakeParams({"named", "", "", "soft_2"}, "soft_0");
 

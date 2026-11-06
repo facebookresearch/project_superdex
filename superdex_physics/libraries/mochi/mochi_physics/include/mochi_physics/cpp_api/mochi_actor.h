@@ -174,6 +174,8 @@ class Actor {
 
   virtual void SetNodePositionsLocal(Span<real const> positionsLocal, Error& error) = 0;
 
+  [[nodiscard]] virtual Span<real const> GetNodeVelocitiesLocal(Error& error) const = 0;
+
   virtual void SetNodeVelocitiesLocal(Span<real const> velocitiesLocal, Error& error) = 0;
 
   [[nodiscard]] virtual Span<real const> GetVisualMeshNodePositionsLocal(Error& error) const = 0;

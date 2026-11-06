@@ -111,6 +111,46 @@ TEST_F(MochiSoftActorScene, GetSetDisplacements) {
   EXPECT_SPAN_EQ(_actor->GetDisplacements(ErrorAssert{}), MakeConstSpan(displ));
 }
 
+TEST_F(MochiSoftActorScene, GetSetNodeVelocitiesLocal) {
+  ColumnVector<real> velocities(kNumDofsSoft);
+  velocities.SetRandom(123);
+  _actor->SetNodeVelocitiesLocal(velocities, ErrorAssert{});
+  EXPECT_SPAN_EQ(_actor->GetNodeVelocitiesLocal(ErrorAssert{}), MakeConstSpan(velocities));
+}
+
+TEST_F(MochiSoftActorScene, PublicStateResumesBackwardEuler) {
+  test::SetSceneIntegrationMethod(_scene, IntegrationMethod::BackwardEuler);
+  ColumnVector<real> initialVelocities(kNumDofsSoft);
+  initialVelocities.SetRandom(123);
+  _actor->SetNodeVelocitiesLocal(initialVelocities, ErrorAssert{});
+  _scene->Step(kDt);
+  TransformRT const root = _actor->GetRootTransform();
+  DynamicArray<real> const displacements{_actor->GetDisplacements(ErrorAssert{})};
+  DynamicArray<real> const velocities{_actor->GetNodeVelocitiesLocal(ErrorAssert{})};
+  _scene->Step(kDt);
+  TransformRT const expectedRoot = _actor->GetRootTransform();
+  DynamicArray<real> const expectedDisplacements{_actor->GetDisplacements(ErrorAssert{})};
+
+  // Setting the state after the first step back repeats the second step.
+  _actor->SetRootTransform(root, ErrorAssert{});
+  _actor->SetDisplacements(displacements, ErrorAssert{});
+  _actor->SetNodeVelocitiesLocal(velocities, ErrorAssert{});
+  _scene->Step(kDt);
+
+  EXPECT_NEAR_EQ(expectedRoot, _actor->GetRootTransform());
+  EXPECT_TRUE(
+      test::NearEqualSpan(
+          _actor->GetDisplacements(ErrorAssert{}), MakeConstSpan(expectedDisplacements)));
+}
+
+TEST_F(MochiSoftActorScene, GetNodeVelocitiesLocalFailsWithoutNodes) {
+  RigidActorParams params;
+  params.shape = _scene->GetContext()->CreateSphereShape({0_r, 0_r, 0_r}, 0.1_r, ErrorAssert{});
+  params.isStatic = true;
+  Actor const* const rigid = _scene->CreateRigidActor(params, ErrorAssert{});
+  EXPECT_TRUE(rigid->GetNodeVelocitiesLocal(test::ExpectNotOK{}).empty());
+}
+
 TEST_F(MochiSoftActorScene, GetSetSoftMaterialParamsField) {
   {
     auto const base = MakeNeoHookeanMaterial(1000_r);

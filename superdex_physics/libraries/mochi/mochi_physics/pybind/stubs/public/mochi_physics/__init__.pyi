@@ -10718,6 +10718,31 @@ class Actor:
             Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler
             in the first time step after this method is called.
         """
+    def get_node_velocities_local(self) -> SpanConstReal:
+        """Get the current velocity of each node in the actor's local frame.
+
+        Returns:
+            Node velocities in the actor's local frame, in the layout that
+            :meth:`~superdex.physics.Actor.set_node_velocities_local` takes.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+
+        Note:
+            Only supported for standalone soft actors, shell actors, and rod actors.
+
+        Note:
+            For standalone soft actors and shell actors: 3 values per node [m/s] — (vx,
+            vy, vz).
+
+        Note:
+            For rod actors: 4 values per node — (vx, vy, vz) in [m/s] plus a twist rate
+            [rad/s].
+
+        See Also:
+            :meth:`~superdex.physics.Actor.set_node_velocities_local`,
+            :meth:`~superdex.physics.Actor.get_displacements`
+        """
     def set_node_velocities_local(self, velocities_local: ArrayLikeReal) -> None:
         """Set the current velocity of each node in the actor's local frame.
 
@@ -10742,6 +10767,9 @@ class Actor:
         Note:
             Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler
             in the first time step after this method is called.
+
+        See Also:
+            :meth:`~superdex.physics.Actor.get_node_velocities_local`
         """
     def get_visual_mesh_node_positions_local(self) -> SpanConstReal:
         """Get the current position (reference + displacements) of the nodes of the

@@ -695,6 +695,18 @@ class Actor [no_init, no_destruct, use_scene] {
   // time step after this method is called.
   fn SetNodePositionsLocal(Span<real const> positionsLocal [units("m")]) -> void [pure, virtual, mochi_error, batchable];
 
+  // @brief Get the current velocity of each node in the actor's local frame.
+  //
+  // @return Node velocities in the actor's local frame, in the layout that
+  // @ref SetNodeVelocitiesLocal takes.
+  //
+  // @note Only supported for standalone soft actors, shell actors, and rod actors.
+  // @note For standalone soft actors and shell actors: 3 values per node [m/s] — (vx, vy, vz).
+  // @note For rod actors: 4 values per node — (vx, vy, vz) in [m/s] plus a twist rate [rad/s].
+  //
+  // @see SetNodeVelocitiesLocal, GetDisplacements
+  fn GetNodeVelocitiesLocal() -> Span<real const> [pure, virtual, const, mochi_error, batchable, nodiscard];
+
   // @brief Set the current velocity of each node in the actor's local frame.
   //
   // @param[in] velocitiesLocal Node velocities to set in the actor's local frame.
@@ -704,6 +716,8 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note For rod actors: 4 values per node — (vx, vy, vz) in [m/s] plus a twist rate [rad/s].
   // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
   // time step after this method is called.
+  //
+  // @see GetNodeVelocitiesLocal
   fn SetNodeVelocitiesLocal(Span<real const> velocitiesLocal) -> void [pure, virtual, mochi_error, batchable];
 
   // @brief Get the current position (reference + displacements) of the nodes of the visual mesh in

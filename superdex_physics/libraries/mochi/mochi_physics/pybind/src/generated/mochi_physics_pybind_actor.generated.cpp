@@ -442,6 +442,16 @@ void mochi::DefineMochiPhysics_MochiPhysicsActor([[maybe_unused]] nb::module_& m
       , nb::arg("positions_local")
       , "Set the current position of each node (reference + displacements) in the actor's\nlocal frame.\n\nArgs:\n    positions_local (ArrayLikeReal): Node positions [m] to set (3 values per\n        node: x, y, z) in the actor's local frame.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Only supported for standalone soft actors and shell actors.\n\nNote:\n    Does not change node velocities.\n\nNote:\n    Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler\n    in the first time step after this method is called."
     )
+    .def("get_node_velocities_local", [](mochi::Actor& self) {
+      mochi::Error error;
+      auto result = self.GetNodeVelocitiesLocal(error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , "Get the current velocity of each node in the actor's local frame.\n\nReturns:\n    Node velocities in the actor's local frame, in the layout that\n    :meth:`~superdex.physics.Actor.set_node_velocities_local` takes.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Only supported for standalone soft actors, shell actors, and rod actors.\n\nNote:\n    For standalone soft actors and shell actors: 3 values per node [m/s] — (vx,\n    vy, vz).\n\nNote:\n    For rod actors: 4 values per node — (vx, vy, vz) in [m/s] plus a twist rate\n    [rad/s].\n\nSee Also:\n    :meth:`~superdex.physics.Actor.set_node_velocities_local`,\n    :meth:`~superdex.physics.Actor.get_displacements`"
+    )
     .def("set_node_velocities_local", [](mochi::Actor& self, mochi::Span<mochi::real const> velocities_local) {
       mochi::Error error;
       self.SetNodeVelocitiesLocal(velocities_local, error);
@@ -450,7 +460,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsActor([[maybe_unused]] nb::module_& m
       }
     }
       , nb::arg("velocities_local")
-      , "Set the current velocity of each node in the actor's local frame.\n\nArgs:\n    velocities_local (ArrayLikeReal): Node velocities to set in the actor's\n        local frame.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Only supported for standalone soft actors, shell actors, and rod actors.\n\nNote:\n    For standalone soft actors and shell actors: 3 values per node [m/s] — (vx,\n    vy, vz).\n\nNote:\n    For rod actors: 4 values per node — (vx, vy, vz) in [m/s] plus a twist rate\n    [rad/s].\n\nNote:\n    Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler\n    in the first time step after this method is called."
+      , "Set the current velocity of each node in the actor's local frame.\n\nArgs:\n    velocities_local (ArrayLikeReal): Node velocities to set in the actor's\n        local frame.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Only supported for standalone soft actors, shell actors, and rod actors.\n\nNote:\n    For standalone soft actors and shell actors: 3 values per node [m/s] — (vx,\n    vy, vz).\n\nNote:\n    For rod actors: 4 values per node — (vx, vy, vz) in [m/s] plus a twist rate\n    [rad/s].\n\nNote:\n    Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler\n    in the first time step after this method is called.\n\nSee Also:\n    :meth:`~superdex.physics.Actor.get_node_velocities_local`"
     )
     .def("get_visual_mesh_node_positions_local", [](mochi::Actor& self) {
       mochi::Error error;

@@ -66,6 +66,13 @@ class MochiShellActorUnitCubeScene : public test::MochiSceneTestBase {
   }
 };
 
+TEST_F(MochiShellActorUnitCubeScene, GetSetNodeVelocitiesLocal) {
+  ColumnVector<real> velocities(_actor->GetNumDofs());
+  velocities.SetRandom(123);
+  _actor->SetNodeVelocitiesLocal(velocities, ErrorAssert{});
+  EXPECT_SPAN_EQ(_actor->GetNodeVelocitiesLocal(ErrorAssert{}), MakeConstSpan(velocities));
+}
+
 TEST_F(MochiShellActorUnitCubeScene, ShellActorFreefall) {
   // Simulate with a gravitational acceleration in all three directions.
   Real3 constexpr kGravity = {1_r, 2_r, 3_r};
