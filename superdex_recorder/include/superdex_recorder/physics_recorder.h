@@ -14,6 +14,22 @@
  * limitations under the License.
  */
 
+/* PhysicsRecorder records a Mochi scene's actors at every Record, so that EpisodeRestorer can
+ * restore the scene to any recorded frame:
+ * - Rigid actors: root pose and velocities, and the center of mass of dynamic ones. Static actors
+ *   are recorded once.
+ * - Articulated actors: root pose, joint positions and velocities, pose-controller targets, and
+ *   link transforms.
+ * - Soft actors: root pose, displacements and node velocities.
+ *
+ * Not supported:
+ * - Shell and rod actors are skipped with a warning, and the episode cannot be restored.
+ * - Nested soft actors, such as soft pads on an articulated actor, move with their articulated
+ *   actor; their own deformation is not recorded.
+ * - Actors created after the recorder are not recorded.
+ * - Contact recording supports only rigid and articulated actors, and fails on a scene with others.
+ */
+
 #pragma once
 
 #include <superdex_recorder/contact_collector.h>
@@ -50,11 +66,9 @@ struct PhysicsRecorderConfig {
   std::vector<std::pair<mochi::ActorHandle, std::string>> spawnNames;
 };
 
-/* Records all rigid and articulated actors in a Mochi scene.
+/* Records all supported actors of a Mochi scene, as described at the top of this file.
  * The episode and scene must outlive this recorder. Record fails if a recorded actor is
- * destroyed. Actors are found at construction, so actors created later are not recorded, and
- * actors of other types are skipped with a warning; with contact recording, they are an error.
- * Static actors are sampled once, at the first Record. */
+ * destroyed. */
 class SUPERDEX_RECORDER_API PhysicsRecorder final {
   MOCHI_DECLARE_NO_COPY_NO_MOVE(PhysicsRecorder)
 

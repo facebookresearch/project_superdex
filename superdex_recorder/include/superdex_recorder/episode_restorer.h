@@ -37,7 +37,7 @@ struct RecordedActor {
   /* The actor's name when it was recorded. */
   std::string runtimeName;
   mochi::ActorHandle handle;
-  bool isArticulated = false;
+  mochi::ActorType type = mochi::ActorType::None;
   bool isStatic = false;
 };
 
@@ -51,15 +51,19 @@ BindRecordedActors(mochi::Scene& scene, EpisodeReader const& recording, mochi::E
 /* @brief Recorded state of one dynamic actor at every frame, concatenated in frame order. */
 struct RestoredActor {
   mochi::ActorHandle handle;
-  bool isArticulated = false;
+  mochi::ActorType type = mochi::ActorType::None;
   /* xyzw per frame. */
   std::vector<mochi::real> rootRotations;
   /* Rigid actors: center-of-mass position and velocities, xyz per frame. */
   std::vector<mochi::real> comTranslations;
   std::vector<mochi::real> linearVelocities;
   std::vector<mochi::real> angularVelocities;
-  /* Articulated actors: root position (xyz per frame) and one value per DoF per frame. */
+  /* Articulated and soft actors: root position, xyz per frame. */
   std::vector<mochi::real> rootTranslations;
+  /* Soft actors: one value per DoF per frame, in the actor's frame. */
+  std::vector<mochi::real> displacements;
+  std::vector<mochi::real> nodeVelocities;
+  /* Articulated actors: one value per DoF per frame. */
   std::vector<mochi::real> jointPositions;
   std::vector<mochi::real> jointVelocities;
   /* Empty for actors without a pose controller. */

@@ -107,7 +107,20 @@ ComponentField ContactField(std::string component) {
 }
 
 std::string_view ActorTypeName(mochi::ActorType type) {
-  return type == mochi::ActorType::Rigid ? "rigid" : "articulated";
+  switch (type) {
+    case mochi::ActorType::Rigid:
+      return "rigid";
+    case mochi::ActorType::Articulated:
+      return "articulated";
+    case mochi::ActorType::Soft:
+      return "soft";
+    case mochi::ActorType::None:
+    case mochi::ActorType::Shell:
+    case mochi::ActorType::Rod:
+    case mochi::ActorType::Count:
+      break;
+  }
+  return "unrecorded";
 }
 
 std::string_view JointTypeName(mochi::ArticulatedJointType type) {
@@ -250,41 +263,45 @@ PhysicsRecorder::PhysicsRecorder(
 
   std::unordered_set<std::string> ids;
   std::vector<char const*> unrecordedActorNames;
-  std::vector<char const*> nestedSoftActorNames;
+  std::vector<char const*> contactlessActorNames;
   scene.ForEachActor([&](mochi::Actor* actor) {
     if (!error.IsOK() || actor == nullptr || actor->IsNestedLinkActor()) {
       return;
     }
     // A nested soft actor moves with its articulated actor, which is recorded.
     if (actor->IsNestedSoftActor()) {
-      nestedSoftActorNames.push_back(actor->GetName());
+      contactlessActorNames.push_back(actor->GetName());
       return;
     }
     if (actor->GetType() != mochi::ActorType::Rigid &&
-        actor->GetType() != mochi::ActorType::Articulated) {
+        actor->GetType() != mochi::ActorType::Articulated &&
+        actor->GetType() != mochi::ActorType::Soft) {
       unrecordedActorNames.push_back(actor->GetName());
       return;
+    }
+    if (actor->GetType() == mochi::ActorType::Soft) {
+      contactlessActorNames.push_back(actor->GetName());
     }
     RegisterActor(UniqueActorId(_config, *actor, ids), *actor, error);
   });
   MOCHI_ERROR_RETURN(error);
   if (_config.recordContactForces) {
     // Contacts with these actors would have no recorded body to index.
-    unrecordedActorNames.insert(
-        unrecordedActorNames.end(), nestedSoftActorNames.begin(), nestedSoftActorNames.end());
-    for (char const* const name : unrecordedActorNames) {
+    contactlessActorNames.insert(
+        contactlessActorNames.end(), unrecordedActorNames.begin(), unrecordedActorNames.end());
+    for (char const* const name : contactlessActorNames) {
       MOCHI_LOG_ERROR("Contacts with actor %s cannot be recorded.", name);
     }
     MOCHI_ERROR_IF(
-        !unrecordedActorNames.empty(),
+        !contactlessActorNames.empty(),
         error,
         "Contact recording supports only rigid and articulated actors.");
     MOCHI_ERROR_RETURN(error);
   }
   for (char const* const name : unrecordedActorNames) {
     MOCHI_LOG_WARNING(
-        "Not recording actor %s: only rigid and articulated actors are recorded, so this episode "
-        "cannot be restored.",
+        "Not recording actor %s: only rigid, articulated and soft actors are recorded, so this "
+        "episode cannot be restored.",
         name);
   }
 
@@ -348,6 +365,9 @@ void PhysicsRecorder::RegisterActor(std::string id, mochi::Actor& actor, mochi::
     if (!actor.IsStatic()) {
       fields.push_back(ActorField("superdex.physics.com_translation_xyz"));
     }
+  } else if (actor.GetType() == mochi::ActorType::Soft) {
+    fields.push_back(ActorField("superdex.physics.displacements"));
+    fields.push_back(ActorField("superdex.physics.node_velocities"));
   } else {
     fields.push_back(ActorField("superdex.physics.joint_positions"));
     fields.push_back(ActorField("superdex.physics.joint_velocities"));
@@ -487,6 +507,8 @@ void PhysicsRecorder::RegisterActor(std::string id, mochi::Actor& actor, mochi::
     if (hasPoseController) {
       registered.controllerTargets.resize(numDofs);
     }
+  } else if (actor.GetType() == mochi::ActorType::Soft) {
+    WritePhysicalParameters(dataPath, actor, error);
   } else {
     WriteGeometry(entityPath, actor, error);
     WritePhysicalParameters(dataPath, actor, error);
@@ -658,6 +680,19 @@ void PhysicsRecorder::Record(SampleTime time, mochi::Error& error) {
       size_t const numFields = actor->IsStatic() ? fields.size() - 1 : fields.size();
       registered.stateSeries.Append(
           time, mochi::Span<mochi::Span<mochi::real const> const>(fields.data(), numFields), error);
+      MOCHI_ERROR_RETURN(error);
+      continue;
+    }
+
+    if (actor->GetType() == mochi::ActorType::Soft) {
+      std::array<mochi::Span<mochi::real const>, 4> const fields{
+          AsSpan(translation),
+          AsSpan(quaternion),
+          actor->GetDisplacements(error),
+          actor->GetNodeVelocitiesLocal(error),
+      };
+      MOCHI_ERROR_RETURN(error);
+      registered.stateSeries.Append(time, fields, error);
       MOCHI_ERROR_RETURN(error);
       continue;
     }

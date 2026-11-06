@@ -65,9 +65,9 @@ class EpisodeRestorer:
     the same scene actor, and scene actors that were not recorded must be static or
     nested, such as robot links. A scene that does not match raises ``sdp.Error``.
 
-    Restoring a frame sets the scene clock and each dynamic actor's pose, velocity
-    and pose-controller target through the public setters, then takes a zero step to
-    refresh actor queries. A positive step then continues the episode. The integrator
+    Restoring a frame sets the scene clock, each dynamic actor's pose, velocity and
+    pose-controller target, and each soft actor's node displacements and velocities
+    through the public setters, then takes a zero step to refresh actor queries. A positive step then continues the episode. The integrator
     starts afresh from the restored state, as at the start of a simulation, so a
     resumed run stays close to the original but doesn't match it bit for bit.
 

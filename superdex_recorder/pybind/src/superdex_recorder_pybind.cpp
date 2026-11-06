@@ -234,7 +234,9 @@ NB_MODULE(SUPERDEX_RECORDER_MODULE_NAME, module) {
   nb::class_<RecordedActor>(module, "_RecordedActor")
       .def_ro("path", &RecordedActor::path)
       .def_ro("handle", &RecordedActor::handle)
-      .def_ro("is_articulated", &RecordedActor::isArticulated)
+      .def_prop_ro(
+          "is_articulated",
+          [](RecordedActor const& actor) { return actor.type == mochi::ActorType::Articulated; })
       .def_ro("is_static", &RecordedActor::isStatic);
   module.def(
       "_bind_recorded_actors",

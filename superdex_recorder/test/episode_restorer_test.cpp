@@ -96,5 +96,76 @@ TEST(EpisodeRestorerTest, RestoresRecordedFramesFromAnEpisodeFile) {
   std::filesystem::remove_all(directory);
 }
 
+TEST(EpisodeRestorerTest, RestoresSoftActorsFromAnEpisodeFile) {
+  Error error;
+  Context* const context = CreateContext(0);
+  constexpr std::array<real, 12> kCoordinates = {
+      0_r, 0_r, 0_r, 0.1_r, 0_r, 0_r, 0_r, 0.1_r, 0_r, 0_r, 0_r, 0.1_r};
+  constexpr std::array<int, 4> kConnectivity = {0, 1, 2, 3};
+  auto const createTetrahedron = [&](Scene& scene) {
+    SoftActorParams params;
+    params.name = "tetrahedron";
+    params.shape = context->CreateTetMeshShape(kCoordinates, kConnectivity, error);
+    return scene.CreateSoftActor(params, error);
+  };
+  // A tetrahedron in flight, deforming from one moving corner.
+  Scene* const live = context->CreateScene("live");
+  Actor* const liveTetrahedron = createTetrahedron(*live);
+  constexpr std::array<real, 12> kInitialVelocities = {
+      0_r, 0_r, 0_r, 1_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r};
+  liveTetrahedron->SetNodeVelocitiesLocal(kInitialVelocities, error);
+  auto const directory = std::filesystem::temp_directory_path() /
+      ("superdex_episode_restorer_test_" + std::to_string(std::random_device{}()));
+  auto episode = Recorder{{.outputDirectory = directory}}.BeginEpisode({}, error);
+  // Root position and displacements at each frame.
+  auto const getState = [&](Actor const& actor) {
+    Real3 const root = actor.GetRootTransform().GetTranslation();
+    std::vector<real> state{root[0], root[1], root[2]};
+    auto const displacements = actor.GetDisplacements(error);
+    state.insert(state.end(), displacements.begin(), displacements.end());
+    return state;
+  };
+  std::vector<std::vector<real>> recordedStates;
+  {
+    PhysicsRecorder physics{*episode, *live, error};
+    for (uint64_t frame = 0; frame < 5; ++frame) {
+      if (frame > 0) {
+        live->Step(0.01_r);
+      }
+      physics.Record({.frame = frame, .simulationTimeSec = live->GetTotalSimulationTime()}, error);
+      recordedStates.push_back(getState(*liveTetrahedron));
+    }
+  }
+  episode->Commit(error);
+  auto const recording = EpisodeReader::Open(episode->GetOutputPath(), error);
+  Scene* const restored = context->CreateScene("restored");
+  Actor* const restoredTetrahedron = createTetrahedron(*restored);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+
+  auto const restorer = EpisodeRestorer::Create(*restored, *recording, error);
+
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  auto const expectStateAt = [&](size_t frameIndex) {
+    std::vector<real> const state = getState(*restoredTetrahedron);
+    ASSERT_EQ(state.size(), recordedStates[frameIndex].size());
+    for (size_t i = 0; i < state.size(); ++i) {
+      EXPECT_NEAR(state[i], recordedStates[frameIndex][i], 1e-6_r);
+    }
+  };
+  // Out of order, so that each restored state comes from the recording.
+  for (size_t const frameIndex : {4, 1, 3}) {
+    restorer->RestoreFrame(frameIndex, error);
+    expectStateAt(frameIndex);
+  }
+  // The restored node velocities carry the next step.
+  restored->Step(0.01_r);
+  expectStateAt(4);
+  EXPECT_TRUE(error.IsOK()) << error.ToString();
+  context->DestroyScene(live);
+  context->DestroyScene(restored);
+  DestroyContext(context);
+  std::filesystem::remove_all(directory);
+}
+
 } // namespace
 } // namespace superdex::recorder

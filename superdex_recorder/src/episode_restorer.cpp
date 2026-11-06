@@ -25,6 +25,7 @@
 #include <iterator>
 #include <map>
 #include <numeric>
+#include <optional>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -95,6 +96,19 @@ ReadStaticValues(EpisodeReader const& recording, std::string_view component, moc
     values.emplace(stored.entityPath, std::move(read.front()));
   }
   return values;
+}
+
+std::optional<mochi::ActorType> ParseActorType(std::string_view name) {
+  if (name == "rigid") {
+    return mochi::ActorType::Rigid;
+  }
+  if (name == "articulated") {
+    return mochi::ActorType::Articulated;
+  }
+  if (name == "soft") {
+    return mochi::ActorType::Soft;
+  }
+  return std::nullopt;
 }
 
 template <typename A, typename B>
@@ -199,7 +213,7 @@ std::map<std::string, std::vector<mochi::real>> ReadEfforts(
     // A robot records its efforts on a child of its own entity.
     auto const robotId = robotIds.find(stored.entityPath.substr(0, stored.entityPath.rfind('/')));
     auto const isRobot = [&](RecordedActor const& actor) {
-      return robotId != robotIds.end() && actor.isArticulated &&
+      return robotId != robotIds.end() && actor.type == mochi::ActorType::Articulated &&
           actor.runtimeName == robotId->second;
     };
     if (std::ranges::count_if(recorded, isRobot) != 1) {
@@ -285,15 +299,20 @@ RestoredActor ReadRestoredActor(
   };
   RestoredActor restored;
   restored.handle = actor.handle;
-  restored.isArticulated = actor.isArticulated;
+  restored.type = actor.type;
   restored.rootRotations = read("root_quaternion_xyzw");
-  if (!actor.isArticulated) {
+  if (actor.type == mochi::ActorType::Rigid) {
     restored.comTranslations = read("com_translation_xyz");
     restored.linearVelocities = read("linear_velocity_xyz");
     restored.angularVelocities = read("angular_velocity_xyz");
     return restored;
   }
   restored.rootTranslations = read("root_translation_xyz");
+  if (actor.type == mochi::ActorType::Soft) {
+    restored.displacements = read("displacements");
+    restored.nodeVelocities = read("node_velocities");
+    return restored;
+  }
   restored.jointPositions = read("joint_positions");
   restored.jointVelocities = read("joint_velocities");
   // Targets are recorded at every frame or at none; ReadStates rejects gaps.
@@ -308,16 +327,20 @@ bool HasStatePerFrame(
     RestoredActor const& actor,
     mochi::Actor const& sceneActor,
     size_t numFrames) {
-  if (!actor.isArticulated) {
+  if (actor.type == mochi::ActorType::Rigid) {
     return HasFrames(actor.rootRotations, 4, numFrames) &&
         HasFrames(actor.comTranslations, 3, numFrames) &&
         HasFrames(actor.linearVelocities, 3, numFrames) &&
         HasFrames(actor.angularVelocities, 3, numFrames);
   }
   auto const numDofs = static_cast<size_t>(sceneActor.GetNumDofs());
-  return HasFrames(actor.rootRotations, 4, numFrames) &&
-      HasFrames(actor.rootTranslations, 3, numFrames) &&
-      HasFrames(actor.jointPositions, numDofs, numFrames) &&
+  bool const hasRoot = HasFrames(actor.rootRotations, 4, numFrames) &&
+      HasFrames(actor.rootTranslations, 3, numFrames);
+  if (actor.type == mochi::ActorType::Soft) {
+    return hasRoot && HasFrames(actor.displacements, numDofs, numFrames) &&
+        HasFrames(actor.nodeVelocities, numDofs, numFrames);
+  }
+  return hasRoot && HasFrames(actor.jointPositions, numDofs, numFrames) &&
       HasFrames(actor.jointVelocities, numDofs, numFrames) &&
       (actor.controllerTargets.empty() || HasFrames(actor.controllerTargets, numDofs, numFrames)) &&
       (actor.jointEfforts.empty() || HasFrames(actor.jointEfforts, numDofs, numFrames));
@@ -372,8 +395,7 @@ BindRecordedActors(mochi::Scene& scene, EpisodeReader const& recording, mochi::E
       return {};
     }
     std::string const& type = actorTypes.at(path);
-    if ((type != "rigid" || actor.GetType() != mochi::ActorType::Rigid) &&
-        (type != "articulated" || actor.GetType() != mochi::ActorType::Articulated)) {
+    if (ParseActorType(type) != actor.GetType()) {
       SUPERDEX_ERROR_SET(
           error,
           "Actor '%s' was recorded as %s, but the scene actor is not.",
@@ -385,7 +407,7 @@ BindRecordedActors(mochi::Scene& scene, EpisodeReader const& recording, mochi::E
         .path = path,
         .runtimeName = runtimeName,
         .handle = actor.GetHandle(),
-        .isArticulated = type == "articulated",
+        .type = actor.GetType(),
         .isStatic = staticFlags.at(path) != 0.0,
     });
   }
@@ -461,7 +483,7 @@ void EpisodeRestorer::RestoreFrame(size_t frameIndex, mochi::Error& error) {
     MOCHI_ERROR_RETURN(error);
     // External forces persist until replaced, so clear any left from before the restore.
     sceneActor->ClearExternalForces();
-    if (!actor.isArticulated) {
+    if (actor.type == mochi::ActorType::Rigid) {
       sceneActor->SetCenterOfMassTransform(GetWorldFromCom(actor, frameIndex), error);
       sceneActor->SetVelocity(
           GetXyz(actor.linearVelocities, frameIndex),
@@ -472,6 +494,12 @@ void EpisodeRestorer::RestoreFrame(size_t frameIndex, mochi::Error& error) {
 
     auto const numDofs = static_cast<size_t>(sceneActor->GetNumDofs());
     sceneActor->SetRootTransform(GetWorldFromRoot(actor, frameIndex), error);
+    if (actor.type == mochi::ActorType::Soft) {
+      sceneActor->SetDisplacements(GetFrameValues(actor.displacements, frameIndex, numDofs), error);
+      sceneActor->SetNodeVelocitiesLocal(
+          GetFrameValues(actor.nodeVelocities, frameIndex, numDofs), error);
+      continue;
+    }
     sceneActor->SetArticulatedPoseFromJoints(
         GetFrameValues(actor.jointPositions, frameIndex, numDofs), error);
     sceneActor->SetArticulatedJointVelocities(

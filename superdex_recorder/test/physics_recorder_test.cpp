@@ -167,7 +167,7 @@ TEST_F(PhysicsRecorderTest, RecordFailsAfterRecordedActorIsDestroyed) {
   EXPECT_FALSE(error.IsOK());
 }
 
-TEST_F(PhysicsRecorderTest, SkipsActorsOfOtherTypes) {
+TEST_F(PhysicsRecorderTest, RecordsSoftActors) {
   ShapeHandle const shape = context->CreateTriMeshShape(kCoordinates, kConnectivity, error);
   ASSERT_NE(CreateRigidActor("cube", shape), nullptr);
   ASSERT_NE(CreateSoftActor("soft"), nullptr);
@@ -179,6 +179,8 @@ TEST_F(PhysicsRecorderTest, SkipsActorsOfOtherTypes) {
   ASSERT_NE(episode, nullptr);
   PhysicsRecorder physics{*episode, *scene, error};
   physics.Record({.frame = 0, .simulationTimeSec = 0.0}, error);
+  scene->Step(0.01);
+  physics.Record({.frame = 1, .simulationTimeSec = scene->GetTotalSimulationTime()}, error);
   episode->Commit(error);
 
   EXPECT_TRUE(error.IsOK()) << error.ToString();
