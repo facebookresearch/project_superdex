@@ -361,10 +361,17 @@ struct NonLinearSolverParams {
    *
    * @note Also the residual below which @ref LinearSolverConvergenceNorm::ResidualPerActorWeighted
    * stops normalizing an actor by its own residual.
+   * @note With a negative @ref LinearSolverParams::absTol, it also determines the linear solver's
+   * absolute tolerance where supported (see @ref LinearSolverParams::absTol).
    */
   real absTol = 1e-3_r;
 
-  /** @brief Relative residual norm tolerance for convergence, relative to the initial residual. */
+  /**
+   * @brief Relative residual norm tolerance for convergence, relative to the initial residual.
+   *
+   * @note With a negative @ref LinearSolverParams::absTol, it also determines the linear solver's
+   * absolute tolerance where supported (see @ref LinearSolverParams::absTol).
+   */
   real relTol = 1e-6_r;
 
   /**

@@ -40,9 +40,11 @@ enum class RecyclingAlgorithm : uint8_t {
  * Linear solver parameters.
  */
 inline constexpr int kDefaultLinearSolverMaxIter = 500;
+inline constexpr real kDefaultLinearSolverAbsTol = 1e-9_r;
 struct KrylovSolverParams {
-  // Absolute convergence tolerance in the solver's stopping norm. Only used for iterative solvers.
-  double absTol = static_cast<double>(LinearSolverParams{}.absTol);
+  // Absolute convergence tolerance in the solver's stopping norm. Must be non-negative. Only used
+  // for iterative solvers.
+  double absTol = static_cast<double>(kDefaultLinearSolverAbsTol);
   // Relative convergence tolerance for the decrease in the solver's stopping norm. Only used for
   // iterative solvers.
   double relTol = static_cast<double>(LinearSolverParams{}.relTol);

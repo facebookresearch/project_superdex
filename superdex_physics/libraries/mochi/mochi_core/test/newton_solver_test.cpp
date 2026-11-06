@@ -770,6 +770,35 @@ TEST(NewtonSolver, PerActorWeighted_FallbackToGlobal) {
   EXPECT_TRUE(status.actorConvergence.empty()); // Empty after fallback.
 }
 
+/** Newton solver that exposes the parameters of its linear solves. */
+struct NewtonSolverProbe : NewtonSolver<real> {
+  using NewtonSolver<real>::NewtonSolver;
+
+  /** Parameters and residual weights of the latest linear solve. */
+  [[nodiscard]] std::pair<KrylovSolverParams, ColumnVector<real>> GetLinearSolve() const {
+    return {_linearSolver->GetParams(), _workspace.residualWeights};
+  }
+
+  /**
+   * Selects the parameters of two iterations whose actor norms are @p norms0 and @p norms, with an
+   * initial island residual of 2, and returns the second absTol.
+   */
+  double SelectAbsTol(
+      Problem const& problem,
+      std::array<real, 2> const& norms0,
+      std::array<real, 2> const& norms) {
+    Status status;
+    status.resNorm0 = 2_r;
+    status.actorResidualWeightedNorm0 = {norms0[0], norms0[1]};
+    status.actorResidualWeightedNorm = status.actorResidualWeightedNorm0;
+    SetLinearSolverParams(problem, status, 0_r);
+    status.numIterDone = 1;
+    status.actorResidualWeightedNorm = {norms[0], norms[1]};
+    SetLinearSolverParams(problem, status, 0_r);
+    return GetLinearSolve().first.absTol;
+  }
+};
+
 /**
  * Parameters and residual weights of the last linear solve in @p numNewtonIters Newton iterations.
  * Each linear solve stops after one CG iteration and each step skips the line search, so every
@@ -780,14 +809,6 @@ TEST(NewtonSolver, PerActorWeighted_FallbackToGlobal) {
     ColumnVector<real> const& x0,
     NewtonSolverParams params,
     int numNewtonIters) {
-  struct Solver : NewtonSolver<real> {
-    using NewtonSolver<real>::NewtonSolver;
-
-    [[nodiscard]] std::pair<KrylovSolverParams, ColumnVector<real>> GetLinearSolve() const {
-      return {_linearSolver->GetParams(), _workspace.residualWeights};
-    }
-  };
-
   params.maxIter = numNewtonIters;
   params.lineSearch.type = LineSearchType::None;
   params.lParams.solverType = LinearSolverType::CG;
@@ -796,7 +817,7 @@ TEST(NewtonSolver, PerActorWeighted_FallbackToGlobal) {
   params.verbosity = VerbosityLevel::Error; // The linear solves stop without converging.
 
   problem.SetSolution(x0);
-  Solver solver(params);
+  NewtonSolverProbe solver(params);
   solver.Solve(problem);
   return solver.GetLinearSolve();
 }
@@ -957,6 +978,82 @@ TEST(NewtonSolver, PerActorWeighted_ZeroAbsTol) {
     ASSERT_EQ(2, weights.Rows());
     EXPECT_EQ(expected, weights[0]);
     EXPECT_EQ(0.25_r, weights[1]);
+  }
+}
+
+/**
+ * Linear absTol selected for a negative absTol: 1% of the residual at which Newton accepts each
+ * actor, or the island in Global mode, divided by each actor's scale under the per-actor norm.
+ */
+TEST(NewtonSolver, SelectedLinearAbsTol) {
+  auto const one = ColumnVector<real>::Ones(1);
+  auto problem = GetTwoActorMixedProblem(one, one);
+  problem.UpdateResidual();
+  using Mode = NonLinearSolverConvergenceMode;
+  using Norm = LinearSolverConvergenceNorm;
+  auto makeParams =
+      [](Mode mode, Norm normType, real absTol, real relTol, double linearAbsTol = -1) {
+        NewtonSolverParams params;
+        params.convergenceMode = mode;
+        params.lParams.normType = normType;
+        params.lParams.absTol = linearAbsTol;
+        params.absTolRes = absTol;
+        params.relTolRes = relTol;
+        params.linearToleranceStrategy = LinearToleranceStrategy::Constant;
+        return params;
+      };
+  struct Case {
+    NewtonSolverParams params;
+    std::array<real, 2> norms0{};
+    std::array<real, 2> norms{};
+    double expected{};
+  };
+  Mode constexpr kPerActor = Mode::PerActorWeighted;
+  Norm constexpr kWeighted = Norm::ResidualPerActorWeighted;
+  Case const kCases[] = {
+      // Every actor absolute-dominated, as with the default tolerances.
+      {.params = makeParams(kPerActor, kWeighted, 1e-3_r, 1e-6_r),
+       .norms0 = {1_r, 4_r},
+       .norms = {0.1_r, 0.2_r},
+       .expected = 5e-5},
+      // An explicit 0 leaves only the relative test.
+      {.params = makeParams(kPerActor, kWeighted, 1e-3_r, 1e-6_r, 0),
+       .norms0 = {1_r, 4_r},
+       .norms = {0.1_r, 0.2_r},
+       .expected = 0},
+      // The minimum over actors, not the smallest tolerance over the largest scale (1e-8).
+      {.params = makeParams(kPerActor, kWeighted, 0_r, 1e-6_r),
+       .norms0 = {1_r, 1e-4_r},
+       .norms = {1e-4_r, 1e-11_r},
+       .expected = 1e-4},
+      // An initially unloaded actor.
+      {.params = makeParams(kPerActor, kWeighted, 0_r, 1e-6_r),
+       .norms0 = {0_r, 1_r},
+       .norms = {0_r, 0.1_r},
+       .expected = 0},
+      // A formerly loaded actor without residual, which takes the largest scale.
+      {.params = makeParams(kPerActor, kWeighted, 0_r, 1e-6_r),
+       .norms0 = {0.5_r, 1_r},
+       .norms = {0_r, 0.1_r},
+       .expected = 5e-8},
+      // Global mode, relative-dominated.
+      {.params = makeParams(Mode::Global, kWeighted, 1e-6_r, 1e-3_r),
+       .norms0 = {1_r, 1_r},
+       .norms = {1_r, 1_r},
+       .expected = 2e-5},
+      // Other stopping norms, per actor and in Global mode.
+      {.params = makeParams(kPerActor, Norm::ResidualL2, 1e-6_r, 1e-3_r),
+       .norms0 = {1_r, 1_r},
+       .norms = {1_r, 1_r},
+       .expected = kDefaultLinearSolverAbsTol},
+      {.params = makeParams(Mode::Global, Norm::PreconditionedResidualL2, 1e-6_r, 1e-3_r),
+       .norms0 = {1_r, 1_r},
+       .norms = {1_r, 1_r},
+       .expected = kDefaultLinearSolverAbsTol},
+  };
+  for (Case const& c : kCases) {
+    NewtonSolverProbe solver(c.params);
+    EXPECT_NEAR(c.expected, solver.SelectAbsTol(problem, c.norms0, c.norms), 1e-5 * c.expected);
   }
 }
 

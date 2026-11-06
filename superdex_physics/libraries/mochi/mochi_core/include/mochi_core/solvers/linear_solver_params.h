@@ -386,6 +386,16 @@ struct LinearSolverParams {
    * @note When the solver stops on @ref LinearSolverConvergenceNorm::ResidualPerActorWeighted, the
    * absolute stop ends the solve only once every actor's weighted residual \f$\|r_a\|_W\f$ is at
    * most @ref absTol. Otherwise, it bounds the solver's stopping norm.
+   * @note 0 leaves only the relative test.
+   * @note A negative value lets Mochi select it. When the solver stops on @ref
+   * LinearSolverConvergenceNorm::ResidualPerActorWeighted, Mochi selects 1% of the residual at
+   * which the non-linear solver accepts each actor: @ref NonLinearSolverParams::relTol times the
+   * actor's initial residual, or @ref NonLinearSolverParams::absTol if larger. When it stops on
+   * @ref LinearSolverConvergenceNorm::ResidualL2 in @ref NonLinearSolverConvergenceMode::Global
+   * mode, Mochi selects 1% of the residual at which the non-linear solver accepts the island.
+   * Otherwise, it selects 1e-9. The selection is 0 when @ref NonLinearSolverParams::absTol is 0 and
+   * either @ref NonLinearSolverParams::relTol or the initial residual of an actor or the island is
+   * 0, which leaves only the relative test.
    */
   real absTol = 1e-9_r;
 

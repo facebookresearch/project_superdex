@@ -539,9 +539,9 @@ void SceneImpl::SetSolverParams(SolverParams const& params, Error& error) {
       error,
       "Maximum number of iterations for iterative linear solvers (LinearSolverParams::maxIter) must be positive or Auto.");
   MOCHI_ERROR_IF_NOT(
-      IsFinite(params.linearSolver.absTol) && params.linearSolver.absTol >= 0_r,
+      IsFinite(params.linearSolver.absTol),
       error,
-      "Linear solver absolute tolerance (LinearSolverParams::absTol) must be non-negative and finite.");
+      "Linear solver absolute tolerance (LinearSolverParams::absTol) must be finite.");
   MOCHI_ERROR_IF_NOT(
       IsFinite(params.linearSolver.relTol) && params.linearSolver.relTol >= 0_r,
       error,

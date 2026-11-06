@@ -288,6 +288,7 @@ class LinearSolver {
         params.maxIter > 0,
         "Maximum number of iterations for iterative linear solvers must be positive.");
     MOCHI_ASSERT(params.solverType != LinearSolverType::Auto, "Solver type must have been set.");
+    MOCHI_ASSERT_VERBOSE(params.absTol >= 0, "The absolute tolerance must be non-negative.");
     if (params.preconditionerLifespan > 1 && details::IsCudaSolver(params.solverType)) {
       MOCHI_LOG_WARNING_ONCE("Preconditioner recycling not supported with CUDA solvers.");
     }

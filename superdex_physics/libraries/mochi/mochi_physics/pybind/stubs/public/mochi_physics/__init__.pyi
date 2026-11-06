@@ -3986,10 +3986,20 @@ class NonLinearSolverParams:
         Also the residual below which :class:`RESIDUAL_PER_ACTOR_WEIGHTED
         <superdex.physics.LinearSolverConvergenceNorm>` stops normalizing an actor
         by its own residual.
+
+    Note:
+        With a negative :attr:`~superdex.physics.LinearSolverParams.abs_tol`, it
+        also determines the linear solver's absolute tolerance where supported (see
+        :attr:`~superdex.physics.LinearSolverParams.abs_tol`).
     """
     rel_tol: float
     """Relative residual norm tolerance for convergence, relative to the initial
     residual.
+
+    Note:
+        With a negative :attr:`~superdex.physics.LinearSolverParams.abs_tol`, it
+        also determines the linear solver's absolute tolerance where supported (see
+        :attr:`~superdex.physics.LinearSolverParams.abs_tol`).
     """
     rel_step_tol: float
     """Relative tolerance on the L2 norm of the raw linear-solve increment before line
@@ -4147,6 +4157,26 @@ class LinearSolverParams:
         solve only once every actor's weighted residual ``‖r_a‖_W`` is at most
         :attr:`~superdex.physics.LinearSolverParams.abs_tol`. Otherwise, it bounds
         the solver's stopping norm.
+
+    Note:
+        0 leaves only the relative test.
+
+    Note:
+        A negative value lets Mochi select it. When the solver stops on
+        :class:`RESIDUAL_PER_ACTOR_WEIGHTED
+        <superdex.physics.LinearSolverConvergenceNorm>`, Mochi selects 1% of the
+        residual at which the non-linear solver accepts each actor:
+        :attr:`~superdex.physics.NonLinearSolverParams.rel_tol` times the actor's
+        initial residual, or :attr:`~superdex.physics.NonLinearSolverParams.abs_tol`
+        if larger. When it stops on :class:`RESIDUAL_L2
+        <superdex.physics.LinearSolverConvergenceNorm>` in :class:`GLOBAL
+        <superdex.physics.NonLinearSolverConvergenceMode>` mode, Mochi selects 1% of
+        the residual at which the non-linear solver accepts the island. Otherwise,
+        it selects 1e-9. The selection is 0 when
+        :attr:`~superdex.physics.NonLinearSolverParams.abs_tol` is 0 and either
+        :attr:`~superdex.physics.NonLinearSolverParams.rel_tol` or the initial
+        residual of an actor or the island is 0, which leaves only the relative
+        test.
     """
     rel_tol: float
     """Relative residual norm tolerance for convergence, relative to the same norm of

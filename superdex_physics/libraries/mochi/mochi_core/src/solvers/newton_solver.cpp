@@ -336,8 +336,11 @@ void NewtonSolver<T>::SetParams(NewtonSolverParams const& params) {
     _stopCriteria.push_back(StopCriterionType::StopCriterion_NoImprovement);
   }
 
-  // Create the linear solver
-  _linearSolver = std::make_unique<LinearSolver<T>>(params.lParams, _preconditionerRecyclingMgr);
+  // Create the linear solver with a non-negative placeholder absTol, which SetLinearSolverParams
+  // replaces before every solve.
+  KrylovSolverParams lParams = params.lParams;
+  lParams.absTol = Max(lParams.absTol, 0.0);
+  _linearSolver = std::make_unique<LinearSolver<T>>(lParams, _preconditionerRecyclingMgr);
 
   // Set line-search type.
   switch (params.lineSearch.type) {
@@ -456,8 +459,6 @@ double NewtonSolver<T>::ForcingTerm(
   T constexpr kSafeguardEtaTh = T(0.01);
 
   // Minimum eta. Prevents attempting to solve beyond the floating-point noise floor.
-  // TODO: Assess max-clamping kMinEta to a fraction of the non-linear residual norm that is left to
-  // achieve non-linear convergence.
   T constexpr kMinEta = T(100) * std::numeric_limits<T>::epsilon();
   static_assert(
       kMaxEta >= kSafeguardEtaTh && kSafeguardEtaTh >= kMinEta, "Inconsistent parameters");
@@ -514,12 +515,21 @@ void NewtonSolver<T>::SetLinearSolverParams(
     Problem const& problem,
     Status const& status,
     T linearResidualNorm) {
-  // Read the user's absTol from _params: an earlier iteration replaced the linear solver's copy
-  // with a normalized one.
+  // A negative absTol selects 1% of the residual at which Newton accepts an actor, or the island:
+  // relTolRes times its initial residual, or absTolRes if larger.
+  auto selectAbsTol = [this](T initialNorm) {
+    T constexpr kFraction = T(0.01);
+    return kFraction * Max(_params.absTolRes, _params.relTolRes * initialNorm);
+  };
+
+  // Read the user's absTol from _params: the linear solver holds a non-negative placeholder or an
+  // earlier iteration's normalized or selected value.
   double absTol = _params.lParams.absTol;
+  bool const isAbsTolSelected = (absTol < 0);
   ForcingTermNorms norms{.res = status.resNorm, .prevRes = status.prevResNorm};
 
-  if (details::UsesResidualWeights(_params.lParams) && UsesPerActorConvergence(problem, _params)) {
+  bool const usePerActor = UsesPerActorConvergence(problem, _params);
+  if (details::UsesResidualWeights(_params.lParams) && usePerActor) {
     auto const actorNorms = MakeConstSpan(status.actorResidualWeightedNorm);
     T const maxActorNorm = Max(actorNorms);
     MOCHI_ASSERT_VERBOSE(
@@ -529,7 +539,6 @@ void NewtonSolver<T>::SetLinearSolverParams(
     _workspace.actorScales.resize_noinit(actorNorms.size());
     _workspace.residualWeights.Resize(problem.GetResidual().Rows());
 
-    T const actorAbsTol = static_cast<T>(absTol);
     T normalizedAbsTol = std::numeric_limits<T>::max();
     T resSqr = 0;
     T weightedResSqr = 0;
@@ -545,6 +554,8 @@ void NewtonSolver<T>::SetLinearSolverParams(
       }
       _workspace.actorScales[i] = scale;
 
+      T const actorAbsTol = isAbsTolSelected ? selectAbsTol(status.actorResidualWeightedNorm0[i])
+                                             : static_cast<T>(absTol);
       // |r_a|_W <= scale |r|_N, so an absolute stop leaves this actor within actorAbsTol.
       normalizedAbsTol = Min(normalizedAbsTol, actorAbsTol / scale);
       weightedResSqr += Sqr(actorNorms[i] / scale);
@@ -570,6 +581,12 @@ void NewtonSolver<T>::SetLinearSolverParams(
     absTol = normalizedAbsTol;
   } else {
     _workspace.residualWeights.Resize(0);
+    if (isAbsTolSelected) {
+      // TODO: Select the linear absTol for the other stopping norms.
+      absTol = (!usePerActor && StopsOnUnpreconditionedResidual(_params.lParams))
+          ? selectAbsTol(status.resNorm0)
+          : kDefaultLinearSolverAbsTol;
+    }
   }
 
   auto linearParams = _linearSolver->GetParams();
