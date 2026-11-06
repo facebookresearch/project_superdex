@@ -48,6 +48,15 @@ std::unique_ptr<SceneObject> RenderModelAsset::GetRenderModelInstance() const {
   return _renderModel ? _renderModel->GetInstance() : nullptr;
 }
 
+std::optional<DeformableMeshView> RenderModelAsset::GetDeformableMesh(mochi::Error& error) {
+  return _renderModel->GetDeformableMesh(error);
+}
+
+std::unique_ptr<DeformableModelInstance> RenderModelAsset::GetDeformableModelInstance(
+    mochi::Error& error) {
+  return _renderModel->GetDeformableInstance(error);
+}
+
 bool RenderModelAsset::RendersThumbnail() const {
   return true;
 }

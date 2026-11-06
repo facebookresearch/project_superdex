@@ -36,6 +36,7 @@
 #include <vector>
 
 namespace mochi_renderer {
+class DeformableModelInstance;
 class Mesh;
 class WireframeMesh;
 } // namespace mochi_renderer
@@ -74,11 +75,13 @@ class MochiModelAsset : public Asset {
   int GetSurfaceVertexCount(SoftSurface surface);
   // The meshes a soft actor of this model is drawn with (see ChooseSoftSurfaces).
   SoftSurfaces GetSoftSurfaces(bool useContactSkin) const;
-  // A solid mesh of `surfaces.rendered` and a wireframe of `surfaces.collision`, both deformable.
+  // A wireframe of `surfaces.collision`, plus a solid mesh of `surfaces.rendered` when
+  // @p createSolid is true, both deformable.
   bool CreateSoftDynamicMeshes(
       SoftSurfaces const& surfaces,
       mochi::Real3 const& bakeScale,
       mochi::TransformRT const& shapeTransform,
+      bool createSolid,
       std::unique_ptr<mochi_renderer::Mesh>& outSolid,
       std::unique_ptr<mochi_renderer::WireframeMesh>& outWireframe);
   // Restores meshes made by CreateSoftDynamicMeshes with the same `surfaces` to their rest pose.
@@ -86,6 +89,12 @@ class MochiModelAsset : public Asset {
       SoftSurfaces const& surfaces,
       mochi_renderer::Mesh* solid,
       mochi_renderer::WireframeMesh* wireframe,
+      mochi::Real3 const& bakeScale,
+      mochi::TransformRT const& shapeTransform);
+  // Sets @p renderModel, a render model linked to this model's visual mesh (see
+  // CheckRenderModelLink), to the visual mesh's rest pose, baked like UpdateSoftDynamicMeshes.
+  void UpdateSoftRenderModel(
+      mochi_renderer::DeformableModelInstance& renderModel,
       mochi::Real3 const& bakeScale,
       mochi::TransformRT const& shapeTransform);
 

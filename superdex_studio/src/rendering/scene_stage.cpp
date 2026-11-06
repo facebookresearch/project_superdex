@@ -16,6 +16,9 @@
 
 #include "rendering/scene_stage.h"
 
+#include "rendering/soft_render_link.h"
+
+#include <mochi_renderer/deformable_model_instance.h>
 #include <mochi_renderer/mesh.h>
 #include <mochi_renderer/resource.h>
 #include <mochi_renderer/resource_manager.h>
@@ -30,6 +33,7 @@
 #include "assets/bot_asset.h"
 #include "assets/mochi_model_asset.h"
 #include "assets/mochi_prefab_asset.h"
+#include "assets/render_model_asset.h"
 #include "core/async_task.h"
 #include "ui/imgui_widgets.h" // HashStringToColor
 
@@ -38,7 +42,10 @@
 #include <superdex_robotics/utils/file_utils.h>
 
 #include <mochi_core/geometry/mesh_data.h>
+#include <mochi_core/utils/debug.h>
 #include <mochi_core/utils/defer.h>
+#include <mochi_core/utils/error.h>
+#include <mochi_core/utils/log.h>
 #include <mochi_core/utils/matrix_utils.h>
 #include <mochi_core/utils/transform_rt.h>
 #include <mochi_core/utils/vmatrix.h>
@@ -177,6 +184,61 @@ static mochi::Path ResolvePrefabModelPath(
   }
   auto resolved = mochi::prefab::GetPrefabFullPath(modelFile, rootPath, prefabSource);
   return resolved.empty() ? mochi::Path{} : mochi::Path(resolved);
+}
+
+// Whether a soft actor of @p asset can draw the render model at @p renderModelFile deformed by its
+// visual mesh, given where the two are placed in the actor's frame.
+static RenderModelLink LinkSoftRenderModel(
+    SuperDexStudio& studio,
+    MochiModelAsset const& asset,
+    mochi::Path const& renderModelFile,
+    ModelPlacement const& render,
+    ModelPlacement const& shape) {
+  auto* const renderAsset = studio.GetAssetManager().LoadRenderModelAsset(renderModelFile);
+  if (renderAsset == nullptr) {
+    return {.reason = "The render model could not be loaded."};
+  }
+  mochi::Error error;
+  std::optional<mochi_renderer::DeformableMeshView> const renderMesh =
+      renderAsset->GetDeformableMesh(error);
+  if (!renderMesh.has_value()) {
+    return {.reason = error.GetDescription()};
+  }
+  std::optional<mochi::MeshData> const& visualMesh = asset.GetModelData().visualMesh;
+  return CheckRenderModelLink(
+      *renderMesh,
+      visualMesh.has_value() ? mochi::MeshDataView(*visualMesh) : mochi::MeshDataView{},
+      render,
+      shape);
+}
+
+// Records why a soft actor's render model is not drawn (empty when it is or there is none). Warns
+// once as the actor starts falling back, not on every restage: an offset being dragged restages
+// repeatedly, and the reason then names a changing distance.
+static void
+SetSoftRenderModelNotice(StagedActor& actor, std::string const& name, std::string notice) {
+  if (actor.softRenderModelNotice.empty() && !notice.empty()) {
+    MOCHI_LOG_WARNING(
+        "Soft actor '%s' draws its Mochi model instead of its render model. %s",
+        name.c_str(),
+        notice.c_str());
+  }
+  actor.softRenderModelNotice = std::move(notice);
+}
+
+// Calls @p fn on a soft actor's linked render model, if any, and on its highlight stand-in: a
+// separate instance, which would otherwise freeze at the pose it was cloned in.
+template <typename Fn>
+static void ForEachSoftRenderModel(StagedActor const& actor, Fn&& fn) {
+  if (!actor.softRenderModel) {
+    return;
+  }
+  fn(*actor.softRenderModel);
+  if (actor.render.highlightClone) {
+    if (auto* clone = actor.render.highlightClone->AsDeformableModelInstance()) {
+      fn(*clone);
+    }
+  }
 }
 
 // Combine a prefab path and a name the same way prefab::AddToScene does, so staged actor names
@@ -478,6 +540,23 @@ static void BuildPrefabRequests(
     req.softBakeScale = actor.scale * softShapeScale;
     req.softShapeTransform =
         TransformRT{actor.shapeRotation, actor.shapeTranslation * softShapeScale};
+    // A render model is only drawn deformed by the visual mesh it is embedded as; otherwise the
+    // solid stands in and the reason is shown in the actor's details.
+    req.renderModelFile = ResolvePrefabModelPath(actor.renderModelFile, rootPath, prefabSource);
+    if (!req.renderModelFile.IsEmpty()) {
+      RenderModelLink const link = LinkSoftRenderModel(
+          *studio,
+          *asset,
+          req.renderModelFile,
+          ModelPlacement{
+              .scale = actor.renderModelScale * softShapeScale,
+              .transform =
+                  TransformRT{
+                      actor.renderModelRotation, actor.renderModelTranslation * softShapeScale}},
+          ModelPlacement{.scale = req.softBakeScale, .transform = req.softShapeTransform});
+      req.softRenderModelLinked = link.linked;
+      req.softRenderModelNotice = link.reason;
+    }
     // Solid (render slot) and wireframe (shape slot) are both staged; StageType picks which shows.
     ComputeStageVisibility(
         /*hasRender=*/true, /*hasShape=*/true, stageType, req.renderVisible, req.shapeVisible);
@@ -1171,11 +1250,10 @@ bool SceneStage::ApplyStageRequests(
   if (reuse) {
     for (size_t i = 0; i < requests.size(); ++i) {
       bool const reqIsSoft = requests[i].isSoft;
-      // A staged actor is "soft" if it has either deforming mesh: plain soft actors and the
-      // non-skinned skin keep a solid, while a skinned skin keeps only the wireframe collision
-      // mesh.
+      // A staged actor is "soft" if it has any deforming representation.
       bool const actorIsSoft = _actors[i].dynamicSolidMesh != nullptr ||
-          _actors[i].dynamicWireframeMesh != nullptr || _actors[i].skinnedCollisionMesh != nullptr;
+          _actors[i].dynamicWireframeMesh != nullptr || _actors[i].softRenderModel != nullptr ||
+          _actors[i].skinnedCollisionMesh != nullptr;
       // A soft/non-soft mismatch, or a change in which soft meshes are shown or in their vertex
       // counts (topology change), forces a rebuild.
       if (_actors[i].name != requests[i].name ||
@@ -1184,7 +1262,8 @@ bool SceneStage::ApplyStageRequests(
           (reqIsSoft &&
            (_actors[i].softSurfaces != requests[i].softSurfaces ||
             _actors[i].softMeshVertexCount != requests[i].softVertexCount ||
-            _actors[i].softCollisionVertexCount != requests[i].softCollisionVertexCount))) {
+            _actors[i].softCollisionVertexCount != requests[i].softCollisionVertexCount ||
+            (_actors[i].softRenderModel != nullptr) != requests[i].softRenderModelLinked))) {
         reuse = false;
         break;
       }
@@ -1224,12 +1303,14 @@ bool SceneStage::ApplyStageRequests(
     // rest-pose restore and idle refresh re-bake with the current scale/offset.
     actor.softBakeScale = req.softBakeScale;
     actor.softShapeTransform = req.softShapeTransform;
+    SetSoftRenderModelNotice(actor, req.name, req.softRenderModelNotice);
 
     // Soft actors bake scale/shape-offset into their geometry, so an edit that changes the rest
     // geometry but not the vertex count (e.g. scaling a nested prefab) reuses the meshes. Re-bake
     // the reused solid + wireframe meshes via the asset so the idle pose stays correct (the rebuild
     // path below handles vertex-count changes).
-    if (reuse && req.isSoft && (actor.dynamicSolidMesh || actor.dynamicWireframeMesh)) {
+    if (reuse && req.isSoft &&
+        (actor.dynamicSolidMesh || actor.dynamicWireframeMesh || actor.softRenderModel)) {
       // Re-fetch the asset from the AssetManager instead of trusting the cached raw pointer: the
       // manager owns assets as unique_ptr and may have evicted/reloaded this one since it was
       // staged, leaving actor.softAsset dangling. Refreshing here keeps it valid for this and later
@@ -1242,6 +1323,10 @@ bool SceneStage::ApplyStageRequests(
             actor.dynamicWireframeMesh,
             req.softBakeScale,
             req.softShapeTransform);
+        ForEachSoftRenderModel(actor, [&](mochi_renderer::DeformableModelInstance& renderModel) {
+          actor.softAsset->UpdateSoftRenderModel(
+              renderModel, req.softBakeScale, req.softShapeTransform);
+        });
       }
     }
 
@@ -1327,30 +1412,56 @@ bool SceneStage::ApplyStageRequests(
           }
         }
       } else if (req.isSoft) {
-        // Soft actors stage two deforming dynamic meshes created + colored by the MochiModelAsset:
-        // a solid mesh in the `render` slot (RenderModelOnly / RenderModelFallbackToMochiModel) and
-        // a wireframe mesh in the `shape` slot (MochiModelOnly). The solid is smooth-lit only when
-        // it shows the visual mesh; recording that lets the highlight clone match its shading. The
+        // Soft actors stage a deforming wireframe in the shape slot, plus either a linked render
+        // model or a solid Mochi mesh in the render slot. The solid is smooth-lit only when it
+        // shows the visual mesh; recording that lets the highlight clone match its shading. The
         // asset is kept so idle refresh / simulation-stop can re-bake the rest pose.
         actor.render.flatShaded = req.softSurfaces.rendered != SoftSurface::Visual;
         auto* asset = manager.LoadMochiModelAsset(req.shapeModelFile);
+        actor.softAsset = asset;
+        // A render model linked to the visual mesh takes the solid's place, keeping its own
+        // materials and deformed by the same visual-mesh updates the solid would get.
+        std::unique_ptr<mochi_renderer::SceneObject> render;
+        if (asset && req.softRenderModelLinked) {
+          if (auto* renderAsset = manager.LoadRenderModelAsset(req.renderModelFile)) {
+            mochi::Error error;
+            std::unique_ptr<DeformableModelInstance> instance =
+                renderAsset->GetDeformableModelInstance(error);
+            if (instance) {
+              asset->UpdateSoftRenderModel(*instance, req.softBakeScale, req.softShapeTransform);
+              actor.softRenderModel = instance.get();
+              render = std::move(instance);
+            } else {
+              // A linked actor's notice was cleared above, so this failure is always warned.
+              MOCHI_ASSERT_VERBOSE(actor.softRenderModelNotice.empty());
+              SetSoftRenderModelNotice(actor, req.name, error.GetDescription());
+            }
+          }
+        }
         std::unique_ptr<mochi_renderer::Mesh> solid;
         std::unique_ptr<mochi_renderer::WireframeMesh> wireframe;
         if (asset) {
           asset->CreateSoftDynamicMeshes(
-              req.softSurfaces, req.softBakeScale, req.softShapeTransform, solid, wireframe);
+              req.softSurfaces,
+              req.softBakeScale,
+              req.softShapeTransform,
+              /*createSolid=*/!render,
+              solid,
+              wireframe);
         }
-        actor.softAsset = asset;
         actor.dynamicSolidMesh = solid.get();
         actor.dynamicWireframeMesh = wireframe.get();
-        if (solid) {
-          solid->SetName(req.name);
+        if (!render) {
+          render = std::move(solid);
+        }
+        if (render) {
+          render->SetName(req.name);
         }
         if (wireframe) {
           wireframe->SetName(req.name);
         }
         actor.render.sceneObject =
-            solid ? _renderScene->AddSceneObjectToScene(std::move(solid)) : nullptr;
+            render ? _renderScene->AddSceneObjectToScene(std::move(render)) : nullptr;
         actor.shape.sceneObject =
             wireframe ? _renderScene->AddSceneObjectToScene(std::move(wireframe)) : nullptr;
         actor.softSurfaces = req.softSurfaces;
@@ -1620,7 +1731,7 @@ void SceneStage::ResetWorldTransforms(mochi::CoordinateSpaceConverter const& con
     // the AssetManager instead of trusting the cached raw pointer, which the manager may have
     // evicted/reloaded (leaving actor.softAsset dangling); this only runs for staged soft actors,
     // so _studio is valid.
-    if (actor.dynamicSolidMesh || actor.dynamicWireframeMesh) {
+    if (actor.dynamicSolidMesh || actor.dynamicWireframeMesh || actor.softRenderModel) {
       actor.softAsset = _studio->GetAssetManager().LoadMochiModelAsset(actor.shape.modelFile);
       if (actor.softAsset) {
         actor.softAsset->UpdateSoftDynamicMeshes(
@@ -1629,6 +1740,10 @@ void SceneStage::ResetWorldTransforms(mochi::CoordinateSpaceConverter const& con
             actor.dynamicWireframeMesh,
             actor.softBakeScale,
             actor.softShapeTransform);
+        ForEachSoftRenderModel(actor, [&](mochi_renderer::DeformableModelInstance& renderModel) {
+          actor.softAsset->UpdateSoftRenderModel(
+              renderModel, actor.softBakeScale, actor.softShapeTransform);
+        });
       }
     }
     // Simulation is over: hand the shape slot back to the blend-skinned surface, which tracks
@@ -1655,16 +1770,22 @@ void SceneStage::ApplySoftMeshUpdates(
     // Mochi is reporting this skin's surface, so a run is under way and the simulation surface is
     // needed; it is not staged at edit time.
     EnsureSimSurface(actor, converter);
-    if (!actor.dynamicSolidMesh && !actor.dynamicWireframeMesh) {
+    if (!actor.dynamicSolidMesh && !actor.dynamicWireframeMesh && !actor.softRenderModel) {
       continue;
     }
     // A vertex-count mismatch means the meshes were rebuilt underneath this update; skip that mesh.
     auto const vertexCount = [](std::vector<float> const& positions) {
       return static_cast<int>(positions.size() / 3);
     };
-    if (actor.dynamicSolidMesh && vertexCount(update.positions) == actor.softMeshVertexCount) {
-      actor.dynamicSolidMesh->Update(
-          mochi::MakeConstSpan(update.positions), mochi::MakeConstSpan(update.normals));
+    if (vertexCount(update.positions) == actor.softMeshVertexCount) {
+      if (actor.dynamicSolidMesh) {
+        actor.dynamicSolidMesh->Update(
+            mochi::MakeConstSpan(update.positions), mochi::MakeConstSpan(update.normals));
+      }
+      ForEachSoftRenderModel(actor, [&](mochi_renderer::DeformableModelInstance& renderModel) {
+        renderModel.SetVertices(
+            mochi::MakeConstSpan(update.positions), mochi::MakeConstSpan(update.normals));
+      });
     }
     bool const sameMesh = update.collisionPositions.empty();
     std::vector<float> const& wirePositions =
@@ -1739,12 +1860,16 @@ void SceneStage::EnsureSimSurface(
   if (!actor.softAsset) {
     return;
   }
-  // Only the wireframe is wanted (a skin has no solid shape representation); the solid the asset
-  // also produces is dropped on scope exit.
+  // Only the wireframe is wanted (a skin has no solid shape representation).
   std::unique_ptr<mochi_renderer::Mesh> unusedSolid;
   std::unique_ptr<mochi_renderer::WireframeMesh> simWireframe;
   actor.softAsset->CreateSoftDynamicMeshes(
-      actor.softSurfaces, actor.softBakeScale, actor.softShapeTransform, unusedSolid, simWireframe);
+      actor.softSurfaces,
+      actor.softBakeScale,
+      actor.softShapeTransform,
+      /*createSolid=*/false,
+      unusedSolid,
+      simWireframe);
   if (!simWireframe) {
     return;
   }

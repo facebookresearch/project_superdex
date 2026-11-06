@@ -2638,6 +2638,46 @@ static bool ShowSoftMaterialEditor(mochi::SoftMaterialParams& material) {
   return changed;
 }
 
+// The Mochi Model and Render Model editors of a rigid or soft actor, cross-wired (link transforms)
+// so a linked render model keeps its transform in step with the shape's. Returns whether either
+// edited a path, scale or offset; @p modelChanged is set only when a path changes.
+template <typename ActorPrefab>
+static bool ShowActorModelEditors(
+    SuperDexStudio* studio,
+    AssetManager const& assetManager,
+    ActorPrefab& actor,
+    bool& modelChanged) {
+  bool const mochiModelEdited = ImGui::ModelEditor(
+      "Mochi Model",
+      studio,
+      AssetType::MochiModel,
+      actor.shapeFile,
+      actor.scale,
+      actor.shapeRotation,
+      actor.shapeTranslation,
+      &actor.renderModelScale,
+      &actor.renderModelRotation,
+      &actor.renderModelTranslation,
+      assetManager,
+      true,
+      modelChanged);
+  bool const renderModelEdited = ImGui::ModelEditor(
+      "Render Model",
+      studio,
+      AssetType::RenderModel,
+      actor.renderModelFile,
+      actor.renderModelScale,
+      actor.renderModelRotation,
+      actor.renderModelTranslation,
+      &actor.scale,
+      &actor.shapeRotation,
+      &actor.shapeTranslation,
+      assetManager,
+      true,
+      modelChanged);
+  return mochiModelEdited || renderModelEdited;
+}
+
 void MochiPrefabEditor::ShowRigidActorDetails(int rigidIndex) {
   auto* actor = &_prefabAsset->GetPrefab().actors.rigid[rigidIndex];
   AssetManager const& assetManager = _studio->GetAssetManager();
@@ -2678,35 +2718,7 @@ void MochiPrefabEditor::ShowRigidActorDetails(int rigidIndex) {
   // so a scale/transform drag would otherwise leave the baked physics shape stale; treat a true
   // return from either editor as requiring shape invalidation + restage.
   bool modelChanged = false;
-  bool const mochiModelEdited = ImGui::ModelEditor(
-      "Mochi Model",
-      _studio,
-      AssetType::MochiModel,
-      actor->shapeFile,
-      actor->scale,
-      actor->shapeRotation,
-      actor->shapeTranslation,
-      &actor->renderModelScale,
-      &actor->renderModelRotation,
-      &actor->renderModelTranslation,
-      assetManager,
-      true,
-      modelChanged);
-
-  bool const renderModelEdited = ImGui::ModelEditor(
-      "Render Model",
-      _studio,
-      AssetType::RenderModel,
-      actor->renderModelFile,
-      actor->renderModelScale,
-      actor->renderModelRotation,
-      actor->renderModelTranslation,
-      &actor->scale,
-      &actor->shapeRotation,
-      &actor->shapeTranslation,
-      assetManager,
-      true,
-      modelChanged);
+  bool const modelEdited = ShowActorModelEditors(_studio, assetManager, *actor, modelChanged);
 
   changed |= ImGui::CollisionContact(
       "Collision / Contact",
@@ -2715,7 +2727,7 @@ void MochiPrefabEditor::ShowRigidActorDetails(int rigidIndex) {
       actor->boundaryElementType,
       &actor->boundarySubsampling);
 
-  if (mochiModelEdited || renderModelEdited) {
+  if (modelEdited) {
     // A model/scale/transform edit changes the staged geometry and the baked physics shape.
     actor->shape = {};
     changed = true;
@@ -2765,23 +2777,10 @@ void MochiPrefabEditor::ShowSoftActorDetails(int softIndex) {
     restage = true;
   }
 
-  // Shape (Mochi model). The actor scale and shape offset are baked into the surface geometry at
-  // load, so any change here invalidates the cached shape and rebuilds the mesh.
-  ImGui::SeparatorText("Shape");
-  if (ImGui::AssetSlot(
-          "Mochi Model", actor->shapeFile, assetManager, _studio, AssetType::MochiModel, true)) {
-    modelChanged = true;
-  }
-  if (ImGui::DragRealXYZ("Scale", actor->scale, 0.01f, 0.0f, 0.0f, "%.4f")) {
-    modelChanged = true;
-  }
-  if (ImGui::DragTransformRT("Shape Offset", actor->shapeRotation, actor->shapeTranslation)) {
-    modelChanged = true;
-  }
-  // Which of the model's meshes the actor is drawn with (see ChooseSoftSurfaces).
-  if (StagedActor const* staged = StagedActorForSource(StagedActorSource::Soft, softIndex)) {
-    ImGui::LabelText("Rendered As", "%s", SoftSurfaceLabel(staged->softSurfaces.rendered));
-  }
+  // The actor scale and shape offset are baked into the surface geometry at load, so an edit to
+  // either model invalidates the cached shape and rebuilds the meshes.
+  bool const modelEdited = ShowActorModelEditors(_studio, assetManager, *actor, modelChanged);
+  ShowSoftRendering(softIndex);
 
   changed |= ShowSoftMaterialEditor(actor->material);
 
@@ -2795,11 +2794,14 @@ void MochiPrefabEditor::ShowSoftActorDetails(int softIndex) {
     restage = true;
   }
 
-  if (modelChanged) {
+  if (modelEdited) {
     // Invalidate the cached shape so the stage rebuilds geometry with the new model/scale/offset.
     actor->shape = {};
     changed = true;
     restage = true;
+  }
+  if (modelChanged) {
+    _studio->GetAssetManager().ResyncReferencer(_prefabAsset);
   }
 
   if (changed) {
@@ -2809,6 +2811,29 @@ void MochiPrefabEditor::ShowSoftActorDetails(int softIndex) {
     _prefabAsset->SetDirty(true);
     GetUndoStack().MarkEdited();
   }
+}
+
+void MochiPrefabEditor::ShowSoftRendering(int softIndex) {
+  StagedActor const* const staged = StagedActorForSource(StagedActorSource::Soft, softIndex);
+  if (staged == nullptr) {
+    return;
+  }
+  ImGui::SeparatorText("Rendering");
+  // Which of the model's meshes the actor is drawn with (see ChooseSoftSurfaces), or the render
+  // model linked to its visual mesh (see CheckRenderModelLink).
+  ImGui::LabelText(
+      "Rendered As",
+      "%s",
+      staged->softRenderModel ? "Render model" : SoftSurfaceLabel(staged->softSurfaces.rendered));
+  if (staged->softRenderModelNotice.empty()) {
+    return;
+  }
+  ImGui::PushTextWrapPos(0.0f);
+  ImGui::TextColored(
+      ImVec4(1.0f, 0.75f, 0.3f, 1.0f),
+      "The render model is not drawn. %s",
+      staged->softRenderModelNotice.c_str());
+  ImGui::PopTextWrapPos();
 }
 
 void MochiPrefabEditor::ShowArticulatedActorDetails(int actorIndex) {

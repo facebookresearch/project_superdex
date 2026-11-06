@@ -126,6 +126,9 @@ class MochiPrefabEditor : public AssetEditor {
   // The staged actor itself, or null.
   StagedActor const*
   StagedActorForSource(StagedActorSource source, int actorIndex, int linkIndex = -1) const;
+  // A soft actor's Rendering section: which mesh it is drawn with, and why its render model is not
+  // drawn.
+  void ShowSoftRendering(int softIndex);
 
   //------------------------------------------------------------------------------------------------
   // Viewport

@@ -25,6 +25,7 @@
 #include <mochi_core/utils/string_utils.h>
 #include <mochi_mesh/isosurface_reconstruction.h>
 #include <mochi_physics/utils/mochi_model_utils.h>
+#include <mochi_renderer/deformable_model_instance.h>
 #include <mochi_renderer/mesh.h>
 #include <mochi_renderer/resource_manager.h>
 #include <mochi_renderer/utils.h>
@@ -231,28 +232,32 @@ bool MochiModelAsset::CreateSoftDynamicMeshes(
     SoftSurfaces const& surfaces,
     mochi::Real3 const& bakeScale,
     mochi::TransformRT const& shapeTransform,
+    bool createSolid,
     std::unique_ptr<Mesh>& outSolid,
     std::unique_ptr<WireframeMesh>& outWireframe) {
   std::vector<float> positions;
   std::vector<float> normals;
   std::vector<int> indices;
-  if (!BakeSoftSurface(surfaces.rendered, bakeScale, shapeTransform, positions, normals, indices)) {
-    return false;
-  }
   ResourceManager& rm = _manager->GetStudio()->GetResourceManager();
   // Solid: opaque, deforming; a visual mesh is smooth-lit like a render model, the collision
   // geometry flat-lit like the rest of the shape views. Wireframe: shaded surface (surface color) +
   // edge overlay (wireframe color), deforming. Both share the actor's hashed colors.
-  outSolid = Mesh::CreateMesh(
-      rm.GetEngine(),
-      mochi::MakeConstSpan(positions),
-      mochi::MakeConstSpan(normals),
-      mochi::MakeConstSpan(indices),
-      surfaces.rendered == SoftSurface::Visual ? rm.CreateLitOpaqueMaterial(_color)
-                                               : rm.CreateFlatLitOpaqueMaterial(_color),
-      /*isDynamic=*/true,
-      /*isClosed=*/true);
-  if (surfaces.collision != surfaces.rendered &&
+  if (createSolid) {
+    if (!BakeSoftSurface(
+            surfaces.rendered, bakeScale, shapeTransform, positions, normals, indices)) {
+      return false;
+    }
+    outSolid = Mesh::CreateMesh(
+        rm.GetEngine(),
+        mochi::MakeConstSpan(positions),
+        mochi::MakeConstSpan(normals),
+        mochi::MakeConstSpan(indices),
+        surfaces.rendered == SoftSurface::Visual ? rm.CreateLitOpaqueMaterial(_color)
+                                                 : rm.CreateFlatLitOpaqueMaterial(_color),
+        /*isDynamic=*/true,
+        /*isClosed=*/true);
+  }
+  if ((!createSolid || surfaces.collision != surfaces.rendered) &&
       !BakeSoftSurface(
           surfaces.collision, bakeScale, shapeTransform, positions, normals, indices)) {
     return false;
@@ -355,6 +360,21 @@ void MochiModelAsset::UpdateSoftDynamicMeshes(
        BakeSoftSurface(
            surfaces.collision, bakeScale, shapeTransform, positions, normals, indices))) {
     wireframe->Update(mochi::MakeConstSpan(positions), mochi::MakeConstSpan(normals));
+  }
+}
+
+void MochiModelAsset::UpdateSoftRenderModel(
+    DeformableModelInstance& renderModel,
+    mochi::Real3 const& bakeScale,
+    mochi::TransformRT const& shapeTransform) {
+  std::vector<float> positions;
+  std::vector<float> normals;
+  std::vector<int> indices;
+  // A failed bake, which BakeSoftSurface logs (e.g. the model was reloaded without its visual
+  // mesh), leaves the instance at its current pose.
+  if (BakeSoftSurface(
+          SoftSurface::Visual, bakeScale, shapeTransform, positions, normals, indices)) {
+    renderModel.SetVertices(mochi::MakeConstSpan(positions), mochi::MakeConstSpan(normals));
   }
 }
 

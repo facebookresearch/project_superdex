@@ -51,11 +51,12 @@ static std::string ComputeAssetsRoot(mochi::Path const& prefabPath) {
 }
 
 // Visit every mutable path field in the prefab's "path field set" (rigid actor
-// shape/render model, articulated link shape/render model, skin shape/render model,
-// and nested prefab reference paths). Mirrors the const visitor `ForEachPathInPrefab`
-// but yields mutable references, so it can be reused by the resolve and relativize
-// passes. Does not descend into loaded nested `ScenePrefab`s — those keep their own
-// (relative) representation and are resolved transiently at stage/load time.
+// shape/render model, soft shape/render model, articulated link shape/render model,
+// skin shape/render model, and nested prefab reference paths). Mirrors the const
+// visitor `ForEachPathInPrefab` but yields mutable references, so it can be reused by
+// the resolve and relativize passes. Does not descend into loaded nested
+// `ScenePrefab`s — those keep their own (relative) representation and are resolved
+// transiently at stage/load time.
 template <typename Fn>
 static void ForEachPathFieldInPrefab(mochi::prefab::ScenePrefab& prefab, Fn const& fn) {
   for (auto& a : prefab.actors.rigid) {
@@ -63,8 +64,8 @@ static void ForEachPathFieldInPrefab(mochi::prefab::ScenePrefab& prefab, Fn cons
     fn(a.renderModelFile);
   }
   for (auto& a : prefab.actors.soft) {
-    // Only the shape file is staged/loaded for soft actors; renderModel* is deferred.
     fn(a.shapeFile);
+    fn(a.renderModelFile);
   }
   for (auto& art : prefab.actors.articulated) {
     for (auto& link : art.links) {
@@ -172,10 +173,7 @@ static void PreloadReferencedAssets(
     loadModelAndRenderModel(a.shapeFile, a.renderModelFile);
   }
   for (auto const& a : prefab.actors.soft) {
-    // Only the shape file is loaded for soft actors; renderModel* is deferred.
-    if (!a.shapeFile.empty()) {
-      manager->LoadMochiModelAsset(a.shapeFile);
-    }
+    loadModelAndRenderModel(a.shapeFile, a.renderModelFile);
   }
   if (!prefab.actors.softSkinned.empty()) {
     MOCHI_LOG_WARNING(
@@ -230,6 +228,7 @@ static void ForEachPathInPrefab(mochi::prefab::ScenePrefab const& prefab, Fn con
   }
   for (auto const& a : prefab.actors.soft) {
     visit(a.shapeFile);
+    visit(a.renderModelFile);
   }
   for (auto const& art : prefab.actors.articulated) {
     for (auto const& link : art.links) {
@@ -407,6 +406,7 @@ bool MochiPrefabAsset::RewriteReferencedPath(
   }
   for (auto& a : _prefab.actors.soft) {
     changed |= MaybeRewriteResolved(a.shapeFile, oldPath, newPath);
+    changed |= MaybeRewriteResolved(a.renderModelFile, oldPath, newPath);
   }
   for (auto& art : _prefab.actors.articulated) {
     for (auto& link : art.links) {

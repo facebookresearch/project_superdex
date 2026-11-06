@@ -47,6 +47,7 @@ struct ScenePrefab;
 } // namespace mochi::prefab
 
 namespace mochi_renderer {
+class DeformableModelInstance;
 class Scene;
 class SceneObject;
 class Mesh;
@@ -148,6 +149,13 @@ struct StagedActor {
   // reuse check to force a rebuild when the topology changes).
   mochi_renderer::Mesh* dynamicSolidMesh = nullptr;
   mochi_renderer::WireframeMesh* dynamicWireframeMesh = nullptr;
+  // Soft actors whose render model is linked to their visual mesh (see CheckRenderModelLink): the
+  // render model, drawn in the render slot instead of the solid and deformed by the visual mesh's
+  // updates. A non-owning back-pointer like dynamicSolidMesh; null otherwise.
+  mochi_renderer::DeformableModelInstance* softRenderModel = nullptr;
+  // Soft actors only: why the prefab's render model is not drawn, or empty when it is or there is
+  // none.
+  std::string softRenderModelNotice;
   // Skinned articulated skin only: the shape slot has two interchangeable surfaces. A GPU-skinned
   // wireframe previews the skin while editing (linear blend skinning off the link transforms);
   // during simulation Mochi reports the skin's true deformed surface per vertex, which blend
@@ -274,6 +282,10 @@ struct StageRequest {
   SoftSurfaces softSurfaces;
   int softVertexCount = 0;
   int softCollisionVertexCount = 0;
+  // Soft actors only: whether the render model at `renderModelFile` is linked to the visual mesh,
+  // and if not, why (empty when there is no render model).
+  bool softRenderModelLinked = false;
+  std::string softRenderModelNotice;
   // Skinned skin only: per-link WORLD transforms (Mochi space) in the GLB's joint order (== nested
   // link / link-declaration order), captured at build time. Populated for ANY articulated skin,
   // with a collision shape (then also `isSoft`), a render GLB, or both, so either can be posed.

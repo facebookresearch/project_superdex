@@ -18,8 +18,13 @@
 
 #include "assets/asset.h"
 
+#include <mochi_core/utils/error.h>
+#include <mochi_renderer/deformable_model_instance.h>
 #include <mochi_renderer/resource.h>
 #include <mochi_renderer/scene.h>
+
+#include <memory>
+#include <optional>
 
 namespace superdex::studio {
 
@@ -32,6 +37,11 @@ class AssetManager;
 class RenderModelAsset : public Asset {
  public:
   std::unique_ptr<mochi_renderer::SceneObject> GetRenderModelInstance() const;
+  // The rest mesh of this model's deformable instances (see RenderModel::GetDeformableMesh).
+  std::optional<mochi_renderer::DeformableMeshView> GetDeformableMesh(mochi::Error& error);
+  // An independently deformable instance of this render model.
+  std::unique_ptr<mochi_renderer::DeformableModelInstance> GetDeformableModelInstance(
+      mochi::Error& error);
   bool RendersThumbnail() const override;
   void StageThumbnailScene(mochi_renderer::Scene& scene) override;
   void ShowAssetTileTooltipItems() const override;
@@ -52,6 +62,7 @@ class RenderModelAsset : public Asset {
       mochi_renderer::ResourceManager& resourceManager) override;
 
  private:
+  // Never null: Create fails when the render model cannot be loaded.
   mochi_renderer::RenderModel* _renderModel = nullptr;
 };
 
