@@ -3262,10 +3262,20 @@ public partial class ExportRobotDialog
         convergentBodySelectionMask.Subtype = UFConstants.UF_solid_body_subtype;
         convergentBodySelectionMask.SolidBodySubtype = UFConstants.UF_UI_SEL_FEATURE_CONVERGENT_SOLID_BODY;
 
+        Selection.MaskTriple convergentSheetSelectionMask;
+        convergentSheetSelectionMask.Type = UFConstants.UF_solid_type;
+        convergentSheetSelectionMask.Subtype = UFConstants.UF_solid_body_subtype;
+        convergentSheetSelectionMask.SolidBodySubtype = UFConstants.UF_UI_SEL_FEATURE_CONVERGENT_SHEET_BODY;
+
         Selection.MaskTriple bodySelectionMask;
         bodySelectionMask.Type = UFConstants.UF_solid_type;
         bodySelectionMask.Subtype = UFConstants.UF_solid_body_subtype;
         bodySelectionMask.SolidBodySubtype = UFConstants.UF_UI_SEL_FEATURE_SOLID_BODY;
+
+        Selection.MaskTriple sheetBodySelectionMask;
+        sheetBodySelectionMask.Type = UFConstants.UF_solid_type;
+        sheetBodySelectionMask.Subtype = UFConstants.UF_solid_body_subtype;
+        sheetBodySelectionMask.SolidBodySubtype = UFConstants.UF_UI_SEL_FEATURE_SHEET_BODY;
 
         Selection.MaskTriple componentSelectionMask;
         componentSelectionMask.Type = UFConstants.UF_component_type;
@@ -3278,12 +3288,16 @@ public partial class ExportRobotDialog
         {
             case LinkSelectionMode.Both:
                 selectionMasks.Add(convergentBodySelectionMask);
+                selectionMasks.Add(convergentSheetSelectionMask);
                 selectionMasks.Add(bodySelectionMask);
+                selectionMasks.Add(sheetBodySelectionMask);
                 selectionMasks.Add(componentSelectionMask);
                 break;
             case LinkSelectionMode.Bodies:
                 selectionMasks.Add(convergentBodySelectionMask);
+                selectionMasks.Add(convergentSheetSelectionMask);
                 selectionMasks.Add(bodySelectionMask);
+                selectionMasks.Add(sheetBodySelectionMask);
                 break;
             case LinkSelectionMode.Components:
                 selectionMasks.Add(componentSelectionMask);
