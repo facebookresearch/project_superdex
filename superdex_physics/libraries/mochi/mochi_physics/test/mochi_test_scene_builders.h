@@ -760,15 +760,30 @@ inline Actor* AddSoftAllegro(Context* context, Scene* scene, real* offsetX = nul
       Quaternion(0.043619387340501414_r, 0.0_r, 0.0_r, 0.999048221582942_r),
       Quaternion(0.0_r, 0.0_r, 0.0_r, 1.0_r),
       Quaternion(-0.043619387340501414_r, 0.0_r, 0.0_r, 0.999048221582942_r)};
-  std::string const fingertipFilePath =
-      "robots/digit360/Digit360_Sensor_Simplified_Constrained.mochi.h5";
+  // A small grid exercises constrained and free soft nodes, including one interior node.
+  // The bounds approximate a Digit360 sensor in its local frame.
+  real constexpr kFingertipSize = 0.025_r;
+  Real3 const fingertipOffset{-0.5_r * kFingertipSize, -0.5_r * kFingertipSize, 0.024_r};
+  auto [fingertipCoordinates, fingertipConnectivity] = CreateMinimalTetMeshUnitGrid(
+      Real3{kFingertipSize, kFingertipSize, kFingertipSize}, Int3{2, 2, 2});
+  ModelData fingertipModel;
+  auto& fingertipMesh = fingertipModel.mesh.emplace();
+  fingertipMesh.nodesPerElement = 4;
+  fingertipMesh.connectivity = Flatten(MakeSpan(fingertipConnectivity));
+  auto& constrainedNodes = fingertipModel.constrainedNodes.emplace();
+  for (int n = 0; n < isize(fingertipCoordinates); ++n) {
+    if (fingertipCoordinates[n][2] == 0_r) {
+      constrainedNodes.push_back(n);
+    }
+  }
   std::array<ShapeHandle, kNumFingertips> fingertipShapes;
   for (int i = 0; i < kNumFingertips; ++i) {
-    fingertipShapes[i] = context->LoadShapeFromFile(
-        GetAssetPath(fingertipFilePath),
-        Real3{1_r, 1_r, 1_r},
-        TransformRT(fingertipRotations[i], fingertipTranslations[i]),
-        test::ExpectOK{});
+    fingertipMesh.coordinates = Flatten(MakeSpan(fingertipCoordinates));
+    TransformRT const transform{fingertipRotations[i], fingertipTranslations[i]};
+    for (auto& point : Unflatten<Real3>(MakeSpan(fingertipMesh.coordinates))) {
+      point = transform.TransformPoint(point + fingertipOffset);
+    }
+    fingertipShapes[i] = context->CreateModelShape(fingertipModel, test::ExpectOK{});
   }
   // Configure soft-actor params for the 4 fingertips
   std::array<std::string, kNumFingertips> const kFingertipNames = {
