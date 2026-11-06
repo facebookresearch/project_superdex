@@ -303,8 +303,7 @@ TEST_P(MochiRodActorAxialStretchScene, RodActorAxialStretch) {
   FixRodElementRotation(_scene, _actor, 0);
 
   // Apply axial force on the last node in the local +x direction (transformed to world)
-  // The force DoF API uses local coordinates, so we need to apply force in all 3 world directions
-  // proportionally to match the local x-direction force
+  // The force DoF API takes forces on rod displacement DoFs in world coordinates
   Real3 const forceLocalDir = Normalize(Real3{1_r, 0_r, 0_r});
   Real3 const forceWorldDir = _worldFromLocal.TransformDirection(forceLocalDir);
 
