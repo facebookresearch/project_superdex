@@ -345,7 +345,7 @@ std::vector<int> GetRowRangesPerWorker(IslandOperators<T> const& ops, int numWor
   MOCHI_ASSERT_VERBOSE(numWorkers > 0, "Invalid number of workers.");
   int interactionBlockSize = 1;
   for (auto const& [rowOffset, colOffset, anyMat, symmetricPair] : ops.GetInteractionMatrices()) {
-    static_assert(std::variant_size<AnyMatrixView<T const>>::value == 4, "Please update this code");
+    static_assert(std::variant_size_v<AnyMatrixView<T const>> == 4, "Please update this code");
     if (std::holds_alternative<BlockSparseMatrixView<T const, 3>>(anyMat)) {
       interactionBlockSize = 3;
       break;

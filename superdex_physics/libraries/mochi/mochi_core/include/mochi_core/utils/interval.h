@@ -40,7 +40,7 @@ namespace mochi {
 */
 template <typename T>
 struct Interval final {
-  static_assert(std::is_integral<T>::value, "Interval only accepts integral types");
+  static_assert(std::is_integral_v<T>, "Interval only accepts integral types");
 
  public:
   using value_type = T;
