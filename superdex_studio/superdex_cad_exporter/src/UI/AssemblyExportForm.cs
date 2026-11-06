@@ -29,6 +29,7 @@ using System.Linq;
 using System.Windows.Forms.Integration;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 
 using CADRobotExporter.Export;
 using CADRobotExporter.RobotDescription;
@@ -43,7 +44,6 @@ using SaveFileDialog = System.Windows.Forms.SaveFileDialog;
 // Legacy WinForms MessageBox
 using WindowState = System.Windows.WindowState;
 using MessageBox = System.Windows.Forms.MessageBox;
-using FolderBrowserDialog = System.Windows.Forms.FolderBrowserDialog;
 using MessageBoxButtons = System.Windows.Forms.MessageBoxButtons;
 using MessageBoxIcon = System.Windows.Forms.MessageBoxIcon;
 using MessageBoxOptions = System.Windows.Forms.MessageBoxOptions;
@@ -1039,52 +1039,68 @@ namespace CADRobotExporter.UI
                 return;
             }
 
-            using (FolderBrowserDialog folderDialog = new FolderBrowserDialog())
+            string initialFolder = lastLinkMeshFolder;
+            if (string.IsNullOrEmpty(initialFolder) || !Directory.Exists(initialFolder))
             {
-                folderDialog.Description = "Select output folder for link meshes";
-                folderDialog.SelectedPath = CadBridge.GetLatestExportLocation();
-                if (folderDialog.ShowDialog() != System.Windows.Forms.DialogResult.OK)
-                    return;
-
-                ExporterMeshingOptions meshingOptions = BuildMeshingOptionsFromForm().ResolveFor(link);
-                ExporterConfiguration config = SaveFormToExporterConfiguration();
-                RobotPackage package = new RobotPackage("", "", config.folderStructure);
-
-                Func<string, bool> confirmOverwrite = (filePath) =>
-                {
-                    string fileName = Path.GetFileName(filePath);
-                    System.Windows.Forms.DialogResult result = MessageBox.Show(
-                        $"File \"{fileName}\" already exists. Replace?",
-                        "Export Link Mesh",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question,
-                        MessageBoxDefaultButton.Button1,
-                        MessageBoxOptions.DefaultDesktopOnly);
-                    return result == System.Windows.Forms.DialogResult.Yes;
-                };
-
-                this.Hide();
-
-                try
-                {
-                    Exporter.ExportSingleLinkMeshes(
-                        link,
-                        package,
-                        folderDialog.SelectedPath,
-                        visualFormats,
-                        meshExportView.CollisionMeshing ? collisionFormats : new List<MeshFormat>(),
-                        meshingOptions,
-                        confirmOverwrite);
-
-                    MessageBox.Show($"Mesh export complete for \"{link.Name}\".", "Export Link Mesh",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, MessageBoxOptions.DefaultDesktopOnly);
-                }
-                finally
-                {
-                    this.Show();
-                }
+                initialFolder = CadBridge.GetLatestExportLocation();
             }
+
+            string outputFolder = FolderPicker.Show(
+                new WindowInteropHelper(this).Handle,
+                "Select output folder for link meshes",
+                initialFolder);
+            if (string.IsNullOrEmpty(outputFolder))
+            {
+                return;
+            }
+            lastLinkMeshFolder = outputFolder;
+
+            ExporterMeshingOptions meshingOptions = BuildMeshingOptionsFromForm().ResolveFor(link);
+            ExporterConfiguration config = SaveFormToExporterConfiguration();
+            RobotPackage package = new RobotPackage("", "", config.folderStructure);
+
+            Func<string, bool> confirmOverwrite = (filePath) =>
+            {
+                string fileName = Path.GetFileName(filePath);
+                System.Windows.Forms.DialogResult result = MessageBox.Show(
+                    $"File \"{fileName}\" already exists. Replace?",
+                    "Export Link Mesh",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question,
+                    MessageBoxDefaultButton.Button1,
+                    MessageBoxOptions.DefaultDesktopOnly);
+                return result == System.Windows.Forms.DialogResult.Yes;
+            };
+
+            List<string> writtenPaths;
+            this.Hide();
+            try
+            {
+                writtenPaths = Exporter.ExportSingleLinkMeshes(
+                    link,
+                    package,
+                    outputFolder,
+                    visualFormats,
+                    meshExportView.CollisionMeshing ? collisionFormats : new List<MeshFormat>(),
+                    meshingOptions,
+                    confirmOverwrite);
+            }
+            finally
+            {
+                this.Show();
+            }
+
+            if (writtenPaths.Count == 0)
+            {
+                MessageBox.Show($"No mesh files were written for \"{link.Name}\".", "Export Link Mesh",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1, MessageBoxOptions.DefaultDesktopOnly);
+                return;
+            }
+
+            ExportCompleteDialog.ShowMeshExportComplete(writtenPaths, owner: this);
         }
+
+        private static string lastLinkMeshFolder;
 
         private List<MeshFormat> BuildVisualFormatList()
         {

@@ -362,6 +362,7 @@
     <Compile Include="Utilities\WpfWindowOwner.cs" />
     <Compile Include="Utilities\PresetStore.cs" />
     <Compile Include="Utilities\ShellMruDirectory.cs" />
+    <Compile Include="Utilities\FolderPicker.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

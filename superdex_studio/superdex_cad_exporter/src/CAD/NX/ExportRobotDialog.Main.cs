@@ -421,31 +421,29 @@ public partial class ExportRobotDialog
             }
 
             // Prompt user to select save folder
-            using (var folderDialog = new FolderBrowserDialog())
+            string basePath = CADRobotExporter.Utilities.FolderPicker.Show(
+                CADRobotExporter.Utilities.NativeWindowWrapper.GetHostMainWindowHandle(),
+                "Select folder to save configuration files",
+                null);
+            if (string.IsNullOrEmpty(basePath))
+                return 0;
+
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+
+            string xmlPath = System.IO.Path.Combine(basePath, $"{robotName}.{timestamp}.urdfConfiguration.xml");
+            System.IO.File.WriteAllText(xmlPath, urdfConfiguration);
+
+            string jsonPath = System.IO.Path.Combine(basePath, $"{robotName}.{timestamp}.exporterConfiguration.json");
+            System.IO.File.WriteAllText(jsonPath, exporterConfiguration);
+
+            if (!string.IsNullOrEmpty(tendonData))
             {
-                folderDialog.Description = "Select folder to save configuration files";
-
-                if (folderDialog.ShowDialog() != DialogResult.OK)
-                    return 0;
-
-                string basePath = folderDialog.SelectedPath;
-                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-
-                string xmlPath = System.IO.Path.Combine(basePath, $"{robotName}.{timestamp}.urdfConfiguration.xml");
-                System.IO.File.WriteAllText(xmlPath, urdfConfiguration);
-
-                string jsonPath = System.IO.Path.Combine(basePath, $"{robotName}.{timestamp}.exporterConfiguration.json");
-                System.IO.File.WriteAllText(jsonPath, exporterConfiguration);
-
-                if (!string.IsNullOrEmpty(tendonData))
-                {
-                    string tendonPath = System.IO.Path.Combine(basePath, $"{robotName}.{timestamp}.tendons.xml");
-                    System.IO.File.WriteAllText(tendonPath, tendonData);
-                }
-
-                theUI.NXMessageBox.Show("SuperDex CAD Exporter", NXMessageBox.DialogType.Information,
-                    $"Configuration backed up to:\n{basePath}");
+                string tendonPath = System.IO.Path.Combine(basePath, $"{robotName}.{timestamp}.tendons.xml");
+                System.IO.File.WriteAllText(tendonPath, tendonData);
             }
+
+            theUI.NXMessageBox.Show("SuperDex CAD Exporter", NXMessageBox.DialogType.Information,
+                $"Configuration backed up to:\n{basePath}");
         }
         catch (Exception ex)
         {

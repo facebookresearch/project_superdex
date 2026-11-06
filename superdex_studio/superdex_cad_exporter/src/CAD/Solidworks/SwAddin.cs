@@ -545,25 +545,24 @@ namespace CADRobotExporter.SW
             }
 
             // Prompt user to select save folder
-            using (var folderDialog = new FolderBrowserDialog())
+            string basePath = FolderPicker.Show(
+                new IntPtr(((Frame)SwApp.Frame()).GetHWnd()),
+                "Select folder to save configuration files",
+                null);
+            if (string.IsNullOrEmpty(basePath))
+                return;
+
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+
+            string xmlPath = Path.Combine(basePath, $"{robotName}.{timestamp}.urdfConfiguration.xml");
+            File.WriteAllText(xmlPath, urdfConfiguration);
+            string jsonPath = Path.Combine(basePath, $"{robotName}.{timestamp}.exporterConfiguration.json");
+            File.WriteAllText(jsonPath, exporterConfiguration);
+
+            if (!string.IsNullOrEmpty(tendonData))
             {
-                folderDialog.Description = "Select folder to save configuration files";
-
-                if (folderDialog.ShowDialog() != DialogResult.OK)
-                    return;
-                string basePath = folderDialog.SelectedPath;
-                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-
-                string xmlPath = Path.Combine(basePath, $"{robotName}.{timestamp}.urdfConfiguration.xml");
-                File.WriteAllText(xmlPath, urdfConfiguration);
-                string jsonPath = Path.Combine(basePath, $"{robotName}.{timestamp}.exporterConfiguration.json");
-                File.WriteAllText(jsonPath, exporterConfiguration);
-
-                if (!string.IsNullOrEmpty(tendonData))
-                {
-                    string tendonPath = Path.Combine(basePath, $"{robotName}.{timestamp}.tendons.xml");
-                    File.WriteAllText(tendonPath, tendonData);
-                }
+                string tendonPath = Path.Combine(basePath, $"{robotName}.{timestamp}.tendons.xml");
+                File.WriteAllText(tendonPath, tendonData);
             }
         }
 

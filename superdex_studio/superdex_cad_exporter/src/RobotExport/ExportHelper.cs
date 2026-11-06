@@ -619,7 +619,11 @@ namespace CADRobotExporter.RobotExport
             }
         }
 
-        public void ExportSingleLinkMeshes(
+        /// <summary>
+        /// Exports the meshes of a single link into <paramref name="outputFolder"/>.
+        /// </summary>
+        /// <returns>The files this export wrote.</returns>
+        public List<string> ExportSingleLinkMeshes(
             Link link,
             RobotPackage package,
             string outputFolder,
@@ -628,6 +632,11 @@ namespace CADRobotExporter.RobotExport
             ExporterMeshingOptions meshingOptions,
             Func<string, bool> confirmOverwrite)
         {
+            // Files the export chose to write; filtered afterwards to the ones actually written.
+            var attemptedPaths = new List<string>();
+            // Filesystem timestamps can be coarser than the clock, so allow a little slack.
+            DateTime exportStartUtc = DateTime.UtcNow.AddSeconds(-2);
+
             Link.ComponentType visualComponentType = Link.ComponentType.Visual;
             Link.ComponentType collisionComponentType = Link.ComponentType.Collision;
 
@@ -674,14 +683,14 @@ namespace CADRobotExporter.RobotExport
                 {
                     string baseName = Path.Combine(outputFolder, link.Name + package.VisualMeshPostfix);
                     ExportSingleMesh(link, visualComponentType, visualFormats, meshingOptions,
-                        baseName, false, confirmOverwrite, ref meshingErrors);
+                        baseName, false, confirmOverwrite, attemptedPaths, ref meshingErrors);
                 }
 
                 if (collisionFormats.Count > 0 && meshingOptions.exportCollision && link.HasComponents(collisionComponentType))
                 {
                     string baseName = Path.Combine(outputFolder, link.Name + package.CollisionMeshPostfix);
                     ExportSingleMesh(link, collisionComponentType, collisionFormats, meshingOptions,
-                        baseName, true, confirmOverwrite, ref meshingErrors);
+                        baseName, true, confirmOverwrite, attemptedPaths, ref meshingErrors);
                 }
             }
             finally
@@ -701,6 +710,18 @@ namespace CADRobotExporter.RobotExport
                     System.Windows.Forms.MessageBoxDefaultButton.Button1,
                     System.Windows.Forms.MessageBoxOptions.DefaultDesktopOnly);
             }
+
+            var writtenPaths = new List<string>();
+            foreach (string path in attemptedPaths)
+            {
+                if (!writtenPaths.Contains(path, StringComparer.OrdinalIgnoreCase)
+                    && File.Exists(path)
+                    && File.GetLastWriteTimeUtc(path) >= exportStartUtc)
+                {
+                    writtenPaths.Add(path);
+                }
+            }
+            return writtenPaths;
         }
 
         private void AddMeshFormatSubSteps(List<MeshFormat> formats, bool collision)
@@ -759,6 +780,7 @@ namespace CADRobotExporter.RobotExport
             string baseFileName,
             bool exportingCollision,
             Func<string, bool> confirmOverwrite,
+            List<string> attemptedPaths,
             ref string meshingErrors,
             string windowsStepBasePath = null)
         {
@@ -787,7 +809,10 @@ namespace CADRobotExporter.RobotExport
             {
                 _progressManager.SetCurrentSubStep(exportingCollision ? SaveStpCollisionStep : SaveStpStep);
                 if (!File.Exists(stepPath) || confirmOverwrite(stepPath))
+                {
                     SaveStp(link, componentType, stepPath);
+                    attemptedPaths.Add(stepPath);
+                }
             }
 
             if (formats.Contains(MeshFormat.stlSolidworks))
@@ -795,7 +820,10 @@ namespace CADRobotExporter.RobotExport
                 _progressManager.SetCurrentSubStep(exportingCollision ? SaveStlCadCollisionStep : SaveStlCadStep);
                 string file = baseFileName + ".stl";
                 if (!File.Exists(file) || confirmOverwrite(file))
+                {
                     SaveStl(link, componentType, file, options, exportingCollision);
+                    attemptedPaths.Add(file);
+                }
             }
 
             if (formats.Contains(MeshFormat.glbCAD))
@@ -803,7 +831,10 @@ namespace CADRobotExporter.RobotExport
                 _progressManager.SetCurrentSubStep(exportingCollision ? SaveGlbCadCollisionStep : SaveGlbCadStep);
                 string file = baseFileName + ".glb";
                 if (!File.Exists(file) || confirmOverwrite(file))
+                {
                     SaveGlb(link, componentType, file, options, exportingCollision);
+                    attemptedPaths.Add(file);
+                }
             }
 
             if (formats.Contains(MeshFormat.objCAD))
@@ -811,7 +842,10 @@ namespace CADRobotExporter.RobotExport
                 _progressManager.SetCurrentSubStep(exportingCollision ? SaveObjCadCollisionStep : SaveObjCadStep);
                 string file = baseFileName + ".obj";
                 if (!File.Exists(file) || confirmOverwrite(file))
+                {
                     SaveObj(link, componentType, file, options, exportingCollision);
+                    attemptedPaths.Add(file);
+                }
             }
 
             // All OpenCascade formats come from one tessellation of the STEP, so they are gathered
@@ -855,6 +889,10 @@ namespace CADRobotExporter.RobotExport
                     stepPath,
                     out meshingError,
                     () => _progressManager.IsCancelled);
+                foreach (MeshExportOutput output in occOutputs)
+                {
+                    attemptedPaths.Add(output.Path);
+                }
                 if (!string.IsNullOrEmpty(meshingError))
                 {
                     meshingErrors += meshingErrorHeader + meshingError + "\n";

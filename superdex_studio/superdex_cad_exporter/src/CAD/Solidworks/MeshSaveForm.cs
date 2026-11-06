@@ -92,7 +92,7 @@ namespace CADRobotExporter.UI
 
             Button buttonCancel = new Button
             {
-                Content = "Cancel",
+                Content = "Close",
                 IsCancel = true,
                 MinWidth = 110,
                 Margin = new Thickness(8, 0, 0, 0),
@@ -119,6 +119,53 @@ namespace CADRobotExporter.UI
             meshing.ApplyEnableState(true, true);
             AddCoordinateSystems();
             MeshFilename = ExtractFilePathWithoutExtension(solidworksSaveAsString);
+
+            SubscribeToDocumentDestroyed();
+            Closed += (s, e) => UnsubscribeFromDocumentDestroyed();
+        }
+
+        private void SubscribeToDocumentDestroyed()
+        {
+            try
+            {
+                if (ActiveSWModel is PartDoc part)
+                {
+                    part.DestroyNotify += OnDocumentDestroyed;
+                }
+                else if (ActiveSWModel is AssemblyDoc assembly)
+                {
+                    assembly.DestroyNotify += OnDocumentDestroyed;
+                }
+            }
+            catch (Exception)
+            {
+                // Best effort
+            }
+        }
+
+        private void UnsubscribeFromDocumentDestroyed()
+        {
+            try
+            {
+                if (ActiveSWModel is PartDoc part)
+                {
+                    part.DestroyNotify -= OnDocumentDestroyed;
+                }
+                else if (ActiveSWModel is AssemblyDoc assembly)
+                {
+                    assembly.DestroyNotify -= OnDocumentDestroyed;
+                }
+            }
+            catch (Exception)
+            {
+                // The document may already be gone
+            }
+        }
+
+        private int OnDocumentDestroyed()
+        {
+            Dispatcher.BeginInvoke(new Action(Close));
+            return 0;
         }
 
         private CheckBox MakeFormatCheckBox(string caption)
@@ -217,7 +264,7 @@ namespace CADRobotExporter.UI
             {
                 ExportCompleteDialog.ShowMeshExportComplete(writtenPaths, owner: this);
             }
-            Close();
+            Activate();
         }
 
         private void ButtonCancel_Click(object sender, RoutedEventArgs e)
