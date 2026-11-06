@@ -151,4 +151,27 @@ class SUPERDEX_RECORDER_API Points3DSeries final : public Series {
   std::vector<rerun::components::Position3D> _positions;
 };
 
+/* @brief Stores a triangle mesh whose vertices move but whose triangles do not, such as the surface
+ * of a soft actor. Each sample holds every vertex's position and normal; the triangles are written
+ * once, by Episode::CreateDeformableMeshSeries. A sample equal to the previous one is not stored,
+ * because readers take the latest sample at or before a time. */
+class SUPERDEX_RECORDER_API DeformableMeshSeries final : public Series {
+ public:
+  DeformableMeshSeries(std::string_view entityPath, size_t numVertices);
+
+  /* Takes XYZ triples, one per vertex. */
+  void Append(
+      SampleTime time,
+      mochi::Span<mochi::real const> vertexPositions,
+      mochi::Span<mochi::real const> vertexNormals,
+      mochi::Error& error);
+
+ private:
+  void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error) override;
+
+  size_t _numVertices;
+  std::vector<rerun::components::Position3D> _positions;
+  std::vector<rerun::components::Vector3D> _normals;
+};
+
 } // namespace superdex::recorder

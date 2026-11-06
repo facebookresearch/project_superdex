@@ -45,6 +45,7 @@ class ScalarSeries;
 class TransformSeries;
 class Arrow3DSeries;
 class Points3DSeries;
+class DeformableMeshSeries;
 
 inline constexpr std::string_view kSchemaName = "superdex.episode";
 inline constexpr uint32_t kSchemaVersionMajor = 1;
@@ -90,6 +91,14 @@ class SUPERDEX_RECORDER_API Episode final {
   TransformSeries* CreateTransformSeries(std::string_view entityPath, mochi::Error& error);
   Arrow3DSeries* CreateArrow3DSeries(std::string_view entityPath, mochi::Error& error);
   Points3DSeries* CreatePoints3DSeries(std::string_view entityPath, mochi::Error& error);
+  /* Writes the mesh's triangles, which index its numVertices vertices, and its color once; the
+   * series stores the vertices at each sample. */
+  DeformableMeshSeries* CreateDeformableMeshSeries(
+      std::string_view entityPath,
+      size_t numVertices,
+      mochi::Span<uint32_t const> triangleIndices,
+      std::array<uint8_t, 4> const& color,
+      mochi::Error& error);
   void WriteConstantText(
       std::string_view entityPath,
       ComponentField const& field,

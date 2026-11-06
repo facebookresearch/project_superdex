@@ -24,6 +24,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <initializer_list>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -343,7 +344,18 @@ PhysicsRecorder::PhysicsRecorder(
   }
 }
 
-PhysicsRecorder::~PhysicsRecorder() = default;
+PhysicsRecorder::~PhysicsRecorder() {
+  // Mochi computes a registered query's result at every step until it is cancelled.
+  for (auto const& registered : _actors) {
+    if (!registered.queries.empty()) {
+      if (mochi::Actor* const actor = _scene.GetActor(registered.handle)) {
+        for (mochi::QueryHandle const query : registered.queries) {
+          actor->CancelQuery(query);
+        }
+      }
+    }
+  }
+}
 
 void PhysicsRecorder::RegisterActor(std::string id, mochi::Actor& actor, mochi::Error& error) {
   MOCHI_ERROR_RETURN(error);
@@ -509,6 +521,18 @@ void PhysicsRecorder::RegisterActor(std::string id, mochi::Actor& actor, mochi::
     }
   } else if (actor.GetType() == mochi::ActorType::Soft) {
     WritePhysicalParameters(dataPath, actor, error);
+    auto const mesh = actor.GetSurfaceMesh();
+    MOCHI_ERROR_IF(
+        mesh.nodesPerElement != 3, error, "Soft actor surface mesh is not a triangle mesh.");
+    MOCHI_ERROR_RETURN(error);
+    // A negative index wraps past the vertex count, which CreateDeformableMeshSeries rejects.
+    std::vector<uint32_t> const triangles(mesh.connectivity.begin(), mesh.connectivity.end());
+    registered.surfaceSeries = _episode.CreateDeformableMeshSeries(
+        entityPath + "/surface",
+        mesh.coordinates.size() / 3,
+        triangles,
+        ColorForId(entityPath),
+        error);
   } else {
     WriteGeometry(entityPath, actor, error);
     WritePhysicalParameters(dataPath, actor, error);
@@ -536,6 +560,14 @@ void PhysicsRecorder::RegisterActor(std::string id, mochi::Actor& actor, mochi::
       dataPath, ActorField("superdex.physics.is_static"), isStatic, error);
   _episode.WriteConstantScalars(dataPath, ActorField("superdex.physics.num_dofs"), numDofs, error);
   MOCHI_ERROR_RETURN(error);
+  if (registered.surfaceSeries != nullptr) {
+    // Mochi computes surface vertices only for registered queries. Computing them now also covers
+    // a Record before the first step.
+    for (mochi::QueryType const query :
+         {mochi::QueryType::SurfaceNodePositions, mochi::QueryType::SurfaceNodeNormals}) {
+      registered.queries.push_back(actor.RegisterQueryAndCompute(query, error));
+    }
+  }
   _actors.push_back(std::move(registered));
 }
 
@@ -693,6 +725,9 @@ void PhysicsRecorder::Record(SampleTime time, mochi::Error& error) {
       };
       MOCHI_ERROR_RETURN(error);
       registered.stateSeries.Append(time, fields, error);
+      auto const surfacePositions = actor->GetSurfaceMeshNodePositionsLocal(error);
+      auto const surfaceNormals = actor->GetSurfaceMeshNodeNormalsLocal(error);
+      registered.surfaceSeries->Append(time, surfacePositions, surfaceNormals, error);
       MOCHI_ERROR_RETURN(error);
       continue;
     }

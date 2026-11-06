@@ -473,6 +473,72 @@ class RecorderTest(unittest.TestCase):
                     sdp.destroy_scene(scene)
                 sdp.shutdown()
 
+    def test_soft_actors_record_their_surface_at_every_frame(self) -> None:
+        with tempfile.TemporaryDirectory() as directory_string:
+            sdp.initialize(num_worker_threads=0)
+            scene = None
+            physics = None
+            try:
+                scene = sdp.create_scene("soft surface")
+                tetrahedron = scene.create_soft_actor(
+                    name="tetrahedron",
+                    shape=sdp.create_tet_mesh_shape(
+                        coordinates=[0, 0, 0, 0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1],
+                        connectivity=[0, 1, 2, 3],
+                    ),
+                )
+                assert tetrahedron is not None
+                # Moving one corner deforms the tetrahedron.
+                tetrahedron.set_node_velocities_local(
+                    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+                )
+                episode = self.make_recorder(Path(directory_string)).begin_episode()
+                physics = recorder.PhysicsRecorder(episode, scene)
+                surfaces = []
+                for frame in range(3):
+                    if frame > 0:
+                        scene.step(0.01)
+                    physics.record(frame, scene.get_total_simulation_time())
+                    surfaces.append(
+                        np.array(tetrahedron.get_surface_mesh_node_positions_local())
+                    )
+                triangles = np.asarray(tetrahedron.get_surface_mesh().connectivity)
+                episode.commit()
+
+                rrd_verify.assert_rerun_accepts(episode.output_path)
+                recording = EpisodeReader(episode.output_path)
+                path = "world/tetrahedron/surface"
+                [indices] = recording.component_samples(
+                    "Mesh3D:triangle_indices", entity_path=path
+                )
+                self.assertTrue(indices.is_static)
+                np.testing.assert_array_equal(np.ravel(indices.value), triangles)
+                samples = recording.component_samples_many(
+                    ("Mesh3D:vertex_positions", "Mesh3D:vertex_normals"),
+                    entity_path=path,
+                )
+                positions = samples["Mesh3D:vertex_positions"]
+                self.assertEqual(
+                    [sample.timelines["frame"] for sample in positions], [0, 1, 2]
+                )
+                np.testing.assert_allclose(
+                    [np.ravel(sample.value) for sample in positions],
+                    surfaces,
+                    atol=1e-6,
+                )
+                self.assertEqual(len(samples["Mesh3D:vertex_normals"]), 3)
+                # The surface's parent entity carries the root transform.
+                transforms = recording.component_samples(
+                    "Transform3D:translation", entity_path="world/tetrahedron"
+                )
+                self.assertEqual(transforms[0].timelines["frame"], 0)
+            finally:
+                physics = None
+                gc.collect()
+                if scene is not None:
+                    sdp.destroy_scene(scene)
+                sdp.shutdown()
+
     def test_reader_returns_only_requested_frames(self) -> None:
         with tempfile.TemporaryDirectory() as directory_string:
             sdp.initialize(num_worker_threads=0)

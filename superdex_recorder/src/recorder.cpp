@@ -199,6 +199,53 @@ Points3DSeries* Episode::CreatePoints3DSeries(std::string_view entityPath, mochi
   return result;
 }
 
+DeformableMeshSeries* Episode::CreateDeformableMeshSeries(
+    std::string_view entityPath,
+    size_t numVertices,
+    mochi::Span<uint32_t const> triangleIndices,
+    std::array<uint8_t, 4> const& color,
+    mochi::Error& error) {
+  ValidateWrite(error);
+  ValidateSeriesPath(entityPath, error);
+  MOCHI_ERROR_IF(
+      numVertices > std::numeric_limits<uint32_t>::max(),
+      error,
+      "Mesh series has too many vertices to record.");
+  MOCHI_ERROR_IF(
+      triangleIndices.size() % 3 != 0,
+      error,
+      "Mesh triangle indices must contain complete triples.");
+  MOCHI_ERROR_IF_NOT(
+      std::ranges::all_of(
+          triangleIndices, [numVertices](uint32_t index) { return index < numVertices; }),
+      error,
+      "Mesh triangle index exceeds the vertex count.");
+  MOCHI_ERROR_RETURN(error, nullptr);
+
+  std::vector<rerun::components::TriangleIndices> triangles;
+  triangles.reserve(triangleIndices.size() / 3);
+  for (size_t i = 0; i < triangleIndices.size(); i += 3) {
+    triangles.emplace_back(triangleIndices[i], triangleIndices[i + 1], triangleIndices[i + 2]);
+  }
+  auto batches = rerun::AsComponents<rerun::archetypes::Mesh3D>::as_batches(
+      rerun::archetypes::Mesh3D::update_fields()
+          .with_triangle_indices(std::move(triangles))
+          .with_albedo_factor(
+              rerun::components::AlbedoFactor{
+                  rerun::datatypes::Rgba32{color[0], color[1], color[2], color[3]}}));
+  if (batches.is_err()) {
+    SetRerunError(batches.error, error, "Failed to encode constant mesh triangles.");
+    return nullptr;
+  }
+  auto& row = _staticRows->batchesByEntity[std::string{entityPath}];
+  row.insert(row.end(), batches.value.begin(), batches.value.end());
+
+  auto series = std::make_unique<DeformableMeshSeries>(entityPath, numVertices);
+  auto* const result = series.get();
+  _series.push_back(std::move(series));
+  return result;
+}
+
 void Episode::WriteConstantText(
     std::string_view entityPath,
     ComponentField const& field,

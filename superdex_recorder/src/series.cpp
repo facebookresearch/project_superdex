@@ -327,4 +327,69 @@ void Points3DSeries::BuildColumns(
   output.emplace_back(std::move(positions.value));
 }
 
+DeformableMeshSeries::DeformableMeshSeries(std::string_view entityPath, size_t numVertices)
+    : Series{entityPath}, _numVertices{numVertices} {}
+
+void DeformableMeshSeries::Append(
+    SampleTime time,
+    mochi::Span<mochi::real const> vertexPositions,
+    mochi::Span<mochi::real const> vertexNormals,
+    mochi::Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  MOCHI_ERROR_IF(
+      vertexPositions.size() != 3 * _numVertices || vertexNormals.size() != 3 * _numVertices,
+      error,
+      "Mesh sample does not have one position and one normal per vertex.");
+  MOCHI_ERROR_RETURN(error);
+  bool repeatsLastSample = GetNumSamples() != 0;
+  size_t const lastSample = _positions.size() - (repeatsLastSample ? _numVertices : 0);
+  for (size_t i = 0; i < 3 * _numVertices && repeatsLastSample; ++i) {
+    repeatsLastSample =
+        static_cast<float>(vertexPositions[i]) == _positions[lastSample + i / 3].xyz.xyz[i % 3] &&
+        static_cast<float>(vertexNormals[i]) == _normals[lastSample + i / 3].vector.xyz[i % 3];
+  }
+  if (repeatsLastSample) {
+    AdvanceTime(time, error);
+    return;
+  }
+  AppendTime(time, error);
+  MOCHI_ERROR_RETURN(error);
+
+  for (size_t i = 0; i < _numVertices; ++i) {
+    _positions.emplace_back(
+        static_cast<float>(vertexPositions[3 * i]),
+        static_cast<float>(vertexPositions[3 * i + 1]),
+        static_cast<float>(vertexPositions[3 * i + 2]));
+    _normals.emplace_back(
+        static_cast<float>(vertexNormals[3 * i]),
+        static_cast<float>(vertexNormals[3 * i + 1]),
+        static_cast<float>(vertexNormals[3 * i + 2]));
+  }
+}
+
+void DeformableMeshSeries::BuildColumns(
+    std::vector<rerun::ComponentColumn>& output,
+    mochi::Error& error) {
+  std::vector<uint32_t> const lengths(GetNumSamples(), static_cast<uint32_t>(_numVertices));
+  auto positions = rerun::ComponentColumn::from_loggable_with_lengths(
+      rerun::Collection<rerun::components::Position3D>::borrow(_positions),
+      rerun::Collection<uint32_t>::borrow(lengths),
+      rerun::archetypes::Mesh3D::Descriptor_vertex_positions);
+  if (positions.is_err()) {
+    SetRerunError(positions.error, error, "Failed to encode mesh vertex positions.");
+    return;
+  }
+  auto normals = rerun::ComponentColumn::from_loggable_with_lengths(
+      rerun::Collection<rerun::components::Vector3D>::borrow(_normals),
+      rerun::Collection<uint32_t>::borrow(lengths),
+      rerun::archetypes::Mesh3D::Descriptor_vertex_normals);
+  if (normals.is_err()) {
+    SetRerunError(normals.error, error, "Failed to encode mesh vertex normals.");
+    return;
+  }
+  output.reserve(2);
+  output.emplace_back(std::move(positions.value));
+  output.emplace_back(std::move(normals.value));
+}
+
 } // namespace superdex::recorder
