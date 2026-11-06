@@ -18,8 +18,8 @@ namespace CADRobotExporter.Export
 {
     public class SuperDexBotFormatWriter : IFormatWriter
     {
-        private readonly string _savePath;
-        private readonly FolderStructure _folderStructure;
+        protected readonly string _savePath;
+        protected readonly FolderStructure _folderStructure;
 
         public SuperDexBotFormatWriter(string savePath, FolderStructure folderStructure = FolderStructure.SuperDex)
         {
@@ -27,40 +27,36 @@ namespace CADRobotExporter.Export
             _folderStructure = folderStructure;
         }
 
-        public void WriteRobot(Robot robot)
+        /// <summary>
+        /// The joints and links of a robot in SuperDex order, as JSON objects.
+        /// </summary>
+        protected class Articulation
         {
-            var linkIndices = new Dictionary<string, int>();
-            var orderedLinks = new List<Link>();
-            var parentMap = new Dictionary<string, int>();
+            public List<Link> Links = new List<Link>();
+            public Dictionary<string, int> LinkIndices = new Dictionary<string, int>();
+            public List<Dictionary<string, object>> JsonJoints = new List<Dictionary<string, object>>();
+            public List<Dictionary<string, object>> JsonLinks = new List<Dictionary<string, object>>();
+            public int DofCount;
+        }
 
-            CollectLinks(robot.BaseLink, orderedLinks, parentMap);
+        /// <summary>Joint type of the joint attaching the root link to the world.</summary>
+        protected virtual string RootJointType => "Hard";
 
-            for (int i = 0; i < orderedLinks.Count; i++)
-            {
-                linkIndices[orderedLinks[i].Name] = i;
-            }
+        /// <summary>Whether joints carry the bot-only effortLimit field.</summary>
+        protected virtual bool WriteEffortLimit => true;
 
-            var jsonJoints = new List<Dictionary<string, object>>();
-            var jsonLinks = new List<Dictionary<string, object>>();
-            int dofCount = 0;
+        /// <summary>Converts a URDF mesh filename to the path written to the file.</summary>
+        protected virtual string MeshPath(string filename)
+        {
+            return StripPackagePrefix(filename);
+        }
 
-            for (int i = 0; i < orderedLinks.Count; i++)
-            {
-                var link = orderedLinks[i];
-                var jointObj = BuildJoint(link, i == 0, linkIndices);
-                jsonJoints.Add(jointObj);
-
-                if (i > 0 && link.Joint != null && !IsFixedJoint(link))
-                {
-                    dofCount++;
-                }
-
-                var linkObj = BuildLink(link, i, parentMap);
-                jsonLinks.Add(linkObj);
-            }
+        public virtual void WriteRobot(Robot robot)
+        {
+            Articulation articulation = BuildArticulation(robot);
 
             var defaultPose = new List<double>();
-            for (int i = 0; i < dofCount; i++)
+            for (int i = 0; i < articulation.DofCount; i++)
             {
                 defaultPose.Add(0);
             }
@@ -68,17 +64,50 @@ namespace CADRobotExporter.Export
             var root = new Dictionary<string, object>
             {
                 ["defaultPose"] = defaultPose,
-                ["joints"] = jsonJoints,
-                ["links"] = jsonLinks,
+                ["joints"] = articulation.JsonJoints,
+                ["links"] = articulation.JsonLinks,
                 ["name"] = robot.Name
             };
 
-            var spatialTendons = BuildSpatialTendons(robot.Tendons, linkIndices);
+            var spatialTendons = BuildSpatialTendons(robot.Tendons, articulation.LinkIndices);
             if (spatialTendons.Count > 0)
             {
                 root["spatialTendons"] = spatialTendons;
             }
 
+            WriteJson(root);
+        }
+
+        protected Articulation BuildArticulation(Robot robot)
+        {
+            var articulation = new Articulation();
+            var parentMap = new Dictionary<string, int>();
+
+            CollectLinks(robot.BaseLink, articulation.Links, parentMap);
+
+            for (int i = 0; i < articulation.Links.Count; i++)
+            {
+                articulation.LinkIndices[articulation.Links[i].Name] = i;
+            }
+
+            for (int i = 0; i < articulation.Links.Count; i++)
+            {
+                var link = articulation.Links[i];
+                articulation.JsonJoints.Add(BuildJoint(link, i == 0, articulation.LinkIndices));
+
+                if (i > 0 && link.Joint != null && !IsFixedJoint(link))
+                {
+                    articulation.DofCount++;
+                }
+
+                articulation.JsonLinks.Add(BuildLink(link, i, parentMap));
+            }
+
+            return articulation;
+        }
+
+        protected void WriteJson(object root)
+        {
             var settings = new JsonSerializerSettings
             {
                 Formatting = Formatting.Indented,
@@ -157,7 +186,7 @@ namespace CADRobotExporter.Export
             if (isRoot)
             {
                 joint["name"] = "world_joint";
-                joint["type"] = "Hard";
+                joint["type"] = RootJointType;
                 return joint;
             }
 
@@ -194,7 +223,7 @@ namespace CADRobotExporter.Export
 
             if (superdexType != "Hard" && j.Limit != null && j.Limit.ElementContainsData())
             {
-                if (j.Limit.IsEffortSet() && j.Limit.Effort > 0)
+                if (WriteEffortLimit && j.Limit.IsEffortSet() && j.Limit.Effort > 0)
                 {
                     joint["effortLimit"] = j.Limit.Effort;
                 }
@@ -259,19 +288,14 @@ namespace CADRobotExporter.Export
         {
             var obj = new Dictionary<string, object>();
 
-            bool hasInertial = link.Inertial != null && link.Inertial.ElementContainsData() && !link.Inertial.IsZero();
+            // Mass, center of mass and inertia are written together or not at all.
+            bool hasInertial = link.Inertial != null && link.Inertial.ElementContainsData() && !link.Inertial.IsZero()
+                && link.Inertial.Mass.Value > 0;
             if (hasInertial)
             {
-                double[] com = link.Inertial.Origin.GetXYZ();
-                if (com != null && (com[0] != 0 || com[1] != 0 || com[2] != 0))
-                {
-                    obj["centerOfMass"] = new List<double> { com[0], com[1], com[2] };
-                }
-
-                if (link.Inertial.Mass.Value > 0)
-                {
-                    obj["mass"] = link.Inertial.Mass.Value;
-                }
+                double[] com = link.Inertial.Origin.GetXYZ() ?? new double[] { 0, 0, 0 };
+                obj["centerOfMass"] = new List<double> { com[0], com[1], com[2] };
+                obj["mass"] = link.Inertial.Mass.Value;
 
                 var inertia = link.Inertial.Inertia;
                 obj["momentOfInertia"] = new List<double>
@@ -338,7 +362,7 @@ namespace CADRobotExporter.Export
             string filename = link.Visual.Geometry.Mesh.Filename;
             if (string.IsNullOrEmpty(filename))
                 return null;
-            return StripPackagePrefix(filename);
+            return MeshPath(filename);
         }
 
         private string GetCollisionMeshPath(Link link)
@@ -348,10 +372,10 @@ namespace CADRobotExporter.Export
             string filename = link.Collision.Geometry.Mesh.Filename;
             if (string.IsNullOrEmpty(filename))
                 return null;
-            return StripPackagePrefix(filename);
+            return MeshPath(filename);
         }
 
-        private static string StripPackagePrefix(string path)
+        protected static string StripPackagePrefix(string path)
         {
             var match = Regex.Match(path, @"package://[^/]+/(.+)$");
             if (match.Success)
@@ -361,7 +385,7 @@ namespace CADRobotExporter.Export
             return path;
         }
 
-        private List<Dictionary<string, object>> BuildSpatialTendons(
+        protected List<Dictionary<string, object>> BuildSpatialTendons(
             List<Tendon> tendons,
             Dictionary<string, int> linkIndices)
         {

@@ -397,6 +397,7 @@
     <Compile Include="Export\MJCFFormatWriter.cs" />
     <Compile Include="Export\URDFFormatWriter.cs" />
     <Compile Include="Export\SuperDexBotFormatWriter.cs" />
+    <Compile Include="Export\SuperDexPrefabFormatWriter.cs" />
     <Compile Include="Model\ElementAttribute.cs" />
     <Compile Include="Model\RobotElement.cs" />
     <Compile Include="RobotDescription\Geometry.cs" />

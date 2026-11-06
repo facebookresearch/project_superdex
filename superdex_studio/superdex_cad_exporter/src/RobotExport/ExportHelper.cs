@@ -84,6 +84,8 @@ namespace CADRobotExporter.RobotExport
 
         public string SuperDexBotFileName { get; private set; }
 
+        public string SuperDexPrefabFileName { get; private set; }
+
         public CADBridge CadBridge { get; private set; }
 
         private ProgressIndicatorManager _progressManager;
@@ -284,6 +286,20 @@ namespace CADRobotExporter.RobotExport
             }
 #endif
 
+            // Written before the meshes to survive a crash or hang while meshing. This pass only
+            // assigns mesh filenames.
+            string meshingErrors = "";
+            try
+            {
+                ExportFiles(Robot.BaseLink, package, 0, false, meshFormats, collisionMeshFormats, meshingOptions, ref meshingErrors);
+                WriteDescriptionFiles(package, exporterConfig, windowsURDFFileName, windowsMJCFFileName, windowsPackageXmlFileName);
+            }
+            catch
+            {
+                _progressManager.Close();
+                throw;
+            }
+
             // Customizing STL preferences
             logger.Information("Saving existing STL preferences");
             SaveSTLExportUserPreferences();
@@ -296,11 +312,13 @@ namespace CADRobotExporter.RobotExport
 
             bool success = false;
             string exception = "";
-            string meshingErrors = "";
             try
             {
-                logger.Information("Beginning individual files export");
-                ExportFiles(Robot.BaseLink, package, 0, exportLinkMesh, meshFormats, collisionMeshFormats, meshingOptions, ref meshingErrors);
+                if (exportLinkMesh)
+                {
+                    logger.Information("Beginning individual files export");
+                    ExportFiles(Robot.BaseLink, package, 0, true, meshFormats, collisionMeshFormats, meshingOptions, ref meshingErrors);
+                }
                 success = true;
             }
             catch (Exception e)
@@ -320,7 +338,8 @@ namespace CADRobotExporter.RobotExport
             if (!success)
             {
                 _progressManager.Close();
-                MessageBox.Show($"Exporting the Robot was cancelled or failed unexpectedly. Exception thrown: {exception}");
+                MessageBox.Show($"Exporting the Robot was cancelled or failed unexpectedly. Exception thrown: {exception}"
+                    + $"\n\nThe robot description files were already written to {package.WindowsPackageDirectory}");
                 return;
             }
 
@@ -340,6 +359,19 @@ namespace CADRobotExporter.RobotExport
                 logger.Warning("The following links had meshing errors:\n" + meshingErrors + "\n\n");
             }
 
+            logger.Information("Resetting STL preferences");
+            ResetSTLExportPreferences();
+
+            CadBridge.SetProgressBarEnd();
+        }
+
+        private void WriteDescriptionFiles(
+            RobotPackage package,
+            ExporterConfiguration exporterConfig,
+            string windowsURDFFileName,
+            string windowsMJCFFileName,
+            string windowsPackageXmlFileName)
+        {
             logger.Information("Writing URDF file to " + windowsURDFFileName);
 
             using (var writer = FormatWriterFactory.Create(ExportFormat.URDF, windowsURDFFileName))
@@ -362,17 +394,21 @@ namespace CADRobotExporter.RobotExport
                 writer.WriteRobot(Robot);
             }
 
+            string windowsSuperDexPrefabFileName = package.WindowsPackageDirectory + Robot.Name + ".superdex_prefab";
+            logger.Information("Writing SuperDex Prefab file to " + windowsSuperDexPrefabFileName);
+
+            using (var writer = FormatWriterFactory.Create(ExportFormat.SuperDexPrefab, windowsSuperDexPrefabFileName, exporterConfig.folderStructure))
+            {
+                writer.WriteRobot(Robot);
+            }
+
             logger.Information("Writing package.xml file to " + windowsPackageXmlFileName);
             WritePackageXml(windowsPackageXmlFileName, Robot.Name);
-
-            logger.Information("Resetting STL preferences");
-            ResetSTLExportPreferences();
-
-            CadBridge.SetProgressBarEnd();
 
             URDFFileName = windowsURDFFileName;
             MJCFFileName = windowsMJCFFileName;
             SuperDexBotFileName = windowsSuperDexBotFileName;
+            SuperDexPrefabFileName = windowsSuperDexPrefabFileName;
         }
 
         public List<string> GetJointNames()
@@ -399,12 +435,16 @@ namespace CADRobotExporter.RobotExport
         }
 
         //Recursive method for exporting each link (and writing it to the URDF)
+        // With exportLinkMesh false, only assigns the mesh filenames.
         private void ExportFiles(Link link, RobotPackage package, int count, bool exportLinkMesh, List<MeshFormat> meshFormats, List<MeshFormat> collisionMeshFormats, ExporterMeshingOptions meshingOptions, ref string meshingErrors)
         {
-            CadBridge.SetProgressBarProgress(count);
-            CadBridge.SetProgressBarTitle("Exporting mesh: " + link.Name);
-            logger.Information("Exporting link: " + link.Name);
-            _progressManager.SetCurrentStep(link.Name);
+            if (exportLinkMesh)
+            {
+                CadBridge.SetProgressBarProgress(count);
+                CadBridge.SetProgressBarTitle("Exporting mesh: " + link.Name);
+                logger.Information("Exporting link: " + link.Name);
+                _progressManager.SetCurrentStep(link.Name);
+            }
             // Iterate through each child and export its files
             logger.Information("Link " + link.Name + " has " + link.Children.Count + " children");
 
@@ -504,7 +544,7 @@ namespace CADRobotExporter.RobotExport
                 count += 1;
                 if (!child.isFixedFrame)
                 {
-                    if (_progressManager.IsCancelled)
+                    if (exportLinkMesh && _progressManager.IsCancelled)
                     {
                         logger.Information("Cancel invoked by user");
                         throw new Exception("Cancelled by user.");

@@ -20,14 +20,16 @@ namespace CADRobotExporter.UI
     /// </summary>
     public class ExportCompleteDialog : Window
     {
-        public ExportCompleteDialog(string urdfPath, string mjcfPath, string superdexBotPath)
+        public ExportCompleteDialog(
+            string urdfPath, string mjcfPath, string superdexBotPath, string superdexPrefabPath)
         {
             Build(
                 "SuperDex CAD Exporter",
                 "Export complete!\n\n" +
                 "URDF file saved to:\n" + urdfPath + "\n\n" +
                 "MJCF file saved to:\n" + mjcfPath + "\n\n" +
-                "SuperDex Bot file saved to:\n" + superdexBotPath,
+                "SuperDex Bot file saved to:\n" + superdexBotPath + "\n\n" +
+                "SuperDex Prefab file saved to:\n" + superdexPrefabPath,
                 "Close");
         }
 

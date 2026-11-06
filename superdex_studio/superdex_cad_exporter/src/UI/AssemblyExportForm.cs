@@ -1284,8 +1284,10 @@ namespace CADRobotExporter.UI
                 string urdfPath = Exporter.URDFFileName;
                 string mjcfPath = Exporter.MJCFFileName;
                 string superdexBotPath = Exporter.SuperDexBotFileName;
+                string superdexPrefabPath = Exporter.SuperDexPrefabFileName;
 
-                ExportCompleteDialog dialog = new ExportCompleteDialog(urdfPath, mjcfPath, superdexBotPath);
+                ExportCompleteDialog dialog = new ExportCompleteDialog(
+                    urdfPath, mjcfPath, superdexBotPath, superdexPrefabPath);
                 dialog.Owner = this;
                 if (dialog.ShowDialog() == true)
                 {

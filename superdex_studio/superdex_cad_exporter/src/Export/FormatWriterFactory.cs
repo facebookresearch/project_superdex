@@ -31,6 +31,8 @@ namespace CADRobotExporter.Export
                     return new MJCFFormatWriter(savePath, folderStructure);
                 case ExportFormat.SuperDexBot:
                     return new SuperDexBotFormatWriter(savePath, folderStructure);
+                case ExportFormat.SuperDexPrefab:
+                    return new SuperDexPrefabFormatWriter(savePath, folderStructure);
                 default:
                     throw new ArgumentException($"Unsupported format: {format}", nameof(format));
             }
@@ -51,6 +53,8 @@ namespace CADRobotExporter.Export
                     return ".xml";
                 case ExportFormat.SuperDexBot:
                     return ".superdex_bot";
+                case ExportFormat.SuperDexPrefab:
+                    return ".superdex_prefab";
                 default:
                     return ".xml";
             }
@@ -71,6 +75,8 @@ namespace CADRobotExporter.Export
                     return "MJCF (MuJoCo)";
                 case ExportFormat.SuperDexBot:
                     return "SuperDex Bot";
+                case ExportFormat.SuperDexPrefab:
+                    return "SuperDex Prefab";
                 default:
                     return format.ToString();
             }

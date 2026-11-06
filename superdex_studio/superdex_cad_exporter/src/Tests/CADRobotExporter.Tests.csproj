@@ -70,6 +70,7 @@
     <Compile Include="JointPropertiesViewModelTests.cs" />
     <Compile Include="KinematicsSummaryTests.cs" />
     <Compile Include="TendonSummaryTests.cs" />
+    <Compile Include="SuperDexFormatWriterTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SolidWorksRobotExporter.csproj">

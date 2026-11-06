@@ -25,6 +25,11 @@ namespace CADRobotExporter.Export
         /// <summary>
         /// SuperDex Bot (json)
         /// </summary>
-        SuperDexBot
+        SuperDexBot,
+
+        /// <summary>
+        /// SuperDex Prefab (json)
+        /// </summary>
+        SuperDexPrefab
     }
 }
