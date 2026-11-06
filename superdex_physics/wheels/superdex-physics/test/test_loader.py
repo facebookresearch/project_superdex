@@ -61,7 +61,10 @@ class LoaderTest(unittest.TestCase):
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            package_dir = Path(temp_dir) / "superdex" / "physics"
+            # Resolve the base: loader resolves __file__, which canonicalizes
+            # symlinks such as /var -> /private/var on macOS.
+            base = Path(temp_dir).resolve()
+            package_dir = base / "superdex" / "physics"
             native_dir = package_dir / "_native"
             native_dir.mkdir(parents=True)
 
@@ -77,8 +80,11 @@ class LoaderTest(unittest.TestCase):
 
     def test_packaged_native_dir_uses_the_flat_robotics_payload(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            package_dir = Path(temp_dir) / "superdex" / "physics"
-            native_dir = Path(temp_dir) / "superdex" / "robotics" / "_native"
+            # Resolve the base: loader resolves __file__, which canonicalizes
+            # symlinks such as /var -> /private/var on macOS.
+            base = Path(temp_dir).resolve()
+            package_dir = base / "superdex" / "physics"
+            native_dir = base / "superdex" / "robotics" / "_native"
             native_dir.mkdir(parents=True)
 
             with (
@@ -216,10 +222,13 @@ class LoaderTest(unittest.TestCase):
         """A wheel install must not be diverted by a stray site-packages candidate."""
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            package_dir = Path(temp_dir) / "superdex" / "physics"
+            # Resolve the base: loader resolves __file__, which canonicalizes
+            # symlinks such as /var -> /private/var on macOS.
+            base = Path(temp_dir).resolve()
+            package_dir = base / "superdex" / "physics"
             native_dir = package_dir / "_native"
             native_dir.mkdir(parents=True)
-            site_packages = Path(temp_dir) / "site-packages"
+            site_packages = base / "site-packages"
             (site_packages / "superdex" / "physics" / "_native").mkdir(parents=True)
 
             with (
