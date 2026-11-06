@@ -189,15 +189,28 @@ tetrahedral mesh; make one in the Model Editor with the
 [Tetrahedralize](./model_editor.mdx#tetrahedralize) modifier followed by **Export
 Collision Model**, for example via the **STEP to Soft Mochi Model** preset.
 
-Soft actors have no render model slot. What you see is the simulated model,
-drawn with the mesh a renderer would use: its visual mesh when that mesh has a
-deformation embedding, otherwise its contact skin, otherwise the surface of its tetrahedral mesh.
-**Rendered As** in Actor Details says which. The
-[**Collision Only**](./user_interface.mdx#view-modes) view (`2`) shows what the
-actor collides with: its contact skin when it has one and **Use Contact Skin**
-is on, otherwise its surface. The Model Editor's
+What you see is the simulated model, drawn with the mesh a renderer would use:
+its visual mesh when that mesh has a deformation embedding, otherwise its
+contact skin, otherwise the surface of its tetrahedral mesh. **Rendered As** in
+Actor Details says which. The [**Collision Only**](./user_interface.mdx#view-modes)
+view (`2`) shows what the actor collides with: its contact skin when it has one
+and **Use Contact Skin** is on, otherwise its surface. The Model Editor's
 [Embed modifiers](./model_editor.mdx#embed-contact-skin-embed-visual-mesh) make
 a contact skin and a visual mesh.
+
+Like a rigid, a soft actor has a **Render Model** slot, whose transform is
+linked to the collision model's. A render model is drawn, deformed with its
+own materials and textures, only when it *is* the collision model's visual
+mesh: the same vertices in the GLB's vertex order and the same
+indexed triangles, placed where the visual mesh is.
+Otherwise Actor Details says why it is not drawn, and the solid mesh above
+stands in. Author the visual mesh with the Model Editor's **Embed Visual Mesh**
+modifier, using **Source from Render Model** as its upstream surface. A render
+model moved, scaled, or edited after authoring is reported until the visual
+mesh is regenerated. The render model must be a binary GLB with embedded
+buffers, containing one mesh node with one triangle-list primitive. Skins, morph targets, GPU instancing,
+material variants, animation of the mesh hierarchy, and texture-coordinate
+sets other than `TEXCOORD_0` are not supported; Actor Details names the reason.
 
 Soft actors also carry their own material, separate from the contact
 parameters, and three behavior toggles worth knowing: **Has Gravity**, **Has
