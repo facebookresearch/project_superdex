@@ -134,7 +134,8 @@ class ResourceManager {
   ResourceManager(filament::Engine* engine, mochi::CoordinateSpaceConverter* spaceConverter);
   filament::gltfio::FilamentAsset* LoadFilamentGltfAsset(
       utils::Path const& filename,
-      FilamentInstanceVector& instances) const;
+      FilamentInstanceVector& instances,
+      size_t& glbHash) const;
   filament::gltfio::FilamentAsset* LoadFilamentGltfAssetFromBuffer(
       std::vector<uint8_t> const& glbData,
       FilamentInstanceVector& instances) const;

@@ -18,13 +18,18 @@
 
 #include <mochi_renderer/camera.h>
 #include <mochi_renderer/debug.h>
+#include <mochi_renderer/deformable_model_instance.h>
 #include <mochi_renderer/mochi_renderer.h>
 #include <mochi_renderer/resource.h>
 #include <mochi_renderer/resource_manager.h>
 #include <mochi_renderer/scene.h>
 #include <mochi_renderer/types.h>
+#include <mochi_renderer/utils.h>
 
 #include <mochi_core/test/log_suppression.h>
+#include <mochi_core/test/mochi_test_helpers.h>
+#include <mochi_core/utils/defer.h>
+#include <mochi_core/utils/file_utils.h>
 
 #include <gtest/gtest.h>
 
@@ -33,9 +38,13 @@
 
 #include <array>
 #include <cmath>
+#include <cstdint>
+#include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <optional>
+#include <string>
 #include <vector>
 
 #include "test_assets.h"
@@ -676,6 +685,153 @@ TEST(GlbRenderTest, DynamicInstancingNewInstanceUsesUpdatedGeometry) {
   ASSERT_NE(second, nullptr);
   EXPECT_TRUE(BoxesNearEqual(second->GetAABB(), updatedFirstBounds, 0.1f))
       << "Instance created after UpdateGeometry rendered stale (original) geometry.";
+}
+
+// The rest pose moved by @p offset, with recomputed normals, as SetVertices takes it.
+static void TranslatedMesh(
+    DeformableMeshView mesh,
+    filament::math::float3 offset,
+    std::vector<float>& positions,
+    std::vector<float>& normals) {
+  positions.assign(mesh.restPositions.begin(), mesh.restPositions.end());
+  for (size_t i = 0; i < positions.size(); ++i) {
+    positions[i] += offset[i % 3];
+  }
+  std::vector<int> const indices{mesh.triangleIndices.begin(), mesh.triangleIndices.end()};
+  ComputeVertexNormalsAreaWeighted(positions, indices, normals);
+}
+
+TEST(DeformableModelTest, InstancesFollowSetVerticesAndCopiesStartAtTheirPose) {
+  SKIP_IF_NO_GPU();
+  std::string const glbPath = test::GetTestAssetPath("basic_shapes/Cube.glb");
+  auto renderer = MochiRenderer::Create();
+  RenderModel* const model = renderer->GetResourceManager()->LoadRenderModel(glbPath);
+  ASSERT_NE(model, nullptr);
+  auto mesh = model->GetDeformableMesh(mochi::test::ExpectOK{});
+  ASSERT_TRUE(mesh.has_value());
+
+  std::unique_ptr<DeformableModelInstance> const instance =
+      model->GetDeformableInstance(mochi::test::ExpectOK{});
+  ASSERT_NE(instance, nullptr);
+  EXPECT_EQ(instance->GetVertexCount(), mesh->restPositions.size() / 3);
+  filament::Box const rest = instance->GetAABB();
+
+  std::vector<float> positions;
+  std::vector<float> normals;
+  TranslatedMesh(*mesh, {5.0f, 0.0f, 0.0f}, positions, normals);
+  instance->SetVertices(mochi::MakeConstSpan(positions), mochi::MakeConstSpan(normals));
+  EXPECT_NEAR(instance->GetAABB().center.x, rest.center.x + 5.0f, 1e-3f);
+
+  // A copy (a highlight stand-in) starts at the deformed pose, then has vertices of its own.
+  std::unique_ptr<SceneObject> const copy = instance->GetInstanceable()->GetInstance();
+  ASSERT_NE(copy, nullptr);
+  DeformableModelInstance* const deformableCopy = copy->AsDeformableModelInstance();
+  ASSERT_NE(deformableCopy, nullptr);
+  filament::Box const deformed = instance->GetAABB();
+  EXPECT_TRUE(BoxesNearEqual(copy->GetAABB(), deformed, 1e-3f));
+  TranslatedMesh(*mesh, {0.0f, -3.0f, 0.0f}, positions, normals);
+  deformableCopy->SetVertices(mochi::MakeConstSpan(positions), mochi::MakeConstSpan(normals));
+  EXPECT_NEAR(copy->GetAABB().center.y, rest.center.y - 3.0f, 1e-3f);
+  EXPECT_TRUE(BoxesNearEqual(instance->GetAABB(), deformed, 1e-3f));
+}
+
+TEST(DeformableModelTest, LeavesRigidInstancesOfTheSameFileUntouched) {
+  SKIP_IF_NO_GPU();
+  std::string const glbPath = test::GetTestAssetPath("basic_shapes/Cube.glb");
+  auto renderer = MochiRenderer::Create();
+  RenderModel* const rigidModel = renderer->GetResourceManager()->LoadRenderModel(glbPath);
+  ASSERT_NE(rigidModel, nullptr);
+  std::unique_ptr<SceneObject> const rigid = rigidModel->GetInstance();
+  filament::Box const rigidBounds = rigid->GetAABB();
+
+  auto mesh = rigidModel->GetDeformableMesh(mochi::test::ExpectOK{});
+  ASSERT_TRUE(mesh.has_value());
+  std::unique_ptr<DeformableModelInstance> const instance =
+      rigidModel->GetDeformableInstance(mochi::test::ExpectOK{});
+  ASSERT_NE(instance, nullptr);
+  std::vector<float> positions;
+  std::vector<float> normals;
+  TranslatedMesh(*mesh, {5.0f, 0.0f, 0.0f}, positions, normals);
+  instance->SetVertices(mochi::MakeConstSpan(positions), mochi::MakeConstSpan(normals));
+
+  EXPECT_TRUE(BoxesNearEqual(rigid->GetAABB(), rigidBounds, 1e-4f));
+  EXPECT_TRUE(BoxesNearEqual(rigidModel->GetInstance()->GetAABB(), rigidBounds, 1e-4f));
+}
+
+TEST(DeformableModelTest, RendersDeformedInstance) {
+  SKIP_IF_NO_GPU();
+  std::string const glbPath = test::GetTestAssetPath("basic_shapes/Cube.glb");
+  auto renderer = MochiRenderer::Create();
+  RenderModel* const model = renderer->GetResourceManager()->LoadRenderModel(glbPath);
+  ASSERT_NE(model, nullptr);
+  auto mesh = model->GetDeformableMesh(mochi::test::ExpectOK{});
+  ASSERT_TRUE(mesh.has_value());
+  std::unique_ptr<DeformableModelInstance> instance =
+      model->GetDeformableInstance(mochi::test::ExpectOK{});
+  ASSERT_NE(instance, nullptr);
+  std::vector<float> positions;
+  std::vector<float> normals;
+  TranslatedMesh(*mesh, {0.0f, 0.0f, 0.0f}, positions, normals);
+  instance->SetVertices(mochi::MakeConstSpan(positions), mochi::MakeConstSpan(normals));
+  auto* scene = renderer->GetScene();
+  scene->CreateSunlight();
+  scene->CreateIndirectLight();
+  // The scene owns the instance, which must go before the model does.
+  SceneObject* const staged = scene->AddSceneObjectToScene(std::move(instance));
+  MOCHI_DEFER(scene->DestroySceneObject(staged));
+  auto* cam = renderer->CreateObservationCamera("deformable_cam", 128, 128);
+  ASSERT_NE(cam, nullptr);
+  cam->LookAt({3.0, 3.0, 3.0}, {0, 0, 0});
+
+  auto results = renderer->RenderAndReadback({"deformable_cam"});
+  ASSERT_TRUE(results.contains("deformable_cam"));
+  auto centroid = FindColorCentroid(results["deformable_cam"], IsNonBlackPixel);
+  ASSERT_TRUE(centroid.has_value()) << "The deformable model was not rendered";
+  EXPECT_GT(centroid->count, 10);
+}
+
+namespace {
+
+// A GLB file holding a triangle whose primitive has a TEXCOORD_1, which deformation rejects.
+mochi::TempFileCleanup WriteTexcoord1TriangleGlb() {
+  std::vector<float> const positions = {-1, -1, 0, 1, -1, 0, 0, 1, 0};
+  std::vector<float> const texcoords = {0, 0, 1, 0, 0, 1};
+  std::vector<uint8_t> bin((positions.size() + texcoords.size()) * sizeof(float));
+  std::memcpy(bin.data(), positions.data(), positions.size() * sizeof(float));
+  std::memcpy(
+      bin.data() + positions.size() * sizeof(float),
+      texcoords.data(),
+      texcoords.size() * sizeof(float));
+  std::vector<uint8_t> const glb = test::AssembleGlb(
+      R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],"nodes":[{"mesh":0}],)"
+      R"("meshes":[{"primitives":[{"attributes":{"POSITION":0,"TEXCOORD_1":1}}]}],)"
+      R"("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+      R"("min":[-1,-1,0],"max":[1,1,0]},)"
+      R"({"bufferView":1,"componentType":5126,"count":3,"type":"VEC2"}],)"
+      R"("bufferViews":[{"buffer":0,"byteLength":36},)"
+      R"({"buffer":0,"byteOffset":36,"byteLength":24}],"buffers":[{"byteLength":60}]})",
+      std::move(bin));
+  mochi::TempFileCleanup file =
+      mochi::CreateTempFile("deformable", ".glb", mochi::test::ExpectOK{});
+  std::ofstream(file.Path(), std::ios::binary)
+      .write(reinterpret_cast<char const*>(glb.data()), static_cast<std::streamsize>(glb.size()));
+  return file;
+}
+
+} // namespace
+
+TEST(DeformableModelTest, UnsupportedDeformationStillLoadsRigidly) {
+  SKIP_IF_NO_GPU();
+  mochi::TempFileCleanup const file = WriteTexcoord1TriangleGlb();
+  auto renderer = MochiRenderer::Create();
+  RenderModel* const model = renderer->GetResourceManager()->LoadRenderModel(file.Path().string());
+  ASSERT_NE(model, nullptr);
+  EXPECT_NE(model->GetInstance(), nullptr);
+  mochi::Error error;
+  EXPECT_EQ(model->GetDeformableInstance(error), nullptr);
+  EXPECT_STREQ(
+      error.GetDescription(),
+      "The GLB's primitive has a texture-coordinate set other than TEXCOORD_0.");
 }
 
 TEST(GlbRenderTest, RenderGlbProducesPixels) {

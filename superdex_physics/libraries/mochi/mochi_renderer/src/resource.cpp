@@ -92,9 +92,11 @@ RenderModel::RenderModel(
     : Resource(engine, name, path, ResourceType::RenderModel), _originalFormat(originalFormat) {}
 
 RenderModel::~RenderModel() {
+  // Destroying the asset destroys its renderables, which may draw the deformable buffers.
   if (_assetLoader && _primaryAsset) {
     _assetLoader->destroyAsset(_primaryAsset);
   }
+  _deformation.reset();
   if (_ownedVertexBuffer) {
     _engine->destroy(_ownedVertexBuffer);
   }
@@ -141,8 +143,10 @@ void RenderModel::ApplyGeometryToInstance(filament::gltfio::FilamentInstance* in
   }
 }
 
-filament::gltfio::FilamentInstance* RenderModel::CreateNewInstance() {
-  if (static_cast<int>(_instances.size()) >= _maxInstances) {
+filament::gltfio::FilamentInstance* RenderModel::CreateConfiguredInstance() {
+  // gltfio cannot destroy single instances, so the cap counts every allocated one. Both pools
+  // reuse released instances before allocating more, so their sizes stay at their peak use.
+  if (static_cast<int>(_instances.size()) + GetDeformableSlotCount() >= _maxInstances) {
     MOCHI_LOG_ERROR(
         "RenderModel '%s' reached its instance cap (%d); cannot create more instances.",
         GetName().c_str(),
@@ -155,6 +159,14 @@ filament::gltfio::FilamentInstance* RenderModel::CreateNewInstance() {
     return nullptr;
   }
   ConfigureInstance(instance);
+  return instance;
+}
+
+filament::gltfio::FilamentInstance* RenderModel::CreateNewInstance() {
+  auto* instance = CreateConfiguredInstance();
+  if (!instance) {
+    return nullptr;
+  }
   // If UpdateGeometry() has replaced the model's geometry, re-point this freshly created instance
   // at the current override so it matches the rest of the pool instead of reverting to the
   // original glTF mesh.
@@ -221,6 +233,13 @@ std::unique_ptr<SceneObject> RenderModel::GetInstance() {
   }
   _instanceInUse[slot] = true;
   auto* instance = _instances[slot];
+  ResetInstanceState(instance);
+  auto ret = CreateInstanceObject(instance, slot);
+  ret->SetName(GetName());
+  return ret;
+}
+
+void RenderModel::ResetInstanceState(filament::gltfio::FilamentInstance* instance) const {
   auto& tm = _engine->getTransformManager();
   auto ti = tm.getInstance(instance->getRoot());
   tm.setParent(ti, {});
@@ -237,10 +256,6 @@ std::unique_ptr<SceneObject> RenderModel::GetInstance() {
     rcm.setReceiveShadows(ri, true);
     rcm.setLayerMask(ri, 0xFF, 0x01);
   }
-
-  auto ret = CreateInstanceObject(instance, slot);
-  ret->SetName(GetName());
-  return ret;
 }
 
 std::unique_ptr<RenderModelInstance> RenderModel::CreateInstanceObject(
@@ -277,6 +292,15 @@ void RenderModel::UpdateGeometry(
     mochi::Span<float const> positions,
     mochi::Span<float const> normals,
     mochi::Span<int const> indices) {
+  // Released deformable slots keep their buffers until the model is destroyed. Once the geometry is
+  // replaced, GetDeformableMesh refuses, so they are never handed out again.
+  if (GetDeformableInstanceCount() > 0) {
+    MOCHI_LOG_ERROR(
+        "RenderModel '%s' has deformable instances checked out; UpdateGeometry cannot replace its "
+        "geometry until they are released.",
+        GetName().c_str());
+    return;
+  }
   if (positions.empty() || indices.empty()) {
     MOCHI_LOG_ERROR("RenderModel::UpdateGeometry called with empty geometry.");
     return;

@@ -17,6 +17,7 @@
 #include <mochi_renderer/utils.h>
 
 #include "collada_reader.h"
+#include "deformable_source.h"
 #include "third_party/stl_reader.h"
 
 #include <mochi_core/utils/coordinate_space_converter.h>
@@ -31,6 +32,7 @@
 #include <tinyxml2.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -40,12 +42,14 @@
 #include <exception>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iterator>
 #include <limits>
 #include <memory>
 #include <numbers>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -400,8 +404,7 @@ std::vector<uint8_t> BuildGlbFromMeshSections(std::vector<MeshSection> const& se
 // cgltf_accessor_unpack_floats then silently zero-fills. Both extensions are
 // resolved below, before extraction, by populating whatever
 // cgltf_buffer_view_data returns, so the extraction code needs no knowledge of
-// compression. This mirrors Filament's gltfio, keeping the renderer's glTF path
-// and this one behaviorally aligned.
+// compression.
 
 namespace {
 
@@ -755,10 +758,12 @@ ExtractImage(cgltf_image const* image, char const* gltfPath, ImageCache& cache) 
 }
 
 // Builds a MeshSection from a single triangle primitive, or nullopt if the
-// primitive is not a usable triangle mesh (non-triangle, missing POSITION, or
-// empty geometry). Assumes cgltf_load_buffers has already populated buffer data.
+// primitive is not a usable triangle mesh (non-triangle, missing POSITION,
+// empty geometry, or indices that are not whole triangles of existing vertices).
+// Material properties are read only when `images` is non-null. Assumes
+// cgltf_load_buffers has already populated buffer data.
 static std::optional<MeshSection>
-ExtractPrimitive(cgltf_primitive const& prim, char const* gltfPath, ImageCache& images) {
+ExtractPrimitive(cgltf_primitive const& prim, char const* gltfPath, ImageCache* images) {
   static_assert(sizeof(int) == 4, "cgltf index unpack requires 32-bit int");
 
   if (prim.type != cgltf_primitive_type_triangles) {
@@ -821,7 +826,7 @@ ExtractPrimitive(cgltf_primitive const& prim, char const* gltfPath, ImageCache& 
     }
   }
 
-  if (prim.material != nullptr) {
+  if (prim.material != nullptr && images != nullptr) {
     if (prim.material->has_pbr_metallic_roughness) {
       cgltf_pbr_metallic_roughness const& pbr = prim.material->pbr_metallic_roughness;
       section.baseColor = {
@@ -833,7 +838,7 @@ ExtractPrimitive(cgltf_primitive const& prim, char const* gltfPath, ImageCache& 
       section.roughness = pbr.roughness_factor;
       if (pbr.base_color_texture.texture != nullptr) {
         section.baseColorTexture =
-            ExtractImage(pbr.base_color_texture.texture->image, gltfPath, images);
+            ExtractImage(pbr.base_color_texture.texture->image, gltfPath, *images);
       }
     }
     // emissiveFactor sits on the material itself, not under pbrMetallicRoughness, so it is read
@@ -847,7 +852,11 @@ ExtractPrimitive(cgltf_primitive const& prim, char const* gltfPath, ImageCache& 
     }
   }
 
-  if (section.positions.empty() || section.indices.empty()) {
+  if (section.positions.empty() || section.indices.empty() || section.indices.size() % 3 != 0 ||
+      std::any_of(section.indices.begin(), section.indices.end(), [&](int index) {
+        return index < 0 || static_cast<cgltf_size>(index) >= vertexCount;
+      })) {
+    MOCHI_LOG_WARNING("ReadGlb: triangle primitive has invalid geometry.");
     return std::nullopt;
   }
   return section;
@@ -905,7 +914,7 @@ static std::vector<MeshSection> ExtractSections(cgltf_data const& data, char con
     cgltf_node_transform_world(&node, world);
     for (cgltf_size p = 0; p < node.mesh->primitives_count; ++p) {
       std::optional<MeshSection> section =
-          ExtractPrimitive(node.mesh->primitives[p], gltfPath, images);
+          ExtractPrimitive(node.mesh->primitives[p], gltfPath, &images);
       if (section.has_value()) {
         ApplyWorldTransform(*section, world);
         sections.push_back(std::move(*section));
@@ -918,7 +927,8 @@ static std::vector<MeshSection> ExtractSections(cgltf_data const& data, char con
     for (cgltf_size m = 0; m < data.meshes_count; ++m) {
       cgltf_mesh const& mesh = data.meshes[m];
       for (cgltf_size p = 0; p < mesh.primitives_count; ++p) {
-        std::optional<MeshSection> section = ExtractPrimitive(mesh.primitives[p], gltfPath, images);
+        std::optional<MeshSection> section =
+            ExtractPrimitive(mesh.primitives[p], gltfPath, &images);
         if (section.has_value()) {
           sections.push_back(std::move(*section));
         }
@@ -928,10 +938,129 @@ static std::vector<MeshSection> ExtractSections(cgltf_data const& data, char con
   return sections;
 }
 
-// Parses `data`/`size` as a GLB blob and extracts sections. `path` (may be null)
-// is forwarded to cgltf_load_buffers so external .bin buffers resolve relative
-// to the source file; pass null for self-contained embedded-GLB bytes.
-static std::vector<MeshSection> ReadGlbImpl(uint8_t const* data, size_t size, char const* path) {
+// COLOR_0 of @p prim as RGBA, or empty if the primitive lacks it or it holds a different vertex
+// count. An RGB COLOR_0 gets an opaque alpha.
+static std::vector<float> UnpackColors(cgltf_primitive const& prim, size_t vertexCount) {
+  for (cgltf_size a = 0; a < prim.attributes_count; ++a) {
+    cgltf_attribute const& attr = prim.attributes[a];
+    if (attr.type != cgltf_attribute_type_color || attr.index != 0 || attr.data == nullptr ||
+        attr.data->count != vertexCount) {
+      continue;
+    }
+    size_t const stored = cgltf_num_components(attr.data->type);
+    std::vector<float> values(vertexCount * stored);
+    cgltf_accessor_unpack_floats(attr.data, values.data(), values.size());
+    if (stored == 4) {
+      return values;
+    }
+    if (stored == 3) {
+      std::vector<float> padded(vertexCount * 4, 1.0f);
+      for (size_t v = 0; v < vertexCount; ++v) {
+        std::copy_n(&values[3 * v], 3, &padded[4 * v]);
+      }
+      return padded;
+    }
+  }
+  return {};
+}
+
+static bool IsAncestorOrSelf(cgltf_node const* ancestor, cgltf_node const* node) {
+  for (; node != nullptr; node = node->parent) {
+    if (node == ancestor) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static DeformableSourceData ExtractDeformableSource(cgltf_data const& data, char const* /*path*/) {
+  DeformableSourceData result;
+  cgltf_node const* meshNode = nullptr;
+  for (cgltf_size i = 0; i < data.nodes_count; ++i) {
+    if (data.nodes[i].mesh == nullptr) {
+      continue;
+    }
+    if (meshNode != nullptr) {
+      result.error = "The GLB has more than one node with a mesh.";
+      return result;
+    }
+    meshNode = &data.nodes[i];
+  }
+  if (meshNode == nullptr) {
+    result.error = "The GLB has no node with a mesh.";
+    return result;
+  }
+  if (meshNode->mesh->primitives_count != 1) {
+    result.error = "The GLB's mesh does not have exactly one primitive.";
+    return result;
+  }
+  cgltf_primitive const& primitive = meshNode->mesh->primitives[0];
+  if (primitive.type != cgltf_primitive_type_triangles) {
+    result.error = "The GLB's primitive is not a triangle list.";
+    return result;
+  }
+  if (meshNode->skin != nullptr) {
+    result.error = "The GLB's mesh is skinned.";
+    return result;
+  }
+  if (primitive.targets_count != 0) {
+    result.error = "The GLB's primitive has morph targets.";
+    return result;
+  }
+  if (meshNode->has_mesh_gpu_instancing) {
+    result.error = "The GLB's mesh uses GPU instancing.";
+    return result;
+  }
+  if (data.variants_count != 0 || primitive.mappings_count != 0) {
+    result.error = "The GLB has material variants.";
+    return result;
+  }
+  for (cgltf_size a = 0; a < primitive.attributes_count; ++a) {
+    cgltf_attribute const& attribute = primitive.attributes[a];
+    if (attribute.type == cgltf_attribute_type_texcoord && attribute.index != 0) {
+      result.error = "The GLB's primitive has a texture-coordinate set other than TEXCOORD_0.";
+      return result;
+    }
+  }
+  for (cgltf_size a = 0; a < data.animations_count; ++a) {
+    cgltf_animation const& animation = data.animations[a];
+    for (cgltf_size c = 0; c < animation.channels_count; ++c) {
+      if (IsAncestorOrSelf(animation.channels[c].target_node, meshNode)) {
+        result.error = "The GLB animates its mesh node or one of its ancestors.";
+        return result;
+      }
+    }
+  }
+  for (cgltf_size b = 0; b < data.buffers_count; ++b) {
+    char const* const uri = data.buffers[b].uri;
+    if (uri != nullptr && std::strncmp(uri, "data:", 5) != 0) {
+      result.error = "The GLB references an external buffer file.";
+      return result;
+    }
+  }
+
+  std::optional<MeshSection> section = ExtractPrimitive(primitive, nullptr, nullptr);
+  if (!section.has_value()) {
+    result.error = "The GLB's primitive geometry is invalid.";
+    return result;
+  }
+  size_t const vertexCount = section->positions.size() / 3;
+  result.positions = std::move(section->positions);
+  result.normals = std::move(section->normals);
+  result.texcoords = std::move(section->texcoords);
+  result.indices = std::move(section->indices);
+  result.colors = UnpackColors(primitive, vertexCount);
+  cgltf_node_transform_world(meshNode, result.rootFromNode.data());
+  return result;
+}
+
+// Parses `data`/`size` as a GLB blob and passes the parsed asset and `path` to
+// `extract`. `path` (may be null) resolves external .bin buffers (through
+// cgltf_load_buffers) and images relative to the source file; pass null for
+// self-contained embedded-GLB bytes. Returns an empty result on failure.
+template <typename Extract>
+static auto ReadGlbImpl(uint8_t const* data, size_t size, char const* path, Extract&& extract)
+    -> decltype(extract(std::declval<cgltf_data const&>(), path)) {
   if (data == nullptr || size == 0) {
     return {};
   }
@@ -946,23 +1075,24 @@ static std::vector<MeshSection> ReadGlbImpl(uint8_t const* data, size_t size, ch
     MOCHI_LOG_WARNING("ReadGlb: failed to load GLB buffers.");
     return {};
   }
-  // Must outlive ExtractSections, which reads through the accessors these
-  // streams back; it copies everything into MeshSection, so scoping them here
-  // is enough.
+  if (cgltf_validate(parsed) != cgltf_result_success) {
+    MOCHI_LOG_WARNING("ReadGlb: GLB validation failed.");
+    return {};
+  }
+  // Must outlive `extract`, which reads through the accessors these streams
+  // back; it copies everything out, so scoping them here is enough.
   DecodedStreams dracoStreams;
   if (!DecodeMeshoptBufferViews(*parsed) || !DecodeDracoMeshes(*parsed, dracoStreams)) {
     return {};
   }
-  return ExtractSections(*parsed, path);
+  return extract(*parsed, path);
 }
 
-std::vector<MeshSection> ReadGlbFromFile(char const* path) {
-  if (path == nullptr) {
-    return {};
-  }
+// Reads the whole file at @p path, or returns an empty buffer (with a warning naming @p reader).
+static std::vector<uint8_t> ReadFileBytes(char const* path, char const* reader) {
   std::ifstream in(path, std::ios::binary | std::ios::ate);
   if (!in) {
-    MOCHI_LOG_WARNING("ReadGlbFromFile: failed to open '%s'.", path);
+    MOCHI_LOG_WARNING("%s: failed to open '%s'.", reader, path);
     return {};
   }
   std::streamsize const size = in.tellg();
@@ -972,10 +1102,49 @@ std::vector<MeshSection> ReadGlbFromFile(char const* path) {
   in.seekg(0);
   std::vector<uint8_t> buffer(static_cast<size_t>(size));
   if (!in.read(reinterpret_cast<char*>(buffer.data()), size)) {
-    MOCHI_LOG_WARNING("ReadGlbFromFile: failed to read '%s'.", path);
+    MOCHI_LOG_WARNING("%s: failed to read '%s'.", reader, path);
     return {};
   }
-  return ReadGlbImpl(buffer.data(), buffer.size(), path);
+  return buffer;
+}
+
+std::vector<MeshSection> ReadGlbFromFile(char const* path) {
+  if (path == nullptr) {
+    return {};
+  }
+  std::vector<uint8_t> const buffer = ReadFileBytes(path, "ReadGlbFromFile");
+  return ReadGlbImpl(buffer.data(), buffer.size(), path, ExtractSections);
+}
+
+size_t HashGlbBytes(mochi::Span<uint8_t const> bytes) {
+  return std::hash<std::string_view>{}(
+      std::string_view(reinterpret_cast<char const*>(bytes.data()), bytes.size()));
+}
+
+DeformableSourceData ReadDeformableGlb(char const* path, size_t expectedHash) {
+  std::vector<uint8_t> const glb = ReadFileBytes(path, "ReadDeformableGlb");
+  if (glb.empty()) {
+    return {.error = "The GLB file could not be read."};
+  }
+  if (HashGlbBytes(mochi::MakeConstSpan(glb)) != expectedHash) {
+    return {
+        .error =
+            "The GLB file has changed since the render model was loaded; load it again to "
+            "deform it."};
+  }
+  constexpr uint32_t kGlbMagic = 0x46546C67; // "glTF"
+  uint32_t magic = 0;
+  if (glb.size() >= sizeof(magic)) {
+    std::memcpy(&magic, glb.data(), sizeof(magic));
+  }
+  if (magic != kGlbMagic) {
+    return {.error = "Only binary GLB files can be deformed."};
+  }
+  DeformableSourceData result = ReadGlbImpl(glb.data(), glb.size(), path, ExtractDeformableSource);
+  if (result.error == nullptr && !result.IsSupported()) {
+    result.error = "The GLB's data could not be read; the log says why.";
+  }
+  return result;
 }
 
 std::vector<MeshSection> ReadColladaFromFile(char const* path) {

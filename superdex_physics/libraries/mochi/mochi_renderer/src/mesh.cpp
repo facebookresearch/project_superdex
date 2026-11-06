@@ -18,6 +18,8 @@
 
 #include <mochi_renderer/mesh.h>
 
+#include "mesh_buffers.h"
+
 #include <filament/IndexBuffer.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
@@ -82,10 +84,7 @@ static filament::math::short4* ComputeTangents(
   return tanCopy;
 }
 
-// Builds a UINT IndexBuffer from triangle indices.
-static filament::IndexBuffer* CreateIndexBuffer(
-    filament::Engine& engine,
-    mochi::Span<int const> indices) {
+filament::IndexBuffer* CreateIndexBuffer(filament::Engine& engine, mochi::Span<int const> indices) {
   size_t const indexCount = indices.size();
   auto* indexBuffer = filament::IndexBuffer::Builder()
                           .indexCount(static_cast<uint32_t>(indexCount))
@@ -138,7 +137,7 @@ static size_t s_meshCount = 0;
 // UTILS
 //------------------------------------------------------------------------------------------------
 
-static filament::Box ComputeBoundingBox(float const* posData, size_t vertexCount) {
+filament::Box ComputeBoundingBox(float const* posData, size_t vertexCount) {
   filament::math::float3 minPt{
       std::numeric_limits<float>::max(),
       std::numeric_limits<float>::max(),

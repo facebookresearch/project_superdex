@@ -22,6 +22,8 @@
 #include <mochi_renderer/resource_manager.h>
 #include <mochi_renderer/utils.h>
 
+#include "deformable_source.h"
+#include "gltf_asset_path.h"
 #include "materials.h"
 
 #include <filament/RenderableManager.h>
@@ -43,15 +45,13 @@
 
 namespace mochi_renderer {
 
-namespace {
-
-utils::Path GetPathForGltfAsset(std::string_view string) {
+utils::Path GetPathForGltfAsset(std::string_view path) {
   auto isGLTF = [](utils::Path file) -> bool {
     return file.getExtension() == "gltf" || file.getExtension() == "glb";
   };
 
-  MOCHI_LOG("[gltf] GetPathForGltfAsset: input = '%.*s'", (int)string.size(), string.data());
-  utils::Path filename{string};
+  MOCHI_LOG("[gltf] GetPathForGltfAsset: input = '%.*s'", (int)path.size(), path.data());
+  utils::Path filename{path};
   if (!filename.exists()) {
     MOCHI_LOG_ERROR("[gltf] File not found: %s", filename.c_str());
     return {};
@@ -79,6 +79,8 @@ utils::Path GetPathForGltfAsset(std::string_view string) {
   MOCHI_LOG("[gltf] Resolved glTF path: %s", filename.c_str());
   return filename;
 }
+
+namespace {
 
 std::ifstream::pos_type GetFileSize(char const* filename) {
   std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
@@ -427,7 +429,8 @@ RenderModel* ResourceManager::LoadGltf(mochi::Path const& path, bool async) {
       _gltfResourceLoader->asyncCancelLoad();
       _gltfResourceLoader->evictResourceData();
       FilamentInstanceVector instances;
-      if (auto* fila_asset = LoadFilamentGltfAsset(filename, instances)) {
+      size_t glbHash = 0;
+      if (auto* fila_asset = LoadFilamentGltfAsset(filename, instances, glbHash)) {
         MOCHI_LOG("[gltf] LoadFilamentGltfAsset succeeded, loading resources...");
         if (LoadFilamentGltfResources(filename, fila_asset, async)) {
           MOCHI_LOG("[gltf] LoadFilamentGltfResources succeeded for: %s", path.ToString().c_str());
@@ -444,6 +447,7 @@ RenderModel* ResourceManager::LoadGltf(mochi::Path const& path, bool async) {
           renderModel->_instances = std::move(instances);
           renderModel->_primaryAsset = fila_asset;
           renderModel->_assetLoader = _gltfAssetLoader;
+          renderModel->_glbHash = glbHash;
           renderModel->InitializeInitialInstance();
           auto* raw = renderModel.get();
           _resources[path] = std::move(renderModel);
@@ -729,7 +733,8 @@ bool ResourceManager::RewriteResourcePath(mochi::Path const& oldPath, mochi::Pat
 
 filament::gltfio::FilamentAsset* ResourceManager::LoadFilamentGltfAsset(
     utils::Path const& filename,
-    FilamentInstanceVector& instances) const {
+    FilamentInstanceVector& instances,
+    size_t& glbHash) const {
   // Peek at the file size to allow pre-allocation.
   long const contentSize = static_cast<long>(GetFileSize(filename.c_str()));
   if (contentSize <= 0) {
@@ -744,6 +749,7 @@ filament::gltfio::FilamentAsset* ResourceManager::LoadFilamentGltfAsset(
     MOCHI_LOG_ERROR("Unable to read: %s", filename.c_str());
     return nullptr;
   }
+  glbHash = HashGlbBytes(mochi::MakeConstSpan(buffer));
 
   // Create exactly one initial instance; further instances grow lazily on demand.
   instances.resize(1);

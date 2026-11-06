@@ -37,6 +37,7 @@ class MaterialInstance;
 class IInstanceable;
 class Resource;
 class SkinnedModelInstance;
+class DeformableModelInstance;
 
 // Filament renderable layer bit reserved for the highlight overlay pass. A renderable tagged with
 // this bit is additionally re-rendered into an isolated overlay target (its normal appearance in
@@ -114,6 +115,11 @@ class SceneObject {
   // RTTI-free downcast: returns this as a SkinnedModelInstance when the object is a GPU-skinned
   // render model (so callers holding a base SceneObject can drive its joints), else nullptr.
   virtual SkinnedModelInstance* AsSkinnedModelInstance() {
+    return nullptr;
+  }
+  // RTTI-free downcast: returns this as a DeformableModelInstance when the object is a render model
+  // whose vertices the caller sets, else nullptr.
+  virtual DeformableModelInstance* AsDeformableModelInstance() {
     return nullptr;
   }
 

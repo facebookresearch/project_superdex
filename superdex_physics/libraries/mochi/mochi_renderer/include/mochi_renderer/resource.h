@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <mochi_renderer/deformable_mesh.h>
 #include <mochi_renderer/path.h>
 #include <mochi_renderer/scene_object.h>
 
@@ -28,11 +29,17 @@
 #include <mochi_core/utils/transform_rt.h>
 
 #include <algorithm>
+#include <optional>
 #include <vector>
+
+namespace mochi {
+class Error;
+} // namespace mochi
 
 namespace mochi_renderer {
 
 class ResourceManager;
+class DeformableModelInstance;
 
 //--------------------------------------------------------------------------------------------------
 // INSTANCEABLE
@@ -103,7 +110,8 @@ class RenderModel : public Resource, public IInstanceable {
   int GetInstanceCount() const override;
   RenderModelFormat GetOriginalFormat() const;
 
-  // Soft cap on the number of concurrently allocated instances for this model.
+  // Soft cap on the number of concurrently allocated instances for this model, including
+  // deformable ones.
   int GetMaxInstances() const;
   void SetMaxInstances(int max);
 
@@ -115,6 +123,20 @@ class RenderModel : public Resource, public IInstanceable {
       mochi::Span<float const> positions,
       mochi::Span<float const> normals,
       mochi::Span<int const> indices);
+
+  // The rest mesh accepted by this model's independently deformable instances, in the model root's
+  // local frame. Only a model loaded from a binary GLB file that embeds its buffers is deformable,
+  // and only when the GLB has exactly one node with a mesh, whose one primitive is a triangle list
+  // without skinning, morph targets, GPU instancing, material variants, animation of the node or
+  // its ancestors, or texture-coordinate sets other than TEXCOORD_0. The first call reads and
+  // decodes the file again, which must still hold the bytes that were loaded. Fails after
+  // UpdateGeometry has replaced the model's geometry. The spans remain valid until the model is
+  // unloaded.
+  std::optional<DeformableMeshView> GetDeformableMesh(mochi::Error& error);
+  // An instance whose vertices the caller sets, drawn with this model's materials and transforms.
+  // Fails when GetDeformableMesh does, or when no instance is available (see GetMaxInstances).
+  // While any is checked out, UpdateGeometry is refused.
+  std::unique_ptr<DeformableModelInstance> GetDeformableInstance(mochi::Error& error);
 
  protected:
   friend class ResourceManager;
@@ -132,10 +154,20 @@ class RenderModel : public Resource, public IInstanceable {
       int instanceIndex);
 
  private:
+  class DeformationState;
+  struct DeformationStateDeleter {
+    void operator()(DeformationState* state) const;
+  };
+
   // Creates a new FilamentInstance on demand and appends it to the pool. Returns nullptr if the
   // soft cap is reached or gltfio fails. Runs on the main engine thread (same assumption as
   // GetInstance()); a mutex could be added later if cross-thread access is ever required.
   filament::gltfio::FilamentInstance* CreateNewInstance();
+  // Creates and configures a FilamentInstance outside the pool, logging why when the soft cap is
+  // reached or gltfio fails.
+  filament::gltfio::FilamentInstance* CreateConfiguredInstance();
+  // Returns a checked-out instance to its default placement, shadowing and layer mask.
+  void ResetInstanceState(filament::gltfio::FilamentInstance* instance) const;
   // One-time per-instance setup applied to every instance when it is created: enables stencil
   // write/INCR on the instance's own material instances and recomputes its bounding boxes.
   // Snapshot every entity's current AABB, in getEntities() order, as this instance's rest bounds.
@@ -149,8 +181,18 @@ class RenderModel : public Resource, public IInstanceable {
   // Applies the one-time setup to the initial instance (index 0) created at load time. Called by
   // ResourceManager after _primaryAsset/_assetLoader are set and resources are loaded.
   void InitializeInitialInstance();
+  void ReleaseDeformableInstance(int slot);
+  void SetDeformableVertices(
+      int slot,
+      mochi::Span<float const> positions,
+      mochi::Span<float const> normals);
+  void CopyDeformableVertices(int from, int to);
+  int GetDeformableVertexCount() const;
+  int GetDeformableInstanceCount() const;
+  int GetDeformableSlotCount() const;
 
   friend class RenderModelInstance;
+  friend class DeformableModelInstance;
   RenderModelFormat _originalFormat;
 
   filament::gltfio::FilamentAsset* _primaryAsset = nullptr;
@@ -168,6 +210,11 @@ class RenderModel : public Resource, public IInstanceable {
   filament::IndexBuffer* _ownedIndexBuffer = nullptr;
   size_t _ownedIndexCount = 0;
   filament::Box _ownedBounds;
+  // Hash of the loaded GLB file's bytes; empty for a model not loaded from a glTF file.
+  std::optional<size_t> _glbHash;
+  // Created by the first GetDeformableMesh call and kept, with every slot it allocates, until the
+  // model is destroyed, so the rest mesh spans stay valid.
+  std::unique_ptr<DeformationState, DeformationStateDeleter> _deformation;
 };
 
 class RenderModelInstance : public SceneObject {
@@ -191,6 +238,9 @@ class RenderModelInstance : public SceneObject {
   // its skin joints.
   filament::gltfio::FilamentInstance* GetFilamentInstance() const {
     return _instance;
+  }
+  RenderModel* GetRenderModel() const {
+    return _model;
   }
 
  private:

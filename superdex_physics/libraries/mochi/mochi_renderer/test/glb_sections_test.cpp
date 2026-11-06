@@ -29,6 +29,7 @@
 
 #include <meshoptimizer.h>
 
+#include "deformable_source.h"
 #include "test_assets.h"
 
 #include <algorithm>
@@ -62,34 +63,7 @@ size_t CountOccurrences(std::string const& haystack, std::string const& needle) 
   return count;
 }
 
-// Assembles a GLB byte buffer from a JSON descriptor and binary chunk, applying
-// the spec-required 4-byte chunk padding (spaces for JSON, zeros for BIN).
-std::vector<uint8_t> AssembleGlb(std::string json, std::vector<uint8_t> bin) {
-  json.append((4 - (json.size() % 4)) % 4, ' ');
-  bin.insert(bin.end(), (4 - (bin.size() % 4)) % 4, uint8_t{0});
-
-  auto const jsonLen = static_cast<uint32_t>(json.size());
-  auto const binLen = static_cast<uint32_t>(bin.size());
-  auto const total = static_cast<uint32_t>(12 + 8 + jsonLen + 8 + binLen);
-
-  std::vector<uint8_t> glb;
-  glb.reserve(total);
-  auto push32 = [&](uint32_t v) {
-    uint8_t b[4];
-    std::memcpy(b, &v, 4);
-    glb.insert(glb.end(), b, b + 4);
-  };
-  push32(0x46546C67); // "glTF"
-  push32(2);
-  push32(total);
-  push32(jsonLen);
-  push32(0x4E4F534A); // "JSON"
-  glb.insert(glb.end(), json.begin(), json.end());
-  push32(binLen);
-  push32(0x004E4942); // "BIN\0"
-  glb.insert(glb.end(), bin.begin(), bin.end());
-  return glb;
-}
+using test::AssembleGlb;
 
 // Builds a GLB with a single non-indexed triangle primitive (POSITION only).
 std::vector<uint8_t> BuildNoIndexGlb(std::vector<float> const& positions) {
@@ -175,7 +149,7 @@ std::vector<uint8_t> BuildMeshoptGlb(
   json += R"(,"type":"VEC3"},{"bufferView":1,"componentType":5125,"count":)";
   json += std::to_string(indices.size());
   json += R"(,"type":"SCALAR"}],"bufferViews":[)";
-  json += R"({"buffer":0,"byteOffset":0,"byteLength":)";
+  json += R"({"buffer":1,"byteOffset":0,"byteLength":)";
   json += std::to_string(vertexCount * vertexStride);
   json += R"(,"byteStride":)";
   json += std::to_string(vertexStride);
@@ -186,7 +160,9 @@ std::vector<uint8_t> BuildMeshoptGlb(
   json += R"(,"count":)";
   json += std::to_string(vertexCount);
   json += R"(,"mode":"ATTRIBUTES"}}},)";
-  json += R"({"buffer":0,"byteOffset":0,"byteLength":)";
+  json += R"({"buffer":1,"byteOffset":)";
+  json += std::to_string(vertexCount * vertexStride);
+  json += R"(,"byteLength":)";
   json += std::to_string(indices.size() * sizeof(uint32_t));
   json += R"(,"extensions":{"EXT_meshopt_compression":{"buffer":0,"byteOffset":)";
   json += std::to_string(indexOffset);
@@ -196,7 +172,10 @@ std::vector<uint8_t> BuildMeshoptGlb(
   json += std::to_string(indices.size());
   json += R"(,"mode":"TRIANGLES"}}}],"buffers":[{"byteLength":)";
   json += std::to_string(bin.size());
-  json += R"(}]})";
+  // The uncompressed views live in a fallback buffer with no data, as the extension specifies.
+  json += R"(},{"byteLength":)";
+  json += std::to_string(vertexCount * vertexStride + indices.size() * sizeof(uint32_t));
+  json += R"(,"extensions":{"EXT_meshopt_compression":{"fallback":true}}}]})";
   return AssembleGlb(std::move(json), std::move(bin));
 }
 
@@ -504,6 +483,65 @@ TEST(GlbReaderTest, MalformedFileReturnsEmpty) {
   EXPECT_TRUE(ReadGlbFromFile(file.Path().string().c_str()).empty());
   EXPECT_TRUE(ReadGlbFromFile(nullptr).empty());
   EXPECT_TRUE(ReadGlbFromFile("/nonexistent/path/missing.glb").empty());
+}
+
+namespace {
+
+// A GLB with the given "nodes" and "meshes" JSON members, whose one accessor holds a triangle's
+// positions.
+std::vector<uint8_t> BuildTriangleGlb(std::string const& nodesAndMeshes) {
+  std::vector<float> const positions = {0, 0, 0, 1, 0, 0, 0, 1, 0};
+  std::vector<uint8_t> bin(positions.size() * sizeof(float));
+  std::memcpy(bin.data(), positions.data(), bin.size());
+  return AssembleGlb(
+      R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)" + nodesAndMeshes +
+          R"(,"accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+          R"("min":[0,0,0],"max":[1,1,0]}],)"
+          R"("bufferViews":[{"buffer":0,"byteLength":36}],"buffers":[{"byteLength":36}]})",
+      std::move(bin));
+}
+
+// The deformable source of a GLB file holding @p glb.
+DeformableSourceData ReadDeformable(std::vector<uint8_t> const& glb) {
+  mochi::TempFileCleanup const file = WriteTempGlb(glb, "glb_sections_deformable");
+  return ReadDeformableGlb(file.Path().string().c_str(), HashGlbBytes(mochi::MakeConstSpan(glb)));
+}
+
+} // namespace
+
+TEST(GlbReaderTest, DeformableSourceRejectsMultipleMeshNodes) {
+  DeformableSourceData const source = ReadDeformable(BuildTriangleGlb(
+      R"("nodes":[{"mesh":0},{"mesh":0}],)"
+      R"("meshes":[{"primitives":[{"attributes":{"POSITION":0}}]}])"));
+  EXPECT_FALSE(source.IsSupported());
+  EXPECT_STREQ(source.error, "The GLB has more than one node with a mesh.");
+}
+
+TEST(GlbReaderTest, DeformableSourceReadsOneTrianglePrimitive) {
+  std::vector<float> const positions = {0, 0, 0, 1, 0, 0, 0, 1, 0};
+  MeshSection section;
+  section.positions = positions;
+  section.indices = {0, 1, 2};
+  DeformableSourceData const source = ReadDeformable(BuildGlbFromMeshSections({section}));
+  ASSERT_TRUE(source.IsSupported()) << (source.error != nullptr ? source.error : "");
+  EXPECT_EQ(source.positions, positions);
+  EXPECT_EQ(source.indices, (std::vector<int>{0, 1, 2}));
+}
+
+TEST(GlbReaderTest, DeformableSourceRejectsMultiplePrimitives) {
+  DeformableSourceData const source = ReadDeformable(BuildTriangleGlb(
+      R"("nodes":[{"mesh":0}],)"
+      R"("meshes":[{"primitives":[{"attributes":{"POSITION":0}},{"attributes":{"POSITION":0}}]}])"));
+  EXPECT_FALSE(source.IsSupported());
+  EXPECT_STREQ(source.error, "The GLB's mesh does not have exactly one primitive.");
+}
+
+TEST(GlbReaderTest, DeformableSourceRejectsJsonGltf) {
+  std::string const gltf = R"({"asset":{"version":"2.0"}})";
+  DeformableSourceData const source =
+      ReadDeformable(std::vector<uint8_t>(gltf.begin(), gltf.end()));
+  EXPECT_FALSE(source.IsSupported());
+  EXPECT_STREQ(source.error, "Only binary GLB files can be deformed.");
 }
 
 TEST(GlbReaderTest, NoIndexPrimitiveGeneratesSequentialIndices) {

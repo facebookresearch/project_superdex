@@ -19,9 +19,12 @@
 #include <mochi_core/utils/error.h>
 #include <mochi_core/utils/path.h>
 
+#include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace mochi_renderer::test {
 
@@ -47,6 +50,35 @@ namespace mochi_renderer::test {
 // their existence check fails.
 [[nodiscard]] inline std::string GetTestAssetPath(std::string_view relativePath) {
   return GetTestAssetsDir() + std::string{relativePath};
+}
+
+// Assembles a GLB byte buffer from a JSON descriptor and binary chunk, applying
+// the spec-required 4-byte chunk padding (spaces for JSON, zeros for BIN).
+[[nodiscard]] inline std::vector<uint8_t> AssembleGlb(std::string json, std::vector<uint8_t> bin) {
+  json.append((4 - (json.size() % 4)) % 4, ' ');
+  bin.insert(bin.end(), (4 - (bin.size() % 4)) % 4, uint8_t{0});
+
+  auto const jsonLen = static_cast<uint32_t>(json.size());
+  auto const binLen = static_cast<uint32_t>(bin.size());
+  auto const total = static_cast<uint32_t>(12 + 8 + jsonLen + 8 + binLen);
+
+  std::vector<uint8_t> glb;
+  glb.reserve(total);
+  auto push32 = [&](uint32_t v) {
+    uint8_t b[4];
+    std::memcpy(b, &v, 4);
+    glb.insert(glb.end(), b, b + 4);
+  };
+  push32(0x46546C67); // "glTF"
+  push32(2);
+  push32(total);
+  push32(jsonLen);
+  push32(0x4E4F534A); // "JSON"
+  glb.insert(glb.end(), json.begin(), json.end());
+  push32(binLen);
+  push32(0x004E4942); // "BIN\0"
+  glb.insert(glb.end(), bin.begin(), bin.end());
+  return glb;
 }
 
 } // namespace mochi_renderer::test
