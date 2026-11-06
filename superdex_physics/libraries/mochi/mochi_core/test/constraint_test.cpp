@@ -302,7 +302,7 @@ static ColumnVector<real, 3> SelectClosest(
     ColumnVectorView<real const, 3> valm,
     RowMatrixView<real, 3, 1, krylov::kDynamic> jac,
     real delta) {
-  auto cd = (valp - val0) * (1_r / (2_r * delta));
+  auto cd = (valp - valm) * (1_r / (2_r * delta));
   auto pd = (valp - val0) * (1_r / delta);
   auto md = (val0 - valm) * (1_r / delta);
   ColumnVector<real, 3> cdDiff = cd - jac;
