@@ -245,7 +245,9 @@ class MochiRodActorAxialStretchScene : public test::MochiSceneTestBase,
   static int constexpr kNumNodes = 9;
   static real constexpr kAxialStiffness = 1e3_r;
   static real constexpr kLinearDensity = 1_r;
-  static real constexpr kForce = 1_r;
+  // Large enough that FP32 rounding of the strain changes the implied force by well under
+  // kTightTolerance, and small enough that the small-strain estimate stays within kLooseTolerance.
+  static real constexpr kForce = 5_r;
   // Approximate asserts
   static real constexpr kLooseTolerance = 1e-2_r;
   // Exact asserts
@@ -338,16 +340,16 @@ TEST_P(MochiRodActorAxialStretchScene, RodActorAxialStretch) {
   }
 
   // Check the axial displacement at the end
-  DynamicArray<real> const dofValues =
-      test::GetDofValuesRelativeToInitialFrame(*_actor, _worldFromLocal, fem::kNumRodFields);
+  auto const displacements = _actor->GetDisplacements(test::ExpectOK{});
 
   // Get the displacement of the last node relative to the first node in local coordinates, which
-  // excludes the compliance of the constraint on the first node. DoF values are displacements in
-  // local coordinates.
+  // excludes the compliance of the constraint on the first node. Recentering only translates the
+  // local frame, so differences of displacements need no conversion to the initial frame, which
+  // would round them to the resolution of node positions.
   Real3 const lastNodeDisplacementLocal{
-      dofValues[4 * lastNodeIndex + 0] - dofValues[0],
-      dofValues[4 * lastNodeIndex + 1] - dofValues[1],
-      dofValues[4 * lastNodeIndex + 2] - dofValues[2]};
+      displacements[4 * lastNodeIndex + 0] - displacements[0],
+      displacements[4 * lastNodeIndex + 1] - displacements[1],
+      displacements[4 * lastNodeIndex + 2] - displacements[2]};
 
   // The displacement direction should match the local x-axis (rod axis)
   // Project the displacement onto the local x-axis to get the axial displacement
@@ -368,10 +370,11 @@ TEST_P(MochiRodActorAxialStretchScene, RodActorAxialStretch) {
       kExpectedDisplacement, actualDisplacement, kLooseTolerance * Abs(kExpectedDisplacement));
 
   // Stretch should satisfy this exactly for the Green--Lagrange-strain-based St. Venant--Kirchhoff
-  // constitutive model, so it uses the "tight" tolerance.
-  real const actualLength = kLength + actualDisplacement;
-  real const stretchRatio = actualLength / kLength;
-  real const glStrain = 0.5_r * (Sqr(stretchRatio) - 1_r);
+  // constitutive model, so it uses the "tight" tolerance. The Green--Lagrange strain
+  // (stretchRatio² - 1) / 2 is expanded in the engineering strain to avoid cancellation.
+  real const engineeringStrain = actualDisplacement / kLength;
+  real const stretchRatio = 1_r + engineeringStrain;
+  real const glStrain = engineeringStrain * (1_r + 0.5_r * engineeringStrain);
   EXPECT_NEAR(kForce, kAxialStiffness * glStrain * stretchRatio, kTightTolerance * Abs(kForce));
 }
 
