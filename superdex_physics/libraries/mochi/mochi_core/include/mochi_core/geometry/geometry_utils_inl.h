@@ -79,7 +79,7 @@ MOCHI_FORCE_INLINE Vec4r VDistancePointSegmentSqr(Vec4r p, Vec4r a, Vec4r b, Vec
     *outPar = wB;
   }
 
-  return VNormSqr<3>(p - wA * a - wB * b);
+  return VNormSqr<3>(wA * (p - a) + wB * (p - b));
 }
 
 inline Vec4r VDistancePointTriangleSqr(
@@ -127,8 +127,6 @@ inline Vec4r VDistancePointTriangleSqr(
                         Vec4r& wa,
                         Vec4r& wb,
                         Vec4r& wc) {
-      auto Sign = [](real val) { return val >= 0 ? 1_r : -1_r; };
-
       Vec4r thiswb;
       real thisDistSqr = Get0(VDistancePointSegmentSqr(p, a, b, &thiswb));
       if (thisDistSqr < minDistSqr) {
@@ -172,23 +170,23 @@ inline Vec4r VDistancePointTriangleSqr(
   }
 
   // Inside the triangle
-  Vec4r abcArea = VNorm<3>(n);
-  Vec4r nunit = n / abcArea;
-  Vec4r dist = VDot<3>(ap, nunit);
-  Vec4r dist2 = dist * dist;
+  Vec4r nSqr = VNormSqr<3>(n);
+  Vec4r apn = VDot<3>(ap, n);
+  Vec4r t = apn / nSqr;
+  Vec4r dist2 = apn * t;
 
+  // Barycentrics from the signed areas of qbc and aqc, q being p projected onto the plane.
+  // Projecting first, and dividing by nSqr instead of multiplying by 1 / nSqr, keep them accurate.
   if (outPar != nullptr) {
-    Vec4r q = p - nunit * dist;
-    Vec4r bcqArea = VNorm<3>(Cross3(bc, q - c));
-    Vec4r aqcArea = VNorm<3>(Cross3(q - a, ca));
-    Vec4r parA = bcqArea / abcArea;
-    Vec4r parB = aqcArea / abcArea;
+    Vec4r aq = ap - n * t;
+    Vec4r parA = VDot<3>(Cross3(bc, aq + ca), n) / nSqr;
+    Vec4r parB = VDot<3>(Cross3(ca, aq), n) / nSqr;
     Vec4r parC = 1_r - (parA + parB);
     *outPar = Blend<0, 1, 1, 1>(parA, Blend<0, 0, 1, 1>(parB, parC));
   }
 
   if (sign.computeSign) {
-    sign.outSign = Sign(Get0(dist));
+    sign.outSign = Sign(Get0(apn));
   }
 
   return dist2;

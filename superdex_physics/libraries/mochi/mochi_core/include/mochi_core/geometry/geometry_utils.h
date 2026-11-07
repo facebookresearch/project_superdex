@@ -1000,9 +1000,9 @@ struct VDistanceSignParams {
   real outSign = 1_r;
 };
 
-// Computes the squared distance between a point and a triangle. The DistanceSignParams
-// structure indicates wether or not the squared distance should be signed, in which
-// case approximated vertex and edge normals should be provided. If outPar != nullptr
+// Computes the squared distance between a point and a triangle. If sign.computeSign, it also
+// sets sign.outSign to the side of the triangle the point is on, using the approximated vertex
+// and edge normals in sign when the closest point is on a vertex or an edge. If outPar != nullptr
 // it also outputs the barycentric coordinates of the closest point.
 [[nodiscard]] Vec4r VDistancePointTriangleSqr(
     Vec4r p,
@@ -1020,9 +1020,9 @@ struct VDistanceSignParams {
     Vec4r const& c,
     Vec4r const& d);
 
-// Computes the distance between a point and a triangle. The DistanceSignParams
-// structure indicates wether or not the squared distance should be signed, in which
-// case approximated vertex and edge normals should be provided. If outPar != nullptr
+// Computes the distance between a point and a triangle. If sign.computeSign, it also sets
+// sign.outSign to the side of the triangle the point is on, using the approximated vertex and
+// edge normals in sign when the closest point is on a vertex or an edge. If outPar != nullptr
 // it also outputs the barycentric coordinates of the closest point.
 [[nodiscard]] Vec4r VDistancePointTriangle(
     Vec4r p,

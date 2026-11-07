@@ -46,6 +46,8 @@
 
 using namespace mochi;
 
+static real constexpr kEpsilon = std::numeric_limits<real>::epsilon();
+
 /**********************************************************************************************
   Helpers
 */
@@ -94,7 +96,7 @@ static void ExpectObb(
     Obb const& actual) {
   // The test data is only accurate to single precision. The tolerance must therefore be
   // proportional to single precision's epsilon also in the double precision build.
-  real constexpr kEpsilon = 1e3_r * static_cast<real>(std::numeric_limits<float>::epsilon());
+  real constexpr kTolerance = 1e3_r * static_cast<real>(std::numeric_limits<float>::epsilon());
 
   // NOTE: The rotation matrix computed by CalcObb may differ from the ground-truth data in the
   // sense that they might be rotated 180 degrees from one another. This is a consequence of
@@ -120,14 +122,14 @@ static void ExpectObb(
   };
 
   // Scalar access
-  EXPECT_NEAR_TOL(translation, actual.GetTransform().GetTranslation(), kEpsilon);
-  EXPECT_NEAR_TOL(extents, actual.GetHalfExtents(), kEpsilon);
-  IsNearEqRotation(rotation, actual.GetTransform().GetRotation(), kEpsilon);
+  EXPECT_NEAR_TOL(translation, actual.GetTransform().GetTranslation(), kTolerance);
+  EXPECT_NEAR_TOL(extents, actual.GetHalfExtents(), kTolerance);
+  IsNearEqRotation(rotation, actual.GetTransform().GetRotation(), kTolerance);
 
   // SIMD access.
-  EXPECT_NEAR_TOL(ToSimd(translation, 1_r), actual.GetTransform().VGetTranslation(), kEpsilon);
-  EXPECT_NEAR_TOL(ToSimd(extents, 0_r), actual.VGetHalfExtents(), kEpsilon);
-  VIsNearEqRotation(ToSimdMatrix(rotation), actual.GetTransform().VGetRotation(), kEpsilon);
+  EXPECT_NEAR_TOL(ToSimd(translation, 1_r), actual.GetTransform().VGetTranslation(), kTolerance);
+  EXPECT_NEAR_TOL(ToSimd(extents, 0_r), actual.VGetHalfExtents(), kTolerance);
+  VIsNearEqRotation(ToSimdMatrix(rotation), actual.GetTransform().VGetRotation(), kTolerance);
 }
 
 static void ExpectSphere(Real3 const& expectedCenter, real expectedRadius, Sphere const& actual) {
@@ -2514,6 +2516,17 @@ TEST(Distances, VDistancePointSegmentSqr) {
   EXPECT_NEAR_RTOL(
       Get0(VDistancePointSegmentSqr(half + (ortho * 2_r), zero, ones, &par)), 4_r, kTol);
   EXPECT_NEAR_RTOL(Get0(par), Get0(VNorm<3>(half) / VNorm<3>(ones)), kTol);
+
+  // Far from the origin, the results match those for the rounded point translated back exactly.
+  Vec4r const shift = {1000_r, 2000_r, 3000_r};
+  Vec4r const farP = (ones * 0.65_r) + (ortho * 2_r) + shift;
+  Vec4r farPar;
+  real const farDistSqr = Get0(VDistancePointSegmentSqr(farP, zero + shift, ones + shift, &farPar));
+  EXPECT_NEAR(
+      Sqrt(farDistSqr),
+      Sqrt(Get0(VDistancePointSegmentSqr(farP - shift, zero, ones, &par))),
+      8_r * kEpsilon);
+  EXPECT_NEAR(Get0(farPar), Get0(par), 4_r * kEpsilon);
 }
 
 TEST(Distances, VDistancePointTriangle) {
@@ -2645,6 +2658,36 @@ TEST(Distances, VDistancePointTriangle) {
   P = M + (normal * 2_r);
   EXPECT_NEAR_RTOL(Get0(VDistancePointTriangle(P, A, B, C, params, &par)), 2_r, tol);
   EXPECT_NEAR_RTOL(Get0(VNorm<3>(par - parM)), 0_r, tol);
+
+  //---
+
+  // Far from the origin, the results match those for the rounded point translated back exactly.
+  Vec4r const shift = {1000_r, 2000_r, 3000_r};
+  for (Vec4r const& Q : {M + (normal * 2_r), A + (AB * 0.65_r) + (ABout * 2_r) - (normal * 3_r)}) {
+    Vec4r const farQ = Q + shift;
+    Vec4r farPar;
+    real const farDist =
+        Get0(VDistancePointTriangle(farQ, A + shift, B + shift, C + shift, params, &farPar));
+    EXPECT_NEAR(
+        farDist,
+        Get0(VDistancePointTriangle(farQ - shift, A, B, C, params, &par)),
+        16_r * kEpsilon);
+    EXPECT_NEAR(Get0(VNorm<3>(farPar - par)), 0_r, 4_r * kEpsilon);
+  }
+
+  // A thin triangle (1.8 m long and 0.26 mm high) and a point 8 cm from its plane: the closest
+  // point, (55 thinB + 202 thinC) / 435, is exactly representable.
+  Vec4r const thinB = {0.609619140625_r, -0.8427734375_r, -0.7978515625_r};
+  Vec4r const thinC = {0.8544921875_r, -1.181640625_r, -1.1181640625_r};
+  Vec4r const thinP = {
+      0.5437066555023193359375_r, -0.637816011905670166015625_r, -0.58520233631134033203125_r};
+  Vec4r const expected = {0.473876953125_r, -0.6552734375_r, -0.6201171875_r};
+  EXPECT_NEAR(
+      Get0(VDistancePointTriangle(thinP, Vec4r{}, thinB, thinC, params, &par)),
+      Get0(VNorm<3>(thinP - expected)),
+      8_r * kEpsilon);
+  Vec4r const closest = (thinB * Get<1>(par)) + (thinC * Get<2>(par));
+  EXPECT_LE(Get0(VNorm<3>(closest - expected)), 8_r * kEpsilon);
 }
 
 TEST(Distances, VDistancePointTriangle_Obtuse) {
