@@ -187,7 +187,7 @@ void CIslandActorPreconditionerPolicy::MeasureBlockJacobi(StepObservation const&
 }
 
 void CIslandActorPreconditionerPolicy::MeasureAmg(StepObservation const& observation) {
-  // Trials compare their own two observations, and probes the last two before them, so that neither
+  // Trials compare their own observations, and probes the last two before them, so that neither
   // compares an empty or stale window.
   static_assert(kAmgTrialSteps == 2 && kMinAmgStepsBetweenBjProbes >= 2);
   _previousAmgObservation = _lastAmgObservation;
@@ -225,6 +225,8 @@ void CIslandActorPreconditionerPolicy::UpdateFromPreviousStep(
   if (observation.numLinearSolves == 0) {
     return;
   }
+  _numObservationsSinceBjProbe =
+      Min(_numObservationsSinceBjProbe + 1, kMinAmgStepsBetweenBjProbes + 1);
 
   if (observation.hasDivergedLinearSolve) {
     switch (_mode) {
@@ -271,7 +273,7 @@ void CIslandActorPreconditionerPolicy::UpdateFromPreviousStep(
     case Mode::AmgTrial: {
       ++_numObservedSolveSteps;
       MeasureAmg(observation);
-      if (_numObservedSolveSteps < kAmgTrialSteps) {
+      if (_numObservedSolveSteps < kAmgTrialSteps && !observation.hasStoppedLinearSolve) {
         return;
       }
 
@@ -294,11 +296,21 @@ void CIslandActorPreconditionerPolicy::UpdateFromPreviousStep(
     case Mode::Amg:
       MeasureAmg(observation);
       if (observation.hasStoppedLinearSolve) {
-        _amgStepsUntilBjProbe = Min(_amgStepsUntilBjProbe, kMinAmgStepsBetweenBjProbes);
+        // Bring the next probe forward, unless it is already due sooner, so that it compares the
+        // two AMG observations after the stop and a one-off stop doesn't decide it, but no closer
+        // than kMinAmgStepsBetweenBjProbes observations to the previous probe's start, so that
+        // failing probes can't churn. Both bounds count this observation, which the decrement below
+        // consumes.
+        static_assert(kAmgStepsBeforeBjProbeAfterStop == 1 + kAmgTrialSteps);
+        _amgStepsUntilBjProbe =
+            Min(_amgStepsUntilBjProbe,
+                Max(kAmgStepsBeforeBjProbeAfterStop,
+                    kMinAmgStepsBetweenBjProbes + 1 - _numObservationsSinceBjProbe));
       }
       // TODO: Consider keeping the AMG hierarchy alive during Block Jacobi probes.
       if (--_amgStepsUntilBjProbe == 0) {
         _mode = Mode::BlockJacobiProbe;
+        _numObservationsSinceBjProbe = 0;
         ResetObservationWindow();
       }
       return;

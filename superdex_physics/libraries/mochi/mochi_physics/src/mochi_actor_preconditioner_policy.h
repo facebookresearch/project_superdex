@@ -39,14 +39,17 @@ struct KrylovSolverParams;
 // - kBjHighIterationStepsBeforeAmgTrial consecutive Block Jacobi observations with linear solves
 //   that each stop or average at least AmgCost::bjIterationsForAmgTrial iterations per linear
 //   solve trigger an AMG trial.
-// - The trial commits AMG if AMG costs less than Block Jacobi did before the trial. Otherwise, a
-//   cooldown follows, in which only observations a fixed percentage costlier than before the trial
-//   count toward a new trial, and none do if Block Jacobi stopped before the trial.
+// - The trial commits AMG if AMG costs less than Block Jacobi did before the trial; a stopped AMG
+//   solve ends it at once, since a stopped AMG window never costs less. Otherwise, a cooldown
+//   follows, in which only observations a fixed percentage costlier than before the trial count
+//   toward a new trial, and none do if Block Jacobi stopped before the trial.
 // - Committed AMG is periodically checked by a Block Jacobi probe, which leaves AMG if Block Jacobi
 //   costs less than AMG did in its last two observations. Each failed probe doubles the interval to
 //   the next one, up to a maximum, so that persistently hard scenes pay for fewer failed probes.
-//   Other entries into AMG restore the minimum interval, and a stopped AMG solve brings the next
-//   probe within the minimum interval.
+//   Other entries into AMG restore the minimum interval. A stopped AMG solve brings the next probe
+//   forward, unless it is already due sooner, to compare the two AMG observations after the stop,
+//   but no sooner than kMinAmgStepsBetweenBjProbes observations, in any mode, after the previous
+//   probe started.
 // Divergence switches to the other preconditioner, except that after AMG diverges, Block Jacobi is
 // retained while it diverges too, and then a cooldown follows in which no observation counts toward
 // an AMG trial.
@@ -126,6 +129,7 @@ struct CIslandActorPreconditionerPolicy : public NoCopy {
   static constexpr int kBjProbeStepsToLeaveAmg = 2;
   static constexpr int kMinAmgStepsBetweenBjProbes = 32;
   static constexpr int kMaxAmgStepsBetweenBjProbes = 128;
+  static constexpr int kAmgStepsBeforeBjProbeAfterStop = 3;
   static constexpr int kAmgTrialCooldownSteps = 50;
 
   void ResetObservationWindow();
@@ -143,6 +147,10 @@ struct CIslandActorPreconditionerPolicy : public NoCopy {
   int _amgStepsBetweenBjProbes = 0;
   int _amgStepsUntilBjProbe = 0;
   StepObservation _blockJacobiWindow;
+
+  // Observations with linear solves, in any mode, since committed AMG last entered a Block Jacobi
+  // probe, saturating at kMinAmgStepsBetweenBjProbes + 1.
+  int _numObservationsSinceBjProbe = kMinAmgStepsBetweenBjProbes + 1;
 
   // AMG's last two observations, cleared when a trial starts.
   StepObservation _previousAmgObservation;
