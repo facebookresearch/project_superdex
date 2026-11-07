@@ -22,6 +22,7 @@
 
 #include <mochi_core/solvers/krylov_solver.h>
 #include <mochi_core/solvers/linear_solver.h>
+#include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/debug.h>
 #include <mochi_core/utils/dynamic_array.h>
 
@@ -188,7 +189,7 @@ void CIslandActorPreconditionerPolicy::MeasureBlockJacobi(StepObservation const&
 void CIslandActorPreconditionerPolicy::MeasureAmg(StepObservation const& observation) {
   // Trials compare their own two observations, and probes the last two before them, so that neither
   // compares an empty or stale window.
-  static_assert(kAmgTrialSteps == 2 && kAmgStepsBetweenBjProbes >= 2);
+  static_assert(kAmgTrialSteps == 2 && kMinAmgStepsBetweenBjProbes >= 2);
   _previousAmgObservation = _lastAmgObservation;
   _lastAmgObservation = observation;
 }
@@ -228,8 +229,10 @@ void CIslandActorPreconditionerPolicy::UpdateFromPreviousStep(
   if (observation.hasDivergedLinearSolve) {
     switch (_mode) {
       case Mode::BlockJacobi:
-      case Mode::BlockJacobiProbe:
         EnterAmg();
+        return;
+      case Mode::BlockJacobiProbe:
+        EnterAmgAfterFailedBjProbe();
         return;
       case Mode::AmgTrial:
       case Mode::Amg:
@@ -290,6 +293,9 @@ void CIslandActorPreconditionerPolicy::UpdateFromPreviousStep(
 
     case Mode::Amg:
       MeasureAmg(observation);
+      if (observation.hasStoppedLinearSolve) {
+        _amgStepsUntilBjProbe = Min(_amgStepsUntilBjProbe, kMinAmgStepsBetweenBjProbes);
+      }
       // TODO: Consider keeping the AMG hierarchy alive during Block Jacobi probes.
       if (--_amgStepsUntilBjProbe == 0) {
         _mode = Mode::BlockJacobiProbe;
@@ -308,7 +314,7 @@ void CIslandActorPreconditionerPolicy::UpdateFromPreviousStep(
       StepObservation amgWindow = _previousAmgObservation;
       amgWindow += _lastAmgObservation;
       if (!CostsLessByMargin(kBlockJacobiCost, _blockJacobiWindow, amgSolveCost, amgWindow)) {
-        EnterAmg();
+        EnterAmgAfterFailedBjProbe();
         return;
       }
       if (_numObservedSolveSteps >= kBjProbeStepsToLeaveAmg) {
@@ -343,6 +349,7 @@ std::optional<PreconditionerType> CIslandActorPreconditionerPolicy::GetSelectedT
 void CIslandActorPreconditionerPolicy::EnterBlockJacobi() {
   _mode = Mode::BlockJacobi;
   ResetObservationWindow();
+  _amgStepsBetweenBjProbes = 0;
   _amgStepsUntilBjProbe = 0;
   _amgTrialCooldownStepsLeft = 0;
   _bjIterationsForAmgRetry = 0;
@@ -354,11 +361,20 @@ void CIslandActorPreconditionerPolicy::EnterBlockJacobiCooldown(int64_t bjIterat
   _bjIterationsForAmgRetry = bjIterationsForAmgRetry;
 }
 
-void CIslandActorPreconditionerPolicy::EnterAmg() {
+void CIslandActorPreconditionerPolicy::EnterAmg(int amgStepsBetweenBjProbes) {
   _mode = Mode::Amg;
   ResetObservationWindow();
-  _amgStepsUntilBjProbe = kAmgStepsBetweenBjProbes;
+  _amgStepsBetweenBjProbes = amgStepsBetweenBjProbes;
+  _amgStepsUntilBjProbe = amgStepsBetweenBjProbes;
   _amgTrialCooldownStepsLeft = 0;
+}
+
+void CIslandActorPreconditionerPolicy::EnterAmgAfterFailedBjProbe() {
+  MOCHI_ASSERT_VERBOSE(_mode == Mode::BlockJacobiProbe, "Only a Block Jacobi probe can fail.");
+  MOCHI_ASSERT_VERBOSE(
+      _amgStepsBetweenBjProbes >= kMinAmgStepsBetweenBjProbes,
+      "Block Jacobi probes start from AMG, which sets the probe interval.");
+  EnterAmg(Min(2 * _amgStepsBetweenBjProbes, kMaxAmgStepsBetweenBjProbes));
 }
 
 void CIslandActorPreconditionerPolicy::EnterBlockJacobiAfterAmgDivergence() {

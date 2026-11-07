@@ -43,7 +43,10 @@ struct KrylovSolverParams;
 //   cooldown follows, in which only observations a fixed percentage costlier than before the trial
 //   count toward a new trial, and none do if Block Jacobi stopped before the trial.
 // - Committed AMG is periodically checked by a Block Jacobi probe, which leaves AMG if Block Jacobi
-//   costs less than AMG did in its last two observations.
+//   costs less than AMG did in its last two observations. Each failed probe doubles the interval to
+//   the next one, up to a maximum, so that persistently hard scenes pay for fewer failed probes.
+//   Other entries into AMG restore the minimum interval, and a stopped AMG solve brings the next
+//   probe within the minimum interval.
 // Divergence switches to the other preconditioner, except that after AMG diverges, Block Jacobi is
 // retained while it diverges too, and then a cooldown follows in which no observation counts toward
 // an AMG trial.
@@ -121,7 +124,8 @@ struct CIslandActorPreconditionerPolicy : public NoCopy {
   static constexpr int kBjHighIterationStepsBeforeAmgTrial = 2;
   static constexpr int kAmgTrialSteps = 2;
   static constexpr int kBjProbeStepsToLeaveAmg = 2;
-  static constexpr int kAmgStepsBetweenBjProbes = 32;
+  static constexpr int kMinAmgStepsBetweenBjProbes = 32;
+  static constexpr int kMaxAmgStepsBetweenBjProbes = 128;
   static constexpr int kAmgTrialCooldownSteps = 50;
 
   void ResetObservationWindow();
@@ -130,11 +134,13 @@ struct CIslandActorPreconditionerPolicy : public NoCopy {
   void EnterBlockJacobi();
   void EnterAmgTrial();
   void EnterBlockJacobiCooldown(int64_t bjIterationsForAmgRetry);
-  void EnterAmg();
+  void EnterAmg(int amgStepsBetweenBjProbes = kMinAmgStepsBetweenBjProbes);
+  void EnterAmgAfterFailedBjProbe();
   void EnterBlockJacobiAfterAmgDivergence();
 
   Mode _mode = Mode::BlockJacobi;
   int _numObservedSolveSteps = 0;
+  int _amgStepsBetweenBjProbes = 0;
   int _amgStepsUntilBjProbe = 0;
   StepObservation _blockJacobiWindow;
 

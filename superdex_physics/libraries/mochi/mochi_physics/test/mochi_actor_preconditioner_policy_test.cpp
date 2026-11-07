@@ -41,7 +41,8 @@ static constexpr PreconditionerType kBlockJacobi = PreconditionerType::BlockJaco
 static constexpr PreconditionerType kAmg = PreconditionerType::AMG;
 static constexpr int kExpectedSoftBjIterationsForAmgTrial = 85;
 static constexpr int kExpectedShellBjIterationsForAmgTrial = 70;
-static constexpr int kExpectedAmgStepsBetweenBjProbes = 32;
+static constexpr int kExpectedMinAmgStepsBetweenBjProbes = 32;
+static constexpr int kExpectedMaxAmgStepsBetweenBjProbes = 128;
 static constexpr int kExpectedAmgTrialCooldownSteps = 50;
 
 static LinearSolverStatus Converged(int iterations) {
@@ -202,9 +203,13 @@ class PolicyScenario {
 
   void EnterBlockJacobiProbe() {
     EnterCommittedAmg();
-    // The 32nd AMG observation with linear solves starts a Block Jacobi probe.
-    Repeat(Converged(20), kExpectedAmgStepsBetweenBjProbes - 1, kAmg);
-    Step(Converged(20), kBlockJacobi);
+    ProbeAfter(kExpectedMinAmgStepsBetweenBjProbes);
+  }
+
+  // Expects the given number of committed AMG observations to start a Block Jacobi probe.
+  void ProbeAfter(int amgSteps, int amgIterations = 20) {
+    Repeat(Converged(amgIterations), amgSteps - 1, kAmg);
+    Step(Converged(amgIterations), kBlockJacobi);
   }
 
   void ExpectActorType(entt::entity actor, OptionalType expectedType) const {
@@ -355,7 +360,7 @@ TEST(ActorPreconditionerPolicy, CommittedAmgAndBlockJacobiProbeTransitions) {
        {std::pair{164, kBlockJacobi}, std::pair{165, kAmg}}) {
     PolicyScenario scenario;
     scenario.EnterCommittedAmg();
-    scenario.Repeat(Converged(20), kExpectedAmgStepsBetweenBjProbes - 2, kAmg);
+    scenario.Repeat(Converged(20), kExpectedMinAmgStepsBetweenBjProbes - 2, kAmg);
     scenario.NoSolve(kAmg);
     scenario.Step(Converged(30), kAmg);
     scenario.Step(Converged(50), kBlockJacobi);
@@ -365,14 +370,26 @@ TEST(ActorPreconditionerPolicy, CommittedAmgAndBlockJacobiProbeTransitions) {
   }
 
   // A probe returns to AMG at its first observation that stops, diverges, or makes Block Jacobi
-  // cost more than 90% of AMG: after 20-iteration AMG observations, Block Jacobi must average at
-  // most 0.9 * 106 = 95.4 iterations, which 96 and (95 + 96) / 2 don't.
+  // cost more than 90% of AMG, and doubles the interval to the next probe, up to the maximum: after
+  // 20-iteration AMG observations, Block Jacobi must average at most 0.9 * 106 = 95.4 iterations,
+  // which 96 and (95 + 96) / 2 don't. A stopped AMG observation brings the next probe within the
+  // minimum interval, counting that observation, and leaves the interval to later probes unchanged.
   for (auto const& failingStatus : {Stopped(), Converged(96), Diverged()}) {
     for (int const passingObservations : {0, 1}) {
       PolicyScenario scenario;
       scenario.EnterBlockJacobiProbe();
       scenario.Repeat(Converged(95), passingObservations, kBlockJacobi);
       scenario.Step(failingStatus, kAmg);
+      scenario.ProbeAfter(2 * kExpectedMinAmgStepsBetweenBjProbes);
+      scenario.Step(failingStatus, kAmg);
+      scenario.ProbeAfter(4 * kExpectedMinAmgStepsBetweenBjProbes);
+      scenario.Step(failingStatus, kAmg);
+      scenario.ProbeAfter(kExpectedMaxAmgStepsBetweenBjProbes);
+      scenario.Step(failingStatus, kAmg);
+      scenario.Step(Stopped(), kAmg);
+      scenario.ProbeAfter(kExpectedMinAmgStepsBetweenBjProbes - 1);
+      scenario.Step(failingStatus, kAmg);
+      scenario.ProbeAfter(kExpectedMaxAmgStepsBetweenBjProbes);
     }
   }
 
@@ -382,42 +399,49 @@ TEST(ActorPreconditionerPolicy, CommittedAmgAndBlockJacobiProbeTransitions) {
        {std::pair{Converged(400), kBlockJacobi}, std::pair{Stopped(), kAmg}}) {
     PolicyScenario scenario;
     scenario.EnterCommittedAmg();
-    scenario.Repeat(Converged(20), kExpectedAmgStepsBetweenBjProbes - 1, kAmg);
+    scenario.Repeat(Converged(20), kExpectedMinAmgStepsBetweenBjProbes - 1, kAmg);
     scenario.Step(Stopped(), kBlockJacobi);
     scenario.Step(probeStatus, expectedType);
   }
 
-  // An AMG solve that stopped before them doesn't.
+  // An AMG solve that stopped before them doesn't, nor does it delay the probe.
   {
     PolicyScenario scenario;
     scenario.EnterCommittedAmg();
-    scenario.Repeat(Converged(20), kExpectedAmgStepsBetweenBjProbes - 3, kAmg);
+    scenario.Repeat(Converged(20), kExpectedMinAmgStepsBetweenBjProbes - 3, kAmg);
     scenario.Step(Stopped(), kAmg);
     scenario.Step(Converged(20), kAmg);
     scenario.Step(Converged(20), kBlockJacobi);
     scenario.Step(Converged(400), kAmg);
   }
 
-  // A probe that leaves AMG doesn't start an AMG trial cooldown.
+  // After a failed probe, a probe that leaves AMG doesn't start an AMG trial cooldown, and
+  // committing AMG after the trial restores the minimum interval to the next probe.
   {
     PolicyScenario scenario;
     scenario.EnterBlockJacobiProbe();
+    scenario.Step(Converged(96), kAmg);
+    scenario.ProbeAfter(2 * kExpectedMinAmgStepsBetweenBjProbes);
     scenario.Step(Converged(95), kBlockJacobi);
     scenario.Step(Converged(95), kBlockJacobi);
     scenario.Step(Converged(kExpectedSoftBjIterationsForAmgTrial), kBlockJacobi);
     scenario.Step(Converged(kExpectedSoftBjIterationsForAmgTrial), kAmg);
+    scenario.Step(Converged(10), kAmg);
+    scenario.Step(Converged(10), kAmg);
+    scenario.ProbeAfter(kExpectedMinAmgStepsBetweenBjProbes);
   }
 }
 
 TEST(ActorPreconditionerPolicy, DivergenceAndStickyRecoveryTransitions) {
-  // Divergence switches to the other preconditioner, except that after AMG diverges, here on
-  // committed AMG observation 32, sticky recovery retains Block Jacobi even if it also diverges.
+  // Divergence switches to the other preconditioner, except that after AMG diverges, here on the
+  // committed AMG observation that would start a probe, sticky recovery retains Block Jacobi even
+  // if it also diverges.
   {
     PolicyScenario scenario;
     scenario.Step({{Diverged(), Converged(1), Diverged()}, {Converged(1), Stopped()}}, kAmg);
     scenario.Step(Stopped(), kAmg);
     scenario.Step(Stopped(), kAmg);
-    scenario.Repeat(Converged(1), kExpectedAmgStepsBetweenBjProbes - 3, kAmg);
+    scenario.Repeat(Converged(1), kExpectedMinAmgStepsBetweenBjProbes - 3, kAmg);
     scenario.Step(Diverged(), kBlockJacobi);
     scenario.NoSolve(kBlockJacobi);
     scenario.Step(Diverged(), kBlockJacobi);
@@ -426,14 +450,18 @@ TEST(ActorPreconditionerPolicy, DivergenceAndStickyRecoveryTransitions) {
   }
 
   // A non-diverged recovery solve starts an AMG trial cooldown in which no observation, not even a
-  // stopped one, counts toward a trial.
+  // stopped one, counts toward a trial. Block Jacobi divergence then enters AMG with the minimum
+  // interval to the next probe, even after a failed probe doubled it.
   {
     PolicyScenario scenario;
-    scenario.EnterCommittedAmg();
+    scenario.EnterBlockJacobiProbe();
+    scenario.Step(Converged(96), kAmg);
     scenario.Step(Diverged(), kBlockJacobi);
     scenario.Step(Stopped(), kBlockJacobi);
     scenario.Step(Stopped(), kBlockJacobi);
     scenario.Step(Stopped(), kBlockJacobi);
+    scenario.Step(Diverged(), kAmg);
+    scenario.ProbeAfter(kExpectedMinAmgStepsBetweenBjProbes);
   }
 
   // Divergence during an AMG trial enters Block Jacobi recovery.
@@ -475,11 +503,9 @@ TEST(ActorPreconditionerPolicy, ActorFamilyCostsAndEligibility) {
     scenario.Step(Converged(200), kAmg);
     scenario.Step(Converged(10), kAmg);
     scenario.Step(Converged(10), kAmg);
-    scenario.Repeat(Converged(10), kExpectedAmgStepsBetweenBjProbes - 1, kAmg);
-    scenario.Step(Converged(10), kBlockJacobi);
+    scenario.ProbeAfter(kExpectedMinAmgStepsBetweenBjProbes, /*amgIterations=*/10);
     scenario.Step(Converged(46), kAmg);
-    scenario.Repeat(Converged(10), kExpectedAmgStepsBetweenBjProbes - 1, kAmg);
-    scenario.Step(Converged(10), kBlockJacobi);
+    scenario.ProbeAfter(2 * kExpectedMinAmgStepsBetweenBjProbes, /*amgIterations=*/10);
     scenario.Step(Converged(45), kBlockJacobi);
     scenario.Step(Converged(46), kBlockJacobi);
   }
@@ -496,8 +522,7 @@ TEST(ActorPreconditionerPolicy, ActorFamilyCostsAndEligibility) {
     scenario.Step(Converged(200), kAmg);
     scenario.Step(Converged(10), kAmg);
     scenario.Step(Converged(10), kAmg);
-    scenario.Repeat(Converged(10), kExpectedAmgStepsBetweenBjProbes - 1, kAmg);
-    scenario.Step(Converged(10), kBlockJacobi);
+    scenario.ProbeAfter(kExpectedMinAmgStepsBetweenBjProbes, /*amgIterations=*/10);
     scenario.Step(Converged(62), kBlockJacobi);
     scenario.Step(Converged(62), kBlockJacobi);
   }
