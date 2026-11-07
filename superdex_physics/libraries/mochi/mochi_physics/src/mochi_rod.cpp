@@ -1357,6 +1357,11 @@ void mochi::InitRodActor(
           params.material.stiffnessDampingCoefficient < 0_r,
       error,
       "Stiffness damping coefficient must be non-negative and finite.");
+  MOCHI_ERROR_IF(
+      !IsFinite(params.material.axialCollapseBarrierScale) ||
+          params.material.axialCollapseBarrierScale < 0_r,
+      error,
+      "Axial collapse barrier scale must be non-negative and finite.");
   ValidateContactParams(params.contact, error);
   MOCHI_ERROR_RETURN(error);
 
@@ -1655,6 +1660,8 @@ static void AddExternalForces(
       hasMassDamping ? materialParams.massDampingCoefficient / dtStage : 0_r;
   real const stiffnessDampingFactor =
       hasStiffnessDamping ? materialParams.stiffnessDampingCoefficient / dtStage : 0_r;
+  real const axialCollapseBarrierStiffness =
+      materialParams.axialCollapseBarrierScale * materialParams.axialStiffness;
 
   return [= /*All copies are inexpensive*/](
              NdArray<int, kBatchSize> const& elemIndices,
@@ -1780,6 +1787,7 @@ static void AddExternalForces(
         outRes,
         outDRes,
         materialParams.axialStiffness,
+        axialCollapseBarrierStiffness,
         projectPsd,
         stiffnessDampingFactor,
         stageStartDispPtr);

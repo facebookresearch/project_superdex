@@ -19,7 +19,15 @@
 #include <mochi_core/materials/material_params_utils.h>
 #include <mochi_core/utils/batch_config.h>
 
+#include <array>
+
 namespace mochi::fem {
+
+// Smallest squared stretch λ² at which the axial collapse barrier is evaluated exactly: λ₀ = 2⁻⁸ in
+// single precision (2⁻⁶⁴ in double). Below it, the barrier continues linearly in λ², which keeps
+// its residual and tangent finite, far from overflow.
+static real constexpr kAxialCollapseBarrierMinStretchSq =
+    MOCHI_USE_DOUBLE_PRECISION ? 0x1p-128_r : 0x1p-16_r;
 
 /// @brief Integrated curvature binormal for normalized edge vectors.
 ///
@@ -75,6 +83,28 @@ static MOCHI_FORCE_INLINE void ScatterRodAxialTangentComponent(
   }
 }
 
+/// @brief Axial collapse barrier ψ = k·⟨λ⁻² − 1⟩³ per unit reference length, at u = λ².
+///
+/// @details With p = ⟨1 − u⟩, ψ = k·p³/u³ and ψ' = −3k·p²/u⁴ diverge at collapse. Below
+/// u₀ = @ref kAxialCollapseBarrierMinStretchSq, ψ continues along its tangent line in u: with
+/// ū = max(u, u₀) and p̄ = ⟨1 − ū⟩, ψ = k·(p̄³/ū³ + 3p̄²(ū − u)/ū⁴). So ψ'(ū) is its exact derivative
+/// everywhere. The tangent is the PSD Gauss–Newton approximation in g = λ⁻² − 1, 6k·g·∇g⊗∇g, whose
+/// coefficient of q⊗q/L is held at its value at u₀ below u₀.
+///
+/// @return {ψ, 2ψ', 24k·p̄/ū⁵}: the energy density and the coefficients that the barrier adds to the
+/// axial stress (of q) and modulus (of q⊗q/L) for an element with u = |q|².
+template <class V>
+[[nodiscard]] static MOCHI_FORCE_INLINE std::array<V, 3> AxialCollapseBarrier(V u, V k) {
+  V const uBar = Max(u, V{kAxialCollapseBarrierMinStretchSq});
+  V const invUBar = V{1} / uBar;
+  V const pBar = Max(V{1} - uBar, V{0});
+  V const kP2InvU4 = k * Sqr(pBar * Sqr(invUBar));
+  return {
+      kP2InvU4 * (pBar * uBar + V{3} * (uBar - u)),
+      V{-6} * kP2InvU4,
+      V{24} * k * pBar * Sqr(Sqr(invUBar)) * invUBar};
+}
+
 template <int kBatchSize>
 bool RodAxialStress(
     Span<Real3 const> meshNodes,
@@ -85,6 +115,7 @@ bool RodAxialStress(
     BatchRodVector<kBatchSize>* outRes,
     BatchRodMatrix<kBatchSize>* outDRes,
     real axialStiffness,
+    real axialCollapseBarrierStiffness,
     bool projectPsd,
     real stiffnessDampingFactor,
     NdArray<BatchReal<kBatchSize>, kNumRodStencilDofs> const* stageStartDisp) {
@@ -148,7 +179,8 @@ bool RodAxialStress(
   for (int i = 0; i < kSpaceDim; ++i) {
     q[i] = Select(isActive, invL * dx[i], V{0});
   }
-  V const strain = V{0.5_r} * (NormSqr(q) - V{1});
+  V const stretchSq = NormSqr(q);
+  V const strain = V{0.5_r} * (stretchSq - V{1});
 
   // Stiffness damping unified into the elastic formulas: scale the material stiffness by
   // (1 + factor) and use a modified strain ε̃ = ε − (factor/(1+factor))·ε₀ (ε₀ = stage-start
@@ -176,6 +208,25 @@ bool RodAxialStress(
   V const effStrain = strain - V{ssWeight} * strainSs;
   V const effStress = effEA * effStrain;
 
+  // Coefficients of q in the residual and of q⊗q/L in the material tangent. The collapse barrier's
+  // Gauss–Newton tangent has no geometric term, so the geometric coefficient stays effStress/L.
+  V stress = effStress;
+  V modulus = effEA;
+  if (axialCollapseBarrierStiffness > 0_r) {
+    // Evaluated at the plain strain with unscaled stiffness, so stiffness damping remains based on
+    // EA alone. Inactive lanes are evaluated at rest, where the barrier vanishes.
+    V const u = Select(isActive, stretchSq, V{1});
+    if (AnyTrue<kBatchSize>(u < V{1})) {
+      auto const [energyDensity, barrierStress, barrierModulus] =
+          AxialCollapseBarrier(u, V{axialCollapseBarrierStiffness});
+      if (evalObj) {
+        *outEnergy += StaticCast<Vd>(energyDensity * L);
+      }
+      stress += barrierStress;
+      modulus += barrierModulus;
+    }
+  }
+
   if (evalObj) {
     // Standard quadratic in the modified strain; equals the elastic + dissipation potential up to
     // an x-independent constant (ε₀ is fixed within a stage), which is immaterial to the solver.
@@ -185,14 +236,14 @@ bool RodAxialStress(
   if (evalRes) {
     // q is exactly zero in inactive lanes, so the residual contribution vanishes there.
     for (int i = 0; i < kSpaceDim; ++i) {
-      V const resComponent = effStress * q[i];
+      V const resComponent = stress * q[i];
       (*outRes)[i] -= resComponent;
       (*outRes)[kNumRodFields + i] += resComponent;
     }
   }
 
   if (evalDRes) {
-    V const materialCoeff = Select(isActive, effEA * invL, V{0});
+    V const materialCoeff = Select(isActive, modulus * invL, V{0});
     V geometricCoeff = effStress * invL;
     if (projectPsd) {
       V const eps{materials::kMinProjectedEigenvalue};
@@ -640,6 +691,7 @@ static_assert(kDefaultFemBatchSize != 1, "Avoid duplicate explicit instantiation
       BatchDouble<BatchSize>*,                        \
       BatchRodVector<BatchSize>*,                     \
       BatchRodMatrix<BatchSize>*,                     \
+      real,                                           \
       real,                                           \
       bool,                                           \
       real,                                           \

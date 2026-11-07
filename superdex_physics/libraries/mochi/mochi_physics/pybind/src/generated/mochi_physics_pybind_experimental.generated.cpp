@@ -342,7 +342,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
   ;
 
   registry.GetClass<mochi::experimental::RodMaterialParams>()
-    .def("__init__", [](mochi::experimental::RodMaterialParams* self, nb::object linear_density, nb::object linear_rotational_inertia, nb::object axial_stiffness, nb::object torsional_stiffness, nb::object flexural_stiffness, nb::object mass_damping_coefficient, nb::object stiffness_damping_coefficient) {
+    .def("__init__", [](mochi::experimental::RodMaterialParams* self, nb::object linear_density, nb::object linear_rotational_inertia, nb::object axial_stiffness, nb::object torsional_stiffness, nb::object flexural_stiffness, nb::object mass_damping_coefficient, nb::object stiffness_damping_coefficient, nb::object axial_collapse_barrier_scale) {
       mochi::experimental::RodMaterialParams result{};
       result.linearDensity = nb::cast<mochi::real>(linear_density);
       result.linearRotationalInertia = nb::cast<mochi::real>(linear_rotational_inertia);
@@ -351,6 +351,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
       result.flexuralStiffness = nb::cast<mochi::Real2>(flexural_stiffness);
       result.massDampingCoefficient = nb::cast<mochi::real>(mass_damping_coefficient);
       result.stiffnessDampingCoefficient = nb::cast<mochi::real>(stiffness_damping_coefficient);
+      result.axialCollapseBarrierScale = nb::cast<mochi::real>(axial_collapse_barrier_scale);
       new (self) mochi::experimental::RodMaterialParams(std::move(result));
     }
       , nb::kw_only()
@@ -361,6 +362,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
       , nb::arg("flexural_stiffness").sig("...") = mochi::experimental::RodMaterialParams{}.flexuralStiffness
       , nb::arg("mass_damping_coefficient") = mochi::experimental::RodMaterialParams{}.massDampingCoefficient
       , nb::arg("stiffness_damping_coefficient") = mochi::experimental::RodMaterialParams{}.stiffnessDampingCoefficient
+      , nb::arg("axial_collapse_barrier_scale") = mochi::experimental::RodMaterialParams{}.axialCollapseBarrierScale
     )
     .def(nb::init<>())
     .def(nb::self == nb::self)
@@ -374,6 +376,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     .def_prop_rw("flexural_stiffness", [](mochi::experimental::RodMaterialParams& self) -> mochi::Real2& { return self.flexuralStiffness; }, [](mochi::experimental::RodMaterialParams& self, nb::object val) { self.flexuralStiffness = nb::cast<mochi::Real2>(val); })
     .def_rw("mass_damping_coefficient", &mochi::experimental::RodMaterialParams::massDampingCoefficient)
     .def_rw("stiffness_damping_coefficient", &mochi::experimental::RodMaterialParams::stiffnessDampingCoefficient)
+    .def_rw("axial_collapse_barrier_scale", &mochi::experimental::RodMaterialParams::axialCollapseBarrierScale)
   ;
 
   registry.GetClass<mochi::experimental::PointCloudColliderParams>()

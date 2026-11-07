@@ -40,6 +40,7 @@ MOCHI_FIELD(torsionalStiffness) MOCHI_ATTRIBUTE(Units("N*m^2"))
 MOCHI_FIELD(flexuralStiffness) MOCHI_ATTRIBUTE(Units("N*m^2"))
 MOCHI_FIELD(massDampingCoefficient) MOCHI_ATTRIBUTE(Units("1/s"))
 MOCHI_FIELD(stiffnessDampingCoefficient) MOCHI_ATTRIBUTE(Units("s"))
+MOCHI_FIELD(axialCollapseBarrierScale)
 MOCHI_STRUCT_END_EX()
 
 MOCHI_STRUCT_BEGIN_EX(mochi::experimental::PointCloudColliderParams)

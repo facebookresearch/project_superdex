@@ -434,9 +434,12 @@ TEST_F(FemRodEmbeddingTest, ComputeEmbeddedPointElementJacobian_FiniteDifference
 //     exact.
 // Boundary stencils (1 or 2 nodes) must produce zero from ops needing a complete element (masking),
 // the rest state has zero elastic energy, axial PSD projection is SPD, and each lane carries
-// distinct data with shuffled global indices (mixed-lane + connectivity-agnostic gather).
+// distinct data with shuffled global indices (mixed-lane + connectivity-agnostic gather). The axial
+// kernel includes the collapse barrier, comparable to SVK at the compressions used here, unless a
+// test sets its stiffness.
 
 static constexpr real kAxialStiffness = 12.0_r;
+static constexpr real kAxialCollapseBarrierStiffness = 8.0_r;
 static constexpr Real2 kFlexuralStiffness = {1.3_r, 0.7_r};
 static constexpr real kTorsionalStiffness = 0.5_r;
 static constexpr Real3 kGravity = {1.0_r, -2.0_r, 3.0_r};
@@ -479,6 +482,7 @@ struct BatchLayout {
   NdArray<int, kBS> elementIndices;
   BatchRodVector<kBS> disp;
   NdArray<BatchReal<kBS>, kNumRodFields> predTarget;
+  real axialCollapseBarrierStiffness = kAxialCollapseBarrierStiffness;
   // Stiffness-damping inputs (zero factor => disabled, matching the kernel defaults). The gravity
   // energy also reads stageStartDisp.
   real stiffnessDampingFactor = 0_r;
@@ -870,6 +874,7 @@ RunRodAxialStress(BatchLayout<kBS> const& layout, OutputConfig cfg, bool project
             r,
             d,
             kAxialStiffness,
+            layout.axialCollapseBarrierStiffness,
             projectPsd,
             layout.stiffnessDampingFactor,
             layout.stiffnessDampingFactor > 0_r ? &layout.stageStartDisp : nullptr);
@@ -945,7 +950,7 @@ static void VerifyOutputModes(BatchLayout<kBS> const& layout, Run const& run) {
 
 // FD for frame-independent ops (gravity / inertia / axial): perturb displacement only.
 template <int kBS, bool kHasDRes, class Run>
-static void VerifyPlainFd(BatchLayout<kBS> const& base, Run const& run) {
+static void VerifyPlainFd(BatchLayout<kBS> const& base, Run const& run, real fdStep = kEps) {
   using V = BatchReal<kBS>;
   constexpr int kN = kNumRodStencilDofs;
   auto const baseR =
@@ -955,8 +960,8 @@ static void VerifyPlainFd(BatchLayout<kBS> const& base, Run const& run) {
   for (int j = 0; j < kN; ++j) {
     BatchLayout<kBS> lp = base;
     BatchLayout<kBS> lm = base;
-    lp.disp[j] = lp.disp[j] + V{kEps};
-    lm.disp[j] = lm.disp[j] - V{kEps};
+    lp.disp[j] = lp.disp[j] + V{fdStep};
+    lm.disp[j] = lm.disp[j] - V{fdStep};
     auto const ep = run(lp, OutputConfig{.energy = true, .residual = false, .dresidual = false});
     auto const em = run(lm, OutputConfig{.energy = true, .residual = false, .dresidual = false});
     NdArray<RodResult, kBS> rp{}, rm{};
@@ -966,10 +971,10 @@ static void VerifyPlainFd(BatchLayout<kBS> const& base, Run const& run) {
     }
     for (int b = 0; b < kBS; ++b) {
       resFd[b][j] =
-          static_cast<real>((ep[b].energy - em[b].energy) / (2.0 * static_cast<double>(kEps)));
+          static_cast<real>((ep[b].energy - em[b].energy) / (2.0 * static_cast<double>(fdStep)));
       if constexpr (kHasDRes) {
         for (int i = 0; i < kN; ++i) {
-          dresFd[b][i * kN + j] = (rp[b].residual[i] - rm[b].residual[i]) / (2_r * kEps);
+          dresFd[b][i * kN + j] = (rp[b].residual[i] - rm[b].residual[i]) / (2_r * fdStep);
         }
       }
     }
@@ -1093,9 +1098,15 @@ static void VerifyAllOpsFd(
       layout, [](BatchLayout<kBS> const& l, OutputConfig c) { return RunRodGravity(l, c); });
   VerifyPlainFd<kBS, true>(
       layout, [](BatchLayout<kBS> const& l, OutputConfig c) { return RunRodInertia(l, c); });
-  VerifyPlainFd<kBS, true>(layout, [](BatchLayout<kBS> const& l, OutputConfig c) {
+  auto const axial = [](BatchLayout<kBS> const& l, OutputConfig c) {
     return RunRodAxialStress(l, c, /*projectPsd*/ false);
-  });
+  };
+  VerifyPlainFd<kBS, /*kHasDRes*/ false>(layout, axial);
+  // The collapse barrier's Gauss–Newton tangent is not the exact Hessian, so the tangent is checked
+  // without it.
+  BatchLayout<kBS> withoutBarrier = layout;
+  withoutBarrier.axialCollapseBarrierStiffness = 0_r;
+  VerifyPlainFd<kBS, true>(withoutBarrier, axial);
   VerifyBendTwistFd<kBS>(stencils, layout);
 }
 
@@ -1327,53 +1338,75 @@ static void ExpectSymmetricPsd(RodResult const& actual, unsigned int seed) {
 // PSD projection => symmetric positive-semi-definite axial dresidual.
 TEST(Rod, AxialPsd) {
   // Verifies the closed-form results are scale invariant: the reference length spans ~13 (float) /
-  // ~103 (double) decades below unity, so the tangent reaches ~1e15 / ~1e105 while the rescaled
-  // assertions below stay exact. Powers of two keep the rescaling itself free of rounding error.
+  // ~103 (double) decades below unity, so the tangent reaches ~1e20 / ~1e110 while the rescaled
+  // results stay exact. Powers of two keep the rescaling itself free of rounding error.
   real constexpr kTinyScale = MOCHI_USE_DOUBLE_PRECISION ? 0x1p-342_r : 0x1p-43_r;
   RunSupportedFemShellRodBatchSizes([&]<int kBS>() {
     int constexpr kN = kNumRodStencilDofs;
     real constexpr kTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-12_r : 1e-5_r;
-    // Closed form for a straight rod with EA = kAxialStiffness = 12 and a stage-start displacement
-    // mirrored about the rest state: effEA = (1 + f)·EA = 18, ssWeight = f/(1 + f) = 1/3.
-    //   tension:     q = 1.5, qSs = 0.5 -> effStrain =  0.75,  effStress =  13.5
-    //   compression: q = 0.5, qSs = 1.5 -> effStrain = -7/12,  effStress = -10.5
-    // residual = effStress·q, material = effEA·q²/L, geometric = effStress/L (floored at eps).
-    for (bool const tension : {false, true}) {
-      real const expectedResidual = tension ? 20.25_r : -5.25_r;
-      real const expectedMaterial = tension ? 40.5_r : 4.5_r;
-      real const expectedGeometric = 13.5_r;
-      for (real const scale : {1_r, kTinyScale}) {
-        NdArray<RodStencil, kBS> stencils{};
-        NdArray<RodStencil, kBS> stageStart{};
-        for (int b = 0; b < kBS; ++b) {
-          stencils[b].X = {Real3{}, Real3{scale, 0_r, 0_r}, Real3{2_r * scale, 0_r, 0_r}};
-          stencils[b].disp[kNumRodFields] = (tension ? 0.5_r : -0.5_r) * scale;
-          stageStart[b] = stencils[b];
-          stageStart[b].disp[kNumRodFields] = -stencils[b].disp[kNumRodFields];
-        }
-        auto layout = BuildShuffledIndependent<kBS>(stencils);
-        AttachStageStart<kBS>(layout, stageStart, kStiffnessDampingFactor);
-        auto const psd = RunRodAxialStress(
-            layout,
-            OutputConfig{.energy = false, .residual = true, .dresidual = true},
-            /*projectPsd*/ true);
-        for (int b = 0; b < kBS; ++b) {
-          EXPECT_NEAR_TOL(psd[b].residual[kNumRodFields], expectedResidual, kTol);
-          real const Kxx = psd[b].dresidual[0];
-          real const Kyy = psd[b].dresidual[kN + 1];
-          if (tension) {
-            EXPECT_NEAR_TOL(scale * Kyy, expectedGeometric, kTol);
-          } else {
-            // Compression gives effStress < 0, so the projection floors the geometric term.
-            EXPECT_EQ(materials::kMinProjectedEigenvalue, Kyy);
+    // Closed form for a straight rod with EA = kAxialStiffness = 12, stretch q, and a stage-start
+    // stretch 2 − q mirrored about the rest state: effEA = (1 + f)·EA = 18 and ssWeight =
+    // f/(1 + f) = 1/3 give effStrain = (q² − 1)/2 − ((2 − q)² − 1)/6 = (q − 1)(q + 3)/3 and
+    // effStress = effEA·effStrain. Then energy = effStress·effStrain·L/2, residual = effStress·q,
+    // material = effEA·q²/L, and geometric = effStress/L (floored at eps when projected). In
+    // compression, the collapse barrier ψ = k·p³/u³ at the plain stretch (u = q², p = 1 − u) adds
+    // ψ·L to the energy, 2ψ' = −6k·p²/u⁴ to the stress, its Gauss–Newton term 24k·p/u⁵ to the
+    // modulus effEA, and nothing to the geometric term. Lanes cycle through tension (q = 1.5) and
+    // compression at q = 0.5 and 0.25: at u = 1/4 alone, 24k·p/u⁵ would equal expressions such as
+    // 6k·p/u⁶ and 32k·p²/u⁵.
+    real constexpr kStretches[] = {1.5_r, 0.5_r, 0.25_r};
+    for (real const barrierStiffness : {0_r, kAxialCollapseBarrierStiffness}) {
+      for (int const firstLane : {0, 1, 2}) {
+        auto const stretch = [&](int b) { return kStretches[(b + firstLane) % 3]; };
+        for (real const scale : {1_r, kTinyScale}) {
+          NdArray<RodStencil, kBS> stencils{};
+          NdArray<RodStencil, kBS> stageStart{};
+          for (int b = 0; b < kBS; ++b) {
+            stencils[b].X = {Real3{}, Real3{scale, 0_r, 0_r}, Real3{2_r * scale, 0_r, 0_r}};
+            stencils[b].disp[kNumRodFields] = (stretch(b) - 1_r) * scale;
+            stageStart[b] = stencils[b];
+            stageStart[b].disp[kNumRodFields] = -stencils[b].disp[kNumRodFields];
           }
-          EXPECT_NEAR_TOL(scale * (Kxx - Kyy), expectedMaterial, kTol);
-          // The rod is x-aligned, so the 3x3 block is diagonal and transversely isotropic.
-          EXPECT_EQ(Kyy, psd[b].dresidual[2 * kN + 2]);
-          EXPECT_EQ(0_r, psd[b].dresidual[1]);
-          EXPECT_EQ(0_r, psd[b].dresidual[2]);
-          EXPECT_EQ(0_r, psd[b].dresidual[kN + 2]);
-          ExpectSymmetricPsd(psd[b], static_cast<unsigned int>(b));
+          auto layout = BuildShuffledIndependent<kBS>(stencils);
+          layout.axialCollapseBarrierStiffness = barrierStiffness;
+          AttachStageStart<kBS>(layout, stageStart, kStiffnessDampingFactor);
+          for (bool const projectPsd : {false, true}) {
+            auto const axial = RunRodAxialStress(
+                layout,
+                OutputConfig{.energy = true, .residual = true, .dresidual = true},
+                projectPsd);
+            for (int b = 0; b < kBS; ++b) {
+              double const q = stretch(b);
+              double const u = Sqr(q);
+              double const p = Max(1.0 - u, 0.0);
+              double const k = barrierStiffness;
+              double const effStrain = (q - 1.0) * (q + 3.0) / 3.0;
+              double const effStress = 18.0 * effStrain;
+              double const expectedEnergy = 0.5 * effStress * effStrain + k * Pow(p / u, 3);
+              double const expectedResidual = (effStress - 6.0 * k * Sqr(p) / Pow(u, 4)) * q;
+              double const expectedMaterial = (18.0 + 24.0 * k * p / Pow(u, 5)) * u;
+              EXPECT_NEAR(expectedEnergy, axial[b].energy / scale, kTol * expectedEnergy);
+              EXPECT_NEAR(
+                  expectedResidual, axial[b].residual[kNumRodFields], kTol * Abs(expectedResidual));
+              real const Kxx = axial[b].dresidual[0];
+              real const Kyy = axial[b].dresidual[kN + 1];
+              if (projectPsd && effStress < 0.0) {
+                // Compression gives a negative stress, so the projection floors the geometric term.
+                EXPECT_EQ(materials::kMinProjectedEigenvalue, Kyy);
+              } else {
+                EXPECT_NEAR(effStress, scale * Kyy, kTol * Abs(effStress));
+              }
+              EXPECT_NEAR(expectedMaterial, scale * (Kxx - Kyy), kTol * expectedMaterial);
+              // The rod is x-aligned, so the 3x3 block is diagonal and transversely isotropic.
+              EXPECT_EQ(Kyy, axial[b].dresidual[2 * kN + 2]);
+              EXPECT_EQ(0_r, axial[b].dresidual[1]);
+              EXPECT_EQ(0_r, axial[b].dresidual[2]);
+              EXPECT_EQ(0_r, axial[b].dresidual[kN + 2]);
+              if (projectPsd) {
+                ExpectSymmetricPsd(axial[b], static_cast<unsigned int>(b));
+              }
+            }
+          }
         }
       }
     }
@@ -1390,6 +1423,62 @@ TEST(Rod, AxialPsd) {
         /*projectPsd*/ true);
     for (int b = 0; b < kBS; ++b) {
       ExpectSymmetricPsd(genericPsd[b], static_cast<unsigned int>(303 + b));
+    }
+  });
+}
+
+// Ordered by decreasing stretch λ of x-aligned unit elements. In single precision, 2⁻⁷ and 2⁻¹⁰
+// straddle the collapse barrier's saturation at λ₀ = 2⁻⁸ (2⁻⁶⁴ in double). The energy keeps growing
+// toward collapse, matching k·(λ⁻² − 1)³ at 2⁻⁷ and its continuation k·p̄²(p̄ + 3)/λ₀⁶ (p̄ = 1 − λ₀²)
+// at λ = 0, plus the SVK energy, and the residual stays its derivative. The barrier pushes back
+// until total collapse, where the residual vanishes with q. Powers of two keep the perturbed
+// displacements exact.
+TEST(Rod, AxialCollapseBarrierNearCollapse) {
+  real constexpr kBarrierStiffness = 0x1p-12_r;
+  real constexpr kFdStepPerStretch = MOCHI_USE_DOUBLE_PRECISION ? 0x1p-14_r : 0x1p-8_r;
+  double constexpr kEnergyRelTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-12 : 1e-6;
+  double constexpr kMinStretchSq = MOCHI_USE_DOUBLE_PRECISION ? 0x1p-128 : 0x1p-16;
+  double constexpr kPBar = 1.0 - kMinStretchSq;
+  double constexpr kG = 0x1p14 - 1.0; // λ⁻² − 1 at λ = 2⁻⁷
+  RunSupportedFemShellRodBatchSizes([&]<int kBS>() {
+    auto const run = [](BatchLayout<kBS> const& l, OutputConfig c) {
+      return RunRodAxialStress(l, c, /*projectPsd*/ true);
+    };
+    double previousEnergy = 0.0;
+    for (real const stretch : {0x1p-7_r, 0x1p-10_r, 1e-5_r, 0_r}) {
+      NdArray<RodStencil, kBS> stencils{};
+      for (int b = 0; b < kBS; ++b) {
+        stencils[b].X = {Real3{}, Real3{1_r, 0_r, 0_r}, Real3{2_r, 0_r, 0_r}};
+        stencils[b].disp[kNumRodFields] = stretch - 1_r;
+      }
+      auto layout = BuildShuffledIndependent<kBS>(stencils);
+      layout.axialCollapseBarrierStiffness = kBarrierStiffness;
+      auto const out =
+          run(layout, OutputConfig{.energy = true, .residual = true, .dresidual = true});
+      for (int b = 0; b < kBS; ++b) {
+        EXPECT_TRUE(IsFinite(out[b].energy));
+        EXPECT_GT(out[b].energy, previousEnergy);
+        real const residualNorm = Norm(out[b].residual);
+        EXPECT_TRUE(IsFinite(residualNorm));
+        EXPECT_EQ(stretch > 0_r, residualNorm > 0_r);
+        for (real const v : out[b].dresidual) {
+          EXPECT_TRUE(IsFinite(v));
+        }
+      }
+      if (stretch == 0x1p-7_r || stretch == 0_r) {
+        double const svkEnergy =
+            0.5 * kAxialStiffness * Sqr(0.5 * (Sqr(static_cast<double>(stretch)) - 1.0));
+        double const barrierEnergy = stretch > 0_r ? kBarrierStiffness * kG * kG * kG
+                                                   : kBarrierStiffness * kPBar * kPBar *
+                (kPBar + 3.0) / (kMinStretchSq * kMinStretchSq * kMinStretchSq);
+        for (int b = 0; b < kBS; ++b) {
+          EXPECT_NEAR(svkEnergy + barrierEnergy, out[b].energy, kEnergyRelTol * barrierEnergy);
+        }
+      }
+      if (stretch >= 0x1p-10_r) {
+        VerifyPlainFd<kBS, /*kHasDRes*/ false>(layout, run, stretch * kFdStepPerStretch);
+      }
+      previousEnergy = out[0].energy;
     }
   });
 }

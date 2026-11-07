@@ -604,6 +604,12 @@ struct RodMaterialParams {
   real massDampingCoefficient = 0_r; // [1/s]
   // Stiffness-proportional damping coefficient.
   real stiffnessDampingCoefficient = 0_r; // [s]
+  // Dimensionless scale of an optional barrier energy
+  // axialCollapseBarrierScale*axialStiffness*max((L/l)^2 - 1, 0)^3 per unit undeformed length, with
+  // the undeformed and deformed lengths L and l of an element. It vanishes unless the element is
+  // compressed, adds no reference stiffness, and resists axial collapse under large compression.
+  // Zero disables it, leaving plain StVK. This must be non-negative.
+  real axialCollapseBarrierScale = 1e-3_r;
 
 #if MOCHI_LANGUAGE_CPP20
   bool operator==(RodMaterialParams const&) const = default;

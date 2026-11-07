@@ -39,7 +39,8 @@
  * Inertia and gravity: These assume lumped nodal masses.
  *
  * Axial deformation: This is equivalent to standard 1D linear finite elements, using a 1D reduced
- * St. Venant--Kirchhoff constitutive model that is linear in the axial Green--Lagrange strain.
+ * St. Venant--Kirchhoff constitutive model that is linear in the axial Green--Lagrange strain, plus
+ * an optional barrier against axial collapse.
  *
  * Bending: This uses the binormal curvature discretization from the discrete elastic rods
  * formulation from computer graphics (https://www.cs.columbia.edu/cg/rods/), which infintely
@@ -468,9 +469,9 @@ bool RodInertia(
 /// @brief Compute axial stress work for a batch of rod stencils.
 ///
 /// Uses 1D Green–Lagrange strain with a reduced St. Venant–Kirchhoff model on the left element
-/// (nodes 0 and 1) of each stencil. Node indices are read from @p l2gFlat, so node 1 may be
-/// non-consecutive (periodic). A boundary stencil whose node 1 collapses onto node 0 is masked to
-/// zero.
+/// (nodes 0 and 1) of each stencil, plus an optional collapse barrier. Node indices are read from
+/// @p l2gFlat, so node 1 may be non-consecutive (periodic). A boundary stencil whose node 1
+/// collapses onto node 0 is masked to zero.
 ///
 /// @tparam kBatchSize Batch size.
 /// @param[in] meshNodes  Reference node positions [m].
@@ -482,6 +483,11 @@ bool RodInertia(
 /// @param[out] outRes  If non-null, accumulates per-element residual.
 /// @param[out] outDRes  If non-null, accumulates per-element stiffness.
 /// @param[in] axialStiffness  EA [N].
+/// @param[in] axialCollapseBarrierStiffness  Stiffness k ≥ 0 [N] of the axial collapse barrier
+///   k·⟨λ⁻² − 1⟩³ per unit reference length, with stretch λ; skipped when zero. Its stiffness uses
+///   a PSD Gauss–Newton approximation, and it is excluded from stiffness damping. Below a stretch
+///   of 2⁻⁸ in single precision (2⁻⁶⁴ in double), its energy continues linearly in λ² and its
+///   stiffness saturates, to avoid overflow; the residual stays the exact derivative of the energy.
 /// @param[in] projectPsd  If true, project the geometric stiffness to PSD.
 /// @param[in] stiffnessDampingFactor  β/dt factor for stiffness damping (dimensionless). Unified
 ///   into the elastic response by scaling the material stiffness to (1+factor)·EA and using the
@@ -499,6 +505,7 @@ bool RodAxialStress(
     BatchRodVector<kBatchSize>* outRes,
     BatchRodMatrix<kBatchSize>* outDRes,
     real axialStiffness,
+    real axialCollapseBarrierStiffness,
     bool projectPsd,
     real stiffnessDampingFactor = 0_r,
     NdArray<BatchReal<kBatchSize>, kNumRodStencilDofs> const* stageStartDisp = nullptr);

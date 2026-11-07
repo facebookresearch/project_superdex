@@ -284,6 +284,8 @@ class MochiRodActorAxialStretchScene : public test::MochiSceneTestBase,
     params.material.axialStiffness = kAxialStiffness;
     params.material.torsionalStiffness = 1e3_r;
     params.material.flexuralStiffness = {1e3_r, 1e3_r};
+    // The exact stretch check is specific to plain StVK, though the barrier is inactive in tension.
+    params.material.axialCollapseBarrierScale = 0_r;
 
     _actor = CreateRodActor(_scene, params, ErrorAssert{});
     EXPECT_NE(entt::entity{}, mochi::GetEntity(reg, _actor->GetHandle(), test::ExpectOK{}));
@@ -3338,7 +3340,77 @@ class MochiRodDampingTest : public test::MochiSceneTestBase {
   }
 };
 
+// The same straight-rod helpers, for the axial collapse barrier.
+class MochiRodCollapseBarrierTest : public MochiRodDampingTest {};
+
 } // namespace
+
+// Between otherwise identical rods compressed uniformly to stretch λ, the objective differs by the
+// axial collapse barrier η·EA·L·(λ⁻² − 1)³ summed over the elements.
+TEST_F(MochiRodCollapseBarrierTest, BarrierEnergyUnderUniformCompression) {
+  real constexpr kBarrierScale = 0.1_r;
+  real constexpr kStretch = 0.5_r;
+  int constexpr kNumNodes = 3;
+  double constexpr kEnergyRelTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-9 : 1e-4;
+  _scene->SetGravity({0_r, 0_r, 0_r});
+  RodMaterialParams material = BaseMaterial();
+  material.axialCollapseBarrierScale = 0_r;
+  Actor* const withoutBarrier = CreateStraightRod(kNumNodes, material);
+  material.axialCollapseBarrierScale = kBarrierScale;
+  Actor* const withBarrier = CreateStraightRod(kNumNodes, material);
+
+  // A unit step at rest initializes the integrator state without moving either rod.
+  _scene->Step(1_r);
+
+  auto& reg = GetRegistry();
+  AssemblyParams const objectiveOnly{.assemObj = true, .assemRes = false, .assemDRes = false};
+  auto const compressedObjective = [&](Actor* actor) {
+    entt::entity const entity = GetEntity(actor);
+    auto const& nodes = reg.get<CPolylineMesh const>(entity).nodes;
+    auto& displacements = reg.get<CRodPose<TimeStep::Current>>(entity).value.displacements;
+    for (int n = 0; n < kNumNodes; ++n) {
+      for (int d = 0; d < fem::kRodThetaDofOffset; ++d) {
+        displacements[fem::kNumRodFields * n + d] = (kStretch - 1_r) * (nodes[n][d] - nodes[0][d]);
+      }
+    }
+    ecs::InvokeOnEntity(rod::AssembleBody, reg, entity, std::cref(objectiveOnly));
+    return reg.get<CActorSnle const>(entity).objective;
+  };
+
+  double const g = 1.0 / Sqr(static_cast<double>(kStretch)) - 1.0;
+  double const expected =
+      static_cast<double>(kBarrierScale * material.axialStiffness) * (kNumNodes - 1) * g * g * g;
+  double const actual = compressedObjective(withBarrier) - compressedObjective(withoutBarrier);
+  EXPECT_NEAR(expected, actual, kEnergyRelTol * expected);
+}
+
+// A backward-Euler step whose inertial prediction crushes a pinned 2-node rod to 1% of its rest
+// length. The free node's balance gives a stretch of 0.011 without the barrier and 0.42 with the
+// default one.
+TEST_F(MochiRodCollapseBarrierTest, DefaultBarrierResistsCrushingStep) {
+  real constexpr kDt = 1e-2_r;
+  _scene->SetGravity({0_r, 0_r, 0_r});
+  UseBackwardEulerDirectSolver();
+  SolverParams sp = _scene->GetSolverParams();
+  sp.nonLinearSolver.maxIter = 100;
+  _scene->SetSolverParams(sp, ErrorAssert{});
+
+  auto const stretchAfterStep = [&](real barrierScale) {
+    RodMaterialParams material = BaseMaterial();
+    material.axialCollapseBarrierScale = barrierScale;
+    Actor* const actor = CreateStraightRod(2, material);
+    MOCHI_DEFER(_scene->DestroyActor(actor));
+    PinRodNode(_scene, actor, 0, Real3{0_r, 0_r, 0_r});
+    DynamicArray<real> vel(2 * 4, 0_r);
+    vel[1 * 4 + 0] = -0.99_r / kDt;
+    actor->SetNodeVelocitiesLocal(MakeConstSpan(vel), ErrorAssert{});
+    _scene->Step(kDt);
+    return 1_r + GetDofs(actor)[1 * 4 + 0];
+  };
+
+  EXPECT_LT(stretchAfterStep(0_r), 0.02_r);
+  EXPECT_GT(stretchAfterStep(RodMaterialParams{}.axialCollapseBarrierScale), 0.3_r);
+}
 
 // CreateRodActor rejects non-finite or out-of-range material parameters and accepts a small
 // positive damping pair.
@@ -3368,6 +3440,7 @@ TEST_F(MochiRodDampingTest, ValidationRejectsInvalidMaterialParams) {
     rejected([&](RodMaterialParams& m) { m.flexuralStiffness[1] = bad; });
     rejected([&](RodMaterialParams& m) { m.massDampingCoefficient = bad; });
     rejected([&](RodMaterialParams& m) { m.stiffnessDampingCoefficient = bad; });
+    rejected([&](RodMaterialParams& m) { m.axialCollapseBarrierScale = bad; });
   }
 
   // A valid small positive pair succeeds.

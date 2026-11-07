@@ -50,6 +50,8 @@ struct RodWorkBenchmarkData {
   DynamicArray<Real3> referenceAxes;
   DynamicArray<int> l2gFlat;
   static constexpr real kAxialStiffness = 1e4_r;
+  // The default RodMaterialParams::axialCollapseBarrierScale times kAxialStiffness.
+  static constexpr real kAxialCollapseBarrierStiffness = 1e-3_r * kAxialStiffness;
   static constexpr Real2 kFlexuralStiffness = {1e-2_r, 1e-2_r};
   static constexpr real kTorsionalStiffness = 5e-3_r;
   static constexpr Real3 kGravity = {0_r, -9.81_r, 0_r};
@@ -162,6 +164,7 @@ static void BenchmarkRodWork(benchmark::State& state, BenchmarkMode mode) {
         evalRes ? &batchRes : nullptr,
         evalDRes ? &batchDRes : nullptr,
         RodWorkBenchmarkData::kAxialStiffness,
+        RodWorkBenchmarkData::kAxialCollapseBarrierStiffness,
         projectPsd);
 
     RodBendTwistStress<kBatchSize>(

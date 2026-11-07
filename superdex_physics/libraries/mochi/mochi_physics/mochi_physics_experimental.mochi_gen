@@ -433,6 +433,7 @@ struct experimental::RodMaterialParams [equality(default)] {
   Real2 flexuralStiffness [units("N*m^2")] = {5e-4, 5e-4};
   real massDampingCoefficient [units("1/s")] = 0;
   real stiffnessDampingCoefficient [units("s")] = 0;
+  real axialCollapseBarrierScale = 1e-3;
 }
 
 struct experimental::PointCloudColliderParams [equality(default)] {
