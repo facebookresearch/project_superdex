@@ -34,13 +34,24 @@
 
 namespace mochi {
 
+namespace details {
+
+/// @brief Whether a preconditioner type applies one preconditioner per actor.
+[[nodiscard]] inline constexpr bool IsPerActorPreconditioner(PreconditionerType const& preconType) {
+  return preconType == PreconditionerType::PerActor ||
+      preconType == PreconditionerType::AdaptivePerActor;
+}
+
+} // namespace details
+
 template <typename T>
 struct IslandOperators;
 
 /** @brief Applies one actor preconditioner to its owned global row interval.
  *
- * @note The referenced preconditioner must outlive this entry. Concurrent row ranges are
- * actor-local.
+ * @note The referenced preconditioner may be destroyed before this entry, but the entry must not be
+ * used after that.
+ * @note Concurrent row ranges are actor-local.
  */
 template <typename T>
 struct ActorPreconditionerEntry {
@@ -358,15 +369,16 @@ struct PerActorPrec final : Preconditioner<T> {
   };
 
  public:
-  static constexpr auto kType = PreconditionerType::PerActor;
-
   /** @brief Construct a per-actor preconditioner from an ordered row partition.
    *
    * @param[in] actorPrecs Entries must have positive sizes, be contiguous in increasing offset
-   * order starting at zero, and reference distinct preconditioners that outlive this object.
+   * order starting at zero, and reference distinct preconditioners that are alive whenever this
+   * object uses them. @ref Update may replace entries whose preconditioners were destroyed.
+   * @param[in] type @ref PreconditionerType::PerActor or @ref PreconditionerType::AdaptivePerActor.
    */
-  explicit PerActorPrec(std::vector<ActorPreconditionerEntry<T>>&& actorPrecs)
-      : _actorPrecs(std::move(actorPrecs)) {
+  PerActorPrec(std::vector<ActorPreconditionerEntry<T>>&& actorPrecs, PreconditionerType type)
+      : _actorPrecs(std::move(actorPrecs)), _type(type) {
+    MOCHI_ASSERT(details::IsPerActorPreconditioner(type), "Invalid per-actor preconditioner type.");
     UpdateSolveItems();
   }
 
@@ -455,7 +467,7 @@ struct PerActorPrec final : Preconditioner<T> {
   void Update(IslandOperators<T> const& A);
 
   constexpr PreconditionerType GetType() const override {
-    return kType;
+    return _type;
   }
 
  private:
@@ -1239,6 +1251,7 @@ struct PerActorPrec final : Preconditioner<T> {
   // _solveItemRanges[i + 1]). Both are recomputed whenever _actorPrecs is set.
   DynamicArray<int> _solveOrder;
   DynamicArray<int> _solveItemRanges;
+  PreconditionerType _type;
   mutable std::optional<ConcurrentSolvePlan> _concurrentSolvePlan;
 };
 

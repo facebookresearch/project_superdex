@@ -284,6 +284,20 @@ enum struct PreconditionerType {
    */
   ColoredSSOR,
 
+  /**
+   * @brief [Experimental] @ref PreconditionerType::PerActor preconditioner that can switch the
+   * preconditioner type of each actor during the simulation to speed up the linear solves.
+   *
+   * @warning Some scenes can run slower than with @ref PreconditionerType::PerActor, and some steps
+   * can take longer than usual, causing latency spikes.
+   * @warning With this preconditioner, stepping after restoring a captured state may not exactly
+   * reproduce the original simulation. However, results remain deterministic: restoring the same
+   * state and repeating the same steps always produces the same results.
+   * @warning This is an experimental feature. It may be changed or removed in the future. Use at
+   * your own risk.
+   */
+  AdaptivePerActor,
+
   /** @brief Number of preconditioner type enum values. */
   Count,
 
@@ -306,6 +320,7 @@ MOCHI_ENUM_ITEM(ILU0)
 MOCHI_ENUM_ITEM(IC0)
 MOCHI_ENUM_ITEM(PerActor)
 MOCHI_ENUM_ITEM(ColoredSSOR)
+MOCHI_ENUM_ITEM(AdaptivePerActor)
 MOCHI_ENUM_COUNT(Count)
 MOCHI_ENUM_END()
 

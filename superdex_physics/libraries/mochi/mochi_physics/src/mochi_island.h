@@ -90,8 +90,6 @@ struct CIslandDofInfo : NoCopy {
 };
 
 // Struct storing information on the status of the solver during an integration stage.
-// This is essentially a reduced version of NewtonSolverStatus with only the information that is
-// relevant to report performance through the scene stats.
 struct StageSolverStats {
   real resNorm = 0_r; // Residual norm with the current solution
   int numIterDone = 0; // Number of iterations done
@@ -99,12 +97,18 @@ struct StageSolverStats {
   int numLSIterDone = 0; // Number of line-search iterations
   ConvergenceStatus convergence = ConvergenceStatus::None; // Worst status among the island actors
 
+  // Linear solver iterations and worst convergence status, excluding retried solves.
+  int numLinearIterDone = 0;
+  LinearSolverConvergenceStatus worstLinearConvergence = LinearSolverConvergenceStatus::None;
+
   inline static StageSolverStats FromNewtonSolverStatus(NewtonSolverStatus<real> const& status) {
     return StageSolverStats{
         .resNorm = status.resNorm,
         .numIterDone = status.numIterDone,
         .resNormError = status.resNormError,
         .numLSIterDone = status.totalNumLSIterDone,
+        .numLinearIterDone = status.totalNumLinearIterDone,
+        .worstLinearConvergence = status.worstLinearConvergence,
     };
   }
 };

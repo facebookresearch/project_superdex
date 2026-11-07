@@ -816,6 +816,7 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
 
     // Try to take step.
     bool retry = false;
+    LinearSolverStatus linearResult;
     do {
       // Assemble the dresidual, if needed. Skip it in the first iteration (unless it's a retry)
       // because it was assembled above together with the residual and (possibly) the objective.
@@ -833,7 +834,7 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
 
       // Solve the linear system.
       dxSolve.SetZero();
-      auto linearResult = _linearSolver->Solve(
+      linearResult = _linearSolver->Solve(
           linOp,
           problem.GetResidual(),
           dxSolve,
@@ -868,7 +869,6 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
       }
 
       linearResidualNorm = static_cast<T>(linearResult.residualNorm);
-      status.totalNumLinearIterDone += linearResult.numIterDone;
       retry = !IsConverged(linearResult.convergence);
 
       // If the Newton-Raphson step is not successful, the iteration will be retried if (a) we did
@@ -934,6 +934,8 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
         } // end if last try
       } // end if retry
     } while (retry);
+    status.totalNumLinearIterDone += linearResult.numIterDone;
+    status.worstLinearConvergence = Max(status.worstLinearConvergence, linearResult.convergence);
 
     // Explosion control
     // TODO: Assess using a per-actor (possibly weighted) norm when convergenceMode =

@@ -194,62 +194,55 @@ TEST_F(ActorPreconditionerTest, PassesNodePositionsAndSupportsOnlyCompatibleType
   EXPECT_EQ(4, expectWarning._messagesReceived);
 }
 
-TEST_F(ActorPreconditionerTest, ChangesCachedPreconditionerAndPreservesStateOnRejection) {
+TEST_F(ActorPreconditionerTest, AppliesTypeAndPreservesItOnRejection) {
   ConfigurePerActorSolve();
 
   auto* actor = CreateSoft();
-  auto& reg = GetRegistry();
   auto const actorEntity = GetEntity(actor);
+  auto const getActorSnle = [&]() -> CActorSnle& {
+    return GetRegistry().get<CActorSnle>(actorEntity);
+  };
+
   SetActorPreconditionerType(actor, PreconditionerType::AMG, test::ExpectOK{});
   _scene->Step(0.01_r);
+  ASSERT_NE(nullptr, getActorSnle().GetActivePreconditioner());
+  EXPECT_EQ(PreconditionerType::AMG, getActorSnle().GetActivePreconditioner()->GetType());
 
-  auto& actorSnle = reg.get<CActorSnle>(actorEntity);
-  ASSERT_NE(nullptr, actorSnle.fullPreconditioner);
-  EXPECT_EQ(PreconditionerType::AMG, actorSnle.fullPreconditioner->GetType());
-  auto const island = reg.get<CIslandMemberInfo const>(actorEntity).island;
-  auto* const islandPreconditioner = reg.get<CIslandPreconditioner>(island).get();
-  auto* const actorPreconditioner = actorSnle.fullPreconditioner.get();
-
-  SetActorPreconditionerType(actor, PreconditionerType::AMG, test::ExpectOK{});
   SetActorPreconditionerType(actor, PreconditionerType::ColoredSSOR, test::ExpectNotOK{});
-  EXPECT_EQ(islandPreconditioner, reg.get<CIslandPreconditioner>(island).get());
-  EXPECT_EQ(actorPreconditioner, actorSnle.fullPreconditioner.get());
+  EXPECT_EQ(PreconditionerType::AMG, getActorSnle().GetActivePreconditionerTypeOverride());
 
   SetActorPreconditionerType(actor, PreconditionerType::BlockJacobi, test::ExpectOK{});
-  EXPECT_NE(islandPreconditioner, reg.get<CIslandPreconditioner>(island).get());
-  EXPECT_EQ(nullptr, actorSnle.fullPreconditioner);
-  EXPECT_EQ(PreconditionerType::BlockJacobi, actorSnle.fullPreconditionerType);
+  EXPECT_EQ(PreconditionerType::BlockJacobi, getActorSnle().GetActivePreconditionerTypeOverride());
+  _scene->Step(0.01_r);
+  ASSERT_NE(nullptr, getActorSnle().GetActivePreconditioner());
+  EXPECT_EQ(PreconditionerType::BlockJacobi, getActorSnle().GetActivePreconditioner()->GetType());
 
   // Each representation keeps its own selection across ROM switches.
-  actorSnle.EnableReduced(Matrix<real>::Zero(1, 1));
+  getActorSnle().EnableReduced(Matrix<real>::Zero(1, 1));
   SetActorPreconditionerType(actor, PreconditionerType::Jacobi, test::ExpectOK{});
-  actorSnle.DisableReduced();
-  EXPECT_EQ(PreconditionerType::BlockJacobi, actorSnle.GetActivePreconditionerType());
-  actorSnle.EnableReduced(Matrix<real>::Zero(1, 1));
-  EXPECT_EQ(PreconditionerType::Jacobi, actorSnle.GetActivePreconditionerType());
+  getActorSnle().DisableReduced();
+  EXPECT_EQ(PreconditionerType::BlockJacobi, getActorSnle().GetActivePreconditionerTypeOverride());
+  getActorSnle().EnableReduced(Matrix<real>::Zero(1, 1));
+  EXPECT_EQ(PreconditionerType::Jacobi, getActorSnle().GetActivePreconditionerTypeOverride());
 }
 
 TEST_F(ActorPreconditionerTest, ArticulatedSelectionsSurviveFirstStepInitialization) {
   ConfigurePerActorSolve();
 
-  DynamicArray<std::pair<Actor*, PreconditionerType>> actors;
+  DynamicArray<std::pair<entt::entity, PreconditionerType>> actors;
   for (auto const type : {PreconditionerType::Jacobi, PreconditionerType::SymInverse}) {
     auto* actor = CreateArticulated(ArticulatedJointType::Free);
-    actors.emplace_back(actor, type);
+    actors.emplace_back(GetEntity(actor), type);
     SetActorPreconditionerType(actor, type, test::ExpectOK{});
   }
 
   _scene->Step(0.01_r);
 
   for (auto const& [actor, type] : actors) {
-    auto const& actorSnle = GetRegistry().get<CActorSnle const>(GetEntity(actor));
-    EXPECT_EQ(type, actorSnle.reducedPreconditionerType);
-    ASSERT_NE(nullptr, actorSnle.reducedPreconditioner);
-    EXPECT_EQ(type, actorSnle.reducedPreconditioner->GetType());
+    auto& actorSnle = GetRegistry().get<CActorSnle>(actor);
+    ASSERT_TRUE(actorSnle.UseReduced());
+    EXPECT_EQ(type, actorSnle.GetActivePreconditionerTypeOverride());
+    ASSERT_NE(nullptr, actorSnle.GetActivePreconditioner());
+    EXPECT_EQ(type, actorSnle.GetActivePreconditioner()->GetType());
   }
-
-  auto* const jacobiActor = actors.front().first;
-  SetActorPreconditionerType(jacobiActor, PreconditionerType::SymInverse, test::ExpectOK{});
-  EXPECT_EQ(
-      nullptr, GetRegistry().get<CActorSnle const>(GetEntity(jacobiActor)).reducedPreconditioner);
 }

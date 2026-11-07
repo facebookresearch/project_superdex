@@ -45,6 +45,7 @@
 #include <mochi_core/linear_algebra/utils/matrix_conversions.h>
 #include <mochi_core/solvers/krylov_solver.h>
 #include <mochi_core/solvers/linear_solver_params.h>
+#include <mochi_core/solvers/per_actor_preconditioner.h>
 #include <mochi_core/utils/log.h>
 #include <mochi_core/utils/span.h>
 #include <mochi_core/utils/task_scheduler.h>
@@ -133,10 +134,15 @@ inline constexpr bool IsIterativeSolver(LinearSolverType const& solverType) {
 /// not CUDA (solving with IslandOperators is not supported on CUDA), and the preconditioner must be
 /// computable from the IslandOperators (if it requires condensing the global matrix, it's more
 /// efficient to use the global matrix also for the matrix-vector products).
-inline constexpr bool UseIslandOperators(KrylovSolverParams const& params) {
+[[nodiscard]] inline constexpr bool UseIslandOperators(KrylovSolverParams const& params) {
   return IsIterativeSolver(params.solverType) && !IsCudaSolver(params.solverType) &&
       ((params.preconditionerType == PreconditionerType::None) ||
-       (params.preconditionerType == PreconditionerType::PerActor));
+       IsPerActorPreconditioner(params.preconditionerType));
+}
+
+/// @brief Whether a linear solve with the given parameters applies one preconditioner per actor.
+[[nodiscard]] inline constexpr bool UsesPerActorPreconditioners(KrylovSolverParams const& params) {
+  return UseIslandOperators(params) && IsPerActorPreconditioner(params.preconditionerType);
 }
 
 /// @brief Returns the norm that the stop criterion of the solver selected by @p params uses (see

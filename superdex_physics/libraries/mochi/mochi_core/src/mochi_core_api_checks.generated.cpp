@@ -203,7 +203,8 @@ static_assert(static_cast<int>(mochi::PreconditionerType::ILU0) == 9, "\n  ERROR
 static_assert(static_cast<int>(mochi::PreconditionerType::IC0) == 10, "\n  ERROR: enum value mochi::PreconditionerType::IC0 is out-of-sync with C++.\n  Please check the enum definition, then run mochi_gen_py to regenerate this file.\n");
 static_assert(static_cast<int>(mochi::PreconditionerType::PerActor) == 11, "\n  ERROR: enum value mochi::PreconditionerType::PerActor is out-of-sync with C++.\n  Please check the enum definition, then run mochi_gen_py to regenerate this file.\n");
 static_assert(static_cast<int>(mochi::PreconditionerType::ColoredSSOR) == 12, "\n  ERROR: enum value mochi::PreconditionerType::ColoredSSOR is out-of-sync with C++.\n  Please check the enum definition, then run mochi_gen_py to regenerate this file.\n");
-static_assert(static_cast<int>(mochi::PreconditionerType::Count) == 13, "\n  ERROR: enum value mochi::PreconditionerType::Count is out-of-sync with C++.\n  Please check the enum definition, then run mochi_gen_py to regenerate this file.\n");
+static_assert(static_cast<int>(mochi::PreconditionerType::AdaptivePerActor) == 13, "\n  ERROR: enum value mochi::PreconditionerType::AdaptivePerActor is out-of-sync with C++.\n  Please check the enum definition, then run mochi_gen_py to regenerate this file.\n");
+static_assert(static_cast<int>(mochi::PreconditionerType::Count) == 14, "\n  ERROR: enum value mochi::PreconditionerType::Count is out-of-sync with C++.\n  Please check the enum definition, then run mochi_gen_py to regenerate this file.\n");
 static_assert(mochi::PreconditionerType::Default == mochi::PreconditionerType::PerActor, "\n  ERROR: enum value mochi::PreconditionerType::Default is out-of-sync with C++.\n  Please check the enum definition, then run mochi_gen_py to regenerate this file.\n");
 
 // enum mochi::LinearSolverConvergenceNorm

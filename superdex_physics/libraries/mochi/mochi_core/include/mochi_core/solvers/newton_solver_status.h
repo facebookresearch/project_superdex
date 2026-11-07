@@ -17,6 +17,7 @@
 #pragma once
 
 #include <mochi_core/linear_algebra/matrix.h>
+#include <mochi_core/solvers/krylov_solver.h>
 #include <mochi_core/solvers/nonlinear_solver_params.h>
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/time.h>
@@ -68,8 +69,13 @@ struct NewtonSolverStatus {
   /// @brief Total number of line-search iterations across all Newton iterations.
   int totalNumLSIterDone = 0;
 
-  /// @brief Total number of iterations of the linear solver across all Newton iterations.
+  /// @brief Total number of iterations of the linear solver across all Newton iterations, excluding
+  /// retried solves.
   int totalNumLinearIterDone = 0;
+
+  /// @brief Worst linear solver convergence status across all Newton iterations, excluding retried
+  /// solves.
+  LinearSolverConvergenceStatus worstLinearConvergence = LinearSolverConvergenceStatus::None;
 
   /// @brief Whether the most recent Newton iteration improved the figure of merit monitored by the
   /// line search.

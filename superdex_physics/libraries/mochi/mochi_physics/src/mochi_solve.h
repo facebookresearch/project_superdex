@@ -22,9 +22,12 @@
 #include "mochi_island.h"
 #include "mochi_simulation.h"
 
+#include <mochi_core/solvers/linear_solver_params.h>
 #include <mochi_core/solvers/snle_problem.h>
 #include <mochi_core/utils/differentiability.h>
 #include <mochi_physics/mochi_physics.h>
+
+#include <optional>
 
 namespace mochi {
 
@@ -45,6 +48,12 @@ void SetSolutions(
     entt::registry& reg,
     CIslandDescendants const& descendants,
     ColumnVectorView<real const> solution);
+
+// Preconditioner type of an actor in the island solve: its override, if any; otherwise the adaptive
+// selection, if eligible; otherwise std::nullopt, so that it is auto-selected. Use this, not
+// ActorSnle::GetActivePreconditionerTypeOverride, to get the type used in the island solve.
+[[nodiscard]] std::optional<PreconditionerType>
+GetActorPreconditionerType(entt::registry const& reg, entt::entity island, entt::entity actor);
 } // namespace mochi
 
 namespace mochi::solver {

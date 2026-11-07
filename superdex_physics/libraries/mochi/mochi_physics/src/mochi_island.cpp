@@ -16,6 +16,8 @@
 
 #include "mochi_island.h"
 
+#include "mochi_actor_preconditioner_policy.h"
+#include "mochi_capture.h"
 #include "mochi_common_components.h"
 #include "mochi_contact.h"
 #include "mochi_contact_filter.h"
@@ -67,6 +69,17 @@ struct CGlobalIsland {
 } // namespace
 
 namespace mochi::island {
+static void ResetActorPreconditionerPolicy(
+    ecs::OptionalCtxGlobal<TagAssemblyPreserveHistory const> preserveHistory,
+    CIslandActorPreconditionerPolicy& policy) {
+  // The restore that ends a solve-free assembly only undoes that assembly, so the selection
+  // carries on.
+  if (!preserveHistory) {
+    // TODO: Make adaptive selection replay-exact so that AdaptivePerActor can become the default.
+    policy.Reset();
+  }
+}
+
 void InitializeOnce(entt::registry& reg) {
   // ECS Component Types:
   ecs::RegisterComponent<CGlobalIsland>(reg);
@@ -76,6 +89,7 @@ void InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<CIslandMembers>(reg);
   ecs::RegisterComponent<CIslandSolverStats>(reg);
   ecs::RegisterComponent<CIslandPreconditioner>(reg);
+  ecs::RegisterComponent<CIslandActorPreconditionerPolicy>(reg);
   ecs::RegisterComponent<CIslandTestConfig>(reg);
   ecs::RegisterComponent<CTempIslandPartitioningData>(reg);
   ecs::RegisterComponent<TagIsland>(reg);
@@ -89,6 +103,9 @@ void InitializeOnce(entt::registry& reg) {
   // Reserve memory for a modest number of islands up front
   data.islands.reserve(64);
   data.actorPartitions.reserve(64);
+
+  // Island state is not captured, so reset adaptive preconditioner selection after a restore.
+  capture::RegisterPostRestoreSystem(&ResetActorPreconditionerPolicy, reg);
 }
 
 [[nodiscard]] bool ShouldRunSingleThreaded(
@@ -156,6 +173,7 @@ entt::entity island::CreateEmpty(entt::registry& reg) {
   reg.emplace<CIslandPreconditioner>(
       island, std::make_shared<PreconditionerRecyclingManager<real>>());
   reg.emplace<CIslandSolverStats>(island);
+  reg.emplace<CIslandActorPreconditionerPolicy>(island);
   sleep::InitIsland(reg, island);
   if (reg.try_ctx<TagDifferentiableScene>()) {
     InitDifferentiableIsland(reg, island);
@@ -663,6 +681,8 @@ void island::PreStep(entt::registry& reg, bool updateSleepState) {
     SortIslandMembers(members);
     // Update CIslandDescendants
     UpdateIslandDescendants(reg, members, descendants);
+    // Reset the adaptive preconditioner policy.
+    reg.get<CIslandActorPreconditionerPolicy>(island).Reset();
     // Reset the island preconditioner.
     reg.get<CIslandPreconditioner>(island).Reset();
   }

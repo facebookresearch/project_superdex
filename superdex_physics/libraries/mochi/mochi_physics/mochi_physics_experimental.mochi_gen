@@ -64,7 +64,8 @@ fn experimental::GetContactForceWorldBatch(Span<Actor const* const> actors, Span
 // @warning @ref PreconditionerType::SymInverse may be prohibitively expensive for full-order
 // deformable actors.
 //
-// @note This setting takes effect only when the scene uses @ref PreconditionerType::PerActor.
+// @note This setting takes effect only when the scene uses @ref PreconditionerType::PerActor or
+// @ref PreconditionerType::AdaptivePerActor, and overrides the adaptive selection for this actor.
 // @note For a ROM actor that switches between reduced and full order, the setting applies only to
 // its current representation. Each representation keeps its own setting across switches.
 // @note Supported combinations are:

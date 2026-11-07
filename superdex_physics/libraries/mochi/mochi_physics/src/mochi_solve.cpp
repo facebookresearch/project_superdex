@@ -17,6 +17,7 @@
 #include "mochi_solve.h"
 
 #include "mochi_actor_convergence.h"
+#include "mochi_actor_preconditioner_policy.h"
 #include "mochi_articulated_body.h"
 #include "mochi_blended.h"
 #include "mochi_common_components.h"
@@ -474,6 +475,20 @@ static void ApplyBoundaryConditionsToIncrement(
   }
 }
 
+std::optional<PreconditionerType> mochi::GetActorPreconditionerType(
+    entt::registry const& reg,
+    entt::entity island,
+    entt::entity actor) {
+  if (auto const typeOverride =
+          reg.get<CActorSnle const>(actor).GetActivePreconditionerTypeOverride()) {
+    return typeOverride;
+  }
+  auto const selectedType =
+      reg.get<CIslandActorPreconditionerPolicy const>(island).GetSelectedType();
+  return selectedType && IsEligibleForAdaptivePreconditioner(reg, actor) ? selectedType
+                                                                         : std::nullopt;
+}
+
 static void GatherSnleDataFromActors(
     SnleProblem<real>& outProblem,
     AssemblyParams const& params,
@@ -528,10 +543,8 @@ static void GatherSnleDataFromActors(
             "Full-order soft and shell actors must have node positions.");
         outProblem.actorPreconditioners.push_back(
             {.offset = dofOffset,
-             .preconditioner =
-                 useReduced ? actorSnle->reducedPreconditioner : actorSnle->fullPreconditioner,
-             .typeHint = useReduced ? actorSnle->reducedPreconditionerType
-                                    : actorSnle->fullPreconditionerType,
+             .preconditioner = actorSnle->GetActivePreconditioner(),
+             .type = GetActorPreconditionerType(reg, island, actor),
              .nodePositions = nodePositions});
       }
     }
@@ -1263,9 +1276,6 @@ bool mochi::solver::StepIslandNewtonAsync(
 
   auto& islandSolverStats = reg.get<CIslandSolverStats>(island);
 
-  // Clear island solver stats.
-  islandSolverStats.stages.clear();
-
   // Reset step-level convergence status. DistributeConvergenceStatus accumulates via
   // stepStatus = Max(stepStatus, stageStatus) across stages, so the initial value must be None.
   for (auto e : descendants.actors) {
@@ -1279,6 +1289,12 @@ bool mochi::solver::StepIslandNewtonAsync(
   auto const& simParams = reg.ctx<CSimulationParams const>();
   NewtonSolverParams newtonParams;
   GetIslandNewtonParams(reg, island, newtonParams);
+
+  // The actor preconditioner policy reads the previous step's stats, so clear them only after
+  // updating it.
+  UpdateIslandActorPreconditionerPolicy(reg, island, descendants, newtonParams.lParams);
+  islandSolverStats.stages.clear();
+
   auto& preconditioner = reg.get<CIslandPreconditioner>(island);
   NewtonSolver<real> snleSolver(newtonParams, preconditioner);
 

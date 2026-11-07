@@ -56,7 +56,7 @@ static SnleProblem<real> GetTestProblem(real (*f)(real), real (*df)(real), real 
     }
     if (params.assemDRes) {
       auto& dresMat = std::get<Matrix<real>>(dresidual);
-      dresMat(0, 0) = ddf(x);
+      dresMat(0, 0) = params.psdDRes ? Abs(ddf(x)) : ddf(x);
     }
 
     // Add SNLE data to the problem, as if it came from a single actor
@@ -245,6 +245,56 @@ static SnleProblem<real> GetBroydenProblem2(int n) {
   functions.assemble = std::move(assembleFn);
   functions.onPostNewIncrement = std::move(incrementFn);
   return SnleProblem<real>{n, n, std::move(functions)};
+}
+
+TEST(NewtonSolver, ExcludesRetriedLinearSolves) {
+  SnleProblem<real> problem = GetTestProblem(
+      [](real x) { return -0.5_r * x * x; }, [](real x) { return -x; }, [](real) { return -1_r; });
+  // The Hessian is negative, so the first CG attempt of each Newton iteration aborts and is retried
+  // with PSD projection.
+  problem.SetSolution(ColumnVector<real, 1>{0.5_r});
+
+  NewtonSolverParams params;
+  params.lParams.solverType = LinearSolverType::CG;
+  params.lParams.preconditionerType = PreconditionerType::None;
+  params.lParams.abortIfNotSpd = true;
+  params.lParams.maxIter = 1;
+  params.psdProjMode = PsdProjectionMode::IfFailRetry;
+  params.lineSearch.type = LineSearchType::None;
+  params.maxIter = 2;
+  params.convergenceMode = NonLinearSolverConvergenceMode::Global;
+
+  NewtonSolver<real> solver(params);
+  auto const status = solver.Solve(problem);
+
+  ASSERT_EQ(2, status.numIterDone);
+  EXPECT_EQ(LinearSolverConvergenceStatus::Converged, status.worstLinearConvergence);
+  EXPECT_EQ(2, status.totalNumLinearIterDone);
+}
+
+TEST(NewtonSolver, KeepsWorstLinearConvergence) {
+  auto problem = GetBroydenProblem(2);
+  problem.SetSolution(ColumnVector<real, 2>{0_r, -1_r});
+
+  NewtonSolverParams params;
+  params.lParams.preconditionerType = PreconditionerType::None;
+  params.lParams.normType = LinearSolverConvergenceNorm::ResidualL2;
+  params.lParams.absTol = 0.3_r;
+  params.lParams.relTol = 0_r;
+  params.lParams.maxIter = 1;
+  params.linearToleranceStrategy = LinearToleranceStrategy::Constant;
+  params.psdProjMode = PsdProjectionMode::Never;
+  params.fittedSaturationHessian = SaturationHessianParams::All(true);
+  params.lineSearch.type = LineSearchType::None;
+  params.convergenceMode = NonLinearSolverConvergenceMode::Global;
+  params.maxIter = 2;
+  params.verbosity = VerbosityLevel::Error;
+
+  // The first Newton iteration's linear solve stops, and the second's converges.
+  auto const status = NewtonSolver<real>(params).Solve(problem);
+
+  ASSERT_EQ(2, status.numIterDone);
+  EXPECT_EQ(LinearSolverConvergenceStatus::Stopped, status.worstLinearConvergence);
 }
 
 TEST(NewtonSolver, SmoothLocalMinimum) {

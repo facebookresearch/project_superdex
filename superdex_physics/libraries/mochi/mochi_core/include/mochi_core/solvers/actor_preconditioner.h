@@ -179,7 +179,8 @@ struct ActorPreconditioner {
   /**
    * @brief Return the concrete preconditioner type for this actor.
    *
-   * @note This is never @ref PreconditionerType::PerActor, which identifies the wrapper.
+   * @note This is never @ref PreconditionerType::PerActor or
+   * @ref PreconditionerType::AdaptivePerActor, which identify the wrapper.
    */
   virtual constexpr PreconditionerType GetType() const = 0;
 
@@ -207,7 +208,7 @@ template <typename T>
 struct ActorPreconditionerInfo {
   int offset = 0; // DoF offset of the actor.
   std::reference_wrapper<std::unique_ptr<ActorPreconditioner<T>>> preconditioner;
-  std::optional<PreconditionerType> typeHint; // Auto-selected if empty.
+  std::optional<PreconditionerType> type; // Auto-selected if empty.
   NodePositionsView<T> nodePositions; // Empty if the actor provides none.
 };
 

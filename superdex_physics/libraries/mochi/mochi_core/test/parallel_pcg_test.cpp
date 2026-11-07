@@ -634,11 +634,13 @@ TEST_F(ParallelPcgTest, SolvesWithMixedModePerActorPreconditioner) {
       ActorPreconditionerParallelMode::SynchronizedTeam,
       synchronizedPrec.GetConcurrentSolveRequirements().mode);
   ASSERT_EQ(3, krylov::parallel_pcg::GetNumParallelWorkers(A));
-  PerActorPrec<real> prec({
-      {0, kSingleWorkerActorSize, singleWorkerPrec},
-      {kSynchronizedOffset, kSynchronizedActorSize, synchronizedPrec},
-      {kIndependentOffset, kActorSize, independentPrec},
-  });
+  PerActorPrec<real> prec(
+      {
+          {0, kSingleWorkerActorSize, singleWorkerPrec},
+          {kSynchronizedOffset, kSynchronizedActorSize, synchronizedPrec},
+          {kIndependentOffset, kActorSize, independentPrec},
+      },
+      PreconditionerType::PerActor);
 
   ColumnVector<real> b(kNumRows);
   b.SetRandom(24);

@@ -820,17 +820,18 @@ void SceneImpl::UpdateQueries(Error& error) {
         "support state capture.");
     return;
   }
-  MOCHI_DEFER(RestorePartialState(
-      state, /*releaseImmediately*/ true, {}, /*wakeAllIslands*/ false, ErrorAssert{}));
 
   auto const intMethod = _registry.ctx<CSimulationParams const>().integrationMethod;
   bool const isReproducible = IsReproducibleFromHistory(intMethod);
 
   // This is a solve-free assembly that must reproduce an already-taken step's forces, so ask
   // the per-actor begin-of-step integration to preserve (not advance) the previous-step history
-  // (see @ref ApplyTimeIntegrationStepStart).
+  // (see @ref ApplyTimeIntegrationStepStart). The tag stays set while the captured state is
+  // restored, so that post-restore systems can tell this rollback from a genuine restore.
   _registry.set<TagAssemblyPreserveHistory>();
   MOCHI_DEFER(_registry.unset<TagAssemblyPreserveHistory>());
+  MOCHI_DEFER(RestorePartialState(
+      state, /*releaseImmediately*/ true, {}, /*wakeAllIslands*/ false, ErrorAssert{}));
 
   // Reconstruct and assemble with the time steps of the reproduced step when usable. A
   // quasistatic (infinite) last step is usable only if the previous state is copied from

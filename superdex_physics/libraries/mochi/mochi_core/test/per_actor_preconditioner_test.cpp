@@ -15,6 +15,7 @@
  */
 
 #include <mochi_core/linear_algebra/utils/matrix_conversions.h>
+#include <mochi_core/solvers/island_operators.h>
 #include <mochi_core/solvers/per_actor_preconditioner.h>
 #include <mochi_core/test/mochi_test_helpers.h>
 #include <mochi_core/utils/dynamic_array.h>
@@ -27,7 +28,9 @@
 #include <chrono>
 #include <future>
 #include <limits>
+#include <memory>
 #include <mutex>
+#include <optional>
 #include <thread>
 #include <utility>
 
@@ -255,7 +258,7 @@ TEST(PerActorPreconditioner, ReuseMatVecRangesCoverRowsWithoutFinalSynchronizati
   RecordingActorPreconditioner actor(ActorPreconditionerParallelMode::IndependentRows, 2, 2_r);
   RecordingActorPreconditioner suffix(
       ActorPreconditionerParallelMode::IndependentRows, 2, 2_r, suffixCost);
-  PerActorPrec<real> prec({{0, 12, actor}, {12, 2, suffix}});
+  PerActorPrec<real> prec({{0, 12, actor}, {12, 2, suffix}}, PreconditionerType::PerActor);
   ColumnVector<real> x(14), Px(14);
   x.SetRandom(11);
   Px.SetZero();
@@ -289,7 +292,7 @@ TEST(PerActorPreconditioner, ReuseMatVecRangesWinsCostTie) {
       .fixedCost = 0.0, .parallelCost = 15280.0, .maxUsefulWorkers = 2};
   RecordingActorPreconditioner actor(
       ActorPreconditionerParallelMode::IndependentRows, 1, 2_r, cost);
-  PerActorPrec<real> prec({{0, 4, actor}});
+  PerActorPrec<real> prec({{0, 4, actor}}, PreconditionerType::PerActor);
   ColumnVector<real> x(4), Px(4);
   x.SetRandom(25);
   Px.SetZero();
@@ -308,7 +311,7 @@ TEST(PerActorPreconditioner, BroadWinsWhenReuseMatVecRangesIsSlower) {
       .fixedCost = 0.0, .parallelCost = 16000.0, .maxUsefulWorkers = 2};
   RecordingActorPreconditioner actor(
       ActorPreconditionerParallelMode::IndependentRows, 1, 2_r, cost);
-  PerActorPrec<real> prec({{0, 4, actor}});
+  PerActorPrec<real> prec({{0, 4, actor}}, PreconditionerType::PerActor);
   ColumnVector<real> x(4), Px(4);
   x.SetRandom(27);
   Px.SetZero();
@@ -325,7 +328,9 @@ TEST(PerActorPreconditioner, IndependentRowsHonorsMaxUsefulWorkers) {
       .fixedCost = 0.0, .parallelCost = 100000.0, .maxUsefulWorkers = 2};
   RecordingActorPreconditioner actor(
       ActorPreconditionerParallelMode::IndependentRows, 2, 2_r, cost);
-  PerActorPrec<real> prec({ActorPreconditionerEntry<real>{0, 8, actor}});
+  PerActorPrec<real> prec(
+      {ActorPreconditionerEntry<real>{.offset = 0, .size = 8, .preconditioner = actor}},
+      PreconditionerType::PerActor);
   ColumnVector<real> x(8), Px(8);
   x.SetRandom(23);
   Px.SetZero();
@@ -346,7 +351,7 @@ TEST(PerActorPreconditioner, IndependentRowsAvoidsAlreadyLoadedWorker) {
       ActorPreconditionerParallelMode::SingleWorker, 0, 2_r, singleCost);
   RecordingActorPreconditioner independent(
       ActorPreconditionerParallelMode::IndependentRows, 1, 3_r, independentCost);
-  PerActorPrec<real> prec({{0, 2, single}, {2, 2, independent}});
+  PerActorPrec<real> prec({{0, 2, single}, {2, 2, independent}}, PreconditionerType::PerActor);
   ColumnVector<real> x(4), Px(4), expected(4);
   x.SetRandom(12);
   Px.SetZero();
@@ -365,7 +370,9 @@ TEST(PerActorPreconditioner, IndependentRowsPlanningDoesNotScaleWithRowCount) {
   int constexpr kNumRows = std::numeric_limits<int>::max() - 1;
   int constexpr kNumBlocks = kNumRows / 6;
   RecordingActorPreconditioner actor(ActorPreconditionerParallelMode::IndependentRows, 6, 1_r);
-  PerActorPrec<real> prec({ActorPreconditionerEntry<real>{0, kNumRows, actor}});
+  PerActorPrec<real> prec(
+      {ActorPreconditionerEntry<real>{.offset = 0, .size = kNumRows, .preconditioner = actor}},
+      PreconditionerType::PerActor);
   DynamicArray<int> const workerRowRanges{
       0, 6 * (kNumBlocks / 4), 6 * (kNumBlocks / 2), 6 * ((3 * kNumBlocks) / 4), kNumRows};
 
@@ -378,11 +385,13 @@ TEST(PerActorPreconditioner, OneWorkerHandlesEveryExecutionMode) {
   RecordingActorPreconditioner single(ActorPreconditionerParallelMode::SingleWorker, 1, 3_r);
   RecordingActorPreconditioner synchronized(
       ActorPreconditionerParallelMode::SynchronizedTeam, 2, 4_r, 2);
-  PerActorPrec<real> prec({
-      {0, 4, independent},
-      {4, 2, single},
-      {6, 4, synchronized},
-  });
+  PerActorPrec<real> prec(
+      {
+          {0, 4, independent},
+          {4, 2, single},
+          {6, 4, synchronized},
+      },
+      PreconditionerType::PerActor);
   ColumnVector<real> x(10), Px(10), expected(10);
   x.SetRandom(24);
   Px.SetZero();
@@ -402,7 +411,9 @@ TEST(PerActorPreconditioner, OneWorkerHandlesEveryExecutionMode) {
 
 TEST(PerActorPreconditioner, SingleWorkerUsesLocalityToBreakLoadTies) {
   RecordingActorPreconditioner actor(ActorPreconditionerParallelMode::SingleWorker, 0, 3_r);
-  PerActorPrec<real> prec({ActorPreconditionerEntry<real>{0, 10, actor}});
+  PerActorPrec<real> prec(
+      {ActorPreconditionerEntry<real>{.offset = 0, .size = 10, .preconditioner = actor}},
+      PreconditionerType::PerActor);
   ColumnVector<real> x(10), Px(10);
   x.SetRandom(21);
   Px.SetZero();
@@ -425,11 +436,13 @@ TEST(PerActorPreconditioner, SingleWorkerPrefersMidpointOwnerForUnevenRanges) {
       ActorPreconditionerParallelMode::SingleWorker, 0, 1_r, targetCost);
   RecordingActorPreconditioner suffix(
       ActorPreconditionerParallelMode::SingleWorker, 0, 1_r, cheapCost);
-  PerActorPrec<real> prec({
-      {0, 9, prefix},
-      {9, 1, target},
-      {10, 1, suffix},
-  });
+  PerActorPrec<real> prec(
+      {
+          {0, 9, prefix},
+          {9, 1, target},
+          {10, 1, suffix},
+      },
+      PreconditionerType::PerActor);
   ColumnVector<real> x(11), Px(11);
   x.SetRandom(22);
   Px.SetZero();
@@ -442,7 +455,9 @@ TEST(PerActorPreconditioner, SingleWorkerPrefersMidpointOwnerForUnevenRanges) {
 
 TEST(PerActorPreconditioner, NonlocalWritesCompleteBeforeWorkersReturn) {
   RecordingActorPreconditioner actor(ActorPreconditionerParallelMode::SingleWorker, 1, 2_r);
-  PerActorPrec<real> prec({ActorPreconditionerEntry<real>{0, 4, actor}});
+  PerActorPrec<real> prec(
+      {ActorPreconditionerEntry<real>{.offset = 0, .size = 4, .preconditioner = actor}},
+      PreconditionerType::PerActor);
   ColumnVector<real> x(4), Px(4);
   x.SetRandom(26);
   Px.SetZero();
@@ -471,7 +486,9 @@ TEST(PerActorPreconditioner, SynchronizedTeamUsesDenseIdsAndReusableBarrier) {
       2,
       4_r,
       /*numTeamBarriers*/ 2);
-  PerActorPrec<real> prec({ActorPreconditionerEntry<real>{0, 10, actor}});
+  PerActorPrec<real> prec(
+      {ActorPreconditionerEntry<real>{.offset = 0, .size = 10, .preconditioner = actor}},
+      PreconditionerType::PerActor);
   ColumnVector<real> x(10), Px(10);
   x.SetRandom(13);
   Px.SetZero();
@@ -525,11 +542,13 @@ TEST(PerActorPreconditioner, OverlappingSynchronizedTeamsCompleteWithoutDeadlock
       ActorPreconditionerParallelMode::SynchronizedTeam, 2, 3_r, actor1Cost);
   RecordingActorPreconditioner actor2(
       ActorPreconditionerParallelMode::SynchronizedTeam, 2, 4_r, actor2Cost);
-  PerActorPrec<real> prec({
-      {0, 4, actor0},
-      {4, 4, actor1},
-      {8, 4, actor2},
-  });
+  PerActorPrec<real> prec(
+      {
+          {0, 4, actor0},
+          {4, 4, actor1},
+          {8, 4, actor2},
+      },
+      PreconditionerType::PerActor);
   ColumnVector<real> x(12), Px(12), expected(12);
   x.SetRandom(14);
   Px.SetZero();
@@ -557,11 +576,13 @@ TEST(PerActorPreconditioner, MixedModesMatchSerialSolve) {
   RecordingActorPreconditioner single(ActorPreconditionerParallelMode::SingleWorker, 1, 3_r);
   RecordingActorPreconditioner synchronized(
       ActorPreconditionerParallelMode::SynchronizedTeam, 2, 4_r, 2);
-  PerActorPrec<real> prec({
-      {0, 4, independent},
-      {4, 2, single},
-      {6, 6, synchronized},
-  });
+  PerActorPrec<real> prec(
+      {
+          {0, 4, independent},
+          {4, 2, single},
+          {6, 6, synchronized},
+      },
+      PreconditionerType::PerActor);
   ColumnVector<real> x(12), parallelResult(12), serialResult(12);
   x.SetRandom(15);
   parallelResult.SetZero();
@@ -581,7 +602,9 @@ TEST(PerActorPreconditioner, RepreparesForDifferentWorkerCount) {
       .fixedCost = 0.0, .parallelCost = 100000.0, .maxUsefulWorkers = 4, .numTeamBarriers = 2};
   RecordingActorPreconditioner actor(
       ActorPreconditionerParallelMode::SynchronizedTeam, 1, 2_r, cost);
-  PerActorPrec<real> prec({ActorPreconditionerEntry<real>{0, 12, actor}});
+  PerActorPrec<real> prec(
+      {ActorPreconditionerEntry<real>{.offset = 0, .size = 12, .preconditioner = actor}},
+      PreconditionerType::PerActor);
   ColumnVector<real> x(12), Px(12);
   x.SetRandom(16);
   ColumnVector<real> const expected = 2_r * x;
@@ -615,12 +638,14 @@ TEST(PerActorPreconditioner, EqualSynchronizedActorsUseSingleWorkerTeams) {
       ActorPreconditionerParallelMode::SynchronizedTeam, 1, 1_r, cost);
   RecordingActorPreconditioner actor3(
       ActorPreconditionerParallelMode::SynchronizedTeam, 1, 1_r, cost);
-  PerActorPrec<real> prec({
-      {0, 4, actor0},
-      {4, 4, actor1},
-      {8, 4, actor2},
-      {12, 4, actor3},
-  });
+  PerActorPrec<real> prec(
+      {
+          {0, 4, actor0},
+          {4, 4, actor1},
+          {8, 4, actor2},
+          {12, 4, actor3},
+      },
+      PreconditionerType::PerActor);
   ColumnVector<real> x(16), Px(16);
   x.SetRandom(18);
   Px.SetZero();
@@ -653,13 +678,15 @@ TEST(PerActorPreconditioner, IdleWorkersJoinRemainingSynchronizedActor) {
       ActorPreconditionerParallelMode::SynchronizedTeam, 1, 1_r, cost);
   RecordingActorPreconditioner actor4(
       ActorPreconditionerParallelMode::SynchronizedTeam, 1, 1_r, cost);
-  PerActorPrec<real> prec({
-      {0, 4, actor0},
-      {4, 4, actor1},
-      {8, 4, actor2},
-      {12, 4, actor3},
-      {16, 4, actor4},
-  });
+  PerActorPrec<real> prec(
+      {
+          {0, 4, actor0},
+          {4, 4, actor1},
+          {8, 4, actor2},
+          {12, 4, actor3},
+          {16, 4, actor4},
+      },
+      PreconditionerType::PerActor);
   ColumnVector<real> x(20), Px(20);
   x.SetRandom(19);
   Px.SetZero();
@@ -690,11 +717,13 @@ TEST(PerActorPreconditioner, TeamLeavesWorkersForLaterActorsWhenFaster) {
       ActorPreconditionerParallelMode::SynchronizedTeam, 1, 1_r, smallCost);
   RecordingActorPreconditioner small1(
       ActorPreconditionerParallelMode::SynchronizedTeam, 1, 1_r, smallCost);
-  PerActorPrec<real> prec({
-      {0, 12, large},
-      {12, 12, small0},
-      {24, 12, small1},
-  });
+  PerActorPrec<real> prec(
+      {
+          {0, 12, large},
+          {12, 12, small0},
+          {24, 12, small1},
+      },
+      PreconditionerType::PerActor);
   ColumnVector<real> x(36), Px(36);
   x.SetRandom(20);
   Px.SetZero();
@@ -725,12 +754,14 @@ TEST(PerActorPreconditioner, IndependentRowsKeepRaisedCapWhenTeamsAreHeld) {
       ActorPreconditionerParallelMode::SynchronizedTeam, 1, 1_r, smallCost);
   RecordingActorPreconditioner small1(
       ActorPreconditionerParallelMode::SynchronizedTeam, 1, 1_r, smallCost);
-  PerActorPrec<real> prec({
-      {0, 12, large},
-      {12, 12, rows},
-      {24, 12, small0},
-      {36, 12, small1},
-  });
+  PerActorPrec<real> prec(
+      {
+          {0, 12, large},
+          {12, 12, rows},
+          {24, 12, small0},
+          {36, 12, small1},
+      },
+      PreconditionerType::PerActor);
   ColumnVector<real> x(48), Px(48);
   x.SetRandom(20);
   Px.SetZero();
@@ -757,7 +788,9 @@ TEST(PerActorPreconditioner, SynchronizedBarrierCostLimitsTeamWidth) {
         .numTeamBarriers = numTeamBarriers};
     RecordingActorPreconditioner actor(
         ActorPreconditionerParallelMode::SynchronizedTeam, 1, 2_r, cost);
-    PerActorPrec<real> prec({ActorPreconditionerEntry<real>{0, 4, actor}});
+    PerActorPrec<real> prec(
+        {ActorPreconditionerEntry<real>{.offset = 0, .size = 4, .preconditioner = actor}},
+        PreconditionerType::PerActor);
     ColumnVector<real> x(4), Px(4);
     x.SetRandom(27);
     Px.SetZero();
@@ -784,10 +817,12 @@ TEST(PerActorPreconditioner, SynchronizedBarrierCostLimitsTeamWidth) {
       1,
       2_r,
       ActorPreconditionerCost{.fixedCost = shortCost, .maxUsefulWorkers = 1});
-  PerActorPrec<real> prec({
-      {0, 4, synchronizedActor},
-      {4, 2, shortActor},
-  });
+  PerActorPrec<real> prec(
+      {
+          {0, 4, synchronizedActor},
+          {4, 2, shortActor},
+      },
+      PreconditionerType::PerActor);
   ColumnVector<real> x(6), Px(6);
   x.SetRandom(28);
   Px.SetZero();
@@ -831,7 +866,7 @@ TEST(PerActorPreconditioner, ShortActorsHoldingMoreThanHalfAWorkerKeepIt) {
       1,
       2_r,
       ActorPreconditionerCost{.parallelCost = 100000.0, .maxUsefulWorkers = 2});
-  PerActorPrec<real> prec({{0, 2, shortActor}, {2, 4, wide}});
+  PerActorPrec<real> prec({{0, 2, shortActor}, {2, 4, wide}}, PreconditionerType::PerActor);
   ColumnVector<real> x(6), Px(6);
   x.SetRandom(30);
   Px.SetZero();
@@ -913,12 +948,14 @@ TEST(PerActorPreconditioner, BuiltInCostsAreValidAndRepresentativeModesMatchSeri
   EXPECT_EQ(2, coloredSSORPrec.prec->NumColors());
 
   // ILU0 covers SingleWorker; colored SSOR and both AMGs cover SynchronizedTeam.
-  PerActorPrec<real> prec({
-      {0, kActorSize, ilu0Prec},
-      {kActorSize, kActorSize, coloredSSORPrec},
-      {2 * kActorSize, kActorSize, amgPrec},
-      {3 * kActorSize, kActorSize, rigidBodyModesAMGPrec},
-  });
+  PerActorPrec<real> prec(
+      {
+          {0, kActorSize, ilu0Prec},
+          {kActorSize, kActorSize, coloredSSORPrec},
+          {2 * kActorSize, kActorSize, amgPrec},
+          {3 * kActorSize, kActorSize, rigidBodyModesAMGPrec},
+      },
+      PreconditionerType::PerActor);
 
   ColumnVector<real> x(4 * kActorSize);
   ColumnVector<real> serialResult(4 * kActorSize);
@@ -959,7 +996,8 @@ TEST(PerActorPreconditioner, SolveSplitsActorsAcrossThreads) {
         ActorPreconditionerParallelMode::SingleWorker, 1, 3_r, smallDense);
     RecordingActorPreconditioner third(
         ActorPreconditionerParallelMode::SingleWorker, 1, 5_r, sparse);
-    PerActorPrec<real> prec({{0, 2, first}, {2, 2, second}, {4, kNumSparseRows, third}});
+    PerActorPrec<real> prec(
+        {{0, 2, first}, {2, 2, second}, {4, kNumSparseRows, third}}, PreconditionerType::PerActor);
 
     ColumnVector<real> x(4 + kNumSparseRows), Px(4 + kNumSparseRows), expected(4 + kNumSparseRows);
     x.SetRandom(32);
@@ -997,4 +1035,44 @@ TEST(PerActorPreconditioner, SolveSplitsActorsAcrossThreads) {
 
   // Items [first] and [second]: the caller takes [first], and [second] stays on the worker.
   expectSolve(/*denseCost*/ 4e6, /*denseThreadId*/ 0, /*smallCost*/ 3e5, /*smallThreadId*/ -1);
+}
+
+TEST(PerActorPreconditioner, UpdateRecreatesOnlyActorPreconditionersWhoseTypeChanged) {
+  int constexpr kActorSize = 2;
+  Matrix<real> actorMatrix = {{2_r, 1_r}, {1_r, 2_r}};
+  AnyMatrixView<real const> const actorMatrixView{AsConstView(actorMatrix)};
+  std::unique_ptr<ActorPreconditioner<real>> autoTypePrec;
+  std::unique_ptr<ActorPreconditioner<real>> requestedTypePrec;
+  auto const makeOperators = [&](PreconditionerType requestedType) {
+    return IslandOperators<real>(
+        {{0, actorMatrixView}, {kActorSize, actorMatrixView}},
+        {},
+        {{.offset = 0, .preconditioner = autoTypePrec, .type = std::nullopt, .nodePositions = {}},
+         {.offset = kActorSize,
+          .preconditioner = requestedTypePrec,
+          .type = requestedType,
+          .nodePositions = {}}});
+  };
+
+  PerActorPrec<real> prec(
+      makeOperators(PreconditionerType::Jacobi).MakePerActorPreconditionerEntries(),
+      PreconditionerType::AdaptivePerActor);
+  ASSERT_NE(nullptr, autoTypePrec);
+  ASSERT_NE(nullptr, requestedTypePrec);
+  EXPECT_EQ(PreconditionerType::SymInverse, autoTypePrec->GetType());
+  EXPECT_EQ(PreconditionerType::Jacobi, requestedTypePrec->GetType());
+  auto const* const autoTypePrecBeforeUpdate = autoTypePrec.get();
+
+  actorMatrix *= 2_r;
+  prec.Update(makeOperators(PreconditionerType::SymInverse));
+  EXPECT_EQ(autoTypePrecBeforeUpdate, autoTypePrec.get());
+  EXPECT_EQ(PreconditionerType::SymInverse, requestedTypePrec->GetType());
+  EXPECT_EQ(PreconditionerType::AdaptivePerActor, prec.GetType());
+
+  // Both the kept and the recreated actor apply the inverse of the updated matrix.
+  ColumnVector<real> const x = {{1_r, 0_r, 1_r, 0_r}};
+  ColumnVector<real> Px(2 * kActorSize);
+  prec.Solve(x, Px);
+  ColumnVector<real> const expected = {{1_r / 3_r, -1_r / 6_r, 1_r / 3_r, -1_r / 6_r}};
+  EXPECT_TRUE(mochi::test::NearEqualMatrices(expected, Px, 1e-5_r));
 }

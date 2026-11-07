@@ -1758,6 +1758,26 @@ class PreconditionerType:
         This is an experimental feature. It may be changed or removed in the future.
         Use at your own risk.
     """
+    ADAPTIVE_PER_ACTOR: PreconditionerType
+    """[Experimental] :class:`PER_ACTOR <superdex.physics.PreconditionerType>`
+    preconditioner that can switch the preconditioner type of each actor during the
+    simulation to speed up the linear solves.
+
+    Warning:
+        Some scenes can run slower than with :class:`PER_ACTOR
+        <superdex.physics.PreconditionerType>`, and some steps can take longer than
+        usual, causing latency spikes.
+
+    Warning:
+        With this preconditioner, stepping after restoring a captured state may not
+        exactly reproduce the original simulation. However, results remain
+        deterministic: restoring the same state and repeating the same steps always
+        produces the same results.
+
+    Warning:
+        This is an experimental feature. It may be changed or removed in the future.
+        Use at your own risk.
+    """
     COUNT: PreconditionerType
     """Number of preconditioner type enum values."""
     DEFAULT: PreconditionerType

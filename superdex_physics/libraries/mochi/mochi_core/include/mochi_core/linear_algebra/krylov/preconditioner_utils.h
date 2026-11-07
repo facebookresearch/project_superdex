@@ -96,7 +96,7 @@ std::function<void(CudaVectorView<T> const& x, CudaVectorView<T> Px)> CreateCuda
 [[nodiscard]] inline constexpr bool PreconditionerStoresInputView(
     PreconditionerType const& preconType) {
   static_assert(
-      static_cast<int>(PreconditionerType::Count) == 13,
+      static_cast<int>(PreconditionerType::Count) == 14,
       "Please update this function if PreconditionerType enumerator changes");
   switch (preconType) {
     case PreconditionerType::SSOR:
@@ -113,6 +113,7 @@ std::function<void(CudaVectorView<T> const& x, CudaVectorView<T> Px)> CreateCuda
     case PreconditionerType::LDLT:
     case PreconditionerType::LU:
     case PreconditionerType::PerActor:
+    case PreconditionerType::AdaptivePerActor:
       return false;
     default:
       MOCHI_ASSERT(false, "Unexpected preconditioner type.");
@@ -132,7 +133,7 @@ template <int kPrecBlockSize, typename MatrixType>
 }
 
 template <typename T, int kPrecBlockSize, typename MatrixType>
-std::unique_ptr<Preconditioner<T>> CreatePreconditioner(
+[[nodiscard]] std::unique_ptr<Preconditioner<T>> CreatePreconditioner(
     MatrixType const& A,
     PreconditionerType const& preconType) {
   if (preconType == PreconditionerType::None) {
@@ -182,8 +183,8 @@ std::unique_ptr<Preconditioner<T>> CreatePreconditioner(
       }
     }
   } else if constexpr (IsIslandOperators<MatrixType>) {
-    if (preconType == PreconditionerType::PerActor) {
-      return std::make_unique<PerActorPrec<T>>(A.MakePerActorPreconditionerEntries());
+    if (IsPerActorPreconditioner(preconType)) {
+      return std::make_unique<PerActorPrec<T>>(A.MakePerActorPreconditionerEntries(), preconType);
     } else {
       MOCHI_ASSERT(
           !PreconditionerStoresInputView(preconType),
@@ -203,7 +204,7 @@ std::unique_ptr<Preconditioner<T>> CreatePreconditioner(
     return CreatePreconditioner<T, kPrecBlockSize>(A.GetUnaugmentedMatrix(), preconType);
   }
   static_assert(
-      static_cast<int>(PreconditionerType::Count) == 13,
+      static_cast<int>(PreconditionerType::Count) == 14,
       "Please update this function if PreconditionerType enumerator changes");
 }
 
@@ -258,7 +259,7 @@ template <typename T, int kPrecBlockSize, typename MatrixType>
       }
     }
   } else if constexpr (IsIslandOperators<MatrixType>) {
-    if (preconType == PreconditionerType::PerActor) {
+    if (IsPerActorPreconditioner(preconType)) {
       return Update.template operator()<PerActorPrec<T>>();
     } else {
       MOCHI_ASSERT(
@@ -281,7 +282,7 @@ template <typename T, int kPrecBlockSize, typename MatrixType>
     return UpdatePreconditioner<T, kPrecBlockSize>(A.GetUnaugmentedMatrix(), preconType, outPrec);
   }
   static_assert(
-      static_cast<int>(PreconditionerType::Count) == 13,
+      static_cast<int>(PreconditionerType::Count) == 14,
       "Please update this function if PreconditionerType enumerator changes");
 }
 
@@ -290,7 +291,7 @@ template <typename T, int kPrecBlockSize, typename MatrixType>
 /// to the matrix, which may not outlive the preconditioner.
 [[nodiscard]] inline constexpr bool PreconditionerIsReusable(PreconditionerType const& preconType) {
   static_assert(
-      static_cast<int>(PreconditionerType::Count) == 13,
+      static_cast<int>(PreconditionerType::Count) == 14,
       "Please confirm that 'reusable across solves' is still the exact complement of 'stores an input view' for "
       "the new preconditioner type(s). If it's not, please update this function accordingly.");
   return !PreconditionerStoresInputView(preconType);

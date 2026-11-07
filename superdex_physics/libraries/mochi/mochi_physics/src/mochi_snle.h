@@ -58,10 +58,10 @@ struct BaseSnle : NoCopy {
 struct ActorSnle : BaseSnle {
   ActorSnle(
       AnyMatrix<real>&& fullDRes,
-      std::optional<PreconditionerType> fullPreconditionerType = std::nullopt)
+      std::optional<PreconditionerType> fullPreconditionerTypeOverride = std::nullopt)
       : fullResidual(GetNumRows(fullDRes)),
         fullDResidual(std::move(fullDRes)),
-        fullPreconditionerType(fullPreconditionerType),
+        _fullPreconditionerTypeOverride(fullPreconditionerTypeOverride),
         _useReduced(false) {
     fullResidual.SetZero();
     mochi::SetZero(fullDResidual);
@@ -70,11 +70,11 @@ struct ActorSnle : BaseSnle {
   ActorSnle(
       AnyMatrix<real>&& reducedDRes,
       int fullSize,
-      std::optional<PreconditionerType> reducedPreconditionerType = std::nullopt)
+      std::optional<PreconditionerType> reducedPreconditionerTypeOverride = std::nullopt)
       : fullResidual(fullSize),
         reducedResidual(GetNumRows(reducedDRes)),
         reducedDResidual(std::move(reducedDRes)),
-        reducedPreconditionerType(reducedPreconditionerType),
+        _reducedPreconditionerTypeOverride(reducedPreconditionerTypeOverride),
         _useReduced(true) {
     fullResidual.SetZero();
     reducedResidual.SetZero();
@@ -113,34 +113,38 @@ struct ActorSnle : BaseSnle {
     return _useReduced;
   }
 
-  [[nodiscard]] std::optional<PreconditionerType> GetActivePreconditionerType() const {
-    return _useReduced ? reducedPreconditionerType : fullPreconditionerType;
+  [[nodiscard]] std::unique_ptr<ActorPreconditioner<real>>& GetActivePreconditioner() {
+    return _useReduced ? _reducedPreconditioner : _fullPreconditioner;
   }
 
-  void SetActivePreconditionerType(PreconditionerType type) {
-    auto& preconditioner = _useReduced ? reducedPreconditioner : fullPreconditioner;
-    auto& preconditionerType = _useReduced ? reducedPreconditionerType : fullPreconditionerType;
-    preconditionerType = type;
-    if (preconditioner && preconditioner->GetType() != type) {
-      preconditioner.reset();
-    }
+  // Preconditioner type set for the active representation at actor creation or by the user, if
+  // any. This is not necessarily the type used in the island solve: use GetActorPreconditionerType
+  // for that.
+  [[nodiscard]] std::optional<PreconditionerType> GetActivePreconditionerTypeOverride() const {
+    return _useReduced ? _reducedPreconditionerTypeOverride : _fullPreconditionerTypeOverride;
+  }
+
+  void SetActivePreconditionerTypeOverride(PreconditionerType type) {
+    auto& typeOverride =
+        _useReduced ? _reducedPreconditionerTypeOverride : _fullPreconditionerTypeOverride;
+    typeOverride = type;
   }
 
   void EnableReduced(AnyMatrix<real>&& reducedDRes) {
     reducedResidual.Reset(ColumnVector<real>::Zero(GetNumRows(reducedDRes)));
     reducedDResidual = std::move(reducedDRes);
-    reducedPreconditioner.reset(nullptr);
-    fullPreconditioner.reset(nullptr);
+    _reducedPreconditioner.reset();
+    _fullPreconditioner.reset();
     _useReduced = true;
   }
 
   void DisableReduced() {
     if (_useReduced) {
-      fullPreconditioner.reset(nullptr);
+      _fullPreconditioner.reset();
     }
     reducedResidual = {};
     reducedDResidual = {};
-    reducedPreconditioner.reset(nullptr);
+    _reducedPreconditioner.reset();
     _useReduced = false;
   }
 
@@ -173,13 +177,9 @@ struct ActorSnle : BaseSnle {
 
   ColumnVector<real> fullResidual;
   AnyMatrix<real> fullDResidual;
-  std::unique_ptr<ActorPreconditioner<real>> fullPreconditioner = nullptr;
-  std::optional<PreconditionerType> fullPreconditionerType = std::nullopt;
 
   ColumnVector<real> reducedResidual = {};
   AnyMatrix<real> reducedDResidual = {};
-  std::unique_ptr<ActorPreconditioner<real>> reducedPreconditioner = nullptr;
-  std::optional<PreconditionerType> reducedPreconditionerType = std::nullopt;
 
   // Energy and residual of the actor's non-potential terms (see SnleProblem::nonPotentialEnergy),
   // assembled with the objective. A hasNonPotentialResidual flag, rather than an empty residual,
@@ -189,6 +189,10 @@ struct ActorSnle : BaseSnle {
   bool hasNonPotentialResidual = false;
 
  private:
+  std::unique_ptr<ActorPreconditioner<real>> _fullPreconditioner = nullptr;
+  std::optional<PreconditionerType> _fullPreconditionerTypeOverride = std::nullopt;
+  std::unique_ptr<ActorPreconditioner<real>> _reducedPreconditioner = nullptr;
+  std::optional<PreconditionerType> _reducedPreconditionerTypeOverride = std::nullopt;
   bool _useReduced = false;
 };
 

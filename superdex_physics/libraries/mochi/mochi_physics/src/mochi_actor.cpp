@@ -28,7 +28,6 @@
 #include "mochi_ecs_utils.h"
 #include "mochi_group.h"
 #include "mochi_integration.h"
-#include "mochi_island.h"
 #include "mochi_point_cloud_contact.h"
 #include "mochi_query.h"
 #include "mochi_rigid.h"
@@ -2848,7 +2847,7 @@ void experimental::SetActorPreconditionerType(
       supported, error, "Requested preconditioner type is not supported for this actor.");
   MOCHI_ERROR_RETURN(error);
 
-  if (actorSnle->GetActivePreconditionerType() == preconditionerType) {
+  if (actorSnle->GetActivePreconditionerTypeOverride() == preconditionerType) {
     return;
   }
 
@@ -2858,9 +2857,7 @@ void experimental::SetActorPreconditionerType(
         "SymInverse preconditioner may be prohibitively expensive for full-order deformable actors.");
   }
 
-  auto const& islandMember = reg.get<CIslandMemberInfo const>(e);
-  reg.get<CIslandPreconditioner>(islandMember.island).Reset();
-  actorSnle->SetActivePreconditionerType(preconditionerType);
+  actorSnle->SetActivePreconditionerTypeOverride(preconditionerType);
   actorImpl->WakeUp();
 }
 

@@ -80,6 +80,27 @@ struct IslandOperators {
   // first time 'Apply' is called.
   mutable std::vector<int> _workerRowRanges = {};
 
+  // Auto-select the preconditioner type based on the actor matrix type.
+  // TODO[T247922835]: Improve criteria to select the preconditioner type.
+  [[nodiscard]] static PreconditionerType SelectActorPreconditionerType(
+      AnyMatrixView<T const> const& A) {
+    static_assert(
+        std::variant_size_v<AnyMatrixView<T const>> == 4,
+        "Please update this function if the actor matrix types change");
+    if (std::holds_alternative<MatrixView<T const>>(A)) {
+      // Use symmetric inverse preconditioner for dense actors.
+      return PreconditionerType::SymInverse;
+    }
+    if (std::holds_alternative<BlockSparseMatrixView<T const, 3>>(A) ||
+        std::holds_alternative<BlockSparseMatrixView<T const, 4>>(A)) {
+      // Use block Jacobi preconditioner for block sparse actors.
+      return PreconditionerType::BlockJacobi;
+    }
+    MOCHI_ASSERT_VERBOSE(std::holds_alternative<SparseMatrixView<T const>>(A));
+    // Use Jacobi preconditioner for sparse actors.
+    return PreconditionerType::Jacobi;
+  }
+
  public:
   // Construct IslandOperators and enforce policies
   IslandOperators(
@@ -126,9 +147,12 @@ struct IslandOperators {
 #endif // MOCHI_ASSERT_VERBOSE_ENABLED
   }
 
-  // Construct missing actor preconditioners, update existing ones, and return each
-  // preconditioner with its island-wide row offset and row count.
-  auto MakePerActorPreconditionerEntries() const {
+  // Construct missing actor preconditioners, recreate those whose type changed, update the rest,
+  // and return each with its island-wide row offset and row count. Each actor preconditioner has
+  // the type passed at construction or, if unset, an auto-selected type. Recreating an actor
+  // preconditioner leaves the entries returned by previous calls dangling, so callers must replace
+  // them with the returned ones.
+  [[nodiscard]] auto MakePerActorPreconditionerEntries() const {
     auto const numActors = isize(_actorMatrices);
     MOCHI_ASSERT(
         _actorPreconditioners.size() == numActors,
@@ -142,39 +166,11 @@ struct IslandOperators {
       auto& actorPrec = info.preconditioner.get();
       ActorPseudoMatrix<T> const actorPseudoMatrix{
           offset, A, _interactionMatrices, info.nodePositions};
-      if (!actorPrec) {
-        // Preconditioner doesn't exist yet. Construct it.
-        PreconditionerType precType = {};
-        if (info.typeHint) {
-          // Use preconditioner type hint.
-          precType = *info.typeHint;
-        } else {
-          // Auto-select based on matrix type.
-          // TODO[T247922835]: Improve criteria to select the preconditioner type.
-          static_assert(
-              std::variant_size_v<decltype(A)> == 4,
-              "Please update the if statement below if the actor matrix types change");
-          if (std::holds_alternative<MatrixView<T const>>(A)) {
-            // Use symmetric inverse preconditioner for dense actors.
-            precType = PreconditionerType::SymInverse;
-          } else if (
-              std::holds_alternative<BlockSparseMatrixView<T const, 3>>(A) ||
-              std::holds_alternative<BlockSparseMatrixView<T const, 4>>(A)) {
-            // Use block Jacobi preconditioner for block sparse actors.
-            precType = PreconditionerType::BlockJacobi;
-          } else {
-            MOCHI_ASSERT_VERBOSE(std::holds_alternative<SparseMatrixView<T const>>(A));
-            // Use Jacobi preconditioner for sparse actors.
-            precType = PreconditionerType::Jacobi;
-          }
-        }
-        actorPrec = CreateActorPreconditioner(precType, actorPseudoMatrix);
-      } else {
-        // Preconditioner already exists. Update it.
-        MOCHI_ASSERT(
-            !info.typeHint || *info.typeHint == actorPrec->GetType(),
-            "Inconsistent preconditioner type.");
+      PreconditionerType const precType = info.type ? *info.type : SelectActorPreconditionerType(A);
+      if (actorPrec && actorPrec->GetType() == precType) {
         actorPrec->Update(actorPseudoMatrix);
+      } else {
+        actorPrec = CreateActorPreconditioner(precType, actorPseudoMatrix);
       }
     });
 

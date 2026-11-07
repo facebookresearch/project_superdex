@@ -77,7 +77,9 @@ TEST(Preconditioner, Type) {
   static_assert(LUPrec<Scalar>::kType == PreconditionerType::LU);
   static_assert(LDLtPrec<Scalar>::kType == PreconditionerType::LDLT);
   static_assert(SymInversePrec<Scalar>::kType == PreconditionerType::SymInverse);
-  static_assert(PerActorPrec<Scalar>::kType == PreconditionerType::PerActor);
+  for (auto const type : {PreconditionerType::PerActor, PreconditionerType::AdaptivePerActor}) {
+    EXPECT_EQ(type, PerActorPrec<Scalar>({}, type).GetType());
+  }
 }
 
 TEST(PreconditionerUtils, StoresInputView) {
@@ -95,7 +97,9 @@ TEST(PreconditionerUtils, StoresInputView) {
   static_assert(mochi::details::PreconditionerStoresInputView(PreconditionerType::AMG));
   static_assert(!mochi::details::PreconditionerStoresInputView(PreconditionerType::PerActor));
   static_assert(
-      static_cast<int>(PreconditionerType::Count) == 13,
+      !mochi::details::PreconditionerStoresInputView(PreconditionerType::AdaptivePerActor));
+  static_assert(
+      static_cast<int>(PreconditionerType::Count) == 14,
       "Please update unit test if PreconditionerType enumerator changes");
 }
 
@@ -113,8 +117,9 @@ TEST(PreconditionerUtils, IsReusable) {
   static_assert(mochi::details::PreconditionerIsReusable(PreconditionerType::LU));
   static_assert(!mochi::details::PreconditionerIsReusable(PreconditionerType::AMG));
   static_assert(mochi::details::PreconditionerIsReusable(PreconditionerType::PerActor));
+  static_assert(mochi::details::PreconditionerIsReusable(PreconditionerType::AdaptivePerActor));
   static_assert(
-      static_cast<int>(PreconditionerType::Count) == 13,
+      static_cast<int>(PreconditionerType::Count) == 14,
       "Please update unit test if PreconditionerType enumerator changes");
 }
 

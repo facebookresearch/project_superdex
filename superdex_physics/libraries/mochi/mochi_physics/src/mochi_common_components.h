@@ -70,7 +70,8 @@ struct TagFullyInitialized {}; // Added last when initializing an actor (for rea
 struct TagHasDeepFlowCollider {};
 
 // Global (registry-context) tag for preserving previous-step quantities without advancing
-// integration history. This is used by zero-step solve-free assembly.
+// integration history. This is used by zero-step solve-free assembly. The tag stays set during the
+// restore that ends that assembly, so that post-restore systems can tell it from a genuine restore.
 struct TagAssemblyPreserveHistory {};
 
 // Indicates that an actor participates in the point-cloud contact system.
