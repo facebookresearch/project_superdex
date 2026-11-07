@@ -809,9 +809,11 @@ MOCHI_FORCE_INLINE void AddBendingDResidual(
 /// @param[in] bendingBeta  Bending stiffness second parameter [Pa·m³].
 /// @param[in] membraneCollapseBarrierStiffness  Stiffness k ≥ 0 of the membrane collapse barrier
 ///   k·⟨tr(C⁻¹) − 2⟩³ per unit reference area [Pa·m]; skipped when zero. Its stiffness uses a
-///   PSD Gauss–Newton approximation, and it is excluded from stiffness damping. Near total
-///   collapse, the energy, residual, and stiffness each saturate independently to avoid overflow,
-///   so there the residual and stiffness are not exact derivatives of the energy.
+///   PSD Gauss–Newton approximation, and it is excluded from stiffness damping. Once tr(C⁻¹)
+///   exceeds 2¹⁶ in single precision (2¹²⁸ in double), about a 2⁻⁸ (2⁻⁶⁴) stretch under uniaxial
+///   compression, its energy continues linearly in 1/tr(C⁻¹) and its stiffness saturates, to avoid
+///   overflow; the residual stays the exact derivative of the energy unless tr C or det A
+///   underflows.
 /// @param[in] projectPsd  If true, project membrane geometric stiffness to be PSD.
 /// @param[in] stiffnessDampingFactor  β/dt factor for stiffness damping (dimensionless). Unified
 ///   into the elastic response by scaling the material stiffnesses to (1+factor)·k and using

@@ -20,18 +20,14 @@
 
 namespace mochi::fem {
 
-// Regularization constants of the membrane collapse barrier (see ShellWork). Each saturates its
-// term once g ≳ ε^(−1/n), where n = 3, 4, 5 for the energy, residual, and tangent, respectively.
-// The residual and tangent saturate at g ≈ gMax = 2¹⁶ in single precision (2¹²⁸ in double),
-// keeping them (∝ k·gMax⁴ and k·gMax⁵) far from overflow. They can't use
-// std::numeric_limits<real>::min(): their numerators stay O(1) at collapse, so ε directly sets the
-// saturated value. The energy is accumulated in double and saturates at k·A·√DBL_MAX.
+// Regularization constants of the membrane collapse barrier (see ShellWork). Its energy and
+// residual are exact until g ≈ gMax = 2¹⁶ in single precision (2¹²⁸ in double), and its tangent
+// adds ε = gMax⁻⁵ to u⁵. This bounds the residual and tangent by O(k·gMax⁴) and O(k·gMax⁵), far
+// from overflow, and the energy by 4k·A·gMax³.
 static real constexpr kMembraneCollapseBarrierInvMaxG =
     MOCHI_USE_DOUBLE_PRECISION ? 0x1p-128_r : 0x1p-16_r;
-static real constexpr kMembraneCollapseBarrierResEps = Sqr(Sqr(kMembraneCollapseBarrierInvMaxG));
 static real constexpr kMembraneCollapseBarrierDResEps =
-    kMembraneCollapseBarrierResEps * kMembraneCollapseBarrierInvMaxG;
-static double constexpr kMembraneCollapseBarrierEnergyEps = 0x1p-512; // ≈ 1 / √DBL_MAX
+    Sqr(Sqr(kMembraneCollapseBarrierInvMaxG)) * kMembraneCollapseBarrierInvMaxG;
 
 /// @brief Gather 6-node bending stencil positions into batched layout.
 ///
@@ -232,31 +228,32 @@ bool ShellWork(
     V const vK{membraneCollapseBarrierStiffness};
 
     // The exact energy k·A·p³/u³, stress 3k·p²·M̂/u⁴, and Gauss–Newton tangent
-    // 6k·A·p/u⁵ · (M̂ : ∂a/∂x)⊗(M̂ : ∂a/∂x) diverge as u → 0. Each is regularized independently by
-    // adding a constant ε to its own power uⁿ (n = 3, 4, 5), so it saturates smoothly once
-    // g ≳ ε^(−1/n), keeping every term finite even at total collapse.
-    //
-    // NOTE: With separate ε's, the residual and tangent are deliberately NOT derivatives of the
-    // regularized energy (as in BatchDKelvinInversion). Each term is its exact value times
-    // uⁿ / (uⁿ + ε), so the force still points along the barrier gradient and the tangent stays
-    // PSD. The trade-off: the residual and tangent saturate near total collapse (g ≈ gMax), while
-    // the energy keeps growing far beyond, which helps only objective-based line searches (the
-    // default residual-norm line search never assembles the energy).
+    // 6k·A·p/u⁵ · (M̂ : ∂a/∂x)⊗(M̂ : ∂a/∂x) diverge as u → 0. Below u₀ = 1/gMax, the energy
+    // continues along its tangent line in u: with ū = max(u, u₀) and p̄ = p(ū), it is
+    // k·A·(p̄³/ū³ + 3p̄²·(ū − u)/ū⁴), and the stress 3k·p̄²·M̂/ū⁴ is its exact derivative while the
+    // tr C and det A floors are inactive. The tangent instead adds ε to u⁵, staying PSD but not
+    // exact.
+    V const u0{kMembraneCollapseBarrierInvMaxG};
+    V const pBar = Select(u >= u0, p, V{1_r - 2_r * kMembraneCollapseBarrierInvMaxG});
     if (evalObj) {
-      Vd const pD = StaticCast<Vd>(p);
+      // Evaluated as k·A·ḡ²·(ḡ + 3(ū − u)/ū²) with ḡ = p̄/ū and ū − u set to 0 for u ≥ u₀, which
+      // keeps inactive lanes zero when u overflows and avoids intermediate underflow for tiny k·A.
       Vd const uD = StaticCast<Vd>(u);
-      *outEnergy += StaticCast<Vd>(vK * refArea) * pD * pD * pD /
-          (uD * uD * uD + Vd{kMembraneCollapseBarrierEnergyEps});
+      Vd const u0D{static_cast<double>(kMembraneCollapseBarrierInvMaxG)};
+      Vd const invUBarD = Vd{1.0} / StaticCast<Vd>(Max(u, u0));
+      Vd const gBarD = StaticCast<Vd>(pBar) * invUBarD;
+      Vd const uGapD = Select(uD >= u0D, Vd{0.0}, u0D - uD);
+      *outEnergy +=
+          StaticCast<Vd>(vK * refArea) * gBarD * gBarD * (gBarD + Vd{3.0} * uGapD * Sqr(invUBarD));
     }
 
     if (needDerivs) {
       V2x2 const adjCHat = invTrC * adjC;
       V2x2 const MHat = -Dot(Dot(adjCHat, adjCHat), AInv);
-      V const u2 = u * u;
-      V const u4 = u2 * u2;
+      V const u4 = Sqr(Sqr(u));
       if (evalRes) {
-        membraneResStress = membraneResStress +
-            (V{3_r} * vK * p * p / (u4 + V{kMembraneCollapseBarrierResEps})) * MHat;
+        V const uBar4 = Max(u4, V{Sqr(Sqr(kMembraneCollapseBarrierInvMaxG))});
+        membraneResStress = membraneResStress + (V{3_r} * vK * pBar * pBar / uBar4) * MHat;
       }
       if (evalDRes) {
         AddMembraneCollapseBarrierDResidual<kBatchSize>(

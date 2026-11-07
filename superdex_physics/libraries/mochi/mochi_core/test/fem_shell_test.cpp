@@ -375,6 +375,7 @@ struct ShellFdOptions {
   bool checkResidualDResidual = true;
   bool checkPsdProjection = false;
   real dispScale = 1_r;
+  real fdStep = MOCHI_USE_DOUBLE_PRECISION ? 1e-6_r : 1e-3_r;
   real membraneLambda = kMembraneLambda;
   real membraneMu = kMembraneMu;
   real bendingAlpha = kBendingAlpha;
@@ -1051,7 +1052,6 @@ static void VerifyShellFd(
   ShellHarness<kBS> h(cfgs, options);
 
   if (options.checkEnergyResidual || options.checkResidualDResidual) {
-    real constexpr kEps = MOCHI_USE_DOUBLE_PRECISION ? 1e-6_r : 1e-3_r;
     real constexpr kResTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-4_r : 1e-3_r;
     real constexpr kDResTol = MOCHI_USE_DOUBLE_PRECISION ? 2e-3_r : 5e-3_r;
 
@@ -1072,8 +1072,8 @@ static void VerifyShellFd(
     for (int j = 0; j < kN; ++j) {
       auto dispP = h.baseDisp;
       auto dispM = h.baseDisp;
-      dispP[j] = dispP[j] + V{kEps};
-      dispM[j] = dispM[j] - V{kEps};
+      dispP[j] = dispP[j] + V{options.fdStep};
+      dispM[j] = dispM[j] - V{options.fdStep};
       // Fresh outputs each call: ShellWork accumulates (+=) into them.
       BatchDouble<kBS> ep{}, em{};
       NdArray<V, kN> rp{}, rm{};
@@ -1091,11 +1091,12 @@ static void VerifyShellFd(
           /*projectPsd*/ false);
       for (int b = 0; b < kBS; ++b) {
         if (options.checkEnergyResidual) {
-          resFd[b][j] = static_cast<real>((ep[b] - em[b]) / (2.0 * static_cast<double>(kEps)));
+          resFd[b][j] =
+              static_cast<real>((ep[b] - em[b]) / (2.0 * static_cast<double>(options.fdStep)));
         }
         if (options.checkResidualDResidual) {
           for (int i = 0; i < kN; ++i) {
-            dresFd[b][i * kN + j] = (rp[i][b] - rm[i][b]) / (2_r * kEps);
+            dresFd[b][i * kN + j] = (rp[i][b] - rm[i][b]) / (2_r * options.fdStep);
           }
         }
       }
@@ -1588,10 +1589,11 @@ static void ExpectZeroLane(ShellOutputs<kBS> const& out, int b) {
 
 // Homogeneous in-plane principal stretches (s₀, s₁) give g = s₀⁻² + s₁⁻² − 2, independent of the
 // reference triangle. Anisotropic cases guard against formulas that agree only when s₀ = s₁, and
-// cases with g = 0 must leave every output unchanged.
+// cases with g = 0 must leave every output unchanged. (2⁻⁸, 1) lies just past the single-precision
+// onset of the energy's linear continuation, which must still match.
 TEST(ShellWork, CollapseBarrierEnergyClosedForm) {
   double constexpr kEnergyRelTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-9 : 1e-4;
-  std::array<Real2, 14> constexpr kStretches = {
+  std::array<Real2, 15> constexpr kStretches = {
       Real2{0.01_r, 0.01_r},
       Real2{0.3_r, 0.3_r},
       Real2{0.5_r, 0.5_r},
@@ -1605,6 +1607,7 @@ TEST(ShellWork, CollapseBarrierEnergyClosedForm) {
       Real2{1.3_r, 0.7_r},
       Real2{0.05_r, 1_r},
       Real2{1_r, 0.01_r},
+      Real2{0x1p-8_r, 1_r},
       Real2{1.5_r, 0.95_r}};
   RunSupportedFemShellRodBatchSizes([&]<int kBS>() {
     for (Real2 const& s : kStretches) {
@@ -1656,7 +1659,15 @@ TEST(ShellWork, CollapseBarrierInactiveUnderTensionBesideCompressedLanes) {
   }
 }
 
+// The near-collapse cases (smallest stretch 2⁻⁷ or 2⁻¹⁰) straddle the onset of saturation in single
+// precision. They need steps far below their collapsed extent (powers of two keep the perturbed
+// near-unit displacements exact) and a small stiffness, so that the squared norms of the compared
+// gradients can't overflow.
 TEST(ShellWork, CollapseBarrierEnergyResidualFd) {
+  std::array<ShellStencilConfig, 3> const nearCollapse = {
+      MakeStretchedInteriorConfig(1_r, 0x1p-7_r),
+      MakeStretchedInteriorConfig(0.5_r, 0x1p-10_r, 0x1p-13_r),
+      MakeStretchedEquilateralConfig(0x1p-10_r, 0.5_r)};
   for (real const dampingFactor : {0_r, 3_r}) {
     ShellFdOptions options;
     options.checkResidualDResidual = false;
@@ -1664,6 +1675,12 @@ TEST(ShellWork, CollapseBarrierEnergyResidualFd) {
     options.stiffnessDampingFactor = dampingFactor;
     options.stageStartDispScale = 0.5_r;
     for (auto const& cfg : MakeCompressedConfigs()) {
+      RunSupportedFemShellRodBatchSizes(
+          [&]<int kBS>() { VerifyShellFdBroadcast<kBS>(cfg, options); });
+    }
+    options.fdStep = MOCHI_USE_DOUBLE_PRECISION ? 0x1p-20_r : 0x1p-17_r;
+    options.membraneCollapseBarrierStiffness = 0x1p-12_r;
+    for (auto const& cfg : nearCollapse) {
       RunSupportedFemShellRodBatchSizes(
           [&]<int kBS>() { VerifyShellFdBroadcast<kBS>(cfg, options); });
     }
