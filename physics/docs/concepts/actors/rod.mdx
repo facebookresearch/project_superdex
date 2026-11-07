@@ -39,11 +39,11 @@ The elastic potential energy can be expressed in terms of a density per unit ref
 $$
 U = \int_{\mathcal{L}_\mathbf{X}} W \,d\mathbf{X}~,
 $$
-where the density can be decomposed into stretching, bending, and twisting terms:
+where the density can be decomposed into stretching, bending, twisting, and collapse terms:
 $$
-W = W_{\text{stretch}}(\varepsilon) + W_{\text{bend}}(\bm{\kappa}) + W_{\text{twist}}(\tau)~,
+W = W_{\text{stretch}}(\varepsilon) + W_{\text{bend}}(\bm{\kappa}) + W_{\text{twist}}(\tau) + W_{\text{collapse}}(\varepsilon)~,
 $$
-where $\varepsilon$, $\bm{\kappa}$, and $\tau$ are stretching, bending, and twisting strain measures.  The stretching strain is the scalar axial component of the Green–Lagrange strain,
+where $\varepsilon$, $\bm{\kappa}$, and $\tau$ are stretching, bending, and twisting strain measures, and $W_{\text{collapse}}$ is a barrier potential to block axial collapse (discussed further below).  The stretching strain is the scalar axial component of the Green–Lagrange strain,
 $$
 \varepsilon = \frac{1}{2}\left(\left(\frac{\Vert\mathbf{e}_0\Vert_2}{\Vert\mathbf{E}_0\Vert_2}\right)^2 - 1\right)~.
 $$
@@ -65,11 +65,23 @@ W_\text{stretch} = \frac{1}{2}k_a\varepsilon^2~,\qquad W_\text{bend} = \frac{1}{
 $$
 defining a St. Venant–Kirchhoff-type model for rod deformation.
 
+Under compression, the St. Venant–Kirchhoff stretching force peaks when $\Vert\mathbf{e}_0\Vert_2 = \Vert\mathbf{E}_0\Vert_2/\sqrt{3}$ and vanishes as the rod collapses, so a large compressive load, such as an impact, can crush an element to a point.
+The barrier term in $W$ prevents this axial collapse:
+$$
+W_{\text{collapse}} = \eta k_a\left\langle\left(\frac{\Vert\mathbf{E}_0\Vert_2}{\Vert\mathbf{e}_0\Vert_2}\right)^2 - 1\right\rangle^3~,
+$$
+where $\eta \geq 0$ is a dimensionless scale and $\langle\cdot\rangle = \max(\cdot, 0)$ denotes Macaulay brackets.
+It is the one-dimensional form of the [shell membrane collapse barrier](./shell.mdx#continuous-model), with $k_a$ in the role of $2\mu$.
+The barrier is active only under compression, diverges as the rod collapses, and contributes no stiffness in the reference configuration, leaving the small-strain response unchanged.
+With the default $\eta = 10^{-3}$, it changes the stretching force by less than 1% up to 13% compression, and $W_\text{stretch} + W_\text{collapse}$ is convex in the stretch $\Vert\mathbf{e}_0\Vert_2/\Vert\mathbf{E}_0\Vert_2$ for any $\eta \geq 1.9\cdot10^{-5}$.
+Setting $\eta = 0$ disables the barrier, recovering the plain St. Venant–Kirchhoff model.
+
 Mass and stiffness dissipation are given by the dissipation potential
 $$
 R = \int_{\mathcal{L}_\mathbf{X}} \left(\alpha_R\frac{1}{2}\left(\rho_{L0}\left\Vert\dot{\mathbf{u}}\right\Vert_2^2 + r_{L0}\dot{\theta}^2\right) + \beta_R\left(W_\text{stretch}(\dot{\varepsilon}) + W_\text{bend}(\dot{\bm{\kappa}}) + W_\text{twist}(\dot{\tau})\right)\right)\,d\mathbf{X}~,
 $$
 where $\alpha_R$ and $\beta_R$ are mass and stiffness dissipation coefficients. This potential is the natural rod generalization of the [soft-actor dissipation model](./soft/overview.mdx#continuous-model).
+The collapse barrier $W_\text{collapse}$ is not included in stiffness dissipation, as for [shell actors](./shell.mdx#continuous-model).
 
 ### Linearized Increments
 
@@ -149,7 +161,7 @@ $$
 \overline{\mathbf{k}}(\mathbf{A}_{i-1}^{\to i},\mathbf{A}_i^{\to i})\cdot\widehat{\mathbf{E}}_i^h
 \right)~.
 $$
-The continuous energies are integrated by multiplying the edge stretching density by $L_i$ and the vertex bending and twisting densities by $\overline{L}_i$.  Because $\overline{\mathbf{k}}$ diverges as its arguments approach opposite directions, the bending energy forms a barrier against folding the centerline through $180^\circ$, and the twisting energy similarly forms a barrier against $180^\circ$ relative twist between adjacent frames.  The implementation regularizes the denominator at finite precision.
+The continuous energies are integrated by multiplying the edge stretching and collapse densities by $L_i$ and the vertex bending and twisting densities by $\overline{L}_i$.  Because $\overline{\mathbf{k}}$ diverges as its arguments approach opposite directions, the bending energy forms a barrier against folding the centerline through $180^\circ$, and the twisting energy similarly forms a barrier against $180^\circ$ relative twist between adjacent frames.  The implementation regularizes the denominator at finite precision.
 
 ## Parameters Reference
 
@@ -185,6 +197,7 @@ See [Parameter Selection](#parameter-selection) for formulas relating these para
 | `flexuralStiffness` | `Real2` | `[5e-4, 5e-4]` | N&middot;m² | Flexural stiffnesses $[k_{b1}, k_{b2}]$ about the two principal axes. |
 | `massDampingCoefficient` | `real` | `0` | 1/s | Mass-proportional damping coefficient $\alpha_R$. |
 | `stiffnessDampingCoefficient` | `real` | `0` | s | Stiffness-proportional damping coefficient $\beta_R$. |
+| `axialCollapseBarrierScale` | `real` | `1e-3` | -- | Dimensionless scale $\eta$ of the [axial collapse barrier](#continuous-model) $W_\text{collapse}$, which resists axial collapse. `0` disables it. |
 
 ## Contact
 
