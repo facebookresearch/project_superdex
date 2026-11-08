@@ -401,12 +401,32 @@ MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, 2> HSumEach(Simd<T, 2> a, Simd<T, 2> b) {
   return Simd<T, 2>::HSumEach(a, b);
 }
 
+namespace details {
+// True if V has its own HSumEach of four vectors, which the generic HSumEach then prefers. A vector
+// that declares HSumEach at sizes it doesn't support must constrain it in the declaration, as the
+// composite and emulated vectors do: this detection can't see a static_assert in the body.
+template <class V, class = void>
+inline constexpr bool kHasOwnHSumEach = false;
+template <class V>
+inline constexpr bool kHasOwnHSumEach<
+    V,
+    std::void_t<decltype(V::HSumEach(
+        std::declval<V>(),
+        std::declval<V>(),
+        std::declval<V>(),
+        std::declval<V>()))>> = true;
+} // namespace details
+
 template <class T, int N>
 MOCHI_ANY MOCHI_FORCE_INLINE Simd<T, 4>
 HSumEach(Simd<T, N> a, Simd<T, N> b, Simd<T, N> c, Simd<T, N> d) {
   static_assert(kHasHSumEach<Simd<T, N>>, "Unsupported N");
   if constexpr (N == 4) {
     return Simd<T, 4>::HSumEach(a, b, c, d);
+  } else if constexpr (details::kHasOwnHSumEach<Simd<T, N>>) {
+    // Wider vectors with their own reduction (x64 Vec8f, and Vec8d with AVX-512) reduce at full
+    // width, in fewer instructions than adding the halves of each vector first.
+    return Simd<T, N>::HSumEach(a, b, c, d);
   } else {
     return HSumEach(
         GetHalf<0>(a) + GetHalf<1>(a),

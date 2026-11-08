@@ -611,8 +611,11 @@ class Simd<T, N, std::enable_if_t<(details::kCompositeFirstSize<T, N> > 0), Simd
     }
   }
 
+  // Constrained to 4 lanes in its declaration rather than by a static_assert, so that
+  // details::kHasOwnHSumEach is false at other sizes, and the generic HSumEach adds their halves.
+  template <int SZ = kSize, std::enable_if_t<SZ == 4, int> = 0>
   [[nodiscard]] static MOCHI_ANY MOCHI_FORCE_INLINE Simd HSumEach(Simd a, Simd b, Simd c, Simd d) {
-    static_assert(kSize == 4 && kSizeFirst == kSizeSecond, "Unsupported size");
+    static_assert(kSizeFirst == kSizeSecond, "Unsupported size");
     // Like HSum, adds the halves of each vector first.
     return {
         First::HSumEach(a.first + a.second, b.first + b.second),

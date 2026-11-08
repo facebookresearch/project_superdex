@@ -131,18 +131,18 @@ class Simd<float, 8> {
       return _mm256_zextps128_ps256(_mm_castsi128_ps(low)); // AVX, SSE2
     } else if constexpr (N == 3) {
       __m256i mask = _mm256_set_epi32(0, 0, 0, 0, 0, -1, -1, -1); // AVX
-      return _mm256_maskload_ps(ptr, mask); // AVX2
+      return _mm256_maskload_ps(ptr, mask); // AVX
     } else if constexpr (N == 4) {
       return _mm256_zextps128_ps256(_mm_loadu_ps(ptr)); // AVX, SSE
     } else if constexpr (N == 5) {
       __m256i mask = _mm256_set_epi32(0, 0, 0, -1, -1, -1, -1, -1); // AVX
-      return _mm256_maskload_ps(ptr, mask); // AVX2
+      return _mm256_maskload_ps(ptr, mask); // AVX
     } else if constexpr (N == 6) {
       __m256i mask = _mm256_set_epi32(0, 0, -1, -1, -1, -1, -1, -1); // AVX
-      return _mm256_maskload_ps(ptr, mask); // AVX2
+      return _mm256_maskload_ps(ptr, mask); // AVX
     } else if constexpr (N == 7) {
       __m256i mask = _mm256_set_epi32(0, -1, -1, -1, -1, -1, -1, -1); // AVX
-      return _mm256_maskload_ps(ptr, mask); // AVX2
+      return _mm256_maskload_ps(ptr, mask); // AVX
     } else if constexpr (N == 8) {
       return _mm256_loadu_ps(ptr); // AVX
     }
@@ -448,6 +448,20 @@ class Simd<float, 8> {
       // higher throughput and ~25% lower latency, when benchmarked on an AMD CPU.
       return HalfT::HSum<4>(GetHalf<0>(a) + GetHalf<1>(a));
     }
+  }
+
+  [[nodiscard]] static MOCHI_FORCE_INLINE Simd<float, 4> HSumEach(Simd a, Simd b, Simd c, Simd d) {
+    // In each 128-bit half: ab = {a[0] + a[2], a[1] + a[3], b[2] + b[0], b[3] + b[1]}, and cd
+    // likewise.
+    auto const ab = _mm256_add_ps(
+        _mm256_blend_ps(a.raw, b.raw, 0b11001100),
+        _mm256_shuffle_ps(a.raw, b.raw, _MM_SHUFFLE(1, 0, 3, 2))); // AVX
+    auto const cd = _mm256_add_ps(
+        _mm256_blend_ps(c.raw, d.raw, 0b11001100),
+        _mm256_shuffle_ps(c.raw, d.raw, _MM_SHUFFLE(1, 0, 3, 2))); // AVX
+    // In each 128-bit half: {ab[0] + ab[1], ab[2] + ab[3], cd[0] + cd[1], cd[2] + cd[3]}.
+    auto const sums = _mm256_hadd_ps(ab, cd); // AVX
+    return _mm_add_ps(_mm256_castps256_ps128(sums), _mm256_extractf128_ps(sums, 1)); // AVX
   }
 
   template <int N>

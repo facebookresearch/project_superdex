@@ -127,6 +127,9 @@ static_assert(Simd<int64_t, 6>::kIsSupported);
 static_assert(Simd<float, 28>::kIsSupported);
 static_assert(Simd<int, 28>::kIsSupported);
 
+static_assert(details::kHasOwnHSumEach<Vec8f> == (MOCHI_USE_SIMD && MOCHI_ARCH_X64_AVX2));
+static_assert(details::kHasOwnHSumEach<Vec8d> == (MOCHI_USE_SIMD && MOCHI_ARCH_X64_AVX512));
+
 #if MOCHI_USE_SIMD
 static_assert(Simd<float, 12>::kIsComposite);
 static_assert(Simd<int, 12>::kIsComposite);

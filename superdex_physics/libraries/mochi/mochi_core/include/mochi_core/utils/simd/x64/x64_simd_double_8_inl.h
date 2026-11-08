@@ -446,6 +446,22 @@ class Simd<double, 8> {
     }
   }
 
+  [[nodiscard]] static MOCHI_FORCE_INLINE Simd<double, 4> HSumEach(Simd a, Simd b, Simd c, Simd d) {
+    // In each 128-bit lane: ab = {a[0] + a[1], b[0] + b[1]}, and cd likewise.
+    auto const ab = _mm512_add_pd(
+        _mm512_unpacklo_pd(a.raw, b.raw), _mm512_unpackhi_pd(a.raw, b.raw)); // AVX512F
+    auto const cd = _mm512_add_pd(
+        _mm512_unpacklo_pd(c.raw, d.raw), _mm512_unpackhi_pd(c.raw, d.raw)); // AVX512F
+    // Halves first: the lane-crossing shuffle below is cheaper in 256 bits than in 512.
+    auto const ab4 =
+        _mm256_add_pd(_mm512_castpd512_pd256(ab), _mm512_extractf64x4_pd(ab, 1)); // AVX512F
+    auto const cd4 =
+        _mm256_add_pd(_mm512_castpd512_pd256(cd), _mm512_extractf64x4_pd(cd, 1)); // AVX512F
+    // {ab4[0], ab4[1], cd4[2], cd4[3]} + {ab4[2], ab4[3], cd4[0], cd4[1]}.
+    return _mm256_add_pd(
+        _mm256_blend_pd(ab4, cd4, 0b1100), _mm256_permute2f128_pd(ab4, cd4, 0x21)); // AVX
+  }
+
   template <int N>
   [[nodiscard]] static MOCHI_FORCE_INLINE Scalar HProd(Simd a) {
     static_assert(N >= 2 && N <= kSize, "Unsupported N");
