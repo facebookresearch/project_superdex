@@ -211,6 +211,10 @@ struct BotSceneArchiveMetadata {
  * beside where the raw bot sits, and the archived scene file points at those archives. No files
  * are written beside the sources.
  *
+ * The root metadata is written to @ref kSceneArchiveMetadataFile. Internal builds
+ * (@c MOCHI_INTERNAL) also write an identical copy under the legacy name
+ * `.mochi_bot_scene_archive_metadata`, which is the only name older builds read.
+ *
  * Requirements:
  *  - Every bots[].path must reference a .superdex_bot or .superdex_bot_archive.
  *  - params.src must be a bot scene path (see @ref IsBotScenePath).

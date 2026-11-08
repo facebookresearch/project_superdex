@@ -1118,6 +1118,9 @@ void superdex::robotics::ArchiveBotScene(ArchiveParams const& params, Error& err
   metadata.comment = params.comment;
   auto const metadataJson = SReflect::ToJsonString(metadata, true);
   AddDataEntry(std::string(kSceneArchiveMetadataFile), metadataJson);
+#if MOCHI_INTERNAL
+  AddDataEntry(std::string(kSceneArchiveMetadataFileLegacy), metadataJson);
+#endif
 
   // Zip up all entries.
   ZipEntries(entries, dstPath, error);
