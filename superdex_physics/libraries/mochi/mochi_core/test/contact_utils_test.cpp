@@ -17,6 +17,7 @@
 #include <mochi_core/contact/contact_utils.h>
 #include <mochi_core/test/mochi_test_helpers.h>
 #include <mochi_core/utils/array_utils.h>
+#include <mochi_core/utils/container_utils.h>
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/rand_utils.h>
 #include <mochi_core/utils/spmat_utils.h>
@@ -665,6 +666,36 @@ TEST(MochiContact, FindPointContacts_ObbEveryTailSize) {
       });
 }
 
+// The corners and edge centers of a box with half extents (1, 1, 1).
+constexpr int kNumBoxFeatures = 8 + 12;
+// clang-format off
+constexpr Real3 kBoxFeatures[kNumBoxFeatures] = {
+    // Corners
+    {-1_r, -1_r, -1_r},
+    {-1_r, -1_r,  1_r},
+    {-1_r,  1_r, -1_r},
+    {-1_r,  1_r,  1_r},
+    { 1_r, -1_r, -1_r},
+    { 1_r, -1_r,  1_r},
+    { 1_r,  1_r, -1_r},
+    { 1_r,  1_r,  1_r},
+
+    // Center of each edge
+    { 0_r,  1_r,  1_r },
+    { 0_r,  1_r, -1_r },
+    { 0_r, -1_r,  1_r },
+    { 0_r, -1_r, -1_r },
+    { 1_r,  0_r,  1_r },
+    { 1_r,  0_r, -1_r },
+    {-1_r,  0_r,  1_r },
+    {-1_r,  0_r, -1_r },
+    { 1_r,  1_r,  0_r },
+    { 1_r, -1_r,  0_r },
+    {-1_r,  1_r,  0_r },
+    {-1_r, -1_r,  0_r },
+};
+// clang-format on
+
 // Used for Obb and for box-shaped meshes.
 template <typename ShapeT>
 static void TestPointContactsBox(
@@ -702,57 +733,29 @@ static void TestPointContactsBox(
 
   // Test the corners & edges
   if (testCenterAndCorners) {
-    constexpr int kNumPoints = 8 + 12;
-    // clang-format off
-   constexpr Real3 kReferencePoints[kNumPoints] = {
-       // Corners
-       {-1_r, -1_r, -1_r},
-       {-1_r, -1_r,  1_r},
-       {-1_r,  1_r, -1_r},
-       {-1_r,  1_r,  1_r},
-       { 1_r, -1_r, -1_r},
-       { 1_r, -1_r,  1_r},
-       { 1_r,  1_r, -1_r},
-       { 1_r,  1_r,  1_r},
-
-       // Center of each edge
-       { 0_r,  1_r,  1_r },
-       { 0_r,  1_r, -1_r },
-       { 0_r, -1_r,  1_r },
-       { 0_r, -1_r, -1_r },
-       { 1_r,  0_r,  1_r },
-       { 1_r,  0_r, -1_r },
-       {-1_r,  0_r,  1_r },
-       {-1_r,  0_r, -1_r },
-       { 1_r,  1_r,  0_r },
-       { 1_r, -1_r,  0_r },
-       {-1_r,  1_r,  0_r },
-       {-1_r, -1_r,  0_r },
-   };
-    // clang-format on
-    Real3 points[kNumPoints];
+    Real3 points[kNumBoxFeatures];
     real nudge = 0_r;
     bool expectHighPrecision = (rot == Quaternion{} && center == Real3{});
     if (expectHighPrecision) {
       // Test the EXACT corners. This case should be precise.
-      for (int i = 0; i < kNumPoints; ++i) {
-        points[i] = center + (kReferencePoints[i] * halfExt);
+      for (int i = 0; i < kNumBoxFeatures; ++i) {
+        points[i] = center + (kBoxFeatures[i] * halfExt);
       }
     } else {
       // Test points just outside the corner, because we don't know what the normal will be inside.
       nudge = 1e-4_r;
-      for (int i = 0; i < kNumPoints; ++i) {
+      for (int i = 0; i < kNumBoxFeatures; ++i) {
         points[i] = shapeTransform.TransformPoint(
-            (kReferencePoints[i] * halfExt) + (Normalize(kReferencePoints[i]) * nudge));
+            (kBoxFeatures[i] * halfExt) + (Normalize(kBoxFeatures[i]) * nudge));
       }
     }
 
     ContactDetectionResult result;
     TestPointContacts(
         points, shape, params, result, /*allowRotationAgnosticGsd*/ expectHighPrecision);
-    EXPECT_EQ(kNumPoints, result.sampleIndices.size());
-    EXPECT_EQ(kNumPoints, result.sdfInfo.size());
-    for (int i = 0; i < kNumPoints; ++i) {
+    EXPECT_EQ(kNumBoxFeatures, result.sampleIndices.size());
+    EXPECT_EQ(kNumBoxFeatures, result.sdfInfo.size());
+    for (int i = 0; i < kNumBoxFeatures; ++i) {
       EXPECT_EQ(i, result.sampleIndices[i]);
       EXPECT_NEAR(nudge, result.sdfInfo.val[i], 1e-5_r);
       // The normal is not well defined at the exact corner. In practice, it will be one of the face
@@ -765,30 +768,30 @@ static void TestPointContactsBox(
 
     // Move the points farther out so that they are barely within tolerance
     nudge = params.tolerance - 1e-5_r;
-    for (int i = 0; i < kNumPoints; ++i) {
+    for (int i = 0; i < kNumBoxFeatures; ++i) {
       points[i] = shapeTransform.TransformPoint(
-          (kReferencePoints[i] * halfExt) + (Normalize(kReferencePoints[i]) * nudge));
+          (kBoxFeatures[i] * halfExt) + (Normalize(kBoxFeatures[i]) * nudge));
     }
     result = {};
     TestPointContacts(points, shape, params, result);
 
     // Expect different distances, but the same normals
-    EXPECT_EQ(kNumPoints, result.sampleIndices.size());
-    EXPECT_EQ(kNumPoints, result.sdfInfo.size());
-    for (int i = 0; i < kNumPoints; ++i) {
+    EXPECT_EQ(kNumBoxFeatures, result.sampleIndices.size());
+    EXPECT_EQ(kNumBoxFeatures, result.sdfInfo.size());
+    for (int i = 0; i < kNumBoxFeatures; ++i) {
       EXPECT_EQ(i, result.sampleIndices[i]);
       EXPECT_NEAR(nudge, result.sdfInfo.val[i], 1e-5_r);
       // The normal is well defined in this case becaue the point was outside of the box (not
       // exactly on the corner of the box). The normal should point outward along the diagonal.
-      Real3 expectedNormal = Normalize(shapeTransform.TransformDirection(kReferencePoints[i]));
+      Real3 expectedNormal = Normalize(shapeTransform.TransformDirection(kBoxFeatures[i]));
       ExpectNearEqNormals(expectedNormal, result.sdfInfo.grad[i], angleEpsilon);
     }
 
     // Move the points just outside of tolerance and expect no hits
     nudge = params.tolerance + 1e-5_r;
-    for (int i = 0; i < kNumPoints; ++i) {
-      Real3 point = kReferencePoints[i] * halfExt;
-      Real3 nudgeDir = kReferencePoints[i];
+    for (int i = 0; i < kNumBoxFeatures; ++i) {
+      Real3 point = kBoxFeatures[i] * halfExt;
+      Real3 nudgeDir = kBoxFeatures[i];
       points[i] = shapeTransform.TransformPoint(point + nudgeDir * nudge);
     }
     result = {};
@@ -931,8 +934,14 @@ TEST(MochiContact, FindPointContacts_Obb) {
       factory, kAngleTolForRotatedCases, true, GetRotationsToTest());
 }
 
-static std::shared_ptr<TriangularMesh const>
-CreateTriangularMeshBox(Quaternion rotation, Real3 center, Real3 halfExt) {
+// An open box lacks its +y and +z faces, so six edges and two corners around them touch one face.
+// Reversed winding turns the normals inwards.
+static std::shared_ptr<TriangularMesh const> CreateTriangularMeshBox(
+    Quaternion rotation,
+    Real3 center,
+    Real3 halfExt,
+    bool open = false,
+    bool reversed = false) {
   /**
     Create a box with center at (0,0,0)
 
@@ -952,7 +961,108 @@ CreateTriangularMeshBox(Quaternion rotation, Real3 center, Real3 halfExt) {
     coord *= 2.0_r * halfExt; // scale so that the AABB spans from -halfExt to +halfExt
     coord = rt.TransformPoint(coord); // rotate and translate
   }
+  if (open) {
+    connectivity.erase(connectivity.begin() + 8, connectivity.begin() + 10); // top
+    connectivity.erase(connectivity.begin() + 4, connectivity.begin() + 6); // front
+  }
+  if (reversed) {
+    for (Int3& triangle : connectivity) {
+      std::swap(triangle[1], triangle[2]);
+    }
+  }
   return std::make_unique<TriangularMesh>(coordinates, connectivity);
+}
+
+// Near the edges and corners of an open box mesh, the signed distance, computed from a triangle's
+// vertices, matches the signed length of the offset from the closest point to about epsilon times
+// the box size. The gradient, computed from the feature's own vertices, times the distance
+// matches the offset to about epsilon times the edge length, or times the distance on a corner.
+// Inside its faces, the gradient is the stored face normal, and exactly on a corner, the corner's
+// pseudonormal, whichever face the search returns. The box is a thin plate, so the triangles along
+// its rim are slivers, and it is far from the origin, where values formed in absolute coordinates
+// lose accuracy. Reversed winding puts the points inside the mesh, next to reflex edges and
+// corners.
+static void TestOpenBoxMeshGradients(Quaternion rotation, bool reversed) {
+  constexpr Real3 kCenter{8_r, -10_r, 6_r};
+  constexpr Real3 kHalfExt{0.004_r, 0.3_r, 0.4_r};
+  constexpr Real3 kWeights{1_r, 2_r, 3_r}; // gives off-diagonal directions in each wedge and cone
+  constexpr real kEps = std::numeric_limits<real>::epsilon();
+  MeshCollider collider(
+      CreateTriangularMeshBox(rotation, kCenter, kHalfExt, /*open*/ true, reversed));
+  collider.Initialize();
+  TransformRT const transform{rotation, kCenter};
+  real const size = 2_r * Norm(kHalfExt);
+  real const sign = reversed ? -1_r : 1_r;
+
+  // Rounding misclassifies points beyond a sliver's sharp vertex within about ε·L/sin α ≈ ε·L²/w of
+  // it, for rim triangles of length L and width w. The radii start at twice that and grow by
+  // decades, to cover every scale up to the contact tolerance.
+  constexpr real kRimLength = 2_r * Max(kHalfExt);
+  constexpr real kRimWidth = 2_r * Min(kHalfExt);
+  DynamicArray<real> radii;
+  for (real radius = 2_r * kEps * Sqr(kRimLength) / kRimWidth;
+       radius < ContactDetectionParams{}.tolerance;
+       radius *= 10_r) {
+    radii.push_back(radius);
+  }
+
+  DynamicArray<Real3> nodeNormals;
+  nodeNormals.resize_noinit(collider.GetMesh()->GetNumNodes());
+  collider.GetMesh()->ComputeNodeNormals(MakeSpan(nodeNormals));
+  auto const corners = collider.GetMesh()->GetNodeCoordinates();
+  for (int node = 0; node < isize(corners); ++node) {
+    ContactDetectionResult result;
+    TestPointContactsImpl({&corners[node], 1}, collider, {}, TransformRT{}, result);
+    ASSERT_EQ(1, result.sampleIndices.size());
+    EXPECT_EQ(nodeNormals[node], result.sdfInfo.grad[0]);
+  }
+
+  for (Real3 const& feature : kBoxFeatures) {
+    if (feature == Real3{0_r, 1_r, 1_r}) {
+      continue; // the edge between the missing faces
+    }
+    Real3 const axis = Real3{1_r, 1_r, 1_r} - Abs(feature); // along the edge, zero on a corner
+    real const length = 2_r * Norm(axis * kHalfExt);
+    bool const isCorner = (length == 0_r);
+    for (real radius : radii) {
+      Real3 const p =
+          transform.TransformPoint(feature * kHalfExt + Normalize(feature * kWeights) * radius);
+      // The offset from the closest point of the stored mesh.
+      auto const a = StaticCast<Double3>(transform.TransformPoint((feature - axis) * kHalfExt));
+      Double3 const ab =
+          StaticCast<Double3>(transform.TransformPoint((feature + axis) * kHalfExt)) - a;
+      Double3 const ap = StaticCast<Double3>(p) - a;
+      auto const offset = StaticCast<Real3>(ap - ab * (isCorner ? 0.0 : Dot(ap, ab) / Dot(ab, ab)));
+      real const distance = sign * Norm(offset);
+
+      ContactDetectionResult result;
+      TestPointContactsImpl({&p, 1}, collider, {}, TransformRT{}, result);
+      ASSERT_EQ(1, result.sampleIndices.size());
+      EXPECT_NEAR(distance, result.sdfInfo.val[0], 2_r * kEps * size);
+      EXPECT_LE(
+          Norm(result.sdfInfo.grad[0] * distance - offset),
+          8_r * kEps * (isCorner ? radius : length));
+      EXPECT_LT(0_r, sign * Dot(result.sdfInfo.grad[0], p - kCenter));
+    }
+  }
+
+  // Points inside the faces, off their edges and diagonals. The open box lacks its +y and +z faces.
+  for (Real3 const& normal :
+       {Real3{1_r, 0_r, 0_r},
+        Real3{-1_r, 0_r, 0_r},
+        Real3{0_r, -1_r, 0_r},
+        Real3{0_r, 0_r, -1_r}}) {
+    Real3 const inFace =
+        normal + (Real3{1_r, 1_r, 1_r} - Abs(normal)) * Real3{0.6_r, 0.2_r, -0.35_r};
+    for (real radius : radii) {
+      Real3 const p = transform.TransformPoint(inFace * kHalfExt + normal * radius);
+      ContactDetectionResult result;
+      TestPointContactsImpl({&p, 1}, collider, {}, TransformRT{}, result);
+      ASSERT_EQ(1, result.sampleIndices.size());
+      EXPECT_TRUE(Contains(collider.GetMesh()->GetElementNormals(), result.sdfInfo.grad[0]));
+      EXPECT_LT(0.99_r, sign * Dot(result.sdfInfo.grad[0], transform.TransformDirection(normal)));
+    }
+  }
 }
 
 TEST(MochiContact, FindPointContacts_BoxMesh) {
@@ -964,11 +1074,53 @@ TEST(MochiContact, FindPointContacts_BoxMesh) {
   };
 
   // Re-use the tests for oriented boxes. This is not sufficient to cover all MeshCollider behavior,
-  // but it is a good start. TODO: Look into reducing floating-point round-off error in the
-  // MeshCollider implementation (compared to the Obb).
-  constexpr real kAngleTolForRotatedCases = 0.06_r; // about 3.5 deg
+  // but it is a good start.
+  constexpr real kAngleTolForRotatedCases = 0.001_r;
   TestPointContactsBoxVariations<MeshCollider>(
       factory, kAngleTolForRotatedCases, true, GetRotationsToTest());
+  for (Quaternion rotation : GetRotationsToTest()) {
+    for (bool reversed : {false, true}) {
+      TestOpenBoxMeshGradients(rotation, reversed);
+    }
+  }
+}
+
+// Above the apex of a closed cone over a non-convex ring, the gradient is +z, though the apex's
+// normal matches the normal of face (0, 4, 5), along (0, 1, y), to rounding: y solves
+// S_z(y) = y·S_y(y) for the angle-weighted sum S of the apex faces' normals. Each rotation of the
+// face order makes another apex face the closest.
+TEST(MochiContact, FindPointContacts_ConeMesh) {
+  real const y = 3.1553250596992832_r;
+  // The apex (node 0), the ring (nodes 1 to 8) and the base's center (node 9).
+  DynamicArray<Real3> const coordinates = {
+      {0_r, 0_r, 0_r},
+      {2_r, -8_r, -1_r},
+      {8_r, 3_r, -1_r},
+      {0.25_r, 0.125_r, -1_r},
+      {1_r, y, -1_r},
+      {-1_r, y, -1_r},
+      {-0.25_r, 0.125_r, -1_r},
+      {-8_r, 3_r, -1_r},
+      {-2_r, -8_r, -1_r},
+      {0_r, 0_r, -1_r}};
+  for (int first = 0; first < 8; ++first) {
+    DynamicArray<Int3> faces;
+    for (int k = 0; k < 8; ++k) {
+      int const i = (first + k) % 8;
+      faces.emplace_back(0, i + 1, (i + 1) % 8 + 1);
+      faces.emplace_back(9, (i + 1) % 8 + 1, i + 1);
+    }
+    MeshCollider cone(std::make_shared<TriangularMesh const>(coordinates, faces));
+    cone.Initialize();
+    Real3 const point{0_r, 0_r, 1e-4_r};
+    ContactDetectionResult result;
+    TestPointContactsImpl(
+        {&point, 1}, cone, {.useAccelerationStructures = false}, TransformRT{}, result);
+    ASSERT_EQ(1, result.sampleIndices.size());
+    EXPECT_LE(
+        Norm(result.sdfInfo.grad[0] - Real3{0_r, 0_r, 1_r}),
+        8_r * std::numeric_limits<real>::epsilon());
+  }
 }
 
 // Helper function to load the corase duck mesh

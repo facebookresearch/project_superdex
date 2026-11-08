@@ -1692,6 +1692,18 @@ class MeshColliderBvh {
     _edgeNormals.resize(_mesh->GetNumEdges());
     _mesh->ComputeNodeNormals(_nodeCoordinates, _elementNormals, _nodeNormals);
     _mesh->ComputeEdgeNormals(_halfEdge, _elementNormals, _edgeNormals);
+    _nodeNormalDeviations.clear();
+    _nodeNormalDeviations.resize(_nodeNormals.size(), 0_r);
+    auto const faces = _mesh->GetElementConnectivity();
+    for (int f = 0; f < isize(faces); ++f) {
+      for (int node : faces[f]) {
+        _nodeNormalDeviations[node] =
+            Max(_nodeNormalDeviations[node], Norm(_elementNormals[f] - _nodeNormals[node]));
+      }
+    }
+    for (int node : _mesh->GetBoundaryNodes()) {
+      _nodeNormalDeviations[node] = Max(_nodeNormalDeviations[node], kSqrt2);
+    }
 
     // Compute acceleration structures.
     _bvhTreeObject = std::make_unique<TriangularMeshBvhObject<Bv>>(_mesh, _nodeCoordinates);
@@ -1746,6 +1758,9 @@ class MeshColliderBvh {
   Span<Real3 const> _elementNormals; // Points to _mesh->GetElementNormals().
   std::vector<Real3> _nodeNormals;
   std::vector<Real3> _edgeNormals;
+  // The largest |n_face - n_node| over each node's incident faces, and at least √2 on boundary
+  // nodes, whose gradient can reach 90° from the node's normal.
+  DynamicArray<real> _nodeNormalDeviations;
   bool _initialized = false;
   bool _isMeshClosed = true;
 };

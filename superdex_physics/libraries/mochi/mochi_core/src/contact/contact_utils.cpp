@@ -829,19 +829,17 @@ bool MeshColliderBvh<Bv>::QueryPoint(
   Vec4r A = ToSimd(_nodeCoordinates[face[0]]);
   Vec4r B = ToSimd(_nodeCoordinates[face[1]]);
   Vec4r C = ToSimd(_nodeCoordinates[face[2]]);
-  auto const& face2HalfEdges = _halfEdge.face2half;
   auto const& halfEdges = _halfEdge.halfEdges;
-  HalfEdge const& he = halfEdges[face2HalfEdges[closestFace]];
-  int edgeAB = he.edge;
-  int edgeBC = halfEdges[he.next].edge;
-  int edgeCA = halfEdges[halfEdges[he.next].next].edge;
+  HalfEdge const& heAB = halfEdges[_halfEdge.face2half[closestFace]];
+  HalfEdge const& heBC = halfEdges[heAB.next];
+  HalfEdge const& heCA = halfEdges[heBC.next];
   VDistanceSignParams signParams;
   signParams.normalA = ToSimd(_nodeNormals[face[0]]);
   signParams.normalB = ToSimd(_nodeNormals[face[1]]);
   signParams.normalC = ToSimd(_nodeNormals[face[2]]);
-  signParams.normalAB = ToSimd(_edgeNormals[edgeAB]);
-  signParams.normalBC = ToSimd(_edgeNormals[edgeBC]);
-  signParams.normalCA = ToSimd(_edgeNormals[edgeCA]);
+  signParams.normalAB = ToSimd(_edgeNormals[heAB.edge]);
+  signParams.normalBC = ToSimd(_edgeNormals[heBC.edge]);
+  signParams.normalCA = ToSimd(_edgeNormals[heCA.edge]);
   signParams.computeSign = true;
   Vec4r par;
   [[maybe_unused]] real closestDist2_again =
@@ -858,47 +856,63 @@ bool MeshColliderBvh<Bv>::QueryPoint(
 
   // If there is contact, add to results.
   if (distance <= params.tolerance) {
-    // Get the closest point on the triangle
-    Vec4r projPos = Broadcast<0>(par) * A + Broadcast<1>(par) * B + Broadcast<2>(par) * C;
-
-    // Compute the collision normal. If the distance is larger than kEps, use (position - projPos)
-    // to compute the normal and flip the sign with outSign if position is inside the mesh. If the
-    // distance is too small, look up the face normal, or edge normal, or node normal instead.
-    // This isn't very efficient, but hopefully most of the nodes are not within +/- kEps of the
-    // surface most of the time.
-    Vec4r normal;
-    constexpr real kEps = 1e-5_r;
-    if (std::abs(distance) >= kEps) {
-      normal = signParams.outSign * Normalize<3>(position - projPos);
-    } else {
-      Vec4r parNonZero = (par > kEps);
-      if (AllTrue<3>(parNonZero)) {
-        // The closes point is somewhere on the triangle. Use the triangle normal.
-        normal = ToSimd(_elementNormals[closestFace]);
+    // The gradient of the signed distance is the face normal inside the face. On an edge or a
+    // vertex, it is the signed direction of the offset from the closest point, computed from the
+    // feature's own vertices. Rounding perturbs the offset by about epsilon times the query point's
+    // distance to those vertices, and its direction by that over the length of the offset, which
+    // leaves the direction undefined at the feature. So the offset is blended towards the
+    // pseudonormal that determined the sign, weighted by that perturbation against how far the
+    // gradient can deviate from the pseudonormal: |n_face - n_ps| for either face of an edge, and
+    // the largest over a vertex's faces, since its pseudonormal can match one of them. The sign
+    // keeps the gradient within 90° of the pseudonormal, a deviation of √2, which the boundary of
+    // an open mesh can reach, so boundary edges take √2 and boundary vertices at least √2. The
+    // normal is then within rounding of the gradient of the feature found, the face normal on flat
+    // features whose stored normals agree, and the pseudonormal where the computed offset
+    // vanishes. It is continuous up to rounding wherever the exact gradient is, and across edges,
+    // where it tends to the pseudonormal, but not at sharp vertices, where the perturbation shrinks
+    // with the offset, so it follows the exact gradient, which has no limit there. A point on a
+    // vertex gets the vertex's pseudonormal, whichever incident face the search returned, since
+    // rounding can leave its barycentrics on an incident edge or inside the face.
+    Vec4r const faceNormal = ToSimd(_elementNormals[closestFace]);
+    Vec4r normal = faceNormal;
+    int const vertex = Equal<3>(position, A) ? 0
+        : Equal<3>(position, B)              ? 1
+        : Equal<3>(position, C)              ? 2
+                                             : -1;
+    Vec4r const isPositive = par > SimdZero();
+    if (vertex >= 0) {
+      normal = ToSimd(_nodeNormals[face[vertex]]);
+    } else if (!AllTrue<3>(isPositive)) {
+      bool const bA = IsTrue<0>(isPositive);
+      bool const bB = IsTrue<1>(isPositive);
+      bool const bC = IsTrue<2>(isPositive);
+      Vec4r pseudonormal MOCHI_NO_INIT;
+      real deviation MOCHI_NO_INIT;
+      Vec4r diff MOCHI_NO_INIT;
+      real roundoff MOCHI_NO_INIT;
+      if (int(bA) + int(bB) + int(bC) == 1) {
+        int const node = face[bA ? 0 : bB ? 1 : 2];
+        pseudonormal = ToSimd(_nodeNormals[node]);
+        deviation = _nodeNormalDeviations[node];
+        diff = position - ToSimd(_nodeCoordinates[node]);
+        roundoff = std::numeric_limits<real>::epsilon() * HMax<3>(Abs(diff));
       } else {
-        auto bA = IsTrue<0>(parNonZero); // par[0] > kEps
-        auto bB = IsTrue<1>(parNonZero); // par[1] > kEps
-        auto bC = IsTrue<2>(parNonZero); // par[2] > kEps
-        if (bA && bB) {
-          // Closest point is on the AB edge
-          normal = ToSimd(_edgeNormals[edgeAB]);
-        } else if (bB && bC) {
-          // Closest point is on the BC edge
-          normal = ToSimd(_edgeNormals[edgeBC]);
-        } else if (bC && bA) {
-          // closest point is on the CA edge
-          normal = ToSimd(_edgeNormals[edgeCA]);
-        } else if (bA) {
-          normal = ToSimd(_nodeNormals[face[0]]); // Closest point is node A
-        } else if (bB) {
-          normal = ToSimd(_nodeNormals[face[1]]); // Closest point is node B
-        } else if (bC) {
-          normal = ToSimd(_nodeNormals[face[2]]); // Closest point is node C
-        } else MOCHI_UNLIKELY {
-          MOCHI_ASSERT(false, "Bad parametric coordinates");
-          normal = {};
-        }
+        HalfEdge const& he = !bC ? heAB : !bA ? heBC : heCA;
+        pseudonormal = ToSimd(_edgeNormals[he.edge]);
+        deviation = he.pair == -1 ? kSqrt2 : Norm<3>(faceNormal - pseudonormal);
+        Vec4r const v0 = !bC ? A : !bA ? B : C;
+        Vec4r const v1 = !bC ? B : !bA ? C : A;
+        Vec4r const edge = v1 - v0;
+        Vec4r const p0 = position - v0;
+        Vec4r const p1 = position - v1;
+        Vec4r const nearer = NormSqr<3>(p1) < NormSqr<3>(p0) ? p1 : p0;
+        diff = nearer - (Dot<3>(nearer, edge) / NormSqr<3>(edge)) * edge;
+        roundoff = std::numeric_limits<real>::epsilon() * HMax<3>(Max(Abs(p0), Abs(p1)));
       }
+      Vec4r const blend = (deviation * signParams.outSign) * diff + roundoff * pseudonormal;
+      real const blendSqr = NormSqr<3>(blend);
+      normal =
+          blendSqr >= std::numeric_limits<real>::min() ? Normalize(blend, blendSqr) : pseudonormal;
     }
 
     // Copy result
