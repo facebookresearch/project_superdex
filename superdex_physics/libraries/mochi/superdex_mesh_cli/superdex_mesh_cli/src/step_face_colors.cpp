@@ -57,7 +57,6 @@
 #include <XCAFPrs_DocumentExplorer.hxx>
 #include <XCAFPrs_IndexedDataMapOfShapeStyle.hxx>
 #include <XCAFPrs_Style.hxx>
-#include <algorithm>
 #include <gp_Pnt.hxx>
 #include <gp_Pnt2d.hxx>
 #include <gp_Vec.hxx>
