@@ -23,6 +23,7 @@
 #include <mochi_core/solvers/krylov_solver.h>
 #include <mochi_core/solvers/newton_solver_status.h>
 #include <mochi_core/utils/basic_utils.h>
+#include <mochi_core/utils/dynamic_array.h>
 #include <mochi_physics/src/mochi_common_components.h>
 #include <mochi_physics/src/mochi_island.h>
 #include <mochi_physics/src/mochi_snle.h>
@@ -67,7 +68,7 @@ static LinearSolverStatus Diverged() {
   };
 }
 
-using StageStatuses = std::initializer_list<LinearSolverStatus>;
+using StageStatuses = DynamicArray<LinearSolverStatus>;
 using StepStatuses = std::initializer_list<StageStatuses>;
 
 using OptionalType = std::optional<PreconditionerType>;
