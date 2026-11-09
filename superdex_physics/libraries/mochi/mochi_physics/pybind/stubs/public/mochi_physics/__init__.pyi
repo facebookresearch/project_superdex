@@ -3332,10 +3332,11 @@ class ContactParams:
         coefficients (viscousFrictionCoefficient, coulombFrictionCoefficient,
         normalViscousDampingCoefficient), the geometric mean of the colliding and
         collider's coefficients is used. This disables friction/dissipation if
-        either of them does. - For penalty coefficient (penaltyCoefficient) and
-        friction velocity threshold (frictionFalloffVel), the geometric mean of the
-        colliding and collider's values is used, except if the collider is static in
-        which case the colliding's values are used.
+        either of them does. - For penalty coefficient (penaltyCoefficient),
+        friction velocity threshold (frictionFalloffVel) and presliding displacement
+        (preslidingDisplacement), the geometric mean of the colliding and collider's
+        values is used, except if the collider is static in which case the
+        colliding's values are used.
 
     See Also:
         :meth:`~superdex.physics.Scene.set_contact_pair_params_override`
@@ -3539,6 +3540,28 @@ class ContactParams:
         exception is if the collider is static, in which case the colliding's
         threshold is used.
     """
+    presliding_displacement: float
+    """[Experimental] Presliding displacement of elasto-plastic Coulomb friction [m].
+
+    With elasto-plastic friction, which requires C1Regularized, contacts take
+    friction from their tangential displacement from their anchor, instead of using
+    :attr:`~superdex.physics.ContactParams.friction_falloff_vel`. The Coulomb
+    friction force smoothly transitions from 0 to full strength as the displacement
+    increases from 0 to preslidingDisplacement (compact support).
+
+    Note:
+        Must be finite and strictly positive.
+
+    Note:
+        Without an actor-pair override for this field, the value used in a collision
+        is the geometric mean of the colliding and collider's displacements. The
+        exception is if the collider is static, in which case the colliding's
+        displacement is used.
+
+    Warning:
+        This is an experimental feature. It may be changed or removed in the future.
+        Use at your own risk.
+    """
     normal_viscous_damping_coefficient: float
     """Normal viscous damping coefficient [s/m].
 
@@ -3636,6 +3659,7 @@ class ContactParams:
         viscous_friction_coefficient: float = ...,
         coulomb_friction_coefficient: float = ...,
         friction_falloff_vel: float = ...,
+        presliding_displacement: float = ...,
         normal_viscous_damping_coefficient: float = ...,
         distance_error_bound: float = ...,
         obj_scale: float = ...,
@@ -5239,6 +5263,16 @@ class ContactPairParamsOverride:
     See Also:
         :attr:`~superdex.physics.ContactParams.friction_falloff_vel`
     """
+    presliding_displacement: Optional[float]
+    """[Experimental] Presliding displacement of elasto-plastic friction [m].
+
+    Warning:
+        This is an experimental feature. It may be changed or removed in the future.
+        Use at your own risk.
+
+    See Also:
+        :attr:`~superdex.physics.ContactParams.presliding_displacement`
+    """
     viscous_friction_coefficient: Optional[float]
     """Pair viscous friction coefficient [s/m].
 
@@ -5264,6 +5298,7 @@ class ContactPairParamsOverride:
         self,
         penalty_coefficient: Optional[float] = ...,
         friction_falloff_vel: Optional[float] = ...,
+        presliding_displacement: Optional[float] = ...,
         viscous_friction_coefficient: Optional[float] = ...,
         coulomb_friction_coefficient: Optional[float] = ...,
         normal_viscous_damping_coefficient: Optional[float] = ...,

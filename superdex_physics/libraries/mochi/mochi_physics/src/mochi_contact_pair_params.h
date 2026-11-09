@@ -38,6 +38,7 @@ namespace mochi {
   };
   applyOverride(params.penaltyCoefficient, paramsOverride.penaltyCoefficient);
   applyOverride(params.frictionFalloffVel, paramsOverride.frictionFalloffVel);
+  applyOverride(params.preslidingDisplacement, paramsOverride.preslidingDisplacement);
   applyOverride(params.viscousFrictionCoefficient, paramsOverride.viscousFrictionCoefficient);
   applyOverride(params.coulombFrictionCoefficient, paramsOverride.coulombFrictionCoefficient);
   applyOverride(

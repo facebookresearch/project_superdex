@@ -42,7 +42,7 @@ ComponentField ActorField(std::string component) {
 }
 
 // Recorded in this order under superdex.physics.contact_param_names, with the Python field names.
-constexpr std::array<std::string_view, 14> kContactParamNames = {
+constexpr std::array<std::string_view, 15> kContactParamNames = {
     "penalty_coefficient",
     "penalty_smoothing_half_distance",
     "penalty_threshold_default",
@@ -53,6 +53,7 @@ constexpr std::array<std::string_view, 14> kContactParamNames = {
     "viscous_friction_coefficient",
     "coulomb_friction_coefficient",
     "friction_falloff_vel",
+    "presliding_displacement",
     "normal_viscous_damping_coefficient",
     "distance_error_bound",
     "obj_scale",
@@ -71,6 +72,7 @@ struct RecordedContactParamsLayout {
   mochi::real viscousFrictionCoefficient;
   mochi::real coulombFrictionCoefficient;
   mochi::real frictionFalloffVel;
+  mochi::real preslidingDisplacement;
   mochi::real normalViscousDampingCoefficient;
   mochi::real distanceErrorBound;
   mochi::real objScale;
@@ -92,6 +94,7 @@ std::array<double, kContactParamNames.size()> ContactParamValues(mochi::ContactP
       p.viscousFrictionCoefficient,
       p.coulombFrictionCoefficient,
       p.frictionFalloffVel,
+      p.preslidingDisplacement,
       p.normalViscousDampingCoefficient,
       p.distanceErrorBound,
       p.objScale,

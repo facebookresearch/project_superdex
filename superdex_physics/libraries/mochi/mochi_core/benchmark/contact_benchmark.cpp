@@ -30,14 +30,17 @@ static void ComputeBatchCollisionForceDForce(benchmark::State& state) {
   auto const isSdfGradUnitary = static_cast<bool>(state.range(3));
   auto const explicitNormals = static_cast<bool>(state.range(4));
   auto const fullDissipation = static_cast<bool>(state.range(5));
+  auto const elastoPlasticFriction = static_cast<bool>(state.range(6));
 
   DynamicArray<Real3> posColliding;
   DynamicArray<Real3> posCollidingStageStart;
   SdfInfo sdfInfo;
   SdfInfo sdfInfoStageStart;
   DynamicArray<Real3> normalColliding;
+  DynamicArray<Real3> anchorOffset;
   ContactParams params = {}; // Default contact params.
-  ContactEvalConfig config = {.explicitNormals = explicitNormals};
+  ContactEvalConfig config = {
+      .explicitNormals = explicitNormals, .elastoPlasticFriction = elastoPlasticFriction};
   if (fullDissipation) {
     params.viscousFrictionCoefficient = 1_r;
     params.normalViscousDampingCoefficient = 1_r;
@@ -65,6 +68,11 @@ static void ComputeBatchCollisionForceDForce(benchmark::State& state) {
     sdfInfoStageStart.grad[i] = sdfInfo.grad[i];
   }
 
+  if (elastoPlasticFriction) {
+    // Tangential anchor offsets within the presliding displacement.
+    anchorOffset.resize(kBatchSize, Real3{0.5_r, 0_r, -0.5_r} * params.preslidingDisplacement);
+  }
+
   for (auto x : state) {
     CallNoInline([&]() {
       ComputeBatchCollisionForceDForce<kBatchSize, GradTarget::Current>(
@@ -78,6 +86,7 @@ static void ComputeBatchCollisionForceDForce(benchmark::State& state) {
           MakeConstSpan(normalColliding),
           MakeConstSpan(posColliding),
           MakeConstSpan(posCollidingStageStart),
+          MakeConstSpan(anchorOffset),
           params,
           config,
           /*dtStage*/ 0.01_r,
@@ -105,16 +114,17 @@ static constexpr int kBatchSize = Min(Simd<real>::kSize, kCollResponseMaxBatchSi
            "dresidual",                                            \
            "unitSdfGradient",                                      \
            "explicitNormals",                                      \
-           "fullDissipation"})                                     \
+           "fullDissipation",                                      \
+           "elastoPlasticFriction"})                               \
       ->Args({__VA_ARGS__})
 
-MOCHI_CONTACT_BENCHMARK("Objective", true, false, false, true, false, false);
-MOCHI_CONTACT_BENCHMARK("Residual", false, true, false, true, false, false);
-MOCHI_CONTACT_BENCHMARK("DResidual", false, false, true, true, false, false);
-MOCHI_CONTACT_BENCHMARK("ResidualDResidual", false, true, true, true, false, false);
-MOCHI_CONTACT_BENCHMARK("All", true, true, true, true, false, false);
-MOCHI_CONTACT_BENCHMARK("All/NonUnitSdfGradient", true, true, true, false, false, false);
-MOCHI_CONTACT_BENCHMARK("All/ExplicitNormals", true, true, true, true, true, false);
+MOCHI_CONTACT_BENCHMARK("Objective", true, false, false, true, false, false, false);
+MOCHI_CONTACT_BENCHMARK("Residual", false, true, false, true, false, false, false);
+MOCHI_CONTACT_BENCHMARK("DResidual", false, false, true, true, false, false, false);
+MOCHI_CONTACT_BENCHMARK("ResidualDResidual", false, true, true, true, false, false, false);
+MOCHI_CONTACT_BENCHMARK("All", true, true, true, true, false, false, false);
+MOCHI_CONTACT_BENCHMARK("All/NonUnitSdfGradient", true, true, true, false, false, false, false);
+MOCHI_CONTACT_BENCHMARK("All/ExplicitNormals", true, true, true, true, true, false, false);
 MOCHI_CONTACT_BENCHMARK(
     "All/NonUnitSdfGradient/ExplicitNormals",
     true,
@@ -122,6 +132,7 @@ MOCHI_CONTACT_BENCHMARK(
     true,
     false,
     true,
+    false,
     false);
 MOCHI_CONTACT_BENCHMARK(
     "All/NonUnitSdfGradient/ExplicitNormals/FullDissipation",
@@ -130,6 +141,17 @@ MOCHI_CONTACT_BENCHMARK(
     true,
     false,
     true,
+    true,
+    false);
+MOCHI_CONTACT_BENCHMARK("All/ElastoPlasticFriction", true, true, true, true, false, false, true);
+MOCHI_CONTACT_BENCHMARK(
+    "All/ExplicitNormals/ElastoPlasticFriction",
+    true,
+    true,
+    true,
+    true,
+    true,
+    false,
     true);
 
 #undef MOCHI_CONTACT_BENCHMARK

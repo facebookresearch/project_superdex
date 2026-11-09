@@ -113,6 +113,8 @@ static void ExpectEqualResults(
 }
 
 // Test N points using the ComputeBatchCollisionForceDForce specialization with batch size of N.
+// With elasto-plastic friction, points have the anchor offset anchorOffset, except every third
+// point, which is a new contact (zero offset), so batches of 3 or more points mix both.
 template <int N, GradTarget kGradTarget>
 void TestPlaneContactAtPointN(
     ContactEvalConfig const& config,
@@ -121,6 +123,7 @@ void TestPlaneContactAtPointN(
     Real3 prevPos,
     Real3 ppoint,
     Real3 pnormal,
+    Real3 anchorOffset,
     real eps,
     real tolGrad,
     real tolHess,
@@ -142,6 +145,7 @@ void TestPlaneContactAtPointN(
   SdfInfo sdf0;
   sdf0.resize(N);
   DynamicArray<Real3> normalColliding(N);
+  DynamicArray<Real3> anchorOffsets(N);
   Real3 forceAn[N] = {};
   [[maybe_unused]] VMatrix3x3r dforceAn[N] = {};
   for (int k = 0; k < N; ++k) {
@@ -154,6 +158,7 @@ void TestPlaneContactAtPointN(
     sdf0.grad[k] = pnormal0;
 
     normalColliding[k] = -pnormal;
+    anchorOffsets[k] = (k % 3 == 2) ? Real3{} : anchorOffset;
   }
   ComputeBatchCollisionForceDForce<N, kGradTarget>(
       {} /*outEnergy*/,
@@ -166,6 +171,7 @@ void TestPlaneContactAtPointN(
       MakeConstSpan(normalColliding),
       MakeConstSpan(posColliding),
       MakeConstSpan(posColliding0),
+      MakeConstSpan(anchorOffsets),
       params,
       config,
       dt,
@@ -200,6 +206,7 @@ void TestPlaneContactAtPointN(
           MakeConstSpan(normalColliding),
           MakeConstSpan(posColliding),
           MakeConstSpan(posColliding0),
+          MakeConstSpan(anchorOffsets),
           params,
           config,
           dt,
@@ -219,6 +226,7 @@ void TestPlaneContactAtPointN(
           MakeConstSpan(normalColliding),
           MakeConstSpan(posColliding),
           MakeConstSpan(posColliding0),
+          MakeConstSpan(anchorOffsets),
           params,
           config,
           dt,
@@ -273,6 +281,7 @@ static void TestPlaneContactAtPoint(
     Real3 prevPos,
     Real3 ppoint,
     Real3 pnormal,
+    Real3 anchorOffset,
     real eps,
     real tolGrad,
     real tolHess,
@@ -280,21 +289,21 @@ static void TestPlaneContactAtPoint(
   // Test all specializations of ComputeBatchCollisionForceDForce.
   static_assert(kCollResponseMaxBatchSize == 8, "Please update unit tests to cover all codepaths");
   TestPlaneContactAtPointN<1, kGradTarget>(
-      config, params, pos, prevPos, ppoint, pnormal, eps, tolGrad, tolHess, dt);
+      config, params, pos, prevPos, ppoint, pnormal, anchorOffset, eps, tolGrad, tolHess, dt);
   TestPlaneContactAtPointN<2, kGradTarget>(
-      config, params, pos, prevPos, ppoint, pnormal, eps, tolGrad, tolHess, dt);
+      config, params, pos, prevPos, ppoint, pnormal, anchorOffset, eps, tolGrad, tolHess, dt);
   TestPlaneContactAtPointN<3, kGradTarget>(
-      config, params, pos, prevPos, ppoint, pnormal, eps, tolGrad, tolHess, dt);
+      config, params, pos, prevPos, ppoint, pnormal, anchorOffset, eps, tolGrad, tolHess, dt);
   TestPlaneContactAtPointN<4, kGradTarget>(
-      config, params, pos, prevPos, ppoint, pnormal, eps, tolGrad, tolHess, dt);
+      config, params, pos, prevPos, ppoint, pnormal, anchorOffset, eps, tolGrad, tolHess, dt);
   TestPlaneContactAtPointN<5, kGradTarget>(
-      config, params, pos, prevPos, ppoint, pnormal, eps, tolGrad, tolHess, dt);
+      config, params, pos, prevPos, ppoint, pnormal, anchorOffset, eps, tolGrad, tolHess, dt);
   TestPlaneContactAtPointN<6, kGradTarget>(
-      config, params, pos, prevPos, ppoint, pnormal, eps, tolGrad, tolHess, dt);
+      config, params, pos, prevPos, ppoint, pnormal, anchorOffset, eps, tolGrad, tolHess, dt);
   TestPlaneContactAtPointN<7, kGradTarget>(
-      config, params, pos, prevPos, ppoint, pnormal, eps, tolGrad, tolHess, dt);
+      config, params, pos, prevPos, ppoint, pnormal, anchorOffset, eps, tolGrad, tolHess, dt);
   TestPlaneContactAtPointN<8, kGradTarget>(
-      config, params, pos, prevPos, ppoint, pnormal, eps, tolGrad, tolHess, dt);
+      config, params, pos, prevPos, ppoint, pnormal, anchorOffset, eps, tolGrad, tolHess, dt);
 }
 
 template <GradTarget kGradTarget>
@@ -304,6 +313,7 @@ void TestPlaneContactFromPoint(
     Real3 const& prevPos,
     Real3 const& ppoint,
     Real3 const& pnormal,
+    Real3 const& anchorOffset,
     int N) {
   // Relative error allowed in the gradient and Hessian: 1% in double precision, 5% in single. This
   // is relatively high for a finite differences test. Due to the approximations in the friction
@@ -324,6 +334,9 @@ void TestPlaneContactFromPoint(
   real constexpr dt = 0.01_r;
   real range = params.coulombFrictionCoefficient == 0 ? params.GetPenaltyThresholdDist(false)
                                                       : params.frictionFalloffVel * dt;
+  if (config.elastoPlasticFriction && params.coulombFrictionCoefficient > 0) {
+    range = params.preslidingDisplacement;
+  }
   real kEps = Max(1e-9_r, 1e-3_r * range);
 
   // Test displacements orthogonal to normal
@@ -346,7 +359,7 @@ void TestPlaneContactFromPoint(
 
       Real3 pos = prevPos + disp;
       TestPlaneContactAtPoint<kGradTarget>(
-          config, params, pos, prevPos, ppoint, pnormal, kEps, kTolGrad, tolHess, dt);
+          config, params, pos, prevPos, ppoint, pnormal, anchorOffset, kEps, kTolGrad, tolHess, dt);
     }
   }
 
@@ -367,7 +380,17 @@ void TestPlaneContactFromPoint(
 
         Real3 pos = prevPos + disp;
         TestPlaneContactAtPoint<kGradTarget>(
-            config, params, pos, prevPos, ppoint, pnormal, kEps, kTolGrad, tolHess, dt);
+            config,
+            params,
+            pos,
+            prevPos,
+            ppoint,
+            pnormal,
+            anchorOffset,
+            kEps,
+            kTolGrad,
+            tolHess,
+            dt);
       }
     }
   }
@@ -377,7 +400,8 @@ template <GradTarget kGradTarget>
 static void TestPlaneContact(
     ContactEvalConfig const& config,
     ContactParams const& paramsIn,
-    Real3 const& pnormal) {
+    Real3 const& pnormal,
+    Real3 const& anchorOffset) {
   int constexpr N = 3;
   Real3 const ppoint = {0_r, 0_r, 0_r};
   ContactParams params = paramsIn;
@@ -386,7 +410,7 @@ static void TestPlaneContact(
   params.penaltySmoothingHalfDistance = 0.001_r;
 
   // Test plane contact from a point lying on the plane
-  TestPlaneContactFromPoint<kGradTarget>(config, params, ppoint, ppoint, pnormal, N);
+  TestPlaneContactFromPoint<kGradTarget>(config, params, ppoint, ppoint, pnormal, anchorOffset, N);
 
   // Test plane contact from a point in a sphere around
   real range = params.GetPenaltyThresholdDist(false);
@@ -396,15 +420,16 @@ static void TestPlaneContact(
       for (real t = 0; t < 2 * kPI; t += 2 * kPI / N) {
         Real3 disp =
             Real3{r * std::cos(t) * std::sin(s), r * std::sin(t) * std::cos(s), r * std::cos(s)};
-        TestPlaneContactFromPoint<kGradTarget>(config, params, ppoint + disp, ppoint, pnormal, N);
+        TestPlaneContactFromPoint<kGradTarget>(
+            config, params, ppoint + disp, ppoint, pnormal, anchorOffset, N);
       }
     }
   }
 }
 
 TEST(ContactPenalties, ConsistencyTests) {
-  // Two different sets of contact evaluation config
-  std::array<ContactEvalConfig, 2> config;
+  // Four different sets of contact evaluation config
+  std::array<ContactEvalConfig, 4> config;
   // Implicit normals. Forbid friction fading. Do not use the fitted Hessian.
   config[0].explicitNormals = false;
   config[0].fadeFriction = false;
@@ -413,14 +438,20 @@ TEST(ContactPenalties, ConsistencyTests) {
   config[1].explicitNormals = true;
   config[1].fadeFriction = true;
   config[1].useFittedHessian = false;
+  // The same with elasto-plastic friction
+  config[2] = config[0];
+  config[2].elastoPlasticFriction = true;
+  config[3] = config[1];
+  config[3].elastoPlasticFriction = true;
 
   // Four different sets of contact parameters
   std::array<ContactParams, 4> params;
   // No friction
   params[0].coulombFrictionCoefficient = 0.0_r;
   params[0].viscousFrictionCoefficient = 0.0_r;
-  // IPC friction
+  // IPC friction. The presliding displacement differs from the falloff (frictionFalloffVel * dt).
   params[1].frictionFalloffVel = 0.01_r;
+  params[1].preslidingDisplacement = 5e-5_r;
   params[1].viscousFrictionCoefficient = 0.0_r;
   params[1].coulombFrictionCoefficient = 0.5_r;
   // Viscous friction
@@ -443,10 +474,18 @@ TEST(ContactPenalties, ConsistencyTests) {
 
   for (auto const& c : config) {
     for (auto const& p : params) {
+      // Elasto-plastic friction only changes Coulomb friction.
+      if (c.elastoPlasticFriction && p.coulombFrictionCoefficient == 0_r) {
+        continue;
+      }
       for (auto const& n : normals) {
-        TestPlaneContact<GradTarget::Current>(c, p, n);
+        // The anchor offset has a normal component, which friction ignores.
+        Real3 const anchorOffset = c.elastoPlasticFriction ? p.preslidingDisplacement *
+                (0.7_r * Normalize(Cross(n, Real3{1_r, 2_r, 3_r})) + 0.3_r * n)
+                                                           : Real3{};
+        TestPlaneContact<GradTarget::Current>(c, p, n, anchorOffset);
         if (c.explicitNormals) {
-          TestPlaneContact<GradTarget::Previous>(c, p, n);
+          TestPlaneContact<GradTarget::Previous>(c, p, n, anchorOffset);
         }
       }
     }
@@ -488,6 +527,7 @@ TEST(ContactPenalties, Friction_DegenerateNormalsKeepFullStrength) {
         MakeConstSpan(normalColliding),
         MakeConstSpan(posColliding),
         MakeConstSpan(posCollidingStageStart),
+        {} /* anchorOffset */,
         params,
         config,
         1_r /* dtFactor */,
@@ -529,6 +569,75 @@ TEST(ContactPenalties, Friction_DegenerateNormalsKeepFullStrength) {
   auto const [collidingNormalEnergy, collidingNormalForce] = eval(unfadedConfig);
   EXPECT_DOUBLE_EQ(unfadedEnergy, collidingNormalEnergy);
   EXPECT_NEAR_EQ((Real3{unfadedForce[0], 0_r, 0_r}), collidingNormalForce);
+}
+
+// A contact anchored within the presliding displacement holds a load below the Coulomb limit
+// without slip, while regular Coulomb friction needs slip to act.
+TEST(ContactPenalties, ElastoPlasticFriction_HoldsLoadWithoutSlip) {
+  ContactParams params;
+  params.coulombFrictionCoefficient = 0.5_r;
+  params.viscousFrictionCoefficient = 0_r;
+  params.normalViscousDampingCoefficient = 0_r;
+  ContactEvalConfig const config{
+      .explicitNormals = true, .fadeFriction = false, .elastoPlasticFriction = true};
+  real const delta = params.preslidingDisplacement;
+
+  // Contacts pressed 1 mm into the plane z = 0, without slip in the stage. Anchors within and
+  // beyond the presliding displacement, one with a normal component, and a new contact.
+  int constexpr kNumContacts = 4;
+  std::array<real, kNumContacts> distance = {};
+  distance.fill(-0.001_r);
+  std::array<Real3, kNumContacts> distanceGrad;
+  distanceGrad.fill(Real3{0_r, 0_r, 1_r});
+  std::array<Real3, kNumContacts> normalColliding;
+  normalColliding.fill(Real3{0_r, 0_r, -1_r});
+  std::array<Real3, kNumContacts> const positions = {};
+  std::array<Real3, kNumContacts> const anchorOffsets = {
+      Real3{0.5_r * delta, 0_r, 0_r},
+      Real3{0.5_r * delta, 0_r, 3_r * delta},
+      Real3{0_r, 2_r * delta, 0_r},
+      Real3{}};
+  auto const computeForce = [&](real dt) {
+    std::array<Real3, kNumContacts> force = {};
+    ComputeBatchCollisionForceDForce<kNumContacts, GradTarget::Current>(
+        {} /* outEnergy */,
+        MakeSpan(force),
+        {} /* outDForce */,
+        MakeConstSpan(distance),
+        MakeConstSpan(distanceGrad),
+        MakeConstSpan(distance),
+        MakeConstSpan(distanceGrad),
+        MakeConstSpan(normalColliding),
+        MakeConstSpan(positions),
+        MakeConstSpan(positions),
+        MakeConstSpan(anchorOffsets),
+        params,
+        config,
+        dt,
+        /*assemEnergy*/ false,
+        /*assemForce*/ true,
+        /*assemDForce*/ false,
+        /*isSdfGradUnitary*/ true,
+        /*isNormalCollidingUnitary*/ true);
+    return force;
+  };
+  auto const force = computeForce(0.01_r);
+
+  // Friction opposes the offset with mu * fN times the IPC step 2 x - x^2 at x = |offset| / delta,
+  // which is 0.75 at x = 0.5 and saturates at 1 beyond x = 1. The normal component of the offset is
+  // ignored. Without slip, a new contact has no friction.
+  real const mu = params.coulombFrictionCoefficient;
+  std::array<Real3, kNumContacts> const expectedFrictionPerNormalForce = {
+      Real3{-0.75_r * mu, 0_r, 0_r}, Real3{-0.75_r * mu, 0_r, 0_r}, Real3{0_r, -mu, 0_r}, Real3{}};
+  for (int i = 0; i < kNumContacts; ++i) {
+    real const normalForce = force[i][2];
+    ASSERT_GT(normalForce, 0_r);
+    EXPECT_NEAR_EQ(
+        expectedFrictionPerNormalForce[i], (Real3{force[i][0], force[i][1], 0_r} / normalForce));
+  }
+
+  // Unlike regular Coulomb friction, elasto-plastic friction does not depend on the time step.
+  EXPECT_EQ(force, computeForce(0.001_r));
 }
 
 // Expect that two vectors point in the same direction +/- some angle

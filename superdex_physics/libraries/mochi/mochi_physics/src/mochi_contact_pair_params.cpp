@@ -57,6 +57,7 @@ void ValidateContactPairParamsOverride(
     Error& error) {
   bool const hasAnyValue = paramsOverride.penaltyCoefficient.has_value() ||
       paramsOverride.frictionFalloffVel.has_value() ||
+      paramsOverride.preslidingDisplacement.has_value() ||
       paramsOverride.viscousFrictionCoefficient.has_value() ||
       paramsOverride.coulombFrictionCoefficient.has_value() ||
       paramsOverride.normalViscousDampingCoefficient.has_value();

@@ -112,6 +112,7 @@ void mochi::ComputeCollisionResponseRange(
                                        : Span<Real3 const>{},                                      \
           MakeConstSpan(contactQuery.posColliding).subspan(s, N),                                  \
           MakeConstSpan(contactQuery.posCollidingStageStart).subspan(s, N),                        \
+          {} /*anchorOffset*/,                                                                     \
           params,                                                                                  \
           config,                                                                                  \
           dtStage,                                                                                 \
@@ -251,6 +252,7 @@ MOCHI_FORCE_INLINE void ComputeBatchSumsPrologue(
           : Span<Real3 const>{},
       MakeConstSpan(contactQuery.posColliding).subspan(first, kBatchSize),
       MakeConstSpan(contactQuery.posCollidingStageStart).subspan(first, kBatchSize),
+      {} /*anchorOffset*/,
       params,
       config,
       dtStage,

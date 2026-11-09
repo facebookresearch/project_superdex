@@ -149,10 +149,11 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
   ;
 
   registry.GetClass<mochi::ContactPairParamsOverride>()
-    .def("__init__", [](mochi::ContactPairParamsOverride* self, nb::object penalty_coefficient, nb::object friction_falloff_vel, nb::object viscous_friction_coefficient, nb::object coulomb_friction_coefficient, nb::object normal_viscous_damping_coefficient) {
+    .def("__init__", [](mochi::ContactPairParamsOverride* self, nb::object penalty_coefficient, nb::object friction_falloff_vel, nb::object presliding_displacement, nb::object viscous_friction_coefficient, nb::object coulomb_friction_coefficient, nb::object normal_viscous_damping_coefficient) {
       mochi::ContactPairParamsOverride result{};
       result.penaltyCoefficient = nb::cast<std::optional<mochi::real>>(penalty_coefficient);
       result.frictionFalloffVel = nb::cast<std::optional<mochi::real>>(friction_falloff_vel);
+      result.preslidingDisplacement = nb::cast<std::optional<mochi::real>>(presliding_displacement);
       result.viscousFrictionCoefficient = nb::cast<std::optional<mochi::real>>(viscous_friction_coefficient);
       result.coulombFrictionCoefficient = nb::cast<std::optional<mochi::real>>(coulomb_friction_coefficient);
       result.normalViscousDampingCoefficient = nb::cast<std::optional<mochi::real>>(normal_viscous_damping_coefficient);
@@ -161,6 +162,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
       , nb::kw_only()
       , nb::arg("penalty_coefficient").sig("...") = mochi::ContactPairParamsOverride{}.penaltyCoefficient
       , nb::arg("friction_falloff_vel").sig("...") = mochi::ContactPairParamsOverride{}.frictionFalloffVel
+      , nb::arg("presliding_displacement").sig("...") = mochi::ContactPairParamsOverride{}.preslidingDisplacement
       , nb::arg("viscous_friction_coefficient").sig("...") = mochi::ContactPairParamsOverride{}.viscousFrictionCoefficient
       , nb::arg("coulomb_friction_coefficient").sig("...") = mochi::ContactPairParamsOverride{}.coulombFrictionCoefficient
       , nb::arg("normal_viscous_damping_coefficient").sig("...") = mochi::ContactPairParamsOverride{}.normalViscousDampingCoefficient
@@ -172,6 +174,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def("__deepcopy__", [](mochi::ContactPairParamsOverride const& self, nb::dict) { return mochi::ContactPairParamsOverride(self); })
     .def_prop_rw("penalty_coefficient", [](mochi::ContactPairParamsOverride& self) -> std::optional<mochi::real>& { return self.penaltyCoefficient; }, [](mochi::ContactPairParamsOverride& self, nb::handle val) { self.penaltyCoefficient = val.is_none() ? std::optional<mochi::real>{} : nb::cast<std::optional<mochi::real>>(val); }, "Pair penalty coefficient [Pa/m] before role-dependent dimensional corrections.\n\nSee Also:\n    :attr:`~superdex.physics.ContactParams.penalty_coefficient`", nb::for_setter(nb::arg("value").none()))
     .def_prop_rw("friction_falloff_vel", [](mochi::ContactPairParamsOverride& self) -> std::optional<mochi::real>& { return self.frictionFalloffVel; }, [](mochi::ContactPairParamsOverride& self, nb::handle val) { self.frictionFalloffVel = val.is_none() ? std::optional<mochi::real>{} : nb::cast<std::optional<mochi::real>>(val); }, "Friction falloff velocity [m/s].\n\nSee Also:\n    :attr:`~superdex.physics.ContactParams.friction_falloff_vel`", nb::for_setter(nb::arg("value").none()))
+    .def_prop_rw("presliding_displacement", [](mochi::ContactPairParamsOverride& self) -> std::optional<mochi::real>& { return self.preslidingDisplacement; }, [](mochi::ContactPairParamsOverride& self, nb::handle val) { self.preslidingDisplacement = val.is_none() ? std::optional<mochi::real>{} : nb::cast<std::optional<mochi::real>>(val); }, "[Experimental] Presliding displacement of elasto-plastic friction [m].\n\nWarning:\n    This is an experimental feature. It may be changed or removed in the future.\n    Use at your own risk.\n\nSee Also:\n    :attr:`~superdex.physics.ContactParams.presliding_displacement`", nb::for_setter(nb::arg("value").none()))
     .def_prop_rw("viscous_friction_coefficient", [](mochi::ContactPairParamsOverride& self) -> std::optional<mochi::real>& { return self.viscousFrictionCoefficient; }, [](mochi::ContactPairParamsOverride& self, nb::handle val) { self.viscousFrictionCoefficient = val.is_none() ? std::optional<mochi::real>{} : nb::cast<std::optional<mochi::real>>(val); }, "Pair viscous friction coefficient [s/m].\n\nSee Also:\n    :attr:`~superdex.physics.ContactParams.viscous_friction_coefficient`", nb::for_setter(nb::arg("value").none()))
     .def_prop_rw("coulomb_friction_coefficient", [](mochi::ContactPairParamsOverride& self) -> std::optional<mochi::real>& { return self.coulombFrictionCoefficient; }, [](mochi::ContactPairParamsOverride& self, nb::handle val) { self.coulombFrictionCoefficient = val.is_none() ? std::optional<mochi::real>{} : nb::cast<std::optional<mochi::real>>(val); }, "Pair Coulomb friction coefficient.\n\nSee Also:\n    :attr:`~superdex.physics.ContactParams.coulomb_friction_coefficient`", nb::for_setter(nb::arg("value").none()))
     .def_prop_rw("normal_viscous_damping_coefficient", [](mochi::ContactPairParamsOverride& self) -> std::optional<mochi::real>& { return self.normalViscousDampingCoefficient; }, [](mochi::ContactPairParamsOverride& self, nb::handle val) { self.normalViscousDampingCoefficient = val.is_none() ? std::optional<mochi::real>{} : nb::cast<std::optional<mochi::real>>(val); }, "Pair normal viscous damping coefficient [s/m].\n\nSee Also:\n    :attr:`~superdex.physics.ContactParams.normal_viscous_damping_coefficient`", nb::for_setter(nb::arg("value").none()))

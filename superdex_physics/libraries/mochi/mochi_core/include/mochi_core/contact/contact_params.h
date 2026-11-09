@@ -31,9 +31,10 @@ namespace mochi {
  *     coulombFrictionCoefficient, normalViscousDampingCoefficient), the geometric mean of the
  *     colliding and collider's coefficients is used. This disables friction/dissipation if either
  *     of them does.
- *   - For penalty coefficient (penaltyCoefficient) and friction velocity threshold
- *     (frictionFalloffVel), the geometric mean of the colliding and collider's values is used,
- *     except if the collider is static in which case the colliding's values are used.
+ *   - For penalty coefficient (penaltyCoefficient), friction velocity threshold
+ *     (frictionFalloffVel) and presliding displacement (preslidingDisplacement), the
+ *     geometric mean of the colliding and collider's values is used, except if the collider is
+ *     static in which case the colliding's values are used.
  *
  * @see Scene::SetContactPairParamsOverride
  */
@@ -53,6 +54,7 @@ struct ContactParams {
    * @param[in] viscousFrictionCoefficient See @ref viscousFrictionCoefficient.
    * @param[in] coulombFrictionCoefficient See @ref coulombFrictionCoefficient.
    * @param[in] frictionFalloffVel See @ref frictionFalloffVel.
+   * @param[in] preslidingDisplacement See @ref preslidingDisplacement.
    * @param[in] normalViscousDampingCoefficient See @ref normalViscousDampingCoefficient.
    * @param[in] distanceErrorBound See @ref distanceErrorBound.
    * @param[in] objScale See @ref objScale.
@@ -72,6 +74,7 @@ struct ContactParams {
       real viscousFrictionCoefficient,
       real coulombFrictionCoefficient,
       real frictionFalloffVel,
+      real preslidingDisplacement,
       real normalViscousDampingCoefficient,
       real distanceErrorBound,
       real objScale,
@@ -221,6 +224,24 @@ struct ContactParams {
   real frictionFalloffVel = 0.01_r;
 
   /**
+   * @brief [Experimental] Presliding displacement of elasto-plastic Coulomb friction [m].
+   *
+   * @details With elasto-plastic friction, which requires C1Regularized, contacts take friction
+   * from their tangential displacement from their anchor, instead of using @ref frictionFalloffVel.
+   * The Coulomb friction force smoothly transitions from 0 to full strength as the displacement
+   * increases from 0 to preslidingDisplacement (compact support).
+   *
+   * @warning This is an experimental feature. It may be changed or removed in the future. Use at
+   * your own risk.
+   *
+   * @note Must be finite and strictly positive.
+   * @note Without an actor-pair override for this field, the value used in a collision is the
+   * geometric mean of the colliding and collider's displacements. The exception is if the collider
+   * is static, in which case the colliding's displacement is used.
+   */
+  real preslidingDisplacement = 1e-4_r;
+
+  /**
    * @brief Normal viscous damping coefficient [s/m].
    *
    * @details Damping force in the normal direction, proportional to the elastic normal contact
@@ -313,6 +334,7 @@ struct ContactParams {
   MOCHI_FIELD(viscousFrictionCoefficient) MOCHI_ATTRIBUTE(Units("s/m"))
   MOCHI_FIELD(coulombFrictionCoefficient)
   MOCHI_FIELD(frictionFalloffVel) MOCHI_ATTRIBUTE(Units("m/s"))
+  MOCHI_FIELD(preslidingDisplacement) MOCHI_ATTRIBUTE(Units("m"))
   MOCHI_FIELD(normalViscousDampingCoefficient) MOCHI_ATTRIBUTE(Units("s/m"))
   MOCHI_FIELD(distanceErrorBound) MOCHI_ATTRIBUTE(Units("m"))
   MOCHI_FIELD(objScale)

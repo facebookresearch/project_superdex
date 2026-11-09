@@ -658,6 +658,11 @@ inline void ValidateContactParams(ContactParams const& params, Error& error) {
       error,
       "Friction falloff velocity (frictionFalloffVel) must be finite and not negative.");
   MOCHI_ERROR_IF_NOT(
+      IsFinite(params.preslidingDisplacement) && params.preslidingDisplacement > 0_r,
+      error,
+      "Friction presliding displacement (preslidingDisplacement) must be finite and "
+      "positive.");
+  MOCHI_ERROR_IF_NOT(
       IsFinite(params.normalViscousDampingCoefficient) &&
           params.normalViscousDampingCoefficient >= 0_r,
       error,
@@ -771,14 +776,14 @@ GetCollidingPadding(ContactAssemblyReg const& reg, entt::entity colliding, entt:
  * @brief Combines contact parameters from two actors into a single set of contact parameters.
  *
  * This function implements the combination logic for friction coefficients, penalty coefficient,
- * and friction falloff velocity using geometric mean. Additional parameters can modify the
- * behavior for static colliders and rod actors.
+ * friction falloff velocity and friction presliding displacement using geometric mean. Additional
+ * parameters can modify the behavior for static colliders and rod actors.
  *
  * @param collidingParams Contact parameters from the colliding actor.
  * @param colliderParams Contact parameters from the collider actor.
  * @param paramsOverride Optional pair-specific parameter replacements.
- * @param isStaticCollider If true, use the colliding actor's penalty and falloff values directly
- * instead of taking the geometric mean.
+ * @param isStaticCollider If true, use the colliding actor's penalty, falloff and presliding
+ * values directly instead of taking the geometric mean.
  * @param collidingIntegralDim The dimension of the colliding-side contact integral (2 for surfaces,
  * 1 for rods).
  * @param colliderIntegralDim The dimension of the collider-side integral (stored in point-cloud
@@ -817,8 +822,8 @@ inline ContactParams CombineContactParams(
         collidingParams.normalViscousDampingCoefficient *
         colliderParams.normalViscousDampingCoefficient);
   }
-  // Penalty coefficient and friction falloff velocity: Use the geometric mean if both actors are
-  // dynamic, and the colliding if the collider is static.
+  // Penalty coefficient, friction falloff velocity and friction presliding displacement: Use the
+  // geometric mean if both actors are dynamic, and the colliding if the collider is static.
   if (paramsOverride == nullptr || !paramsOverride->penaltyCoefficient) {
     pairParams.penaltyCoefficient = isStaticCollider
         ? collidingParams.penaltyCoefficient
@@ -828,6 +833,11 @@ inline ContactParams CombineContactParams(
     pairParams.frictionFalloffVel = isStaticCollider
         ? collidingParams.frictionFalloffVel
         : Sqrt(collidingParams.frictionFalloffVel * colliderParams.frictionFalloffVel);
+  }
+  if (paramsOverride == nullptr || !paramsOverride->preslidingDisplacement) {
+    pairParams.preslidingDisplacement = isStaticCollider
+        ? collidingParams.preslidingDisplacement
+        : Sqrt(collidingParams.preslidingDisplacement * colliderParams.preslidingDisplacement);
   }
 
   bool const hasFrictionOverride = paramsOverride != nullptr &&

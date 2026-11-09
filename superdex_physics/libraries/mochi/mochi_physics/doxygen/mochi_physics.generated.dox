@@ -2278,6 +2278,15 @@
 /// @see @ref mochi::ContactParams::frictionFalloffVel "ContactParams::frictionFalloffVel"
 ///
 
+/// @var mochi::ContactPairParamsOverride::preslidingDisplacement
+///
+/// @brief [Experimental] Presliding displacement of elasto-plastic friction [m].
+///
+/// @warning This is an experimental feature. It may be changed or removed in the future. Use at your own risk.
+///
+/// @see @ref mochi::ContactParams::preslidingDisplacement "ContactParams::preslidingDisplacement"
+///
+
 /// @var mochi::ContactPairParamsOverride::viscousFrictionCoefficient
 ///
 /// @brief Pair viscous friction coefficient [s/m].

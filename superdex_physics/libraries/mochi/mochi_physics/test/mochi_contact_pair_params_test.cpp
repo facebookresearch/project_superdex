@@ -107,12 +107,14 @@ TEST_F(MochiContactPairParams, RejectsEmptyAndInvalidPatchesWithoutMutation) {
   baseline.penaltyCoefficient = 9_r;
   _scene->SetContactPairParamsOverride(actorA, actorB, baseline, test::ExpectOK{});
 
-  std::array<ContactPairParamsOverride, 6> invalid;
+  std::array<ContactPairParamsOverride, 8> invalid;
   invalid[1].penaltyCoefficient = 0_r;
   invalid[2].frictionFalloffVel = -1_r;
   invalid[3].viscousFrictionCoefficient = -1_r;
   invalid[4].coulombFrictionCoefficient = -1_r;
   invalid[5].normalViscousDampingCoefficient = -1_r;
+  invalid[6].preslidingDisplacement = 0_r;
+  invalid[7].preslidingDisplacement = -1e-5_r;
   for (auto const& params : invalid) {
     _scene->SetContactPairParamsOverride(actorA, actorB, params, test::ExpectNotOK{});
     ExpectOverride(actorA, actorB, baseline);

@@ -1088,9 +1088,10 @@ enum ColliderType [from_mochi_core] {
 //     coulombFrictionCoefficient, normalViscousDampingCoefficient), the geometric mean of the
 //     colliding and collider's coefficients is used. This disables friction/dissipation if either
 //     of them does.
-//   - For penalty coefficient (penaltyCoefficient) and friction velocity threshold
-//     (frictionFalloffVel), the geometric mean of the colliding and collider's values is used,
-//     except if the collider is static in which case the colliding's values are used.
+//   - For penalty coefficient (penaltyCoefficient), friction velocity threshold
+//     (frictionFalloffVel) and presliding displacement (preslidingDisplacement), the
+//     geometric mean of the colliding and collider's values is used, except if the collider is
+//     static in which case the colliding's values are used.
 //
 // @see Scene::SetContactPairParamsOverride
 struct ContactParams [equality(default), from_mochi_core] {
@@ -1106,13 +1107,14 @@ struct ContactParams [equality(default), from_mochi_core] {
   // @param[in] viscousFrictionCoefficient See @ref viscousFrictionCoefficient.
   // @param[in] coulombFrictionCoefficient See @ref coulombFrictionCoefficient.
   // @param[in] frictionFalloffVel See @ref frictionFalloffVel.
+  // @param[in] preslidingDisplacement See @ref preslidingDisplacement.
   // @param[in] normalViscousDampingCoefficient See @ref normalViscousDampingCoefficient.
   // @param[in] distanceErrorBound See @ref distanceErrorBound.
   // @param[in] objScale See @ref objScale.
   // @param[in] collidingPenaltyLengthScale See @ref collidingPenaltyLengthScale.
   //
   // @note Must take every parameter in order.
-  ctor ContactParams(real penaltyCoefficient, real penaltySmoothingHalfDistance, real penaltyThresholdDefault, real penaltyThresholdExtraPadding, real collidingPenaltyThresholdPadding, bool frictionWithColliderNormal, real maxAlignmentNormals, real viscousFrictionCoefficient, real coulombFrictionCoefficient, real frictionFalloffVel, real normalViscousDampingCoefficient, real distanceErrorBound, real objScale, real collidingPenaltyLengthScale) [no_python];
+  ctor ContactParams(real penaltyCoefficient, real penaltySmoothingHalfDistance, real penaltyThresholdDefault, real penaltyThresholdExtraPadding, real collidingPenaltyThresholdPadding, bool frictionWithColliderNormal, real maxAlignmentNormals, real viscousFrictionCoefficient, real coulombFrictionCoefficient, real frictionFalloffVel, real preslidingDisplacement, real normalViscousDampingCoefficient, real distanceErrorBound, real objScale, real collidingPenaltyLengthScale) [no_python];
   // @brief Stiffness of the contact penalty force [Pa/m].
   //
   // @note Must be finite and strictly positive.
@@ -1222,6 +1224,21 @@ struct ContactParams [equality(default), from_mochi_core] {
   // geometric mean of the colliding and collider's thresholds. The exception is if the collider is
   // static, in which case the colliding's threshold is used.
   real frictionFalloffVel [units("m/s")] = 0.01;
+  // @brief [Experimental] Presliding displacement of elasto-plastic Coulomb friction [m].
+  //
+  // @details With elasto-plastic friction, which requires C1Regularized, contacts take friction from
+  // their tangential displacement from their anchor, instead of using @ref frictionFalloffVel. The
+  // Coulomb friction force smoothly transitions from 0 to full strength as the displacement
+  // increases from 0 to preslidingDisplacement (compact support).
+  //
+  // @warning This is an experimental feature. It may be changed or removed in the future. Use at
+  // your own risk.
+  //
+  // @note Must be finite and strictly positive.
+  // @note Without an actor-pair override for this field, the value used in a collision is the
+  // geometric mean of the colliding and collider's displacements. The exception is if the collider
+  // is static, in which case the colliding's displacement is used.
+  real preslidingDisplacement [units("m")] = 1e-4;
   // @brief Normal viscous damping coefficient [s/m].
   //
   // @details Damping force in the normal direction, proportional to the elastic normal contact

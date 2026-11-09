@@ -56,6 +56,8 @@ struct ContactPairParamsOverride {
 
   std::optional<real> frictionFalloffVel;
 
+  std::optional<real> preslidingDisplacement;
+
   std::optional<real> viscousFrictionCoefficient;
 
   std::optional<real> coulombFrictionCoefficient;

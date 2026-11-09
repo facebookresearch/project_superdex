@@ -608,6 +608,13 @@ struct ContactEvalConfig {
 
   // Selects which Coulomb friction smoothing model to use.
   CoulombFrictionModel frictionModel = ExperimentalEvalParams{}.frictionModel;
+
+  // [Experimental] Elasto-plastic Coulomb friction. Coulomb friction acts on the tangential
+  // displacement from each contact's anchor, at the anchor offset from the stage-start
+  // position, with ContactParams::preslidingDisplacement as transition width, so contacts hold a
+  // load below the Coulomb limit without slip. A new contact has its anchor at the stage-start
+  // position (zero offset). Requires the anchor offsets of every contact.
+  bool elastoPlasticFriction = false;
 };
 
 /*************************************************************************************************/
@@ -747,6 +754,7 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
     BatchReal3<kBatchSize> const& sdfGrad,
     BatchReal3<kBatchSize> const& nColliding,
     BatchReal3<kBatchSize> const& pRel,
+    BatchReal3<kBatchSize> const& anchorOffset,
     ContactParams const& params,
     ContactEvalConfig const& config,
     real dtFactor,
@@ -763,6 +771,9 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
       params.coulombFrictionCoefficient >= 0_r && params.viscousFrictionCoefficient >= 0_r &&
           params.normalViscousDampingCoefficient >= 0_r,
       "Invalid dissipation params.");
+  MOCHI_ASSERT_VERBOSE(
+      !config.elastoPlasticFriction || params.preslidingDisplacement > 0_r,
+      "Invalid friction presliding displacement.");
 
   using V = BatchReal<kBatchSize>;
   using Vd = BatchDouble<kBatchSize>;
@@ -812,7 +823,6 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
   V const pRelNScalar = Dot(pRel, normal);
   V3 const pRelN = pRelNScalar * normal;
   V3 const pRelT = pRel - pRelN;
-  V pRelTNorm = Norm(pRelT);
 
   // Eigenvalues for dforce accumulation. The dforce matrix can be decomposed as:
   // dforce = eigP * P + eigN * n ⊗ n + eigDeltaT * t ⊗ t
@@ -835,21 +845,33 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
     real const coulombCoefficient = params.coulombFrictionCoefficient;
 
     MOCHI_ASSERT_VERBOSE(params.frictionFalloffVel >= 0_r, "Invalid friction falloff velocity.");
-    V const falloffFriction = V{params.frictionFalloffVel * dtFactor};
+
+    // Tangential slip and transition width. With elasto-plastic friction, the slip is measured from
+    // the anchor, at offset from the stage-start position, and the width is the presliding
+    // displacement, independent of the time step.
+    V3 anchorSlipT MOCHI_NO_INIT;
+    if (config.elastoPlasticFriction) {
+      anchorSlipT = pRelT + anchorOffset - Dot(anchorOffset, normal) * normal;
+    }
+    V3 const& slipT = config.elastoPlasticFriction ? anchorSlipT : pRelT;
+    V const slipTNorm = Norm(slipT);
+    V const falloffFriction =
+        V{config.elastoPlasticFriction ? params.preslidingDisplacement
+                                       : params.frictionFalloffVel * dtFactor};
 
     // Compute friction smoothing function.
     // Note: falloffFriction serves as the transition width `t` for IPC (compact support) and as the
     // regularization parameter `eps` for CinfRegularized (no compact support). Both control the
     // smoothing scale near the stick-slip transition; the semantics differ but the numerical value
-    // (frictionFalloffVel * dtFactor) is shared.
+    // is shared.
     V smoother, dSmoother, ddSmoother, dSmoother_ptNorm;
     switch (config.frictionModel) {
       case CoulombFrictionModel::CinfRegularized:
         CinfRegularized<V>(
-            pRelTNorm, falloffFriction, smoother, dSmoother, ddSmoother, dSmoother_ptNorm);
+            slipTNorm, falloffFriction, smoother, dSmoother, ddSmoother, dSmoother_ptNorm);
         break;
       case CoulombFrictionModel::C1Regularized:
-        IPCstepC1<V>(pRelTNorm, falloffFriction, smoother, dSmoother, ddSmoother, dSmoother_ptNorm);
+        IPCstepC1<V>(slipTNorm, falloffFriction, smoother, dSmoother, ddSmoother, dSmoother_ptNorm);
         break;
       default:
         MOCHI_ASSERT_VERBOSE(false, "Invalid friction model.");
@@ -868,24 +890,24 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
         // force = -kC * fN * dSmoother * t
         if constexpr (kGradTarget == GradTarget::Previous) {
           // Flip the sign for GradTarget::Previous
-          outForce += tmp * pRelT;
+          outForce += tmp * slipT;
         } else {
-          outForce -= tmp * pRelT;
+          outForce -= tmp * slipT;
         }
       }
 
       // Output dforce
       if (assemDForce) {
         // For simplicity, we define alpha = kC * fN
-        // dforce = -alpha * dSmoother * dpRelTUnit/dpRelT * P
-        //          -alpha  * ddSmoother * t * dpRelTNorm/dpRelT * P
-        // With dpRelTUnit/dpRelT = 1/pRelTNorm * (I - t ⊗ t) and dpRelTNorm/dpRelT = tT:
-        // dforce = -alpha * dSmoother * 1/pRelTNorm * P * (I - t ⊗ t)
+        // dforce = -alpha * dSmoother * dslipTUnit/dslipT * P
+        //          -alpha  * ddSmoother * t * dslipTNorm/dslipT * P
+        // With dslipTUnit/dslipT = 1/slipTNorm * (I - t ⊗ t) and dslipTNorm/dslipT = tT:
+        // dforce = -alpha * dSmoother * 1/slipTNorm * P * (I - t ⊗ t)
         //          -alpha * ddSmoother * t ⊗ t
         // It is easiest to build dforce through eigen-decomposition on an orthonormal frame
         // {n, t, b = n x t}:
         // dforce = eigT * t ⊗ t + eigB * b ⊗ b
-        // eigT = -alpha * ddSmoother, eigB = -alpha * dSmoother / pRelTNorm, eigN = 0.
+        // eigT = -alpha * ddSmoother, eigB = -alpha * dSmoother / slipTNorm, eigN = 0.
         // However, for eigT we use the Hessian of a fitted quadratic potential, which performs
         // better globally. Then the term is exactly the same as for eigB.
         // Note the d(fN) term is dropped even if implicitNormalForceForDissipation is true (see
@@ -893,18 +915,18 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
         MOCHI_ASSERT_VERBOSE(AllTrue(tmp >= 0_r), "eigP must not be positive.");
         eigP = -tmp;
         if (!config.useFittedHessian) {
-          V ptMask = (pRelTNorm > 1e-11_r);
+          V ptMask = (slipTNorm > 1e-11_r);
           V eigT = ((-coulombCoefficient) * fPenalty) * ddSmoother;
           MOCHI_ASSERT_VERBOSE(AllTrue(eigT <= 0_r), "eigT must not be positive.");
-          V ptNormInv = 1_r / (pRelTNorm + std::numeric_limits<real>::min());
+          V ptNormInv = 1_r / (slipTNorm + std::numeric_limits<real>::min());
           MOCHI_ASSERT_VERBOSE(IsFinite(ptNormInv), "Inverse norm is not finite.");
-          tangent = pRelT * ptNormInv;
+          tangent = slipT * ptNormInv;
           eigDeltaT = Select(ptMask, eigT - eigP, V{});
         }
 
         // dEnergyFactor term needed for GradTarget::Previous
         if constexpr (kGradTarget == GradTarget::Previous) {
-          dEnergyFactor = coulombCoefficient * dSmoother_ptNorm * pRelT;
+          dEnergyFactor = coulombCoefficient * dSmoother_ptNorm * slipT;
         }
       }
     }
@@ -927,6 +949,7 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
 
     // Output energy
     if (computeEnergyFactor) {
+      V const pRelTNorm = Norm(pRelT);
       energyFactor +=
           0.5 * static_cast<double>(viscousCoefficient) * Sqr(StaticCast<Vd>(pRelTNorm));
     }
@@ -1073,8 +1096,9 @@ struct BatchCollisionResponse {
  * points.
  *
  * @details Processes a batch of contacts using SIMD operations to compute penalty-based collision
- * response. Supports penalty forces with optional Coulomb friction, viscous friction, and
- * normal collision damping. All quantities are expressed in the collider's local space.
+ * response. Supports penalty forces with optional Coulomb friction (regular or elasto-plastic, see
+ * @ref ContactEvalConfig::elastoPlasticFriction), viscous friction, and normal collision damping.
+ * All quantities are expressed in the collider's local space.
  *
  * @tparam kBatchSize Number of contact points to process (must be <= @ref
  * kCollResponseMaxBatchSize)
@@ -1092,6 +1116,9 @@ struct BatchCollisionResponse {
  * with valid colliding normals)
  * @param[in] posColliding Current positions of contact points
  * @param[in] posCollidingStageStart Positions of contact points at stage start
+ * @param[in] anchorOffset Anchor offsets of contact points: stage-start position minus anchor
+ * point, in the collider's local space; their normal component is ignored (used only with
+ * elasto-plastic friction).
  * @param[in] params Contact parameters (penalty coefficient, friction, damping, etc.)
  * @param[in] config Contact evaluation configuration (explicit normals, padding, etc.)
  * @param[in] dtFactor Time step factor (time step multiplied by a factor depending on the
@@ -1119,6 +1146,7 @@ MOCHI_FORCE_INLINE
         Span<Real3 const> normalColliding,
         Span<Real3 const> posColliding,
         Span<Real3 const> posCollidingStageStart,
+        Span<Real3 const> anchorOffset,
         ContactParams const& params,
         ContactEvalConfig const& config,
         real dtFactor,
@@ -1142,6 +1170,9 @@ MOCHI_FORCE_INLINE
   MOCHI_ASSERT_VERBOSE(
       !config.explicitNormals ||
       (distanceStageStart.size() == kBatchSize && distanceGradStageStart.size() == kBatchSize));
+  MOCHI_ASSERT_VERBOSE(
+      !config.elastoPlasticFriction || anchorOffset.size() == kBatchSize,
+      "Elasto-plastic friction requires the anchor offsets.");
   MOCHI_ASSERT_VERBOSE(
       params.penaltyCoefficient > 0_r && params.penaltySmoothingHalfDistance >= 0_r,
       "Invalid contact params.");
@@ -1249,6 +1280,12 @@ MOCHI_FORCE_INLINE
 
     V3 const pRel = pColliding - pCollidingStageStart;
 
+    // Load anchor offsets if needed
+    V3 offset MOCHI_NO_INIT;
+    if (config.elastoPlasticFriction && params.coulombFrictionCoefficient > 0_r) {
+      LoadTransposed<kBatchSize>(&anchorOffset[0][0], offset);
+    }
+
     // Compute penalty force with stage-start data.
     if (!useImplicitNormalForceForDissipation) {
       // Distance for penalty force computation (stage-start data)
@@ -1285,6 +1322,7 @@ MOCHI_FORCE_INLINE
         nCollider,
         nColliding,
         pRel,
+        offset,
         params,
         config,
         dtFactor,
@@ -1320,6 +1358,7 @@ MOCHI_FORCE_INLINE void ComputeBatchCollisionForceDForce(
     Span<Real3 const> normalColliding,
     Span<Real3 const> posColliding,
     Span<Real3 const> posCollidingStageStart,
+    Span<Real3 const> anchorOffset,
     ContactParams const& params,
     ContactEvalConfig const& config,
     real dtFactor,
@@ -1342,6 +1381,7 @@ MOCHI_FORCE_INLINE void ComputeBatchCollisionForceDForce(
       normalColliding,
       posColliding,
       posCollidingStageStart,
+      anchorOffset,
       params,
       config,
       dtFactor,

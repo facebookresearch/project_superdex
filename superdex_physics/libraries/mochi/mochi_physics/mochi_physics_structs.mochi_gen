@@ -109,6 +109,14 @@ struct ContactPairParamsOverride [equality(default)] {
   // @see ContactParams::frictionFalloffVel
   Optional<real> frictionFalloffVel [units("m/s")];
 
+  // @brief [Experimental] Presliding displacement of elasto-plastic friction [m].
+  //
+  // @warning This is an experimental feature. It may be changed or removed in the future. Use at
+  // your own risk.
+  //
+  // @see ContactParams::preslidingDisplacement
+  Optional<real> preslidingDisplacement [units("m")];
+
   // @brief Pair viscous friction coefficient [s/m].
   //
   // @see ContactParams::viscousFrictionCoefficient

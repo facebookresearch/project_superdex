@@ -47,6 +47,7 @@ ContactParams MakeCollidingContactParams() {
   ContactParams params;
   params.penaltyCoefficient = 4_r;
   params.frictionFalloffVel = 0.04_r;
+  params.preslidingDisplacement = 4e-5_r;
   params.viscousFrictionCoefficient = 4_r;
   params.coulombFrictionCoefficient = 9_r;
   params.normalViscousDampingCoefficient = 16_r;
@@ -58,6 +59,7 @@ ContactParams MakeColliderContactParams() {
   ContactParams params;
   params.penaltyCoefficient = 9_r;
   params.frictionFalloffVel = 0.09_r;
+  params.preslidingDisplacement = 9e-5_r;
   params.viscousFrictionCoefficient = 9_r;
   params.coulombFrictionCoefficient = 4_r;
   params.normalViscousDampingCoefficient = 25_r;
@@ -75,11 +77,13 @@ void ExpectCombinedFields(
     ContactParams const& actual,
     real penalty,
     real falloff,
+    real presliding,
     real viscous,
     real coulomb,
     real damping) {
   EXPECT_NEAR_EQ(penalty, actual.penaltyCoefficient);
   EXPECT_NEAR_EQ(falloff, actual.frictionFalloffVel);
+  EXPECT_NEAR_EQ(presliding, actual.preslidingDisplacement);
   EXPECT_NEAR_EQ(viscous, actual.viscousFrictionCoefficient);
   EXPECT_NEAR_EQ(coulomb, actual.coulombFrictionCoefficient);
   EXPECT_NEAR_EQ(damping, actual.normalViscousDampingCoefficient);
@@ -122,6 +126,7 @@ TEST(ContactParamsValidation, RejectsNonFiniteValuesForEveryNumericField) {
       &ContactParams::viscousFrictionCoefficient,
       &ContactParams::coulombFrictionCoefficient,
       &ContactParams::frictionFalloffVel,
+      &ContactParams::preslidingDisplacement,
       &ContactParams::normalViscousDampingCoefficient,
       &ContactParams::distanceErrorBound,
       &ContactParams::objScale,
@@ -235,6 +240,8 @@ TEST(ContactPairParams, NoOverridePreservesDynamicAndStaticCombination) {
       Sqrt(colliding.penaltyCoefficient * collider.penaltyCoefficient);
   expectedDynamic.frictionFalloffVel =
       Sqrt(colliding.frictionFalloffVel * collider.frictionFalloffVel);
+  expectedDynamic.preslidingDisplacement =
+      Sqrt(colliding.preslidingDisplacement * collider.preslidingDisplacement);
 
   ContactParams const dynamic = CombineContactParams(
       colliding,
@@ -247,6 +254,7 @@ TEST(ContactPairParams, NoOverridePreservesDynamicAndStaticCombination) {
       /*collidingPadding=*/0_r);
   EXPECT_EQ(expectedDynamic.penaltyCoefficient, dynamic.penaltyCoefficient);
   EXPECT_EQ(expectedDynamic.frictionFalloffVel, dynamic.frictionFalloffVel);
+  EXPECT_EQ(expectedDynamic.preslidingDisplacement, dynamic.preslidingDisplacement);
   EXPECT_EQ(expectedDynamic.viscousFrictionCoefficient, dynamic.viscousFrictionCoefficient);
   EXPECT_EQ(expectedDynamic.coulombFrictionCoefficient, dynamic.coulombFrictionCoefficient);
   EXPECT_EQ(
@@ -262,7 +270,7 @@ TEST(ContactPairParams, NoOverridePreservesDynamicAndStaticCombination) {
       /*colliderIntegralDim=*/0,
       /*colliderPenaltyLengthScale=*/0_r,
       /*collidingPadding=*/0_r);
-  ExpectCombinedFields(staticCollider, 4_r, 0.04_r, 6_r, 6_r, 20_r);
+  ExpectCombinedFields(staticCollider, 4_r, 0.04_r, 4e-5_r, 6_r, 6_r, 20_r);
   ExpectColliderOwnedFieldsUnchanged(staticCollider, collider);
 }
 
@@ -274,17 +282,24 @@ TEST(ContactPairParams, EachOverrideFieldReplacesOnlyItsResolvedValue) {
     real ContactParams::* resolvedMember;
   };
   constexpr std::array cases = {
-      Case{&ContactPairParamsOverride::penaltyCoefficient, &ContactParams::penaltyCoefficient},
-      Case{&ContactPairParamsOverride::frictionFalloffVel, &ContactParams::frictionFalloffVel},
       Case{
-          &ContactPairParamsOverride::viscousFrictionCoefficient,
-          &ContactParams::viscousFrictionCoefficient},
+          .overrideMember = &ContactPairParamsOverride::penaltyCoefficient,
+          .resolvedMember = &ContactParams::penaltyCoefficient},
       Case{
-          &ContactPairParamsOverride::coulombFrictionCoefficient,
-          &ContactParams::coulombFrictionCoefficient},
+          .overrideMember = &ContactPairParamsOverride::frictionFalloffVel,
+          .resolvedMember = &ContactParams::frictionFalloffVel},
       Case{
-          &ContactPairParamsOverride::normalViscousDampingCoefficient,
-          &ContactParams::normalViscousDampingCoefficient},
+          .overrideMember = &ContactPairParamsOverride::preslidingDisplacement,
+          .resolvedMember = &ContactParams::preslidingDisplacement},
+      Case{
+          .overrideMember = &ContactPairParamsOverride::viscousFrictionCoefficient,
+          .resolvedMember = &ContactParams::viscousFrictionCoefficient},
+      Case{
+          .overrideMember = &ContactPairParamsOverride::coulombFrictionCoefficient,
+          .resolvedMember = &ContactParams::coulombFrictionCoefficient},
+      Case{
+          .overrideMember = &ContactPairParamsOverride::normalViscousDampingCoefficient,
+          .resolvedMember = &ContactParams::normalViscousDampingCoefficient},
   };
 
   for (Case const& testCase : cases) {
@@ -314,6 +329,7 @@ TEST(ContactPairParams, EachOverrideFieldReplacesOnlyItsResolvedValue) {
         actual,
         expected.penaltyCoefficient,
         expected.frictionFalloffVel,
+        expected.preslidingDisplacement,
         expected.viscousFrictionCoefficient,
         expected.coulombFrictionCoefficient,
         expected.normalViscousDampingCoefficient);
@@ -327,6 +343,7 @@ TEST(ContactPairParams, PartialPatchOverridesStaticSelectionAndRetainsOmittedFie
   ContactPairParamsOverride paramsOverride;
   paramsOverride.penaltyCoefficient = 12_r;
   paramsOverride.frictionFalloffVel = 0.25_r;
+  paramsOverride.preslidingDisplacement = 2.5e-5_r;
   paramsOverride.coulombFrictionCoefficient = 0_r;
 
   ContactParams const actual = CombineContactParams(
@@ -338,7 +355,7 @@ TEST(ContactPairParams, PartialPatchOverridesStaticSelectionAndRetainsOmittedFie
       /*colliderIntegralDim=*/0,
       /*colliderPenaltyLengthScale=*/0_r,
       /*collidingPadding=*/0_r);
-  ExpectCombinedFields(actual, 12_r, 0.25_r, 6_r, 0_r, 20_r);
+  ExpectCombinedFields(actual, 12_r, 0.25_r, 2.5e-5_r, 6_r, 0_r, 20_r);
   ExpectColliderOwnedFieldsUnchanged(actual, collider);
 }
 
@@ -393,6 +410,7 @@ TEST(ContactPairParams, RegistryLookupAppliesPairOverrideAndFallsBackForAbsentPa
       actualFallback,
       expectedFallback.penaltyCoefficient,
       expectedFallback.frictionFalloffVel,
+      expectedFallback.preslidingDisplacement,
       expectedFallback.viscousFrictionCoefficient,
       expectedFallback.coulombFrictionCoefficient,
       expectedFallback.normalViscousDampingCoefficient);
