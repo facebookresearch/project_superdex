@@ -20,8 +20,11 @@
 #include <mochi_core/test/mochi_test_helpers.h>
 #include <mochi_physics/mochi_physics.h>
 #include <mochi_physics/mochi_physics_experimental.h>
+#include <mochi_physics/src/mochi_actor_convergence.h>
 
 #include <gtest/gtest.h>
+
+#include <array>
 
 using namespace mochi;
 using namespace mochi::experimental;
@@ -378,6 +381,87 @@ TEST_IF_F(MOCHI_ENABLE_ROM_ACTORS, ActorConvergenceWeightsTest, RomHyperReductio
         }
       }
     }
+  }
+}
+
+// A fixed root (link 0) carries a tree of links. Each link's joint lies L from its parent's along
+// the link's direction, and its center of mass L/2 further. Links 1 to 4 are point masses with a
+// small isotropic MOI, on revolute joints about different axes, one of them oblique. Links 5 and 6
+// are massless frames on hard joints. Link 1 branches into links 2 and 3, so the subtree of link 2,
+// {2, 4, 5, 6}, skips link 3. At rest, a joint's mass block is the MOI about its axis of the links
+// it moves. The weights follow w = 1/(Q_rot · Q_c), with Q_c = aRef·√m_subtree·√M_block and
+// aRef = 1 without gravity.
+TEST_F(ActorConvergenceWeightsTest, ArticulatedTreeOfPointMasses) {
+  constexpr real kLength = 1_r;
+  constexpr real kMoi = 0.01_r;
+  constexpr int kNumMovingLinks = 4;
+  // Per link; the root's entries are unused.
+  constexpr std::array kParents{-1, 0, 1, 1, 2, 4, 5};
+  constexpr std::array kMasses{0_r, 1_r, 2_r, 3_r, 4_r, 0_r, 0_r};
+  constexpr std::array kDirections{
+      kReal3Zeros, kReal3XAxis, kReal3XAxis, kReal3YAxis, kReal3ZAxis, kReal3XAxis, kReal3YAxis};
+  constexpr std::array kAxes{
+      kReal3Zeros,
+      kReal3ZAxis,
+      Real3{2_r / 3_r, 2_r / 3_r, 1_r / 3_r},
+      kReal3XAxis,
+      kReal3YAxis,
+      kReal3Zeros,
+      kReal3Zeros};
+  constexpr int kNumLinks = isize(kParents);
+  _scene->SetGravity(Real3{});
+
+  // Build the tree, and the world positions at rest of each link's joint and center of mass.
+  ArticulatedActorParams params;
+  params.joints.push_back().type = ArticulatedJointType::Hard;
+  params.links.push_back();
+  std::array<Real3, kNumLinks> jointPositions{};
+  std::array<Real3, kNumLinks> centersOfMass{};
+  for (int i = 1; i < kNumLinks; ++i) {
+    Real3 const offset = kLength * kDirections[i];
+    auto& joint = params.joints.push_back();
+    joint.parentLinkFromJoint = TransformRT{offset};
+    auto& link = params.links.push_back();
+    link.parentLink = kParents[i];
+    if (kMasses[i] > 0_r) {
+      joint.type = ArticulatedJointType::Revolute;
+      joint.axis = kAxes[i];
+      link.mass = kMasses[i];
+      link.centerOfMass = 0.5_r * offset;
+      link.momentOfInertia = Real6{kMoi, 0_r, 0_r, kMoi, 0_r, kMoi};
+    } else {
+      joint.type = ArticulatedJointType::Hard;
+    }
+    jointPositions[i] = jointPositions[kParents[i]] + offset;
+    centersOfMass[i] = jointPositions[i] + 0.5_r * offset;
+  }
+  Actor* actor = _scene->CreateArticulatedActor(params, test::ExpectOK{});
+  _scene->Step(kDt);
+
+  // Joint k moves link j if link k is link j or one of its ancestors.
+  std::array<real, kNumMovingLinks + 1> Qc{};
+  real Qrot = 0_r;
+  for (int k = 1; k <= kNumMovingLinks; ++k) {
+    real subtreeMass = 0_r;
+    real massBlock = 0_r;
+    for (int j = k; j < kNumLinks; ++j) {
+      int ancestor = j;
+      while (ancestor > k) {
+        ancestor = kParents[ancestor];
+      }
+      if (ancestor == k && kMasses[j] > 0_r) {
+        Real3 const r = centersOfMass[j] - jointPositions[k];
+        subtreeMass += kMasses[j];
+        massBlock += kMasses[j] * (Dot(r, r) - Sqr(Dot(kAxes[k], r))) + kMoi;
+      }
+    }
+    Qc[k] = Sqrt(subtreeMass) * Sqrt(massBlock);
+    Qrot += Qc[k];
+  }
+  auto const& weights = GetRegistry().get<CActorConvergenceWeights const>(GetEntity(actor)).values;
+  ASSERT_EQ(kNumMovingLinks, weights.Rows());
+  for (int k = 1; k <= kNumMovingLinks; ++k) {
+    EXPECT_NEAR_RTOL(1_r / (Qrot * Qc[k]), weights[k - 1], 1e-5_r);
   }
 }
 

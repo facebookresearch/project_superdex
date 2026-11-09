@@ -30,6 +30,7 @@
 #include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/decomposition_utils.h>
+#include <mochi_core/utils/lie.h>
 #include <mochi_core/utils/rigid_body_size.h>
 #include <mochi_core/utils/rigid_body_utils.h>
 
@@ -377,71 +378,103 @@ GetRodActorResidualWeights(entt::registry const& reg, entt::entity actor, real a
   return weights;
 }
 
+namespace {
+
+/** @brief Inertia of a link's subtree: the link and its descendants. */
+struct SubtreeInertia {
+  real mass; // [kg]
+  Vec4r comOffset; // From the link's center of mass to the subtree's, in world frame [m].
+  VMatrix3x3r momentOfInertia; // About the subtree's center of mass, in world frame [kg·m²].
+};
+
+} // namespace
+
 /**
  * @brief Compute the kBlockSize × kBlockSize diagonal block of M(q) = Jᵀ·H·J for DoFs
- * [dofStart, dofStart + kBlockSize).
+ * [dofStart, dofStart + kBlockSize) of a joint, from the inertia of the joint's subtree.
+ *
+ * @details The Jacobian columns of these DoFs are zero for links outside the subtree, and the DoFs
+ * move the subtree as one rigid body. The block is therefore that of a single body with the
+ * subtree's inertia, moving with the joint's child link.
  */
 template <int kBlockSize>
 [[nodiscard]] static Matrix<real, kBlockSize, kBlockSize> ComputeMassBlock(
-    entt::registry const& reg,
-    CGroupMembers const& groupMembers,
-    Span<VMatrix3x3r const> linkMoisWorld,
+    SubtreeInertia const& subtree,
     RowMatrixView<real const> J,
+    int childLink,
     int dofStart) {
   static_assert(kBlockSize == 1 || kBlockSize == 3, "Unsupported block size.");
 
-  int const numLinks = isize(groupMembers.actors);
-  auto block = Matrix<real, kBlockSize, kBlockSize>::Zero();
+  // Extract the kBlockSize columns of J for the child link's trans/rot rows.
+  int const linkOffset = childLink * RigidSize::kDAll;
+  auto JtBlock = J.template Block<RigidSize::kDTrans, kBlockSize>(
+      linkOffset, dofStart, RigidSize::kDTrans, kBlockSize);
+  auto JrBlock = J.template Block<RigidSize::kDRot, kBlockSize>(
+      linkOffset + RigidSize::kDTrans, dofStart, RigidSize::kDRot, kBlockSize);
 
-  for (int k = 0; k < numLinks; ++k) {
-    auto const& inertia = reg.get<CRigidBodyInertia>(groupMembers.actors[k]);
-    int const linkOffset = k * RigidSize::kDAll;
+  // Jacobian of the subtree's center of mass, propagated from the child link's as in
+  // articulated::Jacobian.
+  Matrix<real, RigidSize::kDTrans, kBlockSize> const JcomBlock =
+      JtBlock + AsMatrixView(lie::DMultRotVecDRot(subtree.comOffset)) * JrBlock;
 
-    // Extract the kBlockSize columns of J for this link's trans/rot rows.
-    auto JtBlock = J.template Block<RigidSize::kDTrans, kBlockSize>(
-        linkOffset, dofStart, RigidSize::kDTrans, kBlockSize);
-    auto JrBlock = J.template Block<RigidSize::kDRot, kBlockSize>(
-        linkOffset + RigidSize::kDTrans, dofStart, RigidSize::kDRot, kBlockSize);
+  // Translational: mass × J_comᵀ·J_com
+  Matrix<real, kBlockSize, kBlockSize> block = subtree.mass * (JcomBlock.Transpose() * JcomBlock);
 
-    // Translational: mass × Jₜᵀ·Jₜ
-    block += inertia.GetMass() * (JtBlock.Transpose() * JtBlock);
-
-    // Rotational: Jᵣᵀ·MOI·Jᵣ (MOI in world frame).
-    block += JrBlock.Transpose() * AsMatrixView(linkMoisWorld[k]) * JrBlock;
-  }
+  // Rotational: J_rᵀ·MOI·J_r
+  block += JrBlock.Transpose() * AsMatrixView(subtree.momentOfInertia) * JrBlock;
 
   return block;
 }
 
 /**
- * @brief Compute total descendant mass for each link (including the link itself).
+ * @brief Compute the inertia of each link's subtree.
  *
  * @note Assumes a tree topology (no closed loops). Cycles introduced by constraints are not
- * accounted for — the subtree mass may undercount if additional links are coupled via constraints.
- * This is acceptable for the purpose of defining characteristic scales for actor convergence
- * criteria.
+ * accounted for — the subtree inertia may undercount if additional links are coupled via
+ * constraints. This is acceptable for the purpose of defining characteristic scales for actor
+ * convergence criteria.
  */
-static DynamicArray<real> ComputeSubtreeMasses(
+static DynamicArray<SubtreeInertia> ComputeSubtreeInertias(
     entt::registry const& reg,
     CGroupMembers const& groupMembers,
     CArticulatedParents const& parents,
+    CArticulatedLinkTransforms<TimeStep::Current> const& linkTransforms,
     FiloAllocator* allocator) {
   int const numLinks = isize(groupMembers.actors);
-  DynamicArray<real> subtreeMasses(allocator);
-  subtreeMasses.resize_noinit(numLinks);
+  DynamicArray<SubtreeInertia> subtrees(allocator);
+  subtrees.resize_noinit(numLinks);
   for (int i = 0; i < numLinks; ++i) {
-    subtreeMasses[i] = reg.get<CRigidBodyInertia>(groupMembers.actors[i]).GetMass();
+    auto const& inertia = reg.get<CRigidBodyInertia>(groupMembers.actors[i]);
+    subtrees[i] = {
+        .mass = inertia.GetMass(),
+        .comOffset = Vec4r{},
+        .momentOfInertia =
+            RotateInertia(inertia.GetMomentOfInertiaLocal(), linkTransforms[i].GetRotation())};
   }
 
-  // Add children's masses.
+  // Merge each subtree into its parent's.
   for (int i = numLinks - 1; i >= 0; --i) {
-    if (parents[i] != -1) {
-      MOCHI_ASSERT_VERBOSE(parents[i] >= 0 && parents[i] < i, "Invalid parent link.");
-      subtreeMasses[parents[i]] += subtreeMasses[i];
+    int const parent = parents[i];
+    if (parent == -1) {
+      continue;
     }
+    MOCHI_ASSERT_VERBOSE(parent >= 0 && parent < i, "Invalid parent link.");
+    auto const& child = subtrees[i];
+    auto& merged = subtrees[parent];
+    // From the merged center of mass to the child's.
+    Vec4r const delta =
+        (linkTransforms[i].VGetTranslation() - linkTransforms[parent].VGetTranslation()) +
+        (child.comOffset - merged.comOffset);
+    real const mass = merged.mass + child.mass;
+    real const childFraction = (mass > 0_r) ? (child.mass / mass) : 0_r;
+    merged.comOffset += childFraction * delta;
+    // Parallel axis theorem, with the reduced mass of the two parts.
+    merged.momentOfInertia += child.momentOfInertia +
+        (merged.mass * childFraction) * SecondMomentToMomentOfInertia(Outer3(delta, delta));
+    merged.mass = mass;
   }
 
-  return subtreeMasses;
+  return subtrees;
 }
 
 /** @brief Compute the diagonal of the principal matrix square root of a symmetric PSD block. */
@@ -504,18 +537,12 @@ static void GetArticulatedActorResidualWeights(
   auto const& dofInfo = reg.get<CActorDofInfo>(actor);
   int const numDofs = dofInfo.dofsSize;
 
-  // Stack allocator for temporaries (subtree masses + link MOIs in world space + Qc per DoF).
+  // Stack allocator for temporaries (subtree inertias + Qc per DoF).
   constexpr std::size_t kStackSizeBytes = 16 * 1024;
   MOCHI_FILO_STACK_ALLOCATOR(allocator, kStackSizeBytes);
 
-  auto const subtreeMasses = ComputeSubtreeMasses(reg, groupMembers, parents, &allocator);
-  DynamicArray<VMatrix3x3r> linkMoisWorld(&allocator);
-  linkMoisWorld.resize_noinit(groupMembers.actors.size());
-  for (int i = 0; i < isize(groupMembers.actors); ++i) {
-    auto const& inertia = reg.get<CRigidBodyInertia>(groupMembers.actors[i]);
-    linkMoisWorld[i] =
-        RotateInertia(inertia.GetMomentOfInertiaLocal(), linkTransforms[i].GetRotation());
-  }
+  auto const subtrees =
+      ComputeSubtreeInertias(reg, groupMembers, parents, linkTransforms, &allocator);
 
   // Compute Qc per DoF and accumulate per-type totals.
   DynamicArray<real> Qc(&allocator);
@@ -524,11 +551,11 @@ static void GetArticulatedActorResidualWeights(
   real Qrot = 0_r;
   for (int j = 0; j < isize(joints->dofInfo); ++j) {
     auto const& joint = joints->dofInfo[j];
-    real const sqrtSubtreeMass = Sqrt(subtreeMasses[joints->jointsChildLinks[j]]);
+    int const childLink = joints->jointsChildLinks[j];
+    real const sqrtSubtreeMass = Sqrt(subtrees[childLink].mass);
 
     auto accumulateBlock = [&]<int kBlockSize>(int offset, real& Qtype) {
-      auto const block =
-          ComputeMassBlock<kBlockSize>(reg, groupMembers, MakeConstSpan(linkMoisWorld), J, offset);
+      auto const block = ComputeMassBlock<kBlockSize>(subtrees[childLink], J, childLink, offset);
       auto const sqrtDiag = BlockSqrtDiagonal<kBlockSize>(AsConstView(block));
       for (int d = 0; d < kBlockSize; ++d) {
         Qc[offset + d] = aRef * sqrtSubtreeMass * sqrtDiag[d];
