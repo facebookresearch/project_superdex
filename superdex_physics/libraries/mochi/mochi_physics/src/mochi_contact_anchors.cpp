@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <array>
+#include <utility>
 
 using namespace mochi;
 
@@ -29,16 +30,6 @@ using namespace mochi;
 [[nodiscard]] MOCHI_FORCE_INLINE static bool
 IsAnchorOfSample(Span<FrictionAnchor const> anchors, int i, int sample) {
   return i != kSentinelIndex && i < isize(anchors) && anchors[i].sample == sample;
-}
-
-// Points the index to the start of the group of each sample in anchors grouped by sample. Only the
-// samples with anchors are set; other entries may be stale, and lookups reject them.
-static void IndexAnchorGroups(Span<FrictionAnchor const> anchors, CFrictionAnchorIndex& outIndex) {
-  for (int i = 0; i < isize(anchors); ++i) {
-    if (i == 0 || anchors[i - 1].sample != anchors[i].sample) {
-      outIndex[anchors[i].sample] = i;
-    }
-  }
 }
 
 void mochi::FillFrictionAnchorOffsets(
@@ -88,17 +79,18 @@ void mochi::UpdateFrictionAnchors(
     CFrictionAnchors& outAnchorsComp,
     CFrictionAnchorIndex& outIndex) {
   // A stopped solve is still the accepted state; only a diverged last stage, which resets the
-  // actor, keeps the previous anchors.
+  // actor, keeps the current anchors, with nothing pending.
   if (convergence && convergence->stageStatus == ConvergenceStatus::Diverged) {
     return;
   }
 
-  auto& anchors = outAnchorsComp.anchors;
+  auto& pending = outAnchorsComp.pending;
   std::array<Span<ActiveCollision const>, 2> const allCollisions{
       MakeConstSpan(asyncCollisions), MakeConstSpan(syncCollisions)};
 
-  // 1. Append the anchors in visiting order, setting index[s] at the first anchor of each sample.
-  // Sized to the contacts that use elasto-plastic friction, which bounds the number of anchors.
+  // 1. Append the anchors in visiting order, using the index as scratch to locate the first anchor
+  // of each sample. Sized to the contacts that use elasto-plastic friction, which bounds the number
+  // of anchors.
   int maxAnchors = 0;
   for (auto const collisions : allCollisions) {
     for (auto const& collision : collisions) {
@@ -107,7 +99,7 @@ void mochi::UpdateFrictionAnchors(
       }
     }
   }
-  anchors.resize_noinit(maxAnchors);
+  pending.resize_noinit(maxAnchors);
   int numAnchors = 0;
   bool isGrouped = true;
   for (auto const collisions : allCollisions) {
@@ -131,39 +123,51 @@ void mochi::UpdateFrictionAnchors(
         MOCHI_ASSERT_VERBOSE(
             sampleIdx >= 0 && sampleIdx < isize(outIndex), "Invalid sample index.");
         // The first anchor of a sample starts its group; later ones must directly follow it.
-        Span<FrictionAnchor const> const appended(anchors.data(), static_cast<size_t>(numAnchors));
+        Span<FrictionAnchor const> const appended(pending.data(), static_cast<size_t>(numAnchors));
         if (!IsAnchorOfSample(appended, outIndex[sampleIdx], sampleIdx)) {
           outIndex[sampleIdx] = numAnchors;
-        } else if (anchors[numAnchors - 1].sample != sampleIdx) {
+        } else if (pending[numAnchors - 1].sample != sampleIdx) {
           isGrouped = false; // The sample's anchors are not contiguous.
         }
-        anchors[numAnchors++] = FrictionAnchor{
+        pending[numAnchors++] = FrictionAnchor{
             .sample = sampleIdx, .collider = colliderId, .point = result.posColliding[i] - offset};
       }
     }
   }
-  anchors.resize(numAnchors);
+  pending.resize(numAnchors);
 
-  // 2. If the anchors of each sample are contiguous, they are grouped and indexed already. That is
-  // always the case when no sample has anchors on several rigid colliders.
-  if (isGrouped) {
-    return;
+  // 2. If the anchors of a sample are not contiguous, which requires anchors on several rigid
+  // colliders, group them by sample. index[s] is the position of the first anchor of s, unique per
+  // sample, so sorting by it groups the anchors of each sample, in order of first appearance. The
+  // order within a sample does not matter: it has at most one anchor per collider.
+  if (!isGrouped) {
+    std::ranges::sort(pending, [&](FrictionAnchor const& a, FrictionAnchor const& b) {
+      return outIndex[a.sample] < outIndex[b.sample];
+    });
   }
-
-  // 3. Otherwise, group them by sample. index[s] is the position of the first anchor of s, unique
-  // per sample, so sorting by it groups the anchors of each sample, in order of first appearance.
-  // The order within a sample does not matter: it has at most one anchor per collider. Then point
-  // the index to the new group starts.
-  std::ranges::sort(anchors, [&](FrictionAnchor const& a, FrictionAnchor const& b) {
-    return outIndex[a.sample] < outIndex[b.sample];
-  });
-  IndexAnchorGroups(anchors, outIndex);
+  outAnchorsComp.hasPending = true;
 }
 
-void mochi::ReindexFrictionAnchors(
+void mochi::PromotePendingFrictionAnchors(CFrictionAnchors& anchorsComp) {
+  if (!anchorsComp.hasPending) {
+    return;
+  }
+  // Swapping keeps the capacity of both sets for the next rebuild.
+  std::swap(anchorsComp.anchors, anchorsComp.pending);
+  anchorsComp.pending.clear();
+  anchorsComp.hasPending = false;
+}
+
+void mochi::IndexFrictionAnchors(
     CFrictionAnchors const& anchorsComp,
     CFrictionAnchorIndex& outIndex) {
-  IndexAnchorGroups(anchorsComp.anchors, outIndex);
+  // Only the samples with anchors are set; other entries may be stale, and lookups reject them.
+  auto const& anchors = anchorsComp.anchors;
+  for (int i = 0; i < isize(anchors); ++i) {
+    if (i == 0 || anchors[i - 1].sample != anchors[i].sample) {
+      outIndex[anchors[i].sample] = i;
+    }
+  }
 }
 
 void mochi::RequestFrictionAnchorClear(entt::registry& reg, entt::entity e) {
@@ -180,8 +184,8 @@ void mochi::ApplyFrictionAnchorClearRequests(entt::registry& reg) {
 
   MOCHI_PROFILE_SCOPE();
 
-  // Drop all the anchors of requested actors as colliding; the index is left stale, which lookups
-  // reject. Keep the requested colliders with friction anchors for the second pass.
+  // Drop all the anchors of requested actors as colliding. Keep the requested colliders with
+  // friction anchors for the second pass.
   auto& entities = requests->entities;
   int numColliders = 0;
   for (int i = 0; i < isize(entities); ++i) {
@@ -203,12 +207,12 @@ void mochi::ApplyFrictionAnchorClearRequests(entt::registry& reg) {
   }
   SortAndRemoveDuplicates(entities);
 
-  // Drop the anchors of all actors on the requested colliders, keeping the others grouped by
-  // sample.
+  // Drop the anchors of all actors on the requested colliders. The stable compaction keeps the
+  // anchors of each sample contiguous.
   auto const isRequested = [&](uint32_t collider) {
     return std::ranges::binary_search(entities, collider);
   };
-  for (auto&& [e, anchorsComp, index] : reg.view<CFrictionAnchors, CFrictionAnchorIndex>().each()) {
+  for (auto&& [e, anchorsComp] : reg.view<CFrictionAnchors>().each()) {
     auto& anchors = anchorsComp.anchors;
     if (anchors.empty()) {
       continue;
@@ -228,14 +232,17 @@ void mochi::ApplyFrictionAnchorClearRequests(entt::registry& reg) {
         anchors[numKept++] = anchors[i];
       }
     }
-    if (numKept == numAnchors) {
-      continue;
-    }
-    // The stable compaction keeps the anchors of each sample contiguous, but shifts their groups.
     anchors.resize(numKept);
-    IndexAnchorGroups(anchors, index);
   }
   entities.clear();
+}
+
+void mochi::PrepareFrictionAnchors(entt::registry& reg, bool promotePending) {
+  if (promotePending) {
+    ecs::InvokeForEachGlobal(&PromotePendingFrictionAnchors, reg);
+  }
+  ApplyFrictionAnchorClearRequests(reg);
+  ecs::InvokeForEachGlobal(&IndexFrictionAnchors, reg);
 }
 
 void mochi::EmplaceFrictionAnchors(entt::registry& reg, entt::entity e, int numSamples) {

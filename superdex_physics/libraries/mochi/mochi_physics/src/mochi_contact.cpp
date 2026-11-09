@@ -18,7 +18,6 @@
 
 #include "mochi_articulated_body.h"
 #include "mochi_blended.h"
-#include "mochi_capture.h"
 #include "mochi_contact_anchors.h"
 #include "mochi_contact_filter.h"
 #include "mochi_deformable.h"
@@ -5076,9 +5075,6 @@ void InitializeOnce(entt::registry& reg) {
   data.dynamicBounds.reserve(kReserveSize);
   data.dynamicHasCollider.reserve(kReserveSize);
   data.dynamicSweepOrder.reserve(kReserveSize);
-
-  // Post-restore fixup: the friction anchor index is not captured.
-  capture::RegisterPostRestoreSystem(&ReindexFrictionAnchors, reg);
 }
 } // namespace mochi::contact
 

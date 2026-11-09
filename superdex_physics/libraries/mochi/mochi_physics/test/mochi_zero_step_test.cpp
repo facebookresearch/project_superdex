@@ -18,6 +18,7 @@
 #include "mochi_test_scene_builders.h"
 
 #include <mochi_core/geometry/geometry_utils.h>
+#include <mochi_core/integration/integration_utils.h>
 #include <mochi_core/test/log_suppression.h>
 #include <mochi_core/test/mochi_test_helpers.h>
 #include <mochi_core/utils/basic_utils.h>
@@ -33,6 +34,7 @@
 #include <mochi_physics/src/mochi_solve.h>
 
 #include <algorithm>
+#include <initializer_list>
 #include <limits>
 #include <map>
 #include <mutex>
@@ -76,6 +78,35 @@ char const* IntegrationMethodName(IntegrationMethod method) {
       return "Count";
   }
   return "Unknown";
+}
+
+struct ZeroStepCase {
+  IntegrationMethod integration;
+  bool elastoPlasticFriction;
+};
+
+// Each integrator with regular friction and, if it supports it, with elasto-plastic friction.
+DynamicArray<ZeroStepCase> WithAndWithoutElastoPlasticFriction(
+    std::initializer_list<IntegrationMethod> integrations) {
+  DynamicArray<ZeroStepCase> cases;
+  for (IntegrationMethod const integration : integrations) {
+    cases.push_back({.integration = integration, .elastoPlasticFriction = false});
+    if (EndsAtLastStage(integration)) {
+      cases.push_back({.integration = integration, .elastoPlasticFriction = true});
+    }
+  }
+  return cases;
+}
+
+std::string ZeroStepCaseName(::testing::TestParamInfo<ZeroStepCase> const& info) {
+  return std::string(IntegrationMethodName(info.param.integration)) +
+      (info.param.elastoPlasticFriction ? "_ElastoPlasticFriction" : "");
+}
+
+void SetElastoPlasticFriction(Scene* scene, bool enabled) {
+  SolverParams params = scene->GetSolverParams();
+  params.experimentalEval.elastoPlasticFriction = enabled;
+  scene->SetSolverParams(params, test::ExpectOK{});
 }
 } // namespace
 
@@ -156,7 +187,7 @@ static void RunZeroStepReproduction(Scene* scene, int numSteps) {
 
 namespace {
 class ZeroStepAssemblyTest : public MochiContextTestBase,
-                             public ::testing::WithParamInterface<IntegrationMethod> {};
+                             public ::testing::WithParamInterface<ZeroStepCase> {};
 } // namespace
 
 INSTANTIATE_TEST_SUITE_P(
@@ -164,21 +195,18 @@ INSTANTIATE_TEST_SUITE_P(
     ZeroStepAssemblyTest,
     // Single-stage only: AssembleIsland asserts numStages == 1, and multi-stage DIRK cannot be
     // reproduced from captured state (intermediate `stages` are not serialized).
-    ::testing::Values(
-        IntegrationMethod::BackwardEuler,
-        IntegrationMethod::BDF2,
-        IntegrationMethod::BDF3),
-    [](::testing::TestParamInfo<IntegrationMethod> const& info) {
-      return std::string(IntegrationMethodName(info.param));
-    });
+    ::testing::ValuesIn(WithAndWithoutElastoPlasticFriction(
+        {IntegrationMethod::BackwardEuler, IntegrationMethod::BDF2, IntegrationMethod::BDF3})),
+    ZeroStepCaseName);
 
 // The solve-free Step(0.0) assembly reproduces a real step's forces bit-exactly, for all
-// single-stage integrators and all actor types (directly and after a capture/restore round-trip).
-// Soft actors recenter at the start of a real step, and Step(0.0) does not recenter again, so both
-// assemble in the same local frame.
+// single-stage integrators, friction models and actor types (directly and after a capture/restore
+// round-trip). Soft actors recenter at the start of a real step, and Step(0.0) does not recenter
+// again, so both assemble in the same local frame.
 TEST_IF_P(MOCHI_HDF5_AND_INTERNAL, ZeroStepAssemblyTest, ReproducesForcesBitExact) {
-  IntegrationMethod const integration = GetParam();
+  auto const [integration, elastoPlasticFriction] = GetParam();
   auto [scene, agent] = CreateSceneActorTypes(_mochiContext, "Scene", integration);
+  SetElastoPlasticFriction(scene, elastoPlasticFriction);
   RegisterAssemblyQuery(agent, QueryType::ArticulatedControllerForce);
 
   RunZeroStepReproduction(scene, GetNumSteps(integration) + 2);
@@ -714,17 +742,52 @@ std::tuple<Actor*, Actor*> AddBoxOnStaticBox(Scene* scene) {
   RegisterContactPointsQuery(dynamicBox);
   return {staticBox, dynamicBox};
 }
+
+enum class StaticMotion { Pose, Velocity };
+
+char const* StaticMotionName(StaticMotion motion) {
+  switch (motion) {
+    case StaticMotion::Pose:
+      return "Pose";
+    case StaticMotion::Velocity:
+      return "Velocity";
+  }
+  return "Unknown";
+}
+
+using MovingStaticCase = std::tuple<StaticMotion, bool /*elastoPlasticFriction*/>;
+
+class ZeroStepMovingStaticTest : public MochiContextTestBase,
+                                 public ::testing::WithParamInterface<MovingStaticCase> {};
 } // namespace
 
-// Step(0.0) reproduces a step in which a static collider moved through prescribed poses.
-TEST_F(ZeroStepContactQueryTest, ZeroStepReproducesMovingStaticCollider) {
+INSTANTIATE_TEST_SUITE_P(
+    MotionsAndFrictionModels,
+    ZeroStepMovingStaticTest,
+    ::testing::Combine(
+        ::testing::Values(StaticMotion::Pose, StaticMotion::Velocity),
+        ::testing::Bool()),
+    [](::testing::TestParamInfo<MovingStaticCase> const& info) {
+      return std::string(StaticMotionName(std::get<0>(info.param))) +
+          (std::get<1>(info.param) ? "_ElastoPlasticFriction" : "");
+    });
+
+// Step(0.0) reproduces a step in which a static collider moved, through prescribed poses or with a
+// prescribed velocity, with either friction model.
+TEST_P(ZeroStepMovingStaticTest, ZeroStepReproducesMovingStaticCollider) {
+  auto const [motion, elastoPlasticFriction] = GetParam();
   auto* scene = _mochiContext->CreateScene("MovingStatic");
+  SetElastoPlasticFriction(scene, elastoPlasticFriction);
   auto [staticBox, dynamicBox] = AddBoxOnStaticBox(scene);
   Real3 constexpr kStaticVelocity{0.05_r, 0_r, 0_r};
   for (int i = 0; i < 20; ++i) {
-    TransformRT pose = staticBox->GetRootTransform();
-    pose.SetTranslation(pose.GetTranslation() + 0.01_r * kStaticVelocity);
-    staticBox->SetRootTransform(pose, test::ExpectOK{});
+    if (motion == StaticMotion::Pose) {
+      TransformRT pose = staticBox->GetRootTransform();
+      pose.SetTranslation(pose.GetTranslation() + 0.01_r * kStaticVelocity);
+      staticBox->SetRootTransform(pose, test::ExpectOK{});
+    } else {
+      staticBox->SetVelocity(kStaticVelocity, Real3{}, test::ExpectOK{});
+    }
     scene->Step(0.01);
   }
   DynamicArray<ContactPoint> const reference = CopyContactPoints(dynamicBox);
@@ -1096,14 +1159,14 @@ TEST_F(ZeroStepContactQueryTest, ZeroStepSkipsDivergedIslands) {
 
 namespace {
 class ZeroStepDoesNotCorruptTest : public MochiContextTestBase,
-                                   public ::testing::WithParamInterface<IntegrationMethod> {};
+                                   public ::testing::WithParamInterface<ZeroStepCase> {};
 class ZeroStepSymplecticDIRK22Test : public MochiContextTestBase {};
 } // namespace
 
 INSTANTIATE_TEST_SUITE_P(
     Integrators,
     ZeroStepDoesNotCorruptTest,
-    ::testing::Values(
+    ::testing::ValuesIn(WithAndWithoutElastoPlasticFriction({
         IntegrationMethod::BackwardEuler,
         IntegrationMethod::BDF2,
         IntegrationMethod::BDF3,
@@ -1112,10 +1175,8 @@ INSTANTIATE_TEST_SUITE_P(
         IntegrationMethod::DIRK33,
         IntegrationMethod::SymplecticDIRK12
         // SymplecticDIRK22 is covered below with a stable free-rigid scene.
-        ),
-    [](::testing::TestParamInfo<IntegrationMethod> const& info) {
-      return std::string(IntegrationMethodName(info.param));
-    });
+    })),
+    ZeroStepCaseName);
 
 // Runs the same real steps in two scenes, additionally probing one with Step(0.0) before the first
 // step and at the midpoint, then verifies that their final captured states are bit-equal.
@@ -1142,15 +1203,18 @@ static void ExpectZeroStepDoesNotAffectNextSolve(Scene* controlScene, Scene* pro
 
 // Two identical scenes run the same N real steps. Scene B additionally calls Step(0.0) before the
 // first step and at the midpoint. The final captured states must be bit-equal, confirming that
-// Step(0.0) leaves no residual side-effects in the simulation state.
+// Step(0.0) leaves no residual side-effects in the simulation state. Both agents register a query
+// that requires assembly, so that Step(0.0) assembles.
 TEST_IF_P(MOCHI_HDF5_AND_INTERNAL, ZeroStepDoesNotCorruptTest, ZeroStepDoesNotAffectNextSolve) {
-  IntegrationMethod const integration = GetParam();
+  auto const [integration, elastoPlasticFriction] = GetParam();
 
   auto [controlScene, controlAgent] =
       CreateSceneActorTypes(_mochiContext, "ControlScene", integration);
-  (void)controlAgent;
   auto [probeScene, probeAgent] = CreateSceneActorTypes(_mochiContext, "ProbeScene", integration);
-  (void)probeAgent;
+  SetElastoPlasticFriction(controlScene, elastoPlasticFriction);
+  SetElastoPlasticFriction(probeScene, elastoPlasticFriction);
+  RegisterAssemblyQuery(controlAgent, QueryType::ArticulatedControllerForce);
+  RegisterAssemblyQuery(probeAgent, QueryType::ArticulatedControllerForce);
 
   ExpectZeroStepDoesNotAffectNextSolve(controlScene, probeScene);
 

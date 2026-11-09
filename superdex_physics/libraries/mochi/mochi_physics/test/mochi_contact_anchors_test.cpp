@@ -21,7 +21,9 @@
 // through the public API.
 #include <mochi_physics/src/mochi_contact.h>
 #include <mochi_physics/src/mochi_contact_anchors.h>
+#include <mochi_physics/src/mochi_island.h>
 #include <mochi_physics/src/mochi_rigid.h>
+#include <mochi_physics/src/mochi_sleep.h>
 
 #include <mochi_core/integration/integration_utils.h>
 #include <mochi_core/utils/basic_utils.h>
@@ -82,6 +84,15 @@ static void ExpectAnchors(
     EXPECT_EQ(expected[i].collider, actual[i].collider) << "anchor " << i;
     EXPECT_EQ(expected[i].point, actual[i].point) << "anchor " << i;
   }
+}
+
+// Whether the anchors are equal, field by field and in order.
+static bool AreEqualAnchors(
+    DynamicArray<FrictionAnchor> const& a,
+    DynamicArray<FrictionAnchor> const& b) {
+  return std::ranges::equal(a, b, [](FrictionAnchor const& x, FrictionAnchor const& y) {
+    return x.sample == y.sample && x.collider == y.collider && x.point == y.point;
+  });
 }
 
 // Expects the index entries of all samples, including kSentinelIndex for samples never indexed.
@@ -177,7 +188,14 @@ class FrictionAnchors : public test::MochiSceneTestBase {
     return GetRegistry().get<CFrictionAnchorIndex>(GetEntity(actor));
   }
 
-  // Rebuilds the anchors from the given contacts, as after a converged step.
+  // Adopts the actor's pending anchors and indexes them, as at the start of the next step.
+  void PromoteAnchors(Actor* actor) {
+    PromotePendingFrictionAnchors(GetAnchors(actor));
+    IndexFrictionAnchors(GetAnchors(actor), GetIndex(actor));
+  }
+
+  // Rebuilds the anchors from the given contacts, as after a converged step, and adopts and indexes
+  // them, as at the start of the next one.
   void RebuildAnchors(
       CFrictionAnchors& anchors,
       CFrictionAnchorIndex& index,
@@ -189,6 +207,8 @@ class FrictionAnchors : public test::MochiSceneTestBase {
     ActivateCollisions(syncCollisions, syncActive);
     UpdateFrictionAnchors(
         GetRegistry(), /*convergence*/ nullptr, asyncActive, syncActive, anchors, index);
+    PromotePendingFrictionAnchors(anchors);
+    IndexFrictionAnchors(anchors, index);
   }
 
   template <bool kIsSync>
@@ -250,10 +270,11 @@ class FrictionAnchors : public test::MochiSceneTestBase {
     return colliders;
   }
 
-  // Applies prescribed static motion and queued preload resets, as at the next step.
+  // Applies prescribed static motion and queued preload resets, and indexes the anchors, as at the
+  // next step, without adopting pending anchors.
   void ApplyClearRequests() {
     ecs::InvokeForEachGlobal(&rigid::ApplyStaticStepStart, GetRegistry());
-    ApplyFrictionAnchorClearRequests(GetRegistry());
+    PrepareFrictionAnchors(GetRegistry(), /*promotePending*/ false);
   }
 
   // Sets the actor's current pose. Dynamic actors request a reset; standalone statics do not.
@@ -359,6 +380,7 @@ class FrictionAnchors : public test::MochiSceneTestBase {
     RebuildAnchors(GetAnchors(actor), GetIndex(actor), {seeded});
 
     Step(1);
+    PromoteAnchors(actor);
     Real3 const anchorPoint = FindAnchorPoint(GetAnchors(actor), GetIndex(actor), sample, plane);
     Real3 const contact = ContactPositionOnPlane(actor, sample);
     Real3 const offset = contact - anchorPoint;
@@ -564,21 +586,26 @@ TEST_F(FrictionAnchors, RebuildKeepsNonzeroOffsetsWithRigidColliders) {
   EXPECT_EQ((Real3{2_r, 0_r, 0_r}), FindAnchorPoint(anchors, index, 2, plane));
 }
 
+// The rebuild reuses the capacity of the pending anchors, which the promotion swaps with the
+// current ones, so the two sets alternate between the same two buffers.
 TEST_F(FrictionAnchors, RebuildReusesCapacity) {
   CreatePlane();
   entt::entity const plane = GetEntity(_plane);
   CFrictionAnchors anchors;
   CFrictionAnchorIndex index(3);
-  RebuildAnchors(
-      anchors,
-      index,
-      {MakeCollision(
-          plane, {0, 1, 2}, {Real3{1_r, 0_r, 0_r}, Real3{2_r, 0_r, 0_r}, Real3{3_r, 0_r, 0_r}})});
-  auto const* storage = anchors.anchors.data();
+  ActiveCollision const threeContacts = MakeCollision(
+      plane, {0, 1, 2}, {Real3{1_r, 0_r, 0_r}, Real3{2_r, 0_r, 0_r}, Real3{3_r, 0_r, 0_r}});
+  RebuildAnchors(anchors, index, {threeContacts});
+  auto const* storage0 = anchors.anchors.data();
+  RebuildAnchors(anchors, index, {threeContacts});
+  auto const* storage1 = anchors.anchors.data();
+  EXPECT_NE(storage0, storage1);
+  EXPECT_EQ(storage0, anchors.pending.data());
 
   // The index keeps stale entries for samples 0 and 2, which lookups reject.
   RebuildAnchors(anchors, index, {MakeCollision(plane, {1}, {Real3{1_r, 2_r, 3_r}})});
-  EXPECT_EQ(storage, anchors.anchors.data());
+  EXPECT_EQ(storage0, anchors.anchors.data());
+  EXPECT_EQ(storage1, anchors.pending.data());
   EXPECT_EQ((Real3{1_r, 2_r, 3_r}), FindAnchorPoint(anchors, index, 1, plane));
   EXPECT_EQ(Real3{}, FindAnchorPoint(anchors, index, 0, plane));
   EXPECT_EQ(Real3{}, FindAnchorPoint(anchors, index, 2, plane));
@@ -588,9 +615,9 @@ TEST_F(FrictionAnchors, RebuildReusesCapacity) {
   EXPECT_EQ(Real3{}, FindAnchorPoint(anchors, index, 1, plane));
 }
 
-// Placing a collider drops the anchors on it and reindexes the others: the group of sample 0
-// shifts, so lookups through a stale index would miss its remaining anchor.
-TEST_F(FrictionAnchors, PlacingColliderReindexesRemainingAnchors) {
+// Placing a collider drops the anchors on it. The group of sample 0 shifts, so lookups need the
+// index of the remaining anchors, built at the start of the step.
+TEST_F(FrictionAnchors, PlacingColliderShiftsRemainingAnchorGroups) {
   CreatePlane();
   entt::entity const plane = GetEntity(_plane);
   Actor* collider = CreateRigidCube();
@@ -720,34 +747,11 @@ TEST_F(FrictionAnchors, RebuildDropsAnchorsOfLostContacts) {
   _scene->SetGravity(Real3{0_r, 100_r, 0_r});
   EXPECT_TRUE(GetRegistry().ctx<CFrictionAnchorClearRequests>().entities.empty());
   Step(1);
+  PromoteAnchors(cube);
   EXPECT_TRUE(GetAnchors(cube).anchors.empty());
 }
 
-TEST_F(FrictionAnchors, RestoreStateRestoresAnchors) {
-  CreatePlane();
-  Actor* cube = CreateRigidCube();
-  Step(1);
-  entt::entity const plane = GetEntity(_plane);
-  RebuildAnchors(
-      GetAnchors(cube),
-      GetIndex(cube),
-      {MakeCollision(plane, {0, 5}, {Real3{1_r, 2_r, 3_r}, Real3{4_r, 5_r, 6_r}})});
-  DynamicArray<FrictionAnchor> const savedAnchors = GetAnchors(cube).anchors;
-  StateHandle const state = _scene->CaptureState(test::ExpectOK{});
-
-  // Different anchors in a different order, so that the index no longer matches the captured ones.
-  RebuildAnchors(
-      GetAnchors(cube),
-      GetIndex(cube),
-      {MakeCollision(plane, {5, 0}, {Real3{7_r, 0_r, 0_r}, Real3{8_r, 0_r, 0_r}})});
-  _scene->RestoreState(state, /*releaseImmediately=*/true, test::ExpectOK{});
-  ExpectAnchors(savedAnchors, GetAnchors(cube).anchors);
-  // The index is not captured: the post-restore reindexing points it to the restored anchors.
-  EXPECT_EQ((Real3{1_r, 2_r, 3_r}), FindAnchorPoint(GetAnchors(cube), GetIndex(cube), 0, plane));
-  EXPECT_EQ((Real3{4_r, 5_r, 6_r}), FindAnchorPoint(GetAnchors(cube), GetIndex(cube), 5, plane));
-}
-
-// Only contacts with rigid colliders use elasto-plastic friction and get anchor offsets: those of a
+// Only contacts with rigid colliders use elasto-plastic friction
 // rigid cube resting on a soft cube, and of the soft cube with the plane, use regular friction and
 // elasto-plastic friction, respectively.
 TEST_F(FrictionAnchors, OnlyRigidCollidersHaveAnchorOffsets) {
@@ -815,6 +819,7 @@ TEST_P(FrictionAnchorsIntegrator, StickingAnchorsStayAtTheirMaterialPoints) {
   real constexpr kLoadRatio = 0.1_r;
   Actor* cube = CreateCubeUnderTangentialLoad(kLoadRatio, kNormalDamping);
   Step(20);
+  PromoteAnchors(cube);
   DynamicArray<FrictionAnchor> kept = GetAnchors(cube).anchors;
   ASSERT_FALSE(kept.empty());
   DynamicArray<FrictionAnchor> const settled = kept;
@@ -826,6 +831,7 @@ TEST_P(FrictionAnchorsIntegrator, StickingAnchorsStayAtTheirMaterialPoints) {
   };
   for (int i = 0; i < 50; ++i) {
     Step(1);
+    PromoteAnchors(cube);
     auto const lost = std::ranges::remove_if(
         kept, [&](FrictionAnchor const& anchor) { return findPoint(anchor) == Real3{}; });
     kept.erase(lost.begin(), lost.end());
@@ -1197,4 +1203,116 @@ TEST_F(FrictionAnchors, PlacementDropsPreload) {
   Step(50);
   EXPECT_GT(Abs(held->GetRootTransform().GetTranslation()[0] - heldX0), 1e-5_r);
   EXPECT_NEAR(moved.GetTranslation()[0], placed->GetRootTransform().GetTranslation()[0], 1e-6_r);
+}
+
+// A step uses the anchors adopted at its start, and leaves those it advances pending until the
+// next step adopts them. The cube slides, so that the step changes its anchors. A diverged step
+// keeps the anchors it adopted, with nothing pending.
+TEST_F(FrictionAnchors, StepAdoptsAnchorsPendingFromLastStep) {
+  test::ExpectLoggingInScope expectWarning(_mochiContext, LogChannel::Warning);
+  Actor* cube = CreateCubeUnderTangentialLoad(1.5_r);
+  Step(20);
+  ASSERT_TRUE(GetAnchors(cube).hasPending);
+  ASSERT_FALSE(GetAnchors(cube).pending.empty());
+  DynamicArray<FrictionAnchor> const pending = GetAnchors(cube).pending;
+  ASSERT_FALSE(AreEqualAnchors(pending, GetAnchors(cube).anchors));
+
+  Step(1);
+  ExpectAnchors(pending, GetAnchors(cube).anchors);
+  EXPECT_TRUE(GetAnchors(cube).hasPending);
+
+  // Zero tolerances and a tiny divergence threshold make the next step diverge.
+  DynamicArray<FrictionAnchor> const adopted = GetAnchors(cube).pending;
+  SolverParams params = _scene->GetSolverParams();
+  params.nonLinearSolver.absTol = 0_r;
+  params.nonLinearSolver.relTol = 0_r;
+  params.nonLinearSolver.relStepTol = 0_r;
+  params.nonLinearSolver.absDivTol = 1e-30_r;
+  _scene->SetSolverParams(params, test::ExpectOK{});
+  Step(1);
+  ASSERT_EQ(ConvergenceStatus::Diverged, cube->GetConvergenceStatus());
+  ExpectAnchors(adopted, GetAnchors(cube).anchors);
+  EXPECT_FALSE(GetAnchors(cube).hasPending);
+}
+
+// A placement after a step drops the anchors that the next step adopts, which would otherwise bring
+// back those dropped from the anchors the last step used. A solve-free assembly in between, which a
+// force query requires, applies the clear request, so it reports the friction without preload, and
+// keeps it for that step.
+TEST_F(FrictionAnchors, PlacementAfterStepDropsAdoptedAnchors) {
+  Actor* cube = CreateCubeUnderTangentialLoad(0.5_r);
+  cube->RegisterQuery(QueryType::TotalContactForce, test::ExpectOK{});
+  Step(20);
+  ASSERT_FALSE(GetAnchors(cube).pending.empty());
+  Real3 const held = cube->GetContactForceWorld(test::ExpectOK{});
+  Place(cube);
+  _scene->Step(0.0);
+  EXPECT_LT(Abs(cube->GetContactForceWorld(test::ExpectOK{})[0]), 0.1_r * Abs(held[0]));
+  EXPECT_FALSE(GetRegistry().ctx<CFrictionAnchorClearRequests>().entities.empty());
+
+  Step(1);
+  EXPECT_TRUE(GetAnchors(cube).anchors.empty());
+}
+
+// A sleeping island keeps the anchors of its last solved step: the first step after it falls
+// asleep adopts them, and they stay while it sleeps.
+TEST_F(FrictionAnchors, SleepingIslandKeepsAnchorsOfLastSolvedStep) {
+  experimental::SetSleepParams(
+      _scene, experimental::SleepParams{.canSleep = true}, test::ExpectOK{});
+  real constexpr kNormalDamping = 100_r; // [s/m]
+  Actor* cube = CreateCubeUnderTangentialLoad(0.5_r, kNormalDamping);
+  int constexpr kMaxSteps = 500;
+  DynamicArray<FrictionAnchor> lastPending;
+  int numSteps = 0;
+  // Sleeping islands are not solved.
+  for (; numSteps < kMaxSteps; ++numSteps) {
+    Step(1);
+    auto const& reg = GetRegistry();
+    if (!sleep::IsIslandAwake(reg, reg.get<CIslandMemberInfo const>(GetEntity(cube)).island)) {
+      break;
+    }
+    lastPending = GetAnchors(cube).pending;
+  }
+  ASSERT_LT(numSteps, kMaxSteps) << "The cube should fall asleep.";
+  ASSERT_FALSE(lastPending.empty());
+
+  for (int i = 0; i < 3; ++i) {
+    SCOPED_TRACE("asleep step " + std::to_string(i));
+    ExpectAnchors(lastPending, GetAnchors(cube).anchors);
+    EXPECT_FALSE(GetAnchors(cube).hasPending);
+    Step(1);
+  }
+}
+
+// Both sets of anchors restore bit for bit. The cube slides, so that they differ. The index is not
+// captured: the start of the next step indexes the restored anchors, whatever the index was, also
+// in a solve-free assembly, which a force query requires.
+TEST_F(FrictionAnchors, RestoreStateRestoresPendingAnchors) {
+  Actor* cube = CreateCubeUnderTangentialLoad(1.5_r);
+  cube->RegisterQuery(QueryType::TotalContactForce, test::ExpectOK{});
+  Step(20);
+  DynamicArray<FrictionAnchor> const anchors = GetAnchors(cube).anchors;
+  DynamicArray<FrictionAnchor> const pending = GetAnchors(cube).pending;
+  ASSERT_FALSE(anchors.empty());
+  ASSERT_FALSE(AreEqualAnchors(anchors, pending));
+  StateHandle const state = _scene->CaptureState(test::ExpectOK{});
+  Step(1);
+
+  _scene->RestoreState(state, /*releaseImmediately=*/true, test::ExpectOK{});
+  ExpectAnchors(anchors, GetAnchors(cube).anchors);
+  ExpectAnchors(pending, GetAnchors(cube).pending);
+  EXPECT_TRUE(GetAnchors(cube).hasPending);
+
+  CFrictionAnchorIndex& index = GetIndex(cube);
+  for (int s = 0; s < isize(index); ++s) {
+    index[s] = kSentinelIndex;
+  }
+  _scene->Step(0.0);
+  for (FrictionAnchor const& anchor : anchors) {
+    EXPECT_EQ(
+        anchor.point,
+        FindAnchorPoint(
+            GetAnchors(cube), index, anchor.sample, static_cast<entt::entity>(anchor.collider)))
+        << "sample " << anchor.sample;
+  }
 }
