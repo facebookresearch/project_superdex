@@ -25,13 +25,15 @@
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/debug.h>
 #include <mochi_core/utils/dynamic_array.h>
+#include <mochi_core/utils/hash_utils.h>
 
+#include <algorithm>
 #include <compare>
 
 namespace mochi {
 
 namespace {
-using StepObservation = CIslandActorPreconditionerPolicy::StepObservation;
+using StepObservation = IslandActorPreconditionerPolicy::StepObservation;
 
 struct EligibleActors {
   DynamicArray<entt::entity> entities;
@@ -77,12 +79,12 @@ struct MeanCost {
 // than with CG. bjIterationsForAmgTrial is the calibrated trigger, above AMG's typical cost per
 // linear solve in steps where Block Jacobi reaches it. The values are deliberately the same for
 // every actor size and topology, so that the selection depends only on iteration counts.
-static constexpr CIslandActorPreconditionerPolicy::AmgCost kSoftAmgCost{
+static constexpr IslandActorPreconditionerPolicy::AmgCost kSoftAmgCost{
     .iterationCost = 37,
     .updateCost = 320,
     .bjIterationsForAmgTrial = 85,
 };
-static constexpr CIslandActorPreconditionerPolicy::AmgCost kShellAmgCost{
+static constexpr IslandActorPreconditionerPolicy::AmgCost kShellAmgCost{
     .iterationCost = 30,
     .updateCost = 210,
     .bjIterationsForAmgTrial = 70,
@@ -90,7 +92,7 @@ static constexpr CIslandActorPreconditionerPolicy::AmgCost kShellAmgCost{
 
 static constexpr LinearSolveCost kBlockJacobiCost{
     .fixedCost = 0,
-    .iterationCost = CIslandActorPreconditionerPolicy::kCostUnitsPerBlockJacobiIteration,
+    .iterationCost = IslandActorPreconditionerPolicy::kCostUnitsPerBlockJacobiIteration,
 };
 
 // A preconditioner replaces the other only if it costs at most 100 - kSwitchMarginPercent percent
@@ -102,10 +104,10 @@ static constexpr int64_t kSwitchMarginPercent = 10;
 // below. Failure means modeled AMG cost at one iteration per linear solve cannot meet the switch
 // margin against Block Jacobi at the iteration threshold for starting an AMG trial.
 [[nodiscard]] static constexpr bool CanKeepAmgTrialsStartedAtTrigger(
-    CIslandActorPreconditionerPolicy::AmgCost const& amgCost) {
+    IslandActorPreconditionerPolicy::AmgCost const& amgCost) {
   return 100 * (amgCost.updateCost + amgCost.iterationCost) <= (100 - kSwitchMarginPercent) *
       amgCost.bjIterationsForAmgTrial *
-      CIslandActorPreconditionerPolicy::kCostUnitsPerBlockJacobiIteration;
+      IslandActorPreconditionerPolicy::kCostUnitsPerBlockJacobiIteration;
 }
 static_assert(CanKeepAmgTrialsStartedAtTrigger(kSoftAmgCost));
 static_assert(CanKeepAmgTrialsStartedAtTrigger(kShellAmgCost));
@@ -155,7 +157,7 @@ static constexpr int64_t kBjIncreaseForAmgRetryPercent = 30;
       MeanCost(incumbentCost, incumbent, 100 - kSwitchMarginPercent);
 }
 
-[[nodiscard]] static StepObservation SummarizePreviousStep(CIslandSolverStats const& islandStats) {
+[[nodiscard]] static StepObservation SummarizeStep(CIslandSolverStats const& islandStats) {
   static_assert(
       static_cast<int>(LinearSolverConvergenceStatus::Count) == 4,
       "Please update this function if LinearSolverConvergenceStatus changes.");
@@ -177,16 +179,16 @@ static constexpr int64_t kBjIncreaseForAmgRetryPercent = 30;
   return observation;
 }
 
-void CIslandActorPreconditionerPolicy::ResetObservationWindow() {
+void IslandActorPreconditionerPolicy::ResetObservationWindow() {
   _numObservedSolveSteps = 0;
   _blockJacobiWindow = {};
 }
 
-void CIslandActorPreconditionerPolicy::MeasureBlockJacobi(StepObservation const& observation) {
+void IslandActorPreconditionerPolicy::MeasureBlockJacobi(StepObservation const& observation) {
   _blockJacobiWindow += observation;
 }
 
-void CIslandActorPreconditionerPolicy::MeasureAmg(StepObservation const& observation) {
+void IslandActorPreconditionerPolicy::MeasureAmg(StepObservation const& observation) {
   // Trials compare their own observations, and probes the last two before them, so that neither
   // compares an empty or stale window.
   static_assert(kAmgTrialSteps == 2 && kMinAmgStepsBetweenBjProbes >= 2);
@@ -194,26 +196,27 @@ void CIslandActorPreconditionerPolicy::MeasureAmg(StepObservation const& observa
   _lastAmgObservation = observation;
 }
 
-void CIslandActorPreconditionerPolicy::Reset() {
-  *this = CIslandActorPreconditionerPolicy{};
+void IslandActorPreconditionerPolicy::Reset() {
+  *this = IslandActorPreconditionerPolicy{};
 }
 
-bool CIslandActorPreconditionerPolicy::SetConfiguration(
-    DynamicArray<entt::entity> const& actors,
-    LinearSolverType solverType) {
-  if (_eligibleActors == actors && _solverType == solverType) {
-    return false;
+void IslandActorPreconditionerPolicy::SetConfiguration(Configuration const& configuration) {
+  if (_enabled && _configuration == configuration) {
+    return;
   }
   Reset();
-  _eligibleActors = actors;
-  _solverType = solverType;
-  return true;
+  _enabled = true;
+  _configuration = configuration;
 }
 
-void CIslandActorPreconditionerPolicy::UpdateFromPreviousStep(
-    StepObservation const& observation,
-    AmgCost const& amgCost) {
-  // An observation is empty if the previous step performed no linear solve, e.g., because every
+void IslandActorPreconditionerPolicy::UpdateFromStep(StepObservation const& observation) {
+  if (!_enabled) {
+    return;
+  }
+
+  AmgCost const& amgCost = _configuration.amgCost;
+
+  // An observation is empty if the step performed no linear solve, e.g., because every
   // integration stage terminated at the nonlinear solver's initial stopping check. The AMG trial
   // cooldown is measured in island steps, so it also advances on empty observations. The
   // observation windows measure solver behavior, so they only advance on observations with linear
@@ -342,7 +345,7 @@ void CIslandActorPreconditionerPolicy::UpdateFromPreviousStep(
   }
 }
 
-void CIslandActorPreconditionerPolicy::EnterAmgTrial() {
+void IslandActorPreconditionerPolicy::EnterAmgTrial() {
   MOCHI_ASSERT_VERBOSE(_mode == Mode::BlockJacobi, "AMG trial can only start from Block Jacobi.");
   _mode = Mode::AmgTrial;
   _numObservedSolveSteps = 0;
@@ -350,15 +353,15 @@ void CIslandActorPreconditionerPolicy::EnterAmgTrial() {
   _lastAmgObservation = {};
 }
 
-std::optional<PreconditionerType> CIslandActorPreconditionerPolicy::GetSelectedType() const {
-  if (!_solverType) {
+std::optional<PreconditionerType> IslandActorPreconditionerPolicy::GetSelectedType() const {
+  if (!_enabled) {
     return std::nullopt;
   }
   return _mode == Mode::Amg || _mode == Mode::AmgTrial ? PreconditionerType::AMG
                                                        : PreconditionerType::BlockJacobi;
 }
 
-void CIslandActorPreconditionerPolicy::EnterBlockJacobi() {
+void IslandActorPreconditionerPolicy::EnterBlockJacobi() {
   _mode = Mode::BlockJacobi;
   ResetObservationWindow();
   _amgStepsBetweenBjProbes = 0;
@@ -367,13 +370,13 @@ void CIslandActorPreconditionerPolicy::EnterBlockJacobi() {
   _bjIterationsForAmgRetry = 0;
 }
 
-void CIslandActorPreconditionerPolicy::EnterBlockJacobiCooldown(int64_t bjIterationsForAmgRetry) {
+void IslandActorPreconditionerPolicy::EnterBlockJacobiCooldown(int64_t bjIterationsForAmgRetry) {
   EnterBlockJacobi();
   _amgTrialCooldownStepsLeft = kAmgTrialCooldownSteps;
   _bjIterationsForAmgRetry = bjIterationsForAmgRetry;
 }
 
-void CIslandActorPreconditionerPolicy::EnterAmg(int amgStepsBetweenBjProbes) {
+void IslandActorPreconditionerPolicy::EnterAmg(int amgStepsBetweenBjProbes) {
   _mode = Mode::Amg;
   ResetObservationWindow();
   _amgStepsBetweenBjProbes = amgStepsBetweenBjProbes;
@@ -381,7 +384,7 @@ void CIslandActorPreconditionerPolicy::EnterAmg(int amgStepsBetweenBjProbes) {
   _amgTrialCooldownStepsLeft = 0;
 }
 
-void CIslandActorPreconditionerPolicy::EnterAmgAfterFailedBjProbe() {
+void IslandActorPreconditionerPolicy::EnterAmgAfterFailedBjProbe() {
   MOCHI_ASSERT_VERBOSE(_mode == Mode::BlockJacobiProbe, "Only a Block Jacobi probe can fail.");
   MOCHI_ASSERT_VERBOSE(
       _amgStepsBetweenBjProbes >= kMinAmgStepsBetweenBjProbes,
@@ -389,7 +392,7 @@ void CIslandActorPreconditionerPolicy::EnterAmgAfterFailedBjProbe() {
   EnterAmg(Min(2 * _amgStepsBetweenBjProbes, kMaxAmgStepsBetweenBjProbes));
 }
 
-void CIslandActorPreconditionerPolicy::EnterBlockJacobiAfterAmgDivergence() {
+void IslandActorPreconditionerPolicy::EnterBlockJacobiAfterAmgDivergence() {
   EnterBlockJacobi();
   _mode = Mode::BlockJacobiAfterAmgDivergence;
 }
@@ -401,17 +404,37 @@ bool IsEligibleForAdaptivePreconditioner(entt::registry const& reg, entt::entity
       reg.any_of<TagSoftActor, TagShellActor>(actor);
 }
 
-void UpdateIslandActorPreconditionerPolicy(
-    entt::registry& reg,
-    entt::entity island,
+// The policy in the copies of the island's actors if all of them were made with the island's
+// current actors, and otherwise the initial policy. The island must have soft or shell actors.
+[[nodiscard]] static IslandActorPreconditionerPolicy GetPolicyFromActorCopies(
+    entt::registry const& reg,
+    CIslandDescendants const& descendants) {
+  // Only soft and shell actors have copies. Each solve copies the policy to all of them, so copies
+  // that all match the island's actors are all from the last solve with these actors.
+  auto const& softActors = descendants.softActors;
+  auto const& shellActors = descendants.shellActors;
+  MOCHI_ASSERT_VERBOSE(
+      !softActors.empty() || !shellActors.empty(), "The island must have soft or shell actors.");
+  uint64_t const actorsHash = island::HashNonCompoundActors(descendants);
+  auto const& copies = reg.storage<CActorPreconditionerPolicyCopy>();
+  auto const matches = [&](entt::entity actor) {
+    return copies.get(actor).islandActorsHash == actorsHash;
+  };
+  if (std::ranges::all_of(softActors, matches) && std::ranges::all_of(shellActors, matches)) {
+    return copies.get(softActors.empty() ? shellActors.front() : softActors.front()).policy;
+  }
+  return {};
+}
+
+void ConfigureIslandActorPreconditionerPolicy(
+    IslandActorPreconditionerPolicy& outPolicy,
+    entt::registry const& reg,
     CIslandDescendants const& descendants,
     KrylovSolverParams const& linearParams) {
-  auto& policy = reg.get<CIslandActorPreconditionerPolicy>(island);
-
   bool const enabled = linearParams.preconditionerType == PreconditionerType::AdaptivePerActor &&
       details::UsesPerActorPreconditioners(linearParams);
   if (!enabled) {
-    policy.Reset();
+    outPolicy.Reset();
     return;
   }
   MOCHI_ASSERT(
@@ -420,20 +443,48 @@ void UpdateIslandActorPreconditionerPolicy(
 
   EligibleActors const actors = CollectEligibleActors(reg, descendants);
   if (actors.entities.empty()) {
-    policy.Reset();
+    outPolicy.Reset();
     return;
   }
-  if (!policy.SetConfiguration(actors.entities, linearParams.solverType)) {
-    // Mixed islands use the soft actors' AMG cost, the higher one, conservatively biasing toward
-    // Block Jacobi.
-    static_assert(
-        kSoftAmgCost.updateCost > kShellAmgCost.updateCost &&
-            kSoftAmgCost.iterationCost > kShellAmgCost.iterationCost &&
-            kSoftAmgCost.bjIterationsForAmgTrial > kShellAmgCost.bjIterationsForAmgTrial,
-        "The soft actors' AMG cost must be the higher one.");
-    policy.UpdateFromPreviousStep(
-        SummarizePreviousStep(reg.get<CIslandSolverStats const>(island)),
-        actors.hasSoftActor ? kSoftAmgCost : kShellAmgCost);
+
+  outPolicy = GetPolicyFromActorCopies(reg, descendants);
+  // Mixed islands use the soft actors' AMG cost, the higher one, conservatively biasing toward
+  // Block Jacobi.
+  static_assert(
+      kSoftAmgCost.updateCost > kShellAmgCost.updateCost &&
+          kSoftAmgCost.iterationCost > kShellAmgCost.iterationCost &&
+          kSoftAmgCost.bjIterationsForAmgTrial > kShellAmgCost.bjIterationsForAmgTrial,
+      "The soft actors' AMG cost must be the higher one.");
+  outPolicy.SetConfiguration({
+      .eligibleActorsHash = HashUnordered(actors.entities),
+      .solverType = linearParams.solverType,
+      .amgCost = actors.hasSoftActor ? kSoftAmgCost : kShellAmgCost,
+  });
+}
+
+void UpdateIslandActorPreconditionerPolicyAndCopies(
+    IslandActorPreconditionerPolicy& policy,
+    entt::registry& reg,
+    CIslandDescendants const& descendants,
+    CIslandSolverStats const& stats) {
+  // Only soft and shell actors can be eligible or have copies.
+  if (descendants.softActors.empty() && descendants.shellActors.empty()) {
+    return;
+  }
+  policy.UpdateFromStep(SummarizeStep(stats));
+
+  uint64_t const actorsHash = island::HashNonCompoundActors(descendants);
+  auto& copies = reg.storage<CActorPreconditionerPolicyCopy>();
+  auto const copyTo = [&](entt::entity actor) {
+    auto& copy = copies.get(actor);
+    copy.islandActorsHash = actorsHash;
+    copy.policy = policy;
+  };
+  for (auto actor : descendants.softActors) {
+    copyTo(actor);
+  }
+  for (auto actor : descendants.shellActors) {
+    copyTo(actor);
   }
 }
 

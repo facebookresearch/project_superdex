@@ -1290,6 +1290,7 @@ bool mochi::solver::StepIslandNewtonAsync(
   MOCHI_ASSERT(descendants.actors.size() > 0, "Empty islands should have been pruned");
 
   auto& islandSolverStats = reg.get<CIslandSolverStats>(island);
+  islandSolverStats.stages.clear();
 
   // Reset step-level convergence status. DistributeConvergenceStatus accumulates via
   // stepStatus = Max(stepStatus, stageStatus) across stages, so the initial value must be None.
@@ -1305,10 +1306,9 @@ bool mochi::solver::StepIslandNewtonAsync(
   NewtonSolverParams newtonParams;
   GetIslandNewtonParams(reg, island, newtonParams);
 
-  // The actor preconditioner policy reads the previous step's stats, so clear them only after
-  // updating it.
-  UpdateIslandActorPreconditionerPolicy(reg, island, descendants, newtonParams.lParams);
-  islandSolverStats.stages.clear();
+  auto& actorPreconditionerPolicy = reg.get<CIslandActorPreconditionerPolicy>(island);
+  ConfigureIslandActorPreconditionerPolicy(
+      actorPreconditionerPolicy, reg, descendants, newtonParams.lParams);
 
   auto& preconditioner = reg.get<CIslandPreconditioner>(island);
   NewtonSolver<real> snleSolver(newtonParams, preconditioner);
@@ -1359,6 +1359,8 @@ bool mochi::solver::StepIslandNewtonAsync(
   PostLastStageLocalPipeline(reg, descendants);
 
   sleep::RecordStep(reg, island, restValue);
+  UpdateIslandActorPreconditionerPolicyAndCopies(
+      actorPreconditionerPolicy, reg, descendants, islandSolverStats);
 
   island::InvokeTestCallback_AssembledResidual(reg, island, problem.GetResidual());
 

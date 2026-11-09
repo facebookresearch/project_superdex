@@ -16,10 +16,10 @@
 
 #pragma once
 
+#include "mochi_attributes.h"
 #include "mochi_ecs.h"
 
 #include <mochi_core/solvers/linear_solver_params.h>
-#include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/no_copy.h>
 
 #include <cstdint>
@@ -28,7 +28,29 @@
 namespace mochi {
 
 struct CIslandDescendants;
+struct CIslandSolverStats;
 struct KrylovSolverParams;
+
+// Mode of IslandActorPreconditionerPolicy.
+enum class ActorPreconditionerPolicyMode {
+  BlockJacobi,
+  AmgTrial,
+  Amg,
+  BlockJacobiProbe,
+  BlockJacobiAfterAmgDivergence,
+};
+
+} // namespace mochi
+
+MOCHI_ENUM_BEGIN(mochi::ActorPreconditionerPolicyMode);
+MOCHI_ENUM_ITEM(BlockJacobi);
+MOCHI_ENUM_ITEM(AmgTrial);
+MOCHI_ENUM_ITEM(Amg);
+MOCHI_ENUM_ITEM(BlockJacobiProbe);
+MOCHI_ENUM_ITEM(BlockJacobiAfterAmgDivergence);
+MOCHI_ENUM_END();
+
+namespace mochi {
 
 // Selects one preconditioner for all eligible actors in an island (see
 // IsEligibleForAdaptivePreconditioner). Island solve statistics cannot attribute performance or
@@ -56,7 +78,7 @@ struct KrylovSolverParams;
 // While adaptive selection stays enabled, changes to solver parameters other than the linear solver
 // type do not reset the policy. Observations spanning such changes may produce suboptimal
 // preconditioner selections.
-struct CIslandActorPreconditionerPolicy : public NoCopy {
+struct IslandActorPreconditionerPolicy {
   // Costs in units of 1 / kCostUnitsPerBlockJacobiIteration of a Block Jacobi iteration of the
   // island, so that comparisons are exact.
   static constexpr int64_t kCostUnitsPerBlockJacobiIteration = 10;
@@ -74,6 +96,14 @@ struct CIslandActorPreconditionerPolicy : public NoCopy {
     // Block Jacobi iterations per linear solve from which Block Jacobi observations count toward an
     // AMG trial.
     int64_t bjIterationsForAmgTrial = 0;
+
+    bool operator==(AmgCost const&) const = default;
+
+    MOCHI_STRUCT_BEGIN(mochi::IslandActorPreconditionerPolicy::AmgCost);
+    MOCHI_FIELD(iterationCost);
+    MOCHI_FIELD(updateCost);
+    MOCHI_FIELD(bjIterationsForAmgTrial);
+    MOCHI_STRUCT_END();
   };
 
   struct StepObservation {
@@ -96,33 +126,48 @@ struct CIslandActorPreconditionerPolicy : public NoCopy {
       hasDivergedLinearSolve |= other.hasDivergedLinearSolve;
       return *this;
     }
+
+    MOCHI_STRUCT_BEGIN(mochi::IslandActorPreconditionerPolicy::StepObservation);
+    MOCHI_FIELD(linearIterationSum);
+    MOCHI_FIELD(numLinearSolves);
+    MOCHI_FIELD(hasStoppedLinearSolve);
+    MOCHI_FIELD(hasDivergedLinearSolve);
+    MOCHI_STRUCT_END();
+  };
+
+  struct Configuration {
+    // HashUnordered of the eligible actors: the selection depends on which actors are eligible, not
+    // on their order.
+    uint64_t eligibleActorsHash = 0;
+    LinearSolverType solverType = LinearSolverType::Default;
+    AmgCost amgCost;
+
+    bool operator==(Configuration const&) const = default;
+
+    MOCHI_STRUCT_BEGIN(mochi::IslandActorPreconditionerPolicy::Configuration);
+    MOCHI_FIELD(eligibleActorsHash);
+    MOCHI_FIELD(solverType);
+    MOCHI_FIELD(amgCost);
+    MOCHI_STRUCT_END();
   };
 
   // Returns to the initial state, in which adaptive selection is disabled until the next
   // SetConfiguration.
   void Reset();
 
-  // Sets the eligible actors and solver type, enabling adaptive selection. If either changed,
-  // restarts from Block Jacobi and returns true, so that the caller does not use the statistics of
-  // the previous step. The actors must come in a stable order, as the island's descendants do:
-  // their order changes only with the island's composition, which resets the policy.
-  [[nodiscard]] bool SetConfiguration(
-      DynamicArray<entt::entity> const& actors,
-      LinearSolverType solverType);
+  // Enables adaptive selection. Restarts from Block Jacobi if adaptive selection was disabled or
+  // the configuration changed.
+  void SetConfiguration(Configuration const& configuration);
 
-  void UpdateFromPreviousStep(StepObservation const& observation, AmgCost const& amgCost);
+  // Updates the selection from a step that solved with it. Does nothing while adaptive selection is
+  // disabled.
+  void UpdateFromStep(StepObservation const& observation);
 
   // Preconditioner type for the eligible actors, or std::nullopt if adaptive selection is disabled.
   [[nodiscard]] std::optional<PreconditionerType> GetSelectedType() const;
 
  private:
-  enum class Mode {
-    BlockJacobi,
-    AmgTrial,
-    Amg,
-    BlockJacobiProbe,
-    BlockJacobiAfterAmgDivergence,
-  };
+  using Mode = ActorPreconditionerPolicyMode;
 
   static constexpr int kBjHighIterationStepsBeforeAmgTrial = 2;
   static constexpr int kAmgTrialSteps = 2;
@@ -142,6 +187,8 @@ struct CIslandActorPreconditionerPolicy : public NoCopy {
   void EnterAmgAfterFailedBjProbe();
   void EnterBlockJacobiAfterAmgDivergence();
 
+  bool _enabled = false;
+  Configuration _configuration;
   Mode _mode = Mode::BlockJacobi;
   int _numObservedSolveSteps = 0;
   int _amgStepsBetweenBjProbes = 0;
@@ -162,10 +209,41 @@ struct CIslandActorPreconditionerPolicy : public NoCopy {
   // during the cooldown, or 0 if none do.
   int64_t _bjIterationsForAmgRetry = 0;
 
-  DynamicArray<entt::entity> _eligibleActors;
+ public:
+  MOCHI_STRUCT_BEGIN(mochi::IslandActorPreconditionerPolicy);
+  MOCHI_FIELD(_enabled);
+  MOCHI_FIELD(_configuration);
+  MOCHI_FIELD(_mode);
+  MOCHI_FIELD(_numObservedSolveSteps);
+  MOCHI_FIELD(_amgStepsBetweenBjProbes);
+  MOCHI_FIELD(_amgStepsUntilBjProbe);
+  MOCHI_FIELD(_blockJacobiWindow);
+  MOCHI_FIELD(_numObservationsSinceBjProbe);
+  MOCHI_FIELD(_previousAmgObservation);
+  MOCHI_FIELD(_lastAmgObservation);
+  MOCHI_FIELD(_amgTrialCooldownStepsLeft);
+  MOCHI_FIELD(_bjIterationsForAmgRetry);
+  MOCHI_STRUCT_END();
+};
 
-  // std::nullopt while adaptive selection is disabled.
-  std::optional<LinearSolverType> _solverType;
+// Adaptive preconditioner selection of an island, which each of its solves configures from the
+// copies in its actors.
+struct CIslandActorPreconditionerPolicy final : IslandActorPreconditionerPolicy, NoCopy {};
+
+// Copy of the adaptive preconditioner selection of the island that last solved the actor. Island
+// state is not captured, so capturing this copy makes the selection replay-exact.
+// TODO[T229060237] - Islands that sleep are not replay-exact: sleeping isn't captured, and
+// restoring wakes every island.
+struct CActorPreconditionerPolicyCopy : NoCopy {
+  // island::HashNonCompoundActors of the island that last solved the actor.
+  uint64_t islandActorsHash = 0;
+  IslandActorPreconditionerPolicy policy;
+
+  MOCHI_STRUCT_BEGIN(mochi::CActorPreconditionerPolicyCopy);
+  MOCHI_ATTRIBUTE(CaptureState);
+  MOCHI_FIELD(islandActorsHash);
+  MOCHI_FIELD(policy);
+  MOCHI_STRUCT_END();
 };
 
 // Whether the preconditioner type of an actor is selected adaptively when adaptive selection is
@@ -174,13 +252,24 @@ struct CIslandActorPreconditionerPolicy : public NoCopy {
     entt::registry const& reg,
     entt::entity actor);
 
-// Updates the adaptive selection from the island's previous step. Adaptive selection requires
+// Configures the adaptive selection for the island's solve. Adaptive selection requires
 // PreconditionerType::AdaptivePerActor, a linear solver that uses IslandOperators, and at least one
-// eligible actor.
-void UpdateIslandActorPreconditionerPolicy(
-    entt::registry& reg,
-    entt::entity island,
+// eligible actor. It continues from the copies in the island's actors if all of them were made with
+// the island's current actors, and otherwise starts over: the selection compares the island's
+// linear-solver iteration counts across steps, and these depend on all island actors, not only
+// eligible ones. Islands aren't captured but the copies are, so the selection is replay-exact.
+void ConfigureIslandActorPreconditionerPolicy(
+    IslandActorPreconditionerPolicy& outPolicy,
+    entt::registry const& reg,
     CIslandDescendants const& descendants,
     KrylovSolverParams const& linearParams);
+
+// Updates the adaptive selection from the island's solve, and its copies in the
+// CActorPreconditionerPolicyCopy of the island's soft and shell actors.
+void UpdateIslandActorPreconditionerPolicyAndCopies(
+    IslandActorPreconditionerPolicy& policy,
+    entt::registry& reg,
+    CIslandDescendants const& descendants,
+    CIslandSolverStats const& stats);
 
 } // namespace mochi

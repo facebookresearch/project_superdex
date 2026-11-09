@@ -17,6 +17,7 @@
 #include "mochi_actor.h"
 
 #include "mochi_actor_convergence.h"
+#include "mochi_actor_preconditioner_policy.h"
 #include "mochi_articulated_actor_params.h"
 #include "mochi_articulated_body.h"
 #include "mochi_blended.h"
@@ -3541,6 +3542,7 @@ real experimental::GetContactForceWorldBatch(
 
 namespace actor {
 void InitializeOnce(entt::registry& reg) {
+  ecs::RegisterComponent<CActorPreconditionerPolicyCopy>(reg);
   ecs::RegisterComponent<CUserData>(reg);
 }
 } // namespace actor

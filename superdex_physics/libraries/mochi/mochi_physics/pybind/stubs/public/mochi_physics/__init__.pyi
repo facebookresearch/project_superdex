@@ -1769,12 +1769,6 @@ class PreconditionerType:
         usual, causing latency spikes.
 
     Warning:
-        With this preconditioner, stepping after restoring a captured state may not
-        exactly reproduce the original simulation. However, results remain
-        deterministic: restoring the same state and repeating the same steps always
-        produces the same results.
-
-    Warning:
         This is an experimental feature. It may be changed or removed in the future.
         Use at your own risk.
     """

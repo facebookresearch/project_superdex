@@ -18,6 +18,7 @@
 
 #include "mochi_actor.h"
 #include "mochi_actor_convergence.h"
+#include "mochi_actor_preconditioner_policy.h"
 #include "mochi_articulated_actor_params.h"
 #include "mochi_articulated_body.h"
 #include "mochi_blended.h"
@@ -840,8 +841,7 @@ void SceneImpl::UpdateQueries(Error& error) {
 
   // This is a solve-free assembly that must reproduce an already-taken step's forces, so ask
   // the per-actor begin-of-step integration to preserve (not advance) the previous-step history
-  // (see @ref ApplyTimeIntegrationStepStart). The tag stays set while the captured state is
-  // restored, so that post-restore systems can tell this rollback from a genuine restore.
+  // (see @ref ApplyTimeIntegrationStepStart).
   _registry.set<TagAssemblyPreserveHistory>();
   MOCHI_DEFER(_registry.unset<TagAssemblyPreserveHistory>());
   MOCHI_DEFER(RestorePartialState(
@@ -3460,6 +3460,10 @@ void SceneImpl::ValidateNewActorComposition(entt::entity e) const {
   MOCHI_ASSERT(
       !_registry.all_of<CActorSnle>(e) || _registry.all_of<CActorConvergenceWeights>(e),
       "Actors with CActorSnle must also have CActorConvergenceWeights, even if useInSolver = false at initialization.");
+  MOCHI_ASSERT(
+      _registry.all_of<CActorPreconditionerPolicyCopy>(e) ==
+          (_registry.any_of<TagSoftActor, TagShellActor>(e)),
+      "Soft and shell actors, and only they, have a CActorPreconditionerPolicyCopy.");
 
   // Stuff needed for contact
   auto const* colliderInfo = _registry.try_get<CColliderInfo const>(e);

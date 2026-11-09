@@ -24,6 +24,8 @@
 #include <mochi_core/solvers/newton_solver_status.h>
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/dynamic_array.h>
+#include <mochi_physics/mochi_physics_experimental.h>
+#include <mochi_physics/src/mochi_capture.h>
 #include <mochi_physics/src/mochi_common_components.h>
 #include <mochi_physics/src/mochi_island.h>
 #include <mochi_physics/src/mochi_snle.h>
@@ -78,7 +80,6 @@ class PolicyScenario {
   explicit PolicyScenario(int numSoftActors = 1, int numShellActors = 0) {
     _island = _reg.create();
     _reg.emplace<CIslandActorPreconditionerPolicy>(_island);
-    _reg.emplace<CIslandSolverStats>(_island);
     _linearParams.preconditionerType = PreconditionerType::AdaptivePerActor;
     _linearParams.solverType = LinearSolverType::CG;
     _linearParams.preconditionerLifespan = 1;
@@ -89,8 +90,6 @@ class PolicyScenario {
     for (int i = 0; i < numShellActors; ++i) {
       AddShellActor();
     }
-
-    Update();
   }
 
   entt::entity AddSoftActor(OptionalType typeOverride = std::nullopt) {
@@ -117,13 +116,27 @@ class PolicyScenario {
   entt::entity AddOtherActor() {
     auto const actor = _reg.create();
     _reg.emplace<CActorSnle>(actor, AnyMatrix<real>{Matrix<real>(1, 1)});
+    _descendants.actors.push_back(actor);
     return actor;
   }
 
   void ReplaceWithSoftActor() {
-    _descendants.softActors.clear();
-    _descendants.shellActors.clear();
+    _descendants.Clear();
     AddSoftActor();
+  }
+
+  // Makes the given soft actors, added before, the island's actors.
+  void SetSoftActors(std::initializer_list<entt::entity> actors) {
+    _descendants.Clear();
+    _descendants.actors = actors;
+    _descendants.softActors = actors;
+  }
+
+  // A compound, e.g., an automatic one, which has no copy.
+  void AddCompound() {
+    auto const compound = _reg.create();
+    _descendants.actors.push_back(compound);
+    _descendants.compoundActors.push_back(compound);
   }
 
   void SetTypeOverride(entt::entity actor, PreconditionerType type) {
@@ -156,8 +169,9 @@ class PolicyScenario {
   }
 
   void Step(StepStatuses stages, OptionalType expectedType) {
-    auto& stats = _reg.get<CIslandSolverStats>(_island);
-    stats.stages.clear();
+    auto& policy = _reg.get<CIslandActorPreconditionerPolicy>(_island);
+    ConfigureIslandActorPreconditionerPolicy(policy, _reg, _descendants, _linearParams);
+    CIslandSolverStats stats;
     for (auto const& statuses : stages) {
       NewtonSolverStatus<real> newtonStatus;
       for (auto const& status : statuses) {
@@ -169,7 +183,7 @@ class PolicyScenario {
       stats.stages.push_back(StageSolverStats::FromNewtonSolverStatus(newtonStatus));
     }
 
-    Update();
+    UpdateIslandActorPreconditionerPolicyAndCopies(policy, _reg, _descendants, stats);
     ExpectType(expectedType);
   }
 
@@ -217,6 +231,18 @@ class PolicyScenario {
     EXPECT_EQ(expectedType, GetActorPreconditionerType(_reg, _island, actor));
   }
 
+  // Resets the island policy, as in the island of a new scene.
+  void ResetIslandPolicy() {
+    _reg.get<CIslandActorPreconditionerPolicy>(_island).Reset();
+  }
+
+  // Configures the island's next solve, which takes the policy from the actors' copies.
+  void Configure(OptionalType expectedType) {
+    ConfigureIslandActorPreconditionerPolicy(
+        _reg.get<CIslandActorPreconditionerPolicy>(_island), _reg, _descendants, _linearParams);
+    ExpectType(expectedType);
+  }
+
  private:
   template <typename TagActorFamily>
   entt::entity AddActor(
@@ -233,12 +259,10 @@ class PolicyScenario {
     }
     _reg.get<CActorSnle>(actor).useInSolver = useInSolver;
     _reg.emplace<TagActorFamily>(actor);
+    _reg.emplace<CActorPreconditionerPolicyCopy>(actor);
+    _descendants.actors.push_back(actor);
     family.push_back(actor);
     return actor;
-  }
-
-  void Update() {
-    UpdateIslandActorPreconditionerPolicy(_reg, _island, _descendants, _linearParams);
   }
 
   void ExpectType(OptionalType expectedType) const {
@@ -507,7 +531,8 @@ TEST(ActorPreconditionerPolicy, AmgTrialCooldownUsesIslandStepClock) {
   // 41 AMG iterations cost as much as 32 + 3.7 * 41 = 183.7 Block Jacobi iterations, more than 90%
   // of the 200-iteration baseline, so the rejected trial starts a cooldown in which observations
   // count toward a new trial from 260 iterations per linear solve, 30% above the baseline. Updates
-  // 1-49 age the cooldown; update 50 reaches zero but still applies the 260-iteration threshold.
+  // 1-49, which solve nothing, age the cooldown, also in the actors' copies; update 50 reaches zero
+  // but still applies the 260-iteration threshold.
   {
     PolicyScenario scenario;
     scenario.EnterAmgTrial();
@@ -580,13 +605,12 @@ TEST(ActorPreconditionerPolicy, PolicyResetBehavior) {
     scenario.Repeat(Converged(500), 3, std::nullopt);
   }
 
-  // An eligible-set change resets the policy and discards stale solver evidence, including the last
-  // probe, which no longer delays the probe after a stopped AMG observation.
+  // An eligible-set change restarts the policy and discards stale solver evidence, including the
+  // last probe, which no longer delays the probe after a stopped AMG observation.
   {
     PolicyScenario scenario;
     scenario.EnterBlockJacobiProbe();
     scenario.ReplaceWithSoftActor();
-    scenario.Step(Diverged(), kBlockJacobi);
     scenario.Step(Diverged(), kAmg);
     scenario.Step(Stopped(), kAmg);
     scenario.ProbeAfter(2);
@@ -599,7 +623,6 @@ TEST(ActorPreconditionerPolicy, PolicyResetBehavior) {
     auto const overriddenSoftActor = scenario.GetFirstSoftActor();
     scenario.SetTypeOverride(overriddenSoftActor, PreconditionerType::Jacobi);
     scenario.ExpectActorType(overriddenSoftActor, PreconditionerType::Jacobi);
-    scenario.Step(Diverged(), kBlockJacobi);
     scenario.Step(Diverged(), kAmg);
   }
 
@@ -612,16 +635,14 @@ TEST(ActorPreconditionerPolicy, PolicyResetBehavior) {
     scenario.SetUseReduced(softActor, true);
     scenario.Step(Diverged(), std::nullopt);
     scenario.SetUseReduced(softActor, false);
-    scenario.Step(Diverged(), kBlockJacobi);
     scenario.Step(Diverged(), kAmg);
   }
 
-  // Changing the linear solver type resets the policy.
+  // Changing the linear solver type restarts the policy.
   {
     PolicyScenario scenario;
     scenario.EnterCommittedAmg();
     scenario.SetSolverType(LinearSolverType::GMRES);
-    scenario.Step(Diverged(), kBlockJacobi);
     scenario.Step(Diverged(), kAmg);
   }
 
@@ -633,36 +654,105 @@ TEST(ActorPreconditionerPolicy, PolicyResetBehavior) {
     scenario.Step(Diverged(), std::nullopt);
   }
 
-  // Adaptation requires the adaptive per-actor preconditioner.
+  // Adaptation requires the adaptive per-actor preconditioner, and solves copy the policy even
+  // while adaptation is disabled.
   {
     PolicyScenario scenario;
     scenario.EnterCommittedAmg();
     scenario.SetPreconditionerType(PreconditionerType::PerActor);
     scenario.Step(Diverged(), std::nullopt);
     scenario.SetPreconditionerType(PreconditionerType::AdaptivePerActor);
-    scenario.Step(Diverged(), kBlockJacobi);
     scenario.Step(Diverged(), kAmg);
+  }
+}
+
+TEST(ActorPreconditionerPolicy, ConfigureFromActorCopies) {
+  // Copies made with the island's current actors restore the policy, including its observations:
+  // after the restored 20 + 40 AMG iterations, 60 more commit AMG, as 120 / 3 = 40 AMG iterations
+  // cost as much as 32 + 3.7 * 40 = 180 Block Jacobi iterations, 90% of the 200-iteration baseline,
+  // and 61 don't. Solves also write the copies of ineligible soft actors, and other actors have no
+  // copies.
+  for (auto const& [lastAmgIterations, expectedType] :
+       {std::pair{60, kAmg}, std::pair{61, kBlockJacobi}}) {
+    PolicyScenario scenario;
+    scenario.AddOtherActor();
+    scenario.AddSoftActorNotInSolver();
+    scenario.EnterAmgTrial();
+    scenario.Step({{Converged(20), Converged(40)}}, kAmg);
+    scenario.ResetIslandPolicy();
+    scenario.Configure(kAmg);
+    scenario.Step(Converged(lastAmgIterations), expectedType);
+  }
+
+  // Adding an actor to the island, even an ineligible one, restarts the selection.
+  {
+    PolicyScenario scenario;
+    scenario.EnterAmgTrial();
+    scenario.AddOtherActor();
+    scenario.Configure(kBlockJacobi);
+  }
+
+  // Neither compounds, e.g., automatic ones, which get new entities when rebuilt, nor the order of
+  // the island's actors, which follows entity values, affects the copies' match or the policy's
+  // configuration.
+  {
+    PolicyScenario scenario;
+    auto const first = scenario.GetFirstSoftActor();
+    auto const second = scenario.AddSoftActor();
+    scenario.EnterAmgTrial();
+    scenario.SetSoftActors({second, first});
+    scenario.AddCompound();
+    scenario.Configure(kAmg);
+    scenario.Step(Converged(20), kAmg);
+  }
+
+  // A copy made with the island's current actors does not restore the policy if another copy was
+  // made with other actors, here by a later solve with only the second of three actors.
+  {
+    PolicyScenario scenario;
+    auto const first = scenario.GetFirstSoftActor();
+    auto const second = scenario.AddSoftActor();
+    auto const third = scenario.AddSoftActor();
+    scenario.EnterCommittedAmg();
+    scenario.SetSoftActors({second});
+    scenario.Step(Converged(1), kBlockJacobi);
+    scenario.SetSoftActors({first, second, third});
+    scenario.Configure(kBlockJacobi);
   }
 }
 
 class ActorPreconditionerPolicyScene : public MochiSceneTestBase {
  protected:
   // With a single CG iteration, stopped Block Jacobi solves start an AMG trial on the third step.
-  void CreateAdaptiveSoftActorScene() {
+  void CreateAdaptiveActorScene(ActorType actorType = ActorType::Soft) {
     auto solverParams = _scene->GetSolverParams();
     solverParams.linearSolver.solverType = LinearSolverType::CG;
     solverParams.linearSolver.preconditionerType = PreconditionerType::AdaptivePerActor;
     solverParams.linearSolver.maxIter = 1;
     _scene->SetSolverParams(solverParams, ExpectOK{});
 
-    SoftActorParams actorParams;
-    actorParams.shape = CreateUnitCubeTetMeshShape(_mochiContext);
-    _actor = _scene->CreateSoftActor(actorParams, ExpectOK{});
+    if (actorType == ActorType::Shell) {
+      auto [coordinates, connectivity] = CreateMinimalTriMeshUnitCube();
+      experimental::ShellActorParams actorParams;
+      actorParams.shape = _mochiContext->CreateTriMeshShape(
+          Flatten(MakeSpan(coordinates)), Flatten(MakeSpan(connectivity)), ExpectOK{});
+      _actor = experimental::CreateShellActor(_scene, actorParams, ExpectOK{});
+    } else {
+      SoftActorParams actorParams;
+      actorParams.shape = CreateUnitCubeTetMeshShape(_mochiContext);
+      _actor = _scene->CreateSoftActor(actorParams, ExpectOK{});
+    }
   }
 
   void SetPreconditionerType(PreconditionerType type) {
     auto solverParams = _scene->GetSolverParams();
     solverParams.linearSolver.preconditionerType = type;
+    _scene->SetSolverParams(solverParams, ExpectOK{});
+  }
+
+  void SetMaxLinearSolverIterations(int maxIter) {
+    auto solverParams = _scene->GetSolverParams();
+    solverParams.linearSolver.maxIter = maxIter;
     _scene->SetSolverParams(solverParams, ExpectOK{});
   }
 
@@ -684,12 +774,31 @@ class ActorPreconditionerPolicyScene : public MochiSceneTestBase {
     StepAndExpectType(kAmg);
   }
 
+  uint64_t GetCopyHash() const {
+    return GetRegistry()
+        .get<CActorPreconditionerPolicyCopy const>(GetEntity(_actor))
+        .islandActorsHash;
+  }
+
+  DynamicArray<uint8_t> CaptureBytes() {
+    DynamicArray<uint8_t> bytes;
+    _scene->CaptureStateToBytes(bytes, ExpectOK{});
+    return bytes;
+  }
+
+  // Also compares the actor's copy hash exactly, since capture::IsEqualState compares it only as a
+  // double.
+  void ExpectState(DynamicArray<uint8_t> const& expected, uint64_t expectedCopyHash) {
+    EXPECT_TRUE(capture::IsEqualState(GetRegistry(), expected, CaptureBytes()));
+    EXPECT_EQ(expectedCopyHash, GetCopyHash());
+  }
+
   Actor* _actor = nullptr;
 };
 
 TEST_F(ActorPreconditionerPolicyScene, SwitchingToPerActorDropsAdaptiveSelection) {
   ExpectLoggingInScope expectWarning(_mochiContext, LogChannel::Warning);
-  CreateAdaptiveSoftActorScene();
+  CreateAdaptiveActorScene();
   StepIntoAmgTrial();
   SetPreconditionerType(PreconditionerType::PerActor);
   StepAndExpectType(kBlockJacobi);
@@ -698,11 +807,13 @@ TEST_F(ActorPreconditionerPolicyScene, SwitchingToPerActorDropsAdaptiveSelection
 }
 
 // The island's linear-solver iteration counts depend on all island members, so adding an ineligible
-// actor to the island also restarts the adaptive selection.
-TEST_F(ActorPreconditionerPolicyScene, IslandCompositionChangeResetsAdaptiveSelection) {
+// actor to the island also restarts the adaptive selection, but an island rebuilt with the same
+// actors, e.g., after a restore, resumes it. It uses a shell actor so that shell islands are
+// covered too: the other scene tests use soft actors.
+TEST_F(ActorPreconditionerPolicyScene, IslandActorChangeRestartsAdaptiveSelection) {
   ExpectLoggingInScope expectWarning(_mochiContext, LogChannel::Warning);
   _scene->SetForceSingleIsland(true);
-  CreateAdaptiveSoftActorScene();
+  CreateAdaptiveActorScene(ActorType::Shell);
   StepAndExpectType(kBlockJacobi);
   StepAndExpectType(kBlockJacobi);
 
@@ -710,28 +821,74 @@ TEST_F(ActorPreconditionerPolicyScene, IslandCompositionChangeResetsAdaptiveSele
   rigidParams.shape = CreateUnitCubeTetMeshShape(_mochiContext);
   rigidParams.colliderType = ColliderType::None;
   _scene->CreateRigidActor(rigidParams, ExpectOK{});
-  // Without the reset, an AMG trial would start.
+  // Without the restart, an AMG trial would start at once.
   StepAndExpectType(kBlockJacobi);
+  StepAndExpectType(kBlockJacobi);
+  auto const beforeAmgTrial = CaptureBytes();
+  StepAndExpectType(kAmg);
+  auto const expected = CaptureBytes();
+  uint64_t const expectedCopyHash = GetCopyHash();
+
+  // Islands are not captured, so a restore while the actors are in separate islands restarts the
+  // selection if they stay apart, since the copies were made with both actors.
+  _scene->SetForceSingleIsland(false);
+  StepAndExpectType(kBlockJacobi);
+  _scene->RestoreStateFromBytes(beforeAmgTrial, ExpectOK{});
+  StepAndExpectType(kBlockJacobi);
+  StepAndExpectType(kBlockJacobi);
+  // If the next step merges them again, it must resume the selection as the original run did.
+  _scene->RestoreStateFromBytes(beforeAmgTrial, ExpectOK{});
+  _scene->SetForceSingleIsland(true);
+  StepAndExpectType(kAmg);
+  ExpectState(expected, expectedCopyHash);
 }
 
-// Island state is not captured, so restoring must not resume the adaptive selection from before
-// the restore. Refreshing a query that requires assembly restores the state internally, which must
-// neither reset nor advance the selection.
-TEST_F(ActorPreconditionerPolicyScene, RestoreResetsAdaptiveSelection) {
+TEST_F(ActorPreconditionerPolicyScene, RestoreResumesAdaptiveSelection) {
   ExpectLoggingInScope expectWarning(_mochiContext, LogChannel::Warning);
-  CreateAdaptiveSoftActorScene();
-  _actor->RegisterQuery(QueryType::ContactPoints, ExpectOK{});
-  StateHandle const initial = _scene->CaptureState(ExpectOK{});
+  CreateAdaptiveActorScene();
   StepAndExpectType(kBlockJacobi);
   StepAndExpectType(kBlockJacobi);
-  _scene->UpdateQueries(ExpectOK{});
-  StepAndExpectType(kAmg);
-  StateHandle const first = _scene->CaptureState(ExpectOK{});
-  StepAndExpectType(kBlockJacobi);
+  // With the default CG iterations, AMG converges, so the AMG trial that the stopped Block Jacobi
+  // solves started commits AMG. Block Jacobi converges cheaply too, so the first probe leaves AMG.
+  SetMaxLinearSolverIterations(kDefaultLinearSolverMaxIter);
+  auto const beforeAmgTrial = CaptureBytes();
+  auto const stepUntilLastAmgStep = [&] {
+    for (int i = 0; i < 1 + kExpectedMinAmgStepsBetweenBjProbes; ++i) {
+      StepAndExpectType(kAmg);
+    }
+  };
+  stepUntilLastAmgStep();
+  auto const beforeLastAmgStep = CaptureBytes();
+  auto const stepThroughProbe = [&] {
+    StepAndExpectType(kAmg);
+    StepAndExpectType(kBlockJacobi);
+    StepAndExpectType(kBlockJacobi);
+    StepAndExpectType(kBlockJacobi);
+  };
+  stepThroughProbe();
+  auto const expected = CaptureBytes();
+  uint64_t const expectedCopyHash = GetCopyHash();
 
-  _scene->RestoreState(initial, /*releaseImmediately=*/false, ExpectOK{});
-  StepIntoAmgTrial();
-  EXPECT_TRUE(_scene->IsEqualState(first, _scene->CaptureState(ExpectOK{})));
+  auto const restoreAndReplay = [&] {
+    _scene->RestoreStateFromBytes(beforeAmgTrial, ExpectOK{});
+    stepUntilLastAmgStep();
+    stepThroughProbe();
+    ExpectState(expected, expectedCopyHash);
+    // Refreshing a query that requires assembly restores the state internally, which must neither
+    // reset nor advance the selection.
+    _scene->RestoreStateFromBytes(beforeLastAmgStep, ExpectOK{});
+    _actor->RegisterQuery(QueryType::ContactPoints, ExpectOK{});
+    _scene->UpdateQueries(ExpectOK{});
+    stepThroughProbe();
+    ExpectState(expected, expectedCopyHash);
+  };
+  restoreAndReplay();
+
+  _mochiContext->DestroyScene(_scene);
+  _scene = _mochiContext->CreateScene("MochiPhysicsTest");
+  CreateAdaptiveActorScene();
+  SetMaxLinearSolverIterations(kDefaultLinearSolverMaxIter);
+  restoreAndReplay();
 }
 
 } // namespace mochi::test::actor_preconditioner_policy

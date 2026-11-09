@@ -17,6 +17,7 @@
 #include "mochi_soft_init.h"
 
 #include "mochi_actor_convergence.h"
+#include "mochi_actor_preconditioner_policy.h"
 #include "mochi_common_components.h"
 #include "mochi_contact.h"
 #include "mochi_contact_filter.h"
@@ -331,6 +332,9 @@ void mochi::InitSoftActor(
 
   // Non-linear solver convergence weights (lazily initialized).
   reg.emplace<CActorConvergenceWeights>(e);
+
+  // Copy of the island's adaptive preconditioner selection (written by the island solve).
+  reg.emplace<CActorPreconditionerPolicyCopy>(e);
 
   // Volume discretization
   auto& femVolDisc = reg.emplace<CFemVolumeDiscretizationP1Q1>(e);

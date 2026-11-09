@@ -26,6 +26,7 @@
 #include <mochi_core/utils/graph.h>
 #include <mochi_physics/mochi_physics.h>
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -190,6 +191,12 @@ void PreStep(entt::registry& reg, bool updateSleepState);
     entt::registry const& reg,
     entt::entity island,
     CIslandDescendants const& descendants);
+
+// Order-independent hash of the island's actors other than compounds. Unlike a hash of all of them,
+// it is the same in a replay after restoring captured state: compounds only group other island
+// actors, and an automatic compound gets a new entity whenever it is rebuilt, which restoring
+// doesn't undo.
+[[nodiscard]] uint64_t HashNonCompoundActors(CIslandDescendants const& descendants);
 
 // Debugging feature exposed to the public API as Scene::GetForceSingleIsland.
 bool GetForceSingleIsland(entt::registry const& reg);

@@ -17,7 +17,6 @@
 #include "mochi_island.h"
 
 #include "mochi_actor_preconditioner_policy.h"
-#include "mochi_capture.h"
 #include "mochi_common_components.h"
 #include "mochi_contact.h"
 #include "mochi_contact_filter.h"
@@ -31,6 +30,7 @@
 
 #include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/dynamic_array.h>
+#include <mochi_core/utils/hash_utils.h>
 
 #include <algorithm>
 #include <functional>
@@ -69,17 +69,6 @@ struct CGlobalIsland {
 } // namespace
 
 namespace mochi::island {
-static void ResetActorPreconditionerPolicy(
-    ecs::OptionalCtxGlobal<TagAssemblyPreserveHistory const> preserveHistory,
-    CIslandActorPreconditionerPolicy& policy) {
-  // The restore that ends a solve-free assembly only undoes that assembly, so the selection
-  // carries on.
-  if (!preserveHistory) {
-    // TODO: Make adaptive selection replay-exact so that AdaptivePerActor can become the default.
-    policy.Reset();
-  }
-}
-
 void InitializeOnce(entt::registry& reg) {
   // ECS Component Types:
   ecs::RegisterComponent<CGlobalIsland>(reg);
@@ -103,9 +92,6 @@ void InitializeOnce(entt::registry& reg) {
   // Reserve memory for a modest number of islands up front
   data.islands.reserve(64);
   data.actorPartitions.reserve(64);
-
-  // Island state is not captured, so reset adaptive preconditioner selection after a restore.
-  capture::RegisterPostRestoreSystem(&ResetActorPreconditionerPolicy, reg);
 }
 
 [[nodiscard]] bool ShouldRunSingleThreaded(
@@ -156,6 +142,11 @@ void InitializeOnce(entt::registry& reg) {
     }
   }
   return true;
+}
+
+uint64_t HashNonCompoundActors(CIslandDescendants const& descendants) {
+  // The actors include the compounds, so subtracting the compounds' hash leaves the others'.
+  return HashUnordered(descendants.actors) - HashUnordered(descendants.compoundActors);
 }
 
 } // namespace mochi::island
@@ -681,8 +672,6 @@ void island::PreStep(entt::registry& reg, bool updateSleepState) {
     SortIslandMembers(members);
     // Update CIslandDescendants
     UpdateIslandDescendants(reg, members, descendants);
-    // Reset the adaptive preconditioner policy.
-    reg.get<CIslandActorPreconditionerPolicy>(island).Reset();
     // Reset the island preconditioner.
     reg.get<CIslandPreconditioner>(island).Reset();
   }
