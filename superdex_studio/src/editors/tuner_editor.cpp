@@ -292,7 +292,7 @@ ImU32 CardColor(ImVec4 const& accent, bool enabled, bool selected = false, bool 
 
 ImVec4 LoadAccent(tuner::LoadType type) {
   auto const& c = kLoadColors[static_cast<size_t>(type)];
-  return ImVec4(c.x, c.y, c.z, 1.0f);
+  return {c.x, c.y, c.z, 1.0f};
 }
 
 // A pose path span's color, on the waypoint timeline and the viewport path. On is the load color.
@@ -301,9 +301,9 @@ ImVec4 DriveModeColor(tuner::PathDriveMode mode) {
     case tuner::PathDriveMode::On:
       break;
     case tuner::PathDriveMode::PositionOnly:
-      return ImVec4(0.95f, 0.75f, 0.25f, 1.0f);
+      return {0.95f, 0.75f, 0.25f, 1.0f};
     case tuner::PathDriveMode::Off:
-      return ImVec4(0.5f, 0.5f, 0.55f, 1.0f);
+      return {0.5f, 0.5f, 0.55f, 1.0f};
   }
   return LoadAccent(tuner::LoadType::PosePath);
 }
