@@ -10441,6 +10441,10 @@ class Actor:
         Args:
             layer (str): Contact layer name to set.
 
+        Note:
+            Has no effect on articulated links without a shape, which have no contact
+            layer.
+
         See Also:
             :meth:`~superdex.physics.Actor.get_contact_layer`,
             :meth:`~superdex.physics.Scene.enable_layer_contact_asymmetric`,

@@ -789,13 +789,13 @@ class ActorInterfaceImpl : public ActorInterface {
   }
 
   void SetContactLayer(std::string_view const& layer) override {
-    auto& comp = reg.get<CContactLayer>(e);
-    if (comp.name == layer) {
-      return; // No change
+    auto* comp = reg.try_get<CContactLayer>(e);
+    if (!comp || comp->name == layer) {
+      return; // No contact layer (e.g. links without a shape), or no change
     }
     auto& table = reg.ctx<CContactFilterTable>();
-    comp.id = GetOrAddContactLayerId(table, layer);
-    comp.name = std::string(layer);
+    comp->id = GetOrAddContactLayerId(table, layer);
+    comp->name = layer;
     WakeUp();
   }
 

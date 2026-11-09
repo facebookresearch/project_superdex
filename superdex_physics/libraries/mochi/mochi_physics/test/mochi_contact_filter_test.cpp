@@ -178,6 +178,17 @@ TEST_F(MochiContactFilter, EnumerateContactLayerNames) {
   MOCHI_DEFER(_scene->DestroyActor(actorA2));
   MOCHI_DEFER(_scene->DestroyActor(actorB));
   MOCHI_DEFER(_scene->DestroyActor(actorC));
+
+  // A link without a shape has no contact layer, so setting one is ignored and adds no name
+  ArticulatedActorParams articulatedParams;
+  articulatedParams.joints.push_back({.type = ArticulatedJointType::Free});
+  articulatedParams.links.push_back({.parentLink = -1});
+  auto* articulated = _scene->CreateArticulatedActor(articulatedParams, test::ExpectOK{});
+  MOCHI_DEFER(_scene->DestroyActor(articulated));
+  auto* shapelessLink = _scene->GetActor(articulated->GetNestedLinkActors(test::ExpectOK{})[0]);
+  shapelessLink->SetContactLayer("D");
+  EXPECT_EQ("", shapelessLink->GetContactLayer());
+
   names.clear();
   _scene->EnumerateContactLayerNames([&](auto name) { names.emplace_back(name); });
   std::ranges::sort(names);

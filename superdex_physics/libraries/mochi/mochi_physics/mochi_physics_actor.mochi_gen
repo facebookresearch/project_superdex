@@ -541,6 +541,8 @@ class Actor [no_init, no_destruct, use_scene] {
   //
   // @param[in] layer Contact layer name to set.
   //
+  // @note Has no effect on articulated links without a shape, which have no contact layer.
+  //
   // @see GetContactLayer, Scene::EnableLayerContactAsymmetric, Scene::EnableLayerContactSymmetric
   fn SetContactLayer(StringView const& layer) -> void [pure, virtual];
 

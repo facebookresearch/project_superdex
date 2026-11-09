@@ -5445,6 +5445,8 @@
 ///
 /// @param[in] layer Contact layer name to set.
 ///
+/// @note Has no effect on articulated links without a shape, which have no contact layer.
+///
 /// @see @ref mochi::Actor::GetContactLayer "GetContactLayer", @ref mochi::Scene::EnableLayerContactAsymmetric "Scene::EnableLayerContactAsymmetric", @ref mochi::Scene::EnableLayerContactSymmetric "Scene::EnableLayerContactSymmetric"
 ///
 

@@ -320,7 +320,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsActor([[maybe_unused]] nb::module_& m
     )
     .def("set_contact_layer", &mochi::Actor::SetContactLayer
       , nb::arg("layer")
-      , "Set the name of the contact layer of the actor.\n\nArgs:\n    layer (str): Contact layer name to set.\n\nSee Also:\n    :meth:`~superdex.physics.Actor.get_contact_layer`,\n    :meth:`~superdex.physics.Scene.enable_layer_contact_asymmetric`,\n    :meth:`~superdex.physics.Scene.enable_layer_contact_symmetric`"
+      , "Set the name of the contact layer of the actor.\n\nArgs:\n    layer (str): Contact layer name to set.\n\nNote:\n    Has no effect on articulated links without a shape, which have no contact\n    layer.\n\nSee Also:\n    :meth:`~superdex.physics.Actor.get_contact_layer`,\n    :meth:`~superdex.physics.Scene.enable_layer_contact_asymmetric`,\n    :meth:`~superdex.physics.Scene.enable_layer_contact_symmetric`"
     )
     .def("get_num_dofs", &mochi::Actor::GetNumDofs
       , "Get the number of degrees of freedom (DoFs) of the actor.\n\nReturns:\n    Number of degrees of freedom of the actor.\n\nNote:\n    Returns zero for actors without degrees of freedom (e.g., static actors)."
