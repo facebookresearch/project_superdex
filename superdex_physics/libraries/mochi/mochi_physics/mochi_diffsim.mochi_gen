@@ -79,12 +79,13 @@ struct diffsim::BackPropagationSceneStats [no_reflection] {
 // @details For accuracy reasons, differentiability is only recommended in double precision.
 // Differentiability is only supported for rigid and articulated actors without boundary
 // conditions, and requires @ref SolverParams::integrationMethod to be
-// @ref IntegrationMethod::BackwardEuler. It adds internal data to support the invocation of the
-// function @ref BackPropagate. It also calls @ref experimental::ApplyImprovedConvergenceSettings,
-// and it logs warnings when overriding non-default scene or actor settings selected by the user.
-// Consider changing those settings to retain the same simulation behavior if the scene is used
-// elsewhere. For more accurate gradients, use @ref ContactParams::frictionWithColliderNormal true
-// (the default); @ref BackPropagate warns otherwise.
+// @ref IntegrationMethod::BackwardEuler and @ref ExperimentalEvalParams::elastoPlasticFriction to
+// be false. It adds internal data to support the invocation of the function @ref BackPropagate.
+// It also calls @ref experimental::ApplyImprovedConvergenceSettings, and it logs warnings when
+// overriding non-default scene or actor settings selected by the user. Consider changing those
+// settings to retain the same simulation behavior if the scene is used elsewhere. For more
+// accurate gradients, use @ref ContactParams::frictionWithColliderNormal true (the default);
+// @ref BackPropagate warns otherwise.
 //
 // @param[in] scene The scene to make differentiable.
 fn diffsim::MakeSceneDifferentiable(Scene* scene) -> void [mochi_error];

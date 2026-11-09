@@ -36,7 +36,8 @@ static ContactEvalConfig InitializeContactForceAdjointEvalConfig(
       .implicitNormalForceForDissipation =
           simParams.experimentalEval.implicitNormalForceForDissipation,
       .useFittedHessian = false,
-      .frictionModel = simParams.experimentalEval.frictionModel};
+      .frictionModel = simParams.experimentalEval.frictionModel,
+      .elastoPlasticFriction = simParams.experimentalEval.elastoPlasticFriction};
 }
 
 static ContactEvalConfig RefineContactForceAdjointEvalConfig(

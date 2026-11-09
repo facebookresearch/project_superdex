@@ -313,4 +313,9 @@ struct TimeIntegratorState {
   return method;
 }
 
+// True if the step of `method` ends at its last stage (see GetMethodEndingAtLastStage).
+[[nodiscard]] constexpr bool EndsAtLastStage(IntegrationMethod method) {
+  return GetMethodEndingAtLastStage(method) == method;
+}
+
 } // namespace mochi

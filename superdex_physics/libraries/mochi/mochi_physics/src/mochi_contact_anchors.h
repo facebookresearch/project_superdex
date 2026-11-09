@@ -32,6 +32,13 @@ namespace mochi {
 // Registry access of the friction anchor systems: whether a collider is rigid.
 using FrictionAnchorReg = ecs::PartialRegistry<TagRigidActor const, TagStaticActor const>;
 
+// Whether contacts with the collider keep friction anchors, and so can use elasto-plastic friction:
+// only rigid colliders, static or dynamic, whose local frame follows the material. All async
+// colliders are static, so it only varies for sync contact.
+[[nodiscard]] inline bool HasFrictionAnchors(FrictionAnchorReg reg, entt::entity collider) {
+  return reg.any_of<TagRigidActor, TagStaticActor>(collider);
+}
+
 // Friction anchor of a colliding contact sample on a rigid collider: a material point of the
 // collider.
 struct FrictionAnchor {
@@ -58,17 +65,18 @@ static_assert(
  * @brief Friction anchors of a colliding actor, grouped by colliding contact sample: the anchors of
  * each sample are contiguous. CFrictionAnchorIndex locates the group of each sample.
  *
- * @details An anchor is a point in the collider's local space. Anchors apply only to rigid
- * colliders, static or dynamic, so a sample has at most one anchor per collider. Each collision
- * detection pass at TimeStep::Current sets ContactDetectionResult::anchorOffset to the stage-start
- * position of each contact relative to its anchor, or zero without one. The anchors stay fixed
- * during the stages of a step: UpdateFrictionAnchors rebuilds them once, after the last stage,
- * from the nonzero offsets and the contact positions.
+ * @details An anchor is a point in the collider's local space. Anchors apply only to colliders
+ * with friction anchors (see HasFrictionAnchors), which are rigid, so a sample has at most one
+ * anchor per collider. Each collision detection pass at TimeStep::Current sets
+ * ContactDetectionResult::anchorOffset to the stage-start position of each contact relative to its
+ * anchor, or zero without one. The anchors stay fixed during the stages of a step. After the last
+ * stage, AdvanceFrictionAnchorOffsets advances the offsets to the end of the step, and
+ * UpdateFrictionAnchors rebuilds the anchors from the nonzero ones.
  *
- * @note Anchors are points rather than offsets, and are committed only at the end of a step, the
- * only state of the trajectory within it: the stage-start positions of multi-step and multi-stage
- * integrators are not the ends of the previous step or stage, so an offset from one of them does
- * not locate the anchor in the next one.
+ * @note Anchors are points rather than offsets so that every stage measures the slip from the same
+ * anchor, whatever its stage-start position: the stage start of multi-step and multi-stage
+ * integrators is not the end of the previous step or stage. The end of the step must be the end of
+ * its last stage (see EndsAtLastStage).
  *
  * @note Only the anchors are captured; the index is derived from them after a restore.
  * @note The collider includes the entity version: anchors on a destroyed collider never match a
@@ -101,8 +109,8 @@ struct CFrictionAnchorIndex : private DynamicArray<int>, public NoCopy {
   using DynamicArray<int>::size;
 };
 
-// Sets the anchor offsets of the contacts with rigid colliders to their stage-start positions
-// relative to their anchors; contacts without an anchor get zero.
+// Sets the anchor offsets of the contacts that use elasto-plastic friction to their stage-start
+// positions relative to their anchors; contacts without an anchor get zero.
 void FillFrictionAnchorOffsets(
     FrictionAnchorReg const& reg,
     CFrictionAnchorIndex const& index,
@@ -121,8 +129,9 @@ void FillFrictionAnchorOffsets(
 }
 
 // Rebuilds the anchors of a colliding actor and their index from the nonzero anchor offsets of its
-// contacts with rigid colliders, at their positions at the end of the step, after the last stage.
-// A diverged last stage keeps the previous anchors. Reuses the capacity of the anchors.
+// contacts that use elasto-plastic friction, at their positions at the end of the step, after
+// AdvanceFrictionAnchorOffsets. A diverged last stage keeps the previous anchors. Reuses the
+// capacity of the anchors.
 void UpdateFrictionAnchors(
     FrictionAnchorReg reg,
     CConvergenceStatus const* convergence,

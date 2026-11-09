@@ -594,6 +594,19 @@ void SceneImpl::SetSolverParams(SolverParams const& params, Error& error) {
           _registry.try_ctx<TagDifferentiableScene>(),
       error,
       "implicitNormalForceForDissipation = true is not supported in differentiable scenes.");
+  MOCHI_ERROR_IF(
+      params.experimentalEval.elastoPlasticFriction && _registry.try_ctx<TagDifferentiableScene>(),
+      error,
+      "elastoPlasticFriction = true is not supported in differentiable scenes.");
+  MOCHI_ERROR_IF(
+      params.experimentalEval.elastoPlasticFriction &&
+          params.experimentalEval.frictionModel != CoulombFrictionModel::C1Regularized,
+      error,
+      "elastoPlasticFriction = true requires frictionModel = C1Regularized.");
+  MOCHI_ERROR_IF(
+      params.experimentalEval.elastoPlasticFriction && !EndsAtLastStage(params.integrationMethod),
+      error,
+      "elastoPlasticFriction = true requires an integrationMethod whose step ends at its last stage (BackwardEuler, BDF2, BDF3, DIRK22 or DIRK33).");
   MOCHI_ERROR_RETURN(error);
 
   // After validation, since NaN can compare equal under MSVC /fp:fast.
@@ -3587,6 +3600,12 @@ void MakeSceneDifferentiableInternal(Scene* scene, Error& error) {
       sceneImpl->GetSolverParams().integrationMethod != IntegrationMethod::BackwardEuler,
       error,
       "Differentiable scenes require SolverParams.integrationMethod to be backward Euler.");
+  // Before ApplyImprovedConvergenceSettings, which sets the solver params before the scene is
+  // tagged differentiable, so SetSolverParams does not reject it yet.
+  MOCHI_ERROR_IF(
+      sceneImpl->GetSolverParams().experimentalEval.elastoPlasticFriction,
+      error,
+      "Differentiable scenes do not support SolverParams.experimentalEval.elastoPlasticFriction.");
   MOCHI_ERROR_RETURN(error);
 
   // Check all actors are differentiable.

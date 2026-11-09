@@ -89,6 +89,10 @@ void mochi::ComputeCollisionResponseRange(
       !config.validCollidingNormals ||
           contactQuery.sdfInfo.size() == contactQuery.normalColliding.size(),
       "Valid colliding normals require normalColliding");
+  MOCHI_ASSERT_VERBOSE(
+      !config.elastoPlasticFriction ||
+          contactQuery.anchorOffset.size() == contactQuery.sampleIndices.size(),
+      "Elasto-plastic friction requires anchor offsets");
 
   // Compute the contact response of all contact samples, in batches to improve performance.
   for (int s = pointRange.Min(); s <= pointRange.Max(); s += kCollResponseBatchSize) {
@@ -112,9 +116,8 @@ void mochi::ComputeCollisionResponseRange(
                                        : Span<Real3 const>{},                                      \
           MakeConstSpan(contactQuery.posColliding).subspan(s, N),                                  \
           MakeConstSpan(contactQuery.posCollidingStageStart).subspan(s, N),                        \
-          contactQuery.anchorOffset.empty()                                                        \
-              ? Span<Real3 const>{}                                                                \
-              : MakeConstSpan(contactQuery.anchorOffset).subspan(s, N),                            \
+          config.elastoPlasticFriction ? MakeConstSpan(contactQuery.anchorOffset).subspan(s, N)    \
+                                       : Span<Real3 const>{},                                      \
           params,                                                                                  \
           config,                                                                                  \
           dtStage,                                                                                 \
@@ -158,6 +161,58 @@ void mochi::ComputeCollisionResponseRange(
 MOCHI_SPECIALIZE_COMPUTE_COLLISION_RESPONSE_RANGE(GradTarget::Current);
 MOCHI_SPECIALIZE_COMPUTE_COLLISION_RESPONSE_RANGE(GradTarget::Previous);
 #undef MOCHI_SPECIALIZE_COMPUTE_COLLISION_RESPONSE_RANGE
+
+void mochi::AdvanceAnchorOffsets(
+    ContactDetectionResult& contactQuery,
+    ContactParams const& params,
+    ContactEvalConfig const& config) {
+  MOCHI_PROFILE_SCOPE();
+  auto& offsets = contactQuery.anchorOffset;
+  int const numContacts = isize(contactQuery.sampleIndices);
+  MOCHI_ASSERT_VERBOSE(
+      config.elastoPlasticFriction && isize(offsets) == numContacts,
+      "Anchors advance only with elasto-plastic friction, which requires anchor offsets.");
+  MOCHI_ASSERT_VERBOSE(
+      !config.explicitNormals || isize(contactQuery.sdfInfoStageStart.grad) == numContacts,
+      "Explicit normals require stage-start SDF info.");
+  MOCHI_ASSERT_VERBOSE(
+      !config.validCollidingNormals || isize(contactQuery.normalColliding) == numContacts,
+      "Valid colliding normals require normalColliding.");
+
+  for (int s = 0; s < numContacts; s += kCollResponseBatchSize) {
+    int const numPoints = Min(numContacts - s, kCollResponseBatchSize);
+#define MOCHI_BATCH_CASE(N)                                                                        \
+  case N:                                                                                          \
+    if constexpr ((N) <= kCollResponseBatchSize) {                                                 \
+      ComputeBatchAnchorOffsets<N>(                                                                \
+          MakeSpan(offsets).subspan(s, N),                                                         \
+          MakeConstSpan(contactQuery.sdfInfo.val).subspan(s, N),                                   \
+          MakeConstSpan(contactQuery.sdfInfo.grad).subspan(s, N),                                  \
+          config.explicitNormals                                                                   \
+              ? MakeConstSpan(contactQuery.sdfInfoStageStart.grad).subspan(s, N)                   \
+              : Span<Real3 const>{},                                                               \
+          config.validCollidingNormals ? MakeConstSpan(contactQuery.normalColliding).subspan(s, N) \
+                                       : Span<Real3 const>{},                                      \
+          MakeConstSpan(contactQuery.posColliding).subspan(s, N),                                  \
+          MakeConstSpan(contactQuery.posCollidingStageStart).subspan(s, N),                        \
+          params,                                                                                  \
+          config,                                                                                  \
+          contactQuery.isSdfGradUnitary,                                                           \
+          contactQuery.isNormalCollidingUnitary);                                                  \
+    }                                                                                              \
+    break;
+    // clang-format off
+    switch (numPoints) {
+      MOCHI_BATCH_CASE(1) MOCHI_BATCH_CASE(2) MOCHI_BATCH_CASE(3) MOCHI_BATCH_CASE(4)
+      MOCHI_BATCH_CASE(5) MOCHI_BATCH_CASE(6) MOCHI_BATCH_CASE(7) MOCHI_BATCH_CASE(8)
+      default:
+        static_assert(kCollResponseMaxBatchSize == 8, "Please update this switch statement");
+        MOCHI_ASSERT(false, "Unsupported batch size (%d).", numPoints);
+    }
+    // clang-format on
+#undef MOCHI_BATCH_CASE
+  }
+}
 
 namespace {
 
@@ -239,6 +294,10 @@ MOCHI_FORCE_INLINE void ComputeBatchSumsPrologue(
     BatchReal<kBatchSize>& outW,
     BatchReal3<kBatchSize>& outLeverArms) {
   using V = BatchReal<kBatchSize>;
+  MOCHI_ASSERT_VERBOSE(
+      !config.elastoPlasticFriction ||
+          contactQuery.anchorOffset.size() == contactQuery.sampleIndices.size(),
+      "Elasto-plastic friction requires anchor offsets.");
   ComputeBatchCollisionResponse<kBatchSize, kGradTarget>(
       outResponse,
       MakeConstSpan(contactQuery.sdfInfo.val).subspan(first, kBatchSize),
@@ -254,9 +313,9 @@ MOCHI_FORCE_INLINE void ComputeBatchSumsPrologue(
           : Span<Real3 const>{},
       MakeConstSpan(contactQuery.posColliding).subspan(first, kBatchSize),
       MakeConstSpan(contactQuery.posCollidingStageStart).subspan(first, kBatchSize),
-      contactQuery.anchorOffset.empty()
-          ? Span<Real3 const>{}
-          : MakeConstSpan(contactQuery.anchorOffset).subspan(first, kBatchSize),
+      config.elastoPlasticFriction
+          ? MakeConstSpan(contactQuery.anchorOffset).subspan(first, kBatchSize)
+          : Span<Real3 const>{},
       params,
       config,
       dtStage,

@@ -134,6 +134,8 @@ struct ExperimentalEvalParams {
    *
    * @details C1Regularized (default) preserves existing behavior exactly. CinfRegularized is an
    * additional model that can be selected at runtime without affecting C1Regularized users.
+   *
+   * @note @ref elastoPlasticFriction requires C1Regularized.
    */
   CoulombFrictionModel frictionModel = CoulombFrictionModel::Default;
 
@@ -144,6 +146,14 @@ struct ExperimentalEvalParams {
    * and slides once the tangential displacement exceeds @ref ContactParams::preslidingDisplacement.
    * Regular Coulomb friction, in contrast, needs slip to act.
    *
+   * @note Applies only to contacts with rigid colliders, static or dynamic, including articulated
+   * links. Contacts with deformable colliders (soft actors with an Sdf collider, and point cloud
+   * colliders) keep the velocity-regularized Coulomb friction.
+   * @note Requires @ref frictionModel = C1Regularized, whose compact support saturates friction at
+   * the presliding displacement.
+   * @note Requires a time integration method (@ref IntegrationMethod) whose step ends at its last
+   * stage: BackwardEuler, BDF2, BDF3, DIRK22 or DIRK33.
+   * @note Not supported in differentiable scenes.
    * @note Changing this setting changes the content of the scene state, so states captured before
    * the change cannot be restored after it.
    */

@@ -103,8 +103,9 @@ def make_scene_differentiable(scene: mochi_physics.Scene) -> None:
     Differentiability is only supported for rigid and articulated actors without
     boundary conditions, and requires
     :attr:`~superdex.physics.SolverParams.integration_method` to be
-    :class:`BACKWARD_EULER <superdex.physics.IntegrationMethod>`. It adds internal
-    data to support the invocation of the function
+    :class:`BACKWARD_EULER <superdex.physics.IntegrationMethod>` and
+    :attr:`~superdex.physics.ExperimentalEvalParams.elasto_plastic_friction` to be
+    false. It adds internal data to support the invocation of the function
     :func:`~superdex.physics.diffsim.back_propagate`. It also calls
     :func:`~superdex.physics.experimental.apply_improved_convergence_settings`, and
     it logs warnings when overriding non-default scene or actor settings selected by

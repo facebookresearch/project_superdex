@@ -1030,11 +1030,19 @@ static void PostLastStageLocalPipeline(entt::registry& reg, CIslandDescendants c
   // Used for soft actors (both FOMs and ROMs).
   ecs::InvokeForEach(&soft::UpdateRigidTransformEval, reg, descendants.softActors);
 
-  // Friction anchors are rebuilt once per step, from the contact results of the last stage. The
-  // stages before it only evaluate forces at intermediate configurations, which are not states of
-  // the trajectory. The PostLastStage systems above do not use the contact results, which
-  // FarSdfCollisionDetection overwrites.
-  ecs::InvokeForEach(&UpdateFrictionAnchors, reg, descendants.actors);
+  // Friction anchors advance once per step, from the contact results of the last stage, which is
+  // the end of the step (EndsAtLastStage). The stages before it only evaluate forces at
+  // intermediate configurations, which are not states of the trajectory. The PostLastStage systems
+  // above do not use the contact results, which FarSdfCollisionDetection overwrites.
+  // TODO: Support integrators whose step does not end at their last stage (DIRK23,
+  // SymplecticDIRK12/22), which SetSolverParams rejects with elasto-plastic friction. Their step
+  // ends at the bTilde combination of the stages, so the anchors would need a collision detection
+  // pass at the step-end state here (after updating the state it depends on), followed by
+  // FillFrictionAnchorOffsets, before advancing them.
+  if (reg.ctx<CSimulationParams const>().experimentalEval.elastoPlasticFriction) {
+    ecs::InvokeForEach(&AdvanceFrictionAnchorOffsets, reg, descendants.actors);
+    ecs::InvokeForEach(&UpdateFrictionAnchors, reg, descendants.actors);
+  }
 
   // Perform a final collision detection pass with far SDF evaluation
   // States of objects haven't changed since last collision detection evaluation, so we

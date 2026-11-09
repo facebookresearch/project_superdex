@@ -3995,23 +3995,35 @@ struct ContactAssemblyPair {
 
 } // namespace
 
-static ContactEvalConfig MakeContactEvalConfig(
-    CSimulationParams const& simParams,
-    entt::registry const& reg,
+ContactEvalConfig mochi::MakeContactEvalConfigAsync(
+    ExperimentalEvalParams const& experimentalEval,
+    ContactAssemblyReg reg,
     entt::entity colliding,
-    CColliderInfo const& collidingInfo,
     bool psdDRes,
     bool useFittedHessian) {
   return ContactEvalConfig{
       .psdDRes = psdDRes,
-      .addPadding = ShouldAddPenaltyPadding(collidingInfo.type),
+      .addPadding = ShouldAddPenaltyPadding(reg.get<CColliderInfo const>(colliding).type),
       .validCollidingNormals = ValidCollidingNormals(reg, colliding),
-      .explicitNormals = simParams.experimentalEval.explicitNormals,
-      .fadeFriction = simParams.experimentalEval.fadeFriction,
-      .implicitNormalForceForDissipation =
-          simParams.experimentalEval.implicitNormalForceForDissipation,
+      .explicitNormals = experimentalEval.explicitNormals,
+      .fadeFriction = experimentalEval.fadeFriction,
+      .implicitNormalForceForDissipation = experimentalEval.implicitNormalForceForDissipation,
       .useFittedHessian = useFittedHessian,
-      .frictionModel = simParams.experimentalEval.frictionModel};
+      .frictionModel = experimentalEval.frictionModel,
+      .elastoPlasticFriction = experimentalEval.elastoPlasticFriction};
+}
+
+static ContactEvalConfig MakeContactEvalConfigPair(
+    ExperimentalEvalParams const& experimentalEval,
+    ContactAssemblyReg reg,
+    entt::entity colliding,
+    entt::entity collider,
+    bool psdDRes,
+    bool useFittedHessian) {
+  ContactEvalConfig config =
+      MakeContactEvalConfigAsync(experimentalEval, reg, colliding, psdDRes, useFittedHessian);
+  config.elastoPlasticFriction = config.elastoPlasticFriction && HasFrictionAnchors(reg, collider);
+  return config;
 }
 
 template <GradTarget kGradTarget>
@@ -4245,13 +4257,8 @@ static void AssembleContactPairRanges(
       real const dtStage = reg.get<CTimeIntegratorState const>(entity0).dtStage;
       auto const& samples = reg.get<CContactSamples<TimeStep::Current> const>(entity0);
 
-      ContactEvalConfig const configPair = MakeContactEvalConfig(
-          simParams,
-          reg,
-          entity0,
-          reg.get<CColliderInfo const>(entity0),
-          psdDRes,
-          useFittedHessian);
+      ContactEvalConfig const configPair = MakeContactEvalConfigPair(
+          simParams.experimentalEval, reg, entity0, entity1, psdDRes, useFittedHessian);
 
       // Compute collision response and assemble it
       auto const& query = pair.collision->collisionResult;
@@ -4712,7 +4719,6 @@ void mochi::AssembleAsyncSkinnedContact(
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current>& activeCollisions,
     CIslandMemberInfo const& islandMember,
     CTimeIntegratorState const& intState,
-    CColliderInfo const& colliderInfo,
     CCollJacs<CollRole::Colliding> const& collJacs,
     CLinearContactSkinElementMap const* linearElementMap,
     CSkinnedContactSnle& outContactSnle,
@@ -4759,17 +4765,16 @@ void mochi::AssembleAsyncSkinnedContact(
   MOCHI_FILO_STACK_ALLOCATOR(filoAllocator, 64 * 1024);
   // Collisions without solver DoFs are evaluated only for contact-query forces.
   CollisionResponseResult forceOnlyResponse(&filoAllocator);
+  ContactEvalConfig forceOnlyConfig;
   if (needForces && hasContactWithoutDofs) {
     forceOnlyResponse.Reserve(activeCollisions, false, true, false);
+    forceOnlyConfig = MakeContactEvalConfigAsync(
+        simParams->experimentalEval,
+        reg,
+        e,
+        params.psdDRes,
+        params.fittedSaturationHessian.contactFriction);
   }
-  ContactEvalConfig const forceOnlyConfig = MakeContactEvalConfig(
-      simParams.value,
-      reg,
-      e,
-      colliderInfo,
-      params.psdDRes,
-      params.fittedSaturationHessian.contactFriction);
-
   // FILO-backed arrays must reserve their full capacities before they begin filling. The number of
   // contact Jacobians is an upper bound on the active ones.
   bool const needsJacs = params.assemRes || params.assemDRes;
@@ -4979,6 +4984,31 @@ struct CTempPotentialColliderData {
   DynamicArray<std::pair<real, int>> dynamicSweepOrder; // (lower bound, index in dynamicBounds)
 };
 } // namespace
+
+void mochi::AdvanceFrictionAnchorOffsets(
+    ContactAssemblyReg reg,
+    entt::entity e,
+    ecs::CtxGlobal<CSimulationParams const> simParams,
+    CConvergenceStatus const* convergence,
+    CActiveCollisions</*kIsSync*/ false, TimeStep::Current>& asyncCollisions,
+    CActiveCollisions</*kIsSync*/ true, TimeStep::Current>& syncCollisions) {
+  if (convergence && convergence->stageStatus == ConvergenceStatus::Diverged) {
+    return;
+  }
+  ContactEvalConfig const config = MakeContactEvalConfigAsync(
+      simParams->experimentalEval, reg, e, /*psdDRes*/ false, /*useFittedHessian*/ false);
+  std::array<Span<ActiveCollision>, 2> const allCollisions{
+      MakeSpan(asyncCollisions), MakeSpan(syncCollisions)};
+  for (auto const collisions : allCollisions) {
+    for (auto& collision : collisions) {
+      entt::entity const collider = collision.colliderEntity;
+      if (!collision.collisionResult.Empty() && HasFrictionAnchors(reg, collider)) {
+        AdvanceAnchorOffsets(
+            collision.collisionResult, GetContactPairParams(reg, e, collider), config);
+      }
+    }
+  }
+}
 
 namespace mochi::contact {
 void EnableFrictionAnchorComponents(entt::registry& reg, bool enable) {
@@ -5447,6 +5477,8 @@ void mochi::CollisionDetectionPipeline(entt::registry& reg, CIslandDescendants c
   ////////////////////////////////////////////////////////////////////////////////
   [[maybe_unused]] bool const explicitNormals =
       reg.ctx<CSimulationParams const>().experimentalEval.explicitNormals;
+  [[maybe_unused]] bool const elastoPlasticFriction =
+      reg.ctx<CSimulationParams const>().experimentalEval.elastoPlasticFriction;
 
   auto asyncCollisionAndResponse = [&](entt::entity e) {
     MOCHI_PROFILE_SCOPE_N("asyncCollisionAndResponse");
@@ -5457,7 +5489,9 @@ void mochi::CollisionDetectionPipeline(entt::registry& reg, CIslandDescendants c
             AddStageStartCollisionDetection</*kIsSync*/ false>, reg, e);
       }
       SetupActiveCollisionNormals</*kIsSync*/ false>(reg, e);
-      ecs::TryInvokeOnEntity(&FillFrictionAnchorOffsets</*kIsSync*/ false>, reg, e);
+      if (elastoPlasticFriction) {
+        ecs::TryInvokeOnEntity(&FillFrictionAnchorOffsets</*kIsSync*/ false>, reg, e);
+      }
     }
     // Notify other systems (e.g. soft actor assembly) that async collision detection and response
     // has been completed.
@@ -5477,7 +5511,9 @@ void mochi::CollisionDetectionPipeline(entt::registry& reg, CIslandDescendants c
             AddStageStartCollisionDetection</*kIsSync*/ true>, reg, e);
       }
       SetupActiveCollisionNormals</*kIsSync*/ true>(reg, e);
-      ecs::TryInvokeOnEntity(&FillFrictionAnchorOffsets</*kIsSync*/ true>, reg, e);
+      if (elastoPlasticFriction) {
+        ecs::TryInvokeOnEntity(&FillFrictionAnchorOffsets</*kIsSync*/ true>, reg, e);
+      }
     }
   };
 

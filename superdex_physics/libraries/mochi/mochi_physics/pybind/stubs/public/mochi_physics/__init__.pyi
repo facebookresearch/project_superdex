@@ -3964,6 +3964,10 @@ class ExperimentalEvalParams:
     C1Regularized (default) preserves existing behavior exactly. CinfRegularized is
     an additional model that can be selected at runtime without affecting
     C1Regularized users.
+
+    Note:
+        :attr:`~superdex.physics.ExperimentalEvalParams.elasto_plastic_friction`
+        requires C1Regularized.
     """
     elasto_plastic_friction: bool
     """[Experimental] Use elasto-plastic Coulomb friction.
@@ -3972,6 +3976,25 @@ class ExperimentalEvalParams:
     slip, and slides once the tangential displacement exceeds
     :attr:`~superdex.physics.ContactParams.presliding_displacement`. Regular Coulomb
     friction, in contrast, needs slip to act.
+
+    Note:
+        Applies only to contacts with rigid colliders, static or dynamic, including
+        articulated links. Contacts with deformable colliders (soft actors with an
+        Sdf collider, and point cloud colliders) keep the velocity-regularized
+        Coulomb friction.
+
+    Note:
+        Requires :attr:`~superdex.physics.ExperimentalEvalParams.friction_model` =
+        C1Regularized, whose compact support saturates friction at the presliding
+        displacement.
+
+    Note:
+        Requires a time integration method
+        (:class:`~superdex.physics.IntegrationMethod`) whose step ends at its last
+        stage: BackwardEuler, BDF2, BDF3, DIRK22 or DIRK33.
+
+    Note:
+        Not supported in differentiable scenes.
 
     Note:
         Changing this setting changes the content of the scene state, so states

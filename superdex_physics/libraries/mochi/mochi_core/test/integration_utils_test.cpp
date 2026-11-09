@@ -232,3 +232,17 @@ TEST(IntegrationUtils, GetMethodEndingAtLastStage) {
   static_assert(
       GetMethodEndingAtLastStage(IntegrationMethod::SymplecticDIRK22) == IntegrationMethod::DIRK22);
 }
+
+// A method's step ends at its last stage if its 'b' vector is the last row of its 'A' matrix.
+TEST(IntegrationUtils, EndsAtLastStageMatchesTableau) {
+  for (int i = 0; i < static_cast<int>(IntegrationMethod::Count); ++i) {
+    auto const method = static_cast<IntegrationMethod>(i);
+    auto const params = CreateTimeIntegratorParams(method);
+    int const lastStage = params.numStages - 1;
+    bool bIsLastRowOfA = true;
+    for (int j = 0; j < params.numStages; ++j) {
+      bIsLastRowOfA &= NearEqual(params.b(0, j), params.A(lastStage, j));
+    }
+    EXPECT_EQ(bIsLastRowOfA, EndsAtLastStage(method)) << "method " << i;
+  }
+}

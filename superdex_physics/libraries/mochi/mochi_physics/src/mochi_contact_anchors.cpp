@@ -21,14 +21,6 @@
 
 using namespace mochi;
 
-// Anchors apply only to rigid colliders, static or dynamic: deformable ones (mapped SDF or point
-// cloud) have none.
-[[nodiscard]] MOCHI_FORCE_INLINE static bool HasFrictionAnchors(
-    FrictionAnchorReg const& reg,
-    entt::entity collider) {
-  return reg.any_of<TagRigidActor, TagStaticActor>(collider);
-}
-
 // Whether entry i of the index points to an anchor of the sample. Entries of samples without
 // anchors may be stale, so the sample is checked.
 [[nodiscard]] MOCHI_FORCE_INLINE static bool
@@ -103,7 +95,7 @@ void mochi::UpdateFrictionAnchors(
       MakeConstSpan(asyncCollisions), MakeConstSpan(syncCollisions)};
 
   // 1. Append the anchors in visiting order, setting index[s] at the first anchor of each sample.
-  // Sized to the contacts with rigid colliders, which bounds the number of anchors.
+  // Sized to the contacts that use elasto-plastic friction, which bounds the number of anchors.
   int maxAnchors = 0;
   for (auto const collisions : allCollisions) {
     for (auto const& collision : collisions) {
@@ -127,7 +119,7 @@ void mochi::UpdateFrictionAnchors(
           isize(result.anchorOffset) == numContacts && isize(result.posColliding) == numContacts,
           "Collision detection must fill the friction anchor offsets and contact positions.");
       for (int i = 0; i < numContacts; ++i) {
-        // The friction model has set the offsets of contacts that lose their anchor to zero.
+        // Contacts with zero offset lose their anchor.
         Real3 const& offset = result.anchorOffset[i];
         if (offset == Real3{}) {
           continue;

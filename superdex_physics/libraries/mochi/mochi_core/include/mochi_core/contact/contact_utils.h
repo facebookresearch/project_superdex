@@ -466,11 +466,12 @@ struct ContactDetectionResult {
   /**
    * @brief Friction anchor offset for each contact point, in the collider's local space.
    * @note Empty or 1-to-1 with sampleIndices. Set from the colliding actor's stored anchors after
-   * each collision detection pass at TimeStep::Current, only for rigid colliders, to the
-   * stage-start position relative to the anchor; zero for contacts without an anchor.
-   * @note When the anchors are rebuilt after the last stage of a step, a nonzero offset means that
-   * the contact keeps its anchor: the friction model sets the offsets of contacts that lose their
-   * anchor to zero.
+   * each collision detection pass at TimeStep::Current, for the contacts that use elasto-plastic
+   * friction, to the stage-start position relative to the anchor; zero for contacts without an
+   * anchor.
+   * @note After the last stage of a step, @ref AdvanceAnchorOffsets replaces the offsets with the
+   * end-of-step positions relative to the advanced anchors, from which the anchors are rebuilt: a
+   * nonzero offset means that the contact keeps its anchor, at the same point while it sticks.
    */
   DynamicArray<Real3> anchorOffset = {};
 
@@ -757,44 +758,40 @@ MOCHI_FORCE_INLINE void ComputeBatchContactPenaltyForceNormDForceNorm(
   }
 }
 
-template <int kBatchSize, GradTarget kGradTarget>
-MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
-    BatchDouble<kBatchSize>& outEnergy,
-    BatchReal3<kBatchSize>& outForce,
-    BatchDForce<kBatchSize, kGradTarget>& outDForce,
-    BatchReal<kBatchSize> const& fPenalty,
-    BatchReal<kBatchSize> const& dFPenalty,
+/**
+ * @brief Alignment of the normals of a batch of contacts: the dot product of the collider and
+ * colliding normals, or -1 (opposed) if the colliding normals are invalid. Contacts with an
+ * alignment above @ref ContactParams::maxAlignmentNormals have no penalty force.
+ *
+ * @param[in] nCollider Collider normals (SDF gradient, at stage start with explicit normals)
+ * @param[in] nColliding Colliding normals (used only with valid colliding normals)
+ */
+template <int kBatchSize>
+MOCHI_FORCE_INLINE BatchReal<kBatchSize> ComputeBatchNormalAlignment(
+    BatchReal3<kBatchSize> const& nCollider,
+    BatchReal3<kBatchSize> const& nColliding,
+    ContactEvalConfig const& config) {
+  return config.validCollidingNormals ? Dot(nCollider, nColliding) : BatchReal<kBatchSize>{-1_r};
+}
+
+/**
+ * @brief Unit normal of the dissipation terms (friction and normal damping) of a batch of contacts:
+ * the collider normal, i.e. the normalized SDF gradient, or the opposite of the colliding normal.
+ *
+ * @details The colliding normal is used only if requested and valid. A near-zero SDF gradient falls
+ * back to the colliding normal if valid, or to a zero normal otherwise.
+ */
+template <int kBatchSize>
+MOCHI_FORCE_INLINE BatchReal3<kBatchSize> ComputeBatchDissipationNormal(
     BatchReal3<kBatchSize> const& sdfGrad,
     BatchReal3<kBatchSize> const& nColliding,
-    BatchReal3<kBatchSize> const& pRel,
-    BatchReal3<kBatchSize> const& anchorOffset,
     ContactParams const& params,
     ContactEvalConfig const& config,
-    real dtFactor,
-    bool assemEnergy,
-    bool assemForce,
-    bool assemDForce,
     bool isSdfGradUnitary,
     bool isNormalCollidingUnitary) {
-  static_assert(
-      kCollResponseMaxBatchSize == 8,
-      "Please update batched contact functions if the max batch size changes");
-  static_assert(kBatchSize > 0 && kBatchSize <= kCollResponseMaxBatchSize, "Invalid batch size");
-  MOCHI_ASSERT_VERBOSE(
-      params.coulombFrictionCoefficient >= 0_r && params.viscousFrictionCoefficient >= 0_r &&
-          params.normalViscousDampingCoefficient >= 0_r,
-      "Invalid dissipation params.");
-  MOCHI_ASSERT_VERBOSE(
-      !config.elastoPlasticFriction || params.preslidingDisplacement > 0_r,
-      "Invalid friction presliding displacement.");
-
   using V = BatchReal<kBatchSize>;
-  using Vd = BatchDouble<kBatchSize>;
   using V3 = BatchReal3<kBatchSize>;
 
-  // Define the normal for dissipation.
-  // If the colliding normal is invalid, override any request to use the colliding normal. The
-  // colliding normal is normalized unless it's known to be unit.
   V3 normal MOCHI_NO_INIT;
   real constexpr kNormalIsZeroThreshold = 100_r * kDefaultNearEqualEpsilon<real>;
   bool const useColliderNormal = params.frictionWithColliderNormal || !config.validCollidingNormals;
@@ -831,6 +828,61 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
           VNearEqual(Norm(normal), V{1_r}, V{10_r * kDefaultNearEqualEpsilon<real>}) ||
           (Norm(normal) < kNormalIsZeroThreshold)),
       "Friction normal must be unit or zero.");
+  return normal;
+}
+
+/**
+ * @brief Projection of a batch of vectors onto the plane of a batch of unit normals,
+ * v - (v . normal) normal.
+ */
+template <int kBatchSize>
+MOCHI_FORCE_INLINE BatchReal3<kBatchSize> ProjectToTangentPlane(
+    BatchReal3<kBatchSize> const& v,
+    BatchReal3<kBatchSize> const& normal) {
+  return v - Dot(v, normal) * normal;
+}
+
+template <int kBatchSize, GradTarget kGradTarget>
+MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
+    BatchDouble<kBatchSize>& outEnergy,
+    BatchReal3<kBatchSize>& outForce,
+    BatchDForce<kBatchSize, kGradTarget>& outDForce,
+    BatchReal<kBatchSize> const& fPenalty,
+    BatchReal<kBatchSize> const& dFPenalty,
+    BatchReal3<kBatchSize> const& sdfGrad,
+    BatchReal3<kBatchSize> const& nColliding,
+    BatchReal3<kBatchSize> const& pRel,
+    BatchReal3<kBatchSize> const& anchorOffset,
+    ContactParams const& params,
+    ContactEvalConfig const& config,
+    real dtFactor,
+    bool assemEnergy,
+    bool assemForce,
+    bool assemDForce,
+    bool isSdfGradUnitary,
+    bool isNormalCollidingUnitary) {
+  static_assert(
+      kCollResponseMaxBatchSize == 8,
+      "Please update batched contact functions if the max batch size changes");
+  static_assert(kBatchSize > 0 && kBatchSize <= kCollResponseMaxBatchSize, "Invalid batch size");
+  MOCHI_ASSERT_VERBOSE(
+      params.coulombFrictionCoefficient >= 0_r && params.viscousFrictionCoefficient >= 0_r &&
+          params.normalViscousDampingCoefficient >= 0_r,
+      "Invalid dissipation params.");
+  MOCHI_ASSERT_VERBOSE(
+      !config.elastoPlasticFriction || params.preslidingDisplacement > 0_r,
+      "Invalid friction presliding displacement.");
+  MOCHI_ASSERT_VERBOSE(
+      !config.elastoPlasticFriction || config.frictionModel == CoulombFrictionModel::C1Regularized,
+      "Elasto-plastic friction requires C1Regularized friction.");
+
+  using V = BatchReal<kBatchSize>;
+  using Vd = BatchDouble<kBatchSize>;
+  using V3 = BatchReal3<kBatchSize>;
+
+  // Define the normal for dissipation.
+  V3 const normal = ComputeBatchDissipationNormal<kBatchSize>(
+      sdfGrad, nColliding, params, config, isSdfGradUnitary, isNormalCollidingUnitary);
 
   // Project the relative displacement
   V const pRelNScalar = Dot(pRel, normal);
@@ -1235,7 +1287,7 @@ MOCHI_FORCE_INLINE
   // object. That happens when one collider gets embedded within another one. The contact energy
   // would normally trap the collider preventing it from escaping. We prevent that contact energy to
   // allow it to escape.
-  V const alignmentNormals = config.validCollidingNormals ? Dot(nCollider, nColliding) : V{-1_r};
+  V const alignmentNormals = ComputeBatchNormalAlignment<kBatchSize>(nCollider, nColliding, config);
   V const maxAlignment = V{params.maxAlignmentNormals};
   V const alignmentMask = alignmentNormals <= maxAlignment;
   // maxAlignmentNormals == -1 leaves no nonzero fade interval. Use an unfaded factor instead of
@@ -1468,6 +1520,128 @@ void ComputeCollisionResponse(
       assemDForce,
       outResponse);
 }
+
+/**
+ * @brief Advance the elasto-plastic friction anchor offsets of a batch of contact points to the end
+ * of the last stage of a step. See @ref AdvanceAnchorOffsets.
+ *
+ * @details The inputs are those of @ref ComputeBatchCollisionResponse, at the end of the stage. The
+ * friction normal is that of the stage, as in the collision response. All quantities are expressed
+ * in the collider's local space.
+ *
+ * @tparam kBatchSize Number of contact points to process (must be <= @ref
+ * kCollResponseMaxBatchSize)
+ *
+ * @param[in,out] inOutAnchorOffset Anchor offsets of the contact points: at stage start on input,
+ * at the end of the stage on output (zero for contacts that lose their anchor).
+ * @param[in] distance Signed distances at contact points (negative = penetration)
+ * @param[in] distanceGrad Gradient of signed distance at current state
+ * @param[in] distanceGradStageStart Gradient of signed distance at stage start (used only with
+ * explicit normals)
+ * @param[in] normalColliding Surface normals of the colliding body at the contact points (used only
+ * with valid colliding normals)
+ * @param[in] posColliding Current positions of contact points
+ * @param[in] posCollidingStageStart Positions of contact points at stage start
+ * @param[in] params Contact parameters (without Coulomb friction, contacts lose their anchors)
+ * @param[in] config Contact evaluation configuration, with elasto-plastic friction
+ * @param[in] isSdfGradUnitary Whether the SDF gradient is already unit length
+ * @param[in] isNormalCollidingUnitary Whether the colliding normals are already unit length
+ */
+template <int kBatchSize>
+MOCHI_FORCE_INLINE void ComputeBatchAnchorOffsets(
+    Span<Real3> inOutAnchorOffset,
+    Span<real const> distance,
+    Span<Real3 const> distanceGrad,
+    Span<Real3 const> distanceGradStageStart,
+    Span<Real3 const> normalColliding,
+    Span<Real3 const> posColliding,
+    Span<Real3 const> posCollidingStageStart,
+    ContactParams const& params,
+    ContactEvalConfig const& config,
+    bool isSdfGradUnitary,
+    bool isNormalCollidingUnitary) {
+  static_assert(
+      kCollResponseMaxBatchSize == 8,
+      "Please update batched contact functions if the max batch size changes");
+  static_assert(kBatchSize > 0 && kBatchSize <= kCollResponseMaxBatchSize, "Invalid batch size");
+  MOCHI_ASSERT_VERBOSE(
+      inOutAnchorOffset.size() == kBatchSize && distance.size() == kBatchSize &&
+      distanceGrad.size() == kBatchSize && posColliding.size() == kBatchSize &&
+      posCollidingStageStart.size() == kBatchSize);
+  MOCHI_ASSERT_VERBOSE(!config.validCollidingNormals || normalColliding.size() == kBatchSize);
+  MOCHI_ASSERT_VERBOSE(!config.explicitNormals || distanceGradStageStart.size() == kBatchSize);
+  MOCHI_ASSERT_VERBOSE(
+      config.elastoPlasticFriction && params.preslidingDisplacement > 0_r,
+      "Anchors advance only with elasto-plastic friction.");
+
+  using V = BatchReal<kBatchSize>;
+  using V3 = BatchReal3<kBatchSize>;
+
+  // Without Coulomb friction, contacts lose their anchors.
+  if (params.coulombFrictionCoefficient <= 0_r) {
+    StoreTransposed<kBatchSize>(&inOutAnchorOffset[0][0], V3{});
+    return;
+  }
+
+  // Friction normal of the stage
+  V3 nCollider MOCHI_NO_INIT;
+  LoadTransposed<kBatchSize>(
+      config.explicitNormals ? &distanceGradStageStart[0][0] : &distanceGrad[0][0], nCollider);
+  V3 nColliding MOCHI_NO_INIT;
+  if (config.validCollidingNormals) {
+    LoadTransposed<kBatchSize>(&normalColliding[0][0], nColliding);
+  }
+  V3 const normal = ComputeBatchDissipationNormal<kBatchSize>(
+      nCollider, nColliding, params, config, isSdfGradUnitary, isNormalCollidingUnitary);
+
+  // Radial return of the displacement from the anchor onto the presliding displacement, measured by
+  // its tangential part as in the collision response.
+  V3 pColliding MOCHI_NO_INIT;
+  LoadTransposed<kBatchSize>(&posColliding[0][0], pColliding);
+  V3 pCollidingStageStart MOCHI_NO_INIT;
+  LoadTransposed<kBatchSize>(&posCollidingStageStart[0][0], pCollidingStageStart);
+  V3 offset MOCHI_NO_INIT;
+  LoadTransposed<kBatchSize>(&inOutAnchorOffset[0][0], offset);
+  V3 const displacement = pColliding - pCollidingStageStart + offset;
+  V3 const slipT = ProjectToTangentPlane<kBatchSize>(displacement, normal);
+  V const preslidingDisplacement{params.preslidingDisplacement};
+  V scale = preslidingDisplacement / Max(Norm(slipT), preslidingDisplacement);
+
+  // Contacts without normal force at the end of the stage lose their anchor: those beyond the
+  // penalty threshold, or masked by the alignment of their normals as in the collision response.
+  V const d = Load<kBatchSize, V>(&distance[0]);
+  scale &= d < V{params.GetPenaltyThresholdDist(config.addPadding)};
+  scale &= ComputeBatchNormalAlignment<kBatchSize>(nCollider, nColliding, config) <=
+      V{params.maxAlignmentNormals};
+  StoreTransposed<kBatchSize>(&inOutAnchorOffset[0][0], scale * displacement);
+}
+
+/**
+ * @brief Replaces the elasto-plastic friction anchor offsets of contacts with those at the end of
+ * the last stage of a step, in place.
+ *
+ * @details With w the displacement of a contact from its anchor, and u its tangential part (see
+ * @ref ContactEvalConfig::elastoPlasticFriction), the anchor sticks while |u| is at most the
+ * presliding displacement, so the new offset is w, and slides along with the contact beyond it, so
+ * the new offset is w scaled by the radial return of u onto the presliding displacement. u is
+ * projected with the friction normal of the stage. Sticking keeps the whole of w, so that a
+ * sticking anchor stays at its material point, whatever the normal; sliding also scales its normal
+ * component, so that it does not accumulate. Contacts without Coulomb friction, or without normal
+ * force at the end of the stage (beyond the penalty threshold, or masked by the alignment of their
+ * normals, see @ref ContactParams::maxAlignmentNormals), lose their anchor (zero offset).
+ *
+ * @note Anchors advance only at the end of a step, which must be the end of its last stage: the
+ * stages before it evaluate forces at intermediate configurations, which are not states of the
+ * trajectory, so they must not commit plastic slip.
+ *
+ * @param[in,out] contactQuery Contacts of the stage, at its end, with their anchor offsets.
+ * @param[in] params Contact parameters of the pair.
+ * @param[in] config Contact evaluation configuration of the stage, with elasto-plastic friction.
+ */
+void AdvanceAnchorOffsets(
+    ContactDetectionResult& contactQuery,
+    ContactParams const& params,
+    ContactEvalConfig const& config);
 
 /**
  * @brief Sums of the collision response of contact points and of its moments about a reference

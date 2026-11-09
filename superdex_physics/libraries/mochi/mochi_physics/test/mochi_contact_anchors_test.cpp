@@ -21,11 +21,15 @@
 #include <mochi_physics/src/mochi_contact.h>
 #include <mochi_physics/src/mochi_contact_anchors.h>
 
+#include <mochi_core/integration/integration_utils.h>
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/dynamic_array.h>
+#include <mochi_core/utils/reflection.h>
 
+#include <algorithm>
 #include <array>
 #include <limits>
+#include <string>
 #include <utility>
 
 using namespace mochi;
@@ -101,19 +105,21 @@ class FrictionAnchors : public test::MochiSceneTestBase {
   }
 
   // Static plane at y = 0. The unit cube mesh has a corner at its origin, so actors created with
-  // the identity transform rest on it.
-  void CreatePlane() {
+  // the identity transform rest on it. Normal contact damping applies only if both actors have it.
+  void CreatePlane(real normalDamping = 0_r) {
     RigidActorParams params;
     params.name = "Plane";
     params.isStatic = true;
     params.shape = _mochiContext->CreatePlaneShape(Real3{0_r, 1_r, 0_r}, 0_r, test::ExpectOK{});
+    params.contact.normalViscousDampingCoefficient = normalDamping;
     _plane = _scene->CreateRigidActor(params, test::ExpectOK{});
   }
 
-  Actor* CreateRigidCube() {
+  Actor* CreateRigidCube(real normalDamping = 0_r) {
     RigidActorParams params;
     params.name = "RigidCube";
     params.shape = test::CreateUnitCubeTetMeshShape(_mochiContext);
+    params.contact.normalViscousDampingCoefficient = normalDamping;
     return _scene->CreateRigidActor(params, test::ExpectOK{});
   }
 
@@ -236,50 +242,88 @@ class FrictionAnchors : public test::MochiSceneTestBase {
     return Real3{};
   }
 
-  // Seeds an anchor on the plane at an offset from the deepest contact of a resting actor, steps
-  // once, and checks that collision detection measured exactly the contacts of that sample from
-  // it, and that the rebuild kept it. Without a friction law, the offset stays as filled, so the
-  // rebuilt anchor follows the contact over the step.
-  void ExpectSeededAnchorRoundTrips(Actor* actor) {
+  // Seeds an anchor beyond the presliding displacement along -x on the plane, for the deepest
+  // contact of a resting actor, and steps once. Collision detection measures the contacts of that
+  // sample from it, so they slide, and the advanced anchor trails the contact by the presliding
+  // displacement along the plane, mostly along x (a sample of a soft actor also moves sideways
+  // under the pull), on the line from the seeded anchor to the contact: sliding scales the whole
+  // displacement from the anchor. Without the anchor, the contact would only move by the motion of
+  // the step, which is far smaller.
+  void ExpectSeededAnchorAdvances(Actor* actor) {
     Step(20);
     auto const [sample, position] = DeepestContactOnPlane(actor);
     ASSERT_GE(sample, 0);
-    Real3 const offset{1e-5_r, 0_r, -2e-5_r};
+    real const delta = ContactParams{}.preslidingDisplacement;
     entt::entity const plane = GetEntity(_plane);
-    ActiveCollision seeded = MakeCollision(plane, {sample}, {offset});
+    Real3 const seededOffset{3_r * delta, 0_r, 0_r};
+    ActiveCollision seeded = MakeCollision(plane, {sample}, {seededOffset});
     seeded.collisionResult.posColliding = {position};
     RebuildAnchors(GetAnchors(actor), GetIndex(actor), {seeded});
 
     Step(1);
-    // The step starts at the seeding contact, up to rounding of unit-scale positions.
-    real constexpr kTol = Max(1e-7_r, 4_r * std::numeric_limits<real>::epsilon());
-    int numSeeded = 0;
-    for (auto const& collision : GetCollisions(actor)) {
-      auto const& result = collision.collisionResult;
-      ASSERT_EQ(isize(result.sampleIndices), isize(result.anchorOffset));
-      for (int i = 0; i < isize(result.sampleIndices); ++i) {
-        bool const isSeeded =
-            result.sampleIndices[i] == sample && collision.colliderEntity == plane;
-        Real3 const expected = isSeeded ? offset : Real3{};
-        for (int d = 0; d < 3; ++d) {
-          EXPECT_NEAR(expected[d], result.anchorOffset[i][d], kTol);
-        }
-        numSeeded += isSeeded ? 1 : 0;
-      }
+    Real3 const anchorPoint = FindAnchorPoint(GetAnchors(actor), GetIndex(actor), sample, plane);
+    Real3 const contact = ContactPositionOnPlane(actor, sample);
+    Real3 const offset = contact - anchorPoint;
+    EXPECT_NEAR(delta, Norm(Real3{offset[0], 0_r, offset[2]}), 1e-3_r * delta);
+    EXPECT_GT(offset[0], 0.9_r * delta);
+    Real3 const displacement = contact - (position - seededOffset);
+    real const scale = delta / Norm(Real3{displacement[0], 0_r, displacement[2]});
+    EXPECT_NEAR_TOL(scale * displacement, offset, 1e-3_r * delta);
+  }
+
+  // Creates the plane and a rigid cube resting on it, with gravity tilted along x, so that the
+  // tangential load is loadRatio times the Coulomb limit.
+  Actor* CreateCubeUnderTangentialLoad(real loadRatio, real normalDamping = 0_r) {
+    real constexpr kGravity = 9.81_r;
+    real const mu = ContactParams{}.coulombFrictionCoefficient;
+    _scene->SetGravity(Real3{loadRatio * mu * kGravity, -kGravity, 0_r});
+    CreatePlane(normalDamping);
+    return CreateRigidCube(normalDamping);
+  }
+
+  // Steps a stack of numCubes rigid cubes resting on the plane with gravity tilted along x, so that
+  // the tangential load of each contact is loadRatio times the Coulomb limit, and returns the
+  // distance the top cube travels along x in the second half of numSteps, relative to what it rests
+  // on: the cubes below tilt slightly under the load.
+  real SlideUnderTangentialLoad(
+      real loadRatio,
+      int numSteps,
+      real normalDamping = 0_r,
+      int numCubes = 1) {
+    Actor* cube = CreateCubeUnderTangentialLoad(loadRatio, normalDamping);
+    Actor* below = nullptr;
+    for (int i = 1; i < numCubes; ++i) {
+      below = cube;
+      cube = CreateRigidCube(normalDamping);
+      cube->SetRootTransform(TransformRT{Real3{0_r, static_cast<real>(i), 0_r}}, test::ExpectOK{});
     }
-    EXPECT_GT(numSeeded, 0);
-    Real3 const rebuiltOffset = ContactPositionOnPlane(actor, sample) -
-        FindAnchorPoint(GetAnchors(actor), GetIndex(actor), sample, plane);
-    for (int d = 0; d < 3; ++d) {
-      EXPECT_NEAR(offset[d], rebuiltOffset[d], kTol);
-    }
-    // Contacts without an anchor carry a zero offset, which is not stored.
-    EXPECT_EQ(1, isize(GetAnchors(actor).anchors));
+    auto const relativeX = [&] {
+      TransformRT const worldFromBelow = below ? below->GetRootTransform() : TransformRT{};
+      return worldFromBelow.TransformPointInverse(cube->GetRootTransform().GetTranslation())[0];
+    };
+    Step(numSteps / 2);
+    real const x0 = relativeX();
+    Step(numSteps - numSteps / 2);
+    return relativeX() - x0;
   }
 
   Actor* _plane = nullptr;
 };
+
+// Elasto-plastic friction with each integrator that it supports.
+class FrictionAnchorsIntegrator : public FrictionAnchors,
+                                  public ::testing::WithParamInterface<IntegrationMethod> {
+ protected:
+  void SetUp() override {
+    FrictionAnchors::SetUp();
+    test::SetSceneIntegrationMethod(_scene, GetParam());
+  }
+};
 } // namespace
+
+static std::string IntegratorName(::testing::TestParamInfo<IntegrationMethod> const& info) {
+  return std::string(SReflect::EnumToString(info.param));
+}
 
 // When the anchors of each sample are adjacent in contact order, the rebuild appends them in that
 // order in a single pass.
@@ -399,6 +443,7 @@ TEST_F(FrictionAnchors, RebuildOfFilledOffsetsKeepsAnchorPoints) {
   CFrictionAnchorIndex index(2);
   RebuildAnchors(
       anchors, index, {MakeCollision(plane, {0, 1}, {Real3{1_r, 0_r, 0_r}, Real3{0_r, 0_r, 2_r}})});
+
   ActiveCollision collision = MakeCollision(plane, {1, 0}, {});
   collision.collisionResult.posCollidingStageStart = {Real3{5_r, 6_r, 7_r}, Real3{-1_r, 0_r, 3_r}};
   collision.collisionResult.posColliding = collision.collisionResult.posCollidingStageStart;
@@ -454,6 +499,42 @@ TEST_F(FrictionAnchors, RebuildReusesCapacity) {
   EXPECT_EQ(Real3{}, FindAnchorPoint(anchors, index, 1, plane));
 }
 
+// Elasto-plastic friction requires the C1Regularized friction model: SetSolverParams rejects
+// CinfRegularized with it, and keeps the previous params.
+TEST_F(FrictionAnchors, RequiresC1RegularizedFriction) {
+  SolverParams params = _scene->GetSolverParams();
+  ASSERT_TRUE(params.experimentalEval.elastoPlasticFriction);
+  params.experimentalEval.frictionModel = CoulombFrictionModel::CinfRegularized;
+  _scene->SetSolverParams(params, test::ExpectNotOK{});
+  EXPECT_EQ(
+      CoulombFrictionModel::C1Regularized,
+      _scene->GetSolverParams().experimentalEval.frictionModel);
+
+  params.experimentalEval.elastoPlasticFriction = false;
+  _scene->SetSolverParams(params, test::ExpectOK{});
+}
+
+// Elasto-plastic friction requires an integrator whose step ends at its last stage, since anchors
+// advance from the contacts of the last stage: SetSolverParams rejects the others with it, and
+// keeps the previous params. Without it, every integrator is accepted.
+TEST_F(FrictionAnchors, RequiresIntegratorEndingAtLastStage) {
+  for (int i = 0; i < static_cast<int>(IntegrationMethod::Count); ++i) {
+    auto const method = static_cast<IntegrationMethod>(i);
+    SolverParams params = _scene->GetSolverParams();
+    params.experimentalEval.elastoPlasticFriction = true;
+    params.integrationMethod = method;
+    Error error;
+    _scene->SetSolverParams(params, error);
+    EXPECT_EQ(EndsAtLastStage(method), error.IsOK()) << SReflect::EnumToString(method);
+    if (!error.IsOK()) {
+      EXPECT_NE(method, _scene->GetSolverParams().integrationMethod);
+    }
+
+    params.experimentalEval.elastoPlasticFriction = false;
+    _scene->SetSolverParams(params, test::ExpectOK{});
+  }
+}
+
 // ExperimentalEvalParams::elastoPlasticFriction governs the anchor components of every actor with
 // contact samples, with an index entry per sample: actors created with it disabled have none,
 // enabling it adds empty ones, actors created with it enabled have them, and disabling it removes
@@ -486,17 +567,17 @@ TEST_F(FrictionAnchors, ElastoPlasticFrictionGovernsAnchorComponents) {
   Step(1);
 }
 
-TEST_F(FrictionAnchors, SoftActorAnchorsRoundTrip) {
+TEST_F(FrictionAnchors, SoftActorAnchorsAdvance) {
   CreatePlane();
-  ExpectSeededAnchorRoundTrips(CreateSoftCube());
+  ExpectSeededAnchorAdvances(CreateSoftCube());
 }
 
-// A seeded anchor of a rigid cube round-trips. Once the cube leaves the plane, it has no contacts
-// and the rebuild drops its anchors.
+// A seeded anchor of a rigid cube advances. Once the cube leaves the plane, it has no contacts and
+// the rebuild drops its anchors.
 TEST_F(FrictionAnchors, RebuildDropsAnchorsOfLostContacts) {
   CreatePlane();
   Actor* cube = CreateRigidCube();
-  ExpectSeededAnchorRoundTrips(cube);
+  ExpectSeededAnchorAdvances(cube);
   cube->SetRootTransform(TransformRT{Quaternion{}, Real3{0_r, 1_r, 0_r}}, test::ExpectOK{});
   cube->SetVelocity(Real3{}, Real3{}, test::ExpectOK{});
   Step(1);
@@ -526,3 +607,138 @@ TEST_F(FrictionAnchors, RestoreStateRestoresAnchors) {
   EXPECT_EQ((Real3{1_r, 2_r, 3_r}), FindAnchorPoint(GetAnchors(cube), GetIndex(cube), 0, plane));
   EXPECT_EQ((Real3{4_r, 5_r, 6_r}), FindAnchorPoint(GetAnchors(cube), GetIndex(cube), 5, plane));
 }
+
+// Only contacts with rigid colliders use elasto-plastic friction and get anchor offsets: those of a
+// rigid cube resting on a soft cube, and of the soft cube with the plane, use regular friction and
+// elasto-plastic friction, respectively.
+TEST_F(FrictionAnchors, OnlyRigidCollidersHaveAnchorOffsets) {
+  CreatePlane();
+  SoftActorParams softParams;
+  softParams.name = "SoftCollider";
+  softParams.shape = test::CreateUnitCubeTetMeshShape(_mochiContext);
+  experimental::ExperimentalSoftActorParams experimentalParams;
+  experimentalParams.colliderType = ColliderType::Sdf;
+  experimentalParams.sdf.resolutionDelta = {0.04_r, 0.04_r, 0.04_r};
+  experimentalParams.sdf.resolutionMode = GridSdfResolutionMode::Explicit;
+  Actor* soft =
+      experimental::CreateSoftActor(_scene, softParams, experimentalParams, test::ExpectOK{});
+  Actor* rigid = CreateRigidCube();
+  rigid->SetRootTransform(TransformRT{Quaternion{}, Real3{0_r, 1_r, 0_r}}, test::ExpectOK{});
+  Step(10);
+
+  auto& reg = GetRegistry();
+  int numWithSoftCollider = 0;
+  int numWithRigidCollider = 0;
+  auto const expectOffsets = [&](auto const& collisions) {
+    for (auto const& collision : collisions) {
+      auto const& result = collision.collisionResult;
+      if (result.sampleIndices.empty()) {
+        continue;
+      }
+      bool const rigidCollider =
+          reg.any_of<TagRigidActor, TagStaticActor>(collision.colliderEntity);
+      EXPECT_EQ(rigidCollider ? isize(result.sampleIndices) : 0, isize(result.anchorOffset));
+      ++(rigidCollider ? numWithRigidCollider : numWithSoftCollider);
+    }
+  };
+  for (Actor* actor : {soft, rigid}) {
+    entt::entity const e = GetEntity(actor);
+    expectOffsets(reg.get<CActiveCollisions</*kIsSync*/ false, TimeStep::Current>>(e));
+    expectOffsets(reg.get<CActiveCollisions</*kIsSync*/ true, TimeStep::Current>>(e));
+  }
+  EXPECT_GT(numWithSoftCollider, 0);
+  EXPECT_GT(numWithRigidCollider, 0);
+}
+
+// Below the Coulomb limit, elasto-plastic friction holds the top cube of a stack of two on the cube
+// below, a dynamic collider, once its contacts stick, with every supported integrator. The contacts
+// have normal damping: without it, the stiff penalty contact chatters with the integrators less
+// dissipative than backward Euler, its normal force dips toward zero, and the tangential load then
+// exceeds the Coulomb limit, so the cube slides.
+TEST_P(FrictionAnchorsIntegrator, HoldsTangentialLoadWithoutCreep) {
+  real constexpr kNormalDamping = 100_r; // [s/m]
+  EXPECT_NEAR(
+      0_r,
+      SlideUnderTangentialLoad(
+          /*loadRatio*/ 0.5_r, /*numSteps*/ 100, kNormalDamping, /*numCubes*/ 2),
+      1e-6_r);
+}
+
+// While the contacts of a cube stick, their anchors stay at the same material points of the plane,
+// with every supported integrator: anchors are fixed during the stages of a step, whose stage-start
+// positions are not the ends of the previous stages. The light tangential load is reversed once
+// the contacts have anchors, so that they move while they stick. Only the anchors kept through
+// every step are checked: a contact that briefly loses contact when the load reverses drops its
+// anchor, and gets a new one elsewhere. Normal contact damping keeps the normal force from
+// chattering toward zero.
+TEST_P(FrictionAnchorsIntegrator, StickingAnchorsStayAtTheirMaterialPoints) {
+  real constexpr kGravity = 9.81_r;
+  real constexpr kNormalDamping = 100_r; // [s/m]
+  real const load = 0.1_r * ContactParams{}.coulombFrictionCoefficient * kGravity;
+  _scene->SetGravity(Real3{load, -kGravity, 0_r});
+  CreatePlane(kNormalDamping);
+  Actor* cube = CreateRigidCube(kNormalDamping);
+  Step(20);
+  DynamicArray<FrictionAnchor> kept = GetAnchors(cube).anchors;
+  ASSERT_FALSE(kept.empty());
+  DynamicArray<FrictionAnchor> const settled = kept;
+
+  _scene->SetGravity(Real3{-load, -kGravity, 0_r});
+  auto const findPoint = [&](FrictionAnchor const& anchor) {
+    auto const collider = static_cast<entt::entity>(anchor.collider);
+    return FindAnchorPoint(GetAnchors(cube), GetIndex(cube), anchor.sample, collider);
+  };
+  for (int i = 0; i < 50; ++i) {
+    Step(1);
+    auto const lost = std::ranges::remove_if(
+        kept, [&](FrictionAnchor const& anchor) { return findPoint(anchor) == Real3{}; });
+    kept.erase(lost.begin(), lost.end());
+  }
+  ASSERT_GE(2 * isize(kept), isize(settled)) << "Most contacts should keep their anchors.";
+
+  real const tol = 1e-2_r * ContactParams{}.preslidingDisplacement;
+  for (auto const& anchor : kept) {
+    Real3 const point = findPoint(anchor);
+    EXPECT_NEAR(anchor.point[0], point[0], tol) << "sample " << anchor.sample;
+    EXPECT_NEAR(anchor.point[1], point[1], tol) << "sample " << anchor.sample;
+    EXPECT_NEAR(anchor.point[2], point[2], tol) << "sample " << anchor.sample;
+  }
+}
+
+// The same load makes regular friction creep with backward Euler, at the speed of
+// velocity-regularized friction v_f (1 - sqrt(1 - loadRatio)), so the hold above is due to the
+// anchors.
+TEST_F(FrictionAnchors, RegularFrictionCreepsUnderTangentialLoad) {
+  SetElastoPlasticFriction(false);
+  real const creepSpeed = ContactParams{}.frictionFalloffVel * (1_r - Sqrt(0.5_r));
+  real const distance = SlideUnderTangentialLoad(/*loadRatio*/ 0.5_r, /*numSteps*/ 100);
+  EXPECT_NEAR(0.5_r * creepSpeed, distance, 0.05_r * 0.5_r * creepSpeed);
+}
+
+// Above the Coulomb limit, the cube slides with the acceleration of Coulomb friction, with every
+// supported integrator, measured from its velocity change between 0.5 s and 1 s, once the contacts
+// have settled. The contacts have normal damping, as in the hold tests: without it, the cube tilts
+// as it slides, and tips over with backward Euler.
+TEST_P(FrictionAnchorsIntegrator, SlidesAboveCoulombLimit) {
+  real constexpr kNormalDamping = 100_r; // [s/m]
+  real constexpr kLoadRatio = 1.5_r;
+  real const acceleration =
+      (kLoadRatio - 1_r) * ContactParams{}.coulombFrictionCoefficient * 9.81_r;
+  Actor* cube = CreateCubeUnderTangentialLoad(kLoadRatio, kNormalDamping);
+  Step(50);
+  real const v0 = cube->GetLinearVelocity(test::ExpectOK{})[0];
+  Step(50);
+  real const v1 = cube->GetLinearVelocity(test::ExpectOK{})[0];
+  EXPECT_NEAR(acceleration, (v1 - v0) / 0.5_r, 0.05_r * acceleration);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    Integrators,
+    FrictionAnchorsIntegrator,
+    ::testing::Values(
+        IntegrationMethod::BackwardEuler,
+        IntegrationMethod::BDF2,
+        IntegrationMethod::BDF3,
+        IntegrationMethod::DIRK22,
+        IntegrationMethod::DIRK33),
+    IntegratorName);

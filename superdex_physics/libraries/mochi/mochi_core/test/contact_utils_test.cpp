@@ -640,6 +640,259 @@ TEST(ContactPenalties, ElastoPlasticFriction_HoldsLoadWithoutSlip) {
   EXPECT_EQ(force, computeForce(0.001_r));
 }
 
+// Contacts at the end of a stage on the plane z = 0, pressed 0.1 mm into it unless distances are
+// given, without stage-start SDF info (implicit normals).
+static ContactDetectionResult MakeAnchoredContacts(
+    DynamicArray<Real3> const& slips,
+    DynamicArray<Real3> const& offsets,
+    DynamicArray<real> distances = {}) {
+  int const numContacts = isize(slips);
+  if (distances.empty()) {
+    distances.resize(numContacts, -1e-4_r);
+  }
+  ContactDetectionResult result;
+  result.sampleIndices.resize(numContacts);
+  std::iota(result.sampleIndices.begin(), result.sampleIndices.end(), 0);
+  result.sdfInfo.resize(numContacts);
+  result.normalColliding.resize(numContacts, Real3{0_r, 0_r, -1_r});
+  result.posCollidingStageStart.resize(numContacts, Real3{});
+  result.posColliding = slips;
+  result.anchorOffset = offsets;
+  for (int i = 0; i < numContacts; ++i) {
+    result.sdfInfo.val[i] = distances[i];
+    result.sdfInfo.grad[i] = Real3{0_r, 0_r, 1_r};
+  }
+  return result;
+}
+
+// The anchor sticks within the presliding displacement, keeping the whole displacement from it, and
+// slides along with the contact beyond it, scaling the whole displacement by the radial return of
+// its tangential part. Contacts at the penalty threshold lose their anchor, and new contacts that
+// have not moved get none.
+TEST(ContactPenalties, AdvanceAnchorOffsets_RadialReturn) {
+  ContactParams const params;
+  real const delta = params.preslidingDisplacement;
+  real const threshold = params.GetPenaltyThresholdDist(/*addPadding*/ false);
+  ContactDetectionResult result = MakeAnchoredContacts(
+      {Real3{0.2_r, 0.1_r, 0.5_r} * delta, Real3{2_r, 4_r, 1_r} * delta, Real3{}, Real3{}},
+      {Real3{0.3_r, 0_r, 0.2_r} * delta,
+       Real3{1_r, 0_r, 0_r} * delta,
+       Real3{},
+       Real3{delta, 0_r, 0_r}},
+      {-1e-4_r, -1e-4_r, -1e-4_r, threshold});
+  AdvanceAnchorOffsets(result, params, ContactEvalConfig{.elastoPlasticFriction = true});
+
+  DynamicArray<Real3> const expected = {
+      Real3{0.5_r, 0.1_r, 0.7_r} * delta, Real3{0.6_r, 0.8_r, 0.2_r} * delta, Real3{}, Real3{}};
+  for (int i = 0; i < isize(expected); ++i) {
+    EXPECT_NEAR_TOL(expected[i], result.anchorOffset[i], 1e-4_r * delta) << "contact " << i;
+  }
+}
+
+// The displacement from the anchor is projected with the friction normal of the stage: the collider
+// normal, at stage start with explicit normals and normalized if needed, or the colliding normal.
+// The displacement slides: a sticking one is kept whole, whatever the normal.
+TEST(ContactPenalties, AdvanceAnchorOffsets_FrictionNormal) {
+  real const delta = ContactParams{}.preslidingDisplacement;
+  Real3 const displacement = Real3{3_r, 2_r, 4_r} * delta;
+  // Radial return of the displacement with the normal n.
+  auto const expectedFor = [&](Real3 const& n) {
+    Real3 const slipT = displacement - Dot(displacement, n) * n;
+    return Min(1_r, delta / Norm(slipT)) * displacement;
+  };
+  auto const advance =
+      [&](ContactParams const& params, ContactEvalConfig config, ContactDetectionResult result) {
+        result.posColliding[0] = displacement;
+        config.elastoPlasticFriction = true;
+        AdvanceAnchorOffsets(result, params, config);
+        return result.anchorOffset[0];
+      };
+  ContactDetectionResult const contact = MakeAnchoredContacts({Real3{}}, {Real3{}});
+  ContactParams const colliderNormalParams;
+  ASSERT_TRUE(colliderNormalParams.frictionWithColliderNormal);
+
+  EXPECT_NEAR_EQ(
+      expectedFor(Real3{0_r, 0_r, 1_r}),
+      advance(colliderNormalParams, ContactEvalConfig{.explicitNormals = false}, contact));
+
+  ContactDetectionResult explicitContact = contact;
+  explicitContact.sdfInfoStageStart.resize(1);
+  explicitContact.sdfInfoStageStart.val[0] = -1e-4_r;
+  explicitContact.sdfInfoStageStart.grad[0] = Real3{1_r, 0_r, 0_r};
+  EXPECT_NEAR_EQ(
+      expectedFor(Real3{1_r, 0_r, 0_r}),
+      advance(colliderNormalParams, ContactEvalConfig{.explicitNormals = true}, explicitContact));
+
+  ContactDetectionResult nonUnitContact = contact;
+  nonUnitContact.isSdfGradUnitary = false;
+  nonUnitContact.sdfInfo.grad[0] = Real3{0_r, 0_r, 2_r};
+  EXPECT_NEAR_EQ(
+      expectedFor(Real3{0_r, 0_r, 1_r}),
+      advance(colliderNormalParams, ContactEvalConfig{}, nonUnitContact));
+
+  ContactParams collidingNormalParams;
+  collidingNormalParams.frictionWithColliderNormal = false;
+  ContactDetectionResult collidingNormalContact = contact;
+  collidingNormalContact.normalColliding[0] = Real3{0_r, -1_r, 0_r};
+  EXPECT_NEAR_EQ(
+      expectedFor(Real3{0_r, 1_r, 0_r}),
+      advance(collidingNormalParams, ContactEvalConfig{}, collidingNormalContact));
+  // Without valid colliding normals, the collider normal is used.
+  EXPECT_NEAR_EQ(
+      expectedFor(Real3{0_r, 0_r, 1_r}),
+      advance(
+          collidingNormalParams,
+          ContactEvalConfig{.validCollidingNormals = false},
+          collidingNormalContact));
+}
+
+// The batched update matches the radial return for any number of contacts, so every batch size and
+// lane: within and beyond the presliding displacement, and beyond the penalty threshold.
+TEST(ContactPenalties, AdvanceAnchorOffsets_EveryBatchSize) {
+  ContactParams const params;
+  real const delta = params.preslidingDisplacement;
+  for (int numContacts = 1; numContacts <= 2 * kCollResponseMaxBatchSize + 1; ++numContacts) {
+    DynamicArray<Real3> slips;
+    DynamicArray<Real3> offsets;
+    DynamicArray<real> distances;
+    for (int i = 0; i < numContacts; ++i) {
+      slips.push_back(Real3{static_cast<real>(i % 5 - 2) * 0.7_r, (i % 3) * 0.4_r, 0.3_r} * delta);
+      offsets.push_back(Real3{(i % 4) * 0.3_r, -0.2_r, 0.1_r} * delta);
+      distances.push_back(i % 7 == 6 ? 2e-3_r : -1e-4_r);
+    }
+    ContactDetectionResult result = MakeAnchoredContacts(slips, offsets, distances);
+    AdvanceAnchorOffsets(result, params, ContactEvalConfig{.elastoPlasticFriction = true});
+
+    for (int i = 0; i < numContacts; ++i) {
+      Real3 expected{};
+      if (distances[i] < params.GetPenaltyThresholdDist(/*addPadding*/ false)) {
+        Real3 const displacement = slips[i] + offsets[i];
+        Real3 const slipT{displacement[0], displacement[1], 0_r};
+        expected = Min(1_r, delta / Norm(slipT)) * displacement;
+      }
+      EXPECT_NEAR_TOL(expected, result.anchorOffset[i], 1e-4_r * delta)
+          << numContacts << " contacts, contact " << i;
+    }
+  }
+}
+
+// Without Coulomb friction, contacts lose their anchors.
+TEST(ContactPenalties, AdvanceAnchorOffsets_WithoutFriction) {
+  real const delta = ContactParams{}.preslidingDisplacement;
+  ContactParams frictionless;
+  frictionless.coulombFrictionCoefficient = 0_r;
+  ContactDetectionResult result =
+      MakeAnchoredContacts({Real3{0.1_r, 0_r, 0_r} * delta}, {Real3{0.2_r, 0_r, 0_r} * delta});
+  AdvanceAnchorOffsets(result, frictionless, ContactEvalConfig{.elastoPlasticFriction = true});
+  EXPECT_EQ(Real3{}, result.anchorOffset[0]);
+}
+
+// Contacts whose normals are aligned beyond ContactParams::maxAlignmentNormals have no normal
+// force, so they lose their anchor, as in the collision response. Without valid colliding normals,
+// the alignment is not computed and they keep it.
+TEST(ContactPenalties, AdvanceAnchorOffsets_NormalAlignment) {
+  ContactParams const params;
+  ASSERT_LT(params.maxAlignmentNormals, 1_r);
+  real const delta = params.preslidingDisplacement;
+  Real3 const slip = Real3{0.1_r, 0_r, 0_r} * delta;
+  Real3 const offset = Real3{0.2_r, 0_r, 0_r} * delta;
+  // The normals of the first contact are opposite (alignment -1), those of the second coincide (1).
+  ContactDetectionResult contacts = MakeAnchoredContacts({slip, slip}, {offset, offset});
+  contacts.normalColliding[1] = Real3{0_r, 0_r, 1_r};
+  auto const advance = [&](bool validCollidingNormals) {
+    ContactDetectionResult result = contacts;
+    AdvanceAnchorOffsets(
+        result,
+        params,
+        ContactEvalConfig{
+            .validCollidingNormals = validCollidingNormals, .elastoPlasticFriction = true});
+    return result.anchorOffset;
+  };
+  Real3 const sticking = slip + offset;
+  real const tol = 1e-4_r * delta;
+
+  DynamicArray<Real3> const masked = advance(/*validCollidingNormals*/ true);
+  EXPECT_NEAR_TOL(sticking, masked[0], tol);
+  EXPECT_EQ(Real3{}, masked[1]);
+
+  DynamicArray<Real3> const unmasked = advance(/*validCollidingNormals*/ false);
+  EXPECT_NEAR_TOL(sticking, unmasked[0], tol);
+  EXPECT_NEAR_TOL(sticking, unmasked[1], tol);
+}
+
+// The collision response and the rigid contact sums use elasto-plastic friction, with the anchor
+// offsets, if the configuration requests it, and regular friction otherwise, ignoring any offsets.
+// They match the batch kernel with the corresponding law.
+TEST(ContactPenalties, ElastoPlasticFriction_FollowsConfig) {
+  ContactParams const params;
+  real const delta = params.preslidingDisplacement;
+  real constexpr kDt = 0.01_r;
+  Real3 const slip{0.1_r * delta, 0_r, 0_r};
+  Real3 const offset{0.4_r * delta, 0.2_r * delta, 0_r};
+  ContactDetectionResult const anchored = MakeAnchoredContacts({slip}, {offset});
+  ContactDetectionResult const unanchored = MakeAnchoredContacts({slip}, {});
+
+  auto const kernelForce = [&](bool elastoPlasticFriction) {
+    std::array<Real3, 1> force = {};
+    ComputeBatchCollisionForceDForce<1, GradTarget::Current>(
+        {} /* outEnergy */,
+        MakeSpan(force),
+        {} /* outDForce */,
+        MakeConstSpan(anchored.sdfInfo.val),
+        MakeConstSpan(anchored.sdfInfo.grad),
+        {} /* distanceStageStart */,
+        {} /* distanceGradStageStart */,
+        MakeConstSpan(anchored.normalColliding),
+        MakeConstSpan(anchored.posColliding),
+        MakeConstSpan(anchored.posCollidingStageStart),
+        MakeConstSpan(anchored.anchorOffset),
+        params,
+        ContactEvalConfig{.elastoPlasticFriction = elastoPlasticFriction},
+        kDt,
+        /*assemEnergy*/ false,
+        /*assemForce*/ true,
+        /*assemDForce*/ false,
+        /*isSdfGradUnitary*/ true,
+        /*isNormalCollidingUnitary*/ true);
+    return force[0];
+  };
+  Real3 const elastoPlasticForce = kernelForce(true);
+  Real3 const regularForce = kernelForce(false);
+  ASSERT_FALSE(NearEqual(elastoPlasticForce, regularForce));
+
+  struct Case {
+    bool requested;
+    ContactDetectionResult const* contacts;
+    Real3 expected;
+  };
+  for (Case const& c :
+       {Case{.requested = true, .contacts = &anchored, .expected = elastoPlasticForce},
+        Case{.requested = false, .contacts = &anchored, .expected = regularForce},
+        Case{.requested = false, .contacts = &unanchored, .expected = regularForce}}) {
+    ContactEvalConfig const config{.elastoPlasticFriction = c.requested};
+    CollisionResponseResult response;
+    response.ResizeNoInit(1, false, true, false);
+    ComputeCollisionResponse<GradTarget::Current>(
+        *c.contacts, params, config, kDt, false, true, false, response);
+    EXPECT_NEAR_EQ(c.expected, response.force[0]);
+
+    real const weight = 2_r;
+    RigidContactSums const sums = ComputeRigidContactSums<GradTarget::Current>(
+        Interval<int>{0, 1},
+        *c.contacts,
+        params,
+        config,
+        kDt,
+        Span<real const>(&weight, 1),
+        Vec4r{},
+        false,
+        true,
+        false,
+        {});
+    EXPECT_NEAR_EQ(weight * c.expected, ToReal3(sums.force));
+  }
+}
+
 // Expect that two vectors point in the same direction +/- some angle
 static void ExpectNearEqNormals(Real3 const& a, Real3 const& b, real angleTol) {
   real dot = Dot(Normalize(a), Normalize(b));

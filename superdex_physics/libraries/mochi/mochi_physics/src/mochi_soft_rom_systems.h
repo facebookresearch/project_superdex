@@ -175,7 +175,6 @@ void AssembleAndProjectAsyncContact(
     CFemBoundaryDiscretization const& femBoundaryDisc,
     CBoundaryLocal2GlobalMap const& bdL2g,
     CContactSamples<TimeStep::Current> const& samples,
-    CColliderInfo const& colliderInfo,
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current>& collisions,
     CRootTransform const& rootTransform,
     CTimeIntegratorState const& intState,

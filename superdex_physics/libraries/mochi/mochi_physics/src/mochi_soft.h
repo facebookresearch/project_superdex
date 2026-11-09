@@ -725,7 +725,6 @@ void AssembleAsyncContact(
     CBoundaryLocal2GlobalMap const& bdL2g,
     CBoundaryNodalBasedStructure const& bdNbs,
     CContactSamples<TimeStep::Current> const& samples,
-    CColliderInfo const& colliderInfo,
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current>& collisions,
     CRootTransform const& rootTransform,
     CRomProjectionStrategy const* romProjectionStrategy,

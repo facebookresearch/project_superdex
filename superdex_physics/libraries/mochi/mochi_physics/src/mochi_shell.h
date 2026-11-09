@@ -390,7 +390,6 @@ void AssembleAsyncContact(
     CContactLocal2GlobalMap const& contactL2g,
     CContactNodalBasedStructure const& contactNbs,
     CContactSamples<TimeStep::Current> const& samples,
-    CColliderInfo const& colliderInfo,
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current>& collisions,
     CRootTransform const& rootTransform,
     CDeformablePointAsyncCollisionsResponse& outResponse,

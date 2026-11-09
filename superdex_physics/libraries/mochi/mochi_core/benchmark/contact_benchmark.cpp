@@ -156,4 +156,68 @@ MOCHI_CONTACT_BENCHMARK(
 
 #undef MOCHI_CONTACT_BENCHMARK
 
+// Advance of the friction anchor offsets of a batch of contacts to the end of a stage. The offsets
+// are updated in place every iteration, which costs the same since the update has no branches.
+template <int kBatchSize>
+static void ComputeBatchAnchorOffsets(benchmark::State& state) {
+  auto const isSdfGradUnitary = static_cast<bool>(state.range(0));
+  auto const explicitNormals = static_cast<bool>(state.range(1));
+
+  ContactParams const params = {}; // Default contact params.
+  ContactEvalConfig const config = {
+      .explicitNormals = explicitNormals, .elastoPlasticFriction = true};
+  real const delta = params.preslidingDisplacement;
+
+  DynamicArray<Real3> anchorOffset;
+  anchorOffset.resize(kBatchSize, Real3{0.5_r, 0_r, -0.5_r} * delta);
+  DynamicArray<Real3> posColliding;
+  posColliding.resize(kBatchSize, Real3{0.3_r, 0.1_r, -0.2_r} * delta);
+  DynamicArray<Real3> posCollidingStageStart;
+  posCollidingStageStart.resize(kBatchSize);
+  SdfInfo sdfInfo;
+  sdfInfo.resize(kBatchSize);
+  SdfInfo sdfInfoStageStart;
+  sdfInfoStageStart.resize(kBatchSize);
+  DynamicArray<Real3> normalColliding;
+  normalColliding.resize(kBatchSize);
+  Real3 const normal = {1_r, -1_r, 1_r};
+  for (int i = 0; i < kBatchSize; ++i) {
+    normalColliding[i] = -Normalize(normal);
+    sdfInfo.grad[i] = isSdfGradUnitary ? -normalColliding[i] : normal;
+    sdfInfoStageStart.grad[i] = sdfInfo.grad[i];
+  }
+
+  for (auto x : state) {
+    CallNoInline([&]() {
+      ComputeBatchAnchorOffsets<kBatchSize>(
+          MakeSpan(anchorOffset),
+          MakeConstSpan(sdfInfo.val),
+          MakeConstSpan(sdfInfo.grad),
+          MakeConstSpan(sdfInfoStageStart.grad),
+          MakeConstSpan(normalColliding),
+          MakeConstSpan(posColliding),
+          MakeConstSpan(posCollidingStageStart),
+          params,
+          config,
+          isSdfGradUnitary,
+          /*isNormalCollidingUnitary*/ true);
+    });
+  }
+
+  state.counters["Points/second"] =
+      benchmark::Counter(state.iterations() * kBatchSize, benchmark::Counter::kIsRate);
+}
+
+#define MOCHI_ANCHOR_BENCHMARK(benchmarkName, ...)          \
+  BENCHMARK_TEMPLATE(ComputeBatchAnchorOffsets, kBatchSize) \
+      ->Name("Contact/BatchAnchorOffsets/" benchmarkName)   \
+      ->ArgNames({"unitSdfGradient", "explicitNormals"})    \
+      ->Args({__VA_ARGS__})
+
+MOCHI_ANCHOR_BENCHMARK("Default", true, false);
+MOCHI_ANCHOR_BENCHMARK("NonUnitSdfGradient", false, false);
+MOCHI_ANCHOR_BENCHMARK("ExplicitNormals", true, true);
+
+#undef MOCHI_ANCHOR_BENCHMARK
+
 } // namespace mochi_benchmark

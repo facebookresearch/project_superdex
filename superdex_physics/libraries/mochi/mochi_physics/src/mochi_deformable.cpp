@@ -371,7 +371,6 @@ void deformable::ComputeAsyncContactResponse(
     ecs::OptionalTag<TagQueryActiveContacts> queryActiveContacts,
     DiscretizationType const& femBoundaryDisc,
     CContactSamples<TimeStep::Current> const& samples,
-    CColliderInfo const& colliderInfo,
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current>& collisions,
     CTimeIntegratorState const& intState,
     CRootTransform const& rootTransform,
@@ -379,15 +378,8 @@ void deformable::ComputeAsyncContactResponse(
     CDeformablePointAsyncCollisionsResponse& outResponse,
     Span<bool const> allowedContactElementMask) {
   femBoundaryDisc.Visit([&](auto const& femBoundaryDiscImpl) {
-    ContactEvalConfig config{
-        .psdDRes = params.psdDRes,
-        .addPadding = ShouldAddPenaltyPadding(colliderInfo.type),
-        .validCollidingNormals = ValidCollidingNormals(reg, e),
-        .explicitNormals = experimentalEval.explicitNormals,
-        .fadeFriction = experimentalEval.fadeFriction,
-        .implicitNormalForceForDissipation = experimentalEval.implicitNormalForceForDissipation,
-        .useFittedHessian = params.fittedSaturationHessian.contactFriction,
-        .frictionModel = experimentalEval.frictionModel};
+    ContactEvalConfig const config = MakeContactEvalConfigAsync(
+        experimentalEval, reg, e, params.psdDRes, params.fittedSaturationHessian.contactFriction);
 
     ComputeAsyncContactResponseImpl(
         reg,
@@ -415,7 +407,6 @@ void deformable::ComputeAsyncContactResponse(
       ecs::OptionalTag<TagQueryActiveContacts>,                                           \
       DISCRETIZATION_TYPE const&,                                                         \
       CContactSamples<TimeStep::Current> const&,                                          \
-      CColliderInfo const&,                                                               \
       CActiveCollisions</*kIsSync*/ false, TimeStep::Current>&,                           \
       CTimeIntegratorState const&,                                                        \
       CRootTransform const&,                                                              \

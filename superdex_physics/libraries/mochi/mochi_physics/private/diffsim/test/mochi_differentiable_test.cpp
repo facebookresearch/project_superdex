@@ -743,7 +743,8 @@ using MochiDifferentiableSettings = MochiSceneTestBase;
 
 // MakeSceneDifferentiable keeps ContactParams.frictionWithColliderNormal = false, and BackPropagate
 // warns about it. SetSolverParams rejects implicitNormalForceForDissipation = true, even with
-// explicitNormals = false.
+// explicitNormals = false, and elastoPlasticFriction = true, which MakeSceneDifferentiable also
+// rejects.
 TEST_F(MochiDifferentiableSettings, HandlesUnsupportedSettings) {
   test::SetSceneIntegrationMethod(_scene, IntegrationMethod::BackwardEuler);
   RigidActorParams params;
@@ -759,6 +760,19 @@ TEST_F(MochiDifferentiableSettings, HandlesUnsupportedSettings) {
   solverParams.experimentalEval.implicitNormalForceForDissipation = true;
   _scene->SetSolverParams(solverParams, test::ExpectNotOK{});
   EXPECT_EQ(before, _scene->GetSolverParams());
+
+  solverParams = before;
+  solverParams.experimentalEval.elastoPlasticFriction = true;
+  _scene->SetSolverParams(solverParams, test::ExpectNotOK{});
+  EXPECT_EQ(before, _scene->GetSolverParams());
+
+  Scene* elastoPlasticScene = _mochiContext->CreateScene("ElastoPlasticFriction");
+  MOCHI_DEFER(_mochiContext->DestroyScene(elastoPlasticScene));
+  test::SetSceneIntegrationMethod(elastoPlasticScene, IntegrationMethod::BackwardEuler);
+  SolverParams elastoPlasticParams = elastoPlasticScene->GetSolverParams();
+  elastoPlasticParams.experimentalEval.elastoPlasticFriction = true;
+  elastoPlasticScene->SetSolverParams(elastoPlasticParams, test::ExpectOK{});
+  MakeSceneDifferentiable(elastoPlasticScene, test::ExpectNotOK{});
 
   StateHandle const stateOld = _scene->CaptureState(test::ExpectOK{});
   _scene->Step(kDt);

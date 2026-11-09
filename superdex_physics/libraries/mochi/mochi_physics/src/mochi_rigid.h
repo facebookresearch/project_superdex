@@ -382,7 +382,6 @@ void EntityAssemble(
     CRigidVel<TimeStep::StageStart> const& stageStartVel,
     CRigidBodyInertia const& rigidInertia,
     CExternalForces const& externalForces,
-    CColliderInfo const& colliderInfo,
     CContactSamples<TimeStep::Current> const* contactSample,
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current>* activeCollisions);
 

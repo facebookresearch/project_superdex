@@ -645,7 +645,6 @@ void mochi::rigid::EntityAssemble(
     CRigidVel<TimeStep::StageStart> const& stageStartVel,
     CRigidBodyInertia const& rigidInertia,
     CExternalForces const& externalForces,
-    CColliderInfo const& colliderInfo,
     CContactSamples<TimeStep::Current> const* contactSample,
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current>* activeCollisions) {
   MOCHI_PROFILE_SCOPE();
@@ -687,16 +686,12 @@ void mochi::rigid::EntityAssemble(
     MOCHI_ASSERT(
         gradTarget == GradTarget::Current || !params.assemDRes,
         "The contact DResidual only supports GradTarget::Current.");
-    ContactEvalConfig config{
-        .psdDRes = params.psdDRes,
-        .addPadding = ShouldAddPenaltyPadding(colliderInfo.type),
-        .validCollidingNormals = ValidCollidingNormals(reg, e),
-        .explicitNormals = simParams->experimentalEval.explicitNormals,
-        .fadeFriction = simParams->experimentalEval.fadeFriction,
-        .implicitNormalForceForDissipation =
-            simParams->experimentalEval.implicitNormalForceForDissipation,
-        .useFittedHessian = params.fittedSaturationHessian.contactFriction,
-        .frictionModel = simParams->experimentalEval.frictionModel};
+    ContactEvalConfig const config = MakeContactEvalConfigAsync(
+        simParams->experimentalEval,
+        reg,
+        e,
+        params.psdDRes,
+        params.fittedSaturationHessian.contactFriction);
     auto const& pose = gradTarget == GradTarget::Current ? currPose.value : stageStartPose.value;
     // Dispatch to the appropriate templatized implementation
     auto assembleRigidBodyAsyncContactResponseFn = gradTarget == GradTarget::Previous

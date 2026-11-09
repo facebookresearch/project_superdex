@@ -89,7 +89,6 @@ void ComputeAsyncContactResponse(
     ecs::OptionalTag<TagQueryActiveContacts> queryActiveContacts,
     DiscretizationType const& femBoundaryDisc,
     CContactSamples<TimeStep::Current> const& samples,
-    CColliderInfo const& colliderInfo,
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current>& collisions,
     CTimeIntegratorState const& intState,
     CRootTransform const& rootTransform,

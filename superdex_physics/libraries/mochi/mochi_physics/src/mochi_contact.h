@@ -915,6 +915,13 @@ inline bool ValidCollidingNormals(ContactAssemblyReg const& reg, entt::entity co
   return !reg.any_of<TagShellActor, TagRodActor>(colliding);
 }
 
+[[nodiscard]] ContactEvalConfig MakeContactEvalConfigAsync(
+    ExperimentalEvalParams const& experimentalEval,
+    ContactAssemblyReg reg,
+    entt::entity colliding,
+    bool psdDRes,
+    bool useFittedHessian);
+
 /**************************************************************************
   ECS contact-related pipelines
 */
@@ -969,6 +976,18 @@ template <bool kIsSync>
 void AddMissingStageStartCollisions(
     CActiveCollisions<kIsSync, TimeStep::StageStart> const& stageStartCollisions,
     CActiveCollisions<kIsSync, TimeStep::Current>& outCurrentCollisions);
+
+// With elasto-plastic friction, replaces the friction anchor offsets of the current contact
+// results of a colliding actor with those at the end of the step, i.e. of its last stage (see
+// AdvanceAnchorOffsets), from which UpdateFrictionAnchors rebuilds the stored anchors. A diverged
+// last stage keeps the previous anchors, so it is skipped.
+void AdvanceFrictionAnchorOffsets(
+    ContactAssemblyReg reg,
+    entt::entity e,
+    ecs::CtxGlobal<CSimulationParams const> simParams,
+    CConvergenceStatus const* convergence,
+    CActiveCollisions</*kIsSync*/ false, TimeStep::Current>& asyncCollisions,
+    CActiveCollisions</*kIsSync*/ true, TimeStep::Current>& syncCollisions);
 
 // Adds to TimeStep::Current collisions and contacts found in TimeStep::StageStart.
 // This function is needed to ensure continuity of dissipative contact forces within a solve if
@@ -1109,7 +1128,6 @@ void AssembleAsyncSkinnedContact(
     CIslandMemberInfo const& islandMember, // TODO: Need a better way to determine the size of
                                            // the interaction residual
     CTimeIntegratorState const& intState,
-    CColliderInfo const& colliderInfo,
     CCollJacs<CollRole::Colliding> const& collJacs,
     CLinearContactSkinElementMap const* linearElementMap,
     CSkinnedContactSnle& outContactSnle,
