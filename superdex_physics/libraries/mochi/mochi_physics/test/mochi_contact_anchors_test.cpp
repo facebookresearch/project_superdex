@@ -751,7 +751,7 @@ TEST_F(FrictionAnchors, RebuildDropsAnchorsOfLostContacts) {
   EXPECT_TRUE(GetAnchors(cube).anchors.empty());
 }
 
-// Only contacts with rigid colliders use elasto-plastic friction
+// Only contacts with rigid colliders use elasto-plastic friction and get anchor offsets: those of a
 // rigid cube resting on a soft cube, and of the soft cube with the plane, use regular friction and
 // elasto-plastic friction, respectively.
 TEST_F(FrictionAnchors, OnlyRigidCollidersHaveAnchorOffsets) {
