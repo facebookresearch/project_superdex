@@ -1497,6 +1497,15 @@ struct ExperimentalEvalParams [equality(default), from_mochi_core] {
   // @details C1Regularized (default) preserves existing behavior exactly. CinfRegularized is an
   // additional model that can be selected at runtime without affecting C1Regularized users.
   CoulombFrictionModel frictionModel = CoulombFrictionModel::Default;
+  // @brief [Experimental] Use elasto-plastic Coulomb friction.
+  //
+  // @details Elasto-plastic friction holds a tangential load below the Coulomb limit without slip,
+  // and slides once the tangential displacement exceeds @ref ContactParams::preslidingDisplacement.
+  // Regular Coulomb friction, in contrast, needs slip to act.
+  //
+  // @note Changing this setting changes the content of the scene state, so states captured before
+  // the change cannot be restored after it.
+  bool elastoPlasticFriction = false;
   // @brief Validate that the residual is the gradient of the objective by a directional
   // finite-difference consistency check.
   //

@@ -1345,13 +1345,14 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
   ;
 
   registry.GetClass<mochi::ExperimentalEvalParams>()
-    .def("__init__", [](mochi::ExperimentalEvalParams* self, nb::object explicit_normals, nb::object fade_friction, nb::object implicit_normal_force_for_dissipation, nb::object fitted_saturation_hessian, nb::object friction_model, nb::object consistency_res_norm, nb::object consistency_res_norm_step) {
+    .def("__init__", [](mochi::ExperimentalEvalParams* self, nb::object explicit_normals, nb::object fade_friction, nb::object implicit_normal_force_for_dissipation, nb::object fitted_saturation_hessian, nb::object friction_model, nb::object elasto_plastic_friction, nb::object consistency_res_norm, nb::object consistency_res_norm_step) {
       mochi::ExperimentalEvalParams result{};
       result.explicitNormals = nb::cast<bool>(explicit_normals);
       result.fadeFriction = nb::cast<bool>(fade_friction);
       result.implicitNormalForceForDissipation = nb::cast<bool>(implicit_normal_force_for_dissipation);
       result.fittedSaturationHessian = nb::cast<mochi::SaturationHessianParams>(fitted_saturation_hessian);
       result.frictionModel = nb::cast<mochi::CoulombFrictionModel>(friction_model);
+      result.elastoPlasticFriction = nb::cast<bool>(elasto_plastic_friction);
       result.consistencyResNorm = nb::cast<bool>(consistency_res_norm);
       result.consistencyResNormStep = nb::cast<mochi::real>(consistency_res_norm_step);
       new (self) mochi::ExperimentalEvalParams(std::move(result));
@@ -1362,6 +1363,7 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
       , nb::arg("implicit_normal_force_for_dissipation") = mochi::ExperimentalEvalParams{}.implicitNormalForceForDissipation
       , nb::arg("fitted_saturation_hessian").sig("...") = mochi::ExperimentalEvalParams{}.fittedSaturationHessian
       , nb::arg("friction_model") = mochi::ExperimentalEvalParams{}.frictionModel
+      , nb::arg("elasto_plastic_friction") = mochi::ExperimentalEvalParams{}.elastoPlasticFriction
       , nb::arg("consistency_res_norm") = mochi::ExperimentalEvalParams{}.consistencyResNorm
       , nb::arg("consistency_res_norm_step") = mochi::ExperimentalEvalParams{}.consistencyResNormStep
     )
@@ -1375,6 +1377,7 @@ void mochi::DefineMochiCore_MochiCore([[maybe_unused]] nb::module_& m, [[maybe_u
     .def_rw("implicit_normal_force_for_dissipation", &mochi::ExperimentalEvalParams::implicitNormalForceForDissipation, "Treat the normal contact force implicitly (if true) or explicitly (if false) for\ndissipative contact terms.\n\nNote:\n    Implicit treatment improves stability (especially with high-order time\n    integrators) but the resulting dissipative force is not integrable, hence it\n    cannot be derived from an objective function. This (a) may hurt convergence\n    with an objective-based line search, and (b) makes the force dresidual\n    non-symmetric (a symmetric approximation is used). With\n    implicitNormalForceForDissipation = false, the distance used for the\n    explicit normal force is approximate when\n    :attr:`~superdex.physics.ExperimentalEvalParams.explicit_normals` is false,\n    but accurate when it is true.\n\nNote:\n    Dissipative contact terms include Coulomb friction, viscous friction, and\n    normal viscous damping. Using an implicit normal force for normal damping\n    can improve the accuracy of the effective coefficient of restitution at a\n    given time step size.\n\nNote:\n    A differentiable scene requires implicitNormalForceForDissipation = false.")
     .def_rw("fitted_saturation_hessian", &mochi::ExperimentalEvalParams::fittedSaturationHessian, "Controls whether force-saturation terms use a fitted quadratic Hessian (more\nstable) or the exact analytical Hessian (faster convergence but less stable),\nindependently for each saturation pathway.\n\nNote:\n    For any flag set to false, the solver will try first with the true Hessian.\n    If it fails, it will retry with the fitted Hessian.")
     .def_rw("friction_model", &mochi::ExperimentalEvalParams::frictionModel, "Selects which Coulomb friction smoothing model to use.\n\nC1Regularized (default) preserves existing behavior exactly. CinfRegularized is\nan additional model that can be selected at runtime without affecting\nC1Regularized users.")
+    .def_rw("elasto_plastic_friction", &mochi::ExperimentalEvalParams::elastoPlasticFriction, "[Experimental] Use elasto-plastic Coulomb friction.\n\nElasto-plastic friction holds a tangential load below the Coulomb limit without\nslip, and slides once the tangential displacement exceeds\n:attr:`~superdex.physics.ContactParams.presliding_displacement`. Regular Coulomb\nfriction, in contrast, needs slip to act.\n\nNote:\n    Changing this setting changes the content of the scene state, so states\n    captured before the change cannot be restored after it.")
     .def_rw("consistency_res_norm", &mochi::ExperimentalEvalParams::consistencyResNorm, "Validate that the residual is the gradient of the objective by a directional\nfinite-difference consistency check.\n\nNote:\n    This operation is expensive and should only be used for debugging.")
     .def_rw("consistency_res_norm_step", &mochi::ExperimentalEvalParams::consistencyResNormStep, "Step size for finite-difference consistency check.")
   ;

@@ -463,6 +463,17 @@ struct ContactDetectionResult {
    */
   DynamicArray<int> colliderFeatureIndices = {};
 
+  /**
+   * @brief Friction anchor offset for each contact point, in the collider's local space.
+   * @note Empty or 1-to-1 with sampleIndices. Set from the colliding actor's stored anchors after
+   * each collision detection pass at TimeStep::Current, only for rigid colliders, to the
+   * stage-start position relative to the anchor; zero for contacts without an anchor.
+   * @note When the anchors are rebuilt after the last stage of a step, a nonzero offset means that
+   * the contact keeps its anchor: the friction model sets the offsets of contacts that lose their
+   * anchor to zero.
+   */
+  DynamicArray<Real3> anchorOffset = {};
+
   void CheckSizes() const {
 #define MOCHI_ASSERT_FULL(var) MOCHI_ASSERT_VERBOSE((var).size() == sampleIndices.size())
 #define MOCHI_ASSERT_EMPTY_OR_FULL(var) \
@@ -481,6 +492,7 @@ struct ContactDetectionResult {
     MOCHI_ASSERT_EMPTY_OR_FULL(forcePerUnitArea);
     MOCHI_ASSERT_EMPTY_OR_FULL(colliderIntegrationWeights);
     MOCHI_ASSERT_EMPTY_OR_FULL(colliderFeatureIndices);
+    MOCHI_ASSERT_EMPTY_OR_FULL(anchorOffset);
 #undef MOCHI_ASSERT_FULL
 #undef MOCHI_ASSERT_EMPTY_OR_FULL
 #undef MOCHI_ASSERT_EMPTY_ONE_OR_FULL
@@ -502,6 +514,7 @@ struct ContactDetectionResult {
     forcePerUnitArea.clear();
     colliderIntegrationWeights.clear();
     colliderFeatureIndices.clear();
+    anchorOffset.clear();
     isSdfGradUnitary = true;
     isNormalCollidingUnitary = true;
   }
@@ -1118,7 +1131,7 @@ struct BatchCollisionResponse {
  * @param[in] posCollidingStageStart Positions of contact points at stage start
  * @param[in] anchorOffset Anchor offsets of contact points: stage-start position minus anchor
  * point, in the collider's local space; their normal component is ignored (used only with
- * elasto-plastic friction).
+ * elasto-plastic friction). See @ref ContactDetectionResult::anchorOffset.
  * @param[in] params Contact parameters (penalty coefficient, friction, damping, etc.)
  * @param[in] config Contact evaluation configuration (explicit normals, padding, etc.)
  * @param[in] dtFactor Time step factor (time step multiplied by a factor depending on the

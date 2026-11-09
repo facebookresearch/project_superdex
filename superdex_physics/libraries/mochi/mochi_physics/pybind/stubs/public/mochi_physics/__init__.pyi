@@ -3965,6 +3965,18 @@ class ExperimentalEvalParams:
     an additional model that can be selected at runtime without affecting
     C1Regularized users.
     """
+    elasto_plastic_friction: bool
+    """[Experimental] Use elasto-plastic Coulomb friction.
+
+    Elasto-plastic friction holds a tangential load below the Coulomb limit without
+    slip, and slides once the tangential displacement exceeds
+    :attr:`~superdex.physics.ContactParams.presliding_displacement`. Regular Coulomb
+    friction, in contrast, needs slip to act.
+
+    Note:
+        Changing this setting changes the content of the scene state, so states
+        captured before the change cannot be restored after it.
+    """
     consistency_res_norm: bool
     """Validate that the residual is the gradient of the objective by a directional
     finite-difference consistency check.
@@ -3984,6 +3996,7 @@ class ExperimentalEvalParams:
         implicit_normal_force_for_dissipation: bool = ...,
         fitted_saturation_hessian: SaturationHessianParams = ...,
         friction_model: CoulombFrictionModel | int = ...,
+        elasto_plastic_friction: bool = ...,
         consistency_res_norm: bool = ...,
         consistency_res_norm_step: float = ...,
     ) -> None: ...

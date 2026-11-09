@@ -604,6 +604,7 @@ void SceneImpl::SetSolverParams(SolverParams const& params, Error& error) {
 
   // Store in CSimulationParams (global to our registry)
   storedParams = params;
+  contact::EnableFrictionAnchorComponents(_registry, params.experimentalEval.elastoPlasticFriction);
   sleep::WakeAll(_registry);
 
   if (_registry.try_ctx<TagDifferentiableScene>() && !params.experimentalEval.explicitNormals) {

@@ -18,6 +18,8 @@
 
 #include "mochi_articulated_body.h"
 #include "mochi_blended.h"
+#include "mochi_capture.h"
+#include "mochi_contact_anchors.h"
 #include "mochi_contact_filter.h"
 #include "mochi_deformable.h"
 #include "mochi_ecs_utils.h"
@@ -4979,6 +4981,21 @@ struct CTempPotentialColliderData {
 } // namespace
 
 namespace mochi::contact {
+void EnableFrictionAnchorComponents(entt::registry& reg, bool enable) {
+  // Every actor with contact samples has the components, or none does.
+  if (enable == !reg.storage<CFrictionAnchors>().empty()) {
+    return;
+  }
+  if (!enable) {
+    reg.clear<CFrictionAnchors>();
+    reg.clear<CFrictionAnchorIndex>();
+    return;
+  }
+  for (auto const [e, samples] : reg.view<CContactSamples<TimeStep::Current> const>().each()) {
+    EmplaceFrictionAnchors(reg, e, isize(samples.positions));
+  }
+}
+
 void InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<CActiveCollisions</*kIsSync*/ false, TimeStep::Current>>(reg);
   ecs::RegisterComponent<CActiveCollisions</*kIsSync*/ false, TimeStep::StageStart>>(reg);
@@ -4993,6 +5010,8 @@ void InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<CContactPartitions>(reg);
   ecs::RegisterComponent<CContactSamples<TimeStep::Current>>(reg);
   ecs::RegisterComponent<CContactSamples<TimeStep::StageStart>>(reg);
+  ecs::RegisterComponent<CFrictionAnchors>(reg);
+  ecs::RegisterComponent<CFrictionAnchorIndex>(reg);
   ecs::RegisterComponent<CContactSkinningData>(reg);
   ecs::RegisterComponent<CLinearContactSkinElementMap>(reg);
   ecs::RegisterComponent<CDeformedContactSkinNodes>(reg);
@@ -5024,6 +5043,9 @@ void InitializeOnce(entt::registry& reg) {
   data.dynamicBounds.reserve(kReserveSize);
   data.dynamicHasCollider.reserve(kReserveSize);
   data.dynamicSweepOrder.reserve(kReserveSize);
+
+  // Post-restore fixup: the friction anchor index is not captured.
+  capture::RegisterPostRestoreSystem(&ReindexFrictionAnchors, reg);
 }
 } // namespace mochi::contact
 
@@ -5435,6 +5457,7 @@ void mochi::CollisionDetectionPipeline(entt::registry& reg, CIslandDescendants c
             AddStageStartCollisionDetection</*kIsSync*/ false>, reg, e);
       }
       SetupActiveCollisionNormals</*kIsSync*/ false>(reg, e);
+      ecs::TryInvokeOnEntity(&FillFrictionAnchorOffsets</*kIsSync*/ false>, reg, e);
     }
     // Notify other systems (e.g. soft actor assembly) that async collision detection and response
     // has been completed.
@@ -5454,6 +5477,7 @@ void mochi::CollisionDetectionPipeline(entt::registry& reg, CIslandDescendants c
             AddStageStartCollisionDetection</*kIsSync*/ true>, reg, e);
       }
       SetupActiveCollisionNormals</*kIsSync*/ true>(reg, e);
+      ecs::TryInvokeOnEntity(&FillFrictionAnchorOffsets</*kIsSync*/ true>, reg, e);
     }
   };
 

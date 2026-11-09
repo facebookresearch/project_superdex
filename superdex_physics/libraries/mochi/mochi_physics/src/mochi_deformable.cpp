@@ -17,6 +17,7 @@
 #include "mochi_deformable.h"
 
 #include "mochi_contact.h"
+#include "mochi_contact_anchors.h"
 #include "mochi_discretization_components.h"
 #include "mochi_ecs_utils.h"
 #include "mochi_rod.h"
@@ -522,6 +523,9 @@ void deformable::EmplaceContactComponents(
   reg.emplace<CPotentialColliders</*kIsSync*/ true>>(e);
   reg.emplace<CContactSamples<TimeStep::Current>>(e, numCollidingSamples);
   reg.emplace<CContactSamples<TimeStep::StageStart>>(e, numCollidingSamples);
+  if (reg.ctx<CSimulationParams const>().experimentalEval.elastoPlasticFriction) {
+    EmplaceFrictionAnchors(reg, e, numCollidingSamples);
+  }
   reg.emplace<CContactCorrespondence</*kIsSync*/ false>>(e, numCollidingSamples);
   reg.emplace<CContactCorrespondence</*kIsSync*/ true>>(e, numCollidingSamples);
   reg.emplace<CActiveCollisions</*kIsSync*/ false, TimeStep::Current>>(e, numContactPartitions);

@@ -19,6 +19,7 @@
 #include "mochi_actor_convergence.h"
 #include "mochi_common_components.h"
 #include "mochi_contact.h"
+#include "mochi_contact_anchors.h"
 #include "mochi_contact_filter.h"
 #include "mochi_differentiable.h"
 #include "mochi_discretization_components.h"
@@ -1111,6 +1112,10 @@ static void InitRigidActor_Dynamic(
     // Emplace helper component to map stage-start and current contact results
     reg.emplace<CContactCorrespondence</*kIsSync*/ false>>(e, numSamples);
     reg.emplace<CContactCorrespondence</*kIsSync*/ true>>(e, numSamples);
+
+    if (reg.ctx<CSimulationParams const>().experimentalEval.elastoPlasticFriction) {
+      EmplaceFrictionAnchors(reg, e, numSamples);
+    }
 
     reg.emplace<CConservativePotentialColliders</*kIsSync*/ false>>(e);
     reg.emplace<CConservativePotentialColliders</*kIsSync*/ true>>(e);

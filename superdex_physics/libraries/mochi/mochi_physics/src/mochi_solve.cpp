@@ -23,6 +23,7 @@
 #include "mochi_common_components.h"
 #include "mochi_compound.h"
 #include "mochi_contact.h"
+#include "mochi_contact_anchors.h"
 #include "mochi_contact_filter.h"
 #include "mochi_deformable.h"
 #include "mochi_discretization_components.h"
@@ -1028,6 +1029,12 @@ static void PostLastStageLocalPipeline(entt::registry& reg, CIslandDescendants c
   // Update the rigid transform at the specified eval point.
   // Used for soft actors (both FOMs and ROMs).
   ecs::InvokeForEach(&soft::UpdateRigidTransformEval, reg, descendants.softActors);
+
+  // Friction anchors are rebuilt once per step, from the contact results of the last stage. The
+  // stages before it only evaluate forces at intermediate configurations, which are not states of
+  // the trajectory. The PostLastStage systems above do not use the contact results, which
+  // FarSdfCollisionDetection overwrites.
+  ecs::InvokeForEach(&UpdateFrictionAnchors, reg, descendants.actors);
 
   // Perform a final collision detection pass with far SDF evaluation
   // States of objects haven't changed since last collision detection evaluation, so we

@@ -138,6 +138,18 @@ struct ExperimentalEvalParams {
   CoulombFrictionModel frictionModel = CoulombFrictionModel::Default;
 
   /**
+   * @brief [Experimental] Use elasto-plastic Coulomb friction.
+   *
+   * @details Elasto-plastic friction holds a tangential load below the Coulomb limit without slip,
+   * and slides once the tangential displacement exceeds @ref ContactParams::preslidingDisplacement.
+   * Regular Coulomb friction, in contrast, needs slip to act.
+   *
+   * @note Changing this setting changes the content of the scene state, so states captured before
+   * the change cannot be restored after it.
+   */
+  bool elastoPlasticFriction = false;
+
+  /**
    * @brief Validate that the residual is the gradient of the objective by a directional
    * finite-difference consistency check.
    *
@@ -160,6 +172,7 @@ struct ExperimentalEvalParams {
   MOCHI_FIELD(implicitNormalForceForDissipation)
   MOCHI_FIELD(fittedSaturationHessian)
   MOCHI_FIELD(frictionModel)
+  MOCHI_FIELD(elastoPlasticFriction)
   MOCHI_FIELD(consistencyResNorm)
   MOCHI_FIELD(consistencyResNormStep)
   MOCHI_STRUCT_END()
