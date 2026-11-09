@@ -418,10 +418,13 @@ void HessianContractImpl(
     RowMatrixView<real const> jacobian,
     Sink& sink) {
   int const numLinks = isize(parents);
-  MOCHI_ASSERT_VERBOSE(isize(dofInfo) == numLinks, "dofInfo must have one entry per link");
-  MOCHI_ASSERT_VERBOSE(isize(jointAxes) == numLinks, "jointAxes must have one entry per link");
   MOCHI_ASSERT_VERBOSE(
-      isize(restTransforms) == numLinks, "restTransforms must have one entry per link");
+      isize(dofInfo) >= numLinks, "dofInfo must have one entry per link, then cycle joints");
+  MOCHI_ASSERT_VERBOSE(
+      isize(jointAxes) >= numLinks, "jointAxes must have one entry per link, then cycle joints");
+  MOCHI_ASSERT_VERBOSE(
+      isize(restTransforms) >= numLinks,
+      "restTransforms must have one entry per link, then cycle joints");
   MOCHI_ASSERT_VERBOSE(
       isize(jointTransforms) == numLinks, "jointTransforms must have one entry per link");
   MOCHI_ASSERT_VERBOSE(

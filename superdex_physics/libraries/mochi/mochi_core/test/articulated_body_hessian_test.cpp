@@ -491,7 +491,7 @@ TEST(ArticulatedBody, Hessian_Consistency) {
   for (int d = 0; d < bundle.props.fullDofsDim; d++) {
     for (int i = 0; i < bundle.props.reducedDofsDim; i++) {
       for (int j = 0; j < i; j++) {
-        EXPECT_NEAR_TOL(hessianFD[j](d, i), hessianFD[j](d, i), tol);
+        EXPECT_NEAR_TOL(hessianFD[j](d, i), hessianFD[i](d, j), tol);
       }
     }
   }
