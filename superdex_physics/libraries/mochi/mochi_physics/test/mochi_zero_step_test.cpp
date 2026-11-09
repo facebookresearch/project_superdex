@@ -716,19 +716,21 @@ std::tuple<Actor*, Actor*> AddBoxOnStaticBox(Scene* scene) {
 }
 } // namespace
 
-// Step(0.0) reproduces a step in which a static collider moved: between steps, static actors keep
-// the start and end poses of the last step, so the collider is not seen at rest.
+// Step(0.0) reproduces a step in which a static collider moved through prescribed poses.
 TEST_F(ZeroStepContactQueryTest, ZeroStepReproducesMovingStaticCollider) {
   auto* scene = _mochiContext->CreateScene("MovingStatic");
   auto [staticBox, dynamicBox] = AddBoxOnStaticBox(scene);
   Real3 constexpr kStaticVelocity{0.05_r, 0_r, 0_r};
   for (int i = 0; i < 20; ++i) {
-    staticBox->SetVelocity(kStaticVelocity, Real3{}, test::ExpectOK{});
+    TransformRT pose = staticBox->GetRootTransform();
+    pose.SetTranslation(pose.GetTranslation() + 0.01_r * kStaticVelocity);
+    staticBox->SetRootTransform(pose, test::ExpectOK{});
     scene->Step(0.01);
   }
   DynamicArray<ContactPoint> const reference = CopyContactPoints(dynamicBox);
   ASSERT_FALSE(reference.empty()) << "Box must rest on the static box";
   EXPECT_NEAR_TOL(reference[0].pointVelocityB, kStaticVelocity, 1e-3_r);
+  EXPECT_NEAR_TOL(dynamicBox->GetLinearVelocity(test::ExpectOK{}), kStaticVelocity, 5e-3_r);
 
   scene->Step(0.0);
   DynamicArray<ContactPoint> const reproduced = CopyContactPoints(dynamicBox);
@@ -750,6 +752,9 @@ TEST_F(ZeroStepContactQueryTest, ZeroStepUsesAndPreservesStaticPrescription) {
     Scene* scene = _mochiContext->CreateScene(name);
     auto [staticBox, dynamicBox] = AddBoxOnStaticBox(scene);
     AdvanceScene(scene, 20, kDt);
+    TransformRT pose = staticBox->GetRootTransform();
+    pose.SetTranslation(pose.GetTranslation() + static_cast<real>(kDt) * kStaticVelocity);
+    staticBox->SetRootTransform(pose, test::ExpectOK{});
     staticBox->SetVelocity(kStaticVelocity, Real3{}, test::ExpectOK{});
     return std::tuple{scene, dynamicBox};
   };

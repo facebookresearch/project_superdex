@@ -5012,15 +5012,17 @@ void mochi::AdvanceFrictionAnchorOffsets(
 
 namespace mochi::contact {
 void EnableFrictionAnchorComponents(entt::registry& reg, bool enable) {
-  // Every actor with contact samples has the components, or none does.
-  if (enable == !reg.storage<CFrictionAnchors>().empty()) {
-    return;
-  }
   if (!enable) {
     reg.clear<CFrictionAnchors>();
     reg.clear<CFrictionAnchorIndex>();
+    reg.unset<CFrictionAnchorClearRequests>();
     return;
   }
+  if (reg.try_ctx<CFrictionAnchorClearRequests>()) {
+    // Anchor components are already enabled, nothing to do.
+    return;
+  }
+  reg.set<CFrictionAnchorClearRequests>();
   for (auto const [e, samples] : reg.view<CContactSamples<TimeStep::Current> const>().each()) {
     EmplaceFrictionAnchors(reg, e, isize(samples.positions));
   }
@@ -5042,6 +5044,7 @@ void InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<CContactSamples<TimeStep::StageStart>>(reg);
   ecs::RegisterComponent<CFrictionAnchors>(reg);
   ecs::RegisterComponent<CFrictionAnchorIndex>(reg);
+  ecs::RegisterComponent<CFrictionAnchorClearRequests>(reg);
   ecs::RegisterComponent<CContactSkinningData>(reg);
   ecs::RegisterComponent<CLinearContactSkinElementMap>(reg);
   ecs::RegisterComponent<CDeformedContactSkinNodes>(reg);

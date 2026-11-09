@@ -1512,6 +1512,10 @@ struct ExperimentalEvalParams [equality(default), from_mochi_core] {
   // the presliding displacement.
   // @note Requires a time integration method (@ref IntegrationMethod) whose step ends at its last
   // stage: BackwardEuler, BDF2, BDF3, DIRK22 or DIRK33.
+  // @note Friction preload is part of the actor history, and is cleared when it is invalidated (see
+  // @ref Actor).
+  // @note A static actor given a velocity every step, like a conveyor belt, never builds friction
+  // preload, so contacts on it creep as with regular friction.
   // @note Not supported in differentiable scenes.
   // @note Changing this setting changes the content of the scene state, so states captured before
   // the change cannot be restored after it.

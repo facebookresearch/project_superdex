@@ -25,10 +25,12 @@
 #include <mochi_core/articulated_body/articulated_body.h>
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/constants.h>
+#include <mochi_core/utils/container_utils.h>
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_physics/src/mochi_articulated_body.h>
 #include <mochi_physics/src/mochi_blended.h>
 #include <mochi_physics/src/mochi_constraint.h>
+#include <mochi_physics/src/mochi_contact_anchors.h>
 #include <mochi_physics/src/mochi_contact_partition.h>
 #include <mochi_physics/src/mochi_context.h>
 #include <mochi_physics/src/mochi_discretization_components.h>
@@ -3060,9 +3062,9 @@ TEST_F(CreateBlendedActorTest, NonCollidingLinksRejectedWithoutBlendedSurface) {
   EXPECT_EQ(numActorsBefore, _scene->GetNumActors());
 }
 
-// Parameterized over the body that carries inertia: unposed (false) or posed (true).
+// Parameterized over the body that carries inertia and whether elasto-plastic friction is enabled.
 class ExternalPoseResetTest : public CreateBlendedActorTest,
-                              public ::testing::WithParamInterface<bool> {
+                              public ::testing::WithParamInterface<std::tuple<bool, bool>> {
  protected:
   enum class Route { Links, Joints, Root };
 
@@ -3071,15 +3073,17 @@ class ExternalPoseResetTest : public CreateBlendedActorTest,
   }
 
   void CheckExternalPoseReset(Route route) {
+    auto const [posedInertia, elastoPlasticFriction] = GetParam();
     _scene->SetGravity({});
     auto solverParams = _scene->GetSolverParams();
     solverParams.integrationMethod = IntegrationMethod::BDF3;
+    solverParams.experimentalEval.elastoPlasticFriction = elastoPlasticFriction;
     _scene->SetSolverParams(solverParams, test::ExpectOK{});
 
     auto params = MakeMinimalBlendedParams(
         CreateUnitCubeTetBlendedSkinShape(_mochiContext, DynamicString{"soft"}));
-    params.hasInertia = GetParam();
-    params.softParams[0].hasInertia = !GetParam();
+    params.hasInertia = posedInertia;
+    params.softParams[0].hasInertia = !posedInertia;
     params.softParams[0].hasStress = false;
     params.softParams[0].hasGravity = false;
 
@@ -3123,6 +3127,20 @@ class ExternalPoseResetTest : public CreateBlendedActorTest,
     ASSERT_FALSE(reg.get<CIntegrationDisplacementSlices const>(nestedEntity).prevSteps.empty());
     ASSERT_FALSE(reg.get<CConservativeStepBounds const>(linkEntity).needsNextStepRelaxation);
     ASSERT_FALSE(reg.get<CConservativeStepBounds const>(nestedEntity).needsNextStepRelaxation);
+    ASSERT_NE(ConvergenceStatus::None, reg.get<CConvergenceStatus const>(parentEntity).stepStatus);
+    std::array const affected{parentEntity, linkEntity, nestedEntity};
+    if (elastoPlasticFriction) {
+      ASSERT_TRUE(reg.all_of<CFrictionAnchors>(parentEntity));
+      for (auto const actorEntity : affected) {
+        if (auto* anchors = reg.try_get<CFrictionAnchors>(actorEntity)) {
+          anchors->anchors.push_back(
+              FrictionAnchor{
+                  .sample = 0,
+                  .collider = entt::to_integral(linkEntity),
+                  .point = Real3{1_r, 0_r, 0_r}});
+        }
+      }
+    }
 
     Real3 constexpr kTranslation{1_r, 0_r, 0_r};
     switch (route) {
@@ -3170,6 +3188,19 @@ class ExternalPoseResetTest : public CreateBlendedActorTest,
     EXPECT_TRUE(reg.get<CIntegrationDisplacementSlices const>(nestedEntity).prevSteps.empty());
     EXPECT_TRUE(reg.get<CConservativeStepBounds const>(linkEntity).needsNextStepRelaxation);
     EXPECT_TRUE(reg.get<CConservativeStepBounds const>(nestedEntity).needsNextStepRelaxation);
+    EXPECT_EQ(ConvergenceStatus::None, reg.get<CConvergenceStatus const>(parentEntity).stepStatus);
+    if (elastoPlasticFriction) {
+      auto const& requests = reg.ctx<CFrictionAnchorClearRequests>().entities;
+      for (auto const actorEntity : affected) {
+        EXPECT_TRUE(Contains(requests, entt::to_integral(actorEntity)));
+      }
+      ApplyFrictionAnchorClearRequests(reg);
+      for (auto const actorEntity : affected) {
+        if (auto const* anchors = reg.try_get<CFrictionAnchors>(actorEntity)) {
+          EXPECT_TRUE(anchors->anchors.empty());
+        }
+      }
+    }
   }
 };
 
@@ -3188,7 +3219,10 @@ TEST_P(ExternalPoseResetTest, FromRootPublishesDerivedState) {
   CheckExternalPoseReset(Route::Root);
 }
 
-INSTANTIATE_TEST_SUITE_P(PosedInertia, ExternalPoseResetTest, ::testing::Bool());
+INSTANTIATE_TEST_SUITE_P(
+    Configurations,
+    ExternalPoseResetTest,
+    ::testing::Combine(::testing::Bool(), ::testing::Bool()));
 
 // Parameterized over the body, unposed (false) or posed (true), that carries inertia and the one
 // that carries stress. Without stress, the body with inertia copies its stored mass matrix into its
@@ -3278,11 +3312,38 @@ TEST_F(CreateBlendedActorTest, NestedDisplacementSettersPublishDerivedState) {
   reg.get<CConservativeStepBounds>(nestedEntity).needsNextStepRelaxation = false;
   reg.get<CConservativeStepBounds>(parentEntity).needsNextStepRelaxation = false;
 
+  auto const primeHistory = [&] {
+    auto& parentPoses = reg.get<CIntegrationArticulatedReducedPose>(parentEntity);
+    parentPoses.prevSteps.clear();
+    parentPoses.prevSteps.emplace_back(
+        reg.get<CArticulatedReducedPose<TimeStep::Current> const>(parentEntity).value);
+    auto& parentVels = reg.get<CIntegrationArticulatedJointVels>(parentEntity);
+    parentVels.prevSteps.clear();
+    parentVels.prevSteps.emplace_back(
+        reg.get<CArticulatedJointVels<TimeStep::Current> const>(parentEntity).value);
+    auto& nestedDisplacements = reg.get<CIntegrationDisplacementSlices>(nestedEntity);
+    nestedDisplacements.prevSteps.clear();
+    nestedDisplacements.prevSteps.emplace_back(
+        reg.get<CDisplacementSlice<real, TimeStep::Current> const>(nestedEntity).value);
+    auto& convergence = reg.get<CConvergenceStatus>(parentEntity);
+    convergence.stageStatus = ConvergenceStatus::Converged;
+    convergence.stepStatus = ConvergenceStatus::Converged;
+  };
+  auto const expectHistoryReset = [&] {
+    EXPECT_TRUE(reg.get<CIntegrationArticulatedReducedPose const>(parentEntity).prevSteps.empty());
+    EXPECT_TRUE(reg.get<CIntegrationArticulatedJointVels const>(parentEntity).prevSteps.empty());
+    EXPECT_TRUE(reg.get<CIntegrationDisplacementSlices const>(nestedEntity).prevSteps.empty());
+    EXPECT_EQ(ConvergenceStatus::None, reg.get<CConvergenceStatus const>(parentEntity).stageStatus);
+    EXPECT_EQ(ConvergenceStatus::None, reg.get<CConvergenceStatus const>(parentEntity).stepStatus);
+  };
+
   // A rotational skeleton velocity makes the skinned velocity depend on node position.
   DynamicArray<real> elastic(childBaseline.size(), 0_r);
   ASSERT_GT(elastic.size(), 3u);
   elastic[3] = 0.25_r;
+  primeHistory();
   nested->SetDisplacements(elastic, test::ExpectOK{});
+  expectHistoryReset();
 
   DynamicArray<real> const childAfterSet(nested->GetDisplacements(test::ExpectOK{}));
   DynamicArray<real> const parentAfterSet(parent->GetDisplacements(test::ExpectOK{}));
@@ -3303,11 +3364,15 @@ TEST_F(CreateBlendedActorTest, NestedDisplacementSettersPublishDerivedState) {
   EXPECT_TRUE(reg.get<CConservativeStepBounds const>(parentEntity).needsNextStepRelaxation);
 
   // Repeating the same update must not apply blending a second time.
+  primeHistory();
   nested->SetDisplacements(elastic, test::ExpectOK{});
+  expectHistoryReset();
   EXPECT_SPAN_EQ(parent->GetDisplacements(test::ExpectOK{}), parentAfterSet);
   Compare(AsConstView(childVelocityAfterSet), AsConstView(childVelocity), kTolerance);
   // Resetting elastic state must restore the skeleton-driven displacement and velocity.
+  primeHistory();
   nested->SetZeroDisplacementsAndVelocities(test::ExpectOK{});
+  expectHistoryReset();
 
   EXPECT_TRUE(
       test::NearEqualSpan(childBaseline, nested->GetDisplacements(test::ExpectOK{}), kTolerance));

@@ -186,7 +186,7 @@ void ResolveAllNodeSkinningDisplacementsPipeline(
 /*
  * Synchronize a nested soft actor's current skinned displacement and velocity after an external
  * displacement and velocity change. If it belongs to a blended actor, republishes the parent's
- * final displacement.
+ * final displacement and invalidates the parent's step history.
  */
 void SynchronizeAfterExternalChange(entt::registry& reg, entt::entity e);
 

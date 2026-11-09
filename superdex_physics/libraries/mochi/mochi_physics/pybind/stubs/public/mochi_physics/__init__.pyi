@@ -3988,6 +3988,14 @@ class ExperimentalEvalParams:
         stage: BackwardEuler, BDF2, BDF3, DIRK22 or DIRK33.
 
     Note:
+        Friction preload is part of the actor history, and is cleared when it is
+        invalidated (see :class:`~superdex.physics.Actor`).
+
+    Note:
+        A static actor given a velocity every step, like a conveyor belt, never
+        builds friction preload, so contacts on it creep as with regular friction.
+
+    Note:
         Not supported in differentiable scenes.
 
     Note:
@@ -9594,6 +9602,15 @@ def get_debug_server() -> DebugServer:
 class Actor:
     """Represents a simulated body (actor) in a scene.
 
+    The actor history is the state that an actor carries over from its previous time
+    steps, besides its current state: the previous states of multi-step time
+    integrators, and, with
+    :attr:`~superdex.physics.ExperimentalEvalParams.elasto_plastic_friction`, the
+    friction preload of its contacts and of contacts on it. Setters that change the
+    state discontinuously invalidate the actor history: in the next time step,
+    multi-step time integrators restart (e.g. BDF2 falls back to backward Euler),
+    and the contacts restart without friction preload.
+
     Note:
         Every body in the simulation is an actor.
 
@@ -9766,8 +9783,8 @@ class Actor:
             before the next step.
 
         Note:
-            Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler
-            in the first time step after this method is called.
+            Invalidates the actor history (see :class:`~superdex.physics.Actor`), except
+            for static actors.
         """
     def get_rigid_center_of_mass_local(self) -> Real3:
         """Get the position of the center of mass in the actor's local coordinate frame
@@ -9823,8 +9840,7 @@ class Actor:
             Does not change velocity.
 
         Note:
-            Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler
-            in the first time step after this method is called.
+            Invalidates the actor history (see :class:`~superdex.physics.Actor`).
 
         Note:
             Moves the actor without changing where the center of mass is within the
@@ -9884,8 +9900,7 @@ class Actor:
             For standalone soft actors, the angular velocity must be zero.
 
         Note:
-            Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler
-            in the first time step after this method is called.
+            Invalidates the actor history (see :class:`~superdex.physics.Actor`).
         """
     def get_linear_velocity(self) -> Real3:
         """Get the linear velocity of the actor in world frame.
@@ -10066,6 +10081,10 @@ class Actor:
             translation boundary conditions. Set the center of mass before adding them.
             Changing only mass or moment of inertia remains supported.
 
+        Note:
+            Invalidates the actor history (see :class:`~superdex.physics.Actor`) if the
+            center of mass changes.
+
         See Also:
             :meth:`~superdex.physics.Actor.get_mass`,
             :meth:`~superdex.physics.Actor.get_density`,
@@ -10187,8 +10206,9 @@ class Actor:
             velocities of nested soft actors.
 
         Note:
-            Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler
-            in the first time step after this method is called.
+            Invalidates the actor history (see :class:`~superdex.physics.Actor`). For
+            nested soft actors of a blended articulated actor, also invalidates the
+            actor history of the articulated actor.
 
         See Also:
             :meth:`~superdex.physics.Actor.get_displacements`,
@@ -10758,8 +10778,9 @@ class Actor:
             orientation.
 
         Note:
-            Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler
-            in the first time step after this method is called.
+            Invalidates the actor history (see :class:`~superdex.physics.Actor`). For
+            nested soft actors of a blended articulated actor, also invalidates the
+            actor history of the articulated actor.
         """
     def get_elements_deformation_gradient(self) -> SpanConstReal:
         """Get the deformation gradient of each element.
@@ -10804,8 +10825,7 @@ class Actor:
             Does not change node velocities.
 
         Note:
-            Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler
-            in the first time step after this method is called.
+            Invalidates the actor history (see :class:`~superdex.physics.Actor`).
         """
     def get_node_velocities_local(self) -> SpanConstReal:
         """Get the current velocity of each node in the actor's local frame.
@@ -10854,8 +10874,7 @@ class Actor:
             [rad/s].
 
         Note:
-            Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler
-            in the first time step after this method is called.
+            Invalidates the actor history (see :class:`~superdex.physics.Actor`).
 
         See Also:
             :meth:`~superdex.physics.Actor.get_node_velocities_local`
@@ -11985,8 +12004,7 @@ class Actor:
             Does not affect the actor's velocities.
 
         Note:
-            Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler
-            in the first time step after this method is called.
+            Invalidates the actor history (see :class:`~superdex.physics.Actor`).
 
         Warning:
             Round-trip error:
@@ -12021,8 +12039,7 @@ class Actor:
             Does not affect the actor's velocities.
 
         Note:
-            Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler
-            in the first time step after this method is called.
+            Invalidates the actor history (see :class:`~superdex.physics.Actor`).
 
         Warning:
             Round-trip error:
@@ -12052,8 +12069,7 @@ class Actor:
             provided velocities.
 
         Note:
-            Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler
-            in the first time step after this method is called.
+            Invalidates the actor history (see :class:`~superdex.physics.Actor`).
 
         See Also:
             :meth:`~superdex.physics.Actor.get_articulated_joint_velocities`

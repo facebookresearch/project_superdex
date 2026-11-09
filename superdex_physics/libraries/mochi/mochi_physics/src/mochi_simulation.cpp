@@ -18,6 +18,7 @@
 
 #include "mochi_actor_convergence.h"
 #include "mochi_articulated_body.h"
+#include "mochi_contact_anchors.h"
 #include "mochi_ecs_utils.h"
 #include "mochi_integration.h"
 #include "mochi_island.h"
@@ -146,6 +147,9 @@ void mochi::InvalidateActorStepHistory(entt::registry& reg, entt::entity actor) 
     convergence->stageStatus = ConvergenceStatus::None;
     convergence->stepStatus = ConvergenceStatus::None;
   }
+
+  // Clear friction preload (anchors) on the next step.
+  RequestFrictionAnchorClear(reg, actor);
 }
 
 namespace mochi::simulation {

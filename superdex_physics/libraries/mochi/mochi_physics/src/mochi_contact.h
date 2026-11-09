@@ -1233,9 +1233,9 @@ void UpdateConservativePotentialColliders(entt::registry& reg);
 // UpdateConservativePotentialColliders sweeps, or 0 (x) if no box is finite.
 [[nodiscard]] size_t SelectSweepAxis(Span<Aabb const> bounds);
 
-// Adds empty friction anchor components to every actor with contact samples, or removes them from
-// all actors, to follow ExperimentalEvalParams::elastoPlasticFriction. Does nothing if the actors
-// already match.
+// Adds empty friction anchor components to every actor with contact samples, and the friction
+// anchor clear requests to the registry context, or removes them all, to follow
+// ExperimentalEvalParams::elastoPlasticFriction. Does nothing if they already match.
 void EnableFrictionAnchorComponents(entt::registry& reg, bool enable);
 
 void InitializeOnce(entt::registry& reg);

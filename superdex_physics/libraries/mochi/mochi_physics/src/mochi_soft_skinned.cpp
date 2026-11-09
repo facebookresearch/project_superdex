@@ -22,6 +22,7 @@
 #include "mochi_integration.h"
 #include "mochi_island.h"
 #include "mochi_rom_jacobian.h"
+#include "mochi_simulation.h"
 #include "mochi_soft_init.h"
 #include "mochi_soft_rom_components.h"
 
@@ -442,7 +443,7 @@ void skinned::SynchronizeAfterExternalChange(entt::registry& reg, entt::entity e
     articulated::compound::ResolveAllNodeSkinningDisplacementsPipeline(
         reg, MakeSingletonConstSpan(parent));
     blended::ResolveAllNodeBlendingDisplacementsPipeline(reg, MakeSingletonConstSpan(parent));
-    RelaxConservativeStepBoundsOnNextStep(reg, parent);
+    InvalidateActorStepHistory(reg, parent);
   }
 
   ecs::TryInvokeOnEntity<ecs::policy::AllowReadWriteSameComponent>(

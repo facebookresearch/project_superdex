@@ -292,7 +292,8 @@ void GetIslandNewtonParams(
 void SetDirichletBCs(CDirichletBC<real> const& dirichlet, ColumnVectorView<real> outSolution);
 
 // Call after externally overwriting actor state. Clears multi-step integration data and the
-// convergence status, and enables conservative-step-bounds relaxation for the next step.
+// convergence status, enables conservative-step-bounds relaxation for the next step, and requests
+// clearing friction preload.
 void InvalidateActorStepHistory(entt::registry& reg, entt::entity actor);
 
 namespace simulation {

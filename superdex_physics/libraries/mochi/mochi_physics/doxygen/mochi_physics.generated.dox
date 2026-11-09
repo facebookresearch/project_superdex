@@ -4943,6 +4943,8 @@
 ///
 /// @brief Represents a simulated body (actor) in a scene.
 ///
+/// @details The actor history is the state that an actor carries over from its previous time steps, besides its current state: the previous states of multi-step time integrators, and, with @ref mochi::ExperimentalEvalParams::elastoPlasticFriction "ExperimentalEvalParams::elastoPlasticFriction", the friction preload of its contacts and of contacts on it. Setters that change the state discontinuously invalidate the actor history: in the next time step, multi-step time integrators restart (e.g. BDF2 falls back to backward Euler), and the contacts restart without friction preload.
+///
 /// @note Every body in the simulation is an actor.
 /// @note Actors always belong to exactly one scene.
 /// @note Actors can be static or dynamic.
@@ -5083,7 +5085,7 @@
 /// @note Not allowed on nested link actors (@ref mochi::Actor::GetNestedLinkActors "GetNestedLinkActors") or nested soft actors (@ref mochi::Actor::GetNestedSoftActors "GetNestedSoftActors").
 /// @note For a top-level articulated actor, the local frame is the articulation root frame, not the root link's frame.
 /// @note For dynamic actors, it does not change velocity. For static actors, it prescribes the root transform at the end of the next time step, and the actor moves there during the step. Its velocity is implied by the change of root transform over the time step. To move a static actor without velocity, also call @ref mochi::Actor::SetVelocity "SetVelocity" with zero velocity before the next step.
-/// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
+/// @note Invalidates the actor history (see @ref mochi::Actor "Actor"), except for static actors.
 ///
 
 /// @fn Real3 mochi::Actor::GetRigidCenterOfMassLocal(Error& error) const
@@ -5121,7 +5123,7 @@
 ///
 /// @note Only supported for standalone dynamic rigid actors.
 /// @note Does not change velocity.
-/// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
+/// @note Invalidates the actor history (see @ref mochi::Actor "Actor").
 /// @note Moves the actor without changing where the center of mass is within the actor (@ref mochi::Actor::GetRigidCenterOfMassLocal "GetRigidCenterOfMassLocal"). To change that, use @ref mochi::Actor::SetInertiaProperties "SetInertiaProperties".
 ///
 /// @see @ref mochi::Actor::GetCenterOfMassTransform "GetCenterOfMassTransform", @ref mochi::Actor::SetRootTransform "SetRootTransform"
@@ -5154,7 +5156,7 @@
 /// @note Only supported for standalone rigid actors and standalone soft actors (except ROMs).
 /// @note For static actors, the velocity is applied at the beginning of the next time step: the actor moves at constant velocity during the step, ending at its root transform (@ref mochi::Actor::SetRootTransform "SetRootTransform"). It is ignored in quasistatic steps.
 /// @note For standalone soft actors, the angular velocity must be zero.
-/// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
+/// @note Invalidates the actor history (see @ref mochi::Actor "Actor").
 ///
 
 /// @fn Real3 mochi::Actor::GetLinearVelocity(Error& error) const
@@ -5238,6 +5240,7 @@
 /// @note After this call, @ref mochi::Actor::GetDensity "GetDensity" returns bulk density mass / volume.
 /// @note The root transform (@ref mochi::Actor::GetRootTransform "GetRootTransform") and the velocity of every material point are preserved, so changing the center of mass does not move the actor. @ref mochi::Actor::GetLinearVelocity "GetLinearVelocity", the center-of-mass velocity, changes accordingly when the actor is rotating. To place the new center of mass at the previous center-of-mass pose instead, call @ref mochi::Actor::GetCenterOfMassTransform "GetCenterOfMassTransform" before this call and pass the result to @ref mochi::Actor::SetCenterOfMassTransform "SetCenterOfMassTransform" afterwards.
 /// @note The center of mass cannot be changed while the actor has constraints or translation boundary conditions. Set the center of mass before adding them. Changing only mass or moment of inertia remains supported.
+/// @note Invalidates the actor history (see @ref mochi::Actor "Actor") if the center of mass changes.
 ///
 /// @see @ref mochi::Actor::GetMass "GetMass", @ref mochi::Actor::GetDensity "GetDensity", @ref mochi::Actor::SetDensity "SetDensity", @ref mochi::Actor::GetRigidCenterOfMassLocal "GetRigidCenterOfMassLocal", @ref mochi::Actor::GetRigidMomentOfInertiaLocal "GetRigidMomentOfInertiaLocal"
 ///
@@ -5304,7 +5307,7 @@
 /// @note Only supported for standalone soft actors, nested soft actors, and shell actors.
 /// @note For nested soft actors, displacements are the elastic deformation component only (before skinning is applied).
 /// @note Does not change the elastic velocity DoFs, but changes the skinned node velocities of nested soft actors.
-/// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
+/// @note Invalidates the actor history (see @ref mochi::Actor "Actor"). For nested soft actors of a blended articulated actor, also invalidates the actor history of the articulated actor.
 ///
 /// @see @ref mochi::Actor::GetDisplacements "GetDisplacements", @ref mochi::Actor::SetNodePositionsLocal "SetNodePositionsLocal"
 ///
@@ -5577,7 +5580,7 @@
 /// @note Only supported for standalone soft actors, nested soft actors, shell actors, and rod actors.
 /// @note For nested soft actors, it zeroes only elastic displacement and velocity. Skeleton-driven displacement and velocity are preserved.
 /// @note For rod actors, it zeroes both the translational displacement DoFs and the twist-angle DoFs, and returns each element's cross-section to its rest orientation.
-/// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
+/// @note Invalidates the actor history (see @ref mochi::Actor "Actor"). For nested soft actors of a blended articulated actor, also invalidates the actor history of the articulated actor.
 ///
 
 /// @fn Span<real const> mochi::Actor::GetElementsDeformationGradient(Error& error) const
@@ -5602,7 +5605,7 @@
 ///
 /// @note Only supported for standalone soft actors and shell actors.
 /// @note Does not change node velocities.
-/// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
+/// @note Invalidates the actor history (see @ref mochi::Actor "Actor").
 ///
 
 /// @fn Span<real const> mochi::Actor::GetNodeVelocitiesLocal(Error& error) const
@@ -5629,7 +5632,7 @@
 /// @note Only supported for standalone soft actors, shell actors, and rod actors.
 /// @note For standalone soft actors and shell actors: 3 values per node [m/s] — (vx, vy, vz).
 /// @note For rod actors: 4 values per node — (vx, vy, vz) in [m/s] plus a twist rate [rad/s].
-/// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
+/// @note Invalidates the actor history (see @ref mochi::Actor "Actor").
 ///
 /// @see @ref mochi::Actor::GetNodeVelocitiesLocal "GetNodeVelocitiesLocal"
 ///
@@ -6194,7 +6197,7 @@
 /// @note Transforms are automatically projected onto valid joint space.
 /// @note If the actor has a pose controller, its target pose is reset to the provided transforms and its target velocity is set to zero. Call @ref mochi::Actor::SetArticulatedTargetVelocity "SetArticulatedTargetVelocity" afterward to use a non-zero target velocity.
 /// @note Does not affect the actor's velocities.
-/// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
+/// @note Invalidates the actor history (see @ref mochi::Actor "Actor").
 ///
 /// @warning Round-trip error: @ref mochi::Actor::SetArticulatedPoseFromLinks "SetArticulatedPoseFromLinks" followed by @ref mochi::Actor::GetArticulatedLinkTransforms "GetArticulatedLinkTransforms" may not return identical values due to internal representation differences.
 ///
@@ -6211,7 +6214,7 @@
 /// @note Only applicable to articulated actors.
 /// @note If the actor has a pose controller, its target pose is reset to the provided pose and its target velocity is set to zero. Call @ref mochi::Actor::SetArticulatedTargetVelocity "SetArticulatedTargetVelocity" afterward to use a non-zero target velocity.
 /// @note Does not affect the actor's velocities.
-/// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
+/// @note Invalidates the actor history (see @ref mochi::Actor "Actor").
 ///
 /// @warning Round-trip error: @ref mochi::Actor::SetArticulatedPoseFromJoints "SetArticulatedPoseFromJoints" followed by @ref mochi::Actor::GetArticulatedPose "GetArticulatedPose" may not return identical values due to internal representation differences.
 ///
@@ -6227,7 +6230,7 @@
 ///
 /// @note Only applicable to articulated actors.
 /// @note If the actor has a pose controller, target velocity is also set to the provided velocities.
-/// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
+/// @note Invalidates the actor history (see @ref mochi::Actor "Actor").
 ///
 /// @see @ref mochi::Actor::GetArticulatedJointVelocities "GetArticulatedJointVelocities"
 ///

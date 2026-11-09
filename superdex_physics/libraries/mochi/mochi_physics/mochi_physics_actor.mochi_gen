@@ -14,6 +14,13 @@
 
 // @brief Represents a simulated body (actor) in a scene.
 //
+// @details The actor history is the state that an actor carries over from its previous time
+// steps, besides its current state: the previous states of multi-step time integrators, and, with
+// @ref ExperimentalEvalParams::elastoPlasticFriction, the friction preload of its contacts and of
+// contacts on it. Setters that change the state discontinuously invalidate the actor history: in
+// the next time step, multi-step time integrators restart (e.g. BDF2 falls back to backward Euler),
+// and the contacts restart without friction preload.
+//
 // @warning Concurrent access to the actor or its scene is illegal.
 //
 // @note Every body in the simulation is an actor.
@@ -134,8 +141,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // root transform at the end of the next time step, and the actor moves there during the step.
   // Its velocity is implied by the change of root transform over the time step. To move a static
   // actor without velocity, also call @ref SetVelocity with zero velocity before the next step.
-  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
-  // time step after this method is called.
+  // @note Invalidates the actor history (see @ref Actor), except for static actors.
   fn SetRootTransform(TransformRT const& worldFromLocal) -> void [pure, virtual, mochi_error, batchable];
 
   // @brief Get the position of the center of mass in the actor's local coordinate frame (@ref
@@ -166,8 +172,7 @@ class Actor [no_init, no_destruct, use_scene] {
   //
   // @note Only supported for standalone dynamic rigid actors.
   // @note Does not change velocity.
-  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
-  // time step after this method is called.
+  // @note Invalidates the actor history (see @ref Actor).
   // @note Moves the actor without changing where the center of mass is within the actor
   // (@ref GetRigidCenterOfMassLocal). To change that, use @ref SetInertiaProperties.
   //
@@ -200,8 +205,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // actor moves at constant velocity during the step, ending at its root transform
   // (@ref SetRootTransform). It is ignored in quasistatic steps.
   // @note For standalone soft actors, the angular velocity must be zero.
-  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
-  // time step after this method is called.
+  // @note Invalidates the actor history (see @ref Actor).
   fn SetVelocity(Real3 const& linearVel [units("m/s")], Real3 const& angularVel [units("rad/s")]) -> void [pure, virtual, mochi_error, batchable];
 
   // @brief Get the linear velocity of the actor in world frame.
@@ -295,6 +299,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note The center of mass cannot be changed while the actor has constraints or translation
   // boundary conditions. Set the center of mass before adding them. Changing only mass or moment of
   // inertia remains supported.
+  // @note Invalidates the actor history (see @ref Actor) if the center of mass changes.
   //
   // @see GetMass, GetDensity, SetDensity, GetRigidCenterOfMassLocal, GetRigidMomentOfInertiaLocal
   fn SetInertiaProperties(real mass [units("kg")], Real3 const& centerOfMass [units("m")], Real6 const& momentOfInertia [units("kg*m^2")]) -> void [pure, virtual, mochi_error, batchable];
@@ -360,8 +365,8 @@ class Actor [no_init, no_destruct, use_scene] {
   // skinning is applied).
   // @note Does not change the elastic velocity DoFs, but changes the skinned node velocities of
   // nested soft actors.
-  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
-  // time step after this method is called.
+  // @note Invalidates the actor history (see @ref Actor). For nested soft actors of a blended
+  // articulated actor, also invalidates the actor history of the articulated actor.
   //
   // @see GetDisplacements, SetNodePositionsLocal
   fn SetDisplacements(Span<real const> displacements [units("m")]) -> void [pure, virtual, mochi_error, batchable];
@@ -669,8 +674,8 @@ class Actor [no_init, no_destruct, use_scene] {
   // Skeleton-driven displacement and velocity are preserved.
   // @note For rod actors, it zeroes both the translational displacement DoFs and the twist-angle DoFs,
   // and returns each element's cross-section to its rest orientation.
-  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
-  // time step after this method is called.
+  // @note Invalidates the actor history (see @ref Actor). For nested soft actors of a blended
+  // articulated actor, also invalidates the actor history of the articulated actor.
   fn SetZeroDisplacementsAndVelocities() -> void [pure, virtual, mochi_error, batchable];
 
   // @brief Get the deformation gradient of each element.
@@ -693,8 +698,7 @@ class Actor [no_init, no_destruct, use_scene] {
   //
   // @note Only supported for standalone soft actors and shell actors.
   // @note Does not change node velocities.
-  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
-  // time step after this method is called.
+  // @note Invalidates the actor history (see @ref Actor).
   fn SetNodePositionsLocal(Span<real const> positionsLocal [units("m")]) -> void [pure, virtual, mochi_error, batchable];
 
   // @brief Get the current velocity of each node in the actor's local frame.
@@ -716,8 +720,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note Only supported for standalone soft actors, shell actors, and rod actors.
   // @note For standalone soft actors and shell actors: 3 values per node [m/s] — (vx, vy, vz).
   // @note For rod actors: 4 values per node — (vx, vy, vz) in [m/s] plus a twist rate [rad/s].
-  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
-  // time step after this method is called.
+  // @note Invalidates the actor history (see @ref Actor).
   //
   // @see GetNodeVelocitiesLocal
   fn SetNodeVelocitiesLocal(Span<real const> velocitiesLocal) -> void [pure, virtual, mochi_error, batchable];
@@ -1315,8 +1318,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // and its target velocity is set to zero. Call @ref SetArticulatedTargetVelocity afterward to use a
   // non-zero target velocity.
   // @note Does not affect the actor's velocities.
-  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
-  // time step after this method is called.
+  // @note Invalidates the actor history (see @ref Actor).
   //
   // @see GetArticulatedLinkTransforms, SetArticulatedPoseFromJoints
   fn SetArticulatedPoseFromLinks(Span<TransformRT const> worldFromLinks) -> void [pure, virtual, mochi_error, batchable];
@@ -1333,8 +1335,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // its target velocity is set to zero. Call @ref SetArticulatedTargetVelocity afterward to use
   // a non-zero target velocity.
   // @note Does not affect the actor's velocities.
-  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
-  // time step after this method is called.
+  // @note Invalidates the actor history (see @ref Actor).
   //
   // @see GetArticulatedPose, SetArticulatedPoseFromLinks
   fn SetArticulatedPoseFromJoints(Span<real const> pose) -> void [pure, virtual, mochi_error, batchable];
@@ -1346,8 +1347,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // @note Only applicable to articulated actors.
   // @note If the actor has a pose controller, target velocity is also set to the provided
   // velocities.
-  // @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first
-  // time step after this method is called.
+  // @note Invalidates the actor history (see @ref Actor).
   //
   // @see GetArticulatedJointVelocities
   fn SetArticulatedJointVelocities(Span<real const> velocities) -> void [pure, virtual, mochi_error, batchable];

@@ -23,6 +23,7 @@
 #include "mochi_compound.h"
 #include "mochi_constraint.h"
 #include "mochi_contact.h"
+#include "mochi_contact_anchors.h"
 #include "mochi_deformable.h"
 #include "mochi_discretization_functions.h"
 #include "mochi_group.h"
@@ -218,6 +219,9 @@ void mochi::PreStepEcs(entt::registry& reg) {
       },
       reg);
   ecs::InvokeForEachGlobal(&rigid::ApplyStaticStepStart, reg);
+
+  // Apply queued friction-preload resets before collision detection copies the anchor offsets.
+  ApplyFrictionAnchorClearRequests(reg);
 
   // Update of previous state and trajectory-dependent derived state.
   if (advanceStep) {

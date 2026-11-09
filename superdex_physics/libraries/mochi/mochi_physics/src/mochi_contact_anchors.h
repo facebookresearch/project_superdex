@@ -109,6 +109,23 @@ struct CFrictionAnchorIndex : private DynamicArray<int>, public NoCopy {
   using DynamicArray<int>::size;
 };
 
+/**
+ * @brief Requests to clear friction preload since the last step. At the start of the next step,
+ * ApplyFrictionAnchorClearRequests drops each actor's anchors, both as colliding and collider.
+ * Global context, present only with elasto-plastic friction.
+ *
+ * @note Captured, so that restoring a state also restores its pending requests, which apply to the
+ * anchors of that state.
+ */
+struct CFrictionAnchorClearRequests : public NoCopy {
+  DynamicArray<uint32_t> entities; // entt::to_integral, including the version
+
+  MOCHI_STRUCT_BEGIN(mochi::CFrictionAnchorClearRequests);
+  MOCHI_ATTRIBUTE(CaptureStateCtx);
+  MOCHI_FIELD(entities);
+  MOCHI_STRUCT_END();
+};
+
 // Sets the anchor offsets of the contacts that use elasto-plastic friction to their stage-start
 // positions relative to their anchors; contacts without an anchor get zero.
 void FillFrictionAnchorOffsets(
@@ -139,6 +156,14 @@ void UpdateFrictionAnchors(
     CActiveCollisions</*kIsSync*/ true, TimeStep::Current> const& syncCollisions,
     CFrictionAnchors& outAnchorsComp,
     CFrictionAnchorIndex& outIndex);
+
+// Requests dropping, at the start of the next step, the friction anchors of an actor, both as
+// colliding and collider (see CFrictionAnchorClearRequests). Does nothing without elasto-plastic
+// friction.
+void RequestFrictionAnchorClear(entt::registry& reg, entt::entity e);
+
+// Applies and clears the queued requests to reset friction preload.
+void ApplyFrictionAnchorClearRequests(entt::registry& reg);
 
 // Emplaces empty friction anchor components on an actor with numSamples contact samples. Call
 // only if ExperimentalEvalParams::elastoPlasticFriction is enabled.

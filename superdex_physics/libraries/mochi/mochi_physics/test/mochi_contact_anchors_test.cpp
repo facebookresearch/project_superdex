@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
+#include "mochi_articulated_test_scenes.h"
 #include "mochi_physics_test_fixture.h"
 
 // These tests inspect the friction anchor component and contact results, which are not exposed
 // through the public API.
 #include <mochi_physics/src/mochi_contact.h>
 #include <mochi_physics/src/mochi_contact_anchors.h>
+#include <mochi_physics/src/mochi_rigid.h>
 
 #include <mochi_core/integration/integration_utils.h>
 #include <mochi_core/utils/basic_utils.h>
@@ -28,6 +30,7 @@
 
 #include <algorithm>
 #include <array>
+#include <functional>
 #include <limits>
 #include <string>
 #include <utility>
@@ -130,6 +133,36 @@ class FrictionAnchors : public test::MochiSceneTestBase {
     return _scene->CreateSoftActor(params, test::ExpectOK{});
   }
 
+  // A free-rooted chain of two box-colliding unit cubes (see test::CreateUnitCubeChain).
+  Actor* CreateArticulatedChain() {
+    std::array const joints{ArticulatedJointType::Free, ArticulatedJointType::Spherical};
+    return test::CreateUnitCubeChain(
+        _scene,
+        test::CreateUnitCubeTetMeshShape(_mochiContext),
+        joints,
+        /*dampingCoeff*/ 0_r,
+        /*inertiaCoeff*/ 0_r,
+        /*frictionCoeff*/ 0_r);
+  }
+
+  Actor* GetLink(Actor* articulated, int link) {
+    return _scene->GetActor(articulated->GetNestedLinkActors(test::ExpectOK{})[link]);
+  }
+
+  // Tilts gravity along x, so that a cube resting on the plane carries a tangential load of
+  // loadRatio times the Coulomb limit.
+  void SetTangentialLoad(real loadRatio) {
+    real const mu = ContactParams{}.coulombFrictionCoefficient;
+    _scene->SetGravity(Real3{loadRatio * mu * kGravity, -kGravity, 0_r});
+  }
+
+  // The plane, and a rigid cube resting on it under a tangential load (see SetTangentialLoad).
+  Actor* CreateCubeUnderTangentialLoad(real loadRatio, real normalDamping = 0_r) {
+    SetTangentialLoad(loadRatio);
+    CreatePlane(normalDamping);
+    return CreateRigidCube(normalDamping);
+  }
+
   void Step(int numSteps) {
     for (int i = 0; i < numSteps; ++i) {
       _scene->Step(1e-2_r);
@@ -197,6 +230,71 @@ class FrictionAnchors : public test::MochiSceneTestBase {
 
   bool HasAnyAnchorComponent(Actor* actor) {
     return GetRegistry().any_of<CFrictionAnchors, CFrictionAnchorIndex>(GetEntity(actor));
+  }
+
+  // Seeds an anchor of the actor's sample 0 on each collider, as after a step.
+  void SeedAnchors(Actor* actor, DynamicArray<entt::entity> const& colliders) {
+    DynamicArray<ActiveCollision> collisions;
+    for (entt::entity const collider : colliders) {
+      collisions.push_back(MakeCollision(collider, {0}, {Real3{1_r, 0_r, 0_r}}));
+    }
+    RebuildAnchors(GetAnchors(actor), GetIndex(actor), collisions);
+  }
+
+  // Colliders of the actor's anchors, in storage order.
+  DynamicArray<entt::entity> GetAnchorColliders(Actor* actor) {
+    DynamicArray<entt::entity> colliders;
+    for (auto const& anchor : GetAnchors(actor).anchors) {
+      colliders.push_back(static_cast<entt::entity>(anchor.collider));
+    }
+    return colliders;
+  }
+
+  // Applies prescribed static motion and queued preload resets, as at the next step.
+  void ApplyClearRequests() {
+    ecs::InvokeForEachGlobal(&rigid::ApplyStaticStepStart, GetRegistry());
+    ApplyFrictionAnchorClearRequests(GetRegistry());
+  }
+
+  // Sets the actor's current pose. Dynamic actors request a reset; standalone statics do not.
+  static void Place(Actor* actor) {
+    actor->SetRootTransform(actor->GetRootTransform(), test::ExpectOK{});
+  }
+
+  // Moves a static actor and zeroes its velocity, which turns the kinematic move into a teleport.
+  static void Teleport(Actor* staticActor, TransformRT const& worldFromLocal) {
+    staticActor->SetRootTransform(worldFromLocal, test::ExpectOK{});
+    staticActor->SetVelocity(Real3{}, Real3{}, test::ExpectOK{});
+  }
+
+  // Every setter that places an articulated actor: where it is, or at zero joint positions.
+  static std::array<std::function<void()>, 3> ArticulatedPlacements(Actor* articulated) {
+    DynamicArray<real> const zeroDofs(articulated->GetNumDofs(), 0_r);
+    DynamicArray<TransformRT> worldFromLinks(
+        articulated->GetNestedLinkActors(test::ExpectOK{}).size());
+    articulated->GetArticulatedLinkTransforms(MakeSpan(worldFromLinks), test::ExpectOK{});
+    return {
+        [articulated] { Place(articulated); },
+        [articulated, zeroDofs] {
+          articulated->SetArticulatedPoseFromJoints(zeroDofs, test::ExpectOK{});
+        },
+        [articulated, worldFromLinks] {
+          articulated->SetArticulatedPoseFromLinks(MakeConstSpan(worldFromLinks), test::ExpectOK{});
+        }};
+  }
+
+  // For each placement: seeds anchors, places, applies the clear requests and checks the anchors.
+  void ForEachPlacement(
+      Span<std::function<void()> const> placements,
+      std::function<void()> const& seed,
+      std::function<void()> const& expect) {
+    for (int i = 0; i < isize(placements); ++i) {
+      SCOPED_TRACE("placement " + std::to_string(i));
+      seed();
+      placements[i]();
+      ApplyClearRequests();
+      expect();
+    }
   }
 
   // The plane is static, so the contacts of an actor with it are async.
@@ -271,16 +369,6 @@ class FrictionAnchors : public test::MochiSceneTestBase {
     EXPECT_NEAR_TOL(scale * displacement, offset, 1e-3_r * delta);
   }
 
-  // Creates the plane and a rigid cube resting on it, with gravity tilted along x, so that the
-  // tangential load is loadRatio times the Coulomb limit.
-  Actor* CreateCubeUnderTangentialLoad(real loadRatio, real normalDamping = 0_r) {
-    real constexpr kGravity = 9.81_r;
-    real const mu = ContactParams{}.coulombFrictionCoefficient;
-    _scene->SetGravity(Real3{loadRatio * mu * kGravity, -kGravity, 0_r});
-    CreatePlane(normalDamping);
-    return CreateRigidCube(normalDamping);
-  }
-
   // Steps a stack of numCubes rigid cubes resting on the plane with gravity tilted along x, so that
   // the tangential load of each contact is loadRatio times the Coulomb limit, and returns the
   // distance the top cube travels along x in the second half of numSteps, relative to what it rests
@@ -307,6 +395,7 @@ class FrictionAnchors : public test::MochiSceneTestBase {
     return relativeX() - x0;
   }
 
+  static constexpr real kGravity = 9.81_r;
   Actor* _plane = nullptr;
 };
 
@@ -499,6 +588,47 @@ TEST_F(FrictionAnchors, RebuildReusesCapacity) {
   EXPECT_EQ(Real3{}, FindAnchorPoint(anchors, index, 1, plane));
 }
 
+// Placing a collider drops the anchors on it and reindexes the others: the group of sample 0
+// shifts, so lookups through a stale index would miss its remaining anchor.
+TEST_F(FrictionAnchors, PlacingColliderReindexesRemainingAnchors) {
+  CreatePlane();
+  entt::entity const plane = GetEntity(_plane);
+  Actor* collider = CreateRigidCube();
+  Actor* colliding = CreateRigidCube();
+  RebuildInterleavedAnchors(plane, GetEntity(collider), GetAnchors(colliding), GetIndex(colliding));
+
+  Place(collider);
+  ApplyClearRequests();
+  auto const& anchors = GetAnchors(colliding);
+  auto const& index = GetIndex(colliding);
+  EXPECT_EQ(2, isize(anchors.anchors));
+  EXPECT_EQ((Real3{4_r, 0_r, 0_r}), FindAnchorPoint(anchors, index, 0, plane));
+  EXPECT_EQ((Real3{1_r, 0_r, 0_r}), FindAnchorPoint(anchors, index, 2, plane));
+  EXPECT_EQ(Real3{}, FindAnchorPoint(anchors, index, 0, GetEntity(collider)));
+  EXPECT_EQ(Real3{}, FindAnchorPoint(anchors, index, 2, GetEntity(collider)));
+}
+
+// Placing an actor that no anchors are on keeps the anchors of other actors as they are. Placing
+// all their colliders drops them all.
+TEST_F(FrictionAnchors, PlacingOtherActorKeepsAnchors) {
+  CreatePlane();
+  entt::entity const plane = GetEntity(_plane);
+  Actor* collider = CreateRigidCube();
+  Actor* other = CreateRigidCube();
+  Actor* colliding = CreateRigidCube();
+  RebuildInterleavedAnchors(plane, GetEntity(collider), GetAnchors(colliding), GetIndex(colliding));
+  DynamicArray<FrictionAnchor> const savedAnchors = GetAnchors(colliding).anchors;
+
+  Place(other);
+  ApplyClearRequests();
+  ExpectAnchors(savedAnchors, GetAnchors(colliding).anchors);
+
+  Place(collider);
+  Teleport(_plane, TransformRT{Real3{0_r, -1e-3_r, 0_r}});
+  ApplyClearRequests();
+  EXPECT_TRUE(GetAnchors(colliding).anchors.empty());
+}
+
 // Elasto-plastic friction requires the C1Regularized friction model: SetSolverParams rejects
 // CinfRegularized with it, and keeps the previous params.
 TEST_F(FrictionAnchors, RequiresC1RegularizedFriction) {
@@ -536,20 +666,28 @@ TEST_F(FrictionAnchors, RequiresIntegratorEndingAtLastStage) {
 }
 
 // ExperimentalEvalParams::elastoPlasticFriction governs the anchor components of every actor with
-// contact samples, with an index entry per sample: actors created with it disabled have none,
-// enabling it adds empty ones, actors created with it enabled have them, and disabling it removes
-// them all. The static plane is only a collider: it never has them. Stepping without the
-// components runs no anchor system.
+// contact samples, with an index entry per sample, and the clear requests: actors created with it
+// disabled have none, enabling it adds empty ones, actors created with it enabled have them, and
+// disabling it removes them all. The static plane is only a collider: it never has anchor
+// components. Stepping without the components runs no anchor system. A state captured with it
+// disabled cannot be restored with it enabled.
 TEST_F(FrictionAnchors, ElastoPlasticFrictionGovernsAnchorComponents) {
   SetElastoPlasticFriction(false);
+  EXPECT_FALSE(GetRegistry().try_ctx<CFrictionAnchorClearRequests>());
   CreatePlane();
   std::array<Actor*, 2> const disabledActors = {CreateRigidCube(), CreateSoftCube()};
   for (Actor* actor : disabledActors) {
     EXPECT_FALSE(HasAnyAnchorComponent(actor)) << actor->GetName();
   }
   Step(1);
+  StateHandle const disabledState = _scene->CaptureState(test::ExpectOK{});
 
   SetElastoPlasticFriction(true);
+  EXPECT_TRUE(GetRegistry().try_ctx<CFrictionAnchorClearRequests>());
+  // Same entities as the capture, so that only the anchor components reject the restore.
+  StateHandle const enabledState = _scene->CaptureState(test::ExpectOK{});
+  _scene->RestoreState(disabledState, /*releaseImmediately=*/true, test::ExpectNotOK{});
+  _scene->RestoreState(enabledState, /*releaseImmediately=*/true, test::ExpectOK{});
   std::array<Actor*, 4> const actors = {
       disabledActors[0], disabledActors[1], CreateRigidCube(), CreateSoftCube()};
   for (Actor* actor : actors) {
@@ -561,6 +699,7 @@ TEST_F(FrictionAnchors, ElastoPlasticFrictionGovernsAnchorComponents) {
   Step(1);
 
   SetElastoPlasticFriction(false);
+  EXPECT_FALSE(GetRegistry().try_ctx<CFrictionAnchorClearRequests>());
   for (Actor* actor : actors) {
     EXPECT_FALSE(HasAnyAnchorComponent(actor)) << actor->GetName();
   }
@@ -572,14 +711,14 @@ TEST_F(FrictionAnchors, SoftActorAnchorsAdvance) {
   ExpectSeededAnchorAdvances(CreateSoftCube());
 }
 
-// A seeded anchor of a rigid cube advances. Once the cube leaves the plane, it has no contacts and
-// the rebuild drops its anchors.
+// A seeded anchor of a rigid cube advances. Upward gravity then makes the cube leave the contact
+// threshold without a state override, so the rebuild drops the lost contacts' anchors.
 TEST_F(FrictionAnchors, RebuildDropsAnchorsOfLostContacts) {
   CreatePlane();
   Actor* cube = CreateRigidCube();
   ExpectSeededAnchorAdvances(cube);
-  cube->SetRootTransform(TransformRT{Quaternion{}, Real3{0_r, 1_r, 0_r}}, test::ExpectOK{});
-  cube->SetVelocity(Real3{}, Real3{}, test::ExpectOK{});
+  _scene->SetGravity(Real3{0_r, 100_r, 0_r});
+  EXPECT_TRUE(GetRegistry().ctx<CFrictionAnchorClearRequests>().entities.empty());
   Step(1);
   EXPECT_TRUE(GetAnchors(cube).anchors.empty());
 }
@@ -672,18 +811,15 @@ TEST_P(FrictionAnchorsIntegrator, HoldsTangentialLoadWithoutCreep) {
 // anchor, and gets a new one elsewhere. Normal contact damping keeps the normal force from
 // chattering toward zero.
 TEST_P(FrictionAnchorsIntegrator, StickingAnchorsStayAtTheirMaterialPoints) {
-  real constexpr kGravity = 9.81_r;
   real constexpr kNormalDamping = 100_r; // [s/m]
-  real const load = 0.1_r * ContactParams{}.coulombFrictionCoefficient * kGravity;
-  _scene->SetGravity(Real3{load, -kGravity, 0_r});
-  CreatePlane(kNormalDamping);
-  Actor* cube = CreateRigidCube(kNormalDamping);
+  real constexpr kLoadRatio = 0.1_r;
+  Actor* cube = CreateCubeUnderTangentialLoad(kLoadRatio, kNormalDamping);
   Step(20);
   DynamicArray<FrictionAnchor> kept = GetAnchors(cube).anchors;
   ASSERT_FALSE(kept.empty());
   DynamicArray<FrictionAnchor> const settled = kept;
 
-  _scene->SetGravity(Real3{-load, -kGravity, 0_r});
+  SetTangentialLoad(-kLoadRatio);
   auto const findPoint = [&](FrictionAnchor const& anchor) {
     auto const collider = static_cast<entt::entity>(anchor.collider);
     return FindAnchorPoint(GetAnchors(cube), GetIndex(cube), anchor.sample, collider);
@@ -723,7 +859,7 @@ TEST_P(FrictionAnchorsIntegrator, SlidesAboveCoulombLimit) {
   real constexpr kNormalDamping = 100_r; // [s/m]
   real constexpr kLoadRatio = 1.5_r;
   real const acceleration =
-      (kLoadRatio - 1_r) * ContactParams{}.coulombFrictionCoefficient * 9.81_r;
+      (kLoadRatio - 1_r) * ContactParams{}.coulombFrictionCoefficient * kGravity;
   Actor* cube = CreateCubeUnderTangentialLoad(kLoadRatio, kNormalDamping);
   Step(50);
   real const v0 = cube->GetLinearVelocity(test::ExpectOK{})[0];
@@ -742,3 +878,323 @@ INSTANTIATE_TEST_SUITE_P(
         IntegrationMethod::DIRK22,
         IntegrationMethod::DIRK33),
     IntegratorName);
+
+// Every setter that places a dynamic rigid actor drops its anchors, and those of other actors on
+// it, at the start of the next step. Anchors on other colliders stay.
+TEST_F(FrictionAnchors, PlacingRigidActorDropsItsAnchorsAndThoseOnIt) {
+  CreatePlane();
+  entt::entity const plane = GetEntity(_plane);
+  Actor* placed = CreateRigidCube();
+  Actor* other = CreateRigidCube();
+  std::array<std::function<void()>, 2> const placements = {
+      [&] {
+        placed->SetRootTransform(TransformRT{Quaternion{}, Real3{2_r, 0_r, 0_r}}, test::ExpectOK{});
+        EXPECT_EQ(2, isize(GetAnchors(placed).anchors)) << "Dropped only at the next step.";
+      },
+      [&] {
+        placed->SetCenterOfMassTransform(
+            placed->GetCenterOfMassTransform(test::ExpectOK{}), test::ExpectOK{});
+      }};
+  ForEachPlacement(
+      MakeConstSpan(placements),
+      [&] {
+        SeedAnchors(placed, {plane, GetEntity(other)});
+        SeedAnchors(other, {plane, GetEntity(placed)});
+      },
+      [&] {
+        EXPECT_TRUE(GetAnchors(placed).anchors.empty());
+        EXPECT_EQ(DynamicArray<entt::entity>{plane}, GetAnchorColliders(other));
+      });
+}
+
+// Every explicit static velocity override clears preload; pose-only motion keeps it.
+TEST_F(FrictionAnchors, StaticVelocityOverridesClearAnchors) {
+  CreatePlane();
+  entt::entity const plane = GetEntity(_plane);
+  Actor* cube = CreateRigidCube();
+  auto const move = [&] {
+    TransformRT moved = _plane->GetRootTransform();
+    moved.SetTranslation(moved.GetTranslation() - Real3{0_r, 1e-3_r, 0_r});
+    _plane->SetRootTransform(moved, test::ExpectOK{});
+  };
+  auto const stop = [&] { _plane->SetVelocity(Real3{}, Real3{}, test::ExpectOK{}); };
+  auto const slide = [&] {
+    _plane->SetVelocity(Real3{0_r, -0.1_r, 0_r}, Real3{}, test::ExpectOK{});
+  };
+  struct Case {
+    std::function<void()> prescribe;
+    bool clearsAnchors;
+  };
+  std::array<Case, 10> const cases = {{
+      {.prescribe = stop, .clearsAnchors = true},
+      {.prescribe = move, .clearsAnchors = false},
+      {.prescribe =
+           [&] {
+             move();
+             stop();
+           },
+       .clearsAnchors = true},
+      {.prescribe =
+           [&] {
+             stop();
+             move();
+           },
+       .clearsAnchors = true},
+      {.prescribe =
+           [&] {
+             move();
+             slide();
+           },
+       .clearsAnchors = true},
+      {.prescribe =
+           [&] {
+             Place(_plane);
+             stop();
+           },
+       .clearsAnchors = true},
+      {.prescribe = slide, .clearsAnchors = true},
+      {.prescribe = slide, .clearsAnchors = true},
+      {.prescribe =
+           [&] {
+             _plane->SetVelocity(
+                 Real3{std::numeric_limits<real>::quiet_NaN(), 0_r, 0_r},
+                 Real3{},
+                 test::ExpectNotOK{});
+           },
+       .clearsAnchors = false},
+      {.prescribe =
+           [&] {
+             _plane->SetVelocity(
+                 Real3{},
+                 Real3{std::numeric_limits<real>::quiet_NaN(), 0_r, 0_r},
+                 test::ExpectNotOK{});
+           },
+       .clearsAnchors = false},
+  }};
+  for (int i = 0; i < isize(cases); ++i) {
+    SCOPED_TRACE("case " + std::to_string(i));
+    SeedAnchors(cube, {plane});
+    cases[i].prescribe();
+    EXPECT_EQ(
+        cases[i].clearsAnchors,
+        !GetRegistry().ctx<CFrictionAnchorClearRequests>().entities.empty());
+    ApplyClearRequests();
+    EXPECT_EQ(cases[i].clearsAnchors, GetAnchors(cube).anchors.empty());
+  }
+}
+
+// Every setter that places a soft actor drops its anchors. Nested soft setters also reset the
+// blended parent whose skin they move.
+TEST_F(FrictionAnchors, PlacingSoftActorDropsItsAnchors) {
+  CreatePlane();
+  Actor* soft = CreateSoftCube();
+  soft->RegisterQuery(QueryType::NodePositions, test::ExpectOK{});
+  _scene->Step(0.0); // Updates the queries
+  Span<real const> const positionsSpan = soft->GetNodePositionsLocal(test::ExpectOK{});
+  DynamicArray<real> const positions(positionsSpan);
+  DynamicArray<real> const displacements(soft->GetDisplacements(test::ExpectOK{}));
+
+  std::array<std::function<void()>, 4> const placements = {
+      [&] { Place(soft); },
+      [&] { soft->SetNodePositionsLocal(MakeConstSpan(positions), test::ExpectOK{}); },
+      [&] { soft->SetDisplacements(MakeConstSpan(displacements), test::ExpectOK{}); },
+      [&] { soft->SetZeroDisplacementsAndVelocities(test::ExpectOK{}); }};
+  ForEachPlacement(
+      MakeConstSpan(placements),
+      [&] { SeedAnchors(soft, {GetEntity(_plane)}); },
+      [&] { EXPECT_TRUE(GetAnchors(soft).anchors.empty()); });
+
+  Actor* blended = test::CreateThreeBoneSoftSkinnedActor(
+      _mochiContext,
+      _scene,
+      test::ThreeBoneSoftSkinnedMode::BlendedFom,
+      TransformRT{},
+      0_r,
+      0_r,
+      0_r,
+      ActorBoundaryElementType::Default);
+  Actor* nested = _scene->GetActor(blended->GetNestedSoftActors(test::ExpectOK{})[0]);
+  DynamicArray<real> const nestedDisplacements(nested->GetDisplacements(test::ExpectOK{}));
+  std::array<std::function<void()>, 2> const nestedPlacements = {
+      [&] { nested->SetDisplacements(MakeConstSpan(nestedDisplacements), test::ExpectOK{}); },
+      [&] { nested->SetZeroDisplacementsAndVelocities(test::ExpectOK{}); }};
+  ForEachPlacement(
+      MakeConstSpan(nestedPlacements),
+      [&] { SeedAnchors(blended, {GetEntity(_plane)}); },
+      [&] { EXPECT_TRUE(GetAnchors(blended).anchors.empty()); });
+}
+
+// Every setter that places an articulated actor drops the anchors of its links, and those of other
+// actors on them.
+TEST_F(FrictionAnchors, PlacingArticulatedActorDropsAnchorsOfLinks) {
+  CreatePlane();
+  entt::entity const plane = GetEntity(_plane);
+  Actor* chain = CreateArticulatedChain();
+  std::array<Actor*, 2> const links = {GetLink(chain, 0), GetLink(chain, 1)};
+  for (Actor* link : links) {
+    ExpectAnchorComponents(link);
+  }
+  Actor* other = CreateRigidCube();
+  ForEachPlacement(
+      MakeConstSpan(ArticulatedPlacements(chain)),
+      [&] {
+        for (Actor* link : links) {
+          SeedAnchors(link, {plane});
+        }
+        SeedAnchors(other, {plane, GetEntity(links[0]), GetEntity(links[1])});
+      },
+      [&] {
+        for (Actor* link : links) {
+          EXPECT_TRUE(GetAnchors(link).anchors.empty());
+        }
+        EXPECT_EQ(DynamicArray<entt::entity>{plane}, GetAnchorColliders(other));
+      });
+}
+
+// Every setter that places an articulated actor drops the anchors of its skin, which belong to the
+// actor itself, and those of other actors on its links, here on its static root link.
+TEST_F(FrictionAnchors, PlacingArticulatedActorDropsAnchorsOfSkin) {
+  CreatePlane();
+  entt::entity const plane = GetEntity(_plane);
+  Actor* skinned = test::CreateThreeBoneSkinnedActor(
+      _mochiContext, _scene, 0_r, 0_r, 0_r, ActorBoundaryElementType::Default);
+  ExpectAnchorComponents(skinned);
+  Actor* staticLink = GetLink(skinned, 0);
+  ASSERT_TRUE(GetRegistry().all_of<TagStaticActor>(GetEntity(staticLink)));
+  Actor* other = CreateRigidCube();
+  ForEachPlacement(
+      MakeConstSpan(ArticulatedPlacements(skinned)),
+      [&] {
+        SeedAnchors(skinned, {plane});
+        SeedAnchors(other, {plane, GetEntity(staticLink)});
+      },
+      [&] {
+        EXPECT_TRUE(GetAnchors(skinned).anchors.empty());
+        EXPECT_EQ(DynamicArray<entt::entity>{plane}, GetAnchorColliders(other));
+      });
+}
+
+// Every setter that places an articulated actor drops the anchors of its nested soft actors.
+TEST_F(FrictionAnchors, PlacingArticulatedActorDropsAnchorsOfNestedSoftActors) {
+  CreatePlane();
+  Actor* skinned = test::CreateThreeBoneSoftSkinnedActor(
+      _mochiContext,
+      _scene,
+      test::ThreeBoneSoftSkinnedMode::Fom,
+      TransformRT{},
+      0_r,
+      0_r,
+      0_r,
+      ActorBoundaryElementType::Default);
+  Actor* nested = _scene->GetActor(skinned->GetNestedSoftActors(test::ExpectOK{})[0]);
+  ExpectAnchorComponents(nested);
+  ForEachPlacement(
+      MakeConstSpan(ArticulatedPlacements(skinned)),
+      [&] { SeedAnchors(nested, {GetEntity(_plane)}); },
+      [&] { EXPECT_TRUE(GetAnchors(nested).anchors.empty()); });
+}
+
+// Velocity and center-of-mass overrides clear friction preload when they invalidate step history.
+TEST_F(FrictionAnchors, VelocityAndCenterOfMassSettersClearAnchors) {
+  CreatePlane();
+  Actor* rigid = CreateRigidCube();
+  Actor* soft = CreateSoftCube();
+  Actor* chain = CreateArticulatedChain();
+  Real3 const velocity{1_r, 0_r, 0_r};
+  struct Case {
+    Actor* actor;
+    std::function<void()> reset;
+  };
+  std::array<Case, 5> const cases = {{
+      {.actor = rigid,
+       .reset = [&] { rigid->SetVelocity(velocity, Real3{0_r, 1_r, 0_r}, test::ExpectOK{}); }},
+      {.actor = rigid,
+       .reset =
+           [&] {
+             rigid->SetInertiaProperties(
+                 rigid->GetMass(test::ExpectOK{}),
+                 rigid->GetRigidCenterOfMassLocal(test::ExpectOK{}) + Real3{0.1_r, 0_r, 0_r},
+                 rigid->GetRigidMomentOfInertiaLocal(test::ExpectOK{}),
+                 test::ExpectOK{});
+           }},
+      {.actor = soft, .reset = [&] { soft->SetVelocity(velocity, Real3{}, test::ExpectOK{}); }},
+      {.actor = soft,
+       .reset = [&] { test::SetRigidNodeVelocitiesLocal(soft, velocity, Real3{}, Real3{}); }},
+      {.actor = GetLink(chain, 0),
+       .reset =
+           [&] {
+             chain->SetArticulatedJointVelocities(
+                 DynamicArray<real>(chain->GetNumDofs(), 1_r), test::ExpectOK{});
+           }},
+  }};
+  for (int i = 0; i < isize(cases); ++i) {
+    SCOPED_TRACE("case " + std::to_string(i));
+    SeedAnchors(cases[i].actor, {GetEntity(_plane)});
+    cases[i].reset();
+    ApplyClearRequests();
+    EXPECT_TRUE(GetAnchors(cases[i].actor).anchors.empty());
+  }
+}
+
+// A placed actor destroyed before the next step is skipped, and the anchors of other actors stay.
+TEST_F(FrictionAnchors, DestroyedPlacedActorIsSkipped) {
+  CreatePlane();
+  Actor* placed = CreateRigidCube();
+  Actor* other = CreateRigidCube();
+  SeedAnchors(other, {GetEntity(_plane)});
+  DynamicArray<FrictionAnchor> const savedAnchors = GetAnchors(other).anchors;
+
+  Place(placed);
+  _scene->DestroyActor(placed);
+  ApplyClearRequests();
+  ExpectAnchors(savedAnchors, GetAnchors(other).anchors);
+  EXPECT_TRUE(GetRegistry().ctx<CFrictionAnchorClearRequests>().entities.empty());
+}
+
+// Clear requests are captured with the state. Restoring a state captured after a placement, before
+// the next step, brings back its pending request along with the anchors it applies to. Restoring a
+// state captured before the placement drops the pending request, so the anchors of that state stay.
+TEST_F(FrictionAnchors, RestoreStateRestoresClearRequests) {
+  CreatePlane();
+  Actor* cube = CreateRigidCube();
+  SeedAnchors(cube, {GetEntity(_plane)});
+  DynamicArray<FrictionAnchor> const savedAnchors = GetAnchors(cube).anchors;
+  StateHandle const beforePlacement = _scene->CaptureState(test::ExpectOK{});
+  Place(cube);
+  StateHandle const afterPlacement = _scene->CaptureState(test::ExpectOK{});
+  ApplyClearRequests();
+  ASSERT_TRUE(GetAnchors(cube).anchors.empty());
+
+  _scene->RestoreState(afterPlacement, /*releaseImmediately=*/false, test::ExpectOK{});
+  ExpectAnchors(savedAnchors, GetAnchors(cube).anchors);
+  ApplyClearRequests();
+  EXPECT_TRUE(GetAnchors(cube).anchors.empty());
+
+  _scene->RestoreState(afterPlacement, /*releaseImmediately=*/true, test::ExpectOK{});
+  ASSERT_FALSE(GetRegistry().ctx<CFrictionAnchorClearRequests>().entities.empty());
+  _scene->RestoreState(beforePlacement, /*releaseImmediately=*/true, test::ExpectOK{});
+  ApplyClearRequests();
+  ExpectAnchors(savedAnchors, GetAnchors(cube).anchors);
+}
+
+// Once the load is removed, the anchors of a held cube pull it back by their pre-load. A placed
+// cube instead starts without pre-load: moved elsewhere on the plane, it stays put. The placement
+// is applied at the next step, which is the first one to use the dropped anchors.
+TEST_F(FrictionAnchors, PlacementDropsPreload) {
+  Actor* held = CreateCubeUnderTangentialLoad(0.5_r);
+  Actor* placed = CreateRigidCube();
+  placed->SetRootTransform(TransformRT{Real3{3_r, 0_r, 0_r}}, test::ExpectOK{});
+  Step(50);
+  SetTangentialLoad(0_r);
+  ASSERT_FALSE(GetAnchors(held).anchors.empty());
+  ASSERT_FALSE(GetAnchors(placed).anchors.empty());
+
+  real const heldX0 = held->GetRootTransform().GetTranslation()[0];
+  TransformRT moved = placed->GetRootTransform();
+  moved.SetTranslation(moved.GetTranslation() + Real3{1_r, 0_r, 0_r});
+  placed->SetRootTransform(moved, test::ExpectOK{});
+  placed->SetVelocity(Real3{}, Real3{}, test::ExpectOK{});
+  Step(50);
+  EXPECT_GT(Abs(held->GetRootTransform().GetTranslation()[0] - heldX0), 1e-5_r);
+  EXPECT_NEAR(moved.GetTranslation()[0], placed->GetRootTransform().GetTranslation()[0], 1e-6_r);
+}

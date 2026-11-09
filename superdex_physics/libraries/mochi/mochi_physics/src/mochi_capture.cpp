@@ -27,6 +27,7 @@
 
 #include <picojson/picojson.h>
 
+#include <algorithm>
 #include <array>
 #include <map>
 #include <string>
@@ -195,12 +196,20 @@ static CaptureEntityList GetCaptureEntities(
                                  : CaptureEntityList{allEntities, false};
 }
 
+namespace {
+struct CtxComponentToRestore {
+  SReflect::TypeId id;
+  bool pending = true;
+};
+} // namespace
+
 // Deserialize a global context component.
 // Must match logic in SerializeCtxComponentData.
 static void DeserializeCtxComponentData(
     entt::registry& reg,
     SpanStreamReader& stream,
     Span<SReflect::TypeId const> excludedAttributes,
+    Span<CtxComponentToRestore> components,
     Error& error) {
   // Read the component header
   ComponentHeader header;
@@ -218,23 +227,31 @@ static void DeserializeCtxComponentData(
     return;
   }
 
+  // Check if the component is currently in the registry
+  auto* const component = std::ranges::lower_bound(
+      components,
+      header.id,
+      [](SReflect::TypeId a, SReflect::TypeId b) { return a < b; },
+      &CtxComponentToRestore::id);
+  MOCHI_ERROR_IF(
+      component == components.end() || component->id != header.id || !component->pending,
+      error,
+      "Unable to restore state because the composition of the scene context has changed");
+  MOCHI_ERROR_RETURN(error);
+  component->pending = false;
+
   // Deserialize component data
-  void* ctxData = componentType->TryCtx(reg);
-  if (ctxData) [[likely]] {
-    if (typeInfo->IsMemCopySafe()) {
-      MOCHI_ERROR_IF(
-          (size_t)header.dataSize != typeInfo->_sizeInBytes, error, "Data size mismatch");
-      stream.Read(ctxData, typeInfo->_sizeInBytes, error);
-    } else {
-      size_t dataStartPos = stream.GetPosition();
-      bool success = typeInfo->DeserializeFromBytes(stream, ctxData);
-      MOCHI_ERROR_IF(!success, error, "Failed to deserialize component data");
-      auto dataBytesRead = stream.GetPosition() - dataStartPos;
-      MOCHI_ERROR_IF(dataBytesRead != header.dataSize, error, "Data size mismatch");
-    }
+  void* const ctxData = componentType->TryCtx(reg);
+  MOCHI_ASSERT_VERBOSE(ctxData != nullptr, "Restored ctx components are present in the registry.");
+  if (typeInfo->IsMemCopySafe()) {
+    MOCHI_ERROR_IF((size_t)header.dataSize != typeInfo->_sizeInBytes, error, "Data size mismatch");
+    stream.Read(ctxData, typeInfo->_sizeInBytes, error);
   } else {
-    MOCHI_ERROR_SET(
-        error, "Unable to restore state because the composition of the scene context has changed");
+    size_t dataStartPos = stream.GetPosition();
+    bool success = typeInfo->DeserializeFromBytes(stream, ctxData);
+    MOCHI_ERROR_IF(!success, error, "Failed to deserialize component data");
+    auto dataBytesRead = stream.GetPosition() - dataStartPos;
+    MOCHI_ERROR_IF(dataBytesRead != header.dataSize, error, "Data size mismatch");
   }
 }
 
@@ -544,10 +561,38 @@ void mochi::capture::RestorePartialState(
   MOCHI_ERROR_RETURN(error);
   size_t dataStartPos = stream.GetPosition();
 
+  // Identify the active non-excluded ctx components.
+  MOCHI_FILO_STACK_ALLOCATOR(typeAllocator, 128 * sizeof(CtxComponentToRestore));
+  DynamicArray<CtxComponentToRestore> components(&typeAllocator);
+  size_t maxComponents = 0;
+  ecs::EnumerateComponentsWithAttribute(
+      reg, SReflect::GetTypeId<attribute::CaptureStateCtx>(), [&](ecs::ComponentTypeInfo const&) {
+        ++maxComponents;
+      });
+  components.reserve(maxComponents);
+  ecs::EnumerateComponentsWithAttribute(
+      reg,
+      SReflect::GetTypeId<attribute::CaptureStateCtx>(),
+      [&](ecs::ComponentTypeInfo const& componentType) {
+        if (componentType.TryCtx(reg) != nullptr &&
+            !ComponentHasAttribute(&componentType, excludedAttributes)) {
+          auto const* typeInfo = componentType.TryGetReflectionInfo();
+          MOCHI_ASSERT_VERBOSE(typeInfo != nullptr);
+          components.push_back(CtxComponentToRestore{.id = typeInfo->_typeId});
+        }
+      });
+  std::ranges::sort(components, [](auto const& a, auto const& b) { return a.id < b.id; });
+
   // Deserialize ctx component data by type
   for (size_t i = 0; i < header.numCtxComponentTypes; ++i) {
-    DeserializeCtxComponentData(reg, stream, excludedAttributes, error);
+    DeserializeCtxComponentData(reg, stream, excludedAttributes, components, error);
+    MOCHI_ERROR_RETURN(error);
   }
+  MOCHI_ERROR_IF(
+      std::ranges::any_of(components, &CtxComponentToRestore::pending),
+      error,
+      "Unable to restore state because the composition of the scene context has changed");
+  MOCHI_ERROR_RETURN(error);
 
   // Deserialize entity component data by type
   for (size_t i = 0; i < (size_t)header.numEntityComponentTypes; ++i) {

@@ -312,8 +312,10 @@ class ActorInterfaceImpl : public ActorInterface {
       reg.get<CRootTransform>(e).worldFromLocal = worldFromLocal;
     }
 
-    // External state changes invalidate step history.
-    InvalidateActorStepHistory(reg, e);
+    // An external transform change invalidates step history, except for static actors.
+    if (!reg.all_of<TagStaticActor>(e)) {
+      InvalidateActorStepHistory(reg, e);
+    }
   }
 
   void SetRootTransform(TransformRT const& worldFromLocal, Error& error) override {

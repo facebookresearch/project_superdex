@@ -16,6 +16,9 @@
 
 #include "mochi_contact_anchors.h"
 
+#include <mochi_core/utils/array_utils.h>
+#include <mochi_core/utils/profile.h>
+
 #include <algorithm>
 #include <array>
 
@@ -161,6 +164,78 @@ void mochi::ReindexFrictionAnchors(
     CFrictionAnchors const& anchorsComp,
     CFrictionAnchorIndex& outIndex) {
   IndexAnchorGroups(anchorsComp.anchors, outIndex);
+}
+
+void mochi::RequestFrictionAnchorClear(entt::registry& reg, entt::entity e) {
+  if (auto* requests = reg.try_ctx<CFrictionAnchorClearRequests>()) {
+    requests->entities.push_back(entt::to_integral(e));
+  }
+}
+
+void mochi::ApplyFrictionAnchorClearRequests(entt::registry& reg) {
+  auto* requests = reg.try_ctx<CFrictionAnchorClearRequests>();
+  if (!requests || requests->entities.empty()) {
+    return;
+  }
+
+  MOCHI_PROFILE_SCOPE();
+
+  // Drop all the anchors of requested actors as colliding; the index is left stale, which lookups
+  // reject. Keep the requested colliders with friction anchors for the second pass.
+  auto& entities = requests->entities;
+  int numColliders = 0;
+  for (int i = 0; i < isize(entities); ++i) {
+    auto const e = static_cast<entt::entity>(entities[i]);
+    // A requested entity may have been destroyed since its request.
+    if (!reg.valid(e)) {
+      continue;
+    }
+    if (auto* anchorsComp = reg.try_get<CFrictionAnchors>(e)) {
+      anchorsComp->anchors.clear();
+    }
+    if (HasFrictionAnchors(reg, e)) {
+      entities[numColliders++] = entities[i];
+    }
+  }
+  entities.resize(numColliders);
+  if (numColliders == 0) {
+    return;
+  }
+  SortAndRemoveDuplicates(entities);
+
+  // Drop the anchors of all actors on the requested colliders, keeping the others grouped by
+  // sample.
+  auto const isRequested = [&](uint32_t collider) {
+    return std::ranges::binary_search(entities, collider);
+  };
+  for (auto&& [e, anchorsComp, index] : reg.view<CFrictionAnchors, CFrictionAnchorIndex>().each()) {
+    auto& anchors = anchorsComp.anchors;
+    if (anchors.empty()) {
+      continue;
+    }
+    // Consecutive anchors often share a collider: search only when it changes.
+    uint32_t lastCollider = anchors[0].collider;
+    bool removeLast = isRequested(lastCollider);
+    int const numAnchors = isize(anchors);
+    int numKept = 0;
+    for (int i = 0; i < numAnchors; ++i) {
+      uint32_t const collider = anchors[i].collider;
+      if (collider != lastCollider) {
+        lastCollider = collider;
+        removeLast = isRequested(collider);
+      }
+      if (!removeLast) {
+        anchors[numKept++] = anchors[i];
+      }
+    }
+    if (numKept == numAnchors) {
+      continue;
+    }
+    // The stable compaction keeps the anchors of each sample contiguous, but shifts their groups.
+    anchors.resize(numKept);
+    IndexAnchorGroups(anchors, index);
+  }
+  entities.clear();
 }
 
 void mochi::EmplaceFrictionAnchors(entt::registry& reg, entt::entity e, int numSamples) {

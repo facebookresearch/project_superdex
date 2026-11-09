@@ -652,6 +652,30 @@ TEST_F(MochiCapture, MissingCtxComponent) {
   RestoreState(reg, state0, test::ExpectNotOK{});
 }
 
+TEST_F(MochiCapture, UncapturedCtxComponentRejectsRestore) {
+  reg.set<CComponentA>();
+  DynamicArray<uint8_t> state;
+  CaptureState(reg, state, test::ExpectOK{});
+  reg.set<CComponentB>();
+
+  RestoreState(reg, state, test::ExpectNotOK{});
+}
+
+TEST_F(MochiCapture, ExcludedCtxCompositionChanges) {
+  reg.set<CComponentA>().ival = 10;
+  reg.set<CComponentB>().ival = 20;
+  DynamicArray<uint8_t> state;
+  CaptureState(reg, state, test::ExpectOK{});
+  reg.unset<CComponentA>();
+  reg.ctx<CComponentB>().ival = 30;
+  reg.set<CComponentAB>().ival = 40;
+  DynamicArray<SReflect::TypeId> const excluded{attribute::TestAttributeA::GetTypeId()};
+
+  RestorePartialState(reg, state, MakeConstSpan(excluded), test::ExpectOK{});
+  EXPECT_EQ(20, reg.ctx<CComponentB const>().ival);
+  EXPECT_EQ(40, reg.ctx<CComponentAB const>().ival);
+}
+
 TEST_F(MochiCapture, EntityMismatch) {
   constexpr int kNumEntities = 10;
   DynamicArray<uint8_t> state;
