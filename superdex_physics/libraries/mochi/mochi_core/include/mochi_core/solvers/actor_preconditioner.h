@@ -637,6 +637,8 @@ class ILU0ActorPrec : public ActorPreconditioner<T> {
     return PreconditionerType::ILU0;
   }
 
+  // TODO: Explore passing the actor matrix to RelaxedILUPrec instead of copying it when no
+  // interaction falls in its rows.
   BlockSparseMatrix<T, kBlockSize> A;
   std::unique_ptr<krylov::RelaxedILUPrec<BlockSparseMatrix<T, kBlockSize>>> prec;
 };
