@@ -2,6 +2,14 @@
 
 All notable changes to this repository will be documented here.
 
+## [Unreleased]
+
+### API Changes
+
+- **Unused dependency:** `superdex-physics` no longer depends on `scikit-image`,
+  which it never imported. Install `scikit-image` yourself if your code imports
+  `skimage`.
+
 ## [1.0.1]
 
 This release expands Python support, improves simulation performance, and adds

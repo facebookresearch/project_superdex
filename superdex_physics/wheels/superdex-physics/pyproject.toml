@@ -32,7 +32,6 @@ dependencies = [
     "pycollada",
     "pyre-extensions",
     "rerun-sdk==0.33.0",
-    "scikit-image",
     "scipy",
     "tabulate",
     "trimesh",
