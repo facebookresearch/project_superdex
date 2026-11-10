@@ -5012,7 +5012,8 @@ void mochi::AdvanceFrictionAnchorOffsets(
 namespace mochi::contact {
 void EnableFrictionAnchorComponents(entt::registry& reg, bool enable) {
   if (!enable) {
-    reg.clear<CFrictionAnchors>();
+    reg.clear<CFrictionAnchors<AnchorSet::Active>>();
+    reg.clear<CFrictionAnchors<AnchorSet::Pending>>();
     reg.clear<CFrictionAnchorIndex>();
     reg.unset<CFrictionAnchorClearRequests>();
     return;
@@ -5041,7 +5042,8 @@ void InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<CContactPartitions>(reg);
   ecs::RegisterComponent<CContactSamples<TimeStep::Current>>(reg);
   ecs::RegisterComponent<CContactSamples<TimeStep::StageStart>>(reg);
-  ecs::RegisterComponent<CFrictionAnchors>(reg);
+  ecs::RegisterComponent<CFrictionAnchors<AnchorSet::Active>>(reg);
+  ecs::RegisterComponent<CFrictionAnchors<AnchorSet::Pending>>(reg);
   ecs::RegisterComponent<CFrictionAnchorIndex>(reg);
   ecs::RegisterComponent<CFrictionAnchorClearRequests>(reg);
   ecs::RegisterComponent<CContactSkinningData>(reg);

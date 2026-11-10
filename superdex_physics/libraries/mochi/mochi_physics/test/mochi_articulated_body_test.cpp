@@ -3129,15 +3129,16 @@ class ExternalPoseResetTest : public CreateBlendedActorTest,
     ASSERT_FALSE(reg.get<CConservativeStepBounds const>(nestedEntity).needsNextStepRelaxation);
     ASSERT_NE(ConvergenceStatus::None, reg.get<CConvergenceStatus const>(parentEntity).stepStatus);
     std::array const affected{parentEntity, linkEntity, nestedEntity};
+    FrictionAnchor const seededAnchor{
+        .sample = 0, .collider = entt::to_integral(linkEntity), .point = Real3{1_r, 0_r, 0_r}};
     if (elastoPlasticFriction) {
-      ASSERT_TRUE(reg.all_of<CFrictionAnchors>(parentEntity));
+      ASSERT_TRUE(
+          (reg.all_of<CFrictionAnchors<AnchorSet::Active>, CFrictionAnchors<AnchorSet::Pending>>(
+              parentEntity)));
       for (auto const actorEntity : affected) {
-        if (auto* anchors = reg.try_get<CFrictionAnchors>(actorEntity)) {
-          anchors->anchors.push_back(
-              FrictionAnchor{
-                  .sample = 0,
-                  .collider = entt::to_integral(linkEntity),
-                  .point = Real3{1_r, 0_r, 0_r}});
+        if (auto* active = reg.try_get<CFrictionAnchors<AnchorSet::Active>>(actorEntity)) {
+          active->anchors = {seededAnchor};
+          reg.get<CFrictionAnchors<AnchorSet::Pending>>(actorEntity).anchors = active->anchors;
         }
       }
     }
@@ -3196,8 +3197,10 @@ class ExternalPoseResetTest : public CreateBlendedActorTest,
       }
       ApplyFrictionAnchorClearRequests(reg);
       for (auto const actorEntity : affected) {
-        if (auto const* anchors = reg.try_get<CFrictionAnchors>(actorEntity)) {
-          EXPECT_TRUE(anchors->anchors.empty());
+        if (auto const* active = reg.try_get<CFrictionAnchors<AnchorSet::Active>>(actorEntity)) {
+          auto const& pending = reg.get<CFrictionAnchors<AnchorSet::Pending>>(actorEntity).anchors;
+          EXPECT_TRUE(active->anchors.empty());
+          EXPECT_TRUE(pending.empty());
         }
       }
     }

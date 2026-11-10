@@ -220,10 +220,9 @@ void mochi::PreStepEcs(entt::registry& reg) {
       reg);
   ecs::InvokeForEachGlobal(&rigid::ApplyStaticStepStart, reg);
 
-  // Adopt the friction anchors advanced at the end of the last step, apply queued friction-preload
-  // resets, and index the final anchors, before collision detection copies them into the contacts.
-  // A solve-free assembly keeps the anchors the last step used, but applies the resets, as it
-  // applies other inputs prescribed since the last step.
+  // Promote the persistent Pending anchors to Active, apply queued resets, and index Active
+  // before collision detection. Promotion preserves Pending while sleeping islands skip their
+  // solve. A solve-free assembly retains the last Active anchors and applies resets temporarily.
   PrepareFrictionAnchors(reg, /*promotePending*/ advanceStep);
 
   // Update of previous state and trajectory-dependent derived state.

@@ -979,8 +979,8 @@ void AddMissingStageStartCollisions(
 
 // With elasto-plastic friction, replaces the friction anchor offsets of the current contact
 // results of a colliding actor with those at the end of the step, i.e. of its last stage (see
-// AdvanceAnchorOffsets), from which UpdateFrictionAnchors rebuilds the pending anchors. A diverged
-// last stage keeps the current anchors, so it is skipped.
+// AdvanceAnchorOffsets), from which UpdateFrictionAnchors rebuilds the next-step anchors. A
+// diverged last stage skips this advance and retains its used anchors.
 void AdvanceFrictionAnchorOffsets(
     ContactAssemblyReg reg,
     entt::entity e,

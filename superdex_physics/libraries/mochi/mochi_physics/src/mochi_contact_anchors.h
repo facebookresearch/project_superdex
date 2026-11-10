@@ -61,48 +61,58 @@ static_assert(
         sizeof(FrictionAnchor) == sizeof(int) + sizeof(uint32_t) + sizeof(Real3),
     "Anchors are copied in bulk, without padding.");
 
+enum class AnchorSet { Active, Pending };
+
+} // namespace mochi
+MOCHI_ENUM_BEGIN(mochi::AnchorSet);
+MOCHI_ENUM_ITEM(Active);
+MOCHI_ENUM_ITEM(Pending);
+MOCHI_ENUM_END();
+namespace mochi {
+
 /**
  * @brief Friction anchors of a colliding actor, grouped by colliding contact sample: the anchors of
- * each sample are contiguous. CFrictionAnchorIndex locates the group of each sample.
+ * each sample are contiguous. CFrictionAnchorIndex locates the group of each sample in the Active
+ * set.
  *
  * @details An anchor is a point in the collider's local space. Anchors apply only to colliders
  * with friction anchors (see HasFrictionAnchors), which are rigid, so a sample has at most one
- * anchor per collider. Each collision detection pass at TimeStep::Current sets
- * ContactDetectionResult::anchorOffset to the stage-start position of each contact relative to its
- * anchor, or zero without one. The anchors stay fixed during the stages of a step. After the last
- * stage, AdvanceFrictionAnchorOffsets advances the offsets to the end of the step, and
- * UpdateFrictionAnchors rebuilds the advanced anchors from the nonzero ones into @ref pending. The
- * next step adopts them at its start (see PromotePendingFrictionAnchors).
+ * anchor per collider. AnchorSet::Active holds the anchors the step uses, and AnchorSet::Pending
+ * those for the next step. At the start of each step, PromotePendingFrictionAnchors copies Pending
+ * into Active without consuming it, so Pending stays valid while an island sleeps. Each collision
+ * detection pass at TimeStep::Current sets ContactDetectionResult::anchorOffset to the stage-start
+ * position of each contact relative to its Active anchor, or zero without one. The anchors stay
+ * fixed during the stages of a step. After the last stage, AdvanceFrictionAnchorOffsets advances
+ * the offsets to the end of the step, and UpdateFrictionAnchors rebuilds Pending from the nonzero
+ * ones. A diverged last stage keeps Pending, which equals Active: the promotion copies it, and
+ * resets drop the same anchors from both sets.
  *
+ * @note Queued preload resets drop the anchors from both sets after promotion, so that no later
+ * promotion brings them back, even if a sleeping island skips the solve that rebuilds Pending.
  * @note Anchors are points rather than offsets so that every stage measures the slip from the same
  * anchor, whatever its stage-start position: the stage start of multi-step and multi-stage
  * integrators is not the end of the previous step or stage. The end of the step must be the end of
  * its last stage (see EndsAtLastStage).
- *
- * @note Both sets of anchors are captured. The index is not: IndexFrictionAnchors derives it from
- * @ref anchors at the start of each step.
+ * @note Both sets are captured: Active reproduces the completed step's forces, while Pending
+ * resumes forward simulation. The index is not: IndexFrictionAnchors derives it from Active at the
+ * start of each step.
  * @note The collider includes the entity version: anchors on a destroyed collider never match a
  * recycled entity, and the next rebuild drops them.
  */
-struct CFrictionAnchors : public NoCopy {
+template <AnchorSet kSet>
+struct CFrictionAnchors : NoCopy {
   DynamicArray<FrictionAnchor> anchors;
-  DynamicArray<FrictionAnchor> pending; // Meaningful only if hasPending
-  // Whether the last step advanced the anchors into pending, which may be empty if all were
-  // dropped. False after a diverged step, which keeps the anchors.
-  bool hasPending = false;
 
-  MOCHI_STRUCT_BEGIN(mochi::CFrictionAnchors);
+  MOCHI_TEMPLATE_BEGIN(mochi::CFrictionAnchors, kSet);
   MOCHI_ATTRIBUTE(CaptureState);
   MOCHI_FIELD(anchors);
-  MOCHI_FIELD(pending);
-  MOCHI_FIELD(hasPending);
-  MOCHI_STRUCT_END();
+  MOCHI_TEMPLATE_END();
 };
 
 /**
  * @brief Index of the friction anchors of a colliding actor by colliding contact sample. Derived
- * from CFrictionAnchors::anchors at the start of each step (see IndexFrictionAnchors), for the
- * collision detection passes that follow. Not captured.
+ * from CFrictionAnchors<AnchorSet::Active> at the start of each step (see IndexFrictionAnchors),
+ * for the collision detection passes that follow. Not captured.
  *
  * @details For a sample s with anchors, index[s] is the start of its group. Other entries may be
  * stale, so an entry i is valid only if anchors[i].sample == s: indexing then only touches the
@@ -124,7 +134,8 @@ struct CFrictionAnchorIndex : private DynamicArray<int>, public NoCopy {
 
 /**
  * @brief Requests to clear friction preload since the last step. At the start of the next step,
- * ApplyFrictionAnchorClearRequests drops each actor's anchors, both as colliding and collider.
+ * ApplyFrictionAnchorClearRequests drops each actor's anchors from both sets, both as colliding
+ * and collider.
  * Global context, present only with elasto-plastic friction.
  *
  * @note Captured, so that restoring a state also restores its pending requests, which apply to the
@@ -153,21 +164,20 @@ template <bool kIsSync>
 void FillFrictionAnchorOffsets(
     FrictionAnchorReg reg,
     CFrictionAnchorIndex const& index,
-    CFrictionAnchors const& anchorsComp,
+    CFrictionAnchors<AnchorSet::Active> const& active,
     CActiveCollisions<kIsSync, TimeStep::Current>& activeCollisions) {
-  FillFrictionAnchorOffsets(reg, index, anchorsComp.anchors, MakeSpan(activeCollisions));
+  FillFrictionAnchorOffsets(reg, index, MakeConstSpan(active.anchors), MakeSpan(activeCollisions));
 }
 
-// Rebuilds the pending anchors of a colliding actor from the nonzero anchor offsets of its contacts
-// that use elasto-plastic friction, at their positions at the end of the step, after
-// AdvanceFrictionAnchorOffsets. Uses the index as scratch. A diverged last stage keeps the current
-// anchors, with nothing pending. Reuses the capacity of the pending anchors.
+// Rebuilds the next-step anchors from nonzero contact offsets after AdvanceFrictionAnchorOffsets.
+// Uses the index as scratch and reuses Pending's capacity. A diverged last stage keeps Pending,
+// which equals the anchors the step used.
 void UpdateFrictionAnchors(
     FrictionAnchorReg reg,
     CConvergenceStatus const* convergence,
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current> const& asyncCollisions,
     CActiveCollisions</*kIsSync*/ true, TimeStep::Current> const& syncCollisions,
-    CFrictionAnchors& outAnchorsComp,
+    CFrictionAnchors<AnchorSet::Pending>& outNext,
     CFrictionAnchorIndex& outIndex);
 
 // Requests dropping, at the start of the next step, the friction anchors of an actor, both as
@@ -180,20 +190,24 @@ void RequestFrictionAnchorClear(entt::registry& reg, entt::entity e);
 void EmplaceFrictionAnchors(entt::registry& reg, entt::entity e, int numSamples);
 
 // Prepares the friction anchors at the start of a step, before collision detection fills the
-// anchor offsets: adopts the pending anchors if promotePending (false for a solve-free assembly,
-// which keeps the anchors the last step used), applies the queued clear requests, and indexes the
-// resulting anchors.
+// anchor offsets: promotes Pending into Active if promotePending (false for a solve-free assembly,
+// which keeps the Active anchors the last step used), applies the queued clear requests to both
+// sets, and indexes Active.
 void PrepareFrictionAnchors(entt::registry& reg, bool promotePending);
 
 // Building blocks of PrepareFrictionAnchors, declared for tests that drive single actors.
 
-// Adopts the pending anchors of a colliding actor, if any.
-void PromotePendingFrictionAnchors(CFrictionAnchors& anchorsComp);
+// Copies the Pending anchors of a colliding actor into Active, without consuming them.
+void PromotePendingFrictionAnchors(
+    CFrictionAnchors<AnchorSet::Pending> const& pending,
+    CFrictionAnchors<AnchorSet::Active>& outActive);
 
-// Applies and clears the queued requests to reset friction preload.
+// Applies and clears the queued requests to reset friction preload, in both anchor sets.
 void ApplyFrictionAnchorClearRequests(entt::registry& reg);
 
 // Points the index to the group of each sample with anchors.
-void IndexFrictionAnchors(CFrictionAnchors const& anchorsComp, CFrictionAnchorIndex& outIndex);
+void IndexFrictionAnchors(
+    CFrictionAnchors<AnchorSet::Active> const& active,
+    CFrictionAnchorIndex& outIndex);
 
 } // namespace mochi

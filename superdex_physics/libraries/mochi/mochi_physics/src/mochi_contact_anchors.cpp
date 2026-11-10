@@ -21,7 +21,6 @@
 
 #include <algorithm>
 #include <array>
-#include <utility>
 
 using namespace mochi;
 
@@ -76,15 +75,15 @@ void mochi::UpdateFrictionAnchors(
     CConvergenceStatus const* convergence,
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current> const& asyncCollisions,
     CActiveCollisions</*kIsSync*/ true, TimeStep::Current> const& syncCollisions,
-    CFrictionAnchors& outAnchorsComp,
+    CFrictionAnchors<AnchorSet::Pending>& outNext,
     CFrictionAnchorIndex& outIndex) {
-  // A stopped solve is still the accepted state; only a diverged last stage, which resets the
-  // actor, keeps the current anchors, with nothing pending.
+  // A stopped solve is accepted. A diverged last stage keeps Pending, which equals the anchors the
+  // step used: the promotion copied it, and resets drop the same anchors from both sets.
   if (convergence && convergence->stageStatus == ConvergenceStatus::Diverged) {
     return;
   }
 
-  auto& pending = outAnchorsComp.pending;
+  auto& pending = outNext.anchors;
   std::array<Span<ActiveCollision const>, 2> const allCollisions{
       MakeConstSpan(asyncCollisions), MakeConstSpan(syncCollisions)};
 
@@ -145,24 +144,20 @@ void mochi::UpdateFrictionAnchors(
       return outIndex[a.sample] < outIndex[b.sample];
     });
   }
-  outAnchorsComp.hasPending = true;
 }
 
-void mochi::PromotePendingFrictionAnchors(CFrictionAnchors& anchorsComp) {
-  if (!anchorsComp.hasPending) {
-    return;
-  }
-  // Swapping keeps the capacity of both sets for the next rebuild.
-  std::swap(anchorsComp.anchors, anchorsComp.pending);
-  anchorsComp.pending.clear();
-  anchorsComp.hasPending = false;
+void mochi::PromotePendingFrictionAnchors(
+    CFrictionAnchors<AnchorSet::Pending> const& pending,
+    CFrictionAnchors<AnchorSet::Active>& outActive) {
+  outActive.anchors.clear();
+  outActive.anchors.append(pending.anchors);
 }
 
 void mochi::IndexFrictionAnchors(
-    CFrictionAnchors const& anchorsComp,
+    CFrictionAnchors<AnchorSet::Active> const& active,
     CFrictionAnchorIndex& outIndex) {
   // Only the samples with anchors are set; other entries may be stale, and lookups reject them.
-  auto const& anchors = anchorsComp.anchors;
+  auto const& anchors = active.anchors;
   for (int i = 0; i < isize(anchors); ++i) {
     if (i == 0 || anchors[i - 1].sample != anchors[i].sample) {
       outIndex[anchors[i].sample] = i;
@@ -184,8 +179,9 @@ void mochi::ApplyFrictionAnchorClearRequests(entt::registry& reg) {
 
   MOCHI_PROFILE_SCOPE();
 
-  // Drop all the anchors of requested actors as colliding. Keep the requested colliders with
-  // friction anchors for the second pass.
+  // Drop all the anchors of requested actors as colliding, from both sets: a promotion before the
+  // next solve rebuilds Pending, e.g., while the island sleeps, must not bring them back. Keep the
+  // requested colliders with friction anchors for the second pass.
   auto& entities = requests->entities;
   int numColliders = 0;
   for (int i = 0; i < isize(entities); ++i) {
@@ -194,8 +190,11 @@ void mochi::ApplyFrictionAnchorClearRequests(entt::registry& reg) {
     if (!reg.valid(e)) {
       continue;
     }
-    if (auto* anchorsComp = reg.try_get<CFrictionAnchors>(e)) {
-      anchorsComp->anchors.clear();
+    if (auto* active = reg.try_get<CFrictionAnchors<AnchorSet::Active>>(e)) {
+      active->anchors.clear();
+    }
+    if (auto* pending = reg.try_get<CFrictionAnchors<AnchorSet::Pending>>(e)) {
+      pending->anchors.clear();
     }
     if (HasFrictionAnchors(reg, e)) {
       entities[numColliders++] = entities[i];
@@ -212,10 +211,9 @@ void mochi::ApplyFrictionAnchorClearRequests(entt::registry& reg) {
   auto const isRequested = [&](uint32_t collider) {
     return std::ranges::binary_search(entities, collider);
   };
-  for (auto&& [e, anchorsComp] : reg.view<CFrictionAnchors>().each()) {
-    auto& anchors = anchorsComp.anchors;
+  auto const dropRequested = [&](DynamicArray<FrictionAnchor>& anchors) {
     if (anchors.empty()) {
-      continue;
+      return;
     }
     // Consecutive anchors often share a collider: search only when it changes.
     uint32_t lastCollider = anchors[0].collider;
@@ -233,6 +231,11 @@ void mochi::ApplyFrictionAnchorClearRequests(entt::registry& reg) {
       }
     }
     anchors.resize(numKept);
+  };
+  auto view = reg.view<CFrictionAnchors<AnchorSet::Active>, CFrictionAnchors<AnchorSet::Pending>>();
+  for (auto&& [e, active, pending] : view.each()) {
+    dropRequested(active.anchors);
+    dropRequested(pending.anchors);
   }
   entities.clear();
 }
@@ -246,6 +249,7 @@ void mochi::PrepareFrictionAnchors(entt::registry& reg, bool promotePending) {
 }
 
 void mochi::EmplaceFrictionAnchors(entt::registry& reg, entt::entity e, int numSamples) {
-  reg.emplace<CFrictionAnchors>(e);
+  reg.emplace<CFrictionAnchors<AnchorSet::Active>>(e);
+  reg.emplace<CFrictionAnchors<AnchorSet::Pending>>(e);
   reg.emplace<CFrictionAnchorIndex>(e, numSamples);
 }
