@@ -157,19 +157,23 @@ when alignment fading is enabled and $m>-1$; otherwise, $a=1$. When both $\mathb
 
 ##### Traction Model
 
-The dissipative traction contributions consist of Coulomb and viscous friction in the tangential direction, and separate normal viscous damping that affects restitution behavior in impacts. Coulomb friction is modeled using a viscous regularization of the static regime, similar to that of [Li et al. (2020)](#references), which allows the full dissipative response to be expressed in terms of the dissipation potential
+The dissipative traction contributions consist of Coulomb and viscous friction in the tangential direction, and separate normal viscous damping that affects restitution behavior in impacts. The exact Coulomb law is set-valued in the static regime, so SuperDex Physics regularizes it. By default, it uses a [viscous regularization](#viscous-regularization), which expresses the full dissipative response in terms of a dissipation potential. Optionally, an experimental [elasto-plastic regularization](#elasto-plastic-regularization) replaces the Coulomb term with a stored energy and a slip rule.
+
+###### Viscous Regularization
+
+Coulomb friction is modeled using a viscous regularization of the static regime, similar to that of [Li et al. (2020)](#references), which allows the full dissipative response to be expressed in terms of the dissipation potential
 $$
-R=\widehat\lambda_n\left(\mu\rho(V_t)+\frac{c_t}{2}V_t^2+\frac{c_n}{2}V_n^2\right)~,
+R=\widehat\lambda_n\left(\mu\rho_{V_f}(V_t)+\frac{c_t}{2}V_t^2+\frac{c_n}{2}V_n^2\right)~,
 $$
-where $\widehat\lambda_n=a\lambda_n$ is the effective dissipative normal-load coefficient, $\mu$ is the Coulomb friction coefficient, $c_t$ is the viscous friction coefficient, $c_n$ is the normal viscous damping coefficient, and $\rho$ is a regularized ramp function.  The default choice of regularization is
+where $\widehat\lambda_n=a\lambda_n$ is the effective dissipative normal-load coefficient, $\mu$ is the Coulomb friction coefficient, $c_t$ is the viscous friction coefficient, $c_n$ is the normal viscous damping coefficient, and $\rho_\ell$ is a regularized ramp function with regularization scale $\ell$.  The default choice of regularization, `frictionModel = C1Regularized` in `ExperimentalEvalParams` ([C++](pathname:///generated/api/latest/cpp/structsuperdex_1_1ExperimentalEvalParams.html), [Python](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.ExperimentalEvalParams)), is the ramp of width $\ell$
 $$
-\rho(V_t)=
+\rho_\ell(s)=
 \begin{cases}
-\displaystyle \frac{V_t^2}{V_f}-\frac{V_t^3}{3V_f^2}, & 0\leq V_t<V_f~, \\
-\displaystyle V_t-\frac{V_f}{3}, & V_t\geq V_f~,
+\displaystyle \frac{s^2}{\ell}-\frac{s^3}{3\ell^2}, & 0\leq s<\ell~, \\
+\displaystyle s-\frac{\ell}{3}, & s\geq \ell~,
 \end{cases}
 $$
-in which $V_f > 0$ is the falloff velocity parameter determining the maximum slipping speed allowed within the nominally static friction regime.
+in which the falloff velocity $V_f > 0$ is the maximum slipping speed allowed within the nominally static friction regime, at which friction reaches the Coulomb limit. The alternative `frictionModel = CinfRegularized` uses a $C^\infty$ ramp without compact support, which approaches the Coulomb limit asymptotically, with $V_f$ as its regularization scale.
 With $\mathbf{T}_{\mathrm{diss}}=-\partial R/\partial\mathbf{V}_{\mathrm{rel}}$, the collider-reference contributions are
 $$
 \mathbf{T}_{v,n} = -c_n \widehat\lambda_n V_n \mathbf{N}_B~,
@@ -181,9 +185,11 @@ $$
 \mathbf{T}_C =
 \begin{cases}
 \mathbf{0}, & V_t=0~, \\
-\displaystyle -\mu \widehat\lambda_n \rho'(V_t)\frac{\mathbf{V}_t}{V_t}, & V_t>0~.
+\displaystyle -\mu \widehat\lambda_n \rho_{V_f}'(V_t)\frac{\mathbf{V}_t}{V_t}, & V_t>0~.
 \end{cases}
 $$
+Since Coulomb friction acts only through slip, a constant tangential load below the Coulomb limit is balanced at a nonzero slipping speed $V_t<V_f$, so objects held by friction creep. Smaller falloff velocities reduce creep, but may degrade stability.
+
 The total collider-reference traction and corresponding world-frame nominal traction on $A$ are
 $$
 \mathbf{T}_{\mathrm{diss}}
@@ -193,6 +199,57 @@ $$
 =\mathbf{F}_B^{-T}\mathbf{T}_{\mathrm{diss}}~.
 $$
 Although written simply as $R$, the dissipation potential depends on position state as well as relative velocity. Whether its stage-discrete force derives from an incremental potential therefore depends on how its position-dependence is evaluated, as discussed under [stage-discrete dissipation](#stage-discrete-dissipation).
+
+###### Elasto-Plastic Regularization
+
+:::warning Experimental
+Elasto-plastic friction is experimental. It may change or be removed in future releases.
+:::
+
+The `elastoPlasticFriction` field of `ExperimentalEvalParams` ([C++](pathname:///generated/api/latest/cpp/structsuperdex_1_1ExperimentalEvalParams.html), [Python](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.ExperimentalEvalParams)), `elasto_plastic_friction` in Python, regularizes the static regime of Coulomb friction by displacement instead of velocity, which holds a tangential load below the Coulomb limit without slip. It is enabled for the whole scene through the solver parameters:
+
+```python
+params = scene.get_solver_params()
+params.experimental_eval.elasto_plastic_friction = True
+scene.set_solver_params(params)
+```
+
+The tangential displacement is measured from an **anchor**, a material point $\mathbf{Y}_a$ of the collider in its reference coordinates:
+$$
+\mathbf{u}=\left(\mathbf{1}-\mathbf{N}_B\otimes\mathbf{N}_B\right)\left(\mathbf{Y}_{AB}-\mathbf{Y}_a\right)~,
+\qquad
+u=\Vert\mathbf{u}\Vert_2~.
+$$
+The Coulomb term derives from the stored energy density
+$$
+\psi=\mu\widehat\lambda_n\,\rho_{\ell_p}(u)~,
+$$
+where $\rho_{\ell_p}$ is the `C1Regularized` ramp above, with the presliding displacement $\ell_p>0$ as its width in displacement. With the normal load and the friction plane held fixed, the Coulomb traction is
+$$
+\mathbf{T}_C=-\frac{\partial\psi}{\partial\mathbf{Y}_{AB}}=
+\begin{cases}
+\mathbf{0}, & u=0~, \\
+\displaystyle -\mu\widehat\lambda_n\,\rho_{\ell_p}'(u)\frac{\mathbf{u}}{u}, & u>0~.
+\end{cases}
+$$
+The anchor follows a slip rule that keeps $u\leq\ell_p$: it stays in place while $u<\ell_p$ (stick), and is dragged along by the contact at the distance $\ell_p$ otherwise (slip):
+$$
+\dot{\mathbf{Y}}_a=
+\begin{cases}
+\mathbf{0}, & u<\ell_p~, \\
+\displaystyle \max\!\left(0,\mathbf{V}_t\cdot\frac{\mathbf{u}}{u}\right)\frac{\mathbf{u}}{u}, & u=\ell_p~.
+\end{cases}
+$$
+Within the presliding displacement, the Coulomb traction is an elastic restoring traction. It reaches the Coulomb limit $\mu\widehat\lambda_n$ at $u=\ell_p$, where the compact support of `C1Regularized` saturates the ramp, so the contact slips with the full Coulomb traction. Unlike with the viscous regularization, the Coulomb term is therefore not purely dissipative: it stores the elastic energy $\psi$, released when the load is removed, so a held object can spring back toward its anchors, and it dissipates the power $\mu\widehat\lambda_n\Vert\dot{\mathbf{Y}}_a\Vert_2$ only during slip. Viscous friction and normal damping are unchanged: $R$ keeps their terms and drops $\mu\rho_{V_f}(V_t)$. The time discretization of the anchor is described under [stage-discrete dissipation](#stage-discrete-dissipation).
+
+Smaller presliding displacements reduce presliding motion and spring-back, but stiffen the tangential response, which may cost nonlinear solver iterations.
+
+Elasto-plastic friction has the following scope and requirements:
+
+- It applies to contacts with rigid colliders, static or dynamic, including articulated links. Contacts with deformable colliders, i.e., soft actors with an `Sdf` collider and `PointCloud` colliders, keep the viscous regularization.
+- It requires `frictionModel = C1Regularized` and an integration method whose step ends at its last stage: `BackwardEuler`, `BDF2`, `BDF3`, `DIRK22`, or `DIRK33`. `Scene::SetSolverParams` rejects other combinations. It is not supported in differentiable scenes.
+- The anchors of an actor's contacts, and those of other actors' contacts on it, are part of its history, which setters that change its state discontinuously invalidate (see [`Actor`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Actor.html)): e.g., placing it or setting its velocity, including any velocity of a static actor. Its contacts then start the next step without elastic pre-load. `SetRootTransform` alone on a static actor moves it over the next step and keeps the anchors on it.
+- Anchors are part of the captured scene state. `Scene::UpdateQueries` reproduces the forces of the last step exactly with `BackwardEuler`, `BDF2`, and `BDF3`, if the scene has not been modified since the last step (see its API reference). Changing `elastoPlasticFriction` changes the content of the scene state, so states captured before the change cannot be restored after it.
 
 #### Restitution Behavior of Rigid Collisions
 
@@ -211,9 +268,9 @@ This restitution behavior is a property of the continuous-time [dynamics](./dyna
 
 #### Contact Parameter Combination
 
-For a contact pair, friction and damping coefficients are the geometric means of the actors' values. The penalty coefficient and friction falloff velocity are also geometric means when both actors are dynamic, but are taken from the colliding actor when the collider is static. Other contact parameters, including the smoothing distance and contact threshold, are taken from the collider.
+For a contact pair, friction and damping coefficients are the geometric means of the actors' values. The penalty coefficient, friction falloff velocity, and presliding displacement are also geometric means when both actors are dynamic, but are taken from the colliding actor when the collider is static. Other contact parameters, including the smoothing distance and contact threshold, are taken from the collider.
 
-The geometric-mean heuristic for combining per-actor contact parameters reduces the dimensionality of a scene's parameter space, but it can limit precise calibration of quantities such as friction coefficients, which are properties of material pairs rather than individual materials. When the parameter-combination heuristic is insufficient, use [`Scene::SetContactPairParamsOverride`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Scene.html) / [`set_contact_pair_params_override`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.Scene.set_contact_pair_params_override) with a `ContactPairParamsOverride` ([C++](pathname:///generated/api/latest/cpp/structsuperdex_1_1ContactPairParamsOverride.html), [Python](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.ContactPairParamsOverride)) to override the combined penalty coefficient, friction falloff velocity, viscous and Coulomb friction coefficients, or normal viscous damping coefficient for an exact unordered actor pair. Unset fields retain the normal combination rule. Setting another override replaces the pair's complete override; it does not merge with the previous value.
+The geometric-mean heuristic for combining per-actor contact parameters reduces the dimensionality of a scene's parameter space, but it can limit precise calibration of quantities such as friction coefficients, which are properties of material pairs rather than individual materials. When the parameter-combination heuristic is insufficient, use [`Scene::SetContactPairParamsOverride`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Scene.html) / [`set_contact_pair_params_override`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.Scene.set_contact_pair_params_override) with a `ContactPairParamsOverride` ([C++](pathname:///generated/api/latest/cpp/structsuperdex_1_1ContactPairParamsOverride.html), [Python](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.ContactPairParamsOverride)) to override the combined penalty coefficient, friction falloff velocity, presliding displacement, viscous and Coulomb friction coefficients, or normal viscous damping coefficient for an exact unordered actor pair. Unset fields retain the normal combination rule. Setting another override replaces the pair's complete override; it does not merge with the previous value.
 
 ```python
 scene.set_contact_pair_params_override(
@@ -295,6 +352,14 @@ $$
 $$
 Only the second term, $\partial R/\partial v$, contributes to the residual, but $\partial R/\partial q$ may be nonzero.  It is possible to recover consistency between the potential and residual by using explicit stage-start predictors to eliminate certain state-dependencies, similar to the treatment of [Li et al. (2020)](#references).  This may improve the performance of the nonlinear algebraic solver used for the implicit stage, but it can decrease accuracy and stability of the time integration at large time steps.
 
+In $\Delta t_iR$, the Coulomb term of the viscous regularization contributes $\Delta t_i\,\mu\widehat\lambda_n\rho_{V_f}(V_{t,i})=\mu\widehat\lambda_n\rho_{V_f\Delta t_i}(\Vert\mathbf{u}_i\Vert_2)$, where $\mathbf{u}_i=\Delta t_i\mathbf{V}_{t,i}$ is the tangential displacement over the stage: a ramp in displacement whose width $V_f\Delta t_i$ shrinks with the time step. The [elasto-plastic regularization](#elasto-plastic-regularization) replaces it with $\psi=\mu\widehat\lambda_n\rho_{\ell_p}(\Vert\mathbf{u}_i\Vert_2)$, with no factor $\Delta t_i$, measuring the tangential displacement from the anchor instead of from the stage start:
+$$
+\mathbf{u}_i=\left(\mathbf{1}-\mathbf{N}_B\otimes\mathbf{N}_B\right)\left(\mathbf{X}_{B,i}(\mathbf{x}_{A,i})-\mathbf{Y}_a\right)~.
+$$
+Its width $\ell_p$ is independent of the time step. The default presliding displacement, `1e-4` m, is the default falloff velocity over a 10 ms backward Euler step, so at that step size both regularizations ramp up friction over the same displacement; the other integration methods scale the stage step $\Delta t_i$. Although $\psi$ is stored rather than dissipated, its normal load and friction plane depend on the position state like those of $R$, and the settings below apply to both.
+
+Anchors are a record of history, so they stay fixed through every stage of a step, and advance once per step, from the contacts at the end of the step, by radial return, the discrete counterpart of the slip rule: an anchor stays in place while $\Vert\mathbf{u}\Vert_2\leq\ell_p$ (stick), and otherwise follows the contact at the distance $\ell_p$ (slip). The radial return scales the whole displacement $\mathbf{w}$ of the contact from its anchor, of which $\mathbf{u}$ is the tangential part, by $\min(1,\ell_p/\Vert\mathbf{u}\Vert_2)$. A sticking anchor therefore stays at its material point of the collider even if the friction normal turns, so sticking contacts do not creep under a changing normal or round-off; and the normal part of $\mathbf{w}$, penalty compression rather than presliding, shrinks while the contact slips instead of accumulating. Each contact sample keeps one anchor per collider. A new contact takes its anchor at its stage-start position. A contact loses its anchor when it separates beyond the contact threshold at the end of a step, when the alignment of its normals rejects it (`maxAlignmentNormals`), or when the pair has no Coulomb friction.
+
 Two Boolean fields in `ExperimentalEvalParams` ([C++](pathname:///generated/api/latest/cpp/structsuperdex_1_1ExperimentalEvalParams.html), [Python](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.ExperimentalEvalParams)) control the time levels used to evaluate the dissipative terms:
 
 - `explicitNormals` selects the geometric data used for dissipation. When `true`, SuperDex Physics uses stage-start normals, alignment, and friction plane, and retains stage-start contacts alongside contacts detected in the current configuration. When `false` (default), it uses current geometry and reconstructs the stage-start distance to first order with the current field gradient.
@@ -330,7 +395,8 @@ For `PointCloud` colliders discretizing the [double-integral generalization](#do
 | `maxAlignmentNormals` | `real` | `0` | -- | Maximum-normal-alignment parameter $m$; contact is rejected when $s > m$. Valid range: [-1, 1]. |
 | `viscousFrictionCoefficient` | `real` | `0` | s/m | Tangential viscous friction coefficient $c_t$. |
 | `coulombFrictionCoefficient` | `real` | `0.5` | -- | Coulomb friction coefficient $\mu$. |
-| `frictionFalloffVel` | `real` | `0.01` | m/s | Falloff velocity $V_f$ in the regularized Coulomb-friction ramp $\rho(V_t)$. |
+| `frictionFalloffVel` | `real` | `0.01` | m/s | Falloff velocity $V_f$, the ramp width of the [viscous regularization](#viscous-regularization) of Coulomb friction. |
+| `preslidingDisplacement` | `real` | `1e-4` | m | **Experimental.** Presliding displacement $\ell_p$, the ramp width of the [elasto-plastic regularization](#elasto-plastic-regularization), which replaces $V_f$ when `elastoPlasticFriction` is enabled. |
 | `normalViscousDampingCoefficient` | `real` | `0` | s/m | Normal viscous damping coefficient $c_n$, which controls velocity-dependent restitution. |
 | `distanceErrorBound` | `real` | `0` | m | **Experimental.** Extra collider bounding-volume padding for approximate distance fields. |
 | `collidingPenaltyLengthScale` | `real` | `1` | m | **Experimental.** Penalty correction scale for contact integrated over lower-dimensional colliding manifolds; always taken from the colliding actor. |
