@@ -522,6 +522,8 @@ Scalar EstimateSpectralRadius(
   p = z;
 
   int m = 0;
+  // TODO: Explore folding the serial vector work between the matrix-vector products into their
+  // parallel passes, so the estimate scales at high worker counts.
   for (int iter = 0; iter < maxIterations; ++iter) {
     Apply(A, p, Ap);
     Scalar const pTAp = p.Dot(Ap);

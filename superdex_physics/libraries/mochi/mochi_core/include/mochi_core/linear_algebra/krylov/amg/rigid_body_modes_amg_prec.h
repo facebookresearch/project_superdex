@@ -1339,6 +1339,8 @@ void RigidBodyModesAMGPrec<Scalar>::UpdateNumerics() {
   constexpr AMGOptions<Scalar> kOptions = {};
   constexpr Scalar kDefaultRelaxationFactor = AMGPrec<Scalar, 3>::kDefaultRelaxationFactor;
   auto const rhs = AsConstView(_spectralRadiusRhs);
+  // TODO: Explore overlapping the fine level's setup with the coarse levels' setup, which are
+  // independent of each other, so the setup scales at high worker counts.
   _fineRelaxationFactor =
       details::AutoRelaxationFactor(_A0, _fineSmoother, kOptions, 0, rhs.TopRows(_A0.Rows()))
           .value_or(kDefaultRelaxationFactor);
