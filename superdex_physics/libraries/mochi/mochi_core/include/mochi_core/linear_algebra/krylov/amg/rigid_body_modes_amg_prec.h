@@ -1437,7 +1437,12 @@ void RigidBodyModesAMGPrec<Scalar>::ConcurrentSolve(
         b.MiddleRows(rowBegin, numRows) - r.MiddleRows(rowBegin, numRows);
   };
 
-  // TODO: Explore an additive cycle at the finest level.
+  // TODO: Explore an additive cycle at the finest level: apply the smoother with a fixed positive
+  // weight and the coarse correction to the same residual, then add the corrections. This avoids
+  // fine residual matrix-vector products and the fine damping estimate. Positive definiteness no
+  // longer depends on that estimate. Solves can be cheaper despite needing more PCG iterations.
+  // In single precision, PCG can stall at a higher error on stiff or contact-heavy systems.
+  // Compare at equal accuracy.
   // Pre-smoothing from zero: u = omega D^{-1} b.
   _fineSmoother.ConcurrentSolve(b, u, data);
   u.MiddleRows(rowBegin, numRows) *= omega;
