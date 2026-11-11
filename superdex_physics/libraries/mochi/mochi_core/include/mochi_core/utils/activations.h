@@ -91,9 +91,10 @@ MOCHI_FORCE_INLINE T SoftClamp(T value, T alpha, T* outDClampedValue = nullptr) 
 /**
   @brief: PolyReLU - A smoothed ReLU activation function.
 
-  Evaluates a polynomial (in y = (x - shift) / t):
+  Evaluates a polynomial in y = (x - shift) / t, in factored form to stay accurate near its triple
+  root at y = -1:
 
-    f(y) = 3/16*t + (1/2 + 3/8*y - 1/16*y^3) * (x - shift)
+    f(x) = t/16 * (1 + y)^3 * (3 - y)
 
   such that
 
@@ -112,20 +113,16 @@ MOCHI_FORCE_INLINE T SoftClamp(T value, T alpha, T* outDClampedValue = nullptr) 
 template <class T>
 MOCHI_FORCE_INLINE void PolyReLU(T x, T t, T shift, T& f, T& df, T& ddf) {
   x -= shift;
-  T const x_t = x / t;
-  T const x2_t2 = x_t * x_t;
-  T const x3_t3 = x2_t2 * x_t;
   T const zero = 0, one = 1;
+  T const y = x / t;
+  T const a = one + y;
+  T const a2 = a * a;
   auto const mask = (t <= zero) | (Abs(x) > t);
-  f = Max(
-      zero,
-      Select(
-          mask, x, T(3.0 / 16.0) * t + (T(0.5) + T(3.0 / 8.0) * x_t - T(1.0 / 16.0) * x3_t3) * x));
-  df = Clamp(
-      Select(mask, Select(x < zero, zero, one), T(0.5) + T(0.75) * x_t - T(0.25) * x3_t3),
-      zero,
-      one);
-  ddf = Max(zero, Select(mask, zero, T(0.75) * (one - x2_t2) / t));
+  // Linear factors in the form c0 - c1 * y, one FMA each, except ddf's, which subtracts first to
+  // stay accurate near its root at y = 1 without FMA.
+  f = Max(zero, Select(mask, x, (a2 * a) * (T(3.0 / 16.0) - T(1.0 / 16.0) * y) * t));
+  df = Clamp(Select(mask, Select(x < zero, zero, one), a2 * (T(0.5) - T(0.25) * y)), zero, one);
+  ddf = Max(zero, Select(mask, zero, a * (T(0.75) * (one - y)) / t));
 }
 
 /**************************************************************************************************
