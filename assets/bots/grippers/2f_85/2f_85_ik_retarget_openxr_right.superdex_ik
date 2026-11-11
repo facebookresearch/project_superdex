@@ -18,21 +18,6 @@
       "baseOrInputLinkFrameFromConstraintFrame": {
         "rotation": [
           0,
-          -6.1901452852453076e-09,
-          0,
-          0.99999994039535522
-        ],
-        "translation": [
-          0.050666678696870804,
-          0,
-          0.10841616243124008
-        ]
-      },
-      "enabled": true,
-      "inputBotLink": "",
-      "linkFrameFromConstraintFrame": {
-        "rotation": [
-          0,
           0,
           0,
           1
@@ -41,30 +26,30 @@
           0,
           0,
           0
+        ]
+      },
+      "enabled": true,
+      "inputBotLink": "xr_10_index_tip",
+      "linkFrameFromConstraintFrame": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          -0.02500000037252903,
+          0,
+          0.045000001788139343
         ]
       },
       "name": "2f_85_left_finger_tip_link",
       "outputBotLink": "2f_85_left_finger_tip_link",
       "positionStiffness": 100,
-      "rotationStiffness": 1
+      "rotationStiffness": 0
     },
     {
       "baseOrInputLinkFrameFromConstraintFrame": {
-        "rotation": [
-          0,
-          6.1901452852453076e-09,
-          0,
-          0.99999994039535522
-        ],
-        "translation": [
-          -0.050666678696870804,
-          0,
-          0.10841616243124008
-        ]
-      },
-      "enabled": true,
-      "inputBotLink": "",
-      "linkFrameFromConstraintFrame": {
         "rotation": [
           0,
           0,
@@ -77,27 +62,69 @@
           0
         ]
       },
+      "enabled": true,
+      "inputBotLink": "xr_05_thumb_tip",
+      "linkFrameFromConstraintFrame": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          0.02500000037252903,
+          0,
+          0.045000001788139343
+        ]
+      },
       "name": "2f_85_right_finger_tip_link",
       "outputBotLink": "2f_85_right_finger_tip_link",
       "positionStiffness": 100,
-      "rotationStiffness": 1
+      "rotationStiffness": 0
     }
   ],
   "inputBot": "../../hands/openxr/right/openxr_hand_lowpoly_right.superdex_bot",
-  "inputBotConfiguration": [],
+  "inputBotConfiguration": [
+    -0.12025617063045502,
+    0.21581390500068665,
+    0.054166503250598907,
+    0.82863271236419678,
+    0.386016845703125,
+    -0.6397443413734436,
+    -0.035752538591623306,
+    0.0068643051199615002,
+    1.2288414239883423,
+    0.75053882598876953,
+    -0.33555376529693604,
+    -0.0047655063681304455,
+    0.00073029228951781988,
+    0.45984867215156555,
+    0.31300222873687744,
+    -0.12691687047481537,
+    0.090686939656734467,
+    0.011081692762672901,
+    0.40867915749549866,
+    0.2583557665348053,
+    0.00034532579593360424,
+    -0.019197158515453339,
+    0.04374917596578598,
+    0.0013204459100961685,
+    0.4208696186542511,
+    0.24660879373550415
+  ],
   "inputBotScale": 1,
   "jointCouplings": [],
   "outputBaseFrameFromInputBaseFrame": {
     "rotation": [
-      -0,
-      1,
-      -0,
-      -4.3711388286737929e-08
+      0.73864954710006714,
+      0.50236904621124268,
+      -0.25393238663673401,
+      -0.37086477875709534
     ],
     "translation": [
-      0,
-      0,
-      0
+      -0.031564019620418549,
+      0.035693120211362839,
+      0.039369203150272369
     ]
   },
   "outputBot": "2f_85.superdex_bot",

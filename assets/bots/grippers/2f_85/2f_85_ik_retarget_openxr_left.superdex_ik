@@ -1,0 +1,133 @@
+{
+  "createParams": {
+    "excludeCollisionShapes": true,
+    "fixedBase": true,
+    "solverParams": {
+      "absTol": 0.009999999776482582,
+      "lineSearchMaxIter": 10,
+      "maxElapsedTimeSeconds": 0.01,
+      "maxIter": 20,
+      "positionErrorThres": 0.009999999776482582,
+      "relTol": 9.99999993922529e-09,
+      "rotationErrorThres": 0.009999999776482582,
+      "verbosity": "Warning"
+    }
+  },
+  "goals": [
+    {
+      "baseOrInputLinkFrameFromConstraintFrame": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "enabled": true,
+      "inputBotLink": "xr_10_index_tip",
+      "linkFrameFromConstraintFrame": {
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ],
+        "translation": [
+          -0.02500000037252903,
+          0,
+          0.04500000178813934
+        ]
+      },
+      "name": "2f_85_left_finger_tip_link",
+      "outputBotLink": "2f_85_left_finger_tip_link",
+      "positionStiffness": 100,
+      "rotationStiffness": 0
+    },
+    {
+      "baseOrInputLinkFrameFromConstraintFrame": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "enabled": true,
+      "inputBotLink": "xr_05_thumb_tip",
+      "linkFrameFromConstraintFrame": {
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ],
+        "translation": [
+          0.02500000037252903,
+          0,
+          0.04500000178813934
+        ]
+      },
+      "name": "2f_85_right_finger_tip_link",
+      "outputBotLink": "2f_85_right_finger_tip_link",
+      "positionStiffness": 100,
+      "rotationStiffness": 0
+    }
+  ],
+  "inputBot": "../../hands/openxr/left/openxr_hand_lowpoly_left.superdex_bot",
+  "inputBotConfiguration": [
+    -0.12025617063045502,
+    -0.21581390500068665,
+    -0.05416650325059891,
+    0.8286327123641968,
+    0.386016845703125,
+    -0.6397443413734436,
+    0.035752538591623306,
+    -0.0068643051199615,
+    1.2288414239883423,
+    0.7505388259887695,
+    -0.33555376529693604,
+    0.0047655063681304455,
+    -0.0007302922895178199,
+    0.45984867215156555,
+    0.31300222873687744,
+    -0.12691687047481537,
+    -0.09068693965673447,
+    -0.011081692762672901,
+    0.40867915749549866,
+    0.2583557665348053,
+    0.00034532579593360424,
+    -0.01919715851545334,
+    -0.04374917596578598,
+    -0.0013204459100961685,
+    0.4208696186542511,
+    0.24660879373550415
+  ],
+  "inputBotScale": 1,
+  "jointCouplings": [],
+  "outputBaseFrameFromInputBaseFrame": {
+    "rotation": [
+      0.5023690462112427,
+      0.7386495471000671,
+      -0.37086477875709534,
+      -0.253932386636734
+    ],
+    "translation": [
+      -0.03156401962041855,
+      -0.03569312021136284,
+      0.03936920315027237
+    ]
+  },
+  "outputBot": "2f_85.superdex_bot",
+  "outputBotConfiguration": [],
+  "version": 9
+}

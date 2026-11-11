@@ -49,6 +49,7 @@
       "friction": {
         "viscous": 0.10000000149011612
       },
+      "limitStiffness": 1000,
       "name": "2f_85_left_inner_knuckle_joint",
       "parentLinkFromJoint": {
         "translation": [
@@ -65,10 +66,11 @@
         -1,
         0
       ],
-      "effortLimit": 50,
+      "effortLimit": 27,
       "friction": {
         "viscous": 0.10000000149011612
       },
+      "limitStiffness": 1000,
       "maxLimit": [
         0,
         -0.80000001192092896,
@@ -109,6 +111,7 @@
       "friction": {
         "viscous": 0.10000000149011612
       },
+      "limitStiffness": 1000,
       "name": "2f_85_left_finger_tip_joint",
       "parentLinkFromJoint": {
         "translation": [
@@ -128,6 +131,7 @@
       "friction": {
         "viscous": 0.10000000149011612
       },
+      "limitStiffness": 1000,
       "name": "2f_85_right_inner_knuckle_joint",
       "parentLinkFromJoint": {
         "translation": [
@@ -144,10 +148,10 @@
         -1,
         0
       ],
-      "effortLimit": 50,
       "friction": {
         "viscous": 0.10000000149011612
       },
+      "limitStiffness": 1000,
       "maxLimit": [
         0,
         0,
@@ -188,6 +192,7 @@
       "friction": {
         "viscous": 0.10000000149011612
       },
+      "limitStiffness": 1000,
       "name": "2f_85_right_finger_tip_joint",
       "parentLinkFromJoint": {
         "translation": [
@@ -197,6 +202,25 @@
         ]
       },
       "type": "Revolute"
+    }
+  ],
+  "linearTransmissions": [
+    {
+      "allowCompressiveForce": true,
+      "jointAxisDisps": [
+        0,
+        0
+      ],
+      "jointCoefficients": [
+        0.0099999997764825821,
+        0.0099999997764825821
+      ],
+      "jointIndices": [
+        3,
+        7
+      ],
+      "name": "actuator_coupling",
+      "stiffness": 100000
     }
   ],
   "links": [
