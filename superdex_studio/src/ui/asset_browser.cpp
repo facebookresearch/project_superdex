@@ -17,10 +17,9 @@
 #include "ui/asset_browser.h"
 #include "app/app.h"
 #include "assets/asset.h"
-#if MOCHI_INTERNAL
 #include "assets/bot_task_utils.h"
+#include "assets/ik_config.h"
 #include "editors/bot_scene_editor.h"
-#endif
 
 #include <mochi_physics/utils/mochi_prefab.h>
 #include <superdex_asset_tuner/tuner_spec.h>
@@ -47,6 +46,51 @@ constexpr float kFilterWidth = 150.0f;
 // stay in sync.
 constexpr std::array<int, 6> kThumbnailExportSizesPx = {64, 128, 256, 512, 1024, 2048};
 
+// AssetBrowserSettings::excludedFolders, each entry split into its path components.
+using FolderExclusions = std::vector<std::vector<std::string>>;
+
+static FolderExclusions ParseFolderExclusions(std::vector<std::string> const& entries) {
+  FolderExclusions exclusions;
+  for (auto const& entry : entries) {
+    std::vector<std::string> parts;
+    std::string part;
+    for (char const c : entry + '/') {
+      if (c != '/' && c != '\\') {
+        part += c;
+        continue;
+      }
+      auto const first = part.find_first_not_of(" \t");
+      if (first != std::string::npos) {
+        part = part.substr(first, part.find_last_not_of(" \t") - first + 1);
+        if (part != ".") {
+          parts.push_back(std::move(part));
+        }
+      }
+      part.clear();
+    }
+    if (!parts.empty()) {
+      exclusions.push_back(std::move(parts));
+    }
+  }
+  return exclusions;
+}
+
+// True if the trailing components of @p dir equal those of any exclusion.
+static bool IsFolderExcluded(std::filesystem::path const& dir, FolderExclusions const& exclusions) {
+  for (auto const& parts : exclusions) {
+    std::filesystem::path path = dir;
+    bool matches = true;
+    for (auto it = parts.rbegin(); it != parts.rend() && matches; ++it) {
+      matches = path.filename().string() == *it;
+      path = path.parent_path();
+    }
+    if (matches) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Recursively scans @p dir into @p node, decrementing @p budget once per visited entry and stopping
 // once it is exhausted (shared across the whole refresh, so it bounds wide and deep trees alike).
 // The budget is a safety net: a newly-added root is refused up front if it exceeds the cap (see
@@ -56,6 +100,7 @@ static void ScanDirectory(
     mochi::Path const& dir,
     DirectoryNode& node,
     SuperDexStudio const* studio,
+    FolderExclusions const& exclusions,
     int& budget) {
   node.fullPath = dir;
   node.name = dir.GetFilename();
@@ -70,13 +115,13 @@ static void ScanDirectory(
     }
     --budget;
     if (entry.is_directory(ec)) {
-      // Skip hidden directories
+      // Skip hidden and excluded directories
       auto const name = entry.path().filename().string();
-      if (!name.empty() && name[0] == '.') {
+      if ((!name.empty() && name[0] == '.') || IsFolderExcluded(entry.path(), exclusions)) {
         continue;
       }
       DirectoryNode child;
-      ScanDirectory(entry.path(), child, studio, budget);
+      ScanDirectory(entry.path(), child, studio, exclusions, budget);
       node.children.push_back(std::move(child));
     } else if (entry.is_regular_file(ec)) {
       auto type = ClassifyAssetTypeByFilename(entry.path().filename().string());
@@ -130,17 +175,22 @@ std::vector<mochi::Path> AssetBrowser::CollectFilePaths(mochi::Path const& dir) 
   return filePaths;
 }
 
-// Returns true if @p dir contains more than @p limit filesystem entries (files + folders). Bounded:
-// the walk stops the moment the limit is exceeded, so it never traverses a huge tree in full (used
-// to refuse an over-large folder as a root before it is scanned or persisted).
-static bool DirectoryExceedsEntryLimit(mochi::Path const& dir, int limit) {
+// Returns true if @p dir contains more than @p limit filesystem entries (files + folders), not
+// counting excluded folders or anything under them. Bounded: the walk stops the moment the limit is
+// exceeded, so it never traverses a huge tree in full (used to refuse an over-large folder as a
+// root before it is scanned or persisted).
+static bool
+DirectoryExceedsEntryLimit(mochi::Path const& dir, FolderExclusions const& exclusions, int limit) {
   std::error_code ec;
   int count = 0;
-  for (auto const& entry : std::filesystem::recursive_directory_iterator(
-           dir.AsFilesystemPath(),
-           std::filesystem::directory_options::skip_permission_denied,
-           ec)) {
-    (void)entry;
+  std::filesystem::recursive_directory_iterator it(
+      dir.AsFilesystemPath(), std::filesystem::directory_options::skip_permission_denied, ec);
+  for (; !ec && it != std::filesystem::recursive_directory_iterator(); it.increment(ec)) {
+    std::error_code typeEc;
+    if (it->is_directory(typeEc) && IsFolderExcluded(it->path(), exclusions)) {
+      it.disable_recursion_pending();
+      continue;
+    }
     if (++count > limit) {
       return true;
     }
@@ -183,17 +233,20 @@ void AssetBrowser::TryRefreshDirectoryTree() {
   // One budget shared across all roots: the scan stops once the total entry count is hit, so even a
   // persisted over-large root (added before this limit existed, or set outside AddRootPath) yields
   // a partial tree instead of hanging the UI.
-  int const limit = _studio->GetAppSettings().assetBrowser.fileFolderLimit;
+  auto const& settings = _studio->GetAppSettings().assetBrowser;
+  int const limit = settings.fileFolderLimit;
+  FolderExclusions const exclusions = ParseFolderExclusions(settings.excludedFolders);
   int budget = limit;
   _rootNodes.resize(_rootPaths.size());
   for (size_t i = 0; i < _rootPaths.size(); ++i) {
     _rootNodes[i] = {};
-    ScanDirectory(_rootPaths[i], _rootNodes[i], _studio, budget);
+    ScanDirectory(_rootPaths[i], _rootNodes[i], _studio, exclusions, budget);
   }
   if (budget <= 0) {
     MOCHI_LOG_WARNING(
         "Asset Browser: directory scan hit the %d-entry limit; the folder view is partial. Point at "
-        "a more specific folder (or remove an over-large root).",
+        "a more specific folder, remove an over-large root, or exclude folders in Settings > Asset "
+        "Browser.",
         limit);
   }
 
@@ -215,11 +268,13 @@ static void SyncRootPathsToSettings(
 bool AssetBrowser::RootExceedsEntryLimit(mochi::Path const& root) const {
   // Refuse a folder too large to scan (e.g. the repo root, picked by mistake): a bounded probe
   // stops as soon as it exceeds the cap, so this never walks the whole tree.
-  int const entryLimit = _studio->GetAppSettings().assetBrowser.fileFolderLimit;
-  if (DirectoryExceedsEntryLimit(root, entryLimit)) {
+  auto const& settings = _studio->GetAppSettings().assetBrowser;
+  int const entryLimit = settings.fileFolderLimit;
+  if (DirectoryExceedsEntryLimit(
+          root, ParseFolderExclusions(settings.excludedFolders), entryLimit)) {
     MOCHI_LOG_ERROR(
         "Not adding '%s' as an Asset Browser root: it contains more than %d files/folders. Point at "
-        "a more specific folder.",
+        "a more specific folder or exclude folders in Settings > Asset Browser.",
         root.ToString().c_str(),
         entryLimit);
     return true;
@@ -399,12 +454,6 @@ void AssetBrowser::ShowFilter(float width) {
   };
   // Real-type swatches (Unknown handled separately so Importable can precede it).
   for (int i = 0; i < kUnknownIndex; ++i) {
-#if !MOCHI_INTERNAL
-    if (static_cast<AssetType>(i) == AssetType::BotScene ||
-        static_cast<AssetType>(i) == AssetType::BotTask) {
-      continue;
-    }
-#endif
     drawTypeSwatch(i);
   }
   // Importable is a cross-cutting category (driven by the importer registry), so
@@ -819,7 +868,13 @@ void AssetBrowser::ShowItemContextMenuContents(TileItem const& item, Asset const
     }
     showedAssetActions = true;
   }
-#if MOCHI_INTERNAL
+  if (selectedCount == 1 && !item.isFolder &&
+      ClassifyAssetTypeByFilename(item.fullPath.GetFilename()) == AssetType::Bot) {
+    if (ImGui::IconSelectable("Create IK Configuration...", ICON_FA_PLUS)) {
+      CreateIKConfigAsset(item.fullPath);
+    }
+    showedAssetActions = true;
+  }
   if (selectedCount == 1 && folderCount == 0 &&
       superdex::robotics::IsBotScenePath(item.fullPath.GetFilename())) {
     bool const unsaved = asset != nullptr && asset->IsDirty();
@@ -833,7 +888,6 @@ void AssetBrowser::ShowItemContextMenuContents(TileItem const& item, Asset const
     }
     showedAssetActions = true;
   }
-#endif // MOCHI_INTERNAL
   if (selectedCount == 1 && !item.isFolder &&
       ClassifyAssetTypeByFilename(item.fullPath.GetFilename()) == AssetType::MochiPrefab) {
     if (ImGui::IconSelectable("Create Asset Tuner...", ICON_FA_PLUS)) {
@@ -1429,6 +1483,48 @@ void AssetBrowser::CreateModBotAsset(mochi::Path const& dir, std::string const& 
       // The file was written with a placeholder name before the user picked one.
       bot->Save();
     }
+  });
+}
+
+void AssetBrowser::CreateIKConfigAsset(mochi::Path const& outputBotPath) {
+  auto* outputBot = _assetManager->LoadBotAsset(outputBotPath);
+  if (!outputBot) {
+    MOCHI_LOG_ERROR(
+        "Failed to load output bot for IK configuration: %s", outputBotPath.ToString().c_str());
+    return;
+  }
+  // Prepare the authored asset, including in-memory dependencies of composed bots.
+  outputBot->Rebuild(_studio->GetBotLoader());
+  if (!outputBot->IsBuildOk() || !outputBot->IsValidateOk()) {
+    MOCHI_LOG_ERROR(
+        "Cannot create IK configuration: output bot '%s' failed build or validation. "
+        "See the Bot Editor for details.",
+        outputBotPath.ToString().c_str());
+    return;
+  }
+
+  std::string const extension{kIKConfigExtension};
+  mochi::Path const dir = outputBotPath.GetParentPath();
+  std::string const configName =
+      MakeUniqueFileName(GetAssetNameFromPath(outputBotPath) + "_ik", dir, extension);
+  auto const newPath = dir / (configName + extension);
+
+  BotIKConfig spec;
+  spec.outputBot = MakeIKBotReference(newPath, outputBotPath);
+  std::string error;
+  if (!InitializeIKGoals(outputBot->GetBotPrefab(), spec, error)) {
+    MOCHI_LOG_ERROR("Failed to initialize IK configuration: %s", error.c_str());
+    return;
+  }
+  if (!SaveIKConfig(newPath, spec, error)) {
+    MOCHI_LOG_ERROR("Failed to create IK configuration: %s", error.c_str());
+    return;
+  }
+  BeginRenaming(newPath, configName, [this, extension](std::string const& newName) {
+    if (!RenameAsset(_renamingPath, newName)) {
+      return;
+    }
+    _studio->OpenPath(_renamingPath.GetParentPath() / (newName + extension));
   });
 }
 
@@ -2257,7 +2353,6 @@ void AssetBrowser::ShowContents() {
           _studio->BeginImport(item.file->importer, item.fullPath);
         } else if (asset) {
           assetToOpen = asset;
-#if MOCHI_INTERNAL
         } else if (item.file->type == AssetType::BotTask) {
           if (auto* sceneEditor = dynamic_cast<BotSceneEditor*>(_studio->GetActiveAssetEditor())) {
             sceneEditor->OpenTask(item.fullPath);
@@ -2265,7 +2360,6 @@ void AssetBrowser::ShowContents() {
             MOCHI_LOG_WARNING(
                 "Open a bot scene to load task '%s' into it.", item.fullPath.ToString().c_str());
           }
-#endif
         } else {
           if (auto* loaded = _assetManager->LoadAsset(item.fullPath)) {
             assetToOpen = loaded;
@@ -2399,7 +2493,6 @@ void AssetBrowser::ShowContents() {
           ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
         ImGui::SetTooltip("This folder is already a root.");
       }
-#if MOCHI_INTERNAL
       if (ImGui::Selectable("Bot Scene...")) {
         auto dir = _currentPath;
         std::string const extension{superdex::robotics::kBotSceneExtension};
@@ -2443,7 +2536,6 @@ void AssetBrowser::ShowContents() {
           });
         }
       }
-#endif // MOCHI_INTERNAL
       ImGui::EndMenu();
     }
     ImGui::Separator(ImGui::GetStyleColorVec4(ImGuiCol_WindowBg));

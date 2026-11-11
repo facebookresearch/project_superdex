@@ -842,12 +842,15 @@ void TunerEditor::ApplyRunSettings() {
   settings.scene.fixedTimeStepSeconds = run.dt;
   settings.scene.throttleToRealTime = true;
   settings.solver = mochi::SolverParams{};
-  settings.studio.groundPlane = run.groundPlane;
+  // The tuner resolves the ground height itself (the RunSpec override or the automatic height), so
+  // the scene gets it as a custom height.
+  float const groundHeight = EffectiveGroundHeight();
+  settings.studio.groundPlaneMode =
+      run.groundPlane ? GroundPlaneMode::Custom : GroundPlaneMode::Off;
+  settings.studio.groundPlaneHeight = groundHeight;
   _mochiScene.SetSettings(settings);
   // The viewport ground and the physics plane always share one height, so what is drawn is what the
   // bodies land on. Not moved mid-run (the settings are locked while simulating).
-  float const groundHeight = EffectiveGroundHeight();
-  _mochiScene.SetGroundPlaneHeight(groundHeight);
   _mochiScene.SetGroundPlaneContact(run.groundContact.value_or(mochi::ContactParams{}));
   if (_viewport && !_mochiScene.IsSimulating()) {
     _viewport->SetGroundPlaneHeight(groundHeight);

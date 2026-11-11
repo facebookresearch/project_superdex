@@ -44,6 +44,7 @@ struct AssetBrowserSettings {
   // repo root) can't hang the UI. A properly-scoped asset folder is well under this (~2500 in
   // practice); the default leaves headroom while keeping a worst-case scan to a few seconds.
   int fileFolderLimit = 5000;
+  std::vector<std::string> excludedFolders;
 
   MOCHI_STRUCT_BEGIN(superdex::studio::AssetBrowserSettings)
   // rootPaths / lastPath are the open workspace, not a preference: hidden from the Settings window.
@@ -67,6 +68,9 @@ struct AssetBrowserSettings {
       "Maximum number of files and folders scanned under a root, and the ceiling above which a "
       "folder is refused as a root. Bounds the scan so a huge tree cannot hang the UI."));
   MOCHI_ATTRIBUTE(IntRange(1, 1000000));
+  MOCHI_FIELD(excludedFolders)
+  MOCHI_ATTRIBUTE(Description(
+      "Folder names or path endings to skip when scanning. They don't count toward the limit."));
   MOCHI_STRUCT_END()
 };
 
@@ -470,16 +474,36 @@ struct PhysicsDebugSettings {
   MOCHI_STRUCT_END()
 };
 
+// Where the studio puts its ground plane when a simulation starts.
+enum class GroundPlaneMode {
+  Off,
+  // At the lowest point of the staged asset (in its rest pose).
+  LowestPoint,
+  // At StudioPhysicsSettings::groundPlaneHeight.
+  Custom,
+};
+
+} // namespace superdex::studio
+
+// Enum reflection specializes a global template, so it is declared at global scope.
+MOCHI_ENUM_BEGIN(superdex::studio::GroundPlaneMode)
+MOCHI_ENUM_ITEM(Off)
+MOCHI_ENUM_ITEM(LowestPoint)
+MOCHI_ENUM_ITEM(Custom)
+MOCHI_ENUM_END()
+
+namespace superdex::studio {
+
 // Studio-only additions to a simulation session: things the studio puts in the scene for
-// convenience that are never part of the asset.
+// convenience that are never part of the asset. Drawn by ShowStudioPhysicsSettings.
 struct StudioPhysicsSettings {
-  bool groundPlane = true;
+  GroundPlaneMode groundPlaneMode = GroundPlaneMode::LowestPoint;
+  // Ground plane height [m] in Custom mode.
+  float groundPlaneHeight = 0.0f;
 
   MOCHI_STRUCT_BEGIN(superdex::studio::StudioPhysicsSettings)
-  MOCHI_FIELD(groundPlane)
-  MOCHI_ATTRIBUTE(Description(
-      "Add a static ground plane at the lowest point of the staged asset when a simulation "
-      "starts. Takes effect the next time you press play."));
+  MOCHI_FIELD(groundPlaneMode)
+  MOCHI_FIELD(groundPlaneHeight)
   MOCHI_STRUCT_END()
 };
 
@@ -558,6 +582,8 @@ struct AppSettings {
   TaskSettings tasks;
   RecentEntriesSettings recentEntries;
   std::unordered_map<std::string, bool> windowVisibility;
+  // Local design-session state, never serialized into an IK document or runtime deployment.
+  std::unordered_map<std::string, std::string> ikRecordings;
 
   MOCHI_STRUCT_BEGIN(superdex::studio::AppSettings)
   MOCHI_FIELD(physics)
@@ -571,6 +597,7 @@ struct AppSettings {
   MOCHI_FIELD(tasks)
   MOCHI_FIELD(recentEntries) MOCHI_ATTRIBUTE(HideFromEditor);
   MOCHI_FIELD(windowVisibility) MOCHI_ATTRIBUTE(HideFromEditor);
+  MOCHI_FIELD(ikRecordings) MOCHI_ATTRIBUTE(HideFromEditor);
   MOCHI_STRUCT_END()
 };
 

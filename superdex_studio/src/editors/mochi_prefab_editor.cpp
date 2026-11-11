@@ -307,7 +307,10 @@ void MochiPrefabEditor::ShowAuxiliaryWindows() {
     ShowContactFilterWindow(&open);
   }
   if (bool& open = _studio->GetWindowVisible("Physics Settings")) {
-    _mochiScene.ShowPhysicsSettingsWindow("Physics Settings", &open, GetAssetSceneOverrides());
+    if (_mochiScene.ShowPhysicsSettingsWindow(
+            "Physics Settings", &open, GetAssetSceneOverrides())) {
+      _viewport->SetGroundPlaneHeight(_mochiScene.GetGroundPlaneHeight());
+    }
   }
   ShowMeasureWindow();
   // debug windows
@@ -439,10 +442,10 @@ void MochiPrefabEditor::RestagePrefab() {
     _selections = saved;
     SyncViewportSelection();
   }
-  // Position the drop-shadow ground plane at the prefab's lowest point (rest pose staged above; not
-  // called mid-sim). The same height positions the studio physics ground plane, when the settings
-  // ask for one.
-  _mochiScene.SetGroundPlaneHeight(_viewport->UpdateGroundPlane());
+  // Position the drop-shadow ground plane where the studio physics ground plane goes: the prefab's
+  // lowest point (rest pose staged above; not called mid-sim) or the custom height.
+  _mochiScene.SetLowestPointHeight(_viewport->UpdateGroundPlane());
+  _viewport->SetGroundPlaneHeight(_mochiScene.GetGroundPlaneHeight());
 
   // The staged scene changed, so the asset's cached thumbnail is stale.
   _prefabAsset->MarkThumbnailDirty();

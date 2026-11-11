@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#if MOCHI_INTERNAL
-
 #include "editors/bot_scene_editor.h"
 #include "app/app.h"
 #include "assets/asset_manager.h"
@@ -120,9 +118,12 @@ std::string ValidateJson(std::string_view text, bool requireObject) {
 
 bool IsOscControllerType(std::string_view type) {
   type = CanonicalControllerType(type);
-  return type == superdex::robotics::ControllerBasicOscPd::TypeName() ||
-      type == superdex::robotics::ControllerOscV1::TypeName() ||
-      type == superdex::robotics::ControllerOscV2::TypeName();
+  return type == superdex::robotics::ControllerBasicOscPd::TypeName()
+#if MOCHI_INTERNAL
+      || type == superdex::robotics::ControllerOscV1::TypeName() ||
+      type == superdex::robotics::ControllerOscV2::TypeName()
+#endif
+      ;
 }
 
 bool ParseJsonObject(std::string_view text, picojson::object& object, std::string& error) {
@@ -960,7 +961,10 @@ void BotSceneEditor::ShowAuxiliaryWindows() {
     ShowInfoWindow(&open);
   }
   if (bool& open = _studio->GetWindowVisible("Physics Settings")) {
-    _mochiScene.ShowPhysicsSettingsWindow("Physics Settings", &open, GetAssetSceneOverrides());
+    if (_mochiScene.ShowPhysicsSettingsWindow(
+            "Physics Settings", &open, GetAssetSceneOverrides())) {
+      _viewport->SetGroundPlaneHeight(_mochiScene.GetGroundPlaneHeight());
+    }
   }
   ShowMeasureWindow();
   if (bool& open = _studio->GetWindowVisible("Task Preview")) {
@@ -1115,10 +1119,10 @@ void BotSceneEditor::RestageBotScene() {
   } else {
     _stage.StageBotScene(stagedPrefab, _stageType);
   }
-  // Position the drop-shadow ground plane at the scene's lowest point (rest pose staged above; not
-  // called mid-sim). The same height positions the studio physics ground plane, when the settings
-  // ask for one.
-  _mochiScene.SetGroundPlaneHeight(_viewport->UpdateGroundPlane());
+  // Position the drop-shadow ground plane where the studio physics ground plane goes: the scene's
+  // lowest point (rest pose staged above; not called mid-sim) or the custom height.
+  _mochiScene.SetLowestPointHeight(_viewport->UpdateGroundPlane());
+  _viewport->SetGroundPlaneHeight(_mochiScene.GetGroundPlaneHeight());
 }
 
 bool BotSceneEditor::BindTaskSpawns(
@@ -2356,5 +2360,3 @@ void BotSceneEditor::ShowInfoWindow(bool* open) {
 }
 
 } // namespace superdex::studio
-
-#endif // MOCHI_INTERNAL

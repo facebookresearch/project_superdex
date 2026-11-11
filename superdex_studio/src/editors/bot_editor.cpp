@@ -367,7 +367,7 @@ void BotEditor::Initialize() {
       [this] { return _mochiScene.IsPaused(); });
   // Stage the bot
   RecomputeModBuildStatus();
-  RestageBot(); // also positions the ground plane at the bot's lowest point
+  RestageBot(); // also positions the ground plane
   _viewport->SetSelectedSceneObjects({});
   _forceLinkFocus = false;
   _viewport->FocusCameraOnScene();
@@ -525,7 +525,9 @@ void BotEditor::ShowAuxiliaryWindows() {
   }
   if (bool& open = _studio->GetWindowVisible("Physics Settings")) {
     // A BotPrefab carries no scene settings, so the editor's override always applies.
-    _mochiScene.ShowPhysicsSettingsWindow("Physics Settings", &open);
+    if (_mochiScene.ShowPhysicsSettingsWindow("Physics Settings", &open)) {
+      _viewport->SetGroundPlaneHeight(_mochiScene.GetGroundPlaneHeight());
+    }
   }
   ShowMeasureWindow();
   // debug windows
@@ -1089,10 +1091,11 @@ void BotEditor::RestageBot() {
       }
     }
   }
-  // Reposition the drop-shadow ground plane and the grid at the bot's lowest point (in the rest
-  // pose staged above); the same height positions the studio physics ground plane. Safe here:
+  // Reposition the drop-shadow ground plane and the grid where the studio physics ground plane
+  // goes: the bot's lowest point (in the rest pose staged above) or the custom height. Safe here:
   // RestageBot rebuilds the rest pose and is never called mid-sim.
-  _mochiScene.SetGroundPlaneHeight(_viewport->UpdateGroundPlane());
+  _mochiScene.SetLowestPointHeight(_viewport->UpdateGroundPlane());
+  _viewport->SetGroundPlaneHeight(_mochiScene.GetGroundPlaneHeight());
 }
 
 void BotEditor::AddBotLink(int iLink) {
