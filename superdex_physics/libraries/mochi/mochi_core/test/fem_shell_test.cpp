@@ -1277,38 +1277,43 @@ static double QuadraticForm(NdArray<real, kDim * kDim> const& m, NdArray<real, k
   return q;
 }
 
+// Expects m to be symmetric and to have no eigenvalue below −tol·‖m‖, with tolerances relative to
+// the Frobenius norm ‖m‖, since rounding errors scale with it. Without Eigen, it checks only the
+// necessary conditions on coordinate vectors and their pairwise sums and differences.
 static void ExpectSymmetricPsd(NdArray<real, kBendingStencilDofs * kBendingStencilDofs> const& m) {
   constexpr int kN = kBendingStencilDofs;
-  real constexpr kSymAbsTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-9_r : 1e-5_r;
-  real constexpr kSymRelTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-10_r : 1e-6_r;
-  double constexpr kPsdTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-8 : 1e-4;
+  real constexpr kSymRelTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-9_r : 1e-5_r;
+  real constexpr kPsdRelTol =
+      (MOCHI_USE_DOUBLE_PRECISION ? 300_r : 100_r) * std::numeric_limits<real>::epsilon();
+  real const norm = Norm(m);
+  ASSERT_TRUE(IsFinite(norm));
 
-  for (int i = 0; i < kN; ++i) {
-    for (int j = 0; j < kN; ++j) {
-      real const a = m[i * kN + j];
-      real const b = m[j * kN + i];
-      EXPECT_NEAR_TOL(a, b, Max(kSymAbsTol, kSymRelTol * Max(Abs(a), Abs(b))));
-    }
-  }
-
-  for (int i = 0; i < kN; ++i) {
-    NdArray<real, kN> v{};
-    v[i] = 1_r;
-    EXPECT_GE(QuadraticForm<kN>(m, v), -kPsdTol);
-  }
   for (int i = 0; i < kN; ++i) {
     for (int j = i + 1; j < kN; ++j) {
-      NdArray<real, kN> plus{};
-      plus[i] = 1_r;
-      plus[j] = 1_r;
-      EXPECT_GE(QuadraticForm<kN>(m, plus), -kPsdTol);
-
-      NdArray<real, kN> minus{};
-      minus[i] = 1_r;
-      minus[j] = -1_r;
-      EXPECT_GE(QuadraticForm<kN>(m, minus), -kPsdTol);
+      EXPECT_NEAR_TOL(m[i * kN + j], m[j * kN + i], kSymRelTol * norm);
     }
   }
+
+  real const psdTol = kPsdRelTol * norm;
+#if MOCHI_USE_EIGEN
+  using EMatType = Eigen::Matrix<real, kN, kN, Eigen::RowMajor | Eigen::DontAlign>;
+  Eigen::Map<EMatType const> const eigenMat(&m[0]);
+  Eigen::SelfAdjointEigenSolver<EMatType> const eigenSolver(eigenMat, Eigen::EigenvaluesOnly);
+  ASSERT_EQ(Eigen::Success, eigenSolver.info());
+  EXPECT_GE(eigenSolver.eigenvalues().minCoeff(), -psdTol);
+#else
+  for (int i = 0; i < kN; ++i) {
+    double const diagonal = static_cast<double>(m[i * kN + i]);
+    EXPECT_GE(diagonal, -psdTol);
+    for (int j = i + 1; j < kN; ++j) {
+      double const diagonalSum = diagonal + static_cast<double>(m[j * kN + j]);
+      double const offDiagonalSum =
+          static_cast<double>(m[i * kN + j]) + static_cast<double>(m[j * kN + i]);
+      EXPECT_GE(diagonalSum + offDiagonalSum, -2_r * psdTol);
+      EXPECT_GE(diagonalSum - offDiagonalSum, -2_r * psdTol);
+    }
+  }
+#endif
 }
 
 template <int kBS>
@@ -2284,27 +2289,15 @@ TEST(ShellWork, StrainStiffeningIndependentOfStiffnessDamping) {
 }
 
 // The exact stiffness is PSD at any stretch, including where it dominates the SVK stiffness, and so
-// is the full stiffness with the projected geometric part. The matrices are normalized, because
-// their entries span orders of magnitude.
+// is the full stiffness with the projected geometric part.
 TEST(ShellWork, StrainStiffeningDResidualPsd) {
   auto const stretched = MakeStretchedConfigs();
   DynamicArray<ShellStencilConfig> cfgs(stretched.begin(), stretched.end());
   cfgs.push_back(MakeStretchedInteriorConfig(2_r, 0.4_r, 0.1_r));
   cfgs.push_back(MakeStretchedEquilateralConfig(1.8_r, 1.6_r, 0.1_r));
-  auto const expectNormalizedPsd = [](auto const& dres) {
+  auto const expectPsd = [](auto const& dres) {
     ASSERT_GT(Norm(dres), 0_r);
-    auto const normalized = (1_r / Norm(dres)) * dres;
-    ExpectSymmetricPsd(normalized);
-#if MOCHI_USE_EIGEN
-    using EMatType = Eigen::
-        Matrix<real, kBendingStencilDofs, kBendingStencilDofs, Eigen::RowMajor | Eigen::DontAlign>;
-    Eigen::Map<EMatType const> const eigenMat(&normalized[0]);
-    Eigen::SelfAdjointEigenSolver<EMatType> const eigenSolver(eigenMat, Eigen::EigenvaluesOnly);
-    ASSERT_EQ(Eigen::Success, eigenSolver.info());
-    real constexpr kPsdTol =
-        (MOCHI_USE_DOUBLE_PRECISION ? 300_r : 100_r) * std::numeric_limits<real>::epsilon();
-    EXPECT_GE(eigenSolver.eigenvalues().minCoeff(), -kPsdTol);
-#endif
+    ExpectSymmetricPsd(dres);
   };
   ShellFdOptions options;
   options.membraneStrainStiffeningStiffness = kStrainStiffeningStiffness;
@@ -2316,8 +2309,8 @@ TEST(ShellWork, StrainStiffeningDResidualPsd) {
           {.energy = false, .residual = false, .dresidual = true},
           /*projectPsd*/ true);
       for (int b = 0; b < kBS; ++b) {
-        expectNormalizedPsd(GetLane(stiffening.dres, b));
-        expectNormalizedPsd(GetLane(projected.dres, b));
+        expectPsd(GetLane(stiffening.dres, b));
+        expectPsd(GetLane(projected.dres, b));
       }
     }
   });
