@@ -20,7 +20,7 @@
 
 #include <imgui.h>
 
-#include <mochi_mesh/tetrahedralization.h> // Tetrahedralize / TetrahedralizationParams
+#include <mochi_mesh/tetrahedralization.h> // Tetrahedralize / TetrahedralizeConstrained + params
 
 #include <memory>
 #include <vector>
@@ -116,12 +116,68 @@ class DelaunayRefinementMethod : public ReflectedMethod<TetrahedralizeProps> {
   }
 };
 
+constexpr mochi::mesh::ConstrainedTetrahedralizationParams kConstrainedTetDefaults{};
+
+struct ConstrainedTetrahedralizeProps {
+  double edgeSize = kConstrainedTetDefaults.edgeSize;
+  bool relativeToMeshSize = kConstrainedTetDefaults.relativeToMeshSize;
+  int iterations = kConstrainedTetDefaults.iterations;
+  bool strict = kConstrainedTetDefaults.strict;
+
+  MOCHI_STRUCT_BEGIN(superdex::studio::ConstrainedTetrahedralizeProps)
+  MOCHI_FIELD(edgeSize)
+  MOCHI_FIELD(relativeToMeshSize)
+  MOCHI_FIELD(iterations)
+  MOCHI_FIELD(strict)
+  MOCHI_STRUCT_END()
+};
+
+class ConstrainedDelaunayMethod : public ReflectedMethod<ConstrainedTetrahedralizeProps> {
+ public:
+  [[nodiscard]] char const* Name() const override {
+    return "Constrained Delaunay";
+  }
+  [[nodiscard]] char const* Description() const override {
+    return "Fill the closed input surface with tetrahedra, keeping it as the mesh boundary (CGAL "
+           "3D constrained Delaunay triangulation and tetrahedral remeshing).";
+  }
+
+  void ShowParams(ModifierGuiContext const& gui) override {
+    ModifierTooltip const& tooltip = gui.tooltip;
+    ImGui::TextUnformatted("The input must be closed and free of self-intersections, and already");
+    ImGui::TextUnformatted("meshed at the resolution wanted on the boundary, which is kept.");
+    processing::ShowEdgeSizeControl(_props.edgeSize, _props.relativeToMeshSize, tooltip);
+    ImGui::InputInt("Iterations", &_props.iterations);
+    tooltip(
+        "Passes refining the interior (at least 1). More passes may improve tetrahedron shape, "
+        "but take longer.");
+    ImGui::Checkbox("Strict Boundary", &_props.strict);
+    tooltip(
+        "Fail unless the boundary triangles stay exactly the input triangles. Off allows splitting "
+        "input triangles where constrained Delaunay construction requires extra boundary vertices.");
+  }
+
+  // Meshes in the pipeline's renderer space, as DelaunayRefinementMethod does.
+  mochi::MeshData Run(
+      mochi::MeshData const& input,
+      ModifierRunContext const& /*ctx*/,
+      mochi::Error& error) const override {
+    mochi::mesh::ConstrainedTetrahedralizationParams p;
+    p.edgeSize = _props.edgeSize;
+    p.relativeToMeshSize = _props.relativeToMeshSize;
+    p.iterations = _props.iterations;
+    p.strict = _props.strict;
+    return mochi::mesh::TetrahedralizeConstrained(input, p, error);
+  }
+};
+
 } // namespace
 
 ModifierRegistryEntry MakeTetrahedralizeEntry() {
   return ModifierRegistryEntry{"Tetrahedralize", ModifierKind::Transform, []() {
                                  std::vector<std::unique_ptr<MeshProcessingMethod>> methods;
                                  methods.push_back(std::make_unique<DelaunayRefinementMethod>());
+                                 methods.push_back(std::make_unique<ConstrainedDelaunayMethod>());
                                  return methods;
                                }};
 }

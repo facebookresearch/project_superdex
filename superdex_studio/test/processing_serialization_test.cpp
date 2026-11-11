@@ -152,6 +152,29 @@ TEST_F(ProcessingSerializationTest, TetrahedralizeAndNoSdfExportRoundTrip) {
   EXPECT_EQ(Properties(saved, 2).count("exportPath"), 0u);
 }
 
+TEST_F(ProcessingSerializationTest, ConstrainedTetrahedralizeRoundTrip) {
+  LoadedPipeline const loaded = Load(R"({
+  "version": 1,
+  "modifiers": [
+    {"modifier": "Tetrahedralize", "method": "Constrained Delaunay", "enabled": true,
+     "collapsed": true,
+     "properties": {"edgeSize": 0.25, "relativeToMeshSize": false, "iterations": 7,
+                    "strict": true}}
+  ]
+})");
+  picojson::object const saved = Save(loaded);
+
+  EXPECT_EQ(loaded.issues, std::vector<std::string>{});
+  ASSERT_EQ(loaded.modifiers.size(), 1u);
+  EXPECT_EQ(Modifier(saved, 0).at("modifier").get<std::string>(), "Tetrahedralize");
+  EXPECT_EQ(Modifier(saved, 0).at("method").get<std::string>(), "Constrained Delaunay");
+  picojson::object const& tet = Properties(saved, 0);
+  EXPECT_DOUBLE_EQ(tet.at("edgeSize").get<double>(), 0.25);
+  EXPECT_FALSE(tet.at("relativeToMeshSize").get<bool>());
+  EXPECT_EQ(tet.at("iterations").get<double>(), 7.0);
+  EXPECT_TRUE(tet.at("strict").get<bool>());
+}
+
 TEST_F(ProcessingSerializationTest, ListsWhatItCannotReadAndLoadsTheRest) {
   LoadedPipeline const loaded = Load(R"({
   "version": 1,

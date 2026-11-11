@@ -152,6 +152,11 @@ constexpr char const* kTetrahedralize =
     R"({"modifier": "Tetrahedralize", "method": "Delaunay Refinement", "enabled": true,
         "collapsed": true, "properties": {"edgeSize": 0.5}})";
 
+// Coarse, as kTetrahedralize.
+constexpr char const* kConstrainedTetrahedralize =
+    R"({"modifier": "Tetrahedralize", "method": "Constrained Delaunay", "enabled": true,
+        "collapsed": true, "properties": {"edgeSize": 0.5}})";
+
 constexpr char const* kExtractSurface =
     R"({"modifier": "Extract Surface", "method": "Boundary", "enabled": true, "collapsed": true,
         "properties": {}})";
@@ -700,6 +705,38 @@ TEST_F(ProcessCommandTest, SdfExportOfATetMeshWritesBoth) {
   EXPECT_EQ(model.mesh->GetNumNodes(), (*report.stages[1].tetMesh)[0]);
   EXPECT_EQ(model.mesh->GetNumElements(), (*report.stages[1].tetMesh)[1]);
   ExpectCubeSdf(model, *report.stages[2].sdfGrid);
+}
+
+TEST_F(ProcessCommandTest, ConstrainedTetrahedralizeFillsTheCube) {
+  WriteCubeStl(_root / "cad" / "cube.stl");
+  fs::path const pipeline = _root / "intermediates" / "cube.StudioProcessing.json";
+  WriteModifiers(pipeline, {kSourceFromModelViewer, kConstrainedTetrahedralize, kNoSdfExport});
+
+  mochi::Error error;
+  ProcessReport const report = RunProcessingPipeline({.pipelinePath = pipeline.string()}, error);
+
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  ASSERT_TRUE(report.succeeded);
+  ASSERT_EQ(report.stages.size(), 3u);
+  ASSERT_TRUE(report.stages[1].tetMesh.has_value());
+  mochi::ModelData const model =
+      mochi::model_utils::LoadFromFile((_root / "collision" / "cube.mochi.h5").string(), error);
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  ASSERT_TRUE(model.mesh.has_value());
+  ASSERT_EQ(model.mesh->nodesPerElement, 4);
+  mochi::MeshData const source = processing::ToMochiSpace(
+      processing::LoadRenderMesh((_root / "cad" / "cube.stl").string(), error));
+  ASSERT_TRUE(error.IsOK()) << error.GetDescription();
+  ASSERT_GE(model.mesh->coordinates.size(), source.coordinates.size());
+  for (std::size_t i = 0; i < source.coordinates.size(); ++i) {
+    EXPECT_EQ(model.mesh->coordinates[i], source.coordinates[i]) << i;
+  }
+  mochi::real volume = 0;
+  for (int tet = 0; tet < model.mesh->GetNumElements(); ++tet) {
+    volume += TetSignedVolume(*model.mesh, tet);
+  }
+  mochi::real const side = 2 * kHalfSide;
+  EXPECT_NEAR(volume, side * side * side, 1e-8f);
 }
 
 TEST_F(ProcessCommandTest, ASurfaceStepAfterTetrahedralizeFailsItsStage) {
