@@ -41,7 +41,7 @@ Some notable features that have been removed, amongst others:
 2. (For SolidWorks) Launch Visual Studio 2022 as administrator (Right-click -> Run as administrator)
 3. Open SuperDexCADExporter.sln
 4. For SolidWorks, right-click on SolidWorksRobotExporter and click Build. The Add-In should be registered automatically. If not, or the build is failing, double-check the SolidWorks API locations in SolidWorksRobotExporter.csproj and update accordingly.
-5. For NX, right-click on NXRobotExporter and click Build. The built files by default are deposited into `C:/NXCustom/`. Please see below for installation instructions.
+5. For NX, right-click on NXRobotExporter and click Build. The built files by default are deposited into `C:/NXCustom/` (pass `/p:NXDeployDir=` to MSBuild to skip this). Please see below for installation instructions.
 6. To build the installers, run the scripts below via PowerShell. Both MSIs are written to `installer/output/`.
    - SolidWorks: build SolidWorksRobotExporter (Release|x64), then run `scripts/MakeSolidWorksInstaller.ps1` to produce `SuperDexCadExporterSolidWorksSetup.msi`.
    - NX: build NXRobotExporter (Release), then run `scripts/MakeNXInstaller.ps1` to produce `SuperDexCadExporterNXSetup.msi`.
@@ -62,7 +62,7 @@ Some notable features that have been removed, amongst others:
 1. Download the NX installer from the latest release on the [Release page](https://github.com/facebookresearch/project_superdex/releases), or build it yourself by following the building instructions above.
 2. Make sure Siemens NX or Teamcenter NX is closed before starting.
 3. Run the installer and go through the prompts.
-   - The add-in is installed into the `startup` and `application` folders of your `UGII_USER_DIR`. If `UGII_USER_DIR` is not set, the installer creates `C:/NXCustom` and sets `UGII_USER_DIR` to it for your user account.
+   - The add-in is installed into the `startup` and `application` folders of your `UGII_USER_DIR`. NX loads every DLL directly in `startup` when it launches, so only `NXRobotExporter.dll` goes there; each dependency goes in its own subfolder (`startup/<Name>/<Name>.dll`). If `UGII_USER_DIR` is not set, the installer creates `C:/NXCustom` and sets `UGII_USER_DIR` to it for your user account.
    - If the installer finds existing NX customizations (such as `UGII_USER_DIR`, `UGII_ENV_FILE`, `UGII_CUSTOM_DIRECTORY_FILE`, `UGII_SITE_DIR` or `UGII_GROUP_DIR`), it lists them before installing. NX setups managed by an administrator may load add-ins from elsewhere, so check with your NX system administrator before continuing.
 4. The next time you launch Siemens NX or Teamcenter NX, there should now be a **Robotics** tab in your ribbon bar. If not, sign out of Windows and back in (or reboot) so NX picks up `UGII_USER_DIR`, then try again.
 

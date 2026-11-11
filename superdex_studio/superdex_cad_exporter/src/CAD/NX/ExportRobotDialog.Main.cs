@@ -136,7 +136,7 @@ public partial class ExportRobotDialog
         Components,
     }
 
-    private static readonly Serilog.ILogger logger = CADRobotExporter.Utilities.Logger.GetLogger();
+    private static Serilog.ILogger logger => CADRobotExporter.Utilities.Logger.GetLogger();
 
     public ExportRobotDialog()
     {
@@ -221,27 +221,6 @@ public partial class ExportRobotDialog
             theSession = NXOpen.Session.GetSession();
             theUI = UI.GetUI();
 
-            logger.Information("Starting up NX Robot Exporter");
-
-            // Register our custom feature class if needed
-            // The CustomFeatureConfiguration.xml handles the registration,
-            // but we can verify it's loaded here
-            NXOpen.Features.CustomFeatureClassManager manager = theSession.CustomFeatureClassManager;
-            try
-            {
-                NXOpen.Features.CustomFeatureClass cfClass = manager.GetClassFromName(NXConfigurationSerialization.CustomFeatureClassName);
-                // Class is registered
-            }
-            catch (NXOpen.NXException ex)
-            {
-                theUI.NXMessageBox.Show("SuperDex CAD Exporter", NXMessageBox.DialogType.Error,
-                    "Could not find Custom Feature required for the Exporter. \n" +
-                    "Exception thrown: \n" +
-                    ex.Message);
-            }
-
-            logger.Information("Registering callbacks");
-
             theUI.MenuBarManager.RegisterApplication("ROBOT_EXPORTER",
             new NXOpen.MenuBar.MenuBarManager.InitializeMenuApplication(DummyCallback),
             new NXOpen.MenuBar.MenuBarManager.EnterMenuApplication(DummyCallback),
@@ -265,12 +244,41 @@ public partial class ExportRobotDialog
         return retValue;
     }
 
+    private static bool customFeatureClassChecked = false;
+
+    /// <summary>
+    /// CustomFeatureConfiguration.xml registers the custom feature class; this only tells the
+    /// user, once per session, when that registration is missing.
+    /// </summary>
+    private static void WarnIfCustomFeatureClassMissing()
+    {
+        if (customFeatureClassChecked)
+        {
+            return;
+        }
+        customFeatureClassChecked = true;
+
+        try
+        {
+            theSession.CustomFeatureClassManager.GetClassFromName(NXConfigurationSerialization.CustomFeatureClassName);
+        }
+        catch (NXOpen.NXException ex)
+        {
+            theUI.NXMessageBox.Show("SuperDex CAD Exporter", NXMessageBox.DialogType.Error,
+                "Could not find Custom Feature required for the Exporter. \n" +
+                "Exception thrown: \n" +
+                ex.Message);
+        }
+    }
+
     public static NXOpen.MenuBar.MenuBarManager.CallbackStatus CreateNewRobot(NXOpen.MenuBar.MenuButtonEvent buttonEvent)
     {
         if (Session.GetSession().Parts.Work == null)
         {
             return NXOpen.MenuBar.MenuBarManager.CallbackStatus.Cancel;
         }
+
+        WarnIfCustomFeatureClassMissing();
 
         var result = GuidSanitizer.CheckForDuplicates();
 
@@ -301,6 +309,8 @@ public partial class ExportRobotDialog
         {
             return NXOpen.MenuBar.MenuBarManager.CallbackStatus.Cancel;
         }
+
+        WarnIfCustomFeatureClassMissing();
 
         var result = GuidSanitizer.CheckForDuplicates();
 
@@ -461,6 +471,8 @@ public partial class ExportRobotDialog
             return NXOpen.MenuBar.MenuBarManager.CallbackStatus.Cancel;
         }
 
+        WarnIfCustomFeatureClassMissing();
+
         try
         {
             using (var openDialog = new OpenFileDialog())
@@ -542,6 +554,8 @@ public partial class ExportRobotDialog
             return NXOpen.MenuBar.MenuBarManager.CallbackStatus.Cancel;
         }
 
+        WarnIfCustomFeatureClassMissing();
+
         URDFImporterDialog importer = null;
         try
         {
@@ -566,6 +580,8 @@ public partial class ExportRobotDialog
         {
             return NXOpen.MenuBar.MenuBarManager.CallbackStatus.Cancel;
         }
+
+        WarnIfCustomFeatureClassMissing();
 
         try
         {

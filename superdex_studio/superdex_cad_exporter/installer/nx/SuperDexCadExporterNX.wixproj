@@ -25,8 +25,8 @@
   </ItemGroup>
 
   <Target Name="EnsureExporterBuilt" BeforeTargets="BeforeBuild">
-    <Error Condition="!Exists('$(ExporterBinDir)\NXRobotExporter.dll')"
-           Text="$(ExporterBinDir)\NXRobotExporter.dll not found. Build NXRobotExporter (Release) before building the installer." />
+    <Error Condition="!Exists('$(ExporterBinDir)\NXRobotExporter.dll') Or !Exists('$(ExporterBinDir)\NXLayout\startup\NXRobotExporter.dll')"
+           Text="NXRobotExporter.dll or its staged NXLayout not found in $(ExporterBinDir). Build NXRobotExporter (Release) before building the installer." />
   </Target>
 
 </Project>

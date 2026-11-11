@@ -38,9 +38,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=10.0.0.9, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.10.0.9\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
-    </Reference>
     <Reference Include="NXOpen, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(UGII_BASE_DIR)\nxbin\managed\NXOpen.dll</HintPath>
@@ -226,31 +223,7 @@
       <HintPath>$(UGII_BASE_DIR)\nxbin\managed\StageModelTemplateOpen.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="System.Buffers, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Buffers.4.6.1\lib\net462\System.Buffers.dll</HintPath>
-    </Reference>
-    <Reference Include="System.IO.Pipelines, Version=10.0.0.9, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.IO.Pipelines.10.0.9\lib\net462\System.IO.Pipelines.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Memory, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Memory.4.6.3\lib\net462\System.Memory.dll</HintPath>
-    </Reference>
     <Reference Include="System.Numerics" />
-    <Reference Include="System.Numerics.Vectors, Version=4.1.6.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Numerics.Vectors.4.6.1\lib\net462\System.Numerics.Vectors.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Text.Encodings.Web, Version=10.0.0.9, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Text.Encodings.Web.10.0.9\lib\net462\System.Text.Encodings.Web.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Text.Json, Version=10.0.0.9, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Text.Json.10.0.9\lib\net462\System.Text.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.4.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.6.3\lib\net462\System.Threading.Tasks.Extensions.dll</HintPath>
-    </Reference>
     <Reference Include="System.ValueTuple" />
     <Reference Include="TDPOpen, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -305,9 +278,6 @@
     </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="WindowsBase" />
-    <Reference Include="xunit.abstractions, Version=2.0.0.0, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
-      <HintPath>..\packages\xunit.abstractions.2.0.3\lib\net35\xunit.abstractions.dll</HintPath>
-    </Reference>
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
@@ -462,22 +432,42 @@
   <PropertyGroup>
     <PostBuildEvent>
 if exist "%25UGII_BASE_DIR%25\ugopen\NXOpenAuxillaryActions.bat" call "%25UGII_BASE_DIR%25\ugopen\NXOpenAuxillaryActions.bat" DotNet $(TargetDir) $(TargetFileName) $(ProjectDir) $(ProjectName)
-
-REM Create NX custom directories if they don't exist
-if not exist "C:\NXCustom\startup" mkdir "C:\NXCustom\startup"
-if not exist "C:\NXCustom\application" mkdir "C:\NXCustom\application"
-
-REM Copy DLLs and related files to startup directory
-xcopy /Y "$(TargetDir)*.*" "C:\NXCustom\startup\"
-
-REM Copy application files (dlx, xml, etc.)
-xcopy /Y "$(ProjectDir)CAD\NX\application\*.*" "C:\NXCustom\application\"
-xcopy /Y "$(ProjectDir)CAD\NX\application\icons\*.*" "C:\NXCustom\application\icons\"
-
-REM Copy startup files
-xcopy /Y "$(ProjectDir)CAD\NX\startup\*.*" "C:\NXCustom\startup\"
 </PostBuildEvent>
   </PropertyGroup>
+  <!-- NX loads every DLL directly in a startup folder when it launches, but not DLLs in its
+       subfolders. Each dependency goes in startup\<Name>\<Name>.dll instead, which the CLR probes
+       for assemblies loaded with Assembly.LoadFrom, as NX loads add-ins. An AssemblyResolve handler
+       would not work: NX calls Assembly.GetTypes() on the add-in, which needs some of these
+       dependencies, before it calls Startup(). The
+       layout is staged in $(OutDir)NXLayout for the installer and deploy scripts, then copied to
+       $(NXDeployDir). Pass /p:NXDeployDir= to skip the copy. -->
+  <PropertyGroup>
+    <NXLayoutDir>$(OutDir)NXLayout\</NXLayoutDir>
+    <NXDeployDir Condition="'$(NXDeployDir)' == ''">C:\NXCustom</NXDeployDir>
+  </PropertyGroup>
+  <Target Name="StageNXLayout" AfterTargets="Build">
+    <ItemGroup>
+      <NXStartupFile Include="$(TargetPath);$(OutDir)superdex_mesh_cli.exe;$(ProjectDir)CAD\NX\startup\*.*" />
+      <NXStartupFile Include="$(OutDir)$(TargetName).pdb" Condition="Exists('$(OutDir)$(TargetName).pdb')" />
+      <NXLibFile Include="@(ReferenceCopyLocalPaths)" Condition="'%(Extension)' == '.dll'" />
+      <NXApplicationFile Include="$(ProjectDir)CAD\NX\application\**\*.*" />
+    </ItemGroup>
+    <RemoveDir Directories="$(NXLayoutDir)" />
+    <Copy SourceFiles="@(NXStartupFile)" DestinationFolder="$(NXLayoutDir)startup" />
+    <Copy SourceFiles="@(NXLibFile)" DestinationFiles="@(NXLibFile->'$(NXLayoutDir)startup\%(Filename)\%(Filename)%(Extension)')" />
+    <Copy SourceFiles="@(NXApplicationFile)" DestinationFiles="@(NXApplicationFile->'$(NXLayoutDir)application\%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+  <Target Name="DeployToNXCustom" AfterTargets="StageNXLayout" Condition="'$(NXDeployDir)' != ''">
+    <ItemGroup>
+      <NXStagedFile Include="$(NXLayoutDir)**\*.*" />
+      <!-- Dependencies that earlier builds copied into startup\. -->
+      <NXRemovedDependency Include="Microsoft.Bcl.AsyncInterfaces;System.Buffers;System.IO.Pipelines;System.Memory;System.Numerics.Vectors;System.Runtime.CompilerServices.Unsafe;System.Text.Encodings.Web;System.Text.Json;System.Threading.Tasks.Extensions;xunit.abstractions" />
+      <NXStaleStartupFile Include="@(NXLibFile->'$(NXDeployDir)\startup\%(Filename)%(Extension)')" />
+      <NXStaleStartupFile Include="@(NXRemovedDependency->'$(NXDeployDir)\startup\%(Identity).dll')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(NXStagedFile)" DestinationFiles="@(NXStagedFile->'$(NXDeployDir)\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Delete Files="@(NXStaleStartupFile)" />
+  </Target>
   <PropertyGroup>
     <PreBuildEvent>"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -ExecutionPolicy Bypass -File "$(SolutionDir)scripts\UpdateVersionInfo.ps1" --filename "$(ProjectDir)Versioning\VersionInfo.cs"</PreBuildEvent>
   </PropertyGroup>

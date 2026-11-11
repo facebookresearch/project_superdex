@@ -99,18 +99,11 @@
               Source="$(BinDir)\NXRobotExporter.pdb" />
       </Component>
 
-      <Files Include="$(BinDir)\*">
-        <Exclude Files="$(BinDir)\NXRobotExporter.dll" />
-        <!-- Test-only dependencies. They land in the build output because the add-in and its
-             unit tests share sources, but they are not needed at runtime. -->
-        <Exclude Files="$(BinDir)\xunit.*" />
-        <Exclude Files="$(BinDir)\Moq.*" />
-        <Exclude Files="$(BinDir)\Microsoft.VisualStudio.TestPlatform.*" />
-        <!-- Third-party symbols only; the add-in's own .pdb is shipped by MainAssembly. -->
-        <Exclude Files="$(BinDir)\*.pdb" />
+      <!-- The startup layout staged by NXRobotExporter.csproj: the mesh helper, menus, ribbon and
+           one subfolder per third-party dependency (NX loads every DLL directly in startup\). -->
+      <Files Include="$(BinDir)\NXLayout\startup\**">
+        <Exclude Files="$(BinDir)\NXLayout\startup\NXRobotExporter.*" />
       </Files>
-
-      <Files Include="$(NXSourceDir)\startup\*" />
     </ComponentGroup>
 
     <ComponentGroup Id="ApplicationFiles" Directory="NXAPPLICATIONDIR">
