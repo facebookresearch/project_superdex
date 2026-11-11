@@ -612,7 +612,7 @@ void mochi::model::LoadFromFileUncheckedH5(
   MOCHI_ERROR_RETURN(error);
 
 #if MOCHI_USE_HDF5
-  std::lock_guard lock{hdf5::GetGlobalMutex()};
+  std::scoped_lock lock{hdf5::GetGlobalMutex()};
   auto reader = CreateGroupReaderHDF5(filePath, error);
   MOCHI_ERROR_RETURN(error);
   LoadModelData(*reader, outData, error);
@@ -630,7 +630,7 @@ void mochi::model::LoadFromBytesUncheckedH5(
     Error& error) {
   MOCHI_ERROR_RETURN(error);
 #if MOCHI_USE_HDF5
-  std::lock_guard lock{hdf5::GetGlobalMutex()};
+  std::scoped_lock lock{hdf5::GetGlobalMutex()};
   auto reader = CreateGroupReaderFromBytesHDF5(fileData, error);
   MOCHI_ERROR_RETURN(error);
   LoadModelData(*reader, outData, error);
@@ -648,7 +648,7 @@ void mochi::model::SaveToFileH5(
     Error& error) {
   MOCHI_ERROR_RETURN(error);
 #if MOCHI_USE_HDF5
-  std::lock_guard lock{hdf5::GetGlobalMutex()};
+  std::scoped_lock lock{hdf5::GetGlobalMutex()};
   std::unique_ptr<GroupWriter> writer = CreateGroupWriterHDF5(filePath, error);
   MOCHI_ERROR_RETURN(error);
   SaveModelData(*writer, data, error);
@@ -667,7 +667,7 @@ void mochi::model::WarnIfOverwritingExperimentalDataH5([[maybe_unused]] std::str
     return;
   }
 
-  std::lock_guard lock{hdf5::GetGlobalMutex()};
+  std::scoped_lock lock{hdf5::GetGlobalMutex()};
 
   // Temporarily suppress HDF5's automatic logging of exception callstacks.
   H5E_auto2_t oldPrintFunc{};

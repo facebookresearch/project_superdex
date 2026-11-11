@@ -65,7 +65,7 @@ static std::mutex g_initMutex;
 static bool g_initialized = false;
 
 void mochi::Initialize() {
-  std::lock_guard lock(g_initMutex);
+  std::scoped_lock lock(g_initMutex);
   if (g_initialized) {
     MOCHI_LOG_WARNING("Redundant call to mochi::Initialize");
   } else {
@@ -76,12 +76,12 @@ void mochi::Initialize() {
 }
 
 bool mochi::IsInitialized() {
-  std::lock_guard lock(g_initMutex);
+  std::scoped_lock lock(g_initMutex);
   return g_initialized;
 }
 
 void mochi::ShutDown() {
-  std::lock_guard lock(g_initMutex);
+  std::scoped_lock lock(g_initMutex);
   if (g_initialized) {
     g_initialized = false;
 
