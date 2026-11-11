@@ -1,0 +1,35 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "5.5",
+	"Category": "",
+	"Description": "SuperDex Unreal: the SuperDex physics and robotics plugins in a ready-to-open project.",
+	"Modules": [
+		{
+			"Name": "SuperDexUnreal",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "SuperDexPhysics",
+			"Enabled": true
+		},
+		{
+			"Name": "SuperDexRobotics",
+			"Enabled": true
+		},
+		{
+			"Name": "SuperDexOpenXRPoseSource",
+			"Enabled": true
+		},
+		{
+			"Name": "SuperDexAssets",
+			"Enabled": true
+		},
+		{
+			"Name": "SuperDexExamples",
+			"Enabled": true
+		}
+	]
+}

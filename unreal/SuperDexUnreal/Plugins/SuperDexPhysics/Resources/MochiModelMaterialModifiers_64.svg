@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+<path d="M4 34.52C4 19.22 13.68 8 26 8C38.32 8 48 19.22 48 34.52C48 41.32 41.4 42 26 42C10.6 42 4 41.32 4 34.52Z" fill="#E3E3E3"/>
+<path d="M23.88 18.2L32.38 18.2L28.12 25.56Z" fill="#0064E0"/>
+<path d="M28.12 25.56L23.88 32.92L32.38 32.92Z" fill="#0064E0"/>
+<path d="M28.12 25.56L36.62 25.56L32.38 32.92Z" fill="#0064E0"/>
+<path d="M36.62 25.56L32.38 32.92L40.88 32.92Z" fill="#0064E0"/>
+<path d="M15.86 10.84L36.14 10.84" fill="none" stroke="#5C5C5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8.46 18.2L43.54 18.2" fill="none" stroke="#5C5C5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M5.22 25.56L46.78 25.56" fill="none" stroke="#5C5C5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M4.06 32.92L47.94 32.92" fill="none" stroke="#5C5C5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M7.8 40.28L44.2 40.28" fill="none" stroke="#5C5C5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M36.9 11.32L47.67 29.97" fill="none" stroke="#5C5C5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M26.51 8.04L44.93 39.94" fill="none" stroke="#5C5C5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M18.79 9.39L37.42 41.66" fill="none" stroke="#5C5C5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M12.55 13.3L29.1 41.97" fill="none" stroke="#5C5C5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M7.66 19.55L20.58 41.94" fill="none" stroke="#5C5C5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M4.5 28.8L11.72 41.32" fill="none" stroke="#5C5C5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M47.93 35.42L45.54 39.57" fill="none" stroke="#5C5C5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M46.19 23.71L35.76 41.78" fill="none" stroke="#5C5C5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M42.07 16.13L27.15 41.98" fill="none" stroke="#5C5C5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M36.5 11.06L18.7 41.89" fill="none" stroke="#5C5C5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M29.56 8.35L10.64 41.13" fill="none" stroke="#5C5C5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M20.85 8.71L4.46 37.11" fill="none" stroke="#5C5C5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="19.62" cy="10.84" r="1.6" fill="#5C5C5C"/>
+<circle cx="28.12" cy="10.84" r="1.6" fill="#5C5C5C"/>
+<circle cx="15.38" cy="18.2" r="1.6" fill="#5C5C5C"/>
+<circle cx="23.88" cy="18.2" r="1.6" fill="#5C5C5C"/>
+<circle cx="32.38" cy="18.2" r="1.6" fill="#5C5C5C"/>
+<circle cx="40.88" cy="18.2" r="1.6" fill="#5C5C5C"/>
+<circle cx="11.12" cy="25.56" r="1.6" fill="#5C5C5C"/>
+<circle cx="19.62" cy="25.56" r="1.6" fill="#5C5C5C"/>
+<circle cx="28.12" cy="25.56" r="1.6" fill="#5C5C5C"/>
+<circle cx="36.62" cy="25.56" r="1.6" fill="#5C5C5C"/>
+<circle cx="45.12" cy="25.56" r="1.6" fill="#5C5C5C"/>
+<circle cx="6.88" cy="32.92" r="1.6" fill="#5C5C5C"/>
+<circle cx="15.38" cy="32.92" r="1.6" fill="#5C5C5C"/>
+<circle cx="23.88" cy="32.92" r="1.6" fill="#5C5C5C"/>
+<circle cx="32.38" cy="32.92" r="1.6" fill="#5C5C5C"/>
+<circle cx="40.88" cy="32.92" r="1.6" fill="#5C5C5C"/>
+<circle cx="19.62" cy="40.28" r="1.6" fill="#5C5C5C"/>
+<circle cx="28.12" cy="40.28" r="1.6" fill="#5C5C5C"/>
+<circle cx="36.62" cy="40.28" r="1.6" fill="#5C5C5C"/>
+<path d="M61 41L52 50" fill="none" stroke="#E3E3E3" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M49.5 46.5L55.5 52.5L52 56L46 50Z" fill="#A3A3A3"/>
+<path d="M45.5 50.5L51.5 56.5C49.5 60.5 45 62.5 40 62C39.5 57 41.5 52.5 45.5 50.5Z" fill="#0064E0"/>
+</svg>

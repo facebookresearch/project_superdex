@@ -1,0 +1,110 @@
+# Build the SuperDex Unreal plugin archives for Windows.
+#
+# Runs unreal/package_plugins.py, which hydrates the SuperDexUnreal project's plugins with their
+# native libraries (unreal/SuperDexUnreal/hydrate_plugins.py, a CMake build) and zips each plugin
+# under unreal/SuperDexUnreal/Plugins on its own:
+#
+#   superdex_physics_unrealplugin_windows   code plugin, source + prebuilt mochi libraries
+#   superdex_robotics_unrealplugin_windows  code plugin, source + prebuilt robotics libraries
+#   superdex_assets_unrealplugin            content only
+#   superdex_examples_unrealplugin          content only
+#
+# Each unzips into the `Plugins/` directory of a UE 5.5 C++ project. The consumer's
+# UnrealBuildTool compiles the Unreal modules on first open, so no Unreal installation is
+# needed to produce them -- which is what keeps this on a hosted runner.
+#
+# Manual dispatch only: these are release artifacts, not a signal a code review needs.
+name: unreal-plugins
+
+on:
+  workflow_dispatch:
+
+# Read-only. Nothing here writes to the repository or needs a secret.
+permissions:
+  contents: read
+
+# A second run on the same ref supersedes the first rather than doubling the spend.
+concurrency:
+  group: unreal-plugins-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  package:
+    name: Windows plugin archives
+    runs-on: windows-2022
+    # The mochi build dominates; this is a runaway guard, not a target.
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # Taken from PyPI rather than from the runner image, so mochi's CMake 3.25 floor is
+      # enforced here rather than inherited.
+      - name: Install build tools
+        shell: bash
+        run: python -m pip install --upgrade pip "cmake>=3.25" ninja
+
+      # mochi's CMake selects clang and fails outright on anything else, and the runner image
+      # ships LLVM without reliably putting it on PATH. Same guard as wheels.yml.
+      - name: Ensure clang-cl is on PATH
+        shell: bash
+        run: |
+          if ! command -v clang-cl >/dev/null 2>&1; then
+            echo 'C:\Program Files\LLVM\bin' >> "$GITHUB_PATH"
+            export PATH="/c/Program Files/LLVM/bin:$PATH"
+          fi
+          if ! command -v clang-cl >/dev/null 2>&1; then
+            echo "::error::clang-cl not found; mochi's CMake requires ClangCL on Windows"
+            exit 1
+          fi
+          clang-cl --version
+
+      # No vcvars step on purpose: clang-cl locates an installed MSVC toolchain by itself.
+      - name: Hydrate and package
+        shell: bash
+        run: python unreal/package_plugins.py --out-dir dist
+
+      # Uploaded separately so each can be downloaded on its own. They are not independent at
+      # install time -- SuperDexRobotics links the import library staged into SuperDexPhysics,
+      # and the content plugins depend on both -- but that is a property of installing them.
+      #
+      # `!cancelled()`: package_plugins.py writes the archives and then exits non-zero if
+      # validation found problems, so a failed run is exactly the one worth downloading.
+      # `if-no-files-found: error` catches a green run that produced no archive.
+      - name: Upload the physics archive
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: superdex_physics_unrealplugin_windows
+          path: dist/superdex_physics_unrealplugin_windows.zip
+          if-no-files-found: error
+
+      - name: Upload the robotics archive
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: superdex_robotics_unrealplugin_windows
+          path: dist/superdex_robotics_unrealplugin_windows.zip
+          if-no-files-found: error
+
+      - name: Upload the assets archive
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: superdex_assets_unrealplugin
+          path: dist/superdex_assets_unrealplugin.zip
+          if-no-files-found: error
+
+      - name: Upload the examples archive
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: superdex_examples_unrealplugin
+          path: dist/superdex_examples_unrealplugin.zip
+          if-no-files-found: error

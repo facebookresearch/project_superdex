@@ -1,0 +1,28 @@
+# Unreal-generated folders
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+Plugins/**/Binaries/
+Plugins/**/Intermediate/
+
+# IDE files
+.vs/
+.vscode/
+.idea/
+*.sln
+*.VC.db
+*.VC.opendb
+.vsconfig
+
+# Native libraries staged into the plugins by hydrate_plugins.py
+*.dll
+*.so
+*.pdb
+*.imp.lib
+# Empty placeholder files that some build setups stage next to the Win64 libraries
+empty.txt
+*.empty
+__pycache__/
+*.pyc

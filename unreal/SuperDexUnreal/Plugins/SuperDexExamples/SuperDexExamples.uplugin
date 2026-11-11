@@ -1,0 +1,32 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "0.1",
+	"FriendlyName": "SuperDex Examples",
+	"Description": "Example levels for the SuperDex physics and robotics plugins.",
+	"Category": "SuperDex",
+	"CreatedBy": "Meta Platforms, Inc.",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": true,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"EnabledByDefault": false,
+	"Plugins": [
+		{
+			"Name": "SuperDexPhysics",
+			"Enabled": true
+		},
+		{
+			"Name": "SuperDexRobotics",
+			"Enabled": true
+		},
+		{
+			"Name": "SuperDexAssets",
+			"Enabled": true
+		}
+	]
+}
