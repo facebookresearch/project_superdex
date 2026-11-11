@@ -24,10 +24,12 @@
 #include <mochi_core/utils/transform_rt.h>
 
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -46,16 +48,22 @@ class TransformSeries;
 class Arrow3DSeries;
 class Points3DSeries;
 class DeformableMeshSeries;
+class TextSeries;
 
 inline constexpr std::string_view kSchemaName = "superdex.episode";
 inline constexpr uint32_t kSchemaVersionMajor = 1;
-inline constexpr uint32_t kSchemaVersionMinor = 0;
+inline constexpr uint32_t kSchemaVersionMinor = 1;
 inline constexpr std::string_view kSchemaCoordinateSpace = "FLU";
 inline constexpr double kSchemaUnitsPerMeter = 1.0;
 
 struct SampleTime {
   uint64_t frame;
   double simulationTimeSec;
+  /* @brief Wall-clock time of the sample since its episode began [s], from Episode::GetWallTimeSec,
+   * recorded on the wall_time timeline. Unset records no wall time. Compared with the simulation
+   * time, it shows when samples were late or missing. Every sample of a series has one or none
+   * does. */
+  std::optional<double> wallTimeSec;
 };
 
 /* @brief Identifies one Rerun component column and its archetype. */
@@ -99,6 +107,10 @@ class SUPERDEX_RECORDER_API Episode final {
       mochi::Span<uint32_t const> triangleIndices,
       std::array<uint8_t, 4> const& color,
       mochi::Error& error);
+  /* Records text over time, such as the events an application raises. Each sample holds every
+   * text of one frame, so several events in the same step share a sample. */
+  TextSeries*
+  CreateTextSeries(std::string_view entityPath, ComponentField const& field, mochi::Error& error);
   void WriteConstantText(
       std::string_view entityPath,
       ComponentField const& field,
@@ -153,6 +165,9 @@ class SUPERDEX_RECORDER_API Episode final {
   [[nodiscard]] std::string const& GetEpisodeId() const;
   [[nodiscard]] std::filesystem::path const& GetOutputPath() const;
   [[nodiscard]] bool IsActive() const;
+  /* @brief Returns the time since the episode began [s], on a monotonic clock: a sample's
+   * SampleTime::wallTimeSec. */
+  [[nodiscard]] double GetWallTimeSec() const;
 
  private:
   friend class Recorder;
@@ -184,6 +199,7 @@ class SUPERDEX_RECORDER_API Episode final {
   std::unique_ptr<StaticRows> _staticRows;
   std::vector<std::unique_ptr<Series>> _series;
   State _state = State::Active;
+  std::chrono::steady_clock::time_point _startTime = std::chrono::steady_clock::now();
 };
 
 /* @brief Starts transactional episode recordings in one output directory. */

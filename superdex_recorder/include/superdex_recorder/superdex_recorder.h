@@ -18,6 +18,7 @@
 
 #include <superdex_recorder/physics_recorder.h>
 #include <superdex_recorder/recorder.h>
+#include <superdex_recorder/source_recorder.h>
 
 #if defined(SUPERDEX_RECORDER_WITH_ROBOTICS)
 #include <superdex_recorder/robot_shadow.h>

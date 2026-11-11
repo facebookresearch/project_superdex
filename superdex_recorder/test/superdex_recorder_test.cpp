@@ -16,6 +16,7 @@
 
 #include <superdex_recorder/recorder.h>
 #include <superdex_recorder/series.h>
+#include <superdex_recorder/source_recorder.h>
 
 #include <gtest/gtest.h>
 
@@ -268,6 +269,68 @@ TEST(SuperDexRecorderTest, ScalarSeriesRejectsRepeatedFrames) {
   EXPECT_FALSE(appendError.IsOK());
 }
 
+TEST(SuperDexRecorderTest, SeriesRejectsMixingSamplesWithAndWithoutWallTime) {
+  TemporaryDirectory directory;
+  Recorder recorder{{.outputDirectory = directory.Path()}};
+  mochi::Error error;
+  auto episode = recorder.BeginEpisode({}, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  ASSERT_NE(episode, nullptr);
+  ComponentField const field{"superdex.archetypes.Test", "superdex.test.value"};
+  auto* const timed = episode->CreateScalarSeries("data/timed", {field}, error);
+  auto* const untimed = episode->CreateScalarSeries("data/untimed", {field}, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  std::array<mochi::real, 1> const value{static_cast<mochi::real>(42)};
+  std::array<mochi::Span<mochi::real const>, 1> const fields{value};
+  timed->Append({.frame = 1, .simulationTimeSec = 0.1, .wallTimeSec = 0.1}, fields, error);
+  untimed->Append({.frame = 1, .simulationTimeSec = 0.1}, fields, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+
+  mochi::Error timedError;
+  timed->Append({.frame = 2, .simulationTimeSec = 0.2}, fields, timedError);
+  mochi::Error untimedError;
+  untimed->Append({.frame = 2, .simulationTimeSec = 0.2, .wallTimeSec = 0.1}, fields, untimedError);
+
+  EXPECT_FALSE(timedError.IsOK());
+  EXPECT_FALSE(untimedError.IsOK());
+}
+
+TEST(SuperDexRecorderTest, SeriesRejectsDecreasingWallTime) {
+  TemporaryDirectory directory;
+  Recorder recorder{{.outputDirectory = directory.Path()}};
+  mochi::Error error;
+  auto episode = recorder.BeginEpisode({}, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  ASSERT_NE(episode, nullptr);
+  auto* const series = episode->CreateScalarSeries(
+      "data/test", {{"superdex.archetypes.Test", "superdex.test.value"}}, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  std::array<mochi::real, 1> const value{static_cast<mochi::real>(42)};
+  std::array<mochi::Span<mochi::real const>, 1> const fields{value};
+  series->Append({.frame = 1, .simulationTimeSec = 0.1, .wallTimeSec = 0.2}, fields, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+
+  mochi::Error appendError;
+  series->Append({.frame = 2, .simulationTimeSec = 0.2, .wallTimeSec = 0.1}, fields, appendError);
+
+  EXPECT_FALSE(appendError.IsOK());
+}
+
+TEST(SuperDexRecorderTest, EpisodeWallTimeStartsAtTheEpisodeAndNeverDecreases) {
+  TemporaryDirectory directory;
+  Recorder recorder{{.outputDirectory = directory.Path()}};
+  mochi::Error error;
+  auto episode = recorder.BeginEpisode({}, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  ASSERT_NE(episode, nullptr);
+
+  double const first = episode->GetWallTimeSec();
+  double const second = episode->GetWallTimeSec();
+
+  EXPECT_GE(first, 0.0);
+  EXPECT_GE(second, first);
+}
+
 TEST(SuperDexRecorderTest, CreateSeriesRejectsExistingEntityPath) {
   TemporaryDirectory directory;
   Recorder recorder{{.outputDirectory = directory.Path()}};
@@ -287,6 +350,9 @@ TEST(SuperDexRecorderTest, CreateSeriesRejectsExistingEntityPath) {
   auto* const arrowSeries = episode->CreateArrow3DSeries("world/test", arrowError);
   mochi::Error pointsError;
   auto* const pointsSeries = episode->CreatePoints3DSeries("world/test", pointsError);
+  mochi::Error textError;
+  auto* const textSeries = episode->CreateTextSeries(
+      "world/test", {"rerun.archetypes.TextLog", "TextLog:text"}, textError);
 
   EXPECT_EQ(scalarSeries, nullptr);
   EXPECT_FALSE(scalarError.IsOK());
@@ -296,6 +362,8 @@ TEST(SuperDexRecorderTest, CreateSeriesRejectsExistingEntityPath) {
   EXPECT_FALSE(arrowError.IsOK());
   EXPECT_EQ(pointsSeries, nullptr);
   EXPECT_FALSE(pointsError.IsOK());
+  EXPECT_EQ(textSeries, nullptr);
+  EXPECT_FALSE(textError.IsOK());
 }
 
 TEST(SuperDexRecorderTest, TransformSeriesChecksTheTimeOfUnchangedTransforms) {
@@ -439,6 +507,129 @@ TEST(SuperDexRecorderTest, WriteKeypointSkeletonRejectsOutOfRangeConnectionsAndR
   EXPECT_TRUE(error.IsOK()) << error.ToString();
   EXPECT_FALSE(connectionError.IsOK());
   EXPECT_FALSE(radiusError.IsOK());
+}
+
+TEST(SuperDexRecorderTest, TextSeriesRecordsSeveralTextsPerFrame) {
+  TemporaryDirectory directory;
+  Recorder recorder{{.outputDirectory = directory.Path()}};
+  mochi::Error error;
+  auto episode = recorder.BeginEpisode({}, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  ASSERT_NE(episode, nullptr);
+  auto* const series =
+      episode->CreateTextSeries("events/test", {"rerun.archetypes.TextLog", "TextLog:text"}, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  ASSERT_NE(series, nullptr);
+  std::array<std::string, 2> const texts{"trial_start=1", "grasp=left"};
+  std::array<std::string, 1> const text{"trial_end=1"};
+
+  series->Append({.frame = 1, .simulationTimeSec = 0.1}, texts, error);
+  series->Append({.frame = 2, .simulationTimeSec = 0.2}, {}, error);
+  series->Append({.frame = 3, .simulationTimeSec = 0.3}, text, error);
+  EXPECT_EQ(series->GetNumSamples(), 3U);
+  episode->Commit(error);
+
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  EXPECT_TRUE(std::filesystem::exists(episode->GetOutputPath()));
+}
+
+TEST(SuperDexRecorderTest, TextSeriesRejectsRepeatedFramesAndIncompleteFields) {
+  TemporaryDirectory directory;
+  Recorder recorder{{.outputDirectory = directory.Path()}};
+  mochi::Error error;
+  auto episode = recorder.BeginEpisode({}, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  ASSERT_NE(episode, nullptr);
+  auto* const series =
+      episode->CreateTextSeries("events/test", {"rerun.archetypes.TextLog", "TextLog:text"}, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  ASSERT_NE(series, nullptr);
+  std::array<std::string, 1> const text{"event"};
+  series->Append({.frame = 1, .simulationTimeSec = 0.1}, text, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+
+  mochi::Error repeatedFrameError;
+  series->Append({.frame = 1, .simulationTimeSec = 0.2}, text, repeatedFrameError);
+  mochi::Error fieldError;
+  auto* const incomplete =
+      episode->CreateTextSeries("events/incomplete", {"rerun.archetypes.TextLog", ""}, fieldError);
+
+  EXPECT_FALSE(repeatedFrameError.IsOK());
+  EXPECT_EQ(incomplete, nullptr);
+  EXPECT_FALSE(fieldError.IsOK());
+}
+
+TEST(SuperDexRecorderTest, SourceRecorderCreatesEachStreamOnFirstUse) {
+  TemporaryDirectory directory;
+  Recorder recorder{{.outputDirectory = directory.Path()}};
+  mochi::Error error;
+  auto episode = recorder.BeginEpisode({}, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  ASSERT_NE(episode, nullptr);
+  SourceRecorder sources{*episode};
+  sources.AddSkeleton(
+      "hand/left", {.keypointNames = {"wrist", "tip"}, .parentIndices = {-1, 0}}, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  std::array<mochi::Real3, 2> const keypoints{mochi::Real3{0_r, 0_r, 0_r}, {0.1_r, 0_r, 0_r}};
+  std::array<std::string, 2> const events{"trial_start", "grasp"};
+
+  for (uint64_t frame = 1; frame <= 2; ++frame) {
+    SampleTime const time{.frame = frame, .simulationTimeSec = 0.1 * static_cast<double>(frame)};
+    sources.RecordTransform(time, "head", mochi::TransformRT{}, error);
+    sources.RecordSkeleton(time, "hand/left", keypoints, error);
+    sources.RecordTexts(time, "study", events, error);
+    sources.RecordScalar(time, "score", static_cast<mochi::real>(frame), error);
+  }
+  episode->Commit(error);
+
+  EXPECT_TRUE(error.IsOK()) << error.ToString();
+}
+
+TEST(SuperDexRecorderTest, SourceRecorderRecordsScalarListsOnTheScalarSeries) {
+  TemporaryDirectory directory;
+  Recorder recorder{{.outputDirectory = directory.Path()}};
+  mochi::Error error;
+  auto episode = recorder.BeginEpisode({}, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  ASSERT_NE(episode, nullptr);
+  SourceRecorder sources{*episode};
+  std::array<mochi::real, 3> const forces{1_r, 2_r, 3_r};
+  SampleTime const first{.frame = 1, .simulationTimeSec = 0.1};
+  SampleTime const second{.frame = 2, .simulationTimeSec = 0.2};
+
+  sources.RecordScalars(first, "forces", forces, error);
+  sources.RecordScalar(second, "forces", 4_r, error);
+  mochi::Error repeatedFrameError;
+  sources.RecordScalars(second, "forces", forces, repeatedFrameError);
+  episode->Commit(error);
+
+  EXPECT_TRUE(error.IsOK()) << error.ToString();
+  EXPECT_FALSE(repeatedFrameError.IsOK());
+}
+
+TEST(SuperDexRecorderTest, SourceRecorderRejectsInvalidSkeletonsAndRepeatedFrames) {
+  TemporaryDirectory directory;
+  Recorder recorder{{.outputDirectory = directory.Path()}};
+  mochi::Error error;
+  auto episode = recorder.BeginEpisode({}, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  ASSERT_NE(episode, nullptr);
+  SourceRecorder sources{*episode};
+  SampleTime const time{.frame = 1, .simulationTimeSec = 0.1};
+  std::array<mochi::Real3, 1> const keypoint{mochi::Real3{0_r, 0_r, 0_r}};
+  sources.RecordScalar(time, "score", 1_r, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+
+  mochi::Error parentError;
+  sources.AddSkeleton("bad", {.keypointNames = {"a", "b"}, .parentIndices = {1, -1}}, parentError);
+  mochi::Error undeclaredError;
+  sources.RecordSkeleton(time, "missing", keypoint, undeclaredError);
+  mochi::Error repeatedFrameError;
+  sources.RecordScalar(time, "score", 2_r, repeatedFrameError);
+
+  EXPECT_FALSE(parentError.IsOK());
+  EXPECT_FALSE(undeclaredError.IsOK());
+  EXPECT_FALSE(repeatedFrameError.IsOK());
 }
 
 } // namespace

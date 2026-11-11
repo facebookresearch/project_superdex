@@ -61,6 +61,7 @@ class SUPERDEX_RECORDER_API Series {
   std::string _entityPath;
   std::vector<int64_t> _frames;
   std::vector<double> _simulationTimesSec;
+  std::vector<double> _wallTimesSec; // Empty when the samples have no wall time.
   std::optional<SampleTime> _latestTime; // May be newer than the last stored time.
   bool _sealed = false; // Rejects appends once its episode commits or is discarded.
 };
@@ -172,6 +173,21 @@ class SUPERDEX_RECORDER_API DeformableMeshSeries final : public Series {
   size_t _numVertices;
   std::vector<rerun::components::Position3D> _positions;
   std::vector<rerun::components::Vector3D> _normals;
+};
+
+class SUPERDEX_RECORDER_API TextSeries final : public Series {
+ public:
+  TextSeries(std::string_view entityPath, ComponentField field);
+
+  /* Records the texts of one frame. An empty sample records the frame with no text. */
+  void Append(SampleTime time, mochi::Span<std::string const> texts, mochi::Error& error);
+
+ private:
+  void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error) override;
+
+  ComponentField _field;
+  std::vector<uint32_t> _lengths;
+  std::vector<rerun::components::Text> _texts;
 };
 
 } // namespace superdex::recorder

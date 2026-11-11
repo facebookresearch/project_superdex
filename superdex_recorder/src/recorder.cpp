@@ -246,6 +246,22 @@ DeformableMeshSeries* Episode::CreateDeformableMeshSeries(
   return result;
 }
 
+TextSeries* Episode::CreateTextSeries(
+    std::string_view entityPath,
+    ComponentField const& field,
+    mochi::Error& error) {
+  ValidateWrite(error);
+  ValidateSeriesPath(entityPath, error);
+  MOCHI_ERROR_IF_NOT(
+      HasValidField(field), error, "A text series field must have archetype and component names.");
+  MOCHI_ERROR_RETURN(error, nullptr);
+
+  auto series = std::make_unique<TextSeries>(entityPath, field);
+  auto* const result = series.get();
+  _series.push_back(std::move(series));
+  return result;
+}
+
 void Episode::WriteConstantText(
     std::string_view entityPath,
     ComponentField const& field,
@@ -556,6 +572,10 @@ std::filesystem::path const& Episode::GetOutputPath() const {
 
 bool Episode::IsActive() const {
   return _state == State::Active;
+}
+
+double Episode::GetWallTimeSec() const {
+  return std::chrono::duration<double>(std::chrono::steady_clock::now() - _startTime).count();
 }
 
 std::string detail::EncodeEntityPathSegment(std::string_view segment) {

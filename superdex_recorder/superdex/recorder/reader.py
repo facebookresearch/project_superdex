@@ -28,7 +28,7 @@ import rerun.experimental as rr_experimental
 _rr_experimental: Any = rr_experimental
 
 SCHEMA_NAME = "superdex.episode"
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 SCHEMA_VERSION_MAJOR = 1
 
 
@@ -37,6 +37,8 @@ class ComponentSample:
     """One component value and the Rerun timelines attached to its row.
 
     ``frame`` is the frame number and ``sim_time`` the simulation time in nanoseconds.
+    ``wall_time``, when the episode recorded it, is the wall-clock time since the episode
+    began in nanoseconds, from a monotonic clock.
     """
 
     entity_path: str
@@ -111,7 +113,7 @@ class EpisodeReader:
                 )
             timeline_values = {}
             for timeline in chunk.timeline_names:
-                if timeline not in {"frame", "sim_time"}:
+                if timeline not in {"frame", "sim_time", "wall_time"}:
                     continue
                 timeline_index = batch.schema.get_field_index(timeline)
                 if timeline_index < 0:

@@ -36,6 +36,8 @@ class Episode:
     def output_path(self) -> Path: ...
     @property
     def is_active(self) -> bool: ...
+    # Time since the episode began on a monotonic clock, for record(..., wall_time_sec=...).
+    def get_wall_time_sec(self) -> float: ...
     def commit(self) -> None: ...
     def abort(self, reason: str) -> None: ...
     def __enter__(self) -> Self: ...
@@ -63,11 +65,21 @@ class PhysicsRecorder:
         scene: Any,
         config: PhysicsRecorderConfig = ...,
     ) -> None: ...
-    def record(self, frame: int, simulation_time_sec: float) -> None: ...
+    def record(
+        self,
+        frame: int,
+        simulation_time_sec: float,
+        wall_time_sec: float | None = ...,
+    ) -> None: ...
 
 class RoboticsRecorder:
     def __init__(self, episode: Episode, robot: Any) -> None: ...
-    def record(self, frame: int, simulation_time_sec: float) -> None: ...
+    def record(
+        self,
+        frame: int,
+        simulation_time_sec: float,
+        wall_time_sec: float | None = ...,
+    ) -> None: ...
 
 class RobotShadow:
     def __init__(
@@ -84,6 +96,7 @@ class RobotShadow:
         simulation_time_sec: float,
         world_from_anchor: Any,
         joint_positions: npt.NDArray[np.floating[Any]],
+        wall_time_sec: float | None = ...,
     ) -> None: ...
 
 class SkeletonShadow:
@@ -105,8 +118,14 @@ class SkeletonShadow:
         frame: int,
         simulation_time_sec: float,
         world_keypoints_xyz: npt.NDArray[np.floating[Any]],
+        wall_time_sec: float | None = ...,
     ) -> None: ...
-    def record_untracked(self, frame: int, simulation_time_sec: float) -> None: ...
+    def record_untracked(
+        self,
+        frame: int,
+        simulation_time_sec: float,
+        wall_time_sec: float | None = ...,
+    ) -> None: ...
 
 # Native episode reader, which the parity tests compare with Rerun's own reader.
 class _EpisodeComponent:

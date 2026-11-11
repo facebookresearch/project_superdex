@@ -81,8 +81,9 @@ mochi::Span<mochi::real const> AsSpan(RealArray const& values) {
   return {values.data(), values.size()};
 }
 
-superdex::recorder::SampleTime Sample(uint64_t frame, double simulationTimeSec) {
-  return {.frame = frame, .simulationTimeSec = simulationTimeSec};
+superdex::recorder::SampleTime
+Sample(uint64_t frame, double simulationTimeSec, std::optional<double> wallTimeSec) {
+  return {.frame = frame, .simulationTimeSec = simulationTimeSec, .wallTimeSec = wallTimeSec};
 }
 
 /* Binds an EpisodeReader method that reads one component of one entity. */
@@ -134,6 +135,7 @@ NB_MODULE(SUPERDEX_RECORDER_MODULE_NAME, module) {
       .def_prop_ro("episode_id", &Episode::GetEpisodeId)
       .def_prop_ro("output_path", [](Episode const& self) { return self.GetOutputPath(); })
       .def_prop_ro("is_active", &Episode::IsActive)
+      .def("get_wall_time_sec", &Episode::GetWallTimeSec)
       .def(
           "__enter__", [](Episode& self) -> Episode& { return self; }, nb::rv_policy::reference)
       .def(
@@ -189,12 +191,17 @@ NB_MODULE(SUPERDEX_RECORDER_MODULE_NAME, module) {
           nb::keep_alive<0, 3>())
       .def(
           "record",
-          [](PhysicsRecorder& self, uint64_t frame, double simulationTimeSec) {
-            CallWithError(
-                [&](mochi::Error& error) { self.Record(Sample(frame, simulationTimeSec), error); });
+          [](PhysicsRecorder& self,
+             uint64_t frame,
+             double simulationTimeSec,
+             std::optional<double> wallTimeSec) {
+            CallWithError([&](mochi::Error& error) {
+              self.Record(Sample(frame, simulationTimeSec, wallTimeSec), error);
+            });
           },
           nb::arg("frame"),
-          nb::arg("simulation_time_sec"));
+          nb::arg("simulation_time_sec"),
+          nb::arg("wall_time_sec") = nb::none());
 
   // Native episode reader, which the parity tests compare with Rerun's own reader.
   nb::class_<EpisodeComponent>(module, "_EpisodeComponent")
@@ -288,12 +295,17 @@ NB_MODULE(SUPERDEX_RECORDER_MODULE_NAME, module) {
           nb::keep_alive<0, 3>())
       .def(
           "record",
-          [](RoboticsRecorder& self, uint64_t frame, double simulationTimeSec) {
-            CallWithError(
-                [&](mochi::Error& error) { self.Record(Sample(frame, simulationTimeSec), error); });
+          [](RoboticsRecorder& self,
+             uint64_t frame,
+             double simulationTimeSec,
+             std::optional<double> wallTimeSec) {
+            CallWithError([&](mochi::Error& error) {
+              self.Record(Sample(frame, simulationTimeSec, wallTimeSec), error);
+            });
           },
           nb::arg("frame"),
-          nb::arg("simulation_time_sec"));
+          nb::arg("simulation_time_sec"),
+          nb::arg("wall_time_sec") = nb::none());
 
   nb::class_<RobotShadow>(module, "RobotShadow")
       .def(
@@ -323,16 +335,21 @@ NB_MODULE(SUPERDEX_RECORDER_MODULE_NAME, module) {
              uint64_t frame,
              double simulationTimeSec,
              mochi::TransformRT const& worldFromAnchor,
-             RealArray const& jointPositions) {
+             RealArray const& jointPositions,
+             std::optional<double> wallTimeSec) {
             CallWithError([&](mochi::Error& error) {
               self.Record(
-                  Sample(frame, simulationTimeSec), worldFromAnchor, AsSpan(jointPositions), error);
+                  Sample(frame, simulationTimeSec, wallTimeSec),
+                  worldFromAnchor,
+                  AsSpan(jointPositions),
+                  error);
             });
           },
           nb::arg("frame"),
           nb::arg("simulation_time_sec"),
           nb::arg("world_from_anchor"),
-          nb::arg("joint_positions"));
+          nb::arg("joint_positions"),
+          nb::arg("wall_time_sec") = nb::none());
 
   nb::class_<SkeletonShadow>(module, "SkeletonShadow")
       .def(
@@ -372,8 +389,8 @@ NB_MODULE(SUPERDEX_RECORDER_MODULE_NAME, module) {
           [](SkeletonShadow& self,
              uint64_t frame,
              double simulationTimeSec,
-             nb::ndarray<mochi::real const, nb::c_contig, nb::device::cpu> const&
-                 worldKeypointsXyz) {
+             nb::ndarray<mochi::real const, nb::c_contig, nb::device::cpu> const& worldKeypointsXyz,
+             std::optional<double> wallTimeSec) {
             CallWithError([&](mochi::Error& error) {
               MOCHI_ERROR_IF_NOT(
                   (worldKeypointsXyz.ndim() == 1 && worldKeypointsXyz.size() % 3 == 0) ||
@@ -387,19 +404,24 @@ NB_MODULE(SUPERDEX_RECORDER_MODULE_NAME, module) {
               for (size_t i = 0; i < keypoints.size(); ++i) {
                 keypoints[i] = {xyz[3 * i], xyz[3 * i + 1], xyz[3 * i + 2]};
               }
-              self.Record(Sample(frame, simulationTimeSec), keypoints, error);
+              self.Record(Sample(frame, simulationTimeSec, wallTimeSec), keypoints, error);
             });
           },
           nb::arg("frame"),
           nb::arg("simulation_time_sec"),
-          nb::arg("world_keypoints_xyz"))
+          nb::arg("world_keypoints_xyz"),
+          nb::arg("wall_time_sec") = nb::none())
       .def(
           "record_untracked",
-          [](SkeletonShadow& self, uint64_t frame, double simulationTimeSec) {
+          [](SkeletonShadow& self,
+             uint64_t frame,
+             double simulationTimeSec,
+             std::optional<double> wallTimeSec) {
             CallWithError([&](mochi::Error& error) {
-              self.RecordUntracked(Sample(frame, simulationTimeSec), error);
+              self.RecordUntracked(Sample(frame, simulationTimeSec, wallTimeSec), error);
             });
           },
           nb::arg("frame"),
-          nb::arg("simulation_time_sec"));
+          nb::arg("simulation_time_sec"),
+          nb::arg("wall_time_sec") = nb::none());
 }

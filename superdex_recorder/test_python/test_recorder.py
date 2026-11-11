@@ -79,7 +79,7 @@ class RecorderTest(unittest.TestCase):
             )
             self.assertEqual(
                 recording.read_static_value("superdex.episode.schema_version"),
-                "1.0",
+                "1.1",
             )
             property_keys = recording.component_samples("superdex.episode.property_key")
             self.assertCountEqual(
@@ -565,6 +565,35 @@ class RecorderTest(unittest.TestCase):
                     ),
                     [],
                 )
+            finally:
+                sdp.shutdown()
+
+    def test_reader_returns_the_recorded_wall_times(self) -> None:
+        with tempfile.TemporaryDirectory() as directory_string:
+            sdp.initialize(num_worker_threads=0)
+            try:
+                scene = sdp.create_scene("wall_times")
+                episode = self.make_recorder(Path(directory_string)).begin_episode()
+                physics = recorder.PhysicsRecorder(episode, scene)
+                wall_times_sec = []
+                for frame in range(3):
+                    if frame > 0:
+                        scene.step(0.01)
+                    wall_times_sec.append(episode.get_wall_time_sec())
+                    physics.record(
+                        frame,
+                        scene.get_total_simulation_time(),
+                        wall_time_sec=wall_times_sec[-1],
+                    )
+                episode.commit()
+
+                samples = EpisodeReader(episode.output_path).component_samples(
+                    "superdex.physics.step_dt_sec"
+                )
+                for sample, wall_time_sec in zip(samples, wall_times_sec, strict=True):
+                    self.assertAlmostEqual(
+                        sample.timelines["wall_time"], wall_time_sec * 1e9, delta=1
+                    )
             finally:
                 sdp.shutdown()
 

@@ -14,13 +14,57 @@
 
 include(FetchContent)
 
+# Rerun forwards the toolchain file to Arrow's separate CMake configuration.
+if(WIN32 AND NOT CMAKE_TOOLCHAIN_FILE)
+    if(IS_ABSOLUTE "${CMAKE_RC_COMPILER}" AND EXISTS "${CMAKE_RC_COMPILER}")
+        set(_superdex_arrow_rc "${CMAKE_RC_COMPILER}")
+    else()
+        get_filename_component(_superdex_compiler_dir "${CMAKE_C_COMPILER}" DIRECTORY)
+        find_program(_superdex_arrow_rc NAMES llvm-rc rc
+            HINTS "${_superdex_compiler_dir}" NO_CACHE REQUIRED)
+    endif()
+    configure_file(
+        "${CMAKE_CURRENT_LIST_DIR}/cmake/arrow_toolchain.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/arrow_toolchain.cmake"
+        @ONLY
+    )
+    set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_BINARY_DIR}/arrow_toolchain.cmake")
+    set(_superdex_generated_arrow_toolchain ON)
+endif()
+
 FetchContent_Declare(
     rerun_sdk
     URL https://github.com/rerun-io/rerun/releases/download/0.33.0/rerun_cpp_sdk.zip
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     FIND_PACKAGE_ARGS 0.33.0 EXACT CONFIG
 )
+if(WIN32)
+    set(_superdex_original_rerun_project_include "${CMAKE_PROJECT_rerun_sdk_INCLUDE}")
+    set(CMAKE_PROJECT_rerun_sdk_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/cmake/configure_rerun.cmake")
+endif()
 FetchContent_MakeAvailable(rerun_sdk)
+if(WIN32)
+    set(CMAKE_PROJECT_rerun_sdk_INCLUDE "${_superdex_original_rerun_project_include}")
+endif()
+
+# CMake's cached system configuration can skip a newly supplied toolchain file.
+if(_superdex_generated_arrow_toolchain AND TARGET arrow_cpp)
+    block()
+        ExternalProject_Get_Property(arrow_cpp BINARY_DIR)
+        if(EXISTS "${BINARY_DIR}/CMakeCache.txt")
+            load_cache("${BINARY_DIR}" READ_WITH_PREFIX _arrow_cache_
+                CMAKE_C_COMPILER CMAKE_CXX_COMPILER CMAKE_RC_COMPILER)
+            if("${_arrow_cache_CMAKE_C_COMPILER}" MATCHES "-NOTFOUND$" OR
+                "${_arrow_cache_CMAKE_CXX_COMPILER}" MATCHES "-NOTFOUND$" OR
+                (DEFINED _arrow_cache_CMAKE_RC_COMPILER AND
+                    NOT "${_arrow_cache_CMAKE_RC_COMPILER}" STREQUAL "${_superdex_arrow_rc}"))
+                message(STATUS "[SuperDex] Resetting Arrow's stale toolchain cache")
+                file(REMOVE "${BINARY_DIR}/CMakeCache.txt")
+                file(REMOVE_RECURSE "${BINARY_DIR}/CMakeFiles")
+            endif()
+        endif()
+    endblock()
+endif()
 
 # The episode reader decompresses Rerun's LZ4 blocks with the reference decoder, lib/lz4.c.
 FetchContent_Declare(
@@ -40,9 +84,11 @@ add_library(superdex_recorder_core STATIC
     src/link_kinematics.cpp
     src/series.cpp
     src/recorder.cpp
+    src/source_recorder.cpp
     include/superdex_recorder/link_kinematics.h
     include/superdex_recorder/recorder.h
     include/superdex_recorder/series.h
+    include/superdex_recorder/source_recorder.h
 )
 target_include_directories(superdex_recorder_core PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_link_libraries(superdex_recorder_core PUBLIC mochi_core rerun_sdk)
@@ -103,6 +149,35 @@ if (TARGET superdex_robotics)
 
     target_compile_definitions(superdex_recorder INTERFACE SUPERDEX_RECORDER_WITH_ROBOTICS=1)
     target_link_libraries(superdex_recorder INTERFACE superdex_recorder_robotics)
+endif ()
+
+# One shared library with the whole recorder, for the Unreal SuperDexRecorder module (it links
+# superdex_recorder_shared.dll on Win64). Mirrors the Buck target of the same name. Windows only:
+# that is the only platform the Unreal module links it on.
+if (WIN32 AND MOCHI_BUILD_SHARED AND TARGET superdex_recorder_robotics)
+    add_library(superdex_recorder_shared SHARED
+        src/contact_collector.cpp
+        src/link_kinematics.cpp
+        src/physics_recorder.cpp
+        src/recorder.cpp
+        src/robot_shadow.cpp
+        src/robotics_recorder.cpp
+        src/series.cpp
+        src/skeleton_shadow.cpp
+        src/source_recorder.cpp
+    )
+    target_include_directories(superdex_recorder_shared PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+    target_link_libraries(superdex_recorder_shared
+        PUBLIC mochi_core mochi_physics superdex_robotics
+        PRIVATE rerun_sdk bcrypt
+    )
+    target_compile_definitions(superdex_recorder_shared
+        PUBLIC SUPERDEX_RECORDER_SHARED=1 SUPERDEX_RECORDER_WITH_ROBOTICS=1
+        PRIVATE SUPERDEX_RECORDER_EXPORTS=1
+    )
+    target_compile_features(superdex_recorder_shared PUBLIC cxx_std_17)
+    mochi_set_compiler_options(superdex_recorder_shared)
+    mochi_set_output_directories(superdex_recorder_shared)
 endif ()
 
 if (MOCHI_BUILD_TESTS)

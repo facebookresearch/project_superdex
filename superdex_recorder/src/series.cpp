@@ -30,6 +30,7 @@ namespace {
 
 constexpr std::string_view kFrameTimeline = "frame";
 constexpr std::string_view kSimulationTimeTimeline = "sim_time";
+constexpr std::string_view kWallTimeTimeline = "wall_time";
 
 void SetRerunError(rerun::Error const& rerunError, mochi::Error& error, char const* description) {
   if (rerunError.is_ok()) {
@@ -60,22 +61,41 @@ void Series::AdvanceTime(SampleTime time, mochi::Error& error) {
       std::isfinite(time.simulationTimeSec) && time.simulationTimeSec >= 0.0,
       error,
       "Series time must be finite and non-negative.");
+  MOCHI_ERROR_IF(
+      time.wallTimeSec.has_value() &&
+          !(std::isfinite(*time.wallTimeSec) && *time.wallTimeSec >= 0.0),
+      error,
+      "Series wall time must be finite and non-negative.");
   if (_latestTime.has_value()) {
     MOCHI_ERROR_IF_NOT(time.frame > _latestTime->frame, error, "Series frames must increase.");
     MOCHI_ERROR_IF_NOT(
         time.simulationTimeSec >= _latestTime->simulationTimeSec,
         error,
         "Series time must not decrease.");
+    MOCHI_ERROR_IF(
+        time.wallTimeSec.has_value() && _latestTime->wallTimeSec.has_value() &&
+            *time.wallTimeSec < *_latestTime->wallTimeSec,
+        error,
+        "Series wall time must not decrease.");
   }
   MOCHI_ERROR_RETURN(error);
   _latestTime = time;
 }
 
 void Series::AppendTime(SampleTime time, mochi::Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  // The wall_time timeline needs a value in every row.
+  MOCHI_ERROR_IF(
+      !_frames.empty() && time.wallTimeSec.has_value() == _wallTimesSec.empty(),
+      error,
+      "Every sample of a series must have a wall time, or none.");
   AdvanceTime(time, error);
   MOCHI_ERROR_RETURN(error);
   _frames.push_back(static_cast<int64_t>(time.frame));
   _simulationTimesSec.push_back(time.simulationTimeSec);
+  if (time.wallTimeSec.has_value()) {
+    _wallTimesSec.push_back(*time.wallTimeSec);
+  }
 }
 
 void Series::Flush(rerun::RecordingStream& recording, mochi::Error& error) {
@@ -90,7 +110,7 @@ void Series::Flush(rerun::RecordingStream& recording, mochi::Error& error) {
   MOCHI_ERROR_RETURN(error);
 
   std::vector<rerun::TimeColumn> timeColumns;
-  timeColumns.reserve(2);
+  timeColumns.reserve(3);
   timeColumns.emplace_back(
       rerun::TimeColumn::from_sequence(
           std::string{kFrameTimeline}, std::move(_frames), rerun::SortingStatus::Sorted));
@@ -99,6 +119,13 @@ void Series::Flush(rerun::RecordingStream& recording, mochi::Error& error) {
           std::string{kSimulationTimeTimeline},
           std::move(_simulationTimesSec),
           rerun::SortingStatus::Sorted));
+  if (!_wallTimesSec.empty()) {
+    timeColumns.emplace_back(
+        rerun::TimeColumn::from_duration_secs(
+            std::string{kWallTimeTimeline},
+            std::move(_wallTimesSec),
+            rerun::SortingStatus::Sorted));
+  }
   SetRerunError(
       recording.try_send_columns(
           _entityPath,
@@ -390,6 +417,42 @@ void DeformableMeshSeries::BuildColumns(
   output.reserve(2);
   output.emplace_back(std::move(positions.value));
   output.emplace_back(std::move(normals.value));
+}
+
+TextSeries::TextSeries(std::string_view entityPath, ComponentField field)
+    : Series{entityPath}, _field{std::move(field)} {}
+
+void TextSeries::Append(
+    SampleTime time,
+    mochi::Span<std::string const> texts,
+    mochi::Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  MOCHI_ERROR_IF(
+      texts.size() > std::numeric_limits<uint32_t>::max(),
+      error,
+      "Text series sample is too large to record.");
+  AppendTime(time, error);
+  MOCHI_ERROR_RETURN(error);
+
+  _lengths.push_back(static_cast<uint32_t>(texts.size()));
+  for (auto const& text : texts) {
+    _texts.emplace_back(text);
+  }
+}
+
+void TextSeries::BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error) {
+  auto texts = rerun::ComponentColumn::from_loggable_with_lengths(
+      rerun::Collection<rerun::components::Text>::borrow(_texts),
+      rerun::Collection<uint32_t>::borrow(_lengths),
+      rerun::ComponentDescriptor{
+          _field.archetype,
+          _field.component,
+          rerun::Loggable<rerun::components::Text>::ComponentType});
+  if (texts.is_err()) {
+    SetRerunError(texts.error, error, "Failed to encode a text series.");
+    return;
+  }
+  output.emplace_back(std::move(texts.value));
 }
 
 } // namespace superdex::recorder
