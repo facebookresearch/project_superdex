@@ -8,6 +8,57 @@ robot controllers, step durations, body parameters, and optional contact forces.
 `EpisodeReader` reads selected frames back, and `EpisodeRestorer` restores a scene to a
 recorded frame. Robot and keypoint shadows add visualization without changing the simulation.
 
+## Recording an episode
+
+Create a `Recorder`, begin an episode, and attach a `PhysicsRecorder` to the scene and a
+`RoboticsRecorder` to each robot. Then record every step of your simulation loop and commit the
+episode:
+
+```python
+import numpy as np
+import superdex.physics as sdp
+import superdex.recorder as sdrec
+import superdex.robotics as sdr
+
+sdp.initialize(num_worker_threads=0)
+scene = sdp.create_scene("Recorded example")
+robotics_context = sdr.create_context()
+bot = sdr.create_bot(scene, sdr.load_bot_prefab_from_file(bot_path), robotics_context)
+bot_actor = bot.get_articulated_actor()
+all_dofs = np.arange(bot_actor.get_num_dofs(), dtype=np.int32)
+time_step = 1.0 / 200.0
+
+recorder = sdrec.Recorder(sdrec.RecorderConfig("recordings"))
+metadata = sdrec.EpisodeMetadata(properties={"task": "my_task"})
+with recorder.begin_episode(metadata) as episode:
+    physics = sdrec.PhysicsRecorder(episode, scene)
+    controls = sdrec.RoboticsRecorder(episode, bot)
+    physics.record(0, scene.get_total_simulation_time())
+
+    for frame in range(num_steps):
+        t = scene.get_total_simulation_time()
+        effort = ...  # This step's controller output, one value per DOF.
+        bot_actor.set_external_forces_on_dofs(dof_indices=all_dofs, force_values=effort)
+        controls.record(frame, t)
+        scene.step(time_step)
+        physics.record(frame + 1, scene.get_total_simulation_time())
+
+    episode.commit()
+```
+
+- Create the recorders after you add every actor to the scene.
+- Record frame 0 before the first step, and frame `N + 1` right after step `N`.
+- Record each robot at the frame its step starts from: after you apply the step's effort and
+  before you call `step`. `EpisodeRestorer` uses this pairing when it resumes from a frame.
+- Call `record` from your simulation loop, or from a scene post-step callback in C++.
+- Keep the episode, the scene and the robotics context alive while the recorders exist.
+- To show a commanded pose or tracked hand keypoints, add a `RobotShadow` or a `SkeletonShadow`
+  and record it each step too.
+
+[`example_osc_jsc_recording.py`](../superdex_robotics/examples/control/example_osc_jsc_recording.py)
+is the complete version: it drives an arm with OSC and a hand with JSC, and records a shadow of
+the commanded pose.
+
 ## Building
 
 Enable the recorder in a CMake source build with `-DSUPERDEX_BUILD_RECORDER=ON`. The Python
