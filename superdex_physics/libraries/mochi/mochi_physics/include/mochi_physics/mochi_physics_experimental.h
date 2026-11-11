@@ -491,6 +491,12 @@ struct ShellMaterialParams {
   // compression.  Increase it if elements still collapse under in-plane compression;
   // membraneLambda / membraneMu > 2 may need more.  Zero disables it, leaving plain StVK.
   real membraneCollapseBarrierScale = 1e-3_r;
+  // Dimensionless scale of an optional strain-stiffening energy
+  // membraneStrainStiffeningScale*membraneMu*sum_i max(e_i, 0)^3 per unit reference area, with
+  // the in-plane principal Green-Lagrange strains e_i.  It vanishes unless some direction is
+  // stretched, adds no reference stiffness, and stiffens the membrane progressively under tension.
+  // Zero disables it.
+  real membraneStrainStiffeningScale = 0_r;
 };
 
 struct PointCloudColliderParams {

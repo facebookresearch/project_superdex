@@ -460,7 +460,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
   ;
 
   registry.GetClass<mochi::experimental::ShellMaterialParams>()
-    .def("__init__", [](mochi::experimental::ShellMaterialParams* self, nb::object membrane_lambda, nb::object membrane_mu, nb::object bending_alpha, nb::object bending_beta, nb::object density, nb::object mass_damping_coefficient, nb::object stiffness_damping_coefficient, nb::object membrane_collapse_barrier_scale) {
+    .def("__init__", [](mochi::experimental::ShellMaterialParams* self, nb::object membrane_lambda, nb::object membrane_mu, nb::object bending_alpha, nb::object bending_beta, nb::object density, nb::object mass_damping_coefficient, nb::object stiffness_damping_coefficient, nb::object membrane_collapse_barrier_scale, nb::object membrane_strain_stiffening_scale) {
       mochi::experimental::ShellMaterialParams result{};
       result.membraneLambda = nb::cast<mochi::real>(membrane_lambda);
       result.membraneMu = nb::cast<mochi::real>(membrane_mu);
@@ -470,6 +470,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
       result.massDampingCoefficient = nb::cast<mochi::real>(mass_damping_coefficient);
       result.stiffnessDampingCoefficient = nb::cast<mochi::real>(stiffness_damping_coefficient);
       result.membraneCollapseBarrierScale = nb::cast<mochi::real>(membrane_collapse_barrier_scale);
+      result.membraneStrainStiffeningScale = nb::cast<mochi::real>(membrane_strain_stiffening_scale);
       new (self) mochi::experimental::ShellMaterialParams(std::move(result));
     }
       , nb::kw_only()
@@ -481,6 +482,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
       , nb::arg("mass_damping_coefficient") = mochi::experimental::ShellMaterialParams{}.massDampingCoefficient
       , nb::arg("stiffness_damping_coefficient") = mochi::experimental::ShellMaterialParams{}.stiffnessDampingCoefficient
       , nb::arg("membrane_collapse_barrier_scale") = mochi::experimental::ShellMaterialParams{}.membraneCollapseBarrierScale
+      , nb::arg("membrane_strain_stiffening_scale") = mochi::experimental::ShellMaterialParams{}.membraneStrainStiffeningScale
     )
     .def(nb::init<>())
     .def("__copy__", [](mochi::experimental::ShellMaterialParams const& self) { return mochi::experimental::ShellMaterialParams(self); })
@@ -493,6 +495,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     .def_rw("mass_damping_coefficient", &mochi::experimental::ShellMaterialParams::massDampingCoefficient)
     .def_rw("stiffness_damping_coefficient", &mochi::experimental::ShellMaterialParams::stiffnessDampingCoefficient)
     .def_rw("membrane_collapse_barrier_scale", &mochi::experimental::ShellMaterialParams::membraneCollapseBarrierScale)
+    .def_rw("membrane_strain_stiffening_scale", &mochi::experimental::ShellMaterialParams::membraneStrainStiffeningScale)
   ;
 
   registry.GetClass<mochi::experimental::ShellActorParams>()

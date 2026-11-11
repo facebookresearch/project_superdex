@@ -93,7 +93,8 @@ void mochi::shell::ValidateShellMaterialParams(
           IsFinite(params.bendingAlpha) && IsFinite(params.bendingBeta) &&
           IsFinite(params.density) && IsFinite(params.massDampingCoefficient) &&
           IsFinite(params.stiffnessDampingCoefficient) &&
-          IsFinite(params.membraneCollapseBarrierScale),
+          IsFinite(params.membraneCollapseBarrierScale) &&
+          IsFinite(params.membraneStrainStiffeningScale),
       error,
       "Invalid shell material params: All fields must be finite.");
   MOCHI_ERROR_IF_NOT(
@@ -127,6 +128,10 @@ void mochi::shell::ValidateShellMaterialParams(
       params.membraneCollapseBarrierScale >= 0_r,
       error,
       "Invalid shell material params: membraneCollapseBarrierScale must be non-negative.");
+  MOCHI_ERROR_IF_NOT(
+      params.membraneStrainStiffeningScale >= 0_r,
+      error,
+      "Invalid shell material params: membraneStrainStiffeningScale must be non-negative.");
   MOCHI_ERROR_RETURN(error);
 }
 
@@ -258,6 +263,7 @@ void mochi::shell::AssembleBody(
         materialParams.bendingAlpha,
         materialParams.bendingBeta,
         2_r * materialParams.membraneCollapseBarrierScale * materialParams.membraneMu,
+        materialParams.membraneStrainStiffeningScale * materialParams.membraneMu,
         gravity,
         materialParams.density,
         predTarget.GetConstSpan(),

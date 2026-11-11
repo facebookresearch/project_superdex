@@ -52,6 +52,20 @@ template <int kBatchSize>
 }
 
 template <int kBatchSize>
+[[nodiscard]] BatchReal2x2<kBatchSize> LoadBatchMatrix2x2(Span<Matrix2x2r const> mats) {
+  MOCHI_ASSERT_VERBOSE(mats.size() >= kBatchSize, "Insufficient matrices.");
+  BatchReal2x2<kBatchSize> result = {};
+  for (int i = 0; i < kBatchSize; ++i) {
+    for (int r = 0; r < 2; ++r) {
+      for (int c = 0; c < 2; ++c) {
+        result[r][c] = Set(result[r][c], i, mats[i][r][c]);
+      }
+    }
+  }
+  return result;
+}
+
+template <int kBatchSize>
 [[nodiscard]] BatchReal3x3<kBatchSize> LoadBatchMatrix3x3(Span<Matrix3x3r const> mats) {
   MOCHI_ASSERT_VERBOSE(mats.size() >= kBatchSize, "Insufficient matrices.");
   BatchReal3x3<kBatchSize> result = {};

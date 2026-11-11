@@ -69,6 +69,7 @@ bool ShellWork(
     real bendingAlpha,
     real bendingBeta,
     real membraneCollapseBarrierStiffness,
+    real membraneStrainStiffeningStiffness,
     bool projectPsd,
     real stiffnessDampingFactor,
     NdArray<BatchReal<kBatchSize>, kBendingStencilDofs> const* stageStartDisp) {
@@ -194,12 +195,39 @@ bool ShellWork(
   NdArray<BatchSymMatrix2x2<kBatchSize>, kBendingStencilNodes, kSpaceDim3> db_dx MOCHI_NO_INIT;
   NdArray<BatchSymMatrix2x2<kBatchSize>, kTriangleNodes, kSpaceDim3> da_dx MOCHI_NO_INIT;
   V2x2 dpsi_da MOCHI_NO_INIT;
-  // Residual-only membrane stress; dpsi_da alone also drives the SVK geometric stiffness.
-  V2x2 membraneResStress MOCHI_NO_INIT;
+  BatchSymMatrix3x3<kBatchSize> d2psi_deps2 MOCHI_NO_INIT;
   if (needDerivs) {
     db_dx = DSecondFundamentalFormDx<kBatchSize>(db_dv_edges, stencilGlobalNodes);
     da_dx = DMetricDx<kBatchSize>(curPosX);
     dpsi_da = V{0.5_r} * DPsiSVK<kBatchSize>(epsilonEff, AInv, effLambda, effMu);
+  }
+  if (evalDRes) {
+    // Material tangent with the effective stiffnesses (1 + factor)·k. Since the SVK tangent is
+    // linear in the stiffness parameters, it and the geometric term at the effective stress dpsi_da
+    // give the exact Hessian of the unified SVK objective.
+    d2psi_deps2 = D2PsiSVKSym2x2<kBatchSize>(AInv, effLambda, effMu);
+  }
+
+  // Membrane strain stiffening k·Σᵢ⟨εᵢ⟩³, with its exact (PSD) stiffness. Evaluated at the plain
+  // strain with unscaled k, so stiffness damping remains based on the SVK reference stiffness
+  // alone.
+  if (membraneStrainStiffeningStiffness > 0_r) {
+    auto const positivePart = PositivePart<kBatchSize>(epsilon);
+    V const vK{membraneStrainStiffeningStiffness};
+    if (evalObj) {
+      *outEnergy += PsiStrainStiffening<kBatchSize>(positivePart, vK) * StaticCast<Vd>(refArea);
+    }
+    if (needDerivs) {
+      dpsi_da = dpsi_da + V{0.5_r} * DPsiStrainStiffening<kBatchSize>(positivePart, AInv, vK);
+    }
+    if (evalDRes) {
+      d2psi_deps2 += D2PsiStrainStiffeningSym2x2<kBatchSize>(positivePart, AInv, vK);
+    }
+  }
+
+  // Residual-only membrane stress; dpsi_da alone also drives the geometric stiffness.
+  V2x2 membraneResStress MOCHI_NO_INIT;
+  if (needDerivs) {
     membraneResStress = dpsi_da;
   }
 
@@ -271,11 +299,8 @@ bool ShellWork(
   }
 
   if (evalDRes) {
-    // Material tangent uses the effective stiffnesses (1 + factor)·k; the membrane geometric term
-    // is evaluated at the effective stress (the new dpsi_da). Since the SVK tangent is linear in
-    // the stiffness parameters, this is the exact Hessian of the unified objective.
     AddMembraneDResidual<kBatchSize>(
-        da_dx, dpsi_da, AInv, refArea, effLambda, effMu, projectPsd, *outDRes);
+        da_dx, dpsi_da, d2psi_deps2, AInv, refArea, projectPsd, *outDRes);
     AddBendingDResidual<kBatchSize>(db_dx, AInv, refArea, effAlpha, effBeta, *outDRes);
 
     // Mirror stiffness: copy upper triangle to lower triangle (node-pair blocks).
@@ -307,6 +332,7 @@ static_assert(kDefaultFemBatchSize != 1, "Avoid duplicate explicit instantiation
       BatchDouble<BatchSize>*,                                                   \
       NdArray<BatchReal<BatchSize>, kBendingStencilDofs>*,                       \
       NdArray<BatchReal<BatchSize>, kBendingStencilDofs * kBendingStencilDofs>*, \
+      real,                                                                      \
       real,                                                                      \
       real,                                                                      \
       real,                                                                      \

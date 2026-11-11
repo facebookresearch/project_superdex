@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 #include <numbers>
 #include <string>
 #include <tuple>
@@ -379,6 +380,10 @@ TEST(ShellMaterialValidation, ValidateShellMaterialParams) {
   reject([](ShellMaterialParams& p) {
     p.membraneCollapseBarrierScale = std::numeric_limits<real>::infinity();
   });
+  reject([](ShellMaterialParams& p) { p.membraneStrainStiffeningScale = -1_r; });
+  reject([](ShellMaterialParams& p) {
+    p.membraneStrainStiffeningScale = std::numeric_limits<real>::infinity();
+  });
 }
 
 TEST(ShellMaterialValidation, ShellMaterialParamsFrom3dIsotropic) {
@@ -470,7 +475,59 @@ TEST(ShellMaterialValidation, ValidateShellDampingCoefficients) {
   });
 }
 
-class MochiShellCollapseBarrierScene : public test::MochiSceneTestBase {};
+class MochiShellMembraneTermScene : public test::MochiSceneTestBase {
+ protected:
+  static constexpr double kRefArea = std::numbers::sqrt3 / 4.0;
+
+  // Objective difference between a single-triangle actor (reference area kRefArea, material
+  // MakeValidShellMaterialParams()) with the material scale `term` set to `value` and one with it
+  // zero, both at the equibiaxial stretch `stretch`.
+  double
+  EquibiaxialObjectiveDifference(real ShellMaterialParams::* term, real value, real stretch) {
+    DynamicArray<Real3> const coords = {
+        Real3{0_r, 0_r, 0_r}, Real3{1_r, 0_r, 0_r}, Real3{0.5_r, kSqrt3Over2, 0_r}};
+    DynamicArray<Int3> const conn = {Int3{0, 1, 2}};
+    ShellActorParams params;
+    params.material = MakeValidShellMaterialParams();
+    params.hasGravity = false;
+    params.colliderType = ColliderType::None;
+    params.shape = _scene->GetContext()->CreateTriMeshShape(
+        Flatten(MakeConstSpan(coords)), Flatten(MakeConstSpan(conn)), test::ExpectOK{});
+    params.material.*term = 0_r;
+    Actor* const without = CreateShellActor(_scene, params, test::ExpectOK{});
+    params.material.*term = value;
+    Actor* const with = CreateShellActor(_scene, params, test::ExpectOK{});
+    MOCHI_DEFER({
+      _scene->DestroyActor(with);
+      _scene->DestroyActor(without);
+    });
+    if (!without || !with) {
+      ADD_FAILURE() << "Shell actor creation failed.";
+      return std::numeric_limits<double>::quiet_NaN();
+    }
+
+    // A unit step at rest initializes the integrator state without moving either actor.
+    test::SetSceneIntegrationMethod(_scene, IntegrationMethod::BackwardEuler);
+    _scene->Step(1_r);
+
+    auto& reg = GetRegistry();
+    AssemblyParams const objectiveOnly{.assemObj = true, .assemRes = false, .assemDRes = false};
+    auto stretchedObjective = [&](Actor* actor) {
+      entt::entity const entity = GetEntity(actor);
+      auto& displacement = reg.get<CDisplacementSlice<real, TimeStep::Current>>(entity).value;
+      for (int n = 0; n < isize(coords); ++n) {
+        for (int d = 0; d < kSpaceDim3; ++d) {
+          displacement(kSpaceDim3 * n + d) = (stretch - 1_r) * coords[n][d];
+        }
+      }
+      ecs::InvokeOnEntity(shell::AssembleBody, reg, entity, std::cref(objectiveOnly));
+      return reg.get<CActorSnle const>(entity).objective;
+    };
+    return stretchedObjective(with) - stretchedObjective(without);
+  }
+};
+
+class MochiShellCollapseBarrierScene : public MochiShellMembraneTermScene {};
 
 // Between otherwise identical actors, the objective differs by the barrier 2ημ·A·⟨tr(C⁻¹) − 2⟩³
 // for scale η, membrane μ, and reference area A.
@@ -479,45 +536,31 @@ TEST_F(MochiShellCollapseBarrierScene, BarrierEnergyUnderEquibiaxialCompression)
   real constexpr kStretch = 0.5_r;
   double constexpr kEnergyRelTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-9 : 1e-4;
 
-  DynamicArray<Real3> const coords = {
-      Real3{0_r, 0_r, 0_r}, Real3{1_r, 0_r, 0_r}, Real3{0.5_r, kSqrt3Over2, 0_r}};
-  DynamicArray<Int3> const conn = {Int3{0, 1, 2}};
-  ShellActorParams params;
-  params.material = MakeValidShellMaterialParams();
-  params.hasGravity = false;
-  params.colliderType = ColliderType::None;
-  params.shape = _scene->GetContext()->CreateTriMeshShape(
-      Flatten(MakeConstSpan(coords)), Flatten(MakeConstSpan(conn)), test::ExpectOK{});
-  params.material.membraneCollapseBarrierScale = 0_r;
-  Actor* const withoutBarrier = CreateShellActor(_scene, params, test::ExpectOK{});
-  params.material.membraneCollapseBarrierScale = kBarrierScale;
-  Actor* const withBarrier = CreateShellActor(_scene, params, test::ExpectOK{});
-  ASSERT_NE(nullptr, withoutBarrier);
-  ASSERT_NE(nullptr, withBarrier);
-
-  // A unit step at rest initializes the integrator state without moving either actor.
-  test::SetSceneIntegrationMethod(_scene, IntegrationMethod::BackwardEuler);
-  _scene->Step(1_r);
-
-  auto& reg = GetRegistry();
-  AssemblyParams const objectiveOnly{.assemObj = true, .assemRes = false, .assemDRes = false};
-  auto compressedObjective = [&](Actor* actor) {
-    entt::entity const entity = GetEntity(actor);
-    auto& displacement = reg.get<CDisplacementSlice<real, TimeStep::Current>>(entity).value;
-    for (int n = 0; n < isize(coords); ++n) {
-      for (int d = 0; d < kSpaceDim3; ++d) {
-        displacement(kSpaceDim3 * n + d) = (kStretch - 1_r) * coords[n][d];
-      }
-    }
-    ecs::InvokeOnEntity(shell::AssembleBody, reg, entity, std::cref(objectiveOnly));
-    return reg.get<CActorSnle const>(entity).objective;
-  };
-
   double const g = 2.0 / Sqr(static_cast<double>(kStretch)) - 2.0;
-  double const expected = 2.0 * static_cast<double>(kBarrierScale * params.material.membraneMu) *
-      (std::numbers::sqrt3 / 4.0) * g * g * g;
-  double const actual = compressedObjective(withBarrier) - compressedObjective(withoutBarrier);
+  double const expected = 2.0 *
+      static_cast<double>(kBarrierScale * MakeValidShellMaterialParams().membraneMu) * kRefArea *
+      g * g * g;
+  double const actual = EquibiaxialObjectiveDifference(
+      &ShellMaterialParams::membraneCollapseBarrierScale, kBarrierScale, kStretch);
   EXPECT_NEAR(expected, actual, kEnergyRelTol * expected);
+}
+
+class MochiShellStrainStiffeningScene : public MochiShellMembraneTermScene {};
+
+// Between otherwise identical actors, the objective differs by γμ·A·Σᵢ⟨εᵢ⟩³ for scale γ, membrane
+// μ, reference area A, and principal Green–Lagrange strains εᵢ, which vanishes under compression.
+TEST_F(MochiShellStrainStiffeningScene, StiffeningEnergyUnderEquibiaxialStretch) {
+  real constexpr kStiffeningScale = 30_r;
+  double constexpr kEnergyRelTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-9 : 1e-4;
+  for (real const stretch : {1.2_r, 0.8_r}) {
+    double const e = Max(0.5 * (Sqr(static_cast<double>(stretch)) - 1.0), 0.0);
+    double const expected =
+        static_cast<double>(kStiffeningScale * MakeValidShellMaterialParams().membraneMu) *
+        kRefArea * 2.0 * e * e * e;
+    double const actual = EquibiaxialObjectiveDifference(
+        &ShellMaterialParams::membraneStrainStiffeningScale, kStiffeningScale, stretch);
+    EXPECT_NEAR(expected, actual, kEnergyRelTol * expected);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -857,16 +900,18 @@ TEST_F(MochiShellStiffnessDampingScene, RigidTranslationUndamped) {
 // Cantilever shell strip in uniaxial tension under a tip end-load applied via
 // SetExternalForcesOnDofs. Verifies (a) the API accepts shell actors, and (b) world-frame nodal
 // forces are correctly rotated into the local frame at assembly time and produce the equilibrium
-// stretch predicted by the exact St. Venant--Kirchhoff stretch-from-load relation.
+// stretch predicted by the exact St. Venant--Kirchhoff stretch-from-load relation, optionally with
+// membrane strain stiffening.
 //
 // Parameterized on whether external forces are supplied as full per-node vectors (three
 // consecutive in-order DoFs per node, exercising the fast path in
 // `deformable::details::AddTranslationalExternalForceEntry`) or as scalar y-components only
-// (one DoF per node with `component == 1`, exercising the slow / sparse path). The fixture's
-// `worldFromLocal` rotation is about the Y axis so that local-y aligns with world-Y, making the
-// two parameterizations physically equivalent.
-class MochiShellActorExternalForcesScene : public test::MochiSceneTestBase,
-                                           public ::testing::WithParamInterface<bool> {
+// (one DoF per node with `component == 1`, exercising the slow / sparse path), and on the strain
+// stiffening scale. The fixture's `worldFromLocal` rotation is about the Y axis so that local-y
+// aligns with world-Y, making the two force parameterizations physically equivalent.
+class MochiShellActorExternalForcesScene
+    : public test::MochiSceneTestBase,
+      public ::testing::WithParamInterface<std::tuple<bool, real>> {
  protected:
   Actor* _actor = nullptr;
   TransformRT _worldFromLocal;
@@ -905,9 +950,10 @@ class MochiShellActorExternalForcesScene : public test::MochiSceneTestBase,
     params.worldFromLocal = _worldFromLocal;
     params.material = mochi::experimental::ShellMaterialParamsFrom3dIsotropic(
         kYoungsModulus3d, kPoissonsRatio3d, kDensity3d, kThickness, ErrorAssert{});
-    // The exact stretch-from-load check below is specific to plain StVK, even though the collapse
-    // barrier is inactive in this tension-only deformation.
+    // The exact stretch-from-load check below omits the collapse barrier, even though it is
+    // inactive in this tension-only deformation.
     params.material.membraneCollapseBarrierScale = 0_r;
+    params.material.membraneStrainStiffeningScale = std::get<1>(GetParam());
     params.shape = _scene->GetContext()->CreateTriMeshShape(
         Flatten(MakeSpan(coordinates)), Flatten(MakeSpan(connectivity)), ErrorAssert{});
     _actor = CreateShellActor(_scene, params, ErrorAssert{});
@@ -920,7 +966,7 @@ class MochiShellActorExternalForcesScene : public test::MochiSceneTestBase,
 };
 
 TEST_P(MochiShellActorExternalForcesScene, ShellActorUniaxialEndLoad) {
-  bool const useScalarYOnly = GetParam();
+  auto const [useScalarYOnly, stiffeningScale] = GetParam();
 
   _scene->SetGravity({0_r, 0_r, 0_r});
 
@@ -991,8 +1037,13 @@ TEST_P(MochiShellActorExternalForcesScene, ShellActorUniaxialEndLoad) {
   _actor->SetExternalForcesOnDofs(
       MakeConstSpan(forceDofs), MakeConstSpan(forceValues), ErrorAssert{});
 
-  // Single large backward-Euler step to reach static equilibrium.
+  // Single large backward-Euler step to reach static equilibrium, to within the algebraic solver
+  // tolerances. The default absolute residual tolerance is too loose for the exact
+  // stretch-from-load check below with strain stiffening, so only the relative one is used.
   test::SetSceneIntegrationMethod(_scene, IntegrationMethod::BackwardEuler);
+  auto solverParams = _scene->GetSolverParams();
+  solverParams.nonLinearSolver.absTol = 0_r;
+  _scene->SetSolverParams(solverParams, test::ExpectOK{});
   _scene->Step(1e2_r);
 
   DynamicArray<real> const dofValues =
@@ -1014,29 +1065,45 @@ TEST_P(MochiShellActorExternalForcesScene, ShellActorUniaxialEndLoad) {
 
   // Expected uniaxial-tension elongation: Δ = F · L / (E · A), with A = width × thickness. The
   // shell strip has length L = kScale (between the top BC and the free tip) and width kScale.
-  // This linear formula is only exact in the small-strain limit, so it uses the loose tolerance.
+  // This linear formula is only exact in the small-strain limit, so it uses the loose tolerance,
+  // and strain stiffening invalidates it.
   real constexpr kExpected = kTipForce * kScale / (kYoungsModulus3d * kScale * kThickness);
-  EXPECT_NEAR(kExpected, tipElongation, kLooseTolerance * Abs(kExpected));
+  if (stiffeningScale == 0_r) {
+    EXPECT_NEAR(kExpected, tipElongation, kLooseTolerance * Abs(kExpected));
+  }
   EXPECT_NEAR(0_r, maxTipDisplOffAxis, kLooseTolerance * Abs(kExpected));
 
   // Stretch should satisfy this exactly for the Green--Lagrange-strain-based St. Venant--Kirchhoff
   // constitutive model with zero Poisson's ratio, so it uses the tight tolerance. The 2D
-  // membrane analogue of the rod's E·A is E · width · thickness.
+  // membrane analogue of the rod's E·A is E · width · thickness. With zero Poisson's ratio, the
+  // lateral strain vanishes, so strain stiffening with scale γ adds 3γμ·ε² = 1.5γ·E·thickness·ε² to
+  // the axial second Piola–Kirchhoff stress.
   real const actualLength = kScale + tipElongation;
   real const stretchRatio = actualLength / kScale;
   real const glStrain = 0.5_r * (Sqr(stretchRatio) - 1_r);
   real constexpr kAxialStiffness = kYoungsModulus3d * kScale * kThickness;
   EXPECT_NEAR(
-      kTipForce, kAxialStiffness * glStrain * stretchRatio, kTightTolerance * Abs(kTipForce));
+      kTipForce,
+      kAxialStiffness * glStrain * (1_r + 1.5_r * stiffeningScale * glStrain) * stretchRatio,
+      kTightTolerance * Abs(kTipForce));
+}
+
+static std::string UniaxialEndLoadParamName(
+    ::testing::TestParamInfo<MochiShellActorExternalForcesScene::ParamType> const& info) {
+  auto const [useScalarYOnly, stiffeningScale] = info.param;
+  return std::string(useScalarYOnly ? "ScalarYOnly" : "FullVector") +
+      (stiffeningScale > 0_r ? "StrainStiffening" : "");
 }
 
 INSTANTIATE_TEST_SUITE_P(
     DofLayout,
     MochiShellActorExternalForcesScene,
-    ::testing::Values(false, true),
-    [](::testing::TestParamInfo<bool> const& info) {
-      return info.param ? "ScalarYOnly" : "FullVector";
-    });
+    ::testing::Values(
+        std::tuple{false, 0_r},
+        std::tuple{true, 0_r},
+        std::tuple{false, 1000_r},
+        std::tuple{true, 1000_r}),
+    UniaxialEndLoadParamName);
 class MochiShellContactSkinTest : public test::MochiSceneTestBase {
  protected:
   static constexpr std::array<Real3, 5> kPhysicsNodes = {

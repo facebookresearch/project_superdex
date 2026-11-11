@@ -75,6 +75,7 @@ MOCHI_FIELD(density) MOCHI_ATTRIBUTE(Units("kg/m^2"))
 MOCHI_FIELD(massDampingCoefficient) MOCHI_ATTRIBUTE(Units("1/s"))
 MOCHI_FIELD(stiffnessDampingCoefficient) MOCHI_ATTRIBUTE(Units("s"))
 MOCHI_FIELD(membraneCollapseBarrierScale)
+MOCHI_FIELD(membraneStrainStiffeningScale)
 MOCHI_STRUCT_END_EX()
 
 MOCHI_STRUCT_BEGIN_EX(mochi::experimental::ShellActorParams)

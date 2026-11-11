@@ -32,9 +32,17 @@
 
 #include <algorithm>
 #include <array>
+#include <limits>
 #include <numbers>
 #include <optional>
 #include <utility>
+
+#if MOCHI_USE_EIGEN
+MOCHI_WARNING_PUSH()
+MOCHI_WARNING_SUPPRESS_EIGEN()
+#include <Eigen/Eigenvalues>
+MOCHI_WARNING_POP()
+#endif
 
 using namespace mochi;
 using namespace mochi::fem;
@@ -381,6 +389,7 @@ struct ShellFdOptions {
   real bendingAlpha = kBendingAlpha;
   real bendingBeta = kBendingBeta;
   real membraneCollapseBarrierStiffness = 0_r;
+  real membraneStrainStiffeningStiffness = 0_r;
   real stiffnessDampingFactor = 0_r;
   real stageStartDispScale = 0_r; // Scale for stage-start displacements (0 = no damping data).
 };
@@ -507,6 +516,7 @@ struct ShellHarness {
         fdOptions.bendingAlpha,
         fdOptions.bendingBeta,
         fdOptions.membraneCollapseBarrierStiffness,
+        fdOptions.membraneStrainStiffeningStiffness,
         projectPsd,
         fdOptions.stiffnessDampingFactor,
         stageStartDisp ? &*stageStartDisp : nullptr);
@@ -624,7 +634,13 @@ static ShellBatchMatrix<kBS> MembraneDResidual(
 
   ShellBatchMatrix<kBS> dres{};
   AddMembraneDResidual<kBS>(
-      da_dx, dpsi_da, AInv, referenceArea, V{1_r}, V{2_r}, /*projectPsd*/ false, dres);
+      da_dx,
+      dpsi_da,
+      D2PsiSVKSym2x2<kBS>(AInv, V{1_r}, V{2_r}),
+      AInv,
+      referenceArea,
+      /*projectPsd*/ false,
+      dres);
   MirrorNodePairBlocks<kBS>(dres);
   return dres;
 }
@@ -857,6 +873,258 @@ static void VerifySvkHelpers() {
       tangentColumns[2][1]};
   for (int b = 0; b < kBS; ++b) {
     ExpectNearL2(GetLane(expectedD2psiSym, b), GetLane(d2psiSym, b), kTol);
+  }
+}
+
+// Principal strains ε₀ ≥ ε₁ of each sign combination, including equal and zero principal strains
+// and one near zero on either side of a sign change.
+static constexpr Real2 kPositivePartPrincipalStrains[] = {
+    {0.3_r, 0.1_r},
+    {0.2_r, 0.2_r},
+    {0.25_r, 0_r},
+    {0.3_r, 1e-4_r},
+    {0.3_r, -1e-4_r},
+    {0.3_r, -0.2_r},
+    {0.2_r, -0.2_r},
+    {0.1_r, -0.4_r},
+    {1e-4_r, -0.3_r},
+    {0_r, -0.25_r},
+    {-0.1_r, -0.3_r},
+    {-0.2_r, -0.2_r},
+    {0_r, 0_r}};
+static constexpr int kNumPositivePartCases = isize(kPositivePartPrincipalStrains);
+
+// Square root L of the non-diagonal metric A = L² of MixedStrainWithPrincipalStrains.
+static constexpr Matrix2x2r kMixedStrainMetricRoot{Real2{1.2_r, 0.3_r}, Real2{0.3_r, 0.8_r}};
+
+// L⁻¹·(ε₀·r₀⊗r₀ + ε₁·r₁⊗r₁)·L for orthonormal rᵢ at the given angle, which is the mixed form A⁻¹·S
+// of the covariant strain S = L·(ε₀·r₀⊗r₀ + ε₁·r₁⊗r₁)·L in the non-diagonal metric A = L². It has
+// eigenvalues εᵢ and eigenprojectors L⁻¹·rᵢ⊗rᵢ·L.
+static Matrix2x2r MixedStrainWithPrincipalStrains(Real2 const& principal, real angle) {
+  Matrix2x2r const& L = kMixedStrainMetricRoot;
+  Real2 const r0{Cos(angle), Sin(angle)};
+  Real2 const r1{-r0[1], r0[0]};
+  return Dot(Invert(L), Dot(principal[0] * Outer(r0, r0) + principal[1] * Outer(r1, r1), L));
+}
+
+template <int kBS>
+static void VerifyPositivePartHelper() {
+  real constexpr kTol = 64_r * std::numeric_limits<real>::epsilon();
+  auto const angle = [](int c) { return 0.3_r + 0.7_r * StaticCast<real>(c); };
+  auto const positive = [](Real2 const& e) { return Real2{Max(e[0], 0_r), Max(e[1], 0_r)}; };
+  auto const decompose = [&](real scaling, int first) {
+    std::array<Matrix2x2r, kBS> strains{};
+    for (int i = 0; i < kBS; ++i) {
+      int const c = (first + i) % kNumPositivePartCases;
+      strains[i] =
+          MixedStrainWithPrincipalStrains(scaling * kPositivePartPrincipalStrains[c], angle(c));
+    }
+    return PositivePart<kBS>(LoadBatchMatrix2x2<kBS>(MakeConstSpan(strains)));
+  };
+
+  // Each lane holds a different case.
+  for (real scaling : {1e-12_r, 1e-6_r, 1_r, 1e6_r, 1e12_r}) {
+    for (int first = 0; first < kNumPositivePartCases; first += kBS) {
+      auto const part = decompose(scaling, first);
+      for (int i = 0; i < kBS; ++i) {
+        int const c = (first + i) % kNumPositivePartCases;
+        Real2 const e = scaling * kPositivePartPrincipalStrains[c];
+        SCOPED_TRACE(testing::Message() << "principal strains = {" << e[0] << ", " << e[1] << "}");
+        real const tol = kTol * Max(Abs(e[0]), Abs(e[1]));
+        EXPECT_NEAR(part.e0[i], e[0], tol);
+        EXPECT_NEAR(part.e1[i], e[1], tol);
+        EXPECT_NEAR_TOL(
+            GetLane(part.epsPlus, i), MixedStrainWithPrincipalStrains(positive(e), angle(c)), tol);
+
+        if (e[0] > 0_r && e[1] < 0_r) {
+          real const r = e[0] / (e[0] - e[1]);
+          EXPECT_NEAR(part.a[i], r, kTol);
+          EXPECT_NEAR(part.b[i], -r * e[1], tol);
+          EXPECT_NEAR_TOL(
+              GetLane(part.projector, i),
+              MixedStrainWithPrincipalStrains({1_r, 0_r}, angle(c)),
+              kTol);
+        } else {
+          // With a zero principal strain, rounding may select either neighboring case, which give
+          // the same positive part.
+          EXPECT_NEAR(part.a[i], e[1] >= 0_r ? 1_r : 0_r, kTol);
+          EXPECT_NEAR(part.b[i], 0_r, tol);
+          if (e[0] * e[1] > 0_r) {
+            EXPECT_EQ(0_r, Norm(GetLane(part.projector, i)));
+          }
+        }
+      }
+    }
+  }
+
+  // The outputs stay finite and the weights in range where the determinant is subnormal.
+  real const tinyScaling = 0.1_r * Sqrt(std::numeric_limits<real>::min());
+  for (int first = 0; first < kNumPositivePartCases; first += kBS) {
+    auto const part = decompose(tinyScaling, first);
+    for (int i = 0; i < kBS; ++i) {
+      EXPECT_TRUE(IsFinite(part.e0[i]) && IsFinite(part.e1[i]));
+      EXPECT_TRUE(IsFinite(GetLane(part.epsPlus, i)) && IsFinite(GetLane(part.projector, i)));
+      EXPECT_TRUE(part.a[i] >= 0_r && part.a[i] <= 1_r);
+      EXPECT_TRUE(part.b[i] >= 0_r && IsFinite(part.b[i]));
+    }
+  }
+}
+
+template <int kBS>
+static void VerifyStrainStiffeningHelpers() {
+  using V = BatchReal<kBS>;
+  using V2x2 = BatchReal2x2<kBS>;
+  // Small, because central differences are only first-order accurate across the tangent's kink
+  // where an eigenvalue vanishes.
+  real constexpr kEps = MOCHI_USE_DOUBLE_PRECISION ? 1e-7_r : 1e-4_r;
+  real constexpr kTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-5_r : 5e-3_r;
+  double constexpr kEnergyRelTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-9 : 1e-4;
+  real constexpr kStiffness = 1.7_r;
+  // Absolute, in units of the stiffness, because individual components may vanish.
+  real constexpr kAbsTol = kTol * kStiffness;
+  V const k{kStiffness};
+
+  auto const broadcast = [](Matrix2x2r const& m) {
+    std::array<Matrix2x2r, kBS> mats{};
+    mats.fill(m);
+    return LoadBatchMatrix2x2<kBS>(MakeConstSpan(mats));
+  };
+  // Covariant strains A·(A⁻¹·S) in the non-diagonal metric of MixedStrainWithPrincipalStrains.
+  V2x2 const A = broadcast(Dot(kMixedStrainMetricRoot, kMixedStrainMetricRoot));
+  V2x2 const AInv = Invert(A, Det(A));
+  auto const strainWithPrincipalStrains = [&](Real2 const& e) {
+    return Dot(A, broadcast(MixedStrainWithPrincipalStrains(e, 0.6_r)));
+  };
+  auto const psi = [&](V2x2 const& strain) {
+    return PsiStrainStiffening<kBS>(PositivePart<kBS>(Dot(AInv, strain)), k);
+  };
+  auto const dpsi = [&](V2x2 const& strain) {
+    return DPsiStrainStiffening<kBS>(PositivePart<kBS>(Dot(AInv, strain)), AInv, k);
+  };
+  auto const d2psi = [&](V2x2 const& strain) {
+    return D2PsiStrainStiffeningSym2x2<kBS>(PositivePart<kBS>(Dot(AInv, strain)), AInv, k);
+  };
+  // Raw [00, 01, 11] coordinate directions; the shear one perturbs both 01 and 10.
+  std::array<V2x2, 3> const directions{
+      SymMatrix2x2(V{1_r}, V{0_r}, V{0_r}),
+      SymMatrix2x2(V{0_r}, V{1_r}, V{0_r}),
+      SymMatrix2x2(V{0_r}, V{0_r}, V{1_r})};
+
+  // OuterSym and SymKroneckerSym2x2 reproduce the SVK tangent, pinning that their layouts match the
+  // reduced tangent layout.
+  {
+    V const lambda{2_r};
+    V const mu{1_r};
+    BatchSymMatrix2x2<kBS> const aInv = Sym2x2Components(AInv);
+    BatchSymMatrix3x3<kBS> const fromBuilders = lambda * OuterSym(aInv, aInv) +
+        (V{2_r} * mu) * fem::details::SymKroneckerSym2x2<kBS>(aInv, aInv);
+    auto const svk = D2PsiSVKSym2x2<kBS>(AInv, lambda, mu);
+    for (int b = 0; b < kBS; ++b) {
+      ExpectNearL2(GetLane(svk, b), GetLane(fromBuilders, b), kTol);
+    }
+  }
+
+  // Principal strains both positive, equal, or with one zero, and with opposite signs for each sign
+  // of the trace. (Cases with one near zero would need looser tolerances, since its absolute error
+  // scales with the other.)
+  for (Real2 const& e :
+       {Real2{0.3_r, 0.1_r},
+        Real2{0.2_r, 0.2_r},
+        Real2{0.25_r, 0_r},
+        Real2{0.3_r, -0.2_r},
+        Real2{0.2_r, -0.2_r},
+        Real2{0.1_r, -0.4_r}}) {
+    SCOPED_TRACE(testing::Message() << "principal strains = {" << e[0] << ", " << e[1] << "}");
+    V2x2 const strain = strainWithPrincipalStrains(e);
+    auto const e0 = static_cast<double>(e[0]);
+    auto const e1 = static_cast<double>(Max(e[1], 0_r));
+    double const expectedPsi = static_cast<double>(kStiffness) * (e0 * e0 * e0 + e1 * e1 * e1);
+    auto const actualPsi = psi(strain);
+    V2x2 const stress = dpsi(strain);
+    BatchSymMatrix3x3<kBS> const tangent = d2psi(strain);
+    for (int b = 0; b < kBS; ++b) {
+      EXPECT_NEAR(expectedPsi, actualPsi[b], kEnergyRelTol * expectedPsi);
+    }
+
+    // Central differences of ψ along each direction, and of dψ/dε for each tangent column.
+    for (V2x2 const& direction : directions) {
+      V2x2 const step = V{kEps} * direction;
+      auto const psiP = psi(strain + step);
+      auto const psiM = psi(strain - step);
+      V const directional = Colon(stress, direction);
+      for (int b = 0; b < kBS; ++b) {
+        real const fd = static_cast<real>((psiP[b] - psiM[b]) / (2.0 * static_cast<double>(kEps)));
+        EXPECT_NEAR_TOL(fd, directional[b], kAbsTol);
+      }
+      V2x2 const dpsiFd = V{0.5_r / kEps} * (dpsi(strain + step) - dpsi(strain - step));
+      auto const applied =
+          fem::details::ApplySym2x2Tangent<kBS>(tangent, Sym2x2Components(direction));
+      ExpectNear2x2Lanes<kBS>(dpsiFd, ToMatrix(applied), 0_r, kAbsTol);
+    }
+
+    // The tangent is PSD as a quadratic form on symmetric strain increments.
+    for (int t = 0; t < 5; ++t) {
+      auto const delta = MakeRandomArray<3>(static_cast<unsigned int>(7 * t + 1), -1_r, 1_r);
+      BatchSymMatrix2x2<kBS> const batchDelta{V{delta[0]}, V{delta[1]}, V{delta[2]}};
+      V const q =
+          ColonSym2x2(batchDelta, fem::details::ApplySym2x2Tangent<kBS>(tangent, batchDelta));
+      for (int b = 0; b < kBS; ++b) {
+        EXPECT_GE(q[b], -kTol * Norm(GetLane(tangent, b)) * NormSqr(delta));
+      }
+    }
+  }
+
+  // Strains with no positive eigenvalue give exact zeros.
+  for (V2x2 const& strain :
+       {strainWithPrincipalStrains(Real2{-0.1_r, -0.3_r}),
+        strainWithPrincipalStrains(Real2{-0.2_r, -0.2_r}),
+        SymMatrix2x2(V{0_r}, V{0_r}, V{0_r})}) {
+    auto const zeroPsi = psi(strain);
+    auto const zeroStress = Sym2x2Components(dpsi(strain));
+    auto const zeroTangent = d2psi(strain);
+    for (int b = 0; b < kBS; ++b) {
+      EXPECT_EQ(0.0, zeroPsi[b]);
+      EXPECT_SPAN_EQ((NdArray<real, 3>{}), GetLane(zeroStress, b));
+      EXPECT_SPAN_EQ((NdArray<real, 6>{}), GetLane(zeroTangent, b));
+    }
+  }
+
+  // Outputs are continuous where an eigenvalue changes sign.
+  {
+    SCOPED_TRACE("continuity");
+    real constexpr kDelta = 1e-4_r;
+    V2x2 const above = strainWithPrincipalStrains(Real2{0.3_r, kDelta});
+    V2x2 const below = strainWithPrincipalStrains(Real2{0.3_r, -kDelta});
+    auto const stressAbove = Sym2x2Components(dpsi(above));
+    auto const stressBelow = Sym2x2Components(dpsi(below));
+    auto const tangentAbove = d2psi(above);
+    auto const tangentBelow = d2psi(below);
+    for (int b = 0; b < kBS; ++b) {
+      ExpectNearL2(GetLane(stressAbove, b), GetLane(stressBelow, b), 100_r * kDelta);
+      ExpectNearL2(GetLane(tangentAbove, b), GetLane(tangentBelow, b), 100_r * kDelta);
+    }
+  }
+
+  // With opposite-signed eigenvalues, the stress and tangent scale as the strain squared and the
+  // strain, respectively, down to strains where cubing the eigenvalue gap would overflow in single
+  // precision; they stay finite where the strain's determinant is subnormal there.
+  for (Real2 const& e : {Real2{0.3_r, -0.2_r}, Real2{0.1_r, -0.4_r}}) {
+    SCOPED_TRACE(testing::Message() << "eigenvalues = {" << e[0] << ", " << e[1] << "}");
+    real constexpr kScale = 1e-15_r;
+    V2x2 const strain = strainWithPrincipalStrains(e);
+    auto const stress = Sym2x2Components(dpsi(strain));
+    auto const tangent = d2psi(strain);
+    auto const scaledStress =
+        V{1_r / (kScale * kScale)} * Sym2x2Components(dpsi(V{kScale} * strain));
+    auto const scaledTangent = V{1_r / kScale} * d2psi(V{kScale} * strain);
+    auto const tinyTangent = d2psi(V{1e-21_r} * strain);
+    for (int b = 0; b < kBS; ++b) {
+      ExpectNearL2(GetLane(stress, b), GetLane(scaledStress, b), kTol);
+      ExpectNearL2(GetLane(tangent, b), GetLane(scaledTangent, b), kTol);
+      for (real const v : GetLane(tinyTangent, b)) {
+        EXPECT_TRUE(IsFinite(v));
+      }
+    }
   }
 }
 
@@ -1329,6 +1597,14 @@ TEST(ShellHelpers, SvkDerivatives) {
   RunSupportedFemShellRodBatchSizes([&]<int kBS>() { VerifySvkHelpers<kBS>(); });
 }
 
+TEST(ShellHelpers, PositivePart) {
+  RunSupportedFemShellRodBatchSizes([&]<int kBS>() { VerifyPositivePartHelper<kBS>(); });
+}
+
+TEST(ShellHelpers, StrainStiffeningDerivatives) {
+  RunSupportedFemShellRodBatchSizes([&]<int kBS>() { VerifyStrainStiffeningHelpers<kBS>(); });
+}
+
 TEST(ShellHelpers, KelvinInversion) {
   RunSupportedFemShellRodBatchSizes([&]<int kBS>() { VerifyKelvinInversionHelpers<kBS>(); });
 }
@@ -1564,18 +1840,34 @@ static std::array<ShellStencilConfig, 5> MakeCompressedConfigs() {
       MakeStretchedEquilateralConfig(0.6_r, 1.1_r, 0.1_r)};
 }
 
-// Barrier contribution: outputs with the barrier minus outputs without it, all else equal.
+// Contribution of an optional membrane term: outputs with its stiffness option set to `stiffness`
+// minus outputs with it zero, all else equal.
+template <int kBS>
+static ShellOutputs<kBS> MembraneTermContribution(
+    real ShellFdOptions::* term,
+    real stiffness,
+    std::array<ShellStencilConfig const*, kBS> const& cfgs,
+    ShellFdOptions options,
+    bool projectPsd) {
+  OutputConfig constexpr kAll{.energy = true, .residual = true, .dresidual = true};
+  options.*term = stiffness;
+  auto const with = RunShell(ShellHarness<kBS>(cfgs, options), kAll, projectPsd);
+  options.*term = 0_r;
+  auto const without = RunShell(ShellHarness<kBS>(cfgs, options), kAll, projectPsd);
+  return {with.energy - without.energy, with.res - without.res, with.dres - without.dres};
+}
+
 template <int kBS>
 static ShellOutputs<kBS> CollapseBarrierContribution(
     std::array<ShellStencilConfig const*, kBS> const& cfgs,
     ShellFdOptions options = {},
     bool projectPsd = false) {
-  OutputConfig constexpr kAll{.energy = true, .residual = true, .dresidual = true};
-  options.membraneCollapseBarrierStiffness = kCollapseBarrierStiffness;
-  auto const with = RunShell(ShellHarness<kBS>(cfgs, options), kAll, projectPsd);
-  options.membraneCollapseBarrierStiffness = 0_r;
-  auto const without = RunShell(ShellHarness<kBS>(cfgs, options), kAll, projectPsd);
-  return {with.energy - without.energy, with.res - without.res, with.dres - without.dres};
+  return MembraneTermContribution<kBS>(
+      &ShellFdOptions::membraneCollapseBarrierStiffness,
+      kCollapseBarrierStiffness,
+      cfgs,
+      options,
+      projectPsd);
 }
 
 template <int kBS>
@@ -1585,6 +1877,32 @@ static void ExpectZeroLane(ShellOutputs<kBS> const& out, int b) {
   EXPECT_EQ(0.0, out.energy[b]);
   EXPECT_SPAN_EQ(LaneVector{}, GetLane(out.res, b));
   EXPECT_SPAN_EQ(LaneMatrix{}, GetLane(out.dres, b));
+}
+
+template <size_t kNumConfigs>
+static void ExpectMembraneTermIndependentOfStiffnessDamping(
+    real ShellFdOptions::* term,
+    real stiffness,
+    std::array<ShellStencilConfig, kNumConfigs> const& cfgs) {
+  real constexpr kTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-9_r : 1e-4_r;
+  ShellFdOptions damped;
+  damped.stiffnessDampingFactor = 3_r;
+  damped.stageStartDispScale = 0.5_r;
+  RunSupportedFemShellRodBatchSizes([&]<int kBS>() {
+    for (auto const& cfg : cfgs) {
+      auto const lanes = BroadcastConfig<kBS>(cfg);
+      auto const undampedTerm = MembraneTermContribution<kBS>(term, stiffness, lanes, {}, false);
+      auto const dampedTerm = MembraneTermContribution<kBS>(term, stiffness, lanes, damped, false);
+      for (int b = 0; b < kBS; ++b) {
+        EXPECT_NEAR(
+            undampedTerm.energy[b],
+            dampedTerm.energy[b],
+            static_cast<double>(kTol) * undampedTerm.energy[b]);
+        ExpectNearL2(GetLane(undampedTerm.res, b), GetLane(dampedTerm.res, b), kTol);
+        ExpectNearL2(GetLane(undampedTerm.dres, b), GetLane(dampedTerm.dres, b), kTol);
+      }
+    }
+  });
 }
 
 // Homogeneous in-plane principal stretches (s₀, s₁) give g = s₀⁻² + s₁⁻² − 2, independent of the
@@ -1761,22 +2079,245 @@ TEST(ShellWork, CollapseBarrierNearCollapse) {
 }
 
 TEST(ShellWork, CollapseBarrierIndependentOfStiffnessDamping) {
-  real constexpr kTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-9_r : 1e-4_r;
-  ShellFdOptions damped;
-  damped.stiffnessDampingFactor = 3_r;
-  damped.stageStartDispScale = 0.5_r;
+  ExpectMembraneTermIndependentOfStiffnessDamping(
+      &ShellFdOptions::membraneCollapseBarrierStiffness,
+      kCollapseBarrierStiffness,
+      MakeCompressedConfigs());
+}
+
+// ---------------------------------------------------------------------------
+// Membrane strain stiffening k·Σᵢ⟨εᵢ⟩³
+// ---------------------------------------------------------------------------
+
+static constexpr real kStrainStiffeningStiffness = 200_r;
+
+template <int kBS>
+static ShellOutputs<kBS> StrainStiffeningContribution(
+    std::array<ShellStencilConfig const*, kBS> const& cfgs,
+    ShellFdOptions options = {},
+    bool projectPsd = false) {
+  return MembraneTermContribution<kBS>(
+      &ShellFdOptions::membraneStrainStiffeningStiffness,
+      kStrainStiffeningStiffness,
+      cfgs,
+      options,
+      projectPsd);
+}
+
+static std::array<ShellStencilConfig, 5> MakeStretchedConfigs() {
+  return {
+      MakeStretchedInteriorConfig(1.2_r, 1.1_r),
+      MakeStretchedInteriorConfig(1.3_r, 0.75_r),
+      MakeStretchedInteriorConfig(1.2_r, 0.9_r, 0.1_r),
+      MakeStretchedEquilateralConfig(1.2_r, 1.2_r),
+      MakeStretchedEquilateralConfig(1.3_r, 0.8_r, 0.1_r)};
+}
+
+// Homogeneous in-plane principal stretches (s₀, s₁) give the energy k·A·Σᵢ⟨εᵢ⟩³ for reference area
+// A and principal Green–Lagrange strains εᵢ = ½(sᵢ² − 1). Cases without stretch must leave every
+// output unchanged.
+TEST(ShellWork, StrainStiffeningEnergyClosedForm) {
+  double constexpr kEnergyRelTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-9 : 1e-4;
+  std::array<Real2, 10> constexpr kStretches = {
+      Real2{1.2_r, 0.7_r},
+      Real2{1.3_r, 0.75_r},
+      Real2{1.5_r, 1.5_r},
+      Real2{2_r, 0.4_r},
+      Real2{0.7_r, 1.1_r},
+      Real2{1.05_r, 1_r},
+      Real2{1.0001_r, 0.9999_r},
+      Real2{0.9_r, 0.9_r},
+      Real2{0.95_r, 0.7_r},
+      Real2{1_r, 1_r}};
   RunSupportedFemShellRodBatchSizes([&]<int kBS>() {
-    for (auto const& cfg : MakeCompressedConfigs()) {
-      auto const cfgs = BroadcastConfig<kBS>(cfg);
-      auto const undampedBarrier = CollapseBarrierContribution<kBS>(cfgs);
-      auto const dampedBarrier = CollapseBarrierContribution<kBS>(cfgs, damped);
+    for (Real2 const& s : kStretches) {
+      double strainSum = 0.0;
+      for (real const si : s) {
+        double const e = Max(0.5 * (Sqr(static_cast<double>(si)) - 1.0), 0.0);
+        strainSum += e * e * e;
+      }
+      for (auto const& [cfg, refArea] :
+           {std::pair{MakeStretchedInteriorConfig(s[0], s[1]), 0.5},
+            std::pair{MakeStretchedEquilateralConfig(s[0], s[1]), std::numbers::sqrt3 / 4.0}}) {
+        auto const stiffening = StrainStiffeningContribution<kBS>(BroadcastConfig<kBS>(cfg));
+        double const expected =
+            static_cast<double>(kStrainStiffeningStiffness) * refArea * strainSum;
+        for (int b = 0; b < kBS; ++b) {
+          if (expected == 0.0) {
+            ExpectZeroLane(stiffening, b);
+          } else {
+            EXPECT_NEAR(expected, stiffening.energy[b], kEnergyRelTol * expected);
+          }
+        }
+      }
+    }
+  });
+}
+
+// Permuting the nodes of a sheared triangle stretched along oblique axes changes the covariant
+// components of its metric and strain, but not the energy. Its residual and stiffness follow, since
+// the FD tests check that they are its exact derivatives.
+TEST(ShellWork, StrainStiffeningEnergyInvariantUnderCentralNodePermutations) {
+  auto cfg = MakeInteriorConfig();
+  Real3 const axis0{0.8_r, 0.6_r, 0_r};
+  Real3 const axis1{-0.6_r, 0.8_r, 0_r};
+  Real2 const stretches{1.3_r, 0.75_r};
+  for (int n = 0; n < kBendingStencilNodes; ++n) {
+    auto& position = cfg.refPositions[n];
+    position = Real3{1.3_r * position[0] + 0.4_r * position[1], 0.7_r * position[1], position[2]};
+    cfg.displacements[n] = (stretches[0] - 1_r) * Dot(axis0, position) * axis0 +
+        (stretches[1] - 1_r) * Dot(axis1, position) * axis1;
+  }
+
+  real constexpr kTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-9_r : 1e-4_r;
+  OutputConfig constexpr kEnergyOnly{.energy = true, .residual = false, .dresidual = false};
+  ShellFdOptions options;
+  options.membraneLambda = 0_r;
+  options.membraneMu = 0_r;
+  options.bendingAlpha = 0_r;
+  options.bendingBeta = 0_r;
+  options.membraneStrainStiffeningStiffness = kStrainStiffeningStiffness;
+  double const referenceEnergy =
+      RunShell(ShellHarness<1>(BroadcastConfig<1>(cfg), options), kEnergyOnly).energy[0];
+  EXPECT_NE(referenceEnergy, 0.0);
+
+  std::array<int, kTriangleNodes> permutation = {0, 1, 2};
+  while (std::ranges::next_permutation(permutation).found) {
+    SCOPED_TRACE(
+        testing::Message() << "permutation = {" << permutation[0] << ", " << permutation[1] << ", "
+                           << permutation[2] << "}");
+    auto const permutedCfg = PermuteCentralNodes(cfg, permutation);
+    ShellHarness<1> const permutedHarness(BroadcastConfig<1>(permutedCfg), options);
+    ExpectNearEnergy(referenceEnergy, RunShell(permutedHarness, kEnergyOnly).energy[0], kTol);
+  }
+}
+
+TEST(ShellWork, StrainStiffeningOutputModes) {
+  ShellFdOptions options;
+  options.membraneStrainStiffeningStiffness = kStrainStiffeningStiffness;
+  for (auto const& cfg : MakeStretchedConfigs()) {
+    RunSupportedFemShellRodBatchSizes(
+        [&]<int kBS>() { VerifyShellOutputModes<kBS>(BroadcastConfig<kBS>(cfg), options); });
+  }
+}
+
+// Inactive lanes must be unaffected by active neighbors.
+TEST(ShellWork, StrainStiffeningInactiveUnderCompressionBesideStretchedLanes) {
+  auto const compressed = MakeStretchedInteriorConfig(0.7_r, 0.8_r);
+  auto const stretched = MakeStretchedInteriorConfig(1.3_r, 0.8_r);
+  std::array<ShellStencilConfig const*, kDefaultFemBatchSize> mixed{};
+  for (int b = 0; b < kDefaultFemBatchSize; ++b) {
+    mixed[b] = (b % 2 == 0) ? &stretched : &compressed;
+  }
+  auto const stiffening = StrainStiffeningContribution<kDefaultFemBatchSize>(mixed);
+  for (int b = 0; b < kDefaultFemBatchSize; ++b) {
+    if (b % 2 == 0) {
+      EXPECT_GT(stiffening.energy[b], 0.0);
+    } else {
+      ExpectZeroLane(stiffening, b);
+    }
+  }
+}
+
+// The stiffness is exact, so both finite-difference checks apply, including with compressed lanes
+// beside stretched ones. Bending is disabled because its stiffness omits the geometric part.
+TEST(ShellWork, StrainStiffeningFd) {
+  auto const stretched = MakeStretchedConfigs();
+  auto const compressed = MakeStretchedInteriorConfig(0.7_r, 0.8_r);
+  for (real const svkScale : {0_r, 1_r}) {
+    for (real const dampingFactor : {0_r, 3_r}) {
+      SCOPED_TRACE(
+          testing::Message() << "SVK scale = " << svkScale << ", damping = " << dampingFactor);
+      ShellFdOptions options;
+      options.membraneLambda = svkScale * kMembraneLambda;
+      options.membraneMu = svkScale * kMembraneMu;
+      options.bendingAlpha = 0_r;
+      options.bendingBeta = 0_r;
+      options.membraneStrainStiffeningStiffness = kStrainStiffeningStiffness;
+      options.stiffnessDampingFactor = dampingFactor;
+      options.stageStartDispScale = 0.5_r;
+      RunSupportedFemShellRodBatchSizes([&]<int kBS>() {
+        for (auto const& cfg : stretched) {
+          VerifyShellFdBroadcast<kBS>(cfg, options);
+        }
+        if constexpr (kBS > 1) {
+          std::array<ShellStencilConfig const*, kBS> mixed{};
+          for (int b = 0; b < kBS; ++b) {
+            mixed[b] = (b % 2 == 0) ? &stretched[(b / 2) % isize(stretched)] : &compressed;
+          }
+          VerifyShellFd<kBS>(mixed, options);
+        }
+      });
+    }
+  }
+}
+
+// The collapse barrier, which is on by default, adds its stress after the stiffening stress.
+// Stretching one direction and compressing the other activates both. Only the residual is checked,
+// because the barrier's stiffness is approximate.
+TEST(ShellWork, StrainStiffeningWithCollapseBarrierEnergyResidualFd) {
+  ShellFdOptions options;
+  options.checkResidualDResidual = false;
+  options.membraneCollapseBarrierStiffness = kCollapseBarrierStiffness;
+  options.membraneStrainStiffeningStiffness = kStrainStiffeningStiffness;
+  for (auto const& cfg :
+       {MakeStretchedInteriorConfig(1.3_r, 0.6_r),
+        MakeStretchedEquilateralConfig(0.6_r, 1.3_r, 0.1_r)}) {
+    RunSupportedFemShellRodBatchSizes([&]<int kBS>() {
+      auto const lanes = BroadcastConfig<kBS>(cfg);
+      auto const barrier = CollapseBarrierContribution<kBS>(lanes);
+      auto const stiffening = StrainStiffeningContribution<kBS>(lanes);
       for (int b = 0; b < kBS; ++b) {
-        EXPECT_NEAR(
-            undampedBarrier.energy[b],
-            dampedBarrier.energy[b],
-            static_cast<double>(kTol) * undampedBarrier.energy[b]);
-        ExpectNearL2(GetLane(undampedBarrier.res, b), GetLane(dampedBarrier.res, b), kTol);
-        ExpectNearL2(GetLane(undampedBarrier.dres, b), GetLane(dampedBarrier.dres, b), kTol);
+        EXPECT_GT(barrier.energy[b], 0.0);
+        EXPECT_GT(stiffening.energy[b], 0.0);
+      }
+      VerifyShellFd<kBS>(lanes, options);
+    });
+  }
+}
+
+TEST(ShellWork, StrainStiffeningIndependentOfStiffnessDamping) {
+  ExpectMembraneTermIndependentOfStiffnessDamping(
+      &ShellFdOptions::membraneStrainStiffeningStiffness,
+      kStrainStiffeningStiffness,
+      MakeStretchedConfigs());
+}
+
+// The exact stiffness is PSD at any stretch, including where it dominates the SVK stiffness, and so
+// is the full stiffness with the projected geometric part. The matrices are normalized, because
+// their entries span orders of magnitude.
+TEST(ShellWork, StrainStiffeningDResidualPsd) {
+  auto const stretched = MakeStretchedConfigs();
+  DynamicArray<ShellStencilConfig> cfgs(stretched.begin(), stretched.end());
+  cfgs.push_back(MakeStretchedInteriorConfig(2_r, 0.4_r, 0.1_r));
+  cfgs.push_back(MakeStretchedEquilateralConfig(1.8_r, 1.6_r, 0.1_r));
+  auto const expectNormalizedPsd = [](auto const& dres) {
+    ASSERT_GT(Norm(dres), 0_r);
+    auto const normalized = (1_r / Norm(dres)) * dres;
+    ExpectSymmetricPsd(normalized);
+#if MOCHI_USE_EIGEN
+    using EMatType = Eigen::
+        Matrix<real, kBendingStencilDofs, kBendingStencilDofs, Eigen::RowMajor | Eigen::DontAlign>;
+    Eigen::Map<EMatType const> const eigenMat(&normalized[0]);
+    Eigen::SelfAdjointEigenSolver<EMatType> const eigenSolver(eigenMat, Eigen::EigenvaluesOnly);
+    ASSERT_EQ(Eigen::Success, eigenSolver.info());
+    real constexpr kPsdTol =
+        (MOCHI_USE_DOUBLE_PRECISION ? 300_r : 100_r) * std::numeric_limits<real>::epsilon();
+    EXPECT_GE(eigenSolver.eigenvalues().minCoeff(), -kPsdTol);
+#endif
+  };
+  ShellFdOptions options;
+  options.membraneStrainStiffeningStiffness = kStrainStiffeningStiffness;
+  RunSupportedFemShellRodBatchSizes([&]<int kBS>() {
+    for (auto const& cfg : cfgs) {
+      auto const stiffening = StrainStiffeningContribution<kBS>(BroadcastConfig<kBS>(cfg));
+      auto const projected = RunShell(
+          ShellHarness<kBS>(BroadcastConfig<kBS>(cfg), options),
+          {.energy = false, .residual = false, .dresidual = true},
+          /*projectPsd*/ true);
+      for (int b = 0; b < kBS; ++b) {
+        expectNormalizedPsd(GetLane(stiffening.dres, b));
+        expectNormalizedPsd(GetLane(projected.dres, b));
       }
     }
   });

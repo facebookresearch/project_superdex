@@ -275,7 +275,120 @@ template <int kBatchSize>
       tangent[4] * x[0] + tangent[5] * twoX01 + tangent[2] * x[2]};
 }
 
+/// @brief Symmetric Kronecker product of symmetric 2x2 tensors y and a, in the reduced tangent
+/// layout of @ref D2PsiSVKSym2x2. It represents the bilinear form ½ tr(y·δ₁·a·δ₂ + a·δ₁·y·δ₂), so
+/// SymKroneckerSym2x2(A⁻¹, A⁻¹) is the μ-part of @ref D2PsiSVKSym2x2 divided by 2μ.
+template <int kBatchSize>
+[[nodiscard]] MOCHI_FORCE_INLINE constexpr BatchSymMatrix3x3<kBatchSize> SymKroneckerSym2x2(
+    BatchSymMatrix2x2<kBatchSize> const& y,
+    BatchSymMatrix2x2<kBatchSize> const& a) {
+  using V = BatchReal<kBatchSize>;
+  V const half{0.5_r};
+  return {
+      y[0] * a[0],
+      V{0.25_r} * (y[0] * a[2] + y[2] * a[0]) + half * y[1] * a[1],
+      y[2] * a[2],
+      half * (y[0] * a[1] + y[1] * a[0]),
+      y[1] * a[1],
+      half * (y[1] * a[2] + y[2] * a[1])};
+}
+
 } // namespace details
+
+/**************************************************************************************************
+  Membrane strain stiffening, ψ = k·Σᵢ⟨εᵢ⟩³ for eigenvalues εᵢ of the mixed membrane strain ε.
+*/
+
+/// @brief Positive part ε₊ = Σᵢ⟨εᵢ⟩·Pᵢ of a mixed 2x2 strain ε, with the eigenvalues and weights
+/// that express ψ and its derivatives without dividing by the eigenvalue gap where it may vanish.
+///
+/// @details With ε₀ ≥ ε₁, ε₊ = a·ε + b·I, where (a, b) = (0, 0) if ε₀ ≤ 0, (1, 0) if ε₁ ≥ 0, and
+/// (r, −r·ε₁) with r = ε₀/(ε₀ − ε₁) ∈ (0, 1] if ε₀ > 0 > ε₁. The tangent weights its two PSD terms
+/// by a and b ≥ 0.
+template <int kBatchSize>
+struct MixedStrainPositivePart {
+  BatchReal<kBatchSize> e0, e1; ///< Eigenvalues, e0 ≥ e1.
+  BatchReal2x2<kBatchSize> epsPlus; ///< Positive part ε₊.
+  /// Eigenprojector P₀ = (ε − ε₁·I)/(ε₀ − ε₁) where ε₀ > 0 > ε₁, zero elsewhere.
+  BatchReal2x2<kBatchSize> projector;
+  BatchReal<kBatchSize> a, b; ///< ε₊ = a·ε + b·I.
+};
+
+template <int kBatchSize>
+[[nodiscard]] MOCHI_FORCE_INLINE MixedStrainPositivePart<kBatchSize> PositivePart(
+    BatchReal2x2<kBatchSize> const& strain) {
+  using V = BatchReal<kBatchSize>;
+  V const zero{0_r};
+  V const one{1_r};
+  V const t = Trace(strain);
+  V const d = Det(strain);
+
+  // The eigenvalues are the roots of x² − t·x + d. Their discriminant t² − 4d is evaluated as
+  // (ε₀₀ − ε₁₁)² + 4·ε₀₁·ε₁₀, which does not cancel when they are close. The root t/2 ± ρ/2 farther
+  // from zero has no cancellation, and the other follows from their product d. σ = 0 only if both
+  // roots vanish.
+  V const diff = strain[0][0] - strain[1][1];
+  V const rho = Sqrt(Max(diff * diff + V{4_r} * strain[0][1] * strain[1][0], zero));
+  V const sigma = t + Select(t >= zero, rho, -rho);
+  V const farRoot = V{0.5_r} * sigma;
+  V const nearRoot = V{2_r} * d / Select(Abs(sigma) > zero, sigma, one);
+  MixedStrainPositivePart<kBatchSize> out;
+  out.e0 = Select(t >= zero, farRoot, nearRoot);
+  out.e1 = Select(t >= zero, nearRoot, farRoot);
+
+  // Eigenvalues have opposite signs iff d < 0, where e0 − e1 adds magnitudes. The floor only keeps
+  // the unselected lanes finite.
+  V const hasMixedSigns = d < zero;
+  V const invGap =
+      Select(hasMixedSigns, one / Max(out.e0 - out.e1, V{std::numeric_limits<real>::min()}), zero);
+  V const r = out.e0 * invGap;
+  out.a = Select(hasMixedSigns, r, Select(t >= zero, one, zero));
+  out.b = -r * out.e1;
+  BatchReal2x2<kBatchSize> const identity = Eye<2, V>();
+  out.projector = invGap * (strain - out.e1 * identity);
+  out.epsPlus = out.a * strain + out.b * identity;
+  return out;
+}
+
+/// @brief Strain-stiffening energy density k·Σᵢ⟨εᵢ⟩³ (per unit reference area).
+template <int kBatchSize>
+[[nodiscard]] MOCHI_FORCE_INLINE BatchDouble<kBatchSize> PsiStrainStiffening(
+    MixedStrainPositivePart<kBatchSize> const& part,
+    BatchReal<kBatchSize> stiffness) {
+  using V = BatchReal<kBatchSize>;
+  using Vd = BatchDouble<kBatchSize>;
+  Vd const e0 = StaticCast<Vd>(Max(part.e0, V{0_r}));
+  Vd const e1 = StaticCast<Vd>(Max(part.e1, V{0_r}));
+  return StaticCast<Vd>(stiffness) * (e0 * e0 * e0 + e1 * e1 * e1);
+}
+
+/// @brief Derivative 3k·ε₊²·A⁻¹ of @ref PsiStrainStiffening with respect to the fully covariant
+/// strain, analogous to @ref DPsiSVK.
+template <int kBatchSize>
+[[nodiscard]] MOCHI_FORCE_INLINE BatchReal2x2<kBatchSize> DPsiStrainStiffening(
+    MixedStrainPositivePart<kBatchSize> const& part,
+    BatchReal2x2<kBatchSize> const& AInv,
+    BatchReal<kBatchSize> stiffness) {
+  using V = BatchReal<kBatchSize>;
+  return (V{3_r} * stiffness) * Dot(Dot(part.epsPlus, part.epsPlus), AInv);
+}
+
+/// @brief Second derivative of @ref PsiStrainStiffening with respect to the fully covariant strain,
+/// in the reduced tangent layout of @ref D2PsiSVKSym2x2. It is the exact tangent
+/// 6k·(a·ε₊A⁻¹ ⊛ A⁻¹ + b·P₀A⁻¹ ⊗ P₀A⁻¹), which is PSD because a, b ≥ 0.
+template <int kBatchSize>
+[[nodiscard]] MOCHI_FORCE_INLINE BatchSymMatrix3x3<kBatchSize> D2PsiStrainStiffeningSym2x2(
+    MixedStrainPositivePart<kBatchSize> const& part,
+    BatchReal2x2<kBatchSize> const& AInv,
+    BatchReal<kBatchSize> stiffness) {
+  using V = BatchReal<kBatchSize>;
+  V const sixK = V{6_r} * stiffness;
+  BatchSymMatrix2x2<kBatchSize> const aInv = Sym2x2Components(AInv);
+  BatchSymMatrix2x2<kBatchSize> const epsPlusRaised = Sym2x2Components(Dot(part.epsPlus, AInv));
+  BatchSymMatrix2x2<kBatchSize> const projectorRaised = Sym2x2Components(Dot(part.projector, AInv));
+  return details::SymKroneckerSym2x2<kBatchSize>((sixK * part.a) * epsPlusRaised, aInv) +
+      OuterSym((sixK * part.b) * projectorRaised, projectorRaised);
+}
 
 /**************************************************************************************************
   Membrane residual and dresidual.
@@ -295,21 +408,21 @@ MOCHI_FORCE_INLINE void AddMembraneResidual(
   }
 }
 
+/// @brief Adds the membrane material stiffness of the tangent @p d2psi (∂²ψ/∂ε², in the reduced
+/// layout of @ref D2PsiSVKSym2x2) and the geometric stiffness of the stress @p dpsi_da.
 template <int kBatchSize>
 MOCHI_FORCE_INLINE void AddMembraneDResidual(
     NdArray<BatchSymMatrix2x2<kBatchSize>, kTriangleNodes, kSpaceDim3> const& da_dx,
     BatchReal2x2<kBatchSize> const& dpsi_da,
+    BatchSymMatrix3x3<kBatchSize> d2psi,
     BatchReal2x2<kBatchSize> const& AInv,
     BatchReal<kBatchSize> referenceArea,
-    BatchReal<kBatchSize> lambda,
-    BatchReal<kBatchSize> mu,
     bool projectPsd,
     NdArray<BatchReal<kBatchSize>, kBendingStencilDofs * kBendingStencilDofs>& outDRes) {
   using V = BatchReal<kBatchSize>;
   using V2x2 = BatchReal2x2<kBatchSize>;
 
   // Material stiffness: pre-absorb scale = 0.25 * area (two factors of 0.5 from dε/da).
-  BatchSymMatrix3x3<kBatchSize> d2psi = D2PsiSVKSym2x2<kBatchSize>(AInv, lambda, mu);
   d2psi *= V{0.25_r} * referenceArea;
   for (int trialNode = 0; trialNode < kTriangleNodes; ++trialNode) {
     NdArray<BatchSymMatrix2x2<kBatchSize>, kSpaceDim3> tangentApplied MOCHI_NO_INIT;
@@ -814,6 +927,10 @@ MOCHI_FORCE_INLINE void AddBendingDResidual(
 ///   compression, its energy continues linearly in 1/tr(C⁻¹) and its stiffness saturates, to avoid
 ///   overflow; the residual stays the exact derivative of the energy unless tr C or det A
 ///   underflows.
+/// @param[in] membraneStrainStiffeningStiffness  Stiffness k ≥ 0 of the membrane strain-stiffening
+///   energy k·Σᵢ⟨εᵢ⟩³ per unit reference area [Pa·m], with eigenvalues εᵢ of the mixed membrane
+///   strain; skipped when zero. It is convex in the deformation, so its exact stiffness is PSD, and
+///   it is excluded from stiffness damping.
 /// @param[in] projectPsd  If true, project membrane geometric stiffness to be PSD.
 /// @param[in] stiffnessDampingFactor  β/dt factor for stiffness damping (dimensionless). Unified
 ///   into the elastic response by scaling the material stiffnesses to (1+factor)·k and using
@@ -833,6 +950,7 @@ bool ShellWork(
     real bendingAlpha,
     real bendingBeta,
     real membraneCollapseBarrierStiffness,
+    real membraneStrainStiffeningStiffness,
     bool projectPsd,
     real stiffnessDampingFactor = 0_r,
     NdArray<BatchReal<kBatchSize>, kBendingStencilDofs> const* stageStartDisp = nullptr);

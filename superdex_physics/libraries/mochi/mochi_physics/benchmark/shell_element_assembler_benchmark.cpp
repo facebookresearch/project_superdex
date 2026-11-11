@@ -195,6 +195,7 @@ static void ShellElementAssemblerBenchmark(
         kBendingAlpha,
         kBendingBeta,
         /*membraneCollapseBarrierStiffness*/ 0_r,
+        /*membraneStrainStiffeningStiffness*/ 0_r,
         kDefaultGravity,
         kShellDensity,
         predTarget.GetConstSpan(),

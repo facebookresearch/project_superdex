@@ -214,6 +214,7 @@ static void BenchmarkShellWork(benchmark::State& state, BenchmarkMode mode, Batc
         data.bendingAlpha,
         data.bendingBeta,
         /*membraneCollapseBarrierStiffness*/ 0_r,
+        /*membraneStrainStiffeningStiffness*/ 0_r,
         projectPsd);
   };
 

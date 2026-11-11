@@ -74,6 +74,7 @@ template <typename TriElementT>
     real bendingAlpha,
     real bendingBeta,
     real membraneCollapseBarrierStiffness,
+    real membraneStrainStiffeningStiffness,
     Real3 gravity,
     real density,
     Span<real const> predTarget,
@@ -215,6 +216,7 @@ template <typename TriElementT>
         bendingAlpha,
         bendingBeta,
         membraneCollapseBarrierStiffness,
+        membraneStrainStiffeningStiffness,
         projectPsd,
         stiffnessDampingFactor,
         hasStiffnessDamping ? &stageStartDispBatch : nullptr);
@@ -432,6 +434,7 @@ void InitializeOnce(entt::registry& reg);
 //  - massDampingCoefficient >= 0.
 //  - stiffnessDampingCoefficient >= 0.
 //  - membraneCollapseBarrierScale >= 0.
+//  - membraneStrainStiffeningScale >= 0.
 void ValidateShellMaterialParams(experimental::ShellMaterialParams const& params, Error& error);
 
 } // namespace mochi::shell
