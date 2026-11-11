@@ -22,7 +22,8 @@
 #include <mochi_core/test/mochi_test_helpers.h>
 #include <mochi_core/utils/constants.h>
 #include <mochi_core/utils/rigid_body_utils.h>
-#include <vector>
+
+#include <limits>
 
 using namespace mochi;
 using namespace mochi::articulated;
@@ -108,18 +109,17 @@ struct ArticulatedBodyBundle {
     return RandomColumnVector(props.reducedDofsDim);
   }
 
+  ArticulatedJacobian ComputeCompactJacobian() const {
+    ArticulatedJacobian result(parents, dofInfo);
+    result.Update(jointAxes, restTransforms, worldFromRoot, jointTransforms, linkTransforms);
+    return result;
+  }
+
+  // NaN-filled first, so that the tests check that ToDense overwrites every entry.
   RowMatrix<real> ComputeJacobian() const {
     RowMatrix<real> result(props.fullDofsDim, props.reducedDofsDim);
-    Jacobian(
-        jointTypes,
-        parents,
-        jointAxes,
-        dofInfo,
-        restTransforms,
-        worldFromRoot,
-        jointTransforms,
-        linkTransforms,
-        result);
+    result.SetConstant(std::numeric_limits<real>::quiet_NaN());
+    ComputeCompactJacobian().ToDense(result);
     return result;
   }
 
@@ -269,16 +269,9 @@ static void FlatJacobian(
     Span<TransformRT const> linkTransformsRef,
     // Flat Jacobian
     RowMatrixView<real> outFlatJacobian) {
-  Jacobian(
-      jointTypes,
-      parents,
-      jointAxes,
-      dofInfo,
-      restTransforms,
-      worldFromRoot,
-      jointTransforms,
-      linkTransforms,
-      outFlatJacobian);
+  ArticulatedJacobian jacobian(parents, dofInfo);
+  jacobian.Update(jointAxes, restTransforms, worldFromRoot, jointTransforms, linkTransforms);
+  jacobian.ToDense(outFlatJacobian);
   ColumnVector<real> pose(GetReducedPoseSize(poseInfo));
   ColumnVector<real> poseRef(GetReducedPoseSize(poseInfo));
   ColumnVector<real> poseDelta(GetReducedDofsSize(dofInfo));
@@ -394,6 +387,9 @@ static void CreateComplexBody(ArticulatedBodyBundle& bundle) {
   bundle.AddJoint(7, ArticulatedJointType::Prismatic);
   bundle.AddJoint(8, ArticulatedJointType::Free);
   bundle.AddJoint(9, ArticulatedJointType::Revolute);
+  // Second root, without DoFs
+  bundle.AddJoint(-1, ArticulatedJointType::Hard);
+  bundle.AddJoint(11, ArticulatedJointType::Revolute);
   bundle.ApplyRandomDeltaPose();
 }
 
@@ -679,6 +675,7 @@ TEST(ArticulatedBody, Jacobian_TransposeContract) {
   ArticulatedBodyBundle bundle;
   CreateComplexBody(bundle);
 
+  ArticulatedJacobian const compactJacobian = bundle.ComputeCompactJacobian();
   RowMatrix<real> jacobian = bundle.ComputeJacobian();
 
   // Randomize contract data
@@ -687,25 +684,33 @@ TEST(ArticulatedBody, Jacobian_TransposeContract) {
 
   // Contract brute-force
   ColumnVector<real> gradientContracted = gradientContractedBF.Duplicate();
+  ColumnVector<real> gradientContractedByLink = gradientContractedBF.Duplicate();
   for (int d = 0; d < bundle.props.numLinks * RigidSize::kDAll; d++) {
     for (int i = 0; i < bundle.props.reducedDofsDim; i++) {
       gradientContractedBF[i] += jacobian(d, i) * contractedVector[d];
     }
   }
 
-  // Contract using the articulated reverse pass.
-  JacobianTransposeContract(
-      bundle.dofInfo,
-      bundle.parents,
-      bundle.linkTransforms,
-      contractedVector,
-      jacobian,
-      gradientContracted,
-      ColumnVectorView<real>{});
+  // Contract using the articulated reverse pass, and link by link.
+  compactJacobian.AddTransposeProduct(contractedVector, gradientContracted);
+  for (int link = 0; link < bundle.props.numLinks; ++link) {
+    compactJacobian.AddLinkTransposeProduct(
+        link,
+        contractedVector.Slice<RigidSize::kDAll>(RigidSize::kDAll * link, RigidSize::kDAll),
+        gradientContractedByLink);
+  }
 
   // Compare
   real tol = sizeof(real) == sizeof(float) ? 1e-1_r : 1e-3_r;
   ExpectVectorsNear(gradientContractedBF, gradientContracted, tol);
+  ExpectVectorsNear(gradientContractedBF, gradientContractedByLink, tol);
+
+  // Apply overwrites its output, which starts as NaN.
+  ColumnVector<real> const reducedVector = bundle.RandomColumnVector(bundle.props.reducedDofsDim);
+  ColumnVector<real> product(bundle.props.fullDofsDim);
+  product.SetConstant(std::numeric_limits<real>::quiet_NaN());
+  compactJacobian.Apply(reducedVector, product);
+  ExpectVectorsNear(ColumnVector<real>(jacobian * reducedVector), product, tol);
 }
 
 TEST(ArticulatedBody, Jacobian_TransposeContract_SubtreeGradient) {
@@ -713,31 +718,17 @@ TEST(ArticulatedBody, Jacobian_TransposeContract_SubtreeGradient) {
   CreateComplexBody(bundle);
   int const numLinks = bundle.props.numLinks;
 
-  RowMatrix<real> jacobian = bundle.ComputeJacobian();
+  ArticulatedJacobian const jacobian = bundle.ComputeCompactJacobian();
   ColumnVector<real> fullGradient = bundle.RandomColumnVector(bundle.props.fullDofsDim);
 
   ColumnVector<real> expectedReduced(bundle.props.reducedDofsDim);
   expectedReduced.SetZero();
-  JacobianTransposeContract(
-      bundle.dofInfo,
-      bundle.parents,
-      bundle.linkTransforms,
-      fullGradient,
-      jacobian,
-      expectedReduced,
-      ColumnVectorView<real>{});
+  jacobian.AddTransposeProduct(fullGradient, expectedReduced);
 
   ColumnVector<real> reduced(bundle.props.reducedDofsDim);
   reduced.SetZero();
   ColumnVector<real> subtreeGradient(bundle.props.fullDofsDim);
-  JacobianTransposeContract(
-      bundle.dofInfo,
-      bundle.parents,
-      bundle.linkTransforms,
-      fullGradient,
-      jacobian,
-      reduced,
-      subtreeGradient);
+  jacobian.AddTransposeProduct(fullGradient, reduced, subtreeGradient);
   ExpectVectorsNear(expectedReduced, reduced, 0_r);
 
   // Brute force: sum of [force; torque] of every descendant, with torque moved to the link.

@@ -188,12 +188,12 @@ struct CArticulatedInertiaParams : public std::vector<real>, NoCopy {};
 struct CArticulatedJointFrictionParams : public std::vector<ArticulatedJointFrictionParams>,
                                          NoCopy {};
 
-// Jacobian of link transforms wrt joint dofs. It is expressed in Lie algebra for 3D rotations.
+// Jacobian of the links wrt the joint DoFs.
 struct CArticulatedJacobian : public NoCopy {
-  RowMatrix<real> value;
+  ArticulatedJacobian value;
 
   MOCHI_DECLARE_MOVE(CArticulatedJacobian);
-  explicit CArticulatedJacobian(RowMatrix<real>&& valueIn) : value(std::move(valueIn)) {}
+  explicit CArticulatedJacobian(ArticulatedJacobian&& valueIn) : value(std::move(valueIn)) {}
 };
 
 // Stores pointers to joint-limit constraints
@@ -204,19 +204,16 @@ struct CArticulatedCycleJoints : public std::vector<ConstraintHandle>, NoCopy {}
 
 // Components registered to an articulated rigid actor
 struct CArticulatedEntity : public NoCopy {
-  CArticulatedEntity(entt::entity e) : entity(e) {}
+  CArticulatedEntity(entt::entity e, int linkIndexIn) : entity(e), linkIndex(linkIndexIn) {}
   entt::entity entity;
+  int linkIndex; // Index of the link in the articulated actor
 };
 
-// Jacobian of link transform wrt joint dofs. It stores the rows of CArticulatedJacobian
-// corresponding to a link, and only the non-zero columns (as values and dofs).
-struct CArticulatedRigidJacobian : public NoCopy {
+// A link actor's rows of the articulated Jacobian, which Actor::GetArticulatedJacobian fills at
+// each call. Empty until the first call. The getter's span survives entt moving the component,
+// because a move keeps the matrix's heap buffer.
+struct CArticulatedLinkJacobianRows : public NoCopy {
   RowMatrix<real, RigidSize::kDAll> value;
-  std::vector<int> dofs;
-
-  MOCHI_DECLARE_MOVE(CArticulatedRigidJacobian);
-  CArticulatedRigidJacobian(RowMatrix<real, RigidSize::kDAll>&& valueIn, Span<int const> dofsIn)
-      : value(std::move(valueIn)), dofs(dofsIn.begin(), dofsIn.end()) {}
 };
 
 struct CTransmissions : public NoCopy {
@@ -501,8 +498,7 @@ void SetPoseControllerParams(
     Error& error);
 
 // Query the force of the pose controller
-Span<real const>
-GetPoseControllerForce(entt::registry& reg, entt::entity e, Scene const* scene, Error& error);
+Span<real const> GetPoseControllerForce(entt::registry& reg, entt::entity e, Error& error);
 
 // To be run pre-simulation step for all articulated body actors
 void PreStepArticulatedBodyActorAsync(entt::registry& reg, entt::entity e);
@@ -528,7 +524,6 @@ void UpdateJacobiansInputPipeline(entt::registry& reg, Span<entt::entity const> 
 template <TimeStep kTimeStep>
 void UpdateJacobianState(
     ecs::Included<TagArticulatedActor>,
-    CArticulatedParents const& parents,
     CArticulatedRestTransforms const& restTransforms,
     CRootTransform const& rootTransform,
     CArticulatedBodyShape const& bodyShape,
@@ -536,17 +531,12 @@ void UpdateJacobianState(
     CArticulatedLinkTransforms<kTimeStep> const& linkTransforms,
     CArticulatedJacobian& outJacobian) {
   MOCHI_PROFILE_SCOPE();
-  auto const* joints = bodyShape.shape->GetJointsData();
-  Jacobian(
-      joints->jointTypes,
-      parents,
-      joints->jointAxes,
-      joints->dofInfo,
+  outJacobian.value.Update(
+      bodyShape.shape->GetJointsData()->jointAxes,
       restTransforms,
       rootTransform.worldFromLocal,
       jointTransforms,
-      linkTransforms,
-      outJacobian.value);
+      linkTransforms);
 }
 
 /*
@@ -751,7 +741,7 @@ void EntityPostNewIncrement(
 void EntityAssemble(
     AssemblyParams const& params,
     ecs::RequiredTag<TagArticulatedActor>,
-    ecs::PartialRegistry<CActorSnle const, CDofOffset const, CArticulatedRigidJacobian const> reg,
+    ecs::PartialRegistry<CActorSnle const, CDofOffset const> reg,
     ecs::OptionalTag<TagUseNewtonEulerInertia> useNewtonEulerInertia,
     CArticulatedProps const& props,
     CGroupMembers const& groupMembers,
@@ -785,11 +775,8 @@ void ProjectFullResidual(
     AssemblyParams const& params,
     ecs::RequiredTag<TagArticulatedActor>,
     entt::registry& reg,
-    CArticulatedBodyShape const& bodyShape,
-    CArticulatedParents const& parents,
     CArticulatedRestTransforms const& restTransforms,
     CArticulatedLinkTransforms<TimeStep::Current> const& currLinkTxs,
-    CArticulatedLinkTransforms<TimeStep::StageStart> const& stageStartLinkTxs,
     CArticulatedJacobian const& jacobian,
     CBlendedComposition const* blendedComposition,
     CArticulatedAsyncContactLinkResidual* asyncContactLinkResidual,
@@ -920,7 +907,7 @@ void TransportGradient(
  */
 template <GradTarget kGradTarget>
 void ProjectContactForceAdjoints(
-    ecs::PartialRegistry<CDofOffset const, CDiffContactGrad<kGradTarget> const> reg,
+    ecs::PartialRegistry<CDiffContactGrad<kGradTarget> const> reg,
     ecs::RequiredTag<TagArticulatedActor>,
     CGroupMembers const& groupMembers,
     CArticulatedJacobian const& jacobian,
@@ -942,30 +929,20 @@ Systems for an articulated rigid
 */
 namespace articulated::rigid {
 
-/*
- * System to update Jacobian
- */
-void EntityUpdateJacobian(
-    ecs::Included<TagArticulatedLinkActor>,
-    ecs::PartialRegistry<CArticulatedJacobian const> reg,
-    CArticulatedEntity const& entArticulated,
-    CDofOffset const& dofOffset,
-    CActorDofInfo const& numDofs,
-    CArticulatedRigidJacobian& outJacobian);
-
 // Compute the contact Jacobians as colliding actor
 template <TimeStep kTimeStep>
 MOCHI_FORCE_INLINE void SetupCollidingJacobians(
     ecs::RequiredTag<TagArticulatedLinkActor>,
     CRigidState<kTimeStep> const& state,
     CRootTransform const& transform,
-    ecs::PartialRegistry<CDofOffset const> reg,
+    ecs::PartialRegistry<CDofOffset const, CArticulatedJacobian const> reg,
     CArticulatedEntity const& entArticulated,
     CDofOffset const& linkDofOffset,
-    CArticulatedRigidJacobian const& jacobianBody,
     CContactSamples<TimeStep::Current> const& samples, // Not templatized, they are constant
     CCollJacs<CollRole::Colliding>& outJacobians) {
   static_assert(kTimeStep == TimeStep::Current || kTimeStep == TimeStep::StageStart);
+  auto const linkJacobian = reg.get<CArticulatedJacobian const>(entArticulated.entity)
+                                .value.Link(entArticulated.linkIndex);
   mochi::rigid::SetupCollidingJacobiansImpl(
       state.value,
       kTimeStep == TimeStep::Current ? transform.worldFromLocal
@@ -973,8 +950,8 @@ MOCHI_FORCE_INLINE void SetupCollidingJacobians(
       reg.get<CDofOffset const>(entArticulated.entity),
       samples,
       outJacobians,
-      jacobianBody.value,
-      jacobianBody.dofs,
+      linkJacobian.block,
+      linkJacobian.dofs,
       linkDofOffset.dofsOffset);
 }
 
@@ -983,19 +960,20 @@ template <TimeStep kTimeStep>
 MOCHI_FORCE_INLINE void SetupColliderJacobians(
     ecs::RequiredTag<TagArticulatedLinkActor>,
     CRigidState<kTimeStep> const& state,
-    ecs::PartialRegistry<CDofOffset const> reg,
+    ecs::PartialRegistry<CDofOffset const, CArticulatedJacobian const> reg,
     CArticulatedEntity const& entArticulated,
     CDofOffset const& linkDofOffset,
-    CArticulatedRigidJacobian const& jacobianBody,
     CRigidBodyInertia const& rigidInertia,
     CCollJacs<CollRole::Collider>& outJacobians) {
+  auto const linkJacobian = reg.get<CArticulatedJacobian const>(entArticulated.entity)
+                                .value.Link(entArticulated.linkIndex);
   mochi::rigid::SetupColliderJacobiansImpl(
       state.value,
       reg.get<CDofOffset const>(entArticulated.entity),
       rigidInertia,
       outJacobians,
-      jacobianBody.value,
-      jacobianBody.dofs,
+      linkJacobian.block,
+      linkJacobian.dofs,
       linkDofOffset.dofsOffset);
 }
 

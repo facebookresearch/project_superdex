@@ -1106,21 +1106,11 @@ using RodConstraintReg = ecs::PartialRegistry<
     CTimeIntegratorState const>;
 
 // Partial registry for global assembly that requires link actor lookups
-using LinkActorAssemblyReg = ecs::
-    PartialRegistry<CArticulatedEntity const, CArticulatedRigidJacobian const, CDofOffset const>;
+using LinkActorAssemblyReg =
+    ecs::PartialRegistry<CArticulatedEntity const, CArticulatedJacobian const, CDofOffset const>;
 
 // Empty target type, used for constraints that do not have a target value.
 struct NoTarget {};
-
-// Helper to get the parent articulated actor from a partial registry
-entt::entity TryGetParentArticulatedActorLocal(
-    LinkActorAssemblyReg const& reg,
-    entt::entity actor) {
-  if (auto const* articulatedEntity = reg.try_get<CArticulatedEntity const>(actor)) {
-    return articulatedEntity->entity;
-  }
-  return entt::null;
-}
 
 // Traits to map ConstraintType to its PartialRegistry type and target type
 template <ConstraintType kType>
@@ -1759,7 +1749,7 @@ static void AssembleGlobalObjResDRes(
       auto const& actorDofs = info.actorDofs[o];
       int const numActorDofs = isize(actorDofs);
       int const actorDofsOffset = reg.get<CDofOffset const>(actor).dofsOffset;
-      if (TryGetParentArticulatedActorLocal(reg, actor) != entt::null) {
+      if (reg.all_of<CArticulatedEntity>(actor)) {
         // Articulations without reduced DoFs have no link-space residual.
         if (auto* outLinkResidual = outLinkResiduals[o]) {
           for (int d = 0; d < numActorDofs; d += 3) {
@@ -1789,13 +1779,13 @@ static void AssembleGlobalObjResDRes(
     //  J := d(constraint DoFs) / d(compound DoFs)
     //
     // for brevity. In the special case of a constraint on all rigid-body DoFs of a link actor, this
-    // would be the link's ArticulatedRigidJacobian.
+    // would be the link's block of the articulated Jacobian.
 
     auto const& allCompoundDofs = sparsity.resIndices;
     int const compoundDofsSize = isize(allCompoundDofs);
 
     // Build the Jacobian matrix on the fly using current link Jacobian values
-    // J has shape (compoundDofsSize x kDofsSize) and maps from constraint DoFs to compound DoFs
+    // J has shape (kDofsSize x compoundDofsSize) and maps from compound DoFs to constraint DoFs
     RowMatrix<real> J = RowMatrix<real>::Zero(kDofsSize, compoundDofsSize);
 
     int constraintDofOffset = 0;
@@ -1804,11 +1794,10 @@ static void AssembleGlobalObjResDRes(
       entt::entity actor = info.actors[o];
       auto const& actorDofs = info.actorDofs[o];
       int numActorDofs = isize(actorDofs);
-      entt::entity parentArticulated = TryGetParentArticulatedActorLocal(reg, actor);
-
-      if (parentArticulated != entt::null) {
+      if (auto const* articulatedEntity = reg.try_get<CArticulatedEntity const>(actor)) {
         // This actor is a link. Map through the link Jacobian.
-        auto const& linkJacobian = reg.get<CArticulatedRigidJacobian const>(actor);
+        auto const linkJacobian = reg.get<CArticulatedJacobian const>(articulatedEntity->entity)
+                                      .value.Link(articulatedEntity->linkIndex);
         int const numLinkReducedDofs = isize(linkJacobian.dofs);
 
         // For each actor DoF used by the constraint, find the corresponding row
@@ -1816,7 +1805,7 @@ static void AssembleGlobalObjResDRes(
         for (int localIdx = 0; localIdx < numActorDofs; ++localIdx) {
           int const actorDof = actorDofs[localIdx];
           J.Row(constraintDofOffset + localIdx).MiddleCols(compoundDofOffset, numLinkReducedDofs) =
-              linkJacobian.value.Row(actorDof);
+              linkJacobian.block.Row(actorDof);
         }
         compoundDofOffset += numLinkReducedDofs;
       } else {

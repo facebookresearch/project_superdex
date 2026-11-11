@@ -22,7 +22,6 @@
 #include "mochi_solve.h"
 #include "mochi_step.h"
 
-#include <mochi_core/articulated_body/articulated_body_hessian.h>
 #include <mochi_core/linear_algebra/krylov_interop.h>
 #include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/file_utils.h>
@@ -108,9 +107,9 @@ void NewtonEulerTermsImpl::Compute(
   MOCHI_DEFER(_scene->SetSolverParams(solverParamsSaved, ErrorAssert{}));
 
   // Jacobian
-  auto const& artJacobian = reg.get<CArticulatedJacobian const>(entity).value;
+  auto const& jacobian = reg.get<CArticulatedJacobian const>(entity).value;
   if (!outJ.empty()) {
-    AsView(outJ) = ColumnVectorView<real const>(artJacobian.data(), isize(artJacobian));
+    jacobian.ToDense(RowMatrixView<real>(outJ.data(), numLinks * RigidSize::kDAll, numDofs));
   }
 
   // Mass matrix and Centrifugal and Coriolis force
@@ -139,14 +138,13 @@ void NewtonEulerTermsImpl::Compute(
   {
     auto JtF = AsView(outJtF);
     JtF.SetZero();
-    for (auto const& e : groupMembers.actors) {
-      auto const& inertia = reg.get<CRigidBodyInertia const>(e);
-      auto const& bodyDofOffset = reg.get<CDofOffset const>(e);
+    for (int link = 0; link < numLinks; ++link) {
+      auto const& inertia = reg.get<CRigidBodyInertia const>(groupMembers.actors[link]);
 
-      Vec4r mg = inertia.GetMass() * ToSimd(gravitySaved);
-      auto jacBody =
-          artJacobian.MiddleRows<RigidSize::kDTrans>(bodyDofOffset.dofsOffset, RigidSize::kDTrans);
-      JtF += jacBody.Transpose() * AsColumnVectorView<3>(mg);
+      Vec4r const mg = inertia.GetMass() * ToSimd(gravitySaved);
+      ColumnVector<real, RigidSize::kDAll> gravityWrench{};
+      gravityWrench.TopRows<RigidSize::kDTrans>(RigidSize::kDTrans) = AsColumnVectorView<3>(mg);
+      jacobian.AddLinkTransposeProduct(link, gravityWrench, JtF);
     }
   }
 }

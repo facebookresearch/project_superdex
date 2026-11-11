@@ -35,10 +35,9 @@ template <typename DiscretizationT>
 void SetupCollidingJacobians(
     ecs::Included<TagArticulatedActor>,
     ecs::Excluded<TagBlendedActor>,
-    ecs::PartialRegistry<CArticulatedRigidJacobian const, CDofOffset const> reg,
     DiscretizationT const& discretization,
     CDofOffset const& dofOffset,
-    CGroupMembers const& groupMembers,
+    CArticulatedJacobian const& jacobian,
     CArticulatedLinkTransforms<TimeStep::Current> const& linkTransforms,
     CArticulatedSkinningData const& skinningData,
     CContactPartitions const& contactPartitions,
@@ -57,8 +56,7 @@ void SetupCollidingJacobians(
     ecs::PartialRegistry<
         CDofOffset const,
         CArticulatedLinkTransforms<TimeStep::Current> const,
-        CArticulatedRigidJacobian const,
-        CGroupMembers const> reg,
+        CArticulatedJacobian const> reg,
     CSkinnedComposition const& composition,
     CDofOffset const& dofOffset,
     CContactPartitions const& contactPartitions,
@@ -79,11 +77,10 @@ namespace blended {
 template <typename DiscretizationT>
 void SetupCollidingJacobians(
     ecs::Included<TagBlendedActor>,
-    ecs::PartialRegistry<CDofOffset const, rom::CRomJacobian const, CArticulatedRigidJacobian const>
-        reg,
+    ecs::PartialRegistry<CDofOffset const, rom::CRomJacobian const> reg,
     CBlendedComposition const& composition,
-    CGroupMembers const& groupMembers,
     CDofOffset const& dofOffset,
+    CArticulatedJacobian const& jacobian,
     DiscretizationT const& discretization,
     CBlendingData const& blendingData,
     CContactPartitions const& contactPartitions,

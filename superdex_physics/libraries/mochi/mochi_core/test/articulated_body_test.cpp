@@ -1121,6 +1121,21 @@ static void JacobianFD(
   outJacobian /= (2_r * eps);
 }
 
+// Dense Jacobian, built through ArticulatedJacobian.
+static RowMatrix<real> DenseJacobian(
+    Span<int const> parents,
+    JointLayout const& layout,
+    Span<ArticulatedRestTransform const> restTransforms,
+    TransformRT const& worldFromRoot,
+    Span<TransformRT const> jointTransforms,
+    Span<TransformRT const> linkTransforms) {
+  ArticulatedJacobian jacobian(parents, layout.dofs);
+  jacobian.Update(layout.axes, restTransforms, worldFromRoot, jointTransforms, linkTransforms);
+  RowMatrix<real> dense(RigidSize::kDAll * jacobian.NumLinks(), jacobian.NumDofs());
+  jacobian.ToDense(dense);
+  return dense;
+}
+
 /*************************************************************************************************/
 TEST(ArticulatedBody, Jacobian_OneLink) {
   // Create test config with 1 link
@@ -1155,17 +1170,8 @@ TEST(ArticulatedBody, Jacobian_OneLink) {
   auto jac_fd = RowMatrix<real>::Zero(props.fullDofsDim, props.reducedDofsDim);
   JacobianFD(reducedPose, props, parents, restTransforms, worldFromRoot, layout, jac_fd);
 
-  auto jac = RowMatrix<real>::Zero(props.fullDofsDim, props.reducedDofsDim);
-  Jacobian(
-      layout.types,
-      parents,
-      layout.axes,
-      layout.dofs,
-      restTransforms,
-      worldFromRoot,
-      jointTransforms,
-      linkTransforms,
-      jac);
+  auto jac = DenseJacobian(
+      parents, layout, restTransforms, worldFromRoot, jointTransforms, linkTransforms);
 
   real rtol = 1.0e-3_r;
   Matrix<real> diff = jac - jac_fd;
@@ -1216,17 +1222,8 @@ TEST(ArticulatedBody, Jacobian_TwoLink) {
   NdArray<real, 6, 6> dx1_dq0_fd = ToNdArray<6, 6>(jac_fd.Block(6, 0, 6, 6)); // For debugging
   NdArray<real, 6, 3> dx1_dq1_fd = ToNdArray<6, 3>(jac_fd.Block(6, 6, 6, 3)); // For debugging
 
-  auto jac = RowMatrix<real>::Zero(props.fullDofsDim, props.reducedDofsDim);
-  Jacobian(
-      layout.types,
-      parents,
-      layout.axes,
-      layout.dofs,
-      restTransforms,
-      worldFromRoot,
-      jointTransforms,
-      linkTransforms,
-      jac);
+  auto jac = DenseJacobian(
+      parents, layout, restTransforms, worldFromRoot, jointTransforms, linkTransforms);
 
   NdArray<real, 6, 6> dx0_dq0 = ToNdArray<6, 6>(jac.Block(0, 0, 6, 6)); // For debugging
   NdArray<real, 6, 6> dx1_dq0 = ToNdArray<6, 6>(jac.Block(6, 0, 6, 6)); // For debugging
@@ -1287,17 +1284,8 @@ TEST(ArticulatedBody, Jacobian_TwoLink_RevoluteJoint) {
   NdArray<real, 6, 6> dx1_dq0_fd = ToNdArray<6, 6>(jac_fd.Block(6, 0, 6, 6)); // For debugging
   NdArray<real, 6, 1> dx1_dq1_fd = ToNdArray<6, 1>(jac_fd.Block(6, 6, 6, 1)); // For debugging
 
-  auto jac = RowMatrix<real>::Zero(props.fullDofsDim, props.reducedDofsDim);
-  Jacobian(
-      layout.types,
-      parents,
-      layout.axes,
-      layout.dofs,
-      restTransforms,
-      worldFromRoot,
-      jointTransforms,
-      linkTransforms,
-      jac);
+  auto jac = DenseJacobian(
+      parents, layout, restTransforms, worldFromRoot, jointTransforms, linkTransforms);
 
   NdArray<real, 6, 6> dx0_dq0 = ToNdArray<6, 6>(jac.Block(0, 0, 6, 6)); // For debugging
   NdArray<real, 6, 6> dx1_dq0 = ToNdArray<6, 6>(jac.Block(6, 0, 6, 6)); // For debugging
@@ -1374,17 +1362,8 @@ TEST(ArticulatedBody, Jacobian_ThreeLink) {
   NdArray<real, 6, 3> dx2_dq1_fd = ToNdArray<6, 3>(jac_fd.Block(12, 6, 6, 3)); // For debugging
   NdArray<real, 6, 3> dx2_dq2_fd = ToNdArray<6, 3>(jac_fd.Block(12, 9, 6, 3)); // For debugging
 
-  auto jac = RowMatrix<real>::Zero(props.fullDofsDim, props.reducedDofsDim);
-  Jacobian(
-      layout.types,
-      parents,
-      layout.axes,
-      layout.dofs,
-      restTransforms,
-      worldFromRoot,
-      jointTransforms,
-      linkTransforms,
-      jac);
+  auto jac = DenseJacobian(
+      parents, layout, restTransforms, worldFromRoot, jointTransforms, linkTransforms);
   NdArray<real, 6, 6> dx0_dq0 = ToNdArray<6, 6>(jac.Block(0, 0, 6, 6)); // For debugging
   NdArray<real, 6, 6> dx1_dq0 = ToNdArray<6, 6>(jac.Block(6, 0, 6, 6)); // For debugging
   NdArray<real, 6, 6> dx2_dq0 = ToNdArray<6, 6>(jac.Block(12, 0, 6, 6)); // For debugging
@@ -1472,17 +1451,8 @@ TEST(ArticulatedBody, Jacobian_ThreeLink_Parallel) {
   NdArray<real, 6, 3> dx1_dq1_fd = ToNdArray<6, 3>(jac_fd.Block(6, 6, 6, 3)); // For debugging
   NdArray<real, 6, 3> dx2_dq2_fd = ToNdArray<6, 3>(jac_fd.Block(12, 9, 6, 3)); // For debugging
 
-  auto jac = RowMatrix<real>::Zero(props.fullDofsDim, props.reducedDofsDim);
-  Jacobian(
-      layout.types,
-      parents,
-      layout.axes,
-      layout.dofs,
-      restTransforms,
-      worldFromRoot,
-      jointTransforms,
-      linkTransforms,
-      jac);
+  auto jac = DenseJacobian(
+      parents, layout, restTransforms, worldFromRoot, jointTransforms, linkTransforms);
   NdArray<real, 6, 6> dx0_dq0 = ToNdArray<6, 6>(jac.Block(0, 0, 6, 6)); // For debugging
   NdArray<real, 6, 6> dx1_dq0 = ToNdArray<6, 6>(jac.Block(6, 0, 6, 6)); // For debugging
   NdArray<real, 6, 6> dx2_dq0 = ToNdArray<6, 6>(jac.Block(12, 0, 6, 6)); // For debugging
@@ -1508,8 +1478,8 @@ TEST(ArticulatedBody, Jacobian_ThreeLink_Parallel) {
   EXPECT_LE(diff.Norm(), rtol * jac_fd.Norm());
 }
 
-TEST(ArticulatedBody, BoneToReducedDofsMap) {
-  // Create test config with 4 bones in a mixed arrangement
+TEST(ArticulatedBody, JacobianLinkDofs) {
+  // Create test config with 4 links in a mixed arrangement
   //        o
   //        |
   //   o----o----o
@@ -1520,14 +1490,14 @@ TEST(ArticulatedBody, BoneToReducedDofsMap) {
        ArticulatedJointType::Revolute,
        ArticulatedJointType::Prismatic},
       {kv0, kv0, kvx, kvy});
-  ReducedDofsMap bonesToReducedDofsMap = CreateBonesToReducedDofsMap(parents, layout.dofs);
-  std::vector<std::vector<int>> expectedBoneDofs = {
+  ArticulatedJacobian const jacobian(parents, layout.dofs);
+  std::vector<std::vector<int>> expectedLinkDofs = {
       {0, 1, 2, 3, 4, 5},
       {0, 1, 2, 3, 4, 5, 6, 7, 8},
       {0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
       {0, 1, 2, 3, 4, 5, 6, 7, 8, 10}};
   for (auto i = 0; i < parents.size(); ++i) {
-    EXPECT_SPAN_EQ(bonesToReducedDofsMap.dofs[i], expectedBoneDofs[i]);
+    EXPECT_SPAN_EQ(jacobian.Link(i).dofs, expectedLinkDofs[i]);
   }
 }
 

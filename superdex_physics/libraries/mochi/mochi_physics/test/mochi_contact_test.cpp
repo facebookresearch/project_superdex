@@ -41,6 +41,7 @@
 #include <mochi_physics/src/mochi_soft.h>
 #include <mochi_physics/src/mochi_soft_rom_linear_systems.h>
 #include <mochi_physics/src/mochi_soft_rom_systems.h>
+#include <mochi_physics/src/mochi_soft_skinned.h>
 #include <mochi_physics/src/mochi_solve.h>
 #include <mochi_physics/src/mochi_step.h>
 
@@ -2325,6 +2326,7 @@ class MochiSoftSkinnedStaticContact : public MochiContactTestBase {
   using Mode = ThreeBoneSoftSkinnedMode;
 
   entt::entity _articulated = entt::null;
+  entt::entity _soft = entt::null;
   ColumnVector<real> _pose;
   ColumnVector<real> _softState;
   Mode _mode;
@@ -2441,8 +2443,6 @@ class MochiSoftSkinnedStaticContact : public MochiContactTestBase {
         &rom::linear::ResolveDisplacementAndJacobian</*kForceUseAllNodes = */ true>, reg, _soft);
     ecs::TryInvokeOnEntity(&rom::UpdateCurrentRomVelocity, reg, _soft);
   }
-
-  entt::entity _soft = entt::null;
 };
 
 TEST_P(MochiSoftSkinnedStaticContact, ContactAssembly) {
@@ -2463,6 +2463,21 @@ class MochiPosedSoftSkinnedStaticContact : public MochiSoftSkinnedStaticContact 
 
 TEST_P(MochiPosedSoftSkinnedStaticContact, ContactAssembly) {
   RunTest();
+
+  // The finite differences validate the dresidual only loosely (see RunTest), so validate the
+  // posed body's Jacobian wrt the joint DoFs against the chain rule through the bones. Assemble at
+  // a new skeleton pose first, so that a dense Jacobian left over from an earlier assembly fails.
+  auto const& reg = GetRegistry();
+  InitState();
+  AddToState(reg.get<CDofOffset const>(_articulated).dofsOffset, 0.01_r);
+  ComputeResponse(GradTarget::Current);
+  auto const& softJacobian = reg.get<CSoftSkinnedJacobianArticulated const>(_soft);
+  auto const& jacobian = reg.get<CArticulatedJacobian const>(_articulated).value;
+  RowMatrix<real> denseJacobian(RigidSize::kDAll * jacobian.NumLinks(), jacobian.NumDofs());
+  jacobian.ToDense(denseJacobian);
+  RowMatrix<real> const expected = softJacobian.dBones * denseJacobian;
+  real constexpr kTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-12_r : 1e-5_r;
+  EXPECT_LE(RowMatrix<real>(expected - softJacobian.dJoints).Norm(), kTol * expected.Norm());
 }
 
 INSTANTIATE_TEST_SUITE_P(

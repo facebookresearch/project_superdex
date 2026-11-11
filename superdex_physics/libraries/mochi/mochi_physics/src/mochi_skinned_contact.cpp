@@ -16,7 +16,6 @@
 
 #include "mochi_skinned_contact.h"
 
-#include "mochi_group.h"
 #include "mochi_simulation.h"
 
 #include <mochi_core/contact/contact_partition.h>
@@ -31,15 +30,13 @@
 using namespace mochi;
 using namespace mochi::dmap;
 
-namespace {
-
 // Stack size to gather the frames of all bones. Larger skeletons use the heap.
 constexpr int kMaxStackBones = 64;
 constexpr size_t kSkinningBonesStackSize =
     kMaxStackBones * sizeof(SkinningBoneFrame) + alignof(SkinningBoneFrame);
 
 // Gather the frames of all bones, indexed by bone id.
-void GatherSkinningBones(
+static void GatherSkinningBones(
     CArticulatedLinkTransforms<TimeStep::Current> const& linkTransforms,
     DSkinningTransform const& skinningTransform,
     DynamicArray<SkinningBoneFrame>& outBones) {
@@ -62,26 +59,22 @@ void GatherSkinningBones(
 // Express the rigid Jacobian slices of the bones in 'boneIds', one slice per bone from slice 0, wrt
 // the articulation DoFs through the Jacobians of their links. Then compress the indices of all
 // slices.
-void FinishJacobians(
-    ecs::PartialRegistry<CArticulatedRigidJacobian const, CDofOffset const> reg,
-    CGroupMembers const& groupMembers,
+static void FinishJacobians(
+    ArticulatedJacobian const& jacobian,
     int articulatedDofOffset,
     Span<int const> boneIds,
     Span<ContactJac> jacs) {
   MOCHI_ASSERT_VERBOSE(isize(boneIds) <= isize(jacs));
   for (int slice = 0; slice < isize(boneIds); ++slice) {
-    entt::entity const link = groupMembers.actors[boneIds[slice]];
-    auto const& linkJacobian = reg.get<CArticulatedRigidJacobian const>(link);
-    int const internalDofOffset = reg.get<CDofOffset const>(link).dofsOffset;
+    int const boneId = boneIds[slice];
+    auto const linkJacobian = jacobian.Link(boneId);
     jacs[slice].SetJacAux(
-        linkJacobian.value, articulatedDofOffset, linkJacobian.dofs, internalDofOffset);
+        linkJacobian.block, articulatedDofOffset, linkJacobian.dofs, RigidSize::kDAll * boneId);
   }
   for (auto& jac : jacs) {
     jac.CompressIndices();
   }
 }
-
-} // namespace
 
 // Write only the structure of the contact Jacobian slices of the bones in 'boneIds', one slice per
 // bone, for assembly from contact sums.
@@ -101,10 +94,9 @@ template <typename DiscretizationT>
 void articulated::compound::SetupCollidingJacobians(
     ecs::Included<TagArticulatedActor>,
     ecs::Excluded<TagBlendedActor>,
-    ecs::PartialRegistry<CArticulatedRigidJacobian const, CDofOffset const> reg,
     DiscretizationT const& discretization,
     CDofOffset const& dofOffset,
-    CGroupMembers const& groupMembers,
+    CArticulatedJacobian const& jacobian,
     CArticulatedLinkTransforms<TimeStep::Current> const& linkTransforms,
     CArticulatedSkinningData const& skinningData,
     CContactPartitions const& contactPartitions,
@@ -144,7 +136,7 @@ void articulated::compound::SetupCollidingJacobians(
             DMap<DQuad, DMapSkinning> const dmap(&dquad, &skinningMap);
             dmap.GetJac(jacData.query->sampleIndices, jacs, jacData.JacScratch());
           }
-          FinishJacobians(reg, groupMembers, dofOffset.dofsOffset, boneIds, jacs);
+          FinishJacobians(jacobian.value, dofOffset.dofsOffset, boneIds, jacs);
         });
   });
 }
@@ -153,10 +145,9 @@ void articulated::compound::SetupCollidingJacobians(
   template void articulated::compound::SetupCollidingJacobians<DISCRETIZATION_TYPE>(   \
       ecs::Included<TagArticulatedActor>,                                              \
       ecs::Excluded<TagBlendedActor>,                                                  \
-      ecs::PartialRegistry<CArticulatedRigidJacobian const, CDofOffset const>,         \
       DISCRETIZATION_TYPE const&,                                                      \
       CDofOffset const&,                                                               \
-      CGroupMembers const&,                                                            \
+      CArticulatedJacobian const&,                                                     \
       CArticulatedLinkTransforms<TimeStep::Current> const&,                            \
       CArticulatedSkinningData const&,                                                 \
       CContactPartitions const&,                                                       \
@@ -170,8 +161,7 @@ void skinned::SetupCollidingJacobians(
     ecs::PartialRegistry<
         CDofOffset const,
         CArticulatedLinkTransforms<TimeStep::Current> const,
-        CArticulatedRigidJacobian const,
-        CGroupMembers const> reg,
+        CArticulatedJacobian const> reg,
     CSkinnedComposition const& composition,
     CDofOffset const& dofOffset,
     CContactPartitions const& contactPartitions,
@@ -191,7 +181,7 @@ void skinned::SetupCollidingJacobians(
   auto const& articulatedDofOffset = reg.get<CDofOffset const>(articulated).dofsOffset;
   auto const& linkTransforms =
       reg.get<CArticulatedLinkTransforms<TimeStep::Current> const>(articulated);
-  auto const& groupMembers = reg.get<CGroupMembers const>(articulated);
+  auto const& jacobian = reg.get<CArticulatedJacobian const>(articulated).value;
   auto const& skinningTransform = skinningInfo.skinningTransform;
   MOCHI_FILO_STACK_ALLOCATOR(bonesAllocator, kSkinningBonesStackSize);
   DynamicArray<SkinningBoneFrame> bones(&bonesAllocator);
@@ -219,7 +209,7 @@ void skinned::SetupCollidingJacobians(
         DMap<DQuad, DMapSkinning, DMapSoft> const dmap(&dquad, &skinningMap, &dsoft);
         dmap.GetJac(jacData.query->sampleIndices, jacs, jacData.JacScratch());
       }
-      FinishJacobians(reg, groupMembers, articulatedDofOffset, boneIds, jacs);
+      FinishJacobians(jacobian, articulatedDofOffset, boneIds, jacs);
     });
   });
 }
@@ -227,11 +217,10 @@ void skinned::SetupCollidingJacobians(
 template <typename DiscretizationT>
 void blended::SetupCollidingJacobians(
     ecs::Included<TagBlendedActor>,
-    ecs::PartialRegistry<CDofOffset const, rom::CRomJacobian const, CArticulatedRigidJacobian const>
-        reg,
+    ecs::PartialRegistry<CDofOffset const, rom::CRomJacobian const> reg,
     CBlendedComposition const& composition,
-    CGroupMembers const& groupMembers,
     CDofOffset const& dofOffset,
+    CArticulatedJacobian const& jacobian,
     DiscretizationT const& discretization,
     CBlendingData const& blendingData,
     CContactPartitions const& contactPartitions,
@@ -269,7 +258,7 @@ void blended::SetupCollidingJacobians(
       auto jacs = jacData.PrepareJacs(isize(boneIds));
       SetupRigidStructureJacobians(
           dofOffset.dofsOffset, boneIds, jacData.query->sampleIndices, jacs);
-      FinishJacobians(reg, groupMembers, dofOffset.dofsOffset, boneIds, jacs);
+      FinishJacobians(jacobian.value, dofOffset.dofsOffset, boneIds, jacs);
       return;
     }
 
@@ -301,7 +290,7 @@ void blended::SetupCollidingJacobians(
           dmap.GetJac(jacData.query->sampleIndices, jacs, jacData.JacScratch());
         }
       }
-      FinishJacobians(reg, groupMembers, dofOffset.dofsOffset, boneIds, jacs);
+      FinishJacobians(jacobian.value, dofOffset.dofsOffset, boneIds, jacs);
     });
   });
 }
@@ -309,13 +298,10 @@ void blended::SetupCollidingJacobians(
 #define MOCHI_BLENDED_SETUP_COLLIDING_JACOBIANS_INST(DISCRETIZATION_TYPE) \
   template void blended::SetupCollidingJacobians<DISCRETIZATION_TYPE>(    \
       ecs::Included<TagBlendedActor>,                                     \
-      ecs::PartialRegistry<                                               \
-          CDofOffset const,                                               \
-          rom::CRomJacobian const,                                        \
-          CArticulatedRigidJacobian const>,                               \
+      ecs::PartialRegistry<CDofOffset const, rom::CRomJacobian const>,    \
       CBlendedComposition const&,                                         \
-      CGroupMembers const&,                                               \
       CDofOffset const&,                                                  \
+      CArticulatedJacobian const&,                                        \
       DISCRETIZATION_TYPE const&,                                         \
       CBlendingData const&,                                               \
       CContactPartitions const&,                                          \

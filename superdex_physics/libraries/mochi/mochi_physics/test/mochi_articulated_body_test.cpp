@@ -1518,7 +1518,10 @@ TEST_F(ArticulatedBodyDynamicsTest, LinkAndConstraintDResidual) {
   ecs::InvokeOnEntity<ecs::policy::AllowReadWriteSameComponent>(
       articulated::compound::EntityAssemble, reg, entity, std::cref(assemblyParams));
 
-  auto const& jacobian = reg.get<CArticulatedJacobian const>(entity).value;
+  auto const& compactJacobian = reg.get<CArticulatedJacobian const>(entity).value;
+  RowMatrix<real> jacobian(
+      RigidSize::kDAll * compactJacobian.NumLinks(), compactJacobian.NumDofs());
+  compactJacobian.ToDense(jacobian);
   Matrix<real> fullDRes = Matrix<real>::Zero(jacobian.Rows(), jacobian.Rows());
   for (auto link : reg.get<CGroupMembers const>(entity).actors) {
     int const offset = reg.get<CDofOffset const>(link).dofsOffset;
@@ -1959,6 +1962,47 @@ TEST_IF_F(MOCHI_HDF5_AND_INTERNAL, ArticulatedActorApiTest, GetArticulatedContro
 
   // Confirm the force is non-zero
   EXPECT_GT(AsConstView(forceValues).Norm(), 1e-3_r);
+
+  // Confirms that the force is the sum of the forces of the pose constraints, projected to the
+  // joint DoFs by the link Jacobians: all their rows for link translation, and the rotation rows
+  // for link rotation. Every link's Jacobian is queried before any is read, to check that its rows
+  // survive the queries of the other links.
+  auto expectConstraintForceSum = [&](Span<real const> controllerForce) {
+    DynamicArray<Span<real const>> linkJacobians;
+    for (ActorHandle const link : _actor->GetNestedLinkActors(test::ExpectOK{})) {
+      linkJacobians.push_back(_scene->GetActor(link)->GetArticulatedJacobian(test::ExpectOK{}));
+    }
+    ColumnVector<real> expectedForce = ColumnVector<real>::Zero(N);
+    for (PoseConstraintInfo const& info : _actor->GetArticulatedPoseConstraints(test::ExpectOK{})) {
+      Constraint const* constraint = _scene->GetConstraint(info.handle);
+      Span<real const> const force = constraint->GetForce(test::ExpectOK{});
+      if (info.type == PoseConstraintType::Joint) {
+        Span<int const> const dofs = constraint->GetDofIndicesForActor(0);
+        for (int i = 0; i < isize(dofs); ++i) {
+          expectedForce[dofs[i]] += force[i];
+        }
+      } else {
+        RowMatrixView<real const> const linkJacobian(
+            linkJacobians[info.link].data(), RigidSize::kDAll, N);
+        int const firstRow = RigidSize::kDAll - isize(force);
+        expectedForce +=
+            linkJacobian.MiddleRows(firstRow, isize(force)).Transpose() * AsConstView(force);
+      }
+    }
+    real const tol = (MOCHI_USE_DOUBLE_PRECISION ? 1e-10_r : 1e-4_r) * expectedForce.Norm();
+    EXPECT_TRUE(test::NearEqualSpan(controllerForce, expectedForce.GetConstSpan(), tol));
+  };
+  expectConstraintForceSum(forceValues);
+
+  // Step towards a moved target and confirm again, to check that the Jacobian queries recompute the
+  // rows.
+  DynamicArray<real> movedTarget(initialPose);
+  for (real& value : movedTarget) {
+    value += 0.1_r;
+  }
+  _actor->SetArticulatedTargetPose(movedTarget, test::ExpectOK{});
+  _scene->Step(kDt);
+  expectConstraintForceSum(_actor->GetArticulatedControllerForce(test::ExpectOK{}));
 
   // Disable force query. Confirm that the force is not available anymore.
   _actor->CancelQuery(query);

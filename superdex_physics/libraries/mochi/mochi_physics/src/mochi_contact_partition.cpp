@@ -18,7 +18,6 @@
 #include "mochi_articulated_body.h"
 #include "mochi_blended.h"
 #include "mochi_discretization_components.h"
-#include "mochi_group.h"
 
 #include <mochi_core/utils/array_utils.h>
 
@@ -53,19 +52,12 @@ CreateSharedBoneIds(entt::registry const& reg, entt::entity entity, entt::entity
   // Fetch skinning of the entity that will be partitioned.
   auto const& skinningData = reg.get<CArticulatedSkinningData const>(entity).skinningData;
 
-  // Fetch the bone entities of the articulated actor.
-  auto const& boneActors = reg.get<CGroupMembers const>(articulated).actors;
-
   // Prepare node indices per collision sample.
   auto nodeIndices = GetNodeIndices(reg, entity);
 
-  // Flag static bones, i.e., with no joint DoFs. TagStaticActor is not assigned yet at partition
-  // initialization, so static bones are detected from their empty DoF list.
-  DynamicArray<bool> staticBones;
-  staticBones.reserve(isize(boneActors));
-  for (auto const bone : boneActors) {
-    staticBones.emplace_back(reg.get<CArticulatedRigidJacobian const>(bone).dofs.empty());
-  }
+  // Static bones, i.e., with no joint DoFs, are skipped. TagStaticActor is not assigned yet at
+  // partition initialization, so static bones are detected from their empty DoF list.
+  auto const& jacobian = reg.get<CArticulatedJacobian const>(articulated).value;
 
   DynamicArray<DynamicArray<int>> boneIdsPerSample;
   boneIdsPerSample.reserve(nodeIndices.size());
@@ -81,7 +73,7 @@ CreateSharedBoneIds(entt::registry const& reg, entt::entity entity, entt::entity
         // Insert bones with nonzero weight that depend on joint DoFs
         if (boneWeights[j] != 0_r) {
           int const boneId = boneIndicesThis[j];
-          if (!staticBones[boneId]) {
+          if (!jacobian.Link(boneId).dofs.empty()) {
             boneIndices.push_back(boneId);
           }
         }

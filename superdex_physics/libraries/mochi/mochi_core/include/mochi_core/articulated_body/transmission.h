@@ -355,17 +355,15 @@ class Transmission {
 
   // Overwrites `outJacobian` with d(Displacement)/d(reducedDof) at the supplied configuration.
   // The scalar-output Jacobian is represented as one moment arm per reduced DoF, using the same
-  // reduced tangent/Lie convention as `bodyJacobian`. Its size must equal bodyJacobian.Cols().
+  // reduced tangent/Lie convention as `bodyJacobian`. Its size must equal bodyJacobian.NumDofs().
   virtual void DisplacementJacobian(
       Span<TransformRT const> linkTransforms,
-      RowMatrixView<real const> bodyJacobian,
+      ArticulatedJacobian const& bodyJacobian,
       Span<real> outJacobian) const = 0;
 
   // `currentLinkTransforms` / `stageStartLinkTransforms` are per-link world-from-CoM transforms at
-  // the corresponding poses. The body Jacobian (d(link transforms)/d(reduced DoFs), Lie/angular
-  // convention, with 6 rows per link as laid out by mochi::articulated::Jacobian) is at the current
-  // pose, and is only used for the dresidual. LinearTransmission ignores the link transforms and
-  // bodyJacobian.
+  // the corresponding poses. The body Jacobian is at the grad target's pose, and is only used for
+  // the dresidual. LinearTransmission ignores the link transforms and bodyJacobian.
   //
   // Residual terms on joint coordinates are added to `outResidual`, the reduced residual. Residual
   // terms that depend on link poses are added to `outLinkResidual` as link-space residuals: 6
@@ -377,7 +375,7 @@ class Transmission {
   virtual void AddObjResDRes(
       Span<TransformRT const> currentLinkTransforms,
       Span<TransformRT const> stageStartLinkTransforms,
-      RowMatrixView<real const> bodyJacobian,
+      ArticulatedJacobian const& bodyJacobian,
       Span<real const> currentPose,
       Span<real const> stageStartPose,
       real timeStep,
@@ -413,13 +411,13 @@ class LinearTransmission : public Transmission {
 
   void DisplacementJacobian(
       Span<TransformRT const> linkTransforms,
-      RowMatrixView<real const> bodyJacobian,
+      ArticulatedJacobian const& bodyJacobian,
       Span<real> outJacobian) const override;
 
   void AddObjResDRes(
       Span<TransformRT const> currentLinkTransforms,
       Span<TransformRT const> stageStartLinkTransforms,
-      RowMatrixView<real const> bodyJacobian,
+      ArticulatedJacobian const& bodyJacobian,
       Span<real const> currentPose,
       Span<real const> stageStartPose,
       real timeStep,
@@ -487,13 +485,13 @@ class SpatialTendon : public Transmission {
 
   void DisplacementJacobian(
       Span<TransformRT const> linkTransforms,
-      RowMatrixView<real const> bodyJacobian,
+      ArticulatedJacobian const& bodyJacobian,
       Span<real> outJacobian) const override;
 
   void AddObjResDRes(
       Span<TransformRT const> currentLinkTransforms,
       Span<TransformRT const> stageStartLinkTransforms,
-      RowMatrixView<real const> bodyJacobian,
+      ArticulatedJacobian const& bodyJacobian,
       Span<real const> currentPose,
       Span<real const> stageStartPose,
       real timeStep,

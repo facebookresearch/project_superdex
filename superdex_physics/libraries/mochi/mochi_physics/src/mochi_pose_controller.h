@@ -28,6 +28,9 @@
 
 namespace mochi {
 
+// Forwards
+struct CArticulatedJacobian;
+
 /***************************************************************************************************
   Implementation classes to control links and joints of an articulated body. They connect link and
   joint data to the actual implementation of soft constraints.
@@ -66,7 +69,8 @@ class PoseConstraintAPI {
       TransformRT const& linkTransformCom) const = 0;
 
   virtual void AddForce(
-      Actor const* link,
+      ArticulatedJacobian const& jacobian,
+      int link,
       Constraint const* constraint,
       ColumnVectorView<real> outForce,
       Error& error) const = 0;
@@ -101,7 +105,8 @@ class LinkPosConstraint final : public PoseConstraintAPI {
       TransformRT const& linkTransformCom) const override;
 
   void AddForce(
-      Actor const* link,
+      ArticulatedJacobian const& jacobian,
+      int link,
       Constraint const* constraint,
       ColumnVectorView<real> outForce,
       Error& error) const override;
@@ -133,7 +138,8 @@ class LinkRotConstraint final : public PoseConstraintAPI {
       TransformRT const& linkTransformCom) const override;
 
   void AddForce(
-      Actor const* link,
+      ArticulatedJacobian const& jacobian,
+      int link,
       Constraint const* constraint,
       ColumnVectorView<real> outForce,
       Error& error) const override;
@@ -165,7 +171,8 @@ class JointConstraint final : public PoseConstraintAPI {
       TransformRT const& linkTransformCom) const override;
 
   void AddForce(
-      Actor const* link,
+      ArticulatedJacobian const& jacobian,
+      int link,
       Constraint const* constraint,
       ColumnVectorView<real> outForce,
       Error& error) const override;
@@ -446,9 +453,9 @@ void SetTargets(
 // System to add the force of a pose controller slice.
 template <PoseConstraintT C>
 void AddForces(
-    Span<Actor const* const> links,
     ColumnVectorView<real> outForce,
     Error& error,
+    CArticulatedJacobian const& jacobian,
     CPoseSliceController<C> const& slice);
 
 void InitializeOnce(entt::registry& reg);

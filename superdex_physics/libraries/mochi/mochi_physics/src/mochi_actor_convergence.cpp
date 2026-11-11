@@ -390,8 +390,9 @@ struct SubtreeInertia {
 } // namespace
 
 /**
- * @brief Compute the kBlockSize × kBlockSize diagonal block of M(q) = Jᵀ·H·J for DoFs
- * [dofStart, dofStart + kBlockSize) of a joint, from the inertia of the joint's subtree.
+ * @brief Compute the kBlockSize × kBlockSize diagonal block of M(q) = Jᵀ·H·J for kBlockSize DoFs of
+ * a joint, from the inertia of the joint's subtree and the DoFs' columns [blockCol, blockCol +
+ * kBlockSize) in the Jacobian block of the joint's child link.
  *
  * @details The Jacobian columns of these DoFs are zero for links outside the subtree, and the DoFs
  * move the subtree as one rigid body. The block is therefore that of a single body with the
@@ -400,20 +401,18 @@ struct SubtreeInertia {
 template <int kBlockSize>
 [[nodiscard]] static Matrix<real, kBlockSize, kBlockSize> ComputeMassBlock(
     SubtreeInertia const& subtree,
-    RowMatrixView<real const> J,
-    int childLink,
-    int dofStart) {
+    RowMatrixView<real const, RigidSize::kDAll> childLinkBlock,
+    int blockCol) {
   static_assert(kBlockSize == 1 || kBlockSize == 3, "Unsupported block size.");
 
-  // Extract the kBlockSize columns of J for the child link's trans/rot rows.
-  int const linkOffset = childLink * RigidSize::kDAll;
-  auto JtBlock = J.template Block<RigidSize::kDTrans, kBlockSize>(
-      linkOffset, dofStart, RigidSize::kDTrans, kBlockSize);
-  auto JrBlock = J.template Block<RigidSize::kDRot, kBlockSize>(
-      linkOffset + RigidSize::kDTrans, dofStart, RigidSize::kDRot, kBlockSize);
+  // Extract the kBlockSize columns of the child link's trans/rot rows.
+  auto const JtBlock = childLinkBlock.template Block<RigidSize::kDTrans, kBlockSize>(
+      0, blockCol, RigidSize::kDTrans, kBlockSize);
+  auto const JrBlock = childLinkBlock.template Block<RigidSize::kDRot, kBlockSize>(
+      RigidSize::kDTrans, blockCol, RigidSize::kDRot, kBlockSize);
 
   // Jacobian of the subtree's center of mass, propagated from the child link's as in
-  // articulated::Jacobian.
+  // ArticulatedJacobian::Update.
   Matrix<real, RigidSize::kDTrans, kBlockSize> const JcomBlock =
       JtBlock + AsMatrixView(lie::DMultRotVecDRot(subtree.comOffset)) * JrBlock;
 
@@ -532,7 +531,7 @@ static void GetArticulatedActorResidualWeights(
   auto const& groupMembers = reg.get<CGroupMembers>(actor);
   auto const& parents = reg.get<CArticulatedParents>(actor);
   auto const* joints = reg.get<CArticulatedBodyShape const>(actor).shape->GetJointsData();
-  auto const& J = reg.get<CArticulatedJacobian>(actor).value;
+  auto const& jacobian = reg.get<CArticulatedJacobian>(actor).value;
   auto const& linkTransforms = reg.get<CArticulatedLinkTransforms<TimeStep::Current>>(actor);
   auto const& dofInfo = reg.get<CActorDofInfo>(actor);
   int const numDofs = dofInfo.dofsSize;
@@ -544,18 +543,21 @@ static void GetArticulatedActorResidualWeights(
   auto const subtrees =
       ComputeSubtreeInertias(reg, groupMembers, parents, linkTransforms, &allocator);
 
-  // Compute Qc per DoF and accumulate per-type totals.
+  // Compute Qc per DoF and accumulate per-type totals. Only the joints of the links have DoFs.
   DynamicArray<real> Qc(&allocator);
   Qc.resize_noinit(numDofs);
   real Qtrans = 0_r;
   real Qrot = 0_r;
-  for (int j = 0; j < isize(joints->dofInfo); ++j) {
-    auto const& joint = joints->dofInfo[j];
-    int const childLink = joints->jointsChildLinks[j];
-    real const sqrtSubtreeMass = Sqrt(subtrees[childLink].mass);
+  for (int link = 0; link < jacobian.NumLinks(); ++link) {
+    auto const& joint = joints->dofInfo[link];
+    real const sqrtSubtreeMass = Sqrt(subtrees[link].mass);
+    // The joint's own DoFs are the trailing columns of the link's block.
+    auto const linkBlock = jacobian.Link(link).block;
+    int const firstJointCol = linkBlock.Cols() - joint.GetSize();
 
     auto accumulateBlock = [&]<int kBlockSize>(int offset, real& Qtype) {
-      auto const block = ComputeMassBlock<kBlockSize>(subtrees[childLink], J, childLink, offset);
+      auto const block = ComputeMassBlock<kBlockSize>(
+          subtrees[link], linkBlock, firstJointCol + (offset - joint.offset));
       auto const sqrtDiag = BlockSqrtDiagonal<kBlockSize>(AsConstView(block));
       for (int d = 0; d < kBlockSize; ++d) {
         Qc[offset + d] = aRef * sqrtSubtreeMass * sqrtDiag[d];

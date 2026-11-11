@@ -296,13 +296,6 @@ void solver::UpdateJacobiansSubpipeline(
           MOCHI_ASSERT_VERBOSE(gradTarget == GradTarget::Current, "Unexpected gradient target");
         }
         updateArticulatedJacobiansFn(reg, descendants.compoundActors);
-        {
-          MOCHI_PROFILE_SCOPE_N("InvokeForEach articulated::rigid::EntityUpdateJacobian");
-          // Update Jacobians for rigid actors in articulated compounds.
-          // This must be called after the update of Jacobians of articulated compounds.
-          ecs::InvokeForEach(
-              &articulated::rigid::EntityUpdateJacobian, reg, descendants.articulatedLinkActors);
-        }
 
         // The remaining terms are only needed for GradTarget::Current, as they're not supported
         // with differentiability
@@ -314,7 +307,8 @@ void solver::UpdateJacobiansSubpipeline(
           if (!descendants.nestedSoftActors.empty()) {
             Schedule(
                 softSkinnedJacobianSem, "skinned::UpdateJacobiansPipeline", [&reg, &descendants]() {
-                  skinned::UpdateJacobiansPipeline(reg, descendants.nestedSoftActors);
+                  skinned::UpdateJacobiansPipeline(
+                      reg, descendants.compoundActors, descendants.nestedSoftActors);
                 });
           }
           // Update skinning Jacobians for rod contact skins.

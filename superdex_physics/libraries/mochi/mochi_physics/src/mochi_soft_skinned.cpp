@@ -335,12 +335,12 @@ InitEnergyTerms(entt::registry& reg, entt::entity e, SoftSkinnedActorParams cons
   // entry only: the articulated one is in CArticulatedSkinnedBodyLinkResidual, in link space.
   int softDofs = reg.get<CActorDofInfo const>(e).dofsSize;
   auto articulated = reg.get<CSkinnedComposition const>(e).articulated;
+  auto const& articulatedProps = reg.get<CArticulatedProps const>(articulated);
   int artDofs = reg.get<CActorDofInfo const>(articulated).dofsSize;
   auto& actorSnle = reg.emplace<CSkinnedInteractionSnle>(e);
   actorSnle.residuals.resize(1);
   actorSnle.residuals[kSoftIdx].second = ColumnVector<real>::Zero(softDofs);
-  reg.emplace<CArticulatedSkinnedBodyLinkResidual>(
-      e, reg.get<CArticulatedProps const>(articulated).fullDofsDim);
+  reg.emplace<CArticulatedSkinnedBodyLinkResidual>(e, articulatedProps.fullDofsDim);
 
   // Offsets will be populated in skinned::EntityAssembleBody based on island composition.
   int constexpr kDummyOffset = 0;
@@ -365,8 +365,10 @@ InitEnergyTerms(entt::registry& reg, entt::entity e, SoftSkinnedActorParams cons
   auto& jacobianArticulated = reg.emplace<CSoftSkinnedJacobianArticulated>(e);
   jacobianArticulated.dBones =
       reg.get<CArticulatedSkinningData const>(e).skinningTransform.CreateDBones();
-  jacobianArticulated.dJoints = mochi::articulated::CreateJacobianStorage(
-      3 * numNodes, reg.get<CArticulatedProps const>(articulated).reducedDofsDim);
+  jacobianArticulated.dJoints =
+      RowMatrix<real>::Zero(3 * numNodes, articulatedProps.reducedDofsDim);
+  reg.get_or_emplace<CDenseArticulatedJacobian>(articulated)
+      .value.Resize(articulatedProps.fullDofsDim, articulatedProps.reducedDofsDim);
   auto& softJacobianRest = reg.emplace<CSoftSkinnedJacobianRest>(e);
   softJacobianRest.value = CreateSkinningJacobianRest(numNodes);
   auto const* romJacobian = reg.try_get<rom::CRomJacobian const>(e);
@@ -644,12 +646,21 @@ static void MultiplyJacobians(
 }
 
 /*
+ * System to expand the Jacobian of an articulated actor once for all its soft skinned actors.
+ */
+static void ExpandArticulatedJacobian(
+    CArticulatedJacobian const& jacobian,
+    CDenseArticulatedJacobian& outDenseJacobian) {
+  jacobian.value.ToDense(outDenseJacobian.value);
+}
+
+/*
  * System to update the Jacobian of a soft skinned mesh wrt bones and joints.
  */
 static void ResolveJacobianDJoints(
     ecs::PartialRegistry<
         CArticulatedLinkTransforms<TimeStep::Current> const,
-        CArticulatedJacobian const> reg,
+        CDenseArticulatedJacobian const> reg,
     CSkinnedComposition const& composition,
     CNodePositions const& positions,
     CActiveUniqueNodes const* activeNodes,
@@ -663,7 +674,8 @@ static void ResolveJacobianDJoints(
       linkTransforms, positions.value, outJacobian.dBones, activeNodesSpan);
 
   // Compute Jacobian DJoints by chain rule with Jacobian DBones/DJoints
-  auto const& articulatedJacobian = reg.get<CArticulatedJacobian const>(composition.articulated);
+  auto const& articulatedJacobian =
+      reg.get<CDenseArticulatedJacobian const>(composition.articulated);
   static_assert(
       krylov::details::MatTraits<decltype(outJacobian.dJoints)>::kMajorDir ==
       krylov::Direction::RowMajor); // Enforced for performance reasons.
@@ -823,11 +835,15 @@ void skinned::UpdateDerivedStatePipeline(entt::registry& reg, Span<entt::entity 
   ecs::InvokeForEach(&ResolveSkinning<TimeStep::Current>, reg, entities);
 }
 
-void skinned::UpdateJacobiansPipeline(entt::registry& reg, Span<entt::entity const> entities) {
+void skinned::UpdateJacobiansPipeline(
+    entt::registry& reg,
+    Span<entt::entity const> compoundActors,
+    Span<entt::entity const> entities) {
   if (entities.empty()) {
     return;
   }
   MOCHI_PROFILE_SCOPE();
+  ecs::InvokeForEach(&ExpandArticulatedJacobian, reg, compoundActors);
   ecs::ParallelInvokeForEach(
       "Compute soft skinned Jacobian wrt skeleton", &ResolveJacobianDJoints, reg, entities);
   ecs::ParallelInvokeForEach(
@@ -839,6 +855,7 @@ void skinned::InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<CNodePositions>(reg);
   ecs::RegisterComponent<CSoftSkinnedAssemblyScratchMemory>(reg);
   ecs::RegisterComponent<CSoftSkinnedJacobianArticulated>(reg);
+  ecs::RegisterComponent<CDenseArticulatedJacobian>(reg);
   ecs::RegisterComponent<CSoftSkinnedJacobianDynamic>(reg);
   ecs::RegisterComponent<CSoftSkinnedJacobianRest>(reg);
   ecs::RegisterComponent<CSoftAttachmentLinks>(reg);

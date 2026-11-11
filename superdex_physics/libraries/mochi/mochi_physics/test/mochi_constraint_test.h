@@ -275,7 +275,8 @@ class ConstraintTestBase : public test::MochiSceneTestBase {
         continue;
       }
       auto const& jacobian = reg.get<CArticulatedJacobian const>(e).value;
-      ColumnVector<real> const jointResidual = jacobian.Transpose() * linkResidual.residual;
+      ColumnVector<real> jointResidual = ColumnVector<real>::Zero(jacobian.NumDofs());
+      jacobian.AddTransposeProduct(linkResidual.residual, jointResidual);
       int const offset = reg.get<CDofOffset const>(e).dofsOffset;
       for (int i = 0; i < isize(globalIndices); ++i) {
         int const dof = globalIndices[i] - offset;

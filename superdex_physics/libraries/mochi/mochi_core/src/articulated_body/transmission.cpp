@@ -62,10 +62,10 @@ real LinearTransmission::Displacement(
 
 void LinearTransmission::DisplacementJacobian(
     Span<TransformRT const> /*linkTransforms*/,
-    [[maybe_unused]] RowMatrixView<real const> bodyJacobian,
+    [[maybe_unused]] ArticulatedJacobian const& bodyJacobian,
     Span<real> outJacobian) const {
   MOCHI_ASSERT_VERBOSE(
-      isize(outJacobian) == bodyJacobian.Cols(),
+      isize(outJacobian) == bodyJacobian.NumDofs(),
       "Displacement Jacobian size must equal the reduced DoF dimension");
   std::fill(outJacobian.begin(), outJacobian.end(), 0_r);
   for (auto const& term : _terms) {
@@ -76,7 +76,7 @@ void LinearTransmission::DisplacementJacobian(
 void LinearTransmission::AddObjResDRes(
     Span<TransformRT const> currentLinkTransforms,
     Span<TransformRT const> stageStartLinkTransforms,
-    RowMatrixView<real const> /*bodyJacobian*/,
+    ArticulatedJacobian const& /*bodyJacobian*/,
     Span<real const> currentPose,
     Span<real const> stageStartPose,
     real timeStep,
@@ -125,12 +125,10 @@ void LinearTransmission::AddObjResDRes(
   }
 }
 
-namespace {
-
 // Accumulates the Euclidean length of each adjacent-waypoint segment plus coefficient * jointAngle
 // for each linear-joint element. `linearJointOffsets` is advanced past each LinearJoint element so
 // that the precomputed offsets stay in sync with the routing list.
-real ComputeElementSum(
+static real ComputeElementSum(
     Span<RoutingElement const> routingElements,
     Span<TransformRT const> linkTransforms,
     SpatialTendon::LinearJointOffsets const* linearJointOffsets,
@@ -165,7 +163,7 @@ real ComputeElementSum(
 // respect to the translation of the link's CoM and the rotation about it), and the linear-joint
 // elements in joint space (one value per reduced DoF). `waypointSlots` gives, for each Waypoint
 // element, the index in `outLinkGradients` of its link.
-void ComputeElementSumGradient(
+static void ComputeElementSumGradient(
     Span<RoutingElement const> routingElements,
     Span<SpatialTendon::LinearJointOffsets const> linearJointOffsets,
     Span<int const> waypointSlots,
@@ -227,23 +225,16 @@ void ComputeElementSumGradient(
 
 // outJointGradient += bodyJacobian^T * linkGradients, with linkGradients[s] the link-space gradient
 // of link waypointLinks[s].
-void AddJacobianTransposeProduct(
+static void AddJacobianTransposeProduct(
     Span<int const> waypointLinks,
-    RowMatrixView<real const> bodyJacobian,
+    ArticulatedJacobian const& bodyJacobian,
     Span<ColumnVector<real, RigidSize::kDAll> const> linkGradients,
     ColumnVectorView<real> outJointGradient) {
-  MOCHI_ASSERT_VERBOSE(
-      isize(linkGradients) == isize(waypointLinks) &&
-          outJointGradient.Rows() == bodyJacobian.Cols(),
-      "Inconsistent sizes");
+  MOCHI_ASSERT_VERBOSE(isize(linkGradients) == isize(waypointLinks), "Inconsistent sizes");
   for (int s = 0; s < isize(waypointLinks); ++s) {
-    auto const base = waypointLinks[s] * RigidSize::kDAll;
-    auto const linkJacobian = bodyJacobian.MiddleRows<RigidSize::kDAll>(base, RigidSize::kDAll);
-    outJointGradient += linkJacobian.Transpose() * linkGradients[s];
+    bodyJacobian.AddLinkTransposeProduct(waypointLinks[s], linkGradients[s], outJointGradient);
   }
 }
-
-} // namespace
 
 SpatialTendon::SpatialTendon(
     Span<RoutingElement const> routingElements,
@@ -307,8 +298,8 @@ SpatialTendon::SpatialTendon(
       }(),
       "SpatialTendon Waypoint elements must be adjacent to at least one other Waypoint");
 
-  // Precompute linear-joint offsets so Displacement / AddObjResDRes never need the joint layout
-  // time, and the links with waypoints.
+  // Precompute the links with waypoints, and the linear-joint offsets so that Displacement and
+  // AddObjResDRes never need the joint layout.
   for (auto const& element : _routingElements) {
     if (element.type == RoutingElementType::LinearJoint) {
       _linearJointOffsets.push_back(
@@ -375,10 +366,10 @@ real SpatialTendon::Displacement(Span<TransformRT const> linkTransforms, Span<re
 
 void SpatialTendon::DisplacementJacobian(
     Span<TransformRT const> linkTransforms,
-    RowMatrixView<real const> bodyJacobian,
+    ArticulatedJacobian const& bodyJacobian,
     Span<real> outJacobian) const {
   MOCHI_ASSERT_VERBOSE(
-      isize(outJacobian) == bodyJacobian.Cols(),
+      isize(outJacobian) == bodyJacobian.NumDofs(),
       "Displacement Jacobian size must equal the reduced DoF dimension");
   // The Jacobian is the joint-space gradient plus the link-space gradient mapped to joint DoFs.
   MOCHI_FILO_STACK_ALLOCATOR(allocator, 64 * RigidSize::kDAll * sizeof(real));
@@ -397,7 +388,7 @@ void SpatialTendon::DisplacementJacobian(
 void SpatialTendon::AddObjResDRes(
     Span<TransformRT const> currentLinkTransforms,
     Span<TransformRT const> stageStartLinkTransforms,
-    RowMatrixView<real const> bodyJacobian,
+    ArticulatedJacobian const& bodyJacobian,
     Span<real const> currentPose,
     Span<real const> stageStartPose,
     real timeStep,
@@ -449,7 +440,7 @@ void SpatialTendon::AddObjResDRes(
   MOCHI_FILO_STACK_ALLOCATOR(allocator, (64 * RigidSize::kDAll + 256) * sizeof(real));
   DynamicArray<ColumnVector<real, RigidSize::kDAll>> linkGradients(
       isize(_waypointLinks), &allocator);
-  ColumnVector<real> jointGradient(bodyJacobian.Cols(), &allocator);
+  ColumnVector<real> jointGradient(bodyJacobian.NumDofs(), &allocator);
   ComputeElementSumGradient(
       _routingElements,
       _linearJointOffsets,

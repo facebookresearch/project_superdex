@@ -15,6 +15,7 @@
  */
 
 #include "mochi_pose_controller.h"
+#include "mochi_articulated_body.h"
 
 using namespace mochi;
 
@@ -51,20 +52,18 @@ void LinkPosConstraint::SetTarget(
 }
 
 void LinkPosConstraint::AddForce(
-    Actor const* link,
+    ArticulatedJacobian const& jacobian,
+    int link,
     Constraint const* constraint,
     ColumnVectorView<real> outForce,
     Error& error) const {
   MOCHI_ERROR_RETURN(error);
   auto forceSpan = constraint->GetForce(error);
   MOCHI_ERROR_RETURN(error);
-  // The constraint force must act on all dofs of the link
+  // The constraint force must act on all DoFs of the link
   MOCHI_ASSERT(forceSpan.size() == RigidSize::kDAll);
   ColumnVectorView<real const, RigidSize::kDAll> force(forceSpan);
-  auto jacobianSpan = link->GetArticulatedJacobian(ErrorAssert{});
-  RowMatrixView<real const, RigidSize::kDAll> jacobian(
-      jacobianSpan.data(), RigidSize::kDAll, isize(jacobianSpan) / RigidSize::kDAll);
-  outForce += jacobian.Transpose() * force;
+  jacobian.AddLinkTransposeProduct(link, force, outForce);
 }
 
 Constraint* LinkRotConstraint::Create(
@@ -99,22 +98,20 @@ void LinkRotConstraint::SetTarget(
 }
 
 void LinkRotConstraint::AddForce(
-    Actor const* link,
+    ArticulatedJacobian const& jacobian,
+    int link,
     Constraint const* constraint,
     ColumnVectorView<real> outForce,
     Error& error) const {
   MOCHI_ERROR_RETURN(error);
   auto forceSpan = constraint->GetForce(error);
   MOCHI_ERROR_RETURN(error);
-  // The constraint force must act only on rotation dofs of the link
+  // The constraint force must act only on rotation DoFs of the link
   MOCHI_ASSERT(forceSpan.size() == RigidSize::kDRot);
-  ColumnVectorView<real const, RigidSize::kDRot> force(forceSpan);
-  auto jacobianSpan = link->GetArticulatedJacobian(ErrorAssert{});
-  RowMatrixView<real const, RigidSize::kDAll> jacobian(
-      jacobianSpan.data(), RigidSize::kDAll, isize(jacobianSpan) / RigidSize::kDAll);
-  RowMatrixView<real const, RigidSize::kDRot> jacobianRot =
-      jacobian.MiddleRows<RigidSize::kDRot>(RigidSize::kDTrans, RigidSize::kDRot);
-  outForce += jacobianRot.Transpose() * force;
+  ColumnVector<real, RigidSize::kDAll> force{};
+  force.BottomRows<RigidSize::kDRot>(RigidSize::kDRot) =
+      ColumnVectorView<real const, RigidSize::kDRot>(forceSpan);
+  jacobian.AddLinkTransposeProduct(link, force, outForce);
 }
 
 Constraint* JointConstraint::Create(
@@ -180,7 +177,8 @@ void JointConstraint::SetTarget(
 }
 
 void JointConstraint::AddForce(
-    Actor const* /* link */,
+    ArticulatedJacobian const& /* jacobian */,
+    int /* link */,
     Constraint const* constraint,
     ColumnVectorView<real> outForce,
     Error& error) const {
@@ -224,13 +222,13 @@ void controller::SetTargets(
 
 template <PoseConstraintT C>
 void controller::AddForces(
-    Span<Actor const* const> links,
     ColumnVectorView<real> outForce,
     Error& error,
+    CArticulatedJacobian const& jacobian,
     CPoseSliceController<C> const& slice) {
   for (int i = 0; i < slice.info.size(); ++i) {
     slice.constraintType.AddForce(
-        links[slice.info[i].link], slice.impl[i].constraint, outForce, error);
+        jacobian.value, slice.info[i].link, slice.impl[i].constraint, outForce, error);
   }
 }
 
@@ -241,7 +239,10 @@ void controller::AddForces(
       Span<ArticulatedPoseInfo const>,       \
       CPoseSliceController<C>&);             \
   template void controller::AddForces<C>(    \
-      Span<Actor const* const>, ColumnVectorView<real>, Error&, CPoseSliceController<C> const&);
+      ColumnVectorView<real>,                \
+      Error&,                                \
+      CArticulatedJacobian const&,           \
+      CPoseSliceController<C> const&);
 MOCHI_SPECIALIZE_CONTROLLER_FUNCS(LinkPosConstraint);
 MOCHI_SPECIALIZE_CONTROLLER_FUNCS(LinkRotConstraint);
 MOCHI_SPECIALIZE_CONTROLLER_FUNCS(JointConstraint);

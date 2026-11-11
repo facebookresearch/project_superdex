@@ -486,26 +486,18 @@ void compound::UpdateConstraintGlobalSparsity(
       // Collect all compound DoF indices that are affected
       for (int o = 0; o < isize(info.actors); ++o) {
         entt::entity actor = info.actors[o];
-        entt::entity parentArticulated = TryGetParentArticulatedActor(reg, actor);
-
-        if (parentArticulated != entt::null) {
+        if (auto const* articulatedEntity = reg.try_get<CArticulatedEntity const>(actor)) {
           // This actor is a link. The compound DoFs are from the parent articulated actor,
           // specifically the subset that affects this link.
-          auto const& linkJacobian = reg.get<CArticulatedRigidJacobian const>(actor);
-          auto const& articulatedDofOffset =
-              reg.get<CDofOffset const>(parentArticulated).dofsOffset;
-          for (int dof : linkJacobian.dofs) {
-            int globalDof = articulatedDofOffset + dof;
-            constraintGlobalResIndices.push_back(globalDof);
-          }
+          auto const linkJacobian = reg.get<CArticulatedJacobian const>(articulatedEntity->entity)
+                                        .value.Link(articulatedEntity->linkIndex);
+          int const articulatedDofOffset =
+              reg.get<CDofOffset const>(articulatedEntity->entity).dofsOffset;
+          AppendSum(constraintGlobalResIndices, linkJacobian.dofs, articulatedDofOffset);
         } else {
           // Regular actor, use direct DoF mapping
           auto actorOffset = reg.get<CDofOffset>(actor).dofsOffset;
-          auto const& actorDofs = info.actorDofs[o];
-          for (int localDof : actorDofs) {
-            int globalDof = actorOffset + localDof;
-            constraintGlobalResIndices.push_back(globalDof);
-          }
+          AppendSum(constraintGlobalResIndices, info.actorDofs[o], actorOffset);
         }
       }
     }

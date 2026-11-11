@@ -348,8 +348,7 @@ void GetTransmissionDisplacementJacobian(
   // The link transforms and the Jacobian are up to date.
   auto const& linkTransforms = reg.get<CArticulatedLinkTransforms<TimeStep::Current> const>(e);
   auto const& bodyJacobian = reg.get<CArticulatedJacobian const>(e).value;
-  transmission->DisplacementJacobian(
-      MakeConstSpan(linkTransforms), AsConstView(bodyJacobian), outJacobian);
+  transmission->DisplacementJacobian(MakeConstSpan(linkTransforms), bodyJacobian, outJacobian);
 }
 
 void GetTransmissionActuatorStateVariables(

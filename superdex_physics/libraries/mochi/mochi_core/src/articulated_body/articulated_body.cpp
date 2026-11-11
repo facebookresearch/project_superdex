@@ -16,6 +16,7 @@
 
 #include <mochi_core/articulated_body/articulated_body.h>
 #include <mochi_core/linear_algebra/krylov_interop.h>
+#include <mochi_core/linear_algebra/matrix_operations.h>
 #include <mochi_core/memory/filo_allocator.h>
 #include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/dtransform.h>
@@ -25,12 +26,271 @@
 
 #include <algorithm>
 #include <numeric>
-#include <vector>
 
 // TODO[T217402682]
 #if MOCHI_COMPILER_GCC
 MOCHI_WARNING_IGNORE_GCC_CLANG(GCC diagnostic ignored "-Wstringop-overread")
 #endif
+
+namespace mochi {
+
+// Writes the columns of the link's own joint, which are the trailing ones of the link's block.
+static void SetJacobianSelfBlock(
+    Span<TransformRT const> linkTransforms,
+    Span<TransformRT const> jointTransforms,
+    Span<ArticulatedRestTransform const> restTransforms,
+    TransformRT const& worldFromRoot,
+    int link,
+    Real3 const& jointAxis,
+    ArticulatedDofInfo const& dofInfo,
+    int parent,
+    RowMatrixView<real, RigidSize::kDAll> outLinkBlock) {
+  // Skip if the joint has no DoFs, i.e., it is a hard joint
+  if (dofInfo.GetSize() == 0) {
+    return;
+  }
+
+  // Common link-joint Jacobian (dTLinkdTJoint = dRLinkdRJoint)
+  Quaternion const& qOuter = restTransforms[link].parentFromOuter.GetRotation();
+  Quaternion const& qParent = (parent != -1 ? linkTransforms[parent] : worldFromRoot).GetRotation();
+  auto dXLinkdXJoint = ToVMatrix3x3(qParent * qOuter);
+
+  // Set translation Jacobians. Joint translation affects only link translation.
+  int const jointTransSize = dofInfo.transSize;
+  int const jointTransCol = outLinkBlock.Cols() - dofInfo.GetSize();
+  if (jointTransSize == 1) {
+    outLinkBlock.Block<3, 1>(0, jointTransCol, 3, 1) =
+        AsColumnVectorView<3>(DotMatVec3x3(dXLinkdXJoint, ToSimd(jointAxis)));
+    outLinkBlock.Block<3, 1>(RigidSize::kDTrans, jointTransCol, 3, 1).SetZero();
+  } else if (jointTransSize == 3) {
+    outLinkBlock.Block<3, 3>(0, jointTransCol, 3, 3) = AsMatrixView(dXLinkdXJoint);
+    outLinkBlock.Block<3, 3>(RigidSize::kDTrans, jointTransCol, 3, 3).SetZero();
+  } else {
+    MOCHI_ASSERT_VERBOSE(jointTransSize == 0, "Unexpected joint translation size");
+  }
+
+  int const jointRotSize = dofInfo.rotSize;
+  if (jointRotSize <= 0) {
+    return;
+  }
+
+  // Link-joint Jacobian dTLinkdRJoint
+  Quaternion const& qJoint = jointTransforms[link].GetRotation();
+  Vec4r tInner = restTransforms[link].innerFromBone.VGetTranslation();
+  auto dTLinkdRJoint = Dot3x3(dXLinkdXJoint, lie::DMultRotVecDRot(qJoint * tInner));
+
+  // Set rotation Jacobians. Joint rotation affects both link translation and rotation.
+  int const jointRotCol = jointTransCol + jointTransSize;
+  if (jointRotSize == 1) {
+    outLinkBlock.Block<3, 1>(0, jointRotCol, 3, 1) =
+        AsColumnVectorView<3>(DotMatVec3x3(dTLinkdRJoint, ToSimd(jointAxis)));
+    outLinkBlock.Block<3, 1>(RigidSize::kDTrans, jointRotCol, 3, 1) =
+        AsColumnVectorView<3>(DotMatVec3x3(dXLinkdXJoint, ToSimd(jointAxis)));
+  } else {
+    MOCHI_ASSERT_VERBOSE(jointRotSize == 3, "Unexpected joint rotation size");
+    outLinkBlock.Block<3, 3>(0, jointRotCol, 3, 3) = AsMatrixView(dTLinkdRJoint);
+    outLinkBlock.Block<3, 3>(RigidSize::kDTrans, jointRotCol, 3, 3) = AsMatrixView(dXLinkdXJoint);
+  }
+}
+
+// Writes the columns of the parent's DoFs, which are the leading ones of the link's block. A
+// rotation of the parent also translates the link, through the lever arm between their centers of
+// mass.
+static void PropagateParentBlock(
+    VMatrix3x3r const& dTLinkdRParent,
+    int numParentCols,
+    real const* MOCHI_RESTRICT parentValues,
+    int numLinkCols,
+    real* MOCHI_RESTRICT outLinkValues) {
+  RowMatrixView<real const, RigidSize::kDAll> const parentBlock(
+      parentValues, RigidSize::kDAll, numParentCols);
+  RowMatrixView<real, RigidSize::kDAll> outLinkBlock(outLinkValues, RigidSize::kDAll, numLinkCols);
+  for (int col = 0; col < numParentCols; ++col) {
+    for (int row = 0; row < RigidSize::kDTrans; ++row) {
+      outLinkBlock(row, col) = parentBlock(row, col) +
+          (dTLinkdRParent[row][0] * parentBlock(RigidSize::kDTrans, col) +
+           dTLinkdRParent[row][1] * parentBlock(RigidSize::kDTrans + 1, col) +
+           dTLinkdRParent[row][2] * parentBlock(RigidSize::kDTrans + 2, col));
+    }
+    for (int row = RigidSize::kDTrans; row < RigidSize::kDAll; ++row) {
+      outLinkBlock(row, col) = parentBlock(row, col);
+    }
+  }
+}
+
+ArticulatedJacobian::ArticulatedJacobian(
+    Span<int const> parents,
+    Span<ArticulatedDofInfo const> dofInfo)
+    : _parents(parents), _dofInfo(dofInfo.subspan(0, parents.size())) {
+  MOCHI_ASSERT_VERBOSE(
+      articulated::GetReducedDofsSize(dofInfo.subspan(NumLinks())) == 0,
+      "Only the joints of the links may have DoFs.");
+  _offsets.reserve(NumLinks() + 1);
+  _offsets.push_back(0);
+  for (int link = 0; link < NumLinks(); ++link) {
+    int const parent = _parents[link];
+    ArticulatedDofInfo const& joint = _dofInfo[link];
+    MOCHI_ASSERT_VERBOSE(parent >= -1 && parent < link, "Links must be sorted parents first.");
+    MOCHI_ASSERT_VERBOSE(joint.offset == _numDofs, "Joint DoFs must be laid out in link order.");
+
+    // The link's list is its parent's, then its joint's DoFs.
+    int const parentBegin = parent >= 0 ? _offsets[parent] : 0;
+    int const parentEnd = parent >= 0 ? _offsets[parent + 1] : 0;
+    int const begin = isize(_dofs);
+    _dofs.resize_noinit(begin + (parentEnd - parentBegin) + joint.GetSize());
+    int* const jointDofs =
+        std::copy(_dofs.begin() + parentBegin, _dofs.begin() + parentEnd, _dofs.begin() + begin);
+    std::iota(jointDofs, _dofs.end(), joint.offset);
+    _offsets.push_back(isize(_dofs));
+    _numDofs += joint.GetSize();
+  }
+  _values.resize_noinit(RigidSize::kDAll * isize(_dofs));
+  _leverArms.resize_noinit(NumLinks());
+}
+
+void ArticulatedJacobian::Update(
+    Span<Real3 const> jointAxes,
+    Span<ArticulatedRestTransform const> restTransforms,
+    TransformRT const& worldFromRoot,
+    Span<TransformRT const> jointTransforms,
+    Span<TransformRT const> linkTransforms) {
+  int const numLinks = NumLinks();
+  MOCHI_ASSERT_VERBOSE(
+      isize(jointAxes) >= numLinks && isize(restTransforms) >= numLinks &&
+          isize(jointTransforms) == numLinks && isize(linkTransforms) == numLinks,
+      "Inconsistent sizes.");
+  for (int link = 0; link < numLinks; ++link) {
+    int const begin = _offsets[link];
+    RowMatrixView<real, RigidSize::kDAll> linkBlock(
+        _values.data() + RigidSize::kDAll * begin, RigidSize::kDAll, _offsets[link + 1] - begin);
+    int const parent = _parents[link];
+    if (parent >= 0) {
+      _leverArms[link] =
+          linkTransforms[link].VGetTranslation() - linkTransforms[parent].VGetTranslation();
+      RowMatrixView<real const, RigidSize::kDAll> const parentBlock = Link(parent).block;
+      PropagateParentBlock(
+          lie::DMultRotVecDRot(_leverArms[link]),
+          parentBlock.Cols(),
+          parentBlock.Data(),
+          linkBlock.Cols(),
+          linkBlock.Data());
+    }
+    SetJacobianSelfBlock(
+        linkTransforms,
+        jointTransforms,
+        restTransforms,
+        worldFromRoot,
+        link,
+        jointAxes[link],
+        _dofInfo[link],
+        parent,
+        linkBlock);
+  }
+}
+
+void ArticulatedJacobian::Apply(
+    ColumnVectorView<real const> reduced,
+    ColumnVectorView<real> outFull) const {
+  MOCHI_ASSERT_VERBOSE(reduced.Rows() == NumDofs(), "Invalid reduced size.");
+  MOCHI_ASSERT_VERBOSE(outFull.Rows() == RigidSize::kDAll * NumLinks(), "Invalid full size.");
+  MOCHI_ASSERT_VERBOSE(
+      !krylov::HasOverlap(reduced.data(), reduced.Rows(), outFull.data(), outFull.Rows()),
+      "Arguments must not alias.");
+  for (int link = 0; link < NumLinks(); ++link) {
+    auto const [block, dofs] = Link(link);
+    for (int row = 0; row < RigidSize::kDAll; ++row) {
+      real value = 0_r;
+      for (int col = 0; col < isize(dofs); ++col) {
+        value += block(row, col) * reduced[dofs[col]];
+      }
+      outFull[RigidSize::kDAll * link + row] = value;
+    }
+  }
+}
+
+void ArticulatedJacobian::AddTransposeProduct(
+    ColumnVectorView<real const> full,
+    ColumnVectorView<real> inOutReduced,
+    ColumnVectorView<real> outSubtree) const {
+  int const numLinks = NumLinks();
+  bool const useLocal = outSubtree.Rows() == 0;
+  MOCHI_ASSERT_VERBOSE(full.Rows() == RigidSize::kDAll * numLinks, "Invalid full size.");
+  MOCHI_ASSERT_VERBOSE(inOutReduced.Rows() == NumDofs(), "Invalid reduced size.");
+  MOCHI_ASSERT_VERBOSE(
+      useLocal || outSubtree.Rows() == RigidSize::kDAll * numLinks, "Invalid subtree size.");
+  MOCHI_ASSERT_VERBOSE(
+      !krylov::HasOverlap(full.data(), full.Rows(), inOutReduced.data(), inOutReduced.Rows()) &&
+          !krylov::HasOverlap(outSubtree.data(), outSubtree.Rows(), full.data(), full.Rows()) &&
+          !krylov::HasOverlap(
+              outSubtree.data(), outSubtree.Rows(), inOutReduced.data(), inOutReduced.Rows()),
+      "Arguments must not alias.");
+
+  // Stack memory for 100 links.
+  MOCHI_FILO_STACK_ALLOCATOR(allocator, 100 * RigidSize::kDAll * sizeof(real));
+  ColumnVector<real> localSubtree(useLocal ? full.Rows() : 0, &allocator);
+  ColumnVectorView<real> subtree = useLocal ? AsView(localSubtree) : outSubtree;
+  subtree = full;
+
+  for (int link = numLinks - 1; link >= 0; --link) {
+    ArticulatedDofInfo const& joint = _dofInfo[link];
+    int const linkOffset = RigidSize::kDAll * link;
+    int const jointDofCount = joint.GetSize();
+    if (jointDofCount > 0) {
+      // The joint's own DoFs are the trailing columns of the link's block.
+      inOutReduced.MiddleRows(joint.offset, jointDofCount) +=
+          Link(link).block.RightCols(jointDofCount).Transpose() *
+          subtree.MiddleRows<RigidSize::kDAll>(linkOffset, RigidSize::kDAll);
+    }
+
+    int const parent = _parents[link];
+    if (parent < 0) {
+      continue;
+    }
+    int const parentOffset = RigidSize::kDAll * parent;
+    Vec4r const force = Load<RigidSize::kDTrans, Vec4r>(&subtree[linkOffset]);
+    Vec4r const torque = Load<RigidSize::kDRot, Vec4r>(&subtree[linkOffset + RigidSize::kDTrans]);
+    Vec4r const torqueAboutParent = torque + Cross3(_leverArms[link], force);
+    subtree.MiddleRows<RigidSize::kDTrans>(parentOffset, RigidSize::kDTrans) +=
+        AsColumnVectorView<3>(force);
+    subtree.MiddleRows<RigidSize::kDRot>(parentOffset + RigidSize::kDTrans, RigidSize::kDRot) +=
+        AsColumnVectorView<3>(torqueAboutParent);
+  }
+}
+
+void ArticulatedJacobian::AddLinkTransposeProduct(
+    int link,
+    ColumnVectorView<real const, RigidSize::kDAll> linkFull,
+    ColumnVectorView<real> inOutReduced) const {
+  MOCHI_ASSERT_VERBOSE(inOutReduced.Rows() == NumDofs(), "Invalid reduced size.");
+  MOCHI_ASSERT_VERBOSE(
+      !krylov::HasOverlap(
+          linkFull.data(), RigidSize::kDAll, inOutReduced.data(), inOutReduced.Rows()),
+      "Arguments must not alias.");
+  auto const [block, dofs] = Link(link);
+  for (int col = 0; col < isize(dofs); ++col) {
+    inOutReduced[dofs[col]] += block.Col(col).Dot(linkFull);
+  }
+}
+
+void ArticulatedJacobian::ToDense(RowMatrixView<real> out) const {
+  MOCHI_ASSERT_VERBOSE(out.Rows() == RigidSize::kDAll * NumLinks(), "Invalid number of rows.");
+  for (int link = 0; link < NumLinks(); ++link) {
+    LinkToDense(link, out.MiddleRows<RigidSize::kDAll>(RigidSize::kDAll * link, RigidSize::kDAll));
+  }
+}
+
+void ArticulatedJacobian::LinkToDense(int link, RowMatrixView<real, RigidSize::kDAll> out) const {
+  MOCHI_ASSERT_VERBOSE(out.Cols() == NumDofs(), "Invalid number of columns.");
+  out.SetZero();
+  auto const [block, dofs] = Link(link);
+  for (int row = 0; row < RigidSize::kDAll; ++row) {
+    for (int col = 0; col < isize(dofs); ++col) {
+      out(row, dofs[col]) = block(row, col);
+    }
+  }
+}
+
+} // namespace mochi
 
 namespace mochi::articulated {
 
@@ -48,206 +308,6 @@ int GetReducedDofsSize(Span<ArticulatedDofInfo const> dofInfo) {
     size += info.GetSize();
   }
   return size;
-}
-
-RowMatrix<real> CreateJacobianStorage(int fullSize, int reducedSize) {
-  return RowMatrix<real>::Zero(fullSize, reducedSize);
-}
-
-ReducedDofsMap CreateBonesToReducedDofsMap(
-    Span<int const> parents,
-    Span<ArticulatedDofInfo const> dofInfo) {
-  // Traverse hierarchy from start to end. Bones are sorted depth-first from root to children.
-  // For each bone, if it has a parent, grab the reduced dofs it depends on, then append the joint
-  // dofs for the current bone. If no parent, collect the joint dofs of the current bone.
-  ReducedDofsMap out;
-  out.dofs.resize(parents.size());
-  for (auto boneIdx = 0; boneIdx < parents.size(); ++boneIdx) {
-    if (parents[boneIdx] > -1) {
-      auto parentIdx = parents[boneIdx];
-      out.dofs[boneIdx].insert(
-          out.dofs[boneIdx].end(), out.dofs[parentIdx].begin(), out.dofs[parentIdx].end());
-    }
-
-    auto& boneDofs = out.dofs[boneIdx];
-
-    int const sizeDofsTrans = dofInfo[boneIdx].transSize;
-    if (sizeDofsTrans > 0) {
-      int const firstIdx = dofInfo[boneIdx].GetTransOffset();
-      for (int j = 0; j < sizeDofsTrans; ++j) {
-        boneDofs.push_back(firstIdx + j);
-      }
-    }
-
-    int const sizeDofsRot = dofInfo[boneIdx].rotSize;
-    if (sizeDofsRot > 0) {
-      int const firstIdx = dofInfo[boneIdx].GetRotOffset();
-      for (int j = 0; j < sizeDofsRot; ++j) {
-        boneDofs.push_back(firstIdx + j);
-      }
-    }
-    std::sort(boneDofs.begin(), boneDofs.end());
-    auto last = std::unique(boneDofs.begin(), boneDofs.end());
-    boneDofs.erase(last, boneDofs.end());
-  }
-  return out;
-}
-
-static void SetJacobianSelfBlock(
-    Span<TransformRT const> linkTransforms,
-    Span<TransformRT const> jointTransforms,
-    Span<ArticulatedRestTransform const> restTransforms,
-    TransformRT const& worldFromRoot,
-    int link,
-    ArticulatedJointType const& jointType,
-    Real3 const& jointAxis,
-    ArticulatedDofInfo const& dofInfo,
-    int parent,
-    RowMatrixView<real> outJacobian) {
-  // Skip if the joint has no dofs, i.e., it is a hard joint
-  if (jointType == ArticulatedJointType::Hard) {
-    return;
-  }
-
-  // Common link-joint Jacobian (dTLinkdTJoint = dRLinkdRJoint)
-  Quaternion const& qOuter = restTransforms[link].parentFromOuter.GetRotation();
-  Quaternion const& qParent = (parent != -1 ? linkTransforms[parent] : worldFromRoot).GetRotation();
-  auto dXLinkdXJoint = ToVMatrix3x3(qParent * qOuter);
-
-  // Set translation Jacobians. Joint translation affects only link translation.
-  int const linkTransOffset = link * RigidSize::kDAll;
-  int const jointTransSize = dofInfo.transSize;
-  int const jointTransOffset = dofInfo.offset;
-  if (jointTransSize == 1) {
-    outJacobian.template Block<3, 1>(linkTransOffset, jointTransOffset, 3, 1) =
-        AsColumnVectorView<3>(DotMatVec3x3(dXLinkdXJoint, ToSimd(jointAxis)));
-  } else if (jointTransSize == 3) {
-    outJacobian.template Block<3, 3>(linkTransOffset, jointTransOffset, 3, 3) =
-        AsMatrixView(dXLinkdXJoint);
-  } else {
-    MOCHI_ASSERT_VERBOSE(jointTransSize == 0, "Unexpected joint translation size");
-  }
-
-  int const jointRotSize = dofInfo.rotSize;
-  if (jointRotSize <= 0) {
-    return;
-  }
-
-  // Link-joint Jacobian dTLinkdRJoint
-  Quaternion const& qJoint = jointTransforms[link].GetRotation();
-  Vec4r tInner = restTransforms[link].innerFromBone.VGetTranslation();
-  auto dTLinkdRJoint = Dot3x3(dXLinkdXJoint, lie::DMultRotVecDRot(qJoint * tInner));
-
-  // Set rotation Jacobians. Joint rotation affects both link translation and rotation.
-  int const linkRotOffset = link * RigidSize::kDAll + RigidSize::kDTrans;
-  int const jointRotOffset = dofInfo.GetRotOffset();
-  if (jointRotSize == 1) {
-    outJacobian.template Block<3, 1>(linkTransOffset, jointRotOffset, 3, 1) =
-        AsColumnVectorView<3>(DotMatVec3x3(dTLinkdRJoint, ToSimd(jointAxis)));
-    outJacobian.template Block<3, 1>(linkRotOffset, jointRotOffset, 3, 1) =
-        AsColumnVectorView<3>(DotMatVec3x3(dXLinkdXJoint, ToSimd(jointAxis)));
-  } else {
-    MOCHI_ASSERT_VERBOSE(jointRotSize == 3, "Unexpected joint rotation size");
-    outJacobian.template Block<3, 3>(linkTransOffset, jointRotOffset, 3, 3) =
-        AsMatrixView(dTLinkdRJoint);
-    outJacobian.template Block<3, 3>(linkRotOffset, jointRotOffset, 3, 3) =
-        AsMatrixView(dXLinkdXJoint);
-  }
-}
-
-static void PropagateJacobianBlock(
-    VMatrix3x3r const& dTLinkdRParent,
-    int link,
-    ArticulatedJointType const& jointType,
-    ArticulatedDofInfo const& dofInfo,
-    int parent,
-    RowMatrixView<real> outJacobian) {
-  // Skip if the joint has no dofs, i.e., it is a hard joint
-  if (jointType == ArticulatedJointType::Hard) {
-    return;
-  }
-
-  // Set translation Jacobian. Joint translation affects only link translation.
-  int const linkTransOffset = link * RigidSize::kDAll;
-  int const parentTransOffset = parent * RigidSize::kDAll;
-  int const jointTransSize = dofInfo.transSize;
-  int const jointTransOffset = dofInfo.GetTransOffset();
-  if (jointTransSize == 1) {
-    outJacobian.template Block<3, 1>(linkTransOffset, jointTransOffset, 3, 1) =
-        outJacobian.template Block<3, 1>(parentTransOffset, jointTransOffset, 3, 1);
-  } else if (jointTransSize == 3) {
-    outJacobian.template Block<3, 3>(linkTransOffset, jointTransOffset, 3, 3) =
-        outJacobian.template Block<3, 3>(parentTransOffset, jointTransOffset, 3, 3);
-  } else {
-    MOCHI_ASSERT_VERBOSE(jointTransSize == 0, "Unexpected joint translation size");
-  }
-
-  int const jointRotSize = dofInfo.rotSize;
-  if (jointRotSize <= 0) {
-    return;
-  }
-
-  // Set rotation Jacobians. Joint rotation affects both link translation and rotation.
-  int const linkRotOffset = link * RigidSize::kDAll + RigidSize::kDTrans;
-  int const parentRotOffset = parent * RigidSize::kDAll + RigidSize::kDTrans;
-  int const jointRotOffset = dofInfo.GetRotOffset();
-  if (jointRotSize == 1) {
-    auto dTParentdJoint = outJacobian.template Block<3, 1>(parentTransOffset, jointRotOffset, 3, 1);
-    auto dRParentdJoint = outJacobian.template Block<3, 1>(parentRotOffset, jointRotOffset, 3, 1);
-    outJacobian.template Block<3, 1>(linkTransOffset, jointRotOffset, 3, 1) =
-        dTParentdJoint + AsMatrixView(dTLinkdRParent) * dRParentdJoint;
-    outJacobian.template Block<3, 1>(linkRotOffset, jointRotOffset, 3, 1) = dRParentdJoint;
-  } else {
-    MOCHI_ASSERT_VERBOSE(jointRotSize == 3, "Unexpected joint rotation size");
-    auto dTParentdJoint = outJacobian.template Block<3, 3>(parentTransOffset, jointRotOffset, 3, 3);
-    auto dRParentdJoint = outJacobian.template Block<3, 3>(parentRotOffset, jointRotOffset, 3, 3);
-    outJacobian.template Block<3, 3>(linkTransOffset, jointRotOffset, 3, 3) =
-        dTParentdJoint + AsMatrixView(dTLinkdRParent) * dRParentdJoint;
-    outJacobian.template Block<3, 3>(linkRotOffset, jointRotOffset, 3, 3) = dRParentdJoint;
-  }
-}
-
-void Jacobian(
-    Span<ArticulatedJointType const> jointTypes,
-    Span<int const> parents,
-    Span<Real3 const> jointAxes,
-    Span<ArticulatedDofInfo const> dofInfo,
-    Span<ArticulatedRestTransform const> restTransforms,
-    TransformRT const& worldFromRoot,
-    Span<TransformRT const> jointTransforms,
-    Span<TransformRT const> linkTransforms,
-    RowMatrixView<real> outJacobian) {
-  // For each link, traverse joints toward the root.
-  outJacobian.SetZero();
-  for (int link = 0; link < isize(parents); ++link) {
-    // Process the link's joint.
-    SetJacobianSelfBlock(
-        linkTransforms,
-        jointTransforms,
-        restTransforms,
-        worldFromRoot,
-        link,
-        jointTypes[link],
-        jointAxes[link],
-        dofInfo[link],
-        parents[link],
-        outJacobian);
-
-    int parent = parents[link];
-    if (parent == -1) {
-      continue;
-    }
-
-    // Link-parent Jacobian dTLinkdRParent
-    Vec4r tLink = linkTransforms[link].VGetTranslation();
-    Vec4r tParent = linkTransforms[parent].VGetTranslation();
-    VMatrix3x3r dTLinkdRParent = lie::DMultRotVecDRot(tLink - tParent);
-    // Propagate other joint Jacobians.
-    for (int joint = parent; joint != -1; joint = parents[joint]) {
-      PropagateJacobianBlock(
-          dTLinkdRParent, link, jointTypes[joint], dofInfo[joint], parent, outJacobian);
-    }
-  }
 }
 
 void TransportInputOfLieJacobian(

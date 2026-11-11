@@ -20,6 +20,8 @@
 #include <mochi_core/linear_algebra/krylov_interop.h>
 #include <mochi_core/linear_algebra/matrix.h>
 #include <mochi_core/mochi_platform.h>
+#include <mochi_core/utils/basic_utils.h>
+#include <mochi_core/utils/debug.h>
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/graph.h>
 #include <mochi_core/utils/rigid_body_size.h>
@@ -29,7 +31,6 @@
 
 #include <cstdint>
 #include <utility>
-#include <vector>
 
 /************************************************************************************************/
 // Definition of lib-level articulated compound data structures and algorithms
@@ -123,6 +124,88 @@ class ArticulatedRestTransform {
         parentFromOuter(parentFromOuter),
         boneFromInner(Invert(innerFromBone)),
         outerFromParent(Invert(parentFromOuter)) {}
+};
+
+/**
+ * @brief Jacobian of each link's world-frame center-of-mass translation [m] and world-frame Lie
+ * rotation [rad] with respect to the reduced DoFs ([m] or [rad], Lie algebra for 3D rotations),
+ * stored per link over the link's ancestor DoFs only: its parent's list, then its own joint's DoFs.
+ */
+class ArticulatedJacobian {
+ public:
+  // Views into the object's storage, showing every later Update. Moving the object keeps them
+  // valid; destroying it or assigning another Jacobian to it invalidates them.
+  struct LinkView {
+    RowMatrixView<real const, RigidSize::kDAll> block; // 6 × dofs.size(), row-major.
+    Span<int const> dofs; // Reduced DoF of each block column, ascending.
+  };
+
+  // Stores the layout (each link's parent and joint DoFs) and builds each link's DoF list. Links
+  // must be sorted parents first, with their joints' DoFs laid out in link order, and joints past
+  // the links must have no DoFs. Block values are undefined until the first Update.
+  explicit ArticulatedJacobian(Span<int const> parents, Span<ArticulatedDofInfo const> dofInfo);
+  MOCHI_DECLARE_MOVE_ONLY(ArticulatedJacobian);
+  ~ArticulatedJacobian() = default;
+
+  // Evaluates every entry of every block from the geometry and the configuration. The only writer;
+  // never resizes.
+  void Update(
+      Span<Real3 const> jointAxes,
+      Span<ArticulatedRestTransform const> restTransforms,
+      TransformRT const& worldFromRoot,
+      Span<TransformRT const> jointTransforms,
+      Span<TransformRT const> linkTransforms);
+
+  [[nodiscard]] int NumLinks() const {
+    return isize(_parents);
+  }
+
+  [[nodiscard]] int NumDofs() const {
+    return _numDofs;
+  }
+
+  [[nodiscard]] LinkView Link(int link) const {
+    MOCHI_ASSERT_VERBOSE(link >= 0 && link < NumLinks(), "Invalid link.");
+    int const begin = _offsets[link];
+    int const numCols = _offsets[link + 1] - begin;
+    return {
+        .block = RowMatrixView<real const, RigidSize::kDAll>(
+            _values.data() + RigidSize::kDAll * begin, RigidSize::kDAll, numCols),
+        .dofs = MakeConstSpan(_dofs).subspan(begin, numCols)};
+  }
+
+  // outFull = J·reduced. Arguments must not alias.
+  void Apply(ColumnVectorView<real const> reduced, ColumnVectorView<real> outFull) const;
+
+  // inOutReduced += Jᵀ·full, in time linear in the number of links: each link's [force; torque]
+  // accumulates over its subtree, moving to its parent through the lever arm between their centers
+  // of mass. If outSubtree is not empty (6·NumLinks()), it receives each link's subtree sum, as
+  // [force; torque] about the link's center of mass. Arguments must not alias.
+  void AddTransposeProduct(
+      ColumnVectorView<real const> full,
+      ColumnVectorView<real> inOutReduced,
+      ColumnVectorView<real> outSubtree = {}) const;
+
+  // inOutReduced += J_linkᵀ·linkFull, over one link's 6 rows. Arguments must not alias.
+  void AddLinkTransposeProduct(
+      int link,
+      ColumnVectorView<real const, RigidSize::kDAll> linkFull,
+      ColumnVectorView<real> inOutReduced) const;
+
+  // Dense rows, zero outside each link's DoFs: all links (6·NumLinks() × NumDofs()) or one link.
+  void ToDense(RowMatrixView<real> out) const;
+  void LinkToDense(int link, RowMatrixView<real, RigidSize::kDAll> out) const;
+
+ private:
+  DynamicArray<int> _parents;
+  DynamicArray<ArticulatedDofInfo> _dofInfo; // One per link.
+  DynamicArray<int> _dofs; // All link DoF lists, concatenated.
+  // Start of each link's list in _dofs, then the total. Link l's block starts at 6·_offsets[l].
+  DynamicArray<int> _offsets;
+  DynamicArray<real> _values; // All blocks, row-major, in link order.
+  // From each link's parent's center of mass to its own, in world frame [m].
+  DynamicArray<Vec4r> _leverArms;
+  int _numDofs = 0;
 };
 } // namespace mochi
 
@@ -221,32 +304,6 @@ void AssertJointTypeCount() {
 
 // Get the number of reduced dofs from the joint dofs info
 [[nodiscard]] int GetReducedDofsSize(Span<ArticulatedDofInfo const> dofInfo);
-
-// Create 2D storage for Jacobian of mapping from reduced dofs to full dofs
-// Returned storage is initialized to zeros
-RowMatrix<real> CreateJacobianStorage(int fullSize, int reducedSize);
-
-// Helper structure that stores, for each bone, the indices of its governing joint DoFs
-struct ReducedDofsMap {
-  std::vector<std::vector<int>> dofs;
-};
-
-// Create the sparse map from reduced dofs to full dofs based on the hierarchy and the joint info.
-ReducedDofsMap CreateBonesToReducedDofsMap(
-    Span<int const> parents,
-    Span<ArticulatedDofInfo const> dofInfo);
-
-// Compute Jacobian
-void Jacobian(
-    Span<ArticulatedJointType const> jointTypes,
-    Span<int const> parents,
-    Span<Real3 const> jointAxes,
-    Span<ArticulatedDofInfo const> dofInfo,
-    Span<ArticulatedRestTransform const> restTransforms,
-    TransformRT const& worldFromRoot,
-    Span<TransformRT const> jointTransforms,
-    Span<TransformRT const> linkTransforms,
-    RowMatrixView<real> outJacobian);
 
 // Given a Lie Jacobian dx/dq, with q an articulated pose, this function computes the Jacobian
 // dx/du, with u expressing 3D rotations as full rotation vectors.

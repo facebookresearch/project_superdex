@@ -1921,7 +1921,7 @@ class ActorInterfaceImpl : public ActorInterface {
 
   Span<real const> GetArticulatedControllerForce(Error& error) const override {
     MOCHI_ERROR_RETURN_IF_NO_CONTROLLER({});
-    return articulated::compound::GetPoseControllerForce(reg, e, scene, error);
+    return articulated::compound::GetPoseControllerForce(reg, e, error);
   }
 
 #undef MOCHI_ERROR_RETURN_IF_NO_CONTROLLER
@@ -2584,7 +2584,7 @@ class ActorInterfaceImpl : public ActorInterface {
 
 #define MOCHI_ERROR_RETURN_IF_NOT_LINK(...)                                   \
   MOCHI_ERROR_RETURN(error, __VA_ARGS__);                                     \
-  auto const* articulated = MOCHI_TRY_GET(CArticulatedEntity, reg, e, error); \
+  auto const* articulated = reg.try_get<CArticulatedEntity const>(e);         \
   MOCHI_ERROR_IF_NOT(articulated, error, "Actor is not an articulated link"); \
   MOCHI_ERROR_RETURN(error, __VA_ARGS__);
 
@@ -2594,10 +2594,11 @@ class ActorInterfaceImpl : public ActorInterface {
 
   Span<real const> GetArticulatedJacobian(Error& error) const override {
     MOCHI_ERROR_RETURN_IF_NOT_LINK({});
-    auto const& artJacobian = reg.get<CArticulatedJacobian const>(articulated->entity).value;
-    auto const& dofOffset = reg.get<CDofOffset const>(e).dofsOffset;
-    auto const& numDofs = reg.get<CActorDofInfo const>(e).dofsSize;
-    return artJacobian.MiddleRows(dofOffset, numDofs);
+    auto const& jacobian = reg.get<CArticulatedJacobian const>(articulated->entity).value;
+    auto& rows = reg.get<CArticulatedLinkJacobianRows>(e).value;
+    rows.Resize(RigidSize::kDAll, jacobian.NumDofs());
+    jacobian.LinkToDense(articulated->linkIndex, rows);
+    return rows;
   }
 #undef MOCHI_ERROR_RETURN_IF_NOT_LINK
 };
@@ -2968,14 +2969,11 @@ static void GetRigidTransformBackward(
   }
 
   if (actor->IsNestedLinkActor()) {
-    // For link actors, project through the FK Jacobian to the parent articulated actor's DOFs.
-    auto jacSpan = actor->GetArticulatedJacobian(ErrorAssert{});
-    int const parentDofs = isize(jacSpan) / RigidSize::kDAll;
-    RowMatrixView<real const, RigidSize::kDAll> jac(jacSpan.data(), RigidSize::kDAll, parentDofs);
-
-    auto const& artEntity = reg.get<CArticulatedEntity>(actorImpl->e);
+    // For link actors, project through the FK Jacobian to the parent articulated actor's DoFs.
+    auto const& artEntity = reg.get<CArticulatedEntity const>(actorImpl->e);
+    auto const& jacobian = reg.get<CArticulatedJacobian const>(artEntity.entity).value;
     auto& stateGrad = reg.get<CDiffStateGrad>(artEntity.entity);
-    stateGrad.value += jac.Transpose() * gradLie;
+    jacobian.AddLinkTransposeProduct(artEntity.linkIndex, gradLie, stateGrad.value);
   } else {
     // For standalone rigid actors, accumulate directly.
     auto& stateGrad = reg.get<CDiffStateGrad>(actorImpl->e);
@@ -3188,7 +3186,9 @@ void diffsim::SetArticulatedPoseFromJointsBackward(
   // A pose reset also updates the link velocities as v_link = J(q) * v_joint. Account for
   // d(v_link)/dq = dJ(q)/dq * v_joint using the articulation Hessian.
   auto const& jacobian = reg.get<CArticulatedJacobian const>(e).value;
-  int const linkDofs = jacobian.Rows();
+  int const linkDofs = RigidSize::kDAll * jacobian.NumLinks();
+  RowMatrix<real> denseJacobian(linkDofs, jacobian.NumDofs());
+  jacobian.ToDense(denseJacobian);
   auto const dt = static_cast<real>(reg.ctx<CSceneTime const>().DeltaTime());
   ColumnVector<real> linkVelocityGrad(
       dt * reg.get<CDiffDerivedStepGrad const>(e).value.BottomRows(linkDofs));
@@ -3205,7 +3205,7 @@ void diffsim::SetArticulatedPoseFromJointsBackward(
       reg.get<CArticulatedJointTransforms<TimeStep::Current> const>(e),
       reg.get<CArticulatedLinkTransforms<TimeStep::Current> const>(e),
       linkVelocityGrad,
-      jacobian,
+      denseJacobian,
       jointVelocity,
       outGrad);
 
@@ -3311,13 +3311,14 @@ void diffsim::SetArticulatedJointVelocitiesBackward(
   //    so dL/dv += -dt · dL/d(target_old).
   auto const dt = static_cast<real>(reg.ctx<CSceneTime const>().DeltaTime());
   auto const& derivedStepGrad = reg.get<CDiffDerivedStepGrad const>(e);
-  auto const& jacobian = reg.get<CArticulatedJacobian const>(e);
+  auto const& jacobian = reg.get<CArticulatedJacobian const>(e).value;
 
   // Contribution 1: velocity path via ProjectDerivedStateGradient.
-  int const linkDofs = jacobian.value.Rows();
+  int const linkDofs = RigidSize::kDAll * jacobian.NumLinks();
   auto outGrad = AsView(outGradVelocities);
-  outGrad = dt * derivedStepGrad.value.TopRows(numDofs);
-  outGrad += dt * (jacobian.value.Transpose() * derivedStepGrad.value.BottomRows(linkDofs));
+  outGrad = derivedStepGrad.value.TopRows(numDofs);
+  jacobian.AddTransposeProduct(derivedStepGrad.value.BottomRows(linkDofs), outGrad);
+  outGrad *= dt;
 
   // Contribution 2: controller path (if pose controller exists and this function owns
   // PreviousInput).

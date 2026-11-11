@@ -34,7 +34,6 @@
 #include "mochi_simulation.h"
 #include "mochi_soft_skinned.h"
 
-#include <mochi_core/articulated_body/articulated_body_hessian.h>
 #include <mochi_core/contact/contact_partition.h>
 #include <mochi_core/geometry/geometry_utils.h>
 #include <mochi_core/geometry/model_utils.h>
@@ -257,7 +256,7 @@ static void UpdateDerivedVelocityFromJointVelocities(
 
   // Link velocities are differential variables, but they are invalidated after a pose reset.
   ColumnVector<real> velFull(props.fullDofsDim, &allocator);
-  velFull = jacobian.value * velReduced;
+  jacobian.value.Apply(velReduced, velFull);
   for (int i = 0; i < isize(members.actors); ++i) {
     entt::entity const link = members.actors[i];
     int const offset = reg.get<CDofOffset const>(link).dofsOffset;
@@ -1194,18 +1193,14 @@ void articulated::compound::SetPoseControllerParams(
   }
 }
 
-Span<real const> articulated::compound::GetPoseControllerForce(
-    entt::registry& reg,
-    entt::entity e,
-    Scene const* scene,
-    Error& error) {
+Span<real const>
+articulated::compound::GetPoseControllerForce(entt::registry& reg, entt::entity e, Error& error) {
   MOCHI_ERROR_RETURN(error, {});
 
-  // TODO: This query should be computed during the simulation step, but it has to be computed
-  //       on-demand because the implementation requires the public virtual Scene and Actor
-  //       interfaces, which are only available during public API calls. This is an antipattern. The
-  //       internals of mochi_physics should use ECS entities and not reach out to the public API
-  //       layer.
+  // TODO: This query should be computed during the simulation step, from the ECS components of the
+  //       controller constraints. It is computed on demand instead, through the public Constraint
+  //       interface (GetForce, GetDofIndicesForActor). This is an antipattern. The internals of
+  //       mochi_physics should use ECS entities and not reach out to the public API layer.
 
   auto* query = reg.try_get<CQueryArticulatedControllerForce>(e);
   MOCHI_ERROR_IF(
@@ -1220,36 +1215,13 @@ Span<real const> articulated::compound::GetPoseControllerForce(
     query->force.Resize(numDofs);
   }
 
-  SceneHandle sceneHandle = reg.ctx<CSceneHandle const>().value;
-  auto const& actors = reg.get<CGroupMembers const>(e).actors;
-  std::vector<Actor const*> links(actors.size());
-  std::ranges::transform(actors, links.begin(), [&](auto e) {
-    return scene->GetActor(GetActorHandle(e, sceneHandle));
-  });
-  auto const linksSpan = MakeConstSpan(links);
-
   query->force.SetZero();
   ecs::TryInvokeOnEntity<ecs::policy::AllowMutableExternalParams>(
-      &controller::AddForces<LinkPosConstraint>,
-      reg,
-      e,
-      linksSpan,
-      AsView(query->force),
-      std::ref(error));
+      &controller::AddForces<LinkPosConstraint>, reg, e, AsView(query->force), std::ref(error));
   ecs::TryInvokeOnEntity<ecs::policy::AllowMutableExternalParams>(
-      &controller::AddForces<LinkRotConstraint>,
-      reg,
-      e,
-      linksSpan,
-      AsView(query->force),
-      std::ref(error));
+      &controller::AddForces<LinkRotConstraint>, reg, e, AsView(query->force), std::ref(error));
   ecs::TryInvokeOnEntity<ecs::policy::AllowMutableExternalParams>(
-      &controller::AddForces<JointConstraint>,
-      reg,
-      e,
-      linksSpan,
-      AsView(query->force),
-      std::ref(error));
+      &controller::AddForces<JointConstraint>, reg, e, AsView(query->force), std::ref(error));
 
   MOCHI_ERROR_RETURN(error, {});
   return query->force;
@@ -1758,7 +1730,7 @@ void mochi::articulated::compound::InitArticulatedBodyActor(
   reg.emplace<CArticulatedReducedPose<TimeStep::Previous>>(e, reducedPoseDim);
   reg.emplace<CArticulatedReducedPose<TimeStep::StageStart>>(e, reducedPoseDim);
   reg.emplace<CIntegrationArticulatedReducedPose>(e, reducedPoseDim);
-  reg.emplace<CArticulatedJacobian>(e, CreateJacobianStorage(fullDofsDim, reducedDofsDim));
+  reg.emplace<CArticulatedJacobian>(e, ArticulatedJacobian(parents, dofInfo));
   reg.emplace<CArticulatedJointTransforms<TimeStep::Current>>(e, numActors);
   reg.emplace<CArticulatedJointTransforms<TimeStep::StageStart>>(e, numActors);
   reg.emplace<CArticulatedLinkVels>(e, numActors);
@@ -1800,15 +1772,14 @@ void mochi::articulated::compound::InitArticulatedBodyActor(
 
   // Create internal rigid actors' components
   // This method must be called after the compound has already been initialized
-  ReducedDofsMap reducedDofsMap = CreateBonesToReducedDofsMap(parents, dofInfo);
   for (auto a = 0; a < numActors; ++a) {
+    MOCHI_ASSERT_VERBOSE(
+        reg.get<CDofOffset const>(groupMembers.actors[a]).dofsOffset == RigidSize::kDAll * a,
+        "Unexpected link DoF offset.");
     reg.emplace<TagArticulatedLinkActor>(groupMembers.actors[a]);
-    reg.emplace<CArticulatedEntity>(groupMembers.actors[a], e);
+    reg.emplace<CArticulatedEntity>(groupMembers.actors[a], e, a);
+    reg.emplace<CArticulatedLinkJacobianRows>(groupMembers.actors[a]);
     reg.emplace<CArticulatedFullPoseRef>(groupMembers.actors[a], AsConstView(fullPose.value));
-    reg.emplace<CArticulatedRigidJacobian>(
-        groupMembers.actors[a],
-        RowMatrix<real, RigidSize::kDAll>::Zero(RigidSize::kDAll, isize(reducedDofsMap.dofs[a])),
-        reducedDofsMap.dofs[a]);
     reg.get<CActorSnle>(groupMembers.actors[a]).useInSolver = false;
 
     // Rigid poses are algebraic variables that depend on the articulated body's DoFs. They are NOT
@@ -1948,16 +1919,12 @@ static void UpdateJacobianInput(
       linkTransforms);
 
   // Compute Jacobian
-  Jacobian(
-      joints->jointTypes,
-      parents,
+  outJacobian.value.Update(
       joints->jointAxes,
-      joints->dofInfo,
       restTransforms,
       rootTransform.worldFromLocal,
       jointTransforms,
-      linkTransforms,
-      outJacobian.value);
+      linkTransforms);
 }
 
 template <TimeStep kTimeStep>
@@ -2089,7 +2056,7 @@ void articulated::compound::AssembleTransmissionForces(
     transmission->AddObjResDRes(
         MakeConstSpan(currLinkTxs),
         MakeConstSpan(stageStartLinkTxs),
-        AsConstView(jacobian.value),
+        jacobian.value,
         currPose.value,
         stageStartPose.value,
         intState.dtStage,
@@ -2557,13 +2524,13 @@ static bool HasJointInertia(CArticulatedInertiaParams const& inertia) {
 // diagonal in the links' 6x6 dresiduals, plus the constraints' dresidual, which spans the full DoFs
 // up to the last constrained one.
 static void AssembleReducedDResidual(
-    ecs::PartialRegistry<CActorSnle const, CDofOffset const, CArticulatedRigidJacobian const> reg,
+    ecs::PartialRegistry<CActorSnle const, CDofOffset const> reg,
     Span<entt::entity const> links,
-    CArticulatedJacobian const& jacobian,
+    ArticulatedJacobian const& jacobian,
     CCompoundConstraintSnle const* constraintFullSnle,
     MatrixView<real> outJtDJ) {
   MOCHI_ASSERT_VERBOSE(
-      outJtDJ.Rows() == jacobian.value.Cols() && outJtDJ.Cols() == jacobian.value.Cols(),
+      outJtDJ.Rows() == jacobian.NumDofs() && outJtDJ.Cols() == jacobian.NumDofs(),
       "Unexpected reduced dresidual size.");
   outJtDJ.SetZero();
 
@@ -2577,8 +2544,8 @@ static void AssembleReducedDResidual(
     constraintFullDRes =
         std::get<SparseMatrixView<real const>>(AsConstView(constraintDResidual.matrix));
     MOCHI_ASSERT(
-        constraintFullDRes.Rows() <= jacobian.value.Rows(),
-        "CCompoundConstraintSnle should have been resized to the number of full DOFs in this articulated compound");
+        constraintFullDRes.Rows() <= RigidSize::kDAll * jacobian.NumLinks(),
+        "CCompoundConstraintSnle should have been resized to the number of full DoFs in this articulated compound");
   }
 
   // Scratch reused by every link, sized for a link that spans all reduced DoFs.
@@ -2588,12 +2555,13 @@ static void AssembleReducedDResidual(
   Matrix<real, RigidSize::kDAll> DJ(RigidSize::kDAll, numDofs, &tempAllocator);
   Matrix<real> linkJtDJ(numDofs, numDofs, &tempAllocator);
   RowMatrix<real, RigidSize::kDAll> couplingDJ(RigidSize::kDAll, numDofs, &tempAllocator);
+  RowMatrix<real, 3> couplingBlockDJ(3, numDofs, &tempAllocator);
 
-  // Link i's 6 rows J_i of J are nonzero only in the columns of its ancestor joints' DoFs, which
-  // its compact Jacobian lists, so the 6x6 diagonal block D_ii contributes J_i^T * D_ii * J_i
-  // through them. Constraint entries C_ij coupling link i with another link j (e.g. in closed
-  // kinematic loops) contribute J_i^T * C_ij * J_j. D is symmetric, and so is J^T * D * J: only
-  // its upper triangle is assembled, counting each pair of coupled links once, and then mirrored.
+  // Link i's 6 rows J_i of J are nonzero only in the columns of its ancestor joints' DoFs, those of
+  // its block, so the 6x6 diagonal block D_ii contributes J_i^T * D_ii * J_i through them.
+  // Constraint entries C_ij coupling link i with another link j (e.g. in closed kinematic loops)
+  // contribute J_i^T * C_ij * J_j. D is symmetric, and so is J^T * D * J: only its upper triangle
+  // is assembled, counting each pair of coupled links once, and then mirrored.
   for (int i = 0; i < isize(links); ++i) {
     int const offset = i * RigidSize::kDAll;
     MOCHI_ASSERT_VERBOSE(
@@ -2631,16 +2599,20 @@ static void AssembleReducedDResidual(
             couplingDJ.SetZero();
             isCoupled = true;
           }
-          couplingDJ.MiddleRows<3>(row - offset, 3) += block * jacobian.value.MiddleRows<3>(col, 3);
+          // C_ij * J_j is nonzero only in the columns of link j's block.
+          auto const [Jj, linkDofs] = jacobian.Link(j);
+          auto blockDJj = couplingBlockDJ.LeftCols(isize(linkDofs));
+          blockDJj = block * Jj.MiddleRows<3>(col - RigidSize::kDAll * j, 3);
+          auto couplingRows = couplingDJ.MiddleRows<3>(row - offset, 3);
+          for (int q = 0; q < isize(linkDofs); ++q) {
+            couplingRows.Col(linkDofs[q]) += blockDJj.Col(q);
+          }
         }
       }
     }
 
-    auto const& linkJacobian = reg.get<CArticulatedRigidJacobian const>(links[i]);
-    auto const& dofs = linkJacobian.dofs;
-    MOCHI_ASSERT_VERBOSE(std::ranges::is_sorted(dofs), "Expected ascending link DoFs.");
+    auto const [Ji, dofs] = jacobian.Link(i);
     int const numLinkDofs = isize(dofs);
-    RowMatrixView<real const, RigidSize::kDAll> const Ji = linkJacobian.value;
     if (isCoupled) {
       // J_i^T * C_ij * J_j over links j > i and its transpose meet in the upper triangle, and both
       // add to its diagonal.
@@ -2680,31 +2652,24 @@ static void AssembleReducedDResidual(
   }
 }
 
-// Adds the non-potential terms of a link, whose residual its compact Jacobian projects onto the
-// compound's DoFs. The terms are rotational, so the projection skips the translation rows.
+// Adds the non-potential terms of a link, whose residual its block of the Jacobian projects onto
+// the compound's DoFs.
 static void AddLinkNonPotentialTerms(
     ActorSnle const& linkSnle,
-    CArticulatedRigidJacobian const& linkJacobian,
-    int numDofs,
+    ArticulatedJacobian const& jacobian,
+    int link,
     ActorSnle& outCompoundSnle) {
-  MOCHI_ASSERT_VERBOSE(
-      linkSnle.nonPotentialResidual.TopRows(RigidSize::kDTrans).NormSqr() == 0_r,
-      "Link non-potential terms must be rotational.");
   outCompoundSnle.nonPotentialEnergy += linkSnle.nonPotentialEnergy;
-  auto residual = outCompoundSnle.NonPotentialResidual(numDofs);
-  for (int p = 0; p < isize(linkJacobian.dofs); ++p) {
-    real projected = 0_r;
-    for (int row = RigidSize::kDTrans; row < RigidSize::kDAll; ++row) {
-      projected += linkJacobian.value(row, p) * linkSnle.nonPotentialResidual[row];
-    }
-    residual[linkJacobian.dofs[p]] += projected;
-  }
+  jacobian.AddLinkTransposeProduct(
+      link,
+      ColumnVectorView<real const, RigidSize::kDAll>(linkSnle.nonPotentialResidual.GetConstSpan()),
+      outCompoundSnle.NonPotentialResidual(jacobian.NumDofs()));
 }
 
 void articulated::compound::EntityAssemble(
     AssemblyParams const& params,
     ecs::RequiredTag<TagArticulatedActor>,
-    ecs::PartialRegistry<CActorSnle const, CDofOffset const, CArticulatedRigidJacobian const> reg,
+    ecs::PartialRegistry<CActorSnle const, CDofOffset const> reg,
     ecs::OptionalTag<TagUseNewtonEulerInertia> useNewtonEulerInertia,
     CArticulatedProps const& props,
     CGroupMembers const& groupMembers,
@@ -2749,17 +2714,14 @@ void articulated::compound::EntityAssemble(
   // TODO: We could skip this step if we had a way to go directly from the full-DoF bodies to the
   // reduced-DoF problem.
   if (IsAssemblyNeeded(StateDependency::SecondOrder, false /*inputDependency*/, gradTarget)) {
-    for (auto bodyEntity : groupMembers.actors) {
+    for (int link = 0; link < isize(groupMembers.actors); ++link) {
+      entt::entity const bodyEntity = groupMembers.actors[link];
       auto const& bodySnle = reg.get<CActorSnle const>(bodyEntity);
       auto const& bodyDofOffset = reg.get<CDofOffset const>(bodyEntity);
       if (params.assemObj) {
         outCompoundSnle.objective += bodySnle.objective;
         if (bodySnle.hasNonPotentialResidual) {
-          AddLinkNonPotentialTerms(
-              bodySnle,
-              reg.get<CArticulatedRigidJacobian const>(bodyEntity),
-              props.reducedDofsDim,
-              outCompoundSnle);
+          AddLinkNonPotentialTerms(bodySnle, jacobian.value, link, outCompoundSnle);
         }
       }
       if (params.assemRes) {
@@ -2786,7 +2748,7 @@ void articulated::compound::EntityAssemble(
       auto const& constraintResidual = constraintFullSnle->residuals[0].second;
       MOCHI_ASSERT(
           constraintOffset + constraintResidual.Rows() <= outCompoundSnle.fullResidual.Rows(),
-          "CCompoundConstraintSnle should have been resized to the number of full DOFs in this articulated compound");
+          "CCompoundConstraintSnle should have been resized to the number of full DoFs in this articulated compound");
       outCompoundSnle.fullResidual.MiddleRows(constraintOffset, constraintResidual.Rows()) +=
           constraintResidual;
     }
@@ -2799,7 +2761,9 @@ void articulated::compound::EntityAssemble(
       auto const diffInputSize = diffInputInfo->dofsSize;
       MOCHI_ASSERT_VERBOSE(diffInputSize > 0, "Expected non-zero size");
       outCompoundSnle.reducedResidual.Resize(diffInputSize);
-      outCompoundSnle.reducedResidual = jacobian.value.Transpose() * outCompoundSnle.fullResidual;
+      outCompoundSnle.reducedResidual.SetZero();
+      jacobian.value.AddTransposeProduct(
+          outCompoundSnle.fullResidual, outCompoundSnle.reducedResidual);
     } else if (gradTarget == GradTarget::PreviousDelta) {
       MOCHI_ASSERT_VERBOSE(derivedStateInfo, "CActorDerivedStateInfo not found");
       auto const derivedDofsSize = derivedStateInfo->dofsSize;
@@ -2823,9 +2787,9 @@ void articulated::compound::EntityAssemble(
         std::holds_alternative<Matrix<real>>(outCompoundSnle.reducedDResidual),
         "Expected dense storage.");
     auto& JtDJ = std::get<Matrix<real>>(outCompoundSnle.reducedDResidual);
-    AssembleReducedDResidual(reg, groupMembers.actors, jacobian, constraintFullSnle, JtDJ);
+    AssembleReducedDResidual(reg, groupMembers.actors, jacobian.value, constraintFullSnle, JtDJ);
 
-    // regularize the jacobian in case we want to do quasi-static optimization
+    // Regularize the reduced dresidual in quasi-static steps.
     if (!IsFinite(intState.dtStage)) {
       real maxDiagonalElement = 0_r;
       for (int i = 0; i < JtDJ.Rows(); i++) {
@@ -2944,11 +2908,8 @@ void articulated::compound::ProjectFullResidual(
     AssemblyParams const& params,
     ecs::RequiredTag<TagArticulatedActor>,
     entt::registry& reg,
-    CArticulatedBodyShape const& bodyShape,
-    CArticulatedParents const& parents,
     CArticulatedRestTransforms const& restTransforms,
     CArticulatedLinkTransforms<TimeStep::Current> const& currLinkTxs,
-    CArticulatedLinkTransforms<TimeStep::StageStart> const& stageStartLinkTxs,
     CArticulatedJacobian const& jacobian,
     CBlendedComposition const* blendedComposition,
     CArticulatedAsyncContactLinkResidual* asyncContactLinkResidual,
@@ -2995,12 +2956,7 @@ void articulated::compound::ProjectFullResidual(
     return;
   }
 
-  // Project the full residual, with the link-space residuals, all at once. The Jacobian of each
-  // grad target is evaluated on the link transforms of its time step (see
-  // UpdateJacobiansSubpipeline), which the linear-time contraction must use too.
-  Span<TransformRT const> const linkTransforms = params.gradTarget == GradTarget::Previous
-      ? MakeConstSpan(stageStartLinkTxs)
-      : MakeConstSpan(currLinkTxs);
+  // Project the full residual, with the link-space residuals, all at once.
   bool const computeWrenches = jointWrenchesQuery && params.gradTarget == GradTarget::Current;
   ColumnVectorView<real> subtreeGradient;
   if (computeWrenches) {
@@ -3008,16 +2964,10 @@ void articulated::compound::ProjectFullResidual(
     wrenches.Resize(fullResidual.Rows());
     subtreeGradient.Reset(wrenches);
   }
-  articulated::JacobianTransposeContract(
-      bodyShape.shape->GetJointsData()->dofInfo,
-      parents,
-      linkTransforms,
-      fullResidual.GetConstSpan(),
-      jacobian.value,
-      AsView(outCompoundSnle.reducedResidual),
-      subtreeGradient);
+  jacobian.value.AddTransposeProduct(
+      fullResidual, outCompoundSnle.reducedResidual, subtreeGradient);
   if (computeWrenches) {
-    MoveSubtreeWrenchesToJoints(restTransforms, linkTransforms, subtreeGradient.GetSpan());
+    MoveSubtreeWrenchesToJoints(restTransforms, currLinkTxs, subtreeGradient.GetSpan());
     jointWrenchesQuery->isValid = true;
   }
 }
@@ -3439,7 +3389,8 @@ void articulated::compound::ProjectDerivedStateGradient(
   // Copy joint-space gradient
   outStateGrad = derivedStateGrad.TopRows(outStateGrad.Rows());
   // Add link-space gradient
-  outStateGrad += jacobian.value.Transpose() * derivedStateGrad.BottomRows(jacobian.value.Rows());
+  jacobian.value.AddTransposeProduct(
+      derivedStateGrad.BottomRows(RigidSize::kDAll * jacobian.value.NumLinks()), outStateGrad);
 }
 
 void articulated::compound::ShiftDerivedStateGradient(
@@ -3491,52 +3442,31 @@ void articulated::compound::TransportGradient(
 
 template <GradTarget kGradTarget>
 void articulated::compound::ProjectContactForceAdjoints(
-    ecs::PartialRegistry<CDofOffset const, CDiffContactGrad<kGradTarget> const> reg,
+    ecs::PartialRegistry<CDiffContactGrad<kGradTarget> const> reg,
     ecs::RequiredTag<TagArticulatedActor>,
     CGroupMembers const& groupMembers,
     CArticulatedJacobian const& jacobian,
     CDiffContactGrad<kGradTarget>& outGrad) {
   // Project the per-link adjoints
-  for (auto link : groupMembers.actors) {
-    if (auto const* linkGrad = reg.template try_get<CDiffContactGrad<kGradTarget> const>(link)) {
-      int const offset = reg.template get<CDofOffset const>(link).dofsOffset;
-      auto const jac = jacobian.value.MiddleRows<RigidSize::kDAll>(offset, RigidSize::kDAll);
-      outGrad += jac.Transpose() * (*linkGrad);
+  for (int link = 0; link < isize(groupMembers.actors); ++link) {
+    if (auto const* linkGrad =
+            reg.template try_get<CDiffContactGrad<kGradTarget> const>(groupMembers.actors[link])) {
+      jacobian.value.AddLinkTransposeProduct(
+          link, ColumnVectorView<real const, RigidSize::kDAll>(linkGrad->GetConstSpan()), outGrad);
     }
   }
 }
 
-#define MOCHI_SPECIALIZE_PROJECT_CONTACT_FORCE_ADJOINTS(kGradTarget)               \
-  template void articulated::compound::ProjectContactForceAdjoints(                \
-      ecs::PartialRegistry<CDofOffset const, CDiffContactGrad<kGradTarget> const>, \
-      ecs::RequiredTag<TagArticulatedActor>,                                       \
-      CGroupMembers const&,                                                        \
-      CArticulatedJacobian const&,                                                 \
+#define MOCHI_SPECIALIZE_PROJECT_CONTACT_FORCE_ADJOINTS(kGradTarget) \
+  template void articulated::compound::ProjectContactForceAdjoints(  \
+      ecs::PartialRegistry<CDiffContactGrad<kGradTarget> const>,     \
+      ecs::RequiredTag<TagArticulatedActor>,                         \
+      CGroupMembers const&,                                          \
+      CArticulatedJacobian const&,                                   \
       CDiffContactGrad<kGradTarget>& outGrad);
 MOCHI_SPECIALIZE_PROJECT_CONTACT_FORCE_ADJOINTS(GradTarget::Current);
 MOCHI_SPECIALIZE_PROJECT_CONTACT_FORCE_ADJOINTS(GradTarget::Previous);
 #undef MOCHI_SPECIALIZE_PROJECT_CONTACT_FORCE_ADJOINTS
-
-void articulated::rigid::EntityUpdateJacobian(
-    ecs::Included<TagArticulatedLinkActor>,
-    ecs::PartialRegistry<CArticulatedJacobian const> reg,
-    CArticulatedEntity const& entArticulated,
-    CDofOffset const& dofOffset,
-    CActorDofInfo const& numDofs,
-    CArticulatedRigidJacobian& outJacobian) {
-  MOCHI_ASSERT_VERBOSE(numDofs.dofsSize == RigidSize::kDAll);
-
-  auto const& artJacobian = reg.get<CArticulatedJacobian const>(entArticulated.entity).value;
-  auto const artJacobianBlock =
-      artJacobian.MiddleRows<RigidSize::kDAll>(dofOffset.dofsOffset, numDofs.dofsSize);
-  for (int r = 0; r < RigidSize::kDAll; ++r) {
-    auto const src = artJacobianBlock.Row(r);
-    auto dst = outJacobian.value.Row(r);
-    for (int i = 0; i < isize(outJacobian.dofs); ++i) {
-      dst(i) = src(outJacobian.dofs[i]);
-    }
-  }
-}
 
 // Take the full space DoFs from the articulated and distribute it into the rigid body states of
 // the internal rigid actors.
@@ -3712,6 +3642,7 @@ void InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<CArticulatedJointFrictionParams>(reg);
   ecs::RegisterComponent<CArticulatedParents>(reg);
   ecs::RegisterComponent<CArticulatedJacobian>(reg);
+  ecs::RegisterComponent<CArticulatedLinkJacobianRows>(reg);
   ecs::RegisterComponent<CArticulatedJointLimits>(reg);
   ecs::RegisterComponent<CArticulatedCycleJoints>(reg);
   ecs::RegisterComponent<CArticulatedJointPoseInfo>(reg);
@@ -3730,7 +3661,6 @@ void InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<CArticulatedReducedPose<TimeStep::Previous>>(reg);
   ecs::RegisterComponent<CArticulatedReducedPose<TimeStep::StageStart>>(reg);
   ecs::RegisterComponent<CArticulatedRestTransforms>(reg);
-  ecs::RegisterComponent<CArticulatedRigidJacobian>(reg);
   ecs::RegisterComponent<CArticulatedSkinExportParams>(reg);
   ecs::RegisterComponent<CArticulatedSkinningData>(reg);
   ecs::RegisterComponent<CArticulatedAsyncContactLinkResidual>(reg);

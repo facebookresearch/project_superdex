@@ -573,9 +573,9 @@ TEST(Transmission, LinearTransmission_DisplacementJacobianOverwritesAndAccumulat
       MakeConstSpan(poseInfo),
       {});
 
-  RowMatrix<real> const bodyJacobian = RowMatrix<real>::Zero(0, 3);
+  ArticulatedJacobian const bodyJacobian(ParentIndexArray{-1, 0, 1}, MakeConstSpan(dofInfo));
   DynamicArray<real> jacobian(3, 911_r);
-  transmission.DisplacementJacobian({}, AsConstView(bodyJacobian), MakeSpan(jacobian));
+  transmission.DisplacementJacobian({}, bodyJacobian, MakeSpan(jacobian));
 
   DynamicArray<real> const expected = {-0.3_r, 0_r, 1_r};
   EXPECT_SPAN_EQ(MakeConstSpan(jacobian), MakeConstSpan(expected));
@@ -595,7 +595,7 @@ void VerifyResidualIsEnergyGradient(
     real timeStep,
     Span<TransformRT const> currentLinkTransforms = {},
     Span<TransformRT const> stageStartLinkTransforms = {},
-    RowMatrixView<real const> bodyJacobian = {},
+    ArticulatedJacobian const& bodyJacobian = ArticulatedJacobian({}, {}),
     int numDirections = 5) {
   int const numDofs = isize(currentPose);
 
@@ -690,7 +690,7 @@ void VerifyDResidualDerivative(
     real timeStep,
     Span<TransformRT const> currentLinkTransforms = {},
     Span<TransformRT const> stageStartLinkTransforms = {},
-    RowMatrixView<real const> bodyJacobian = {},
+    ArticulatedJacobian const& bodyJacobian = ArticulatedJacobian({}, {}),
     int numDirections = 5) {
   int const numDofs = isize(currentPose);
 
@@ -1018,11 +1018,10 @@ DynamicArray<TransformRT> ComputeLinkTransforms(RevoluteChain const& chain, Span
   return linkTransforms;
 }
 
-// Computes the body Jacobian (6 * numLinks rows, reducedDofs cols, Lie/angular convention) at the
-// given reduced pose, matching what the physics engine supplies during assembly.
-RowMatrix<real> ComputeBodyJacobian(RevoluteChain const& chain, Span<real const> pose) {
+// Computes the body Jacobian at the given reduced pose, matching what the physics engine supplies
+// during assembly.
+ArticulatedJacobian ComputeBodyJacobian(RevoluteChain const& chain, Span<real const> pose) {
   int const numLinks = isize(chain.parents);
-  int const reducedDofs = GetReducedDofsSize(MakeConstSpan(chain.dofInfo));
   DynamicArray<TransformRT> jointTransforms(numLinks);
   DynamicArray<TransformRT> linkTransforms(numLinks);
   ComputeTransformsFromReducedPose(
@@ -1035,17 +1034,13 @@ RowMatrix<real> ComputeBodyJacobian(RevoluteChain const& chain, Span<real const>
       AsConstView(pose),
       MakeSpan(jointTransforms),
       MakeSpan(linkTransforms));
-  RowMatrix<real> jacobian = CreateJacobianStorage(numLinks * RigidSize::kDAll, reducedDofs);
-  Jacobian(
-      MakeConstSpan(chain.jointTypes),
-      MakeConstSpan(chain.parents),
+  ArticulatedJacobian jacobian(MakeConstSpan(chain.parents), MakeConstSpan(chain.dofInfo));
+  jacobian.Update(
       MakeConstSpan(chain.jointAxes),
-      MakeConstSpan(chain.dofInfo),
       MakeConstSpan(chain.restTransforms),
       TransformRT::Identity(),
       MakeConstSpan(jointTransforms),
-      MakeConstSpan(linkTransforms),
-      jacobian);
+      MakeConstSpan(linkTransforms));
   return jacobian;
 }
 
@@ -1156,7 +1151,7 @@ AssembledTransmission AssembleResDRes(
     Span<real const> stageStartPose,
     real timeStep,
     AssemblyParams const& params,
-    RowMatrixView<real const> bodyJacobian) {
+    ArticulatedJacobian const& bodyJacobian) {
   int const numDofs = isize(currentPose);
   AssembledTransmission out;
   out.residual = DynamicArray<real>(numDofs, 0_r);
@@ -1233,14 +1228,13 @@ TEST(SpatialTendon, DisplacementJacobian_MatchesFiniteDifferencesAndOverwrites) 
   DynamicArray<real> const pose = {0.2_r, 0.4_r, -0.3_r};
   DynamicArray<TransformRT> const linkTransforms =
       ComputeLinkTransforms(chain, MakeConstSpan(pose));
-  RowMatrix<real> const bodyJacobian = ComputeBodyJacobian(chain, MakeConstSpan(pose));
+  ArticulatedJacobian const bodyJacobian = ComputeBodyJacobian(chain, MakeConstSpan(pose));
 
   for (DynamicArray<RoutingElement> const& routingElements :
        {waypointOnly, mixed, allLinear, revisiting}) {
     SpatialTendon const tendon = MakeTendon(chain, MakeConstSpan(routingElements));
     DynamicArray<real> jacobian(isize(pose), 911_r);
-    tendon.DisplacementJacobian(
-        MakeConstSpan(linkTransforms), AsConstView(bodyJacobian), MakeSpan(jacobian));
+    tendon.DisplacementJacobian(MakeConstSpan(linkTransforms), bodyJacobian, MakeSpan(jacobian));
     DynamicArray<real> const finiteDifference =
         FiniteDiffDisplacementGradient(tendon, chain, MakeConstSpan(pose));
     for (int i = 0; i < isize(pose); ++i) {
@@ -1275,7 +1269,7 @@ TEST(SpatialTendon, Residual_MatchesLengthGradient) {
   real const timeStep = 0.01_r;
   real const force = 2_r;
   int const numDofs = isize(currentPose);
-  RowMatrix<real> const jacobian = ComputeBodyJacobian(chain, MakeConstSpan(currentPose));
+  ArticulatedJacobian const jacobian = ComputeBodyJacobian(chain, MakeConstSpan(currentPose));
 
   for (DynamicArray<RoutingElement> const& routingElements :
        {waypointOnly, mixed, allLinear, revisiting}) {
@@ -1290,8 +1284,9 @@ TEST(SpatialTendon, Residual_MatchesLengthGradient) {
         MakeConstSpan(stageStartPose),
         timeStep,
         AssemblyParams{.assemObj = true, .assemRes = true},
-        AsConstView(jacobian));
-    ColumnVector<real> const projected = jacobian.Transpose() * AsConstView(assembled.linkResidual);
+        jacobian);
+    ColumnVector<real> projected = ColumnVector<real>::Zero(numDofs);
+    jacobian.AddTransposeProduct(AsConstView(assembled.linkResidual), projected);
     DynamicArray<real> const g =
         FiniteDiffDisplacementGradient(tendon, chain, MakeConstSpan(currentPose));
     for (int i = 0; i < numDofs; ++i) {
@@ -1318,7 +1313,7 @@ TEST(SpatialTendon, Residual_MatchesLengthGradient) {
       MakeConstSpan(stageStartPose),
       timeStep,
       AssemblyParams{.assemObj = true, .assemRes = true},
-      AsConstView(jacobian));
+      jacobian);
   for (real const value : passive.residual) {
     EXPECT_EQ(value, 0_r);
   }
@@ -1348,7 +1343,7 @@ TEST(SpatialTendon, DResidual_MatchesQuadraticApproximation) {
   // Zero velocity (previous == current) so the force is purely the spring term.
   DynamicArray<real> const& previousPose = currentPose;
   real const timeStep = 0.01_r;
-  RowMatrix<real> const jacobian = ComputeBodyJacobian(chain, MakeConstSpan(currentPose));
+  ArticulatedJacobian const jacobian = ComputeBodyJacobian(chain, MakeConstSpan(currentPose));
   AssemblyParams const params{
       .assemObj = false, .assemRes = true, .assemDRes = true, .psdDRes = false};
   AssembledTransmission const assembled = AssembleResDRes(
@@ -1358,7 +1353,7 @@ TEST(SpatialTendon, DResidual_MatchesQuadraticApproximation) {
       MakeConstSpan(previousPose),
       timeStep,
       params,
-      AsConstView(jacobian));
+      jacobian);
 
   DynamicArray<real> const g =
       FiniteDiffDisplacementGradient(tendon, chain, MakeConstSpan(currentPose));

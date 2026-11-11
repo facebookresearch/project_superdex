@@ -6562,6 +6562,7 @@
 /// @return Jacobian matrix in row-major order with shape [6, numArticulatedDoFs], where 6 is the number of rigid DoFs of the link (3 translation + 3 rotation) and numArticulatedDoFs is @ref mochi::Actor::GetNumDofs "GetNumDofs" of the owning articulated actor.
 ///
 /// @note Only applicable to nested link actors within articulated actors.
+/// @note The values are computed at the call. Later steps and state changes do not update them, but the next call on the same link overwrites them. The returned span remains valid until the owning articulated actor is destroyed.
 /// @note To get the Jacobian in the articulation's root frame, left-multiply the Jacobian by the 6×6 block-diagonal of the root-from-world rotation:
 ///
 /// @code

@@ -33,8 +33,8 @@ namespace mochi::articulated {
 // Hessian tensor (H) is a 3D tensor of size:
 // (|d|=RigidSize::kDAll*numLinks, |i|=#ReducedDofs, |j|=#ReducedDofs)
 //  H(d,i,j) = ArticulatedHessian[j](d,i) = ∂²m_d/∂qᵢ∂qⱼ
-// m_d: the component of full DOF (same meaning as the row index of the Jacobian)
-// q_i, q_j: the component of reduced DOF (same meaning as the column index of the Jacobian)
+// m_d: the component of full DoF (same meaning as the row index of the dense Jacobian)
+// q_i, q_j: the component of reduced DoF (same meaning as the column index of the dense Jacobian)
 using ArticulatedHessian = DynamicArray<Matrix<real>>;
 
 // Compute Hessian tensor
@@ -48,20 +48,6 @@ void Hessian(
     Span<TransformRT const> linkTransforms,
     RowMatrixView<real const> jacobian,
     ArticulatedHessian& outHessian);
-
-// Contract the transpose of an articulated Jacobian with a full-space vector in linear time:
-// outReducedGradient += jacobian^T * inFullGradient.
-// If outSubtreeGradient is not empty (size RigidSize::kDAll * numLinks), on return its block of
-// each link holds the sum of inFullGradient over the link's subtree, as [force; torque] about the
-// link's translation in linkTransforms. Arguments must not alias.
-void JacobianTransposeContract(
-    Span<ArticulatedDofInfo const> dofInfo,
-    Span<int const> parents,
-    Span<TransformRT const> linkTransforms,
-    Span<real const> inFullGradient,
-    RowMatrixView<real const> jacobian,
-    ColumnVectorView<real> outReducedGradient,
-    ColumnVectorView<real> outSubtreeGradient);
 
 // The articulated Hessian differentiates a locally transported Jacobian. For a Lie perturbation
 // delta around q, define

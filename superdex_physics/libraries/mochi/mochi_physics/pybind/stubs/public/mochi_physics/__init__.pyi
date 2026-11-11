@@ -12711,6 +12711,11 @@ class Actor:
             Only applicable to nested link actors within articulated actors.
 
         Note:
+            The values are computed at the call. Later steps and state changes do not
+            update them, but the next call on the same link overwrites them. The
+            returned span remains valid until the owning articulated actor is destroyed.
+
+        Note:
             To get the Jacobian in the articulation's root frame, left-multiply the
             Jacobian by the 6×6 block-diagonal of the root-from-world rotation:
 

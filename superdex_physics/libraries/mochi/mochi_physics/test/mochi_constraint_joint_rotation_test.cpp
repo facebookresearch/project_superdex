@@ -285,7 +285,6 @@ struct JointRotationTrackingLinkToRigidData {
 
     // Initialize the articulated Jacobian
     ecs::InvokeForEachGlobal(&articulated::compound::UpdateJacobianState<kTimeStep>, reg);
-    ecs::InvokeForEachGlobal(&articulated::rigid::EntityUpdateJacobian, reg);
   }
 
   template <TimeStep kTimeStep>
@@ -525,7 +524,6 @@ struct JointRotationTrackingDifferentActorsData {
 
     // Initialize the articulated Jacobians
     ecs::InvokeForEachGlobal(&articulated::compound::UpdateJacobianState<kTimeStep>, reg);
-    ecs::InvokeForEachGlobal(&articulated::rigid::EntityUpdateJacobian, reg);
   }
 
   template <TimeStep kTimeStep>

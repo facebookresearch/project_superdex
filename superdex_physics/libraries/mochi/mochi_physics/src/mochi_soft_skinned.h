@@ -64,6 +64,12 @@ struct CSoftSkinnedJacobianArticulated : public NoCopy {
   RowMatrix<real> dJoints;
 };
 
+// Jacobian of an articulated actor with soft skinned actors, in dense form, for their
+// dJoints = dBones * value. skinned::UpdateJacobiansPipeline expands it once for all of them.
+struct CDenseArticulatedJacobian : public NoCopy {
+  RowMatrix<real> value;
+};
+
 // Reusable memory used during skinned::EntityAssembleBody
 struct CSoftSkinnedAssemblyScratchMemory {
   RowMatrix<real> A_Jsoft; // Only needed for ROMs. Will be resized on the fly.
@@ -217,9 +223,13 @@ void UpdateDerivedStatePipeline(entt::registry& reg, Span<entt::entity const> en
 
 /*
  * Pipeline to update Jacobians for assembly. Must be called after
- * articulated::compound::UpdateJacobiansPipeline()
+ * articulated::compound::UpdateJacobiansStatePipeline<TimeStep::Current>(). compoundActors must
+ * include the articulated actors of the entities.
  */
-void UpdateJacobiansPipeline(entt::registry& reg, Span<entt::entity const> entities);
+void UpdateJacobiansPipeline(
+    entt::registry& reg,
+    Span<entt::entity const> compoundActors,
+    Span<entt::entity const> entities);
 
 // Call once on startup
 void InitializeOnce(entt::registry& reg);

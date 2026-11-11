@@ -126,12 +126,14 @@ class ActorConvergenceWeightsTest : public test::MochiSceneTestBase {
     for (int i = 0; i < numNodes; ++i) {
       nodes.push_back(Real3{static_cast<real>(i) * spacing, 0_r, 0_r});
     }
+
     DynamicArray<Real3> axes;
     for (int i = 0; i < numNodes - 1; ++i) {
       axes.push_back(Real3{0_r, 1_r, 0_r});
     }
     auto shape =
         CreatePolylineShape(_mochiContext, nodes, axes, /*isClosedLoop*/ false, test::ExpectOK{});
+
     RodActorParams p;
     p.shape = shape;
     p.material.linearDensity = linearDensity;
@@ -148,6 +150,7 @@ class ActorConvergenceWeightsTest : public test::MochiSceneTestBase {
     }
     auto shape =
         CreatePolylineShape(_mochiContext, nodes, {}, /*isClosedLoop*/ true, test::ExpectOK{});
+
     RodActorParams p;
     p.shape = shape;
     p.material.linearDensity = linearDensity;
@@ -386,15 +389,17 @@ TEST_IF_F(MOCHI_ENABLE_ROM_ACTORS, ActorConvergenceWeightsTest, RomHyperReductio
 
 // A fixed root (link 0) carries a tree of links. Each link's joint lies L from its parent's along
 // the link's direction, and its center of mass L/2 further. Links 1 to 4 are point masses with a
-// small isotropic MOI, on revolute joints about different axes, one of them oblique. Links 5 and 6
-// are massless frames on hard joints. Link 1 branches into links 2 and 3, so the subtree of link 2,
-// {2, 4, 5, 6}, skips link 3. At rest, a joint's mass block is the MOI about its axis of the links
-// it moves. The weights follow w = 1/(Q_rot · Q_c), with Q_c = aRef·√m_subtree·√M_block and
+// small isotropic MOI: links 1 to 3 on revolute joints about different axes, one of them oblique,
+// and link 4 on a free joint. Links 5 and 6 are massless frames on hard joints. Link 1 branches
+// into links 2 and 3, so the subtree of link 2, {2, 4, 5, 6}, skips link 3. At rest, a joint's mass
+// block is the mass of the links it moves for a translation, and their MOI about its axis for a
+// rotation. The weights follow w = 1/(Q_type · Q_c), with Q_c = aRef·√m_subtree·√M_block and
 // aRef = 1 without gravity.
 TEST_F(ActorConvergenceWeightsTest, ArticulatedTreeOfPointMasses) {
   constexpr real kLength = 1_r;
   constexpr real kMoi = 0.01_r;
-  constexpr int kNumMovingLinks = 4;
+  constexpr int kFreeLink = 4; // The last moving link.
+
   // Per link; the root's entries are unused.
   constexpr std::array kParents{-1, 0, 1, 1, 2, 4, 5};
   constexpr std::array kMasses{0_r, 1_r, 2_r, 3_r, 4_r, 0_r, 0_r};
@@ -405,10 +410,11 @@ TEST_F(ActorConvergenceWeightsTest, ArticulatedTreeOfPointMasses) {
       kReal3ZAxis,
       Real3{2_r / 3_r, 2_r / 3_r, 1_r / 3_r},
       kReal3XAxis,
-      kReal3YAxis,
+      kReal3Zeros,
       kReal3Zeros,
       kReal3Zeros};
   constexpr int kNumLinks = isize(kParents);
+
   _scene->SetGravity(Real3{});
 
   // Build the tree, and the world positions at rest of each link's joint and center of mass.
@@ -424,7 +430,7 @@ TEST_F(ActorConvergenceWeightsTest, ArticulatedTreeOfPointMasses) {
     auto& link = params.links.push_back();
     link.parentLink = kParents[i];
     if (kMasses[i] > 0_r) {
-      joint.type = ArticulatedJointType::Revolute;
+      joint.type = i == kFreeLink ? ArticulatedJointType::Free : ArticulatedJointType::Revolute;
       joint.axis = kAxes[i];
       link.mass = kMasses[i];
       link.centerOfMass = 0.5_r * offset;
@@ -432,16 +438,18 @@ TEST_F(ActorConvergenceWeightsTest, ArticulatedTreeOfPointMasses) {
     } else {
       joint.type = ArticulatedJointType::Hard;
     }
+
     jointPositions[i] = jointPositions[kParents[i]] + offset;
     centersOfMass[i] = jointPositions[i] + 0.5_r * offset;
   }
+
   Actor* actor = _scene->CreateArticulatedActor(params, test::ExpectOK{});
   _scene->Step(kDt);
 
   // Joint k moves link j if link k is link j or one of its ancestors.
-  std::array<real, kNumMovingLinks + 1> Qc{};
+  std::array<real, kFreeLink> Qc{};
   real Qrot = 0_r;
-  for (int k = 1; k <= kNumMovingLinks; ++k) {
+  for (int k = 1; k < kFreeLink; ++k) {
     real subtreeMass = 0_r;
     real massBlock = 0_r;
     for (int j = k; j < kNumLinks; ++j) {
@@ -458,10 +466,22 @@ TEST_F(ActorConvergenceWeightsTest, ArticulatedTreeOfPointMasses) {
     Qc[k] = Sqrt(subtreeMass) * Sqrt(massBlock);
     Qrot += Qc[k];
   }
+
+  // The free joint moves link 4 alone, with its center of mass L/2 along z: Q_c = m for the
+  // translations, and √m·√(m·(L/2)² + kMoi) about x and y and √m·√kMoi about z for the rotations.
+  real const m = kMasses[kFreeLink];
+  real const lateralQc = Sqrt(m) * Sqrt(m * Sqr(0.5_r * kLength) + kMoi);
+  std::array const freeQc{m, m, m, lateralQc, lateralQc, Sqrt(m) * Sqrt(kMoi)};
+  Qrot += freeQc[3] + freeQc[4] + freeQc[5];
+
   auto const& weights = GetRegistry().get<CActorConvergenceWeights const>(GetEntity(actor)).values;
-  ASSERT_EQ(kNumMovingLinks, weights.Rows());
-  for (int k = 1; k <= kNumMovingLinks; ++k) {
+  ASSERT_EQ(kFreeLink - 1 + isize(freeQc), weights.Rows());
+  for (int k = 1; k < kFreeLink; ++k) {
     EXPECT_NEAR_RTOL(1_r / (Qrot * Qc[k]), weights[k - 1], 1e-5_r);
+  }
+  for (int d = 0; d < isize(freeQc); ++d) {
+    real const Qtype = d < 3 ? 3_r * m : Qrot;
+    EXPECT_NEAR_RTOL(1_r / (Qtype * freeQc[d]), weights[kFreeLink - 1 + d], 1e-5_r);
   }
 }
 

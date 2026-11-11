@@ -15,7 +15,6 @@
  */
 
 #include <mochi_core/articulated_body/articulated_body.h>
-#include <mochi_core/articulated_body/articulated_body_hessian.h>
 
 #include "config.h"
 
@@ -126,6 +125,12 @@ struct ArticulatedBodyBundle {
         fullPose);
     reducedPose = newPose;
   }
+
+  ArticulatedJacobian ComputeJacobian() const {
+    ArticulatedJacobian result(parents, dofInfo);
+    result.Update(jointAxes, restTransforms, worldFromRoot, jointTransforms, linkTransforms);
+    return result;
+  }
 };
 } // namespace
 
@@ -138,74 +143,21 @@ static void JacobianVectorContract(benchmark::State& state) {
     bundle.AddJoint(i - 1, ArticulatedJointType::Spherical);
   }
 
-  // Compute Jacobian
-  RowMatrix<real> jacobian(bundle.props.fullDofsDim, bundle.props.reducedDofsDim);
-  Jacobian(
-      bundle.jointTypes,
-      bundle.parents,
-      bundle.jointAxes,
-      bundle.dofInfo,
-      bundle.restTransforms,
-      bundle.worldFromRoot,
-      bundle.jointTransforms,
-      bundle.linkTransforms,
-      jacobian);
+  ArticulatedJacobian const jacobian = bundle.ComputeJacobian();
 
-  // Fast J^T*v
   ColumnVector<real> contractedVector(bundle.props.numLinks * RigidSize::kDAll);
-  ColumnVector<real> gradientContracted(bundle.props.reducedDofsDim);
+  contractedVector.SetRandom(0);
+  ColumnVector<real> gradientContracted = ColumnVector<real>::Zero(bundle.props.reducedDofsDim);
   for (auto x : state) {
-    gradientContracted = Transpose(jacobian) * contractedVector;
-    MOCHI_NO_DISCARD_IN_LOOP(gradientContracted);
-  }
-  benchmark::DoNotOptimize(gradientContracted);
-}
-
-template <int n>
-static void JacobianVectorContractFast(benchmark::State& state) {
-  ArticulatedBodyBundle bundle;
-  for (int i = 0; i < n; i++) {
-    bundle.AddJoint(i - 1, ArticulatedJointType::Spherical);
-  }
-
-  // Compute Jacobian
-  RowMatrix<real> jacobian(bundle.props.fullDofsDim, bundle.props.reducedDofsDim);
-  Jacobian(
-      bundle.jointTypes,
-      bundle.parents,
-      bundle.jointAxes,
-      bundle.dofInfo,
-      bundle.restTransforms,
-      bundle.worldFromRoot,
-      bundle.jointTransforms,
-      bundle.linkTransforms,
-      jacobian);
-
-  // Fast J^T*v
-  ColumnVector<real> contractedVector(bundle.props.numLinks * RigidSize::kDAll);
-  ColumnVector<real> gradientContracted(bundle.props.reducedDofsDim);
-  for (auto x : state) {
-    JacobianTransposeContract(
-        bundle.dofInfo,
-        bundle.parents,
-        bundle.linkTransforms,
-        contractedVector,
-        jacobian,
-        gradientContracted,
-        ColumnVectorView<real>{});
+    jacobian.AddTransposeProduct(contractedVector, gradientContracted);
     MOCHI_NO_DISCARD_IN_LOOP(gradientContracted);
   }
   benchmark::DoNotOptimize(gradientContracted);
 }
 
 BENCHMARK_TEMPLATE(JacobianVectorContract, 10);
-BENCHMARK_TEMPLATE(JacobianVectorContractFast, 10);
 BENCHMARK_TEMPLATE(JacobianVectorContract, 20);
-BENCHMARK_TEMPLATE(JacobianVectorContractFast, 20);
 BENCHMARK_TEMPLATE(JacobianVectorContract, 30);
-BENCHMARK_TEMPLATE(JacobianVectorContractFast, 30);
 BENCHMARK_TEMPLATE(JacobianVectorContract, 40);
-BENCHMARK_TEMPLATE(JacobianVectorContractFast, 40);
 BENCHMARK_TEMPLATE(JacobianVectorContract, 50);
-BENCHMARK_TEMPLATE(JacobianVectorContractFast, 50);
 } // namespace mochi_benchmark
