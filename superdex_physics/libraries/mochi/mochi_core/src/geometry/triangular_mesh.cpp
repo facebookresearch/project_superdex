@@ -112,27 +112,6 @@ static void CalcTriangleNormalsAndArea(
   }
 }
 
-// Get the overall barycenter for the mesh
-static Real3 CalcMeshBarycenter(
-    Span<Real3 const> elementBarycenters,
-    Span<real const> elementAreas,
-    real totalArea) {
-  MOCHI_ASSERT_VERBOSE(
-      elementBarycenters.size() == elementAreas.size(), "Should be parallel arrays");
-  size_t const numElements = elementBarycenters.size();
-  if (numElements == 0) {
-    return {};
-  }
-  MOCHI_ASSERT_VERBOSE(
-      IsFinite(totalArea) && totalArea > 0_r, "Total area must be positive and finite.")
-  Real3 barycenter = {};
-  for (int e = 0; e < numElements; ++e) {
-    barycenter += elementBarycenters[e] * elementAreas[e];
-  }
-  barycenter /= totalArea;
-  return barycenter;
-}
-
 // Verify that all triangle normals point outward by doing a brute force
 // ray-cast against the rest of the mesh. If any normals are found to be
 // facing inward, then negate their direction and correct the winding order.
@@ -269,14 +248,7 @@ TriangularMesh::TriangularMesh(Span<Real3 const> coordinatesIn, Span<Int3 const>
     }
   }
 
-  // Calculate total area
-  _totalMeasure = 0_r;
-  for (real a : _elementMeasure) {
-    _totalMeasure += a;
-  }
-
-  // Calculate the overall barycenter (stored in the base class)
-  _barycenter = CalcMeshBarycenter(_elementBarycenters, _elementMeasure, _totalMeasure);
+  ComputeTotalMeasureAndBarycenter();
 
   bool constexpr kCheckMeshFlux = false;
   if constexpr (kCheckMeshFlux) {

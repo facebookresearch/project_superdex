@@ -965,8 +965,11 @@ static void InitRigidActor_Dynamic(
       return;
     }
 
-    // Store the inertia properties.
-    reg.emplace<CRigidBodyInertia>(e, *comLocal, *volume, moi, *density);
+    // Store the inertia properties, keeping whichever of mass and density the caller gave bitwise.
+    auto& inertia = reg.emplace<CRigidBodyInertia>(e, *comLocal, *volume, moi, *density);
+    if (params.mass) {
+      inertia.SetInertiaProperties(*mass, *comLocal, moi);
+    }
 
     // Energy terms used
     reg.emplace<TagUseInertia>(e);

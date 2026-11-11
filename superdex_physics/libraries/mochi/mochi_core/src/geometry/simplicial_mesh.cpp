@@ -89,6 +89,31 @@ SimplicialMesh::SimplicialMesh(
   // algorithms are used depending on the element type.
 }
 
+void SimplicialMesh::ComputeTotalMeasureAndBarycenter() {
+  MOCHI_ASSERT_VERBOSE(
+      _elementBarycenters.size() == _elementMeasure.size(), "Should be parallel arrays");
+  double totalMeasure = 0.0;
+  Double3 firstMoment = {};
+  for (size_t e = 0; e < _elementMeasure.size(); ++e) {
+    auto const measure = StaticCast<double>(_elementMeasure[e]);
+    totalMeasure += measure;
+    firstMoment += StaticCast<Double3>(_elementBarycenters[e]) * measure;
+  }
+  MOCHI_ASSERT_VERBOSE(
+      _elementMeasure.empty() || (IsFinite(totalMeasure) && totalMeasure > 0.0),
+      "Total measure must be positive and finite.");
+  _totalMeasure = StaticCast<real>(totalMeasure);
+  _barycenter = _elementMeasure.empty() ? Real3{} : StaticCast<Real3>(firstMoment / totalMeasure);
+}
+
+real SimplicialMesh::ComputeMeasure(Span<int const> elementIndices) const {
+  double measure = 0.0;
+  for (int e : elementIndices) {
+    measure += StaticCast<double>(_elementMeasure[e]);
+  }
+  return StaticCast<real>(measure);
+}
+
 std::vector<int> SimplicialMesh::FindBoundaryNodes(
     size_t numNodes,
     Span<Int2 const> boundaryEdges) {

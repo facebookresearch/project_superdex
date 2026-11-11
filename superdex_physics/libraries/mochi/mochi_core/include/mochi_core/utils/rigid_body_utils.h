@@ -402,19 +402,21 @@ inline void ComputeVolumeAndCentroid(
     Span<Int3 const> connectivity,
     Vec4r& outCentroid,
     real& outVolume) {
-  outVolume = 0_r;
-  Vec4r firstMoment = {};
+  // Accumulated in double for accuracy
+  double volume = 0.0;
+  Vec4d firstMoment = {};
   for (Int3 const& face : connectivity) {
-    Vec4r const a = ToSimd(coordinates[face[0]]);
-    Vec4r const b = ToSimd(coordinates[face[1]]);
-    Vec4r const c = ToSimd(coordinates[face[2]]);
+    Vec4d const a = StaticCast<Vec4d>(ToSimd(coordinates[face[0]]));
+    Vec4d const b = StaticCast<Vec4d>(ToSimd(coordinates[face[1]]));
+    Vec4d const c = StaticCast<Vec4d>(ToSimd(coordinates[face[2]]));
     // det(a, b, c)/6, from the edges to reduce cancellation on small faces far from the origin
-    real const tetVolume = (1_r / 6_r) * Dot<3>(a, Cross3(b - a, c - a));
-    outVolume += tetVolume;
-    firstMoment += (0.25_r * (a + b + c)) * tetVolume;
+    double const tetVolume = (1.0 / 6.0) * Dot<3>(a, Cross3(b - a, c - a));
+    volume += tetVolume;
+    firstMoment += (0.25 * (a + b + c)) * tetVolume;
   }
 
-  outCentroid = firstMoment / outVolume;
+  outVolume = StaticCast<real>(volume);
+  outCentroid = StaticCast<Vec4r>(firstMoment / volume);
 }
 
 // Computes the second moment of inertia of a rigid body with uniform density from its tetrahedral
@@ -425,26 +427,28 @@ inline VMatrix3x3r ComputeSecondMomentOfInertia(
     Span<Int4 const> connectivity,
     real density,
     Vec4r const& centerOfMass) {
-  VMatrix3x3r outInertia = {};
+  // Accumulated in double for accuracy
+  Vec4d const center = StaticCast<Vec4d>(centerOfMass);
+  VMatrix3x3d outInertia = {};
   for (Int4 const& tet : connectivity) {
-    Vec4r const x0 = ToSimd(coordinates[tet[0]]);
-    Vec4r const x1 = ToSimd(coordinates[tet[1]]);
-    Vec4r const x2 = ToSimd(coordinates[tet[2]]);
-    Vec4r const x3 = ToSimd(coordinates[tet[3]]);
+    Vec4d const x0 = StaticCast<Vec4d>(ToSimd(coordinates[tet[0]]));
+    Vec4d const x1 = StaticCast<Vec4d>(ToSimd(coordinates[tet[1]]));
+    Vec4d const x2 = StaticCast<Vec4d>(ToSimd(coordinates[tet[2]]));
+    Vec4d const x3 = StaticCast<Vec4d>(ToSimd(coordinates[tet[3]]));
     // 6 times the signed volume, from the original edges to limit rounding on small tetrahedra far
     // from centerOfMass
-    real const det = Dot<3>(x1 - x0, Cross3(x2 - x0, x3 - x0));
-    Vec4r const a = x0 - centerOfMass;
-    Vec4r const b = x1 - centerOfMass;
-    Vec4r const c = x2 - centerOfMass;
-    Vec4r const d = x3 - centerOfMass;
-    Vec4r const s = a + b + c + d;
+    double const det = Dot<3>(x1 - x0, Cross3(x2 - x0, x3 - x0));
+    Vec4d const a = x0 - center;
+    Vec4d const b = x1 - center;
+    Vec4d const c = x2 - center;
+    Vec4d const d = x3 - center;
+    Vec4d const s = a + b + c + d;
     outInertia +=
         (Outer3(a, a) + Outer3(b, b) + Outer3(c, c) + Outer3(d, d) + Outer3(s, s)) * Abs(det);
   }
 
-  outInertia *= density / 120_r;
-  return outInertia;
+  outInertia *= static_cast<double>(density) / 120.0;
+  return StaticCast<VMatrix3x3r>(outInertia);
 }
 
 // Computes the second moment of inertia of a rigid body with uniform density from its closed
@@ -456,19 +460,21 @@ inline VMatrix3x3r ComputeSecondMomentOfInertia(
     Span<Int3 const> connectivity,
     real density,
     Vec4r const& centerOfMass) {
-  VMatrix3x3r outInertia = {};
+  // Accumulated in double for accuracy
+  Vec4d const center = StaticCast<Vec4d>(centerOfMass);
+  VMatrix3x3d outInertia = {};
   for (Int3 const& face : connectivity) {
-    Vec4r const a = ToSimd(coordinates[face[0]]) - centerOfMass;
-    Vec4r const b = ToSimd(coordinates[face[1]]) - centerOfMass;
-    Vec4r const c = ToSimd(coordinates[face[2]]) - centerOfMass;
-    Vec4r const s = a + b + c;
+    Vec4d const a = StaticCast<Vec4d>(ToSimd(coordinates[face[0]])) - center;
+    Vec4d const b = StaticCast<Vec4d>(ToSimd(coordinates[face[1]])) - center;
+    Vec4d const c = StaticCast<Vec4d>(ToSimd(coordinates[face[2]])) - center;
+    Vec4d const s = a + b + c;
     // det(a, b, c), from the edges to reduce cancellation on small faces far from centerOfMass
-    real const det = Dot<3>(a, Cross3(b - a, c - a));
+    double const det = Dot<3>(a, Cross3(b - a, c - a));
     outInertia += (Outer3(a, a) + Outer3(b, b) + Outer3(c, c) + Outer3(s, s)) * det;
   }
 
-  outInertia *= density / 120_r;
-  return outInertia;
+  outInertia *= static_cast<double>(density) / 120.0;
+  return StaticCast<VMatrix3x3r>(outInertia);
 }
 
 // Computes the second moment of inertia of a sphere with given uniform density and radius

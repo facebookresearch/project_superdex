@@ -676,10 +676,11 @@ TEST_F(TunerTest, PosePathDrivesTheBodyAlongItsWaypoints) {
   RunCapture const run = Run(spec);
 
   ASSERT_EQ(run.summary.status, "ok");
-  // Halfway along, it tracks the moving target closely, not just once the path has stopped.
+  // The drive pushes the cube up to the path's speed on the first sample. Halfway along, it tracks
+  // the moving target closely, not just once the path has stopped, and needs no force.
+  EXPECT_GT(run.Value("load.drive.mag", 0), 0);
   size_t const halfway = run.samples.size() / 3;
   EXPECT_LT(run.Value("load.drive.error", halfway), 0.05f);
-  EXPECT_GT(run.Value("load.drive.mag", halfway), 0);
   EXPECT_LT(run.Final("load.drive.error"), 0.005f);
   EXPECT_LT(run.Final("load.drive.angleError"), 0.01f);
   EXPECT_NEAR(run.Final("cube.rotvec.z"), quarterTurn, 0.01f);

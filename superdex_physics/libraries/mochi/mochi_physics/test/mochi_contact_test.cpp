@@ -48,6 +48,7 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <cmath>
 #include <cstring>
 #include <limits>
 #include <memory>
@@ -611,6 +612,16 @@ INSTANTIATE_TEST_SUITE_P(
         FarCollider::GridSdf),
     FarColliderName);
 
+// Central-difference step that balances truncation (∝ h²) and rounding (∝ ε / h) errors, and a
+// tolerance that scales like the resulting error (∝ ε^(2/3)).
+[[nodiscard]] static real FiniteDifferenceStep() {
+  return 0.05_r * std::cbrt(std::numeric_limits<real>::epsilon());
+}
+
+[[nodiscard]] static real FiniteDifferenceTolerance() {
+  return 80_r * Sqr(std::cbrt(std::numeric_limits<real>::epsilon()));
+}
+
 namespace {
 struct TestParams {
   std::string name = {};
@@ -619,10 +630,10 @@ struct TestParams {
   real viscousCoefficient = 0_r;
   real dampingCoefficient = 0_r;
   bool explicitNormals = false;
-  real resTol = 1e-3_r;
-  real dresTol = 1e-3_r;
+  real resTol = FiniteDifferenceTolerance();
+  real dresTol = FiniteDifferenceTolerance();
   bool ignoreColliderRotDres = false;
-  real eps = 1e-4_r;
+  real eps = FiniteDifferenceStep();
   bool frictionWithColliderNormal = true;
   // Stretch of the soft collider along its local x axis at stage start.
   real colliderStretch = 0_r;
@@ -1780,7 +1791,7 @@ INSTANTIATE_TEST_SUITE_P(
         TestParams{"DampingExplicit", GradTarget::Current, 0_r, 0_r, 1_r, true, 2e-3_r, 3e-2_r},
         TestParams{"NoFrictionPrevious", GradTarget::Previous, 0_r, 0_r, 0_r, true, {}, {}},
         TestParams{"ViscousPrevious", GradTarget::Previous, 0_r, 1_r, 0_r, true, 2e-3_r, {}},
-        TestParams{"CoulombPrevious", GradTarget::Previous, 0.5_r, 0_r, 0_r, true, 1e-3_r, {}},
+        TestParams{"CoulombPrevious", GradTarget::Previous, 0.5_r, 0_r, 0_r, true},
         TestParams{"DampingPrevious", GradTarget::Previous, 0_r, 0_r, 1_r, true, 4e-3_r, {}}),
     [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
 
@@ -3042,18 +3053,13 @@ TEST_P(MochiSkinnedSoftLinkContact, MappedMatchesLegacyAssembly) {
 // The dresidual omits the second derivative of the map from the link DoFs to the contact points,
 // whose lever arm depends on both the link pose and the skin samples, so it differs from the finite
 // differences in every row and column of the link DoFs. Only the soft block, whose skin map is
-// linear, is compared. Its finite differences have float rounding error near 1e-3 that varies
-// across build configurations.
+// linear, is compared.
 INSTANTIATE_TEST_SUITE_P(
     FrictionVariations,
     MochiSkinnedSoftLinkContact,
     ::testing::Values(
-        TestParams{.name = "NoFriction", .dresTol = 2e-3_r, .ignoreColliderDres = true},
-        TestParams{
-            .name = "Viscous",
-            .viscousCoefficient = 1_r,
-            .dresTol = 2e-3_r,
-            .ignoreColliderDres = true}),
+        TestParams{.name = "NoFriction", .ignoreColliderDres = true},
+        TestParams{.name = "Viscous", .viscousCoefficient = 1_r, .ignoreColliderDres = true}),
     [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
 
 // An enlarged child link under the soft cube overlaps it by less than the penalty threshold, so

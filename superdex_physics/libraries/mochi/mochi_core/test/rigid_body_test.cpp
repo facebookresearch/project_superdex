@@ -139,6 +139,61 @@ TEST_IF(MOCHI_INTERNAL, RigidBody, MomentOfInertia_Armadillo) {
   TestMassProperties(mesh, nullptr, density);
 }
 
+// The volume, center of mass and second moment of a small part authored far from its mesh origin,
+// from its tet mesh and from its boundary, and the area and barycenter of its boundary mesh, are
+// accurate to rounding them, up to the error of their double-precision arithmetic.
+TEST(RigidBody, MassProperties_FarFromOrigin) {
+  auto [coordinates, connectivity] =
+      test::CreateMinimalTetMeshUnitGrid(Real3{0.05_r, 0.02_r, 0.01_r}, Int3{16, 16, 16});
+  for (Real3& x : coordinates) {
+    x += Real3{8_r, 5_r, 3_r};
+  }
+  TetrahedralMesh const mesh(coordinates, connectivity);
+  TriangularMesh const boundaryMesh = CreateBoundaryMesh(mesh);
+  Vec4r boundaryCentroid = {};
+  real boundaryVolume = {};
+  ComputeVolumeAndCentroid(
+      boundaryMesh.GetNodeCoordinates(),
+      boundaryMesh.GetElementConnectivity(),
+      boundaryCentroid,
+      boundaryVolume);
+
+  // The rounded coordinates still span a box exactly. The tolerance is the rounding of the results,
+  // plus the worst-case error of summing their terms in double: an epsilon per tet, and per
+  // boundary face times the cancellation in the boundary integrals, whose terms are measured from
+  // the origin.
+  Aabb const box = mesh.GetAabb();
+  Real3 const size = box.GetSize();
+  real const volume = Prod(size);
+  real const area = 2_r * (size[0] * size[1] + size[1] * size[2] + size[2] * size[0]);
+  Real3 const center = box.GetCenter();
+  real const cancellation = Norm(center) * area / volume;
+  real const tol = 4_r * std::numeric_limits<real>::epsilon() +
+      (StaticCast<real>(mesh.GetNumElements()) +
+       StaticCast<real>(boundaryMesh.GetNumElements()) * cancellation) *
+          StaticCast<real>(std::numeric_limits<double>::epsilon());
+  EXPECT_NEAR(mesh.GetTotalMeasure(), volume, tol * volume);
+  EXPECT_NEAR(boundaryVolume, volume, tol * volume);
+  EXPECT_NEAR(boundaryMesh.GetTotalMeasure(), area, tol * area);
+  EXPECT_NEAR(Norm(mesh.GetBarycenter() - center), 0_r, tol * Norm(center));
+  EXPECT_NEAR(Norm(ToReal3(boundaryCentroid) - center), 0_r, tol * Norm(center));
+  EXPECT_NEAR(Norm(boundaryMesh.GetBarycenter() - center), 0_r, tol * Norm(center));
+
+  // The box's second moment about its center, per unit density
+  Vec4r const sizes = ToSimd(size);
+  VMatrix3x3r const secondMoment = VDiagonalMatrix<3>((volume / 12_r) * sizes * sizes);
+  for (VMatrix3x3r const& computed :
+       {ComputeSecondMomentOfInertia(
+            mesh.GetNodeCoordinates(), mesh.GetElementConnectivity(), 1_r, ToSimd(center)),
+        ComputeSecondMomentOfInertia(
+            boundaryMesh.GetNodeCoordinates(),
+            boundaryMesh.GetElementConnectivity(),
+            1_r,
+            ToSimd(center))}) {
+    EXPECT_NEAR(Norm3x3(computed - secondMoment), 0_r, tol * Norm3x3(secondMoment));
+  }
+}
+
 static void TestReal3(Real3 const& a, Real3 const& b, real tol) {
   real error = Norm(a - b) / Max(Norm(a), Norm(b));
   EXPECT_NEAR(0_r, error, tol);

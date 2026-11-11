@@ -251,11 +251,7 @@ TetrahedralMesh::TetrahedralMesh(
     }
   }
 
-  // compute total volume
-  _totalMeasure = 0_r;
-  for (real v : _elementMeasure) {
-    _totalMeasure += v;
-  }
+  ComputeTotalMeasureAndBarycenter();
 
   // handle boundaries (faces and edges)
   if (!boundaryFaces && !boundaryFacesConnectivity) {
@@ -279,16 +275,6 @@ TetrahedralMesh::TetrahedralMesh(
   FindAllBoundaryInformation();
 
   _boundaryMesh = std::make_shared<TriangularMesh>(_coordinates, _boundaryFacesConnectivity);
-
-  // Calculate the mesh barycenter
-  // (average of element barycenters weighted by volume)
-  _barycenter = {};
-  if (_numVolumes > 0) {
-    for (size_t e = 0; e < _numVolumes; ++e) {
-      _barycenter += _elementBarycenters[e] * _elementMeasure[e];
-    }
-    _barycenter /= _totalMeasure;
-  }
 }
 
 void TetrahedralMesh::FindAllBoundaryInformation() {

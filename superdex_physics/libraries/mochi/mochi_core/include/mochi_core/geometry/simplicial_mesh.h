@@ -161,8 +161,13 @@ class SimplicialMesh {
   // Get the "measure" (area of triangle or volume of tetrahedron) of a single element
   real GetElementMeasure(int elementIndex) const;
 
-  // Get the total "measure" (area of triangle or volume of tetrahedron) for the whole mesh
+  // Get the total "measure" (area of triangle or volume of tetrahedron) for the whole mesh, summed
+  // in double in element order and rounded once.
   real GetTotalMeasure() const;
+
+  // Compute the total measure of the given elements, summed in double in the given order and
+  // rounded once. For all elements in index order, it equals GetTotalMeasure() bitwise.
+  [[nodiscard]] real ComputeMeasure(Span<int const> elementIndices) const;
 
   // Get the axis-aligned bounding box that contains all the active nodes
   Aabb const& GetAabb() const;
@@ -179,6 +184,10 @@ class SimplicialMesh {
       size_t numNodes,
       Span<int const> connectivity,
       int numNodesPerElement);
+
+  // Computes _totalMeasure and _barycenter, the average of the element barycenters weighted by
+  // their measures, from _elementMeasure. Accumulated in double for accuracy.
+  void ComputeTotalMeasureAndBarycenter();
 
   std::vector<Real3> _coordinates;
   std::vector<Real3> _coordinatesActiveNodes;

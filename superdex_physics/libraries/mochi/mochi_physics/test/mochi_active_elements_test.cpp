@@ -21,7 +21,9 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <memory>
+#include <numeric>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -340,6 +342,26 @@ TEST(MochiDiscretization, ActiveVolumeElements3) {
   EXPECT_SPAN_EQ(uniqueNodes, goldActiveNodes);
 
   CheckContainsMethodForActiveVol(*mesh, actEl, activeElems);
+}
+
+// With every element active, the default weights are exactly 1: the active measure is summed like
+// the mesh's total measure.
+TEST(MochiDiscretization, AllActiveElementsHaveUnitWeights) {
+  auto mesh = std::make_shared<TetrahedralMesh>(
+      test::CreateMinimalTetMeshUnitGrid(Real3{0.3_r, 0.5_r, 0.7_r}, Int3{8, 8, 8}));
+  DynamicArray<int> allVolumes(mesh->GetNumElements());
+  std::iota(allVolumes.begin(), allVolumes.end(), 0);
+  CActiveVolumeElements const actVolElems(mesh, allVolumes);
+
+  auto femVolD = CreateFemVolDiscretization(*mesh);
+  auto tracesVec = CreateTraces(*mesh, femVolD);
+  DynamicArray<int> allTraces(tracesVec.size());
+  std::iota(allTraces.begin(), allTraces.end(), 0);
+  CActiveBoundaryFaces const actBdFaces(mesh, allTraces, MakeConstSpan(tracesVec));
+
+  auto isOne = [](real weight) { return weight == 1_r; };
+  EXPECT_TRUE(std::ranges::all_of(actVolElems.ViewWeights(), isOne));
+  EXPECT_TRUE(std::ranges::all_of(actBdFaces.ViewWeights(), isOne));
 }
 
 // ===================================================================================

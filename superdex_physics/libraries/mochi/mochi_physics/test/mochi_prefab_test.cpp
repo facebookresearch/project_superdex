@@ -4872,14 +4872,14 @@ TEST_IF(MOCHI_HDF5_AND_INTERNAL, Prefab, ArticulatedLinks_NestedPrefabScaleBakes
   ASSERT_NE(nullptr, boneA);
   ASSERT_NE(nullptr, boneB);
 
-  EXPECT_NEAR_EQ(5_r * es3, boneA->GetMass(test::ExpectOK{}));
+  EXPECT_EQ(5_r * es3, boneA->GetMass(test::ExpectOK{}));
   EXPECT_NEAR_EQ(
       Real3(0.1_r, 0.2_r, 0.3_r) * es, boneA->GetRigidCenterOfMassLocal(test::ExpectOK{}));
   EXPECT_NEAR_EQ(
       Real6(es5, 2_r * es5, 3_r * es5, 0_r, 0_r, 0_r),
       boneA->GetRigidMomentOfInertiaLocal(test::ExpectOK{}));
 
-  EXPECT_NEAR_EQ(8_r * es3, boneB->GetMass(test::ExpectOK{}));
+  EXPECT_EQ(8_r * es3, boneB->GetMass(test::ExpectOK{}));
   EXPECT_NEAR_EQ(
       Real3(0.4_r, 0.5_r, 0.6_r) * es, boneB->GetRigidCenterOfMassLocal(test::ExpectOK{}));
   EXPECT_NEAR_EQ(

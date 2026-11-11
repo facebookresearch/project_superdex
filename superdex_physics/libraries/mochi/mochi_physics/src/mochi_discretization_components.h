@@ -433,8 +433,8 @@ A few comments:
 - this component also contains the weighting information needed to use
   the active elements for FEM operations. By default, upon construction,
   these weights are computed based on the tet element measures as follows:
-  we calculate the ratio of the sum of the measures of the active elements
-  over the sum of the measures of all elements.
+  we calculate the ratio of the sum of the measures of all elements
+  over the sum of the measures of the active elements.
 */
 class CActiveVolumeElements : public NoCopy {
  private:
@@ -543,8 +543,7 @@ class CActiveVolumeElements : public NoCopy {
   void RecomputeWeightsBasedOnElementsMeasure() {
     MOCHI_ASSERT_VERBOSE(isize(_weights) == _mesh->GetNumElements());
 
-    real activeSum = {};
-    std::ranges::for_each(_indices, [&](int i) { activeSum += _mesh->GetElementMeasure(i); });
+    real const activeSum = _mesh->ComputeMeasure(_indices);
     MOCHI_ASSERT(activeSum > 0, "Active measure must be positive.");
 
     // Only need to store the weights for the active elements.
@@ -569,7 +568,7 @@ Note:
   constraint, for example, tying the component or even putting it inside the tet mesh component.
 
 - If no explicit weights are provided, the weights are computed as the ratio of the sum of the
-  measure of the active boundary faces over the sum of the measure of all boundary faces.
+  measure of all boundary faces over the sum of the measure of the active boundary faces.
 
 - If an interior mesh is provided in the constructor, it also stores the subset of volume elements
   that neighbor the active boundary faces.
@@ -745,10 +744,7 @@ class CActiveBoundaryFaces : public NoCopy {
     if (newActiveFaceWeights.empty() && !_activeBoundaryFaceInds.empty()) {
       MOCHI_ASSERT(isize(_weights) == _boundaryMesh->GetNumElements());
 
-      real activeMeasure = 0_r;
-      std::ranges::for_each(_activeBoundaryFaceInds, [&](int i) {
-        activeMeasure += _boundaryMesh->GetElementMeasure(i);
-      });
+      real const activeMeasure = _boundaryMesh->ComputeMeasure(_activeBoundaryFaceInds);
       MOCHI_ASSERT(activeMeasure > 0, "Active measure must be positive.");
 
       // Only need to store the weights for the active boundary faces.

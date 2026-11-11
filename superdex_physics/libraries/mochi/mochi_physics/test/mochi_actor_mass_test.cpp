@@ -474,11 +474,11 @@ TEST_F(ActorMassTest, RigidActor_Api) {
     MOCHI_DEFER(_scene->DestroyActor(actor));
 
     EXPECT_NEAR_RTOL(kMass, actor->GetMass(test::ExpectOK{}), kApiRelTol);
-    EXPECT_NEAR_RTOL(kDensity, actor->GetDensity(test::ExpectOK{}), kApiRelTol);
+    EXPECT_EQ(kDensity, actor->GetDensity(test::ExpectOK{}));
 
     actor->SetDensity(kNewDensity, test::ExpectOK{});
     EXPECT_NEAR_RTOL(kNewMass, actor->GetMass(test::ExpectOK{}), kApiRelTol);
-    EXPECT_NEAR_RTOL(kNewDensity, actor->GetDensity(test::ExpectOK{}), kApiRelTol);
+    EXPECT_EQ(kNewDensity, actor->GetDensity(test::ExpectOK{}));
   }
 
   // Dynamic actor created from mass.
@@ -487,12 +487,12 @@ TEST_F(ActorMassTest, RigidActor_Api) {
     auto* actor = _scene->CreateRigidActor(params, test::ExpectOK{});
     MOCHI_DEFER(_scene->DestroyActor(actor));
 
-    EXPECT_NEAR_RTOL(kMass, actor->GetMass(test::ExpectOK{}), kApiRelTol);
+    EXPECT_EQ(kMass, actor->GetMass(test::ExpectOK{}));
     EXPECT_NEAR_RTOL(kDensity, actor->GetDensity(test::ExpectOK{}), kApiRelTol);
 
     actor->SetDensity(kNewDensity, test::ExpectOK{});
     EXPECT_NEAR_RTOL(kNewMass, actor->GetMass(test::ExpectOK{}), kApiRelTol);
-    EXPECT_NEAR_RTOL(kNewDensity, actor->GetDensity(test::ExpectOK{}), kApiRelTol);
+    EXPECT_EQ(kNewDensity, actor->GetDensity(test::ExpectOK{}));
   }
 
   // Static actor.
