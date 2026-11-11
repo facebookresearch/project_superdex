@@ -38,4 +38,29 @@ namespace mochi::mesh {
     TetrahedralizationParams const& params,
     Error& error);
 
+/// @brief [Experimental] Generate a tetrahedral volume mesh whose boundary is a closed triangle
+/// surface.
+/// @warning This API may change in future releases.
+///
+/// @details Unlike @ref Tetrahedralize, which approximates the input surface, this keeps it: the
+/// first nodes of the output are the input vertices, unmoved and in input order, followed by any
+/// added nodes. Some input triangles may be subdivided by nodes added on their edges or faces,
+/// which keeps the boundary's shape; in strict mode that fails instead, so the output's boundary
+/// triangles are exactly the input triangles. Nested shells alternate between material and empty
+/// cavities, starting with material inside the outermost shells. Because the boundary is kept,
+/// the quality of the tetrahedra next to it is limited by the quality of the
+/// input triangles. Every output node is referenced by at least one tetrahedron, and the output is
+/// deterministic for a given input and parameters.
+///
+/// @param[in] surfaceMesh Input triangle mesh (nodesPerElement must be 3). Must be a closed,
+/// consistently oriented manifold free of self-intersections, with no unreferenced or coincident
+/// vertices.
+/// @param[in] params Tetrahedralization parameters
+/// @param[in,out] error Error status
+/// @return Tetrahedral mesh (nodesPerElement == 4)
+[[nodiscard]] MeshData TetrahedralizeConstrained(
+    MeshDataView const& surfaceMesh,
+    ConstrainedTetrahedralizationParams const& params,
+    Error& error);
+
 } // namespace mochi::mesh

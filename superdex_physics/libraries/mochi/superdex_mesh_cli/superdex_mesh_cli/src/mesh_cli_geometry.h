@@ -45,6 +45,7 @@ inline int GetNumElements(MeshData const& mesh) {
 // Pull the shared param structs into the cli namespace so the algorithm implementations can
 // continue to reference them unqualified.
 using mochi::mesh::CadMeshingBackend;
+using mochi::mesh::ConstrainedTetrahedralizationParams;
 using mochi::mesh::MeshCleanupParams;
 using mochi::mesh::MeshClosureMode;
 using mochi::mesh::MeshClosureParams;
@@ -119,6 +120,12 @@ DecimateMesh(MeshData const& mesh, MeshDecimateParams const& params, CliError& e
 [[nodiscard]] MeshData Tetrahedralize(
     MeshData const& surfaceMesh,
     TetrahedralizationParams const& params,
+    CliError& error);
+/// As @ref Tetrahedralize, but the output boundary is the input surface: its first nodes are the
+/// input vertices in input order and, in strict mode, its boundary triangles are the input's.
+[[nodiscard]] MeshData TetrahedralizeConstrained(
+    MeshData const& surfaceMesh,
+    ConstrainedTetrahedralizationParams const& params,
     CliError& error);
 
 } // namespace mochi::mesh::cli

@@ -66,6 +66,7 @@ enum class GeometryOp : uint32_t {
   TessellateStepByColor = 12, ///< As TessellateStep, but one mesh per resolved face color.
   UnionMeshes = 13, ///< Boolean union of several meshes into one closed surface.
   Tetrahedralize = 14, ///< Tetrahedral volume mesh of a closed triangle surface (CGAL Mesh_3).
+  TetrahedralizeConstrained = 15, ///< Tetrahedral volume mesh whose boundary is the input surface.
 };
 
 inline constexpr uint32_t kFrameMagic = 0x53445832u; ///< Frame magic ("SDX2").
@@ -157,6 +158,7 @@ class PayloadWriter {
   void WriteMeshDecimateParams(MeshDecimateParams const& params);
   void WriteMeshUnionParams(MeshUnionParams const& params);
   void WriteTetrahedralizationParams(TetrahedralizationParams const& params);
+  void WriteConstrainedTetrahedralizationParams(ConstrainedTetrahedralizationParams const& params);
 
   [[nodiscard]] std::vector<char> const& Bytes() const {
     return _bytes;
@@ -208,6 +210,8 @@ class PayloadReader {
   [[nodiscard]] bool ReadMeshDecimateParams(MeshDecimateParams& outParams);
   [[nodiscard]] bool ReadMeshUnionParams(MeshUnionParams& outParams);
   [[nodiscard]] bool ReadTetrahedralizationParams(TetrahedralizationParams& outParams);
+  [[nodiscard]] bool ReadConstrainedTetrahedralizationParams(
+      ConstrainedTetrahedralizationParams& outParams);
 
   /// True once every byte has been consumed. Callers must check this after reading the last value
   /// they expect; a payload with trailing bytes is malformed.

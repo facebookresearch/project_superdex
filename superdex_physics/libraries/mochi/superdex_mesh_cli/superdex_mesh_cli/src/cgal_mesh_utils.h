@@ -152,6 +152,17 @@ MeshDataToSurfaceMesh(MeshData const& mesh, CliError& error, bool* needsRepairOu
 ///        @ref MeshCleanupParams::removeAlmostDegenerateFaces.
 void RepairMesh(CgalSurfaceMesh& sm, bool removeAlmostDegenerateFaces = true);
 
+/// Converts the input of a tetrahedralization, rejecting anything but a closed,
+/// self-intersection-free triangle surface. Unless @p allowRepair, also rejects a surface that
+/// @ref MeshDataToSurfaceMesh could only rebuild from a polygon soup, which renumbers vertices.
+/// Defined in tetrahedralization.cpp.
+[[nodiscard]] CgalSurfaceMesh
+TetrahedralizationInputSurface(MeshData const& surfaceMesh, bool allowRepair, CliError& error);
+
+/// Mean extent of the bounding box of @p sm's faces, which relative tetrahedralization lengths are
+/// fractions of. Defined in tetrahedralization.cpp.
+[[nodiscard]] double AverageFaceBoundingBoxExtent(CgalSurfaceMesh const& sm, CliError& error);
+
 /// Convert a CGAL Surface_mesh to MeshData.
 [[nodiscard]] inline MeshData SurfaceMeshToMeshData(CgalSurfaceMesh const& sm) {
   MeshData result;

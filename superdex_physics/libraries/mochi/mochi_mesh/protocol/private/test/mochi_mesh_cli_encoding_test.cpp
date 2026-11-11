@@ -187,6 +187,16 @@ TetrahedralizationParams DistinctTetrahedralizationParams() {
   return params;
 }
 
+// Every value differs from its default, and every bool is flipped from its default.
+ConstrainedTetrahedralizationParams DistinctConstrainedTetrahedralizationParams() {
+  ConstrainedTetrahedralizationParams params;
+  params.edgeSize = 0.375;
+  params.relativeToMeshSize = false;
+  params.iterations = 7;
+  params.strict = true;
+  return params;
+}
+
 bool DecodesAsMesh(MeshData const& mesh) {
   PayloadWriter writer;
   writer.WriteMeshData(mesh);
@@ -909,6 +919,38 @@ TEST(MochiMeshCliEncoding, TetrahedralizationParamsRejectInvalidPayload) {
   auto const badBool = WithU32At(writer.Bytes(), sizeof(double), 2);
   PayloadReader badBoolReader(badBool);
   EXPECT_FALSE(badBoolReader.ReadTetrahedralizationParams(decoded));
+}
+
+TEST(MochiMeshCliEncoding, ConstrainedTetrahedralizationParamsRoundTrip) {
+  ConstrainedTetrahedralizationParams const params = DistinctConstrainedTetrahedralizationParams();
+
+  PayloadWriter writer;
+  writer.WriteConstrainedTetrahedralizationParams(params);
+
+  PayloadReader reader(writer.Bytes());
+  ConstrainedTetrahedralizationParams decoded;
+  EXPECT_TRUE(reader.ReadConstrainedTetrahedralizationParams(decoded));
+  EXPECT_TRUE(reader.AtEnd());
+  EXPECT_EQ(decoded.edgeSize, params.edgeSize);
+  EXPECT_EQ(decoded.relativeToMeshSize, params.relativeToMeshSize);
+  EXPECT_EQ(decoded.iterations, params.iterations);
+  EXPECT_EQ(decoded.strict, params.strict);
+}
+
+TEST(MochiMeshCliEncoding, ConstrainedTetrahedralizationParamsRejectInvalidPayload) {
+  PayloadWriter writer;
+  writer.WriteConstrainedTetrahedralizationParams(DistinctConstrainedTetrahedralizationParams());
+  ConstrainedTetrahedralizationParams decoded;
+
+  std::vector<char> truncated = writer.Bytes();
+  truncated.pop_back();
+  PayloadReader truncatedReader(truncated);
+  EXPECT_FALSE(truncatedReader.ReadConstrainedTetrahedralizationParams(decoded));
+
+  // strict is the trailing bool.
+  auto const badBool = WithU32At(writer.Bytes(), writer.Bytes().size() - sizeof(uint32_t), 2);
+  PayloadReader badBoolReader(badBool);
+  EXPECT_FALSE(badBoolReader.ReadConstrainedTetrahedralizationParams(decoded));
 }
 
 // Switching on an out-of-range enumerator is undefined behaviour, so every enum on the wire is

@@ -75,9 +75,9 @@ MeshData ExtractTetrahedra(C3t3 const& c3t3) {
 
 } // namespace
 
-MeshData mochi::mesh::cli::Tetrahedralize(
+SurfaceMesh mochi::mesh::cli::cgal_utils::TetrahedralizationInputSurface(
     MeshData const& surfaceMesh,
-    TetrahedralizationParams const& params,
+    bool allowRepair,
     CliError& error) {
   MOCHI_MESH_CLI_ERROR_RETURN(error, {});
   MOCHI_MESH_CLI_ERROR_IF(
@@ -86,6 +86,53 @@ MeshData mochi::mesh::cli::Tetrahedralize(
       "Input mesh must be a triangle mesh (nodesPerElement == 3).");
   MOCHI_MESH_CLI_ERROR_IF(surfaceMesh.coordinates.empty(), error, "Input mesh has no vertices.");
   MOCHI_MESH_CLI_ERROR_IF(surfaceMesh.connectivity.empty(), error, "Input mesh has no faces.");
+  MOCHI_MESH_CLI_ERROR_RETURN(error, {});
+
+  bool needsRepair = false;
+  SurfaceMesh sm = MeshDataToSurfaceMesh(surfaceMesh, error, &needsRepair);
+  MOCHI_MESH_CLI_ERROR_RETURN(error, {});
+  MOCHI_MESH_CLI_ERROR_IF(
+      needsRepair && !allowRepair,
+      error,
+      "Input surface has non-manifold edges or inconsistently oriented faces. Clean it up first "
+      "(e.g. Make Manifold).");
+  MOCHI_MESH_CLI_ERROR_RETURN(error, {});
+  MOCHI_MESH_CLI_ERROR_IF(
+      !CGAL::is_closed(sm),
+      error,
+      "Input surface must be closed. Close it first (e.g. Make Watertight or Alpha Wrap).");
+  MOCHI_MESH_CLI_ERROR_RETURN(error, {});
+  MOCHI_MESH_CLI_ERROR_IF(
+      CGAL::Polygon_mesh_processing::does_self_intersect(sm),
+      error,
+      "Input surface self-intersects. Clean it up first (e.g. Alpha Wrap).");
+  MOCHI_MESH_CLI_ERROR_RETURN(error, {});
+  return sm;
+}
+
+double mochi::mesh::cli::cgal_utils::AverageFaceBoundingBoxExtent(
+    SurfaceMesh const& sm,
+    CliError& error) {
+  MOCHI_MESH_CLI_ERROR_RETURN(error, 0.0);
+  CGAL::Bbox_3 bounds;
+  for (auto const face : sm.faces()) {
+    bounds += CGAL::Polygon_mesh_processing::face_bbox(face, sm);
+  }
+  double const extent = ((bounds.xmax() - bounds.xmin()) + (bounds.ymax() - bounds.ymin()) +
+                         (bounds.zmax() - bounds.zmin())) /
+      3.0;
+  MOCHI_MESH_CLI_ERROR_IF(
+      !(extent > 0.0) || !std::isfinite(extent),
+      error,
+      "Mesh average bounding box extent must be positive and finite.");
+  return extent;
+}
+
+MeshData mochi::mesh::cli::Tetrahedralize(
+    MeshData const& surfaceMesh,
+    TetrahedralizationParams const& params,
+    CliError& error) {
+  MOCHI_MESH_CLI_ERROR_RETURN(error, {});
   MOCHI_MESH_CLI_ERROR_IF(
       !(params.edgeSize > 0.0) || !std::isfinite(params.edgeSize),
       error,
@@ -109,36 +156,11 @@ MeshData mochi::mesh::cli::Tetrahedralize(
   MOCHI_MESH_CLI_ERROR_RETURN(error, {});
 
   try {
-    SurfaceMesh const sm = cgal_utils::MeshDataToSurfaceMesh(surfaceMesh, error);
+    SurfaceMesh const sm =
+        cgal_utils::TetrahedralizationInputSurface(surfaceMesh, /*allowRepair=*/true, error);
+    double const scale =
+        params.relativeToMeshSize ? cgal_utils::AverageFaceBoundingBoxExtent(sm, error) : 1.0;
     MOCHI_MESH_CLI_ERROR_RETURN(error, {});
-    MOCHI_MESH_CLI_ERROR_IF(
-        !CGAL::is_closed(sm),
-        error,
-        "Input surface must be closed. Close it first (e.g. Make Watertight or Alpha Wrap).");
-    MOCHI_MESH_CLI_ERROR_RETURN(error, {});
-    MOCHI_MESH_CLI_ERROR_IF(
-        CGAL::Polygon_mesh_processing::does_self_intersect(sm),
-        error,
-        "Input surface self-intersects. Clean it up first (e.g. Alpha Wrap).");
-    MOCHI_MESH_CLI_ERROR_RETURN(error, {});
-
-    double scale = 1.0;
-    if (params.relativeToMeshSize) {
-      CGAL::Bbox_3 bounds;
-      for (auto const face : sm.faces()) {
-        bounds += CGAL::Polygon_mesh_processing::face_bbox(face, sm);
-      }
-      Vector3d const size{
-          bounds.xmax() - bounds.xmin(),
-          bounds.ymax() - bounds.ymin(),
-          bounds.zmax() - bounds.zmin()};
-      scale = (size[0] + size[1] + size[2]) / 3.0;
-      MOCHI_MESH_CLI_ERROR_IF(
-          !(scale > 0.0) || !std::isfinite(scale),
-          error,
-          "Mesh average bounding box extent must be positive and finite.");
-      MOCHI_MESH_CLI_ERROR_RETURN(error, {});
-    }
 
     // Mesh_3 bounds circumradii, not edge lengths. Convert the target edge length using the
     // circumradius of the equilateral triangle (L/sqrt(3)) and regular tetrahedron (L*sqrt(6)/4).

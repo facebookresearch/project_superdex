@@ -62,6 +62,13 @@ class TetrahedralizationParams:
     odt: bool
     def __init__(self) -> None: ...
 
+class ConstrainedTetrahedralizationParams:
+    edge_size: float
+    relative_to_mesh_size: bool
+    iterations: int
+    strict: bool
+    def __init__(self) -> None: ...
+
 class DistributionStatistics:
     mean: float
     standard_deviation: float
@@ -87,6 +94,11 @@ def tetrahedralize(
     vertices: npt.NDArray[np.floating],
     faces: npt.NDArray[np.integer],
     params: TetrahedralizationParams = ...,
+) -> Tuple[npt.NDArray[np.floating], npt.NDArray[np.integer]]: ...
+def tetrahedralize_constrained(
+    vertices: npt.NDArray[np.floating],
+    faces: npt.NDArray[np.integer],
+    params: ConstrainedTetrahedralizationParams = ...,
 ) -> Tuple[npt.NDArray[np.floating], npt.NDArray[np.integer]]: ...
 def compute_mesh_statistics(
     vertices: npt.NDArray[np.floating],

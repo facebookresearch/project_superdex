@@ -364,4 +364,17 @@ struct TetrahedralizationParams {
   bool odt = false; ///< Smooth the mesh by Optimal Delaunay Triangulation (slower)
 };
 
+/// @brief [Experimental] Parameters for tetrahedral volume meshing that keeps the input triangle
+/// surface as the mesh boundary.
+/// @warning This API may change in future releases.
+struct ConstrainedTetrahedralizationParams {
+  double edgeSize = 0.1; ///< Target interior tetrahedron edge length. Must be positive.
+  bool relativeToMeshSize = true; ///< edgeSize is a fraction of avg bounding box dimension,
+                                  ///< otherwise coordinate units
+  int32_t iterations = 10; ///< Interior refinement and quality improvement passes.
+                           ///< Must be at least 1.
+  bool strict = false; ///< Fail if constrained Delaunay construction requires adding boundary
+                       ///< vertices and subdividing input triangles
+};
+
 } // namespace mochi::mesh

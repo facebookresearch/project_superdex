@@ -95,6 +95,23 @@ std::vector<char> DispatchTetrahedralize(std::vector<char> const& payload) {
   return MakeMeshResponse(result);
 }
 
+std::vector<char> DispatchTetrahedralizeConstrained(std::vector<char> const& payload) {
+  PayloadReader reader(payload);
+  ConstrainedTetrahedralizationParams params;
+  MeshData inputMesh;
+  if (!reader.ReadConstrainedTetrahedralizationParams(params) || !reader.ReadMeshData(inputMesh) ||
+      !reader.AtEnd()) {
+    return MakeErrorResponse(1, "superdex_mesh_cli: malformed TetrahedralizeConstrained request");
+  }
+
+  CliError error;
+  MeshData const result = TetrahedralizeConstrained(inputMesh, params, error);
+  if (!error.IsOK()) {
+    return MakeErrorResponse(error);
+  }
+  return MakeMeshResponse(result);
+}
+
 std::vector<char> DispatchReconstructSurfaceFromSdf(std::vector<char> const& payload) {
   PayloadReader reader(payload);
   ScalarField3d sdf;
@@ -366,6 +383,8 @@ std::vector<char> Dispatch(GeometryOp op, std::vector<char> const& payload) {
       return DispatchUnionMeshes(payload);
     case GeometryOp::Tetrahedralize:
       return DispatchTetrahedralize(payload);
+    case GeometryOp::TetrahedralizeConstrained:
+      return DispatchTetrahedralizeConstrained(payload);
   }
   return MakeErrorResponse(1, "superdex_mesh_cli: unknown operation");
 }

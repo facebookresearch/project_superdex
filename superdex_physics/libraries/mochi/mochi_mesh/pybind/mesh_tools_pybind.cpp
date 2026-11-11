@@ -213,6 +213,38 @@ NB_MODULE(MODULE_NAME, m) {
       "Returns:\n"
       "    Tuple of (vertices, tetrahedra) numpy arrays");
 
+  nb::class_<ConstrainedTetrahedralizationParams>(m, "ConstrainedTetrahedralizationParams")
+      .def(nb::init<>())
+      .def_rw("edge_size", &ConstrainedTetrahedralizationParams::edgeSize)
+      .def_rw("relative_to_mesh_size", &ConstrainedTetrahedralizationParams::relativeToMeshSize)
+      .def_rw("iterations", &ConstrainedTetrahedralizationParams::iterations)
+      .def_rw("strict", &ConstrainedTetrahedralizationParams::strict);
+
+  m.def(
+      "tetrahedralize_constrained",
+      [](RealArray const& vertices,
+         IntArray const& faces,
+         ConstrainedTetrahedralizationParams const& params) {
+        MeshDataView const inputMesh = MeshDataViewFromNumpy(vertices, faces);
+        Error error;
+        MeshData result = TetrahedralizeConstrained(inputMesh, params, error);
+        if (!error.IsOK()) {
+          throw MochiMeshErrorException(error);
+        }
+        return MeshDataToNumpy(result);
+      },
+      nb::arg("vertices"),
+      nb::arg("faces"),
+      nb::arg("params") = ConstrainedTetrahedralizationParams{},
+      "Generate a tetrahedral volume mesh whose boundary is a closed triangle surface.\n\n"
+      "The first output vertices are the input vertices, in input order.\n\n"
+      "Args:\n"
+      "    vertices: (N, 3) array of vertex coordinates\n"
+      "    faces: (M, 3) array of triangle vertex indices\n"
+      "    params: ConstrainedTetrahedralizationParams\n\n"
+      "Returns:\n"
+      "    Tuple of (vertices, tetrahedra) numpy arrays");
+
   // Mesh statistics
   nb::class_<DistributionStatistics>(m, "DistributionStatistics")
       .def_ro("mean", &DistributionStatistics::mean)

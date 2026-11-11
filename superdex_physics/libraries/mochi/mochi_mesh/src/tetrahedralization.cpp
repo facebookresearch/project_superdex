@@ -45,3 +45,26 @@ MeshData mochi::mesh::Tetrahedralize(
   MOCHI_ERROR_RETURN(error, {});
   return result;
 }
+
+MeshData mochi::mesh::TetrahedralizeConstrained(
+    MeshDataView const& surfaceMesh,
+    ConstrainedTetrahedralizationParams const& params,
+    Error& error) {
+  MOCHI_ERROR_IF(
+      surfaceMesh.nodesPerElement != 3,
+      error,
+      "Input mesh must be a triangle mesh (nodesPerElement == 3).");
+  MOCHI_ERROR_RETURN(error, {});
+
+  cli::PayloadWriter writer;
+  writer.WriteConstrainedTetrahedralizationParams(params);
+  cli::MeshData const cliMesh = cli_adapter::ToCliMeshData(surfaceMesh, error);
+  MOCHI_ERROR_RETURN(error, {});
+  writer.WriteMeshData(cliMesh);
+  MeshData result = InvokeMeshOp(cli::GeometryOp::TetrahedralizeConstrained, writer, error);
+  MOCHI_ERROR_RETURN(error, {});
+  MOCHI_ERROR_IF(
+      result.nodesPerElement != 4, error, "Tetrahedralization did not return a tetrahedral mesh.");
+  MOCHI_ERROR_RETURN(error, {});
+  return result;
+}

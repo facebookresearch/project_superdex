@@ -382,6 +382,15 @@ void PayloadWriter::WriteTetrahedralizationParams(TetrahedralizationParams const
   WriteBool(odt);
 }
 
+void PayloadWriter::WriteConstrainedTetrahedralizationParams(
+    ConstrainedTetrahedralizationParams const& params) {
+  auto const& [edgeSize, relativeToMeshSize, iterations, strict] = params;
+  WriteDouble(edgeSize);
+  WriteBool(relativeToMeshSize);
+  WriteInt32(iterations);
+  WriteBool(strict);
+}
+
 bool PayloadReader::ReadU32(uint32_t& outValue) {
   return ReadPod(_data, _pos, outValue);
 }
@@ -715,4 +724,12 @@ bool PayloadReader::ReadTetrahedralizationParams(TetrahedralizationParams& outPa
   return ReadDouble(edgeSize) && ReadBool(relativeToMeshSize) && ReadDouble(facetDistanceBound) &&
       ReadDouble(facetAngleBound) && ReadDouble(cellRadiusEdgeRatio) && ReadBool(detectFeatures) &&
       ReadDouble(sharpFeatureAngle) && ReadBool(perturb) && ReadBool(exude) && ReadBool(odt);
+}
+
+bool PayloadReader::ReadConstrainedTetrahedralizationParams(
+    ConstrainedTetrahedralizationParams& outParams) {
+  outParams = {};
+  auto& [edgeSize, relativeToMeshSize, iterations, strict] = outParams;
+  return ReadDouble(edgeSize) && ReadBool(relativeToMeshSize) && ReadInt32(iterations) &&
+      ReadBool(strict);
 }

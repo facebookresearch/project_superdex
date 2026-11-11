@@ -57,3 +57,30 @@ class TetrahedralizationTest(MochiMeshTestBase):
             mochi_mesh.tetrahedralize(
                 create_cube_vertices(), create_cube_faces_with_hole()
             )
+
+    def test_tetrahedralize_constrained_keeps_input_vertices_first(self):
+        params = mochi_mesh.ConstrainedTetrahedralizationParams()
+        params.edge_size = 0.5
+        params.iterations = 3
+
+        self.assertEqual(params.iterations, 3)
+        self.assertFalse(params.strict)
+
+        input_verts = create_cube_vertices()
+        verts, tets = mochi_mesh.tetrahedralize_constrained(
+            input_verts, create_cube_faces_closed(), params
+        )
+
+        self.assertEqual(tets.shape[1], 4)
+        self.assertGreater(tets.shape[0], 0)
+        self.assertEqual(np.unique(tets).size, verts.shape[0])
+        np.testing.assert_array_equal(verts[: input_verts.shape[0]], input_verts)
+
+    def test_tetrahedralize_constrained_strict_raises_when_vertices_needed(self):
+        params = mochi_mesh.ConstrainedTetrahedralizationParams()
+        params.strict = True
+        # The cube's cospherical vertices need added boundary vertices.
+        with self.assertRaises(mochi_mesh.Error):
+            mochi_mesh.tetrahedralize_constrained(
+                create_cube_vertices(), create_cube_faces_closed(), params
+            )
