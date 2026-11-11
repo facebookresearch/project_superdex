@@ -235,7 +235,7 @@ NB_MODULE(SUPERDEX_ROBOTICS_MODULE_NAME, m) {
       []() -> superdex::robotics::RoboticsContext* {
         // The physics Context lives in the shared pybind-core library.
         mochi::CheckContext();
-        std::lock_guard lock(g_botsContextMutex); // NOLINT(facebook-thread-safety-analysis)
+        std::scoped_lock lock(g_botsContextMutex); // NOLINT(facebook-thread-safety-analysis)
         if (!g_botsContext) {
           g_botsContext = superdex::robotics::CreateRoboticsContext();
         }
@@ -250,7 +250,7 @@ NB_MODULE(SUPERDEX_ROBOTICS_MODULE_NAME, m) {
   // Empty capture: g_botsContext has static storage. Null-guarded and idempotent, so it is safe
   // to run when no context was created or after a prior teardown.
   mochi::RegisterContextDependent([]() {
-    std::lock_guard lock(g_botsContextMutex); // NOLINT(facebook-thread-safety-analysis)
+    std::scoped_lock lock(g_botsContextMutex); // NOLINT(facebook-thread-safety-analysis)
     if (g_botsContext) {
       superdex::robotics::DestroyRoboticsContext(g_botsContext);
       g_botsContext = nullptr;

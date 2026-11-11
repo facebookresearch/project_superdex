@@ -79,7 +79,7 @@ RoboticsContextCallbackHandle RoboticsContext::RegisterOnDestroy(std::function<v
   if (!callback) {
     return {};
   }
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   RoboticsHandle::ValueType const value = _nextHandle++;
   _onDestroyCallbacks.emplace(value, std::move(callback));
   // NOLINTNEXTLINE(modernize-return-braced-init-list): explicit ctor, braced form is ill-formed
@@ -87,7 +87,7 @@ RoboticsContextCallbackHandle RoboticsContext::RegisterOnDestroy(std::function<v
 }
 
 void RoboticsContext::CancelOnDestroy(RoboticsContextCallbackHandle handle) {
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   _onDestroyCallbacks.erase(handle.value);
 }
 
@@ -104,7 +104,7 @@ RoboticsContext::~RoboticsContext() {
    * callback only clears its owner's back-reference and does not re-enter this context. */
   std::vector<std::function<void()>> onDestroyCallbacks;
   {
-    std::lock_guard lock(_slotsMutex);
+    std::scoped_lock lock(_slotsMutex);
     onDestroyCallbacks.reserve(_onDestroyCallbacks.size());
     for (auto it = _onDestroyCallbacks.rbegin(); it != _onDestroyCallbacks.rend(); ++it) {
       onDestroyCallbacks.push_back(std::move(it->second));
@@ -120,7 +120,7 @@ RoboticsContext::~RoboticsContext() {
    * up-front (under the lock) because DestroyBot itself acquires _slotsMutex. */
   std::vector<std::pair<Scene*, BotHandle>> botsToDestroy;
   {
-    std::lock_guard lock(_slotsMutex);
+    std::scoped_lock lock(_slotsMutex);
     botsToDestroy.reserve(_botSlots.size());
     for (auto const& [handleValue, slot] : _botSlots) {
       if (slot.bot) {
@@ -139,7 +139,7 @@ RoboticsContext::~RoboticsContext() {
   std::vector<SensorBase*> sensorsToDestroy;
   std::vector<ActuatorBase*> actuatorsToDestroy;
   {
-    std::lock_guard lock(_slotsMutex);
+    std::scoped_lock lock(_slotsMutex);
     for (auto& [handleValue, slot] : _controllerSlots) {
       if (slot.controller) {
         controllersToDestroy.push_back(slot.controller);
@@ -209,7 +209,7 @@ ControllerHandle RoboticsContext::CreateControllerInternal(
     return {};
   }
 
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   RoboticsHandle::ValueType index = _nextHandle++;
   controller->SetName(name);
   controller->SetOwningBot(GetBotContainingActorLocked(robot));
@@ -230,7 +230,7 @@ ControllerHandle RoboticsContext::CreateController(
 DynamicArray<ControllerHandle> RoboticsContext::FindControllersByName(
     std::string_view name,
     Bot const* scope) const {
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   return CollectHandles<ControllerHandle>(_controllerSlots, [&](ComponentBase const& comp) {
     return InScope(comp, scope) && comp.GetName() == name;
   });
@@ -239,7 +239,7 @@ DynamicArray<ControllerHandle> RoboticsContext::FindControllersByName(
 DynamicArray<ControllerHandle> RoboticsContext::FindControllersByType(
     std::string_view typeName,
     Bot const* scope) const {
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   return CollectHandles<ControllerHandle>(_controllerSlots, [&](ComponentBase const& comp) {
     return InScope(comp, scope) && comp.GetTypeName() == typeName;
   });
@@ -248,7 +248,7 @@ DynamicArray<ControllerHandle> RoboticsContext::FindControllersByType(
 DynamicArray<SensorHandle> RoboticsContext::FindSensorsByName(
     std::string_view name,
     Bot const* scope) const {
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   return CollectHandles<SensorHandle>(_sensorSlots, [&](ComponentBase const& comp) {
     return InScope(comp, scope) && comp.GetName() == name;
   });
@@ -257,7 +257,7 @@ DynamicArray<SensorHandle> RoboticsContext::FindSensorsByName(
 DynamicArray<SensorHandle> RoboticsContext::FindSensorsByType(
     std::string_view typeName,
     Bot const* scope) const {
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   return CollectHandles<SensorHandle>(_sensorSlots, [&](ComponentBase const& comp) {
     return InScope(comp, scope) && comp.GetTypeName() == typeName;
   });
@@ -270,7 +270,7 @@ void RoboticsContext::DestroyController(ControllerHandle handle) {
 
   ControllerBase* toDestroy = nullptr;
   {
-    std::lock_guard lock(_slotsMutex);
+    std::scoped_lock lock(_slotsMutex);
     auto it = _controllerSlots.find(handle.value);
     if (it == _controllerSlots.end()) {
       return;
@@ -289,7 +289,7 @@ ControllerBase* RoboticsContext::GetController(ControllerHandle handle) const {
     return nullptr;
   }
 
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   auto it = _controllerSlots.find(handle.value);
   if (it == _controllerSlots.end()) {
     return nullptr;
@@ -302,7 +302,7 @@ bool RoboticsContext::IsValidController(ControllerHandle handle) const {
     return false;
   }
 
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   auto it = _controllerSlots.find(handle.value);
   if (it == _controllerSlots.end()) {
     return false;
@@ -361,7 +361,7 @@ Bot* RoboticsContext::CreateBot(
   BotHandle handle;
   BotImpl* raw = nullptr;
   {
-    std::lock_guard lock(_slotsMutex);
+    std::scoped_lock lock(_slotsMutex);
     RoboticsHandle::ValueType const index = _nextHandle++;
     handle = BotHandle(index);
     bot->SetHandle(handle);
@@ -399,7 +399,7 @@ void RoboticsContext::DestroyBot(Scene* scene, BotHandle handle) {
   std::vector<ActuatorHandle> actuatorsToDestroy;
   std::vector<SensorHandle> sensorsToDestroy;
   {
-    std::lock_guard lock(_slotsMutex);
+    std::scoped_lock lock(_slotsMutex);
     auto it = _botSlots.find(handle.value);
     if (it == _botSlots.end() || it->second.bot == nullptr) {
       return;
@@ -457,7 +457,7 @@ void RoboticsContext::DestroyBot(Scene* scene, BotHandle handle) {
 }
 
 Bot* RoboticsContext::GetBotContainingActor(Actor const* actor) const {
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   return GetBotContainingActorLocked(actor);
 }
 
@@ -476,19 +476,19 @@ Bot* RoboticsContext::GetBotContainingActorLocked(Actor const* actor) const {
 
 DynamicArray<ControllerHandle> RoboticsContext::FindControllerHandlesByOwner(
     Bot const* owner) const {
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   return CollectHandles<ControllerHandle>(
       _controllerSlots, [&](ComponentBase const& comp) { return comp.GetOwningBot() == owner; });
 }
 
 DynamicArray<SensorHandle> RoboticsContext::FindSensorHandlesByOwner(Bot const* owner) const {
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   return CollectHandles<SensorHandle>(
       _sensorSlots, [&](ComponentBase const& comp) { return comp.GetOwningBot() == owner; });
 }
 
 DynamicArray<ActuatorHandle> RoboticsContext::FindActuatorHandlesByOwner(Bot const* owner) const {
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   return CollectHandles<ActuatorHandle>(
       _actuatorSlots, [&](ComponentBase const& comp) { return comp.GetOwningBot() == owner; });
 }
@@ -497,7 +497,7 @@ Bot* RoboticsContext::GetBot(BotHandle handle) const {
   if (!handle.IsValid()) {
     return nullptr;
   }
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   auto it = _botSlots.find(handle.value);
   if (it == _botSlots.end() || it->second.bot == nullptr) {
     return nullptr;
@@ -509,7 +509,7 @@ bool RoboticsContext::IsValidBot(BotHandle handle) const {
   if (!handle.IsValid()) {
     return false;
   }
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   auto it = _botSlots.find(handle.value);
   return it != _botSlots.end() && it->second.bot != nullptr;
 }
@@ -518,7 +518,7 @@ DynamicArray<BotHandle> RoboticsContext::FindBotsByName(std::string_view name) c
   /* Bots are not ComponentBase, so CollectHandles (whose predicates read a ComponentBase) does not
    * apply — scan _botSlots directly. A destroyed bot's slot holds a null unique_ptr (values are
    * never recycled), so skip those. */
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   DynamicArray<BotHandle> result;
   for (auto const& [value, slot] : _botSlots) {
     if (slot.bot == nullptr) {
@@ -707,7 +707,7 @@ SensorHandle RoboticsContext::CreateSensor(
     return {};
   }
 
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   RoboticsHandle::ValueType index = _nextHandle++;
   sensor->SetName(name);
   sensor->SetOwningBot(GetBotContainingActorLocked(linkActor));
@@ -723,7 +723,7 @@ void RoboticsContext::DestroySensor(SensorHandle handle) {
 
   SensorBase* toDestroy = nullptr;
   {
-    std::lock_guard lock(_slotsMutex);
+    std::scoped_lock lock(_slotsMutex);
     auto it = _sensorSlots.find(handle.value);
     if (it == _sensorSlots.end()) {
       return;
@@ -742,7 +742,7 @@ SensorBase* RoboticsContext::GetSensor(SensorHandle handle) const {
     return nullptr;
   }
 
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   auto it = _sensorSlots.find(handle.value);
   if (it == _sensorSlots.end()) {
     return nullptr;
@@ -755,7 +755,7 @@ bool RoboticsContext::IsValidSensor(SensorHandle handle) const {
     return false;
   }
 
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   auto it = _sensorSlots.find(handle.value);
   if (it == _sensorSlots.end()) {
     return false;
@@ -804,7 +804,7 @@ ActuatorHandle RoboticsContext::CreateActuator(
     return {};
   }
 
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   RoboticsHandle::ValueType index = _nextHandle++;
   actuator->SetName(name);
   actuator->SetOwningBot(GetBotContainingActorLocked(linkActor));
@@ -820,7 +820,7 @@ void RoboticsContext::DestroyActuator(ActuatorHandle handle) {
 
   ActuatorBase* toDestroy = nullptr;
   {
-    std::lock_guard lock(_slotsMutex);
+    std::scoped_lock lock(_slotsMutex);
     auto it = _actuatorSlots.find(handle.value);
     if (it == _actuatorSlots.end()) {
       return;
@@ -839,7 +839,7 @@ ActuatorBase* RoboticsContext::GetActuator(ActuatorHandle handle) const {
     return nullptr;
   }
 
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   auto it = _actuatorSlots.find(handle.value);
   if (it == _actuatorSlots.end()) {
     return nullptr;
@@ -852,7 +852,7 @@ bool RoboticsContext::IsValidActuator(ActuatorHandle handle) const {
     return false;
   }
 
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   auto it = _actuatorSlots.find(handle.value);
   if (it == _actuatorSlots.end()) {
     return false;
@@ -867,7 +867,7 @@ bool RoboticsContext::IsActuatorTypeRegistered(std::string_view typeName) const 
 DynamicArray<ActuatorHandle> RoboticsContext::FindActuatorsByName(
     std::string_view name,
     Bot const* scope) const {
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   return CollectHandles<ActuatorHandle>(_actuatorSlots, [&](ComponentBase const& comp) {
     return InScope(comp, scope) && comp.GetName() == name;
   });
@@ -876,7 +876,7 @@ DynamicArray<ActuatorHandle> RoboticsContext::FindActuatorsByName(
 DynamicArray<ActuatorHandle> RoboticsContext::FindActuatorsByType(
     std::string_view typeName,
     Bot const* scope) const {
-  std::lock_guard lock(_slotsMutex);
+  std::scoped_lock lock(_slotsMutex);
   return CollectHandles<ActuatorHandle>(_actuatorSlots, [&](ComponentBase const& comp) {
     return InScope(comp, scope) && comp.GetTypeName() == typeName;
   });
