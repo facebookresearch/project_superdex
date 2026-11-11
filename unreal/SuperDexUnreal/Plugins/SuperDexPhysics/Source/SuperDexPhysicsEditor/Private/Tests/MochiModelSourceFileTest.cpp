@@ -36,8 +36,9 @@ bool FMochiModelSourceFileTest::RunTest(const FString& Parameters) {
   if (!TestNotNull(TEXT("The source model loads"), Source)) {
     return false;
   }
-  const FString File = FPaths::ConvertRelativePathToFull(FPaths::Combine(
-      FPaths::AutomationTransientDir(), TEXT("MochiModelSourceFileTest/sphere.mochi.h5")));
+  const FString File = FPaths::ConvertRelativePathToFull(
+      FPaths::Combine(
+          FPaths::AutomationTransientDir(), TEXT("MochiModelSourceFileTest/sphere.mochi.h5")));
   if (!TestTrue(TEXT("The source model exports"), Source->ExportToFilename(File))) {
     return false;
   }
@@ -62,7 +63,8 @@ bool FMochiModelSourceFileTest::RunTest(const FString& Parameters) {
           Model, false, false, FString(), nullptr, INDEX_NONE, false, true));
 
   IFileManager::Get().Delete(*File);
-  const FString RecordedBefore = Model->AssetImportData->GetSourceData().SourceFiles[0].RelativeFilename;
+  const FString RecordedBefore =
+      Model->AssetImportData->GetSourceData().SourceFiles[0].RelativeFilename;
   AddExpectedError(TEXT("Source file not found"), EAutomationExpectedErrorFlags::Contains, 1);
   TestFalse(
       TEXT("Reimport fails once the source file is gone"),

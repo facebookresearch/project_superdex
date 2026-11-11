@@ -267,7 +267,8 @@ UENUM(BlueprintType)
 enum class EMochiLinearSolverConvergenceNorm : uint8 {
   L2Norm,
   L2NormPreconditioned,
-  L2NormPerActorWeighted = static_cast<uint8>(mochi::LinearSolverConvergenceNorm::ResidualPerActorWeighted),
+  L2NormPerActorWeighted =
+      static_cast<uint8>(mochi::LinearSolverConvergenceNorm::ResidualPerActorWeighted),
   Default = static_cast<uint8>(mochi::LinearSolverConvergenceNorm::Default),
 };
 

@@ -783,7 +783,7 @@
     {
       "contact": {
         "frictionWithColliderNormal": false,
-        "penaltyCoefficient": 100000000,
+        "penaltyCoefficient": 10000000000,
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
@@ -799,7 +799,7 @@
     {
       "contact": {
         "frictionWithColliderNormal": false,
-        "penaltyCoefficient": 100000000,
+        "penaltyCoefficient": 10000000000,
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
@@ -812,7 +812,7 @@
     {
       "contact": {
         "frictionWithColliderNormal": false,
-        "penaltyCoefficient": 100000000,
+        "penaltyCoefficient": 10000000000,
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
@@ -825,7 +825,7 @@
     {
       "contact": {
         "frictionWithColliderNormal": false,
-        "penaltyCoefficient": 100000000,
+        "penaltyCoefficient": 10000000000,
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
@@ -846,7 +846,7 @@
     {
       "contact": {
         "frictionWithColliderNormal": false,
-        "penaltyCoefficient": 100000000,
+        "penaltyCoefficient": 10000000000,
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
@@ -859,7 +859,7 @@
     {
       "contact": {
         "frictionWithColliderNormal": false,
-        "penaltyCoefficient": 100000000,
+        "penaltyCoefficient": 10000000000,
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
@@ -872,7 +872,7 @@
     {
       "contact": {
         "frictionWithColliderNormal": false,
-        "penaltyCoefficient": 100000000,
+        "penaltyCoefficient": 10000000000,
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
@@ -893,7 +893,7 @@
     {
       "contact": {
         "frictionWithColliderNormal": false,
-        "penaltyCoefficient": 100000000,
+        "penaltyCoefficient": 10000000000,
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
@@ -906,7 +906,7 @@
     {
       "contact": {
         "frictionWithColliderNormal": false,
-        "penaltyCoefficient": 100000000,
+        "penaltyCoefficient": 10000000000,
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
@@ -919,7 +919,7 @@
     {
       "contact": {
         "frictionWithColliderNormal": false,
-        "penaltyCoefficient": 100000000,
+        "penaltyCoefficient": 10000000000,
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
@@ -940,7 +940,7 @@
     {
       "contact": {
         "frictionWithColliderNormal": false,
-        "penaltyCoefficient": 100000000,
+        "penaltyCoefficient": 10000000000,
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
@@ -953,7 +953,7 @@
     {
       "contact": {
         "frictionWithColliderNormal": false,
-        "penaltyCoefficient": 100000000,
+        "penaltyCoefficient": 10000000000,
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
@@ -966,7 +966,7 @@
     {
       "contact": {
         "frictionWithColliderNormal": false,
-        "penaltyCoefficient": 100000000,
+        "penaltyCoefficient": 10000000000,
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
@@ -983,7 +983,7 @@
     {
       "contact": {
         "frictionWithColliderNormal": false,
-        "penaltyCoefficient": 100000000,
+        "penaltyCoefficient": 10000000000,
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
@@ -996,7 +996,7 @@
     {
       "contact": {
         "frictionWithColliderNormal": false,
-        "penaltyCoefficient": 100000000,
+        "penaltyCoefficient": 10000000000,
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
@@ -1009,7 +1009,7 @@
     {
       "contact": {
         "frictionWithColliderNormal": false,
-        "penaltyCoefficient": 100000000,
+        "penaltyCoefficient": 10000000000,
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
@@ -1022,7 +1022,7 @@
     {
       "contact": {
         "frictionWithColliderNormal": false,
-        "penaltyCoefficient": 100000000,
+        "penaltyCoefficient": 10000000000,
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },

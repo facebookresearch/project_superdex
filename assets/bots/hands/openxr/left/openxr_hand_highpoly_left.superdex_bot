@@ -93,7 +93,7 @@
     },
     {
       "friction": {
-        "viscous": 0.0010000000474974513
+        "viscous": 0.0099999997764825821
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -129,7 +129,7 @@
         -0.068175077438354492
       ],
       "friction": {
-        "viscous": 1.9999999949504854e-06
+        "viscous": 0.00019999999494757503
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -165,7 +165,7 @@
         0.08345378190279007
       ],
       "friction": {
-        "viscous": 9.9999997473787516e-06
+        "viscous": 9.9999997473787516e-05
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -230,7 +230,7 @@
     },
     {
       "friction": {
-        "viscous": 3.0000001061125658e-06
+        "viscous": 0.00030000001424923539
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -266,7 +266,7 @@
         -0.0020183324813842773
       ],
       "friction": {
-        "viscous": 1.9999999949504854e-06
+        "viscous": 9.9999997473787516e-05
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -302,7 +302,7 @@
         -0.021136313676834106
       ],
       "friction": {
-        "viscous": 9.9999999747524271e-07
+        "viscous": 9.9999997473787516e-05
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -367,7 +367,7 @@
     },
     {
       "friction": {
-        "viscous": 3.0000001061125658e-06
+        "viscous": 0.00030000001424923539
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -403,7 +403,7 @@
         0.0020815432071685791
       ],
       "friction": {
-        "viscous": 1.9999999949504854e-06
+        "viscous": 9.9999997473787516e-05
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -439,7 +439,7 @@
         0.096979781985282898
       ],
       "friction": {
-        "viscous": 9.9999999747524271e-07
+        "viscous": 9.9999997473787516e-05
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -504,7 +504,7 @@
     },
     {
       "friction": {
-        "viscous": 3.0000001061125658e-06
+        "viscous": 0.00030000001424923539
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -540,7 +540,7 @@
         0.022281737998127937
       ],
       "friction": {
-        "viscous": 1.9999999949504854e-06
+        "viscous": 9.9999997473787516e-05
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -576,7 +576,7 @@
         0.076113052666187286
       ],
       "friction": {
-        "viscous": 9.9999999747524271e-07
+        "viscous": 9.9999997473787516e-05
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -629,7 +629,7 @@
         2.9802322387695312e-08
       ],
       "friction": {
-        "viscous": 9.9999997473787516e-05
+        "viscous": 0.0099999997764825821
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -660,7 +660,7 @@
     },
     {
       "friction": {
-        "viscous": 3.0000001061125658e-06
+        "viscous": 0.00030000001424923539
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -696,7 +696,7 @@
         0.04504859447479248
       ],
       "friction": {
-        "viscous": 1.9999999949504854e-06
+        "viscous": 9.9999997473787516e-05
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -732,7 +732,7 @@
         0.045722458511590958
       ],
       "friction": {
-        "viscous": 9.9999999747524271e-07
+        "viscous": 9.9999997473787516e-05
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -787,7 +787,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "xr_01_wrist",
       "renderModel": "render/xr_01_wrist_render.glb",
       "shape": "collision/xr_01_wrist_highpoly_collision.mochi.h5"
@@ -803,7 +803,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "xr_02_thumb_metacarpal",
       "parentLink": 0,
       "renderModel": "render/xr_02_thumb_metacarpal_render.glb",
@@ -816,7 +816,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "xr_03_thumb_proximal",
       "parentLink": 2,
       "renderModel": "render/xr_03_thumb_proximal_render.glb",
@@ -829,7 +829,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "xr_04_thumb_distal",
       "parentLink": 3,
       "renderModel": "render/xr_04_thumb_distal_render.glb",
@@ -850,7 +850,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "xr_07_index_proximal",
       "parentLink": 6,
       "renderModel": "render/xr_07_index_proximal_render.glb",
@@ -863,7 +863,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "xr_08_index_intermediate",
       "parentLink": 7,
       "renderModel": "render/xr_08_index_intermediate_render.glb",
@@ -876,7 +876,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "xr_09_index_distal",
       "parentLink": 8,
       "renderModel": "render/xr_09_index_distal_render.glb",
@@ -897,7 +897,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "xr_12_middle_proximal",
       "parentLink": 11,
       "renderModel": "render/xr_12_middle_proximal_render.glb",
@@ -910,7 +910,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "xr_13_middle_intermediate",
       "parentLink": 12,
       "renderModel": "render/xr_13_middle_intermediate_render.glb",
@@ -923,7 +923,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "xr_14_middle_distal",
       "parentLink": 13,
       "renderModel": "render/xr_14_middle_distal_render.glb",
@@ -944,7 +944,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "xr_17_ring_proximal",
       "parentLink": 16,
       "renderModel": "render/xr_17_ring_proximal_render.glb",
@@ -957,7 +957,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "xr_18_ring_intermediate",
       "parentLink": 17,
       "renderModel": "render/xr_18_ring_intermediate_render.glb",
@@ -970,7 +970,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "xr_19_ring_distal",
       "parentLink": 18,
       "renderModel": "render/xr_19_ring_distal_render.glb",
@@ -987,7 +987,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "xr_21_little_metacarpal",
       "parentLink": 0,
       "renderModel": "render/xr_21_little_metacarpal_render.glb",
@@ -1000,7 +1000,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "xr_22_little_proximal",
       "parentLink": 21,
       "renderModel": "render/xr_22_little_proximal_render.glb",
@@ -1013,7 +1013,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "xr_23_little_intermediate",
       "parentLink": 22,
       "renderModel": "render/xr_23_little_intermediate_render.glb",
@@ -1026,7 +1026,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "xr_24_little_distal",
       "parentLink": 23,
       "renderModel": "render/xr_24_little_distal_render.glb",

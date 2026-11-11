@@ -71,13 +71,11 @@ UMochiContactMatrix* FMochiSceneSettings::GetContactMatrix() const {
 UMochiPhysicsSettings::UMochiPhysicsSettings() {
   DefaultSceneSettings.SolverParams =
       ConstructorHelpers::FObjectFinder<UMochiSolverParams>(
-          TEXT(
-              "MochiSolverParams'/SuperDexPhysics/Params/MSP_Default.MSP_Default'"))
+          TEXT("MochiSolverParams'/SuperDexPhysics/Params/MSP_Default.MSP_Default'"))
           .Object;
   DefaultSceneSettings.ContactMatrix =
       ConstructorHelpers::FObjectFinder<UMochiContactMatrix>(
-          TEXT(
-              "MochiContactMatrix'/SuperDexPhysics/Params/MCM_Default.MCM_Default'"))
+          TEXT("MochiContactMatrix'/SuperDexPhysics/Params/MCM_Default.MCM_Default'"))
           .Object;
 }
 
@@ -135,13 +133,11 @@ AMochiSceneSettingsActor::AMochiSceneSettingsActor() {
   } else {
     SceneSettings.SolverParams =
         ConstructorHelpers::FObjectFinder<UMochiSolverParams>(
-            TEXT(
-                "MochiSolverParams'/SuperDexPhysics/Params/MSP_Default.MSP_Default'"))
+            TEXT("MochiSolverParams'/SuperDexPhysics/Params/MSP_Default.MSP_Default'"))
             .Object;
     SceneSettings.ContactMatrix =
         ConstructorHelpers::FObjectFinder<UMochiContactMatrix>(
-            TEXT(
-                "MochiContactMatrix'/SuperDexPhysics/Params/MCM_Default.MCM_Default'"))
+            TEXT("MochiContactMatrix'/SuperDexPhysics/Params/MCM_Default.MCM_Default'"))
             .Object;
   }
 }

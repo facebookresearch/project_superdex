@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #pragma once
 
 #include "Components/ActorComponent.h"
@@ -40,7 +39,10 @@ USTRUCT()
 struct FSuperDexBotAudioParams {
   GENERATED_BODY()
   // The joints these params are applied to.
-  UPROPERTY(EditAnywhere, meta = (GetOptions = "GetJointNames_EditorOnly"), Category = "SuperDex Bot Audio")
+  UPROPERTY(
+      EditAnywhere,
+      meta = (GetOptions = "GetJointNames_EditorOnly"),
+      Category = "SuperDex Bot Audio")
   TArray<FName> Joints;
   // The audio clip to use. Should be seamless loop with constant vol/pitch/tone.
   UPROPERTY(EditAnywhere, Category = "SuperDex Bot Audio")

@@ -72,12 +72,12 @@ UMochiGameInstanceSubsystem::UMochiGameInstanceSubsystem() {
   const auto defaultUnrealMesh_Sphere =
       FindAsset<UStaticMesh>(TEXT("StaticMesh'/Engine/BasicShapes/Sphere.Sphere'"));
   // find default Mochi mesh references
-  const auto defaultMochiMesh_Plane = FindAsset<UMochiModel>(
-      TEXT("MochiModel'/SuperDexPhysics/Models/MM_Plane.MM_Plane'"));
-  const auto defaultMochiMesh_Cube = FindAsset<UMochiModel>(
-      TEXT("MochiModel'/SuperDexPhysics/Models/MM_Cube.MM_Cube'"));
-  const auto defaultMochiMesh_Sphere = FindAsset<UMochiModel>(
-      TEXT("MochiModel'/SuperDexPhysics/Models/MM_Sphere.MM_Sphere'"));
+  const auto defaultMochiMesh_Plane =
+      FindAsset<UMochiModel>(TEXT("MochiModel'/SuperDexPhysics/Models/MM_Plane.MM_Plane'"));
+  const auto defaultMochiMesh_Cube =
+      FindAsset<UMochiModel>(TEXT("MochiModel'/SuperDexPhysics/Models/MM_Cube.MM_Cube'"));
+  const auto defaultMochiMesh_Sphere =
+      FindAsset<UMochiModel>(TEXT("MochiModel'/SuperDexPhysics/Models/MM_Sphere.MM_Sphere'"));
 #endif
 }
 

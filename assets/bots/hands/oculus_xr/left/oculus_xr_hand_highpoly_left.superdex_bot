@@ -77,14 +77,25 @@
     },
     {
       "friction": {
-        "viscous": 0.0010000000474974513
+        "viscous": 0.0099999997764825821
       },
+      "limitStiffness": 1000,
+      "maxLimit": [
+        1.0471975803375244,
+        0.0872664675116539,
+        0.8726646900177002
+      ],
+      "minLimit": [
+        -1.5707963705062866,
+        -0.0872664675116539,
+        -0.8726646900177002
+      ],
       "name": "joint_01_wrist_stub",
       "type": "Hard"
     },
     {
       "friction": {
-        "viscous": 0.0010000000474974513
+        "viscous": 0.0099999997764825821
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -120,7 +131,7 @@
         -0.99627912044525146
       ],
       "friction": {
-        "viscous": 9.9999997473787516e-05
+        "viscous": 0.0099999997764825821
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -156,7 +167,7 @@
         0
       ],
       "friction": {
-        "viscous": 1.9999999949504854e-06
+        "viscous": 0.00019999999494757503
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -192,7 +203,7 @@
         -2.9802325229866256e-07
       ],
       "friction": {
-        "viscous": 9.9999997473787516e-06
+        "viscous": 9.9999997473787516e-05
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -223,7 +234,7 @@
     },
     {
       "friction": {
-        "viscous": 3.0000001061125658e-06
+        "viscous": 0.00030000001424923539
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -259,7 +270,7 @@
         1.1920928955078125e-07
       ],
       "friction": {
-        "viscous": 1.9999999949504854e-06
+        "viscous": 9.9999997473787516e-05
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -295,7 +306,7 @@
         0
       ],
       "friction": {
-        "viscous": 9.9999999747524271e-07
+        "viscous": 9.9999997473787516e-05
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -326,7 +337,7 @@
     },
     {
       "friction": {
-        "viscous": 3.0000001061125658e-06
+        "viscous": 0.00030000001424923539
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -362,7 +373,7 @@
         0
       ],
       "friction": {
-        "viscous": 1.9999999949504854e-06
+        "viscous": 9.9999997473787516e-05
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -398,7 +409,7 @@
         0
       ],
       "friction": {
-        "viscous": 9.9999999747524271e-07
+        "viscous": 9.9999997473787516e-05
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -429,7 +440,7 @@
     },
     {
       "friction": {
-        "viscous": 3.0000001061125658e-06
+        "viscous": 0.00030000001424923539
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -465,7 +476,7 @@
         0
       ],
       "friction": {
-        "viscous": 1.9999999949504854e-06
+        "viscous": 9.9999997473787516e-05
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -501,7 +512,7 @@
         0
       ],
       "friction": {
-        "viscous": 9.9999999747524271e-07
+        "viscous": 9.9999997473787516e-05
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -537,7 +548,7 @@
         0
       ],
       "friction": {
-        "viscous": 9.9999997473787516e-05
+        "viscous": 0.0099999997764825821
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -568,7 +579,7 @@
     },
     {
       "friction": {
-        "viscous": 3.0000001061125658e-06
+        "viscous": 0.00030000001424923539
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -604,7 +615,7 @@
         -5.9604644775390625e-08
       ],
       "friction": {
-        "viscous": 1.9999999949504854e-06
+        "viscous": 9.9999997473787516e-05
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -640,7 +651,7 @@
         5.9604651880817983e-08
       ],
       "friction": {
-        "viscous": 9.9999999747524271e-07
+        "viscous": 9.9999997473787516e-05
       },
       "limitStiffness": 1000,
       "maxLimit": [
@@ -678,7 +689,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_00_wrist_root",
       "renderModel": "render/bone_00_wrist_root_render.glb",
       "shape": "collision/bone_00_wrist_root_highpoly_collision.mochi.h5"
@@ -690,7 +701,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_01_wrist_stub",
       "parentLink": 0,
       "renderModel": "render/bone_01_wrist_stub_render.glb",
@@ -703,7 +714,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_02_thumb_metacarpal",
       "parentLink": 0,
       "renderModel": "render/bone_02_thumb_metacarpal_render.glb",
@@ -716,7 +727,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_03_thumb_proximal",
       "parentLink": 2,
       "renderModel": "render/bone_03_thumb_proximal_render.glb",
@@ -729,7 +740,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_04_thumb_medial",
       "parentLink": 3,
       "renderModel": "render/bone_04_thumb_medial_render.glb",
@@ -742,7 +753,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_05_thumb_distal",
       "parentLink": 4,
       "renderModel": "render/bone_05_thumb_distal_render.glb",
@@ -755,7 +766,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_06_index_proximal",
       "parentLink": 0,
       "renderModel": "render/bone_06_index_proximal_render.glb",
@@ -768,7 +779,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_07_index_medial",
       "parentLink": 6,
       "renderModel": "render/bone_07_index_medial_render.glb",
@@ -781,7 +792,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_08_index_distal",
       "parentLink": 7,
       "renderModel": "render/bone_08_index_distal_render.glb",
@@ -794,7 +805,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_09_middle_proximal",
       "parentLink": 0,
       "renderModel": "render/bone_09_middle_proximal_render.glb",
@@ -807,7 +818,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_10_middle_medial",
       "parentLink": 9,
       "renderModel": "render/bone_10_middle_medial_render.glb",
@@ -820,7 +831,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_11_middle_distal",
       "parentLink": 10,
       "renderModel": "render/bone_11_middle_distal_render.glb",
@@ -833,7 +844,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_12_ring_proximal",
       "parentLink": 0,
       "renderModel": "render/bone_12_ring_proximal_render.glb",
@@ -846,7 +857,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_13_ring_medial",
       "parentLink": 12,
       "renderModel": "render/bone_13_ring_medial_render.glb",
@@ -859,7 +870,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_14_ring_distal",
       "parentLink": 13,
       "renderModel": "render/bone_14_ring_distal_render.glb",
@@ -872,7 +883,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_15_pinky_metacarpal",
       "parentLink": 0,
       "renderModel": "render/bone_15_pinky_metacarpal_render.glb",
@@ -885,7 +896,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_16_pinky_proximal",
       "parentLink": 15,
       "renderModel": "render/bone_16_pinky_proximal_render.glb",
@@ -898,7 +909,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_17_pinky_medial",
       "parentLink": 16,
       "renderModel": "render/bone_17_pinky_medial_render.glb",
@@ -911,7 +922,7 @@
         "penaltyThresholdDefault": 0.0030000000260770321,
         "viscousFrictionCoefficient": 20
       },
-      "density": 10,
+      "density": 980,
       "name": "bone_18_pinky_distal",
       "parentLink": 17,
       "renderModel": "render/bone_18_pinky_distal_render.glb",

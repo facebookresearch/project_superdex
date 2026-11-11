@@ -371,8 +371,9 @@ struct SUPERDEXPHYSICS_API FMochiArticulatedCycleJoint {
   double Stiffness = 50000;
 
   mochi::ArticulatedCycleJointParams ToMochi(const FUnrealToMochiConverter& U2M) const;
-  void
-  FromMochi(const mochi::ArticulatedCycleJointParams& Mochi, const FMochiToUnrealConverter& M2U);
+  void FromMochi(
+      const mochi::ArticulatedCycleJointParams& Mochi,
+      const FMochiToUnrealConverter& M2U);
 };
 
 // Per-joint control gains, typically authored in a UDataTable keyed by joint name.
