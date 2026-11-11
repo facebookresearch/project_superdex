@@ -25,11 +25,11 @@ Elastic potential energy $U$ is given in terms of a density $W$ per unit referen
 $$
 U = \int_{\Gamma_\mathbf{X}} W\,d\mathbf{X}~.
 $$
-The energy density $W$ is the sum of three terms:
+The energy density $W$ is the sum of four terms:
 $$
-W = W_{\text{membrane}}(\bm{\varepsilon}) + W_{\text{bend}}(\bm{\kappa}) + W_{\text{collapse}}(\bm{\varepsilon})~,
+W = W_{\text{membrane}}(\bm{\varepsilon}) + W_{\text{bend}}(\bm{\kappa}) + W_{\text{collapse}}(\bm{\varepsilon}) + W_{\text{stiffening}}(\bm{\varepsilon})~,
 $$
-where $W_{\text{membrane}}$ is the membrane energy, depending on the membrane Green–Lagrange strain $\bm{\varepsilon}$, $W_{\text{bend}}$ is the bending energy, depending on a curvature strain $\bm{\kappa}$, and $W_{\text{collapse}}$ is a barrier potential to block a membrane collapse instability (discussed further below).  Expressed with respect to the standard curvilinear basis $\left\{\mathbf{E}_\alpha = \frac{\partial\mathbf{X}}{\partial\xi^\alpha}\right\}_{\alpha=0,1}$ of the reference configuration, these strains are
+where $W_{\text{membrane}}$ is the membrane energy, depending on the membrane Green–Lagrange strain $\bm{\varepsilon}$, $W_{\text{bend}}$ is the bending energy, depending on a curvature strain $\bm{\kappa}$, $W_{\text{collapse}}$ is a barrier potential to block a membrane collapse instability, and $W_{\text{stiffening}}$ is an optional stiffening of the membrane under tension (both discussed further below).  Expressed with respect to the standard curvilinear basis $\left\{\mathbf{E}_\alpha = \frac{\partial\mathbf{X}}{\partial\xi^\alpha}\right\}_{\alpha=0,1}$ of the reference configuration, these strains are
 $$
 \varepsilon_{\alpha\beta} = \frac{1}{2}(a_{\alpha\beta} - A_{\alpha\beta})~,\qquad\kappa_{\alpha\beta} = B_{\alpha\beta} - b_{\alpha\beta}~,
 $$
@@ -53,12 +53,33 @@ The barrier is active only under compressive deformations, diverges as the membr
 The default $\eta = 10^{-3}$ suffices for membrane materials derived from plane-stress reduction of a valid isotropic 3D material, while exotic 2D materials with $\lambda/\mu > 2$ may require larger values.
 Setting $\eta = 0$ disables the barrier, recovering the plain St. Venant–Kirchhoff membrane.
 
+Many visibly deformable shell structures encountered in human-scale manipulation problems have nonlinear material behavior under tension, which cannot be approximated well by the St. Venant–Kirchhoff model's linear stress–strain relation.
+In particular, materials whose main load-bearing constituent is a network of fibers that are largely slack near the reference configuration tend to stiffen significantly as they are stretched.
+Important examples include woven and knit fabrics, as well as soft biological tissues supported by collagen fiber networks.
+The optional strain-stiffening term models this behavior:
+$$
+W_{\text{stiffening}} = \gamma\mu\sum_{i=0}^{1}\left\langle\varepsilon_i\right\rangle^3~,
+$$
+where $\gamma \geq 0$ is a dimensionless scale and $\varepsilon_i$ are the eigenvalues of ${\varepsilon^\alpha}_\beta$.
+It is active only in stretched directions, so it leaves the response to in-plane compression unchanged, including buckling and the collapse barrier.
+Its value, stress, and stiffness vanish in the reference configuration, leaving the small-strain response and the [parameter selection](#parameter-selection) below unchanged.
+It is also convex in the deformation, so its exact stiffness is positive semidefinite.
+The same cubic penalty on principal Green–Lagrange strains beyond a prescribed limit is used for strain limiting in the STARK framework of [Fernández-Fernández et al. (2024)](#references).
+$W_{\text{stiffening}}$ corresponds to a zero limit, so stiffening begins smoothly at the reference configuration rather than at a limit.
+The strain limiting of [Huang et al. (2025)](#references) has the same general cubic form and also activates at zero strain, but acts along fixed material directions rather than along the principal stretch directions.
+To guide the choice of $\gamma$, under uniaxial tension the tangent stiffness of $W_{\text{stiffening}}$ equals that of $W_{\text{membrane}}$ at the Green–Lagrange strain
+$$
+\varepsilon_\text{knee} = \frac{2(\lambda + \mu)}{3\gamma(\lambda + 2\mu)}~.
+$$
+For membranes derived from plane-stress reduction of an isotropic 3D material with Poisson's ratio $0 \leq \nu \leq 0.5$, $\gamma = 10$ places this knee between about 3% and 5% strain.
+The default $\gamma = 0$ disables the term.
+
 Mass and stiffness dissipation are given by the dissipation potential
 $$
 R = \int_{\Gamma_\mathbf{X}} \left(\alpha_R\frac{1}{2}(\rho_{A0}\Vert\dot{\mathbf{u}}\Vert_2^2) + \beta_R\left(W_\text{membrane}(\dot{\bm{\varepsilon}}) + W_\text{bend}(\dot{\bm{\kappa}})\right)\right)\,d\mathbf{X}~,
 $$
 where $\alpha_R$ and $\beta_R$ are mass and stiffness dissipation coefficients. This potential is the natural shell generalization of the [soft-actor dissipation model](./soft/overview.mdx#continuous-model).
-The collapse barrier $W_\text{collapse}$ is not included in stiffness dissipation, following the soft-actor approach of defining damping through the reference-configuration material stiffness.
+Neither $W_\text{collapse}$ nor $W_\text{stiffening}$ is included in stiffness dissipation, following the soft-actor approach of defining damping through the reference-configuration material stiffness.
 
 ### Parameter Selection
 
@@ -132,6 +153,7 @@ If an edge is at a boundary of the mesh, the missing face normal is set to the n
 | `massDampingCoefficient` | `real` | `0` | 1/s | Mass-proportional damping coefficient $\alpha_R$ |
 | `stiffnessDampingCoefficient` | `real` | `0` | s | Stiffness-proportional damping coefficient $\beta_R$ |
 | `membraneCollapseBarrierScale` | `real` | `0.001` | -- | Dimensionless scale $\eta$ of the [membrane collapse barrier](#continuous-model) $W_\text{collapse}$, which resists in-plane collapse. `0` disables it. |
+| `membraneStrainStiffeningScale` | `real` | `0` | -- | Dimensionless scale $\gamma$ of the [membrane strain stiffening](#continuous-model) $W_\text{stiffening}$, which stiffens the membrane progressively under tension. `0` disables it. |
 
 ## Examples
 
@@ -147,4 +169,6 @@ If an edge is at a boundary of the mesh, the missing face normal is set to the n
 ## References
 
 - Z. Chen, H.-Y. Chen, D. M. Kaufman, M. Skouras, and E. Vouga, [Fine Wrinkling on Coarsely Meshed Thin Shells](https://doi.org/10.1145/3462758), *ACM Transactions on Graphics*, 40(5), Article 190, 2021.
+- J. A. Fernández-Fernández, R. Lange, S. Laible, K. O. Arras, and J. Bender, [STARK: A Unified Framework for Strongly Coupled Simulation of Rigid and Deformable Bodies with Frictional Contact](https://doi.org/10.1109/ICRA57147.2024.10610574), *2024 IEEE International Conference on Robotics and Automation (ICRA)*, pp. 16888–16894, 2024.
+- K. Huang, X. Lu, H. Lin, T. Komura, and M. Li, [StiffGIPC: Advancing GPU IPC for Stiff Affine-Deformable Simulation](https://doi.org/10.1145/3735126), *ACM Transactions on Graphics*, 44(3), Article 31, 2025.
 - R. Tamstorf and E. Grinspun, [Discrete Bending Forces and Their Jacobians](https://doi.org/10.1016/j.gmod.2013.07.002), *Graphical Models*, 75(6), pp. 362–370, 2013.
