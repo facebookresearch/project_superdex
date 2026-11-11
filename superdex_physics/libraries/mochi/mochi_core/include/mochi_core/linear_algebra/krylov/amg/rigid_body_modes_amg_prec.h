@@ -252,9 +252,19 @@ struct RigidBodyModesAMGPrec : Preconditioner<Scalar> {
   /// coefficients from the positions.
   void UpdateInterpolation();
 
-  /// @brief Recompute the coarse matrices, the accepted coarse levels, their smoothers, the damping
+  /// @brief Recompute the damping of the fine smoother.
+  ///
+  /// @note May run concurrently with @ref SetPositions, @ref UpdateInterpolation and
+  /// @ref UpdateCoarseLevels. It must not read or write what they write, nor write what they read.
+  void UpdateFineDamping();
+
+  /// @brief Recompute the coarse matrices, the accepted coarse levels, their smoothers and damping,
   /// and the coarsest inverse.
-  void UpdateNumerics();
+  ///
+  /// @note May run concurrently with `_fineSmoother`'s @ref BlockJacobiPrec::Update and
+  /// @ref UpdateFineDamping, so it must not read or write `_fineSmoother` or
+  /// `_fineRelaxationFactor`.
+  void UpdateCoarseLevels();
 
   /// @brief V-cycle at coarse level s + 1 on a single worker, from and to its vectors b and x.
   void CoarseCycle(int s) const;
@@ -1183,9 +1193,15 @@ RigidBodyModesAMGPrec<Scalar>::RigidBodyModesAMGPrec(
   details::SetXorShiftRandom(AsView(_spectralRadiusRhs));
 
   _positions.resize(_A0.Rows());
-  SetPositions(referencePositions, displacements);
-  UpdateInterpolation();
-  UpdateNumerics();
+  ParallelForN("RigidModeAMGBuild", /*n*/ 2, /*minPerTask*/ 1, [&](int part) {
+    if (part == 0) {
+      UpdateFineDamping();
+    } else {
+      SetPositions(referencePositions, displacements);
+      UpdateInterpolation();
+      UpdateCoarseLevels();
+    }
+  });
 }
 
 template <typename Scalar>
@@ -1214,11 +1230,17 @@ void RigidBodyModesAMGPrec<Scalar>::Update(
 #endif // MOCHI_ASSERT_VERBOSE_ENABLED
 
   _A0 = A;
-  _fineSmoother.Update(_A0);
-  if (SetPositions(referencePositions, displacements)) {
-    UpdateInterpolation();
-  }
-  UpdateNumerics();
+  ParallelForN("RigidModeAMGUpdate", /*n*/ 2, /*minPerTask*/ 1, [&](int part) {
+    if (part == 0) {
+      _fineSmoother.Update(_A0);
+      UpdateFineDamping();
+    } else {
+      if (SetPositions(referencePositions, displacements)) {
+        UpdateInterpolation();
+      }
+      UpdateCoarseLevels();
+    }
+  });
 }
 
 template <typename Scalar>
@@ -1335,16 +1357,15 @@ void RigidBodyModesAMGPrec<Scalar>::UpdateInterpolation() {
 }
 
 template <typename Scalar>
-void RigidBodyModesAMGPrec<Scalar>::UpdateNumerics() {
-  constexpr AMGOptions<Scalar> kOptions = {};
-  constexpr Scalar kDefaultRelaxationFactor = AMGPrec<Scalar, 3>::kDefaultRelaxationFactor;
-  auto const rhs = AsConstView(_spectralRadiusRhs);
-  // TODO: Explore overlapping the fine level's setup with the coarse levels' setup, which are
-  // independent of each other, so the setup scales at high worker counts.
+void RigidBodyModesAMGPrec<Scalar>::UpdateFineDamping() {
+  auto const rhs = AsConstView(_spectralRadiusRhs).TopRows(_A0.Rows());
   _fineRelaxationFactor =
-      details::AutoRelaxationFactor(_A0, _fineSmoother, kOptions, 0, rhs.TopRows(_A0.Rows()))
-          .value_or(kDefaultRelaxationFactor);
+      details::AutoRelaxationFactor(_A0, _fineSmoother, AMGOptions<Scalar>{}, 0, rhs)
+          .value_or(AMGPrec<Scalar, 3>::kDefaultRelaxationFactor);
+}
 
+template <typename Scalar>
+void RigidBodyModesAMGPrec<Scalar>::UpdateCoarseLevels() {
   auto& level1 = _levels.front();
   details::Galerkin(level1.transfer, _A0, _PtA0Pattern, nullptr, level1.A);
   for (int a = 0; a < isize(_decoupled); ++a) {
@@ -1385,10 +1406,10 @@ void RigidBodyModesAMGPrec<Scalar>::UpdateNumerics() {
       }
     }
     _numAcceptedCoarseLevels = s + 1;
+    auto const rhs = AsConstView(_spectralRadiusRhs).TopRows(current.A.Rows());
     current.relaxationFactor =
-        details::AutoRelaxationFactor(
-            current.A, current.smoother, kOptions, s + 1, rhs.TopRows(current.A.Rows()))
-            .value_or(kDefaultRelaxationFactor);
+        details::AutoRelaxationFactor(current.A, current.smoother, AMGOptions<Scalar>{}, s + 1, rhs)
+            .value_or(AMGPrec<Scalar, 3>::kDefaultRelaxationFactor);
     auto& next = _levels[s + 1];
     details::Galerkin(next.transfer, current.A, AsGraphView(current.PtA), &current.PtA, next.A);
   }
