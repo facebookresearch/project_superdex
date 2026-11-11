@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <memory>
 #include <tuple>
 #include <utility>
@@ -64,7 +65,7 @@ TEST(Constraints, DeformableNodeValue) {
                      Real3 const& cVal) {
     ColumnVector<real, 3> val;
     TransformRT tx(q, t);
-    EvalDeformableNodeFixedConstraint(tx, r + disp, p, &val, nullptr, nullptr);
+    EvalDeformableNodeFixedConstraint(tx, r, disp, p, &val, nullptr, nullptr);
 
     real constexpr kTol = 1.0e-3_r;
     for (int i = 0; i < 3; ++i) {
@@ -127,7 +128,7 @@ TEST(Constraints, DeformableNodeJacobian) {
         ColumnVector<real, 3> val;
         RowMatrix<real, 3, 3> Jac;
         TransformRT tx(q, t);
-        EvalDeformableNodeFixedConstraint(tx, r + disp, p, &val, &Jac, nullptr);
+        EvalDeformableNodeFixedConstraint(tx, r, disp, p, &val, &Jac, nullptr);
 
         auto JacFD = Jac.Duplicate();
         real constexpr kDelta = 1.0e-3_r;
@@ -136,11 +137,11 @@ TEST(Constraints, DeformableNodeJacobian) {
           real v0 = disp[i];
           real dx = std::max(kDelta, std::abs(kDelta * disp[i]));
           disp[i] += dx;
-          EvalDeformableNodeFixedConstraint(tx, r + disp, p, &val, nullptr, nullptr);
+          EvalDeformableNodeFixedConstraint(tx, r, disp, p, &val, nullptr, nullptr);
           auto valp = val.Duplicate();
 
           disp[i] -= 2_r * dx;
-          EvalDeformableNodeFixedConstraint(tx, r + disp, p, &val, nullptr, nullptr);
+          EvalDeformableNodeFixedConstraint(tx, r, disp, p, &val, nullptr, nullptr);
           auto valm = val.Duplicate();
           disp[i] = v0;
 
@@ -184,7 +185,7 @@ TEST(Constraints, DeformableNodeJacobianTarget) {
         ColumnVector<real, 3> val;
         RowMatrix<real, 3, 3> Jac;
         TransformRT tx(q, t);
-        EvalDeformableNodeFixedConstraint(tx, r + disp, p, &val, nullptr, &Jac);
+        EvalDeformableNodeFixedConstraint(tx, r, disp, p, &val, nullptr, &Jac);
 
         auto JacFD = Jac.Duplicate();
         real constexpr kDelta = 1.0e-3_r;
@@ -192,11 +193,11 @@ TEST(Constraints, DeformableNodeJacobianTarget) {
         for (int i = 0; i < 3; ++i) {
           real v0 = p[i];
           p[i] += kDelta;
-          EvalDeformableNodeFixedConstraint(tx, r + disp, p, &val, nullptr, nullptr);
+          EvalDeformableNodeFixedConstraint(tx, r, disp, p, &val, nullptr, nullptr);
           auto valp = val.Duplicate();
 
           p[i] -= 2_r * kDelta;
-          EvalDeformableNodeFixedConstraint(tx, r + disp, p, &val, nullptr, nullptr);
+          EvalDeformableNodeFixedConstraint(tx, r, disp, p, &val, nullptr, nullptr);
           auto valm = val.Duplicate();
           p[i] = v0;
 
@@ -794,7 +795,7 @@ TEST(Constraints, DeformableNodeToDeformableNodeValue) {
     TransformRT txB(qB, tB);
 
     ColumnVector<real, 3> val;
-    EvalDeformableNodeToDeformableNodeConstraint(txA, txB, rA + dispA, rB + dispB, &val, nullptr);
+    EvalDeformableNodeToDeformableNodeConstraint(txA, txB, rA, dispA, rB, dispB, &val, nullptr);
 
     real constexpr kTol = 1.0e-3_r;
     for (int i = 0; i < 3; ++i) {
@@ -898,7 +899,7 @@ TEST(Constraints, DeformableNodeToDeformableNodeJacobian) {
 
     ColumnVector<real, 3> val;
     RowMatrix<real, 3, 6> Jac;
-    EvalDeformableNodeToDeformableNodeConstraint(txA, txB, rA + dispA, rB + dispB, &val, &Jac);
+    EvalDeformableNodeToDeformableNodeConstraint(txA, txB, rA, dispA, rB, dispB, &val, &Jac);
     auto JacFD = Jac.Duplicate();
 
     real constexpr kDelta = 1.0e-2_r;
@@ -907,11 +908,11 @@ TEST(Constraints, DeformableNodeToDeformableNodeJacobian) {
       real v0 = dispA[i];
       real dx = std::max(kDelta, std::abs(kDelta * dispA[i]));
       dispA[i] += dx;
-      EvalDeformableNodeToDeformableNodeConstraint(txA, txB, rA + dispA, rB + dispB, &val, nullptr);
+      EvalDeformableNodeToDeformableNodeConstraint(txA, txB, rA, dispA, rB, dispB, &val, nullptr);
       auto valp = val.Duplicate();
 
       dispA[i] -= 2_r * dx;
-      EvalDeformableNodeToDeformableNodeConstraint(txA, txB, rA + dispA, rB + dispB, &val, nullptr);
+      EvalDeformableNodeToDeformableNodeConstraint(txA, txB, rA, dispA, rB, dispB, &val, nullptr);
       auto valm = val.Duplicate();
       dispA[i] = v0;
 
@@ -921,11 +922,11 @@ TEST(Constraints, DeformableNodeToDeformableNodeJacobian) {
       real v0 = dispB[i];
       real dx = std::max(kDelta, kDelta * dispB[i]);
       dispB[i] += dx;
-      EvalDeformableNodeToDeformableNodeConstraint(txA, txB, rA + dispA, rB + dispB, &val, nullptr);
+      EvalDeformableNodeToDeformableNodeConstraint(txA, txB, rA, dispA, rB, dispB, &val, nullptr);
       auto valp = val.Duplicate();
 
       dispB[i] -= 2_r * dx;
-      EvalDeformableNodeToDeformableNodeConstraint(txA, txB, rA + dispA, rB + dispB, &val, nullptr);
+      EvalDeformableNodeToDeformableNodeConstraint(txA, txB, rA, dispA, rB, dispB, &val, nullptr);
       auto valm = val.Duplicate();
       dispB[i] = v0;
 
@@ -1734,7 +1735,7 @@ TEST(Constraints, DeformableNodeToRigidValue) {
     // Compute constraint value
     ColumnVector<real, 3> val;
     EvalDeformableNodeToRigidConstraint(
-        rigidTx, deformableTx, deformableDisp + deformableRest, rigidRest, &val, nullptr);
+        rigidTx, deformableTx, deformableRest, deformableDisp, rigidRest, &val, nullptr);
     real constexpr kTol = 1.0e-3_r;
     for (int i = 0; i < 3; ++i) {
       EXPECT_NEAR_RTOL(cVal[i], val[i], kTol);
@@ -1785,12 +1786,11 @@ TEST(Constraints, DeformableNodeToRigidJacobian) {
                    Real3 const& deformableDisp) {
     // Update actor-related parameters according to test input
     TransformRT rbState = rigidTx;
-    auto deformableLocal = deformableDisp + deformableRest;
 
     ColumnVector<real, 3> val;
     RowMatrix<real, 3, 9> Jac;
     EvalDeformableNodeToRigidConstraint(
-        rbState, deformableTx, deformableLocal, rigidRest, &val, &Jac);
+        rbState, deformableTx, deformableRest, deformableDisp, rigidRest, &val, &Jac);
 
     auto JacFD = Jac.Duplicate();
 
@@ -1805,13 +1805,13 @@ TEST(Constraints, DeformableNodeToRigidJacobian) {
       xA[i] += kDelta;
       rbState.SetTranslation(xA);
       EvalDeformableNodeToRigidConstraint(
-          rbState, deformableTx, deformableLocal, rigidRest, &val, nullptr);
+          rbState, deformableTx, deformableRest, deformableDisp, rigidRest, &val, nullptr);
       auto valp = val.Duplicate();
 
       xA[i] -= 2_r * kDelta;
       rbState.SetTranslation(xA);
       EvalDeformableNodeToRigidConstraint(
-          rbState, deformableTx, deformableLocal, rigidRest, &val, nullptr);
+          rbState, deformableTx, deformableRest, deformableDisp, rigidRest, &val, nullptr);
       auto valm = val.Duplicate();
 
       JacFD.Col(i) = (valp - valm) * (1_r / (2_r * kDelta));
@@ -1823,13 +1823,13 @@ TEST(Constraints, DeformableNodeToRigidJacobian) {
       delta[i] = kDelta;
       rbState.SetRotation(Quaternion::FromRotationVector(delta) * q0);
       EvalDeformableNodeToRigidConstraint(
-          rbState, deformableTx, deformableLocal, rigidRest, &val, nullptr);
+          rbState, deformableTx, deformableRest, deformableDisp, rigidRest, &val, nullptr);
       auto valp = val.Duplicate();
 
       delta[i] = -kDelta;
       rbState.SetRotation(Quaternion::FromRotationVector(delta) * q0);
       EvalDeformableNodeToRigidConstraint(
-          rbState, deformableTx, deformableLocal, rigidRest, &val, nullptr);
+          rbState, deformableTx, deformableRest, deformableDisp, rigidRest, &val, nullptr);
       auto valm = val.Duplicate();
 
       JacFD.Col(i + 3) = (valp - valm) * (1_r / (2_r * kDelta));
@@ -1841,15 +1841,13 @@ TEST(Constraints, DeformableNodeToRigidJacobian) {
     for (int i = 0; i < 3; ++i) {
       real v0 = disp[i];
       disp[i] += kDelta;
-      deformableLocal = disp + deformableRest;
       EvalDeformableNodeToRigidConstraint(
-          rbState, deformableTx, deformableLocal, rigidRest, &val, nullptr);
+          rbState, deformableTx, deformableRest, disp, rigidRest, &val, nullptr);
       auto valp = val.Duplicate();
 
       disp[i] -= 2_r * kDelta;
-      deformableLocal = disp + deformableRest;
       EvalDeformableNodeToRigidConstraint(
-          rbState, deformableTx, deformableLocal, rigidRest, &val, nullptr);
+          rbState, deformableTx, deformableRest, disp, rigidRest, &val, nullptr);
       auto valm = val.Duplicate();
       disp[i] = v0;
 
@@ -1884,6 +1882,101 @@ TEST(Constraints, DeformableNodeToRigidJacobian) {
       }
     }
   }
+}
+
+/// Position constraint values ---------------------------------------------
+
+// Rotates v in double, with the same map as Quaternion::operator*.
+[[nodiscard]] static Double3 RotateDouble(Quaternion const& q, Double3 const& v) {
+  Double3 const qv{q.data[0], q.data[1], q.data[2]};
+  Double3 const t = 2.0 * Cross(qv, v);
+  return v + static_cast<double>(q.data[3]) * t + Cross(qv, t);
+}
+
+TEST(Constraints, PositionValueAccuracy) {
+  // Checks the position constraints between frames A and B against a double reference from the
+  // same stored inputs. Nodes have rest positions rA, rB and displacements uA, uB; rigid bodies
+  // have lever arms rA, rB.
+  auto testCVals = [](TransformRT const& txA,
+                      Real3 const& rA,
+                      Real3 const& uA,
+                      TransformRT const& txB,
+                      Real3 const& rB,
+                      Real3 const& uB,
+                      Real3 const& target,
+                      real tol) {
+    auto toD = [](Real3 const& v) { return StaticCast<Double3>(v); };
+    Quaternion const& qA = txA.GetRotation();
+    Quaternion const& qB = txB.GetRotation();
+    // Subtract translations first, so the reference keeps local precision when real is double.
+    Double3 const tAB = toD(txA.GetTranslation()) - toD(txB.GetTranslation());
+    Double3 const tAT = toD(txA.GetTranslation()) - toD(target);
+    Double3 const pA = RotateDouble(qA, toD(rA) + toD(uA));
+    Double3 const pB = RotateDouble(qB, toD(rB) + toD(uB));
+    Double3 const lA = RotateDouble(qA, toD(rA));
+    Double3 const lB = RotateDouble(qB, toD(rB));
+    auto expectNear = [tol](ColumnVector<real, 3> const& val, Double3 const& ref) {
+      for (int i = 0; i < 3; ++i) {
+        EXPECT_NEAR(val[i], ref[i], tol);
+      }
+    };
+
+    ColumnVector<real, 3> val;
+    EvalDeformableNodeFixedConstraint(txA, rA, uA, target, &val, nullptr, nullptr);
+    expectNear(val, tAT + pA);
+    EvalDeformableNodeToDeformableNodeConstraint(txA, txB, rA, uA, rB, uB, &val, nullptr);
+    expectNear(val, tAB + (pA - pB));
+    EvalDeformableNodeToRigidConstraint(txB, txA, rA, uA, rB, &val, nullptr);
+    expectNear(val, (lB - pA) - tAB);
+    EvalRigidPositionFixedConstraint(txA, rA, target, &val, nullptr, nullptr);
+    expectNear(val, tAT + lA);
+    EvalRigidPositionToRigidTargetConstraint(txA, txB, rA, &val, nullptr, nullptr);
+    expectNear(val, tAB + (lA - RotateDouble(qB, toD(rA))));
+    EvalRigidSphericalJointConstraint(txA, txB, rA, rB, &val, nullptr);
+    expectNear(val, tAB + (lA - lB));
+  };
+
+  // Rounding of a few rotations and sums, relative to the magnitude of the local terms
+  real constexpr kTol = 8_r * std::numeric_limits<real>::epsilon();
+
+  // Far from the origin, with generic rotations, the values keep the precision of their local terms
+  // (components up to kScale) instead of the world position's.
+  real constexpr kScale = 0.25_r;
+  Real3 const offset{100_r, -100_r, 100_r};
+  DynamicArray<Quaternion> const qs = {
+      Quaternion::FromAxisAngle(Normalize(kv123), ToRads(-20_r)),
+      Quaternion::FromAxisAngle(Normalize(Real3{-2_r, 1_r, 0.5_r}), ToRads(110_r)),
+      Quaternion::FromAxisAngle(Normalize(Real3{0.3_r, -1_r, 2_r}), ToRads(165_r)),
+  };
+  for (auto const& qA : qs) {
+    for (auto const& qB : qs) {
+      testCVals(
+          TransformRT(qA, offset + Real3{0.1_r, -0.2_r, 0.15_r}),
+          Real3{0.2_r, -0.15_r, 0.1_r},
+          Real3{0.02_r, 0.01_r, -0.015_r},
+          TransformRT(qB, offset + Real3{-0.05_r, 0_r, 0.2_r}),
+          Real3{-0.1_r, 0.2_r, 0.15_r},
+          Real3{-0.01_r, 0.025_r, 0.005_r},
+          offset + Real3{0.2_r, 0.05_r, -0.1_r},
+          kTol * kScale);
+    }
+  }
+
+  // With rest positions that cancel exactly, node displacements of a few nanometres are not rounded
+  // away by the rest positions. They are multiples of 2^-30 m, so the reference adds them exactly.
+  real constexpr kDispUnit = 1_r / (1 << 30);
+  Real3 const tA{0.5_r, -0.25_r, 1_r};
+  Real3 const rA{0.125_r, -0.375_r, 0.75_r};
+  Real3 const tB{0.25_r, 0.5_r, 0.5_r};
+  testCVals(
+      TransformRT(kqI, tA),
+      rA,
+      kDispUnit * Real3{3_r, -7_r, 9_r},
+      TransformRT(kqI, tB),
+      tA + rA - tB,
+      kDispUnit * Real3{-6_r, 2_r, 8_r},
+      tA + rA,
+      kTol * kDispUnit);
 }
 
 /// EvalSingleDofTargetConstraint ---------------------------------------------

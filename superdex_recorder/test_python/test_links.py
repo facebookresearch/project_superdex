@@ -121,6 +121,19 @@ def link_poses(links: dict[str, sdp.Actor]) -> dict[str, sdp.TransformRT]:
     return {name: link.get_root_transform() for name, link in links.items()}
 
 
+def converge_each_step(scene: sdp.Scene) -> None:
+    # The restore doesn't reproduce every solver input bitwise, so with the default stopping
+    # criteria a restored step's solve can stop an iteration apart from the recorded one's.
+    params = scene.get_solver_params()
+    solver = params.non_linear_solver
+    solver.abs_tol = 0.0
+    solver.rel_tol = 0.0
+    solver.rel_step_tol = 0.0
+    solver.max_iter = 20
+    params.non_linear_solver = solver
+    scene.set_solver_params(params)
+
+
 def fixed_link_names(robot: sdp.Actor) -> set[str]:
     shape_info = robot.get_articulated_shape_info()
     link_names = list(shape_info.link_names)
@@ -613,11 +626,13 @@ class LinkRecordingTest(unittest.TestCase):
         for bot_path in ROBOTIQ_BOTS:
             with self.subTest(bot=bot_path):
                 scene, robot = self.create_robot_scene(bot_path)
+                converge_each_step(scene)
                 episode_path, poses = self.record_frames(
                     scene, link_actors(scene, robot)
                 )
 
                 restored_scene, restored_robot = self.create_robot_scene(bot_path)
+                converge_each_step(restored_scene)
                 restored_links = link_actors(restored_scene, restored_robot)
                 restorer = recorder.EpisodeRestorer(
                     EpisodeReader(episode_path), restored_scene

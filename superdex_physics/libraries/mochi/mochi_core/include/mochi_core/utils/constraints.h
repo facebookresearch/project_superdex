@@ -35,20 +35,23 @@ namespace mochi {
  *
  * Computes the constraint value and Jacobian for a deformable-node position constraint. The
  * constraint measures the difference between the world position of a local point and a target world
- * position.
+ * position. The node's rest position and displacement are separate inputs, so that small
+ * displacements keep their precision.
  *
  * @param worldFromLocal A rigid transform to apply to the local position
- * @param posLocal The deformable-node position in local coordinates
+ * @param restLocal The deformable-node rest position in local coordinates
+ * @param dispLocal The deformable-node displacement in local coordinates
  * @param posTargetWorld The target position in world coordinates
  * @param[out] outVal Output constraint value (3D vector). If nullptr, value computation is skipped
- * @param[out] outJac Output Jacobian matrix wrt the deformable-node local position (3x3). If
- * nullptr, Jacobian computation is skipped
+ * @param[out] outJac Output Jacobian matrix wrt the deformable-node displacement (3x3). If nullptr,
+ * Jacobian computation is skipped
  * @param[out] outJacTarget Output Jacobian matrix wrt the target position (3x3). If nullptr,
  * Jacobian computation is skipped
  */
 void EvalDeformableNodeFixedConstraint(
     TransformRT const& worldFromLocal,
-    Real3 const& posLocal,
+    Real3 const& restLocal,
+    Real3 const& dispLocal,
     Real3 const& posTargetWorld,
     ColumnVector<real, 3>* outVal,
     RowMatrix<real, 3, 3>* outJac,
@@ -58,22 +61,28 @@ void EvalDeformableNodeFixedConstraint(
  * @brief Evaluates a position constraint between two deformable nodes.
  *
  * Computes the constraint value and Jacobian for coupling the positions of two deformable nodes.
- * The constraint measures the difference between the world positions of the points.
+ * The constraint measures the difference between the world positions of the points. The nodes' rest
+ * positions and displacements are separate inputs, so that small displacements keep their
+ * precision.
  *
  * @param worldFromLocalA Rigid transform to apply to point A
  * @param worldFromLocalB Rigid transform to apply to point B
- * @param posLocalA Deformable-node position A in local coordinates
- * @param posLocalB Deformable-node position B in local coordinates
+ * @param restLocalA Deformable-node rest position A in local coordinates
+ * @param dispLocalA Deformable-node displacement A in local coordinates
+ * @param restLocalB Deformable-node rest position B in local coordinates
+ * @param dispLocalB Deformable-node displacement B in local coordinates
  * @param[out] outVal Output constraint value (3D vector). If nullptr, value computation is skipped
- * @param[out] outJac Output Jacobian matrix wrt the deformable-node local positions (3x6). First 3
+ * @param[out] outJac Output Jacobian matrix wrt the deformable-node displacements (3x6). First 3
  * columns are wrt node A, last 3 columns are wrt node B. If nullptr, Jacobian computation is
  * skipped
  */
 void EvalDeformableNodeToDeformableNodeConstraint(
     TransformRT const& worldFromLocalA,
     TransformRT const& worldFromLocalB,
-    Real3 const& posLocalA,
-    Real3 const& posLocalB,
+    Real3 const& restLocalA,
+    Real3 const& dispLocalA,
+    Real3 const& restLocalB,
+    Real3 const& dispLocalB,
     ColumnVector<real, 3>* outVal,
     RowMatrix<real, 3, 6>* outJac);
 
@@ -82,22 +91,25 @@ void EvalDeformableNodeToDeformableNodeConstraint(
  *
  * Computes the constraint value and Jacobian for coupling a deformable node to a point on a rigid
  * body. The constraint measures the difference between the world position of the deformable node
- * and the world position of the point on the rigid body.
+ * and the world position of the point on the rigid body. The node's rest position and displacement
+ * are separate inputs, so that small displacements keep their precision.
  *
  * @param worldFromLocalRigid Transform of the rigid body
  * @param worldFromLocalDeformable Rigid transform to apply to the deformable-node local position
- * @param posLocalDeformable Deformable-node position in local coordinates
+ * @param restLocalDeformable Deformable-node rest position in local coordinates
+ * @param dispLocalDeformable Deformable-node displacement in local coordinates
  * @param posLocalRigid Local position of the attachment point on the rigid body
  * @param[out] outVal Output constraint value (3D vector). If nullptr, value computation is skipped
- * @param[out] outJac Output Jacobian matrix wrt the rigid transform and the deformable-node local
- * position (3x9). First 3 columns are wrt the translation of the rigid body, next 3 columns are wrt
- * the rotation of the rigid body, last 3 columns are wrt the deformable-node local position. If
+ * @param[out] outJac Output Jacobian matrix wrt the rigid transform and the deformable-node
+ * displacement (3x9). First 3 columns are wrt the translation of the rigid body, next 3 columns are
+ * wrt the rotation of the rigid body, last 3 columns are wrt the deformable-node displacement. If
  * nullptr, Jacobian computation is skipped
  */
 void EvalDeformableNodeToRigidConstraint(
     TransformRT const& worldFromLocalRigid,
     TransformRT const& worldFromLocalDeformable,
-    Real3 const& posLocalDeformable,
+    Real3 const& restLocalDeformable,
+    Real3 const& dispLocalDeformable,
     Real3 const& posLocalRigid,
     ColumnVector<real, 3>* outVal,
     RowMatrix<real, 3, 9>* outJac);

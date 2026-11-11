@@ -25,15 +25,18 @@ namespace mochi {
 
 void EvalDeformableNodeFixedConstraint(
     TransformRT const& worldFromLocal,
-    Real3 const& posLocal,
+    Real3 const& restLocal,
+    Real3 const& dispLocal,
     Real3 const& posTargetWorld,
     ColumnVector<real, 3>* outVal,
     RowMatrix<real, 3, 3>* outJac,
     RowMatrix<real, 3, 3>* outJacTarget) {
   if (outVal) {
-    Vec4r posWorld = worldFromLocal.TransformPoint(ToSimd(posLocal));
-    Vec4r vecDiff = posWorld - ToSimd(posTargetWorld);
-    Store<3>(outVal->data(), vecDiff);
+    // Subtract translations first, and add the displacement after the rest position cancels.
+    Quaternion const& rot = worldFromLocal.GetRotation();
+    Vec4r const restDiff =
+        (worldFromLocal.VGetTranslation() - ToSimd(posTargetWorld)) + rot * ToSimd(restLocal);
+    Store<3>(outVal->data(), restDiff + rot * ToSimd(dispLocal));
   }
 
   if (outJac) {
@@ -49,15 +52,19 @@ void EvalDeformableNodeFixedConstraint(
 void EvalDeformableNodeToDeformableNodeConstraint(
     TransformRT const& worldFromLocalA,
     TransformRT const& worldFromLocalB,
-    Real3 const& posLocalA,
-    Real3 const& posLocalB,
+    Real3 const& restLocalA,
+    Real3 const& dispLocalA,
+    Real3 const& restLocalB,
+    Real3 const& dispLocalB,
     ColumnVector<real, 3>* outVal,
     RowMatrix<real, 3, 6>* outJac) {
   if (outVal) {
-    Vec4r posAWorld = worldFromLocalA.TransformPoint(ToSimd(posLocalA));
-    Vec4r posBWorld = worldFromLocalB.TransformPoint(ToSimd(posLocalB));
-    Vec4r vecDiff = posAWorld - posBWorld;
-    Store<3>(outVal->data(), vecDiff);
+    // Subtract translations first, and add the displacements after the rest positions cancel.
+    Quaternion const& rotA = worldFromLocalA.GetRotation();
+    Quaternion const& rotB = worldFromLocalB.GetRotation();
+    Vec4r const restDiff = (worldFromLocalA.VGetTranslation() - worldFromLocalB.VGetTranslation()) +
+        (rotA * ToSimd(restLocalA) - rotB * ToSimd(restLocalB));
+    Store<3>(outVal->data(), restDiff + (rotA * ToSimd(dispLocalA) - rotB * ToSimd(dispLocalB)));
   }
 
   if (outJac) {
@@ -69,7 +76,8 @@ void EvalDeformableNodeToDeformableNodeConstraint(
 void EvalDeformableNodeToRigidConstraint(
     TransformRT const& worldFromLocalRigid,
     TransformRT const& worldFromLocalDeformable,
-    Real3 const& posLocalDeformable,
+    Real3 const& restLocalDeformable,
+    Real3 const& dispLocalDeformable,
     Real3 const& posLocalRigid,
     ColumnVector<real, 3>* outVal,
     RowMatrix<real, 3, 9>* outJac) {
@@ -78,10 +86,12 @@ void EvalDeformableNodeToRigidConstraint(
   Vec4r radiusVec = worldFromLocalRigid.GetRotation() * ToSimd(posLocalRigid);
 
   if (outVal) {
-    Vec4r posRigidWorld = worldFromLocalRigid.VGetTranslation() + radiusVec;
-    Vec4r posNodeWorld = worldFromLocalDeformable.TransformPoint(ToSimd(posLocalDeformable));
-    Vec4r vecDiff = posRigidWorld - posNodeWorld;
-    Store<3>(outVal->data(), vecDiff);
+    // Subtract translations first, and add the displacement after the rest position cancels.
+    Quaternion const& rotDeformable = worldFromLocalDeformable.GetRotation();
+    Vec4r const restDiff =
+        (worldFromLocalRigid.VGetTranslation() - worldFromLocalDeformable.VGetTranslation()) +
+        (radiusVec - rotDeformable * ToSimd(restLocalDeformable));
+    Store<3>(outVal->data(), restDiff - rotDeformable * ToSimd(dispLocalDeformable));
   }
 
   if (outJac) {
@@ -103,8 +113,8 @@ void EvalRigidPositionFixedConstraint(
   Vec4r radiusVec = worldFromLocal.GetRotation() * ToSimd(posLocal);
 
   if (outVal) {
-    Vec4r posWorld = radiusVec + worldFromLocal.VGetTranslation();
-    Vec4r vecDiff = posWorld - ToSimd(posTargetWorld);
+    // Subtract translations first to avoid cancelling world-sized terms.
+    Vec4r const vecDiff = (worldFromLocal.VGetTranslation() - ToSimd(posTargetWorld)) + radiusVec;
     Store<3>(outVal->data(), vecDiff);
   }
 
@@ -132,9 +142,10 @@ void EvalRigidPositionToRigidTargetConstraint(
   Vec4r radiusVecTarget = worldFromLocalTarget.GetRotation() * ToSimd(posLocal);
 
   if (outVal) {
-    Vec4r posWorld = worldFromLocal.VGetTranslation() + radiusVec;
-    Vec4r posWorldTarget = worldFromLocalTarget.VGetTranslation() + radiusVecTarget;
-    Vec4r vecDiff = posWorld - posWorldTarget;
+    // Subtract translations first to avoid cancelling world-sized terms.
+    Vec4r const vecDiff =
+        (worldFromLocal.VGetTranslation() - worldFromLocalTarget.VGetTranslation()) +
+        (radiusVec - radiusVecTarget);
     Store<3>(outVal->data(), vecDiff);
   }
 
@@ -193,9 +204,9 @@ void EvalRigidSphericalJointConstraint(
   Vec4r radiusVecB = worldFromLocalB.GetRotation() * ToSimd(posLocalB);
 
   if (outVal) {
-    Vec4r posAWorld = worldFromLocalA.VGetTranslation() + radiusVecA;
-    Vec4r posBWorld = worldFromLocalB.VGetTranslation() + radiusVecB;
-    Vec4r vecDiff = posAWorld - posBWorld;
+    // Subtract translations first to avoid cancelling world-sized terms.
+    Vec4r const vecDiff = (worldFromLocalA.VGetTranslation() - worldFromLocalB.VGetTranslation()) +
+        (radiusVecA - radiusVecB);
     Store<3>(outVal->data(), vecDiff);
   }
 

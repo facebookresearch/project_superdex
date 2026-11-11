@@ -16,6 +16,8 @@
 
 #include "mochi_constraint_test.h"
 
+#include <limits>
+
 using namespace mochi;
 using namespace mochi::test;
 using namespace mochi::constraint_test;
@@ -241,6 +243,41 @@ class ConstraintDeformableNodeToRigidCoupling
 
 TEST_F(ConstraintDeformableNodeToRigidCoupling, Test) {
   RunAllTests();
+}
+
+namespace {
+class ConstraintDeformableNodeToRigidAttachment : public test::MochiSceneTestBase {};
+} // namespace
+
+// An attachment to the deformable nodes' positions starts at zero deviation far from the origin
+// too, to the precision of the actors' relative offsets rather than of their world positions.
+TEST_F(ConstraintDeformableNodeToRigidAttachment, StartsAtZeroDeviationFarFromOrigin) {
+  Real3 const offset{1000_r, -1000_r, 1000_r};
+  RigidActorParams paramsRigid;
+  paramsRigid.shape = GetUnitCubeShape(_scene->GetContext());
+  paramsRigid.colliderType = ColliderType::None;
+  paramsRigid.worldFromLocal = TransformRT(
+      Quaternion::FromAxisAngle(Normalize(Real3{1_r, -2_r, -5_r}), 0.6_r),
+      offset + Real3{0.3_r, -0.2_r, 0.7_r});
+  Actor* const rigid = _scene->CreateRigidActor(paramsRigid, ExpectOK{});
+  SoftActorParams paramsSoft;
+  paramsSoft.shape = paramsRigid.shape;
+  paramsSoft.worldFromLocal =
+      TransformRT(Quaternion::FromAxisAngle(Normalize(Real3{-2_r, -1_r, 1_r}), 0.9_r), offset);
+  Actor* const soft = _scene->CreateSoftActor(paramsSoft, ExpectOK{});
+  soft->SetDisplacements(DynamicArray<real>(soft->GetNumDofs(), 0.05_r), ExpectOK{});
+
+  // Rounding of a few rotations and sums of relative offsets of a few metres
+  real constexpr kTol = 16_r * std::numeric_limits<real>::epsilon();
+  DeformableNodeToRigidConstraintParams params;
+  params.rigidActor = rigid->GetHandle();
+  params.deformableActor = soft->GetHandle();
+  for (int node = 0; node < soft->GetMesh().GetNumNodes(); ++node) {
+    params.deformableNodeIndex = node;
+    Constraint const* const constraint =
+        _scene->CreateDeformableNodeToRigidConstraint(params, ExpectOK{});
+    EXPECT_TRUE(test::NearEqualSpan(Real3{}, constraint->GetDeviation(), kTol));
+  }
 }
 
 /********************************************************************************

@@ -441,8 +441,12 @@ void mochi::InitConstraint_DeformableNodeToRigid(
     Real3 dispDeformable =
         GetDeformableDisplacement<TimeStep::Current>(reg, objDeformable, MakeConstSpan(dofs));
     auto const& deformableTrans = reg.get<CRootTransform const>(objDeformable).worldFromLocal;
-    auto posWorldDeformable = deformableTrans.TransformPoint(data.restDeformable + dispDeformable);
-    data.posLocalRigid = rbState.TransformPointInverse(posWorldDeformable);
+    // Form the node's offset from the rigid body from the frames' relative translation, not from
+    // world positions, so that the attachment starts at zero deviation far from the origin too.
+    Quaternion const& rotDeformable = deformableTrans.GetRotation();
+    Vec4r const offsetWorld = (deformableTrans.VGetTranslation() - rbState.VGetTranslation()) +
+        rotDeformable * ToSimd(data.restDeformable) + rotDeformable * ToSimd(dispDeformable);
+    data.posLocalRigid = ToReal3(rbState.TransformDirectionInverse(offsetWorld));
   } else {
     data.posLocalRigid = params.rigidLocalPos - ToReal3(rbLocalCom);
   }
@@ -1203,7 +1207,7 @@ static void EvalConstraintImpl(
   Real3 dispB =
       GetDeformableDisplacement<kTimeStep>(reg, info.actors[1], MakeConstSpan(info.actorDofs[1]));
   EvalDeformableNodeToDeformableNodeConstraint(
-      transformA, transformB, data.restA + dispA, data.restB + dispB, outC, outJac);
+      transformA, transformB, data.restA, dispA, data.restB, dispB, outC, outJac);
   outActive = true;
 }
 
@@ -1222,7 +1226,8 @@ static void EvalConstraintImpl(
   EvalDeformableNodeToRigidConstraint(
       stateRigid,
       transformDeformable,
-      data.restDeformable + dispDeformable,
+      data.restDeformable,
+      dispDeformable,
       data.posLocalRigid,
       outC,
       outJac);
@@ -1243,7 +1248,7 @@ static void EvalConstraintImpl(
   Real3 disp =
       GetDeformableDisplacement<kTimeStep>(reg, info.actors[0], MakeConstSpan(info.actorDofs[0]));
   EvalDeformableNodeFixedConstraint(
-      transform, data.rest + disp, target.value, outC, outJac, outJacTarget);
+      transform, data.rest, disp, target.value, outC, outJac, outJacTarget);
   outActive = true;
 }
 
