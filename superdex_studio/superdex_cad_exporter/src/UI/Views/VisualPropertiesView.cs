@@ -22,19 +22,19 @@ namespace CADRobotExporter.UI.Views
     /// </summary>
     public class VisualPropertiesView : UserControl
     {
-        private readonly TextBox originX = new TextBox();
-        private readonly TextBox originY = new TextBox();
-        private readonly TextBox originZ = new TextBox();
-        private readonly TextBox originRoll = new TextBox();
-        private readonly TextBox originPitch = new TextBox();
-        private readonly TextBox originYaw = new TextBox();
+        private readonly NumericField originX = new NumericField();
+        private readonly NumericField originY = new NumericField();
+        private readonly NumericField originZ = new NumericField();
+        private readonly NumericField originRoll = new NumericField();
+        private readonly NumericField originPitch = new NumericField();
+        private readonly NumericField originYaw = new NumericField();
 
         // The WinForms originals were DomainUpDown controls with an empty Items collection, so
         // their spin arrows never did anything; plain text entry is what users actually had.
-        private readonly TextBox red = new TextBox();
-        private readonly TextBox green = new TextBox();
-        private readonly TextBox blue = new TextBox();
-        private readonly TextBox alpha = new TextBox();
+        private readonly NumericField red = new NumericField();
+        private readonly NumericField green = new NumericField();
+        private readonly NumericField blue = new NumericField();
+        private readonly NumericField alpha = new NumericField();
         private readonly Border swatch = new Border
         {
             Width = 22,
@@ -195,10 +195,10 @@ namespace CADRobotExporter.UI.Views
         {
             return new ColorFields
             {
-                Red = red.Text,
-                Green = green.Text,
-                Blue = blue.Text,
-                Alpha = alpha.Text,
+                Red = red.Value,
+                Green = green.Value,
+                Blue = blue.Value,
+                Alpha = alpha.Value,
             };
         }
 
@@ -235,9 +235,9 @@ namespace CADRobotExporter.UI.Views
                 color.SetRgb(dialog.Color.R, dialog.Color.G, dialog.Color.B);
             }
 
-            red.Text = color.Red;
-            green.Text = color.Green;
-            blue.Text = color.Blue;
+            red.Value = color.Red;
+            green.Value = color.Green;
+            blue.Value = color.Blue;
         }
 
         public void ClearPresets()
@@ -263,46 +263,46 @@ namespace CADRobotExporter.UI.Views
 
         public void Clear()
         {
-            originX.Text = "";
-            originY.Text = "";
-            originZ.Text = "";
-            originRoll.Text = "";
-            originPitch.Text = "";
-            originYaw.Text = "";
-            red.Text = "";
-            green.Text = "";
-            blue.Text = "";
-            alpha.Text = "";
+            originX.Value = "";
+            originY.Value = "";
+            originZ.Value = "";
+            originRoll.Value = "";
+            originPitch.Value = "";
+            originYaw.Value = "";
+            red.Value = "";
+            green.Value = "";
+            blue.Value = "";
+            alpha.Value = "";
         }
 
         public void Show(LinkPropertiesViewModel properties)
         {
-            originX.Text = properties.VisualOrigin.X;
-            originY.Text = properties.VisualOrigin.Y;
-            originZ.Text = properties.VisualOrigin.Z;
-            originRoll.Text = properties.VisualOrigin.Roll;
-            originPitch.Text = properties.VisualOrigin.Pitch;
-            originYaw.Text = properties.VisualOrigin.Yaw;
+            originX.Value = properties.VisualOrigin.X;
+            originY.Value = properties.VisualOrigin.Y;
+            originZ.Value = properties.VisualOrigin.Z;
+            originRoll.Value = properties.VisualOrigin.Roll;
+            originPitch.Value = properties.VisualOrigin.Pitch;
+            originYaw.Value = properties.VisualOrigin.Yaw;
 
-            red.Text = properties.Color.Red;
-            green.Text = properties.Color.Green;
-            blue.Text = properties.Color.Blue;
-            alpha.Text = properties.Color.Alpha;
+            red.Value = properties.Color.Red;
+            green.Value = properties.Color.Green;
+            blue.Value = properties.Color.Blue;
+            alpha.Value = properties.Color.Alpha;
         }
 
         public void ReadInto(LinkPropertiesViewModel properties)
         {
-            properties.VisualOrigin.X = originX.Text;
-            properties.VisualOrigin.Y = originY.Text;
-            properties.VisualOrigin.Z = originZ.Text;
-            properties.VisualOrigin.Roll = originRoll.Text;
-            properties.VisualOrigin.Pitch = originPitch.Text;
-            properties.VisualOrigin.Yaw = originYaw.Text;
+            properties.VisualOrigin.X = originX.Value;
+            properties.VisualOrigin.Y = originY.Value;
+            properties.VisualOrigin.Z = originZ.Value;
+            properties.VisualOrigin.Roll = originRoll.Value;
+            properties.VisualOrigin.Pitch = originPitch.Value;
+            properties.VisualOrigin.Yaw = originYaw.Value;
 
-            properties.Color.Red = red.Text;
-            properties.Color.Green = green.Text;
-            properties.Color.Blue = blue.Text;
-            properties.Color.Alpha = alpha.Text;
+            properties.Color.Red = red.Value;
+            properties.Color.Green = green.Value;
+            properties.Color.Blue = blue.Value;
+            properties.Color.Alpha = alpha.Value;
         }
     }
 }

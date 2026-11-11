@@ -386,6 +386,7 @@
     <Compile Include="UI\ViewModels\TendonSummary.cs" />
     <Compile Include="UI\Views\TendonsSummaryView.cs" />
     <Compile Include="UI\Views\NumericSpinner.cs" />
+    <Compile Include="UI\Views\NumericField.cs" />
     <Compile Include="UI\Views\JointPropertiesView.cs" />
     <Compile Include="UI\Views\InertialPropertiesView.cs" />
     <Compile Include="UI\Views\VisualPropertiesView.cs" />

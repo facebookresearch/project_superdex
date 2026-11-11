@@ -19,21 +19,21 @@ namespace CADRobotExporter.UI.Views
     /// </summary>
     public class InertialPropertiesView : UserControl
     {
-        private readonly TextBox originX = new TextBox();
-        private readonly TextBox originY = new TextBox();
-        private readonly TextBox originZ = new TextBox();
-        private readonly TextBox originRoll = new TextBox();
-        private readonly TextBox originPitch = new TextBox();
-        private readonly TextBox originYaw = new TextBox();
+        private readonly NumericField originX = new NumericField();
+        private readonly NumericField originY = new NumericField();
+        private readonly NumericField originZ = new NumericField();
+        private readonly NumericField originRoll = new NumericField();
+        private readonly NumericField originPitch = new NumericField();
+        private readonly NumericField originYaw = new NumericField();
 
-        private readonly TextBox ixx = new TextBox();
-        private readonly TextBox ixy = new TextBox();
-        private readonly TextBox ixz = new TextBox();
-        private readonly TextBox iyy = new TextBox();
-        private readonly TextBox iyz = new TextBox();
-        private readonly TextBox izz = new TextBox();
+        private readonly NumericField ixx = new NumericField();
+        private readonly NumericField ixy = new NumericField();
+        private readonly NumericField ixz = new NumericField();
+        private readonly NumericField iyy = new NumericField();
+        private readonly NumericField iyz = new NumericField();
+        private readonly NumericField izz = new NumericField();
 
-        private readonly TextBox mass = new TextBox { MinWidth = 120 };
+        private readonly NumericField mass = new NumericField { MinWidth = 120 };
         private readonly Button recalculate = new Button
         {
             Content = "Recalculate",
@@ -55,7 +55,8 @@ namespace CADRobotExporter.UI.Views
 
             Grid groups = new Grid();
             groups.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            groups.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.15, GridUnitType.Star) });
+            // Wide enough for a compact tensor value with its exponent ("-5.21575E-05").
+            groups.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.6, GridUnitType.Star) });
 
             GroupBox originGroup = MakeGroup("Origin (m, rad)", BuildOrigin());
             GroupBox inertiaGroup = MakeGroup("Moment of Inertia (Kg * m^2)", BuildInertia());
@@ -194,57 +195,57 @@ namespace CADRobotExporter.UI.Views
 
         public void Clear()
         {
-            originX.Text = "";
-            originY.Text = "";
-            originZ.Text = "";
-            originRoll.Text = "";
-            originPitch.Text = "";
-            originYaw.Text = "";
-            ixx.Text = "";
-            ixy.Text = "";
-            ixz.Text = "";
-            iyy.Text = "";
-            iyz.Text = "";
-            izz.Text = "";
-            mass.Text = "";
+            originX.Value = "";
+            originY.Value = "";
+            originZ.Value = "";
+            originRoll.Value = "";
+            originPitch.Value = "";
+            originYaw.Value = "";
+            ixx.Value = "";
+            ixy.Value = "";
+            ixz.Value = "";
+            iyy.Value = "";
+            iyz.Value = "";
+            izz.Value = "";
+            mass.Value = "";
         }
 
         public void Show(LinkPropertiesViewModel properties)
         {
-            originX.Text = properties.InertialOrigin.X;
-            originY.Text = properties.InertialOrigin.Y;
-            originZ.Text = properties.InertialOrigin.Z;
-            originRoll.Text = properties.InertialOrigin.Roll;
-            originPitch.Text = properties.InertialOrigin.Pitch;
-            originYaw.Text = properties.InertialOrigin.Yaw;
+            originX.Value = properties.InertialOrigin.X;
+            originY.Value = properties.InertialOrigin.Y;
+            originZ.Value = properties.InertialOrigin.Z;
+            originRoll.Value = properties.InertialOrigin.Roll;
+            originPitch.Value = properties.InertialOrigin.Pitch;
+            originYaw.Value = properties.InertialOrigin.Yaw;
 
-            ixx.Text = properties.Inertia.Ixx;
-            ixy.Text = properties.Inertia.Ixy;
-            ixz.Text = properties.Inertia.Ixz;
-            iyy.Text = properties.Inertia.Iyy;
-            iyz.Text = properties.Inertia.Iyz;
-            izz.Text = properties.Inertia.Izz;
+            ixx.Value = properties.Inertia.Ixx;
+            ixy.Value = properties.Inertia.Ixy;
+            ixz.Value = properties.Inertia.Ixz;
+            iyy.Value = properties.Inertia.Iyy;
+            iyz.Value = properties.Inertia.Iyz;
+            izz.Value = properties.Inertia.Izz;
 
-            mass.Text = properties.Mass;
+            mass.Value = properties.Mass;
         }
 
         public void ReadInto(LinkPropertiesViewModel properties)
         {
-            properties.InertialOrigin.X = originX.Text;
-            properties.InertialOrigin.Y = originY.Text;
-            properties.InertialOrigin.Z = originZ.Text;
-            properties.InertialOrigin.Roll = originRoll.Text;
-            properties.InertialOrigin.Pitch = originPitch.Text;
-            properties.InertialOrigin.Yaw = originYaw.Text;
+            properties.InertialOrigin.X = originX.Value;
+            properties.InertialOrigin.Y = originY.Value;
+            properties.InertialOrigin.Z = originZ.Value;
+            properties.InertialOrigin.Roll = originRoll.Value;
+            properties.InertialOrigin.Pitch = originPitch.Value;
+            properties.InertialOrigin.Yaw = originYaw.Value;
 
-            properties.Inertia.Ixx = ixx.Text;
-            properties.Inertia.Ixy = ixy.Text;
-            properties.Inertia.Ixz = ixz.Text;
-            properties.Inertia.Iyy = iyy.Text;
-            properties.Inertia.Iyz = iyz.Text;
-            properties.Inertia.Izz = izz.Text;
+            properties.Inertia.Ixx = ixx.Value;
+            properties.Inertia.Ixy = ixy.Value;
+            properties.Inertia.Ixz = ixz.Value;
+            properties.Inertia.Iyy = iyy.Value;
+            properties.Inertia.Iyz = iyz.Value;
+            properties.Inertia.Izz = izz.Value;
 
-            properties.Mass = mass.Text;
+            properties.Mass = mass.Value;
         }
     }
 }

@@ -11,6 +11,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 using CADRobotExporter.UI.ViewModels;
 
@@ -76,6 +77,7 @@ namespace CADRobotExporter.UI.Views
             textBox.LostFocus += (s, e) => CommitText();
             textBox.TextChanged += OnTextChanged;
             textBox.PreviewKeyDown += OnTextBoxKeyDown;
+            textBox.PreviewMouseLeftButtonDown += OnTextBoxMouseDown;
 
             RepeatButton up = MakeButton("\u25B2");
             RepeatButton down = MakeButton("\u25BC");
@@ -141,6 +143,23 @@ namespace CADRobotExporter.UI.Views
             {
                 Step(-1);
                 e.Handled = true;
+            }
+        }
+
+        // Triple-click selects the whole value, as in NumericField; double-click stops at the
+        // decimal point. Either way the field then scrolls back to the start of the value, which
+        // the selection's caret would otherwise leave scrolled to its end.
+        private void OnTextBoxMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ClickCount == 3)
+            {
+                textBox.SelectAll();
+                e.Handled = true;
+            }
+
+            if (e.ClickCount >= 2)
+            {
+                Dispatcher.BeginInvoke(new Action(textBox.ScrollToHome), DispatcherPriority.Background);
             }
         }
 

@@ -26,24 +26,24 @@ namespace CADRobotExporter.UI.Views
         private readonly TextBox coordSys = MakeReadOnly();
         private readonly TextBox refAxis = MakeReadOnly();
 
-        private readonly TextBox originX = new TextBox();
-        private readonly TextBox originY = new TextBox();
-        private readonly TextBox originZ = new TextBox();
-        private readonly TextBox originRoll = new TextBox();
-        private readonly TextBox originPitch = new TextBox();
-        private readonly TextBox originYaw = new TextBox();
+        private readonly NumericField originX = new NumericField();
+        private readonly NumericField originY = new NumericField();
+        private readonly NumericField originZ = new NumericField();
+        private readonly NumericField originRoll = new NumericField();
+        private readonly NumericField originPitch = new NumericField();
+        private readonly NumericField originYaw = new NumericField();
 
-        private readonly TextBox axisX = new TextBox();
-        private readonly TextBox axisY = new TextBox();
-        private readonly TextBox axisZ = new TextBox();
+        private readonly NumericField axisX = new NumericField();
+        private readonly NumericField axisY = new NumericField();
+        private readonly NumericField axisZ = new NumericField();
 
         private readonly NumericSpinner limitLower = MakeLimitSpinner();
         private readonly NumericSpinner limitUpper = MakeLimitSpinner();
-        private readonly TextBox limitEffort = new TextBox();
-        private readonly TextBox limitVelocity = new TextBox();
+        private readonly NumericField limitEffort = new NumericField();
+        private readonly NumericField limitVelocity = new NumericField();
 
-        private readonly TextBox damping = new TextBox();
-        private readonly TextBox friction = new TextBox();
+        private readonly NumericField damping = new NumericField();
+        private readonly NumericField friction = new NumericField();
 
         private readonly CheckBox useDegreesBox =
             new CheckBox { Content = "Use Degrees for Editing", IsChecked = true };
@@ -348,19 +348,19 @@ namespace CADRobotExporter.UI.Views
             childLink.Text = "";
             coordSys.Text = "";
             refAxis.Text = "";
-            originX.Text = "";
-            originY.Text = "";
-            originZ.Text = "";
-            originRoll.Text = "";
-            originPitch.Text = "";
-            originYaw.Text = "";
-            axisX.Text = "";
-            axisY.Text = "";
-            axisZ.Text = "";
-            limitEffort.Text = "";
-            limitVelocity.Text = "";
-            damping.Text = "";
-            friction.Text = "";
+            originX.Value = "";
+            originY.Value = "";
+            originZ.Value = "";
+            originRoll.Value = "";
+            originPitch.Value = "";
+            originYaw.Value = "";
+            axisX.Value = "";
+            axisY.Value = "";
+            axisZ.Value = "";
+            limitEffort.Value = "";
+            limitVelocity.Value = "";
+            damping.Value = "";
+            friction.Value = "";
         }
 
         public void Show(JointPropertiesViewModel properties)
@@ -379,26 +379,26 @@ namespace CADRobotExporter.UI.Views
             coordSys.Text = properties.CoordinateSystemName;
             refAxis.Text = properties.AxisName;
 
-            originX.Text = properties.Origin.X;
-            originY.Text = properties.Origin.Y;
-            originZ.Text = properties.Origin.Z;
-            originRoll.Text = properties.Origin.Roll;
-            originPitch.Text = properties.Origin.Pitch;
-            originYaw.Text = properties.Origin.Yaw;
+            originX.Value = properties.Origin.X;
+            originY.Value = properties.Origin.Y;
+            originZ.Value = properties.Origin.Z;
+            originRoll.Value = properties.Origin.Roll;
+            originPitch.Value = properties.Origin.Pitch;
+            originYaw.Value = properties.Origin.Yaw;
 
-            axisX.Text = properties.Axis.X;
-            axisY.Text = properties.Axis.Y;
-            axisZ.Text = properties.Axis.Z;
+            axisX.Value = properties.Axis.X;
+            axisY.Value = properties.Axis.Y;
+            axisZ.Value = properties.Axis.Z;
 
             limitLower.Increment = properties.LimitIncrement;
             limitUpper.Increment = properties.LimitIncrement;
             limitLower.Value = properties.LimitLower;
             limitUpper.Value = properties.LimitUpper;
-            limitEffort.Text = properties.LimitEffort;
-            limitVelocity.Text = properties.LimitVelocity;
+            limitEffort.Value = properties.LimitEffort;
+            limitVelocity.Value = properties.LimitVelocity;
 
-            damping.Text = properties.Damping;
-            friction.Text = properties.Friction;
+            damping.Value = properties.Damping;
+            friction.Value = properties.Friction;
 
             SetMotionControlsEnabled(properties.AllowsMotion);
         }
@@ -412,24 +412,24 @@ namespace CADRobotExporter.UI.Views
             properties.ParentLink = parentLink.Text;
             properties.ChildLink = childLink.Text;
 
-            properties.Origin.X = originX.Text;
-            properties.Origin.Y = originY.Text;
-            properties.Origin.Z = originZ.Text;
-            properties.Origin.Roll = originRoll.Text;
-            properties.Origin.Pitch = originPitch.Text;
-            properties.Origin.Yaw = originYaw.Text;
+            properties.Origin.X = originX.Value;
+            properties.Origin.Y = originY.Value;
+            properties.Origin.Z = originZ.Value;
+            properties.Origin.Roll = originRoll.Value;
+            properties.Origin.Pitch = originPitch.Value;
+            properties.Origin.Yaw = originYaw.Value;
 
-            properties.Axis.X = axisX.Text;
-            properties.Axis.Y = axisY.Text;
-            properties.Axis.Z = axisZ.Text;
+            properties.Axis.X = axisX.Value;
+            properties.Axis.Y = axisY.Value;
+            properties.Axis.Z = axisZ.Value;
 
             properties.LimitLower = limitLower.Value;
             properties.LimitUpper = limitUpper.Value;
-            properties.LimitEffort = limitEffort.Text;
-            properties.LimitVelocity = limitVelocity.Text;
+            properties.LimitEffort = limitEffort.Value;
+            properties.LimitVelocity = limitVelocity.Value;
 
-            properties.Damping = damping.Text;
-            properties.Friction = friction.Text;
+            properties.Damping = damping.Value;
+            properties.Friction = friction.Value;
 
             return properties;
         }
