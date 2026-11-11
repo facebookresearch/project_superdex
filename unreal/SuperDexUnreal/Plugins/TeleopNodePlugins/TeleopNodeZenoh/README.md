@@ -181,3 +181,9 @@ If other machines connect to a listening Windows machine (router or peer), allow
 1. Edit `teleop.proto`, and update `teleop_codec.h` if a message changed shape.
 2. Regenerate `generated/` with nanopb 0.4.9.1, from `Source/TeleopNodeZenoh/Private/TeleopMsgs`:
    `nanopb_generator.py -D generated teleop.proto`.
+
+## License
+
+First-party code in this plugin is Apache-2.0 licensed; see [LICENSE](LICENSE). zenoh-pico and
+nanopb retain their own terms; see [thirdparty_licenses/NOTICE.md](thirdparty_licenses/NOTICE.md),
+beside their license texts.
