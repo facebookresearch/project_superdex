@@ -31,7 +31,7 @@
         "edgeSampling": "Uniform",
         "linearDeflection": 0.050000000000000003,
         "targetEdgeLength": 0,
-        "targetEdgeLengthFraction": 0.025000000000000001
+        "targetEdgeLengthFraction": 0.040000000000000001
       }
     },
     {

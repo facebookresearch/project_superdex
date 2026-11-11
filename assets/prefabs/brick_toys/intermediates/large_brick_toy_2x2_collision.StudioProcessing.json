@@ -1,0 +1,134 @@
+{
+  "editorState": {
+    "cadRotation": [
+      0.70710676908493042,
+      0,
+      0,
+      0.70710676908493042
+    ],
+    "cadScale": [
+      1,
+      1,
+      1
+    ],
+    "cadTranslation": [
+      0.015900000929832458,
+      0,
+      -0.015900000929832458
+    ]
+  },
+  "modifiers": [
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "From Model Viewer",
+      "modifier": "Source from CAD Model",
+      "properties": {
+        "allowPartialFailure": true,
+        "angularDeflection": 0.25,
+        "backend": "Isotropic",
+        "combineTouchingSolids": true,
+        "edgeSampling": "Uniform",
+        "faceColorSizing": [
+          {
+            "angularDeflection": 0,
+            "color": "#E4E4E4",
+            "linearDeflection": 0,
+            "targetEdgeLength": 0,
+            "targetEdgeLengthFraction": 0.059999999999999998
+          },
+          {
+            "angularDeflection": 0,
+            "color": "#FCBC84",
+            "linearDeflection": 0,
+            "targetEdgeLength": 0,
+            "targetEdgeLengthFraction": 0.014999999999999999
+          },
+          {
+            "angularDeflection": 0,
+            "color": "#80FFFF",
+            "linearDeflection": 0,
+            "targetEdgeLength": 0,
+            "targetEdgeLengthFraction": 0
+          }
+        ],
+        "linearDeflection": 0.050000000000000003,
+        "targetEdgeLength": 0,
+        "targetEdgeLengthFraction": 0.02
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "Make Manifold",
+      "modifier": "Refine Mesh",
+      "properties": {
+        "thenMakeWatertight": true
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": false,
+      "method": "Tangential Relaxation (Smoothing)",
+      "modifier": "Refine Mesh",
+      "properties": {
+        "angleSmoothingIterations": 0,
+        "tangentialRelaxationIterations": 3
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "SDF",
+      "modifier": "Export Mochi Model",
+      "properties": {
+        "sdf": {
+          "boundaryPaddingDist": 0.0050000003539025784,
+          "minGridResolution": [
+            6,
+            6,
+            6
+          ],
+          "resolutionDelta": [
+            1,
+            1,
+            1
+          ],
+          "resolutionMode": "MeanEdge"
+        }
+      }
+    }
+  ],
+  "referenceModels": [
+    {
+      "color": [
+        0.61568629741668701,
+        0.73333334922790527,
+        0.22745099663734436
+      ],
+      "opacity": 1,
+      "overrideColor": false,
+      "path": "",
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "showSurface": true,
+      "showWireframe": false,
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "type": "RenderModel"
+    }
+  ],
+  "version": 1
+}

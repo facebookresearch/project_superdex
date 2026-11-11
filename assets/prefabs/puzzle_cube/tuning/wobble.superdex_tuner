@@ -1,0 +1,177 @@
+{
+  "assetsRoot": "",
+  "prefab": "./../puzzle_cube.mochi_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "hold_center_link",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "puzzle_cube/center_link",
+      "pointLocal": [
+        0,
+        0,
+        0
+      ],
+      "waypoints": [
+        {
+          "time": 0,
+          "position": [
+            0,
+            0,
+            0.034
+          ],
+          "rotation": [
+            1.48665497e-10,
+            0.0,
+            0.0
+          ],
+          "interpolation": "Step"
+        }
+      ],
+      "drive": {
+        "responseHz": 20,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 20,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    },
+    {
+      "name": "wdiag",
+      "enabled": true,
+      "type": "Torque",
+      "target": "puzzle_cube/corner3_shell_link",
+      "frame": "World",
+      "direction": [
+        0.5773502691896258,
+        0.5773502691896258,
+        0.5773502691896258
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0,
+            "value": 0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 0.4,
+            "value": 0.005,
+            "interpolation": "Step"
+          },
+          {
+            "time": 0.7,
+            "value": 0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    },
+    {
+      "name": "wtilt",
+      "enabled": true,
+      "type": "Torque",
+      "target": "puzzle_cube/corner3_shell_link",
+      "frame": "World",
+      "direction": [
+        0.7071067811865475,
+        -0.7071067811865475,
+        0
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0,
+            "value": 0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 0.8,
+            "value": 0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 1.2,
+            "value": 0.005,
+            "interpolation": "Step"
+          },
+          {
+            "time": 1.5,
+            "value": 0.005,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "puzzle_cube/center_link"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "puzzle_cube/corner2_link"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "puzzle_cube/corner3_link"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "puzzle_cube/corner4_link"
+    },
+    {
+      "kind": "JointState",
+      "target": "puzzle_cube/corner3_joint"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 1.5,
+    "groundPlane": false,
+    "record": {
+      "enabled": true,
+      "contactPoints": false,
+      "staticActors": false
+    },
+    "gravity": [
+      0,
+      0,
+      0
+    ]
+  },
+  "comment": "Wobble check: with only the center held, twists corner 3 about the cube diagonal (0.4-0.7 s), then tilts it about (1,-1,0) (0.8-1.5 s), both at 5 mN m. Corner 3 should give about 0.5 degrees and 0.2 degrees.",
+  "plots": [
+    {
+      "channels": [
+        "load.wdiag.mag",
+        "load.wtilt.mag"
+      ],
+      "height": 140
+    },
+    {
+      "channels": [
+        "puzzle_cube/corner3_joint.q0",
+        "puzzle_cube/corner3_joint.q1",
+        "puzzle_cube/corner3_joint.q2"
+      ],
+      "height": 200
+    }
+  ]
+}

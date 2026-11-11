@@ -1,0 +1,61 @@
+{
+  "_comment": "The puzzle cube between two 2 x 1 x 2 cm finger pads on the LeftHand layer, so they collide with the shells only, as hands do.",
+  "prefabs": [
+    {
+      "name": "cube",
+      "path": "./../puzzle_cube.mochi_prefab"
+    }
+  ],
+  "actors": {
+    "rigid": [
+      {
+        "name": "padL",
+        "shape": "./../../../cube/cube_fine_mesh.mochi.h5",
+        "scale": [
+          0.02,
+          0.01,
+          0.02
+        ],
+        "translation": [
+          -0.01,
+          -0.044500000000000005,
+          0.024
+        ],
+        "colliderType": "Box",
+        "density": 1000,
+        "layer": "LeftHand",
+        "contact": {
+          "coulombFrictionCoefficient": 1.0,
+          "frictionFalloffVel": 0.001,
+          "penaltyCoefficient": 10000000000.0,
+          "penaltySmoothingHalfDistance": 0.0002,
+          "penaltyThresholdDefault": 0.0001
+        }
+      },
+      {
+        "name": "padR",
+        "shape": "./../../../cube/cube_fine_mesh.mochi.h5",
+        "scale": [
+          0.02,
+          0.01,
+          0.02
+        ],
+        "translation": [
+          -0.01,
+          0.0345,
+          0.024
+        ],
+        "colliderType": "Box",
+        "density": 1000,
+        "layer": "LeftHand",
+        "contact": {
+          "coulombFrictionCoefficient": 1.0,
+          "frictionFalloffVel": 0.001,
+          "penaltyCoefficient": 10000000000.0,
+          "penaltySmoothingHalfDistance": 0.0002,
+          "penaltyThresholdDefault": 0.0001
+        }
+      }
+    ]
+  }
+}

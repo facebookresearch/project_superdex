@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+<path d="M7 40C5 10 26 6 27 24C28 40 42 38 42 8" fill="none" stroke="#E3E3E3" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="7" cy="40" r="1.9" fill="#5C5C5C"/>
+<circle cx="9.14" cy="22.31" r="1.9" fill="#5C5C5C"/>
+<circle cx="15.88" cy="14" r="1.9" fill="#5C5C5C"/>
+<circle cx="23.17" cy="14.69" r="1.9" fill="#5C5C5C"/>
+<circle cx="27" cy="24" r="1.9" fill="#5C5C5C"/>
+<circle cx="29.77" cy="32.47" r="1.9" fill="#5C5C5C"/>
+<circle cx="34.88" cy="33.25" r="1.9" fill="#5C5C5C"/>
+<circle cx="39.8" cy="25.41" r="1.9" fill="#5C5C5C"/>
+<circle cx="42" cy="8" r="1.9" fill="#5C5C5C"/>
+<path d="M43 40L59 40" fill="none" stroke="#0064E0" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M43 62L59 62" fill="none" stroke="#0064E0" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M51 42L44.5 43.8L57.5 47.4L44.5 51L57.5 54.6L44.5 58.2L51 60" fill="none" stroke="#0064E0" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

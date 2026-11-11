@@ -1,0 +1,270 @@
+{
+  "assetsRoot": "",
+  "prefab": "./grip_lift.mochi_scene",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "drv_padL",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "padL",
+      "pointLocal": [
+        0.01,
+        0.005,
+        0.01
+      ],
+      "waypoints": [
+        {
+          "time": 0,
+          "position": [
+            0,
+            -0.0395,
+            0.034
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear"
+        },
+        {
+          "time": 0.3,
+          "position": [
+            0,
+            -0.0345,
+            0.034
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear"
+        },
+        {
+          "time": 0.6,
+          "position": [
+            0,
+            -0.0345,
+            0.034
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Smooth"
+        },
+        {
+          "time": 1.6,
+          "position": [
+            0,
+            -0.0345,
+            0.134
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear"
+        },
+        {
+          "time": 2.2,
+          "position": [
+            0,
+            -0.0345,
+            0.134
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear"
+        }
+      ],
+      "drive": {
+        "responseHz": 60,
+        "dampingRatio": 1,
+        "maxAcceleration": 499.9999999999999,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    },
+    {
+      "name": "drv_padR",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "padR",
+      "pointLocal": [
+        0.01,
+        0.005,
+        0.01
+      ],
+      "waypoints": [
+        {
+          "time": 0,
+          "position": [
+            0,
+            0.0395,
+            0.034
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear"
+        },
+        {
+          "time": 0.3,
+          "position": [
+            0,
+            0.0345,
+            0.034
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear"
+        },
+        {
+          "time": 0.6,
+          "position": [
+            0,
+            0.0345,
+            0.034
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Smooth"
+        },
+        {
+          "time": 1.6,
+          "position": [
+            0,
+            0.0345,
+            0.134
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear"
+        },
+        {
+          "time": 2.2,
+          "position": [
+            0,
+            0.0345,
+            0.134
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear"
+        }
+      ],
+      "drive": {
+        "responseHz": 60,
+        "dampingRatio": 1,
+        "maxAcceleration": 499.9999999999999,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cube/puzzle_cube/center_link"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cube/puzzle_cube/corner2_link"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cube/puzzle_cube/corner3_link"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cube/puzzle_cube/corner4_link"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cube/puzzle_cube/corner5_link"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cube/puzzle_cube/corner6_link"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cube/puzzle_cube/corner7_link"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cube/puzzle_cube/corner8_link"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "padL"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "padR"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 2.2,
+    "groundPlane": true,
+    "record": {
+      "enabled": true,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "comment": "Pinches the cube with 2 N per pad (friction 1), then lifts it 10 cm over 1 s. The cube should follow to within a few mm, and its corners should stay within about 2 degrees of nominal.",
+  "plots": [
+    {
+      "channels": [
+        "cube/puzzle_cube/center_link.pos.z",
+        "padL.pos.z"
+      ],
+      "height": 180
+    },
+    {
+      "channels": [
+        "load.drv_padL.mag",
+        "load.drv_padR.mag"
+      ],
+      "height": 140
+    }
+  ]
+}

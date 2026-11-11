@@ -17,7 +17,12 @@
           0,
           -4.3711388286737929e-08
         ],
-        "shape": "./collision/paper_cup.mochi.h5"
+        "shape": "./collision/paper_cup.mochi.h5",
+        "translation": [
+          0,
+          -0.14239683747291565,
+          0.11160792410373688
+        ]
       },
       {
         "boundaryElementType": "P1Q1",
@@ -38,8 +43,8 @@
         "shape": "./collision/paper_cup.mochi.h5",
         "translation": [
           0,
-          0.09403722733259201,
-          0
+          -0.048359706997871399,
+          0.11160792410373688
         ]
       },
       {
@@ -61,8 +66,8 @@
         "shape": "./collision/paper_cup.mochi.h5",
         "translation": [
           0,
-          0.28239625692367554,
-          0
+          0.13999947905540466,
+          0.11160792410373688
         ]
       },
       {
@@ -84,8 +89,8 @@
         "shape": "./collision/paper_cup.mochi.h5",
         "translation": [
           0,
-          0.18835902214050293,
-          0
+          0.045962169766426086,
+          0.11160792410373688
         ]
       },
       {
@@ -107,8 +112,8 @@
         "shape": "./collision/paper_cup.mochi.h5",
         "translation": [
           0,
-          0.051722504198551178,
-          0.11942264437675476
+          -0.090674355626106262,
+          0.23103049397468567
         ]
       },
       {
@@ -130,8 +135,8 @@
         "shape": "./collision/paper_cup.mochi.h5",
         "translation": [
           0,
-          0.14575964212417603,
-          0.11942264437675476
+          0.0033626407384872437,
+          0.23103049397468567
         ]
       },
       {
@@ -153,8 +158,8 @@
         "shape": "./collision/paper_cup.mochi.h5",
         "translation": [
           0,
-          0.24008139967918396,
-          0.11942264437675476
+          0.097684606909751892,
+          0.23103049397468567
         ]
       },
       {
@@ -176,8 +181,8 @@
         "shape": "./collision/paper_cup.mochi.h5",
         "translation": [
           0,
-          0.09841638058423996,
-          0.23821242153644562
+          -0.043980523943901062,
+          0.34982016682624817
         ]
       },
       {
@@ -199,8 +204,8 @@
         "shape": "./collision/paper_cup.mochi.h5",
         "translation": [
           0,
-          0.19245351850986481,
-          0.23821242153644562
+          0.05005665123462677,
+          0.34982016682624817
         ]
       },
       {
@@ -222,25 +227,8 @@
         "shape": "./collision/paper_cup.mochi.h5",
         "translation": [
           0,
-          0.14996230602264404,
-          0.35017096996307373
-        ]
-      },
-      {
-        "contact": {
-          "penaltyCoefficient": 999999995904,
-          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
-          "penaltyThresholdDefault": 9.9999997473787516e-05,
-          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
-        },
-        "density": 7850,
-        "name": "Sphere1",
-        "renderModel": "./../sphere/render/sphere.glb",
-        "shape": "./../sphere/collision/sphere.mochi.h5",
-        "translation": [
-          0,
-          0.1497153639793396,
-          0.38266375660896301
+          0.0075653642416000366,
+          0.46177870035171509
         ]
       }
     ]

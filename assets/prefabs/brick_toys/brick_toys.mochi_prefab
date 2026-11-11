@@ -1,0 +1,40 @@
+{
+  "prefabs": [
+    {
+      "name": "brick_0",
+      "path": "./large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        -0.042000006884336472,
+        -0.040000021457672119,
+        0
+      ]
+    },
+    {
+      "name": "brick_1",
+      "path": "./large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        -0.042000006884336472,
+        -0.040000021457672119,
+        0.018999999389052391
+      ]
+    },
+    {
+      "name": "brick_2",
+      "path": "./large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        -0.042000006884336472,
+        0.0099999755620956421,
+        0
+      ]
+    },
+    {
+      "name": "brick_3",
+      "path": "./large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0079999938607215881,
+        -0.015000000596046448,
+        0
+      ]
+    }
+  ]
+}

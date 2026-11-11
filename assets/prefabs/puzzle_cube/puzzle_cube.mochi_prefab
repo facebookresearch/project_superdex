@@ -1,72 +1,704 @@
 {
-  "prefabs": [
-    {
-      "name": "center",
-      "path": "./puzzle_cube_center.mochi_prefab"
-    },
-    {
-      "name": "corner1",
-      "path": "./puzzle_cube_corner.mochi_prefab"
-    },
-    {
-      "name": "corner2",
-      "path": "./puzzle_cube_corner.mochi_prefab",
-      "rotation": [
-        0,
-        0,
-        0.70710676908493042,
-        0.70710676908493042
-      ]
-    },
-    {
-      "name": "corner3",
-      "path": "./puzzle_cube_corner.mochi_prefab",
-      "rotation": [
-        0,
-        0,
-        1,
-        -4.3711388286737929e-08
-      ]
-    },
-    {
-      "name": "corner4",
-      "path": "./puzzle_cube_corner.mochi_prefab",
-      "rotation": [
-        0,
-        0,
-        0.70710676908493042,
-        -0.70710676908493042
-      ]
-    },
-    {
-      "name": "corner5",
-      "path": "./puzzle_cube_corner.mochi_prefab",
-      "rotation": [
-        -0.70710676908493042,
-        0,
-        0,
-        0.70710676908493042
-      ]
-    },
-    {
-      "name": "corner6",
-      "path": "./puzzle_cube_corner.mochi_prefab",
-      "rotation": [
-        -0.49999991059303284,
-        -0.49999991059303284,
-        0.50000005960464478,
-        0.50000005960464478
-      ]
-    },
-    {
-      "name": "corner7",
-      "path": "./puzzle_cube_corner.mochi_prefab",
-      "rotation": [
-        -0.49999985098838806,
-        0.49999985098838806,
-        -0.50000011920928955,
-        0.50000011920928955
-      ]
-    }
-  ]
+  "_comment": "Assembled as a bot and exported with SuperDex Studio, then tuned with superdex_asset_tuner (see tuning/).",
+  "actors": {
+    "articulated": [
+      {
+        "joints": [
+          {
+            "name": "center_joint",
+            "type": "Free"
+          },
+          {
+            "name": "corner1_shell_joint",
+            "type": "Hard"
+          },
+          {
+            "name": "corner2_joint",
+            "parentLinkFromJoint": {
+              "rotation": [
+                -0.7071068286895752,
+                0,
+                0,
+                0.7071068286895752
+              ]
+            },
+            "type": "Spherical",
+            "friction": {
+              "viscous": 0.001,
+              "coulomb": 0.00075,
+              "falloffVel": 0.01
+            }
+          },
+          {
+            "name": "corner2_shell_joint",
+            "type": "Hard"
+          },
+          {
+            "name": "corner3_joint",
+            "parentLinkFromJoint": {
+              "rotation": [
+                -0.7071068286895752,
+                -3.090862321641907e-08,
+                0.7071068286895752,
+                -3.090862321641907e-08
+              ]
+            },
+            "type": "Spherical",
+            "friction": {
+              "viscous": 0.001,
+              "coulomb": 0.00075,
+              "falloffVel": 0.01
+            }
+          },
+          {
+            "name": "corner3_shell_joint",
+            "type": "Hard"
+          },
+          {
+            "name": "corner4_joint",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0,
+                0,
+                0.7071068286895752,
+                0.7071068286895752
+              ]
+            },
+            "type": "Spherical",
+            "friction": {
+              "viscous": 0.001,
+              "coulomb": 0.00075,
+              "falloffVel": 0.01
+            }
+          },
+          {
+            "name": "corner4_shell_joint",
+            "type": "Hard"
+          },
+          {
+            "name": "corner5_joint",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0,
+                0,
+                1,
+                -4.371138828673793e-08
+              ]
+            },
+            "type": "Spherical",
+            "friction": {
+              "viscous": 0.001,
+              "coulomb": 0.00075,
+              "falloffVel": 0.01
+            }
+          },
+          {
+            "name": "corner5_shell_joint",
+            "type": "Hard"
+          },
+          {
+            "name": "corner6_joint",
+            "parentLinkFromJoint": {
+              "rotation": [
+                0,
+                0,
+                0.7071068286895752,
+                -0.7071068286895752
+              ]
+            },
+            "type": "Spherical",
+            "friction": {
+              "viscous": 0.001,
+              "coulomb": 0.00075,
+              "falloffVel": 0.01
+            }
+          },
+          {
+            "name": "corner6_shell_joint",
+            "type": "Hard"
+          },
+          {
+            "name": "corner7_joint",
+            "parentLinkFromJoint": {
+              "rotation": [
+                -0.4999999403953552,
+                -0.4999999403953552,
+                0.5000001192092896,
+                0.5000001192092896
+              ]
+            },
+            "type": "Spherical",
+            "friction": {
+              "viscous": 0.001,
+              "coulomb": 0.00075,
+              "falloffVel": 0.01
+            }
+          },
+          {
+            "name": "corner7_shell_joint",
+            "type": "Hard"
+          },
+          {
+            "name": "corner8_joint",
+            "parentLinkFromJoint": {
+              "rotation": [
+                -0.49999988079071045,
+                0.49999988079071045,
+                -0.5000001788139343,
+                0.5000001788139343
+              ]
+            },
+            "type": "Spherical",
+            "friction": {
+              "viscous": 0.001,
+              "coulomb": 0.00075,
+              "falloffVel": 0.01
+            }
+          },
+          {
+            "name": "corner8_shell_joint",
+            "type": "Hard"
+          }
+        ],
+        "links": [
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "Sdf",
+            "contact": {
+              "coulombFrictionCoefficient": 2,
+              "frictionFalloffVel": 0.05000000074505806,
+              "penaltyCoefficient": 300000000000.0,
+              "penaltySmoothingHalfDistance": 0.0005,
+              "penaltyThresholdDefault": -0.0003,
+              "viscousFrictionCoefficient": 0.10000000149011612
+            },
+            "density": 800,
+            "layer": "puzzle_cube_core",
+            "name": "center_link",
+            "renderModel": "./render/puzzle_cube_center.glb",
+            "renderModelScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "shape": "./collision/puzzle_cube_center.mochi.h5",
+            "shapeScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ]
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "Sdf",
+            "contact": {
+              "coulombFrictionCoefficient": 1.6,
+              "frictionFalloffVel": 0.0002500000118743628,
+              "penaltyCoefficient": 100000000000.0,
+              "penaltySmoothingHalfDistance": 0.002,
+              "penaltyThresholdDefault": 0.000275
+            },
+            "density": 800,
+            "name": "corner1_shell_link",
+            "parentLink": 0,
+            "renderModel": "./render/puzzle_cube_corner1_shell.glb",
+            "renderModelScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "shape": "./collision/puzzle_cube_corner_shell.mochi.h5",
+            "shapeScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "layer": "puzzle_cube_shell"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "Sdf",
+            "contact": {
+              "coulombFrictionCoefficient": 0.0024999999441206455,
+              "frictionFalloffVel": 0.05000000074505806,
+              "penaltyCoefficient": 300000000000.0,
+              "penaltySmoothingHalfDistance": 0.0005,
+              "penaltyThresholdDefault": -0.0003,
+              "viscousFrictionCoefficient": 0.10000000149011612
+            },
+            "density": 800,
+            "layer": "puzzle_cube_core",
+            "name": "corner2_link",
+            "parentLink": 0,
+            "renderModel": "./render/puzzle_cube_corner.glb",
+            "renderModelScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "shape": "./collision/puzzle_cube_corner.mochi.h5",
+            "shapeScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ]
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "Sdf",
+            "contact": {
+              "coulombFrictionCoefficient": 1.6,
+              "frictionFalloffVel": 0.0002500000118743628,
+              "penaltyCoefficient": 100000000000.0,
+              "penaltySmoothingHalfDistance": 0.002,
+              "penaltyThresholdDefault": 0.000275
+            },
+            "density": 800,
+            "name": "corner2_shell_link",
+            "parentLink": 2,
+            "renderModel": "./render/puzzle_cube_corner2_shell.glb",
+            "renderModelScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "shape": "./collision/puzzle_cube_corner_shell.mochi.h5",
+            "shapeScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "layer": "puzzle_cube_shell"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "Sdf",
+            "contact": {
+              "coulombFrictionCoefficient": 0.0024999999441206455,
+              "frictionFalloffVel": 0.05000000074505806,
+              "penaltyCoefficient": 300000000000.0,
+              "penaltySmoothingHalfDistance": 0.0005,
+              "penaltyThresholdDefault": -0.0003,
+              "viscousFrictionCoefficient": 0.10000000149011612
+            },
+            "density": 800,
+            "layer": "puzzle_cube_core",
+            "name": "corner3_link",
+            "parentLink": 0,
+            "renderModel": "./render/puzzle_cube_corner.glb",
+            "renderModelScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "shape": "./collision/puzzle_cube_corner.mochi.h5",
+            "shapeScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ]
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "Sdf",
+            "contact": {
+              "coulombFrictionCoefficient": 1.6,
+              "frictionFalloffVel": 0.0002500000118743628,
+              "penaltyCoefficient": 100000000000.0,
+              "penaltySmoothingHalfDistance": 0.002,
+              "penaltyThresholdDefault": 0.000275
+            },
+            "density": 800,
+            "name": "corner3_shell_link",
+            "parentLink": 4,
+            "renderModel": "./render/puzzle_cube_corner3_shell.glb",
+            "renderModelScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "shape": "./collision/puzzle_cube_corner_shell.mochi.h5",
+            "shapeScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "layer": "puzzle_cube_shell"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "Sdf",
+            "contact": {
+              "coulombFrictionCoefficient": 0.0024999999441206455,
+              "frictionFalloffVel": 0.05000000074505806,
+              "penaltyCoefficient": 300000000000.0,
+              "penaltySmoothingHalfDistance": 0.0005,
+              "penaltyThresholdDefault": -0.0003,
+              "viscousFrictionCoefficient": 0.10000000149011612
+            },
+            "density": 800,
+            "layer": "puzzle_cube_core",
+            "name": "corner4_link",
+            "parentLink": 0,
+            "renderModel": "./render/puzzle_cube_corner.glb",
+            "renderModelScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "shape": "./collision/puzzle_cube_corner.mochi.h5",
+            "shapeScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ]
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "Sdf",
+            "contact": {
+              "coulombFrictionCoefficient": 1.6,
+              "frictionFalloffVel": 0.0002500000118743628,
+              "penaltyCoefficient": 100000000000.0,
+              "penaltySmoothingHalfDistance": 0.002,
+              "penaltyThresholdDefault": 0.000275
+            },
+            "density": 800,
+            "name": "corner4_shell_link",
+            "parentLink": 6,
+            "renderModel": "./render/puzzle_cube_corner4_shell.glb",
+            "renderModelScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "shape": "./collision/puzzle_cube_corner_shell.mochi.h5",
+            "shapeScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "layer": "puzzle_cube_shell"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "Sdf",
+            "contact": {
+              "coulombFrictionCoefficient": 0.0024999999441206455,
+              "frictionFalloffVel": 0.05000000074505806,
+              "penaltyCoefficient": 300000000000.0,
+              "penaltySmoothingHalfDistance": 0.0005,
+              "penaltyThresholdDefault": -0.0003,
+              "viscousFrictionCoefficient": 0.10000000149011612
+            },
+            "density": 800,
+            "layer": "puzzle_cube_core",
+            "name": "corner5_link",
+            "parentLink": 0,
+            "renderModel": "./render/puzzle_cube_corner.glb",
+            "renderModelScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "shape": "./collision/puzzle_cube_corner.mochi.h5",
+            "shapeScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ]
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "Sdf",
+            "contact": {
+              "coulombFrictionCoefficient": 1.6,
+              "frictionFalloffVel": 0.0002500000118743628,
+              "penaltyCoefficient": 100000000000.0,
+              "penaltySmoothingHalfDistance": 0.002,
+              "penaltyThresholdDefault": 0.000275
+            },
+            "density": 800,
+            "name": "corner5_shell_link",
+            "parentLink": 8,
+            "renderModel": "./render/puzzle_cube_corner5_shell.glb",
+            "renderModelScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "shape": "./collision/puzzle_cube_corner_shell.mochi.h5",
+            "shapeScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "layer": "puzzle_cube_shell"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "Sdf",
+            "contact": {
+              "coulombFrictionCoefficient": 0.0024999999441206455,
+              "frictionFalloffVel": 0.05000000074505806,
+              "penaltyCoefficient": 300000000000.0,
+              "penaltySmoothingHalfDistance": 0.0005,
+              "penaltyThresholdDefault": -0.0003,
+              "viscousFrictionCoefficient": 0.10000000149011612
+            },
+            "density": 800,
+            "layer": "puzzle_cube_core",
+            "name": "corner6_link",
+            "parentLink": 0,
+            "renderModel": "./render/puzzle_cube_corner.glb",
+            "renderModelScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "shape": "./collision/puzzle_cube_corner.mochi.h5",
+            "shapeScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ]
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "Sdf",
+            "contact": {
+              "coulombFrictionCoefficient": 1.6,
+              "frictionFalloffVel": 0.0002500000118743628,
+              "penaltyCoefficient": 100000000000.0,
+              "penaltySmoothingHalfDistance": 0.002,
+              "penaltyThresholdDefault": 0.000275
+            },
+            "density": 800,
+            "name": "corner6_shell_link",
+            "parentLink": 10,
+            "renderModel": "./render/puzzle_cube_corner6_shell.glb",
+            "renderModelScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "shape": "./collision/puzzle_cube_corner_shell.mochi.h5",
+            "shapeScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "layer": "puzzle_cube_shell"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "Sdf",
+            "contact": {
+              "coulombFrictionCoefficient": 0.0024999999441206455,
+              "frictionFalloffVel": 0.05000000074505806,
+              "penaltyCoefficient": 300000000000.0,
+              "penaltySmoothingHalfDistance": 0.0005,
+              "penaltyThresholdDefault": -0.0003,
+              "viscousFrictionCoefficient": 0.10000000149011612
+            },
+            "density": 800,
+            "layer": "puzzle_cube_core",
+            "name": "corner7_link",
+            "parentLink": 0,
+            "renderModel": "./render/puzzle_cube_corner.glb",
+            "renderModelScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "shape": "./collision/puzzle_cube_corner.mochi.h5",
+            "shapeScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ]
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "Sdf",
+            "contact": {
+              "coulombFrictionCoefficient": 1.6,
+              "frictionFalloffVel": 0.0002500000118743628,
+              "penaltyCoefficient": 100000000000.0,
+              "penaltySmoothingHalfDistance": 0.002,
+              "penaltyThresholdDefault": 0.000275
+            },
+            "density": 800,
+            "name": "corner7_shell_link",
+            "parentLink": 12,
+            "renderModel": "./render/puzzle_cube_corner7_shell.glb",
+            "renderModelScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "shape": "./collision/puzzle_cube_corner_shell.mochi.h5",
+            "shapeScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "layer": "puzzle_cube_shell"
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "Sdf",
+            "contact": {
+              "coulombFrictionCoefficient": 0.0024999999441206455,
+              "frictionFalloffVel": 0.05000000074505806,
+              "penaltyCoefficient": 300000000000.0,
+              "penaltySmoothingHalfDistance": 0.0005,
+              "penaltyThresholdDefault": -0.0003,
+              "viscousFrictionCoefficient": 0.10000000149011612
+            },
+            "density": 800,
+            "layer": "puzzle_cube_core",
+            "name": "corner8_link",
+            "parentLink": 0,
+            "renderModel": "./render/puzzle_cube_corner.glb",
+            "renderModelScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "shape": "./collision/puzzle_cube_corner.mochi.h5",
+            "shapeScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ]
+          },
+          {
+            "boundaryElementType": "P1Q1",
+            "colliderType": "Sdf",
+            "contact": {
+              "coulombFrictionCoefficient": 1.6,
+              "frictionFalloffVel": 0.0002500000118743628,
+              "penaltyCoefficient": 100000000000.0,
+              "penaltySmoothingHalfDistance": 0.002,
+              "penaltyThresholdDefault": 0.000275
+            },
+            "density": 800,
+            "name": "corner8_shell_link",
+            "parentLink": 14,
+            "renderModel": "./render/puzzle_cube_corner8_shell.glb",
+            "renderModelScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "shape": "./collision/puzzle_cube_corner_shell.mochi.h5",
+            "shapeScale": [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.8500000238418579
+            ],
+            "layer": "puzzle_cube_shell"
+          }
+        ],
+        "name": "puzzle_cube",
+        "translation": [
+          0,
+          0,
+          0.034
+        ]
+      }
+    ]
+  },
+  "contactFilter": {
+    "layerContactSymmetric": [
+      {
+        "enable": false,
+        "layers": [
+          "puzzle_cube_core",
+          "puzzle_cube_shell"
+        ]
+      },
+      {
+        "enable": false,
+        "layers": [
+          "puzzle_cube_core",
+          "LeftHand"
+        ]
+      },
+      {
+        "enable": false,
+        "layers": [
+          "puzzle_cube_core",
+          "RightHand"
+        ]
+      },
+      {
+        "enable": false,
+        "layers": [
+          "puzzle_cube_core",
+          "GenericObject"
+        ]
+      }
+    ],
+    "actorContactSymmetric": [
+      {
+        "enable": true,
+        "actors": [
+          "puzzle_cube/center_link",
+          "puzzle_cube/corner2_link"
+        ],
+        "includeNestedActors": false
+      },
+      {
+        "enable": true,
+        "actors": [
+          "puzzle_cube/center_link",
+          "puzzle_cube/corner3_link"
+        ],
+        "includeNestedActors": false
+      },
+      {
+        "enable": true,
+        "actors": [
+          "puzzle_cube/center_link",
+          "puzzle_cube/corner4_link"
+        ],
+        "includeNestedActors": false
+      },
+      {
+        "enable": true,
+        "actors": [
+          "puzzle_cube/center_link",
+          "puzzle_cube/corner5_link"
+        ],
+        "includeNestedActors": false
+      },
+      {
+        "enable": true,
+        "actors": [
+          "puzzle_cube/center_link",
+          "puzzle_cube/corner6_link"
+        ],
+        "includeNestedActors": false
+      },
+      {
+        "enable": true,
+        "actors": [
+          "puzzle_cube/center_link",
+          "puzzle_cube/corner7_link"
+        ],
+        "includeNestedActors": false
+      },
+      {
+        "enable": true,
+        "actors": [
+          "puzzle_cube/center_link",
+          "puzzle_cube/corner8_link"
+        ],
+        "includeNestedActors": false
+      }
+    ],
+    "_comment": "Core (center + inner corners) never touches shells; it also ignores hands, which only need the shells. Mochi disables contact between adjacent links, so center <-> inner corner contact is re-enabled explicitly."
+  }
 }

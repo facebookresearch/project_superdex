@@ -1,0 +1,290 @@
+{
+  "assetsRoot": "",
+  "prefab": "./../puzzle_cube.mochi_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "hold_center_link",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "puzzle_cube/center_link",
+      "pointLocal": [
+        0,
+        0,
+        0
+      ],
+      "waypoints": [
+        {
+          "time": 0,
+          "position": [
+            0,
+            0,
+            0.034
+          ],
+          "rotation": [
+            1.48665497e-10,
+            0.0,
+            0.0
+          ],
+          "interpolation": "Step"
+        }
+      ],
+      "drive": {
+        "responseHz": 20,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 20,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    },
+    {
+      "name": "hold_corner2_shell_link",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "puzzle_cube/corner2_shell_link",
+      "pointLocal": [
+        0,
+        0,
+        0
+      ],
+      "waypoints": [
+        {
+          "time": 0,
+          "position": [
+            0,
+            0,
+            0.034
+          ],
+          "rotation": [
+            -1.57079649,
+            -2.76174017e-09,
+            -4.78682782e-09
+          ],
+          "interpolation": "Step"
+        }
+      ],
+      "drive": {
+        "responseHz": 20,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 20,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    },
+    {
+      "name": "hold_corner6_shell_link",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "puzzle_cube/corner6_shell_link",
+      "pointLocal": [
+        0,
+        0,
+        0
+      ],
+      "waypoints": [
+        {
+          "time": 0,
+          "position": [
+            0,
+            0,
+            0.034
+          ],
+          "rotation": [
+            -3.5953196e-09,
+            -5.59716007e-09,
+            -1.57079649
+          ],
+          "interpolation": "Step"
+        }
+      ],
+      "drive": {
+        "responseHz": 20,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 20,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    },
+    {
+      "name": "hold_corner8_shell_link",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "puzzle_cube/corner8_shell_link",
+      "pointLocal": [
+        0,
+        0,
+        0
+      ],
+      "waypoints": [
+        {
+          "time": 0,
+          "position": [
+            0,
+            0,
+            0.034
+          ],
+          "rotation": [
+            -1.20919907,
+            1.20919907,
+            -1.20919979
+          ],
+          "interpolation": "Step"
+        }
+      ],
+      "drive": {
+        "responseHz": 20,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 20,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    },
+    {
+      "name": "tq3",
+      "enabled": true,
+      "type": "Torque",
+      "target": "puzzle_cube/corner3_shell_link",
+      "frame": "World",
+      "direction": [
+        -1,
+        0,
+        0
+      ],
+      "profile": {
+        "kind": "Constant",
+        "magnitude": 0.024,
+        "start": 0.0,
+        "end": 0.15
+      }
+    },
+    {
+      "name": "tq4",
+      "enabled": true,
+      "type": "Torque",
+      "target": "puzzle_cube/corner4_shell_link",
+      "frame": "World",
+      "direction": [
+        -1,
+        0,
+        0
+      ],
+      "profile": {
+        "kind": "Constant",
+        "magnitude": 0.024,
+        "start": 0.0,
+        "end": 0.15
+      }
+    },
+    {
+      "name": "tq5",
+      "enabled": true,
+      "type": "Torque",
+      "target": "puzzle_cube/corner5_shell_link",
+      "frame": "World",
+      "direction": [
+        -1,
+        0,
+        0
+      ],
+      "profile": {
+        "kind": "Constant",
+        "magnitude": 0.024,
+        "start": 0.0,
+        "end": 0.15
+      }
+    },
+    {
+      "name": "tq7",
+      "enabled": true,
+      "type": "Torque",
+      "target": "puzzle_cube/corner7_shell_link",
+      "frame": "World",
+      "direction": [
+        -1,
+        0,
+        0
+      ],
+      "profile": {
+        "kind": "Constant",
+        "magnitude": 0.024,
+        "start": 0.0,
+        "end": 0.15
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "puzzle_cube/center_link"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "puzzle_cube/corner2_link"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "puzzle_cube/corner3_link"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "puzzle_cube/corner4_link"
+    },
+    {
+      "kind": "JointState",
+      "target": "puzzle_cube/corner3_joint"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 1.5,
+    "groundPlane": false,
+    "record": {
+      "enabled": true,
+      "contactPoints": false,
+      "staticActors": false
+    },
+    "gravity": [
+      0,
+      0,
+      0
+    ]
+  },
+  "comment": "Flicks the x- layer with 24 mN m on each corner for 0.15 s, then lets go. The joint damping and friction slow the layer as it coasts, and the shell corners catch it close to the next aligned position (about 85-90 degrees) without overshoot. A gentler flick (12 mN m) stops the layer partway, at about 60 degrees.",
+  "plots": [
+    {
+      "channels": [
+        "load.tq3.mag",
+        "load.tq4.mag",
+        "load.tq5.mag",
+        "load.tq7.mag"
+      ],
+      "height": 140
+    },
+    {
+      "channels": [
+        "puzzle_cube/corner3_joint.q0",
+        "puzzle_cube/corner3_joint.q1",
+        "puzzle_cube/corner3_joint.q2"
+      ],
+      "height": 200
+    }
+  ]
+}
