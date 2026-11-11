@@ -807,16 +807,32 @@ Fills a closed surface with tetrahedra, producing the volume mesh a
 | Method | What it does |
 |--------|--------------|
 | **Delaunay Refinement** | Tetrahedralize the input surface with CGAL's Delaunay refinement mesher. |
+| **Constrained Delaunay** | Fill the input surface with tetrahedra, keeping it as the mesh's boundary. |
 
 Its input must be a closed surface with no self-intersections, so put **Wrap
-Mesh** ahead of it; the **STEP to Soft Mochi Model** preset does this. **Edge
-Size** sets the target tetrahedron edge length, and **Facet Distance** bounds how
-far the boundary may deviate from the input surface. Both are a percentage of the
-mesh's average bounding-box dimension, or millimeters when **Relative to Mesh
-Size** is off. A zero **Facet Distance** automatically uses one fifth of **Edge
-Size**. **Min Facet Angle** and **Max Radius-Edge Ratio** trade element quality
-against element count, and sharp features are preserved when **Detect Features**
-is on.
+Mesh** ahead of it; the **STEP to Soft Mochi Model** preset does this.
+
+**Delaunay Refinement** remeshes the boundary along with the interior, so it
+suits an input surface at any resolution. **Edge Size** sets the target
+tetrahedron edge length, and **Facet Distance** bounds how far the boundary may
+deviate from the input surface. Both are a percentage of the mesh's average
+bounding-box dimension, or millimeters when **Relative to Mesh Size** is off. A
+zero **Facet Distance** automatically uses one fifth of **Edge Size**. **Min Facet
+Angle** and **Max Radius-Edge Ratio** trade element quality against element
+count, and sharp features are preserved when **Detect Features** is on.
+
+**Constrained Delaunay** keeps the input surface's vertices, unmoved and as the
+first nodes of the tetrahedral mesh, so use it when the surface is already meshed
+at the resolution you want on the boundary. Tetrahedra next to the boundary can
+only be as well shaped as the input triangles. **Edge Size** sets the target edge
+length of the interior tetrahedra, and **Iterations** how many passes refine the
+interior. More passes may improve tetrahedron shape, but take longer. Where
+constrained Delaunay construction requires extra boundary vertices, some input
+triangles are split by vertices added on their edges or faces, which keeps the
+boundary's shape. Turn on **Strict Boundary** to fail the stage instead, so the
+boundary triangles are exactly the input triangles. Nested shells alternate
+between material and empty cavities, starting with material inside the outermost
+shells.
 
 Its output is a tetrahedral mesh. The stage shows and measures the mesh's
 boundary surface, its stats add the node and tetrahedron counts, and **Save**
