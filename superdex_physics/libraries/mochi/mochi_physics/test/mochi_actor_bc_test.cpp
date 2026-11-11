@@ -323,11 +323,13 @@ TEST_F(MochiActorBC, MultiplePermanentRangesSurviveClear) {
 }
 
 TEST_F(MochiActorBC, SoftNodeTranslation) {
-  // Create minimal soft cube actor
+  // Create minimal soft cube actor with a generic rotation, far from the origin in x and y so that
+  // mapping the world-space boundary values to the local frame is sensitive to roundoff of world
+  // coordinates, and near it in z, where subtracting the translation in float would round.
   SoftActorParams params;
   params.shape = _cubeShape;
-  params.worldFromLocal.SetRotation(Quaternion::FromRotationVector(Real3{0.5_r * kPI, 0_r, 0_r}));
-  params.worldFromLocal.SetTranslation(Real3{0.1_r, 0.2_r, 0.3_r});
+  params.worldFromLocal.SetRotation(Quaternion::FromRotationVector(Real3{0.3_r, -0.5_r, 0.7_r}));
+  params.worldFromLocal.SetTranslation(Real3{100_r, -100_r, 0.05_r});
   Actor* actor = _scene->CreateSoftActor(params, test::ExpectOK{});
   actor->RegisterQuery(QueryType::NodePositions, test::ExpectOK{});
 
@@ -350,6 +352,26 @@ TEST_F(MochiActorBC, SoftNodeTranslation) {
     startingWorldPositions[i] = ToReal3(params.worldFromLocal.TransformPoint(pt));
   }
 
+  // Expects the nodes displaced to the local positions of their world-space boundary values,
+  // computed in double precision from the stored root translation and rotation matrix, up to the
+  // rounding of the displacements themselves.
+  auto expectAtBoundaryValues = [&](Span<int const> bcNodeIndices) {
+    TransformRT const root = actor->GetRootTransform();
+    auto const localFromWorldT = ToNdArray3x3(
+        StaticCast<VMatrix3x3d>(ToVMatrix3x3Transpose(root.GetRotation().GetConjugate())));
+    auto const refPositions = Unflatten<Real3 const>(mesh.coordinates);
+    auto const displacements = Unflatten<Real3 const>(actor->GetDisplacements(test::ExpectOK{}));
+    for (int i : bcNodeIndices) {
+      Double3 const offsetWorld = StaticCast<Double3>(startingWorldPositions[i]) -
+          StaticCast<Double3>(root.GetTranslation());
+      Double3 const expected =
+          DotVecMat(offsetWorld, localFromWorldT) - StaticCast<Double3>(refPositions[i]);
+      double const tolerance = std::numeric_limits<real>::epsilon() * Norm(expected) +
+          16.0 * std::numeric_limits<double>::epsilon() * kBoxWidth;
+      EXPECT_LE(Norm(StaticCast<Double3>(displacements[i]) - expected), tolerance);
+    }
+  };
+
   // Freeze all nodes with world-space boundary conditions
   EXPECT_EQ(0, actor->GetBoundaryConditionDofIndices().size());
   EXPECT_EQ(0, actor->GetBoundaryConditionDofValuesWorld().size());
@@ -371,8 +393,7 @@ TEST_F(MochiActorBC, SoftNodeTranslation) {
 
   // Expect no movement
   EXPECT_NEAR_EQ(params.worldFromLocal, actor->GetRootTransform());
-  EXPECT_TRUE(
-      test::NearEqualSpan(mesh.coordinates, actor->GetNodePositionsLocal(test::ExpectOK{})));
+  expectAtBoundaryValues(nodeIndices);
 
   // Now, freeze one node (arbitrarily chosen).
   // This time, specify the DoF indices instead of the node indices.
@@ -389,15 +410,15 @@ TEST_F(MochiActorBC, SoftNodeTranslation) {
   real const kTimeStep = 0.02_r;
   _scene->Step(kTimeStep);
 
+  // Expect that node index 1 (the one with BCs) did not move
+  expectAtBoundaryValues(MakeSingletonConstSpan(kBCNodeIndex));
+
   // Get the updated world-space positions
   auto newLocalPositions = Unflatten<Real3 const>(actor->GetNodePositionsLocal(test::ExpectOK{}));
   std::vector<Real3> newWorldPositions(newLocalPositions.size());
   for (int i = 0; i < isize(newLocalPositions); ++i) {
     newWorldPositions[i] = params.worldFromLocal.TransformPoint(newLocalPositions[i]);
   }
-
-  // Expect that node index 1 (the one with BCs) did not move, up to world-local transform rounding.
-  EXPECT_NEAR_EQ(startingWorldPositions[kBCNodeIndex], newWorldPositions[kBCNodeIndex]);
 
   // Expect that all other nodes moved in the direction of gravity (-Y)
   for (int i = 0; i < numNodes; ++i) {

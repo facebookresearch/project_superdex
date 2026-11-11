@@ -66,19 +66,23 @@ static void UpdateDirichletBC(
   outLocalBC.dofIndices = inWorldBC->dofIndices;
   outLocalBC.colValueIndices = inWorldBC->colValueIndices;
 
-  // DotVecMat(vec, matrixTranspose) is the fastest way to transform points.
-  TransformRT localFromWorld = Invert(root.worldFromLocal);
-  VMatrix4x4r worldToLocalT = ToVMatrix4x4Transpose(localFromWorld);
+  // DotVecMat(vec, matrixTranspose) is the fastest way to transform points. Subtract the
+  // translation before rotating, in double, and round only the displacement: it then carries no
+  // rounding of world or local coordinates, and the rounding of the rotation matrix rotates all
+  // nodes alike.
+  auto const translation = StaticCast<Vec4d>(root.worldFromLocal.VGetTranslation());
+  auto const localFromWorldRotationT =
+      StaticCast<VMatrix3x3d>(ToVMatrix3x3Transpose(Conjugate(root.worldFromLocal.GetRotation())));
 
   // SNLE BC stores BC values as displacements, but we store BC positions.
   // Subtract our positions from the reference pose to update SNLE BC.
   outLocalBC.poseValues.resize_noinit(inWorldBC->poseIndices.size());
   Span<real const> refPositions = Flatten(mesh.mesh->GetNodeCoordinates());
   for (int i = 0; i < isize(inWorldBC->poseValues); i += 3) {
-    Vec4r posWorld = ToSimdPoint(Load<3, Vec4r>(&inWorldBC->poseValues[i]));
-    Vec4r posLocal = DotVecMat4x4(posWorld, worldToLocalT);
-    Vec4r posRef = Load<3, Vec4r>(&refPositions[inWorldBC->poseIndices[i]]);
-    Store<3>(&outLocalBC.poseValues[i], posLocal - posRef);
+    auto const posWorld = StaticCast<Vec4d>(Load<3, Vec4r>(&inWorldBC->poseValues[i]));
+    Vec4d const posLocal = DotVecMat3x3(posWorld - translation, localFromWorldRotationT);
+    auto const posRef = StaticCast<Vec4d>(Load<3, Vec4r>(&refPositions[inWorldBC->poseIndices[i]]));
+    Store<3>(&outLocalBC.poseValues[i], StaticCast<Vec4r>(posLocal - posRef));
   }
 }
 
