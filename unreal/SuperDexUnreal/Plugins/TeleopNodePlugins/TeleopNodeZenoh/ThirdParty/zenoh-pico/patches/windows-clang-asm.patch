@@ -1,0 +1,14 @@
+diff --git a/include/zenoh-pico/system/platform/windows.h b/include/zenoh-pico/system/platform/windows.h
+--- a/include/zenoh-pico/system/platform/windows.h
++++ b/include/zenoh-pico/system/platform/windows.h
+@@ -61,7 +61,10 @@
+     } _ep;
+ } _z_sys_net_endpoint_t;
+ 
++#if !defined(__clang__) && !defined(__GNUC__)
++// MSVC has no GNU inline asm; clang/gcc treat __asm__ as a keyword.
+ inline void __asm__(char *instruction) { (void)(instruction); }
++#endif
+ 
+ #ifdef __cplusplus
+ }

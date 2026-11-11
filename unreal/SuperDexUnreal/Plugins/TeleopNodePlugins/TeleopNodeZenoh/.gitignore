@@ -1,0 +1,4 @@
+# zenoh-pico and nanopb sources, placed here by the build (see README.md). No trailing slashes:
+# OSIRIS places them as directory symlinks, which a pattern ending in / does not match.
+Source/TeleopNodeZenoh/Private/ZenohPico
+Source/TeleopNodeZenoh/Private/Nanopb

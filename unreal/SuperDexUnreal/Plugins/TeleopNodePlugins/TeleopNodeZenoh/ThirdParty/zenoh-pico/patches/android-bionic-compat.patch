@@ -1,0 +1,92 @@
+diff --git a/src/system/unix/system.c b/src/system/unix/system.c
+--- a/src/system/unix/system.c
++++ b/src/system/unix/system.c
+@@ -33,13 +33,14 @@
+ #include "zenoh-pico/system/platform.h"
+ 
+ /*------------------ Random ------------------*/
++// Bionic only declares getrandom() from API 28; arc4random is available at every API level.
+ uint8_t z_random_u8(void) {
+     uint8_t ret = 0;
+-#if defined(ZENOH_LINUX)
++#if defined(ZENOH_LINUX) && !defined(__ANDROID__)
+     while (getrandom(&ret, sizeof(uint8_t), 0) <= 0) {
+         ZP_ASM_NOP;
+     }
+-#elif defined(ZENOH_MACOS) || defined(ZENOH_BSD)
++#elif defined(ZENOH_MACOS) || defined(ZENOH_BSD) || defined(__ANDROID__)
+     ret = z_random_u32();
+ #endif
+ 
+@@ -48,11 +49,11 @@
+ 
+ uint16_t z_random_u16(void) {
+     uint16_t ret = 0;
+-#if defined(ZENOH_LINUX)
++#if defined(ZENOH_LINUX) && !defined(__ANDROID__)
+     while (getrandom(&ret, sizeof(uint16_t), 0) <= 0) {
+         ZP_ASM_NOP;
+     }
+-#elif defined(ZENOH_MACOS) || defined(ZENOH_BSD)
++#elif defined(ZENOH_MACOS) || defined(ZENOH_BSD) || defined(__ANDROID__)
+     ret = z_random_u32();
+ #endif
+ 
+@@ -61,11 +62,11 @@
+ 
+ uint32_t z_random_u32(void) {
+     uint32_t ret = 0;
+-#if defined(ZENOH_LINUX)
++#if defined(ZENOH_LINUX) && !defined(__ANDROID__)
+     while (getrandom(&ret, sizeof(uint32_t), 0) <= 0) {
+         ZP_ASM_NOP;
+     }
+-#elif defined(ZENOH_MACOS) || defined(ZENOH_BSD)
++#elif defined(ZENOH_MACOS) || defined(ZENOH_BSD) || defined(__ANDROID__)
+     ret = arc4random();
+ #endif
+ 
+@@ -74,11 +75,11 @@
+ 
+ uint64_t z_random_u64(void) {
+     uint64_t ret = 0;
+-#if defined(ZENOH_LINUX)
++#if defined(ZENOH_LINUX) && !defined(__ANDROID__)
+     while (getrandom(&ret, sizeof(uint64_t), 0) <= 0) {
+         ZP_ASM_NOP;
+     }
+-#elif defined(ZENOH_MACOS) || defined(ZENOH_BSD)
++#elif defined(ZENOH_MACOS) || defined(ZENOH_BSD) || defined(__ANDROID__)
+     ret |= z_random_u32();
+     ret = ret << 32;
+     ret |= z_random_u32();
+@@ -88,11 +89,11 @@
+ }
+ 
+ void z_random_fill(void *buf, size_t len) {
+-#if defined(ZENOH_LINUX)
++#if defined(ZENOH_LINUX) && !defined(__ANDROID__)
+     while (getrandom(buf, len, 0) <= 0) {
+         ZP_ASM_NOP;
+     }
+-#elif defined(ZENOH_MACOS) || defined(ZENOH_BSD)
++#elif defined(ZENOH_MACOS) || defined(ZENOH_BSD) || defined(__ANDROID__)
+     arc4random_buf(buf, len);
+ #endif
+ }
+@@ -114,7 +115,15 @@
+ 
+ z_result_t _z_task_detach(_z_task_t *task) { _Z_CHECK_SYS_ERR(pthread_detach(*task)); }
+ 
++#if defined(__ANDROID__)
++// Bionic does not implement pthread_cancel.
++z_result_t _z_task_cancel(_z_task_t *task) {
++    _ZP_UNUSED(task);
++    _Z_ERROR_RETURN(_Z_ERR_GENERIC);
++}
++#else
+ z_result_t _z_task_cancel(_z_task_t *task) { _Z_CHECK_SYS_ERR(pthread_cancel(*task)); }
++#endif
+ 
+ void _z_task_exit(void) { pthread_exit(NULL); }
+ 
