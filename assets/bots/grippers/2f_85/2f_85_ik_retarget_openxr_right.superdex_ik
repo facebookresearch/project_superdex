@@ -1,0 +1,106 @@
+{
+  "createParams": {
+    "excludeCollisionShapes": true,
+    "fixedBase": true,
+    "solverParams": {
+      "absTol": 0.0099999997764825821,
+      "lineSearchMaxIter": 10,
+      "maxElapsedTimeSeconds": 0.01,
+      "maxIter": 20,
+      "positionErrorThres": 0.0099999997764825821,
+      "relTol": 9.9999999392252903e-09,
+      "rotationErrorThres": 0.0099999997764825821,
+      "verbosity": "Warning"
+    }
+  },
+  "goals": [
+    {
+      "baseOrInputLinkFrameFromConstraintFrame": {
+        "rotation": [
+          0,
+          -6.1901452852453076e-09,
+          0,
+          0.99999994039535522
+        ],
+        "translation": [
+          0.050666678696870804,
+          0,
+          0.10841616243124008
+        ]
+      },
+      "enabled": true,
+      "inputBotLink": "",
+      "linkFrameFromConstraintFrame": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "name": "2f_85_left_finger_tip_link",
+      "outputBotLink": "2f_85_left_finger_tip_link",
+      "positionStiffness": 100,
+      "rotationStiffness": 1
+    },
+    {
+      "baseOrInputLinkFrameFromConstraintFrame": {
+        "rotation": [
+          0,
+          6.1901452852453076e-09,
+          0,
+          0.99999994039535522
+        ],
+        "translation": [
+          -0.050666678696870804,
+          0,
+          0.10841616243124008
+        ]
+      },
+      "enabled": true,
+      "inputBotLink": "",
+      "linkFrameFromConstraintFrame": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "name": "2f_85_right_finger_tip_link",
+      "outputBotLink": "2f_85_right_finger_tip_link",
+      "positionStiffness": 100,
+      "rotationStiffness": 1
+    }
+  ],
+  "inputBot": "../../hands/openxr/right/openxr_hand_lowpoly_right.superdex_bot",
+  "inputBotConfiguration": [],
+  "inputBotScale": 1,
+  "jointCouplings": [],
+  "outputBaseFrameFromInputBaseFrame": {
+    "rotation": [
+      -0,
+      1,
+      -0,
+      -4.3711388286737929e-08
+    ],
+    "translation": [
+      0,
+      0,
+      0
+    ]
+  },
+  "outputBot": "2f_85.superdex_bot",
+  "outputBotConfiguration": [],
+  "version": 9
+}
