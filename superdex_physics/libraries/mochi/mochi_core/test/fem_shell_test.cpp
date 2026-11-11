@@ -430,13 +430,6 @@ static ShellBatchStencil<kBS> BroadcastStencilNodes(
 }
 
 template <int kBS>
-static ShellBatchVector<kBS> ExtrapolatedPositions(ShellStencilConfig const& cfg) {
-  auto pos = BroadcastNodeValues<kBS>(cfg.refPositions);
-  ExtrapolateStencilPositions<kBS>(BroadcastStencilNodes<kBS>(cfg.globalNodeIndices), pos);
-  return pos;
-}
-
-template <int kBS>
 static void MirrorNodePairBlocks(ShellBatchMatrix<kBS>& dres) {
   for (int testNode = 0; testNode < kBendingStencilNodes; ++testNode) {
     for (int trialNode = testNode + 1; trialNode < kBendingStencilNodes; ++trialNode) {
@@ -593,7 +586,7 @@ static BatchDouble<kBS> MembraneEnergy(
     ShellBatchVector<kBS> const& disp) {
   using V = BatchReal<kBS>;
   using Vd = BatchDouble<kBS>;
-  auto const A = Metric<kBS>(refPos);
+  auto const A = Metric<kBS>(EdgeVectors<kBS>(refPos));
   V const detA = Det(A);
   V const referenceArea = V{0.5_r} * Sqrt(detA);
   auto const AInv = Invert(A, detA);
@@ -606,12 +599,12 @@ static ShellBatchVector<kBS> MembraneResidual(
     ShellBatchVector<kBS> const& refPos,
     ShellBatchVector<kBS> const& disp) {
   using V = BatchReal<kBS>;
-  auto const A = Metric<kBS>(refPos);
+  auto const A = Metric<kBS>(EdgeVectors<kBS>(refPos));
   V const detA = Det(A);
   V const referenceArea = V{0.5_r} * Sqrt(detA);
   auto const AInv = Invert(A, detA);
   auto const epsilon = Dot(AInv, MembraneStrain<kBS>(refPos, disp));
-  auto const da_dx = DMetricDx<kBS>(refPos + disp);
+  auto const da_dx = DMetricDx<kBS>(EdgeVectors<kBS>(refPos + disp));
   auto const dpsi_da = V{0.5_r} * DPsiSVK<kBS>(epsilon, AInv, V{1_r}, V{2_r});
 
   ShellBatchVector<kBS> res{};
@@ -624,12 +617,12 @@ static ShellBatchMatrix<kBS> MembraneDResidual(
     ShellBatchVector<kBS> const& refPos,
     ShellBatchVector<kBS> const& disp) {
   using V = BatchReal<kBS>;
-  auto const A = Metric<kBS>(refPos);
+  auto const A = Metric<kBS>(EdgeVectors<kBS>(refPos));
   V const detA = Det(A);
   V const referenceArea = V{0.5_r} * Sqrt(detA);
   auto const AInv = Invert(A, detA);
   auto const epsilon = Dot(AInv, MembraneStrain<kBS>(refPos, disp));
-  auto const da_dx = DMetricDx<kBS>(refPos + disp);
+  auto const da_dx = DMetricDx<kBS>(EdgeVectors<kBS>(refPos + disp));
   auto const dpsi_da = V{0.5_r} * DPsiSVK<kBS>(epsilon, AInv, V{1_r}, V{2_r});
 
   ShellBatchMatrix<kBS> dres{};
@@ -651,7 +644,7 @@ static BatchDouble<kBS> BendingEnergy(
     ShellBatchVector<kBS> const& disp) {
   using V = BatchReal<kBS>;
   using Vd = BatchDouble<kBS>;
-  auto const A = Metric<kBS>(refPos);
+  auto const A = Metric<kBS>(EdgeVectors<kBS>(refPos));
   V const detA = Det(A);
   V const referenceArea = V{0.5_r} * Sqrt(detA);
   auto const AInv = Invert(A, detA);
@@ -667,7 +660,7 @@ static ShellBatchVector<kBS> BendingResidual(
     ShellBatchVector<kBS> const& refPos,
     ShellBatchVector<kBS> const& disp) {
   using V = BatchReal<kBS>;
-  auto const A = Metric<kBS>(refPos);
+  auto const A = Metric<kBS>(EdgeVectors<kBS>(refPos));
   V const detA = Det(A);
   V const referenceArea = V{0.5_r} * Sqrt(detA);
   auto const AInv = Invert(A, detA);
@@ -689,7 +682,7 @@ static ShellBatchMatrix<kBS> BendingDResidual(
     ShellBatchVector<kBS> const& refPos,
     ShellBatchVector<kBS> const& disp) {
   using V = BatchReal<kBS>;
-  auto const A = Metric<kBS>(refPos);
+  auto const A = Metric<kBS>(EdgeVectors<kBS>(refPos));
   V const detA = Det(A);
   V const referenceArea = V{0.5_r} * Sqrt(detA);
   auto const AInv = Invert(A, detA);
@@ -714,17 +707,20 @@ static void VerifyMetricAndStrainHelpers() {
   real constexpr kD2MetricTol = 1e-5_r;
 
   for (auto const& cfg : MakeHelperConfigs()) {
-    auto const refPos = ExtrapolatedPositions<kBS>(cfg);
+    auto const refPos = BroadcastNodeValues<kBS>(cfg.refPositions);
     auto const disp = BroadcastNodeValues<kBS>(cfg.displacements);
     auto const direction = BroadcastNodeValues<kBS>(HelperDirection());
+    auto const metric = [](ShellBatchVector<kBS> const& pos) {
+      return Metric<kBS>(EdgeVectors<kBS>(pos));
+    };
 
     auto const strainFromDelta = MembraneStrain<kBS>(refPos, disp);
-    auto const strainFromMetric = V{0.5_r} * (Metric<kBS>(refPos + disp) - Metric<kBS>(refPos));
+    auto const strainFromMetric = V{0.5_r} * (metric(refPos + disp) - metric(refPos));
     ExpectNear2x2Lanes<kBS>(strainFromMetric, strainFromDelta, kMetricTol, kMetricTol);
 
-    auto const da_dx = DMetricDx<kBS>(refPos);
-    auto const metricFd = (V{1_r / kMetricEps}) *
-        (Metric<kBS>(refPos + V{kMetricEps} * direction) - Metric<kBS>(refPos));
+    auto const da_dx = DMetricDx<kBS>(EdgeVectors<kBS>(refPos));
+    auto const metricFd =
+        (V{1_r / kMetricEps}) * (metric(refPos + V{kMetricEps} * direction) - metric(refPos));
     BatchSymMatrix2x2<kBS> metricDirectional{};
     for (int node = 0; node < kTriangleNodes; ++node) {
       for (int d = 0; d < kSpaceDim3; ++d) {
@@ -734,7 +730,8 @@ static void VerifyMetricAndStrainHelpers() {
     ExpectNear2x2Lanes<kBS>(metricFd, ToMatrix(metricDirectional), kMetricTol, kMetricTol);
 
     auto const d2a_dx2 = D2MetricDx2<kBS>();
-    auto const da_dxPerturbed = DMetricDx<kBS>(refPos + V{kD2MetricEps} * direction);
+    auto const da_dxPerturbed =
+        DMetricDx<kBS>(EdgeVectors<kBS>(refPos + V{kD2MetricEps} * direction));
     for (int testNode = 0; testNode < kTriangleNodes; ++testNode) {
       for (int d = 0; d < kSpaceDim3; ++d) {
         auto const fd =
@@ -756,7 +753,7 @@ static void VerifyBendingEdgeGeometryHelpers() {
   real constexpr kTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-3_r : 5e-3_r;
 
   for (auto const& cfg : MakeHelperConfigs()) {
-    auto const pos = ExtrapolatedPositions<kBS>(cfg);
+    auto const pos = BroadcastNodeValues<kBS>(cfg.refPositions);
     auto const edges = EdgeVectors<kBS>(pos);
     auto const edgeDirection = BroadcastNodeTriples<kBS>(HelperDirection());
     auto const db_dv = DSecondFundamentalFormDEdges<kBS>(edges);
@@ -797,24 +794,28 @@ static void VerifyBendingPositionGeometryHelpers() {
   real constexpr kDbDxAbsTol = MOCHI_USE_DOUBLE_PRECISION ? kTol : 1e-2_r;
 
   for (auto const& cfg : MakeHelperConfigs()) {
-    auto const boundaryCfg = WithBoundary35(cfg);
-    auto const rawPos = BroadcastNodeValues<kBS>(boundaryCfg.refPositions);
-    auto const originalPos = BroadcastNodeValues<kBS>(cfg.refPositions);
-    auto const stencilGlobalNodes = BroadcastStencilNodes<kBS>(boundaryCfg.globalNodeIndices);
-    auto extrapolatedPos = rawPos;
-    ExtrapolateStencilPositions<kBS>(stencilGlobalNodes, extrapolatedPos);
-    ExpectNearVectorLanes<kBS>(originalPos, extrapolatedPos, kTol);
+    auto const pos = BroadcastNodeValues<kBS>(cfg.refPositions);
+    auto const stencilGlobalNodes =
+        BroadcastStencilNodes<kBS>(WithBoundary35(cfg).globalNodeIndices);
+    // The helper configurations place the hinge nodes where they would be extrapolated.
+    auto const edges = EdgeVectors<kBS>(pos);
+    auto extrapolatedEdges = edges;
+    ExtrapolateStencilEdges<kBS>(stencilGlobalNodes, extrapolatedEdges);
+    for (int edge = 0; edge < kBendingStencilNodes; ++edge) {
+      for (int b = 0; b < kBS; ++b) {
+        ExpectNearL2(GetLane(edges[edge], b), GetLane(extrapolatedEdges[edge], b), kTol);
+      }
+    }
 
-    auto const extrapolatedEdges = EdgeVectors<kBS>(extrapolatedPos);
     auto const db_dx = DSecondFundamentalFormDx<kBS>(
         DSecondFundamentalFormDEdges<kBS>(extrapolatedEdges), stencilGlobalNodes);
-    auto perturbedPos = rawPos + V{kEps} * BroadcastNodeValues<kBS>(HelperDirection());
-    ExtrapolateStencilPositions<kBS>(stencilGlobalNodes, perturbedPos);
+    auto const direction = BroadcastNodeValues<kBS>(HelperDirection());
+    auto perturbedEdges = EdgeVectors<kBS>(pos + V{kEps} * direction);
+    ExtrapolateStencilEdges<kBS>(stencilGlobalNodes, perturbedEdges);
     auto const db_dxFd = (V{1_r / kEps}) *
-        (SecondFundamentalForm<kBS>(EdgeVectors<kBS>(perturbedPos)) -
+        (SecondFundamentalForm<kBS>(perturbedEdges) -
          SecondFundamentalForm<kBS>(extrapolatedEdges));
     BatchSymMatrix2x2<kBS> db_dxDirectional{};
-    auto const direction = BroadcastNodeValues<kBS>(HelperDirection());
     for (int node = 0; node < kBendingStencilNodes; ++node) {
       for (int d = 0; d < kSpaceDim3; ++d) {
         db_dxDirectional += db_dx[node][d] * direction[node * kSpaceDim3 + d];
@@ -1188,7 +1189,7 @@ static void VerifyMembraneResidualHelpers() {
   real constexpr kDResTol = 1e-3_r;
 
   for (auto const& cfg : MakeHelperConfigs()) {
-    auto const refPos = ExtrapolatedPositions<kBS>(cfg);
+    auto const refPos = BroadcastNodeValues<kBS>(cfg.refPositions);
     auto const disp = BroadcastNodeValues<kBS>(cfg.displacements);
     auto const res = MembraneResidual<kBS>(refPos, disp);
     auto const dres = MembraneDResidual<kBS>(refPos, disp);
@@ -1227,7 +1228,7 @@ static void VerifyBendingResidualHelpers() {
 
   for (auto const& cfg : MakeHelperConfigs()) {
     auto const stencilGlobalNodes = BroadcastStencilNodes<kBS>(cfg.globalNodeIndices);
-    auto const refPos = ExtrapolatedPositions<kBS>(cfg);
+    auto const refPos = BroadcastNodeValues<kBS>(cfg.refPositions);
     auto const disp = BroadcastNodeValues<kBS>(cfg.displacements);
     auto const res = BendingResidual<kBS>(stencilGlobalNodes, refPos, disp);
 
@@ -1667,14 +1668,24 @@ TEST(ShellWork, MembraneMatchesClosedForm) {
   }
 }
 
-TEST(ShellWork, BendingEnergyInvariantUnderCentralNodePermutations) {
+// The bending energy depends only on the stencil's shape. The translation keeps reference positions
+// exact, so it changes no edge, but it moves a small, nearly flat stencil far from the local
+// origin, where adding displacements to positions would round its dihedral. Translating the
+// reference positions and displacements of a stencil with missing hinges by 1 keeps tilts of ε
+// exact, but extrapolating the missing hinge positions would round them away.
+TEST(ShellWork, BendingEnergyInvariantUnderCentralNodePermutationsAndTranslation) {
   auto const cfg = MakeInteriorConfig();
   ShellFdOptions options;
   options.membraneLambda = 0_r;
   options.membraneMu = 0_r;
+  auto const energy = [&](ShellStencilConfig const& stencil) {
+    return RunShell(
+               ShellHarness<1>(BroadcastConfig<1>(stencil), options),
+               {.energy = true, .residual = false, .dresidual = false})
+        .energy[0];
+  };
 
-  ShellHarness<1> const referenceHarness(BroadcastConfig<1>(cfg), options);
-  double const referenceEnergy = RunShell(referenceHarness, {.energy = true}).energy[0];
+  double const referenceEnergy = energy(cfg);
   EXPECT_NE(referenceEnergy, 0.0);
 
   std::array<int, kTriangleNodes> permutation = {0, 1, 2};
@@ -1682,10 +1693,41 @@ TEST(ShellWork, BendingEnergyInvariantUnderCentralNodePermutations) {
     SCOPED_TRACE(
         testing::Message() << "permutation = {" << permutation[0] << ", " << permutation[1] << ", "
                            << permutation[2] << "}");
-    auto const permutedCfg = PermuteCentralNodes(cfg, permutation);
-    ShellHarness<1> const permutedHarness(BroadcastConfig<1>(permutedCfg), options);
-    double const permutedEnergy = RunShell(permutedHarness, {.energy = true}).energy[0];
-    ExpectNearEnergy(referenceEnergy, permutedEnergy);
+    ExpectNearEnergy(referenceEnergy, energy(PermuteCentralNodes(cfg, permutation)));
+  }
+
+  real constexpr kEdgeLength = 0x1p-7_r;
+  ShellStencilConfig nearlyFlat = cfg;
+  for (int n = 0; n < kBendingStencilNodes; ++n) {
+    nearlyFlat.refPositions[n] = kEdgeLength * cfg.refPositions[n];
+    nearlyFlat.displacements[n] = Real3{};
+  }
+  nearlyFlat.displacements[3][2] = 1e-3_r * kEdgeLength;
+  ShellStencilConfig translated = nearlyFlat;
+  for (Real3& position : translated.refPositions) {
+    position += Real3{10_r, -10_r, 10_r};
+  }
+  ShellStencilConfig boundary = WithBoundary35(nearlyFlat);
+  boundary.refPositions[1][2] = std::numeric_limits<real>::epsilon();
+  boundary.displacements = {};
+  boundary.displacements[1][2] = std::numeric_limits<real>::epsilon();
+  ShellStencilConfig translatedBoundary = boundary;
+  for (int n = 0; n < kBendingStencilNodes; ++n) {
+    translatedBoundary.refPositions[n] += Real3{1_r, -1_r, 1_r};
+    translatedBoundary.displacements[n] += Real3{1_r, -1_r, 1_r};
+  }
+  double constexpr kTol = 16.0 * std::numeric_limits<real>::epsilon();
+  auto const expectEqualEnergies = [&](ShellStencilConfig const& stencil,
+                                       ShellStencilConfig const& moved) {
+    double const stencilEnergy = energy(stencil);
+    EXPECT_GT(stencilEnergy, 0.0);
+    EXPECT_NEAR(stencilEnergy, energy(moved), kTol * stencilEnergy);
+  };
+  options.stageStartDispScale = 0.5_r;
+  for (real const dampingFactor : {0_r, 3_r}) {
+    options.stiffnessDampingFactor = dampingFactor;
+    expectEqualEnergies(nearlyFlat, translated);
+    expectEqualEnergies(boundary, translatedBoundary);
   }
 }
 
@@ -1796,6 +1838,9 @@ TEST(ShellWork, EnergyResidualFdWithStiffnessDampingBendingOnly) {
   options.checkResidualDResidual = false;
   options.membraneLambda = 0_r;
   options.membraneMu = 0_r;
+  // With bending alone, the finite differences' FP32 rounding error (∝ 1/step) dominates their
+  // truncation error (∝ step²) at the default step, so a larger step balances the two.
+  options.fdStep = MOCHI_USE_DOUBLE_PRECISION ? 1e-6_r : 3e-3_r;
   options.stiffnessDampingFactor = 3_r;
   options.stageStartDispScale = 0.5_r;
   VerifyShellFdCanonicalConfigs(options);

@@ -32,7 +32,7 @@ static real constexpr kMembraneCollapseBarrierDResEps =
 /// @brief Gather 6-node bending stencil positions into batched layout.
 ///
 /// @warning Sentinel nodes (globalIdx == kSentinelIndex) are mapped to meshNodes[0], producing
-/// invalid positions. Callers must follow with @ref ExtrapolateStencilPositions to overwrite them.
+/// invalid positions. Callers must overwrite their edges with @ref ExtrapolateStencilEdges.
 template <int kBatchSize>
 static MOCHI_FORCE_INLINE void GatherStencilPositions(
     Span<Real3 const> meshNodes,
@@ -54,6 +54,22 @@ static MOCHI_FORCE_INLINE void GatherStencilPositions(
         outPos[n * kSpaceDim3 + 1],
         outPos[n * kSpaceDim3 + 2]);
   }
+}
+
+/// @brief Edge vectors of the displaced stencil, as reference edges plus displacement edges.
+///
+/// @details Unlike the edges of X + u, this keeps small displacements from being rounded to the
+/// precision of large reference positions X.
+template <int kBatchSize>
+static MOCHI_FORCE_INLINE NdArray<BatchReal3<kBatchSize>, kBendingStencilNodes>
+DisplacedEdgeVectors(
+    NdArray<int, kBendingStencilNodes, kBatchSize> const& stencilGlobalNodes,
+    NdArray<BatchReal3<kBatchSize>, kBendingStencilNodes> const& refEdges,
+    NdArray<BatchReal<kBatchSize>, kBendingStencilDofs> const& disp) {
+  auto edges = EdgeVectors<kBatchSize>(disp);
+  edges += refEdges;
+  ExtrapolateStencilEdges<kBatchSize>(stencilGlobalNodes, edges);
+  return edges;
 }
 
 template <int kBatchSize>
@@ -104,24 +120,17 @@ bool ShellWork(
   V const effBeta = V{1_r + effFactor} * vBeta;
   real const ssWeight = effFactor > 0_r ? effFactor / (1_r + effFactor) : 0_r;
 
-  // Gather and extrapolate positions.
-  // NOTE: Sentinel hinge positions are invalid after gathering (mapped to an arbitrary mesh node)
-  // and must be overwritten by ExtrapolateStencilPositions before use.
+  // Gather positions and form their edges.
+  // NOTE: Sentinel hinge positions are invalid after gathering (mapped to an arbitrary mesh node),
+  // and so are their edges until overwritten by ExtrapolateStencilEdges.
   NdArray<V, kBendingStencilDofs> refPosX MOCHI_NO_INIT;
   GatherStencilPositions<kBatchSize>(meshNodes, stencilGlobalNodes, refPosX);
-  // Save pre-extrapolation reference positions for stage-start bending curvature computation.
-  NdArray<V, kBendingStencilDofs> refPosXPreExtrap MOCHI_NO_INIT;
-  if (hasDamping) {
-    refPosXPreExtrap = refPosX;
-  }
-
-  NdArray<V, kBendingStencilDofs> curPosX = refPosX + disp;
-  ExtrapolateStencilPositions<kBatchSize>(stencilGlobalNodes, refPosX);
-  ExtrapolateStencilPositions<kBatchSize>(stencilGlobalNodes, curPosX);
+  auto refEdges = EdgeVectors<kBatchSize>(refPosX);
+  ExtrapolateStencilEdges<kBatchSize>(stencilGlobalNodes, refEdges);
 
   // Reference-configuration midsurface metric tensor. Clamp detA to avoid 1/0 → NaN in padding
   // lanes where all positions are zero (det = 0).
-  V2x2 const A = Metric<kBatchSize>(refPosX);
+  V2x2 const A = Metric<kBatchSize>(refEdges);
   V const detA = Max(Det(A), V{std::numeric_limits<real>::min()});
   V const refArea = V{0.5_r} * Sqrt(detA);
   V2x2 const AInv = Invert(A, detA);
@@ -140,7 +149,7 @@ bool ShellWork(
   }
 
   // Compute current edge vectors (shared by energy, residual, and derivative paths).
-  auto const curEdges = EdgeVectors<kBatchSize>(curPosX);
+  auto const curEdges = DisplacedEdgeVectors<kBatchSize>(stencilGlobalNodes, refEdges, disp);
 
   // When both b and db_dv are needed from curEdges, use fused function to share normals.
   bool const needCurB = (evalObj || evalRes);
@@ -165,7 +174,6 @@ bool ShellWork(
   if (needCurB) {
     // TODO: The second fundamental forms are independent of the unknown current solution and could
     // be precomputed.
-    auto const refEdges = EdgeVectors<kBatchSize>(refPosX);
     auto const B = SecondFundamentalForm<kBatchSize>(refEdges);
     V2x2 const kappa = B - curB;
     s = Dot(AInv, kappa);
@@ -173,9 +181,8 @@ bool ShellWork(
 
     if (hasDamping) {
       // Stage-start bending curvature.
-      NdArray<V, kBendingStencilDofs> curPosXStageStart = refPosXPreExtrap + *stageStartDisp;
-      ExtrapolateStencilPositions<kBatchSize>(stencilGlobalNodes, curPosXStageStart);
-      auto const curEdgesStageStart = EdgeVectors<kBatchSize>(curPosXStageStart);
+      auto const curEdgesStageStart =
+          DisplacedEdgeVectors<kBatchSize>(stencilGlobalNodes, refEdges, *stageStartDisp);
       auto const curBStageStart = SecondFundamentalForm<kBatchSize>(curEdgesStageStart);
       V2x2 const kappaStageStart = B - curBStageStart;
       V2x2 const sStageStart = Dot(AInv, kappaStageStart);
@@ -198,7 +205,7 @@ bool ShellWork(
   BatchSymMatrix3x3<kBatchSize> d2psi_deps2 MOCHI_NO_INIT;
   if (needDerivs) {
     db_dx = DSecondFundamentalFormDx<kBatchSize>(db_dv_edges, stencilGlobalNodes);
-    da_dx = DMetricDx<kBatchSize>(curPosX);
+    da_dx = DMetricDx<kBatchSize>(curEdges);
     dpsi_da = V{0.5_r} * DPsiSVK<kBatchSize>(epsilonEff, AInv, effLambda, effMu);
   }
   if (evalDRes) {
@@ -237,7 +244,7 @@ bool ShellWork(
     // With mixed C = A⁻¹a = I + 2ε, g = −2 tr(adj(C)·ε) / det C. Taking adj(C) from the current
     // metric and det C = |e₀ × e₁|² / det A from the current edges keeps g accurate both near the
     // reference configuration (small ε) and near collapse (small C).
-    V2x2 const C = Dot(AInv, Metric<kBatchSize>(curPosX));
+    V2x2 const C = Dot(AInv, Metric<kBatchSize>(curEdges));
     V2x2 const adjC = Transpose(Cofactor(C));
     V const detC = NormSqr(Cross(curEdges[0], curEdges[2])) / detA;
 

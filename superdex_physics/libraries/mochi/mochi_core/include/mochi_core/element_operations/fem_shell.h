@@ -96,34 +96,6 @@ inline NdArray<int, kBendingStencilNodes> GlobalStencilIndices(
 }
 
 /**************************************************************************************************
-  Position helpers.
-*/
-
-template <int kBatchSize>
-MOCHI_FORCE_INLINE void ExtrapolateStencilPositions(
-    NdArray<int, kBendingStencilNodes, kBatchSize> const& stencilGlobalNodes,
-    NdArray<BatchReal<kBatchSize>, kBendingStencilDofs>& outPos) {
-  using V = BatchReal<kBatchSize>;
-  alignas(alignof(V)) real staging[V::kSize]{};
-  // Triangle vertices in cyclic order. The hinge node opposite v0 lives at stencil slot (v0 +
-  // kTriangleNodes). When missing it is extrapolated as x[v1] + x[v2] - x[v0].
-  for (auto const& v : {Int3{0, 1, 2}, Int3{1, 2, 0}, Int3{2, 0, 1}}) {
-    for (int b = 0; b < kBatchSize; ++b) {
-      staging[b] = (stencilGlobalNodes[v[0] + kTriangleNodes][b] == kSentinelIndex) ? 1_r : 0_r;
-    }
-    V const isMissing = (Load<V>(staging) > V{0_r});
-    int const hingeIdx = (v[0] + kTriangleNodes) * kSpaceDim3;
-    Int3 const vIdx = v * kSpaceDim3;
-    for (int d = 0; d < kSpaceDim3; ++d) {
-      outPos[hingeIdx + d] = Select(
-          isMissing,
-          outPos[vIdx[1] + d] + outPos[vIdx[2] + d] - outPos[vIdx[0] + d],
-          outPos[hingeIdx + d]);
-    }
-  }
-}
-
-/**************************************************************************************************
   Metric tensor and strain.
 */
 
@@ -147,26 +119,24 @@ template <int kBatchSize>
       Dot(E1 + V{0.5_r} * du1, du1));
 }
 
+/// @brief Metric tensor of the central triangle, from the stencil edge vectors of
+/// @ref EdgeVectors: e0 = x1 - x0 = v[0] and e1 = x2 - x0 = -v[2].
 template <int kBatchSize>
 [[nodiscard]] MOCHI_FORCE_INLINE BatchReal2x2<kBatchSize> Metric(
-    NdArray<BatchReal<kBatchSize>, kBendingStencilDofs> const& pos) {
-  BatchReal3<kBatchSize> e0 MOCHI_NO_INIT, e1 MOCHI_NO_INIT;
-  for (int d = 0; d < kSpaceDim3; ++d) {
-    e0[d] = pos[1 * kSpaceDim3 + d] - pos[0 * kSpaceDim3 + d];
-    e1[d] = pos[2 * kSpaceDim3 + d] - pos[0 * kSpaceDim3 + d];
-  }
+    NdArray<BatchReal3<kBatchSize>, kBendingStencilNodes> const& v) {
+  BatchReal3<kBatchSize> const& e0 = v[0];
+  BatchReal3<kBatchSize> const e1 = -v[2];
   return SymMatrix2x2(Dot(e0, e0), Dot(e0, e1), Dot(e1, e1));
 }
 
+/// @brief Derivative of @ref Metric with respect to the triangle node positions, from the stencil
+/// edge vectors of @ref EdgeVectors.
 template <int kBatchSize>
 [[nodiscard]] MOCHI_FORCE_INLINE NdArray<BatchSymMatrix2x2<kBatchSize>, kTriangleNodes, kSpaceDim3>
-DMetricDx(NdArray<BatchReal<kBatchSize>, kBendingStencilDofs> const& pos) {
+DMetricDx(NdArray<BatchReal3<kBatchSize>, kBendingStencilNodes> const& v) {
   using V = BatchReal<kBatchSize>;
-  BatchReal3<kBatchSize> e0 MOCHI_NO_INIT, e1 MOCHI_NO_INIT;
-  for (int d = 0; d < kSpaceDim3; ++d) {
-    e0[d] = pos[1 * kSpaceDim3 + d] - pos[0 * kSpaceDim3 + d];
-    e1[d] = pos[2 * kSpaceDim3 + d] - pos[0 * kSpaceDim3 + d];
-  }
+  BatchReal3<kBatchSize> const& e0 = v[0];
+  BatchReal3<kBatchSize> const e1 = -v[2];
   NdArray<BatchSymMatrix2x2<kBatchSize>, kTriangleNodes, kSpaceDim3> da_dx MOCHI_NO_INIT;
   V const two{2_r};
   for (int i = 0; i < kSpaceDim3; ++i) {
@@ -497,9 +467,10 @@ MOCHI_FORCE_INLINE void AddMembraneCollapseBarrierDResidual(
 /// @brief Compute the 6 edge vectors of a bending stencil for a batch of elements.
 ///
 /// @details Edges 0–2 are the triangle edges (v[i] = x_{(i+1)%3} - x_i), edges 3–5 connect triangle
-/// vertices to their opposite hinge nodes (v[i+3] = x_{i+3} - x_{(i+1)%3}).
+/// vertices to their opposite hinge nodes (v[i+3] = x_{i+3} - x_{(i+1)%3}). Edges to missing hinge
+/// nodes are invalid until set by @ref ExtrapolateStencilEdges.
 ///
-/// @param[in] pos  Batched 18-DoF position vector (6 nodes × 3 spatial, extrapolated).
+/// @param[in] pos  Batched 18-DoF position vector (6 nodes × 3 spatial).
 /// @return Per-edge batched 3-vectors, indexed as result[edge][dim].
 template <int kBatchSize>
 [[nodiscard]] MOCHI_FORCE_INLINE NdArray<BatchReal3<kBatchSize>, kBendingStencilNodes> EdgeVectors(
@@ -513,6 +484,30 @@ template <int kBatchSize>
     }
   }
   return v;
+}
+
+/// @brief Overwrite the edges of @ref EdgeVectors to missing hinge nodes with those of their
+/// extrapolated positions.
+///
+/// @details A missing hinge node is extrapolated as x_{i+3} = x_{(i+1)%3} + x_{(i+2)%3} - x_i, so
+/// its edge v[i+3] = x_{(i+2)%3} - x_i = -v[(i+2)%3]. Negating the triangle edge is exact, while
+/// extrapolating the position would round it to the precision of the positions.
+template <int kBatchSize>
+MOCHI_FORCE_INLINE void ExtrapolateStencilEdges(
+    NdArray<int, kBendingStencilNodes, kBatchSize> const& stencilGlobalNodes,
+    NdArray<BatchReal3<kBatchSize>, kBendingStencilNodes>& outEdges) {
+  using V = BatchReal<kBatchSize>;
+  alignas(alignof(V)) real staging[V::kSize]{};
+  for (int i = 0; i < kTriangleNodes; ++i) {
+    for (int b = 0; b < kBatchSize; ++b) {
+      staging[b] = (stencilGlobalNodes[i + kTriangleNodes][b] == kSentinelIndex) ? 1_r : 0_r;
+    }
+    V const isMissing = (Load<V>(staging) > V{0_r});
+    for (int d = 0; d < kSpaceDim3; ++d) {
+      outEdges[i + kTriangleNodes][d] =
+          Select(isMissing, -outEdges[(i + 2) % 3][d], outEdges[i + kTriangleNodes][d]);
+    }
+  }
 }
 
 /// @brief Kelvin inversion (inversion in the unit sphere) of a batched 3-vector: v / |v|^2.
