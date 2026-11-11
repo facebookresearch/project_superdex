@@ -599,6 +599,7 @@ void IKEditor::PrepareOutputBot() {
 }
 
 void IKEditor::RestageBots() {
+  _displayedInputPose.reset();
   if (!_prepared || !_viewport) {
     return;
   }
@@ -638,6 +639,7 @@ void IKEditor::RestageBots() {
 }
 
 void IKEditor::PrepareInputBot() {
+  _displayedInputPose.reset();
   auto const& config = _ikAsset->GetConfig();
   if (config.inputBot.empty()) {
     return;
@@ -659,6 +661,7 @@ void IKEditor::PrepareInputBot() {
 }
 
 void IKEditor::CancelRecording() {
+  _displayedInputPose.reset();
   if (_recordingTasks) {
     _recordingTasks->Cancel(1);
   }
@@ -922,6 +925,7 @@ void IKEditor::ShowRecordingControls() {
 }
 
 void IKEditor::UpdateInputBotPose() {
+  _displayedInputPose.reset();
   auto const* inputBot = _preview.GetInputBot();
   if (!_prepared || !inputBot) {
     return;
@@ -980,6 +984,95 @@ void IKEditor::UpdateInputBotPose() {
       std::array<SkinnedPoseUpdate, 1> const updates{std::move(update)};
       _inputBotStage.ApplySkinnedPose(mochi::MakeConstSpan(updates), converter);
     }
+  }
+  bool const staged = !_worldFrameFromInputLinkFrames.empty() &&
+      _inputBotStagedLinkNames.size() == inputBot->links.size() &&
+      _worldFrameFromInputLinkFrames.size() == inputBot->links.size() &&
+      std::any_of(
+          _inputBotStage.GetActors().begin(),
+          _inputBotStage.GetActors().end(),
+          [](auto const& actor) { return actor.sceneObject != nullptr; });
+  if (staged && _inputBotDiagnostic.empty()) {
+    // Capture exactly the q/root just applied above. Do not sample the playback clock on click.
+    auto const positions = inputBotConfiguration.empty()
+        ? mochi::MakeConstSpan(inputBot->defaultPose)
+        : inputBotConfiguration;
+    _displayedInputPose = IKInputPoseSnapshot{
+        mochi::DynamicArray<mochi::real>{positions}, _worldFrameFromInputLinkFrames.front()};
+  }
+}
+
+bool IKEditor::CanSnapshotInputBotPose(BotIKConfig& candidate, std::string& diagnostic) const {
+  diagnostic.clear();
+  if (IsReadOnly()) {
+    diagnostic = "Read-only document";
+    return false;
+  }
+  auto const& config = _ikAsset->GetConfig();
+  if (!_prepared || !_preview.GetInputBot() || !_displayedInputPose || _inputBotSnapshot.empty() ||
+      _observedInputBotReference != config.inputBot ||
+      _observedOutputBotReference != config.outputBot ||
+      _observedDocumentPath != _ikAsset->GetPath()) {
+    diagnostic = "No complete input viewport pose for the current bot and document";
+    return false;
+  }
+  // Inspect only existing live assets: no rebuild/load from a capture availability check.
+  // Same-reference model edits must not let an old staged pose be authored against a new model.
+  auto const* inputAsset =
+      _studio->GetAssetManager().FindAssetByPath<BotAsset>(_ikAsset->GetInputBotPath());
+  auto const* outputAsset =
+      _studio->GetAssetManager().FindAssetByPath<BotAsset>(_ikAsset->GetOutputBotPath());
+  if (!inputAsset || !outputAsset || !inputAsset->IsBuildOk() || !inputAsset->IsValidateOk() ||
+      !outputAsset->IsBuildOk() || !outputAsset->IsValidateOk() ||
+      SReflect::ToJsonString(inputAsset->GetBotPrefab(), false) != _inputBotSnapshot ||
+      SReflect::ToJsonString(outputAsset->GetBotPrefab(), false) != _outputBotSnapshot) {
+    diagnostic = "Input or output model changed; refresh the IK editor before taking a snapshot";
+    return false;
+  }
+  if (!config.outputBotConfiguration.empty() &&
+      mochi::isize(config.outputBotConfiguration) != _preview.GetOutputBot()._numDofs) {
+    diagnostic = "Output joint configuration does not match the prepared bot";
+    return false;
+  }
+  return BuildIKInputPoseSnapshot(
+      config,
+      _preview.GetInputBot(),
+      *_displayedInputPose,
+      _preview.GetWorldFrameFromOutputBaseFrame(),
+      candidate,
+      diagnostic);
+}
+
+void IKEditor::SnapshotInputBotPose() {
+  if (IsReadOnly()) {
+    return;
+  }
+  BotIKConfig candidate;
+  std::string diagnostic;
+  if (!CanSnapshotInputBotPose(candidate, diagnostic)) {
+    _editDiagnostic = std::move(diagnostic);
+    return;
+  }
+  auto& config = _ikAsset->GetConfig();
+  bool const changed = config.inputBotConfiguration != candidate.inputBotConfiguration ||
+      config.outputBaseFrameFromInputBaseFrame != candidate.outputBaseFrameFromInputBaseFrame;
+  if (changed) {
+    PushUndoSnapshot(); // Commit any preceding drag separately from this atomic input-only edit.
+    config.inputBotConfiguration = std::move(candidate.inputBotConfiguration);
+    config.outputBaseFrameFromInputBaseFrame = candidate.outputBaseFrameFromInputBaseFrame;
+  }
+  // Do not StopPreview: its output-seed restoration would discard the visible output solve.
+  // Restarting from the first cursor also avoids applying the captured wrist delta twice.
+  _recordingClock.Stop();
+  _recordingOwnsPose = false;
+  _recordingPose.reset();
+  _resumeRecording = false;
+  _running = false;
+  if (changed) {
+    MarkEdited(true);
+  } else {
+    UpdateInputBotPose();
+    UpdateMarkers();
   }
 }
 
@@ -2092,10 +2185,15 @@ void IKEditor::ShowSolverWindow(bool* open) {
         "Maps the input bot's base frame into the output bot's initial base frame.");
     ImGui::TextWrapped("Click the input bot in the viewport to select, translate, or rotate it.");
     ImGui::EndDisabled();
-    if (auto const* inputBot = _preview.GetInputBot();
-        inputBot && ImGui::CollapsingHeader("Input Bot Pose")) {
-      ImGui::PushID("InputBotPose");
-      ImGui::BeginDisabled(IsReadOnly() || _recordingOwnsPose);
+    if (!_inputBotDiagnostic.empty()) {
+      ImGui::TextWrapped("%s", _inputBotDiagnostic.c_str());
+    }
+  }
+  if (ImGui::CollapsingHeader("Input Bot Pose")) {
+    ImGui::PushID("InputBotPose");
+    auto const* inputBot = _preview.GetInputBot();
+    ImGui::BeginDisabled(IsReadOnly() || _recordingOwnsPose || !inputBot);
+    if (inputBot) {
       auto pose = config.inputBotConfiguration.empty() ? inputBot->defaultPose
                                                        : config.inputBotConfiguration;
       if (ImGui::JointPoseEditor(*inputBot, pose)) {
@@ -2115,17 +2213,30 @@ void IKEditor::ShowSolverWindow(bool* open) {
           _editDiagnostic = error.GetDescription();
         }
       }
-      if (ImGui::Button("Reset Input Bot Pose")) {
-        PushUndoSnapshot();
-        config.inputBotConfiguration.clear();
-        MarkEdited(true);
+    }
+    if (ImGui::Button("Reset Input Bot Pose")) {
+      PushUndoSnapshot();
+      config.inputBotConfiguration.clear();
+      MarkEdited(true);
+    }
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    BotIKConfig snapshotCandidate;
+    std::string snapshotDiagnostic;
+    ImGui::BeginDisabled(!CanSnapshotInputBotPose(snapshotCandidate, snapshotDiagnostic));
+    if (ImGui::Button("Snapshot Input Bot Pose")) {
+      SnapshotInputBotPose();
+    }
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+      if (snapshotDiagnostic.empty()) {
+        ImGui::SetTooltip(
+            "Capture displayed input pose into document and stop playback; recording selection kept.");
+      } else {
+        ImGui::SetTooltip("%s", snapshotDiagnostic.c_str());
       }
-      ImGui::EndDisabled();
-      ImGui::PopID();
     }
-    if (!_inputBotDiagnostic.empty()) {
-      ImGui::TextWrapped("%s", _inputBotDiagnostic.c_str());
-    }
+    ImGui::EndDisabled();
+    ImGui::PopID();
   }
   ImGui::SeparatorText("Creation and Numerical Settings");
   ImGui::BeginDisabled(IsReadOnly());

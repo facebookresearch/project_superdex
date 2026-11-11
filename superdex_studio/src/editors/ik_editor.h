@@ -73,6 +73,8 @@ class IKEditor : public AssetEditor {
   void RestageBots();
   void PrepareInputBot();
   void UpdateInputBotPose();
+  bool CanSnapshotInputBotPose(BotIKConfig& candidate, std::string& diagnostic) const;
+  void SnapshotInputBotPose();
   void CancelRecording();
   void SyncRecording(bool force = false, bool checkFile = false);
   void SampleRecording();
@@ -114,6 +116,8 @@ class IKEditor : public AssetEditor {
   IKPreviewSession _preview;
   mochi::DynamicArray<mochi::TransformRT> _authoredOutputBaseFrameFromLinkFrames;
   mochi::DynamicArray<mochi::TransformRT> _worldFrameFromInputLinkFrames;
+  // Owned only after a successful stage application; invalidated on rebind, restage, or bad FK.
+  std::optional<IKInputPoseSnapshot> _displayedInputPose;
   mochi::DynamicArray<std::string> _inputBotStagedLinkNames;
   bool _selectInputBotRoot = false;
   std::string _inputBotDiagnostic;

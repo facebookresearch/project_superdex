@@ -127,6 +127,67 @@ bool ComputeOutputBotLinks(
 
 } // namespace
 
+bool BuildIKInputPoseSnapshot(
+    BotIKConfig const& config,
+    BotPrefab const* inputBot,
+    IKInputPoseSnapshot const& displayedPose,
+    TransformRT const& worldFrameFromOutputBaseFrame,
+    BotIKConfig& candidate,
+    std::string& diagnostic) {
+  diagnostic.clear();
+  if (!inputBot || config.inputBot.empty() || inputBot->links.empty() || inputBot->_numDofs < 0 ||
+      inputBot->joints.size() != inputBot->links.size() ||
+      isize(inputBot->_dofIndices) != inputBot->_numDofs) {
+    diagnostic = "Snapshot requires a prepared input bot";
+    return false;
+  }
+  if (!ValidatePrepared(*inputBot, diagnostic)) {
+    return false;
+  }
+  if (isize(displayedPose.inputBotConfiguration) != inputBot->_numDofs) {
+    diagnostic = "Displayed input pose does not contain the complete joint configuration";
+    return false;
+  }
+  auto const validFrame = [](TransformRT const& frame) {
+    return IsFinite(frame) && NearEqual(Norm(frame.GetRotation().ToReal4()), real(1), real(1e-4));
+  };
+  if (!validFrame(worldFrameFromOutputBaseFrame) ||
+      !validFrame(displayedPose.worldFrameFromInputBaseFrame)) {
+    diagnostic = "Snapshot requires finite unit-rotation input and authored output frames";
+    return false;
+  }
+  DynamicArray<TransformRT> links;
+  Error error;
+  ComputeIKInputBotTransforms(
+      *inputBot,
+      displayedPose.inputBotConfiguration,
+      displayedPose.worldFrameFromInputBaseFrame,
+      config.inputBotScale,
+      links,
+      error);
+  if (!error.IsOK() || links.size() != inputBot->links.size()) {
+    diagnostic = error.IsOK() ? "Displayed input pose has incomplete forward kinematics"
+                              : error.GetDescription();
+    return false;
+  }
+  BotIKConfig next = config;
+  next.inputBotConfiguration = displayedPose.inputBotConfiguration;
+  next.outputBaseFrameFromInputBaseFrame = NormalizeRotation(
+      Invert(worldFrameFromOutputBaseFrame) * displayedPose.worldFrameFromInputBaseFrame);
+  // A repeated capture should not create an undo entry from floating-point anchor roundtrips.
+  if (NearEqual(
+          next.outputBaseFrameFromInputBaseFrame,
+          config.outputBaseFrameFromInputBaseFrame,
+          real(1e-6))) {
+    next.outputBaseFrameFromInputBaseFrame = config.outputBaseFrameFromInputBaseFrame;
+  }
+  if (!ValidateIKConfig(next, diagnostic)) {
+    return false;
+  }
+  candidate = std::move(next);
+  return true;
+}
+
 bool IKPreviewSession::Prepare(BotPrefab const& outputBot, std::string& diagnostic) {
   diagnostic.clear();
   if (!ValidatePrepared(outputBot, diagnostic)) {

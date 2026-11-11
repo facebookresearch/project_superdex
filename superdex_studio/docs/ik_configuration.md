@@ -128,6 +128,26 @@ recording. While recording playback owns the pose, **Input Bot Pose**, its reset
 while paused or single-stepping. **Stop** restores pose authoring; goals
 and uniform retarget scale remain editable.
 
+**Snapshot Input Bot Pose**, beside **Reset Input Bot Pose**, captures the input pose
+currently applied in the main viewport into the IK document. It remains available
+while recording playback is running or paused; read-only documents, missing input
+models, and incomplete or invalid displayed poses disable it. A manual default pose
+is materialized as explicit joint coordinates.
+
+The snapshot writes only `inputBotConfiguration` and
+`outputBaseFrameFromInputBaseFrame`, using the output bot's authored initial base
+anchor, not its solved floating root. It does not scale joint values, change the
+input scale or model default, copy the output solve, or modify any goal/coupling.
+Both input fields are one undo/redo edit and survive save/reopen without a recording
+reference in the document. Repeating an already-authored pose adds no undo entry.
+
+Snapshot stops playback and returns the input pose controls to authoring, but keeps
+the selected RRD, loaded clip, local recording preference, and current output
+preview. The playback cursor returns to the first sample; the next Run uses the
+captured root as its new authored anchor without applying the previous wrist delta
+twice. Reset remains disabled while recording playback owns the pose. Snapshot does
+not infer tracking confidence from simulated recording poses.
+
 For each selected IK goal, choose an **Input Bot Link** or **Output Bot Base**.
 A bound goal resolves through `worldFrameFromOutputBaseFrame * outputBaseFrameFromInputBaseFrame`, the input
 bot's forward kinematics, and `baseOrInputLinkFrameFromConstraintFrame`. The retarget scale multiplies the

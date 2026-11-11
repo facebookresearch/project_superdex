@@ -952,6 +952,49 @@ TEST(IKRecordingClipTest, LoadsUserSceneRecordingAndReadsBackNativeQAndRootForEa
     std::cout << "\n";
   }
 }
+TEST(IKRecordingClipTest, SnapshotFixtureUsesNativeFreeRootAndUnscaledPrismaticQ) {
+  auto inputBot = Robot(1);
+  inputBot.joints[1].type = ArticulatedJointType::Prismatic;
+  inputBot.joints[1].axis = Real3{1_r, 0_r, 0_r};
+  inputBot.scale = 2_r;
+  RebuildBotData(inputBot, test::ExpectOK{});
+  inputBot.defaultPose = {0.05_r};
+  auto first = Sample(0, 0, 0.15, 1);
+  auto middle = Sample(10'000'000'000LL, 1, 0.45, 1);
+  auto last = Sample(20'000'000'000LL, 2, 0.7, 1);
+  first.translation = middle.translation = last.translation = {2, 3, 4};
+  middle.positions[0] = 0.3;
+  middle.positions[1] = 0.2;
+  middle.positions[2] = 0.1;
+  middle.positions[5] = 0.4;
+  last.positions[0] = 0.5;
+  last.positions[1] = -0.1;
+  last.positions[2] = 0.2;
+  last.positions[5] = 0.7;
+  Fixture file;
+  file.Write({first, middle, last}, Meta(inputBot));
+  auto clip = file.Good(inputBot);
+  ASSERT_NE(clip, nullptr);
+  auto const* sample = clip->SampleAt(middle.time);
+  ASSERT_NE(sample, nullptr);
+  EXPECT_EQ(sample->inputBotConfiguration, (DynamicArray<real>{0.45_r}));
+  TransformRT const authored{Quaternion::RotationY(0.35_r), Real3{0.4_r, 0.2_r, 0.5_r}};
+  TransformRT const delta{Quaternion::RotationZ(0.4_r), Real3{0.3_r, 0.2_r, 0.1_r}};
+  EXPECT_TRUE(NearEqual(clip->InputBotRoot(*sample, authored, false), authored * delta, 1e-5_r));
+  EXPECT_EQ(clip->InputBotRoot(*sample, authored, true), authored);
+  // Opt-in export is scratch-only test data for the editor's live snapshot regression.
+  // Ordinary CI writes only the Fixture's isolated temporary directory.
+  if (auto const* directory = std::getenv("SUPERDEX_STUDIO_SNAPSHOT_FIXTURE_DIR");
+      directory && *directory) {
+    auto const destination = std::filesystem::u8path(directory);
+    std::filesystem::create_directories(destination);
+    std::filesystem::copy_file(
+        file.path,
+        destination / "snapshot-input.rrd",
+        std::filesystem::copy_options::overwrite_existing);
+  }
+}
+
 using Clock = IKRecordingClock::Clock;
 Clock::time_point Now(int64_t ns) {
   return Clock::time_point{std::chrono::nanoseconds{ns}};

@@ -1390,4 +1390,235 @@ TEST_F(IKPreviewTest, InputBotOverride_InvalidInputsPreserveSolverDisplayAndDocu
   }
 }
 
+BotIKConfig SnapshotConfig() {
+  auto config = Config();
+  config.inputBot = "input.superdex_bot";
+  config.outputBotConfiguration = {-0.2_r, 0.35_r};
+  config.inputBotConfiguration = {0.1_r, 0.2_r};
+  config.inputBotScale = 3_r;
+  config.outputBaseFrameFromInputBaseFrame =
+      TransformRT{Quaternion::RotationX(0.15_r), Real3{0.1_r, -0.2_r, 0.3_r}};
+  config.goals[0].inputBotLink = "d_tip";
+  config.goals[0].linkFrameFromConstraintFrame =
+      TransformRT{Quaternion::RotationZ(-0.1_r), Real3{0.03_r, 0.04_r, 0.05_r}};
+  auto coupling = Coupling(-0.5_r);
+  coupling.enabled = false;
+  config.jointCouplings = {coupling};
+  return config;
+}
+
+TEST(IKInputPoseSnapshotTest, CopiesOnlyInputQAndRootWithoutScalingOrChangingModels) {
+  auto inputBot = Robot();
+  inputBot.scale = 2_r;
+  auto const model = SReflect::ToJsonString(inputBot, false);
+  auto const config = SnapshotConfig();
+  auto const original = SerializeStudioIKConfig(config);
+  TransformRT const outputAnchor{Quaternion::RotationY(0.3_r), Real3{1_r, 2_r, -3_r}};
+  TransformRT const relative{Quaternion::RotationZ(0.4_r), Real3{0.5_r, -0.3_r, 0.2_r}};
+  IKInputPoseSnapshot displayed{{0.45_r, 0.25_r}, outputAnchor * relative};
+  BotIKConfig candidate;
+  std::string diagnostic;
+  ASSERT_TRUE(
+      BuildIKInputPoseSnapshot(config, &inputBot, displayed, outputAnchor, candidate, diagnostic))
+      << diagnostic;
+  EXPECT_EQ(candidate.inputBotConfiguration, displayed.inputBotConfiguration);
+  EXPECT_TRUE(NearEqual(candidate.outputBaseFrameFromInputBaseFrame, relative, 1e-5_r));
+  EXPECT_EQ(candidate.inputBotScale, 3_r);
+  EXPECT_EQ(SReflect::ToJsonString(inputBot, false), model);
+  // Restoring the two permitted fields must restore the entire authored document.
+  candidate.inputBotConfiguration = config.inputBotConfiguration;
+  candidate.outputBaseFrameFromInputBaseFrame = config.outputBaseFrameFromInputBaseFrame;
+  EXPECT_EQ(SerializeStudioIKConfig(candidate), original);
+}
+
+TEST(IKInputPoseSnapshotTest, MaterializesDisplayedDefaultAndRepeatedCaptureIsAnAuthoredNoop) {
+  auto const inputBot = Robot();
+  auto config = SnapshotConfig();
+  config.inputBotConfiguration.clear();
+  auto const outputAnchor = Robot().worldFromRoot;
+  IKInputPoseSnapshot displayed{
+      inputBot.defaultPose, outputAnchor * config.outputBaseFrameFromInputBaseFrame};
+  BotIKConfig candidate;
+  std::string diagnostic;
+  ASSERT_TRUE(
+      BuildIKInputPoseSnapshot(config, &inputBot, displayed, outputAnchor, candidate, diagnostic))
+      << diagnostic;
+  EXPECT_EQ(candidate.inputBotConfiguration, inputBot.defaultPose);
+  EXPECT_EQ(candidate.outputBaseFrameFromInputBaseFrame, config.outputBaseFrameFromInputBaseFrame);
+  auto const saved = SerializeStudioIKConfig(candidate);
+  displayed.worldFrameFromInputBaseFrame =
+      outputAnchor * candidate.outputBaseFrameFromInputBaseFrame;
+  BotIKConfig repeated;
+  ASSERT_TRUE(
+      BuildIKInputPoseSnapshot(candidate, &inputBot, displayed, outputAnchor, repeated, diagnostic))
+      << diagnostic;
+  EXPECT_EQ(SerializeStudioIKConfig(repeated), saved);
+}
+
+TEST(IKInputPoseSnapshotTest, CandidateOwnsQAfterBorrowedRecordingSourceChanges) {
+  auto const inputBot = Robot();
+  auto const config = SnapshotConfig();
+  auto const outputAnchor = Robot().worldFromRoot;
+  IKInputPoseSnapshot displayed{{0.45_r, 0.25_r}, outputAnchor};
+  BotIKConfig candidate;
+  std::string diagnostic;
+  ASSERT_TRUE(
+      BuildIKInputPoseSnapshot(config, &inputBot, displayed, outputAnchor, candidate, diagnostic));
+  displayed.inputBotConfiguration[0] = -0.8_r;
+  displayed.inputBotConfiguration.clear();
+  EXPECT_EQ(candidate.inputBotConfiguration, (DynamicArray<real>{0.45_r, 0.25_r}));
+}
+
+TEST(IKInputPoseSnapshotTest, InvalidOrIncompletePosePreservesCandidateAndDocument) {
+  auto const inputBot = Robot();
+  auto const config = SnapshotConfig();
+  auto const original = SerializeStudioIKConfig(config);
+  auto const outputAnchor = Robot().worldFromRoot;
+  for (int fault = 0; fault < 12; ++fault) {
+    SCOPED_TRACE(fault);
+    auto badConfig = config;
+    auto anchor = outputAnchor;
+    IKInputPoseSnapshot displayed{{0.45_r, 0.25_r}, outputAnchor};
+    auto const* model = &inputBot;
+    if (fault == 0)
+      displayed.inputBotConfiguration.clear();
+    if (fault == 1)
+      displayed.inputBotConfiguration.push_back(0_r);
+    if (fault == 2)
+      displayed.inputBotConfiguration[0] = std::numeric_limits<real>::quiet_NaN();
+    if (fault == 3)
+      displayed.worldFrameFromInputBaseFrame.SetTranslation(
+          Real3{std::numeric_limits<real>::infinity(), 0_r, 0_r});
+    if (fault == 4)
+      displayed.worldFrameFromInputBaseFrame.SetRotation(Quaternion{0_r, 0_r, 0_r, 2_r});
+    if (fault == 5)
+      anchor.SetRotation(Quaternion{0_r, 0_r, 0_r, 0_r});
+    if (fault == 6)
+      anchor.SetTranslation(Real3{std::numeric_limits<real>::quiet_NaN(), 0_r, 0_r});
+    if (fault == 7)
+      badConfig.inputBotScale = 0_r;
+    if (fault == 8)
+      badConfig.goals[0].positionStiffness = -1_r;
+    if (fault == 9)
+      badConfig.inputBot.clear();
+    if (fault == 10)
+      model = nullptr;
+    if (fault == 11)
+      badConfig.version = 8;
+    auto candidate = Config(-0.6_r, 0.1_r);
+    auto const sentinel = SerializeStudioIKConfig(candidate);
+    std::string diagnostic;
+    EXPECT_FALSE(
+        BuildIKInputPoseSnapshot(badConfig, model, displayed, anchor, candidate, diagnostic));
+    EXPECT_FALSE(diagnostic.empty());
+    EXPECT_EQ(SerializeStudioIKConfig(candidate), sentinel);
+    EXPECT_EQ(SerializeStudioIKConfig(config), original);
+  }
+}
+
+TEST(IKInputPoseSnapshotTest, RejectsStalePreparedMetadataBeforeNativeFK) {
+  auto const config = SnapshotConfig();
+  auto const anchor = Robot().worldFromRoot;
+  IKInputPoseSnapshot displayed{{0.45_r, 0.25_r}, anchor};
+  for (int fault = 0; fault < 7; ++fault) {
+    SCOPED_TRACE(fault);
+    auto inputBot = Robot();
+    if (fault == 0)
+      inputBot.links[kTip].parentLink = kTip;
+    if (fault == 1)
+      inputBot.links[kTip]._index = 99;
+    if (fault == 2)
+      inputBot.links[kTip]._parentFromLink.SetTranslation(Real3{9_r, 0_r, 0_r});
+    if (fault == 3)
+      inputBot.links[kTip]._rootFromLink.SetTranslation(Real3{9_r, 0_r, 0_r});
+    if (fault == 4)
+      std::swap(inputBot._dofIndices[0], inputBot._dofIndices[1]);
+    if (fault == 5)
+      inputBot.links[0]._childrenIndices.clear();
+    if (fault == 6)
+      inputBot.defaultPose[0] = std::numeric_limits<real>::quiet_NaN();
+    auto candidate = Config();
+    auto const sentinel = SerializeStudioIKConfig(candidate);
+    std::string diagnostic;
+    EXPECT_FALSE(
+        BuildIKInputPoseSnapshot(config, &inputBot, displayed, anchor, candidate, diagnostic));
+    EXPECT_FALSE(diagnostic.empty());
+    EXPECT_EQ(SerializeStudioIKConfig(candidate), sentinel);
+  }
+}
+
+TEST(IKInputPoseSnapshotTest, OverflowingNativeFKFailsBeforeCandidateMutation) {
+  auto inputBot = Robot();
+  inputBot.scale = 10_r;
+  auto const config = SnapshotConfig();
+  IKInputPoseSnapshot displayed{
+      {0_r, std::numeric_limits<real>::max() * 0.75_r}, inputBot.worldFromRoot};
+  auto candidate = Config();
+  auto const sentinel = SerializeStudioIKConfig(candidate);
+  std::string diagnostic;
+  EXPECT_FALSE(BuildIKInputPoseSnapshot(
+      config, &inputBot, displayed, inputBot.worldFromRoot, candidate, diagnostic));
+  EXPECT_EQ(SerializeStudioIKConfig(candidate), sentinel);
+}
+
+TEST_F(IKPreviewTest, InputSnapshotUsesAuthoredAnchorAndDoesNotResetSolvedOutput) {
+  auto const outputBot = Robot(ArticulatedJointType::Free);
+  auto const inputBot = Robot(ArticulatedJointType::Free);
+  auto config = SnapshotConfig();
+  config.createParams.fixedBase = false;
+  config.goals[0].outputBotLink = "root";
+  config.goals[0].inputBotLink = "root";
+  config.goals[0].linkFrameFromConstraintFrame = {};
+  config.goals[0].baseOrInputLinkFrameFromConstraintFrame = {};
+  TransformRT const relative{Quaternion::RotationZ(0.4_r), Real3{0.3_r, 0.4_r, 0.5_r}};
+  IKInputPoseSnapshot displayed{{0.45_r, 0.25_r}, outputBot.worldFromRoot * relative};
+  IKInputBotPose const borrowed{
+      displayed.inputBotConfiguration, displayed.worldFrameFromInputBaseFrame};
+  IKPreviewSession session;
+  std::string diagnostic;
+  ASSERT_TRUE(session.Prepare(outputBot, diagnostic));
+  ASSERT_TRUE(session.SetInputBot(&inputBot, diagnostic));
+  ASSERT_TRUE(session.Step(_context, _loader, config, diagnostic, &borrowed)) << diagnostic;
+  auto const solvedLinks = session.GetOutputBotWorldFromLinks();
+  auto const solvedQ = session.GetOutputBotJointPositions();
+  ASSERT_FALSE(NearEqual(solvedLinks.front(), session.GetWorldFrameFromOutputBaseFrame(), 1e-3_r));
+  BotIKConfig candidate;
+  ASSERT_TRUE(BuildIKInputPoseSnapshot(
+      config,
+      session.GetInputBot(),
+      displayed,
+      session.GetWorldFrameFromOutputBaseFrame(),
+      candidate,
+      diagnostic))
+      << diagnostic;
+  EXPECT_TRUE(NearEqual(candidate.outputBaseFrameFromInputBaseFrame, relative, 1e-5_r));
+  EXPECT_TRUE(session.HasSolver());
+  EXPECT_EQ(session.GetOutputBotWorldFromLinks(), solvedLinks);
+  EXPECT_EQ(session.GetOutputBotJointPositions(), solvedQ);
+  EXPECT_EQ(session.GetWorldFrameFromOutputBaseFrame(), outputBot.worldFromRoot);
+}
+
+TEST(IKInputPoseSnapshotTest, InputFieldsRoundtripTogetherWithoutAnyRecordingDependency) {
+  auto const inputBot = Robot();
+  auto const config = SnapshotConfig();
+  auto const outputAnchor = Robot().worldFromRoot;
+  IKInputPoseSnapshot displayed{
+      {0.45_r, 0.25_r},
+      outputAnchor * TransformRT{Quaternion::RotationZ(0.4_r), Real3{0.3_r, 0.4_r, 0.5_r}}};
+  BotIKConfig candidate;
+  std::string diagnostic;
+  ASSERT_TRUE(
+      BuildIKInputPoseSnapshot(config, &inputBot, displayed, outputAnchor, candidate, diagnostic));
+  auto const undo = SerializeStudioIKConfig(config);
+  auto const redo = SerializeStudioIKConfig(candidate);
+  EXPECT_EQ(redo.find("Recording"), std::string::npos);
+  for (auto const& json : {undo, redo, undo, redo}) {
+    BotIKConfig restored;
+    ASSERT_TRUE(ParseIKConfig(json, restored, diagnostic)) << diagnostic;
+    EXPECT_EQ(SerializeStudioIKConfig(restored), json);
+    EXPECT_EQ(restored.outputBotConfiguration, config.outputBotConfiguration);
+    EXPECT_EQ(restored.inputBotScale, config.inputBotScale);
+  }
+}
+
 } // namespace

@@ -32,6 +32,24 @@ struct IKInputBotPose {
   mochi::TransformRT worldFrameFromInputBaseFrame;
 };
 
+/* @brief Owned last-applied viewport pose; safe after recording spans are released. */
+struct IKInputPoseSnapshot {
+  mochi::DynamicArray<mochi::real> inputBotConfiguration;
+  mochi::TransformRT worldFrameFromInputBaseFrame;
+};
+
+/* @brief Build an input-only authored edit from a complete displayed pose.
+ * Uses the immutable authored output anchor, not the solved output root. Native FK and document
+ * validation run before replacing candidate; failure preserves it and has no playback side effects.
+ */
+bool BuildIKInputPoseSnapshot(
+    BotIKConfig const& config,
+    superdex::robotics::BotPrefab const* inputBot,
+    IKInputPoseSnapshot const& displayedPose,
+    mochi::TransformRT const& worldFrameFromOutputBaseFrame,
+    BotIKConfig& candidate,
+    std::string& diagnostic);
+
 /* @brief Serialized, synchronous IK preview. Destroy/Stop before the borrowed context dies. */
 class IKPreviewSession {
  public:
