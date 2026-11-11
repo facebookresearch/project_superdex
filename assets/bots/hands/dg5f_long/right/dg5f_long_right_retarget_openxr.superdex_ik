@@ -49,7 +49,43 @@
       "verbosity": "Warning"
     }
   },
-  "jointCouplings": [],
+  "jointCouplings": [
+    {
+      "enabled": true,
+      "jointA": "dg5f_joint_1_3",
+      "jointB": "dg5f_joint_1_4",
+      "ratio": 1,
+      "stiffness": 0.125
+    },
+    {
+      "enabled": true,
+      "jointA": "dg5f_joint_2_3",
+      "jointB": "dg5f_joint_2_4",
+      "ratio": 1,
+      "stiffness": 0.25
+    },
+    {
+      "enabled": true,
+      "jointA": "dg5f_joint_3_3",
+      "jointB": "dg5f_joint_3_4",
+      "ratio": 1,
+      "stiffness": 0.25
+    },
+    {
+      "enabled": true,
+      "jointA": "dg5f_joint_4_3",
+      "jointB": "dg5f_joint_4_4",
+      "ratio": 1,
+      "stiffness": 0.25
+    },
+    {
+      "enabled": true,
+      "jointA": "dg5f_joint_5_3",
+      "jointB": "dg5f_joint_5_4",
+      "ratio": 1,
+      "stiffness": 0.25
+    }
+  ],
   "inputBot": "../../openxr/right/openxr_hand_lowpoly_right.superdex_bot",
   "inputBotConfiguration": [],
   "inputBotScale": 1.375,
@@ -71,8 +107,8 @@
         ]
       },
       "name": "dg5f_link_1_tip",
-      "positionStiffness": 500,
-      "rotationStiffness": 0.10000000149011612,
+      "positionStiffness": 1000,
+      "rotationStiffness": 1,
       "inputBotLink": "xr_05_thumb_tip",
       "baseOrInputLinkFrameFromConstraintFrame": {
         "rotation": [
@@ -105,8 +141,8 @@
         ]
       },
       "name": "dg5f_link_2_tip",
-      "positionStiffness": 100,
-      "rotationStiffness": 0.10000000149011612,
+      "positionStiffness": 1000,
+      "rotationStiffness": 1,
       "inputBotLink": "xr_10_index_tip",
       "baseOrInputLinkFrameFromConstraintFrame": {
         "rotation": [
@@ -139,8 +175,8 @@
         ]
       },
       "name": "dg5f_link_3_tip",
-      "positionStiffness": 100,
-      "rotationStiffness": 0.10000000149011612,
+      "positionStiffness": 1000,
+      "rotationStiffness": 1,
       "inputBotLink": "xr_15_middle_tip",
       "baseOrInputLinkFrameFromConstraintFrame": {
         "rotation": [
@@ -173,8 +209,8 @@
         ]
       },
       "name": "dg5f_link_4_tip",
-      "positionStiffness": 100,
-      "rotationStiffness": 0.10000000149011612,
+      "positionStiffness": 1000,
+      "rotationStiffness": 1,
       "inputBotLink": "xr_20_ring_tip",
       "baseOrInputLinkFrameFromConstraintFrame": {
         "rotation": [
@@ -207,8 +243,8 @@
         ]
       },
       "name": "dg5f_link_5_tip",
-      "positionStiffness": 100,
-      "rotationStiffness": 0.10000000149011612,
+      "positionStiffness": 1000,
+      "rotationStiffness": 1,
       "inputBotLink": "xr_25_little_tip",
       "baseOrInputLinkFrameFromConstraintFrame": {
         "rotation": [
