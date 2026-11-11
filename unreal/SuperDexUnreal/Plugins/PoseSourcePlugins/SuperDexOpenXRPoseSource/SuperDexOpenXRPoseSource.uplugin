@@ -1,0 +1,46 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "0.1",
+	"FriendlyName": "SuperDex OpenXR Pose Source",
+	"Description": "Tracked hand poses from OpenXR hand tracking (XR_EXT_hand_tracking) for SuperDex Robotics.",
+	"Category": "SuperDex",
+	"CreatedBy": "Meta Platforms, Inc.",
+	"CreatedByURL": "https://github.com/facebookresearch/project_superdex",
+	"DocsURL": "https://facebookresearch.github.io/project_superdex/",
+	"MarketplaceURL": "",
+	"SupportURL": "https://github.com/facebookresearch/project_superdex/issues",
+	"EnabledByDefault": false,
+	"CanContainContent": false,
+	"IsBetaVersion": true,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "SuperDexOpenXRPoseSource",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [
+				"Win64",
+				"Android",
+				"Linux"
+			]
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "SuperDexRobotics",
+			"Enabled": true
+		},
+		{
+			"Name": "OpenXR",
+			"Enabled": true,
+			"Optional": true
+		},
+		{
+			"Name": "OpenXRHandTracking",
+			"Enabled": true,
+			"Optional": true
+		}
+	]
+}
