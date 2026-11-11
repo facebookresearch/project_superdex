@@ -135,7 +135,6 @@ target_link_libraries(superdex_studio_static
     PUBLIC
         superdex_studio_processing
         superdex_asset_tuner_static
-        superdex_recorder_reader
         mochi_core
         mochi_physics
         mochi_renderer
@@ -153,6 +152,14 @@ target_compile_definitions(superdex_studio_static
         IMGUI_DEFINE_MATH_OPERATORS
         MOCHI_USE_REFLECTION=1
 )
+
+# IK recording playback reads episodes with the recorder's reader, so it needs
+# SUPERDEX_BUILD_RECORDER=ON. Without it the IK editor disables playback.
+if (SUPERDEX_BUILD_RECORDER)
+    target_link_libraries(superdex_studio_static PUBLIC superdex_recorder_reader)
+else ()
+    target_compile_definitions(superdex_studio_static PUBLIC SUPERDEX_STUDIO_RECORDING_PLAYBACK=0)
+endif ()
 
 if (MSVC)
     # Studio TUs freely mix Windows-macro-polluting headers with Filament's math headers (which use
@@ -252,7 +259,11 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/assets"
 #-----------------------------------------------------------------------------
 
 if (MOCHI_BUILD_TESTS)
-    foreach (_ik_test ik_preview_session ik_recording_player ik_design_session)
+    set(_ik_tests ik_preview_session ik_design_session)
+    if (SUPERDEX_BUILD_RECORDER)
+        list(APPEND _ik_tests ik_recording_player)
+    endif ()
+    foreach (_ik_test IN LISTS _ik_tests)
         set(_ik_test_target "superdex_studio_${_ik_test}_test")
         add_executable(${_ik_test_target}
             "${SUPERDEX_MOCHI_SOURCE_DIR}/mochi_renderer/src/path.cpp"
@@ -277,6 +288,7 @@ if (MOCHI_BUILD_TESTS)
         add_test(NAME ${_ik_test_target} COMMAND ${_ik_test_target}
             WORKING_DIRECTORY "$<TARGET_FILE_DIR:${_ik_test_target}>")
     endforeach ()
+    unset(_ik_tests)
     unset(_ik_test)
     unset(_ik_test_target)
 endif ()

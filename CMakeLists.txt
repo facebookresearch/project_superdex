@@ -57,7 +57,6 @@ if (SUPERDEX_BUILD_ALL)
 endif ()
 
 if (SUPERDEX_BUILD_STUDIO)
-    set(SUPERDEX_BUILD_RECORDER ON CACHE BOOL "" FORCE)
     # Needed to build the studio: it links all five.
     set(SUPERDEX_BUILD_ROBOTICS ON CACHE BOOL "" FORCE)
     set(SUPERDEX_BUILD_ASSET_TUNER ON CACHE BOOL "" FORCE)

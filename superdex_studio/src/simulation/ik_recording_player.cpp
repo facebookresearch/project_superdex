@@ -15,7 +15,9 @@
  */
 
 #include "simulation/ik_recording_player.h"
+#if SUPERDEX_STUDIO_RECORDING_PLAYBACK
 #include <superdex_recorder/episode_reader.h>
+#endif
 
 #include <algorithm>
 #include <bit>
@@ -27,9 +29,18 @@
 
 namespace superdex::studio {
 namespace {
-using namespace superdex::recorder;
 using namespace mochi;
 using superdex::robotics::BotPrefab;
+
+uint64_t Distance(int64_t first, int64_t last) {
+  return static_cast<uint64_t>(last) - static_cast<uint64_t>(first);
+}
+int64_t AtOffset(int64_t first, uint64_t offset) {
+  return std::bit_cast<int64_t>(static_cast<uint64_t>(first) + offset);
+}
+
+#if SUPERDEX_STUDIO_RECORDING_PLAYBACK
+using namespace superdex::recorder;
 constexpr std::string_view kActors = "data/physics/actors/";
 constexpr std::string_view kRobots = "data/robotics/robots/";
 constexpr char kPositions[] = "superdex.physics.joint_positions";
@@ -39,12 +50,6 @@ constexpr uintmax_t kFileBytes = 1024ULL * 1024 * 1024;
 constexpr size_t kPoseBudget = 256 * 1024 * 1024;
 constexpr size_t kMaxLayoutSize = 4096;
 
-uint64_t Distance(int64_t first, int64_t last) {
-  return static_cast<uint64_t>(last) - static_cast<uint64_t>(first);
-}
-int64_t AtOffset(int64_t first, uint64_t offset) {
-  return std::bit_cast<int64_t>(static_cast<uint64_t>(first) + offset);
-}
 bool Finite(double value) {
   return std::isfinite(value) && std::abs(value) <= std::numeric_limits<real>::max();
 }
@@ -398,8 +403,10 @@ Real3 Xyz(Span<double const> values, size_t offset = 0) {
       static_cast<real>(values[offset + 1]),
       static_cast<real>(values[offset + 2])};
 }
+#endif // SUPERDEX_STUDIO_RECORDING_PLAYBACK
 } // namespace
 
+#if SUPERDEX_STUDIO_RECORDING_PLAYBACK
 std::shared_ptr<IKRecordingClip const> IKRecordingClip::Load(
     std::string const& path,
     BotPrefab const& inputBot,
@@ -563,6 +570,16 @@ std::shared_ptr<IKRecordingClip const> IKRecordingClip::Load(
     return {};
   return clip;
 }
+#else
+std::shared_ptr<IKRecordingClip const> IKRecordingClip::Load(
+    std::string const& /*path*/,
+    BotPrefab const& /*inputBot*/,
+    std::string& diagnostic,
+    std::atomic_bool const* /*cancelled*/) {
+  diagnostic = kIKRecordingPlaybackUnavailable;
+  return {};
+}
+#endif // SUPERDEX_STUDIO_RECORDING_PLAYBACK
 
 IKRecordingSample const* IKRecordingClip::SampleAt(int64_t time) const {
   auto const next = std::upper_bound(

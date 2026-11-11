@@ -25,7 +25,18 @@
 #include <string>
 #include <vector>
 
+// Playback reads episodes with the recorder's reader. CMake builds it only with
+// SUPERDEX_BUILD_RECORDER=ON and sets this to 0 otherwise.
+#ifndef SUPERDEX_STUDIO_RECORDING_PLAYBACK
+#define SUPERDEX_STUDIO_RECORDING_PLAYBACK 1
+#endif
+
 namespace superdex::studio {
+
+inline constexpr bool kIKRecordingPlaybackAvailable = SUPERDEX_STUDIO_RECORDING_PLAYBACK != 0;
+inline constexpr char kIKRecordingPlaybackUnavailable[] =
+    "Recording playback is not available in this build. Rebuild Studio with "
+    "-DSUPERDEX_BUILD_RECORDER=ON to enable it.";
 
 struct IKRecordingSample {
   uint64_t frame = 0;

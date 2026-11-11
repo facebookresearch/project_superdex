@@ -773,7 +773,7 @@ void IKEditor::RestoreRecordingSelection() {
   auto const remembered =
       RememberedIKRecording(_studio->GetAppSettings().ikRecordings, _ikAsset->GetPath());
   _observedRememberedRecording = remembered;
-  if (remembered.empty()) {
+  if (remembered.empty() || !kIKRecordingPlaybackAvailable) {
     _selectedRecording.clear();
     return;
   }
@@ -835,8 +835,9 @@ void IKEditor::ShowRecordingDropTarget() {
     std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) {
       return char(std::tolower(c));
     });
-    bool const valid = payload && payload->items.size() == 1 && !payload->items[0].isFolder &&
-        extension == ".rrd" && !_ikAsset->GetConfig().inputBot.empty();
+    bool const valid = kIKRecordingPlaybackAvailable && payload && payload->items.size() == 1 &&
+        !payload->items[0].isFolder && extension == ".rrd" &&
+        !_ikAsset->GetConfig().inputBot.empty();
     if (valid) {
       if (ImGui::AcceptDragDropPayload(kAssetBrowserDragDropType)) {
         SelectRecording(payload->items[0].fullPath);
@@ -851,6 +852,17 @@ void IKEditor::ShowRecordingDropTarget() {
 void IKEditor::ShowRecordingControls() {
   auto& config = _ikAsset->GetConfig();
   ImGui::SeparatorText("Session Recording");
+  if constexpr (!kIKRecordingPlaybackAvailable) {
+    ImGui::BeginDisabled();
+    ImGui::Button("Browse RRD");
+    ImGui::EndDisabled();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+      ImGui::SetTooltip("%s", kIKRecordingPlaybackUnavailable);
+    }
+    ImGui::SameLine();
+    ImGui::TextDisabled("Playback unavailable in this build");
+    return;
+  }
   ImGui::TextWrapped(
       "Drop an RRD from the Asset Browser onto the viewport. This design-only choice is remembered locally, not saved in the IK document.");
   std::string reference = _selectedRecording;
