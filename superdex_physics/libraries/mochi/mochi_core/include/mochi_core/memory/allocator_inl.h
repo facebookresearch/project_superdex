@@ -39,8 +39,8 @@
 #endif
 
 // Exception for Unreal Engine Linux builds. UE5's bundled libc++ lacks <memory_resource>.
-#ifdef UNREALIOS_LINUX
-#if UNREALIOS_LINUX
+#ifdef MOCHI_UNREAL_LINUX
+#if MOCHI_UNREAL_LINUX
 #undef MOCHI_HAS_MEMORY_RESOURCE
 #define MOCHI_HAS_MEMORY_RESOURCE 0
 #undef MOCHI_HAS_PMR_NEW_DELETE_RESOURCE

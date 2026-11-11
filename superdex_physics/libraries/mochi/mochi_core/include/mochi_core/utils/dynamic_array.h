@@ -45,7 +45,7 @@ namespace mochi {
 #endif
 
 #if MOCHI_LANGUAGE_CPP20
-// Only until unrealios-android-mochiunreal gets an updated compiler that supports the
+// Only until the Unreal Engine Android toolchain gets an updated compiler that supports the
 // std::forward_iterator concept.
 template <class From, class To>
 concept ConvertibleTo =

@@ -116,12 +116,12 @@
 #endif
 #endif
 
-// UNREALIOS_LINUX_EDITOR disables AVX2 for the Linux editor build.
+// MOCHI_UNREAL_LINUX_EDITOR disables AVX2 for the Linux editor build.
 // The editor target shares its PCH with UnrealEditor, which is compiled without -mavx2.
 // Adding -mavx2 per-module causes a PCH/AST feature mismatch.
 // Game target does use AVX2.
-#if defined(UNREALIOS_LINUX_EDITOR)
-#if UNREALIOS_LINUX_EDITOR
+#if defined(MOCHI_UNREAL_LINUX_EDITOR)
+#if MOCHI_UNREAL_LINUX_EDITOR
 #undef MOCHI_UNREAL_ARCH_AVX2
 #define MOCHI_UNREAL_ARCH_AVX2 0
 #endif
