@@ -374,7 +374,7 @@ namespace CADRobotExporter.UI
 
         private void ResetMeshingToDefaults(object sender, EventArgs e)
         {
-            ExporterConfiguration defaults = new ExporterConfiguration();
+            ExporterConfiguration defaults = ExporterConfiguration.CreateDefault();
             WriteMeshingColumns(defaults.visualMeshingOptions, defaults.collisionMeshingOptions);
             CommitMeshingColumns();
         }
@@ -1384,7 +1384,7 @@ namespace CADRobotExporter.UI
         {
             if (config == null)
             {
-                config = new ExporterConfiguration(); // Use defaults
+                config = ExporterConfiguration.CreateDefault();
             }
 
             // Commit first: with an override on screen the columns hold that link's values, and
@@ -1401,7 +1401,7 @@ namespace CADRobotExporter.UI
         {
             if (config == null)
             {
-                config = new ExporterConfiguration();
+                config = ExporterConfiguration.CreateDefault();
             }
 
             LoadMeshingOptionsToForm(config);

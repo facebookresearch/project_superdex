@@ -73,7 +73,7 @@ namespace CADRobotExporter.CAD.NX
             ufSession = UFSession.GetUFSession();
             workPart = session.Parts.Work;
 
-            exporterConfiguration = new ExporterConfiguration();
+            exporterConfiguration = ExporterConfiguration.CreateDefault();
             configurationFeature = null;
             latestExportLocation = "";
 
@@ -254,7 +254,7 @@ namespace CADRobotExporter.CAD.NX
 
         public void SetExporterConfiguration(ExporterConfiguration config)
         {
-            exporterConfiguration = config ?? new ExporterConfiguration();
+            exporterConfiguration = config ?? ExporterConfiguration.CreateDefault();
         }
 
         public override void SetLatestExportLocation(string location)

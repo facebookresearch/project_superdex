@@ -689,21 +689,23 @@ namespace CADRobotExporter.CAD
                 Converters = new List<JsonConverter> { new StringEnumConverter() },
             };
 
-            if (exporterFeature != null)
+            if (exporterFeature == null)
             {
-                Attribute exporterAttribute = exporterFeature.GetSpecificFeature2();
-                Parameter param = exporterAttribute.GetParameter("exporterConfiguration");
+                return ExporterConfiguration.CreateDefault();
+            }
 
-                if (param != null)
-                {
-                    jsonString = param.GetStringValue();
-                    logger.Information("Exporter configuration found\n" + jsonString);
-                }
-                else
-                {
-                    logger.Information("Exporter configuration not found, using defaults");
-                    return new ExporterConfiguration();
-                }
+            Attribute exporterAttribute = exporterFeature.GetSpecificFeature2();
+            Parameter param = exporterAttribute.GetParameter("exporterConfiguration");
+
+            if (param != null)
+            {
+                jsonString = param.GetStringValue();
+                logger.Information("Exporter configuration found\n" + jsonString);
+            }
+            else
+            {
+                logger.Information("Exporter configuration not found, using defaults");
+                return new ExporterConfiguration();
             }
 
             try

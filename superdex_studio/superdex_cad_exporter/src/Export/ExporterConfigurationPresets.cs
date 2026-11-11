@@ -25,7 +25,7 @@ namespace CADRobotExporter.Export
             new ExporterConfigurationPreset
             {
                 Name = "Default",
-                Configuration = new ExporterConfiguration(),
+                Configuration = ExporterConfiguration.CreateDefault(),
                 IsUserPreset = false
             },
             new ExporterConfigurationPreset

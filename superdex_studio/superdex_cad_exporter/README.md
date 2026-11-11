@@ -68,6 +68,10 @@ Some notable features that have been removed, amongst others:
 
 If you build NXRobotExporter from source instead, the build deposits the `application` and `startup` folders into `C:/NXCustom`. Add `UGII_USER_DIR` to your User or System Environment Variables (System Properties → Environment Variables...) and point it to `C:/NXCustom`.
 
+### Custom defaults
+
+To change what a new robot configuration starts with (mesh formats, meshing options, folder structure), save the settings you want as a preset, then copy the preset's `.json` file next to the add-in DLL (`NXRobotExporter.dll` or `SuperDexCADExporter.dll`) and rename it to `ExporterDefaults.json`. Fields left out of the file keep their built-in defaults. The **Default** preset and the **Reset to Default** meshing button use these values too.
+
 ## Usage
 
 Please refer to the [documentation](http://facebookresearch.github.io/project_superdex/studio/docs/cad_exporter) for a full tutorial and additional information about advanced features.
