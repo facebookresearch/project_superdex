@@ -43,6 +43,10 @@ enum class BenchmarkMode { Objective, Residual, DresidualWithoutPsd, DresidualWi
 // Boundary: every batch lane is a boundary triangle.
 enum class BatchKind { Interior, Boundary };
 
+// Optional membrane term enabled in addition to the SVK membrane and bending: the collapse barrier
+// at its default scale η = 1e-3, or strain stiffening with scale γ = 10.
+enum class MembraneTerm { None, CollapseBarrier, StrainStiffening };
+
 // -------------------------------------------------------------------------------------
 // Shared benchmark data: real-world sized triangular mesh with bending stencils
 // -------------------------------------------------------------------------------------
@@ -160,7 +164,11 @@ static auto const& GetSharedData() {
 // ShellWork benchmark
 // -------------------------------------------------------------------------------------
 
-static void BenchmarkShellWork(benchmark::State& state, BenchmarkMode mode, BatchKind batchKind) {
+static void BenchmarkShellWork(
+    benchmark::State& state,
+    BenchmarkMode mode,
+    BatchKind batchKind,
+    MembraneTerm membraneTerm) {
   using V = BatchReal<kBatchSize>;
   using Vd = BatchDouble<kBatchSize>;
 
@@ -172,6 +180,10 @@ static void BenchmarkShellWork(benchmark::State& state, BenchmarkMode mode, Batc
       (mode == BenchmarkMode::DresidualWithPsd || mode == BenchmarkMode::DresidualWithoutPsd ||
        mode == BenchmarkMode::All);
   bool const projectPsd = (mode == BenchmarkMode::DresidualWithPsd || mode == BenchmarkMode::All);
+  real const collapseBarrierStiffness =
+      membraneTerm == MembraneTerm::CollapseBarrier ? 2_r * 1e-3_r * data.membraneMu : 0_r;
+  real const strainStiffeningStiffness =
+      membraneTerm == MembraneTerm::StrainStiffening ? 10_r * data.membraneMu : 0_r;
 
   // Pre-pack stencil global nodes per lane (interior or boundary batch).
   auto const& elementIndices =
@@ -213,8 +225,8 @@ static void BenchmarkShellWork(benchmark::State& state, BenchmarkMode mode, Batc
         data.membraneMu,
         data.bendingAlpha,
         data.bendingBeta,
-        /*membraneCollapseBarrierStiffness*/ 0_r,
-        /*membraneStrainStiffeningStiffness*/ 0_r,
+        collapseBarrierStiffness,
+        strainStiffeningStiffness,
         projectPsd);
   };
 
@@ -230,15 +242,23 @@ static void BenchmarkShellWork(benchmark::State& state, BenchmarkMode mode, Batc
 // -------------------------------------------------------------------------------------
 
 // clang-format off
-#define MOCHI_SHELL_WORK_MODES(Prefix, Kind)                                                                     \
-  BENCHMARK_CAPTURE(BenchmarkShellWork, Prefix##_Objective,           BenchmarkMode::Objective,           Kind); \
-  BENCHMARK_CAPTURE(BenchmarkShellWork, Prefix##_Residual,            BenchmarkMode::Residual,            Kind); \
-  BENCHMARK_CAPTURE(BenchmarkShellWork, Prefix##_DresidualWithoutPsd, BenchmarkMode::DresidualWithoutPsd, Kind); \
-  BENCHMARK_CAPTURE(BenchmarkShellWork, Prefix##_DresidualWithPsd,    BenchmarkMode::DresidualWithPsd,    Kind); \
-  BENCHMARK_CAPTURE(BenchmarkShellWork, Prefix##_All,                 BenchmarkMode::All,                 Kind);
+#define MOCHI_SHELL_WORK_MODES(Prefix, Kind, Term)                                                                     \
+  BENCHMARK_CAPTURE(BenchmarkShellWork, Prefix##_Objective,           BenchmarkMode::Objective,           Kind, Term); \
+  BENCHMARK_CAPTURE(BenchmarkShellWork, Prefix##_Residual,            BenchmarkMode::Residual,            Kind, Term); \
+  BENCHMARK_CAPTURE(BenchmarkShellWork, Prefix##_DresidualWithoutPsd, BenchmarkMode::DresidualWithoutPsd, Kind, Term); \
+  BENCHMARK_CAPTURE(BenchmarkShellWork, Prefix##_DresidualWithPsd,    BenchmarkMode::DresidualWithPsd,    Kind, Term); \
+  BENCHMARK_CAPTURE(BenchmarkShellWork, Prefix##_All,                 BenchmarkMode::All,                 Kind, Term);
 // clang-format on
 
-MOCHI_SHELL_WORK_MODES(ShellWorkInterior, BatchKind::Interior)
-MOCHI_SHELL_WORK_MODES(ShellWorkBoundary, BatchKind::Boundary)
+MOCHI_SHELL_WORK_MODES(ShellWorkInterior, BatchKind::Interior, MembraneTerm::None)
+MOCHI_SHELL_WORK_MODES(ShellWorkBoundary, BatchKind::Boundary, MembraneTerm::None)
+MOCHI_SHELL_WORK_MODES(
+    ShellWorkInteriorCollapseBarrier,
+    BatchKind::Interior,
+    MembraneTerm::CollapseBarrier)
+MOCHI_SHELL_WORK_MODES(
+    ShellWorkInteriorStrainStiffening,
+    BatchKind::Interior,
+    MembraneTerm::StrainStiffening)
 
 } // namespace mochi_benchmark

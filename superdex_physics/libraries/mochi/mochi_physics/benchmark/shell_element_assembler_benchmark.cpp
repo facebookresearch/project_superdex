@@ -39,11 +39,13 @@ using namespace mochi::shell;
 namespace {
 
 // Element operations to toggle. Inertia and stress (membrane + bending) always run in the full
-// assembly; only gravity and PSD projection are toggleable. An elopFlags value of 0 selects the
-// assembler-overhead path (a trivial no-op element operator).
+// assembly; gravity, PSD projection, and the optional membrane terms are toggleable. An elopFlags
+// value of 0 selects the assembler-overhead path (a trivial no-op element operator).
 enum ShellElOpFlags {
   kShellElOpGravity = 1 << 0, // fem::GravityWork
   kShellElOpPsdProjection = 1 << 1, // PSD projection of the stress dresidual
+  kShellElOpCollapseBarrier = 1 << 2, // Membrane collapse barrier at its default scale
+  kShellElOpStrainStiffening = 1 << 3, // Membrane strain stiffening
 };
 
 // Results to compute for each element
@@ -175,6 +177,11 @@ static void ShellElementAssemblerBenchmark(
 
   bool const hasGravity = elopFlags & kShellElOpGravity;
   bool const psdProject = elopFlags & kShellElOpPsdProjection;
+  bool const hasCollapseBarrier = elopFlags & kShellElOpCollapseBarrier;
+  bool const hasStrainStiffening = elopFlags & kShellElOpStrainStiffening;
+  real const kCollapseBarrierScale =
+      mochi::experimental::ShellMaterialParams{}.membraneCollapseBarrierScale;
+  constexpr real kStrainStiffeningScale = 10_r;
 
   ElOpFnType<ShellStencilElement> batchedOp;
   if (elopFlags == 0) {
@@ -194,8 +201,8 @@ static void ShellElementAssemblerBenchmark(
         kMembraneMu,
         kBendingAlpha,
         kBendingBeta,
-        /*membraneCollapseBarrierStiffness*/ 0_r,
-        /*membraneStrainStiffeningStiffness*/ 0_r,
+        hasCollapseBarrier ? 2_r * kCollapseBarrierScale * kMembraneMu : 0_r,
+        hasStrainStiffening ? kStrainStiffeningScale * kMembraneMu : 0_r,
         kDefaultGravity,
         kShellDensity,
         predTarget.GetConstSpan(),
@@ -271,7 +278,9 @@ static void ShellElementAssemblerBenchmark(
 // clang-format on
 
 // Defines benchmarks with various element operations for shell. Inertia and stress always run in
-// the full assembly; the AssemblerOverhead cases isolate the assembler's gather/scatter cost.
+// the full assembly; the AssemblerOverhead cases isolate the assembler's gather/scatter cost. The
+// CollapseBarrier and StrainStiffening cases each add one optional membrane term to Full/All,
+// with and without PSD projection; the former matches the default material.
 // clang-format off
 #define MOCHI_BENCHMARK_SHELL_ELEMENT_ASSEMBLER(name, file, meshSize)                                                                                                                                                    \
   MOCHI_BENCHMARK_SHELL_ELEMENT_ASSEMBLER_FOR_THREADS(name##_AssemblerOverhead_Obj, #name "/AssemblerOverhead/Objective", file, meshSize, 0, kResultObj);                                                                \
@@ -283,7 +292,11 @@ static void ShellElementAssemblerBenchmark(
   MOCHI_BENCHMARK_SHELL_ELEMENT_ASSEMBLER_FOR_THREADS(name##_Full_Dres_NoPsd, #name "/Full/DResidual/NoPsd", file, meshSize, kShellElOpGravity, kResultDRes);                            \
   MOCHI_BENCHMARK_SHELL_ELEMENT_ASSEMBLER_FOR_THREADS(name##_Full_Dres_Psd, #name "/Full/DResidual/Psd", file, meshSize, kShellElOpGravity | kShellElOpPsdProjection, kResultDRes);      \
   MOCHI_BENCHMARK_SHELL_ELEMENT_ASSEMBLER_FOR_THREADS(name##_Full_All_NoPsd, #name "/Full/All/NoPsd", file, meshSize, kShellElOpGravity, kResultObjResDRes);                             \
-  MOCHI_BENCHMARK_SHELL_ELEMENT_ASSEMBLER_FOR_THREADS(name##_Full_All_Psd, #name "/Full/All/Psd", file, meshSize, kShellElOpGravity | kShellElOpPsdProjection, kResultObjResDRes);
+  MOCHI_BENCHMARK_SHELL_ELEMENT_ASSEMBLER_FOR_THREADS(name##_Full_All_Psd, #name "/Full/All/Psd", file, meshSize, kShellElOpGravity | kShellElOpPsdProjection, kResultObjResDRes);      \
+  MOCHI_BENCHMARK_SHELL_ELEMENT_ASSEMBLER_FOR_THREADS(name##_Full_All_NoPsd_CollapseBarrier, #name "/Full/All/NoPsd/CollapseBarrier", file, meshSize, kShellElOpGravity | kShellElOpCollapseBarrier, kResultObjResDRes); \
+  MOCHI_BENCHMARK_SHELL_ELEMENT_ASSEMBLER_FOR_THREADS(name##_Full_All_Psd_CollapseBarrier, #name "/Full/All/Psd/CollapseBarrier", file, meshSize, kShellElOpGravity | kShellElOpPsdProjection | kShellElOpCollapseBarrier, kResultObjResDRes); \
+  MOCHI_BENCHMARK_SHELL_ELEMENT_ASSEMBLER_FOR_THREADS(name##_Full_All_NoPsd_StrainStiffening, #name "/Full/All/NoPsd/StrainStiffening", file, meshSize, kShellElOpGravity | kShellElOpStrainStiffening, kResultObjResDRes); \
+  MOCHI_BENCHMARK_SHELL_ELEMENT_ASSEMBLER_FOR_THREADS(name##_Full_All_Psd_StrainStiffening, #name "/Full/All/Psd/StrainStiffening", file, meshSize, kShellElOpGravity | kShellElOpPsdProjection | kShellElOpStrainStiffening, kResultObjResDRes);
 // clang-format on
 
 // Generated square mesh benchmarks (various sizes)
