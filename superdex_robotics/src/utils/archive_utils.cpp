@@ -861,8 +861,15 @@ std::filesystem::path ToBotArchivePath(std::filesystem::path botPath) {
   return botPath.replace_extension(kBotArchiveExtension);
 }
 
+// The archive of a raw bot path as written in a scene: only the extension changes, as text. A
+// std::filesystem round trip would collapse the "//" root prefix into an absolute "/" path.
+std::string ToBotArchivePathText(std::string const& botPath) {
+  auto const extension = std::filesystem::path(botPath).extension().string();
+  return botPath.substr(0, botPath.size() - extension.size()) + std::string(kBotArchiveExtension);
+}
+
 // Points every raw bot path in a .superdex_scene JSON document at its archive (see
-// ToBotArchivePath), keeping the path's relative or tagged form.
+// ToBotArchivePath), keeping the path's relative, //-rooted or tagged form.
 void RewriteRawBotPaths(picojson::value& sceneJson) {
   if (!sceneJson.is<picojson::object>()) {
     return;
@@ -880,8 +887,7 @@ void RewriteRawBotPaths(picojson::value& sceneJson) {
     auto const path = entry.find("path");
     if (path != entry.end() && path->second.is<std::string>() &&
         !IsBotArchivePath(path->second.get<std::string>())) {
-      path->second =
-          picojson::value(ToBotArchivePath(path->second.get<std::string>()).generic_string());
+      path->second = picojson::value(ToBotArchivePathText(path->second.get<std::string>()));
     }
   }
 }
