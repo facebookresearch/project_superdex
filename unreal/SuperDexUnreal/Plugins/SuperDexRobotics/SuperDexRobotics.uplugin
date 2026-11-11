@@ -1,0 +1,81 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "SuperDex Robotics",
+	"Description": "Robot loading, IK and control on top of SuperDex Physics.",
+	"Category": "SuperDex",
+	"CreatedBy": "Meta Platforms, Inc.",
+	"CreatedByURL": "https://github.com/facebookresearch/project_superdex",
+	"DocsURL": "https://facebookresearch.github.io/project_superdex/",
+	"MarketplaceURL": "",
+	"SupportURL": "https://github.com/facebookresearch/project_superdex/issues",
+	"EnabledByDefault": false,
+	"CanContainContent": true,
+	"IsBetaVersion": true,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "SuperDexRobotics",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault",
+			"PlatformAllowList": [
+				"Win64",
+				"Android",
+				"Linux"
+			]
+		},
+		{
+			"Name": "SuperDexRecorder",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault",
+			"PlatformAllowList": [
+				"Win64"
+			]
+		},
+		{
+			"Name": "SuperDexPose",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [
+				"Win64",
+				"Android",
+				"Linux"
+			]
+		},
+		{
+			"Name": "SuperDexTeleop",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [
+				"Win64",
+				"Android"
+			]
+		},
+		{
+			"Name": "SuperDexStudy",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [
+				"Win64",
+				"Android",
+				"Linux"
+			]
+		},
+		{
+			"Name": "SuperDexRoboticsEditor",
+			"Type": "Editor",
+			"LoadingPhase": "PostEngineInit",
+			"PlatformAllowList": [
+				"Win64"
+			]
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "SuperDexPhysics",
+			"Enabled": true
+		}
+	],
+	"IsExperimentalVersion": false
+}
