@@ -313,6 +313,109 @@ class TestRerunLoggerSaveToRrd(MochiContextTestCase):
             self.assertEqual(frames, list(range(10)))
 
 
+class TestRerunLoggerSkinnedArticulated(MochiContextTestCase):
+    def test_skin_changes_per_frame_with_correct_world_pose(self):
+        for coordinate_system in ("mochi", "blender"):
+            with self.subTest(coordinate_system=coordinate_system):
+                self._check_world_pose(coordinate_system)
+
+    def _check_world_pose(self, coordinate_system):
+        import superdex.physics as sdp
+        from superdex.physics.rerun import RerunLogger, RerunLoggerCfg
+        from superdex.physics.utils.scene_helpers import create_scene_from_prefab
+        from superdex.physics.utils.transformations import (
+            apply_affine_transform,
+            make_transform,
+            transformrt_to_numpy,
+        )
+
+        scene = create_scene_from_prefab(
+            "samples/wuji_skinned_hands_drop_benchmark.mochi_scene"
+        )
+        hands = []
+        scene.for_each_actor(
+            lambda a: hands.append(a)
+            if a.get_type() == sdp.ActorType.ARTICULATED
+            and not a.get_surface_mesh().is_empty()
+            else None
+        )
+        hand = hands[0]
+        entity = f"world/{hand.get_contact_layer()}/{hand.get_name()}_h{hand.get_handle().value}"
+        entity = "/".join(filter(None, entity.split("/")))
+        expected = {}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "test.rrd")
+            with RerunLogger(
+                RerunLoggerCfg(
+                    application_id="test_skin",
+                    coordinate_system=coordinate_system,
+                    connect=False,
+                    spawn=False,
+                    save_path=path,
+                )
+            ) as logger:
+                logger.set_scene(scene)
+                for i in range(2):
+                    hand.set_articulated_pose_from_joints(
+                        np.full(hand.get_num_dofs(), 0.4 * i)
+                    )
+                    hand.set_root_transform(
+                        sdp.TransformRT(
+                            rotation=sdp.Quaternion.from_rotation_vector(
+                                [0.2, -0.3, 0.5 + 0.1 * i]
+                            ),
+                            translation=[0.7 + 0.1 * i, -0.4, 1.2],
+                        )
+                    )
+                    scene.step(0.0)
+                    hand.register_query_and_compute(
+                        sdp.QueryType.SURFACE_NODE_POSITIONS
+                    )
+                    expected[i] = apply_affine_transform(
+                        logger._coordinate_transform.source_to_target
+                        @ make_transform(
+                            *transformrt_to_numpy(hand.get_root_transform())
+                        ),
+                        np.asarray(
+                            hand.get_surface_mesh_node_positions_local()
+                        ).reshape(-1, 3),
+                    )
+                    logger.log_frame(frame_idx=i)
+            recording = _flush_and_load_rrd(path)
+            samples = {}
+            for chunk in recording.stream().filter(has_timeline="frame"):
+                if chunk.entity_path.lstrip("/") != entity:
+                    continue
+                batch = chunk.to_record_batch()
+                for component in (
+                    "Mesh3D:vertex_positions",
+                    "Transform3D:translation",
+                    "Transform3D:mat3x3",
+                ):
+                    columns = [
+                        name for name in batch.schema.names if name.endswith(component)
+                    ]
+                    if not columns:
+                        continue
+                    for frame, value in zip(
+                        batch.column("frame").to_pylist(),
+                        batch.column(columns[0]).to_pylist(),
+                    ):
+                        if value:
+                            samples.setdefault(frame, {})[component] = np.asarray(value)
+        self.assertEqual(sorted(samples), [0, 1])
+        vertices0 = samples[0]["Mesh3D:vertex_positions"]
+        vertices1 = samples[1]["Mesh3D:vertex_positions"]
+        self.assertGreater(np.abs(vertices1 - vertices0).max(), 1e-3)
+        for frame, components in samples.items():
+            vertices = components["Mesh3D:vertex_positions"]
+            translation = components["Transform3D:translation"].reshape(3)
+            rotation = components["Transform3D:mat3x3"].reshape(3, 3, order="F")
+            np.testing.assert_allclose(
+                vertices @ rotation.T + translation, expected[frame], atol=1e-5
+            )
+
+
 class TestRerunLoggerResetScene(MochiContextTestCase):
     """Tests for reset_scene() method."""
 

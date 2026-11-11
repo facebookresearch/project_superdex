@@ -224,13 +224,17 @@ def extract_actor_mesh(
     return vertices, faces, normals
 
 
+# Soft bodies and articulated skins deform in their local frame.
+_DEFORMING = (ActorType.SOFT, ActorType.ARTICULATED)
+
+
 class ActorLogger(Logger):
     """
     Logger for Mochi actors to rerun.
 
     This class handles logging actor mesh geometry and transforms to rerun.
     For rigid actors, it logs the initial mesh and updates the transform.
-    For deformable actors (soft), it updates the vertex positions each frame.
+    For deformable actors (soft bodies, articulated skins), it re-logs the vertices.
     """
 
     ####################################################################################
@@ -304,7 +308,7 @@ class ActorLogger(Logger):
         # Try to load a visual mesh if mesh_assets_dir is configured.
         # Only for rigid actors — deformable actors update vertex positions
         # each frame, and the visual mesh has different topology.
-        if mesh_assets_dir is not None and actor.get_type() != ActorType.SOFT:
+        if mesh_assets_dir is not None and actor.get_type() not in _DEFORMING:
             self._visual_mesh = self._try_load_visual_mesh()
 
         unique_name = f"{actor.get_name()}_h{actor.get_handle().value}"
@@ -323,8 +327,8 @@ class ActorLogger(Logger):
 
         For rigid actors, the mesh geometry is logged once as static (timeless)
         data since it doesn't change - only the transform is updated each frame.
-        For deformable actors (soft), the mesh is re-logged each frame with
-        updated vertex positions.
+        For deformable actors (soft bodies and articulated skins), the mesh is
+        re-logged each frame with updated vertex positions.
 
         When a visual mesh is available (loaded from DAE/GLB), it replaces the
         physics mesh for rendering. Visual meshes include per-material vertex
@@ -339,59 +343,44 @@ class ActorLogger(Logger):
         # Get current vertex positions in local space.
         vertices_local = self._get_actor_coordinates()
 
-        is_rigid = self._actor.get_type() != ActorType.SOFT
-
+        actor_type = self._actor.get_type()
+        mesh_transform = (
+            np.eye(4) if actor_type == ActorType.ARTICULATED else source_to_target
+        )
+        deforms = actor_type in _DEFORMING
         if not self._mesh_logged:
             if self._visual_mesh is not None:
-                self._log_visual_mesh(source_to_target, static or is_rigid)
+                self._log_visual_mesh(source_to_target, static or not deforms)
             else:
                 self._log_physics_mesh(
-                    source_to_target, vertices_local, is_rigid, static
+                    mesh_transform, vertices_local, not deforms, static
                 )
             self._mesh_logged = True
-
-            if is_rigid:
-                transform = self._get_actor_transform()
-                if transform is not None:
-                    transform_target = source_to_target @ transform
-                    rr.log(
-                        self._entity_path,
-                        rr.Transform3D(
-                            translation=transform_target[:3, 3],
-                            mat3x3=transform_target[:3, :3],
-                        ),
-                    )
-        else:
-            if not is_rigid:
-                # Deformable actors: re-log vertex positions each frame.
-                # Visual meshes are never loaded for deformable actors.
-                vertices_target = apply_linear_map(
-                    source_to_target[:3, :3], vertices_local
-                )
-                normals_local = self._get_actor_normals()
-                normals_target = apply_linear_map(
-                    source_to_target[:3, :3], normals_local
-                )
+        elif deforms:
+            # Deforming actors need fresh physics-mesh vertices each frame.
+            vertices_target = apply_linear_map(mesh_transform[:3, :3], vertices_local)
+            normals_local = self._get_actor_normals()
+            normals_target = apply_linear_map(mesh_transform[:3, :3], normals_local)
+            rr.log(
+                self._entity_path,
+                rr.Mesh3D(
+                    vertex_positions=vertices_target,
+                    triangle_indices=self._faces_cache,
+                    vertex_normals=normals_target,
+                    albedo_factor=self._color,
+                ),
+            )
+        if actor_type != ActorType.SOFT:
+            transform = self._get_actor_transform()
+            if transform is not None:
+                transform_target = source_to_target @ transform
                 rr.log(
                     self._entity_path,
-                    rr.Mesh3D(
-                        vertex_positions=vertices_target,
-                        triangle_indices=self._faces_cache,
-                        vertex_normals=normals_target,
-                        albedo_factor=self._color,
+                    rr.Transform3D(
+                        translation=transform_target[:3, 3],
+                        mat3x3=transform_target[:3, :3],
                     ),
                 )
-            else:
-                transform = self._get_actor_transform()
-                if transform is not None:
-                    transform_target = source_to_target @ transform
-                    rr.log(
-                        self._entity_path,
-                        rr.Transform3D(
-                            translation=transform_target[:3, 3],
-                            mat3x3=transform_target[:3, :3],
-                        ),
-                    )
 
     def _log_visual_mesh(
         self,

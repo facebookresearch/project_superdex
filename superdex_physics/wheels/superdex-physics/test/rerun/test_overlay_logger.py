@@ -410,6 +410,18 @@ class TestArticulatedOverlay(MochiContextTestCase):
             )
             self.assertEqual(len(overlay.get_articulated_names()), 0)
 
+    def test_skinned_articulated_root_is_not_a_rigid_actor(self):
+        from superdex.physics.utils.scene_helpers import create_scene_from_prefab
+
+        scene = create_scene_from_prefab(
+            "samples/wuji_skinned_hands_drop_benchmark.mochi_scene"
+        )
+        with self._create_logger() as logger:
+            overlay = logger.create_overlay("ghost", scene=scene)
+            articulated = set(overlay.get_articulated_names())
+            self.assertTrue(articulated)
+            self.assertFalse(articulated & set(overlay.get_actor_names()))
+
     def test_articulated_overlay_in_rrd(self):
         """Articulated overlay meshes appear in saved .rrd."""
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -210,7 +210,8 @@ class OverlayLogger:
             articulated_link_names.update(link_names)
 
         def gather_rigid(a: Actor) -> None:
-            if a.get_surface_mesh().is_empty():
+            # Draw articulated links separately from their root skin.
+            if a.get_surface_mesh().is_empty() or a.get_type() == ActorType.ARTICULATED:
                 return
             name = a.get_name()
             if name in articulated_link_names or a.is_nested_link_actor():
