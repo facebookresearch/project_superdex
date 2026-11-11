@@ -612,6 +612,8 @@ Scalar EstimateSpectralRadius(
 
   // Eigendecomposition of T
 #if MOCHI_USE_EIGEN
+  // TODO: Explore computing only T's largest eigenvalue (e.g., by bisection) instead of a full
+  // eigendecomposition with eigenvectors, to make the estimate cheaper when A is small.
   Matrix<Scalar> V(m, m);
   ColumnVector<Scalar> D(m);
   SelfAdjointEigenDecomposition(AsConstView(T), V, D);
