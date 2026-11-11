@@ -29,7 +29,7 @@ using namespace net;
 MessageClient::ReqRepHelper::ReqRepHelper(MessageClient& client) : _client(client) {}
 
 MessageClient::ReqRepHelper::~ReqRepHelper() {
-  std::lock_guard lock(_mutex);
+  std::scoped_lock lock(_mutex);
   MOCHI_ASSERT(_waiters.empty(), "ReqRepHelper destroyed while requests are still pending");
 }
 
@@ -52,7 +52,7 @@ void MessageClient::ReqRepHelper::SendAndAwaitReply(
   Key const key{outReply.GetFinalTypeId().value, request.requestId};
   Waiter waiter{outReply};
   {
-    std::lock_guard lock(_mutex);
+    std::scoped_lock lock(_mutex);
     [[maybe_unused]] auto const [_, inserted] = _waiters.emplace(key, &waiter);
     MOCHI_ASSERT_VERBOSE(inserted, "Duplicate request/reply waiter");
   }
@@ -60,7 +60,7 @@ void MessageClient::ReqRepHelper::SendAndAwaitReply(
   if (!_client.Send(request)) {
     MOCHI_ERROR_SET(error, "Send failed");
 
-    std::lock_guard lock(_mutex);
+    std::scoped_lock lock(_mutex);
     EraseWaiter(key, waiter);
     return;
   }
@@ -77,7 +77,7 @@ void MessageClient::ReqRepHelper::SendAndAwaitReply(
 
 void MessageClient::ReqRepHelper::DispatchReply(ReplyMessage&& msg) {
   Key const key{msg.GetFinalTypeId().value, msg.requestId};
-  std::lock_guard lock(_mutex);
+  std::scoped_lock lock(_mutex);
   auto const it = _waiters.find(key);
   if (it == _waiters.end()) {
     return;
@@ -87,7 +87,7 @@ void MessageClient::ReqRepHelper::DispatchReply(ReplyMessage&& msg) {
 }
 
 void MessageClient::ReqRepHelper::Cancel() {
-  std::lock_guard lock(_mutex);
+  std::scoped_lock lock(_mutex);
   for (auto& [_, waiter] : _waiters) {
     waiter->canceled = true;
     waiter->cv.notify_one();

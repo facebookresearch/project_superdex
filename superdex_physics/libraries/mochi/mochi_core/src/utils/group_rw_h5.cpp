@@ -55,7 +55,7 @@ class GroupH5Base {
   }
 
   ~GroupH5Base() {
-    std::lock_guard lock{hdf5::GetGlobalMutex()};
+    std::scoped_lock lock{hdf5::GetGlobalMutex()};
     _file.close();
   }
 
@@ -83,7 +83,7 @@ class GroupH5Base {
   void ExitGroupImpl(Error& error) {
     MOCHI_ERROR_IF(_stack.size() == 1, error, "ExitGroup called too many times.");
     MOCHI_ERROR_RETURN(error);
-    std::lock_guard lock{hdf5::GetGlobalMutex()};
+    std::scoped_lock lock{hdf5::GetGlobalMutex()};
 
     try {
       _stack.pop_back();
@@ -221,21 +221,21 @@ class GroupReaderH5 final : public GroupReader, private GroupH5Base {
   // GroupReader API:
 
   bool HasGroup(std::string_view name) const override {
-    std::lock_guard lock{hdf5::GetGlobalMutex()};
+    std::scoped_lock lock{hdf5::GetGlobalMutex()};
     auto const& group = GetCurrentGroup();
     std::string nameStr(name);
     return group.nameExists(nameStr) && group.childObjType(nameStr) == H5O_TYPE_GROUP;
   }
 
   bool HasDataSet(std::string_view name) const override {
-    std::lock_guard lock{hdf5::GetGlobalMutex()};
+    std::scoped_lock lock{hdf5::GetGlobalMutex()};
     auto const& group = GetCurrentGroup();
     std::string nameStr(name);
     return group.nameExists(nameStr) && group.childObjType(nameStr) == H5O_TYPE_DATASET;
   }
 
   bool HasAttribute(std::string_view name) const override {
-    std::lock_guard lock{hdf5::GetGlobalMutex()};
+    std::scoped_lock lock{hdf5::GetGlobalMutex()};
     auto const& obj = GetAttributeTarget();
     return obj.attrExists(std::string(name));
   }
@@ -328,7 +328,7 @@ void GroupWriterH5::AddAttribute(
     size_t len,
     Error& error) {
   MOCHI_ERROR_RETURN(error);
-  std::lock_guard lock{hdf5::GetGlobalMutex()};
+  std::scoped_lock lock{hdf5::GetGlobalMutex()};
 
   try {
     H5::H5Object const& hobject = GetAttributeTarget();
@@ -352,7 +352,7 @@ void GroupWriterH5::AddAttributeImpl(
     size_t count,
     Error& error) {
   MOCHI_ERROR_RETURN(error);
-  std::lock_guard lock{hdf5::GetGlobalMutex()};
+  std::scoped_lock lock{hdf5::GetGlobalMutex()};
 
   try {
     // What are we adding attributes to?
@@ -370,7 +370,7 @@ void GroupWriterH5::AddAttributeImpl(
     std::string_view name,
     Error& error) {
   MOCHI_ERROR_RETURN(error, {});
-  std::lock_guard lock{hdf5::GetGlobalMutex()};
+  std::scoped_lock lock{hdf5::GetGlobalMutex()};
 
   try {
     // Create a child of the current group.
@@ -396,7 +396,7 @@ void GroupWriterH5::AddDataSetImpl(
     Error& error) {
   MOCHI_ERROR_IF(dims.size() == 0, error, "Invalid dims.");
   MOCHI_ERROR_RETURN(error);
-  std::lock_guard lock{hdf5::GetGlobalMutex()};
+  std::scoped_lock lock{hdf5::GetGlobalMutex()};
 
   // Check the dimensions
   size_t expectedCount = dims[0];
@@ -448,7 +448,7 @@ void GroupWriterH5::AddDataSetImpl(
     std::string_view name,
     Error& error) {
   MOCHI_ERROR_RETURN(error, {});
-  std::lock_guard lock{hdf5::GetGlobalMutex()};
+  std::scoped_lock lock{hdf5::GetGlobalMutex()};
 
   try {
     // Get the parent group (or file)
@@ -470,7 +470,7 @@ void GroupWriterH5::AddDataSetImpl(
 
 DynamicArray<std::string> GroupReaderH5::GetObjectNames(H5G_obj_t objectType, Error& error) const {
   MOCHI_ERROR_RETURN(error, {});
-  std::lock_guard lock{hdf5::GetGlobalMutex()};
+  std::scoped_lock lock{hdf5::GetGlobalMutex()};
 
   try {
     DynamicArray<std::string> names(_allocator);
@@ -534,7 +534,7 @@ DynamicArray<std::string> GroupReaderH5::GetAttributeNames(Error& error) const {
   DynamicArray<std::string> names(_allocator);
 
   MOCHI_ERROR_RETURN(error, names);
-  std::lock_guard lock{hdf5::GetGlobalMutex()};
+  std::scoped_lock lock{hdf5::GetGlobalMutex()};
 
   try {
     H5::H5Object const& obj = GetAttributeTarget();
@@ -582,7 +582,7 @@ DynamicArray<size_t> GroupReaderH5::GetDataSetDimensions(std::string_view name, 
   DynamicArray<size_t> dims(_allocator);
 
   MOCHI_ERROR_RETURN(error, dims);
-  std::lock_guard lock{hdf5::GetGlobalMutex()};
+  std::scoped_lock lock{hdf5::GetGlobalMutex()};
 
   try {
     H5::Group const& group = GetCurrentGroup();
@@ -611,7 +611,7 @@ void GroupReaderH5::ReadDataSetImpl(
     Span<T> outData,
     Error& error) {
   MOCHI_ERROR_RETURN(error);
-  std::lock_guard lock{hdf5::GetGlobalMutex()};
+  std::scoped_lock lock{hdf5::GetGlobalMutex()};
 
   try {
     H5::Group const& group = GetCurrentGroup();
@@ -644,7 +644,7 @@ void GroupReaderH5::ReadDataSetImpl(
 
 void GroupReaderH5::ReadDataSet(std::string_view name, Span<std::string> outData, Error& error) {
   MOCHI_ERROR_RETURN(error);
-  std::lock_guard lock{hdf5::GetGlobalMutex()};
+  std::scoped_lock lock{hdf5::GetGlobalMutex()};
 
   try {
     H5::Group const& group = GetCurrentGroup();
@@ -698,7 +698,7 @@ void GroupReaderH5::ReadAttributeImpl(
     Span<T> outData,
     Error& error) const {
   MOCHI_ERROR_RETURN(error);
-  std::lock_guard lock{hdf5::GetGlobalMutex()};
+  std::scoped_lock lock{hdf5::GetGlobalMutex()};
 
   try {
     H5::H5Object const& obj = GetAttributeTarget();
@@ -727,7 +727,7 @@ void GroupReaderH5::ReadAttributeImpl(
 
 void GroupReaderH5::ReadAttribute(std::string_view name, Span<char> outData, Error& error) const {
   MOCHI_ERROR_RETURN(error);
-  std::lock_guard lock{hdf5::GetGlobalMutex()};
+  std::scoped_lock lock{hdf5::GetGlobalMutex()};
 
   try {
     H5::H5Object const& obj = GetAttributeTarget();
@@ -757,7 +757,7 @@ void GroupReaderH5::ReadAttribute(std::string_view name, Span<char> outData, Err
 
 size_t GroupReaderH5::GetAttributeSize(std::string_view name, Error& error) const {
   MOCHI_ERROR_RETURN(error, 0);
-  std::lock_guard lock{hdf5::GetGlobalMutex()};
+  std::scoped_lock lock{hdf5::GetGlobalMutex()};
 
   try {
     H5::H5Object const& obj = GetAttributeTarget();
@@ -777,7 +777,7 @@ size_t GroupReaderH5::GetAttributeSize(std::string_view name, Error& error) cons
 
 size_t GroupReaderH5::GetStringAttributeSize(std::string_view name, Error& error) const {
   MOCHI_ERROR_RETURN(error, 0);
-  std::lock_guard lock{hdf5::GetGlobalMutex()};
+  std::scoped_lock lock{hdf5::GetGlobalMutex()};
 
   try {
     H5::H5Object const& obj = GetAttributeTarget();

@@ -824,14 +824,14 @@ class PayloadQueue {
  public:
   void Push(DynamicArray<uint8_t> payload) {
     {
-      std::lock_guard lock(_mutex);
+      std::scoped_lock lock(_mutex);
       _queue.push_back(std::move(payload));
     }
     _cv.notify_one();
   }
 
   bool Pop(DynamicArray<uint8_t>& out) {
-    std::lock_guard lock(_mutex);
+    std::scoped_lock lock(_mutex);
     if (_queue.empty()) {
       return false;
     }
@@ -854,14 +854,14 @@ class PayloadQueue {
 
   void Shutdown() {
     {
-      std::lock_guard lock(_mutex);
+      std::scoped_lock lock(_mutex);
       _shutdown = true;
     }
     _cv.notify_all();
   }
 
   void Clear() {
-    std::lock_guard lock(_mutex);
+    std::scoped_lock lock(_mutex);
     _queue.clear();
   }
 
@@ -1077,7 +1077,7 @@ class TcpServerTransport final : public ServerTransport {
     if (!conn) {
       return false;
     }
-    std::lock_guard<std::mutex> const lock(conn->sendMutex);
+    std::scoped_lock const lock(conn->sendMutex);
     return SendFramed(conn->socket.Get(), data, size);
   }
 
@@ -1088,7 +1088,7 @@ class TcpServerTransport final : public ServerTransport {
     DynamicArray<std::shared_ptr<ClientConnection>> conns;
     _state.Read([&](State const& s) { conns = s.clients; });
     for (auto const& conn : conns) {
-      std::lock_guard<std::mutex> const lock(conn->sendMutex);
+      std::scoped_lock const lock(conn->sendMutex);
       SendFramed(conn->socket.Get(), data, size);
     }
   }

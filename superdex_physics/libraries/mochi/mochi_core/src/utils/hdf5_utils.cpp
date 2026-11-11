@@ -50,7 +50,7 @@ H5::H5File mochi::hdf5::OpenFileForWrite(std::string_view filePath, Error& error
     MOCHI_ERROR_RETURN(error, {});
   }
 
-  std::lock_guard lock(GetGlobalMutex());
+  std::scoped_lock lock(GetGlobalMutex());
 
   try {
     // Use the C API because it allows us to set the ordering flags.
@@ -79,7 +79,7 @@ H5::H5File mochi::hdf5::OpenFileForRead(std::string_view filePath, Error& error)
   MOCHI_ERROR_IF(!std::filesystem::exists(filePath), error, "File not found");
   MOCHI_ERROR_RETURN(error, {});
 
-  std::lock_guard lock(GetGlobalMutex());
+  std::scoped_lock lock(GetGlobalMutex());
 
   try {
     return {std::string(filePath).c_str(), H5F_ACC_RDONLY};
@@ -91,7 +91,7 @@ H5::H5File mochi::hdf5::OpenFileForRead(std::string_view filePath, Error& error)
 
 H5::H5File mochi::hdf5::OpenFileBytesForRead(Span<char const> fileData, Error& error) {
   MOCHI_ERROR_RETURN(error, {});
-  std::lock_guard lock(GetGlobalMutex());
+  std::scoped_lock lock(GetGlobalMutex());
 
   try {
     // HDF5 calls a file in memory a "file image". The C++ wrapper for HDF5 does not expose this
@@ -118,7 +118,7 @@ H5::H5File mochi::hdf5::OpenFileBytesForRead(Span<char const> fileData, Error& e
 
 H5::Group mochi::hdf5::CreateGroup(H5::Group const& parent, char const* name, Error& error) {
   MOCHI_ERROR_RETURN(error, {});
-  std::lock_guard lock(GetGlobalMutex());
+  std::scoped_lock lock(GetGlobalMutex());
 
   try {
     // Create a child group. This part uses the C API to set the creation order flags
