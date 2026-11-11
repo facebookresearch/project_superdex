@@ -163,7 +163,7 @@ inline void FlushLog() {
 
 inline LogFn GetLogCallback() {
 #if MOCHI_ARCH_CPU
-  std::lock_guard<std::recursive_mutex> lock(log_impl::GetLogMutexRef());
+  std::scoped_lock lock(log_impl::GetLogMutexRef());
   auto const& logFn = log_impl::GetLogFnRef();
   return logFn ? logFn : LogFn{&log_impl::DefaultLogFn};
 #else
@@ -173,7 +173,7 @@ inline LogFn GetLogCallback() {
 
 inline void SetLogCallback([[maybe_unused]] LogFn fn) {
 #if MOCHI_ARCH_CPU
-  std::lock_guard<std::recursive_mutex> lock(log_impl::GetLogMutexRef());
+  std::scoped_lock lock(log_impl::GetLogMutexRef());
   auto& logFn = log_impl::GetLogFnRef();
   logFn = fn ? fn : LogFn{&log_impl::DefaultLogFn};
 #endif
@@ -185,7 +185,7 @@ inline void EnableLogChannel(LogChannel channel, [[maybe_unused]] bool enable) {
     return;
   }
 #if MOCHI_ARCH_CPU
-  std::lock_guard<std::recursive_mutex> lock(log_impl::GetLogMutexRef());
+  std::scoped_lock lock(log_impl::GetLogMutexRef());
   log_impl::GetLogChannelsDisabledArrayRef()[(size_t)channel] = !enable;
 #endif
 }
@@ -195,7 +195,7 @@ inline bool IsLogChannelEnabled(LogChannel channel) {
     return false;
   }
 #if MOCHI_ARCH_CPU
-  std::lock_guard<std::recursive_mutex> lock(log_impl::GetLogMutexRef());
+  std::scoped_lock lock(log_impl::GetLogMutexRef());
   auto const& isChannelDisabled = log_impl::GetLogChannelsDisabledArrayRef();
   return !isChannelDisabled[(size_t)channel];
 #else

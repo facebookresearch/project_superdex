@@ -134,7 +134,7 @@ MOCHI_FORCE_INLINE DstRefT assert_cast(SrcT&& ref) {
 
 inline OnAssertFn GetAssertionFailureCallback() {
 #if MOCHI_ARCH_CPU
-  std::lock_guard<std::recursive_mutex> lock(assert_impl::GetAssertMutexRef());
+  std::scoped_lock lock(assert_impl::GetAssertMutexRef());
   auto& fn = assert_impl::GetOnAssertFnRef();
   return fn ? fn : OnAssertFn{assert_impl::DefaultAssertHandler};
 #else
@@ -144,7 +144,7 @@ inline OnAssertFn GetAssertionFailureCallback() {
 
 inline void SetAssertionFailureCallback([[maybe_unused]] OnAssertFn fn) {
 #if MOCHI_ARCH_CPU
-  std::lock_guard<std::recursive_mutex> lock(assert_impl::GetAssertMutexRef());
+  std::scoped_lock lock(assert_impl::GetAssertMutexRef());
   assert_impl::GetOnAssertFnRef() = fn ? fn : OnAssertFn{assert_impl::DefaultAssertHandler};
 #endif
 }
@@ -153,7 +153,7 @@ inline void SetAssertionFailureCallback([[maybe_unused]] OnAssertFn fn) {
 MOCHI_NO_INLINE inline bool
 OnAssertionFailure(char const* file, int line, char const* condition, char const* msg) {
 #if MOCHI_ARCH_CPU
-  std::lock_guard<std::recursive_mutex> lock(assert_impl::GetAssertMutexRef());
+  std::scoped_lock lock(assert_impl::GetAssertMutexRef());
   int& callDepth = assert_impl::GetAssertCallDepthRef();
   if (callDepth != 0) {
     // HELP! Assert failure within an assert handler function!
