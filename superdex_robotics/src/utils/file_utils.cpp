@@ -53,7 +53,6 @@ bool superdex::robotics::IsBotPath(std::string_view path) {
   return false;
 }
 
-#if SUPERDEXROBOTICS_WITH_BOT_SCENE
 bool superdex::robotics::IsBotScenePath(std::string_view path) {
   if (path.ends_with(kBotSceneExtension)) {
     return true;
@@ -77,7 +76,6 @@ bool superdex::robotics::IsBotTaskPath(std::string_view path) {
 #endif
   return false;
 }
-#endif
 
 static std::filesystem::path GetDirectoryPath(std::filesystem::path const& path) {
   return path.parent_path();
@@ -902,7 +900,6 @@ void superdex::robotics::SaveToFile(
   }
 }
 
-#if SUPERDEXROBOTICS_WITH_BOT_SCENE
 void superdex::robotics::SaveToFile(
     BotScenePrefab const& scenePrefab,
     std::string_view path,
@@ -937,7 +934,6 @@ void superdex::robotics::SaveToFile(
   // splicing needed.
   SaveParamsToFile(temp, path, error);
 }
-#endif // SUPERDEXROBOTICS_WITH_BOT_SCENE
 
 static void HashFileIntoState(XXH3_state_t* state, std::string_view path, Error& error) {
   MOCHI_ERROR_RETURN(error);

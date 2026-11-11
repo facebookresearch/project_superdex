@@ -511,7 +511,6 @@ void superdex::robotics::ExportBotPrefabToUrdfFile(
   mochi::WriteFile(urdfPath, xmlStr, error);
 }
 
-#if SUPERDEXROBOTICS_WITH_BOT_SCENE
 namespace {
 
 constexpr std::string_view kWorldLink = "world";
@@ -854,4 +853,3 @@ DynamicString superdex::robotics::SaveBotSceneToUrdfString(
     Error& error) {
   return SaveBotSceneToUrdfString(scene, rootPath, options, {}, error);
 }
-#endif // SUPERDEXROBOTICS_WITH_BOT_SCENE

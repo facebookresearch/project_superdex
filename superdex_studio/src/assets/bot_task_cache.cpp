@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-#if MOCHI_INTERNAL
-
 #include "assets/bot_task_cache.h"
 
-#include <superdex_robotics/internal/bot_task.h>
+#include <superdex_robotics/scene/bot_task.h>
 #include <superdex_robotics/utils/file_utils.h>
 
 #include <mochi_core/utils/reflection.h>
@@ -128,5 +126,3 @@ bool BotTaskCache::Write(std::string const& path, Entry& entry, std::string& err
 }
 
 } // namespace superdex::studio
-
-#endif // MOCHI_INTERNAL

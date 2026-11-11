@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-#if MOCHI_INTERNAL
-
 #include "assets/bot_task_utils.h"
 
-#include <superdex_robotics/internal/bot_task.h>
+#include <superdex_robotics/scene/bot_task.h>
 #include <superdex_robotics/utils/file_utils.h>
 
 namespace superdex::studio {
@@ -58,5 +56,3 @@ bool SetBotTaskName(std::string const& path, std::string_view name, std::string&
 }
 
 } // namespace superdex::studio
-
-#endif // MOCHI_INTERNAL

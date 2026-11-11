@@ -15,9 +15,7 @@
  */
 
 #include <superdex_robotics/core/loader.h>
-#if SUPERDEXROBOTICS_WITH_BOT_SCENE
-#include <superdex_robotics/internal/bot_scene.h>
-#endif
+#include <superdex_robotics/scene/bot_scene.h>
 #include <superdex_robotics/utils/archive_utils.h>
 #include <superdex_robotics/utils/file_utils.h>
 
@@ -754,7 +752,6 @@ BotArchiveMetadata superdex::robotics::ReadBotArchiveMetadata(
 // Bot scene archives (.superdex_scene_archive)
 // ---------------------------------------------------------------------------
 
-#if SUPERDEXROBOTICS_WITH_BOT_SCENE
 bool superdex::robotics::IsSceneArchivePath(std::string_view path) {
   if (path.ends_with(kSceneArchiveExtension)) {
     return true;
@@ -1154,4 +1151,3 @@ BotSceneArchiveMetadata superdex::robotics::ReadBotSceneArchiveMetadata(
   MOCHI_ERROR_RETURN(error, {});
   return metadata;
 }
-#endif // SUPERDEXROBOTICS_WITH_BOT_SCENE

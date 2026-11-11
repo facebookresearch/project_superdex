@@ -24,6 +24,7 @@
 #include <mochi_physics/utils/mochi_prefab.h>
 
 #include <algorithm>
+#include <cmath>
 #include <numeric>
 #include <set>
 #include <string_view>
@@ -1859,6 +1860,31 @@ DynamicArray<int> superdex::robotics::FindLeafLinkIndices(BotPrefab const& botPr
   return leafIndices;
 }
 
+// Motion of a joint in its own frame for the bot-space DOFs starting at pose[inOutDofIndex], which
+// is advanced past them. As Mochi's articulated::ComputeJointTransform, with axes normalized as
+// Mochi does when it creates the actor, so a prismatic position is along the unit axis [m].
+static TransformRT
+ComputeBotJointMotion(BotJointPrefab const& joint, Span<real const> pose, int& inOutDofIndex) {
+  switch (joint.type) {
+    case ArticulatedJointType::Revolute:
+      return TransformRT(Quaternion::FromAxisAngle(joint.axis, pose[inOutDofIndex++]));
+    case ArticulatedJointType::Prismatic:
+      return TransformRT(Normalize(joint.axis) * pose[inOutDofIndex++]);
+    case ArticulatedJointType::Spherical: {
+      static_assert(RigidSize::kDRot == 3, "Spherical joint pose layout assumes 3 rotation DOFs.");
+      Real3 const rotVec{pose[inOutDofIndex], pose[inOutDofIndex + 1], pose[inOutDofIndex + 2]};
+      inOutDofIndex += RigidSize::kDRot;
+      return TransformRT(Quaternion::FromRotationVector(rotVec));
+    }
+    case ArticulatedJointType::Free:
+    case ArticulatedJointType::Hard:
+    case ArticulatedJointType::Cycle:
+    case ArticulatedJointType::Count:
+      break;
+  }
+  return TransformRT::Identity();
+}
+
 void superdex::robotics::ComputeLinkTransformsFromPose(
     BotPrefab const& botPrefab,
     Span<real const> pose,
@@ -1866,66 +1892,152 @@ void superdex::robotics::ComputeLinkTransformsFromPose(
     LinkTransformSpace transformSpace,
     Error& error,
     int finalLinkIndex) {
-  if (isize(pose) != botPrefab._numDofs) {
-    MOCHI_LOG_WARNING(
-        "ComputeLinkTransformsFromPose: pose size (%d) does not match DOF "
-        "count (%d)",
-        isize(pose),
-        botPrefab._numDofs);
-    MOCHI_ERROR_SET(error, "pose size does not match DOF count")
-    MOCHI_ERROR_RETURN(error);
-  }
-  if (botPrefab.links.empty()) {
-    MOCHI_LOG_WARNING("ComputeLinkTransformsFromPose: botPrefab has no links");
-    MOCHI_ERROR_SET(error, "botPrefab has no links")
-    MOCHI_ERROR_RETURN(error);
-  }
-  if (botPrefab.links.size() != botPrefab.joints.size()) {
-    MOCHI_LOG_WARNING(
-        "ComputeLinkTransformsFromPose: joint count (%d) not equal to link count (%d)",
-        isize(botPrefab.joints),
-        isize(botPrefab.links));
-    MOCHI_ERROR_SET(error, "Joint count not equal to link count")
-    MOCHI_ERROR_RETURN(error);
-  }
+  MOCHI_ERROR_RETURN(error);
   int const numLinks = isize(botPrefab.links);
+  MOCHI_ERROR_IF(numLinks == 0, error, "botPrefab has no links");
+  MOCHI_ERROR_IF(isize(botPrefab.joints) != numLinks, error, "Joint count not equal to link count");
+  MOCHI_ERROR_IF(isize(pose) != botPrefab._numDofs, error, "pose size does not match DOF count");
+  MOCHI_ERROR_RETURN(error);
   int const iFinal = finalLinkIndex < 0 ? numLinks : Min(finalLinkIndex + 1, numLinks);
   outLinkTransforms.resize(iFinal);
   outLinkTransforms[0] = TransformRT::Identity();
   int iDof = 0;
   for (int iLink = 1; iLink < iFinal; ++iLink) {
     auto const& link = botPrefab.links[iLink];
-    outLinkTransforms[iLink] = link._parentFromLink;
     auto const& joint = botPrefab.joints[iLink];
-    if (joint.type == ArticulatedJointType::Revolute) {
-      // In Mochi: rotation is applied as q_new = q_old * q_delta
-      // Create rotation quaternion from axis-angle
-      auto rot = outLinkTransforms[iLink].GetRotation();
-      Quaternion jointRot = Quaternion::FromAxisAngle(joint.axis, pose[iDof++]);
-      outLinkTransforms[iLink].SetRotation(rot * jointRot);
-    } else if (joint.type == ArticulatedJointType::Prismatic) {
-      // Transform axis to parent space, then add translation
-      Real3 axisInParent = outLinkTransforms[iLink].TransformDirection(joint.axis);
-      Real3 loc = outLinkTransforms[iLink].GetTranslation();
-      loc = loc + axisInParent * pose[iDof++];
-      outLinkTransforms[iLink].SetTranslation(loc);
-    } else if (joint.type == ArticulatedJointType::Spherical) {
-      // Spherical pose is a rotation vector (axis-angle vector) of size
-      // RigidSize::kDRot = 3. Convert it to a quaternion and apply the same
-      // way as a revolute joint: q_new = q_old * q_delta.
-      static_assert(RigidSize::kDRot == 3, "Spherical joint pose layout assumes 3 rotation DOFs.");
-      Real3 const rotVec{pose[iDof], pose[iDof + 1], pose[iDof + 2]};
-      iDof += RigidSize::kDRot;
-      auto rot = outLinkTransforms[iLink].GetRotation();
-      Quaternion jointRot = Quaternion::FromRotationVector(rotVec);
-      outLinkTransforms[iLink].SetRotation(rot * jointRot);
-    }
+    MOCHI_ASSERT_VERBOSE(
+        link.parentLink >= 0 && link.parentLink < iLink, "Links must follow their parents");
+    // As Mochi's articulated::ComputeTransformsFromReducedPose: parentFromLink =
+    // parentLinkFromJoint * motion * jointFromChildLink.
+    outLinkTransforms[iLink] = joint.parentLinkFromJoint *
+        ComputeBotJointMotion(joint, pose, iDof) * link.parentJointFromLink;
     if (transformSpace == LinkTransformSpace::RootFromParent) {
-      int const iParent = link.parentLink;
       // Mochi: parent * child (opposite of Unreal's child * parent)
-      outLinkTransforms[iLink] = outLinkTransforms[iParent] * outLinkTransforms[iLink];
+      outLinkTransforms[iLink] = outLinkTransforms[link.parentLink] * outLinkTransforms[iLink];
     }
   }
+  MOCHI_ASSERT_VERBOSE(iFinal < numLinks || iDof == botPrefab._numDofs, "Stale _numDofs");
+}
+
+// Angle [rad] of the rotation of a unit quaternion with the given vector and scalar parts, in
+// [0, pi]. atan2 keeps small angles accurate, unlike acos of the scalar part.
+static real RotationAngle(Real3 const& vectorPart, real scalarPart) {
+  return 2_r * std::atan2(Norm(vectorPart), Abs(scalarPart));
+}
+
+// What a joint's motion holds that the joint can't produce (see LinkPoseResidual).
+static LinkPoseResidual ComputeJointResidual(
+    BotJointPrefab const& joint,
+    TransformRT const& motion) {
+  Quaternion const& q = motion.GetRotation();
+  Real3 const vectorPart{q.data[0], q.data[1], q.data[2]};
+  Real3 const translation = motion.GetTranslation();
+  switch (joint.type) {
+    case ArticulatedJointType::Revolute: {
+      // The swing left after the nearest rotation about the axis, whose quaternion is the axis
+      // component of the vector part with the scalar part.
+      Real3 const axis = Normalize(joint.axis);
+      real const sinHalf = Dot(vectorPart, axis);
+      return {
+          RotationAngle(
+              vectorPart - axis * sinHalf, std::sqrt(sinHalf * sinHalf + q.data[3] * q.data[3])),
+          Norm(translation)};
+    }
+    case ArticulatedJointType::Prismatic: {
+      Real3 const axis = Normalize(joint.axis);
+      return {
+          RotationAngle(vectorPart, q.data[3]), Norm(translation - axis * Dot(translation, axis))};
+    }
+    case ArticulatedJointType::Spherical:
+      return {0_r, Norm(translation)};
+    case ArticulatedJointType::Hard:
+      return {RotationAngle(vectorPart, q.data[3]), Norm(translation)};
+    case ArticulatedJointType::Free:
+    case ArticulatedJointType::Cycle:
+    case ArticulatedJointType::Count:
+      break;
+  }
+  return {};
+}
+
+void superdex::robotics::ComputePoseFromLinkTransforms(
+    BotPrefab const& botPrefab,
+    Span<TransformRT const> linkTransforms,
+    DynamicArray<real>& outPose,
+    LinkTransformSpace transformSpace,
+    Error& error,
+    Span<real const> referencePose,
+    DynamicArray<LinkPoseResidual>* outResiduals) {
+  // Below this squared norm of the twist quaternion (a swing within about 2e-5 rad of a half turn
+  // off a revolute axis), the revolute angle is undetermined.
+  static constexpr real kDegenerateTwistSq = 1e-10_r;
+  MOCHI_ERROR_RETURN(error);
+  int const numLinks = isize(botPrefab.links);
+  MOCHI_ERROR_IF(numLinks == 0, error, "botPrefab has no links");
+  MOCHI_ERROR_IF(isize(botPrefab.joints) != numLinks, error, "Joint count not equal to link count");
+  MOCHI_ERROR_IF(
+      isize(linkTransforms) != numLinks, error, "Link transform count not equal to link count");
+  MOCHI_ERROR_IF(
+      !referencePose.empty() && isize(referencePose) != botPrefab._numDofs,
+      error,
+      "referencePose size does not match DOF count");
+  MOCHI_ERROR_RETURN(error);
+  outPose.resize(botPrefab._numDofs);
+  if (outResiduals != nullptr) {
+    *outResiduals = DynamicArray<LinkPoseResidual>(numLinks, LinkPoseResidual{});
+  }
+  int iDof = 0;
+  for (int iLink = 1; iLink < numLinks; ++iLink) {
+    auto const& link = botPrefab.links[iLink];
+    auto const& joint = botPrefab.joints[iLink];
+    // Mochi: parent * child (opposite of Unreal's child * parent)
+    TransformRT const parentFromLink = transformSpace == LinkTransformSpace::RootFromParent
+        ? Invert(linkTransforms[link.parentLink]) * linkTransforms[iLink]
+        : linkTransforms[iLink];
+    // ComputeLinkTransformsFromPose: parentFromLink = parentLinkFromJoint * motion *
+    // parentJointFromLink.
+    TransformRT const motion =
+        Invert(joint.parentLinkFromJoint) * parentFromLink * Invert(link.parentJointFromLink);
+    if (outResiduals != nullptr) {
+      (*outResiduals)[iLink] = ComputeJointResidual(joint, motion);
+    }
+    Quaternion const& q = motion.GetRotation();
+    switch (joint.type) {
+      case ArticulatedJointType::Revolute: {
+        // The twist of the motion about the axis, 2 atan2(v . axis, w): the nearest rotation about
+        // the axis. Both vanish when every angle is equally near (a half turn about a
+        // perpendicular axis); the angle is then the reference (or 0) rather than whatever
+        // rounding gives. Of the angles 2 pi apart giving the same rotation, take the nearest to
+        // the reference, else the one in [-pi, pi].
+        real const sinHalf = Dot(Real3{q.data[0], q.data[1], q.data[2]}, Normalize(joint.axis));
+        real const cosHalf = q.data[3];
+        real const reference = referencePose.empty() ? 0_r : referencePose[iDof];
+        real const angle = sinHalf * sinHalf + cosHalf * cosHalf > kDegenerateTwistSq
+            ? 2_r * std::atan2(sinHalf, cosHalf)
+            : reference;
+        outPose[iDof++] = angle + 2_r * kPI * std::round((reference - angle) / (2_r * kPI));
+        break;
+      }
+      case ArticulatedJointType::Prismatic:
+        // Translation of the motion along the unit axis.
+        outPose[iDof++] = Dot(motion.GetTranslation(), Normalize(joint.axis));
+        break;
+      case ArticulatedJointType::Spherical: {
+        // Rotation vector of norm <= pi, as Mochi's articulated::ConvertPoseToDofs.
+        Real3 const rotVec = q.ToRotationVector();
+        outPose[iDof++] = rotVec[0];
+        outPose[iDof++] = rotVec[1];
+        outPose[iDof++] = rotVec[2];
+        break;
+      }
+      case ArticulatedJointType::Free:
+      case ArticulatedJointType::Hard:
+      case ArticulatedJointType::Cycle:
+      case ArticulatedJointType::Count:
+        break;
+    }
+  }
+  MOCHI_ASSERT_VERBOSE(iDof == botPrefab._numDofs, "Stale _numDofs");
 }
 
 // Computes and bakes mass properties (centerOfMass, momentOfInertia, and mass for density-only

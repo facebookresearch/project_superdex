@@ -166,7 +166,6 @@ ReadBotArchiveMetadata(std::string_view extractedDir, superdex::Error& error);
 // Bot scene archives (.superdex_scene_archive)
 // ---------------------------------------------------------------------------
 
-#if SUPERDEXROBOTICS_WITH_BOT_SCENE
 constexpr std::string_view kSceneArchiveMetadataFile = ".superdex_scene_archive_metadata";
 constexpr std::string_view kSceneArchiveExtension = ".superdex_scene_archive";
 
@@ -263,6 +262,5 @@ GetExtractedBotSceneArchiveTarget(std::string_view extractedDir, superdex::Error
  * @return The archive metadata, or default-constructed on failure. */
 [[nodiscard]] MOCHI_API BotSceneArchiveMetadata
 ReadBotSceneArchiveMetadata(std::string_view extractedDir, superdex::Error& error);
-#endif // SUPERDEXROBOTICS_WITH_BOT_SCENE
 
 } // namespace superdex::robotics

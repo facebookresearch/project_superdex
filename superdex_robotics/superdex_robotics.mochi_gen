@@ -1212,3 +1212,659 @@ fn bots::CreateBot(
 // @param[in] scene Scene to remove the bot from. Must be the same scene used to create the bot.
 // @param[in] bot Pointer to the bot to be destroyed.
 fn bots::DestroyBot(Scene* scene, bots::Bot* bot [nullable]) -> void [export];
+
+# ---------------------------------------------------------------------------
+# Bot Scene types (.superdex_scene)
+# ---------------------------------------------------------------------------
+
+// @brief Metadata stored at the root of a bot scene archive.
+struct bots::BotSceneArchiveMetadata [no_python, no_reflection] {
+  String date;
+  String sceneHash;
+  String commitHash;
+  String target;
+  Optional<String> comment;
+}
+
+// @brief Human-readable metadata for a .superdex_scene file. Not consumed by the runtime.
+struct bots::BotSceneMetadata [no_reflection] {
+  // @brief Human-readable scene name, e.g. "T3 Shapefilter Station".
+  String name;
+  // @brief Longer description of the scene purpose.
+  String description;
+  // @brief Schema version, e.g. "1.0".
+  String version;
+  // @brief Author name or unixname.
+  String author;
+}
+
+// @brief A named reference to a spawnable scene, prefab, bot, or bot archive.
+struct bots::PrefabEntry [no_reflection] {
+  // @brief Unique name for this prefab instance (used for runtime lookup).
+  String name;
+  // @brief Relative path to a .mochi_scene, .mochi_prefab, .superdex_bot, or
+  // .superdex_bot_archive file.
+  String path;
+}
+
+// @brief Scene definition within a .superdex_scene.
+//
+// The base_scene is optional — a scene under construction may not have one yet. When present it is
+// the authoritative source for all simulation physics parameters (gravity, solver config, contact
+// filtering, collision layers, etc.); when absent the scene keeps its default parameters.
+struct bots::BaseSceneParams [no_reflection] {
+  // @brief Path to a .mochi_scene file. Defines the scene foundation. Empty means no base scene.
+  String baseScene;
+  // @brief Prefabs that can be loaded/destroyed on demand at runtime (e.g. task objects spawned
+  // each episode).
+  DynamicArray<bots::PrefabEntry> spawnablePrefabs [no_serialize_defaults];
+  // @brief Where this scene's task frame (the nominal table top) is in the world. Every task's
+  // root-level spawns are placed onto it, through the task's taskRootOffset when it declares one.
+  // Unset leaves every task where its own coordinates put it.
+  Optional<TransformRT> taskRoot [no_serialize_defaults];
+}
+
+// @brief A controller instance to create and attach to a bot.
+struct bots::ControllerEntry [no_reflection, ignore_extraneous_fields] {
+  // @brief Controller type identifier (registered string), e.g. "BASIC_OSC_PD", "BASIC_JSC_PD".
+  String type;
+  // @brief Instance name for runtime lookup.
+  String name;
+  // @brief Controller-specific parameters as a raw JSON string. Omit to use defaults.
+  String params;
+  // @brief The controller's init args as a serialized JSON object -- the contents of the scene
+  // entry's nested "initArgs" object (e.g. {"baseLinkName":..,"eeLinkName":..} for link-resolved
+  // controllers, or a model path for a learned controller). Passed verbatim to
+  // ControllerBase::ConfigureFromSceneEntry, which deserializes it into a controller-specific
+  // struct, so the scene loader never needs to know a controller's fields. Reflected with the
+  // JsonString attribute: on load the nested "initArgs" object is captured into this string, and on
+  // save it is re-emitted as a nested object (round-trip identity), so no bespoke parsing is
+  // needed. May also be set or modified directly (e.g. from Python) before LoadBotScene. Defaults
+  // to an empty object ("{}"), which NoSerializeDefaults omits from the saved file. (Legacy scenes
+  // that interleave flat controller fields instead of a nested "initArgs" object are folded into
+  // this string at load time -- see LoadBotScenePrefabFromFile; new scenes and all saves use the
+  // nested form.)
+  String initArgs [json_string, no_serialize_defaults] = "{}";
+}
+
+// @brief A bot (robot) to instantiate in the scene.
+struct bots::BotEntry [no_reflection] {
+  // @brief Unique instance name (used for runtime lookup via GetBot(name)).
+  String name;
+  // @brief Path to a .superdex_bot or .superdex_bot_archive file (self-contained or mod bot).
+  String path;
+  // @brief Bot placement relative to the scene root (aFromB convention: maps bot-frame coordinates
+  // into the scene frame). Default: identity.
+  TransformRT parentFromBot [no_serialize_defaults];
+  // @brief Initial joint angles (length = total DOFs of the bot).
+  DynamicArray<real> initialPose [no_serialize_defaults];
+  // @brief Controllers to create and attach to this bot.
+  DynamicArray<bots::ControllerEntry> controllers [no_serialize_defaults];
+  // @brief Key naming the teleoperator rig that drives this bot; the consumer maps it to a
+  // concrete class. Empty means use the consumer's default for the slot this bot fills.
+  String roboperatorClass [no_serialize_defaults];
+  // @brief Legacy key captured on load: older assets stored a flat `translation`. Folded into
+  // @ref parentFromBot by ApplyLegacyBotEntryTransforms and cleared (so re-saves omit it).
+  Real3 _legacyTranslation [no_python, no_serialize_defaults, reflection_name("translation")];
+  // @brief Legacy key captured on load: older assets stored a flat `rotation`. Folded into
+  // @ref parentFromBot by ApplyLegacyBotEntryTransforms and cleared (so re-saves omit it).
+  Quaternion _legacyRotation [no_python, no_serialize_defaults, reflection_name("rotation")];
+}
+
+// @brief One slot a scene offers, and the bots eligible to fill it.
+struct bots::SlotEntry [no_reflection] {
+  // @brief Unique slot name within the scene, e.g. "right". Names a role, not a bot.
+  String name;
+  // @brief Names of bot entries that may fill this slot. A consumer picks at most one per slot;
+  // superdex validates that each named bot exists and is listed once, and nothing else. Which
+  // slots a scene has, and what they mean, is the scene's business, not superdex's.
+  DynamicArray<String> controlledBots;
+}
+
+// @brief A scene-level sensor (not attached to any bot).
+//
+// Useful for environment-level observations such as overhead cameras, force plates,
+// or proximity sensors mounted on fixtures.
+struct bots::SceneSensorEntry [no_reflection, ignore_extraneous_fields] {
+  // @brief Sensor type identifier (registered string), e.g. "SENSOR_CAMERA".
+  String type;
+  // @brief Unique instance name for runtime lookup.
+  String name;
+  // @brief Sensor pose relative to the scene root (aFromB convention: maps sensor-frame
+  // coordinates into the parent scene frame). Chain to world via SensorBase::GetWorldTransform.
+  // Default: identity.
+  TransformRT parentFromSensor [no_serialize_defaults];
+  // @brief Sensor-specific parameters: a path to a .superdex_sensor JSON file or inline JSON. Omit
+  // to use defaults.
+  String params;
+  // @brief Legacy key captured on load: older assets stored a flat `translation`. Folded into
+  // @ref parentFromSensor by ApplyLegacySensorTransforms and cleared (so re-saves omit it).
+  Real3 _legacyTranslation [no_python, no_serialize_defaults, reflection_name("translation")];
+  // @brief Legacy key captured on load: older assets stored a flat `rotation`. Folded into
+  // @ref parentFromSensor by ApplyLegacySensorTransforms and cleared (so re-saves omit it).
+  Quaternion _legacyRotation [no_python, no_serialize_defaults, reflection_name("rotation")];
+}
+
+// @brief Complete parameter set for a .superdex_scene file.
+//
+// A .superdex_scene is a JSON config that serves as the single source of truth for a complete
+// simulation environment. It unifies scene geometry, robots, controllers, and sensors.
+struct bots::BotScenePrefab [no_reflection] {
+  // @brief Human-readable metadata. Not consumed by the runtime.
+  bots::BotSceneMetadata metadata [no_serialize_defaults];
+  // @brief Scene definition. The base_scene is optional.
+  bots::BaseSceneParams scene;
+  // @brief Robots to instantiate.
+  DynamicArray<bots::BotEntry> bots [no_serialize_defaults];
+  // @brief Scene-level sensors (not attached to any bot).
+  DynamicArray<bots::SceneSensorEntry> sensors [no_serialize_defaults];
+  // @brief Slots this scene offers, and which bots may fill each. A map in meaning, an array of
+  // named entries in the file, as every other named collection in this schema is. Empty means the
+  // scene declares no slots and offers no choice.
+  DynamicArray<bots::SlotEntry> slots [no_serialize_defaults];
+}
+
+// @brief Load bot scene parameters from a .superdex_scene JSON file.
+//
+// Deserializes the file, validates that bot, controller, and spawnable-prefab names are non-empty
+// and unique, and resolves relative paths to absolute. A scene with no base scene and no bots is
+// valid — that is the state of a newly created scene.
+//
+// @param[in] path File path to the .superdex_scene file.
+//
+// @return Loaded @ref BotScenePrefab, or default-constructed on failure.
+fn bots::LoadBotScenePrefabFromFile(StringView path) -> bots::BotScenePrefab [export, mochi_error];
+
+// @brief Velocity limit for every exported joint whose SuperDex name (after
+// @ref SceneUrdfOptions::stripIndexPrefixes) is @ref joint.
+struct bots::SceneUrdfJointVelocityLimit [no_reflection] {
+  // @brief SuperDex joint name, e.g. "Joint1_L" or "thumb_cmc_flex".
+  String joint;
+  // @brief Velocity limit [rad/s or m/s].
+  real velocity;
+}
+
+// @brief An extra URDF frame rigidly attached to every exported link named @ref link.
+struct bots::SceneUrdfLinkAlias [no_reflection] {
+  // @brief SuperDex link name (after @ref SceneUrdfOptions::stripIndexPrefixes).
+  String link;
+  // @brief Alias name, prefixed like the link it is attached to.
+  String alias;
+}
+
+// @brief Options for @ref SaveBotSceneToUrdfString.
+struct bots::SceneUrdfOptions [no_reflection] {
+  // @brief URDF robot name. Empty uses the scene's metadata name, or "scene".
+  String robotName;
+  // @brief Links and joints of a bot that fills a slot are named "{slot}_{instanceName}_{name}",
+  // and other bots' "{entry}_{name}". Base-scene actors keep their names, prefixed with
+  // "{prefab}_" for each nested prefab. Defaults to "real".
+  String instanceName;
+  // @brief Strip a leading "link_NN_" or "joint_NN_" index from SuperDex names.
+  bool stripIndexPrefixes = false;
+  // @brief Velocity limits by joint name. @ref BotJointPrefab has none of its own.
+  DynamicArray<bots::SceneUrdfJointVelocityLimit> jointVelocityLimits;
+  // @brief Fail if a joint with position limits has no entry in @ref jointVelocityLimits. When
+  // false, such joints get a placeholder velocity of 1, as `SaveToUrdfFile` writes.
+  bool requireVelocityLimits = true;
+  // @brief Extra frames to add, e.g. ROS names for a bot's base and tool links.
+  DynamicArray<bots::SceneUrdfLinkAlias> linkAliases;
+}
+
+// @brief Export a bot scene to a URDF XML string, without meshes.
+//
+// @details The URDF is rooted at a `world` link, the scene root. Each bot entry, base-scene
+// articulated actor and static rigid actor hangs from it by a `fixed` joint named
+// `{root link}_placement`, with its own links and joints unchanged below. Dynamic and soft actors,
+// tasks and spawnable prefabs are skipped, and skins are not exported, so a skinned hand is rigid.
+// SuperDex, unlike URDF, needs joint names to differ from link names, so a joint named like a link
+// (e.g. "joint_01_wrist" beside "link_01_wrist", with @ref SceneUrdfOptions::stripIndexPrefixes)
+// gets a `_joint` suffix.
+//
+// Each sensor becomes a `{name}_frame` link at its parentFromSensor on its link (bot sensors) or
+// on `world` (scene sensors). A sensor whose name another sensor shares takes its bot's prefix, as
+// the bot's links do, and an unnamed sensor is named `{link}_sensor_{index}`, after its URDF link
+// and its index on that link. A camera's parentFromSensor is its optical frame (Z forward, X right,
+// Y down): it gets a `{name}_optical_frame` link there, and `{name}_frame` follows ROS REP-103
+// (X forward, Z up). Intrinsics are not exported.
+//
+// No @code <visual> @endcode or @code <collision> @endcode elements are written. SuperDex Studio's
+// `scene_to_urdf` exports the meshes too, as STL.
+//
+// @param[in] scene Path-resolved scene, as returned by @ref LoadBotScenePrefabFromFile.
+// @param[in] rootPath Root directory for the base scene's relative paths (see
+// `GetBotSceneBaseRoot`).
+// @param[in] options Export options.
+//
+// @return The URDF XML.
+fn bots::SaveBotSceneToUrdfString(bots::BotScenePrefab const& scene, StringView rootPath, bots::SceneUrdfOptions const& options) -> String [export, overloaded, mochi_error];
+
+// @brief Runtime representation of a loaded .superdex_scene.
+//
+// Owns the physics scene and provides named lookup for bots, controllers, sensors, actuators, and
+// spawnable prefabs. This is NOT a prefab — it composes data from both mochi_physics and
+// mochi_bots.
+class bots::BotScene [no_init, no_reflection] {
+  // @brief Get the physics scene.
+  //
+  // @return Physics scene, or None if it is unavailable.
+  fn GetScene() -> Scene* [const, nullable];
+
+  // @brief Get the Mochi context.
+  //
+  // @return Mochi context, or None if this BotScene is moved from.
+  fn GetMochiContext() -> Context* [const, nullable, no_python];
+
+  // @brief Get the robotics context (bot/controller/sensor/actuator resource owner).
+  //
+  // @return Robotics context, or None if unavailable.
+  fn GetRoboticsContext() -> bots::RoboticsContext* [const, nullable];
+
+  // @brief Look up a bot by the name declared in the .superdex_scene file.
+  //
+  // @param[in] name Exact declared bot name.
+  // @return Loaded bot, or None if the name is not found or this BotScene is moved from.
+  fn GetBot(StringView name) -> bots::Bot* [const, nullable];
+
+  // @brief Get (loading on first use) a bot for a spawnable prefab whose path is a
+  // .superdex_bot_archive / .superdex_bot, by the name declared in the
+  // .superdex_scene file's spawnablePrefabs. Unlike SpawnPrefabInstance (which
+  // places a named instance), this instantiates the spawnable once per name
+  // as an articulated Bot (CreateBot) so callers can access its articulated
+  // actor (e.g. for FK). The bot is created at identity root; callers that need
+  // placement set the actor pose themselves. Cached per name and owned by this
+  // BotScene. Returns nullptr and sets error if the name is unknown or its
+  // prefab is not a bot archive.
+  //
+  // @param[in] name Spawnable-prefab name declared in this scene.
+  // @return Cached or newly instantiated articulated bot, or None on error.
+  fn GetOrLoadSpawnableBot(StringView name) -> bots::Bot* [mochi_error];
+
+  // @brief Spawn a spawnable prefab under an instance name at a world pose.
+  //
+  // Instances are keyed by instance name, not prefab name, so the same prefab may be spawned any
+  // number of times. The instance name prefixes the created actor names, and is the identity the
+  // rest of the pipeline keys off (the recorded HDF5 object id and the dataset/replay feature key;
+  // see @ref SpawnEntry::name). The instance does not replace the scene's gravity or solver
+  // settings. A .superdex_bot / .superdex_bot_archive spawnable is instantiated as an articulated
+  // Bot named after the instance and rooted at worldFromInstance; the instance owns it.
+  //
+  // @param[in] instanceName Unique, non-empty instance name; must not already be live.
+  // @param[in] prefabName Spawnable-prefab name declared in this scene.
+  // @param[in] worldFromInstance Instance root pose in world space.
+  // @return Actor handles in prefab AddToScene order (for a bot, its articulated actor), or empty
+  // on error. Valid until the instance is destroyed.
+  fn SpawnPrefabInstance(StringView instanceName, StringView prefabName, TransformRT const& worldFromInstance) -> Span<ActorHandle const> [mochi_error];
+
+  // @brief Destroy a live prefab instance and its actors.
+  //
+  // @param[in] instanceName Name of a live prefab instance.
+  fn DestroyPrefabInstance(StringView instanceName) -> void [mochi_error];
+
+  // @brief Destroy every live prefab instance, e.g. to reset an episode.
+  fn DestroyAllPrefabInstances() -> void;
+
+  // @brief Get the actor handles of a live prefab instance.
+  //
+  // @param[in] instanceName Name of a prefab instance.
+  // @return Actor handles in prefab AddToScene order, or empty if no such instance is live.
+  fn GetPrefabInstanceActors(StringView instanceName) -> Span<ActorHandle const> [const];
+
+  // @brief Get the names of every live prefab instance.
+  //
+  // @return Instance names in creation order.
+  fn GetPrefabInstanceNames() -> DynamicArray<String> [const];
+
+  // @brief Retire a bot loaded from the .superdex_scene: destroy its controllers, actuators,
+  // sensors, and articulated actor (actuators and sensors hold link-actor pointers, so they are
+  // destroyed before the actor), then erase it from the bot registry so scene teardown does not
+  // double-destroy it. Errors if no bot named `name` is loaded.
+  //
+  // @param[in] name Exact declared name of the loaded bot to remove.
+  fn RemoveBot(StringView name) -> void [mochi_error];
+
+  // @brief Instantiate a bot the .superdex_scene declares but that is not loaded -- one removed
+  // with RemoveBot, or left out when the scene was loaded -- together with its controllers, at its
+  // declared placement and initial pose. Errors, creating nothing, if no bot named `name` is
+  // declared, it is already loaded, or it fails to instantiate.
+  //
+  // @param[in] name Exact declared name of the bot to initialize.
+  // @return The loaded bot, or None on error.
+  fn InitializeBot(StringView name) -> bots::Bot* [mochi_error];
+
+  // @brief Get the original parameters this BotScene was loaded from.
+  //
+  // @return Original scene parameters, or an empty prefab if this BotScene is moved from.
+  fn GetBotScenePrefab() -> bots::BotScenePrefab const& [const];
+
+  // @brief Get a controller handle by key (borrowed reference).
+  // The BotScene retains ownership — the handle remains valid as long as
+  // the BotScene is alive. Access the concrete controller via
+  // GetRoboticsContext()->GetController(handle) and downcast.
+  // @param[in] key Controller key in "botName/controllerName" format.
+  // @return The controller handle, or an invalid handle if not found.
+  fn GetControllerHandle(StringView key) -> bots::ControllerHandle [const];
+
+  // @brief Find controllers in the associated @ref RoboticsContext whose instance name equals
+  // name. This includes components from any other BotScene sharing the context.
+  //
+  // @param[in] name Exact instance name to match.
+  // @return Handles of every match in creation order; empty if none or the context is unavailable.
+  fn FindControllersByName(StringView name) -> DynamicArray<bots::ControllerHandle> [const];
+
+  // @brief Find controllers in the associated @ref RoboticsContext whose registered type name
+  // equals typeName. This includes components from any other BotScene sharing the context.
+  //
+  // @param[in] typeName Exact registered type name to match.
+  // @return Handles of every match in creation order; empty if none or the context is unavailable.
+  fn FindControllersByType(StringView typeName) -> DynamicArray<bots::ControllerHandle> [const];
+
+  // @brief Find sensors in the associated @ref RoboticsContext whose instance name equals name.
+  // This includes components from any other BotScene sharing the context.
+  //
+  // @param[in] name Exact instance name to match.
+  // @return Handles of every match in creation order; empty if none or the context is unavailable.
+  fn FindSensorsByName(StringView name) -> DynamicArray<bots::SensorHandle> [const];
+
+  // @brief Find sensors in the associated @ref RoboticsContext whose registered type name equals
+  // typeName. This includes components from any other BotScene sharing the context.
+  //
+  // @param[in] typeName Exact registered type name to match.
+  // @return Handles of every match in creation order; empty if none or the context is unavailable.
+  fn FindSensorsByType(StringView typeName) -> DynamicArray<bots::SensorHandle> [const];
+
+  // @brief Find actuators in the associated @ref RoboticsContext whose instance name equals name.
+  // This includes components from any other BotScene sharing the context.
+  //
+  // @param[in] name Exact instance name to match.
+  // @return Handles of every match in creation order; empty if none or the context is unavailable.
+  fn FindActuatorsByName(StringView name) -> DynamicArray<bots::ActuatorHandle> [const];
+
+  // @brief Find actuators in the associated @ref RoboticsContext whose registered type name equals
+  // typeName. This includes components from any other BotScene sharing the context.
+  //
+  // @param[in] typeName Exact registered type name to match.
+  // @return Handles of every match in creation order; empty if none or the context is unavailable.
+  fn FindActuatorsByType(StringView typeName) -> DynamicArray<bots::ActuatorHandle> [const];
+
+  // @brief Begin deciding a task's termination criteria from episode time zero, replacing any
+  // already in progress. They are evaluated after every physics step of this scene, against
+  // episode time summed from the step sizes.
+  //
+  // @param[in] task The task whose spawns were applied to this scene. Its criteria are copied.
+  fn StartTermination(bots::BotTaskPrefab const& task) -> void;
+
+  // @brief Stop deciding termination criteria.
+  fn StopTermination() -> void;
+
+  // @brief Clear progress toward the criteria (held results, latches, dwell) without restarting
+  // the episode clock, for task objects that were just re-placed.
+  fn RestartTerminationProgress() -> void;
+
+  // @brief The outcome of the criteria begun by StartTermination. Sticky: the first step on which
+  // either outcome is reached is frozen until the next start or stop.
+  //
+  // @return Both outcomes.
+  fn GetTerminationOutcome() -> bots::TerminationOutcome [const];
+}
+
+// @brief Load a .superdex_scene file and instantiate all scene objects.
+//
+// Creates the physics scene from the base_scene, instantiates all bots with placement and
+// initial pose, and creates controllers via the provided RoboticsContext.
+//
+// @param[in] path File path to the .superdex_scene file.
+// @param[in] context Mochi context.
+// @param[in] botsCtx RoboticsContext for controller creation and lifetime management.
+//
+// @return The loaded BotScene.
+fn bots::LoadBotScene(StringView path, Context* context, bots::RoboticsContext* botsCtx) -> bots::BotScene [export, overloaded, mochi_error];
+
+// @brief Load a bot scene into a caller-provided scene from an already-loaded prefab.
+//
+// Like the path-based @ref LoadBotScene overload but does not create or own the scene: bots and
+// controllers are created in scene and the base prefab (already loaded and path-resolved, e.g. by
+// an asset) is added directly. The returned @ref BotScene destroys the bots and controllers it
+// created but leaves scene intact (the caller retains ownership of the scene).
+//
+// @param[in] scene Caller-owned scene to populate.
+// @param[in] prefab Already-loaded, path-resolved bot scene parameters.
+// @param[in] rootPath Root directory used to resolve the base scene's relative shape/prefab paths.
+// @param[in] context Mochi context.
+// @param[in] botsCtx RoboticsContext for controller creation and lifetime management.
+//
+// @return The loaded BotScene (non-owning of scene).
+fn bots::LoadBotScene(Scene* scene, bots::BotScenePrefab const& prefab, StringView rootPath, Context* context, bots::RoboticsContext* botsCtx) -> bots::BotScene [export, overloaded, mochi_error];
+
+// @brief Load a bot scene into a caller-provided scene from a file or archive path.
+//
+// Like the prefab overload but loads and validates the @ref BotScenePrefab through
+// LoadBotScenePrefabFromFile so archive extraction remains transparent. The base-scene-relative
+// root is derived analogously to the path overload (bots root with a resolved base-scene fallback),
+// then delegates to the prefab overload. The returned @ref BotScene owns the bots, controllers,
+// and base-scene actors it added but leaves the caller-owned @ref Scene intact.
+//
+// @param[in] scene Caller-owned @ref Scene to populate.
+// @param[in] path File path to the .superdex_scene file or .superdex_scene_archive.
+// @param[in] context Mochi @ref Context.
+// @param[in] botsCtx @ref RoboticsContext for controller creation and lifetime management.
+//
+// @return The loaded @ref BotScene (non-owning of the caller scene).
+fn bots::LoadBotScene(Scene* scene, StringView path, Context* context, bots::RoboticsContext* botsCtx) -> bots::BotScene [export, overloaded, mochi_error];
+
+# ---------------------------------------------------------------------------
+# Bot Task types (.superdex_task)
+# ---------------------------------------------------------------------------
+
+// @brief A single named object instance to spawn on top of a .superdex_scene.
+//
+// Declares which spawnable prefab to instantiate (by name) and where. The
+// instance @ref name is the key used everywhere downstream — it becomes the
+// recorded object id (HDF5 group), the dataset/replay feature key, and the
+// Unreal actor label — so a task can spawn multiple instances of the same
+// @ref prefabName under distinct names.
+struct bots::SpawnEntry [no_reflection] {
+  // @brief Unique instance name within the task (e.g. "Foam2", "m8_knob").
+  String name;
+  // @brief Name of a spawnable prefab declared in the .superdex_scene's
+  // scene.spawnablePrefabs[]. Multiple spawns may reference the same prefab.
+  String prefabName;
+  // @brief Name of another spawn entry whose transform this spawn is relative to,
+  // or the reserved literal "task_root" (also the implicit default when
+  // empty) to place this spawn in the task actor's own frame. @ref
+  // parentFromSpawn, and any PoseRandomization offset, are interpreted in the
+  // parent's local frame; the parent's resolved (post-DR) world transform is
+  // composed in after randomization. Parent chains may be arbitrarily deep.
+  // Cycles and references to undefined spawn names are rejected by
+  // ValidateBotTaskPrefab.
+  String parent [no_serialize_defaults];
+  // @brief Local pose relative to @ref parent (aFromB convention: maps spawn-frame coordinates into
+  // the parent frame). Default: identity.
+  TransformRT parentFromSpawn [no_serialize_defaults];
+  // @brief Legacy key captured on load: older assets stored a flat `translation`. Folded into
+  // @ref parentFromSpawn by ApplyLegacySpawnTransforms and cleared (so re-saves omit it).
+  Real3 _legacyTranslation [no_python, no_serialize_defaults, reflection_name("translation")];
+  // @brief Legacy key captured on load: older assets stored a flat `rotation`. Folded into
+  // @ref parentFromSpawn by ApplyLegacySpawnTransforms and cleared (so re-saves omit it).
+  Quaternion _legacyRotation [no_python, no_serialize_defaults, reflection_name("rotation")];
+}
+
+// @brief Complete parameter set for a .superdex_task file.
+//
+// A .superdex_task is a JSON config that declares which spawnable-prefab
+// instances to place (and where) on top of a .superdex_scene. It is a
+// declarative, swappable task definition: one base scene can host many tasks.
+struct bots::BotTaskPrefab [no_reflection] {
+  // @brief Human-readable metadata. Not consumed by the runtime.
+  bots::BotSceneMetadata metadata [no_serialize_defaults];
+  // @brief The objects an episode starts with, and where: each entry is placed at every reset.
+  DynamicArray<bots::SpawnEntry> resetState [no_serialize_defaults];
+  // @brief The transform from this task's own coordinates into the task frame (the nominal table
+  // top): for a table spawned at T, it is inverse(T). On a scene that declares a taskRoot,
+  // root-level spawns are relocated by taskRoot * taskRootOffset. Unset, the task is authored in
+  // the task frame itself.
+  Optional<TransformRT> taskRootOffset [no_serialize_defaults];
+}
+
+// @brief Load task parameters from a .superdex_task JSON file.
+//
+// Deserializes the file and validates that spawn names are non-empty, unique,
+// and not equal to kTaskRootParentName; that each spawn references a
+// non-empty prefab name; and that @ref SpawnEntry::parent references either
+// kTaskRootParentName or the name of another spawn in this task. Parent
+// graphs must be acyclic. Existence of @ref SpawnEntry::prefabName in any
+// scene is intentionally NOT validated here (loose binding) — that is checked
+// at apply time against the loaded scene.
+//
+// @param[in] path File path to the .superdex_task file.
+//
+// @return Loaded @ref BotTaskPrefab, or default-constructed on failure.
+fn bots::LoadBotTaskPrefabFromFile(StringView path) -> bots::BotTaskPrefab [export, mochi_error];
+
+// @brief Both outcomes of a task.
+struct bots::TerminationOutcome [no_reflection] {
+  // @brief Whether the task file declares a success outcome at all. When false, the consumer keeps
+  // whatever predicate it already implements, and @ref success is meaningless.
+  bool successAuthored = false;
+  // @brief Whether the success criteria have held for their validation time.
+  bool success = false;
+  // @brief Whether the task file declares a failure outcome at all.
+  bool failureAuthored = false;
+  // @brief Whether the failure criteria have held for their validation time.
+  bool failure = false;
+}
+
+# ---------------------------------------------------------------------------
+# DR episode list types (dr_manifest.json — the pre-randomized DR interchange)
+# ---------------------------------------------------------------------------
+
+// @brief One DR draw: a stable key and its sampled value as a uniform array.
+//
+// `value` is always a list so it maps to a @code DynamicArray<real> @endcode;
+// a scalar draw rides as a length-1 list flagged by `scalar`. The flag lets a
+// reader recover the exact scalar-vs-vector shape with no registry.
+struct bots::DREpisodeEntry [no_reflection] {
+  String key;
+  bool scalar;
+  DynamicArray<real> value;
+}
+
+// @brief One episode's sampled DR: seed and the flat keyed values.
+//
+// Per-spawn pose DR is not a separate field — it rides in `values` under
+// @code dr/spawn/<name>/<dr_class>/pose @endcode keys, so a reader consumes it
+// through the same generic `{key -> value}` path. `episodeSeed` is a decimal
+// string — a full uint64 can't round-trip as a JSON number, so parse it with
+// ParseSeed.
+struct bots::DREpisode [no_reflection] {
+  int index;
+  String episodeSeed [reflection_name("episode_seed")];
+  DynamicArray<bots::DREpisodeEntry> values;
+}
+
+// @brief A pre-randomized DR episode list — the neutral cross-language interchange.
+//
+// Read from a `dr_manifest.json` produced by the Python DR pipeline
+// (schema v1). `profile`, `experiment_overrides`, and `pose_overrides` from the file are ignored: a
+// C++ applier consumes resolved per-episode values, not the config that produced
+// them, so @ref LoadDREpisodeListFromFile tolerates those unmodeled keys.
+struct bots::DREpisodeList [no_reflection] {
+  int schemaVersion [reflection_name("schema_version")];
+  String specVersion [reflection_name("spec_version")];
+  String masterSeed [reflection_name("master_seed")];
+  DynamicArray<bots::DREpisode> episodes;
+}
+
+// @brief Load a pre-randomized DR episode list from a JSON manifest file.
+//
+// Deserializes a schema-v1 `dr_manifest.json` and validates it via
+// ValidateDREpisodeList. Unmodeled top-level keys
+// (`experiment_overrides`, `pose_overrides`, `profile`) are ignored.
+//
+// @param[in] path File path to the manifest.
+//
+// @return Loaded @ref DREpisodeList, or default-constructed on failure.
+fn bots::LoadDREpisodeListFromFile(StringView path) -> bots::DREpisodeList [export, mochi_error];
+
+// @brief Save a @ref DREpisodeList to a JSON manifest file.
+//
+// The inverse of @ref LoadDREpisodeListFromFile: validates list via
+// ValidateDREpisodeList, then serializes it to a schema-v1
+// `dr_manifest.json`. Validating before writing makes a malformed list a hard
+// error rather than a bad file on disk. Only the modeled fields are emitted;
+// the optional producer keys the loader tolerates (`experiment_overrides`,
+// `pose_overrides`, `profile`) are not part of @ref DREpisodeList, so they are absent.
+//
+// @param[in] list The episode list to save.
+// @param[in] path Destination file path.
+fn bots::SaveDREpisodeListToFile(bots::DREpisodeList const& list, StringView path) -> void [export, mochi_error];
+
+# ---------------------------------------------------------------------------
+# Reset-state randomization (resolved from an episode's DR values)
+# ---------------------------------------------------------------------------
+
+// @brief The DR episode key an entry's PoseRandomization offset is drawn under.
+//
+// @param[in] spawnName The reset-state entry's name.
+// @param[in] domainRandomizationClass Its PoseRandomization class.
+// @return @code dr/spawn/<spawnName>/<domainRandomizationClass>/pose @endcode
+fn bots::SpawnPoseDRKey(StringView spawnName, StringView domainRandomizationClass) -> String [export];
+
+// @brief The DR episode key an entry's PrefabSelection is drawn under.
+//
+// @param[in] spawnName The reset-state entry's name.
+// @return @code dr/spawn/<spawnName>/prefab @endcode
+fn bots::SpawnPrefabDRKey(StringView spawnName) -> String [export];
+
+// @brief The DR class of an entry's PoseRandomization.
+//
+// @param[in] entry The reset-state entry.
+// @return The class, or empty if the entry has no PoseRandomization.
+fn bots::GetPoseRandomizationClass(bots::SpawnEntry const& entry) -> String [export];
+
+// @brief The candidates of an entry's PrefabSelection.
+//
+// @param[in] entry The reset-state entry.
+// @return The prefab names, or empty if the entry has no PrefabSelection.
+fn bots::GetPrefabSelection(bots::SpawnEntry const& entry) -> DynamicArray<String> [export];
+
+// @brief One entry of a task's reset state, after its randomization was applied.
+struct bots::ResolvedSpawn [no_reflection] {
+  // @brief The entry's name.
+  String name;
+  // @brief The prefab to place: the PrefabSelection draw, or the nominal prefab without one.
+  String prefabName;
+  // @brief As declared; empty or task_root for the task root.
+  String parent;
+  // @brief The declared parentFromSpawn with the PoseRandomization offset applied.
+  TransformRT parentFromSpawn;
+  // @brief The entry's pose composed through its parent chain, with the task root at the
+  // worldFromTask passed to ResolveResetState.
+  TransformRT worldFromSpawn;
+}
+
+// @brief Where a task's root-level spawns go on a scene: scene.taskRoot * task.taskRootOffset,
+// with an absent offset taken as identity; identity when the scene declares no task root.
+//
+// @param[in] scene The bot scene's scene block.
+// @param[in] task The task.
+// @return The world-from-task transform to pass to ResolveResetState.
+fn bots::ComputeWorldFromTask(bots::BaseSceneParams const& scene, bots::BotTaskPrefab const& task) -> TransformRT [export];
+
+// @brief Resolve a task's reset state for one episode from that episode's DR values.
+//
+// Entries whose DR key is absent are placed as declared, so empty values resolve the nominal state.
+// Root-level entries are composed onto worldFromTask.
+//
+// @param[in] task The task.
+// @param[in] values The episode's DR values; keys this does not read are ignored.
+// @param[in] worldFromTask Where the task's root-level spawns go; see ComputeWorldFromTask.
+// @return One entry per reset-state entry, parents before their children.
+fn bots::ResolveResetState(bots::BotTaskPrefab const& task, DynamicArray<bots::DREpisodeEntry> const& values, TransformRT const& worldFromTask) -> DynamicArray<bots::ResolvedSpawn> [export, mochi_error, overloaded];
+
+// @brief ResolveResetState with the task in its own coordinates (identity worldFromTask).
+//
+// @param[in] task The task.
+// @param[in] values The episode's DR values; keys this does not read are ignored.
+// @return One entry per reset-state entry, parents before their children.
+fn bots::ResolveResetState(bots::BotTaskPrefab const& task, DynamicArray<bots::DREpisodeEntry> const& values) -> DynamicArray<bots::ResolvedSpawn> [export, mochi_error, overloaded];

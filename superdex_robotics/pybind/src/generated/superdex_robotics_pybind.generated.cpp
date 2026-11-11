@@ -82,6 +82,25 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::SensorBase, superdex::robotics::ComponentBase>(m_bots, "SensorBase", "Base class for robot sensors. Derives from ComponentBase for common lifecycle\n(validity, actor, destroy). Each derived sensor keeps its own specialized\nComputeSignal signature.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::ActuatorBase, superdex::robotics::ComponentBase>(m_bots, "ActuatorBase", "Base class for robot actuators.\n\nMirrors :class:`~superdex.robotics.ControllerBase` and\n:class:`~superdex.robotics.SensorBase`: derives from ComponentBase for common\nlifecycle (validity, actor, destroy). No concrete actuators exist yet; this\nestablishes the contract early so the first actuator follows the same shape as\ncontrollers and sensors.\n\nRegistration contract (a ``RoboticsContext::RegisterActuator<T>`` template lands\nwith the first concrete actuator, mirroring RegisterController/RegisterSensor):\nevery actuator must declare static constexpr std::string_view TypeName() {\nreturn \"...\"; } (used by the registration templates and for the generated Python\ntype_name() binding), implement std::string_view GetTypeName() const override;\n// returns TypeName() and provide a uniform constructor ActuatorX(Actor* actor,\nstd::string_view paramArgs, Error& error); that loads its own params from the\npath or inline JSON. An (Actor*, Params const&, Error&) overload is recommended\nfor programmatic / non-filesystem construction.\n\nTeardown contract (mirrors :class:`~superdex.robotics.ControllerBase` /\n:class:`~superdex.robotics.SensorBase`):\n:meth:`~superdex.robotics.ComponentBase.get_actor` resolves the live actor on\ndemand and yields None once the owning mochi Scene (or the actor) is gone, so an\nactuator that outlives its Scene (Scene destroyed before the RoboticsContext)\nsees :meth:`~superdex.robotics.ComponentBase.get_actor` == None in its\ndestructor. Any concrete actuator whose destructor releases actor-held resources\nmust therefore guard on GetActor() != None (or, for context-owned resources,\nresolve via GetContext()) so teardown never dereferences a dangling Actor*.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::CameraSensor, superdex::robotics::SensorBase>(m_bots, "CameraSensor", "Camera sensor runtime object. Stores intrinsics/extrinsics for use by renderers\n(UE, etc.). No ComputeSignal — cameras don't produce data in the mochi physics\nloop; renderers query GetParams() to configure their camera actors.", nb::never_destruct()));
+  registry.StoreClass(nb::class_<superdex::robotics::BotSceneMetadata>(m_bots, "BotSceneMetadata", "Human-readable metadata for a .superdex_scene file. Not consumed by the runtime."));
+  registry.StoreClass(nb::class_<superdex::robotics::PrefabEntry>(m_bots, "PrefabEntry", "A named reference to a spawnable scene, prefab, bot, or bot archive."));
+  registry.StoreClass(nb::class_<superdex::robotics::BaseSceneParams>(m_bots, "BaseSceneParams", "Scene definition within a .superdex_scene.\n\nThe base_scene is optional — a scene under construction may not have one yet.\nWhen present it is the authoritative source for all simulation physics\nparameters (gravity, solver config, contact filtering, collision layers, etc.);\nwhen absent the scene keeps its default parameters."));
+  registry.StoreClass(nb::class_<superdex::robotics::ControllerEntry>(m_bots, "ControllerEntry", "A controller instance to create and attach to a bot."));
+  registry.StoreClass(nb::class_<superdex::robotics::BotEntry>(m_bots, "BotEntry", "A bot (robot) to instantiate in the scene."));
+  registry.StoreClass(nb::class_<superdex::robotics::SlotEntry>(m_bots, "SlotEntry", "One slot a scene offers, and the bots eligible to fill it."));
+  registry.StoreClass(nb::class_<superdex::robotics::SceneSensorEntry>(m_bots, "SceneSensorEntry", "A scene-level sensor (not attached to any bot).\n\nUseful for environment-level observations such as overhead cameras, force\nplates, or proximity sensors mounted on fixtures."));
+  registry.StoreClass(nb::class_<superdex::robotics::BotScenePrefab>(m_bots, "BotScenePrefab", "Complete parameter set for a .superdex_scene file.\n\nA .superdex_scene is a JSON config that serves as the single source of truth for\na complete simulation environment. It unifies scene geometry, robots,\ncontrollers, and sensors."));
+  registry.StoreClass(nb::class_<superdex::robotics::SceneUrdfJointVelocityLimit>(m_bots, "SceneUrdfJointVelocityLimit", "Velocity limit for every exported joint whose SuperDex name (after\n:attr:`~superdex.robotics.SceneUrdfOptions.strip_index_prefixes`) is\n:attr:`joint`."));
+  registry.StoreClass(nb::class_<superdex::robotics::SceneUrdfLinkAlias>(m_bots, "SceneUrdfLinkAlias", "An extra URDF frame rigidly attached to every exported link named :attr:`link`."));
+  registry.StoreClass(nb::class_<superdex::robotics::SceneUrdfOptions>(m_bots, "SceneUrdfOptions", "Options for :func:`~superdex.robotics.save_bot_scene_to_urdf_string`."));
+  registry.StoreClass(nb::class_<superdex::robotics::BotScene>(m_bots, "BotScene", "Runtime representation of a loaded .superdex_scene.\n\nOwns the physics scene and provides named lookup for bots, controllers, sensors,\nactuators, and spawnable prefabs. This is NOT a prefab — it composes data from\nboth mochi_physics and mochi_bots."));
+  registry.StoreClass(nb::class_<superdex::robotics::SpawnEntry>(m_bots, "SpawnEntry", "A single named object instance to spawn on top of a .superdex_scene.\n\nDeclares which spawnable prefab to instantiate (by name) and where. The instance\n:attr:`name` is the key used everywhere downstream — it becomes the recorded\nobject id (HDF5 group), the dataset/replay feature key, and the Unreal actor\nlabel — so a task can spawn multiple instances of the same :attr:`prefab_name`\nunder distinct names."));
+  registry.StoreClass(nb::class_<superdex::robotics::BotTaskPrefab>(m_bots, "BotTaskPrefab", "Complete parameter set for a .superdex_task file.\n\nA .superdex_task is a JSON config that declares which spawnable-prefab instances\nto place (and where) on top of a .superdex_scene. It is a declarative, swappable\ntask definition: one base scene can host many tasks."));
+  registry.StoreClass(nb::class_<superdex::robotics::TerminationOutcome>(m_bots, "TerminationOutcome", "Both outcomes of a task."));
+  registry.StoreClass(nb::class_<superdex::robotics::DREpisodeEntry>(m_bots, "DREpisodeEntry", "One DR draw: a stable key and its sampled value as a uniform array.\n\n`value` is always a list so it maps to a ``DynamicArray<real>``; a scalar draw\nrides as a length-1 list flagged by `scalar`. The flag lets a reader recover the\nexact scalar-vs-vector shape with no registry."));
+  registry.StoreClass(nb::class_<superdex::robotics::DREpisode>(m_bots, "DREpisode", "One episode's sampled DR: seed and the flat keyed values.\n\nPer-spawn pose DR is not a separate field — it rides in `values` under\n``dr/spawn/<name>/<dr_class>/pose`` keys, so a reader consumes it through the\nsame generic `{key -> value}` path. `episodeSeed` is a decimal string — a full\nuint64 can't round-trip as a JSON number, so parse it with ParseSeed."));
+  registry.StoreClass(nb::class_<superdex::robotics::DREpisodeList>(m_bots, "DREpisodeList", "A pre-randomized DR episode list — the neutral cross-language interchange.\n\nRead from a `dr_manifest.json` produced by the Python DR pipeline (schema v1).\n`profile`, `experiment_overrides`, and `pose_overrides` from the file are\nignored: a C++ applier consumes resolved per-episode values, not the config that\nproduced them, so :func:`~superdex.robotics.load_dr_episode_list_from_file`\ntolerates those unmodeled keys."));
+  registry.StoreClass(nb::class_<superdex::robotics::ResolvedSpawn>(m_bots, "ResolvedSpawn", "One entry of a task's reset state, after its randomization was applied."));
 }
 
 void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
@@ -1290,6 +1309,548 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+  registry.GetClass<superdex::robotics::BotSceneMetadata>()
+    .def("__init__", [](superdex::robotics::BotSceneMetadata* self, nb::object name, nb::object description, nb::object version, nb::object author) {
+      superdex::robotics::BotSceneMetadata result{};
+      result.name = nb::cast<mochi::DynamicString>(name);
+      result.description = nb::cast<mochi::DynamicString>(description);
+      result.version = nb::cast<mochi::DynamicString>(version);
+      result.author = nb::cast<mochi::DynamicString>(author);
+      new (self) superdex::robotics::BotSceneMetadata(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("name") = superdex::robotics::BotSceneMetadata{}.name
+      , nb::arg("description") = superdex::robotics::BotSceneMetadata{}.description
+      , nb::arg("version") = superdex::robotics::BotSceneMetadata{}.version
+      , nb::arg("author") = superdex::robotics::BotSceneMetadata{}.author
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::BotSceneMetadata const& self) { return superdex::robotics::BotSceneMetadata(self); })
+    .def("__deepcopy__", [](superdex::robotics::BotSceneMetadata const& self, nb::dict) { return superdex::robotics::BotSceneMetadata(self); })
+    .def_rw("name", &superdex::robotics::BotSceneMetadata::name, "Human-readable scene name, e.g. \"T3 Shapefilter Station\".")
+    .def_rw("description", &superdex::robotics::BotSceneMetadata::description, "Longer description of the scene purpose.")
+    .def_rw("version", &superdex::robotics::BotSceneMetadata::version, "Schema version, e.g. \"1.0\".")
+    .def_rw("author", &superdex::robotics::BotSceneMetadata::author, "Author name or unixname.")
+  ;
+
+  registry.GetClass<superdex::robotics::PrefabEntry>()
+    .def("__init__", [](superdex::robotics::PrefabEntry* self, nb::object name, nb::object path) {
+      superdex::robotics::PrefabEntry result{};
+      result.name = nb::cast<mochi::DynamicString>(name);
+      result.path = nb::cast<mochi::DynamicString>(path);
+      new (self) superdex::robotics::PrefabEntry(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("name") = superdex::robotics::PrefabEntry{}.name
+      , nb::arg("path") = superdex::robotics::PrefabEntry{}.path
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::PrefabEntry const& self) { return superdex::robotics::PrefabEntry(self); })
+    .def("__deepcopy__", [](superdex::robotics::PrefabEntry const& self, nb::dict) { return superdex::robotics::PrefabEntry(self); })
+    .def_rw("name", &superdex::robotics::PrefabEntry::name, "Unique name for this prefab instance (used for runtime lookup).")
+    .def_rw("path", &superdex::robotics::PrefabEntry::path, "Relative path to a .mochi_scene, .mochi_prefab, .superdex_bot, or\n.superdex_bot_archive file.")
+  ;
+
+  registry.GetClass<superdex::robotics::BaseSceneParams>()
+    .def("__init__", [](superdex::robotics::BaseSceneParams* self, nb::object base_scene, nb::object spawnable_prefabs, nb::object task_root) {
+      superdex::robotics::BaseSceneParams result{};
+      result.baseScene = nb::cast<mochi::DynamicString>(base_scene);
+      result.spawnablePrefabs = nb::cast<mochi::DynamicArray<superdex::robotics::PrefabEntry>>(spawnable_prefabs);
+      result.taskRoot = nb::cast<std::optional<mochi::TransformRT>>(task_root);
+      new (self) superdex::robotics::BaseSceneParams(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("base_scene") = superdex::robotics::BaseSceneParams{}.baseScene
+      , nb::arg("spawnable_prefabs").sig("...") = superdex::robotics::BaseSceneParams{}.spawnablePrefabs
+      , nb::arg("task_root").sig("...") = superdex::robotics::BaseSceneParams{}.taskRoot
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::BaseSceneParams const& self) { return superdex::robotics::BaseSceneParams(self); })
+    .def("__deepcopy__", [](superdex::robotics::BaseSceneParams const& self, nb::dict) { return superdex::robotics::BaseSceneParams(self); })
+    .def_rw("base_scene", &superdex::robotics::BaseSceneParams::baseScene, "Path to a .mochi_scene file. Defines the scene foundation. Empty means no base\nscene.")
+    .def_prop_rw("spawnable_prefabs", [](superdex::robotics::BaseSceneParams& self) -> mochi::DynamicArray<superdex::robotics::PrefabEntry>& { return self.spawnablePrefabs; }, [](superdex::robotics::BaseSceneParams& self, nb::object val) { self.spawnablePrefabs = nb::cast<mochi::DynamicArray<superdex::robotics::PrefabEntry>>(val); }, "Prefabs that can be loaded/destroyed on demand at runtime (e.g. task objects\nspawned each episode).")
+    .def_prop_rw("task_root", [](superdex::robotics::BaseSceneParams& self) -> std::optional<mochi::TransformRT>& { return self.taskRoot; }, [](superdex::robotics::BaseSceneParams& self, nb::handle val) { self.taskRoot = val.is_none() ? std::optional<mochi::TransformRT>{} : nb::cast<std::optional<mochi::TransformRT>>(val); }, "Where this scene's task frame (the nominal table top) is in the world. Every\ntask's root-level spawns are placed onto it, through the task's taskRootOffset\nwhen it declares one. Unset leaves every task where its own coordinates put it.", nb::for_setter(nb::arg("value").none()))
+  ;
+
+  registry.GetClass<superdex::robotics::ControllerEntry>()
+    .def("__init__", [](superdex::robotics::ControllerEntry* self, nb::object type, nb::object name, nb::object params, nb::object init_args) {
+      superdex::robotics::ControllerEntry result{};
+      result.type = nb::cast<mochi::DynamicString>(type);
+      result.name = nb::cast<mochi::DynamicString>(name);
+      result.params = nb::cast<mochi::DynamicString>(params);
+      result.initArgs = nb::cast<mochi::DynamicString>(init_args);
+      new (self) superdex::robotics::ControllerEntry(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("type") = superdex::robotics::ControllerEntry{}.type
+      , nb::arg("name") = superdex::robotics::ControllerEntry{}.name
+      , nb::arg("params") = superdex::robotics::ControllerEntry{}.params
+      , nb::arg("init_args") = superdex::robotics::ControllerEntry{}.initArgs
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::ControllerEntry const& self) { return superdex::robotics::ControllerEntry(self); })
+    .def("__deepcopy__", [](superdex::robotics::ControllerEntry const& self, nb::dict) { return superdex::robotics::ControllerEntry(self); })
+    .def_rw("type", &superdex::robotics::ControllerEntry::type, "Controller type identifier (registered string), e.g. \"BASIC_OSC_PD\",\n\"BASIC_JSC_PD\".")
+    .def_rw("name", &superdex::robotics::ControllerEntry::name, "Instance name for runtime lookup.")
+    .def_rw("params", &superdex::robotics::ControllerEntry::params, "Controller-specific parameters as a raw JSON string. Omit to use defaults.")
+    .def_rw("init_args", &superdex::robotics::ControllerEntry::initArgs, "The controller's init args as a serialized JSON object -- the contents of the\nscene entry's nested \"initArgs\" object (e.g. {\"baseLinkName\":..,\"eeLinkName\":..}\nfor link-resolved controllers, or a model path for a learned controller). Passed\nverbatim to ControllerBase::ConfigureFromSceneEntry, which deserializes it into\na controller-specific struct, so the scene loader never needs to know a\ncontroller's fields. Reflected with the JsonString attribute: on load the nested\n\"initArgs\" object is captured into this string, and on save it is re-emitted as\na nested object (round-trip identity), so no bespoke parsing is needed. May also\nbe set or modified directly (e.g. from Python) before LoadBotScene. Defaults to\nan empty object (\"{}\"), which NoSerializeDefaults omits from the saved file.\n(Legacy scenes that interleave flat controller fields instead of a nested\n\"initArgs\" object are folded into this string at load time -- see\nLoadBotScenePrefabFromFile; new scenes and all saves use the nested form.)")
+  ;
+
+  registry.GetClass<superdex::robotics::BotEntry>()
+    .def("__init__", [](superdex::robotics::BotEntry* self, nb::object name, nb::object path, nb::object parent_from_bot, nb::object initial_pose, nb::object controllers, nb::object roboperator_class) {
+      superdex::robotics::BotEntry result{};
+      result.name = nb::cast<mochi::DynamicString>(name);
+      result.path = nb::cast<mochi::DynamicString>(path);
+      result.parentFromBot = nb::cast<mochi::TransformRT>(parent_from_bot);
+      result.initialPose = nb::cast<mochi::DynamicArray<mochi::real>>(initial_pose);
+      result.controllers = nb::cast<mochi::DynamicArray<superdex::robotics::ControllerEntry>>(controllers);
+      result.roboperatorClass = nb::cast<mochi::DynamicString>(roboperator_class);
+      new (self) superdex::robotics::BotEntry(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("name") = superdex::robotics::BotEntry{}.name
+      , nb::arg("path") = superdex::robotics::BotEntry{}.path
+      , nb::arg("parent_from_bot").sig("...") = superdex::robotics::BotEntry{}.parentFromBot
+      , nb::arg("initial_pose").sig("...") = superdex::robotics::BotEntry{}.initialPose
+      , nb::arg("controllers").sig("...") = superdex::robotics::BotEntry{}.controllers
+      , nb::arg("roboperator_class") = superdex::robotics::BotEntry{}.roboperatorClass
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::BotEntry const& self) { return superdex::robotics::BotEntry(self); })
+    .def("__deepcopy__", [](superdex::robotics::BotEntry const& self, nb::dict) { return superdex::robotics::BotEntry(self); })
+    .def_rw("name", &superdex::robotics::BotEntry::name, "Unique instance name (used for runtime lookup via GetBot(name)).")
+    .def_rw("path", &superdex::robotics::BotEntry::path, "Path to a .superdex_bot or .superdex_bot_archive file (self-contained or mod\nbot).")
+    .def_rw("parent_from_bot", &superdex::robotics::BotEntry::parentFromBot, "Bot placement relative to the scene root (aFromB convention: maps bot-frame\ncoordinates into the scene frame). Default: identity.")
+    .def_prop_rw("initial_pose", [](superdex::robotics::BotEntry& self) -> mochi::DynamicArray<mochi::real>& { return self.initialPose; }, [](superdex::robotics::BotEntry& self, nb::object val) { self.initialPose = nb::cast<mochi::DynamicArray<mochi::real>>(val); }, "Initial joint angles (length = total DOFs of the bot).")
+    .def_prop_rw("controllers", [](superdex::robotics::BotEntry& self) -> mochi::DynamicArray<superdex::robotics::ControllerEntry>& { return self.controllers; }, [](superdex::robotics::BotEntry& self, nb::object val) { self.controllers = nb::cast<mochi::DynamicArray<superdex::robotics::ControllerEntry>>(val); }, "Controllers to create and attach to this bot.")
+    .def_rw("roboperator_class", &superdex::robotics::BotEntry::roboperatorClass, "Key naming the teleoperator rig that drives this bot; the consumer maps it to a\nconcrete class. Empty means use the consumer's default for the slot this bot\nfills.")
+  ;
+
+  registry.GetClass<superdex::robotics::SlotEntry>()
+    .def("__init__", [](superdex::robotics::SlotEntry* self, nb::object name, nb::object controlled_bots) {
+      superdex::robotics::SlotEntry result{};
+      result.name = nb::cast<mochi::DynamicString>(name);
+      result.controlledBots = nb::cast<mochi::DynamicArray<mochi::DynamicString>>(controlled_bots);
+      new (self) superdex::robotics::SlotEntry(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("name") = superdex::robotics::SlotEntry{}.name
+      , nb::arg("controlled_bots").sig("...") = superdex::robotics::SlotEntry{}.controlledBots
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SlotEntry const& self) { return superdex::robotics::SlotEntry(self); })
+    .def("__deepcopy__", [](superdex::robotics::SlotEntry const& self, nb::dict) { return superdex::robotics::SlotEntry(self); })
+    .def_rw("name", &superdex::robotics::SlotEntry::name, "Unique slot name within the scene, e.g. \"right\". Names a role, not a bot.")
+    .def_prop_rw("controlled_bots", [](superdex::robotics::SlotEntry& self) -> mochi::DynamicArray<mochi::DynamicString>& { return self.controlledBots; }, [](superdex::robotics::SlotEntry& self, nb::object val) { self.controlledBots = nb::cast<mochi::DynamicArray<mochi::DynamicString>>(val); }, "Names of bot entries that may fill this slot. A consumer picks at most one per\nslot; superdex validates that each named bot exists and is listed once, and\nnothing else. Which slots a scene has, and what they mean, is the scene's\nbusiness, not superdex's.")
+  ;
+
+  registry.GetClass<superdex::robotics::SceneSensorEntry>()
+    .def("__init__", [](superdex::robotics::SceneSensorEntry* self, nb::object type, nb::object name, nb::object parent_from_sensor, nb::object params) {
+      superdex::robotics::SceneSensorEntry result{};
+      result.type = nb::cast<mochi::DynamicString>(type);
+      result.name = nb::cast<mochi::DynamicString>(name);
+      result.parentFromSensor = nb::cast<mochi::TransformRT>(parent_from_sensor);
+      result.params = nb::cast<mochi::DynamicString>(params);
+      new (self) superdex::robotics::SceneSensorEntry(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("type") = superdex::robotics::SceneSensorEntry{}.type
+      , nb::arg("name") = superdex::robotics::SceneSensorEntry{}.name
+      , nb::arg("parent_from_sensor").sig("...") = superdex::robotics::SceneSensorEntry{}.parentFromSensor
+      , nb::arg("params") = superdex::robotics::SceneSensorEntry{}.params
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SceneSensorEntry const& self) { return superdex::robotics::SceneSensorEntry(self); })
+    .def("__deepcopy__", [](superdex::robotics::SceneSensorEntry const& self, nb::dict) { return superdex::robotics::SceneSensorEntry(self); })
+    .def_rw("type", &superdex::robotics::SceneSensorEntry::type, "Sensor type identifier (registered string), e.g. \"SENSOR_CAMERA\".")
+    .def_rw("name", &superdex::robotics::SceneSensorEntry::name, "Unique instance name for runtime lookup.")
+    .def_rw("parent_from_sensor", &superdex::robotics::SceneSensorEntry::parentFromSensor, "Sensor pose relative to the scene root (aFromB convention: maps sensor-frame\ncoordinates into the parent scene frame). Chain to world via\nSensorBase::GetWorldTransform. Default: identity.")
+    .def_rw("params", &superdex::robotics::SceneSensorEntry::params, "Sensor-specific parameters: a path to a .superdex_sensor JSON file or inline\nJSON. Omit to use defaults.")
+  ;
+
+  registry.GetClass<superdex::robotics::BotScenePrefab>()
+    .def("__init__", [](superdex::robotics::BotScenePrefab* self, nb::object metadata, nb::object scene, nb::object bots, nb::object sensors, nb::object slots) {
+      superdex::robotics::BotScenePrefab result{};
+      result.metadata = nb::cast<superdex::robotics::BotSceneMetadata>(metadata);
+      result.scene = nb::cast<superdex::robotics::BaseSceneParams>(scene);
+      result.bots = nb::cast<mochi::DynamicArray<superdex::robotics::BotEntry>>(bots);
+      result.sensors = nb::cast<mochi::DynamicArray<superdex::robotics::SceneSensorEntry>>(sensors);
+      result.slots = nb::cast<mochi::DynamicArray<superdex::robotics::SlotEntry>>(slots);
+      new (self) superdex::robotics::BotScenePrefab(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("metadata").sig("...") = superdex::robotics::BotScenePrefab{}.metadata
+      , nb::arg("scene").sig("...") = superdex::robotics::BotScenePrefab{}.scene
+      , nb::arg("bots").sig("...") = superdex::robotics::BotScenePrefab{}.bots
+      , nb::arg("sensors").sig("...") = superdex::robotics::BotScenePrefab{}.sensors
+      , nb::arg("slots").sig("...") = superdex::robotics::BotScenePrefab{}.slots
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::BotScenePrefab const& self) { return superdex::robotics::BotScenePrefab(self); })
+    .def("__deepcopy__", [](superdex::robotics::BotScenePrefab const& self, nb::dict) { return superdex::robotics::BotScenePrefab(self); })
+    .def_rw("metadata", &superdex::robotics::BotScenePrefab::metadata, "Human-readable metadata. Not consumed by the runtime.")
+    .def_rw("scene", &superdex::robotics::BotScenePrefab::scene, "Scene definition. The base_scene is optional.")
+    .def_prop_rw("bots", [](superdex::robotics::BotScenePrefab& self) -> mochi::DynamicArray<superdex::robotics::BotEntry>& { return self.bots; }, [](superdex::robotics::BotScenePrefab& self, nb::object val) { self.bots = nb::cast<mochi::DynamicArray<superdex::robotics::BotEntry>>(val); }, "Robots to instantiate.")
+    .def_prop_rw("sensors", [](superdex::robotics::BotScenePrefab& self) -> mochi::DynamicArray<superdex::robotics::SceneSensorEntry>& { return self.sensors; }, [](superdex::robotics::BotScenePrefab& self, nb::object val) { self.sensors = nb::cast<mochi::DynamicArray<superdex::robotics::SceneSensorEntry>>(val); }, "Scene-level sensors (not attached to any bot).")
+    .def_prop_rw("slots", [](superdex::robotics::BotScenePrefab& self) -> mochi::DynamicArray<superdex::robotics::SlotEntry>& { return self.slots; }, [](superdex::robotics::BotScenePrefab& self, nb::object val) { self.slots = nb::cast<mochi::DynamicArray<superdex::robotics::SlotEntry>>(val); }, "Slots this scene offers, and which bots may fill each. A map in meaning, an\narray of named entries in the file, as every other named collection in this\nschema is. Empty means the scene declares no slots and offers no choice.")
+  ;
+
+  registry.GetClass<superdex::robotics::SceneUrdfJointVelocityLimit>()
+    .def("__init__", [](superdex::robotics::SceneUrdfJointVelocityLimit* self, nb::object joint, nb::object velocity) {
+      superdex::robotics::SceneUrdfJointVelocityLimit result{};
+      result.joint = nb::cast<mochi::DynamicString>(joint);
+      result.velocity = nb::cast<mochi::real>(velocity);
+      new (self) superdex::robotics::SceneUrdfJointVelocityLimit(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("joint") = superdex::robotics::SceneUrdfJointVelocityLimit{}.joint
+      , nb::arg("velocity") = superdex::robotics::SceneUrdfJointVelocityLimit{}.velocity
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SceneUrdfJointVelocityLimit const& self) { return superdex::robotics::SceneUrdfJointVelocityLimit(self); })
+    .def("__deepcopy__", [](superdex::robotics::SceneUrdfJointVelocityLimit const& self, nb::dict) { return superdex::robotics::SceneUrdfJointVelocityLimit(self); })
+    .def_rw("joint", &superdex::robotics::SceneUrdfJointVelocityLimit::joint, "SuperDex joint name, e.g. \"Joint1_L\" or \"thumb_cmc_flex\".")
+    .def_rw("velocity", &superdex::robotics::SceneUrdfJointVelocityLimit::velocity, "Velocity limit [rad/s or m/s].")
+  ;
+
+  registry.GetClass<superdex::robotics::SceneUrdfLinkAlias>()
+    .def("__init__", [](superdex::robotics::SceneUrdfLinkAlias* self, nb::object link, nb::object alias) {
+      superdex::robotics::SceneUrdfLinkAlias result{};
+      result.link = nb::cast<mochi::DynamicString>(link);
+      result.alias = nb::cast<mochi::DynamicString>(alias);
+      new (self) superdex::robotics::SceneUrdfLinkAlias(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("link") = superdex::robotics::SceneUrdfLinkAlias{}.link
+      , nb::arg("alias") = superdex::robotics::SceneUrdfLinkAlias{}.alias
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SceneUrdfLinkAlias const& self) { return superdex::robotics::SceneUrdfLinkAlias(self); })
+    .def("__deepcopy__", [](superdex::robotics::SceneUrdfLinkAlias const& self, nb::dict) { return superdex::robotics::SceneUrdfLinkAlias(self); })
+    .def_rw("link", &superdex::robotics::SceneUrdfLinkAlias::link, "SuperDex link name (after\n:attr:`~superdex.robotics.SceneUrdfOptions.strip_index_prefixes`).")
+    .def_rw("alias", &superdex::robotics::SceneUrdfLinkAlias::alias, "Alias name, prefixed like the link it is attached to.")
+  ;
+
+  registry.GetClass<superdex::robotics::SceneUrdfOptions>()
+    .def("__init__", [](superdex::robotics::SceneUrdfOptions* self, nb::object robot_name, nb::object instance_name, nb::object strip_index_prefixes, nb::object joint_velocity_limits, nb::object require_velocity_limits, nb::object link_aliases) {
+      superdex::robotics::SceneUrdfOptions result{};
+      result.robotName = nb::cast<mochi::DynamicString>(robot_name);
+      result.instanceName = nb::cast<mochi::DynamicString>(instance_name);
+      result.stripIndexPrefixes = nb::cast<bool>(strip_index_prefixes);
+      result.jointVelocityLimits = nb::cast<mochi::DynamicArray<superdex::robotics::SceneUrdfJointVelocityLimit>>(joint_velocity_limits);
+      result.requireVelocityLimits = nb::cast<bool>(require_velocity_limits);
+      result.linkAliases = nb::cast<mochi::DynamicArray<superdex::robotics::SceneUrdfLinkAlias>>(link_aliases);
+      new (self) superdex::robotics::SceneUrdfOptions(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("robot_name") = superdex::robotics::SceneUrdfOptions{}.robotName
+      , nb::arg("instance_name") = superdex::robotics::SceneUrdfOptions{}.instanceName
+      , nb::arg("strip_index_prefixes") = superdex::robotics::SceneUrdfOptions{}.stripIndexPrefixes
+      , nb::arg("joint_velocity_limits").sig("...") = superdex::robotics::SceneUrdfOptions{}.jointVelocityLimits
+      , nb::arg("require_velocity_limits") = superdex::robotics::SceneUrdfOptions{}.requireVelocityLimits
+      , nb::arg("link_aliases").sig("...") = superdex::robotics::SceneUrdfOptions{}.linkAliases
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SceneUrdfOptions const& self) { return superdex::robotics::SceneUrdfOptions(self); })
+    .def("__deepcopy__", [](superdex::robotics::SceneUrdfOptions const& self, nb::dict) { return superdex::robotics::SceneUrdfOptions(self); })
+    .def_rw("robot_name", &superdex::robotics::SceneUrdfOptions::robotName, "URDF robot name. Empty uses the scene's metadata name, or \"scene\".")
+    .def_rw("instance_name", &superdex::robotics::SceneUrdfOptions::instanceName, "Links and joints of a bot that fills a slot are named\n\"{slot}_{instanceName}_{name}\", and other bots' \"{entry}_{name}\". Base-scene\nactors keep their names, prefixed with \"{prefab}_\" for each nested prefab.\nDefaults to \"real\".")
+    .def_rw("strip_index_prefixes", &superdex::robotics::SceneUrdfOptions::stripIndexPrefixes, "Strip a leading \"link_NN_\" or \"joint_NN_\" index from SuperDex names.")
+    .def_prop_rw("joint_velocity_limits", [](superdex::robotics::SceneUrdfOptions& self) -> mochi::DynamicArray<superdex::robotics::SceneUrdfJointVelocityLimit>& { return self.jointVelocityLimits; }, [](superdex::robotics::SceneUrdfOptions& self, nb::object val) { self.jointVelocityLimits = nb::cast<mochi::DynamicArray<superdex::robotics::SceneUrdfJointVelocityLimit>>(val); }, "Velocity limits by joint name. :class:`~superdex.robotics.BotJointPrefab` has\nnone of its own.")
+    .def_rw("require_velocity_limits", &superdex::robotics::SceneUrdfOptions::requireVelocityLimits, "Fail if a joint with position limits has no entry in\n:attr:`~superdex.robotics.SceneUrdfOptions.joint_velocity_limits`. When false,\nsuch joints get a placeholder velocity of 1, as `SaveToUrdfFile` writes.")
+    .def_prop_rw("link_aliases", [](superdex::robotics::SceneUrdfOptions& self) -> mochi::DynamicArray<superdex::robotics::SceneUrdfLinkAlias>& { return self.linkAliases; }, [](superdex::robotics::SceneUrdfOptions& self, nb::object val) { self.linkAliases = nb::cast<mochi::DynamicArray<superdex::robotics::SceneUrdfLinkAlias>>(val); }, "Extra frames to add, e.g. ROS names for a bot's base and tool links.")
+  ;
+
+  registry.GetClass<superdex::robotics::BotScene>()
+    .def("get_scene", &superdex::robotics::BotScene::GetScene
+      , "Get the physics scene.\n\nReturns:\n    Physics scene, or None if it is unavailable."
+      , nb::rv_policy::reference
+    )
+    .def("get_robotics_context", &superdex::robotics::BotScene::GetRoboticsContext
+      , "Get the robotics context (bot/controller/sensor/actuator resource owner).\n\nReturns:\n    Robotics context, or None if unavailable."
+      , nb::rv_policy::reference
+    )
+    .def("get_bot", &superdex::robotics::BotScene::GetBot
+      , nb::arg("name")
+      , "Look up a bot by the name declared in the .superdex_scene file.\n\nArgs:\n    name (str): Exact declared bot name.\n\nReturns:\n    Loaded bot, or None if the name is not found or this BotScene is moved from."
+      , nb::rv_policy::reference
+    )
+    .def("get_or_load_spawnable_bot", [](superdex::robotics::BotScene& self, std::string_view name) {
+      mochi::Error error;
+      auto result = self.GetOrLoadSpawnableBot(name, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("name")
+      , "Get (loading on first use) a bot for a spawnable prefab whose path is a\n.superdex_bot_archive / .superdex_bot, by the name declared in the\n.superdex_scene file's spawnablePrefabs. Unlike SpawnPrefabInstance (which\nplaces a named instance), this instantiates the spawnable once per name as an\narticulated Bot (CreateBot) so callers can access its articulated actor (e.g.\nfor FK). The bot is created at identity root; callers that need placement set\nthe actor pose themselves. Cached per name and owned by this BotScene. Returns\nNone and sets error if the name is unknown or its prefab is not a bot archive.\n\nArgs:\n    name (str): Spawnable-prefab name declared in this scene.\n\nReturns:\n    Cached or newly instantiated articulated bot, or None on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+      , nb::rv_policy::reference
+    )
+    .def("spawn_prefab_instance", [](superdex::robotics::BotScene& self, std::string_view instance_name, std::string_view prefab_name, mochi::TransformRT const& world_from_instance) {
+      mochi::Error error;
+      auto result = self.SpawnPrefabInstance(instance_name, prefab_name, world_from_instance, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("instance_name")
+      , nb::arg("prefab_name")
+      , nb::arg("world_from_instance")
+      , "Spawn a spawnable prefab under an instance name at a world pose.\n\nInstances are keyed by instance name, not prefab name, so the same prefab may be\nspawned any number of times. The instance name prefixes the created actor names,\nand is the identity the rest of the pipeline keys off (the recorded HDF5 object\nid and the dataset/replay feature key; see\n:attr:`~superdex.robotics.SpawnEntry.name`). The instance does not replace the\nscene's gravity or solver settings. A .superdex_bot / .superdex_bot_archive\nspawnable is instantiated as an articulated Bot named after the instance and\nrooted at worldFromInstance; the instance owns it.\n\nArgs:\n    instance_name (str): Unique, non-empty instance name; must not already be\n        live.\n    prefab_name (str): Spawnable-prefab name declared in this scene.\n    world_from_instance (TransformRT): Instance root pose in world space.\n\nReturns:\n    Actor handles in prefab AddToScene order (for a bot, its articulated actor),\n    or empty on error. Valid until the instance is destroyed.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    )
+    .def("destroy_prefab_instance", [](superdex::robotics::BotScene& self, std::string_view instance_name) {
+      mochi::Error error;
+      self.DestroyPrefabInstance(instance_name, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , nb::arg("instance_name")
+      , "Destroy a live prefab instance and its actors.\n\nArgs:\n    instance_name (str): Name of a live prefab instance.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    )
+    .def("destroy_all_prefab_instances", &superdex::robotics::BotScene::DestroyAllPrefabInstances
+      , "Destroy every live prefab instance, e.g. to reset an episode."
+    )
+    .def("get_prefab_instance_actors", &superdex::robotics::BotScene::GetPrefabInstanceActors
+      , nb::arg("instance_name")
+      , "Get the actor handles of a live prefab instance.\n\nArgs:\n    instance_name (str): Name of a prefab instance.\n\nReturns:\n    Actor handles in prefab AddToScene order, or empty if no such instance is\n    live."
+    )
+    .def("get_prefab_instance_names", &superdex::robotics::BotScene::GetPrefabInstanceNames
+      , "Get the names of every live prefab instance.\n\nReturns:\n    Instance names in creation order."
+    )
+    .def("remove_bot", [](superdex::robotics::BotScene& self, std::string_view name) {
+      mochi::Error error;
+      self.RemoveBot(name, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , nb::arg("name")
+      , "Retire a bot loaded from the .superdex_scene: destroy its controllers,\nactuators, sensors, and articulated actor (actuators and sensors hold link-actor\npointers, so they are destroyed before the actor), then erase it from the bot\nregistry so scene teardown does not double-destroy it. Errors if no bot named\n`name` is loaded.\n\nArgs:\n    name (str): Exact declared name of the loaded bot to remove.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    )
+    .def("initialize_bot", [](superdex::robotics::BotScene& self, std::string_view name) {
+      mochi::Error error;
+      auto result = self.InitializeBot(name, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("name")
+      , "Instantiate a bot the .superdex_scene declares but that is not loaded -- one\nremoved with RemoveBot, or left out when the scene was loaded -- together with\nits controllers, at its declared placement and initial pose. Errors, creating\nnothing, if no bot named `name` is declared, it is already loaded, or it fails\nto instantiate.\n\nArgs:\n    name (str): Exact declared name of the bot to initialize.\n\nReturns:\n    The loaded bot, or None on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+      , nb::rv_policy::reference
+    )
+    .def("get_bot_scene_prefab", &superdex::robotics::BotScene::GetBotScenePrefab
+      , "Get the original parameters this BotScene was loaded from.\n\nReturns:\n    Original scene parameters, or an empty prefab if this BotScene is moved\n    from."
+      , nb::rv_policy::reference
+    )
+    .def("get_controller_handle", &superdex::robotics::BotScene::GetControllerHandle
+      , nb::arg("key")
+      , "Get a controller handle by key (borrowed reference). The BotScene retains\nownership — the handle remains valid as long as the BotScene is alive. Access\nthe concrete controller via GetRoboticsContext()->GetController(handle) and\ndowncast.\n\nArgs:\n    key (str): Controller key in \"botName/controllerName\" format.\n\nReturns:\n    The controller handle, or an invalid handle if not found."
+    )
+    .def("find_controllers_by_name", &superdex::robotics::BotScene::FindControllersByName
+      , nb::arg("name")
+      , "Find controllers in the associated :class:`~superdex.robotics.RoboticsContext`\nwhose instance name equals name. This includes components from any other\nBotScene sharing the context.\n\nArgs:\n    name (str): Exact instance name to match.\n\nReturns:\n    Handles of every match in creation order; empty if none or the context is\n    unavailable."
+    )
+    .def("find_controllers_by_type", &superdex::robotics::BotScene::FindControllersByType
+      , nb::arg("type_name")
+      , "Find controllers in the associated :class:`~superdex.robotics.RoboticsContext`\nwhose registered type name equals typeName. This includes components from any\nother BotScene sharing the context.\n\nArgs:\n    type_name (str): Exact registered type name to match.\n\nReturns:\n    Handles of every match in creation order; empty if none or the context is\n    unavailable."
+    )
+    .def("find_sensors_by_name", &superdex::robotics::BotScene::FindSensorsByName
+      , nb::arg("name")
+      , "Find sensors in the associated :class:`~superdex.robotics.RoboticsContext` whose\ninstance name equals name. This includes components from any other BotScene\nsharing the context.\n\nArgs:\n    name (str): Exact instance name to match.\n\nReturns:\n    Handles of every match in creation order; empty if none or the context is\n    unavailable."
+    )
+    .def("find_sensors_by_type", &superdex::robotics::BotScene::FindSensorsByType
+      , nb::arg("type_name")
+      , "Find sensors in the associated :class:`~superdex.robotics.RoboticsContext` whose\nregistered type name equals typeName. This includes components from any other\nBotScene sharing the context.\n\nArgs:\n    type_name (str): Exact registered type name to match.\n\nReturns:\n    Handles of every match in creation order; empty if none or the context is\n    unavailable."
+    )
+    .def("find_actuators_by_name", &superdex::robotics::BotScene::FindActuatorsByName
+      , nb::arg("name")
+      , "Find actuators in the associated :class:`~superdex.robotics.RoboticsContext`\nwhose instance name equals name. This includes components from any other\nBotScene sharing the context.\n\nArgs:\n    name (str): Exact instance name to match.\n\nReturns:\n    Handles of every match in creation order; empty if none or the context is\n    unavailable."
+    )
+    .def("find_actuators_by_type", &superdex::robotics::BotScene::FindActuatorsByType
+      , nb::arg("type_name")
+      , "Find actuators in the associated :class:`~superdex.robotics.RoboticsContext`\nwhose registered type name equals typeName. This includes components from any\nother BotScene sharing the context.\n\nArgs:\n    type_name (str): Exact registered type name to match.\n\nReturns:\n    Handles of every match in creation order; empty if none or the context is\n    unavailable."
+    )
+    .def("start_termination", &superdex::robotics::BotScene::StartTermination
+      , nb::arg("task")
+      , "Begin deciding a task's termination criteria from episode time zero, replacing\nany already in progress. They are evaluated after every physics step of this\nscene, against episode time summed from the step sizes.\n\nArgs:\n    task (BotTaskPrefab): The task whose spawns were applied to this scene. Its\n        criteria are copied."
+    )
+    .def("stop_termination", &superdex::robotics::BotScene::StopTermination
+      , "Stop deciding termination criteria."
+    )
+    .def("restart_termination_progress", &superdex::robotics::BotScene::RestartTerminationProgress
+      , "Clear progress toward the criteria (held results, latches, dwell) without\nrestarting the episode clock, for task objects that were just re-placed."
+    )
+    .def("get_termination_outcome", &superdex::robotics::BotScene::GetTerminationOutcome
+      , "The outcome of the criteria begun by StartTermination. Sticky: the first step on\nwhich either outcome is reached is frozen until the next start or stop.\n\nReturns:\n    Both outcomes."
+    )
+  ;
+
+  registry.GetClass<superdex::robotics::SpawnEntry>()
+    .def("__init__", [](superdex::robotics::SpawnEntry* self, nb::object name, nb::object prefab_name, nb::object parent, nb::object parent_from_spawn) {
+      superdex::robotics::SpawnEntry result{};
+      result.name = nb::cast<mochi::DynamicString>(name);
+      result.prefabName = nb::cast<mochi::DynamicString>(prefab_name);
+      result.parent = nb::cast<mochi::DynamicString>(parent);
+      result.parentFromSpawn = nb::cast<mochi::TransformRT>(parent_from_spawn);
+      new (self) superdex::robotics::SpawnEntry(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("name") = superdex::robotics::SpawnEntry{}.name
+      , nb::arg("prefab_name") = superdex::robotics::SpawnEntry{}.prefabName
+      , nb::arg("parent") = superdex::robotics::SpawnEntry{}.parent
+      , nb::arg("parent_from_spawn").sig("...") = superdex::robotics::SpawnEntry{}.parentFromSpawn
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SpawnEntry const& self) { return superdex::robotics::SpawnEntry(self); })
+    .def("__deepcopy__", [](superdex::robotics::SpawnEntry const& self, nb::dict) { return superdex::robotics::SpawnEntry(self); })
+    .def_rw("name", &superdex::robotics::SpawnEntry::name, "Unique instance name within the task (e.g. \"Foam2\", \"m8_knob\").")
+    .def_rw("prefab_name", &superdex::robotics::SpawnEntry::prefabName, "Name of a spawnable prefab declared in the .superdex_scene's\nscene.spawnablePrefabs[]. Multiple spawns may reference the same prefab.")
+    .def_rw("parent", &superdex::robotics::SpawnEntry::parent, "Name of another spawn entry whose transform this spawn is relative to, or the\nreserved literal \"task_root\" (also the implicit default when empty) to place\nthis spawn in the task actor's own frame.\n:attr:`~superdex.robotics.SpawnEntry.parent_from_spawn`, and any\nPoseRandomization offset, are interpreted in the parent's local frame; the\nparent's resolved (post-DR) world transform is composed in after randomization.\nParent chains may be arbitrarily deep. Cycles and references to undefined spawn\nnames are rejected by ValidateBotTaskPrefab.")
+    .def_rw("parent_from_spawn", &superdex::robotics::SpawnEntry::parentFromSpawn, "Local pose relative to :attr:`~superdex.robotics.SpawnEntry.parent` (aFromB\nconvention: maps spawn-frame coordinates into the parent frame). Default:\nidentity.")
+  ;
+
+  registry.GetClass<superdex::robotics::BotTaskPrefab>()
+    .def("__init__", [](superdex::robotics::BotTaskPrefab* self, nb::object metadata, nb::object reset_state, nb::object task_root_offset) {
+      superdex::robotics::BotTaskPrefab result{};
+      result.metadata = nb::cast<superdex::robotics::BotSceneMetadata>(metadata);
+      result.resetState = nb::cast<mochi::DynamicArray<superdex::robotics::SpawnEntry>>(reset_state);
+      result.taskRootOffset = nb::cast<std::optional<mochi::TransformRT>>(task_root_offset);
+      new (self) superdex::robotics::BotTaskPrefab(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("metadata").sig("...") = superdex::robotics::BotTaskPrefab{}.metadata
+      , nb::arg("reset_state").sig("...") = superdex::robotics::BotTaskPrefab{}.resetState
+      , nb::arg("task_root_offset").sig("...") = superdex::robotics::BotTaskPrefab{}.taskRootOffset
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::BotTaskPrefab const& self) { return superdex::robotics::BotTaskPrefab(self); })
+    .def("__deepcopy__", [](superdex::robotics::BotTaskPrefab const& self, nb::dict) { return superdex::robotics::BotTaskPrefab(self); })
+    .def_rw("metadata", &superdex::robotics::BotTaskPrefab::metadata, "Human-readable metadata. Not consumed by the runtime.")
+    .def_prop_rw("reset_state", [](superdex::robotics::BotTaskPrefab& self) -> mochi::DynamicArray<superdex::robotics::SpawnEntry>& { return self.resetState; }, [](superdex::robotics::BotTaskPrefab& self, nb::object val) { self.resetState = nb::cast<mochi::DynamicArray<superdex::robotics::SpawnEntry>>(val); }, "The objects an episode starts with, and where: each entry is placed at every\nreset.")
+    .def_prop_rw("task_root_offset", [](superdex::robotics::BotTaskPrefab& self) -> std::optional<mochi::TransformRT>& { return self.taskRootOffset; }, [](superdex::robotics::BotTaskPrefab& self, nb::handle val) { self.taskRootOffset = val.is_none() ? std::optional<mochi::TransformRT>{} : nb::cast<std::optional<mochi::TransformRT>>(val); }, "The transform from this task's own coordinates into the task frame (the nominal\ntable top): for a table spawned at T, it is inverse(T). On a scene that declares\na taskRoot, root-level spawns are relocated by taskRoot * taskRootOffset. Unset,\nthe task is authored in the task frame itself.", nb::for_setter(nb::arg("value").none()))
+  ;
+
+  registry.GetClass<superdex::robotics::TerminationOutcome>()
+    .def("__init__", [](superdex::robotics::TerminationOutcome* self, nb::object success_authored, nb::object success, nb::object failure_authored, nb::object failure) {
+      superdex::robotics::TerminationOutcome result{};
+      result.successAuthored = nb::cast<bool>(success_authored);
+      result.success = nb::cast<bool>(success);
+      result.failureAuthored = nb::cast<bool>(failure_authored);
+      result.failure = nb::cast<bool>(failure);
+      new (self) superdex::robotics::TerminationOutcome(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("success_authored") = superdex::robotics::TerminationOutcome{}.successAuthored
+      , nb::arg("success") = superdex::robotics::TerminationOutcome{}.success
+      , nb::arg("failure_authored") = superdex::robotics::TerminationOutcome{}.failureAuthored
+      , nb::arg("failure") = superdex::robotics::TerminationOutcome{}.failure
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::TerminationOutcome const& self) { return superdex::robotics::TerminationOutcome(self); })
+    .def("__deepcopy__", [](superdex::robotics::TerminationOutcome const& self, nb::dict) { return superdex::robotics::TerminationOutcome(self); })
+    .def_rw("success_authored", &superdex::robotics::TerminationOutcome::successAuthored, "Whether the task file declares a success outcome at all. When false, the\nconsumer keeps whatever predicate it already implements, and\n:attr:`~superdex.robotics.TerminationOutcome.success` is meaningless.")
+    .def_rw("success", &superdex::robotics::TerminationOutcome::success, "Whether the success criteria have held for their validation time.")
+    .def_rw("failure_authored", &superdex::robotics::TerminationOutcome::failureAuthored, "Whether the task file declares a failure outcome at all.")
+    .def_rw("failure", &superdex::robotics::TerminationOutcome::failure, "Whether the failure criteria have held for their validation time.")
+  ;
+
+  registry.GetClass<superdex::robotics::DREpisodeEntry>()
+    .def("__init__", [](superdex::robotics::DREpisodeEntry* self, nb::object key, nb::object scalar, nb::object value) {
+      superdex::robotics::DREpisodeEntry result{};
+      result.key = nb::cast<mochi::DynamicString>(key);
+      result.scalar = nb::cast<bool>(scalar);
+      result.value = nb::cast<mochi::DynamicArray<mochi::real>>(value);
+      new (self) superdex::robotics::DREpisodeEntry(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("key") = superdex::robotics::DREpisodeEntry{}.key
+      , nb::arg("scalar") = superdex::robotics::DREpisodeEntry{}.scalar
+      , nb::arg("value").sig("...") = superdex::robotics::DREpisodeEntry{}.value
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::DREpisodeEntry const& self) { return superdex::robotics::DREpisodeEntry(self); })
+    .def("__deepcopy__", [](superdex::robotics::DREpisodeEntry const& self, nb::dict) { return superdex::robotics::DREpisodeEntry(self); })
+    .def_rw("key", &superdex::robotics::DREpisodeEntry::key)
+    .def_rw("scalar", &superdex::robotics::DREpisodeEntry::scalar)
+    .def_prop_rw("value", [](superdex::robotics::DREpisodeEntry& self) -> mochi::DynamicArray<mochi::real>& { return self.value; }, [](superdex::robotics::DREpisodeEntry& self, nb::object val) { self.value = nb::cast<mochi::DynamicArray<mochi::real>>(val); })
+  ;
+
+  registry.GetClass<superdex::robotics::DREpisode>()
+    .def("__init__", [](superdex::robotics::DREpisode* self, nb::object index, nb::object episode_seed, nb::object values) {
+      superdex::robotics::DREpisode result{};
+      result.index = nb::cast<int>(index);
+      result.episodeSeed = nb::cast<mochi::DynamicString>(episode_seed);
+      result.values = nb::cast<mochi::DynamicArray<superdex::robotics::DREpisodeEntry>>(values);
+      new (self) superdex::robotics::DREpisode(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("index") = superdex::robotics::DREpisode{}.index
+      , nb::arg("episode_seed") = superdex::robotics::DREpisode{}.episodeSeed
+      , nb::arg("values").sig("...") = superdex::robotics::DREpisode{}.values
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::DREpisode const& self) { return superdex::robotics::DREpisode(self); })
+    .def("__deepcopy__", [](superdex::robotics::DREpisode const& self, nb::dict) { return superdex::robotics::DREpisode(self); })
+    .def_rw("index", &superdex::robotics::DREpisode::index)
+    .def_rw("episode_seed", &superdex::robotics::DREpisode::episodeSeed)
+    .def_prop_rw("values", [](superdex::robotics::DREpisode& self) -> mochi::DynamicArray<superdex::robotics::DREpisodeEntry>& { return self.values; }, [](superdex::robotics::DREpisode& self, nb::object val) { self.values = nb::cast<mochi::DynamicArray<superdex::robotics::DREpisodeEntry>>(val); })
+  ;
+
+  registry.GetClass<superdex::robotics::DREpisodeList>()
+    .def("__init__", [](superdex::robotics::DREpisodeList* self, nb::object schema_version, nb::object spec_version, nb::object master_seed, nb::object episodes) {
+      superdex::robotics::DREpisodeList result{};
+      result.schemaVersion = nb::cast<int>(schema_version);
+      result.specVersion = nb::cast<mochi::DynamicString>(spec_version);
+      result.masterSeed = nb::cast<mochi::DynamicString>(master_seed);
+      result.episodes = nb::cast<mochi::DynamicArray<superdex::robotics::DREpisode>>(episodes);
+      new (self) superdex::robotics::DREpisodeList(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("schema_version") = superdex::robotics::DREpisodeList{}.schemaVersion
+      , nb::arg("spec_version") = superdex::robotics::DREpisodeList{}.specVersion
+      , nb::arg("master_seed") = superdex::robotics::DREpisodeList{}.masterSeed
+      , nb::arg("episodes").sig("...") = superdex::robotics::DREpisodeList{}.episodes
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::DREpisodeList const& self) { return superdex::robotics::DREpisodeList(self); })
+    .def("__deepcopy__", [](superdex::robotics::DREpisodeList const& self, nb::dict) { return superdex::robotics::DREpisodeList(self); })
+    .def_rw("schema_version", &superdex::robotics::DREpisodeList::schemaVersion)
+    .def_rw("spec_version", &superdex::robotics::DREpisodeList::specVersion)
+    .def_rw("master_seed", &superdex::robotics::DREpisodeList::masterSeed)
+    .def_prop_rw("episodes", [](superdex::robotics::DREpisodeList& self) -> mochi::DynamicArray<superdex::robotics::DREpisode>& { return self.episodes; }, [](superdex::robotics::DREpisodeList& self, nb::object val) { self.episodes = nb::cast<mochi::DynamicArray<superdex::robotics::DREpisode>>(val); })
+  ;
+
+  registry.GetClass<superdex::robotics::ResolvedSpawn>()
+    .def("__init__", [](superdex::robotics::ResolvedSpawn* self, nb::object name, nb::object prefab_name, nb::object parent, nb::object parent_from_spawn, nb::object world_from_spawn) {
+      superdex::robotics::ResolvedSpawn result{};
+      result.name = nb::cast<mochi::DynamicString>(name);
+      result.prefabName = nb::cast<mochi::DynamicString>(prefab_name);
+      result.parent = nb::cast<mochi::DynamicString>(parent);
+      result.parentFromSpawn = nb::cast<mochi::TransformRT>(parent_from_spawn);
+      result.worldFromSpawn = nb::cast<mochi::TransformRT>(world_from_spawn);
+      new (self) superdex::robotics::ResolvedSpawn(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("name") = superdex::robotics::ResolvedSpawn{}.name
+      , nb::arg("prefab_name") = superdex::robotics::ResolvedSpawn{}.prefabName
+      , nb::arg("parent") = superdex::robotics::ResolvedSpawn{}.parent
+      , nb::arg("parent_from_spawn").sig("...") = superdex::robotics::ResolvedSpawn{}.parentFromSpawn
+      , nb::arg("world_from_spawn").sig("...") = superdex::robotics::ResolvedSpawn{}.worldFromSpawn
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::ResolvedSpawn const& self) { return superdex::robotics::ResolvedSpawn(self); })
+    .def("__deepcopy__", [](superdex::robotics::ResolvedSpawn const& self, nb::dict) { return superdex::robotics::ResolvedSpawn(self); })
+    .def_rw("name", &superdex::robotics::ResolvedSpawn::name, "The entry's name.")
+    .def_rw("prefab_name", &superdex::robotics::ResolvedSpawn::prefabName, "The prefab to place: the PrefabSelection draw, or the nominal prefab without\none.")
+    .def_rw("parent", &superdex::robotics::ResolvedSpawn::parent, "As declared; empty or task_root for the task root.")
+    .def_rw("parent_from_spawn", &superdex::robotics::ResolvedSpawn::parentFromSpawn, "The declared parentFromSpawn with the PoseRandomization offset applied.")
+    .def_rw("world_from_spawn", &superdex::robotics::ResolvedSpawn::worldFromSpawn, "The entry's pose composed through its parent chain, with the task root at the\nworldFromTask passed to ResolveResetState.")
+  ;
+
     m_bots.attr("EFFORT_UNBOUNDED") = nb::cast(superdex::robotics::kEffortUnbounded);
 
     m_bots.def("load_bot_prefab_from_file", [](std::string_view path) {
@@ -1361,6 +1922,164 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       , nb::arg("scene").none()
       , nb::arg("bot").none()
       , "Destroy a :class:`~superdex.robotics.Bot` previously created by\n:func:`~superdex.robotics.create_bot`. Destroys the underlying articulated actor\nin its owning scene and any controllers, sensors, and actuators the bot created.\nThis must be in the scene thread (i.e. in an async callback if using async\nscenes.)\n\nArgs:\n    scene (Scene): Scene to remove the bot from. Must be the same scene used to\n        create the bot.\n    bot (Optional[Bot]): Pointer to the bot to be destroyed."
+    );
+
+    m_bots.def("load_bot_scene_prefab_from_file", [](std::string_view path) {
+      mochi::Error error;
+      auto result = superdex::robotics::LoadBotScenePrefabFromFile(path, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("path")
+      , "Load bot scene parameters from a .superdex_scene JSON file.\n\nDeserializes the file, validates that bot, controller, and spawnable-prefab\nnames are non-empty and unique, and resolves relative paths to absolute. A scene\nwith no base scene and no bots is valid — that is the state of a newly created\nscene.\n\nArgs:\n    path (str): File path to the .superdex_scene file.\n\nReturns:\n    Loaded :class:`~superdex.robotics.BotScenePrefab`, or default-constructed on\n    failure.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+
+    m_bots.def("save_bot_scene_to_urdf_string", [](superdex::robotics::BotScenePrefab const& scene, std::string_view root_path, superdex::robotics::SceneUrdfOptions const& options) {
+      mochi::Error error;
+      auto result = superdex::robotics::SaveBotSceneToUrdfString(scene, root_path, options, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("scene")
+      , nb::arg("root_path")
+      , nb::arg("options")
+      , "Export a bot scene to a URDF XML string, without meshes.\n\nThe URDF is rooted at a `world` link, the scene root. Each bot entry, base-scene\narticulated actor and static rigid actor hangs from it by a `fixed` joint named\n`{root link}_placement`, with its own links and joints unchanged below. Dynamic\nand soft actors, tasks and spawnable prefabs are skipped, and skins are not\nexported, so a skinned hand is rigid. SuperDex, unlike URDF, needs joint names\nto differ from link names, so a joint named like a link (e.g. \"joint_01_wrist\"\nbeside \"link_01_wrist\", with\n:attr:`~superdex.robotics.SceneUrdfOptions.strip_index_prefixes`) gets a\n`_joint` suffix.\n\nEach sensor becomes a `{name}_frame` link at its parentFromSensor on its link\n(bot sensors) or on `world` (scene sensors). A sensor whose name another sensor\nshares takes its bot's prefix, as the bot's links do, and an unnamed sensor is\nnamed `{link}_sensor_{index}`, after its URDF link and its index on that link. A\ncamera's parentFromSensor is its optical frame (Z forward, X right, Y down): it\ngets a `{name}_optical_frame` link there, and `{name}_frame` follows ROS REP-103\n(X forward, Z up). Intrinsics are not exported.\n\nNo ``<visual>`` or ``<collision>`` elements are written. SuperDex Studio's\n`scene_to_urdf` exports the meshes too, as STL.\n\nArgs:\n    scene (BotScenePrefab): Path-resolved scene, as returned by\n        :func:`~superdex.robotics.load_bot_scene_prefab_from_file`.\n    root_path (str): Root directory for the base scene's relative paths (see\n        `GetBotSceneBaseRoot`).\n    options (SceneUrdfOptions): Export options.\n\nReturns:\n    The URDF XML.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+
+    m_bots.def("load_bot_scene", [](std::string_view path, superdex::robotics::RoboticsContext* bots_ctx) {
+      CheckContext();
+      mochi::Error error;
+      auto result = superdex::robotics::LoadBotScene(path, GetContext(), bots_ctx, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("path")
+      , nb::arg("bots_ctx").none()
+      , "Load a .superdex_scene file and instantiate all scene objects.\n\nCreates the physics scene from the base_scene, instantiates all bots with\nplacement and initial pose, and creates controllers via the provided\nRoboticsContext.\n\nArgs:\n    path (str): File path to the .superdex_scene file.\n    bots_ctx (RoboticsContext): RoboticsContext for controller creation and\n        lifetime management.\n\nReturns:\n    The loaded BotScene.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+    m_bots.def("load_bot_scene", [](mochi::Scene* scene, superdex::robotics::BotScenePrefab const& prefab, std::string_view root_path, superdex::robotics::RoboticsContext* bots_ctx) {
+      CheckContext();
+      mochi::Error error;
+      auto result = superdex::robotics::LoadBotScene(scene, prefab, root_path, GetContext(), bots_ctx, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("scene").none()
+      , nb::arg("prefab")
+      , nb::arg("root_path")
+      , nb::arg("bots_ctx").none()
+      , "Load a bot scene into a caller-provided scene from an already-loaded prefab.\n\nLike the path-based :func:`~superdex.robotics.load_bot_scene` overload but does\nnot create or own the scene: bots and controllers are created in scene and the\nbase prefab (already loaded and path-resolved, e.g. by an asset) is added\ndirectly. The returned :class:`~superdex.robotics.BotScene` destroys the bots\nand controllers it created but leaves scene intact (the caller retains ownership\nof the scene).\n\nArgs:\n    scene (Scene): Caller-owned scene to populate.\n    prefab (BotScenePrefab): Already-loaded, path-resolved bot scene parameters.\n    root_path (str): Root directory used to resolve the base scene's relative\n        shape/prefab paths.\n    bots_ctx (RoboticsContext): RoboticsContext for controller creation and\n        lifetime management.\n\nReturns:\n    The loaded BotScene (non-owning of scene).\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+    m_bots.def("load_bot_scene", [](mochi::Scene* scene, std::string_view path, superdex::robotics::RoboticsContext* bots_ctx) {
+      CheckContext();
+      mochi::Error error;
+      auto result = superdex::robotics::LoadBotScene(scene, path, GetContext(), bots_ctx, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("scene").none()
+      , nb::arg("path")
+      , nb::arg("bots_ctx").none()
+      , "Load a bot scene into a caller-provided scene from a file or archive path.\n\nLike the prefab overload but loads and validates the\n:class:`~superdex.robotics.BotScenePrefab` through LoadBotScenePrefabFromFile so\narchive extraction remains transparent. The base-scene-relative root is derived\nanalogously to the path overload (bots root with a resolved base-scene\nfallback), then delegates to the prefab overload. The returned\n:class:`~superdex.robotics.BotScene` owns the bots, controllers, and base-scene\nactors it added but leaves the caller-owned :class:`~superdex.physics.Scene`\nintact.\n\nArgs:\n    scene (Scene): Caller-owned :class:`~superdex.physics.Scene` to populate.\n    path (str): File path to the .superdex_scene file or\n        .superdex_scene_archive.\n    bots_ctx (RoboticsContext): :class:`~superdex.robotics.RoboticsContext` for\n        controller creation and lifetime management.\n\nReturns:\n    The loaded :class:`~superdex.robotics.BotScene` (non-owning of the caller\n    scene).\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+
+    m_bots.def("load_bot_task_prefab_from_file", [](std::string_view path) {
+      mochi::Error error;
+      auto result = superdex::robotics::LoadBotTaskPrefabFromFile(path, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("path")
+      , "Load task parameters from a .superdex_task JSON file.\n\nDeserializes the file and validates that spawn names are non-empty, unique, and\nnot equal to kTaskRootParentName; that each spawn references a non-empty prefab\nname; and that :attr:`~superdex.robotics.SpawnEntry.parent` references either\nkTaskRootParentName or the name of another spawn in this task. Parent graphs\nmust be acyclic. Existence of :attr:`~superdex.robotics.SpawnEntry.prefab_name`\nin any scene is intentionally NOT validated here (loose binding) — that is\nchecked at apply time against the loaded scene.\n\nArgs:\n    path (str): File path to the .superdex_task file.\n\nReturns:\n    Loaded :class:`~superdex.robotics.BotTaskPrefab`, or default-constructed on\n    failure.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+
+    m_bots.def("load_dr_episode_list_from_file", [](std::string_view path) {
+      mochi::Error error;
+      auto result = superdex::robotics::LoadDREpisodeListFromFile(path, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("path")
+      , "Load a pre-randomized DR episode list from a JSON manifest file.\n\nDeserializes a schema-v1 `dr_manifest.json` and validates it via\nValidateDREpisodeList. Unmodeled top-level keys (`experiment_overrides`,\n`pose_overrides`, `profile`) are ignored.\n\nArgs:\n    path (str): File path to the manifest.\n\nReturns:\n    Loaded :class:`~superdex.robotics.DREpisodeList`, or default-constructed on\n    failure.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+
+    m_bots.def("save_dr_episode_list_to_file", [](superdex::robotics::DREpisodeList const& list, std::string_view path) {
+      mochi::Error error;
+      superdex::robotics::SaveDREpisodeListToFile(list, path, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , nb::arg("list")
+      , nb::arg("path")
+      , "Save a :class:`~superdex.robotics.DREpisodeList` to a JSON manifest file.\n\nThe inverse of :func:`~superdex.robotics.load_dr_episode_list_from_file`:\nvalidates list via ValidateDREpisodeList, then serializes it to a schema-v1\n`dr_manifest.json`. Validating before writing makes a malformed list a hard\nerror rather than a bad file on disk. Only the modeled fields are emitted; the\noptional producer keys the loader tolerates (`experiment_overrides`,\n`pose_overrides`, `profile`) are not part of\n:class:`~superdex.robotics.DREpisodeList`, so they are absent.\n\nArgs:\n    list (DREpisodeList): The episode list to save.\n    path (str): Destination file path.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+
+    m_bots.def("spawn_pose_dr_key", &superdex::robotics::SpawnPoseDRKey
+      , nb::arg("spawn_name")
+      , nb::arg("domain_randomization_class")
+      , "The DR episode key an entry's PoseRandomization offset is drawn under.\n\nArgs:\n    spawn_name (str): The reset-state entry's name.\n    domain_randomization_class (str): Its PoseRandomization class.\n\nReturns:\n    ``dr/spawn/<spawnName>/<domainRandomizationClass>/pose``"
+    );
+
+    m_bots.def("spawn_prefab_dr_key", &superdex::robotics::SpawnPrefabDRKey
+      , nb::arg("spawn_name")
+      , "The DR episode key an entry's PrefabSelection is drawn under.\n\nArgs:\n    spawn_name (str): The reset-state entry's name.\n\nReturns:\n    ``dr/spawn/<spawnName>/prefab``"
+    );
+
+    m_bots.def("get_pose_randomization_class", &superdex::robotics::GetPoseRandomizationClass
+      , nb::arg("entry")
+      , "The DR class of an entry's PoseRandomization.\n\nArgs:\n    entry (SpawnEntry): The reset-state entry.\n\nReturns:\n    The class, or empty if the entry has no PoseRandomization."
+    );
+
+    m_bots.def("get_prefab_selection", &superdex::robotics::GetPrefabSelection
+      , nb::arg("entry")
+      , "The candidates of an entry's PrefabSelection.\n\nArgs:\n    entry (SpawnEntry): The reset-state entry.\n\nReturns:\n    The prefab names, or empty if the entry has no PrefabSelection."
+    );
+
+    m_bots.def("compute_world_from_task", &superdex::robotics::ComputeWorldFromTask
+      , nb::arg("scene")
+      , nb::arg("task")
+      , "Where a task's root-level spawns go on a scene: scene.taskRoot *\ntask.taskRootOffset, with an absent offset taken as identity; identity when the\nscene declares no task root.\n\nArgs:\n    scene (BaseSceneParams): The bot scene's scene block.\n    task (BotTaskPrefab): The task.\n\nReturns:\n    The world-from-task transform to pass to ResolveResetState."
+    );
+
+    m_bots.def("resolve_reset_state", [](superdex::robotics::BotTaskPrefab const& task, mochi::DynamicArray<superdex::robotics::DREpisodeEntry> const& values, mochi::TransformRT const& world_from_task) {
+      mochi::Error error;
+      auto result = superdex::robotics::ResolveResetState(task, values, world_from_task, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("task")
+      , nb::arg("values")
+      , nb::arg("world_from_task")
+      , "Resolve a task's reset state for one episode from that episode's DR values.\n\nEntries whose DR key is absent are placed as declared, so empty values resolve\nthe nominal state. Root-level entries are composed onto worldFromTask.\n\nArgs:\n    task (BotTaskPrefab): The task.\n    values (bots.ArrayLikeDREpisodeEntry): The episode's DR values; keys this\n        does not read are ignored.\n    world_from_task (TransformRT): Where the task's root-level spawns go; see\n        ComputeWorldFromTask.\n\nReturns:\n    One entry per reset-state entry, parents before their children.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+    m_bots.def("resolve_reset_state", [](superdex::robotics::BotTaskPrefab const& task, mochi::DynamicArray<superdex::robotics::DREpisodeEntry> const& values) {
+      mochi::Error error;
+      auto result = superdex::robotics::ResolveResetState(task, values, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("task")
+      , nb::arg("values")
+      , "ResolveResetState with the task in its own coordinates (identity worldFromTask).\n\nArgs:\n    task (BotTaskPrefab): The task.\n    values (bots.ArrayLikeDREpisodeEntry): The episode's DR values; keys this\n        does not read are ignored.\n\nReturns:\n    One entry per reset-state entry, parents before their children.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
     );
 
 }

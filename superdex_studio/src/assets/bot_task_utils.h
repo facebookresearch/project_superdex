@@ -16,8 +16,6 @@
 
 #pragma once
 
-#if MOCHI_INTERNAL
-
 #include <string>
 #include <string_view>
 
@@ -30,5 +28,3 @@ bool CreateBotTaskFile(std::string const& path, std::string_view name, std::stri
 bool SetBotTaskName(std::string const& path, std::string_view name, std::string& error);
 
 } // namespace superdex::studio
-
-#endif // MOCHI_INTERNAL

@@ -16,10 +16,8 @@
 
 #pragma once
 #include <superdex_physics.h>
+#include <superdex_robotics/scene/bot_scene.h>
 #include <superdex_robotics/superdex_robotics.h>
-#if SUPERDEXROBOTICS_WITH_BOT_SCENE
-#include <superdex_robotics/internal/bot_scene.h>
-#endif
 #if MOCHI_INTERNAL
 #include <superdex_robotics/internal/internal.h>
 #endif
@@ -181,7 +179,6 @@ DetectAssetFolderLayout(std::filesystem::path const& originDir);
  */
 [[nodiscard]] MOCHI_API bool IsBotPath(std::string_view path);
 
-#if SUPERDEXROBOTICS_WITH_BOT_SCENE
 /**
  * @brief Recognize a bot scene file path by extension.
  *
@@ -203,7 +200,6 @@ DetectAssetFolderLayout(std::filesystem::path const& originDir);
  * @return @c true if @p path ends with a recognized bot task extension.
  */
 [[nodiscard]] MOCHI_API bool IsBotTaskPath(std::string_view path);
-#endif
 
 /**
  * @brief Parsed contents of a `.superdex_root` file.
@@ -609,7 +605,6 @@ SaveToFile(ModBotPrefab const& modBotPrefab, std::string_view path, superdex::Er
 // BotScenePrefab
 // ---------------------------------------------------------------------------
 
-#if SUPERDEXROBOTICS_WITH_BOT_SCENE
 /* @brief Save bot scene prefab to a .superdex_scene JSON file.
  *
  * Creates parent directories if they do not exist.
@@ -619,7 +614,6 @@ SaveToFile(ModBotPrefab const& modBotPrefab, std::string_view path, superdex::Er
  * @param[in,out] error Error status. */
 MOCHI_API void
 SaveToFile(BotScenePrefab const& scenePrefab, std::string_view path, superdex::Error& error);
-#endif // SUPERDEXROBOTICS_WITH_BOT_SCENE
 
 // ---------------------------------------------------------------------------
 // Geometry (URDF and MJCF)
@@ -825,7 +819,6 @@ SaveToUrdfFile(BotPrefab const& botPrefab, std::string_view path, superdex::Erro
 [[nodiscard]] MOCHI_API DynamicString
 SaveToUrdfString(BotPrefab const& botPrefab, superdex::Error& error);
 
-#if SUPERDEXROBOTICS_WITH_BOT_SCENE
 /* @brief Velocity limit for every exported joint whose SuperDex name (after
  * @ref SceneUrdfOptions::stripIndexPrefixes) is @ref joint. */
 struct SceneUrdfJointVelocityLimit {
@@ -928,7 +921,6 @@ using SceneUrdfMeshWriter = std::function<SceneUrdfMesh(
     std::string_view rootPath,
     SceneUrdfOptions const& options,
     superdex::Error& error);
-#endif // SUPERDEXROBOTICS_WITH_BOT_SCENE
 
 // ---------------------------------------------------------------------------
 // MJCF

@@ -16,16 +16,14 @@
 
 #pragma once
 
-#if MOCHI_INTERNAL
-
 #include "editors/asset_editor.h"
 #include "rendering/scene_stage.h"
 #include "simulation/mochi_async_scene.h"
 #include "simulation/physics_drag_controller.h"
 #include "simulation/skin_sim_sync.h"
 
-#include <superdex_robotics/internal/bot_scene.h>
-#include <superdex_robotics/internal/bot_task.h>
+#include <superdex_robotics/scene/bot_scene.h>
+#include <superdex_robotics/scene/bot_task.h>
 
 #include <optional>
 #include <string>
@@ -209,5 +207,3 @@ class BotSceneEditor : public AssetEditor {
 };
 
 } // namespace superdex::studio
-
-#endif // MOCHI_INTERNAL

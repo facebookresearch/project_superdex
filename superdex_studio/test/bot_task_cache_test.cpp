@@ -16,7 +16,7 @@
 
 #include "assets/bot_task_cache.h"
 
-#include <superdex_robotics/internal/bot_task.h>
+#include <superdex_robotics/scene/bot_task.h>
 #include <superdex_robotics/utils/file_utils.h>
 
 #include <mochi_core/test/mochi_test_helpers.h>

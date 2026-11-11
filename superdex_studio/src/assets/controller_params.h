@@ -16,14 +16,14 @@
 
 #pragma once
 
-#if MOCHI_INTERNAL
-
 #include <superdex_robotics/controllers/controller_basic_jsc_pd.h>
 #include <superdex_robotics/controllers/controller_basic_osc_pd.h>
 #include <superdex_robotics/controllers/controller_mochi_articulated_pose.h>
+#include <superdex_robotics/scene/bot_scene.h>
+#if MOCHI_INTERNAL
 #include <superdex_robotics/controllers/internal/controller_osc_v1.h>
 #include <superdex_robotics/controllers/internal/controller_osc_v2.h>
-#include <superdex_robotics/internal/bot_scene.h>
+#endif
 
 #include <array>
 #include <functional>
@@ -34,33 +34,49 @@
 
 namespace superdex::studio {
 
+// The internal-only OSC controllers (ControllerOscV1, ControllerOscV2) in the tables below.
+#if MOCHI_INTERNAL
+inline constexpr std::size_t kInternalControllerCount = 2;
+#else
+inline constexpr std::size_t kInternalControllerCount = 0;
+#endif
+
 // Calls fn.template operator()<TController>() for each built-in controller type until one returns
 // true, and returns whether any did.
 template <typename Fn>
 bool ForEachBuiltinController(Fn&& fn) {
   namespace robotics = superdex::robotics;
-  return fn.template operator()<robotics::ControllerBasicJscPd>() ||
+  bool const found = fn.template operator()<robotics::ControllerBasicJscPd>() ||
       fn.template operator()<robotics::ControllerBasicOscPd>() ||
-      fn.template operator()<robotics::ControllerMochiArticulatedPose>() ||
-      fn.template operator()<robotics::ControllerOscV1>() ||
+      fn.template operator()<robotics::ControllerMochiArticulatedPose>();
+#if MOCHI_INTERNAL
+  return found || fn.template operator()<robotics::ControllerOscV1>() ||
       fn.template operator()<robotics::ControllerOscV2>();
+#else
+  return found;
+#endif
 }
 
-constexpr std::array<std::string_view, 5> kBuiltinControllerTypes = {
+constexpr std::array<std::string_view, 3 + kInternalControllerCount> kBuiltinControllerTypes = {
     superdex::robotics::ControllerBasicJscPd::TypeName(),
     superdex::robotics::ControllerBasicOscPd::TypeName(),
     superdex::robotics::ControllerMochiArticulatedPose::TypeName(),
+#if MOCHI_INTERNAL
     superdex::robotics::ControllerOscV1::TypeName(),
     superdex::robotics::ControllerOscV2::TypeName(),
+#endif
 };
 
 // Legacy names old scenes still use for built-in controllers, mirroring
 // superdex::robotics::RegisterLegacyControllerTypes.
-constexpr std::array<std::pair<std::string_view, std::string_view>, 3> kLegacyControllerTypes = {{
-    {"joint_space_pd_v1", superdex::robotics::ControllerBasicJscPd::TypeName()},
-    {"opspace_v1", superdex::robotics::ControllerOscV1::TypeName()},
-    {"opspace_v2", superdex::robotics::ControllerOscV2::TypeName()},
-}};
+constexpr std::array<std::pair<std::string_view, std::string_view>, 1 + kInternalControllerCount>
+    kLegacyControllerTypes = {{
+        {"joint_space_pd_v1", superdex::robotics::ControllerBasicJscPd::TypeName()},
+#if MOCHI_INTERNAL
+        {"opspace_v1", superdex::robotics::ControllerOscV1::TypeName()},
+        {"opspace_v2", superdex::robotics::ControllerOscV2::TypeName()},
+#endif
+    }};
 
 // The canonical name for a legacy controller type name, or @p type unchanged.
 constexpr std::string_view CanonicalControllerType(std::string_view type) {
@@ -159,5 +175,3 @@ bool ExternalizeInlineParams(
     std::string& error);
 
 } // namespace superdex::studio
-
-#endif // MOCHI_INTERNAL

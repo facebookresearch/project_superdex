@@ -16,8 +16,6 @@
 
 #pragma once
 
-#if MOCHI_INTERNAL
-
 #include <map>
 #include <string>
 
@@ -66,5 +64,3 @@ class BotTaskCache {
 };
 
 } // namespace superdex::studio
-
-#endif // MOCHI_INTERNAL

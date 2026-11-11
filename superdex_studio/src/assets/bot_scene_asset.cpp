@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#if MOCHI_INTERNAL
-
 #include "assets/bot_scene_asset.h"
 #include "app/app.h"
 #include "assets/asset.h"
@@ -741,5 +739,3 @@ bool BotSceneAsset::ExtractArchiveToLooseFiles(mochi::Path const& directory, moc
 }
 
 } // namespace superdex::studio
-
-#endif // MOCHI_INTERNAL

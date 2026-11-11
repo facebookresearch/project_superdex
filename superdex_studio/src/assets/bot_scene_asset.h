@@ -16,14 +16,12 @@
 
 #pragma once
 
-#if MOCHI_INTERNAL
-
 #include "assets/asset.h"
 #include "assets/asset_referencer.h"
 #include "assets/bot_task_cache.h"
 #include "assets/controller_params.h"
 
-#include <superdex_robotics/internal/bot_scene.h>
+#include <superdex_robotics/scene/bot_scene.h>
 
 #include <optional>
 
@@ -83,5 +81,3 @@ class BotSceneAsset : public Asset, public IAssetReferencer {
 };
 
 } // namespace superdex::studio
-
-#endif // MOCHI_INTERNAL

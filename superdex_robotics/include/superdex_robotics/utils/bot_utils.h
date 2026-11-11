@@ -356,9 +356,18 @@ int MOCHI_API FindLinkIndexByName(BotPrefab const& bot, std::string_view name);
 /**
  * @brief Compute link transforms for a given pose (joint configuration).
  *
- * @param[in] botPrefab Bot parameters describing the articulation structure.
- * @param[in] pose Array of joint angles (revolute) or linear positions (prismatic), in bot space:
- * one entry per bot-space DOF, excluding any root-joint DOFs.
+ * @details Composes each link as Mochi's articulated body does: parent-from-link =
+ * joint.parentLinkFromJoint * joint motion * link.parentJointFromLink, where the joint motion is a
+ * rotation of the revolute angle about the joint axis, a translation of the prismatic position
+ * along the unit joint axis, or the rotation of a spherical joint's rotation vector. Any finite
+ * revolute angle works, including several turns. Transforms are in nominal (unscaled) bot space:
+ * @ref BotPrefab::scale is not applied. The root link's transform is the identity.
+ *
+ * @param[in] botPrefab Bot parameters describing the articulation structure, prepared by
+ * @ref RebuildBotData (not rechecked here, as this is meant to run every frame).
+ * @param[in] pose Joint angles (revolute) [rad], linear positions (prismatic) [m] and rotation
+ * vectors (spherical) [rad], in bot space: one entry per bot-space DOF, excluding any root-joint
+ * DOFs.
  * @param[out] outLinkTransforms Output array for computed transforms (will be resized).
  * @param[in] transformSpace Whether to output link-to-parent or link-to-root transforms.
  * @param[in,out] error Error status. Check @ref Error::IsOK for success.
@@ -371,6 +380,62 @@ void MOCHI_API ComputeLinkTransformsFromPose(
     LinkTransformSpace transformSpace,
     superdex::Error& error,
     int finalLinkIndex = -1);
+
+/**
+ * @brief What a link's transform holds that its joint can't produce: the part
+ * @ref ComputePoseFromLinkTransforms discards.
+ */
+struct LinkPoseResidual {
+  /** Angle [rad] of the rotation left after the joint's DOFs: the swing off a revolute axis, the
+   * whole rotation of a prismatic or Hard joint, 0 for a spherical joint. */
+  real rotation = 0;
+  /** Length, in nominal bot units, of the translation left after the joint's DOFs: the whole
+   * translation of a rotational or Hard joint, the part off the axis of a prismatic joint. Only
+   * meaningful when the link transforms carry translations. */
+  real translation = 0;
+};
+
+/**
+ * @brief Compute the pose (joint configuration) of given link transforms: the inverse of
+ * @ref ComputeLinkTransformsFromPose.
+ *
+ * @details Each joint's DOFs are read from its link's transform relative to the link's parent as
+ * given (in either space), measured in the joint frame, and limited to what the joint can do: a
+ * revolute angle is the twist of the joint motion about the joint axis (the nearest rotation about
+ * the axis), a prismatic position is the joint motion's translation along the unit joint axis, and
+ * a spherical joint is the rotation vector of the joint motion (norm <= pi). Anything else (swing
+ * off a revolute axis, translation of a rotational joint, rotation or off-axis translation of a
+ * prismatic joint, any motion of a Hard joint) is discarded, and measured in @p outResiduals if
+ * given, so transforms that come from @ref ComputeLinkTransformsFromPose round-trip, and an error
+ * in one link's transform only affects its own joint. Translations only matter for prismatic
+ * joints, so a bot without them can be posed from link rotations alone. In RootFromParent space
+ * only relative transforms are used, so link-to-world transforms work too.
+ *
+ * A link's transform can't tell revolute angles 2 pi apart. Each is the one nearest to its entry in
+ * @p referencePose if given, such as the previous frame's pose, so a joint tracked through several
+ * turns stays continuous; else the one in [-pi, pi].
+ *
+ * @param[in] botPrefab Bot parameters, as for @ref ComputeLinkTransformsFromPose.
+ * @param[in] linkTransforms One transform per link, with unit rotations, in nominal bot space, in
+ * @p transformSpace.
+ * @param[out] outPose Output pose (will be resized): one entry per bot-space DOF, excluding any
+ * root-joint DOFs, as @ref ComputeLinkTransformsFromPose takes it.
+ * @param[in] transformSpace Whether @p linkTransforms are link-to-parent or link-to-root.
+ * @param[in,out] error Error status. Check @ref Error::IsOK for success.
+ * @param[in] referencePose Empty, or a pose (one entry per bot-space DOF) whose revolute angles
+ * choose the turn of the output's.
+ * @param[out] outResiduals Null, or resized to one entry per link: what each link's transform
+ * holds that its joint can't produce (zero for the root link). Transforms that fit the bot only
+ * leave rounding error; larger residuals mean they don't fit it.
+ */
+void MOCHI_API ComputePoseFromLinkTransforms(
+    BotPrefab const& botPrefab,
+    Span<TransformRT const> linkTransforms,
+    DynamicArray<real>& outPose,
+    LinkTransformSpace transformSpace,
+    superdex::Error& error,
+    Span<real const> referencePose = {},
+    DynamicArray<LinkPoseResidual>* outResiduals = nullptr);
 
 /**
  * @brief Compute and bake mass properties (centerOfMass, momentOfInertia) for links that specify

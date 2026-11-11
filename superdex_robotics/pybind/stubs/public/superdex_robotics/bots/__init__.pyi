@@ -79,6 +79,23 @@ type ArrayLikeBotContactOverride = (
     Sequence[BotContactOverride] | DynamicArrayBotContactOverride | npt.NDArray[Any]
 )
 
+class DynamicArrayBotEntry:
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, size: int, value: BotEntry = ...) -> None: ...
+    @overload
+    def __init__(self, sequence: Sequence[BotEntry]) -> None: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> BotEntry: ...
+    def __setitem__(self, index: int, value: BotEntry) -> None: ...
+    def __iter__(self) -> Iterator[BotEntry]: ...
+    def append(self, value: BotEntry) -> None: ...
+    def clear(self) -> None: ...
+    def resize(self, size: int) -> None: ...
+
+type ArrayLikeBotEntry = Sequence[BotEntry] | DynamicArrayBotEntry | npt.NDArray[Any]
+
 class DynamicArrayBotHandle:
     @overload
     def __init__(self) -> None: ...
@@ -195,6 +212,25 @@ type ArrayLikeBotSpatialTendonPrefab = (
     npt.NDArray[Any]
 )
 
+class DynamicArrayControllerEntry:
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, size: int, value: ControllerEntry = ...) -> None: ...
+    @overload
+    def __init__(self, sequence: Sequence[ControllerEntry]) -> None: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> ControllerEntry: ...
+    def __setitem__(self, index: int, value: ControllerEntry) -> None: ...
+    def __iter__(self) -> Iterator[ControllerEntry]: ...
+    def append(self, value: ControllerEntry) -> None: ...
+    def clear(self) -> None: ...
+    def resize(self, size: int) -> None: ...
+
+type ArrayLikeControllerEntry = (
+    Sequence[ControllerEntry] | DynamicArrayControllerEntry | npt.NDArray[Any]
+)
+
 class DynamicArrayControllerHandle:
     @overload
     def __init__(self) -> None: ...
@@ -214,6 +250,139 @@ type ArrayLikeControllerHandle = (
     Sequence[ControllerHandle] | DynamicArrayControllerHandle | npt.NDArray[Any]
 )
 
+class DynamicArrayDREpisode:
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, size: int, value: DREpisode = ...) -> None: ...
+    @overload
+    def __init__(self, sequence: Sequence[DREpisode]) -> None: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> DREpisode: ...
+    def __setitem__(self, index: int, value: DREpisode) -> None: ...
+    def __iter__(self) -> Iterator[DREpisode]: ...
+    def append(self, value: DREpisode) -> None: ...
+    def clear(self) -> None: ...
+    def resize(self, size: int) -> None: ...
+
+type ArrayLikeDREpisode = Sequence[DREpisode] | DynamicArrayDREpisode | npt.NDArray[Any]
+
+class DynamicArrayDREpisodeEntry:
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, size: int, value: DREpisodeEntry = ...) -> None: ...
+    @overload
+    def __init__(self, sequence: Sequence[DREpisodeEntry]) -> None: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> DREpisodeEntry: ...
+    def __setitem__(self, index: int, value: DREpisodeEntry) -> None: ...
+    def __iter__(self) -> Iterator[DREpisodeEntry]: ...
+    def append(self, value: DREpisodeEntry) -> None: ...
+    def clear(self) -> None: ...
+    def resize(self, size: int) -> None: ...
+
+type ArrayLikeDREpisodeEntry = (
+    Sequence[DREpisodeEntry] | DynamicArrayDREpisodeEntry | npt.NDArray[Any]
+)
+
+class DynamicArrayPrefabEntry:
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, size: int, value: PrefabEntry = ...) -> None: ...
+    @overload
+    def __init__(self, sequence: Sequence[PrefabEntry]) -> None: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> PrefabEntry: ...
+    def __setitem__(self, index: int, value: PrefabEntry) -> None: ...
+    def __iter__(self) -> Iterator[PrefabEntry]: ...
+    def append(self, value: PrefabEntry) -> None: ...
+    def clear(self) -> None: ...
+    def resize(self, size: int) -> None: ...
+
+type ArrayLikePrefabEntry = (
+    Sequence[PrefabEntry] | DynamicArrayPrefabEntry | npt.NDArray[Any]
+)
+
+class DynamicArrayResolvedSpawn:
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, size: int, value: ResolvedSpawn = ...) -> None: ...
+    @overload
+    def __init__(self, sequence: Sequence[ResolvedSpawn]) -> None: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> ResolvedSpawn: ...
+    def __setitem__(self, index: int, value: ResolvedSpawn) -> None: ...
+    def __iter__(self) -> Iterator[ResolvedSpawn]: ...
+    def append(self, value: ResolvedSpawn) -> None: ...
+    def clear(self) -> None: ...
+    def resize(self, size: int) -> None: ...
+
+type ArrayLikeResolvedSpawn = (
+    Sequence[ResolvedSpawn] | DynamicArrayResolvedSpawn | npt.NDArray[Any]
+)
+
+class DynamicArraySceneSensorEntry:
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, size: int, value: SceneSensorEntry = ...) -> None: ...
+    @overload
+    def __init__(self, sequence: Sequence[SceneSensorEntry]) -> None: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> SceneSensorEntry: ...
+    def __setitem__(self, index: int, value: SceneSensorEntry) -> None: ...
+    def __iter__(self) -> Iterator[SceneSensorEntry]: ...
+    def append(self, value: SceneSensorEntry) -> None: ...
+    def clear(self) -> None: ...
+    def resize(self, size: int) -> None: ...
+
+type ArrayLikeSceneSensorEntry = (
+    Sequence[SceneSensorEntry] | DynamicArraySceneSensorEntry | npt.NDArray[Any]
+)
+
+class DynamicArraySceneUrdfJointVelocityLimit:
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, size: int, value: SceneUrdfJointVelocityLimit = ...) -> None: ...
+    @overload
+    def __init__(self, sequence: Sequence[SceneUrdfJointVelocityLimit]) -> None: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> SceneUrdfJointVelocityLimit: ...
+    def __setitem__(self, index: int, value: SceneUrdfJointVelocityLimit) -> None: ...
+    def __iter__(self) -> Iterator[SceneUrdfJointVelocityLimit]: ...
+    def append(self, value: SceneUrdfJointVelocityLimit) -> None: ...
+    def clear(self) -> None: ...
+    def resize(self, size: int) -> None: ...
+
+type ArrayLikeSceneUrdfJointVelocityLimit = (
+    Sequence[SceneUrdfJointVelocityLimit] |
+    DynamicArraySceneUrdfJointVelocityLimit |
+    npt.NDArray[Any]
+)
+
+class DynamicArraySceneUrdfLinkAlias:
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, size: int, value: SceneUrdfLinkAlias = ...) -> None: ...
+    @overload
+    def __init__(self, sequence: Sequence[SceneUrdfLinkAlias]) -> None: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> SceneUrdfLinkAlias: ...
+    def __setitem__(self, index: int, value: SceneUrdfLinkAlias) -> None: ...
+    def __iter__(self) -> Iterator[SceneUrdfLinkAlias]: ...
+    def append(self, value: SceneUrdfLinkAlias) -> None: ...
+    def clear(self) -> None: ...
+    def resize(self, size: int) -> None: ...
+
+type ArrayLikeSceneUrdfLinkAlias = (
+    Sequence[SceneUrdfLinkAlias] | DynamicArraySceneUrdfLinkAlias | npt.NDArray[Any]
+)
+
 class DynamicArraySensorHandle:
     @overload
     def __init__(self) -> None: ...
@@ -231,6 +400,42 @@ class DynamicArraySensorHandle:
 
 type ArrayLikeSensorHandle = (
     Sequence[SensorHandle] | DynamicArraySensorHandle | npt.NDArray[Any]
+)
+
+class DynamicArraySlotEntry:
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, size: int, value: SlotEntry = ...) -> None: ...
+    @overload
+    def __init__(self, sequence: Sequence[SlotEntry]) -> None: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> SlotEntry: ...
+    def __setitem__(self, index: int, value: SlotEntry) -> None: ...
+    def __iter__(self) -> Iterator[SlotEntry]: ...
+    def append(self, value: SlotEntry) -> None: ...
+    def clear(self) -> None: ...
+    def resize(self, size: int) -> None: ...
+
+type ArrayLikeSlotEntry = Sequence[SlotEntry] | DynamicArraySlotEntry | npt.NDArray[Any]
+
+class DynamicArraySpawnEntry:
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, size: int, value: SpawnEntry = ...) -> None: ...
+    @overload
+    def __init__(self, sequence: Sequence[SpawnEntry]) -> None: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> SpawnEntry: ...
+    def __setitem__(self, index: int, value: SpawnEntry) -> None: ...
+    def __iter__(self) -> Iterator[SpawnEntry]: ...
+    def append(self, value: SpawnEntry) -> None: ...
+    def clear(self) -> None: ...
+    def resize(self, size: int) -> None: ...
+
+type ArrayLikeSpawnEntry = (
+    Sequence[SpawnEntry] | DynamicArraySpawnEntry | npt.NDArray[Any]
 )
 
 class BotFileType:
@@ -2127,6 +2332,773 @@ class CameraSensor(SensorBase):
             :class:`~superdex.physics.Error`: If an error occurs.
         """
 
+class BotSceneMetadata:
+    """Human-readable metadata for a .superdex_scene file. Not consumed by the runtime.
+    """
+    name: str
+    """Human-readable scene name, e.g. "T3 Shapefilter Station"."""
+    description: str
+    """Longer description of the scene purpose."""
+    version: str
+    """Schema version, e.g. "1.0"."""
+    author: str
+    """Author name or unixname."""
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        name: str = ...,
+        description: str = ...,
+        version: str = ...,
+        author: str = ...,
+    ) -> None: ...
+
+class PrefabEntry:
+    """A named reference to a spawnable scene, prefab, bot, or bot archive."""
+    name: str
+    """Unique name for this prefab instance (used for runtime lookup)."""
+    path: str
+    """Relative path to a .mochi_scene, .mochi_prefab, .superdex_bot, or
+    .superdex_bot_archive file.
+    """
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, name: str = ..., path: str = ...) -> None: ...
+
+class BaseSceneParams:
+    """Scene definition within a .superdex_scene.
+
+    The base_scene is optional — a scene under construction may not have one yet.
+    When present it is the authoritative source for all simulation physics
+    parameters (gravity, solver config, contact filtering, collision layers, etc.);
+    when absent the scene keeps its default parameters.
+    """
+    base_scene: str
+    """Path to a .mochi_scene file. Defines the scene foundation. Empty means no base
+    scene.
+    """
+    @property
+    def spawnable_prefabs(self) -> DynamicArrayPrefabEntry:
+        """Prefabs that can be loaded/destroyed on demand at runtime (e.g. task objects
+        spawned each episode).
+        """
+    @spawnable_prefabs.setter
+    def spawnable_prefabs(self, value: ArrayLikePrefabEntry) -> None: ...
+    task_root: Optional[mochi_physics.TransformRT]
+    """Where this scene's task frame (the nominal table top) is in the world. Every
+    task's root-level spawns are placed onto it, through the task's taskRootOffset
+    when it declares one. Unset leaves every task where its own coordinates put it.
+    """
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        base_scene: str = ...,
+        spawnable_prefabs: ArrayLikePrefabEntry = ...,
+        task_root: Optional[mochi_physics.TransformRT] = ...,
+    ) -> None: ...
+
+class ControllerEntry:
+    """A controller instance to create and attach to a bot."""
+    type: str
+    """Controller type identifier (registered string), e.g. "BASIC_OSC_PD",
+    "BASIC_JSC_PD".
+    """
+    name: str
+    """Instance name for runtime lookup."""
+    params: str
+    """Controller-specific parameters as a raw JSON string. Omit to use defaults."""
+    init_args: str
+    """The controller's init args as a serialized JSON object -- the contents of the
+    scene entry's nested "initArgs" object (e.g. {"baseLinkName":..,"eeLinkName":..}
+    for link-resolved controllers, or a model path for a learned controller). Passed
+    verbatim to ControllerBase::ConfigureFromSceneEntry, which deserializes it into
+    a controller-specific struct, so the scene loader never needs to know a
+    controller's fields. Reflected with the JsonString attribute: on load the nested
+    "initArgs" object is captured into this string, and on save it is re-emitted as
+    a nested object (round-trip identity), so no bespoke parsing is needed. May also
+    be set or modified directly (e.g. from Python) before LoadBotScene. Defaults to
+    an empty object ("{}"), which NoSerializeDefaults omits from the saved file.
+    (Legacy scenes that interleave flat controller fields instead of a nested
+    "initArgs" object are folded into this string at load time -- see
+    LoadBotScenePrefabFromFile; new scenes and all saves use the nested form.)
+    """
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        type: str = ...,
+        name: str = ...,
+        params: str = ...,
+        init_args: str = ...,
+    ) -> None: ...
+
+class BotEntry:
+    """A bot (robot) to instantiate in the scene."""
+    name: str
+    """Unique instance name (used for runtime lookup via GetBot(name))."""
+    path: str
+    """Path to a .superdex_bot or .superdex_bot_archive file (self-contained or mod
+    bot).
+    """
+    parent_from_bot: mochi_physics.TransformRT
+    """Bot placement relative to the scene root (aFromB convention: maps bot-frame
+    coordinates into the scene frame). Default: identity.
+    """
+    @property
+    def initial_pose(self) -> mochi_physics.DynamicArrayReal:
+        """Initial joint angles (length = total DOFs of the bot)."""
+    @initial_pose.setter
+    def initial_pose(self, value: mochi_physics.ArrayLikeReal) -> None: ...
+    @property
+    def controllers(self) -> DynamicArrayControllerEntry:
+        """Controllers to create and attach to this bot."""
+    @controllers.setter
+    def controllers(self, value: ArrayLikeControllerEntry) -> None: ...
+    roboperator_class: str
+    """Key naming the teleoperator rig that drives this bot; the consumer maps it to a
+    concrete class. Empty means use the consumer's default for the slot this bot
+    fills.
+    """
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        name: str = ...,
+        path: str = ...,
+        parent_from_bot: mochi_physics.TransformRT = ...,
+        initial_pose: mochi_physics.ArrayLikeReal = ...,
+        controllers: ArrayLikeControllerEntry = ...,
+        roboperator_class: str = ...,
+    ) -> None: ...
+
+class SlotEntry:
+    """One slot a scene offers, and the bots eligible to fill it."""
+    name: str
+    """Unique slot name within the scene, e.g. "right". Names a role, not a bot."""
+    @property
+    def controlled_bots(self) -> mochi_physics.DynamicArrayString:
+        """Names of bot entries that may fill this slot. A consumer picks at most one
+        per
+        slot; superdex validates that each named bot exists and is listed once, and
+        nothing else. Which slots a scene has, and what they mean, is the scene's
+        business, not superdex's.
+        """
+    @controlled_bots.setter
+    def controlled_bots(self, value: mochi_physics.ArrayLikeString) -> None: ...
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        name: str = ...,
+        controlled_bots: mochi_physics.ArrayLikeString = ...,
+    ) -> None: ...
+
+class SceneSensorEntry:
+    """A scene-level sensor (not attached to any bot).
+
+    Useful for environment-level observations such as overhead cameras, force
+    plates, or proximity sensors mounted on fixtures.
+    """
+    type: str
+    """Sensor type identifier (registered string), e.g. "SENSOR_CAMERA"."""
+    name: str
+    """Unique instance name for runtime lookup."""
+    parent_from_sensor: mochi_physics.TransformRT
+    """Sensor pose relative to the scene root (aFromB convention: maps sensor-frame
+    coordinates into the parent scene frame). Chain to world via
+    SensorBase::GetWorldTransform. Default: identity.
+    """
+    params: str
+    """Sensor-specific parameters: a path to a .superdex_sensor JSON file or inline
+    JSON. Omit to use defaults.
+    """
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        type: str = ...,
+        name: str = ...,
+        parent_from_sensor: mochi_physics.TransformRT = ...,
+        params: str = ...,
+    ) -> None: ...
+
+class BotScenePrefab:
+    """Complete parameter set for a .superdex_scene file.
+
+    A .superdex_scene is a JSON config that serves as the single source of truth for
+    a complete simulation environment. It unifies scene geometry, robots,
+    controllers, and sensors.
+    """
+    metadata: BotSceneMetadata
+    """Human-readable metadata. Not consumed by the runtime."""
+    scene: BaseSceneParams
+    """Scene definition. The base_scene is optional."""
+    @property
+    def bots(self) -> DynamicArrayBotEntry:
+        """Robots to instantiate."""
+    @bots.setter
+    def bots(self, value: ArrayLikeBotEntry) -> None: ...
+    @property
+    def sensors(self) -> DynamicArraySceneSensorEntry:
+        """Scene-level sensors (not attached to any bot)."""
+    @sensors.setter
+    def sensors(self, value: ArrayLikeSceneSensorEntry) -> None: ...
+    @property
+    def slots(self) -> DynamicArraySlotEntry:
+        """Slots this scene offers, and which bots may fill each. A map in meaning, an
+        array of named entries in the file, as every other named collection in this
+        schema is. Empty means the scene declares no slots and offers no choice.
+        """
+    @slots.setter
+    def slots(self, value: ArrayLikeSlotEntry) -> None: ...
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        metadata: BotSceneMetadata = ...,
+        scene: BaseSceneParams = ...,
+        bots: ArrayLikeBotEntry = ...,
+        sensors: ArrayLikeSceneSensorEntry = ...,
+        slots: ArrayLikeSlotEntry = ...,
+    ) -> None: ...
+
+class SceneUrdfJointVelocityLimit:
+    """Velocity limit for every exported joint whose SuperDex name (after
+    :attr:`~superdex.robotics.SceneUrdfOptions.strip_index_prefixes`) is
+    :attr:`joint`.
+    """
+    joint: str
+    """SuperDex joint name, e.g. "Joint1_L" or "thumb_cmc_flex"."""
+    velocity: float
+    """Velocity limit [rad/s or m/s]."""
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, joint: str = ..., velocity: float = ...) -> None: ...
+
+class SceneUrdfLinkAlias:
+    """An extra URDF frame rigidly attached to every exported link named :attr:`link`.
+    """
+    link: str
+    """SuperDex link name (after
+    :attr:`~superdex.robotics.SceneUrdfOptions.strip_index_prefixes`).
+    """
+    alias: str
+    """Alias name, prefixed like the link it is attached to."""
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, link: str = ..., alias: str = ...) -> None: ...
+
+class SceneUrdfOptions:
+    """Options for :func:`~superdex.robotics.save_bot_scene_to_urdf_string`."""
+    robot_name: str
+    """URDF robot name. Empty uses the scene's metadata name, or "scene"."""
+    instance_name: str
+    """Links and joints of a bot that fills a slot are named
+    "{slot}_{instanceName}_{name}", and other bots' "{entry}_{name}". Base-scene
+    actors keep their names, prefixed with "{prefab}_" for each nested prefab.
+    Defaults to "real".
+    """
+    strip_index_prefixes: bool
+    """Strip a leading "link_NN_" or "joint_NN_" index from SuperDex names."""
+    @property
+    def joint_velocity_limits(self) -> DynamicArraySceneUrdfJointVelocityLimit:
+        """Velocity limits by joint name. :class:`~superdex.robotics.BotJointPrefab` has
+        none of its own.
+        """
+    @joint_velocity_limits.setter
+    def joint_velocity_limits(
+        self,
+        value: ArrayLikeSceneUrdfJointVelocityLimit,
+    ) -> None: ...
+    require_velocity_limits: bool
+    """Fail if a joint with position limits has no entry in
+    :attr:`~superdex.robotics.SceneUrdfOptions.joint_velocity_limits`. When false,
+    such joints get a placeholder velocity of 1, as `SaveToUrdfFile` writes.
+    """
+    @property
+    def link_aliases(self) -> DynamicArraySceneUrdfLinkAlias:
+        """Extra frames to add, e.g. ROS names for a bot's base and tool links."""
+    @link_aliases.setter
+    def link_aliases(self, value: ArrayLikeSceneUrdfLinkAlias) -> None: ...
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        robot_name: str = ...,
+        instance_name: str = ...,
+        strip_index_prefixes: bool = ...,
+        joint_velocity_limits: ArrayLikeSceneUrdfJointVelocityLimit = ...,
+        require_velocity_limits: bool = ...,
+        link_aliases: ArrayLikeSceneUrdfLinkAlias = ...,
+    ) -> None: ...
+
+class BotScene:
+    """Runtime representation of a loaded .superdex_scene.
+
+    Owns the physics scene and provides named lookup for bots, controllers, sensors,
+    actuators, and spawnable prefabs. This is NOT a prefab — it composes data from
+    both mochi_physics and mochi_bots.
+    """
+    def get_scene(self) -> Optional[mochi_physics.Scene]:
+        """Get the physics scene.
+
+        Returns:
+            Physics scene, or None if it is unavailable.
+        """
+    def get_robotics_context(self) -> Optional[RoboticsContext]:
+        """Get the robotics context (bot/controller/sensor/actuator resource owner).
+
+        Returns:
+            Robotics context, or None if unavailable.
+        """
+    def get_bot(self, name: str) -> Optional[Bot]:
+        """Look up a bot by the name declared in the .superdex_scene file.
+
+        Args:
+            name (str): Exact declared bot name.
+
+        Returns:
+            Loaded bot, or None if the name is not found or this BotScene is moved from.
+        """
+    def get_or_load_spawnable_bot(self, name: str) -> Bot:
+        """Get (loading on first use) a bot for a spawnable prefab whose path is a
+        .superdex_bot_archive / .superdex_bot, by the name declared in the
+        .superdex_scene file's spawnablePrefabs. Unlike SpawnPrefabInstance (which
+        places a named instance), this instantiates the spawnable once per name as an
+        articulated Bot (CreateBot) so callers can access its articulated actor (e.g.
+        for FK). The bot is created at identity root; callers that need placement set
+        the actor pose themselves. Cached per name and owned by this BotScene. Returns
+        None and sets error if the name is unknown or its prefab is not a bot archive.
+
+        Args:
+            name (str): Spawnable-prefab name declared in this scene.
+
+        Returns:
+            Cached or newly instantiated articulated bot, or None on error.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+        """
+    def spawn_prefab_instance(
+        self,
+        instance_name: str,
+        prefab_name: str,
+        world_from_instance: mochi_physics.TransformRT,
+    ) -> mochi_physics.SpanConstActorHandle:
+        """Spawn a spawnable prefab under an instance name at a world pose.
+
+        Instances are keyed by instance name, not prefab name, so the same prefab may be
+        spawned any number of times. The instance name prefixes the created actor names,
+        and is the identity the rest of the pipeline keys off (the recorded HDF5 object
+        id and the dataset/replay feature key; see
+        :attr:`~superdex.robotics.SpawnEntry.name`). The instance does not replace the
+        scene's gravity or solver settings. A .superdex_bot / .superdex_bot_archive
+        spawnable is instantiated as an articulated Bot named after the instance and
+        rooted at worldFromInstance; the instance owns it.
+
+        Args:
+            instance_name (str): Unique, non-empty instance name; must not already be
+                live.
+            prefab_name (str): Spawnable-prefab name declared in this scene.
+            world_from_instance (TransformRT): Instance root pose in world space.
+
+        Returns:
+            Actor handles in prefab AddToScene order (for a bot, its articulated actor),
+            or empty on error. Valid until the instance is destroyed.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+        """
+    def destroy_prefab_instance(self, instance_name: str) -> None:
+        """Destroy a live prefab instance and its actors.
+
+        Args:
+            instance_name (str): Name of a live prefab instance.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+        """
+    def destroy_all_prefab_instances(self) -> None:
+        """Destroy every live prefab instance, e.g. to reset an episode."""
+    def get_prefab_instance_actors(
+        self,
+        instance_name: str,
+    ) -> mochi_physics.SpanConstActorHandle:
+        """Get the actor handles of a live prefab instance.
+
+        Args:
+            instance_name (str): Name of a prefab instance.
+
+        Returns:
+            Actor handles in prefab AddToScene order, or empty if no such instance is
+            live.
+        """
+    def get_prefab_instance_names(self) -> mochi_physics.DynamicArrayString:
+        """Get the names of every live prefab instance.
+
+        Returns:
+            Instance names in creation order.
+        """
+    def remove_bot(self, name: str) -> None:
+        """Retire a bot loaded from the .superdex_scene: destroy its controllers,
+        actuators, sensors, and articulated actor (actuators and sensors hold link-actor
+        pointers, so they are destroyed before the actor), then erase it from the bot
+        registry so scene teardown does not double-destroy it. Errors if no bot named
+        `name` is loaded.
+
+        Args:
+            name (str): Exact declared name of the loaded bot to remove.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+        """
+    def initialize_bot(self, name: str) -> Bot:
+        """Instantiate a bot the .superdex_scene declares but that is not loaded -- one
+        removed with RemoveBot, or left out when the scene was loaded -- together with
+        its controllers, at its declared placement and initial pose. Errors, creating
+        nothing, if no bot named `name` is declared, it is already loaded, or it fails
+        to instantiate.
+
+        Args:
+            name (str): Exact declared name of the bot to initialize.
+
+        Returns:
+            The loaded bot, or None on error.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+        """
+    def get_bot_scene_prefab(self) -> BotScenePrefab:
+        """Get the original parameters this BotScene was loaded from.
+
+        Returns:
+            Original scene parameters, or an empty prefab if this BotScene is moved
+            from.
+        """
+    def get_controller_handle(self, key: str) -> ControllerHandle:
+        """Get a controller handle by key (borrowed reference). The BotScene retains
+        ownership — the handle remains valid as long as the BotScene is alive. Access
+        the concrete controller via GetRoboticsContext()->GetController(handle) and
+        downcast.
+
+        Args:
+            key (str): Controller key in "botName/controllerName" format.
+
+        Returns:
+            The controller handle, or an invalid handle if not found.
+        """
+    def find_controllers_by_name(self, name: str) -> DynamicArrayControllerHandle:
+        """Find controllers in the associated
+        :class:`~superdex.robotics.RoboticsContext`
+        whose instance name equals name. This includes components from any other
+        BotScene sharing the context.
+
+        Args:
+            name (str): Exact instance name to match.
+
+        Returns:
+            Handles of every match in creation order; empty if none or the context is
+            unavailable.
+        """
+    def find_controllers_by_type(self, type_name: str) -> DynamicArrayControllerHandle:
+        """Find controllers in the associated
+        :class:`~superdex.robotics.RoboticsContext`
+        whose registered type name equals typeName. This includes components from any
+        other BotScene sharing the context.
+
+        Args:
+            type_name (str): Exact registered type name to match.
+
+        Returns:
+            Handles of every match in creation order; empty if none or the context is
+            unavailable.
+        """
+    def find_sensors_by_name(self, name: str) -> DynamicArraySensorHandle:
+        """Find sensors in the associated :class:`~superdex.robotics.RoboticsContext`
+        whose
+        instance name equals name. This includes components from any other BotScene
+        sharing the context.
+
+        Args:
+            name (str): Exact instance name to match.
+
+        Returns:
+            Handles of every match in creation order; empty if none or the context is
+            unavailable.
+        """
+    def find_sensors_by_type(self, type_name: str) -> DynamicArraySensorHandle:
+        """Find sensors in the associated :class:`~superdex.robotics.RoboticsContext`
+        whose
+        registered type name equals typeName. This includes components from any other
+        BotScene sharing the context.
+
+        Args:
+            type_name (str): Exact registered type name to match.
+
+        Returns:
+            Handles of every match in creation order; empty if none or the context is
+            unavailable.
+        """
+    def find_actuators_by_name(self, name: str) -> DynamicArrayActuatorHandle:
+        """Find actuators in the associated :class:`~superdex.robotics.RoboticsContext`
+        whose instance name equals name. This includes components from any other
+        BotScene sharing the context.
+
+        Args:
+            name (str): Exact instance name to match.
+
+        Returns:
+            Handles of every match in creation order; empty if none or the context is
+            unavailable.
+        """
+    def find_actuators_by_type(self, type_name: str) -> DynamicArrayActuatorHandle:
+        """Find actuators in the associated :class:`~superdex.robotics.RoboticsContext`
+        whose registered type name equals typeName. This includes components from any
+        other BotScene sharing the context.
+
+        Args:
+            type_name (str): Exact registered type name to match.
+
+        Returns:
+            Handles of every match in creation order; empty if none or the context is
+            unavailable.
+        """
+    def start_termination(self, task: BotTaskPrefab) -> None:
+        """Begin deciding a task's termination criteria from episode time zero,
+        replacing
+        any already in progress. They are evaluated after every physics step of this
+        scene, against episode time summed from the step sizes.
+
+        Args:
+            task (BotTaskPrefab): The task whose spawns were applied to this scene. Its
+                criteria are copied.
+        """
+    def stop_termination(self) -> None:
+        """Stop deciding termination criteria."""
+    def restart_termination_progress(self) -> None:
+        """Clear progress toward the criteria (held results, latches, dwell) without
+        restarting the episode clock, for task objects that were just re-placed.
+        """
+    def get_termination_outcome(self) -> TerminationOutcome:
+        """The outcome of the criteria begun by StartTermination. Sticky: the first step
+        on
+        which either outcome is reached is frozen until the next start or stop.
+
+        Returns:
+            Both outcomes.
+        """
+
+class SpawnEntry:
+    """A single named object instance to spawn on top of a .superdex_scene.
+
+    Declares which spawnable prefab to instantiate (by name) and where. The instance
+    :attr:`name` is the key used everywhere downstream — it becomes the recorded
+    object id (HDF5 group), the dataset/replay feature key, and the Unreal actor
+    label — so a task can spawn multiple instances of the same :attr:`prefab_name`
+    under distinct names.
+    """
+    name: str
+    """Unique instance name within the task (e.g. "Foam2", "m8_knob")."""
+    prefab_name: str
+    """Name of a spawnable prefab declared in the .superdex_scene's
+    scene.spawnablePrefabs[]. Multiple spawns may reference the same prefab.
+    """
+    parent: str
+    """Name of another spawn entry whose transform this spawn is relative to, or the
+    reserved literal "task_root" (also the implicit default when empty) to place
+    this spawn in the task actor's own frame.
+    :attr:`~superdex.robotics.SpawnEntry.parent_from_spawn`, and any
+    PoseRandomization offset, are interpreted in the parent's local frame; the
+    parent's resolved (post-DR) world transform is composed in after randomization.
+    Parent chains may be arbitrarily deep. Cycles and references to undefined spawn
+    names are rejected by ValidateBotTaskPrefab.
+    """
+    parent_from_spawn: mochi_physics.TransformRT
+    """Local pose relative to :attr:`~superdex.robotics.SpawnEntry.parent` (aFromB
+    convention: maps spawn-frame coordinates into the parent frame). Default:
+    identity.
+    """
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        name: str = ...,
+        prefab_name: str = ...,
+        parent: str = ...,
+        parent_from_spawn: mochi_physics.TransformRT = ...,
+    ) -> None: ...
+
+class BotTaskPrefab:
+    """Complete parameter set for a .superdex_task file.
+
+    A .superdex_task is a JSON config that declares which spawnable-prefab instances
+    to place (and where) on top of a .superdex_scene. It is a declarative, swappable
+    task definition: one base scene can host many tasks.
+    """
+    metadata: BotSceneMetadata
+    """Human-readable metadata. Not consumed by the runtime."""
+    @property
+    def reset_state(self) -> DynamicArraySpawnEntry:
+        """The objects an episode starts with, and where: each entry is placed at every
+        reset.
+        """
+    @reset_state.setter
+    def reset_state(self, value: ArrayLikeSpawnEntry) -> None: ...
+    task_root_offset: Optional[mochi_physics.TransformRT]
+    """The transform from this task's own coordinates into the task frame (the nominal
+    table top): for a table spawned at T, it is inverse(T). On a scene that declares
+    a taskRoot, root-level spawns are relocated by taskRoot * taskRootOffset. Unset,
+    the task is authored in the task frame itself.
+    """
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        metadata: BotSceneMetadata = ...,
+        reset_state: ArrayLikeSpawnEntry = ...,
+        task_root_offset: Optional[mochi_physics.TransformRT] = ...,
+    ) -> None: ...
+
+class TerminationOutcome:
+    """Both outcomes of a task."""
+    success_authored: bool
+    """Whether the task file declares a success outcome at all. When false, the
+    consumer keeps whatever predicate it already implements, and
+    :attr:`~superdex.robotics.TerminationOutcome.success` is meaningless.
+    """
+    success: bool
+    """Whether the success criteria have held for their validation time."""
+    failure_authored: bool
+    """Whether the task file declares a failure outcome at all."""
+    failure: bool
+    """Whether the failure criteria have held for their validation time."""
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        success_authored: bool = ...,
+        success: bool = ...,
+        failure_authored: bool = ...,
+        failure: bool = ...,
+    ) -> None: ...
+
+class DREpisodeEntry:
+    """One DR draw: a stable key and its sampled value as a uniform array.
+
+    `value` is always a list so it maps to a ``DynamicArray<real>``; a scalar draw
+    rides as a length-1 list flagged by `scalar`. The flag lets a reader recover the
+    exact scalar-vs-vector shape with no registry.
+    """
+    key: str
+    scalar: bool
+    @property
+    def value(self) -> mochi_physics.DynamicArrayReal: ...
+    @value.setter
+    def value(self, value: mochi_physics.ArrayLikeReal) -> None: ...
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        key: str = ...,
+        scalar: bool = ...,
+        value: mochi_physics.ArrayLikeReal = ...,
+    ) -> None: ...
+
+class DREpisode:
+    """One episode's sampled DR: seed and the flat keyed values.
+
+    Per-spawn pose DR is not a separate field — it rides in `values` under
+    ``dr/spawn/<name>/<dr_class>/pose`` keys, so a reader consumes it through the
+    same generic `{key -> value}` path. `episodeSeed` is a decimal string — a full
+    uint64 can't round-trip as a JSON number, so parse it with ParseSeed.
+    """
+    index: int
+    episode_seed: str
+    @property
+    def values(self) -> DynamicArrayDREpisodeEntry: ...
+    @values.setter
+    def values(self, value: ArrayLikeDREpisodeEntry) -> None: ...
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        index: int = ...,
+        episode_seed: str = ...,
+        values: ArrayLikeDREpisodeEntry = ...,
+    ) -> None: ...
+
+class DREpisodeList:
+    """A pre-randomized DR episode list — the neutral cross-language interchange.
+
+    Read from a `dr_manifest.json` produced by the Python DR pipeline (schema v1).
+    `profile`, `experiment_overrides`, and `pose_overrides` from the file are
+    ignored: a C++ applier consumes resolved per-episode values, not the config that
+    produced them, so :func:`~superdex.robotics.load_dr_episode_list_from_file`
+    tolerates those unmodeled keys.
+    """
+    schema_version: int
+    spec_version: str
+    master_seed: str
+    @property
+    def episodes(self) -> DynamicArrayDREpisode: ...
+    @episodes.setter
+    def episodes(self, value: ArrayLikeDREpisode) -> None: ...
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        schema_version: int = ...,
+        spec_version: str = ...,
+        master_seed: str = ...,
+        episodes: ArrayLikeDREpisode = ...,
+    ) -> None: ...
+
+class ResolvedSpawn:
+    """One entry of a task's reset state, after its randomization was applied."""
+    name: str
+    """The entry's name."""
+    prefab_name: str
+    """The prefab to place: the PrefabSelection draw, or the nominal prefab without
+    one.
+    """
+    parent: str
+    """As declared; empty or task_root for the task root."""
+    parent_from_spawn: mochi_physics.TransformRT
+    """The declared parentFromSpawn with the PoseRandomization offset applied."""
+    world_from_spawn: mochi_physics.TransformRT
+    """The entry's pose composed through its parent chain, with the task root at the
+    worldFromTask passed to ResolveResetState.
+    """
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        name: str = ...,
+        prefab_name: str = ...,
+        parent: str = ...,
+        parent_from_spawn: mochi_physics.TransformRT = ...,
+        world_from_spawn: mochi_physics.TransformRT = ...,
+    ) -> None: ...
+
 EFFORT_UNBOUNDED: float
 """Sentinel :attr:`~superdex.robotics.BotJointPrefab.effort_limit` value: the
 joint's actuation effort is unbounded.
@@ -2268,6 +3240,310 @@ def destroy_bot(scene: mochi_physics.Scene, bot: Optional[Bot]) -> None:
         scene (Scene): Scene to remove the bot from. Must be the same scene used to
             create the bot.
         bot (Optional[Bot]): Pointer to the bot to be destroyed.
+    """
+
+def load_bot_scene_prefab_from_file(path: str) -> BotScenePrefab:
+    """Load bot scene parameters from a .superdex_scene JSON file.
+
+    Deserializes the file, validates that bot, controller, and spawnable-prefab
+    names are non-empty and unique, and resolves relative paths to absolute. A scene
+    with no base scene and no bots is valid — that is the state of a newly created
+    scene.
+
+    Args:
+        path (str): File path to the .superdex_scene file.
+
+    Returns:
+        Loaded :class:`~superdex.robotics.BotScenePrefab`, or default-constructed on
+        failure.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+def save_bot_scene_to_urdf_string(
+    scene: BotScenePrefab,
+    root_path: str,
+    options: SceneUrdfOptions,
+) -> str:
+    """Export a bot scene to a URDF XML string, without meshes.
+
+    The URDF is rooted at a `world` link, the scene root. Each bot entry, base-scene
+    articulated actor and static rigid actor hangs from it by a `fixed` joint named
+    `{root link}_placement`, with its own links and joints unchanged below. Dynamic
+    and soft actors, tasks and spawnable prefabs are skipped, and skins are not
+    exported, so a skinned hand is rigid. SuperDex, unlike URDF, needs joint names
+    to differ from link names, so a joint named like a link (e.g. "joint_01_wrist"
+    beside "link_01_wrist", with
+    :attr:`~superdex.robotics.SceneUrdfOptions.strip_index_prefixes`) gets a
+    `_joint` suffix.
+
+    Each sensor becomes a `{name}_frame` link at its parentFromSensor on its link
+    (bot sensors) or on `world` (scene sensors). A sensor whose name another sensor
+    shares takes its bot's prefix, as the bot's links do, and an unnamed sensor is
+    named `{link}_sensor_{index}`, after its URDF link and its index on that link. A
+    camera's parentFromSensor is its optical frame (Z forward, X right, Y down): it
+    gets a `{name}_optical_frame` link there, and `{name}_frame` follows ROS REP-103
+    (X forward, Z up). Intrinsics are not exported.
+
+    No ``<visual>`` or ``<collision>`` elements are written. SuperDex Studio's
+    `scene_to_urdf` exports the meshes too, as STL.
+
+    Args:
+        scene (BotScenePrefab): Path-resolved scene, as returned by
+            :func:`~superdex.robotics.load_bot_scene_prefab_from_file`.
+        root_path (str): Root directory for the base scene's relative paths (see
+            `GetBotSceneBaseRoot`).
+        options (SceneUrdfOptions): Export options.
+
+    Returns:
+        The URDF XML.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+@overload
+def load_bot_scene(path: str, bots_ctx: RoboticsContext) -> BotScene:
+    """Load a .superdex_scene file and instantiate all scene objects.
+
+    Creates the physics scene from the base_scene, instantiates all bots with
+    placement and initial pose, and creates controllers via the provided
+    RoboticsContext.
+
+    Args:
+        path (str): File path to the .superdex_scene file.
+        bots_ctx (RoboticsContext): RoboticsContext for controller creation and
+            lifetime management.
+
+    Returns:
+        The loaded BotScene.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+@overload
+def load_bot_scene(
+    scene: mochi_physics.Scene,
+    prefab: BotScenePrefab,
+    root_path: str,
+    bots_ctx: RoboticsContext,
+) -> BotScene:
+    """Load a bot scene into a caller-provided scene from an already-loaded prefab.
+
+    Like the path-based :func:`~superdex.robotics.load_bot_scene` overload but does
+    not create or own the scene: bots and controllers are created in scene and the
+    base prefab (already loaded and path-resolved, e.g. by an asset) is added
+    directly. The returned :class:`~superdex.robotics.BotScene` destroys the bots
+    and controllers it created but leaves scene intact (the caller retains ownership
+    of the scene).
+
+    Args:
+        scene (Scene): Caller-owned scene to populate.
+        prefab (BotScenePrefab): Already-loaded, path-resolved bot scene parameters.
+        root_path (str): Root directory used to resolve the base scene's relative
+            shape/prefab paths.
+        bots_ctx (RoboticsContext): RoboticsContext for controller creation and
+            lifetime management.
+
+    Returns:
+        The loaded BotScene (non-owning of scene).
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+@overload
+def load_bot_scene(
+    scene: mochi_physics.Scene,
+    path: str,
+    bots_ctx: RoboticsContext,
+) -> BotScene:
+    """Load a bot scene into a caller-provided scene from a file or archive path.
+
+    Like the prefab overload but loads and validates the
+    :class:`~superdex.robotics.BotScenePrefab` through LoadBotScenePrefabFromFile so
+    archive extraction remains transparent. The base-scene-relative root is derived
+    analogously to the path overload (bots root with a resolved base-scene
+    fallback), then delegates to the prefab overload. The returned
+    :class:`~superdex.robotics.BotScene` owns the bots, controllers, and base-scene
+    actors it added but leaves the caller-owned :class:`~superdex.physics.Scene`
+    intact.
+
+    Args:
+        scene (Scene): Caller-owned :class:`~superdex.physics.Scene` to populate.
+        path (str): File path to the .superdex_scene file or
+            .superdex_scene_archive.
+        bots_ctx (RoboticsContext): :class:`~superdex.robotics.RoboticsContext` for
+            controller creation and lifetime management.
+
+    Returns:
+        The loaded :class:`~superdex.robotics.BotScene` (non-owning of the caller
+        scene).
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+def load_bot_task_prefab_from_file(path: str) -> BotTaskPrefab:
+    """Load task parameters from a .superdex_task JSON file.
+
+    Deserializes the file and validates that spawn names are non-empty, unique, and
+    not equal to kTaskRootParentName; that each spawn references a non-empty prefab
+    name; and that :attr:`~superdex.robotics.SpawnEntry.parent` references either
+    kTaskRootParentName or the name of another spawn in this task. Parent graphs
+    must be acyclic. Existence of :attr:`~superdex.robotics.SpawnEntry.prefab_name`
+    in any scene is intentionally NOT validated here (loose binding) — that is
+    checked at apply time against the loaded scene.
+
+    Args:
+        path (str): File path to the .superdex_task file.
+
+    Returns:
+        Loaded :class:`~superdex.robotics.BotTaskPrefab`, or default-constructed on
+        failure.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+def load_dr_episode_list_from_file(path: str) -> DREpisodeList:
+    """Load a pre-randomized DR episode list from a JSON manifest file.
+
+    Deserializes a schema-v1 `dr_manifest.json` and validates it via
+    ValidateDREpisodeList. Unmodeled top-level keys (`experiment_overrides`,
+    `pose_overrides`, `profile`) are ignored.
+
+    Args:
+        path (str): File path to the manifest.
+
+    Returns:
+        Loaded :class:`~superdex.robotics.DREpisodeList`, or default-constructed on
+        failure.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+def save_dr_episode_list_to_file(list: DREpisodeList, path: str) -> None:
+    """Save a :class:`~superdex.robotics.DREpisodeList` to a JSON manifest file.
+
+    The inverse of :func:`~superdex.robotics.load_dr_episode_list_from_file`:
+    validates list via ValidateDREpisodeList, then serializes it to a schema-v1
+    `dr_manifest.json`. Validating before writing makes a malformed list a hard
+    error rather than a bad file on disk. Only the modeled fields are emitted; the
+    optional producer keys the loader tolerates (`experiment_overrides`,
+    `pose_overrides`, `profile`) are not part of
+    :class:`~superdex.robotics.DREpisodeList`, so they are absent.
+
+    Args:
+        list (DREpisodeList): The episode list to save.
+        path (str): Destination file path.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+def spawn_pose_dr_key(spawn_name: str, domain_randomization_class: str) -> str:
+    """The DR episode key an entry's PoseRandomization offset is drawn under.
+
+    Args:
+        spawn_name (str): The reset-state entry's name.
+        domain_randomization_class (str): Its PoseRandomization class.
+
+    Returns:
+        ``dr/spawn/<spawnName>/<domainRandomizationClass>/pose``
+    """
+
+def spawn_prefab_dr_key(spawn_name: str) -> str:
+    """The DR episode key an entry's PrefabSelection is drawn under.
+
+    Args:
+        spawn_name (str): The reset-state entry's name.
+
+    Returns:
+        ``dr/spawn/<spawnName>/prefab``
+    """
+
+def get_pose_randomization_class(entry: SpawnEntry) -> str:
+    """The DR class of an entry's PoseRandomization.
+
+    Args:
+        entry (SpawnEntry): The reset-state entry.
+
+    Returns:
+        The class, or empty if the entry has no PoseRandomization.
+    """
+
+def get_prefab_selection(entry: SpawnEntry) -> mochi_physics.DynamicArrayString:
+    """The candidates of an entry's PrefabSelection.
+
+    Args:
+        entry (SpawnEntry): The reset-state entry.
+
+    Returns:
+        The prefab names, or empty if the entry has no PrefabSelection.
+    """
+
+def compute_world_from_task(
+    scene: BaseSceneParams,
+    task: BotTaskPrefab,
+) -> mochi_physics.TransformRT:
+    """Where a task's root-level spawns go on a scene: scene.taskRoot *
+    task.taskRootOffset, with an absent offset taken as identity; identity when the
+    scene declares no task root.
+
+    Args:
+        scene (BaseSceneParams): The bot scene's scene block.
+        task (BotTaskPrefab): The task.
+
+    Returns:
+        The world-from-task transform to pass to ResolveResetState.
+    """
+
+@overload
+def resolve_reset_state(
+    task: BotTaskPrefab,
+    values: ArrayLikeDREpisodeEntry,
+    world_from_task: mochi_physics.TransformRT,
+) -> DynamicArrayResolvedSpawn:
+    """Resolve a task's reset state for one episode from that episode's DR values.
+
+    Entries whose DR key is absent are placed as declared, so empty values resolve
+    the nominal state. Root-level entries are composed onto worldFromTask.
+
+    Args:
+        task (BotTaskPrefab): The task.
+        values (bots.ArrayLikeDREpisodeEntry): The episode's DR values; keys this
+            does not read are ignored.
+        world_from_task (TransformRT): Where the task's root-level spawns go; see
+            ComputeWorldFromTask.
+
+    Returns:
+        One entry per reset-state entry, parents before their children.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+@overload
+def resolve_reset_state(
+    task: BotTaskPrefab,
+    values: ArrayLikeDREpisodeEntry,
+) -> DynamicArrayResolvedSpawn:
+    """ResolveResetState with the task in its own coordinates (identity worldFromTask).
+
+    Args:
+        task (BotTaskPrefab): The task.
+        values (bots.ArrayLikeDREpisodeEntry): The episode's DR values; keys this
+            does not read are ignored.
+
+    Returns:
+        One entry per reset-state entry, parents before their children.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
     """
 
 def create_context() -> RoboticsContext: ...

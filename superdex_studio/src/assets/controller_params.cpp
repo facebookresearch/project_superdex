@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#if MOCHI_INTERNAL
-
 #include "assets/controller_params.h"
 
 #include <superdex_robotics/utils/file_utils.h>
@@ -297,5 +295,3 @@ bool ExternalizeInlineParams(
 }
 
 } // namespace superdex::studio
-
-#endif // MOCHI_INTERNAL

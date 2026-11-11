@@ -43,14 +43,25 @@ namespace mochi {
     DefDynamicArray<superdex::robotics::ActuatorHandle>(m_bots, "DynamicArrayActuatorHandle");
     DefDynamicArray<superdex::robotics::BotActuatorPrefab>(m_bots, "DynamicArrayBotActuatorPrefab");
     DefDynamicArray<superdex::robotics::BotContactOverride>(m_bots, "DynamicArrayBotContactOverride");
+    DefDynamicArray<superdex::robotics::BotEntry>(m_bots, "DynamicArrayBotEntry");
     DefDynamicArray<superdex::robotics::BotHandle>(m_bots, "DynamicArrayBotHandle");
     DefDynamicArray<superdex::robotics::BotJointPrefab>(m_bots, "DynamicArrayBotJointPrefab");
     DefDynamicArray<superdex::robotics::BotLinearTransmissionPrefab>(m_bots, "DynamicArrayBotLinearTransmissionPrefab");
     DefDynamicArray<superdex::robotics::BotLinkPrefab>(m_bots, "DynamicArrayBotLinkPrefab");
     DefDynamicArray<superdex::robotics::BotSensorPrefab>(m_bots, "DynamicArrayBotSensorPrefab");
     DefDynamicArray<superdex::robotics::BotSpatialTendonPrefab>(m_bots, "DynamicArrayBotSpatialTendonPrefab");
+    DefDynamicArray<superdex::robotics::ControllerEntry>(m_bots, "DynamicArrayControllerEntry");
     DefDynamicArray<superdex::robotics::ControllerHandle>(m_bots, "DynamicArrayControllerHandle");
+    DefDynamicArray<superdex::robotics::DREpisode>(m_bots, "DynamicArrayDREpisode");
+    DefDynamicArray<superdex::robotics::DREpisodeEntry>(m_bots, "DynamicArrayDREpisodeEntry");
+    DefDynamicArray<superdex::robotics::PrefabEntry>(m_bots, "DynamicArrayPrefabEntry");
+    DefDynamicArray<superdex::robotics::ResolvedSpawn>(m_bots, "DynamicArrayResolvedSpawn");
+    DefDynamicArray<superdex::robotics::SceneSensorEntry>(m_bots, "DynamicArraySceneSensorEntry");
+    DefDynamicArray<superdex::robotics::SceneUrdfJointVelocityLimit>(m_bots, "DynamicArraySceneUrdfJointVelocityLimit");
+    DefDynamicArray<superdex::robotics::SceneUrdfLinkAlias>(m_bots, "DynamicArraySceneUrdfLinkAlias");
     DefDynamicArray<superdex::robotics::SensorHandle>(m_bots, "DynamicArraySensorHandle");
+    DefDynamicArray<superdex::robotics::SlotEntry>(m_bots, "DynamicArraySlotEntry");
+    DefDynamicArray<superdex::robotics::SpawnEntry>(m_bots, "DynamicArraySpawnEntry");
   }
 
   inline void DefineFinalize([[maybe_unused]] nb::module_& m) {
