@@ -738,6 +738,8 @@ auto Determinant(
         return details::Determinant3x3<InputType>(A);
       case 4:
         return details::Determinant4x4<InputType>(A);
+      default:
+        break;
     }
   }
   //--- Otherwise, use the LU factorization.
@@ -869,6 +871,8 @@ auto Inverse(Matrix<Scalar, kRowsAtCT, kColsAtCT, kMajorDirection, kOwnership, k
         details::Inverse4x4(A, invA);
         return invA;
       }
+      default:
+        break;
     }
   }
   //--- Otherwise, use the LU factorization without pivoting.
@@ -915,6 +919,8 @@ auto SymInverse(
         details::SymInverse4x4(A, invA);
         return invA;
       }
+      default:
+        break;
     }
   }
   //--- Otherwise, use the LDLt factorization.
