@@ -46,6 +46,11 @@ class AssetManager;
 class SuperDexStudio;
 enum class AssetType;
 
+enum class PlayToolbarAction { None, Play, Pause, Step, Stop };
+
+PlayToolbarAction ShowPlayToolbarOverViewport(bool started, bool playing, bool canPlay = true);
+PlayToolbarAction GetPlayToolbarHotkey(bool started, bool playing, bool canPlay = true);
+
 // Deterministic RGBA color derived by hashing @p str (ImHashStr -> RGBA bytes, alpha forced to 1).
 // Gives an asset/model a stable, distinct default color from its path (the same scheme mochi models
 // use): the same string always maps to the same color, different strings to different colors.
@@ -299,11 +304,11 @@ bool FolderTile(
     bool selected = false,
     TileRenameState* rename = nullptr);
 
-// Renders a 64px asset thumbnail slot for @p assetPath plus a path field and browse button.
-// Returns true when the slotted path changes (drag-drop or clear). Double-clicking the thumbnail
-// opens the asset's editor. Pass @p acceptDragDropPayload = false and @p showClearButton = false to
-// render a read-only (locked) slot that can still be viewed and browsed to but not reassigned or
-// cleared.
+// Renders a 64px asset thumbnail slot for @p assetPath with a picker and browser locator.
+// Returns true when the slotted path changes (picker, drag-drop or clear). Double-clicking the
+// thumbnail opens the asset's editor. Pass @p acceptDragDropPayload = false and @p showClearButton
+// = false to render a read-only (locked) slot that can still be viewed and browsed to but not
+// reassigned or cleared.
 bool AssetSlot(
     char const* label,
     mochi::DynamicString& assetPath,

@@ -48,6 +48,7 @@ constexpr std::array<ImU32, kAssetTypeCount> kAssetTypeColors = {
     IM_COL32(230, 110, 200, 255), // BotTask (pink)
     IM_COL32(0, 206, 209, 255), // CadModel (teal)
     IM_COL32(255, 215, 0, 255), // Tuner (gold)
+    IM_COL32(80, 190, 150, 255), // IK (mint)
     IM_COL32(192, 192, 192, 192), // Unknown (gray)
 };
 

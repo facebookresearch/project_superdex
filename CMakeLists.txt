@@ -57,6 +57,7 @@ if (SUPERDEX_BUILD_ALL)
 endif ()
 
 if (SUPERDEX_BUILD_STUDIO)
+    set(SUPERDEX_BUILD_RECORDER ON CACHE BOOL "" FORCE)
     # Needed to build the studio: it links all five.
     set(SUPERDEX_BUILD_ROBOTICS ON CACHE BOOL "" FORCE)
     set(SUPERDEX_BUILD_ASSET_TUNER ON CACHE BOOL "" FORCE)
@@ -99,6 +100,11 @@ if (SUPERDEX_BUILD_ROBOTICS)
 endif ()
 
 if (SUPERDEX_BUILD_RECORDER)
+    if (APPLE)
+        set(_superdex_rerun_project_include "${CMAKE_PROJECT_rerun_sdk_INCLUDE}")
+        set(CMAKE_PROJECT_rerun_sdk_INCLUDE
+            "${CMAKE_CURRENT_SOURCE_DIR}/cmake/rerun_apple_libtool_compat.cmake")
+    endif ()
     add_subdirectory(superdex_recorder)
 endif ()
 

@@ -19,14 +19,13 @@
 #include "assets/asset.h"
 #include "assets/asset_referencer.h"
 #include "assets/bot_asset.h"
-#include "assets/tuner_asset.h"
-#if MOCHI_INTERNAL
 #include "assets/bot_scene_asset.h"
-#endif
 #include "assets/cad_model_asset.h"
+#include "assets/ik_asset.h"
 #include "assets/mochi_model_asset.h"
 #include "assets/mochi_prefab_asset.h"
 #include "assets/render_model_asset.h"
+#include "assets/tuner_asset.h"
 
 #include <functional>
 #include <map>
@@ -63,9 +62,8 @@ class AssetManager {
   MochiPrefabAsset* LoadMochiPrefabAsset(mochi::Path const& path);
   BotAsset* LoadBotAsset(mochi::Path const& path);
   TunerAsset* LoadTunerAsset(mochi::Path const& path);
-#if MOCHI_INTERNAL
+  IKAsset* LoadIKAsset(mochi::Path const& path);
   BotSceneAsset* LoadBotSceneAsset(mochi::Path const& path);
-#endif
   bool UnloadAssetByPath(mochi::Path const& path);
   bool UnloadAssets(std::set<mochi::Path> const& paths);
   bool UnloadAllAssets();

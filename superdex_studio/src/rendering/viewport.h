@@ -231,7 +231,8 @@ class Viewport {
   void ShowViewportContents(bool showCameraOrientationGizmo);
   void ShowStatsOverlay(
       std::optional<float> mochiSPS = std::nullopt,
-      std::optional<float> simTimeSec = std::nullopt) const;
+      std::optional<float> simTimeSec = std::nullopt,
+      std::optional<double> ikSolveMs = std::nullopt) const;
   void ShowSceneHierarchyWindow(char const* name, bool* open);
   void ShowSelectedObjectDetailsWindow(char const* name, bool* open) const;
   // Register a toggleable "Show" command. The viewport owns its keyboard shortcut and lists it in

@@ -28,6 +28,8 @@
 
 namespace superdex::studio {
 
+inline constexpr std::string_view kIKConfigExtension = ".superdex_ik";
+
 enum class AssetType {
   RenderModel,
   MochiModel,
@@ -37,6 +39,8 @@ enum class AssetType {
   BotTask,
   CadModel,
   Tuner,
+  // Public IK documents; appended here to preserve existing type ordering.
+  IK,
   Unknown,
   Count
 };
@@ -52,6 +56,7 @@ constexpr std::array<char const*, kAssetTypeCount> kAssetTypeLabels = {
     "Task",
     "CAD Model",
     "Asset Tuner",
+    "IK Configuration",
     "(Unknown)"};
 
 inline constexpr char const* GetAssetTypeLabel(AssetType type) {
@@ -71,7 +76,7 @@ struct AssetTypeExtension {
 //
 // Order is significant twice over: the first matching entry wins, so an extension must precede any
 // shorter one that is its own suffix; and within a type, earlier means preferred.
-constexpr std::array<AssetTypeExtension, 22> kAssetTypeExtensions{
+constexpr std::array<AssetTypeExtension, 23> kAssetTypeExtensions{
     {{".glb", AssetType::RenderModel},
      {".gltf", AssetType::RenderModel},
      {".dae", AssetType::RenderModel},
@@ -82,7 +87,7 @@ constexpr std::array<AssetTypeExtension, 22> kAssetTypeExtensions{
      {".step", AssetType::CadModel},
      {".stl", AssetType::CadModel},
      {".mochi.h5", AssetType::MochiModel},
-     // Bot scenes and tasks are an internal-build concept; public builds do not classify these.
+     // Public builds skip the legacy .mochi_bot_scene and .mochi_bot_task names (asset_types.cpp).
      {".superdex_scene", AssetType::BotScene},
      {".superdex_scene_archive", AssetType::BotScene},
      {".mochi_bot_scene", AssetType::BotScene},
@@ -96,7 +101,9 @@ constexpr std::array<AssetTypeExtension, 22> kAssetTypeExtensions{
      {".mochi_scene", AssetType::MochiPrefab},
      {".superdex_prefab", AssetType::MochiPrefab},
      {".mochi_prefab", AssetType::MochiPrefab},
-     {".superdex_tuner", AssetType::Tuner}}};
+     {".superdex_tuner", AssetType::Tuner},
+     // IK configurations are classified in both public and internal builds.
+     {kIKConfigExtension, AssetType::IK}}};
 
 AssetType ClassifyAssetTypeByFilename(std::string_view filename);
 AssetType ClassifyAssetTypeByPath(mochi::Path const& path);

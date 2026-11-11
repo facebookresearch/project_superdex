@@ -129,6 +129,24 @@ DebugDrawSettingsEdit ShowDebugDrawSettings(
   return edit;
 }
 
+bool ShowStudioPhysicsSettings(StudioPhysicsSettings& settings) {
+  bool changed = ImGui::SimpleReflectionEnum("Ground Plane", settings.groundPlaneMode);
+  ImGui::ItemTooltipWrapped(
+      "Add a static ground plane when a simulation starts: at the lowest point of the staged "
+      "asset, or at a custom height. The viewport ground and grid sit at the same height. Locked "
+      "while simulating.");
+  if (settings.groundPlaneMode == GroundPlaneMode::Custom) {
+    changed |= ImGui::DragFloat(
+        "Ground Plane Height",
+        &settings.groundPlaneHeight,
+        0.001f,
+        0.0f,
+        0.0f,
+        GetUnitFormat(UnitFormat::Length));
+  }
+  return changed;
+}
+
 //--------------------------------------------------------------------------------------------------
 // ASYNC SCENE
 //--------------------------------------------------------------------------------------------------
@@ -211,8 +229,14 @@ void MochiAsyncScene::SetSettings(PhysicsSettings const& settings) {
   _settings = settings;
 }
 
-void MochiAsyncScene::SetGroundPlaneHeight(float height) {
-  _groundPlaneHeight = height;
+void MochiAsyncScene::SetLowestPointHeight(float height) {
+  _lowestPointHeight = height;
+}
+
+float MochiAsyncScene::GetGroundPlaneHeight() const {
+  return _settings.studio.groundPlaneMode == GroundPlaneMode::Custom
+      ? _settings.studio.groundPlaneHeight
+      : _lowestPointHeight;
 }
 
 void MochiAsyncScene::SetGroundPlaneContact(mochi::ContactParams const& contact) {
@@ -293,8 +317,9 @@ void MochiAsyncScene::CreateScene(std::string_view name, bool startPaused) {
     onStartPhysics();
   }
   _asyncScene->QueueCommand([this,
-                             addGroundPlane = _settings.studio.groundPlane,
-                             groundHeight = _groundPlaneHeight,
+                             addGroundPlane =
+                                 _settings.studio.groundPlaneMode != GroundPlaneMode::Off,
+                             groundHeight = GetGroundPlaneHeight(),
                              groundContact = _groundPlaneContact](mochi::Scene* physicsScene) {
     _groundPlaneActor = {};
     if (addGroundPlane) {
@@ -507,13 +532,13 @@ void MochiAsyncScene::ExportPrefab(
   _asyncScene->WaitForQueuedCommands();
 }
 
-void MochiAsyncScene::ShowPhysicsSettingsWindow(
+bool MochiAsyncScene::ShowPhysicsSettingsWindow(
     char const* name,
     bool* open,
     AssetSceneOverrides assetOverrides) {
   if (!ImGui::Begin(name, open)) {
     ImGui::End();
-    return;
+    return false;
   }
   // Scene and Solver are siblings here, in the app Settings window and in the prefab's own scene
   // section; keep the three in step.
@@ -546,12 +571,17 @@ void MochiAsyncScene::ShowPhysicsSettingsWindow(
   if (ImGui::CollapsingHeader("Debug Draw", ImGuiTreeNodeFlags_DefaultOpen)) {
     ShowDebugDrawSection();
   }
+  bool groundPlaneChanged = false;
   if (ImGui::CollapsingHeader("Studio")) {
     ImGui::Indent();
-    (void)ImGui::SimpleReflectionStruct(_settings.studio);
+    // The plane is placed on play, so it cannot change mid-simulation.
+    ImGui::BeginDisabled(IsSimulating());
+    groundPlaneChanged = ShowStudioPhysicsSettings(_settings.studio);
+    ImGui::EndDisabled();
     ImGui::Unindent();
   }
   ImGui::End();
+  return groundPlaneChanged;
 }
 
 void MochiAsyncScene::ShowDebugDrawSection() {
@@ -570,65 +600,9 @@ void MochiAsyncScene::ShowDebugDrawSection() {
 }
 
 void MochiAsyncScene::ShowPlayToolbarOverViewport() {
-  ImVec2 childPos = ImGui::GetWindowPos();
-  ImVec2 childSize = ImGui::GetWindowSize();
-  constexpr float kButtonPadding = 10.0f;
-  constexpr int kNumButtons = 3;
-  float buttonSize = ImGui::CalcTextSize(ICON_FA_PLAY).x + ImGui::GetStyle().FramePadding.x * 2;
-  float spacing = ImGui::GetStyle().ItemSpacing.x;
-  float totalWidth = buttonSize * kNumButtons + spacing * (kNumButtons - 1);
-  float startX = childPos.x + (childSize.x - totalWidth) * 0.5f;
-  float startY = childPos.y + kButtonPadding;
-
-  ImGui::SetCursorScreenPos({startX, startY});
-  bool simulating = IsSimulating();
-  bool playing = simulating && !IsPaused();
-  if (!simulating) {
-    if (ImGui::Button(ICON_FA_PLAY "###play")) {
-      CreateScene(_sceneName, false);
-    }
-    if (ImGui::IsItemHovered()) {
-      ImGui::SetTooltip("Play (Space)");
-    }
-  } else if (!playing) {
-    if (ImGui::Button(ICON_FA_PLAY "###play")) {
-      Pause(false);
-    }
-    if (ImGui::IsItemHovered()) {
-      ImGui::SetTooltip("Resume (Space)");
-    }
-  } else {
-    if (ImGui::Button(ICON_FA_PAUSE "###play")) {
-      Pause(true);
-    }
-    if (ImGui::IsItemHovered()) {
-      ImGui::SetTooltip("Pause (Space)");
-    }
-  }
-  ImGui::BeginDisabled(playing);
-  ImGui::SameLine();
-  if (ImGui::Button(ICON_FA_STEP_FORWARD "###step")) {
-    if (!simulating) {
-      CreateScene(_sceneName, true);
-    }
-    if (IsSimulating()) {
-      RequestStepThenPause();
-    }
-  }
-  // Show the tooltip even while disabled so users can discover the shortcut before starting.
-  if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-    ImGui::SetTooltip("Step (Right Arrow)");
-  }
-  ImGui::EndDisabled(); // playing
-  ImGui::BeginDisabled(!simulating);
-  ImGui::SameLine();
-  if (ImGui::Button(ICON_FA_STOP "###stop")) {
-    DestroyMochiScene();
-  }
-  if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-    ImGui::SetTooltip("Stop (Esc)");
-  }
-  ImGui::EndDisabled(); // !simulating
+  bool const simulating = IsSimulating();
+  HandlePlayToolbarAction(
+      superdex::studio::ShowPlayToolbarOverViewport(simulating, simulating && !IsPaused()));
 }
 
 void MochiAsyncScene::ShowExportSimulationPrefabMenuItem(std::string_view exportName) {
@@ -650,27 +624,34 @@ void MochiAsyncScene::ShowExportSimulationPrefabMenuItem(std::string_view export
 
 void MochiAsyncScene::HandleHotkeys() {
   bool const simulating = IsSimulating();
-  bool const playing = simulating && !IsPaused();
-  // Space toggles play/pause, starting the simulation if it is currently stopped.
-  if (ImGui::IsKeyChordPressed(ImGuiKey_Space)) {
-    if (!simulating) {
-      CreateScene(_sceneName, false);
-    } else {
-      Pause(playing);
-    }
-  }
-  // Right Arrow single-steps; matches the toolbar, which disables stepping while playing.
-  if (!playing && ImGui::IsKeyChordPressed(ImGuiKey_RightArrow)) {
-    if (!simulating) {
-      CreateScene(_sceneName, true);
-    }
-    if (IsSimulating()) {
-      RequestStepThenPause();
-    }
-  }
-  // Escape stops; matches the toolbar, which disables stop while not simulating.
-  if (simulating && ImGui::IsKeyChordPressed(ImGuiKey_Escape)) {
-    DestroyMochiScene();
+  HandlePlayToolbarAction(GetPlayToolbarHotkey(simulating, simulating && !IsPaused()));
+}
+
+void MochiAsyncScene::HandlePlayToolbarAction(PlayToolbarAction action) {
+  switch (action) {
+    case PlayToolbarAction::Play:
+      if (!IsSimulating()) {
+        CreateScene(_sceneName, false);
+      } else {
+        Pause(false);
+      }
+      break;
+    case PlayToolbarAction::Pause:
+      Pause(true);
+      break;
+    case PlayToolbarAction::Step:
+      if (!IsSimulating()) {
+        CreateScene(_sceneName, true);
+      }
+      if (IsSimulating()) {
+        RequestStepThenPause();
+      }
+      break;
+    case PlayToolbarAction::Stop:
+      DestroyMochiScene();
+      break;
+    case PlayToolbarAction::None:
+      break;
   }
 }
 

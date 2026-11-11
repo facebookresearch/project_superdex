@@ -18,9 +18,7 @@
 
 #include "rendering/soft_surface.h"
 
-#if MOCHI_INTERNAL
-#include <superdex_robotics/internal/bot_scene.h>
-#endif
+#include <superdex_robotics/scene/bot_scene.h>
 #include <superdex_robotics/superdex_robotics.h>
 
 #include <mochi_core/utils/coordinate_space_converter.h>
@@ -201,7 +199,6 @@ struct StagedActor {
 
 using StagedActors = std::vector<StagedActor>;
 
-#if MOCHI_INTERNAL
 // One task-file spawn resolved against a bot scene and into world space. The scene editor owns the
 // loaded task; SceneStage only needs this render-staging view of it.
 struct ResolvedTaskSpawn {
@@ -210,7 +207,6 @@ struct ResolvedTaskSpawn {
   mochi::Path prefabPath;
   mochi::TransformRT worldFromSpawn = {};
 };
-#endif
 
 // A per-frame deformation update for one soft actor's dynamic meshes: produced by the simulation
 // post-step callback and consumed by SceneStage::ApplySoftMeshUpdates. Position/normal buffers are
@@ -344,7 +340,6 @@ struct SceneStage {
       std::string const& rootPath,
       StageType stageType);
 
-#if MOCHI_INTERNAL
   // Stage (or re-stage) a complete bot scene (base ScenePrefab + all placed bots) into the bound
   // render scene at rest pose. Spawnable-prefab declarations are not instances and are omitted
   // until StageBotTask is called. The base scene and each bot are resolved internally via the
@@ -363,7 +358,6 @@ struct SceneStage {
       superdex::robotics::BotScenePrefab const& scene,
       mochi::Span<ResolvedTaskSpawn const> taskSpawns,
       StageType stageType);
-#endif
 
   // Change which already-staged representation is visible without rebuilding or restoring actors
   // to their default pose. Used for view changes during simulation.
@@ -386,6 +380,14 @@ struct SceneStage {
   void ApplyWorldTransform(
       std::string_view name,
       mochi::TransformRT const& actorWorldTransform,
+      mochi::CoordinateSpaceConverter const& converter);
+
+  // Apply a world transform and actor-frame scale (no-op if not found). Scale must be finite and
+  // positive on every axis; skinned actors require uniform scale.
+  void ApplyWorldTransform(
+      std::string_view name,
+      mochi::TransformRT const& actorWorldTransform,
+      mochi::Real3 const& scale,
       mochi::CoordinateSpaceConverter const& converter);
 
   // Re-apply the default-pose transforms captured during staging.
@@ -483,12 +485,10 @@ struct SceneStage {
   // missing or another batch is running.
   void BuildMissingSdfSurfaces();
 
-#if MOCHI_INTERNAL
   bool StageBotSceneImpl(
       superdex::robotics::BotScenePrefab const& scene,
       mochi::Span<ResolvedTaskSpawn const> const* taskSpawns,
       StageType stageType);
-#endif
 
   // Create the opaque, tinted, shadowless stand-in clone of `base` (parented to it, tagged into the
   // highlight overlay pass). Returns nullptr if no instance could be allocated.

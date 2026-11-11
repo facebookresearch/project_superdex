@@ -733,7 +733,13 @@ static void ApplySkinnedJointPose(
   TransformRT const rootInv = Invert(actor.worldTransform);
   std::vector<TransformRT> jointTransforms(linkWorldTransforms.size());
   for (int j = 0; j < isize(linkWorldTransforms); ++j) {
-    jointTransforms[j] = converter.TransformToOutput(rootInv * linkWorldTransforms[j]);
+    TransformRT local = rootInv * linkWorldTransforms[j];
+    // Skin actor scaling is uniform only. Remove it from bone translations so the external
+    // geometry scale is applied once, while the authored inverse-bind matrices stay unchanged.
+    if (actor.worldScale[0] != 1_r) {
+      local = TransformRT(local.GetRotation(), local.GetTranslation() / actor.worldScale[0]);
+    }
+    jointTransforms[j] = converter.TransformToOutput(local);
   }
   // Build renderable-local bone matrices from the ARTICULATION's own current + rest link frames:
   // boneMatrix_j = currentRootRel_j * inverse(restRootRel_j). At rest they are identity (the baked
@@ -1094,7 +1100,6 @@ bool SceneStage::StagePrefab(
   return ApplyStageRequests(requests, stageType);
 }
 
-#if MOCHI_INTERNAL
 bool SceneStage::StageBotScene(
     superdex::robotics::BotScenePrefab const& scene,
     StageType stageType) {
@@ -1232,7 +1237,6 @@ bool SceneStage::StageBotSceneImpl(
 
   return ApplyStageRequests(requests, stageType);
 }
-#endif // MOCHI_INTERNAL
 
 bool SceneStage::ApplyStageRequests(
     std::vector<StageRequest> const& requests,
@@ -1722,6 +1726,26 @@ void SceneStage::ApplyWorldTransform(
     return;
   }
   SetStagedActorWorldTransform(_actors[index], actorWorldTransform, converter);
+}
+
+void SceneStage::ApplyWorldTransform(
+    std::string_view name,
+    mochi::TransformRT const& actorWorldTransform,
+    mochi::Real3 const& scale,
+    mochi::CoordinateSpaceConverter const& converter) {
+  int const index = FindIndexByName(name);
+  if (index < 0) {
+    return;
+  }
+  for (int i = 0; i < 3; ++i) {
+    if (!std::isfinite(scale[i]) || scale[i] <= 0_r) {
+      MOCHI_LOG_ERROR("ApplyWorldTransform: scale must be finite and positive on every axis");
+      return;
+    }
+  }
+  auto& actor = _actors[index];
+  actor.worldScale = scale;
+  SetStagedActorWorldTransform(actor, actorWorldTransform, converter);
 }
 
 void SceneStage::ResetWorldTransforms(mochi::CoordinateSpaceConverter const& converter) {

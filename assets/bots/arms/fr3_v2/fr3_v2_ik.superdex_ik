@@ -1,0 +1,37 @@
+{
+  "bot": "fr3_v2.superdex_bot",
+  "createParams": {
+    "excludeCollisionShapes": true,
+    "fixedBase": true,
+    "solverParams": {
+      "absTol": 0.0099999997764825821,
+      "lineSearchMaxIter": 10,
+      "maxElapsedTimeSeconds": 0.01,
+      "maxIter": 20,
+      "positionErrorThres": 0.0099999997764825821,
+      "relTol": 9.9999999392252903e-09,
+      "rotationErrorThres": 0.0099999997764825821,
+      "verbosity": "Warning"
+    }
+  },
+  "targets": [
+    {
+      "enabled": true,
+      "link": "fr3_link8",
+      "name": "fr3_link8",
+      "position": [
+        0.30689048767089844,
+        3.9910710256663151e-06,
+        0.59028202295303345
+      ],
+      "positionStiffness": 100,
+      "rotation": [
+        -2.221444845199585,
+        2.221433162689209,
+        5.8248156165063847e-06
+      ],
+      "rotationStiffness": 100
+    }
+  ],
+  "version": 1
+}

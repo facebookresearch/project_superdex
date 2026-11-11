@@ -46,12 +46,6 @@ static bool HasExtension(std::string_view str, std::string_view suffixLower) {
 
 namespace {
 
-#if MOCHI_INTERNAL
-constexpr bool kInternalBuild = true;
-#else
-constexpr bool kInternalBuild = false;
-#endif
-
 // Folders swept as a last resort when the ordered search finds nothing, covering assets whose
 // models sit under a role that does not match their type (a URDF import leaves the `.stl` it was
 // given in `collision/`) and foreign trees that name the render role `visual`. Deliberately
@@ -70,10 +64,13 @@ constexpr std::array<std::string_view, 5> kCrossRoleSearchSubdirs{
 std::size_t AssetTypeExtensionIndex(std::string_view filename) {
   for (std::size_t i = 0; i < kAssetTypeExtensions.size(); ++i) {
     auto const& entry = kAssetTypeExtensions[i];
-    if (!kInternalBuild &&
-        (entry.type == AssetType::BotScene || entry.type == AssetType::BotTask)) {
+#if !MOCHI_INTERNAL
+    // Only internal builds still read the legacy bot scene and task names.
+    if ((entry.type == AssetType::BotScene || entry.type == AssetType::BotTask) &&
+        entry.extension.starts_with(".mochi_bot_")) {
       continue;
     }
+#endif
     if (HasExtension(filename, entry.extension)) {
       return i;
     }
@@ -150,6 +147,8 @@ std::string_view AssetTypeToToken(AssetType type) {
       return "CadModel";
     case AssetType::Tuner:
       return "Tuner";
+    case AssetType::IK:
+      return "IK";
     case AssetType::Unknown:
     case AssetType::Count:
       return "Unknown";
@@ -222,6 +221,7 @@ std::string_view AssetRoleFolderForType(AssetType type) {
     case AssetType::BotScene:
     case AssetType::BotTask:
     case AssetType::Tuner:
+    case AssetType::IK:
     case AssetType::Unknown:
     case AssetType::Count:
       break;

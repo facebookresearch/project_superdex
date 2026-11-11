@@ -135,6 +135,7 @@ target_link_libraries(superdex_studio_static
     PUBLIC
         superdex_studio_processing
         superdex_asset_tuner_static
+        superdex_recorder_reader
         mochi_core
         mochi_physics
         mochi_renderer
@@ -245,6 +246,40 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/processing_presets"
     DESTINATION . COMPONENT superdex_studio)
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/assets"
     DESTINATION . COMPONENT superdex_studio)
+
+#-----------------------------------------------------------------------------
+# Headless IK tests
+#-----------------------------------------------------------------------------
+
+if (MOCHI_BUILD_TESTS)
+    foreach (_ik_test ik_preview_session ik_recording_player ik_design_session)
+        set(_ik_test_target "superdex_studio_${_ik_test}_test")
+        add_executable(${_ik_test_target}
+            "${SUPERDEX_MOCHI_SOURCE_DIR}/mochi_renderer/src/path.cpp"
+            "test/${_ik_test}_test.cpp")
+        if (NOT _ik_test STREQUAL "ik_design_session")
+            target_sources(${_ik_test_target} PRIVATE "src/simulation/${_ik_test}.cpp")
+        endif ()
+        if (_ik_test STREQUAL "ik_recording_player")
+            # Match the native reader test's writer-before-reader archive order: the prebuilt
+            # Rerun SDK also contains LZ4, so resolve its symbols before the standalone decoder.
+            target_link_libraries(${_ik_test_target} PRIVATE superdex_recorder_core superdex_recorder_reader)
+        endif ()
+        target_include_directories(${_ik_test_target} PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/src"
+            "${SUPERDEX_MOCHI_SOURCE_DIR}/mochi_renderer/include")
+        target_link_libraries(${_ik_test_target} PRIVATE
+            superdex_robotics mochi_core mochi_physics simple_reflection picojson gtest_main)
+        target_compile_definitions(${_ik_test_target} PRIVATE MOCHI_USE_REFLECTION=1)
+        mochi_set_compiler_options(${_ik_test_target})
+        mochi_set_output_directories(${_ik_test_target})
+        mochi_set_sibling_library_rpath(${_ik_test_target})
+        add_test(NAME ${_ik_test_target} COMMAND ${_ik_test_target}
+            WORKING_DIRECTORY "$<TARGET_FILE_DIR:${_ik_test_target}>")
+    endforeach ()
+    unset(_ik_test)
+    unset(_ik_test_target)
+endif ()
 
 unset(_studio_static_srcs)
 unset(_studio_processing_srcs)

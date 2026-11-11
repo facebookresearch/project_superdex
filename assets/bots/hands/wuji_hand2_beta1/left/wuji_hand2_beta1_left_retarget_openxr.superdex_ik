@@ -1,0 +1,265 @@
+{
+  "outputBaseFrameFromInputBaseFrame": {
+    "rotation": [
+      -0.7369183309757297,
+      0.6741116650116122,
+      0.010268556896334241,
+      0.04918732871872268
+    ],
+    "translation": [
+      -0.010778231546282768,
+      0.006459556985646486,
+      -0.020585142076015472
+    ]
+  },
+  "outputBot": "wuji_hand2_beta1_left.superdex_bot",
+  "outputBotConfiguration": [
+    0.30243590474128723,
+    -0.33109942078590393,
+    0,
+    0,
+    0.027839748188853264,
+    0.055977944284677505,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0.054454270750284195,
+    0,
+    0,
+    0.043416813015937805,
+    0.027227135375142097,
+    0,
+    0
+  ],
+  "createParams": {
+    "excludeCollisionShapes": true,
+    "fixedBase": true,
+    "solverParams": {
+      "absTol": 0.0010000000474974513,
+      "lineSearchMaxIter": 10,
+      "maxElapsedTimeSeconds": 0.002,
+      "maxIter": 20,
+      "positionErrorThres": 0.0010000000474974513,
+      "relTol": 9.9999999392252903e-09,
+      "rotationErrorThres": 0.0099999997764825821,
+      "verbosity": "Warning"
+    }
+  },
+  "jointCouplings": [
+    {
+      "enabled": true,
+      "jointA": "joint_04_thumb_mcp",
+      "jointB": "joint_05_thumb_ip",
+      "ratio": 1,
+      "stiffness": 0.125
+    },
+    {
+      "enabled": true,
+      "jointA": "joint_11_index_finger_pip",
+      "jointB": "joint_12_index_finger_dip",
+      "ratio": 1,
+      "stiffness": 0.25
+    },
+    {
+      "enabled": true,
+      "jointA": "joint_18_middle_finger_pip",
+      "jointB": "joint_19_middle_finger_dip",
+      "ratio": 1,
+      "stiffness": 0.25
+    },
+    {
+      "enabled": true,
+      "jointA": "joint_25_ring_finger_pip",
+      "jointB": "joint_26_ring_finger_dip",
+      "ratio": 1,
+      "stiffness": 0.25
+    },
+    {
+      "enabled": true,
+      "jointA": "joint_32_pinky_pip",
+      "jointB": "joint_33_pinky_dip",
+      "ratio": 1,
+      "stiffness": 0.25
+    }
+  ],
+  "inputBot": "../../openxr/left/openxr_hand_lowpoly_left.superdex_bot",
+  "inputBotConfiguration": [],
+  "inputBotScale": 1.25,
+  "goals": [
+    {
+      "enabled": true,
+      "outputBotLink": "link_08_thumb_tip",
+      "linkFrameFromConstraintFrame": {
+        "rotation": [
+          0.006007585794725501,
+          0.0145107201338223,
+          -0.006674637634193818,
+          0.9998543879618518
+        ],
+        "translation": [
+          -0.001822143793106079,
+          0.002159982919692993,
+          0.0009768754243850708
+        ]
+      },
+      "name": "link_08_thumb_tip",
+      "positionStiffness": 1000,
+      "rotationStiffness": 1,
+      "inputBotLink": "xr_05_thumb_tip",
+      "baseOrInputLinkFrameFromConstraintFrame": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "enabled": true,
+      "outputBotLink": "link_15_index_finger_tip",
+      "linkFrameFromConstraintFrame": {
+        "rotation": [
+          0.0503564095565095,
+          0.0543948660139957,
+          0.013211376686228307,
+          0.9971614162681743
+        ],
+        "translation": [
+          -0.0012631937861442566,
+          0.0024014748632907867,
+          0.0021813958883285522
+        ]
+      },
+      "name": "link_15_index_finger_tip",
+      "positionStiffness": 1000,
+      "rotationStiffness": 1,
+      "inputBotLink": "xr_10_index_tip",
+      "baseOrInputLinkFrameFromConstraintFrame": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "enabled": true,
+      "outputBotLink": "link_22_middle_finger_tip",
+      "linkFrameFromConstraintFrame": {
+        "rotation": [
+          0.056653785584925356,
+          0.013535884974730012,
+          0.007749995985683369,
+          0.9982720400567523
+        ],
+        "translation": [
+          -0.0006789974868297577,
+          0.001230090856552124,
+          0.003980398178100586
+        ]
+      },
+      "name": "link_22_middle_finger_tip",
+      "positionStiffness": 1000,
+      "rotationStiffness": 1,
+      "inputBotLink": "xr_15_middle_tip",
+      "baseOrInputLinkFrameFromConstraintFrame": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          0,
+          0,
+          0.0099999997764825821
+        ]
+      }
+    },
+    {
+      "enabled": true,
+      "outputBotLink": "link_29_ring_finger_tip",
+      "linkFrameFromConstraintFrame": {
+        "rotation": [
+          -0.003225357426195481,
+          -0.04069708188834776,
+          0.012593942388372706,
+          0.9990869517766534
+        ],
+        "translation": [
+          0.0005629444494843483,
+          0.0017188005149364471,
+          0.0017583966255187988
+        ]
+      },
+      "name": "link_29_ring_finger_tip",
+      "positionStiffness": 1000,
+      "rotationStiffness": 1,
+      "inputBotLink": "xr_20_ring_tip",
+      "baseOrInputLinkFrameFromConstraintFrame": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          0,
+          0,
+          0.004999999888241291
+        ]
+      }
+    },
+    {
+      "enabled": true,
+      "outputBotLink": "link_36_pinky_tip",
+      "linkFrameFromConstraintFrame": {
+        "rotation": [
+          0.01893075986023491,
+          -0.05449884387947849,
+          0.045168080099137954,
+          0.9973120609353284
+        ],
+        "translation": [
+          -0.0019678995013237,
+          0.0031450390815734863,
+          0.010247588157653809
+        ]
+      },
+      "name": "link_36_pinky_tip",
+      "positionStiffness": 1000,
+      "rotationStiffness": 1,
+      "inputBotLink": "xr_25_little_tip",
+      "baseOrInputLinkFrameFromConstraintFrame": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          0,
+          0,
+          0
+        ]
+      }
+    }
+  ],
+  "version": 9
+}

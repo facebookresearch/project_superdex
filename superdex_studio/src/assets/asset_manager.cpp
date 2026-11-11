@@ -17,6 +17,7 @@
 #include "assets/asset_manager.h"
 #include "app/app.h"
 #include "core/common.h"
+#include "core/ik_design_session.h"
 #include "editors/asset_editor.h"
 
 #include <mochi_core/utils/path.h>
@@ -73,12 +74,10 @@ Asset* AssetManager::LoadAsset(mochi::Path const& path) {
       return LoadBotAsset(path);
     case AssetType::Tuner:
       return LoadTunerAsset(path);
-#if MOCHI_INTERNAL
+    case AssetType::IK:
+      return LoadIKAsset(path);
     case AssetType::BotScene:
       return LoadBotSceneAsset(path);
-#else
-    case AssetType::BotScene:
-#endif
     case AssetType::BotTask:
     case AssetType::Unknown:
     case AssetType::Count:
@@ -184,7 +183,23 @@ BotAsset* AssetManager::LoadBotAsset(mochi::Path const& path) {
   return nullptr;
 }
 
-#if MOCHI_INTERNAL
+IKAsset* AssetManager::LoadIKAsset(mochi::Path const& path) {
+  if (auto* existing = FindAssetByPath(path)) {
+    if (existing->GetType() == AssetType::IK) {
+      return static_cast<IKAsset*>(existing);
+    }
+    MOCHI_LOG_ERROR(
+        "Failed to cast previously loaded asset to IKAsset: %s", path.ToString().c_str());
+    return nullptr;
+  }
+  auto asset = IKAsset::Create(GetAssetNameFromPath(path), path, this);
+  if (asset) {
+    return static_cast<IKAsset*>(RegisterAsset(path, std::move(asset)));
+  }
+  MOCHI_LOG_ERROR("Failed to load IKAsset: %s", path.ToString().c_str());
+  return nullptr;
+}
+
 BotSceneAsset* AssetManager::LoadBotSceneAsset(mochi::Path const& path) {
   if (auto* existing = FindAssetByPath(path)) {
     if (existing->GetType() == AssetType::BotScene) {
@@ -203,7 +218,6 @@ BotSceneAsset* AssetManager::LoadBotSceneAsset(mochi::Path const& path) {
   MOCHI_LOG_ERROR("Failed to load BotSceneAsset: %s", path.ToString().c_str());
   return nullptr;
 }
-#endif // MOCHI_INTERNAL
 
 TunerAsset* AssetManager::LoadTunerAsset(mochi::Path const& path) {
   if (auto* existing = FindAssetByPath(path)) {
@@ -459,8 +473,16 @@ void AssetManager::RewriteAssetPath(mochi::Path const& oldPath, mochi::Path cons
 
 void AssetManager::RewriteAssetPaths(
     mochi::Span<std::pair<mochi::Path, mochi::Path>> const& moves) {
+  bool designStateChanged = false;
   for (auto const& [oldPath, newPath] : moves) {
+    if (_studio) {
+      designStateChanged |=
+          RewriteIKDesignPath(_studio->GetAppSettings().ikRecordings, oldPath, newPath);
+    }
     RewriteAssetPathInMap(oldPath, newPath);
+  }
+  if (_studio && designStateChanged) {
+    _studio->SaveSettings();
   }
   auto const affected = NotifyPathsMoved(moves);
   RefreshReferencers(affected);

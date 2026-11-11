@@ -1180,8 +1180,10 @@ void Viewport::ShowViewportContents(bool showCameraOrientationGizmo) {
   ShowShowMenu();
 }
 
-void Viewport::ShowStatsOverlay(std::optional<float> mochiSPS, std::optional<float> simTimeSec)
-    const {
+void Viewport::ShowStatsOverlay(
+    std::optional<float> mochiSPS,
+    std::optional<float> simTimeSec,
+    std::optional<double> ikSolveMs) const {
   ImGuiStyle const& style = ImGui::GetStyle();
   ImVec2 const windowPos = ImGui::GetWindowPos();
   ImVec2 const windowSize = ImGui::GetWindowSize();
@@ -1212,6 +1214,9 @@ void Viewport::ShowStatsOverlay(std::optional<float> mochiSPS, std::optional<flo
     if (showSimTime) {
       valueColX = std::max(valueColX, ImGui::CalcTextSize("Sim time: ").x);
     }
+    if (ikSolveMs.has_value()) {
+      valueColX = std::max(valueColX, ImGui::CalcTextSize("IK solve: ").x);
+    }
     valueColX += style.ItemSpacing.x;
 
     // Sim time is rendered first so it sits at the top of the overlay, above the perf rows.
@@ -1224,6 +1229,12 @@ void Viewport::ShowStatsOverlay(std::optional<float> mochiSPS, std::optional<flo
     ImGui::TextUnformatted("Render: ");
     ImGui::SameLine(valueColX);
     ImGui::Text("%.0f FPS", ImGui::GetIO().Framerate);
+
+    if (ikSolveMs.has_value()) {
+      ImGui::TextUnformatted("IK solve: ");
+      ImGui::SameLine(valueColX);
+      ImGui::Text("%.3f ms", ikSolveMs.value());
+    }
 
     if (showPhysics) {
       // A physics value of 0 (e.g. the simulation hasn't produced a sample yet) is shown as "N/A".
@@ -1481,6 +1492,11 @@ bool Viewport::ShowTransformGizmo(float x, float y, float width, float height) c
   if (!gizmoTarget.has_value()) {
     return false;
   }
+  auto const rotationNorm = mochi::Norm(gizmoTarget->first.GetRotation());
+  if (!mochi::IsFinite(gizmoTarget->first) || !mochi::IsFinite(rotationNorm) ||
+      rotationNorm <= mochi::real(1e-6)) {
+    return false;
+  }
 
   // Build the view matrix in editor (Mochi) space: viewEditor = viewRender * editorToRender, where
   // editorToRender is the 4x4 change-of-basis (3x3 basis * uniform scale, zero translation). The
@@ -1501,7 +1517,8 @@ bool Viewport::ShowTransformGizmo(float x, float y, float width, float height) c
   }
 
   // Build the model matrix in editor space (T * R * S) from the target transform and scale.
-  mochi::TransformRT const& targetTransform = gizmoTarget->first;
+  // Rigid inversion assumes unit rotation. Otherwise delta feedback amplifies quaternion drift.
+  mochi::TransformRT const targetTransform = mochi::NormalizeRotation(gizmoTarget->first);
   mochi::Real3 const& targetScale = gizmoTarget->second;
   mochi::Real3 const t = targetTransform.GetTranslation();
   mochi::Quaternion const r = targetTransform.GetRotation();
@@ -1590,7 +1607,8 @@ bool Viewport::ShowTransformGizmo(float x, float y, float width, float height) c
           static_cast<mochi::real>(newScale.x),
           static_cast<mochi::real>(newScale.y),
           static_cast<mochi::real>(newScale.z)};
-      changed = true;
+      newTransform = mochi::NormalizeRotation(newTransform);
+      changed = mochi::IsFinite(newTransform) && mochi::IsFinite(outScale);
     }
   }
 
@@ -1641,7 +1659,8 @@ bool Viewport::ShowTransformGizmo(float x, float y, float width, float height) c
   // stays put; once the threshold is crossed the accumulated movement lands on the (possibly
   // retargeted) selection.
   if (changed && !_gizmoStartPending && onTransformGizmoDelta) {
-    mochi::TransformRT const deltaTransform = newTransform * mochi::Invert(targetTransform);
+    mochi::TransformRT const deltaTransform =
+        mochi::NormalizeRotation(newTransform * mochi::Invert(targetTransform));
     mochi::Real3 const deltaScale{
         outScale[0] / _gizmoPrevScale[0],
         outScale[1] / _gizmoPrevScale[1],

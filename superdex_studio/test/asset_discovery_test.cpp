@@ -90,6 +90,30 @@ TEST_F(AssetDiscoveryTest, ClassifiesEveryKnownExtension) {
   EXPECT_EQ(ClassifyAssetTypeByFilename("x"), AssetType::Unknown);
 }
 
+TEST_F(AssetDiscoveryTest, IKConfigurationIsAPublicNonModelDocument) {
+  auto const document = Touch("arm/arm.superdex_ik");
+  Touch("arm/arm.superdex_bot");
+
+  EXPECT_EQ(ClassifyAssetTypeByPath(mochi::Path{document}), AssetType::IK);
+  EXPECT_EQ(ClassifyAssetTypeByFilename("arm.SUPERDEX_IK"), AssetType::IK);
+  EXPECT_EQ(ClassifyAssetTypeByFilename("arm.superdex_ik.json"), AssetType::Unknown);
+  EXPECT_EQ(AssetTypeToToken(AssetType::IK), "IK");
+  EXPECT_EQ(AssetTypeFromToken("IK"), AssetType::IK);
+  EXPECT_STREQ(GetAssetTypeLabel(AssetType::IK), "IK Configuration");
+  EXPECT_TRUE(AssetRoleFolderForType(AssetType::IK).empty());
+  ExpectFound(FindAssetFileByName("arm", AssetType::IK, mochi::Path{_tempDir / "arm"}), document);
+  EXPECT_TRUE(Find("arm", AssetType::CadModel, _tempDir / "arm").empty());
+  EXPECT_TRUE(Find("arm", AssetType::RenderModel, _tempDir / "arm").empty());
+  EXPECT_TRUE(Find("arm", AssetType::MochiModel, _tempDir / "arm").empty());
+}
+
+TEST_F(AssetDiscoveryTest, StableTypeTokensRoundTripAfterAddingIK) {
+  for (int index = 0; index < kAssetTypeCount; ++index) {
+    auto const type = static_cast<AssetType>(index);
+    EXPECT_EQ(AssetTypeFromToken(AssetTypeToToken(type)), type);
+  }
+}
+
 // Step 1: the role folder for the requested type, the layout the assets ship in.
 TEST_F(AssetDiscoveryTest, FindsModelsInTheirRoleFolders) {
   Touch("fr3/cad/link0.step");

@@ -123,6 +123,7 @@ class AssetBrowser {
   bool RenameAsset(mochi::Path const& assetPath, std::string const& newStem);
   void DuplicateItem(TileItem const& item);
   void CreateModBotAsset(mochi::Path const& dir, std::string const& base = {});
+  void CreateIKConfigAsset(mochi::Path const& botPath);
   // Creates a .superdex_tuner next to `prefabPath` that references it, then renames and opens it.
   void CreateTunerAsset(mochi::Path const& prefabPath);
 

@@ -40,6 +40,7 @@ class DebugDraw;
 namespace superdex::studio {
 
 class SuperDexStudio;
+enum class PlayToolbarAction;
 
 // Holds the wall-clock schedule used to pace fixed-step simulation to real time. Defined in
 // the .cpp; owned via shared_ptr so the stepping callback can safely outlive scene teardown.
@@ -84,6 +85,10 @@ struct DebugDrawSettingsEdit {
 DebugDrawSettingsEdit ShowDebugDrawSettings(
     mochi::Context* context,
     PhysicsDebugSettings& settings);
+
+// Draws the studio additions (the ground plane), editing @p settings. The height is only shown in
+// Custom mode. Shared like ShowDebugDrawSettings. Returns true when a value changed.
+bool ShowStudioPhysicsSettings(StudioPhysicsSettings& settings);
 
 struct MochiDebugDrawLineVerticesBuffer {
   std::vector<mochi::Real3> positions;
@@ -130,7 +135,11 @@ class MochiAsyncScene {
   // Scene
   void Initialize(mochi::Context* context, std::string const& sceneName);
   void SetSettings(PhysicsSettings const& settings);
-  void SetGroundPlaneHeight(float height);
+  // Lowest point of the staged asset, where a LowestPoint ground plane goes.
+  void SetLowestPointHeight(float height);
+  // Height of the studio ground plane per the settings: the custom height in Custom mode, else the
+  // lowest point. Editors draw the viewport ground here too, so it matches the physics plane.
+  float GetGroundPlaneHeight() const;
   // Contact parameters of the studio ground plane added on the next CreateScene.
   void SetGroundPlaneContact(mochi::ContactParams const& contact);
   bool IsSimulating() const;
@@ -171,7 +180,9 @@ class MochiAsyncScene {
   float GetStepsPerSecond() const;
 
   // ImGui
-  void
+  // Returns true when the ground plane settings changed, so the editor can move its viewport ground
+  // to GetGroundPlaneHeight. They are locked while simulating.
+  bool
   ShowPhysicsSettingsWindow(char const* name, bool* open, AssetSceneOverrides assetOverrides = {});
   // The Debug Draw part of the Physics Settings window, for editors that show it on its own. Edits
   // apply live while simulating.
@@ -185,6 +196,7 @@ class MochiAsyncScene {
   void HandleHotkeys();
 
  private:
+  void HandlePlayToolbarAction(PlayToolbarAction action);
   // Pushes the scene settings (step params and real-time pacing, gravity, solver) into the
   // scene. No-op when stopped.
   void ApplySceneSettings();
@@ -203,7 +215,7 @@ class MochiAsyncScene {
   mochi_renderer::ProducerConsumerBuffer<MochiDebugRenderData> _debugData;
   mochi::CallbackHandle _debugDrawCb = {};
   PhysicsSettings _settings;
-  float _groundPlaneHeight = 0.0f;
+  float _lowestPointHeight = 0.0f;
   mochi::ContactParams _groundPlaneContact;
   // The studio-added ground plane, tracked so it can be excluded from prefab exports. Only ever
   // touched from the simulation thread (inside queued commands). Invalid when none was added.

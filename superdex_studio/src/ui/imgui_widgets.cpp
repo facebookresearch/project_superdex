@@ -48,6 +48,63 @@ using namespace mochi_renderer;
 using namespace ImGui;
 using namespace superdex::studio;
 
+PlayToolbarAction
+superdex::studio::ShowPlayToolbarOverViewport(bool started, bool playing, bool canPlay) {
+  ImVec2 const childPos = ImGui::GetWindowPos();
+  ImVec2 const childSize = ImGui::GetWindowSize();
+  constexpr float kButtonPadding = 10.0f;
+  constexpr int kNumButtons = 3;
+  float const buttonSize =
+      ImGui::CalcTextSize(ICON_FA_PLAY).x + ImGui::GetStyle().FramePadding.x * 2;
+  float const spacing = ImGui::GetStyle().ItemSpacing.x;
+  float const totalWidth = buttonSize * kNumButtons + spacing * (kNumButtons - 1);
+  float const startX = childPos.x + (childSize.x - totalWidth) * 0.5f;
+  float const startY = childPos.y + kButtonPadding;
+  PlayToolbarAction action = PlayToolbarAction::None;
+
+  ImGui::SetCursorScreenPos({startX, startY});
+  ImGui::BeginDisabled(!playing && !canPlay);
+  if (ImGui::Button(playing ? ICON_FA_PAUSE "###play" : ICON_FA_PLAY "###play")) {
+    action = playing ? PlayToolbarAction::Pause : PlayToolbarAction::Play;
+  }
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+    ImGui::SetTooltip(playing ? "Pause (Space)" : (started ? "Resume (Space)" : "Play (Space)"));
+  }
+  ImGui::EndDisabled();
+  ImGui::BeginDisabled(playing || !canPlay);
+  ImGui::SameLine();
+  if (ImGui::Button(ICON_FA_STEP_FORWARD "###step")) {
+    action = PlayToolbarAction::Step;
+  }
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+    ImGui::SetTooltip("Step (Right Arrow)");
+  }
+  ImGui::EndDisabled();
+  ImGui::BeginDisabled(!started);
+  ImGui::SameLine();
+  if (ImGui::Button(ICON_FA_STOP "###stop")) {
+    action = PlayToolbarAction::Stop;
+  }
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+    ImGui::SetTooltip("Stop (Esc)");
+  }
+  ImGui::EndDisabled();
+  return action;
+}
+
+PlayToolbarAction superdex::studio::GetPlayToolbarHotkey(bool started, bool playing, bool canPlay) {
+  if ((playing || canPlay) && ImGui::IsKeyChordPressed(ImGuiKey_Space)) {
+    return playing ? PlayToolbarAction::Pause : PlayToolbarAction::Play;
+  }
+  if (!playing && canPlay && ImGui::IsKeyChordPressed(ImGuiKey_RightArrow)) {
+    return PlayToolbarAction::Step;
+  }
+  if (started && ImGui::IsKeyChordPressed(ImGuiKey_Escape)) {
+    return PlayToolbarAction::Stop;
+  }
+  return PlayToolbarAction::None;
+}
+
 ImVec4 superdex::studio::HashStringToColor(std::string_view str) {
   ImU32 const hashId = ImHashStr(str.data(), str.size());
   ImVec4 color = ImGui::ColorConvertU32ToFloat4(hashId);
@@ -1476,6 +1533,7 @@ bool ImGui::AssetSlot(
   auto const accepts = [assetTypes](AssetType type) {
     return std::ranges::find(assetTypes, type) != assetTypes.end();
   };
+  bool const readOnly = !acceptDragDropPayload && !showClearButton;
   bool changed = false;
   // Scope all internal widget IDs under the slot label so this widget's icon-only buttons
   // (search/trash) never collide with identical buttons drawn by the caller or by sibling slots.
@@ -1537,7 +1595,9 @@ bool ImGui::AssetSlot(
   popupId += label;
 
   ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
+  ImGui::BeginDisabled(readOnly);
   bool const openPicker = ImGui::Button(buttonLabel.c_str(), ImVec2(width, 0.0f));
+  ImGui::EndDisabled();
   ImGui::PopStyleVar();
   ImVec2 const buttonMin = ImGui::GetItemRectMin();
   ImVec2 const buttonMax = ImGui::GetItemRectMax();
@@ -1554,6 +1614,7 @@ bool ImGui::AssetSlot(
   ImGui::SetNextWindowPos(ImVec2(buttonMin.x, buttonMax.y));
   ImGui::SetNextWindowSize(ImVec2(width, 0.0f));
   if (ImGui::BeginPopup(popupId.c_str())) {
+    ImGui::BeginDisabled(readOnly);
     // Sticky name filter, pinned above the scrolling list.
     static ImGuiTextFilter assetFilter;
     // Candidate list is fetched once when the popup opens (not every frame): GetAllAssetsOfType
@@ -1648,6 +1709,7 @@ bool ImGui::AssetSlot(
       }
     }
     ImGui::EndChild();
+    ImGui::EndDisabled();
     ImGui::EndPopup();
   }
 

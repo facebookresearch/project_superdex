@@ -3614,6 +3614,7 @@ void ModelEditor::UpdateReferenceModel(ReferenceModel& rm, bool assignDefaultCol
     case AssetType::BotScene:
     case AssetType::BotTask:
     case AssetType::Tuner:
+    case AssetType::IK:
     case AssetType::Unknown:
     case AssetType::Count:
       break; // not a viewer-only reference model type; leave the slot empty

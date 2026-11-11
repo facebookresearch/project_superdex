@@ -61,6 +61,7 @@
 #include <utility>
 
 #include "editors/bot_scene_editor.h"
+#include "editors/ik_editor.h"
 #include "editors/mochi_prefab_editor.h"
 #include "editors/model_editor.h"
 #include "editors/tuner_editor.h"
@@ -655,12 +656,19 @@ void SuperDexStudio::OnUpdate() {
     auto& undoStack = editor->GetUndoStack();
     // Undo/Redo
     if (editor->CanUndoRedo() && undoStack.IsInitialized()) {
-      if (ImGui::IsKeyChordPressed(ImGuiKey_Z | ImGuiMod_Ctrl | ImGuiMod_Shift)) {
+      bool const redo = ImGui::IsKeyChordPressed(ImGuiKey_Z | ImGuiMod_Ctrl | ImGuiMod_Shift);
+      bool const undo = ImGui::IsKeyChordPressed(ImGuiKey_Z | ImGuiMod_Ctrl);
+      bool const redoY = ImGui::IsKeyChordPressed(ImGuiKey_Y | ImGuiMod_Ctrl);
+      if (redo || undo || redoY) {
+        if (auto* ikEditor = dynamic_cast<IKEditor*>(editor)) {
+          ikEditor->CommitPendingEdits();
+        }
+      }
+      if (redo) {
         undoStack.Redo();
-      } else if (ImGui::IsKeyChordPressed(ImGuiKey_Z | ImGuiMod_Ctrl)) {
+      } else if (undo) {
         undoStack.Undo();
-      } else if (ImGui::IsKeyChordPressed(
-                     ImGuiKey_Y | ImGuiMod_Ctrl)) { // NOLINT(bugprone-branch-clone)
+      } else if (redoY) { // NOLINT(bugprone-branch-clone)
         undoStack.Redo();
       }
     }
@@ -863,14 +871,21 @@ void SuperDexStudio::RefreshEditors(std::vector<IAssetReferencer*> const& refere
   }
   for (auto const& editorPtr : _assetEditors) {
     AssetEditor* editor = editorPtr.get();
-    // Refresh the editor if it directly referenced a rewritten path, or if it represents an asset
-    // whose references changed.
-    bool const refresh = std::ranges::find(referencers, static_cast<IAssetReferencer*>(editor)) !=
+    // An IK editor also depends on its source bot, even when only the bot's model references
+    // changed. Refresh consumers after their source assets have been updated.
+    bool referencesAffectedSource = false;
+    editor->ForEachReferencedPath([&](mochi::Path const& path) {
+      referencesAffectedSource |= std::ranges::any_of(
+          affectedAssets, [&](Asset* asset) { return asset->GetPath() == path; });
+    });
+    bool const refresh = referencesAffectedSource ||
+        std::ranges::find(referencers, static_cast<IAssetReferencer*>(editor)) !=
             referencers.end() ||
         std::ranges::any_of(affectedAssets,
                             [&](Asset* asset) { return editor->RepresentsAsset(asset); });
     if (refresh) {
       editor->Refresh();
+      _assetManager->ResyncReferencer(editor);
     }
   }
 }
@@ -998,7 +1013,6 @@ void SuperDexStudio::SaveActiveAssetEditorAs() {
   OpenFile(selected);
 }
 
-#if MOCHI_INTERNAL
 void SuperDexStudio::CreateSceneArchive(mochi::Path const& scenePath) {
   if (auto const* scene = _assetManager->FindAssetByPath(scenePath);
       scene != nullptr && scene->IsDirty()) {
@@ -1046,7 +1060,6 @@ void SuperDexStudio::CreateSceneArchive(mochi::Path const& scenePath) {
   MOCHI_LOG("Created scene archive '%s'.", selected.ToString().c_str());
   AddRecentFile(selected);
 }
-#endif // MOCHI_INTERNAL
 
 void SuperDexStudio::SaveAllAssetEditors() {
   for (auto& editor : _assetEditors) {
@@ -1684,9 +1697,10 @@ void SuperDexStudio::ShowMainMenu() {
             "*.superdex_prefab",
             "*.mochi_prefab",
             "*.superdex_tuner",
-#if MOCHI_INTERNAL
+            "*.superdex_ik",
             "*.superdex_scene",
             "*.superdex_scene_archive",
+#if MOCHI_INTERNAL
             "*.mochi_bot_scene",
             "*.mochi_bot_scene_archive",
 #endif
@@ -2124,7 +2138,7 @@ bool SuperDexStudio::ShowPhysicsSettings() {
   }
   if (ImGui::CollapsingHeader("Studio")) {
     ImGui::Indent();
-    changed |= ImGui::SimpleReflectionStruct(_appSettings.physics.studio);
+    changed |= ShowStudioPhysicsSettings(_appSettings.physics.studio);
     // Drag tuning is studio-only too, and unlike the rest of the physics settings it is never
     // seeded into an editor, so it lives here rather than in the per-editor window.
     if (ImGui::CollapsingHeader("Physics Drag")) {
@@ -2555,9 +2569,8 @@ void SuperDexStudio::BuildDefaultDockLayout() {
   DockEditorDefaultWindows<BotEditor>(dock_right, dock_right_bottom, dock_bottom);
   DockEditorDefaultWindows<MochiPrefabEditor>(dock_right, dock_right_bottom, dock_bottom);
   DockEditorDefaultWindows<TunerEditor>(dock_right, dock_right_bottom, dock_bottom);
-#if MOCHI_INTERNAL
+  DockEditorDefaultWindows<IKEditor>(dock_right, dock_right_bottom, dock_bottom);
   DockEditorDefaultWindows<BotSceneEditor>(dock_right, dock_right_bottom, dock_bottom);
-#endif
   ImGui::DockBuilderFinish(dockSpaceId);
   // Reset all window visibility to defaults.
   _appSettings.windowVisibility.clear();
