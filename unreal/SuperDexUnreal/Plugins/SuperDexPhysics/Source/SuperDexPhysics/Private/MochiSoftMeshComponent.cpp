@@ -138,6 +138,8 @@ static void PopulateFromMochiMesh_SoftInternal(
     FDynamicMesh3& Mesh,
     UMochiModel* Model,
     bool bUseMochiNodeNormals,
+    TConstArrayView<FVector2f> RenderModelUVs,
+    TConstArrayView<FLinearColor> RenderModelColors,
     mochi::ActorHandle const& MochiExistingActor,
     UWorld* World) {
   MOCHI_PROFILE_SCOPE();
@@ -165,6 +167,24 @@ static void PopulateFromMochiMesh_SoftInternal(
   }
 
   ComputeOrDiscardVertexNormals(Mesh, bUseMochiNodeNormals);
+  // Vertex IDs are visual-mesh node indices. A count mismatch means the model changed after import,
+  // or the mesh came from the contact skin or surface instead. Flat shading is not supported: it
+  // draws face normals, but the material's tangents are built from the normal overlay.
+  const auto fits = [&Mesh](int32 Num) { return Num == 0 || Num == Mesh.MaxVertexID(); };
+  if (bUseMochiNodeNormals && !(RenderModelUVs.IsEmpty() && RenderModelColors.IsEmpty())) {
+    if (fits(RenderModelUVs.Num()) && fits(RenderModelColors.Num())) {
+      EnableSoftMeshRenderModelAttributes(Mesh, RenderModelUVs, RenderModelColors);
+    } else {
+      UE_LOG(
+          LogMochiPhysics,
+          Warning,
+          TEXT(
+              "Render model UVs or colors aren't drawn on Mochi model %s: they don't match the %d "
+              "vertices of its drawn mesh. Reimport the prefab."),
+          *GetNameSafe(Model),
+          Mesh.MaxVertexID());
+    }
+  }
 }
 
 void UMochiSoftMeshComponent::SetMochiModel(UMochiModel* NewMochiModel) {
@@ -172,7 +192,13 @@ void UMochiSoftMeshComponent::SetMochiModel(UMochiModel* NewMochiModel) {
   Model = NewMochiModel;
   EditMesh([this](UE::Geometry::FDynamicMesh3& Mesh) {
     PopulateFromMochiMesh_SoftInternal(
-        Mesh, Model, bUseMochiNodeNormals, MochiExistingActor, GetWorld());
+        Mesh,
+        Model,
+        bUseMochiNodeNormals,
+        RenderModelUVs,
+        RenderModelColors,
+        MochiExistingActor,
+        GetWorld());
   });
   ValidateMaterialSlots();
 }
@@ -180,13 +206,47 @@ void UMochiSoftMeshComponent::SetMochiModel(UMochiModel* NewMochiModel) {
 void UMochiSoftMeshComponent::OnRegister() {
   MOCHI_PROFILE_SCOPE();
   SetEnableFlatShading(!bUseMochiNodeNormals);
+  if (bUseMochiNodeNormals) {
+    if (!RenderModelUVs.IsEmpty()) {
+      // Normal maps need tangents that follow the deformation.
+      SetTangentsType(EDynamicMeshComponentTangentsMode::AutoCalculated);
+    }
+    if (!RenderModelColors.IsEmpty()) {
+      // Converts the linear colors as a static mesh does.
+      SetVertexColorSpaceTransformMode(EDynamicMeshVertexColorTransformMode::LinearToSRGB);
+    }
+  }
   // Populate the underlying UDynamicMesh from the Model data
   EditMesh([this](UE::Geometry::FDynamicMesh3& Mesh) {
     PopulateFromMochiMesh_SoftInternal(
-        Mesh, Model, bUseMochiNodeNormals, MochiExistingActor, GetWorld());
+        Mesh,
+        Model,
+        bUseMochiNodeNormals,
+        RenderModelUVs,
+        RenderModelColors,
+        MochiExistingActor,
+        GetWorld());
   });
   ValidateMaterialSlots();
   Super::OnRegister();
+}
+
+void UMochiSoftMeshComponent::BeginPlay() {
+  MOCHI_PROFILE_SCOPE();
+  WarnIfRenderModelAttributesNotDrawn();
+  Super::BeginPlay();
+}
+
+void UMochiSoftMeshComponent::WarnIfRenderModelAttributesNotDrawn() const {
+  if (!bUseMochiNodeNormals && (!RenderModelUVs.IsEmpty() || !RenderModelColors.IsEmpty())) {
+    UE_LOG(
+        LogMochiPhysics,
+        Warning,
+        TEXT(
+            "%s has render model UVs or colors, which aren't drawn because Use Mochi Node Normals "
+            "is off: flat shading can't give the render model's material matching tangents."),
+        *GetPathName());
+  }
 }
 
 void UMochiSoftMeshComponent::SetExistingMochiActorHandle(mochi::ActorHandle Handle) {
@@ -210,12 +270,21 @@ void UMochiSoftMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& Prop
   MOCHI_PROFILE_SCOPE();
   // Check for changes in the Model property, and regenerate dynamic mesh if needed
   const FName PropName = PropertyChangedEvent.GetPropertyName();
+  if (PropName == GET_MEMBER_NAME_CHECKED(UMochiSoftMeshComponent, bUseMochiNodeNormals)) {
+    WarnIfRenderModelAttributesNotDrawn();
+  }
   if (PropName == GET_MEMBER_NAME_CHECKED(UMochiSoftMeshComponent, Model)) {
     UE_LOG(LogMochiPhysics, Display, TEXT("[%hs] %s changed"), __FUNCTION__, *PropName.ToString());
 
     EditMesh([this](UE::Geometry::FDynamicMesh3& Mesh) {
       PopulateFromMochiMesh_SoftInternal(
-          Mesh, Model, bUseMochiNodeNormals, MochiExistingActor, GetWorld());
+          Mesh,
+          Model,
+          bUseMochiNodeNormals,
+          RenderModelUVs,
+          RenderModelColors,
+          MochiExistingActor,
+          GetWorld());
     });
     ValidateMaterialSlots();
   }

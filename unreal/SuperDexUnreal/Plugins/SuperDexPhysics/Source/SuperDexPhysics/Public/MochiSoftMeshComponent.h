@@ -56,6 +56,14 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
   // Enable elastic energy query.
   UPROPERTY(EditAnywhere, Category = "Mochi")
   bool bEnableElasticEnergyQuery = false;
+  // TEXCOORD_0 and COLOR_0 (linear RGBA) of the prefab render model, one per visual-mesh node, set
+  // by the prefab importer when the render model is the visual mesh. Either may be empty. They are
+  // drawn only when bUseMochiNodeNormals is set, since flat shading is not supported. Not shown in
+  // the Details panel, which would build a property node per element.
+  UPROPERTY()
+  TArray<FVector2f> RenderModelUVs;
+  UPROPERTY()
+  TArray<FLinearColor> RenderModelColors;
 
   // EXPERIMENTAL
 
@@ -91,6 +99,8 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
 
   void SetMochiModel(UMochiModel* NewMochiModel);
 
+  virtual void BeginPlay() override;
+
   // TODO: No the most graceful, but permits a path to create a dynamic mesh component from an
   // existing Mochi actor handle.
   void SetExistingMochiActorHandle(mochi::ActorHandle Handle);
@@ -105,6 +115,8 @@ class SUPERDEXPHYSICS_API UMochiSoftMeshComponent : public UMochiDeformableMeshC
   virtual void OnQueryDataApplied(const FMochiActorQueryData& QueryData) override;
 
  private:
+  void WarnIfRenderModelAttributesNotDrawn() const;
+
   // TODO: Again, not very graceful, but these fields permit construction of this component from an
   // existing actor, specifically for skinned hand meshes.
   mochi::ActorHandle MochiExistingActor;

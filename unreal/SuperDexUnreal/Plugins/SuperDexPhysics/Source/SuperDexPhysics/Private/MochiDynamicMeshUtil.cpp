@@ -19,6 +19,7 @@
 #include "MochiConversions.h"
 #include "MochiPhysicsModule.h"
 
+#include "DynamicMesh/DynamicMeshAttributeSet.h"
 #include "DynamicMesh/MeshNormals.h"
 
 #include <mochi_core/geometry/mesh_data_utils.h>
@@ -219,6 +220,49 @@ void ConvertElementBarycenterReferencePositions(
   }
 }
 
+void EnableSoftMeshRenderModelAttributes(
+    UE::Geometry::FDynamicMesh3& Mesh,
+    TConstArrayView<FVector2f> UVs,
+    TConstArrayView<FLinearColor> Colors) {
+  MOCHI_PROFILE_SCOPE();
+  const int32 vertexCount = Mesh.MaxVertexID();
+  // Element IDs must start at 0 to match vertex IDs.
+  check(!Mesh.HasAttributes());
+  check(UVs.IsEmpty() || UVs.Num() == vertexCount);
+  check(Colors.IsEmpty() || Colors.Num() == vertexCount);
+  // Enabling attributes creates one UV layer and one normal layer. Without UVs, the UV layer's
+  // triangles stay unset, as in a mesh with no UVs.
+  Mesh.EnableAttributes();
+  UE::Geometry::FDynamicMeshAttributeSet* attributes = Mesh.Attributes();
+  UE::Geometry::FDynamicMeshNormalOverlay* normalOverlay = attributes->PrimaryNormals();
+  UE::Geometry::FDynamicMeshUVOverlay* uvOverlay =
+      UVs.IsEmpty() ? nullptr : attributes->PrimaryUV();
+  UE::Geometry::FDynamicMeshColorOverlay* colorOverlay = nullptr;
+  if (!Colors.IsEmpty()) {
+    attributes->EnablePrimaryColors();
+    colorOverlay = attributes->PrimaryColors();
+  }
+  for (int vertIdx = 0; vertIdx < vertexCount; ++vertIdx) {
+    normalOverlay->AppendElement(Mesh.GetVertexNormal(vertIdx));
+    if (uvOverlay) {
+      uvOverlay->AppendElement(UVs[vertIdx]);
+    }
+    if (colorOverlay) {
+      colorOverlay->AppendElement(FVector4f(Colors[vertIdx]));
+    }
+  }
+  for (const int triIdx : Mesh.TriangleIndicesItr()) {
+    const UE::Geometry::FIndex3i tri = Mesh.GetTriangle(triIdx);
+    normalOverlay->SetTriangle(triIdx, tri);
+    if (uvOverlay) {
+      uvOverlay->SetTriangle(triIdx, tri);
+    }
+    if (colorOverlay) {
+      colorOverlay->SetTriangle(triIdx, tri);
+    }
+  }
+}
+
 void UpdateDynamicMeshFromMochiQuery(
     const TArray<mochi::real>& NodePositions,
     const TArray<mochi::real>& NodeNormals,
@@ -227,6 +271,10 @@ void UpdateDynamicMeshFromMochiQuery(
     UE::Geometry::FDynamicMesh3& Mesh) {
   MOCHI_PROFILE_SCOPE();
   const FVector3f invScale3d = static_cast<FVector3f>(InvScale3D);
+  // The render proxy draws the normal overlay rather than the vertex normals when there is one.
+  UE::Geometry::FDynamicMeshNormalOverlay* normalOverlay =
+      bUseMochiNodeNormals && Mesh.HasAttributes() ? Mesh.Attributes()->PrimaryNormals() : nullptr;
+  check(!normalOverlay || normalOverlay->ElementCount() == Mesh.MaxVertexID());
   // single precision converter for speed
   FMochiToUnrealConverter_float m2uf;
   for (int i = 0; i < NodePositions.Num(); i += 3) {
@@ -238,6 +286,9 @@ void UpdateDynamicMeshFromMochiQuery(
       FVector3f VertNormal =
           m2uf.DirectionToUnreal({NodeNormals[i], NodeNormals[i + 1], NodeNormals[i + 2]});
       Mesh.SetVertexNormal(VertIdx, VertNormal);
+      if (normalOverlay) {
+        normalOverlay->SetElement(VertIdx, VertNormal);
+      }
     }
   }
 }
