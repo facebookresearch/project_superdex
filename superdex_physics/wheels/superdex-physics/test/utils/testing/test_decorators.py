@@ -13,49 +13,71 @@
 # limitations under the License.
 
 import unittest
+from types import ModuleType
 
 from superdex.physics.utils.testing.decorators import skip, skip_if
-from superdex.physics.utils.testing.environment import IS_INTERNAL_CI
 
 ########################################################################################
 
 
 class TestDecorators(unittest.TestCase):
-    """Test class for testing functionality."""
+    def test_excluded_methods_are_not_discovered(self) -> None:
+        for decorator in (skip("Unsupported"), skip_if(True, "Unsupported")):
+            with self.subTest(decorator=decorator):
+                executed: list[str] = []
 
-    @skip_if(IS_INTERNAL_CI, "Unable to test in internal CI")
-    def test_skip_decorator(self):
-        """Test that the skip decorator skips tests."""
+                class Example(unittest.TestCase):
+                    executions = executed
 
-        @skip("Skipping for testing")
-        def test_skipped():
-            self.fail("This test should be skipped")
+                    @decorator
+                    def test_excluded(self) -> None:
+                        self.fail("Excluded test ran")
 
-        # Run the test and verify that it was skipped.
-        with self.assertRaises(unittest.SkipTest):
-            test_skipped()
+                    @skip_if(False, "Supported")
+                    def test_included(self) -> None:
+                        self.assertEqual(self.executions, [])
+                        self.executions.append("included")
 
-    @skip_if(IS_INTERNAL_CI, "Unable to test in internal CI")
-    def test_skip_if_decorator(self):
-        """Test that the skip_if decorator skips tests based on a condition."""
+                loader = unittest.TestLoader()
+                self.assertEqual(loader.getTestCaseNames(Example), ["test_included"])
+                result = unittest.TestResult()
+                loader.loadTestsFromTestCase(Example).run(result)
+                self.assertTrue(result.wasSuccessful())
+                self.assertEqual(result.testsRun, 1)
+                self.assertEqual(result.skipped, [])
+                self.assertEqual(executed, ["included"])
 
-        @skip_if(True, "Skipping for testing")
-        def test_skipped():
-            self.fail("This test should be skipped")
+    def test_excluded_classes_are_not_discovered(self) -> None:
+        for decorator in (skip("Unsupported"), skip_if(True, "Unsupported")):
+            with self.subTest(decorator=decorator):
 
-        # Run the test and verify that it was skipped.
-        with self.assertRaises(unittest.SkipTest):
-            test_skipped()
+                @decorator
+                class Excluded(unittest.TestCase):
+                    def test_excluded(self) -> None:
+                        self.fail("Excluded class ran")
 
-        @skip_if(False, "Skipping for testing")
-        def test_not_skipped():
-            pass
+                module = ModuleType("example_tests")
+                module.__dict__["Excluded"] = Excluded
+                suite = unittest.TestLoader().loadTestsFromModule(module)
+                self.assertEqual(suite.countTestCases(), 0)
 
-        # Run the test and verify that it was not skipped.
-        test_not_skipped()
+    def test_false_condition_preserves_methods_and_classes(self) -> None:
+        def method() -> str:
+            return "enabled"
 
+        for item in (method, unittest.TestCase):
+            with self.subTest(item=item):
+                self.assertIs(skip_if(False, "Supported")(item), item)
+        self.assertEqual(skip_if(False, "Supported")(method)(), "enabled")
 
-########################################################################################
+    def test_excluded_override_does_not_discover_inherited_method(self) -> None:
+        class Base(unittest.TestCase):
+            def test_excluded(self) -> None:
+                self.fail("Inherited test ran")
 
-if __name__ == "__main__":
-    unittest.main()
+        class Derived(Base):
+            @skip_if(True, "Unsupported")
+            def test_excluded(self) -> None:
+                self.fail("Excluded override ran")
+
+        self.assertEqual(unittest.TestLoader().getTestCaseNames(Derived), [])

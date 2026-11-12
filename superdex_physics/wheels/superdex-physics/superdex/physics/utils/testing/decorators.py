@@ -12,48 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
-from functools import wraps
 from typing import Any, Callable
-
-from superdex.physics.utils.testing.environment import IS_INTERNAL_CI
 
 ########################################################################################
 
 
 def skip(reason: str) -> Callable[[Any], Any]:
-    """
-    Unconditionally skip a test with the given reason. This is a convenience wrapper
-    around skip_if that always skips the test.
-    """
+    """Unconditionally omit a test from discovery with the given reason."""
     return skip_if(condition=True, reason=reason)
 
 
 def skip_if(condition: bool, reason: str) -> Callable[[Any], Any]:
     """
-    Conditionally skip a test based on a boolean condition. This decorator provides
-    different behavior depending on the environment. If the test is running in
-    internal CI, it will print a skip message and return early, but will not set the
-    skipped flag. This avoids flagging intentionally skipped tests as warnings in the
-    internal CI UI. In other environments, it falls back to unittest.skip() for proper
-    test reporting.
+    Omit a test method or class from discovery when the condition is true.
+
+    Excluded methods and classes become None, which unittest does not discover.
+    The reason documents why the test does not apply to this configuration.
     """
 
-    def factory(item: Callable[[Any], Any]) -> Callable[[Any], Any]:
-        # If condition is False, return the original item unchanged.
-        if not condition:
-            return item
-
-        # Use unittest's built-in skip mechanism for types and for methods, as long
-        # as the test is not running in internal CI.
-        if isinstance(item, type) or not IS_INTERNAL_CI:
-            return unittest.skip(reason)(item)
-
-        # For methods running in internal CI, create a wrapper that prints skip message.
-        @wraps(item)
-        def wrapper(*args, **kwargs):
-            print(f"Skipping test {item.__name__} on internal CI because {reason}.")
-
-        return wrapper
+    def factory(item: Any) -> Any:
+        return None if condition else item
 
     return factory
