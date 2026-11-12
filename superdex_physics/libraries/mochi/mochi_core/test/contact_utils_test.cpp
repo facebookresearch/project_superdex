@@ -665,10 +665,48 @@ static ContactDetectionResult MakeAnchoredContacts(
   return result;
 }
 
+// Contacts for the anchor kernel tests, one per lane, cycling through kNumAnchorContactPatterns
+// patterns: displacements from the anchor of 0.51, 5 and 1.5 presliding displacements (sticking,
+// then sliding), a contact beyond the penalty threshold, and one whose normals are aligned. The
+// last two lose their anchor and have no friction.
+int constexpr kNumAnchorContactPatterns = 5;
+static ContactDetectionResult MakeAnchorContactPatterns(
+    ContactParams const& params,
+    int numContacts) {
+  real const delta = params.preslidingDisplacement;
+  std::array<Real3, kNumAnchorContactPatterns> const kSlips = {
+      Real3{0.2_r, 0.1_r, 0.5_r} * delta,
+      Real3{2_r, 4_r, 1_r} * delta,
+      Real3{0.9_r, -1.1_r, 0_r} * delta,
+      Real3{0.2_r, 0_r, 0_r} * delta,
+      Real3{0.2_r, 0_r, 0_r} * delta};
+  std::array<Real3, kNumAnchorContactPatterns> const kOffsets = {
+      Real3{0.3_r, 0_r, 0.2_r} * delta,
+      Real3{1_r, 0_r, 0_r} * delta,
+      Real3{0.3_r, 0.2_r, 0_r} * delta,
+      Real3{0.1_r, 0_r, 0_r} * delta,
+      Real3{0.1_r, 0_r, 0_r} * delta};
+  DynamicArray<Real3> slips;
+  DynamicArray<Real3> offsets;
+  DynamicArray<real> distances;
+  for (int i = 0; i < numContacts; ++i) {
+    int const pattern = i % kNumAnchorContactPatterns;
+    slips.push_back(kSlips[pattern]);
+    offsets.push_back(kOffsets[pattern]);
+    distances.push_back(
+        pattern == 3 ? params.GetPenaltyThresholdDist(/*addPadding*/ false) : -1e-4_r);
+  }
+  ContactDetectionResult result = MakeAnchoredContacts(slips, offsets, distances);
+  for (int i = 4; i < numContacts; i += kNumAnchorContactPatterns) {
+    result.normalColliding[i] = Real3{0_r, 0_r, 1_r};
+  }
+  return result;
+}
+
 // The anchor sticks within the presliding displacement, keeping the whole displacement from it, and
 // slides along with the contact beyond it, scaling the whole displacement by the radial return of
-// its tangential part. Contacts at the penalty threshold lose their anchor, and new contacts that
-// have not moved get none.
+// its tangential part. Contacts at the penalty threshold lose their anchor, and contacts that have
+// not moved keep one at zero offset.
 TEST(ContactPenalties, AdvanceAnchorOffsets_RadialReturn) {
   ContactParams const params;
   real const delta = params.preslidingDisplacement;
@@ -687,6 +725,7 @@ TEST(ContactPenalties, AdvanceAnchorOffsets_RadialReturn) {
   for (int i = 0; i < isize(expected); ++i) {
     EXPECT_NEAR_TOL(expected[i], result.anchorOffset[i], 1e-4_r * delta) << "contact " << i;
   }
+  EXPECT_EQ((DynamicArray<bool>{true, true, true, false}), result.keepsAnchor);
 }
 
 // The displacement from the anchor is projected with the friction normal of the stage: the collider
@@ -765,13 +804,15 @@ TEST(ContactPenalties, AdvanceAnchorOffsets_EveryBatchSize) {
 
     for (int i = 0; i < numContacts; ++i) {
       Real3 expected{};
-      if (distances[i] < params.GetPenaltyThresholdDist(/*addPadding*/ false)) {
+      bool const keepsAnchor = distances[i] < params.GetPenaltyThresholdDist(/*addPadding*/ false);
+      if (keepsAnchor) {
         Real3 const displacement = slips[i] + offsets[i];
         Real3 const slipT{displacement[0], displacement[1], 0_r};
         expected = Min(1_r, delta / Norm(slipT)) * displacement;
       }
       EXPECT_NEAR_TOL(expected, result.anchorOffset[i], 1e-4_r * delta)
           << numContacts << " contacts, contact " << i;
+      EXPECT_EQ(keepsAnchor, result.keepsAnchor[i]) << numContacts << " contacts, contact " << i;
     }
   }
 }
@@ -785,6 +826,7 @@ TEST(ContactPenalties, AdvanceAnchorOffsets_WithoutFriction) {
       MakeAnchoredContacts({Real3{0.1_r, 0_r, 0_r} * delta}, {Real3{0.2_r, 0_r, 0_r} * delta});
   AdvanceAnchorOffsets(result, frictionless, ContactEvalConfig{.elastoPlasticFriction = true});
   EXPECT_EQ(Real3{}, result.anchorOffset[0]);
+  EXPECT_FALSE(result.keepsAnchor[0]);
 }
 
 // Contacts whose normals are aligned beyond ContactParams::maxAlignmentNormals have no normal
@@ -806,18 +848,146 @@ TEST(ContactPenalties, AdvanceAnchorOffsets_NormalAlignment) {
         params,
         ContactEvalConfig{
             .validCollidingNormals = validCollidingNormals, .elastoPlasticFriction = true});
-    return result.anchorOffset;
+    return result;
   };
   Real3 const sticking = slip + offset;
   real const tol = 1e-4_r * delta;
 
-  DynamicArray<Real3> const masked = advance(/*validCollidingNormals*/ true);
-  EXPECT_NEAR_TOL(sticking, masked[0], tol);
-  EXPECT_EQ(Real3{}, masked[1]);
+  ContactDetectionResult const masked = advance(/*validCollidingNormals*/ true);
+  EXPECT_NEAR_TOL(sticking, masked.anchorOffset[0], tol);
+  EXPECT_EQ(Real3{}, masked.anchorOffset[1]);
+  EXPECT_EQ((DynamicArray<bool>{true, false}), masked.keepsAnchor);
 
-  DynamicArray<Real3> const unmasked = advance(/*validCollidingNormals*/ false);
-  EXPECT_NEAR_TOL(sticking, unmasked[0], tol);
-  EXPECT_NEAR_TOL(sticking, unmasked[1], tol);
+  ContactDetectionResult const unmasked = advance(/*validCollidingNormals*/ false);
+  EXPECT_NEAR_TOL(sticking, unmasked.anchorOffset[0], tol);
+  EXPECT_NEAR_TOL(sticking, unmasked.anchorOffset[1], tol);
+  EXPECT_EQ((DynamicArray<bool>{true, true}), unmasked.keepsAnchor);
+}
+
+// The VJP of the anchor advance matches central finite differences of AdvanceAnchorOffsets in the
+// stage-start offsets, for every batch size and lane: within and beyond the presliding
+// displacement, and zero for contacts that lose their anchor, beyond the penalty threshold or
+// masked by the alignment of their normals.
+TEST(ContactPenalties, AdvanceAnchorOffsetsVjp_MatchesFiniteDifferences) {
+  ContactParams const params;
+  real const delta = params.preslidingDisplacement;
+  ContactEvalConfig const config{.elastoPlasticFriction = true};
+  for (int numContacts = 1; numContacts <= 2 * kCollResponseMaxBatchSize + 1; ++numContacts) {
+    ContactDetectionResult const result = MakeAnchorContactPatterns(params, numContacts);
+    DynamicArray<Real3> zBars;
+    for (int i = 0; i < numContacts; ++i) {
+      zBars.push_back(Real3{1_r + 0.1_r * static_cast<real>(i), -0.5_r, 0.3_r});
+    }
+
+    DynamicArray<Real3> wBars = zBars;
+    AdvanceAnchorOffsetsVjp(result, params, config, MakeSpan(wBars));
+
+    real const eps = 1e-3_r * delta;
+    for (int i = 0; i < numContacts; ++i) {
+      for (int k = 0; k < 3; ++k) {
+        ContactDetectionResult plus = result;
+        ContactDetectionResult minus = result;
+        plus.anchorOffset[i][k] += eps;
+        minus.anchorOffset[i][k] -= eps;
+        AdvanceAnchorOffsets(plus, params, config);
+        AdvanceAnchorOffsets(minus, params, config);
+        real const fd = Dot(zBars[i], plus.anchorOffset[i] - minus.anchorOffset[i]) / (2_r * eps);
+        EXPECT_NEAR(fd, wBars[i][k], 2e-3_r)
+            << numContacts << " contacts, contact " << i << ", component " << k;
+      }
+    }
+  }
+}
+
+// Without Coulomb friction, contacts lose their anchors, so the advanced offsets have no adjoint.
+TEST(ContactPenalties, AdvanceAnchorOffsetsVjp_WithoutFriction) {
+  real const delta = ContactParams{}.preslidingDisplacement;
+  ContactParams frictionless;
+  frictionless.coulombFrictionCoefficient = 0_r;
+  ContactDetectionResult const result =
+      MakeAnchoredContacts({Real3{0.1_r, 0_r, 0_r} * delta}, {Real3{0.2_r, 0_r, 0_r} * delta});
+  DynamicArray<Real3> adjoint = {Real3{1_r, 2_r, 3_r}};
+  AdvanceAnchorOffsetsVjp(
+      result, frictionless, ContactEvalConfig{.elastoPlasticFriction = true}, MakeSpan(adjoint));
+  EXPECT_EQ(Real3{}, adjoint[0]);
+}
+
+// The derivative of the force with respect to the anchor offsets is the Coulomb block of the force
+// derivative: dforce with Coulomb friction minus dforce without it. Checked for every batch size
+// and lane, within and beyond the presliding displacement, beyond the penalty threshold and with
+// aligned normals, with the exact and the fitted friction Hessian, and with viscous friction and
+// normal damping, which do not depend on the offsets. It is requested alone and together with
+// dforce, whose viscous friction it must not include.
+TEST(ContactPenalties, ElastoPlasticFriction_DForceAnchorIsCoulombBlockOfDForce) {
+  ContactParams params;
+  params.viscousFrictionCoefficient = 0.1_r;
+  params.normalViscousDampingCoefficient = 0.1_r;
+  ContactParams withoutCoulomb = params;
+  withoutCoulomb.coulombFrictionCoefficient = 0_r;
+  real constexpr kDt = 0.01_r;
+  for (bool const useFittedHessian : {false, true}) {
+    ContactEvalConfig const config{
+        .useFittedHessian = useFittedHessian, .elastoPlasticFriction = true};
+    for (int numContacts = 1; numContacts <= 2 * kCollResponseMaxBatchSize + 1; ++numContacts) {
+      ContactDetectionResult const result = MakeAnchorContactPatterns(params, numContacts);
+
+      CollisionResponseResult withCoulombResponse;
+      CollisionResponseResult withoutCoulombResponse;
+      CollisionResponseResult anchorResponse;
+      withCoulombResponse.ResizeNoInit(numContacts, false, false, true, true);
+      withoutCoulombResponse.ResizeNoInit(numContacts, false, false, true);
+      anchorResponse.ResizeNoInit(numContacts, false, false, false, true);
+      ComputeCollisionResponse<GradTarget::Current>(
+          result,
+          params,
+          config,
+          kDt,
+          false,
+          false,
+          true,
+          withCoulombResponse,
+          /*assemDForceAnchor*/ true);
+      ComputeCollisionResponse<GradTarget::Current>(
+          result, withoutCoulomb, config, kDt, false, false, true, withoutCoulombResponse);
+      ComputeCollisionResponse<GradTarget::Current>(
+          result,
+          params,
+          config,
+          kDt,
+          false,
+          false,
+          false,
+          anchorResponse,
+          /*assemDForceAnchor*/ true);
+
+      for (int i = 0; i < numContacts; ++i) {
+        VMatrix3x3r const expected =
+            withCoulombResponse.dforce[i] - withoutCoulombResponse.dforce[i];
+        // The difference cancels the penalty block, so compare relative to the full dforce.
+        real scale = 0_r;
+        for (int r = 0; r < 3; ++r) {
+          scale = Max(scale, Norm(ToReal3(withCoulombResponse.dforce[i][r])));
+        }
+        bool const hasFriction = i % kNumAnchorContactPatterns < 3;
+        for (CollisionResponseResult const* response : {&anchorResponse, &withCoulombResponse}) {
+          VMatrix3x3r const dforceAnchor = SimdSymToFull(response->dforceAnchor[i]);
+          for (int r = 0; r < 3; ++r) {
+            EXPECT_NEAR_TOL(ToReal3(expected[r]), ToReal3(dforceAnchor[r]), 1e-5_r * scale)
+                << "with dforce " << (response == &withCoulombResponse) << ", fitted Hessian "
+                << useFittedHessian << ", " << numContacts << " contacts, contact " << i << ", row "
+                << r;
+            if (!hasFriction) {
+              EXPECT_EQ(Real3{}, ToReal3(dforceAnchor[r]));
+            }
+          }
+        }
+        if (hasFriction) {
+          EXPECT_GT(Norm(ToReal3(expected[0])) + Norm(ToReal3(expected[1])), 0_r)
+              << "contact " << i << " should have a nonzero Coulomb block";
+        }
+      }
+    }
+  }
 }
 
 // The collision response and the rigid contact sums use elasto-plastic friction, with the anchor

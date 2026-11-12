@@ -170,6 +170,8 @@ static void ComputeBatchAnchorOffsets(benchmark::State& state) {
 
   DynamicArray<Real3> anchorOffset;
   anchorOffset.resize(kBatchSize, Real3{0.5_r, 0_r, -0.5_r} * delta);
+  DynamicArray<bool> keepsAnchor;
+  keepsAnchor.resize(kBatchSize);
   DynamicArray<Real3> posColliding;
   posColliding.resize(kBatchSize, Real3{0.3_r, 0.1_r, -0.2_r} * delta);
   DynamicArray<Real3> posCollidingStageStart;
@@ -191,6 +193,7 @@ static void ComputeBatchAnchorOffsets(benchmark::State& state) {
     CallNoInline([&]() {
       ComputeBatchAnchorOffsets<kBatchSize>(
           MakeSpan(anchorOffset),
+          MakeSpan(keepsAnchor),
           MakeConstSpan(sdfInfo.val),
           MakeConstSpan(sdfInfo.grad),
           MakeConstSpan(sdfInfoStageStart.grad),

@@ -27,6 +27,7 @@
 #include <cmath>
 #include <limits>
 #include <optional>
+#include <type_traits>
 
 using namespace mochi;
 
@@ -34,28 +35,34 @@ using namespace mochi;
 constexpr int kCollResponseBatchSize = Min(2 * Simd<real>::kSize, kCollResponseMaxBatchSize);
 
 // Apply collider integration weights from a ContactDetectionResult to a CollisionResponseResult.
-// This scales the energy, force, and dforce arrays by the corresponding collider weights.
+// This scales the assembled energy, force, dforce and dforceAnchor arrays by the corresponding
+// collider weights. The other arrays may keep the size of an earlier assembly, so they are not
+// touched.
 // If colliderIntegrationWeights is empty, this function is a no-op.
 static void ApplyColliderWeightsToCollisionResponse(
     ContactDetectionResult const& contactQuery,
     Interval<int> pointRange,
+    bool assemEnergy,
+    bool assemForce,
+    bool assemDForce,
+    bool assemDForceAnchor,
     CollisionResponseResult& outResponse) {
   if (contactQuery.colliderIntegrationWeights.empty()) {
     return;
   }
-  bool const scaleEnergy = !outResponse.energy.empty();
-  bool const scaleForce = !outResponse.force.empty();
-  bool const scaleDForce = !outResponse.dforce.empty();
   for (auto s : pointRange) {
     real colliderWeight = contactQuery.colliderIntegrationWeights[s];
-    if (scaleEnergy) {
+    if (assemEnergy) {
       outResponse.energy[s] *= colliderWeight;
     }
-    if (scaleForce) {
+    if (assemForce) {
       outResponse.force[s] *= colliderWeight;
     }
-    if (scaleDForce) {
+    if (assemDForce) {
       outResponse.dforce[s] *= colliderWeight;
+    }
+    if (assemDForceAnchor) {
+      outResponse.dforceAnchor[s] *= colliderWeight;
     }
   }
 }
@@ -70,13 +77,16 @@ void mochi::ComputeCollisionResponseRange(
     bool assemEnergy,
     bool assemForce,
     bool assemDForce,
-    CollisionResponseResult& outResponse) {
+    CollisionResponseResult& outResponse,
+    bool assemDForceAnchor) {
   MOCHI_PROFILE_SCOPE();
 
   // Outputs should already be the correct size
   MOCHI_ASSERT(!assemEnergy || (outResponse.energy.size() == isize(contactQuery.sampleIndices)));
   MOCHI_ASSERT(!assemForce || (outResponse.force.size() == isize(contactQuery.sampleIndices)));
   MOCHI_ASSERT(!assemDForce || (outResponse.dforce.size() == isize(contactQuery.sampleIndices)));
+  MOCHI_ASSERT(
+      !assemDForceAnchor || (outResponse.dforceAnchor.size() == isize(contactQuery.sampleIndices)));
 
   MOCHI_ASSERT_VERBOSE(
       !config.explicitNormals ||
@@ -125,7 +135,9 @@ void mochi::ComputeCollisionResponseRange(
           assemForce,                                                                              \
           assemDForce,                                                                             \
           contactQuery.isSdfGradUnitary,                                                           \
-          contactQuery.isNormalCollidingUnitary);                                                  \
+          contactQuery.isNormalCollidingUnitary,                                                   \
+          assemDForceAnchor ? MakeSpan(outResponse.dforceAnchor).subspan(s, N)                     \
+                            : Span<VSymMatrix3x3r>{});                                             \
     }                                                                                              \
     break;
 
@@ -144,7 +156,14 @@ void mochi::ComputeCollisionResponseRange(
 #undef MOCHI_BATCH_CASE
 
   // Apply collider integration weights (e.g., for shell/shell contact).
-  ApplyColliderWeightsToCollisionResponse(contactQuery, pointRange, outResponse);
+  ApplyColliderWeightsToCollisionResponse(
+      contactQuery,
+      pointRange,
+      assemEnergy,
+      assemForce,
+      assemDForce,
+      assemDForceAnchor,
+      outResponse);
 }
 
 #define MOCHI_SPECIALIZE_COMPUTE_COLLISION_RESPONSE_RANGE(kGradTarget) \
@@ -157,20 +176,25 @@ void mochi::ComputeCollisionResponseRange(
       bool,                                                            \
       bool,                                                            \
       bool,                                                            \
-      CollisionResponseResult&);
+      CollisionResponseResult&,                                        \
+      bool);
 MOCHI_SPECIALIZE_COMPUTE_COLLISION_RESPONSE_RANGE(GradTarget::Current);
 MOCHI_SPECIALIZE_COMPUTE_COLLISION_RESPONSE_RANGE(GradTarget::Previous);
 #undef MOCHI_SPECIALIZE_COMPUTE_COLLISION_RESPONSE_RANGE
 
-void mochi::AdvanceAnchorOffsets(
-    ContactDetectionResult& contactQuery,
+// Calls batchFn(std::integral_constant<int, N>{}, s, inputs...) for the batches [s, s + N) of the
+// contacts of an anchor advance, after checking that the contacts have the data it reads. The
+// inputs are the arguments of ComputeBatchAnchorDisplacement after the anchor offsets, for the
+// batch.
+template <class BatchFnT>
+static void ForEachAnchorAdvanceBatch(
+    ContactDetectionResult const& contactQuery,
     ContactParams const& params,
-    ContactEvalConfig const& config) {
-  MOCHI_PROFILE_SCOPE();
-  auto& offsets = contactQuery.anchorOffset;
+    ContactEvalConfig const& config,
+    BatchFnT&& batchFn) {
   int const numContacts = isize(contactQuery.sampleIndices);
   MOCHI_ASSERT_VERBOSE(
-      config.elastoPlasticFriction && isize(offsets) == numContacts,
+      config.elastoPlasticFriction && isize(contactQuery.anchorOffset) == numContacts,
       "Anchors advance only with elasto-plastic friction, which requires anchor offsets.");
   MOCHI_ASSERT_VERBOSE(
       !config.explicitNormals || isize(contactQuery.sdfInfoStageStart.grad) == numContacts,
@@ -179,27 +203,31 @@ void mochi::AdvanceAnchorOffsets(
       !config.validCollidingNormals || isize(contactQuery.normalColliding) == numContacts,
       "Valid colliding normals require normalColliding.");
 
+  auto const callBatch = [&](auto batchSize, int s) {
+    int constexpr N = decltype(batchSize)::value;
+    batchFn(
+        batchSize,
+        s,
+        MakeConstSpan(contactQuery.sdfInfo.val).subspan(s, N),
+        MakeConstSpan(contactQuery.sdfInfo.grad).subspan(s, N),
+        config.explicitNormals ? MakeConstSpan(contactQuery.sdfInfoStageStart.grad).subspan(s, N)
+                               : Span<Real3 const>{},
+        config.validCollidingNormals ? MakeConstSpan(contactQuery.normalColliding).subspan(s, N)
+                                     : Span<Real3 const>{},
+        MakeConstSpan(contactQuery.posColliding).subspan(s, N),
+        MakeConstSpan(contactQuery.posCollidingStageStart).subspan(s, N),
+        params,
+        config,
+        contactQuery.isSdfGradUnitary,
+        contactQuery.isNormalCollidingUnitary);
+  };
   for (int s = 0; s < numContacts; s += kCollResponseBatchSize) {
     int const numPoints = Min(numContacts - s, kCollResponseBatchSize);
-#define MOCHI_BATCH_CASE(N)                                                                        \
-  case N:                                                                                          \
-    if constexpr ((N) <= kCollResponseBatchSize) {                                                 \
-      ComputeBatchAnchorOffsets<N>(                                                                \
-          MakeSpan(offsets).subspan(s, N),                                                         \
-          MakeConstSpan(contactQuery.sdfInfo.val).subspan(s, N),                                   \
-          MakeConstSpan(contactQuery.sdfInfo.grad).subspan(s, N),                                  \
-          config.explicitNormals                                                                   \
-              ? MakeConstSpan(contactQuery.sdfInfoStageStart.grad).subspan(s, N)                   \
-              : Span<Real3 const>{},                                                               \
-          config.validCollidingNormals ? MakeConstSpan(contactQuery.normalColliding).subspan(s, N) \
-                                       : Span<Real3 const>{},                                      \
-          MakeConstSpan(contactQuery.posColliding).subspan(s, N),                                  \
-          MakeConstSpan(contactQuery.posCollidingStageStart).subspan(s, N),                        \
-          params,                                                                                  \
-          config,                                                                                  \
-          contactQuery.isSdfGradUnitary,                                                           \
-          contactQuery.isNormalCollidingUnitary);                                                  \
-    }                                                                                              \
+#define MOCHI_BATCH_CASE(N)                             \
+  case N:                                               \
+    if constexpr ((N) <= kCollResponseBatchSize) {      \
+      callBatch(std::integral_constant<int, (N)>{}, s); \
+    }                                                   \
     break;
     // clang-format off
     switch (numPoints) {
@@ -212,6 +240,39 @@ void mochi::AdvanceAnchorOffsets(
     // clang-format on
 #undef MOCHI_BATCH_CASE
   }
+}
+
+void mochi::AdvanceAnchorOffsets(
+    ContactDetectionResult& contactQuery,
+    ContactParams const& params,
+    ContactEvalConfig const& config) {
+  MOCHI_PROFILE_SCOPE();
+  contactQuery.keepsAnchor.resize_noinit(contactQuery.sampleIndices.size());
+  ForEachAnchorAdvanceBatch(
+      contactQuery, params, config, [&](auto batchSize, int s, auto const&... inputs) {
+        int constexpr N = decltype(batchSize)::value;
+        ComputeBatchAnchorOffsets<N>(
+            MakeSpan(contactQuery.anchorOffset).subspan(s, N),
+            MakeSpan(contactQuery.keepsAnchor).subspan(s, N),
+            inputs...);
+      });
+}
+
+void mochi::AdvanceAnchorOffsetsVjp(
+    ContactDetectionResult const& contactQuery,
+    ContactParams const& params,
+    ContactEvalConfig const& config,
+    Span<Real3> inOutAdjoint) {
+  MOCHI_PROFILE_SCOPE();
+  MOCHI_ASSERT_VERBOSE(isize(inOutAdjoint) == isize(contactQuery.sampleIndices));
+  ForEachAnchorAdvanceBatch(
+      contactQuery, params, config, [&](auto batchSize, int s, auto const&... inputs) {
+        int constexpr N = decltype(batchSize)::value;
+        ComputeBatchAnchorOffsetsVjp<N>(
+            inOutAdjoint.subspan(s, N),
+            MakeConstSpan(contactQuery.anchorOffset).subspan(s, N),
+            inputs...);
+      });
 }
 
 namespace {

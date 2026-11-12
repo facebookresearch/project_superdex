@@ -15,6 +15,7 @@
  */
 
 #include "mochi_articulated_test_scenes.h"
+#include "mochi_friction_anchor_test_utils.h"
 #include "mochi_physics_test_fixture.h"
 
 // These tests inspect the friction anchor component and contact results, which are not exposed
@@ -38,13 +39,17 @@
 #include <utility>
 
 using namespace mochi;
+using test::AreEqualAnchors;
+using test::ExpectAnchors;
 
 // Contacts of a colliding actor with one collider, with their anchor offsets, at positions twice
-// those offsets, so that the anchors rebuilt from them are at points equal to the offsets.
+// those offsets, so that the anchors rebuilt from them are at points equal to the offsets. They all
+// keep their anchors, unless told otherwise.
 static ActiveCollision MakeCollision(
     entt::entity collider,
     DynamicArray<int> const& samples,
-    DynamicArray<Real3> const& offsets) {
+    DynamicArray<Real3> const& offsets,
+    DynamicArray<bool> keepsAnchor = {}) {
   ActiveCollision collision;
   collision.colliderEntity = collider;
   collision.collisionResult.sampleIndices = samples;
@@ -52,53 +57,69 @@ static ActiveCollision MakeCollision(
   for (Real3 const& offset : offsets) {
     collision.collisionResult.posColliding.push_back(2_r * offset);
   }
+  if (keepsAnchor.empty()) {
+    keepsAnchor.resize(offsets.size(), true);
+  }
+  collision.collisionResult.keepsAnchor = std::move(keepsAnchor);
   return collision;
 }
 
-// Point of the sample's anchor on the collider, or zero: the lookup by index that
-// FillFrictionAnchorOffsets falls back to.
+// Point of the sample's anchor on the collider, or zero.
 static Real3 FindAnchorPoint(
     DynamicArray<FrictionAnchor> const& anchors,
-    CFrictionAnchorIndex const& index,
+    CFrictionAnchorIndex<AnchorSet::Active> const& index,
     int sample,
     entt::entity collider) {
-  auto const colliderId = entt::to_integral(collider);
-  for (int i = index[sample];
-       i != kSentinelIndex && i < isize(anchors) && anchors[i].sample == sample;
-       ++i) {
-    if (anchors[i].collider == colliderId) {
-      return anchors[i].point;
-    }
-  }
-  return Real3{};
-}
-
-// Expects the anchors, field by field and in order.
-static void ExpectAnchors(
-    DynamicArray<FrictionAnchor> const& expected,
-    DynamicArray<FrictionAnchor> const& actual) {
-  ASSERT_EQ(isize(expected), isize(actual));
-  for (int i = 0; i < isize(expected); ++i) {
-    EXPECT_EQ(expected[i].sample, actual[i].sample) << "anchor " << i;
-    EXPECT_EQ(expected[i].collider, actual[i].collider) << "anchor " << i;
-    EXPECT_EQ(expected[i].point, actual[i].point) << "anchor " << i;
-  }
-}
-
-// Whether the anchors are equal, field by field and in order.
-static bool AreEqualAnchors(
-    DynamicArray<FrictionAnchor> const& a,
-    DynamicArray<FrictionAnchor> const& b) {
-  return std::ranges::equal(a, b, [](FrictionAnchor const& x, FrictionAnchor const& y) {
-    return x.sample == y.sample && x.collider == y.collider && x.point == y.point;
-  });
+  int const i = FindFrictionAnchor(index, anchors, sample, entt::to_integral(collider));
+  return i == kSentinelIndex ? Real3{} : anchors[i].point;
 }
 
 // Expects the index entries of all samples, including kSentinelIndex for samples never indexed.
-static void ExpectIndex(CFrictionAnchorIndex const& index, DynamicArray<int> const& expected) {
+static void ExpectIndex(
+    CFrictionAnchorIndex<AnchorSet::Active> const& index,
+    DynamicArray<int> const& expected) {
   ASSERT_EQ(isize(expected), isize(index));
   for (int s = 0; s < isize(expected); ++s) {
     EXPECT_EQ(expected[s], index[s]) << "sample " << s;
+  }
+}
+
+// FindFrictionAnchorFromHint takes the anchor at the hint when it matches and falls back to the
+// index otherwise: in any lookup order it finds the anchor FindFrictionAnchor finds, and an absent
+// anchor leaves the hint unchanged.
+TEST(FrictionAnchorLookup, FindFromHintMatchesIndexLookup) {
+  CFrictionAnchors<AnchorSet::Pending> pending;
+  pending.anchors = {
+      {.sample = 0, .collider = 10},
+      {.sample = 0, .collider = 20},
+      {.sample = 2, .collider = 10},
+      {.sample = 3, .collider = 20}};
+  CFrictionAnchorIndex<AnchorSet::Pending> index(5);
+  IndexFrictionAnchors(pending, index);
+  Span<FrictionAnchor const> const anchors = MakeConstSpan(pending.anchors);
+
+  // In layout order, every lookup is the hint.
+  int hint = 0;
+  for (int i = 0; i < isize(anchors); ++i) {
+    EXPECT_EQ(
+        i,
+        FindFrictionAnchorFromHint(index, anchors, anchors[i].sample, anchors[i].collider, hint));
+    EXPECT_EQ(i + 1, hint);
+  }
+
+  // Out of order, with anchors absent for sample 1, for sample 2 on collider 20 and for sample 4.
+  struct Lookup {
+    int sample;
+    uint32_t collider;
+  };
+  Lookup const lookups[] = {{3, 20}, {1, 10}, {0, 20}, {2, 20}, {0, 10}, {4, 10}, {2, 10}};
+  hint = 0;
+  for (auto const [sample, collider] : lookups) {
+    int const expected = FindFrictionAnchor(index, anchors, sample, collider);
+    int const before = hint;
+    EXPECT_EQ(expected, FindFrictionAnchorFromHint(index, anchors, sample, collider, hint))
+        << "sample " << sample << ", collider " << collider;
+    EXPECT_EQ(expected == kSentinelIndex ? before : expected + 1, hint);
   }
 }
 
@@ -187,21 +208,21 @@ class FrictionAnchors : public test::MochiSceneTestBase {
     return GetRegistry().get<CFrictionAnchors<AnchorSet::Pending>>(GetEntity(actor)).anchors;
   }
 
-  CFrictionAnchorIndex& GetIndex(Actor* actor) {
-    return GetRegistry().get<CFrictionAnchorIndex>(GetEntity(actor));
+  CFrictionAnchorIndex<AnchorSet::Active>& GetIndex(Actor* actor) {
+    return GetRegistry().get<CFrictionAnchorIndex<AnchorSet::Active>>(GetEntity(actor));
   }
 
   // Copies the actor's pending anchors and indexes them, as at the start of the next step.
   void PromoteAnchors(Actor* actor) {
     ecs::InvokeOnEntity(&PromotePendingFrictionAnchors, GetRegistry(), GetEntity(actor));
-    ecs::InvokeOnEntity(&IndexFrictionAnchors, GetRegistry(), GetEntity(actor));
+    ecs::InvokeOnEntity(&IndexFrictionAnchors<AnchorSet::Active>, GetRegistry(), GetEntity(actor));
   }
 
   // Rebuilds the anchors from the given contacts, as after a converged step, and adopts and indexes
   // them, as at the start of the next one.
   void RebuildAnchors(
       DynamicArray<FrictionAnchor>& anchors,
-      CFrictionAnchorIndex& index,
+      CFrictionAnchorIndex<AnchorSet::Active>& index,
       DynamicArray<ActiveCollision> const& asyncCollisions,
       DynamicArray<ActiveCollision> const& syncCollisions = {}) {
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current> asyncActive(/*numPartitions*/ 1);
@@ -235,7 +256,7 @@ class FrictionAnchors : public test::MochiSceneTestBase {
       entt::entity a,
       entt::entity b,
       DynamicArray<FrictionAnchor>& anchors,
-      CFrictionAnchorIndex& index) {
+      CFrictionAnchorIndex<AnchorSet::Active>& index) {
     RebuildAnchors(
         anchors,
         index,
@@ -250,11 +271,11 @@ class FrictionAnchors : public test::MochiSceneTestBase {
     ASSERT_TRUE((reg.all_of<
                  CFrictionAnchors<AnchorSet::Active>,
                  CFrictionAnchors<AnchorSet::Pending>,
-                 CFrictionAnchorIndex>(e)))
+                 CFrictionAnchorIndex<AnchorSet::Active>>(e)))
         << actor->GetName();
     EXPECT_EQ(
         isize(reg.get<CContactSamples<TimeStep::Current> const>(e).positions),
-        isize(reg.get<CFrictionAnchorIndex const>(e)))
+        isize(reg.get<CFrictionAnchorIndex<AnchorSet::Active> const>(e)))
         << actor->GetName();
   }
 
@@ -263,7 +284,7 @@ class FrictionAnchors : public test::MochiSceneTestBase {
         .any_of<
             CFrictionAnchors<AnchorSet::Active>,
             CFrictionAnchors<AnchorSet::Pending>,
-            CFrictionAnchorIndex>(GetEntity(actor));
+            CFrictionAnchorIndex<AnchorSet::Active>>(GetEntity(actor));
   }
 
   // Seeds an anchor of the actor's sample 0 on each collider, as after a step.
@@ -462,7 +483,7 @@ TEST_F(FrictionAnchors, RebuildAppendsAdjacentAnchorsInContactOrder) {
   entt::entity const a = GetEntity(_plane);
   entt::entity const b = GetEntity(CreateRigidCube());
   DynamicArray<FrictionAnchor> anchors;
-  CFrictionAnchorIndex index(3);
+  CFrictionAnchorIndex<AnchorSet::Active> index(3);
   RebuildAnchors(
       anchors,
       index,
@@ -489,7 +510,7 @@ TEST_F(FrictionAnchors, RebuildGroupsBySample) {
   entt::entity const a = GetEntity(_plane);
   entt::entity const b = GetEntity(CreateRigidCube());
   DynamicArray<FrictionAnchor> anchors;
-  CFrictionAnchorIndex index(4);
+  CFrictionAnchorIndex<AnchorSet::Active> index(4);
   RebuildInterleavedAnchors(a, b, anchors, index);
 
   ExpectIndex(index, {2, kSentinelIndex, 0, kSentinelIndex});
@@ -517,7 +538,7 @@ TEST_F(FrictionAnchors, FillFindsAnchorsOfSamplesWithSeveralColliders) {
   entt::entity const b = GetEntity(CreateRigidCube());
   entt::entity const soft = GetEntity(CreateSoftCube());
   DynamicArray<FrictionAnchor> anchors;
-  CFrictionAnchorIndex index(4);
+  CFrictionAnchorIndex<AnchorSet::Active> index(4);
   RebuildInterleavedAnchors(a, b, anchors, index);
 
   DynamicArray<ActiveCollision> collisions{
@@ -546,7 +567,7 @@ TEST_F(FrictionAnchors, FillIgnoresAnchorsOfRecycledColliders) {
   Actor* cube = CreateRigidCube();
   entt::entity const b = GetEntity(cube);
   DynamicArray<FrictionAnchor> anchors;
-  CFrictionAnchorIndex index(4);
+  CFrictionAnchorIndex<AnchorSet::Active> index(4);
   RebuildInterleavedAnchors(a, b, anchors, index);
 
   _scene->DestroyActor(cube);
@@ -570,13 +591,14 @@ TEST_F(FrictionAnchors, RebuildOfFilledOffsetsKeepsAnchorPoints) {
   CreatePlane();
   entt::entity const plane = GetEntity(_plane);
   DynamicArray<FrictionAnchor> anchors;
-  CFrictionAnchorIndex index(2);
+  CFrictionAnchorIndex<AnchorSet::Active> index(2);
   RebuildAnchors(
       anchors, index, {MakeCollision(plane, {0, 1}, {Real3{1_r, 0_r, 0_r}, Real3{0_r, 0_r, 2_r}})});
 
   ActiveCollision collision = MakeCollision(plane, {1, 0}, {});
   collision.collisionResult.posCollidingStageStart = {Real3{5_r, 6_r, 7_r}, Real3{-1_r, 0_r, 3_r}};
   collision.collisionResult.posColliding = collision.collisionResult.posCollidingStageStart;
+  collision.collisionResult.keepsAnchor = {true, true};
   FillFrictionAnchorOffsets(
       GetRegistry(), index, anchors, Span<ActiveCollision>(&collision, size_t{1}));
   RebuildAnchors(anchors, index, {collision});
@@ -586,23 +608,28 @@ TEST_F(FrictionAnchors, RebuildOfFilledOffsetsKeepsAnchorPoints) {
   EXPECT_EQ((Real3{0_r, 0_r, 2_r}), FindAnchorPoint(anchors, index, 1, plane));
 }
 
-// Only nonzero offsets of contacts with rigid colliders become anchors.
-TEST_F(FrictionAnchors, RebuildKeepsNonzeroOffsetsWithRigidColliders) {
+// Only the contacts with rigid colliders that keep their anchors have one, including zero offsets.
+TEST_F(FrictionAnchors, RebuildKeepsAnchorsOfKeptContactsWithRigidColliders) {
   CreatePlane();
   entt::entity const plane = GetEntity(_plane);
   entt::entity const soft = GetEntity(CreateSoftCube());
   DynamicArray<FrictionAnchor> anchors;
-  CFrictionAnchorIndex index(4);
+  CFrictionAnchorIndex<AnchorSet::Active> index(4);
   RebuildAnchors(
       anchors,
       index,
-      {MakeCollision(plane, {0, 1, 2}, {Real3{1_r, 0_r, 0_r}, Real3{}, Real3{2_r, 0_r, 0_r}}),
+      {MakeCollision(
+           plane,
+           {0, 1, 2},
+           {Real3{1_r, 0_r, 0_r}, Real3{}, Real3{2_r, 0_r, 0_r}},
+           {true, true, false}),
        MakeCollision(soft, {3}, {Real3{3_r, 0_r, 0_r}})});
 
-  ExpectIndex(index, {0, kSentinelIndex, 1, kSentinelIndex});
-  EXPECT_EQ(2, isize(anchors));
-  EXPECT_EQ((Real3{1_r, 0_r, 0_r}), FindAnchorPoint(anchors, index, 0, plane));
-  EXPECT_EQ((Real3{2_r, 0_r, 0_r}), FindAnchorPoint(anchors, index, 2, plane));
+  ExpectIndex(index, {0, 1, kSentinelIndex, kSentinelIndex});
+  DynamicArray<FrictionAnchor> const expectedAnchors{
+      {.sample = 0, .collider = entt::to_integral(plane), .point = Real3{1_r, 0_r, 0_r}},
+      {.sample = 1, .collider = entt::to_integral(plane), .point = Real3{}}};
+  ExpectAnchors(expectedAnchors, anchors);
 }
 
 // Rebuilding Pending and promoting it into Active reuse each array's capacity.
@@ -611,7 +638,7 @@ TEST_F(FrictionAnchors, RebuildReusesCapacity) {
   entt::entity const plane = GetEntity(_plane);
   CFrictionAnchors<AnchorSet::Active> active;
   CFrictionAnchors<AnchorSet::Pending> pending;
-  CFrictionAnchorIndex index(3);
+  CFrictionAnchorIndex<AnchorSet::Active> index(3);
   active.anchors.reserve(3);
   pending.anchors.reserve(3);
   auto const* activeStorage = active.anchors.data();
@@ -1459,7 +1486,7 @@ TEST_F(FrictionAnchors, RestoreStateRestoresActiveAndPendingAnchors) {
   ExpectAnchors(anchors, GetAnchors(cube));
   ExpectAnchors(pending, GetPendingAnchors(cube));
 
-  CFrictionAnchorIndex& index = GetIndex(cube);
+  CFrictionAnchorIndex<AnchorSet::Active>& index = GetIndex(cube);
   for (int s = 0; s < isize(index); ++s) {
     index[s] = kSentinelIndex;
   }

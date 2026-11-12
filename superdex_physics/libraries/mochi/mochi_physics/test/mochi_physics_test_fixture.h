@@ -45,9 +45,11 @@ inline entt::registry const& GetRegistry(Scene const* scene) {
   return assert_cast<SceneImpl const*>(scene)->GetRegistry();
 }
 
-// Create a unit-cube tetrahedral mesh shape on the given context (no skinning).
-inline ShapeHandle CreateUnitCubeTetMeshShape(Context* context) {
-  auto cube = CreateMinimalTetMeshUnitCube();
+// Create a unit-cube tetrahedral mesh shape, scaled by `scale`, on the given context (no skinning).
+inline ShapeHandle CreateUnitCubeTetMeshShape(
+    Context* context,
+    Real3 const& scale = Real3{1_r, 1_r, 1_r}) {
+  auto cube = CreateMinimalTetMeshUnitCube(scale);
   return context->CreateTetMeshShape(
       Flatten(MakeSpan(cube.first)), Flatten(MakeSpan(cube.second)), ExpectOK{});
 }

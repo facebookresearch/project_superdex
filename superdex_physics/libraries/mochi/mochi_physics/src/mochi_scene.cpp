@@ -27,6 +27,7 @@
 #include "mochi_constraint.h"
 #include "mochi_constraint_interface.h"
 #include "mochi_contact.h"
+#include "mochi_contact_anchors.h"
 #include "mochi_contact_filter.h"
 #include "mochi_contact_pair_params.h"
 #include "mochi_context.h"
@@ -596,10 +597,6 @@ void SceneImpl::SetSolverParams(SolverParams const& params, Error& error) {
       error,
       "implicitNormalForceForDissipation = true is not supported in differentiable scenes.");
   MOCHI_ERROR_IF(
-      params.experimentalEval.elastoPlasticFriction && _registry.try_ctx<TagDifferentiableScene>(),
-      error,
-      "elastoPlasticFriction = true is not supported in differentiable scenes.");
-  MOCHI_ERROR_IF(
       params.experimentalEval.elastoPlasticFriction &&
           params.experimentalEval.frictionModel != CoulombFrictionModel::C1Regularized,
       error,
@@ -618,7 +615,13 @@ void SceneImpl::SetSolverParams(SolverParams const& params, Error& error) {
 
   // Store in CSimulationParams (global to our registry)
   storedParams = params;
+
+  // Enable or disable elasto-plastic friction.
   contact::EnableFrictionAnchorComponents(_registry, params.experimentalEval.elastoPlasticFriction);
+  if (_registry.try_ctx<TagDifferentiableScene>()) {
+    EnableDifferentiableFrictionAnchorComponents(
+        _registry, params.experimentalEval.elastoPlasticFriction);
+  }
   sleep::WakeAll(_registry);
 
   if (_registry.try_ctx<TagDifferentiableScene>() && !params.experimentalEval.explicitNormals) {
@@ -1362,7 +1365,7 @@ void SceneImpl::RestoreStatePair(StateHandle curr, StateHandle prev, Error& err)
       prev, /*releaseImmediately*/ false, excludeAdjoints, /*wakeAllIslands*/ true, err);
   MOCHI_ERROR_RETURN(err);
 
-  // Advance time and pre-step ECS, to set TimeStep::Previous components
+  // Advance time and pre-step ECS, to set TimeStep::Previous components.
   auto timeStepSec = _registry.ctx<CSceneTime>().DeltaTime();
   _registry.ctx<CSceneTime>().Advance(timeStepSec);
   PreStepEcs(_registry);
@@ -1370,6 +1373,7 @@ void SceneImpl::RestoreStatePair(StateHandle curr, StateHandle prev, Error& err)
   // Set the current state (including start and end targets), excluding adjoints.
   RestorePartialState(
       curr, /*releaseImmediately*/ false, excludeAdjoints, /*wakeAllIslands*/ true, err);
+  MOCHI_ERROR_RETURN(err);
 }
 
 bool SceneImpl::IsActorContactEnabled(ActorHandle colliding, ActorHandle collider, Error& error)
@@ -1464,6 +1468,7 @@ static void WarnIfNotDifferentiabilitySettings(SceneImpl const& scene) {
 
 void SceneImpl::ResetBackPropagation() {
   ecs::InvokeForEachGlobal(&ResetBackPropagationContainers, _registry);
+  ecs::InvokeForEachGlobal(&ResetFrictionAnchorAdjoints, _registry);
   _registry.unset<TagBackPropagationPrepared>();
 }
 
@@ -1484,6 +1489,18 @@ void SceneImpl::PrepareBackPropagate(StateHandle stateNew, StateHandle stateOld,
 
   RestoreStatePair(stateNew, stateOld, error);
   MOCHI_ERROR_RETURN(error);
+
+  auto anchorAdjoints = _registry.view<
+      CDiffFrictionAnchorGrad<AnchorSet::Pending> const,
+      CFrictionAnchors<AnchorSet::Pending> const>();
+  for (auto [e, pendingGrad, pendingAnchors] : anchorAdjoints.each()) {
+    MOCHI_ERROR_IF(
+        !pendingGrad.grads.empty() && pendingGrad.grads.size() != pendingAnchors.anchors.size(),
+        error,
+        "Friction anchor adjoints do not match the recorded post-step state. "
+        "ResetBackPropagation before starting a new forward rollout.");
+    MOCHI_ERROR_RETURN(error);
+  }
 
   _registry.ctx<CStatePair>() = CStatePair{.stateNew = stateNew, .stateOld = stateOld};
 
@@ -1535,6 +1552,8 @@ void SceneImpl::BackPropagate(Error& error) {
 
   // Process the rigid current and previous contact force adjoints.
   AccumulateContactForceAdjoints(_registry);
+  // Back-propagate through the friction anchor update; adds to the contact adjoints above.
+  AccumulateFrictionAnchorAdjoints(_registry);
 
   // Add to the pose adjoint the projected derived-step adjoint. Store in CDiffContainerState.
   // λq_k += λΔx_k * ∂Δx_k/∂x_k * ∂x_k/∂q_k; with ∂Δx_k/∂x_k = I
@@ -1561,6 +1580,9 @@ void SceneImpl::BackPropagate(Error& error) {
   auto& backPropStats = _registry.ctx<CBackPropagationSceneStats>();
   backPropStats.solveDurationSec = ToSeconds(timer.GetElapsed());
 
+  // Uses the solve's adjoint and the step's contacts, so it must precede restoring the old state.
+  PropagateFrictionAnchorAdjoints(_registry);
+
   // Update the adjoints from the solve results.
   // λΔx_{k-1} = z * ∂r_k/∂Δx_{k-1}
   // λq_{k-1} = z * ∂r_k/∂q_{k-1} + λΔx_k * ∂Δx_k/∂x_{k-1} * ∂x_{k-1}/∂q_{k-1}
@@ -1581,11 +1603,21 @@ void SceneImpl::BackPropagate(Error& error) {
     _registry.get<CDiffStateGrad>(e).value = _registry.get<CDiffContainerState const>(e);
   });
 
-  // 2. Restore state q_{k-1} (to get the correct Jacobian for projection), but not adjoints.
-  SReflect::TypeId excludeAdjoints[] = {attribute::HasAdjoint::GetTypeId()};
+  // 2. Restore state q_{k-1} (to get the correct Jacobian for projection), but not adjoints or
+  // step-used Active anchors. Active [A,C] remains beside old Pending [A,B,C] for the reverse drop.
+  SReflect::TypeId excludeOldState[] = {
+      attribute::HasAdjoint::GetTypeId(), attribute::PreserveOnOldStateRestore::GetTypeId()};
   RestorePartialState(
-      stateOld, /*releaseImmediately*/ false, excludeAdjoints, /*wakeAllIslands*/ true, error);
+      stateOld, /*releaseImmediately*/ false, excludeOldState, /*wakeAllIslands*/ true, error);
   MOCHI_ERROR_RETURN(error);
+  ecs::InvokeForEachGlobal(&ReverseFrictionAnchorDropAdjoints, _registry);
+  // Then restore the old Active anchors too, so that the scene is left in the old state.
+  if (_registry.ctx<CSimulationParams const>().experimentalEval.elastoPlasticFriction) {
+    SReflect::TypeId excludeAdjoints[] = {attribute::HasAdjoint::GetTypeId()};
+    RestorePartialState(
+        stateOld, /*releaseImmediately*/ false, excludeAdjoints, /*wakeAllIslands*/ true, error);
+    MOCHI_ERROR_RETURN(error);
+  }
 
   // 3. Project and add λq_{k-1} += λΔx_k * ∂x_{k-1}/∂q_{k-1}
   // Also add the contact-force adjoints wrt the previous state.
@@ -3604,12 +3636,6 @@ void MakeSceneDifferentiableInternal(Scene* scene, Error& error) {
       sceneImpl->GetSolverParams().integrationMethod != IntegrationMethod::BackwardEuler,
       error,
       "Differentiable scenes require SolverParams.integrationMethod to be backward Euler.");
-  // Before ApplyImprovedConvergenceSettings, which sets the solver params before the scene is
-  // tagged differentiable, so SetSolverParams does not reject it yet.
-  MOCHI_ERROR_IF(
-      sceneImpl->GetSolverParams().experimentalEval.elastoPlasticFriction,
-      error,
-      "Differentiable scenes do not support SolverParams.experimentalEval.elastoPlasticFriction.");
   MOCHI_ERROR_RETURN(error);
 
   // Check all actors are differentiable.

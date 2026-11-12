@@ -4984,6 +4984,14 @@ struct CTempPotentialColliderData {
 };
 } // namespace
 
+ContactEvalConfig mochi::MakeAnchorAdvanceEvalConfig(
+    ExperimentalEvalParams const& experimentalEval,
+    ContactAssemblyReg reg,
+    entt::entity colliding) {
+  return MakeContactEvalConfigAsync(
+      experimentalEval, reg, colliding, /*psdDRes*/ false, /*useFittedHessian*/ false);
+}
+
 void mochi::AdvanceFrictionAnchorOffsets(
     ContactAssemblyReg reg,
     entt::entity e,
@@ -4994,8 +5002,7 @@ void mochi::AdvanceFrictionAnchorOffsets(
   if (convergence && convergence->stageStatus == ConvergenceStatus::Diverged) {
     return;
   }
-  ContactEvalConfig const config = MakeContactEvalConfigAsync(
-      simParams->experimentalEval, reg, e, /*psdDRes*/ false, /*useFittedHessian*/ false);
+  ContactEvalConfig const config = MakeAnchorAdvanceEvalConfig(simParams->experimentalEval, reg, e);
   std::array<Span<ActiveCollision>, 2> const allCollisions{
       MakeSpan(asyncCollisions), MakeSpan(syncCollisions)};
   for (auto const collisions : allCollisions) {
@@ -5014,7 +5021,7 @@ void EnableFrictionAnchorComponents(entt::registry& reg, bool enable) {
   if (!enable) {
     reg.clear<CFrictionAnchors<AnchorSet::Active>>();
     reg.clear<CFrictionAnchors<AnchorSet::Pending>>();
-    reg.clear<CFrictionAnchorIndex>();
+    reg.clear<CFrictionAnchorIndex<AnchorSet::Active>>();
     reg.unset<CFrictionAnchorClearRequests>();
     return;
   }
@@ -5044,7 +5051,8 @@ void InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<CContactSamples<TimeStep::StageStart>>(reg);
   ecs::RegisterComponent<CFrictionAnchors<AnchorSet::Active>>(reg);
   ecs::RegisterComponent<CFrictionAnchors<AnchorSet::Pending>>(reg);
-  ecs::RegisterComponent<CFrictionAnchorIndex>(reg);
+  ecs::RegisterComponent<CFrictionAnchorIndex<AnchorSet::Active>>(reg);
+  ecs::RegisterComponent<CFrictionAnchorIndex<AnchorSet::Pending>>(reg);
   ecs::RegisterComponent<CFrictionAnchorClearRequests>(reg);
   ecs::RegisterComponent<CContactSkinningData>(reg);
   ecs::RegisterComponent<CLinearContactSkinElementMap>(reg);

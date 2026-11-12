@@ -682,7 +682,9 @@ inline void ValidateContactParams(ContactParams const& params, Error& error) {
       "Colliding penalty length scale (collidingPenaltyLengthScale) must be finite and positive.");
 }
 
-using ContactAssemblyReg = ecs::PartialRegistry<
+// Registry access of contact assembly, extended with the given access.
+template <typename... ExtraAccessT>
+using ContactAssemblyRegWith = ecs::PartialRegistry<
     CContactPairParamsOverrideTable const,
     CContactParams const,
     CPointCloudColliderParams const,
@@ -697,7 +699,10 @@ using ContactAssemblyReg = ecs::PartialRegistry<
     CRootTransform const,
     CRigidState<TimeStep::Current> const,
     CRigidState<TimeStep::StageStart> const,
-    CRigidBodyInertia const>;
+    CRigidBodyInertia const,
+    ExtraAccessT...>;
+
+using ContactAssemblyReg = ContactAssemblyRegWith<>;
 
 // Transform a collider-local contact force into the colliding actor's local frame.
 [[nodiscard]] MOCHI_FORCE_INLINE Real3 TransformContactForceToCollidingLocal(
@@ -921,6 +926,13 @@ inline bool ValidCollidingNormals(ContactAssemblyReg const& reg, entt::entity co
     entt::entity colliding,
     bool psdDRes,
     bool useFittedHessian);
+
+// Evaluation configuration of the friction anchor advance of a colliding actor (see
+// AdvanceFrictionAnchorOffsets), which its back-propagation must reproduce.
+[[nodiscard]] ContactEvalConfig MakeAnchorAdvanceEvalConfig(
+    ExperimentalEvalParams const& experimentalEval,
+    ContactAssemblyReg reg,
+    entt::entity colliding);
 
 /**************************************************************************
   ECS contact-related pipelines

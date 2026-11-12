@@ -19,6 +19,7 @@
 #include "mochi_actor_convergence.h"
 #include "mochi_articulated_body.h"
 #include "mochi_constraint.h"
+#include "mochi_contact_anchors.h"
 #include "mochi_rigid.h"
 #include "mochi_simulation.h"
 #include "mochi_solve.h"
@@ -500,10 +501,32 @@ static void NewtonSolveZ(
 
 static void SetForceContainer(
     ColumnVectorView<real const> data,
+    ecs::Excluded<TagArticulatedLinkActor>,
     CActorDofInfo const& size,
     CDofOffset const& offset,
     CDiffForceGrad& outContainer) {
   outContainer = data.MiddleRows(offset.dofsOffset, size.dofsSize);
+}
+
+// System to set the gradient wrt external forces on the rigid DoFs of an articulated link from that
+// of its articulated actor. A link wrench enters the articulated actor through the transpose of the
+// link's rows of the articulated Jacobian, so the gradient maps through those rows, which cover
+// only the link's ancestor DoFs.
+static void SetLinkForceContainer(
+    ecs::PartialRegistry<CArticulatedJacobian const, CDiffForceGrad const> reg,
+    ecs::RequiredTag<TagArticulatedLinkActor>,
+    CArticulatedEntity const& articulated,
+    CDiffForceGrad& outContainer) {
+  auto const link =
+      reg.get<CArticulatedJacobian const>(articulated.entity).value.Link(articulated.linkIndex);
+  auto const& articulatedGrad = reg.get<CDiffForceGrad const>(articulated.entity);
+  for (int r = 0; r < RigidSize::kDAll; ++r) {
+    real grad = 0_r;
+    for (int c = 0; c < isize(link.dofs); ++c) {
+      grad += link.block(r, c) * articulatedGrad[link.dofs[c]];
+    }
+    outContainer[r] = grad;
+  }
 }
 
 static void PrepareBackPropagationIslandAsync(
@@ -534,9 +557,10 @@ static void PrepareBackPropagationIslandAsync(
   solver::PreFirstStageLocalPipeline(reg, descendants);
   solver::PreStageLocalPipeline(reg, island, descendants, problem);
 
-  // Run collision detection if some actor has queries enabled
+  // Run collision detection if some actor has queries enabled or friction anchors, whose adjoint
+  // reads the current contacts.
   if (std::ranges::any_of(descendants.actors, [&](auto const& e) {
-        return reg.any_of<CQueryActorContactForces>(e);
+        return reg.any_of<CQueryActorContactForces, CDiffFrictionAnchorGrad<AnchorSet::Active>>(e);
       })) {
     // We must visit the full island, to account for cases where the queried actors act as
     // colliders.
@@ -544,8 +568,25 @@ static void PrepareBackPropagationIslandAsync(
   }
 }
 
+// System to reset the adjoints of the anchor offsets that the step read, one per Active anchor,
+// before back-propagating the step.
+static void PrepareFrictionAnchorAdjoints(
+    CFrictionAnchors<AnchorSet::Active> const& activeAnchors,
+    CDiffFrictionAnchorGrad<AnchorSet::Active>& outActiveGrad) {
+  outActiveGrad.grads.resize_noinit(activeAnchors.anchors.size());
+  std::ranges::fill(outActiveGrad.grads, Real3{});
+}
+
 void mochi::PrepareBackPropagation(entt::registry& reg) {
   MOCHI_PROFILE_SCOPE();
+
+  // The Active friction anchors of the restored state are those its step used, and collision
+  // detection reads them; its Pending anchors are those the step produced, and the back-propagation
+  // of their advance reads them. The indices are not captured, so derive them from the anchors, as
+  // the step does in its pre-step for Active.
+  ecs::InvokeForEachGlobal(&IndexFrictionAnchors<AnchorSet::Active>, reg);
+  ecs::InvokeForEachGlobal(&IndexFrictionAnchors<AnchorSet::Pending>, reg);
+  ecs::InvokeForEachGlobal(&PrepareFrictionAnchorAdjoints, reg);
 
   TaskSemaphore eachTask;
   reg.view<CIslandDescendants const>().each(
@@ -640,6 +681,25 @@ static void BackPropagationSolveIslandAsync(
         AsConstView(previousGrad),
         stepCounter);
   }
+
+  // The friction anchor adjoints (PropagateFrictionAnchorAdjoints) need the contact geometry and
+  // the link force gradients at the solution, but finite-difference Hessian-vector products leave
+  // actor and contact data at the last perturbation. They are nonzero only for the anchors that the
+  // step read, and nothing else reads the link force gradients, so they are set only in islands
+  // whose step read anchors, after restoring the data at the solution. A zero solve adjoint gives
+  // zero gradients, whatever the data.
+  bool const readsAnchors = std::ranges::any_of(descendants.actors, [&](entt::entity e) {
+    auto const* anchors = reg.try_get<CFrictionAnchors<AnchorSet::Active> const>(e);
+    return anchors && !anchors->anchors.empty();
+  });
+  if (readsAnchors) {
+    if (!IsZero(zSolve)) {
+      solver::PostNewSolutionLocalPipeline(reg, island, problemForward.solution);
+      solver::UpdateDerivedStateBeforeAssembly(reg, island, GradTarget::Current, descendants);
+    }
+    ecs::InvokeForEach<ecs::policy::AllowReadWriteSameComponent>(
+        &SetLinkForceContainer, reg, descendants.articulatedLinkActors);
+  }
 }
 
 void mochi::BackPropagationSolve(entt::registry& reg) {
@@ -684,6 +744,15 @@ void mochi::EmplaceDifferentiabilityComponents(
   reg.emplace<CDiffDerivedStepGrad>(e, numDerivedStateDofs);
 }
 
+// Emplaces the anchor-offset adjoints of an actor with friction anchors, and the index of its
+// Pending anchors, which the back-propagation of the anchor advance looks up.
+static void EmplaceDifferentiableFrictionAnchorComponents(entt::registry& reg, entt::entity e) {
+  reg.emplace<CDiffFrictionAnchorGrad<AnchorSet::Active>>(e);
+  reg.emplace<CDiffFrictionAnchorGrad<AnchorSet::Pending>>(e);
+  reg.emplace<CFrictionAnchorIndex<AnchorSet::Pending>>(
+      e, isize(reg.get<CFrictionAnchorIndex<AnchorSet::Active> const>(e)));
+}
+
 void mochi::EmplaceDifferentiableContactComponents(
     entt::registry& reg,
     entt::entity e,
@@ -691,6 +760,25 @@ void mochi::EmplaceDifferentiableContactComponents(
   // Emplace components to store contact-force adjoints per-entity.
   reg.emplace<CDiffContactGrad<GradTarget::Current>>(e, dofInfo.dofsSize);
   reg.emplace<CDiffContactGrad<GradTarget::Previous>>(e, dofInfo.dofsSize);
+  if (reg.all_of<CFrictionAnchors<AnchorSet::Active>>(e)) {
+    EmplaceDifferentiableFrictionAnchorComponents(reg, e);
+  }
+}
+
+void mochi::EnableDifferentiableFrictionAnchorComponents(entt::registry& reg, bool enable) {
+  if (!enable) {
+    reg.clear<CDiffFrictionAnchorGrad<AnchorSet::Active>>();
+    reg.clear<CDiffFrictionAnchorGrad<AnchorSet::Pending>>();
+    reg.clear<CFrictionAnchorIndex<AnchorSet::Pending>>();
+    return;
+  }
+  auto view = reg.view<
+      CFrictionAnchors<AnchorSet::Active> const,
+      CDiffContactGrad<GradTarget::Current> const>(
+      entt::exclude<CDiffFrictionAnchorGrad<AnchorSet::Pending>>);
+  for (auto e : view) {
+    EmplaceDifferentiableFrictionAnchorComponents(reg, e);
+  }
 }
 
 void mochi::EmplaceConstraintDifferentiabilityComponents(entt::registry& reg, entt::entity e) {
@@ -718,6 +806,13 @@ void mochi::ResetBackPropagationContainers(
   if (outTargetPoseGrad) {
     outTargetPoseGrad->propagated.SetZero();
   }
+}
+
+void mochi::ResetFrictionAnchorAdjoints(
+    CDiffFrictionAnchorGrad<AnchorSet::Active>& active,
+    CDiffFrictionAnchorGrad<AnchorSet::Pending>& pending) {
+  active.grads.clear();
+  pending.grads.clear();
 }
 
 void mochi::PrepareContactForceAdjoints(
@@ -770,6 +865,8 @@ void InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<CDiffDerivedStepGrad>(reg);
   ecs::RegisterComponent<CDiffContactGrad<GradTarget::Current>>(reg);
   ecs::RegisterComponent<CDiffContactGrad<GradTarget::Previous>>(reg);
+  ecs::RegisterComponent<CDiffFrictionAnchorGrad<AnchorSet::Active>>(reg);
+  ecs::RegisterComponent<CDiffFrictionAnchorGrad<AnchorSet::Pending>>(reg);
   ecs::RegisterComponent<CIslandBackPropSolverStats>(reg);
 }
 } // namespace mochi::differentiable

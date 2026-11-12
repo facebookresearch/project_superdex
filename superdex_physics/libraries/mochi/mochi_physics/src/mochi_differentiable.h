@@ -17,10 +17,13 @@
 #pragma once
 
 #include "mochi_contact.h"
+#include "mochi_contact_anchors.h"
 #include "mochi_ecs_utils.h"
 #include "mochi_island.h"
 #include "mochi_simulation.h"
 #include "mochi_snle.h"
+
+#include <mochi_core/utils/dynamic_array.h>
 
 namespace mochi::diffsim {
 // Forward declarations: this header only aliases these types as ECS components.
@@ -160,9 +163,24 @@ struct CDiffTargetPoseGrad : NoCopy {
   // `current` and `previous` are not captured.
   MOCHI_STRUCT_END();
 };
-// Component to store the gradient wrt external forces computed during the back-propagation step.
+// Component to store the gradient wrt external forces computed during the back-propagation step. On
+// articulated links, it is set only in islands whose step read friction anchors, whose adjoints
+// read it.
 struct CDiffForceGrad : public ColumnVector<real> {
   using ColumnVector<real>::ColumnVector;
+};
+// Anchor-offset adjoints parallel to the corresponding Active/Pending anchor set. Pending carries
+// incoming and handed-off state adjoints; Active accumulates the step-used-anchor adjoints.
+// BackPropagate reverses drops from Active into the old Pending layout. Empty Pending means zero.
+template <AnchorSet kSet>
+struct CDiffFrictionAnchorGrad {
+  DynamicArray<Real3> grads;
+
+  MOCHI_TEMPLATE_BEGIN(mochi::CDiffFrictionAnchorGrad, kSet);
+  MOCHI_ATTRIBUTE_IF(kSet == AnchorSet::Pending, CaptureState);
+  MOCHI_ATTRIBUTE(HasAdjoint);
+  MOCHI_FIELD(grads);
+  MOCHI_TEMPLATE_END();
 };
 
 /**************************************************************************
@@ -218,6 +236,11 @@ void EmplaceDifferentiableContactComponents(
     entt::entity e,
     CActorDofInfo const& dofInfo);
 
+// Emplaces the anchor adjoint component on the differentiable actors with friction anchors, or
+// removes it from all actors, to follow ExperimentalEvalParams::elastoPlasticFriction in a scene
+// that is already differentiable. Call after contact::EnableFrictionAnchorComponents.
+void EnableDifferentiableFrictionAnchorComponents(entt::registry& reg, bool enable);
+
 // System to emplace differentiability components on constraints
 void EmplaceConstraintDifferentiabilityComponents(entt::registry& reg, entt::entity e);
 
@@ -227,6 +250,13 @@ void ResetBackPropagationContainers(
     CDiffDerivedStepGrad& outGradDerivedStep,
     CDiffTargetPoseGrad* outTargetPoseGrad);
 
+// System to reset the friction anchor adjoints between runs. Separate from
+// ResetBackPropagationContainers, because articulated links have anchor adjoints but no state
+// adjoint.
+void ResetFrictionAnchorAdjoints(
+    CDiffFrictionAnchorGrad<AnchorSet::Active>& active,
+    CDiffFrictionAnchorGrad<AnchorSet::Pending>& pending);
+
 // System to reset contact force adjoints before running backward contact queries.
 void PrepareContactForceAdjoints(
     CQueryActorContactForces const& queryActorContactForces,
@@ -235,8 +265,29 @@ void PrepareContactForceAdjoints(
     CActiveCollisions</*kIsSync*/ true, TimeStep::Current>& outActiveCollisionsSync,
     CCollJacs<CollRole::Collider>* outColliderJacs);
 
-// System to accumulate contact force adjoints to actor level.
+// System to accumulate contact force adjoints to actor level. With elasto-plastic friction, it also
+// adds the direct dependence of the queried contact forces on the anchor offsets that the step
+// read.
 void AccumulateContactForceAdjoints(entt::registry& reg);
+
+// After restoring the old state except Active anchors and adjoints, reverse the forward drop:
+// scatter the Active gradient into the old Pending layout, leaving dropped-anchor entries zero.
+void ReverseFrictionAnchorDropAdjoints(
+    CDiffFrictionAnchorGrad<AnchorSet::Active>& activeGrad,
+    CDiffFrictionAnchorGrad<AnchorSet::Pending>& pendingGrad,
+    CFrictionAnchors<AnchorSet::Active> const& activeAnchors,
+    CFrictionAnchors<AnchorSet::Pending> const& pendingAnchors);
+
+// Back-propagates through the friction anchor advance of the step (AdvanceFrictionAnchorOffsets),
+// before the back-propagation solve: adds the contributions of the anchor-offset adjoint to
+// CDiffContactGrad and its direct contribution to the offsets that the step read. Call after
+// AccumulateContactForceAdjoints.
+void AccumulateFrictionAnchorAdjoints(entt::registry& reg);
+
+// Adds the dependence of the solve on the anchor offsets that the step read, using the solve's
+// adjoint (-CDiffForceGrad), and stores their adjoint for the step before it. Call after
+// BackPropagationSolve, before restoring the old state.
+void PropagateFrictionAnchorAdjoints(entt::registry& reg);
 
 namespace differentiable {
 void InitializeOnce(entt::registry& reg);

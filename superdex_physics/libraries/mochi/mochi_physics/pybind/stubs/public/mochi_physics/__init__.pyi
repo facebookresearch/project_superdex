@@ -4023,9 +4023,6 @@ class ExperimentalEvalParams:
         builds friction preload, so contacts on it creep as with regular friction.
 
     Note:
-        Not supported in differentiable scenes.
-
-    Note:
         Changing this setting changes the content of the scene state, so states
         captured before the change cannot be restored after it.
     """

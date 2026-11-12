@@ -62,4 +62,15 @@ struct CaptureStateCtx : Attribute {
 struct HasAdjoint : Attribute {
   MOCHI_STRUCT_WITH_BASE(mochi::attribute::HasAdjoint, mochi::Attribute);
 };
+
+/**
+ * @brief [Struct Attribute] Marks state needed from the current step during the backward handoff
+ * while the old state is restored.
+ *
+ * @note Skipped only when explicitly excluded by that restore. Ordinary state restoration and
+ * back-propagation preparation still restore the component.
+ */
+struct PreserveOnOldStateRestore : Attribute {
+  MOCHI_STRUCT_WITH_BASE(mochi::attribute::PreserveOnOldStateRestore, mochi::Attribute);
+};
 } // namespace mochi::attribute

@@ -157,7 +157,6 @@ struct ExperimentalEvalParams {
    * @ref Actor).
    * @note A static actor given a velocity every step, like a conveyor belt, never builds friction
    * preload, so contacts on it creep as with regular friction.
-   * @note Not supported in differentiable scenes.
    * @note Changing this setting changes the content of the scene state, so states captured before
    * the change cannot be restored after it.
    */

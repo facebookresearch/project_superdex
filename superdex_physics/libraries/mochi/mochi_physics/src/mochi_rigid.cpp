@@ -1353,10 +1353,14 @@ void mochi::InitDifferentiableRigidActor(
     bool isArticulatedLink) {
   MOCHI_ASSERT_VERBOSE(!reg.any_of<TagStaticActor>(e), "Do not call on static actors");
 
-  // Emplace general components needed for differentiability. Stand-alone rigid actors only.
+  // Emplace general components needed for differentiability. Stand-alone rigid actors only. Links
+  // get only the gradient wrt external forces on their rigid DoFs, projected from their articulated
+  // actor after the back-propagation solve (see CDiffForceGrad).
   if (!isArticulatedLink) {
     ecs::InvokeOnEntity<ecs::policy::AllowFullRegistryAccess>(
         &EmplaceDifferentiabilityComponents, reg, e, RigidSize::kDAll);
+  } else {
+    reg.emplace<CDiffForceGrad>(e, RigidSize::kDAll);
   }
 
   // Emplace components needed for differentiable contact forces. Rigid and link actors.

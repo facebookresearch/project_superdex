@@ -19,6 +19,7 @@
 
 #include <mochi_core/utils/defer.h>
 #include <mochi_physics/diffsim/mochi_diffsim.h>
+#include <mochi_physics/src/mochi_contact_anchors.h>
 #include <mochi_physics/src/mochi_differentiable.h>
 
 #include <numeric>
@@ -734,6 +735,36 @@ TEST_IF_P(
   RunGradientConsistencyTest(lossTerms, target, 10, params);
 }
 
+// Mixed rigid/articulated contact with high damping, pose control and elasto-plastic friction.
+TEST_IF_P(
+    MOCHI_TEST_ARTICULATED_DOUBLE,
+    MochiDifferentiable,
+    MixedRigidAndArticulatedAnchorContact_LastStepError) {
+  auto* target = LoadScenePrefab(
+      _scene,
+      "mixed_rigid_and_articulated_contact_high_damping_control.mochi_scene",
+      "ArticulatedActor1/ArticulatedActor/Link2_Horizontal");
+  auto solverParams = _scene->GetSolverParams();
+  solverParams.experimentalEval.elastoPlasticFriction = true;
+  _scene->SetSolverParams(solverParams, test::ExpectOK{});
+  // The prefab's articulated links are frictionless.
+  _scene->ForEachActor([&](Actor* actor) {
+    if (actor->GetType() == ActorType::Rigid) {
+      auto contactParams = actor->GetContactParams(test::ExpectOK{});
+      contactParams.coulombFrictionCoefficient = 1_r;
+      actor->SetContactParams(contactParams, test::ExpectOK{});
+    }
+  });
+  std::array<LossAndGradientEvalPair, 2> lossTerms = {
+      lastStepTranslationError, lastStepRotationError};
+  RunGradientConsistencyTest(
+      lossTerms, target, 5, TestParams{.tol = 3e-2_r, .controlSpeed = 0.5_r});
+  bool hasAnchors = false;
+  GetRegistry().view<CFrictionAnchors<AnchorSet::Active> const>().each(
+      [&](auto const& anchors) { hasAnchors |= !anchors.anchors.empty(); });
+  EXPECT_TRUE(hasAnchors);
+}
+
 /***************************************************************************************************
   Differentiability Settings Test
 */
@@ -741,10 +772,31 @@ TEST_IF_P(
 // Not parameterized: BackPropagate logs each settings warning once per process.
 using MochiDifferentiableSettings = MochiSceneTestBase;
 
+// A failed restore leaves no prepared pair; it does not roll back the partially restored state.
+TEST_F(MochiDifferentiableSettings, PrepareBackPropagateRejectsInvalidStatePair) {
+  test::SetSceneIntegrationMethod(_scene, IntegrationMethod::BackwardEuler);
+  RigidActorParams params;
+  params.shape = test::CreateUnitCubeTetMeshShape(_mochiContext);
+  _scene->CreateRigidActor(params, test::ExpectOK{});
+  MakeSceneDifferentiable(_scene, test::ExpectOK{});
+  StateHandle const stateOld = _scene->CaptureState(test::ExpectOK{});
+  params.isStatic = true;
+  auto* extra = _scene->CreateRigidActor(params, test::ExpectOK{});
+  StateHandle const stateNew = _scene->CaptureState(test::ExpectOK{});
+  _scene->DestroyActor(extra);
+  MOCHI_DEFER({
+    _scene->ReleaseState(stateOld);
+    _scene->ReleaseState(stateNew);
+  });
+
+  PrepareBackPropagate(_scene, stateNew, stateOld, test::ExpectNotOK{});
+
+  EXPECT_FALSE(GetRegistry().try_ctx<TagBackPropagationPrepared>());
+}
+
 // MakeSceneDifferentiable keeps ContactParams.frictionWithColliderNormal = false, and BackPropagate
 // warns about it. SetSolverParams rejects implicitNormalForceForDissipation = true, even with
-// explicitNormals = false, and elastoPlasticFriction = true, which MakeSceneDifferentiable also
-// rejects.
+// explicitNormals = false.
 TEST_F(MochiDifferentiableSettings, HandlesUnsupportedSettings) {
   test::SetSceneIntegrationMethod(_scene, IntegrationMethod::BackwardEuler);
   RigidActorParams params;
@@ -760,19 +812,6 @@ TEST_F(MochiDifferentiableSettings, HandlesUnsupportedSettings) {
   solverParams.experimentalEval.implicitNormalForceForDissipation = true;
   _scene->SetSolverParams(solverParams, test::ExpectNotOK{});
   EXPECT_EQ(before, _scene->GetSolverParams());
-
-  solverParams = before;
-  solverParams.experimentalEval.elastoPlasticFriction = true;
-  _scene->SetSolverParams(solverParams, test::ExpectNotOK{});
-  EXPECT_EQ(before, _scene->GetSolverParams());
-
-  Scene* elastoPlasticScene = _mochiContext->CreateScene("ElastoPlasticFriction");
-  MOCHI_DEFER(_mochiContext->DestroyScene(elastoPlasticScene));
-  test::SetSceneIntegrationMethod(elastoPlasticScene, IntegrationMethod::BackwardEuler);
-  SolverParams elastoPlasticParams = elastoPlasticScene->GetSolverParams();
-  elastoPlasticParams.experimentalEval.elastoPlasticFriction = true;
-  elastoPlasticScene->SetSolverParams(elastoPlasticParams, test::ExpectOK{});
-  MakeSceneDifferentiable(elastoPlasticScene, test::ExpectNotOK{});
 
   StateHandle const stateOld = _scene->CaptureState(test::ExpectOK{});
   _scene->Step(kDt);

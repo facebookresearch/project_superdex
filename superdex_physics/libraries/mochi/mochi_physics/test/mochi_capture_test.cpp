@@ -19,6 +19,7 @@
 #include <mochi_physics/src/mochi_attributes.h>
 #include <mochi_physics/src/mochi_capture.h>
 #include <mochi_physics/src/mochi_common_components.h> // For CActorInfo (used for JSON only)
+#include <mochi_physics/src/mochi_contact_anchors.h>
 #include <mochi_physics/src/mochi_ecs_registry.h>
 
 #include <algorithm>
@@ -167,6 +168,8 @@ class MochiCapture : public testing::Test {
     ecs::RegisterComponent<CFilteredTrivial>(reg);
     ecs::RegisterComponent<CFilteredNonTrivial>(reg);
     ecs::RegisterComponent<CActorInfo>(reg);
+    ecs::RegisterComponent<CFrictionAnchors<AnchorSet::Active>>(reg);
+    ecs::RegisterComponent<CFrictionAnchors<AnchorSet::Pending>>(reg);
     capture::InitializeOnce(reg);
     ecs::FinalizeComponentRegistration(reg);
   }
@@ -904,6 +907,38 @@ TEST_F(MochiCapture, CaptureStateToJson) {
       std::remove_if(expectedJson.begin(), expectedJson.end(), isspace), expectedJson.end());
   actualJson.erase(std::remove_if(actualJson.begin(), actualJson.end(), isspace), actualJson.end());
   EXPECT_STREQ(expectedJson.c_str(), actualJson.c_str());
+}
+
+TEST_F(MochiCapture, PreserveOnOldStateRestore) {
+  auto const entity = reg.create();
+  auto& active = reg.emplace<CFrictionAnchors<AnchorSet::Active>>(entity).anchors;
+  auto& pending = reg.emplace<CFrictionAnchors<AnchorSet::Pending>>(entity).anchors;
+  Real3 const activePoint{1_r, 2_r, 3_r};
+  Real3 const pendingPoint{4_r, 5_r, 6_r};
+  Real3 const livePoint{7_r, 8_r, 9_r};
+  active.push_back(FrictionAnchor{.point = activePoint});
+  pending.push_back(FrictionAnchor{.point = pendingPoint});
+  reg.set<CComponentA>().ival = 1;
+  reg.emplace<CComponentA>(entity).ival = 10;
+  DynamicArray<uint8_t> state;
+  CaptureState(reg, state, test::ExpectOK{});
+
+  active[0].point = livePoint;
+  pending[0].point = livePoint;
+  reg.ctx<CComponentA>().ival = 3;
+  reg.get<CComponentA>(entity).ival = 30;
+  SReflect::TypeId const excluded[] = {attribute::PreserveOnOldStateRestore::GetTypeId()};
+  RestorePartialState(reg, state, excluded, test::ExpectOK{});
+  EXPECT_EQ(livePoint, active[0].point);
+  EXPECT_EQ(pendingPoint, pending[0].point);
+  EXPECT_EQ(1, reg.ctx<CComponentA const>().ival);
+  EXPECT_EQ(10, reg.get<CComponentA const>(entity).ival);
+
+  // The marker does not affect ordinary restoration.
+  pending[0].point = livePoint;
+  RestoreState(reg, state, test::ExpectOK{});
+  EXPECT_EQ(activePoint, active[0].point);
+  EXPECT_EQ(pendingPoint, pending[0].point);
 }
 
 TEST_F(MochiCapture, RestorePartialState) {

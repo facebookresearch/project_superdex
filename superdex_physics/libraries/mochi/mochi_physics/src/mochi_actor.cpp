@@ -3264,6 +3264,7 @@ void diffsim::SetExternalForcesOnDofsBackward(
     Error& error) {
   MOCHI_ERROR_RETURN_IF_BACKWARD_NOT_SUPPORTED(const);
   auto const actorType = actor->GetType();
+  // Links have CDiffForceGrad, but it is set only in islands whose step read friction anchors.
   MOCHI_ERROR_IF_NOT(
       actorType == ActorType::Articulated ||
           (actorType == ActorType::Rigid && !actor->IsNestedLinkActor()),
