@@ -431,6 +431,18 @@ static void AddEnergyGradient(
   response.AddContactSampleResponse(sampleIndex, &energy, &gradient, nullptr);
 }
 
+// Adds a response whose energy and gradient have a dissipative part, scaled by 0.1.
+static void AddDissipativeEnergyGradient(
+    CDeformablePointAsyncCollisionsResponse& response,
+    int sampleIndex,
+    double energy,
+    Real3 const& gradient) {
+  double const dissipationEnergy = 0.1 * energy;
+  Real3 const dissipationGradient = 0.1_r * gradient;
+  response.AddContactSampleResponse(
+      sampleIndex, &energy, &gradient, nullptr, &dissipationEnergy, &dissipationGradient);
+}
+
 TEST(CDeformablePointAsyncCollisionsResponse, AppendsSamplesAndDedupsActiveElements) {
   CDeformablePointAsyncCollisionsResponse response;
   EXPECT_TRUE(response.Empty());
@@ -453,21 +465,37 @@ TEST(CDeformablePointAsyncCollisionsResponse, AppendsSamplesAndDedupsActiveEleme
 
 TEST(CDeformablePointAsyncCollisionsResponse, AccumulatesRepeatedSample) {
   CDeformablePointAsyncCollisionsResponse response;
-  response.Reset(2, 2);
+  response.Reset(2, 2, /*reportsDissipation*/ true);
 
   double const energy[] = {2.0, 5.0};
   Real3 const gradient[] = {Real3{1_r, 2_r, 3_r}, Real3{10_r, 20_r, 30_r}};
   VMatrix3x3r const hessian{Vec4r{1_r, 2_r, 3_r}, Vec4r{4_r, 5_r, 6_r}, Vec4r{7_r, 8_r, 9_r}};
+  double const dissipationEnergy[] = {0.2, 0.5};
+  Real3 const dissipationGradient[] = {0.1_r * gradient[0], 0.1_r * gradient[1]};
 
-  response.AddContactSampleResponse(1, &energy[0], &gradient[0], &hessian); // append
+  // Sample 1 is added twice with friction and damping, and sample 0 with them, then without them.
+  response.AddContactSampleResponse( // append
+      1, &energy[0], &gradient[0], &hessian, &dissipationEnergy[0], &dissipationGradient[0]);
   int const idx = response.GetResponseIndexFromSampleIndex(1);
-  response.AddContactSampleResponse(1, &energy[1], &gradient[1], &hessian); // accumulate
+  response.AddContactSampleResponse( // accumulate
+      1, &energy[1], &gradient[1], &hessian, &dissipationEnergy[1], &dissipationGradient[1]);
+  response.AddContactSampleResponse(
+      0, &energy[1], &gradient[1], &hessian, &dissipationEnergy[1], &dissipationGradient[1]);
+  response.AddContactSampleResponse(0, &energy[0], &gradient[0], &hessian);
   response.ValidateInvariants(MakeConstSpan(std::array<bool, 2>{true, false}));
 
   EXPECT_EQ(response.GetResponseIndexFromSampleIndex(1), idx); // same slot reused
-  EXPECT_NEAR_EQ(response.GetEnergy(idx), 7.0);
-  EXPECT_NEAR_EQ(response.GetGradient(idx), gradient[0] + gradient[1]);
-  EXPECT_NEAR_EQ(response.GetHessian(idx), ToNdArray3x3(hessian) + ToNdArray3x3(hessian));
+  double const expectedDissipationEnergy[] = {0.5, 0.7};
+  Real3 const expectedDissipationGradient[] = {
+      dissipationGradient[1], dissipationGradient[0] + dissipationGradient[1]};
+  for (int const sample : {0, 1}) {
+    int const i = response.GetResponseIndexFromSampleIndex(sample);
+    EXPECT_NEAR_EQ(response.GetEnergy(i), 7.0);
+    EXPECT_NEAR_EQ(response.GetGradient(i), gradient[0] + gradient[1]);
+    EXPECT_NEAR_EQ(response.GetHessian(i), ToNdArray3x3(hessian) + ToNdArray3x3(hessian));
+    EXPECT_NEAR_EQ(response.GetDissipationEnergy(i), expectedDissipationEnergy[sample]);
+    EXPECT_NEAR_EQ(response.GetDissipationGradient(i), expectedDissipationGradient[sample]);
+  }
 }
 
 TEST(CDeformablePointAsyncCollisionsResponse, PopulatesPresentArraysOnly) {
@@ -493,10 +521,16 @@ TEST(CDeformablePointAsyncCollisionsResponse, PopulatesPresentArraysOnly) {
 TEST(CDeformablePointAsyncCollisionsResponse, ResetSameSizeClearsStaleState) {
   CDeformablePointAsyncCollisionsResponse response;
 
-  // Assembly 1: elements 0 and 2 active; sample 0 carries energy 10.
-  response.Reset(/*numContactElements*/ 3, /*numQuadsPerContactElement*/ 2);
-  AddEnergyGradient(response, 0, 10.0, Real3{1_r, 0_r, 0_r}); // element 0
+  // Assembly 1: elements 0 and 2 active; sample 4 has no friction or damping, and sample 0 carries
+  // energy 10, with friction and damping.
+  response.Reset(
+      /*numContactElements*/ 3, /*numQuadsPerContactElement*/ 2, /*reportsDissipation*/ true);
   AddEnergyGradient(response, 4, 1.0, Real3{0_r, 0_r, 1_r}); // element 2
+  EXPECT_FALSE(response.HasReportedDissipation());
+  EXPECT_EQ(response.GetDissipationEnergy(response.GetResponseIndexFromSampleIndex(4)), 0.0);
+  EXPECT_EQ(response.GetDissipationGradient(response.GetResponseIndexFromSampleIndex(4)), Real3{});
+  AddDissipativeEnergyGradient(response, 0, 10.0, Real3{1_r, 0_r, 0_r}); // element 0
+  EXPECT_TRUE(response.HasReportedDissipation());
   response.ValidateInvariants(MakeConstSpan(std::array<bool, 3>{true, false, true}));
 
   // Assembly 2, same sizes -> capacity-preserving sparse-clear of both lookup arrays.
@@ -506,6 +540,7 @@ TEST(CDeformablePointAsyncCollisionsResponse, ResetSameSizeClearsStaleState) {
 
   AddEnergyGradient(response, 0, 5.0, Real3{1_r, 0_r, 0_r}); // re-add element 0
   response.ValidateInvariants(MakeConstSpan(std::array<bool, 3>{true, false, false}));
+  EXPECT_FALSE(response.HasReportedDissipation());
   EXPECT_NEAR_EQ(response.GetEnergy(response.GetResponseIndexFromSampleIndex(0)), 5.0); // not 15.0
   EXPECT_SPAN_EQ( // element 2 from the previous assembly must not linger
       response.ViewActiveContactElementSubset().isElementActive,
@@ -533,11 +568,12 @@ TEST(CDeformablePointAsyncCollisionsResponse, ResetDifferentSizeReinitializes) {
 
 TEST(CDeformablePointAsyncCollisionsResponse, ClearAllowsReuse) {
   CDeformablePointAsyncCollisionsResponse response;
-  response.Reset(2, 2);
-  AddEnergyGradient(response, 0, 1.0, Real3{1_r, 0_r, 0_r});
+  response.Reset(2, 2, /*reportsDissipation*/ true);
+  AddDissipativeEnergyGradient(response, 0, 1.0, Real3{1_r, 0_r, 0_r});
 
   response.Clear();
   EXPECT_TRUE(response.Empty());
+  EXPECT_FALSE(response.HasReportedDissipation());
 
   response.Reset(2, 2); // a fresh assembly after Clear() still works
   AddEnergyGradient(response, 1, 2.0, Real3{0_r, 1_r, 0_r});

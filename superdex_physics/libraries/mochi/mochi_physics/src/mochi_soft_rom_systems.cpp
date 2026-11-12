@@ -183,7 +183,7 @@ void mochi::rom::AssembleAndProjectBody(
   // Clear SNLE data.
   auto& JtDJ = std::get<Matrix<real>>(outSnle.reducedDResidual);
   if (params.assemObj) {
-    outSnle.objective = 0.0;
+    outSnle.ResetObjective();
   }
   if (params.assemRes) {
     outSnle.reducedResidual.SetZero();
@@ -301,7 +301,7 @@ void mochi::rom::AssembleAndProjectAsyncContact(
   deformable::ComputeAsyncContactResponse<CFemBoundaryDiscretization, kSpaceDim3>(
       reg,
       e,
-      simParams->experimentalEval,
+      simParams.value,
       queryActiveContacts,
       femBoundaryDisc,
       samples,
@@ -327,16 +327,19 @@ void mochi::rom::AssembleAndProjectAsyncContact(
         activeBoundaryFaces ? activeBoundaryFaces->ViewWeights() : Span<real const>{};
     auto boundaryOp = deformable::MakeBatchedBoundaryOp(
         MakeConstSpan(disc.femElements), outResponse, bdFaceWeights);
+    auto const denseJacobian = AsConstView(*jacobian.template TryGet<CRomJacobian::DenseT>());
 
     AssembleAndProjectObjResDRes<ElementT>(
         bdL2g,
         boundaryOp,
         bdActiveSubset,
-        AsConstView(*jacobian.template TryGet<CRomJacobian::DenseT>()),
+        denseJacobian,
         outSnle.objective,
         AsView(outSnle.reducedResidual),
         AsView(std::get<Matrix<real>>(outSnle.reducedDResidual)),
         params);
+    deformable::AssembleAndProjectContactDissipation<ElementT>(
+        bdL2g, MakeConstSpan(disc.femElements), outResponse, bdFaceWeights, denseJacobian, outSnle);
   });
 }
 

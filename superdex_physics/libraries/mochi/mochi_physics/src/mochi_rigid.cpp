@@ -96,8 +96,10 @@ void rigid::SetVelocity(
   outCurrVel.value.SetOmega(ToSimd(angularVelocityWorld));
 }
 
+// If outDissipationEnergy and outDissipationGradient are not null, they receive the energy and
+// gradient of friction and damping summed over the contacts. Returns whether it reported any.
 template <GradTarget kGradTarget>
-static void AssembleRigidBodyAsyncContactResponse(
+[[nodiscard]] static bool AssembleRigidBodyAsyncContactResponse(
     ContactAssemblyReg reg,
     entt::entity e,
     ecs::OptionalTag<TagQueryActiveContacts> queryActiveContacts,
@@ -108,24 +110,34 @@ static void AssembleRigidBodyAsyncContactResponse(
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current>& collisions,
     double* outEnergy,
     RigidGradient* outGradient,
-    RigidHessian* outHessian) {
+    RigidHessian* outHessian,
+    double* outDissipationEnergy,
+    RigidGradient* outDissipationGradient) {
   MOCHI_PROFILE_SCOPE();
   MOCHI_ASSERT_VERBOSE(
       (!outEnergy || *outEnergy == 0.0) && (!outGradient || *outGradient == RigidGradient{}) &&
-          (!outHessian || *outHessian == RigidHessian{}),
+          (!outHessian || *outHessian == RigidHessian{}) &&
+          (!outDissipationEnergy || *outDissipationEnergy == 0.0) &&
+          (!outDissipationGradient || *outDissipationGradient == RigidGradient{}),
       "Expected this to be the first assembly term, with zero energy");
   MOCHI_ASSERT_VERBOSE(
       kGradTarget == GradTarget::Current || !outHessian,
       "The contact DResidual only supports GradTarget::Current.");
+  MOCHI_ASSERT_VERBOSE(
+      (outDissipationEnergy == nullptr) == (outDissipationGradient == nullptr),
+      "The dissipation energy and gradient must be requested together.");
 
   bool const assemEnergy = (outEnergy != nullptr);
   bool const assemGradient = (outGradient != nullptr);
   bool const assemHessian = (outHessian != nullptr);
   bool const storeForces = assemGradient && queryActiveContacts;
+  bool reportedDissipation = false;
 
   // Gradient and Hessian accumulation terms across all colliders
   Vec4r outGradientCom = {};
   Vec4r outGradientRot = {};
+  Vec4r outDissipationGradientCom = {};
+  Vec4r outDissipationGradientRot = {};
   VMatrix3x3r outHessianCom = {};
   VMatrix3x3r outHessianRot = {};
   VMatrix3x3r outHessianMix = {};
@@ -176,6 +188,11 @@ static void AssembleRigidBodyAsyncContactResponse(
     if (storeForces) {
       contactQuery.forcePerUnitArea.resize_noinit(numPoints);
     }
+    std::optional<RigidContactSums> dissipationSums;
+    if (outDissipationEnergy && HasDissipation(contactParams)) {
+      dissipationSums.emplace();
+      reportedDissipation = true;
+    }
     RigidContactSums const sums = ComputeRigidContactSums<kGradTarget>(
         Interval<int>{0, numPoints},
         contactQuery,
@@ -187,7 +204,8 @@ static void AssembleRigidBodyAsyncContactResponse(
         assemEnergy,
         assemGradient,
         assemHessian,
-        storeForces ? MakeSpan(contactQuery.forcePerUnitArea) : Span<Real3>{});
+        storeForces ? MakeSpan(contactQuery.forcePerUnitArea) : Span<Real3>{},
+        dissipationSums ? &*dissipationSums : nullptr);
     if (assemEnergy) {
       *outEnergy += sums.energy;
     }
@@ -197,6 +215,11 @@ static void AssembleRigidBodyAsyncContactResponse(
     if (assemGradient) {
       outGradientCom -= DotVecMat3x3(sums.force, rotT);
       outGradientRot -= DotVecMat3x3(sums.torque, rotT);
+    }
+    if (dissipationSums) {
+      *outDissipationEnergy += dissipationSums->energy;
+      outDissipationGradientCom -= DotVecMat3x3(dissipationSums->force, rotT);
+      outDissipationGradientRot -= DotVecMat3x3(dissipationSums->torque, rotT);
     }
 
     if (assemHessian) {
@@ -213,6 +236,11 @@ static void AssembleRigidBodyAsyncContactResponse(
     Store(outGradient->data(), outGradientCom);
     Store<RigidSize::kDRot>(outGradient->data() + RigidSize::kDTrans, outGradientRot);
   }
+  if (outDissipationGradient) {
+    Store(outDissipationGradient->data(), outDissipationGradientCom);
+    Store<RigidSize::kDRot>(
+        outDissipationGradient->data() + RigidSize::kDTrans, outDissipationGradientRot);
+  }
   if (assemHessian) {
     StoreSubmatrix<RigidSize::kDTrans, RigidSize::kDTrans, RigidSize::kDAll, RigidSize::kDAll>(
         *outHessian, Int2{0, 0}, outHessianCom);
@@ -223,6 +251,7 @@ static void AssembleRigidBodyAsyncContactResponse(
     StoreSubmatrix<RigidSize::kDRot, RigidSize::kDTrans, RigidSize::kDAll, RigidSize::kDAll>(
         *outHessian, Int2{RigidSize::kDTrans, 0}, outHessianMix);
   }
+  return reportedDissipation;
 }
 
 /*****************************************************************************************************
@@ -671,11 +700,17 @@ void mochi::rigid::EntityAssemble(
       IsAssemblyNeeded(StateDependency::ZeroOrder, false /*inputDependency*/, gradTarget);
 
   // Newton-Euler inertia and external torques report their non-potential terms with the objective
-  bool const reportsNonPotential = params.assemObj &&
+  bool const reportsNonPotential = ReportsNonPotentialTerms(params, simParams.value) &&
       ((assembleInertia && useNewtonEulerInertia) ||
        (assembleExternalForces && HasTorque(externalForces)));
   RigidNonPotentialTerms tempNonPotential;
   RigidNonPotentialTerms* nonPotential = reportsNonPotential ? &tempNonPotential : nullptr;
+
+  // So do the friction and damping of contact.
+  bool const reportsContactDissipation = ReportsContactDissipation(params, simParams.value);
+  double contactDissipationEnergy = 0.0;
+  RigidGradient contactDissipationGradient{};
+  bool reportedContactDissipation = false;
 
   // Compute async contact term first. It assumes that energy starts at zero.
   bool bContactEnabled = hasContactTag && activeCollisions &&
@@ -697,7 +732,7 @@ void mochi::rigid::EntityAssemble(
     auto assembleRigidBodyAsyncContactResponseFn = gradTarget == GradTarget::Previous
         ? AssembleRigidBodyAsyncContactResponse<GradTarget::Previous>
         : AssembleRigidBodyAsyncContactResponse<GradTarget::Current>;
-    assembleRigidBodyAsyncContactResponseFn(
+    reportedContactDissipation = assembleRigidBodyAsyncContactResponseFn(
         reg,
         e,
         queryActiveContacts,
@@ -708,7 +743,9 @@ void mochi::rigid::EntityAssemble(
         *activeCollisions,
         energy,
         gradient,
-        hessian);
+        hessian,
+        reportsContactDissipation ? &contactDissipationEnergy : nullptr,
+        reportsContactDissipation ? &contactDissipationGradient : nullptr);
   }
 
   // Compute gravitational terms
@@ -774,8 +811,12 @@ void mochi::rigid::EntityAssemble(
 
   // Sum energy
   if (params.assemObj) {
+    outActorSnle.ResetObjective();
     outActorSnle.objective = tempEnergy;
-    outActorSnle.ResetNonPotentialTerms();
+    if (reportedContactDissipation) {
+      outActorSnle.AddNonPotentialTerms(
+          contactDissipationEnergy, AsConstView(contactDissipationGradient), 0, RigidSize::kDAll);
+    }
     if (reportsNonPotential) {
       outActorSnle.AddNonPotentialTerms(
           tempNonPotential.energy,

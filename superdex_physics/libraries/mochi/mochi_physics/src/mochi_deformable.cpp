@@ -279,6 +279,7 @@ static void ComputeAsyncContactResponseImpl(
     bool evalEner,
     bool evalGrad,
     bool evalHess,
+    bool reportsDissipation,
     Span<bool const> allowedContactElementMask) {
   MOCHI_PROFILE_SCOPE();
 
@@ -300,13 +301,14 @@ static void ComputeAsyncContactResponseImpl(
   auto const worldFromLocalRotation = ToVMatrix3x3(transform.GetRotation());
 
   // Reset contact response samples.
-  outResponse.Reset(numContactElements, FemDiscretization<ElementT>::kNumQuads);
+  outResponse.Reset(numContactElements, FemDiscretization<ElementT>::kNumQuads, reportsDissipation);
 
   // Preallocate memory for collision response. Use stack memory if possible. 32 KiB is enough in
   // most cases.
   MOCHI_FILO_STACK_ALLOCATOR(allocator, 32 * 1024);
   CollisionResponseResult collisionResponse(&allocator);
   collisionResponse.Reserve(collisions, evalEner, evalGrad, evalHess);
+  CollisionResponseResult& dissipation = outResponse.DissipationScratch();
 
   // Compute collision response.
   for (int c = 0; c < numColliders; ++c) {
@@ -318,6 +320,10 @@ static void ComputeAsyncContactResponseImpl(
 
     int const numActiveSamples = isize(contactQuery.sampleIndices);
     collisionResponse.ResizeNoInit(numActiveSamples, evalEner, evalGrad, evalHess);
+    bool const colliderReportsDissipation = reportsDissipation && HasDissipation(contactParams);
+    if (colliderReportsDissipation) {
+      dissipation.ResizeNoInit(numActiveSamples, true, true, false);
+    }
 
     // Add the transformation between collider and world space. The response is the gradient wrt the
     // current contact points, so map it back through the current collider frame even when explicit
@@ -336,7 +342,8 @@ static void ComputeAsyncContactResponseImpl(
         evalEner,
         evalGrad,
         evalHess,
-        collisionResponse);
+        collisionResponse,
+        colliderReportsDissipation ? &dissipation : nullptr);
 
     // Assemble
     for (size_t i = 0; i < numActiveSamples; ++i) {
@@ -352,10 +359,19 @@ static void ComputeAsyncContactResponseImpl(
         outDForce = &collisionResponse.dforce[i];
         *outDForce = TransformContactDForceToCollidingLocal(colliderFromLocal, *outDForce);
       }
+      double const* dissipationEnergy = nullptr;
+      Real3* dissipationForce = nullptr;
+      if (colliderReportsDissipation) {
+        dissipationEnergy = &dissipation.energy[i];
+        dissipationForce = &dissipation.force[i];
+        *dissipationForce =
+            TransformContactForceToCollidingLocal(colliderFromLocal, *dissipationForce);
+      }
 
       // Write energy response to buffer.
       int const sampleIndex = contactQuery.sampleIndices[i];
-      outResponse.AddContactSampleResponse(sampleIndex, outEnergy, outForce, outDForce);
+      outResponse.AddContactSampleResponse(
+          sampleIndex, outEnergy, outForce, outDForce, dissipationEnergy, dissipationForce);
     }
 
     // Optionally store data for queries
@@ -371,7 +387,7 @@ template <typename DiscretizationType, int kNumFields>
 void deformable::ComputeAsyncContactResponse(
     ContactAssemblyReg reg,
     entt::entity e,
-    ExperimentalEvalParams const& experimentalEval,
+    CSimulationParams const& simParams,
     ecs::OptionalTag<TagQueryActiveContacts> queryActiveContacts,
     DiscretizationType const& femBoundaryDisc,
     CContactSamples<TimeStep::Current> const& samples,
@@ -381,6 +397,7 @@ void deformable::ComputeAsyncContactResponse(
     AssemblyParams const& params,
     CDeformablePointAsyncCollisionsResponse& outResponse,
     Span<bool const> allowedContactElementMask) {
+  auto const& experimentalEval = simParams.experimentalEval;
   femBoundaryDisc.Visit([&](auto const& femBoundaryDiscImpl) {
     ContactEvalConfig const config = MakeContactEvalConfigAsync(
         experimentalEval, reg, e, params.psdDRes, params.fittedSaturationHessian.contactFriction);
@@ -399,6 +416,7 @@ void deformable::ComputeAsyncContactResponse(
         params.assemObj,
         params.assemRes,
         params.assemDRes,
+        ReportsContactDissipation(params, simParams),
         allowedContactElementMask);
   });
 }
@@ -407,7 +425,7 @@ void deformable::ComputeAsyncContactResponse(
   template void deformable::ComputeAsyncContactResponse<DISCRETIZATION_TYPE, NUM_FIELDS>( \
       ContactAssemblyReg,                                                                 \
       entt::entity,                                                                       \
-      ExperimentalEvalParams const&,                                                      \
+      CSimulationParams const&,                                                           \
       ecs::OptionalTag<TagQueryActiveContacts>,                                           \
       DISCRETIZATION_TYPE const&,                                                         \
       CContactSamples<TimeStep::Current> const&,                                          \

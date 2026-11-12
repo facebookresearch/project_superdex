@@ -45,6 +45,9 @@ namespace mochi {
 // Forwards
 struct CRecordingData;
 struct CRomProjectionStrategy;
+namespace rom {
+struct CRomJacobian;
+} // namespace rom
 struct TractionWorkArgs;
 
 /**************************************************************************
@@ -728,6 +731,7 @@ void AssembleAsyncContact(
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current>& collisions,
     CRootTransform const& rootTransform,
     CRomProjectionStrategy const* romProjectionStrategy,
+    rom::CRomJacobian const* romJacobian,
     CDeformablePointAsyncCollisionsResponse& outResponse,
     CActorSnle& outActorSnle,
     CActiveBoundaryFaces const* activeBoundaryFaces = nullptr);

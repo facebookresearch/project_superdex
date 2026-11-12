@@ -2136,6 +2136,7 @@ void articulated::compound::AssembleDampingForces(
 void articulated::compound::AssembleInertiaForces(
     AssemblyParams const& params,
     ecs::OptionalTag<TagUseNewtonEulerInertia> useNewtonEulerInertia,
+    ecs::CtxGlobal<CSimulationParams const> simParams,
     CArticulatedProps const& props,
     CArticulatedBodyShape const& bodyShape,
     CArticulatedJointPoseInfo const& poseInfo,
@@ -2152,6 +2153,9 @@ void articulated::compound::AssembleInertiaForces(
   auto const jointAxes = joints->jointAxes;
   auto const dofInfo = joints->dofInfo;
   auto inertiaFuncRigidBody = GetRigidInertiaFn<real>(params.gradTarget, useNewtonEulerInertia);
+  // Newton-Euler inertia reports its non-potential terms with the objective
+  bool const reportsNonPotential =
+      ReportsNonPotentialTerms(params, simParams.value) && useNewtonEulerInertia;
   auto assemblerRigidBody =
       [&](int i, double* energy, RigidGradient* gradient, RigidHessian* hessian) -> bool {
     MOCHI_ASSERT_VERBOSE_FREE_OR_SPHERICAL(jointTypes[i]);
@@ -2159,8 +2163,6 @@ void articulated::compound::AssembleInertiaForces(
       return false;
     }
 
-    // Newton-Euler inertia reports its non-potential terms with the objective
-    bool const reportsNonPotential = energy && useNewtonEulerInertia;
     RigidNonPotentialTerms nonPotential;
     inertiaFuncRigidBody(
         inertiaParams[i] /*mass*/,
@@ -2288,6 +2290,7 @@ void articulated::compound::AssembleFrictionForces(
 
 void articulated::compound::AssembleExternalForces(
     AssemblyParams const& params,
+    ecs::CtxGlobal<CSimulationParams const> simParams,
     CArticulatedProps const& props,
     CArticulatedBodyShape const& bodyShape,
     CArticulatedJointPoseInfo const& poseInfo,
@@ -2300,6 +2303,7 @@ void articulated::compound::AssembleExternalForces(
   auto const* joints = bodyShape.shape->GetJointsData();
   auto const jointTypes = joints->jointTypes;
   auto const jointDofInfo = joints->dofInfo;
+  bool const reportsNonPotential = ReportsNonPotentialTerms(params, simParams.value);
   // For convenience, fill an array with force values for all dofs, even if they're zero.
   MOCHI_FILO_STACK_ALLOCATOR(allocator, sizeof(real) * 256); // Up to 256 dofs
   DynamicArray<real> allForces(props.reducedDofsDim, 0_r, &allocator);
@@ -2330,7 +2334,7 @@ void articulated::compound::AssembleExternalForces(
     }
 
     // A nonzero torque reports its non-potential terms with the objective
-    bool const reportsNonPotential = energy && jointTorque != Real3{};
+    bool const reportsJointNonPotential = reportsNonPotential && jointTorque != Real3{};
     RigidNonPotentialTerms nonPotential;
     AddRigidBodyExternalForces(
         currJointTxs[i],
@@ -2339,8 +2343,8 @@ void articulated::compound::AssembleExternalForces(
         forces,
         energy,
         gradient,
-        reportsNonPotential ? &nonPotential : nullptr);
-    if (reportsNonPotential) {
+        reportsJointNonPotential ? &nonPotential : nullptr);
+    if (reportsJointNonPotential) {
       outCompoundSnle.AddNonPotentialTerms(
           nonPotential.energy,
           AsConstView(nonPotential.rotGradient),
@@ -2652,25 +2656,12 @@ static void AssembleReducedDResidual(
   }
 }
 
-// Adds the non-potential terms of a link, whose residual its block of the Jacobian projects onto
-// the compound's DoFs.
-static void AddLinkNonPotentialTerms(
-    ActorSnle const& linkSnle,
-    ArticulatedJacobian const& jacobian,
-    int link,
-    ActorSnle& outCompoundSnle) {
-  outCompoundSnle.nonPotentialEnergy += linkSnle.nonPotentialEnergy;
-  jacobian.AddLinkTransposeProduct(
-      link,
-      ColumnVectorView<real const, RigidSize::kDAll>(linkSnle.nonPotentialResidual.GetConstSpan()),
-      outCompoundSnle.NonPotentialResidual(jacobian.NumDofs()));
-}
-
 void articulated::compound::EntityAssemble(
     AssemblyParams const& params,
     ecs::RequiredTag<TagArticulatedActor>,
     ecs::PartialRegistry<CActorSnle const, CDofOffset const> reg,
     ecs::OptionalTag<TagUseNewtonEulerInertia> useNewtonEulerInertia,
+    ecs::CtxGlobal<CSimulationParams const> simParams,
     CArticulatedProps const& props,
     CGroupMembers const& groupMembers,
     CArticulatedJacobian const& jacobian,
@@ -2720,8 +2711,13 @@ void articulated::compound::EntityAssemble(
       auto const& bodyDofOffset = reg.get<CDofOffset const>(bodyEntity);
       if (params.assemObj) {
         outCompoundSnle.objective += bodySnle.objective;
+        outCompoundSnle.nonPotentialEnergy += bodySnle.nonPotentialEnergy;
         if (bodySnle.hasNonPotentialResidual) {
-          AddLinkNonPotentialTerms(bodySnle, jacobian.value, link, outCompoundSnle);
+          jacobian.value.AddLinkTransposeProduct(
+              link,
+              ColumnVectorView<real const, RigidSize::kDAll>(
+                  bodySnle.nonPotentialResidual.GetConstSpan()),
+              outCompoundSnle.NonPotentialResidual(jacobian.value.NumDofs()));
         }
       }
       if (params.assemRes) {
@@ -2824,6 +2820,7 @@ void articulated::compound::EntityAssemble(
     AssembleInertiaForces(
         params,
         useNewtonEulerInertia,
+        simParams,
         props,
         bodyShape,
         poseInfo,
@@ -2858,6 +2855,7 @@ void articulated::compound::EntityAssemble(
       IsAssemblyNeeded(StateDependency::ZeroOrder, true /*inputDependency*/, gradTarget)) {
     AssembleExternalForces(
         params,
+        simParams,
         props,
         bodyShape,
         poseInfo,
@@ -2924,8 +2922,15 @@ void articulated::compound::ProjectFullResidual(
 
   // Consumes a link-space residual: adds it to the full residual if it is projected, and
   // deactivates it, so that the next assembly accumulates it from zero. Inactive residuals may hold
-  // stale values.
+  // stale values. Its non-potential part, of a current-state objective assembly, is projected into
+  // the compound's non-potential residual.
   auto consume = [&](ArticulatedLinkResidual& linkResidual) {
+    if (linkResidual.isNonPotentialActive) {
+      jacobian.value.AddTransposeProduct(
+          linkResidual.nonPotentialResidual,
+          outCompoundSnle.NonPotentialResidual(jacobian.value.NumDofs()));
+      linkResidual.isNonPotentialActive = false;
+    }
     if (!linkResidual.isActive) {
       return;
     }

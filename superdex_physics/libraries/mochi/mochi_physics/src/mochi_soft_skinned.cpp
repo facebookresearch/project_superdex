@@ -121,6 +121,9 @@ void skinned::EntityAssembleBody(
   auto softOffset = dofOffset.dofsOffset;
 
   if (params.assemObj) {
+    MOCHI_ASSERT_VERBOSE(
+        outSoftSkinnedSnle.nonPotentialEnergy == 0.0 && !outSoftSkinnedSnle.hasNonPotentialResidual,
+        "The posed body must have no non-potential terms, which are not transformed.");
     outInteractionSnle.objective = outSoftSkinnedSnle.objective;
   }
 

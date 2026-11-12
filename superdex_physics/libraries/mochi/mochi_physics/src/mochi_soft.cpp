@@ -22,6 +22,7 @@
 #include "mochi_discretization_components.h"
 #include "mochi_ecs_utils.h"
 #include "mochi_integration.h"
+#include "mochi_rom_jacobian.h"
 #include "mochi_simulation.h"
 #include "mochi_soft_rom_components.h"
 
@@ -258,7 +259,7 @@ void mochi::soft::AssembleBodyImpl(
 
   // Clear SNLE data
   if (params.assemObj) {
-    outSnle.objective = 0.0;
+    outSnle.ResetObjective();
   }
   if (params.assemRes) {
     outSnle.fullResidual.SetZero();
@@ -429,6 +430,7 @@ void mochi::soft::AssembleAsyncContact(
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current>& collisions,
     CRootTransform const& rootTransform,
     CRomProjectionStrategy const* romProjectionStrategy,
+    rom::CRomJacobian const* romJacobian,
     CDeformablePointAsyncCollisionsResponse& outResponse,
     CActorSnle& outActorSnle,
     CActiveBoundaryFaces const* activeBoundaryFaces) {
@@ -460,7 +462,7 @@ void mochi::soft::AssembleAsyncContact(
   deformable::ComputeAsyncContactResponse<CFemBoundaryDiscretization, kSpaceDim3>(
       reg,
       e,
-      simParams->experimentalEval,
+      simParams.value,
       queryActiveContacts,
       femBoundaryDisc,
       samples,
@@ -497,6 +499,23 @@ void mochi::soft::AssembleAsyncContact(
         MakeConstSpan(disc.femElements), outResponse, bdFaceWeights);
 
     AssembleObjResDRes<ElementT>(bdL2g, bdNbs, boundaryOp, results, activeSubset);
+    // ROMs project their full residual onto their reduced DoFs after assembly, but not their
+    // non-potential residual, which is assembled in reduced DoFs.
+    if (!isRom) {
+      deformable::AssembleContactDissipation<ElementT>(
+          bdL2g, bdNbs, MakeConstSpan(disc.femElements), outResponse, bdFaceWeights, outActorSnle);
+    } else if (outResponse.HasReportedDissipation()) {
+      MOCHI_ASSERT_VERBOSE(
+          romJacobian && romJacobian->TryGet<rom::CRomJacobian::DenseT>(),
+          "Expected dense ROM Jacobian.");
+      deformable::AssembleAndProjectContactDissipation<ElementT>(
+          bdL2g,
+          MakeConstSpan(disc.femElements),
+          outResponse,
+          bdFaceWeights,
+          AsConstView(*romJacobian->TryGet<rom::CRomJacobian::DenseT>()),
+          outActorSnle);
+    }
   });
 }
 

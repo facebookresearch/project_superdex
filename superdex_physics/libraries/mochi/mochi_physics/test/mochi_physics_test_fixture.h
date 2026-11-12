@@ -18,6 +18,7 @@
 
 #include <mochi_core/contact/contact_utils.h>
 #include <mochi_core/geometry/model_data.h>
+#include <mochi_core/solvers/snle_problem.h>
 #include <mochi_core/test/mochi_test_helpers.h>
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/math_utils.h>
@@ -34,6 +35,7 @@
 #include <gtest/gtest.h>
 
 #include <memory>
+#include <optional>
 
 namespace mochi::test {
 
@@ -356,5 +358,43 @@ inline void ExpectEqualContactJacSnapshots(
 // damping and gravity act. Each body with inertia or gravity is checked: a nested soft actor's
 // unposed and posed bodies separately.
 void ExpectUniformTranslationAssembly(Scene* scene, Actor* actor, real relTol);
+
+// The non-potential residuals of a problem (see SnleProblem::nonPotentialResiduals), summed into
+// one vector over its DoFs.
+ColumnVector<real> SumNonPotentialResiduals(SnleProblem<real> const& problem);
+
+// Coefficients of friction and contact damping (see ContactParams).
+struct DissipationCoefficients {
+  real coulomb = 0_r;
+  real viscous = 0_r;
+  real damping = 0_r;
+};
+
+// Coulomb friction, viscous friction and contact damping, all acting.
+inline constexpr DissipationCoefficients kDissipationCoefficients{
+    .coulomb = 0.5_r,
+    .viscous = 1_r,
+    .damping = 1_r};
+
+// Checks the energy N and residual g that friction and damping report as non-potential terms (see
+// SnleProblem::nonPotentialEnergy) at the problem's state, under WolfeStrong, with every actor's
+// contact coefficients set to coefficients, if given, then zeroed with the overrides disabled:
+// - E and F change observably;
+// - with implicit normals, E - N and F - g don't change;
+// - with explicit normals, N and g don't change;
+// - objective-only and combined assemblies, and residual requests that reuse the objective, agree;
+// - ResidualNorm reports nothing, with the same E and F.
+// Restores the line search, the actors' contact coefficients and the overrides.
+void ExpectDissipationIsNonPotential(
+    entt::registry& reg,
+    SnleProblem<real>& problem,
+    std::optional<DissipationCoefficients> coefficients);
+
+// Steps a scene until some actor has contact at the end of a step, and once more, so that its
+// contacts persist through a whole step. Then runs ExpectDissipationIsNonPotential with
+// kDissipationCoefficients on every island, each of which must touch with friction or damping, at a
+// random increment from the end of that step. With elasto-plastic friction, also expects some
+// contact to have a nonzero anchor offset.
+void ExpectDissipationIsNonPotentialAfterTouch(Scene* scene, real dt);
 
 } // namespace mochi::test

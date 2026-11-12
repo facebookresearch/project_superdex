@@ -42,10 +42,48 @@ struct BaseSnle : NoCopy {
 
   virtual void SetZero(AssemblyParams const& params) = 0;
 
+  // Zeroes the objective and the non-potential terms assembled with it.
+  void ResetObjective() {
+    objective = 0.0;
+    nonPotentialEnergy = 0.0;
+    hasNonPotentialResidual = false;
+  }
+
+  // Returns the non-potential residual, of numDofs entries, zeroed at the first call after
+  // ResetObjective.
+  [[nodiscard]] ColumnVectorView<real> NonPotentialResidual(int numDofs) {
+    if (!hasNonPotentialResidual) {
+      nonPotentialResidual.Resize(numDofs);
+      nonPotentialResidual.SetZero();
+      hasNonPotentialResidual = true;
+    }
+    MOCHI_ASSERT_VERBOSE(nonPotentialResidual.Rows() == numDofs);
+    return nonPotentialResidual;
+  }
+
+  // Adds the energy and residual, on the DoFs from offset, of an active non-potential term.
+  void AddNonPotentialTerms(
+      double energy,
+      ColumnVectorView<real const> residual,
+      int offset,
+      int numDofs) {
+    nonPotentialEnergy += energy;
+    NonPotentialResidual(numDofs).MiddleRows(offset, residual.Rows()) += residual;
+  }
+
   double objective = 0.0;
 
   // If this SNLE data is not directly used by the solver, then set useInSolver to false.
   bool useInSolver = true;
+
+  // Energy and residual of the non-potential terms (see SnleProblem::nonPotentialEnergy),
+  // assembled with the objective. hasNonPotentialResidual says whether this SNLE has a
+  // non-potential residual. A flag, rather than an empty residual, keeps the residual's allocation
+  // across assemblies. An actor's residual spans its DoFs, and an interaction's the island's, at
+  // offset 0.
+  double nonPotentialEnergy = 0.0;
+  ColumnVector<real> nonPotentialResidual = {};
+  bool hasNonPotentialResidual = false;
 };
 
 /**
@@ -83,8 +121,7 @@ struct ActorSnle : BaseSnle {
 
   void SetZero(AssemblyParams const& params) override {
     if (params.assemObj) {
-      objective = 0.0;
-      ResetNonPotentialTerms();
+      ResetObjective();
     }
     if (params.assemRes) {
       fullResidual.SetZero();
@@ -98,8 +135,7 @@ struct ActorSnle : BaseSnle {
 
   void SetFullToZero(AssemblyParams const& params) {
     if (params.assemObj) {
-      objective = 0.0;
-      ResetNonPotentialTerms();
+      ResetObjective();
     }
     if (params.assemRes) {
       fullResidual.SetZero();
@@ -148,45 +184,11 @@ struct ActorSnle : BaseSnle {
     _useReduced = false;
   }
 
-  // Resets the non-potential terms, which objective assemblies set.
-  void ResetNonPotentialTerms() {
-    nonPotentialEnergy = 0.0;
-    hasNonPotentialResidual = false;
-  }
-
-  // Returns the non-potential residual, of numDofs entries, zeroed at the first call after its
-  // reset.
-  [[nodiscard]] ColumnVectorView<real> NonPotentialResidual(int numDofs) {
-    if (!hasNonPotentialResidual) {
-      nonPotentialResidual.Resize(numDofs);
-      nonPotentialResidual.SetZero();
-      hasNonPotentialResidual = true;
-    }
-    return nonPotentialResidual;
-  }
-
-  // Adds the energy and residual, on the DoFs from offset, of an active non-potential term.
-  void AddNonPotentialTerms(
-      double energy,
-      ColumnVectorView<real const> residual,
-      int offset,
-      int numDofs) {
-    nonPotentialEnergy += energy;
-    NonPotentialResidual(numDofs).MiddleRows(offset, residual.Rows()) += residual;
-  }
-
   ColumnVector<real> fullResidual;
   AnyMatrix<real> fullDResidual;
 
   ColumnVector<real> reducedResidual = {};
   AnyMatrix<real> reducedDResidual = {};
-
-  // Energy and residual of the actor's non-potential terms (see SnleProblem::nonPotentialEnergy),
-  // assembled with the objective. A hasNonPotentialResidual flag, rather than an empty residual,
-  // keeps the residual's allocation across assemblies.
-  double nonPotentialEnergy = 0.0;
-  ColumnVector<real> nonPotentialResidual = {};
-  bool hasNonPotentialResidual = false;
 
  private:
   std::unique_ptr<ActorPreconditioner<real>> _fullPreconditioner = nullptr;
@@ -219,7 +221,7 @@ struct CSoftSkinnedUnposedSnle : ActorSnle {
 struct InteractionSnle : BaseSnle {
   void SetZero(AssemblyParams const& params) override {
     if (params.assemObj) {
-      objective = 0.0;
+      ResetObjective();
     }
     if (params.assemRes) {
       for (auto& [rOffset, res] : residuals) {

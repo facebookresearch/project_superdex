@@ -16,6 +16,7 @@
 
 #include "mochi_articulated_test_scenes.h"
 #include "mochi_physics_test_fixture.h"
+#include "mochi_test_scene_builders.h"
 
 #include <mochi_core/geometry/tetrahedral_mesh.h>
 #include <mochi_core/geometry/triangular_mesh.h>
@@ -51,12 +52,14 @@
 #include <bit>
 #include <cmath>
 #include <cstring>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <numeric>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -106,7 +109,7 @@ void AddToArticulatedPose(entt::registry& reg, entt::entity entity, int localDof
 // Test collision response on multiple contacts by comparing analytical force and dforce to
 // finite-difference approximations, and rigid contact sums to sums of the per-point response.
 TEST(MochiContact, ComputeCollisionResponse) {
-  auto runTest = [](bool explicitNormals, real coulombCoefficient, real viscousCoefficient) {
+  auto runTest = [](bool explicitNormals, test::DissipationCoefficients const& coefficients) {
     // Contact eval config for derivative consistency tests
     ContactEvalConfig config{
         .explicitNormals = explicitNormals,
@@ -114,8 +117,9 @@ TEST(MochiContact, ComputeCollisionResponse) {
         .useFittedHessian = false};
 
     ContactParams params;
-    params.viscousFrictionCoefficient = viscousCoefficient;
-    params.coulombFrictionCoefficient = coulombCoefficient;
+    params.viscousFrictionCoefficient = coefficients.viscous;
+    params.coulombFrictionCoefficient = coefficients.coulomb;
+    params.normalViscousDampingCoefficient = coefficients.damping;
     params.penaltyThresholdDefault = 0.005_r; // Large enough to cover the tested distances
     real dtStage = 0.01_r;
 
@@ -169,6 +173,16 @@ TEST(MochiContact, ComputeCollisionResponse) {
     mochi::ComputeCollisionResponse<GradTarget::Current>(
         contactQuery, params, config, dtStage, true, true, true, res);
 
+    // The response without friction and damping.
+    ContactParams nonDissipativeParams = params;
+    nonDissipativeParams.viscousFrictionCoefficient = 0_r;
+    nonDissipativeParams.coulombFrictionCoefficient = 0_r;
+    nonDissipativeParams.normalViscousDampingCoefficient = 0_r;
+    CollisionResponseResult nonDissipative;
+    nonDissipative.ResizeNoInit(isize(contactQuery.sampleIndices), true, true, false);
+    mochi::ComputeCollisionResponse<GradTarget::Current>(
+        contactQuery, nonDissipativeParams, config, dtStage, true, true, false, nonDissipative);
+
     // Random bone points (rho, s) and bone rotations of the skinned contact sums.
     constexpr int kNumBones = 3;
     auto generator = RandomGenerator(42);
@@ -190,8 +204,10 @@ TEST(MochiContact, ComputeCollisionResponse) {
     }
 
     // The rigid and skinned contact sums match the sums of the per-point response for ranges of
-    // every length. The requested quantities cycle with period 7, coprime with the batch size, so
-    // every combination meets every size of the last batch.
+    // every length. At GradTarget::Current, so do the sums of its friction and damping part, the
+    // response less the non-dissipative one, and requesting them leaves the other sums unchanged.
+    // The requested quantities cycle with period 7, coprime with the batch size, so every
+    // combination meets every size of the last batch.
     auto const testContactSums = [&](auto gradTarget) {
       constexpr GradTarget kGradTarget = decltype(gradTarget)::value;
       Vec4r const origin{0.3_r, -0.2_r, 0.1_r, 0_r};
@@ -202,6 +218,8 @@ TEST(MochiContact, ComputeCollisionResponse) {
       constexpr real kTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-12_r : 1e-5_r;
       CollisionResponseResult ref;
       ref.ResizeNoInit(isize(contactQuery.sampleIndices), true, true, true);
+      CollisionResponseResult refDissipation;
+      refDissipation.ResizeNoInit(isize(contactQuery.sampleIndices), true, true, false);
       for (int numPoints = 1; numPoints < isize(contactQuery.sampleIndices); ++numPoints) {
         Interval<int> const range{1, 1 + numPoints};
         int const flags = 1 + numPoints % 7;
@@ -209,12 +227,24 @@ TEST(MochiContact, ComputeCollisionResponse) {
         bool const assemForce = (flags & 2) != 0;
         bool const assemDForce = kGradTarget == GradTarget::Current && (flags & 4) != 0;
         mochi::ComputeCollisionResponseRange<kGradTarget>(
-            range, contactQuery, params, config, dtStage, true, true, true, ref);
+            range,
+            contactQuery,
+            params,
+            config,
+            dtStage,
+            true,
+            true,
+            true,
+            ref,
+            kGradTarget == GradTarget::Current ? &refDissipation : nullptr);
         RigidContactSums expected;
+        RigidContactSums expectedDissipation;
         // Upper bounds of the sums of the term magnitudes, to scale the tolerances
         real energyScale = 0_r;
         real forceScale = 0_r;
         real dForceScale = 0_r;
+        real dissipationEnergyScale = 0_r;
+        real dissipationForceScale = 0_r;
         for (int s : range) {
           real const w = weights[contactQuery.sampleIndices[s]];
           Vec4r const leverArm =
@@ -234,21 +264,23 @@ TEST(MochiContact, ComputeCollisionResponse) {
           energyScale += Abs(static_cast<real>(we));
           forceScale += lever * Norm(ToReal3(wf));
           dForceScale += Sqr(lever) * Norm3x3(wd);
+          if constexpr (kGradTarget == GradTarget::Current) {
+            EXPECT_NEAR(
+                refDissipation.energy[s],
+                res.energy[s] - nonDissipative.energy[s],
+                kTol * (Abs(res.energy[s]) + Abs(nonDissipative.energy[s])));
+            EXPECT_LE(
+                Norm(refDissipation.force[s] - (res.force[s] - nonDissipative.force[s])),
+                kTol * (Norm(res.force[s]) + Norm(nonDissipative.force[s])));
+            double const weDissipation = w * refDissipation.energy[s];
+            Vec4r const wfDissipation = w * ToSimd(refDissipation.force[s]);
+            expectedDissipation.energy += weDissipation;
+            expectedDissipation.force += wfDissipation;
+            expectedDissipation.torque += Cross3(leverArm, wfDissipation);
+            dissipationEnergyScale += Abs(static_cast<real>(weDissipation));
+            dissipationForceScale += lever * Norm(ToReal3(wfDissipation));
+          }
         }
-
-        DynamicArray<Real3> outForce(nContacts, Real3{});
-        RigidContactSums const actual = ComputeRigidContactSums<kGradTarget>(
-            range,
-            contactQuery,
-            params,
-            config,
-            dtStage,
-            MakeConstSpan(weights),
-            origin,
-            assemEnergy,
-            assemForce,
-            assemDForce,
-            assemForce ? MakeSpan(outForce) : Span<Real3>{});
 
         auto const expectOutForce = [&](Span<Real3 const> forces) {
           for (int s = 0; s < isize(forces); ++s) {
@@ -257,13 +289,41 @@ TEST(MochiContact, ComputeCollisionResponse) {
           }
         };
 
-        EXPECT_NEAR(actual.energy, expected.energy, kTol * energyScale);
-        EXPECT_LE(Norm(ToReal3(actual.force - expected.force)), kTol * forceScale);
-        EXPECT_LE(Norm(ToReal3(actual.torque - expected.torque)), kTol * forceScale);
-        EXPECT_LE(Norm3x3(actual.dForce - expected.dForce), kTol * dForceScale);
-        EXPECT_LE(Norm3x3(actual.skewDForce - expected.skewDForce), kTol * dForceScale);
-        EXPECT_LE(Norm3x3(actual.skewDForceSkew - expected.skewDForceSkew), kTol * dForceScale);
-        expectOutForce(MakeConstSpan(outForce));
+        for (bool const reportsDissipation : {false, true}) {
+          if (reportsDissipation && kGradTarget != GradTarget::Current) {
+            break;
+          }
+          DynamicArray<Real3> outForce(nContacts, Real3{});
+          RigidContactSums dissipation;
+          RigidContactSums const actual = ComputeRigidContactSums<kGradTarget>(
+              range,
+              contactQuery,
+              params,
+              config,
+              dtStage,
+              MakeConstSpan(weights),
+              origin,
+              assemEnergy,
+              assemForce,
+              assemDForce,
+              assemForce ? MakeSpan(outForce) : Span<Real3>{},
+              reportsDissipation ? &dissipation : nullptr);
+
+          EXPECT_NEAR(actual.energy, expected.energy, kTol * energyScale);
+          EXPECT_LE(Norm(ToReal3(actual.force - expected.force)), kTol * forceScale);
+          EXPECT_LE(Norm(ToReal3(actual.torque - expected.torque)), kTol * forceScale);
+          EXPECT_LE(Norm3x3(actual.dForce - expected.dForce), kTol * dForceScale);
+          EXPECT_LE(Norm3x3(actual.skewDForce - expected.skewDForce), kTol * dForceScale);
+          EXPECT_LE(Norm3x3(actual.skewDForceSkew - expected.skewDForceSkew), kTol * dForceScale);
+          expectOutForce(MakeConstSpan(outForce));
+          if (reportsDissipation) {
+            EXPECT_NEAR(
+                dissipation.energy, expectedDissipation.energy, kTol * dissipationEnergyScale);
+            real const tol = kTol * dissipationForceScale;
+            EXPECT_LE(Norm(ToReal3(dissipation.force - expectedDissipation.force)), tol);
+            EXPECT_LE(Norm(ToReal3(dissipation.torque - expectedDissipation.torque)), tol);
+          }
+        }
 
         if constexpr (kGradTarget == GradTarget::Current) {
           // The skinned sums of the bone slices followed by a rigid-collider slice about origin,
@@ -271,16 +331,20 @@ TEST(MochiContact, ComputeCollisionResponse) {
           constexpr int kNumSlices = kNumBones + 1;
           std::array<Vec4r, kNumSlices> skForce{};
           std::array<Vec4r, kNumSlices> skTorque{};
+          std::array<Vec4r, kNumSlices> skDissipationForce{};
+          std::array<Vec4r, kNumSlices> skDissipationTorque{};
           std::array<VMatrix3x3r, kNumSlices * kNumSlices> skDForce{};
           std::array<VMatrix3x3r, kNumSlices * kNumSlices> skSkewBDForce{};
           std::array<VMatrix3x3r, kNumSlices * kNumSlices> skSkewADForce{};
           std::array<VMatrix3x3r, kNumSlices * kNumSlices> skSkewDForceSkew{};
           real skForceScale = 0_r;
+          real skDissipationForceScale = 0_r;
           real skDForceScale = 0_r;
           for (int s : range) {
             int const sample = contactQuery.sampleIndices[s];
             real const w = weights[sample];
             Vec4r const wf = (assemForce ? w : 0_r) * ToSimd(ref.force[s]);
+            Vec4r const wfDissipation = w * ToSimd(refDissipation.force[s]);
             VMatrix3x3r const wd = (assemDForce ? w : 0_r) * ref.dforce[s];
             std::array<real, kNumSlices> scales{};
             std::array<Vec4r, kNumSlices> leverArms{};
@@ -296,6 +360,8 @@ TEST(MochiContact, ComputeCollisionResponse) {
               maxLever = Max(maxLever, Norm(ToReal3(leverArms[a])));
               skForce[a] += scales[a] * wf;
               skTorque[a] += Cross3(leverArms[a], wf);
+              skDissipationForce[a] += scales[a] * wfDissipation;
+              skDissipationTorque[a] += Cross3(leverArms[a], wfDissipation);
               for (int b = a; b < kNumSlices; ++b) {
                 int const p = a * kNumSlices + b;
                 VMatrix3x3r const skewAWD = Dot3x3(Skew3(leverArms[a]), wd);
@@ -306,6 +372,7 @@ TEST(MochiContact, ComputeCollisionResponse) {
               }
             }
             skForceScale += (1_r + maxLever) * Norm(ToReal3(wf));
+            skDissipationForceScale += (1_r + maxLever) * Norm(ToReal3(wfDissipation));
             skDForceScale += Sqr(1_r + maxLever) * Norm3x3(wd);
           }
 
@@ -317,40 +384,57 @@ TEST(MochiContact, ComputeCollisionResponse) {
                 .boneRotations = MakeConstSpan(boneRotations),
                 .rigidColliderOrigin =
                     hasRigidColliderSlice ? std::optional{origin} : std::nullopt};
-            DynamicArray<Real3> skOutForce(nContacts, Real3{});
-            SkinnedContactSums const skinned = ComputeSkinnedContactSums(
-                range,
-                contactQuery,
-                params,
-                config,
-                dtStage,
-                MakeConstSpan(weights),
-                slices,
-                assemEnergy,
-                assemForce,
-                assemDForce,
-                GetDefaultAllocator(),
-                assemForce ? MakeSpan(skOutForce) : Span<Real3>{});
+            for (bool const reportsDissipation : {false, true}) {
+              DynamicArray<Real3> skOutForce(nContacts, Real3{});
+              SkinnedContactSums dissipation(
+                  slices.NumSlices(),
+                  /*assemForce*/ true,
+                  /*assemDForce*/ false,
+                  GetDefaultAllocator());
+              SkinnedContactSums const skinned = ComputeSkinnedContactSums(
+                  range,
+                  contactQuery,
+                  params,
+                  config,
+                  dtStage,
+                  MakeConstSpan(weights),
+                  slices,
+                  assemEnergy,
+                  assemForce,
+                  assemDForce,
+                  GetDefaultAllocator(),
+                  assemForce ? MakeSpan(skOutForce) : Span<Real3>{},
+                  reportsDissipation ? &dissipation : nullptr);
 
-            EXPECT_NEAR(skinned.energy, expected.energy, kTol * energyScale);
-            for (int a = 0; a < skinned.numSlices; ++a) {
-              if (assemForce) {
-                EXPECT_LE(Norm(ToReal3(skinned.force[a] - skForce[a])), kTol * skForceScale);
-                EXPECT_LE(Norm(ToReal3(skinned.torque[a] - skTorque[a])), kTol * skForceScale);
+              EXPECT_NEAR(skinned.energy, expected.energy, kTol * energyScale);
+              if (reportsDissipation) {
+                EXPECT_NEAR(
+                    dissipation.energy, expectedDissipation.energy, kTol * dissipationEnergyScale);
               }
-              if (assemDForce) {
-                for (int b = a; b < skinned.numSlices; ++b) {
-                  int const p = skinned.PairIndex(a, b);
-                  int const q = a * kNumSlices + b;
-                  real const tol = kTol * skDForceScale;
-                  EXPECT_LE(Norm3x3(skinned.dForce[p] - skDForce[q]), tol);
-                  EXPECT_LE(Norm3x3(skinned.skewBDForce[p] - skSkewBDForce[q]), tol);
-                  EXPECT_LE(Norm3x3(skinned.skewADForce[p] - skSkewADForce[q]), tol);
-                  EXPECT_LE(Norm3x3(skinned.skewDForceSkew[p] - skSkewDForceSkew[q]), tol);
+              for (int a = 0; a < skinned.numSlices; ++a) {
+                if (assemForce) {
+                  EXPECT_LE(Norm(ToReal3(skinned.force[a] - skForce[a])), kTol * skForceScale);
+                  EXPECT_LE(Norm(ToReal3(skinned.torque[a] - skTorque[a])), kTol * skForceScale);
+                }
+                if (reportsDissipation) {
+                  real const tol = kTol * skDissipationForceScale;
+                  EXPECT_LE(Norm(ToReal3(dissipation.force[a] - skDissipationForce[a])), tol);
+                  EXPECT_LE(Norm(ToReal3(dissipation.torque[a] - skDissipationTorque[a])), tol);
+                }
+                if (assemDForce) {
+                  for (int b = a; b < skinned.numSlices; ++b) {
+                    int const p = skinned.PairIndex(a, b);
+                    int const q = a * kNumSlices + b;
+                    real const tol = kTol * skDForceScale;
+                    EXPECT_LE(Norm3x3(skinned.dForce[p] - skDForce[q]), tol);
+                    EXPECT_LE(Norm3x3(skinned.skewBDForce[p] - skSkewBDForce[q]), tol);
+                    EXPECT_LE(Norm3x3(skinned.skewADForce[p] - skSkewADForce[q]), tol);
+                    EXPECT_LE(Norm3x3(skinned.skewDForceSkew[p] - skSkewDForceSkew[q]), tol);
+                  }
                 }
               }
+              expectOutForce(MakeConstSpan(skOutForce));
             }
-            expectOutForce(MakeConstSpan(skOutForce));
           }
         }
       }
@@ -412,10 +496,10 @@ TEST(MochiContact, ComputeCollisionResponse) {
     }
   };
 
-  runTest(/* explicitNormals */ false, /*coulombCoefficient*/ 0_r, /*viscousCoefficient*/ 100.0_r);
-  runTest(/* explicitNormals */ false, /*coulombCoefficient*/ 0.5_r, /*viscousCoefficient*/ 0_r);
-  runTest(/* explicitNormals */ true, /*coulombCoefficient*/ 0_r, /*viscousCoefficient*/ 100.0_r);
-  runTest(/* explicitNormals */ true, /*coulombCoefficient*/ 0.5_r, /*viscousCoefficient*/ 0_r);
+  runTest(/*explicitNormals*/ false, {.viscous = 100_r, .damping = 1_r});
+  runTest(/*explicitNormals*/ false, {.coulomb = 0.5_r});
+  runTest(/*explicitNormals*/ true, {.viscous = 100_r});
+  runTest(/*explicitNormals*/ true, {.coulomb = 0.5_r, .damping = 1_r});
 }
 
 TEST(MochiContact, SetupActiveCollisionNormalsCachesLinearElementNormal) {
@@ -854,18 +938,18 @@ TEST(MochiContact, AssembleResAndDResWithSharedAndPerPointSlices) {
   runTest({0, 4});
 }
 
-// Objective, residual and dense dresidual of the only island of a scene.
+// Objective, residual and dense dresidual of the only island of a scene, with the energy and the
+// summed residual of its non-potential terms.
 struct IslandAssembly {
   double objective = 0.0;
   ColumnVector<real> residual;
   Matrix<real> dresidual;
+  double nonPotentialEnergy = 0.0;
+  ColumnVector<real> nonPotentialResidual;
 };
 
-static IslandAssembly AssembleSingleIsland(
-    entt::registry& reg,
-    GradTarget gradTarget,
-    bool assemRes = true,
-    bool assemDRes = true) {
+// The SNLE problem of the only island of a scene, at its current state.
+static SnleProblem<real> CreateSingleIslandProblem(entt::registry& reg) {
   // There should be exactly one island.
   entt::entity island = entt::null;
   for (auto [e] : reg.view<TagIsland>().each()) {
@@ -888,13 +972,22 @@ static IslandAssembly AssembleSingleIsland(
 
   // Set up the SNLE problem with an assembly function
   SnleProblemFunctions<real> functions;
-  functions.assemble = [&](SnleProblem<real>& problem, AssemblyParams const& params) {
+  functions.assemble = [&reg, island](SnleProblem<real>& problem, AssemblyParams const& params) {
     solver::AssembleIslandPipeline(reg, island, params, problem);
   };
   SnleProblem<real> problem(dofsSize, solutionSize, std::move(functions));
 
   // Initialize solution to zero
   problem.solution.SetZero();
+  return problem;
+}
+
+static IslandAssembly AssembleSingleIsland(
+    entt::registry& reg,
+    GradTarget gradTarget,
+    bool assemRes = true,
+    bool assemDRes = true) {
+  SnleProblem<real> problem = CreateSingleIslandProblem(reg);
 
   // Request the objective, and the residual and dresidual if requested. The dresidual is assembled
   // only for GradTarget::Current.
@@ -915,6 +1008,8 @@ static IslandAssembly AssembleSingleIsland(
   if (params.assemDRes) {
     assembly.dresidual = ToMatrix(problem.GetDResidual());
   }
+  assembly.nonPotentialEnergy = problem.nonPotentialEnergy;
+  assembly.nonPotentialResidual = test::SumNonPotentialResiduals(problem);
   return assembly;
 }
 
@@ -1069,6 +1164,9 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
     // GradTarget::Current and implicit normals.
     bool const isCurrentTarget = params.gradTarget == GradTarget::Current;
     solverParams.experimentalEval.fadeFriction = isCurrentTarget && params.explicitNormals;
+    // A line search that tests the merit, for which friction and damping report non-potential
+    // terms.
+    solverParams.nonLinearSolver.lineSearchType = LineSearchType::WolfeStrong;
     _scene->SetSolverParams(solverParams, test::ExpectOK{});
 
     InitializeScene(
@@ -1079,7 +1177,9 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
   // GradTarget::Previous, test only the residual. The results for the dresidual are not perfect, as
   // the derivatives discard some nonlinearities (e.g., derivative of the SDF normal for some SDFs,
   // 2nd derivative of the mapping from contact sample to DoFs). In particular, error grows for the
-  // rotation of the _collider, and its corresponding block in the Hessian is sometimes ignored
+  // rotation of the _collider, and its corresponding block in the Hessian is sometimes ignored.
+  // For GradTarget::Current, also check the non-potential terms of friction and damping (see
+  // ExpectDissipationIsNonPotential).
   void RunTest() {
     auto const& params = GetParam();
     InitializeSceneFromParams();
@@ -1158,6 +1258,61 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
       EXPECT_EQ(dres.Indices(), dresFD.Indices()); // Expect same sparsity
       ColumnVector<real> dresValueDelta = AsConstView(dres.Values()) - AsConstView(dresFD.Values());
       EXPECT_NEAR(dresValueDelta.Norm() / Max(dres.Norm(), dresFD.Norm()), 0_r, dresTol);
+
+      // The fixture's coefficients if it has some, and all three otherwise.
+      test::DissipationCoefficients coefficients{
+          .coulomb = params.coulombCoefficient,
+          .viscous = params.viscousCoefficient,
+          .damping = params.dampingCoefficient};
+      if (!FixtureHasDissipation()) {
+        coefficients = test::kDissipationCoefficients;
+      }
+      ExpectDissipationIsNonPotential(coefficients);
+    }
+  }
+
+  // Whether the fixture's coefficients include friction or damping.
+  static bool FixtureHasDissipation() {
+    auto const& params = GetParam();
+    return params.coulombCoefficient > 0_r || params.viscousCoefficient > 0_r ||
+        params.dampingCoefficient > 0_r;
+  }
+
+  // Checks the non-potential terms of friction and damping (see
+  // test::ExpectDissipationIsNonPotential) at a random state near the initial one.
+  void ExpectDissipationIsNonPotential(std::optional<test::DissipationCoefficients> coefficients) {
+    InitDisplacedState();
+    SetUnsetStageTimeSteps();
+    auto& reg = GetRegistry();
+    SnleProblem<real> problem = CreateSingleIslandProblem(reg);
+    test::ExpectDissipationIsNonPotential(reg, problem, coefficients);
+  }
+
+  // Sets the state to the initial one moved by the same random step on every call, of up to 1e-4 in
+  // every DoF in both precisions, so that friction and damping slip.
+  void InitDisplacedState() {
+    InitState();
+    auto generator = RandomGenerator(5);
+    for (int i = 0; i < _numDofs; ++i) {
+      AddToState(i, 1e-4_r * RandomUniformValue(generator, -1_r, 1_r));
+    }
+  }
+
+  // Updates the actors' stage-start contact samples from their stage-start states, as the solver's
+  // stage setup does with implicit normals, so that friction and damping slip from the stage start.
+  void UpdateStageStartSamples() {
+    auto& reg = GetRegistry();
+    for (entt::entity const island : reg.view<CIslandDescendants const>()) {
+      UpdateStageStartDataPipeline(reg, reg.get<CIslandDescendants const>(island));
+    }
+  }
+
+  // Sets the stage time step, which friction and damping need, where the fixture leaves it unset.
+  void SetUnsetStageTimeSteps() {
+    for (auto [entity, intState] : GetRegistry().view<CTimeIntegratorState>().each()) {
+      if (intState.dtStage < 0_r) {
+        intState.dtStage = kDtStage;
+      }
     }
   }
 
@@ -1222,11 +1377,21 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
     InitState();
     PreStep();
     ComputeResponse(gradTarget);
+    IslandAssembly const legacyObjRes =
+        AssembleSingleIsland(GetRegistry(), gradTarget, /*assemRes*/ true, /*assemDRes*/ false);
 
-    // Both paths evaluate the same contacts and differ only in summation order.
+    // Both paths evaluate the same contacts, including the friction and damping that they report as
+    // non-potential terms, and differ only in summation order.
     EXPECT_NEAR(mappedObjective, _objective, kRelTol * Abs(mappedObjective));
     ColumnVector<real> const resDelta = mappedResidual - _residual;
     EXPECT_LE(resDelta.Norm(), kRelTol * mappedResidual.Norm());
+    EXPECT_NEAR(
+        objRes.nonPotentialEnergy,
+        legacyObjRes.nonPotentialEnergy,
+        kRelTol * Abs(objRes.nonPotentialEnergy));
+    ColumnVector<real> const nonPotentialResDelta =
+        objRes.nonPotentialResidual - legacyObjRes.nonPotentialResidual;
+    EXPECT_LE(nonPotentialResDelta.Norm(), kRelTol * objRes.nonPotentialResidual.Norm());
     // Values are compared positionally, so the sparsity patterns must match.
     ASSERT_TRUE(test::EqualSpan(mappedDResidual.Pointers(), _dresidual.Pointers()));
     ASSERT_TRUE(test::EqualSpan(mappedDResidual.Indices(), _dresidual.Indices()));
@@ -1248,6 +1413,7 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
   // through colliding contact Jacobians.
   void RunSerialVsParallelTest(bool removeLinearContactSkinMap = false) {
     InitializeSceneFromParams();
+    SetUnsetStageTimeSteps();
     if (removeLinearContactSkinMap) {
       RemoveLinearContactSkinMap();
     }
@@ -1263,6 +1429,20 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
     EXPECT_LE(resDelta.Norm(), kRelTol * serial.island.residual.Norm());
     Matrix<real> const dresDelta{serial.island.dresidual - parallel.island.dresidual};
     EXPECT_LE(dresDelta.Norm(), kRelTol * serial.island.dresidual.Norm());
+    // Friction slips at the displaced state, and without friction or damping, nothing is reported.
+    if (FixtureHasDissipation()) {
+      EXPECT_GT(Abs(serial.island.nonPotentialEnergy), 0.0);
+    } else {
+      EXPECT_EQ(serial.island.nonPotentialEnergy, 0.0);
+      EXPECT_EQ(serial.island.nonPotentialResidual.Norm(), 0_r);
+    }
+    EXPECT_NEAR(
+        serial.island.nonPotentialEnergy,
+        parallel.island.nonPotentialEnergy,
+        kRelTol * Abs(serial.island.nonPotentialEnergy));
+    ColumnVector<real> const nonPotentialResDelta =
+        serial.island.nonPotentialResidual - parallel.island.nonPotentialResidual;
+    EXPECT_LE(nonPotentialResDelta.Norm(), kRelTol * serial.island.nonPotentialResidual.Norm());
 
     ASSERT_EQ(serial.forces.size(), parallel.forces.size());
     real forceScale = 0_r;
@@ -1494,7 +1674,7 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
     forEachCollision([](auto& collision) { collision.collisionResult.forcePerUnitArea.clear(); });
 
     _mochiContext->SetIsSingleThreaded(singleThreaded);
-    InitState();
+    InitDisplacedState();
     PreStep();
     ThreadedAssembly result{.island = AssembleSingleIsland(reg, GradTarget::Current), .forces = {}};
     forEachCollision([&](auto const& collision) {
@@ -1803,6 +1983,13 @@ class MochiSkinnedArticulatedStaticContact : public MochiContactTestBase {
     UpdateArticulatedFullPose(GetRegistry(), _colliding);
   }
 
+ protected:
+  // If set, two cubes like the collider follow it, so that with friction or damping, the skin's
+  // pairs with the collider and with the last cube report dissipation, and those with the middle
+  // cube don't: neither cube has friction or damping, and an override sets the fixture's
+  // coefficients for the last.
+  bool _withDissipationOverride = false;
+
  public:
   MochiSkinnedArticulatedStaticContact() {
     _numDofsA = 6;
@@ -1824,12 +2011,23 @@ class MochiSkinnedArticulatedStaticContact : public MochiContactTestBase {
         Quaternion::FromRotationVector(Real3{0.1_r, -0.1_r, 0.2_r}), Real3{0.6_r, 0.6_r, 0.6_r}};
     Actor* const collider = InitStaticCube(
         1_r, colliderTransform, coulombCoefficient, viscousCoefficient, dampingCoefficient);
+    if (_withDissipationOverride) {
+      InitStaticCube(1_r, colliderTransform, 0_r, 0_r, 0_r);
+      Actor* const lastCube = InitStaticCube(1_r, colliderTransform, 0_r, 0_r, 0_r);
+      ContactPairParamsOverride paramsOverride;
+      paramsOverride.viscousFrictionCoefficient = viscousCoefficient;
+      paramsOverride.coulombFrictionCoefficient = coulombCoefficient;
+      paramsOverride.normalViscousDampingCoefficient = dampingCoefficient;
+      _scene->SetContactPairParamsOverride(
+          articulatedActor->GetHandle(), lastCube->GetHandle(), paramsOverride, test::ExpectOK{});
+    }
     InitActors(articulatedActor, collider);
 
     auto& pose = GetRegistry().get<CArticulatedReducedPose<TimeStep::Current>>(_colliding).value;
     UpdateFullState();
     _pose = pose.Duplicate();
     island::PreStep(GetRegistry(), /*updateSleepState*/ true);
+    UpdateStageStartSamples();
   }
 
   void InitState() override {
@@ -1855,22 +2053,29 @@ INSTANTIATE_TEST_SUITE_P(
         TestParams{"NoFriction", GradTarget::Current, 0_r, 0_r, 0_r, false, 2e-3_r, 2.6e-1_r}),
     [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
 
-// Async contact sums of the skin, split across tasks.
+// Async contact sums of the skin, split across tasks, with pairs that report dissipation, if the
+// fixture has friction, around pairs that don't.
 class MochiParallelSkinnedArticulatedStaticContact : public MochiSkinnedArticulatedStaticContact {
  public:
   MochiParallelSkinnedArticulatedStaticContact() {
     UseParallelDenseContact();
+    _withDissipationOverride = true;
   }
 };
 
 TEST_P(MochiParallelSkinnedArticulatedStaticContact, MatchesSerialAssembly) {
   RunSerialVsParallelTest();
+  if (FixtureHasDissipation()) {
+    ExpectDissipationIsNonPotential(std::nullopt);
+  }
 }
 
 INSTANTIATE_TEST_SUITE_P(
     MultipleBones,
     MochiParallelSkinnedArticulatedStaticContact,
-    ::testing::Values(TestParams{.name = "NoFriction"}),
+    ::testing::Values(
+        TestParams{.name = "NoFriction"},
+        TestParams{.name = "Coulomb", .coulombCoefficient = 0.5_r}),
     [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
 
 // A skinned articulated actor against a dynamic rigid box, in sync contact.
@@ -1906,6 +2111,7 @@ class MochiSkinnedArticulatedRigidContact : public MochiContactTestBase {
     _pose = reg.get<CArticulatedReducedPose<TimeStep::Current>>(_colliding).value.Duplicate();
     _boxState = reg.get<CRigidState<TimeStep::Current>>(_collider).value;
     island::PreStep(reg, /*updateSleepState*/ true);
+    UpdateStageStartSamples();
   }
 
   void InitState() override {
@@ -1964,7 +2170,9 @@ TEST_P(MochiParallelSkinnedArticulatedRigidContact, MatchesSerialAssembly) {
 INSTANTIATE_TEST_SUITE_P(
     MultipleBones,
     MochiParallelSkinnedArticulatedRigidContact,
-    ::testing::Values(TestParams{.name = "NoFriction"}),
+    ::testing::Values(
+        TestParams{.name = "NoFriction"},
+        TestParams{.name = "Coulomb", .coulombCoefficient = 0.5_r}),
     [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
 
 // Contact with an articulated collider of two links: a free root link away from the colliding
@@ -2093,6 +2301,7 @@ class MochiSkinnedArticulatedLinkContact : public MochiLinkColliderContactTestBa
     SaveColliderPose();
     _skinPose = reg.get<CArticulatedReducedPose<TimeStep::Current>>(_colliding).value.Duplicate();
     island::PreStep(reg, /*updateSleepState*/ true);
+    UpdateStageStartSamples();
   }
 
   void InitState() override {
@@ -2146,7 +2355,9 @@ TEST_P(MochiParallelSkinnedArticulatedLinkContact, MatchesSerialAssembly) {
 INSTANTIATE_TEST_SUITE_P(
     MultipleBones,
     MochiParallelSkinnedArticulatedLinkContact,
-    ::testing::Values(TestParams{.name = "NoFriction"}),
+    ::testing::Values(
+        TestParams{.name = "NoFriction"},
+        TestParams{.name = "Coulomb", .coulombCoefficient = 0.5_r}),
     [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
 
 // The contact of a soft-skinned actor with zero soft displacement matches the contact of an
@@ -2386,6 +2597,7 @@ class MochiSoftSkinnedStaticContact : public MochiContactTestBase {
     _softState = UsesRom()
         ? reg.get<CRomModeAmplitudes const>(_soft).value.Duplicate()
         : reg.get<CDisplacementSlice<real, TimeStep::Current> const>(_soft).value.Duplicate();
+    UpdateStageStartSamples();
   }
 
   std::pair<entt::entity, int> GetEntityAndLocalDofFromGlobalDof(int globalDof) override {
@@ -2582,7 +2794,9 @@ TEST_P(MochiParallelPartiallyBlendedStaticContact, MatchesSerialAssembly) {
 INSTANTIATE_TEST_SUITE_P(
     MultipleBones,
     MochiParallelPartiallyBlendedStaticContact,
-    ::testing::Values(TestParams{.name = "NoFriction"}),
+    ::testing::Values(
+        TestParams{.name = "NoFriction"},
+        TestParams{.name = "Coulomb", .coulombCoefficient = 0.5_r}),
     [](::testing::TestParamInfo<TestParams> const& info) { return info.param.name; });
 
 class MochiSoftStaticContact : public MochiContactTestBase {
@@ -4562,3 +4776,108 @@ TEST_F(ContactTorqueScene, Consistency) {
   EXPECT_LE(
       momentumDifferenceError, 0.1_r); // Momentum difference should be same order of magnitude
 }
+
+// A scene with actors above the ground plane or above a slab pinned at its center, which they touch
+// through one of the contact paths.
+struct DissipationSceneParams {
+  std::string name;
+  std::function<void(Scene*)> addActors;
+};
+
+class MochiDissipationScene
+    : public test::MochiSceneTestBase,
+      public ::testing::WithParamInterface<std::tuple<DissipationSceneParams, bool>> {};
+
+// Friction and damping are reported as non-potential terms (see
+// test::ExpectDissipationIsNonPotential) once an actor touches the ground or the slab, with
+// regular and elasto-plastic friction.
+TEST_P(MochiDissipationScene, DissipationIsNonPotential) {
+  auto const& [sceneParams, elastoPlasticFriction] = GetParam();
+  SolverParams solverParams = _scene->GetSolverParams();
+  solverParams.experimentalEval.elastoPlasticFriction = elastoPlasticFriction;
+  _scene->SetSolverParams(solverParams, test::ExpectOK{});
+  AddGroundPlane(_scene);
+  sceneParams.addActors(_scene);
+  test::ExpectDissipationIsNonPotentialAfterTouch(_scene, /*dt*/ 0.02_r);
+}
+
+// Removes the friction and damping of a pair, which then reports nothing.
+static void RemovePairDissipation(Scene* scene, Actor const* colliding, Actor const* collider) {
+  ContactPairParamsOverride paramsOverride;
+  paramsOverride.viscousFrictionCoefficient = 0_r;
+  paramsOverride.coulombFrictionCoefficient = 0_r;
+  paramsOverride.normalViscousDampingCoefficient = 0_r;
+  scene->SetContactPairParamsOverride(
+      colliding->GetHandle(), collider->GetHandle(), paramsOverride, test::ExpectOK{});
+}
+
+// The rod and the shell duck take async FEM contact. The chain takes async contact on its links,
+// next to Newton-Euler inertia. The cube takes async contact on its only actor SNLE, next to an
+// external torque, from the ground and two copies of it, the last without friction and damping, so
+// that it sums a collider that reports nothing after two that do. The cubes on the slab take sync
+// contact, whose island-sized residual has the fixed rows of the slab, which follows them in the
+// DoFs; only the first cube's pair has friction and damping. The ROM ducks project their contact
+// onto the reduced DoFs, for the whole actor or element by element, with the face weights of
+// hyper-reduction.
+static DynamicArray<DissipationSceneParams> DissipationScenes() {
+  // The ducks start just above the ground, so that they touch it within a few steps.
+  static constexpr real kDuckHeight = 0.02_r;
+  DynamicArray<DissipationSceneParams> scenes = {
+      {.name = "Rod", .addActors = [](Scene* scene) { AddRod(scene); }},
+      {.name = "NewtonEulerChain",
+       .addActors =
+           [](Scene* scene) {
+             real offsetX = 0_r;
+             Actor* const chain = AddNChainBody(
+                 scene->GetContext(), scene, "Chain", 0_r, 0.06_r, /*fixedRoot*/ false, offsetX);
+             EnableNewtonEulerInertia(chain, true, test::ExpectOK{});
+           }},
+      {.name = "TorqueCube",
+       .addActors =
+           [](Scene* scene) {
+             Actor* const cube = AddRigidCube(scene);
+             cube->SetExternalForcesOnDofs(
+                 std::array{3, 4, 5}, std::array{0.1_r, -0.2_r, 0.3_r}, test::ExpectOK{});
+             AddGroundPlane(scene);
+             RemovePairDissipation(scene, cube, AddGroundPlane(scene));
+           }},
+      {.name = "CubesOnPinnedSlab",
+       .addActors =
+           [](Scene* scene) {
+             real constexpr kSlabBottom = 0.1_r;
+             real constexpr kSlabThickness = 0.15_r;
+             real constexpr kCubeBottom = kSlabBottom + kSlabThickness + 0.0004_r; // 0.4 mm above
+             real offsetX = -0.11_r; // Side by side, 2 cm apart, centered on the slab
+             AddRigidCube(scene, &offsetX, kCubeBottom);
+             Actor* const cubeWithoutDissipation = AddRigidCube(scene, &offsetX, kCubeBottom);
+             RemovePairDissipation(
+                 scene, cubeWithoutDissipation, AddPinnedSlab(scene, kSlabBottom, kSlabThickness));
+           }},
+  };
+  // Some scenes load assets that are not shipped externally.
+  if constexpr (MOCHI_USE_HDF5 && MOCHI_INTERNAL) {
+    scenes.push_back({.name = "ShellDuck", .addActors = [](Scene* scene) {
+                        AddShellDuck(scene, nullptr, kDuckHeight);
+                      }});
+  }
+  if constexpr (MOCHI_USE_HDF5 && MOCHI_INTERNAL && MOCHI_ENABLE_ROM_ACTORS) {
+    for (auto const strategy :
+         {RomProjectionStrategy::ActorLevelProjection,
+          RomProjectionStrategy::ElementLevelProjection}) {
+      bool const actorLevel = strategy == RomProjectionStrategy::ActorLevelProjection;
+      scenes.push_back(
+          {.name = actorLevel ? "ActorLevelRomDuck" : "ElementLevelRomDuck",
+           .addActors = [strategy](Scene* scene) { AddRomDuck(scene, strategy, kDuckHeight); }});
+    }
+  }
+  return scenes;
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ContactPaths,
+    MochiDissipationScene,
+    ::testing::Combine(::testing::ValuesIn(DissipationScenes()), ::testing::Bool()),
+    [](::testing::TestParamInfo<std::tuple<DissipationSceneParams, bool>> const& info) {
+      return std::get<0>(info.param).name +
+          (std::get<1>(info.param) ? "_ElastoPlasticFriction" : "");
+    });

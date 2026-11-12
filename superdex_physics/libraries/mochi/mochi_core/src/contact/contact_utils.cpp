@@ -78,6 +78,7 @@ void mochi::ComputeCollisionResponseRange(
     bool assemForce,
     bool assemDForce,
     CollisionResponseResult& outResponse,
+    CollisionResponseResult* outDissipation,
     bool assemDForceAnchor) {
   MOCHI_PROFILE_SCOPE();
 
@@ -87,6 +88,14 @@ void mochi::ComputeCollisionResponseRange(
   MOCHI_ASSERT(!assemDForce || (outResponse.dforce.size() == isize(contactQuery.sampleIndices)));
   MOCHI_ASSERT(
       !assemDForceAnchor || (outResponse.dforceAnchor.size() == isize(contactQuery.sampleIndices)));
+  MOCHI_ASSERT_VERBOSE(
+      !outDissipation ||
+          (kGradTarget == GradTarget::Current && HasDissipation(params) &&
+           outDissipation != &outResponse &&
+           isize(outDissipation->energy) == isize(contactQuery.sampleIndices) &&
+           isize(outDissipation->force) == isize(contactQuery.sampleIndices)),
+      "The dissipative response requires GradTarget::Current, dissipation and its own storage of "
+      "the size of the contact points.");
 
   MOCHI_ASSERT_VERBOSE(
       !config.explicitNormals ||
@@ -136,6 +145,8 @@ void mochi::ComputeCollisionResponseRange(
           assemDForce,                                                                             \
           contactQuery.isSdfGradUnitary,                                                           \
           contactQuery.isNormalCollidingUnitary,                                                   \
+          outDissipation ? MakeSpan(outDissipation->energy).subspan(s, N) : Span<double>{},        \
+          outDissipation ? MakeSpan(outDissipation->force).subspan(s, N) : Span<Real3>{},          \
           assemDForceAnchor ? MakeSpan(outResponse.dforceAnchor).subspan(s, N)                     \
                             : Span<VSymMatrix3x3r>{});                                             \
     }                                                                                              \
@@ -164,6 +175,16 @@ void mochi::ComputeCollisionResponseRange(
       assemDForce,
       assemDForceAnchor,
       outResponse);
+  if (outDissipation) {
+    ApplyColliderWeightsToCollisionResponse(
+        contactQuery,
+        pointRange,
+        /*assemEnergy*/ true,
+        /*assemForce*/ true,
+        /*assemDForce*/ false,
+        /*assemDForceAnchor*/ false,
+        *outDissipation);
+  }
 }
 
 #define MOCHI_SPECIALIZE_COMPUTE_COLLISION_RESPONSE_RANGE(kGradTarget) \
@@ -177,6 +198,7 @@ void mochi::ComputeCollisionResponseRange(
       bool,                                                            \
       bool,                                                            \
       CollisionResponseResult&,                                        \
+      CollisionResponseResult*,                                        \
       bool);
 MOCHI_SPECIALIZE_COMPUTE_COLLISION_RESPONSE_RANGE(GradTarget::Current);
 MOCHI_SPECIALIZE_COMPUTE_COLLISION_RESPONSE_RANGE(GradTarget::Previous);
@@ -336,7 +358,8 @@ MOCHI_FORCE_INLINE BatchReal3x3<kBatchSize> TimesSkew(
 
 // Compute the collision response of the batch of kBatchSize contact points starting at 'first',
 // store its forces in outForce if not empty, and gather the weights. If computeLeverArms, also
-// compute the lever arms from 'origin' to the contact points at the time step of kGradTarget.
+// compute the lever arms from 'origin' to the contact points at the time step of kGradTarget. If
+// outDissipation is not null, also compute the energy and force of friction and damping in it.
 template <int kBatchSize, GradTarget kGradTarget>
 MOCHI_FORCE_INLINE void ComputeBatchSumsPrologue(
     int first,
@@ -353,7 +376,8 @@ MOCHI_FORCE_INLINE void ComputeBatchSumsPrologue(
     Span<Real3> outForce,
     BatchCollisionResponse<kBatchSize, kGradTarget>& outResponse,
     BatchReal<kBatchSize>& outW,
-    BatchReal3<kBatchSize>& outLeverArms) {
+    BatchReal3<kBatchSize>& outLeverArms,
+    BatchCollisionResponse<kBatchSize, kGradTarget>* outDissipation) {
   using V = BatchReal<kBatchSize>;
   MOCHI_ASSERT_VERBOSE(
       !config.elastoPlasticFriction ||
@@ -384,7 +408,8 @@ MOCHI_FORCE_INLINE void ComputeBatchSumsPrologue(
       assemForce,
       assemDForce,
       contactQuery.isSdfGradUnitary,
-      contactQuery.isNormalCollidingUnitary);
+      contactQuery.isNormalCollidingUnitary,
+      outDissipation);
 
   if (!outForce.empty()) {
     StoreTransposed<kBatchSize>(&outForce[first][0], outResponse.force);
@@ -438,7 +463,7 @@ struct RigidContactLaneSums {
   // Add the requested quantities of the collision response of a batch of contact points, with
   // weights w and lever arms s.
   template <GradTarget kGradTarget>
-  void Add(
+  MOCHI_FORCE_INLINE void Add(
       BatchCollisionResponse<kBatchSize, kGradTarget> const& response,
       BatchReal<kBatchSize> const& w,
       BatchReal3<kBatchSize> const& s,
@@ -487,7 +512,9 @@ struct RigidContactLaneSums {
 } // namespace
 
 // Add the collision response of the batch of kBatchSize contact points starting at 'first' to
-// outLaneSums, and store its forces in outForce if not empty. See ComputeRigidContactSums.
+// outLaneSums, and store its forces in outForce if not empty. If outDissipationLaneSums is not
+// null, also add the energy, force and torque of its friction and damping to it. See
+// ComputeRigidContactSums.
 template <int kBatchSize, GradTarget kGradTarget>
 static void AddBatchRigidContactSums(
     int first,
@@ -501,8 +528,10 @@ static void AddBatchRigidContactSums(
     bool assemForce,
     bool assemDForce,
     Span<Real3> outForce,
-    RigidContactLaneSums<kBatchSize>& outLaneSums) {
+    RigidContactLaneSums<kBatchSize>& outLaneSums,
+    RigidContactLaneSums<kBatchSize>* outDissipationLaneSums) {
   BatchCollisionResponse<kBatchSize, kGradTarget> response MOCHI_NO_INIT;
+  BatchCollisionResponse<kBatchSize, kGradTarget> dissipation MOCHI_NO_INIT;
   BatchReal<kBatchSize> w MOCHI_NO_INIT;
   BatchReal3<kBatchSize> leverArms MOCHI_NO_INIT;
   ComputeBatchSumsPrologue<kBatchSize, kGradTarget>(
@@ -516,13 +545,23 @@ static void AddBatchRigidContactSums(
       assemEnergy,
       assemForce,
       assemDForce,
-      /*computeLeverArms*/ assemForce || assemDForce,
+      /*computeLeverArms*/ assemForce || assemDForce || outDissipationLaneSums,
       outForce,
       response,
       w,
-      leverArms);
+      leverArms,
+      outDissipationLaneSums ? &dissipation : nullptr);
 
   outLaneSums.Add(response, w, leverArms, assemEnergy, assemForce, assemDForce);
+  if (outDissipationLaneSums) {
+    outDissipationLaneSums->Add(
+        dissipation,
+        w,
+        leverArms,
+        /*assemEnergy*/ true,
+        /*assemForce*/ true,
+        /*assemDForce*/ false);
+  }
 }
 
 template <GradTarget kGradTarget>
@@ -537,7 +576,8 @@ RigidContactSums mochi::ComputeRigidContactSums(
     bool assemEnergy,
     bool assemForce,
     bool assemDForce,
-    Span<Real3> outForce) {
+    Span<Real3> outForce,
+    RigidContactSums* outDissipation) {
   MOCHI_PROFILE_SCOPE();
   MOCHI_ASSERT_VERBOSE(pointRange.Valid());
   MOCHI_ASSERT_VERBOSE(
@@ -560,6 +600,9 @@ RigidContactSums mochi::ComputeRigidContactSums(
   MOCHI_ASSERT_VERBOSE(
       kGradTarget == GradTarget::Current || !assemDForce,
       "The force derivative sums only support GradTarget::Current.");
+  MOCHI_ASSERT_VERBOSE(
+      !outDissipation || (kGradTarget == GradTarget::Current && HasDissipation(params)),
+      "The dissipative sums require GradTarget::Current and dissipation.");
 
   // Full batches accumulate into the same lane sums, which are reduced once. The remaining points
   // form a narrower batch rather than a masked full batch: a full batch would read past pointRange,
@@ -569,6 +612,8 @@ RigidContactSums mochi::ComputeRigidContactSums(
   int s = pointRange.Min();
   if (pointRange.Size() >= kCollResponseBatchSize) {
     RigidContactLaneSums<kCollResponseBatchSize> laneSums MOCHI_NO_INIT(assemDForce);
+    RigidContactLaneSums<kCollResponseBatchSize> dissipationLaneSums MOCHI_NO_INIT(
+        /*assemDForce*/ false);
     for (; s <= pointRange.Max() - kCollResponseBatchSize + 1; s += kCollResponseBatchSize) {
       AddBatchRigidContactSums<kCollResponseBatchSize, kGradTarget>(
           s,
@@ -582,31 +627,42 @@ RigidContactSums mochi::ComputeRigidContactSums(
           assemForce,
           assemDForce,
           outForce,
-          laneSums);
+          laneSums,
+          outDissipation ? &dissipationLaneSums : nullptr);
     }
     laneSums.AddTo(sums, assemEnergy, assemForce, assemDForce);
+    if (outDissipation) {
+      dissipationLaneSums.AddTo(
+          *outDissipation, /*assemEnergy*/ true, /*assemForce*/ true, /*assemDForce*/ false);
+    }
   }
 
   // The remaining points, fewer than a full batch, are summed over their own lanes.
-#define MOCHI_BATCH_CASE(N)                                             \
-  case N:                                                               \
-    if constexpr ((N) < kCollResponseBatchSize) {                       \
-      RigidContactLaneSums<N> lastBatchSums MOCHI_NO_INIT(assemDForce); \
-      AddBatchRigidContactSums<N, kGradTarget>(                         \
-          s,                                                            \
-          contactQuery,                                                 \
-          params,                                                       \
-          config,                                                       \
-          dtStage,                                                      \
-          weights,                                                      \
-          origin,                                                       \
-          assemEnergy,                                                  \
-          assemForce,                                                   \
-          assemDForce,                                                  \
-          outForce,                                                     \
-          lastBatchSums);                                               \
-      lastBatchSums.AddTo(sums, assemEnergy, assemForce, assemDForce);  \
-    }                                                                   \
+#define MOCHI_BATCH_CASE(N)                                                                     \
+  case N:                                                                                       \
+    if constexpr ((N) < kCollResponseBatchSize) {                                               \
+      RigidContactLaneSums<N> lastBatchSums MOCHI_NO_INIT(assemDForce);                         \
+      RigidContactLaneSums<N> lastBatchDissipationSums MOCHI_NO_INIT(/*assemDForce*/ false);    \
+      AddBatchRigidContactSums<N, kGradTarget>(                                                 \
+          s,                                                                                    \
+          contactQuery,                                                                         \
+          params,                                                                               \
+          config,                                                                               \
+          dtStage,                                                                              \
+          weights,                                                                              \
+          origin,                                                                               \
+          assemEnergy,                                                                          \
+          assemForce,                                                                           \
+          assemDForce,                                                                          \
+          outForce,                                                                             \
+          lastBatchSums,                                                                        \
+          outDissipation ? &lastBatchDissipationSums : nullptr);                                \
+      lastBatchSums.AddTo(sums, assemEnergy, assemForce, assemDForce);                          \
+      if (outDissipation) {                                                                     \
+        lastBatchDissipationSums.AddTo(                                                         \
+            *outDissipation, /*assemEnergy*/ true, /*assemForce*/ true, /*assemDForce*/ false); \
+      }                                                                                         \
+    }                                                                                           \
     break;
 
   int const numPoints = pointRange.Max() - s + 1;
@@ -638,7 +694,8 @@ RigidContactSums mochi::ComputeRigidContactSums(
       bool,                                                              \
       bool,                                                              \
       bool,                                                              \
-      Span<Real3>);
+      Span<Real3>,                                                       \
+      RigidContactSums*);
 MOCHI_SPECIALIZE_COMPUTE_RIGID_CONTACT_SUMS(GradTarget::Current);
 MOCHI_SPECIALIZE_COMPUTE_RIGID_CONTACT_SUMS(GradTarget::Previous);
 #undef MOCHI_SPECIALIZE_COMPUTE_RIGID_CONTACT_SUMS
@@ -670,7 +727,8 @@ struct SkinnedContactBatchSlices {
 // would read and write all of it, and zeroing and reducing it would dominate each call, since
 // skinned contact pairs typically have few points. Reducing every batch keeps the state in the
 // scalar sums, O(numSlices^2) but kBatchSize times smaller, at the cost of a lane reduction per
-// batch. See ComputeSkinnedContactSums.
+// batch. If outDissipation is not null, also add the energy, force and torque sums of friction and
+// damping to it. See ComputeSkinnedContactSums.
 template <int kBatchSize>
 void AddBatchSkinnedContactSums(
     int first,
@@ -685,7 +743,8 @@ void AddBatchSkinnedContactSums(
     bool assemDForce,
     Span<Real3> outForce,
     SkinnedContactBatchSlices<kBatchSize>& batchSlices,
-    SkinnedContactSums& outSums) {
+    SkinnedContactSums& outSums,
+    SkinnedContactSums* outDissipation) {
   using V = BatchReal<kBatchSize>;
   using V3 = BatchReal3<kBatchSize>;
   using M3 = BatchReal3x3<kBatchSize>;
@@ -695,6 +754,7 @@ void AddBatchSkinnedContactSums(
   bool const hasRigidColliderSlice = slices.rigidColliderOrigin.has_value();
 
   BatchCollisionResponse<kBatchSize, kGradTarget> response MOCHI_NO_INIT;
+  BatchCollisionResponse<kBatchSize, kGradTarget> dissipation MOCHI_NO_INIT;
   V w MOCHI_NO_INIT;
   V3 rigidColliderLeverArms MOCHI_NO_INIT;
   ComputeBatchSumsPrologue<kBatchSize, kGradTarget>(
@@ -708,16 +768,21 @@ void AddBatchSkinnedContactSums(
       assemEnergy,
       assemForce,
       assemDForce,
-      /*computeLeverArms*/ hasRigidColliderSlice && (assemForce || assemDForce),
+      /*computeLeverArms*/ hasRigidColliderSlice && (assemForce || assemDForce || outDissipation),
       outForce,
       response,
       w,
-      rigidColliderLeverArms);
+      rigidColliderLeverArms,
+      outDissipation ? &dissipation : nullptr);
 
   if (assemEnergy) {
     outSums.energy += HSum<kBatchSize>(StaticCast<BatchDouble<kBatchSize>>(w) * response.energy);
   }
-  if (!assemForce && !assemDForce) {
+  if (outDissipation) {
+    outDissipation->energy +=
+        HSum<kBatchSize>(StaticCast<BatchDouble<kBatchSize>>(w) * dissipation.energy);
+  }
+  if (!assemForce && !assemDForce && !outDissipation) {
     return;
   }
 
@@ -763,6 +828,13 @@ void AddBatchSkinnedContactSums(
       outSums.torque[a] += SumLanes3<kBatchSize>(Cross(r[a], wf));
     }
   }
+  if (outDissipation) {
+    V3 const wf = w * dissipation.force;
+    for (int a = 0; a < numSlices; ++a) {
+      outDissipation->force[a] += SumLanes3<kBatchSize>(s[a] * wf);
+      outDissipation->torque[a] += SumLanes3<kBatchSize>(Cross(r[a], wf));
+    }
+  }
 
   if (assemDForce) {
     auto& h = batchSlices.skewWD;
@@ -791,7 +863,7 @@ void AddBatchSkinnedContactSums(
 }
 
 // Add the SkinnedContactSums of 'pointRange', whose size must be a multiple of kBatchSize, to
-// outSums.
+// outSums, and those of its friction and damping to outDissipation if not null.
 template <int kBatchSize>
 void AddSkinnedContactSums(
     Interval<int> pointRange,
@@ -806,7 +878,8 @@ void AddSkinnedContactSums(
     bool assemDForce,
     Span<Real3> outForce,
     Allocator* scratch,
-    SkinnedContactSums& outSums) {
+    SkinnedContactSums& outSums,
+    SkinnedContactSums* outDissipation) {
   MOCHI_ASSERT_VERBOSE(pointRange.Size() % kBatchSize == 0);
   SkinnedContactBatchSlices<kBatchSize> batchSlices(slices.NumSlices(), assemDForce, scratch);
   for (int first = pointRange.Min(); first <= pointRange.Max(); first += kBatchSize) {
@@ -823,7 +896,8 @@ void AddSkinnedContactSums(
         assemDForce,
         outForce,
         batchSlices,
-        outSums);
+        outSums,
+        outDissipation);
   }
 }
 
@@ -841,9 +915,15 @@ SkinnedContactSums mochi::ComputeSkinnedContactSums(
     bool assemForce,
     bool assemDForce,
     Allocator* scratch,
-    Span<Real3> outForce) {
+    Span<Real3> outForce,
+    SkinnedContactSums* outDissipation) {
   MOCHI_PROFILE_SCOPE();
   MOCHI_ASSERT_VERBOSE(pointRange.Valid());
+  MOCHI_ASSERT_VERBOSE(
+      !outDissipation ||
+          (HasDissipation(params) && outDissipation->numSlices == slices.NumSlices() &&
+           isize(outDissipation->force) == slices.NumSlices()),
+      "The dissipative sums require dissipation and their force arrays.");
   MOCHI_ASSERT_VERBOSE(
       pointRange.Min() >= 0 && pointRange.Max() < isize(contactQuery.sampleIndices));
   MOCHI_ASSERT_VERBOSE(
@@ -880,7 +960,8 @@ SkinnedContactSums mochi::ComputeSkinnedContactSums(
         assemDForce,
         outForce,
         scratch,
-        sums);
+        sums,
+        outDissipation);
   };
 
   int const numPoints = pointRange.Size();

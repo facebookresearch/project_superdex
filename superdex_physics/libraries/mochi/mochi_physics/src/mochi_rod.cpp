@@ -1839,7 +1839,7 @@ void AssembleBody(
 
   // Clear SNLE data
   if (params.assemObj) {
-    outActorSnle.objective = 0.0;
+    outActorSnle.ResetObjective();
   }
   if (params.assemRes) {
     outActorSnle.fullResidual.SetZero();
@@ -1928,7 +1928,7 @@ void AssembleAsyncContact(
   deformable::ComputeAsyncContactResponse<CFemSegmentDiscretization, fem::kNumRodFields>(
       reg,
       e,
-      simParams->experimentalEval,
+      simParams.value,
       queryActiveContacts,
       femDisc,
       samples,
@@ -1961,6 +1961,13 @@ void AssembleAsyncContact(
 
     AssembleObjResDRes<ElementT, fem::kNumRodFields>(
         contactL2g, contactNbs, boundaryOp, results, activeSubset);
+    deformable::AssembleContactDissipation<ElementT, fem::kNumRodFields>(
+        contactL2g,
+        contactNbs,
+        MakeConstSpan(disc.femElements),
+        outResponse,
+        Span<real const>{},
+        outActorSnle);
   });
 }
 

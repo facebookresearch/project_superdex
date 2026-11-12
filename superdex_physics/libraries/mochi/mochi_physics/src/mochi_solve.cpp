@@ -374,10 +374,9 @@ static void ApplyBoundaryConditionsToProblem(
 
       // Apply BCs to actors and interactions
       if (params.assemObj) {
-        for (auto&& [actorOffset, nonPotentialRes] : problem.nonPotentialResiduals) {
-          if (actorOffset == dofOffset) {
-            SetZeroOnRows(*nonPotentialRes, dirichlet->dofIndices, 0); // No DoF offset
-            break;
+        for (auto&& [rOffset, nonPotentialRes] : problem.nonPotentialResiduals) {
+          if (rOffset <= dofOffset && dofOffset < rOffset + nonPotentialRes->Rows()) {
+            SetZeroOnRows(*nonPotentialRes, dirichlet->dofIndices, dofOffset - rOffset);
           }
         }
       }
@@ -505,8 +504,12 @@ static void GatherSnleDataFromActors(
 
       if (params.assemObj) {
         outProblem.objective += actorSnle->objective;
+        outProblem.nonPotentialEnergy += actorSnle->nonPotentialEnergy;
         if (actorSnle->hasNonPotentialResidual) {
-          outProblem.nonPotentialEnergy += actorSnle->nonPotentialEnergy;
+          MOCHI_ASSERT_VERBOSE(
+              actorSnle->nonPotentialResidual.Rows() ==
+                  reg.get<CActorDofInfo const>(actor).dofsSize,
+              "An actor's non-potential residual must span its DoFs.");
           outProblem.nonPotentialResiduals.emplace_back(
               dofOffset, &actorSnle->nonPotentialResidual);
         }
@@ -551,6 +554,13 @@ static void GatherSnleDataFromActors(
     if (interSnle && interSnle->useInSolver) {
       if (params.assemObj) {
         outProblem.objective += interSnle->objective;
+        outProblem.nonPotentialEnergy += interSnle->nonPotentialEnergy;
+        if (interSnle->hasNonPotentialResidual) {
+          MOCHI_ASSERT_VERBOSE(
+              interSnle->nonPotentialResidual.Rows() == outProblem.GetDofsSize(),
+              "An interaction's non-potential residual must span the problem's DoFs.");
+          outProblem.nonPotentialResiduals.emplace_back(0, &interSnle->nonPotentialResidual);
+        }
       }
       if (params.assemRes) {
         for (auto& [rowOffset, residual] : interSnle->residuals) {

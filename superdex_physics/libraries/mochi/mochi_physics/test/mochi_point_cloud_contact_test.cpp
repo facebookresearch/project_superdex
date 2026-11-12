@@ -819,6 +819,15 @@ TEST_P(MochiShellActorContactScene, TwoShellActorsWithContact) {
   // changed slightly between the two steps.
   EXPECT_NEAR_TOL(bottomForceQueried, bottomForceWorld, scaledTol);
   EXPECT_NEAR_TOL(topForceQueried, topForceWorld, scaledTol);
+
+  // With implicit normals, friction and damping, here with an implicit normal force, are reported
+  // as non-potential terms, through the collider weights of shell-shell contact and the fixed rows
+  // of the bottom sheet (see test::ExpectDissipationIsNonPotential).
+  SolverParams solverParams = _scene->GetSolverParams();
+  solverParams.experimentalEval.implicitNormalForceForDissipation =
+      !solverParams.experimentalEval.explicitNormals;
+  _scene->SetSolverParams(solverParams, test::ExpectOK{});
+  test::ExpectDissipationIsNonPotentialAfterTouch(_scene, kTimeStep);
 }
 
 INSTANTIATE_TEST_SUITE_P(

@@ -3953,8 +3953,9 @@ class ExperimentalEvalParams:
     Note:
         Implicit treatment improves stability (especially with high-order time
         integrators) but the resulting dissipative force is not integrable, hence it
-        cannot be derived from an objective function. This (a) may hurt convergence
-        with an objective-based line search, and (b) makes the force dresidual
+        cannot be derived from an objective function. Merit-based line searches
+        therefore count its work along each step instead of an energy (see
+        :class:`~superdex.physics.LineSearchType`), and its force dresidual is
         non-symmetric (a symmetric approximation is used). With
         implicitNormalForceForDissipation = false, the distance used for the
         explicit normal force is approximate when

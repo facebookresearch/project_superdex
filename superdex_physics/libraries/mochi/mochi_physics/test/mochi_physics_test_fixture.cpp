@@ -22,12 +22,20 @@
 #include <mochi_core/test/batched_work_test_utils.h>
 #include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/task_scheduler.h>
+#include <mochi_physics/src/mochi_active_collisions.h>
+#include <mochi_physics/src/mochi_contact_anchors.h>
+#include <mochi_physics/src/mochi_contact_pair_params.h>
+#include <mochi_physics/src/mochi_island.h>
 #include <mochi_physics/src/mochi_shell.h>
+#include <mochi_physics/src/mochi_simulation.h>
 #include <mochi_physics/src/mochi_soft.h>
 #include <mochi_physics/src/mochi_soft_rom_components.h>
 #include <mochi_physics/src/mochi_soft_skinned.h>
+#include <mochi_physics/src/mochi_solve.h>
 
+#include <algorithm>
 #include <functional>
+#include <utility>
 #include <variant>
 
 namespace mochi::test {
@@ -284,6 +292,178 @@ void ExpectUniformTranslationAssembly(Scene* scene, Actor* actor, real relTol) {
     if (hasInertia || hasGravity) {
       ExpectBodyUniformTranslationAssembly(scene, actor, relTol, posed, hasInertia, hasGravity);
     }
+  }
+}
+
+ColumnVector<real> SumNonPotentialResiduals(SnleProblem<real> const& problem) {
+  ColumnVector<real> sum = ColumnVector<real>::Zero(problem.GetDofsSize());
+  for (auto const& [offset, residual] : problem.nonPotentialResiduals) {
+    sum.MiddleRows(offset, residual->Rows()) += *residual;
+  }
+  return sum;
+}
+
+void ExpectDissipationIsNonPotential(
+    entt::registry& reg,
+    SnleProblem<real>& problem,
+    std::optional<DissipationCoefficients> coefficients) {
+  auto& simParams = reg.ctx<CSimulationParams>();
+  LineSearchType const lineSearchType = simParams.nonLinearSolver.lineSearchType;
+  DynamicArray<std::pair<entt::entity, ContactParams>> contactParams;
+  for (auto [e, params] : reg.view<CContactParams const>().each()) {
+    contactParams.emplace_back(e, params);
+  }
+
+  auto const setCoefficients = [&](DissipationCoefficients const& c) {
+    for (auto [e, params] : reg.view<CContactParams>().each()) {
+      params.coulombFrictionCoefficient = c.coulomb;
+      params.viscousFrictionCoefficient = c.viscous;
+      params.normalViscousDampingCoefficient = c.damping;
+    }
+  };
+
+  struct Terms {
+    double objective = 0.0;
+    double nonPotentialEnergy = 0.0;
+    ColumnVector<real> nonPotentialResidual;
+  };
+  auto const getTerms = [&] {
+    return Terms{
+        .objective = problem.GetObjective(),
+        .nonPotentialEnergy = problem.nonPotentialEnergy,
+        .nonPotentialResidual = SumNonPotentialResiduals(problem)};
+  };
+
+  auto const assemble = [&](AssemblyParams const& params) {
+    problem.InvalidateCachedData();
+    problem.UpdateObjResDRes(params);
+  };
+
+  simParams.nonLinearSolver.lineSearchType = LineSearchType::WolfeStrong;
+  if (coefficients) {
+    setCoefficients(*coefficients);
+  }
+
+  assemble({.assemObj = true});
+  Terms const on = getTerms();
+
+  problem.UpdateObjResDRes({.assemObj = true, .assemRes = true, .assemDRes = true});
+  Terms const cached = getTerms();
+  EXPECT_EQ(on.nonPotentialEnergy, cached.nonPotentialEnergy);
+  ColumnVector<real> const cachedChange = cached.nonPotentialResidual - on.nonPotentialResidual;
+  EXPECT_EQ(cachedChange.Norm(), 0_r);
+
+  assemble({.assemObj = true, .assemRes = true});
+  Terms const combined = getTerms();
+  ColumnVector<real> const residual = problem.GetResidual();
+
+  simParams.nonLinearSolver.lineSearchType = LineSearchType::ResidualNorm;
+  assemble({.assemObj = true, .assemRes = true});
+  EXPECT_EQ(problem.nonPotentialEnergy, 0.0);
+  EXPECT_TRUE(problem.nonPotentialResiduals.empty());
+  double const objectiveNoReport = problem.GetObjective();
+  ColumnVector<real> const residualNoReport = problem.GetResidual();
+
+  simParams.nonLinearSolver.lineSearchType = LineSearchType::WolfeStrong;
+  setCoefficients({});
+  auto& overrideTable = reg.ctx<CContactPairParamsOverrideTable>();
+  CContactPairParamsOverrideTable::Records const overrides = overrideTable.GetRecords();
+  overrideTable.DisableDissipation();
+
+  assemble({.assemObj = true, .assemRes = true});
+  Terms const off = getTerms();
+  ColumnVector<real> const residualOff = problem.GetResidual();
+
+  // Assemblies of different requests may evaluate an energy in the precision of real. Those of the
+  // same request, with friction and damping and without, or reporting them and not, differ only in
+  // summation order.
+  double const energyScale = Max(Abs(combined.objective), Abs(off.objective));
+  double const requestTol = (MOCHI_USE_DOUBLE_PRECISION ? 1e-10 : 1e-6) * energyScale;
+  double const energyTol = 1e-10 * energyScale;
+  real const residualTol = (MOCHI_USE_DOUBLE_PRECISION ? 1e-10_r : 2e-5_r) *
+      Max(residual.Norm(), residualOff.Norm(), combined.nonPotentialResidual.Norm());
+
+  EXPECT_NEAR(objectiveNoReport, combined.objective, energyTol);
+  ColumnVector<real> const reportChange = residual - residualNoReport;
+  EXPECT_LE(reportChange.Norm(), residualTol);
+
+  EXPECT_NEAR(on.objective, combined.objective, requestTol);
+  EXPECT_NEAR(on.nonPotentialEnergy, combined.nonPotentialEnergy, requestTol);
+  ColumnVector<real> const combinedChange = combined.nonPotentialResidual - on.nonPotentialResidual;
+  EXPECT_LE(combinedChange.Norm(), residualTol);
+
+  // Friction and damping act observably, so that a dropped or extra term breaks the comparisons
+  // below.
+  double const objectiveChange = combined.objective - off.objective;
+  ColumnVector<real> const fullResidualChange = residual - residualOff;
+  EXPECT_GT(Abs(objectiveChange), 10 * energyTol);
+  EXPECT_GT(fullResidualChange.Norm(), 10 * residualTol);
+
+  double const energyChange = combined.nonPotentialEnergy - off.nonPotentialEnergy;
+  ColumnVector<real> const residualChange =
+      combined.nonPotentialResidual - off.nonPotentialResidual;
+  if (simParams.experimentalEval.explicitNormals) {
+    EXPECT_NEAR(energyChange, 0.0, energyTol);
+    EXPECT_LE(residualChange.Norm(), residualTol);
+  } else {
+    EXPECT_NEAR(objectiveChange, energyChange, energyTol);
+    ColumnVector<real> const keptResidualChange = fullResidualChange - residualChange;
+    EXPECT_LE(keptResidualChange.Norm(), residualTol);
+  }
+
+  simParams.nonLinearSolver.lineSearchType = lineSearchType;
+  for (auto const& [e, params] : contactParams) {
+    reg.get<CContactParams>(e) = params;
+  }
+  for (auto const& [pair, paramsOverride] : overrides) {
+    overrideTable.Set(pair.first, pair.second, paramsOverride);
+  }
+}
+
+void ExpectDissipationIsNonPotentialAfterTouch(Scene* scene, real dt) {
+  auto& reg = GetRegistry(scene);
+
+  // Whether pred holds for some current active collision, sync or async.
+  auto const anyCollision = [&](auto const& pred) {
+    auto const anyOf = [&]<bool kIsSync>() {
+      for (auto [e, collisions] :
+           reg.view<CActiveCollisions<kIsSync, TimeStep::Current> const>().each()) {
+        if (std::ranges::any_of(collisions, pred)) {
+          return true;
+        }
+      }
+      return false;
+    };
+    return anyOf.template operator()<true>() || anyOf.template operator()<false>();
+  };
+  auto const hasContact = [&] {
+    return anyCollision([](auto const& collision) { return !collision.collisionResult.Empty(); });
+  };
+
+  int constexpr kMaxSteps = 50;
+  for (int step = 0; step < kMaxSteps && !hasContact(); ++step) {
+    scene->Step(dt);
+  }
+  ASSERT_TRUE(hasContact());
+  scene->Step(dt);
+
+  // With elasto-plastic friction, the anchors advanced by the step, as the next step uses them.
+  PrepareFrictionAnchors(reg, /*promotePending*/ true);
+  for (entt::entity const island : reg.view<CIslandDescendants const>()) {
+    SnleProblem<real> problem = solver::InitIslandAssembly(
+        reg, island, reg.get<CIslandDescendants const>(island), /*syncCurrentState*/ true);
+    ColumnVector<real> increment(problem.GetDofsSize());
+    increment.SetRandom(/*seed*/ 3, -1e-3_r, 1e-3_r);
+    solver::PostNewIncrementLocalPipeline(reg, island, AsConstView(increment), problem.solution);
+    ExpectDissipationIsNonPotential(reg, problem, kDissipationCoefficients);
+  }
+
+  if (reg.ctx<CSimulationParams const>().experimentalEval.elastoPlasticFriction) {
+    bool const hasAnchoredContact = anyCollision([](auto const& collision) {
+      return std::ranges::any_of(
+          collision.collisionResult.anchorOffset, [](Real3 const& o) { return o != Real3{}; });
+    });
+    EXPECT_TRUE(hasAnchoredContact) << "Elasto-plastic friction should act on anchors.";
   }
 }
 

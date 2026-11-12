@@ -26,6 +26,29 @@
 namespace mochi {
 
 /**
+ * Whether the line search type tests the merit.
+ */
+[[nodiscard]] constexpr bool LineSearchUsesMerit(LineSearchType type) {
+  switch (type) {
+    case LineSearchType::Simple:
+    case LineSearchType::Armijo:
+    case LineSearchType::WolfeWeak:
+    case LineSearchType::WolfeStrong:
+      return true;
+    case LineSearchType::None:
+    case LineSearchType::ResidualNorm:
+      return false;
+    case LineSearchType::Count:
+      break;
+  }
+  static_assert(
+      static_cast<int>(LineSearchType::Count) == 6,
+      "Please update the switch statement above if LineSearchType enum changes");
+  MOCHI_ASSERT(false, "Invalid line search type.");
+  return false;
+}
+
+/**
  * Utility struct implementing line search algorithms. It has no internal state. Simple, Armijo and
  * the Wolfe searches test the merit of @ref SnleProblem::LineSearchMerit, and keep the objective in
  * @ref NewtonSolverStatus::objective.

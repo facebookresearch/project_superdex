@@ -1341,6 +1341,10 @@ TEST_IF_F(
     ArticulatedBodyDynamicsTest,
     NonPotentialTermsLeaveAPotential) {
   auto generator = mochi::RandomGenerator(7);
+  // Only the line searches that test the merit get the non-potential terms.
+  auto solverParams = _scene->GetSolverParams();
+  solverParams.nonLinearSolver.lineSearchType = LineSearchType::WolfeStrong;
+  _scene->SetSolverParams(solverParams, test::ExpectOK{});
   // In one island, at nonzero offsets: a free anisotropic box under torques only, a copy spinning
   // with Newton-Euler inertia and no forces, and a tree whose links' DoF columns are not a prefix
   // of the DoFs, with armature and a fixed revolute DoF, spinning with Newton-Euler inertia under
@@ -1420,6 +1424,13 @@ TEST_IF_F(
         keptSlope,
         problem.GetResidual().Dot(AsConstView(p)) - nonPotentialSlope,
         1e-6 * problem.GetResidual().Norm() * AsConstView(p).Norm());
+
+    // ResidualNorm, which doesn't test the merit, gets none.
+    reg.ctx<CSimulationParams>().nonLinearSolver.lineSearchType = LineSearchType::ResidualNorm;
+    problem.InvalidateCachedData();
+    problem.UpdateObjective();
+    EXPECT_EQ(problem.nonPotentialEnergy, 0.0);
+    EXPECT_TRUE(problem.nonPotentialResiduals.empty());
   }
 }
 

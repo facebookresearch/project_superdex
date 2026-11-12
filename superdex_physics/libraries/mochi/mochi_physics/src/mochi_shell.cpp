@@ -228,7 +228,7 @@ void mochi::shell::AssembleBody(
 
   // Clear SNLE data
   if (params.assemObj) {
-    outActorSnle.objective = 0.0;
+    outActorSnle.ResetObjective();
   }
   if (params.assemRes) {
     outActorSnle.fullResidual.SetZero();
@@ -451,7 +451,7 @@ void mochi::shell::AssembleAsyncContact(
   deformable::ComputeAsyncContactResponse<CFemSurfaceDiscretization, kSpaceDim3>(
       reg,
       e,
-      simParams->experimentalEval,
+      simParams.value,
       queryActiveContacts,
       femDisc,
       samples,
@@ -482,5 +482,12 @@ void mochi::shell::AssembleAsyncContact(
         MakeConstSpan(disc.femElements), outResponse, Span<real const>{});
 
     AssembleObjResDRes<ElementT>(contactL2g, contactNbs, boundaryOp, results, activeSubset);
+    deformable::AssembleContactDissipation<ElementT>(
+        contactL2g,
+        contactNbs,
+        MakeConstSpan(disc.femElements),
+        outResponse,
+        Span<real const>{},
+        outActorSnle);
   });
 }

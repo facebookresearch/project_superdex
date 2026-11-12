@@ -656,6 +656,13 @@ struct ContactEvalConfig {
   bool elastoPlasticFriction = false;
 };
 
+// Whether the contact has dissipative terms: Coulomb or viscous friction, or normal viscous
+// damping.
+[[nodiscard]] MOCHI_FORCE_INLINE bool HasDissipation(ContactParams const& params) {
+  return params.coulombFrictionCoefficient > 0_r || params.viscousFrictionCoefficient > 0_r ||
+      params.normalViscousDampingCoefficient > 0_r;
+}
+
 /*************************************************************************************************/
 
 // Maximum batch size for collision force and dforce computation.
@@ -867,11 +874,26 @@ MOCHI_FORCE_INLINE BatchReal3<kBatchSize> ProjectToTangentPlane(
   return v - Dot(v, normal) * normal;
 }
 
+/**
+ * @brief Collision response (energy, force, and force derivative) of a batch of contact points.
+ *
+ * @note Quantities not requested from @ref ComputeBatchCollisionResponse are left uninitialized.
+ * Lanes beyond @p kBatchSize hold unspecified values.
+ */
+template <int kBatchSize, GradTarget kGradTarget>
+struct BatchCollisionResponse {
+  BatchDouble<kBatchSize> energy;
+  BatchReal3<kBatchSize> force;
+  BatchDForce<kBatchSize, kGradTarget> dForce;
+};
+
+// Add the requested energy, force and force derivative of friction and damping to outResponse. If
+// outDissipation is not null, it also receives the energy and force of friction and damping,
+// whatever assemEnergy and assemForce. It requires GradTarget::Current and must not overlap the
+// other arguments.
 template <int kBatchSize, GradTarget kGradTarget>
 MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
-    BatchDouble<kBatchSize>& outEnergy,
-    BatchReal3<kBatchSize>& outForce,
-    BatchDForce<kBatchSize, kGradTarget>& outDForce,
+    BatchCollisionResponse<kBatchSize, kGradTarget>& outResponse,
     BatchSymMatrix3x3<kBatchSize>* outDForceAnchor,
     BatchReal<kBatchSize> const& fPenalty,
     BatchReal<kBatchSize> const& dFPenalty,
@@ -886,7 +908,8 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
     bool assemForce,
     bool assemDForce,
     bool isSdfGradUnitary,
-    bool isNormalCollidingUnitary) {
+    bool isNormalCollidingUnitary,
+    BatchCollisionResponse<kBatchSize, kGradTarget>* outDissipation) {
   static_assert(
       kCollResponseMaxBatchSize == 8,
       "Please update batched contact functions if the max batch size changes");
@@ -909,6 +932,10 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
   using V = BatchReal<kBatchSize>;
   using Vd = BatchDouble<kBatchSize>;
   using V3 = BatchReal3<kBatchSize>;
+
+  auto& outEnergy = outResponse.energy;
+  auto& outForce = outResponse.force;
+  auto& outDForce = outResponse.dForce;
 
   // Define the normal for dissipation.
   V3 const normal = ComputeBatchDissipationNormal<kBatchSize>(
@@ -933,7 +960,10 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
   Vd energyFactor MOCHI_NO_INIT;
   V3 dEnergyFactor MOCHI_NO_INIT;
   bool const computeEnergyFactor =
-      assemEnergy || (kGradTarget == GradTarget::Previous && assemForce);
+      assemEnergy || outDissipation || (kGradTarget == GradTarget::Previous && assemForce);
+  if (outDissipation) {
+    outDissipation->force = {};
+  }
 
   // Coulomb friction
   if (params.coulombFrictionCoefficient > 0) {
@@ -977,7 +1007,7 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
       energyFactor = static_cast<double>(coulombCoefficient) * StaticCast<Vd>(smoother);
     }
 
-    if (assemForce || assemDForce || assemDForceAnchor) {
+    if (assemForce || assemDForce || assemDForceAnchor || outDissipation) {
       V tmp = (coulombCoefficient * fPenalty) * dSmoother_ptNorm;
 
       // Output force
@@ -989,6 +1019,9 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
         } else {
           outForce -= tmp * slipT;
         }
+      }
+      if (outDissipation) {
+        outDissipation->force -= tmp * slipT;
       }
 
       // Output dforce
@@ -1066,7 +1099,7 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
           0.5 * static_cast<double>(viscousCoefficient) * Sqr(StaticCast<Vd>(pRelTNorm));
     }
 
-    if (assemForce || assemDForce) {
+    if (assemForce || assemDForce || outDissipation) {
       V tmp = viscousCoefficient * fPenalty;
 
       // Output force
@@ -1078,6 +1111,9 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
         } else {
           outForce -= tmp * pRelT;
         }
+      }
+      if (outDissipation) {
+        outDissipation->force -= tmp * pRelT;
       }
 
       // Output dforce
@@ -1108,7 +1144,7 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
           0.5 * static_cast<double>(normalDampingCoefficient) * Sqr(StaticCast<Vd>(pRelNScalar));
     }
 
-    if (assemForce || assemDForce) {
+    if (assemForce || assemDForce || outDissipation) {
       V tmp = normalDampingCoefficient * fPenalty;
 
       // Output force: force = -coeff * fN * pn / dtFactor (damping in normal direction)
@@ -1118,6 +1154,9 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
         } else {
           outForce -= tmp * pRelN;
         }
+      }
+      if (outDissipation) {
+        outDissipation->force -= tmp * pRelN;
       }
 
       // Output dforce: The full derivative of the damping force includes both the derivative
@@ -1176,6 +1215,9 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
   if (assemEnergy) {
     outEnergy += StaticCast<Vd>(fPenalty) * energyFactor;
   }
+  if (outDissipation) {
+    outDissipation->energy = StaticCast<Vd>(fPenalty) * energyFactor;
+  }
 
   // Add Previous-target terms from differentiating the explicit stage-start penalty force.
   if constexpr (kGradTarget == GradTarget::Previous) {
@@ -1189,19 +1231,6 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
     }
   }
 }
-
-/**
- * @brief Collision response (energy, force, and force derivative) of a batch of contact points.
- *
- * @note Quantities not requested from @ref ComputeBatchCollisionResponse are left uninitialized.
- * Lanes beyond @p kBatchSize hold unspecified values.
- */
-template <int kBatchSize, GradTarget kGradTarget>
-struct BatchCollisionResponse {
-  BatchDouble<kBatchSize> energy;
-  BatchReal3<kBatchSize> force;
-  BatchDForce<kBatchSize, kGradTarget> dForce;
-};
 
 /**
  * @brief Compute collision response (energy, force, and force derivative) for a batch of contact
@@ -1240,6 +1269,9 @@ struct BatchCollisionResponse {
  * @param[in] assemDForce Whether to compute and output force derivatives
  * @param[in] isSdfGradUnitary Whether the SDF gradient is already unit length
  * @param[in] isNormalCollidingUnitary Whether the colliding normals are already unit length
+ * @param[out] outDissipation Optional: the energy and force of friction and damping, which the
+ * requested energy and force of @p outResponse include. Requires @ref GradTarget::Current and @ref
+ * HasDissipation.
  * @param[out] outDForceAnchor Output force derivatives with respect to the anchor offsets, or
  * nullptr to skip them (GradTarget::Current with elasto-plastic friction only)
  */
@@ -1269,6 +1301,7 @@ MOCHI_FORCE_INLINE
         bool assemDForce,
         bool isSdfGradUnitary,
         bool isNormalCollidingUnitary,
+        BatchCollisionResponse<kBatchSize, kGradTarget>* outDissipation,
         BatchSymMatrix3x3<kBatchSize>* outDForceAnchor = nullptr) {
   static_assert(
       kCollResponseMaxBatchSize == 8,
@@ -1351,8 +1384,13 @@ MOCHI_FORCE_INLINE
   // Compute penalty force with current data.
   bool constexpr kAssemPenalty =
       IsAssemblyNeeded(StateDependency::ZeroOrder, false /*inputDependency*/, kGradTarget);
-  bool const hasDissipation = params.coulombFrictionCoefficient > 0_r ||
-      params.viscousFrictionCoefficient > 0_r || params.normalViscousDampingCoefficient > 0_r;
+  bool const hasDissipation = HasDissipation(params);
+  MOCHI_ASSERT_VERBOSE(
+      !outDissipation || (kGradTarget == GradTarget::Current && hasDissipation),
+      "The dissipative response requires GradTarget::Current and dissipation.");
+  if constexpr (kGradTarget != GradTarget::Current) {
+    outDissipation = nullptr; // Compiles out the dissipation code for the other targets.
+  }
   bool const useImplicitNormalForceForDissipation =
       config.implicitNormalForceForDissipation && hasDissipation;
   if constexpr (kAssemPenalty) {
@@ -1429,9 +1467,7 @@ MOCHI_FORCE_INLINE
     }
 
     ComputeBatchContactDissipationForceDForce<kBatchSize, kGradTarget>(
-        energy,
-        force,
-        dForce,
+        outResponse,
         outDForceAnchor,
         fPenalty,
         dFPenalty,
@@ -1446,7 +1482,8 @@ MOCHI_FORCE_INLINE
         assemForce,
         assemDForce,
         isSdfGradUnitary,
-        isNormalCollidingUnitary);
+        isNormalCollidingUnitary,
+        outDissipation);
   } else if constexpr (kGradTarget == GradTarget::Current) {
     if (outDForceAnchor) {
       *outDForceAnchor = {};
@@ -1465,6 +1502,8 @@ MOCHI_FORCE_INLINE
  * @param[out] outForce Output collision forces (size kBatchSize, written if assemForce)
  * @param[out] outDForce Output collision force derivatives (size kBatchSize, written if
  * assemDForce)
+ * @param[out] outDissipationEnergy, outDissipationForce Optional: the energy and force of friction
+ * and damping (size kBatchSize, written if not empty). See @ref ComputeBatchCollisionResponse.
  * @param[out] outDForceAnchor Output force derivatives with respect to the anchor offsets (size
  * kBatchSize, or empty to skip them; GradTarget::Current with elasto-plastic friction only)
  */
@@ -1489,15 +1528,22 @@ MOCHI_FORCE_INLINE void ComputeBatchCollisionForceDForce(
     bool assemDForce,
     bool isSdfGradUnitary,
     bool isNormalCollidingUnitary,
+    Span<double> outDissipationEnergy = {},
+    Span<Real3> outDissipationForce = {},
     Span<VSymMatrix3x3r> outDForceAnchor = {}) {
+  bool const assemDissipation = !outDissipationEnergy.empty();
   MOCHI_ASSERT_VERBOSE(!assemEnergy || (outEnergy.size() == kBatchSize));
   MOCHI_ASSERT_VERBOSE(!assemForce || (outForce.size() == kBatchSize));
   MOCHI_ASSERT_VERBOSE(!assemDForce || (outDForce.size() == kBatchSize));
+  MOCHI_ASSERT_VERBOSE(
+      outDissipationForce.size() == outDissipationEnergy.size() &&
+      (!assemDissipation || outDissipationEnergy.size() == kBatchSize));
   MOCHI_ASSERT_VERBOSE(outDForceAnchor.empty() || kGradTarget == GradTarget::Current);
   bool const assemDForceAnchor = kGradTarget == GradTarget::Current && !outDForceAnchor.empty();
   MOCHI_ASSERT_VERBOSE(!assemDForceAnchor || (outDForceAnchor.size() == kBatchSize));
 
   BatchCollisionResponse<kBatchSize, kGradTarget> response MOCHI_NO_INIT;
+  BatchCollisionResponse<kBatchSize, kGradTarget> dissipation MOCHI_NO_INIT;
   BatchSymMatrix3x3<kBatchSize> dForceAnchor MOCHI_NO_INIT;
   ComputeBatchCollisionResponse<kBatchSize, kGradTarget>(
       response,
@@ -1517,9 +1563,14 @@ MOCHI_FORCE_INLINE void ComputeBatchCollisionForceDForce(
       assemDForce,
       isSdfGradUnitary,
       isNormalCollidingUnitary,
+      assemDissipation ? &dissipation : nullptr,
       assemDForceAnchor ? &dForceAnchor : nullptr);
 
   // Store outputs to Spans
+  if (assemDissipation) {
+    Store<kBatchSize>(outDissipationEnergy.data(), dissipation.energy);
+    StoreTransposed<kBatchSize>(&outDissipationForce[0][0], dissipation.force);
+  }
   if (assemEnergy) {
     Store<kBatchSize>(outEnergy.data(), response.energy);
   }
@@ -1559,6 +1610,10 @@ MOCHI_FORCE_INLINE void ComputeBatchCollisionForceDForce(
   }
 }
 
+// Compute the collision response of the contact points in pointRange and store it in outResponse.
+// If outDissipation is not null, it also receives the energy and force of friction and damping (see
+// ComputeBatchCollisionResponse). Its energy and force must be sized like the contact points, and
+// it requires GradTarget::Current and HasDissipation(params).
 template <GradTarget kGradTarget>
 void ComputeCollisionResponseRange(
     Interval<int> pointRange,
@@ -1570,11 +1625,13 @@ void ComputeCollisionResponseRange(
     bool assemForce,
     bool assemDForce,
     CollisionResponseResult& outResponse,
+    CollisionResponseResult* outDissipation = nullptr,
     bool assemDForceAnchor = false);
 
 // Compute collision response for a collider and store it in CollisionResponseResult. With
 // assemDForceAnchor, also stores the force derivatives with respect to the anchor offsets in
 // CollisionResponseResult::dforceAnchor (GradTarget::Current with elasto-plastic friction only).
+// See ComputeCollisionResponseRange for outDissipation.
 template <GradTarget kGradTarget>
 void ComputeCollisionResponse(
     ContactDetectionResult const& contactQuery,
@@ -1585,6 +1642,7 @@ void ComputeCollisionResponse(
     bool assemForce,
     bool assemDForce,
     CollisionResponseResult& outResponse,
+    CollisionResponseResult* outDissipation = nullptr,
     bool assemDForceAnchor = false) {
   ComputeCollisionResponseRange<kGradTarget>(
       Interval<int>{0, isize(contactQuery.sampleIndices)},
@@ -1596,6 +1654,7 @@ void ComputeCollisionResponse(
       assemForce,
       assemDForce,
       outResponse,
+      outDissipation,
       assemDForceAnchor);
 }
 
@@ -1963,6 +2022,9 @@ struct RigidContactSums {
  * @param[out] outForce Optional collision forces of the contact points, as computed by @ref
  * ComputeCollisionResponseRange. Indexed like the contact points; only @p pointRange is written.
  * Requires @p assemForce.
+ * @param[in,out] outDissipation Optional: the energy, force and torque sums of friction and damping
+ * (see @ref ComputeBatchCollisionResponse) are added to it. Requires @ref GradTarget::Current and
+ * @ref HasDissipation.
  * @return The sums. Quantities not requested are zero.
  */
 template <GradTarget kGradTarget>
@@ -1977,7 +2039,8 @@ RigidContactSums ComputeRigidContactSums(
     bool assemEnergy,
     bool assemForce,
     bool assemDForce,
-    Span<Real3> outForce = {});
+    Span<Real3> outForce = {},
+    RigidContactSums* outDissipation = nullptr);
 
 /**
  * @brief Rigid-form Jacobian slices of the contact points of a skinned actor's partition, read by
@@ -2094,6 +2157,9 @@ struct SkinnedContactSums {
  * @param[out] outForce Optional collision forces of the contact points, as computed by @ref
  * ComputeCollisionResponseRange. Indexed like the contact points; only @p pointRange is written.
  * Requires @p assemForce.
+ * @param[in,out] outDissipation Optional: the energy, force and torque sums of friction and damping
+ * (see @ref ComputeBatchCollisionResponse) are added to it. It must have the force arrays. If
+ * allocated from @p scratch, it must outlive the returned sums. Requires @ref HasDissipation.
  * @return The sums, allocated from @p scratch.
  */
 SkinnedContactSums ComputeSkinnedContactSums(
@@ -2108,7 +2174,8 @@ SkinnedContactSums ComputeSkinnedContactSums(
     bool assemForce,
     bool assemDForce,
     Allocator* scratch,
-    Span<Real3> outForce = {});
+    Span<Real3> outForce = {},
+    SkinnedContactSums* outDissipation = nullptr);
 
 /*************************************************************************************************/
 

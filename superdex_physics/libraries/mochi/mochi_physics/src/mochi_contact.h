@@ -185,6 +185,21 @@ struct CDeformablePointAsyncCollisionsResponse {
    */
   DynamicArray<bool> _isActiveContactElement;
 
+  /** @brief The friction and damping parts of the energies and gradients (see
+   * @ref AddContactSampleResponse), with an entry per response sample, zero for samples without
+   * friction or damping, if the assembly reports them (see @ref ReportsContactDissipation). Empty
+   * otherwise. */
+  DynamicArray<double> _dissipationEnergies;
+  DynamicArray<Real3> _dissipationGradients;
+
+  /** @brief Whether the assembly reports friction and damping, and whether some sample does. */
+  bool _reportsDissipation = false;
+  bool _hasReportedDissipation = false;
+
+  /** @brief Scratch for the friction and damping of one collider's contacts (see
+   * @ref ComputeCollisionResponse), kept across assemblies to reuse its allocation. */
+  CollisionResponseResult _dissipationScratch;
+
  public:
   [[nodiscard]] MOCHI_FORCE_INLINE bool Empty() const {
     return _sampleIndices.empty();
@@ -206,6 +221,23 @@ struct CDeformablePointAsyncCollisionsResponse {
     return _hessians[responseIndex];
   }
 
+  [[nodiscard]] MOCHI_FORCE_INLINE double GetDissipationEnergy(int responseIndex) const {
+    return _dissipationEnergies[responseIndex];
+  }
+
+  [[nodiscard]] MOCHI_FORCE_INLINE Real3 const& GetDissipationGradient(int responseIndex) const {
+    return _dissipationGradients[responseIndex];
+  }
+
+  // Whether some sample reported friction or damping (see GetDissipationEnergy).
+  [[nodiscard]] bool HasReportedDissipation() const {
+    return _hasReportedDissipation;
+  }
+
+  [[nodiscard]] CollisionResponseResult& DissipationScratch() {
+    return _dissipationScratch;
+  }
+
   void Clear() {
     _numQuadsPerContactElement = 0;
     _responseIndexFromSampleIndex.clear();
@@ -215,9 +247,16 @@ struct CDeformablePointAsyncCollisionsResponse {
     _hessians.clear();
     _activeContactElementIndices.clear();
     _isActiveContactElement.clear();
+    _dissipationEnergies.clear();
+    _dissipationGradients.clear();
+    _reportsDissipation = false;
+    _hasReportedDissipation = false;
   }
 
-  void Reset(int numContactElements, int numQuadsPerContactElement) {
+  // reportsDissipation: whether the assembly reports friction and damping (see
+  // GetDissipationEnergy).
+  void
+  Reset(int numContactElements, int numQuadsPerContactElement, bool reportsDissipation = false) {
     MOCHI_ASSERT_VERBOSE(
         numContactElements >= 0, "Number of contact elements must be non-negative.");
     MOCHI_ASSERT_VERBOSE(
@@ -254,15 +293,23 @@ struct CDeformablePointAsyncCollisionsResponse {
     }
     _activeContactElementIndices.clear();
     _activeContactElementIndices.reserve(numContactElements);
+
+    _dissipationEnergies.clear();
+    _dissipationGradients.clear();
+    _reportsDissipation = reportsDissipation;
+    _hasReportedDissipation = false;
   }
 
   // Add response data for a contact sample. If data is provided more than once for the same sample
-  // index, the values are accumulated.
+  // index, the values are accumulated. The dissipation energy and gradient, the part of the
+  // response from friction and damping, require a Reset with reportsDissipation.
   void AddContactSampleResponse(
       int sampleIndex,
       double const* energy,
       Real3 const* gradient,
-      VMatrix3x3r const* hessian) {
+      VMatrix3x3r const* hessian,
+      double const* dissipationEnergy = nullptr,
+      Real3 const* dissipationGradient = nullptr) {
     MOCHI_ASSERT_VERBOSE(sampleIndex >= 0, "Contact sample index must be non-negative.");
     MOCHI_ASSERT_VERBOSE(
         sampleIndex < isize(_responseIndexFromSampleIndex),
@@ -270,6 +317,10 @@ struct CDeformablePointAsyncCollisionsResponse {
     MOCHI_ASSERT_VERBOSE(
         _numQuadsPerContactElement > 0,
         "Number of quadrature points per contact element must be positive.");
+    MOCHI_ASSERT_VERBOSE(
+        (dissipationEnergy == nullptr) == (dissipationGradient == nullptr) &&
+            (!dissipationEnergy || _reportsDissipation),
+        "The dissipation energy and gradient must be given together, after a Reset with reportsDissipation.");
 
     int responseIndex = _responseIndexFromSampleIndex[sampleIndex];
     if (responseIndex == kInvalidIndex) {
@@ -285,6 +336,10 @@ struct CDeformablePointAsyncCollisionsResponse {
       if (hessian) {
         _hessians.push_back(ToNdArray3x3(*hessian));
       }
+      if (_reportsDissipation) {
+        _dissipationEnergies.push_back(dissipationEnergy ? *dissipationEnergy : 0.0);
+        _dissipationGradients.push_back(dissipationGradient ? *dissipationGradient : Real3{});
+      }
     } else {
       if (energy) {
         _energies[responseIndex] += *energy;
@@ -295,6 +350,13 @@ struct CDeformablePointAsyncCollisionsResponse {
       if (hessian) {
         _hessians[responseIndex] += ToNdArray3x3(*hessian);
       }
+      if (dissipationEnergy) {
+        _dissipationEnergies[responseIndex] += *dissipationEnergy;
+        _dissipationGradients[responseIndex] += *dissipationGradient;
+      }
+    }
+    if (dissipationEnergy) {
+      _hasReportedDissipation = true;
     }
 
     int const contactElementIndex = sampleIndex / _numQuadsPerContactElement;
@@ -328,6 +390,10 @@ struct CDeformablePointAsyncCollisionsResponse {
     MOCHI_ASSERT_VERBOSE(
         _hessians.empty() || isize(_hessians) == isize(_sampleIndices),
         "Contact response hessians must be empty or match the number of response samples.");
+    MOCHI_ASSERT_VERBOSE(
+        isize(_dissipationEnergies) == (_reportsDissipation ? isize(_sampleIndices) : 0) &&
+            isize(_dissipationGradients) == isize(_dissipationEnergies),
+        "Contact response dissipation must match the number of response samples if reported, and be empty otherwise.");
     if (!allowedContactElementMask.empty()) {
       MOCHI_ASSERT_VERBOSE(
           isize(allowedContactElementMask) == isize(_isActiveContactElement),
@@ -777,6 +843,35 @@ GetCollidingPadding(ContactAssemblyReg const& reg, entt::entity colliding, entt:
   return ignoresPadding ? 0_r : padding;
 }
 
+// Combines only the Coulomb friction, viscous friction and normal viscous damping coefficients of a
+// pair (see CombineContactParams), which decide whether it has friction or damping. The other
+// parameters are the collider's, with the pair's override.
+[[nodiscard]] inline ContactParams CombineDissipationCoefficients(
+    ContactParams const& collidingParams,
+    ContactParams const& colliderParams,
+    ContactPairParamsOverride const* paramsOverride) {
+  ContactParams pairParams = colliderParams;
+  if (paramsOverride != nullptr) {
+    pairParams = ApplyContactPairParamsOverride(pairParams, *paramsOverride);
+  }
+
+  // Friction coefficients: Use the geometric mean of the colliding and collider actors.
+  if (paramsOverride == nullptr || !paramsOverride->coulombFrictionCoefficient) {
+    pairParams.coulombFrictionCoefficient = Sqrt(
+        collidingParams.coulombFrictionCoefficient * colliderParams.coulombFrictionCoefficient);
+  }
+  if (paramsOverride == nullptr || !paramsOverride->viscousFrictionCoefficient) {
+    pairParams.viscousFrictionCoefficient = Sqrt(
+        collidingParams.viscousFrictionCoefficient * colliderParams.viscousFrictionCoefficient);
+  }
+  if (paramsOverride == nullptr || !paramsOverride->normalViscousDampingCoefficient) {
+    pairParams.normalViscousDampingCoefficient = Sqrt(
+        collidingParams.normalViscousDampingCoefficient *
+        colliderParams.normalViscousDampingCoefficient);
+  }
+  return pairParams;
+}
+
 /**
  * @brief Combines contact parameters from two actors into a single set of contact parameters.
  *
@@ -808,25 +903,8 @@ inline ContactParams CombineContactParams(
     int colliderIntegralDim,
     real colliderPenaltyLengthScale,
     real collidingPadding) {
-  ContactParams pairParams = colliderParams;
-  if (paramsOverride != nullptr) {
-    pairParams = ApplyContactPairParamsOverride(pairParams, *paramsOverride);
-  }
-
-  // Friction coefficients: Use the geometric mean of the colliding and collider actors.
-  if (paramsOverride == nullptr || !paramsOverride->coulombFrictionCoefficient) {
-    pairParams.coulombFrictionCoefficient = Sqrt(
-        collidingParams.coulombFrictionCoefficient * colliderParams.coulombFrictionCoefficient);
-  }
-  if (paramsOverride == nullptr || !paramsOverride->viscousFrictionCoefficient) {
-    pairParams.viscousFrictionCoefficient = Sqrt(
-        collidingParams.viscousFrictionCoefficient * colliderParams.viscousFrictionCoefficient);
-  }
-  if (paramsOverride == nullptr || !paramsOverride->normalViscousDampingCoefficient) {
-    pairParams.normalViscousDampingCoefficient = Sqrt(
-        collidingParams.normalViscousDampingCoefficient *
-        colliderParams.normalViscousDampingCoefficient);
-  }
+  ContactParams pairParams =
+      CombineDissipationCoefficients(collidingParams, colliderParams, paramsOverride);
   // Penalty coefficient, friction falloff velocity and friction presliding displacement: Use the
   // geometric mean if both actors are dynamic, and the colliding if the collider is static.
   if (paramsOverride == nullptr || !paramsOverride->penaltyCoefficient) {
@@ -888,6 +966,14 @@ inline ContactParams CombineContactParams(
   return pairParams;
 }
 
+[[nodiscard]] inline ContactPairParamsOverride const* FindContactPairParamsOverride(
+    ContactAssemblyReg const& reg,
+    entt::entity colliding,
+    entt::entity collider) {
+  auto const& overrideTable = reg.ctx<CContactPairParamsOverrideTable const>();
+  return overrideTable.Empty() ? nullptr : overrideTable.Find(colliding, collider);
+}
+
 inline ContactParams
 GetContactPairParams(ContactAssemblyReg const& reg, entt::entity colliding, entt::entity collider) {
   MOCHI_ASSERT(
@@ -900,19 +986,36 @@ GetContactPairParams(ContactAssemblyReg const& reg, entt::entity colliding, entt
   int const collidingIntegralDim = CollidingIntegralDim(reg, colliding);
   int const colliderIntegralDim = ColliderIntegralDim(reg, collider);
   real const colliderPenaltyLengthScale = ColliderPenaltyLengthScale(reg, collider);
-  auto const& overrideTable = reg.ctx<CContactPairParamsOverrideTable const>();
-  ContactPairParamsOverride const* const paramsOverride =
-      overrideTable.Empty() ? nullptr : overrideTable.Find(colliding, collider);
-
   return CombineContactParams(
       collidingParams,
       colliderParams,
-      paramsOverride,
+      FindContactPairParamsOverride(reg, colliding, collider),
       isStaticCollider,
       collidingIntegralDim,
       colliderIntegralDim,
       colliderPenaltyLengthScale,
       GetCollidingPadding(reg, colliding, collider));
+}
+
+// Whether an assembly reports the friction and damping of contact (see ReportsNonPotentialTerms):
+// with implicit normals, whose friction and damping forces treat the normals and the load as
+// constants when differentiating their energy, so their energy is in general not a potential of
+// their force. Explicit normals lag the normals and the load, so the energy of friction and damping
+// is a potential for a fixed contact set.
+[[nodiscard]] inline bool ReportsContactDissipation(
+    AssemblyParams const& params,
+    CSimulationParams const& simParams) {
+  return ReportsNonPotentialTerms(params, simParams) && !simParams.experimentalEval.explicitNormals;
+}
+
+// Whether a contact pair has friction or damping (see HasDissipation), without combining its other
+// contact parameters (see GetContactPairParams).
+[[nodiscard]] inline bool
+PairHasDissipation(ContactAssemblyReg const& reg, entt::entity colliding, entt::entity collider) {
+  return HasDissipation(CombineDissipationCoefficients(
+      reg.get<CContactParams const>(colliding),
+      reg.get<CContactParams const>(collider),
+      FindContactPairParamsOverride(reg, colliding, collider)));
 }
 
 inline bool ValidCollidingNormals(ContactAssemblyReg const& reg, entt::entity colliding) {

@@ -162,7 +162,7 @@ class SnleProblem {
   // Energy and residuals of the non-potential terms, whose residual has no potential. The
   // objective and the residual include them too. The assembly callback sets them with the
   // objective, and their rows at fixed DoFs must be zero, as in the residual. The residuals are
-  // paired with the actor's DOF offset.
+  // paired with the DoF offset of their first row.
   double nonPotentialEnergy = 0.0;
   DynamicArray<std::pair</*offset*/ int, ColumnVector<T>*>> nonPotentialResiduals;
 

@@ -23,8 +23,10 @@
 #include <mochi_core/integration/integration_utils.h>
 #include <mochi_core/linear_algebra/matrix.h>
 #include <mochi_core/solvers/krylov_solver.h>
+#include <mochi_core/solvers/line_search.h>
 #include <mochi_core/solvers/newton_solver_params.h>
 #include <mochi_core/utils/array_utils.h>
+#include <mochi_core/utils/assembly_params.h>
 #include <mochi_core/utils/container_utils.h>
 #include <mochi_core/utils/sparsity_utils.h>
 #include <mochi_physics/mochi_physics.h>
@@ -287,6 +289,16 @@ void GetIslandNewtonParams(
     entt::registry const& reg,
     entt::entity island,
     NewtonSolverParams& outNewtonParams);
+
+// Whether an assembly reports the energy and residual of the terms without a potential (see
+// SnleProblem::nonPotentialEnergy), which only line searches that test the merit read: objective
+// assemblies of the current state for such a search.
+[[nodiscard]] inline bool ReportsNonPotentialTerms(
+    AssemblyParams const& params,
+    CSimulationParams const& simParams) {
+  return params.assemObj && params.gradTarget == GradTarget::Current &&
+      LineSearchUsesMerit(simParams.nonLinearSolver.lineSearchType);
+}
 
 // Set Dirichlet BCs on the solution vector. The BC indices must index the solution vector.
 void SetDirichletBCs(CDirichletBC<real> const& dirichlet, ColumnVectorView<real> outSolution);

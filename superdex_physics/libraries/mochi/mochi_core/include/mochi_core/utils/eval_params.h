@@ -107,11 +107,12 @@ struct ExperimentalEvalParams {
    * dissipative contact terms.
    *
    * @note Implicit treatment improves stability (especially with high-order time integrators) but
-   * the resulting dissipative force is not integrable, hence it cannot be derived from an
-   * objective function. This (a) may hurt convergence with an objective-based line search, and (b)
-   * makes the force dresidual non-symmetric (a symmetric approximation is used). With
-   * implicitNormalForceForDissipation = false, the distance used for the explicit normal force is
-   * approximate with @ref explicitNormals = false, but accurate with explicitNormals = true.
+   * the resulting dissipative force is not integrable, hence it cannot be derived from an objective
+   * function. Merit-based line searches therefore count its work along each step instead of an
+   * energy (see @ref LineSearchType), and its force dresidual is non-symmetric (a symmetric
+   * approximation is used). With implicitNormalForceForDissipation = false, the distance used for
+   * the explicit normal force is approximate with @ref explicitNormals = false, but accurate with
+   * @ref explicitNormals = true.
    * @note Dissipative contact terms include Coulomb friction, viscous friction, and normal viscous
    * damping. Using an implicit normal force for normal damping can improve the accuracy of the
    * effective coefficient of restitution at a given time step size.

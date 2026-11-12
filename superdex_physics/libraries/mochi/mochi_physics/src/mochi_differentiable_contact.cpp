@@ -220,7 +220,16 @@ static void AccumulateRigidContactForceAdjoints(
     bool const readsAnchors = outAnchorGrad && ReadsFrictionAnchors(reg, collider, params, config);
     response.ResizeNoInit(numContacts, false, false, true, readsAnchors);
     ComputeCollisionResponse<kGradTarget>(
-        query, params, config, intState.dtStage, false, false, true, response, readsAnchors);
+        query,
+        params,
+        config,
+        intState.dtStage,
+        false,
+        false,
+        true,
+        response,
+        /*outDissipation*/ nullptr,
+        readsAnchors);
 
     // The queried force also depends on the anchor offset z_n that the step read, so
     // zBar_n += (df/dz)^T fBar. New contacts and contacts cleared by a placement read a zero offset
@@ -506,7 +515,16 @@ void AccumulateSolveAnchorAdjoints(
     // df/dz_n, the derivative of the per-unit-area force with respect to the anchor offset.
     response.ResizeNoInit(numContacts, false, false, false, true);
     ComputeCollisionResponse<GradTarget::Current>(
-        result, params, config, intState.dtStage, false, false, false, response, true);
+        result,
+        params,
+        config,
+        intState.dtStage,
+        false,
+        false,
+        false,
+        response,
+        /*outDissipation*/ nullptr,
+        /*assemDForceAnchor*/ true);
 
     // J (-lambda), the contact displacement induced by the solve adjoint, in the collider frame:
     // the rigid displacement of the colliding actor minus that of the collider (static for async

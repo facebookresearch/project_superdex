@@ -762,11 +762,7 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
     // On the first step we compute dresidual at the same time, assuming we will need it.
     {
       AssemblyParams assemblyParams;
-      static_assert(
-          static_cast<int>(LineSearchType::Count) == 6,
-          "Please make sure the logic below is correct if LineSearchType enum changes");
-      assemblyParams.assemObj = (_params.lineSearch.type != LineSearchType::None) &&
-          (_params.lineSearch.type != LineSearchType::ResidualNorm);
+      assemblyParams.assemObj = LineSearchUsesMerit(_params.lineSearch.type);
       assemblyParams.assemRes = true;
       assemblyParams.assemDRes = isFirstIter;
       assemblyParams.psdDRes = projectPsd;

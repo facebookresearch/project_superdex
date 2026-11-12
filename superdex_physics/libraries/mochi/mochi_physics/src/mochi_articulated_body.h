@@ -224,7 +224,7 @@ struct CTransmissions : public NoCopy {
   Link-space (full-DoF) residual of an articulated actor, projected to its reduced DoFs after
   assembly. The residual is valid only if isActive. Producers accumulate into it through
   AddLinkResidual() or AddTriple(), and its consumer, articulated::compound::ProjectFullResidual,
-  reads it if active and then deactivates it.
+  reads it if active and then deactivates it. Likewise for its non-potential part.
 */
 struct ArticulatedLinkResidual : NoCopy {
   explicit ArticulatedLinkResidual(int fullDofs) : residual(fullDofs) {}
@@ -243,8 +243,23 @@ struct ArticulatedLinkResidual : NoCopy {
     residual.Slice<3>(fullDof, 3) += value;
   }
 
+  // Adds the non-potential residual of a link (see SnleProblem::nonPotentialEnergy) at its offset
+  // in the full DoFs, zeroing the non-potential part on the first write after deactivation.
+  void AddNonPotentialLinkResidual(
+      int linkDofOffset,
+      ColumnVectorView<real const, RigidSize::kDAll> linkRes) {
+    if (!isNonPotentialActive) {
+      nonPotentialResidual.Resize(residual.Rows());
+      nonPotentialResidual.SetZero();
+      isNonPotentialActive = true;
+    }
+    nonPotentialResidual.Slice<RigidSize::kDAll>(linkDofOffset, RigidSize::kDAll) += linkRes;
+  }
+
   ColumnVector<real> residual;
   bool isActive = false;
+  ColumnVector<real> nonPotentialResidual;
+  bool isNonPotentialActive = false;
 
  private:
   void Activate() {
@@ -607,6 +622,7 @@ void GetLinkTransformsComFromPose(
 void AssembleInertiaForces(
     AssemblyParams const& params,
     ecs::OptionalTag<TagUseNewtonEulerInertia> useNewtonEulerInertia,
+    ecs::CtxGlobal<CSimulationParams const> simParams,
     CArticulatedProps const& props,
     CArticulatedBodyShape const& bodyShape,
     CArticulatedJointPoseInfo const& poseInfo,
@@ -641,6 +657,7 @@ void AssembleFrictionForces(
  */
 void AssembleExternalForces(
     AssemblyParams const& params,
+    ecs::CtxGlobal<CSimulationParams const> simParams,
     CArticulatedProps const& props,
     CArticulatedBodyShape const& bodyShape,
     CArticulatedJointPoseInfo const& poseInfo,
@@ -743,6 +760,7 @@ void EntityAssemble(
     ecs::RequiredTag<TagArticulatedActor>,
     ecs::PartialRegistry<CActorSnle const, CDofOffset const> reg,
     ecs::OptionalTag<TagUseNewtonEulerInertia> useNewtonEulerInertia,
+    ecs::CtxGlobal<CSimulationParams const> simParams,
     CArticulatedProps const& props,
     CGroupMembers const& groupMembers,
     CArticulatedJacobian const& jacobian,
@@ -770,7 +788,8 @@ void EntityAssemble(
 // soft actors) to its full residual, projects it to the reduced DoFs, and adds it to the reduced
 // residual. For state grad targets only. Must run after contact, constraint, articulated and nested
 // soft actor assembly. As their only consumer, it deactivates the link-space residuals, whether
-// projected or not. For GradTarget::Current, it also computes the joint wrenches if queried.
+// projected or not, and projects their active non-potential parts into the compound's
+// non-potential residual. For GradTarget::Current, it also computes the joint wrenches if queried.
 void ProjectFullResidual(
     AssemblyParams const& params,
     ecs::RequiredTag<TagArticulatedActor>,

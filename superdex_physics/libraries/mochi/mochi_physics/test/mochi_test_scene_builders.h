@@ -47,12 +47,11 @@ inline Actor* AddGroundPlane(Scene* scene) {
   return scene->CreateRigidActor(groundParams, test::ExpectOK{});
 }
 
-// Dynamic rigid cube just above the ground plane.
-inline Actor* AddRigidCube(Scene* scene, real* offsetX = nullptr) {
+// Dynamic rigid cube, its bottom at height, by default just above the ground plane: at the default
+// offset, the tilted ground is 11.1 mm high under the cube's -x edge.
+inline Actor* AddRigidCube(Scene* scene, real* offsetX = nullptr, real height = 0.0115_r) {
   auto* context = scene->GetContext();
   real constexpr kBoxScale = 0.2_r;
-  // At the default offset, the tilted ground is 11.1 mm high under the cube's -x edge.
-  real constexpr kBoxLift = 0.0115_r;
   real const x = offsetX ? *offsetX : 0_r;
 
   RigidActorParams params;
@@ -65,7 +64,7 @@ inline Actor* AddRigidCube(Scene* scene, real* offsetX = nullptr) {
       test::ExpectOK{});
   params.colliderType = ColliderType::Box;
   params.density = 1000_r;
-  params.worldFromLocal.SetTranslation(Real3{x - 0.5_r * kBoxScale, kBoxLift, -0.5_r * kBoxScale});
+  params.worldFromLocal.SetTranslation(Real3{x - 0.5_r * kBoxScale, height, -0.5_r * kBoxScale});
   auto* actor = scene->CreateRigidActor(params, test::ExpectOK{});
 
   // Add an initial velocity to test that the full velocity is correctly restored.
@@ -74,6 +73,29 @@ inline Actor* AddRigidCube(Scene* scene, real* offsetX = nullptr) {
   if (offsetX) {
     *offsetX += 1.1_r * kBoxScale;
   }
+
+  return actor;
+}
+
+// Dynamic rigid slab, 0.6 m wide and deep and centered on the y axis, its bottom at height, pinned
+// at its center of mass.
+inline Actor* AddPinnedSlab(Scene* scene, real height, real thickness) {
+  real constexpr kSlabSize = 0.6_r;
+
+  RigidActorParams params;
+  params.name = "Slab";
+  params.shape = scene->GetContext()->LoadShapeFromFile(
+      test::GetAssetPath("cube/cube_fine_mesh.mochi.json"),
+      Real3{kSlabSize, thickness, kSlabSize},
+      TransformRT::Identity(),
+      test::ExpectOK{});
+  params.colliderType = ColliderType::Box;
+  params.density = 1000_r;
+  params.worldFromLocal.SetTranslation(Real3{-0.5_r * kSlabSize, height, -0.5_r * kSlabSize});
+  auto* actor = scene->CreateRigidActor(params, test::ExpectOK{});
+
+  Real3 const center = actor->GetCenterOfMassTransform(test::ExpectOK{}).GetTranslation();
+  actor->AddBoundaryConditionDofsWorld(std::array{0, 1, 2}, center, test::ExpectOK{});
 
   return actor;
 }
@@ -149,12 +171,11 @@ inline Actor* AddSoftContactSkinCube(Scene* scene, real* offsetX = nullptr) {
   return actor;
 }
 
-// Dynamic shell duck just above the ground plane.
-inline Actor* AddShellDuck(Scene* scene, real* offsetX = nullptr) {
+// Dynamic shell duck above the ground plane, its origin, near its bottom, at height.
+inline Actor* AddShellDuck(Scene* scene, real* offsetX = nullptr, real height = 0.2_r) {
   MOCHI_ASSERT(MOCHI_USE_HDF5, "Adding a shell duck requires HDF5 support");
   auto* context = scene->GetContext();
   real constexpr kDuckScale = 0.1_r;
-  real constexpr kDuckLift = 0.1_r;
   real const x = offsetX ? *offsetX : 0_r;
 
   experimental::ShellActorParams params;
@@ -171,7 +192,7 @@ inline Actor* AddShellDuck(Scene* scene, real* offsetX = nullptr) {
       1000_r, // density3d
       0.01_r, // thickness
       test::ExpectOK{});
-  params.worldFromLocal.SetTranslation(Real3{x, kDuckScale + kDuckLift, 0_r});
+  params.worldFromLocal.SetTranslation(Real3{x, height, 0_r});
   auto* actor = experimental::CreateShellActor(scene, params, test::ExpectOK{});
 
   if (offsetX) {
@@ -179,6 +200,33 @@ inline Actor* AddShellDuck(Scene* scene, real* offsetX = nullptr) {
   }
 
   return actor;
+}
+
+// Dynamic soft ROM duck with hyper-reduction, projected with the given strategy, its origin at
+// height.
+inline Actor*
+AddRomDuck(Scene* scene, experimental::RomProjectionStrategy projectionStrategy, real height) {
+  MOCHI_ASSERT(MOCHI_USE_HDF5, "Adding a ROM duck requires HDF5 support");
+  real constexpr kDuckScale = 0.1_r;
+
+  SoftActorParams params;
+  params.shape = scene->GetContext()->LoadShapeFromFile(
+      test::GetAssetPath("duck/duck_coarse.mochi.h5"),
+      Real3{kDuckScale, kDuckScale, kDuckScale},
+      TransformRT::Identity(),
+      test::ExpectOK{});
+  params.worldFromLocal.SetTranslation(Real3{0_r, height, 0_r});
+  experimental::ExperimentalSoftActorParams experimentalParams;
+  experimentalParams.rom = experimental::RomParams{
+      .source = "biharmonic_10",
+      .hyperReduction =
+          experimental::HyperReductionParams{
+              .initializationStrategy =
+                  experimental::SampleMeshInitRandomSampling{
+                      .stepSizeForBoundaryElementsSelection = 3,
+                      .stepSizeForInteriorElementsSelection = 3}},
+      .romProjectionStrategy = projectionStrategy};
+  return experimental::CreateSoftActor(scene, params, experimentalParams, test::ExpectOK{});
 }
 
 // Dynamic shell box with a contact skin, just above the ground plane.
