@@ -1998,7 +1998,7 @@ class ArticulatedCycleJoint:
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, child: int = ..., parent: int = ...) -> None: ...
+    def __init__(self, *, child: int = ..., parent: int = ...) -> None: ...
     def __eq__(self, other: object) -> bool: ...
     def __ne__(self, other: object) -> bool: ...
 
@@ -2034,6 +2034,7 @@ class RoutingElement:
     @overload
     def __init__(
         self,
+        *,
         type: RoutingElementType | int = ...,
         index: int = ...,
         local_position: Real3Like = ...,
@@ -2074,6 +2075,7 @@ class BlendingData:
     @overload
     def __init__(
         self,
+        *,
         source_shape: str = ...,
         indices: ArrayLikeInt = ...,
         weights: ArrayLikeReal = ...,
@@ -2112,6 +2114,7 @@ class BlendingDataView:
     @overload
     def __init__(
         self,
+        *,
         source_shape: str = ...,
         indices: ArrayLikeInt = ...,
         weights: ArrayLikeReal = ...,
@@ -2149,6 +2152,7 @@ class SkinningData:
     @overload
     def __init__(
         self,
+        *,
         weights_per_node: int = ...,
         indices: ArrayLikeInt = ...,
         weights: ArrayLikeReal = ...,
@@ -2186,6 +2190,7 @@ class SkinningDataView:
     @overload
     def __init__(
         self,
+        *,
         weights_per_node: int = ...,
         indices: ArrayLikeInt = ...,
         weights: ArrayLikeReal = ...,
@@ -2238,6 +2243,7 @@ class MeshData:
     @overload
     def __init__(
         self,
+        *,
         nodes_per_element: int = ...,
         coordinates: ArrayLikeReal = ...,
         connectivity: ArrayLikeInt = ...,
@@ -2313,6 +2319,7 @@ class MeshDataView:
     @overload
     def __init__(
         self,
+        *,
         nodes_per_element: int = ...,
         coordinates: ArrayLikeReal = ...,
         connectivity: ArrayLikeInt = ...,
@@ -2415,6 +2422,7 @@ class GridSdfData:
     @overload
     def __init__(
         self,
+        *,
         dims: Int3Like = ...,
         values: ArrayLikeReal = ...,
         bounds: Aabb = ...,
@@ -2502,6 +2510,7 @@ class GridSdfDataView:
     @overload
     def __init__(
         self,
+        *,
         dims: Int3Like = ...,
         values: ArrayLikeReal = ...,
         bounds: Aabb = ...,
@@ -2542,6 +2551,7 @@ class Box:
     @overload
     def __init__(
         self,
+        *,
         center: Real3Like = ...,
         half_extents: Real3Like = ...,
         rotation: QuaternionLike = ...,
@@ -2561,7 +2571,7 @@ class Plane:
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, normal: Real3Like = ..., distance: float = ...) -> None: ...
+    def __init__(self, *, normal: Real3Like = ..., distance: float = ...) -> None: ...
     def __eq__(self, other: object) -> bool: ...
     def __ne__(self, other: object) -> bool: ...
 
@@ -2577,7 +2587,7 @@ class Sphere:
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, center: Real3Like = ..., radius: float = ...) -> None: ...
+    def __init__(self, *, center: Real3Like = ..., radius: float = ...) -> None: ...
     def __eq__(self, other: object) -> bool: ...
     def __ne__(self, other: object) -> bool: ...
 
@@ -2628,6 +2638,7 @@ class ModelData:
     @overload
     def __init__(
         self,
+        *,
         mesh: Optional[MeshData] = ...,
         visual_mesh: Optional[MeshData] = ...,
         contact_skin_mesh: Optional[MeshData] = ...,
@@ -2697,6 +2708,7 @@ class ModelDataView:
     @overload
     def __init__(
         self,
+        *,
         mesh: Optional[MeshDataView] = ...,
         visual_mesh: Optional[MeshDataView] = ...,
         contact_skin_mesh: Optional[MeshDataView] = ...,
@@ -2802,6 +2814,7 @@ class GridSdfParams:
     @overload
     def __init__(
         self,
+        *,
         resolution_mode: GridSdfResolutionMode | int = ...,
         resolution_delta: Real3Like = ...,
         boundary_padding_dist: float = ...,
@@ -2825,6 +2838,7 @@ class LinearElasticMaterialParams:
     @overload
     def __init__(
         self,
+        *,
         youngs_modulus: float = ...,
         poisson_ratio: float = ...,
     ) -> None: ...
@@ -2852,6 +2866,7 @@ class StVenantKirchhoffMaterialParams:
     @overload
     def __init__(
         self,
+        *,
         youngs_modulus: float = ...,
         poisson_ratio: float = ...,
         psd_strategy: MaterialPsdStrategy | int = ...,
@@ -2880,6 +2895,7 @@ class NeoHookeanMaterialParams:
     @overload
     def __init__(
         self,
+        *,
         youngs_modulus: float = ...,
         poisson_ratio: float = ...,
         psd_strategy: MaterialPsdStrategy | int = ...,
@@ -2922,6 +2938,7 @@ class ActiveAnisoArapMaterialParams:
     @overload
     def __init__(
         self,
+        *,
         alpha: float = ...,
         length: float = ...,
         aniso_dir: Real3Like = ...,
@@ -2982,6 +2999,7 @@ class ActiveNeoHookeanMaterialParams:
     @overload
     def __init__(
         self,
+        *,
         passive_isotropic: NeoHookeanMaterialParams = ...,
         active_anisotropic: ActiveAnisoArapMaterialParams = ...,
     ) -> None: ...
@@ -3007,6 +3025,7 @@ class ArapMaterialParams:
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         psd_strategy: MaterialPsdStrategy | int = ...,
     ) -> None: ...
@@ -3043,6 +3062,7 @@ class ActiveShapeTargetingArapMaterialParams:
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         shape_target_tensor: Real6Like = ...,
         psd_strategy: MaterialPsdStrategy | int = ...,
@@ -3118,6 +3138,7 @@ class SoftMaterialParams:
     @overload
     def __init__(
         self,
+        *,
         type: SoftMaterialType | int = ...,
         neo_hookean: NeoHookeanMaterialParams = ...,
         st_venant_kirchhoff: StVenantKirchhoffMaterialParams = ...,
@@ -3196,6 +3217,7 @@ class PerElementSoftMaterialData:
     @overload
     def __init__(
         self,
+        *,
         type: SoftMaterialType | int = ...,
         psd_strategy: MaterialPsdStrategy | int = ...,
         youngs_modulus: ArrayLikeReal = ...,
@@ -3294,6 +3316,7 @@ class PerElementSoftMaterialDataView:
     @overload
     def __init__(
         self,
+        *,
         type: SoftMaterialType | int = ...,
         psd_strategy: MaterialPsdStrategy | int = ...,
         youngs_modulus: ArrayLikeReal = ...,
@@ -3643,6 +3666,7 @@ class ContactParams:
     @overload
     def __init__(
         self,
+        *,
         penalty_coefficient: float = ...,
         penalty_smoothing_half_distance: float = ...,
         penalty_threshold_default: float = ...,
@@ -3768,6 +3792,7 @@ class ArticulatedJointFrictionParams:
     @overload
     def __init__(
         self,
+        *,
         viscous: float = ...,
         coulomb: float = ...,
         falloff_vel: float = ...,
@@ -3790,6 +3815,7 @@ class ArticulatedDofInfo:
     @overload
     def __init__(
         self,
+        *,
         offset: int = ...,
         trans_size: int = ...,
         rot_size: int = ...,
@@ -3847,6 +3873,7 @@ class SaturationHessianParams:
     @overload
     def __init__(
         self,
+        *,
         contact_friction: bool = ...,
         joint_friction: bool = ...,
         constraint_saturation: bool = ...,
@@ -4016,6 +4043,7 @@ class ExperimentalEvalParams:
     @overload
     def __init__(
         self,
+        *,
         explicit_normals: bool = ...,
         fade_friction: bool = ...,
         implicit_normal_force_for_dissipation: bool = ...,
@@ -4185,6 +4213,7 @@ class NonLinearSolverParams:
     @overload
     def __init__(
         self,
+        *,
         solver_type: NonLinearSolverType | int = ...,
         d_residual_assembly_period: int = ...,
         max_iter: int = ...,
@@ -4316,6 +4345,7 @@ class LinearSolverParams:
     @overload
     def __init__(
         self,
+        *,
         solver_type: LinearSolverType | int = ...,
         preconditioner_type: PreconditionerType | int = ...,
         norm_type: LinearSolverConvergenceNorm | int = ...,
@@ -4346,6 +4376,7 @@ class CoordinateSpace:
     @overload
     def __init__(
         self,
+        *,
         axes: CoordinateSpaceAxes | int = ...,
         units_per_meter: float = ...,
     ) -> None: ...
@@ -4466,7 +4497,7 @@ class Handle:
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, value: Handle.ValueTypeLike = ...) -> None: ...
+    def __init__(self, *, value: Handle.ValueTypeLike = ...) -> None: ...
     @overload
     def __init__(self, raw: Handle.ValueTypeLike) -> None:
         """Construct a handle from its raw 64-bit identifier.
@@ -4497,7 +4528,7 @@ class SceneHandle(Handle):
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, value: Handle.ValueTypeLike = ...) -> None: ...
+    def __init__(self, *, value: Handle.ValueTypeLike = ...) -> None: ...
     def __hash__(self) -> int: ...
 
 class ActorHandle(Handle):
@@ -4516,7 +4547,7 @@ class ActorHandle(Handle):
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, value: Handle.ValueTypeLike = ...) -> None: ...
+    def __init__(self, *, value: Handle.ValueTypeLike = ...) -> None: ...
     def __hash__(self) -> int: ...
 
 class ShapeHandle(Handle):
@@ -4534,7 +4565,7 @@ class ShapeHandle(Handle):
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, value: Handle.ValueTypeLike = ...) -> None: ...
+    def __init__(self, *, value: Handle.ValueTypeLike = ...) -> None: ...
     def __hash__(self) -> int: ...
 
 class CallbackHandle(Handle):
@@ -4548,7 +4579,7 @@ class CallbackHandle(Handle):
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, value: Handle.ValueTypeLike = ...) -> None: ...
+    def __init__(self, *, value: Handle.ValueTypeLike = ...) -> None: ...
     def __hash__(self) -> int: ...
 
 class ConstraintHandle(Handle):
@@ -4567,7 +4598,7 @@ class ConstraintHandle(Handle):
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, value: Handle.ValueTypeLike = ...) -> None: ...
+    def __init__(self, *, value: Handle.ValueTypeLike = ...) -> None: ...
     def __hash__(self) -> int: ...
 
 class StateHandle(Handle):
@@ -4586,7 +4617,7 @@ class StateHandle(Handle):
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, value: Handle.ValueTypeLike = ...) -> None: ...
+    def __init__(self, *, value: Handle.ValueTypeLike = ...) -> None: ...
     def __hash__(self) -> int: ...
 
 class QueryHandle(Handle):
@@ -4605,7 +4636,7 @@ class QueryHandle(Handle):
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, value: Handle.ValueTypeLike = ...) -> None: ...
+    def __init__(self, *, value: Handle.ValueTypeLike = ...) -> None: ...
     def __hash__(self) -> int: ...
 
 INVALID_HANDLE: int
@@ -5178,6 +5209,7 @@ class SolverParams:
     @overload
     def __init__(
         self,
+        *,
         non_linear_solver: NonLinearSolverParams = ...,
         linear_solver: LinearSolverParams = ...,
         integration_method: IntegrationMethod | int = ...,
@@ -5246,6 +5278,7 @@ class RecenteringParams:
     @overload
     def __init__(
         self,
+        *,
         use_recentering: bool = ...,
         rotation_epsilon_deg: float = ...,
         translation_epsilon: float = ...,
@@ -5272,6 +5305,7 @@ class BoundarySubsamplingParams:
     @overload
     def __init__(
         self,
+        *,
         subsampling_density: float = ...,
         strategy: BoundarySubsamplingStrategy | int = ...,
     ) -> None: ...
@@ -5334,6 +5368,7 @@ class ContactPairParamsOverride:
     @overload
     def __init__(
         self,
+        *,
         penalty_coefficient: Optional[float] = ...,
         friction_falloff_vel: Optional[float] = ...,
         presliding_displacement: Optional[float] = ...,
@@ -5515,6 +5550,7 @@ class ArticulatedShapeInfo:
     @overload
     def __init__(
         self,
+        *,
         root_from_links_at_rest: ArrayLikeTransformRT = ...,
         link_names: ArrayLikeString = ...,
         parents: ArrayLikeInt = ...,
@@ -5543,7 +5579,7 @@ class StepInfo:
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, scene: Scene = ..., time_step_sec: float = ...) -> None: ...
+    def __init__(self, *, scene: Scene = ..., time_step_sec: float = ...) -> None: ...
 
 class RigidActorParams:
     """Parameters to create a rigid body actor.
@@ -5779,6 +5815,7 @@ class RigidActorParams:
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         layer: str = ...,
         shape: ShapeHandle = ...,
@@ -5969,6 +6006,7 @@ class SoftActorParams:
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         layer: str = ...,
         world_from_local: TransformRT = ...,
@@ -6112,6 +6150,7 @@ class ArticulatedJointParams:
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         type: ArticulatedJointType | int = ...,
         parent_link_from_joint: TransformRT = ...,
@@ -6345,6 +6384,7 @@ class ArticulatedLinkParams:
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         parent_link: int = ...,
         parent_joint_from_link: TransformRT = ...,
@@ -6458,6 +6498,7 @@ class ArticulatedSkinParams:
     @overload
     def __init__(
         self,
+        *,
         shape: ShapeHandle = ...,
         layer: str = ...,
         contact: ContactParams = ...,
@@ -6501,6 +6542,7 @@ class ArticulatedCycleJointParams:
     @overload
     def __init__(
         self,
+        *,
         parent_link: int = ...,
         child_link: int = ...,
         joint_from_child_link: TransformRT = ...,
@@ -6588,6 +6630,7 @@ class ArticulatedActorParams:
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         world_from_root: TransformRT = ...,
         cycles: ArrayLikeArticulatedCycleJointParams = ...,
@@ -6773,6 +6816,7 @@ class SoftSkinnedActorParams:
     @overload
     def __init__(
         self,
+        *,
         skeleton_params: ArticulatedActorParams = ...,
         soft_params: ArrayLikeSoftActorParams = ...,
         soft_attach_links: ArrayLikeString = ...,
@@ -6826,6 +6870,7 @@ class ConstraintParams:
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -6859,6 +6904,7 @@ class RigidSphericalJointConstraintParams(ConstraintParams):
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -6917,6 +6963,7 @@ class RigidPrismaticJointConstraintParams(ConstraintParams):
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -6975,6 +7022,7 @@ class DeformableNodeToDeformableNodeConstraintParams(ConstraintParams):
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -7023,6 +7071,7 @@ class RodElementRotationToRigidConstraintParams(ConstraintParams):
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -7065,6 +7114,7 @@ class RodElementRotationConstraintParams(ConstraintParams):
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -7147,6 +7197,7 @@ class DeformableNodeToRigidConstraintParams(ConstraintParams):
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -7217,6 +7268,7 @@ class JointRotationRangeConstraintParams(ConstraintParams):
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -7258,6 +7310,7 @@ class RigidPivotPositionConstraintParams(ConstraintParams):
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -7294,6 +7347,7 @@ class RigidPivotToRigidTargetConstraintParams(ConstraintParams):
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -7332,6 +7386,7 @@ class RigidPivotRotationConstraintParams(ConstraintParams):
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -7365,6 +7420,7 @@ class DeformableNodePositionConstraintParams(ConstraintParams):
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -7416,6 +7472,7 @@ class JointRotationTrackingConstraintParams(ConstraintParams):
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -7462,6 +7519,7 @@ class ArticulatedSingleDofTargetConstraintParams(ConstraintParams):
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -7509,6 +7567,7 @@ class Articulated3dRotationTargetConstraintParams(ConstraintParams):
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -7555,6 +7614,7 @@ class ArticulatedSingleDofRangeConstraintParams(ConstraintParams):
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -7601,6 +7661,7 @@ class Articulated3dRotationRangeConstraintParams(ConstraintParams):
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -7772,6 +7833,7 @@ class ContactPoint:
     @overload
     def __init__(
         self,
+        *,
         actor_a: ActorHandle = ...,
         actor_b: ActorHandle = ...,
         distance: float = ...,
@@ -7813,7 +7875,7 @@ class NodeContactForce:
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, index: int = ..., force: Real3Like = ...) -> None: ...
+    def __init__(self, *, index: int = ..., force: Real3Like = ...) -> None: ...
 
 class SdfDistances:
     """SDF distance information for active contact sample points.
@@ -7865,6 +7927,7 @@ class SdfDistances:
     @overload
     def __init__(
         self,
+        *,
         sample_indices: ArrayLikeInt = ...,
         world_positions: ArrayLikeReal3 = ...,
         distances: ArrayLikeReal = ...,
@@ -7919,6 +7982,7 @@ class PerformanceStats:
     @overload
     def __init__(
         self,
+        *,
         total_step_duration_sec: float = ...,
         solve_step_duration_sec: float = ...,
         pre_step_callbacks_duration_sec: float = ...,
@@ -7977,6 +8041,7 @@ class SolverStats:
     @overload
     def __init__(
         self,
+        *,
         max_non_linear_iters: int = ...,
         residual_norm: float = ...,
         max_line_search_iters: int = ...,
@@ -8035,6 +8100,7 @@ class PoseTrackingParams:
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -8085,6 +8151,7 @@ class PoseControllerParams:
     @overload
     def __init__(
         self,
+        *,
         link_pos_tracking: ArrayLikePoseTrackingParams = ...,
         link_rot_tracking: ArrayLikePoseTrackingParams = ...,
         joint_tracking: ArrayLikePoseTrackingParams = ...,
@@ -8118,6 +8185,7 @@ class PoseConstraintInfo:
     @overload
     def __init__(
         self,
+        *,
         handle: ConstraintHandle = ...,
         type: PoseConstraintType | int = ...,
         link: int = ...,
@@ -8146,6 +8214,7 @@ class DebugDrawSpheres:
     @overload
     def __init__(
         self,
+        *,
         positions: ArrayLikeReal3 = ...,
         radii: ArrayLikeReal = ...,
         colors: ArrayLikeColor = ...,
@@ -8176,6 +8245,7 @@ class DebugDrawLineVertices:
     @overload
     def __init__(
         self,
+        *,
         positions: ArrayLikeReal3 = ...,
         colors: ArrayLikeColor = ...,
     ) -> None: ...
@@ -8199,6 +8269,7 @@ class DebugDrawData:
     @overload
     def __init__(
         self,
+        *,
         line_vertices: DebugDrawLineVertices = ...,
         spheres: DebugDrawSpheres = ...,
     ) -> None: ...
@@ -8943,6 +9014,7 @@ def create_mesh_shape(mesh: MeshData) -> ShapeHandle:
     """
 @overload
 def create_mesh_shape(
+    *,
     nodes_per_element: int = ...,
     coordinates: ArrayLikeReal = ...,
     connectivity: ArrayLikeInt = ...,
@@ -9014,6 +9086,7 @@ def create_model_shape(model: ModelData) -> ShapeHandle:
     """
 @overload
 def create_model_shape(
+    *,
     mesh: Optional[MeshData] = ...,
     visual_mesh: Optional[MeshData] = ...,
     contact_skin_mesh: Optional[MeshData] = ...,
@@ -13671,6 +13744,7 @@ class Scene:
     @overload
     def create_rigid_actor(
         self,
+        *,
         name: str = ...,
         layer: str = ...,
         shape: ShapeHandle = ...,
@@ -13709,6 +13783,7 @@ class Scene:
     @overload
     def create_soft_actor(
         self,
+        *,
         name: str = ...,
         layer: str = ...,
         world_from_local: TransformRT = ...,
@@ -13753,6 +13828,7 @@ class Scene:
     @overload
     def create_articulated_actor(
         self,
+        *,
         name: str = ...,
         world_from_root: TransformRT = ...,
         cycles: ArrayLikeArticulatedCycleJointParams = ...,
@@ -13800,6 +13876,7 @@ class Scene:
     @overload
     def create_soft_skinned_actor(
         self,
+        *,
         skeleton_params: ArticulatedActorParams = ...,
         soft_params: ArrayLikeSoftActorParams = ...,
         soft_attach_links: ArrayLikeString = ...,
@@ -13942,6 +14019,7 @@ class Scene:
     @overload
     def create_articulated_single_dof_range_constraint(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -13984,6 +14062,7 @@ class Scene:
     @overload
     def create_articulated3d_rotation_range_constraint(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -14018,6 +14097,7 @@ class Scene:
     @overload
     def create_articulated_single_dof_target_constraint(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -14052,6 +14132,7 @@ class Scene:
     @overload
     def create_articulated3d_rotation_target_constraint(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -14085,6 +14166,7 @@ class Scene:
     @overload
     def create_joint_rotation_range_constraint(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -14122,6 +14204,7 @@ class Scene:
     @overload
     def create_joint_rotation_tracking_constraint(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -14155,6 +14238,7 @@ class Scene:
     @overload
     def create_rod_element_rotation_to_rigid_constraint(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -14189,6 +14273,7 @@ class Scene:
     @overload
     def create_rod_element_rotation_constraint(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -14222,6 +14307,7 @@ class Scene:
     @overload
     def create_rigid_pivot_position_constraint(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -14257,6 +14343,7 @@ class Scene:
     @overload
     def create_rigid_pivot_to_rigid_target_constraint(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -14290,6 +14377,7 @@ class Scene:
     @overload
     def create_rigid_pivot_rotation_constraint(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -14323,6 +14411,7 @@ class Scene:
     @overload
     def create_rigid_prismatic_joint_constraint(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -14358,6 +14447,7 @@ class Scene:
     @overload
     def create_rigid_spherical_joint_constraint(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -14392,6 +14482,7 @@ class Scene:
     @overload
     def create_deformable_node_position_constraint(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -14426,6 +14517,7 @@ class Scene:
     @overload
     def create_deformable_node_to_deformable_node_constraint(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -14461,6 +14553,7 @@ class Scene:
     @overload
     def create_deformable_node_to_rigid_constraint(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,

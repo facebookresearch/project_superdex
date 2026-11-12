@@ -481,7 +481,7 @@ class RoboticsHandle:
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, value: int = ...) -> None: ...
+    def __init__(self, *, value: int = ...) -> None: ...
     def __eq__(self, other: object) -> bool: ...
     def __ne__(self, other: object) -> bool: ...
     def __lt__(self, other: RoboticsHandle) -> bool: ...
@@ -495,7 +495,7 @@ class BotHandle(RoboticsHandle):
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, value: int = ...) -> None: ...
+    def __init__(self, *, value: int = ...) -> None: ...
 
 class ControllerHandle(RoboticsHandle):
     """Distinct handle identifying a controller in its owning
@@ -504,7 +504,7 @@ class ControllerHandle(RoboticsHandle):
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, value: int = ...) -> None: ...
+    def __init__(self, *, value: int = ...) -> None: ...
 
 class SensorHandle(RoboticsHandle):
     """Distinct handle identifying a sensor in its owning
@@ -513,7 +513,7 @@ class SensorHandle(RoboticsHandle):
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, value: int = ...) -> None: ...
+    def __init__(self, *, value: int = ...) -> None: ...
 
 class ActuatorHandle(RoboticsHandle):
     """Distinct handle identifying an actuator in its owning
@@ -522,7 +522,7 @@ class ActuatorHandle(RoboticsHandle):
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, value: int = ...) -> None: ...
+    def __init__(self, *, value: int = ...) -> None: ...
 
 class BotJointPrefab(mochi_physics.prefab.ArticulatedJointPrefab):
     """Parameters describing a single joint in a bot."""
@@ -540,6 +540,7 @@ class BotJointPrefab(mochi_physics.prefab.ArticulatedJointPrefab):
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         type: mochi_physics.ArticulatedJointType | int = ...,
         parent_link_from_joint: mochi_physics.TransformRT = ...,
@@ -575,6 +576,7 @@ class BotSensorPrefab:
     @overload
     def __init__(
         self,
+        *,
         type: str = ...,
         name: str = ...,
         parent_from_sensor: mochi_physics.TransformRT = ...,
@@ -596,7 +598,13 @@ class BotActuatorPrefab:
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, type: str = ..., name: str = ..., params: str = ...) -> None: ...
+    def __init__(
+        self,
+        *,
+        type: str = ...,
+        name: str = ...,
+        params: str = ...,
+    ) -> None: ...
     def __eq__(self, other: object) -> bool: ...
     def __ne__(self, other: object) -> bool: ...
 
@@ -617,6 +625,7 @@ class BotLinkPrefab(mochi_physics.prefab.ArticulatedLinkPrefab):
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         parent_link: int = ...,
         parent_joint_from_link: mochi_physics.TransformRT = ...,
@@ -668,6 +677,7 @@ class BotContactOverride:
     @overload
     def __init__(
         self,
+        *,
         link_a: str = ...,
         link_b: str = ...,
         enable: bool = ...,
@@ -690,6 +700,7 @@ class BotTransmissionPrefab(
     @overload
     def __init__(
         self,
+        *,
         target_displacement: float = ...,
         stiffness: float = ...,
         damping: float = ...,
@@ -743,6 +754,7 @@ class BotLinearTransmissionPrefab(BotTransmissionPrefab):
     @overload
     def __init__(
         self,
+        *,
         target_displacement: float = ...,
         stiffness: float = ...,
         damping: float = ...,
@@ -783,6 +795,7 @@ class BotSpatialTendonPrefab(BotTransmissionPrefab):
     @overload
     def __init__(
         self,
+        *,
         target_displacement: float = ...,
         stiffness: float = ...,
         damping: float = ...,
@@ -877,6 +890,7 @@ class BotPrefab:
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         joints: ArrayLikeBotJointPrefab = ...,
         links: ArrayLikeBotLinkPrefab = ...,
@@ -1363,6 +1377,7 @@ class ControllerBasicOscPdParams:
     @overload
     def __init__(
         self,
+        *,
         kp_p: float = ...,
         kd_p: float = ...,
         kp_r: float = ...,
@@ -1425,6 +1440,7 @@ class ControllerBasicOscPdObsv:
     @overload
     def __init__(
         self,
+        *,
         dof_positions: mochi_physics.ArrayLikeReal = ...,
         dof_velocities: mochi_physics.ArrayLikeReal = ...,
         world_from_root: mochi_physics.TransformRT = ...,
@@ -1441,6 +1457,7 @@ class ControllerBasicOscPdTarget:
     @overload
     def __init__(
         self,
+        *,
         root_from_target_ee: mochi_physics.TransformRT = ...,
     ) -> None: ...
 
@@ -1555,6 +1572,7 @@ class ControllerMochiArticulatedPoseParams:
     @overload
     def __init__(
         self,
+        *,
         pose_controller_params: mochi_physics.PoseControllerParams = ...,
     ) -> None: ...
     @staticmethod
@@ -1608,6 +1626,7 @@ class ControllerMochiArticulatedPoseTarget:
     @overload
     def __init__(
         self,
+        *,
         world_from_root: mochi_physics.TransformRT = ...,
         local_to_parent_transforms: mochi_physics.ArrayLikeTransformRT = ...,
         pose_dofs: mochi_physics.ArrayLikeReal = ...,
@@ -2035,6 +2054,7 @@ class ControllerBasicJscPdParams:
     @overload
     def __init__(
         self,
+        *,
         kp: mochi_physics.ArrayLikeReal = ...,
         kd: mochi_physics.ArrayLikeReal = ...,
         saturation: mochi_physics.ArrayLikeReal = ...,
@@ -2085,6 +2105,7 @@ class ControllerBasicJscPdObsv:
     @overload
     def __init__(
         self,
+        *,
         dof_positions: mochi_physics.ArrayLikeReal = ...,
         dof_velocities: mochi_physics.ArrayLikeReal = ...,
         dt: float = ...,
@@ -2100,7 +2121,7 @@ class ControllerBasicJscPdTarget:
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, target_pose: mochi_physics.ArrayLikeReal = ...) -> None: ...
+    def __init__(self, *, target_pose: mochi_physics.ArrayLikeReal = ...) -> None: ...
 
 class CameraSensorParams:
     """Parameters for a camera sensor (fixed or wrist-mounted). Loaded from a
@@ -2146,6 +2167,7 @@ class CameraSensorParams:
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         image_width: int = ...,
         image_height: int = ...,
@@ -2348,6 +2370,7 @@ class BotSceneMetadata:
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         description: str = ...,
         version: str = ...,
@@ -2365,7 +2388,7 @@ class PrefabEntry:
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, name: str = ..., path: str = ...) -> None: ...
+    def __init__(self, *, name: str = ..., path: str = ...) -> None: ...
 
 class BaseSceneParams:
     """Scene definition within a .superdex_scene.
@@ -2396,6 +2419,7 @@ class BaseSceneParams:
     @overload
     def __init__(
         self,
+        *,
         base_scene: str = ...,
         spawnable_prefabs: ArrayLikePrefabEntry = ...,
         task_root: Optional[mochi_physics.TransformRT] = ...,
@@ -2431,6 +2455,7 @@ class ControllerEntry:
     @overload
     def __init__(
         self,
+        *,
         type: str = ...,
         name: str = ...,
         params: str = ...,
@@ -2469,6 +2494,7 @@ class BotEntry:
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         path: str = ...,
         parent_from_bot: mochi_physics.TransformRT = ...,
@@ -2496,6 +2522,7 @@ class SlotEntry:
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         controlled_bots: mochi_physics.ArrayLikeString = ...,
     ) -> None: ...
@@ -2524,6 +2551,7 @@ class SceneSensorEntry:
     @overload
     def __init__(
         self,
+        *,
         type: str = ...,
         name: str = ...,
         parent_from_sensor: mochi_physics.TransformRT = ...,
@@ -2564,6 +2592,7 @@ class BotScenePrefab:
     @overload
     def __init__(
         self,
+        *,
         metadata: BotSceneMetadata = ...,
         scene: BaseSceneParams = ...,
         bots: ArrayLikeBotEntry = ...,
@@ -2583,7 +2612,7 @@ class SceneUrdfJointVelocityLimit:
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, joint: str = ..., velocity: float = ...) -> None: ...
+    def __init__(self, *, joint: str = ..., velocity: float = ...) -> None: ...
 
 class SceneUrdfLinkAlias:
     """An extra URDF frame rigidly attached to every exported link named :attr:`link`.
@@ -2597,7 +2626,7 @@ class SceneUrdfLinkAlias:
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, link: str = ..., alias: str = ...) -> None: ...
+    def __init__(self, *, link: str = ..., alias: str = ...) -> None: ...
 
 class SceneUrdfOptions:
     """Options for :func:`~superdex.robotics.save_bot_scene_to_urdf_string`."""
@@ -2636,6 +2665,7 @@ class SceneUrdfOptions:
     @overload
     def __init__(
         self,
+        *,
         robot_name: str = ...,
         instance_name: str = ...,
         strip_index_prefixes: bool = ...,
@@ -2935,6 +2965,7 @@ class SpawnEntry:
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         prefab_name: str = ...,
         parent: str = ...,
@@ -2968,6 +2999,7 @@ class BotTaskPrefab:
     @overload
     def __init__(
         self,
+        *,
         metadata: BotSceneMetadata = ...,
         reset_state: ArrayLikeSpawnEntry = ...,
         task_root_offset: Optional[mochi_physics.TransformRT] = ...,
@@ -2991,6 +3023,7 @@ class TerminationOutcome:
     @overload
     def __init__(
         self,
+        *,
         success_authored: bool = ...,
         success: bool = ...,
         failure_authored: bool = ...,
@@ -3015,6 +3048,7 @@ class DREpisodeEntry:
     @overload
     def __init__(
         self,
+        *,
         key: str = ...,
         scalar: bool = ...,
         value: mochi_physics.ArrayLikeReal = ...,
@@ -3039,6 +3073,7 @@ class DREpisode:
     @overload
     def __init__(
         self,
+        *,
         index: int = ...,
         episode_seed: str = ...,
         values: ArrayLikeDREpisodeEntry = ...,
@@ -3065,6 +3100,7 @@ class DREpisodeList:
     @overload
     def __init__(
         self,
+        *,
         schema_version: int = ...,
         spec_version: str = ...,
         master_seed: str = ...,
@@ -3092,6 +3128,7 @@ class ResolvedSpawn:
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         prefab_name: str = ...,
         parent: str = ...,

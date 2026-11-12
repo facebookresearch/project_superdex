@@ -741,6 +741,7 @@ class SceneParams:
     @overload
     def __init__(
         self,
+        *,
         comment: Optional[str] = ...,
         description: str = ...,
         gravity: Optional[mochi_physics.Real3Like] = ...,
@@ -872,6 +873,7 @@ class RigidActorPrefab(mochi_physics.RigidActorParams):
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         layer: str = ...,
         shape: mochi_physics.ShapeHandle = ...,
@@ -1137,6 +1139,7 @@ class SoftActorPrefab(mochi_physics.SoftActorParams):
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         layer: str = ...,
         world_from_local: mochi_physics.TransformRT = ...,
@@ -1176,6 +1179,7 @@ class ArticulatedJointPrefab(mochi_physics.ArticulatedJointParams):
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         type: mochi_physics.ArticulatedJointType | int = ...,
         parent_link_from_joint: mochi_physics.TransformRT = ...,
@@ -1299,6 +1303,7 @@ class ArticulatedLinkPrefab(mochi_physics.ArticulatedLinkParams):
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         parent_link: int = ...,
         parent_joint_from_link: mochi_physics.TransformRT = ...,
@@ -1404,6 +1409,7 @@ class ArticulatedSkinPrefab(mochi_physics.ArticulatedSkinParams):
     @overload
     def __init__(
         self,
+        *,
         shape: mochi_physics.ShapeHandle = ...,
         layer: str = ...,
         contact: mochi_physics.ContactParams = ...,
@@ -1544,6 +1550,7 @@ class ArticulatedActorPrefab:
     @overload
     def __init__(
         self,
+        *,
         comment: Optional[str] = ...,
         name: str = ...,
         scale: float = ...,
@@ -1630,6 +1637,7 @@ class SoftSkinnedActorPrefab:
     @overload
     def __init__(
         self,
+        *,
         comment: Optional[str] = ...,
         skeleton_params: ArticulatedActorPrefab = ...,
         soft_params: ArrayLikeSoftActorPrefab = ...,
@@ -1671,6 +1679,7 @@ class ActorLists:
     @overload
     def __init__(
         self,
+        *,
         comment: Optional[str] = ...,
         articulated: ArrayLikeArticulatedActorPrefab = ...,
         rigid: ArrayLikeRigidActorPrefab = ...,
@@ -1707,6 +1716,7 @@ class RigidSphericalJointConstraintPrefab(
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -1747,6 +1757,7 @@ class RigidPrismaticJointConstraintPrefab(
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -1788,6 +1799,7 @@ class DeformableNodeToDeformableNodeConstraintPrefab(
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -1829,6 +1841,7 @@ class DeformableNodeToRigidConstraintPrefab(
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -1871,6 +1884,7 @@ class JointRotationRangeConstraintPrefab(
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -1912,6 +1926,7 @@ class RigidPivotPositionConstraintPrefab(
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -1948,6 +1963,7 @@ class RigidPivotToRigidTargetConstraintPrefab(
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -1984,6 +2000,7 @@ class RigidPivotRotationConstraintPrefab(
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -2020,6 +2037,7 @@ class DeformableNodePositionConstraintPrefab(
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -2058,6 +2076,7 @@ class JointRotationTrackingConstraintPrefab(
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -2095,6 +2114,7 @@ class ArticulatedSingleDofTargetConstraintPrefab(
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -2132,6 +2152,7 @@ class Articulated3dRotationTargetConstraintPrefab(
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -2168,6 +2189,7 @@ class ArticulatedSingleDofRangeConstraintPrefab(
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -2206,6 +2228,7 @@ class Articulated3dRotationRangeConstraintPrefab(
     @overload
     def __init__(
         self,
+        *,
         stiffness: float = ...,
         damping: float = ...,
         saturation: float = ...,
@@ -2358,6 +2381,7 @@ class ConstraintLists:
     @overload
     def __init__(
         self,
+        *,
         comment: Optional[str] = ...,
         articulated3d_rotation_range: ArrayLikeArticulated3dRotationRangeConstraintPrefab = ...,
         articulated_single_dof_range: ArrayLikeArticulatedSingleDofRangeConstraintPrefab = ...,
@@ -2424,6 +2448,7 @@ class PoseControllerPrefab:
     @overload
     def __init__(
         self,
+        *,
         comment: Optional[str] = ...,
         articulated_actor: str = ...,
         link_pos_tracking: mochi_physics.ArrayLikePoseTrackingParams = ...,
@@ -2516,6 +2541,7 @@ class PrefabReference:
     @overload
     def __init__(
         self,
+        *,
         comment: Optional[str] = ...,
         name: str = ...,
         path: str = ...,
@@ -2606,6 +2632,7 @@ class ActorContactEntry:
     @overload
     def __init__(
         self,
+        *,
         enable: bool = ...,
         actors: mochi_physics.ArrayLikeString = ...,
         include_nested_actors: bool = ...,
@@ -2661,6 +2688,7 @@ class ContactPairParamsOverrideEntry:
     @overload
     def __init__(
         self,
+        *,
         actors: mochi_physics.ArrayLikeString = ...,
         params_override: mochi_physics.ContactPairParamsOverride = ...,
     ) -> None: ...
@@ -2712,6 +2740,7 @@ class LayerContactEntry:
     @overload
     def __init__(
         self,
+        *,
         enable: bool = ...,
         layers: mochi_physics.ArrayLikeString = ...,
     ) -> None: ...
@@ -2844,6 +2873,7 @@ class ContactFilter:
     @overload
     def __init__(
         self,
+        *,
         comment: Optional[str] = ...,
         actor_contact_asymmetric: Optional[ArrayLikeActorContactEntry] = ...,
         actor_contact_symmetric: Optional[ArrayLikeActorContactEntry] = ...,
@@ -2898,6 +2928,7 @@ class ScenePrefab:
     @overload
     def __init__(
         self,
+        *,
         comment: Optional[str] = ...,
         actors: ActorLists = ...,
         constraints: ConstraintLists = ...,
@@ -3040,6 +3071,7 @@ class PrefabParams:
     @overload
     def __init__(
         self,
+        *,
         name: str = ...,
         scale: float = ...,
         rotation: mochi_physics.QuaternionLike = ...,
@@ -3094,6 +3126,7 @@ class AddToSceneResult:
     @overload
     def __init__(
         self,
+        *,
         actors: mochi_physics.ArrayLikeActor = ...,
         constraints: mochi_physics.ArrayLikeConstraint = ...,
     ) -> None: ...
@@ -3202,6 +3235,7 @@ class ExportParams:
     @overload
     def __init__(
         self,
+        *,
         exclude_actors: mochi_physics.ArrayLikeActorHandle = ...,
         export_current_pose: bool = ...,
     ) -> None: ...

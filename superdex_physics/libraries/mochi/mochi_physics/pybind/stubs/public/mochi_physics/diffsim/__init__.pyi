@@ -52,6 +52,7 @@ class BackPropagationSolverParams:
     @overload
     def __init__(
         self,
+        *,
         verbosity: mochi_physics.VerbosityLevel | int = ...,
         use_newton_outer_solver: bool = ...,
         outer_solver_max_iter: int = ...,
@@ -89,6 +90,7 @@ class BackPropagationSceneStats:
     @overload
     def __init__(
         self,
+        *,
         total_duration_sec: float = ...,
         solve_duration_sec: float = ...,
         max_outer_iters: int = ...,
