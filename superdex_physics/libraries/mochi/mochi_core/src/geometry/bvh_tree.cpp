@@ -206,14 +206,36 @@ int BvhTree<Bv>::FindClosest(Real3 const& queryPoint, real* outDistanceSqr) cons
 
 template <typename Bv>
 int BvhTree<Bv>::VFindClosest(Vec4r queryPoint, real* outDistanceSqr) const {
+  BvhNearestQueryStats unused;
+  return FindClosestImpl</*kCollectStats*/ false>(queryPoint, unused, outDistanceSqr);
+}
+
+template <typename Bv>
+int BvhTree<Bv>::FindClosestWithStats(
+    Vec4r queryPoint,
+    BvhNearestQueryStats& stats,
+    real* outDistanceSqr) const {
+  return FindClosestImpl</*kCollectStats*/ true>(queryPoint, stats, outDistanceSqr);
+}
+
+template <typename Bv>
+template <bool kCollectStats>
+int BvhTree<Bv>::FindClosestImpl(
+    Vec4r queryPoint,
+    BvhNearestQueryStats& stats,
+    real* outDistanceSqr) const {
   MOCHI_ASSERT_VERBOSE(IsValid(), "Invalid BVH Tree");
 
   // Initialize candidate to arbitrary entry.
   int bestIndex = 0;
   real bestDistanceSqr = Get0(_object->VGetDistanceSqr(queryPoint, 0));
 
+  if constexpr (kCollectStats) {
+    ++stats.elementTests;
+  }
+
   // Traverse tree.
-  FindClosestOnNode(kRootNode, queryPoint, bestIndex, bestDistanceSqr);
+  FindClosestOnNode<kCollectStats>(kRootNode, queryPoint, bestIndex, bestDistanceSqr, stats);
 
   // Finally, output results.
   if (outDistanceSqr) {
@@ -376,16 +398,24 @@ void BvhTree<Bv>::IntersectNodes(
 }
 
 template <typename Bv>
+template <bool kCollectStats>
 void BvhTree<Bv>::FindClosestOnNode(
     int nodeIndex,
     Vec4r point,
     int& bestIndex,
-    real& bestDistanceSqr) const {
+    real& bestDistanceSqr,
+    BvhNearestQueryStats& stats) const {
   auto const& node = _nodes[nodeIndex];
 
   // Find distance from query point to the BV. If closer than current best candidate, traverse.
   real volumeDistanceSqr = Get0(VDistancePointShapeSqr(point, node.bv));
+  if constexpr (kCollectStats) {
+    ++stats.bvTests;
+  }
   if (volumeDistanceSqr < bestDistanceSqr) {
+    if constexpr (kCollectStats) {
+      ++stats.nodesVisited;
+    }
     // Test distance to elements.
     if (node.isLeafNode) {
       auto elemRange = Slice(_elements, node.elementIndexRange);
@@ -396,11 +426,16 @@ void BvhTree<Bv>::FindClosestOnNode(
           bestDistanceSqr = distanceSqr;
         }
       }
+      if constexpr (kCollectStats) {
+        stats.elementTests += node.elementIndexRange.Size();
+      }
     }
     // Test distance to children.
     else {
-      FindClosestOnNode(node.leftChildIndex, point, bestIndex, bestDistanceSqr);
-      FindClosestOnNode(node.rightChildIndex, point, bestIndex, bestDistanceSqr);
+      FindClosestOnNode<kCollectStats>(
+          node.leftChildIndex, point, bestIndex, bestDistanceSqr, stats);
+      FindClosestOnNode<kCollectStats>(
+          node.rightChildIndex, point, bestIndex, bestDistanceSqr, stats);
     }
   }
 }

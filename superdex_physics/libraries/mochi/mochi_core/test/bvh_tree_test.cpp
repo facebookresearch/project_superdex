@@ -16,12 +16,15 @@
 
 #include <gtest/gtest.h>
 #include <mochi_core/contact/contact_utils.h>
+#include <mochi_core/geometry/aabb.h>
 #include <mochi_core/geometry/bvh_tree.h>
 #include <mochi_core/geometry/geometry_utils.h>
+#include <mochi_core/geometry/tetrahedral_mesh.h>
 #include <mochi_core/geometry/triangular_mesh.h>
 #include <mochi_core/test/mochi_test_helpers.h>
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/debug.h>
+#include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/nd_array.h>
 #include <mochi_core/utils/nd_array_utils.h>
 #include <mochi_core/utils/simd.h>
@@ -508,4 +511,195 @@ TEST(BvhTree, PointSet_vs_TetMesh_AABBTree) {
       EXPECT_EQ(result[i].second, resultTest[i].second);
     }
   }
+}
+
+/*************************************************************************************************/
+/* Nearest-element queries on real meshes, compared against brute force */
+
+// In single precision, the signed box distance (VDistancePointShapeSqr) can round above zero for a
+// point exactly on a box boundary and prune the box that contains it. The resulting distance error
+// is ~1e-9 m; these tests allow 1e-6 m.
+constexpr real kSurfacePruneTol = 1e-6_r; // [m]
+
+// Normals of different but equally close faces agree within this; most agree bitwise.
+constexpr real kNormalCosTol = 1e-4_r;
+
+static DynamicArray<Real3> CreateMeshQueryPoints(TriangularMesh const& mesh) {
+  constexpr int kPointsPerAxis = 6;
+  constexpr int kSurfaceStride = 8;
+  DynamicArray<Real3> points;
+  Aabb const bounds = ExpandShape(mesh.GetAabb(), 0.2_r * Max(mesh.GetAabb().GetSize()));
+  Real3 const step = bounds.GetSize() / static_cast<real>(kPointsPerAxis - 1);
+  for (int x = 0; x < kPointsPerAxis; ++x) {
+    for (int y = 0; y < kPointsPerAxis; ++y) {
+      for (int z = 0; z < kPointsPerAxis; ++z) {
+        points.push_back(bounds.GetMin() + StaticCast<Real3>(Int3{x, y, z}) * step);
+      }
+    }
+  }
+  auto const coords = mesh.GetNodeCoordinates();
+  auto const faces = mesh.GetElementConnectivity();
+  for (int f = 0; f < isize(faces); f += kSurfaceStride) {
+    points.push_back((coords[faces[f][0]] + coords[faces[f][1]] + coords[faces[f][2]]) / 3_r);
+  }
+  for (int n = 0; n < isize(coords); n += kSurfaceStride) {
+    points.push_back(coords[n]);
+    points.push_back(coords[n] + Real3{1e-3_r, -2e-3_r, 3e-3_r});
+  }
+  return points;
+}
+
+// The tree must find an element as close as a brute-force scan finds, up to kSurfacePruneTol. Both
+// use the object's own element distance, so without that pruning the distances match bitwise.
+static void ExpectFindClosestMatchesBruteForce(
+    char const* treeName,
+    AabbTree const& tree,
+    Span<Real3 const> points) {
+  SCOPED_TRACE(treeName);
+  BvhObject<Aabb> const& object = *tree.GetObject();
+  int numTooFar = 0;
+  int numInconsistent = 0;
+  for (auto const& p : points) {
+    Vec4r const q = ToSimd(p);
+    real bruteDistSqr = std::numeric_limits<real>::infinity();
+    for (int e = 0; e < object.GetNumElements(); ++e) {
+      bruteDistSqr = Min(bruteDistSqr, Get0(object.VGetDistanceSqr(q, e)));
+    }
+    real distSqr = {};
+    int const index = tree.VFindClosest(q, &distSqr);
+    numTooFar += std::sqrt(distSqr) <= std::sqrt(bruteDistSqr) + kSurfacePruneTol ? 0 : 1;
+    // The returned distance belongs to the returned element.
+    numInconsistent += Get0(object.VGetDistanceSqr(q, index)) == distSqr ? 0 : 1;
+  }
+  EXPECT_EQ(numTooFar, 0) << "out of " << points.size() << " points";
+  EXPECT_EQ(numInconsistent, 0) << "out of " << points.size() << " points";
+}
+
+TEST(BvhTree, FindClosest_Stats) {
+  // Four points on a line, one per leaf: the root splits {0, 1} | {2, 3}.
+  DynamicArray<Real3> const points = {
+      {0_r, 0_r, 0_r}, {1_r, 0_r, 0_r}, {2_r, 0_r, 0_r}, {3_r, 0_r, 0_r}};
+  PointSetAabbObject const object(points);
+  AabbTree const tree(
+      &object,
+      BvhTreeParams{
+          .splittingAlgorithm = BvhSplittingAlgorithm::TopDown_Mean, .maxElementsPerLeaf = 1});
+
+  struct Case {
+    real x = 0_r;
+    int expectedIndex = 0;
+    BvhNearestQueryStats expectedStats;
+  };
+  Case const cases[] = {
+      // The root box is no closer than the seed (point 0), so nothing is visited.
+      {.x = -10_r,
+       .expectedIndex = 0,
+       .expectedStats = {.nodesVisited = 0, .bvTests = 1, .elementTests = 1}},
+      // Root, then {0, 1}. Both leaves are no closer than the seed.
+      {.x = 0.4_r,
+       .expectedIndex = 0,
+       .expectedStats = {.nodesVisited = 2, .bvTests = 5, .elementTests = 1}},
+      // Root, {0, 1} and its leaf {1} (leaf {0} only ties the seed), then {2, 3} and both its
+      // leaves.
+      {.x = 2.6_r,
+       .expectedIndex = 3,
+       .expectedStats = {.nodesVisited = 6, .bvTests = 7, .elementTests = 4}},
+  };
+  for (auto const& c : cases) {
+    SCOPED_TRACE(testing::Message() << "x = " << c.x);
+    Vec4r const q = ToSimd(Real3{c.x, 0_r, 0_r});
+    real distSqr = {};
+    BvhNearestQueryStats stats;
+    EXPECT_EQ(tree.FindClosestWithStats(q, stats, &distSqr), c.expectedIndex);
+    real plainDistSqr = {};
+    EXPECT_EQ(tree.VFindClosest(q, &plainDistSqr), c.expectedIndex);
+    EXPECT_EQ(distSqr, plainDistSqr);
+    EXPECT_EQ(stats.nodesVisited, c.expectedStats.nodesVisited);
+    EXPECT_EQ(stats.bvTests, c.expectedStats.bvTests);
+    EXPECT_EQ(stats.elementTests, c.expectedStats.elementTests);
+
+    // Stats accumulate across calls.
+    tree.FindClosestWithStats(q, stats);
+    EXPECT_EQ(stats.elementTests, 2 * c.expectedStats.elementTests);
+  }
+}
+
+TEST_IF(MOCHI_INTERNAL, BvhTree, FindClosest_MatchesBruteForceOnMesh) {
+  std::shared_ptr<TetrahedralMesh const> const tetMesh =
+      LoadTetrahedralMesh(test::GetAssetPath("duck/duck_coarse_mesh.mochi.json"), test::ExpectOK{});
+  auto const triMesh = std::make_shared<TriangularMesh const>(CreateBoundaryMesh(*tetMesh));
+  auto const points = CreateMeshQueryPoints(*triMesh);
+
+  // Providers read these coordinates, so deforming them and refitting changes the trees.
+  DynamicArray<Real3> triCoords(triMesh->GetNodeCoordinates());
+  DynamicArray<Real3> tetCoords(tetMesh->GetNodeCoordinates());
+
+  TriangularMeshBvhObject<Aabb> const triObject(triMesh, triCoords);
+  TetrahedralMeshAabbObject const tetObject(tetMesh, tetCoords);
+  PointSetAabbObject const pointObject(tetCoords);
+  AabbTree triTree(&triObject, BvhTreeParams{});
+  AabbTree tetTree(&tetObject, BvhTreeParams{});
+  AabbTree pointTree(
+      &pointObject, BvhTreeParams{.splittingAlgorithm = BvhSplittingAlgorithm::TopDown_Mean});
+
+  auto const expectAllMatch = [&]() {
+    ExpectFindClosestMatchesBruteForce("Triangle tree", triTree, points);
+    ExpectFindClosestMatchesBruteForce("Tet tree", tetTree, points);
+    ExpectFindClosestMatchesBruteForce("Point tree", pointTree, points);
+  };
+  {
+    SCOPED_TRACE("Fresh trees");
+    expectAllMatch();
+  }
+
+  // Deform anisotropically and refit.
+  auto const deform = [](Real3 const& x) {
+    return Real3{1.2_r * x[0], 0.8_r * x[1] + 0.1_r * std::sin(5_r * x[0]), x[2]};
+  };
+  std::ranges::transform(triCoords, triCoords.begin(), deform);
+  std::ranges::transform(tetCoords, tetCoords.begin(), deform);
+  triTree.Refit();
+  tetTree.Refit();
+  pointTree.Refit();
+  {
+    SCOPED_TRACE("Refit trees");
+    expectAllMatch();
+  }
+}
+
+// MeshCollider must return the same signed distance, up to kSurfacePruneTol, and an equivalent
+// normal with and without the tree, even when the two searches pick different but equally close
+// faces.
+static void ExpectMeshColliderMatchesBruteForce(char const* meshPath) {
+  SCOPED_TRACE(meshPath);
+  auto const tetMesh = LoadTetrahedralMesh(test::GetAssetPath(meshPath), test::ExpectOK{});
+  auto const triMesh = std::make_shared<TriangularMesh const>(CreateBoundaryMesh(*tetMesh));
+  MeshCollider collider(triMesh);
+  collider.Initialize();
+  ASSERT_TRUE(collider.IsMeshClosed());
+
+  ContactDetectionParams accelerated;
+  accelerated.tolerance = std::numeric_limits<real>::infinity();
+  ContactDetectionParams bruteForce = accelerated;
+  bruteForce.useAccelerationStructures = false;
+
+  int numSdfMismatches = 0;
+  int numNormalMismatches = 0;
+  auto const points = CreateMeshQueryPoints(*triMesh);
+  for (auto const& p : points) {
+    Vec4r pos, grad, bruteForcePos, bruteForceGrad;
+    real sdf = {}, bruteForceSdf = {};
+    ASSERT_TRUE(collider.QueryPoint(ToSimd(p, 1_r), accelerated, pos, sdf, grad));
+    ASSERT_TRUE(collider.QueryPoint(
+        ToSimd(p, 1_r), bruteForce, bruteForcePos, bruteForceSdf, bruteForceGrad));
+    numSdfMismatches += std::abs(sdf - bruteForceSdf) <= kSurfacePruneTol ? 0 : 1;
+    numNormalMismatches += Dot<3>(grad, bruteForceGrad) > 1_r - kNormalCosTol ? 0 : 1;
+  }
+  EXPECT_EQ(numSdfMismatches, 0) << "out of " << points.size() << " points";
+  EXPECT_EQ(numNormalMismatches, 0) << "out of " << points.size() << " points";
+}
+
+TEST_IF(MOCHI_INTERNAL, BvhTree, MeshCollider_MatchesBruteForceOnMeshes) {
+  ExpectMeshColliderMatchesBruteForce("duck/duck_coarse_mesh.mochi.json");
+  ExpectMeshColliderMatchesBruteForce("armadillo/armadillo_coarse_mesh.mochi.json");
 }

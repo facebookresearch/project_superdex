@@ -32,6 +32,7 @@
 #include <mochi_core/utils/simd.h>
 #include <mochi_core/utils/span.h>
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <variant>
@@ -112,6 +113,19 @@ struct BvhTreeParams {
 };
 
 /**
+ * Work counters for nearest-element queries. See @ref BvhTree::FindClosestWithStats.
+ */
+struct BvhNearestQueryStats {
+  // Nodes whose children or elements were examined.
+  int64_t nodesVisited = 0;
+  // Bounding volumes whose distance to the query point was computed.
+  int64_t bvTests = 0;
+  // Exact element distances computed, including the seed (element 0). The seed is computed again
+  // if the search reaches its leaf, and both computations are counted.
+  int64_t elementTests = 0;
+};
+
+/**
  * Bounding volume hierarchy tree structure, used as acceleration structure to determine potential
  * contacts between pairs of objects. Note that BvhTree assumes that the underlying object that was
  * used to create it is quasi-static (i.e. it does not suffer exceedingly large deformations) and
@@ -189,6 +203,14 @@ class BvhTree {
   int VFindClosest(Vec4r queryPoint, real* outDistanceSqr = nullptr) const;
 
   /**
+   * Same as @ref VFindClosest, and adds the work done to [stats]. Meant for tests and benchmarks.
+   */
+  int FindClosestWithStats(
+      Vec4r queryPoint,
+      BvhNearestQueryStats& stats,
+      real* outDistanceSqr = nullptr) const;
+
+  /**
    * Get node by index.
    */
   Node const& GetNode(int index) const {
@@ -225,7 +247,15 @@ class BvhTree {
       int thisIndex,
       int otherIndex,
       BvhIntersectionQueryFn const& callback) const;
-  void FindClosestOnNode(int nodeIndex, Vec4r point, int& bestIndex, real& bestDistanceSqr) const;
+  template <bool kCollectStats>
+  int FindClosestImpl(Vec4r queryPoint, BvhNearestQueryStats& stats, real* outDistanceSqr) const;
+  template <bool kCollectStats>
+  void FindClosestOnNode(
+      int nodeIndex,
+      Vec4r point,
+      int& bestIndex,
+      real& bestDistanceSqr,
+      BvhNearestQueryStats& stats) const;
   void ShrinkBuffers();
 
   template <bool kSkipElementBvCheck, typename BvOther>
