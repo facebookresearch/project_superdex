@@ -1068,7 +1068,8 @@ class Actor [no_init, no_destruct, use_scene] {
 
   // @brief Get the total contact torque about the center of mass.
   //
-  // @return Total contact torque [N·m] in world frame, about the center of mass.
+  // @return Total contact torque [N·m] in world frame, about the center of mass at the
+  // evaluated state (see @ref QueryType::TotalContactForce).
   //
   // @note Requires registering @ref QueryType::TotalContactForce before the simulation step. Results are
   // available after the simulation step completes.
@@ -1599,11 +1600,7 @@ class Actor [no_init, no_destruct, use_scene] {
   // Results are available after the simulation step completes.
   // @note Wrenches correspond to the last state assembled by the solver. If the solver did not
   // converge, the joint balance is only approximate.
-  // @note For multi-stage time integrators, wrenches correspond to the last stage. If the last stage
-  // is not at the end of the time step (@ref IntegrationMethod::DIRK23,
-  // @ref IntegrationMethod::SymplecticDIRK12 and @ref IntegrationMethod::SymplecticDIRK22), they
-  // differ from the wrenches at the end-of-step state, e.g. the link transforms returned by
-  // @ref GetArticulatedLinkTransforms.
+  // @note After a step, wrenches correspond to the last integration stage, see @ref Scene::Step.
   // @note If the solver diverged in the last simulation step, the returned wrenches may be
   // inaccurate.
   // @note Contact forces on static links, i.e. links whose joints up to the root are all

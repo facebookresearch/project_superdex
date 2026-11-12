@@ -5067,6 +5067,10 @@ class QueryType:
     Note:
         Not supported for actors without contact sample points or with far SDF
         evaluation enabled.
+
+    Note:
+        After a step, data corresponds to the last integration stage, see
+        :meth:`~superdex.physics.Scene.step`.
     """
     ELASTIC_ENERGY: QueryType
     """Elastic energy of a deformable actor. Available via
@@ -5088,6 +5092,10 @@ class QueryType:
     Note:
         Not supported for rod actors, actors without contact sample points or actors
         with far SDF evaluation enabled.
+
+    Note:
+        After a step, data corresponds to the last integration stage, see
+        :meth:`~superdex.physics.Scene.step`.
     """
     CONSTRAINT_FORCE: QueryType
     """Force/torque applied by a constraint. Available via
@@ -5101,6 +5109,10 @@ class QueryType:
         (:meth:`~superdex.physics.Actor.register_query_and_compute`) is not
         supported. Data is computed by :meth:`~superdex.physics.Scene.step` or
         :meth:`~superdex.physics.Scene.update_queries`.
+
+    Note:
+        After a step, data corresponds to the last integration stage, see
+        :meth:`~superdex.physics.Scene.step`.
     """
     ARTICULATED_CONTROLLER_FORCE: QueryType
     """Generalized forces applied by an articulated pose controller. Available via
@@ -5124,6 +5136,12 @@ class QueryType:
         (:meth:`~superdex.physics.Actor.register_query_and_compute`) is not
         supported. Data is computed by :meth:`~superdex.physics.Scene.step` or
         :meth:`~superdex.physics.Scene.update_queries`.
+
+    Note:
+        After a step, data corresponds to the last integration stage, see
+        :meth:`~superdex.physics.Scene.step`. For actors with far SDF evaluation
+        enabled, data comes instead from a collision detection pass after the last
+        stage, which evaluates rigid actors at the end of the time step.
     """
     TOTAL_CONTACT_FORCE: QueryType
     """Total contact force and torque acting on an actor. Available via
@@ -5139,6 +5157,11 @@ class QueryType:
     Note:
         Not supported for actors without contact sample points or with far SDF
         evaluation enabled.
+
+    Note:
+        After a step, data corresponds to the last integration stage, see
+        :meth:`~superdex.physics.Scene.step`. This includes the center of mass about
+        which :meth:`~superdex.physics.Actor.get_contact_torque_world` is reported.
     """
     ARTICULATED_JOINT_WRENCHES: QueryType
     """Wrench (force and torque) transmitted by each non-cycle joint of an articulated
@@ -5153,6 +5176,10 @@ class QueryType:
         (:meth:`~superdex.physics.Actor.register_query_and_compute`) is not
         supported. Data is computed by :meth:`~superdex.physics.Scene.step` or
         :meth:`~superdex.physics.Scene.update_queries`.
+
+    Note:
+        After a step, data corresponds to the last integration stage, see
+        :meth:`~superdex.physics.Scene.step`.
     """
     COUNT: QueryType
     """Number of query type enum values."""
@@ -11635,7 +11662,9 @@ class Actor:
         """Get the total contact torque about the center of mass.
 
         Returns:
-            Total contact torque [N·m] in world frame, about the center of mass.
+            Total contact torque [N·m] in world frame, about the center of mass at the
+            evaluated state (see :class:`TOTAL_CONTACT_FORCE
+            <superdex.physics.QueryType>`).
 
         Raises:
             :class:`~superdex.physics.Error`: If an error occurs.
@@ -12651,13 +12680,8 @@ class Actor:
             did not converge, the joint balance is only approximate.
 
         Note:
-            For multi-stage time integrators, wrenches correspond to the last stage. If
-            the last stage is not at the end of the time step (:class:`DIRK23
-            <superdex.physics.IntegrationMethod>`, :class:`SYMPLECTIC_DIRK12
-            <superdex.physics.IntegrationMethod>` and :class:`SYMPLECTIC_DIRK22
-            <superdex.physics.IntegrationMethod>`), they differ from the wrenches at the
-            end-of-step state, e.g. the link transforms returned by
-            :meth:`~superdex.physics.Actor.get_articulated_link_transforms`.
+            After a step, wrenches correspond to the last integration stage, see
+            :meth:`~superdex.physics.Scene.step`.
 
         Note:
             If the solver diverged in the last simulation step, the returned wrenches
@@ -13390,6 +13414,26 @@ class Scene:
         Note:
             If the time step is negative or NaN, no step is taken and an error is
             logged.
+
+        Note:
+            After the step, the actor state (e.g. transforms, velocities and node
+            positions) and the queries derived from it are at the end of the time step.
+            Queries evaluated during force assembly (:class:`CONTACT_POINTS
+            <superdex.physics.QueryType>`, :class:`NODE_CONTACT_FORCES
+            <superdex.physics.QueryType>`, :class:`SDF_DISTANCES
+            <superdex.physics.QueryType>`, :class:`TOTAL_CONTACT_FORCE
+            <superdex.physics.QueryType>`, :class:`CONSTRAINT_FORCE
+            <superdex.physics.QueryType>` and :class:`ARTICULATED_JOINT_WRENCHES
+            <superdex.physics.QueryType>`) correspond to the last stage of the time
+            integrator instead. For integration methods whose step does not end at their
+            last stage (:class:`DIRK23 <superdex.physics.IntegrationMethod>`,
+            :class:`SYMPLECTIC_DIRK12 <superdex.physics.IntegrationMethod>` and
+            :class:`SYMPLECTIC_DIRK22 <superdex.physics.IntegrationMethod>`), the two
+            differ and should not be combined, e.g. contact points should not be
+            expressed in the frame returned by
+            :meth:`~superdex.physics.Actor.get_root_transform`. To evaluate these
+            queries at the end-of-step state instead, call
+            :meth:`~superdex.physics.Scene.update_queries`.
 
         See Also:
             :class:`~superdex.physics.IntegrationMethod`,

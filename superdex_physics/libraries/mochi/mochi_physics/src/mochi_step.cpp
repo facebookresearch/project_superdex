@@ -361,14 +361,10 @@ void mochi::PreStepIslandAsync(entt::registry& reg, CIslandDescendants const& de
  * - Called by PostStepIslandAsync during simulation step. Also called by UpdateAllActorQueries.
  * - Can be called concurrently for different actors.
  * - May schedule additional work. Wait for the semaphore to ensure completion.
- * - If @p includeAssemblyQueries is false, queries that require contact detection or force
- *   assembly (see QueryRequiresAssembly) are left unchanged.
+ * - Contact-derived queries are updated by UpdateActorContactQueriesAsync.
  */
-static void UpdateActorQueriesAsync(
-    TaskSemaphore const& sem,
-    entt::registry& reg,
-    entt::entity e,
-    bool includeAssemblyQueries) {
+static void
+UpdateActorNonAssemblyQueriesAsync(TaskSemaphore const& sem, entt::registry& reg, entt::entity e) {
   bool isDeformable = reg.any_of<TagSoftActor, TagBlendedActor, TagShellActor, TagRodActor>(e);
   if (isDeformable) {
     // Update CBoundingVolume for actors that deform
@@ -449,11 +445,12 @@ static void UpdateActorQueriesAsync(
   // For any actor with an SDF collider.
   // Write CQuerySdfSurface
   ecs::TryScheduleInvokeOnEntity(sem, "UpdateQuerySdfSurface", &UpdateQuerySdfSurface, reg, e);
+}
 
-  if (!includeAssemblyQueries) {
-    return;
-  }
-
+// Schedule contact-derived queries from coherent Current state. Wait on sem before changing actor
+// state or recording query results.
+static void
+UpdateActorContactQueriesAsync(TaskSemaphore const& sem, entt::registry& reg, entt::entity e) {
   ecs::TryScheduleInvokeOnEntity(sem, "UpdateQuerySdfDistances", &UpdateQuerySdfDistances, reg, e);
 
   // All dynamic actors
@@ -466,6 +463,21 @@ static void UpdateActorQueriesAsync(
       sem, "UpdateQueryActorContactForces", &UpdateQueryActorContactForces, reg, e);
 }
 
+void mochi::UpdateIslandContactQueries(
+    entt::registry& reg,
+    CIslandDescendants const& descendants,
+    bool farSdfActors) {
+  MOCHI_PROFILE_SCOPE();
+  TaskSemaphore sem;
+  for (auto e : descendants.actors) {
+    if (reg.any_of<CRequiresFarSdfEvaluation>(e) == farSdfActors) {
+      UpdateActorContactQueriesAsync(sem, reg, e);
+    }
+  }
+  // Sync contacts read both actors' state. No actor may change state until all reads finish.
+  sem.Wait();
+}
+
 void mochi::UpdateAllActorQueries(entt::registry& reg, bool includeAssemblyQueries) {
   TaskSemaphore sem;
   reg.view<CActorInfo const, CIslandMemberInfo const>().each(
@@ -474,7 +486,10 @@ void mochi::UpdateAllActorQueries(entt::registry& reg, bool includeAssemblyQueri
         // Therefore, we will process those same actors here.
         if (islandMemberInfo.island != entt::null) {
           Schedule(sem, "UpdateDynamicActorQueriesAsync", [&reg, sem, e, includeAssemblyQueries]() {
-            UpdateActorQueriesAsync(sem, reg, e, includeAssemblyQueries);
+            UpdateActorNonAssemblyQueriesAsync(sem, reg, e);
+            if (includeAssemblyQueries) {
+              UpdateActorContactQueriesAsync(sem, reg, e);
+            }
           });
         }
       });
@@ -505,10 +520,10 @@ static void PostStepIslandAsync(entt::registry& reg, CIslandDescendants const& d
       // Query updates for these actor types may be quite expensive, so we schedule an async task
       // for each one.
       Schedule(sem, "PostStepDeformableActorAsync", [sem, &reg, e]() {
-        UpdateActorQueriesAsync(sem, reg, e, /*includeAssemblyQueries*/ true);
+        UpdateActorNonAssemblyQueriesAsync(sem, reg, e);
       });
     } else {
-      UpdateActorQueriesAsync(sem, reg, e, /*includeAssemblyQueries*/ true);
+      UpdateActorNonAssemblyQueriesAsync(sem, reg, e);
     }
   }
 

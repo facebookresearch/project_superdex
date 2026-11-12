@@ -338,6 +338,7 @@ enum QueryType {
   // Scene::UpdateQueries.
   // @note Not supported for actors without contact sample points or with far SDF evaluation
   // enabled.
+  // @note After a step, data corresponds to the last integration stage, see @ref Scene::Step.
   ContactPoints,
 
   // @brief Elastic energy of a deformable actor. Available via @ref Actor::GetElasticEnergy.
@@ -351,6 +352,7 @@ enum QueryType {
   // is not supported. Data is computed by @ref Scene::Step or @ref Scene::UpdateQueries.
   // @note Not supported for rod actors, actors without contact sample points or actors with
   // far SDF evaluation enabled.
+  // @note After a step, data corresponds to the last integration stage, see @ref Scene::Step.
   NodeContactForces,
 
   // @brief Force/torque applied by a constraint. Available via @ref Constraint::GetForce.
@@ -358,6 +360,7 @@ enum QueryType {
   // @note Only applicable to @ref Constraint objects.
   // @note Requires force evaluation, so immediate computation (@ref Actor::RegisterQueryAndCompute)
   // is not supported. Data is computed by @ref Scene::Step or @ref Scene::UpdateQueries.
+  // @note After a step, data corresponds to the last integration stage, see @ref Scene::Step.
   ConstraintForce,
 
   // @brief Generalized forces applied by an articulated pose controller. Available via @ref
@@ -373,6 +376,9 @@ enum QueryType {
   //
   // @note Requires contact detection, so immediate computation (@ref Actor::RegisterQueryAndCompute)
   // is not supported. Data is computed by @ref Scene::Step or @ref Scene::UpdateQueries.
+  // @note After a step, data corresponds to the last integration stage, see @ref Scene::Step. For
+  // actors with far SDF evaluation enabled, data comes instead from a collision detection pass after
+  // the last stage, which evaluates rigid actors at the end of the time step.
   SdfDistances,
 
   // @brief Total contact force and torque acting on an actor. Available via @ref
@@ -382,6 +388,8 @@ enum QueryType {
   // is not supported. Data is computed by @ref Scene::Step or @ref Scene::UpdateQueries.
   // @note Not supported for actors without contact sample points or with far SDF evaluation
   // enabled.
+  // @note After a step, data corresponds to the last integration stage, see @ref Scene::Step. This
+  // includes the center of mass about which @ref Actor::GetContactTorqueWorld is reported.
   TotalContactForce,
 
   // @brief Wrench (force and torque) transmitted by each non-cycle joint of an articulated actor.
@@ -390,6 +398,7 @@ enum QueryType {
   // @note Only supported for articulated actors with at least one degree of freedom.
   // @note Requires force evaluation, so immediate computation (@ref Actor::RegisterQueryAndCompute)
   // is not supported. Data is computed by @ref Scene::Step or @ref Scene::UpdateQueries.
+  // @note After a step, data corresponds to the last integration stage, see @ref Scene::Step.
   ArticulatedJointWrenches,
 
   // @brief Number of query type enum values.

@@ -2090,6 +2090,7 @@
 ///
 /// @note Requires contact detection and force evaluation, so immediate computation (@ref mochi::Actor::RegisterQueryAndCompute "Actor::RegisterQueryAndCompute") is not supported. Data is computed by @ref mochi::Scene::Step "Scene::Step" or @ref mochi::Scene::UpdateQueries "Scene::UpdateQueries".
 /// @note Not supported for actors without contact sample points or with far SDF evaluation enabled.
+/// @note After a step, data corresponds to the last integration stage, see @ref mochi::Scene::Step "Scene::Step".
 ///
 
 /// @var mochi::QueryType::ElasticEnergy
@@ -2105,6 +2106,7 @@
 ///
 /// @note Requires force evaluation, so immediate computation (@ref mochi::Actor::RegisterQueryAndCompute "Actor::RegisterQueryAndCompute") is not supported. Data is computed by @ref mochi::Scene::Step "Scene::Step" or @ref mochi::Scene::UpdateQueries "Scene::UpdateQueries".
 /// @note Not supported for rod actors, actors without contact sample points or actors with far SDF evaluation enabled.
+/// @note After a step, data corresponds to the last integration stage, see @ref mochi::Scene::Step "Scene::Step".
 ///
 
 /// @var mochi::QueryType::ConstraintForce
@@ -2113,6 +2115,7 @@
 ///
 /// @note Only applicable to @ref mochi::Constraint "Constraint" objects.
 /// @note Requires force evaluation, so immediate computation (@ref mochi::Actor::RegisterQueryAndCompute "Actor::RegisterQueryAndCompute") is not supported. Data is computed by @ref mochi::Scene::Step "Scene::Step" or @ref mochi::Scene::UpdateQueries "Scene::UpdateQueries".
+/// @note After a step, data corresponds to the last integration stage, see @ref mochi::Scene::Step "Scene::Step".
 ///
 
 /// @var mochi::QueryType::ArticulatedControllerForce
@@ -2128,6 +2131,7 @@
 /// @brief Signed distance field values for contact samples. Available via @ref mochi::Actor::GetSdfDistances "Actor::GetSdfDistances".
 ///
 /// @note Requires contact detection, so immediate computation (@ref mochi::Actor::RegisterQueryAndCompute "Actor::RegisterQueryAndCompute") is not supported. Data is computed by @ref mochi::Scene::Step "Scene::Step" or @ref mochi::Scene::UpdateQueries "Scene::UpdateQueries".
+/// @note After a step, data corresponds to the last integration stage, see @ref mochi::Scene::Step "Scene::Step". For actors with far SDF evaluation enabled, data comes instead from a collision detection pass after the last stage, which evaluates rigid actors at the end of the time step.
 ///
 
 /// @var mochi::QueryType::TotalContactForce
@@ -2136,6 +2140,7 @@
 ///
 /// @note Requires force evaluation, so immediate computation (@ref mochi::Actor::RegisterQueryAndCompute "Actor::RegisterQueryAndCompute") is not supported. Data is computed by @ref mochi::Scene::Step "Scene::Step" or @ref mochi::Scene::UpdateQueries "Scene::UpdateQueries".
 /// @note Not supported for actors without contact sample points or with far SDF evaluation enabled.
+/// @note After a step, data corresponds to the last integration stage, see @ref mochi::Scene::Step "Scene::Step". This includes the center of mass about which @ref mochi::Actor::GetContactTorqueWorld "Actor::GetContactTorqueWorld" is reported.
 ///
 
 /// @var mochi::QueryType::ArticulatedJointWrenches
@@ -2144,6 +2149,7 @@
 ///
 /// @note Only supported for articulated actors with at least one degree of freedom.
 /// @note Requires force evaluation, so immediate computation (@ref mochi::Actor::RegisterQueryAndCompute "Actor::RegisterQueryAndCompute") is not supported. Data is computed by @ref mochi::Scene::Step "Scene::Step" or @ref mochi::Scene::UpdateQueries "Scene::UpdateQueries".
+/// @note After a step, data corresponds to the last integration stage, see @ref mochi::Scene::Step "Scene::Step".
 ///
 
 /// @var mochi::QueryType::Count
@@ -5927,7 +5933,7 @@
 /// @brief Get the total contact torque about the center of mass.
 ///
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
-/// @return Total contact torque [N·m] in world frame, about the center of mass.
+/// @return Total contact torque [N·m] in world frame, about the center of mass at the evaluated state (see @ref mochi::QueryType::TotalContactForce "QueryType::TotalContactForce").
 ///
 /// @note Requires registering @ref mochi::QueryType::TotalContactForce "QueryType::TotalContactForce" before the simulation step. Results are available after the simulation step completes.
 /// @note Only supported for rigid actors and articulated links that support @ref mochi::QueryType::TotalContactForce "QueryType::TotalContactForce".
@@ -6485,7 +6491,7 @@
 /// @note Only applicable to articulated actors with at least one DoF.
 /// @note Requires registering @ref mochi::QueryType::ArticulatedJointWrenches "QueryType::ArticulatedJointWrenches" before the simulation step. Results are available after the simulation step completes.
 /// @note Wrenches correspond to the last state assembled by the solver. If the solver did not converge, the joint balance is only approximate.
-/// @note For multi-stage time integrators, wrenches correspond to the last stage. If the last stage is not at the end of the time step (@ref mochi::IntegrationMethod::DIRK23 "IntegrationMethod::DIRK23", @ref mochi::IntegrationMethod::SymplecticDIRK12 "IntegrationMethod::SymplecticDIRK12" and @ref mochi::IntegrationMethod::SymplecticDIRK22 "IntegrationMethod::SymplecticDIRK22"), they differ from the wrenches at the end-of-step state, e.g. the link transforms returned by @ref mochi::Actor::GetArticulatedLinkTransforms "GetArticulatedLinkTransforms".
+/// @note After a step, wrenches correspond to the last integration stage, see @ref mochi::Scene::Step "Scene::Step".
 /// @note If the solver diverged in the last simulation step, the returned wrenches may be inaccurate.
 /// @note Contact forces on static links, i.e. links whose joints up to the root are all @ref mochi::ArticulatedJointType::Hard "ArticulatedJointType::Hard", are not included. Hence, if link i is static, the wrenches of joint i and its ancestor joints miss the contact forces on link i.
 ///
@@ -6958,6 +6964,7 @@
 /// @note It is OK to use a different time step each time.
 /// @note With a zero time step, the simulation does not advance. Pre-step callbacks run first, then queries are refreshed as by @ref mochi::Scene::UpdateQueries "UpdateQueries", then post-step callbacks run. If some queries cannot be updated, then it will log a one-time warning. To update queries without invoking callbacks, call @ref mochi::Scene::UpdateQueries "UpdateQueries" instead.
 /// @note If the time step is negative or NaN, no step is taken and an error is logged.
+/// @note After the step, the actor state (e.g. transforms, velocities and node positions) and the queries derived from it are at the end of the time step. Queries evaluated during force assembly (@ref mochi::QueryType::ContactPoints "QueryType::ContactPoints", @ref mochi::QueryType::NodeContactForces "QueryType::NodeContactForces", @ref mochi::QueryType::SdfDistances "QueryType::SdfDistances", @ref mochi::QueryType::TotalContactForce "QueryType::TotalContactForce", @ref mochi::QueryType::ConstraintForce "QueryType::ConstraintForce" and @ref mochi::QueryType::ArticulatedJointWrenches "QueryType::ArticulatedJointWrenches") correspond to the last stage of the time integrator instead. For integration methods whose step does not end at their last stage (@ref mochi::IntegrationMethod::DIRK23 "IntegrationMethod::DIRK23", @ref mochi::IntegrationMethod::SymplecticDIRK12 "IntegrationMethod::SymplecticDIRK12" and @ref mochi::IntegrationMethod::SymplecticDIRK22 "IntegrationMethod::SymplecticDIRK22"), the two differ and should not be combined, e.g. contact points should not be expressed in the frame returned by @ref mochi::Actor::GetRootTransform "Actor::GetRootTransform". To evaluate these queries at the end-of-step state instead, call @ref mochi::Scene::UpdateQueries "UpdateQueries".
 ///
 /// @see @ref mochi::IntegrationMethod "IntegrationMethod", @ref mochi::Scene::UpdateQueries "UpdateQueries"
 ///

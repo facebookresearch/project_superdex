@@ -25,6 +25,8 @@
 #include <mochi_physics/src/mochi_constraint.h>
 #include <mochi_physics/src/mochi_discretization_components.h>
 #include <mochi_physics/src/mochi_query.h>
+#include <mochi_physics/src/mochi_rigid.h>
+#include <mochi_physics/src/mochi_scene_recorder.h>
 #include <mochi_physics/src/mochi_simulation.h>
 #include <mochi_physics/src/mochi_soft_rom_components.h>
 
@@ -33,10 +35,12 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstring>
 #include <functional>
 #include <limits>
 #include <optional>
 #include <string_view>
+#include <tuple>
 #include <vector>
 
 using namespace mochi;
@@ -1988,6 +1992,252 @@ static void Compare(Real3 const& a, Real3 const& b) {
   real normDiff = Norm(a - b);
   real normMax = Max(Norm(a), Norm(b));
   EXPECT_LE(normDiff, 1e-3_r * normMax);
+}
+
+namespace {
+class StageContactQueryTest
+    : public ActorQueryTest,
+      public ::testing::WithParamInterface<std::tuple<IntegrationMethod, bool>> {
+ public:
+  void SetUp() override {
+    _numWorkerThreads = 2;
+    ActorQueryTest::SetUp();
+    _mochiContext->SetIsSingleThreaded(std::get<1>(GetParam()));
+    test::SetSceneIntegrationMethod(_scene, std::get<0>(GetParam()));
+  }
+};
+} // namespace
+
+TEST_P(StageContactQueryTest, MovingSyncContactsUseLastAssemblyStage) {
+  auto* bottom = CreateRigidCube(_scene, 1_r, Real3{});
+  auto* top = CreateRigidCube(_scene, 0.5_r, Real3{0.25_r, 0.99_r, 0.25_r});
+  for (auto* actor : {top, bottom}) {
+    auto contact = actor->GetContactParams(test::ExpectOK{});
+    contact.penaltyCoefficient = 1e4_r;
+    actor->SetContactParams(contact, test::ExpectOK{});
+    actor->SetVelocity(Real3{1_r, 0_r, 0_r}, Real3{}, test::ExpectOK{});
+    for (auto query :
+         {QueryType::ContactPoints,
+          QueryType::NodeContactForces,
+          QueryType::TotalContactForce,
+          QueryType::SdfDistances}) {
+      actor->RegisterQuery(query, test::ExpectOK{});
+    }
+  }
+
+  auto& reg = GetRegistry();
+  double constexpr kDt = 0.01;
+  // Populate BDF history before checking the chosen method's final stage.
+  for (int i = 0; i < 2; ++i) {
+    _scene->Step(kDt);
+  }
+  // Inspect the recording buffer without a file writer or post-step flush.
+  CRecordingParams recording;
+  recording.recordContactPoints = true;
+  recording.recordNodeContactForces = true;
+  recording.recordSdfDistances = true;
+  reg.set<TagSceneRecordingEnabled>();
+  reg.set<CRecordingParams>(recording);
+  for (auto* actor : {top, bottom}) {
+    reg.emplace<CRecordingData>(GetEntity(actor), recording);
+  }
+  _scene->Step(kDt);
+  ASSERT_NE(_scene->GetSolverStats().convergenceStatus, ConvergenceStatus::Diverged);
+
+  auto stagePose = [&](Actor* actor) -> TransformRT const& {
+    auto const e = GetEntity(actor);
+    int const stage = reg.get<CTimeIntegratorState const>(e).currentStage;
+    return reg.get<CIntegrationRigidStates const>(e).stages[stage].value;
+  };
+  auto stageTransform = [&](Actor* actor) {
+    TransformRT transform;
+    rigid::RigidStateToRootTransform(
+        reg.get<CRigidBodyInertia const>(GetEntity(actor)).GetCenterOfMassLocal(),
+        stagePose(actor),
+        transform);
+    return transform;
+  };
+  auto const contacts = top->GetContactPointsWorld(test::ExpectOK{});
+  auto const counterpart = bottom->GetContactPointsWorld(test::ExpectOK{});
+  ASSERT_FALSE(contacts.empty());
+  ASSERT_EQ(contacts.size(), counterpart.size());
+  auto const sdf = top->GetSdfDistances(test::ExpectOK{});
+  auto const topEntity = GetEntity(top);
+  auto const& samples = reg.get<CContactSamples<TimeStep::Current> const>(topEntity);
+  auto const& start = GetRootTransform<TimeStep::StageStart>(reg, topEntity);
+  real const dtStage = reg.get<CTimeIntegratorState const>(topEntity).dtStage;
+  TransformRT const topStage = stageTransform(top);
+  TransformRT const bottomStage = stageTransform(bottom);
+  Real3 totalForce{}, topTorque{}, bottomTorque{};
+  for (int i = 0; i < isize(contacts); ++i) {
+    auto const& cp = contacts[i];
+    ASSERT_EQ(cp.actorA, top->GetHandle());
+    ASSERT_EQ(cp.actorB, bottom->GetHandle());
+    Real3 const pos = topStage.TransformPoint(samples.positions[cp.sampleIndex]);
+    EXPECT_NEAR_TOL(cp.posA, pos, 1e-5_r);
+    EXPECT_NEAR_TOL(
+        cp.pointVelocityA,
+        (pos - start.TransformPoint(samples.positions[cp.sampleIndex])) / dtStage,
+        1e-4_r);
+    // Both bodies translate tangentially at 1 m/s, without tangential contact forces.
+    EXPECT_NEAR(cp.pointVelocityA[0], 1_r, 1e-3_r);
+    EXPECT_NEAR(cp.pointVelocityB[0], 1_r, 1e-3_r);
+    Real3 const colliderLocal = Invert(bottomStage).TransformPoint(cp.posB);
+    Real3 const colliderStart = GetRootTransform<TimeStep::StageStart>(reg, GetEntity(bottom))
+                                    .TransformPoint(colliderLocal);
+    EXPECT_NEAR_TOL(cp.pointVelocityB, (cp.posB - colliderStart) / dtStage, 1e-4_r);
+    EXPECT_NEAR_TOL(cp.posB, cp.posA - cp.distance * cp.normal, 1e-5_r);
+    EXPECT_NEAR(cp.distance, Invert(bottomStage).TransformPoint(cp.posA)[1] - 1_r, 1e-5_r);
+    EXPECT_NEAR_TOL(counterpart[i].posA, cp.posA, 1e-5_r);
+    EXPECT_NEAR_TOL(counterpart[i].pointVelocityA, cp.pointVelocityA, 1e-5_r);
+    EXPECT_NEAR_TOL(counterpart[i].pointVelocityB, cp.pointVelocityB, 1e-5_r);
+    EXPECT_NEAR_TOL(counterpart[i].force, cp.force, 1e-5_r);
+
+    auto const it = std::ranges::find(sdf.sampleIndices, cp.sampleIndex);
+    ASSERT_NE(it, sdf.sampleIndices.end());
+    int const index = static_cast<int>(it - sdf.sampleIndices.begin());
+    EXPECT_NEAR_TOL(sdf.worldPositions[index], cp.posA, 1e-5_r);
+    EXPECT_NEAR(sdf.distances[index], cp.distance, 1e-5_r);
+    totalForce += cp.force;
+    topTorque += Cross(cp.posA - stagePose(top).GetTranslation(), cp.force);
+    bottomTorque -= Cross(cp.posA - stagePose(bottom).GetTranslation(), cp.force);
+  }
+  real const forceTol = 1e-4_r * Max(1_r, Norm(totalForce));
+  EXPECT_GT(Norm(totalForce), 0_r);
+  EXPECT_NEAR_TOL(top->GetContactForceWorld(test::ExpectOK{}), totalForce, forceTol);
+  EXPECT_NEAR_TOL(bottom->GetContactForceWorld(test::ExpectOK{}), -totalForce, forceTol);
+  EXPECT_NEAR_TOL(top->GetContactTorqueWorld(test::ExpectOK{}), topTorque, forceTol);
+  EXPECT_NEAR_TOL(bottom->GetContactTorqueWorld(test::ExpectOK{}), bottomTorque, forceTol);
+  ExpectEqualContactForces(true, top);
+
+  auto const& entries = reg.get<CRecordingData const>(topEntity).entries;
+  auto expectRecorded = [&](char const* name, Span<real const> expected) {
+    auto const it = entries.find(name);
+    ASSERT_NE(it, entries.end());
+    ASSERT_EQ(it->second.data.size(), expected.size() * sizeof(real));
+    EXPECT_EQ(std::memcmp(it->second.data.data(), expected.data(), it->second.data.size()), 0);
+  };
+  DynamicArray<Real3> positions, velocities;
+  for (auto const& cp : contacts) {
+    positions.push_back(cp.posA);
+    velocities.push_back(cp.pointVelocityA);
+  }
+  expectRecorded("contacts_posA", Flatten(MakeConstSpan(positions)));
+  expectRecorded("contacts_pointVelocityA", Flatten(MakeConstSpan(velocities)));
+  expectRecorded("sdf_distances_world_positions", Flatten(sdf.worldPositions));
+  expectRecorded(
+      "translationCom", reg.get<CRigidState<TimeStep::Current>>(topEntity).value.GetTranslation());
+
+  // Actor state still advances to the physical endpoint, not the saved contact stage.
+  EXPECT_NEAR(top->GetRootTransform().GetTranslation()[0], 0.25_r + 3_r * kDt, 1e-5_r);
+  if (std::get<0>(GetParam()) == IntegrationMethod::SymplecticDIRK12) {
+    EXPECT_NEAR(
+        top->GetRootTransform().GetTranslation()[0] - topStage.GetTranslation()[0],
+        0.5_r * kDt,
+        1e-5_r);
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    IntegratorsAndThreads,
+    StageContactQueryTest,
+    ::testing::Combine(
+        ::testing::Values(
+            IntegrationMethod::BackwardEuler,
+            IntegrationMethod::BDF2,
+            IntegrationMethod::BDF3,
+            IntegrationMethod::SymplecticDIRK12,
+            IntegrationMethod::SymplecticDIRK22,
+            IntegrationMethod::DIRK23),
+        ::testing::Bool()));
+
+TEST_F(ActorQueryTest, MidpointAsyncContactsLeaveNodeQueriesAtStepEnd) {
+  real constexpr kDt = 1e-2_r;
+  test::SetSceneIntegrationMethod(_scene, IntegrationMethod::SymplecticDIRK12);
+  auto* actor = CreateSoftCube(_scene, 0.5_r, Real3{0_r, -0.01_r, 0_r});
+  auto* ground = CreateStaticGroundPlane(_scene, 0_r);
+  for (auto* a : {actor, ground}) {
+    auto contact = a->GetContactParams(test::ExpectOK{});
+    contact.penaltyCoefficient = 1e4_r;
+    contact.viscousFrictionCoefficient = 0_r;
+    a->SetContactParams(contact, test::ExpectOK{});
+  }
+  for (auto query : {QueryType::ContactPoints, QueryType::NodePositions, QueryType::SdfDistances}) {
+    actor->RegisterQuery(query, test::ExpectOK{});
+  }
+  actor->SetVelocity(Real3{1_r, 0_r, 0_r}, Real3{}, test::ExpectOK{});
+  _scene->Step(kDt);
+
+  auto const contacts = actor->GetContactPointsWorld(test::ExpectOK{});
+  ASSERT_FALSE(contacts.empty());
+  auto const& reg = GetRegistry();
+  auto const e = GetEntity(actor);
+  auto const& samplesStart = reg.get<CContactSamples<TimeStep::StageStart> const>(e);
+  auto const& samples = reg.get<CContactSamples<TimeStep::Current> const>(e);
+  auto const& transform = GetRootTransform<TimeStep::StageStart>(reg, e);
+  for (auto const& cp : contacts) {
+    Real3 const start = transform.TransformPoint(samplesStart.positions[cp.sampleIndex]);
+    Real3 const stage = actor->GetRootTransform().TransformPoint(samples.positions[cp.sampleIndex]);
+    EXPECT_NEAR_TOL(cp.posA, stage, 1e-5_r);
+    EXPECT_NEAR_TOL(cp.pointVelocityA, (stage - start) / (0.5_r * kDt), 1e-4_r);
+    EXPECT_NEAR(cp.distance, cp.posA[1], 1e-5_r);
+  }
+  auto const nodes = Unflatten<Real3 const>(actor->GetNodePositionsLocal(test::ExpectOK{}));
+  auto const reference = Unflatten<Real3 const>(actor->GetMesh().coordinates);
+  auto const displacements = Unflatten<Real3 const>(actor->GetDisplacements(test::ExpectOK{}));
+  ASSERT_EQ(nodes.size(), reference.size());
+  for (int i = 0; i < isize(nodes); ++i) {
+    EXPECT_NEAR_TOL(nodes[i], reference[i] + displacements[i], 1e-5_r);
+  }
+  EXPECT_NEAR(actor->GetRootTransform().TransformPoint(nodes[0])[0], kDt, 1e-4_r);
+}
+
+TEST_F(ActorQueryTest, DivergedStageClearsCachedContactQueries) {
+  test::SetSceneIntegrationMethod(_scene, IntegrationMethod::SymplecticDIRK22);
+  auto* actor = CreateRigidCube(_scene, 0.5_r, Real3{0_r, -0.01_r, 0_r});
+  CreateStaticGroundPlane(_scene, 0_r);
+  auto contact = actor->GetContactParams(test::ExpectOK{});
+  contact.penaltyCoefficient = 1e4_r;
+  actor->SetContactParams(contact, test::ExpectOK{});
+  for (auto query :
+       {QueryType::ContactPoints,
+        QueryType::NodeContactForces,
+        QueryType::TotalContactForce,
+        QueryType::SdfDistances}) {
+    actor->RegisterQuery(query, test::ExpectOK{});
+  }
+  _scene->Step(0.01);
+  ASSERT_FALSE(actor->GetContactPointsWorld(test::ExpectOK{}).empty());
+
+  auto params = _scene->GetSolverParams();
+  params.nonLinearSolver.absTol = 0_r;
+  params.nonLinearSolver.relTol = 0_r;
+  params.nonLinearSolver.relStepTol = 0_r;
+  params.nonLinearSolver.absDivTol = 1e-30_r;
+  _scene->SetSolverParams(params, test::ExpectOK{});
+  test::ExpectLoggingInScope expectWarning(_mochiContext, LogChannel::Warning);
+  _scene->Step(0.01);
+  ASSERT_EQ(actor->GetConvergenceStatus(), ConvergenceStatus::Diverged);
+  EXPECT_TRUE(actor->GetContactPointsWorld(test::ExpectOK{}).empty());
+  EXPECT_TRUE(actor->GetNodeContactForcesWorld(test::ExpectOK{}).empty());
+  EXPECT_TRUE(actor->GetSdfDistances(test::ExpectOK{}).distances.empty());
+  EXPECT_EQ(actor->GetContactForceWorld(test::ExpectOK{}), Real3{});
+}
+
+TEST_F(ActorQueryTest, FarSdfQueriesAreUpdatedByFarPass) {
+  // The stage pass skips far-SDF actors, so only the far pass can initialize their query.
+  auto* actor = CreateRigidCube(_scene, 0.5_r, Real3{0.25_r, 1.2_r, 0.25_r});
+  CreateRigidCube(_scene, 1_r, Real3{});
+  auto& reg = GetRegistry();
+  auto const e = GetEntity(actor);
+  reg.emplace<CRequiresFarSdfEvaluation>(e, 1_r);
+  actor->RegisterQuery(QueryType::SdfDistances, test::ExpectOK{});
+  EXPECT_FALSE(reg.get<CQuerySdfDistances const>(e).isInitialized);
+  _scene->Step(0.01);
+
+  // TODO: Also check the distances once far collision detection finds colliders.
+  EXPECT_TRUE(reg.get<CQuerySdfDistances const>(e).isInitialized);
+  EXPECT_EQ(actor->GetSdfDistances(test::ExpectOK{}).maxSdfFarDistanceEvaluation, 1_r);
 }
 
 TEST_F(ActorQueryTest, ActorContactForces) {

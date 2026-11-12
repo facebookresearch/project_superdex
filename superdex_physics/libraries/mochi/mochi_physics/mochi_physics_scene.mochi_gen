@@ -97,6 +97,16 @@ class Scene [no_init, no_destruct] {
   // queries cannot be updated, then it will log a one-time warning. To update queries without
   // invoking callbacks, call @ref UpdateQueries instead.
   // @note If the time step is negative or NaN, no step is taken and an error is logged.
+  // @note After the step, the actor state (e.g. transforms, velocities and node positions) and the
+  // queries derived from it are at the end of the time step. Queries evaluated during force
+  // assembly (@ref QueryType::ContactPoints, @ref QueryType::NodeContactForces, @ref
+  // QueryType::SdfDistances, @ref QueryType::TotalContactForce, @ref QueryType::ConstraintForce and
+  // @ref QueryType::ArticulatedJointWrenches) correspond to the last stage of the time integrator
+  // instead. For integration methods whose step does not end at their last stage (@ref
+  // IntegrationMethod::DIRK23, @ref IntegrationMethod::SymplecticDIRK12 and @ref
+  // IntegrationMethod::SymplecticDIRK22), the two differ and should not be combined, e.g. contact
+  // points should not be expressed in the frame returned by @ref Actor::GetRootTransform. To
+  // evaluate these queries at the end-of-step state instead, call @ref UpdateQueries.
   //
   // @see IntegrationMethod, UpdateQueries
   fn Step(double timeStepSec [units("s")]) -> void [pure, virtual, release_gil];

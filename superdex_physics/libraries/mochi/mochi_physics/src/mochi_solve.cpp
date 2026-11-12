@@ -41,6 +41,7 @@
 #include "mochi_soft.h"
 #include "mochi_soft_rom_systems.h"
 #include "mochi_soft_skinned.h"
+#include "mochi_step.h"
 
 #include <mochi_core/integration/integration_utils.h>
 #include <mochi_core/linear_algebra/block_sparse_matrix.h>
@@ -1000,7 +1001,10 @@ void mochi::solver::PostStageLocalPipeline(
  * Pipeline executed after the last time integration stage of the time step. Each actor is
  * responsible for computing its position and velocity state at the end of the time step.
  */
-static void PostLastStageLocalPipeline(entt::registry& reg, CIslandDescendants const& descendants) {
+static void PostLastStageLocalPipeline(
+    entt::registry& reg,
+    entt::entity island,
+    CIslandDescendants const& descendants) {
   MOCHI_PROFILE_SCOPE();
 
   // Order requirements:
@@ -1038,11 +1042,15 @@ static void PostLastStageLocalPipeline(entt::registry& reg, CIslandDescendants c
     ecs::InvokeForEach(&UpdateFrictionAnchors, reg, descendants.actors);
   }
 
-  // Perform a final collision detection pass with far SDF evaluation
-  // States of objects haven't changed since last collision detection evaluation, so we
-  // can easily skip pre collision detection
+  // Final collision detection with far SDF evaluation. It reuses the contact samples and bounds of
+  // the last stage: rigid actors sample at their step-end transform, while deformable actors keep
+  // their last-stage samples.
   ecs::InvokeForEach<ecs::policy::AllowFullRegistryAccess>(
       &FarSdfCollisionDetection, reg, descendants.actors);
+  {
+    profiler::ScopedIslandTimer const timer(reg, island, &CIslandStats::queriesSec);
+    UpdateIslandContactQueries(reg, descendants, /*farSdfActors*/ true);
+  }
 
   // Optionally record state and queries
   if (reg.try_ctx<TagSceneRecordingEnabled>()) {
@@ -1350,7 +1358,11 @@ bool mochi::solver::StepIslandNewtonAsync(
     PostStageLocalPipeline(reg, descendants);
   }
 
-  PostLastStageLocalPipeline(reg, descendants);
+  {
+    profiler::ScopedIslandTimer const timer(reg, island, &CIslandStats::queriesSec);
+    UpdateIslandContactQueries(reg, descendants, /*farSdfActors*/ false);
+  }
+  PostLastStageLocalPipeline(reg, island, descendants);
 
   sleep::RecordStep(reg, island, restValue);
   UpdateIslandActorPreconditionerPolicyAndCopies(

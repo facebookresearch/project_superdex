@@ -48,12 +48,21 @@ void PostStepEcs(entt::registry& reg);
 
 void PreStepIslandAsync(entt::registry& reg, CIslandDescendants const& descendants);
 
+// Save the contact queries of an island's actors, once per step for each value of farSdfActors:
+// - false: after the final stage solve, before step-end finalization (last assembly stage).
+// - true: after the final far collision detection. Far-SDF actors get only SDF distances.
+void UpdateIslandContactQueries(
+    entt::registry& reg,
+    CIslandDescendants const& descendants,
+    bool farSdfActors);
+
 /**
- * @brief Call UpdateActorQueriesAsync for each actor in the scene.
+ * @brief Recompute scene queries, optionally including contact-derived queries.
  *
- * @remarks This work is normally done during PostStepIslandAsync. Thus you only need to call this
- * function if you want to forcibly recompute the queries without waiting for the next simulation
- * step.
+ * @remarks During a step, queries are updated by UpdateIslandContactQueries and, at step end,
+ * PostStepIslandAsync. This function refreshes the same queries from Current. With
+ * @p includeAssemblyQueries, the caller must provide freshly assembled, coherent Current contact
+ * data.
  *
  * @param reg ECS registry
  * @param includeAssemblyQueries If false, queries that require contact detection or force assembly
