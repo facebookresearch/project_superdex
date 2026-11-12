@@ -291,6 +291,7 @@ ShapeHandle ContextImpl::LoadShapeFromFile(
     // Load the file (any supported format)
     ModelData model = model::LoadFromFile(filePath, err);
     model::BakeTransform(model, bakeScale, bakeTransform, err);
+    model::Validate(model, err); // Baking can invalidate a valid model
     MOCHI_ERROR_RETURN(err, ShapePtr{});
 
     // Load experimental feature if present.
@@ -386,6 +387,7 @@ ShapeHandle ContextImpl::LoadShapeFromBytes(
   // Load the file from memory (any supported format)
   ModelData model = model::LoadFromBytes(fileData, format, error);
   model::BakeTransform(model, bakeScale, bakeTransform, error);
+  model::Validate(model, error); // Baking can invalidate a valid model
   MOCHI_ERROR_RETURN(error, {});
 
   // Load experimental feature if present.
