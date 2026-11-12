@@ -150,8 +150,8 @@ class RenderModel::DeformationState {
   }
 
   std::unique_ptr<DeformableModelInstance> Checkout(mochi::Error& error) {
-    auto slot = std::find_if(
-        _slots.begin(), _slots.end(), [](Slot const& candidate) { return !candidate.inUse; });
+    auto slot =
+        std::ranges::find_if(_slots, [](Slot const& candidate) { return !candidate.inUse; });
     if (slot == _slots.end()) {
       filament::gltfio::FilamentInstance* const instance = _model.CreateConfiguredInstance();
       if (instance == nullptr) {

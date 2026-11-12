@@ -51,9 +51,8 @@ std::string Resource::GetNameFromPath(mochi::Path const& path) {
   auto const dot = stem.find_last_of('.');
   if (dot != std::string::npos) {
     std::string ext = stem.substr(dot);
-    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) {
-      return static_cast<char>(std::tolower(c));
-    });
+    std::ranges::transform(
+        ext, ext.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     if (ext == ".mochi") {
       return stem.substr(0, dot);
     }

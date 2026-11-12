@@ -170,7 +170,7 @@ std::vector<uint8_t> BuildGlbFromMeshSections(std::vector<MeshSection> const& se
 
     layout.texture = kNone;
     if (s.hasTexcoords && s.baseColorTexture && !s.baseColorTexture->bytes.empty()) {
-      auto const it = std::find(images.begin(), images.end(), s.baseColorTexture.get());
+      auto const it = std::ranges::find(images, s.baseColorTexture.get());
       layout.texture = static_cast<size_t>(it - images.begin());
       if (it == images.end()) {
         images.push_back(s.baseColorTexture.get());
@@ -190,10 +190,8 @@ std::vector<uint8_t> BuildGlbFromMeshSections(std::vector<MeshSection> const& se
   size_t const binSize = bin.size();
 
   // A glTF extension must be declared at the top level before any material may reference it.
-  bool const usesEmissiveStrength =
-      std::any_of(layouts.begin(), layouts.end(), [](SectionLayout const& layout) {
-        return layout.emissiveStrength != 1.0f;
-      });
+  bool const usesEmissiveStrength = std::ranges::any_of(
+      layouts, [](SectionLayout const& layout) { return layout.emissiveStrength != 1.0f; });
 
   // Build the glTF JSON descriptor. One primitive + one material per section.
   std::string json;
@@ -853,7 +851,7 @@ ExtractPrimitive(cgltf_primitive const& prim, char const* gltfPath, ImageCache* 
   }
 
   if (section.positions.empty() || section.indices.empty() || section.indices.size() % 3 != 0 ||
-      std::any_of(section.indices.begin(), section.indices.end(), [&](int index) {
+      std::ranges::any_of(section.indices, [&](int index) {
         return index < 0 || static_cast<cgltf_size>(index) >= vertexCount;
       })) {
     MOCHI_LOG_WARNING("ReadGlb: triangle primitive has invalid geometry.");

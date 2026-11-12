@@ -64,7 +64,7 @@ static filament::math::short4 PackNormalTangentFrame(filament::math::float3 norm
 static filament::math::short4* PackNormalTangentFrames(
     std::vector<filament::math::float3> const& normals) {
   auto* tangents = new filament::math::short4[normals.size()];
-  std::transform(normals.begin(), normals.end(), tangents, PackNormalTangentFrame);
+  std::ranges::transform(normals, tangents, PackNormalTangentFrame);
   return tangents;
 }
 
@@ -226,7 +226,7 @@ DebugDraw::DebugDraw(filament::Engine* engine, filament::Scene* scene)
           .normalized(filament::VertexAttribute::TANGENTS)
           .build(*_engine);
   auto* spherePositions = new filament::math::float3[_sphereUnitPositions.size()];
-  std::copy(_sphereUnitPositions.begin(), _sphereUnitPositions.end(), spherePositions);
+  std::ranges::copy(_sphereUnitPositions, spherePositions);
   _sphereVertexBuffer->setBufferAt(
       *_engine,
       0,
@@ -238,7 +238,7 @@ DebugDraw::DebugDraw(filament::Engine* engine, filament::Scene* scene)
           }));
 
   auto* sphereTangents = new filament::math::short4[_sphereUnitTangents.size()];
-  std::copy(_sphereUnitTangents.begin(), _sphereUnitTangents.end(), sphereTangents);
+  std::ranges::copy(_sphereUnitTangents, sphereTangents);
   _sphereVertexBuffer->setBufferAt(
       *_engine,
       1,
@@ -253,7 +253,7 @@ DebugDraw::DebugDraw(filament::Engine* engine, filament::Scene* scene)
                            .bufferType(filament::IndexBuffer::IndexType::USHORT)
                            .build(*_engine);
   auto* sphereIndices = new uint16_t[_sphereUnitIndices.size()];
-  std::copy(_sphereUnitIndices.begin(), _sphereUnitIndices.end(), sphereIndices);
+  std::ranges::copy(_sphereUnitIndices, sphereIndices);
   _sphereIndexBuffer->setBuffer(
       *_engine,
       filament::IndexBuffer::BufferDescriptor(
@@ -1515,7 +1515,7 @@ void DebugDraw::SortOverlayTrianglesBackToFront(filament::math::float3 viewPos) 
   }
   std::vector<uint32_t> order(triCount);
   std::iota(order.begin(), order.end(), 0u);
-  std::sort(order.begin(), order.end(), [&distSq](uint32_t l, uint32_t r) {
+  std::ranges::sort(order, [&distSq](uint32_t l, uint32_t r) {
     return distSq[l] > distSq[r]; // farthest first
   });
   std::vector<uint32_t> sorted;

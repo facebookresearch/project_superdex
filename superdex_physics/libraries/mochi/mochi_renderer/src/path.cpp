@@ -59,9 +59,8 @@ static std::filesystem::path Normalize(std::filesystem::path const& p) {
 }
 
 static std::string ToLower(std::string s) {
-  std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
-    return static_cast<char>(std::tolower(c));
-  });
+  std::ranges::transform(
+      s, s.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
   return s;
 }
 

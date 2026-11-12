@@ -36,6 +36,7 @@
 #include <mochi_core/utils/debug.h>
 
 #include <cgltf.h>
+#include <algorithm>
 #include <fstream>
 #include <set>
 
@@ -61,7 +62,7 @@ utils::Path GetPathForGltfAsset(std::string_view path) {
   if (filename.isDirectory()) {
     MOCHI_LOG("[gltf] Path is a directory, scanning for glTF files...");
     std::vector<utils::Path> files = filename.listContents();
-    auto it = std::find_if(files.cbegin(), files.cend(), isGLTF);
+    auto it = std::ranges::find_if(files, isGLTF);
     if (it == files.end()) {
       MOCHI_LOG_ERROR("[gltf] No glTF/glb file found in directory: %s", filename.c_str());
       return {};
@@ -330,9 +331,8 @@ Resource* ResourceManager::LoadResource(mochi::Path const& path) {
     return _resources[path].get();
   }
   std::string extension = path.GetExtension();
-  std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) {
-    return std::tolower(c);
-  });
+  std::ranges::transform(
+      extension, extension.begin(), [](unsigned char c) { return std::tolower(c); });
   if (extension == ".gltf" || extension == ".glb") {
     return LoadGltf(path);
   }
@@ -353,9 +353,8 @@ Resource* ResourceManager::LoadResource(mochi::Path const& path) {
   }
   if (extension == ".json") {
     std::string stem = path.GetStem();
-    std::transform(stem.begin(), stem.end(), stem.begin(), [](unsigned char c) {
-      return static_cast<char>(std::tolower(c));
-    });
+    std::ranges::transform(
+        stem, stem.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     if (stem.ends_with(".mochi")) {
       return LoadMochiModel(path);
     }
@@ -377,9 +376,8 @@ RenderModel* ResourceManager::LoadRenderModel(mochi::Path const& path) {
     return nullptr;
   }
   std::string extension = path.GetExtension();
-  std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) {
-    return std::tolower(c);
-  });
+  std::ranges::transform(
+      extension, extension.begin(), [](unsigned char c) { return std::tolower(c); });
   if (extension == ".gltf" || extension == ".glb") {
     return LoadGltf(path);
   }
@@ -397,9 +395,8 @@ RenderModel* ResourceManager::LoadRenderModel(mochi::Path const& path) {
   }
   if (extension == ".json") {
     std::string stem = path.GetStem();
-    std::transform(stem.begin(), stem.end(), stem.begin(), [](unsigned char c) {
-      return static_cast<char>(std::tolower(c));
-    });
+    std::ranges::transform(
+        stem, stem.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     if (stem.ends_with(".mochi")) {
       return LoadMochiModel(path);
     }

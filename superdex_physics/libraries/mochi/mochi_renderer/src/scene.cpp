@@ -46,6 +46,7 @@
 #include "materials.h"
 #include "view_settings.h"
 
+#include <algorithm>
 #include <iostream>
 #include <iterator>
 #include <memory>
@@ -700,13 +701,12 @@ void Scene::DestroySceneObject(SceneObject* object) {
     auto entities = object->GetEntities();
     _scene->removeEntities(entities.data(), entities.size());
   }
-  auto it = std::find(_objectsPublic.begin(), _objectsPublic.end(), object);
+  auto it = std::ranges::find(_objectsPublic, object);
   if (it != _objectsPublic.end()) {
     _objectsPublic.erase(it);
   }
-  auto it_ptr = std::find_if(
-      _objectsPrivate.begin(),
-      _objectsPrivate.end(),
+  auto it_ptr = std::ranges::find_if(
+      _objectsPrivate,
       [object](std::unique_ptr<SceneObject> const& e) { return e.get() == object; });
   if (it_ptr != _objectsPrivate.end()) {
     _objectsPrivate.erase(it_ptr);
