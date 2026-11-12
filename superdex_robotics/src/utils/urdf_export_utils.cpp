@@ -439,11 +439,8 @@ void superdex::robotics::AppendBotToUrdf(
     dynamicsXml->SetAttribute("friction", FormatDouble(friction).c_str());
     jointXml->InsertEndChild(dynamicsXml);
 
-    // Limits (only emit when both limits are set and the joint is not continuous).
-    if (typeName != std::string_view(kJointTypeContinuous) && joint.minLimit.has_value() &&
-        joint.maxLimit.has_value()) {
-      double const lower = ExtractScalarLimit(joint.minLimit, joint.axis);
-      double const upper = ExtractScalarLimit(joint.maxLimit, joint.axis);
+    bool const isContinuous = typeName == std::string_view(kJointTypeContinuous);
+    if (isContinuous || (joint.minLimit.has_value() && joint.maxLimit.has_value())) {
       // URDF requires the effort attribute; emit the effortLimit verbatim so it round-trips
       // (< 0 unbounded, 0 non-actuated, > 0 finite).
       auto const effort = static_cast<double>(joint.effortLimit);
@@ -456,8 +453,12 @@ void superdex::robotics::AppendBotToUrdf(
       tx::XMLElement* limitXml = doc->NewElement("limit");
       limitXml->SetAttribute("effort", FormatDouble(effort).c_str());
       limitXml->SetAttribute("velocity", FormatDouble(velocity).c_str());
-      limitXml->SetAttribute("lower", FormatDouble(lower).c_str());
-      limitXml->SetAttribute("upper", FormatDouble(upper).c_str());
+      if (!isContinuous) {
+        double const lower = ExtractScalarLimit(joint.minLimit, joint.axis);
+        double const upper = ExtractScalarLimit(joint.maxLimit, joint.axis);
+        limitXml->SetAttribute("lower", FormatDouble(lower).c_str());
+        limitXml->SetAttribute("upper", FormatDouble(upper).c_str());
+      }
       jointXml->InsertEndChild(limitXml);
     }
   }
