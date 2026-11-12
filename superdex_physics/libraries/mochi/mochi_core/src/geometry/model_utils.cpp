@@ -964,6 +964,7 @@ struct BakeTransformInput {
   TransformRT rt; // Rotation and translation (no scale)
   VMatrix3x3r directionMatrix; // Change of basis (rotation/mirroring, no scale).
   VMatrix4x4r matrix; // Transforms points (scale/mirroring, rotation, translation)
+  bool isExactChangeOfBasis = false; // directionMatrix only permutes and negates axes
 };
 } // namespace
 
@@ -1004,7 +1005,8 @@ static BakeTransformInput MakeBakeTransformInput(CoordinateSpaceConverter const&
       scale3,
       TransformRT{QuaternionFromMatrix(rotation), Real3{}},
       ToSimdMatrix(converter.GetDirectionMatrix()),
-      ToSimdMatrix(converter.GetTransformMatrix())};
+      ToSimdMatrix(converter.GetTransformMatrix()),
+      /* isExactChangeOfBasis */ true};
 }
 
 static void BakeTransformBox(Box& data, BakeTransformInput const& transform, Error& error) {
@@ -1040,10 +1042,13 @@ static void BakeTransformPlane(Plane& data, BakeTransformInput const& transform,
   Real3 normal = {};
   real distance = 0_r;
   if (IsExactlyUniformMagnitude(scale)) {
-    // The direction matrix alone transforms the normal, and it preserves length, so the normal is
-    // left exactly as the change of basis produced it. Every distance from the origin then scales
-    // by the shared magnitude.
+    // The direction matrix alone transforms the normal. An exact change of basis keeps it exact,
+    // but any other rotation can stretch it slightly, so renormalize it if necessary. Every
+    // distance from the origin then scales by the shared magnitude.
     normal = ToReal3(DotMatVec3x3(transform.directionMatrix, ToSimd(data.GetNormal(), 0_r)));
+    if (!transform.isExactChangeOfBasis) {
+      normal = NormalizeIfNecessary(normal);
+    }
     distance = data.GetDistanceFromOrigin() * Abs(scale[0]);
   } else {
     // Non-uniform scale stretches a normal by an amount that depends on its direction, so divide by
