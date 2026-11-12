@@ -1480,31 +1480,43 @@ TEST(IKInputPoseSnapshotTest, InvalidOrIncompletePosePreservesCandidateAndDocume
     auto anchor = outputAnchor;
     IKInputPoseSnapshot displayed{{0.45_r, 0.25_r}, outputAnchor};
     auto const* model = &inputBot;
-    if (fault == 0)
+    if (fault == 0) {
       displayed.inputBotConfiguration.clear();
-    if (fault == 1)
+    }
+    if (fault == 1) {
       displayed.inputBotConfiguration.push_back(0_r);
-    if (fault == 2)
+    }
+    if (fault == 2) {
       displayed.inputBotConfiguration[0] = std::numeric_limits<real>::quiet_NaN();
-    if (fault == 3)
+    }
+    if (fault == 3) {
       displayed.worldFrameFromInputBaseFrame.SetTranslation(
           Real3{std::numeric_limits<real>::infinity(), 0_r, 0_r});
-    if (fault == 4)
+    }
+    if (fault == 4) {
       displayed.worldFrameFromInputBaseFrame.SetRotation(Quaternion{0_r, 0_r, 0_r, 2_r});
-    if (fault == 5)
+    }
+    if (fault == 5) {
       anchor.SetRotation(Quaternion{0_r, 0_r, 0_r, 0_r});
-    if (fault == 6)
+    }
+    if (fault == 6) {
       anchor.SetTranslation(Real3{std::numeric_limits<real>::quiet_NaN(), 0_r, 0_r});
-    if (fault == 7)
+    }
+    if (fault == 7) {
       badConfig.inputBotScale = 0_r;
-    if (fault == 8)
+    }
+    if (fault == 8) {
       badConfig.goals[0].positionStiffness = -1_r;
-    if (fault == 9)
+    }
+    if (fault == 9) {
       badConfig.inputBot.clear();
-    if (fault == 10)
+    }
+    if (fault == 10) {
       model = nullptr;
-    if (fault == 11)
+    }
+    if (fault == 11) {
       badConfig.version = 8;
+    }
     auto candidate = Config(-0.6_r, 0.1_r);
     auto const sentinel = SerializeStudioIKConfig(candidate);
     std::string diagnostic;
@@ -1523,20 +1535,27 @@ TEST(IKInputPoseSnapshotTest, RejectsStalePreparedMetadataBeforeNativeFK) {
   for (int fault = 0; fault < 7; ++fault) {
     SCOPED_TRACE(fault);
     auto inputBot = Robot();
-    if (fault == 0)
+    if (fault == 0) {
       inputBot.links[kTip].parentLink = kTip;
-    if (fault == 1)
+    }
+    if (fault == 1) {
       inputBot.links[kTip]._index = 99;
-    if (fault == 2)
+    }
+    if (fault == 2) {
       inputBot.links[kTip]._parentFromLink.SetTranslation(Real3{9_r, 0_r, 0_r});
-    if (fault == 3)
+    }
+    if (fault == 3) {
       inputBot.links[kTip]._rootFromLink.SetTranslation(Real3{9_r, 0_r, 0_r});
-    if (fault == 4)
+    }
+    if (fault == 4) {
       std::swap(inputBot._dofIndices[0], inputBot._dofIndices[1]);
-    if (fault == 5)
+    }
+    if (fault == 5) {
       inputBot.links[0]._childrenIndices.clear();
-    if (fault == 6)
+    }
+    if (fault == 6) {
       inputBot.defaultPose[0] = std::numeric_limits<real>::quiet_NaN();
+    }
     auto candidate = Config();
     auto const sentinel = SerializeStudioIKConfig(candidate);
     std::string diagnostic;

@@ -88,8 +88,9 @@ Metadata Meta(
     std::string runtime = "",
     bool roboticsIdentity = true) {
   Metadata metadata;
-  if (runtime.empty())
+  if (runtime.empty()) {
     runtime = std::string{inputBot.name};
+  }
   auto const id = path.substr(std::string{"data/physics/actors/"}.size());
   metadata.texts[{path, "superdex.physics.actor_id"}] = {id};
   metadata.texts[{path, "superdex.physics.runtime_name"}] = {runtime};
@@ -281,13 +282,15 @@ class Fixture {
         ASSERT_TRUE(data.is_ok());
         std::vector<rerun::TimeColumn> times{rerun::TimeColumn::from_nanos_since_epoch(
             "log_time", std::vector<int64_t>{1'700'000'000'000'000'000LL - row->time})};
-        if (options.frameTimeline)
+        if (options.frameTimeline) {
           times.push_back(
               rerun::TimeColumn::from_sequence("frame", std::vector<int64_t>{row->frame}));
-        if (options.simTimeline)
+        }
+        if (options.simTimeline) {
           times.push_back(
               rerun::TimeColumn::from_duration_nanoseconds(
                   "sim_time", std::vector<int64_t>{row->time}));
+        }
         ASSERT_TRUE(stream
                         .try_send_columns(
                             key.first, times, rerun::Collection<rerun::ComponentColumn>{data.value})
@@ -513,14 +516,18 @@ TEST(IKRecordingClipTest, MissingFieldsOrMismatchedFrameTimeKeysFailWholeClip) {
       SCOPED_TRACE(mutation);
       auto columns = State();
       auto& rows = columns[{kEntity, field}];
-      if (mutation == 0)
+      if (mutation == 0) {
         columns.erase({kEntity, field});
-      if (mutation == 1)
+      }
+      if (mutation == 1) {
         rows.pop_back();
-      if (mutation == 2)
+      }
+      if (mutation == 2) {
         rows[1].frame += 1;
-      if (mutation == 3)
+      }
+      if (mutation == 3) {
         rows[1].time += 1;
+      }
       Fixture file;
       file.WriteRaw(columns);
       file.Reject(mutation == 0 ? "no temporal rows" : "alignment mismatch");
@@ -581,8 +588,9 @@ TEST(IKRecordingClipTest, RootQuaternionMustBeUnitIncludingNegativeHemisphere) {
 TEST(IKRecordingClipTest, RequiredStaticLayoutAndIdentityMetadataCannotBeMissingOrMistyped) {
   auto const baseline = Meta();
   for (auto const& [key, values] : baseline.texts) {
-    if (key.second == "superdex.robotics.robot_id")
+    if (key.second == "superdex.robotics.robot_id") {
       continue; // No robotics identity uses exact physics name.
+    }
     auto metadata = baseline;
     metadata.texts.erase(key);
     Fixture file;
@@ -619,20 +627,27 @@ TEST(IKRecordingClipTest, JointNamesTypesCountsAndPartitionAreStrict) {
   }
   for (int mutation = 0; mutation < 7; ++mutation) {
     auto metadata = Meta();
-    if (mutation == 0)
+    if (mutation == 0) {
       metadata.texts[{layout, kNames}][1] = "unknown_joint";
-    if (mutation == 1)
+    }
+    if (mutation == 1) {
       metadata.texts[{layout, kNames}][1] = "root";
-    if (mutation == 2)
+    }
+    if (mutation == 2) {
       metadata.texts[{layout, kTypes}][1] = "prismatic";
-    if (mutation == 3)
+    }
+    if (mutation == 3) {
       metadata.scalars[{layout, kTranslations}][1] = 1;
-    if (mutation == 4)
+    }
+    if (mutation == 4) {
       metadata.scalars[{layout, kRotations}][0] = 2;
-    if (mutation == 5)
+    }
+    if (mutation == 5) {
       metadata.texts[{layout, kTypes}][0] = "spherical";
-    if (mutation == 6)
+    }
+    if (mutation == 6) {
       metadata.scalars[{kEntity, "superdex.physics.num_dofs"}] = {9};
+    }
     Fixture file;
     file.WriteRaw(State(), metadata);
     file.Reject("No compatible");
@@ -676,20 +691,27 @@ TEST(IKRecordingClipTest, InputBotLayoutAndUnsupportedRootFramesAreRejected) {
   file.Write();
   for (int mutation = 0; mutation < 7; ++mutation) {
     auto inputBot = Robot();
-    if (mutation == 0)
+    if (mutation == 0) {
       inputBot.name.clear();
-    if (mutation == 1)
+    }
+    if (mutation == 1) {
       inputBot._numDofs = 3;
-    if (mutation == 2)
+    }
+    if (mutation == 2) {
       inputBot._dofIndices[0] = 0;
-    if (mutation == 3)
+    }
+    if (mutation == 3) {
       inputBot.joints[1].name = "root";
-    if (mutation == 4)
+    }
+    if (mutation == 4) {
       inputBot.joints[0].type = ArticulatedJointType::Spherical;
-    if (mutation == 5)
+    }
+    if (mutation == 5) {
       inputBot.joints[0].parentLinkFromJoint.SetTranslation(Real3{1_r, 0_r, 0_r});
-    if (mutation == 6)
+    }
+    if (mutation == 6) {
       inputBot.joints[1].axis[0] = std::numeric_limits<real>::quiet_NaN();
+    }
     file.Reject("Input bot", inputBot);
   }
 }
@@ -745,8 +767,9 @@ TEST(IKRecordingClipTest, FileAndLayoutSizeCapsFailBeforeConstructingUnboundedCl
 TEST(IKRecordingClipTest, LoadsUserSceneRecordingAndReadsBackNativeQAndRootForEachInputBot) {
   auto const* path = std::getenv("SUPERDEX_TEST_INPUT_RRD");
   auto const* inputBotPath = std::getenv("SUPERDEX_TEST_INPUT_BOT");
-  if (!path || !inputBotPath)
+  if (!path || !inputBotPath) {
     GTEST_SKIP() << "Set actual native RRD and input-bot paths";
+  }
   Error error;
   auto inputBot = FileBotLoader{}.LoadBotPrefab(inputBotPath, error);
   ASSERT_TRUE(error.IsOK()) << error.ToString();
@@ -898,8 +921,9 @@ TEST(IKRecordingClipTest, LoadsUserSceneRecordingAndReadsBackNativeQAndRootForEa
       ASSERT_EQ(native.simulationTimesNs[stateIndex], tRows.simulationTimesNs[i]);
       auto const q = native.GetRow(stateIndex);
       DynamicArray<real> positions;
-      for (auto value : q)
+      for (auto value : q) {
         positions.push_back(static_cast<real>(value));
+      }
       kinematics.Compute(positions, error);
       ASSERT_TRUE(error.IsOK()) << error.ToString();
       auto const expected = kinematics.GetParentFromLinks()[link];
@@ -941,14 +965,17 @@ TEST(IKRecordingClipTest, LoadsUserSceneRecordingAndReadsBackNativeQAndRootForEa
   for (size_t i : {size_t{0}, native.GetNumRows() / 2, native.GetNumRows() - 1}) {
     auto const* sample = clip->SampleAt(native.simulationTimesNs[i]);
     std::cout << "frame=" << sample->frame << " sim_ns=" << sample->time << " q26:";
-    for (auto q : sample->inputBotConfiguration)
+    for (auto q : sample->inputBotConfiguration) {
       std::cout << " " << q;
+    }
     std::cout << " wrist_xyz:";
-    for (int axis = 0; axis < 3; ++axis)
+    for (int axis = 0; axis < 3; ++axis) {
       std::cout << " " << sample->recordedWorldFrameFromInputBaseFrame.GetTranslation()[axis];
+    }
     std::cout << " wrist_xyzw:";
-    for (int axis = 0; axis < 4; ++axis)
+    for (int axis = 0; axis < 4; ++axis) {
       std::cout << " " << sample->recordedWorldFrameFromInputBaseFrame.GetRotation().data[axis];
+    }
     std::cout << "\n";
   }
 }

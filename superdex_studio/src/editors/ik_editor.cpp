@@ -2047,12 +2047,14 @@ void IKEditor::ShowJointCouplings() {
   float const pickerWidth =
       std::max(40.0f, (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f);
   CouplingJointPicker("##AddJointA", _pendingCouplingA, _pendingCouplingB, outputBot, pickerWidth);
-  if (ImGui::IsItemHovered())
+  if (ImGui::IsItemHovered()) {
     ImGui::SetTooltip("Joint A (qB = ratio * qA)");
+  }
   ImGui::SameLine();
   CouplingJointPicker("##AddJointB", _pendingCouplingB, _pendingCouplingA, outputBot, pickerWidth);
-  if (ImGui::IsItemHovered())
+  if (ImGui::IsItemHovered()) {
     ImGui::SetTooltip("Joint B (qB = ratio * qA)");
+  }
   ImGui::EndDisabled();
   ImGui::PopID();
   if (!addDiagnostic.empty()) {
