@@ -34,8 +34,7 @@ scene.set_solver_params(solver_params)
 ```
 
 The current normal load is used for dissipation because it improves the accuracy and stability of frictional point-cloud self-contact. See [Stage-Discrete Dissipation](../../concepts/contact.md#stage-discrete-dissipation) for details.
-This is technically inconsistent with the mathematical assumptions behind the `WOLFE_STRONG` line search, because contact dissipation with an implicit normal force does not derive exactly from an incremental potential.
-However, the potential-based line search nonetheless improves convergence in spite of this inconsistency, since most terms of the formulation do derive from a potential.
+This dissipation doesn't derive exactly from an incremental potential, so merit-based line searches such as `WOLFE_STRONG` score it by its work along each step instead of by an energy.
 
 This example uses the default linear solver, but using the experimental [`sdp.LinearSolverType.PARALLEL_CG`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.LinearSolverType) linear solver can improve performance even further in applications where strict bit-level determinism is not required and a suitable multi-core environment is available.
 
