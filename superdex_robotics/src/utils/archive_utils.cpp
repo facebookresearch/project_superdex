@@ -801,6 +801,16 @@ static void CollectScenePrefabDependencies(
     }
     collectedFiles.insert(Resolve(asset));
   };
+  auto const CollectArticulatedAssets = [&](mochi::prefab::ArticulatedActorPrefab const& actor) {
+    for (auto const& link : actor.links) {
+      CollectAsset(link.shapeFile);
+      CollectAsset(link.renderModelFile);
+    }
+    if (actor.skin.has_value()) {
+      CollectAsset(actor.skin->shapeFile);
+      CollectAsset(actor.skin->renderModelFile);
+    }
+  };
   // Rigid actors.
   for (auto const& actor : prefab.actors.rigid) {
     CollectAsset(actor.shapeFile);
@@ -814,17 +824,11 @@ static void CollectScenePrefabDependencies(
   }
   // Articulated actors.
   for (auto const& actor : prefab.actors.articulated) {
-    for (auto const& link : actor.links) {
-      CollectAsset(link.shapeFile);
-      CollectAsset(link.renderModelFile);
-    }
+    CollectArticulatedAssets(actor);
   }
-  // Soft-skinned actors (skeleton links + soft bodies).
+  // Soft-skinned actors (skeleton + soft bodies).
   for (auto const& actor : prefab.actors.softSkinned) {
-    for (auto const& link : actor.skeletonParams.links) {
-      CollectAsset(link.shapeFile);
-      CollectAsset(link.renderModelFile);
-    }
+    CollectArticulatedAssets(actor.skeletonParams);
     for (auto const& soft : actor.softParams) {
       CollectAsset(soft.shapeFile);
       CollectAsset(soft.renderModelFile);
