@@ -446,6 +446,44 @@ TEST_F(ArchiveBotMultiRootTest, CollectsSensorParamsAndReferencedAssets) {
   EXPECT_TRUE(ContainsFileNamed(extractedDir, "test_weights.json"));
 }
 
+// Companion paths in sensor params are bot paths, so root-relative and tagged references are
+// archived too, including one that reaches into another root.
+//
+// File structure (under _tempDir):
+//   root/
+//     .superdex_root  ({"@b": "../B"})
+//     fr3/              (copy of bots/arms/fr3, plus params/test.superdex_sensor)
+//     models/root_weights.json
+//   B/
+//     .superdex_root  (empty)
+//     models/tagged_weights.json
+TEST_F(ArchiveBotMultiRootTest, CollectsRootRelativeAndTaggedSensorAssets) {
+  auto const root = _tempDir / "root";
+  auto const rootB = _tempDir / "B";
+  WriteRootFile(root, R"({"@b": "../B"})");
+  WriteEmptyRootMarker(rootB);
+  CopyBotDirInto(kFr3AssetDir, root / "fr3");
+  mochi::WriteFile(root / "models" / "root_weights.json", R"({"w": [1.0]})", ExpectOK{});
+  mochi::WriteFile(rootB / "models" / "tagged_weights.json", R"({"w": [1.0]})", ExpectOK{});
+  auto const bot = root / "fr3" / std::string(kFr3BotName);
+  AddSensorWithParams(
+      bot,
+      root / "fr3",
+      R"({"weightsPath": "//models/root_weights.json", "modelPath": "@b/models/tagged_weights.json"})",
+      /*writeWeights*/ false);
+
+  auto const archiveFile = _tempDir / "with_sensor.superdex_bot_archive";
+  ArchiveParams params;
+  params.src = bot.string();
+  params.dst = archiveFile.string();
+  ArchiveBot(params, ExpectOK{});
+  ASSERT_TRUE(fs::is_regular_file(archiveFile));
+
+  auto const extractedDir = ExtractBotArchiveToCache(archiveFile.string(), ExpectOK{});
+  EXPECT_TRUE(ContainsFileNamed(extractedDir, "root_weights.json"));
+  EXPECT_TRUE(ContainsFileNamed(extractedDir, "tagged_weights.json"));
+}
+
 // A sensor params file that cannot be parsed still archives. The archive mirrors the assets it was
 // built from, broken ones included: the unparseable file is bundled as-is, so loading from the
 // archive fails at the same parse that loading from the source tree does. Refusing to archive would

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include "bot_path_resolution.h"
 #include "mjcf_utils.h"
 #include "urdf_utils.h"
 
@@ -392,6 +393,18 @@ std::filesystem::path superdex::robotics::ResolveBotPath(
   auto resolved = ResolveBotPathUnlogged(input, basePath, maxParentDepth, error);
   if (!error.IsOK()) {
     MOCHI_LOG_ERROR("Error resolving bot path: %s", std::string(input).c_str());
+  }
+  return resolved;
+}
+
+std::optional<std::filesystem::path> superdex::robotics::TryResolveBotPath(
+    std::string_view input,
+    std::filesystem::path const& basePath,
+    int maxParentDepth) {
+  Error error;
+  auto resolved = ResolveBotPathUnlogged(input, basePath, maxParentDepth, error);
+  if (!error.IsOK()) {
+    return std::nullopt;
   }
   return resolved;
 }

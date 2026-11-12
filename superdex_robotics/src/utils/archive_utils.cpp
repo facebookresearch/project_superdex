@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "bot_path_resolution.h"
+
 #include <superdex_robotics/core/loader.h>
 #include <superdex_robotics/scene/bot_scene.h>
 #include <superdex_robotics/utils/archive_utils.h>
@@ -244,26 +246,24 @@ static void NoteMissingAsset(DynamicArray<DynamicString>& warnings, std::string 
   warnings.push_back(DynamicString(message));
 }
 
-// Collect files referenced from within a sensor's params (.superdex_sensor)
-// file. Sensor params reference companion assets by paths relative to the
-// params file's directory -- a learned sensor naming its weights file, say --
-// and without these, a sensor declared in the archive cannot load. We walk the params JSON and
-// collect any string that resolves to an existing file relative to the params directory. This is
-// type-agnostic, so it covers every sensor type (including those whose params struct lives in a
-// library the archiver does not link) without per-type knowledge here.
-//
-// Limitations, both acceptable in practice: (1) only params-dir-relative
-// references are discovered (the convention sensor params use); a "//root"- or
-// "@tag"-relative reference would be missed. (2) Any string that happens to
-// resolve to an existing file is collected, so an incidental value could be
-// over-collected — harmless (extra bytes only).
-//
-// A params file that cannot be parsed warns and contributes nothing rather than
-// failing the archive. The archive's job is to mirror the assets it was built
-// from, broken ones included: the file itself is still bundled by the caller, so
-// loading from the archive fails exactly where loading from the source tree
-// does, at the same parse. Failing here instead would make a repo that loads
-// badly impossible to archive at all, and the two would stop agreeing.
+/* @brief Collect files referenced from within a sensor's params (.superdex_sensor)
+ * file. Sensor params reference companion assets by bot path, resolved against
+ * the params file -- a learned sensor naming its weights file, say -- and
+ * without these, a sensor declared in the archive cannot load. We walk the params JSON and
+ * collect any string that resolves, as a bot path from the params file, to an existing file. This
+ * is type-agnostic, so it covers every sensor type (including those whose params struct lives in a
+ * library the archiver does not link) without per-type knowledge here.
+ *
+ * Limitation, acceptable in practice: any string that happens to resolve to an
+ * existing file is collected, so an incidental value could be over-collected —
+ * harmless (extra bytes only).
+ *
+ * A params file that cannot be parsed warns and contributes nothing rather than
+ * failing the archive. The archive's job is to mirror the assets it was built
+ * from, broken ones included: the file itself is still bundled by the caller, so
+ * loading from the archive fails exactly where loading from the source tree
+ * does, at the same parse. Failing here instead would make a repo that loads
+ * badly impossible to archive at all, and the two would stop agreeing. */
 static void CollectSensorParamsReferences(
     std::filesystem::path const& paramsFile,
     std::set<std::filesystem::path>& collectedFiles,
@@ -280,7 +280,6 @@ static void CollectSensorParamsReferences(
     return;
   }
 
-  auto const baseDir = paramsFile.parent_path();
   std::vector<picojson::value const*> pending{&json};
   while (!pending.empty()) {
     picojson::value const* const value = pending.back();
@@ -294,11 +293,13 @@ static void CollectSensorParamsReferences(
         pending.push_back(&element);
       }
     } else if (value->is<std::string>()) {
-      // An empty string resolves to baseDir (a directory), which the
-      // is_regular_file check below correctly rejects — no empty guard needed.
-      auto const candidate = NormalizeBotPath(baseDir / value->get<std::string>());
-      if (std::filesystem::is_regular_file(candidate)) {
-        collectedFiles.insert(candidate);
+      // Most strings are not paths at all; those that do not resolve are skipped, and an empty
+      // string resolves to nothing.
+      auto const candidate =
+          TryResolveBotPath(value->get<std::string>(), paramsFile, kBotPathMaxParentDepth);
+      if (candidate.has_value() && !candidate->empty() &&
+          std::filesystem::is_regular_file(*candidate)) {
+        collectedFiles.insert(*candidate);
       }
     }
   }
