@@ -873,27 +873,38 @@ std::string ToBotArchivePathText(std::string const& botPath) {
   return botPath.substr(0, botPath.size() - extension.size()) + std::string(kBotArchiveExtension);
 }
 
-// Points every raw bot path in a .superdex_scene JSON document at its archive (see
-// ToBotArchivePath), keeping the path's relative, //-rooted or tagged form.
+/* Points the raw bot path of every entry in `entries[].path` at its archive (see ToBotArchivePath),
+ * keeping the path's relative, //-rooted or tagged form. Entries naming anything else are left
+ * alone. */
+void RewriteRawBotPathsIn(picojson::object& parent, std::string const& entries) {
+  auto const list = parent.find(entries);
+  if (list == parent.end() || !list->second.is<picojson::array>()) {
+    return;
+  }
+  for (auto& item : list->second.get<picojson::array>()) {
+    if (!item.is<picojson::object>()) {
+      continue;
+    }
+    auto& entry = item.get<picojson::object>();
+    auto const path = entry.find("path");
+    if (path != entry.end() && path->second.is<std::string>() &&
+        IsBotPath(path->second.get<std::string>())) {
+      path->second = picojson::value(ToBotArchivePathText(path->second.get<std::string>()));
+    }
+  }
+}
+
+/* Points every raw bot path in a .superdex_scene JSON document -- scene bots and bot
+ * spawnables -- at its archive. */
 void RewriteRawBotPaths(picojson::value& sceneJson) {
   if (!sceneJson.is<picojson::object>()) {
     return;
   }
-  auto& scene = sceneJson.get<picojson::object>();
-  auto const bots = scene.find("bots");
-  if (bots == scene.end() || !bots->second.is<picojson::array>()) {
-    return;
-  }
-  for (auto& bot : bots->second.get<picojson::array>()) {
-    if (!bot.is<picojson::object>()) {
-      continue;
-    }
-    auto& entry = bot.get<picojson::object>();
-    auto const path = entry.find("path");
-    if (path != entry.end() && path->second.is<std::string>() &&
-        !IsBotArchivePath(path->second.get<std::string>())) {
-      path->second = picojson::value(ToBotArchivePathText(path->second.get<std::string>()));
-    }
+  auto& root = sceneJson.get<picojson::object>();
+  RewriteRawBotPathsIn(root, "bots");
+  auto const scene = root.find("scene");
+  if (scene != root.end() && scene->second.is<picojson::object>()) {
+    RewriteRawBotPathsIn(scene->second.get<picojson::object>(), "spawnablePrefabs");
   }
 }
 
@@ -901,9 +912,8 @@ void RewriteRawBotPaths(picojson::value& sceneJson) {
 
 /* Collect `sceneCanonical` (already loaded as `prefab`, paths absolute) and every file it
  * references: the base scene's prefab tree, spawnables, bots, controller params, and scene sensor
- * params with their companion assets. Bot archives are opaque; a raw bot stands in for the bot
- * archive ArchiveBotScene generates for it, and a raw bot given as a spawnable is walked as a
- * prefab. */
+ * params with their companion assets. Bot archives are opaque; a raw bot, as a scene bot or a
+ * spawnable, stands in for the bot archive ArchiveBotScene generates for it. */
 static void CollectBotSceneDependencies(
     std::filesystem::path const& sceneCanonical,
     BotScenePrefab const& prefab,
@@ -933,6 +943,8 @@ static void CollectBotSceneDependencies(
     auto const spawnPathString = spawnPath.generic_string();
     if (IsBotArchivePath(spawnPathString)) {
       collectedFiles.insert(spawnPath);
+    } else if (IsBotPath(spawnPathString)) {
+      collectedFiles.insert(ToBotArchivePath(spawnPath));
     } else {
       CollectScenePrefabDependencies(
           spawnPath, spawnPath.parent_path().string(), collectedFiles, error);
@@ -1002,8 +1014,7 @@ void superdex::robotics::ArchiveBotScene(ArchiveParams const& params, Error& err
   // Raw bots are archived on the fly. Each generated archive is stored where it would sit beside
   // its raw bot, so the archived scene only changes those bots' path extensions and every relative
   // or tagged path still resolves after extraction. Nothing is written beside the sources.
-  std::optional<mochi::TempDirCleanup> generatedDir;
-  std::map<std::filesystem::path, std::filesystem::path> generatedArchives;
+  std::set<std::filesystem::path> rawBotPaths;
   for (auto const& bot : prefab.bots) {
     if (IsBotArchivePath(bot.path)) {
       continue;
@@ -1013,11 +1024,16 @@ void superdex::robotics::ArchiveBotScene(ArchiveParams const& params, Error& err
         error,
         "bots[].path entries must be .superdex_bot or .superdex_bot_archive files.");
     MOCHI_ERROR_RETURN(error);
-    auto const botPath = NormalizeBotPath(std::string(bot.path));
-    auto const botArchivePath = ToBotArchivePath(botPath);
-    if (generatedArchives.contains(botArchivePath)) {
-      continue;
+    rawBotPaths.insert(NormalizeBotPath(std::string(bot.path)));
+  }
+  for (auto const& spawnPrefab : prefab.scene.spawnablePrefabs) {
+    if (IsBotPath(spawnPrefab.path)) {
+      rawBotPaths.insert(NormalizeBotPath(std::string(spawnPrefab.path)));
     }
+  }
+  std::optional<mochi::TempDirCleanup> generatedDir;
+  std::map<std::filesystem::path, std::filesystem::path> generatedArchives;
+  for (auto const& botPath : rawBotPaths) {
     if (!generatedDir.has_value()) {
       generatedDir.emplace(mochi::CreateTempDirectory("superdex_scene_archive", error));
       MOCHI_ERROR_RETURN(error);
@@ -1030,7 +1046,7 @@ void superdex::robotics::ArchiveBotScene(ArchiveParams const& params, Error& err
     botParams.comment = params.comment;
     ArchiveBot(botParams, error);
     MOCHI_ERROR_RETURN(error);
-    generatedArchives.emplace(botArchivePath, generated);
+    generatedArchives.emplace(ToBotArchivePath(botPath), generated);
   }
 
   auto const dstPath = std::filesystem::path(std::string(params.dst));
