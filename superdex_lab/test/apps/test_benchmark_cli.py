@@ -21,7 +21,7 @@ from collections.abc import Callable, Iterator
 from types import SimpleNamespace
 from unittest import mock
 
-from arvr.projects.superdex.superdex_lab.apps.envs import benchmark, run_sample
+from apps.envs import benchmark, run_sample
 
 _ENV_ID = "superdex_gym/CartPole-v0"
 

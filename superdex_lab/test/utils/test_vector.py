@@ -12,15 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pathlib
-import sys
-
-# Prepend path to root directory to allow importing the test package.
-TEST_ROOT_PATH = pathlib.Path(__file__).parent.parent.resolve()
-sys.path.insert(0, str(TEST_ROOT_PATH))
-
-########################################################################################
-
 import unittest
 
 from gymnasium.vector import AutoresetMode

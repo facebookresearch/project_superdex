@@ -21,7 +21,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from parameterized import parameterized
 from superdex.lab.rllib.recipe_manifest import (
     load_recipe_manifest,
     load_recipes,
@@ -88,26 +87,23 @@ class RecipeManifestTest(unittest.TestCase):
             with self.subTest(env_id=recipe.env_id):
                 self.assertNotIn("env_config", recipe.config)
 
-    @parameterized.expand(
-        (
+    def test_manifest_rejects_recipe_path_escape(self) -> None:
+        for name, relative_path in (
             ("posix_parent", "../private.json"),
             ("windows_parent", "..\\private.json"),
             ("posix_absolute", "/private.json"),
             ("windows_absolute", "C:\\private.json"),
             ("windows_drive_relative", "C:private.json"),
             ("windows_unc", "\\\\server\\share\\private.json"),
-        )
-    )
-    def test_manifest_rejects_recipe_path_escape(
-        self, _name: str, relative_path: str
-    ) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            manifest_path = _write_manifest(
-                Path(temporary), slug="test", relative_path=relative_path
-            )
+        ):
+            with self.subTest(name):
+                with tempfile.TemporaryDirectory() as temporary:
+                    manifest_path = _write_manifest(
+                        Path(temporary), slug="test", relative_path=relative_path
+                    )
 
-            with self.assertRaisesRegex(ValueError, "must stay below"):
-                load_recipe_manifest(manifest_path, "train")
+                    with self.assertRaisesRegex(ValueError, "must stay below"):
+                        load_recipe_manifest(manifest_path, "train")
 
     def test_manifest_loads_resolved_nested_recipe(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -221,8 +217,8 @@ class RecipeManifestTest(unittest.TestCase):
             self.assertNotIn("/", recipe.slug)
             self.assertNotIn("\\", recipe.slug)
 
-    @parameterized.expand(
-        (
+    def test_manifest_rejects_unsafe_slug(self) -> None:
+        for name, slug in (
             ("dot", "."),
             ("dot_dot", ".."),
             ("posix_separator", "nested/path"),
@@ -256,14 +252,13 @@ class RecipeManifestTest(unittest.TestCase):
             ("reserved_lpt_superscript_one_extension", "LPT\u00b9.json"),
             ("reserved_lpt_superscript_two", "lpt\u00b2"),
             ("reserved_lpt_superscript_three_extension", "LpT\u00b3.txt"),
-        )
-    )
-    def test_manifest_rejects_unsafe_slug(self, _name: str, slug: str) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            manifest_path = _write_manifest(Path(temporary), slug=slug)
+        ):
+            with self.subTest(name):
+                with tempfile.TemporaryDirectory() as temporary:
+                    manifest_path = _write_manifest(Path(temporary), slug=slug)
 
-            with self.assertRaisesRegex(ValueError, "filesystem-safe"):
-                load_recipe_manifest(manifest_path, "train")
+                    with self.assertRaisesRegex(ValueError, "filesystem-safe"):
+                        load_recipe_manifest(manifest_path, "train")
 
     def test_manifest_rejects_empty_slug(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -272,20 +267,19 @@ class RecipeManifestTest(unittest.TestCase):
             with self.assertRaisesRegex(TypeError, "non-empty slug"):
                 load_recipe_manifest(manifest_path, "train")
 
-    @parameterized.expand(
-        (
+    def test_manifest_accepts_portable_slug(self) -> None:
+        for name, slug in (
             ("snake_case", "ant_no_contact"),
             ("hyphen", "cart-pole"),
             ("ordinary_extension", "experiment.v2"),
             ("reserved_prefix", "console"),
             ("non_reserved_com", "com10"),
             ("non_reserved_lpt", "lpt0"),
-        )
-    )
-    def test_manifest_accepts_portable_slug(self, _name: str, slug: str) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            manifest_path = _write_manifest(Path(temporary), slug=slug)
+        ):
+            with self.subTest(name):
+                with tempfile.TemporaryDirectory() as temporary:
+                    manifest_path = _write_manifest(Path(temporary), slug=slug)
 
-            recipes = load_recipe_manifest(manifest_path, "train")
+                    recipes = load_recipe_manifest(manifest_path, "train")
 
-            self.assertEqual({}, recipes)
+                    self.assertEqual({}, recipes)

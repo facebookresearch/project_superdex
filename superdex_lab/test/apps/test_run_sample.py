@@ -15,7 +15,7 @@
 import unittest
 from unittest import mock
 
-from arvr.projects.superdex.superdex_lab.apps.envs import run_sample
+from apps.envs import run_sample
 
 
 def _resolve(

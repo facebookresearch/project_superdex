@@ -14,7 +14,7 @@
 
 import unittest
 
-from arvr.projects.superdex.superdex_lab.apps.envs.sample_runner import sample_runner
+from apps.envs.sample_runner import sample_runner
 
 
 class _FakeEnv:

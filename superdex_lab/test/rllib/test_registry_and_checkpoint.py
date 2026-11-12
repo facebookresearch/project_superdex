@@ -18,16 +18,13 @@ import unittest
 from unittest import mock
 
 import gymnasium as gym
-from arvr.projects.superdex.superdex_lab.apps.rllib import utils as rllib_utils
-from arvr.projects.superdex.superdex_lab.apps.rllib.checkpoint_env import (
+from apps.rllib import utils as rllib_utils
+from apps.rllib.checkpoint_env import (
     make_checkpoint_env,
     prepare_checkpoint_env_config,
     resolve_checkpoint_env_spec,
 )
-from arvr.projects.superdex.superdex_lab.apps.rllib.utils import (
-    _superdex_env_creator,
-    register_envs,
-)
+from apps.rllib.utils import _superdex_env_creator, register_envs
 from gymnasium.envs.registration import EnvSpec
 from superdex.lab.gym.registration import register_envs as register_gym_envs
 from test.envs.registry_test_utils import restore_gym_registry, snapshot_gym_registry
