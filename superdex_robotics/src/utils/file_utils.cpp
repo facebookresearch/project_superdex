@@ -298,7 +298,8 @@ ParsedRootFile superdex::robotics::ParseRootFile(
   return result;
 }
 
-std::filesystem::path superdex::robotics::ResolveBotPath(
+/* @brief @ref ResolveBotPath without its failure log. */
+static std::filesystem::path ResolveBotPathUnlogged(
     std::string_view input,
     std::filesystem::path const& basePath,
     int maxParentDepth,
@@ -311,7 +312,6 @@ std::filesystem::path superdex::robotics::ResolveBotPath(
   // A file-relative path may ascend at most maxParentDepth parent directories (0 = descendant-only,
   // the default for bots). // and @tag remainders remain strictly descendant (checked per-branch).
   if (CountParentDirComponents(input) > maxParentDepth) {
-    MOCHI_LOG_ERROR("Error resolving bot path: %s", std::string(input).c_str());
     MOCHI_ERROR_SET(
         error, "Bot path ascends beyond the permitted number of parent ('..') directories.");
     return {};
@@ -327,7 +327,6 @@ std::filesystem::path superdex::robotics::ResolveBotPath(
 
     auto rootDir = FindBotsRoot(basePath);
     if (!rootDir) {
-      MOCHI_LOG_ERROR("Error resolving bot path: %s", std::string(input).c_str());
       MOCHI_ERROR_SET(error, "No .superdex_root marker found for tagged path.");
       return {};
     }
@@ -335,7 +334,6 @@ std::filesystem::path superdex::robotics::ResolveBotPath(
     MOCHI_ERROR_RETURN(error, {});
     auto it = parsed.tags.find(std::string(tagName));
     if (it == parsed.tags.end()) {
-      MOCHI_LOG_ERROR("Error resolving bot path: %s", std::string(input).c_str());
       MOCHI_ERROR_SET(error, "Tag is not defined in .superdex_root.");
       return {};
     }
@@ -343,13 +341,11 @@ std::filesystem::path superdex::robotics::ResolveBotPath(
       return it->second;
     }
     if (std::filesystem::path(remainder).is_absolute()) {
-      MOCHI_LOG_ERROR("Error resolving bot path: %s", std::string(input).c_str());
       MOCHI_ERROR_SET(error, "Tagged-path remainder must not be an absolute path.");
       return {};
     }
     // maxParentDepth relaxes only the file-relative form; a @tag reference stays descendant-only.
     if (ContainsParentDirComponent(remainder)) {
-      MOCHI_LOG_ERROR("Error resolving bot path: %s", std::string(input).c_str());
       MOCHI_ERROR_SET(error, "Tagged-path remainder must not contain '..' components.");
       return {};
     }
@@ -359,19 +355,16 @@ std::filesystem::path superdex::robotics::ResolveBotPath(
   if (input.starts_with(kRootPrefix)) {
     auto rootDir = FindBotsRoot(basePath);
     if (!rootDir) {
-      MOCHI_LOG_ERROR("Error resolving bot path: %s", std::string(input).c_str());
       MOCHI_ERROR_SET(error, "Path uses // prefix but no marker found");
       return {};
     }
     auto remainder = input.substr(kRootPrefix.size());
     if (std::filesystem::path(remainder).is_absolute()) {
-      MOCHI_LOG_ERROR("Error resolving bot path: %s", std::string(input).c_str());
       MOCHI_ERROR_SET(error, "// root-prefixed path remainder must not be an absolute path.");
       return {};
     }
     // maxParentDepth relaxes only the file-relative form; a // reference stays descendant-only.
     if (ContainsParentDirComponent(remainder)) {
-      MOCHI_LOG_ERROR("Error resolving bot path: %s", std::string(input).c_str());
       MOCHI_ERROR_SET(error, "// root-prefixed path remainder must not contain '..' components.");
       return {};
     }
@@ -380,7 +373,6 @@ std::filesystem::path superdex::robotics::ResolveBotPath(
 
   std::filesystem::path inputAsPath(input);
   if (inputAsPath.is_absolute()) {
-    MOCHI_LOG_ERROR("Error resolving bot path: %s", std::string(input).c_str());
     MOCHI_ERROR_SET(
         error, "Absolute bot paths are not allowed; use //, @tag/, or a file-relative path.");
     return {};
@@ -389,6 +381,19 @@ std::filesystem::path superdex::robotics::ResolveBotPath(
   // Plain relative path; join with basePath's directory.
   auto const dir = GetDirectoryPath(basePath);
   return NormalizeBotPath(dir / inputAsPath);
+}
+
+std::filesystem::path superdex::robotics::ResolveBotPath(
+    std::string_view input,
+    std::filesystem::path const& basePath,
+    int maxParentDepth,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error, {});
+  auto resolved = ResolveBotPathUnlogged(input, basePath, maxParentDepth, error);
+  if (!error.IsOK()) {
+    MOCHI_LOG_ERROR("Error resolving bot path: %s", std::string(input).c_str());
+  }
+  return resolved;
 }
 
 DynamicString superdex::robotics::UnresolveBotPath(
