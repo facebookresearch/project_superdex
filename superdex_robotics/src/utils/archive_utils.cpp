@@ -899,6 +899,88 @@ void RewriteRawBotPaths(picojson::value& sceneJson) {
 
 } // namespace
 
+/* Collect `sceneCanonical` (already loaded as `prefab`, paths absolute) and every file it
+ * references: the base scene's prefab tree, spawnables, bots, controller params, and scene sensor
+ * params with their companion assets. Bot archives are opaque; a raw bot stands in for the bot
+ * archive ArchiveBotScene generates for it, and a raw bot given as a spawnable is walked as a
+ * prefab. */
+static void CollectBotSceneDependencies(
+    std::filesystem::path const& sceneCanonical,
+    BotScenePrefab const& prefab,
+    std::set<std::filesystem::path>& collectedFiles,
+    DynamicArray<DynamicString>& warnings,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error);
+
+  // 1. The .superdex_scene file itself.
+  collectedFiles.insert(sceneCanonical);
+
+  // 2. Base scene and its transitive shape/prefab dependencies, resolved against the same root
+  //    BotScene loads them with.
+  if (!prefab.scene.baseScene.empty()) {
+    auto const baseScenePath = NormalizeBotPath(std::string(prefab.scene.baseScene));
+    auto const baseRoot = GetBotSceneBaseRoot(
+        sceneCanonical.generic_string(),
+        std::string_view(prefab.scene.baseScene.c_str(), prefab.scene.baseScene.size()));
+    CollectScenePrefabDependencies(baseScenePath, baseRoot, collectedFiles, error);
+    MOCHI_ERROR_RETURN(error);
+  }
+
+  // 3. Spawnable prefab dependencies. BotScene::SpawnPrefabInstance roots each spawnable at its
+  //    own directory.
+  for (auto const& spawnPrefab : prefab.scene.spawnablePrefabs) {
+    auto const spawnPath = NormalizeBotPath(std::string(spawnPrefab.path));
+    auto const spawnPathString = spawnPath.generic_string();
+    if (IsBotArchivePath(spawnPathString)) {
+      collectedFiles.insert(spawnPath);
+    } else {
+      CollectScenePrefabDependencies(
+          spawnPath, spawnPath.parent_path().string(), collectedFiles, error);
+      MOCHI_ERROR_RETURN(error);
+    }
+  }
+
+  // 4. Bot archive files (opaque blobs — we do not walk their dependency trees).
+  for (auto const& bot : prefab.bots) {
+    auto const botPath = NormalizeBotPath(std::string(bot.path));
+    collectedFiles.insert(IsBotArchivePath(bot.path) ? botPath : ToBotArchivePath(botPath));
+  }
+
+  // 5. Controller param files.
+  for (auto const& bot : prefab.bots) {
+    for (auto const& ctrl : bot.controllers) {
+      if (ctrl.params.empty() ||
+          IsInlineJson(std::string_view(ctrl.params.c_str(), ctrl.params.size()))) {
+        // Inline JSON has no backing file to archive.
+        continue;
+      }
+      auto const paramsPath = NormalizeBotPath(std::string(ctrl.params));
+      if (std::filesystem::is_regular_file(paramsPath)) {
+        collectedFiles.insert(paramsPath);
+      }
+    }
+  }
+
+  // 6. Scene-level sensor param files and their companion assets, handled like link sensors.
+  for (auto const& sensor : prefab.sensors) {
+    if (sensor.params.empty() ||
+        IsInlineJson(std::string_view(sensor.params.c_str(), sensor.params.size()))) {
+      continue;
+    }
+    auto const paramsPath = NormalizeBotPath(std::string(sensor.params));
+    if (!std::filesystem::exists(paramsPath)) {
+      NoteMissingAsset(
+          warnings,
+          "scene sensor params '" + paramsPath.generic_string() + "' on sensor '" +
+              std::string(sensor.name) + "' do not exist; archived without them");
+      continue;
+    }
+    collectedFiles.insert(paramsPath);
+    CollectSensorParamsReferences(paramsPath, collectedFiles, warnings, error);
+    MOCHI_ERROR_RETURN(error);
+  }
+}
+
 void superdex::robotics::ArchiveBotScene(ArchiveParams const& params, Error& error) {
   MOCHI_ERROR_RETURN(error);
   MOCHI_ERROR_IF(!IsBotScenePath(params.src), error, "Source must be a .superdex_scene file.");
@@ -957,75 +1039,9 @@ void superdex::robotics::ArchiveBotScene(ArchiveParams const& params, Error& err
 
   // Collect all transitive dependencies.
   std::set<std::filesystem::path> collectedFiles;
-
-  // 1. The .superdex_scene file itself.
-  collectedFiles.insert(sceneCanonical);
-
-  // 2. Base scene and its transitive shape/prefab dependencies, resolved against the same root
-  //    BotScene loads them with.
-  if (!prefab.scene.baseScene.empty()) {
-    auto const baseScenePath = NormalizeBotPath(std::string(prefab.scene.baseScene));
-    auto const baseRoot = GetBotSceneBaseRoot(
-        sceneCanonical.generic_string(),
-        std::string_view(prefab.scene.baseScene.c_str(), prefab.scene.baseScene.size()));
-    CollectScenePrefabDependencies(baseScenePath, baseRoot, collectedFiles, error);
-    MOCHI_ERROR_RETURN(error);
-  }
-
-  // 3. Spawnable prefab dependencies. BotScene::SpawnPrefabInstance roots each spawnable at its
-  //    own directory.
-  for (auto const& spawnPrefab : prefab.scene.spawnablePrefabs) {
-    auto const spawnPath = NormalizeBotPath(std::string(spawnPrefab.path));
-    auto const spawnPathString = spawnPath.generic_string();
-    if (IsBotArchivePath(spawnPathString)) {
-      collectedFiles.insert(spawnPath);
-    } else {
-      CollectScenePrefabDependencies(
-          spawnPath, spawnPath.parent_path().string(), collectedFiles, error);
-      MOCHI_ERROR_RETURN(error);
-    }
-  }
-
-  // 4. Bot archive files (opaque blobs — we do not walk their dependency trees).
-  for (auto const& bot : prefab.bots) {
-    auto const botPath = NormalizeBotPath(std::string(bot.path));
-    collectedFiles.insert(IsBotArchivePath(bot.path) ? botPath : ToBotArchivePath(botPath));
-  }
-
-  // 5. Controller param files.
-  for (auto const& bot : prefab.bots) {
-    for (auto const& ctrl : bot.controllers) {
-      if (ctrl.params.empty() ||
-          IsInlineJson(std::string_view(ctrl.params.c_str(), ctrl.params.size()))) {
-        // Inline JSON has no backing file to archive.
-        continue;
-      }
-      auto const paramsPath = NormalizeBotPath(std::string(ctrl.params));
-      if (std::filesystem::is_regular_file(paramsPath)) {
-        collectedFiles.insert(paramsPath);
-      }
-    }
-  }
-
-  // 6. Scene-level sensor param files and their companion assets, handled like link sensors.
-  DynamicArray<DynamicString> sensorWarnings;
-  for (auto const& sensor : prefab.sensors) {
-    if (sensor.params.empty() ||
-        IsInlineJson(std::string_view(sensor.params.c_str(), sensor.params.size()))) {
-      continue;
-    }
-    auto const paramsPath = NormalizeBotPath(std::string(sensor.params));
-    if (!std::filesystem::exists(paramsPath)) {
-      NoteMissingAsset(
-          sensorWarnings,
-          "scene sensor params '" + paramsPath.generic_string() + "' on sensor '" +
-              std::string(sensor.name) + "' do not exist; archived without them");
-      continue;
-    }
-    collectedFiles.insert(paramsPath);
-    CollectSensorParamsReferences(paramsPath, collectedFiles, sensorWarnings, error);
-    MOCHI_ERROR_RETURN(error);
-  }
+  DynamicArray<DynamicString> warnings;
+  CollectBotSceneDependencies(sceneCanonical, prefab, collectedFiles, warnings, error);
+  MOCHI_ERROR_RETURN(error);
 
   // Map files to roots and compute deepest common ancestor (same logic as ArchiveBot).
   std::map<std::filesystem::path, std::filesystem::path> fileToRoot;
