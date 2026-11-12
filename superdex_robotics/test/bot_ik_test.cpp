@@ -1269,28 +1269,39 @@ TEST_F(BotIKTest, Couplings_RuntimeValidation_ExactUniqueSingleDofNamesAndAllVal
     for (int fault = 0; fault < 11; ++fault) {
       auto coupling = FingerCoupling();
       coupling.enabled = enabled;
-      if (fault == 0)
+      if (fault == 0) {
         coupling.jointA.clear();
-      if (fault == 1)
+      }
+      if (fault == 1) {
         coupling.jointB.clear();
-      if (fault == 2)
+      }
+      if (fault == 2) {
         coupling.jointB = coupling.jointA;
-      if (fault == 3)
+      }
+      if (fault == 3) {
         coupling.ratio = 0_r;
-      if (fault == 4)
+      }
+      if (fault == 4) {
         coupling.ratio = std::numeric_limits<real>::infinity();
-      if (fault == 5)
+      }
+      if (fault == 5) {
         coupling.ratio = std::numeric_limits<real>::quiet_NaN();
-      if (fault == 6)
+      }
+      if (fault == 6) {
         coupling.stiffness = -1_r;
-      if (fault == 7)
+      }
+      if (fault == 7) {
         coupling.stiffness = std::numeric_limits<real>::infinity();
-      if (fault == 8)
+      }
+      if (fault == 8) {
         coupling.stiffness = std::numeric_limits<real>::quiet_NaN();
-      if (fault == 9)
+      }
+      if (fault == 9) {
         coupling.offset = std::numeric_limits<real>::infinity();
-      if (fault == 10)
+      }
+      if (fault == 10) {
         coupling.offset = std::numeric_limits<real>::quiet_NaN();
+      }
       DynamicArray<BotIKJointCouplingParams> const couplings{coupling};
       BotIK::ValidateJointCouplings(prefab, couplings, ExpectNotOK{});
       EXPECT_EQ(
@@ -1333,8 +1344,9 @@ TEST_F(BotIKTest, Couplings_RuntimeValidation_ExactUniqueSingleDofNamesAndAllVal
 
 TEST_F(BotIKTest, Couplings_BatchPrevalidationAndLoaderFailure_NoMutationOrPartialPublishedActor) {
   auto prefab = MakeFinger();
-  for (auto& link : prefab.links)
+  for (auto& link : prefab.links) {
     link.shapeFile = "test_tet";
+  }
   auto const original = prefab;
   auto params = TestCreateParams();
   params.excludeCollisionShapes = false;

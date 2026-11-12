@@ -1463,28 +1463,37 @@ TEST(IKConfigTest, Couplings_AllEntriesRequireValidValuesAndUniqueUnorderedPairs
       coupling.jointA = "PIP";
       coupling.jointB = "DIP";
       coupling.enabled = enabled;
-      if (fault == 0)
+      if (fault == 0) {
         coupling.jointA.clear();
-      if (fault == 1)
+      }
+      if (fault == 1) {
         coupling.jointB.clear();
-      if (fault == 2)
+      }
+      if (fault == 2) {
         coupling.jointB = coupling.jointA;
-      if (fault == 3)
+      }
+      if (fault == 3) {
         coupling.ratio = 0_r;
-      if (fault == 4)
+      }
+      if (fault == 4) {
         coupling.ratio = std::numeric_limits<real>::infinity();
-      if (fault == 5)
+      }
+      if (fault == 5) {
         coupling.ratio = std::numeric_limits<real>::quiet_NaN();
-      if (fault == 6)
+      }
+      if (fault == 6) {
         coupling.stiffness = -1_r;
-      if (fault == 7)
+      }
+      if (fault == 7) {
         coupling.stiffness = std::numeric_limits<real>::infinity();
+      }
       auto invalid = initial;
       invalid.jointCouplings = {coupling};
       if (fault >= 8) {
         auto duplicate = coupling;
-        if (fault == 9)
+        if (fault == 9) {
           std::swap(duplicate.jointA, duplicate.jointB);
+        }
         duplicate.enabled = false;
         duplicate.stiffness = 0_r;
         invalid.jointCouplings.push_back(duplicate);
