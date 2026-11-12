@@ -111,6 +111,34 @@ TEST_F(MochiSoftActorScene, GetSetDisplacements) {
   EXPECT_SPAN_EQ(_actor->GetDisplacements(ErrorAssert{}), MakeConstSpan(displ));
 }
 
+TEST_F(MochiSoftActorScene, RecenteringPreservesWorldNodePositions) {
+  auto const reference = Unflatten<Real3 const>(_actor->GetMesh().coordinates);
+  Real3 const displacement{0.01_r, 0.02_r, -0.03_r};
+  DynamicArray<Real3> const displacements(reference.size(), displacement);
+  Quaternion const rotation = Quaternion::FromAxisAngle(Normalize(Real3{1_r, -2_r, 3_r}), 0.7_r);
+  real constexpr kRoundoffTol = 32_r * std::numeric_limits<real>::epsilon();
+
+  _actor->SetRootTransform(TransformRT{rotation, 1e4_r * Real3{3_r, -1_r, 2_r}}, test::ExpectOK{});
+  _actor->SetDisplacements(Flatten(MakeConstSpan(displacements)), test::ExpectOK{});
+  TransformRT const oldRoot = _actor->GetRootTransform();
+
+  ASSERT_TRUE(
+      ecs::TryInvokeOnEntity(
+          &soft::RecenterSolutionUsingRigidTransformEval, GetRegistry(), GetEntity(_actor)));
+
+  TransformRT const newRoot = _actor->GetRootTransform();
+  EXPECT_NE(newRoot, oldRoot);
+  auto const recentered = Unflatten<Real3 const>(_actor->GetDisplacements(test::ExpectOK{}));
+
+  // The comparison frame's origin is the old root translation.
+  for (int node = 0; node < isize(reference); ++node) {
+    Real3 const before = oldRoot.GetRotation() * (reference[node] + displacement);
+    Real3 const after = (newRoot.GetTranslation() - oldRoot.GetTranslation()) +
+        newRoot.GetRotation() * (reference[node] + recentered[node]);
+    EXPECT_NEAR_TOL(after, before, kRoundoffTol * Max(1_r, Norm(before)));
+  }
+}
+
 TEST_F(MochiSoftActorScene, GetSetNodeVelocitiesLocal) {
   ColumnVector<real> velocities(kNumDofsSoft);
   velocities.SetRandom(123);
@@ -984,7 +1012,6 @@ TEST_P(MochiSoftRecenteringTest, WorldSpaceResultsAreIndependentOfRecentering) {
   int constexpr kNumSteps = 6;
   int numRecenteredSteps = 0;
   for (int step = 0; step < kNumSteps; ++step) {
-    SCOPED_TRACE("Step " + std::to_string(step));
     TransformRT const rootBeforeStep = recentered->GetRootTransform();
     _scene->Step(kDt);
     if (!NearEqual(recentered->GetRootTransform(), rootBeforeStep, 0_r)) {

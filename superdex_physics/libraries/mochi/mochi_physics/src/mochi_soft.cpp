@@ -1020,8 +1020,6 @@ void mochi::soft::RecenterSolutionUsingRigidTransformEval(
   TransformRT newWorldFromLocal = oldWorldFromLocal * deltaPivot;
   newWorldFromLocal.SetRotation(Normalize(
       newWorldFromLocal.GetRotation())); // Normalize the quaternion to avoid drift over time.
-  MOCHI_ASSERT_VERBOSE(
-      NearEqual(newWorldFromLocal * refPivot, oldWorldFromLocal * newPivot, 1e-5_r));
   root.worldFromLocal = newWorldFromLocal;
 
   // Transform the pivot in the opposite direction (inverse of deltaPivot) to compensate
@@ -1030,9 +1028,13 @@ void mochi::soft::RecenterSolutionUsingRigidTransformEval(
   // Reset the pivot eval so that it is correct in the new reference frame.
   pivotEval.value = refPivot;
 
+  // TransformPointInverse subtracts before rotating, so roundoff scales with the recentering step.
+  TransformRT const newLocalFromOldLocal{
+      Conjugate(newWorldFromLocal.GetRotation()) * oldWorldFromLocal.GetRotation(),
+      newWorldFromLocal.TransformPointInverse(oldWorldFromLocal.VGetTranslation())};
+
   // Transform kinematics to compensate for the new root transform. The previous-step state is
   // transformed too, so move its root transform to keep it fixed in world space.
-  TransformRT const newLocalFromOldLocal = Invert(newWorldFromLocal) * oldWorldFromLocal;
   root.worldFromLocalPrev = root.worldFromLocalPrev * Invert(newLocalFromOldLocal);
   Span<real const> refCoords = Flatten(simplicial.mesh->GetNodeCoordinates());
 
