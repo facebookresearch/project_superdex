@@ -277,7 +277,7 @@ bool CheckTypes(
         (number <= 0 || number > std::numeric_limits<real>::max() || real(number) <= 0_r)) {
       return Fail(diagnostic, path + ": must be positive and in real precision range");
     }
-    bool const couplingNumber = path.find("jointCouplings[") == 0;
+    bool const couplingNumber = path.starts_with("jointCouplings[");
     if (couplingNumber && number != 0 &&
         (std::abs(number) > std::numeric_limits<real>::max() || real(number) == 0_r)) {
       return Fail(diagnostic, path + ": nonzero number must be in real precision range");
@@ -285,7 +285,7 @@ bool CheckTypes(
     if (couplingNumber && path.find("].ratio") != std::string::npos && number == 0) {
       return Fail(diagnostic, path + ": must be nonzero");
     }
-    bool const nonnegative = path.find("createParams.solverParams.") == 0 ||
+    bool const nonnegative = path.starts_with("createParams.solverParams.") ||
         path.find("Stiffness") != std::string::npos ||
         (couplingNumber && path.find("].stiffness") != std::string::npos);
     if (nonnegative && number < 0) {
