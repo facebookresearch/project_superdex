@@ -89,18 +89,16 @@ static bool PrefabHasArticulated(mochi::prefab::ScenePrefab const& prefab) {
   return false;
 }
 
-// Build a copy of the prefab suitable for cheap articulated forward kinematics: rigid/soft actors
-// and the contact settings that may name them are dropped, and articulated link shapes are cleared
-// (turning links into shapeless dummy links), while articulated transforms, joints, and
-// nested-prefab structure are preserved. Nested prefabs
-// are deep-cloned so the original (shared) nested prefabs are not mutated.
+// Build a copy of the prefab suitable for cheap articulated forward kinematics: only articulated
+// actors and the nested prefabs that place them are kept, so nothing else (e.g. constraints or
+// controllers naming dropped actors) can fail AddToScene. Articulated link shapes are cleared
+// (turning links into shapeless dummy links), while articulated transforms and joints are
+// preserved. Nested prefabs are deep-cloned so the original (shared) nested prefabs are not
+// mutated.
 static mochi::prefab::ScenePrefab StripArticulated(mochi::prefab::ScenePrefab const& src) {
-  mochi::prefab::ScenePrefab out = src;
-  out.actors.rigid.clear();
-  out.actors.soft.clear();
-  out.actors.softSkinned.clear();
-  out.contactFilter.reset();
-  out.contactPairParamsOverrides.reset();
+  mochi::prefab::ScenePrefab out;
+  out.actors.articulated = src.actors.articulated;
+  out.prefabs = src.prefabs;
   for (auto& art : out.actors.articulated) {
     for (auto& link : art.links) {
       link.shapeFile.clear();
@@ -581,8 +579,9 @@ static void BuildPrefabRequests(
 // copy of the prefab added to `scene` (a scratch scene) with `params`; the transforms are in the
 // world frame `params` places the prefab in (identity by default). Output is ordered to match the
 // depth-first articulated-actor traversal (nested prefabs first, then each level's articulated
-// actors). No-op (leaves `out` empty) when the prefab contains no articulated actors.
-static void ComputeArticulatedLinkTransforms(
+// actors). No-op (leaves `out` empty) when the prefab contains no articulated actors. Returns false
+// when the stripped copy cannot be instantiated or read, in which case `out` must not be used.
+[[nodiscard]] static bool ComputeArticulatedLinkTransforms(
     mochi::Scene* scene,
     mochi::prefab::ScenePrefab const& prefab,
     std::vector<ArticulatedData>& out,
@@ -590,14 +589,17 @@ static void ComputeArticulatedLinkTransforms(
   using namespace mochi;
   out.clear();
   if (!PrefabHasArticulated(prefab)) {
-    return;
+    return true;
   }
   mochi::prefab::ScenePrefab const stripped = StripArticulated(prefab);
   ErrorLog e;
   auto const result = mochi::prefab::AddToScene(stripped, scene, params, e);
+  // Remove the temporary FK actors, including any created before a failure, so the scratch scene
+  // does not accumulate state across restages.
+  MOCHI_DEFER(for (auto* actor : result.actors) { scene->DestroyActor(actor->GetHandle()); });
   if (!e.IsOK()) {
     MOCHI_LOG_ERROR("StagePrefab: failed to compute articulated forward kinematics.");
-    return;
+    return false;
   }
   auto const articulatedActors = result.Filter(ActorType::Articulated);
   out.resize(articulatedActors.size());
@@ -636,10 +638,7 @@ static void ComputeArticulatedLinkTransforms(
       out[i].names[j] = linkActor ? linkActor->GetName() : "";
     }
   }
-  // Remove the temporary FK actors so the scratch scene does not accumulate state across restages.
-  for (auto* actor : result.actors) {
-    scene->DestroyActor(actor->GetHandle());
-  }
+  return e.IsOK();
 }
 
 // Load the asset for `modelFile` and create a fresh render instance for it. `isRenderModel` selects
@@ -1076,7 +1075,9 @@ bool SceneStage::StagePrefab(
 
   // Compute articulated link forward kinematics up front; cheap no-op for rigid-only prefabs.
   std::vector<ArticulatedData> articulatedFk;
-  ComputeArticulatedLinkTransforms(_scene, prefab, articulatedFk);
+  if (!ComputeArticulatedLinkTransforms(_scene, prefab, articulatedFk)) {
+    return false;
+  }
 
   // Build the ordered staging requests by traversing the prefab tree in AddToScene order.
   std::vector<StageRequest> requests;
@@ -1129,10 +1130,10 @@ bool SceneStage::StageBotSceneImpl(
   // under the same "scene" prefab name that superdex::robotics::LoadBotScene uses, so the staged
   // actor names (and order) align with the base-scene physics actors.
   std::string const baseScenePath{scene.scene.baseScene};
-  if (auto* baseAsset = manager.FindAssetByPath<MochiPrefabAsset>(Path{baseScenePath})) {
+  auto* const baseAsset = manager.FindAssetByPath<MochiPrefabAsset>(Path{baseScenePath});
+  std::vector<ArticulatedData> baseFk;
+  if (baseAsset && ComputeArticulatedLinkTransforms(_scene, baseAsset->GetPrefab(), baseFk)) {
     auto const& basePrefab = baseAsset->GetPrefab();
-    std::vector<ArticulatedData> articulatedFk;
-    ComputeArticulatedLinkTransforms(_scene, basePrefab, articulatedFk);
     std::string_view const topSource = basePrefab.sourceFilePath.has_value()
         ? std::string_view(*basePrefab.sourceFilePath)
         : std::string_view();
@@ -1144,7 +1145,7 @@ bool SceneStage::StageBotSceneImpl(
         topSource,
         TransformSRT::Identity(),
         stageType,
-        articulatedFk,
+        baseFk,
         artCursor,
         std::string("scene"),
         -1,
@@ -1190,7 +1191,9 @@ bool SceneStage::StageBotSceneImpl(
         params.translation = worldFromSpawn.GetTranslation();
         params.applySceneSettings = false;
         std::vector<ArticulatedData> articulatedFk;
-        ComputeArticulatedLinkTransforms(_scene, spawnPrefab, articulatedFk, params);
+        if (!ComputeArticulatedLinkTransforms(_scene, spawnPrefab, articulatedFk, params)) {
+          return;
+        }
         std::string_view const source = spawnPrefab.sourceFilePath.has_value()
             ? std::string_view(*spawnPrefab.sourceFilePath)
             : std::string_view();

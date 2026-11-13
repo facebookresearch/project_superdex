@@ -334,7 +334,7 @@ struct SceneStage {
   // otherwise rebuilds. No-op if no scene is bound. `rootPath` resolves non-"./" model file
   // references.
   // Returns true if the staged objects were rebuilt (pointers invalidated), false if existing
-  // objects were reused.
+  // objects were reused or left untouched because the prefab could not be instantiated.
   bool StagePrefab(
       mochi::prefab::ScenePrefab const& prefab,
       std::string const& rootPath,
