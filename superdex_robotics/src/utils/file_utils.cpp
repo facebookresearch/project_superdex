@@ -21,6 +21,7 @@
 #include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/file_utils.h>
 #include <mochi_core/utils/overload_visitor.h>
+#include <mochi_physics/utils/mochi_path_remap.h>
 #include <superdex_robotics/utils/archive_utils.h>
 #include <superdex_robotics/utils/bot_utils.h>
 #include <superdex_robotics/utils/file_utils.h>
@@ -299,6 +300,15 @@ ParsedRootFile superdex::robotics::ParseRootFile(
   return result;
 }
 
+/* @brief The path to load for a resolved bot path, through the path remap table when one is
+ * installed. Empty when an applied asset snapshot refuses it (see @ref ApplyAssetSnapshot). */
+static std::filesystem::path RemapResolvedPath(std::filesystem::path const& resolved) {
+  if (!IsPathRemapActive()) {
+    return resolved;
+  }
+  return std::string(RemapPath(resolved.generic_string()));
+}
+
 /* @brief @ref ResolveBotPath without its failure log. */
 static std::filesystem::path ResolveBotPathUnlogged(
     std::string_view input,
@@ -390,11 +400,27 @@ std::filesystem::path superdex::robotics::ResolveBotPath(
     int maxParentDepth,
     Error& error) {
   MOCHI_ERROR_RETURN(error, {});
-  auto resolved = ResolveBotPathUnlogged(input, basePath, maxParentDepth, error);
+  auto const resolved = ResolveBotPathUnlogged(input, basePath, maxParentDepth, error);
   if (!error.IsOK()) {
     MOCHI_LOG_ERROR("Error resolving bot path: %s", std::string(input).c_str());
+    return {};
   }
-  return resolved;
+  auto remapped = RemapResolvedPath(resolved);
+  MOCHI_ERROR_IF(
+      !resolved.empty() && remapped.empty(),
+      error,
+      "The applied asset snapshot does not pin this file.");
+  return remapped;
+}
+
+std::string superdex::robotics::RemapBotFilePath(std::string_view path, Error& error) {
+  MOCHI_ERROR_RETURN(error, {});
+  std::string remapped(RemapPath(path));
+  MOCHI_ERROR_IF(
+      remapped.empty() && !path.empty(),
+      error,
+      "The applied asset snapshot does not pin this file.");
+  return remapped;
 }
 
 std::optional<std::filesystem::path> superdex::robotics::TryResolveBotPath(
@@ -402,11 +428,15 @@ std::optional<std::filesystem::path> superdex::robotics::TryResolveBotPath(
     std::filesystem::path const& basePath,
     int maxParentDepth) {
   Error error;
-  auto resolved = ResolveBotPathUnlogged(input, basePath, maxParentDepth, error);
+  auto const resolved = ResolveBotPathUnlogged(input, basePath, maxParentDepth, error);
   if (!error.IsOK()) {
     return std::nullopt;
   }
-  return resolved;
+  auto remapped = RemapResolvedPath(resolved);
+  if (!resolved.empty() && remapped.empty()) {
+    return std::nullopt;
+  }
+  return remapped;
 }
 
 DynamicString superdex::robotics::UnresolveBotPath(

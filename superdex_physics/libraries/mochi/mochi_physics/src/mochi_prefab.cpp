@@ -34,6 +34,7 @@
 #include <mochi_core/utils/span.h>
 #include <mochi_core/utils/vmatrix.h>
 #include <mochi_physics/mochi_physics_experimental.h>
+#include <mochi_physics/utils/mochi_path_remap.h>
 #include <mochi_physics/utils/mochi_prefab.h>
 
 #include <filesystem>
@@ -109,9 +110,9 @@ DynamicString prefab::GetPrefabFullPath(
     auto prefabDir = std::filesystem::path(prefabFilePath).parent_path();
     std::string_view relativePart = inputPath.substr(2); // Skip "./"
     auto resolvedPathObj = prefabDir / std::filesystem::path(relativePart);
-    return DynamicString(resolvedPathObj.string());
+    return RemapPath(resolvedPathObj.string());
   }
-  return DynamicString(path::GetFullPath(inputPath, rootForRelativePath));
+  return RemapPath(path::GetFullPath(inputPath, rootForRelativePath));
 }
 
 [[nodiscard]] static DynamicString GetPrefabPathKey(std::string_view path) {

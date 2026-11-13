@@ -26,6 +26,7 @@
 #include <mochi_core/utils/json_utils.h>
 #include <mochi_core/utils/overload_visitor.h>
 
+#include <mochi_physics/utils/mochi_path_remap.h>
 #include <mochi_physics/utils/mochi_prefab.h>
 
 #include <miniz.h>
@@ -468,6 +469,12 @@ static std::string JoinArchivePath(
 
 void superdex::robotics::ArchiveBot(ArchiveParams const& params, Error& error) {
   MOCHI_ERROR_RETURN(error);
+  // An archive stores each file at the path it was collected from, but a remapped (pinned) file
+  // still names its siblings by their unremapped paths, so the archive would not load.
+  MOCHI_ERROR_IF(
+      IsPathRemapActive(),
+      error,
+      "Cannot archive while a path remap (such as an asset snapshot) is applied.");
   MOCHI_ERROR_IF(!IsBotPath(params.src), error, "Source must be a .superdex_bot file.");
   MOCHI_ERROR_IF(
       !params.dst.ends_with(kBotArchiveExtension),
@@ -1003,6 +1010,13 @@ void superdex::robotics::ArchiveBotScene(ArchiveParams const& params, Error& err
   MOCHI_ERROR_IF(!IsBotScenePath(params.src), error, "Source must be a .superdex_scene file.");
   MOCHI_ERROR_IF(
       !IsSceneArchivePath(params.dst), error, "Destination must end with .superdex_scene_archive.");
+  MOCHI_ERROR_RETURN(error);
+
+  // Refused for the same reason as ArchiveBot.
+  MOCHI_ERROR_IF(
+      IsPathRemapActive(),
+      error,
+      "Cannot archive while a path remap (such as an asset snapshot) is applied.");
   MOCHI_ERROR_RETURN(error);
 
   auto const sceneCanonical = std::filesystem::weakly_canonical(std::string(params.src));

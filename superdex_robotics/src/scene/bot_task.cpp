@@ -349,8 +349,11 @@ static void ApplyLegacySpawnTransforms(BotTaskPrefab& params) {
   }
 }
 
-BotTaskPrefab LoadBotTaskPrefabFromFile(std::string_view path, Error& error) {
+BotTaskPrefab LoadBotTaskPrefabFromFile(std::string_view requestedPath, Error& error) {
   MOCHI_ERROR_RETURN(error, {});
+  std::string const pathStr = RemapBotFilePath(requestedPath, error);
+  MOCHI_ERROR_RETURN(error, {});
+  std::string_view const path(pathStr);
 
   MOCHI_ERROR_IF(!IsBotTaskPath(path), error, "Unsupported file format; expected .superdex_task");
   MOCHI_ERROR_RETURN(error, {});

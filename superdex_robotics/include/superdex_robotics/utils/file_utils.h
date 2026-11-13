@@ -312,6 +312,8 @@ ParseRootFile(std::filesystem::path const& rootFilePath, superdex::Error& error)
  *   `.superdex_root` marker (regardless of its tag table).
  * - Anything else -> join with @p basePath.parent_path() and
  *   @c weakly_canonical.
+ * - While an asset snapshot is applied (see @ref ApplyAssetSnapshot), the result is the version it
+ *   pins; a file under the snapshot's roots that it does not pin -> hard error.
  *
  * @param[in] input Raw path string (e.g. from a `.superdex_bot` or .superdex_scene field).
  * @param[in] basePath The referencing file (its parent directory is used as
@@ -330,6 +332,16 @@ ParseRootFile(std::filesystem::path const& rootFilePath, superdex::Error& error)
     std::filesystem::path const& basePath,
     int maxParentDepth,
     superdex::Error& error);
+
+/**
+ * @brief The path to load for a bot file a caller names directly (a scene, task, or bot), through
+ * the applied asset snapshot if any (see @ref ApplyAssetSnapshot).
+ *
+ * @param[in] path The file to load.
+ * @param[in,out] error Set when the applied asset snapshot does not pin @p path.
+ * @return @p path unchanged when no snapshot is applied; empty on error.
+ */
+[[nodiscard]] MOCHI_API std::string RemapBotFilePath(std::string_view path, superdex::Error& error);
 
 /**
  * @brief Convert an absolute path to its canonical bot-path string form for serialization.

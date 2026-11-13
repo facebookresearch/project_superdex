@@ -26,8 +26,11 @@
 using namespace mochi;
 using namespace superdex::robotics;
 
-BotPrefab superdex::robotics::LoadBotPrefabFromFile(std::string_view path, Error& error) {
+BotPrefab superdex::robotics::LoadBotPrefabFromFile(std::string_view requestedPath, Error& error) {
   MOCHI_ERROR_RETURN(error, {});
+  std::string const pathStr = RemapBotFilePath(requestedPath, error);
+  MOCHI_ERROR_RETURN(error, {});
+  std::string_view const path(pathStr);
   constexpr bool validate = true;
   if (IsBotArchivePath(path) && std::filesystem::is_regular_file(std::string(path))) {
     auto extractedDir = ExtractBotArchiveToCache(path, error);

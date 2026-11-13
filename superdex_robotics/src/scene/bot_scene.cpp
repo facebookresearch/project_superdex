@@ -518,12 +518,16 @@ void EraseBotRenderModels(
 // LoadBotScenePrefabFromFile
 // ---------------------------------------------------------------------------
 
-BotScenePrefab superdex::robotics::LoadBotScenePrefabFromFile(std::string_view path, Error& error) {
+BotScenePrefab superdex::robotics::LoadBotScenePrefabFromFile(
+    std::string_view requestedPath,
+    Error& error) {
   MOCHI_ERROR_RETURN(error, {});
 
   // Error descriptions must be string literals (Error stores a non-owning
   // char const*), so the offending path is surfaced via MOCHI_LOG_ERROR.
-  std::string const pathStr(path);
+  std::string const pathStr = RemapBotFilePath(requestedPath, error);
+  MOCHI_ERROR_RETURN(error, {});
+  std::string_view const path(pathStr);
 
   // Transparent archive support: load from the extracted copy.
   if (IsSceneArchivePath(path)) {
