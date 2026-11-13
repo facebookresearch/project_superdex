@@ -1,0 +1,50 @@
+# When making changes, check the enabled checks from a directory under this one:
+# ~/fbsource/tools/lint/clangtidy/clang-tidy-platform010-clang-21 -list-checks
+#
+# Mochi's disabled checks (arvr/libraries/mochi/.clang-tidy gives each one's reason), and:
+#
+# -facebook-thread-safety-analysis
+#     SuperDex is open source and does not use the internal thread-safety annotations (`tsa`).
+#     Shared state goes in `mochi::Guarded`.
+#
+# -modernize-use-ranges
+#     SuperDex code does not use `std::ranges`.
+#
+# -readability-redundant-string-cstr
+#     Wrong for `mochi::DynamicString`, which is not a `std::string`: without `.c_str()` most
+#     flagged lines do not compile.
+#
+# -modernize-use-designated-initializers
+#     Style only: short positional initializers read clearly as they are.
+#
+# -clang-diagnostic-missing-designated-field-initializers
+#     Omitted designated members are value-initialized, and SuperDex omits them on purpose.
+#
+# -performance-inefficient-string-concatenation
+#     It flags only cold code (error messages, setup, tests), where `a + b + c` reads better.
+---
+InheritParentConfig: true
+Checks: '
+-bugprone-unchecked-optional-access,
+-clang-diagnostic-extra-semi,
+-facebook-hte-FloatingPointMin,
+-facebook-hte-MissingCopyAssignment,
+-facebook-hte-MissingMoveAssignment,
+-facebook-hte-LocalUncheckedArrayBounds,
+-facebook-hte-MemberUncheckedArrayBounds,
+-facebook-hte-ParameterUncheckedArrayBounds,
+-facebook-hte-MissingExplicit,
+-facebook-hte-MissingStdForward,
+-hicpp-explicit-conversions,
+-modernize-avoid-c-arrays,
+-modernize-use-nodiscard,
+-performance-unnecessary-value-param,
+-readability-named-parameter,
+-facebook-thread-safety-analysis,
+-modernize-use-ranges,
+-readability-redundant-string-cstr,
+-modernize-use-designated-initializers,
+-clang-diagnostic-missing-designated-field-initializers,
+-performance-inefficient-string-concatenation,
+'
+...
