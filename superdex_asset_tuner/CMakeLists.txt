@@ -20,7 +20,14 @@ file(GLOB _tuner_srcs
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
 )
-list(FILTER _tuner_srcs EXCLUDE REGEX "/src/cli_main\\.cpp$")
+list(FILTER _tuner_srcs EXCLUDE REGEX "/src/(cli_main|sim_recording|sim_recording_unsupported)\\.cpp$")
+# Runs record sim.rrd only when superdex_recorder is built; otherwise they write the CSV and JSON
+# files alone.
+if (TARGET superdex_recorder_physics)
+    list(APPEND _tuner_srcs "${CMAKE_CURRENT_SOURCE_DIR}/src/sim_recording.cpp")
+else ()
+    list(APPEND _tuner_srcs "${CMAKE_CURRENT_SOURCE_DIR}/src/sim_recording_unsupported.cpp")
+endif ()
 file(GLOB _tuner_headers "${CMAKE_CURRENT_SOURCE_DIR}/include/superdex_asset_tuner/*.h")
 
 add_library(superdex_asset_tuner_static STATIC ${_tuner_srcs} ${_tuner_headers})
@@ -37,6 +44,12 @@ target_link_libraries(superdex_asset_tuner_static
         mochi_core
         mochi_physics
 )
+if (TARGET superdex_recorder_physics)
+    target_link_libraries(superdex_asset_tuner_static
+        PRIVATE
+            superdex_recorder_physics
+    )
+endif ()
 
 target_compile_definitions(superdex_asset_tuner_static PRIVATE MOCHI_USE_REFLECTION=1)
 
@@ -74,6 +87,10 @@ if (MOCHI_BUILD_TESTS)
     target_include_directories(superdex_asset_tuner_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/test")
     # The tests have no main.cpp of their own.
     target_link_libraries(superdex_asset_tuner_test PRIVATE superdex_asset_tuner_static gtest_main)
+    if (TARGET superdex_recorder_physics)
+        target_link_libraries(
+            superdex_asset_tuner_test PRIVATE superdex_recorder_physics superdex_recorder_reader)
+    endif ()
 endif ()
 
 unset(_tuner_srcs)

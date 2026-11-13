@@ -70,7 +70,8 @@ struct RunSummary {
 //   tuner.resolved.json  spec after overrides, plus the resolved prefab path
 //   signals.csv          time + one column per channel
 //   summary.json         RunSummary with per-channel min/max/final
-//   sim.h5               Mochi native recording (written by the scene, see GetSimRecordingPath)
+//   sim.rrd              SuperDex episode of the run (written by SimRecording, see
+//   GetSimRecordingPath)
 class RunWriter {
  public:
   // Creates `<outDir>/<UTC timestamp>_<tunerName>[_<tag>]` and writes tuner.resolved.json.
@@ -95,7 +96,7 @@ class RunWriter {
     return _runDir;
   }
   [[nodiscard]] std::filesystem::path GetSimRecordingPath() const {
-    return _runDir / "sim.h5";
+    return _runDir / "sim.rrd";
   }
 
  private:

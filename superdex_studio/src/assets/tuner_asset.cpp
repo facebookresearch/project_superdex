@@ -22,6 +22,8 @@
 
 #include <mochi_core/utils/path.h>
 
+#include <optional>
+
 namespace superdex::studio {
 
 std::unique_ptr<TunerAsset>
@@ -95,13 +97,51 @@ bool TunerAsset::RewriteReferencedPath(mochi::Path const& oldPath, mochi::Path c
     return false;
   }
   _prefabPath = newPath;
-  // Keep the tuner-relative "./" form when the prefab stays next to (or below) the tuner.
-  std::filesystem::path const tunerDir = _path.GetParentPath().AsFilesystemPath();
-  std::filesystem::path const relative = newPath.AsFilesystemPath().lexically_relative(tunerDir);
-  bool const isBelowTuner = !relative.empty() && *relative.begin() != "..";
-  _spec.prefab = isBelowTuner ? "./" + relative.generic_string() : newPath.ToString();
+  _spec.prefab = ToSpecPrefabPath(newPath);
   SetDirty(true);
   return true;
+}
+
+void TunerAsset::SetPrefabPath(mochi::Path const& path) {
+  _spec.prefab = ToSpecPrefabPath(path);
+  SetDirty(true);
+  RefreshPrefabFromSpec();
+}
+
+bool TunerAsset::RefreshPrefabFromSpec() {
+  mochi::Path const path(superdex::tuner::ResolvePrefabPath(_spec, _path.AsFilesystemPath()));
+  if (path == _prefabPath) {
+    return false;
+  }
+  _prefabPath = path;
+  if (_manager->LoadMochiPrefabAsset(_prefabPath) == nullptr) {
+    MOCHI_LOG_ERROR(
+        "Asset Tuner %s: failed to load prefab %s",
+        _path.ToString().c_str(),
+        _prefabPath.ToString().c_str());
+  }
+  // Keeps the new prefab loaded and lets the old one unload.
+  _manager->ResyncReferencer(this);
+  return true;
+}
+
+std::string TunerAsset::ToSpecPrefabPath(mochi::Path const& path) const {
+  auto const relativeIfBelow = [&](std::filesystem::path const& dir) -> std::optional<std::string> {
+    std::filesystem::path const relative = path.AsFilesystemPath().lexically_relative(dir);
+    if (relative.empty() || *relative.begin() == "..") {
+      return std::nullopt;
+    }
+    return relative.generic_string();
+  };
+  std::filesystem::path const tunerPath = _path.AsFilesystemPath();
+  if (auto const relative = relativeIfBelow(tunerPath.parent_path())) {
+    return "./" + *relative;
+  }
+  if (auto const relative =
+          relativeIfBelow(superdex::tuner::ResolveAssetsRoot(_spec, tunerPath, tunerPath))) {
+    return *relative;
+  }
+  return path.ToString();
 }
 
 } // namespace superdex::studio

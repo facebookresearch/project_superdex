@@ -61,9 +61,8 @@
     "duration": 3,
     "groundPlane": true,
     "record": {
-      "contactPoints": false,
-      "enabled": true,
-      "staticActors": false
+      "contactForces": false,
+      "enabled": true
     }
   }
 }

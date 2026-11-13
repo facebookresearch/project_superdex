@@ -16,11 +16,12 @@
 
 #include "superdex_asset_tuner/tuner_runner.h"
 
+#include "superdex_asset_tuner/sim_recording.h"
+
 #include "scene_utils.h"
 
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/defer.h>
-#include <mochi_physics/mochi_physics_experimental.h>
 #include <mochi_physics/utils/mochi_prefab.h>
 
 #include <algorithm>
@@ -31,6 +32,15 @@
 namespace superdex::tuner {
 
 namespace {
+
+// Adds why sim.rrd was not written to the summary's message, keeping what it already says.
+void NoteRecordingFailure(RunSummary& summary, std::string_view reason) {
+  summary.simRecording = false;
+  std::string message(std::string_view(summary.message));
+  message += message.empty() ? "sim.rrd not written: " : " sim.rrd not written: ";
+  message += reason;
+  summary.message = DynamicString(message);
+}
 
 bool AllFinite(Span<real const> values) {
   for (real const v : values) {
@@ -136,6 +146,9 @@ bool RunTuner(
   MOCHI_DEFER(session.Unbind(*scene));
 
   RunWriter writer;
+  SimRecording simRecording;
+  // Why sim.rrd is not written, added to the summary's message once the run has set it.
+  std::string recordError;
   if (!options.outDir.empty()) {
     std::string const tunerName = tunerFilePath.stem().string();
     std::filesystem::path const prefabPath = ResolvePrefabPath(spec, tunerFilePath);
@@ -143,17 +156,9 @@ bool RunTuner(
       return false;
     }
     writer.WriteHeader(session.GetChannelNames());
-    if (spec.run.record.enabled) {
-      mochi::experimental::RecordingParams recording;
-      recording.recordContactPoints = spec.run.record.contactPoints;
-      recording.recordStaticActorState = spec.run.record.staticActors;
-      mochi::Error recordError;
-      mochi::experimental::StartRecording(
-          scene, writer.GetSimRecordingPath().string(), recording, recordError);
-      outSummary.simRecording = recordError.IsOK();
-      if (!recordError.IsOK()) {
-        outSummary.message = DynamicString("sim.h5 not written: ") + recordError.GetDescription();
-      }
+    if (spec.run.record.enabled && SimRecording::IsSupported()) {
+      outSummary.simRecording =
+          simRecording.Start(writer.GetSimRecordingPath(), *scene, session, resolved, recordError);
     }
   }
 
@@ -176,6 +181,7 @@ bool RunTuner(
         if (writer.IsOpen()) {
           writer.WriteSample(sample);
         }
+        simRecording.Record(sample);
         if (options.onSample) {
           options.onSample(session.GetChannelNames(), sample);
         }
@@ -194,9 +200,7 @@ bool RunTuner(
   }
   scene->CancelCallback(preStep);
   scene->CancelCallback(postStep);
-  if (mochi::experimental::IsRecording(scene, mochi::ErrorAssert{})) {
-    mochi::experimental::StopRecording(scene, mochi::ErrorAssert{});
-  }
+  simRecording.StopSampling();
 
   outSummary.simTime = session.GetTime();
   if (diverged) {
@@ -211,6 +215,14 @@ bool RunTuner(
   }
   outSummary.wallTimeSec =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - wallStart).count();
+  if (simRecording.IsActive()) {
+    // summary.json says whether sim.rrd was written, so the recording is finished first.
+    outSummary.runDir = DynamicString(writer.GetRunDir().string());
+    simRecording.Finish(outSummary, recordError);
+  }
+  if (!recordError.empty()) {
+    NoteRecordingFailure(outSummary, recordError);
+  }
   if (writer.IsOpen()) {
     return writer.Close(outSummary, outError);
   }

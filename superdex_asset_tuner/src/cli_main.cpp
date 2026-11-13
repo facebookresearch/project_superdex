@@ -35,7 +35,7 @@ constexpr char kUsage[] =
     "  superdex_asset_tuner describe <file.superdex_tuner | file.mochi_scene>\n"
     "\n"
     "run       Simulates the tuner headlessly and prints summary.json to stdout. Writes a run\n"
-    "          directory (tuner.resolved.json, signals.csv, summary.json, sim.h5) under --out\n"
+    "          directory (tuner.resolved.json, signals.csv, summary.json, sim.rrd) under --out\n"
     "          (default: ./tuner_runs) unless --no-files is given.\n"
     "          --set applies a JSON override to the tuner spec, e.g. --set run.dt=0.005 or\n"
     "          --set loads[name=push].profile.magnitude=3\n"

@@ -25,6 +25,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -86,10 +87,17 @@ class TunerTest : public ::testing::Test {
  protected:
   void SetUp() override {
     auto const* info = ::testing::UnitTest::GetInstance()->current_test_info();
+    // Unique per process: the float and double test binaries run the same tests concurrently.
     _dir = std::filesystem::temp_directory_path() / "superdex_asset_tuner_test" /
-        (std::string(info->test_suite_name()) + "." + info->name());
+        (std::string(info->test_suite_name()) + "." + info->name() + "." +
+         std::to_string(std::random_device{}()));
     std::filesystem::remove_all(_dir);
     std::filesystem::create_directories(_dir);
+  }
+
+  void TearDown() override {
+    std::error_code error;
+    std::filesystem::remove_all(_dir, error);
   }
 
   [[nodiscard]] std::filesystem::path const& Dir() const {

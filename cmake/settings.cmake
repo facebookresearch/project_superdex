@@ -20,7 +20,7 @@ include_guard(GLOBAL)
 
 option(SUPERDEX_BUILD_ROBOTICS "Build the superdex_robotics subproject" ON)
 option(SUPERDEX_BUILD_ASSET_TUNER "Build the superdex_asset_tuner library and command line tool" OFF)
-option(SUPERDEX_BUILD_RECORDER "Build the experimental SuperDex episode recorder" OFF)
+option(SUPERDEX_BUILD_RECORDER "Build the experimental SuperDex episode recorder (also lets superdex_asset_tuner write sim.rrd)" OFF)
 option(SUPERDEX_BUILD_STUDIO "Build the superdex_studio application" OFF)
 
 option(SUPERDEX_BUILD_ALL "Build all SuperDex CMake targets except the opt-in recorder" OFF)

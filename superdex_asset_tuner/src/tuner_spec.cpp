@@ -45,6 +45,30 @@ bool ReadTextFile(std::filesystem::path const& path, std::string& out, std::stri
   return true;
 }
 
+// Brings the record settings of files written before sim.rrd replaced sim.h5 up to date:
+// `contactPoints` is now `contactForces`, and static actors are always recorded once.
+void MigrateRecordSpec(picojson::value& document) {
+  if (!document.is<picojson::object>()) {
+    return;
+  }
+  auto& root = document.get<picojson::object>();
+  auto const run = root.find("run");
+  if (run == root.end() || !run->second.is<picojson::object>()) {
+    return;
+  }
+  auto& runObject = run->second.get<picojson::object>();
+  auto const record = runObject.find("record");
+  if (record == runObject.end() || !record->second.is<picojson::object>()) {
+    return;
+  }
+  auto& fields = record->second.get<picojson::object>();
+  if (auto const contactPoints = fields.find("contactPoints"); contactPoints != fields.end()) {
+    fields.emplace("contactForces", contactPoints->second);
+    fields.erase(contactPoints);
+  }
+  fields.erase("staticActors");
+}
+
 } // namespace
 
 bool LoadTunerSpecFromJson(
@@ -56,6 +80,7 @@ bool LoadTunerSpecFromJson(
   if (!ParseJson(json, document, outError)) {
     return false;
   }
+  MigrateRecordSpec(document);
   for (SpecOverride const& entry : overrides) {
     if (!SetJsonPathFromText(document, entry.path, entry.value, outError)) {
       return false;

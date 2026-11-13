@@ -567,6 +567,23 @@ struct TaskSettings {
   MOCHI_STRUCT_END()
 };
 
+// The Runs Kept slider's range; typed values go up to kMaxTunerRunHistory.
+inline constexpr int kTunerRunHistorySliderMax = 20;
+inline constexpr int kMaxTunerRunHistory = 1000;
+
+struct AssetTunerSettings {
+  int runHistory = 5;
+
+  MOCHI_STRUCT_BEGIN(superdex::studio::AssetTunerSettings)
+  MOCHI_FIELD(runHistory)
+  MOCHI_ATTRIBUTE(DisplayName("Run History"));
+  MOCHI_ATTRIBUTE(Description(
+      "Previous runs the Asset Tuner Plots window keeps and draws, faded, behind the current run, "
+      "so runs can be compared. 0 keeps none. Pinned runs are kept in addition."));
+  MOCHI_ATTRIBUTE(IntRange(0, kMaxTunerRunHistory));
+  MOCHI_STRUCT_END()
+};
+
 // Ordered to match the Settings window's category list. `physicsDrag` has no category of its own
 // (it is drawn under Physics); `recentEntries` and `windowVisibility` are app state rather than
 // preferences, so they sit at the end.
@@ -580,6 +597,7 @@ struct AppSettings {
   BotEditorSettings botEditor;
   BotVisualizationSettings botVisualization;
   TaskSettings tasks;
+  AssetTunerSettings assetTuner;
   RecentEntriesSettings recentEntries;
   std::unordered_map<std::string, bool> windowVisibility;
   // Local design-session state, never serialized into an IK document or runtime deployment.
@@ -595,6 +613,7 @@ struct AppSettings {
   MOCHI_FIELD(botEditor)
   MOCHI_FIELD(botVisualization)
   MOCHI_FIELD(tasks)
+  MOCHI_FIELD(assetTuner)
   MOCHI_FIELD(recentEntries) MOCHI_ATTRIBUTE(HideFromEditor);
   MOCHI_FIELD(windowVisibility) MOCHI_ATTRIBUTE(HideFromEditor);
   MOCHI_FIELD(ikRecordings) MOCHI_ATTRIBUTE(HideFromEditor);

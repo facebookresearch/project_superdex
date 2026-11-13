@@ -25,9 +25,11 @@
 
 #include <superdex_asset_tuner/run_writer.h>
 #include <superdex_asset_tuner/scene_targets.h>
+#include <superdex_asset_tuner/sim_recording.h>
 #include <superdex_asset_tuner/tuner_session.h>
 
 #include <atomic>
+#include <deque>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -70,6 +72,20 @@ class TunerEditor : public AssetEditor {
   struct ChannelHistory {
     std::string name;
     std::vector<float> values;
+  };
+  // A previous run, kept to compare with the current one in the plots.
+  struct RunTrace {
+    // Runs are numbered from 1 in each editor session.
+    uint64_t id = 0;
+    // What changed in the spec from the run before, one "path: before -> after" line each.
+    std::string changes;
+    // Why it ended early, and whether its loads were edited while it ran.
+    std::string status;
+    std::vector<float> times;
+    std::vector<ChannelHistory> channels;
+    bool visible = true;
+    // Kept beyond AssetTunerSettings::runHistory.
+    bool pinned = false;
   };
   // Everything in the tuner's scene that loads and probes can target, with the names Mochi gives
   // the actors: "<nested>/<actor>" and "<articulated actor>/<link or joint>". Built from
@@ -129,10 +145,23 @@ class TunerEditor : public AssetEditor {
   void RefreshTargets();
   [[nodiscard]] std::string MakeUniqueLoadName(std::string_view base) const;
 
+  // Run history
+  // Moves the current run's traces into _runHistory and starts the next run's, on the UI thread
+  // when a run starts.
+  void BeginRunTrace();
+  // Drops the oldest unpinned runs beyond AssetTunerSettings::runHistory.
+  void TrimRunHistory();
+  // Run list of the plots window: which runs are drawn and pinned, and what each changed.
+  void ShowRunHistory();
+
   // Recording
   bool OpenRunWriter();
   void StartRecording();
   void StopRecording();
+  // Scene thread (or UI thread while it is blocked): sim.rrd of the run OpenRunWriter opened.
+  void StartSimRecording(mochi::Scene& scene);
+  void RecordSimSample(superdex::tuner::Sample const& sample, bool firstStop);
+  void StopSimSampling();
   [[nodiscard]] bool IsRecording() const {
     return _writer.IsOpen();
   }
@@ -233,13 +262,31 @@ class TunerEditor : public AssetEditor {
   superdex::tuner::Sample _lastSample;
   bool _hasSample = false;
 
+  // Run history, newest first, and the current run's id, spec, changes from the run before and
+  // status.
+  std::deque<RunTrace> _runHistory;
+  uint64_t _runId = 0;
+  superdex::tuner::TunerSpec _runSpec;
+  std::string _runChanges;
+  std::string _runStatus;
+  bool _runEditedLive = false;
+  // The loads last sent to the running session, as JSON, to tell load edits from other edits.
+  std::string _liveLoadsJson;
+
   // Recording
   bool _recordNextRun = false;
   bool _stopAtDuration = true;
   std::string _outputDir;
   superdex::tuner::RunWriter _writer;
   superdex::tuner::RunSummary _runSummary;
+  // The spec the recorded run resolves to (the ground height it uses).
+  superdex::tuner::TunerSpec _recordedSpec;
   std::string _lastRunDir;
+  // Scene-thread state of sim.rrd: the recording, whether it still samples, and the sim time it
+  // ends at. The UI thread touches them only while the scene thread is blocked or idle.
+  superdex::tuner::SimRecording _simRecording;
+  bool _simRecordingOnSim = false;
+  double _simRecordEnd = 0.0;
 
   // UI state
   PrefabTargets _targets;

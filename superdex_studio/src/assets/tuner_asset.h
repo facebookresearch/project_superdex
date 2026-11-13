@@ -60,12 +60,21 @@ class TunerAsset : public Asset, public IAssetReferencer {
   mochi::Path const& GetPrefabPath() const {
     return _prefabPath;
   }
+  // Points the tuner at another prefab and loads it. The spec stores the path relative to the tuner
+  // ("./...") when the prefab is in or below the tuner's folder, else relative to the assets root
+  // when it is under it, else absolute.
+  void SetPrefabPath(mochi::Path const& path);
+  // Follows the spec's prefab path after it changed in place (an undo), loading that prefab.
+  // Returns true if the prefab changed.
+  bool RefreshPrefabFromSpec();
 
  private:
   friend class AssetManager;
   using Asset::Asset;
   static std::unique_ptr<TunerAsset>
   Create(std::string const& name, mochi::Path const& path, AssetManager* manager);
+  // How the spec stores `path`; see SetPrefabPath.
+  [[nodiscard]] std::string ToSpecPrefabPath(mochi::Path const& path) const;
 
   superdex::tuner::TunerSpec _spec;
   mochi::Path _prefabPath;

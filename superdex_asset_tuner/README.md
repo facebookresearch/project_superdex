@@ -35,10 +35,20 @@ Simulates for `run.duration` (or until a stop condition triggers), prints `summa
   tuner.resolved.json   the spec actually run: overrides applied, absolute prefab path, ground height
   signals.csv           one row per step: t, then one column per channel
   summary.json          status, message, steps, sim/wall time, per-channel min/max/final
-  sim.h5                native Mochi recording (unless run.record.enabled is false)
+  sim.rrd               the simulation over time, as a SuperDex episode (see below)
 ```
 
 `tuner.resolved.json` is a complete tuner file: running it again reproduces the run
+
+`sim.rrd` is written unless `run.record.enabled` is false, and only when the tuner is built with the SuperDex recorder (`SUPERDEX_BUILD_RECORDER` in CMake). It is a [Rerun](https://rerun.io) recording: open it in the Rerun viewer to see the bodies move and every channel plotted. It holds:
+
+- the scene's actors at every step, under `data/physics`, drawn at `world`,
+- with `run.record.contactForces`, each step's contact points and forces under `data/physics/contacts`, drawn as arrows at `world/contact_forces`,
+- every channel, under `data/tuner/channels/<channel>`,
+- each load as applied (point, vector and pose-path target), under `data/tuner/loads/<load>`,
+- the resolved spec and the summary, as text on `data/tuner`.
+
+`signals.csv` holds the same channels for tools that don't read Rerun recordings.
 
 `summary.json`'s `status` is one of:
 
@@ -217,6 +227,5 @@ A threshold's channel must be produced by a probe or load. If it isn't, the run 
 | `groundPlane` | true | Add a static ground plane, normal \+Z. |
 | `groundHeight` | unset | Ground plane height. Unset: the lowest point of the prefab's bodies. |
 | `groundContact` | unset | The ground plane's contact parameters (SuperDex Physics' `ContactParams` fields, e.g. `{ "coulombFrictionCoefficient": 0.8, "penaltySmoothingHalfDistance": 1e-5 }`). Unset: SuperDex defaults. |
-| `record.enabled` | true | Write `sim.h5` into the run folder. |
-| `record.contactPoints` | false | Include per-step contact points in `sim.h5` (larger files). |
-| `record.staticActors` | false | Include static actors' state in `sim.h5` every step. |
+| `record.enabled` | true | Write `sim.rrd` into the run folder. |
+| `record.contactForces` | false | Include each step's contact points and forces in `sim.rrd` (larger files). Only scenes of rigid and articulated actors can record them. Formerly `contactPoints`. |

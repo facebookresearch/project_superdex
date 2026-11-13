@@ -395,21 +395,19 @@ struct PrefabOverride {
 
 struct RecordSpec {
   bool enabled = true;
-  bool contactPoints = false;
-  bool staticActors = false;
+  bool contactForces = false;
 
   MOCHI_STRUCT_BEGIN(superdex::tuner::RecordSpec)
   MOCHI_FIELD(enabled)
-  MOCHI_ATTRIBUTE(DisplayName("Record sim.h5 (CLI)"));
+  MOCHI_ATTRIBUTE(DisplayName("Record sim.rrd"));
   MOCHI_ATTRIBUTE(Description(
-      "Write Mochi's native HDF5 recording into the run folder on CLI runs. In Studio, the Record "
-      "button controls recording."));
-  MOCHI_FIELD(contactPoints)
-  MOCHI_ATTRIBUTE(DisplayName("Record Contact Points"));
-  MOCHI_ATTRIBUTE(Description("Include per-step contact points in sim.h5 (larger files)."));
-  MOCHI_FIELD(staticActors)
-  MOCHI_ATTRIBUTE(DisplayName("Record Static Actors"));
-  MOCHI_ATTRIBUTE(Description("Include static actors' state in sim.h5 every step."));
+      "In Studio enables recording to sim.rrd when the Record button is armed. "
+      "On CLI runs, records the run's simulation to sim.rrd in the run folder."));
+  MOCHI_FIELD(contactForces)
+  MOCHI_ATTRIBUTE(DisplayName("Record Contact Forces"));
+  MOCHI_ATTRIBUTE(Description(
+      "Include each step's contact points and forces in sim.rrd (larger files). Scenes with "
+      "actors other than rigid and articulated actors cannot record them."));
   MOCHI_STRUCT_END()
 };
 

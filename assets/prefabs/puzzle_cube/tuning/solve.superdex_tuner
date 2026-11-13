@@ -9130,8 +9130,7 @@
     "groundPlane": false,
     "record": {
       "enabled": true,
-      "contactPoints": false,
-      "staticActors": false
+      "contactForces": false
     },
     "gravity": [
       0,

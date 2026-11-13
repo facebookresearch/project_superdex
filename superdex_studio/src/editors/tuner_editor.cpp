@@ -23,12 +23,12 @@
 #include "rendering/measure_tool.h"
 #include "ui/imgui_widgets.h"
 
+#include <superdex_asset_tuner/json_path.h>
 #include <superdex_asset_tuner/load_math.h>
 #include <superdex_asset_tuner/scene_targets.h>
 #include <superdex_asset_tuner/tuner_runner.h>
 
 #include <mochi_core/utils/math_utils.h>
-#include <mochi_physics/mochi_physics_experimental.h>
 #include <mochi_renderer/debug.h>
 #include <mochi_renderer/type_conversions.h>
 
@@ -41,6 +41,7 @@
 #include <charconv>
 #include <cmath>
 #include <cstdio>
+#include <limits>
 #include <numbers>
 #include <optional>
 
@@ -126,6 +127,12 @@ constexpr ImVec4 kErrorColor{1.0f, 0.45f, 0.35f, 1.0f};
 // Plot history cap, so a long session cannot grow without bound (~1.5 h at 100 Hz).
 constexpr size_t kMaxPlotSamples = 500'000;
 constexpr float kPlotLineWeight = 2.0f;
+constexpr float kHistoryLineWeight = 1.5f;
+// Opacity of the newest and the oldest previous run's traces.
+constexpr float kNewestRunAlpha = 0.55f;
+constexpr float kOldestRunAlpha = 0.15f;
+// Longer values in a run's list of changes are cut to this many characters.
+constexpr size_t kMaxChangeValueChars = 48;
 // Fraction of the data range added when fitting Y, so values at the extremes stay visible.
 constexpr float kPlotFitPaddingY = 0.1f;
 constexpr double kTimeEpsilon = 1e-9;
@@ -328,6 +335,10 @@ float sAutoGroundHeightForRunUi = 0.0f;
 // Run Settings widget override: Ground Height shows the automatic height until overridden, and an
 // override starts from it.
 bool DrawRunFieldOverride(char const* label, SReflect::FieldTypeInfo const& field, void* fieldPtr) {
+  // Drawn after the other run settings, without a foldout of its own.
+  if (std::string_view(field._name) == "record") {
+    return true;
+  }
   if (std::string_view(field._name) != "groundHeight") {
     return false;
   }
@@ -548,12 +559,11 @@ void TunerEditor::Initialize() {
         _studio->GetRendererToEditorSpaceConverter());
     auto const loads = _session.GetLoads();
     _boundLoads.assign(loads.begin(), loads.end());
-    _channels.clear();
+    BeginRunTrace();
     for (auto const& name : _session.GetChannelNames()) {
       ChannelHistory& channel = _channels.emplace_back();
       channel.name = std::string(std::string_view(name));
     }
-    _sampleTimes.clear();
     _hasSample = false;
     _stopEvent.reset();
     return mochi::CallbackHandle{};
@@ -914,29 +924,23 @@ bool TunerEditor::BindPhysicsActors(mochi::Scene* scene) {
         _session.OnPostStep(info, sample);
         // Pause on this step, like the CLI stops on it, so the scene the viewport shows is the one
         // that triggered. Only the first trigger pauses; resuming runs on without stop checks.
-        if (sample.stopCondition >= 0 && !_stopPausedOnSim.exchange(true)) {
+        bool const firstStop = sample.stopCondition >= 0 && !_stopPausedOnSim.exchange(true);
+        if (firstStop) {
           _mochiScene.GetAsyncScene()->Pause(true);
         }
+        RecordSimSample(sample, firstStop);
         std::lock_guard const lock(_samplesMutex);
         _pendingSamples.push_back(sample);
       });
   if (_recordNextRun && OpenRunWriter()) {
-    mochi::experimental::RecordingParams recording;
-    recording.recordContactPoints = spec.run.record.contactPoints;
-    recording.recordStaticActorState = spec.run.record.staticActors;
-    mochi::Error recordError;
-    mochi::experimental::StartRecording(
-        scene, _writer.GetSimRecordingPath().string(), recording, recordError);
-    _runSummary.simRecording = recordError.IsOK();
+    StartSimRecording(*scene);
   }
   return true;
 }
 
 // Sim thread; the UI thread is blocked in MochiAsyncScene::DestroyMochiScene.
 void TunerEditor::DestroyPhysicsActors(mochi::Scene* scene) {
-  if (mochi::experimental::IsRecording(scene, mochi::ErrorAssert{})) {
-    mochi::experimental::StopRecording(scene, mochi::ErrorAssert{});
-  }
+  StopSimSampling();
   for (mochi::CallbackHandle* handle : {&_loadsCallback, &_probesCallback}) {
     if (handle->IsValid()) {
       scene->CancelCallback(*handle);
@@ -999,6 +1003,7 @@ void TunerEditor::DrainSamples() {
           _runSummary.stopCondition = stops[static_cast<size_t>(sample.stopCondition)].name;
         }
       }
+      _runStatus = "Stopped: " + _stopEvent->message;
       MOCHI_LOG("Asset Tuner stopped at t = %.3f s: %s", sample.time, sample.stopMessage.c_str());
       stopNow = true;
     }
@@ -1040,6 +1045,14 @@ void TunerEditor::OnSpecEdited(bool structural) {
     return;
   }
   if (LiveLoadsCompatible()) {
+    tuner::TunerSpec loads;
+    loads.loads = _tunerAsset->GetSpec().loads;
+    std::string loadsJson = tuner::SaveTunerSpecToJson(loads);
+    if (loadsJson == _liveLoadsJson) {
+      return; // another edit, such as a stop condition
+    }
+    _liveLoadsJson = std::move(loadsJson);
+    _runEditedLive = true;
     _mochiScene.GetAsyncScene()->QueueCommand(
         [this, loads = _tunerAsset->GetSpec().loads](mochi::Scene*) {
           std::string error;
@@ -1079,6 +1092,9 @@ void TunerEditor::RestoreUndoSnapshot(std::string const& json) {
   _tunerAsset->GetSpec() = std::move(spec);
   _placingLoad = -1;
   _tunerAsset->SetDirty(!GetUndoStack().IsAtSavedState());
+  if (_tunerAsset->RefreshPrefabFromSpec()) {
+    Restage();
+  }
   ValidateOverrides();
   ApplyRunSettings();
 }
@@ -1145,6 +1161,7 @@ bool TunerEditor::OpenRunWriter() {
     channel.name = name;
     _runSummary.channels.push_back(std::move(channel));
   }
+  _recordedSpec = spec;
   std::string error;
   if (!_writer.Open(
           std::filesystem::path(_outputDir),
@@ -1164,17 +1181,8 @@ void TunerEditor::StartRecording() {
   if (IsRecording() || !_mochiScene.IsSimulating() || !OpenRunWriter()) {
     return;
   }
-  tuner::RecordSpec const& record = _tunerAsset->GetSpec().run.record;
-  mochi::experimental::RecordingParams recording;
-  recording.recordContactPoints = record.contactPoints;
-  recording.recordStaticActorState = record.staticActors;
   mochi::AsyncScene* asyncScene = _mochiScene.GetAsyncScene();
-  asyncScene->QueueCommand(
-      [this, path = _writer.GetSimRecordingPath().string(), recording](mochi::Scene* scene) {
-        mochi::Error error;
-        mochi::experimental::StartRecording(scene, path, recording, error);
-        _runSummary.simRecording = error.IsOK();
-      });
+  asyncScene->QueueCommand([this](mochi::Scene* scene) { StartSimRecording(*scene); });
   asyncScene->WaitForQueuedCommands();
 }
 
@@ -1184,12 +1192,18 @@ void TunerEditor::StopRecording() {
   }
   if (_mochiScene.IsSimulating()) {
     mochi::AsyncScene* asyncScene = _mochiScene.GetAsyncScene();
-    asyncScene->QueueCommand([](mochi::Scene* scene) {
-      if (mochi::experimental::IsRecording(scene, mochi::ErrorAssert{})) {
-        mochi::experimental::StopRecording(scene, mochi::ErrorAssert{});
-      }
-    });
+    asyncScene->QueueCommand([this](mochi::Scene*) { StopSimSampling(); });
     asyncScene->WaitForQueuedCommands();
+  }
+  // The scene thread no longer touches the recording. sim.rrd keeps the summary too, so it is
+  // finished first; summary.json then says whether it was written.
+  if (_simRecording.IsActive()) {
+    _runSummary.runDir = DynamicString(_writer.GetRunDir().string());
+    std::string error;
+    if (!_simRecording.Finish(_runSummary, error)) {
+      _runSummary.simRecording = false;
+      MOCHI_LOG_ERROR("Asset Tuner recording: %s", error.c_str());
+    }
   }
   std::string error;
   if (!_writer.Close(_runSummary, error)) {
@@ -1197,6 +1211,223 @@ void TunerEditor::StopRecording() {
   }
   _lastRunDir = std::string(std::string_view(_runSummary.runDir));
   MOCHI_LOG("Asset Tuner run recorded to %s", _lastRunDir.c_str());
+}
+
+void TunerEditor::StartSimRecording(mochi::Scene& scene) {
+  if (!_recordedSpec.run.record.enabled) {
+    return;
+  }
+  if (!tuner::SimRecording::IsSupported()) {
+    MOCHI_LOG_WARNING_ONCE(
+        "Asset Tuner recording: sim.rrd not written, Studio was built without superdex_recorder.");
+    return;
+  }
+  // Mirrors which samples DrainSamples writes to signals.csv.
+  _simRecordEnd =
+      _stopAtDuration ? _recordedSpec.run.duration : std::numeric_limits<double>::infinity();
+  std::string error;
+  _runSummary.simRecording =
+      _simRecording.Start(_writer.GetSimRecordingPath(), scene, _session, _recordedSpec, error);
+  _simRecordingOnSim = _runSummary.simRecording;
+  if (!_runSummary.simRecording) {
+    MOCHI_LOG_ERROR("Asset Tuner recording: sim.rrd not written: %s", error.c_str());
+  }
+}
+
+void TunerEditor::RecordSimSample(tuner::Sample const& sample, bool firstStop) {
+  if (!_simRecordingOnSim) {
+    return;
+  }
+  if (sample.time > _simRecordEnd + kTimeEpsilon) {
+    StopSimSampling();
+    return;
+  }
+  _simRecording.Record(sample);
+  // Like signals.csv, the recording ends with the sample that stopped the run or reached its
+  // duration.
+  if (firstStop || sample.time >= _simRecordEnd - kTimeEpsilon) {
+    StopSimSampling();
+  }
+}
+
+void TunerEditor::StopSimSampling() {
+  _simRecording.StopSampling();
+  _simRecordingOnSim = false;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Run history
+//--------------------------------------------------------------------------------------------------
+
+namespace {
+
+// What changed in the spec from one run to the next, one "path: before -> after" line each, in the
+// syntax of the CLI's --set. The plot layout is not part of a run.
+std::string DescribeRunChanges(tuner::TunerSpec before, tuner::TunerSpec after) {
+  before.plots.clear();
+  after.plots.clear();
+  picojson::value a;
+  picojson::value b;
+  std::string error;
+  if (!tuner::ParseJson(tuner::SaveTunerSpecToJson(before), a, error) ||
+      !tuner::ParseJson(tuner::SaveTunerSpecToJson(after), b, error)) {
+    return {};
+  }
+  auto const shorten = [](std::string value) {
+    if (value.empty()) {
+      return std::string("(none)");
+    }
+    if (value.size() > kMaxChangeValueChars) {
+      value.resize(kMaxChangeValueChars - 3);
+      value += "...";
+    }
+    return value;
+  };
+  std::string lines;
+  for (tuner::JsonChange const& change : tuner::DiffJson(a, b)) {
+    if (!lines.empty()) {
+      lines += '\n';
+    }
+    lines += change.path + ": " + shorten(change.before) + " -> " + shorten(change.after);
+  }
+  return lines;
+}
+
+// Opacity of the traces of _runHistory[index]: the older, the fainter.
+float RunTraceAlpha(size_t index, size_t count) {
+  float const age = count > 1 ? static_cast<float>(index) / static_cast<float>(count - 1) : 0.0f;
+  return kNewestRunAlpha + (kOldestRunAlpha - kNewestRunAlpha) * age;
+}
+
+} // namespace
+
+void TunerEditor::BeginRunTrace() {
+  if (!_sampleTimes.empty()) {
+    RunTrace& run = _runHistory.emplace_front();
+    run.id = _runId;
+    run.changes = std::move(_runChanges);
+    run.status = _runStatus;
+    if (_runEditedLive) {
+      run.status +=
+          run.status.empty() ? "Loads edited during the run" : " (loads edited during the run)";
+    }
+    run.times = std::move(_sampleTimes);
+    run.channels = std::move(_channels);
+    TrimRunHistory();
+  }
+  _sampleTimes.clear();
+  _channels.clear();
+  tuner::TunerSpec spec = _tunerAsset->GetSpec();
+  _runChanges = _runId > 0 ? DescribeRunChanges(_runSpec, spec) : std::string{};
+  tuner::TunerSpec loads;
+  loads.loads = spec.loads;
+  _liveLoadsJson = tuner::SaveTunerSpecToJson(loads);
+  _runSpec = std::move(spec);
+  ++_runId;
+  _runStatus.clear();
+  _runEditedLive = false;
+}
+
+void TunerEditor::TrimRunHistory() {
+  size_t const keep =
+      static_cast<size_t>(std::max(0, _studio->GetAppSettings().assetTuner.runHistory));
+  size_t unpinned = 0;
+  for (auto it = _runHistory.begin(); it != _runHistory.end();) {
+    if (!it->pinned && ++unpinned > keep) {
+      it = _runHistory.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
+void TunerEditor::ShowRunHistory() {
+  if (!ImGui::CollapsingHeader("Runs", ImGuiTreeNodeFlags_DefaultOpen)) {
+    return;
+  }
+  int& keep = _studio->GetAppSettings().assetTuner.runHistory;
+  // Ctrl+click types any count; dragging covers the usual range.
+  if (ImGui::SliderInt("Runs Kept", &keep, 0, kTunerRunHistorySliderMax)) {
+    keep = std::clamp(keep, 0, kMaxTunerRunHistory);
+    TrimRunHistory();
+  }
+  if (ImGui::IsItemDeactivatedAfterEdit()) {
+    _studio->SaveSettings();
+  }
+  Tooltip(
+      "Previous runs to keep and draw, faded, behind the current run (also in Settings > Asset "
+      "Tuner). Pinned runs do not count towards the limit.");
+
+  auto const showDetails = [](uint64_t id, std::string const& changes, std::string const& status) {
+    if (!ImGui::BeginItemTooltip()) {
+      return;
+    }
+    if (id == 1) {
+      ImGui::TextUnformatted("The first run since this asset tuner was opened.");
+    } else if (changes.empty()) {
+      ImGui::TextUnformatted("Same spec as the run before.");
+    } else {
+      ImGui::TextUnformatted("Changed from the run before:");
+      ImGui::TextUnformatted(changes.c_str());
+    }
+    if (!status.empty()) {
+      ImGui::Separator();
+      ImGui::TextUnformatted(status.c_str());
+    }
+    ImGui::EndTooltip();
+  };
+  if (_runId > 0) {
+    ImGui::Text("Run %llu (current)", static_cast<unsigned long long>(_runId));
+    showDetails(_runId, _runChanges, _runStatus);
+  }
+  // Square buttons as tall as the checkbox.
+  ImVec2 const buttonSize(ImGui::GetFrameHeight(), ImGui::GetFrameHeight());
+  std::optional<size_t> removeRun;
+  for (size_t i = 0; i < _runHistory.size(); ++i) {
+    RunTrace& run = _runHistory[i];
+    ImGui::PushID(static_cast<int>(run.id));
+    ImGui::Checkbox(("Run " + std::to_string(run.id)).c_str(), &run.visible);
+    showDetails(run.id, run.changes, run.status);
+    ImGui::SameLine();
+    ImGui::PushStyleColor(
+        ImGuiCol_Text,
+        run.pinned ? ImGui::GetStyleColorVec4(ImGuiCol_Text)
+                   : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+    // Unpinning keeps the run until the next run trims the history.
+    if (ImGui::Button(ICON_FA_THUMBTACK, buttonSize)) {
+      run.pinned = !run.pinned;
+    }
+    ImGui::PopStyleColor();
+    Tooltip(
+        run.pinned ? "Pinned: kept regardless of Runs Kept and isn't Cleared. Click to unpin."
+                   : "Pin to keep this run regardless of the kept runs counter");
+    ImGui::SameLine();
+    if (ImGui::Button(ICON_FA_TRASH, buttonSize)) {
+      removeRun = i;
+    }
+    Tooltip("Forget this run.");
+    ImGui::PopID();
+  }
+  if (removeRun) {
+    _runHistory.erase(_runHistory.begin() + static_cast<std::ptrdiff_t>(*removeRun));
+  }
+  bool const hasFinishedRun = !_mochiScene.IsSimulating() && !_sampleTimes.empty();
+  bool const hasUnpinned =
+      std::ranges::any_of(_runHistory, [](RunTrace const& run) { return !run.pinned; });
+  ImGui::BeginDisabled(!hasUnpinned && !hasFinishedRun);
+  if (ImGui::Button("Clear Runs", ImVec2(-FLT_MIN, 0))) {
+    std::erase_if(_runHistory, [](RunTrace const& run) { return !run.pinned; });
+    // The last run's traces too, unless it is still running.
+    if (hasFinishedRun) {
+      _sampleTimes.clear();
+      for (ChannelHistory& channel : _channels) {
+        channel.values.clear();
+      }
+    }
+  }
+  ImGui::EndDisabled();
+  Tooltip("Clear all runs except for the pinned runs.");
+  ImGui::Spacing();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -3090,6 +3321,7 @@ bool TunerEditor::IsChannelPlotted(std::string_view channel) const {
 
 void TunerEditor::ShowChannelList(bool& structural) {
   auto& plots = EditablePlots();
+  ShowRunHistory();
   ImGui::Checkbox("Auto-fit All", &_autoFitPlots);
   Tooltip(
       "Fit every plot to its data each frame. Turn off to pan and zoom (all plots share time).");
@@ -3200,11 +3432,35 @@ void TunerEditor::ShowPlotArea(size_t index, bool& structural, bool& outRemove) 
     ImPlot::SetupLegend(
         ImPlotLocation_North, ImPlotLegendFlags_Outside | ImPlotLegendFlags_Horizontal);
     int const count = static_cast<int>(_sampleTimes.size());
-    for (DynamicString const& name : plot.channels) {
-      auto const it =
-          std::find_if(_channels.begin(), _channels.end(), [&](ChannelHistory const& c) {
-            return c.name == std::string_view(name);
-          });
+    for (size_t k = 0; k < plot.channels.size(); ++k) {
+      std::string_view const name(plot.channels[k]);
+      auto const findIn = [&](std::vector<ChannelHistory> const& channels) {
+        return std::ranges::find(channels, name, &ChannelHistory::name);
+      };
+      // Each channel keeps its color across runs; previous runs are drawn first, oldest first, so
+      // the current run is on top.
+      ImVec4 const color = ImPlot::GetColormapColor(static_cast<int>(k));
+      for (size_t r = _runHistory.size(); r-- > 0;) {
+        RunTrace const& run = _runHistory[r];
+        auto const traced = findIn(run.channels);
+        if (!run.visible || traced == run.channels.end()) {
+          continue;
+        }
+        ImVec4 faded = color;
+        faded.w = RunTraceAlpha(r, _runHistory.size());
+        ImPlot::PlotLine(
+            (traced->name + "##run" + std::to_string(run.id)).c_str(),
+            run.times.data(),
+            traced->values.data(),
+            static_cast<int>(run.times.size()),
+            {ImPlotProp_LineColor,
+             faded,
+             ImPlotProp_LineWeight,
+             kHistoryLineWeight,
+             ImPlotProp_Flags,
+             ImPlotItemFlags_NoLegend});
+      }
+      auto const it = findIn(_channels);
       if (it == _channels.end()) {
         continue; // not produced by the current run (e.g. its probe was removed)
       }
@@ -3213,7 +3469,7 @@ void TunerEditor::ShowPlotArea(size_t index, bool& structural, bool& outRemove) 
           _sampleTimes.data(),
           it->values.data(),
           count,
-          {ImPlotProp_LineWeight, kPlotLineWeight});
+          {ImPlotProp_LineColor, color, ImPlotProp_LineWeight, kPlotLineWeight});
       if (ImPlot::BeginDragDropSourceItem(it->name.c_str())) {
         SetChannelPayload(static_cast<int>(index), {it->name});
         ImPlot::EndDragDropSource();
@@ -3339,6 +3595,11 @@ void TunerEditor::ShowPlotsWindow(bool* open) {
     _plotTimeMin = 0.0;
     _plotTimeMax =
         std::max(_sampleTimes.empty() ? 0.0 : static_cast<double>(_sampleTimes.back()), 1e-3);
+    for (RunTrace const& run : _runHistory) {
+      if (run.visible && !run.times.empty()) {
+        _plotTimeMax = std::max(_plotTimeMax, static_cast<double>(run.times.back()));
+      }
+    }
   }
 
   ImGui::BeginChild(
@@ -3878,8 +4139,28 @@ void TunerEditor::ShowRunWindow(bool* open) {
   ImGui::SeparatorText("Prefab");
   {
     mochi::DynamicString prefabPath(_tunerAsset->GetPrefabPath().ToString());
-    ImGui::InputText("Prefab", &prefabPath, ImGuiInputTextFlags_ReadOnly);
-    Tooltip("The prefab this asset tuner simulates. Solver settings are from the prefab");
+    // A tuner always simulates a prefab, so the slot has no clear button.
+    ImGui::BeginDisabled(_mochiScene.IsSimulating() || _tunerAsset->IsReadOnly());
+    if (ImGui::AssetSlot(
+            "Prefab",
+            prefabPath,
+            _studio->GetAssetManager(),
+            _studio,
+            AssetType::MochiPrefab,
+            /*acceptDragDropPayload=*/true,
+            /*showClearButton=*/false)) {
+      _tunerAsset->SetPrefabPath(mochi::Path(std::string(std::string_view(prefabPath))));
+      Restage();
+      _viewport->FocusCameraOnScene();
+      structural = true;
+    }
+    ImGui::EndDisabled();
+    Tooltip(
+        _mochiScene.IsSimulating()
+            ? "Stop the simulation to change the prefab."
+            : "The prefab this asset tuner simulates; solver settings are from the prefab. Pick or "
+              "drop another prefab to tune it instead. Loads, probes and overrides keep their "
+              "current targets, which could be mismatched with the replacement.");
     bool const prefabLoaded = _tunerAsset->GetPrefabAsset() != nullptr;
     ImGui::BeginDisabled(!prefabLoaded);
     if (ImGui::Button(ICON_FA_FOLDER_OPEN " Open Prefab")) {
@@ -3960,6 +4241,7 @@ void TunerEditor::ShowRunWindow(bool* open) {
   sAutoGroundHeightForRunUi = _autoGroundHeight;
   changed |= ImGui::SimpleReflectionStruct(spec.run, DrawRunFieldOverride);
   changed |= spec.run.groundHeight != groundHeightBefore;
+  changed |= ImGui::SimpleReflectionStruct(spec.run.record);
   ImGui::EndDisabled();
   if (_mochiScene.IsSimulating()) {
     ImGui::TextDisabled("Stop the simulation to change run settings.");

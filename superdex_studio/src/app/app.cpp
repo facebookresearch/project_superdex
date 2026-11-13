@@ -2192,7 +2192,7 @@ constexpr SettingsCategory MakeSettingsCategory(
       applyOnCommit};
 }
 
-constexpr std::array<SettingsCategory, 8> kSettingsCategories = {{
+constexpr std::array<SettingsCategory, 9> kSettingsCategories = {{
     // Hand-drawn rather than reflection-driven: the debug draw feature list is queried from mochi
     // at runtime, so it cannot come from the settings struct. No apply hooks -- these are the
     // defaults a simulation session starts from; a running one is driven by the editor's own
@@ -2239,6 +2239,7 @@ constexpr std::array<SettingsCategory, 8> kSettingsCategories = {{
     MakeSettingsCategory<&AppSettings::botEditor>("Bot Editor"),
     MakeSettingsCategory<&AppSettings::botVisualization>("Bot Visualization"),
     MakeSettingsCategory<&AppSettings::tasks>("Tasks"),
+    MakeSettingsCategory<&AppSettings::assetTuner>("Asset Tuner"),
 }};
 
 void SuperDexStudio::ApplyHighlightOverlayOpacity() {

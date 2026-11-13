@@ -246,8 +246,7 @@
     "groundPlane": true,
     "record": {
       "enabled": true,
-      "contactPoints": false,
-      "staticActors": false
+      "contactForces": false
     }
   },
   "comment": "Pinches the cube with 2 N per pad (friction 1), then lifts it 10 cm over 1 s. The cube should follow to within a few mm, and its corners should stay within about 2 degrees of nominal.",

@@ -20,6 +20,7 @@
 
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace superdex::tuner {
 
@@ -50,5 +51,20 @@ bool ParseJson(std::string_view text, picojson::value& out, std::string& outErro
 // selectors such as `loads[name=push].profile.magnitude=3` keep their '='. False if there is no
 // such '=' or the path is empty.
 bool SplitAssignment(std::string_view assignment, std::string& outPath, std::string& outValue);
+
+// One difference found by DiffJson. `before` and `after` are compact JSON, empty where the value is
+// absent.
+struct JsonChange {
+  std::string path;
+  std::string before;
+  std::string after;
+};
+
+// Differences between two JSON documents, as paths in SetJsonPath's syntax. Array elements that are
+// objects with unique string `name` fields are matched by name (`loads[name=push].enabled`), other
+// arrays of the same length by index; an array whose elements cannot be matched is one change.
+[[nodiscard]] std::vector<JsonChange> DiffJson(
+    picojson::value const& before,
+    picojson::value const& after);
 
 } // namespace superdex::tuner

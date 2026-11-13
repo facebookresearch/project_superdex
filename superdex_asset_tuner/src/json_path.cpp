@@ -16,8 +16,10 @@
 
 #include "superdex_asset_tuner/json_path.h"
 
+#include <algorithm>
 #include <charconv>
 #include <optional>
+#include <set>
 #include <vector>
 
 namespace superdex::tuner {
@@ -201,6 +203,107 @@ bool SplitAssignment(std::string_view assignment, std::string& outPath, std::str
     }
   }
   return false;
+}
+
+namespace {
+
+// Names of the array's elements, or nullopt unless every element is an object with a unique string
+// `name`.
+std::optional<std::vector<std::string>> ElementNames(picojson::array const& array) {
+  std::vector<std::string> names;
+  std::set<std::string, std::less<>> unique;
+  for (picojson::value const& element : array) {
+    if (!element.is<picojson::object>()) {
+      return std::nullopt;
+    }
+    auto const& object = element.get<picojson::object>();
+    auto const name = object.find("name");
+    if (name == object.end() || !name->second.is<std::string>() ||
+        !unique.insert(name->second.get<std::string>()).second) {
+      return std::nullopt;
+    }
+    names.push_back(name->second.get<std::string>());
+  }
+  return names;
+}
+
+void Diff(
+    std::string const& path,
+    picojson::value const* before,
+    picojson::value const* after,
+    std::vector<JsonChange>& out) {
+  if (before != nullptr && after != nullptr && *before == *after) {
+    return;
+  }
+  auto const record = [&] {
+    out.push_back(
+        {path,
+         before != nullptr ? before->serialize() : std::string{},
+         after != nullptr ? after->serialize() : std::string{}});
+  };
+  if (before == nullptr || after == nullptr) {
+    record();
+    return;
+  }
+  if (before->is<picojson::object>() && after->is<picojson::object>()) {
+    auto const& a = before->get<picojson::object>();
+    auto const& b = after->get<picojson::object>();
+    std::set<std::string> keys;
+    for (auto const& [key, value] : a) {
+      keys.insert(key);
+    }
+    for (auto const& [key, value] : b) {
+      keys.insert(key);
+    }
+    for (std::string const& key : keys) {
+      auto const ai = a.find(key);
+      auto const bi = b.find(key);
+      Diff(
+          path.empty() ? key : path + "." + key,
+          ai != a.end() ? &ai->second : nullptr,
+          bi != b.end() ? &bi->second : nullptr,
+          out);
+    }
+    return;
+  }
+  if (before->is<picojson::array>() && after->is<picojson::array>() && !path.empty()) {
+    auto const& a = before->get<picojson::array>();
+    auto const& b = after->get<picojson::array>();
+    auto const aNames = ElementNames(a);
+    auto const bNames = ElementNames(b);
+    if (aNames && bNames) {
+      auto const find = [](std::vector<std::string> const& names,
+                           picojson::array const& array,
+                           std::string const& name) -> picojson::value const* {
+        auto const it = std::ranges::find(names, name);
+        return it != names.end() ? &array[static_cast<size_t>(it - names.begin())] : nullptr;
+      };
+      for (std::string const& name : *aNames) {
+        Diff(path + "[name=" + name + "]", find(*aNames, a, name), find(*bNames, b, name), out);
+      }
+      for (std::string const& name : *bNames) {
+        if (find(*aNames, a, name) == nullptr) {
+          Diff(path + "[name=" + name + "]", nullptr, find(*bNames, b, name), out);
+        }
+      }
+      return;
+    }
+    if (a.size() == b.size()) {
+      for (size_t i = 0; i < a.size(); ++i) {
+        Diff(path + "[" + std::to_string(i) + "]", &a[i], &b[i], out);
+      }
+      return;
+    }
+  }
+  record();
+}
+
+} // namespace
+
+std::vector<JsonChange> DiffJson(picojson::value const& before, picojson::value const& after) {
+  std::vector<JsonChange> changes;
+  Diff({}, &before, &after, changes);
+  return changes;
 }
 
 } // namespace superdex::tuner

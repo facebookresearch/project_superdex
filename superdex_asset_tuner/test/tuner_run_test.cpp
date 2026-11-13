@@ -16,6 +16,7 @@
 
 #include "tuner_test_fixture.h"
 
+#include "superdex_asset_tuner/sim_recording.h"
 #include "superdex_asset_tuner/tuner_spec.h"
 
 #include <mochi_core/utils/constants.h>
@@ -532,6 +533,21 @@ TEST_F(TunerTest, SpecRoundTripsAndAppliesOverrides) {
   EXPECT_EQ(loaded.plots[0].height, 150.0f);
 }
 
+TEST_F(TunerTest, RecordSettingsOfSimH5FilesStillLoad) {
+  TunerSpec spec;
+  std::string error;
+
+  bool const loaded = LoadTunerSpecFromJson(
+      R"({"run": {"record": {"enabled": false, "contactPoints": true, "staticActors": true}}})",
+      {},
+      spec,
+      error);
+
+  ASSERT_TRUE(loaded) << error;
+  EXPECT_FALSE(spec.run.record.enabled);
+  EXPECT_TRUE(spec.run.record.contactForces);
+}
+
 TEST_F(TunerTest, PrefabOverrideChangesSimulatedParameters) {
   TunerSpec spec = MakeSpec(kRigidCubePrefab);
   PrefabOverride density;
@@ -553,9 +569,8 @@ TEST_F(TunerTest, RunDirectoryContainsResolvedSpecSignalsAndSummary) {
   ASSERT_TRUE(std::filesystem::is_directory(runDir));
   EXPECT_TRUE(std::filesystem::exists(runDir / "tuner.resolved.json"));
   EXPECT_TRUE(std::filesystem::exists(runDir / "summary.json"));
-  if (run.summary.simRecording) {
-    EXPECT_TRUE(std::filesystem::exists(runDir / "sim.h5"));
-  }
+  EXPECT_EQ(run.summary.simRecording, SimRecording::IsSupported());
+  EXPECT_EQ(std::filesystem::exists(runDir / "sim.rrd"), SimRecording::IsSupported());
   std::istringstream csv(ReadFile(runDir / "signals.csv"));
   std::string header;
   std::getline(csv, header);
