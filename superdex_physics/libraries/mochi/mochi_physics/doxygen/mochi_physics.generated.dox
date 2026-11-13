@@ -273,6 +273,114 @@
 /// @note For nested soft actors in @ref mochi::prefab::SoftSkinnedActorPrefab::softParams "SoftSkinnedActorPrefab::softParams", values are the soft displacements in the unposed (bind-pose) frame, before skinning is applied.
 ///
 
+/// @struct mochi::prefab::RodPose
+///
+/// @brief A rod pose: node displacements and element frame axes.
+///
+/// @details Values are expressed in the model frame of @ref mochi::prefab::RodActorPrefab::shapeFile "RodActorPrefab::shapeFile", the same frame as its node positions and rest frame axes. The model transform baked into the shape (@ref mochi::prefab::RodActorPrefab::scale "RodActorPrefab::scale", @ref mochi::prefab::RodActorPrefab::shapeRotation "RodActorPrefab::shapeRotation", and the effective prefab scale) is applied to the pose too: displacements like node positions, and frame axes like the rest frame axes (by the inverse transpose, then renormalized). @ref mochi::prefab::RodActorPrefab::shapeTranslation "RodActorPrefab::shapeTranslation" does not affect them. When @ref mochi::prefab::RodActorPrefab::shapeFile "RodActorPrefab::shapeFile" is empty (a preset @ref mochi::RodActorParams::shape "RodActorParams::shape"), the pose is applied unchanged.
+///
+/// @see @ref mochi::Actor::GetRodPose "Actor::GetRodPose", @ref mochi::Actor::SetRodPose "Actor::SetRodPose"
+///
+
+/// @var mochi::prefab::RodPose::nodeDisplacements
+///
+/// @brief Node displacements relative to the rest node positions, flattened as [x0, y0, z0, x1, y1, z1, ...]. Must contain 3 finite values per node.
+///
+
+/// @var mochi::prefab::RodPose::elementFrameAxes
+///
+/// @brief Element frame axes, flattened as [x0, y0, z0, x1, y1, z1, ...]. Must contain 3 finite values per element. After the model transform is applied, each axis is expected to be a unit vector orthogonal to its deformed element, within a tolerance of 1e-3. Geometry violations emit warnings; the supplied pose is still applied.
+///
+
+/// @struct mochi::prefab::RodActorPrefab
+///
+/// @brief Prefab parameters for a rod actor.
+///
+/// @details Extends @ref mochi::RodActorParams "RodActorParams". The inherited @ref mochi::RodActorParams::worldFromLocal "RodActorParams::worldFromLocal" is replaced by the prefab-relative @ref mochi::prefab::RodActorPrefab::rotation "rotation" and @ref mochi::prefab::RodActorPrefab::translation "translation" fields, and the inherited @ref mochi::RodActorParams::shape "RodActorParams::shape" (a runtime @ref mochi::ShapeHandle "ShapeHandle") is replaced by @ref mochi::prefab::RodActorPrefab::shapeFile "shapeFile" (a path serialized to JSON. The shape is loaded at instantiation time).
+///
+/// @note The rod is created in its rest configuration, then @ref mochi::prefab::RodActorPrefab::pose "pose" is applied if set. Use @ref mochi::Actor::SetRecenteringParams "Actor::SetRecenteringParams" after instantiation to change recentering.
+/// @note The inherited @ref mochi::RodActorParams::name "RodActorParams::name" field need not be unique, but a name shared by more than one actor cannot be used by name-based prefab references.
+///
+
+/// @var mochi::prefab::RodActorPrefab::comment
+///
+/// @brief Optional serialized comment.
+///
+
+/// @var mochi::prefab::RodActorPrefab::shapeFile
+///
+/// @brief Path to a polyline model file that will be loaded and referenced via @ref mochi::ShapeHandle "ShapeHandle".
+///
+
+/// @var mochi::prefab::RodActorPrefab::scale
+///
+/// @brief Scale [x, y, z] to bake into the shape file.
+///
+/// @details Applies to the rod geometry: node positions, element frame axes (transformed by the inverse transpose and renormalized), and the visual and contact-skin meshes. Also applies to @ref mochi::PointCloudColliderParams::radius "PointCloudColliderParams::radius", which is authored for the unscaled shape and is multiplied by the absolute value of the uniform scale. Does not apply to @ref mochi::RodActorParams::material "RodActorParams::material", @ref mochi::RodActorParams::contact "RodActorParams::contact", or the other @ref mochi::RodActorParams::pointCloudCollider "RodActorParams::pointCloudCollider" parameters.
+///
+/// @note All components must be non-zero and finite. Negative components mirror the corresponding model-space axes.
+/// @note Must be uniform by absolute value when the rod has a point-cloud collider (see @ref mochi::RodActorParams::colliderType "RodActorParams::colliderType").
+///
+/// @see @ref mochi::prefab::PrefabParams::scale "PrefabParams::scale"
+///
+
+/// @var mochi::prefab::RodActorPrefab::shapeRotation
+///
+/// @brief Rotation quaternion [x, y, z, w] to bake into the shape file.
+///
+
+/// @var mochi::prefab::RodActorPrefab::shapeTranslation
+///
+/// @brief Translation [x, y, z] to bake into the shape file.
+///
+
+/// @var mochi::prefab::RodActorPrefab::rotation
+///
+/// @brief Actor rotation quaternion [x, y, z, w] relative to the prefab's local frame (i.e., the prefab-from-local rotation). Composes with @ref mochi::prefab::PrefabParams::rotation "PrefabParams::rotation" to produce the final world-from-local rotation.
+///
+/// @note Must be finite and non-zero.
+///
+
+/// @var mochi::prefab::RodActorPrefab::translation
+///
+/// @brief Actor translation [x, y, z] relative to the prefab's local frame (i.e., the prefab-from-local translation). Composes with @ref mochi::prefab::PrefabParams::scale "PrefabParams::scale", @ref mochi::prefab::PrefabParams::rotation "PrefabParams::rotation", and @ref mochi::prefab::PrefabParams::translation "PrefabParams::translation" to produce the final world-from-local translation.
+///
+/// @note Must be finite.
+///
+
+/// @var mochi::prefab::RodActorPrefab::renderModelFile
+///
+/// @brief Optional path to a render model file (e.g. .glb) for visualization.
+///
+/// @note Reserved visualization metadata. SuperDex Physics does not use it for simulation. Ignored if empty.
+///
+
+/// @var mochi::prefab::RodActorPrefab::renderModelScale
+///
+/// @brief Scale [x, y, z] to apply to the render model.
+///
+/// @note Ignored if @ref mochi::prefab::RodActorPrefab::renderModelFile "renderModelFile" is empty.
+///
+
+/// @var mochi::prefab::RodActorPrefab::renderModelRotation
+///
+/// @brief Rotation quaternion [x, y, z, w] to apply to the render model.
+///
+/// @note Ignored if @ref mochi::prefab::RodActorPrefab::renderModelFile "renderModelFile" is empty.
+///
+
+/// @var mochi::prefab::RodActorPrefab::renderModelTranslation
+///
+/// @brief Translation [x, y, z] to apply to the render model.
+///
+/// @note Ignored if @ref mochi::prefab::RodActorPrefab::renderModelFile "renderModelFile" is empty.
+///
+
+/// @var mochi::prefab::RodActorPrefab::pose
+///
+/// @brief Optional initial pose. Applied right after the actor is created, see @ref mochi::Actor::SetRodPose "Actor::SetRodPose".
+///
+
 /// @struct mochi::prefab::ArticulatedJointPrefab
 ///
 /// @brief Joint parameters for an articulated actor prefab.
@@ -554,6 +662,11 @@
 /// @var mochi::prefab::ActorLists::softSkinned
 ///
 /// @brief Soft-skinned actors.
+///
+
+/// @var mochi::prefab::ActorLists::rod
+///
+/// @brief Rod actors.
 ///
 
 /// @struct mochi::prefab::RigidSphericalJointConstraintPrefab
@@ -1161,10 +1274,11 @@
 ///
 /// The effective scale is applied to:
 ///
-/// - Mesh geometry (link / actor shapes are loaded at the cumulative scale)
+/// - Mesh geometry (link / actor shapes are loaded at the cumulative scale), including rod nodes, element frame axes (inverse transpose, then renormalized), and rod visual and contact-skin meshes
+/// - The rod point-cloud collider @ref mochi::PointCloudColliderParams::radius "PointCloudColliderParams::radius", by the absolute value of the effective scale, which must be uniform for rods with a point-cloud collider
 /// - Joint and link translations, cycle joint anchors
 /// - Prismatic joint position limits (Real3, in meters)
-/// - Soft actor @ref mochi::prefab::SoftActorPrefab::nodeDisplacements "SoftActorPrefab::nodeDisplacements" and translational DoFs of @ref mochi::prefab::ArticulatedActorPrefab::jointPose "ArticulatedActorPrefab::jointPose"
+/// - Soft actor @ref mochi::prefab::SoftActorPrefab::nodeDisplacements "SoftActorPrefab::nodeDisplacements", rod actor @ref mochi::prefab::RodPose::nodeDisplacements "RodPose::nodeDisplacements" (with @ref mochi::prefab::RodPose::elementFrameAxes "RodPose::elementFrameAxes" transformed like the rest frame axes), and translational DoFs of @ref mochi::prefab::ArticulatedActorPrefab::jointPose "ArticulatedActorPrefab::jointPose"
 /// - Constraint geometric target and limit distances [m], including rigid prismatic joint limits, world-space position targets, rigid actor-local pivot/joint positions in @ref mochi::prefab::RigidPivotPositionConstraintPrefab "RigidPivotPositionConstraintPrefab", @ref mochi::prefab::RigidPivotToRigidTargetConstraintPrefab "RigidPivotToRigidTargetConstraintPrefab", and @ref mochi::prefab::RigidSphericalJointConstraintPrefab "RigidSphericalJointConstraintPrefab"; the rigid-local attachment/search point in @ref mochi::prefab::DeformableNodeToRigidConstraintPrefab "DeformableNodeToRigidConstraintPrefab"; and translational single-DoF target/range values in @ref mochi::prefab::ArticulatedSingleDofTargetConstraintPrefab "ArticulatedSingleDofTargetConstraintPrefab" and @ref mochi::prefab::ArticulatedSingleDofRangeConstraintPrefab "ArticulatedSingleDofRangeConstraintPrefab". Actor-local constraint distances use the referenced actor's prefab metric scale, so standalone rigid/soft shape-bake scale fields are not applied again.
 /// - User-supplied inertia overrides on rigid and articulated link actors: center of mass scales componentwise by the signed effective scale, mass scales by the absolute effective volume scale, moment of inertia uses the corresponding diagonal inertia transform. For a purely uniform effective scale s, this reduces to:
 /// @code
@@ -1181,6 +1295,7 @@
 /// - linearVelocity / angularVelocity / jointVelocities
 /// - Contact-pair parameter overrides, whose authored values are preserved
 /// - Constraint stiffness/damping coefficients and saturation thresholds inherited from @ref mochi::ConstraintParams "ConstraintParams". These parameters define the constraint's response, not just geometry: different goals (preserving material behavior, damping ratio, actuator limits, or closed-loop response) imply different scale laws, so prefab scaling preserves authored values.
+/// - Rod material and contact parameters (@ref mochi::RodActorParams::material "RodActorParams::material" and @ref mochi::RodActorParams::contact "RodActorParams::contact"), and the other point-cloud collider parameters in @ref mochi::RodActorParams::pointCloudCollider "RodActorParams::pointCloudCollider"
 /// - Joint inertia, friction, limit stiffness/damping, cycle joint stiffness (characterized actuator / tuned-penalty parameters; bring your own actuator model when scaling a robot)
 /// - Revolute and spherical joint angular limits, rotation-valued targets and ranges in @ref mochi::prefab::Articulated3dRotationTargetConstraintPrefab "Articulated3dRotationTargetConstraintPrefab" and @ref mochi::prefab::Articulated3dRotationRangeConstraintPrefab "Articulated3dRotationRangeConstraintPrefab", and rotational single-DoF target/range values in @ref mochi::prefab::ArticulatedSingleDofTargetConstraintPrefab "ArticulatedSingleDofTargetConstraintPrefab" and @ref mochi::prefab::ArticulatedSingleDofRangeConstraintPrefab "ArticulatedSingleDofRangeConstraintPrefab" (scale invariant)
 ///
@@ -4479,6 +4594,7 @@
 /// @note Some shape data cannot bake arbitrary non-uniform scale. Unsupported scale values are rejected.
 /// @note Precomputed grid SDF data is preserved only when @p bakeScale is uniform by absolute value. Non-uniform scale by absolute value discards the precomputed SDF. If an SDF collider later requires SDF data, SuperDex Physics regenerates it from the transformed mesh at runtime, which may be expensive.
 /// @note If the loaded model has @ref mochi::ModelData::elementFrameAxes "ModelData::elementFrameAxes", @p bakeScale transforms those axes as normal directions using the inverse-transpose of the scale transform, then normalize them.
+/// @note A polyline model without @ref mochi::ModelData::elementFrameAxes "ModelData::elementFrameAxes" gets its default axes generated from the model before the bake, which then transforms them the same way.
 /// @note Call on any thread.
 ///
 /// @see @ref mochi::ShapeHandle "ShapeHandle", @ref mochi::Context::ReleaseShape "ReleaseShape", @ref mochi::Context::LoadShapeFromBytes "LoadShapeFromBytes"
@@ -4497,6 +4613,7 @@
 ///
 /// @note The shape remains in memory while referenced by any handle or actor. In the C API, you must release the shape explicitly by calling @ref mochi::Context::ReleaseShape "Context::ReleaseShape". In C++ and Python, this is optional, since @ref mochi::ShapeHandle "ShapeHandle" cleanup is automatic.
 /// @note If the loaded model has @ref mochi::ModelData::elementFrameAxes "ModelData::elementFrameAxes", @p bakeTransform transforms those axes as normal directions using the inverse-transpose of the rotation transform, then normalize them.
+/// @note A polyline model without @ref mochi::ModelData::elementFrameAxes "ModelData::elementFrameAxes" gets its default axes generated from the model before the bake, which then transforms them the same way.
 /// @note Call on any thread.
 ///
 /// @see @ref mochi::ShapeHandle "ShapeHandle", @ref mochi::Context::ReleaseShape "ReleaseShape", @ref mochi::Context::LoadShapeFromBytes "LoadShapeFromBytes"
@@ -4518,6 +4635,7 @@
 /// @note Some shape data cannot bake arbitrary non-uniform scale. Unsupported scale values are rejected.
 /// @note Precomputed grid SDF data is preserved only when @p bakeScale is uniform by absolute value. Non-uniform scale by absolute value discards the precomputed SDF. If an SDF collider later requires SDF data, SuperDex Physics regenerates it from the transformed mesh at runtime, which may be expensive.
 /// @note If the loaded model has @ref mochi::ModelData::elementFrameAxes "ModelData::elementFrameAxes", @p bakeScale and @p bakeTransform transform those axes as normal directions using the inverse-transpose of the scale-rotation transform, then normalize them.
+/// @note A polyline model without @ref mochi::ModelData::elementFrameAxes "ModelData::elementFrameAxes" gets its default axes generated from the model before the bake, which then transforms them the same way.
 /// @note Call on any thread.
 ///
 /// @see @ref mochi::ShapeHandle "ShapeHandle", @ref mochi::Context::ReleaseShape "ReleaseShape", @ref mochi::Context::LoadShapeFromBytes "LoadShapeFromBytes"
@@ -4554,6 +4672,7 @@
 /// @note Some shape data cannot bake arbitrary non-uniform scale. Unsupported scale values are rejected.
 /// @note Precomputed grid SDF data is preserved only when @p bakeScale is uniform by absolute value. Non-uniform scale by absolute value discards the precomputed SDF. If an SDF collider later requires SDF data, SuperDex Physics regenerates it from the transformed mesh at runtime, which may be expensive.
 /// @note If the loaded model has @ref mochi::ModelData::elementFrameAxes "ModelData::elementFrameAxes", @p bakeScale transforms those axes as normal directions using the inverse-transpose of the scale transform, then normalize them.
+/// @note A polyline model without @ref mochi::ModelData::elementFrameAxes "ModelData::elementFrameAxes" gets its default axes generated from the model before the bake, which then transforms them the same way.
 /// @note Call on any thread.
 ///
 /// @see @ref mochi::ShapeHandle "ShapeHandle", @ref mochi::Context::ReleaseShape "ReleaseShape", @ref mochi::Context::LoadShapeFromFile "LoadShapeFromFile"
@@ -4572,6 +4691,7 @@
 ///
 /// @note The shape remains in memory while referenced by any handle or actor. In the C API, you must release the shape explicitly by calling @ref mochi::Context::ReleaseShape "Context::ReleaseShape". In C++ and Python, this is optional, since @ref mochi::ShapeHandle "ShapeHandle" cleanup is automatic.
 /// @note If the loaded model has @ref mochi::ModelData::elementFrameAxes "ModelData::elementFrameAxes", @p bakeTransform transforms those axes as normal directions using the inverse-transpose of the rotation transform, then normalize them.
+/// @note A polyline model without @ref mochi::ModelData::elementFrameAxes "ModelData::elementFrameAxes" gets its default axes generated from the model before the bake, which then transforms them the same way.
 /// @note Call on any thread.
 ///
 /// @see @ref mochi::ShapeHandle "ShapeHandle", @ref mochi::Context::ReleaseShape "ReleaseShape", @ref mochi::Context::LoadShapeFromFile "LoadShapeFromFile"
@@ -4593,6 +4713,7 @@
 /// @note Some shape data cannot bake arbitrary non-uniform scale. Unsupported scale values are rejected.
 /// @note Precomputed grid SDF data is preserved only when @p bakeScale is uniform by absolute value. Non-uniform scale by absolute value discards the precomputed SDF. If an SDF collider later requires SDF data, SuperDex Physics regenerates it from the transformed mesh at runtime, which may be expensive.
 /// @note If the loaded model has @ref mochi::ModelData::elementFrameAxes "ModelData::elementFrameAxes", @p bakeScale and @p bakeTransform transform those axes as normal directions using the inverse-transpose of the scale-rotation transform, then normalize them.
+/// @note A polyline model without @ref mochi::ModelData::elementFrameAxes "ModelData::elementFrameAxes" gets its default axes generated from the model before the bake, which then transforms them the same way.
 /// @note Call on any thread.
 ///
 /// @see @ref mochi::ShapeHandle "ShapeHandle", @ref mochi::Context::ReleaseShape "ReleaseShape", @ref mochi::Context::LoadShapeFromFile "LoadShapeFromFile"
@@ -4627,6 +4748,7 @@
 /// @note Some shape data cannot bake arbitrary non-uniform scale. Unsupported scale values are rejected.
 /// @note Precomputed grid SDF data is preserved only when @p bakeScale is uniform by absolute value. Non-uniform scale by absolute value discards the precomputed SDF. If an SDF collider later requires SDF data, SuperDex Physics regenerates it from the transformed mesh at runtime, which may be expensive.
 /// @note If the loaded model has @ref mochi::ModelData::elementFrameAxes "ModelData::elementFrameAxes", @p bakeScale transforms those axes as normal directions using the inverse-transpose of the scale transform, then normalize them.
+/// @note A polyline model without @ref mochi::ModelData::elementFrameAxes "ModelData::elementFrameAxes" gets its default axes generated from the model before the bake, which then transforms them the same way.
 /// @note Call on any thread.
 ///
 /// @see @ref mochi::ShapeHandle "ShapeHandle", @ref mochi::Context::ReleaseShape "ReleaseShape", @ref mochi::Context::LoadShapeFromFile "LoadShapeFromFile"
@@ -4644,6 +4766,7 @@
 ///
 /// @note The shape remains in memory while referenced by any handle or actor. In the C API, you must release the shape explicitly by calling @ref mochi::Context::ReleaseShape "Context::ReleaseShape". In C++ and Python, this is optional, since @ref mochi::ShapeHandle "ShapeHandle" cleanup is automatic.
 /// @note If the loaded model has @ref mochi::ModelData::elementFrameAxes "ModelData::elementFrameAxes", @p bakeTransform transforms those axes as normal directions using the inverse-transpose of the rotation transform, then normalize them.
+/// @note A polyline model without @ref mochi::ModelData::elementFrameAxes "ModelData::elementFrameAxes" gets its default axes generated from the model before the bake, which then transforms them the same way.
 /// @note Call on any thread.
 ///
 /// @see @ref mochi::ShapeHandle "ShapeHandle", @ref mochi::Context::ReleaseShape "ReleaseShape", @ref mochi::Context::LoadShapeFromFile "LoadShapeFromFile"
@@ -4664,6 +4787,7 @@
 /// @note Some shape data cannot bake arbitrary non-uniform scale. Unsupported scale values are rejected.
 /// @note Precomputed grid SDF data is preserved only when @p bakeScale is uniform by absolute value. Non-uniform scale by absolute value discards the precomputed SDF. If an SDF collider later requires SDF data, SuperDex Physics regenerates it from the transformed mesh at runtime, which may be expensive.
 /// @note If the loaded model has @ref mochi::ModelData::elementFrameAxes "ModelData::elementFrameAxes", @p bakeScale and @p bakeTransform transform those axes as normal directions using the inverse-transpose of the scale-rotation transform, then normalize them.
+/// @note A polyline model without @ref mochi::ModelData::elementFrameAxes "ModelData::elementFrameAxes" gets its default axes generated from the model before the bake, which then transforms them the same way.
 /// @note Call on any thread.
 ///
 /// @see @ref mochi::ShapeHandle "ShapeHandle", @ref mochi::Context::ReleaseShape "ReleaseShape", @ref mochi::Context::LoadShapeFromFile "LoadShapeFromFile"

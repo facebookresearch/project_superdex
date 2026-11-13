@@ -27,6 +27,7 @@
 #include <mochi_physics/src/mochi_discretization_components.h>
 #include <mochi_physics/src/mochi_ecs_utils.h>
 #include <mochi_physics/src/mochi_hdf5.h>
+#include <mochi_physics/src/mochi_rod.h>
 #include <mochi_physics/src/mochi_scene.h>
 #include <mochi_physics/src/mochi_soft_rom_components.h>
 #include <mochi_physics/utils/mochi_prefab.h>
@@ -34,9 +35,11 @@
 #include "mochi_physics_test_fixture.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <limits>
 #include <memory>
 #include <string>
+#include <vector>
 
 using namespace mochi;
 using namespace mochi::test;
@@ -1676,6 +1679,764 @@ TEST_IF(MOCHI_INTERNAL, Prefab, SoftActor_AddToScene) {
   scene->ForEachActor(checkActor);
   ASSERT_EQ(1, isize(result.actors));
   EXPECT_EQ(actorHandle, result.actors[0]->GetHandle());
+}
+
+TEST(Prefab, RodActor_Serialization) {
+  // One rod actor with all non-default settings
+  std::string const json = R"({
+    "actors": {
+      "rod": [
+        {
+          "_comment": "Good stuff",
+          "name": "bob",
+          "layer": "bob's layer",
+          "shape": "some/dir/path",
+          "scale": [0.5, -0.25, 2.0],
+          "shapeRotation": [9.0, 8.0, 7.0, 6.0],
+          "shapeTranslation": [5.0, 4.0, 3.0],
+          "rotation": [1.0, 2.0, 3.0, 4.0],
+          "translation": [5.0, 6.0, 7.0],
+          "renderModel": "some/dir/rod.glb",
+          "renderModelScale": [2.0, 3.0, 4.0],
+          "renderModelRotation": [0.0, 0.0, 1.0, 0.0],
+          "renderModelTranslation": [0.25, 0.5, 0.75],
+          "contact": {"penaltyCoefficient": 2e9, "coulombFrictionCoefficient": 0.25},
+          "contactElementType": "P1Q1",
+          "material": {
+            "linearDensity": 0.25,
+            "linearRotationalInertia": 0.0078125,
+            "axialStiffness": 256,
+            "torsionalStiffness": 0.0625,
+            "flexuralStiffness": [0.125, 0.5],
+            "massDampingCoefficient": 0.5,
+            "stiffnessDampingCoefficient": 0.125,
+            "axialCollapseBarrierScale": 0.25
+          },
+          "colliderType": "PointCloud",
+          "pointCloudCollider": {
+            "radius": 0.03125,
+            "selfContactExclusionRatio": 2.5,
+            "spatialHashLoadFactor": 0.125,
+            "selfContact": true,
+            "colliderSegmentElementType": "P1Q2"
+          },
+          "hasGravity": false,
+          "useContactSkin": true,
+          "contactSkinElementType": "P1Q6",
+          "pose": {
+            "nodeDisplacements": [0.0, 0.5, 0.0, 0.25, 0.0, 0.0],
+            "elementFrameAxes": [0.0, 1.0, 0.0]
+          }
+        }
+      ]
+    }
+  })";
+
+  prefab::RodActorPrefab expected;
+  expected.comment = DynamicString("Good stuff");
+  expected.name = "bob";
+  expected.layer = "bob's layer";
+  expected.shapeFile = "some/dir/path";
+  expected.scale = {0.5_r, -0.25_r, 2_r};
+  expected.shapeRotation = Quaternion(9_r, 8_r, 7_r, 6_r);
+  expected.shapeTranslation = {5_r, 4_r, 3_r};
+  expected.rotation = Quaternion(1_r, 2_r, 3_r, 4_r);
+  expected.translation = {5_r, 6_r, 7_r};
+  expected.renderModelFile = "some/dir/rod.glb";
+  expected.renderModelScale = {2_r, 3_r, 4_r};
+  expected.renderModelRotation = Quaternion(0_r, 0_r, 1_r, 0_r);
+  expected.renderModelTranslation = {0.25_r, 0.5_r, 0.75_r};
+  expected.contact.penaltyCoefficient = 2e9_r;
+  expected.contact.coulombFrictionCoefficient = 0.25_r;
+  expected.contactElementType = ActorSegmentElementType::P1Q1;
+  expected.material = {
+      .linearDensity = 0.25_r,
+      .linearRotationalInertia = 0.0078125_r,
+      .axialStiffness = 256_r,
+      .torsionalStiffness = 0.0625_r,
+      .flexuralStiffness = {0.125_r, 0.5_r},
+      .massDampingCoefficient = 0.5_r,
+      .stiffnessDampingCoefficient = 0.125_r,
+      .axialCollapseBarrierScale = 0.25_r};
+  expected.colliderType = ColliderType::PointCloud;
+  expected.pointCloudCollider = {
+      .radius = 0.03125_r,
+      .selfContactExclusionRatio = 2.5_r,
+      .spatialHashLoadFactor = 0.125_r,
+      .selfContact = true,
+      .colliderSegmentElementType = ActorSegmentElementType::P1Q2};
+  expected.hasGravity = false;
+  expected.useContactSkin = true;
+  expected.contactSkinElementType = ActorBoundaryElementType::P1Q6;
+  expected.pose = prefab::RodPose{
+      .nodeDisplacements = {0_r, 0.5_r, 0_r, 0.25_r, 0_r, 0_r},
+      .elementFrameAxes = {0_r, 1_r, 0_r}};
+
+  // If this fails, then a code change may break existing prefab files.
+  prefab::ScenePrefab const content = prefab::ShallowLoadFromJsonString(json, test::ExpectOK{});
+  ASSERT_EQ(1, isize(content.actors.rod));
+  EXPECT_EQ(expected, content.actors.rod[0]);
+
+  auto const json2 = prefab::SaveToJsonString(content, test::ExpectOK{});
+  EXPECT_EQ(content, prefab::ShallowLoadFromJsonString(json2, test::ExpectOK{}));
+  auto const defaults = prefab::ShallowLoadFromJsonString(R"({"actors":{"rod":[{}]}})", ExpectOK{});
+  ASSERT_EQ(1, isize(defaults.actors.rod));
+  EXPECT_TRUE(defaults.actors.rod[0].renderModelFile.empty());
+  EXPECT_EQ(kReal3Ones, defaults.actors.rod[0].renderModelScale);
+  EXPECT_EQ(Quaternion{}, defaults.actors.rod[0].renderModelRotation);
+  EXPECT_EQ(Real3{}, defaults.actors.rod[0].renderModelTranslation);
+}
+
+struct RodShapeFile {
+  ModelData model;
+  std::string path;
+};
+
+// Generates the rod shape so the rod prefab tests do not depend on internal assets.
+[[nodiscard]] static RodShapeFile WriteRodShapeFile(
+    std::filesystem::path const& dir,
+    Span<Real3 const> nodes,
+    Span<Real3 const> frameAxes,
+    bool isClosedLoop) {
+  RodShapeFile out;
+  out.model = experimental::GenerateTubularRodModelData(
+      nodes, frameAxes, /*radius=*/0.01_r, /*numCrossSectionSegments=*/4, isClosedLoop, ExpectOK{});
+  out.path = (dir / (isClosedLoop ? "closed_rod.mochi.json" : "open_rod.mochi.json")).string();
+  model::SaveToFile(out.model, out.path, FileFormat::JSON, ExpectOK{});
+  return out;
+}
+
+[[nodiscard]] static ModelData MakeStraightRodModel() {
+  // Frame axes are oblique to the coordinate axes, so non-uniform scale changes their direction.
+  real const c = 1_r / Sqrt(2_r);
+  DynamicArray<Real3> const nodes = {{0_r, 0_r, 0_r}, {0.1_r, 0_r, 0_r}, {0.2_r, 0_r, 0_r}};
+  DynamicArray<Real3> const axes(2, Real3{0_r, c, c});
+  return experimental::GenerateTubularRodModelData(
+      nodes,
+      axes,
+      /*radius=*/0.01_r,
+      /*numCrossSectionSegments=*/4,
+      /*isClosedLoop=*/false,
+      ExpectOK{});
+}
+
+[[nodiscard]] static RodShapeFile WriteStraightRodShapeFile(std::filesystem::path const& dir) {
+  RodShapeFile out;
+  out.model = MakeStraightRodModel();
+  out.path = (dir / "open_rod.mochi.json").string();
+  model::SaveToFile(out.model, out.path, FileFormat::JSON, ExpectOK{});
+  return out;
+}
+
+[[nodiscard]] static std::string WriteTetCubeShapeFile(std::filesystem::path const& dir) {
+  auto [coordinates, connectivity] = test::CreateMinimalTetMeshUnitCube();
+  ModelData cubeModel;
+  auto& mesh = cubeModel.mesh.emplace();
+  mesh.nodesPerElement = 4;
+  mesh.coordinates = Flatten(MakeSpan(coordinates));
+  mesh.connectivity = Flatten(MakeSpan(connectivity));
+  auto const path = (dir / "cube.mochi.json").string();
+  model::SaveToFile(cubeModel, path, FileFormat::JSON, ExpectOK{});
+  return path;
+}
+
+// Applies the prefab bake x' = scale * x + translation to flattened model-space positions.
+[[nodiscard]] static DynamicArray<real>
+BakePositions(Span<real const> positions, Real3 const& scale, Real3 const& translation) {
+  DynamicArray<real> out(positions.begin(), positions.end());
+  for (Real3& p : Unflatten<Real3>(out)) {
+    p = scale * p + translation;
+  }
+  return out;
+}
+
+TEST(Prefab, RodActor_AddToScene_Scale) {
+  struct Case {
+    char const* label = "";
+    bool isClosedLoop = false;
+    Real3 actorScale = kReal3Ones;
+    real nestedScale = 1_r;
+    real prefabScale = 1_r;
+    ColliderType colliderType = ColliderType::PointCloud;
+  };
+  for (Case const& c : {
+           Case{
+               .label = "PrefabScale",
+               .isClosedLoop = false,
+               .actorScale = kReal3Ones,
+               .nestedScale = 1_r,
+               .prefabScale = 2_r},
+           Case{
+               .label = "NestedPrefabScale",
+               .isClosedLoop = false,
+               .actorScale = kReal3Ones,
+               .nestedScale = 3_r,
+               .prefabScale = 2_r},
+           Case{
+               .label = "NonUniformMirroredActorScaleWithoutPointCloudCollider",
+               .isClosedLoop = false,
+               .actorScale = {2_r, -1_r, 0.5_r},
+               .nestedScale = 1_r,
+               .prefabScale = 1_r,
+               .colliderType = ColliderType::None},
+           Case{
+               .label = "MirroredClosedLoopContactSkin",
+               .isClosedLoop = true,
+               .actorScale = {1.5_r, -1.5_r, 1.5_r},
+               .nestedScale = 2_r,
+               .prefabScale = 1_r},
+       }) {
+    SCOPED_TRACE(c.label);
+    auto* context = mochi::CreateContext(0);
+    MOCHI_DEFER(mochi::DestroyContext(context));
+    auto* scene = context->CreateScene("test");
+    MOCHI_DEFER(context->DestroyScene(scene));
+    auto tempDir = CreateTempDirectory("prefab_rod_scale_test", ExpectOK{});
+
+    DynamicArray<Real3> const squareLoop = {
+        {0_r, 0_r, 0_r}, {0.1_r, 0_r, 0_r}, {0.1_r, 0_r, 0.1_r}, {0_r, 0_r, 0.1_r}};
+    RodShapeFile const shape = c.isClosedLoop
+        ? WriteRodShapeFile(
+              tempDir.Path(), squareLoop, DynamicArray<Real3>(4, Real3{0_r, 1_r, 0_r}), true)
+        : WriteStraightRodShapeFile(tempDir.Path());
+
+    prefab::ScenePrefab childPrefab;
+    auto& rod = childPrefab.actors.rod.push_back();
+    rod.name = "Rod";
+    rod.shapeFile = shape.path;
+    rod.scale = c.actorScale;
+    rod.shapeTranslation = {0.1_r, 0.2_r, 0.3_r};
+    rod.rotation = Quaternion::FromAxisAngle(Real3{0_r, 1_r, 0_r}, 0.5_r);
+    rod.translation = {1_r, 2_r, 3_r};
+    rod.material.axialStiffness = 321_r;
+    rod.contact.penaltyCoefficient = 1234_r;
+    rod.colliderType = c.colliderType;
+    rod.pointCloudCollider.radius = 0.02_r;
+    rod.useContactSkin = c.isClosedLoop;
+    auto const childPath = tempDir.Path() / "child.mochi_scene";
+    prefab::SaveToJsonFile(childPrefab, childPath.string(), ExpectOK{});
+
+    prefab::ScenePrefab parentPrefab;
+    auto& nestedRef = parentPrefab.prefabs.push_back();
+    nestedRef.name = "Child";
+    nestedRef.path = childPath.string();
+    nestedRef.scale = c.nestedScale;
+    auto const parentPath = tempDir.Path() / "parent.mochi_scene";
+    prefab::SaveToJsonFile(parentPrefab, parentPath.string(), ExpectOK{});
+
+    prefab::PrefabParams params;
+    params.name = "Top";
+    params.scale = c.prefabScale;
+    params.translation = {0.5_r, 0_r, 0_r};
+    auto const result =
+        prefab::AddToScene(parentPath.string(), test::GetAssetsDir(), scene, params, ExpectOK{});
+    auto const rods = result.Filter(ActorType::Rod);
+    ASSERT_EQ(1, isize(rods));
+    Actor const* actor = rods[0];
+    EXPECT_STREQ("Top/Child/Rod", actor->GetName());
+
+    // Geometry is baked at the composed scale.
+    real const outerScale = c.prefabScale * c.nestedScale;
+    Real3 const bakeScale = c.actorScale * outerScale;
+    Real3 const bakeTranslation = rod.shapeTranslation * outerScale;
+    EXPECT_TRUE(
+        test::NearEqualSpan(
+            BakePositions(shape.model.mesh->coordinates, bakeScale, bakeTranslation),
+            actor->GetMesh().coordinates,
+            1e-6_r));
+    EXPECT_TRUE(
+        test::NearEqualSpan(
+            BakePositions(shape.model.contactSkinMesh->coordinates, bakeScale, bakeTranslation),
+            actor->GetContactSkinMesh().coordinates,
+            1e-6_r));
+
+    TransformSRT const worldFromActor =
+        TransformSRT(params.scale, params.rotation, params.translation) *
+        TransformSRT(c.nestedScale, Quaternion{}, Real3{}) *
+        TransformSRT(1_r, Normalize(rod.rotation), rod.translation);
+    EXPECT_NEAR_EQ(worldFromActor.GetRotation(), actor->GetRootTransform().GetRotation());
+    EXPECT_NEAR_EQ(worldFromActor.GetTranslation(), actor->GetRootTransform().GetTranslation());
+
+    // Frame axes are normals of the scaled geometry and stay valid.
+    auto const& reg = assert_cast<SceneImpl*>(scene)->GetRegistry();
+    entt::entity const entity = GetEntityUnchecked(actor->GetHandle());
+    Span<Real3 const> const axes = reg.get<CReferenceElementFrameAxes const>(entity).axes;
+    Span<Real3 const> const modelAxes = Unflatten<Real3 const>(*shape.model.elementFrameAxes);
+    ASSERT_EQ(isize(modelAxes), isize(axes));
+    for (int i = 0; i < isize(axes); ++i) {
+      EXPECT_NEAR_TOL(Normalize(modelAxes[i] / c.actorScale), axes[i], 1e-6_r);
+    }
+    model::ValidatePolylineElementFrameAxes(
+        axes, Unflatten<Real3 const>(actor->GetMesh().coordinates), c.isClosedLoop, ExpectOK{});
+
+    // Material and contact parameters do not scale. The collider radius scales with the absolute
+    // value of the uniform composed scale, like the geometry.
+    EXPECT_EQ(
+        rod.material,
+        static_cast<RodMaterialParams const&>(reg.get<CRodMaterialParams const>(entity)));
+    EXPECT_EQ(rod.contact, actor->GetContactParams(ExpectOK{}));
+    if (c.colliderType != ColliderType::None) {
+      PointCloudColliderParams expectedCollider = rod.pointCloudCollider;
+      expectedCollider.radius *= Abs(bakeScale[0]);
+      EXPECT_EQ(
+          expectedCollider,
+          static_cast<PointCloudColliderParams const&>(
+              reg.get<CPointCloudColliderParams const>(entity)));
+    }
+  }
+}
+
+TEST(Prefab, RodActor_AddToScene_ConstraintsAndContactFilters) {
+  auto* context = mochi::CreateContext(0);
+  MOCHI_DEFER(mochi::DestroyContext(context));
+  auto tempDir = CreateTempDirectory("prefab_rod_constraints_test", ExpectOK{});
+  std::string const rodShapePath = WriteStraightRodShapeFile(tempDir.Path()).path;
+
+  prefab::ScenePrefab childPrefab;
+  for (char const* name : {"RodA", "RodB"}) {
+    auto& rod = childPrefab.actors.rod.push_back();
+    rod.name = name;
+    rod.layer = "Rods";
+    rod.shapeFile = rodShapePath;
+  }
+  childPrefab.actors.rod[1].translation = {0.3_r, 0_r, 0_r};
+  auto& anchor = childPrefab.actors.rigid.push_back();
+  anchor.name = "Anchor";
+  anchor.shapeFile = WriteTetCubeShapeFile(tempDir.Path());
+  anchor.colliderType = ColliderType::None;
+  auto const childPath = tempDir.Path() / "child.mochi_scene";
+  prefab::SaveToJsonFile(childPrefab, childPath.string(), ExpectOK{});
+
+  // The parent references the nested rods by their prefixed names.
+  std::string const parentJson = R"({
+    "prefabs": [{"name": "Child", "scale": 3, "path": ")" +
+      childPath.generic_string() + R"("}],
+    "constraints": {
+      "deformableNodePosition": [{"actor": "Child/RodA", "nodeIndex": 1, "position": [0.4, 0.5, 0.6]}],
+      "deformableNodeToRigid": [
+        {"deformableActor": "Child/RodA", "rigidActor": "Child/Anchor",
+         "deformableNodeIndex": 2, "rigidLocalPos": [0.3, 0.2, 0.1], "fixToDeformablePos": false}
+      ],
+      "deformableNodeToDeformableNode": [
+        {"actorA": "Child/RodA", "actorB": "Child/RodB", "nodeIndexA": 2, "nodeIndexB": 1}
+      ]
+    },
+    "contactFilter": {
+      "actorContactSymmetric": [{"enable": false, "actors": ["Child/RodA", "Child/Anchor"]}],
+      "layerContactSymmetric": [{"enable": false, "layers": ["Rods", "Rods"]}]
+    }
+  })";
+  auto const parentPath = tempDir.Path() / "parent.mochi_scene";
+  WriteFile(parentPath, Span<char const>(parentJson.data(), parentJson.size()), ExpectOK{});
+
+  auto* scene = context->CreateScene("test");
+  MOCHI_DEFER(context->DestroyScene(scene));
+  prefab::PrefabParams params;
+  params.name = "Top";
+  params.scale = 2_r;
+  params.rotation = Quaternion::FromAxisAngle(Real3{0_r, 0_r, 1_r}, 0.5_r);
+  params.translation = {0_r, 1_r, 2_r};
+  auto const result =
+      prefab::AddToScene(parentPath.string(), test::GetAssetsDir(), scene, params, ExpectOK{});
+
+  ActorHandle const rodA = FindActorByName(scene, "Top/Child/RodA");
+  ActorHandle const rodB = FindActorByName(scene, "Top/Child/RodB");
+  ActorHandle const anchorHandle = FindActorByName(scene, "Top/Child/Anchor");
+  ASSERT_TRUE(rodA.IsValid() && rodB.IsValid() && anchorHandle.IsValid());
+
+  ASSERT_EQ(3, isize(result.actors));
+  for (Actor* actor : result.actors) {
+    EXPECT_EQ(actor, scene->GetActor(actor->GetHandle()));
+  }
+  auto const& reg = assert_cast<SceneImpl const*>(scene)->GetRegistry();
+  for (ConstraintType const type :
+       {ConstraintType::DeformableNodePosition,
+        ConstraintType::DeformableNodeToRigid,
+        ConstraintType::DeformableNodeToDeformableNode}) {
+    ASSERT_EQ(1, isize(result.Filter(type)));
+  }
+  auto constraintEntity = [&](ConstraintType type) {
+    return GetEntityUnchecked(result.Filter(type)[0]->GetHandle());
+  };
+  auto const positionEntity = constraintEntity(ConstraintType::DeformableNodePosition);
+  auto const& positionInfo = reg.get<CConstraintInfo>(positionEntity);
+  EXPECT_EQ(positionInfo.actors, (std::vector<entt::entity>{GetEntityUnchecked(rodA)}));
+  EXPECT_EQ(positionInfo.actorDofs, (std::vector<std::vector<int>>{{4, 5, 6}}));
+  Real3 const target = TransformRT(params.rotation, params.translation)
+                           .TransformPoint(params.scale * Real3{0.4_r, 0.5_r, 0.6_r});
+  EXPECT_NEAR_EQ(
+      (reg.get<CConstraintTarget<Real3, TimeStep::Current>>(positionEntity).value), target);
+
+  auto const nodeToRigidEntity = constraintEntity(ConstraintType::DeformableNodeToRigid);
+  auto const& nodeToRigidInfo = reg.get<CConstraintInfo>(nodeToRigidEntity);
+  EXPECT_EQ(
+      nodeToRigidInfo.actors,
+      (std::vector<entt::entity>{GetEntityUnchecked(anchorHandle), GetEntityUnchecked(rodA)}));
+  EXPECT_EQ(
+      nodeToRigidInfo.actorDofs, (std::vector<std::vector<int>>{{0, 1, 2, 3, 4, 5}, {8, 9, 10}}));
+  auto const& rigidData =
+      reg.get<CConstraintData<ConstraintType::DeformableNodeToRigid>>(nodeToRigidEntity);
+  EXPECT_NEAR_EQ(rigidData.restDeformable, Real3(1.2_r, 0_r, 0_r));
+  Real3 const anchorCom = scene->GetActor(anchorHandle)->GetRigidCenterOfMassLocal(ExpectOK{});
+  EXPECT_NEAR_EQ(rigidData.posLocalRigid, 6_r * Real3(0.3_r, 0.2_r, 0.1_r) - anchorCom);
+
+  auto const nodeToNodeEntity = constraintEntity(ConstraintType::DeformableNodeToDeformableNode);
+  auto const& nodeToNodeInfo = reg.get<CConstraintInfo>(nodeToNodeEntity);
+  EXPECT_EQ(
+      nodeToNodeInfo.actors,
+      (std::vector<entt::entity>{GetEntityUnchecked(rodA), GetEntityUnchecked(rodB)}));
+  EXPECT_EQ(nodeToNodeInfo.actorDofs, (std::vector<std::vector<int>>{{8, 9, 10}, {4, 5, 6}}));
+  auto const& nodeData =
+      reg.get<CConstraintData<ConstraintType::DeformableNodeToDeformableNode>>(nodeToNodeEntity);
+  EXPECT_NEAR_EQ(nodeData.restA, Real3(1.2_r, 0_r, 0_r));
+  EXPECT_NEAR_EQ(nodeData.restB, Real3(0.6_r, 0_r, 0_r));
+
+  auto const* sceneImpl = assert_cast<SceneImpl const*>(scene);
+  EXPECT_FALSE(sceneImpl->IsActorContactEnabled(rodA, anchorHandle, ExpectOK{}));
+  EXPECT_FALSE(sceneImpl->IsActorContactEnabled(anchorHandle, rodA, ExpectOK{}));
+  EXPECT_TRUE(sceneImpl->IsActorContactEnabled(rodB, anchorHandle, ExpectOK{}));
+  EXPECT_FALSE(scene->IsLayerContactEnabled("Rods", "Rods"));
+}
+
+TEST(Prefab, RodActor_AddToScene_Errors) {
+  auto* context = mochi::CreateContext(0);
+  MOCHI_DEFER(mochi::DestroyContext(context));
+  auto tempDir = CreateTempDirectory("prefab_rod_errors_test", ExpectOK{});
+  std::string const rodShapePath = WriteStraightRodShapeFile(tempDir.Path()).path;
+  std::string const cubeShapePath = WriteTetCubeShapeFile(tempDir.Path());
+
+  // Valid rods with explicit-index constraints; each case below changes one thing.
+  auto makeRodPrefab = [&] {
+    prefab::ScenePrefab scenePrefab;
+    for (char const* name : {"RodA", "RodB"}) {
+      auto& rod = scenePrefab.actors.rod.push_back();
+      rod.name = name;
+      rod.shapeFile = rodShapePath;
+    }
+    auto& anchor = scenePrefab.actors.rigid.push_back();
+    anchor.name = "Anchor";
+    anchor.shapeFile = cubeShapePath;
+    anchor.colliderType = ColliderType::None;
+    auto& toRigid = scenePrefab.constraints.deformableNodeToRigid.push_back();
+    toRigid.deformableActorName = "RodA";
+    toRigid.rigidActorName = "Anchor";
+    toRigid.deformableNodeIndex = 0;
+    auto& toDeformable = scenePrefab.constraints.deformableNodeToDeformableNode.push_back();
+    toDeformable.actorNameA = "RodA";
+    toDeformable.actorNameB = "RodB";
+    toDeformable.nodeIndexA = 2;
+    toDeformable.nodeIndexB = 0;
+    prefab::LoadShapes(scenePrefab, test::GetAssetsDir(), context, ExpectOK{});
+    return scenePrefab;
+  };
+  auto addToScene = [&](prefab::ScenePrefab const& scenePrefab, Error& error) {
+    auto* scene = context->CreateScene("test");
+    MOCHI_DEFER(context->DestroyScene(scene));
+    prefab::AddToScene(scenePrefab, scene, {}, error);
+  };
+  auto expectError = [&](prefab::ScenePrefab const& scenePrefab, char const* expectedDescription) {
+    auto const suppressError = test::SuppressLogError();
+    Error error;
+    addToScene(scenePrefab, error);
+    EXPECT_STREQ(expectedDescription, error.GetDescription());
+  };
+  addToScene(makeRodPrefab(), ExpectOK{});
+
+  {
+    SCOPED_TRACE("Non-polyline shape");
+    auto scenePrefab = makeRodPrefab();
+    scenePrefab.actors.rod[0].shape = scenePrefab.actors.rigid[0].shape;
+    expectError(scenePrefab, "Cannot create actor. Requires a PolylineShape.");
+  }
+  {
+    // The shape is already loaded, so this reaches the validation in AddToScene.
+    SCOPED_TRACE("Zero scale");
+    auto scenePrefab = makeRodPrefab();
+    scenePrefab.actors.rod[0].scale = {1_r, 0_r, 1_r};
+    expectError(scenePrefab, "RodActorPrefab::scale must be non-zero and finite on all 3 axes.");
+  }
+  {
+    SCOPED_TRACE("Non-uniform scale with a point-cloud collider");
+    auto scenePrefab = makeRodPrefab();
+    scenePrefab.actors.rod[0].scale = {1_r, -2_r, 1_r};
+    scenePrefab.actors.rod[0].colliderType = ColliderType::Auto;
+    expectError(
+        scenePrefab,
+        "RodActorPrefab::scale must be uniform (by absolute value) when the rod has a point-cloud "
+        "collider.");
+  }
+  {
+    SCOPED_TRACE("findClosest to rigid");
+    auto scenePrefab = makeRodPrefab();
+    scenePrefab.constraints.deformableNodeToRigid[0].findClosest = true;
+    expectError(scenePrefab, "Find closest only supported for soft actors.");
+  }
+  {
+    SCOPED_TRACE("findClosest between deformables");
+    auto scenePrefab = makeRodPrefab();
+    scenePrefab.constraints.deformableNodeToDeformableNode[0].findClosest = true;
+    expectError(scenePrefab, "Find closest only supported for soft actors.");
+  }
+}
+
+// A bent, twisted, and translated pose of WriteStraightRodShapeFile's rod, in model space. Node 2
+// moves along an axis-preserving direction, and element 0's axis is rotated about its tangent.
+[[nodiscard]] static prefab::RodPose MakeStraightRodPose() {
+  real const c = 1_r / Sqrt(2_r);
+  Real3 const t{0.01_r, 0_r, 0.005_r};
+  Real3 const twistedAxis = TransformRT(Quaternion::FromAxisAngle(Real3{1_r, 0_r, 0_r}, 0.3_r))
+                                .TransformPoint(Real3{0_r, c, c});
+  prefab::RodPose pose;
+  pose.nodeDisplacements =
+      Flatten(MakeConstSpan(DynamicArray<Real3>{t, t, t + Real3{0_r, 0.02_r, -0.02_r}}));
+  pose.elementFrameAxes = Flatten(MakeConstSpan(DynamicArray<Real3>{twistedAxis, {0_r, c, c}}));
+  return pose;
+}
+
+// Bakes the deformed model (rest nodes plus pose displacements, with the pose frame axes) the way
+// the rod shape is baked, and expects the actor to hold the difference from its baked rest nodes
+// and the baked axes.
+static void ExpectBakedRodPose(
+    Actor const* actor,
+    ModelData const& restModel,
+    prefab::RodPose const& pose,
+    Real3 const& bakeScale,
+    Quaternion const& shapeRotation,
+    Real3 const& shapeTranslation) {
+  ModelData deformedModel = restModel;
+  for (int i = 0; i < isize(pose.nodeDisplacements); ++i) {
+    deformedModel.mesh->coordinates[i] += pose.nodeDisplacements[i];
+  }
+  deformedModel.elementFrameAxes = pose.elementFrameAxes;
+  model::BakeTransform(deformedModel, bakeScale, shapeRotation, shapeTranslation, ExpectOK{});
+
+  auto const bakedRestNodes = Unflatten<Real3 const>(actor->GetMesh().coordinates);
+  auto const bakedDeformedNodes = Unflatten<Real3 const>(deformedModel.mesh->coordinates);
+  DynamicArray<Real3> expectedDisplacements;
+  for (int i = 0; i < isize(bakedRestNodes); ++i) {
+    expectedDisplacements.push_back(bakedDeformedNodes[i] - bakedRestNodes[i]);
+  }
+  auto const actual = test::GetRodPose(*actor);
+  EXPECT_TRUE(
+      test::NearEqualSpan(
+          Flatten(MakeConstSpan(expectedDisplacements)), actual.displacements, 1e-5_r));
+  EXPECT_TRUE(
+      test::NearEqualSpan(*deformedModel.elementFrameAxes, actual.elementFrameAxes, 1e-5_r));
+}
+
+TEST(Prefab, RodActor_AddToScene_Pose) {
+  struct Case {
+    char const* label = "";
+    Real3 actorScale = kReal3Ones;
+    Quaternion shapeRotation;
+    real nestedScale = 1_r;
+    real prefabScale = 1_r;
+  };
+  for (Case const& c : {
+           Case{
+               .label = "IdentityBake",
+               .actorScale = kReal3Ones,
+               .shapeRotation = Quaternion{},
+               .nestedScale = 1_r,
+               .prefabScale = 1_r},
+           Case{
+               .label = "NonUniformMirroredRotatedNested",
+               .actorScale = {2_r, -1_r, 0.5_r},
+               .shapeRotation = Quaternion::FromAxisAngle(Normalize(Real3{1_r, 2_r, 3_r}), 0.7_r),
+               .nestedScale = 3_r,
+               .prefabScale = 2_r},
+       }) {
+    SCOPED_TRACE(c.label);
+    auto* context = mochi::CreateContext(0);
+    MOCHI_DEFER(mochi::DestroyContext(context));
+    auto* scene = context->CreateScene("test");
+    MOCHI_DEFER(context->DestroyScene(scene));
+    auto tempDir = CreateTempDirectory("prefab_rod_pose_test", ExpectOK{});
+
+    RodShapeFile const shape = WriteStraightRodShapeFile(tempDir.Path());
+    prefab::ScenePrefab childPrefab;
+    auto& rod = childPrefab.actors.rod.push_back();
+    rod.name = "Rod";
+    rod.shapeFile = shape.path;
+    rod.scale = c.actorScale;
+    rod.shapeRotation = c.shapeRotation;
+    rod.shapeTranslation = {0.1_r, 0.2_r, 0.3_r};
+    // The pose is actor-local, so the actor's own transform does not affect it.
+    rod.rotation = Quaternion::FromAxisAngle(Real3{0_r, 0_r, 1_r}, 0.4_r);
+    rod.translation = {1_r, -2_r, 0.5_r};
+    rod.pose = MakeStraightRodPose();
+    auto const childPath = tempDir.Path() / "child.mochi_scene";
+    prefab::SaveToJsonFile(childPrefab, childPath.string(), ExpectOK{});
+
+    prefab::ScenePrefab parentPrefab;
+    auto& nestedRef = parentPrefab.prefabs.push_back();
+    nestedRef.name = "Child";
+    nestedRef.path = childPath.string();
+    nestedRef.scale = c.nestedScale;
+    auto const parentPath = tempDir.Path() / "parent.mochi_scene";
+    prefab::SaveToJsonFile(parentPrefab, parentPath.string(), ExpectOK{});
+
+    prefab::PrefabParams params;
+    params.scale = c.prefabScale;
+    auto const result =
+        prefab::AddToScene(parentPath.string(), test::GetAssetsDir(), scene, params, ExpectOK{});
+    auto const rods = result.Filter(ActorType::Rod);
+    ASSERT_EQ(1, isize(rods));
+    real const outerScale = c.nestedScale * c.prefabScale;
+    ExpectBakedRodPose(
+        rods[0],
+        shape.model,
+        *rod.pose,
+        c.actorScale * outerScale,
+        c.shapeRotation,
+        rod.shapeTranslation * outerScale);
+
+    // The baked pose stays valid in the deformed configuration.
+    auto const pose = test::GetRodPose(*rods[0]);
+    DynamicArray<Real3> deformedNodes;
+    auto const restNodes = Unflatten<Real3 const>(rods[0]->GetMesh().coordinates);
+    auto const displacements = Unflatten<Real3 const>(pose.displacements);
+    for (int i = 0; i < isize(restNodes); ++i) {
+      deformedNodes.push_back(restNodes[i] + displacements[i]);
+    }
+    model::ValidatePolylineElementFrameAxes(
+        Unflatten<Real3 const>(pose.elementFrameAxes),
+        deformedNodes,
+        /*isClosedLoop=*/false,
+        ExpectOK{});
+  }
+}
+
+// A shape file without frame axes gets default axes in its model frame, so its model-frame rest
+// pose matches the baked rest frame.
+TEST(Prefab, RodActor_AddToScene_PoseForGeneratedFrameAxes) {
+  auto* context = mochi::CreateContext(0);
+  MOCHI_DEFER(mochi::DestroyContext(context));
+  auto* scene = context->CreateScene("test");
+  MOCHI_DEFER(context->DestroyScene(scene));
+  auto tempDir = CreateTempDirectory("prefab_rod_generated_axes_test", ExpectOK{});
+  ModelData curvedModel;
+  auto& mesh = curvedModel.mesh.emplace();
+  mesh.nodesPerElement = 2;
+  mesh.coordinates = Flatten(MakeConstSpan(
+      DynamicArray<Real3>{
+          {0_r, 0_r, 0_r}, {0.1_r, 0_r, 0_r}, {0.18_r, 0.05_r, 0_r}, {0.22_r, 0.12_r, 0.04_r}}));
+  auto const shapePath = (tempDir.Path() / "curved_rod.mochi.json").string();
+  model::SaveToFile(curvedModel, shapePath, FileFormat::JSON, ExpectOK{});
+
+  auto addRods = [&](prefab::ScenePrefab& scenePrefab) {
+    prefab::LoadShapes(scenePrefab, test::GetAssetsDir(), context, ExpectOK{});
+    return prefab::AddToScene(scenePrefab, scene, {}, ExpectOK{}).Filter(ActorType::Rod);
+  };
+  prefab::ScenePrefab unbakedPrefab;
+  unbakedPrefab.actors.rod.push_back().shapeFile = shapePath;
+  auto const unbakedRods = addRods(unbakedPrefab);
+  ASSERT_EQ(1, isize(unbakedRods));
+  auto const modelRestPose = test::GetRodPose(*unbakedRods[0]);
+
+  prefab::ScenePrefab bakedPrefab;
+  for (bool const hasPose : {false, true}) {
+    auto& rod = bakedPrefab.actors.rod.push_back();
+    rod.shapeFile = shapePath;
+    rod.scale = {2_r, -1_r, 0.5_r};
+    rod.shapeRotation = Quaternion::FromAxisAngle(Normalize(Real3{1_r, 2_r, 3_r}), 0.7_r);
+    if (hasPose) {
+      rod.pose = prefab::RodPose{
+          .nodeDisplacements = modelRestPose.displacements,
+          .elementFrameAxes = modelRestPose.elementFrameAxes};
+    }
+  }
+  auto const bakedRods = addRods(bakedPrefab);
+  ASSERT_EQ(2, isize(bakedRods));
+  auto const restPose = test::GetRodPose(*bakedRods[0]);
+  auto const posedPose = test::GetRodPose(*bakedRods[1]);
+  EXPECT_TRUE(test::NearEqualSpan(restPose.displacements, posedPose.displacements, 1e-6_r));
+  EXPECT_TRUE(test::NearEqualSpan(restPose.elementFrameAxes, posedPose.elementFrameAxes, 1e-5_r));
+}
+
+// A pose can be applied to a preset shape handle.
+TEST(Prefab, RodActor_AddToScene_PoseForPresetShape) {
+  auto* context = mochi::CreateContext(0);
+  MOCHI_DEFER(mochi::DestroyContext(context));
+  auto* scene = context->CreateScene("test");
+  MOCHI_DEFER(context->DestroyScene(scene));
+  ModelData const model = MakeStraightRodModel();
+  prefab::ScenePrefab scenePrefab;
+  auto& rod = scenePrefab.actors.rod.push_back();
+  rod.name = "Rod";
+  rod.shape = context->CreateModelShape(model, ExpectOK{});
+  rod.pose = MakeStraightRodPose();
+  rod.renderModelFile = "missing/unused.glb";
+  rod.renderModelScale = {3_r, 4_r, 5_r};
+  rod.renderModelRotation = Quaternion(0_r, 0_r, 1_r, 0_r);
+  rod.renderModelTranslation = {6_r, 7_r, 8_r};
+  auto const result = prefab::AddToScene(scenePrefab, scene, {}, ExpectOK{});
+  ASSERT_EQ(1, isize(result.Filter(ActorType::Rod)));
+  ExpectBakedRodPose(
+      result.Filter(ActorType::Rod)[0], model, *rod.pose, kReal3Ones, Quaternion{}, Real3{});
+}
+
+TEST(Prefab, RodActor_AddToScene_PoseGeometryWarns) {
+  auto* context = mochi::CreateContext(0);
+  MOCHI_DEFER(mochi::DestroyContext(context));
+  auto* scene = context->CreateScene("test");
+  MOCHI_DEFER(context->DestroyScene(scene));
+  auto tempDir = CreateTempDirectory("prefab_rod_pose_warning_test", ExpectOK{});
+  RodShapeFile const shape = WriteStraightRodShapeFile(tempDir.Path());
+  prefab::ScenePrefab scenePrefab;
+  auto& rod = scenePrefab.actors.rod.push_back();
+  rod.shapeFile = shape.path;
+  rod.scale = {2_r, 1_r, 1_r};
+  rod.pose = MakeStraightRodPose();
+  // Lifting node 2 along +y tilts element 1 toward its frame axis.
+  rod.pose->nodeDisplacements[7] += 0.05_r;
+  prefab::LoadShapes(scenePrefab, test::GetAssetsDir(), context, ExpectOK{});
+  test::ExpectLoggingInScope expectWarning(context, LogChannel::Warning);
+  auto const result = prefab::AddToScene(scenePrefab, scene, {}, ExpectOK{});
+  auto const actors = result.Filter(ActorType::Rod);
+  ASSERT_EQ(1, isize(actors));
+  EXPECT_EQ(1, expectWarning._messagesReceived);
+  ExpectBakedRodPose(actors[0], shape.model, *rod.pose, rod.scale, Quaternion{}, Real3{});
+}
+
+// One wrong-size case per array. Non-finite values are rejected by Actor::SetRodPose.
+TEST(Prefab, RodActor_AddToScene_PoseErrors) {
+  auto* context = mochi::CreateContext(0);
+  MOCHI_DEFER(mochi::DestroyContext(context));
+  ShapeHandle const shape = context->CreateModelShape(MakeStraightRodModel(), ExpectOK{});
+  auto expectError = [&](prefab::RodPose const& pose, char const* expectedDescription) {
+    prefab::ScenePrefab scenePrefab;
+    auto& valid = scenePrefab.actors.rod.push_back();
+    valid.name = "Valid";
+    valid.shape = shape;
+    auto& rod = scenePrefab.actors.rod.push_back();
+    rod.name = "InvalidPose";
+    rod.shape = shape;
+    rod.pose = pose;
+    auto* scene = context->CreateScene("test");
+    MOCHI_DEFER(context->DestroyScene(scene));
+    auto const suppressError = test::SuppressLogError();
+    Error error;
+    auto const result = prefab::AddToScene(scenePrefab, scene, {}, error);
+    EXPECT_STREQ(expectedDescription, error.GetDescription());
+    ASSERT_EQ(2, isize(result.actors));
+    EXPECT_EQ(isize(result.actors), scene->GetNumActors());
+    EXPECT_STREQ("Valid", result.actors[0]->GetName());
+    EXPECT_STREQ("InvalidPose", result.actors[1]->GetName());
+    for (Actor* actor : result.actors) {
+      EXPECT_EQ(actor, scene->GetActor(actor->GetHandle()));
+      scene->DestroyActor(actor->GetHandle());
+    }
+    EXPECT_EQ(0, scene->GetNumActors());
+  };
+
+  auto pose = MakeStraightRodPose();
+  pose.nodeDisplacements.pop_back();
+  expectError(pose, "RodPose::nodeDisplacements must have 3 values per node.");
+
+  pose = MakeStraightRodPose();
+  pose.elementFrameAxes.pop_back();
+  expectError(pose, "RodPose::elementFrameAxes must have 3 values per element.");
 }
 
 TEST_IF(MOCHI_ENABLE_ROM_ACTORS, Prefab, ExperimentalAddToScene_AppliesRomToAllSoftActors) {
@@ -5024,6 +5785,29 @@ TEST(Prefab, ValidateScale) {
 
     scenePrefab.actors.rigid[0].scale = Real3{1_r, std::numeric_limits<real>::infinity(), 1_r};
     prefab::AddToScene(scenePrefab, scene, {}, test::ExpectNotOK{});
+  }
+
+  {
+    prefab::ScenePrefab scenePrefab;
+    auto& rod = scenePrefab.actors.rod.push_back();
+    real const invalidScales[] = {
+        0_r,
+        std::numeric_limits<real>::min(),
+        std::numeric_limits<real>::quiet_NaN(),
+        std::numeric_limits<real>::infinity()};
+    for (real const invalidScale : invalidScales) {
+      for (int axis = 0; axis < 3; ++axis) {
+        rod.scale = kReal3Ones;
+        rod.scale[axis] = invalidScale;
+        Error error;
+        auto const result = prefab::AddToScene(scenePrefab, scene, {}, error);
+        EXPECT_STREQ(
+            "RodActorPrefab::scale must be non-zero and finite on all 3 axes.",
+            error.GetDescription());
+        EXPECT_TRUE(result.actors.empty());
+        EXPECT_EQ(0, scene->GetNumActors());
+      }
+    }
   }
 
   // SoftActorPrefab::scale: Components must be non-zero and finite.

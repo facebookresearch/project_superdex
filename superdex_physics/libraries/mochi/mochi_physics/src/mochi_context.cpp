@@ -189,6 +189,18 @@ static void ValidateShapeTransform(Real3 const& scale, TransformRT const& rt, Er
       "Invalid shape scale. Scale must be non-zero on all 3 axes.");
 }
 
+// Generates the default frame axes of a valid polyline model that has none. Loads call this before
+// baking a transform, so that the bake transforms default axes like authored ones.
+static void GenerateMissingPolylineFrameAxes(ModelData& model) {
+  if (!model.mesh || model.mesh->nodesPerElement != 2 || model.elementFrameAxes) {
+    return;
+  }
+  DynamicArray<Real3> const axes = GenerateDiscreteBishopFrame(
+      Unflatten<Real3 const>(model.mesh->coordinates), IsPolylineClosedLoop(*model.mesh));
+  Span<real const> const flatAxes = Flatten(MakeConstSpan(axes));
+  model.elementFrameAxes.emplace(flatAxes.begin(), flatAxes.end());
+}
+
 // The path component of a file cache key. Normalizing it lets different spellings of one file
 // (mixed separators, "a/../b") share a cache entry, and lets ClearFileFromCache evict a file it
 // was given under a different spelling than the load used. Case is deliberately not folded: that
@@ -290,6 +302,8 @@ ShapeHandle ContextImpl::LoadShapeFromFile(
   auto doLoad = [&](Error& err) {
     // Load the file (any supported format)
     ModelData model = model::LoadFromFile(filePath, err);
+    MOCHI_ERROR_RETURN(err, ShapePtr{});
+    GenerateMissingPolylineFrameAxes(model);
     model::BakeTransform(model, bakeScale, bakeTransform, err);
     model::Validate(model, err); // Baking can invalidate a valid model
     MOCHI_ERROR_RETURN(err, ShapePtr{});
@@ -386,6 +400,8 @@ ShapeHandle ContextImpl::LoadShapeFromBytes(
 
   // Load the file from memory (any supported format)
   ModelData model = model::LoadFromBytes(fileData, format, error);
+  MOCHI_ERROR_RETURN(error, {});
+  GenerateMissingPolylineFrameAxes(model);
   model::BakeTransform(model, bakeScale, bakeTransform, error);
   model::Validate(model, error); // Baking can invalidate a valid model
   MOCHI_ERROR_RETURN(error, {});
@@ -1001,9 +1017,8 @@ ShapePtr ContextImpl::CreateShapeFromModelData(
     // TODO: Move data instead of copying
     auto nodes = DynamicArray<Real3>{Unflatten<Real3>(model.mesh->coordinates)};
     bool const isClosedLoop = IsPolylineClosedLoop(*model.mesh);
-    auto frameAxes = model.elementFrameAxes
-        ? DynamicArray<Real3>{Unflatten<Real3>(*model.elementFrameAxes)}
-        : mochi::GenerateDiscreteBishopFrame(nodes, isClosedLoop);
+    GenerateMissingPolylineFrameAxes(model);
+    auto frameAxes = DynamicArray<Real3>{Unflatten<Real3>(*model.elementFrameAxes)};
 
     auto visualSurface = CreateRodSurfaceData(
         model.visualMesh, MakeConstSpan(nodes), MakeConstSpan(frameAxes), isClosedLoop);

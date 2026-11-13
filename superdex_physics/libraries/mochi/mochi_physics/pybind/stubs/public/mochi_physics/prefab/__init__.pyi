@@ -663,6 +663,25 @@ type ArrayLikeRigidSphericalJointConstraintPrefab = (
     npt.NDArray[Any]
 )
 
+class DynamicArrayRodActorPrefab:
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, size: int, value: RodActorPrefab = ...) -> None: ...
+    @overload
+    def __init__(self, sequence: Sequence[RodActorPrefab]) -> None: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> RodActorPrefab: ...
+    def __setitem__(self, index: int, value: RodActorPrefab) -> None: ...
+    def __iter__(self) -> Iterator[RodActorPrefab]: ...
+    def append(self, value: RodActorPrefab) -> None: ...
+    def clear(self) -> None: ...
+    def resize(self, size: int) -> None: ...
+
+type ArrayLikeRodActorPrefab = (
+    Sequence[RodActorPrefab] | DynamicArrayRodActorPrefab | npt.NDArray[Any]
+)
+
 class DynamicArraySoftActorPrefab:
     @overload
     def __init__(self) -> None: ...
@@ -1172,6 +1191,219 @@ class SoftActorPrefab(mochi_physics.SoftActorParams):
     def __eq__(self, other: object) -> bool: ...
     def __ne__(self, other: object) -> bool: ...
 
+class RodPose:
+    """A rod pose: node displacements and element frame axes.
+
+    Values are expressed in the model frame of
+    :attr:`~superdex.physics.prefab.RodActorPrefab.shape_file`, the same frame as
+    its node positions and rest frame axes. The model transform baked into the shape
+    (:attr:`~superdex.physics.prefab.RodActorPrefab.scale`,
+    :attr:`~superdex.physics.prefab.RodActorPrefab.shape_rotation`, and the
+    effective prefab scale) is applied to the pose too: displacements like node
+    positions, and frame axes like the rest frame axes (by the inverse transpose,
+    then renormalized).
+    :attr:`~superdex.physics.prefab.RodActorPrefab.shape_translation` does not
+    affect them. When :attr:`~superdex.physics.prefab.RodActorPrefab.shape_file` is
+    empty (a preset :attr:`~superdex.physics.RodActorParams.shape`), the pose is
+    applied unchanged.
+
+    See Also:
+        :meth:`~superdex.physics.Actor.get_rod_pose`,
+        :meth:`~superdex.physics.Actor.set_rod_pose`
+    """
+    @property
+    def node_displacements(self) -> mochi_physics.DynamicArrayReal:
+        """Node displacements relative to the rest node positions, flattened as [x0, y0,
+        z0, x1, y1, z1, ...]. Must contain 3 finite values per node.
+        """
+    @node_displacements.setter
+    def node_displacements(self, value: mochi_physics.ArrayLikeReal) -> None: ...
+    @property
+    def element_frame_axes(self) -> mochi_physics.DynamicArrayReal:
+        """Element frame axes, flattened as [x0, y0, z0, x1, y1, z1, ...]. Must contain
+        3
+        finite values per element. After the model transform is applied, each axis is
+        expected to be a unit vector orthogonal to its deformed element, within a
+        tolerance of 1e-3. Geometry violations emit warnings; the supplied pose is still
+        applied.
+        """
+    @element_frame_axes.setter
+    def element_frame_axes(self, value: mochi_physics.ArrayLikeReal) -> None: ...
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        node_displacements: mochi_physics.ArrayLikeReal = ...,
+        element_frame_axes: mochi_physics.ArrayLikeReal = ...,
+    ) -> None: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __ne__(self, other: object) -> bool: ...
+
+class RodActorPrefab(mochi_physics.RodActorParams):
+    """Prefab parameters for a rod actor.
+
+    Extends :class:`~superdex.physics.RodActorParams`. The inherited
+    :attr:`~superdex.physics.RodActorParams.world_from_local` is replaced by the
+    prefab-relative :attr:`rotation` and :attr:`translation` fields, and the
+    inherited :attr:`~superdex.physics.RodActorParams.shape` (a runtime
+    :class:`~superdex.physics.ShapeHandle`) is replaced by :attr:`shape_file` (a
+    path serialized to JSON. The shape is loaded at instantiation time).
+
+    Note:
+        The rod is created in its rest configuration, then :attr:`pose` is applied
+        if set. Use :meth:`~superdex.physics.Actor.set_recentering_params` after
+        instantiation to change recentering.
+
+    Note:
+        The inherited :attr:`~superdex.physics.RodActorParams.name` field need not
+        be unique, but a name shared by more than one actor cannot be used by
+        name-based prefab references.
+    """
+    comment: Optional[str]
+    """Optional serialized comment."""
+    shape_file: str
+    """Path to a polyline model file that will be loaded and referenced via
+    :class:`~superdex.physics.ShapeHandle`.
+    """
+    @property
+    def scale(self) -> mochi_physics.Real3:
+        """Scale [x, y, z] to bake into the shape file.
+
+        Applies to the rod geometry: node positions, element frame axes (transformed by
+        the inverse transpose and renormalized), and the visual and contact-skin meshes.
+        Also applies to :attr:`~superdex.physics.PointCloudColliderParams.radius`, which
+        is authored for the unscaled shape and is multiplied by the absolute value of
+        the uniform scale. Does not apply to
+        :attr:`~superdex.physics.RodActorParams.material`,
+        :attr:`~superdex.physics.RodActorParams.contact`, or the other
+        :attr:`~superdex.physics.RodActorParams.point_cloud_collider` parameters.
+
+        Note:
+            All components must be non-zero and finite. Negative components mirror the
+            corresponding model-space axes.
+
+        Note:
+            Must be uniform by absolute value when the rod has a point-cloud collider
+            (see :attr:`~superdex.physics.RodActorParams.collider_type`).
+
+        See Also:
+            :attr:`~superdex.physics.prefab.PrefabParams.scale`
+        """
+    @scale.setter
+    def scale(self, value: mochi_physics.Real3Like) -> None: ...
+    @property
+    def shape_rotation(self) -> mochi_physics.Quaternion:
+        """Rotation quaternion [x, y, z, w] to bake into the shape file."""
+    @shape_rotation.setter
+    def shape_rotation(self, value: mochi_physics.QuaternionLike) -> None: ...
+    @property
+    def shape_translation(self) -> mochi_physics.Real3:
+        """Translation [x, y, z] to bake into the shape file."""
+    @shape_translation.setter
+    def shape_translation(self, value: mochi_physics.Real3Like) -> None: ...
+    @property
+    def rotation(self) -> mochi_physics.Quaternion:
+        """Actor rotation quaternion [x, y, z, w] relative to the prefab's local frame
+        (i.e., the prefab-from-local rotation). Composes with
+        :attr:`~superdex.physics.prefab.PrefabParams.rotation` to produce the final
+        world-from-local rotation.
+
+        Note:
+            Must be finite and non-zero.
+        """
+    @rotation.setter
+    def rotation(self, value: mochi_physics.QuaternionLike) -> None: ...
+    @property
+    def translation(self) -> mochi_physics.Real3:
+        """Actor translation [x, y, z] relative to the prefab's local frame (i.e., the
+        prefab-from-local translation). Composes with
+        :attr:`~superdex.physics.prefab.PrefabParams.scale`,
+        :attr:`~superdex.physics.prefab.PrefabParams.rotation`, and
+        :attr:`~superdex.physics.prefab.PrefabParams.translation` to produce the final
+        world-from-local translation.
+
+        Note:
+            Must be finite.
+        """
+    @translation.setter
+    def translation(self, value: mochi_physics.Real3Like) -> None: ...
+    render_model_file: str
+    """Optional path to a render model file (e.g. .glb) for visualization.
+
+    Note:
+        Reserved visualization metadata. SuperDex Physics does not use it for
+        simulation. Ignored if empty.
+    """
+    @property
+    def render_model_scale(self) -> mochi_physics.Real3:
+        """Scale [x, y, z] to apply to the render model.
+
+        Note:
+            Ignored if :attr:`~superdex.physics.prefab.RodActorPrefab.render_model_file`
+            is empty.
+        """
+    @render_model_scale.setter
+    def render_model_scale(self, value: mochi_physics.Real3Like) -> None: ...
+    @property
+    def render_model_rotation(self) -> mochi_physics.Quaternion:
+        """Rotation quaternion [x, y, z, w] to apply to the render model.
+
+        Note:
+            Ignored if :attr:`~superdex.physics.prefab.RodActorPrefab.render_model_file`
+            is empty.
+        """
+    @render_model_rotation.setter
+    def render_model_rotation(self, value: mochi_physics.QuaternionLike) -> None: ...
+    @property
+    def render_model_translation(self) -> mochi_physics.Real3:
+        """Translation [x, y, z] to apply to the render model.
+
+        Note:
+            Ignored if :attr:`~superdex.physics.prefab.RodActorPrefab.render_model_file`
+            is empty.
+        """
+    @render_model_translation.setter
+    def render_model_translation(self, value: mochi_physics.Real3Like) -> None: ...
+    pose: Optional[RodPose]
+    """Optional initial pose. Applied right after the actor is created, see
+    :meth:`~superdex.physics.Actor.set_rod_pose`.
+    """
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        name: str = ...,
+        layer: str = ...,
+        world_from_local: mochi_physics.TransformRT = ...,
+        shape: mochi_physics.ShapeHandle = ...,
+        contact: mochi_physics.ContactParams = ...,
+        contact_element_type: mochi_physics.ActorSegmentElementType | int = ...,
+        material: mochi_physics.RodMaterialParams = ...,
+        collider_type: mochi_physics.ColliderType | int = ...,
+        point_cloud_collider: mochi_physics.PointCloudColliderParams = ...,
+        has_gravity: bool = ...,
+        use_contact_skin: bool = ...,
+        contact_skin_element_type: mochi_physics.ActorBoundaryElementType | int = ...,
+        comment: Optional[str] = ...,
+        shape_file: str = ...,
+        scale: mochi_physics.Real3Like = ...,
+        shape_rotation: mochi_physics.QuaternionLike = ...,
+        shape_translation: mochi_physics.Real3Like = ...,
+        rotation: mochi_physics.QuaternionLike = ...,
+        translation: mochi_physics.Real3Like = ...,
+        render_model_file: str = ...,
+        render_model_scale: mochi_physics.Real3Like = ...,
+        render_model_rotation: mochi_physics.QuaternionLike = ...,
+        render_model_translation: mochi_physics.Real3Like = ...,
+        pose: Optional[RodPose] = ...,
+    ) -> None: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __ne__(self, other: object) -> bool: ...
+
 class ArticulatedJointPrefab(mochi_physics.ArticulatedJointParams):
     """Joint parameters for an articulated actor prefab."""
     @overload
@@ -1674,6 +1906,11 @@ class ActorLists:
         """Soft-skinned actors."""
     @soft_skinned.setter
     def soft_skinned(self, value: ArrayLikeSoftSkinnedActorPrefab) -> None: ...
+    @property
+    def rod(self) -> DynamicArrayRodActorPrefab:
+        """Rod actors."""
+    @rod.setter
+    def rod(self, value: ArrayLikeRodActorPrefab) -> None: ...
     @overload
     def __init__(self) -> None: ...
     @overload
@@ -1685,6 +1922,7 @@ class ActorLists:
         rigid: ArrayLikeRigidActorPrefab = ...,
         soft: ArrayLikeSoftActorPrefab = ...,
         soft_skinned: ArrayLikeSoftSkinnedActorPrefab = ...,
+        rod: ArrayLikeRodActorPrefab = ...,
     ) -> None: ...
     def __eq__(self, other: object) -> bool: ...
     def __ne__(self, other: object) -> bool: ...
@@ -2963,11 +3201,20 @@ class PrefabParams:
 
     The effective scale is applied to:
 
-    - Mesh geometry (link / actor shapes are loaded at the cumulative scale)
+    - Mesh geometry (link / actor shapes are loaded at the cumulative scale),
+      including rod nodes, element frame axes (inverse transpose, then
+      renormalized), and rod visual and contact-skin meshes
+    - The rod point-cloud collider
+      :attr:`~superdex.physics.PointCloudColliderParams.radius`, by the absolute
+      value of the effective scale, which must be uniform for rods with a
+      point-cloud collider
     - Joint and link translations, cycle joint anchors
     - Prismatic joint position limits (Real3, in meters)
-    - Soft actor :attr:`~superdex.physics.prefab.SoftActorPrefab.node_displacements`
-      and translational DoFs of
+    - Soft actor
+      :attr:`~superdex.physics.prefab.SoftActorPrefab.node_displacements`, rod actor
+      :attr:`~superdex.physics.prefab.RodPose.node_displacements` (with
+      :attr:`~superdex.physics.prefab.RodPose.element_frame_axes` transformed like
+      the rest frame axes), and translational DoFs of
       :attr:`~superdex.physics.prefab.ArticulatedActorPrefab.joint_pose`
     - Constraint geometric target and limit distances [m], including rigid prismatic
       joint limits, world-space position targets, rigid actor-local pivot/joint
@@ -3008,6 +3255,11 @@ class PrefabParams:
       constraint's response, not just geometry: different goals (preserving material
       behavior, damping ratio, actuator limits, or closed-loop response) imply
       different scale laws, so prefab scaling preserves authored values.
+    - Rod material and contact parameters
+      (:attr:`~superdex.physics.RodActorParams.material` and
+      :attr:`~superdex.physics.RodActorParams.contact`), and the other point-cloud
+      collider parameters in
+      :attr:`~superdex.physics.RodActorParams.point_cloud_collider`
     - Joint inertia, friction, limit stiffness/damping, cycle joint stiffness
       (characterized actuator / tuned-penalty parameters; bring your own actuator
       model when scaling a robot)

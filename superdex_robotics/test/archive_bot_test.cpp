@@ -25,6 +25,7 @@
 #include <mochi_core/test/mochi_test_helpers.h>
 #include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/file_utils.h>
+#include <mochi_physics/utils/mochi_prefab.h>
 
 #include <filesystem>
 #include <string>
@@ -588,4 +589,39 @@ TEST_F(ArchiveBotMultiRootTest, ThreeRoots_BaseAndAttachInSeparateRoots) {
   WriteFr3WithDg5fModBot(modBot, rootB / "fr3" / kFr3BotName, rootC / "dg5f" / kDg5fBotName);
 
   ExpectArchiveHashRoundTrip(modBot, _tempDir);
+}
+
+TEST(ArchiveBotCacheTest, CollectPrefabFiles_RodAssets) {
+  auto const tempDir = CreateTempDirectory("archive_rod_assets_test", ExpectOK{});
+  auto const root = std::filesystem::weakly_canonical(tempDir.Path());
+  auto const parentPath = root / "parent.mochi_scene";
+  auto const childPath = root / "nested" / "child.mochi_scene";
+  auto const sharedRender = root / "shared.glb";
+  auto const localRender = root / "nested" / "local.glb";
+  auto const localShape = root / "nested" / "rod.mochi.json";
+  auto const absoluteRender = root / "absolute.glb";
+  for (auto const& path : {sharedRender, localRender, localShape, absoluteRender}) {
+    WriteFile(path, std::string_view{}, ExpectOK{});
+  }
+
+  prefab::ScenePrefab parent;
+  parent.actors.rod.push_back().renderModelFile = "shared.glb";
+  parent.actors.rod.push_back();
+  parent.prefabs.push_back().path = "./nested/child.mochi_scene";
+  WriteFile(parentPath, prefab::SaveToJsonString(parent, ExpectOK{}), ExpectOK{});
+
+  prefab::ScenePrefab child;
+  child.actors.rod.push_back().renderModelFile = "shared.glb";
+  auto& localRod = child.actors.rod.push_back();
+  localRod.shapeFile = "./rod.mochi.json";
+  localRod.renderModelFile = "./local.glb";
+  child.actors.rod.push_back().renderModelFile = absoluteRender.generic_string();
+  WriteFile(childPath, prefab::SaveToJsonString(child, ExpectOK{}), ExpectOK{});
+
+  auto const files = CollectPrefabFiles(parentPath, ExpectOK{});
+  EXPECT_EQ(6, files.size());
+  for (auto const& path :
+       {parentPath, childPath, sharedRender, localRender, localShape, absoluteRender}) {
+    EXPECT_TRUE(files.contains(path)) << path;
+  }
 }

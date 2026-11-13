@@ -1333,10 +1333,7 @@ static void EmplaceRodActorContact(
   Obb const meshObb = CalcObb(MakeConstSpan(shape.GetNodes()));
   reg.emplace<CBoundingVolume>(e, meshObb);
 
-  ColliderType colliderType = params.colliderType;
-  if (colliderType == ColliderType::Auto) {
-    colliderType = ColliderType::PointCloud;
-  }
+  ColliderType const colliderType = rod::ResolveColliderType(params.colliderType);
 
   auto& collider = reg.emplace<CColliderInfo>(e);
   collider.type = colliderType;

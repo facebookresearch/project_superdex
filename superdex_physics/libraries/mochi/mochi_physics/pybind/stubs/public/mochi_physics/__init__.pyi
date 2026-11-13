@@ -8767,6 +8767,12 @@ def load_shape_from_file(file_path: str, bake_scale: Real3Like) -> ShapeHandle:
         the scale transform, then normalize them.
 
     Note:
+        A polyline model without
+        :attr:`~superdex.physics.ModelData.element_frame_axes` gets its default axes
+        generated from the model before the bake, which then transforms them the
+        same way.
+
+    Note:
         Call on any thread.
 
     See Also:
@@ -8805,6 +8811,12 @@ def load_shape_from_file(file_path: str, bake_transform: TransformRT) -> ShapeHa
         :attr:`~superdex.physics.ModelData.element_frame_axes`, ``bake_transform``
         transforms those axes as normal directions using the inverse-transpose of
         the rotation transform, then normalize them.
+
+    Note:
+        A polyline model without
+        :attr:`~superdex.physics.ModelData.element_frame_axes` gets its default axes
+        generated from the model before the bake, which then transforms them the
+        same way.
 
     Note:
         Call on any thread.
@@ -8862,6 +8874,12 @@ def load_shape_from_file(
         :attr:`~superdex.physics.ModelData.element_frame_axes`, ``bake_scale`` and
         ``bake_transform`` transform those axes as normal directions using the
         inverse-transpose of the scale-rotation transform, then normalize them.
+
+    Note:
+        A polyline model without
+        :attr:`~superdex.physics.ModelData.element_frame_axes` gets its default axes
+        generated from the model before the bake, which then transforms them the
+        same way.
 
     Note:
         Call on any thread.
@@ -8952,6 +8970,12 @@ def load_shape_from_bytes(
         the scale transform, then normalize them.
 
     Note:
+        A polyline model without
+        :attr:`~superdex.physics.ModelData.element_frame_axes` gets its default axes
+        generated from the model before the bake, which then transforms them the
+        same way.
+
+    Note:
         Call on any thread.
 
     See Also:
@@ -8994,6 +9018,12 @@ def load_shape_from_bytes(
         :attr:`~superdex.physics.ModelData.element_frame_axes`, ``bake_transform``
         transforms those axes as normal directions using the inverse-transpose of
         the rotation transform, then normalize them.
+
+    Note:
+        A polyline model without
+        :attr:`~superdex.physics.ModelData.element_frame_axes` gets its default axes
+        generated from the model before the bake, which then transforms them the
+        same way.
 
     Note:
         Call on any thread.
@@ -9052,6 +9082,12 @@ def load_shape_from_bytes(
         :attr:`~superdex.physics.ModelData.element_frame_axes`, ``bake_scale`` and
         ``bake_transform`` transform those axes as normal directions using the
         inverse-transpose of the scale-rotation transform, then normalize them.
+
+    Note:
+        A polyline model without
+        :attr:`~superdex.physics.ModelData.element_frame_axes` gets its default axes
+        generated from the model before the bake, which then transforms them the
+        same way.
 
     Note:
         Call on any thread.
@@ -9152,6 +9188,12 @@ def load_shape_from_bytes(
         the scale transform, then normalize them.
 
     Note:
+        A polyline model without
+        :attr:`~superdex.physics.ModelData.element_frame_axes` gets its default axes
+        generated from the model before the bake, which then transforms them the
+        same way.
+
+    Note:
         Call on any thread.
 
     See Also:
@@ -9199,6 +9241,12 @@ def load_shape_from_bytes(
         :attr:`~superdex.physics.ModelData.element_frame_axes`, ``bake_transform``
         transforms those axes as normal directions using the inverse-transpose of
         the rotation transform, then normalize them.
+
+    Note:
+        A polyline model without
+        :attr:`~superdex.physics.ModelData.element_frame_axes` gets its default axes
+        generated from the model before the bake, which then transforms them the
+        same way.
 
     Note:
         Call on any thread.
@@ -9262,6 +9310,12 @@ def load_shape_from_bytes(
         :attr:`~superdex.physics.ModelData.element_frame_axes`, ``bake_scale`` and
         ``bake_transform`` transform those axes as normal directions using the
         inverse-transpose of the scale-rotation transform, then normalize them.
+
+    Note:
+        A polyline model without
+        :attr:`~superdex.physics.ModelData.element_frame_axes` gets its default axes
+        generated from the model before the bake, which then transforms them the
+        same way.
 
     Note:
         Call on any thread.

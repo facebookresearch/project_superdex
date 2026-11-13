@@ -129,6 +129,34 @@ struct SoftActorPrefab : public SoftActorParams {
 #endif
 };
 
+struct RodPose {
+  DynamicArray<real> nodeDisplacements{};
+  DynamicArray<real> elementFrameAxes{};
+
+#if MOCHI_LANGUAGE_CPP20
+  bool operator==(RodPose const&) const = default;
+#endif
+};
+
+struct RodActorPrefab : public RodActorParams {
+  std::optional<DynamicString> comment = std::nullopt;
+  DynamicString shapeFile{};
+  Real3 scale{1_r, 1_r, 1_r};
+  Quaternion shapeRotation{};
+  Real3 shapeTranslation{};
+  Quaternion rotation{};
+  Real3 translation{};
+  DynamicString renderModelFile;
+  Real3 renderModelScale = {1_r, 1_r, 1_r};
+  Quaternion renderModelRotation;
+  Real3 renderModelTranslation = {};
+  std::optional<RodPose> pose = std::nullopt;
+
+#if MOCHI_LANGUAGE_CPP20
+  bool operator==(RodActorPrefab const&) const = default;
+#endif
+};
+
 struct ArticulatedJointPrefab : ArticulatedJointParams {
 #if MOCHI_LANGUAGE_CPP20
   bool operator==(ArticulatedJointPrefab const&) const = default;
@@ -208,6 +236,7 @@ struct ActorLists {
   DynamicArray<RigidActorPrefab> rigid{};
   DynamicArray<SoftActorPrefab> soft{};
   DynamicArray<SoftSkinnedActorPrefab> softSkinned{};
+  DynamicArray<RodActorPrefab> rod{};
 
 #if MOCHI_LANGUAGE_CPP20
   bool operator==(ActorLists const&) const = default;

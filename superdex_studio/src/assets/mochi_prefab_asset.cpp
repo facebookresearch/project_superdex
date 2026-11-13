@@ -51,12 +51,11 @@ static std::string ComputeAssetsRoot(mochi::Path const& prefabPath) {
 }
 
 // Visit every mutable path field in the prefab's "path field set" (rigid actor
-// shape/render model, soft shape/render model, articulated link shape/render model,
-// skin shape/render model, and nested prefab reference paths). Mirrors the const
-// visitor `ForEachPathInPrefab` but yields mutable references, so it can be reused by
-// the resolve and relativize passes. Does not descend into loaded nested
-// `ScenePrefab`s — those keep their own (relative) representation and are resolved
-// transiently at stage/load time.
+// shape/render model, soft actor shape/render model, rod actor shape/render model, articulated link
+// shape/render model, skin shape/render model, and nested prefab reference paths). Mirrors the
+// const visitor `ForEachPathInPrefab` but yields mutable references, so it can be reused by the
+// resolve and relativize passes. Does not descend into loaded nested `ScenePrefab`s — those keep
+// their own (relative) representation and are resolved transiently at stage/load time.
 template <typename Fn>
 static void ForEachPathFieldInPrefab(mochi::prefab::ScenePrefab& prefab, Fn const& fn) {
   for (auto& a : prefab.actors.rigid) {
@@ -64,6 +63,10 @@ static void ForEachPathFieldInPrefab(mochi::prefab::ScenePrefab& prefab, Fn cons
     fn(a.renderModelFile);
   }
   for (auto& a : prefab.actors.soft) {
+    fn(a.shapeFile);
+    fn(a.renderModelFile);
+  }
+  for (auto& a : prefab.actors.rod) {
     fn(a.shapeFile);
     fn(a.renderModelFile);
   }
@@ -175,6 +178,12 @@ static void PreloadReferencedAssets(
   for (auto const& a : prefab.actors.soft) {
     loadModelAndRenderModel(a.shapeFile, a.renderModelFile);
   }
+  // Rod shapes are polylines, which have no render geometry for a Mochi model asset.
+  for (auto const& a : prefab.actors.rod) {
+    if (!a.renderModelFile.empty()) {
+      manager->LoadRenderModelAsset(a.renderModelFile);
+    }
+  }
   if (!prefab.actors.softSkinned.empty()) {
     MOCHI_LOG_WARNING(
         "MochiPrefabAsset: softSkinned actors are not supported by the asset loader.");
@@ -230,6 +239,10 @@ static void ForEachPathInPrefab(mochi::prefab::ScenePrefab const& prefab, Fn con
     visit(a.shapeFile);
     visit(a.renderModelFile);
   }
+  for (auto const& a : prefab.actors.rod) {
+    visit(a.shapeFile);
+    visit(a.renderModelFile);
+  }
   for (auto const& art : prefab.actors.articulated) {
     for (auto const& link : art.links) {
       visit(link.shapeFile);
@@ -271,6 +284,9 @@ void ClearCachedShapes(mochi::prefab::ScenePrefab& prefab) {
       soft.shape = {};
       soft.flow = {};
     }
+  }
+  for (auto& actor : prefab.actors.rod) {
+    actor.shape = {};
   }
   for (auto& nested : prefab.prefabs) {
     if (nested.prefab) {
@@ -405,6 +421,10 @@ bool MochiPrefabAsset::RewriteReferencedPath(
     changed |= MaybeRewriteResolved(a.renderModelFile, oldPath, newPath);
   }
   for (auto& a : _prefab.actors.soft) {
+    changed |= MaybeRewriteResolved(a.shapeFile, oldPath, newPath);
+    changed |= MaybeRewriteResolved(a.renderModelFile, oldPath, newPath);
+  }
+  for (auto& a : _prefab.actors.rod) {
     changed |= MaybeRewriteResolved(a.shapeFile, oldPath, newPath);
     changed |= MaybeRewriteResolved(a.renderModelFile, oldPath, newPath);
   }

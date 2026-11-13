@@ -66,6 +66,24 @@ class TestPrefab(MochiTestBase):
                 changed.name = "Different"
                 self.assertNotEqual(original, changed)
 
+    def test_rod_render_metadata(self):
+        defaults = mochi.prefab.RodActorPrefab()
+        self.assertEqual("", defaults.render_model_file)
+        self.assertEqual(mochi.Real3(1, 1, 1), defaults.render_model_scale)
+        self.assertEqual(mochi.Quaternion(), defaults.render_model_rotation)
+        self.assertEqual(mochi.Real3(), defaults.render_model_translation)
+
+        rod = mochi.prefab.RodActorPrefab(
+            render_model_file="rod.glb",
+            render_model_scale=[2, 3, 4],
+            render_model_rotation=mochi.Quaternion(0, 0, 1, 0),
+            render_model_translation=[0.25, 0.5, 0.75],
+        )
+        self.assertEqual("rod.glb", rod.render_model_file)
+        self.assertEqual(mochi.Real3(2, 3, 4), rod.render_model_scale)
+        self.assertEqual(mochi.Quaternion(0, 0, 1, 0), rod.render_model_rotation)
+        self.assertEqual(mochi.Real3(0.25, 0.5, 0.75), rod.render_model_translation)
+
     @requires_internal_assets
     def test_add_to_scene_returns_result(self):
         """Verify that add_to_scene returns an AddToSceneResult with actors and constraints."""

@@ -185,6 +185,11 @@ void InitRodActor(
 
 namespace rod {
 
+// The collider type a rod actor uses: ColliderType::Auto resolves to ColliderType::PointCloud.
+[[nodiscard]] inline ColliderType ResolveColliderType(ColliderType colliderType) {
+  return colliderType == ColliderType::Auto ? ColliderType::PointCloud : colliderType;
+}
+
 /**************************************************************************
   ECS Systems for Rod Actors
 */

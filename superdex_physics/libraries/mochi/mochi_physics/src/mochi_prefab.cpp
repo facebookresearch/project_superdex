@@ -16,6 +16,7 @@
 
 #include "mochi_articulated_actor_params.h"
 #include "mochi_ecs_utils.h"
+#include "mochi_rod.h"
 #include "mochi_scene.h"
 
 #include <mochi_core/mochi_platform.h>
@@ -444,6 +445,36 @@ static void LoadActorShapes(
 }
 
 static void LoadActorShapes(
+    RodActorPrefab& actor,
+    Context* context,
+    MochiShapeCache& shapeCache,
+    std::string_view rootPath,
+    std::string_view prefabFilePath,
+    real scaleModifier,
+    bool skipLoaded,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  LoadPrefabActorShape(
+      context,
+      shapeCache,
+      actor.shapeFile,
+      rootPath,
+      prefabFilePath,
+      actor.scale * scaleModifier,
+      actor.shapeRotation,
+      actor.shapeTranslation * scaleModifier,
+      actor.shape,
+      skipLoaded,
+      error);
+  if (!error.IsOK()) {
+    MOCHI_LOG_ERROR(
+        "Prefab failed to load shape \"%s\", referenced by rod actor \"%s\"",
+        GetPrefabFullPath(actor.shapeFile, rootPath, prefabFilePath).c_str(),
+        actor.name.c_str());
+  }
+}
+
+static void LoadActorShapes(
     SoftSkinnedActorPrefab& actor,
     Context* context,
     MochiShapeCache& shapeCache,
@@ -538,6 +569,15 @@ static void LoadShapesWithCycleCheck(
       prefabFilePath,
       scaleModifier,
       prefab.actors.softSkinned,
+      skipLoaded,
+      error);
+  LoadActorListShapes(
+      context,
+      shapeCache,
+      rootPath,
+      prefabFilePath,
+      scaleModifier,
+      prefab.actors.rod,
       skipLoaded,
       error);
 
@@ -1127,6 +1167,11 @@ static void AddConstraintsImpl(
   return IsFinite(scale) && !NearZero(scale[0]) && !NearZero(scale[1]) && !NearZero(scale[2]);
 }
 
+[[nodiscard]] static bool IsUniformAbsScale(Real3 const& scale) {
+  Real3 const absScale = Abs(scale);
+  return NearEqualRel(absScale[0], absScale[1]) && NearEqualRel(absScale[0], absScale[2]);
+}
+
 // Validate that a scale is strictly positive and finite.
 #define MOCHI_VALIDATE_POSITIVE_SCALE(scale, scaleName, error) \
   MOCHI_ERROR_IF_NOT(                                          \
@@ -1224,6 +1269,20 @@ void prefab::ScaleArticulatedActorParams(ArticulatedActorParams& params, real sc
   return values.has_value() && !values->empty();
 }
 
+// The linear part of a shape bake x' = R (bakeScale * x) + t, transposed for
+// ArrayRotateVectors_MatT, or nullopt if shapeFile is not baked or the bake is the identity.
+// Preset shape handles are not baked.
+[[nodiscard]] static std::optional<VMatrix3x3r> GetShapeBakeLinearT(
+    DynamicString const& shapeFile,
+    Quaternion const& shapeRotation,
+    Real3 const& bakeScale) {
+  Quaternion const rotation = Normalize(shapeRotation);
+  if (shapeFile.empty() || (bakeScale == Real3{1_r, 1_r, 1_r} && rotation == Quaternion{})) {
+    return std::nullopt;
+  }
+  return Transpose3x3(Dot3x3(ToVMatrix3x3(rotation), VDiagonalMatrix<3>(ToSimd(bakeScale, 0_r))));
+}
+
 // Authored soft displacements live in the model frame of shapeFile. The shape was baked as
 // x' = R (bakeScale * x) + t, so map the displacements through the same linear part:
 // d' = R (bakeScale * d). A preset shape handle was not baked, so leave them unchanged.
@@ -1244,19 +1303,65 @@ static void ApplySoftDisplacements(
       "SoftActorPrefab::nodeDisplacements must have 3 values per simulation node.");
   MOCHI_ERROR_RETURN(error);
 
-  Quaternion const shapeRotation = Normalize(prefab.shapeRotation);
-  Real3 const bakeScale = prefab.scale * prefabScale;
-  if (prefab.shapeFile.empty() ||
-      (bakeScale == Real3{1_r, 1_r, 1_r} && shapeRotation == Quaternion{})) {
+  auto const bakeMatT =
+      GetShapeBakeLinearT(prefab.shapeFile, prefab.shapeRotation, prefab.scale * prefabScale);
+  if (!bakeMatT) {
     actor->SetDisplacements(displacements, error);
   } else {
-    VMatrix3x3r const bakeMatT = Transpose3x3(
-        Dot3x3(ToVMatrix3x3(shapeRotation), VDiagonalMatrix<3>(ToSimd(bakeScale, 0_r))));
     DynamicArray<real> bakedDisplacements;
     bakedDisplacements.resize_noinit(displacements.size());
     ArrayRotateVectors_MatT<true>(
-        Unflatten<Real3>(bakedDisplacements), Unflatten<Real3 const>(displacements), bakeMatT);
+        Unflatten<Real3>(bakedDisplacements), Unflatten<Real3 const>(displacements), *bakeMatT);
     actor->SetDisplacements(bakedDisplacements, error);
+  }
+}
+
+// An authored rod pose lives in the model frame of shapeFile. Displacements map through the bake's
+// linear part like soft displacements, and frame axes through its inverse transpose
+// R (bakeScale^-1 * a), renormalized, like the rest frame axes in BakeTransform.
+static void
+ApplyRodPose(Actor* actor, RodActorPrefab const& prefab, real prefabScale, Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  if (!prefab.pose) {
+    return;
+  }
+  auto const& displacements = prefab.pose->nodeDisplacements;
+  auto const& axes = prefab.pose->elementFrameAxes;
+  MeshDataView const mesh = actor->GetMesh();
+  int const numNodes = mesh.GetNumNodes();
+  int const numElements = mesh.GetNumElements();
+  MOCHI_ERROR_IF(
+      isize(displacements) != kSpaceDim3 * numNodes,
+      error,
+      "RodPose::nodeDisplacements must have 3 values per node.");
+  MOCHI_ERROR_IF(
+      isize(axes) != kSpaceDim3 * numElements,
+      error,
+      "RodPose::elementFrameAxes must have 3 values per element.");
+  MOCHI_ERROR_RETURN(error);
+
+  Real3 const bakeScale = prefab.scale * prefabScale;
+  if (auto const bakeMatT =
+          GetShapeBakeLinearT(prefab.shapeFile, prefab.shapeRotation, bakeScale)) {
+    DynamicArray<real> bakedDisplacements;
+    bakedDisplacements.resize_noinit(displacements.size());
+    DynamicArray<real> bakedAxes;
+    bakedAxes.resize_noinit(axes.size());
+    ArrayRotateVectors_MatT<true>(
+        Unflatten<Real3>(bakedDisplacements), Unflatten<Real3 const>(displacements), *bakeMatT);
+    // Non-null because bakeMatT is: the shape is baked, and 1 / bakeScale is 1 only if bakeScale
+    // is.
+    auto const axesMatT =
+        GetShapeBakeLinearT(prefab.shapeFile, prefab.shapeRotation, 1_r / bakeScale);
+    MOCHI_ASSERT(axesMatT.has_value(), "Expected an inverse-transpose bake.");
+    ArrayRotateVectors_MatT<true>(
+        Unflatten<Real3>(bakedAxes), Unflatten<Real3 const>(axes), *axesMatT);
+    for (auto& axis : Unflatten<Real3>(bakedAxes)) {
+      axis = Normalize(axis);
+    }
+    actor->SetRodPose(bakedDisplacements, bakedAxes, error);
+  } else {
+    actor->SetRodPose(displacements, axes, error);
   }
 }
 
@@ -1515,6 +1620,38 @@ static void AddToSceneImpl(
     recordActorPrefabMetricScale(newActor->GetHandle(), params.scale);
   }
 
+  // Rod Actors:
+  for (auto const& actor : prefab.actors.rod) {
+    MOCHI_ERROR_IF_NOT(
+        IsNonZeroScale(actor.scale),
+        error,
+        "RodActorPrefab::scale must be non-zero and finite on all 3 axes.");
+    // The collider radius is a scalar, so it cannot follow non-uniform scale.
+    MOCHI_ERROR_IF(
+        rod::ResolveColliderType(actor.colliderType) == ColliderType::PointCloud &&
+            !IsUniformAbsScale(actor.scale),
+        error,
+        "RodActorPrefab::scale must be uniform (by absolute value) when the rod has a point-cloud "
+        "collider.");
+    MOCHI_VALIDATE_POSE(actor.rotation, actor.translation, "RodActorPrefab", error);
+    MOCHI_ERROR_RETURN(error);
+
+    TransformSRT prefabFromActor(1_r, Normalize(actor.rotation), actor.translation);
+    TransformSRT worldFromActor = worldFromPrefab * prefabFromActor;
+
+    RodActorParams actorParams = actor;
+    actorParams.name = CombineNames(params.name, actor.name);
+    actorParams.worldFromLocal = worldFromActor.GetTransformRT();
+    actorParams.pointCloudCollider.radius *= Abs(actor.scale[0]) * params.scale;
+
+    Actor* newActor = scene->CreateRodActor(actorParams, error);
+    MOCHI_ERROR_RETURN(error);
+    onActorCreated(newActor, actorParams.name);
+    ApplyRodPose(newActor, actor, params.scale, error);
+    MOCHI_ERROR_RETURN(error);
+    recordActorPrefabMetricScale(newActor->GetHandle(), params.scale);
+  }
+
   // Soft Skinned Actors:
   for (auto const& actor : prefab.actors.softSkinned) {
     for (auto const& soft : actor.softParams) {
@@ -1602,10 +1739,9 @@ static void AddToSceneImpl(
   // call; the per-type ApplyPrefabTransformToConstraint / if-constexpr static_asserts only fire
   // once a type is actually dispatched, so they cannot catch an omitted call on their own.
   // TODO(T280114669): RodElementRotationToRigid and RodElementRotation are the only real
-  // ConstraintTypes without prefab support, since prefabs do not support rod actors yet. Add a
-  // constraint prefab, a ConstraintLists entry, actor-name resolution, transform handling for
-  // refFrameRotVec, and dispatch here if rod rotation constraints need to be authorable from
-  // prefab JSON.
+  // ConstraintTypes without prefab support. Add a constraint prefab, a ConstraintLists entry,
+  // actor-name resolution, transform handling for refFrameRotVec, and dispatch here if rod
+  // rotation constraints need to be authorable from prefab JSON.
   static_assert(
       static_cast<int>(ConstraintType::Count) == 17,
       "ConstraintType changed: review the prefab constraint dispatch below.");

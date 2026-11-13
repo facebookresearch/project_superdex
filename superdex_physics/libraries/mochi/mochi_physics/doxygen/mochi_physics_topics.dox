@@ -651,13 +651,21 @@
  * @ingroup prefabs_document
  */
 
-/* ---- Prefabs / Actors (4) ---- */
+/* ---- Prefabs / Actors (6) ---- */
 /**
  * @struct superdex::prefab::ArticulatedActorPrefab
  * @ingroup prefabs_actors
  */
 /**
  * @struct superdex::prefab::RigidActorPrefab
+ * @ingroup prefabs_actors
+ */
+/**
+ * @struct superdex::prefab::RodActorPrefab
+ * @ingroup prefabs_actors
+ */
+/**
+ * @struct superdex::prefab::RodPose
  * @ingroup prefabs_actors
  */
 /**

@@ -3099,6 +3099,32 @@ TEST_P(MochiContextTest, GetModelData_PreservesPolylineAuxiliaryMeshes) {
   ExpectAuxiliaryMeshesRoundTrip(_mochiContext, model);
 }
 
+// A curved polyline without frame axes gets its default axes before the bake, which transforms them
+// like authored axes.
+TEST_P(MochiContextTest, LoadShapeFromBytes_PolylineDefaultFrameAxesAreBaked) {
+  ModelData model;
+  auto& mesh = model.mesh.emplace();
+  mesh.nodesPerElement = 2;
+  mesh.coordinates = Flatten(MakeConstSpan(
+      DynamicArray<Real3>{
+          {0_r, 0_r, 0_r}, {0.1_r, 0_r, 0_r}, {0.18_r, 0.05_r, 0_r}, {0.22_r, 0.12_r, 0.04_r}}));
+  DynamicString const json = model::SaveToJsonString(model, ExpectOK{});
+  auto getModelData = [&](ShapeHandle shape) {
+    return assert_cast<ContextImpl*>(_mochiContext)
+        ->GetShapeSharedPtr(shape)
+        ->GetModelData(ExpectOK{});
+  };
+  Real3 const scale{2_r, -1_r, 0.5_r};
+  TransformRT const rt(Quaternion::FromAxisAngle(Normalize(Real3{1_r, 2_r, 3_r}), 0.7_r), Real3{});
+  ModelData expected = getModelData(_mochiContext->LoadShapeFromBytes(json, ExpectOK{}));
+  model::BakeTransform(expected, scale, rt, ExpectOK{});
+
+  ModelData const actual =
+      getModelData(_mochiContext->LoadShapeFromBytes(json, scale, rt, ExpectOK{}));
+  ASSERT_TRUE(actual.elementFrameAxes.has_value());
+  EXPECT_TRUE(test::NearEqualSpan(*expected.elementFrameAxes, *actual.elementFrameAxes, 1e-5_r));
+}
+
 // Verify GetShapeVisualMesh returns the authored visual mesh and element-based skinning for a
 // polyline shape.
 TEST_P(MochiContextTest, GetShapeVisualMesh_PolylineWithVisualMesh) {

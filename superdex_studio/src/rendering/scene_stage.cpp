@@ -573,6 +573,11 @@ static void BuildPrefabRequests(
     MOCHI_LOG_ERROR_ONCE(
         "SceneStage: soft-skinned actors are not yet supported and will not render.");
   }
+
+  // Rod actors are not yet supported and will not render.
+  if (!prefab.actors.rod.empty()) {
+    MOCHI_LOG_WARNING_ONCE("SceneStage: rod actors are not yet supported and will not render.");
+  }
 }
 
 // Compute per-articulated-actor nested-link world transforms (and link actor names) via a stripped

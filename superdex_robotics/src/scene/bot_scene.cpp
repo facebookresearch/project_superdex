@@ -363,8 +363,9 @@ MakeSkinRenderModel(BotPrefab const& botPrefab, Actor const& actor, Span<ActorHa
 
 /* Pairs the actors prefab::AddToScene created from a loaded prefab with their render models. It
  * walks `prefab` -- the same object AddToScene was given -- in AddToScene's creation order: nested
- * prefabs depth-first, then articulated (one model per link), rigid, soft, and soft-skinned actors.
- * Soft and soft-skinned actors get no model: their render geometry would have to deform with them.
+ * prefabs depth-first, then articulated (one model per link), rigid, soft, rod, and soft-skinned
+ * actors. Soft, rod, and soft-skinned actors get no model: their render geometry would have to
+ * deform with them.
  * Scale follows the prefab importer's convention: a model's offset and scale are multiplied by its
  * actor's scale, including the scale of every enclosing nested prefab. */
 class PrefabRenderModelRecorder {
@@ -429,7 +430,9 @@ class PrefabRenderModelRecorder {
           actor.renderModelScale,
           actor.scale * prefabScale);
     }
-    for (int i = 0; i < isize(prefab.actors.soft) + isize(prefab.actors.softSkinned); ++i) {
+    for (int i = 0; i <
+         isize(prefab.actors.soft) + isize(prefab.actors.softSkinned) + isize(prefab.actors.rod);
+         ++i) {
       Next();
     }
   }

@@ -201,6 +201,8 @@ class Context [no_init, no_destruct, singleton] {
   // @note If the loaded model has @ref ModelData::elementFrameAxes, @ref bakeScale transforms those
   // axes as normal directions using the inverse-transpose of the scale transform, then normalize
   // them.
+  // @note A polyline model without @ref ModelData::elementFrameAxes gets its default axes generated
+  // from the model before the bake, which then transforms them the same way.
   // @note Call on any thread.
   //
   // @see ShapeHandle, ReleaseShape, LoadShapeFromBytes
@@ -226,6 +228,8 @@ class Context [no_init, no_destruct, singleton] {
   // @note If the loaded model has @ref ModelData::elementFrameAxes, @ref bakeTransform transforms
   // those axes as normal directions using the inverse-transpose of the rotation transform, then
   // normalize them.
+  // @note A polyline model without @ref ModelData::elementFrameAxes gets its default axes generated
+  // from the model before the bake, which then transforms them the same way.
   // @note Call on any thread.
   //
   // @see ShapeHandle, ReleaseShape, LoadShapeFromBytes
@@ -260,6 +264,8 @@ class Context [no_init, no_destruct, singleton] {
   // @note If the loaded model has @ref ModelData::elementFrameAxes, @ref bakeScale and
   // @ref bakeTransform transform those axes as normal directions using the inverse-transpose of the
   // scale-rotation transform, then normalize them.
+  // @note A polyline model without @ref ModelData::elementFrameAxes gets its default axes generated
+  // from the model before the bake, which then transforms them the same way.
   // @note Call on any thread.
   //
   // @see ShapeHandle, ReleaseShape, LoadShapeFromBytes
@@ -313,6 +319,8 @@ class Context [no_init, no_destruct, singleton] {
   // @note If the loaded model has @ref ModelData::elementFrameAxes, @ref bakeScale transforms
   // those axes as normal directions using the inverse-transpose of the scale transform, then
   // normalize them.
+  // @note A polyline model without @ref ModelData::elementFrameAxes gets its default axes generated
+  // from the model before the bake, which then transforms them the same way.
   // @note Call on any thread.
   //
   // @see ShapeHandle, ReleaseShape, LoadShapeFromFile
@@ -340,6 +348,8 @@ class Context [no_init, no_destruct, singleton] {
   // @note If the loaded model has @ref ModelData::elementFrameAxes, @ref bakeTransform transforms
   // those axes as normal directions using the inverse-transpose of the rotation transform, then
   // normalize them.
+  // @note A polyline model without @ref ModelData::elementFrameAxes gets its default axes generated
+  // from the model before the bake, which then transforms them the same way.
   // @note Call on any thread.
   //
   // @see ShapeHandle, ReleaseShape, LoadShapeFromFile
@@ -375,6 +385,8 @@ class Context [no_init, no_destruct, singleton] {
   // @note If the loaded model has @ref ModelData::elementFrameAxes, @ref bakeScale and
   // @ref bakeTransform transform those axes as normal directions using the inverse-transpose of the
   // scale-rotation transform, then normalize them.
+  // @note A polyline model without @ref ModelData::elementFrameAxes gets its default axes generated
+  // from the model before the bake, which then transforms them the same way.
   // @note Call on any thread.
   //
   // @see ShapeHandle, ReleaseShape, LoadShapeFromFile
@@ -431,6 +443,8 @@ class Context [no_init, no_destruct, singleton] {
   // @note If the loaded model has @ref ModelData::elementFrameAxes, @ref bakeScale transforms
   // those axes as normal directions using the inverse-transpose of the scale transform, then
   // normalize them.
+  // @note A polyline model without @ref ModelData::elementFrameAxes gets its default axes generated
+  // from the model before the bake, which then transforms them the same way.
   // @note Call on any thread.
   //
   // @see ShapeHandle, ReleaseShape, LoadShapeFromFile
@@ -459,6 +473,8 @@ class Context [no_init, no_destruct, singleton] {
   // @note If the loaded model has @ref ModelData::elementFrameAxes, @ref bakeTransform transforms
   // those axes as normal directions using the inverse-transpose of the rotation transform, then
   // normalize them.
+  // @note A polyline model without @ref ModelData::elementFrameAxes gets its default axes generated
+  // from the model before the bake, which then transforms them the same way.
   // @note Call on any thread.
   //
   // @see ShapeHandle, ReleaseShape, LoadShapeFromFile
@@ -496,6 +512,8 @@ class Context [no_init, no_destruct, singleton] {
   // @note If the loaded model has @ref ModelData::elementFrameAxes, @ref bakeScale and
   // @ref bakeTransform transform those axes as normal directions using the inverse-transpose of the
   // scale-rotation transform, then normalize them.
+  // @note A polyline model without @ref ModelData::elementFrameAxes gets its default axes generated
+  // from the model before the bake, which then transforms them the same way.
   // @note Call on any thread.
   //
   // @see ShapeHandle, ReleaseShape, LoadShapeFromFile

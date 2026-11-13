@@ -274,6 +274,10 @@ TArray<mochi::DynamicString> GetReferencedFiles(const mochi::prefab::ScenePrefab
       addSoft(soft);
     }
   }
+  for (const auto& actor : Prefab.actors.rod) {
+    files.Add(actor.shapeFile);
+    files.Add(actor.renderModelFile);
+  }
   files.RemoveAll([](const mochi::DynamicString& File) { return File.empty(); });
   return files;
 }
@@ -1291,6 +1295,9 @@ void FSuperDexPrefabImporter::AddActors(
   }
   if (!actors.softSkinned.empty()) {
     WarnUnsupported(prefabName, TEXT("Soft skinned actors"));
+  }
+  if (!actors.rod.empty()) {
+    WarnUnsupported(prefabName, TEXT("Rod actors"));
   }
   if (HasConstraints(Context.Data.constraints)) {
     WarnUnsupported(prefabName, TEXT("Constraints"));

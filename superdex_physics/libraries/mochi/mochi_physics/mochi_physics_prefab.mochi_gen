@@ -246,6 +246,111 @@ struct prefab::SoftActorPrefab(SoftActorParams) [equality(default), remove_refle
   Optional<DynamicArray<real>> nodeDisplacements [units("m")];
 }
 
+// @brief A rod pose: node displacements and element frame axes.
+//
+// @details Values are expressed in the model frame of @ref RodActorPrefab::shapeFile, the same
+// frame as its node positions and rest frame axes. The model transform baked into the shape
+// (@ref RodActorPrefab::scale, @ref RodActorPrefab::shapeRotation, and the effective prefab scale)
+// is applied to the pose too: displacements like node positions, and frame axes like the rest frame
+// axes (by the inverse transpose, then renormalized). @ref RodActorPrefab::shapeTranslation does not
+// affect them. When @ref RodActorPrefab::shapeFile is empty (a preset
+// @ref RodActorParams::shape), the pose is applied unchanged.
+//
+// @see Actor::GetRodPose, Actor::SetRodPose
+struct prefab::RodPose [equality(default)] {
+  // @brief Node displacements relative to the rest node positions, flattened as
+  // [x0, y0, z0, x1, y1, z1, ...]. Must contain 3 finite values per node.
+  DynamicArray<real> nodeDisplacements [units("m")];
+
+  // @brief Element frame axes, flattened as [x0, y0, z0, x1, y1, z1, ...]. Must contain 3 finite
+  // values per element. After the model transform is applied, each axis is expected to be a unit
+  // vector orthogonal to its deformed element, within a tolerance of 1e-3. Geometry violations
+  // emit warnings; the supplied pose is still applied.
+  DynamicArray<real> elementFrameAxes;
+}
+
+// @brief Prefab parameters for a rod actor.
+//
+// @details Extends @ref RodActorParams. The inherited @ref RodActorParams::worldFromLocal is
+// replaced by the prefab-relative @ref rotation and @ref translation fields, and the inherited
+// @ref RodActorParams::shape (a runtime @ref ShapeHandle) is replaced by @ref shapeFile (a path
+// serialized to JSON. The shape is loaded at instantiation time).
+//
+// @note The rod is created in its rest configuration, then @ref pose is applied if set. Use
+// @ref Actor::SetRecenteringParams after instantiation to change recentering.
+// @note The inherited @ref RodActorParams::name field need not be unique, but a name shared by more
+// than one actor cannot be used by name-based prefab references.
+struct prefab::RodActorPrefab(RodActorParams) [equality(default), remove_reflection_fields("worldFromLocal")] {
+  // @brief Optional serialized comment.
+  Optional<String> comment [reflection_name("_comment")];
+
+  // @brief Path to a polyline model file that will be loaded and referenced via @ref ShapeHandle.
+  String shapeFile [reflection_name("shape")];
+
+  // @brief Scale [x, y, z] to bake into the shape file.
+  //
+  // @details Applies to the rod geometry: node positions, element frame axes (transformed by the
+  // inverse transpose and renormalized), and the visual and contact-skin meshes. Also applies to
+  // @ref PointCloudColliderParams::radius, which is authored for the unscaled shape and is
+  // multiplied by the absolute value of the uniform scale. Does not apply to
+  // @ref RodActorParams::material, @ref RodActorParams::contact, or the other
+  // @ref RodActorParams::pointCloudCollider parameters.
+  //
+  // @note All components must be non-zero and finite. Negative components mirror the corresponding
+  // model-space axes.
+  // @note Must be uniform by absolute value when the rod has a point-cloud collider (see
+  // @ref RodActorParams::colliderType).
+  //
+  // @see PrefabParams::scale
+  Real3 scale = kReal3Ones;
+
+  // @brief Rotation quaternion [x, y, z, w] to bake into the shape file.
+  Quaternion shapeRotation;
+
+  // @brief Translation [x, y, z] to bake into the shape file.
+  Real3 shapeTranslation [units("m")];
+
+  // @brief Actor rotation quaternion [x, y, z, w] relative to the prefab's local frame
+  // (i.e., the prefab-from-local rotation). Composes with @ref PrefabParams::rotation
+  // to produce the final world-from-local rotation.
+  //
+  // @note Must be finite and non-zero.
+  Quaternion rotation;
+
+  // @brief Actor translation [x, y, z] relative to the prefab's local frame
+  // (i.e., the prefab-from-local translation). Composes with @ref PrefabParams::scale,
+  // @ref PrefabParams::rotation, and @ref PrefabParams::translation to produce the final
+  // world-from-local translation.
+  //
+  // @note Must be finite.
+  Real3 translation [units("m")];
+
+  // @brief Optional path to a render model file (e.g. .glb) for visualization.
+  //
+  // @note Reserved visualization metadata. SuperDex Physics does not use it for simulation.
+  // Ignored if empty.
+  DynamicString renderModelFile [reflection_name("renderModel")];
+
+  // @brief Scale [x, y, z] to apply to the render model.
+  //
+  // @note Ignored if @ref renderModelFile is empty.
+  Real3 renderModelScale = kReal3Ones;
+
+  // @brief Rotation quaternion [x, y, z, w] to apply to the render model.
+  //
+  // @note Ignored if @ref renderModelFile is empty.
+  Quaternion renderModelRotation;
+
+  // @brief Translation [x, y, z] to apply to the render model.
+  //
+  // @note Ignored if @ref renderModelFile is empty.
+  Real3 renderModelTranslation [units("m")];
+
+  // @brief Optional initial pose. Applied right after the actor is created, see
+  // @ref Actor::SetRodPose.
+  Optional<prefab::RodPose> pose;
+}
+
 // @brief Joint parameters for an articulated actor prefab.
 struct prefab::ArticulatedJointPrefab(ArticulatedJointParams) [equality(default)] {}
 
@@ -483,6 +588,9 @@ struct prefab::ActorLists [equality(default)] {
 
   // @brief Soft-skinned actors.
   DynamicArray<prefab::SoftSkinnedActorPrefab> softSkinned;
+
+  // @brief Rod actors.
+  DynamicArray<prefab::RodActorPrefab> rod;
 }
 
 // @brief Prefab parameters for a @ref RigidSphericalJointConstraintParams.
@@ -1103,11 +1211,18 @@ struct prefab::PrefabParams [no_reflection] {
   //
   // The effective scale is applied to:
   //
-  //   - Mesh geometry (link / actor shapes are loaded at the cumulative scale)
+  //   - Mesh geometry (link / actor shapes are loaded at the cumulative scale),
+  //     including rod nodes, element frame axes (inverse transpose, then
+  //     renormalized), and rod visual and contact-skin meshes
+  //   - The rod point-cloud collider @ref PointCloudColliderParams::radius, by the
+  //     absolute value of the effective scale, which must be uniform for rods with
+  //     a point-cloud collider
   //   - Joint and link translations, cycle joint anchors
   //   - Prismatic joint position limits (Real3, in meters)
-  //   - Soft actor @ref SoftActorPrefab::nodeDisplacements and translational
-  //     DoFs of @ref ArticulatedActorPrefab::jointPose
+  //   - Soft actor @ref SoftActorPrefab::nodeDisplacements, rod actor
+  //     @ref RodPose::nodeDisplacements (with @ref RodPose::elementFrameAxes
+  //     transformed like the rest frame axes), and translational DoFs of
+  //     @ref ArticulatedActorPrefab::jointPose
   //   - Constraint geometric target and limit distances [m], including rigid
   //     prismatic joint limits, world-space position targets, rigid actor-local
   //     pivot/joint positions in @ref RigidPivotPositionConstraintPrefab,
@@ -1144,6 +1259,9 @@ struct prefab::PrefabParams [no_reflection] {
   //     material behavior, damping ratio, actuator limits, or closed-loop
   //     response) imply different scale laws, so prefab scaling preserves
   //     authored values.
+  //   - Rod material and contact parameters (@ref RodActorParams::material and
+  //     @ref RodActorParams::contact), and the other point-cloud collider
+  //     parameters in @ref RodActorParams::pointCloudCollider
   //   - Joint inertia, friction, limit stiffness/damping, cycle joint
   //     stiffness (characterized actuator / tuned-penalty parameters; bring
   //     your own actuator model when scaling a robot)

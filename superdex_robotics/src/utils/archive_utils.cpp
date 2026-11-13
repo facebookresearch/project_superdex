@@ -836,6 +836,11 @@ static void CollectScenePrefabDependencies(
       CollectAsset(soft.flowFile);
     }
   }
+  // Rod actors.
+  for (auto const& actor : prefab.actors.rod) {
+    CollectAsset(actor.shapeFile);
+    CollectAsset(actor.renderModelFile);
+  }
   // Nested prefabs.
   for (auto const& nested : prefab.prefabs) {
     if (!nested.path.empty()) {
