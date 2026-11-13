@@ -76,7 +76,7 @@ class AssetSnapshotTest : public testing::Test {
     auto const prevLogFn = GetLogCallback();
     SetLogCallback([](LogChannel, char const*, char const*, int) {});
     Error error;
-    (void)ApplyAssetSnapshot(snapshot, _root, error);
+    (void)ApplyAssetSnapshot(snapshot, _root.generic_string(), error);
     SetLogCallback(prevLogFn);
     EXPECT_NOT_OK(error);
     EXPECT_FALSE(IsPathRemapActive());
@@ -111,14 +111,14 @@ TEST_F(AssetSnapshotTest, SaveThenLoadRoundTrips) {
 
 TEST_F(AssetSnapshotTest, ApplyReturnsTheScenesPath) {
   WriteSnapshotFiles();
-  auto const scene = ApplyAssetSnapshot(MakeSnapshot(), _root, ExpectOK{});
+  auto const scene = ApplyAssetSnapshot(MakeSnapshot(), _root.generic_string(), ExpectOK{});
   EXPECT_EQ(
       std::string(scene), NormalizeBotPath(_root / "scenes/s.mochi_bot_scene").generic_string());
 }
 
 TEST_F(AssetSnapshotTest, ApplyRoutesReferencesToVersionedCopies) {
   WriteSnapshotFiles();
-  (void)ApplyAssetSnapshot(MakeSnapshot(), _root, ExpectOK{});
+  (void)ApplyAssetSnapshot(MakeSnapshot(), _root.generic_string(), ExpectOK{});
   auto const referencing = _root / "bots" / "b.superdex_bot";
   EXPECT_EQ(
       ResolveBotPath("//params/p.json", referencing, kBotPathMaxParentDepth, ExpectOK{}),
@@ -129,7 +129,7 @@ TEST_F(AssetSnapshotTest, ApplyRoutesReferencesToVersionedCopies) {
 TEST_F(AssetSnapshotTest, ApplyRefusesAFileItDoesNotPin) {
   WriteSnapshotFiles();
   mochi::WriteFile(_root / "params/other.json", std::string_view{"{}"}, ExpectOK{});
-  (void)ApplyAssetSnapshot(MakeSnapshot(), _root, ExpectOK{});
+  (void)ApplyAssetSnapshot(MakeSnapshot(), _root.generic_string(), ExpectOK{});
   auto const suppressError = SuppressLogError();
   Error error;
   (void)ResolveBotPath(
@@ -141,7 +141,7 @@ TEST_F(AssetSnapshotTest, ApplyLeavesFilesOutsideItsRootsUnchanged) {
   WriteSnapshotFiles();
   auto const outside = fs::path(_tempDirCleanup.Path()) / "outside" / "o.json";
   mochi::WriteFile(outside, std::string_view{"{}"}, ExpectOK{});
-  (void)ApplyAssetSnapshot(MakeSnapshot(), _root, ExpectOK{});
+  (void)ApplyAssetSnapshot(MakeSnapshot(), _root.generic_string(), ExpectOK{});
   EXPECT_EQ(std::string(RemapPath(outside.generic_string())), outside.generic_string());
 }
 
@@ -178,7 +178,7 @@ TEST_F(AssetSnapshotTest, AnEmptySnapshotRefusesFilesUnderTheRoot) {
   WriteSnapshotFiles();
   auto snapshot = MakeSnapshot();
   snapshot.files.clear();
-  (void)ApplyAssetSnapshot(snapshot, _root, ExpectOK{});
+  (void)ApplyAssetSnapshot(snapshot, _root.generic_string(), ExpectOK{});
   EXPECT_TRUE(IsPathRemapActive());
   auto const suppressError = SuppressLogError();
   EXPECT_EQ(std::string(RemapPath((_root / "params/p.json").generic_string())), "");
@@ -192,7 +192,7 @@ TEST_F(AssetSnapshotTest, ApplyAcceptsAnUnchangedPinnedRootMarker) {
   snapshot.files.push_back(
       {.file = DynamicString("//.superdex_root"),
        .version = DynamicString("//-1790000000.superdex_root")});
-  (void)ApplyAssetSnapshot(snapshot, _root, ExpectOK{});
+  (void)ApplyAssetSnapshot(snapshot, _root.generic_string(), ExpectOK{});
   EXPECT_TRUE(IsPathRemapActive());
 }
 
@@ -221,4 +221,15 @@ TEST_F(AssetSnapshotTest, ApplyRejectsAVersionInAnotherDirectory) {
   auto snapshot = MakeSnapshot();
   snapshot.files.back().version = "//elsewhere/p-1791002000.json";
   ExpectApplyFails(snapshot);
+}
+
+TEST_F(AssetSnapshotTest, ClearRoutesReferencesBackToTips) {
+  WriteSnapshotFiles();
+  (void)ApplyAssetSnapshot(MakeSnapshot(), _root.generic_string(), ExpectOK{});
+  ClearAssetSnapshot();
+  EXPECT_FALSE(IsPathRemapActive());
+  EXPECT_EQ(
+      ResolveBotPath(
+          "//params/p.json", _root / "bots" / "b.superdex_bot", kBotPathMaxParentDepth, ExpectOK{}),
+      NormalizeBotPath(_root / "params" / "p.json"));
 }

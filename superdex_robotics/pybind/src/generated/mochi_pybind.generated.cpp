@@ -41,6 +41,7 @@ namespace mochi {
     auto m_bots = m.def_submodule("bots");
 
     DefDynamicArray<superdex::robotics::ActuatorHandle>(m_bots, "DynamicArrayActuatorHandle");
+    DefDynamicArray<superdex::robotics::AssetSnapshotEntry>(m_bots, "DynamicArrayAssetSnapshotEntry");
     DefDynamicArray<superdex::robotics::BotActuatorPrefab>(m_bots, "DynamicArrayBotActuatorPrefab");
     DefDynamicArray<superdex::robotics::BotContactOverride>(m_bots, "DynamicArrayBotContactOverride");
     DefDynamicArray<superdex::robotics::BotEntry>(m_bots, "DynamicArrayBotEntry");

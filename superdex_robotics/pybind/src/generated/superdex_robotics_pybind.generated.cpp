@@ -101,6 +101,8 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::DREpisode>(m_bots, "DREpisode", "One episode's sampled DR: seed and the flat keyed values.\n\nPer-spawn pose DR is not a separate field — it rides in `values` under\n``dr/spawn/<name>/<dr_class>/pose`` keys, so a reader consumes it through the\nsame generic `{key -> value}` path. `episodeSeed` is a decimal string — a full\nuint64 can't round-trip as a JSON number, so parse it with ParseSeed."));
   registry.StoreClass(nb::class_<superdex::robotics::DREpisodeList>(m_bots, "DREpisodeList", "A pre-randomized DR episode list — the neutral cross-language interchange.\n\nRead from a `dr_manifest.json` produced by the Python DR pipeline (schema v1).\n`profile`, `experiment_overrides`, and `pose_overrides` from the file are\nignored: a C++ applier consumes resolved per-episode values, not the config that\nproduced them, so :func:`~superdex.robotics.load_dr_episode_list_from_file`\ntolerates those unmodeled keys."));
   registry.StoreClass(nb::class_<superdex::robotics::ResolvedSpawn>(m_bots, "ResolvedSpawn", "One entry of a task's reset state, after its randomization was applied."));
+  registry.StoreClass(nb::class_<superdex::robotics::AssetSnapshotEntry>(m_bots, "AssetSnapshotEntry", "One file an asset snapshot pins: the bot path a scene's references resolve to,\nand the bot path of the version to load in its place. Both are `//`- or\n`@tag/`-prefixed, relative to the scene's .superdex_root."));
+  registry.StoreClass(nb::class_<superdex::robotics::AssetSnapshot>(m_bots, "AssetSnapshot", "The contents of a .superdex_scene_snapshot file: every file a scene uses, each\nmapped to a pinned version. Where the versions come from is up to whoever writes\nthe snapshot."));
 }
 
 void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_& m, [[maybe_unused]] PybindRegistry& registry) {
@@ -1851,6 +1853,48 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("world_from_spawn", &superdex::robotics::ResolvedSpawn::worldFromSpawn, "The entry's pose composed through its parent chain, with the task root at the\nworldFromTask passed to ResolveResetState.")
   ;
 
+  registry.GetClass<superdex::robotics::AssetSnapshotEntry>()
+    .def("__init__", [](superdex::robotics::AssetSnapshotEntry* self, nb::object file, nb::object version) {
+      superdex::robotics::AssetSnapshotEntry result{};
+      result.file = nb::cast<mochi::DynamicString>(file);
+      result.version = nb::cast<mochi::DynamicString>(version);
+      new (self) superdex::robotics::AssetSnapshotEntry(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("file") = superdex::robotics::AssetSnapshotEntry{}.file
+      , nb::arg("version") = superdex::robotics::AssetSnapshotEntry{}.version
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::AssetSnapshotEntry const& self) { return superdex::robotics::AssetSnapshotEntry(self); })
+    .def("__deepcopy__", [](superdex::robotics::AssetSnapshotEntry const& self, nb::dict) { return superdex::robotics::AssetSnapshotEntry(self); })
+    .def_rw("file", &superdex::robotics::AssetSnapshotEntry::file)
+    .def_rw("version", &superdex::robotics::AssetSnapshotEntry::version)
+  ;
+
+  registry.GetClass<superdex::robotics::AssetSnapshot>()
+    .def("__init__", [](superdex::robotics::AssetSnapshot* self, nb::object scene, nb::object created_at, nb::object source_revision, nb::object files) {
+      superdex::robotics::AssetSnapshot result{};
+      result.scene = nb::cast<mochi::DynamicString>(scene);
+      result.createdAt = nb::cast<uint64_t>(created_at);
+      result.sourceRevision = nb::cast<mochi::DynamicString>(source_revision);
+      result.files = nb::cast<mochi::DynamicArray<superdex::robotics::AssetSnapshotEntry>>(files);
+      new (self) superdex::robotics::AssetSnapshot(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("scene") = superdex::robotics::AssetSnapshot{}.scene
+      , nb::arg("created_at") = superdex::robotics::AssetSnapshot{}.createdAt
+      , nb::arg("source_revision") = superdex::robotics::AssetSnapshot{}.sourceRevision
+      , nb::arg("files").sig("...") = superdex::robotics::AssetSnapshot{}.files
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::AssetSnapshot const& self) { return superdex::robotics::AssetSnapshot(self); })
+    .def("__deepcopy__", [](superdex::robotics::AssetSnapshot const& self, nb::dict) { return superdex::robotics::AssetSnapshot(self); })
+    .def_rw("scene", &superdex::robotics::AssetSnapshot::scene, "The scene the snapshot was taken of.")
+    .def_rw("created_at", &superdex::robotics::AssetSnapshot::createdAt, "When the snapshot was taken, as Unix time.")
+    .def_rw("source_revision", &superdex::robotics::AssetSnapshot::sourceRevision, "The source revision the versions were read at.")
+    .def_prop_rw("files", [](superdex::robotics::AssetSnapshot& self) -> mochi::DynamicArray<superdex::robotics::AssetSnapshotEntry>& { return self.files; }, [](superdex::robotics::AssetSnapshot& self, nb::object val) { self.files = nb::cast<mochi::DynamicArray<superdex::robotics::AssetSnapshotEntry>>(val); })
+  ;
+
     m_bots.attr("EFFORT_UNBOUNDED") = nb::cast(superdex::robotics::kEffortUnbounded);
 
     m_bots.def("load_bot_prefab_from_file", [](std::string_view path) {
@@ -2080,6 +2124,47 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       , nb::arg("task")
       , nb::arg("values")
       , "ResolveResetState with the task in its own coordinates (identity worldFromTask).\n\nArgs:\n    task (BotTaskPrefab): The task.\n    values (bots.ArrayLikeDREpisodeEntry): The episode's DR values; keys this\n        does not read are ignored.\n\nReturns:\n    One entry per reset-state entry, parents before their children.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+
+    m_bots.def("load_asset_snapshot", [](std::string_view path) {
+      mochi::Error error;
+      auto result = superdex::robotics::LoadAssetSnapshot(path, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("path")
+      , "Read a .superdex_scene_snapshot file. Fails unless its formatVersion is the one\nthis reader supports.\n\nArgs:\n    path (str): The snapshot file.\n\nReturns:\n    The snapshot, or a default-constructed one on failure.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+
+    m_bots.def("save_asset_snapshot", [](superdex::robotics::AssetSnapshot const& snapshot, std::string_view path) {
+      mochi::Error error;
+      superdex::robotics::SaveAssetSnapshot(snapshot, path, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , nb::arg("snapshot")
+      , nb::arg("path")
+      , "Write a snapshot to a file as JSON.\n\nArgs:\n    snapshot (AssetSnapshot): The snapshot to write.\n    path (str): Destination file.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+
+    m_bots.def("apply_asset_snapshot", [](superdex::robotics::AssetSnapshot const& snapshot, std::string_view asset_root) {
+      mochi::Error error;
+      auto result = superdex::robotics::ApplyAssetSnapshot(snapshot, asset_root, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("snapshot")
+      , nb::arg("asset_root")
+      , "Pin every file in a snapshot for the rest of the process, so each loads from its\nversion instead, replacing any snapshot already applied.\n\nEntries are resolved against assetRoot, the directory holding the scene's\n.superdex_root, wherever its asset tree is mounted. Every version must exist,\nbeside the file it pins, and no version may itself be a pinned file. Then load\nthe scene from the returned path as usual: the scene and every file it\nreferences, however deeply, load from their pinned versions. A file under\nassetRoot, or under the .superdex_root directory of any pinned file, that the\nsnapshot does not pin fails to load instead of loading its tip. Applying fails\nif a pinned .superdex_root no longer matches its version. Loaded assets carry\nthe versions' paths, so don't save assets while a snapshot is applied; archiving\nis refused. Call :func:`~superdex.robotics.clear_asset_snapshot` to stop\napplying it. On failure no snapshot is applied, including any applied before.\n\nArgs:\n    snapshot (AssetSnapshot): The snapshot to apply.\n    asset_root (str): Directory containing the .superdex_root the snapshot's\n        paths are relative to.\n\nReturns:\n    Absolute path of the snapshot's scene, to load as usual.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+
+    m_bots.def("clear_asset_snapshot", &superdex::robotics::ClearAssetSnapshot
+      , "Stop applying the snapshot :func:`~superdex.robotics.apply_asset_snapshot`\napplied, so files load from their tips again. Loads already done are unaffected."
     );
 
 }

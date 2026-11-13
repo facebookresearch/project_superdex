@@ -1868,3 +1868,59 @@ fn bots::ResolveResetState(bots::BotTaskPrefab const& task, DynamicArray<bots::D
 // @param[in] values The episode's DR values; keys this does not read are ignored.
 // @return One entry per reset-state entry, parents before their children.
 fn bots::ResolveResetState(bots::BotTaskPrefab const& task, DynamicArray<bots::DREpisodeEntry> const& values) -> DynamicArray<bots::ResolvedSpawn> [export, mochi_error, overloaded];
+// @brief One file an asset snapshot pins: the bot path a scene's references resolve to, and the
+// bot path of the version to load in its place. Both are `//`- or `@tag/`-prefixed, relative to
+// the scene's .superdex_root.
+struct bots::AssetSnapshotEntry [no_reflection] {
+  String file;
+  String version;
+}
+
+// @brief The contents of a .superdex_scene_snapshot file: every file a scene uses, each mapped to
+// a pinned version. Where the versions come from is up to whoever writes the snapshot.
+struct bots::AssetSnapshot [no_reflection] {
+  // @brief The scene the snapshot was taken of.
+  String scene;
+  // @brief When the snapshot was taken, as Unix time.
+  uint64 createdAt [units("s")] = 0;
+  // @brief The source revision the versions were read at.
+  String sourceRevision;
+  DynamicArray<bots::AssetSnapshotEntry> files;
+}
+
+// @brief Read a .superdex_scene_snapshot file. Fails unless its formatVersion is the one this
+// reader supports.
+//
+// @param[in] path The snapshot file.
+//
+// @return The snapshot, or a default-constructed one on failure.
+fn bots::LoadAssetSnapshot(StringView path) -> bots::AssetSnapshot [export, mochi_error, nodiscard];
+
+// @brief Write a snapshot to a file as JSON.
+//
+// @param[in] snapshot The snapshot to write.
+// @param[in] path Destination file.
+fn bots::SaveAssetSnapshot(bots::AssetSnapshot const& snapshot, StringView path) -> void [export, mochi_error];
+
+// @brief Pin every file in a snapshot for the rest of the process, so each loads from its version
+// instead, replacing any snapshot already applied.
+//
+// @details Entries are resolved against assetRoot, the directory holding the scene's
+// .superdex_root, wherever its asset tree is mounted. Every version must exist, beside the file it
+// pins, and no version may itself be a pinned file. Then load the scene from the returned path as
+// usual: the scene and every file it references, however deeply, load from their pinned versions.
+// A file under assetRoot, or under the .superdex_root directory of any pinned file, that the
+// snapshot does not pin fails to load instead of loading its tip. Applying fails if a pinned
+// .superdex_root no longer matches its version. Loaded assets carry the versions' paths, so don't
+// save assets while a snapshot is applied; archiving is refused. Call @ref ClearAssetSnapshot to
+// stop applying it. On failure no snapshot is applied, including any applied before.
+//
+// @param[in] snapshot The snapshot to apply.
+// @param[in] assetRoot Directory containing the .superdex_root the snapshot's paths are relative to.
+//
+// @return Absolute path of the snapshot's scene, to load as usual.
+fn bots::ApplyAssetSnapshot(bots::AssetSnapshot const& snapshot, StringView assetRoot) -> String [export, mochi_error, nodiscard];
+
+// @brief Stop applying the snapshot @ref ApplyAssetSnapshot applied, so files load from their tips
+// again. Loads already done are unaffected.
+fn bots::ClearAssetSnapshot() -> void [export];

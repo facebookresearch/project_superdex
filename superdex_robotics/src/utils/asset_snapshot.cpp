@@ -21,6 +21,7 @@
 #include <mochi_core/utils/json_utils.h>
 #include <mochi_physics/utils/mochi_path_remap.h>
 
+#include <filesystem>
 #include <set>
 #include <string>
 #include <utility>
@@ -51,18 +52,18 @@ AssetSnapshot superdex::robotics::LoadAssetSnapshot(std::string_view path, Error
   auto const* sourceRevision = field("sourceRevision");
   auto const* files = field("files");
   if (scene == nullptr || !scene->is<std::string>() || createdAt == nullptr ||
-      !createdAt->is<int64_t>() || sourceRevision == nullptr ||
+      !createdAt->is<int64_t>() || createdAt->get<int64_t>() < 0 || sourceRevision == nullptr ||
       !sourceRevision->is<std::string>() || files == nullptr || !files->is<picojson::object>()) {
     MOCHI_ERROR_SET(
         error,
-        "Snapshot needs a string \"scene\", integer \"createdAt\", string \"sourceRevision\", and "
-        "object \"files\".");
+        "Snapshot needs a string \"scene\", non-negative integer \"createdAt\", string "
+        "\"sourceRevision\", and object \"files\".");
     return {};
   }
 
   AssetSnapshot snapshot;
   snapshot.scene = DynamicString(scene->get<std::string>());
-  snapshot.createdAt = createdAt->get<int64_t>();
+  snapshot.createdAt = static_cast<uint64_t>(createdAt->get<int64_t>());
   snapshot.sourceRevision = DynamicString(sourceRevision->get<std::string>());
   for (auto const& [file, version] : files->get<picojson::object>()) {
     MOCHI_ERROR_IF(!version.is<std::string>(), error, "Snapshot \"files\" values must be strings.");
@@ -85,7 +86,7 @@ void superdex::robotics::SaveAssetSnapshot(
   picojson::object root;
   root.emplace("formatVersion", picojson::value(kAssetSnapshotFormatVersion));
   root.emplace("scene", picojson::value(std::string(snapshot.scene)));
-  root.emplace("createdAt", picojson::value(snapshot.createdAt));
+  root.emplace("createdAt", picojson::value(static_cast<int64_t>(snapshot.createdAt)));
   root.emplace("sourceRevision", picojson::value(std::string(snapshot.sourceRevision)));
   root.emplace("files", picojson::value(files));
   WriteFile(
@@ -102,12 +103,12 @@ static bool IsRootMarker(std::filesystem::path const& path) {
 
 DynamicString superdex::robotics::ApplyAssetSnapshot(
     AssetSnapshot const& snapshot,
-    std::filesystem::path const& assetRoot,
+    std::string_view assetRoot,
     Error& error) {
   MOCHI_ERROR_RETURN(error, {});
   // Resolve against the files as they are, not through a table an earlier snapshot installed.
   ClearPathRemap();
-  auto const base = assetRoot / kRootMarkerFile;
+  auto const base = std::filesystem::path(assetRoot) / kRootMarkerFile;
   auto const resolve = [&](DynamicString const& botPath) {
     return ResolveBotPath(
         std::string_view(botPath.c_str(), botPath.size()), base, kBotPathMaxParentDepth, error);
@@ -169,4 +170,8 @@ DynamicString superdex::robotics::ApplyAssetSnapshot(
   }
   SetPathRemap(MakeConstSpan(entries), MakeConstSpan(roots));
   return DynamicString(scene.generic_string());
+}
+
+void superdex::robotics::ClearAssetSnapshot() {
+  ClearPathRemap();
 }

@@ -35,6 +35,7 @@
 #include <superdex_robotics/sensors/camera_sensor.h>
 #include <superdex_robotics/sensors/sensor_base.h>
 #include <superdex_robotics/superdex_robotics.h>
+#include <superdex_robotics/utils/asset_snapshot.h>
 #include <superdex_robotics/utils/file_utils.h>
 
 // Internal-only controllers. Included via the generic aggregator so shipped source

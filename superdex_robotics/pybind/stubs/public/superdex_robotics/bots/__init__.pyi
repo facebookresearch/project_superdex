@@ -41,6 +41,25 @@ type ArrayLikeActuatorHandle = (
     Sequence[ActuatorHandle] | DynamicArrayActuatorHandle | npt.NDArray[Any]
 )
 
+class DynamicArrayAssetSnapshotEntry:
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, size: int, value: AssetSnapshotEntry = ...) -> None: ...
+    @overload
+    def __init__(self, sequence: Sequence[AssetSnapshotEntry]) -> None: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> AssetSnapshotEntry: ...
+    def __setitem__(self, index: int, value: AssetSnapshotEntry) -> None: ...
+    def __iter__(self) -> Iterator[AssetSnapshotEntry]: ...
+    def append(self, value: AssetSnapshotEntry) -> None: ...
+    def clear(self) -> None: ...
+    def resize(self, size: int) -> None: ...
+
+type ArrayLikeAssetSnapshotEntry = (
+    Sequence[AssetSnapshotEntry] | DynamicArrayAssetSnapshotEntry | npt.NDArray[Any]
+)
+
 class DynamicArrayBotActuatorPrefab:
     @overload
     def __init__(self) -> None: ...
@@ -3136,6 +3155,45 @@ class ResolvedSpawn:
         world_from_spawn: mochi_physics.TransformRT = ...,
     ) -> None: ...
 
+class AssetSnapshotEntry:
+    """One file an asset snapshot pins: the bot path a scene's references resolve to,
+    and the bot path of the version to load in its place. Both are `//`- or
+    `@tag/`-prefixed, relative to the scene's .superdex_root.
+    """
+    file: str
+    version: str
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, *, file: str = ..., version: str = ...) -> None: ...
+
+class AssetSnapshot:
+    """The contents of a .superdex_scene_snapshot file: every file a scene uses, each
+    mapped to a pinned version. Where the versions come from is up to whoever writes
+    the snapshot.
+    """
+    scene: str
+    """The scene the snapshot was taken of."""
+    created_at: int
+    """When the snapshot was taken, as Unix time."""
+    source_revision: str
+    """The source revision the versions were read at."""
+    @property
+    def files(self) -> DynamicArrayAssetSnapshotEntry: ...
+    @files.setter
+    def files(self, value: ArrayLikeAssetSnapshotEntry) -> None: ...
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        scene: str = ...,
+        created_at: int = ...,
+        source_revision: str = ...,
+        files: ArrayLikeAssetSnapshotEntry = ...,
+    ) -> None: ...
+
 EFFORT_UNBOUNDED: float
 """Sentinel :attr:`~superdex.robotics.BotJointPrefab.effort_limit` value: the
 joint's actuation effort is unbounded.
@@ -3581,6 +3639,64 @@ def resolve_reset_state(
 
     Raises:
         :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+def load_asset_snapshot(path: str) -> AssetSnapshot:
+    """Read a .superdex_scene_snapshot file. Fails unless its formatVersion is the one
+    this reader supports.
+
+    Args:
+        path (str): The snapshot file.
+
+    Returns:
+        The snapshot, or a default-constructed one on failure.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+def save_asset_snapshot(snapshot: AssetSnapshot, path: str) -> None:
+    """Write a snapshot to a file as JSON.
+
+    Args:
+        snapshot (AssetSnapshot): The snapshot to write.
+        path (str): Destination file.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+def apply_asset_snapshot(snapshot: AssetSnapshot, asset_root: str) -> str:
+    """Pin every file in a snapshot for the rest of the process, so each loads from its
+    version instead, replacing any snapshot already applied.
+
+    Entries are resolved against assetRoot, the directory holding the scene's
+    .superdex_root, wherever its asset tree is mounted. Every version must exist,
+    beside the file it pins, and no version may itself be a pinned file. Then load
+    the scene from the returned path as usual: the scene and every file it
+    references, however deeply, load from their pinned versions. A file under
+    assetRoot, or under the .superdex_root directory of any pinned file, that the
+    snapshot does not pin fails to load instead of loading its tip. Applying fails
+    if a pinned .superdex_root no longer matches its version. Loaded assets carry
+    the versions' paths, so don't save assets while a snapshot is applied; archiving
+    is refused. Call :func:`~superdex.robotics.clear_asset_snapshot` to stop
+    applying it. On failure no snapshot is applied, including any applied before.
+
+    Args:
+        snapshot (AssetSnapshot): The snapshot to apply.
+        asset_root (str): Directory containing the .superdex_root the snapshot's
+            paths are relative to.
+
+    Returns:
+        Absolute path of the snapshot's scene, to load as usual.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+def clear_asset_snapshot() -> None:
+    """Stop applying the snapshot :func:`~superdex.robotics.apply_asset_snapshot`
+    applied, so files load from their tips again. Loads already done are unaffected.
     """
 
 def create_context() -> RoboticsContext: ...

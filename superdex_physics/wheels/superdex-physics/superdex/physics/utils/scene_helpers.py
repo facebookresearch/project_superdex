@@ -167,6 +167,38 @@ def load_bot_task_prefab(path: str):  # noqa: ANN201
     return sdr.load_bot_task_prefab_from_file(_strip_win_extended_prefix(path))
 
 
+def apply_asset_snapshot(snapshot_path: str, asset_root: str) -> str:
+    """Pin every file in a .superdex_scene_snapshot for the rest of the process.
+
+    Afterwards, loading the snapshot's scene (or a task, or a bot) loads every file it references
+    from the version the snapshot pins instead of the tip, however deeply nested. A file under the
+    snapshot's roots that it does not pin fails to load rather than loading its tip. Replaces any
+    snapshot already applied. Don't save assets while a snapshot is applied: they would record the
+    pinned paths.
+
+    Args:
+        snapshot_path: The .superdex_scene_snapshot file.
+        asset_root: Directory containing the .superdex_root the snapshot's paths are relative to,
+            wherever that asset tree is mounted. Every pinned version must exist under it.
+
+    Returns:
+        Path of the snapshot's scene, to pass to `load_bot_scene` as usual.
+    """
+    import superdex.robotics as sdr  # @manual
+
+    snapshot = sdr.load_asset_snapshot(_strip_win_extended_prefix(snapshot_path))
+    return str(
+        sdr.apply_asset_snapshot(snapshot, _strip_win_extended_prefix(asset_root))
+    )
+
+
+def clear_asset_snapshot() -> None:
+    """Stop applying the snapshot `apply_asset_snapshot` applied, so files load from their tips."""
+    import superdex.robotics as sdr  # @manual
+
+    sdr.clear_asset_snapshot()
+
+
 def create_scene_from_prefab(
     prefab: str | sdp.prefab.ScenePrefab,
     root_dir: str | pathlib.Path | None = None,

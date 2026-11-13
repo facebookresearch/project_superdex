@@ -19,7 +19,6 @@
 #include <superdex_robotics/superdex_robotics.h>
 
 #include <cstdint>
-#include <filesystem>
 #include <string_view>
 
 namespace superdex::robotics {
@@ -46,7 +45,7 @@ struct AssetSnapshot {
   /* The scene the snapshot was taken of. */
   DynamicString scene;
   /* When the snapshot was taken [Unix seconds]. */
-  int64_t createdAt = 0;
+  uint64_t createdAt = 0;
   /* The source revision the versions were read at. */
   DynamicString sourceRevision;
   DynamicArray<AssetSnapshotEntry> files;
@@ -89,7 +88,7 @@ SaveAssetSnapshot(AssetSnapshot const& snapshot, std::string_view path, superdex
  *
  * Loaded assets carry the versions' paths, so don't save assets while a snapshot is applied: the
  * pins would be written into them. Archiving is refused for the same reason. Call
- * mochi::ClearPathRemap to stop applying the snapshot.
+ * @ref ClearAssetSnapshot to stop applying the snapshot.
  *
  * @param[in] snapshot The snapshot to apply.
  * @param[in] assetRoot Directory containing the .superdex_root the snapshot's paths are relative
@@ -99,7 +98,11 @@ SaveAssetSnapshot(AssetSnapshot const& snapshot, std::string_view path, superdex
  * @return Absolute path of the snapshot's scene, to load as usual. */
 [[nodiscard]] MOCHI_API DynamicString ApplyAssetSnapshot(
     AssetSnapshot const& snapshot,
-    std::filesystem::path const& assetRoot,
+    std::string_view assetRoot,
     superdex::Error& error);
+
+/* @brief Stop applying the snapshot @ref ApplyAssetSnapshot installed, so files load from their
+ * tips again. Loads already done are unaffected. */
+MOCHI_API void ClearAssetSnapshot();
 
 } // namespace superdex::robotics

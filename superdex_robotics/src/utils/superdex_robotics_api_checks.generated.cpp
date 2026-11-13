@@ -28,6 +28,7 @@
 #include <superdex_robotics/sensors/camera_sensor.h>
 #include <superdex_robotics/superdex_robotics.h>
 #include <superdex_robotics/utils/archive_utils.h>
+#include <superdex_robotics/utils/asset_snapshot.h>
 #include <superdex_robotics/utils/bot_utils.h>
 #include <superdex_robotics/utils/file_utils.h>
 #include <superdex_robotics/utils/superdex_robotics_api_checks.generated.h>
@@ -453,6 +454,16 @@ static_assert(std::is_same_v<decltype(&superdex::robotics::ResolvedSpawn::parent
 static_assert(std::is_same_v<decltype(&superdex::robotics::ResolvedSpawn::parentFromSpawn), mochi::TransformRT superdex::robotics::ResolvedSpawn::*>, "\n  ERROR: Field superdex::robotics::ResolvedSpawn::parentFromSpawn is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 static_assert(std::is_same_v<decltype(&superdex::robotics::ResolvedSpawn::worldFromSpawn), mochi::TransformRT superdex::robotics::ResolvedSpawn::*>, "\n  ERROR: Field superdex::robotics::ResolvedSpawn::worldFromSpawn is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
 
+// struct superdex::robotics::AssetSnapshotEntry
+static_assert(std::is_same_v<decltype(&superdex::robotics::AssetSnapshotEntry::file), mochi::DynamicString superdex::robotics::AssetSnapshotEntry::*>, "\n  ERROR: Field superdex::robotics::AssetSnapshotEntry::file is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::AssetSnapshotEntry::version), mochi::DynamicString superdex::robotics::AssetSnapshotEntry::*>, "\n  ERROR: Field superdex::robotics::AssetSnapshotEntry::version is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+
+// struct superdex::robotics::AssetSnapshot
+static_assert(std::is_same_v<decltype(&superdex::robotics::AssetSnapshot::scene), mochi::DynamicString superdex::robotics::AssetSnapshot::*>, "\n  ERROR: Field superdex::robotics::AssetSnapshot::scene is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::AssetSnapshot::createdAt), uint64_t superdex::robotics::AssetSnapshot::*>, "\n  ERROR: Field superdex::robotics::AssetSnapshot::createdAt is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::AssetSnapshot::sourceRevision), mochi::DynamicString superdex::robotics::AssetSnapshot::*>, "\n  ERROR: Field superdex::robotics::AssetSnapshot::sourceRevision is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+static_assert(std::is_same_v<decltype(&superdex::robotics::AssetSnapshot::files), mochi::DynamicArray<superdex::robotics::AssetSnapshotEntry> superdex::robotics::AssetSnapshot::*>, "\n  ERROR: Field superdex::robotics::AssetSnapshot::files is out-of-sync with C++ definition.\n  Please check the field type, then run mochi_gen_py to regenerate this file.\n");
+
 // free function superdex::robotics::LoadBotPrefabFromFile
 static_assert(std::is_same_v<decltype(&superdex::robotics::LoadBotPrefabFromFile), superdex::robotics::BotPrefab (*)(std::string_view, mochi::Error&)>, "\n  ERROR: Function superdex::robotics::LoadBotPrefabFromFile is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
 
@@ -521,4 +532,16 @@ static_assert(std::is_same_v<decltype(static_cast<mochi::DynamicArray<superdex::
 
 // free function superdex::robotics::ResolveResetState
 static_assert(std::is_same_v<decltype(static_cast<mochi::DynamicArray<superdex::robotics::ResolvedSpawn> (*)(superdex::robotics::BotTaskPrefab const&, mochi::DynamicArray<superdex::robotics::DREpisodeEntry> const&, mochi::Error&)>(&superdex::robotics::ResolveResetState)), mochi::DynamicArray<superdex::robotics::ResolvedSpawn> (*)(superdex::robotics::BotTaskPrefab const&, mochi::DynamicArray<superdex::robotics::DREpisodeEntry> const&, mochi::Error&)>, "\n  ERROR: Function superdex::robotics::ResolveResetState is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
+
+// free function superdex::robotics::LoadAssetSnapshot
+static_assert(std::is_same_v<decltype(&superdex::robotics::LoadAssetSnapshot), superdex::robotics::AssetSnapshot (*)(std::string_view, mochi::Error&)>, "\n  ERROR: Function superdex::robotics::LoadAssetSnapshot is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
+
+// free function superdex::robotics::SaveAssetSnapshot
+static_assert(std::is_same_v<decltype(&superdex::robotics::SaveAssetSnapshot), void (*)(superdex::robotics::AssetSnapshot const&, std::string_view, mochi::Error&)>, "\n  ERROR: Function superdex::robotics::SaveAssetSnapshot is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
+
+// free function superdex::robotics::ApplyAssetSnapshot
+static_assert(std::is_same_v<decltype(&superdex::robotics::ApplyAssetSnapshot), mochi::DynamicString (*)(superdex::robotics::AssetSnapshot const&, std::string_view, mochi::Error&)>, "\n  ERROR: Function superdex::robotics::ApplyAssetSnapshot is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
+
+// free function superdex::robotics::ClearAssetSnapshot
+static_assert(std::is_same_v<decltype(&superdex::robotics::ClearAssetSnapshot), void (*)()>, "\n  ERROR: Function superdex::robotics::ClearAssetSnapshot is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
 // clang-format on

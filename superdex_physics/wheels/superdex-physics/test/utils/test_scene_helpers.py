@@ -23,7 +23,10 @@ from unittest.mock import patch
 import superdex.physics as sdp
 from superdex.physics.paths import get_assets_root
 from superdex.physics.utils.scene_helpers import (
+    apply_asset_snapshot,
+    clear_asset_snapshot,
     create_scene_from_prefab,
+    load_bot_scene_prefab,
     load_bot_task_prefab,
 )
 
@@ -222,3 +225,78 @@ class LoadBotTaskPrefabTest(unittest.TestCase):
         )
         with self.assertRaises(sdp.Error):  # pyre-ignore[16]
             load_bot_task_prefab(path)
+
+
+class AssetSnapshotTest(unittest.TestCase):
+    """Tests for `apply_asset_snapshot` / `clear_asset_snapshot`: loading a scene or task under a
+    snapshot reads the pinned copies, and loading without one reads the tips."""
+
+    def setUp(self) -> None:
+        self._root = pathlib.Path(tempfile.mkdtemp(prefix="mochi_asset_snapshot_test_"))
+        (self._root / ".superdex_root").write_text("")
+        # Each file has a tip and a pinned version ("-2" before the extension) whose contents say
+        # which copy they are.
+        for tag, suffix in (("tip", ""), ("pinned", "-2")):
+            self._write(
+                f"scenes/s{suffix}.mochi_bot_scene",
+                {
+                    "scene": {
+                        "spawnablePrefabs": [
+                            {"name": f"box_{tag}", "path": "box.mochi_prefab"}
+                        ]
+                    }
+                },
+            )
+            self._write(
+                f"tasks/t{suffix}.mochi_bot_task",
+                {"resetState": [{"name": f"spawn_{tag}", "prefabName": "box"}]},
+            )
+            self._write(f"scenes/box{suffix}.mochi_prefab", {})
+        self._snapshot = self._write(
+            "s.superdex_scene_snapshot",
+            {
+                "formatVersion": 1,
+                "scene": "//scenes/s.mochi_bot_scene",
+                "createdAt": 1792520967,
+                "sourceRevision": "abc123",
+                "files": {
+                    "//scenes/s.mochi_bot_scene": "//scenes/s-2.mochi_bot_scene",
+                    "//scenes/box.mochi_prefab": "//scenes/box-2.mochi_prefab",
+                    "//tasks/t.mochi_bot_task": "//tasks/t-2.mochi_bot_task",
+                },
+            },
+        )
+
+    def tearDown(self) -> None:
+        clear_asset_snapshot()
+        shutil.rmtree(self._root, ignore_errors=True)
+
+    def _write(self, relative: str, payload: dict) -> str:
+        path = self._root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload))
+        return str(path)
+
+    def _loaded_tags(self, scene_path: str) -> tuple[str, str]:
+        scene = load_bot_scene_prefab(scene_path)
+        task = load_bot_task_prefab(str(self._root / "tasks/t.mochi_bot_task"))
+        return str(scene.scene.spawnable_prefabs[0].name), str(task.reset_state[0].name)
+
+    def test_without_a_snapshot_tips_load(self) -> None:
+        self.assertEqual(
+            self._loaded_tags(str(self._root / "scenes/s.mochi_bot_scene")),
+            ("box_tip", "spawn_tip"),
+        )
+
+    def test_with_a_snapshot_pinned_versions_load(self) -> None:
+        scene_path = apply_asset_snapshot(self._snapshot, str(self._root))
+        self.assertEqual(
+            pathlib.Path(scene_path).resolve(),
+            (self._root / "scenes/s.mochi_bot_scene").resolve(),
+        )
+        self.assertEqual(self._loaded_tags(scene_path), ("box_pinned", "spawn_pinned"))
+
+    def test_clearing_the_snapshot_loads_tips_again(self) -> None:
+        scene_path = apply_asset_snapshot(self._snapshot, str(self._root))
+        clear_asset_snapshot()
+        self.assertEqual(self._loaded_tags(scene_path), ("box_tip", "spawn_tip"))
