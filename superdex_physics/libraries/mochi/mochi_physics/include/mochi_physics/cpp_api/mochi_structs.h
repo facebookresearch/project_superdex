@@ -205,6 +205,76 @@ struct SoftActorParams {
 #endif
 };
 
+struct RodMaterialParams {
+  real linearDensity = 1e-1_r;
+
+  real linearRotationalInertia = 1e-6_r;
+
+  real axialStiffness = 1e2_r;
+
+  real torsionalStiffness = 5e-4_r;
+
+  Real2 flexuralStiffness = {5e-4_r, 5e-4_r};
+
+  real massDampingCoefficient = 0_r;
+
+  real stiffnessDampingCoefficient = 0_r;
+
+  real axialCollapseBarrierScale = 1e-3_r;
+
+#if MOCHI_LANGUAGE_CPP20
+  bool operator==(RodMaterialParams const&) const = default;
+#endif
+};
+
+struct PointCloudColliderParams {
+  real radius = 0.01_r;
+
+  real selfContactExclusionRatio = 1.5_r;
+
+  real spatialHashLoadFactor = 0.0625_r;
+
+  bool selfContact = false;
+
+  std::optional<ActorBoundaryElementType> colliderTriangleElementType = std::nullopt;
+
+  std::optional<ActorSegmentElementType> colliderSegmentElementType = std::nullopt;
+
+#if MOCHI_LANGUAGE_CPP20
+  bool operator==(PointCloudColliderParams const&) const = default;
+#endif
+};
+
+struct RodActorParams {
+  DynamicString name;
+
+  DynamicString layer;
+
+  TransformRT worldFromLocal = TransformRT::Identity();
+
+  ShapeHandle shape;
+
+  ContactParams contact;
+
+  ActorSegmentElementType contactElementType = ActorSegmentElementType::Default;
+
+  RodMaterialParams material = {};
+
+  ColliderType colliderType = ColliderType::None;
+
+  PointCloudColliderParams pointCloudCollider = {};
+
+  bool hasGravity = true;
+
+  bool useContactSkin = false;
+
+  ActorBoundaryElementType contactSkinElementType = ActorBoundaryElementType::Default;
+
+#if MOCHI_LANGUAGE_CPP20
+  bool operator==(RodActorParams const&) const = default;
+#endif
+};
+
 struct ArticulatedJointParams {
   DynamicString name;
   ArticulatedJointType type = ArticulatedJointType::Invalid;

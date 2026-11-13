@@ -163,7 +163,7 @@ void UMochiRodMeshComponent::CreateMochiActor() {
     return;
   }
 
-  mochi::experimental::PointCloudColliderParams pointCloudParams;
+  mochi::PointCloudColliderParams pointCloudParams;
   pointCloudParams.radius = mochi::real(PointCloudRadius);
   pointCloudParams.selfContact = bPointCloudSelfContact;
   pointCloudParams.selfContactExclusionRatio = mochi::real(PointCloudSelfContactExclusionRatio);

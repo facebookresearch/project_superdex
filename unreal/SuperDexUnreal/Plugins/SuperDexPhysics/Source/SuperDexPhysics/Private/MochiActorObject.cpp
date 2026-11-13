@@ -131,7 +131,7 @@ mochi::experimental::ShellActorParams CreateShellActorParams(
     const UMochiContactParams* ContactParams,
     bool bHasGravity,
     EMochiColliderType ColliderType,
-    const mochi::experimental::PointCloudColliderParams* PointCloudParams,
+    const mochi::PointCloudColliderParams* PointCloudParams,
     bool bUseContactSkin,
     EMochiActorBoundaryElementType ContactElementType) {
   MOCHI_PROFILE_SCOPE();
@@ -160,7 +160,7 @@ mochi::experimental::ShellActorParams CreateShellActorParams(
   return shellParams;
 }
 
-mochi::experimental::RodActorParams CreateRodActorParams(
+mochi::RodActorParams CreateRodActorParams(
     const char* Name,
     const FTransform& WorldFromLocal,
     const char* LayerStr,
@@ -170,12 +170,12 @@ mochi::experimental::RodActorParams CreateRodActorParams(
     bool bHasGravity,
     EMochiColliderType ColliderType,
     bool bUseContactSkin,
-    const mochi::experimental::PointCloudColliderParams* PointCloudParams,
+    const mochi::PointCloudColliderParams* PointCloudParams,
     EMochiActorSegmentElementType ContactElementType,
     EMochiActorBoundaryElementType ContactSkinElementType) {
   MOCHI_PROFILE_SCOPE();
   FUnrealToMochiConverter u2m;
-  mochi::experimental::RodActorParams rodParams;
+  mochi::RodActorParams rodParams;
   rodParams.name = Name;
   rodParams.layer = LayerStr;
   rodParams.worldFromLocal = u2m.TransformToMochi_RT(WorldFromLocal);
@@ -460,7 +460,7 @@ UMochiActorObject* UMochiActorObject::CreateShell(
     EMochiColliderType ColliderType,
     FName Layer,
     bool bHasGravity,
-    const mochi::experimental::PointCloudColliderParams* PointCloudParams,
+    const mochi::PointCloudColliderParams* PointCloudParams,
     bool bUseContactSkin,
     EMochiActorBoundaryElementType ContactElementType,
     bool bQuerySurfaceNodePositions,
@@ -522,7 +522,7 @@ UMochiActorObject* UMochiActorObject::CreateRod(
     EMochiColliderType ColliderType,
     FName Layer,
     bool bHasGravity,
-    const mochi::experimental::PointCloudColliderParams* PointCloudParams,
+    const mochi::PointCloudColliderParams* PointCloudParams,
     bool bUseContactSkin,
     EMochiActorSegmentElementType ContactElementType,
     EMochiActorBoundaryElementType ContactSkinElementType,
@@ -557,7 +557,7 @@ UMochiActorObject* UMochiActorObject::CreateRod(
         ContactElementType,
         ContactSkinElementType);
 
-    auto* actor = mochi::experimental::CreateRodActor(scene, rodParams, e);
+    auto* actor = scene->CreateRodActor(rodParams, e);
     MOCHI_ERROR_RETURN(e);
     mochiActorHandle = actor->GetHandle();
   });

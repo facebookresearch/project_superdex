@@ -1158,7 +1158,7 @@ class MochiRodActorContactScene : public test::MochiSceneTestBase,
       RodActorParams p = rodTemplate;
       p.shape = CreatePolylineShape(
           _scene->GetContext(), nodes, MakeConstSpan(axes), false, ErrorAssert{});
-      return CreateRodActor(_scene, p, ErrorAssert{});
+      return _scene->CreateRodActor(p, ErrorAssert{});
     };
 
     auto pinEndpoints = [&](Actor* actor, Real3 const& startPos, Real3 const& endPos) {

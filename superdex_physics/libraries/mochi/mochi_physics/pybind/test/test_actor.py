@@ -107,10 +107,7 @@ class TestActor(MochiTestBase):
             num_cross_section_segments=4,
             is_closed_loop=False,
         )
-        rod = mochi.experimental.create_rod_actor(
-            scene,
-            mochi.experimental.RodActorParams(shape=mochi.create_model_shape(model)),
-        )
+        rod = scene.create_rod_actor(shape=mochi.create_model_shape(model))
 
         displacements = np.ones(nodes.size, dtype=np_real)
         axes = np.zeros(rest_axes.size, dtype=np_real)

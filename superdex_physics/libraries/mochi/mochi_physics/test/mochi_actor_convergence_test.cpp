@@ -137,7 +137,7 @@ class ActorConvergenceWeightsTest : public test::MochiSceneTestBase {
     RodActorParams p;
     p.shape = shape;
     p.material.linearDensity = linearDensity;
-    return CreateRodActor(_scene, p, test::ExpectOK{});
+    return _scene->CreateRodActor(p, test::ExpectOK{});
   }
 
   // Closed-loop circular rod centered at the origin in the XZ plane.
@@ -154,7 +154,7 @@ class ActorConvergenceWeightsTest : public test::MochiSceneTestBase {
     RodActorParams p;
     p.shape = shape;
     p.material.linearDensity = linearDensity;
-    return CreateRodActor(_scene, p, test::ExpectOK{});
+    return _scene->CreateRodActor(p, test::ExpectOK{});
   }
 
   Actor* CreateRomActor(

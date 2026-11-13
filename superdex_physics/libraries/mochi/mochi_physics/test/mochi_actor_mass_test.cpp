@@ -238,7 +238,7 @@ static PhysicsValidationTestCase CreateRodActorTestCase() {
             params.worldFromLocal.SetTranslation(startPos);
 
             return std::make_pair(
-                CreateRodActor(scene, params, test::ExpectOK{}),
+                scene->CreateRodActor(params, test::ExpectOK{}),
                 PhysicsTestConfig{
                     .expectedMass = kLinearDensity * kLength,
                     .expectedDensity = 0_r,
@@ -577,7 +577,7 @@ TEST_F(ActorMassTest, RodActor_Api) {
           .torsionalStiffness = 1e1_r,
           .flexuralStiffness = {1e1_r, 1e1_r}}};
 
-  auto* actor = CreateRodActor(_scene, params, test::ExpectOK{});
+  auto* actor = _scene->CreateRodActor(params, test::ExpectOK{});
   MOCHI_DEFER(_scene->DestroyActor(actor));
 
   EXPECT_NEAR_RTOL(kMass, actor->GetMass(test::ExpectOK{}), kApiRelTol);

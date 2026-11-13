@@ -499,77 +499,6 @@ struct ShellMaterialParams {
   real membraneStrainStiffeningScale = 0_r;
 };
 
-struct PointCloudColliderParams {
-  /**
-   * @brief Range of interaction of the contact penalty potential evaluated between pairs of
-   * points [m].
-   *
-   * @details If the contact sample points (used as a quadrature for the contact penalty) are
-   * spaced significantly further apart than this, then nodes will be able to slip between them.
-   * This can be addressed without refining the mesh by increasing the number of contact samples
-   * per element, whose spacing scales roughly like (element size) / (quadrature points per
-   * element)^(1/d), where `d` is the parametric dimension of the collider geometry (`d = 2` for
-   * surfaces such as shell, `d = 1` for curves such as rods).
-   *
-   * @note Must be finite and strictly positive. Its sum with the effective contact threshold in
-   * @ref ContactParams, including @ref ContactParams::penaltyThresholdExtraPadding, must also be
-   * finite and strictly positive.
-   *
-   * @note This value also serves as the length scale for dimensional correction of the contact
-   * penalty coefficient on the collider side. The effective penalty stiffness is scaled by
-   * `pow(radius, -integralDim)`, where `integralDim` is the dimension of the collider-side
-   * contact integral.
-   */
-  real radius = 0.01_r;
-
-  /**
-   * @brief Contact samples whose reference-configuration positions are within a radius of
-   * (radius * selfContactExclusionRatio) + (additional padding) of a node are excluded from
-   * self-contact force computation for that node, where "additional padding" refers to any extra
-   * padding associated with the contact penalty formulation.
-   *
-   * @note Must be > 1.
-   */
-  real selfContactExclusionRatio = 1.5_r;
-
-  /**
-   * @brief Load factor for the spatial hash table used in collision detection. Should be << 1.
-   */
-  real spatialHashLoadFactor = 0.0625_r;
-
-  /**
-   * @brief Whether to enable self-contact for this actor.
-   *
-   * @note False by default because it is still highly experimental, not optimized yet, and may
-   * severely degrade performance in scenarios where it isn't needed. Has no effect if the actor's
-   * colliderType is set to @ref ColliderType::None.
-   */
-  bool selfContact = false;
-
-  /**
-   * @brief Triangle element type for collider discretization on a surface.
-   *
-   * @details When nullopt, uses nodal collider placement (one collider point per mesh node,
-   * weighted by assembled nodal measure — cheapest option). When set, uses quadrature-based
-   * collider placement with the specified element type (denser and more accurate, but more
-   * expensive). Only used for surface collider geometries (e.g., shell).
-   */
-  std::optional<ActorBoundaryElementType> colliderTriangleElementType = std::nullopt;
-
-  /**
-   * @brief Segment element type for collider discretization on a curve.
-   *
-   * @details When nullopt, uses nodal collider placement. When set, uses quadrature-based
-   * placement with the specified segment element type. Only used for curve collider geometries
-   * (e.g., rods).
-   */
-  std::optional<ActorSegmentElementType> colliderSegmentElementType = std::nullopt;
-
-#if MOCHI_LANGUAGE_CPP20
-  bool operator==(PointCloudColliderParams const&) const = default;
-#endif
-};
-
 // Parameters for creating a shell actor.
 struct ShellActorParams {
   DynamicString name;
@@ -583,58 +512,6 @@ struct ShellActorParams {
   bool hasGravity = true;
   ActorBoundaryElementType contactElementType = ActorBoundaryElementType::Default;
   bool useContactSkin = false;
-};
-
-struct RodMaterialParams {
-  // Mass per unit undeformed length in a rod. For a rod made of homogeneous material, this would be
-  // the 3D mass density (per unit volume) times the cross-sectional area. This must be positive.
-  real linearDensity = 1e-1_r; // [kg/m]
-  // Rotational inertia about the rod's axis, per unit undeformed length. For a rod made of a
-  // homogeneous material, the value would be the 3D density (per unit volume) times the cross
-  // section's polar area moment of inertia. This must be positive.
-  real linearRotationalInertia = 1e-6_r; // [kg m^2 / m] = [kg m]
-  // Axial stiffness of a rod. This would be Young's modulus times cross-section area if the rod was
-  // made of a homogeneous elastic material. This must be positive.
-  real axialStiffness = 1e2_r; // [N]
-  // Torsional stiffness of a rod. For rods made of homogenous elastic material, this would be the
-  // shear modulus times a "torsion constant" that is the polar area moment of inertia for circular
-  // cross sections, and depends on solving for a Prandtl stress function in the general case (with
-  // values for common shapes available in engineering handbooks). This must be non-negative.
-  real torsionalStiffness = 5e-4_r; // [N m^2]
-  // The first value is flexural stiffness about the material frame axes explicitly provided, and
-  // the second value is flexural stiffness about the perpendicular axis. For a beam made of
-  // homogeneous elastic material, these would be Young's modulus times the cross section's area
-  // moments of inertia about the respective axes. Both values must be non-negative.
-  Real2 flexuralStiffness = {5e-4_r, 5e-4_r}; // [N m^2]
-  // Damping coefficient for velocity-proportional forces from the mass term.
-  real massDampingCoefficient = 0_r; // [1/s]
-  // Stiffness-proportional damping coefficient.
-  real stiffnessDampingCoefficient = 0_r; // [s]
-  // Dimensionless scale of an optional barrier energy
-  // axialCollapseBarrierScale*axialStiffness*max((L/l)^2 - 1, 0)^3 per unit undeformed length, with
-  // the undeformed and deformed lengths L and l of an element. It vanishes unless the element is
-  // compressed, adds no reference stiffness, and resists axial collapse under large compression.
-  // Zero disables it, leaving plain StVK. This must be non-negative.
-  real axialCollapseBarrierScale = 1e-3_r;
-
-#if MOCHI_LANGUAGE_CPP20
-  bool operator==(RodMaterialParams const&) const = default;
-#endif
-};
-
-struct RodActorParams {
-  DynamicString name;
-  DynamicString layer;
-  TransformRT worldFromLocal = TransformRT::Identity();
-  ShapeHandle shape;
-  ContactParams contact;
-  ActorSegmentElementType contactElementType = ActorSegmentElementType::Default;
-  RodMaterialParams material = {};
-  ColliderType colliderType = ColliderType::None;
-  PointCloudColliderParams pointCloudCollider = {};
-  bool hasGravity = true;
-  bool useContactSkin = false;
-  ActorBoundaryElementType contactSkinElementType = ActorBoundaryElementType::Default;
 };
 
 enum class ControlType {
@@ -964,8 +841,6 @@ MOCHI_API Actor* CreateSoftSkinnedActor(
     Error& error);
 
 MOCHI_API Actor* CreateShellActor(Scene* scene, ShellActorParams const& params, Error& error);
-
-MOCHI_API Actor* CreateRodActor(Scene* scene, RodActorParams const& params, Error& error);
 
 // Like Context::CreateModelShape, but with additional data for a linear ROM.
 // WARNING: Requires MOCHI_ENABLE_ROM_ACTORS=1.

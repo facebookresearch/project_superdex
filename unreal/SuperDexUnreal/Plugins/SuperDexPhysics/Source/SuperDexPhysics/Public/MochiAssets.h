@@ -320,9 +320,9 @@ class SUPERDEXPHYSICS_API UMochiRodMaterialParams : public UObject {
  public:
   UMochiRodMaterialParams();
   // Convert to native Mochi type.
-  mochi::experimental::RodMaterialParams ToMochi() const;
+  mochi::RodMaterialParams ToMochi() const;
   // Convert from native Mochi type.
-  void FromMochi(const mochi::experimental::RodMaterialParams& Mochi);
+  void FromMochi(const mochi::RodMaterialParams& Mochi);
 };
 
 //------------------------------------------------------------------------------

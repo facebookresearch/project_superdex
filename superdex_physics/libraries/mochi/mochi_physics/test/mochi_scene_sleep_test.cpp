@@ -242,7 +242,7 @@ class SceneSleep : public test::MochiSceneTestBase {
         params.material.torsionalStiffness = 1e3_r;
         params.material.flexuralStiffness = {1e3_r, 1e3_r};
         params.worldFromLocal.SetTranslation(Real3{0_r, bottomHeight, 0_r});
-        return CreateRodActor(_scene, params, test::ExpectOK{});
+        return _scene->CreateRodActor(params, test::ExpectOK{});
       }
       case ActorType::Articulated: {
         real const linkSize = 0.5_r * kCubeSize;

@@ -54,9 +54,6 @@ void mochi::DeclareMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mo
   registry.StoreClass(nb::class_<mochi::experimental::NewtonEulerTerms>(m_experimental, "NewtonEulerTerms", nb::never_destruct()));
   registry.StoreClass(nb::class_<mochi::experimental::ExperimentalSoftActorParams>(m_experimental, "ExperimentalSoftActorParams"));
   registry.StoreClass(nb::class_<mochi::experimental::ExperimentalSoftSkinnedActorParams>(m_experimental, "ExperimentalSoftSkinnedActorParams"));
-  registry.StoreClass(nb::class_<mochi::experimental::RodMaterialParams>(m_experimental, "RodMaterialParams"));
-  registry.StoreClass(nb::class_<mochi::experimental::PointCloudColliderParams>(m_experimental, "PointCloudColliderParams"));
-  registry.StoreClass(nb::class_<mochi::experimental::RodActorParams>(m_experimental, "RodActorParams", "Parameters for creating an experimental rod actor."));
   registry.StoreClass(nb::class_<mochi::experimental::ShellMaterialParams>(m_experimental, "ShellMaterialParams"));
   registry.StoreClass(nb::class_<mochi::experimental::ShellActorParams>(m_experimental, "ShellActorParams", "Parameters for creating an experimental shell actor."));
   registry.StoreClass(nb::class_<mochi::experimental::SleepParams>(m_experimental, "SleepParams", "[Experimental] Parameters controlling island sleeping.\n\nActors that interact (through contact or constraints) are grouped into islands,\nwhich are solved together. An island at rest can be put to sleep: it keeps its\nstate unchanged and is skipped by :meth:`~superdex.physics.Scene.step` until\nsomething wakes it (e.g. an actor, constraint or scene setting changes through\nthe API, or an awake actor comes into contact with it).\n\nAn island goes to sleep after :attr:`min_steps_before_sleep` consecutive steps\nin which it was at rest, as judged by :attr:`sleep_threshold`. Steps in which\nthe solver did not converge never count, so an island that never converges never\ngoes to sleep.\n\nNote:\n    Changing the sleep parameters wakes all islands.\n\nNote:\n    Sleeping islands are excluded from :class:`~superdex.physics.SolverStats`\n    and :class:`~superdex.physics.experimental.DebugStats`, and their actors\n    report :class:`NONE <superdex.physics.ConvergenceStatus>` from\n    :meth:`~superdex.physics.Actor.get_convergence_status`.\n\nNote:\n    Islands do not sleep while the scene is recording, so recording can change\n    the simulation results.\n\nNote:\n    Sleeping is not supported in differentiable scenes.\n\nWarning:\n    Island sleeping is experimental and may change or be removed without\n    warning.\n\nSee Also:\n    :func:`~superdex.physics.experimental.get_sleep_params`,\n    :func:`~superdex.physics.experimental.set_sleep_params`"));
@@ -341,124 +338,6 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
     .def_prop_rw("soft_params", [](mochi::experimental::ExperimentalSoftSkinnedActorParams& self) -> mochi::DynamicArray<mochi::experimental::ExperimentalSoftActorParams>& { return self.softParams; }, [](mochi::experimental::ExperimentalSoftSkinnedActorParams& self, nb::object val) { self.softParams = nb::cast<mochi::DynamicArray<mochi::experimental::ExperimentalSoftActorParams>>(val); })
   ;
 
-  registry.GetClass<mochi::experimental::RodMaterialParams>()
-    .def("__init__", [](mochi::experimental::RodMaterialParams* self, nb::object linear_density, nb::object linear_rotational_inertia, nb::object axial_stiffness, nb::object torsional_stiffness, nb::object flexural_stiffness, nb::object mass_damping_coefficient, nb::object stiffness_damping_coefficient, nb::object axial_collapse_barrier_scale) {
-      mochi::experimental::RodMaterialParams result{};
-      result.linearDensity = nb::cast<mochi::real>(linear_density);
-      result.linearRotationalInertia = nb::cast<mochi::real>(linear_rotational_inertia);
-      result.axialStiffness = nb::cast<mochi::real>(axial_stiffness);
-      result.torsionalStiffness = nb::cast<mochi::real>(torsional_stiffness);
-      result.flexuralStiffness = nb::cast<mochi::Real2>(flexural_stiffness);
-      result.massDampingCoefficient = nb::cast<mochi::real>(mass_damping_coefficient);
-      result.stiffnessDampingCoefficient = nb::cast<mochi::real>(stiffness_damping_coefficient);
-      result.axialCollapseBarrierScale = nb::cast<mochi::real>(axial_collapse_barrier_scale);
-      new (self) mochi::experimental::RodMaterialParams(std::move(result));
-    }
-      , nb::kw_only()
-      , nb::arg("linear_density") = mochi::experimental::RodMaterialParams{}.linearDensity
-      , nb::arg("linear_rotational_inertia") = mochi::experimental::RodMaterialParams{}.linearRotationalInertia
-      , nb::arg("axial_stiffness") = mochi::experimental::RodMaterialParams{}.axialStiffness
-      , nb::arg("torsional_stiffness") = mochi::experimental::RodMaterialParams{}.torsionalStiffness
-      , nb::arg("flexural_stiffness").sig("...") = mochi::experimental::RodMaterialParams{}.flexuralStiffness
-      , nb::arg("mass_damping_coefficient") = mochi::experimental::RodMaterialParams{}.massDampingCoefficient
-      , nb::arg("stiffness_damping_coefficient") = mochi::experimental::RodMaterialParams{}.stiffnessDampingCoefficient
-      , nb::arg("axial_collapse_barrier_scale") = mochi::experimental::RodMaterialParams{}.axialCollapseBarrierScale
-    )
-    .def(nb::init<>())
-    .def(nb::self == nb::self)
-    .def(nb::self != nb::self)
-    .def("__copy__", [](mochi::experimental::RodMaterialParams const& self) { return mochi::experimental::RodMaterialParams(self); })
-    .def("__deepcopy__", [](mochi::experimental::RodMaterialParams const& self, nb::dict) { return mochi::experimental::RodMaterialParams(self); })
-    .def_rw("linear_density", &mochi::experimental::RodMaterialParams::linearDensity)
-    .def_rw("linear_rotational_inertia", &mochi::experimental::RodMaterialParams::linearRotationalInertia)
-    .def_rw("axial_stiffness", &mochi::experimental::RodMaterialParams::axialStiffness)
-    .def_rw("torsional_stiffness", &mochi::experimental::RodMaterialParams::torsionalStiffness)
-    .def_prop_rw("flexural_stiffness", [](mochi::experimental::RodMaterialParams& self) -> mochi::Real2& { return self.flexuralStiffness; }, [](mochi::experimental::RodMaterialParams& self, nb::object val) { self.flexuralStiffness = nb::cast<mochi::Real2>(val); })
-    .def_rw("mass_damping_coefficient", &mochi::experimental::RodMaterialParams::massDampingCoefficient)
-    .def_rw("stiffness_damping_coefficient", &mochi::experimental::RodMaterialParams::stiffnessDampingCoefficient)
-    .def_rw("axial_collapse_barrier_scale", &mochi::experimental::RodMaterialParams::axialCollapseBarrierScale)
-  ;
-
-  registry.GetClass<mochi::experimental::PointCloudColliderParams>()
-    .def("__init__", [](mochi::experimental::PointCloudColliderParams* self, nb::object radius, nb::object self_contact_exclusion_ratio, nb::object spatial_hash_load_factor, nb::object self_contact, nb::object collider_triangle_element_type, nb::object collider_segment_element_type) {
-      mochi::experimental::PointCloudColliderParams result{};
-      result.radius = nb::cast<mochi::real>(radius);
-      result.selfContactExclusionRatio = nb::cast<mochi::real>(self_contact_exclusion_ratio);
-      result.spatialHashLoadFactor = nb::cast<mochi::real>(spatial_hash_load_factor);
-      result.selfContact = nb::cast<bool>(self_contact);
-      result.colliderTriangleElementType = nb::cast<std::optional<mochi::ActorBoundaryElementType>>(collider_triangle_element_type);
-      result.colliderSegmentElementType = nb::cast<std::optional<mochi::ActorSegmentElementType>>(collider_segment_element_type);
-      new (self) mochi::experimental::PointCloudColliderParams(std::move(result));
-    }
-      , nb::kw_only()
-      , nb::arg("radius") = mochi::experimental::PointCloudColliderParams{}.radius
-      , nb::arg("self_contact_exclusion_ratio") = mochi::experimental::PointCloudColliderParams{}.selfContactExclusionRatio
-      , nb::arg("spatial_hash_load_factor") = mochi::experimental::PointCloudColliderParams{}.spatialHashLoadFactor
-      , nb::arg("self_contact") = mochi::experimental::PointCloudColliderParams{}.selfContact
-      , nb::arg("collider_triangle_element_type").sig("...") = mochi::experimental::PointCloudColliderParams{}.colliderTriangleElementType
-      , nb::arg("collider_segment_element_type").sig("...") = mochi::experimental::PointCloudColliderParams{}.colliderSegmentElementType
-    )
-    .def(nb::init<>())
-    .def(nb::self == nb::self)
-    .def(nb::self != nb::self)
-    .def("__copy__", [](mochi::experimental::PointCloudColliderParams const& self) { return mochi::experimental::PointCloudColliderParams(self); })
-    .def("__deepcopy__", [](mochi::experimental::PointCloudColliderParams const& self, nb::dict) { return mochi::experimental::PointCloudColliderParams(self); })
-    .def_rw("radius", &mochi::experimental::PointCloudColliderParams::radius)
-    .def_rw("self_contact_exclusion_ratio", &mochi::experimental::PointCloudColliderParams::selfContactExclusionRatio)
-    .def_rw("spatial_hash_load_factor", &mochi::experimental::PointCloudColliderParams::spatialHashLoadFactor)
-    .def_rw("self_contact", &mochi::experimental::PointCloudColliderParams::selfContact)
-    .def_prop_rw("collider_triangle_element_type", [](mochi::experimental::PointCloudColliderParams& self) -> std::optional<mochi::ActorBoundaryElementType>& { return self.colliderTriangleElementType; }, [](mochi::experimental::PointCloudColliderParams& self, nb::handle val) { self.colliderTriangleElementType = val.is_none() ? std::optional<mochi::ActorBoundaryElementType>{} : nb::cast<std::optional<mochi::ActorBoundaryElementType>>(val); }, nb::for_setter(nb::arg("value").none()))
-    .def_prop_rw("collider_segment_element_type", [](mochi::experimental::PointCloudColliderParams& self) -> std::optional<mochi::ActorSegmentElementType>& { return self.colliderSegmentElementType; }, [](mochi::experimental::PointCloudColliderParams& self, nb::handle val) { self.colliderSegmentElementType = val.is_none() ? std::optional<mochi::ActorSegmentElementType>{} : nb::cast<std::optional<mochi::ActorSegmentElementType>>(val); }, nb::for_setter(nb::arg("value").none()))
-  ;
-
-  registry.GetClass<mochi::experimental::RodActorParams>()
-    .def("__init__", [](mochi::experimental::RodActorParams* self, nb::object name, nb::object layer, nb::object world_from_local, nb::object shape, nb::object contact, nb::object contact_element_type, nb::object material, nb::object collider_type, nb::object point_cloud_collider, nb::object has_gravity, nb::object use_contact_skin, nb::object contact_skin_element_type) {
-      mochi::experimental::RodActorParams result{};
-      result.name = nb::cast<mochi::DynamicString>(name);
-      result.layer = nb::cast<mochi::DynamicString>(layer);
-      result.worldFromLocal = nb::cast<mochi::TransformRT>(world_from_local);
-      result.shape = nb::cast<mochi::ShapeHandle>(shape);
-      result.contact = nb::cast<mochi::ContactParams>(contact);
-      result.contactElementType = nb::cast<mochi::ActorSegmentElementType>(contact_element_type);
-      result.material = nb::cast<mochi::experimental::RodMaterialParams>(material);
-      result.colliderType = nb::cast<mochi::ColliderType>(collider_type);
-      result.pointCloudCollider = nb::cast<mochi::experimental::PointCloudColliderParams>(point_cloud_collider);
-      result.hasGravity = nb::cast<bool>(has_gravity);
-      result.useContactSkin = nb::cast<bool>(use_contact_skin);
-      result.contactSkinElementType = nb::cast<mochi::ActorBoundaryElementType>(contact_skin_element_type);
-      new (self) mochi::experimental::RodActorParams(std::move(result));
-    }
-      , nb::kw_only()
-      , nb::arg("name") = mochi::experimental::RodActorParams{}.name
-      , nb::arg("layer") = mochi::experimental::RodActorParams{}.layer
-      , nb::arg("world_from_local").sig("...") = mochi::experimental::RodActorParams{}.worldFromLocal
-      , nb::arg("shape").sig("...") = mochi::experimental::RodActorParams{}.shape
-      , nb::arg("contact").sig("...") = mochi::experimental::RodActorParams{}.contact
-      , nb::arg("contact_element_type") = mochi::experimental::RodActorParams{}.contactElementType
-      , nb::arg("material").sig("...") = mochi::experimental::RodActorParams{}.material
-      , nb::arg("collider_type") = mochi::experimental::RodActorParams{}.colliderType
-      , nb::arg("point_cloud_collider").sig("...") = mochi::experimental::RodActorParams{}.pointCloudCollider
-      , nb::arg("has_gravity") = mochi::experimental::RodActorParams{}.hasGravity
-      , nb::arg("use_contact_skin") = mochi::experimental::RodActorParams{}.useContactSkin
-      , nb::arg("contact_skin_element_type") = mochi::experimental::RodActorParams{}.contactSkinElementType
-    )
-    .def(nb::init<>())
-    .def("__copy__", [](mochi::experimental::RodActorParams const& self) { return mochi::experimental::RodActorParams(self); })
-    .def("__deepcopy__", [](mochi::experimental::RodActorParams const& self, nb::dict) { return mochi::experimental::RodActorParams(self); })
-    .def_rw("name", &mochi::experimental::RodActorParams::name, "Actor name.")
-    .def_rw("layer", &mochi::experimental::RodActorParams::layer, "Contact layer name.")
-    .def_rw("world_from_local", &mochi::experimental::RodActorParams::worldFromLocal, "World-from-local transform applied to the shape.")
-    .def_rw("shape", &mochi::experimental::RodActorParams::shape, "Shape handle defining the rod geometry. Must be a polyline shape.\n\nNote:\n    Each element's frame axis is interpreted as one cross-sectional principal\n    axis (the other is the cross product of the segment direction and that\n    axis); the flexural stiffness components are defined with respect to these\n    axes.\n\nNote:\n    A rod actor uses a visual mesh only when the shape has embedding data. For\n    shapes created from :class:`~superdex.physics.ModelData`, the embedding is\n    built from the skinning data in\n    :attr:`~superdex.physics.ModelData.visual_mesh`. Without visual-mesh\n    skinning, :func:`~superdex.physics.get_shape_visual_mesh` still returns the\n    shape's visual mesh, but the rod actor ignores it:\n    :meth:`~superdex.physics.Actor.get_visual_mesh` returns an empty view, and\n    :class:`VISUAL_NODE_POSITIONS <superdex.physics.QueryType>` and\n    :class:`VISUAL_NODE_NORMALS <superdex.physics.QueryType>` are unsupported.\n\nNote:\n    Setting\n    :attr:`~superdex.physics.experimental.RodActorParams.use_contact_skin` to\n    true requires :attr:`~superdex.physics.ModelData.contact_skin_mesh`.")
-    .def_rw("contact", &mochi::experimental::RodActorParams::contact, "Contact properties for interactions with volume actors.")
-    .def_rw("contact_element_type", &mochi::experimental::RodActorParams::contactElementType, "Element type controlling the number of contact samples per segment.")
-    .def_rw("material", &mochi::experimental::RodActorParams::material, "Rod material properties.")
-    .def_rw("collider_type", &mochi::experimental::RodActorParams::colliderType, "Collider type. Set to PointCloud to enable point-cloud contact.")
-    .def_rw("point_cloud_collider", &mochi::experimental::RodActorParams::pointCloudCollider, "Geometric and logical properties of the point-cloud collider.")
-    .def_rw("has_gravity", &mochi::experimental::RodActorParams::hasGravity, "Enables gravity.")
-    .def_rw("use_contact_skin", &mochi::experimental::RodActorParams::useContactSkin, "Use the rod shape's contact skin for contact instead of its centerline.\n\nActor creation fails if the shape does not have a contact skin.\n\nNote:\n    The contact skin is exposed through\n    :meth:`~superdex.physics.Actor.get_contact_skin_mesh` and\n    :class:`CONTACT_SKIN_NODE_POSITIONS <superdex.physics.QueryType>` /\n    :class:`CONTACT_SKIN_NODE_NORMALS <superdex.physics.QueryType>`\n    independently of this flag.")
-    .def_rw("contact_skin_element_type", &mochi::experimental::RodActorParams::contactSkinElementType, "Triangle element type for contact-skin quadrature.\n\nNote:\n    :attr:`~superdex.physics.experimental.RodActorParams.contact_element_type`\n    controls centerline sampling instead.")
-  ;
-
   registry.GetClass<mochi::experimental::ShellMaterialParams>()
     .def("__init__", [](mochi::experimental::ShellMaterialParams* self, nb::object membrane_lambda, nb::object membrane_mu, nb::object bending_alpha, nb::object bending_beta, nb::object density, nb::object mass_damping_coefficient, nb::object stiffness_damping_coefficient, nb::object membrane_collapse_barrier_scale, nb::object membrane_strain_stiffening_scale) {
       mochi::experimental::ShellMaterialParams result{};
@@ -508,7 +387,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
       result.material = nb::cast<mochi::experimental::ShellMaterialParams>(material);
       result.colliderType = nb::cast<mochi::ColliderType>(collider_type);
       result.contact = nb::cast<mochi::ContactParams>(contact);
-      result.pointCloudCollider = nb::cast<mochi::experimental::PointCloudColliderParams>(point_cloud_collider);
+      result.pointCloudCollider = nb::cast<mochi::PointCloudColliderParams>(point_cloud_collider);
       result.hasGravity = nb::cast<bool>(has_gravity);
       result.contactElementType = nb::cast<mochi::ActorBoundaryElementType>(contact_element_type);
       result.useContactSkin = nb::cast<bool>(use_contact_skin);
@@ -934,19 +813,6 @@ void mochi::DefineMochiPhysics_MochiPhysicsExperimental([[maybe_unused]] nb::mod
       , nb::arg("scene").none()
       , nb::arg("params")
       , nb::arg("experimental_params")
-      , nb::rv_policy::reference
-    );
-
-    m_experimental.def("create_rod_actor", [](mochi::Scene* scene, mochi::experimental::RodActorParams const& params) {
-      mochi::Error error;
-      auto result = mochi::experimental::CreateRodActor(scene, params, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
-    }
-      , nb::arg("scene").none()
-      , nb::arg("params")
       , nb::rv_policy::reference
     );
 

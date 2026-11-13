@@ -76,7 +76,7 @@ def create_mass_on_rod_spring_simulation() -> tuple[Scene, Actor, Actor]:
     flexural_stiffness = YOUNGS_MODULUS * second_moment_of_area
 
     # Create rod material parameters
-    material_params = sdp.experimental.RodMaterialParams(
+    material_params = sdp.RodMaterialParams(
         linear_density=DENSITY * area,
         linear_rotational_inertia=DENSITY * polar_moment_of_inertia,
         axial_stiffness=axial_stiffness,
@@ -85,7 +85,7 @@ def create_mass_on_rod_spring_simulation() -> tuple[Scene, Actor, Actor]:
     )
 
     # Create rod actor params
-    rod_params = sdp.experimental.RodActorParams(
+    rod_params = sdp.RodActorParams(
         name="Spring",
         shape=shape,
         world_from_local=sdp.TransformRT(),
@@ -93,7 +93,7 @@ def create_mass_on_rod_spring_simulation() -> tuple[Scene, Actor, Actor]:
     )
 
     # Create rod actor
-    rod_actor = sdp.experimental.create_rod_actor(scene, rod_params)
+    rod_actor = scene.create_rod_actor(rod_params)
 
     # Reference node positions of the rod, flattened as [x0, y0, z0, x1, y1, z1, ...].
     # They are in the actor's local frame, which coincides with the world frame here

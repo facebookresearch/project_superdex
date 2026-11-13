@@ -4665,12 +4665,7 @@ class ActorType:
         Use at your own risk.
     """
     ROD: ActorType
-    """[Experimental] Rod actor for thin elastic rods.
-
-    Warning:
-        This is an experimental feature. It may be changed or removed in the future.
-        Use at your own risk.
-    """
+    """Rod actor for thin elastic rods."""
     COUNT: ActorType
     """Number of actor type enum values."""
     def __init__(self, value: int) -> None: ...
@@ -5039,9 +5034,9 @@ class QueryType:
     :meth:`~superdex.physics.Actor.get_contact_skin_mesh_node_positions_local`.
 
     Note:
-        Only supported for deformable actors whose shape has a contact skin,
+        Only supported for deformable actors whose shapes have contact skins,
         regardless of :attr:`~superdex.physics.SoftActorParams.use_contact_skin` /
-        :attr:`~superdex.physics.experimental.RodActorParams.use_contact_skin` /
+        :attr:`~superdex.physics.RodActorParams.use_contact_skin` /
         :attr:`~superdex.physics.experimental.ShellActorParams.use_contact_skin`.
     """
     CONTACT_SKIN_NODE_NORMALS: QueryType
@@ -5049,9 +5044,9 @@ class QueryType:
     :meth:`~superdex.physics.Actor.get_contact_skin_mesh_node_normals_local`.
 
     Note:
-        Only supported for deformable actors whose shape has a contact skin,
+        Only supported for deformable actors whose shapes have contact skins,
         regardless of :attr:`~superdex.physics.SoftActorParams.use_contact_skin` /
-        :attr:`~superdex.physics.experimental.RodActorParams.use_contact_skin` /
+        :attr:`~superdex.physics.RodActorParams.use_contact_skin` /
         :attr:`~superdex.physics.experimental.ShellActorParams.use_contact_skin`.
     """
     CONTACT_POINTS: QueryType
@@ -6045,6 +6040,275 @@ class SoftActorParams:
         has_stress: bool = ...,
         use_contact_skin: bool = ...,
         boundary_element_type: ActorBoundaryElementType | int = ...,
+    ) -> None: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __ne__(self, other: object) -> bool: ...
+
+class RodMaterialParams:
+    """Material properties of a rod actor.
+
+    See Also:
+        :class:`~superdex.physics.RodActorParams`
+    """
+    linear_density: float
+    """Mass per unit undeformed length. Must be positive.
+
+    Note:
+        For a rod made of homogeneous material, this is the 3D mass density (per
+        unit volume) times the cross-sectional area.
+    """
+    linear_rotational_inertia: float
+    """Rotational inertia about the rod's axis, per unit undeformed length. Must be
+    positive.
+
+    Note:
+        For a rod made of homogeneous material, this is the 3D mass density (per
+        unit volume) times the cross section's polar area moment of inertia.
+    """
+    axial_stiffness: float
+    """Axial stiffness. Must be positive.
+
+    Note:
+        For a rod made of homogeneous elastic material, this is Young's modulus
+        times the cross-sectional area.
+    """
+    torsional_stiffness: float
+    """Torsional stiffness. Must be non-negative.
+
+    Note:
+        For a rod made of homogeneous elastic material, this is the shear modulus
+        times a torsion constant. The torsion constant is the polar area moment of
+        inertia for circular cross sections, and depends on solving for a Prandtl
+        stress function in the general case (values for common shapes are available
+        in engineering handbooks).
+    """
+    @property
+    def flexural_stiffness(self) -> Real2:
+        """Flexural stiffnesses about the element frame axis and about the perpendicular
+        cross-sectional axis, respectively. Both values must be non-negative.
+
+        Note:
+            For a rod made of homogeneous elastic material, these are Young's modulus
+            times the cross section's area moments of inertia about the respective axes.
+
+        See Also:
+            :attr:`~superdex.physics.RodActorParams.shape`
+        """
+    @flexural_stiffness.setter
+    def flexural_stiffness(self, value: Real2Like) -> None: ...
+    mass_damping_coefficient: float
+    """Mass-proportional damping coefficient. Must be non-negative."""
+    stiffness_damping_coefficient: float
+    """Stiffness-proportional damping coefficient. Must be non-negative."""
+    axial_collapse_barrier_scale: float
+    """Dimensionless scale of an optional barrier against axial collapse. Must be
+    non-negative.
+
+    The barrier energy per unit undeformed length is `η·kₐ·max(1/λ² - 1, 0)³`, where
+    `η` is :attr:`~superdex.physics.RodMaterialParams.axial_collapse_barrier_scale`,
+    `kₐ` is :attr:`~superdex.physics.RodMaterialParams.axial_stiffness`, and `λ` is
+    the axial stretch of the centerline. It is active only under compression, adds
+    no stiffness at rest, and diverges as the rod collapses. Zero disables it,
+    leaving the plain St. Venant-Kirchhoff axial response.
+    """
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        linear_density: float = ...,
+        linear_rotational_inertia: float = ...,
+        axial_stiffness: float = ...,
+        torsional_stiffness: float = ...,
+        flexural_stiffness: Real2Like = ...,
+        mass_damping_coefficient: float = ...,
+        stiffness_damping_coefficient: float = ...,
+        axial_collapse_barrier_scale: float = ...,
+    ) -> None: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __ne__(self, other: object) -> bool: ...
+
+class PointCloudColliderParams:
+    """Geometric and logical properties of a point-cloud collider.
+
+    See Also:
+        :attr:`~superdex.physics.RodActorParams.point_cloud_collider`,
+        :attr:`~superdex.physics.experimental.ShellActorParams.point_cloud_collider`
+    """
+    radius: float
+    """Range of interaction of the contact penalty potential evaluated between pairs of
+    points.
+
+    If the contact sample points (used as a quadrature for the contact penalty) are
+    spaced significantly further apart than this, then nodes will be able to slip
+    between them. This can be addressed without refining the mesh by increasing the
+    number of contact samples per element, whose spacing scales roughly like
+    (element size) / (quadrature points per element)^(1/d), where `d` is the
+    parametric dimension of the collider geometry (`d = 2` for surfaces such as
+    shells, `d = 1` for curves such as rods).
+
+    Note:
+        Must be finite and strictly positive. Its sum with the effective contact
+        threshold in :class:`~superdex.physics.ContactParams`, including
+        :attr:`~superdex.physics.ContactParams.penalty_threshold_extra_padding`,
+        must also be finite and strictly positive.
+
+    Note:
+        This value also serves as the length scale for dimensional correction of the
+        contact penalty coefficient on the collider side. The effective penalty
+        stiffness is scaled by `pow(radius, -integralDim)`, where `integralDim` is
+        the dimension of the collider-side contact integral.
+    """
+    self_contact_exclusion_ratio: float
+    """Contact samples whose reference-configuration positions are within a radius of
+    (radius * selfContactExclusionRatio) + (additional padding) of a node are
+    excluded from self-contact force computation for that node, where "additional
+    padding" refers to any extra padding associated with the contact penalty
+    formulation.
+
+    Note:
+        Must be > 1 when
+        :attr:`~superdex.physics.PointCloudColliderParams.self_contact` is enabled.
+    """
+    spatial_hash_load_factor: float
+    """Load factor for the spatial hash table used in collision detection. Must be
+    positive, and should be << 1.
+    """
+    self_contact: bool
+    """Whether to enable self-contact for this actor.
+
+    Note:
+        Disabled by default because it may degrade performance in scenarios where it
+        isn't needed. Has no effect if the actor's colliderType is set to
+        :class:`NONE <superdex.physics.ColliderType>`.
+    """
+    collider_triangle_element_type: Optional[ActorBoundaryElementType]
+    """Triangle element type for collider discretization on a surface.
+
+    When unset, uses nodal collider placement (one collider point per mesh node,
+    weighted by assembled nodal measure — cheapest option). When set, uses
+    quadrature-based collider placement with the specified element type (denser and
+    more accurate, but more expensive). Only used for surface collider geometries
+    (e.g., shells).
+    """
+    collider_segment_element_type: Optional[ActorSegmentElementType]
+    """Segment element type for collider discretization on a curve.
+
+    When unset, uses nodal collider placement. When set, uses quadrature-based
+    placement with the specified segment element type. Only used for curve collider
+    geometries (e.g., rods).
+    """
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        radius: float = ...,
+        self_contact_exclusion_ratio: float = ...,
+        spatial_hash_load_factor: float = ...,
+        self_contact: bool = ...,
+        collider_triangle_element_type: Optional[ActorBoundaryElementType | int] = ...,
+        collider_segment_element_type: Optional[ActorSegmentElementType | int] = ...,
+    ) -> None: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __ne__(self, other: object) -> bool: ...
+
+class RodActorParams:
+    """Parameters to create a rod actor.
+
+    A rod actor is a 1D deformable body whose geometry is a polyline.
+
+    See Also:
+        :meth:`~superdex.physics.Scene.create_rod_actor`
+    """
+    name: str
+    """Actor name."""
+    layer: str
+    """Contact layer name."""
+    world_from_local: TransformRT
+    """World-from-local transform applied to the shape."""
+    shape: ShapeHandle
+    """Shape handle defining the rod geometry. Must be a polyline shape.
+
+    Note:
+        Each element's frame axis is interpreted as one cross-sectional principal
+        axis (the other is the cross product of the segment direction and that
+        axis); the flexural stiffness components are defined with respect to these
+        axes.
+
+    Note:
+        A rod actor uses a visual mesh only when the shape has embedding data. For
+        shapes created from :class:`~superdex.physics.ModelData`, the embedding is
+        built from the skinning data in
+        :attr:`~superdex.physics.ModelData.visual_mesh`. Without visual-mesh
+        skinning, :func:`~superdex.physics.get_shape_visual_mesh` still returns the
+        shape's visual mesh, but the rod actor ignores it:
+        :meth:`~superdex.physics.Actor.get_visual_mesh` returns an empty view, and
+        :class:`VISUAL_NODE_POSITIONS <superdex.physics.QueryType>` and
+        :class:`VISUAL_NODE_NORMALS <superdex.physics.QueryType>` are unsupported.
+
+    Note:
+        Setting :attr:`~superdex.physics.RodActorParams.use_contact_skin` to true
+        requires :attr:`~superdex.physics.ModelData.contact_skin_mesh`.
+    """
+    contact: ContactParams
+    """Contact properties for interactions with volume actors."""
+    contact_element_type: ActorSegmentElementType
+    """Element type controlling the number of contact samples per segment."""
+    material: RodMaterialParams
+    """Rod material properties."""
+    collider_type: ColliderType
+    """Collider type. Set to :class:`POINT_CLOUD <superdex.physics.ColliderType>` or
+    :class:`AUTO <superdex.physics.ColliderType>` to enable point-cloud contact.
+
+    Note:
+        Only :class:`NONE <superdex.physics.ColliderType>`, :class:`POINT_CLOUD
+        <superdex.physics.ColliderType>`, and :class:`AUTO
+        <superdex.physics.ColliderType>` are supported.
+    """
+    point_cloud_collider: PointCloudColliderParams
+    """Geometric and logical properties of the point-cloud collider."""
+    has_gravity: bool
+    """Enables gravity."""
+    use_contact_skin: bool
+    """Use the rod shape's contact skin for contact instead of its centerline.
+
+    Actor creation fails if the shape does not have a contact skin.
+
+    Note:
+        The contact skin is exposed through
+        :meth:`~superdex.physics.Actor.get_contact_skin_mesh` and
+        :class:`CONTACT_SKIN_NODE_POSITIONS <superdex.physics.QueryType>` /
+        :class:`CONTACT_SKIN_NODE_NORMALS <superdex.physics.QueryType>`
+        independently of this flag.
+    """
+    contact_skin_element_type: ActorBoundaryElementType
+    """Triangle element type for contact-skin quadrature.
+
+    Note:
+        :attr:`~superdex.physics.RodActorParams.contact_element_type` controls
+        centerline sampling instead.
+    """
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        name: str = ...,
+        layer: str = ...,
+        world_from_local: TransformRT = ...,
+        shape: ShapeHandle = ...,
+        contact: ContactParams = ...,
+        contact_element_type: ActorSegmentElementType | int = ...,
+        material: RodMaterialParams = ...,
+        collider_type: ColliderType | int = ...,
+        point_cloud_collider: PointCloudColliderParams = ...,
+        has_gravity: bool = ...,
+        use_contact_skin: bool = ...,
+        contact_skin_element_type: ActorBoundaryElementType | int = ...,
     ) -> None: ...
     def __eq__(self, other: object) -> bool: ...
     def __ne__(self, other: object) -> bool: ...
@@ -14013,6 +14277,40 @@ class Scene:
         has_gravity: bool = ...,
         has_inertia: bool = ...,
         has_stress: bool = ...,
+    ) -> Optional[Actor]: ...
+    @overload
+    def create_rod_actor(self, params: RodActorParams) -> Optional[Actor]:
+        """Create a rod actor.
+
+        Args:
+            params (RodActorParams): Parameters defining the rod actor.
+
+        Returns:
+            Pointer to the created :class:`~superdex.physics.Actor`, or None on error.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+
+        See Also:
+            :class:`~superdex.physics.RodActorParams`,
+            :meth:`~superdex.physics.Scene.destroy_actor`
+        """
+    @overload
+    def create_rod_actor(
+        self,
+        *,
+        name: str = ...,
+        layer: str = ...,
+        world_from_local: TransformRT = ...,
+        shape: ShapeHandle = ...,
+        contact: ContactParams = ...,
+        contact_element_type: ActorSegmentElementType | int = ...,
+        material: RodMaterialParams = ...,
+        collider_type: ColliderType | int = ...,
+        point_cloud_collider: PointCloudColliderParams = ...,
+        has_gravity: bool = ...,
+        use_contact_skin: bool = ...,
+        contact_skin_element_type: ActorBoundaryElementType | int = ...,
     ) -> Optional[Actor]: ...
     @overload
     def destroy_actor(self, actor: Optional[Actor]) -> None:

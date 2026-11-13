@@ -36,10 +36,7 @@ enum ActorType {
   // your own risk.
   Shell,
 
-  // @brief [Experimental] Rod actor for thin elastic rods.
-  //
-  // @warning This is an experimental feature. It may be changed or removed in the future. Use at
-  // your own risk.
+  // @brief Rod actor for thin elastic rods.
   Rod,
 
   // @brief Number of actor type enum values.
@@ -316,18 +313,16 @@ enum QueryType {
   // @brief Positions of contact skin mesh nodes. Available via @ref
   // Actor::GetContactSkinMeshNodePositionsLocal.
   //
-  // @note Only supported for deformable actors whose shape has a contact skin, regardless of @ref
-  // SoftActorParams::useContactSkin / @ref
-  // experimental::RodActorParams::useContactSkin / @ref
+  // @note Only supported for deformable actors whose shapes have contact skins, regardless of @ref
+  // SoftActorParams::useContactSkin / @ref RodActorParams::useContactSkin / @ref
   // experimental::ShellActorParams::useContactSkin.
   ContactSkinNodePositions,
 
   // @brief Normals of contact skin mesh nodes. Available via @ref
   // Actor::GetContactSkinMeshNodeNormalsLocal.
   //
-  // @note Only supported for deformable actors whose shape has a contact skin, regardless of @ref
-  // SoftActorParams::useContactSkin / @ref
-  // experimental::RodActorParams::useContactSkin / @ref
+  // @note Only supported for deformable actors whose shapes have contact skins, regardless of @ref
+  // SoftActorParams::useContactSkin / @ref RodActorParams::useContactSkin / @ref
   // experimental::ShellActorParams::useContactSkin.
   ContactSkinNodeNormals,
 

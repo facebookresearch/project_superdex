@@ -498,6 +498,187 @@ struct SoftActorParams [equality(default)] {
   ActorBoundaryElementType boundaryElementType = ActorBoundaryElementType::Default;
 }
 
+// @brief Material properties of a rod actor.
+//
+// @see RodActorParams
+struct RodMaterialParams [equality(default)] {
+
+  // @brief Mass per unit undeformed length. Must be positive.
+  //
+  // @note For a rod made of homogeneous material, this is the 3D mass density (per unit volume)
+  // times the cross-sectional area.
+  real linearDensity [units("kg/m")] = 1e-1;
+
+  // @brief Rotational inertia about the rod's axis, per unit undeformed length. Must be positive.
+  //
+  // @note For a rod made of homogeneous material, this is the 3D mass density (per unit volume)
+  // times the cross section's polar area moment of inertia.
+  real linearRotationalInertia [units("kg*m")] = 1e-6;
+
+  // @brief Axial stiffness. Must be positive.
+  //
+  // @note For a rod made of homogeneous elastic material, this is Young's modulus times the
+  // cross-sectional area.
+  real axialStiffness [units("N")] = 1e2;
+
+  // @brief Torsional stiffness. Must be non-negative.
+  //
+  // @note For a rod made of homogeneous elastic material, this is the shear modulus times a torsion
+  // constant. The torsion constant is the polar area moment of inertia for circular cross sections,
+  // and depends on solving for a Prandtl stress function in the general case (values for common
+  // shapes are available in engineering handbooks).
+  real torsionalStiffness [units("N*m^2")] = 5e-4;
+
+  // @brief Flexural stiffnesses about the element frame axis and about the perpendicular
+  // cross-sectional axis, respectively. Both values must be non-negative.
+  //
+  // @note For a rod made of homogeneous elastic material, these are Young's modulus times the cross
+  // section's area moments of inertia about the respective axes.
+  //
+  // @see RodActorParams::shape
+  Real2 flexuralStiffness [units("N*m^2")] = {5e-4, 5e-4};
+
+  // @brief Mass-proportional damping coefficient. Must be non-negative.
+  real massDampingCoefficient [units("1/s")] = 0;
+
+  // @brief Stiffness-proportional damping coefficient. Must be non-negative.
+  real stiffnessDampingCoefficient [units("s")] = 0;
+
+  // @brief Dimensionless scale of an optional barrier against axial collapse. Must be non-negative.
+  //
+  // @details The barrier energy per unit undeformed length is
+  // `η·kₐ·max(1/λ² - 1, 0)³`, where `η` is @ref axialCollapseBarrierScale, `kₐ` is @ref
+  // axialStiffness, and `λ` is the axial stretch of the centerline. It is active only under
+  // compression, adds no stiffness at rest, and diverges as the rod collapses. Zero disables it,
+  // leaving the plain St. Venant-Kirchhoff axial response.
+  real axialCollapseBarrierScale = 1e-3;
+}
+
+// @brief Geometric and logical properties of a point-cloud collider.
+//
+// @see RodActorParams::pointCloudCollider, experimental::ShellActorParams::pointCloudCollider
+struct PointCloudColliderParams [equality(default)] {
+
+  // @brief Range of interaction of the contact penalty potential evaluated between pairs of
+  // points.
+  //
+  // @details If the contact sample points (used as a quadrature for the contact penalty) are
+  // spaced significantly further apart than this, then nodes will be able to slip between them.
+  // This can be addressed without refining the mesh by increasing the number of contact samples
+  // per element, whose spacing scales roughly like (element size) / (quadrature points per
+  // element)^(1/d), where `d` is the parametric dimension of the collider geometry (`d = 2` for
+  // surfaces such as shells, `d = 1` for curves such as rods).
+  //
+  // @note Must be finite and strictly positive. Its sum with the effective contact threshold in
+  // @ref ContactParams, including @ref ContactParams::penaltyThresholdExtraPadding, must also be
+  // finite and strictly positive.
+  // @note This value also serves as the length scale for dimensional correction of the contact
+  // penalty coefficient on the collider side. The effective penalty stiffness is scaled by
+  // `pow(radius, -integralDim)`, where `integralDim` is the dimension of the collider-side
+  // contact integral.
+  real radius [units("m")] = 0.01;
+
+  // @brief Contact samples whose reference-configuration positions are within a radius of
+  // (radius * selfContactExclusionRatio) + (additional padding) of a node are excluded from
+  // self-contact force computation for that node, where "additional padding" refers to any extra
+  // padding associated with the contact penalty formulation.
+  //
+  // @note Must be > 1 when @ref selfContact is enabled.
+  real selfContactExclusionRatio = 1.5;
+
+  // @brief Load factor for the spatial hash table used in collision detection. Must be positive,
+  // and should be << 1.
+  real spatialHashLoadFactor = 0.0625;
+
+  // @brief Whether to enable self-contact for this actor.
+  //
+  // @note Disabled by default because it may degrade performance in scenarios where it isn't
+  // needed. Has no effect if the actor's colliderType is set to @ref ColliderType::None.
+  bool selfContact = false;
+
+  // @brief Triangle element type for collider discretization on a surface.
+  //
+  // @details When unset, uses nodal collider placement (one collider point per mesh node,
+  // weighted by assembled nodal measure — cheapest option). When set, uses quadrature-based
+  // collider placement with the specified element type (denser and more accurate, but more
+  // expensive). Only used for surface collider geometries (e.g., shells).
+  Optional<ActorBoundaryElementType> colliderTriangleElementType;
+
+  // @brief Segment element type for collider discretization on a curve.
+  //
+  // @details When unset, uses nodal collider placement. When set, uses quadrature-based
+  // placement with the specified segment element type. Only used for curve collider geometries
+  // (e.g., rods).
+  Optional<ActorSegmentElementType> colliderSegmentElementType;
+}
+
+// @brief Parameters to create a rod actor.
+//
+// @details A rod actor is a 1D deformable body whose geometry is a polyline.
+//
+// @see Scene::CreateRodActor
+struct RodActorParams [equality(default)] {
+
+  // @brief Actor name.
+  String name;
+
+  // @brief Contact layer name.
+  String layer;
+
+  // @brief World-from-local transform applied to the shape.
+  TransformRT worldFromLocal;
+
+  // @brief Shape handle defining the rod geometry. Must be a polyline shape.
+  //
+  // @note Each element's frame axis is interpreted as one cross-sectional principal axis (the other
+  // is the cross product of the segment direction and that axis); the flexural stiffness components
+  // are defined with respect to these axes.
+  // @note A rod actor uses a visual mesh only when the shape has embedding data. For shapes created
+  // from @ref ModelData, the embedding is built from the skinning data in @ref
+  // ModelData::visualMesh. Without visual-mesh skinning, @ref Context::GetShapeVisualMesh still
+  // returns the shape's visual mesh, but the rod actor ignores it: @ref Actor::GetVisualMesh returns
+  // an empty view, and @ref QueryType::VisualNodePositions and @ref QueryType::VisualNodeNormals are
+  // unsupported.
+  // @note Setting @ref useContactSkin to true requires @ref ModelData::contactSkinMesh.
+  ShapeHandle shape;
+
+  // @brief Contact properties for interactions with volume actors.
+  ContactParams contact;
+
+  // @brief Element type controlling the number of contact samples per segment.
+  ActorSegmentElementType contactElementType = ActorSegmentElementType::Default;
+
+  // @brief Rod material properties.
+  RodMaterialParams material;
+
+  // @brief Collider type. Set to @ref ColliderType::PointCloud or @ref ColliderType::Auto to enable
+  // point-cloud contact.
+  //
+  // @note Only @ref ColliderType::None, @ref ColliderType::PointCloud, and @ref ColliderType::Auto
+  // are supported.
+  ColliderType colliderType = ColliderType::None;
+
+  // @brief Geometric and logical properties of the point-cloud collider.
+  PointCloudColliderParams pointCloudCollider;
+
+  // @brief Enables gravity.
+  bool hasGravity = true;
+
+  // @brief Use the rod shape's contact skin for contact instead of its centerline.
+  //
+  // @details Actor creation fails if the shape does not have a contact skin.
+  //
+  // @note The contact skin is exposed through @ref Actor::GetContactSkinMesh and @ref
+  // QueryType::ContactSkinNodePositions / @ref QueryType::ContactSkinNodeNormals independently of
+  // this flag.
+  bool useContactSkin = false;
+
+  // @brief Triangle element type for contact-skin quadrature.
+  //
+  // @note @ref RodActorParams::contactElementType controls centerline sampling instead.
+  ActorBoundaryElementType contactSkinElementType = ActorBoundaryElementType::Default;
+}
+
 // @brief Parameters describing a single joint within an articulated actor.
 //
 // @details Each joint connects a link to its parent in the kinematic tree. Joints are referenced

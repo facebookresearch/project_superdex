@@ -147,7 +147,7 @@ struct CReferenceNodeCurvatureBinormal : public NoCopy {
   DynamicArray<Real3> values;
 };
 
-struct CRodMaterialParams : public experimental::RodMaterialParams {};
+struct CRodMaterialParams : public RodMaterialParams {};
 
 // Generate variable-width rod connectivity and matching stencil positions. Each node gets an
 // up-to-3-node stencil [i, i+1, i+2]. Open-rod boundary stencils are shorter, while closed-loop
@@ -171,7 +171,7 @@ struct CRodMaterialParams : public experimental::RodMaterialParams {};
 void InitRodActor(
     entt::registry& reg,
     entt::entity e,
-    experimental::RodActorParams const& params,
+    RodActorParams const& params,
     std::shared_ptr<PolylineShape const> shapePtr,
     Error& error);
 
@@ -199,7 +199,7 @@ namespace rod {
     Span<real const> elementRotationalInertias,
     Span<Real3 const> frameAxes,
     Span<Real3 const> referenceAxes,
-    experimental::RodMaterialParams const& materialParams,
+    RodMaterialParams const& materialParams,
     Real3 gravity,
     Span<real const> stageStartDispl,
     Span<real const> stageStartVel,

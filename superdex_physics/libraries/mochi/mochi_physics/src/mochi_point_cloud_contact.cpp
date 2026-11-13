@@ -28,7 +28,7 @@
 namespace mochi {
 
 void ValidatePointCloudColliderParams(
-    experimental::PointCloudColliderParams const& params,
+    PointCloudColliderParams const& params,
     ContactParams const& contactParams,
     Error& error) {
   MOCHI_ERROR_IF_NOT(params.radius > 0_r, error, "Point-cloud collider radius must be positive.");
@@ -47,7 +47,7 @@ void ValidatePointCloudColliderParams(
 }
 
 SpatialHashTable CreateSpatialHashTable(
-    experimental::PointCloudColliderParams const& params,
+    PointCloudColliderParams const& params,
     CColliderPointCloudDiscretization const& colliderDiscretization,
     real contactThreshold) {
   int const numColliderPoints = colliderDiscretization.GetNumColliderPoints();
@@ -142,7 +142,7 @@ static void StableCountingSort(Span<T const> items, KeyFunction const& key, Span
 
 template <bool kSelfContact, typename ColliderDiscretizationT>
 static void ComputePointCloudContactIndicesImpl(
-    experimental::PointCloudColliderParams const& pointCloudColliderParams,
+    PointCloudColliderParams const& pointCloudColliderParams,
     ColliderDiscretizationT const& colliderDisc,
     TransformRT const& worldFromCollider,
     CollidingPointCloudDiscretization const& collidingDiscretization,
@@ -357,7 +357,7 @@ static void ComputePointCloudContactIndicesImpl(
 }
 
 void ComputePointCloudContactIndices(
-    experimental::PointCloudColliderParams const& pointCloudColliderParams,
+    PointCloudColliderParams const& pointCloudColliderParams,
     CColliderPointCloudDiscretization const& colliderDiscretization,
     TransformRT const& worldFromCollider,
     CollidingPointCloudDiscretization const& collidingDiscretization,

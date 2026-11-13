@@ -209,7 +209,7 @@ def add_rod_tendon(scene: Scene, art: TendonArticulation) -> Actor:
     polar_moment_of_inertia = 0.5 * math.pi * ROD_RADIUS**4
     second_moment_of_area = 0.25 * math.pi * ROD_RADIUS**4
     torsion_constant = 0.5 * math.pi * ROD_RADIUS**4
-    material = sdp.experimental.RodMaterialParams(
+    material = sdp.RodMaterialParams(
         linear_density=ROD_DENSITY * ROD_AREA,
         linear_rotational_inertia=ROD_DENSITY * polar_moment_of_inertia,
         axial_stiffness=ROD_AREA * ROD_YOUNGS_MODULUS,
@@ -220,17 +220,14 @@ def add_rod_tendon(scene: Scene, art: TendonArticulation) -> Actor:
         ],
     )
 
-    rod = sdp.experimental.create_rod_actor(
-        scene,
-        sdp.experimental.RodActorParams(
-            name="TendonRod",
-            shape=shape,
-            world_from_local=sdp.TransformRT(),
-            material=material,
-            layer="Tendon",
-            contact=sdp.ContactParams(penalty_coefficient=PENALTY_COEFFICIENT),
-            use_contact_skin=True,
-        ),
+    rod = scene.create_rod_actor(
+        name="TendonRod",
+        shape=shape,
+        world_from_local=sdp.TransformRT(),
+        material=material,
+        layer="Tendon",
+        contact=sdp.ContactParams(penalty_coefficient=PENALTY_COEFFICIENT),
+        use_contact_skin=True,
     )
 
     # Attach both rod endpoints to the semantic local origins authored in the prefab.

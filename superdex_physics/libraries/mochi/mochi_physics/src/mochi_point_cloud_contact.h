@@ -163,12 +163,12 @@ struct CollidingPointCloudDiscretization {
 };
 /// Validates point-cloud collider parameters and their combined contact range.
 void ValidatePointCloudColliderParams(
-    experimental::PointCloudColliderParams const& params,
+    PointCloudColliderParams const& params,
     ContactParams const& contactParams,
     Error& error);
 
 SpatialHashTable CreateSpatialHashTable(
-    experimental::PointCloudColliderParams const& params,
+    PointCloudColliderParams const& params,
     CColliderPointCloudDiscretization const& colliderDiscretization,
     real contactThreshold);
 
@@ -178,7 +178,7 @@ SpatialHashTable CreateSpatialHashTable(
 // samples; an empty span denotes identity. Pairs within the self-contact exclusion distance in the
 // reference configuration are omitted.
 void ComputePointCloudContactIndices(
-    experimental::PointCloudColliderParams const& pointCloudColliderParams,
+    PointCloudColliderParams const& pointCloudColliderParams,
     CColliderPointCloudDiscretization const& colliderDiscretization,
     TransformRT const& worldFromCollider,
     CollidingPointCloudDiscretization const& collidingDiscretization,

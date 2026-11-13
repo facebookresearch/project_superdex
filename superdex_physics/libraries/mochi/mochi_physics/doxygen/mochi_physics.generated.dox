@@ -1731,9 +1731,7 @@
 
 /// @var mochi::ActorType::Rod
 ///
-/// @brief [Experimental] Rod actor for thin elastic rods.
-///
-/// @warning This is an experimental feature. It may be changed or removed in the future. Use at your own risk.
+/// @brief Rod actor for thin elastic rods.
 ///
 
 /// @var mochi::ActorType::Count
@@ -2074,14 +2072,14 @@
 ///
 /// @brief Positions of contact skin mesh nodes. Available via @ref mochi::Actor::GetContactSkinMeshNodePositionsLocal "Actor::GetContactSkinMeshNodePositionsLocal".
 ///
-/// @note Only supported for deformable actors whose shape has a contact skin, regardless of @ref mochi::SoftActorParams::useContactSkin "SoftActorParams::useContactSkin" / `experimental::RodActorParams::useContactSkin` / `experimental::ShellActorParams::useContactSkin`.
+/// @note Only supported for deformable actors whose shapes have contact skins, regardless of @ref mochi::SoftActorParams::useContactSkin "SoftActorParams::useContactSkin" / @ref mochi::RodActorParams::useContactSkin "RodActorParams::useContactSkin" / `experimental::ShellActorParams::useContactSkin`.
 ///
 
 /// @var mochi::QueryType::ContactSkinNodeNormals
 ///
 /// @brief Normals of contact skin mesh nodes. Available via @ref mochi::Actor::GetContactSkinMeshNodeNormalsLocal "Actor::GetContactSkinMeshNodeNormalsLocal".
 ///
-/// @note Only supported for deformable actors whose shape has a contact skin, regardless of @ref mochi::SoftActorParams::useContactSkin "SoftActorParams::useContactSkin" / `experimental::RodActorParams::useContactSkin` / `experimental::ShellActorParams::useContactSkin`.
+/// @note Only supported for deformable actors whose shapes have contact skins, regardless of @ref mochi::SoftActorParams::useContactSkin "SoftActorParams::useContactSkin" / @ref mochi::RodActorParams::useContactSkin "RodActorParams::useContactSkin" / `experimental::ShellActorParams::useContactSkin`.
 ///
 
 /// @var mochi::QueryType::ContactPoints
@@ -2697,6 +2695,198 @@
 /// @note Selects quadrature on the tetrahedral boundary, or on the authored contact skin when @ref mochi::SoftActorParams::useContactSkin "useContactSkin" is true.
 ///
 /// @see @ref mochi::ActorBoundaryElementType "ActorBoundaryElementType"
+///
+
+/// @struct mochi::RodMaterialParams
+///
+/// @brief Material properties of a rod actor.
+///
+/// @see @ref mochi::RodActorParams "RodActorParams"
+///
+
+/// @var mochi::RodMaterialParams::linearDensity
+///
+/// @brief Mass per unit undeformed length. Must be positive.
+///
+/// @note For a rod made of homogeneous material, this is the 3D mass density (per unit volume) times the cross-sectional area.
+///
+
+/// @var mochi::RodMaterialParams::linearRotationalInertia
+///
+/// @brief Rotational inertia about the rod's axis, per unit undeformed length. Must be positive.
+///
+/// @note For a rod made of homogeneous material, this is the 3D mass density (per unit volume) times the cross section's polar area moment of inertia.
+///
+
+/// @var mochi::RodMaterialParams::axialStiffness
+///
+/// @brief Axial stiffness. Must be positive.
+///
+/// @note For a rod made of homogeneous elastic material, this is Young's modulus times the cross-sectional area.
+///
+
+/// @var mochi::RodMaterialParams::torsionalStiffness
+///
+/// @brief Torsional stiffness. Must be non-negative.
+///
+/// @note For a rod made of homogeneous elastic material, this is the shear modulus times a torsion constant. The torsion constant is the polar area moment of inertia for circular cross sections, and depends on solving for a Prandtl stress function in the general case (values for common shapes are available in engineering handbooks).
+///
+
+/// @var mochi::RodMaterialParams::flexuralStiffness
+///
+/// @brief Flexural stiffnesses about the element frame axis and about the perpendicular cross-sectional axis, respectively. Both values must be non-negative.
+///
+/// @note For a rod made of homogeneous elastic material, these are Young's modulus times the cross section's area moments of inertia about the respective axes.
+///
+/// @see @ref mochi::RodActorParams::shape "RodActorParams::shape"
+///
+
+/// @var mochi::RodMaterialParams::massDampingCoefficient
+///
+/// @brief Mass-proportional damping coefficient. Must be non-negative.
+///
+
+/// @var mochi::RodMaterialParams::stiffnessDampingCoefficient
+///
+/// @brief Stiffness-proportional damping coefficient. Must be non-negative.
+///
+
+/// @var mochi::RodMaterialParams::axialCollapseBarrierScale
+///
+/// @brief Dimensionless scale of an optional barrier against axial collapse. Must be non-negative.
+///
+/// @details The barrier energy per unit undeformed length is `η·kₐ·max(1/λ² - 1, 0)³`, where `η` is @ref mochi::RodMaterialParams::axialCollapseBarrierScale "axialCollapseBarrierScale", `kₐ` is @ref mochi::RodMaterialParams::axialStiffness "axialStiffness", and `λ` is the axial stretch of the centerline. It is active only under compression, adds no stiffness at rest, and diverges as the rod collapses. Zero disables it, leaving the plain St. Venant-Kirchhoff axial response.
+///
+
+/// @struct mochi::PointCloudColliderParams
+///
+/// @brief Geometric and logical properties of a point-cloud collider.
+///
+/// @see @ref mochi::RodActorParams::pointCloudCollider "RodActorParams::pointCloudCollider", `experimental::ShellActorParams::pointCloudCollider`
+///
+
+/// @var mochi::PointCloudColliderParams::radius
+///
+/// @brief Range of interaction of the contact penalty potential evaluated between pairs of points.
+///
+/// @details If the contact sample points (used as a quadrature for the contact penalty) are spaced significantly further apart than this, then nodes will be able to slip between them. This can be addressed without refining the mesh by increasing the number of contact samples per element, whose spacing scales roughly like (element size) / (quadrature points per element)^(1/d), where `d` is the parametric dimension of the collider geometry (`d = 2` for surfaces such as shells, `d = 1` for curves such as rods).
+///
+/// @note Must be finite and strictly positive. Its sum with the effective contact threshold in @ref mochi::ContactParams "ContactParams", including @ref mochi::ContactParams::penaltyThresholdExtraPadding "ContactParams::penaltyThresholdExtraPadding", must also be finite and strictly positive.
+/// @note This value also serves as the length scale for dimensional correction of the contact penalty coefficient on the collider side. The effective penalty stiffness is scaled by `pow(radius, -integralDim)`, where `integralDim` is the dimension of the collider-side contact integral.
+///
+
+/// @var mochi::PointCloudColliderParams::selfContactExclusionRatio
+///
+/// @brief Contact samples whose reference-configuration positions are within a radius of (radius * selfContactExclusionRatio) + (additional padding) of a node are excluded from self-contact force computation for that node, where "additional padding" refers to any extra padding associated with the contact penalty formulation.
+///
+/// @note Must be > 1 when @ref mochi::PointCloudColliderParams::selfContact "selfContact" is enabled.
+///
+
+/// @var mochi::PointCloudColliderParams::spatialHashLoadFactor
+///
+/// @brief Load factor for the spatial hash table used in collision detection. Must be positive, and should be << 1.
+///
+
+/// @var mochi::PointCloudColliderParams::selfContact
+///
+/// @brief Whether to enable self-contact for this actor.
+///
+/// @note Disabled by default because it may degrade performance in scenarios where it isn't needed. Has no effect if the actor's colliderType is set to @ref mochi::ColliderType::None "ColliderType::None".
+///
+
+/// @var mochi::PointCloudColliderParams::colliderTriangleElementType
+///
+/// @brief Triangle element type for collider discretization on a surface.
+///
+/// @details When unset, uses nodal collider placement (one collider point per mesh node, weighted by assembled nodal measure — cheapest option). When set, uses quadrature-based collider placement with the specified element type (denser and more accurate, but more expensive). Only used for surface collider geometries (e.g., shells).
+///
+
+/// @var mochi::PointCloudColliderParams::colliderSegmentElementType
+///
+/// @brief Segment element type for collider discretization on a curve.
+///
+/// @details When unset, uses nodal collider placement. When set, uses quadrature-based placement with the specified segment element type. Only used for curve collider geometries (e.g., rods).
+///
+
+/// @struct mochi::RodActorParams
+///
+/// @brief Parameters to create a rod actor.
+///
+/// @details A rod actor is a 1D deformable body whose geometry is a polyline.
+///
+/// @see @ref mochi::Scene::CreateRodActor "Scene::CreateRodActor"
+///
+
+/// @var mochi::RodActorParams::name
+///
+/// @brief Actor name.
+///
+
+/// @var mochi::RodActorParams::layer
+///
+/// @brief Contact layer name.
+///
+
+/// @var mochi::RodActorParams::worldFromLocal
+///
+/// @brief World-from-local transform applied to the shape.
+///
+
+/// @var mochi::RodActorParams::shape
+///
+/// @brief Shape handle defining the rod geometry. Must be a polyline shape.
+///
+/// @note Each element's frame axis is interpreted as one cross-sectional principal axis (the other is the cross product of the segment direction and that axis); the flexural stiffness components are defined with respect to these axes.
+/// @note A rod actor uses a visual mesh only when the shape has embedding data. For shapes created from @ref mochi::ModelData "ModelData", the embedding is built from the skinning data in @ref mochi::ModelData::visualMesh "ModelData::visualMesh". Without visual-mesh skinning, @ref mochi::Context::GetShapeVisualMesh "Context::GetShapeVisualMesh" still returns the shape's visual mesh, but the rod actor ignores it: @ref mochi::Actor::GetVisualMesh "Actor::GetVisualMesh" returns an empty view, and @ref mochi::QueryType::VisualNodePositions "QueryType::VisualNodePositions" and @ref mochi::QueryType::VisualNodeNormals "QueryType::VisualNodeNormals" are unsupported.
+/// @note Setting @ref mochi::RodActorParams::useContactSkin "useContactSkin" to true requires @ref mochi::ModelData::contactSkinMesh "ModelData::contactSkinMesh".
+///
+
+/// @var mochi::RodActorParams::contact
+///
+/// @brief Contact properties for interactions with volume actors.
+///
+
+/// @var mochi::RodActorParams::contactElementType
+///
+/// @brief Element type controlling the number of contact samples per segment.
+///
+
+/// @var mochi::RodActorParams::material
+///
+/// @brief Rod material properties.
+///
+
+/// @var mochi::RodActorParams::colliderType
+///
+/// @brief Collider type. Set to @ref mochi::ColliderType::PointCloud "ColliderType::PointCloud" or @ref mochi::ColliderType::Auto "ColliderType::Auto" to enable point-cloud contact.
+///
+/// @note Only @ref mochi::ColliderType::None "ColliderType::None", @ref mochi::ColliderType::PointCloud "ColliderType::PointCloud", and @ref mochi::ColliderType::Auto "ColliderType::Auto" are supported.
+///
+
+/// @var mochi::RodActorParams::pointCloudCollider
+///
+/// @brief Geometric and logical properties of the point-cloud collider.
+///
+
+/// @var mochi::RodActorParams::hasGravity
+///
+/// @brief Enables gravity.
+///
+
+/// @var mochi::RodActorParams::useContactSkin
+///
+/// @brief Use the rod shape's contact skin for contact instead of its centerline.
+///
+/// @details Actor creation fails if the shape does not have a contact skin.
+///
+/// @note The contact skin is exposed through @ref mochi::Actor::GetContactSkinMesh "Actor::GetContactSkinMesh" and @ref mochi::QueryType::ContactSkinNodePositions "QueryType::ContactSkinNodePositions" / @ref mochi::QueryType::ContactSkinNodeNormals "QueryType::ContactSkinNodeNormals" independently of this flag.
+///
+
+/// @var mochi::RodActorParams::contactSkinElementType
+///
+/// @brief Triangle element type for contact-skin quadrature.
+///
+/// @note @ref mochi::RodActorParams::contactElementType "RodActorParams::contactElementType" controls centerline sampling instead.
 ///
 
 /// @struct mochi::ArticulatedJointParams
@@ -7241,6 +7431,17 @@
 /// @warning For a blended skin, each vertex pair with a positive nested-soft blend weight must have exactly equal rest positions and identical ordered skinning indices and weights.
 ///
 /// @see @ref mochi::SoftSkinnedActorParams "SoftSkinnedActorParams", @ref mochi::Scene::DestroyActor "DestroyActor"
+///
+
+/// @fn Actor* mochi::Scene::CreateRodActor(RodActorParams const& params, Error& error)
+///
+/// @brief Create a rod actor.
+///
+/// @param[in] params Parameters defining the rod actor.
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+/// @return Pointer to the created @ref mochi::Actor "Actor", or nullptr on error.
+///
+/// @see @ref mochi::RodActorParams "RodActorParams", @ref mochi::Scene::DestroyActor "DestroyActor"
 ///
 
 /// @fn void mochi::Scene::DestroyActor(Actor* actor)

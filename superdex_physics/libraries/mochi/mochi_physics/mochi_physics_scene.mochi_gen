@@ -358,6 +358,15 @@ class Scene [no_init, no_destruct] {
   // @see SoftSkinnedActorParams, DestroyActor
   fn CreateSoftSkinnedActor(SoftSkinnedActorParams const& params) -> Actor* [pure, virtual, mochi_error, expand_struct_params, nullable];
 
+  // @brief Create a rod actor.
+  //
+  // @param[in] params Parameters defining the rod actor.
+  //
+  // @return Pointer to the created @ref Actor, or nullptr on error.
+  //
+  // @see RodActorParams, DestroyActor
+  fn CreateRodActor(RodActorParams const& params) -> Actor* [pure, virtual, mochi_error, expand_struct_params, nullable];
+
   // @brief Destroy an actor and remove it from the scene.
   //
   // @param[in] actor Pointer to the actor to destroy.

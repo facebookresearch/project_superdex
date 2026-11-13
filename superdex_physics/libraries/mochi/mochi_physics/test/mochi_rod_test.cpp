@@ -163,7 +163,7 @@ class MochiRodActorStraightRodScene : public test::MochiSceneTestBase,
     params.material.torsionalStiffness = 1e1_r;
     params.material.flexuralStiffness = {1e1_r, 1e1_r};
 
-    _actor = CreateRodActor(_scene, params, ErrorAssert{});
+    _actor = _scene->CreateRodActor(params, ErrorAssert{});
     EXPECT_NE(entt::entity{}, mochi::GetEntity(reg, _actor->GetHandle(), test::ExpectOK{}));
   }
 };
@@ -288,7 +288,7 @@ class MochiRodActorAxialStretchScene : public test::MochiSceneTestBase,
     // The exact stretch check is specific to plain StVK, though the barrier is inactive in tension.
     params.material.axialCollapseBarrierScale = 0_r;
 
-    _actor = CreateRodActor(_scene, params, ErrorAssert{});
+    _actor = _scene->CreateRodActor(params, ErrorAssert{});
     EXPECT_NE(entt::entity{}, mochi::GetEntity(reg, _actor->GetHandle(), test::ExpectOK{}));
   }
 
@@ -439,7 +439,7 @@ class MochiRodActorTorsionScene : public test::MochiSceneTestBase,
     params.material.torsionalStiffness = kTorsionalStiffness;
     params.material.flexuralStiffness = {1e3_r, 1e3_r};
 
-    _actor = CreateRodActor(_scene, params, ErrorAssert{});
+    _actor = _scene->CreateRodActor(params, ErrorAssert{});
     EXPECT_NE(entt::entity{}, mochi::GetEntity(reg, _actor->GetHandle(), test::ExpectOK{}));
   }
 
@@ -610,7 +610,7 @@ class MochiRodActorCantileverScene : public test::MochiSceneTestBase,
     real const torsionConstant = 1e-8_r;
     params.material.torsionalStiffness = kShearModulus * torsionConstant;
 
-    _actor = CreateRodActor(_scene, params, ErrorAssert{});
+    _actor = _scene->CreateRodActor(params, ErrorAssert{});
     EXPECT_NE(entt::entity{}, mochi::GetEntity(reg, _actor->GetHandle(), test::ExpectOK{}));
   }
 
@@ -908,7 +908,7 @@ class MochiRodRotationalInertiaTest : public test::MochiSceneTestBase {
     // Use default material parameters, except for a unit rotational inertia.
     params.material.linearRotationalInertia = 1_r;
 
-    _actor = CreateRodActor(_scene, params, ErrorAssert{});
+    _actor = _scene->CreateRodActor(params, ErrorAssert{});
     EXPECT_NE(entt::entity{}, mochi::GetEntity(reg, _actor->GetHandle(), test::ExpectOK{}));
   }
 
@@ -1382,8 +1382,8 @@ class MochiRodSurfaceMeshes : public test::MochiSceneTestBase {
       ShapeHandle shape,
       bool useContactSkin = false,
       ActorBoundaryElementType contactSkinElementType = ActorBoundaryElementType::Default) {
-    return CreateRodActor(
-        _scene, GetRodActorParams(shape, useContactSkin, contactSkinElementType), ErrorAssert{});
+    return _scene->CreateRodActor(
+        GetRodActorParams(shape, useContactSkin, contactSkinElementType), ErrorAssert{});
   }
 
   Actor* CreateTestRodActorWithContactSkin(
@@ -1663,7 +1663,7 @@ TEST_F(MochiRodSurfaceMeshes, SurfaceContactMaxGeometrySpeedIncludesPointCloudCo
   ShapeHandle const shape = CreateRodShapeWithContactSkin(/*includeVisualMesh=*/false);
   RodActorParams params = GetRodActorParams(shape, /*useContactSkin=*/true);
   params.colliderType = ColliderType::PointCloud;
-  Actor* const actor = CreateRodActor(_scene, params, test::ExpectOK{});
+  Actor* const actor = _scene->CreateRodActor(params, test::ExpectOK{});
   entt::entity const entity = GetEntity(actor);
 
   // The authored skin is embedded in the middle element, so node 0 affects only the centerline
@@ -1753,7 +1753,7 @@ TEST_F(MochiRodSurfaceMeshes, QueryWithoutVisualMeshFails) {
       _scene->GetContext(), _rodNodes, frameAxes, /*isClosedLoop=*/false, ErrorAssert{});
   RodActorParams params;
   params.shape = shape;
-  Actor* actor = CreateRodActor(_scene, params, ErrorAssert{});
+  Actor* actor = _scene->CreateRodActor(params, ErrorAssert{});
 
   EXPECT_FALSE(actor->RegisterQuery(QueryType::VisualNodePositions, test::ExpectNotOK{}).IsValid());
 }
@@ -2047,7 +2047,7 @@ TEST_F(MochiRodSurfaceMeshes, ContactSkinContact_BoundsIncludePointCloudCollider
     RodActorParams params = GetRodActorParams(shape, /*useContactSkin=*/true);
     params.colliderType = colliderType;
     params.pointCloudCollider.radius = kRadius;
-    Actor* const actor = CreateRodActor(_scene, params, test::ExpectOK{});
+    Actor* const actor = _scene->CreateRodActor(params, test::ExpectOK{});
     actor->RegisterQueryAndCompute(QueryType::ContactSkinNodePositions, test::ExpectOK{});
 
     auto& reg = GetRegistry();
@@ -2091,7 +2091,7 @@ TEST_F(MochiRodSurfaceMeshes, ContactSkinElementTypeControlsSurfaceQuadrature) {
        {std::pair{ActorBoundaryElementType::P1Q1, 2},
         std::pair{ActorBoundaryElementType::P1Q6, 12}}) {
     RodActorParams params = GetRodActorParams(shape, true, elementType);
-    Actor* actor = CreateRodActor(_scene, params, ErrorAssert{});
+    Actor* actor = _scene->CreateRodActor(params, ErrorAssert{});
     auto& reg = GetRegistry();
     auto const entity = mochi::GetEntity(reg, actor->GetHandle(), test::ExpectOK{});
 
@@ -2127,7 +2127,7 @@ TEST_F(MochiRodSurfaceMeshes, ContactSkinContact_MissingContactSkinFails) {
   RodActorParams params;
   params.shape = shape;
   params.useContactSkin = true;
-  EXPECT_EQ(nullptr, CreateRodActor(_scene, params, test::ExpectNotOK{}));
+  EXPECT_EQ(nullptr, _scene->CreateRodActor(params, test::ExpectNotOK{}));
 }
 
 TEST_F(MochiRodSurfaceMeshes, ContactSkinJacobian_FiniteDifferenceConsistency) {
@@ -2306,7 +2306,7 @@ class MochiRodTubularCrossSection : public test::MochiSceneTestBase {
     params.material.axialStiffness = 1e3_r;
     params.material.torsionalStiffness = 1e1_r;
     params.material.flexuralStiffness = {1e1_r, 1e1_r};
-    return CreateRodActor(_scene, params, ErrorAssert{});
+    return _scene->CreateRodActor(params, ErrorAssert{});
   }
 };
 
@@ -2508,7 +2508,7 @@ TEST_IF_F(MOCHI_USE_HDF5, MochiRodSurfaceMeshes, Hdf5RoundTrip) {
   params.material.axialStiffness = 1e3_r;
   params.material.torsionalStiffness = 1e1_r;
   params.material.flexuralStiffness = {1e1_r, 1e1_r};
-  Actor* actor = CreateRodActor(_scene, params, ErrorAssert{});
+  Actor* actor = _scene->CreateRodActor(params, ErrorAssert{});
 
   actor->RegisterQuery(QueryType::VisualNodePositions, ErrorAssert{});
   _scene->Step(0_r);
@@ -2764,7 +2764,7 @@ class MochiRodContactSkinOnBox : public test::MochiSceneTestBase,
     real const torsionConstant = 0.5_r * kPI * Pow(kRadius, 4);
     rodParams.material.torsionalStiffness = kShearModulus * torsionConstant;
 
-    _rodActor = CreateRodActor(_scene, rodParams, ErrorAssert{});
+    _rodActor = _scene->CreateRodActor(rodParams, ErrorAssert{});
     ASSERT_NE(_rodActor, nullptr);
     _rodActor->RegisterQuery(QueryType::TotalContactForce, ErrorAssert{});
 
@@ -3000,7 +3000,7 @@ TEST_F(MochiRodActorValidationTest, CreationRejectsInvalidContactParams) {
   params.shape = shape;
   params.contact.penaltyThresholdDefault = std::numeric_limits<real>::infinity();
 
-  EXPECT_EQ(nullptr, CreateRodActor(_scene, params, test::ExpectNotOK{}));
+  EXPECT_EQ(nullptr, _scene->CreateRodActor(params, test::ExpectNotOK{}));
 }
 
 class MochiClosedLoopRodActorTest : public test::MochiSceneTestBase {};
@@ -3031,7 +3031,7 @@ TEST_F(MochiClosedLoopRodActorTest, CreateAndStep) {
       Real2{0.25_r * kPI * Pow(kCrossSectionRadius, 4), 0.25_r * kPI * Pow(kCrossSectionRadius, 4)};
   actorParams.material.torsionalStiffness = 1e6_r * 0.5_r * kPI * Pow(kCrossSectionRadius, 4);
 
-  Actor* actor = CreateRodActor(_scene, actorParams, ErrorAssert{});
+  Actor* actor = _scene->CreateRodActor(actorParams, ErrorAssert{});
   ASSERT_NE(actor, nullptr);
 
   // Verify element count = node count for closed-loop rods
@@ -3063,7 +3063,7 @@ TEST_F(MochiClosedLoopRodActorTest, MassDistribution) {
       CreatePolylineShape(_scene->GetContext(), nodes, {}, /*isClosedLoop=*/true, ErrorAssert{});
   actorParams.material.linearDensity = kLinearDensity;
 
-  Actor* actor = CreateRodActor(_scene, actorParams, ErrorAssert{});
+  Actor* actor = _scene->CreateRodActor(actorParams, ErrorAssert{});
   ASSERT_NE(actor, nullptr);
 
   // Compute expected total length (circumference of the regular polygon)
@@ -3305,7 +3305,7 @@ class MochiRodDampingTest : public test::MochiSceneTestBase {
     RodActorParams params;
     params.shape = shape;
     params.material = material;
-    return CreateRodActor(_scene, params, ErrorAssert{});
+    return _scene->CreateRodActor(params, ErrorAssert{});
   }
 
   // Backward Euler with an exact direct linear solve (LU, no preconditioner) and a fully-converged
@@ -3426,7 +3426,7 @@ TEST_F(MochiRodDampingTest, ValidationRejectsInvalidMaterialParams) {
     params.shape = shape;
     params.material = m;
     test::ExpectNotOK error;
-    EXPECT_EQ(nullptr, CreateRodActor(_scene, params, error));
+    EXPECT_EQ(nullptr, _scene->CreateRodActor(params, error));
   };
   constexpr real kNan = std::numeric_limits<real>::quiet_NaN();
   for (real const bad : {0_r, -1_r, kNan, kInf}) {
@@ -3683,7 +3683,7 @@ class MochiRodRecenteringTest : public test::MochiSceneTestBase,
     params.material.axialStiffness = 1e3_r;
     params.material.torsionalStiffness = 1e-1_r;
     params.material.flexuralStiffness = {1e-1_r, 1e-1_r};
-    Actor* const actor = CreateRodActor(_scene, params, ErrorAssert{});
+    Actor* const actor = _scene->CreateRodActor(params, ErrorAssert{});
 
     Real3 const center{0.5_r * kLength, 0_r, 0_r};
     DynamicArray<real> velocities(actor->GetNumDofs(), 0_r);
@@ -3752,7 +3752,7 @@ class MochiRodPoseTest : public test::MochiSceneTestBase {
   [[nodiscard]] Actor* CreateRod(ShapeHandle shape) {
     RodActorParams params;
     params.shape = shape;
-    Actor* rod = CreateRodActor(_scene, params, test::ExpectOK{});
+    Actor* rod = _scene->CreateRodActor(params, test::ExpectOK{});
     rod->SetRecenteringParams({.useRecentering = false}, test::ExpectOK{});
     DeformableNodePositionConstraintParams pin;
     pin.actor = rod->GetHandle();

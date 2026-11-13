@@ -83,7 +83,7 @@ class ActorPreconditionerTest : public test::MochiSceneTestBase {
     RodActorParams params;
     params.shape =
         CreatePolylineShape(_mochiContext, nodes, axes, /*isClosedLoop*/ false, test::ExpectOK{});
-    return CreateRodActor(_scene, params, test::ExpectOK{});
+    return _scene->CreateRodActor(params, test::ExpectOK{});
   }
 
   Actor* CreateArticulated(ArticulatedJointType jointType) {

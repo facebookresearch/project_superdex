@@ -16,10 +16,6 @@
 
 #pragma once
 
-// Include experimental header first to ensure PointCloudColliderParams is defined before other
-// includes that might bring in mochi_contact.h transitively.
-#include <mochi_physics/mochi_physics_experimental.h>
-
 #include "mochi_active_collisions.h"
 #include "mochi_common_components.h"
 #include "mochi_contact_pair_params.h"
@@ -47,6 +43,7 @@
 #include <mochi_core/utils/reflection.h>
 #include <mochi_core/utils/task_scheduler.h>
 #include <mochi_core/utils/vmatrix.h>
+#include <mochi_physics/mochi_physics.h>
 
 #include <algorithm>
 #include <array>
@@ -96,7 +93,7 @@ struct CPlaneCollider final : PlaneCollider, NoCopy {};
 struct CSdfCollider final : SdfCollider, NoCopy {};
 
 /** @brief Component for point-cloud collider properties. */
-struct CPointCloudColliderParams final : experimental::PointCloudColliderParams, NoCopy {
+struct CPointCloudColliderParams final : PointCloudColliderParams, NoCopy {
   /// @brief Dimension of the collider-side integral (2 for shell, 1 for rods). Set during actor
   /// initialization.
   int integralDim = 0;

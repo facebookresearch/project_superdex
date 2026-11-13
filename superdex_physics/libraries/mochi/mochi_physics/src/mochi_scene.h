@@ -84,6 +84,7 @@ class SceneImpl final : public Scene {
   Actor* CreateSoftActor(SoftActorParams const& params, Error& error) override;
   Actor* CreateArticulatedActor(ArticulatedActorParams const& params, Error& error) override;
   Actor* CreateSoftSkinnedActor(SoftSkinnedActorParams const& params, Error& error) override;
+  Actor* CreateRodActor(RodActorParams const& params, Error& error) override;
   void DestroyActor(Actor* actor) override;
   void DestroyActor(ActorHandle actor) override;
   Actor* GetActor(ActorHandle actor) override;
@@ -223,7 +224,7 @@ class SceneImpl final : public Scene {
       std::shared_ptr<TriangularMeshShape const> shapePtr,
       Error& error);
   Actor* CreateRodActorImpl(
-      experimental::RodActorParams const& params,
+      RodActorParams const& params,
       std::shared_ptr<PolylineShape const> shapePtr,
       Error& error);
   Span<uint8_t const> FindState(StateHandle handle, Error& error) const;

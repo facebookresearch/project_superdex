@@ -1325,7 +1325,7 @@ ModelData mochi::experimental::GenerateTubularRodModelData(
 static void EmplaceRodActorContact(
     entt::registry& reg,
     entt::entity e,
-    experimental::RodActorParams const& params,
+    RodActorParams const& params,
     PolylineShape const& shape,
     CFemSegmentDiscretization const& segmentDisc,
     int numCollidingSamples,
@@ -1406,7 +1406,7 @@ static void EmplaceRodActorContact(
 void mochi::InitRodActor(
     entt::registry& reg,
     entt::entity e,
-    experimental::RodActorParams const& params,
+    RodActorParams const& params,
     std::shared_ptr<PolylineShape const> shapePtr,
     Error& error) {
   // Validate material parameters for actor creation
@@ -1730,7 +1730,7 @@ static void AddExternalForces(
     Span<real const> elementRotationalInertias,
     Span<Real3 const> frameAxes,
     Span<Real3 const> referenceAxes,
-    experimental::RodMaterialParams const& materialParams,
+    RodMaterialParams const& materialParams,
     Real3 gravity,
     Span<real const> stageStartDispl,
     Span<real const> stageStartVel,

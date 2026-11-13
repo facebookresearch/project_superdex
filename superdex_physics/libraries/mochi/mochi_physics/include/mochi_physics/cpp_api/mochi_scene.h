@@ -104,6 +104,8 @@ class Scene {
 
   virtual Actor* CreateSoftSkinnedActor(SoftSkinnedActorParams const& params, Error& error) = 0;
 
+  virtual Actor* CreateRodActor(RodActorParams const& params, Error& error) = 0;
+
   virtual void DestroyActor(ActorHandle actor) = 0;
 
   virtual void DestroyActor(Actor* actor) = 0;

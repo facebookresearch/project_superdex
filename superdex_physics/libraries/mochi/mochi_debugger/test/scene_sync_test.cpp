@@ -118,7 +118,7 @@ class SceneSyncTest : public MochiDebuggerTest {
     model.visualMesh->skinning->indices = {0, 0, 0};
     model.visualMesh->skinning->weights = {1_r, 1_r, 1_r};
 
-    experimental::RodActorParams params;
+    RodActorParams params;
     params.name = "VisualMeshOnly";
     params.shape = _context->CreateModelShape(model, test::ExpectOK{});
     params.material.linearDensity = 1_r;
@@ -126,7 +126,7 @@ class SceneSyncTest : public MochiDebuggerTest {
     params.material.axialStiffness = 1e3_r;
     params.material.torsionalStiffness = 1e1_r;
     params.material.flexuralStiffness = {1e1_r, 1e1_r};
-    return experimental::CreateRodActor(scene, params, test::ExpectOK{})->GetHandle();
+    return scene->CreateRodActor(params, test::ExpectOK{})->GetHandle();
   }
 
   ActorHandle CreateActorWithContactSkinOnly(Scene* scene) {
@@ -145,10 +145,10 @@ class SceneSyncTest : public MochiDebuggerTest {
     model.contactSkinMesh->skinning->indices = {0, 0, 0};
     model.contactSkinMesh->skinning->weights = {1_r, 1_r, 1_r};
 
-    experimental::RodActorParams params;
+    RodActorParams params;
     params.name = "ContactSkinOnly";
     params.shape = _context->CreateModelShape(model, test::ExpectOK{});
-    return experimental::CreateRodActor(scene, params, test::ExpectOK{})->GetHandle();
+    return scene->CreateRodActor(params, test::ExpectOK{})->GetHandle();
   }
 
   ActorHandle CreateShellActorWithVisualMesh(Scene* scene) {

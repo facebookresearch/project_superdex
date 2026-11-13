@@ -42,6 +42,9 @@ void mochi::DeclareMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_
   registry.StoreClass(nb::class_<mochi::StepInfo>(m, "StepInfo", "Information passed to per-step callbacks.\n\nSee Also:\n    :meth:`~superdex.physics.Scene.register_pre_step_callback`,\n    :meth:`~superdex.physics.Scene.register_post_step_callback`"));
   registry.StoreClass(nb::class_<mochi::RigidActorParams>(m, "RigidActorParams", "Parameters to create a rigid body actor.\n\nRigid actors behave as rigid bodies with 6 degrees of freedom (3 translational,\n3 rotational). They can be static (fixed in space) or dynamic (affected by\nforces and collisions).\n\nNote:\n    Articulated links are created from\n    :class:`~superdex.physics.ArticulatedLinkParams` instead.\n\nSee Also:\n    :meth:`~superdex.physics.Scene.create_rigid_actor`,\n    :class:`~superdex.physics.ArticulatedActorParams`"));
   registry.StoreClass(nb::class_<mochi::SoftActorParams>(m, "SoftActorParams", "Parameters to create a soft deformable actor.\n\nSoft actors are volumetric deformable bodies simulated using the Finite Element\nMethod (FEM).\n\nNote:\n    Soft actors created via :meth:`~superdex.physics.Scene.create_soft_actor`\n    act as colliding actors via their own surface sample points but not as\n    colliders. To create a soft actor with a collider, use\n    :func:`~superdex.physics.experimental.create_soft_actor` with an explicit\n    :attr:`~superdex.physics.experimental.ExperimentalSoftActorParams.collider_type`.\n\nSee Also:\n    :meth:`~superdex.physics.Scene.create_soft_actor`,\n    :func:`~superdex.physics.experimental.create_soft_actor`,\n    :class:`~superdex.physics.experimental.ExperimentalSoftActorParams`"));
+  registry.StoreClass(nb::class_<mochi::RodMaterialParams>(m, "RodMaterialParams", "Material properties of a rod actor.\n\nSee Also:\n    :class:`~superdex.physics.RodActorParams`"));
+  registry.StoreClass(nb::class_<mochi::PointCloudColliderParams>(m, "PointCloudColliderParams", "Geometric and logical properties of a point-cloud collider.\n\nSee Also:\n    :attr:`~superdex.physics.RodActorParams.point_cloud_collider`,\n    :attr:`~superdex.physics.experimental.ShellActorParams.point_cloud_collider`"));
+  registry.StoreClass(nb::class_<mochi::RodActorParams>(m, "RodActorParams", "Parameters to create a rod actor.\n\nA rod actor is a 1D deformable body whose geometry is a polyline.\n\nSee Also:\n    :meth:`~superdex.physics.Scene.create_rod_actor`"));
   registry.StoreClass(nb::class_<mochi::ArticulatedJointParams>(m, "ArticulatedJointParams", "Parameters describing a single joint within an articulated actor.\n\nEach joint connects a link to its parent in the kinematic tree. Joints are\nreferenced positionally — the i-th entry of\n:attr:`~superdex.physics.ArticulatedActorParams.joints` corresponds to the joint\nconnecting the i-th link to its parent. Cycle-closing joints are declared\nseparately via :attr:`~superdex.physics.ArticulatedActorParams.cycles`.\n\nSee Also:\n    :class:`~superdex.physics.ArticulatedActorParams`,\n    :class:`~superdex.physics.ArticulatedLinkParams`,\n    :class:`~superdex.physics.ArticulatedJointType`"));
   registry.StoreClass(nb::class_<mochi::ArticulatedLinkParams>(m, "ArticulatedLinkParams", "Parameters describing a single rigid link within an articulated actor.\n\nEach link is a rigid body in the articulation's kinematic tree. Mirrors\n:class:`~superdex.physics.RigidActorParams` for the per-link rigid-body\nproperties (shape, mass, inertia, contact), and adds tree-structure fields\n(:attr:`parent_link`, :attr:`parent_joint_from_link`). Pose and velocity at\ncreation time come from the articulated body, not from per-link fields.\n\nSee Also:\n    :class:`~superdex.physics.ArticulatedActorParams`,\n    :class:`~superdex.physics.ArticulatedJointParams`,\n    :class:`~superdex.physics.RigidActorParams`"));
   registry.StoreClass(nb::class_<mochi::ArticulatedSkinParams>(m, "ArticulatedSkinParams", "Optional skinned mesh attached to an articulated actor for collision and\nrendering.\n\nThe skin is a triangular or tetrahedral mesh deformed by the articulated links\nand, for a blended skin, the nested soft actors. The articulated actor acts as a\ncolliding actor through the skin's surface: contact sample points on that\nsurface are tested against other actors' collider geometry. The skin does not\nprovide collider geometry, so other actors' contact sample points are not tested\nagainst it.\n\nSee Also:\n    :attr:`~superdex.physics.ArticulatedActorParams.skin`"));
@@ -356,6 +359,126 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def_rw("has_stress", &mochi::SoftActorParams::hasStress, "If true, actor is affected by internal stress/strain forces.\n\nNote:\n    Unless the soft actor is part of a soft-skinned actor\n    (:attr:`~superdex.physics.SoftSkinnedActorParams.soft_params`), at least one\n    of :attr:`~superdex.physics.SoftActorParams.has_gravity`,\n    :attr:`~superdex.physics.SoftActorParams.has_inertia` or\n    :attr:`~superdex.physics.SoftActorParams.has_stress` must be enabled.")
     .def_rw("use_contact_skin", &mochi::SoftActorParams::useContactSkin, "[Experimental] Use the shape's authored contact skin for colliding contact\nsamples.\n\nActor creation fails unless the shape has a contact skin. The tetrahedral\nboundary remains the collider geometry when an SDF or Deep Flow collider is\nenabled. This option is not supported for ROM or nested soft actors.\n\nNote:\n    The contact skin is exposed through\n    :meth:`~superdex.physics.Actor.get_contact_skin_mesh` and\n    :class:`CONTACT_SKIN_NODE_POSITIONS <superdex.physics.QueryType>` /\n    :class:`CONTACT_SKIN_NODE_NORMALS <superdex.physics.QueryType>`\n    independently of this flag.\n\nWarning:\n    This is an experimental feature. It may be changed or removed in the future.\n    Use at your own risk.")
     .def_rw("boundary_element_type", &mochi::SoftActorParams::boundaryElementType, "Finite element type for contact discretization.\n\nNote:\n    Selects quadrature on the tetrahedral boundary, or on the authored contact\n    skin when :attr:`~superdex.physics.SoftActorParams.use_contact_skin` is\n    true.\n\nSee Also:\n    :class:`~superdex.physics.ActorBoundaryElementType`")
+  ;
+
+  registry.GetClass<mochi::RodMaterialParams>()
+    .def("__init__", [](mochi::RodMaterialParams* self, nb::object linear_density, nb::object linear_rotational_inertia, nb::object axial_stiffness, nb::object torsional_stiffness, nb::object flexural_stiffness, nb::object mass_damping_coefficient, nb::object stiffness_damping_coefficient, nb::object axial_collapse_barrier_scale) {
+      mochi::RodMaterialParams result{};
+      result.linearDensity = nb::cast<mochi::real>(linear_density);
+      result.linearRotationalInertia = nb::cast<mochi::real>(linear_rotational_inertia);
+      result.axialStiffness = nb::cast<mochi::real>(axial_stiffness);
+      result.torsionalStiffness = nb::cast<mochi::real>(torsional_stiffness);
+      result.flexuralStiffness = nb::cast<mochi::Real2>(flexural_stiffness);
+      result.massDampingCoefficient = nb::cast<mochi::real>(mass_damping_coefficient);
+      result.stiffnessDampingCoefficient = nb::cast<mochi::real>(stiffness_damping_coefficient);
+      result.axialCollapseBarrierScale = nb::cast<mochi::real>(axial_collapse_barrier_scale);
+      new (self) mochi::RodMaterialParams(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("linear_density") = mochi::RodMaterialParams{}.linearDensity
+      , nb::arg("linear_rotational_inertia") = mochi::RodMaterialParams{}.linearRotationalInertia
+      , nb::arg("axial_stiffness") = mochi::RodMaterialParams{}.axialStiffness
+      , nb::arg("torsional_stiffness") = mochi::RodMaterialParams{}.torsionalStiffness
+      , nb::arg("flexural_stiffness").sig("...") = mochi::RodMaterialParams{}.flexuralStiffness
+      , nb::arg("mass_damping_coefficient") = mochi::RodMaterialParams{}.massDampingCoefficient
+      , nb::arg("stiffness_damping_coefficient") = mochi::RodMaterialParams{}.stiffnessDampingCoefficient
+      , nb::arg("axial_collapse_barrier_scale") = mochi::RodMaterialParams{}.axialCollapseBarrierScale
+    )
+    .def(nb::init<>())
+    .def(nb::self == nb::self)
+    .def(nb::self != nb::self)
+    .def("__copy__", [](mochi::RodMaterialParams const& self) { return mochi::RodMaterialParams(self); })
+    .def("__deepcopy__", [](mochi::RodMaterialParams const& self, nb::dict) { return mochi::RodMaterialParams(self); })
+    .def_rw("linear_density", &mochi::RodMaterialParams::linearDensity, "Mass per unit undeformed length. Must be positive.\n\nNote:\n    For a rod made of homogeneous material, this is the 3D mass density (per\n    unit volume) times the cross-sectional area.")
+    .def_rw("linear_rotational_inertia", &mochi::RodMaterialParams::linearRotationalInertia, "Rotational inertia about the rod's axis, per unit undeformed length. Must be\npositive.\n\nNote:\n    For a rod made of homogeneous material, this is the 3D mass density (per\n    unit volume) times the cross section's polar area moment of inertia.")
+    .def_rw("axial_stiffness", &mochi::RodMaterialParams::axialStiffness, "Axial stiffness. Must be positive.\n\nNote:\n    For a rod made of homogeneous elastic material, this is Young's modulus\n    times the cross-sectional area.")
+    .def_rw("torsional_stiffness", &mochi::RodMaterialParams::torsionalStiffness, "Torsional stiffness. Must be non-negative.\n\nNote:\n    For a rod made of homogeneous elastic material, this is the shear modulus\n    times a torsion constant. The torsion constant is the polar area moment of\n    inertia for circular cross sections, and depends on solving for a Prandtl\n    stress function in the general case (values for common shapes are available\n    in engineering handbooks).")
+    .def_prop_rw("flexural_stiffness", [](mochi::RodMaterialParams& self) -> mochi::Real2& { return self.flexuralStiffness; }, [](mochi::RodMaterialParams& self, nb::object val) { self.flexuralStiffness = nb::cast<mochi::Real2>(val); }, "Flexural stiffnesses about the element frame axis and about the perpendicular\ncross-sectional axis, respectively. Both values must be non-negative.\n\nNote:\n    For a rod made of homogeneous elastic material, these are Young's modulus\n    times the cross section's area moments of inertia about the respective axes.\n\nSee Also:\n    :attr:`~superdex.physics.RodActorParams.shape`")
+    .def_rw("mass_damping_coefficient", &mochi::RodMaterialParams::massDampingCoefficient, "Mass-proportional damping coefficient. Must be non-negative.")
+    .def_rw("stiffness_damping_coefficient", &mochi::RodMaterialParams::stiffnessDampingCoefficient, "Stiffness-proportional damping coefficient. Must be non-negative.")
+    .def_rw("axial_collapse_barrier_scale", &mochi::RodMaterialParams::axialCollapseBarrierScale, "Dimensionless scale of an optional barrier against axial collapse. Must be\nnon-negative.\n\nThe barrier energy per unit undeformed length is `η·kₐ·max(1/λ² - 1, 0)³`, where\n`η` is :attr:`~superdex.physics.RodMaterialParams.axial_collapse_barrier_scale`,\n`kₐ` is :attr:`~superdex.physics.RodMaterialParams.axial_stiffness`, and `λ` is\nthe axial stretch of the centerline. It is active only under compression, adds\nno stiffness at rest, and diverges as the rod collapses. Zero disables it,\nleaving the plain St. Venant-Kirchhoff axial response.")
+  ;
+
+  registry.GetClass<mochi::PointCloudColliderParams>()
+    .def("__init__", [](mochi::PointCloudColliderParams* self, nb::object radius, nb::object self_contact_exclusion_ratio, nb::object spatial_hash_load_factor, nb::object self_contact, nb::object collider_triangle_element_type, nb::object collider_segment_element_type) {
+      mochi::PointCloudColliderParams result{};
+      result.radius = nb::cast<mochi::real>(radius);
+      result.selfContactExclusionRatio = nb::cast<mochi::real>(self_contact_exclusion_ratio);
+      result.spatialHashLoadFactor = nb::cast<mochi::real>(spatial_hash_load_factor);
+      result.selfContact = nb::cast<bool>(self_contact);
+      result.colliderTriangleElementType = nb::cast<std::optional<mochi::ActorBoundaryElementType>>(collider_triangle_element_type);
+      result.colliderSegmentElementType = nb::cast<std::optional<mochi::ActorSegmentElementType>>(collider_segment_element_type);
+      new (self) mochi::PointCloudColliderParams(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("radius") = mochi::PointCloudColliderParams{}.radius
+      , nb::arg("self_contact_exclusion_ratio") = mochi::PointCloudColliderParams{}.selfContactExclusionRatio
+      , nb::arg("spatial_hash_load_factor") = mochi::PointCloudColliderParams{}.spatialHashLoadFactor
+      , nb::arg("self_contact") = mochi::PointCloudColliderParams{}.selfContact
+      , nb::arg("collider_triangle_element_type").sig("...") = mochi::PointCloudColliderParams{}.colliderTriangleElementType
+      , nb::arg("collider_segment_element_type").sig("...") = mochi::PointCloudColliderParams{}.colliderSegmentElementType
+    )
+    .def(nb::init<>())
+    .def(nb::self == nb::self)
+    .def(nb::self != nb::self)
+    .def("__copy__", [](mochi::PointCloudColliderParams const& self) { return mochi::PointCloudColliderParams(self); })
+    .def("__deepcopy__", [](mochi::PointCloudColliderParams const& self, nb::dict) { return mochi::PointCloudColliderParams(self); })
+    .def_rw("radius", &mochi::PointCloudColliderParams::radius, "Range of interaction of the contact penalty potential evaluated between pairs of\npoints.\n\nIf the contact sample points (used as a quadrature for the contact penalty) are\nspaced significantly further apart than this, then nodes will be able to slip\nbetween them. This can be addressed without refining the mesh by increasing the\nnumber of contact samples per element, whose spacing scales roughly like\n(element size) / (quadrature points per element)^(1/d), where `d` is the\nparametric dimension of the collider geometry (`d = 2` for surfaces such as\nshells, `d = 1` for curves such as rods).\n\nNote:\n    Must be finite and strictly positive. Its sum with the effective contact\n    threshold in :class:`~superdex.physics.ContactParams`, including\n    :attr:`~superdex.physics.ContactParams.penalty_threshold_extra_padding`,\n    must also be finite and strictly positive.\n\nNote:\n    This value also serves as the length scale for dimensional correction of the\n    contact penalty coefficient on the collider side. The effective penalty\n    stiffness is scaled by `pow(radius, -integralDim)`, where `integralDim` is\n    the dimension of the collider-side contact integral.")
+    .def_rw("self_contact_exclusion_ratio", &mochi::PointCloudColliderParams::selfContactExclusionRatio, "Contact samples whose reference-configuration positions are within a radius of\n(radius * selfContactExclusionRatio) + (additional padding) of a node are\nexcluded from self-contact force computation for that node, where \"additional\npadding\" refers to any extra padding associated with the contact penalty\nformulation.\n\nNote:\n    Must be > 1 when\n    :attr:`~superdex.physics.PointCloudColliderParams.self_contact` is enabled.")
+    .def_rw("spatial_hash_load_factor", &mochi::PointCloudColliderParams::spatialHashLoadFactor, "Load factor for the spatial hash table used in collision detection. Must be\npositive, and should be << 1.")
+    .def_rw("self_contact", &mochi::PointCloudColliderParams::selfContact, "Whether to enable self-contact for this actor.\n\nNote:\n    Disabled by default because it may degrade performance in scenarios where it\n    isn't needed. Has no effect if the actor's colliderType is set to\n    :class:`NONE <superdex.physics.ColliderType>`.")
+    .def_prop_rw("collider_triangle_element_type", [](mochi::PointCloudColliderParams& self) -> std::optional<mochi::ActorBoundaryElementType>& { return self.colliderTriangleElementType; }, [](mochi::PointCloudColliderParams& self, nb::handle val) { self.colliderTriangleElementType = val.is_none() ? std::optional<mochi::ActorBoundaryElementType>{} : nb::cast<std::optional<mochi::ActorBoundaryElementType>>(val); }, "Triangle element type for collider discretization on a surface.\n\nWhen unset, uses nodal collider placement (one collider point per mesh node,\nweighted by assembled nodal measure — cheapest option). When set, uses\nquadrature-based collider placement with the specified element type (denser and\nmore accurate, but more expensive). Only used for surface collider geometries\n(e.g., shells).", nb::for_setter(nb::arg("value").none()))
+    .def_prop_rw("collider_segment_element_type", [](mochi::PointCloudColliderParams& self) -> std::optional<mochi::ActorSegmentElementType>& { return self.colliderSegmentElementType; }, [](mochi::PointCloudColliderParams& self, nb::handle val) { self.colliderSegmentElementType = val.is_none() ? std::optional<mochi::ActorSegmentElementType>{} : nb::cast<std::optional<mochi::ActorSegmentElementType>>(val); }, "Segment element type for collider discretization on a curve.\n\nWhen unset, uses nodal collider placement. When set, uses quadrature-based\nplacement with the specified segment element type. Only used for curve collider\ngeometries (e.g., rods).", nb::for_setter(nb::arg("value").none()))
+  ;
+
+  registry.GetClass<mochi::RodActorParams>()
+    .def("__init__", [](mochi::RodActorParams* self, nb::object name, nb::object layer, nb::object world_from_local, nb::object shape, nb::object contact, nb::object contact_element_type, nb::object material, nb::object collider_type, nb::object point_cloud_collider, nb::object has_gravity, nb::object use_contact_skin, nb::object contact_skin_element_type) {
+      mochi::RodActorParams result{};
+      result.name = nb::cast<mochi::DynamicString>(name);
+      result.layer = nb::cast<mochi::DynamicString>(layer);
+      result.worldFromLocal = nb::cast<mochi::TransformRT>(world_from_local);
+      result.shape = nb::cast<mochi::ShapeHandle>(shape);
+      result.contact = nb::cast<mochi::ContactParams>(contact);
+      result.contactElementType = nb::cast<mochi::ActorSegmentElementType>(contact_element_type);
+      result.material = nb::cast<mochi::RodMaterialParams>(material);
+      result.colliderType = nb::cast<mochi::ColliderType>(collider_type);
+      result.pointCloudCollider = nb::cast<mochi::PointCloudColliderParams>(point_cloud_collider);
+      result.hasGravity = nb::cast<bool>(has_gravity);
+      result.useContactSkin = nb::cast<bool>(use_contact_skin);
+      result.contactSkinElementType = nb::cast<mochi::ActorBoundaryElementType>(contact_skin_element_type);
+      new (self) mochi::RodActorParams(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("name") = mochi::RodActorParams{}.name
+      , nb::arg("layer") = mochi::RodActorParams{}.layer
+      , nb::arg("world_from_local").sig("...") = mochi::RodActorParams{}.worldFromLocal
+      , nb::arg("shape").sig("...") = mochi::RodActorParams{}.shape
+      , nb::arg("contact").sig("...") = mochi::RodActorParams{}.contact
+      , nb::arg("contact_element_type") = mochi::RodActorParams{}.contactElementType
+      , nb::arg("material").sig("...") = mochi::RodActorParams{}.material
+      , nb::arg("collider_type") = mochi::RodActorParams{}.colliderType
+      , nb::arg("point_cloud_collider").sig("...") = mochi::RodActorParams{}.pointCloudCollider
+      , nb::arg("has_gravity") = mochi::RodActorParams{}.hasGravity
+      , nb::arg("use_contact_skin") = mochi::RodActorParams{}.useContactSkin
+      , nb::arg("contact_skin_element_type") = mochi::RodActorParams{}.contactSkinElementType
+    )
+    .def(nb::init<>())
+    .def(nb::self == nb::self)
+    .def(nb::self != nb::self)
+    .def("__copy__", [](mochi::RodActorParams const& self) { return mochi::RodActorParams(self); })
+    .def("__deepcopy__", [](mochi::RodActorParams const& self, nb::dict) { return mochi::RodActorParams(self); })
+    .def_rw("name", &mochi::RodActorParams::name, "Actor name.")
+    .def_rw("layer", &mochi::RodActorParams::layer, "Contact layer name.")
+    .def_rw("world_from_local", &mochi::RodActorParams::worldFromLocal, "World-from-local transform applied to the shape.")
+    .def_rw("shape", &mochi::RodActorParams::shape, "Shape handle defining the rod geometry. Must be a polyline shape.\n\nNote:\n    Each element's frame axis is interpreted as one cross-sectional principal\n    axis (the other is the cross product of the segment direction and that\n    axis); the flexural stiffness components are defined with respect to these\n    axes.\n\nNote:\n    A rod actor uses a visual mesh only when the shape has embedding data. For\n    shapes created from :class:`~superdex.physics.ModelData`, the embedding is\n    built from the skinning data in\n    :attr:`~superdex.physics.ModelData.visual_mesh`. Without visual-mesh\n    skinning, :func:`~superdex.physics.get_shape_visual_mesh` still returns the\n    shape's visual mesh, but the rod actor ignores it:\n    :meth:`~superdex.physics.Actor.get_visual_mesh` returns an empty view, and\n    :class:`VISUAL_NODE_POSITIONS <superdex.physics.QueryType>` and\n    :class:`VISUAL_NODE_NORMALS <superdex.physics.QueryType>` are unsupported.\n\nNote:\n    Setting :attr:`~superdex.physics.RodActorParams.use_contact_skin` to true\n    requires :attr:`~superdex.physics.ModelData.contact_skin_mesh`.")
+    .def_rw("contact", &mochi::RodActorParams::contact, "Contact properties for interactions with volume actors.")
+    .def_rw("contact_element_type", &mochi::RodActorParams::contactElementType, "Element type controlling the number of contact samples per segment.")
+    .def_rw("material", &mochi::RodActorParams::material, "Rod material properties.")
+    .def_rw("collider_type", &mochi::RodActorParams::colliderType, "Collider type. Set to :class:`POINT_CLOUD <superdex.physics.ColliderType>` or\n:class:`AUTO <superdex.physics.ColliderType>` to enable point-cloud contact.\n\nNote:\n    Only :class:`NONE <superdex.physics.ColliderType>`, :class:`POINT_CLOUD\n    <superdex.physics.ColliderType>`, and :class:`AUTO\n    <superdex.physics.ColliderType>` are supported.")
+    .def_rw("point_cloud_collider", &mochi::RodActorParams::pointCloudCollider, "Geometric and logical properties of the point-cloud collider.")
+    .def_rw("has_gravity", &mochi::RodActorParams::hasGravity, "Enables gravity.")
+    .def_rw("use_contact_skin", &mochi::RodActorParams::useContactSkin, "Use the rod shape's contact skin for contact instead of its centerline.\n\nActor creation fails if the shape does not have a contact skin.\n\nNote:\n    The contact skin is exposed through\n    :meth:`~superdex.physics.Actor.get_contact_skin_mesh` and\n    :class:`CONTACT_SKIN_NODE_POSITIONS <superdex.physics.QueryType>` /\n    :class:`CONTACT_SKIN_NODE_NORMALS <superdex.physics.QueryType>`\n    independently of this flag.")
+    .def_rw("contact_skin_element_type", &mochi::RodActorParams::contactSkinElementType, "Triangle element type for contact-skin quadrature.\n\nNote:\n    :attr:`~superdex.physics.RodActorParams.contact_element_type` controls\n    centerline sampling instead.")
   ;
 
   registry.GetClass<mochi::ArticulatedJointParams>()

@@ -287,7 +287,7 @@ inline Actor* AddRod(Scene* scene, real* offsetX = nullptr, bool useContactSkin 
     }
   }
   // Define parameters for the rod actor
-  experimental::RodActorParams params;
+  RodActorParams params;
   params.name = useContactSkin ? "ContactSkinRod" : "Rod";
   params.layer = "Object";
   if (useContactSkin) {
@@ -317,7 +317,7 @@ inline Actor* AddRod(Scene* scene, real* offsetX = nullptr, bool useContactSkin 
   real const torsionConstant = 0.5_r * kPI * Pow(kRodRadius, 4);
   params.material.torsionalStiffness = kShearModulus * torsionConstant;
 
-  auto* actor = experimental::CreateRodActor(scene, params, test::ExpectOK{});
+  auto* actor = scene->CreateRodActor(params, test::ExpectOK{});
 
   if (offsetX) {
     *offsetX += 2_r * kRodLength;

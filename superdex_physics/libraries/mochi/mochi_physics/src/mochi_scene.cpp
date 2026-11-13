@@ -2071,19 +2071,17 @@ Actor* SceneImpl::CreateSoftSkinnedActor(SoftSkinnedActorParams const& params, E
   return experimental::CreateSoftSkinnedActor(this, params, {}, error);
 }
 
-Actor* experimental::CreateRodActor(Scene* scene, RodActorParams const& params, Error& error) {
+Actor* SceneImpl::CreateRodActor(RodActorParams const& params, Error& error) {
   MOCHI_PROFILE_SCOPE();
-  MOCHI_ERROR_IF(!scene, error, "Invalid scene");
   MOCHI_ERROR_RETURN(error, {});
-  auto* context = assert_cast<ContextImpl*>(scene->GetContext());
 
   // A polyline mesh is required
-  auto shapePtr =
-      std::dynamic_pointer_cast<PolylineShape const>(context->GetShapeSharedPtr(params.shape));
+  auto shapePtr = std::dynamic_pointer_cast<PolylineShape const>(
+      assert_cast<ContextImpl*>(GetContext())->GetShapeSharedPtr(params.shape));
   MOCHI_ERROR_IF_NOT(shapePtr, error, "Cannot create actor. Requires a PolylineShape.");
   MOCHI_ERROR_RETURN(error, {});
 
-  return assert_cast<SceneImpl*>(scene)->CreateRodActorImpl(params, shapePtr, error);
+  return CreateRodActorImpl(params, shapePtr, error);
 }
 
 static std::vector<bool> IdentifyStaticLinks(ArticulatedBodyShape const* shape) {

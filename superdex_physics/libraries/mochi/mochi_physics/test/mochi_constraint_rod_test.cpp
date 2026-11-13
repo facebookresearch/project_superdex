@@ -322,10 +322,10 @@ class ConstraintRodElementRotationTestT : public ConstraintTestBaseT<TData> {
     int const numElements = kIsClosedLoop ? isize(nodes) : isize(nodes) - 1;
     DynamicArray<Real3> const frameAxes(numElements, Real3{0_r, 1_r, 0_r});
 
-    experimental::RodActorParams rodParams;
+    RodActorParams rodParams;
     rodParams.shape = experimental::CreatePolylineShape(
         this->_scene->GetContext(), nodes, frameAxes, kIsClosedLoop, ExpectOK{});
-    auto* rodActor = experimental::CreateRodActor(this->_scene, rodParams, ExpectOK{});
+    auto* rodActor = this->_scene->CreateRodActor(rodParams, ExpectOK{});
     auto const rodEntity = this->GetEntity(rodActor->GetHandle());
     this->_entitiesActors.push_back(rodEntity);
     auto& reg = this->GetRegistry();
@@ -379,10 +379,10 @@ class RodElementRotationConstraintTest : public test::MochiSceneTestBase {
       nodes.push_back(origin + Real3{0.25_r * StaticCast<real>(i), 0_r, 0_r});
     }
     DynamicArray<Real3> const frameAxes(kNumElements, Real3{0_r, 1_r, 0_r});
-    experimental::RodActorParams rodParams;
+    RodActorParams rodParams;
     rodParams.shape = experimental::CreatePolylineShape(
         _scene->GetContext(), nodes, frameAxes, /*isClosedLoop=*/false, ExpectOK{});
-    Actor* const rod = experimental::CreateRodActor(_scene, rodParams, ExpectOK{});
+    Actor* const rod = _scene->CreateRodActor(rodParams, ExpectOK{});
 
     DeformableNodePositionConstraintParams pinParams;
     pinParams.actor = rod->GetHandle();
@@ -535,7 +535,7 @@ TEST_F(ContactSkinnedRodConstraintTest, ConstraintUsesCenterlineNodeIndices) {
 
   RodActorParams rodParams;
   rodParams.shape = _scene->GetContext()->CreateModelShape(model, ExpectOK{});
-  Actor* const rod = CreateRodActor(_scene, rodParams, ExpectOK{});
+  Actor* const rod = _scene->CreateRodActor(rodParams, ExpectOK{});
   ASSERT_EQ(4, rod->GetMesh().GetNumNodes());
   ASSERT_EQ(3, rod->GetContactSkinMesh().GetNumNodes());
 

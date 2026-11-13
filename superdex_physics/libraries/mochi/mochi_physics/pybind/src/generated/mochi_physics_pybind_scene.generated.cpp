@@ -339,6 +339,53 @@ void mochi::DefineMochiPhysics_MochiPhysicsScene([[maybe_unused]] nb::module_& m
       , nb::arg("has_inertia") = mochi::SoftSkinnedActorParams{}.hasInertia
       , nb::arg("has_stress") = mochi::SoftSkinnedActorParams{}.hasStress
       , "Create a soft-skinned actor with an articulated skeleton.\n\nArgs:\n    params (SoftSkinnedActorParams): Parameters defining the soft-skinned actor.\n\nReturns:\n    Pointer to the created :class:`~superdex.physics.Actor`, or None on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    To access nested soft actors, use\n    :meth:`~superdex.physics.Actor.get_nested_soft_actors`.\n\nNote:\n    To access nested link actors, use\n    :meth:`~superdex.physics.Actor.get_nested_link_actors`.\n\nWarning:\n    The skeleton must have at least one non-Hard joint.\n\nWarning:\n    For a blended skin, each vertex pair with a positive nested-soft blend\n    weight must have exactly equal rest positions and identical ordered skinning\n    indices and weights.\n\nSee Also:\n    :class:`~superdex.physics.SoftSkinnedActorParams`,\n    :meth:`~superdex.physics.Scene.destroy_actor`", nb::rv_policy::reference)
+    .def("create_rod_actor", [](mochi::Scene& self, mochi::RodActorParams const& params) {
+      mochi::Error error;
+      auto result = self.CreateRodActor(params, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("params")
+      , "Create a rod actor.\n\nArgs:\n    params (RodActorParams): Parameters defining the rod actor.\n\nReturns:\n    Pointer to the created :class:`~superdex.physics.Actor`, or None on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nSee Also:\n    :class:`~superdex.physics.RodActorParams`,\n    :meth:`~superdex.physics.Scene.destroy_actor`"
+      , nb::rv_policy::reference
+    )
+    .def("create_rod_actor", [](mochi::Scene& self, nb::object name, nb::object layer, nb::object world_from_local, nb::object shape, nb::object contact, nb::object contact_element_type, nb::object material, nb::object collider_type, nb::object point_cloud_collider, nb::object has_gravity, nb::object use_contact_skin, nb::object contact_skin_element_type) {
+      mochi::RodActorParams params{};
+      params.name = nb::cast<mochi::DynamicString>(name);
+      params.layer = nb::cast<mochi::DynamicString>(layer);
+      params.worldFromLocal = nb::cast<mochi::TransformRT>(world_from_local);
+      params.shape = nb::cast<mochi::ShapeHandle>(shape);
+      params.contact = nb::cast<mochi::ContactParams>(contact);
+      params.contactElementType = nb::cast<mochi::ActorSegmentElementType>(contact_element_type);
+      params.material = nb::cast<mochi::RodMaterialParams>(material);
+      params.colliderType = nb::cast<mochi::ColliderType>(collider_type);
+      params.pointCloudCollider = nb::cast<mochi::PointCloudColliderParams>(point_cloud_collider);
+      params.hasGravity = nb::cast<bool>(has_gravity);
+      params.useContactSkin = nb::cast<bool>(use_contact_skin);
+      params.contactSkinElementType = nb::cast<mochi::ActorBoundaryElementType>(contact_skin_element_type);
+      mochi::Error error;
+      auto result = self.CreateRodActor(params, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::kw_only()
+      , nb::arg("name") = mochi::RodActorParams{}.name
+      , nb::arg("layer") = mochi::RodActorParams{}.layer
+      , nb::arg("world_from_local").sig("...") = mochi::RodActorParams{}.worldFromLocal
+      , nb::arg("shape").sig("...") = mochi::RodActorParams{}.shape
+      , nb::arg("contact").sig("...") = mochi::RodActorParams{}.contact
+      , nb::arg("contact_element_type") = mochi::RodActorParams{}.contactElementType
+      , nb::arg("material").sig("...") = mochi::RodActorParams{}.material
+      , nb::arg("collider_type") = mochi::RodActorParams{}.colliderType
+      , nb::arg("point_cloud_collider").sig("...") = mochi::RodActorParams{}.pointCloudCollider
+      , nb::arg("has_gravity") = mochi::RodActorParams{}.hasGravity
+      , nb::arg("use_contact_skin") = mochi::RodActorParams{}.useContactSkin
+      , nb::arg("contact_skin_element_type") = mochi::RodActorParams{}.contactSkinElementType
+      , "Create a rod actor.\n\nArgs:\n    params (RodActorParams): Parameters defining the rod actor.\n\nReturns:\n    Pointer to the created :class:`~superdex.physics.Actor`, or None on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nSee Also:\n    :class:`~superdex.physics.RodActorParams`,\n    :meth:`~superdex.physics.Scene.destroy_actor`", nb::rv_policy::reference)
     .def("destroy_actor", nb::overload_cast<mochi::Actor*>(&mochi::Scene::DestroyActor)
       , nb::arg("actor").none()
       , "Destroy an actor and remove it from the scene.\n\nArgs:\n    actor (Optional[Actor]): Pointer to the actor to destroy.\n\nNote:\n    Nested actors cannot be destroyed individually. When you destroy the parent\n    actor (e.g. an articulation), all the nested actors will be destroyed\n    automatically.\n\nNote:\n    Constraints attached to the actor are automatically destroyed.\n\nNote:\n    If ``actor`` is None, this function has no effect.\n\nNote:\n    After the actor is destroyed, do not use the pointer or its handle.\n\nWarning:\n    The pointer must be None or point to a live actor owned by this scene.\n    Passing a pointer to an actor that has been destroyed is undefined behavior.\n\nSee Also:\n    :meth:`~superdex.physics.Scene.get_actor`,\n    :meth:`~superdex.physics.Actor.get_handle`"

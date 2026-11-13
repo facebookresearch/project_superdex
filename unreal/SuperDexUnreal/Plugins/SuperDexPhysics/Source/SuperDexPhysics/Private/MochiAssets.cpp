@@ -240,11 +240,11 @@ void UMochiShellMaterialParams::Apply3DParametersTo2D() {
 //------------------------------------------------------------------------------
 
 UMochiRodMaterialParams::UMochiRodMaterialParams() {
-  FromMochi(mochi::experimental::RodMaterialParams{});
+  FromMochi(mochi::RodMaterialParams{});
 }
 
-mochi::experimental::RodMaterialParams UMochiRodMaterialParams::ToMochi() const {
-  mochi::experimental::RodMaterialParams result;
+mochi::RodMaterialParams UMochiRodMaterialParams::ToMochi() const {
+  mochi::RodMaterialParams result;
   result.linearDensity = mochi::real(LinearDensity);
   result.linearRotationalInertia = mochi::real(LinearRotationalInertia);
   result.axialStiffness = mochi::real(AxialStiffness);
@@ -256,7 +256,7 @@ mochi::experimental::RodMaterialParams UMochiRodMaterialParams::ToMochi() const 
   return result;
 }
 // Populate from native Mochi type.
-void UMochiRodMaterialParams::FromMochi(const mochi::experimental::RodMaterialParams& Mochi) {
+void UMochiRodMaterialParams::FromMochi(const mochi::RodMaterialParams& Mochi) {
   LinearDensity = Mochi.linearDensity;
   LinearRotationalInertia = Mochi.linearRotationalInertia;
   AxialStiffness = Mochi.axialStiffness;

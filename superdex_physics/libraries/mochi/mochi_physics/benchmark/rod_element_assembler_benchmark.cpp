@@ -165,7 +165,7 @@ static void RodElementAssemblerBenchmark(
                    fem::BatchRodMatrix<kBatchSize>*,
                    bool) -> bool { return true; };
   } else {
-    experimental::RodMaterialParams materialParams;
+    RodMaterialParams materialParams;
     materialParams.axialStiffness = kAxialStiffness;
     materialParams.flexuralStiffness = kFlexuralStiffness;
     materialParams.torsionalStiffness = kTorsionalStiffness;

@@ -426,87 +426,6 @@ struct experimental::ExperimentalSoftSkinnedActorParams [equality(default), no_r
   DynamicArray<experimental::ExperimentalSoftActorParams> softParams;
 }
 
-struct experimental::RodMaterialParams [equality(default)] {
-  real linearDensity [units("kg/m")] = 1e-1;
-  real linearRotationalInertia [units("kg*m")] = 1e-6;
-  real axialStiffness [units("N")] = 1e2;
-  real torsionalStiffness [units("N*m^2")] = 5e-4;
-  Real2 flexuralStiffness [units("N*m^2")] = {5e-4, 5e-4};
-  real massDampingCoefficient [units("1/s")] = 0;
-  real stiffnessDampingCoefficient [units("s")] = 0;
-  real axialCollapseBarrierScale = 1e-3;
-}
-
-struct experimental::PointCloudColliderParams [equality(default)] {
-  real radius [units("m")] = 0.01;
-  real selfContactExclusionRatio = 1.5;
-  real spatialHashLoadFactor = 0.0625;
-  bool selfContact = false;
-  Optional<ActorBoundaryElementType> colliderTriangleElementType;
-  Optional<ActorSegmentElementType> colliderSegmentElementType;
-}
-
-// @brief Parameters for creating an experimental rod actor.
-struct experimental::RodActorParams {
-
-  // @brief Actor name.
-  String name;
-
-  // @brief Contact layer name.
-  String layer;
-
-  // @brief World-from-local transform applied to the shape.
-  TransformRT worldFromLocal;
-
-  // @brief Shape handle defining the rod geometry. Must be a polyline shape.
-  //
-  // @note Each element's frame axis is interpreted as one cross-sectional principal axis (the other
-  // is the cross product of the segment direction and that axis); the flexural stiffness components
-  // are defined with respect to these axes.
-  // @note A rod actor uses a visual mesh only when the shape has embedding data. For shapes created
-  // from @ref ModelData, the embedding is built from the skinning data in @ref
-  // ModelData::visualMesh. Without visual-mesh skinning, @ref Context::GetShapeVisualMesh still
-  // returns the shape's visual mesh, but the rod actor ignores it: @ref Actor::GetVisualMesh returns
-  // an empty view, and @ref QueryType::VisualNodePositions and @ref QueryType::VisualNodeNormals are
-  // unsupported.
-  // @note Setting @ref useContactSkin to true requires @ref ModelData::contactSkinMesh.
-  ShapeHandle shape [no_reflection];  # REFLECTION TODO: shape handles do not serialize yet.
-
-  // @brief Contact properties for interactions with volume actors.
-  ContactParams contact;
-
-  // @brief Element type controlling the number of contact samples per segment.
-  ActorSegmentElementType contactElementType = ActorSegmentElementType::Default;
-
-  // @brief Rod material properties.
-  experimental::RodMaterialParams material;
-
-  // @brief Collider type. Set to PointCloud to enable point-cloud contact.
-  ColliderType colliderType = ColliderType::None;
-
-  // @brief Geometric and logical properties of the point-cloud collider.
-  experimental::PointCloudColliderParams pointCloudCollider;
-
-  // @brief Enables gravity.
-  bool hasGravity = true;
-
-  // @brief Use the rod shape's contact skin for contact instead of its centerline.
-  //
-  // @details Actor creation fails if the shape does not have a contact skin.
-  //
-  // @note The contact skin is exposed through @ref Actor::GetContactSkinMesh and @ref
-  // QueryType::ContactSkinNodePositions / @ref QueryType::ContactSkinNodeNormals independently of
-  // this flag.
-  bool useContactSkin = false;
-
-  // @brief Triangle element type for contact-skin quadrature.
-  //
-  // @note @ref RodActorParams::contactElementType controls centerline sampling instead.
-  ActorBoundaryElementType contactSkinElementType = ActorBoundaryElementType::Default;
-}
-
-fn experimental::CreateRodActor(Scene* scene, experimental::RodActorParams const& params) -> Actor* [mochi_error, nullable];
-
 fn experimental::GenerateTubularRodModelData(Span<Real3 const> nodes [units("m")], Span<Real3 const> elementFrameAxes, real radius [units("m")], int numCrossSectionSegments, bool isClosedLoop) -> ModelData [mochi_error, no_capi];
 
 struct experimental::ShellMaterialParams {
@@ -552,7 +471,7 @@ struct experimental::ShellActorParams {
   ContactParams contact;
 
   // @brief Geometric and logical properties of the point-cloud collider.
-  experimental::PointCloudColliderParams pointCloudCollider;
+  PointCloudColliderParams pointCloudCollider;
 
   // @brief Enables gravity.
   bool hasGravity = true;

@@ -161,7 +161,7 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
       EMochiColliderType ColliderType,
       FName Layer,
       bool bHasGravity,
-      const mochi::experimental::PointCloudColliderParams* PointCloudParams = nullptr,
+      const mochi::PointCloudColliderParams* PointCloudParams = nullptr,
       bool bUseContactSkin = false,
       EMochiActorBoundaryElementType ContactElementType = EMochiActorBoundaryElementType::Default,
       bool bQuerySurfaceNodePositions = false,
@@ -180,7 +180,7 @@ class SUPERDEXPHYSICS_API UMochiActorObject : public UObject {
       EMochiColliderType ColliderType,
       FName Layer,
       bool bHasGravity,
-      const mochi::experimental::PointCloudColliderParams* PointCloudParams = nullptr,
+      const mochi::PointCloudColliderParams* PointCloudParams = nullptr,
       bool bUseContactSkin = false,
       EMochiActorSegmentElementType ContactElementType = EMochiActorSegmentElementType::Default,
       EMochiActorBoundaryElementType ContactSkinElementType =

@@ -885,7 +885,7 @@ TEST_P(IntegrationMethodTest, QuasistaticStepEndsAtRestAtEquilibrium) {
         cube, [faceX](int, Real3 const& node) { return node[0] == faceX; }, test::ExpectOK{});
   }
 
-  experimental::RodActorParams rodParams;
+  RodActorParams rodParams;
   rodParams.shape = experimental::CreatePolylineShape(
       _mochiContext,
       MakeRodNodes(3),
@@ -895,7 +895,7 @@ TEST_P(IntegrationMethodTest, QuasistaticStepEndsAtRestAtEquilibrium) {
   rodParams.worldFromLocal.SetTranslation(Real3{0_r, 3_r, 0_r});
   // Stiff enough for the solve to stop within kTol of the rest shape.
   rodParams.material.flexuralStiffness = Real2{1_r, 1_r};
-  Actor* rod = experimental::CreateRodActor(_scene, rodParams, test::ExpectOK{});
+  Actor* rod = _scene->CreateRodActor(rodParams, test::ExpectOK{});
   DeformableNodePositionConstraintParams rodPin;
   rodPin.actor = rod->GetHandle();
   rodPin.nodeIndex = 0;
