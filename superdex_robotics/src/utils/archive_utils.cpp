@@ -922,17 +922,33 @@ void RewriteRawBotPaths(picojson::value& sceneJson) {
 
 } // namespace
 
+/* How CollectBotSceneDependencies treats a raw .superdex_bot named by a scene. */
+enum class RawBotHandling {
+  /* As the bot archive ArchiveBotScene generates for it, which sits beside the raw bot. */
+  AsGeneratedArchive,
+  /* Walked down to the files it loads, like ArchiveBot walks a bot. */
+  Walk,
+};
+
 /* Collect `sceneCanonical` (already loaded as `prefab`, paths absolute) and every file it
  * references: the base scene's prefab tree, spawnables, bots, controller params, and scene sensor
- * params with their companion assets. Bot archives are opaque; a raw bot, as a scene bot or a
- * spawnable, stands in for the bot archive ArchiveBotScene generates for it. */
+ * params with their companion assets. Bot archives are opaque; raw bots follow `rawBots`. */
 static void CollectBotSceneDependencies(
     std::filesystem::path const& sceneCanonical,
     BotScenePrefab const& prefab,
+    RawBotHandling rawBots,
     std::set<std::filesystem::path>& collectedFiles,
     DynamicArray<DynamicString>& warnings,
     Error& error) {
   MOCHI_ERROR_RETURN(error);
+  FileBotLoader const loader;
+  auto const collectRawBot = [&](std::filesystem::path const& botPath) {
+    if (rawBots == RawBotHandling::Walk) {
+      CollectBotDependencies(botPath.generic_string(), loader, collectedFiles, warnings, error);
+    } else {
+      collectedFiles.insert(ToBotArchivePath(botPath));
+    }
+  };
 
   // 1. The .superdex_scene file itself.
   collectedFiles.insert(sceneCanonical);
@@ -956,7 +972,8 @@ static void CollectBotSceneDependencies(
     if (IsBotArchivePath(spawnPathString)) {
       collectedFiles.insert(spawnPath);
     } else if (IsBotPath(spawnPathString)) {
-      collectedFiles.insert(ToBotArchivePath(spawnPath));
+      collectRawBot(spawnPath);
+      MOCHI_ERROR_RETURN(error);
     } else {
       CollectScenePrefabDependencies(
           spawnPath, spawnPath.parent_path().string(), collectedFiles, error);
@@ -964,10 +981,15 @@ static void CollectBotSceneDependencies(
     }
   }
 
-  // 4. Bot archive files (opaque blobs — we do not walk their dependency trees).
+  // 4. Bots. Archives are opaque blobs — we do not walk their dependency trees.
   for (auto const& bot : prefab.bots) {
     auto const botPath = NormalizeBotPath(std::string(bot.path));
-    collectedFiles.insert(IsBotArchivePath(bot.path) ? botPath : ToBotArchivePath(botPath));
+    if (IsBotArchivePath(bot.path)) {
+      collectedFiles.insert(botPath);
+    } else {
+      collectRawBot(botPath);
+      MOCHI_ERROR_RETURN(error);
+    }
   }
 
   // 5. Controller param files.
@@ -1003,6 +1025,28 @@ static void CollectBotSceneDependencies(
     CollectSensorParamsReferences(paramsPath, collectedFiles, warnings, error);
     MOCHI_ERROR_RETURN(error);
   }
+}
+
+std::set<std::filesystem::path> superdex::robotics::CollectBotSceneFiles(
+    std::filesystem::path const& scenePath,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error, {});
+  MOCHI_ERROR_IF(
+      !IsBotScenePath(scenePath.generic_string()), error, "Source must be a .superdex_scene file.");
+  MOCHI_ERROR_RETURN(error, {});
+  auto const sceneCanonical =
+      std::filesystem::weakly_canonical(std::string(RemapPath(scenePath.generic_string())));
+  auto const prefab = LoadBotScenePrefabFromFile(sceneCanonical.generic_string(), error);
+  MOCHI_ERROR_RETURN(error, {});
+  std::set<std::filesystem::path> files;
+  DynamicArray<DynamicString> warnings;
+  CollectBotSceneDependencies(sceneCanonical, prefab, RawBotHandling::Walk, files, warnings, error);
+  // An archive records missing assets as warnings; a closure missing a file is incomplete.
+  MOCHI_ERROR_IF(!warnings.empty(), error, "The scene references files that do not exist.");
+  if (!error.IsOK()) {
+    files.clear();
+  }
+  return files;
 }
 
 void superdex::robotics::ArchiveBotScene(ArchiveParams const& params, Error& error) {
@@ -1075,7 +1119,8 @@ void superdex::robotics::ArchiveBotScene(ArchiveParams const& params, Error& err
   // Collect all transitive dependencies.
   std::set<std::filesystem::path> collectedFiles;
   DynamicArray<DynamicString> warnings;
-  CollectBotSceneDependencies(sceneCanonical, prefab, collectedFiles, warnings, error);
+  CollectBotSceneDependencies(
+      sceneCanonical, prefab, RawBotHandling::AsGeneratedArchive, collectedFiles, warnings, error);
   MOCHI_ERROR_RETURN(error);
 
   // Map files to roots and compute deepest common ancestor (same logic as ArchiveBot).

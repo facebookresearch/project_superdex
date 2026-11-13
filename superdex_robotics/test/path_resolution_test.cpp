@@ -763,6 +763,59 @@ TEST_F(PathResolutionTest, UnresolveBotPath_OutsideEverythingFails) {
 }
 
 // ----------------------------------------------------------------------------
+// UnresolveBotPathFromRoot
+// ----------------------------------------------------------------------------
+
+// File structure (under _tempDir):
+//   root/
+//     .superdex_root  (empty)
+//     sub/
+//       bot.superdex_bot   (referencing file)
+//       render/foo.glb     (descendant of basePath dir)
+TEST_F(PathResolutionTest, UnresolveBotPathFromRoot_DescendantOfBaseDirEmitsRootPrefix) {
+  auto const root = _tempDir / "root";
+  WriteEmptyRootMarker(root);
+  auto const sub = root / "sub";
+  auto const target = sub / "render" / "foo.glb";
+  TouchFile(target);
+  auto const result = UnresolveBotPathFromRoot(target, sub / "bot.superdex_bot", ExpectOK{});
+  EXPECT_EQ(std::string(result), "//sub/render/foo.glb");
+}
+
+// File structure (under _tempDir):
+//   R1/
+//     .superdex_root  ({"@other": "../R2"})
+//     bot.superdex_bot
+//   R2/
+//     .superdex_root  (empty)
+//     foo.glb
+TEST_F(PathResolutionTest, UnresolveBotPathFromRoot_TaggedWhenOutsideBotsRoot) {
+  auto const r1 = _tempDir / "R1";
+  auto const r2 = _tempDir / "R2";
+  WriteEmptyRootMarker(r2);
+  WriteRootFile(r1, R"({"@other": "../R2"})");
+  auto const target = r2 / "foo.glb";
+  TouchFile(target);
+  auto const result = UnresolveBotPathFromRoot(target, r1 / "bot.superdex_bot", ExpectOK{});
+  EXPECT_EQ(std::string(result), "@other/foo.glb");
+}
+
+// File structure (under _tempDir):
+//   root/
+//     .superdex_root (empty)
+//     bot.superdex_bot
+//   outside/asset.glb        (sibling of `root`, not reachable via root or tag)
+TEST_F(PathResolutionTest, UnresolveBotPathFromRoot_OutsideEverythingFails) {
+  auto const root = _tempDir / "root";
+  WriteEmptyRootMarker(root);
+  auto const target = _tempDir / "outside" / "asset.glb";
+  TouchFile(target);
+  Error error;
+  (void)UnresolveBotPathFromRoot(target, root / "bot.superdex_bot", error);
+  EXPECT_NOT_OK(error);
+}
+
+// ----------------------------------------------------------------------------
 // Round-trip: UnresolveBotPath(ResolveBotPath(s)) == s
 // ----------------------------------------------------------------------------
 

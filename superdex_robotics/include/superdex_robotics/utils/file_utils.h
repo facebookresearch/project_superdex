@@ -392,6 +392,25 @@ ParseRootFile(std::filesystem::path const& rootFilePath, superdex::Error& error)
     superdex::Error& error);
 
 /**
+ * @brief @ref UnresolveBotPath without the file-relative form: the result is always
+ * `//`-prefixed (rule 2) or `@tag/`-prefixed (rule 3).
+ *
+ * Every file under the same root then has one spelling no matter which file refers to it, so the
+ * result works as a key for a file across a whole asset tree (for example, in a snapshot that maps
+ * each file a scene uses to a pinned version).
+ *
+ * @param[in] absPath Absolute path to convert.
+ * @param[in] basePath A file under the root whose `//` and tag table the result uses.
+ * @param[in,out] error Error status. Check @ref Error::IsOK for success.
+ *
+ * @return `//`- or `@tag/`-prefixed bot path that resolves to @p absPath from @p basePath.
+ */
+[[nodiscard]] MOCHI_API DynamicString UnresolveBotPathFromRoot(
+    std::filesystem::path const& absPath,
+    std::filesystem::path const& basePath,
+    superdex::Error& error);
+
+/**
  * @brief Ensure that the parent directory of @p path exists, creating it if necessary.
  *
  * If the parent directory of @p path is empty or already exists, this is a no-op.

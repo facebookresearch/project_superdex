@@ -439,10 +439,12 @@ std::optional<std::filesystem::path> superdex::robotics::TryResolveBotPath(
   return remapped;
 }
 
-DynamicString superdex::robotics::UnresolveBotPath(
+// UnresolveBotPath, with rule 1 (the file-relative form) optional for UnresolveBotPathFromRoot.
+static DynamicString UnresolveBotPathImpl(
     std::filesystem::path const& absPath,
     std::filesystem::path const& basePath,
     int maxParentDepth,
+    bool allowFileRelative,
     Error& error) {
   MOCHI_ERROR_RETURN(error, {});
   // Empty input -> empty output.
@@ -486,9 +488,11 @@ DynamicString superdex::robotics::UnresolveBotPath(
   // Rule 1: file-relative to basePath's parent directory, ascending at most maxParentDepth levels.
   // Normalized the same way as `canonical` above, so both sides of the comparison agree on what a
   // path means; see NormalizeBotPath for why that normalization does not resolve symlinks.
-  auto const baseDir = NormalizeBotPath(GetDirectoryPath(basePath));
-  if (auto rel = tryRelative(baseDir, maxParentDepth)) {
-    return DynamicString{*rel};
+  if (allowFileRelative) {
+    auto const baseDir = NormalizeBotPath(GetDirectoryPath(basePath));
+    if (auto rel = tryRelative(baseDir, maxParentDepth)) {
+      return DynamicString{*rel};
+    }
   }
 
   // Locate the nearest .superdex_root for rules 2 and 3.
@@ -541,6 +545,22 @@ DynamicString superdex::robotics::UnresolveBotPath(
       error,
       "Path is not reachable via the base file directory, the //-root, or any @tag; absolute bot paths are not allowed.");
   return {};
+}
+
+DynamicString superdex::robotics::UnresolveBotPath(
+    std::filesystem::path const& absPath,
+    std::filesystem::path const& basePath,
+    int maxParentDepth,
+    Error& error) {
+  return UnresolveBotPathImpl(absPath, basePath, maxParentDepth, /*allowFileRelative=*/true, error);
+}
+
+DynamicString superdex::robotics::UnresolveBotPathFromRoot(
+    std::filesystem::path const& absPath,
+    std::filesystem::path const& basePath,
+    Error& error) {
+  return UnresolveBotPathImpl(
+      absPath, basePath, kBotPathMaxParentDepth, /*allowFileRelative=*/false, error);
 }
 
 static void

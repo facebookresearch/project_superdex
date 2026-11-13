@@ -239,6 +239,22 @@ MOCHI_API void ArchiveBotScene(ArchiveParams const& params, superdex::Error& err
     std::filesystem::path const& prefabPath,
     superdex::Error& error);
 
+/* @brief Collect a .mochi_bot_scene file and every file loading it reads, as absolute paths: the
+ * base scene and its prefab tree, spawnable prefabs, bots, controller params, and scene sensor
+ * params with their companion assets.
+ *
+ * This is the closure @ref ArchiveBotScene collects, except that raw .superdex_bot files (as scene
+ * bots or spawnables) are walked down to the bots, geometry, and sensor params they load instead of
+ * standing in for a generated bot archive. A .superdex_bot_archive is collected as a single file.
+ * Fails if any file the scene references is missing, where archiving only warns.
+ *
+ * @param[in] scenePath The .mochi_bot_scene file.
+ * @param[in,out] error Error status. Check @ref Error::IsOK for success.
+ * @return The scene file and its dependencies, or an empty set on failure. */
+[[nodiscard]] MOCHI_API std::set<std::filesystem::path> CollectBotSceneFiles(
+    std::filesystem::path const& scenePath,
+    superdex::Error& error);
+
 /* @brief Extract a .superdex_scene_archive to a content-hash-keyed cache directory.
  *
  * @param[in] archiveFile Path to the .superdex_scene_archive file.
