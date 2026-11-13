@@ -5,10 +5,6 @@ sidebar_position: 1
 
 # Mass on Rod Spring
 
-:::caution Experimental
-Rod actors are part of the **experimental** API. Their API may change in future releases.
-:::
-
 This example hangs a rigid cube from a helical spring modeled as an elastic rod. It demonstrates loading a curved rod centerline from a file, deriving rod material parameters from a circular cross-section, and coupling a rod to a rigid actor with position and rotation constraints.
 
 **Source**: `examples/example_mass_on_rod_spring.py`
@@ -56,7 +52,7 @@ axial_stiffness = YOUNGS_MODULUS * area
 torsional_stiffness = SHEAR_MODULUS * torsion_constant
 flexural_stiffness = YOUNGS_MODULUS * second_moment_of_area
 
-material_params = sdp.experimental.RodMaterialParams(
+material_params = sdp.RodMaterialParams(
     linear_density=DENSITY * area,
     linear_rotational_inertia=DENSITY * polar_moment_of_inertia,
     axial_stiffness=axial_stiffness,

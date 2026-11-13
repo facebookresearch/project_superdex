@@ -5,10 +5,6 @@ sidebar_position: 7
 
 # Rod Actors
 
-:::caution Experimental
-Rod actors are part of the **experimental** API. Their API may change in future releases.
-:::
-
 Rod actors represent **one-dimensional elastic elements** for simulating cables, ropes, hair strands, tendons, springs, and other slender deformable structures. They are well-suited for any object whose length is much greater than its cross-sectional dimensions. Their centerline geometry is supplied by a polyline [shape](../shapes.mdx#mesh-shapes).
 
 ## Formulation
@@ -165,9 +161,11 @@ The continuous energies are integrated by multiplying the edge stretching and co
 
 ## Parameters Reference
 
-Pass `RodActorParams` to the experimental free function `CreateRodActor` / `create_rod_actor`; unlike standard actor types, rods are not created through a [`Scene`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Scene.html) method.
+Create rod actors with [`Scene::CreateRodActor`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Scene.html) / [`Scene.create_rod_actor`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.Scene.create_rod_actor).
 
 ### `RodActorParams`
+
+The creation fields are defined by `RodActorParams` ([C++](pathname:///generated/api/latest/cpp/structsuperdex_1_1RodActorParams.html), [Python](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.RodActorParams)).
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -177,16 +175,16 @@ Pass `RodActorParams` to the experimental free function `CreateRodActor` / `crea
 | `shape` | [`ShapeHandle`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ShapeHandle.html) | -- | Polyline shape defining the rod centerline. **Required.** |
 | `contact` | [`ContactParams`](pathname:///generated/api/latest/cpp/structsuperdex_1_1ContactParams.html) | Default | Contact properties. |
 | `contactElementType` | `ActorSegmentElementType` | `Default` (`P1Q3`) | Contact sampling along centerline segments. |
-| `material` | `RodMaterialParams` | Default | Material properties (see below). |
+| `material` | [`RodMaterialParams`](#rodmaterialparams) | Default | Material properties. |
 | `colliderType` | `ColliderType` | `None` | `PointCloud` or `Auto` enables a point-cloud collider. |
-| `pointCloudCollider` | `PointCloudColliderParams` | Default | [Point-cloud collider parameters](../contact.md#pointcloudcolliderparams) shared with shell actors. |
+| `pointCloudCollider` | [`PointCloudColliderParams`](../contact.md#pointcloudcolliderparams) | Default | Point-cloud collider parameters shared with shell actors. |
 | `hasGravity` | `bool` | `true` | Whether the rod is affected by scene gravity. |
 | `useContactSkin` | `bool` | `false` | Samples contact on the shape's contact skin instead of the centerline. |
 | `contactSkinElementType` | `ActorBoundaryElementType` | `Default` | Contact sampling on the contact skin. |
 
 ### `RodMaterialParams`
 
-See [Parameter Selection](#parameter-selection) for formulas relating these parameters to homogeneous three-dimensional materials.
+The material fields are defined by `RodMaterialParams` ([C++](pathname:///generated/api/latest/cpp/structsuperdex_1_1RodMaterialParams.html), [Python](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.RodMaterialParams)). See [Parameter Selection](#parameter-selection) for formulas relating these parameters to homogeneous three-dimensional materials.
 
 | Parameter | Type | Default | Units | Description |
 |-----------|------|---------|-------|-------------|

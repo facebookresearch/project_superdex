@@ -21,7 +21,7 @@ There are several actor types, each targeting a different class of physical beha
 | **[Soft](./soft/overview.mdx)** | Deformable elastic volumes, discretized as tetrahedral meshes. | Stable |
 | **[Articulated](./articulated_actors.mdx)** | Multi-body systems of rigid links connected by joints, optionally with a skinned surface or coupled soft actors. | Stable |
 | **[Shell](./shell.mdx)** | Deformable elastic surfaces, discretized as triangular meshes. | Experimental |
-| **[Rod](./rod.mdx)** | Deformable elastic curves, discretized as polylines. | Experimental |
+| **[Rod](./rod.mdx)** | Deformable elastic curves, discretized as polylines. | Stable |
 
 An articulated actor owns a rigid actor for each link; the API calls these nested link actors. Individual links can be referenced, e.g., to define constraints between them.
 However, articulated actors are not merely collections of actors joined by constraints; an articulated actor's configuration can be defined in a minimal reduced coordinate space that is typically much smaller than the combined degrees of freedom of its rigid links.
@@ -30,7 +30,7 @@ Many references on physics simulation use the terms "soft" and "deformable" inte
 
 ## Creating Actors
 
-Stable actor types are generally created through a corresponding `Create<ActorType>Actor` factory method on the [`Scene`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Scene.html) object. Experimental shell and rod actors are created through analogous free functions in the `experimental` API.
+Stable actor types are generally created through a corresponding `Create<ActorType>Actor` factory method on the [`Scene`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Scene.html) object. Experimental shell actors are created through an analogous free function in the `experimental` API.
 
 <Tabs groupId="language">
 <TabItem value="cpp" label="C++" default>

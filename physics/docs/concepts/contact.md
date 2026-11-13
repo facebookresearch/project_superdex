@@ -403,7 +403,7 @@ For `PointCloud` colliders discretizing the [double-integral generalization](#do
 
 ### `PointCloudColliderParams`
 
-Point-cloud colliders are configured with additional parameters in `PointCloudColliderParams`.
+Point-cloud colliders are configured with additional parameters in `PointCloudColliderParams` ([C++](pathname:///generated/api/latest/cpp/structsuperdex_1_1PointCloudColliderParams.html), [Python](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.PointCloudColliderParams)).
 
 | Parameter | Type | Default | Units | Description |
 |---|---|---|---|---|

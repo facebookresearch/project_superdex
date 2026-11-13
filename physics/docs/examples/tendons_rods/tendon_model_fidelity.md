@@ -6,7 +6,7 @@ sidebar_position: 1
 # Choosing a Tendon Model
 
 :::caution Experimental
-Rod actors and transmissions are part of the **experimental** API. Their APIs may change in future releases.
+Transmissions and `generate_tubular_rod_model_data` are part of the **experimental** API. Their APIs may change in future releases.
 :::
 
 This example compares three ways to model the same tendon-driven articulated mechanism: an elastic rod, a waypoint-routed spatial tendon, and a fixed-coefficient linear transmission. The example places all three models side by side and drives them with the same prescribed slider motion.
@@ -66,16 +66,13 @@ If the generated model should be validated or serialized instead of registered d
 The rod material parameters, omitted from these snippets, follow the homogeneous circular-cross-section formulas described in [Rod Actors: Parameter Selection](../../concepts/actors/rod.mdx#parameter-selection).
 
 ```python
-rod = sdp.experimental.create_rod_actor(
-    scene,
-    sdp.experimental.RodActorParams(
-        name="TendonRod",
-        shape=shape,
-        material=material,
-        layer="Tendon",
-        contact=sdp.ContactParams(penalty_coefficient=PENALTY_COEFFICIENT),
-        use_contact_skin=True,
-    ),
+rod = scene.create_rod_actor(
+    name="TendonRod",
+    shape=shape,
+    material=material,
+    layer="Tendon",
+    contact=sdp.ContactParams(penalty_coefficient=PENALTY_COEFFICIENT),
+    use_contact_skin=True,
 )
 ```
 
