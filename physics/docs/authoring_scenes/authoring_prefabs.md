@@ -19,7 +19,8 @@ Every section is optional:
     "rigid": [],
     "soft": [],
     "articulated": [],
-    "softSkinned": []
+    "softSkinned": [],
+    "rod": []
   },
   "constraints": {},
   "controllers": [],
@@ -30,12 +31,15 @@ Every section is optional:
 }
 ```
 
-The four actor arrays contain file-backed variants of the corresponding C++ actor parameters:
+The five actor arrays contain file-backed variants of the corresponding C++ actor parameters:
 
 - `rigid` contains `RigidActorPrefab` entries ([C++](pathname:///generated/api/latest/cpp/structsuperdex_1_1prefab_1_1RigidActorPrefab.html), [Python](pathname:///generated/api/latest/python/api/prefab.html#superdex.physics.prefab.RigidActorPrefab)).
 - `soft` contains `SoftActorPrefab` entries ([C++](pathname:///generated/api/latest/cpp/structsuperdex_1_1prefab_1_1SoftActorPrefab.html), [Python](pathname:///generated/api/latest/python/api/prefab.html#superdex.physics.prefab.SoftActorPrefab)).
 - `articulated` contains `ArticulatedActorPrefab` entries ([C++](pathname:///generated/api/latest/cpp/structsuperdex_1_1prefab_1_1ArticulatedActorPrefab.html), [Python](pathname:///generated/api/latest/python/api/prefab.html#superdex.physics.prefab.ArticulatedActorPrefab)).
 - `softSkinned` contains `SoftSkinnedActorPrefab` entries ([C++](pathname:///generated/api/latest/cpp/structsuperdex_1_1prefab_1_1SoftSkinnedActorPrefab.html), [Python](pathname:///generated/api/latest/python/api/prefab.html#superdex.physics.prefab.SoftSkinnedActorPrefab)).
+- `rod` contains `RodActorPrefab` entries ([C++](pathname:///generated/api/latest/cpp/structsuperdex_1_1prefab_1_1RodActorPrefab.html), [Python](pathname:///generated/api/latest/python/api/prefab.html#superdex.physics.prefab.RodActorPrefab)). Their shapes must be polyline models. Both the rod's `scale` and prefab scale change rod geometry and the point-cloud collider `radius`, which is authored for the unscaled shape; rod material, contact, and other point-cloud collider parameters are not scaled. The `radius` cannot follow non-uniform scale, so a rod with a point-cloud collider requires a `scale` that is uniform by absolute value. An optional `pose` ([`RodPose`](pathname:///generated/api/latest/cpp/structsuperdex_1_1prefab_1_1RodPose.html)) sets the initial node displacements and element frame axes in the shape's model frame; it transforms with the rod geometry.
+
+Rod prefabs also preserve optional `renderModel`, `renderModelScale`, `renderModelRotation`, and `renderModelTranslation` metadata, with the same defaults as soft actor prefabs. Physics ignores these fields, and SuperDex Studio does not render rod actors yet.
 
 ## Name Actors for References
 

@@ -12,7 +12,7 @@ Prefabs are declarative JSON documents that describe a complete physics scene or
 
 A prefab can contain:
 
-- Non-experimental actor types (i.e., rigid, soft, and articulated, including soft-skinned articulations).
+- Non-experimental actor types (i.e., rigid, soft, rod, and articulated, including soft-skinned articulations).
 - Supported constraints and articulated pose controllers.
 - References to other prefabs.
 - Optional gravity and solver settings for the destination scene.
@@ -145,9 +145,9 @@ Export reconstructs selected scene and actor data; it is not a lossless snapshot
 
 ## Support Boundary
 
-Prefab loading represents rigid, soft, articulated, and soft-skinned actors, [supported prefab constraints](pathname:///generated/api/latest/cpp/group__prefabs__constraints.html), [pose controllers](pathname:///generated/api/latest/cpp/group__prefabs__articulation.html), nested prefabs, [scene settings](pathname:///generated/api/latest/cpp/group__prefabs__document.html), and [contact filters](#contact-filters).
+Prefab loading represents rigid, soft, articulated, soft-skinned, and rod actors, [supported prefab constraints](pathname:///generated/api/latest/cpp/group__prefabs__constraints.html), [pose controllers](pathname:///generated/api/latest/cpp/group__prefabs__articulation.html), nested prefabs, [scene settings](pathname:///generated/api/latest/cpp/group__prefabs__document.html), and [contact filters](#contact-filters).
 
-The format does not represent rod actors, experimental shell actors, constraints specific to them, or experimental transmissions. Scene export can emit the supported actor types, but it does not emit constraints or pose controllers. Additional export omissions are listed in the [authoring guide](../authoring_scenes/authoring_prefabs.md#export-limitations).
+The format does not represent experimental shell actors, rod-specific constraints, or experimental transmissions. Scene export can emit the supported actor types except rods, but it does not emit constraints or pose controllers. Additional export omissions are listed in the [authoring guide](../authoring_scenes/authoring_prefabs.md#export-limitations).
 
 ## Examples
 

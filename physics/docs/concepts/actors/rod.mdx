@@ -205,6 +205,10 @@ Whenever the shape has a contact skin, `Actor::GetContactSkinMesh` and the `Cont
 
 Rods have no collider by default. Set `colliderType` to `PointCloud` or `Auto` to enable a [point-cloud collider](../contact.md#double-integral-generalization), whose collider integral is taken over the centerline. See [Contact Roles](../contact.md#contact-roles) for the distinction between colliding samples and colliders.
 
+## Prefabs
+
+Rods can be authored in prefabs as `RodActorPrefab` entries ([C++](pathname:///generated/api/latest/cpp/structsuperdex_1_1prefab_1_1RodActorPrefab.html), [Python](pathname:///generated/api/latest/python/api/prefab.html#superdex.physics.prefab.RodActorPrefab)) in the `rod` actor array. See [Authoring Prefabs](../../authoring_scenes/authoring_prefabs.md).
+
 ## Examples
 
 - **[Mass on Rod Spring](../../examples/tendons_rods/mass_on_rod_spring.md)**: hangs a rigid mass from a helical spring, exercising curved reference geometry and bend-twist coupling, and derives constraint stiffnesses from the rod's own stiffness coefficients by dimensional analysis.
