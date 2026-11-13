@@ -1716,17 +1716,21 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
   ;
 
   registry.GetClass<superdex::robotics::BotTaskPrefab>()
-    .def("__init__", [](superdex::robotics::BotTaskPrefab* self, nb::object metadata, nb::object reset_state, nb::object task_root_offset) {
+    .def("__init__", [](superdex::robotics::BotTaskPrefab* self, nb::object metadata, nb::object reset_state, nb::object task_root_offset, nb::object physics_hz, nb::object time_limit_s) {
       superdex::robotics::BotTaskPrefab result{};
       result.metadata = nb::cast<superdex::robotics::BotSceneMetadata>(metadata);
       result.resetState = nb::cast<mochi::DynamicArray<superdex::robotics::SpawnEntry>>(reset_state);
       result.taskRootOffset = nb::cast<std::optional<mochi::TransformRT>>(task_root_offset);
+      result.physicsHz = nb::cast<int>(physics_hz);
+      result.timeLimitS = nb::cast<mochi::real>(time_limit_s);
       new (self) superdex::robotics::BotTaskPrefab(std::move(result));
     }
       , nb::kw_only()
       , nb::arg("metadata").sig("...") = superdex::robotics::BotTaskPrefab{}.metadata
       , nb::arg("reset_state").sig("...") = superdex::robotics::BotTaskPrefab{}.resetState
       , nb::arg("task_root_offset").sig("...") = superdex::robotics::BotTaskPrefab{}.taskRootOffset
+      , nb::arg("physics_hz") = superdex::robotics::BotTaskPrefab{}.physicsHz
+      , nb::arg("time_limit_s") = superdex::robotics::BotTaskPrefab{}.timeLimitS
     )
     .def(nb::init<>())
     .def("__copy__", [](superdex::robotics::BotTaskPrefab const& self) { return superdex::robotics::BotTaskPrefab(self); })
@@ -1734,6 +1738,8 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("metadata", &superdex::robotics::BotTaskPrefab::metadata, "Human-readable metadata. Not consumed by the runtime.")
     .def_prop_rw("reset_state", [](superdex::robotics::BotTaskPrefab& self) -> mochi::DynamicArray<superdex::robotics::SpawnEntry>& { return self.resetState; }, [](superdex::robotics::BotTaskPrefab& self, nb::object val) { self.resetState = nb::cast<mochi::DynamicArray<superdex::robotics::SpawnEntry>>(val); }, "The objects an episode starts with, and where: each entry is placed at every\nreset.")
     .def_prop_rw("task_root_offset", [](superdex::robotics::BotTaskPrefab& self) -> std::optional<mochi::TransformRT>& { return self.taskRootOffset; }, [](superdex::robotics::BotTaskPrefab& self, nb::handle val) { self.taskRootOffset = val.is_none() ? std::optional<mochi::TransformRT>{} : nb::cast<std::optional<mochi::TransformRT>>(val); }, "The transform from this task's own coordinates into the task frame (the nominal\ntable top): for a table spawned at T, it is inverse(T). On a scene that declares\na taskRoot, root-level spawns are relocated by taskRoot * taskRootOffset. Unset,\nthe task is authored in the task frame itself.", nb::for_setter(nb::arg("value").none()))
+    .def_rw("physics_hz", &superdex::robotics::BotTaskPrefab::physicsHz, "The rate the task's physics steps at, in Hz. 0 means the task does not set one,\nand the consumer keeps its own.")
+    .def_rw("time_limit_s", &superdex::robotics::BotTaskPrefab::timeLimitS, "How long an episode may run before it ends with neither outcome, in seconds of\nsim time. 0 means the task sets no limit.")
   ;
 
   registry.GetClass<superdex::robotics::TerminationOutcome>()

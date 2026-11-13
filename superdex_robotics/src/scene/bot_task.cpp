@@ -236,6 +236,13 @@ void ValidateRandomization(SpawnEntry const& spawn, Error& error) {
 void ValidateBotTaskPrefab(BotTaskPrefab const& params, Error& error) {
   MOCHI_ERROR_RETURN(error);
 
+  MOCHI_ERROR_IF(params.physicsHz < 0, error, "BotTaskPrefab: physicsHz is negative");
+  MOCHI_ERROR_IF(
+      !(params.timeLimitS >= 0.0_r) || !std::isfinite(params.timeLimitS),
+      error,
+      "BotTaskPrefab: timeLimitS is negative or not finite");
+  MOCHI_ERROR_RETURN(error);
+
   std::unordered_set<std::string> spawnNames;
   std::unordered_map<std::string, std::string> nameToParent;
   for (auto const& spawn : params.resetState) {

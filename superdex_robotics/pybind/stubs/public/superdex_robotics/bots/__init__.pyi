@@ -3013,6 +3013,14 @@ class BotTaskPrefab:
     a taskRoot, root-level spawns are relocated by taskRoot * taskRootOffset. Unset,
     the task is authored in the task frame itself.
     """
+    physics_hz: int
+    """The rate the task's physics steps at, in Hz. 0 means the task does not set one,
+    and the consumer keeps its own.
+    """
+    time_limit_s: float
+    """How long an episode may run before it ends with neither outcome, in seconds of
+    sim time. 0 means the task sets no limit.
+    """
     @overload
     def __init__(self) -> None: ...
     @overload
@@ -3022,6 +3030,8 @@ class BotTaskPrefab:
         metadata: BotSceneMetadata = ...,
         reset_state: ArrayLikeSpawnEntry = ...,
         task_root_offset: Optional[mochi_physics.TransformRT] = ...,
+        physics_hz: int = ...,
+        time_limit_s: float = ...,
     ) -> None: ...
 
 class TerminationOutcome:

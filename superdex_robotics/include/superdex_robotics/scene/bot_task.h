@@ -371,6 +371,13 @@ struct BotTaskPrefab {
   /// see @ref ComputeWorldFromTask. Unset, the task is authored in the task frame itself.
   std::optional<TransformRT> taskRootOffset;
 
+  /* @brief The rate the task's physics steps at [Hz]; 0: the consumer keeps its own. */
+  int physicsHz = 0;
+
+  /* @brief How long an episode may run before it ends with neither outcome [s of sim time]; 0: no
+   * limit. */
+  real timeLimitS = 0.0_r;
+
   // --- LEGACY (remove once all .mochi_bot_task assets carry `resetState`) ---
   // Older tasks named the entries `spawns`. LoadBotTaskPrefabFromFile folds them into
   // `resetState` and clears this, so re-saves omit it. TODO(superdex): delete this field, its
@@ -382,6 +389,8 @@ struct BotTaskPrefab {
   MOCHI_FIELD(resetState) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD(terminationCriteria) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD(taskRootOffset) MOCHI_ATTRIBUTE(NoSerializeDefaults);
+  MOCHI_FIELD(physicsHz) MOCHI_ATTRIBUTE(NoSerializeDefaults) MOCHI_ATTRIBUTE(Units("1/s"));
+  MOCHI_FIELD(timeLimitS) MOCHI_ATTRIBUTE(NoSerializeDefaults) MOCHI_ATTRIBUTE(Units("s"));
   MOCHI_FIELD_NAME(_legacySpawns, "spawns") MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_STRUCT_END()
 };

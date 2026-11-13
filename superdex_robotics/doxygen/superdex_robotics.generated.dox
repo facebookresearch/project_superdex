@@ -1496,6 +1496,16 @@
 /// @brief The transform from this task's own coordinates into the task frame (the nominal table top): for a table spawned at T, it is inverse(T). On a scene that declares a taskRoot, root-level spawns are relocated by taskRoot * taskRootOffset. Unset, the task is authored in the task frame itself.
 ///
 
+/// @var superdex::robotics::BotTaskPrefab::physicsHz
+///
+/// @brief The rate the task's physics steps at, in Hz. 0 means the task does not set one, and the consumer keeps its own.
+///
+
+/// @var superdex::robotics::BotTaskPrefab::timeLimitS
+///
+/// @brief How long an episode may run before it ends with neither outcome, in seconds of sim time. 0 means the task sets no limit.
+///
+
 /// @struct superdex::robotics::TerminationOutcome
 ///
 /// @brief Both outcomes of a task.
