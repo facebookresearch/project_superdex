@@ -271,7 +271,7 @@ void DeepFlowMap::MapPoints(
   points.resize_noinit(originalPoints.size());
   real totalScale = _scale * flow->objFromLocalScale;
   Real3 totalShift = _scale * flow->objFromLocalShift;
-  std::transform(originalPoints.begin(), originalPoints.end(), points.begin(), [&](auto& point) {
+  std::ranges::transform(originalPoints, points.begin(), [&](auto& point) {
     return (point - totalShift) / totalScale;
   });
 

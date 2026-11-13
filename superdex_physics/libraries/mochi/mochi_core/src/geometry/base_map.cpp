@@ -17,6 +17,8 @@
 #include <mochi_core/geometry/base_map.h>
 #include <mochi_core/utils/matrix_utils.h>
 
+#include <algorithm>
+
 using namespace mochi;
 
 void BaseMap::ReindexResult(
@@ -39,7 +41,7 @@ void BaseMap::ReindexResult(
   // If outIndices has the same size as indsPoints, just copy the values. No need to reindex
   // Jacobians.
   if (outIndices.size() == indsPoints.size()) {
-    std::copy(indsPoints.begin(), indsPoints.end(), outIndices.begin());
+    std::ranges::copy(indsPoints, outIndices.begin());
     return;
   }
 

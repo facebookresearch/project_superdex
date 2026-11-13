@@ -412,7 +412,7 @@ void GroupWriterH5::AddDataSetImpl(
 
   // Convert dims to hsize_t (not technically the same as size_t)
   std::vector<hsize_t> hdims(dims.size());
-  std::copy(dims.begin(), dims.end(), hdims.begin());
+  std::ranges::copy(dims, hdims.begin());
 
   // Add a dataset to the current group
   try {
@@ -594,7 +594,7 @@ DynamicArray<size_t> GroupReaderH5::GetDataSetDimensions(std::string_view name, 
     {
       DynamicArray<hsize_t> hdims(rank, _allocator);
       dataspace.getSimpleExtentDims(hdims.data());
-      std::copy(hdims.begin(), hdims.end(), dims.begin());
+      std::ranges::copy(hdims, dims.begin());
     }
   } catch (H5::Exception const& e) {
     hdf5::ReportException(e, error);

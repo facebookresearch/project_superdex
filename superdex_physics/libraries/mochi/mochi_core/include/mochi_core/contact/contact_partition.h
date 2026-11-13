@@ -122,7 +122,7 @@ class BoneIdsDescriptor : public PartitionDescriptorImpl<DynamicArray<int>> {
 
   struct Less {
     bool operator()(DynamicArray<int> const& a, DynamicArray<int> const& b) const {
-      return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
+      return std::ranges::lexicographical_compare(a, b);
     }
   };
 

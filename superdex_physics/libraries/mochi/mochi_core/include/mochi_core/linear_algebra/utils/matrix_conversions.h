@@ -259,7 +259,7 @@ auto ToBlockSparseMatrix(
     auto firstRowIndices = Span(indices.data(), numBlockCols);
     std::iota(firstRowIndices.begin(), firstRowIndices.end(), 0);
     for (int br = 1; br < numBlockRows; ++br) {
-      std::copy(firstRowIndices.begin(), firstRowIndices.end(), indices.data() + br * numBlockCols);
+      std::ranges::copy(firstRowIndices, indices.data() + br * numBlockCols);
     }
     values.resize(mat.Rows() * mat.Cols());
     auto valuesAsRowMatrix = RowMatrixView<NonConstScalar>{values.data(), mat.Rows(), mat.Cols()};
@@ -674,7 +674,7 @@ auto ToSparseMatrix(
     auto firstRow = Span(indices.data(), numCols);
     std::iota(firstRow.begin(), firstRow.end(), 0);
     for (int r = 1; r < numRows; ++r) {
-      std::copy(firstRow.begin(), firstRow.end(), indices.begin() + r * numCols);
+      std::ranges::copy(firstRow, indices.begin() + r * numCols);
     }
     // Values
     values.resize(numIndices);

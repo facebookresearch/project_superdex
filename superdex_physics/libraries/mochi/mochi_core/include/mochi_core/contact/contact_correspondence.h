@@ -44,7 +44,7 @@ class ContactCorrespondence : public NoCopy {
     // Preallocate memory for arrays used with all collider types.
     _stamp.resize_noinit(_numSamples);
     _missing.reserve(_numSamples);
-    std::fill(_stamp.begin(), _stamp.end(), 0);
+    std::ranges::fill(_stamp, 0);
   }
 
   [[nodiscard]] MOCHI_FORCE_INLINE Span<Pair const> GetMissingSamples(

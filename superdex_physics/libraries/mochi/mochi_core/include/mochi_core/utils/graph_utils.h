@@ -380,7 +380,7 @@ template <typename Idx, typename Ptr, template <typename, typename...> class Sto
   DynamicArray<bool> available;
   available.resize_noinit(maxCount + 1);
   for (auto nd : order) {
-    std::fill(available.begin(), available.end(), true);
+    std::ranges::fill(available, true);
     for (auto neighbor : g[nd]) {
       if (color[neighbor] != -1) {
         available[color[neighbor]] = false;

@@ -174,10 +174,8 @@ Graph<int, int> mochi::MakeSparsityGraph(
     return CreateCSRGraphFromSortedAndUniquedMatrix(numRows, {}, {});
   }
 
-  auto const max_row_it =
-      std::max_element(coordinates.cbegin(), coordinates.cend(), [](Int2 const& a, Int2 const& b) {
-        return a[0] < b[0];
-      });
+  auto const max_row_it = std::ranges::max_element(
+      coordinates, [](Int2 const& a, Int2 const& b) { return a[0] < b[0]; });
 
   // since we have the max row, we need + 1 below to account for 0-based enumeration
   std::vector<std::vector<int>> M((*max_row_it)[0] + 1, std::vector<int>{});
@@ -229,7 +227,7 @@ void mochi::SetZeroOnRows(
         AsView(values).SetZero();
         if (isDiagNonZero) {
           auto indices = mat.Indices(r);
-          auto const* it = std::find(indices.begin(), indices.end(), r);
+          auto const* it = std::ranges::find(indices, r);
           if (it != indices.end()) {
             values[std::distance(indices.begin(), it)] = diagonalValue;
           }

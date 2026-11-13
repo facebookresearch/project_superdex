@@ -273,7 +273,7 @@ int BvhTree<Bv>::BuildNode(int parentIndex, Span<int> elementIndicesSpan, int de
     _leaves.push_back(nodeIndex);
 
     // Ensure local ordering of the elements.
-    std::sort(elementIndicesSpan.begin(), elementIndicesSpan.end());
+    std::ranges::sort(elementIndicesSpan);
   }
 
   // Otherwise, determine split and generate branch nodes.

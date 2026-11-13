@@ -228,11 +228,8 @@ SampleMeshWeighting mochi::rom::hyper::GenerateSampleMeshWeights(
       [&generationResult, &internalReweightFactor, &boundaryReweightFactor]() {
         std::vector<real> result;
         result.reserve(generationResult.sampleElements.GetSubsetSize());
-        std::transform(
-            generationResult.sampleElements.begin(),
-            generationResult.sampleElements.end(),
-            std::back_inserter(result),
-            [&](int idx) {
+        std::ranges::transform(
+            generationResult.sampleElements, std::back_inserter(result), [&](int idx) {
               if (generationResult.sampleInterior.Contains(idx)) {
                 return internalReweightFactor;
               } else if (generationResult.sampleBoundary.Contains(idx)) {
@@ -263,7 +260,7 @@ SampleMeshWeighting mochi::rom::hyper::GenerateSampleMeshWeights(
   }();
 
   std::vector<real> faceWeights(sampleMesh.boundaryElementSubset.GetSubsetSize());
-  std::fill(faceWeights.begin(), faceWeights.end(), faceReweightFactor);
+  std::ranges::fill(faceWeights, faceReweightFactor);
 
   return SampleMeshWeighting{
       .volumeElements = std::move(volElementWeights),
@@ -343,7 +340,7 @@ SampleMeshTetMeshResult CreateSampleMeshTetMesh(
         auto newFaces = boundaryElements.Extract(fullMesh.GetBoundaryFaces());
 
         // Relabel face elements with new node indices
-        std::for_each(newFaces.begin(), newFaces.end(), [&volumeElements](auto& face) {
+        std::ranges::for_each(newFaces, [&volumeElements](auto& face) {
           auto element = volumeElements.GetSubsetIndexFromFullIndex(face.element);
           MOCHI_ASSERT(element);
           face.element = *element;

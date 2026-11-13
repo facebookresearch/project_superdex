@@ -146,7 +146,7 @@ struct PerActorPrec final : Preconditioner<T> {
       MOCHI_ASSERT_VERBOSE(!loads.empty(), "Worker heap must not be empty.");
       MOCHI_ASSERT_VERBOSE(
           isize(heapPositions) == isize(loads) && isize(workerRowRanges) == isize(loads) + 1);
-      std::fill(_loads.begin(), _loads.end(), 0.0);
+      std::ranges::fill(_loads, 0.0);
       // Equal loads order workers by index, so index order is a valid heap.
       _heapWorkerIds.resize_noinit(_loads.size());
       std::iota(_heapWorkerIds.begin(), _heapWorkerIds.end(), 0);
@@ -1065,8 +1065,7 @@ struct PerActorPrec final : Preconditioner<T> {
         workerRowRanges[0] == 0 && workerRowRanges[numWorkers] == numRows,
         "Worker row ranges do not cover the preconditioner.");
     MOCHI_ASSERT_VERBOSE(
-        std::is_sorted(workerRowRanges.begin(), workerRowRanges.end()),
-        "Worker row ranges must be nondecreasing.");
+        std::ranges::is_sorted(workerRowRanges), "Worker row ranges must be nondecreasing.");
 
     // Keep transient planner arrays off the heap for typical islands.
     MOCHI_FILO_STACK_ALLOCATOR(planningAllocator, 16 * 1024);

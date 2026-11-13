@@ -55,9 +55,8 @@ mochi::CreateIndexGroups(Span<int const> inds, bool forceTriplets, Allocator* al
 
   // Sort the index groups. This makes assembly into a sparse matrix a bit faster,
   // as we can assume that the index groups come in ascending order.
-  std::sort(outGroups.begin(), outGroups.end(), [](IndexGroup const& a, IndexGroup const& b) {
-    return a.dst < b.dst;
-  });
+  std::ranges::sort(
+      outGroups, [](IndexGroup const& a, IndexGroup const& b) { return a.dst < b.dst; });
 
   return outGroups;
 }

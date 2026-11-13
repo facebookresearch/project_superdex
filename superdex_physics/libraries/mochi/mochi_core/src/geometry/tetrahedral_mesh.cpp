@@ -157,7 +157,7 @@ static std::vector<Int2> FindAllEdges(Span<int const> connectivity, int numNodes
   }
   // Nice to have a well defined order, but not strictly necessary
   std::vector<Int2> uniqueEdgeList(uniqueEdges.begin(), uniqueEdges.end());
-  std::sort(uniqueEdgeList.begin(), uniqueEdgeList.end(), Int2Less{});
+  std::ranges::sort(uniqueEdgeList, Int2Less{});
   return uniqueEdgeList;
 }
 

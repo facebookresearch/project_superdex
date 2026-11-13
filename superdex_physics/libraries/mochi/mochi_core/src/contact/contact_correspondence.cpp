@@ -16,6 +16,7 @@
 
 #include <mochi_core/contact/contact_correspondence.h>
 
+#include <algorithm>
 #include <limits>
 
 using namespace mochi;
@@ -24,7 +25,7 @@ void ContactCorrespondence::Clear() {
   // Check roll-over of the epoch counter.
   if (_epoch == std::numeric_limits<int>::max()) {
     _epoch = 0;
-    std::fill(_stamp.begin(), _stamp.end(), 0);
+    std::ranges::fill(_stamp, 0);
   }
 
   // Update epoch.

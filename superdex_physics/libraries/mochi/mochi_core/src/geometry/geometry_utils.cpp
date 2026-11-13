@@ -704,7 +704,7 @@ constexpr size_t kBoundingSphereStackBytes = 16 * 1024;
   MOCHI_FILO_STACK_ALLOCATOR(allocator, kBoundingSphereStackBytes);
   DynamicArray<Real3> points(&allocator);
   points.resize_noinit(coordinates.size());
-  std::copy(coordinates.begin(), coordinates.end(), points.begin());
+  std::ranges::copy(coordinates, points.begin());
   return CalcBoundingSphereBestInPlace(points);
 }
 

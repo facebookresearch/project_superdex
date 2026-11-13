@@ -48,14 +48,14 @@ mochi::DSkinningTransform::DSkinningTransform(
       int const boneId = skinIndices[index];
       MOCHI_ASSERT_VERBOSE(boneId >= 0 && boneId < GetBoneCount(), "Bone index out of range!");
       auto const matchesBoneId = [boneId](auto const& bone) { return bone.first == boneId; };
-      auto const position = std::find_if(vertexBones.begin(), vertexBones.end(), matchesBoneId);
+      auto const position = std::ranges::find_if(vertexBones, matchesBoneId);
       if (position != vertexBones.end()) {
         position->second += weight;
       } else {
         vertexBones.emplace_back(boneId, weight);
       }
     }
-    std::sort(vertexBones.begin(), vertexBones.end());
+    std::ranges::sort(vertexBones);
     totalPairs += isize(vertexBones);
   }
 }

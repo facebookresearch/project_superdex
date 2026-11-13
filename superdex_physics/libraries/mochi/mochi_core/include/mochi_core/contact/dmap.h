@@ -491,7 +491,7 @@ class DMapQuad final : public DMapImpl {
         auto* dst = outJacY.Inds(i).begin();
         for (int k = 0; k < ElementT::kNumNodes; k++, j++) {
           auto const& srcInds = jacX.Inds(indsX[j]);
-          std::copy(srcInds.begin(), srcInds.end(), dst);
+          std::ranges::copy(srcInds, dst);
           dst += srcInds.size();
         }
       }

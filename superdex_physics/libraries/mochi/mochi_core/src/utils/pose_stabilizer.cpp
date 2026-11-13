@@ -22,7 +22,7 @@ namespace mochi {
 
 static void CopyPose(Span<TransformRT const> pose, Span<TransformRT> outPose) {
   MOCHI_ASSERT_VERBOSE(pose.size() == outPose.size());
-  std::copy(pose.begin(), pose.end(), outPose.begin());
+  std::ranges::copy(pose, outPose.begin());
 }
 
 LastValidPoseStabilizer::LastValidPoseStabilizer(

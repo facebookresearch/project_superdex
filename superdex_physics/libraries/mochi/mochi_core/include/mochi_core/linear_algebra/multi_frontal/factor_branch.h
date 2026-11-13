@@ -88,7 +88,7 @@ struct FactorData {
    * @return True if the node is a branch root, false otherwise.
    */
   bool IsBranchRoot(int node) {
-    return std::binary_search(branchRoots.begin(), branchRoots.end(), node);
+    return std::ranges::binary_search(branchRoots, node);
   }
 
   auto
