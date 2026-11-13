@@ -24,7 +24,7 @@ struct bots::ActuatorHandle(bots::RoboticsHandle) {}
 enum bots::BotFileType {
   // @brief Flat bot parameters.
   BotPrefab,
-  // @brief Mod bot recipe that produces @ref BotPrefab.
+  // @brief Mod bot recipe that produces @ref bots::BotPrefab.
   ModBotPrefab,
   // @brief Number of enum values.
   Count,

@@ -38,7 +38,7 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
 
   nb::enum_<superdex::robotics::BotFileType>(m_bots, "BotFileType", "Type of content stored in a .superdex_bot file.")
     .value("BOT_PREFAB", superdex::robotics::BotFileType::BotPrefab, "Flat bot parameters.")
-    .value("MOD_BOT_PREFAB", superdex::robotics::BotFileType::ModBotPrefab, "Mod bot recipe that produces :class:`BOT_PREFAB\n    <superdex.robotics.BotFileType>`.")
+    .value("MOD_BOT_PREFAB", superdex::robotics::BotFileType::ModBotPrefab, "Mod bot recipe that produces :class:`~superdex.robotics.BotPrefab`.")
     .value("COUNT", superdex::robotics::BotFileType::Count, "Number of enum values.")
   ;
 

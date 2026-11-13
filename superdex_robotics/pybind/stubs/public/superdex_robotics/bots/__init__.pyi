@@ -462,9 +462,7 @@ class BotFileType:
     BOT_PREFAB: BotFileType
     """Flat bot parameters."""
     MOD_BOT_PREFAB: BotFileType
-    """Mod bot recipe that produces :class:`BOT_PREFAB
-    <superdex.robotics.BotFileType>`.
-    """
+    """Mod bot recipe that produces :class:`~superdex.robotics.BotPrefab`."""
     COUNT: BotFileType
     """Number of enum values."""
     def __init__(self, value: int) -> None: ...
