@@ -5164,11 +5164,12 @@
 ///
 /// @param[in] scene Pointer to the scene to destroy.
 ///
-/// @note No-op if @p scene is null or unknown to this @ref mochi::Context "Context".
+/// @note No-op if @p scene is null or belongs to another @ref mochi::Context "Context".
 /// @note Call on any thread.
 /// @note Any remaining scenes will be cleaned up automatically when the @ref mochi::Context "Context" is destroyed.
 ///
 /// @warning Do not dereference pointers to the scene, actors, constraints, etc. after this call.
+/// @warning Passing a pointer to a scene that has been destroyed is undefined behavior.
 /// @warning If @p scene is owned by an @ref mochi::AsyncScene "AsyncScene", the call is a no-op (a warning is logged). Call @ref mochi::Context::DestroyAsyncScene "DestroyAsyncScene" instead.
 ///
 /// @see @ref mochi::Context::CreateScene "CreateScene", @ref mochi::Context::DestroyAsyncScene "DestroyAsyncScene"

@@ -230,7 +230,7 @@ class ContextImpl final : public Context {
   int _numWorkerThreadsRequested; // default computed in constructor
   std::atomic<Handle::ValueType> _nextHandle{1};
   std::unordered_map<ShapeHandle::ValueType, ConstShapePtr> _shapes;
-  std::vector<std::unique_ptr<SceneImpl>> _scenes;
+  std::unordered_map<SceneHandle::ValueType, std::unique_ptr<SceneImpl>> _scenes;
   std::vector<std::unique_ptr<IKSolverImpl>> _ikSolvers;
 #if MOCHI_USE_OSC
   std::vector<std::unique_ptr<OperationalSpaceControllerImpl>> _OSCs;

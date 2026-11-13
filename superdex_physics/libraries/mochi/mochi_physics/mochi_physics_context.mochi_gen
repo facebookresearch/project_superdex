@@ -884,10 +884,11 @@ class Context [no_init, no_destruct, singleton] {
   // @param[in] scene Pointer to the scene to destroy.
   //
   // @warning Do not dereference pointers to the scene, actors, constraints, etc. after this call.
+  // @warning Passing a pointer to a scene that has been destroyed is undefined behavior.
   // @warning If @ref scene is owned by an @ref AsyncScene, the call is a no-op (a warning is logged).
   // Call @ref DestroyAsyncScene instead.
   //
-  // @note No-op if @ref scene is null or unknown to this @ref Context.
+  // @note No-op if @ref scene is null or belongs to another @ref Context.
   // @note Call on any thread.
   // @note Any remaining scenes will be cleaned up automatically when the @ref Context is destroyed.
   //

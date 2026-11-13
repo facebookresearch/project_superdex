@@ -147,7 +147,11 @@ void ContextImpl::PreShutDown() {
 #endif
   _newtonEulerTerms.clear();
   _ikSolvers.clear();
-  _scenes.clear();
+  // Remove scenes one at a time so a scene's destructor can call back into the Context.
+  while (!_scenes.empty()) {
+    auto const scene = std::move(_scenes.extract(_scenes.begin()).mapped());
+    _debugServer->OnRemoveScene(scene.get());
+  }
   _shapes.clear();
 
   // All scenes have been destroyed, so it is now safe to destroy the debug server.
@@ -599,7 +603,9 @@ Scene* ContextImpl::CreateScene(std::string_view name) {
   std::scoped_lock lock(_mutex);
 
   // Add it to the collection
-  _scenes.push_back(std::move(newScene));
+  [[maybe_unused]] bool const inserted =
+      _scenes.try_emplace(sceneRawPtr->GetHandle().value, std::move(newScene)).second;
+  MOCHI_ASSERT(inserted, "SceneHandle not unique!");
 
   // Notify debug server
   _debugServer->OnAddScene(sceneRawPtr);
@@ -608,11 +614,14 @@ Scene* ContextImpl::CreateScene(std::string_view name) {
 }
 
 void ContextImpl::DestroyScene(Scene* scene) {
+  if (!scene) {
+    return;
+  }
   std::unique_ptr<SceneImpl> sceneToDestroy;
   {
     std::scoped_lock lock(_mutex);
-    auto it = std::ranges::find_if(_scenes, [scene](auto& ptr) { return ptr.get() == scene; });
-    if (it == _scenes.end()) {
+    auto it = _scenes.find(scene->GetHandle().value);
+    if (it == _scenes.end() || it->second.get() != scene) {
       return;
     }
 
@@ -625,7 +634,7 @@ void ContextImpl::DestroyScene(Scene* scene) {
       }
     }
 
-    sceneToDestroy = std::move(*it);
+    sceneToDestroy = std::move(it->second);
     _debugServer->OnRemoveScene(sceneToDestroy.get());
     _scenes.erase(it);
   }
@@ -1254,10 +1263,9 @@ Scene* ContextImpl::GetScene(SceneHandle handle) {
     return nullptr;
   }
   std::scoped_lock lock(_mutex);
-  auto it =
-      std::ranges::find_if(_scenes, [handle](auto& ptr) { return ptr->GetHandle() == handle; });
+  auto it = _scenes.find(handle.value);
   if (it != _scenes.end()) {
-    return (*it).get();
+    return it->second.get();
   }
   return nullptr;
 }
@@ -1272,7 +1280,9 @@ bool ContextImpl::IsValidScene(Scene const* scene) const {
     return false;
   }
   std::scoped_lock lock(_mutex);
-  auto it = std::ranges::find_if(_scenes, [scene](auto& ptr) { return ptr.get() == scene; });
+  // Compare pointers: a destroyed scene's handle cannot be read.
+  auto it =
+      std::ranges::find_if(_scenes, [scene](auto& entry) { return entry.second.get() == scene; });
   return (it != _scenes.end());
 }
 

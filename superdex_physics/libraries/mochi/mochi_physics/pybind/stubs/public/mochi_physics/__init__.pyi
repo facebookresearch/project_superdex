@@ -9985,7 +9985,7 @@ def destroy_scene(scene: Optional[Scene]) -> None:
         scene (Optional[Scene]): Pointer to the scene to destroy.
 
     Note:
-        No-op if ``scene`` is None or unknown to this Mochi context.
+        No-op if ``scene`` is None or belongs to another Mochi context.
 
     Note:
         Call on any thread.
@@ -10002,6 +10002,9 @@ def destroy_scene(scene: Optional[Scene]) -> None:
     Warning:
         Do not dereference pointers to the scene, actors, constraints, etc. after
         this call.
+
+    Warning:
+        Passing a pointer to a scene that has been destroyed is undefined behavior.
 
     Warning:
         If ``scene`` is owned by an ``mochi::AsyncScene``, the call is a no-op (a
