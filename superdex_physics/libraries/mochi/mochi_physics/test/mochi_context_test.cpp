@@ -42,6 +42,7 @@
 #include <initializer_list>
 #include <ios>
 #include <iterator>
+#include <latch>
 #include <limits>
 #include <memory>
 #include <numeric>
@@ -1431,6 +1432,116 @@ TEST_P(MochiContextTest, GetScene) {
   auto invalidHandle = SceneHandle{};
   EXPECT_FALSE(invalidHandle.IsValid());
   EXPECT_EQ(nullptr, _mochiContext->GetScene(invalidHandle));
+}
+
+TEST_P(MochiContextTest, GetSceneWhileOtherThreadsCreateAndDestroyScenes) {
+  constexpr int kLiveScenes = 8;
+  constexpr int kReaders = 4;
+  constexpr int kChurners = 2;
+  constexpr int kMinChurnsPerThread = 20;
+  constexpr int kMinReaderPasses = 20;
+  std::vector<Scene*> liveScenes;
+  std::vector<SceneHandle> liveHandles;
+  for (int i = 0; i < kLiveScenes; ++i) {
+    liveScenes.push_back(_mochiContext->CreateScene("Live"));
+    liveHandles.push_back(liveScenes.back()->GetHandle());
+  }
+
+  std::latch start{kReaders + kChurners};
+  std::atomic<int> churnersRunning{kChurners};
+  std::atomic<int> readerPasses{0};
+  std::atomic<int> wrongLiveLookups{0};
+  std::atomic<int> wrongChurnLookups{0};
+  std::vector<std::thread> threads;
+  threads.reserve(kReaders + kChurners);
+  for (int r = 0; r < kReaders; ++r) {
+    threads.emplace_back([&] {
+      _mochiContext->BindThisThread();
+      start.arrive_and_wait();
+      while (churnersRunning.load() > 0) {
+        for (int i = 0; i < kLiveScenes; ++i) {
+          if (_mochiContext->GetScene(liveHandles[i]) != liveScenes[i] ||
+              !_mochiContext->IsValidScene(liveScenes[i])) {
+            wrongLiveLookups.fetch_add(1);
+          }
+        }
+        readerPasses.fetch_add(1);
+      }
+      _mochiContext->UnbindThisThread();
+    });
+  }
+  for (int c = 0; c < kChurners; ++c) {
+    threads.emplace_back([&] {
+      _mochiContext->BindThisThread();
+      start.arrive_and_wait();
+      // Churn until the readers have also made progress, so lookups overlap creation and
+      // destruction however the threads are scheduled.
+      for (int i = 0; i < kMinChurnsPerThread || readerPasses.load() < kMinReaderPasses; ++i) {
+        Scene* const scene = _mochiContext->CreateScene("Churn");
+        SceneHandle const handle = scene->GetHandle();
+        if (_mochiContext->GetScene(handle) != scene) {
+          wrongChurnLookups.fetch_add(1);
+        }
+        _mochiContext->DestroyScene(scene);
+        if (_mochiContext->GetScene(handle) != nullptr) {
+          wrongChurnLookups.fetch_add(1);
+        }
+      }
+      churnersRunning.fetch_sub(1);
+      _mochiContext->UnbindThisThread();
+    });
+  }
+  for (std::thread& thread : threads) {
+    thread.join();
+  }
+
+  EXPECT_EQ(wrongLiveLookups.load(), 0);
+  EXPECT_EQ(wrongChurnLookups.load(), 0);
+  for (int i = 0; i < kLiveScenes; ++i) {
+    EXPECT_EQ(_mochiContext->GetScene(liveHandles[i]), liveScenes[i]);
+  }
+}
+
+TEST(Context, DestroyContextWhileSceneDestructionCallsIsValidScene) {
+  Context* const context = CreateContext(/*numWorkerThreads*/ 0);
+  Scene* const scenes[] = {context->CreateScene("A"), context->CreateScene("B")};
+  int numValid = 0;
+  for (Scene* const scene : scenes) {
+    // A callback capture whose deleter runs when DestroyContext destroys the scene.
+    std::shared_ptr<void> capture(nullptr, [&](void*) {
+      for (Scene const* const other : scenes) {
+        numValid += context->IsValidScene(other) ? 1 : 0;
+      }
+    });
+    EXPECT_TRUE(
+        scene
+            ->RegisterPreStepCallback("Capture", [capture = std::move(capture)](StepInfo const&) {})
+            .IsValid());
+  }
+
+  DestroyContext(context);
+
+  // A scene leaves the context before it is destroyed; the first one destroyed finds the other.
+  EXPECT_EQ(numValid, 1);
+}
+
+TEST(Context, DestroyContextWhileSceneDestructionCreatesAScene) {
+  Context* const context = CreateContext(/*numWorkerThreads*/ 0);
+  int numCreated = 0;
+  for (int i = 0; i < 2; ++i) {
+    Scene* const scene = context->CreateScene("Scene");
+    // A callback capture whose deleter creates a scene, which DestroyContext destroys too.
+    std::shared_ptr<void> capture(
+        nullptr, [&](void*) { numCreated += context->CreateScene("Created") != nullptr ? 1 : 0; });
+    EXPECT_TRUE(
+        scene
+            ->RegisterPreStepCallback("Capture", [capture = std::move(capture)](StepInfo const&) {})
+            .IsValid());
+  }
+
+  DestroyContext(context);
+
+  EXPECT_EQ(numCreated, 2);
 }
 
 TEST_P(MochiContextTest, CreateSceneMultithreaded) {
