@@ -7390,9 +7390,8 @@ class RodElementRotationConstraintParams(ConstraintParams):
     """
     @property
     def ref_frame_rot_vec(self) -> Real3:
-        """Reference-frame orientation in world coordinates, expressed as a rotation
-        vector
-        [rad]. The constraint deviation is expressed in this frame.
+        """Reference-frame orientation relative to the target rotation, expressed as a
+        rotation vector [rad]. The constraint deviation is expressed in this frame.
         """
     @ref_frame_rot_vec.setter
     def ref_frame_rot_vec(self, value: Real3Like) -> None: ...

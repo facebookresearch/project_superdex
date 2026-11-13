@@ -1273,8 +1273,8 @@ struct RodElementRotationToRigidConstraintParams(ConstraintParams) [equality(def
 // Constraint::SetTargetRotation
 struct RodElementRotationConstraintParams(ConstraintParams) [equality(default)] {
 
-  // @brief Reference-frame orientation in world coordinates, expressed as a rotation vector [rad].
-  // The constraint deviation is expressed in this frame.
+  // @brief Reference-frame orientation relative to the target rotation, expressed as a rotation
+  // vector [rad]. The constraint deviation is expressed in this frame.
   Real3 refFrameRotVec [units("rad")] = {};
 
   // @brief Actor handle identifying the rod actor.

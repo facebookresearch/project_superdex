@@ -682,6 +682,70 @@ type ArrayLikeRodActorPrefab = (
     Sequence[RodActorPrefab] | DynamicArrayRodActorPrefab | npt.NDArray[Any]
 )
 
+class DynamicArrayRodElementRotationConstraintPrefab:
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        size: int,
+        value: RodElementRotationConstraintPrefab = ...,
+    ) -> None: ...
+    @overload
+    def __init__(
+        self,
+        sequence: Sequence[RodElementRotationConstraintPrefab],
+    ) -> None: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> RodElementRotationConstraintPrefab: ...
+    def __setitem__(
+        self,
+        index: int,
+        value: RodElementRotationConstraintPrefab,
+    ) -> None: ...
+    def __iter__(self) -> Iterator[RodElementRotationConstraintPrefab]: ...
+    def append(self, value: RodElementRotationConstraintPrefab) -> None: ...
+    def clear(self) -> None: ...
+    def resize(self, size: int) -> None: ...
+
+type ArrayLikeRodElementRotationConstraintPrefab = (
+    Sequence[RodElementRotationConstraintPrefab] |
+    DynamicArrayRodElementRotationConstraintPrefab |
+    npt.NDArray[Any]
+)
+
+class DynamicArrayRodElementRotationToRigidConstraintPrefab:
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        size: int,
+        value: RodElementRotationToRigidConstraintPrefab = ...,
+    ) -> None: ...
+    @overload
+    def __init__(
+        self,
+        sequence: Sequence[RodElementRotationToRigidConstraintPrefab],
+    ) -> None: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> RodElementRotationToRigidConstraintPrefab: ...
+    def __setitem__(
+        self,
+        index: int,
+        value: RodElementRotationToRigidConstraintPrefab,
+    ) -> None: ...
+    def __iter__(self) -> Iterator[RodElementRotationToRigidConstraintPrefab]: ...
+    def append(self, value: RodElementRotationToRigidConstraintPrefab) -> None: ...
+    def clear(self) -> None: ...
+    def resize(self, size: int) -> None: ...
+
+type ArrayLikeRodElementRotationToRigidConstraintPrefab = (
+    Sequence[RodElementRotationToRigidConstraintPrefab] |
+    DynamicArrayRodElementRotationToRigidConstraintPrefab |
+    npt.NDArray[Any]
+)
+
 class DynamicArraySoftActorPrefab:
     @overload
     def __init__(self) -> None: ...
@@ -2052,6 +2116,93 @@ class DeformableNodeToDeformableNodeConstraintPrefab(
     def __eq__(self, other: object) -> bool: ...
     def __ne__(self, other: object) -> bool: ...
 
+class RodElementRotationConstraintPrefab(
+    mochi_physics.RodElementRotationConstraintParams
+):
+    """Prefab parameters for a
+    :class:`~superdex.physics.RodElementRotationConstraintParams`.
+
+    Note:
+        Actor name fields use the same naming convention as
+        :class:`~superdex.physics.prefab.PoseControllerPrefab`. "myActor" refers to
+        an actor in this prefab. "myPrefab/myActor" refers to an actor in a nested
+        prefab.
+
+    Note:
+        A referenced actor name must identify exactly one existing actor. Actor
+        names need not be unique, but referencing a name shared by more than one
+        actor, or a name that matches no actor, is invalid and rejected at
+        :func:`~superdex.physics.prefab.add_to_scene`.
+
+    Note:
+        :attr:`~superdex.physics.RodElementRotationConstraintParams.ref_frame_rot_vec`
+        is relative to the target rotation, which already includes the prefab
+        placement, so the prefab transform does not change it.
+    """
+    actor_name: str
+    """Name or hierarchy path identifying the rod actor."""
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        stiffness: float = ...,
+        damping: float = ...,
+        saturation: float = ...,
+        ref_frame_rot_vec: mochi_physics.Real3Like = ...,
+        actor: mochi_physics.ActorHandle = ...,
+        element_index: int = ...,
+        actor_name: str = ...,
+    ) -> None: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __ne__(self, other: object) -> bool: ...
+
+class RodElementRotationToRigidConstraintPrefab(
+    mochi_physics.RodElementRotationToRigidConstraintParams
+):
+    """Prefab parameters for a
+    :class:`~superdex.physics.RodElementRotationToRigidConstraintParams`.
+
+    Note:
+        Actor name fields use the same naming convention as
+        :class:`~superdex.physics.prefab.PoseControllerPrefab`. "myActor" refers to
+        an actor in this prefab. "myPrefab/myActor" refers to an actor in a nested
+        prefab.
+
+    Note:
+        A referenced actor name must identify exactly one existing actor. Actor
+        names need not be unique, but referencing a name shared by more than one
+        actor, or a name that matches no actor, is invalid and rejected at
+        :func:`~superdex.physics.prefab.add_to_scene`.
+
+    Note:
+        :attr:`~superdex.physics.RodElementRotationToRigidConstraintParams.ref_frame_rot_vec`
+        is authored in the prefab frame and rotated into world coordinates.
+    """
+    rigid_actor_name: str
+    """Name or hierarchy path identifying the rigid actor."""
+    rod_actor_name: str
+    """Name or hierarchy path identifying the rod actor."""
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        stiffness: float = ...,
+        damping: float = ...,
+        saturation: float = ...,
+        ref_frame_rot_vec: mochi_physics.Real3Like = ...,
+        rigid_actor: mochi_physics.ActorHandle = ...,
+        rod_actor: mochi_physics.ActorHandle = ...,
+        element_index: int = ...,
+        rigid_actor_name: str = ...,
+        rod_actor_name: str = ...,
+    ) -> None: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __ne__(self, other: object) -> bool: ...
+
 class DeformableNodeToRigidConstraintPrefab(
     mochi_physics.DeformableNodeToRigidConstraintParams
 ):
@@ -2614,6 +2765,25 @@ class ConstraintLists:
         self,
         value: ArrayLikeDeformableNodeToDeformableNodeConstraintPrefab,
     ) -> None: ...
+    @property
+    def rod_element_rotation(self) -> DynamicArrayRodElementRotationConstraintPrefab:
+        """World-rotation tracking constraints on rod elements."""
+    @rod_element_rotation.setter
+    def rod_element_rotation(
+        self,
+        value: ArrayLikeRodElementRotationConstraintPrefab,
+    ) -> None: ...
+    @property
+    def rod_element_rotation_to_rigid(
+        self,
+    ) -> DynamicArrayRodElementRotationToRigidConstraintPrefab:
+        """Relative-rotation tracking constraints between rod elements and rigid actors.
+        """
+    @rod_element_rotation_to_rigid.setter
+    def rod_element_rotation_to_rigid(
+        self,
+        value: ArrayLikeRodElementRotationToRigidConstraintPrefab,
+    ) -> None: ...
     @overload
     def __init__(self) -> None: ...
     @overload
@@ -2635,6 +2805,8 @@ class ConstraintLists:
         deformable_node_position: ArrayLikeDeformableNodePositionConstraintPrefab = ...,
         deformable_node_to_rigid: ArrayLikeDeformableNodeToRigidConstraintPrefab = ...,
         deformable_node_to_deformable_node: ArrayLikeDeformableNodeToDeformableNodeConstraintPrefab = ...,
+        rod_element_rotation: ArrayLikeRodElementRotationConstraintPrefab = ...,
+        rod_element_rotation_to_rigid: ArrayLikeRodElementRotationToRigidConstraintPrefab = ...,
     ) -> None: ...
     def __eq__(self, other: object) -> bool: ...
     def __ne__(self, other: object) -> bool: ...

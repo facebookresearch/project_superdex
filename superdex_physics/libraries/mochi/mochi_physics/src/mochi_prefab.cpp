@@ -937,6 +937,8 @@ static Constraint* AddConstraintImpl(Scene* scene, RigidSphericalJointConstraint
 static Constraint* AddConstraintImpl(Scene* scene, DeformableNodePositionConstraintParams const& params, Error& error) { return scene->CreateDeformableNodePositionConstraint(params, error);}
 static Constraint* AddConstraintImpl(Scene* scene, DeformableNodeToDeformableNodeConstraintParams const& params, Error& error) { return scene->CreateDeformableNodeToDeformableNodeConstraint(params, error);}
 static Constraint* AddConstraintImpl(Scene* scene, DeformableNodeToRigidConstraintParams const& params, Error& error) { return scene->CreateDeformableNodeToRigidConstraint(params, error);}
+static Constraint* AddConstraintImpl(Scene* scene, RodElementRotationConstraintParams const& params, Error& error) { return scene->CreateRodElementRotationConstraint(params, error);}
+static Constraint* AddConstraintImpl(Scene* scene, RodElementRotationToRigidConstraintParams const& params, Error& error) { return scene->CreateRodElementRotationToRigidConstraint(params, error);}
 // clang-format on
 
 [[nodiscard]] static Real3 TransformRotationVector(
@@ -1035,8 +1037,17 @@ static void ApplyPrefabTransformToConstraint(
   params.refFrameRotVec = TransformRotationVector(worldFromPrefab, params.refFrameRotVec);
 }
 
+static void ApplyPrefabTransformToConstraint(
+    TransformSRT const& worldFromPrefab,
+    ActorPrefabMetricScaleMap const&,
+    RodElementRotationToRigidConstraintPrefab& params) {
+  params.refFrameRotVec = TransformRotationVector(worldFromPrefab, params.refFrameRotVec);
+}
+
 // Remaining constraint types: no field that the prefab transform changes here. Rotation targets and
 // ranges are scale-invariant, and DeformableNodeToDeformableNode references only node indices.
+// RodElementRotation's reference frame is relative to its target rotation, which already includes
+// the prefab placement.
 // ArticulatedSingleDof target/range values are also left unchanged here: a translational (prismatic
 // or free-translation) DoF's value is a distance that must scale, but that needs the referenced
 // actor's effective scale and per-DoF type, which are only available in AddConstraintsImpl (see
@@ -1044,6 +1055,7 @@ static void ApplyPrefabTransformToConstraint(
 template <class ParamsT>
 static constexpr bool kPrefabTransformNoOpConstraint =
     std::is_same_v<ParamsT, DeformableNodeToDeformableNodeConstraintPrefab> ||
+    std::is_same_v<ParamsT, RodElementRotationConstraintPrefab> ||
     std::is_same_v<ParamsT, ArticulatedSingleDofTargetConstraintPrefab> ||
     std::is_same_v<ParamsT, Articulated3dRotationTargetConstraintPrefab> ||
     std::is_same_v<ParamsT, ArticulatedSingleDofRangeConstraintPrefab> ||
@@ -1117,11 +1129,16 @@ static void AddConstraintsImpl(
           FindActorHandleForConstraint(path, params.rigidActorName, actorNames, error);
       params.deformableActor =
           FindActorHandleForConstraint(path, params.deformableActorName, actorNames, error);
+    } else if constexpr (std::is_same_v<ParamsT, RodElementRotationToRigidConstraintPrefab>) {
+      params.rigidActor =
+          FindActorHandleForConstraint(path, params.rigidActorName, actorNames, error);
+      params.rodActor = FindActorHandleForConstraint(path, params.rodActorName, actorNames, error);
     } else if constexpr (
         std::is_same_v<ParamsT, RigidPivotPositionConstraintPrefab> ||
         std::is_same_v<ParamsT, RigidPivotToRigidTargetConstraintPrefab> ||
         std::is_same_v<ParamsT, RigidPivotRotationConstraintPrefab> ||
         std::is_same_v<ParamsT, DeformableNodePositionConstraintPrefab> ||
+        std::is_same_v<ParamsT, RodElementRotationConstraintPrefab> ||
         std::is_same_v<ParamsT, ArticulatedSingleDofTargetConstraintPrefab> ||
         std::is_same_v<ParamsT, Articulated3dRotationTargetConstraintPrefab> ||
         std::is_same_v<ParamsT, ArticulatedSingleDofRangeConstraintPrefab> ||
@@ -1738,10 +1755,6 @@ static void AddToSceneImpl(
   // count. This guards against a new constraint type being silently dropped by a forgotten dispatch
   // call; the per-type ApplyPrefabTransformToConstraint / if-constexpr static_asserts only fire
   // once a type is actually dispatched, so they cannot catch an omitted call on their own.
-  // TODO(T280114669): RodElementRotationToRigid and RodElementRotation are the only real
-  // ConstraintTypes without prefab support. Add a constraint prefab, a ConstraintLists entry,
-  // actor-name resolution, transform handling for refFrameRotVec, and dispatch here if rod
-  // rotation constraints need to be authorable from prefab JSON.
   static_assert(
       static_cast<int>(ConstraintType::Count) == 17,
       "ConstraintType changed: review the prefab constraint dispatch below.");
@@ -1761,6 +1774,8 @@ static void AddToSceneImpl(
   AddConstraintsImpl(scene, params.name, outActorNames, worldFromPrefab, actorPrefabMetricScale, con.articulated3dRotationTarget, outResult.constraints, error);
   AddConstraintsImpl(scene, params.name, outActorNames, worldFromPrefab, actorPrefabMetricScale, con.articulatedSingleDofRange, outResult.constraints, error);
   AddConstraintsImpl(scene, params.name, outActorNames, worldFromPrefab, actorPrefabMetricScale, con.articulated3dRotationRange, outResult.constraints, error);
+  AddConstraintsImpl(scene, params.name, outActorNames, worldFromPrefab, actorPrefabMetricScale, con.rodElementRotation, outResult.constraints, error);
+  AddConstraintsImpl(scene, params.name, outActorNames, worldFromPrefab, actorPrefabMetricScale, con.rodElementRotationToRigid, outResult.constraints, error);
   MOCHI_ERROR_RETURN(error);
   // clang-format on
 

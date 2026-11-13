@@ -723,6 +723,39 @@
 /// @brief Name or hierarchy path identifying deformable actor B.
 ///
 
+/// @struct mochi::prefab::RodElementRotationConstraintPrefab
+///
+/// @brief Prefab parameters for a @ref mochi::RodElementRotationConstraintParams "RodElementRotationConstraintParams".
+///
+/// @note Actor name fields use the same naming convention as @ref mochi::prefab::PoseControllerPrefab "PoseControllerPrefab". "myActor" refers to an actor in this prefab. "myPrefab/myActor" refers to an actor in a nested prefab.
+/// @note A referenced actor name must identify exactly one existing actor. Actor names need not be unique, but referencing a name shared by more than one actor, or a name that matches no actor, is invalid and rejected at @ref mochi::prefab::AddToScene "AddToScene".
+/// @note @ref mochi::RodElementRotationConstraintParams::refFrameRotVec "RodElementRotationConstraintParams::refFrameRotVec" is relative to the target rotation, which already includes the prefab placement, so the prefab transform does not change it.
+///
+
+/// @var mochi::prefab::RodElementRotationConstraintPrefab::actorName
+///
+/// @brief Name or hierarchy path identifying the rod actor.
+///
+
+/// @struct mochi::prefab::RodElementRotationToRigidConstraintPrefab
+///
+/// @brief Prefab parameters for a @ref mochi::RodElementRotationToRigidConstraintParams "RodElementRotationToRigidConstraintParams".
+///
+/// @note Actor name fields use the same naming convention as @ref mochi::prefab::PoseControllerPrefab "PoseControllerPrefab". "myActor" refers to an actor in this prefab. "myPrefab/myActor" refers to an actor in a nested prefab.
+/// @note A referenced actor name must identify exactly one existing actor. Actor names need not be unique, but referencing a name shared by more than one actor, or a name that matches no actor, is invalid and rejected at @ref mochi::prefab::AddToScene "AddToScene".
+/// @note @ref mochi::RodElementRotationToRigidConstraintParams::refFrameRotVec "RodElementRotationToRigidConstraintParams::refFrameRotVec" is authored in the prefab frame and rotated into world coordinates.
+///
+
+/// @var mochi::prefab::RodElementRotationToRigidConstraintPrefab::rigidActorName
+///
+/// @brief Name or hierarchy path identifying the rigid actor.
+///
+
+/// @var mochi::prefab::RodElementRotationToRigidConstraintPrefab::rodActorName
+///
+/// @brief Name or hierarchy path identifying the rod actor.
+///
+
 /// @struct mochi::prefab::DeformableNodeToRigidConstraintPrefab
 ///
 /// @brief Prefab parameters for a @ref mochi::DeformableNodeToRigidConstraintParams "DeformableNodeToRigidConstraintParams".
@@ -959,6 +992,16 @@
 /// @var mochi::prefab::ConstraintLists::deformableNodeToDeformableNode
 ///
 /// @brief Constraints connecting two deformable actor nodes.
+///
+
+/// @var mochi::prefab::ConstraintLists::rodElementRotation
+///
+/// @brief World-rotation tracking constraints on rod elements.
+///
+
+/// @var mochi::prefab::ConstraintLists::rodElementRotationToRigid
+///
+/// @brief Relative-rotation tracking constraints between rod elements and rigid actors.
 ///
 
 /// @struct mochi::prefab::PoseControllerPrefab
@@ -3629,7 +3672,7 @@
 
 /// @var mochi::RodElementRotationConstraintParams::refFrameRotVec
 ///
-/// @brief Reference-frame orientation in world coordinates, expressed as a rotation vector [rad]. The constraint deviation is expressed in this frame.
+/// @brief Reference-frame orientation relative to the target rotation, expressed as a rotation vector [rad]. The constraint deviation is expressed in this frame.
 ///
 
 /// @var mochi::RodElementRotationConstraintParams::actor

@@ -2439,6 +2439,221 @@ TEST(Prefab, RodActor_AddToScene_PoseErrors) {
   expectError(pose, "RodPose::elementFrameAxes must have 3 values per element.");
 }
 
+TEST(Prefab, RodRotationConstraints_Serialization) {
+  std::string const json = R"({
+    "constraints": {
+      "rodElementRotation": [
+        {"actor": "Rod", "elementIndex": 2, "refFrameRotVec": [0.5, -0.25, 0.125], "stiffness": 4}
+      ],
+      "rodElementRotationToRigid": [
+        {"rigidActor": "Anchor", "rodActor": "Rod", "elementIndex": 1,
+         "refFrameRotVec": [-0.5, 0.25, 0.0625], "damping": 2}
+      ]
+    }
+  })";
+
+  prefab::RodElementRotationConstraintPrefab expectedRotation;
+  expectedRotation.actorName = "Rod";
+  expectedRotation.elementIndex = 2;
+  expectedRotation.refFrameRotVec = {0.5_r, -0.25_r, 0.125_r};
+  expectedRotation.stiffness = 4_r;
+  prefab::RodElementRotationToRigidConstraintPrefab expectedToRigid;
+  expectedToRigid.rigidActorName = "Anchor";
+  expectedToRigid.rodActorName = "Rod";
+  expectedToRigid.elementIndex = 1;
+  expectedToRigid.refFrameRotVec = {-0.5_r, 0.25_r, 0.0625_r};
+  expectedToRigid.damping = 2_r;
+
+  // If this fails, then a code change may break existing prefab files.
+  prefab::ScenePrefab const content = prefab::ShallowLoadFromJsonString(json, ExpectOK{});
+  ASSERT_EQ(1, isize(content.constraints.rodElementRotation));
+  ASSERT_EQ(1, isize(content.constraints.rodElementRotationToRigid));
+  EXPECT_EQ(expectedRotation, content.constraints.rodElementRotation[0]);
+  EXPECT_EQ(expectedToRigid, content.constraints.rodElementRotationToRigid[0]);
+
+  auto const json2 = prefab::SaveToJsonString(content, ExpectOK{});
+  EXPECT_EQ(content, prefab::ShallowLoadFromJsonString(json2, ExpectOK{}));
+}
+
+// A rod and a rotated rigid anchor; the rod rotation constraints are optional.
+[[nodiscard]] static prefab::ScenePrefab MakeRodAndAnchorPrefab(
+    std::string const& rodShapePath,
+    std::string const& cubeShapePath) {
+  prefab::ScenePrefab scenePrefab;
+  auto& rod = scenePrefab.actors.rod.push_back();
+  rod.name = "Rod";
+  rod.shapeFile = rodShapePath;
+  auto& anchor = scenePrefab.actors.rigid.push_back();
+  anchor.name = "Anchor";
+  anchor.shapeFile = cubeShapePath;
+  anchor.colliderType = ColliderType::None;
+  anchor.rotation = Quaternion::FromAxisAngle(Real3{1_r, 0_r, 0_r}, 0.4_r);
+  return scenePrefab;
+}
+
+template <ConstraintType kType>
+[[nodiscard]] static auto const& GetConstraintData(
+    Scene const* scene,
+    Constraint const* constraint) {
+  return assert_cast<SceneImpl const*>(scene)->GetRegistry().get<CConstraintData<kType> const>(
+      GetEntityUnchecked(constraint->GetHandle()));
+}
+
+// Rod rotation constraints from a prefab instantiated with rotation and scale match the same
+// constraints created directly through Scene. RodElementRotationToRigid's reference rotation is in
+// world coordinates, so it rotates with the placement; RodElementRotation's is relative to the
+// target rotation, so it does not.
+TEST(Prefab, RodRotationConstraints_MatchDirectCreation) {
+  auto* context = mochi::CreateContext(0);
+  MOCHI_DEFER(mochi::DestroyContext(context));
+  auto tempDir = CreateTempDirectory("prefab_rod_rotation_constraints_test", ExpectOK{});
+  auto const baseScenePrefab = MakeRodAndAnchorPrefab(
+      WriteStraightRodShapeFile(tempDir.Path()).path, WriteTetCubeShapeFile(tempDir.Path()));
+
+  Real3 const rotationRefFrame{0.1_r, -0.2_r, 0.3_r};
+  Real3 const toRigidRefFrame{-0.3_r, 0.2_r, 0.1_r};
+  auto withConstraints = baseScenePrefab;
+  auto& rotation = withConstraints.constraints.rodElementRotation.push_back();
+  rotation.actorName = "Rod";
+  rotation.elementIndex = 1;
+  rotation.refFrameRotVec = rotationRefFrame;
+  auto& toRigid = withConstraints.constraints.rodElementRotationToRigid.push_back();
+  toRigid.rigidActorName = "Anchor";
+  toRigid.rodActorName = "Rod";
+  toRigid.elementIndex = 0;
+  toRigid.refFrameRotVec = toRigidRefFrame;
+
+  prefab::PrefabParams params;
+  params.rotation = Quaternion::FromAxisAngle(Normalize(Real3{1_r, 1_r, 0_r}), 0.6_r);
+  params.translation = {1_r, 2_r, 3_r};
+  params.scale = 2_r;
+  auto addToScene = [&](Scene* scene,
+                        prefab::ScenePrefab const& scenePrefab,
+                        char const* file,
+                        prefab::PrefabParams const& placement) {
+    auto const path = tempDir.Path() / file;
+    prefab::SaveToJsonFile(scenePrefab, path.string(), ExpectOK{});
+    return prefab::AddToScene(path.string(), test::GetAssetsDir(), scene, placement, ExpectOK{});
+  };
+
+  auto* prefabScene = context->CreateScene("prefab");
+  MOCHI_DEFER(context->DestroyScene(prefabScene));
+  auto const result =
+      addToScene(prefabScene, withConstraints, "with_constraints.mochi_scene", params);
+  auto const prefabRotation = result.Filter(ConstraintType::RodElementRotation);
+  auto const prefabToRigid = result.Filter(ConstraintType::RodElementRotationToRigid);
+  ASSERT_EQ(1, isize(prefabRotation));
+  ASSERT_EQ(1, isize(prefabToRigid));
+
+  auto* directScene = context->CreateScene("direct");
+  MOCHI_DEFER(context->DestroyScene(directScene));
+  addToScene(directScene, baseScenePrefab, "without_constraints.mochi_scene", params);
+  auto toWorld = [&](Real3 const& refFrame) {
+    return (params.rotation * Quaternion::FromRotationVector(refFrame)).ToRotationVector();
+  };
+  RodElementRotationConstraintParams directRotationParams;
+  directRotationParams.actor = FindActorByName(directScene, "Rod");
+  directRotationParams.elementIndex = rotation.elementIndex;
+  directRotationParams.refFrameRotVec = rotationRefFrame;
+  Constraint* const directRotation =
+      directScene->CreateRodElementRotationConstraint(directRotationParams, ExpectOK{});
+  RodElementRotationToRigidConstraintParams directToRigidParams;
+  directToRigidParams.rigidActor = FindActorByName(directScene, "Anchor");
+  directToRigidParams.rodActor = FindActorByName(directScene, "Rod");
+  directToRigidParams.elementIndex = toRigid.elementIndex;
+  directToRigidParams.refFrameRotVec = toWorld(toRigidRefFrame);
+  Constraint* const directToRigid =
+      directScene->CreateRodElementRotationToRigidConstraint(directToRigidParams, ExpectOK{});
+
+  constexpr auto kRotation = ConstraintType::RodElementRotation;
+  constexpr auto kToRigid = ConstraintType::RodElementRotationToRigid;
+  auto const& prefabRotationData = GetConstraintData<kRotation>(prefabScene, prefabRotation[0]);
+  auto const& directRotationData = GetConstraintData<kRotation>(directScene, directRotation);
+  EXPECT_EQ(directRotationData.elementIndex, prefabRotationData.elementIndex);
+  EXPECT_NEAR_TOL(directRotationData.q0, prefabRotationData.q0, 1e-6_r);
+  auto const& prefabToRigidData = GetConstraintData<kToRigid>(prefabScene, prefabToRigid[0]);
+  auto const& directToRigidData = GetConstraintData<kToRigid>(directScene, directToRigid);
+  EXPECT_EQ(directToRigidData.elementIndex, prefabToRigidData.elementIndex);
+  EXPECT_NEAR_TOL(directToRigidData.q0, prefabToRigidData.q0, 1e-6_r);
+
+  // The targets also match: both scenes evolve identically.
+  prefabScene->Step(0.01);
+  directScene->Step(0.01);
+  EXPECT_TRUE(
+      test::NearEqualSpan(
+          directRotation->GetDeviation(), prefabRotation[0]->GetDeviation(), 1e-5_r));
+  EXPECT_TRUE(
+      test::NearEqualSpan(directToRigid->GetDeviation(), prefabToRigid[0]->GetDeviation(), 1e-5_r));
+
+  // The same twist of the rod reads the same RodElementRotation deviation at any placement.
+  auto twistedDeviation = [&](prefab::PrefabParams const& placement) {
+    auto* scene = context->CreateScene("twist");
+    MOCHI_DEFER(context->DestroyScene(scene));
+    auto const constraints = addToScene(scene, withConstraints, "twist.mochi_scene", placement)
+                                 .Filter(ConstraintType::RodElementRotation);
+    Actor* const rod = scene->GetActor(FindActorByName(scene, "Rod"));
+    auto const nodes = Unflatten<Real3 const>(rod->GetMesh().coordinates);
+    auto pose = test::GetRodPose(*rod);
+    auto const axes = Unflatten<Real3>(pose.elementFrameAxes);
+    for (int i = 0; i < isize(axes); ++i) {
+      Real3 const tangent = Normalize(nodes[i + 1] - nodes[i]);
+      axes[i] = TransformRT(Quaternion::FromAxisAngle(tangent, 0.2_r)).TransformDirection(axes[i]);
+    }
+    rod->SetRodPose(pose.displacements, pose.elementFrameAxes, ExpectOK{});
+    return constraints[0]->GetDeviation();
+  };
+  auto const identityDeviation = twistedDeviation({});
+  ASSERT_EQ(3, isize(identityDeviation));
+  EXPECT_NEAR(
+      0.2_r, Norm(Real3{identityDeviation[0], identityDeviation[1], identityDeviation[2]}), 1e-5_r);
+  EXPECT_TRUE(test::NearEqualSpan(identityDeviation, twistedDeviation(params), 1e-5_r));
+}
+
+TEST(Prefab, RodRotationConstraints_NameErrors) {
+  auto* context = mochi::CreateContext(0);
+  MOCHI_DEFER(mochi::DestroyContext(context));
+  auto tempDir = CreateTempDirectory("prefab_rod_rotation_constraint_errors_test", ExpectOK{});
+  auto baseScenePrefab = MakeRodAndAnchorPrefab(
+      WriteStraightRodShapeFile(tempDir.Path()).path, WriteTetCubeShapeFile(tempDir.Path()));
+  prefab::LoadShapes(baseScenePrefab, test::GetAssetsDir(), context, ExpectOK{});
+
+  auto expectError = [&](prefab::ScenePrefab const& scenePrefab, char const* expectedDescription) {
+    auto* scene = context->CreateScene("test");
+    MOCHI_DEFER(context->DestroyScene(scene));
+    auto const suppressError = test::SuppressLogError();
+    Error error;
+    prefab::AddToScene(scenePrefab, scene, {}, error);
+    EXPECT_STREQ(expectedDescription, error.GetDescription());
+  };
+  auto withRotation = [&](char const* actorName) {
+    auto scenePrefab = baseScenePrefab;
+    scenePrefab.constraints.rodElementRotation.push_back().actorName = actorName;
+    return scenePrefab;
+  };
+  auto withToRigid = [&](char const* rigidActorName, char const* rodActorName) {
+    auto scenePrefab = baseScenePrefab;
+    auto& constraint = scenePrefab.constraints.rodElementRotationToRigid.push_back();
+    constraint.rigidActorName = rigidActorName;
+    constraint.rodActorName = rodActorName;
+    return scenePrefab;
+  };
+  auto withDuplicateRod = [&](prefab::ScenePrefab scenePrefab) {
+    auto const rod = scenePrefab.actors.rod[0];
+    scenePrefab.actors.rod.push_back(rod);
+    return scenePrefab;
+  };
+
+  char const* const kMissing = "Failed to find actor referenced by constraint.";
+  char const* const kAmbiguous = "Ambiguous prefab actor name reference.";
+  expectError(withRotation("Missing"), kMissing);
+  expectError(withDuplicateRod(withRotation("Rod")), kAmbiguous);
+  expectError(withToRigid("Missing", "Rod"), kMissing);
+  expectError(withToRigid("Anchor", "Missing"), kMissing);
+  expectError(withDuplicateRod(withToRigid("Anchor", "Rod")), kAmbiguous);
+  expectError(withRotation("Anchor"), "Invalid rod actor type");
+  expectError(withToRigid("Anchor", "Anchor"), "Invalid rod actor type");
+}
+
 TEST_IF(MOCHI_ENABLE_ROM_ACTORS, Prefab, ExperimentalAddToScene_AppliesRomToAllSoftActors) {
   auto* context = mochi::CreateContext(0);
   MOCHI_DEFER(mochi::DestroyContext(context));

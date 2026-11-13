@@ -695,7 +695,7 @@
  * @ingroup prefabs_articulation
  */
 
-/* ---- Prefabs / Constraints (14) ---- */
+/* ---- Prefabs / Constraints (16) ---- */
 /**
  * @struct superdex::prefab::Articulated3dRotationRangeConstraintPrefab
  * @ingroup prefabs_constraints
@@ -750,6 +750,14 @@
  */
 /**
  * @struct superdex::prefab::RigidSphericalJointConstraintPrefab
+ * @ingroup prefabs_constraints
+ */
+/**
+ * @struct superdex::prefab::RodElementRotationConstraintPrefab
+ * @ingroup prefabs_constraints
+ */
+/**
+ * @struct superdex::prefab::RodElementRotationToRigidConstraintPrefab
  * @ingroup prefabs_constraints
  */
 

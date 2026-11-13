@@ -50,6 +50,8 @@ void mochi::DeclareMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_&
   registry.StoreClass(nb::class_<mochi::prefab::RigidSphericalJointConstraintPrefab, mochi::RigidSphericalJointConstraintParams>(m_prefab, "RigidSphericalJointConstraintPrefab", "Prefab parameters for a\n:class:`~superdex.physics.RigidSphericalJointConstraintParams`.\n\nNote:\n    Actor name fields use the same naming convention as\n    :class:`~superdex.physics.prefab.PoseControllerPrefab`. \"myActor\" refers to\n    an actor in this prefab. \"myPrefab/myActor\" refers to an actor in a nested\n    prefab.\n\nNote:\n    A referenced actor name must identify exactly one existing actor. Actor\n    names need not be unique, but referencing a name shared by more than one\n    actor, or a name that matches no actor, is invalid and rejected at\n    :func:`~superdex.physics.prefab.add_to_scene`."));
   registry.StoreClass(nb::class_<mochi::prefab::RigidPrismaticJointConstraintPrefab, mochi::RigidPrismaticJointConstraintParams>(m_prefab, "RigidPrismaticJointConstraintPrefab", "Prefab parameters for a\n:class:`~superdex.physics.RigidPrismaticJointConstraintParams`.\n\nNote:\n    Actor name fields use the same naming convention as\n    :class:`~superdex.physics.prefab.PoseControllerPrefab`. \"myActor\" refers to\n    an actor in this prefab. \"myPrefab/myActor\" refers to an actor in a nested\n    prefab.\n\nNote:\n    A referenced actor name must identify exactly one existing actor. Actor\n    names need not be unique, but referencing a name shared by more than one\n    actor, or a name that matches no actor, is invalid and rejected at\n    :func:`~superdex.physics.prefab.add_to_scene`."));
   registry.StoreClass(nb::class_<mochi::prefab::DeformableNodeToDeformableNodeConstraintPrefab, mochi::DeformableNodeToDeformableNodeConstraintParams>(m_prefab, "DeformableNodeToDeformableNodeConstraintPrefab", "Prefab parameters for a\n:class:`~superdex.physics.DeformableNodeToDeformableNodeConstraintParams`.\n\nNote:\n    Actor name fields use the same naming convention as\n    :class:`~superdex.physics.prefab.PoseControllerPrefab`. \"myActor\" refers to\n    an actor in this prefab. \"myPrefab/myActor\" refers to an actor in a nested\n    prefab.\n\nNote:\n    A referenced actor name must identify exactly one existing actor. Actor\n    names need not be unique, but referencing a name shared by more than one\n    actor, or a name that matches no actor, is invalid and rejected at\n    :func:`~superdex.physics.prefab.add_to_scene`."));
+  registry.StoreClass(nb::class_<mochi::prefab::RodElementRotationConstraintPrefab, mochi::RodElementRotationConstraintParams>(m_prefab, "RodElementRotationConstraintPrefab", "Prefab parameters for a\n:class:`~superdex.physics.RodElementRotationConstraintParams`.\n\nNote:\n    Actor name fields use the same naming convention as\n    :class:`~superdex.physics.prefab.PoseControllerPrefab`. \"myActor\" refers to\n    an actor in this prefab. \"myPrefab/myActor\" refers to an actor in a nested\n    prefab.\n\nNote:\n    A referenced actor name must identify exactly one existing actor. Actor\n    names need not be unique, but referencing a name shared by more than one\n    actor, or a name that matches no actor, is invalid and rejected at\n    :func:`~superdex.physics.prefab.add_to_scene`.\n\nNote:\n    :attr:`~superdex.physics.RodElementRotationConstraintParams.ref_frame_rot_vec`\n    is relative to the target rotation, which already includes the prefab\n    placement, so the prefab transform does not change it."));
+  registry.StoreClass(nb::class_<mochi::prefab::RodElementRotationToRigidConstraintPrefab, mochi::RodElementRotationToRigidConstraintParams>(m_prefab, "RodElementRotationToRigidConstraintPrefab", "Prefab parameters for a\n:class:`~superdex.physics.RodElementRotationToRigidConstraintParams`.\n\nNote:\n    Actor name fields use the same naming convention as\n    :class:`~superdex.physics.prefab.PoseControllerPrefab`. \"myActor\" refers to\n    an actor in this prefab. \"myPrefab/myActor\" refers to an actor in a nested\n    prefab.\n\nNote:\n    A referenced actor name must identify exactly one existing actor. Actor\n    names need not be unique, but referencing a name shared by more than one\n    actor, or a name that matches no actor, is invalid and rejected at\n    :func:`~superdex.physics.prefab.add_to_scene`.\n\nNote:\n    :attr:`~superdex.physics.RodElementRotationToRigidConstraintParams.ref_frame_rot_vec`\n    is authored in the prefab frame and rotated into world coordinates."));
   registry.StoreClass(nb::class_<mochi::prefab::DeformableNodeToRigidConstraintPrefab, mochi::DeformableNodeToRigidConstraintParams>(m_prefab, "DeformableNodeToRigidConstraintPrefab", "Prefab parameters for a\n:class:`~superdex.physics.DeformableNodeToRigidConstraintParams`.\n\nNote:\n    Actor name fields use the same naming convention as\n    :class:`~superdex.physics.prefab.PoseControllerPrefab`. \"myActor\" refers to\n    an actor in this prefab. \"myPrefab/myActor\" refers to an actor in a nested\n    prefab.\n\nNote:\n    A referenced actor name must identify exactly one existing actor. Actor\n    names need not be unique, but referencing a name shared by more than one\n    actor, or a name that matches no actor, is invalid and rejected at\n    :func:`~superdex.physics.prefab.add_to_scene`."));
   registry.StoreClass(nb::class_<mochi::prefab::JointRotationRangeConstraintPrefab, mochi::JointRotationRangeConstraintParams>(m_prefab, "JointRotationRangeConstraintPrefab", "Prefab parameters for a\n:class:`~superdex.physics.JointRotationRangeConstraintParams`.\n\nNote:\n    Actor name fields use the same naming convention as\n    :class:`~superdex.physics.prefab.PoseControllerPrefab`. \"myActor\" refers to\n    an actor in this prefab. \"myPrefab/myActor\" refers to an actor in a nested\n    prefab.\n\nNote:\n    A referenced actor name must identify exactly one existing actor. Actor\n    names need not be unique, but referencing a name shared by more than one\n    actor, or a name that matches no actor, is invalid and rejected at\n    :func:`~superdex.physics.prefab.add_to_scene`."));
   registry.StoreClass(nb::class_<mochi::prefab::RigidPivotPositionConstraintPrefab, mochi::RigidPivotPositionConstraintParams>(m_prefab, "RigidPivotPositionConstraintPrefab", "Prefab parameters for a\n:class:`~superdex.physics.RigidPivotPositionConstraintParams`.\n\nNote:\n    Actor name fields use the same naming convention as\n    :class:`~superdex.physics.prefab.PoseControllerPrefab`. \"myActor\" refers to\n    an actor in this prefab. \"myPrefab/myActor\" refers to an actor in a nested\n    prefab.\n\nNote:\n    A referenced actor name must identify exactly one existing actor. Actor\n    names need not be unique, but referencing a name shared by more than one\n    actor, or a name that matches no actor, is invalid and rejected at\n    :func:`~superdex.physics.prefab.add_to_scene`."));
@@ -732,6 +734,69 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_rw("actor_name_b", &mochi::prefab::DeformableNodeToDeformableNodeConstraintPrefab::actorNameB, "Name or hierarchy path identifying deformable actor B.")
   ;
 
+  registry.GetClass<mochi::prefab::RodElementRotationConstraintPrefab, mochi::RodElementRotationConstraintParams>()
+    .def("__init__", [](mochi::prefab::RodElementRotationConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object ref_frame_rot_vec, nb::object actor, nb::object element_index, nb::object actor_name) {
+      mochi::prefab::RodElementRotationConstraintPrefab result{};
+      result.stiffness = nb::cast<mochi::real>(stiffness);
+      result.damping = nb::cast<mochi::real>(damping);
+      result.saturation = nb::cast<mochi::real>(saturation);
+      result.refFrameRotVec = nb::cast<mochi::Real3>(ref_frame_rot_vec);
+      result.actor = nb::cast<mochi::ActorHandle>(actor);
+      result.elementIndex = nb::cast<int>(element_index);
+      result.actorName = nb::cast<mochi::DynamicString>(actor_name);
+      new (self) mochi::prefab::RodElementRotationConstraintPrefab(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("stiffness") = mochi::prefab::RodElementRotationConstraintPrefab{}.stiffness
+      , nb::arg("damping") = mochi::prefab::RodElementRotationConstraintPrefab{}.damping
+      , nb::arg("saturation") = mochi::prefab::RodElementRotationConstraintPrefab{}.saturation
+      , nb::arg("ref_frame_rot_vec").sig("...") = mochi::prefab::RodElementRotationConstraintPrefab{}.refFrameRotVec
+      , nb::arg("actor").sig("...") = mochi::prefab::RodElementRotationConstraintPrefab{}.actor
+      , nb::arg("element_index") = mochi::prefab::RodElementRotationConstraintPrefab{}.elementIndex
+      , nb::arg("actor_name") = mochi::prefab::RodElementRotationConstraintPrefab{}.actorName
+    )
+    .def(nb::init<>())
+    .def(nb::self == nb::self)
+    .def(nb::self != nb::self)
+    .def("__copy__", [](mochi::prefab::RodElementRotationConstraintPrefab const& self) { return mochi::prefab::RodElementRotationConstraintPrefab(self); })
+    .def("__deepcopy__", [](mochi::prefab::RodElementRotationConstraintPrefab const& self, nb::dict) { return mochi::prefab::RodElementRotationConstraintPrefab(self); })
+    .def_rw("actor_name", &mochi::prefab::RodElementRotationConstraintPrefab::actorName, "Name or hierarchy path identifying the rod actor.")
+  ;
+
+  registry.GetClass<mochi::prefab::RodElementRotationToRigidConstraintPrefab, mochi::RodElementRotationToRigidConstraintParams>()
+    .def("__init__", [](mochi::prefab::RodElementRotationToRigidConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object ref_frame_rot_vec, nb::object rigid_actor, nb::object rod_actor, nb::object element_index, nb::object rigid_actor_name, nb::object rod_actor_name) {
+      mochi::prefab::RodElementRotationToRigidConstraintPrefab result{};
+      result.stiffness = nb::cast<mochi::real>(stiffness);
+      result.damping = nb::cast<mochi::real>(damping);
+      result.saturation = nb::cast<mochi::real>(saturation);
+      result.refFrameRotVec = nb::cast<mochi::Real3>(ref_frame_rot_vec);
+      result.rigidActor = nb::cast<mochi::ActorHandle>(rigid_actor);
+      result.rodActor = nb::cast<mochi::ActorHandle>(rod_actor);
+      result.elementIndex = nb::cast<int>(element_index);
+      result.rigidActorName = nb::cast<mochi::DynamicString>(rigid_actor_name);
+      result.rodActorName = nb::cast<mochi::DynamicString>(rod_actor_name);
+      new (self) mochi::prefab::RodElementRotationToRigidConstraintPrefab(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("stiffness") = mochi::prefab::RodElementRotationToRigidConstraintPrefab{}.stiffness
+      , nb::arg("damping") = mochi::prefab::RodElementRotationToRigidConstraintPrefab{}.damping
+      , nb::arg("saturation") = mochi::prefab::RodElementRotationToRigidConstraintPrefab{}.saturation
+      , nb::arg("ref_frame_rot_vec").sig("...") = mochi::prefab::RodElementRotationToRigidConstraintPrefab{}.refFrameRotVec
+      , nb::arg("rigid_actor").sig("...") = mochi::prefab::RodElementRotationToRigidConstraintPrefab{}.rigidActor
+      , nb::arg("rod_actor").sig("...") = mochi::prefab::RodElementRotationToRigidConstraintPrefab{}.rodActor
+      , nb::arg("element_index") = mochi::prefab::RodElementRotationToRigidConstraintPrefab{}.elementIndex
+      , nb::arg("rigid_actor_name") = mochi::prefab::RodElementRotationToRigidConstraintPrefab{}.rigidActorName
+      , nb::arg("rod_actor_name") = mochi::prefab::RodElementRotationToRigidConstraintPrefab{}.rodActorName
+    )
+    .def(nb::init<>())
+    .def(nb::self == nb::self)
+    .def(nb::self != nb::self)
+    .def("__copy__", [](mochi::prefab::RodElementRotationToRigidConstraintPrefab const& self) { return mochi::prefab::RodElementRotationToRigidConstraintPrefab(self); })
+    .def("__deepcopy__", [](mochi::prefab::RodElementRotationToRigidConstraintPrefab const& self, nb::dict) { return mochi::prefab::RodElementRotationToRigidConstraintPrefab(self); })
+    .def_rw("rigid_actor_name", &mochi::prefab::RodElementRotationToRigidConstraintPrefab::rigidActorName, "Name or hierarchy path identifying the rigid actor.")
+    .def_rw("rod_actor_name", &mochi::prefab::RodElementRotationToRigidConstraintPrefab::rodActorName, "Name or hierarchy path identifying the rod actor.")
+  ;
+
   registry.GetClass<mochi::prefab::DeformableNodeToRigidConstraintPrefab, mochi::DeformableNodeToRigidConstraintParams>()
     .def("__init__", [](mochi::prefab::DeformableNodeToRigidConstraintPrefab* self, nb::object stiffness, nb::object damping, nb::object saturation, nb::object rigid_local_pos, nb::object deformable_node_index, nb::object rigid_actor, nb::object deformable_actor, nb::object find_closest, nb::object fix_to_deformable_pos, nb::object rigid_actor_name, nb::object deformable_actor_name) {
       mochi::prefab::DeformableNodeToRigidConstraintPrefab result{};
@@ -1083,7 +1148,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
   ;
 
   registry.GetClass<mochi::prefab::ConstraintLists>()
-    .def("__init__", [](mochi::prefab::ConstraintLists* self, nb::object comment, nb::object articulated3d_rotation_range, nb::object articulated_single_dof_range, nb::object articulated3d_rotation_target, nb::object articulated_single_dof_target, nb::object joint_rotation_range, nb::object joint_rotation_tracking, nb::object rigid_pivot_position, nb::object rigid_pivot_to_rigid_target, nb::object rigid_pivot_rotation, nb::object rigid_prismatic_joint, nb::object rigid_spherical_joint, nb::object deformable_node_position, nb::object deformable_node_to_rigid, nb::object deformable_node_to_deformable_node) {
+    .def("__init__", [](mochi::prefab::ConstraintLists* self, nb::object comment, nb::object articulated3d_rotation_range, nb::object articulated_single_dof_range, nb::object articulated3d_rotation_target, nb::object articulated_single_dof_target, nb::object joint_rotation_range, nb::object joint_rotation_tracking, nb::object rigid_pivot_position, nb::object rigid_pivot_to_rigid_target, nb::object rigid_pivot_rotation, nb::object rigid_prismatic_joint, nb::object rigid_spherical_joint, nb::object deformable_node_position, nb::object deformable_node_to_rigid, nb::object deformable_node_to_deformable_node, nb::object rod_element_rotation, nb::object rod_element_rotation_to_rigid) {
       mochi::prefab::ConstraintLists result{};
       result.comment = nb::cast<std::optional<mochi::DynamicString>>(comment);
       result.articulated3dRotationRange = nb::cast<mochi::DynamicArray<mochi::prefab::Articulated3dRotationRangeConstraintPrefab>>(articulated3d_rotation_range);
@@ -1100,6 +1165,8 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
       result.deformableNodePosition = nb::cast<mochi::DynamicArray<mochi::prefab::DeformableNodePositionConstraintPrefab>>(deformable_node_position);
       result.deformableNodeToRigid = nb::cast<mochi::DynamicArray<mochi::prefab::DeformableNodeToRigidConstraintPrefab>>(deformable_node_to_rigid);
       result.deformableNodeToDeformableNode = nb::cast<mochi::DynamicArray<mochi::prefab::DeformableNodeToDeformableNodeConstraintPrefab>>(deformable_node_to_deformable_node);
+      result.rodElementRotation = nb::cast<mochi::DynamicArray<mochi::prefab::RodElementRotationConstraintPrefab>>(rod_element_rotation);
+      result.rodElementRotationToRigid = nb::cast<mochi::DynamicArray<mochi::prefab::RodElementRotationToRigidConstraintPrefab>>(rod_element_rotation_to_rigid);
       new (self) mochi::prefab::ConstraintLists(std::move(result));
     }
       , nb::kw_only()
@@ -1118,6 +1185,8 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
       , nb::arg("deformable_node_position").sig("...") = mochi::prefab::ConstraintLists{}.deformableNodePosition
       , nb::arg("deformable_node_to_rigid").sig("...") = mochi::prefab::ConstraintLists{}.deformableNodeToRigid
       , nb::arg("deformable_node_to_deformable_node").sig("...") = mochi::prefab::ConstraintLists{}.deformableNodeToDeformableNode
+      , nb::arg("rod_element_rotation").sig("...") = mochi::prefab::ConstraintLists{}.rodElementRotation
+      , nb::arg("rod_element_rotation_to_rigid").sig("...") = mochi::prefab::ConstraintLists{}.rodElementRotationToRigid
     )
     .def(nb::init<>())
     .def(nb::self == nb::self)
@@ -1139,6 +1208,8 @@ void mochi::DefineMochiPhysics_MochiPhysicsPrefab([[maybe_unused]] nb::module_& 
     .def_prop_rw("deformable_node_position", [](mochi::prefab::ConstraintLists& self) -> mochi::DynamicArray<mochi::prefab::DeformableNodePositionConstraintPrefab>& { return self.deformableNodePosition; }, [](mochi::prefab::ConstraintLists& self, nb::object val) { self.deformableNodePosition = nb::cast<mochi::DynamicArray<mochi::prefab::DeformableNodePositionConstraintPrefab>>(val); }, "Position constraints on a deformable actor node.")
     .def_prop_rw("deformable_node_to_rigid", [](mochi::prefab::ConstraintLists& self) -> mochi::DynamicArray<mochi::prefab::DeformableNodeToRigidConstraintPrefab>& { return self.deformableNodeToRigid; }, [](mochi::prefab::ConstraintLists& self, nb::object val) { self.deformableNodeToRigid = nb::cast<mochi::DynamicArray<mochi::prefab::DeformableNodeToRigidConstraintPrefab>>(val); }, "Constraints connecting a deformable node to a rigid actor.")
     .def_prop_rw("deformable_node_to_deformable_node", [](mochi::prefab::ConstraintLists& self) -> mochi::DynamicArray<mochi::prefab::DeformableNodeToDeformableNodeConstraintPrefab>& { return self.deformableNodeToDeformableNode; }, [](mochi::prefab::ConstraintLists& self, nb::object val) { self.deformableNodeToDeformableNode = nb::cast<mochi::DynamicArray<mochi::prefab::DeformableNodeToDeformableNodeConstraintPrefab>>(val); }, "Constraints connecting two deformable actor nodes.")
+    .def_prop_rw("rod_element_rotation", [](mochi::prefab::ConstraintLists& self) -> mochi::DynamicArray<mochi::prefab::RodElementRotationConstraintPrefab>& { return self.rodElementRotation; }, [](mochi::prefab::ConstraintLists& self, nb::object val) { self.rodElementRotation = nb::cast<mochi::DynamicArray<mochi::prefab::RodElementRotationConstraintPrefab>>(val); }, "World-rotation tracking constraints on rod elements.")
+    .def_prop_rw("rod_element_rotation_to_rigid", [](mochi::prefab::ConstraintLists& self) -> mochi::DynamicArray<mochi::prefab::RodElementRotationToRigidConstraintPrefab>& { return self.rodElementRotationToRigid; }, [](mochi::prefab::ConstraintLists& self, nb::object val) { self.rodElementRotationToRigid = nb::cast<mochi::DynamicArray<mochi::prefab::RodElementRotationToRigidConstraintPrefab>>(val); }, "Relative-rotation tracking constraints between rod elements and rigid actors.")
   ;
 
   registry.GetClass<mochi::prefab::PoseControllerPrefab>()

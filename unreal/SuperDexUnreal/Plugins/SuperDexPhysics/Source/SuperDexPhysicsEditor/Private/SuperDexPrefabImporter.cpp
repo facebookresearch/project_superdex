@@ -237,7 +237,8 @@ bool HasConstraints(const mochi::prefab::ConstraintLists& C) {
       !C.rigidPivotPosition.empty() || !C.rigidPivotToRigidTarget.empty() ||
       !C.rigidPivotRotation.empty() || !C.rigidPrismaticJoint.empty() ||
       !C.rigidSphericalJoint.empty() || !C.deformableNodePosition.empty() ||
-      !C.deformableNodeToRigid.empty() || !C.deformableNodeToDeformableNode.empty();
+      !C.deformableNodeToRigid.empty() || !C.deformableNodeToDeformableNode.empty() ||
+      !C.rodElementRotation.empty() || !C.rodElementRotationToRigid.empty();
 }
 
 // The files a prefab references directly (nested prefabs excluded), as written in the prefab.

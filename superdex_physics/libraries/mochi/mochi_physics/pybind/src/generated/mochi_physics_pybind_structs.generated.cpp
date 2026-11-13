@@ -888,7 +888,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsStructs([[maybe_unused]] nb::module_&
     .def(nb::self != nb::self)
     .def("__copy__", [](mochi::RodElementRotationConstraintParams const& self) { return mochi::RodElementRotationConstraintParams(self); })
     .def("__deepcopy__", [](mochi::RodElementRotationConstraintParams const& self, nb::dict) { return mochi::RodElementRotationConstraintParams(self); })
-    .def_prop_rw("ref_frame_rot_vec", [](mochi::RodElementRotationConstraintParams& self) -> mochi::Real3& { return self.refFrameRotVec; }, [](mochi::RodElementRotationConstraintParams& self, nb::object val) { self.refFrameRotVec = nb::cast<mochi::Real3>(val); }, "Reference-frame orientation in world coordinates, expressed as a rotation vector\n[rad]. The constraint deviation is expressed in this frame.")
+    .def_prop_rw("ref_frame_rot_vec", [](mochi::RodElementRotationConstraintParams& self) -> mochi::Real3& { return self.refFrameRotVec; }, [](mochi::RodElementRotationConstraintParams& self, nb::object val) { self.refFrameRotVec = nb::cast<mochi::Real3>(val); }, "Reference-frame orientation relative to the target rotation, expressed as a\nrotation vector [rad]. The constraint deviation is expressed in this frame.")
     .def_rw("actor", &mochi::RodElementRotationConstraintParams::actor, "Actor handle identifying the rod actor.")
     .def_rw("element_index", &mochi::RodElementRotationConstraintParams::elementIndex, "Index of the element in the rod actor.")
   ;

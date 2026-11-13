@@ -119,6 +119,8 @@ namespace mochi {
     DefDynamicArray<mochi::prefab::RigidPrismaticJointConstraintPrefab>(m_prefab, "DynamicArrayRigidPrismaticJointConstraintPrefab");
     DefDynamicArray<mochi::prefab::RigidSphericalJointConstraintPrefab>(m_prefab, "DynamicArrayRigidSphericalJointConstraintPrefab");
     DefDynamicArray<mochi::prefab::RodActorPrefab>(m_prefab, "DynamicArrayRodActorPrefab");
+    DefDynamicArray<mochi::prefab::RodElementRotationConstraintPrefab>(m_prefab, "DynamicArrayRodElementRotationConstraintPrefab");
+    DefDynamicArray<mochi::prefab::RodElementRotationToRigidConstraintPrefab>(m_prefab, "DynamicArrayRodElementRotationToRigidConstraintPrefab");
     DefDynamicArray<mochi::RoutingElement>(m, "DynamicArrayRoutingElement");
     DefDynamicArray<mochi::SoftActorParams>(m, "DynamicArraySoftActorParams");
     DefDynamicArray<mochi::prefab::SoftActorPrefab>(m_prefab, "DynamicArraySoftActorPrefab");

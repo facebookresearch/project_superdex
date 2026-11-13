@@ -366,6 +366,24 @@ struct Articulated3dRotationRangeConstraintPrefab
 #endif
 };
 
+struct RodElementRotationConstraintPrefab : public RodElementRotationConstraintParams {
+  DynamicString actorName{};
+
+#if MOCHI_LANGUAGE_CPP20
+  bool operator==(RodElementRotationConstraintPrefab const&) const = default;
+#endif
+};
+
+struct RodElementRotationToRigidConstraintPrefab
+    : public RodElementRotationToRigidConstraintParams {
+  DynamicString rigidActorName{};
+  DynamicString rodActorName{};
+
+#if MOCHI_LANGUAGE_CPP20
+  bool operator==(RodElementRotationToRigidConstraintPrefab const&) const = default;
+#endif
+};
+
 /////////////////
 
 struct ConstraintLists {
@@ -384,6 +402,8 @@ struct ConstraintLists {
   DynamicArray<DeformableNodePositionConstraintPrefab> deformableNodePosition{};
   DynamicArray<DeformableNodeToRigidConstraintPrefab> deformableNodeToRigid{};
   DynamicArray<DeformableNodeToDeformableNodeConstraintPrefab> deformableNodeToDeformableNode{};
+  DynamicArray<RodElementRotationConstraintPrefab> rodElementRotation{};
+  DynamicArray<RodElementRotationToRigidConstraintPrefab> rodElementRotationToRigid{};
 
 #if MOCHI_LANGUAGE_CPP20
   bool operator==(ConstraintLists const&) const = default;

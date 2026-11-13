@@ -641,6 +641,39 @@ struct prefab::DeformableNodeToDeformableNodeConstraintPrefab(DeformableNodeToDe
   String actorNameB [reflection_name("actorB")];
 }
 
+// @brief Prefab parameters for a @ref RodElementRotationConstraintParams.
+//
+// @note Actor name fields use the same naming convention as @ref PoseControllerPrefab.
+// "myActor" refers to an actor in this prefab. "myPrefab/myActor" refers to an actor
+// in a nested prefab.
+// @note A referenced actor name must identify exactly one existing actor. Actor names need not be
+// unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+// is invalid and rejected at @ref AddToScene.
+// @note @ref RodElementRotationConstraintParams::refFrameRotVec is relative to the target rotation,
+// which already includes the prefab placement, so the prefab transform does not change it.
+struct prefab::RodElementRotationConstraintPrefab(RodElementRotationConstraintParams) [equality(default)] {
+  // @brief Name or hierarchy path identifying the rod actor.
+  String actorName [reflection_name("actor")];
+}
+
+// @brief Prefab parameters for a @ref RodElementRotationToRigidConstraintParams.
+//
+// @note Actor name fields use the same naming convention as @ref PoseControllerPrefab.
+// "myActor" refers to an actor in this prefab. "myPrefab/myActor" refers to an actor
+// in a nested prefab.
+// @note A referenced actor name must identify exactly one existing actor. Actor names need not be
+// unique, but referencing a name shared by more than one actor, or a name that matches no actor,
+// is invalid and rejected at @ref AddToScene.
+// @note @ref RodElementRotationToRigidConstraintParams::refFrameRotVec is authored in the prefab
+// frame and rotated into world coordinates.
+struct prefab::RodElementRotationToRigidConstraintPrefab(RodElementRotationToRigidConstraintParams) [equality(default)] {
+  // @brief Name or hierarchy path identifying the rigid actor.
+  String rigidActorName [reflection_name("rigidActor")];
+
+  // @brief Name or hierarchy path identifying the rod actor.
+  String rodActorName [reflection_name("rodActor")];
+}
+
 // @brief Prefab parameters for a @ref DeformableNodeToRigidConstraintParams.
 //
 // @note Actor name fields use the same naming convention as @ref PoseControllerPrefab.
@@ -839,6 +872,12 @@ struct prefab::ConstraintLists [equality(default)] {
 
   // @brief Constraints connecting two deformable actor nodes.
   DynamicArray<prefab::DeformableNodeToDeformableNodeConstraintPrefab> deformableNodeToDeformableNode;
+
+  // @brief World-rotation tracking constraints on rod elements.
+  DynamicArray<prefab::RodElementRotationConstraintPrefab> rodElementRotation;
+
+  // @brief Relative-rotation tracking constraints between rod elements and rigid actors.
+  DynamicArray<prefab::RodElementRotationToRigidConstraintPrefab> rodElementRotationToRigid;
 }
 
 // @brief Prefab parameters for an articulated pose controller.
