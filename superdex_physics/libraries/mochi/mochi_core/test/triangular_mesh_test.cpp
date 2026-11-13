@@ -113,14 +113,14 @@ TEST(TriangularMesh, Cube) {
   };
   std::vector<Int2> actualEdges(mesh.GetEdges().begin(), mesh.GetEdges().end());
   for (Int2 edge : actualEdges) {
-    std::sort(edge.begin(), edge.end());
+    std::ranges::sort(edge);
   }
 
   auto int2_less = [](Int2 const& a, Int2 const& b) {
     return (a[0] < b[0]) || (a[0] == b[0] && a[1] < b[1]);
   };
-  std::sort(actualEdges.begin(), actualEdges.end(), int2_less);
-  std::sort(expectedEdges.begin(), expectedEdges.end(), int2_less);
+  std::ranges::sort(actualEdges, int2_less);
+  std::ranges::sort(expectedEdges, int2_less);
   EXPECT_SPAN_EQ(expectedEdges, actualEdges);
 
   // Boundary edges (none because it is a closed triangle)
@@ -229,22 +229,22 @@ TEST(TriangularMesh, Single) {
   std::vector<Int2> expectedEdges = {Int2{0, 1}, Int2{0, 2}, Int2{1, 2}};
   std::vector<Int2> actualEdges(mesh.GetEdges().begin(), mesh.GetEdges().end());
   for (Int2& edge : actualEdges) {
-    std::sort(edge.begin(), edge.end());
+    std::ranges::sort(edge);
   }
 
   auto int2_less = [](Int2 const& a, Int2 const& b) {
     return (a[0] < b[0]) || (a[0] == b[0] && a[1] < b[1]);
   };
-  std::sort(actualEdges.begin(), actualEdges.end(), int2_less);
+  std::ranges::sort(actualEdges, int2_less);
   EXPECT_SPAN_EQ(expectedEdges, actualEdges);
 
   // Boundary edges (all 3 of them)
   std::vector<Int2> actualBoundaryEdges(
       mesh.GetBoundaryEdges().begin(), mesh.GetBoundaryEdges().end());
   for (Int2& edge : actualBoundaryEdges) {
-    std::sort(edge.begin(), edge.end());
+    std::ranges::sort(edge);
   }
-  std::sort(actualBoundaryEdges.begin(), actualBoundaryEdges.end(), int2_less);
+  std::ranges::sort(actualBoundaryEdges, int2_less);
   EXPECT_SPAN_EQ(expectedEdges, actualBoundaryEdges);
 
   EXPECT_EQ(Real3(0_r, 0_r, 0_r), mesh.GetAabb().GetMin());

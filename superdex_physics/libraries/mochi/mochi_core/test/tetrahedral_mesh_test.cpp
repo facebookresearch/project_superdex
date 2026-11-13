@@ -99,28 +99,28 @@ TEST(TetrahedralMesh, Cube) {
   // Sorted, unique subset of elements
   {
     mesh.UniqueNodesInElements(std::vector<int>{0, 3, 4}, nodesInElems);
-    std::sort(nodesInElems.begin(), nodesInElems.end());
+    std::ranges::sort(nodesInElems);
     EXPECT_SPAN_EQ(MakeConstSpan(std::vector<int>{0, 2, 3, 4, 5, 6}), nodesInElems);
   }
 
   // Unsorted, unique subset of elements
   {
     mesh.UniqueNodesInElements(std::vector<int>{4, 0, 2}, nodesInElems);
-    std::sort(nodesInElems.begin(), nodesInElems.end());
+    std::ranges::sort(nodesInElems);
     EXPECT_SPAN_EQ(MakeConstSpan(std::vector<int>{0, 1, 2, 3, 5, 6}), nodesInElems);
   }
 
   // Unsorted, non-unique subset of elements
   {
     mesh.UniqueNodesInElements(std::vector<int>{4, 0, 4, 2, 4, 2}, nodesInElems);
-    std::sort(nodesInElems.begin(), nodesInElems.end());
+    std::ranges::sort(nodesInElems);
     EXPECT_SPAN_EQ(MakeConstSpan(std::vector<int>{0, 1, 2, 3, 5, 6}), nodesInElems);
   }
 
   // All elements
   {
     mesh.UniqueNodesInElements(std::vector<int>{0, 1, 2, 3, 4}, nodesInElems);
-    std::sort(nodesInElems.begin(), nodesInElems.end());
+    std::ranges::sort(nodesInElems);
     EXPECT_SPAN_EQ(MakeConstSpan(std::vector<int>{0, 1, 2, 3, 4, 5, 6, 7}), nodesInElems);
   }
 
@@ -151,22 +151,22 @@ TEST(TetrahedralMesh, Cube) {
   };
   std::vector<Int2> actualEdges(mesh.GetEdges().begin(), mesh.GetEdges().end());
   for (Int2 edge : actualEdges) {
-    std::sort(edge.begin(), edge.end());
+    std::ranges::sort(edge);
   }
 
   auto int2_less = [](Int2 const& a, Int2 const& b) {
     return (a[0] < b[0]) || (a[0] == b[0] && a[1] < b[1]);
   };
-  std::sort(actualEdges.begin(), actualEdges.end(), int2_less);
-  std::sort(expectedEdges.begin(), expectedEdges.end(), int2_less);
+  std::ranges::sort(actualEdges, int2_less);
+  std::ranges::sort(expectedEdges, int2_less);
   EXPECT_SPAN_EQ(expectedEdges, actualEdges);
 
   // Boundary edges (all edges are boundary edges in this mesh)
   std::vector<Int2> actualBoundaryEdges(mesh.GetEdges().begin(), mesh.GetEdges().end());
   for (Int2 edge : actualBoundaryEdges) {
-    std::sort(edge.begin(), edge.end());
+    std::ranges::sort(edge);
   }
-  std::sort(actualBoundaryEdges.begin(), actualBoundaryEdges.end(), int2_less);
+  std::ranges::sort(actualBoundaryEdges, int2_less);
   EXPECT_SPAN_EQ(expectedEdges, actualBoundaryEdges);
 
   // Element barycenters
@@ -220,10 +220,10 @@ TEST(TetrahedralMesh, Cube) {
     std::sort(actualBoundaryFaces[i].begin(), actualBoundaryFaces[i].end());
   }
   auto int3_less = [](Int3 const& a, Int3 const& b) {
-    return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
+    return std::ranges::lexicographical_compare(a, b);
   };
-  std::sort(expectedBoundaryFaces.begin(), expectedBoundaryFaces.end(), int3_less);
-  std::sort(actualBoundaryFaces.begin(), actualBoundaryFaces.end(), int3_less);
+  std::ranges::sort(expectedBoundaryFaces, int3_less);
+  std::ranges::sort(actualBoundaryFaces, int3_less);
   EXPECT_SPAN_EQ(MakeSpan(expectedBoundaryFaces), MakeSpan(actualBoundaryFaces));
 
   // The test above did not consider the winding order. Now, lets verify that all the
