@@ -246,6 +246,7 @@ TEST_F(IKPreviewTest, Step_LivePoseUpdatesWarmStartAndStopRestoresSeed) {
   IKPreviewSession session;
   std::string diagnostic;
   ASSERT_TRUE(session.Prepare(bot, diagnostic));
+  uint64_t solves = session.GetSolveCount();
   for (real const angle : {0.4_r, -0.2_r, 0.3_r}) {
     SetIKGoalConstraintTransform(spec.goals[0], Expected({}, angle, 0.3_r)[kTip]);
     ASSERT_TRUE(session.Step(_context, _loader, spec, diagnostic)) << diagnostic;
@@ -255,15 +256,24 @@ TEST_F(IKPreviewTest, Step_LivePoseUpdatesWarmStartAndStopRestoresSeed) {
     ExpectLinks(session.GetOutputBotWorldFromLinks(), Expected(bot.worldFromRoot, angle, 0.3_r));
     EXPECT_EQ(session.GetWorldFrameFromOutputBaseFrame(), bot.worldFromRoot);
     EXPECT_GE(session.GetLastSolveMilliseconds(), 0);
+    // Each published solve reports the native nonlinear solver's own iteration count and status.
+    EXPECT_EQ(session.GetSolveCount(), ++solves);
+    EXPECT_GE(session.GetLastSolveIterations(), 1);
+    EXPECT_LE(session.GetLastSolveIterations(), spec.createParams.solverParams.maxIter);
+    EXPECT_NE(session.GetLastSolveConvergence(), ConvergenceStatus::None);
   }
   auto const solved = session.GetOutputBotWorldFromLinks();
   spec.goals[0].enabled = false;
   ASSERT_TRUE(session.Step(_context, _loader, spec, diagnostic));
   EXPECT_EQ(session.GetStatus(), "No Active Goals");
   EXPECT_EQ(session.GetLastSolveMilliseconds(), 0);
+  EXPECT_EQ(session.GetLastSolveIterations(), 0);
+  EXPECT_EQ(session.GetLastSolveConvergence(), ConvergenceStatus::None);
+  EXPECT_EQ(session.GetSolveCount(), solves);
   EXPECT_EQ(session.GetOutputBotWorldFromLinks(), solved);
   session.Stop();
   EXPECT_FALSE(session.HasSolver());
+  EXPECT_EQ(session.GetSolveCount(), solves);
   EXPECT_EQ(session.GetOutputBotJointPositions(), bot.defaultPose);
   ExpectLinks(session.GetOutputBotWorldFromLinks(), Expected(bot.worldFromRoot, 0.15_r, 0.1_r));
   spec.goals[0].enabled = true;

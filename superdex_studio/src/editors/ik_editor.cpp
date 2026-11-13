@@ -16,6 +16,7 @@
 
 #include "editors/ik_editor.h"
 #include <imgui_internal.h>
+#include <implot.h>
 #include "app/app.h"
 #include "assets/asset_manager.h"
 #include "assets/bot_asset.h"
@@ -35,6 +36,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdio>
 #include <limits>
 #include <string_view>
 
@@ -46,6 +48,33 @@ constexpr float kGoalMarkerRadius = 0.012f;
 constexpr mochi::real kDefaultOutputLinkAxisLength = mochi::real(0.08);
 constexpr mochi::real kGoalAxisRatio = mochi::real(0.8);
 constexpr int kInputBotSelection = -2;
+// Solve plot history cap (~55 min at the 60 Hz preview rate); the oldest tenth is dropped when
+// full.
+constexpr size_t kMaxSolvePlotSamples = 200'000;
+constexpr float kSolvePlotLineWeight = 2.0f;
+
+char const* ConvergenceLabel(mochi::ConvergenceStatus status) {
+  switch (status) {
+    case mochi::ConvergenceStatus::Converged:
+      return "converged";
+    case mochi::ConvergenceStatus::Stopped:
+      return "stopped before converging";
+    case mochi::ConvergenceStatus::Diverged:
+      return "diverged";
+    default:
+      return "no status";
+  }
+}
+
+bool IsUnconverged(mochi::ConvergenceStatus status) {
+  return status == mochi::ConvergenceStatus::Stopped ||
+      status == mochi::ConvergenceStatus::Diverged;
+}
+
+template <typename T>
+void DropOldest(std::vector<T>& values, size_t count) {
+  values.erase(values.begin(), values.begin() + static_cast<std::ptrdiff_t>(count));
+}
 
 // Picker choices only; native ValidateIKJointCouplings remains the binding authority.
 bool CouplingJointChoice(robotics::BotPrefab const& bot, size_t joint) {
@@ -1417,6 +1446,7 @@ void IKEditor::SolveOnce() {
   }
   _previewDiagnostic.clear();
   ApplyPreviewPose();
+  RecordSolveSample();
 }
 
 void IKEditor::OnHandleInputs() {
@@ -1663,6 +1693,7 @@ std::vector<AssetEditor::WindowDeclaration> IKEditor::GetDefaultWindows() {
   return {
       {"IK Goals", true, DockRegion::SidePanelTop, false},
       {"IK Solver", true, DockRegion::SidePanelBottom, false},
+      {"IK Solve Plots", true, DockRegion::BottomBar, false},
       MeasureWindowDeclaration()};
 }
 
@@ -1677,6 +1708,9 @@ void IKEditor::ShowAuxiliaryWindows() {
   }
   if (bool& open = _studio->GetWindowVisible("IK Solver")) {
     ShowSolverWindow(&open);
+  }
+  if (bool& open = _studio->GetWindowVisible("IK Solve Plots")) {
+    ShowSolvePlotsWindow(&open);
   }
   ShowMeasureWindow();
 }
@@ -2278,6 +2312,183 @@ void IKEditor::ShowSolverWindow(bool* open) {
   ImGui::End();
 }
 
+void IKEditor::ClearSolvePlots() {
+  _solvePlots = {};
+  // Start from the preview's current count: only solves after the clear are plotted.
+  _plottedSolveCount = _preview.GetSolveCount();
+  _solvePlotMin = 0;
+  _solvePlotMax = 1;
+}
+
+void IKEditor::RecordSolveSample() {
+  uint64_t const count = _preview.GetSolveCount();
+  if (count == _plottedSolveCount) {
+    return;
+  }
+  _plottedSolveCount = count;
+  auto& plots = _solvePlots;
+  if (plots.solves.size() >= kMaxSolvePlotSamples) {
+    size_t const drop = kMaxSolvePlotSamples / 10;
+    double const firstKept = plots.solves[drop];
+    DropOldest(plots.solves, drop);
+    DropOldest(plots.milliseconds, drop);
+    DropOldest(plots.iterations, drop);
+    auto const kept =
+        std::lower_bound(plots.unconvergedSolves.begin(), plots.unconvergedSolves.end(), firstKept);
+    size_t const unconvergedDrop = static_cast<size_t>(kept - plots.unconvergedSolves.begin());
+    DropOldest(plots.unconvergedSolves, unconvergedDrop);
+    DropOldest(plots.unconvergedIterations, unconvergedDrop);
+  }
+  double const solve = plots.nextSolve;
+  plots.nextSolve += 1;
+  double const iterations = _preview.GetLastSolveIterations();
+  plots.solves.push_back(solve);
+  plots.milliseconds.push_back(_preview.GetLastSolveMilliseconds());
+  plots.iterations.push_back(iterations);
+  plots.lastConvergence = _preview.GetLastSolveConvergence();
+  if (IsUnconverged(plots.lastConvergence)) {
+    plots.unconvergedSolves.push_back(solve);
+    plots.unconvergedIterations.push_back(iterations);
+  }
+}
+
+void IKEditor::ShowSolvePlotsWindow(bool* open) {
+  // Layouts saved before this window existed have no place for it: on first use, tab it with the
+  // bottom bar's Log Console instead of floating it over the viewport. Saved placements win.
+  if (ImGuiWindow const* logConsole = ImGui::FindWindowByName("Log Console");
+      logConsole && logConsole->DockId != 0) {
+    ImGui::SetNextWindowDockID(logConsole->DockId, ImGuiCond_FirstUseEver);
+  }
+  if (!ImGui::Begin("IK Solve Plots", open)) {
+    ImGui::End();
+    return;
+  }
+  auto const& plots = _solvePlots;
+  ImGui::BeginDisabled(plots.solves.empty());
+  if (ImGui::Button("Clear")) {
+    ClearSolvePlots();
+  }
+  ImGui::EndDisabled();
+  ImGui::SameLine();
+  ImGui::Checkbox("Auto-fit", &_autoFitSolvePlots);
+  ImGui::SameLine();
+  if (plots.solves.empty()) {
+    ImGui::TextDisabled(
+        "Press Play or Step to plot each IK solve's time and nonlinear solver iterations.");
+    ImGui::End();
+    return;
+  }
+  size_t const count = plots.solves.size();
+  double totalMilliseconds = 0;
+  double maxMilliseconds = 0;
+  for (double const milliseconds : plots.milliseconds) {
+    totalMilliseconds += milliseconds;
+    maxMilliseconds = std::max(maxMilliseconds, milliseconds);
+  }
+  double const maxIterations = *std::max_element(plots.iterations.begin(), plots.iterations.end());
+  auto const& limits = _ikAsset->GetConfig().createParams.solverParams;
+  char budget[32] = "unlimited";
+  if (limits.maxElapsedTimeSeconds > 0) {
+    std::snprintf(budget, sizeof(budget), "%.3g ms", limits.maxElapsedTimeSeconds * 1000.0);
+  }
+  ImGui::Text(
+      "%zu solves | last: %.3f ms, %d iterations, %s | mean %.3f ms, max %.3f ms | max %d iterations | %zu not converged | limits: %s, %d iterations",
+      count,
+      plots.milliseconds.back(),
+      static_cast<int>(plots.iterations.back()),
+      ConvergenceLabel(plots.lastConvergence),
+      totalMilliseconds / static_cast<double>(count),
+      maxMilliseconds,
+      static_cast<int>(maxIterations),
+      plots.unconvergedSolves.size(),
+      budget,
+      limits.maxIter);
+  if (ImGui::IsItemHovered()) {
+    ImGui::SetTooltip(
+        "Solve time is the native solver call, excluding solver creation. Iterations are the "
+        "nonlinear solver's; a solve that stops at the iteration limit or time budget before "
+        "reaching its tolerance is marked not converged.");
+  }
+
+  auto const& params = _ikAsset->GetConfig().createParams.solverParams;
+  if (_autoFitSolvePlots) {
+    _solvePlotMin = plots.solves.front();
+    _solvePlotMax = std::max(plots.solves.back(), plots.solves.front() + 1);
+  }
+  int const samples = static_cast<int>(count);
+  ImPlotFlags const flags = ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect;
+  ImPlotAxisFlags const valueFit =
+      _autoFitSolvePlots ? ImPlotAxisFlags_AutoFit : ImPlotAxisFlags_None;
+  // One plot, two y-axes: solve time on the left, iterations on the right. Each limit line is a
+  // translucent copy of its series' color on that series' axis; limits never drive the fit.
+  // Solve time is the primary signal: prominent color, drawn after (on top of) the noisier
+  // iterations, which are muted and thinner. Non-converged markers stay on top of both.
+  ImVec4 const timeColor{1.00f, 0.62f, 0.20f, 1.0f};
+  ImVec4 const iterationColor{0.45f, 0.60f, 0.80f, 0.75f};
+  auto const lineSpec = [](ImVec4 color, float weight) {
+    ImPlotSpec spec;
+    spec.LineColor = color;
+    spec.LineWeight = weight;
+    return spec;
+  };
+  auto const limitSpec = [](ImVec4 color) {
+    ImPlotSpec spec;
+    spec.LineColor = ImVec4(color.x, color.y, color.z, 0.45f);
+    spec.Flags = static_cast<ImPlotItemFlags>(ImPlotInfLinesFlags_Horizontal) |
+        static_cast<ImPlotItemFlags>(ImPlotItemFlags_NoFit);
+    return spec;
+  };
+  if (ImGui::BeginChild("##IKSolvePlotArea", ImVec2(0, 0))) {
+    if (ImPlot::BeginPlot("##IKSolveMetrics", ImVec2(-1, -1), flags)) {
+      ImPlot::SetupAxis(ImAxis_X1, "Solve");
+      ImPlot::SetupAxis(ImAxis_Y1, "Solve time [ms]", valueFit);
+      ImPlot::SetupAxis(ImAxis_Y2, "Iterations", ImPlotAxisFlags_AuxDefault | valueFit);
+      ImPlot::SetupAxisLinks(ImAxis_X1, &_solvePlotMin, &_solvePlotMax);
+      ImPlot::SetupLegend(ImPlotLocation_NorthWest, ImPlotLegendFlags_Horizontal);
+
+      ImPlot::SetAxes(ImAxis_X1, ImAxis_Y2);
+      ImPlot::PlotLine(
+          "Iterations",
+          plots.solves.data(),
+          plots.iterations.data(),
+          samples,
+          lineSpec(iterationColor, 0.75f * kSolvePlotLineWeight));
+      double const iterationLimit = params.maxIter;
+      ImPlot::PlotInfLines("Iteration limit", &iterationLimit, 1, limitSpec(iterationColor));
+
+      ImPlot::SetAxes(ImAxis_X1, ImAxis_Y1);
+      ImPlot::PlotLine(
+          "Solve time",
+          plots.solves.data(),
+          plots.milliseconds.data(),
+          samples,
+          lineSpec(timeColor, kSolvePlotLineWeight));
+      if (params.maxElapsedTimeSeconds > 0) {
+        double const budgetMilliseconds = params.maxElapsedTimeSeconds * 1000.0;
+        ImPlot::PlotInfLines("Time budget", &budgetMilliseconds, 1, limitSpec(timeColor));
+      }
+
+      if (!plots.unconvergedSolves.empty()) {
+        ImPlot::SetAxes(ImAxis_X1, ImAxis_Y2);
+        ImPlotSpec markers;
+        markers.Marker = ImPlotMarker_Circle;
+        markers.MarkerSize = 3.0f;
+        markers.MarkerFillColor = ImVec4(0.95f, 0.3f, 0.25f, 1.0f);
+        markers.MarkerLineColor = markers.MarkerFillColor;
+        ImPlot::PlotScatter(
+            "Not converged",
+            plots.unconvergedSolves.data(),
+            plots.unconvergedIterations.data(),
+            static_cast<int>(plots.unconvergedSolves.size()),
+            markers);
+      }
+      ImPlot::EndPlot();
+    }
+  }
+  ImGui::EndChild();
+  ImGui::End();
+}
+
 void IKEditor::HandlePlayToolbarAction(PlayToolbarAction action) {
   switch (action) {
     case PlayToolbarAction::Play:
@@ -2287,6 +2498,9 @@ void IKEditor::HandlePlayToolbarAction(PlayToolbarAction action) {
         }
         _recordingOwnsPose = true;
         _recordingClock.Play();
+      }
+      if (!_preview.HasSolver()) {
+        ClearSolvePlots(); // A fresh run, not a resume from Pause.
       }
       _running = true;
       _previewDiagnostic.clear();
@@ -2304,6 +2518,9 @@ void IKEditor::HandlePlayToolbarAction(PlayToolbarAction action) {
         }
         _recordingOwnsPose = true;
         _recordingClock.Step();
+      }
+      if (!_preview.HasSolver()) {
+        ClearSolvePlots();
       }
       SolveOnce();
       break;

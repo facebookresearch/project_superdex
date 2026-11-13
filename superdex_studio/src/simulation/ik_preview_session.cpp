@@ -232,6 +232,8 @@ bool IKPreviewSession::Prepare(BotPrefab const& outputBot, std::string& diagnost
   _prepared = true;
   _status = "Prepared";
   _lastSolveMilliseconds = 0;
+  _lastSolveIterations = 0;
+  _lastSolveConvergence = ConvergenceStatus::None;
   return true;
 }
 
@@ -360,6 +362,8 @@ void IKPreviewSession::Stop() {
   std::fill(_positionGoals.begin(), _positionGoals.end(), false);
   std::fill(_rotationGoals.begin(), _rotationGoals.end(), false);
   _lastSolveMilliseconds = 0;
+  _lastSolveIterations = 0;
+  _lastSolveConvergence = ConvergenceStatus::None;
   _status = _prepared ? "Stopped" : "Not Prepared";
 }
 
@@ -370,6 +374,8 @@ bool IKPreviewSession::Step(
     std::string& diagnostic,
     IKInputBotPose const* inputBotPose) {
   _lastSolveMilliseconds = 0;
+  _lastSolveIterations = 0;
+  _lastSolveConvergence = ConvergenceStatus::None;
   auto fail = [&] {
     _status = diagnostic;
     return false;
@@ -473,6 +479,9 @@ bool IKPreviewSession::Step(
     diagnostic = error.GetDescription();
     return fail();
   }
+  auto const solverStats = _solver->GetLastSolverStats();
+  _lastSolveIterations = solverStats.maxNonLinearIters;
+  _lastSolveConvergence = solverStats.convergenceStatus;
   // Copy both views before any subsequent mutation. Only publish a fully finite snapshot.
   DynamicArray<TransformRT> links{_solver->GetWorldFromLinks()};
   DynamicArray<real> positions{_solver->GetJointPositions()};
@@ -493,6 +502,7 @@ bool IKPreviewSession::Step(
   _worldFrameFromOutputLinkFrames = std::move(links);
   _outputBotJointPositions = std::move(positions);
   _status = reached ? "Goals Reached" : "Best Effort: Goals Unreached";
+  ++_solveCount;
   return true;
 }
 

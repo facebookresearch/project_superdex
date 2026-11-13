@@ -308,6 +308,12 @@ class BotIKTest : public testing::Test {
               ExpectOK{}),
           nullptr);
       EXPECT_EQ(ik->SolveIK(ExpectOK{}), solver->SolveIK(ExpectOK{}));
+      // Iteration counts are not an exact parity oracle: equivalent problems built through
+      // different paths may differ by an iteration while poses agree. Check validity here.
+      auto const stats = ik->GetLastSolverStats();
+      EXPECT_GE(stats.maxNonLinearIters, 1);
+      EXPECT_LE(stats.maxNonLinearIters, params.solverParams.maxIter);
+      EXPECT_NE(stats.convergenceStatus, ConvergenceStatus::None);
       actor->GetArticulatedPose(directPose, ExpectOK{});
       actor->GetArticulatedLinkTransforms(directLinks, ExpectOK{});
       ExpectPoseNear(
@@ -543,6 +549,35 @@ TEST_F(BotIKTest, SetJointPositions_AfterFloatingBaseSolve_PreservesSolvedBasePl
   ExpectPoseNear(ik->GetJointPositions(), seed);
   ExpectLinksNear(ik->GetWorldFromLinks(), ExpectedLinks(solvedBase, seed[0], seed[1]));
   EXPECT_TRUE(ik->SolveIK(ExpectOK{}));
+}
+
+TEST_F(BotIKTest, GetLastSolverStats_ReportsThisSolversIterationLimit) {
+  BotPrefab const prefab = MakeRobot();
+  auto const goalLinks = ExpectedLinks(prefab.worldFromRoot, 0.4_r, 0.3_r);
+  Real3 const localPosition{0.1_r, 0.05_r, 0_r};
+  int limitedIterations = 0;
+  int unlimitedIterations = 0;
+  for (int const maxIter : {1, 80}) {
+    SCOPED_TRACE(maxIter);
+    auto params = TestCreateParams();
+    params.solverParams.maxIter = maxIter;
+    auto const ik = CreateBotIK(_mochiContext, prefab, params, ExpectOK{});
+    ASSERT_NE(ik, nullptr);
+    ik->SetPositionGoal(
+        kTip,
+        localPosition,
+        goalLinks[kTip].TransformPoint(localPosition),
+        kGoalStiffness,
+        ExpectOK{});
+    (void)ik->SolveIK(ExpectOK{});
+    auto const stats = ik->GetLastSolverStats();
+    EXPECT_GE(stats.maxNonLinearIters, 1);
+    EXPECT_LE(stats.maxNonLinearIters, maxIter);
+    EXPECT_NE(stats.convergenceStatus, ConvergenceStatus::None);
+    (maxIter == 1 ? limitedIterations : unlimitedIterations) = stats.maxNonLinearIters;
+  }
+  EXPECT_EQ(limitedIterations, 1);
+  EXPECT_GT(unlimitedIterations, limitedIterations);
 }
 
 TEST_F(BotIKTest, SolveIK_PositionRotationAndBoth_ReachIndependentlyAuthoredGoals) {

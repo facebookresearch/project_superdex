@@ -525,6 +525,10 @@ bool BotIK::SolveIK(Error& error) {
   return error.IsOK() && reached;
 }
 
+SolverStats BotIK::GetLastSolverStats() const {
+  return _impl->scene->GetSolverStats();
+}
+
 Span<real const> BotIK::GetJointPositions() const {
   return _impl->jointPositions;
 }

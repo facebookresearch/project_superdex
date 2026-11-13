@@ -105,6 +105,19 @@ class IKPreviewSession {
   double GetLastSolveMilliseconds() const {
     return _lastSolveMilliseconds;
   }
+  /* @brief Nonlinear iterations of the last solver call; zero on ticks that do not solve. */
+  int GetLastSolveIterations() const {
+    return _lastSolveIterations;
+  }
+  /* @brief Convergence of the last solver call; None on ticks that do not solve. */
+  mochi::ConvergenceStatus GetLastSolveConvergence() const {
+    return _lastSolveConvergence;
+  }
+  /* @brief Count of solver calls that published a pose; never reset, so callers can detect new
+   * solves across Stop and recreation. */
+  uint64_t GetSolveCount() const {
+    return _solveCount;
+  }
   /* @brief Validate the document and all named bindings; empty/disabled goal sets are legal. */
   bool CanSolve(
       BotIKConfig const&,
@@ -138,6 +151,9 @@ class IKPreviewSession {
   bool _prepared = false;
   std::string _status = "Not Prepared";
   double _lastSolveMilliseconds = 0;
+  int _lastSolveIterations = 0;
+  mochi::ConvergenceStatus _lastSolveConvergence = mochi::ConvergenceStatus::None;
+  uint64_t _solveCount = 0;
 };
 
 /* @brief Map composed skin bone identities into prepared link order, preserving output on failure.

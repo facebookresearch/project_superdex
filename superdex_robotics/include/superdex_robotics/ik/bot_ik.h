@@ -199,6 +199,14 @@ class MOCHI_API BotIK {
    * snapshots. Getters never initiate a solve.
    */
   [[nodiscard]] bool SolveIK(mochi::Error& error);
+  /**
+   * @brief Native nonlinear-solver statistics of the most recent solve step.
+   *
+   * @note Reports the IK scene's last step: iterations, line-search iterations, residual norm and
+   * convergence status. A solve rejected before stepping (for example, with no goals) leaves the
+   * previous statistics in place.
+   */
+  [[nodiscard]] mochi::SolverStats GetLastSolverStats() const;
 
   /**
    * @brief Snapshot of joint positions [m/rad], excluding root DOFs for both Free and Hard roots.

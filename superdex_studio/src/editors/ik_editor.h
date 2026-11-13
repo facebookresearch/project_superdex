@@ -26,8 +26,10 @@
 #include <filesystem>
 
 #include <chrono>
+#include <cstdint>
 #include <optional>
 #include <unordered_map>
+#include <vector>
 
 namespace superdex::studio {
 
@@ -106,6 +108,10 @@ class IKEditor : public AssetEditor {
       bool discrete,
       std::optional<size_t> editedRow = std::nullopt);
   void ShowSolverWindow(bool* open);
+  void ShowSolvePlotsWindow(bool* open);
+  // Appends the preview's latest solve to the plot history once; ticks without a solve add nothing.
+  void RecordSolveSample();
+  void ClearSolvePlots();
   void HandlePlayToolbarAction(PlayToolbarAction action);
 
   IKAsset* _ikAsset = nullptr;
@@ -114,6 +120,24 @@ class IKEditor : public AssetEditor {
   SceneStage _inputBotStage;
   StageType _stageType = StageType::RenderModelFallbackToMochiModel;
   IKPreviewSession _preview;
+  // Live solve metrics, one entry per published solve since the plots were last cleared. X is the
+  // solve number; non-converged solves are also kept separately for highlighting.
+  struct SolvePlotHistory {
+    std::vector<double> solves;
+    std::vector<double> milliseconds;
+    std::vector<double> iterations;
+    std::vector<double> unconvergedSolves;
+    std::vector<double> unconvergedIterations;
+    mochi::ConvergenceStatus lastConvergence = mochi::ConvergenceStatus::None;
+    double nextSolve = 1;
+  };
+  SolvePlotHistory _solvePlots;
+  uint64_t _plottedSolveCount = 0;
+  // Solve-axis range, kept across frames (ImPlot axis link) so panning and zooming persist while
+  // auto-fit is off.
+  double _solvePlotMin = 0;
+  double _solvePlotMax = 1;
+  bool _autoFitSolvePlots = true;
   mochi::DynamicArray<mochi::TransformRT> _authoredOutputBaseFrameFromLinkFrames;
   mochi::DynamicArray<mochi::TransformRT> _worldFrameFromInputLinkFrames;
   // Owned only after a successful stage application; invalidated on rebind, restage, or bad FK.
