@@ -57,7 +57,7 @@ inline T& ProducerConsumerBuffer<T>::GetProducerData() {
 
 template <typename T>
 inline void ProducerConsumerBuffer<T>::Produce() {
-  std::lock_guard lock(_mutex);
+  std::scoped_lock lock(_mutex);
   std::swap(_middle, _back);
   _middleDirty = true;
 }
@@ -69,7 +69,7 @@ inline T& ProducerConsumerBuffer<T>::GetConsumerData() {
 
 template <typename T>
 inline bool ProducerConsumerBuffer<T>::Consume() {
-  std::lock_guard lock(_mutex);
+  std::scoped_lock lock(_mutex);
   if (_middleDirty) {
     std::swap(_front, _middle);
     _middleDirty = false;
