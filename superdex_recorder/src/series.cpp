@@ -455,4 +455,23 @@ void TextSeries::BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi
   output.emplace_back(std::move(texts.value));
 }
 
+PlotSeries::PlotSeries(std::string_view entityPath) : Series{entityPath} {}
+
+void PlotSeries::Append(SampleTime time, double value, mochi::Error& error) {
+  AppendTime(time, error);
+  MOCHI_ERROR_RETURN(error);
+  _values.emplace_back(value);
+}
+
+void PlotSeries::BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error) {
+  auto values = rerun::ComponentColumn::from_loggable(
+      rerun::Collection<rerun::components::Scalar>::borrow(_values),
+      rerun::archetypes::Scalars::Descriptor_scalars);
+  if (values.is_err()) {
+    SetRerunError(values.error, error, "Failed to encode a plot series.");
+    return;
+  }
+  output.emplace_back(std::move(values.value));
+}
+
 } // namespace superdex::recorder

@@ -49,6 +49,7 @@ class Arrow3DSeries;
 class Points3DSeries;
 class DeformableMeshSeries;
 class TextSeries;
+class PlotSeries;
 
 inline constexpr std::string_view kSchemaName = "superdex.episode";
 inline constexpr uint32_t kSchemaVersionMajor = 1;
@@ -111,6 +112,9 @@ class SUPERDEX_RECORDER_API Episode final {
    * text of one frame, so several events in the same step share a sample. */
   TextSeries*
   CreateTextSeries(std::string_view entityPath, ComponentField const& field, mochi::Error& error);
+  /* Records one value per sample that the Rerun viewer plots; its component is "Scalars:scalars".
+   */
+  PlotSeries* CreatePlotSeries(std::string_view entityPath, mochi::Error& error);
   void WriteConstantText(
       std::string_view entityPath,
       ComponentField const& field,

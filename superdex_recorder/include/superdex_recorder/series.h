@@ -190,4 +190,18 @@ class SUPERDEX_RECORDER_API TextSeries final : public Series {
   std::vector<rerun::components::Text> _texts;
 };
 
+/* @brief Stores one double per sample as Rerun's Scalars archetype, which the Rerun viewer plots by
+ * default. */
+class SUPERDEX_RECORDER_API PlotSeries final : public Series {
+ public:
+  explicit PlotSeries(std::string_view entityPath);
+
+  void Append(SampleTime time, double value, mochi::Error& error);
+
+ private:
+  void BuildColumns(std::vector<rerun::ComponentColumn>& output, mochi::Error& error) override;
+
+  std::vector<rerun::components::Scalar> _values;
+};
+
 } // namespace superdex::recorder

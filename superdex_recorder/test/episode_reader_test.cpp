@@ -129,6 +129,27 @@ TEST(EpisodeReaderTest, ReadsScalarSeries) {
   EXPECT_FALSE(reader->HasComponent("data/test", "superdex.test.values", true));
 }
 
+TEST(EpisodeReaderTest, ReadsPlotSeriesAtDoublePrecision) {
+  TemporaryDirectory directory;
+  // Not representable as a float, so a 32-bit round trip would change it.
+  constexpr double kValue = 0.1;
+  auto const path = RecordEpisode(directory, [](Episode& episode, mochi::Error& error) {
+    auto* const series = episode.CreatePlotSeries("data/plot", error);
+    ASSERT_NE(series, nullptr);
+    series->Append({.frame = 0, .simulationTimeSec = 0.0}, kValue, error);
+    series->Append({.frame = 1, .simulationTimeSec = 0.5}, -kValue, error);
+  });
+  auto const reader = OpenEpisode(path);
+  ASSERT_NE(reader, nullptr);
+  mochi::Error error;
+
+  ScalarRows const rows = reader->ReadScalars("data/plot", "Scalars:scalars", error);
+
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
+  EXPECT_EQ(rows.frames, (std::vector<int64_t>{0, 1}));
+  EXPECT_EQ(rows.values, (std::vector<double>{kValue, -kValue}));
+}
+
 TEST(EpisodeReaderTest, ReadsTransformsAsFlatRows) {
   TemporaryDirectory directory;
   auto const path = RecordEpisode(directory, [](Episode& episode, mochi::Error& error) {
