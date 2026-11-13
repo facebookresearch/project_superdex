@@ -71,7 +71,7 @@ Here composition and subtraction are manifold-aware rotation operations, not ari
 
 ### Newton Solver
 
-The IK optimization uses Newton's method with an Armijo line search. `IKSolverParams`
+The IK optimization uses Newton's method with line search. `IKSolverParams`
 configures its convergence tolerances and stopping limits. Convergence is declared when
 either the absolute or relative residual-norm criterion is satisfied. The solve may instead
 stop without converging when it reaches the iteration or elapsed-time limit. Regardless of
@@ -422,7 +422,7 @@ The IK solver will produce poses that reach the target while respecting collisio
 | Parameter | Default | Description | Tuning Guidance |
 |-----------|---------|-------------|-----------------|
 | `maxIter` / `max_iter` | `20` | Maximum Newton iterations | Increase if the solver fails to converge for large motions. Decrease for faster but less precise solves. |
-| `lineSearchMaxIter` / `line_search_max_iter` | `10` | Maximum line-search iterations per Newton step | Increase if Armijo backtracking needs more attempts to find an acceptable step. Decrease to cap line-search work. |
+| `lineSearchMaxIter` / `line_search_max_iter` | `10` | Maximum line-search iterations per Newton step | Increase if the line search needs more attempts to find an acceptable step. Decrease to cap line-search work. |
 | `maxElapsedTimeSeconds` / `max_elapsed_time_seconds` | `0` [s] | Maximum elapsed wall-clock time | Set a positive value to enforce a time budget. `0` disables the limit. |
 | `verbosity` | `Warning` | Solver log level | Set to `Info` or `Debug` during development to diagnose convergence issues. |
 | `absTol` / `abs_tol` | `1e-2` | Absolute residual-norm tolerance | This is the **primary convergence criterion**. Lower values yield tighter convergence but may require more iterations. |

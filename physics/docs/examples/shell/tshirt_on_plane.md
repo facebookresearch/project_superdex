@@ -21,20 +21,18 @@ The current page provides some additional discussion and interpretation of these
 ### Create the Scene and Ground
 
 This example sets non-default solver parameters, which is often necessary to attain interactive framerates in simulations of cloth garments modeled as flexible shells.
-The loss of accuracy from limiting nonlinear solver iterations can be partially compensated by using the strong Wolfe line search, which is empirically effective for improving solution quality in deformable actors when there is a limited iteration budget.
 
 ```python
 scene = sdp.create_scene("T-shirt on Plane Scene")
 
 solver_params = scene.get_solver_params()
 solver_params.non_linear_solver.max_iter = 2
-solver_params.non_linear_solver.line_search_type = sdp.LineSearchType.WOLFE_STRONG
 solver_params.experimental_eval.implicit_normal_force_for_dissipation = True
 scene.set_solver_params(solver_params)
 ```
 
 The current normal load is used for dissipation because it improves the accuracy and stability of frictional point-cloud self-contact. See [Stage-Discrete Dissipation](../../concepts/contact.md#stage-discrete-dissipation) for details.
-This dissipation doesn't derive exactly from an incremental potential, so merit-based line searches such as `WOLFE_STRONG` score it by its work along each step instead of by an energy.
+This dissipation doesn't derive exactly from an incremental potential, so merit-based line searches such as the default `WOLFE_STRONG` score it by its work along each step instead of by an energy.
 
 This example uses the default linear solver, but using the experimental [`sdp.LinearSolverType.PARALLEL_CG`](pathname:///generated/api/latest/python/api/physics.html#superdex.physics.LinearSolverType) linear solver can improve performance even further in applications where strict bit-level determinism is not required and a suitable multi-core environment is available.
 
