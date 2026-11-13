@@ -93,7 +93,7 @@ GetRigidContactFrame(ContactAssemblyReg reg, entt::entity colliding, entt::entit
     frame.collidingFromPivot = comColliding - state.VGetTranslation();
   } else {
     auto const& transform =
-        GetRootTransform<kTimeStep>(reg, collider, reg.get<CRootTransform const>(collider));
+        GetStaticColliderTransform<kTimeStep>(reg.get<CRootTransform const>(collider));
     std::tie(frame.rot, frame.rotT) = ToVMatrix3x3_WithTranspose(transform.GetRotation());
     frame.collidingFromPivot = comColliding - transform.VGetTranslation();
   }

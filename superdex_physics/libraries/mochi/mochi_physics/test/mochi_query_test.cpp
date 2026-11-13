@@ -2064,7 +2064,7 @@ TEST_P(StageContactQueryTest, MovingSyncContactsUseLastAssemblyStage) {
   auto const sdf = top->GetSdfDistances(test::ExpectOK{});
   auto const topEntity = GetEntity(top);
   auto const& samples = reg.get<CContactSamples<TimeStep::Current> const>(topEntity);
-  auto const& start = GetRootTransform<TimeStep::StageStart>(reg, topEntity);
+  auto const& start = reg.get<CRootTransform const>(topEntity).worldFromLocalStageStart;
   real const dtStage = reg.get<CTimeIntegratorState const>(topEntity).dtStage;
   TransformRT const topStage = stageTransform(top);
   TransformRT const bottomStage = stageTransform(bottom);
@@ -2083,8 +2083,8 @@ TEST_P(StageContactQueryTest, MovingSyncContactsUseLastAssemblyStage) {
     EXPECT_NEAR(cp.pointVelocityA[0], 1_r, 1e-3_r);
     EXPECT_NEAR(cp.pointVelocityB[0], 1_r, 1e-3_r);
     Real3 const colliderLocal = Invert(bottomStage).TransformPoint(cp.posB);
-    Real3 const colliderStart = GetRootTransform<TimeStep::StageStart>(reg, GetEntity(bottom))
-                                    .TransformPoint(colliderLocal);
+    Real3 const colliderStart = reg.get<CRootTransform const>(GetEntity(bottom))
+                                    .worldFromLocalStageStart.TransformPoint(colliderLocal);
     EXPECT_NEAR_TOL(cp.pointVelocityB, (cp.posB - colliderStart) / dtStage, 1e-4_r);
     EXPECT_NEAR_TOL(cp.posB, cp.posA - cp.distance * cp.normal, 1e-5_r);
     EXPECT_NEAR(cp.distance, Invert(bottomStage).TransformPoint(cp.posA)[1] - 1_r, 1e-5_r);
@@ -2174,7 +2174,8 @@ TEST_F(ActorQueryTest, MidpointAsyncContactsLeaveNodeQueriesAtStepEnd) {
   auto const e = GetEntity(actor);
   auto const& samplesStart = reg.get<CContactSamples<TimeStep::StageStart> const>(e);
   auto const& samples = reg.get<CContactSamples<TimeStep::Current> const>(e);
-  auto const& transform = GetRootTransform<TimeStep::StageStart>(reg, e);
+  // A soft actor's root transform does not change during a step.
+  auto const& transform = reg.get<CRootTransform const>(e).worldFromLocal;
   for (auto const& cp : contacts) {
     Real3 const start = transform.TransformPoint(samplesStart.positions[cp.sampleIndex]);
     Real3 const stage = actor->GetRootTransform().TransformPoint(samples.positions[cp.sampleIndex]);

@@ -179,8 +179,8 @@ template <GradTarget kGradTarget>
 
     // Fetch the collider's world-from-local rotation and precompute the actor COM in the collider's
     // local frame.
-    auto const& colliderTransform = GetRootTransform<GetTimeStep<kGradTarget>()>(
-        reg, collision.colliderEntity, reg.get<CRootTransform const>(collision.colliderEntity));
+    auto const& colliderTransform = GetStaticColliderTransform<GetTimeStep<kGradTarget>()>(
+        reg.get<CRootTransform const>(collision.colliderEntity));
     auto const trans = colliderTransform.VGetTranslation();
     auto const [rot, rotT] = ToVMatrix3x3_WithTranspose(colliderTransform.GetRotation());
     auto const comColliderSpace = DotVecMat3x3(com - trans, rot);

@@ -95,6 +95,18 @@ struct CStaticPrescribedMotion : NoCopy {
   MOCHI_STRUCT_END();
 };
 
+// Root transform of a static collider at a contact time step. Static actors are not solved, but
+// they can move with prescribed transforms; their stage start is the start of the step.
+template <TimeStep kTimeStep>
+[[nodiscard]] TransformRT const& GetStaticColliderTransform(CRootTransform const& root) {
+  static_assert(kTimeStep == TimeStep::Current || kTimeStep == TimeStep::StageStart);
+  if constexpr (kTimeStep == TimeStep::Current) {
+    return root.worldFromLocal;
+  } else {
+    return root.worldFromLocalPrev;
+  }
+}
+
 /**************************************************************************
   ECS Rigid-body Actor Utils
 */

@@ -167,7 +167,7 @@ static void AddPerCollisionMissingStageStartContacts(
   bool const isPointCloudCollider = reg.all_of<TagUsePointCloudContact>(collider);
 
   // Get the transform of the collider.
-  auto const& worldFromCollider = GetRootTransform<TimeStep::Current>(reg, collider);
+  auto const& worldFromCollider = reg.get<CRootTransform const>(collider).worldFromLocal;
   auto const colliderFromColliding = Invert(worldFromCollider) * worldFromColliding;
   VMatrix4x4r const colliderFromCollidingT = ToVMatrix4x4Transpose(colliderFromColliding);
 
@@ -297,7 +297,7 @@ void mochi::AddStageStartCollisionDetection(
     CActiveCollisions<kIsSync, TimeStep::StageStart> const& stageStartCollisions,
     CActiveCollisions<kIsSync, TimeStep::Current>& outCurrentCollisions,
     CContactCorrespondence<kIsSync>& correspondence) {
-  auto const& worldFromColliding = GetRootTransform<TimeStep::Current>(reg, e);
+  auto const& worldFromColliding = reg.get<CRootTransform const>(e).worldFromLocal;
   AddMissingStageStartCollisions(stageStartCollisions, outCurrentCollisions);
   AddMissingStageStartContacts(
       reg,

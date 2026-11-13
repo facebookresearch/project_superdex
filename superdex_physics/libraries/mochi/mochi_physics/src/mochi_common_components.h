@@ -158,47 +158,6 @@ struct CRootTransform : public NoCopy {
   MOCHI_STRUCT_END();
 };
 
-// Helper function to resolve the root transform of an actor at a given time, given its
-// CRootTransform.
-template <TimeStep kTimeStep>
-[[nodiscard]] TransformRT const& GetRootTransform(
-    [[maybe_unused]] ecs::
-        PartialRegistry<CRootTransform const, TagStaticActor const, TagRigidActor const> reg,
-    [[maybe_unused]] entt::entity entity,
-    CRootTransform const& crt) {
-  MOCHI_ASSERT_VERBOSE(
-      &crt == reg.try_get<CRootTransform const>(entity),
-      "Expected the CRootTransform of the given entity.");
-  if constexpr (kTimeStep == TimeStep::Current) {
-    return crt.worldFromLocal;
-  } else if constexpr (kTimeStep == TimeStep::Previous) {
-    return crt.worldFromLocalPrev;
-  } else {
-    static_assert(kTimeStep == TimeStep::StageStart);
-    // Note: Order matters. Static links have both TagStaticActor and TagRigidActor.
-    if (reg.all_of<TagStaticActor>(entity)) {
-      // "Static" actors are not solved, but they can move with prescribed transforms. To correctly
-      // evaluate friction against "moving" static actors, their stage-start transform is evaluated
-      // at the beginning of the step.
-      return crt.worldFromLocalPrev;
-    } else if (reg.all_of<TagRigidActor>(entity)) {
-      // Rigid actors store the stage-start transform in its own field.
-      return crt.worldFromLocalStageStart;
-    } else {
-      // For all other actors, the stage-start transform is the same as the current transform.
-      // This is particularly relevant for soft actors with recentering, whose stage-start and
-      // current displacements are both expressed wrt the current root transform.
-      return crt.worldFromLocal;
-    }
-  }
-}
-
-// Helper function to resolve the root transform of an actor at a given time.
-template <TimeStep kTimeStep>
-[[nodiscard]] TransformRT const& GetRootTransform(entt::registry const& reg, entt::entity entity) {
-  return GetRootTransform<kTimeStep>(reg, entity, reg.get<CRootTransform const>(entity));
-}
-
 // Contains the inertia information of a dynamic rigid body.
 // Defined in this file because it is accessed in contact assembly.
 struct CRigidBodyInertia : public NoCopy, RigidBodyInertia {
