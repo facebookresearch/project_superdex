@@ -82,6 +82,11 @@ inline auto DefDynamicArray(nanobind::module_& m, char const* pyName) {
       },
       nb::arg("size"),
       nb::arg("value") = T{});
+  if constexpr (std::is_same_v<T, char>) {
+    c.def("__init__", [](DynamicArrayT* self, nb::bytes values) {
+      new (self) DynamicArrayT(values.c_str(), values.c_str() + values.size());
+    });
+  }
   c.def(
       "__init__",
       [](DynamicArrayT* self, nb::sequence sequence) {
@@ -152,9 +157,13 @@ inline auto DefDynamicArray(nanobind::module_& m, char const* pyName) {
         },
         nb::keep_alive<0, 1>());
   }
-  c.def("__reduce__", [pyName](DynamicArrayT const& self) {
+  c.def("__reduce__", [](DynamicArrayT const& self) {
     nb::object values;
-    if constexpr (std::is_arithmetic_v<T>) {
+    // The item casters reject the NumPy scalars of bool and char arrays, and a char only converts
+    // to a str if it is ASCII.
+    if constexpr (std::is_same_v<T, char>) {
+      values = nb::bytes(self.data(), self.size());
+    } else if constexpr (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>) {
       if (self.empty()) {
         values = nb::list();
       } else {
@@ -169,8 +178,7 @@ inline auto DefDynamicArray(nanobind::module_& m, char const* pyName) {
       }
       values = std::move(items);
     }
-    return nb::make_tuple(
-        nb::module_::import_(MOCHI_PHYSICS_MODULE_NAME_STR).attr(pyName), nb::make_tuple(values));
+    return nb::make_tuple(nb::type<DynamicArrayT>(), nb::make_tuple(values));
   });
   c.def("append", nb::overload_cast<T const&>(&DynamicArrayT::push_back), nb::arg("item"));
   c.def(

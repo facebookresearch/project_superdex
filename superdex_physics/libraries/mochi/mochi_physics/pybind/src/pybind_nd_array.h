@@ -64,13 +64,12 @@ inline auto DefNdArray(nanobind::module_& m, char const* pyName, char const* doc
     self[index] = value;
   });
   c.def("__len__", [](NdArrayT const& /*self*/) { return size_t(N); });
-  c.def("__reduce__", [pyName](NdArrayT const& self) {
+  c.def("__reduce__", [](NdArrayT const& self) {
     nb::list values;
     for (auto const& v : self) {
       values.append(v);
     }
-    return nb::make_tuple(
-        nb::module_::import_(MOCHI_PHYSICS_MODULE_NAME_STR).attr(pyName), nb::make_tuple(values));
+    return nb::make_tuple(nb::type<NdArrayT>(), nb::make_tuple(values));
   });
   c.def("__repr__", [](NdArrayT const& self) { return ToPyReplString(self); });
   c.def("__str__", [](NdArrayT const& self) { return ToPyString(self); });

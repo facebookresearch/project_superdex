@@ -148,7 +148,7 @@ NB_MODULE(MOCHI_PHYSICS_MODULE_NAME, m) {
           "__reduce__",
           [](Quaternion const& self) {
             return nb::make_tuple(
-                nb::module_::import_(MOCHI_PHYSICS_MODULE_NAME_STR).attr("Quaternion"),
+                nb::type<Quaternion>(),
                 nb::make_tuple(self.data[0], self.data[1], self.data[2], self.data[3]));
           })
       .def(
@@ -205,8 +205,7 @@ NB_MODULE(MOCHI_PHYSICS_MODULE_NAME, m) {
           "__reduce__",
           [](TransformRT const& self) {
             return nb::make_tuple(
-                nb::module_::import_(MOCHI_PHYSICS_MODULE_NAME_STR).attr("TransformRT"),
-                nb::make_tuple(self.GetRotation(), self.GetTranslation()));
+                nb::type<TransformRT>(), nb::make_tuple(self.GetRotation(), self.GetTranslation()));
           })
       .def("__repr__", [](TransformRT const& self) { return ToPyReplString(self); })
       .def("__str__", [](TransformRT const& self) { return ToPyString(self); })
@@ -241,9 +240,7 @@ NB_MODULE(MOCHI_PHYSICS_MODULE_NAME, m) {
       .def(
           "__reduce__",
           [](Aabb const& self) {
-            return nb::make_tuple(
-                nb::module_::import_(MOCHI_PHYSICS_MODULE_NAME_STR).attr("Aabb"),
-                nb::make_tuple(self.GetMin(), self.GetMax()));
+            return nb::make_tuple(nb::type<Aabb>(), nb::make_tuple(self.GetMin(), self.GetMax()));
           })
       .def("__repr__", [](Aabb const& self) { return ToPyReplString(self); })
       .def("__str__", [](Aabb const& self) { return ToPyString(self); })

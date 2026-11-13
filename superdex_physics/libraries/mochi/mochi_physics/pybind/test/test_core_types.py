@@ -172,15 +172,24 @@ class TestCoreTypes(MochiTestBase):
             mochi.DynamicArrayInt([1, object()])
         self.assertEqual([4, 5], list(mochi.DynamicArrayInt([4, 5])))
 
-        # pickle serialization
-        self.assertEqual(
+        # bytes constructor, which char arrays also unpickle through
+        all_bytes = bytes(range(256))
+        self.assertEqual(all_bytes, bytes(mochi.DynamicArrayChar(all_bytes)))
+
+        # pickle serialization, including an array type registered in a submodule and
+        # element types whose NumPy scalars the item casters reject
+        control_type = mochi.experimental.ControlType
+        for a in (
             mochi.DynamicArrayInt(),
-            pickle.loads(pickle.dumps(mochi.DynamicArrayInt())),
-        )
-        a = mochi.DynamicArrayInt([1, 2, 3])
-        serialized_data = pickle.dumps(a)
-        a2 = pickle.loads(serialized_data)
-        self.assertEqual(a, a2)
+            mochi.DynamicArrayInt([1, 2, 3]),
+            mochi.DynamicArrayBool([True, False]),
+            mochi.DynamicArrayChar(),
+            mochi.DynamicArrayChar(all_bytes),
+            mochi.experimental.DynamicArrayControlType([control_type.FORCE]),
+        ):
+            b = pickle.loads(pickle.dumps(a))
+            self.assertIs(type(a), type(b))
+            self.assertEqual(a, b)
 
         # copy.copy / copy.deepcopy: independent copies via the C++ copy ctor.
         a = mochi.DynamicArrayInt([1, 2, 3])
