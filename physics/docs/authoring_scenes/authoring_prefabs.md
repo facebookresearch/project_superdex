@@ -168,22 +168,22 @@ Generated mesh references use `./generated_assets/...`, so the export directory 
 
 Export reconstructs selected scene and creation data; it is not a lossless snapshot or authoring round trip.
 
-C++ `ExportScene` and Python [`sdp.prefab.export_scene()`](pathname:///generated/api/latest/python/api/prefab.html#superdex.physics.prefab.export_scene) support rigid, soft, articulated, and soft-skinned actors, write the current gravity and solver settings, and record the effective disabled actor/layer contact state and contact-pair parameter overrides. They write current actor root transforms, but articulated links use their rest configuration and deformable actors use reference geometry rather than current deformation.
+C++ `ExportScene` and Python [`sdp.prefab.export_scene()`](pathname:///generated/api/latest/python/api/prefab.html#superdex.physics.prefab.export_scene) support rigid, soft, articulated, soft-skinned, and rod actors, write the current gravity and solver settings, and record the effective disabled actor/layer contact state and contact-pair parameter overrides. They write current actor root transforms and reference geometry. By default they omit the current pose. With [`ExportParams`](pathname:///generated/api/latest/cpp/structsuperdex_1_1prefab_1_1ExportParams.html) `exportCurrentPose` (Python `export_current_pose`), they also write soft displacements, articulated joint poses, and rod poses (node displacements and element frame axes) for actors not exactly at rest.
 
 They do not export:
 
 - Generic scene constraints or articulated pose controllers.
-- Shell actors, rod actors or rod-specific relationships, or experimental transmissions.
+- Shell actors or experimental transmissions.
 - Implicit non-mesh shapes.
-- Current articulated joint pose or joint velocities.
-- Runtime state, including rigid velocities, soft deformation and nodal velocities, controller targets, runtime per-element material changes such as animated shape-target tensors, callbacks, queries, and recordings.
+- Current soft, articulated, or rod pose, unless `exportCurrentPose` is set, and velocities of any actor.
+- Other runtime state, including controller targets, runtime per-element material changes such as animated shape-target tensors, callbacks, queries, and recordings.
 - Original authoring structure and metadata, including the nested-prefab hierarchy, paths, comments, render metadata, authoring transforms, and specialized shape-construction settings such as SDF authoring parameters.
 
 Generated HDF5 files contain serializable runtime model data, but do not make specialized shape configurations losslessly round-trippable. Duplicate actor names may be made unique, and export may canonicalize the contact-filter JSON rather than reproduce the original entries.
 
 Scene export records effective disabled contact pairs, not explicit entries that enable contact. If an explicit entry enabled contact between adjacent articulation links, reloading the export applies automatic adjacent-link filtering and disables that pair again. Add the equivalent `enable: true` entry to the exported prefab or re-enable the pair after loading.
 
-C++ `ExportActor` and Python [`sdp.prefab.export_actor()`](pathname:///generated/api/latest/python/api/prefab.html#superdex.physics.prefab.export_actor) are narrower than their scene counterparts: they support standalone rigid, soft, and articulated actors, but not soft-skinned parents or nested actors. They do not export scene contact filters or contact-pair parameter overrides.
+C++ `ExportActor` and Python [`sdp.prefab.export_actor()`](pathname:///generated/api/latest/python/api/prefab.html#superdex.physics.prefab.export_actor) are narrower than their scene counterparts: they support standalone rigid, soft, articulated, and rod actors, but not soft-skinned parents or nested actors. They do not export scene contact filters or contact-pair parameter overrides.
 
 ## Examples
 
