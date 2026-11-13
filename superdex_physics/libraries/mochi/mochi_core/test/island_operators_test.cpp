@@ -71,7 +71,7 @@ TEST(IslandOperators, SingleDenseActor) {
   // |356|
   real constexpr kValues[9] = {1, 2, 3, 2, 4, 5, 3, 5, 6};
   auto actorMat = Matrix<real>{3, 3};
-  std::copy(std::begin(kValues), std::end(kValues), actorMat.data());
+  std::ranges::copy(kValues, actorMat.data());
   std::vector<std::pair<int, AnyMatrixView<real const>>> actorMatrices;
   actorMatrices.emplace_back(0, AsConstView(actorMat));
 
@@ -222,7 +222,7 @@ TEST(IslandOperators, MixedActors) {
   // |356|
   real constexpr kValues[9] = {1, 2, 3, 2, 4, 5, 3, 5, 6};
   auto denseActorMat = Matrix<real>{3, 3};
-  std::copy(std::begin(kValues), std::end(kValues), denseActorMat.data());
+  std::ranges::copy(kValues, denseActorMat.data());
 
   // |1 3|
   // | 45|

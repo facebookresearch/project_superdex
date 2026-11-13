@@ -28,7 +28,7 @@ SubsetMap mochi::Union(SubsetMap const& A, SubsetMap const& B) {
   MOCHI_ASSERT(A.GetFullSetSize() == B.GetFullSetSize());
   std::vector<int> result;
   result.reserve(A.GetSubsetSize() + B.GetSubsetSize());
-  std::set_union(A.begin(), A.end(), B.begin(), B.end(), std::back_inserter(result));
+  std::ranges::set_union(A, B, std::back_inserter(result));
   return {std::move(result), A.GetFullSetSize()};
 }
 
@@ -39,7 +39,7 @@ SubsetMap mochi::Intersection(SubsetMap const& A, SubsetMap const& B) {
       int64_t{2} * A.GetSubsetSize() * B.GetSubsetSize() / Max(1, A.GetFullSetSize());
   std::vector<int> result;
   result.reserve(sizeGuess);
-  std::set_intersection(A.begin(), A.end(), B.begin(), B.end(), std::back_inserter(result));
+  std::ranges::set_intersection(A, B, std::back_inserter(result));
   return {std::move(result), A.GetFullSetSize()};
 }
 

@@ -55,13 +55,9 @@ constexpr std::array<Int3, 12> const kConnectivity = {
 
 static TriangleSoup BoxTriangleSoup() {
   TriangleSoup soup;
-  std::transform(
-      kConnectivity.begin(),
-      kConnectivity.end(),
-      std::back_inserter(soup.triangles),
-      [&](Int3 const& idx) {
-        return Triangle{kCoordinates[idx[0]], kCoordinates[idx[1]], kCoordinates[idx[2]]};
-      });
+  std::ranges::transform(kConnectivity, std::back_inserter(soup.triangles), [&](Int3 const& idx) {
+    return Triangle{kCoordinates[idx[0]], kCoordinates[idx[1]], kCoordinates[idx[2]]};
+  });
   return soup;
 }
 

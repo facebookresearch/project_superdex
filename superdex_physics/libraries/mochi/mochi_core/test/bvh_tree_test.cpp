@@ -417,13 +417,13 @@ TEST(BvhTree, PointSet_AABBTree) {
   aabbTree.Refit();
 
   // Compute distances using the AABB tree
-  std::fill(distSqr.begin(), distSqr.end(), std::numeric_limits<real>::infinity());
+  std::ranges::fill(distSqr, std::numeric_limits<real>::infinity());
   for (int i = 0; i < points.size(); i++) {
     aabbTree.VFindClosest(ToSimd(points[i]), &distSqr[i]);
   }
 
   // Compute distances using a brute-force test
-  std::fill(distSqrTest.begin(), distSqrTest.end(), std::numeric_limits<real>::infinity());
+  std::ranges::fill(distSqrTest, std::numeric_limits<real>::infinity());
   for (int i = 0; i < points.size(); i++) {
     for (auto const& j : pointSet) {
       real distSqrThis = Get0(VNormSqr<3>(ToSimd(points[i]) - ToSimd(j)));
@@ -481,7 +481,7 @@ TEST(BvhTree, PointSet_vs_TetMesh_AABBTree) {
   aabbTreeTets.Intersect(aabbTreePoints, IntersectionCallback);
 
   // Sort the intersecting pairs for convenience of the test
-  std::sort(result.begin(), result.end(), [](auto a, auto b) { return a.first < b.first; });
+  std::ranges::sort(result, [](auto a, auto b) { return a.first < b.first; });
 
   // Brute-force pairwise testing
   std::vector<std::pair<int, int>> resultTest;

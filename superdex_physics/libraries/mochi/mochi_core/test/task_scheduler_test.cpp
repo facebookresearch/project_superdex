@@ -220,7 +220,7 @@ static void TestTaskMutex(TaskScheduler& scheduler) {
 
   // Verify that we got all 10,000 unique numbers
   EXPECT_EQ(10000, numbers.size());
-  std::sort(numbers.begin(), numbers.end());
+  std::ranges::sort(numbers);
   for (int i = 0; i < 10000; ++i) {
     EXPECT_EQ(i, numbers[i]);
   }
@@ -256,7 +256,7 @@ static void TestTaskConditionVariable(TaskScheduler& scheduler) {
 
   // Verify that we got all 10,000 unique numbers
   EXPECT_EQ(10000, numbers.size());
-  std::sort(numbers.begin(), numbers.end());
+  std::ranges::sort(numbers);
   for (int i = 0; i < 10000; ++i) {
     EXPECT_EQ(i, numbers[i]);
   }
@@ -540,20 +540,20 @@ static void TestUtil_ParallelSort() {
       std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
   static constexpr size_t kNumValues = 500; // arbitrary large size
   std::vector<int> randomData(kNumValues);
-  std::generate(randomData.begin(), randomData.end(), [&]() { return dist(gen); });
+  std::ranges::generate(randomData, [&]() { return dist(gen); });
 
   // Repeat this test for various data sizes
   auto runTest = [&](size_t len) {
     // Sort using ParallelSort
     std::vector<int> sorted(randomData.begin(), randomData.begin() + len);
     ParallelSort(sorted.begin(), sorted.end());
-    EXPECT_TRUE(std::is_sorted(sorted.begin(), sorted.end()));
+    EXPECT_TRUE(std::ranges::is_sorted(sorted));
 
     // Repeat with a custom comparison function
     auto compare = [](int a, int b) { return b < a; };
     sorted.assign(randomData.begin(), randomData.begin() + len);
     ParallelSort(sorted.begin(), sorted.end(), compare);
-    EXPECT_TRUE(std::is_sorted(sorted.begin(), sorted.end(), compare));
+    EXPECT_TRUE(std::ranges::is_sorted(sorted, compare));
   };
 
   static constexpr size_t kTestSizes[] = {0, 1, 2, 3, 16, 32, 64, 128, 255, 256, 257, kNumValues};

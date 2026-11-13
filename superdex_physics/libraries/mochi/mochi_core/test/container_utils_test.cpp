@@ -234,7 +234,7 @@ TEST(ContainerUtils, RandomSubset) {
       if (N0 > 0) {
         RandomSubset(vec, uint32_t(N0 - 1), rng); // SizeT = uint32_t specialization
         auto sorted = vec;
-        std::sort(sorted.begin(), sorted.end());
+        std::ranges::sort(sorted);
         EXPECT_EQ(vec.size(), N0 - 1);
         for (int i = 0; i < isize(sorted) - 1; ++i) {
           EXPECT_TRUE(sorted[i] != sorted[i + 1]);

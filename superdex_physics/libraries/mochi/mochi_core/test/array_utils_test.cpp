@@ -877,12 +877,12 @@ TEST(ArrayUtils, ArgSort) {
     for (auto idx : result) {
       sorted.push_back(data[idx]);
     }
-    EXPECT_TRUE(std::is_sorted(sorted.begin(), sorted.end()));
+    EXPECT_TRUE(std::ranges::is_sorted(sorted));
 
     // Check that result is a valid permutation: no duplicates or missing indices
     std::vector<size_t> expected(result.size());
     std::iota(expected.begin(), expected.end(), 0);
-    std::sort(result.begin(), result.end());
+    std::ranges::sort(result);
     EXPECT_SPAN_EQ(result, expected);
   }
 }

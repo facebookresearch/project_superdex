@@ -120,7 +120,7 @@ TEST(Graph, Traverse) {
     auto nodeList = nToN[11];
     // nToN may not have sorted entries
     // Sort the list to simplify the comparison
-    std::sort(nodeList.begin(), nodeList.end());
+    std::ranges::sort(nodeList);
     std::vector<int> neighbors{5, 6, 7, 10, 11, 12, 15, 16, 17};
     EXPECT_EQ(isize(neighbors), isize(nodeList));
     for (int i = 0; i < isize(neighbors); ++i) {
@@ -149,7 +149,7 @@ TEST(Graph, Traverse) {
     auto eleList = eToE[5];
     // eToE may not have sorted entries
     // Sort the list to simplify the comparison
-    std::sort(eleList.begin(), eleList.end());
+    std::ranges::sort(eleList);
     std::vector<int> neighbors{0, 1, 2, 4, 5, 6, 8, 9, 10};
     EXPECT_EQ(isize(neighbors), isize(eleList));
     for (int i = 0; i < isize(neighbors); ++i) {

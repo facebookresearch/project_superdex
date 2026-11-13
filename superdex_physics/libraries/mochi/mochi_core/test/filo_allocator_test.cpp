@@ -58,7 +58,7 @@ static void TestFiloAllocator_VariousSizes(FiloAllocator* alloc) {
     }
     // Expect all addresses to be unique
     auto sortedPtrs = ptrs;
-    std::sort(sortedPtrs.begin(), sortedPtrs.end());
+    std::ranges::sort(sortedPtrs);
     for (int i = 1; i < isize(ptrs); ++i) {
       EXPECT_NE(sortedPtrs[i - 1], sortedPtrs[i]);
     }

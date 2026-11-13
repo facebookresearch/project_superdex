@@ -545,7 +545,7 @@ TEST(SparseMatrix, ConstructFromGraph) {
     SparseMatrix<real, int, int, std::vector> mat(3, graph);
     EXPECT_EQ(graph.NumTargets(), mat.NumNonZeros());
     EXPECT_EQ(graph.NumTargets(), isize(mat.Values()));
-    std::copy(std::begin(TC::kValues), std::end(TC::kValues), mat.Values().begin());
+    std::ranges::copy(TC::kValues, mat.Values().begin());
     CheckMat<TC>(mat);
 
     // Repeat, but this time use std::move
@@ -553,7 +553,7 @@ TEST(SparseMatrix, ConstructFromGraph) {
     EXPECT_EQ(0, isize(graph.GetPointers())); // NOLINT(bugprone-use-after-move)
     EXPECT_EQ(0, isize(graph.GetTargets())); // NOLINT(bugprone-use-after-move)
     EXPECT_EQ(isize(mat.Values()), isize(mat2.Values()));
-    std::copy(std::begin(TC::kValues), std::end(TC::kValues), mat2.Values().begin());
+    std::ranges::copy(TC::kValues, mat2.Values().begin());
     CheckMat<TC>(mat2);
 
     // If we do not specify the number of columns, then it will default to be a square matrix.
@@ -598,7 +598,7 @@ TEST(SparseMatrix, ConstructFromGraph) {
     SparseMatrix<real> mat(3, graph, &mem2);
     EXPECT_EQ(graph.NumTargets(), mat.NumNonZeros());
     EXPECT_EQ(graph.NumTargets(), isize(mat.Values()));
-    std::copy(std::begin(TC::kValues), std::end(TC::kValues), mat.Values().begin());
+    std::ranges::copy(TC::kValues, mat.Values().begin());
     CheckMat<TC>(mat);
     EXPECT_GE(int(mat.Values().begin() - (real*)(buffer2.data())), 0);
     EXPECT_LT(int(mat.Values().begin() - (real*)(buffer2.data())), N);
@@ -610,7 +610,7 @@ TEST(SparseMatrix, ConstructFromGraph) {
     EXPECT_EQ(0, isize(graph.GetPointers())); // NOLINT(bugprone-use-after-move)
     EXPECT_EQ(0, isize(graph.GetTargets())); // NOLINT(bugprone-use-after-move)
     EXPECT_EQ(isize(mat.Values()), isize(mat2.Values()));
-    std::copy(std::begin(TC::kValues), std::end(TC::kValues), mat2.Values().begin());
+    std::ranges::copy(TC::kValues, mat2.Values().begin());
     CheckMat<TC>(mat2);
     EXPECT_GE(int(mat2.Pointers().data() - buffer1.data()), 0);
     EXPECT_LT(int(mat2.Pointers().data() - buffer1.data()), N);

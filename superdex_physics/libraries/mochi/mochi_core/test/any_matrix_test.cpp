@@ -151,7 +151,7 @@ TEST(AnyMatrix, AsView) {
   // Matrix<real> (column major)
   {
     Matrix<real> mat{kNumRows, kNumCols};
-    std::copy(std::begin(kValuesDenseColMajor), std::end(kValuesDenseColMajor), mat.data());
+    std::ranges::copy(kValuesDenseColMajor, mat.data());
     AnyMatrix<real> any = mat;
     checkMat(any);
     checkMat(AsView(any));
@@ -302,7 +302,7 @@ TEST(AnyMatrixView, GetBlockDiagonal) {
   int constexpr kNumRows = 3;
   real constexpr kValuesDenseColMajor[] = {1_r, -1.1_r, 7_r, -2.2_r, 4_r, -3.3_r, 2_r, -4.4_r, 8_r};
   Matrix<real> mat{kNumRows, kNumRows};
-  std::copy(std::begin(kValuesDenseColMajor), std::end(kValuesDenseColMajor), mat.data());
+  std::ranges::copy(kValuesDenseColMajor, mat.data());
   using test::details::CheckGetBlockDiagonal;
 
   // Matrix<real> (column major)

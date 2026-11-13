@@ -159,7 +159,7 @@ TEST(SparsityUtils, MatAddSubBlocks_BlockSparseMatrix_BlockSize3) {
   DynamicArray<int> blockPointers = {0, 2, 4, 6};
   DynamicArray<int> blockIndices = {0, 2, 0, 1, 1, 2};
   DynamicArray<real> values(blockIndices.size() * 3 * 3);
-  std::fill(values.begin(), values.end(), 0_r);
+  std::ranges::fill(values, 0_r);
 
   BlockSparseMatrix<real, 3> bSp(3, blockPointers, blockIndices, values);
 
@@ -204,7 +204,7 @@ TEST(SparsityUtils, MatAddSubBlocks_BlockSparseMatrix_BlockSize4) {
   DynamicArray<int> blockPointers = {0, 2, 4, 6};
   DynamicArray<int> blockIndices = {0, 2, 0, 1, 1, 2};
   DynamicArray<real> values(blockIndices.size() * 4 * 4);
-  std::fill(values.begin(), values.end(), 0_r);
+  std::ranges::fill(values, 0_r);
 
   BlockSparseMatrix<real, 4> bSp(3, blockPointers, blockIndices, values);
 
@@ -254,7 +254,7 @@ TEST(SparsityUtils, MatAddSubBlocks_BlockSparseMatrix_MultipleGroups_BlockSize3)
   DynamicArray<int> blockPointers = {0, 2, 4, 6};
   DynamicArray<int> blockIndices = {0, 2, 0, 1, 1, 2};
   DynamicArray<real> values(blockIndices.size() * 3 * 3);
-  std::fill(values.begin(), values.end(), 0_r);
+  std::ranges::fill(values, 0_r);
 
   BlockSparseMatrix<real, 3> bSp(3, blockPointers, blockIndices, values);
 
@@ -302,7 +302,7 @@ TEST(SparsityUtils, MatAddSubBlocks_BlockSparseMatrix_MultipleGroups_BlockSize4)
   DynamicArray<int> blockPointers = {0, 2, 4, 6};
   DynamicArray<int> blockIndices = {0, 2, 0, 1, 1, 2};
   DynamicArray<real> values(blockIndices.size() * 4 * 4);
-  std::fill(values.begin(), values.end(), 0_r);
+  std::ranges::fill(values, 0_r);
 
   BlockSparseMatrix<real, 4> bSp(3, blockPointers, blockIndices, values);
 
@@ -482,7 +482,7 @@ TEST(SparsityUtils, SetZeroOnRowsCols_BlockSparseMatrix_BlockSize3) {
   DynamicArray<int> blockPointers = {0, 2, 4, 6};
   DynamicArray<int> blockIndices = {0, 2, 0, 1, 1, 2};
   DynamicArray<real> values(blockIndices.size() * 3 * 3);
-  std::fill(values.begin(), values.end(), 1_r);
+  std::ranges::fill(values, 1_r);
 
   // Zero individual cols (and corresponding rows for comparison)
   {
@@ -594,7 +594,7 @@ TEST(SparsityUtils, SetZeroOnRowsCols_BlockSparseMatrix_BlockSize4) {
   DynamicArray<int> blockPointers = {0, 2, 4, 6};
   DynamicArray<int> blockIndices = {0, 2, 0, 1, 1, 2};
   DynamicArray<real> values(blockIndices.size() * 4 * 4);
-  std::fill(values.begin(), values.end(), 1_r);
+  std::ranges::fill(values, 1_r);
 
   // Zero individual cols (and corresponding rows for comparison)
   {
@@ -848,7 +848,7 @@ TEST(SparsityUtils, SetZeroOnCols_ValueIndicesCache) {
     DynamicArray<int> blockPointers = {0, 2, 5, 7};
     DynamicArray<int> blockIndices = {0, 1, 0, 1, 2, 1, 2};
     DynamicArray<real> values(blockIndices.size() * 3 * 3);
-    std::fill(values.begin(), values.end(), 1_r);
+    std::ranges::fill(values, 1_r);
 
     BlockSparseMatrix<real, 3> bSp(3, blockPointers, blockIndices, values);
 

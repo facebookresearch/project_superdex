@@ -32,7 +32,7 @@ static void TestPriority() {
   auto invalid = std::numeric_limits<int>::max();
 
   for (int i = 0; i < n; ++i) {
-    auto min = *std::min_element(priorities.begin(), priorities.end());
+    auto min = *std::ranges::min_element(priorities);
     auto next = pq.RemoveMinElement();
     EXPECT_EQ(priorities[next], min);
     priorities[next] = invalid;

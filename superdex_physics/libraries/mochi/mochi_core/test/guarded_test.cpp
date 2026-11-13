@@ -334,7 +334,7 @@ TEST(Guarded, ConcurrentContainerInsertionsPreserveAllElements) {
   DynamicArray<int> result = values.Mutate([](auto& v) { return v; });
   ASSERT_EQ(result.size(), static_cast<size_t>(kThreads * kPerThread));
 
-  std::sort(result.begin(), result.end());
+  std::ranges::sort(result);
   DynamicArray<int> expected(kThreads * kPerThread);
   std::iota(expected.begin(), expected.end(), 0);
   EXPECT_EQ(result, expected);

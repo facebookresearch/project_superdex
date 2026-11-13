@@ -43,7 +43,7 @@ TEST(ActorPseudoMatrix, DenseActor) {
   // |356|
   real constexpr kValues[9] = {1, 2, 3, 2, 4, 5, 3, 5, 6};
   auto actorMat = Matrix<real>{3, 3};
-  std::copy(std::begin(kValues), std::end(kValues), actorMat.data());
+  std::ranges::copy(kValues, actorMat.data());
 
   ActorPseudoMatrix<real> ops{0, actorMat, {}};
   EXPECT_EQ(3, ops.Rows());

@@ -86,7 +86,7 @@ TEST_P(SphereOctTreeTest, CoincidentPoints) {
   for (int numPoints = 0; numPoints < 250; ++numPoints) {
     DynamicArray<Real3> points;
     points.resize_noinit(numPoints);
-    std::fill(points.begin(), points.end(), location);
+    std::ranges::fill(points, location);
     auto tree = SphereOctTree::FromPoints(points, maxPerLeaf);
     tree.AssertTreeIsValid(points);
   }
@@ -110,7 +110,7 @@ TEST_P(SphereOctTreeTest, FindIntersectingSamplesAll) {
         result);
 
     // Should return every index exactly once.
-    std::sort(result.begin(), result.end());
+    std::ranges::sort(result);
     ASSERT_EQ(isize(result), numPoints);
     for (int i = 0; i < numPoints; ++i) {
       EXPECT_EQ(result[i], i);
@@ -163,7 +163,7 @@ TEST(SphereOctTreeTest, FindIntersectingSamplesPrimitiveShape) {
     EXPECT_TRUE(result.empty());
 
     tree.FindIntersectingSamples(Plane{Real3{1_r, 0_r, 0_r}, 0_r}, result);
-    std::sort(result.begin(), result.end());
+    std::ranges::sort(result);
     DynamicArray<int> const expected{0, 1};
     EXPECT_EQ(result, expected);
   }

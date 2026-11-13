@@ -822,7 +822,7 @@ TEST(BlockSparseMatrix, ConstructFromGraph) {
     BlockSparseMatrix<real, 3> mat(2, graph);
     EXPECT_EQ(graph.NumTargets(), mat.NumNonZeroBlocks());
     EXPECT_EQ(graph.NumTargets() * 3 * 3, isize(mat.Values()));
-    std::copy(std::begin(TC::kValues), std::end(TC::kValues), mat.Values().begin());
+    std::ranges::copy(TC::kValues, mat.Values().begin());
     CheckMat<TC>(mat);
 
     // Repeat, but this time use std::move
@@ -830,13 +830,13 @@ TEST(BlockSparseMatrix, ConstructFromGraph) {
     EXPECT_EQ(0, isize(graph.GetPointers())); // NOLINT(bugprone-use-after-move)
     EXPECT_EQ(0, isize(graph.GetTargets())); // NOLINT(bugprone-use-after-move)
     EXPECT_EQ(isize(mat.Values()), isize(mat2.Values()));
-    std::copy(std::begin(TC::kValues), std::end(TC::kValues), mat2.Values().begin());
+    std::ranges::copy(TC::kValues, mat2.Values().begin());
     CheckMat<TC>(mat2);
 
     // If the number of block columns if not specified, it must default to a square matrix whose
     // number of block rows and block columns is derived from the graph.
     BlockSparseMatrix<real, 3> mat3(Graph<int, int>(pointers, indices));
-    std::copy(std::begin(TC::kValues), std::end(TC::kValues), mat3.Values().begin());
+    std::ranges::copy(TC::kValues, mat3.Values().begin());
     CheckMat<TC>(mat3);
   }
 
@@ -863,7 +863,7 @@ TEST(BlockSparseMatrix, ConstructFromGraph) {
     BlockSparseMatrix<real, 3> mat(2, graph, &mem2);
     EXPECT_EQ(graph.NumTargets(), mat.NumNonZeroBlocks());
     EXPECT_EQ(graph.NumTargets() * 3 * 3, isize(mat.Values()));
-    std::copy(std::begin(TC::kValues), std::end(TC::kValues), mat.Values().begin());
+    std::ranges::copy(TC::kValues, mat.Values().begin());
     CheckMat<TC>(mat);
     EXPECT_GE(int(mat.Values().begin() - (real*)(buffer2.data())), 0);
     EXPECT_LT(int(mat.Values().begin() - (real*)(buffer2.data())), N);
@@ -875,7 +875,7 @@ TEST(BlockSparseMatrix, ConstructFromGraph) {
     EXPECT_EQ(0, isize(graph.GetPointers())); // NOLINT(bugprone-use-after-move)
     EXPECT_EQ(0, isize(graph.GetTargets())); // NOLINT(bugprone-use-after-move)
     EXPECT_EQ(isize(mat.Values()), isize(mat2.Values()));
-    std::copy(std::begin(TC::kValues), std::end(TC::kValues), mat2.Values().begin());
+    std::ranges::copy(TC::kValues, mat2.Values().begin());
     CheckMat<TC>(mat2);
     EXPECT_GE(int(mat2.Pointers().data() - buffer1.data()), 0);
     EXPECT_LT(int(mat2.Pointers().data() - buffer1.data()), N);
@@ -887,7 +887,7 @@ TEST(BlockSparseMatrix, ConstructFromGraph) {
     // If the number of block columns if not specified, it must default to a square matrix whose
     // number of block rows and block columns is derived from the graph.
     BlockSparseMatrix<real, 3> mat3(Graph<int, int>(pointers, indices), &mem2);
-    std::copy(std::begin(TC::kValues), std::end(TC::kValues), mat3.Values().begin());
+    std::ranges::copy(TC::kValues, mat3.Values().begin());
     EXPECT_GE(int(mat3.Values().begin() - (real*)(buffer2.data())), 0);
     EXPECT_LT(int(mat3.Values().begin() - (real*)(buffer2.data())), N);
     CheckMat<TC>(mat3);

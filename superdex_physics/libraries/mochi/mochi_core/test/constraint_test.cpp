@@ -2230,8 +2230,8 @@ TEST(Constraints, SingleDofRangeJacobian) {
 
     // Test individual coordinates
     for (int i = 0; i < ndim; ++i) {
-      std::fill(minValues.begin(), minValues.end(), 0_r);
-      std::fill(maxValues.begin(), maxValues.end(), 0_r);
+      std::ranges::fill(minValues, 0_r);
+      std::ranges::fill(maxValues, 0_r);
       minValues[i] = bp.first;
       maxValues[i] = bp.second;
 
@@ -2245,8 +2245,8 @@ TEST(Constraints, SingleDofRangeJacobian) {
     }
 
     // Test all coordinates
-    std::fill(minValues.begin(), minValues.end(), bp.first);
-    std::fill(maxValues.begin(), maxValues.end(), bp.second);
+    std::ranges::fill(minValues, bp.first);
+    std::ranges::fill(maxValues, bp.second);
     for (auto i = 0; i < ndim; ++i) {
       if (i % 3 == 0) {
         dofValues[i] = bp.first - delta;
@@ -2300,8 +2300,8 @@ TEST(Constraints, RotationRangeJacobian) {
 
     // Test individual coordinates
     for (int i = 0; i < 3; ++i) {
-      std::fill(minValues.begin(), minValues.end(), 0_r);
-      std::fill(maxValues.begin(), maxValues.end(), 0_r);
+      std::ranges::fill(minValues, 0_r);
+      std::ranges::fill(maxValues, 0_r);
       minValues[i] = bp.first;
       maxValues[i] = bp.second;
 
@@ -2315,8 +2315,8 @@ TEST(Constraints, RotationRangeJacobian) {
     }
 
     // Test all coordinates
-    std::fill(minValues.begin(), minValues.end(), bp.first);
-    std::fill(maxValues.begin(), maxValues.end(), bp.second);
+    std::ranges::fill(minValues, bp.first);
+    std::ranges::fill(maxValues, bp.second);
     for (auto i = 0; i < 3; ++i) {
       if (i % 3 == 0) {
         dofValues[i] = bp.first - delta;
