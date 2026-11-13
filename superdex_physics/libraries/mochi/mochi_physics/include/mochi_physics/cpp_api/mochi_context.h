@@ -155,6 +155,8 @@ class Context {
   [[nodiscard]] virtual MeshDataView GetShapeContactSkinMesh(ShapeHandle shape, Error& error)
       const = 0;
   [[nodiscard]] virtual MeshDataView GetShapeVisualMesh(ShapeHandle shape, Error& error) const = 0;
+  [[nodiscard]] virtual Span<real const> GetShapeElementFrameAxes(ShapeHandle shape, Error& error)
+      const = 0;
 
   [[nodiscard]] virtual Aabb GetShapeAabb(ShapeHandle shape, Error& error) const = 0;
 

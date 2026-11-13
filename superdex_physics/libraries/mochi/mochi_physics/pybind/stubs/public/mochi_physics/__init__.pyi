@@ -9754,6 +9754,43 @@ def get_shape_visual_mesh(shape: ShapeHandle) -> MeshDataView:
         :meth:`~superdex.physics.Actor.get_visual_mesh`
     """
 
+def get_shape_element_frame_axes(shape: ShapeHandle) -> SpanConstReal:
+    """Get the per-element frame axes of a polyline shape.
+
+    Returns reference frame axes in the same local coordinate frame as
+    :func:`~superdex.physics.get_shape_mesh`, in the format of
+    :attr:`~superdex.physics.ModelData.element_frame_axes`. XYZ triple e is a unit
+    vector orthogonal to element e of that mesh. The span contains three values per
+    element, including the closing element of a closed loop. These are the model's
+    authored axes when it has them, otherwise the discrete Bishop frame generated
+    when the shape was created, and include any bake transform applied when the
+    shape was created or loaded.
+
+    Args:
+        shape (ShapeHandle): Handle to a polyline shape.
+
+    Returns:
+        A non-owning view of the shape's element frame axes.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+
+    Note:
+        Only supported for polyline shapes. Sets error otherwise.
+
+    Note:
+        Can be called on any thread.
+
+    Note:
+        The returned view will be invalid after the shape handle has been released.
+
+    See Also:
+        :attr:`~superdex.physics.ModelData.element_frame_axes`,
+        :func:`~superdex.physics.get_shape_mesh`,
+        :meth:`~superdex.physics.Actor.get_rod_pose`,
+        :class:`~superdex.physics.RodActorParams`
+    """
+
 def get_shape_aabb(shape: ShapeHandle) -> Aabb:
     """Get an axis-aligned bounding box (AABB) that contains the shape, in its local
     coordinate frame.

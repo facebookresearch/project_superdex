@@ -1223,6 +1223,18 @@ Aabb ContextImpl::GetShapeAabb(ShapeHandle shape, Error& error) const {
   return GetAabb(shapePtr->GetBoundingVolume(error)); // Not all shapes have a bounding volume
 }
 
+Span<real const> ContextImpl::GetShapeElementFrameAxes(ShapeHandle shape, Error& error) const {
+  MOCHI_ERROR_RETURN(error, {});
+
+  std::shared_ptr<PolylineShape const> shapePtr =
+      std::dynamic_pointer_cast<PolylineShape const>(GetShapeSharedPtr(shape));
+  MOCHI_ERROR_IF_NOT(
+      shapePtr, error, "Cannot get shape element frame axes. Invalid polyline shape handle.");
+  MOCHI_ERROR_RETURN(error, {});
+
+  return Flatten(MakeConstSpan(shapePtr->GetElementFrameAxes()));
+}
+
 ArticulatedShapeInfo ContextImpl::GetArticulatedShapeInfo(ShapeHandle shape, Error& error) const {
   MOCHI_ERROR_RETURN(error, {});
 

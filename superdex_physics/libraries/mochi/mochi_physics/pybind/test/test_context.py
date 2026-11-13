@@ -530,3 +530,22 @@ class TestContext(MochiTestBase):
         self.assertEqual(3, visual.nodes_per_element)
         self.assertEqual(8, visual.get_num_nodes())
         self.assertEqual(12, visual.get_num_elements())
+
+    def test_get_shape_element_frame_axes(self):
+        model = mochi.ModelData()
+        model.mesh = mochi.MeshData()
+        model.mesh.nodes_per_element = 2
+        model.mesh.coordinates = [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 2.0, 0.0, 0.0]
+        model.element_frame_axes = [0.0, 0.0, 1.0, 0.0, 1.0, 0.0]
+        shape = mochi.create_model_shape(model)
+        axes = mochi.get_shape_element_frame_axes(shape)
+        np.testing.assert_allclose(model.element_frame_axes, np.asarray(axes))
+
+    def test_get_shape_element_frame_axes_not_polyline(self):
+        shape = mochi.create_sphere_shape(center=[0.0, 0.0, 0.0], radius=1.0)
+        with self.assertRaises(mochi.Error):
+            mochi.get_shape_element_frame_axes(shape)
+
+    def test_get_shape_element_frame_axes_invalid_handle(self):
+        with self.assertRaises(mochi.Error):
+            mochi.get_shape_element_frame_axes(mochi.ShapeHandle())

@@ -106,6 +106,7 @@ class ContextImpl final : public Context {
   MeshDataView GetShapeSurfaceMesh(ShapeHandle shape, Error& error) const override;
   MeshDataView GetShapeContactSkinMesh(ShapeHandle shape, Error& error) const override;
   MeshDataView GetShapeVisualMesh(ShapeHandle shape, Error& error) const override;
+  Span<real const> GetShapeElementFrameAxes(ShapeHandle shape, Error& error) const override;
   Aabb GetShapeAabb(ShapeHandle shape, Error& error) const override;
   [[nodiscard]] ArticulatedShapeInfo GetArticulatedShapeInfo(ShapeHandle shape, Error& error)
       const override;

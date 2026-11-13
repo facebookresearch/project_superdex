@@ -473,6 +473,19 @@ void mochi::DefineMochiPhysics_MochiPhysicsContext([[maybe_unused]] nb::module_&
       , "Get a view of the shape's visual mesh data, including skinning data if\navailable.\n\nReturns a triangle mesh (3 nodes per element) intended for visual rendering.\nCoordinates and connectivity are returned in visual-mesh node-index space,\nincluding any nodes that no visual triangle references. The mesh includes the\nauthored skinning data when available. For shapes without a visual mesh, returns\nan empty view.\n\nArgs:\n    shape (ShapeHandle): Handle to a valid shape.\n\nReturns:\n    A non-owning view of the shape's visual mesh data, or an empty view if the\n    shape has no visual mesh.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Can be called on any thread.\n\nNote:\n    The returned view will be invalid after the shape handle has been released.\n\nNote:\n    For tetrahedral and triangular mesh shapes, skinning indices refer to the\n    node ordering returned by :func:`~superdex.physics.get_shape_mesh`, not to\n    the compact surface-node ordering returned by\n    :func:`~superdex.physics.get_shape_surface_mesh`. For polyline shapes,\n    skinning indices refer to polyline elements.\n\nSee Also:\n    :class:`~superdex.physics.MeshDataView`,\n    :func:`~superdex.physics.get_shape_mesh`,\n    :func:`~superdex.physics.get_shape_surface_mesh`,\n    :meth:`~superdex.physics.Actor.get_visual_mesh`"
     );
 
+    m.def("get_shape_element_frame_axes", [](mochi::ShapeHandle shape) {
+      CheckContext();
+      mochi::Error error;
+      auto result = GetContext()->GetShapeElementFrameAxes(shape, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("shape")
+      , "Get the per-element frame axes of a polyline shape.\n\nReturns reference frame axes in the same local coordinate frame as\n:func:`~superdex.physics.get_shape_mesh`, in the format of\n:attr:`~superdex.physics.ModelData.element_frame_axes`. XYZ triple e is a unit\nvector orthogonal to element e of that mesh. The span contains three values per\nelement, including the closing element of a closed loop. These are the model's\nauthored axes when it has them, otherwise the discrete Bishop frame generated\nwhen the shape was created, and include any bake transform applied when the\nshape was created or loaded.\n\nArgs:\n    shape (ShapeHandle): Handle to a polyline shape.\n\nReturns:\n    A non-owning view of the shape's element frame axes.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Only supported for polyline shapes. Sets error otherwise.\n\nNote:\n    Can be called on any thread.\n\nNote:\n    The returned view will be invalid after the shape handle has been released.\n\nSee Also:\n    :attr:`~superdex.physics.ModelData.element_frame_axes`,\n    :func:`~superdex.physics.get_shape_mesh`,\n    :meth:`~superdex.physics.Actor.get_rod_pose`,\n    :class:`~superdex.physics.RodActorParams`"
+    );
+
     m.def("get_shape_aabb", [](mochi::ShapeHandle shape) {
       CheckContext();
       mochi::Error error;

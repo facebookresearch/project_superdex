@@ -28,6 +28,7 @@
 #include <mochi_physics/src/mochi_context.h>
 #include <mochi_physics/src/mochi_pose_controller.h>
 #include <mochi_physics/src/mochi_rigid.h>
+#include <mochi_physics/src/mochi_rod.h>
 #include <mochi_physics/src/mochi_shape.h>
 #include <mochi_physics/src/mochi_soft.h>
 #include <mochi_physics/src/mochi_soft_rom_systems.h>
@@ -3166,4 +3167,90 @@ TEST_P(MochiContextTest, GetShapeVisualMesh_PolylineNoVisualMeshReturnsEmpty) {
   ASSERT_TRUE(shape.IsValid());
   auto const mesh = _mochiContext->GetShapeVisualMesh(shape, ExpectOK{});
   EXPECT_EQ(MeshDataView{}, mesh);
+}
+
+static ModelData CreateFramedPolylineModel(bool isClosedLoop = false) {
+  DynamicArray<Real3> const nodes = {
+      {0_r, 0_r, 0_r}, {1_r, 0_r, 0_r}, {2_r, 1_r, 0_r}, {3_r, 1_r, 1_r}};
+  DynamicArray<Real3> axes = {
+      {0_r, 1_r, 0_r}, Normalize(Real3{1_r, -1_r, 1_r}), Normalize(Real3{1_r, 1_r, -1_r})};
+  if (isClosedLoop) {
+    axes.push_back(Normalize(Real3{0_r, 1_r, -1_r}));
+  }
+  ModelData model;
+  model.mesh.emplace();
+  model.mesh->nodesPerElement = 2;
+  model.mesh->coordinates = Flatten(MakeConstSpan(nodes));
+  model.mesh->connectivity = MakeSequentialPolylineConnectivity(isize(nodes), isClosedLoop);
+  model.elementFrameAxes = DynamicArray<real>{Flatten(MakeConstSpan(axes))};
+  return model;
+}
+
+TEST_P(MochiContextTest, GetShapeElementFrameAxes_ReturnsAuthoredAxes) {
+  for (bool const isClosedLoop : {false, true}) {
+    SCOPED_TRACE(isClosedLoop ? "closed loop" : "open polyline");
+    ModelData const model = CreateFramedPolylineModel(isClosedLoop);
+    ShapeHandle const shape = _mochiContext->CreateModelShape(model, ExpectOK{});
+    MeshDataView const mesh = _mochiContext->GetShapeMesh(shape, ExpectOK{});
+    Span<real const> const axes = _mochiContext->GetShapeElementFrameAxes(shape, ExpectOK{});
+    EXPECT_EQ(3 * mesh.GetNumElements(), isize(axes));
+    EXPECT_SPAN_EQ(MakeConstSpan(*model.elementFrameAxes), axes);
+  }
+}
+
+TEST_P(MochiContextTest, GetShapeElementFrameAxes_GeneratesBishopFrameWhenUnframed) {
+  for (bool const isClosedLoop : {false, true}) {
+    SCOPED_TRACE(isClosedLoop ? "closed loop" : "open polyline");
+    ModelData model = CreateFramedPolylineModel(isClosedLoop);
+    model.elementFrameAxes.reset();
+    ShapeHandle const shape = _mochiContext->CreateModelShape(model, ExpectOK{});
+    MeshDataView const mesh = _mochiContext->GetShapeMesh(shape, ExpectOK{});
+    Span<real const> const axes = _mochiContext->GetShapeElementFrameAxes(shape, ExpectOK{});
+    DynamicArray<Real3> const bishop = GenerateDiscreteBishopFrame(
+        Unflatten<Real3 const>(MakeConstSpan(model.mesh->coordinates)), isClosedLoop);
+    EXPECT_EQ(3 * mesh.GetNumElements(), isize(axes));
+    EXPECT_SPAN_EQ(Flatten(MakeConstSpan(bishop)), axes);
+  }
+}
+
+// A shape loaded with a bake transform reports the axes of the baked model: the authored axes, or
+// else the Bishop frame of the unbaked centerline, transformed by the bake.
+TEST_P(MochiContextTest, GetShapeElementFrameAxes_IncludesBakeTransform) {
+  Real3 const scale{1_r, 2_r, 0.5_r};
+  TransformRT const transform{
+      Quaternion::FromAxisAngle(Normalize(Real3{1_r, 1_r, 0_r}), 0.7_r), Real3{1_r, 2_r, 3_r}};
+  for (bool const framed : {true, false}) {
+    SCOPED_TRACE(framed ? "framed" : "unframed");
+    ModelData model = CreateFramedPolylineModel();
+    if (!framed) {
+      model.elementFrameAxes.reset();
+    }
+    DynamicString const json = model::SaveToJsonString(model, ExpectOK{});
+    ShapeHandle const shape = _mochiContext->LoadShapeFromBytes(
+        Span<char const>(json.data(), json.size()), scale, transform, ExpectOK{});
+
+    ModelData baked = model;
+    if (!framed) {
+      DynamicArray<Real3> const bishop = GenerateDiscreteBishopFrame(
+          Unflatten<Real3 const>(MakeConstSpan(model.mesh->coordinates)), false);
+      baked.elementFrameAxes = DynamicArray<real>{Flatten(MakeConstSpan(bishop))};
+    }
+    model::BakeTransform(baked, scale, transform, ExpectOK{});
+    Span<real const> const actual = _mochiContext->GetShapeElementFrameAxes(shape, ExpectOK{});
+    EXPECT_TRUE(test::NearEqualSpan(*baked.elementFrameAxes, actual, 1e-5_r));
+  }
+}
+
+TEST_P(MochiContextTest, GetShapeElementFrameAxes_NonPolylineShapesSetError) {
+  auto unitCube = CreateMinimalTetMeshUnitCube();
+  ShapeHandle const tetShape = _mochiContext->CreateTetMeshShape(
+      Flatten(MakeSpan(unitCube.first)), Flatten(MakeSpan(unitCube.second)), ExpectOK{});
+  EXPECT_TRUE(_mochiContext->GetShapeElementFrameAxes(tetShape, ExpectNotOK{}).empty());
+  ShapeHandle const sphereShape = _mochiContext->CreateSphereShape(Real3{}, 1_r, ExpectOK{});
+  EXPECT_TRUE(_mochiContext->GetShapeElementFrameAxes(sphereShape, ExpectNotOK{}).empty());
+}
+
+TEST_P(MochiContextTest, GetShapeElementFrameAxes_InvalidHandle) {
+  [[maybe_unused]] auto axes =
+      _mochiContext->GetShapeElementFrameAxes(ShapeHandle{}, ExpectNotOK{});
 }

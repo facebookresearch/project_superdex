@@ -1958,9 +1958,9 @@ TEST(Prefab, RodActor_AddToScene_Scale) {
     EXPECT_NEAR_EQ(worldFromActor.GetTranslation(), actor->GetRootTransform().GetTranslation());
 
     // Frame axes are normals of the scaled geometry and stay valid.
-    auto const& reg = assert_cast<SceneImpl*>(scene)->GetRegistry();
-    entt::entity const entity = GetEntityUnchecked(actor->GetHandle());
-    Span<Real3 const> const axes = reg.get<CReferenceElementFrameAxes const>(entity).axes;
+    ShapeHandle const referenceShape = actor->GetReferenceShape(ExpectOK{});
+    Span<Real3 const> const axes =
+        Unflatten<Real3 const>(context->GetShapeElementFrameAxes(referenceShape, ExpectOK{}));
     Span<Real3 const> const modelAxes = Unflatten<Real3 const>(*shape.model.elementFrameAxes);
     ASSERT_EQ(isize(modelAxes), isize(axes));
     for (int i = 0; i < isize(axes); ++i) {
@@ -1971,6 +1971,8 @@ TEST(Prefab, RodActor_AddToScene_Scale) {
 
     // Material and contact parameters do not scale. The collider radius scales with the absolute
     // value of the uniform composed scale, like the geometry.
+    auto const& reg = assert_cast<SceneImpl*>(scene)->GetRegistry();
+    entt::entity const entity = GetEntityUnchecked(actor->GetHandle());
     EXPECT_EQ(
         rod.material,
         static_cast<RodMaterialParams const&>(reg.get<CRodMaterialParams const>(entity)));
