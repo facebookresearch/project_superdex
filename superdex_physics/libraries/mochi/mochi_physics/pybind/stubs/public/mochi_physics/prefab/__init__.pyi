@@ -3453,25 +3453,27 @@ class ExportParams:
     @exclude_actors.setter
     def exclude_actors(self, value: mochi_physics.ArrayLikeActorHandle) -> None: ...
     export_current_pose: bool
-    """Whether to export the current pose of soft and articulated actors.
+    """Whether to export the current pose of soft, articulated, and rod actors.
 
     When true, the current elastic displacements of soft actors (including nested
     soft actors of soft-skinned actors) are written to
-    :attr:`~superdex.physics.prefab.SoftActorPrefab.node_displacements`, and the
-    current joint pose of articulated actors (including soft-skinned skeletons) is
-    written to :attr:`~superdex.physics.prefab.ArticulatedActorPrefab.joint_pose`.
-    Adding the exported prefab to a scene then restores that pose. Actors exactly at
-    rest omit these fields.
+    :attr:`~superdex.physics.prefab.SoftActorPrefab.node_displacements`, the current
+    joint pose of articulated actors (including soft-skinned skeletons) is written
+    to :attr:`~superdex.physics.prefab.ArticulatedActorPrefab.joint_pose`, and the
+    current node displacements and element frame axes of rod actors are written to
+    :attr:`~superdex.physics.prefab.RodActorPrefab.pose`. Adding the exported prefab
+    to a scene then restores that pose. Actors exactly at rest omit these fields.
 
     Note:
-        When false (the default), soft displacement and articulated joint pose
-        fields are omitted. Actor transforms are exported regardless of this option.
+        When false (the default), soft displacement, articulated joint pose, and rod
+        pose fields are omitted. Actor transforms are exported regardless of this
+        option.
 
     Note:
         Displacements of ROM soft actors are never exported.
 
     Note:
-        Velocities (soft nodal and articulated joint) are never exported.
+        Velocities (soft nodal, articulated joint, and rod) are never exported.
 
     Note:
         A prefab with exported soft displacements cannot be added to a scene with
@@ -4055,13 +4057,13 @@ def export_scene(
         trip of any prefab used to create the scene.
 
     Warning:
-        Currently exports only rigid, soft, articulated, and soft-skinned actors.
-        Constraints, pose controllers, shell, rod actors, and implicit (non-mesh)
+        Currently exports only rigid, soft, articulated, soft-skinned, and rod
+        actors. Constraints, pose controllers, shell actors, and implicit (non-mesh)
         shapes are NOT exported.
 
     Warning:
-        Velocities are NOT exported. Soft actor displacements and articulated joint
-        poses are exported only when
+        Velocities are NOT exported. Soft actor displacements, articulated joint
+        poses, and rod poses are exported only when
         :attr:`~superdex.physics.prefab.ExportParams.export_current_pose` is true.
 
     Warning:
@@ -4136,8 +4138,8 @@ def export_actor(
         referenced from the prefab using "./generated_assets/" paths.
 
     Warning:
-        Only supported for standalone rigid actors, standalone soft actors, and
-        articulated actors. Soft-skinned actors are not supported.
+        Only supported for standalone rigid actors, standalone soft actors,
+        articulated actors, and rod actors. Soft-skinned actors are not supported.
 
     Warning:
         Scene-level contact-filter settings and contact-pair parameter overrides are

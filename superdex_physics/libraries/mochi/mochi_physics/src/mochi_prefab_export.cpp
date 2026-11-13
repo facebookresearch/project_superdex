@@ -25,6 +25,8 @@
 #include "mochi_contact_filter.h"
 #include "mochi_contact_pair_params.h"
 #include "mochi_ecs_utils.h"
+#include "mochi_rod.h"
+#include "mochi_rod_pose.h"
 #include "mochi_scene.h"
 #include "mochi_simulation.h"
 #include "mochi_soft.h"
@@ -141,10 +143,10 @@ static std::pair<DynamicString, std::filesystem::path> GenerateShapeFilePaths(
     case ActorType::Rigid:
     case ActorType::Soft:
     case ActorType::Articulated:
+    case ActorType::Rod:
       return true;
     case ActorType::None:
     case ActorType::Shell:
-    case ActorType::Rod:
     case ActorType::Count:
       return false;
   }
@@ -453,6 +455,84 @@ static SoftActorPrefab ExportSoftActor(
   }
 
   MOCHI_LOG("Exported soft actor '%s'", prefab.name.c_str());
+  return prefab;
+}
+
+// The current rod pose (see Actor::GetRodPose), or nullopt if the rod is at rest. The exported
+// shape is the runtime rest shape with an identity model transform, so the actor-local pose needs
+// no remapping.
+[[nodiscard]] static std::optional<prefab::RodPose> ExportRodPose(
+    entt::registry const& registry,
+    entt::entity entity) {
+  auto const& pose = registry.get<CRodPose<TimeStep::Current> const>(entity).value;
+  auto const& restAxes = registry.get<CReferenceElementFrameAxes const>(entity).axes;
+  prefab::RodPose snapshot;
+  for (Real4 const& d : Unflatten<Real4 const>(pose.displacements.GetConstSpan())) {
+    for (int i = 0; i < kSpaceDim3; ++i) {
+      snapshot.nodeDisplacements.push_back(d[i]);
+    }
+  }
+  bool const isAtRest =
+      std::ranges::all_of(snapshot.nodeDisplacements, [](real v) { return v == 0_r; }) &&
+      std::ranges::equal(pose.frameAxes, restAxes);
+  if (isAtRest) {
+    return std::nullopt;
+  }
+  Span<real const> const axes = Flatten(MakeConstSpan(pose.frameAxes));
+  snapshot.elementFrameAxes.assign(axes.begin(), axes.end());
+  return snapshot;
+}
+
+// Rods are exported at the current root transform, with their current pose if exportCurrentPose.
+static RodActorPrefab ExportRodActor(
+    Actor const* actor,
+    entt::registry const& registry,
+    entt::entity entity,
+    std::unordered_map<Shape const*, DynamicString>& shapeCache,
+    std::unordered_map<entt::entity, DynamicString> const& exportActorNames,
+    std::unordered_map<std::string, int>& usedFileNames,
+    std::string_view assetsDir,
+    std::string_view relativePrefix,
+    bool exportCurrentPose,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error, {});
+
+  RodActorPrefab prefab;
+
+  auto it = exportActorNames.find(entity);
+  MOCHI_ERROR_IF(it == exportActorNames.end(), error, "Actor name not found in export map");
+  MOCHI_ERROR_RETURN(error, {});
+  prefab.name = it->second;
+  prefab.layer = actor->GetContactLayer();
+
+  auto const transform = actor->GetRootTransform();
+  prefab.translation = transform.GetTranslation();
+  prefab.rotation = transform.GetRotation();
+
+  auto [relativePath, fullShapePath] =
+      GenerateShapeFilePaths(prefab.name, "rod", relativePrefix, assetsDir, usedFileNames);
+  prefab.shapeFile =
+      SaveActorMeshToFile(actor, fullShapePath.string(), relativePath, shapeCache, error);
+  MOCHI_ERROR_RETURN(error, {});
+
+  prefab.hasGravity = registry.all_of<TagUseGravity>(entity);
+  prefab.useContactSkin = registry.all_of<TagUseDeformableContactSkin>(entity);
+  prefab.colliderType = registry.get<CColliderInfo const>(entity).type;
+  if (auto const* pointCloud = registry.try_get<CPointCloudColliderParams const>(entity)) {
+    prefab.pointCloudCollider = static_cast<PointCloudColliderParams const&>(*pointCloud);
+  }
+  prefab.material =
+      static_cast<RodMaterialParams const&>(registry.get<CRodMaterialParams const>(entity));
+  prefab.contact = actor->GetContactParams(error);
+  MOCHI_ERROR_RETURN(error, {});
+  auto const& exportParams = registry.get<CRodExportParams const>(entity);
+  prefab.contactElementType = exportParams.contactElementType;
+  prefab.contactSkinElementType = exportParams.contactSkinElementType;
+  if (exportCurrentPose) {
+    prefab.pose = ExportRodPose(registry, entity);
+  }
+
+  MOCHI_LOG("Exported rod actor '%s'", prefab.name.c_str());
   return prefab;
 }
 
@@ -1081,9 +1161,24 @@ static bool ExportActorToPrefab(
       }
       break;
     }
+    case ActorType::Rod: {
+      auto rodPrefab = ExportRodActor(
+          actor,
+          registry,
+          entity,
+          shapeCache,
+          exportActorNames,
+          usedFileNames,
+          assetsDir,
+          relativePrefix,
+          exportCurrentPose,
+          error);
+      MOCHI_ERROR_RETURN(error, false);
+      prefab.actors.rod.push_back(std::move(rodPrefab));
+      break;
+    }
     case ActorType::None:
     case ActorType::Shell:
-    case ActorType::Rod:
     case ActorType::Count:
       // Unsupported for prefab export.
       MOCHI_ASSERT_VERBOSE(
@@ -1332,6 +1427,7 @@ void prefab::ExportScene(
   sortByName(prefab.actors.rigid);
   sortByName(prefab.actors.soft);
   sortByName(prefab.actors.articulated);
+  sortByName(prefab.actors.rod);
   std::ranges::sort(prefab.actors.softSkinned, {}, [](auto const& a) -> auto const& {
     return a.skeletonParams.name;
   });

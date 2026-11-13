@@ -88,6 +88,7 @@ void InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<CReferenceElementFrameAxes>(reg);
   ecs::RegisterComponent<CReferenceNodeCurvatureBinormal>(reg);
   ecs::RegisterComponent<CRodMaterialParams>(reg);
+  ecs::RegisterComponent<CRodExportParams>(reg);
   ecs::RegisterComponent<CIntegrationRodPoses>(reg);
   ecs::RegisterComponent<CRodPose<TimeStep::Current>>(reg);
   ecs::RegisterComponent<CRodPose<TimeStep::StageStart>>(reg);
@@ -1577,6 +1578,10 @@ void mochi::InitRodActor(
 
   // Non-linear solver convergence weights (lazily initialized).
   reg.emplace<CActorConvergenceWeights>(e);
+
+  auto& exportParams = reg.emplace<CRodExportParams>(e);
+  exportParams.contactElementType = params.contactElementType;
+  exportParams.contactSkinElementType = params.contactSkinElementType;
 
   // FEM discretization for contact
   auto segmentDisc = CFemSegmentDiscretization::Create(

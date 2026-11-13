@@ -24,6 +24,7 @@
 #include <mochi_core/utils/span.h>
 #include <mochi_physics/mochi_physics_experimental.h>
 #include <mochi_physics/src/mochi_common_components.h>
+#include <mochi_physics/src/mochi_rod.h>
 #include <mochi_physics/src/mochi_scene.h>
 #include <mochi_physics/utils/mochi_prefab.h>
 
@@ -2076,11 +2077,12 @@ TEST_IF(MOCHI_HDF5_AND_INTERNAL, PrefabExport, ContactPairOverridesExcludeAndRou
 }
 
 // A standalone soft actor, an articulated chain covering every DoF kind (Free, Revolute, Prismatic,
-// Spherical), and a soft-skinned actor, all built from procedural shapes.
+// Spherical), a soft-skinned actor, and a rod pinned at one end, all built from procedural shapes.
 struct CurrentPoseExportActors {
   Actor* soft = nullptr;
   Actor* articulated = nullptr;
   Actor* skinned = nullptr;
+  Actor* rod = nullptr;
 };
 
 static CurrentPoseExportActors CreateCurrentPoseExportActors(Context* context, Scene* scene) {
@@ -2122,7 +2124,38 @@ static CurrentPoseExportActors CreateCurrentPoseExportActors(Context* context, S
   nestedSoft.shape = CreateUnitCubeTetSoftShape(context);
   nestedSoft.hasGravity = false;
   actors.skinned = scene->CreateSoftSkinnedActor(skinnedParams, ExpectOK{});
+
+  DynamicArray<Real3> const rodNodes = {
+      {0_r, 0_r, 0_r}, {0.1_r, 0_r, 0_r}, {0.2_r, 0_r, 0_r}, {0.3_r, 0_r, 0_r}};
+  RodActorParams rodParams;
+  rodParams.name = "Rod";
+  rodParams.worldFromLocal = TransformRT(
+      Quaternion::FromAxisAngle(Normalize(Real3{0_r, 1_r, 1_r}), 0.5_r), Real3{0_r, 3_r, 2_r});
+  rodParams.shape = context->CreateModelShape(
+      experimental::GenerateTubularRodModelData(
+          rodNodes,
+          DynamicArray<Real3>(3, Real3{0_r, 0_r, 1_r}),
+          /*radius=*/0.01_r,
+          /*numCrossSectionSegments=*/4,
+          /*isClosedLoop=*/false,
+          ExpectOK{}),
+      ExpectOK{});
+  rodParams.colliderType = ColliderType::None;
+  actors.rod = scene->CreateRodActor(rodParams, ExpectOK{});
+  DeformableNodePositionConstraintParams pin;
+  pin.actor = actors.rod->GetHandle();
+  pin.nodeIndex = 0;
+  pin.position = rodParams.worldFromLocal.TransformPoint(rodNodes[0]);
+  scene->CreateDeformableNodePositionConstraint(pin, ExpectOK{});
   return actors;
+}
+
+[[nodiscard]] static DynamicArray<real> GetRodNodeDisplacements(Actor const* rod) {
+  return test::GetRodPose(*rod).displacements;
+}
+
+[[nodiscard]] static DynamicArray<real> GetRodFrameAxes(Actor const* rod) {
+  return test::GetRodPose(*rod).elementFrameAxes;
 }
 
 // Elastic (pre-skinning) displacements of a soft actor. For standalone soft actors, this matches
@@ -2161,6 +2194,21 @@ static void SetExportActorPoses(Scene* scene, CurrentPoseExportActors const& act
   scene->GetActor(nestedSoft)
       ->SetDisplacements(
           MakeDisplacements(isize(GetElasticDisplacements(scene, nestedSoft)), 0.02_r), ExpectOK{});
+
+  // A rigid rotation of the rod about its local origin, which keeps its frame axes valid.
+  TransformRT const rotation(Quaternion::FromAxisAngle(Normalize(Real3{1_r, 1_r, 0_r}), 0.3_r));
+  DynamicArray<real> rodDisplacements;
+  for (Real3 const& x : Unflatten<Real3 const>(actors.rod->GetMesh().coordinates)) {
+    Real3 const d = rotation.TransformPoint(x) - x;
+    for (real const value : d) {
+      rodDisplacements.push_back(value);
+    }
+  }
+  DynamicArray<real> rodAxes = GetRodFrameAxes(actors.rod);
+  for (Real3& axis : Unflatten<Real3>(rodAxes)) {
+    axis = rotation.TransformDirection(axis);
+  }
+  actors.rod->SetRodPose(rodDisplacements, rodAxes, ExpectOK{});
 }
 
 [[nodiscard]] static prefab::ScenePrefab ExportAndLoad(
@@ -2181,6 +2229,8 @@ static void ExpectNoCurrentPoseFields(prefab::ScenePrefab const& exported) {
   EXPECT_FALSE(skinned.skeletonParams.jointPose.has_value());
   ASSERT_EQ(1, isize(skinned.softParams));
   EXPECT_FALSE(skinned.softParams[0].nodeDisplacements.has_value());
+  ASSERT_EQ(1, isize(exported.actors.rod));
+  EXPECT_FALSE(exported.actors.rod[0].pose.has_value());
 }
 
 class PrefabExportCurrentPoseTest : public MochiSceneTestBase {
@@ -2244,6 +2294,8 @@ TEST_IF_P(MOCHI_USE_HDF5, PrefabExportCurrentPoseRoundTrip, RestoresState) {
   if (GetParam() == PoseSource::SetDirectly) {
     EXPECT_TRUE(exportedSkinned.softParams[0].nodeDisplacements.has_value());
   }
+  ASSERT_EQ(1, isize(exported.actors.rod));
+  EXPECT_TRUE(exported.actors.rod[0].pose.has_value());
 
   auto* reloaded = _mochiContext->CreateScene("reloaded");
   MOCHI_DEFER(_mochiContext->DestroyScene(reloaded));
@@ -2275,6 +2327,12 @@ TEST_IF_P(MOCHI_USE_HDF5, PrefabExportCurrentPoseRoundTrip, RestoresState) {
       GetElasticDisplacements(_scene, nestedSoft),
       GetElasticDisplacements(reloaded, reloadedSkinned->GetNestedSoftActors(ExpectOK{})[0]),
       kTol));
+  auto const rods = result.Filter(ActorType::Rod);
+  ASSERT_EQ(1, isize(rods));
+  EXPECT_TRUE(
+      NearEqualSpan(GetRodNodeDisplacements(actors.rod), GetRodNodeDisplacements(rods[0]), kTol));
+  EXPECT_TRUE(NearEqualSpan(GetRodFrameAxes(actors.rod), GetRodFrameAxes(rods[0]), kTol));
+  EXPECT_NEAR_TOL(actors.rod->GetRootTransform(), rods[0]->GetRootTransform(), kTol);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -2284,6 +2342,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 // ExportActor honors ExportParams::exportCurrentPose and serializes the current pose.
 TEST_IF_F(MOCHI_USE_HDF5, PrefabExportCurrentPoseTest, ExportActor_CurrentPose) {
+  DynamicArray<real> const restRodAxes = GetRodFrameAxes(actors.rod);
   SetExportActorPoses(_scene, actors);
   auto tempDir = CreateTempDirectory("export_actor_current_pose", ExpectOK{});
 
@@ -2291,6 +2350,13 @@ TEST_IF_F(MOCHI_USE_HDF5, PrefabExportCurrentPoseTest, ExportActor_CurrentPose) 
     prefab::ExportActor(actor, name, tempDir.Path().string(), params, ExpectOK{});
     return prefab::ShallowLoadFromFile(
         (tempDir.Path() / name / (std::string(name) + ".mochi_scene")).string(), ExpectOK{});
+  };
+  auto expectExportedRodPose = [&](char const* name) {
+    auto const rod = exportActor(actors.rod, name, {.exportCurrentPose = true});
+    ASSERT_EQ(1, isize(rod.actors.rod));
+    ASSERT_TRUE(rod.actors.rod[0].pose.has_value());
+    EXPECT_SPAN_EQ(GetRodNodeDisplacements(actors.rod), rod.actors.rod[0].pose->nodeDisplacements);
+    EXPECT_SPAN_EQ(GetRodFrameAxes(actors.rod), rod.actors.rod[0].pose->elementFrameAxes);
   };
 
   auto const soft = exportActor(actors.soft, "soft", {.exportCurrentPose = true});
@@ -2301,13 +2367,33 @@ TEST_IF_F(MOCHI_USE_HDF5, PrefabExportCurrentPoseTest, ExportActor_CurrentPose) 
   ASSERT_TRUE(chain.actors.articulated[0].jointPose.has_value());
   EXPECT_SPAN_EQ(actors.soft->GetDisplacements(ExpectOK{}), *soft.actors.soft[0].nodeDisplacements);
   EXPECT_SPAN_EQ(GetPose(actors.articulated), *chain.actors.articulated[0].jointPose);
+  expectExportedRodPose("rod");
 
   auto const softRest = exportActor(actors.soft, "soft_rest", {});
   auto const chainRest = exportActor(actors.articulated, "chain_rest", {});
+  auto const rodRest = exportActor(actors.rod, "rod_rest", {});
   ASSERT_EQ(1, isize(softRest.actors.soft));
   ASSERT_EQ(1, isize(chainRest.actors.articulated));
+  ASSERT_EQ(1, isize(rodRest.actors.rod));
   EXPECT_FALSE(softRest.actors.soft[0].nodeDisplacements.has_value());
   EXPECT_FALSE(chainRest.actors.articulated[0].jointPose.has_value());
+  EXPECT_FALSE(rodRest.actors.rod[0].pose.has_value());
+
+  // A rod displaced without twist, or twisted without displacement, is not at rest.
+  int const numNodes = actors.rod->GetMesh().GetNumNodes();
+  DynamicArray<Real3> const offsets(numNodes, Real3{0.01_r, -0.02_r, 0.03_r});
+  actors.rod->SetRodPose(Flatten(MakeConstSpan(offsets)), restRodAxes, ExpectOK{});
+  expectExportedRodPose("rod_translated");
+
+  auto const nodes = Unflatten<Real3 const>(actors.rod->GetMesh().coordinates);
+  DynamicArray<real> twistedAxes = restRodAxes;
+  auto const axes = Unflatten<Real3>(twistedAxes);
+  for (int i = 0; i < isize(axes); ++i) {
+    Real3 const tangent = Normalize(nodes[i + 1] - nodes[i]);
+    axes[i] = TransformRT(Quaternion::FromAxisAngle(tangent, 0.3_r)).TransformDirection(axes[i]);
+  }
+  actors.rod->SetRodPose(DynamicArray<real>(kSpaceDim3 * numNodes, 0_r), twistedAxes, ExpectOK{});
+  expectExportedRodPose("rod_twisted");
 }
 
 #if MOCHI_USE_HDF5 && MOCHI_ENABLE_ROM_ACTORS
@@ -2342,3 +2428,233 @@ TEST_IF(MOCHI_HDF5_AND_ROM, PrefabExport, ExportScene_RomSoftActorExportsNoDispl
 }
 
 #undef MOCHI_HDF5_AND_ROM
+
+// Rods are created directly from generated shapes, so these tests do not depend on internal assets.
+class PrefabExportRodTest : public MochiSceneTestBase {
+ protected:
+  void SetUp() override {
+    MochiSceneTestBase::SetUp();
+
+    DynamicArray<Real3> const openNodes = {
+        {0_r, 0_r, 0_r}, {0.1_r, 0_r, 0_r}, {0.2_r, 0.05_r, 0_r}, {0.3_r, 0.05_r, 0_r}};
+    openParams.name = "OpenRod";
+    openParams.layer = "Rods";
+    openParams.worldFromLocal = TransformRT(
+        Quaternion::FromAxisAngle(Normalize(Real3{1_r, 2_r, 3_r}), 0.7_r), Real3{1_r, 2_r, 3_r});
+    openParams.shape = CreateRodShape(openNodes, Real3{0_r, 0_r, 1_r}, /*isClosedLoop=*/false);
+    openParams.contact.penaltyCoefficient = 1234_r;
+    openParams.contactElementType = ActorSegmentElementType::P1Q1;
+    openParams.material.axialStiffness = 321_r;
+    openParams.material.flexuralStiffness = {1e-3_r, 2e-3_r};
+    openParams.material.axialCollapseBarrierScale = 0.25_r;
+    openParams.colliderType = ColliderType::PointCloud;
+    openParams.pointCloudCollider = {
+        .radius = 0.02_r,
+        .selfContactExclusionRatio = 2.5_r,
+        .spatialHashLoadFactor = 0.125_r,
+        .selfContact = true,
+        .colliderSegmentElementType = ActorSegmentElementType::P1Q2};
+    openParams.hasGravity = false;
+    openRod = _scene->CreateRodActor(openParams, ExpectOK{});
+
+    DynamicArray<Real3> const loopNodes = {
+        {0_r, 0_r, 0_r}, {0.1_r, 0_r, 0_r}, {0.1_r, 0_r, 0.1_r}, {0_r, 0_r, 0.1_r}};
+    loopParams.name = "LoopRod";
+    loopParams.worldFromLocal.SetTranslation(Real3{0_r, 1_r, 0_r});
+    loopParams.shape = CreateRodShape(loopNodes, Real3{0_r, 1_r, 0_r}, /*isClosedLoop=*/true);
+    loopParams.useContactSkin = true;
+    loopParams.contactSkinElementType = ActorBoundaryElementType::P1Q6;
+    loopRod = _scene->CreateRodActor(loopParams, ExpectOK{});
+  }
+
+  [[nodiscard]] ShapeHandle
+  CreateRodShape(Span<Real3 const> nodes, Real3 const& frameAxis, bool isClosedLoop) {
+    int const numElements = isClosedLoop ? isize(nodes) : isize(nodes) - 1;
+    ModelData const model = experimental::GenerateTubularRodModelData(
+        nodes,
+        DynamicArray<Real3>(numElements, frameAxis),
+        /*radius=*/0.01_r,
+        /*numCrossSectionSegments=*/4,
+        isClosedLoop,
+        ExpectOK{});
+    return _mochiContext->CreateModelShape(model, ExpectOK{});
+  }
+
+  RodActorParams openParams;
+  RodActorParams loopParams;
+  Actor* openRod = nullptr;
+  Actor* loopRod = nullptr;
+};
+
+// The prefab that exporting a rod created from `params` at its creation pose must produce.
+[[nodiscard]] static prefab::RodActorPrefab ExpectedRodPrefab(
+    RodActorParams const& params,
+    DynamicString const& shapeFile) {
+  prefab::RodActorPrefab expected;
+  static_cast<RodActorParams&>(expected) = params;
+  expected.shape = {};
+  expected.worldFromLocal = RodActorParams{}.worldFromLocal;
+  expected.shapeFile = shapeFile;
+  expected.rotation = params.worldFromLocal.GetRotation();
+  expected.translation = params.worldFromLocal.GetTranslation();
+  return expected;
+}
+
+[[nodiscard]] static Actor const* FindActor(Span<Actor* const> actors, std::string_view name) {
+  auto const* it = std::ranges::find_if(
+      actors, [&](Actor const* a) { return std::string_view(a->GetName()) == name; });
+  return it == actors.end() ? nullptr : *it;
+}
+
+static void ExpectSameRodGeometry(Actor const* expected, Actor const* actual) {
+  EXPECT_SPAN_EQ(expected->GetMesh().coordinates, actual->GetMesh().coordinates);
+  EXPECT_SPAN_EQ(
+      expected->GetContactSkinMesh().coordinates, actual->GetContactSkinMesh().coordinates);
+  auto getFrameAxes = [](Actor const* actor) {
+    auto const& reg = GetRegistry(actor->GetScene());
+    return reg.get<CReferenceElementFrameAxes const>(GetEntity(reg, actor->GetHandle(), ExpectOK{}))
+        .axes;
+  };
+  EXPECT_SPAN_EQ(Flatten(getFrameAxes(expected)), Flatten(getFrameAxes(actual)));
+}
+
+TEST_IF_F(MOCHI_USE_HDF5, PrefabExportRodTest, ExportScene_RoundTrip) {
+  _scene->EnableActorContactSymmetric(
+      openRod->GetHandle(), loopRod->GetHandle(), false, IncludeNestedActors::No, ExpectOK{});
+
+  auto tempDir = CreateTempDirectory("export_rods", ExpectOK{});
+  auto const prefabFile = ExportScene(_scene, "rods", tempDir.Path());
+  auto const exported = prefab::ShallowLoadFromFile(prefabFile.string(), ExpectOK{});
+
+  // Actors are sorted by name.
+  ASSERT_EQ(2, isize(exported.actors.rod));
+  auto const& exportedLoop = exported.actors.rod[0];
+  auto const& exportedOpen = exported.actors.rod[1];
+  EXPECT_EQ(ExpectedRodPrefab(loopParams, exportedLoop.shapeFile), exportedLoop);
+  EXPECT_EQ(ExpectedRodPrefab(openParams, exportedOpen.shapeFile), exportedOpen);
+  for (auto const& rod : exported.actors.rod) {
+    ValidateShapeFile(std::string(rod.shapeFile), tempDir.Path(), prefabFile, "Rod actor");
+  }
+
+  ASSERT_TRUE(exported.contactFilter.has_value());
+  ASSERT_TRUE(exported.contactFilter->actorContactSymmetric.has_value());
+  ASSERT_EQ(1, isize(*exported.contactFilter->actorContactSymmetric));
+  auto const& entry = (*exported.contactFilter->actorContactSymmetric)[0];
+  EXPECT_FALSE(entry.enable);
+  EXPECT_EQ((DynamicArray<DynamicString>{"LoopRod", "OpenRod"}), entry.actors);
+
+  auto* reloaded = _mochiContext->CreateScene("reloaded");
+  MOCHI_DEFER(_mochiContext->DestroyScene(reloaded));
+  auto const result =
+      prefab::AddToScene(prefabFile.string(), tempDir.Path().string(), reloaded, ExpectOK{});
+  auto const rods = result.Filter(ActorType::Rod);
+  ASSERT_EQ(2, isize(rods));
+  Actor const* reloadedOpen = FindActor(rods, "OpenRod");
+  Actor const* reloadedLoop = FindActor(rods, "LoopRod");
+  ASSERT_NE(nullptr, reloadedOpen);
+  ASSERT_NE(nullptr, reloadedLoop);
+  ExpectSameRodGeometry(openRod, reloadedOpen);
+  ExpectSameRodGeometry(loopRod, reloadedLoop);
+  EXPECT_FALSE(
+      assert_cast<SceneImpl const*>(reloaded)->IsActorContactEnabled(
+          reloadedOpen->GetHandle(), reloadedLoop->GetHandle(), ExpectOK{}));
+}
+
+TEST_IF_F(MOCHI_USE_HDF5, PrefabExportRodTest, ExportScene_Deterministic) {
+  auto tempDir = CreateTempDirectory("export_rods_determinism", ExpectOK{});
+  auto readFile = [](std::filesystem::path const& path) {
+    std::ifstream file(path);
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+
+  auto const prefabFile = ExportScene(_scene, "rods", tempDir.Path());
+  std::string const content1 = readFile(prefabFile);
+
+  // The second scene creates its rods in a different order.
+  auto* scene2 = _mochiContext->CreateScene(_scene->GetName());
+  MOCHI_DEFER(_mochiContext->DestroyScene(scene2));
+  scene2->CreateRodActor(loopParams, ExpectOK{});
+  scene2->CreateRodActor(openParams, ExpectOK{});
+  std::filesystem::remove_all(prefabFile.parent_path());
+  EXPECT_EQ(content1, readFile(ExportScene(scene2, "rods", tempDir.Path())));
+}
+
+TEST_IF_F(MOCHI_USE_HDF5, PrefabExportRodTest, ExportActor_SingleRod) {
+  auto tempDir = CreateTempDirectory("export_single_rod", ExpectOK{});
+  prefab::ExportActor(openRod, "single_rod", tempDir.Path().string(), ExpectOK{});
+  auto const exported = prefab::ShallowLoadFromFile(
+      (tempDir.Path() / "single_rod" / "single_rod.mochi_scene").string(), ExpectOK{});
+
+  ASSERT_EQ(1, isize(exported.actors.rod));
+  auto expected = ExpectedRodPrefab(openParams, exported.actors.rod[0].shapeFile);
+  expected.name = "single_rod";
+  EXPECT_EQ(expected, exported.actors.rod[0]);
+}
+
+TEST_IF_F(MOCHI_USE_HDF5, PrefabExportRodTest, ExportActor_OmitsRenderMetadata) {
+  prefab::ScenePrefab input;
+  auto& rod = input.actors.rod.push_back();
+  rod = ExpectedRodPrefab(openParams, {});
+  rod.name = "MetadataRod";
+  rod.shape = openParams.shape;
+  rod.renderModelFile = "missing/unused.glb";
+  rod.renderModelScale = {2_r, 3_r, 4_r};
+  rod.renderModelRotation = Quaternion(0_r, 0_r, 1_r, 0_r);
+  rod.renderModelTranslation = {0.25_r, 0.5_r, 0.75_r};
+  auto const result = prefab::AddToScene(input, _scene, {}, ExpectOK{});
+  ASSERT_EQ(1, isize(result.actors));
+
+  auto const tempDir = CreateTempDirectory("export_rod_render_metadata", ExpectOK{});
+  prefab::ExportActor(result.actors[0], "metadata", tempDir.Path().string(), ExpectOK{});
+  auto const exported = prefab::ShallowLoadFromFile(
+      (tempDir.Path() / "metadata" / "metadata.mochi_scene").string(), ExpectOK{});
+  ASSERT_EQ(1, isize(exported.actors.rod));
+  auto const& output = exported.actors.rod[0];
+  EXPECT_TRUE(output.renderModelFile.empty());
+  EXPECT_EQ(kReal3Ones, output.renderModelScale);
+  EXPECT_EQ(Quaternion{}, output.renderModelRotation);
+  EXPECT_EQ(Real3{}, output.renderModelTranslation);
+}
+
+// A falling, recentered rod is exported at its current root transform, in its rest configuration by
+// default, and with its local pose if exportCurrentPose. Either way it reloads where it was.
+TEST_IF_F(MOCHI_USE_HDF5, PrefabExportRodTest, ExportScene_MovedRod) {
+  for (int i = 0; i < 5; ++i) {
+    _scene->Step(0.01);
+  }
+  TransformRT const rootTransform = loopRod->GetRootTransform();
+  ASSERT_NE(loopParams.worldFromLocal.GetTranslation(), rootTransform.GetTranslation());
+
+  for (bool const exportCurrentPose : {false, true}) {
+    SCOPED_TRACE(exportCurrentPose ? "CurrentPose" : "Default");
+    auto tempDir = CreateTempDirectory("export_moved_rod", ExpectOK{});
+    auto const prefabFile =
+        ExportScene(_scene, "moved_rod", tempDir.Path(), {.exportCurrentPose = exportCurrentPose});
+    auto const exported = prefab::ShallowLoadFromFile(prefabFile.string(), ExpectOK{});
+    ASSERT_EQ(2, isize(exported.actors.rod));
+    auto const& exportedLoop = exported.actors.rod[0];
+    ASSERT_EQ("LoopRod", exportedLoop.name);
+    EXPECT_EQ(rootTransform.GetRotation(), exportedLoop.rotation);
+    EXPECT_EQ(rootTransform.GetTranslation(), exportedLoop.translation);
+    if (!exportCurrentPose) {
+      EXPECT_FALSE(exportedLoop.pose.has_value());
+    }
+
+    auto* reloaded = _mochiContext->CreateScene("reloaded");
+    MOCHI_DEFER(_mochiContext->DestroyScene(reloaded));
+    auto const result =
+        prefab::AddToScene(prefabFile.string(), tempDir.Path().string(), reloaded, ExpectOK{});
+    Actor const* reloadedLoop = FindActor(result.Filter(ActorType::Rod), "LoopRod");
+    ASSERT_NE(nullptr, reloadedLoop);
+    ExpectSameRodGeometry(loopRod, reloadedLoop);
+    EXPECT_EQ(rootTransform, reloadedLoop->GetRootTransform());
+    if (exportCurrentPose) {
+      EXPECT_TRUE(NearEqualSpan(
+          GetRodNodeDisplacements(loopRod), GetRodNodeDisplacements(reloadedLoop), 1e-6_r));
+      EXPECT_TRUE(NearEqualSpan(GetRodFrameAxes(loopRod), GetRodFrameAxes(reloadedLoop), 1e-6_r));
+    } else {
+      auto const reloadedDisplacements = GetRodNodeDisplacements(reloadedLoop);
+      EXPECT_SPAN_EQ(DynamicArray<real>(reloadedDisplacements.size(), 0_r), reloadedDisplacements);
+    }
+  }
+}

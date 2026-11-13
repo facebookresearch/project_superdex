@@ -149,6 +149,13 @@ struct CReferenceNodeCurvatureBinormal : public NoCopy {
 
 struct CRodMaterialParams : public RodMaterialParams {};
 
+// Rod creation params that are consumed during InitRodActor and cannot be recovered from the ECS
+// afterward. Used for lossless prefab export.
+struct CRodExportParams : NoCopy {
+  ActorSegmentElementType contactElementType = ActorSegmentElementType::Default;
+  ActorBoundaryElementType contactSkinElementType = ActorBoundaryElementType::Default;
+};
+
 // Generate variable-width rod connectivity and matching stencil positions. Each node gets an
 // up-to-3-node stencil [i, i+1, i+2]. Open-rod boundary stencils are shorter, while closed-loop
 // stencils wrap around using modular indexing.
