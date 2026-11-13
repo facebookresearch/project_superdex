@@ -298,7 +298,7 @@ class TestStructs(MochiTestBase):
             line_search_type=mochi.LineSearchType.ARMIJO,
             psd_proj_mode=mochi.PsdProjectionMode.ALWAYS,
             rel_div_tol=2e4,
-            line_search_max_iter=8,
+            line_search_max_iter=7,
             line_search_wolfe2=0.95,
             linear_tolerance_strategy=mochi.LinearToleranceStrategy.EISENSTAT_WALKER1,
         )
@@ -317,7 +317,7 @@ class TestStructs(MochiTestBase):
         self.assertFalse(params_kw_all.explosion_control)
         self.assertAlmostEqual(2e9, params_kw_all.abs_div_tol)
         self.assertAlmostEqual(2e4, params_kw_all.rel_div_tol)
-        self.assertEqual(8, params_kw_all.line_search_max_iter)
+        self.assertEqual(7, params_kw_all.line_search_max_iter)
         self.assertAlmostEqual(0.6, params_kw_all.line_search_alpha)
         self.assertAlmostEqual(2e-4, params_kw_all.line_search_wolfe1)
         self.assertAlmostEqual(0.95, params_kw_all.line_search_wolfe2)

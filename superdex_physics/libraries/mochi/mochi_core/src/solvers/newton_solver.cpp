@@ -889,6 +889,13 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
         //   Newton-Raphson iterate, and try Newton-Raphson iteration again using other tricks such
         //   as SPD projection.
         dxStep = -dxSolve;
+        if (MOCHI_ASSERT_VERBOSE_ENABLED && isLastTry &&
+            LineSearchUsesMerit(_params.lineSearch.type) &&
+            !(problem.GetResidual().Dot(dxStep) <= 0)) { // Uphill or NaN
+          MOCHI_LOG_WARNING_ONCE(
+              "\nA Newton step doesn't go downhill, so line searches that test the merit can fail "
+              "on it. Use PsdProjectionMode::Always or LineSearchType::ResidualNorm.");
+        }
         status.improvedInLastIter = TakeStep(
             problem,
             status,

@@ -261,7 +261,6 @@ class QPSolver {
     params.maxIter = 1e3;
     params.lParams.preconditionerType = PreconditionerType::None;
     params.lParams.solverType = LinearSolverType::LDLT;
-    params.lineSearch.type = LineSearchType::WolfeWeak;
     SetNewtonSolverParams(params);
   }
 

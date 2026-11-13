@@ -973,11 +973,12 @@ RestoreStateFromScene(Scene* sceneTo, Scene const* sceneFrom, StateHandle handle
 // the residual is the true gradient of the merit, and (2) enabling merit-based line search. These
 // settings are recommended together with double precision; single precision may not provide the
 // necessary accuracy. Some of these settings may hurt stability or degrade performance. The
-// function does not change solver tolerances or settings other than the line-search type.
+// function doesn't change solver tolerances. It sets:
 // EnableNewtonEulerInertia(false). (default)
 // SolverParams.experimentalEval.implicitNormalForceForDissipation = false. (default)
 // SolverParams.experimentalEval.explicitNormals = true. (non-default)
-// SolverParams.nonlinearSolver.lineSearchType = LineSearchType::Armijo. (non-default)
+// SolverParams.nonlinearSolver.lineSearchType = LineSearchType::WolfeStrong (default), if the
+// current line search doesn't use the merit.
 MOCHI_API void ApplyImprovedConvergenceSettings(Scene* scene, Error& error);
 
 // [Batch API] Function for testing performance of batched actor queries across the Python-C++

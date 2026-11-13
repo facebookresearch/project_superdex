@@ -52,7 +52,6 @@ def create_tshirt_on_plane_simulation() -> tuple[Scene, Actor, Actor]:
     # Configure the solver for interactive shell contact.
     solver_params = scene.get_solver_params()
     solver_params.non_linear_solver.max_iter = 2
-    solver_params.non_linear_solver.line_search_type = sdp.LineSearchType.WOLFE_STRONG
     solver_params.experimental_eval.implicit_normal_force_for_dissipation = True
     scene.set_solver_params(solver_params)
 

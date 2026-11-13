@@ -58,6 +58,7 @@
 #include <mochi_core/integration/integration_utils.h>
 #include <mochi_core/memory/filo_allocator.h>
 #include <mochi_core/mochi_platform.h>
+#include <mochi_core/solvers/line_search.h>
 #include <mochi_core/solvers/linear_solver.h>
 #include <mochi_core/utils/cuda_utils.h>
 #include <mochi_core/utils/defer.h>
@@ -1417,11 +1418,20 @@ void SceneImpl::ApplyImprovedConvergenceSettings(bool logWarnings) {
   // Do not log warning; this is a non-default value.
   solverParams.experimentalEval.explicitNormals = true;
 
-  // Set SolverParams.nonlinearSolver.lineSearchType = LineSearchType::Armijo.
-  // Do not log warning; this is a non-default value.
-  solverParams.nonLinearSolver.lineSearchType = LineSearchType::Armijo;
+  // Set SolverParams.nonlinearSolver.lineSearchType = LineSearchType::WolfeStrong if the line
+  // search doesn't use the merit.
+  // Possibly log warning if the value is overridden.
+  if (!LineSearchUsesMerit(solverParams.nonLinearSolver.lineSearchType)) {
+    if (logWarnings) {
+      MOCHI_LOG_WARNING_ONCE(
+          "\nOverriding SolverParams.nonLinearSolver.lineSearchType = LineSearchType::%s. Setting "
+          "to LineSearchType::WolfeStrong.",
+          SReflect::EnumToString(solverParams.nonLinearSolver.lineSearchType));
+    }
+    solverParams.nonLinearSolver.lineSearchType = LineSearchType::WolfeStrong;
+  }
 
-  // Set at least one line search iteration (required by LineSearchType::Armijo).
+  // Set at least one line search iteration (required by merit-based line searches).
   solverParams.nonLinearSolver.lineSearchMaxIter =
       Max(1, solverParams.nonLinearSolver.lineSearchMaxIter);
 
@@ -1459,10 +1469,11 @@ static void WarnIfNotDifferentiabilitySettings(SceneImpl const& scene) {
     MOCHI_LOG_WARNING_ONCE("\nExpected SolverParams.experimentalEval.explicitNormals = true.");
   }
 
-  // Validate SolverParams.nonlinearSolver.lineSearchType = LineSearchType::Armijo.
-  if (solverParams.nonLinearSolver.lineSearchType != LineSearchType::Armijo) {
+  // Validate that SolverParams.nonlinearSolver.lineSearchType uses the merit.
+  if (!LineSearchUsesMerit(solverParams.nonLinearSolver.lineSearchType)) {
     MOCHI_LOG_WARNING_ONCE(
-        "\nExpected SolverParams.nonLinearSolver.lineSearchType = LineSearchType::Armijo.");
+        "\nExpected a SolverParams.nonLinearSolver.lineSearchType that uses the merit, such as "
+        "LineSearchType::WolfeStrong.");
   }
 }
 

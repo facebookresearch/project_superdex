@@ -2852,7 +2852,7 @@ TEST(Prefab, Serialization_SceneParams) {
           "explosionControl": false,
           "absDivTol": 3450000000,
           "relDivTol": 44400,
-          "lineSearchMaxIter": 8,
+          "lineSearchMaxIter": 7,
           "lineSearchAlpha": 0.5123,
           "lineSearchWolfe1": 2.22e-05,
           "lineSearchWolfe2": 3.33,
@@ -2967,7 +2967,7 @@ TEST(Prefab, Serialization_SceneParams) {
     EXPECT_NEAR_EQ(44400_r, solver.nonLinearSolver.relDivTol);
     EXPECT_NEAR_EQ(0.555_r, solver.nonLinearSolver.relStepTol);
     EXPECT_NEAR_EQ(0.5123_r, solver.nonLinearSolver.lineSearchAlpha);
-    EXPECT_EQ(8, solver.nonLinearSolver.lineSearchMaxIter);
+    EXPECT_EQ(7, solver.nonLinearSolver.lineSearchMaxIter);
     EXPECT_NEAR_EQ(0.111_r, solver.nonLinearSolver.lineSearchMaxRelIncrease);
     EXPECT_NEAR_EQ(2.22e-5_r, solver.nonLinearSolver.lineSearchWolfe1);
     EXPECT_NEAR_EQ(3.33_r, solver.nonLinearSolver.lineSearchWolfe2);

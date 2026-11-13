@@ -1407,18 +1407,12 @@ class LineSearchType:
     """
     RESIDUAL_NORM: LineSearchType
     """Line search with residual norm condition. Accepts a step if the residual norm
-    decreases.
+    does not increase.
 
     Note:
-        More robust than objective-based line searches (:class:`SIMPLE
-        <superdex.physics.LineSearchType>`, :class:`ARMIJO
-        <superdex.physics.LineSearchType>`, :class:`WOLFE_WEAK
-        <superdex.physics.LineSearchType>`, :class:`WOLFE_STRONG
-        <superdex.physics.LineSearchType>`) but may degrade non-linear solver
-        convergence in non-convex problems. In highly non-convex regions where the
-        residual norm cannot be reduced, it may cause objects to move at slower
-        velocity than they should due to the inability to take valid steps. Consider
-        using an objective-based line search in that case.
+        Does not use the merit. When the residual norm cannot be reduced, e.g., in
+        highly non-convex regions, failed searches keep short steps, which can make
+        objects move slower than they should.
     """
     COUNT: LineSearchType
     """Number of line search type enum values."""

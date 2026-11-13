@@ -297,14 +297,18 @@ TEST(NewtonSolver, KeepsWorstLinearConvergence) {
   EXPECT_EQ(LinearSolverConvergenceStatus::Stopped, status.worstLinearConvergence);
 }
 
+[[nodiscard]] static SnleProblem<real> GetSmoothLocalMinimumProblem() {
+  return GetTestProblem(
+      [](real x) { return -(x * x * x) / 30.0_r - x * Sin(x) - Cos(x); },
+      [](real x) { return -(x * x) / 10.0_r - x * Cos(x); },
+      [](real x) { return -x / 5.0_r - Cos(x) + x * Sin(x); });
+}
+
 TEST(NewtonSolver, SmoothLocalMinimum) {
   constexpr auto kEpsilon = std::numeric_limits<real>::epsilon();
   constexpr real kAbsTol = 1e3_r * kEpsilon;
 
-  SnleProblem<real> problem = GetTestProblem(
-      [](real x) { return -(x * x * x) / 30.0_r - x * Sin(x) - Cos(x); },
-      [](real x) { return -(x * x) / 10.0_r - x * Cos(x); },
-      [](real x) { return -x / 5.0_r - Cos(x) + x * Sin(x); });
+  SnleProblem<real> problem = GetSmoothLocalMinimumProblem();
   for (auto solverType :
        {NonLinearSolverType::Newton, NonLinearSolverType::BFGS, NonLinearSolverType::SR1}) {
     for (auto dResidualAssemblyPeriod : {1, 2, 4, 8}) {
@@ -408,6 +412,41 @@ TEST(NewtonSolver, SmoothLocalMinimum) {
         EXPECT_NEAR(problem.GetIncrement()[0], problem.GetSolution()[0] - x0[0], kAbsTol);
       }
     }
+  }
+}
+
+TEST(NewtonSolver, UphillStepWarning) {
+  SnleProblem<real> problem = GetSmoothLocalMinimumProblem();
+
+  // From x = 0.5, where the Hessian is negative, the unprojected Newton step goes uphill. With
+  // fitted saturation Hessians, the first try is the last, on which line searches that test the
+  // merit warn once per process, hence the static count.
+  static int numWarnings = 0;
+  int const numWarningsBefore = numWarnings;
+  auto const prevLogFn = GetLogCallback();
+  SetLogCallback([](LogChannel channel, char const*, char const*, int) {
+    if (channel == LogChannel::Warning) {
+      ++numWarnings;
+    }
+  });
+  MOCHI_DEFER(SetLogCallback(prevLogFn));
+  NewtonSolverParams params;
+  params.lParams.solverType = LinearSolverType::LDLT;
+  params.lParams.preconditionerType = PreconditionerType::None;
+  params.maxIter = 1;
+  params.psdProjMode = PsdProjectionMode::Never;
+  params.convergenceMode = NonLinearSolverConvergenceMode::Global;
+  params.fittedSaturationHessian = SaturationHessianParams::All(true);
+  // Only builds with verbose asserts check for uphill steps.
+  int const meritWarnings = MOCHI_ASSERT_VERBOSE_ENABLED ? 1 : numWarningsBefore;
+  for (auto const& [type, warnings] :
+       {std::pair{LineSearchType::ResidualNorm, numWarningsBefore},
+        std::pair{LineSearchType::WolfeStrong, meritWarnings},
+        std::pair{LineSearchType::WolfeStrong, meritWarnings}}) {
+    params.lineSearch.type = type;
+    problem.SetSolution(ColumnVector<real, 1>(0.5_r));
+    NewtonSolver<real>(params).Solve(problem);
+    EXPECT_EQ(warnings, numWarnings);
   }
 }
 

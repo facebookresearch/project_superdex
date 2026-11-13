@@ -310,7 +310,7 @@ def add_linear_transmission(art: TendonArticulation) -> int:
 
 
 def create_tendon_comparison_simulation() -> tuple[Scene, list[TendonArticulation]]:
-    """Build the three side-by-side tendon-fidelity copies and configure the solver.
+    """Build the three side-by-side tendon-fidelity copies.
 
     Note: physics.initialize() must be called before this function.
     """
@@ -352,10 +352,6 @@ def create_tendon_comparison_simulation() -> tuple[Scene, list[TendonArticulatio
         "LinearTransmissionArticulation",
     )
     add_linear_transmission(art_linear)
-
-    solver_params = scene.get_solver_params()
-    solver_params.non_linear_solver.line_search_type = sdp.LineSearchType.WOLFE_STRONG
-    scene.set_solver_params(solver_params)
 
     return scene, [art_rod, art_spatial, art_linear]
 

@@ -188,14 +188,12 @@ enum struct LineSearchType {
   WolfeStrong,
 
   /**
-   * @brief Line search with residual norm condition. Accepts a step if the residual norm decreases.
+   * @brief Line search with residual norm condition. Accepts a step if the residual norm does not
+   * increase.
    *
-   * @note More robust than objective-based line searches (@ref LineSearchType::Simple, @ref
-   * LineSearchType::Armijo, @ref LineSearchType::WolfeWeak, @ref LineSearchType::WolfeStrong) but
-   * may degrade non-linear solver convergence in non-convex problems. In highly non-convex regions
-   * where the residual norm cannot be reduced, it may cause objects to move at slower velocity than
-   * they should due to the inability to take valid steps. Consider using an objective-based line
-   * search in that case.
+   * @note Does not use the merit. When the residual norm cannot be reduced, e.g., in highly
+   * non-convex regions, failed searches keep short steps, which can make objects move slower than
+   * they should.
    */
   ResidualNorm,
 
@@ -203,7 +201,7 @@ enum struct LineSearchType {
   Count,
 
   /** @brief Default line search type. */
-  Default = ResidualNorm
+  Default = WolfeStrong
 };
 } // namespace mochi
 
@@ -422,7 +420,7 @@ struct NonLinearSolverParams {
    *
    * @note Must be >= 1 unless @ref lineSearchType is @ref LineSearchType::None.
    */
-  int lineSearchMaxIter = 4;
+  int lineSearchMaxIter = 8;
 
   /**
    * @brief Step length reduction factor for line search.
