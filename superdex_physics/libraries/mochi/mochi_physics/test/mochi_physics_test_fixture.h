@@ -173,6 +173,27 @@ inline DynamicArray<Real3> GetWorldNodePositions(Actor const& actor, int numFiel
   return positions;
 }
 
+inline DynamicArray<real> GetDofValues(Actor const& actor) {
+  DynamicArray<real> dofs(actor.GetNumDofs());
+  actor.GetDofValues({}, dofs, ExpectOK{});
+  return dofs;
+}
+
+// The outputs of Actor::GetRodPose.
+struct RodPoseValues {
+  DynamicArray<real> displacements;
+  DynamicArray<real> elementFrameAxes;
+};
+
+inline RodPoseValues GetRodPose(Actor const& rod) {
+  MeshDataView const mesh = rod.GetMesh();
+  RodPoseValues pose;
+  pose.displacements.resize(mesh.coordinates.size());
+  pose.elementFrameAxes.resize(kSpaceDim3 * mesh.GetNumElements());
+  rod.GetRodPose(pose.displacements, pose.elementFrameAxes, ExpectOK{});
+  return pose;
+}
+
 // Expect that a shell or rod actor recentered with `recenteringParams` moves like an identical
 // actor without recentering when both translate and spin under gravity with a multistep integrator,
 // and that the recentered actor's root transform moved by at least `minRecenteringDistance`.

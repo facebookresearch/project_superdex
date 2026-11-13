@@ -16,6 +16,7 @@
 
 #include "mochi_physics_test_fixture.h"
 
+#include <mochi_core/element_operations/fem_rod.h>
 #include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/math_utils.h>
 #include <mochi_core/utils/reflection.h>
@@ -896,6 +897,17 @@ static DynamicArray<WakeCase> const& GetWakeCases() {
          auto const displacements = MakeUnitArray(size, 1, 0.001_r);
          c.actor->SetDisplacements(MakeConstSpan(displacements), test::ExpectOK{});
        }},
+      {"SetRodPose",
+       {ActorType::Rod},
+       OnRepeat::WakeUp,
+       [](WakeContext& c) {
+         // Translating every node by the same y offset keeps the frame axes valid.
+         auto pose = test::GetRodPose(*c.actor);
+         for (int i = 1; i < isize(pose.displacements); i += kSpaceDim3) {
+           pose.displacements[i] += 0.001_r;
+         }
+         c.actor->SetRodPose(pose.displacements, pose.elementFrameAxes, test::ExpectOK{});
+       }},
       {"SetNodePositionsLocal",
        {ActorType::Soft},
        OnRepeat::WakeUp,
@@ -1306,6 +1318,14 @@ TEST_F(SceneSleep, ReadingStateDoesNotWake) {
   actor->SetUserData(nullptr);
   Step();
   EXPECT_FALSE(IsAwake(actor));
+}
+
+TEST_F(SceneSleep, RejectedSetRodPoseDoesNotWake) {
+  Actor* rod = CreateTestActor(ActorType::Rod);
+  ASSERT_NO_FATAL_FAILURE(StepUntilAsleep(rod));
+  rod->SetRodPose({}, {}, test::ExpectNotOK{});
+  ApplyWakeRequests();
+  EXPECT_FALSE(IsAwake(rod));
 }
 
 TEST_F(SceneSleep, WakingOneIslandLeavesOthersAsleep) {

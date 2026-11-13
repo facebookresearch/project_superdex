@@ -26,6 +26,7 @@
 #include <mochi_physics/src/mochi_step.h>
 #include "mochi_core/test/mochi_test_helpers.h"
 #include "mochi_physics_test_fixture.h"
+#include "mochi_test_scene_builders.h"
 
 #include <algorithm>
 #include <array>
@@ -342,7 +343,7 @@ TEST_P(MochiRodActorAxialStretchScene, RodActorAxialStretch) {
   }
 
   // Check the axial displacement at the end
-  auto const displacements = _actor->GetDisplacements(test::ExpectOK{});
+  auto const displacements = test::GetDofValues(*_actor);
 
   // Get the displacement of the last node relative to the first node in local coordinates, which
   // excludes the compliance of the constraint on the first node. Recentering only translates the
@@ -1017,8 +1018,7 @@ TEST_F(MochiRodRotationalInertiaTest, SetZeroDisplacementsAndVelocitiesRestoresR
   _actor->SetZeroDisplacementsAndVelocities(test::ExpectOK{});
   _scene->Step(kTimeStep);
   EXPECT_TRUE(
-      test::NearEqualSpan(
-          DynamicArray<real>(4 * kNumNodes, 0_r), _actor->GetDisplacements(test::ExpectOK{})));
+      test::NearEqualSpan(DynamicArray<real>(4 * kNumNodes, 0_r), test::GetDofValues(*_actor)));
   auto& reg = GetRegistry();
   auto const entity = mochi::GetEntity(reg, _actor->GetHandle(), test::ExpectOK{});
   EXPECT_NEAR_EQ(
@@ -3715,3 +3715,418 @@ INSTANTIATE_TEST_SUITE_P(
     [](::testing::TestParamInfo<real> const& info) {
       return info.param > 0_r ? "WithTranslationEpsilon" : "Default";
     });
+
+// Rod pose: Actor::GetRodPose, Actor::SetRodPose, and the twist entries of Actor::GetDofValues.
+class MochiRodPoseTest : public test::MochiSceneTestBase {
+ protected:
+  static constexpr int kNumNodes = 6;
+
+  void SetUp() override {
+    MochiSceneTestBase::SetUp();
+    _scene->SetGravity(Real3{});
+  }
+
+  [[nodiscard]] ShapeHandle CreateShape(bool isClosedLoop) {
+    DynamicArray<Real3> nodes;
+    for (int i = 0; i < kNumNodes; ++i) {
+      if (isClosedLoop) {
+        real const angle = 2_r * kPI * StaticCast<real>(i) / StaticCast<real>(kNumNodes);
+        nodes.push_back(Real3{0.1_r * Cos(angle), 0_r, 0.1_r * Sin(angle)});
+      } else {
+        nodes.push_back(Real3{0.05_r * StaticCast<real>(i), 0_r, 0_r});
+      }
+    }
+    int const numElements = isClosedLoop ? kNumNodes : kNumNodes - 1;
+    ModelData const model = GenerateTubularRodModelData(
+        nodes,
+        DynamicArray<Real3>(numElements, Real3{0_r, 1_r, 0_r}),
+        /*radius=*/0.005_r,
+        /*numCrossSectionSegments=*/6,
+        isClosedLoop,
+        test::ExpectOK{});
+    return _mochiContext->CreateModelShape(model, test::ExpectOK{});
+  }
+
+  // A rod pinned at node 0. Recentering is disabled, so rods with equal local poses are also equal
+  // in world space.
+  [[nodiscard]] Actor* CreateRod(ShapeHandle shape) {
+    RodActorParams params;
+    params.shape = shape;
+    Actor* rod = CreateRodActor(_scene, params, test::ExpectOK{});
+    rod->SetRecenteringParams({.useRecentering = false}, test::ExpectOK{});
+    DeformableNodePositionConstraintParams pin;
+    pin.actor = rod->GetHandle();
+    pin.nodeIndex = 0;
+    pin.position = Unflatten<Real3 const>(rod->GetMesh().coordinates)[0];
+    pin.stiffness = 1e2_r;
+    _scene->CreateDeformableNodePositionConstraint(pin, test::ExpectOK{});
+    return rod;
+  }
+
+  // A twist torque on element 2 and a transverse force on node 4 bend and twist the rod.
+  static void ApplyLoads(Actor* rod) {
+    std::array<int, 2> const dofs = {
+        fem::kNumRodFields * 2 + fem::kRodThetaDofOffset, fem::kNumRodFields * 4 + 1};
+    std::array<real, 2> const values = {1e-3_r, -1e-2_r};
+    rod->SetExternalForcesOnDofs(dofs, values, test::ExpectOK{});
+  }
+
+  [[nodiscard]] static DynamicArray<real> Twists(Actor const* rod) {
+    DynamicArray<real> const dofs = test::GetDofValues(*rod);
+    DynamicArray<real> twists;
+    for (int i = fem::kRodThetaDofOffset; i < isize(dofs); i += fem::kNumRodFields) {
+      twists.push_back(dofs[i]);
+    }
+    return twists;
+  }
+
+  static void ExpectNearPoses(Actor const* expected, Actor const* actual) {
+    auto const expectedPose = test::GetRodPose(*expected);
+    auto const actualPose = test::GetRodPose(*actual);
+    EXPECT_TRUE(test::NearEqualSpan(expectedPose.displacements, actualPose.displacements, 1e-6_r));
+    EXPECT_TRUE(
+        test::NearEqualSpan(expectedPose.elementFrameAxes, actualPose.elementFrameAxes, 1e-6_r));
+  }
+};
+
+// The twist DoF values are the twist accumulated during the last step.
+TEST_F(MochiRodPoseTest, TwistDofValuesAreStepIncrements) {
+  for (bool const isClosedLoop : {false, true}) {
+    SCOPED_TRACE(isClosedLoop ? "ClosedLoop" : "Open");
+    Actor* rod = CreateRod(CreateShape(isClosedLoop));
+    EXPECT_SPAN_EQ(DynamicArray<real>(kNumNodes, 0_r), Twists(rod));
+
+    ApplyLoads(rod);
+    _scene->Step(0.01);
+    auto const twists = Twists(rod);
+    EXPECT_TRUE(std::ranges::any_of(twists, [](real twist) { return twist != 0_r; }));
+    if (!isClosedLoop) {
+      EXPECT_EQ(0_r, twists.back()) << "The padding twist angle of an open rod stays zero.";
+    }
+    _scene->DestroyActor(rod);
+  }
+}
+
+// SetRodPose zeroes the twist DoF values without changing the pose, because the frame axes already
+// carry the twist.
+TEST_F(MochiRodPoseTest, SetRodPoseZeroesTwistDofs) {
+  for (bool const isClosedLoop : {false, true}) {
+    SCOPED_TRACE(isClosedLoop ? "ClosedLoop" : "Open");
+    Actor* rod = CreateRod(CreateShape(isClosedLoop));
+    ApplyLoads(rod);
+    _scene->Step(0.01);
+    ASSERT_TRUE(std::ranges::any_of(Twists(rod), [](real twist) { return twist != 0_r; }));
+
+    auto const pose = test::GetRodPose(*rod);
+    rod->SetRodPose(pose.displacements, pose.elementFrameAxes, test::ExpectOK{});
+    EXPECT_SPAN_EQ(DynamicArray<real>(kNumNodes, 0_r), Twists(rod));
+    auto const after = test::GetRodPose(*rod);
+    EXPECT_SPAN_EQ(pose.displacements, after.displacements);
+    EXPECT_TRUE(test::NearEqualSpan(pose.elementFrameAxes, after.elementFrameAxes, 1e-6_r));
+    _scene->DestroyActor(rod);
+  }
+}
+
+// The pose of a bent and twisted rod transfers to a fresh rod with the same shape.
+TEST_F(MochiRodPoseTest, SetRodPoseRoundTrips) {
+  for (bool const isClosedLoop : {false, true}) {
+    SCOPED_TRACE(isClosedLoop ? "ClosedLoop" : "Open");
+    ShapeHandle const shape = CreateShape(isClosedLoop);
+    Actor* source = CreateRod(shape);
+    ApplyLoads(source);
+    for (int i = 0; i < 3; ++i) {
+      _scene->Step(0.01);
+    }
+    Actor* target = CreateRod(shape);
+    auto const pose = test::GetRodPose(*source);
+    target->SetRodPose(pose.displacements, pose.elementFrameAxes, test::ExpectOK{});
+
+    EXPECT_SPAN_EQ(pose.displacements, test::GetRodPose(*target).displacements);
+    ExpectNearPoses(source, target);
+    for (Actor* rod : {source, target}) {
+      rod->RegisterQueryAndCompute(QueryType::ContactSkinNodePositions, test::ExpectOK{});
+    }
+    EXPECT_TRUE(
+        test::NearEqualSpan(
+            source->GetContactSkinMeshNodePositionsLocal(test::ExpectOK{}),
+            target->GetContactSkinMeshNodePositionsLocal(test::ExpectOK{}),
+            1e-6_r));
+    _scene->DestroyActor(source);
+    _scene->DestroyActor(target);
+  }
+}
+
+TEST_F(MochiRodPoseTest, SetRodPoseRestartsMultistepIntegrationAndPreservesVelocities) {
+  test::SetSceneIntegrationMethod(_scene, IntegrationMethod::BDF2);
+  for (bool const isClosedLoop : {false, true}) {
+    SCOPED_TRACE(isClosedLoop ? "ClosedLoop" : "Open");
+    ShapeHandle const shape = CreateShape(isClosedLoop);
+    Actor* source = CreateRod(shape);
+    ApplyLoads(source);
+    for (int i = 0; i < 3; ++i) {
+      _scene->Step(0.01);
+    }
+    Actor* target = CreateRod(shape);
+    auto const entity = GetEntity(source);
+    auto const& poseHistory = GetRegistry().get<CIntegrationRodPoses>(entity);
+    auto const& velocityHistory =
+        GetRegistry().get<CIntegrationVelocitySlices<DisplacementLayer::Default>>(entity);
+    ASSERT_FALSE(poseHistory.prevSteps.empty());
+    ASSERT_FALSE(velocityHistory.prevSteps.empty());
+    auto const& sourceVelocity =
+        GetRegistry().get<CVelocitySlice<real, TimeStep::Current>>(entity).value;
+    ColumnVector<real> const velocities = sourceVelocity;
+    ASSERT_NE(0_r, velocities[fem::kNumRodFields * 4 + 1]);
+    ASSERT_NE(0_r, velocities[fem::kNumRodFields * 2 + fem::kRodThetaDofOffset]);
+    auto const pose = test::GetRodPose(*source);
+    target->SetRodPose(pose.displacements, pose.elementFrameAxes, test::ExpectOK{});
+    target->SetNodeVelocitiesLocal(velocities.GetConstSpan(), test::ExpectOK{});
+    ApplyLoads(target);
+
+    // Only the pose setter resets the source's history; its velocities must remain unchanged.
+    source->SetRodPose(pose.displacements, pose.elementFrameAxes, test::ExpectOK{});
+    EXPECT_TRUE(poseHistory.prevSteps.empty());
+    EXPECT_TRUE(velocityHistory.prevSteps.empty());
+    EXPECT_SPAN_EQ(velocities.GetConstSpan(), sourceVelocity.GetConstSpan());
+
+    _scene->Step(0.01);
+    ExpectNearPoses(source, target);
+    auto const& targetVelocity =
+        GetRegistry().get<CVelocitySlice<real, TimeStep::Current>>(GetEntity(target)).value;
+    EXPECT_TRUE(
+        test::NearEqualSpan(sourceVelocity.GetConstSpan(), targetVelocity.GetConstSpan(), 1e-6_r));
+    _scene->DestroyActor(source);
+    _scene->DestroyActor(target);
+  }
+}
+
+// A rod continues the same motion whether or not it keeps the twist DoF values of its last step,
+// both for the solve-free assembly of UpdateQueries and for the next step.
+TEST_F(MochiRodPoseTest, TwistDofsHaveNoDynamicalEffect) {
+  auto addRotationConstraint = [&](Actor* rod) {
+    RodElementRotationConstraintParams params;
+    params.actor = rod->GetHandle();
+    params.elementIndex = 1;
+    params.stiffness = 1e-2_r;
+    params.damping = 1e-3_r;
+    Constraint* constraint = _scene->CreateRodElementRotationConstraint(params, test::ExpectOK{});
+    constraint->RegisterQuery(QueryType::ConstraintForce, test::ExpectOK{});
+    return constraint;
+  };
+  for (bool const isClosedLoop : {false, true}) {
+    SCOPED_TRACE(isClosedLoop ? "ClosedLoop" : "Open");
+    ShapeHandle const shape = CreateShape(isClosedLoop);
+    Actor* withTwist = CreateRod(shape);
+    Actor* withoutTwist = CreateRod(shape);
+    Constraint* constraintWithTwist = addRotationConstraint(withTwist);
+    Constraint* constraintWithoutTwist = addRotationConstraint(withoutTwist);
+    ApplyLoads(withTwist);
+    for (int i = 0; i < 3; ++i) {
+      _scene->Step(0.01);
+    }
+    ASSERT_TRUE(std::ranges::any_of(Twists(withTwist), [](real twist) { return twist != 0_r; }));
+
+    auto const pose = test::GetRodPose(*withTwist);
+    withoutTwist->SetRodPose(pose.displacements, pose.elementFrameAxes, test::ExpectOK{});
+    // Setting velocities also resets the step history of both rods.
+    DynamicArray<real> const zeroVelocities(withTwist->GetNumDofs(), 0_r);
+    for (Actor* rod : {withTwist, withoutTwist}) {
+      rod->SetNodeVelocitiesLocal(zeroVelocities, test::ExpectOK{});
+    }
+    ApplyLoads(withoutTwist);
+
+    _scene->UpdateQueries(test::ExpectOK{});
+    EXPECT_TRUE(
+        test::NearEqualSpan(
+            constraintWithTwist->GetForce(test::ExpectOK{}),
+            constraintWithoutTwist->GetForce(test::ExpectOK{}),
+            1e-6_r));
+
+    _scene->Step(0.01);
+    ExpectNearPoses(withTwist, withoutTwist);
+    EXPECT_TRUE(test::NearEqualSpan(Twists(withTwist), Twists(withoutTwist), 1e-6_r));
+    _scene->DestroyActor(withTwist);
+    _scene->DestroyActor(withoutTwist);
+  }
+}
+
+TEST_F(MochiRodPoseTest, SetRodPoseValidatesSizesAndFiniteness) {
+  for (bool const isClosedLoop : {false, true}) {
+    SCOPED_TRACE(isClosedLoop ? "ClosedLoop" : "Open");
+    Actor* rod = CreateRod(CreateShape(isClosedLoop));
+    auto const rest = test::GetRodPose(*rod);
+    auto const& restDisplacements = rest.displacements;
+    auto const& restAxes = rest.elementFrameAxes;
+    auto expectError = [&](Span<real const> displacements,
+                           Span<real const> axes,
+                           char const* expectedDescription) {
+      Error error;
+      rod->SetRodPose(displacements, axes, error);
+      EXPECT_STREQ(expectedDescription, error.GetDescription());
+      auto const after = test::GetRodPose(*rod);
+      EXPECT_SPAN_EQ(restDisplacements, after.displacements);
+      EXPECT_SPAN_EQ(restAxes, after.elementFrameAxes);
+    };
+    auto displaced = [&](int dof, real value) {
+      DynamicArray<real> out = restDisplacements;
+      out[dof] = value;
+      return out;
+    };
+
+    expectError(
+        Span<real const>(restDisplacements.data(), restDisplacements.size() - 1),
+        restAxes,
+        "Rod displacements must have 3 values per node.");
+    expectError(
+        restDisplacements,
+        Span<real const>(restAxes.data(), restAxes.size() - 1),
+        "Rod element frame axes must have 3 values per element.");
+    expectError(
+        displaced(0, std::numeric_limits<real>::quiet_NaN()), restAxes, "Rod pose must be finite.");
+    DynamicArray<real> nonfiniteAxes = restAxes;
+    nonfiniteAxes[1] = std::numeric_limits<real>::infinity();
+    expectError(restDisplacements, nonfiniteAxes, "Rod pose must be finite.");
+    _scene->DestroyActor(rod);
+  }
+}
+
+TEST_F(MochiRodPoseTest, SetRodPoseRestoresExtremeDeformations) {
+  for (bool const isClosedLoop : {false, true}) {
+    SCOPED_TRACE(isClosedLoop ? "ClosedLoop" : "Open");
+    Actor* rod = CreateRod(CreateShape(isClosedLoop));
+    auto const rest = test::GetRodPose(*rod);
+    auto const nodes = Unflatten<Real3 const>(rod->GetMesh().coordinates);
+    auto pose = rest;
+    auto const displacements = Unflatten<Real3>(MakeSpan(pose.displacements));
+    // A compressed edge and a near-180-degree fold exceed shape-creation tolerances.
+    std::array<Real3, kNumNodes> const deformed = {
+        Real3{},
+        Real3{1e-7_r, 0_r, 0_r},
+        Real3{-0.05_r, 0_r, 1e-4_r},
+        Real3{-0.1_r, 0_r, 0.05_r},
+        Real3{-0.05_r, 0_r, 0.1_r},
+        Real3{0.05_r, 0_r, 0.05_r}};
+    for (int i = 0; i < kNumNodes; ++i) {
+      displacements[i] = deformed[i] - nodes[i];
+    }
+    auto const axes = Unflatten<Real3>(MakeSpan(pose.elementFrameAxes));
+    for (auto& axis : axes) {
+      axis = Real3{0_r, 1_r, 0_r};
+    }
+    {
+      test::ExpectLoggingInScope expectWarning(_scene->GetContext(), LogChannel::Warning);
+      rod->SetRodPose(pose.displacements, pose.elementFrameAxes, test::ExpectOK{});
+      EXPECT_EQ(1, expectWarning._messagesReceived);
+    }
+    auto const captured = test::GetRodPose(*rod);
+    rod->SetRodPose(rest.displacements, rest.elementFrameAxes, test::ExpectOK{});
+    {
+      test::ExpectLoggingInScope expectWarning(_scene->GetContext(), LogChannel::Warning);
+      rod->SetRodPose(captured.displacements, captured.elementFrameAxes, test::ExpectOK{});
+      EXPECT_EQ(1, expectWarning._messagesReceived);
+    }
+    auto const restored = test::GetRodPose(*rod);
+    EXPECT_SPAN_EQ(captured.displacements, restored.displacements);
+    EXPECT_SPAN_EQ(captured.elementFrameAxes, restored.elementFrameAxes);
+    _scene->DestroyActor(rod);
+  }
+}
+
+TEST_F(MochiRodPoseTest, SetRodPoseWarnsOnInvalidFramesWithoutChangingInput) {
+  for (bool const isClosedLoop : {false, true}) {
+    SCOPED_TRACE(isClosedLoop ? "ClosedLoop" : "Open");
+    Actor* rod = CreateRod(CreateShape(isClosedLoop));
+    auto pose = test::GetRodPose(*rod);
+    auto const axes = Unflatten<Real3>(MakeSpan(pose.elementFrameAxes));
+    for (Real3 const axis : {Real3{0_r, 1.01_r, 0_r}, Real3{1_r, 0_r, 0_r}, Real3{}}) {
+      std::ranges::fill(axes, axis);
+      {
+        test::ExpectLoggingInScope expectWarning(_scene->GetContext(), LogChannel::Warning);
+        rod->SetRodPose(pose.displacements, pose.elementFrameAxes, test::ExpectOK{});
+        EXPECT_EQ(1, expectWarning._messagesReceived);
+      }
+      auto const after = test::GetRodPose(*rod);
+      EXPECT_SPAN_EQ(pose.displacements, after.displacements);
+      EXPECT_SPAN_EQ(pose.elementFrameAxes, after.elementFrameAxes);
+    }
+    _scene->DestroyActor(rod);
+  }
+}
+
+TEST_F(MochiRodPoseTest, SetRodPoseWarnsOnAntiparallelEdges) {
+  Actor* rod = CreateRod(CreateShape(/*isClosedLoop=*/false));
+  auto pose = test::GetRodPose(*rod);
+  auto const nodes = Unflatten<Real3 const>(rod->GetMesh().coordinates);
+  auto const displacements = Unflatten<Real3>(MakeSpan(pose.displacements));
+  displacements[2] = nodes[0] - nodes[2];
+  {
+    test::ExpectLoggingInScope expectWarning(_scene->GetContext(), LogChannel::Warning);
+    rod->SetRodPose(pose.displacements, pose.elementFrameAxes, test::ExpectOK{});
+    EXPECT_EQ(1, expectWarning._messagesReceived);
+  }
+  auto const after = test::GetRodPose(*rod);
+  EXPECT_SPAN_EQ(pose.displacements, after.displacements);
+  EXPECT_SPAN_EQ(pose.elementFrameAxes, after.elementFrameAxes);
+}
+
+TEST_F(MochiRodPoseTest, SetRodPosePreservesFrameAxesExactly) {
+  for (bool const isClosedLoop : {false, true}) {
+    SCOPED_TRACE(isClosedLoop ? "ClosedLoop" : "Open");
+    Actor* rod = CreateRod(CreateShape(isClosedLoop));
+    auto pose = test::GetRodPose(*rod);
+    // Do not silently repair rounding errors in a captured simulation frame.
+    pose.elementFrameAxes[0] = 1e-4_r;
+    pose.elementFrameAxes[1] += 1e-4_r;
+    rod->SetRodPose(pose.displacements, pose.elementFrameAxes, test::ExpectOK{});
+    auto const restored = test::GetRodPose(*rod);
+    EXPECT_SPAN_EQ(pose.displacements, restored.displacements);
+    EXPECT_SPAN_EQ(pose.elementFrameAxes, restored.elementFrameAxes);
+    _scene->DestroyActor(rod);
+  }
+}
+
+TEST_F(MochiRodPoseTest, GetRodPoseValidatesOutputSizes) {
+  for (bool const isClosedLoop : {false, true}) {
+    SCOPED_TRACE(isClosedLoop ? "ClosedLoop" : "Open");
+    Actor* rod = CreateRod(CreateShape(isClosedLoop));
+    auto pose = test::GetRodPose(*rod);
+    Error displacementsError;
+    rod->GetRodPose(
+        Span<real>(pose.displacements.data(), pose.displacements.size() - 1),
+        pose.elementFrameAxes,
+        displacementsError);
+    EXPECT_STREQ(
+        "Rod displacements must have 3 values per node.", displacementsError.GetDescription());
+    Error axesError;
+    rod->GetRodPose(
+        pose.displacements,
+        Span<real>(pose.elementFrameAxes.data(), pose.elementFrameAxes.size() - 1),
+        axesError);
+    EXPECT_STREQ(
+        "Rod element frame axes must have 3 values per element.", axesError.GetDescription());
+    _scene->DestroyActor(rod);
+  }
+}
+
+TEST_F(MochiRodPoseTest, PoseApiIsRodOnly) {
+  Actor* rod = CreateRod(CreateShape(/*isClosedLoop=*/false));
+  Error displacementsError;
+  EXPECT_TRUE(rod->GetDisplacements(displacementsError).empty());
+  EXPECT_STREQ(
+      "GetDisplacements is not supported for rod actors. Use GetRodPose.",
+      displacementsError.GetDescription());
+
+  auto pose = test::GetRodPose(*rod);
+  Error setDisplacementsError;
+  rod->SetDisplacements(pose.displacements, setDisplacementsError);
+  EXPECT_STREQ(
+      "SetDisplacements is not supported for rod actors. Use SetRodPose.",
+      setDisplacementsError.GetDescription());
+  Actor* cube = test::AddRigidCube(_scene);
+  Error setError;
+  cube->SetRodPose(pose.displacements, pose.elementFrameAxes, setError);
+  EXPECT_STREQ("SetRodPose is only supported for rod actors.", setError.GetDescription());
+  Error getError;
+  cube->GetRodPose(pose.displacements, pose.elementFrameAxes, getError);
+  EXPECT_STREQ("GetRodPose is only supported for rod actors.", getError.GetDescription());
+}

@@ -459,6 +459,24 @@ void UpdateSurfaceContactBounds(
 // Get the mass of a rod actor.
 [[nodiscard]] real GetActorMass(entt::registry const& reg, entt::entity actor);
 
+// Get the current pose of a rod actor (see Actor::GetRodPose).
+void GetPose(
+    entt::registry const& reg,
+    entt::entity actor,
+    Span<real> outDisplacements,
+    Span<real> outElementFrameAxes,
+    Error& error);
+
+// Set the current pose of a rod actor (see Actor::SetRodPose). Validates sizes and finiteness,
+// warns on shape-tolerance violations, copies frame axes unchanged, and zeroes twist DoFs.
+// Does not invalidate step history or wake the actor.
+void SetPose(
+    entt::registry& reg,
+    entt::entity actor,
+    Span<real const> displacements,
+    Span<real const> elementFrameAxes,
+    Error& error);
+
 // Compute per-node curvature binormal vectors [1/m] for a rod centerline polyline.
 //
 // For open polylines, the endpoints have no defined curvature and the corresponding entries are

@@ -10257,17 +10257,17 @@ class Actor:
         reference (rest) positions.
 
         Returns:
-            Node displacements in the actor's local frame. Length is 3 × the number of
-            nodes, except for rod actors, where it is 4 × the number of nodes (3
-            displacement [m] + 1 twist [rad] per node). The number of nodes is available
-            from :meth:`~superdex.physics.Actor.get_mesh`.
+            Node displacements [m] in the actor's local frame. Length is 3 × the number
+            of nodes. The number of nodes is available from
+            :meth:`~superdex.physics.Actor.get_mesh`.
 
         Raises:
             :class:`~superdex.physics.Error`: If an error occurs.
 
         Note:
             Only supported for standalone soft actors, nested soft actors, shell actors,
-            rod actors, and articulated actors with a skin mesh.
+            and articulated actors with a skin mesh. For rod actors, use
+            :meth:`~superdex.physics.Actor.get_rod_pose`.
 
         Note:
             For articulated actors, returns displacements of the skin mesh.
@@ -10279,6 +10279,7 @@ class Actor:
 
         See Also:
             :meth:`~superdex.physics.Actor.set_displacements`,
+            :meth:`~superdex.physics.Actor.get_rod_pose`,
             :meth:`~superdex.physics.Actor.get_node_positions_local`
         """
     def set_displacements(self, displacements: ArrayLikeReal) -> None:
@@ -10295,7 +10296,7 @@ class Actor:
 
         Note:
             Only supported for standalone soft actors, nested soft actors, and shell
-            actors.
+            actors. For rod actors, use :meth:`~superdex.physics.Actor.set_rod_pose`.
 
         Note:
             For nested soft actors, displacements are the elastic deformation component
@@ -10312,7 +10313,78 @@ class Actor:
 
         See Also:
             :meth:`~superdex.physics.Actor.get_displacements`,
-            :meth:`~superdex.physics.Actor.set_node_positions_local`
+            :meth:`~superdex.physics.Actor.set_node_positions_local`,
+            :meth:`~superdex.physics.Actor.set_rod_pose`
+        """
+    def get_rod_pose(
+        self,
+        out_displacements: ArrayLikeReal,
+        out_element_frame_axes: ArrayLikeReal,
+    ) -> None:
+        """Get the pose of a rod actor: its node displacements and element frame axes.
+
+        Args:
+            out_displacements (ArrayLikeReal): Node displacements in the actor's local
+                frame, relative to reference (rest) positions. Must be of size 3 × the
+                number of nodes of :meth:`~superdex.physics.Actor.get_mesh`.
+            out_element_frame_axes (ArrayLikeReal): Element frame axes in the actor's
+                local frame. Each axis is a unit vector orthogonal to its deformed
+                element, and carries the rod's twist. Must be of size 3 × the number of
+                elements of :meth:`~superdex.physics.Actor.get_mesh`.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+
+        Note:
+            Only supported for rod actors.
+
+        See Also:
+            :meth:`~superdex.physics.Actor.set_rod_pose`
+        """
+    def set_rod_pose(
+        self,
+        displacements: ArrayLikeReal,
+        element_frame_axes: ArrayLikeReal,
+    ) -> None:
+        """Set the pose of a rod actor: its node displacements and element frame axes.
+
+        Validates sizes and finiteness, then copies the pose unchanged. Geometry or
+        frame axes outside shape-creation tolerances generate warnings, but are not
+        rejected or normalized. Captured simulation poses remain restorable even under
+        extreme deformation.
+
+        Args:
+            displacements (ArrayLikeReal): Node displacements in the actor's local
+                frame, relative to reference (rest) positions. Must be of size 3 × the
+                number of nodes of :meth:`~superdex.physics.Actor.get_mesh`.
+            element_frame_axes (ArrayLikeReal): Element frame axes in the actor's local
+                frame. Must be of size 3 × the number of elements of
+                :meth:`~superdex.physics.Actor.get_mesh`.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+
+        Note:
+            Only supported for rod actors.
+
+        Note:
+            Resets the twist DoF values (see
+            :meth:`~superdex.physics.Actor.get_dof_values`) to zero. The frame axes
+            carry the twist.
+
+        Note:
+            Does not change the velocity DoFs.
+
+        Note:
+            Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler
+            in the first time step after this method is called.
+
+        Warning:
+            Caller-constructed poses must have simulation-consistent geometry and frame
+            axes: each axis should be a unit vector orthogonal to its deformed element.
+
+        See Also:
+            :meth:`~superdex.physics.Actor.get_rod_pose`
         """
     def get_soft_material_params(self) -> SoftMaterialParams:
         """Get the material parameters of a soft actor.
@@ -10643,6 +10715,10 @@ class Actor:
 
         Note:
             Returns zero for actors without degrees of freedom (e.g., static actors).
+
+        Note:
+            For rod actors, there are 4 DoFs per node, in the layout of
+            :meth:`~superdex.physics.Actor.get_dof_values`.
         """
     def get_dof_values(
         self,
@@ -10667,6 +10743,17 @@ class Actor:
         Note:
             Not supported for static actors, even when both input and output spans are
             empty.
+
+        Note:
+            For rod actors, each node has 4 DoF values: the (x, y, z) displacement [m]
+            and a twist angle [rad]. The twist angle at node i belongs to element i,
+            except for the last node of an open (non-closed-loop) rod, whose twist angle
+            is padding and is always zero. It is the twist about the element's tangent
+            accumulated since the start of the most recent time step, and it is reset to
+            zero at the start of each time step and by
+            :meth:`~superdex.physics.Actor.set_rod_pose`. It is already included in the
+            element frame axes of :meth:`~superdex.physics.Actor.get_rod_pose`, so it is
+            not a total twist.
 
         See Also:
             :meth:`~superdex.physics.Actor.get_num_dofs`
@@ -10940,14 +11027,6 @@ class Actor:
         Note:
             Only supported for standalone soft actors, shell actors, and rod actors.
 
-        Note:
-            For standalone soft actors and shell actors: 3 values per node [m/s] — (vx,
-            vy, vz).
-
-        Note:
-            For rod actors: 4 values per node — (vx, vy, vz) in [m/s] plus a twist rate
-            [rad/s].
-
         See Also:
             :meth:`~superdex.physics.Actor.set_node_velocities_local`,
             :meth:`~superdex.physics.Actor.get_displacements`
@@ -10970,8 +11049,12 @@ class Actor:
             vy, vz).
 
         Note:
-            For rod actors: 4 values per node — (vx, vy, vz) in [m/s] plus a twist rate
-            [rad/s].
+            For rod actors: 4 values per node in the layout of
+            :meth:`~superdex.physics.Actor.get_dof_values` — (vx, vy, vz) [m/s] and the
+            twist rate [rad/s] of the element frame about its tangent, relative to its
+            parallel transport by the centerline motion. For open rods, the last node's
+            twist rate is padding: it has no effect and reads back as zero after the
+            next step.
 
         Note:
             Invalidates the actor history (see :class:`~superdex.physics.Actor`).
@@ -11513,8 +11596,10 @@ class Actor:
             Only supported for rigid, articulated, rod, and shell actors.
 
         Note:
-            DoF indices use the same per-actor-type index layout documented by
-            :meth:`~superdex.physics.Actor.add_boundary_condition_dofs_world`.
+            DoF indices use the per-actor-type index layout documented by
+            :meth:`~superdex.physics.Actor.add_boundary_condition_dofs_world`, except
+            for rod actors, which use the layout of
+            :meth:`~superdex.physics.Actor.get_dof_values`.
 
         Note:
             External forces can be cleared with

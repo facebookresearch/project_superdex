@@ -112,6 +112,12 @@ class Actor {
 
   virtual void SetDisplacements(Span<real const> displacements, Error& error) = 0;
 
+  virtual void GetRodPose(Span<real> outDisplacements, Span<real> outElementFrameAxes, Error& error)
+      const = 0;
+
+  virtual void
+  SetRodPose(Span<real const> displacements, Span<real const> elementFrameAxes, Error& error) = 0;
+
   [[nodiscard]] virtual SoftMaterialParams GetSoftMaterialParams(Error& error) const = 0;
 
   virtual void SetSoftMaterialParams(SoftMaterialParams const& params, Error& error) = 0;

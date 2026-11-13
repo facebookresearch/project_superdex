@@ -354,6 +354,95 @@ real GetActorMass(entt::registry const& reg, entt::entity actor) {
   return totalMass;
 }
 
+static void ValidatePoseSizes(
+    CPolylineMesh const& mesh,
+    int numDisplacements,
+    int numElementFrameAxes,
+    Error& error) {
+  MOCHI_ERROR_IF(
+      numDisplacements != kSpaceDim3 * isize(mesh.nodes),
+      error,
+      "Rod displacements must have 3 values per node.");
+  MOCHI_ERROR_IF(
+      numElementFrameAxes != kSpaceDim3 * mesh.NumElements(),
+      error,
+      "Rod element frame axes must have 3 values per element.");
+}
+
+void GetPose(
+    entt::registry const& reg,
+    entt::entity actor,
+    Span<real> outDisplacements,
+    Span<real> outElementFrameAxes,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  MOCHI_ASSERT(reg.all_of<TagRodActor>(actor), "Expected rod actor.");
+  ValidatePoseSizes(
+      reg.get<CPolylineMesh const>(actor),
+      isize(outDisplacements),
+      isize(outElementFrameAxes),
+      error);
+  MOCHI_ERROR_RETURN(error);
+
+  auto const& pose = reg.get<CRodPose<TimeStep::Current> const>(actor).value;
+  auto const displacements = Unflatten<Real4 const>(pose.displacements.GetConstSpan());
+  auto const out = Unflatten<Real3>(outDisplacements);
+  for (int i = 0; i < isize(out); ++i) {
+    Real4 const& d = displacements[i];
+    out[i] = Real3{d[0], d[1], d[2]};
+  }
+  std::ranges::copy(Flatten(MakeConstSpan(pose.frameAxes)), outElementFrameAxes.begin());
+}
+
+void SetPose(
+    entt::registry& reg,
+    entt::entity actor,
+    Span<real const> displacements,
+    Span<real const> elementFrameAxes,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  MOCHI_ASSERT(reg.all_of<TagRodActor>(actor), "Expected rod actor.");
+  auto const& mesh = reg.get<CPolylineMesh const>(actor);
+  int const numNodes = isize(mesh.nodes);
+  ValidatePoseSizes(mesh, isize(displacements), isize(elementFrameAxes), error);
+  MOCHI_ERROR_RETURN(error);
+  MOCHI_ERROR_IF_NOT(
+      IsFinite(displacements) && IsFinite(elementFrameAxes), error, "Rod pose must be finite.");
+  MOCHI_ERROR_RETURN(error);
+
+  auto const nodalDisplacements = Unflatten<Real3 const>(displacements);
+  // Shape tolerances are advisory: captured simulation poses must remain restorable.
+  if (IsLogChannelEnabled(LogChannel::Warning)) {
+    MOCHI_FILO_STACK_ALLOCATOR(allocator, 256 * sizeof(Real3));
+    DynamicArray<Real3> deformedNodes(&allocator);
+    deformedNodes.resize_noinit(numNodes);
+    for (int i = 0; i < numNodes; ++i) {
+      deformedNodes[i] = mesh.nodes[i] + nodalDisplacements[i];
+    }
+    Error diagnostic;
+    model::ValidatePolylineGeometry(MakeConstSpan(deformedNodes), mesh.isClosedLoop, diagnostic);
+    if (diagnostic.IsOK()) {
+      model::ValidatePolylineElementFrameAxes(
+          Unflatten<Real3 const>(elementFrameAxes),
+          MakeConstSpan(deformedNodes),
+          mesh.isClosedLoop,
+          diagnostic);
+    }
+    if (!diagnostic.IsOK()) {
+      MOCHI_LOG_WARNING(
+          "SetRodPose: pose exceeds shape-creation tolerances (%s). Setting it as given.",
+          diagnostic.GetDescription());
+    }
+  }
+  auto& pose = reg.get<CRodPose<TimeStep::Current>>(actor).value;
+  auto const poseDisplacements = Unflatten<Real4>(pose.displacements.GetSpan());
+  for (int i = 0; i < numNodes; ++i) {
+    Real3 const& d = nodalDisplacements[i];
+    poseDisplacements[i] = Real4{d[0], d[1], d[2], 0_r};
+  }
+  std::ranges::copy(elementFrameAxes, Flatten(MakeSpan(pose.frameAxes)).begin());
+}
+
 void ComputeRodNodeCurvatureBinormals(
     Span<Real3 const> nodes,
     bool isClosedLoop,

@@ -5294,13 +5294,13 @@
 /// @brief Get the node displacements of the actor in the actor's local frame, relative to reference (rest) positions.
 ///
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
-/// @return Node displacements in the actor's local frame. Length is 3 × the number of nodes, except for rod actors, where it is 4 × the number of nodes (3 displacement [m] + 1 twist [rad] per node). The number of nodes is available from @ref mochi::Actor::GetMesh "GetMesh".
+/// @return Node displacements [m] in the actor's local frame. Length is 3 × the number of nodes. The number of nodes is available from @ref mochi::Actor::GetMesh "GetMesh".
 ///
-/// @note Only supported for standalone soft actors, nested soft actors, shell actors, rod actors, and articulated actors with a skin mesh.
+/// @note Only supported for standalone soft actors, nested soft actors, shell actors, and articulated actors with a skin mesh. For rod actors, use @ref mochi::Actor::GetRodPose "GetRodPose".
 /// @note For articulated actors, returns displacements of the skin mesh.
 /// @note For nested soft actors, returns post-skinning displacements, which may differ from the pre-skinning elastic deformation component written by @ref mochi::Actor::SetDisplacements "SetDisplacements".
 ///
-/// @see @ref mochi::Actor::SetDisplacements "SetDisplacements", @ref mochi::Actor::GetNodePositionsLocal "GetNodePositionsLocal"
+/// @see @ref mochi::Actor::SetDisplacements "SetDisplacements", @ref mochi::Actor::GetRodPose "GetRodPose", @ref mochi::Actor::GetNodePositionsLocal "GetNodePositionsLocal"
 ///
 
 /// @fn void mochi::Actor::SetDisplacements(Span<real const> displacements, Error& error)
@@ -5310,12 +5310,45 @@
 /// @param[in] displacements Node displacements [m] to set in the actor's local frame. Length must be 3 × the number of nodes. The number of nodes is available from @ref mochi::Actor::GetMesh "GetMesh".
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
-/// @note Only supported for standalone soft actors, nested soft actors, and shell actors.
+/// @note Only supported for standalone soft actors, nested soft actors, and shell actors. For rod actors, use @ref mochi::Actor::SetRodPose "SetRodPose".
 /// @note For nested soft actors, displacements are the elastic deformation component only (before skinning is applied).
 /// @note Does not change the elastic velocity DoFs, but changes the skinned node velocities of nested soft actors.
 /// @note Invalidates the actor history (see @ref mochi::Actor "Actor"). For nested soft actors of a blended articulated actor, also invalidates the actor history of the articulated actor.
 ///
-/// @see @ref mochi::Actor::GetDisplacements "GetDisplacements", @ref mochi::Actor::SetNodePositionsLocal "SetNodePositionsLocal"
+/// @see @ref mochi::Actor::GetDisplacements "GetDisplacements", @ref mochi::Actor::SetNodePositionsLocal "SetNodePositionsLocal", @ref mochi::Actor::SetRodPose "SetRodPose"
+///
+
+/// @fn void mochi::Actor::GetRodPose(Span<real> outDisplacements, Span<real> outElementFrameAxes, Error& error) const
+///
+/// @brief Get the pose of a rod actor: its node displacements and element frame axes.
+///
+/// @param[out] outDisplacements Node displacements in the actor's local frame, relative to reference (rest) positions. Must be of size 3 × the number of nodes of @ref mochi::Actor::GetMesh "GetMesh".
+/// @param[out] outElementFrameAxes Element frame axes in the actor's local frame. Each axis is a unit vector orthogonal to its deformed element, and carries the rod's twist. Must be of size 3 × the number of elements of @ref mochi::Actor::GetMesh "GetMesh".
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+///
+/// @note Only supported for rod actors.
+///
+/// @see @ref mochi::Actor::SetRodPose "SetRodPose"
+///
+
+/// @fn void mochi::Actor::SetRodPose(Span<real const> displacements, Span<real const> elementFrameAxes, Error& error)
+///
+/// @brief Set the pose of a rod actor: its node displacements and element frame axes.
+///
+/// @details Validates sizes and finiteness, then copies the pose unchanged. Geometry or frame axes outside shape-creation tolerances generate warnings, but are not rejected or normalized. Captured simulation poses remain restorable even under extreme deformation.
+///
+/// @param[in] displacements Node displacements in the actor's local frame, relative to reference (rest) positions. Must be of size 3 × the number of nodes of @ref mochi::Actor::GetMesh "GetMesh".
+/// @param[in] elementFrameAxes Element frame axes in the actor's local frame. Must be of size 3 × the number of elements of @ref mochi::Actor::GetMesh "GetMesh".
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+///
+/// @note Only supported for rod actors.
+/// @note Resets the twist DoF values (see @ref mochi::Actor::GetDofValues "GetDofValues") to zero. The frame axes carry the twist.
+/// @note Does not change the velocity DoFs.
+/// @note Resets multi-step time integrators, e.g. BDF2 falls back to backward Euler in the first time step after this method is called.
+///
+/// @warning Caller-constructed poses must have simulation-consistent geometry and frame axes: each axis should be a unit vector orthogonal to its deformed element.
+///
+/// @see @ref mochi::Actor::GetRodPose "GetRodPose"
 ///
 
 /// @fn SoftMaterialParams mochi::Actor::GetSoftMaterialParams(Error& error) const
@@ -5475,6 +5508,7 @@
 /// @return Number of degrees of freedom of the actor.
 ///
 /// @note Returns zero for actors without degrees of freedom (e.g., static actors).
+/// @note For rod actors, there are 4 DoFs per node, in the layout of @ref mochi::Actor::GetDofValues "GetDofValues".
 ///
 
 /// @fn void mochi::Actor::GetDofValues(Span<int const> dofIndices, Span<real> outDofValues, Error& error) const
@@ -5486,6 +5520,7 @@
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 /// @note Not supported for static actors, even when both input and output spans are empty.
+/// @note For rod actors, each node has 4 DoF values: the (x, y, z) displacement [m] and a twist angle [rad]. The twist angle at node i belongs to element i, except for the last node of an open (non-closed-loop) rod, whose twist angle is padding and is always zero. It is the twist about the element's tangent accumulated since the start of the most recent time step, and it is reset to zero at the start of each time step and by @ref mochi::Actor::SetRodPose "SetRodPose". It is already included in the element frame axes of @ref mochi::Actor::GetRodPose "GetRodPose", so it is not a total twist.
 ///
 /// @see @ref mochi::Actor::GetNumDofs "GetNumDofs"
 ///
@@ -5622,8 +5657,6 @@
 /// @return Node velocities in the actor's local frame, in the layout that @ref mochi::Actor::SetNodeVelocitiesLocal "SetNodeVelocitiesLocal" takes.
 ///
 /// @note Only supported for standalone soft actors, shell actors, and rod actors.
-/// @note For standalone soft actors and shell actors: 3 values per node [m/s] — (vx, vy, vz).
-/// @note For rod actors: 4 values per node — (vx, vy, vz) in [m/s] plus a twist rate [rad/s].
 ///
 /// @see @ref mochi::Actor::SetNodeVelocitiesLocal "SetNodeVelocitiesLocal", @ref mochi::Actor::GetDisplacements "GetDisplacements"
 ///
@@ -5637,7 +5670,7 @@
 ///
 /// @note Only supported for standalone soft actors, shell actors, and rod actors.
 /// @note For standalone soft actors and shell actors: 3 values per node [m/s] — (vx, vy, vz).
-/// @note For rod actors: 4 values per node — (vx, vy, vz) in [m/s] plus a twist rate [rad/s].
+/// @note For rod actors: 4 values per node in the layout of @ref mochi::Actor::GetDofValues "GetDofValues" — (vx, vy, vz) [m/s] and the twist rate [rad/s] of the element frame about its tangent, relative to its parallel transport by the centerline motion. For open rods, the last node's twist rate is padding: it has no effect and reads back as zero after the next step.
 /// @note Invalidates the actor history (see @ref mochi::Actor "Actor").
 ///
 /// @see @ref mochi::Actor::GetNodeVelocitiesLocal "GetNodeVelocitiesLocal"
@@ -5856,7 +5889,7 @@
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 /// @note Only supported for rigid, articulated, rod, and shell actors.
-/// @note DoF indices use the same per-actor-type index layout documented by @ref mochi::Actor::AddBoundaryConditionDofsWorld "AddBoundaryConditionDofsWorld".
+/// @note DoF indices use the per-actor-type index layout documented by @ref mochi::Actor::AddBoundaryConditionDofsWorld "AddBoundaryConditionDofsWorld", except for rod actors, which use the layout of @ref mochi::Actor::GetDofValues "GetDofValues".
 /// @note External forces can be cleared with @ref mochi::Actor::ClearExternalForces "ClearExternalForces".
 /// @note Replaces all previously set external forces, including external forces on DoFs not included in @p dofIndices. Passing empty @p dofIndices and @p forceValues is equivalent to calling @ref mochi::Actor::ClearExternalForces "ClearExternalForces".
 /// @note For rigid and shell actors, values are interpreted in the world frame.

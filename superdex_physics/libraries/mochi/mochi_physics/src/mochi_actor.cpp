@@ -674,6 +674,11 @@ class ActorInterfaceImpl : public ActorInterface {
 
   Span<real const> GetDisplacements(Error& error) const override {
     using CurrentDisplacement = CFinalDisplacementRef<TimeStep::Current>;
+    MOCHI_ERROR_IF(
+        reg.all_of<TagRodActor>(e),
+        error,
+        "GetDisplacements is not supported for rod actors. Use GetRodPose.");
+    MOCHI_ERROR_RETURN(error, {});
     auto const* displacement = MOCHI_TRY_GET(CurrentDisplacement, reg, e, error);
     MOCHI_ERROR_RETURN(error, {});
     return displacement->value;
@@ -681,6 +686,11 @@ class ActorInterfaceImpl : public ActorInterface {
 
   void SetDisplacements(Span<real const> displacements, Error& error) override {
     using CurrentDisplacement = CDisplacementSlice<real, TimeStep::Current>;
+    MOCHI_ERROR_IF(
+        reg.all_of<TagRodActor>(e),
+        error,
+        "SetDisplacements is not supported for rod actors. Use SetRodPose.");
+    MOCHI_ERROR_RETURN(error);
     auto* currentDisplacement = MOCHI_TRY_GET(CurrentDisplacement, reg, e, error);
     MOCHI_ERROR_RETURN(error);
     MOCHI_ERROR_IF_NOT(
@@ -696,6 +706,27 @@ class ActorInterfaceImpl : public ActorInterface {
       ScopedSchedulerBinding schedulerBinding(assert_cast<SceneImpl*>(scene));
       skinned::SynchronizeAfterExternalChange(reg, e);
     }
+
+    // External state changes invalidate step history.
+    InvalidateActorStepHistory(reg, e);
+    WakeUp();
+  }
+
+  void GetRodPose(Span<real> outDisplacements, Span<real> outElementFrameAxes, Error& error)
+      const override {
+    MOCHI_ERROR_IF_NOT(
+        reg.all_of<TagRodActor>(e), error, "GetRodPose is only supported for rod actors.");
+    MOCHI_ERROR_RETURN(error);
+    rod::GetPose(reg, e, outDisplacements, outElementFrameAxes, error);
+  }
+
+  void SetRodPose(Span<real const> displacements, Span<real const> elementFrameAxes, Error& error)
+      override {
+    MOCHI_ERROR_IF_NOT(
+        reg.all_of<TagRodActor>(e), error, "SetRodPose is only supported for rod actors.");
+    MOCHI_ERROR_RETURN(error);
+    rod::SetPose(reg, e, displacements, elementFrameAxes, error);
+    MOCHI_ERROR_RETURN(error);
 
     // External state changes invalidate step history.
     InvalidateActorStepHistory(reg, e);

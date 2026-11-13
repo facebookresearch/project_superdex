@@ -397,8 +397,8 @@ class RodElementRotationConstraintTest : public test::MochiSceneTestBase {
     for (int i = 0; i < kNumSteps; ++i) {
       _scene->Step(kDt);
     }
-    auto const dispA = rodA->GetDisplacements(ExpectOK{});
-    auto const dispB = rodB->GetDisplacements(ExpectOK{});
+    auto const dispA = test::GetDofValues(*rodA);
+    auto const dispB = test::GetDofValues(*rodB);
     ASSERT_EQ(isize(dispA), isize(dispB));
     // Make sure the rods deformed under gravity
     EXPECT_GT(Abs(dispA[fem::kNumRodFields * kNumElements + 1]), 1e-3_r);

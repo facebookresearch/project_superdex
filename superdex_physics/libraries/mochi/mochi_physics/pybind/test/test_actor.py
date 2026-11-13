@@ -93,6 +93,42 @@ class TestActor(MochiTestBase):
             self.assertAlmostEqual(0.001 * i, displacements[i], places=5)
         mochi.destroy_scene(scene)
 
+    def test_actor_get_set_rod_pose(self):
+        scene = mochi.create_scene("My Scene")
+        num_elements = 3
+        nodes = np.array(
+            [[0.1 * i, 0.0, 0.0] for i in range(num_elements + 1)], dtype=np_real
+        )
+        rest_axes = np.tile([0.0, 1.0, 0.0], num_elements).astype(np_real)
+        model = mochi.experimental.generate_tubular_rod_model_data(
+            nodes=nodes,
+            element_frame_axes=rest_axes.reshape(-1, 3),
+            radius=0.01,
+            num_cross_section_segments=4,
+            is_closed_loop=False,
+        )
+        rod = mochi.experimental.create_rod_actor(
+            scene,
+            mochi.experimental.RodActorParams(shape=mochi.create_model_shape(model)),
+        )
+
+        displacements = np.ones(nodes.size, dtype=np_real)
+        axes = np.zeros(rest_axes.size, dtype=np_real)
+        rod.get_rod_pose(displacements, axes)
+        np.testing.assert_array_equal(displacements, 0.0)
+        np.testing.assert_allclose(axes, rest_axes)
+
+        # Translating every node by the same offset keeps the frame axes valid.
+        displacements[1::3] = 0.05
+        rod.set_rod_pose(displacements, axes)
+        out_displacements = np.zeros_like(displacements)
+        rod.get_rod_pose(out_displacements, axes)
+        np.testing.assert_allclose(out_displacements, displacements)
+
+        with self.assertRaises(mochi.Error):
+            rod.get_displacements()
+        mochi.destroy_scene(scene)
+
     def test_actor_set_velocity(self):
         scene = mochi.create_scene("My Scene")
         actor = self._create_rigid_box_actor(scene)
