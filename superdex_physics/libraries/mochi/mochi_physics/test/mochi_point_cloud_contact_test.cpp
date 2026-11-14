@@ -30,6 +30,8 @@
 #include <functional>
 #include <numeric>
 #include <optional>
+#include <set>
+#include <tuple>
 #include <utility>
 
 using namespace mochi;
@@ -1070,9 +1072,22 @@ TEST_P(MochiShellSelfContactScene, SingleShellActorWithSelfContact) {
   // The net contact force on the single self-contacting actor is zero. The query uses the
   // previous-step configuration, so an additional step is needed to populate the query results.
   _actor->RegisterQuery(QueryType::TotalContactForce, test::ExpectOK{});
+  _actor->RegisterQuery(QueryType::ContactPoints, test::ExpectOK{});
   _scene->Step(kTimeStep);
   Real3 const actorForceQueried = _actor->GetContactForceWorld(test::ExpectOK{});
   EXPECT_NEAR_TOL(actorForceQueried, Real3{}, scaledTol);
+
+  // Each self-contact point is reported once. A sample may touch several collider points, so a
+  // contact is identified by its sample and posB.
+  Span<ContactPoint const> const contacts = _actor->GetContactPointsWorld(test::ExpectOK{});
+  ASSERT_FALSE(contacts.empty());
+  std::set<std::tuple<int, real, real, real>> distinct;
+  for (ContactPoint const& contact : contacts) {
+    EXPECT_EQ(contact.actorA, _actor->GetHandle());
+    EXPECT_EQ(contact.actorB, _actor->GetHandle());
+    distinct.emplace(contact.sampleIndex, contact.posB[0], contact.posB[1], contact.posB[2]);
+  }
+  EXPECT_EQ(isize(distinct), isize(contacts));
 }
 
 INSTANTIATE_TEST_SUITE_P(

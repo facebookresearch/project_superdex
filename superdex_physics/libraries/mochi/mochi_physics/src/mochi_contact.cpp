@@ -3727,6 +3727,10 @@ void mochi::UpdateQueryActiveContactsWorldSpace(
     // Process contacts as collider entity. Not needed for CQueryNodeContactForces
     if (colliderJacs && outQueryActiveContacts) {
       for (auto const& jac : *colliderJacs) {
+        // Self-contacts were already reported from the sync collisions above.
+        if (jac.otherEntity == e) {
+          continue;
+        }
         // Entities that use "far sdf" queries are not compatible with contact point reporting.
         // If the other actor uses that feature, then do not attempt to report contacts
         // because we won't have the matching forcePerUnitArea data.
