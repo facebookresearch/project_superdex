@@ -4109,6 +4109,9 @@ class NonLinearSolverParams:
         With a negative :attr:`~superdex.physics.LinearSolverParams.abs_tol`, it
         also determines the linear solver's absolute tolerance where supported (see
         :attr:`~superdex.physics.LinearSolverParams.abs_tol`).
+
+    Note:
+        0 disables this criterion.
     """
     rel_step_tol: float
     """Relative tolerance on the L2 norm of the raw linear-solve increment before line

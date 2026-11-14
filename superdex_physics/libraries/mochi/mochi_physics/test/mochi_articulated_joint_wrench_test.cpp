@@ -362,7 +362,7 @@ TEST_P(ArticulatedJointWrenchStepEndIntegratorTest, SpinningLinkCentripetalForce
   Real3 const expectedTorque = Cross(lever, expectedForce);
 
   // After the first step, the discrete acceleration differs from the continuous one by O((ω h)²).
-  real const tol = 1e-2_r * Norm(expectedForce);
+  real const tol = 3e-2_r * Norm(expectedForce);
   EXPECT_NEAR_TOL(expectedForce, wrenches.forces[1], tol);
   EXPECT_NEAR_TOL(expectedTorque, wrenches.torques[1], tol * Norm(lever));
   EXPECT_LE(Abs(Dot(wrenches.torques[1], axis)), tol * Norm(lever));

@@ -372,8 +372,9 @@ struct NonLinearSolverParams {
    *
    * @note With a negative @ref LinearSolverParams::absTol, it also determines the linear solver's
    * absolute tolerance where supported (see @ref LinearSolverParams::absTol).
+   * @note 0 disables this criterion.
    */
-  real relTol = 1e-6_r;
+  real relTol = 0_r;
 
   /**
    * @brief Relative tolerance on the L2 norm of the raw linear-solve increment before line search
