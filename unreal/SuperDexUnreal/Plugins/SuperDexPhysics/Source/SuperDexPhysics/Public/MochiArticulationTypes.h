@@ -420,3 +420,34 @@ SUPERDEXPHYSICS_API void ConvertArticulatedDofsToUnreal(
     bool bIncludesRootFreeDofs,
     TArrayView<double> Dofs,
     const FMochiToUnrealConverter& M2U);
+
+// Convert the index of one DOF of a joint of Type between the conventions, and the sign its value
+// takes: the DOFs of Free and Spherical joints are vector components in the joint frame. Returns
+// false if the joint has no such DOF.
+SUPERDEXPHYSICS_API bool ConvertArticulatedDofIndexToMochi(
+    EMochiArticulatedJointType Type,
+    int32 Dof,
+    const FUnrealToMochiConverter& U2M,
+    int32& OutDof,
+    double& OutSign);
+SUPERDEXPHYSICS_API bool ConvertArticulatedDofIndexToUnreal(
+    EMochiArticulatedJointType Type,
+    int32 Dof,
+    const FMochiToUnrealConverter& M2U,
+    int32& OutDof,
+    double& OutSign);
+
+// Convert per-component bounds [Min, Max] of a joint-frame rotation vector, as a spherical joint's
+// DOFs, between the conventions. Components that change sign swap their bounds.
+SUPERDEXPHYSICS_API void ConvertRotationBoundsToMochi(
+    const FVector& Min,
+    const FVector& Max,
+    const FUnrealToMochiConverter& U2M,
+    mochi::Real3& OutMin,
+    mochi::Real3& OutMax);
+SUPERDEXPHYSICS_API void ConvertRotationBoundsToUnreal(
+    const mochi::Real3& Min,
+    const mochi::Real3& Max,
+    const FMochiToUnrealConverter& M2U,
+    FVector& OutMin,
+    FVector& OutMax);

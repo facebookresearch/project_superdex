@@ -83,7 +83,7 @@ void UMochiImplicitShapeComponent::BeginPlay() {
     return;
   }
 
-  // create the actor if it hasn't been created externally (e.g. by MochiConstraintComponent)
+  // create the actor if it hasn't been created externally (e.g. by a constraint component)
   if (MochiActorObject == nullptr) {
     CreateMochiActor();
   }

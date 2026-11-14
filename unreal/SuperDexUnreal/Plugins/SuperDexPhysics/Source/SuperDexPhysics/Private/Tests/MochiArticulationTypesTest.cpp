@@ -194,6 +194,71 @@ bool FMochiArticulatedDofConversionTest::RunTest(const FString& Parameters) {
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FMochiArticulatedDofIndexConversionTest,
+    "SuperDexPhysics.Articulation.DofIndexConversion",
+    MOCHI_ARTICULATION_TYPES_TEST_FLAGS)
+
+bool FMochiArticulatedDofIndexConversionTest::RunTest(const FString& Parameters) {
+  for (const EMochiArticulatedJointType type :
+       {EMochiArticulatedJointType::Free,
+        EMochiArticulatedJointType::Spherical,
+        EMochiArticulatedJointType::Revolute,
+        EMochiArticulatedJointType::Prismatic}) {
+    const int32 numDofs = GetArticulatedJointNumDofs(type);
+    for (int32 dof = 0; dof < numDofs; ++dof) {
+      const FString what = FString::Printf(TEXT("Joint type %d DOF %d"), int32(type), dof);
+      // A value of the Unreal DOF must convert to the same value of the Mochi DOF as the whole
+      // DOF vector does.
+      int32 mochiDof = -1;
+      double sign = 0.0;
+      if (!TestTrue(
+              what,
+              ConvertArticulatedDofIndexToMochi(type, dof, kUnrealToStudio, mochiDof, sign))) {
+        continue;
+      }
+      TArray<double> dofs;
+      dofs.SetNumZeroed(numDofs);
+      dofs[dof] = 0.5;
+      ConvertArticulatedDofsToMochi(MakeArrayView(&type, 1), true, dofs, kUnrealToStudio);
+      TestTrue(what, FMath::IsNearlyEqual(dofs[mochiDof], sign * 0.5, kTolerance));
+      int32 roundTrip = -1;
+      double roundTripSign = 0.0;
+      ConvertArticulatedDofIndexToUnreal(type, mochiDof, kStudioToUnreal, roundTrip, roundTripSign);
+      TestEqual(what, roundTrip, dof);
+      TestEqual(what, roundTripSign, sign);
+    }
+    int32 outDof = 0;
+    double sign = 0.0;
+    TestFalse(
+        TEXT("DOF out of range"),
+        ConvertArticulatedDofIndexToMochi(type, numDofs, kUnrealToStudio, outDof, sign));
+  }
+  return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FMochiRotationBoundsConversionTest,
+    "SuperDexPhysics.Articulation.RotationBoundsConversion",
+    MOCHI_ARTICULATION_TYPES_TEST_FLAGS)
+
+bool FMochiRotationBoundsConversionTest::RunTest(const FString& Parameters) {
+  // Studio to Unreal negates the X and Z rotation vector components, which swaps their bounds.
+  const mochi::Real3 min{-1_r, -2_r, -3_r};
+  const mochi::Real3 max{1_r, 2_r, 4_r};
+  FVector unrealMin;
+  FVector unrealMax;
+  ConvertRotationBoundsToUnreal(min, max, kStudioToUnreal, unrealMin, unrealMax);
+  TestTrue(TEXT("Unreal min"), unrealMin.Equals(FVector(-1, -2, -4), kTolerance));
+  TestTrue(TEXT("Unreal max"), unrealMax.Equals(FVector(1, 2, 3), kTolerance));
+  mochi::Real3 roundTripMin;
+  mochi::Real3 roundTripMax;
+  ConvertRotationBoundsToMochi(unrealMin, unrealMax, kUnrealToStudio, roundTripMin, roundTripMax);
+  TestTrue(TEXT("Round trip min"), NearlyEqual(roundTripMin, min));
+  TestTrue(TEXT("Round trip max"), NearlyEqual(roundTripMax, max));
+  return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FMochiArticulationForwardKinematicsTest,
     "SuperDexPhysics.Articulation.ForwardKinematicsMatchesMochi",
     MOCHI_ARTICULATION_TYPES_TEST_FLAGS)

@@ -333,14 +333,6 @@ enum class EMochiHyperReductionStrategy : uint8 {
 };
 
 UENUM(Blueprintable)
-enum class EMochiConstraintComponentMode : uint8 {
-  // Constrains the specified Mochi component to the world.
-  OneBody,
-  // Constraints the specified Mochi components to each other.
-  TwoBody
-};
-
-UENUM(Blueprintable)
 enum class EMochiContactDirection : uint8 {
   // 'this' object is contacting the 'other' object
   // (i.e the contact point in question lies on the surface of 'this' object)

@@ -68,7 +68,7 @@ const TArray<FMochiContactPoint>& UMochiRigidMeshComponent::GetContactPoints() c
 
 void UMochiRigidMeshComponent::CreateMochiActor() {
   MOCHI_PROFILE_SCOPE();
-  // Guarded here rather than only in BeginPlay because UMochiConstraintComponent also creates
+  // Guarded here rather than only in BeginPlay because the constraint components also create
   // actors through this entry point.
   if (IsSceneExternallyOwned(GetWorld())) {
     UE_LOG(
@@ -193,7 +193,7 @@ void UMochiRigidMeshComponent::BeginPlay() {
         __FUNCTION__);
     return;
   }
-  // create the actor if it hasn't been created externally (e.g. by MochiConstraintComponent)
+  // create the actor if it hasn't been created externally (e.g. by a constraint component)
   if (MochiActorObject == nullptr) {
     CreateMochiActor();
   }

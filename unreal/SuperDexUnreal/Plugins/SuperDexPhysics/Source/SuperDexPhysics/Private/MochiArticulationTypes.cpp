@@ -468,3 +468,113 @@ void ConvertArticulatedDofsToUnreal(
         return bRotational ? sign * converted : converted;
       });
 }
+
+namespace {
+
+// Converts a one-hot DOF array with ConvertDofs to find where DOF Dof goes.
+template <typename TConvertDofs>
+bool ConvertArticulatedDofIndex(
+    EMochiArticulatedJointType Type,
+    int32 Dof,
+    TConvertDofs ConvertDofs,
+    int32& OutDof,
+    double& OutSign) {
+  TArray<double> dofs;
+  dofs.SetNumZeroed(GetArticulatedJointNumDofs(Type));
+  if (!dofs.IsValidIndex(Dof)) {
+    return false;
+  }
+  dofs[Dof] = 1.0;
+  ConvertDofs(MakeArrayView(dofs));
+  OutDof = dofs.IndexOfByPredicate([](double Value) { return !FMath::IsNearlyZero(Value); });
+  OutSign = dofs[OutDof] > 0 ? 1.0 : -1.0;
+  return true;
+}
+
+// Converts Min and Max as spherical joint DOFs with ConvertDofs, then reorders each component.
+template <typename TConvertDofs>
+void ConvertRotationBounds(
+    const FVector& Min,
+    const FVector& Max,
+    TConvertDofs ConvertDofs,
+    FVector& OutMin,
+    FVector& OutMax) {
+  double a[3] = {Min.X, Min.Y, Min.Z};
+  double b[3] = {Max.X, Max.Y, Max.Z};
+  ConvertDofs(MakeArrayView(a));
+  ConvertDofs(MakeArrayView(b));
+  OutMin = FVector(a[0], a[1], a[2]).ComponentMin(FVector(b[0], b[1], b[2]));
+  OutMax = FVector(a[0], a[1], a[2]).ComponentMax(FVector(b[0], b[1], b[2]));
+}
+
+constexpr EMochiArticulatedJointType kSpherical = EMochiArticulatedJointType::Spherical;
+
+} // namespace
+
+bool ConvertArticulatedDofIndexToMochi(
+    EMochiArticulatedJointType Type,
+    int32 Dof,
+    const FUnrealToMochiConverter& U2M,
+    int32& OutDof,
+    double& OutSign) {
+  return ConvertArticulatedDofIndex(
+      Type,
+      Dof,
+      [&](TArrayView<double> Dofs) {
+        ConvertArticulatedDofsToMochi(MakeArrayView(&Type, 1), true, Dofs, U2M);
+      },
+      OutDof,
+      OutSign);
+}
+
+bool ConvertArticulatedDofIndexToUnreal(
+    EMochiArticulatedJointType Type,
+    int32 Dof,
+    const FMochiToUnrealConverter& M2U,
+    int32& OutDof,
+    double& OutSign) {
+  return ConvertArticulatedDofIndex(
+      Type,
+      Dof,
+      [&](TArrayView<double> Dofs) {
+        ConvertArticulatedDofsToUnreal(MakeArrayView(&Type, 1), true, Dofs, M2U);
+      },
+      OutDof,
+      OutSign);
+}
+
+void ConvertRotationBoundsToMochi(
+    const FVector& Min,
+    const FVector& Max,
+    const FUnrealToMochiConverter& U2M,
+    mochi::Real3& OutMin,
+    mochi::Real3& OutMax) {
+  FVector min;
+  FVector max;
+  ConvertRotationBounds(
+      Min,
+      Max,
+      [&](TArrayView<double> Dofs) {
+        ConvertArticulatedDofsToMochi(MakeArrayView(&kSpherical, 1), true, Dofs, U2M);
+      },
+      min,
+      max);
+  OutMin = ToReal3(min);
+  OutMax = ToReal3(max);
+}
+
+void ConvertRotationBoundsToUnreal(
+    const mochi::Real3& Min,
+    const mochi::Real3& Max,
+    const FMochiToUnrealConverter& M2U,
+    FVector& OutMin,
+    FVector& OutMax) {
+  ConvertRotationBounds(
+      ToFVector(Min),
+      ToFVector(Max),
+      [&](TArrayView<double> Dofs) {
+        ConvertArticulatedDofsToUnreal(MakeArrayView(&kSpherical, 1), true, Dofs, M2U);
+      },
+      OutMin,
+      OutMax);
+}
