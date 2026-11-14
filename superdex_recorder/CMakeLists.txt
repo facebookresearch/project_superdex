@@ -200,7 +200,11 @@ if (MOCHI_BUILD_TESTS)
     mochi_set_output_directories(superdex_recorder_physics_test)
     add_test(NAME superdex_recorder_physics_test COMMAND superdex_recorder_physics_test)
 
-    add_executable(superdex_recorder_restorer_test test/episode_restorer_test.cpp)
+    add_executable(
+        superdex_recorder_restorer_test
+        test/episode_restorer_golden_test.cpp
+        test/episode_restorer_test.cpp
+    )
     target_link_libraries(
         superdex_recorder_restorer_test
         PRIVATE superdex_recorder_physics superdex_physics gtest_main
@@ -208,6 +212,18 @@ if (MOCHI_BUILD_TESTS)
     mochi_set_compiler_options(superdex_recorder_restorer_test)
     mochi_set_output_directories(superdex_recorder_restorer_test)
     add_test(NAME superdex_recorder_restorer_test COMMAND superdex_recorder_restorer_test)
+
+    add_executable(superdex_recorder_frame_bank_test test/frame_bank_test.cpp)
+    target_link_libraries(superdex_recorder_frame_bank_test PRIVATE superdex_recorder_physics gtest_main)
+    mochi_set_compiler_options(superdex_recorder_frame_bank_test)
+    mochi_set_output_directories(superdex_recorder_frame_bank_test)
+    add_test(NAME superdex_recorder_frame_bank_test COMMAND superdex_recorder_frame_bank_test)
+
+    add_executable(superdex_recorder_frames_test test/episode_restorer_frames_test.cpp)
+    target_link_libraries(superdex_recorder_frames_test PRIVATE superdex_recorder_physics gtest_main)
+    mochi_set_compiler_options(superdex_recorder_frames_test)
+    mochi_set_output_directories(superdex_recorder_frames_test)
+    add_test(NAME superdex_recorder_frames_test COMMAND superdex_recorder_frames_test)
 
     add_executable(superdex_recorder_reader_test test/episode_reader_test.cpp)
     target_link_libraries(
@@ -227,6 +243,15 @@ if (MOCHI_BUILD_TESTS)
         mochi_set_compiler_options(superdex_recorder_robotics_test)
         mochi_set_output_directories(superdex_recorder_robotics_test)
         add_test(NAME superdex_recorder_robotics_test COMMAND superdex_recorder_robotics_test)
+
+        add_executable(superdex_recorder_frame_bank_recording_test test/frame_bank_recording_test.cpp)
+        target_link_libraries(
+            superdex_recorder_frame_bank_recording_test
+            PRIVATE superdex_recorder_physics superdex_recorder_robotics gtest_main
+        )
+        mochi_set_compiler_options(superdex_recorder_frame_bank_recording_test)
+        mochi_set_output_directories(superdex_recorder_frame_bank_recording_test)
+        add_test(NAME superdex_recorder_frame_bank_recording_test COMMAND superdex_recorder_frame_bank_recording_test)
     endif ()
 endif ()
 

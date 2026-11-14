@@ -65,6 +65,11 @@ ROD_TRANSLATION = [-0.15, -0.045, 0.9]
 SLOT_ARM_PATH = "@bots/internal/t3/right/t3_right.superdex_bot"
 # Alternatives for one slot that share the arm's articulated actor name.
 SLOT_BOTS = ("t3_right", "t3_right_osc_v2")
+# The shape filter's moving cross, whose mass properties domain randomization may change.
+CROSS = "shape_cross"
+TILTED_GRAVITY = [0.0, 2.0, -9.6]
+# A center of mass moved by domain randomization at run time [m].
+CENTER_OF_MASS_SHIFT = [0.002, -0.001, 0.003]
 
 
 def physics_scene(bot_scene: sdr.BotScene) -> sdp.Scene:
@@ -662,4 +667,43 @@ class RebuildSceneTest(unittest.TestCase):
         ):
             recorder.rebuild_scene(
                 EpisodeReader(episode.output_path), BOT_SCENE_PATH, self.context
+            )
+
+    def test_rebuilt_scene_has_the_recorded_gravity_and_mass_properties(self) -> None:
+        live, spawned = self.load_live_scene()
+        live_scene = physics_scene(live)
+        live_scene.set_gravity(TILTED_GRAVITY)
+        cross = next(a for a in spawned if a.get_name() == CROSS)
+        center = [
+            c + d
+            for c, d in zip(
+                cross.get_rigid_center_of_mass_local().tolist(),
+                CENTER_OF_MASS_SHIFT,
+                strict=True,
+            )
+        ]
+        inertia = [2.0 * v for v in cross.get_rigid_moment_of_inertia_local().tolist()]
+        cross.set_inertia_properties(cross.get_mass(), center, inertia)
+        path, _ = self.record(live_scene, spawned, 1)
+
+        rebuilt = recorder.rebuild_scene(
+            EpisodeReader(path),
+            BOT_SCENE_PATH,
+            self.context,
+            bot_task_path=self.task_path,
+        )
+
+        scene = physics_scene(rebuilt.bot_scene)
+        self.assertEqual(
+            scene.get_gravity().tolist(), live_scene.get_gravity().tolist()
+        )
+        rebuilt_cross = scene_actors(scene)[f"{SPAWN_NAME}/{CROSS}"]
+        for quantity in (
+            "get_rigid_center_of_mass_local",
+            "get_rigid_moment_of_inertia_local",
+        ):
+            self.assertEqual(
+                getattr(rebuilt_cross, quantity)().tolist(),
+                getattr(cross, quantity)().tolist(),
+                quantity,
             )
