@@ -17,7 +17,7 @@ panel edits which part of it, and how to arrange actors with ease.
 
 <Figure
   src="../../img/prefab_editor/prefab_main.webp"
-  alt="The SuperDex Studio window with the nist_task_board_1 prefab open: the task board in the viewport with a transform gizmo on a selected bolt, the Prefab Hierarchy listing its parts on the right, and Actor Details below showing the selected nut."
+  alt="The SuperDex Studio window with the nist_task_board_1 prefab open: the task board in the viewport with a transform gizmo on a selected bolt, the Prefab Hierarchy listing its parts on the right, and Details below showing the selected nut."
 />
 
 ## What Is a Prefab?
@@ -33,8 +33,9 @@ transform gizmo, and the playback transport are app-wide and are covered in
 ## Anatomy of a Prefab
 
 A prefab is a flat list of actors of four kinds. Pick the kind by what the part
-has to *do*, then author it in **Actor Details**, which changes its sections to
-match whatever you have selected.
+has to *do*, then author it in **Details**, which changes its sections to
+match whatever you have selected. [Constraints](#constraints) then tie actors or
+joints together with springs and limits.
 
 | Kind | Use it when |
 |------|-------------------|
@@ -45,9 +46,9 @@ match whatever you have selected.
 
 <Figure
   src="../../img/prefab_editor/prefab_hierarchy.webp"
-  alt="The Prefab Hierarchy panel with Name and Type columns: Articulated1 expanded into root, new_link, and new_link_1 as Articulated Links, followed by Nested1 as a Nested Prefab, Rigid1 as Rigid, and Soft1 as Soft."
+  alt="The Prefab Hierarchy panel on its Actors tab, with + Actor and + Constraint buttons, a settings cog at the top right, and Name and Type columns: Articulated1 expanded into root, new_link, and new_link_1 as Articulated Links, followed by Nested1 as a Nested Prefab, Rigid1 as Rigid, and Soft1 as Soft."
   variant="inset"
-  maxWidth={570}
+  maxWidth={576}
   caption="One prefab holding all four actor kinds, with the articulated actor expanded."
 />
 
@@ -62,11 +63,11 @@ more than this editor can currently author, so here is where the line falls.
 - **Collision and render models** per actor, each with its own scale and offset.
 - **[Inertial properties](#inertial-properties)**, either derived from the collision geometry or given outright.
 - **Joints within one articulated actor**: prismatic, revolute, spherical, and hard, plus an optional skin.
+- **[Constraints](#constraints)**: joint springs and ranges, joints between rigid actors, pivots, and deformable node attachments.
 - **[Contact filtering](#contact-filter)** by actor pair or by layer.
 - **[Scene settings](#scene-settings)**: gravity and solver, on a scene prefab.
 
 :::info Not Yet Supported
-- <strong><ProjectSuperdexLink site="physics" path="docs/concepts/constraints/">Constraints between separate actors</ProjectSuperdexLink></strong>, such as pinning two rigid actors together. Model the pair as one articulated actor in the meantime.
 - <strong><ProjectSuperdexLink site="physics" path="docs/concepts/pose_controller/">Pose controllers</ProjectSuperdexLink></strong> for articulated actors.
 - <strong><ProjectSuperdexLink site="physics" path="docs/concepts/actors/soft_skinned_actors/">Soft-skinned actors</ProjectSuperdexLink></strong>, which are neither listed in the hierarchy nor drawn in the viewport.
 - **Closed-loop articulations** and initial joint velocities.
@@ -74,9 +75,9 @@ more than this editor can currently author, so here is where the line falls.
 - <strong><ProjectSuperdexLink site="physics" path="docs/concepts/transmissions/">Tendons</ProjectSuperdexLink> and <ProjectSuperdexLink site="physics" path="docs/concepts/actors/shell/">shells</ProjectSuperdexLink> (cloth)</strong>, which the prefab format itself cannot express yet, so those need format work before Studio can author them.
 
 These already simulate in
-<ProjectSuperdexLink site="physics" path="docs/overview/">SuperDex Physics</ProjectSuperdexLink>. Constraints and pose
-controllers already present in a file survive a save and still simulate; you
-just cannot see or edit them here. Closed-loop articulations are the exception:
+<ProjectSuperdexLink site="physics" path="docs/overview/">SuperDex Physics</ProjectSuperdexLink>. Pose controllers
+already present in a file survive a save and still simulate; you just cannot see
+or edit them here. Closed-loop articulations are the exception:
 adding, deleting, or reparenting a link drops that actor's cycles and joint
 velocities.
 :::
@@ -88,9 +89,9 @@ default; the Contact Filter is not, and you open it from the **Window** menu.
 
 | Window | What you do there |
 |--------|-------------------|
-| **Prefab Hierarchy** | Create, select, duplicate, and delete actors. Sortable by name or type. |
+| **Prefab Hierarchy** | Create, select, duplicate, and delete actors and constraints. Sortable by name or type. |
 | **Prefab Details** | Settings for the prefab as a whole. See [Scene Settings](#scene-settings). |
-| **Actor Details** | Everything about the selected actor. Its sections change with the actor kind. |
+| **Details** | Everything about the selected actor or constraint. Its sections change with what is selected. |
 | **Contact Filter** | Which actors and layers are allowed to collide. Hidden by default. |
 
 {/* FIGURE 3: prefab_windows — variant="full", annotated with callouts 1-4
@@ -141,10 +142,10 @@ name used by the [Contact Filter](#contact-filter).
 
 <Figure
   src="../../img/prefab_editor/actor_rigid.webp"
-  alt="Actor Details for the rigid actor Bar12, scrolling from General with its Type, Name, and Layer fields and its Static and Has Gravity toggles, through Transform, Inertial Properties set to Default, a collision model slot and a render model slot each with their own translation, rotation, and scale, and finally the Collision / Contact parameters."
+  alt="Details for the rigid actor Bar12, scrolling from General with its Type, Name, and Layer fields and its Static and Has Gravity toggles, through Transform, Inertial Properties set to Default, a collision model slot and a render model slot each with their own translation, rotation, and scale, and finally the Collision / Contact parameters."
   maxWidth={575}
   maxHeight={644}
-  caption="Actor Details for a rigid actor. One long panel. Scroll inside the frame to run through it."
+  caption="Details for a rigid actor. One long panel. Scroll inside the frame to run through it."
 />
 
 <FigureNote>
@@ -193,7 +194,7 @@ Collision Model**, for example via the **STEP to Soft Mochi Model** preset.
 What you see is the simulated model, drawn with the mesh a renderer would use:
 its visual mesh when that mesh has a deformation embedding, otherwise its
 contact skin, otherwise the surface of its tetrahedral mesh. **Rendered As** in
-Actor Details says which. The [**Collision Only**](./user_interface.mdx#view-modes)
+Details says which. The [**Collision Only**](./user_interface.mdx#view-modes)
 view (`2`) shows what the actor collides with: its contact skin when it has one
 and **Use Contact Skin** is on, otherwise its surface. The Model Editor's
 [Embed modifiers](./model_editor.mdx#embed-contact-skin-embed-visual-mesh) make
@@ -204,14 +205,14 @@ linked to the collision model's. A render model is drawn, deformed with its
 own materials and textures, only when it *is* the collision model's visual
 mesh: the same vertices in the GLB's vertex order and the same
 indexed triangles, placed where the visual mesh is.
-Otherwise Actor Details says why it is not drawn, and the solid mesh above
+Otherwise Details says why it is not drawn, and the solid mesh above
 stands in. Author the visual mesh with the Model Editor's **Embed Visual Mesh**
 modifier, using **Source from Render Model** as its upstream surface. A render
 model moved, scaled, or edited after authoring is reported until the visual
 mesh is regenerated. The render model must be a binary GLB with embedded
 buffers, containing one mesh node with one triangle-list primitive. Skins, morph targets, GPU instancing,
 material variants, animation of the mesh hierarchy, and texture-coordinate
-sets other than `TEXCOORD_0` are not supported; Actor Details names the reason.
+sets other than `TEXCOORD_0` are not supported; Details names the reason.
 
 Soft actors also carry their own material, separate from the contact
 parameters, and three behavior toggles worth knowing: **Has Gravity**, **Has
@@ -222,7 +223,7 @@ deformation is the point, and a rigid everywhere else. The material models and
 their parameters are documented in <ProjectSuperdexLink site="physics" path="docs/authoring_scenes/authoring_prefabs/">Authoring Prefabs</ProjectSuperdexLink>.
 
 {/* FIGURE 6: actor_soft — variant="inset" or scroller.
-    Actor Details with a soft actor selected: General with the toggles,
+    Details with a soft actor selected: General with the toggles,
     Transform, Shape, Material, Collision / Contact.
     Keep it below the floated video: a figure set beside a float is squeezed
     into the remaining column width. */}
@@ -234,7 +235,8 @@ actor. Use one for anything with moving parts that stay attached: a hinged lid, 
 drawer, a vise, a door.
 
 Its row in the Prefab Hierarchy expands into the link tree, and selecting a link
-inside it fills **Actor Details** with that link's joint and body properties.
+inside it fills **Details** with that link's joint and body properties. The
+constraints on a link's joint are listed under the link.
 Beyond structure, an articulated actor carries an optional **Skin**, a render
 model deformed by the links underneath it.
 
@@ -282,7 +284,7 @@ ways to express a rule:
 </FigureRow>
 
 Layers are the scalable half. Every rigid and soft actor has a **Layer** field
-in [Actor Details](#editor-windows), directly under **Name**; type the same
+in [Details](#editor-windows), directly under **Name**; type the same
 layer name on a group of actors and one layer rule then covers all of them. That
 is the difference between one rule and forty.
 
@@ -292,11 +294,78 @@ the first side is affected by the second, but not the reverse. New rows are
 created asymmetric, so if a pair is behaving oddly in only one direction, check
 that first.
 
+## Constraints
+
+A <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/">constraint</ProjectSuperdexLink>
+ties a joint, an actor, or a pair of actors to a target with a spring of its own
+stiffness and damping: a key that springs back up, a slider
+that stops at its ends, a lid pinned to its box. The Prefab Hierarchy lists them
+on its **Constraints** tab, named by what they attach to (`cabinet/drawer_joint`,
+`lid & box`). The **Actors** tab lists each one again under what it constrains: a
+joint constraint under its joint's link, any other under each actor it names, and
+a constraint on an actor inside a nested prefab under that nested prefab; turn
+that off with **Show Constraints Under Actors** under the cog at the top right. Every row
+selects the same constraint, and **Details** then shows its fields.
+
+<FigureRow minWidth={576}>
+  <Figure
+    src="../../img/prefab_editor/constraints_actors_tab.webp"
+    alt="The Prefab Hierarchy on its Actors tab for the midi keyboard: the midi articulated actor expanded into housing and its keys, each key link with a Joint Target constraint row under it."
+    maxWidth={576}
+    caption={<><FigureLabel>Actors</FigureLabel>Each key's spring under the key's link.</>}
+  />
+  <Figure
+    src="../../img/prefab_editor/constraints_tab.webp"
+    alt="The Prefab Hierarchy on its Constraints tab for the midi keyboard, with a + Constraint button and one row per constraint, such as midi/button_1_joint and midi/key_a3_joint as Joint Target and midi/joystick_joint as Joint Rotation Target."
+    maxWidth={576}
+    caption={<><FigureLabel>Constraints</FigureLabel>Every constraint in the prefab, named by what it attaches to.</>}
+  />
+</FigureRow>
+
+| Group | Constraints | Attach to |
+|-------|-------------|-----------|
+| <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#articulated-constraints">Articulated Joint</ProjectSuperdexLink> | <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#articulatedsingledoftarget">Joint Target</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#articulatedsingledofrange">Joint Range</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#articulated3drotationtarget">Joint Rotation Target</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#articulated3drotationrange">Joint Rotation Range</ProjectSuperdexLink> | One joint of an articulated actor. Target and Range move one degree of freedom of a revolute, prismatic, or free joint; the rotation versions take a spherical or free joint. |
+| <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#rigid-rigid-joints">Between Two Rigid Actors</ProjectSuperdexLink> | <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#rigidsphericaljoint">Spherical Joint</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#rigidprismaticjoint">Prismatic Joint</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#jointrotationtracking">Relative Rotation Target</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#jointrotationrange">Relative Rotation Range</ProjectSuperdexLink> | Actor A and actor B. |
+| <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#rigid-pivots-to-kinematic-targets">Rigid Actor to World</ProjectSuperdexLink> | <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#rigidpivotposition">Pivot Position</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#rigidpivottorigidtarget">Pivot Target Pose</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#rigidpivotrotation">Pivot Rotation</ProjectSuperdexLink> | A point or frame on one rigid actor. |
+| <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#deformable-couplings">Deformable</ProjectSuperdexLink> | <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#deformablenodeposition">Node Position</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#deformablenodetorigid">Node to Rigid</ProjectSuperdexLink>, <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#deformablenodetodeformablenode">Node to Node</ProjectSuperdexLink> | Nodes of soft actors. |
+
+Each name links to its definition in SuperDex Physics, with the exact equation and
+frame behind every field.
+
+Create one with **+ Constraint** at the top of either tab, or from the
+`Right-click` menu of a row: **Add Constraint** on a link offers the joint
+constraints for that link's joint, and on a rigid or soft actor the ones that fit
+it. A new constraint attaches to the selected actors or link when they fit and to
+the first suitable actors otherwise, and starts where it changes nothing: a Joint
+Range copies the joint's limits, a Spherical Joint anchors where actor B rests,
+and pivot targets sit at the actor's current pose. **Details** picks actors and
+joints by name and shows values in the units of what they constrain: degrees for
+an angle, meters for a distance. Its Spring section holds the stiffness, damping,
+and <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/#saturation">saturation</ProjectSuperdexLink> every constraint shares.
+
+<Figure
+  src="../../img/prefab_editor/constraint_details.webp"
+  alt="Details for a Joint Target: General with its type and a one-line description; Joint with the midi actor, key_a3_joint (Revolute) and its Rotation DoF picked from lists; Target at -10.3 degrees with the current angle at 0 degrees below it; and Spring with Stiffness in N·m/rad, Damping in N·m·s/rad, and Saturation switched off."
+  variant="inset"
+  maxWidth={576}
+  caption="Details for the spring that holds a key up."
+/>
+
+A constraint Studio can tell is broken, because it names an actor that is gone, a
+joint it does not fit, or a minimum above its maximum, shows red in the
+hierarchy and explains why in **Details**. Playing the prefab skips it with a
+warning in the Log Console instead of failing the whole prefab. Studio does not
+check node indices against the mesh or the kind of an actor inside a nested
+prefab; a mistake there still fails the prefab when it plays. Renaming an actor
+renames it in its constraints once the new name is entered; deleting an actor or
+a link deletes the constraints on it.
+
 ## Placing, Duplicating, and Snapping
 
-`Right-click` empty space in the Prefab Hierarchy to create an actor: **Create
-Rigid**, **Create Soft**, **Create Articulated**, or **Create Nested Prefab**.
-`Right-click` an existing row to copy, duplicate, or delete it.
+**+ Actor** at the top of the Prefab Hierarchy's Actors tab, or `Right-click` on
+empty space in it, creates an actor: **Create Rigid**, **Create Soft**, **Create
+Articulated**, or **Create Nested Prefab**. `Right-click` an existing row to copy,
+duplicate, or delete it.
 
 The Prefab Editor is the only editor with multi-selection. `Ctrl`-click to add
 or remove one actor, `Shift`-click to take a range, then move the whole
@@ -341,4 +410,5 @@ the contact filter rules that used to apply to it.
 - [Bot Editor Guide](./bot_editor/index.mdx): the field-by-field joint and link reference.
 - [Model Editor Guide](./model_editor.mdx): building the collision models a prefab binds.
 - <ProjectSuperdexLink site="physics" path="docs/concepts/prefabs/">Prefabs</ProjectSuperdexLink>: the concept, as the physics engine defines it.
+- <ProjectSuperdexLink site="physics" path="docs/concepts/constraints/">Constraints</ProjectSuperdexLink>: every constraint type, its equation, and its parameters.
 - <ProjectSuperdexLink site="physics" path="docs/authoring_scenes/authoring_prefabs/">Authoring Prefabs</ProjectSuperdexLink>: the full property reference for actors, materials, contacts, and scene settings.
