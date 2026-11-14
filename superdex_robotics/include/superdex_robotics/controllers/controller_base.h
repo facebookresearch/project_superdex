@@ -19,12 +19,22 @@
 #include <superdex_robotics/controllers/controller_recording.h>
 #include <superdex_robotics/core/component_base.h>
 
+#include <cstdint>
 #include <string>
 #include <string_view>
 
 namespace superdex::robotics {
 
 struct BotPrefab;
+
+/* @brief What a controller's float input holds (see ControllerBase::GetInputKind). */
+enum class ControllerInputKind : uint8_t {
+  None, /* Not driven by floats */
+  JointPositions, /* One position per controlled DOF, ascending [rad or m] */
+  Pose, /* Tool frame (EE link * EELinkFromEE) in the root frame: x y z [m], qx qy qz qw */
+  Custom, /* The controller's own layout; only callers that know its type drive it */
+  Count
+};
 
 /* @brief Base class for all controllers.
  * Inherits common lifecycle from ComponentBase. Controllers are identified
@@ -64,6 +74,29 @@ class MOCHI_API ControllerBase : public ComponentBase {
 
   /* @brief Write the most recently computed target and output, if available. */
   virtual void Record(ControllerRecordingSink& sink, superdex::Error& error) const;
+
+  /* @brief How many floats ComputeOutputFromInput takes; 0 when floats cannot drive it. */
+  [[nodiscard]] virtual int GetInputSize() const;
+
+  /* @brief What those floats are. */
+  [[nodiscard]] virtual ControllerInputKind GetInputKind() const;
+
+  /* @brief The actor DOFs it drives, ascending. A JointPositions input lists them, and
+   * ComputeOutputFromInput writes their efforts. Empty when unknown. */
+  [[nodiscard]] virtual Span<int const> GetControlledDofs() const;
+
+  /* @brief Writes the input that holds the robot where it is now. @p input must be GetInputSize()
+   * wide. */
+  virtual void GetCurrentInput(Span<real> input, superdex::Error& error);
+
+  /* @brief Reads the live actor and writes into @p efforts (one per actor DOF, zero on DOFs it
+   * does not control) what the typed ComputeOutput gives for @p input over @p dt [s]. @p input must
+   * be GetInputSize() wide. */
+  virtual void ComputeOutputFromInput(
+      Span<real const> input,
+      real dt,
+      Span<real> efforts,
+      superdex::Error& error);
 
  protected:
   /* @brief Common controller constructor archetype: stores the (optionally null) @p actor via

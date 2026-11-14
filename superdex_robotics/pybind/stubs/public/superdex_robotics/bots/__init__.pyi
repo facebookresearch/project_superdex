@@ -489,6 +489,28 @@ class LinkTransformSpace:
     def __int__(self) -> int: ...
     def __index__(self) -> int: ...
 
+class ControllerInputKind:
+    """What a controller's float input holds (see
+    :meth:`~superdex.robotics.ControllerBase.get_input_kind`).
+    """
+    NONE: ControllerInputKind
+    """Not driven by floats."""
+    JOINT_POSITIONS: ControllerInputKind
+    """One position per controlled DOF, ascending [rad or m]."""
+    POSE: ControllerInputKind
+    """The tool pose in the root frame: x y z [m], then qx qy qz qw."""
+    CUSTOM: ControllerInputKind
+    """The controller's own layout; only callers that know its type drive it."""
+    COUNT: ControllerInputKind
+    """Number of enum values."""
+    def __init__(self, value: int) -> None: ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def value(self) -> int: ...
+    def __int__(self) -> int: ...
+    def __index__(self) -> int: ...
+
 class RoboticsHandle:
     """Shared base handle for bots, controllers, sensors, and actuators. The distinct
     derived handle types below encode the component kind in the C++ type
@@ -1332,6 +1354,51 @@ class ControllerBase(ComponentBase):
     Controllers are identified by string names via RoboticsContext registration, not
     enums.
     """
+    def get_input_size(self) -> int:
+        """How many floats ComputeOutputFromInput takes; 0 when floats cannot drive it.
+
+        Returns:
+            The input size.
+        """
+    def get_input_kind(self) -> ControllerInputKind:
+        """What those floats are.
+
+        Returns:
+            The input kind.
+        """
+    def get_controlled_dofs(self) -> mochi_physics.SpanConstInt:
+        """The actor DOFs it drives, ascending. A JointPositions input lists them, and
+        ComputeOutputFromInput writes their efforts. Empty when unknown.
+
+        Returns:
+            The controlled DOFs.
+        """
+    def get_current_input(self, input: mochi_physics.ArrayLikeReal) -> None:
+        """Writes the input that holds the robot where it is now.
+
+        Args:
+            input (ArrayLikeReal): GetInputSize() values.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+        """
+    def compute_output_from_input(
+        self,
+        input: mochi_physics.ArrayLikeReal,
+        dt: float,
+        efforts: mochi_physics.ArrayLikeReal,
+    ) -> None:
+        """Writes what the typed ComputeOutput gives for the input, from the live actor.
+
+        Args:
+            input (ArrayLikeReal): GetInputSize() values.
+            dt (float): Control step [s].
+            efforts (ArrayLikeReal): One per actor DOF, zero on DOFs the controller does
+                not control.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+        """
     def configure_from_scene_entry(self, param_args: str, init_args: str) -> None:
         """Configure this controller from serialized parameter and initialization
         arguments. paramArgs is either a params file path or inline JSON; empty uses

@@ -593,10 +593,47 @@ class bots::ComponentBase [no_init, no_destruct] {
   fn Reset() -> void [pure, virtual];
 }
 
+// @brief What a controller's float input holds (see @ref ControllerBase::GetInputKind).
+enum bots::ControllerInputKind {
+  // @brief Not driven by floats.
+  None,
+  // @brief One position per controlled DOF, ascending [rad or m].
+  JointPositions,
+  // @brief The tool pose in the root frame: x y z [m], then qx qy qz qw.
+  Pose,
+  // @brief The controller's own layout; only callers that know its type drive it.
+  Custom,
+  // @brief Number of enum values.
+  Count,
+}
+
 // @brief Base class for all controllers.
 // Inherits common lifecycle from ComponentBase. Controllers are identified
 // by string names via RoboticsContext registration, not enums.
 class bots::ControllerBase(bots::ComponentBase) [no_init, no_destruct] {
+  // @brief How many floats ComputeOutputFromInput takes; 0 when floats cannot drive it.
+  // @return The input size.
+  fn GetInputSize() -> int [virtual, const, nodiscard];
+
+  // @brief What those floats are.
+  // @return The input kind.
+  fn GetInputKind() -> bots::ControllerInputKind [virtual, const, nodiscard];
+
+  // @brief The actor DOFs it drives, ascending. A JointPositions input lists them, and
+  // ComputeOutputFromInput writes their efforts. Empty when unknown.
+  // @return The controlled DOFs.
+  fn GetControlledDofs() -> Span<int const> [virtual, const, nodiscard];
+
+  // @brief Writes the input that holds the robot where it is now.
+  // @param[out] input GetInputSize() values.
+  fn GetCurrentInput(Span<real> input) -> void [virtual, mochi_error];
+
+  // @brief Writes what the typed ComputeOutput gives for the input, from the live actor.
+  // @param[in] input GetInputSize() values.
+  // @param[in] dt Control step [s].
+  // @param[out] efforts One per actor DOF, zero on DOFs the controller does not control.
+  fn ComputeOutputFromInput(Span<real const> input, real dt [units("s")], Span<real> efforts) -> void [virtual, mochi_error];
+
   // @brief Configure this controller from serialized parameter and initialization arguments.
   // paramArgs is either a params file path or inline JSON; empty uses defaults. initArgs is a
   // controller-specific file path or inline JSON, for example carrying baseLinkName/eeLinkName for
@@ -722,7 +759,7 @@ class bots::ControllerBasicOscPd(bots::ControllerBase) [no_init, no_destruct] {
 
   // @brief Get the controlled DOF indices (between base and end-effector links).
   // @return The controlled dofs.
-  fn GetControlledDofs() -> Span<int const>;
+  fn GetControlledDofs() -> Span<int const> [const, nodiscard];
 
   // @brief Get the controlled link indices (between base and end-effector links).
   // @return The controlled links.

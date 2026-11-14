@@ -48,6 +48,14 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
     .value("COUNT", superdex::robotics::LinkTransformSpace::Count, "Number of enum values.")
   ;
 
+  nb::enum_<superdex::robotics::ControllerInputKind>(m_bots, "ControllerInputKind", "What a controller's float input holds (see\n:meth:`~superdex.robotics.ControllerBase.get_input_kind`).")
+    .value("NONE", superdex::robotics::ControllerInputKind::None, "Not driven by floats.")
+    .value("JOINT_POSITIONS", superdex::robotics::ControllerInputKind::JointPositions, "One position per controlled DOF, ascending [rad or m].")
+    .value("POSE", superdex::robotics::ControllerInputKind::Pose, "The tool pose in the root frame: x y z [m], then qx qy qz qw.")
+    .value("CUSTOM", superdex::robotics::ControllerInputKind::Custom, "The controller's own layout; only callers that know its type drive it.")
+    .value("COUNT", superdex::robotics::ControllerInputKind::Count, "Number of enum values.")
+  ;
+
   registry.StoreClass(nb::class_<superdex::robotics::RoboticsHandle>(m_bots, "RoboticsHandle", "Shared base handle for bots, controllers, sensors, and actuators. The distinct\nderived handle types below encode the component kind in the C++ type\n(compile-time safety); all share this base's raw value and validity check."));
   registry.StoreClass(nb::class_<superdex::robotics::BotHandle, superdex::robotics::RoboticsHandle>(m_bots, "BotHandle", "Distinct handle identifying a bot in its owning\n:class:`~superdex.robotics.RoboticsContext`."));
   registry.StoreClass(nb::class_<superdex::robotics::ControllerHandle, superdex::robotics::RoboticsHandle>(m_bots, "ControllerHandle", "Distinct handle identifying a controller in its owning\n:class:`~superdex.robotics.RoboticsContext`."));
@@ -648,6 +656,37 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
   ;
 
   registry.GetClass<superdex::robotics::ControllerBase, superdex::robotics::ComponentBase>()
+    .def("get_input_size", &superdex::robotics::ControllerBase::GetInputSize
+      , "How many floats ComputeOutputFromInput takes; 0 when floats cannot drive it.\n\nReturns:\n    The input size."
+    )
+    .def("get_input_kind", &superdex::robotics::ControllerBase::GetInputKind
+      , "What those floats are.\n\nReturns:\n    The input kind."
+    )
+    .def("get_controlled_dofs", &superdex::robotics::ControllerBase::GetControlledDofs
+      , "The actor DOFs it drives, ascending. A JointPositions input lists them, and\nComputeOutputFromInput writes their efforts. Empty when unknown.\n\nReturns:\n    The controlled DOFs."
+    )
+    .def("get_current_input", [](superdex::robotics::ControllerBase& self, mochi::Span<mochi::real> input) {
+      mochi::Error error;
+      self.GetCurrentInput(input, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , nb::arg("input")
+      , "Writes the input that holds the robot where it is now.\n\nArgs:\n    input (ArrayLikeReal): GetInputSize() values.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    )
+    .def("compute_output_from_input", [](superdex::robotics::ControllerBase& self, mochi::Span<mochi::real const> input, mochi::real dt, mochi::Span<mochi::real> efforts) {
+      mochi::Error error;
+      self.ComputeOutputFromInput(input, dt, efforts, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , nb::arg("input")
+      , nb::arg("dt")
+      , nb::arg("efforts")
+      , "Writes what the typed ComputeOutput gives for the input, from the live actor.\n\nArgs:\n    input (ArrayLikeReal): GetInputSize() values.\n    dt (float): Control step [s].\n    efforts (ArrayLikeReal): One per actor DOF, zero on DOFs the controller does\n        not control.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    )
     .def("configure_from_scene_entry", [](superdex::robotics::ControllerBase& self, std::string_view param_args, std::string_view init_args) {
       mochi::Error error;
       self.ConfigureFromSceneEntry(param_args, init_args, error);

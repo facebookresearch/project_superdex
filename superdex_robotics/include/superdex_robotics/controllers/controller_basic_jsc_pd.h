@@ -143,6 +143,19 @@ class MOCHI_API ControllerBasicJscPd : public ControllerBase {
   void ConfigureRecording(ControllerRecordingSink& sink, superdex::Error& error) const override;
   void Record(ControllerRecordingSink& sink, superdex::Error& error) const override;
 
+  /* Float input: joint positions (ControllerInputKind::JointPositions) as Target::targetPose, one
+   * per actor DOF (Kp.size() without an actor), with Obsv::dt = dt. */
+  [[nodiscard]] int GetInputSize() const override;
+  [[nodiscard]] ControllerInputKind GetInputKind() const override;
+  /* Every actor DOF; empty without an actor. */
+  [[nodiscard]] Span<int const> GetControlledDofs() const override;
+  void GetCurrentInput(Span<real> input, superdex::Error& error) override;
+  void ComputeOutputFromInput(
+      Span<real const> input,
+      real dt,
+      Span<real> efforts,
+      superdex::Error& error) override;
+
  protected:
   void CheckParams(Params const& params, superdex::Error& error);
 
@@ -151,6 +164,9 @@ class MOCHI_API ControllerBasicJscPd : public ControllerBase {
 
   /* The efforts to be applied */
   ColumnVector<real> _efforts;
+
+  /* Every actor DOF, ascending; empty without an actor. */
+  DynamicArray<int> _dofs;
 
   /* The prior ComputeOutput call targetPose are stored here for computing target velocity */
   DynamicArray<real> _prevTargetPose;

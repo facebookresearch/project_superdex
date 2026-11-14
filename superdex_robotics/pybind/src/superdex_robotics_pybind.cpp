@@ -24,10 +24,14 @@
 #include <mochi_core/utils/error.h>
 #include <mochi_core/utils/log.h>
 
+#include <nanobind/stl/vector.h>
+
+#include <algorithm>
 #include <mutex>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 using namespace mochi;
 namespace nb = nanobind;
@@ -105,10 +109,16 @@ class PythonComponent : public BaseT {
   std::string _typeName;
 };
 
-/* Controllers add one virtual the other kinds do not have: they are configured after construction,
+/* Controllers add virtuals the other kinds do not have. They are configured after construction,
  * because the scene entry that names a controller also carries its params. Sensors and actuators
  * receive their paramArgs as a constructor argument instead, so their adapters need nothing beyond
- * the shared template. */
+ * the shared template.
+ *
+ * A Python controller driven by floats defines `input_size()`, `input_kind()` (a
+ * ControllerInputKind), `current_input()` and `compute_output_from_input(input, dt)` (one effort
+ * per actor DOF), and may define `controlled_dofs()` (ascending). The size, kind and DOFs are read
+ * after creation and after configure_from_scene_entry.
+ */
 class PythonController final : public PythonComponent<superdex::robotics::ControllerBase> {
  public:
   PythonController(
@@ -117,7 +127,54 @@ class PythonController final : public PythonComponent<superdex::robotics::Contro
       superdex::robotics::BotPrefab const* prefab,
       mochi::Actor* actor,
       mochi::Error& error)
-      : PythonComponent(std::move(impl), std::move(typeName), prefab, actor, error) {}
+      : PythonComponent(std::move(impl), std::move(typeName), prefab, actor, error) {
+    ReadInputDescription(error);
+  }
+
+  [[nodiscard]] int GetInputSize() const override {
+    return _inputSize;
+  }
+
+  [[nodiscard]] superdex::robotics::ControllerInputKind GetInputKind() const override {
+    return _inputKind;
+  }
+
+  [[nodiscard]] mochi::Span<int const> GetControlledDofs() const override {
+    return {_controlledDofs.data(), _controlledDofs.size()};
+  }
+
+  void GetCurrentInput(mochi::Span<mochi::real> input, mochi::Error& error) override {
+    MOCHI_ERROR_RETURN(error);
+    nb::gil_scoped_acquire gil;
+    if (!nb::hasattr(Impl(), "current_input")) {
+      ControllerBase::GetCurrentInput(input, error);
+      return;
+    }
+    try {
+      CopyNumbers(Impl().attr("current_input")(), input, error);
+    } catch (std::exception const& e) {
+      Fail("current_input", e, error);
+    }
+  }
+
+  void ComputeOutputFromInput(
+      mochi::Span<mochi::real const> input,
+      mochi::real dt,
+      mochi::Span<mochi::real> efforts,
+      mochi::Error& error) override {
+    MOCHI_ERROR_RETURN(error);
+    nb::gil_scoped_acquire gil;
+    if (!nb::hasattr(Impl(), "compute_output_from_input")) {
+      ControllerBase::ComputeOutputFromInput(input, dt, efforts, error);
+      return;
+    }
+    try {
+      std::vector<mochi::real> const values(input.begin(), input.end());
+      CopyNumbers(Impl().attr("compute_output_from_input")(values, dt), efforts, error);
+    } catch (std::exception const& e) {
+      Fail("compute_output_from_input", e, error);
+    }
+  }
 
   void ConfigureFromSceneEntry(
       std::string_view paramArgs,
@@ -139,8 +196,57 @@ class PythonController final : public PythonComponent<superdex::robotics::Contro
           e.what());
       MOCHI_ERROR_SET(
           error, "Python controller configure_from_scene_entry raised an exception (see log).");
+      return;
     }
+    ReadInputDescription(error);
   }
+
+ private:
+  /* Reads input_size(), input_kind() and controlled_dofs(), when the Python controller defines
+   * them. */
+  void ReadInputDescription(mochi::Error& error) {
+    MOCHI_ERROR_RETURN(error);
+    nb::gil_scoped_acquire gil;
+    try {
+      if (nb::hasattr(Impl(), "input_size")) {
+        _inputSize = nb::cast<int>(Impl().attr("input_size")());
+      }
+      if (nb::hasattr(Impl(), "input_kind")) {
+        _inputKind = nb::cast<superdex::robotics::ControllerInputKind>(Impl().attr("input_kind")());
+      }
+      if (nb::hasattr(Impl(), "controlled_dofs")) {
+        _controlledDofs = nb::cast<std::vector<int>>(Impl().attr("controlled_dofs")());
+      }
+    } catch (std::exception const& e) {
+      Fail("input_size, input_kind or controlled_dofs", e, error);
+    }
+    MOCHI_ERROR_IF(_inputSize < 0, error, "Python controller input_size() must not be negative.");
+  }
+
+  /* Copies the numbers a Python method returned into @p out, which they must fill. */
+  static void CopyNumbers(nb::handle result, mochi::Span<mochi::real> out, mochi::Error& error) {
+    auto const values = nb::cast<std::vector<mochi::real>>(result);
+    MOCHI_ERROR_IF(
+        values.size() != out.size(),
+        error,
+        "Python controller returned the wrong number of values.");
+    MOCHI_ERROR_RETURN(error);
+    std::copy(values.begin(), values.end(), out.begin());
+  }
+
+  /* The Python detail cannot be stored in Error (it holds a borrowed char const*), so it is logged
+   * and a static message set. */
+  void Fail(char const* method, std::exception const& e, mochi::Error& error) const {
+    MOCHI_LOG_ERROR(
+        "Python controller '%s' %s failed: %s", TypeNameString().c_str(), method, e.what());
+    MOCHI_ERROR_SET(
+        error, "Python controller raised an exception or returned the wrong type (see log).");
+  }
+
+  int _inputSize = 0;
+  superdex::robotics::ControllerInputKind _inputKind =
+      superdex::robotics::ControllerInputKind::None;
+  std::vector<int> _controlledDofs;
 };
 
 using PythonSensor = PythonComponent<superdex::robotics::SensorBase>;

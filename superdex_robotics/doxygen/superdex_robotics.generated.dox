@@ -22,6 +22,36 @@
 /// @namespace superdex::robotics
 ///
 
+/// @enum superdex::robotics::ControllerInputKind
+///
+/// @brief What a controller's float input holds (see @ref superdex::robotics::ControllerBase::GetInputKind "ControllerBase::GetInputKind").
+///
+
+/// @var superdex::robotics::ControllerInputKind::None
+///
+/// @brief Not driven by floats.
+///
+
+/// @var superdex::robotics::ControllerInputKind::JointPositions
+///
+/// @brief One position per controlled DOF, ascending [rad or m].
+///
+
+/// @var superdex::robotics::ControllerInputKind::Pose
+///
+/// @brief The tool pose in the root frame: x y z [m], then qx qy qz qw.
+///
+
+/// @var superdex::robotics::ControllerInputKind::Custom
+///
+/// @brief The controller's own layout; only callers that know its type drive it.
+///
+
+/// @var superdex::robotics::ControllerInputKind::Count
+///
+/// @brief Number of enum values.
+///
+
 /// @struct superdex::robotics::RoboticsHandle
 ///
 /// @brief Shared base handle for bots, controllers, sensors, and actuators. The distinct derived handle types below encode the component kind in the C++ type (compile-time safety); all share this base's raw value and validity check.
@@ -444,6 +474,45 @@
 /// @brief Base class for all controllers. Inherits common lifecycle from ComponentBase. Controllers are identified by string names via RoboticsContext registration, not enums.
 ///
 
+/// @fn int superdex::robotics::ControllerBase::GetInputSize() const
+///
+/// @brief How many floats ComputeOutputFromInput takes; 0 when floats cannot drive it.
+///
+/// @return The input size.
+///
+
+/// @fn ControllerInputKind superdex::robotics::ControllerBase::GetInputKind() const
+///
+/// @brief What those floats are.
+///
+/// @return The input kind.
+///
+
+/// @fn Span<int const> superdex::robotics::ControllerBase::GetControlledDofs() const
+///
+/// @brief The actor DOFs it drives, ascending. A JointPositions input lists them, and ComputeOutputFromInput writes their efforts. Empty when unknown.
+///
+/// @return The controlled DOFs.
+///
+
+/// @fn void superdex::robotics::ControllerBase::GetCurrentInput(Span<real> input, superdex::Error& error)
+///
+/// @brief Writes the input that holds the robot where it is now.
+///
+/// @param[out] input GetInputSize() values.
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+///
+
+/// @fn void superdex::robotics::ControllerBase::ComputeOutputFromInput(Span<real const> input, real dt, Span<real> efforts, superdex::Error& error)
+///
+/// @brief Writes what the typed ComputeOutput gives for the input, from the live actor.
+///
+/// @param[in] input GetInputSize() values.
+/// @param[in] dt Control step [s].
+/// @param[out] efforts One per actor DOF, zero on DOFs the controller does not control.
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+///
+
 /// @fn void superdex::robotics::ControllerBase::ConfigureFromSceneEntry(std::string_view paramArgs, std::string_view initArgs, superdex::Error& error)
 ///
 /// @brief Configure this controller from serialized parameter and initialization arguments. paramArgs is either a params file path or inline JSON; empty uses defaults. initArgs is a controller-specific file path or inline JSON, for example carrying baseLinkName/eeLinkName for link-resolved controllers. Implementations typically deserialize it into a small reflected init-args struct and ignore unrecognized framework keys.
@@ -606,7 +675,7 @@
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 
-/// @fn Span<int const> superdex::robotics::ControllerBasicOscPd::GetControlledDofs()
+/// @fn Span<int const> superdex::robotics::ControllerBasicOscPd::GetControlledDofs() const
 ///
 /// @brief Get the controlled DOF indices (between base and end-effector links).
 ///

@@ -17,6 +17,7 @@
 #include <superdex_robotics/controllers/controller_basic_jsc_pd.h>
 #include <superdex_robotics/utils/file_utils.h>
 
+#include <algorithm>
 #include <array>
 #include <numeric>
 #include <vector>
@@ -39,6 +40,8 @@ ControllerBasicJscPd::ControllerBasicJscPd(BotPrefab const* prefab, Actor* robot
   if (Actor* const actor = GetActor()) {
     _efforts.Resize(actor->GetNumDofs());
     _efforts.SetZero();
+    _dofs.resize(actor->GetNumDofs());
+    std::iota(_dofs.begin(), _dofs.end(), 0);
   }
 }
 
@@ -199,4 +202,52 @@ void ControllerBasicJscPd::Record(ControllerRecordingSink& sink, Error& error) c
       {"joint_effort_output", _efforts},
   }};
   sink.WriteScalars(kStateStreamName, fields, error);
+}
+
+int ControllerBasicJscPd::GetInputSize() const {
+  Actor* const actor = GetActor();
+  return actor != nullptr ? actor->GetNumDofs() : static_cast<int>(_params.Kp.size());
+}
+
+ControllerInputKind ControllerBasicJscPd::GetInputKind() const {
+  return ControllerInputKind::JointPositions;
+}
+
+Span<int const> ControllerBasicJscPd::GetControlledDofs() const {
+  return _dofs;
+}
+
+void ControllerBasicJscPd::GetCurrentInput(Span<real> input, Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  Actor* const actor = GetActor();
+  MOCHI_ERROR_IF(
+      actor == nullptr, error, "ControllerBasicJscPd::GetCurrentInput requires a live mochi actor");
+  MOCHI_ERROR_RETURN(error);
+  MOCHI_ERROR_IF(
+      isize(input) != actor->GetNumDofs(),
+      error,
+      "ControllerBasicJscPd::GetCurrentInput: the input must have one value per actor DOF");
+  MOCHI_ERROR_RETURN(error);
+  actor->GetArticulatedPose(input, error);
+}
+
+void ControllerBasicJscPd::ComputeOutputFromInput(
+    Span<real const> input,
+    real dt,
+    Span<real> efforts,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  Obsv obsv = GetCurrentObservationsFromMochi(error);
+  MOCHI_ERROR_RETURN(error);
+  MOCHI_ERROR_IF(
+      isize(efforts) != isize(obsv.dofPositions),
+      error,
+      "ControllerBasicJscPd::ComputeOutputFromInput: efforts must have one value per actor DOF");
+  MOCHI_ERROR_RETURN(error);
+  obsv.dt = dt;
+  Target target;
+  target.targetPose.assign(input.begin(), input.end());
+  Span<real const> const output = ComputeOutput(obsv, target, error);
+  MOCHI_ERROR_RETURN(error);
+  std::copy(output.begin(), output.end(), efforts.begin());
 }

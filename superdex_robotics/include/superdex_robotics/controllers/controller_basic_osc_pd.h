@@ -182,7 +182,7 @@ class MOCHI_API ControllerBasicOscPd : public ControllerBase {
       superdex::Error& error) override;
   /* @brief Get the controlled DOF indices (between base and end-effector links).
    * @return The controlled dofs. */
-  Span<int const> GetControlledDofs();
+  [[nodiscard]] Span<int const> GetControlledDofs() const override;
 
   /* @brief Get the controlled link indices (between base and end-effector links).
    * @return The controlled links. */
@@ -210,6 +210,16 @@ class MOCHI_API ControllerBasicOscPd : public ControllerBase {
 
   void ConfigureRecording(ControllerRecordingSink& sink, superdex::Error& error) const override;
   void Record(ControllerRecordingSink& sink, superdex::Error& error) const override;
+
+  /* Float input: the tool pose (ControllerInputKind::Pose) as Target::rootFromTargetEE. */
+  [[nodiscard]] int GetInputSize() const override;
+  [[nodiscard]] ControllerInputKind GetInputKind() const override;
+  void GetCurrentInput(Span<real> input, superdex::Error& error) override;
+  void ComputeOutputFromInput(
+      Span<real const> input,
+      real dt,
+      Span<real> efforts,
+      superdex::Error& error) override;
 
  protected:
   static void CheckParams(Params const& params, superdex::Error& error);

@@ -17,6 +17,7 @@
 #include <superdex_robotics/controllers/controller_basic_osc_pd.h>
 #include <superdex_robotics/utils/bot_utils.h>
 #include <superdex_robotics/utils/file_utils.h>
+#include "controllers/pose_input.h"
 #include "mochi_core/linear_algebra/matrix_operations.h"
 
 #include <algorithm>
@@ -265,7 +266,7 @@ void ControllerBasicOscPd::Record(ControllerRecordingSink& sink, Error& error) c
   sink.WriteScalars(kOutputStreamName, fields, error);
 }
 
-Span<int const> ControllerBasicOscPd::GetControlledDofs() {
+Span<int const> ControllerBasicOscPd::GetControlledDofs() const {
   return _dofIndices;
 }
 
@@ -496,4 +497,33 @@ ControllerBasicOscPd::Obsv ControllerBasicOscPd::GetCurrentObservationsFromMochi
   obsv.worldFromEELink = eeLink->GetRootTransform();
   obsv.eeJacobian = eeJacobian;
   return obsv;
+}
+
+int ControllerBasicOscPd::GetInputSize() const {
+  return kPoseInputSize;
+}
+
+ControllerInputKind ControllerBasicOscPd::GetInputKind() const {
+  return ControllerInputKind::Pose;
+}
+
+void ControllerBasicOscPd::GetCurrentInput(Span<real> input, Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  MOCHI_ERROR_IF(
+      _eeLinkIndex < 0,
+      error,
+      "ControllerBasicOscPd::GetCurrentInput: Initialize() must be called first");
+  MOCHI_ERROR_RETURN(error);
+  Actor* const robot = GetActor();
+  Actor* const eeLink = robot != nullptr ? GetScene()->GetActor(_eeLinkHandle) : nullptr;
+  WriteToolPoseInput(robot, eeLink, _params.EELinkFromEE, input, error);
+}
+
+void ControllerBasicOscPd::ComputeOutputFromInput(
+    Span<real const> input,
+    real /*dt*/,
+    Span<real> efforts,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  ComputeOscOutputFromPoseInput(*this, input, efforts, error);
 }
