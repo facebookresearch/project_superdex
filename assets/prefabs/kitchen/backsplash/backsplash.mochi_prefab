@@ -1,0 +1,24 @@
+{
+  "_comment": "Tiled wall section behind the sink, 1 m wide (static). It runs from the floor, 1 m below the countertop (Z = 0), to 1 m above it; its front face is at X = +50 mm; the 100 mm square cut-out takes the switch.",
+  "actors": {
+    "rigid": [
+      {
+        "name": "backsplash",
+        "shape": "./collision/backsplash.mochi.h5",
+        "renderModel": "./render/backsplash.glb",
+        "colliderType": "Sdf",
+        "density": 2000,
+        "contact": {
+          "coulombFrictionCoefficient": 0.5,
+          "penaltyCoefficient": 100000000000.0
+        },
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "isStatic": true
+      }
+    ]
+  }
+}

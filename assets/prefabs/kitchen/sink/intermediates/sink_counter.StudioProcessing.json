@@ -1,0 +1,104 @@
+{
+  "editorState": {
+    "cadRotation": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "cadScale": [
+      1,
+      1,
+      1
+    ],
+    "cadTranslation": [
+      0,
+      0,
+      0
+    ]
+  },
+  "modifiers": [
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "From Model Viewer",
+      "modifier": "Source from CAD Model",
+      "properties": {
+        "allowPartialFailure": true,
+        "angularDeflection": 0.25,
+        "backend": "Isotropic",
+        "combineTouchingSolids": true,
+        "edgeSampling": "Uniform",
+        "linearDeflection": 0.05,
+        "targetEdgeLength": 50.0,
+        "targetEdgeLengthFraction": 0.04,
+        "faceColorSizing": [
+          {
+            "color": "#6E7073",
+            "targetEdgeLength": 10.0,
+            "linearDeflection": 0,
+            "angularDeflection": 0,
+            "targetEdgeLengthFraction": 0
+          },
+          {
+            "color": "#FFFFFF",
+            "targetEdgeLength": 10.0,
+            "linearDeflection": 0,
+            "angularDeflection": 0,
+            "targetEdgeLengthFraction": 0
+          },
+          {
+            "color": "#404040",
+            "targetEdgeLength": 20.0,
+            "linearDeflection": 0,
+            "angularDeflection": 0,
+            "targetEdgeLengthFraction": 0
+          }
+        ]
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "Make Manifold",
+      "modifier": "Refine Mesh",
+      "properties": {
+        "thenMakeWatertight": true
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "Tangential Relaxation (Smoothing)",
+      "modifier": "Refine Mesh",
+      "properties": {
+        "angleSmoothingIterations": 0,
+        "tangentialRelaxationIterations": 3
+      }
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "SDF",
+      "modifier": "Export Mochi Model",
+      "properties": {
+        "sdf": {
+          "boundaryPaddingDist": 0.005,
+          "minGridResolution": [
+            6,
+            6,
+            6
+          ],
+          "resolutionDelta": [
+            0.012,
+            0.012,
+            0.012
+          ],
+          "resolutionMode": "Explicit"
+        }
+      }
+    }
+  ],
+  "referenceModels": [],
+  "version": 1
+}

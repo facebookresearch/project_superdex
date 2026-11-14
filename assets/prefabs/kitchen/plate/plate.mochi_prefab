@@ -1,0 +1,23 @@
+{
+  "_comment": "Ceramic dinner plate, 240 mm across.",
+  "actors": {
+    "rigid": [
+      {
+        "name": "plate",
+        "shape": "./collision/plate.mochi.h5",
+        "renderModel": "./render/plate.glb",
+        "colliderType": "Sdf",
+        "density": 2400,
+        "contact": {
+          "coulombFrictionCoefficient": 0.4,
+          "penaltyCoefficient": 100000000000.0
+        },
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    ]
+  }
+}

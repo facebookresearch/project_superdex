@@ -1,0 +1,87 @@
+{
+  "_comment": "Soap dispenser: the base is fixed in the world and the pump head presses down 25 mm against a preloaded return spring (an articulatedSingleDofTarget constraint).",
+  "actors": {
+    "articulated": [
+      {
+        "name": "dispenser",
+        "joints": [
+          {
+            "name": "base_joint",
+            "type": "Hard"
+          },
+          {
+            "name": "pump_joint",
+            "type": "Prismatic",
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0,
+                0,
+                0.05
+              ]
+            },
+            "minLimit": [
+              0,
+              0,
+              -0.025
+            ],
+            "maxLimit": [
+              0,
+              0,
+              0
+            ],
+            "friction": {
+              "viscous": 1.0,
+              "coulomb": 0.3,
+              "falloffVel": 0.005
+            },
+            "limitStiffness": 100000.0,
+            "limitDamping": 50.0
+          }
+        ],
+        "links": [
+          {
+            "name": "base",
+            "parentLink": -1,
+            "colliderType": "Sdf",
+            "density": 2000,
+            "renderModel": "./render/dispenser_base.glb",
+            "shape": "./collision/dispenser_base.mochi.h5",
+            "contact": {
+              "coulombFrictionCoefficient": 0.4,
+              "penaltyCoefficient": 100000000000.0
+            }
+          },
+          {
+            "name": "pump",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 400,
+            "renderModel": "./render/dispenser_pump.glb",
+            "shape": "./collision/dispenser_pump.mochi.h5",
+            "contact": {
+              "coulombFrictionCoefficient": 0.4,
+              "penaltyCoefficient": 100000000000.0
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "constraints": {
+    "articulatedSingleDofTarget": [
+      {
+        "actor": "dispenser",
+        "jointIndex": 1,
+        "dofIndex": 0,
+        "targetValue": 0.012,
+        "stiffness": 250.0,
+        "damping": 2.0
+      }
+    ]
+  }
+}

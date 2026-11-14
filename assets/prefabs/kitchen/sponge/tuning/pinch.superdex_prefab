@@ -1,0 +1,59 @@
+{
+  "_comment": "The sponge with two right OpenXR index fingertips (about 50 g each) beside its pad, for tuning/pinch.superdex_tuner.",
+  "prefabs": [
+    {
+      "name": "sponge",
+      "path": "./../sponge.mochi_prefab"
+    }
+  ],
+  "actors": {
+    "rigid": [
+      {
+        "name": "finger_a",
+        "shape": "./../../../../bots/hands/openxr/right/collision/xr_09_index_distal_lowpoly_collision.mochi.h5",
+        "colliderType": "Sdf",
+        "density": 20800,
+        "contact": {
+          "frictionWithColliderNormal": false,
+          "penaltyCoefficient": 10000000000.0,
+          "penaltyThresholdDefault": 0.003,
+          "coulombFrictionCoefficient": 0.8
+        },
+        "translation": [
+          0.034,
+          0.068,
+          0.0114
+        ],
+        "rotation": [
+          -0.70710678,
+          0,
+          0,
+          0.70710678
+        ]
+      },
+      {
+        "name": "finger_b",
+        "shape": "./../../../../bots/hands/openxr/right/collision/xr_09_index_distal_lowpoly_collision.mochi.h5",
+        "colliderType": "Sdf",
+        "density": 20800,
+        "contact": {
+          "frictionWithColliderNormal": false,
+          "penaltyCoefficient": 10000000000.0,
+          "penaltyThresholdDefault": 0.003,
+          "coulombFrictionCoefficient": 0.8
+        },
+        "translation": [
+          0.034,
+          -0.068,
+          0.0114
+        ],
+        "rotation": [
+          0.70710678,
+          0,
+          0,
+          0.70710678
+        ]
+      }
+    ]
+  }
+}

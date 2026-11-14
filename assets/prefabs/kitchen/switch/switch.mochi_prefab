@@ -1,0 +1,166 @@
+{
+  "_comment": "Double toggle light switch on a wall plate: the plate is fixed in the world (its back face goes against the wall, facing +X) and each toggle flips between two stops 40 deg apart. An over-center spring per toggle (a rigidPivotPosition constraint toward a point behind the pivot) makes the toggles bistable: they snap to the nearest stop and need about 1.5 N at the tip to flip.",
+  "actors": {
+    "articulated": [
+      {
+        "name": "switch",
+        "joints": [
+          {
+            "name": "plate_joint",
+            "type": "Hard"
+          },
+          {
+            "name": "toggle_left_joint",
+            "type": "Revolute",
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.015,
+                -0.022083,
+                0
+              ],
+              "rotation": [
+                0.0,
+                0.173615753,
+                0.0,
+                0.98481347
+              ]
+            },
+            "minLimit": [
+              0,
+              -0.698,
+              0
+            ],
+            "maxLimit": [
+              0,
+              0,
+              0
+            ],
+            "friction": {
+              "viscous": 0.0005,
+              "coulomb": 0.002,
+              "falloffVel": 0.02
+            },
+            "limitStiffness": 50.0,
+            "limitDamping": 0.02
+          },
+          {
+            "name": "toggle_right_joint",
+            "type": "Revolute",
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.015,
+                0.022083,
+                0
+              ],
+              "rotation": [
+                0.0,
+                0.173615753,
+                0.0,
+                0.98481347
+              ]
+            },
+            "minLimit": [
+              0,
+              -0.698,
+              0
+            ],
+            "maxLimit": [
+              0,
+              0,
+              0
+            ],
+            "friction": {
+              "viscous": 0.0005,
+              "coulomb": 0.002,
+              "falloffVel": 0.02
+            },
+            "limitStiffness": 50.0,
+            "limitDamping": 0.02
+          }
+        ],
+        "links": [
+          {
+            "name": "plate",
+            "parentLink": -1,
+            "colliderType": "Sdf",
+            "density": 2000,
+            "renderModel": "./render/switch_plate.glb",
+            "shape": "./collision/switch_plate.mochi.h5",
+            "contact": {
+              "coulombFrictionCoefficient": 0.4,
+              "penaltyCoefficient": 100000000000.0
+            }
+          },
+          {
+            "name": "toggle_left",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 1200,
+            "renderModel": "./render/switch_toggle.glb",
+            "shape": "./collision/switch_toggle.mochi.h5",
+            "contact": {
+              "coulombFrictionCoefficient": 0.5,
+              "penaltyCoefficient": 100000000000.0
+            }
+          },
+          {
+            "name": "toggle_right",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 1200,
+            "renderModel": "./render/switch_toggle.glb",
+            "shape": "./collision/switch_toggle.mochi.h5",
+            "contact": {
+              "coulombFrictionCoefficient": 0.5,
+              "penaltyCoefficient": 100000000000.0
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "constraints": {
+    "rigidPivotPosition": [
+      {
+        "actor": "switch/toggle_left",
+        "localPosition": [
+          0.035,
+          0,
+          0
+        ],
+        "targetPosition": [
+          -0.03,
+          -0.022083,
+          0.0
+        ],
+        "stiffness": 280.0,
+        "damping": 0.05
+      },
+      {
+        "actor": "switch/toggle_right",
+        "localPosition": [
+          0.035,
+          0,
+          0
+        ],
+        "targetPosition": [
+          -0.03,
+          0.022083,
+          0.0
+        ],
+        "stiffness": 280.0,
+        "damping": 0.05
+      }
+    ]
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "comment": "Twist the lid counterclockwise with a torque that grows to 0.03 N m over 2 s while the jar is held with the opposite torque. The lid should start to turn at a small torque (it is only finger tight), climb the coarse thread (pos.z rises 9.75 mm per turn) and come free after about one turn (the run ends once it has climbed 9.4 mm).",
+  "assetsRoot": "",
+  "prefab": "./../jar.mochi_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "unscrew",
+      "enabled": true,
+      "type": "Torque",
+      "target": "jar_lid",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        1
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.0,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 2.0,
+            "value": 0.03,
+            "interpolation": "Step"
+          },
+          {
+            "time": 6.0,
+            "value": 0.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 6.0,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    },
+    {
+      "name": "hold_body",
+      "enabled": true,
+      "type": "Torque",
+      "target": "jar_body",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.0,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 2.0,
+            "value": 0.03,
+            "interpolation": "Step"
+          },
+          {
+            "time": 6.0,
+            "value": 0.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 6.0,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "jar_lid"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "jar_body"
+    }
+  ],
+  "stopConditions": [
+    {
+      "name": "lid_free",
+      "kind": "ChannelThreshold",
+      "channel": "jar_lid.pos.z",
+      "comparison": "Above",
+      "threshold": 0.1186
+    }
+  ],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.002,
+    "duration": 6.0,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "jar_lid.rotvecUnwrapped.z",
+        "jar_lid.pos.z"
+      ],
+      "height": 160
+    }
+  ]
+}

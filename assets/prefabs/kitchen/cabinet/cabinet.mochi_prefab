@@ -1,0 +1,120 @@
+{
+  "_comment": "Wall cabinet with one shelf: the box is fixed in the world (its back at X = 0 goes against the wall, its front faces +X) and each door swings open 110 deg on its outer hinge. Joint friction holds the doors where they are left.",
+  "actors": {
+    "articulated": [
+      {
+        "name": "cabinet",
+        "joints": [
+          {
+            "name": "box_joint",
+            "type": "Hard"
+          },
+          {
+            "name": "door_left_joint",
+            "type": "Revolute",
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.312,
+                -0.48,
+                0.02
+              ]
+            },
+            "minLimit": [
+              0,
+              0,
+              -1.92
+            ],
+            "maxLimit": [
+              0,
+              0,
+              0
+            ],
+            "friction": {
+              "viscous": 0.3,
+              "coulomb": 0.15,
+              "falloffVel": 0.02
+            },
+            "limitStiffness": 3000.0,
+            "limitDamping": 30.0
+          },
+          {
+            "name": "door_right_joint",
+            "type": "Revolute",
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.312,
+                0.48,
+                0.02
+              ]
+            },
+            "minLimit": [
+              0,
+              0,
+              0
+            ],
+            "maxLimit": [
+              0,
+              0,
+              1.92
+            ],
+            "friction": {
+              "viscous": 0.3,
+              "coulomb": 0.15,
+              "falloffVel": 0.02
+            },
+            "limitStiffness": 3000.0,
+            "limitDamping": 30.0
+          }
+        ],
+        "links": [
+          {
+            "name": "box",
+            "parentLink": -1,
+            "colliderType": "Sdf",
+            "density": 600,
+            "renderModel": "./render/cabinet_box.glb",
+            "shape": "./collision/cabinet_box.mochi.h5",
+            "contact": {
+              "coulombFrictionCoefficient": 0.5,
+              "penaltyCoefficient": 100000000000.0
+            }
+          },
+          {
+            "name": "door_left",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 600,
+            "renderModel": "./render/cabinet_door_left.glb",
+            "shape": "./collision/cabinet_door_left.mochi.h5",
+            "contact": {
+              "coulombFrictionCoefficient": 0.5,
+              "penaltyCoefficient": 100000000000.0
+            }
+          },
+          {
+            "name": "door_right",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 600,
+            "renderModel": "./render/cabinet_door_right.glb",
+            "shape": "./collision/cabinet_door_right.mochi.h5",
+            "contact": {
+              "coulombFrictionCoefficient": 0.5,
+              "penaltyCoefficient": 100000000000.0
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

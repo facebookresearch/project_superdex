@@ -1,0 +1,30 @@
+{
+  "_comment": "The jar with an OpenXR index fingertip (about 50 g) beside its wall, for tuning/press.superdex_tuner. The fingertip keeps Mochi's default contact parameters, like the robot hands' links.",
+  "prefabs": [
+    {
+      "name": "jar",
+      "path": "./../jar.mochi_prefab"
+    }
+  ],
+  "actors": {
+    "rigid": [
+      {
+        "name": "finger",
+        "shape": "./../../../../bots/hands/openxr/right/collision/xr_09_index_distal_lowpoly_collision.mochi.h5",
+        "colliderType": "Sdf",
+        "density": 20800,
+        "translation": [
+          0.085,
+          0.0,
+          0.06
+        ],
+        "rotation": [
+          0.0,
+          0.70710678,
+          0.0,
+          0.70710678
+        ]
+      }
+    ]
+  }
+}

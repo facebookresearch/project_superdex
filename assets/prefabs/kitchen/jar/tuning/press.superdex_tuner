@@ -1,0 +1,137 @@
+{
+  "comment": "Push a fingertip with Mochi's default contact parameters (as on the robot hands) into the middle of the jar's wall with up to 120 N, aiming 30 mm past the outer face, while the jar is held. The fingertip should stop about 1 mm into the 4 mm glass wall and tilt up along it, rather than push through into the jar.",
+  "assetsRoot": "",
+  "prefab": "./press.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "push",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "finger",
+      "frame": "World",
+      "pointLocal": [
+        0,
+        0,
+        -0.019
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0.054,
+            0,
+            0.06
+          ],
+          "rotation": [
+            0,
+            1.5707963,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.4,
+          "position": [
+            0.009,
+            0,
+            0.06
+          ],
+          "rotation": [
+            0,
+            1.5707963,
+            0
+          ],
+          "interpolation": "Step",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 40,
+        "dampingRatio": 1,
+        "maxAcceleration": 2400,
+        "rotation": true,
+        "rotResponseHz": 10,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    },
+    {
+      "name": "hold",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "jar/jar_body",
+      "frame": "World",
+      "pointLocal": [
+        0,
+        0,
+        0
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Step",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "finger"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "finger"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "jar/jar_body"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 1.2,
+    "groundPlane": false,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "finger.contactForce.x"
+      ],
+      "height": 160
+    }
+  ]
+}

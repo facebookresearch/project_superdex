@@ -1,0 +1,176 @@
+{
+  "comment": "Flip the toggles with a force at the tip that grows to 3 N over 1.5 s: the left toggle up, then the right toggle up, then the left one back down. Read off the force at which each toggle snaps over (about 1.5 N); after it snaps it should sit on its other stop with no force, and the untouched toggle should not move.",
+  "assetsRoot": "",
+  "prefab": "./../switch.mochi_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "flip_left_up",
+      "enabled": true,
+      "type": "Force",
+      "target": "switch/toggle_left",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        1
+      ],
+      "pointLocal": [
+        0.035,
+        0,
+        0
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.0,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 1.5,
+            "value": 3.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 1.5,
+            "value": 0.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 3.0,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    },
+    {
+      "name": "flip_right_up",
+      "enabled": true,
+      "type": "Force",
+      "target": "switch/toggle_right",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        1
+      ],
+      "pointLocal": [
+        0.035,
+        0,
+        0
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0,
+            "value": 0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 1.5,
+            "value": 0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 3.0,
+            "value": 3.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 3.0,
+            "value": 0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    },
+    {
+      "name": "flip_left_down",
+      "enabled": true,
+      "type": "Force",
+      "target": "switch/toggle_left",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        0.035,
+        0,
+        0
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0,
+            "value": 0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 3.0,
+            "value": 0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 4.5,
+            "value": 3.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 4.5,
+            "value": 0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "JointState",
+      "target": "switch/toggle_left_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "switch/toggle_right_joint"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 5.0,
+    "groundPlane": false,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "load.flip_left_up.mag",
+        "load.flip_right_up.mag",
+        "load.flip_left_down.mag",
+        "switch/toggle_left_joint.q0",
+        "switch/toggle_right_joint.q0"
+      ],
+      "height": 160
+    }
+  ]
+}

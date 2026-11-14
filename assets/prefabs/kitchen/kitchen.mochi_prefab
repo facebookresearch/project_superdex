@@ -1,0 +1,119 @@
+{
+  "_comment": "Kitchen sink scene: a counter with an inset sink, faucet and soap dispenser against a tiled wall with a double light switch, a wall cabinet above, and loose props (a jar, a sponge, plates). The origin is on the floor, centered on the back of the backsplash, with +X toward the front: the unit is 1 m wide and 0.7 m deep, and the countertop is 1 m up.",
+  "prefabs": [
+    {
+      "name": "sink",
+      "path": "./sink/sink.mochi_prefab",
+      "translation": [
+        0.425,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "name": "faucet",
+      "path": "./faucet/faucet.mochi_prefab",
+      "translation": [
+        0.17473,
+        0.00349,
+        1.0
+      ]
+    },
+    {
+      "name": "dispenser",
+      "path": "./dispenser/dispenser.mochi_prefab",
+      "translation": [
+        0.2348,
+        0.35668,
+        1.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.382683432,
+        0.923879533
+      ]
+    },
+    {
+      "name": "backsplash",
+      "path": "./backsplash/backsplash.mochi_prefab",
+      "translation": [
+        0.05,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "name": "switch",
+      "path": "./switch/switch.mochi_prefab",
+      "translation": [
+        0.1,
+        0.35,
+        1.25
+      ]
+    },
+    {
+      "name": "cabinet",
+      "path": "./cabinet/cabinet.mochi_prefab",
+      "translation": [
+        0.1,
+        0.0,
+        1.5
+      ]
+    },
+    {
+      "name": "jar",
+      "path": "./jar/jar.mochi_prefab",
+      "translation": [
+        0.205,
+        -0.3,
+        1.0
+      ]
+    },
+    {
+      "name": "sponge",
+      "path": "./sponge/sponge.mochi_prefab",
+      "translation": [
+        0.525,
+        0.4,
+        1.0
+      ]
+    },
+    {
+      "name": "plate_sink",
+      "path": "./plate/plate.mochi_prefab",
+      "translation": [
+        0.425,
+        0.03,
+        0.891
+      ]
+    },
+    {
+      "name": "plate_shelf_1",
+      "path": "./plate/plate.mochi_prefab",
+      "translation": [
+        0.27,
+        -0.17,
+        1.761
+      ]
+    },
+    {
+      "name": "plate_shelf_2",
+      "path": "./plate/plate.mochi_prefab",
+      "translation": [
+        0.27,
+        -0.17,
+        1.768
+      ]
+    },
+    {
+      "name": "plate_cabinet_1",
+      "path": "./plate/plate.mochi_prefab",
+      "translation": [
+        0.27,
+        0.17,
+        1.531
+      ]
+    }
+  ]
+}

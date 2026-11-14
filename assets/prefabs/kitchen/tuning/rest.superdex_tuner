@@ -1,0 +1,74 @@
+{
+  "comment": "The whole kitchen left alone for 4 s, standing on the floor. The props settle where they are placed (the plates on the basin floor and the cabinet shelves, the jar and sponge on the counter) and no joint drifts.",
+  "assetsRoot": "",
+  "prefab": "./../kitchen.mochi_prefab",
+  "prefabOverrides": [],
+  "loads": [],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "plate_sink/plate"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "plate_shelf_1/plate"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "plate_shelf_2/plate"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "plate_cabinet_1/plate"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "jar/jar_body"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "jar/jar_lid"
+    },
+    {
+      "kind": "JointState",
+      "target": "switch/switch/toggle_left_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "cabinet/cabinet/door_left_joint"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 4.0,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "plate_sink/plate.pos.z",
+        "plate_shelf_1/plate.pos.z",
+        "plate_shelf_2/plate.pos.z",
+        "plate_cabinet_1/plate.pos.z",
+        "jar/jar_body.pos.z",
+        "jar/jar_lid.pos.z"
+      ],
+      "height": 160
+    }
+  ]
+}

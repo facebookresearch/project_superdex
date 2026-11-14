@@ -1,0 +1,85 @@
+{
+  "comment": "Press the pump head with a force that grows to 12 N over 2 s, then let go. It should start to move at about 3 N, bottom out after 25 mm at about 9 N, and spring back up within a fraction of a second.",
+  "assetsRoot": "",
+  "prefab": "./../dispenser.mochi_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "press",
+      "enabled": true,
+      "type": "Force",
+      "target": "dispenser/pump",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        0,
+        0,
+        0.06
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.0,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 2.0,
+            "value": 12.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 2.0,
+            "value": 0.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 3.0,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "JointState",
+      "target": "dispenser/pump_joint"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 3.0,
+    "groundPlane": false,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "load.press.mag",
+        "dispenser/pump_joint.q0"
+      ],
+      "height": 160
+    }
+  ]
+}

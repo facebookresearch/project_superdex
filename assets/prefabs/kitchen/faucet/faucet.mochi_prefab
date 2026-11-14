@@ -1,0 +1,114 @@
+{
+  "_comment": "Single-lever faucet: the base is fixed in the world, the spout swivels +-57 deg about Z and the upright lever tilts on a spherical joint (29 deg outward, and swings +-29 deg). Joint friction holds both where they are left.",
+  "actors": {
+    "articulated": [
+      {
+        "name": "faucet",
+        "joints": [
+          {
+            "name": "base_joint",
+            "type": "Hard"
+          },
+          {
+            "name": "spout_joint",
+            "type": "Revolute",
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "minLimit": [
+              0,
+              0,
+              -1.0
+            ],
+            "maxLimit": [
+              0,
+              0,
+              1.0
+            ],
+            "friction": {
+              "viscous": 0.05,
+              "coulomb": 0.12,
+              "falloffVel": 0.02
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 2.0
+          },
+          {
+            "name": "handle_joint",
+            "type": "Spherical",
+            "parentLinkFromJoint": {
+              "translation": [
+                0,
+                0.06711,
+                0.10711
+              ],
+              "rotation": [
+                -0.382683432,
+                0.0,
+                0.0,
+                0.923879533
+              ]
+            },
+            "minLimit": [
+              -0.5,
+              -0.02,
+              -0.5
+            ],
+            "maxLimit": [
+              0.0,
+              0.02,
+              0.5
+            ],
+            "friction": {
+              "viscous": 0.01,
+              "coulomb": 0.06,
+              "falloffVel": 0.02
+            },
+            "limitStiffness": 200.0,
+            "limitDamping": 0.5
+          }
+        ],
+        "links": [
+          {
+            "name": "base",
+            "parentLink": -1,
+            "colliderType": "Sdf",
+            "density": 2000,
+            "renderModel": "./render/faucet_base.glb",
+            "shape": "./collision/faucet_base.mochi.h5",
+            "contact": {
+              "coulombFrictionCoefficient": 0.4,
+              "penaltyCoefficient": 100000000000.0
+            }
+          },
+          {
+            "name": "spout",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 1500,
+            "renderModel": "./render/faucet_spout.glb",
+            "shape": "./collision/faucet_spout.mochi.h5",
+            "contact": {
+              "coulombFrictionCoefficient": 0.4,
+              "penaltyCoefficient": 100000000000.0
+            }
+          },
+          {
+            "name": "handle",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 1000,
+            "renderModel": "./render/faucet_handle.glb",
+            "shape": "./collision/faucet_handle.mochi.h5",
+            "contact": {
+              "coulombFrictionCoefficient": 0.4,
+              "penaltyCoefficient": 100000000000.0
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

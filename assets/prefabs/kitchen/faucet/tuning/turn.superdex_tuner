@@ -1,0 +1,122 @@
+{
+  "comment": "Turn the spout with a torque that grows to 0.3 N m over 1 s, then tilt the upright lever outward with one that grows to 0.15 N m. The spout should start to turn at about 0.15 N m and the lever at about 0.1 N m; each should stay where it is left when the torque stops.",
+  "assetsRoot": "",
+  "prefab": "./../faucet.mochi_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "swivel",
+      "enabled": true,
+      "type": "Torque",
+      "target": "faucet/spout",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        1
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.0,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 1.0,
+            "value": 0.3,
+            "interpolation": "Step"
+          },
+          {
+            "time": 1.0,
+            "value": 0.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 2.0,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    },
+    {
+      "name": "lift",
+      "enabled": true,
+      "type": "Torque",
+      "target": "faucet/handle",
+      "frame": "Local",
+      "direction": [
+        -1,
+        0,
+        0
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0,
+            "value": 0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 2.0,
+            "value": 0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 3.0,
+            "value": 0.15,
+            "interpolation": "Step"
+          },
+          {
+            "time": 3.0,
+            "value": 0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "JointState",
+      "target": "faucet/spout_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "faucet/handle_joint"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 4.0,
+    "groundPlane": false,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "faucet/spout_joint.q0",
+        "faucet/handle_joint.q0",
+        "faucet/handle_joint.q2"
+      ],
+      "height": 160
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "_comment": "Counter section with an inset stainless basin, fixed in the world. The countertop is at Z = 0, 1 m above the floor the counter stands on, and the basin is centered on the origin. A strainer sleeve lines the drain; below it, the disposal blade spins freely.",
+  "actors": {
+    "articulated": [
+      {
+        "name": "sink",
+        "joints": [
+          {
+            "name": "counter_joint",
+            "type": "Hard"
+          },
+          {
+            "name": "drain_joint",
+            "type": "Hard"
+          },
+          {
+            "name": "disposal_base_joint",
+            "type": "Hard",
+            "parentLinkFromJoint": {
+              "translation": [
+                0,
+                0,
+                -0.18
+              ]
+            }
+          },
+          {
+            "name": "disposal_blade_joint",
+            "type": "Revolute",
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0,
+                0,
+                -0.18
+              ]
+            },
+            "friction": {
+              "viscous": 0.0005,
+              "coulomb": 0.002,
+              "falloffVel": 0.02
+            }
+          }
+        ],
+        "links": [
+          {
+            "name": "counter",
+            "parentLink": -1,
+            "colliderType": "Sdf",
+            "density": 2000,
+            "renderModel": "./render/sink_counter.glb",
+            "shape": "./collision/sink_counter.mochi.h5",
+            "contact": {
+              "coulombFrictionCoefficient": 0.4,
+              "penaltyCoefficient": 100000000000.0
+            }
+          },
+          {
+            "name": "drain",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 2000,
+            "renderModel": "./render/sink_drain.glb",
+            "shape": "./collision/sink_drain.mochi.h5",
+            "contact": {
+              "coulombFrictionCoefficient": 0.4,
+              "penaltyCoefficient": 100000000000.0
+            }
+          },
+          {
+            "name": "disposal_base",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 2000,
+            "renderModel": "./render/sink_disposal_base.glb",
+            "shape": "./collision/sink_disposal_base.mochi.h5",
+            "contact": {
+              "coulombFrictionCoefficient": 0.4,
+              "penaltyCoefficient": 100000000000.0
+            }
+          },
+          {
+            "name": "disposal_blade",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 2000,
+            "renderModel": "./render/sink_disposal_blade.glb",
+            "shape": "./collision/sink_disposal_blade.mochi.h5",
+            "contact": {
+              "coulombFrictionCoefficient": 0.4,
+              "penaltyCoefficient": 100000000000.0
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

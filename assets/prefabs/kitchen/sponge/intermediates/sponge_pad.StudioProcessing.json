@@ -1,0 +1,112 @@
+{
+  "editorState": {
+    "cadRotation": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "cadScale": [
+      1,
+      1,
+      1
+    ],
+    "cadTranslation": [
+      0,
+      0,
+      0
+    ]
+  },
+  "modifiers": [
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "From Model Viewer",
+      "modifier": "Source from Render Model",
+      "properties": {}
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "From Model Viewer",
+      "modifier": "Source from CAD Model",
+      "properties": {
+        "allowPartialFailure": true,
+        "angularDeflection": 0.25,
+        "backend": "Isotropic",
+        "combineTouchingSolids": true,
+        "edgeSampling": "Uniform",
+        "linearDeflection": 0.05,
+        "targetEdgeLength": 0,
+        "targetEdgeLengthFraction": 0.02
+      }
+    },
+    {
+      "collapsed": true,
+      "enabled": true,
+      "method": "Make Manifold",
+      "modifier": "Refine Mesh",
+      "properties": {
+        "thenMakeWatertight": true
+      }
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "Alpha Wrap",
+      "modifier": "Wrap Mesh",
+      "properties": {
+        "relativeAlpha": 1.0,
+        "relativeOffset": 0.0,
+        "edgeSize": 0.005,
+        "relativeToMeshSize": false
+      }
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "Incremental Isotropic Remesh",
+      "modifier": "Remesh",
+      "properties": {
+        "edgeSize": 0.01,
+        "relativeToMeshSize": false,
+        "detectFeatures": true,
+        "sharpFeatureAngle": 60.0,
+        "smoothingIterations": 3,
+        "relaxationStepsPerIteration": 3
+      }
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "Constrained Delaunay",
+      "modifier": "Tetrahedralize",
+      "properties": {
+        "edgeSize": 0.01,
+        "relativeToMeshSize": false,
+        "iterations": 10,
+        "strict": false
+      }
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "Upstream Surface",
+      "modifier": "Embed Visual Mesh",
+      "properties": {
+        "referenceIndex": 0
+      }
+    },
+    {
+      "collapsed": false,
+      "enabled": true,
+      "method": "SDF",
+      "modifier": "Export Mochi Model",
+      "properties": {
+        "bakeSdf": false
+      }
+    }
+  ],
+  "referenceModels": [],
+  "version": 1
+}

@@ -1,0 +1,43 @@
+{
+  "_comment": "Glass jar with a screw-on plastic lid (two rigid actors). The lid starts screwed on; it unscrews in about a turn along the threads.",
+  "actors": {
+    "rigid": [
+      {
+        "name": "jar_body",
+        "shape": "./collision/jar_body.mochi.h5",
+        "renderModel": "./render/jar_body.glb",
+        "colliderType": "Sdf",
+        "density": 1500,
+        "contact": {
+          "coulombFrictionCoefficient": 0.5,
+          "penaltyCoefficient": 1000000000000.0,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltySmoothingHalfDistance": 0.001
+        },
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "name": "jar_lid",
+        "shape": "./collision/jar_lid.mochi.h5",
+        "renderModel": "./render/jar_lid.glb",
+        "colliderType": "Sdf",
+        "density": 1000,
+        "contact": {
+          "coulombFrictionCoefficient": 0.6,
+          "penaltyCoefficient": 1000000000000.0,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltySmoothingHalfDistance": 0.001
+        },
+        "translation": [
+          0.0,
+          0.0,
+          0.1092
+        ]
+      }
+    ]
+  }
+}

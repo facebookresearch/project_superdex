@@ -1,0 +1,345 @@
+{
+  "comment": "Pinch the pad between two OpenXR index fingertips near one end, each pushing with up to 5 N (a firm finger pinch), drag the pinched end 45 mm away from the grip, then let go, while the grip is held still. The pad should dent and stretch smoothly without folding or splintering, and spring back. superdex_asset_tuner records sim.h5; its pad elements should not invert.",
+  "assetsRoot": "",
+  "prefab": "./pinch.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "pinch_a",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "finger_a",
+      "frame": "World",
+      "pointLocal": [
+        0,
+        0,
+        -0.012
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0.034,
+            0.048,
+            0.0114
+          ],
+          "rotation": [
+            -1.5707963,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.5,
+          "position": [
+            0.034,
+            0.035,
+            0.0114
+          ],
+          "rotation": [
+            -1.5707963,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.2,
+          "position": [
+            0.034,
+            0.017,
+            0.0114
+          ],
+          "rotation": [
+            -1.5707963,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.8,
+          "position": [
+            0.034,
+            0.017,
+            0.0114
+          ],
+          "rotation": [
+            -1.5707963,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 2.6,
+          "position": [
+            0.079,
+            0.017,
+            0.0034000000000000002
+          ],
+          "rotation": [
+            -1.5707963,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 3.2,
+          "position": [
+            0.079,
+            0.017,
+            0.0034000000000000002
+          ],
+          "rotation": [
+            -1.5707963,
+            0,
+            0
+          ],
+          "interpolation": "Step",
+          "drive": "On"
+        },
+        {
+          "time": 3.3,
+          "position": [
+            0.079,
+            0.058,
+            0.0034000000000000002
+          ],
+          "rotation": [
+            -1.5707963,
+            0,
+            0
+          ],
+          "interpolation": "Step",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 100,
+        "rotation": true,
+        "rotResponseHz": 15,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    },
+    {
+      "name": "pinch_b",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "finger_b",
+      "frame": "World",
+      "pointLocal": [
+        0,
+        0,
+        -0.012
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0.034,
+            -0.048,
+            0.0114
+          ],
+          "rotation": [
+            1.5707963,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.5,
+          "position": [
+            0.034,
+            -0.035,
+            0.0114
+          ],
+          "rotation": [
+            1.5707963,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.2,
+          "position": [
+            0.034,
+            -0.017,
+            0.0114
+          ],
+          "rotation": [
+            1.5707963,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.8,
+          "position": [
+            0.034,
+            -0.017,
+            0.0114
+          ],
+          "rotation": [
+            1.5707963,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 2.6,
+          "position": [
+            0.079,
+            -0.017,
+            0.0034000000000000002
+          ],
+          "rotation": [
+            1.5707963,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 3.2,
+          "position": [
+            0.079,
+            -0.017,
+            0.0034000000000000002
+          ],
+          "rotation": [
+            1.5707963,
+            0,
+            0
+          ],
+          "interpolation": "Step",
+          "drive": "On"
+        },
+        {
+          "time": 3.3,
+          "position": [
+            0.079,
+            -0.058,
+            0.0034000000000000002
+          ],
+          "rotation": [
+            1.5707963,
+            0,
+            0
+          ],
+          "interpolation": "Step",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 100,
+        "rotation": true,
+        "rotResponseHz": 15,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    },
+    {
+      "name": "hold",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "sponge/sponge_grip",
+      "frame": "World",
+      "pointLocal": [
+        0,
+        0,
+        0
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0,
+            0,
+            0.0238
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Step",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 60,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 60,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "ContactForce",
+      "target": "finger_a"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "finger_b"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "sponge/sponge_grip"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 4.0,
+    "groundPlane": false,
+    "record": {
+      "enabled": true,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "finger_a.contactForce.y",
+        "finger_b.contactForce.y"
+      ],
+      "height": 160
+    }
+  ]
+}

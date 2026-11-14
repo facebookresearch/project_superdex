@@ -1,0 +1,1081 @@
+{
+  "_comment": "Kitchen sponge: a rigid grip on top of a soft foam pad. The pad hangs from the grip by its top 5 mm: every pad node there is tied to the grip.",
+  "actors": {
+    "rigid": [
+      {
+        "name": "sponge_grip",
+        "shape": "./collision/sponge_grip.mochi.h5",
+        "renderModel": "./render/sponge_grip.glb",
+        "colliderType": "Sdf",
+        "density": 150,
+        "contact": {
+          "coulombFrictionCoefficient": 0.6,
+          "penaltyCoefficient": 100000000000.0
+        },
+        "translation": [
+          0.0,
+          0.0,
+          0.0238
+        ]
+      }
+    ],
+    "soft": [
+      {
+        "name": "sponge_pad",
+        "shape": "./collision/sponge_pad.mochi.h5",
+        "renderModel": "./render/sponge_pad.glb",
+        "material": {
+          "neoHookean": {
+            "youngsModulus": 25000.0,
+            "poissonRatio": 0.2
+          },
+          "density": 60.0,
+          "stiffnessDampingCoefficient": 0.01
+        },
+        "contact": {
+          "coulombFrictionCoefficient": 0.9,
+          "penaltyCoefficient": 100000000000.0
+        }
+      }
+    ]
+  },
+  "constraints": {
+    "deformableNodeToRigid": [
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 1,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 2,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 3,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 6,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 7,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 8,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 10,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 17,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 18,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 21,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 23,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 24,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 25,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 26,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 33,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 35,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 36,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 37,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 40,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 42,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 44,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 45,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 49,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 50,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 51,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 54,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 55,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 58,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 60,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 61,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 62,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 63,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 64,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 65,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 67,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 70,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 73,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 76,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 78,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 81,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 84,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 88,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 89,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 90,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 92,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 96,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 97,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 98,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 99,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 104,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 105,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 106,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 107,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 110,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 113,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 114,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 120,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 121,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 126,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 127,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 132,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 138,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 139,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 148,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 153,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 156,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 158,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 164,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 165,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 168,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 170,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 173,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 174,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 178,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 180,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 188,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 191,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 197,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 200,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 203,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 215,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 218,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 219,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 225,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 229,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 230,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 235,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 236,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 241,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 246,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 249,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 250,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 252,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 255,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 258,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 259,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 260,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 264,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 265,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 266,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 268,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 272,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 273,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 274,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 281,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 284,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 286,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 291,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 295,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 310,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 349,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 362,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 365,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 429,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      },
+      {
+        "deformableActor": "sponge_pad",
+        "rigidActor": "sponge_grip",
+        "findClosest": false,
+        "fixToDeformablePos": true,
+        "deformableNodeIndex": 432,
+        "stiffness": 1739.1304,
+        "damping": 1.73913
+      }
+    ]
+  }
+}

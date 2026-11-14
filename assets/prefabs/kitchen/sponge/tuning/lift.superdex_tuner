@@ -1,0 +1,23 @@
+{
+  "comment": "Lift the sponge by its grip 10 cm off the ground, wave it side to side, then press it down onto the ground with 30 N (a firm hand press) and let go. The pad should hang on the grip without sagging off it, squash under the press, and spring back.",
+  "assetsRoot": "", "prefab": "./../sponge.mochi_prefab", "prefabOverrides": [],
+  "loads": [
+    {"name": "lift", "enabled": true, "type": "PosePath", "target": "sponge_grip", "pointLocal": [0, 0, 0.02],
+     "waypoints": [
+       {"time": 0.0, "position": [0, 0, 0.05], "rotation": [0, 0, 0], "drive": "Off"},
+       {"time": 0.5, "position": [0, 0, 0.05], "rotation": [0, 0, 0]},
+       {"time": 1.0, "position": [0, 0, 0.15], "rotation": [0, 0, 0]},
+       {"time": 1.5, "position": [0.1, 0, 0.15], "rotation": [0, 0, 0]},
+       {"time": 2.0, "position": [-0.1, 0, 0.15], "rotation": [0, 0, 0]},
+       {"time": 2.5, "position": [0, 0, 0.15], "rotation": [0, 0, 0]},
+       {"time": 3.0, "position": [0, 0, 0.05], "rotation": [0, 0, 0], "drive": "Off"}],
+     "drive": {"responseHz": 6, "dampingRatio": 1, "maxAcceleration": 30, "rotation": true}},
+    {"name": "press", "enabled": true, "type": "Force", "target": "sponge_grip", "frame": "World", "direction": [0, 0, -1],
+     "pointLocal": [0, 0, 0.02], "profile": {"kind": "Envelope", "magnitude": 30, "riseTime": 0.3, "fallTime": 0.3, "start": 3.5, "end": 4.5}}],
+  "probes": [{"kind": "SolverStats", "target": ""}, {"kind": "Performance", "target": ""},
+             {"kind": "BodyPose", "target": "sponge_grip"}, {"kind": "ContactForce", "target": "sponge_grip"}],
+  "stopConditions": [],
+  "run": {"singleThreaded": true, "dt": 0.005, "duration": 5.5, "groundPlane": true,
+          "record": {"enabled": true, "contactPoints": false, "staticActors": false}},
+  "plots": [{"channels": ["sponge_grip.pos.z", "load.lift.mag", "load.press.mag"], "height": 160}]
+}
