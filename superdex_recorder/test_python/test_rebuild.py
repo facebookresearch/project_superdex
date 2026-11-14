@@ -29,7 +29,7 @@ import superdex.robotics as sdr
 from superdex.physics.paths import resolve_asset
 from superdex.physics.utils.scene_helpers import load_bot_scene
 from superdex.recorder.reader import EpisodeReader
-from superdex.recorder.rebuild import _retire_unselected_bots
+from superdex.recorder.rebuild import _recorded_bots
 
 BOT_SCENE_PATH = resolve_asset(
     "bots/internal/tests/bot_scene/test_bot_scene.mochi_bot_scene"
@@ -616,10 +616,14 @@ class RebuildSceneTest(unittest.TestCase):
                 {"name": "spare", "controlledBots": [SLOT_BOTS[1]]},
             ]
         )
-        bot_scene = load_bot_scene(str(scene_path), self.context)
-        _retire_unselected_bots(bot_scene, {"scene.slot.right": SLOT_BOTS[0]})
-        for bot in SLOT_BOTS:
-            self.assertIsNotNone(bot_scene.get_bot(bot))
+        prefab = sdr.load_bot_scene_prefab_from_file(str(scene_path))
+        self.assertEqual(
+            _recorded_bots(prefab, {"scene.slot.right": SLOT_BOTS[0]}), list(SLOT_BOTS)
+        )
+        # A lab records "" for a slot it leaves unchosen, which builds none of its bots.
+        self.assertEqual(
+            _recorded_bots(prefab, {"scene.slot.right": "", "scene.slot.spare": ""}), []
+        )
 
     def test_rejects_slot_choice_the_scene_does_not_offer(self) -> None:
         live, spawned = self.load_live_scene()

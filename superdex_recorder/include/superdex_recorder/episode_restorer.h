@@ -18,6 +18,7 @@
 
 #include <superdex_recorder/episode_reader.h>
 #include <superdex_recorder/export.h>
+#include <superdex_recorder/frame_bank.h>
 
 #include <mochi_core/utils/error.h>
 #include <mochi_physics/cpp_api/mochi_scene.h>
@@ -48,34 +49,6 @@ struct RecordedActor {
 std::vector<RecordedActor>
 BindRecordedActors(mochi::Scene& scene, EpisodeReader const& recording, mochi::Error& error);
 
-/* @brief Recorded state of one dynamic actor at every frame, concatenated in frame order. */
-struct RestoredActor {
-  mochi::ActorHandle handle;
-  mochi::ActorType type = mochi::ActorType::None;
-  /* xyzw per frame. */
-  std::vector<mochi::real> rootRotations;
-  /* Rigid actors: center-of-mass position and velocities, xyz per frame. */
-  std::vector<mochi::real> comTranslations;
-  std::vector<mochi::real> linearVelocities;
-  std::vector<mochi::real> angularVelocities;
-  /* Articulated, soft and rod actors: root position, xyz per frame. */
-  std::vector<mochi::real> rootTranslations;
-  /* Soft and rod actors, in the actor's frame: displacements are xyz per node per frame, and
-   * node velocities one value per DoF per frame. */
-  std::vector<mochi::real> displacements;
-  std::vector<mochi::real> nodeVelocities;
-  /* Rod actors: xyz per element per frame, in the actor's frame. */
-  std::vector<mochi::real> elementFrameAxes;
-  /* Articulated actors: one value per DoF per frame. */
-  std::vector<mochi::real> jointPositions;
-  std::vector<mochi::real> jointVelocities;
-  /* Empty for actors without a pose controller. */
-  std::vector<mochi::real> controllerTargets;
-  /* External forces during the step after each frame, one value per DoF per frame. Empty for
-   * actors without recorded joint efforts. */
-  std::vector<mochi::real> jointEfforts;
-};
-
 /* @brief Restores a scene to the end of any recorded step.
  * Each restore sets the scene clock, each actor's state through the public setters, pose-controller
  * targets, and external forces, then takes a zero step. The integrator starts afresh from the
@@ -91,24 +64,34 @@ class SUPERDEX_RECORDER_API EpisodeRestorer final {
    * destroyed during the episode are not supported. */
   static std::unique_ptr<EpisodeRestorer>
   Create(mochi::Scene& scene, EpisodeReader const& recording, mochi::Error& error);
+  /* @brief Binds a bank's actors once, as BindRecordedActors does. Every episode must list the same
+   * actors. A restore places each static actor at its episode's pose. Dynamic scene actors that
+   * the bank does not hold keep their state, though a restore may wake them. */
+  static std::unique_ptr<EpisodeRestorer>
+  Create(mochi::Scene& scene, std::shared_ptr<FrameBank const> bank, mochi::Error& error);
   ~EpisodeRestorer();
 
-  /* Recorded frame numbers, by frame index. */
+  /* Recorded frame numbers of the first episode, by frame index. */
   [[nodiscard]] std::vector<int64_t> const& GetFrames() const;
   /* Sorted by path, including static actors. */
   [[nodiscard]] std::vector<RecordedActor> const& GetActors() const;
 
+  /* Restores a frame of the first episode. */
   void RestoreFrame(size_t frameIndex, mochi::Error& error);
+  void RestoreFrame(size_t episode, size_t frameIndex, mochi::Error& error);
 
  private:
-  explicit EpisodeRestorer(mochi::Scene& scene);
+  EpisodeRestorer(
+      mochi::Scene& scene,
+      std::shared_ptr<FrameBank const> bank,
+      std::vector<RecordedActor> actors);
 
   mochi::Scene& _scene;
+  std::shared_ptr<FrameBank const> _bank;
   std::vector<int64_t> _frames;
-  std::vector<double> _simulationTimesSec;
-  std::vector<double> _stepDtsSec;
   std::vector<RecordedActor> _recordedActors;
-  std::vector<RestoredActor> _actors;
+  /* DOF indices 0, 1, ..., for every restore. */
+  std::vector<int> _dofIndices;
 };
 
 } // namespace superdex::recorder

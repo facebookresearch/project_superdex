@@ -35,6 +35,9 @@ namespace {
 constexpr std::string_view kActorArchetype = "superdex.archetypes.PhysicsActor";
 constexpr std::string_view kContactArchetype = "superdex.archetypes.PhysicsContacts";
 constexpr std::string_view kFrameArchetype = "superdex.archetypes.PhysicsFrame";
+constexpr char const* kGravityComponent = "superdex.physics.gravity_xyz";
+constexpr char const* kCenterOfMassComponent = "superdex.physics.center_of_mass_local";
+constexpr char const* kMomentOfInertiaComponent = "superdex.physics.moment_of_inertia_local";
 
 ComponentField ActorField(std::string component) {
   return {std::string{kActorArchetype}, std::move(component)};
@@ -256,6 +259,10 @@ PhysicsRecorder::PhysicsRecorder(
           FrameField("superdex.physics.step_dt_sec"),
       },
       error);
+  mochi::Real3 const gravity = scene.GetGravity();
+  std::array<double, 3> const gravityValues{gravity[0], gravity[1], gravity[2]};
+  _episode.WriteConstantScalars(
+      "data/physics/frames", FrameField(kGravityComponent), gravityValues, error);
   std::vector<std::string> const contactParamNames{
       kContactParamNames.begin(), kContactParamNames.end()};
   _episode.WriteConstantTexts(
@@ -619,6 +626,23 @@ void PhysicsRecorder::WritePhysicalParameters(
   std::array<double, 1> const mass{static_cast<double>(actor.GetMass(massError))};
   if (massError.IsOK()) {
     _episode.WriteConstantScalars(path, ActorField("superdex.physics.mass"), mass, error);
+  }
+  if (actor.GetType() != mochi::ActorType::Rigid) {
+    return;
+  }
+  // Mochi reports these for dynamic rigid bodies and, for the center of mass, links.
+  mochi::Error comError;
+  mochi::Real3 const com = actor.GetRigidCenterOfMassLocal(comError);
+  if (comError.IsOK()) {
+    std::array<double, 3> const values{com[0], com[1], com[2]};
+    _episode.WriteConstantScalars(path, ActorField(kCenterOfMassComponent), values, error);
+  }
+  mochi::Error inertiaError;
+  mochi::Real6 const inertia = actor.GetRigidMomentOfInertiaLocal(inertiaError);
+  if (inertiaError.IsOK()) {
+    std::array<double, 6> values{};
+    std::copy(inertia.begin(), inertia.end(), values.begin());
+    _episode.WriteConstantScalars(path, ActorField(kMomentOfInertiaComponent), values, error);
   }
 }
 

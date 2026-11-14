@@ -18,11 +18,13 @@
 
 #include <superdex_recorder/formatted_error.h>
 
+#include <mochi_core/utils/quaternion_utils.h>
 #include <mochi_physics/mochi_physics_experimental.h>
 
 #include <algorithm>
 #include <cmath>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <numeric>
 #include <optional>
@@ -34,36 +36,44 @@
 namespace superdex::recorder {
 namespace {
 
+using mochi::operator""_r;
+
+constexpr std::string_view kRobotId = "superdex.robotics.robot_id";
+constexpr std::string_view kControllerId = "superdex.robotics.controller_id";
+constexpr std::string_view kRoboticsPrefix = "superdex.robotics.";
+
 // A static actor must be this close to its recorded pose, in quaternion and translation [m].
 constexpr double kStaticPoseTolerance = 1e-5;
 
-mochi::Real3 GetXyz(std::vector<mochi::real> const& values, size_t frameIndex) {
+using Values = mochi::DynamicArray<mochi::real>;
+
+mochi::Real3 GetXyz(Values const& values, size_t frameIndex) {
   size_t const offset = 3 * frameIndex;
   return {values[offset], values[offset + 1], values[offset + 2]};
 }
 
-mochi::Quaternion GetXyzw(std::vector<mochi::real> const& values, size_t frameIndex) {
+mochi::Quaternion GetXyzw(Values const& values, size_t frameIndex) {
   size_t const offset = 4 * frameIndex;
   return mochi::Quaternion{
       values[offset], values[offset + 1], values[offset + 2], values[offset + 3]};
 }
 
 mochi::Span<mochi::real const>
-GetFrameValues(std::vector<mochi::real> const& values, size_t frameIndex, size_t width) {
+GetFrameValues(Values const& values, size_t frameIndex, size_t width) {
   return {values.data() + frameIndex * width, width};
 }
 
-mochi::TransformRT GetWorldFromCom(RestoredActor const& actor, size_t frameIndex) {
+mochi::TransformRT GetWorldFromCom(BankActor const& actor, size_t frameIndex) {
   return mochi::TransformRT{
       GetXyzw(actor.rootRotations, frameIndex), GetXyz(actor.comTranslations, frameIndex)};
 }
 
-mochi::TransformRT GetWorldFromRoot(RestoredActor const& actor, size_t frameIndex) {
+mochi::TransformRT GetWorldFromRoot(BankActor const& actor, size_t frameIndex) {
   return mochi::TransformRT{
       GetXyzw(actor.rootRotations, frameIndex), GetXyz(actor.rootTranslations, frameIndex)};
 }
 
-bool HasFrames(std::vector<mochi::real> const& values, size_t width, size_t numFrames) {
+bool HasFrames(Values const& values, size_t width, size_t numFrames) {
   return values.size() == width * numFrames;
 }
 
@@ -291,33 +301,36 @@ void ValidateStaticPose(
   }
 }
 
-RestoredActor ReadRestoredActor(
+/* Reads an actor's state at each frame; a static actor's pose at the first frame. */
+void ReadBankActor(
     EpisodeReader const& recording,
     RecordedActor const& actor,
     std::vector<int64_t> const& frames,
     std::map<std::string, std::vector<mochi::real>>& efforts,
+    BankActor& restored,
     mochi::Error& error) {
+  std::vector<int64_t> const firstFrame{frames.front()};
   auto const read = [&](std::string_view state) {
-    return ReadStates(recording, actor, state, frames, error);
+    return Values(ReadStates(recording, actor, state, actor.isStatic ? firstFrame : frames, error));
   };
-  RestoredActor restored;
-  restored.handle = actor.handle;
-  restored.type = actor.type;
   restored.rootRotations = read("root_quaternion_xyzw");
-  if (actor.type == mochi::ActorType::Rigid) {
+  if (actor.type == mochi::ActorType::Rigid && !actor.isStatic) {
     restored.comTranslations = read("com_translation_xyz");
     restored.linearVelocities = read("linear_velocity_xyz");
     restored.angularVelocities = read("angular_velocity_xyz");
-    return restored;
+    return;
   }
   restored.rootTranslations = read("root_translation_xyz");
+  if (actor.isStatic) {
+    return;
+  }
   if (actor.type == mochi::ActorType::Soft || actor.type == mochi::ActorType::Rod) {
     restored.displacements = read("displacements");
     restored.nodeVelocities = read("node_velocities");
     if (actor.type == mochi::ActorType::Rod) {
       restored.elementFrameAxes = read("element_frame_axes");
     }
-    return restored;
+    return;
   }
   restored.jointPositions = read("joint_positions");
   restored.jointVelocities = read("joint_velocities");
@@ -325,15 +338,18 @@ RestoredActor ReadRestoredActor(
   if (recording.HasComponent(actor.path, "superdex.physics.controller_target_positions", false)) {
     restored.controllerTargets = read("controller_target_positions");
   }
-  restored.jointEfforts = std::move(efforts[actor.path]);
-  return restored;
+  restored.jointEfforts = Values(efforts[actor.path]);
 }
 
 bool HasStatePerFrame(
-    RestoredActor const& actor,
+    BankActor const& actor,
+    mochi::ActorType type,
     mochi::Actor const& sceneActor,
     size_t numFrames) {
-  if (actor.type == mochi::ActorType::Rigid) {
+  if (actor.isStatic) {
+    return HasFrames(actor.rootRotations, 4, 1) && HasFrames(actor.rootTranslations, 3, 1);
+  }
+  if (type == mochi::ActorType::Rigid) {
     return HasFrames(actor.rootRotations, 4, numFrames) &&
         HasFrames(actor.comTranslations, 3, numFrames) &&
         HasFrames(actor.linearVelocities, 3, numFrames) &&
@@ -342,11 +358,11 @@ bool HasStatePerFrame(
   auto const numDofs = static_cast<size_t>(sceneActor.GetNumDofs());
   bool const hasRoot = HasFrames(actor.rootRotations, 4, numFrames) &&
       HasFrames(actor.rootTranslations, 3, numFrames);
-  if (actor.type == mochi::ActorType::Soft) {
+  if (type == mochi::ActorType::Soft) {
     return hasRoot && HasFrames(actor.displacements, numDofs, numFrames) &&
         HasFrames(actor.nodeVelocities, numDofs, numFrames);
   }
-  if (actor.type == mochi::ActorType::Rod) {
+  if (type == mochi::ActorType::Rod) {
     auto const mesh = sceneActor.GetMesh();
     return hasRoot && HasFrames(actor.displacements, mesh.coordinates.size(), numFrames) &&
         HasFrames(
@@ -359,10 +375,49 @@ bool HasStatePerFrame(
       (actor.jointEfforts.empty() || HasFrames(actor.jointEfforts, numDofs, numFrames));
 }
 
-} // namespace
+/* Checks that an episode holds the state of each bound actor at each frame, as wide as the scene
+ * actor. */
+void ValidateStates(
+    mochi::Scene& scene,
+    BankEpisode const& episode,
+    std::vector<RecordedActor> const& recorded,
+    mochi::Error& error) {
+  size_t const numFrames = episode.frames.size();
+  MOCHI_ERROR_IF(
+      numFrames == 0 || episode.simulationTimesSec.size() != numFrames ||
+          episode.stepDtsSec.size() != numFrames || episode.actors.size() != recorded.size(),
+      error,
+      "A bank episode has no valid frames or other actors.");
+  for (size_t i = 0; i < recorded.size() && error.IsOK(); ++i) {
+    mochi::Actor const* const sceneActor = scene.GetActor(recorded[i].handle);
+    if (sceneActor == nullptr) {
+      MOCHI_ERROR_SET(error, "A recorded actor was destroyed.");
+      return;
+    }
+    if (!HasStatePerFrame(episode.actors[i], recorded[i].type, *sceneActor, numFrames)) {
+      SUPERDEX_ERROR_SET(
+          error,
+          "Recorded states of '%s' do not match the degrees of freedom of scene actor '%s'.",
+          recorded[i].path.c_str(),
+          sceneActor->GetName());
+    }
+  }
+}
 
-std::vector<RecordedActor>
-BindRecordedActors(mochi::Scene& scene, EpisodeReader const& recording, mochi::Error& error) {
+bool HaveSameActors(BankEpisode const& a, BankEpisode const& b) {
+  return std::equal(
+      a.actors.begin(),
+      a.actors.end(),
+      b.actors.begin(),
+      b.actors.end(),
+      [](BankActor const& x, BankActor const& y) {
+        return x.path == y.path && x.runtimeName == y.runtimeName && x.spawnName == y.spawnName &&
+            x.type == y.type && x.isStatic == y.isStatic;
+      });
+}
+
+/* Reads each recorded actor's names, type and static flag, sorted by path. */
+mochi::DynamicArray<BankActor> ReadActors(EpisodeReader const& recording, mochi::Error& error) {
   auto const runtimeNames =
       ReadStaticValues<std::string>(recording, "superdex.physics.runtime_name", error);
   auto const spawnNames =
@@ -374,6 +429,25 @@ BindRecordedActors(mochi::Scene& scene, EpisodeReader const& recording, mochi::E
       HaveSameKeys(runtimeNames, actorTypes) && HaveSameKeys(runtimeNames, staticFlags),
       error,
       "Recorded actor metadata is incomplete.");
+  MOCHI_ERROR_RETURN(error, {});
+  mochi::DynamicArray<BankActor> actors;
+  for (auto const& [path, runtimeName] : runtimeNames) {
+    actors.emplace_back();
+    BankActor& actor = actors.back();
+    actor.path = path;
+    actor.runtimeName = runtimeName;
+    if (auto const spawnName = spawnNames.find(path); spawnName != spawnNames.end()) {
+      actor.spawnName = spawnName->second;
+    }
+    actor.type = actorTypes.at(path);
+    actor.isStatic = staticFlags.at(path) != 0.0;
+  }
+  return actors;
+}
+
+std::vector<RecordedActor>
+BindActors(mochi::Scene& scene, mochi::DynamicArray<BankActor> const& actors, mochi::Error& error) {
+  MOCHI_ERROR_RETURN(error, {});
   std::map<std::string, mochi::Actor*, std::less<>> sceneActors;
   ForEachTopLevelActor(scene, [&](std::string const& name, mochi::Actor& actor) {
     if (!sceneActors.emplace(name, &actor).second) {
@@ -384,15 +458,19 @@ BindRecordedActors(mochi::Scene& scene, EpisodeReader const& recording, mochi::E
 
   std::vector<RecordedActor> recorded;
   std::map<mochi::Actor const*, std::string> boundPaths;
-  for (auto const& [path, runtimeName] : runtimeNames) {
+  for (BankActor const& banked : actors) {
+    std::string const path{banked.path};
+    std::string const runtimeName{banked.runtimeName};
     // Loading a task names a spawn's bodies "<spawn name>/<name>", and a spawned bot after its
     // spawn.
     std::vector<std::string> names{runtimeName};
-    if (auto const spawnName = spawnNames.find(path); spawnName != spawnNames.end()) {
-      names = {spawnName->second + "/" + runtimeName, spawnName->second, runtimeName};
+    if (!banked.spawnName.empty()) {
+      std::string const spawnName{banked.spawnName};
+      names = {spawnName + "/" + runtimeName, spawnName, runtimeName};
     }
-    auto const name = std::ranges::find_if(
-        names, [&](std::string const& candidate) { return sceneActors.contains(candidate); });
+    auto const name = std::find_if(names.begin(), names.end(), [&](std::string const& candidate) {
+      return sceneActors.contains(candidate);
+    });
     if (name == names.end()) {
       SUPERDEX_ERROR_SET(error, "Scene is missing recorded actor '%s'.", names.front().c_str());
       return {};
@@ -407,13 +485,12 @@ BindRecordedActors(mochi::Scene& scene, EpisodeReader const& recording, mochi::E
           name->c_str());
       return {};
     }
-    std::string const& type = actorTypes.at(path);
-    if (ParseActorType(type) != actor.GetType()) {
+    if (ParseActorType(banked.type) != actor.GetType()) {
       SUPERDEX_ERROR_SET(
           error,
           "Actor '%s' was recorded as %s, but the scene actor is not.",
           runtimeName.c_str(),
-          type.c_str());
+          banked.type.c_str());
       return {};
     }
     recorded.push_back({
@@ -421,58 +498,215 @@ BindRecordedActors(mochi::Scene& scene, EpisodeReader const& recording, mochi::E
         .runtimeName = runtimeName,
         .handle = actor.GetHandle(),
         .type = actor.GetType(),
-        .isStatic = staticFlags.at(path) != 0.0,
+        .isStatic = banked.isStatic,
     });
   }
   return recorded;
 }
 
-std::unique_ptr<EpisodeRestorer>
-EpisodeRestorer::Create(mochi::Scene& scene, EpisodeReader const& recording, mochi::Error& error) {
-  MOCHI_ERROR_RETURN(error, nullptr);
-  std::vector<RecordedActor> recorded = BindRecordedActors(scene, recording, error);
-  ValidateUnrecordedActors(scene, recorded, error);
+/* The recording's episode properties. */
+mochi::DynamicArray<BankProperty> ReadProperties(
+    EpisodeReader const& recording,
+    mochi::Error& error) {
+  auto const keys =
+      ReadStaticValues<std::string>(recording, "superdex.episode.property_key", error);
+  auto const values =
+      ReadStaticValues<std::string>(recording, "superdex.episode.property_value", error);
+  MOCHI_ERROR_IF_NOT(
+      HaveSameKeys(keys, values), error, "Recorded episode properties are incomplete.");
+  MOCHI_ERROR_RETURN(error, {});
+  mochi::DynamicArray<BankProperty> properties;
+  for (auto const& [path, key] : keys) {
+    properties.emplace_back();
+    BankProperty& property = properties.back();
+    property.key = key;
+    property.value = values.at(path);
+  }
+  return properties;
+}
+
+/* The kBankTargetFields entry that a recorded component holds, or empty. */
+std::string_view GetTargetField(std::string_view component) {
+  if (!component.starts_with(kRoboticsPrefix)) {
+    return {};
+  }
+  std::string_view const field = component.substr(kRoboticsPrefix.size());
+  bool const isTarget = std::find(kBankTargetFields.begin(), kBankTargetFields.end(), field) !=
+      kBankTargetFields.end();
+  return isTarget ? field : std::string_view{};
+}
+
+/* Reads each recorded robot controller's kBankTargetFields at each frame, from the last row
+ * recorded at or before it; before the first row, NaN. */
+mochi::DynamicArray<BankController> ReadControllers(
+    EpisodeReader const& recording,
+    std::vector<RecordedActor> const& recorded,
+    std::vector<int64_t> const& frames,
+    mochi::Error& error) {
+  auto const robotIds = ReadStaticValues<std::string>(recording, kRobotId, error);
+  auto const controllerIds = ReadStaticValues<std::string>(recording, kControllerId, error);
+  mochi::DynamicArray<BankController> controllers;
+  for (auto const& stored : recording.GetComponents()) {
+    std::string_view const field = GetTargetField(stored.component);
+    if (stored.isStatic || field.empty()) {
+      continue;
+    }
+    MOCHI_ERROR_RETURN(error, {});
+    // A controller records on a child of its own entity, <robot>/controllers/<controller>.
+    std::string const controllerPath = stored.entityPath.substr(0, stored.entityPath.rfind('/'));
+    auto const controllerId = controllerIds.find(controllerPath);
+    auto const robotId =
+        robotIds.find(controllerPath.substr(0, controllerPath.rfind("/controllers/")));
+    auto const isRobot = [&](RecordedActor const& actor) {
+      return robotId != robotIds.end() && actor.type == mochi::ActorType::Articulated &&
+          actor.runtimeName == robotId->second;
+    };
+    if (controllerId == controllerIds.end() ||
+        std::count_if(recorded.begin(), recorded.end(), isRobot) != 1) {
+      SUPERDEX_ERROR_SET(
+          error, "'%s' has no controller of a unique recorded robot.", stored.entityPath.c_str());
+      return {};
+    }
+    ScalarRows const rows = recording.ReadScalars(stored.entityPath, stored.component, error);
+    size_t const width = rows.GetNumRows() == 0 ? 0 : rows.values.size() / rows.GetNumRows();
+    for (size_t row = 0; row < rows.GetNumRows() && error.IsOK(); ++row) {
+      if (rows.GetRow(row).size() != width) {
+        SUPERDEX_ERROR_SET(
+            error,
+            "'%s' changes size at frame %lld.",
+            stored.entityPath.c_str(),
+            static_cast<long long>(rows.frames[row]));
+      }
+    }
+    MOCHI_ERROR_RETURN(error, {});
+    auto const robotActor = static_cast<int32_t>(
+        std::find_if(recorded.begin(), recorded.end(), isRobot) - recorded.begin());
+    auto* controller =
+        std::find_if(controllers.begin(), controllers.end(), [&](BankController const& c) {
+          return c.robotActor == robotActor && std::string_view{c.id} == controllerId->second;
+        });
+    if (controller == controllers.end()) {
+      controllers.emplace_back();
+      controller = &controllers.back();
+      controller->robotActor = robotActor;
+      controller->id = controllerId->second;
+    }
+    std::vector<mochi::real> values;
+    values.reserve(width * frames.size());
+    for (ptrdiff_t const row : FindLatestRows(rows.frames, frames)) {
+      if (row < 0) {
+        values.insert(values.end(), width, std::numeric_limits<mochi::real>::quiet_NaN());
+      } else {
+        AppendRow(rows, row, values);
+      }
+    }
+    controller->targets.emplace_back();
+    BankTarget& target = controller->targets.back();
+    target.name = field;
+    target.width = static_cast<int32_t>(width);
+    target.values = Values(values);
+  }
+  return controllers;
+}
+
+} // namespace
+
+std::vector<RecordedActor>
+BindRecordedActors(mochi::Scene& scene, EpisodeReader const& recording, mochi::Error& error) {
+  return BindActors(scene, ReadActors(recording, error), error);
+}
+
+BankEpisode ReadBankEpisode(EpisodeReader const& recording, mochi::Error& error) {
+  MOCHI_ERROR_RETURN(error, {});
+  BankEpisode episode;
+  episode.properties = ReadProperties(recording, error);
+  episode.actors = ReadActors(recording, error);
   ScalarRows const frames =
       recording.ReadScalars("data/physics/frames", "superdex.physics.step_dt_sec", error);
   MOCHI_ERROR_IF(
       error.IsOK() && (frames.GetNumRows() == 0 || frames.values.size() != frames.GetNumRows()),
       error,
       "The recording has no valid physics frames.");
-  auto efforts = ReadEfforts(recording, recorded, frames.frames, error);
-  MOCHI_ERROR_RETURN(error, nullptr);
-
-  std::unique_ptr<EpisodeRestorer> restorer{new EpisodeRestorer{scene}};
-  restorer->_frames = frames.frames;
-  restorer->_stepDtsSec = frames.values;
+  MOCHI_ERROR_RETURN(error, {});
+  episode.frames = frames.frames;
+  episode.stepDtsSec = frames.values;
   for (int64_t const timeNs : frames.simulationTimesNs) {
-    restorer->_simulationTimesSec.push_back(static_cast<double>(timeNs) / 1e9);
+    episode.simulationTimesSec.push_back(static_cast<double>(timeNs) / 1e9);
   }
-  for (auto const& actor : recorded) {
-    mochi::Actor const* const sceneActor = scene.GetActor(actor.handle);
-    if (sceneActor == nullptr) {
-      MOCHI_ERROR_SET(error, "A recorded actor was destroyed.");
-      return nullptr;
-    }
-    if (actor.isStatic) {
-      ValidateStaticPose(recording, actor, *sceneActor, frames.frames.front(), error);
-      continue;
-    }
-    restorer->_actors.push_back(ReadRestoredActor(recording, actor, frames.frames, efforts, error));
-    if (error.IsOK() &&
-        !HasStatePerFrame(restorer->_actors.back(), *sceneActor, frames.GetNumRows())) {
-      SUPERDEX_ERROR_SET(
-          error,
-          "Recorded states of '%s' do not match the degrees of freedom of scene actor '%s'.",
-          actor.path.c_str(),
-          sceneActor->GetName());
-    }
+  // ReadStates and ReadEfforts read metadata only, so these actors bind to no scene.
+  std::vector<RecordedActor> recorded;
+  for (BankActor const& actor : episode.actors) {
+    recorded.push_back({
+        .path = std::string{actor.path},
+        .runtimeName = std::string{actor.runtimeName},
+        .handle = {},
+        .type = ParseActorType(actor.type).value_or(mochi::ActorType::None),
+        .isStatic = actor.isStatic,
+    });
   }
-  MOCHI_ERROR_RETURN(error, nullptr);
-  restorer->_recordedActors = std::move(recorded);
-  return restorer;
+  auto efforts = ReadEfforts(recording, recorded, frames.frames, error);
+  for (size_t i = 0; i < recorded.size() && error.IsOK(); ++i) {
+    ReadBankActor(recording, recorded[i], frames.frames, efforts, episode.actors[i], error);
+  }
+  episode.controllers = ReadControllers(recording, recorded, frames.frames, error);
+  MOCHI_ERROR_RETURN(error, {});
+  return episode;
 }
 
-EpisodeRestorer::EpisodeRestorer(mochi::Scene& scene) : _scene{scene} {}
+std::unique_ptr<EpisodeRestorer>
+EpisodeRestorer::Create(mochi::Scene& scene, EpisodeReader const& recording, mochi::Error& error) {
+  MOCHI_ERROR_RETURN(error, nullptr);
+  auto bank = std::make_shared<FrameBank>();
+  bank->episodes.push_back(ReadBankEpisode(recording, error));
+  BankEpisode const& episode = bank->episodes[0];
+  std::vector<RecordedActor> recorded = BindActors(scene, episode.actors, error);
+  ValidateUnrecordedActors(scene, recorded, error);
+  ValidateStates(scene, episode, recorded, error);
+  for (size_t i = 0; i < recorded.size() && error.IsOK(); ++i) {
+    if (recorded[i].isStatic) {
+      ValidateStaticPose(
+          recording, recorded[i], *scene.GetActor(recorded[i].handle), episode.frames[0], error);
+    }
+  }
+  MOCHI_ERROR_RETURN(error, nullptr);
+  return std::unique_ptr<EpisodeRestorer>{
+      new EpisodeRestorer{scene, std::move(bank), std::move(recorded)}};
+}
+
+std::unique_ptr<EpisodeRestorer> EpisodeRestorer::Create(
+    mochi::Scene& scene,
+    std::shared_ptr<FrameBank const> bank,
+    mochi::Error& error) {
+  MOCHI_ERROR_RETURN(error, nullptr);
+  MOCHI_ERROR_IF(bank == nullptr || bank->episodes.empty(), error, "The bank has no episodes.");
+  MOCHI_ERROR_RETURN(error, nullptr);
+  std::vector<RecordedActor> recorded = BindActors(scene, bank->episodes[0].actors, error);
+  for (size_t e = 0; e < bank->episodes.size() && error.IsOK(); ++e) {
+    if (!HaveSameActors(bank->episodes[e], bank->episodes[0])) {
+      SUPERDEX_ERROR_SET(error, "Bank episode %zu lists other actors than episode 0.", e);
+    }
+    ValidateStates(scene, bank->episodes[e], recorded, error);
+  }
+  MOCHI_ERROR_RETURN(error, nullptr);
+  return std::unique_ptr<EpisodeRestorer>{
+      new EpisodeRestorer{scene, std::move(bank), std::move(recorded)}};
+}
+
+EpisodeRestorer::EpisodeRestorer(
+    mochi::Scene& scene,
+    std::shared_ptr<FrameBank const> bank,
+    std::vector<RecordedActor> actors)
+    : _scene{scene},
+      _bank{std::move(bank)},
+      _frames(_bank->episodes[0].frames.begin(), _bank->episodes[0].frames.end()),
+      _recordedActors{std::move(actors)} {
+  int maxDofs = 0;
+  for (RecordedActor const& actor : _recordedActors) {
+    maxDofs = std::max(maxDofs, _scene.GetActor(actor.handle)->GetNumDofs());
+  }
+  _dofIndices.resize(static_cast<size_t>(maxDofs));
+  std::iota(_dofIndices.begin(), _dofIndices.end(), 0);
+}
 
 EpisodeRestorer::~EpisodeRestorer() = default;
 
@@ -485,18 +719,32 @@ std::vector<RecordedActor> const& EpisodeRestorer::GetActors() const {
 }
 
 void EpisodeRestorer::RestoreFrame(size_t frameIndex, mochi::Error& error) {
+  RestoreFrame(0, frameIndex, error);
+}
+
+void EpisodeRestorer::RestoreFrame(size_t episodeIndex, size_t frameIndex, mochi::Error& error) {
   MOCHI_ERROR_RETURN(error);
-  MOCHI_ERROR_IF(frameIndex >= _frames.size(), error, "Frame index is out of range.");
+  MOCHI_ERROR_IF(episodeIndex >= _bank->episodes.size(), error, "Episode index is out of range.");
+  MOCHI_ERROR_RETURN(error);
+  BankEpisode const& episode = _bank->episodes[episodeIndex];
+  MOCHI_ERROR_IF(frameIndex >= episode.frames.size(), error, "Frame index is out of range.");
   MOCHI_ERROR_RETURN(error);
   mochi::experimental::SetSimulationTime(
-      &_scene, _simulationTimesSec[frameIndex], _stepDtsSec[frameIndex], error);
-  for (auto const& actor : _actors) {
-    mochi::Actor* const sceneActor = _scene.GetActor(actor.handle);
+      &_scene, episode.simulationTimesSec[frameIndex], episode.stepDtsSec[frameIndex], error);
+  for (size_t i = 0; i < _recordedActors.size(); ++i) {
+    BankActor const& actor = episode.actors[i];
+    mochi::Actor* const sceneActor = _scene.GetActor(_recordedActors[i].handle);
     MOCHI_ERROR_IF(sceneActor == nullptr, error, "A restored actor was destroyed.");
     MOCHI_ERROR_RETURN(error);
+    if (actor.isStatic) {
+      sceneActor->SetRootTransform(GetWorldFromRoot(actor, 0), error);
+      // Zero velocity places the actor at once; otherwise Mochi sweeps it there over the next step.
+      sceneActor->SetVelocity(mochi::Real3{0_r, 0_r, 0_r}, mochi::Real3{0_r, 0_r, 0_r}, error);
+      continue;
+    }
     // External forces persist until replaced, so clear any left from before the restore.
     sceneActor->ClearExternalForces();
-    if (actor.type == mochi::ActorType::Rigid) {
+    if (_recordedActors[i].type == mochi::ActorType::Rigid) {
       sceneActor->SetCenterOfMassTransform(GetWorldFromCom(actor, frameIndex), error);
       sceneActor->SetVelocity(
           GetXyz(actor.linearVelocities, frameIndex),
@@ -507,8 +755,9 @@ void EpisodeRestorer::RestoreFrame(size_t frameIndex, mochi::Error& error) {
 
     auto const numDofs = static_cast<size_t>(sceneActor->GetNumDofs());
     sceneActor->SetRootTransform(GetWorldFromRoot(actor, frameIndex), error);
-    if (actor.type == mochi::ActorType::Soft || actor.type == mochi::ActorType::Rod) {
-      if (actor.type == mochi::ActorType::Rod) {
+    mochi::ActorType const type = _recordedActors[i].type;
+    if (type == mochi::ActorType::Soft || type == mochi::ActorType::Rod) {
+      if (type == mochi::ActorType::Rod) {
         auto const mesh = sceneActor->GetMesh();
         sceneActor->SetRodPose(
             GetFrameValues(actor.displacements, frameIndex, mesh.coordinates.size()),
@@ -533,10 +782,10 @@ void EpisodeRestorer::RestoreFrame(size_t frameIndex, mochi::Error& error) {
           GetFrameValues(actor.controllerTargets, frameIndex, numDofs), error);
     }
     if (!actor.jointEfforts.empty()) {
-      std::vector<int> dofIndices(numDofs);
-      std::iota(dofIndices.begin(), dofIndices.end(), 0);
       sceneActor->SetExternalForcesOnDofs(
-          dofIndices, GetFrameValues(actor.jointEfforts, frameIndex, numDofs), error);
+          mochi::Span<int const>{_dofIndices.data(), numDofs},
+          GetFrameValues(actor.jointEfforts, frameIndex, numDofs),
+          error);
     }
   }
   MOCHI_ERROR_RETURN(error);

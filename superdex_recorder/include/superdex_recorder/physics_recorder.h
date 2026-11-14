@@ -23,6 +23,9 @@
  * - Soft actors: root pose, displacements and node velocities, and surface vertices for viewing.
  * - Rod actors: root pose, node displacements, element frame axes, node velocities with twist
  *   rates, and contact-skin vertices, if any, for viewing.
+ * - Once: each body's contact parameters, a dynamic body's density and mass, and a dynamic rigid
+ *   body's or link's center of mass and moment of inertia, as domain randomization may have set
+ *   them; and the scene's gravity.
  *
  * Not supported:
  * - Shell actors are skipped with a warning, and the episode cannot be restored.

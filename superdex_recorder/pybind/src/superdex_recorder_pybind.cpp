@@ -16,6 +16,7 @@
 
 #include <superdex_recorder/episode_reader.h>
 #include <superdex_recorder/episode_restorer.h>
+#include <superdex_recorder/frame_bank.h>
 #include <superdex_recorder/physics_recorder.h>
 #include <superdex_recorder/recorder.h>
 #include <superdex_recorder/robot_shadow.h>
@@ -37,6 +38,7 @@
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/vector.h>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <filesystem>
@@ -76,6 +78,44 @@ auto CallWithErrorResult(Function&& function) {
 }
 
 using RealArray = nb::ndarray<mochi::real const, nb::ndim<1>, nb::c_contig, nb::device::cpu>;
+
+/* A bank's size and precision, its actors (and whether a static one's pose varies across
+ * episodes) and its controllers' target fields. */
+std::string DescribeFrameBank(
+    std::filesystem::path const& path,
+    superdex::recorder::FrameBank const& bank) {
+  using namespace superdex::recorder;
+  size_t numFrames = 0;
+  for (BankEpisode const& episode : bank.episodes) {
+    numFrames += episode.frames.size();
+  }
+  std::string text = path.string() + ": " + std::to_string(bank.episodes.size()) + " episodes, " +
+      std::to_string(numFrames) + " frames, " + (sizeof(mochi::real) == 4 ? "fp32" : "fp64") + "\n";
+  BankEpisode const& first = bank.episodes[0];
+  for (size_t a = 0; a < first.actors.size(); ++a) {
+    BankActor const& actor = first.actors[a];
+    text += "  actor " + std::string{actor.path} + ": " + (actor.isStatic ? "static " : "") +
+        std::string{actor.type};
+    if (actor.isStatic) {
+      bool const varies =
+          std::any_of(bank.episodes.begin(), bank.episodes.end(), [&](BankEpisode const& other) {
+            return other.actors.size() != first.actors.size() ||
+                !(other.actors[a].rootRotations == actor.rootRotations) ||
+                !(other.actors[a].rootTranslations == actor.rootTranslations);
+          });
+      text += varies ? ", pose varies across episodes" : ", one pose in every episode";
+    }
+    text += "\n";
+  }
+  for (BankController const& controller : first.controllers) {
+    text += "  controller " + std::string{controller.id} + ":";
+    for (BankTarget const& target : controller.targets) {
+      text += " " + std::string{target.name};
+    }
+    text += "\n";
+  }
+  return text;
+}
 
 mochi::Span<mochi::real const> AsSpan(RealArray const& values) {
   return {values.data(), values.size()};
@@ -271,6 +311,26 @@ NB_MODULE(SUPERDEX_RECORDER_MODULE_NAME, module) {
             CallWithError([&](mochi::Error& error) { self.RestoreFrame(frameIndex, error); });
           },
           nb::arg("frame_index"));
+
+  // Native cores of superdex.recorder.frame_bank.
+  module.def(
+      "_pack_frame_bank",
+      [](std::vector<std::filesystem::path> const& recordings, std::filesystem::path const& out) {
+        CallWithError([&](mochi::Error& error) {
+          SaveFrameBank(PackFrameBank({recordings.data(), recordings.size()}, error), out, error);
+        });
+      },
+      nb::arg("recordings"),
+      nb::arg("out"),
+      nb::call_guard<nb::gil_scoped_release>());
+  module.def(
+      "_describe_frame_bank",
+      [](std::filesystem::path const& path) {
+        auto const bank =
+            CallWithErrorResult([&](mochi::Error& error) { return LoadFrameBank(path, error); });
+        return DescribeFrameBank(path, *bank);
+      },
+      nb::arg("path"));
 
   // Content hash that the Unreal recorder stores for the scene archive and task files.
   module.def(

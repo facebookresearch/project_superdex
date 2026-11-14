@@ -102,13 +102,17 @@ set_target_properties(superdex_recorder_core PROPERTIES POSITION_INDEPENDENT_COD
 add_library(superdex_recorder_physics STATIC
     src/contact_collector.cpp
     src/episode_restorer.cpp
+    src/frame_bank.cpp
     src/physics_recorder.cpp
     include/superdex_recorder/contact_collector.h
     include/superdex_recorder/episode_restorer.h
+    include/superdex_recorder/frame_bank.h
     include/superdex_recorder/physics_recorder.h
 )
 target_include_directories(superdex_recorder_physics PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_link_libraries(superdex_recorder_physics PUBLIC superdex_recorder_core superdex_recorder_reader mochi_physics)
+# Frame banks are written with Mochi reflection, as BUCK's Mochi macros enable it.
+target_compile_definitions(superdex_recorder_physics PRIVATE MOCHI_USE_REFLECTION=1)
 target_compile_features(superdex_recorder_physics PUBLIC cxx_std_17)
 mochi_set_compiler_options(superdex_recorder_physics)
 set_target_properties(superdex_recorder_physics PROPERTIES POSITION_INDEPENDENT_CODE ON)

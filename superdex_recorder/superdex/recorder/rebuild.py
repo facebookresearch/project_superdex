@@ -16,14 +16,15 @@
 
 from __future__ import annotations
 
+import json
 import math
-import os
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
 import superdex.physics as sdp
-from superdex.physics.utils.scene_helpers import load_bot_scene, load_bot_task_prefab
+from superdex.physics.utils.scene_helpers import load_bot_task_prefab
 
 from . import _extension
 from .reader import EpisodeReader
@@ -32,15 +33,25 @@ from .restore import _bind_actors
 if TYPE_CHECKING:
     import superdex.robotics as sdr  # @manual
 
-_BOT_ARCHIVE_SUFFIXES = (".superdex_bot_archive", ".mochi_bot_archive")
 # Unreal recordings of small parts differ from rebuilt masses by up to 2.6e-5, while
 # mismatched geometry differs by far more.
 _MASS_RELATIVE_TOLERANCE = 1e-4
+# Centers of mass rebuilt from the same prefabs agree to float rounding [m]; domain
+# randomization moves them by millimeters.
+_CENTER_OF_MASS_TOLERANCE = 1e-5
+_CENTER_OF_MASS = "superdex.physics.center_of_mass_local"
+_MOMENT_OF_INERTIA = "superdex.physics.moment_of_inertia_local"
 _PHYSICAL_COMPONENTS = (
     "superdex.physics.contact_params",
     "superdex.physics.density",
     "superdex.physics.mass",
+    _CENTER_OF_MASS,
+    _MOMENT_OF_INERTIA,
 )
+_GRAVITY = "superdex.physics.gravity_xyz"
+# Prefab edits made before bots and task spawns were created, as JSON objects by name.
+_BOT_EDITS = "superdex.scene.bot_edits"
+_SPAWN_EDITS = "superdex.scene.spawn_edits"
 
 
 @dataclass(frozen=True)
@@ -62,11 +73,15 @@ def rebuild_scene(
 ) -> RebuiltScene:
     """Load a bot scene and a bot task, then apply an episode's recorded setup to it.
 
-    Bots that the recorded slot selections did not choose are removed, as in Unreal.
-    Static actors move to their recorded poses, and every recorded body gets its
-    recorded contact parameters and density (see :func:`apply_recorded_physics`).
-    This reproduces domain randomization applied when the episode was recorded.
-    Dynamic state is left to :class:`EpisodeRestorer`.
+    Only the bots the recording's slot choices name are built, as in Unreal (see
+    :func:`_recorded_bots`), and every bot and task spawn whose prefab was edited before
+    it was created (gravity off, domain randomization of its mass properties or size) is
+    built with its recorded edit (``superdex.scene.bot_edits`` and
+    ``superdex.scene.spawn_edits``). Static actors move to their recorded poses, the
+    scene gets its recorded gravity, and every recorded body its recorded contact
+    parameters and mass properties (see :func:`apply_recorded_physics`). This reproduces
+    domain randomization applied when the episode was recorded. Dynamic state is left to
+    :class:`EpisodeRestorer`.
 
     When the recording names the scene archive or task file it was recorded with, as
     Unreal recordings do, the given files must have the same content hash. A spawn whose
@@ -77,8 +92,16 @@ def rebuild_scene(
     _check_recorded_file(properties, "scene.archive", Path(bot_scene_path))
     if bot_task_path is not None:
         _check_recorded_file(properties, "scene.task", Path(bot_task_path))
-    bot_scene = load_bot_scene(str(bot_scene_path), robotics_context)
-    _retire_unselected_bots(bot_scene, properties)
+    import superdex.robotics as sdr  # @manual
+
+    bot_scene = sdr.load_bot_scene(
+        str(bot_scene_path),
+        _recorded_bots(
+            sdr.load_bot_scene_prefab_from_file(str(bot_scene_path)), properties
+        ),
+        _recorded_edits(recording, _BOT_EDITS),
+        robotics_context,
+    )
     scene = bot_scene.get_scene()
     assert scene is not None
     spawned = (
@@ -87,21 +110,28 @@ def rebuild_scene(
         else _spawn_bot_task(
             bot_scene,
             scene,
-            robotics_context,
             Path(bot_task_path),
             _recorded_prefabs(properties),
+            json.loads(_recorded_edits(recording, _SPAWN_EDITS) or "{}"),
         )
     )
     _place_static_actors(recording, scene)
+    gravity = recording.component_samples(_GRAVITY)
+    if gravity:
+        scene.set_gravity(list(gravity[0].value))
     apply_recorded_physics(recording, scene)
     return RebuiltScene(bot_scene, spawned)
 
 
 def apply_recorded_physics(recording: EpisodeReader, scene: sdp.Scene) -> None:
-    """Give every recorded body its recorded contact parameters and density.
+    """Give every recorded body its recorded contact parameters and mass properties.
 
-    Afterwards each body's mass must match the recording, which also catches a scene
-    whose geometry differs from the one that was recorded.
+    Each body gets its recorded density, and its mass must then match the recording,
+    which catches a scene whose geometry differs from the one that was recorded. A free
+    dynamic body then gets its recorded mass, center of mass and moment of inertia, which
+    domain randomization may have changed at run time; a link's come from its prefab. Each
+    recorded center of mass must then match, which catches a link built without its
+    recorded prefab edit.
     """
     names = recording.read_static_value("superdex.physics.contact_param_names")
     template = sdp.ContactParams()
@@ -132,14 +162,34 @@ def apply_recorded_physics(recording: EpisodeReader, scene: sdp.Scene) -> None:
             )
     for sample in samples["superdex.physics.density"]:
         body(sample.entity_path).set_density(sample.value[0])
-    for sample in samples["superdex.physics.mass"]:
-        actor = body(sample.entity_path)
-        if not math.isclose(
-            actor.get_mass(), sample.value[0], rel_tol=_MASS_RELATIVE_TOLERANCE
-        ):
+    _apply_recorded_mass_properties(samples, body)
+
+
+def _apply_recorded_mass_properties(
+    samples: dict[str, list[Any]], body: Callable[[str], sdp.Actor]
+) -> None:
+    """Check each recorded mass, give each free dynamic body its recorded mass properties,
+    then check each recorded center of mass (see :func:`apply_recorded_physics`)."""
+    masses = {s.entity_path: s.value[0] for s in samples["superdex.physics.mass"]}
+    for path, mass in masses.items():
+        actor = body(path)
+        if not math.isclose(actor.get_mass(), mass, rel_tol=_MASS_RELATIVE_TOLERANCE):
             raise ValueError(
                 f"{actor.get_name()!r} has mass {actor.get_mass()}, but "
-                f"{sample.value[0]} was recorded."
+                f"{mass} was recorded."
+            )
+    inertias = {s.entity_path: list(s.value) for s in samples[_MOMENT_OF_INERTIA]}
+    for sample in samples[_CENTER_OF_MASS]:
+        actor, center = body(sample.entity_path), list(sample.value)
+        if sample.entity_path in inertias and not actor.is_nested_link_actor():
+            actor.set_inertia_properties(
+                masses[sample.entity_path], center, inertias[sample.entity_path]
+            )
+        rebuilt = actor.get_rigid_center_of_mass_local().tolist()
+        if math.dist(rebuilt, center) > _CENTER_OF_MASS_TOLERANCE:
+            raise ValueError(
+                f"{actor.get_name()!r} has its center of mass at {rebuilt}, but "
+                f"{center} was recorded."
             )
 
 
@@ -171,6 +221,12 @@ def _check_recorded_file(properties: dict[str, str], prefix: str, path: Path) ->
         )
 
 
+def _recorded_edits(recording: EpisodeReader, component: str) -> str:
+    """The recorded prefab edits of `component`, a JSON object by name, or ""."""
+    samples = recording.component_samples(component)
+    return samples[0].value[0] if samples else ""
+
+
 def _recorded_prefabs(properties: dict[str, str]) -> dict[str, str]:
     prefix = "scene.prefab."
     return {
@@ -180,20 +236,18 @@ def _recorded_prefabs(properties: dict[str, str]) -> dict[str, str]:
     }
 
 
-def _retire_unselected_bots(
-    bot_scene: sdr.BotScene, properties: dict[str, str]
-) -> None:
-    """Remove the alternatives to the bots the recording selected for its slots.
+def _recorded_bots(prefab: sdr.BotScenePrefab, properties: dict[str, str]) -> list[str]:
+    """The bots a recording ran with, in the scene's order.
 
     A scene slot offers several bots, which may share an articulated actor name. Unreal
     records each slot's choice as ``scene.slot.<slot>`` and retires the offered bots
-    that no slot selected, so the rebuilt scene does the same. A bot stays if any slot
-    selected it or a slot without a recorded choice offers it, so recordings made before
-    slots were recorded keep every bot.
+    that no slot selected; a lab records ``""`` for a slot it leaves unchosen. A bot is
+    built if it is in no slot, a slot selected it, or a slot without a recorded choice
+    offers it, so recordings made before slots were recorded keep every bot.
     """
     offered = {
         str(slot.name): [str(bot) for bot in slot.controlled_bots]
-        for slot in bot_scene.get_bot_scene_prefab().slots
+        for slot in prefab.slots
     }
     selected = {
         slot: properties[f"scene.slot.{slot}"]
@@ -201,7 +255,7 @@ def _retire_unselected_bots(
         if f"scene.slot.{slot}" in properties
     }
     for slot, bot in selected.items():
-        if bot not in offered[slot]:
+        if bot and bot not in offered[slot]:
             raise ValueError(
                 f"The recording selects bot {bot!r} for slot {slot!r}, which offers "
                 f"{offered[slot]}."
@@ -209,26 +263,18 @@ def _retire_unselected_bots(
     kept = set(selected.values()).union(
         *(bots for slot, bots in offered.items() if slot not in selected)
     )
-    for slot in selected:
-        for bot in offered[slot]:
-            if bot not in kept and bot_scene.get_bot(bot) is not None:
-                bot_scene.remove_bot(bot)
+    retired = {bot for slot in selected for bot in offered[slot]} - kept
+    return [str(entry.name) for entry in prefab.bots if str(entry.name) not in retired]
 
 
 def _spawn_bot_task(
     bot_scene: sdr.BotScene,
     scene: sdp.Scene,
-    robotics_context: sdr.RoboticsContext,
     task_path: Path,
     recorded_prefabs: dict[str, str],
+    recorded_edits: dict[str, Any],
 ) -> dict[str, list[str]]:
-    import superdex.robotics as sdr  # @manual
-
     task = load_bot_task_prefab(str(task_path))
-    prefab_paths = {
-        str(entry.name): str(entry.path)
-        for entry in bot_scene.get_bot_scene_prefab().scene.spawnable_prefabs
-    }
     spawns = {str(spawn.name): spawn for spawn in task.reset_state}
     world_from_spawns: dict[str, sdp.TransformRT] = {}
 
@@ -246,33 +292,14 @@ def _spawn_bot_task(
 
     spawned = {}
     for name, spawn in spawns.items():
-        prefab_name = recorded_prefabs.get(name, str(spawn.prefab_name))
-        prefab_path = prefab_paths.get(prefab_name)
-        if prefab_path is None:
-            raise ValueError(
-                f"Spawn {name!r} uses prefab {prefab_name!r}, which the bot "
-                f"scene does not declare. Available: {sorted(prefab_paths)}."
-            )
-        pose = world_from_spawn(name)
-        if prefab_path.endswith(_BOT_ARCHIVE_SUFFIXES):
-            bot_prefab = sdr.load_bot_prefab_from_file(prefab_path)
-            bot_prefab.name = name
-            bot_prefab.world_from_root = pose
-            bot = sdr.create_bot(scene, bot_prefab, robotics_context)
-            actor = None if bot is None else bot.get_articulated_actor()
-            if actor is None:
-                raise ValueError(f"Could not create bot {name!r} from {prefab_path}.")
-            spawned[name] = [actor.get_name()]
-            continue
-        params = sdp.prefab.PrefabParams()
-        params.name = name
-        params.translation = pose.translation
-        params.rotation = pose.rotation
-        params.apply_scene_settings = False
-        result = sdp.prefab.add_to_scene(
-            prefab_path, os.path.dirname(prefab_path), scene, params
+        edit = recorded_edits.get(name)
+        handles = bot_scene.spawn_prefab_instance(
+            name,
+            recorded_prefabs.get(name, str(spawn.prefab_name)),
+            world_from_spawn(name),
+            "" if edit is None else json.dumps(edit),
         )
-        spawned[name] = [actor.get_name() for actor in result.actors]
+        spawned[name] = [scene.get_actor(handle).get_name() for handle in handles]
     return spawned
 
 
