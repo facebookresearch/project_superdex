@@ -101,6 +101,8 @@ Project SuperDex has first-class support for Python across the board. The quicke
     * Linux Only: `SuperDex Studio` and `SuperDex Physics Debugger` require an available X11 display (native X11 or XWayland), a graphics driver supporting OpenGL 4.1, and the following runtime components:
        * Ubuntu/Debian: `sudo apt install libgl1 libx11-6 libx11-xcb1 libxcb1 libxext6 libxrandr2 libxinerama1 libxcursor1 libxi6 zenity`
        * Fedora/RHEL: `sudo dnf install libglvnd-glx libX11 libX11-xcb libxcb libXext libXrandr libXinerama libXcursor libXi zenity`
+       * **WSL2 / WSLg Users**: If Filament encounters a `D3D12: Removing Device` crash with the virtualization driver, force software rasterization:
+         `export LIBGL_ALWAYS_SOFTWARE=1`
 2. `cd` into the `project_superdex` source directory
 3. Create venv `uv venv`
 4. Pip Install: `uv pip install superdex`
