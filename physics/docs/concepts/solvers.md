@@ -72,7 +72,7 @@ The performance of iterative solvers also depends strongly on using an appropria
 
 ## Convergence Criteria
 
-Suppressing the fixed stage index $i$, let $r^{(k)}$ denote the residual at nonlinear iteration $k$. The absolute residual tolerance is $\epsilon_\textrm{abs}$ (defaulting to $10^{-3}$), and the relative residual tolerance is $\epsilon_\textrm{rel}$ (defaulting to $10^{-6}$). [`NonLinearSolverParams::convergenceMode`](pathname:///generated/api/latest/cpp/structsuperdex_1_1NonLinearSolverParams.html) determines how these tolerances are applied. The `NonLinearSolverConvergenceMode` enum defines the modes:
+Suppressing the fixed stage index $i$, let $r^{(k)}$ denote the residual at nonlinear iteration $k$. The absolute residual tolerance is $\epsilon_\textrm{abs}$ (defaulting to $10^{-3}$), and the relative residual tolerance is $\epsilon_\textrm{rel}$ (defaulting to 0, which disables the relative criterion). [`NonLinearSolverParams::convergenceMode`](pathname:///generated/api/latest/cpp/structsuperdex_1_1NonLinearSolverParams.html) determines how these tolerances are applied. The `NonLinearSolverConvergenceMode` enum defines the modes:
 
 - **`NonLinearSolverConvergenceMode::PerActorWeighted` (default):** For actor $a$, define
 
