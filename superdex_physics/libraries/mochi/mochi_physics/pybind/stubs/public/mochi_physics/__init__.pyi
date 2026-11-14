@@ -1303,6 +1303,11 @@ class NonLinearSolverConvergenceMode:
 
     Convergence is determined by the global residual norm within each simulation
     island: ``|r|`` <= absTol or ``|r|`` <= relTol * ``|r0|``
+
+    Note:
+        The default :attr:`~superdex.physics.NonLinearSolverParams.abs_tol` and
+        :attr:`~superdex.physics.NonLinearSolverParams.rel_tol` are not generally
+        appropriate for this mode: set them for the problem's residual scale.
     """
     PER_ACTOR_WEIGHTED: NonLinearSolverConvergenceMode
     """Use per-actor weighted residual norms for convergence checks.

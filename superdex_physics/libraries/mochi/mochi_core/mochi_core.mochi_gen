@@ -1575,6 +1575,9 @@ enum NonLinearSolverConvergenceMode [from_mochi_core] {
   //
   // @details Convergence is determined by the global residual norm within each simulation island:
   // @code |r| @endcode <= absTol or @code |r| @endcode <= relTol * @code |r0| @endcode
+  //
+  // @note The default @ref NonLinearSolverParams::absTol and @ref NonLinearSolverParams::relTol are
+  // not generally appropriate for this mode: set them for the problem's residual scale.
   Global,
   // @brief Use per-actor weighted residual norms for convergence checks.
   //

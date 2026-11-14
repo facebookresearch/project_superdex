@@ -281,6 +281,9 @@ enum struct NonLinearSolverConvergenceMode {
    *
    * @details Convergence is determined by the global residual norm within each simulation island:
    * |r| <= absTol or |r| <= relTol * |r0|
+   *
+   * @note The default @ref NonLinearSolverParams::absTol and @ref NonLinearSolverParams::relTol are
+   * not generally appropriate for this mode: set them for the problem's residual scale.
    */
   Global,
 
