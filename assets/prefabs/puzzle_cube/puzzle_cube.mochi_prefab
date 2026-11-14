@@ -196,7 +196,7 @@
               "frictionFalloffVel": 0.0002500000118743628,
               "penaltyCoefficient": 100000000000.0,
               "penaltySmoothingHalfDistance": 0.002,
-              "penaltyThresholdDefault": 0.000275
+              "penaltyThresholdDefault": 0.0002
             },
             "density": 800,
             "name": "corner1_shell_link",
@@ -251,7 +251,7 @@
               "frictionFalloffVel": 0.0002500000118743628,
               "penaltyCoefficient": 100000000000.0,
               "penaltySmoothingHalfDistance": 0.002,
-              "penaltyThresholdDefault": 0.000275
+              "penaltyThresholdDefault": 0.0002
             },
             "density": 800,
             "name": "corner2_shell_link",
@@ -306,7 +306,7 @@
               "frictionFalloffVel": 0.0002500000118743628,
               "penaltyCoefficient": 100000000000.0,
               "penaltySmoothingHalfDistance": 0.002,
-              "penaltyThresholdDefault": 0.000275
+              "penaltyThresholdDefault": 0.0002
             },
             "density": 800,
             "name": "corner3_shell_link",
@@ -361,7 +361,7 @@
               "frictionFalloffVel": 0.0002500000118743628,
               "penaltyCoefficient": 100000000000.0,
               "penaltySmoothingHalfDistance": 0.002,
-              "penaltyThresholdDefault": 0.000275
+              "penaltyThresholdDefault": 0.0002
             },
             "density": 800,
             "name": "corner4_shell_link",
@@ -416,7 +416,7 @@
               "frictionFalloffVel": 0.0002500000118743628,
               "penaltyCoefficient": 100000000000.0,
               "penaltySmoothingHalfDistance": 0.002,
-              "penaltyThresholdDefault": 0.000275
+              "penaltyThresholdDefault": 0.0002
             },
             "density": 800,
             "name": "corner5_shell_link",
@@ -471,7 +471,7 @@
               "frictionFalloffVel": 0.0002500000118743628,
               "penaltyCoefficient": 100000000000.0,
               "penaltySmoothingHalfDistance": 0.002,
-              "penaltyThresholdDefault": 0.000275
+              "penaltyThresholdDefault": 0.0002
             },
             "density": 800,
             "name": "corner6_shell_link",
@@ -526,7 +526,7 @@
               "frictionFalloffVel": 0.0002500000118743628,
               "penaltyCoefficient": 100000000000.0,
               "penaltySmoothingHalfDistance": 0.002,
-              "penaltyThresholdDefault": 0.000275
+              "penaltyThresholdDefault": 0.0002
             },
             "density": 800,
             "name": "corner7_shell_link",
@@ -581,7 +581,7 @@
               "frictionFalloffVel": 0.0002500000118743628,
               "penaltyCoefficient": 100000000000.0,
               "penaltySmoothingHalfDistance": 0.002,
-              "penaltyThresholdDefault": 0.000275
+              "penaltyThresholdDefault": 0.0002
             },
             "density": 800,
             "name": "corner8_shell_link",
@@ -700,5 +700,905 @@
       }
     ],
     "_comment": "Core (center + inner corners) never touches shells; it also ignores hands, which only need the shells. Mochi disables contact between adjacent links, so center <-> inner corner contact is re-enabled explicitly."
+  },
+  "constraints": {
+    "rigidSphericalJoint": [
+      {
+        "actorA": "puzzle_cube/corner2_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          -0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner2_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          -0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner2_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner2_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner2_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          -0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner2_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          -0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner2_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner2_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner3_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          -0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner3_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          -0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner3_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner3_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner3_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          -0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner3_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          -0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner3_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner3_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner4_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          -0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner4_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          -0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner4_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner4_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner4_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          -0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner4_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          -0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner4_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner4_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner5_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          -0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner5_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          -0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner5_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner5_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner5_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          -0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner5_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          -0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner5_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner5_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner6_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          -0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner6_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          -0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner6_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner6_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner6_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          -0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner6_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          -0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner6_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner6_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner7_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          -0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner7_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          -0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner7_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner7_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner7_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          -0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner7_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          -0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner7_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner7_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner8_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          -0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner8_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          -0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner8_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner8_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          -0.017321,
+          0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner8_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          -0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner8_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          -0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner8_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          0.017321,
+          -0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      },
+      {
+        "actorA": "puzzle_cube/corner8_link",
+        "actorB": "puzzle_cube/center_link",
+        "localPosA": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "localPosB": [
+          0.017321,
+          0.017321,
+          0.017321
+        ],
+        "stiffness": 600.0,
+        "saturation": 0.0005
+      }
+    ]
   }
 }

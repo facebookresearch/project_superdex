@@ -1054,7 +1054,7 @@
       0
     ]
   },
-  "comment": "Drives the x- layer through 180 degrees at 90 deg/s with a position-only PosePath on each corner shell (center and x+ corners held). Each corner's load.drv*.mag times its 34 mm lever arm is that corner's share of the turning torque. Summed over the four corners it is about 15 mN m away from the detents, most of it joint damping and friction, and about 30 mN m to break out of each aligned position.",
+  "comment": "Drives the x- layer through 180 degrees at 90 deg/s with a position-only PosePath on each corner shell (center and x+ corners held). Each corner's load.drv*.mag times its 34 mm lever arm is that corner's share of the turning torque. Summed over the four corners it is about 18 mN m away from the detents, most of it joint damping and friction, and about 50 mN m to break out of each aligned position.",
   "plots": [
     {
       "channels": [

@@ -266,7 +266,7 @@
       0
     ]
   },
-  "comment": "Flicks the x- layer with 24 mN m on each corner for 0.15 s, then lets go. The joint damping and friction slow the layer as it coasts, and the shell corners catch it close to the next aligned position (about 85-90 degrees) without overshoot. A gentler flick (12 mN m) stops the layer partway, at about 60 degrees.",
+  "comment": "Flicks the x- layer with 24 mN m on each corner for 0.15 s, then lets go. The joint damping and friction slow the layer as it coasts, and the detent springs pull it into the next aligned position (90 degrees) without overshoot. A gentler flick (12 mN m) does not carry the layer past 45 degrees, and the springs pull it back to where it started; 16 mN m is enough to reach the next position.",
   "plots": [
     {
       "channels": [

@@ -1,0 +1,110 @@
+{
+  "assetsRoot": "",
+  "prefab": "./../puzzle_cube.mochi_prefab",
+  "prefabOverrides": [
+    {
+      "path": "actors.articulated[name=puzzle_cube].jointPose",
+      "value": "[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.5235988, 0.0, -0.5235988, 0.0, -0.5235988, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -2e-07, -0.5235988, 0.0, 0.0, 0.0]"
+    }
+  ],
+  "loads": [
+    {
+      "name": "hold_center_link",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "puzzle_cube/center_link",
+      "pointLocal": [
+        0,
+        0,
+        0
+      ],
+      "waypoints": [
+        {
+          "time": 0,
+          "position": [
+            0,
+            0,
+            0.034
+          ],
+          "rotation": [
+            1.48665497e-10,
+            0.0,
+            0.0
+          ],
+          "interpolation": "Step"
+        }
+      ],
+      "drive": {
+        "responseHz": 20,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 20,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "puzzle_cube/center_link"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "puzzle_cube/corner3_link"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "puzzle_cube/corner4_link"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "puzzle_cube/corner5_link"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "puzzle_cube/corner7_link"
+    },
+    {
+      "kind": "JointState",
+      "target": "puzzle_cube/corner3_joint"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 1.0,
+    "groundPlane": false,
+    "record": {
+      "enabled": true,
+      "contactPoints": false,
+      "staticActors": false
+    },
+    "gravity": [
+      0,
+      0,
+      0
+    ]
+  },
+  "comment": "Snap check: the x- layer (corners 3, 4, 5, 7) starts turned 30 deg about +x and is let go with only the center held. The detent springs pull it back to alignment: within about 3 deg in 0.25 s and 0.5 deg in 0.5 s. Started past 45 deg, it snaps forward to 90 deg instead.",
+  "plots": [
+    {
+      "channels": [
+        "puzzle_cube/corner3_joint.q0",
+        "puzzle_cube/corner3_joint.q1",
+        "puzzle_cube/corner3_joint.q2"
+      ],
+      "height": 160
+    }
+  ]
+}

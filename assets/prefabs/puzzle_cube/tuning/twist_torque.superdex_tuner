@@ -274,7 +274,7 @@
       0
     ]
   },
-  "comment": "Turns the x- layer (corners 3, 4, 5, 7) with a torque on each corner shell that ramps from 0 to 15 mN m (60 mN m in total) over 3 s, while PosePaths hold the center and the x+ corners. The layer should stay within a degree of nominal until it breaks away at about 33 mN m in total, then turn freely.",
+  "comment": "Turns the x- layer (corners 3, 4, 5, 7) with a torque on each corner shell that ramps from 0 to 15 mN m (60 mN m in total) over 3 s, while PosePaths hold the center and the x+ corners. The layer should stay within a degree of nominal until it breaks away at about 35 mN m in total (the detent springs and the shell corners' friction), then turn freely.",
   "plots": [
     {
       "channels": [

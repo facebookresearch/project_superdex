@@ -155,7 +155,7 @@
       0
     ]
   },
-  "comment": "Wobble check: with only the center held, twists corner 3 about the cube diagonal (0.4-0.7 s), then tilts it about (1,-1,0) (0.8-1.5 s), both at 5 mN m. Corner 3 should give about 0.5 degrees and 0.2 degrees.",
+  "comment": "Wobble check: with only the center held, twists corner 3 about the cube diagonal (0.4-0.7 s), then tilts it about (1,-1,0) (0.8-1.5 s), both at 5 mN m. Corner 3 should give about 0.9 degrees each way.",
   "plots": [
     {
       "channels": [
