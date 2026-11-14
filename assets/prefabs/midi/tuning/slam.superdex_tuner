@@ -1,0 +1,204 @@
+{
+  "comment": "Heavy-handed use: one control after another is hit with about ten times its working load for 0.4 s (20 N on keys and a button, 10 N on a slider, 0.5 N m on the pitch wheel and joystick). The stops should hold within a few tenths of a millimeter or degree, and everything should settle back without ringing.",
+  "assetsRoot": "",
+  "prefab": "./../midi.mochi_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "white_key",
+      "enabled": true,
+      "type": "Force",
+      "target": "midi/key_e4",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 20.0,
+        "riseTime": 0.02,
+        "fallTime": 0.02,
+        "start": 0.2,
+        "end": 0.6
+      },
+      "pointLocal": [
+        0,
+        -0.075,
+        0.036
+      ]
+    },
+    {
+      "name": "black_key",
+      "enabled": true,
+      "type": "Force",
+      "target": "midi/key_f_sharp4",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 20.0,
+        "riseTime": 0.02,
+        "fallTime": 0.02,
+        "start": 0.7,
+        "end": 1.1
+      },
+      "pointLocal": [
+        0,
+        -0.045,
+        0.0499
+      ]
+    },
+    {
+      "name": "button",
+      "enabled": true,
+      "type": "Force",
+      "target": "midi/button_2",
+      "frame": "Local",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 20.0,
+        "riseTime": 0.02,
+        "fallTime": 0.02,
+        "start": 1.2,
+        "end": 1.6
+      },
+      "pointLocal": [
+        0,
+        0,
+        0.02
+      ]
+    },
+    {
+      "name": "slider",
+      "enabled": true,
+      "type": "Force",
+      "target": "midi/slider_3",
+      "frame": "Local",
+      "direction": [
+        0,
+        1,
+        0
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 10.0,
+        "riseTime": 0.02,
+        "fallTime": 0.02,
+        "start": 1.7,
+        "end": 2.1
+      },
+      "pointLocal": [
+        0,
+        0,
+        0.015
+      ]
+    },
+    {
+      "name": "pitch_wheel",
+      "enabled": true,
+      "type": "Torque",
+      "target": "midi/pitch_wheel",
+      "frame": "Local",
+      "direction": [
+        1,
+        0,
+        0
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 0.5,
+        "riseTime": 0.02,
+        "fallTime": 0.02,
+        "start": 2.2,
+        "end": 2.6
+      }
+    },
+    {
+      "name": "joystick",
+      "enabled": true,
+      "type": "Torque",
+      "target": "midi/joystick",
+      "frame": "Local",
+      "direction": [
+        0,
+        1,
+        0
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 0.5,
+        "riseTime": 0.02,
+        "fallTime": 0.02,
+        "start": 2.7,
+        "end": 3.1
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/key_e4_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/key_f_sharp4_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/button_2_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/slider_3_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/pitch_wheel_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/joystick_joint"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.0111,
+    "duration": 3.5,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "midi/key_e4_joint.q0",
+        "midi/key_f_sharp4_joint.q0",
+        "midi/button_2_joint.q0"
+      ],
+      "height": 160
+    }
+  ]
+}

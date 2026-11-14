@@ -1,0 +1,3067 @@
+{
+  "_comment": "MIDI keyboard as one articulation: the housing on a free joint, every key and control on its own joint, and four rubber feet hard-jointed under the housing. The actor transform turns the CAD layout (players' side at -Y) so the keys face +X, centered on the origin. Return springs are constraints. Generated from the CAD layout and tuned with superdex_asset_tuner (see tuning/).",
+  "actors": {
+    "articulated": [
+      {
+        "name": "midi",
+        "translation": [
+          0.0775,
+          0.0,
+          0.003
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.7071067811865476,
+          0.7071067811865476
+        ],
+        "joints": [
+          {
+            "name": "housing_joint",
+            "type": "Free"
+          },
+          {
+            "name": "key_c3_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.24675,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_d3_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.22325,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_e3_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.19975,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_f3_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.17625,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_g3_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.15275,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_a3_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.12925,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_b3_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.10575,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_c4_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.08225,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_d4_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.05875,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_e4_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.03525,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_f4_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.01175,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_g4_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.01175,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_a4_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.03525,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_b4_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.05875,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_c5_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.08225,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_d5_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.10575,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_e5_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.12925,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_f5_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.15275,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_g5_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.17625,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_a5_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.19975,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_b5_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.22325,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_c6_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.057,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.24675,
+                0.0925,
+                0.044
+              ]
+            },
+            "friction": {
+              "viscous": 0.002,
+              "coulomb": 0.002,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_c_sharp3_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.075,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.23675,
+                0.0925,
+                0.041
+              ]
+            },
+            "friction": {
+              "viscous": 0.0015,
+              "coulomb": 0.0015,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_d_sharp3_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.075,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.20975,
+                0.0925,
+                0.041
+              ]
+            },
+            "friction": {
+              "viscous": 0.0015,
+              "coulomb": 0.0015,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_f_sharp3_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.075,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.168,
+                0.0925,
+                0.041
+              ]
+            },
+            "friction": {
+              "viscous": 0.0015,
+              "coulomb": 0.0015,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_g_sharp3_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.075,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.141,
+                0.0925,
+                0.041
+              ]
+            },
+            "friction": {
+              "viscous": 0.0015,
+              "coulomb": 0.0015,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_a_sharp3_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.075,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.114,
+                0.0925,
+                0.041
+              ]
+            },
+            "friction": {
+              "viscous": 0.0015,
+              "coulomb": 0.0015,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_c_sharp4_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.075,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.07225,
+                0.0925,
+                0.041
+              ]
+            },
+            "friction": {
+              "viscous": 0.0015,
+              "coulomb": 0.0015,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_d_sharp4_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.075,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.04525,
+                0.0925,
+                0.041
+              ]
+            },
+            "friction": {
+              "viscous": 0.0015,
+              "coulomb": 0.0015,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_f_sharp4_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.075,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.0035,
+                0.0925,
+                0.041
+              ]
+            },
+            "friction": {
+              "viscous": 0.0015,
+              "coulomb": 0.0015,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_g_sharp4_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.075,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.0235,
+                0.0925,
+                0.041
+              ]
+            },
+            "friction": {
+              "viscous": 0.0015,
+              "coulomb": 0.0015,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_a_sharp4_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.075,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.0505,
+                0.0925,
+                0.041
+              ]
+            },
+            "friction": {
+              "viscous": 0.0015,
+              "coulomb": 0.0015,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_c_sharp5_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.075,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.09225,
+                0.0925,
+                0.041
+              ]
+            },
+            "friction": {
+              "viscous": 0.0015,
+              "coulomb": 0.0015,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_d_sharp5_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.075,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.11925,
+                0.0925,
+                0.041
+              ]
+            },
+            "friction": {
+              "viscous": 0.0015,
+              "coulomb": 0.0015,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_f_sharp5_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.075,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.161,
+                0.0925,
+                0.041
+              ]
+            },
+            "friction": {
+              "viscous": 0.0015,
+              "coulomb": 0.0015,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_g_sharp5_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.075,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.188,
+                0.0925,
+                0.041
+              ]
+            },
+            "friction": {
+              "viscous": 0.0015,
+              "coulomb": 0.0015,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "key_a_sharp5_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.075,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.215,
+                0.0925,
+                0.041
+              ]
+            },
+            "friction": {
+              "viscous": 0.0015,
+              "coulomb": 0.0015,
+              "falloffVel": 0.01
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 1.0
+          },
+          {
+            "name": "pitch_wheel_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              -0.7,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.7,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.24225,
+                0.1929251,
+                0.1080239
+              ],
+              "rotation": [
+                0.130526192,
+                0.0,
+                0.0,
+                0.991444861
+              ]
+            },
+            "friction": {
+              "viscous": 0.0005,
+              "coulomb": 0.001,
+              "falloffVel": 0.02
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 0.2
+          },
+          {
+            "name": "mod_wheel_joint",
+            "type": "Revolute",
+            "axis": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "minLimit": [
+              -0.785,
+              0.0,
+              0.0
+            ],
+            "maxLimit": [
+              0.785,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.18825,
+                0.1929251,
+                0.1080239
+              ],
+              "rotation": [
+                0.130526192,
+                0.0,
+                0.0,
+                0.991444861
+              ]
+            },
+            "friction": {
+              "viscous": 0.0008,
+              "coulomb": 0.012,
+              "falloffVel": 0.02
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 0.2
+          },
+          {
+            "name": "joystick_joint",
+            "type": "Spherical",
+            "minLimit": [
+              -0.44,
+              -0.44,
+              -0.02
+            ],
+            "maxLimit": [
+              0.44,
+              0.44,
+              0.02
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.21525,
+                0.1277317,
+                0.100111
+              ],
+              "rotation": [
+                0.130526192,
+                0.0,
+                0.0,
+                0.991444861
+              ]
+            },
+            "friction": {
+              "viscous": 0.0008,
+              "coulomb": 0.001,
+              "falloffVel": 0.02
+            },
+            "limitStiffness": 1000.0,
+            "limitDamping": 0.2
+          },
+          {
+            "name": "knob_joint",
+            "type": "Revolute",
+            "axis": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.0,
+                0.128572,
+                0.1068273
+              ],
+              "rotation": [
+                0.130526192,
+                0.0,
+                0.0,
+                0.991444861
+              ]
+            },
+            "friction": {
+              "viscous": 0.0003,
+              "coulomb": 0.006,
+              "falloffVel": 0.02
+            }
+          },
+          {
+            "name": "button_1_joint",
+            "type": "Prismatic",
+            "axis": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              -0.0035
+            ],
+            "maxLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.045,
+                0.1545952,
+                0.0967182
+              ],
+              "rotation": [
+                0.130526192,
+                0.0,
+                0.0,
+                0.991444861
+              ]
+            },
+            "friction": {
+              "viscous": 0.2,
+              "coulomb": 0.05,
+              "falloffVel": 0.005
+            },
+            "limitStiffness": 100000.0,
+            "limitDamping": 10.0
+          },
+          {
+            "name": "button_2_joint",
+            "type": "Prismatic",
+            "axis": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              -0.0035
+            ],
+            "maxLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.045,
+                0.1545952,
+                0.0967182
+              ],
+              "rotation": [
+                0.130526192,
+                0.0,
+                0.0,
+                0.991444861
+              ]
+            },
+            "friction": {
+              "viscous": 0.2,
+              "coulomb": 0.05,
+              "falloffVel": 0.005
+            },
+            "limitStiffness": 100000.0,
+            "limitDamping": 10.0
+          },
+          {
+            "name": "button_3_joint",
+            "type": "Prismatic",
+            "axis": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              -0.0035
+            ],
+            "maxLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.045,
+                0.1111382,
+                0.0850739
+              ],
+              "rotation": [
+                0.130526192,
+                0.0,
+                0.0,
+                0.991444861
+              ]
+            },
+            "friction": {
+              "viscous": 0.2,
+              "coulomb": 0.05,
+              "falloffVel": 0.005
+            },
+            "limitStiffness": 100000.0,
+            "limitDamping": 10.0
+          },
+          {
+            "name": "button_4_joint",
+            "type": "Prismatic",
+            "axis": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "minLimit": [
+              0.0,
+              0.0,
+              -0.0035
+            ],
+            "maxLimit": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.045,
+                0.1111382,
+                0.0850739
+              ],
+              "rotation": [
+                0.130526192,
+                0.0,
+                0.0,
+                0.991444861
+              ]
+            },
+            "friction": {
+              "viscous": 0.2,
+              "coulomb": 0.05,
+              "falloffVel": 0.005
+            },
+            "limitStiffness": 100000.0,
+            "limitDamping": 10.0
+          },
+          {
+            "name": "slider_1_joint",
+            "type": "Prismatic",
+            "axis": [
+              0.0,
+              1.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              -0.055,
+              0.0
+            ],
+            "maxLimit": [
+              0.0,
+              0.055,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.1032,
+                0.1597251,
+                0.1162101
+              ],
+              "rotation": [
+                0.130526192,
+                0.0,
+                0.0,
+                0.991444861
+              ]
+            },
+            "friction": {
+              "viscous": 1.5,
+              "coulomb": 0.35,
+              "falloffVel": 0.0001
+            },
+            "limitStiffness": 100000.0,
+            "limitDamping": 10.0
+          },
+          {
+            "name": "slider_2_joint",
+            "type": "Prismatic",
+            "axis": [
+              0.0,
+              1.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              -0.055,
+              0.0
+            ],
+            "maxLimit": [
+              0.0,
+              0.055,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.1407,
+                0.1597251,
+                0.1162101
+              ],
+              "rotation": [
+                0.130526192,
+                0.0,
+                0.0,
+                0.991444861
+              ]
+            },
+            "friction": {
+              "viscous": 1.5,
+              "coulomb": 0.35,
+              "falloffVel": 0.0001
+            },
+            "limitStiffness": 100000.0,
+            "limitDamping": 10.0
+          },
+          {
+            "name": "slider_3_joint",
+            "type": "Prismatic",
+            "axis": [
+              0.0,
+              1.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              -0.055,
+              0.0
+            ],
+            "maxLimit": [
+              0.0,
+              0.055,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.1782,
+                0.1597251,
+                0.1162101
+              ],
+              "rotation": [
+                0.130526192,
+                0.0,
+                0.0,
+                0.991444861
+              ]
+            },
+            "friction": {
+              "viscous": 1.5,
+              "coulomb": 0.35,
+              "falloffVel": 0.0001
+            },
+            "limitStiffness": 100000.0,
+            "limitDamping": 10.0
+          },
+          {
+            "name": "slider_4_joint",
+            "type": "Prismatic",
+            "axis": [
+              0.0,
+              1.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              -0.055,
+              0.0
+            ],
+            "maxLimit": [
+              0.0,
+              0.055,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.2157,
+                0.1597251,
+                0.1162101
+              ],
+              "rotation": [
+                0.130526192,
+                0.0,
+                0.0,
+                0.991444861
+              ]
+            },
+            "friction": {
+              "viscous": 1.5,
+              "coulomb": 0.35,
+              "falloffVel": 0.0001
+            },
+            "limitStiffness": 100000.0,
+            "limitDamping": 10.0
+          },
+          {
+            "name": "slider_5_joint",
+            "type": "Prismatic",
+            "axis": [
+              0.0,
+              1.0,
+              0.0
+            ],
+            "minLimit": [
+              0.0,
+              -0.055,
+              0.0
+            ],
+            "maxLimit": [
+              0.0,
+              0.055,
+              0.0
+            ],
+            "parentLinkFromJoint": {
+              "translation": [
+                0.2532,
+                0.1597251,
+                0.1162101
+              ],
+              "rotation": [
+                0.130526192,
+                0.0,
+                0.0,
+                0.991444861
+              ]
+            },
+            "friction": {
+              "viscous": 1.5,
+              "coulomb": 0.35,
+              "falloffVel": 0.0001
+            },
+            "limitStiffness": 100000.0,
+            "limitDamping": 10.0
+          },
+          {
+            "name": "foot_front_left_joint",
+            "type": "Hard",
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.255,
+                -0.05,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "foot_front_right_joint",
+            "type": "Hard",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.255,
+                -0.05,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "foot_back_left_joint",
+            "type": "Hard",
+            "parentLinkFromJoint": {
+              "translation": [
+                -0.255,
+                0.21,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "foot_back_right_joint",
+            "type": "Hard",
+            "parentLinkFromJoint": {
+              "translation": [
+                0.255,
+                0.21,
+                0.0
+              ]
+            }
+          }
+        ],
+        "links": [
+          {
+            "name": "housing",
+            "colliderType": "Sdf",
+            "density": 380,
+            "contact": {
+              "coulombFrictionCoefficient": 0.6
+            },
+            "renderModel": "./render/midi_housing.glb",
+            "shape": "./collision/midi_housing.mochi.h5"
+          },
+          {
+            "name": "key_c3",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_c.glb",
+            "shape": "./collision/midi_key_white_c.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_d3",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_d.glb",
+            "shape": "./collision/midi_key_white_d.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_e3",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_e.glb",
+            "shape": "./collision/midi_key_white_e.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_f3",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_f.glb",
+            "shape": "./collision/midi_key_white_f.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_g3",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_g.glb",
+            "shape": "./collision/midi_key_white_g.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_a3",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_a.glb",
+            "shape": "./collision/midi_key_white_a.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_b3",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_b.glb",
+            "shape": "./collision/midi_key_white_b.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_c4",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_c.glb",
+            "shape": "./collision/midi_key_white_c.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_d4",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_d.glb",
+            "shape": "./collision/midi_key_white_d.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_e4",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_e.glb",
+            "shape": "./collision/midi_key_white_e.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_f4",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_f.glb",
+            "shape": "./collision/midi_key_white_f.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_g4",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_g.glb",
+            "shape": "./collision/midi_key_white_g.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_a4",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_a.glb",
+            "shape": "./collision/midi_key_white_a.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_b4",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_b.glb",
+            "shape": "./collision/midi_key_white_b.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_c5",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_c.glb",
+            "shape": "./collision/midi_key_white_c.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_d5",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_d.glb",
+            "shape": "./collision/midi_key_white_d.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_e5",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_e.glb",
+            "shape": "./collision/midi_key_white_e.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_f5",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_f.glb",
+            "shape": "./collision/midi_key_white_f.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_g5",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_g.glb",
+            "shape": "./collision/midi_key_white_g.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_a5",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_a.glb",
+            "shape": "./collision/midi_key_white_a.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_b5",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_b.glb",
+            "shape": "./collision/midi_key_white_b.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_c6",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 330,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_white_c_top.glb",
+            "shape": "./collision/midi_key_white_c_top.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.08175,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_c_sharp3",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 250,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_black.glb",
+            "shape": "./collision/midi_key_black.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.056,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_d_sharp3",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 250,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_black.glb",
+            "shape": "./collision/midi_key_black.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.056,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_f_sharp3",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 250,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_black.glb",
+            "shape": "./collision/midi_key_black.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.056,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_g_sharp3",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 250,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_black.glb",
+            "shape": "./collision/midi_key_black.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.056,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_a_sharp3",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 250,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_black.glb",
+            "shape": "./collision/midi_key_black.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.056,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_c_sharp4",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 250,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_black.glb",
+            "shape": "./collision/midi_key_black.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.056,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_d_sharp4",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 250,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_black.glb",
+            "shape": "./collision/midi_key_black.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.056,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_f_sharp4",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 250,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_black.glb",
+            "shape": "./collision/midi_key_black.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.056,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_g_sharp4",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 250,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_black.glb",
+            "shape": "./collision/midi_key_black.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.056,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_a_sharp4",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 250,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_black.glb",
+            "shape": "./collision/midi_key_black.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.056,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_c_sharp5",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 250,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_black.glb",
+            "shape": "./collision/midi_key_black.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.056,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_d_sharp5",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 250,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_black.glb",
+            "shape": "./collision/midi_key_black.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.056,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_f_sharp5",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 250,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_black.glb",
+            "shape": "./collision/midi_key_black.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.056,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_g_sharp5",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 250,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_black.glb",
+            "shape": "./collision/midi_key_black.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.056,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "key_a_sharp5",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 250,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_key_black.glb",
+            "shape": "./collision/midi_key_black.mochi.h5",
+            "parentJointFromLink": {
+              "translation": [
+                0.0,
+                -0.056,
+                0.0
+              ]
+            }
+          },
+          {
+            "name": "pitch_wheel",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 700,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_pitch_wheel.glb",
+            "shape": "./collision/midi_pitch_wheel.mochi.h5"
+          },
+          {
+            "name": "mod_wheel",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 700,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_mod_wheel.glb",
+            "shape": "./collision/midi_mod_wheel.mochi.h5"
+          },
+          {
+            "name": "joystick",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 900,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_joystick.glb",
+            "shape": "./collision/midi_joystick.mochi.h5"
+          },
+          {
+            "name": "knob",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 700,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_knob.glb",
+            "shape": "./collision/midi_knob.mochi.h5"
+          },
+          {
+            "name": "button_1",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 600,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_button_pink.glb",
+            "shape": "./collision/midi_button.mochi.h5"
+          },
+          {
+            "name": "button_2",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 600,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_button_blue.glb",
+            "shape": "./collision/midi_button.mochi.h5"
+          },
+          {
+            "name": "button_3",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 600,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_button_green.glb",
+            "shape": "./collision/midi_button.mochi.h5"
+          },
+          {
+            "name": "button_4",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 600,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_button_yellow.glb",
+            "shape": "./collision/midi_button.mochi.h5"
+          },
+          {
+            "name": "slider_1",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 700,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_slider.glb",
+            "shape": "./collision/midi_slider.mochi.h5"
+          },
+          {
+            "name": "slider_2",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 700,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_slider.glb",
+            "shape": "./collision/midi_slider.mochi.h5"
+          },
+          {
+            "name": "slider_3",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 700,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_slider.glb",
+            "shape": "./collision/midi_slider.mochi.h5"
+          },
+          {
+            "name": "slider_4",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 700,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_slider.glb",
+            "shape": "./collision/midi_slider.mochi.h5"
+          },
+          {
+            "name": "slider_5",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 700,
+            "layer": "midi_controls",
+            "contact": {
+              "coulombFrictionCoefficient": 0.8
+            },
+            "renderModel": "./render/midi_slider.glb",
+            "shape": "./collision/midi_slider.mochi.h5"
+          },
+          {
+            "name": "foot_front_left",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 1100,
+            "contact": {
+              "coulombFrictionCoefficient": 1.2,
+              "penaltyCoefficient": 30000000000.0
+            },
+            "renderModel": "./render/midi_foot.glb",
+            "shape": "./collision/midi_foot.mochi.h5"
+          },
+          {
+            "name": "foot_front_right",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 1100,
+            "contact": {
+              "coulombFrictionCoefficient": 1.2,
+              "penaltyCoefficient": 30000000000.0
+            },
+            "renderModel": "./render/midi_foot.glb",
+            "shape": "./collision/midi_foot.mochi.h5"
+          },
+          {
+            "name": "foot_back_left",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 1100,
+            "contact": {
+              "coulombFrictionCoefficient": 1.2,
+              "penaltyCoefficient": 30000000000.0
+            },
+            "renderModel": "./render/midi_foot.glb",
+            "shape": "./collision/midi_foot.mochi.h5"
+          },
+          {
+            "name": "foot_back_right",
+            "parentLink": 0,
+            "colliderType": "Sdf",
+            "density": 1100,
+            "contact": {
+              "coulombFrictionCoefficient": 1.2,
+              "penaltyCoefficient": 30000000000.0
+            },
+            "renderModel": "./render/midi_foot.glb",
+            "shape": "./collision/midi_foot.mochi.h5"
+          }
+        ]
+      }
+    ]
+  },
+  "constraints": {
+    "articulatedSingleDofTarget": [
+      {
+        "actor": "midi",
+        "jointIndex": 1,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 2,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 3,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 4,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 5,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 6,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 7,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 8,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 9,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 10,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 11,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 12,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 13,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 14,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 15,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 16,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 17,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 18,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 19,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 20,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 21,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 22,
+        "dofIndex": 0,
+        "targetValue": -0.18,
+        "stiffness": 0.6,
+        "damping": 0.002
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 23,
+        "dofIndex": 0,
+        "targetValue": -0.17,
+        "stiffness": 0.4,
+        "damping": 0.0015
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 24,
+        "dofIndex": 0,
+        "targetValue": -0.17,
+        "stiffness": 0.4,
+        "damping": 0.0015
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 25,
+        "dofIndex": 0,
+        "targetValue": -0.17,
+        "stiffness": 0.4,
+        "damping": 0.0015
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 26,
+        "dofIndex": 0,
+        "targetValue": -0.17,
+        "stiffness": 0.4,
+        "damping": 0.0015
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 27,
+        "dofIndex": 0,
+        "targetValue": -0.17,
+        "stiffness": 0.4,
+        "damping": 0.0015
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 28,
+        "dofIndex": 0,
+        "targetValue": -0.17,
+        "stiffness": 0.4,
+        "damping": 0.0015
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 29,
+        "dofIndex": 0,
+        "targetValue": -0.17,
+        "stiffness": 0.4,
+        "damping": 0.0015
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 30,
+        "dofIndex": 0,
+        "targetValue": -0.17,
+        "stiffness": 0.4,
+        "damping": 0.0015
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 31,
+        "dofIndex": 0,
+        "targetValue": -0.17,
+        "stiffness": 0.4,
+        "damping": 0.0015
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 32,
+        "dofIndex": 0,
+        "targetValue": -0.17,
+        "stiffness": 0.4,
+        "damping": 0.0015
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 33,
+        "dofIndex": 0,
+        "targetValue": -0.17,
+        "stiffness": 0.4,
+        "damping": 0.0015
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 34,
+        "dofIndex": 0,
+        "targetValue": -0.17,
+        "stiffness": 0.4,
+        "damping": 0.0015
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 35,
+        "dofIndex": 0,
+        "targetValue": -0.17,
+        "stiffness": 0.4,
+        "damping": 0.0015
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 36,
+        "dofIndex": 0,
+        "targetValue": -0.17,
+        "stiffness": 0.4,
+        "damping": 0.0015
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 37,
+        "dofIndex": 0,
+        "targetValue": -0.17,
+        "stiffness": 0.4,
+        "damping": 0.0015
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 38,
+        "dofIndex": 0,
+        "targetValue": 0.0,
+        "stiffness": 0.05,
+        "damping": 0.0005
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 42,
+        "dofIndex": 0,
+        "targetValue": 0.006,
+        "stiffness": 170.0,
+        "damping": 0.3
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 43,
+        "dofIndex": 0,
+        "targetValue": 0.006,
+        "stiffness": 170.0,
+        "damping": 0.3
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 44,
+        "dofIndex": 0,
+        "targetValue": 0.006,
+        "stiffness": 170.0,
+        "damping": 0.3
+      },
+      {
+        "actor": "midi",
+        "jointIndex": 45,
+        "dofIndex": 0,
+        "targetValue": 0.006,
+        "stiffness": 170.0,
+        "damping": 0.3
+      }
+    ],
+    "articulated3dRotationTarget": [
+      {
+        "actor": "midi",
+        "jointIndex": 40,
+        "target": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "stiffness": 0.08,
+        "damping": 0.0008
+      }
+    ]
+  },
+  "contactFilter": {
+    "_comment": "Keys and controls never touch each other (they only move along their joints), which saves contact work; hands and props still touch them. Mochi already disables contact between each control and the housing (adjacent links).",
+    "layerContactSymmetric": [
+      {
+        "enable": false,
+        "layers": [
+          "midi_controls",
+          "midi_controls"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,436 @@
+{
+  "comment": "Feel of every kind of control at once: each load ramps up over 3 s, then lets go. The keyboard rests on the ground. Read off the load at which each control starts to move, where it bottoms out, and how it comes back.",
+  "assetsRoot": "",
+  "prefab": "./../midi.mochi_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "white_key",
+      "enabled": true,
+      "type": "Force",
+      "target": "midi/key_c4",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.0,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 3.0,
+            "value": 1.5,
+            "interpolation": "Step"
+          },
+          {
+            "time": 3.001,
+            "value": 0.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 4.5,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      },
+      "pointLocal": [
+        0,
+        -0.075,
+        0.036
+      ]
+    },
+    {
+      "name": "black_key",
+      "enabled": true,
+      "type": "Force",
+      "target": "midi/key_c_sharp4",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.0,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 3.0,
+            "value": 1.5,
+            "interpolation": "Step"
+          },
+          {
+            "time": 3.001,
+            "value": 0.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 4.5,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      },
+      "pointLocal": [
+        0,
+        -0.045,
+        0.0499
+      ]
+    },
+    {
+      "name": "button",
+      "enabled": true,
+      "type": "Force",
+      "target": "midi/button_1",
+      "frame": "Local",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.0,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 3.0,
+            "value": 3.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 3.001,
+            "value": 0.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 4.5,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      },
+      "pointLocal": [
+        0,
+        0,
+        0.02
+      ]
+    },
+    {
+      "name": "slider",
+      "enabled": true,
+      "type": "Force",
+      "target": "midi/slider_1",
+      "frame": "Local",
+      "direction": [
+        0,
+        1,
+        0
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.0,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 3.0,
+            "value": 1.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 3.001,
+            "value": 0.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 4.5,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      },
+      "pointLocal": [
+        0,
+        0,
+        0.015
+      ]
+    },
+    {
+      "name": "knob",
+      "enabled": true,
+      "type": "Torque",
+      "target": "midi/knob",
+      "frame": "Local",
+      "direction": [
+        0,
+        0,
+        1
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.0,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 3.0,
+            "value": 0.02,
+            "interpolation": "Step"
+          },
+          {
+            "time": 3.001,
+            "value": 0.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 4.5,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    },
+    {
+      "name": "pitch_wheel",
+      "enabled": true,
+      "type": "Torque",
+      "target": "midi/pitch_wheel",
+      "frame": "Local",
+      "direction": [
+        1,
+        0,
+        0
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.0,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 3.0,
+            "value": 0.06,
+            "interpolation": "Step"
+          },
+          {
+            "time": 3.001,
+            "value": 0.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 4.5,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    },
+    {
+      "name": "mod_wheel",
+      "enabled": true,
+      "type": "Torque",
+      "target": "midi/mod_wheel",
+      "frame": "Local",
+      "direction": [
+        1,
+        0,
+        0
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.0,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 3.0,
+            "value": 0.03,
+            "interpolation": "Step"
+          },
+          {
+            "time": 3.001,
+            "value": 0.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 4.5,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    },
+    {
+      "name": "joystick",
+      "enabled": true,
+      "type": "Torque",
+      "target": "midi/joystick",
+      "frame": "Local",
+      "direction": [
+        1,
+        0,
+        0
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.0,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 3.0,
+            "value": 0.06,
+            "interpolation": "Step"
+          },
+          {
+            "time": 3.001,
+            "value": 0.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 4.5,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/key_c4_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/key_c_sharp4_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/button_1_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/slider_1_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/knob_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/pitch_wheel_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/mod_wheel_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/joystick_joint"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 4.5,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "load.white_key.mag",
+        "midi/key_c4_joint.q0"
+      ],
+      "height": 140
+    },
+    {
+      "channels": [
+        "load.black_key.mag",
+        "midi/key_c_sharp4_joint.q0"
+      ],
+      "height": 140
+    },
+    {
+      "channels": [
+        "load.button.mag",
+        "midi/button_1_joint.q0"
+      ],
+      "height": 140
+    },
+    {
+      "channels": [
+        "load.slider.mag",
+        "midi/slider_1_joint.q0"
+      ],
+      "height": 140
+    },
+    {
+      "channels": [
+        "load.knob.mag",
+        "midi/knob_joint.q0"
+      ],
+      "height": 140
+    },
+    {
+      "channels": [
+        "load.pitch_wheel.mag",
+        "midi/pitch_wheel_joint.q0"
+      ],
+      "height": 140
+    },
+    {
+      "channels": [
+        "load.mod_wheel.mag",
+        "midi/mod_wheel_joint.q0"
+      ],
+      "height": 140
+    },
+    {
+      "channels": [
+        "load.joystick.mag",
+        "midi/joystick_joint.q0"
+      ],
+      "height": 140
+    }
+  ]
+}

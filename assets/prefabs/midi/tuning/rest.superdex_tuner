@@ -1,0 +1,84 @@
+{
+  "comment": "The keyboard left alone on the ground for 10 s. Nothing should move: the keys, buttons, wheels and joystick sit on their stops or springs, and the sliders' friction holds them on the 15 deg panel.",
+  "assetsRoot": "",
+  "prefab": "./../midi.mochi_prefab",
+  "prefabOverrides": [],
+  "loads": [],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "midi/housing"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/key_c4_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/key_c_sharp4_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/button_1_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/slider_1_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/slider_5_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/knob_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/pitch_wheel_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/mod_wheel_joint"
+    },
+    {
+      "kind": "JointState",
+      "target": "midi/joystick_joint"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.01,
+    "duration": 10.0,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "midi/slider_1_joint.q0",
+        "midi/slider_5_joint.q0"
+      ],
+      "height": 140
+    },
+    {
+      "channels": [
+        "perf.solveMs"
+      ],
+      "height": 120
+    }
+  ]
+}
