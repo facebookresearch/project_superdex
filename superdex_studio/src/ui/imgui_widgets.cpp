@@ -580,6 +580,39 @@ bool ImGui::NameInputWithCollisionCheck(
   return changed;
 }
 
+bool ImGui::ActorNameCombo(
+    char const* label,
+    mochi::DynamicString& value,
+    std::vector<std::string> const& names) {
+  std::string const current(value);
+  bool const missing = !current.empty() && std::ranges::find(names, current) == names.end();
+  if (missing) {
+    // The combo frame uses FrameBg; its arrow button uses Button. Push both so the whole widget is
+    // red (same highlight as a name conflict).
+    PushStyleColor(ImGuiCol_FrameBg, kNameConflictColor);
+    PushStyleColor(ImGuiCol_Button, kNameConflictColor);
+  }
+  bool const open = BeginCombo(label, current.c_str());
+  if (missing) {
+    PopStyleColor(2);
+  }
+  bool changed = false;
+  if (open) {
+    for (auto const& name : names) {
+      bool const selected = current == name;
+      if (Selectable(name.c_str(), selected) && !selected) {
+        value = mochi::DynamicString{name};
+        changed = true;
+      }
+      if (selected) {
+        SetItemDefaultFocus();
+      }
+    }
+    EndCombo();
+  }
+  return changed;
+}
+
 bool ImGui::BatchRenameInputs(superdex::studio::BatchRenameParams& params, int trimMax) {
   using superdex::studio::BatchRenameCase;
   bool changed = false;

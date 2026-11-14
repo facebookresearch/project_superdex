@@ -72,16 +72,6 @@ constexpr float kLineScreenFraction = 0.0015f;
 constexpr float kLineMinHalfWidth = 0.00005f;
 constexpr float kLineMaxHalfWidth = 0.01f;
 
-float ScreenScaledSize(
-    filament::math::float3 point,
-    filament::math::float3 cameraPosition,
-    float fraction,
-    float minSize,
-    float maxSize) {
-  float const distance = length(point - cameraPosition);
-  return std::clamp(distance * fraction, minSize, maxSize);
-}
-
 // Draws a segment as a camera-facing quad in the overlay (translucent) bucket.
 void DrawOverlayLine(
     mochi_renderer::DebugDraw* debugDraw,
@@ -184,6 +174,16 @@ bool IsSamePick(MeasureEntity const& a, MeasureEntity const& b) {
 }
 
 } // namespace
+
+float ScreenScaledSize(
+    filament::math::float3 point,
+    filament::math::float3 cameraPosition,
+    float fraction,
+    float minSize,
+    float maxSize) {
+  float const distance = length(point - cameraPosition);
+  return std::clamp(distance * fraction, minSize, maxSize);
+}
 
 //--------------------------------------------------------------------------------------------------
 // GEOMETRY CACHE

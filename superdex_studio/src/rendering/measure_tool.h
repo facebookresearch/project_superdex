@@ -42,6 +42,15 @@ class SuperDexStudio;
 class Viewport;
 struct SceneStage;
 
+// A size that stays the same on screen: `fraction` of `point`'s distance to the camera, clamped to
+// [minSize, maxSize] (renderer space, meters). Sizes debug-draw markers and lines.
+float ScreenScaledSize(
+    filament::math::float3 point,
+    filament::math::float3 cameraPosition,
+    float fraction,
+    float minSize,
+    float maxSize);
+
 //--------------------------------------------------------------------------------------------------
 // TARGETS
 //--------------------------------------------------------------------------------------------------

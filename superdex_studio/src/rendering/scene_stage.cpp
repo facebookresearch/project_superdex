@@ -1872,6 +1872,11 @@ int SceneStage::FindIndexByName(std::string_view name) const {
   return it == _nameToIndex.end() ? -1 : it->second;
 }
 
+StagedActor const* SceneStage::FindActorByName(std::string_view name) const {
+  int const index = FindIndexByName(name);
+  return index < 0 ? nullptr : &_actors[static_cast<size_t>(index)];
+}
+
 int SceneStage::FindUpdateTarget(std::string_view name, int stagedIndex) const {
   if (stagedIndex < 0) {
     return FindIndexByName(name);

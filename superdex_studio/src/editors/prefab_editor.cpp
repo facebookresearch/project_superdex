@@ -2352,37 +2352,8 @@ static bool ContactActorCombo(
     char const* id,
     mochi::DynamicString& value,
     std::vector<std::string> const& actorNames) {
-  bool changed = false;
-  // Flag entries that reference an actor no longer present in the prefab, using the same red
-  // FrameBg as name-conflict highlighting.
-  std::string_view const current(value);
-  bool const missing = !current.empty() &&
-      std::find(actorNames.begin(), actorNames.end(), current) == actorNames.end();
-  if (missing) {
-    // The combo frame uses FrameBg; its arrow button uses Button. Push both so the whole widget is
-    // red (same highlight as a name conflict).
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, kNameConflictColor);
-    ImGui::PushStyleColor(ImGuiCol_Button, kNameConflictColor);
-  }
   ImGui::SetNextItemWidth(-1.0f);
-  bool const open = ImGui::BeginCombo(id, value.c_str());
-  if (missing) {
-    ImGui::PopStyleColor(2);
-  }
-  if (open) {
-    for (auto const& name : actorNames) {
-      bool const selected = std::string_view(value) == name;
-      if (ImGui::Selectable(name.c_str(), selected)) {
-        value = mochi::DynamicString{name};
-        changed = true;
-      }
-      if (selected) {
-        ImGui::SetItemDefaultFocus();
-      }
-    }
-    ImGui::EndCombo();
-  }
-  return changed;
+  return ImGui::ActorNameCombo(id, value, actorNames);
 }
 
 // Placeholder used whenever a layer name would otherwise be empty. Empty layer names are invalid

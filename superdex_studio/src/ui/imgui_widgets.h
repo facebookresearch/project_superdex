@@ -86,6 +86,8 @@ inline constexpr std::array<AxisColors, 3> kAxes = {kAxisX, kAxisY, kAxisZ};
 
 // Frame-background highlight for a name input whose value collides with an existing name.
 inline ImVec4 const kNameConflictColor(0.5f, 0.0f, 0.0f, 1.0f);
+// Text color for an error message shown in a panel.
+inline ImVec4 const kErrorTextColor(1.0f, 0.45f, 0.35f, 1.0f);
 
 // Unit format enum for type-safe unit display in UI widgets.
 enum class UnitFormat {
@@ -193,6 +195,13 @@ bool InputTextMultiline(
 // Name InputText that highlights (kNameConflictColor) and shows a "name already used" tooltip when
 // @p collides is true. Returns true if the text changed. Shared by the actor detail panels.
 bool NameInputWithCollisionCheck(char const* label, mochi::DynamicString& name, bool collides);
+
+// Combo that picks @p value from @p names. A non-empty value that is not one of @p names (an actor
+// that no longer exists) is highlighted with kNameConflictColor. Returns true if the value changed.
+bool ActorNameCombo(
+    char const* label,
+    mochi::DynamicString& value,
+    std::vector<std::string> const& names);
 
 void RenderTargetImage(
     superdex::studio::RenderTarget const* renderTarget,

@@ -123,7 +123,6 @@ constexpr std::array<filament::math::float4, 4> kLoadColors{{
 }};
 constexpr filament::math::float4 kSelectedLoadColor{1.0f, 1.0f, 0.2f, 1.0f};
 constexpr ImVec4 kWarningColor{1.0f, 0.7f, 0.2f, 1.0f};
-constexpr ImVec4 kErrorColor{1.0f, 0.45f, 0.35f, 1.0f};
 // Plot history cap, so a long session cannot grow without bound (~1.5 h at 100 Hz).
 constexpr size_t kMaxPlotSamples = 500'000;
 constexpr float kPlotLineWeight = 2.0f;
@@ -3780,7 +3779,7 @@ void TunerEditor::ShowStopConditionCards(bool& structural) {
   list.bubbleColor = [&](size_t i, bool isPlaceholder) {
     bool const triggered = _stopEvent && _stopEvent->condition == static_cast<int>(i);
     return CardColor(
-        triggered ? kErrorColor : kWarningColor,
+        triggered ? kErrorTextColor : kWarningColor,
         !isPlaceholder && stops[i].enabled,
         !isPlaceholder && _stopCards.cards[i].id == _selectedStopCard);
   };
@@ -4170,7 +4169,8 @@ void TunerEditor::ShowRunWindow(bool* open) {
     Tooltip("Open the prefab in its own editor tab.");
     if (!prefabLoaded) {
       ImGui::SameLine();
-      ImGui::TextColored(kErrorColor, ICON_FA_EXCLAMATION_TRIANGLE " Failed to load (see log).");
+      ImGui::TextColored(
+          kErrorTextColor, ICON_FA_EXCLAMATION_TRIANGLE " Failed to load (see log).");
     }
   }
 
@@ -4203,7 +4203,7 @@ void TunerEditor::ShowRunWindow(bool* open) {
             "specified below.\nClick again to disarm.");
   ImGui::SameLine();
   if (recording) {
-    ImGui::TextColored(kErrorColor, "Recording");
+    ImGui::TextColored(kErrorTextColor, "Recording");
   } else if (armed) {
     ImGui::TextUnformatted("Recording each run");
   } else {
@@ -4287,7 +4287,7 @@ void TunerEditor::ShowOverridesWindow(bool* open) {
   list.id = [&](size_t i) { return _overrideCards.cards[i].id; };
   list.bubbleColor = [&](size_t i, bool isPlaceholder) {
     bool const broken = i < _overrideErrors.size() && !_overrideErrors[i].empty();
-    return CardColor(broken ? kErrorColor : kNeutralAccent, !isPlaceholder);
+    return CardColor(broken ? kErrorTextColor : kNeutralAccent, !isPlaceholder);
   };
   list.ghostLabel = [&](size_t i) { return std::string(std::string_view(overrides[i].path)); };
   list.move = [&](size_t from, size_t to) {
@@ -4328,7 +4328,7 @@ void TunerEditor::ShowOverridesWindow(bool* open) {
       Tooltip(
           "JSON value, e.g. 0.8, true or [0, 0, 1]. Text that is not valid JSON is passed as a string.");
       if (!error.empty()) {
-        ImGui::PushStyleColor(ImGuiCol_Text, kErrorColor);
+        ImGui::PushStyleColor(ImGuiCol_Text, kErrorTextColor);
         ImGui::TextWrapped("%s", error.c_str());
         ImGui::PopStyleColor();
       } else {

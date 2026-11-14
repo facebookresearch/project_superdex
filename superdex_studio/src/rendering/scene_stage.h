@@ -427,6 +427,8 @@ struct SceneStage {
   void DestroySimSurface(StagedActor& actor);
   // Get a staged actor's index by name. Returns -1 if not found.
   int FindIndexByName(std::string_view name) const;
+  // Get a staged actor by name. Returns null if not found.
+  StagedActor const* FindActorByName(std::string_view name) const;
 
   // Get a staged actor's index by associated SceneObject*. Returns -1 if not found. Matches either
   // representation, so a pick/selection on either the render or shape instance resolves to the
