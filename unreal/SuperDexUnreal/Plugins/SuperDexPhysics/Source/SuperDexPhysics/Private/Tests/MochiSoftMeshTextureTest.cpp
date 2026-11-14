@@ -110,7 +110,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FMochiSoftMeshTextureAttributesTest::RunTest(const FString& Parameters) {
   FDynamicMesh3 mesh = MakeTwoTriangleMesh();
 
-  EnableSoftMeshRenderModelAttributes(mesh, kUVs, kColors);
+  EnableRenderModelAttributes(mesh, kUVs, kColors);
 
   const UE::Geometry::FDynamicMeshNormalOverlay* normalOverlay =
       mesh.Attributes()->PrimaryNormals();
@@ -131,7 +131,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FMochiSoftMeshTextureNoColorsTest::RunTest(const FString& Parameters) {
   FDynamicMesh3 mesh = MakeTwoTriangleMesh();
 
-  EnableSoftMeshRenderModelAttributes(mesh, kUVs, {});
+  EnableRenderModelAttributes(mesh, kUVs, {});
 
   TestTrue(TEXT("UVs of the nodes"), HasUVsOfNodes(mesh));
   TestFalse(TEXT("Has a color overlay"), mesh.Attributes()->HasPrimaryColors());
@@ -146,7 +146,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FMochiSoftMeshTextureColorsWithoutUVsTest::RunTest(const FString& Parameters) {
   FDynamicMesh3 mesh = MakeTwoTriangleMesh();
 
-  EnableSoftMeshRenderModelAttributes(mesh, {}, kColors);
+  EnableRenderModelAttributes(mesh, {}, kColors);
 
   TestTrue(TEXT("Colors of the nodes"), HasColorsOfNodes(mesh));
   TestTrue(
@@ -167,9 +167,10 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FMochiSoftMeshTextureNormalUpdateTest::RunTest(const FString& Parameters) {
   FDynamicMesh3 mesh = MakeTwoTriangleMesh();
-  EnableSoftMeshRenderModelAttributes(mesh, kUVs, kColors);
+  EnableRenderModelAttributes(mesh, kUVs, kColors);
 
-  UpdateDynamicMeshFromMochiQuery(kNodePositions, kNodeNormals, true, FVector::OneVector, mesh);
+  UpdateDynamicMeshFromMochiQuery(
+      kNodePositions, kNodeNormals, true, true, FVector::OneVector, mesh);
 
   const UE::Geometry::FDynamicMeshNormalOverlay* normalOverlay =
       mesh.Attributes()->PrimaryNormals();
@@ -182,6 +183,31 @@ bool FMochiSoftMeshTextureNormalUpdateTest::RunTest(const FString& Parameters) {
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FMochiSoftMeshTextureEmptyNormalOverlayTest,
+    "SuperDexPhysics.SoftMeshTexture.QueryIgnoresEmptyNormalOverlay",
+    MOCHI_SOFT_MESH_TEXTURE_TEST_FLAGS)
+
+bool FMochiSoftMeshTextureEmptyNormalOverlayTest::RunTest(const FString& Parameters) {
+  FDynamicMesh3 mesh = MakeTwoTriangleMesh();
+  mesh.EnableAttributes();
+  UE::Geometry::FDynamicMeshNormalOverlay* normalOverlay = mesh.Attributes()->PrimaryNormals();
+  TestEqual(TEXT("Initial overlay elements"), normalOverlay->ElementCount(), 0);
+
+  UpdateDynamicMeshFromMochiQuery(
+      kNodePositions, kNodeNormals, true, false, FVector::OneVector, mesh);
+
+  TestEqual(TEXT("Overlay elements"), normalOverlay->ElementCount(), 0);
+  for (const int triIdx : mesh.TriangleIndicesItr()) {
+    TestFalse(TEXT("Overlay triangle is set"), normalOverlay->IsSetTriangle(triIdx));
+  }
+  for (int32 vertIdx = 0; vertIdx < mesh.VertexCount(); ++vertIdx) {
+    TestTrue(TEXT("Position"), mesh.GetVertex(vertIdx).Equals(ExpectedPosition(vertIdx)));
+    TestEqual(TEXT("Vertex normal"), mesh.GetVertexNormal(vertIdx), ExpectedNormal(vertIdx));
+  }
+  return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FMochiSoftMeshTextureUntexturedUpdateTest,
     "SuperDexPhysics.SoftMeshTexture.QueryLeavesUntexturedMeshUntextured",
     MOCHI_SOFT_MESH_TEXTURE_TEST_FLAGS)
@@ -189,7 +215,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FMochiSoftMeshTextureUntexturedUpdateTest::RunTest(const FString& Parameters) {
   FDynamicMesh3 mesh = MakeTwoTriangleMesh();
 
-  UpdateDynamicMeshFromMochiQuery(kNodePositions, kNodeNormals, true, FVector::OneVector, mesh);
+  UpdateDynamicMeshFromMochiQuery(
+      kNodePositions, kNodeNormals, true, false, FVector::OneVector, mesh);
 
   TestFalse(TEXT("Has attributes"), mesh.HasAttributes());
   TestEqual(TEXT("Triangle count"), mesh.TriangleCount(), 2);

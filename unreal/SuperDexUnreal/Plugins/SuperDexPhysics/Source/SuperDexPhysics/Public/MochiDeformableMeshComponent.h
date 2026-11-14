@@ -115,6 +115,10 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
   virtual void SetMaterial(int32 ElementIndex, UMaterialInterface* Material) override;
 
  protected:
+  void SetHasRenderModelAttributes(bool bHasAttributes) {
+    bHasRenderModelAttributes = bHasAttributes;
+  }
+
   /// Subclass hook called from @ref TickComponent after the standard per-step update.
   /// Default no-op.
   virtual void OnQueryDataApplied(const FMochiActorQueryData& QueryData) {}
@@ -123,4 +127,6 @@ class SUPERDEXPHYSICS_API UMochiDeformableMeshComponent : public UDynamicMeshCom
   UPROPERTY()
   UMochiActorObject* MochiActorObject = nullptr;
   FMochiContactEventHandler ContactEventHandler;
+  // Set only when the current dynamic mesh was given per-vertex render-model overlays.
+  bool bHasRenderModelAttributes = false;
 };

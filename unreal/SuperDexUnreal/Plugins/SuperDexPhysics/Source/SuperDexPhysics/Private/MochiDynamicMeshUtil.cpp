@@ -220,7 +220,7 @@ void ConvertElementBarycenterReferencePositions(
   }
 }
 
-void EnableSoftMeshRenderModelAttributes(
+void EnableRenderModelAttributes(
     UE::Geometry::FDynamicMesh3& Mesh,
     TConstArrayView<FVector2f> UVs,
     TConstArrayView<FLinearColor> Colors) {
@@ -267,13 +267,14 @@ void UpdateDynamicMeshFromMochiQuery(
     const TArray<mochi::real>& NodePositions,
     const TArray<mochi::real>& NodeNormals,
     bool bUseMochiNodeNormals,
+    bool bUpdateRenderModelNormalOverlay,
     FVector InvScale3D,
     UE::Geometry::FDynamicMesh3& Mesh) {
   MOCHI_PROFILE_SCOPE();
   const FVector3f invScale3d = static_cast<FVector3f>(InvScale3D);
-  // The render proxy draws the normal overlay rather than the vertex normals when there is one.
   UE::Geometry::FDynamicMeshNormalOverlay* normalOverlay =
-      bUseMochiNodeNormals && Mesh.HasAttributes() ? Mesh.Attributes()->PrimaryNormals() : nullptr;
+      bUseMochiNodeNormals && bUpdateRenderModelNormalOverlay ? Mesh.Attributes()->PrimaryNormals()
+                                                              : nullptr;
   check(!normalOverlay || normalOverlay->ElementCount() == Mesh.MaxVertexID());
   // single precision converter for speed
   FMochiToUnrealConverter_float m2uf;

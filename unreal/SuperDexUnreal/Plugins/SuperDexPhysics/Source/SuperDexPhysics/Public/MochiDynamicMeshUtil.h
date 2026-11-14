@@ -69,18 +69,19 @@ void SUPERDEXPHYSICS_API ConvertVolumeNodeReferencePositions(
 /// whose element IDs are the vertex IDs: a normal overlay starting from the vertex normals, and a
 /// UV or color overlay when UVs or Colors (linear RGBA) is non-empty. Each non-empty array holds
 /// one value per vertex.
-void SUPERDEXPHYSICS_API EnableSoftMeshRenderModelAttributes(
+void SUPERDEXPHYSICS_API EnableRenderModelAttributes(
     UE::Geometry::FDynamicMesh3& Mesh,
     TConstArrayView<FVector2f> UVs,
     TConstArrayView<FLinearColor> Colors);
 
-/// Update vertex positions (and optionally normals) on a dynamic mesh from Mochi query data. With
-/// normals, the primary normal overlay is also updated if present, as built by
-/// EnableSoftMeshRenderModelAttributes. UV and color overlays are left unchanged.
+/// Update vertex positions (and optionally normals) on a dynamic mesh from Mochi query data.
+/// bUpdateRenderModelNormalOverlay requires the one-overlay-element-per-vertex layout built by
+/// EnableRenderModelAttributes. UV and color overlays are left unchanged.
 void SUPERDEXPHYSICS_API UpdateDynamicMeshFromMochiQuery(
     const TArray<mochi::real>& NodePositions,
     const TArray<mochi::real>& NodeNormals,
     bool bUseMochiNodeNormals,
+    bool bUpdateRenderModelNormalOverlay,
     FVector InvScale3D,
     UE::Geometry::FDynamicMesh3& Mesh);
 

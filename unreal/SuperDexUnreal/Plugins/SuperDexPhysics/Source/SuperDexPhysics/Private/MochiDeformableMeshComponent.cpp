@@ -85,6 +85,7 @@ void UMochiDeformableMeshComponent::TickComponent(
               QueryData.SurfaceNodePositions,
               QueryData.NodeNormals,
               bUseMochiNodeNormals,
+              bHasRenderModelAttributes,
               FVector::OneVector / GetComponentTransform().GetScale3D(),
               Mesh);
         },

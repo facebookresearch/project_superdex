@@ -134,7 +134,7 @@ const void UMochiSoftMeshComponent::ApplyMaterialModifiers(
 UMochiSoftMeshComponent::UMochiSoftMeshComponent(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer) {}
 
-static void PopulateFromMochiMesh_SoftInternal(
+static bool PopulateFromMochiMesh_SoftInternal(
     FDynamicMesh3& Mesh,
     UMochiModel* Model,
     bool bUseMochiNodeNormals,
@@ -173,7 +173,8 @@ static void PopulateFromMochiMesh_SoftInternal(
   const auto fits = [&Mesh](int32 Num) { return Num == 0 || Num == Mesh.MaxVertexID(); };
   if (bUseMochiNodeNormals && !(RenderModelUVs.IsEmpty() && RenderModelColors.IsEmpty())) {
     if (fits(RenderModelUVs.Num()) && fits(RenderModelColors.Num())) {
-      EnableSoftMeshRenderModelAttributes(Mesh, RenderModelUVs, RenderModelColors);
+      EnableRenderModelAttributes(Mesh, RenderModelUVs, RenderModelColors);
+      return true;
     } else {
       UE_LOG(
           LogMochiPhysics,
@@ -185,20 +186,21 @@ static void PopulateFromMochiMesh_SoftInternal(
           Mesh.MaxVertexID());
     }
   }
+  return false;
 }
 
 void UMochiSoftMeshComponent::SetMochiModel(UMochiModel* NewMochiModel) {
   MOCHI_PROFILE_SCOPE();
   Model = NewMochiModel;
   EditMesh([this](UE::Geometry::FDynamicMesh3& Mesh) {
-    PopulateFromMochiMesh_SoftInternal(
+    SetHasRenderModelAttributes(PopulateFromMochiMesh_SoftInternal(
         Mesh,
         Model,
         bUseMochiNodeNormals,
         RenderModelUVs,
         RenderModelColors,
         MochiExistingActor,
-        GetWorld());
+        GetWorld()));
   });
   ValidateMaterialSlots();
 }
@@ -218,14 +220,14 @@ void UMochiSoftMeshComponent::OnRegister() {
   }
   // Populate the underlying UDynamicMesh from the Model data
   EditMesh([this](UE::Geometry::FDynamicMesh3& Mesh) {
-    PopulateFromMochiMesh_SoftInternal(
+    SetHasRenderModelAttributes(PopulateFromMochiMesh_SoftInternal(
         Mesh,
         Model,
         bUseMochiNodeNormals,
         RenderModelUVs,
         RenderModelColors,
         MochiExistingActor,
-        GetWorld());
+        GetWorld()));
   });
   ValidateMaterialSlots();
   Super::OnRegister();
@@ -277,14 +279,14 @@ void UMochiSoftMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& Prop
     UE_LOG(LogMochiPhysics, Display, TEXT("[%hs] %s changed"), __FUNCTION__, *PropName.ToString());
 
     EditMesh([this](UE::Geometry::FDynamicMesh3& Mesh) {
-      PopulateFromMochiMesh_SoftInternal(
+      SetHasRenderModelAttributes(PopulateFromMochiMesh_SoftInternal(
           Mesh,
           Model,
           bUseMochiNodeNormals,
           RenderModelUVs,
           RenderModelColors,
           MochiExistingActor,
-          GetWorld());
+          GetWorld()));
     });
     ValidateMaterialSlots();
   }
