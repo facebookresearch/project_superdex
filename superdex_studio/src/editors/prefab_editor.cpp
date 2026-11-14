@@ -112,6 +112,11 @@ void PrefabEditor::Initialize() {
        .getState = [this] { return _mochiScene.IsDebugDrawEnabled(); },
        .shortcut = ImGuiKey_P});
   _viewport->RegisterShowCommand(
+      {.name = "Constraints",
+       .onToggle = [this] { _showAllConstraints = !_showAllConstraints; },
+       .getState = [this] { return _showAllConstraints; },
+       .shortcut = ImGuiKey_C});
+  _viewport->RegisterShowCommand(
       {.name = "Render Only",
        .onToggle = [this] { SetRepresentationMode(StageType::RenderModelOnly); },
        .getState = [this] { return _stageType == StageType::RenderModelOnly; },
@@ -215,6 +220,7 @@ void PrefabEditor::OnRender(Renderer const* renderer) {
         _viewport->GetDebugText(),
         _studio->GetEditorToRendererSpaceConverter());
   }
+  DrawConstraints();
   // Render the scene.
   _viewport->RenderScene(renderer);
 }
@@ -1351,6 +1357,7 @@ void PrefabEditor::ShowPrefabHierarchyWindow(bool* open) {
   // (the keyboard shortcuts in OnHandleInputs and the gizmo ctrl-drag are already gated the same
   // way). Left-click selection still works so actors can be inspected during playback.
   bool const simulating = _mochiScene.IsSimulating();
+  _hoveredConstraint.reset();
 
   if (!ImGui::BeginTabBar("PrefabHierarchyTabs")) {
     ImGui::End();

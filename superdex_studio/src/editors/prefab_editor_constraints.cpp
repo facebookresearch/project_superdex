@@ -19,6 +19,7 @@
 #include "app/app.h"
 #include "assets/mochi_prefab_asset.h"
 #include "editors/prefab_editor.h"
+#include "rendering/constraint_visualization.h"
 #include "rendering/scene_stage.h"
 #include "ui/imgui_widgets.h"
 
@@ -270,6 +271,15 @@ bool EditFields(ConstraintEditContext const& ctx, C& c) {
       } else {
         changed |= ImGui::DragReal("Min", &c.minValue, speed, 0.0f, 0.0f, format, scale);
         changed |= ImGui::DragReal("Max", &c.maxValue, speed, 0.0f, 0.0f, format, scale);
+      }
+      if (validJoint) {
+        if (auto const frames = ComputeArticulatedJointFrames(*actor, c.jointIndex, ctx.stage)) {
+          real const current = MeasureJointDof(*frames, c.dofIndex) /
+              (rotation || actor->scale == 0 ? 1_r : actor->scale);
+          char text[64];
+          std::snprintf(text, sizeof(text), format, static_cast<float>(current) * scale);
+          ImGui::LabelText("Current", "%s", text);
+        }
       }
     } else {
       rotation = true;
@@ -740,6 +750,7 @@ void PrefabEditor::ShowConstraintRow(
     FocusWindowIfOpen("Details");
   }
   if (ImGui::IsItemHovered()) {
+    _hoveredConstraint = ref;
     HighlightConstraintActors(ref);
   }
   if (!simulating &&
@@ -970,6 +981,61 @@ void PrefabEditor::HighlightConstraintActors(ConstraintRef ref) {
           c, [&](mochi::DynamicString const& name) { highlight(std::string_view(name)); });
     }
   });
+}
+
+void PrefabEditor::DrawConstraints() {
+  auto* debugDraw = _viewport->GetRenderScene()->GetDebugDraw();
+  if (debugDraw == nullptr) {
+    return;
+  }
+  auto const& prefab = _prefabAsset->GetPrefab();
+  filament::math::double3 const camera = _viewport->GetRenderScene()->GetCameraPosition();
+  ConstraintDrawContext const ctx{
+      prefab,
+      _stage,
+      *debugDraw,
+      _viewport->GetDebugText(),
+      _studio->GetEditorToRendererSpaceConverter(),
+      filament::math::float3{
+          static_cast<float>(camera.x),
+          static_cast<float>(camera.y),
+          static_cast<float>(camera.z)}};
+
+  std::optional<ConstraintRef> selected;
+  std::vector<ConstraintRef> emphasized; // drawn bold: hovered, or on the selected link's joint
+  if (Selection const* const primary = PrimarySelection()) {
+    if (primary->kind == Selection::Kind::Constraint) {
+      selected = primary->constraint;
+    } else if (
+        primary->kind == Selection::Kind::ArticulatedLink && primary->actorIndex >= 0 &&
+        primary->actorIndex < static_cast<int>(prefab.actors.articulated.size())) {
+      emphasized = FindJointConstraints(
+          prefab.constraints,
+          std::string_view(prefab.actors.articulated[primary->actorIndex].name),
+          primary->linkIndex);
+    }
+  }
+  if (_hoveredConstraint && _hoveredConstraint != selected) {
+    emphasized.push_back(*_hoveredConstraint);
+  }
+  auto const isEmphasized = [&](ConstraintRef const& ref) {
+    return ref == selected || mochi::Contains(emphasized, ref);
+  };
+  if (_showAllConstraints) {
+    for (ConstraintRef const& ref : CollectConstraints(prefab.constraints)) {
+      if (!isEmphasized(ref)) {
+        DrawConstraint(ctx, ref, ConstraintEmphasis::Normal);
+      }
+    }
+  }
+  for (ConstraintRef const& ref : emphasized) {
+    if (ref != selected) {
+      DrawConstraint(ctx, ref, ConstraintEmphasis::Hovered);
+    }
+  }
+  if (selected) {
+    DrawConstraint(ctx, *selected, ConstraintEmphasis::Selected);
+  }
 }
 
 } // namespace superdex::studio

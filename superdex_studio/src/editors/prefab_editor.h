@@ -248,6 +248,7 @@ class PrefabEditor : public AssetEditor {
   // Call right after an actor's name input: once the rename is committed, renames the actor in the
   // constraints that reference it. Returns true if it changed any.
   bool RenameActorInConstraints(std::string_view name, bool collides);
+  void DrawConstraints();
   // Highlights the staged actors `ref` references (on hierarchy hover).
   void HighlightConstraintActors(ConstraintRef ref);
   ConstraintActorIndex BuildConstraintActorIndex() const;
@@ -345,6 +346,10 @@ class PrefabEditor : public AssetEditor {
   bool _forceLinkFocus = false;
   // One-shot flag: show the Actors tab of the hierarchy (set on viewport pick).
   bool _focusActorsTab = false;
+  // Draw every constraint (Show > Constraints), not just the selected and hovered one.
+  bool _showAllConstraints = false;
+  // Constraint row under the mouse this frame (set by the hierarchy, drawn by OnRender).
+  std::optional<ConstraintRef> _hoveredConstraint;
   // The actors constraint fields can name, rebuilt each frame.
   ConstraintActorIndex _constraintActorIndex;
   // Constraints tab rows (description, constraint), reused across frames.
