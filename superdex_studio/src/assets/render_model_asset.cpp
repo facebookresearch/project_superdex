@@ -18,6 +18,7 @@
 #include "app/app.h"
 #include "assets/asset_manager.h"
 #include "editors/model_editor.h"
+#include "meshing/processing_modifiers/processing_mesh_utils.h"
 
 #include <mochi_renderer/resource_manager.h>
 
@@ -55,6 +56,16 @@ std::optional<DeformableMeshView> RenderModelAsset::GetDeformableMesh(mochi::Err
 std::unique_ptr<DeformableModelInstance> RenderModelAsset::GetDeformableModelInstance(
     mochi::Error& error) {
   return _renderModel->GetDeformableInstance(error);
+}
+
+ModelStats const& RenderModelAsset::GetStats() const {
+  if (!_stats) {
+    _stats.emplace();
+    for (MeshSection const& section : processing::ReadSectionsInRenderSpace(_path.ToString())) {
+      _stats->triangles += static_cast<int64_t>(section.indices.size() / 3);
+    }
+  }
+  return *_stats;
 }
 
 bool RenderModelAsset::RendersThumbnail() const {

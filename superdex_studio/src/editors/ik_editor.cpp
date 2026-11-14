@@ -23,6 +23,7 @@
 #include "assets/ik_asset.h"
 #include "core/ik_design_session.h"
 #include "rendering/measure_tool.h"
+#include "rendering/stats.h"
 #include "ui/asset_browser.h"
 #include "ui/imgui_widgets.h"
 
@@ -281,6 +282,33 @@ void IKEditor::Initialize() {
   _viewport->SetSceneStage(&_outputBotStage);
   BindSceneStageMeasureTargets(
       *_viewport, _outputBotStage, [this] { return _running; }, [this] { return !_running; });
+  _viewport->SetStatsProvider([this] {
+    auto const& config = _ikAsset->GetConfig();
+    auto const count = [](auto const& items, auto const& predicate) {
+      return static_cast<int64_t>(std::ranges::count_if(items, predicate));
+    };
+    StatsText text;
+    // The preview session keeps its last output bot after a failed prepare.
+    text.Add("Output DOFs", _prepared ? FormatBotDofs(_preview.GetOutputBot()) : "None");
+    auto const* inputBot = _preview.GetInputBot();
+    text.Add("Input DOFs", inputBot ? FormatBotDofs(*inputBot) : "None");
+    char scale[32];
+    std::snprintf(scale, sizeof(scale), "%.3f", static_cast<double>(config.inputBotScale));
+    text.Add("Input Scale", scale);
+    text.Add(
+        "IK Goals",
+        FormatBreakdown(
+            static_cast<int64_t>(config.goals.size()),
+            {{count(config.goals, [](auto const& g) { return !g.enabled; }), "Disabled"},
+             {count(config.goals, [](auto const& g) { return g.inputBotLink.empty(); }),
+              "Unbound"}}));
+    return text.Add(
+        "Joint Couplings",
+        FormatBreakdown(
+            static_cast<int64_t>(config.jointCouplings.size()),
+            {{count(config.jointCouplings, [](auto const& c) { return !c.enabled; }),
+              "Disabled"}}));
+  });
   _viewport->RegisterShowCommand(
       {.name = "IK Constraint Frames",
        .onToggle =

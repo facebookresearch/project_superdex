@@ -26,6 +26,7 @@
 #include "meshing/processing_modifiers/processing_serialization.h"
 #include "meshing/processing_modifiers/processing_stack.h"
 #include "rendering/measure_tool.h"
+#include "rendering/stats.h"
 #include "ui/asset_browser.h"
 #include "ui/imgui_widgets.h"
 #include "ui/reorderable_list.h"
@@ -645,6 +646,7 @@ void ModelEditor::Initialize() {
   // being off; every slot, reference model and processing stage is measurable.
   _viewport->GetMeasureTool()->SetTargetProvider(
       [this](std::vector<MeasureTarget>& out) { CollectMeasureTargets(out); });
+  _viewport->SetStatsProvider([this] { return BuildStats(); });
   if (_cadModelAsset) {
     _cadModelPath = _cadModelAsset->GetPath().ToString();
   }
@@ -1587,6 +1589,44 @@ std::vector<AssetEditor::WindowDeclaration> ModelEditor::GetDefaultWindows() {
 
 std::vector<AssetEditor::WindowDeclaration> ModelEditor::GetAuxiliaryWindows() const {
   return GetDefaultWindows();
+}
+
+StatsText ModelEditor::BuildStats() const {
+  auto const& converter = _studio->GetRendererToEditorSpaceConverter();
+  // The CAD model has triangles once it has been tessellated.
+  int64_t cadTriangles = 0;
+  for (MeshSection const& section : _cadSections) {
+    cadTriangles += static_cast<int64_t>(section.indices.size() / 3);
+  }
+  GeometryStats render;
+  if (_renderModelAsset) {
+    render.Add(
+        _renderModelAsset->GetStats(), EditorSpaceBounds(_renderModelSurfaceMesh, converter));
+  }
+  GeometryStats collision;
+  std::string sdfGrid = "None";
+  int64_t contactSkinTriangles = 0;
+  int64_t visualMeshTriangles = 0;
+  if (_mochiModelAsset) {
+    collision.Add(
+        _mochiModelAsset->GetStats(), EditorSpaceBounds(_mochiModelSurfaceMesh, converter));
+    mochi::ModelData const& model = _mochiModelAsset->GetModelData();
+    if (model.sdf) {
+      mochi::Int3 const& dims = model.sdf->dims;
+      sdfGrid = std::to_string(dims[0]) + " x " + std::to_string(dims[1]) + " x " +
+          std::to_string(dims[2]);
+    }
+    contactSkinTriangles = model.contactSkinMesh ? model.contactSkinMesh->GetNumElements() : 0;
+    visualMeshTriangles = model.visualMesh ? model.visualMesh->GetNumElements() : 0;
+  }
+  return StatsText()
+      .Add("CAD Tris", cadTriangles)
+      .Add("CAD AABB", FormatSize(EditorSpaceBounds(_cadModelSurfaceMesh, converter)))
+      .AddRender(render)
+      .AddCollision(collision)
+      .Add("SDF Grid", sdfGrid)
+      .Add("Contact Skin Tris", contactSkinTriangles)
+      .Add("Visual Mesh Tris", visualMeshTriangles);
 }
 
 void ModelEditor::CollectMeasureTargets(std::vector<MeasureTarget>& out) const {

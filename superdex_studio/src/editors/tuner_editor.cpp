@@ -21,6 +21,7 @@
 #include "assets/tuner_asset.h"
 #include "rendering/debug_text.h"
 #include "rendering/measure_tool.h"
+#include "rendering/stats.h"
 #include "ui/imgui_widgets.h"
 
 #include <superdex_asset_tuner/json_path.h>
@@ -522,6 +523,17 @@ void TunerEditor::Initialize() {
   _viewport->onSceneObjectClicked = [this](SceneObject* object, filament::math::float3 hit) {
     OnScenePressed(object, hit);
   };
+  _viewport->SetStatsProvider([this] {
+    StatsText text;
+    if (MochiPrefabAsset const* prefabAsset = _tunerAsset->GetPrefabAsset()) {
+      text.AddPrefab(prefabAsset->GetPrefab());
+    }
+    auto const& spec = _tunerAsset->GetSpec();
+    return text.Add("Loads", mochi::isize(spec.loads))
+        .Add("Probes", mochi::isize(spec.probes))
+        .AddRender(_stageStats.render)
+        .AddCollision(_stageStats.collision);
+  });
   _viewport->RegisterShowCommand(
       {.name = "Physics Debug Draw",
        .onToggle = [this] { _mochiScene.ToggleDebugDraw(); },
@@ -771,6 +783,7 @@ void TunerEditor::Restage() {
   MochiPrefabAsset* prefabAsset = _tunerAsset->GetPrefabAsset();
   if (prefabAsset == nullptr) {
     _stage.Clear();
+    _stageStats = {};
     return;
   }
   // Nested prefabs edited in their own editors since the prefab was loaded (saved or not).
@@ -778,6 +791,9 @@ void TunerEditor::Restage() {
       prefabAsset->GetPrefab(), _studio->GetAssetManager(), prefabAsset->GetAssetsRoot());
   ValidateOverrides();
   _stage.StagePrefab(prefabAsset->GetPrefab(), prefabAsset->GetAssetsRoot(), _stageType);
+  // Staging places every actor at its rest pose, also mid-run (simulation moves them again after).
+  _stageStats = ComputeStageStats(
+      _stage, _studio->GetAssetManager(), _studio->GetRendererToEditorSpaceConverter());
   // The ground stays put mid-run (it only changes the view there).
   if (_mochiScene.IsSimulating()) {
     return;

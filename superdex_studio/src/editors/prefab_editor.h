@@ -19,6 +19,7 @@
 #include "assets/prefab_constraints.h"
 #include "editors/asset_editor.h"
 #include "rendering/scene_stage.h"
+#include "rendering/stats.h"
 #include "simulation/mochi_async_scene.h"
 #include "simulation/physics_drag_controller.h"
 #include "simulation/prefab_sim_sync.h"
@@ -324,6 +325,8 @@ class PrefabEditor : public AssetEditor {
   // render scene state
   std::unique_ptr<Viewport> _viewport;
   SceneStage _stage;
+  // The stage's render and collision stats, taken after each staging at the rest pose.
+  StageStats _stageStats;
   StageType _stageType = StageType::RenderModelFallbackToMochiModel;
   // physics scene state
   MochiAsyncScene _mochiScene;

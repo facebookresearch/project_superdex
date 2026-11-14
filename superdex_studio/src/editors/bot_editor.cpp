@@ -18,6 +18,7 @@
 #include "app/app.h"
 #include "io/glb_export.h"
 #include "rendering/measure_tool.h"
+#include "rendering/stats.h"
 #include "ui/asset_browser.h"
 #include "ui/imgui_widgets.h"
 
@@ -244,6 +245,12 @@ void BotEditor::Initialize() {
       [this](std::vector<mochi_renderer::SceneObject*> const& objects) {
         OnSceneSelectionChanged(objects);
       };
+  _viewport->SetStatsProvider([this] {
+    return StatsText()
+        .AddBot(_botAsset->GetBotPrefab())
+        .AddRender(_stageStats.render)
+        .AddCollision(_stageStats.collision);
+  });
   // Register viewport "Show" toggle commands (keyboard shortcuts + top-left dropdown). The Grid
   // toggle is registered by the viewport itself, for every editor.
   _viewport->RegisterShowCommand(
@@ -420,9 +427,16 @@ void BotEditor::Shutdown() {
 
 void BotEditor::OnActivate() {
   // Rebuild when we are reactivated because the user may have changed a dependency (e.g. base bot)
-  if (!_mochiScene.IsSimulating() && RecomputeModBuildStatus()) {
+  if (_mochiScene.IsSimulating()) {
+    return;
+  }
+  if (RecomputeModBuildStatus()) {
     _botAsset->MarkThumbnailDirty();
     RestageBot();
+  } else {
+    // A model the bot uses may have been edited and reloaded in place in another tab.
+    _stageStats = ComputeStageStats(
+        _stage, _studio->GetAssetManager(), _studio->GetRendererToEditorSpaceConverter());
   }
 }
 
@@ -1082,6 +1096,8 @@ void BotEditor::RestageBot() {
   bool const hadSelection = _viewport->HasSelection();
   bool const rebuilt =
       _stage.StageBot(_botAsset->GetBotPrefab(), _stageType, !_showSkinCoveredLinks);
+  _stageStats = ComputeStageStats(
+      _stage, _studio->GetAssetManager(), _studio->GetRendererToEditorSpaceConverter());
   if (rebuilt && hadSelection) {
     _viewport->SetSelectedSceneObjects({});
     _selectedBotLinkIndex = selected;

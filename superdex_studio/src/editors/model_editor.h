@@ -341,6 +341,8 @@ class ModelEditor : public AssetEditor {
   // modifier's MeshStats (guarded by outputGenId) and recomposites the display. Called once per
   // frame.
   void PumpHausdorffResults();
+  // The viewport Stats overlay rows for the slotted models.
+  StatsText BuildStats() const;
   // Fills the Measure tool's pickable-object list: every slot, reference model and processing stage
   // that has both a scene object and the CPU sections it was built from. The mochi slot (and a
   // mochi reference) counts as collision geometry; everything else as render geometry.

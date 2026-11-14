@@ -18,6 +18,7 @@
 
 #include "editors/asset_editor.h"
 #include "rendering/scene_stage.h"
+#include "rendering/stats.h"
 #include "simulation/mochi_async_scene.h"
 #include "simulation/physics_drag_controller.h"
 #include "simulation/skin_sim_sync.h"
@@ -82,6 +83,8 @@ class BotSceneEditor : public AssetEditor {
   //------------------------------------------------------------------------------------------------
 
   void RestageBotScene();
+  // The viewport Stats overlay rows for what RestageBotScene stages.
+  StatsText BuildStats() const;
   // Resolves @p task against the current scene and loads its prefabs. On failure, @p spawns is
   // empty and @p error says why.
   bool BindTaskSpawns(
@@ -131,6 +134,8 @@ class BotSceneEditor : public AssetEditor {
   // render scene state
   std::unique_ptr<Viewport> _viewport;
   SceneStage _stage;
+  // The stage's render and collision stats, taken after each staging at the rest pose.
+  StageStats _stageStats;
   StageType _stageType = StageType::RenderModelFallbackToMochiModel;
   // physics scene state
   MochiAsyncScene _mochiScene;

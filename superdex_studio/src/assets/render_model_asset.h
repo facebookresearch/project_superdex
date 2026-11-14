@@ -17,6 +17,7 @@
 #pragma once
 
 #include "assets/asset.h"
+#include "rendering/stats.h"
 
 #include <mochi_core/utils/error.h>
 #include <mochi_renderer/deformable_model_instance.h>
@@ -42,6 +43,8 @@ class RenderModelAsset : public Asset {
   // An independently deformable instance of this render model.
   std::unique_ptr<mochi_renderer::DeformableModelInstance> GetDeformableModelInstance(
       mochi::Error& error);
+  // Read from the file on first use.
+  ModelStats const& GetStats() const;
   bool RendersThumbnail() const override;
   void StageThumbnailScene(mochi_renderer::Scene& scene) override;
   void ShowAssetTileTooltipItems() const override;
@@ -64,6 +67,7 @@ class RenderModelAsset : public Asset {
  private:
   // Never null: Create fails when the render model cannot be loaded.
   mochi_renderer::RenderModel* _renderModel = nullptr;
+  mutable std::optional<ModelStats> _stats;
 };
 
 } // namespace superdex::studio

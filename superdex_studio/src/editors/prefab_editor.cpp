@@ -19,6 +19,7 @@
 #include "assets/asset.h"
 #include "assets/mochi_prefab_asset.h"
 #include "rendering/measure_tool.h"
+#include "rendering/stats.h"
 #include "ui/imgui_widgets.h"
 
 #include <mochi_core/utils/basic_utils.h>
@@ -105,6 +106,12 @@ void PrefabEditor::Initialize() {
       DuplicateSelection(/*commitUndo=*/false);
     }
   };
+  _viewport->SetStatsProvider([this] {
+    return StatsText()
+        .AddPrefab(_prefabAsset->GetPrefab())
+        .AddRender(_stageStats.render)
+        .AddCollision(_stageStats.collision);
+  });
   // Register viewport "Show" toggle commands (keyboard shortcuts + top-left dropdown).
   _viewport->RegisterShowCommand(
       {.name = "Physics Debug Draw",
@@ -441,6 +448,8 @@ void PrefabEditor::RestagePrefab() {
         prefab, _studio->GetAssetManager(), _prefabAsset->GetAssetsRoot());
   }
   bool const rebuilt = _stage.StagePrefab(prefab, _prefabAsset->GetAssetsRoot(), _stageType);
+  _stageStats = ComputeStageStats(
+      _stage, _studio->GetAssetManager(), _studio->GetRendererToEditorSpaceConverter());
   if (rebuilt) {
     // StagePrefab destroyed the previous scene objects, which cleared the viewport's selection (and
     // via onSceneSelectionChanged, our _selections). The prefab arrays are unchanged, so restore

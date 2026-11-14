@@ -22,6 +22,7 @@
 #include "assets/controller_params.h"
 #include "assets/mochi_prefab_asset.h"
 #include "rendering/measure_tool.h"
+#include "rendering/stats.h"
 #include "ui/imgui_widgets.h"
 
 #include <superdex_robotics/utils/archive_utils.h>
@@ -786,6 +787,7 @@ void BotSceneEditor::Initialize() {
   // Initialize Viewport (read-only: no gizmo).
   _viewport = Viewport::Create(_studio, _studio->GetViewSettings());
   _viewport->showTransformGizmoTarget = []() { return false; };
+  _viewport->SetStatsProvider([this] { return BuildStats(); });
   // Register viewport "Show" toggle commands (keyboard shortcuts + top-left dropdown).
   _viewport->RegisterShowCommand(
       {.name = "Physics Debug Draw",
@@ -1119,10 +1121,42 @@ void BotSceneEditor::RestageBotScene() {
   } else {
     _stage.StageBotScene(stagedPrefab, _stageType);
   }
+  _stageStats = ComputeStageStats(
+      _stage, _studio->GetAssetManager(), _studio->GetRendererToEditorSpaceConverter());
   // Position the drop-shadow ground plane where the studio physics ground plane goes: the scene's
   // lowest point (rest pose staged above; not called mid-sim) or the custom height.
   _mochiScene.SetLowestPointHeight(_viewport->UpdateGroundPlane());
   _viewport->SetGroundPlaneHeight(_mochiScene.GetGroundPlaneHeight());
+}
+
+StatsText BotSceneEditor::BuildStats() const {
+  auto const& assets = _studio->GetAssetManager();
+  auto const scene = WithActiveSlotBots(_sceneAsset->GetPrefab(), _activeSlotBots);
+  std::vector<mochi::prefab::ScenePrefab const*> prefabs;
+  int64_t bots = 0;
+  int64_t botDofs = 0;
+  auto const add = [&](mochi::Path const& path) {
+    if (auto const* bot = assets.FindAssetByPath<BotAsset>(path)) {
+      ++bots;
+      botDofs += bot->GetBotPrefab()._numDofs;
+    } else if (auto const* prefab = assets.FindAssetByPath<MochiPrefabAsset>(path)) {
+      prefabs.push_back(&prefab->GetPrefab());
+    }
+  };
+  add(mochi::Path{std::string(scene.scene.baseScene)});
+  for (auto const& bot : scene.bots) {
+    add(mochi::Path{std::string(bot.path)});
+  }
+  // Spawnable declarations are staged only as the instances a loaded task places.
+  if (_taskPrefab.has_value()) {
+    for (auto const& spawn : _taskSpawns) {
+      add(spawn.prefabPath);
+    }
+  }
+  StatsText text;
+  text.Add("Bots", FormatBreakdown(bots, {{botDofs, "DOFs"}}));
+  text.Add("Task Spawns", _taskPrefab.has_value() ? mochi::isize(_taskSpawns) : 0);
+  return text.AddPrefabs(prefabs).AddRender(_stageStats.render).AddCollision(_stageStats.collision);
 }
 
 bool BotSceneEditor::BindTaskSpawns(

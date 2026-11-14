@@ -367,6 +367,23 @@ struct TunerViewportSettings {
   MOCHI_STRUCT_END()
 };
 
+// The Stats overlay that viewports show under their Show menu.
+struct ViewportStatsSettings {
+  bool show = true;
+  Color4 textColor{1.0f, 1.0f, 1.0f, 1.0f};
+
+  MOCHI_STRUCT_BEGIN(superdex::studio::ViewportStatsSettings)
+  MOCHI_FIELD(show)
+  MOCHI_ATTRIBUTE(DisplayName("Show"));
+  MOCHI_ATTRIBUTE(Description(
+      "Whether viewports show the staged content's statistics under their Show menu. Toggled from "
+      "the Show menu (Ctrl+I) of any viewport."));
+  MOCHI_FIELD(textColor)
+  MOCHI_ATTRIBUTE(DisplayName("Text Color"));
+  MOCHI_ATTRIBUTE(Color);
+  MOCHI_STRUCT_END()
+};
+
 // Everything that applies to every viewport, grouped into the sections the Settings window shows.
 struct ViewportSettings {
   ViewportCameraSettings camera;
@@ -375,6 +392,7 @@ struct ViewportSettings {
   TransformGizmoSettings transformGizmo;
   GroundGridSettings groundGrid;
   TunerViewportSettings tuner;
+  ViewportStatsSettings stats;
 
   MOCHI_STRUCT_BEGIN(superdex::studio::ViewportSettings)
   MOCHI_FIELD(camera)
@@ -383,6 +401,7 @@ struct ViewportSettings {
   MOCHI_FIELD(transformGizmo) MOCHI_ATTRIBUTE(DisplayName("Transform Gizmo"));
   MOCHI_FIELD(groundGrid) MOCHI_ATTRIBUTE(DisplayName("Ground Grid"));
   MOCHI_FIELD(tuner)
+  MOCHI_FIELD(stats)
   MOCHI_STRUCT_END()
 };
 

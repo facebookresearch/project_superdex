@@ -18,6 +18,7 @@
 
 #include "assets/asset.h"
 #include "rendering/soft_surface.h"
+#include "rendering/stats.h"
 
 #include <mochi_physics/cpp_api/mochi_context.h>
 #include <mochi_renderer/resource.h>
@@ -65,6 +66,8 @@ class MochiModelAsset : public Asset {
   void UpdateRenderModel();
   mochi::ModelData const& GetModelData() const;
   mochi::ModelData& GetModelData();
+  // Computed on first use and again after the model reloads.
+  ModelStats const& GetStats() const;
   filament::math::float3 GetSurfaceColor() const;
 
   // Soft Dynamic Mesh Utils
@@ -205,6 +208,7 @@ class MochiModelAsset : public Asset {
   filament::math::float3 _color = {0.5f, 0.7f, 1.0f};
   filament::math::float3 _wireframeColor = {1.0f, 1.0f, 1.0f};
   mochi::ModelData _modelData;
+  mutable std::optional<ModelStats> _stats;
   std::unordered_map<std::string, mochi::ShapeHandle> _shapeCache;
 };
 

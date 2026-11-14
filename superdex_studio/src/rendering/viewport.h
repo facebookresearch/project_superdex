@@ -19,6 +19,7 @@
 #include "rendering/camera_controller.h"
 #include "rendering/debug_text.h"
 #include "rendering/render_target.h"
+#include "rendering/stats.h"
 
 #include <mochi_core/utils/error.h>
 
@@ -238,6 +239,11 @@ class Viewport {
   // Register a toggleable "Show" command. The viewport owns its keyboard shortcut and lists it in
   // the top-left "Show" dropdown.
   void RegisterShowCommand(ShowCommand command);
+  // Gives the viewport a Stats overlay: a "Stats" Show command (Ctrl+I) and, while it is on, the
+  // rows @p provider returns, drawn under the Show button in the app-wide text color, error rows in
+  // the error color. The on/off state and the color are persisted (ViewportStatsSettings).
+  // @p provider runs each frame the overlay shows.
+  void SetStatsProvider(std::function<StatsText()> provider);
   // The viewport's Measure tool (never null). Every viewport has one and registers its Ctrl+M
   // toggle; editors give it geometry to pick via MeasureTool::SetTargetProvider.
   MeasureTool* GetMeasureTool() const {
@@ -264,6 +270,8 @@ class Viewport {
   // Projects and draws the queued debug labels over the viewport image, then clears them.
   void ShowDebugText(ImVec2 contentOrigin, float logicalWidth, float logicalHeight);
   void ShowShowMenu();
+  // Draws the Stats overlay rows with their top-left corner at @p pos.
+  void ShowStatsText(ImVec2 pos) const;
   void HandleShowCommandShortcuts();
   // Feeds the Measure tool the cursor ray for this frame (hover preview, and a pick on click), and
   // switches the tool off if the editor has withdrawn it. Called every frame the viewport is drawn.
@@ -331,6 +339,8 @@ class Viewport {
   mutable mochi::Real3 _gizmoPrevScale{1.0f, 1.0f, 1.0f};
   // Registered "Show" toggle commands (keyboard bindings + top-left dropdown).
   std::vector<ShowCommand> _showCommands;
+  // Builds the Stats overlay rows; empty when the editor offers none (see SetStatsProvider).
+  std::function<StatsText()> _statsProvider;
   // Modal vertex/face measurement tool, owned per viewport so its selection and recorded
   // measurements are per-editor. Created in the constructor and never null.
   std::unique_ptr<MeasureTool> _measureTool;

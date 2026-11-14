@@ -22,6 +22,7 @@
 #include "io/glb_export.h"
 #include "rendering/bot_visualization.h"
 #include "rendering/scene_stage.h"
+#include "rendering/stats.h"
 #include "rendering/viewport.h"
 #include "simulation/mochi_async_scene.h"
 #include "simulation/physics_drag_controller.h"
@@ -195,6 +196,8 @@ class BotEditor : public AssetEditor {
   // render scene state
   std::unique_ptr<Viewport> _viewport;
   SceneStage _stage;
+  // The stage's render and collision stats, taken after each staging at the rest pose.
+  StageStats _stageStats;
   StageType _stageType = StageType::RenderModelOnly;
   // Draw the rigid links the bot's skin covers, which are hidden by default behind the skin.
   bool _showSkinCoveredLinks = false;

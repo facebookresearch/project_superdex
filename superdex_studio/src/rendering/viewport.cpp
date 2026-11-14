@@ -1918,6 +1918,39 @@ void Viewport::RegisterShowCommand(ShowCommand command) {
   _showCommands.push_back(std::move(command));
 }
 
+void Viewport::SetStatsProvider(std::function<StatsText()> provider) {
+  if (!_statsProvider) {
+    // Ctrl+I rather than I: I is already the Bot Editor's Inertia toggle.
+    RegisterShowCommand(
+        {.name = "Stats",
+         .onToggle =
+             [this] {
+               bool& show = _studio->GetAppSettings().viewport.stats.show;
+               show = !show;
+             },
+         .getState = [this] { return _studio->GetAppSettings().viewport.stats.show; },
+         .shortcut = ImGuiKey_I | ImGuiMod_Ctrl});
+  }
+  _statsProvider = std::move(provider);
+}
+
+void Viewport::ShowStatsText(ImVec2 pos) const {
+  auto const& color = _studio->GetAppSettings().viewport.stats.textColor;
+  ImU32 const textColor = ImGui::GetColorU32(ImVec4(color[0], color[1], color[2], color[3]));
+  ImU32 const errorColor = ImGui::GetColorU32(kErrorTextColor);
+  // No background, so a one-pixel drop shadow keeps the text legible over bright geometry.
+  ImU32 const shadowColor = IM_COL32(0, 0, 0, static_cast<int>(200.0f * color[3]));
+  ImGui::PushFont(_studio->GetFont("Roboto Mono"));
+  ImDrawList* const drawList = ImGui::GetWindowDrawList();
+  float const lineHeight = ImGui::GetTextLineHeight();
+  for (StatsText::Line const& line : _statsProvider().Lines()) {
+    drawList->AddText({pos.x + 1.0f, pos.y + 1.0f}, shadowColor, line.text.c_str());
+    drawList->AddText(pos, line.error ? errorColor : textColor, line.text.c_str());
+    pos.y += lineHeight;
+  }
+  ImGui::PopFont();
+}
+
 void Viewport::HandleShowCommandShortcuts() {
   for (auto const& cmd : _showCommands) {
     if (cmd.shortcut == ImGuiKey_None) {
@@ -1944,7 +1977,11 @@ void Viewport::ShowShowMenu() {
   if (ImGui::Button("Show")) {
     ImGui::OpenPopup("##ShowMenu");
   }
-  ImGui::SetNextWindowPos({ImGui::GetItemRectMin().x, ImGui::GetItemRectMax().y});
+  ImVec2 const belowButton = {ImGui::GetItemRectMin().x, ImGui::GetItemRectMax().y};
+  if (_statsProvider && _studio->GetAppSettings().viewport.stats.show) {
+    ShowStatsText({belowButton.x, belowButton.y + ImGui::GetStyle().ItemSpacing.y});
+  }
+  ImGui::SetNextWindowPos(belowButton);
   if (ImGui::BeginPopup("##ShowMenu")) {
     // Keep the menu open after a click so multiple toggles can be flipped; it closes only when the
     // user clicks away.

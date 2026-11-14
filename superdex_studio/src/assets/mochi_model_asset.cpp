@@ -415,6 +415,7 @@ bool MochiModelAsset::ReloadFromDisk() {
     return false;
   }
   _modelData = std::move(reloaded);
+  _stats.reset();
   // Physics shapes were baked from the previous model data; drop them everywhere they are cached so
   // consumers re-bake from the reloaded data on their next physics load.
   _manager->InvalidateShapeCachesForPath(_path);
@@ -445,6 +446,13 @@ mochi::ModelData const& MochiModelAsset::GetModelData() const {
 
 mochi::ModelData& MochiModelAsset::GetModelData() {
   return _modelData;
+}
+
+ModelStats const& MochiModelAsset::GetStats() const {
+  if (!_stats) {
+    _stats = ComputeCollisionModelStats(_modelData);
+  }
+  return *_stats;
 }
 
 filament::math::float3 MochiModelAsset::GetSurfaceColor() const {
