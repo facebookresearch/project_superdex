@@ -1602,6 +1602,20 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       , nb::arg("world_from_instance")
       , "Spawn a spawnable prefab under an instance name at a world pose.\n\nInstances are keyed by instance name, not prefab name, so the same prefab may be\nspawned any number of times. The instance name prefixes the created actor names,\nand is the identity the rest of the pipeline keys off (the recorded HDF5 object\nid and the dataset/replay feature key; see\n:attr:`~superdex.robotics.SpawnEntry.name`). The instance does not replace the\nscene's gravity or solver settings. A .superdex_bot / .superdex_bot_archive\nspawnable is instantiated as an articulated Bot named after the instance and\nrooted at worldFromInstance; the instance owns it.\n\nArgs:\n    instance_name (str): Unique, non-empty instance name; must not already be\n        live.\n    prefab_name (str): Spawnable-prefab name declared in this scene.\n    world_from_instance (TransformRT): Instance root pose in world space.\n\nReturns:\n    Actor handles in prefab AddToScene order (for a bot, its articulated actor),\n    or empty on error. Valid until the instance is destroyed.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
     )
+    .def("spawn_prefab_instance", [](superdex::robotics::BotScene& self, std::string_view instance_name, std::string_view prefab_name, mochi::TransformRT const& world_from_instance, std::string_view edit) {
+      mochi::Error error;
+      auto result = self.SpawnPrefabInstance(instance_name, prefab_name, world_from_instance, edit, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("instance_name")
+      , nb::arg("prefab_name")
+      , nb::arg("world_from_instance")
+      , nb::arg("edit")
+      , "Like the overload above, with an edit set in the prefab before its shapes load,\ne.g. to rebuild a recorded spawn.\n\nAn empty edit changes nothing; one that does not fit the prefab spawns nothing.\n\nArgs:\n    instance_name (str): Unique, non-empty instance name; must not already be\n        live.\n    prefab_name (str): Spawnable-prefab name declared in this scene.\n    world_from_instance (TransformRT): Instance root pose in world space.\n    edit (str): The fields to set in the prefab, as a JSON object (`DiffPrefab`\n        writes one).\n\nReturns:\n    Actor handles in prefab AddToScene order, or empty on error. Valid until the\n    instance is destroyed.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    )
     .def("destroy_prefab_instance", [](superdex::robotics::BotScene& self, std::string_view instance_name) {
       mochi::Error error;
       self.DestroyPrefabInstance(instance_name, error);
@@ -2012,6 +2026,21 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       , nb::arg("path")
       , nb::arg("bots_ctx").none()
       , "Load a .superdex_scene file and instantiate all scene objects.\n\nCreates the physics scene from the base_scene, instantiates all bots with\nplacement and initial pose, and creates controllers via the provided\nRoboticsContext.\n\nArgs:\n    path (str): File path to the .superdex_scene file.\n    bots_ctx (RoboticsContext): RoboticsContext for controller creation and\n        lifetime management.\n\nReturns:\n    The loaded BotScene.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+    m_bots.def("load_bot_scene", [](std::string_view path, mochi::DynamicArray<mochi::DynamicString> const& bots, std::string_view edits, superdex::robotics::RoboticsContext* bots_ctx) {
+      CheckContext();
+      mochi::Error error;
+      auto result = superdex::robotics::LoadBotScene(path, bots, edits, GetContext(), bots_ctx, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("path")
+      , nb::arg("bots")
+      , nb::arg("edits")
+      , nb::arg("bots_ctx").none()
+      , "Like the path overload above, but instantiates only the declared bots named in\nbots, each with its edit set in its prefab before the bot is created, e.g. to\nrebuild the bots a recording was made with.\n\nThe rest stay declared, and :meth:`~superdex.robotics.BotScene.initialize_bot`\nbrings them up unedited. Errors if bots names a bot the scene does not declare,\nor an edit is for a bot not in bots or does not fit it.\n\nArgs:\n    path (str): File path to the .superdex_scene file.\n    bots (ArrayLikeString): The bots to instantiate.\n    edits (str): The fields to set in each bot's prefab, as a JSON object of\n        edits by bot name (`DiffPrefab` writes each), or empty for none.\n    bots_ctx (RoboticsContext): RoboticsContext for controller creation and\n        lifetime management.\n\nReturns:\n    The loaded BotScene.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
     );
     m_bots.def("load_bot_scene", [](mochi::Scene* scene, superdex::robotics::BotScenePrefab const& prefab, std::string_view root_path, superdex::robotics::RoboticsContext* bots_ctx) {
       CheckContext();

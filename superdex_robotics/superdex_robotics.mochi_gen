@@ -1494,7 +1494,20 @@ class bots::BotScene [no_init, no_reflection] {
   // @param[in] worldFromInstance Instance root pose in world space.
   // @return Actor handles in prefab AddToScene order (for a bot, its articulated actor), or empty
   // on error. Valid until the instance is destroyed.
-  fn SpawnPrefabInstance(StringView instanceName, StringView prefabName, TransformRT const& worldFromInstance) -> Span<ActorHandle const> [mochi_error];
+  fn SpawnPrefabInstance(StringView instanceName, StringView prefabName, TransformRT const& worldFromInstance) -> Span<ActorHandle const> [mochi_error, overloaded];
+
+  // @brief Like the overload above, with an edit set in the prefab before its shapes load, e.g. to
+  // rebuild a recorded spawn.
+  //
+  // An empty edit changes nothing; one that does not fit the prefab spawns nothing.
+  //
+  // @param[in] instanceName Unique, non-empty instance name; must not already be live.
+  // @param[in] prefabName Spawnable-prefab name declared in this scene.
+  // @param[in] worldFromInstance Instance root pose in world space.
+  // @param[in] edit The fields to set in the prefab, as a JSON object (`DiffPrefab` writes one).
+  // @return Actor handles in prefab AddToScene order, or empty on error. Valid until the instance
+  // is destroyed.
+  fn SpawnPrefabInstance(StringView instanceName, StringView prefabName, TransformRT const& worldFromInstance, StringView edit) -> Span<ActorHandle const> [mochi_error, overloaded];
 
   // @brief Destroy a live prefab instance and its actors.
   //
@@ -1619,6 +1632,23 @@ class bots::BotScene [no_init, no_reflection] {
 //
 // @return The loaded BotScene.
 fn bots::LoadBotScene(StringView path, Context* context, bots::RoboticsContext* botsCtx) -> bots::BotScene [export, overloaded, mochi_error];
+
+// @brief Like the path overload above, but instantiates only the declared bots named in bots, each
+// with its edit set in its prefab before the bot is created, e.g. to rebuild the bots a recording
+// was made with.
+//
+// The rest stay declared, and @ref BotScene::InitializeBot brings them up unedited. Errors if bots
+// names a bot the scene does not declare, or an edit is for a bot not in bots or does not fit it.
+//
+// @param[in] path File path to the .superdex_scene file.
+// @param[in] bots The bots to instantiate.
+// @param[in] edits The fields to set in each bot's prefab, as a JSON object of edits by bot name
+// (`DiffPrefab` writes each), or empty for none.
+// @param[in] context Mochi context.
+// @param[in] botsCtx RoboticsContext for controller creation and lifetime management.
+//
+// @return The loaded BotScene.
+fn bots::LoadBotScene(StringView path, DynamicArray<String> const& bots, StringView edits, Context* context, bots::RoboticsContext* botsCtx) -> bots::BotScene [export, overloaded, mochi_error];
 
 // @brief Load a bot scene into a caller-provided scene from an already-loaded prefab.
 //

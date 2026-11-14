@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "scene/prefab_edit.h"
+
 #include <mochi_core/utils/container_utils.h>
 #include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/json_utils.h>
@@ -688,6 +690,8 @@ struct BotScene::Impl {
   }
 
   BotScenePrefab params;
+  /* Changes each declared bot's prefab before the bot is created, at load and in InitializeBot. */
+  BotPrefabEdit editBot;
   Context* context = nullptr;
   RoboticsContext* botsCtx = nullptr;
   /* Token for our RoboticsContext teardown callback (see RegisterOnDestroy); cancelled in ~Impl
@@ -1038,6 +1042,30 @@ Span<ActorHandle const> BotScene::SpawnPrefabInstance(
     std::string_view prefabName,
     TransformRT const& worldFromInstance,
     Error& error) {
+  return SpawnEditedPrefabInstance(instanceName, prefabName, worldFromInstance, {}, error);
+}
+
+Span<ActorHandle const> BotScene::SpawnPrefabInstance(
+    std::string_view instanceName,
+    std::string_view prefabName,
+    TransformRT const& worldFromInstance,
+    std::string_view edit,
+    Error& error) {
+  SpawnPrefabEdit apply;
+  if (!edit.empty()) {
+    apply = [edit](prefab::ScenePrefab& prefab, Error& editError) {
+      ApplyPrefabEdit(edit, prefab, editError);
+    };
+  }
+  return SpawnEditedPrefabInstance(instanceName, prefabName, worldFromInstance, apply, error);
+}
+
+Span<ActorHandle const> BotScene::SpawnEditedPrefabInstance(
+    std::string_view instanceName,
+    std::string_view prefabName,
+    TransformRT const& worldFromInstance,
+    SpawnPrefabEdit const& edit,
+    Error& error) {
   MOCHI_ERROR_RETURN(error, {});
   MOCHI_ERROR_IF(!impl_, error, "BotScene is not initialized");
   MOCHI_ERROR_RETURN(error, {});
@@ -1061,6 +1089,8 @@ Span<ActorHandle const> BotScene::SpawnPrefabInstance(
   std::string const& path = pathIt->second;
   if (IsBotArchivePath(path) || IsBotPath(path)) {
     MOCHI_ERROR_IF(!impl_->botsCtx, error, "BotScene: bots context is not initialized");
+    MOCHI_ERROR_IF(edit, error, "BotScene: a bot-file spawnable cannot take a prefab edit");
+    MOCHI_ERROR_RETURN(error, {});
     BotPrefab botPrefab = LoadBotPrefabFromFile(path, error);
     MOCHI_ERROR_RETURN(error, {});
     botPrefab.name = DynamicString(instanceName);
@@ -1087,9 +1117,13 @@ Span<ActorHandle const> BotScene::SpawnPrefabInstance(
 
   std::string const rootPath = std::filesystem::path(pathIt->second).parent_path().string();
   /* Loaded here rather than by the path overload of AddToScene so the render models can be read
-   * from the same prefab the actors were created from. */
-  prefab::ScenePrefab const loaded =
-      prefab::LoadFromFile(pathIt->second, rootPath, scene->GetContext(), error);
+   * from the same prefab the actors were created from; the steps are prefab::LoadFromFile's. */
+  prefab::ScenePrefab loaded = prefab::ShallowLoadFromFile(pathIt->second, error);
+  if (edit && error.IsOK()) {
+    edit(loaded, error);
+  }
+  prefab::LoadNestedPrefabs(loaded, rootPath, error);
+  prefab::LoadShapes(loaded, rootPath, scene->GetContext(), error);
   auto const result = prefab::AddToScene(loaded, scene, prefabParams, error);
   if (!error.IsOK()) {
     DestroyAddedToScene(scene, result);
@@ -1406,6 +1440,10 @@ static Bot* InstantiateBot(
   if (!botEntry.initialPose.empty()) {
     botPrefab.defaultPose = botEntry.initialPose;
   }
+  if (impl.editBot) {
+    impl.editBot(botEntry, botPrefab, error);
+    MOCHI_ERROR_RETURN(error, nullptr);
+  }
 
   Bot* bot = loader != nullptr ? botsCtx->CreateBot(scene, botPrefab, *loader, error)
                                : CreateBot(scene, botPrefab, botsCtx, error);
@@ -1592,22 +1630,46 @@ static void PopulateCallerOwnedBotScene(
 // LoadBotScene
 // ---------------------------------------------------------------------------
 
-BotScene superdex::robotics::LoadBotScene(
+/* Fails, naming it, if botsToInitialize names a bot the scene does not declare. */
+static void CheckBotsDeclared(
+    BotScenePrefab const& prefab,
+    Span<std::string_view const> botsToInitialize,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error);
+  for (std::string_view const name : botsToInitialize) {
+    if (FindBotEntry(prefab, name) == nullptr) {
+      MOCHI_LOG_ERROR(
+          "LoadBotScene: botsToInitialize names '%s', which the scene does not declare",
+          std::string(name).c_str());
+      MOCHI_ERROR_SET(
+          error, "LoadBotScene: botsToInitialize names a bot the scene does not declare");
+      return;
+    }
+  }
+}
+
+/* Loads the .superdex_scene file at path into a scene impl creates and owns. */
+static void PopulateOwnedBotScene(
+    BotScene::Impl& impl,
     std::string_view path,
+    std::optional<Span<std::string_view const>> botsToInitialize,
     Context* context,
     RoboticsContext* botsCtx,
     Error& error) {
-  MOCHI_ERROR_RETURN(error, {});
+  MOCHI_ERROR_RETURN(error);
   MOCHI_ERROR_IF(context == nullptr, error, "LoadBotScene: context must not be null");
-  MOCHI_ERROR_RETURN(error, {});
+  MOCHI_ERROR_RETURN(error);
   MOCHI_ERROR_IF(botsCtx == nullptr, error, "LoadBotScene: botsCtx must not be null");
-  MOCHI_ERROR_RETURN(error, {});
+  MOCHI_ERROR_RETURN(error);
 
   /* 1. Load and validate the .superdex_scene file. */
   std::string const scenePath = ResolveBotSceneFile(path, error);
-  MOCHI_ERROR_RETURN(error, {});
+  MOCHI_ERROR_RETURN(error);
   BotScenePrefab params = LoadBotScenePrefabFromFile(scenePath, error);
-  MOCHI_ERROR_RETURN(error, {});
+  if (botsToInitialize) {
+    CheckBotsDeclared(params, *botsToInitialize, error);
+  }
+  MOCHI_ERROR_RETURN(error);
 
   /* 2. Resolve the base scene root and create an owned scene. */
   std::string rootPath = GetBotSceneBaseRoot(
@@ -1617,19 +1679,71 @@ BotScene superdex::robotics::LoadBotScene(
       ? "bot_scene"
       : std::string(params.metadata.name.c_str(), params.metadata.name.size());
 
-  BotScene botScene;
-  botScene.impl_->context = context;
-  botScene.impl_->botsCtx = botsCtx;
-  botScene.impl_->onDestroyHandle = botsCtx->RegisterOnDestroy(
-      [impl = botScene.impl_.get()]() { impl->OnRoboticsContextDestroyed(); });
+  impl.context = context;
+  impl.botsCtx = botsCtx;
+  impl.onDestroyHandle =
+      botsCtx->RegisterOnDestroy([implPtr = &impl]() { implPtr->OnRoboticsContextDestroyed(); });
   Scene* const createdScene = context->CreateScene(sceneName);
-  botScene.impl_->sceneHandle = createdScene->GetHandle();
-  botScene.impl_->ownsScene = true;
-  botScene.impl_->params = std::move(params);
+  impl.sceneHandle = createdScene->GetHandle();
+  impl.ownsScene = true;
+  impl.params = std::move(params);
 
-  PopulateBotScene(*botScene.impl_, createdScene, rootPath, botsCtx, error);
+  PopulateBotScene(impl, createdScene, rootPath, botsCtx, error, {}, nullptr, botsToInitialize);
+  MOCHI_ERROR_RETURN(error);
+  impl.RegisterTerminationCallback(*createdScene);
+}
+
+BotScene superdex::robotics::LoadBotScene(
+    std::string_view path,
+    Context* context,
+    RoboticsContext* botsCtx,
+    Error& error) {
   MOCHI_ERROR_RETURN(error, {});
-  botScene.impl_->RegisterTerminationCallback(*createdScene);
+  BotScene botScene;
+  PopulateOwnedBotScene(*botScene.impl_, path, std::nullopt, context, botsCtx, error);
+  MOCHI_ERROR_RETURN(error, {});
+  return botScene;
+}
+
+BotScene superdex::robotics::LoadBotScene(
+    std::string_view path,
+    DynamicArray<DynamicString> const& bots,
+    std::string_view edits,
+    Context* context,
+    RoboticsContext* botsCtx,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error, {});
+  std::vector<std::string_view> names;
+  for (DynamicString const& bot : bots) {
+    names.emplace_back(bot.c_str(), bot.size());
+  }
+  // Each bot's edit as its own JSON text, by bot name.
+  std::unordered_map<std::string, std::string> byBot;
+  if (!edits.empty()) {
+    picojson::value const parsed = ParseJsonFromString({edits.data(), edits.size()}, error);
+    MOCHI_ERROR_IF(!parsed.is<picojson::object>(), error, "LoadBotScene: edits must be an object");
+    MOCHI_ERROR_RETURN(error, {});
+    for (auto const& [name, edit] : parsed.get<picojson::object>()) {
+      if (std::find(names.begin(), names.end(), name) == names.end()) {
+        MOCHI_LOG_ERROR("LoadBotScene: an edit is for bot '%s', which is not built", name.c_str());
+        MOCHI_ERROR_SET(error, "LoadBotScene: an edit is for a bot that is not built");
+        return {};
+      }
+      byBot.emplace(name, edit.serialize());
+    }
+  }
+  BotScene botScene;
+  if (!byBot.empty()) {
+    botScene.impl_->editBot = [byBot = std::move(byBot)](
+                                  BotEntry const& entry, BotPrefab& prefab, Error& editError) {
+      auto const found = byBot.find(std::string(entry.name.c_str(), entry.name.size()));
+      if (found != byBot.end()) {
+        ApplyPrefabEdit(found->second, prefab, editError);
+      }
+    };
+  }
+  PopulateOwnedBotScene(*botScene.impl_, path, MakeConstSpan(names), context, botsCtx, error);
+  MOCHI_ERROR_RETURN(error, {});
   return botScene;
 }
 
@@ -1687,6 +1801,36 @@ BotScene superdex::robotics::LoadBotScene(
     Context* context,
     RoboticsContext* botsCtx,
     Error& error) {
+  return LoadBotScene(scene, path, botsToInitialize, {}, context, botsCtx, error);
+}
+
+BotScene superdex::robotics::LoadBotScene(
+    Scene* scene,
+    std::string_view path,
+    Span<std::string_view const> botsToInitialize,
+    BotPrefabEdit const& edit,
+    Context* context,
+    RoboticsContext* botsCtx,
+    Error& error) {
+  MOCHI_ERROR_RETURN(error, {});
+  std::string const scenePath = ResolveBotSceneFile(path, error);
+  MOCHI_ERROR_RETURN(error, {});
+  BotScenePrefab const prefab = LoadBotScenePrefabFromFile(scenePath, error);
+  MOCHI_ERROR_RETURN(error, {});
+  std::string const rootPath = GetBotSceneBaseRoot(
+      scenePath, std::string_view(prefab.scene.baseScene.c_str(), prefab.scene.baseScene.size()));
+  return LoadBotScene(scene, prefab, rootPath, botsToInitialize, edit, context, botsCtx, error);
+}
+
+BotScene superdex::robotics::LoadBotScene(
+    Scene* scene,
+    BotScenePrefab const& prefab,
+    std::string_view rootPath,
+    Span<std::string_view const> botsToInitialize,
+    BotPrefabEdit const& edit,
+    Context* context,
+    RoboticsContext* botsCtx,
+    Error& error) {
   MOCHI_ERROR_RETURN(error, {});
   MOCHI_ERROR_IF(scene == nullptr, error, "LoadBotScene: scene must not be null");
   MOCHI_ERROR_RETURN(error, {});
@@ -1694,31 +1838,17 @@ BotScene superdex::robotics::LoadBotScene(
   MOCHI_ERROR_RETURN(error, {});
   MOCHI_ERROR_IF(botsCtx == nullptr, error, "LoadBotScene: botsCtx must not be null");
   MOCHI_ERROR_RETURN(error, {});
-
-  std::string const scenePath = ResolveBotSceneFile(path, error);
+  ValidateBotScenePrefab(prefab, error);
+  CheckBotsDeclared(prefab, botsToInitialize, error);
   MOCHI_ERROR_RETURN(error, {});
-  BotScenePrefab const prefab = LoadBotScenePrefabFromFile(scenePath, error);
-  MOCHI_ERROR_RETURN(error, {});
-  for (std::string_view const name : botsToInitialize) {
-    if (FindBotEntry(prefab, name) == nullptr) {
-      MOCHI_LOG_ERROR(
-          "LoadBotScene: botsToInitialize names '%s', which the scene does not declare",
-          std::string(name).c_str());
-      MOCHI_ERROR_SET(
-          error, "LoadBotScene: botsToInitialize names a bot the scene does not declare");
-      return {};
-    }
-  }
-
-  std::string const rootPath = GetBotSceneBaseRoot(
-      scenePath, std::string_view(prefab.scene.baseScene.c_str(), prefab.scene.baseScene.size()));
 
   BotScene botScene;
+  botScene.impl_->editBot = edit;
   PopulateCallerOwnedBotScene(
       *botScene.impl_,
       scene,
       prefab,
-      rootPath,
+      std::string(rootPath),
       context,
       botsCtx,
       error,

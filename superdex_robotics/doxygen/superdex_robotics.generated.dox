@@ -1305,6 +1305,20 @@
 /// @return Actor handles in prefab AddToScene order (for a bot, its articulated actor), or empty on error. Valid until the instance is destroyed.
 ///
 
+/// @fn Span<ActorHandle const> superdex::robotics::BotScene::SpawnPrefabInstance(std::string_view instanceName, std::string_view prefabName, TransformRT const& worldFromInstance, std::string_view edit, superdex::Error& error)
+///
+/// @brief Like the overload above, with an edit set in the prefab before its shapes load, e.g. to rebuild a recorded spawn.
+///
+/// An empty edit changes nothing; one that does not fit the prefab spawns nothing.
+///
+/// @param[in] instanceName Unique, non-empty instance name; must not already be live.
+/// @param[in] prefabName Spawnable-prefab name declared in this scene.
+/// @param[in] worldFromInstance Instance root pose in world space.
+/// @param[in] edit The fields to set in the prefab, as a JSON object (`DiffPrefab` writes one).
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+/// @return Actor handles in prefab AddToScene order, or empty on error. Valid until the instance is destroyed.
+///
+
 /// @fn void superdex::robotics::BotScene::DestroyPrefabInstance(std::string_view instanceName, superdex::Error& error)
 ///
 /// @brief Destroy a live prefab instance and its actors.
@@ -1653,6 +1667,21 @@
 /// Creates the physics scene from the base_scene, instantiates all bots with placement and initial pose, and creates controllers via the provided RoboticsContext.
 ///
 /// @param[in] path File path to the .superdex_scene file.
+/// @param[in] context Mochi context.
+/// @param[in] botsCtx RoboticsContext for controller creation and lifetime management.
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+/// @return The loaded BotScene.
+///
+
+/// @fn BotScene superdex::robotics::LoadBotScene(std::string_view path, DynamicArray<DynamicString> const& bots, std::string_view edits, Context* context, RoboticsContext* botsCtx, superdex::Error& error)
+///
+/// @brief Like the path overload above, but instantiates only the declared bots named in bots, each with its edit set in its prefab before the bot is created, e.g. to rebuild the bots a recording was made with.
+///
+/// The rest stay declared, and @ref superdex::robotics::BotScene::InitializeBot "BotScene::InitializeBot" brings them up unedited. Errors if bots names a bot the scene does not declare, or an edit is for a bot not in bots or does not fit it.
+///
+/// @param[in] path File path to the .superdex_scene file.
+/// @param[in] bots The bots to instantiate.
+/// @param[in] edits The fields to set in each bot's prefab, as a JSON object of edits by bot name (`DiffPrefab` writes each), or empty for none.
 /// @param[in] context Mochi context.
 /// @param[in] botsCtx RoboticsContext for controller creation and lifetime management.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.

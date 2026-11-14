@@ -26,6 +26,10 @@
 #include <string_view>
 #include <unordered_map>
 
+namespace mochi::prefab {
+struct ScenePrefab;
+} // namespace mochi::prefab
+
 namespace superdex::robotics {
 
 /**
@@ -292,6 +296,33 @@ MOCHI_API BotScenePrefab LoadBotScenePrefabFromFile(std::string_view path, super
  */
 using BotPrefabLookup = std::function<BotPrefab const*(std::string_view botPath)>;
 
+/**
+ * @brief Changes a spawnable prefab as its file declares it, before its nested prefabs and shapes
+ * load (e.g. an actor's shape scale). An edit that sets @p error spawns nothing.
+ */
+using SpawnPrefabEdit =
+    std::function<void(mochi::prefab::ScenePrefab& prefab, superdex::Error& error)>;
+
+/**
+ * @brief Changes a declared bot's prefab after it loads, placed and posed as its scene entry
+ * declares, and before the bot is created (e.g. its links' gravity or mass). It sees the bot's
+ * entry, so entries that share one bot file can be changed differently. An edit that sets
+ * @p error stops the bot from being created.
+ */
+using BotPrefabEdit =
+    std::function<void(BotEntry const& entry, BotPrefab& prefab, superdex::Error& error)>;
+
+/**
+ * @brief The fields an edit changed in a prefab, as a JSON object: @p edited's fields that differ
+ * from @p original's. An array of named objects (links, joints, actors) becomes an object of each
+ * changed element's changed fields, keyed by its name. Numbers keep every bit, so a recording that
+ * carries the result rebuilds what the edit made (see @ref LoadBotScene and
+ * @ref BotScene::SpawnPrefabInstance, which take it). Empty when nothing differs.
+ */
+MOCHI_API DynamicString DiffPrefab(BotPrefab const& original, BotPrefab const& edited);
+MOCHI_API DynamicString
+DiffPrefab(mochi::prefab::ScenePrefab const& original, mochi::prefab::ScenePrefab const& edited);
+
 struct BotTaskPrefab;
 struct TerminationOutcome;
 
@@ -406,6 +437,26 @@ class MOCHI_API BotScene {
       TransformRT const& worldFromInstance,
       superdex::Error& error);
 
+  /* @brief Like the overload above, with @p edit, a @ref DiffPrefab result, set in the prefab
+   * before its shapes load, e.g. to rebuild a recorded spawn. An empty edit changes nothing; one
+   * that does not fit the prefab spawns nothing. */
+  Span<ActorHandle const> SpawnPrefabInstance(
+      std::string_view instanceName,
+      std::string_view prefabName,
+      TransformRT const& worldFromInstance,
+      std::string_view edit,
+      superdex::Error& error);
+
+  /* @brief Like @ref SpawnPrefabInstance, with @p edit applied to the prefab before its nested
+   * prefabs and shapes load (see @ref SpawnPrefabEdit). A bot-file spawnable is not a prefab, so it
+   * refuses an edit. C++ only. */
+  Span<ActorHandle const> SpawnEditedPrefabInstance(
+      std::string_view instanceName,
+      std::string_view prefabName,
+      TransformRT const& worldFromInstance,
+      SpawnPrefabEdit const& edit,
+      superdex::Error& error);
+
   /* @brief Destroy a prefab instance created by @ref SpawnPrefabInstance.
    * @param instanceName Name of a currently live instance.
    * @param error Error status. */
@@ -434,8 +485,9 @@ class MOCHI_API BotScene {
 
   /* Instantiate a bot the .superdex_scene declares but that is not loaded -- one left out of the
    * scene's botsToInitialize, or removed with @ref RemoveBot -- together with its controllers, at
-   * its declared placement and initial pose. Its prefab is loaded from file. Errors, creating
-   * nothing, if no bot named `name` is declared, it is already loaded, or it fails to instantiate.
+   * its declared placement and initial pose. Its prefab is loaded from file, and changed by the
+   * @ref BotPrefabEdit the scene was loaded with, if any. Errors, creating nothing, if no bot named
+   * `name` is declared, it is already loaded, or it fails to instantiate.
    * @param name Exact declared name of the bot to initialize.
    * @param error Error status.
    * @return The loaded bot, or nullptr on error. */
@@ -565,6 +617,13 @@ class MOCHI_API BotScene {
       RoboticsContext* botsCtx,
       superdex::Error& error);
   friend MOCHI_API BotScene LoadBotScene(
+      std::string_view path,
+      DynamicArray<DynamicString> const& bots,
+      std::string_view edits,
+      Context* context,
+      RoboticsContext* botsCtx,
+      superdex::Error& error);
+  friend MOCHI_API BotScene LoadBotScene(
       Scene* scene,
       BotScenePrefab const& prefab,
       std::string_view rootPath,
@@ -590,6 +649,16 @@ class MOCHI_API BotScene {
       Scene* scene,
       std::string_view path,
       Span<std::string_view const> botsToInitialize,
+      BotPrefabEdit const& edit,
+      Context* context,
+      RoboticsContext* botsCtx,
+      superdex::Error& error);
+  friend MOCHI_API BotScene LoadBotScene(
+      Scene* scene,
+      BotScenePrefab const& prefab,
+      std::string_view rootPath,
+      Span<std::string_view const> botsToInitialize,
+      BotPrefabEdit const& edit,
       Context* context,
       RoboticsContext* botsCtx,
       superdex::Error& error);
@@ -612,6 +681,22 @@ class MOCHI_API BotScene {
  */
 MOCHI_API BotScene LoadBotScene(
     std::string_view path,
+    Context* context,
+    RoboticsContext* botsCtx,
+    superdex::Error& error);
+
+/**
+ * @brief Like @ref LoadBotScene(std::string_view, Context*, RoboticsContext*, superdex::Error&),
+ * but instantiates only the declared bots named in @p bots, each with its edit in @p edits set in
+ * its prefab before the bot is created, e.g. to rebuild the bots a recording was made with. @p
+ * edits is a JSON object of @ref DiffPrefab results by bot name, or empty for none. The rest stay
+ * declared, and @ref BotScene::InitializeBot brings them up unedited. Errors if @p bots names a bot
+ * the scene does not declare, or an edit is for a bot not in @p bots or does not fit its bot.
+ */
+MOCHI_API BotScene LoadBotScene(
+    std::string_view path,
+    DynamicArray<DynamicString> const& bots,
+    std::string_view edits,
     Context* context,
     RoboticsContext* botsCtx,
     superdex::Error& error);
@@ -692,6 +777,39 @@ MOCHI_API BotScene LoadBotScene(
     Scene* scene,
     std::string_view path,
     Span<std::string_view const> botsToInitialize,
+    Context* context,
+    RoboticsContext* botsCtx,
+    superdex::Error& error);
+
+/**
+ * @brief Like @ref LoadBotScene(Scene*, std::string_view, Span<std::string_view const>, Context*,
+ * RoboticsContext*, superdex::Error&), with @p edit changing each bot's prefab before the bot is
+ * created: the bots in @p botsToInitialize, and those brought up later with
+ * @ref BotScene::InitializeBot. The BotScene keeps @p edit for that, so whatever it refers to must
+ * outlive the BotScene. C++ only.
+ */
+MOCHI_API BotScene LoadBotScene(
+    Scene* scene,
+    std::string_view path,
+    Span<std::string_view const> botsToInitialize,
+    BotPrefabEdit const& edit,
+    Context* context,
+    RoboticsContext* botsCtx,
+    superdex::Error& error);
+
+/**
+ * @brief Like the overload above, from an already-loaded, path-resolved @p prefab whose base scene
+ * resolves against @p rootPath, as @ref LoadBotScene(Scene*, BotScenePrefab const&,
+ * std::string_view, Context*, RoboticsContext*, superdex::Error&) takes them. A caller that changes
+ * entries themselves (e.g. their controllers) does so in @p prefab, which
+ * @ref BotScene::GetBotScenePrefab then returns. C++ only.
+ */
+MOCHI_API BotScene LoadBotScene(
+    Scene* scene,
+    BotScenePrefab const& prefab,
+    std::string_view rootPath,
+    Span<std::string_view const> botsToInitialize,
+    BotPrefabEdit const& edit,
     Context* context,
     RoboticsContext* botsCtx,
     superdex::Error& error);

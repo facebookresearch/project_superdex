@@ -2738,6 +2738,7 @@ class BotScene:
         Raises:
             :class:`~superdex.physics.Error`: If an error occurs.
         """
+    @overload
     def spawn_prefab_instance(
         self,
         instance_name: str,
@@ -2764,6 +2765,35 @@ class BotScene:
         Returns:
             Actor handles in prefab AddToScene order (for a bot, its articulated actor),
             or empty on error. Valid until the instance is destroyed.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+        """
+    @overload
+    def spawn_prefab_instance(
+        self,
+        instance_name: str,
+        prefab_name: str,
+        world_from_instance: mochi_physics.TransformRT,
+        edit: str,
+    ) -> mochi_physics.SpanConstActorHandle:
+        """Like the overload above, with an edit set in the prefab before its shapes
+        load,
+        e.g. to rebuild a recorded spawn.
+
+        An empty edit changes nothing; one that does not fit the prefab spawns nothing.
+
+        Args:
+            instance_name (str): Unique, non-empty instance name; must not already be
+                live.
+            prefab_name (str): Spawnable-prefab name declared in this scene.
+            world_from_instance (TransformRT): Instance root pose in world space.
+            edit (str): The fields to set in the prefab, as a JSON object (`DiffPrefab`
+                writes one).
+
+        Returns:
+            Actor handles in prefab AddToScene order, or empty on error. Valid until the
+            instance is destroyed.
 
         Raises:
             :class:`~superdex.physics.Error`: If an error occurs.
@@ -3416,6 +3446,36 @@ def load_bot_scene(path: str, bots_ctx: RoboticsContext) -> BotScene:
 
     Args:
         path (str): File path to the .superdex_scene file.
+        bots_ctx (RoboticsContext): RoboticsContext for controller creation and
+            lifetime management.
+
+    Returns:
+        The loaded BotScene.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+@overload
+def load_bot_scene(
+    path: str,
+    bots: mochi_physics.ArrayLikeString,
+    edits: str,
+    bots_ctx: RoboticsContext,
+) -> BotScene:
+    """Like the path overload above, but instantiates only the declared bots named in
+    bots, each with its edit set in its prefab before the bot is created, e.g. to
+    rebuild the bots a recording was made with.
+
+    The rest stay declared, and :meth:`~superdex.robotics.BotScene.initialize_bot`
+    brings them up unedited. Errors if bots names a bot the scene does not declare,
+    or an edit is for a bot not in bots or does not fit it.
+
+    Args:
+        path (str): File path to the .superdex_scene file.
+        bots (ArrayLikeString): The bots to instantiate.
+        edits (str): The fields to set in each bot's prefab, as a JSON object of
+            edits by bot name (`DiffPrefab` writes each), or empty for none.
         bots_ctx (RoboticsContext): RoboticsContext for controller creation and
             lifetime management.
 
