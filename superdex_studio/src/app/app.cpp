@@ -62,8 +62,8 @@
 
 #include "editors/bot_scene_editor.h"
 #include "editors/ik_editor.h"
-#include "editors/mochi_prefab_editor.h"
 #include "editors/model_editor.h"
+#include "editors/prefab_editor.h"
 #include "editors/tuner_editor.h"
 #include "io/mjcf_importer.h"
 #include "io/urdf_importer.h"
@@ -2568,7 +2568,7 @@ void SuperDexStudio::BuildDefaultDockLayout() {
   // introduced.
   DockEditorDefaultWindows<ModelEditor>(dock_right, dock_right_bottom, dock_bottom);
   DockEditorDefaultWindows<BotEditor>(dock_right, dock_right_bottom, dock_bottom);
-  DockEditorDefaultWindows<MochiPrefabEditor>(dock_right, dock_right_bottom, dock_bottom);
+  DockEditorDefaultWindows<PrefabEditor>(dock_right, dock_right_bottom, dock_bottom);
   DockEditorDefaultWindows<TunerEditor>(dock_right, dock_right_bottom, dock_bottom);
   DockEditorDefaultWindows<IKEditor>(dock_right, dock_right_bottom, dock_bottom);
   DockEditorDefaultWindows<BotSceneEditor>(dock_right, dock_right_bottom, dock_bottom);

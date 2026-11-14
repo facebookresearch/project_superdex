@@ -35,13 +35,13 @@ namespace superdex::studio {
 
 class MochiPrefabAsset;
 
-class MochiPrefabEditor : public AssetEditor {
+class PrefabEditor : public AssetEditor {
  public:
   //------------------------------------------------------------------------------------------------
   // AssetEditor
   //------------------------------------------------------------------------------------------------
 
-  MochiPrefabEditor(SuperDexStudio* studio, MochiPrefabAsset* asset);
+  PrefabEditor(SuperDexStudio* studio, MochiPrefabAsset* asset);
   void Initialize() override;
   void OnHandleInputs() override;
   void OnRender(Renderer const* renderer) override;

@@ -17,7 +17,7 @@
 #include "assets/mochi_prefab_asset.h"
 #include "app/app.h"
 #include "assets/asset_manager.h"
-#include "editors/mochi_prefab_editor.h"
+#include "editors/prefab_editor.h"
 #include "rendering/scene_stage.h"
 
 #include <mochi_core/utils/defer.h>
@@ -400,7 +400,7 @@ void MochiPrefabAsset::OnRewritePath(
 }
 
 std::unique_ptr<AssetEditor> MochiPrefabAsset::CreateEditor(SuperDexStudio* studio) {
-  return std::make_unique<MochiPrefabEditor>(studio, this);
+  return std::make_unique<PrefabEditor>(studio, this);
 }
 
 std::string const& MochiPrefabAsset::GetReferencerName() const {

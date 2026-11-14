@@ -85,7 +85,7 @@ void SetPoseRandomizationClass(superdex::robotics::SpawnEntry& spawn, std::strin
 
 // Returns a name of the form "<stem><N>" (N starting at 1) that is not in @p existing. Trailing
 // digits of @p base are stripped to form the stem so numbering continues from it. Mirrors
-// MochiPrefabEditor::MakeUniquePrefabActorName so new entries get sensible non-conflicting names.
+// PrefabEditor::MakeUniquePrefabActorName so new entries get sensible non-conflicting names.
 std::string MakeUniqueName(std::string_view base, std::set<std::string> const& existing) {
   std::string stem(base);
   while (!stem.empty() && std::isdigit(static_cast<unsigned char>(stem.back()))) {

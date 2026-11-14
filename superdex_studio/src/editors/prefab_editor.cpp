@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "editors/mochi_prefab_editor.h"
+#include "editors/prefab_editor.h"
 #include "app/app.h"
 #include "assets/asset.h"
 #include "assets/mochi_prefab_asset.h"
@@ -65,13 +65,13 @@ FallbackName(std::string_view prefix, mochi::DynamicString const& name, int inde
 // AssetEditor
 //--------------------------------------------------------------------------------------------------
 
-MochiPrefabEditor::MochiPrefabEditor(SuperDexStudio* studio, MochiPrefabAsset* asset)
+PrefabEditor::PrefabEditor(SuperDexStudio* studio, MochiPrefabAsset* asset)
     : AssetEditor(studio, asset),
       _prefabAsset(asset),
-      _stage(studio, "MochiPrefabEditorStage"),
+      _stage(studio, "PrefabEditorStage"),
       _simSync(studio->GetEditorToRendererSpaceConverter()) {}
 
-void MochiPrefabEditor::Initialize() {
+void PrefabEditor::Initialize() {
   // Initialize _undoStack
   if (!_prefabAsset->IsReadOnly()) {
     _undoStack.Initialize(
@@ -132,7 +132,7 @@ void MochiPrefabEditor::Initialize() {
        .getState = [this] { return _stageType == StageType::SdfFallbackToMochiModel; },
        .shortcut = ImGuiKey_4});
   // Initialize Mochi scene and callbacks
-  _mochiScene.Initialize(_studio->GetMochiContext(), "MochiPrefabEditor");
+  _mochiScene.Initialize(_studio->GetMochiContext(), "PrefabEditor");
   _mochiScene.SetSettings(_studio->GetAppSettings().physics);
   _mochiScene.onStartPhysics = [this]() { _simSync.CaptureStagedSurfaces(_stage); };
   _mochiScene.createPhysicsActors = [this](mochi::Scene* s) { CreatePhysicsActors(s); };
@@ -168,7 +168,7 @@ void MochiPrefabEditor::Initialize() {
   _viewport->FocusCameraOnScene();
 }
 
-void MochiPrefabEditor::OnHandleInputs() {
+void PrefabEditor::OnHandleInputs() {
   // Sim-control shortcuts must run even while simulating (e.g. Esc to stop), so handle them before
   // the early-out below that ignores editing shortcuts during simulation.
   if (CanSimulate()) {
@@ -199,7 +199,7 @@ void MochiPrefabEditor::OnHandleInputs() {
   DeleteSelection();
 }
 
-void MochiPrefabEditor::OnRender(Renderer const* renderer) {
+void PrefabEditor::OnRender(Renderer const* renderer) {
   // Sync data from physics simulation
   if (_mochiScene.IsSimulating()) {
     _mochiScene.UpdateStats();
@@ -219,7 +219,7 @@ void MochiPrefabEditor::OnRender(Renderer const* renderer) {
   _viewport->RenderScene(renderer);
 }
 
-void MochiPrefabEditor::Shutdown() {
+void PrefabEditor::Shutdown() {
   if (_mochiScene.IsSimulating()) {
     _mochiScene.DestroyMochiScene();
   }
@@ -227,7 +227,7 @@ void MochiPrefabEditor::Shutdown() {
   _viewport.reset();
 }
 
-void MochiPrefabEditor::OnActivate() {
+void PrefabEditor::OnActivate() {
   // A nested prefab may have been edited (and saved) in another tab while we were inactive.
   // RestagePrefab reloads nested prefabs from disk (LoadNestedPrefabs) and re-stages, so their
   // changes appear automatically when returning to this editor.
@@ -236,7 +236,7 @@ void MochiPrefabEditor::OnActivate() {
   }
 }
 
-void MochiPrefabEditor::Refresh() {
+void PrefabEditor::Refresh() {
   // A referenced shape/model was replaced/renamed elsewhere in the app. Stop any running simulation
   // (restaging mid-sim is unsafe), then restage to reflect it.
   if (_mochiScene.IsSimulating()) {
@@ -245,14 +245,14 @@ void MochiPrefabEditor::Refresh() {
   RestagePrefab();
 }
 
-void MochiPrefabEditor::OnDeactivate() {
+void PrefabEditor::OnDeactivate() {
   // Stop simulation when the user changes to another editor.
   if (_mochiScene.IsSimulating()) {
     _mochiScene.DestroyMochiScene();
   }
 }
 
-void MochiPrefabEditor::ShowTabContents() {
+void PrefabEditor::ShowTabContents() {
   ImGui::BeginChild("Viewport_Child", ImVec2(0, 0), 0, ImGuiWindowFlags_NoMove);
   // Force-drag only applies while the sim runs.
   _viewport->enableSceneObjectDrag = _mochiScene.IsSimulating();
@@ -264,7 +264,7 @@ void MochiPrefabEditor::ShowTabContents() {
   ImGui::EndChild(); // Viewport_Child
 }
 
-std::vector<AssetEditor::WindowDeclaration> MochiPrefabEditor::GetDefaultWindows() {
+std::vector<AssetEditor::WindowDeclaration> PrefabEditor::GetDefaultWindows() {
   using Dock = AssetEditor::DockRegion;
   return {
       // main windows
@@ -280,7 +280,7 @@ std::vector<AssetEditor::WindowDeclaration> MochiPrefabEditor::GetDefaultWindows
       {"Render Scene Stage", false, Dock::SidePanelTop, true}};
 }
 
-AssetSceneOverrides MochiPrefabEditor::GetAssetSceneOverrides() const {
+AssetSceneOverrides PrefabEditor::GetAssetSceneOverrides() const {
   auto const& scene = _prefabAsset->GetPrefab().scene;
   if (!scene.has_value()) {
     return {};
@@ -288,11 +288,11 @@ AssetSceneOverrides MochiPrefabEditor::GetAssetSceneOverrides() const {
   return {scene->gravity.has_value(), scene->solver.has_value()};
 }
 
-std::vector<AssetEditor::WindowDeclaration> MochiPrefabEditor::GetAuxiliaryWindows() const {
+std::vector<AssetEditor::WindowDeclaration> PrefabEditor::GetAuxiliaryWindows() const {
   return GetDefaultWindows();
 }
 
-void MochiPrefabEditor::ShowAuxiliaryWindows() {
+void PrefabEditor::ShowAuxiliaryWindows() {
   // main windows
   if (bool& open = _studio->GetWindowVisible("Prefab Hierarchy")) {
     ShowPrefabHierarchyWindow(&open);
@@ -326,25 +326,24 @@ void MochiPrefabEditor::ShowAuxiliaryWindows() {
   }
 }
 
-void MochiPrefabEditor::ShowMainMenuItems() {
+void PrefabEditor::ShowMainMenuItems() {
   if (ImGui::BeginMenu("Prefab")) {
     _mochiScene.ShowExportSimulationPrefabMenuItem(_prefabAsset->GetName());
     ImGui::EndMenu();
   }
 }
 
-bool MochiPrefabEditor::CanUndoRedo() const {
+bool PrefabEditor::CanUndoRedo() const {
   return !_mochiScene.IsSimulating();
 }
 
-void MochiPrefabEditor::ApplySceneViewSettings(
-    mochi_renderer::SceneViewSettings const& viewSettings) {
+void PrefabEditor::ApplySceneViewSettings(mochi_renderer::SceneViewSettings const& viewSettings) {
   if (_viewport && _viewport->GetRenderScene()) {
     _viewport->GetRenderScene()->ApplyViewSettings(viewSettings);
   }
 }
 
-void MochiPrefabEditor::OnAppSettingsChanged(AppSettings const& settings) {
+void PrefabEditor::OnAppSettingsChanged(AppSettings const& settings) {
   // The drag controller snapshots its tuning per session, so a live one has to be told.
   if (_dragController) {
     _dragController->SetSettings(settings.physicsDrag);
@@ -366,13 +365,13 @@ struct PrefabUndoSnapshot {
   MOCHI_STRUCT_END()
 };
 
-std::string MochiPrefabEditor::TakeUndoSnapshot() const {
+std::string PrefabEditor::TakeUndoSnapshot() const {
   PrefabUndoSnapshot const snapshot{
       _prefabAsset->GetPrefab(), _prefabAsset->GetStashedSceneParams()};
   return SReflect::ToJsonString(snapshot, false);
 }
 
-void MochiPrefabEditor::RestoreUndoSnapshot(std::string const& json, int selectionIndex) {
+void PrefabEditor::RestoreUndoSnapshot(std::string const& json, int selectionIndex) {
   // Clear highlights before the scene objects are rebuilt below.
   _viewport->SetSelectedSceneObjects({});
 
@@ -405,7 +404,7 @@ void MochiPrefabEditor::RestoreUndoSnapshot(std::string const& json, int selecti
   _prefabAsset->SetDirty(!GetUndoStack().IsAtSavedState());
 }
 
-int MochiPrefabEditor::GetUndoSelectionIndex() const {
+int PrefabEditor::GetUndoSelectionIndex() const {
   Selection const* const primary = PrimarySelection();
   return (primary && primary->kind == Selection::Kind::Rigid) ? primary->actorIndex : -1;
 }
@@ -414,7 +413,7 @@ int MochiPrefabEditor::GetUndoSelectionIndex() const {
 // Prefab Staging
 //------------------------------------------------------------------------------------------------
 
-void MochiPrefabEditor::SetRepresentationMode(StageType stageType) {
+void PrefabEditor::SetRepresentationMode(StageType stageType) {
   _stageType = stageType;
   if (_mochiScene.IsSimulating()) {
     _stage.SetRepresentationMode(stageType);
@@ -425,7 +424,7 @@ void MochiPrefabEditor::SetRepresentationMode(StageType stageType) {
   SyncViewportSelection();
 }
 
-void MochiPrefabEditor::RestagePrefab() {
+void PrefabEditor::RestagePrefab() {
   std::vector<Selection> const saved = _selections;
   auto& prefab = _prefabAsset->GetPrefab();
   // Refresh nested prefab data from memory (or disk) so nested edits — even unsaved ones from a
@@ -451,18 +450,14 @@ void MochiPrefabEditor::RestagePrefab() {
   _prefabAsset->MarkThumbnailDirty();
 }
 
-SceneObject* MochiPrefabEditor::StagedObjectForSource(
-    StagedActorSource source,
-    int actorIndex,
-    int linkIndex) const {
+SceneObject*
+PrefabEditor::StagedObjectForSource(StagedActorSource source, int actorIndex, int linkIndex) const {
   StagedActor const* const staged = StagedActorForSource(source, actorIndex, linkIndex);
   return staged ? staged->sceneObject : nullptr;
 }
 
-StagedActor const* MochiPrefabEditor::StagedActorForSource(
-    StagedActorSource source,
-    int actorIndex,
-    int linkIndex) const {
+StagedActor const*
+PrefabEditor::StagedActorForSource(StagedActorSource source, int actorIndex, int linkIndex) const {
   if (actorIndex < 0) {
     return nullptr;
   }
@@ -479,11 +474,11 @@ StagedActor const* MochiPrefabEditor::StagedActorForSource(
 // Mochi Scene
 //------------------------------------------------------------------------------------------------
 
-bool MochiPrefabEditor::CanSimulate() const {
+bool PrefabEditor::CanSimulate() const {
   return !_stage.IsEmpty();
 }
 
-void MochiPrefabEditor::CreatePhysicsActors(mochi::Scene* scene) {
+void PrefabEditor::CreatePhysicsActors(mochi::Scene* scene) {
   auto* mochiContext = _studio->GetMochiContext();
   std::string const rootPath = _prefabAsset->GetAssetsRoot();
 
@@ -503,26 +498,26 @@ void MochiPrefabEditor::CreatePhysicsActors(mochi::Scene* scene) {
   _simSync.Track(mochi::MakeConstSpan(result.actors));
 }
 
-void MochiPrefabEditor::DestroyPhysicsActors(mochi::Scene* scene) {
+void PrefabEditor::DestroyPhysicsActors(mochi::Scene* scene) {
   // Release the soft-actor surface queries while the actors are still alive (this callback runs
   // before the scene is destroyed).
   _simSync.Untrack(scene);
 }
 
-mochi::CallbackHandle MochiPrefabEditor::RegisterPostStepCallback(mochi::AsyncScene* scene) {
+mochi::CallbackHandle PrefabEditor::RegisterPostStepCallback(mochi::AsyncScene* scene) {
   return scene->RegisterPostStepCallback(
-      "MochiPrefabEditor::ExtractActors",
+      "PrefabEditor::ExtractActors",
       [this](mochi::StepInfo const& info) { _simSync.Produce(info.scene); });
 }
 
-void MochiPrefabEditor::OnStopPhysics() {
+void PrefabEditor::OnStopPhysics() {
   // Tear down the per-session force-drag controller (its callback is already gone with the scene).
   _dragController.reset();
   _simSync.Reset();
   _stage.ResetWorldTransforms(_studio->GetEditorToRendererSpaceConverter());
 }
 
-void MochiPrefabEditor::SyncFromPhysics() {
+void PrefabEditor::SyncFromPhysics() {
   _simSync.Apply(_stage, _studio->GetEditorToRendererSpaceConverter());
 }
 
@@ -530,7 +525,7 @@ void MochiPrefabEditor::SyncFromPhysics() {
 // Viewport
 //--------------------------------------------------------------------------------------------------
 
-MochiPrefabEditor::Selection MochiPrefabEditor::SelectionForRow(HierarchyRow const& row) {
+PrefabEditor::Selection PrefabEditor::SelectionForRow(HierarchyRow const& row) {
   switch (row.category) {
     case RowCategory::Rigid:
       return {Selection::Kind::Rigid, row.index, -1};
@@ -544,7 +539,7 @@ MochiPrefabEditor::Selection MochiPrefabEditor::SelectionForRow(HierarchyRow con
   return {};
 }
 
-MochiPrefabEditor::Selection MochiPrefabEditor::SelectionForObject(SceneObject* object) const {
+PrefabEditor::Selection PrefabEditor::SelectionForObject(SceneObject* object) const {
   if (!object) {
     return {};
   }
@@ -571,7 +566,7 @@ MochiPrefabEditor::Selection MochiPrefabEditor::SelectionForObject(SceneObject* 
   return {};
 }
 
-void MochiPrefabEditor::OnSceneSelectionChanged(std::vector<SceneObject*> const& objects) {
+void PrefabEditor::OnSceneSelectionChanged(std::vector<SceneObject*> const& objects) {
   _selections.clear();
   _selectionAnchorRow = -1;
   for (SceneObject* object : objects) {
@@ -598,11 +593,11 @@ void MochiPrefabEditor::OnSceneSelectionChanged(std::vector<SceneObject*> const&
   SyncViewportSelection();
 }
 
-MochiPrefabEditor::Selection const* MochiPrefabEditor::PrimarySelection() const {
+PrefabEditor::Selection const* PrefabEditor::PrimarySelection() const {
   return _selections.empty() ? nullptr : &_selections.back();
 }
 
-bool MochiPrefabEditor::IsRowSelected(Selection::Kind kind, int actorIndex) const {
+bool PrefabEditor::IsRowSelected(Selection::Kind kind, int actorIndex) const {
   for (Selection const& sel : _selections) {
     // An articulated actor row is highlighted whether the actor itself or one of its links is
     // selected.
@@ -615,7 +610,7 @@ bool MochiPrefabEditor::IsRowSelected(Selection::Kind kind, int actorIndex) cons
   return false;
 }
 
-void MochiPrefabEditor::SyncViewportSelection() {
+void PrefabEditor::SyncViewportSelection() {
   std::vector<SceneObject*> objects;
   for (Selection const& sel : _selections) {
     switch (sel.kind) {
@@ -654,7 +649,7 @@ void MochiPrefabEditor::SyncViewportSelection() {
   _viewport->SetSelectedSceneObjects(std::move(objects), /*invokeCallback=*/false);
 }
 
-void MochiPrefabEditor::SetSingleSelection(Selection selection) {
+void PrefabEditor::SetSingleSelection(Selection selection) {
   if (selection.kind == Selection::Kind::None) {
     _selections.clear();
   } else {
@@ -664,7 +659,7 @@ void MochiPrefabEditor::SetSingleSelection(Selection selection) {
   SyncViewportSelection();
 }
 
-void MochiPrefabEditor::HandleTopLevelRowClick(int rowIndex, Selection const& sel) {
+void PrefabEditor::HandleTopLevelRowClick(int rowIndex, Selection const& sel) {
   ImGuiIO const& io = ImGui::GetIO();
   if (io.KeyCtrl) {
     // Toggle this row in/out of the selection.
@@ -699,8 +694,8 @@ void MochiPrefabEditor::HandleTopLevelRowClick(int rowIndex, Selection const& se
   FocusWindowIfOpen("Actor Details");
 }
 
-std::optional<std::pair<mochi::TransformRT, mochi::Real3>>
-MochiPrefabEditor::GetTransformGizmoTarget() const {
+std::optional<std::pair<mochi::TransformRT, mochi::Real3>> PrefabEditor::GetTransformGizmoTarget()
+    const {
   auto const& prefab = _prefabAsset->GetPrefab();
   // Per-axis-scale target (rigid/soft): authored transform + the actor's Real3 scale.
   auto perAxis = [](mochi::Quaternion const& rotation,
@@ -781,7 +776,7 @@ static void InvalidateArticulatedActorShapes(mochi::prefab::ArticulatedActorPref
   }
 }
 
-void MochiPrefabEditor::OnGizmoTransformDelta(
+void PrefabEditor::OnGizmoTransformDelta(
     mochi::TransformRT const& delta,
     mochi::Real3 const& scaleMul) {
   auto& prefab = _prefabAsset->GetPrefab();
@@ -962,7 +957,7 @@ void MochiPrefabEditor::OnGizmoTransformDelta(
 // Structural edits
 //--------------------------------------------------------------------------------------------------
 
-int MochiPrefabEditor::AddArticulatedLink(
+int PrefabEditor::AddArticulatedLink(
     mochi::prefab::ArticulatedActorPrefab& actor,
     int parentIdx,
     std::string_view baseName) {
@@ -995,7 +990,7 @@ int MochiPrefabEditor::AddArticulatedLink(
   return static_cast<int>(actor.links.size()) - 1;
 }
 
-void MochiPrefabEditor::RemoveArticulatedLinkAndDescendants(
+void PrefabEditor::RemoveArticulatedLinkAndDescendants(
     mochi::prefab::ArticulatedActorPrefab& actor,
     int linkIdx) {
   using namespace mochi;
@@ -1137,7 +1132,7 @@ static void ReorderArticulatedActorTopological(mochi::prefab::ArticulatedActorPr
   actor.joints = std::move(newJoints);
 }
 
-void MochiPrefabEditor::ReparentArticulatedLink(
+void PrefabEditor::ReparentArticulatedLink(
     int actorIndex,
     int linkIdx,
     int newParentIdx,
@@ -1210,13 +1205,13 @@ void MochiPrefabEditor::ReparentArticulatedLink(
 // ImGui
 //--------------------------------------------------------------------------------------------------
 
-void MochiPrefabEditor::HighlightStagedObject(SceneObject* object) {
+void PrefabEditor::HighlightStagedObject(SceneObject* object) {
   if (object) {
     _viewport->HighlightSceneObject(object, {46.f / 255.f, 134.f / 255.f, 233.f / 255.f});
   }
 }
 
-void MochiPrefabEditor::RenderArticulatedLinkTree(
+void PrefabEditor::RenderArticulatedLinkTree(
     int actorIndex,
     mochi::prefab::ArticulatedActorPrefab const& actor,
     std::vector<std::vector<int>> const& children,
@@ -1293,7 +1288,7 @@ void MochiPrefabEditor::RenderArticulatedLinkTree(
   ImGui::PopID();
 }
 
-void MochiPrefabEditor::ShowPrefabHierarchyWindow(bool* open) {
+void PrefabEditor::ShowPrefabHierarchyWindow(bool* open) {
   auto& prefab = _prefabAsset->GetPrefab();
 
   ImGuiWindowFlags scenePrefabFlags =
@@ -1685,7 +1680,7 @@ void MochiPrefabEditor::ShowPrefabHierarchyWindow(bool* open) {
   }
 }
 
-std::vector<std::string> MochiPrefabEditor::CollectTopLevelNames() const {
+std::vector<std::string> PrefabEditor::CollectTopLevelNames() const {
   auto const& prefab = _prefabAsset->GetPrefab();
   std::vector<std::string> names;
   names.reserve(
@@ -1706,7 +1701,7 @@ std::vector<std::string> MochiPrefabEditor::CollectTopLevelNames() const {
   return names;
 }
 
-std::string MochiPrefabEditor::MakeUniquePrefabActorName(std::string_view base) const {
+std::string PrefabEditor::MakeUniquePrefabActorName(std::string_view base) const {
   auto const resolved = CollectTopLevelNames();
   std::set<std::string> existing(resolved.begin(), resolved.end());
   // Strip any trailing digits so the numbering continues from the stem (e.g. duplicating "actor1"
@@ -1726,7 +1721,7 @@ std::string MochiPrefabEditor::MakeUniquePrefabActorName(std::string_view base) 
   }
 }
 
-void MochiPrefabEditor::CreateRigidActor() {
+void PrefabEditor::CreateRigidActor() {
   auto& prefab = _prefabAsset->GetPrefab();
   mochi::prefab::RigidActorPrefab actor;
   actor.name = mochi::DynamicString{MakeUniquePrefabActorName("Rigid")};
@@ -1738,7 +1733,7 @@ void MochiPrefabEditor::CreateRigidActor() {
   GetUndoStack().PushNow();
 }
 
-void MochiPrefabEditor::CreateSoftActor() {
+void PrefabEditor::CreateSoftActor() {
   auto& prefab = _prefabAsset->GetPrefab();
   mochi::prefab::SoftActorPrefab actor;
   actor.name = mochi::DynamicString{MakeUniquePrefabActorName("Soft")};
@@ -1750,7 +1745,7 @@ void MochiPrefabEditor::CreateSoftActor() {
   GetUndoStack().PushNow();
 }
 
-void MochiPrefabEditor::CreateArticulatedActor() {
+void PrefabEditor::CreateArticulatedActor() {
   auto& prefab = _prefabAsset->GetPrefab();
   mochi::prefab::ArticulatedActorPrefab actor;
   actor.name = mochi::DynamicString{MakeUniquePrefabActorName("Articulated")};
@@ -1774,7 +1769,7 @@ void MochiPrefabEditor::CreateArticulatedActor() {
   GetUndoStack().PushNow();
 }
 
-void MochiPrefabEditor::CreateNestedPrefab() {
+void PrefabEditor::CreateNestedPrefab() {
   auto& prefab = _prefabAsset->GetPrefab();
   mochi::prefab::PrefabReference nested;
   nested.name = mochi::DynamicString{MakeUniquePrefabActorName("Nested")};
@@ -1794,8 +1789,7 @@ static constexpr std::string_view kClipboardPrefix = "MochiPrefabActor:";
 // individual blocks.
 static constexpr std::string_view kClipboardSeparator = "\n@@MOCHI_PREFAB_ACTOR@@\n";
 
-std::string MochiPrefabEditor::BuildActorClipboardBlock(Selection::Kind kind, int actorIndex)
-    const {
+std::string PrefabEditor::BuildActorClipboardBlock(Selection::Kind kind, int actorIndex) const {
   auto const& prefab = _prefabAsset->GetPrefab();
   char const* tag = nullptr;
   std::string json;
@@ -1834,7 +1828,7 @@ std::string MochiPrefabEditor::BuildActorClipboardBlock(Selection::Kind kind, in
   return std::string(kClipboardPrefix) + tag + "\n" + json;
 }
 
-void MochiPrefabEditor::CopyActorToClipboard(Selection::Kind kind, int actorIndex) const {
+void PrefabEditor::CopyActorToClipboard(Selection::Kind kind, int actorIndex) const {
   std::string const block = BuildActorClipboardBlock(kind, actorIndex);
   if (block.empty()) {
     return;
@@ -1842,7 +1836,7 @@ void MochiPrefabEditor::CopyActorToClipboard(Selection::Kind kind, int actorInde
   ImGui::SetClipboardText(block.c_str());
 }
 
-void MochiPrefabEditor::CopySelectionToClipboard() const {
+void PrefabEditor::CopySelectionToClipboard() const {
   std::string clip;
   for (Selection const& sel : _selections) {
     std::string const block = BuildActorClipboardBlock(sel.kind, sel.actorIndex);
@@ -1859,7 +1853,7 @@ void MochiPrefabEditor::CopySelectionToClipboard() const {
   }
 }
 
-std::optional<MochiPrefabEditor::Selection> MochiPrefabEditor::DuplicateActorNoCommit(
+std::optional<PrefabEditor::Selection> PrefabEditor::DuplicateActorNoCommit(
     Selection::Kind kind,
     int actorIndex) {
   auto& prefab = _prefabAsset->GetPrefab();
@@ -1917,7 +1911,7 @@ std::optional<MochiPrefabEditor::Selection> MochiPrefabEditor::DuplicateActorNoC
   return std::nullopt;
 }
 
-void MochiPrefabEditor::DuplicateActor(Selection::Kind kind, int actorIndex) {
+void PrefabEditor::DuplicateActor(Selection::Kind kind, int actorIndex) {
   auto const newSelection = DuplicateActorNoCommit(kind, actorIndex);
   if (!newSelection) {
     return;
@@ -1929,7 +1923,7 @@ void MochiPrefabEditor::DuplicateActor(Selection::Kind kind, int actorIndex) {
   GetUndoStack().PushNow();
 }
 
-void MochiPrefabEditor::DuplicateSelection(bool commitUndo) {
+void PrefabEditor::DuplicateSelection(bool commitUndo) {
   // Duplicating appends to the end of each array, so earlier indices stay valid as we iterate
   // _selections directly (DuplicateActorNoCommit only appends to the prefab arrays; _selections is
   // reassigned only after the loop). Multiple links of one articulated actor map to the same actor,
@@ -1960,7 +1954,7 @@ void MochiPrefabEditor::DuplicateSelection(bool commitUndo) {
   }
 }
 
-bool MochiPrefabEditor::DeleteSelection() {
+bool PrefabEditor::DeleteSelection() {
   if (_selections.empty()) {
     return false;
   }
@@ -2043,7 +2037,7 @@ bool MochiPrefabEditor::DeleteSelection() {
   return true;
 }
 
-void MochiPrefabEditor::PasteFromClipboard() {
+void PrefabEditor::PasteFromClipboard() {
   char const* text = ImGui::GetClipboardText();
   if (!text) {
     return;
@@ -2148,7 +2142,7 @@ void MochiPrefabEditor::PasteFromClipboard() {
   GetUndoStack().PushNow();
 }
 
-void MochiPrefabEditor::ShowPrefabDetailsWindow(bool* open) {
+void PrefabEditor::ShowPrefabDetailsWindow(bool* open) {
   ImGui::Begin("Prefab Details", open);
 
   // Sticky large name header: rendered before the scrolling child so it stays fixed at the top.
@@ -2170,7 +2164,7 @@ void MochiPrefabEditor::ShowPrefabDetailsWindow(bool* open) {
   ImGui::End();
 }
 
-void MochiPrefabEditor::ShowActorDetailsWindow(bool* open) {
+void PrefabEditor::ShowActorDetailsWindow(bool* open) {
   auto const& prefab = _prefabAsset->GetPrefab();
 
   ImGui::Begin("Actor Details", open);
@@ -2239,7 +2233,7 @@ void MochiPrefabEditor::ShowActorDetailsWindow(bool* open) {
   ImGui::End();
 }
 
-std::string MochiPrefabEditor::SelectedActorDisplayName() const {
+std::string PrefabEditor::SelectedActorDisplayName() const {
   if (_selections.size() > 1) {
     return "Multiple Actors Selected";
   }
@@ -2292,7 +2286,7 @@ std::string MochiPrefabEditor::SelectedActorDisplayName() const {
   return {};
 }
 
-void MochiPrefabEditor::ShowScenePrefabDetails() {
+void PrefabEditor::ShowScenePrefabDetails() {
   auto& prefab = _prefabAsset->GetPrefab();
   bool changed = false;
 
@@ -2535,7 +2529,7 @@ bool ShowContactEntryTable(
   return changed;
 }
 
-void MochiPrefabEditor::ShowContactFilterWindow(bool* open) {
+void PrefabEditor::ShowContactFilterWindow(bool* open) {
   ImGui::Begin("Contact Filter", open);
   auto& prefab = _prefabAsset->GetPrefab();
 
@@ -2681,7 +2675,7 @@ static bool ShowActorModelEditors(
   return mochiModelEdited || renderModelEdited;
 }
 
-void MochiPrefabEditor::ShowRigidActorDetails(int rigidIndex) {
+void PrefabEditor::ShowRigidActorDetails(int rigidIndex) {
   auto* actor = &_prefabAsset->GetPrefab().actors.rigid[rigidIndex];
   AssetManager const& assetManager = _studio->GetAssetManager();
 
@@ -2746,7 +2740,7 @@ void MochiPrefabEditor::ShowRigidActorDetails(int rigidIndex) {
   }
 }
 
-void MochiPrefabEditor::ShowSoftActorDetails(int softIndex) {
+void PrefabEditor::ShowSoftActorDetails(int softIndex) {
   auto* actor = &_prefabAsset->GetPrefab().actors.soft[softIndex];
   AssetManager const& assetManager = _studio->GetAssetManager();
 
@@ -2816,7 +2810,7 @@ void MochiPrefabEditor::ShowSoftActorDetails(int softIndex) {
   }
 }
 
-void MochiPrefabEditor::ShowSoftRendering(int softIndex) {
+void PrefabEditor::ShowSoftRendering(int softIndex) {
   StagedActor const* const staged = StagedActorForSource(StagedActorSource::Soft, softIndex);
   if (staged == nullptr) {
     return;
@@ -2839,7 +2833,7 @@ void MochiPrefabEditor::ShowSoftRendering(int softIndex) {
   ImGui::PopTextWrapPos();
 }
 
-void MochiPrefabEditor::ShowArticulatedActorDetails(int actorIndex) {
+void PrefabEditor::ShowArticulatedActorDetails(int actorIndex) {
   auto& actor = _prefabAsset->GetPrefab().actors.articulated[actorIndex];
   AssetManager const& assetManager = _studio->GetAssetManager();
 
@@ -2917,7 +2911,7 @@ void MochiPrefabEditor::ShowArticulatedActorDetails(int actorIndex) {
   }
 }
 
-void MochiPrefabEditor::ShowArticulatedLinkDetails(int actorIndex, int linkIndex) {
+void PrefabEditor::ShowArticulatedLinkDetails(int actorIndex, int linkIndex) {
   auto& actor = _prefabAsset->GetPrefab().actors.articulated[actorIndex];
   if (linkIndex < 0 || linkIndex >= static_cast<int>(actor.links.size())) {
     return;
@@ -2990,7 +2984,7 @@ void MochiPrefabEditor::ShowArticulatedLinkDetails(int actorIndex, int linkIndex
   }
 }
 
-void MochiPrefabEditor::ShowNestedPrefabDetails(int prefabIndex) {
+void PrefabEditor::ShowNestedPrefabDetails(int prefabIndex) {
   auto& ref = _prefabAsset->GetPrefab().prefabs[prefabIndex];
   AssetManager const& assetManager = _studio->GetAssetManager();
 
@@ -3047,7 +3041,7 @@ void MochiPrefabEditor::ShowNestedPrefabDetails(int prefabIndex) {
   }
 }
 
-bool MochiPrefabEditor::TopLevelNameCollides(std::string const& name) const {
+bool PrefabEditor::TopLevelNameCollides(std::string const& name) const {
   // Top-level actor names share a namespace (a duplicate name collides in the staged scene's name
   // map). More than one top-level actor resolving to `name` means a conflict.
   auto const names = CollectTopLevelNames();
