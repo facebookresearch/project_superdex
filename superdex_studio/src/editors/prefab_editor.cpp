@@ -270,7 +270,7 @@ std::vector<AssetEditor::WindowDeclaration> PrefabEditor::GetDefaultWindows() {
       // main windows
       {"Prefab Hierarchy", true, Dock::SidePanelTop, false},
       {"Prefab Details", true, Dock::SidePanelBottom, false},
-      {"Actor Details", true, Dock::SidePanelBottom, false},
+      {"Details", true, Dock::SidePanelBottom, false},
       {"Contact Filter", false, Dock::SidePanelBottom, false},
       {"Physics Settings", false, Dock::SidePanelBottom, false},
       MeasureWindowDeclaration(),
@@ -293,6 +293,7 @@ std::vector<AssetEditor::WindowDeclaration> PrefabEditor::GetAuxiliaryWindows() 
 }
 
 void PrefabEditor::ShowAuxiliaryWindows() {
+  _constraintActorIndex = BuildConstraintActorIndex();
   // main windows
   if (bool& open = _studio->GetWindowVisible("Prefab Hierarchy")) {
     ShowPrefabHierarchyWindow(&open);
@@ -300,8 +301,8 @@ void PrefabEditor::ShowAuxiliaryWindows() {
   if (bool& open = _studio->GetWindowVisible("Prefab Details")) {
     ShowPrefabDetailsWindow(&open);
   }
-  if (bool& open = _studio->GetWindowVisible("Actor Details")) {
-    ShowActorDetailsWindow(&open);
+  if (bool& open = _studio->GetWindowVisible("Details")) {
+    ShowDetailsWindow(&open);
   }
   if (bool& open = _studio->GetWindowVisible("Contact Filter")) {
     ShowContactFilterWindow(&open);
@@ -589,6 +590,7 @@ void PrefabEditor::OnSceneSelectionChanged(std::vector<SceneObject*> const& obje
       _selections.push_back(sel);
     }
   }
+  _focusActorsTab = !_selections.empty();
   // Expand-and-scroll to a link only when a single link was picked in the viewport.
   if (_selections.size() == 1 && _selections.back().kind == Selection::Kind::ArticulatedLink) {
     _forceLinkFocus = true;
@@ -645,6 +647,7 @@ void PrefabEditor::SyncViewportSelection() {
           }
         }
         break;
+      case Selection::Kind::Constraint:
       case Selection::Kind::None:
         break;
     }
@@ -696,7 +699,7 @@ void PrefabEditor::HandleTopLevelRowClick(int rowIndex, Selection const& sel) {
     _selectionAnchorRow = rowIndex;
     SyncViewportSelection();
   }
-  FocusWindowIfOpen("Actor Details");
+  FocusWindowIfOpen("Details");
 }
 
 std::optional<std::pair<mochi::TransformRT, mochi::Real3>> PrefabEditor::GetTransformGizmoTarget()
@@ -755,6 +758,7 @@ std::optional<std::pair<mochi::TransformRT, mochi::Real3>> PrefabEditor::GetTran
         auto const& ref = prefabs[sel.actorIndex];
         return scalar(ref.rotation, ref.translation, ref.scale);
       }
+      case Selection::Kind::Constraint:
       case Selection::Kind::None:
         return std::nullopt;
     }
@@ -829,6 +833,7 @@ void PrefabEditor::OnGizmoTransformDelta(
         pivotPosition = ref.translation;
       }
       break;
+    case Selection::Kind::Constraint:
     case Selection::Kind::None:
       break;
   }
@@ -949,6 +954,7 @@ void PrefabEditor::OnGizmoTransformDelta(
         ref.scale *= scalarMul;
         break;
       }
+      case Selection::Kind::Constraint:
       case Selection::Kind::None:
         break;
     }
@@ -1230,7 +1236,13 @@ void PrefabEditor::RenderArticulatedLinkTree(
     bool simulating,
     HierarchyEdits& edits) {
   auto const& link = actor.links[linkIndex];
-  bool const hasChildren = !children[linkIndex].empty();
+  // The constraints on this link's joint are listed under it, before its child links.
+  bool const showConstraints = _studio->GetAppSettings().prefabEditor.showConstraintsUnderActors;
+  std::vector<ConstraintRef> const jointConstraints = showConstraints
+      ? FindJointConstraints(
+            _prefabAsset->GetPrefab().constraints, std::string_view(actor.name), linkIndex)
+      : std::vector<ConstraintRef>{};
+  bool const hasChildren = !children[linkIndex].empty() || !jointConstraints.empty();
   bool const isRoot = link.parentLink == superdex::robotics::kIndexNone;
   Selection const* const primary = PrimarySelection();
   bool const selected = primary && primary->kind == Selection::Kind::ArticulatedLink &&
@@ -1264,7 +1276,7 @@ void PrefabEditor::RenderArticulatedLinkTree(
   if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
     // Articulated links are single-select only (they clear any multi-selection).
     SetSingleSelection({Selection::Kind::ArticulatedLink, actorIndex, linkIndex});
-    FocusWindowIfOpen("Actor Details");
+    FocusWindowIfOpen("Details");
   }
   if (!simulating && ImGui::BeginPopupContextItem("LinkPopup", ImGuiPopupFlags_MouseButtonRight)) {
     if (ImGui::Selectable("Add Child Link")) {
@@ -1277,6 +1289,12 @@ void PrefabEditor::RenderArticulatedLinkTree(
       edits.delLinkIndex = linkIndex;
     }
     ImGui::EndDisabled();
+    ImGui::Separator();
+    if (ImGui::BeginMenu("Add Constraint")) {
+      ShowCreateConstraintMenuItems(
+          {Selection::Kind::ArticulatedLink, actorIndex, linkIndex}, edits);
+      ImGui::EndMenu();
+    }
     ImGui::EndPopup();
   }
 
@@ -1289,6 +1307,12 @@ void PrefabEditor::RenderArticulatedLinkTree(
   }
 
   if (hasChildren && nodeOpen) {
+    // Indented like leaf links, whose labels sit right of the (absent) arrow.
+    ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
+    for (ConstraintRef const& ref : jointConstraints) {
+      ShowConstraintRow(ref, ConstraintTypeLabel(ref.type), "Constraint", simulating, edits);
+    }
+    ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
     for (int child : children[linkIndex]) {
       RenderArticulatedLinkTree(
           actorIndex, actor, children, ancestorsToOpen, child, simulating, edits);
@@ -1307,55 +1331,20 @@ void PrefabEditor::ShowPrefabHierarchyWindow(bool* open) {
 
   // Top-level prefab entry (like the Bot Editor's bot-name row): it only raises the Prefab Details
   // window. It is not a selection, so the actor selection is deliberately left untouched.
+  // Leave room on the row for the settings cog.
+  float const nameWidth = ImGui::GetContentRegionAvail().x - ImGui::GetTextLineHeight() -
+      ImGui::GetStyle().ItemSpacing.x;
   ImGui::PushFont(_studio->GetFont("Roboto Bold Large"));
-  if (ImGui::Selectable(_prefabAsset->GetName().c_str(), false)) {
+  ImGui::SetNextItemAllowOverlap();
+  if (ImGui::Selectable(_prefabAsset->GetName().c_str(), false, 0, ImVec2(nameWidth, 0.0f))) {
     FocusWindowIfOpen("Prefab Details");
   }
   ImGui::PopFont();
-  ImGui::Separator();
-
-  // Flatten every actor kind into a single row list. Each row carries its source category and index
-  // so selection/edit/delete map back to the underlying prefab arrays after sorting. The row buffer
-  // is a persistent member, cleared and reused to avoid a per-frame allocation.
-  auto& rows = _hierarchyRows;
-  rows.clear();
-  rows.reserve(
-      prefab.actors.rigid.size() + prefab.actors.soft.size() + prefab.actors.articulated.size() +
-      prefab.prefabs.size());
-  for (int r = 0; r < static_cast<int>(prefab.actors.rigid.size()); ++r) {
-    rows.push_back(
-        {FallbackName(kRigidPrefix, prefab.actors.rigid[r].name, r),
-         "Rigid",
-         RowCategory::Rigid,
-         r});
-  }
-  for (int s = 0; s < static_cast<int>(prefab.actors.soft.size()); ++s) {
-    rows.push_back(
-        {FallbackName(kSoftPrefix, prefab.actors.soft[s].name, s), "Soft", RowCategory::Soft, s});
-  }
-  for (int a = 0; a < static_cast<int>(prefab.actors.articulated.size()); ++a) {
-    rows.push_back(
-        {FallbackName(kArticulatedPrefix, prefab.actors.articulated[a].name, a),
-         "Articulated",
-         RowCategory::Articulated,
-         a});
-  }
-  for (int p = 0; p < static_cast<int>(prefab.prefabs.size()); ++p) {
-    rows.push_back(
-        {FallbackName(kNestedPrefix, prefab.prefabs[p].name, p),
-         "Nested Prefab",
-         RowCategory::NestedPrefab,
-         p});
-  }
+  ShowHierarchySettingsCog();
 
   // Structural edits are deferred until after the table is rendered (mutating the prefab arrays
   // mid-iteration would invalidate indices).
   HierarchyEdits edits;
-
-  // When at least one articulated actor is present, indent leaf rows' first column so their labels
-  // align with the articulated tree-node labels (which sit to the right of the collapse arrow).
-  bool const hasArticulated = !prefab.actors.articulated.empty();
-  float const leafIndent = ImGui::GetTreeNodeToLabelSpacing();
 
   // Structural edits (create/delete/duplicate/paste) mutate the prefab and restage, which conflicts
   // with the running simulation, so the right-click context menus are suppressed while simulating
@@ -1363,261 +1352,363 @@ void PrefabEditor::ShowPrefabHierarchyWindow(bool* open) {
   // way). Left-click selection still works so actors can be inspected during playback.
   bool const simulating = _mochiScene.IsSimulating();
 
-  // Render one Rigid/Soft/Nested leaf row: an indented span-all-columns Selectable that selects the
-  // staged object, a hover highlight, and a right-click Copy/Duplicate/Delete popup. Parameterized
-  // by selection kind, the staged-object source, the popup id, and the deferred-delete target.
-  auto leafRow = [&](int rowIndex,
-                     HierarchyRow const& row,
-                     Selection::Kind kind,
-                     StagedActorSource source,
-                     char const* popupId,
-                     int& deleteTarget) {
-    ImGui::TableNextRow();
-    ImGui::TableNextColumn();
-    if (hasArticulated) {
-      ImGui::Indent(leafIndent);
+  if (!ImGui::BeginTabBar("PrefabHierarchyTabs")) {
+    ImGui::End();
+    return;
+  }
+  // A viewport pick brings the actor list back so the picked actor can be seen.
+  ImGuiTabItemFlags const actorsTabFlags =
+      _focusActorsTab ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None;
+  _focusActorsTab = false;
+  if (ImGui::BeginTabItem("Actors", nullptr, actorsTabFlags)) {
+    ShowHierarchyToolbar(simulating, edits, /*withActorButton=*/true);
+    ImGui::Separator();
+
+    // Flatten every actor kind into a single row list. Each row carries its source category and
+    // index so selection/edit/delete map back to the underlying prefab arrays after sorting. The
+    // row buffer is a persistent member, cleared and reused to avoid a per-frame allocation.
+    auto& rows = _hierarchyRows;
+    rows.clear();
+    rows.reserve(
+        prefab.actors.rigid.size() + prefab.actors.soft.size() + prefab.actors.articulated.size() +
+        prefab.prefabs.size());
+    for (int r = 0; r < static_cast<int>(prefab.actors.rigid.size()); ++r) {
+      rows.push_back(
+          {FallbackName(kRigidPrefix, prefab.actors.rigid[r].name, r),
+           "Rigid",
+           RowCategory::Rigid,
+           r});
     }
-    bool const isSelected = IsRowSelected(kind, row.index);
-    if (ImGui::Selectable(row.name.c_str(), isSelected, ImGuiSelectableFlags_SpanAllColumns)) {
-      HandleTopLevelRowClick(rowIndex, {kind, row.index, -1});
+    for (int s = 0; s < static_cast<int>(prefab.actors.soft.size()); ++s) {
+      rows.push_back(
+          {FallbackName(kSoftPrefix, prefab.actors.soft[s].name, s), "Soft", RowCategory::Soft, s});
     }
-    if (ImGui::IsItemHovered()) {
-      if (kind == Selection::Kind::NestedPrefab) {
-        // Hovering the nested prefab row highlights all of its staged scene objects.
-        for (auto const& staged : _stage.GetActors()) {
-          if (staged.source == StagedActorSource::NestedPrefab &&
-              staged.sourceActorIndex == row.index) {
-            HighlightStagedObject(staged.sceneObject);
-          }
+    for (int a = 0; a < static_cast<int>(prefab.actors.articulated.size()); ++a) {
+      rows.push_back(
+          {FallbackName(kArticulatedPrefix, prefab.actors.articulated[a].name, a),
+           "Articulated",
+           RowCategory::Articulated,
+           a});
+    }
+    for (int p = 0; p < static_cast<int>(prefab.prefabs.size()); ++p) {
+      rows.push_back(
+          {FallbackName(kNestedPrefix, prefab.prefabs[p].name, p),
+           "Nested Prefab",
+           RowCategory::NestedPrefab,
+           p});
+    }
+
+    // When at least one articulated actor is present, indent leaf rows' first column so their
+    // labels align with the articulated tree-node labels (which sit to the right of the collapse
+    // arrow).
+    bool const hasArticulated = !prefab.actors.articulated.empty();
+    float const leafIndent = ImGui::GetTreeNodeToLabelSpacing();
+
+    // Render one Rigid/Soft/Nested leaf row: an indented span-all-columns Selectable that selects
+    // the staged object, a hover highlight, and a right-click Copy/Duplicate/Delete popup.
+    // Parameterized by selection kind, the staged-object source, the popup id, and the
+    // deferred-delete target.
+    auto leafRow = [&](int rowIndex,
+                       HierarchyRow const& row,
+                       Selection::Kind kind,
+                       StagedActorSource source,
+                       char const* popupId,
+                       int& deleteTarget) {
+      ImGui::TableNextRow();
+      ImGui::TableNextColumn();
+      // The constraints naming this actor (or, for a nested prefab, an actor inside it) are listed
+      // under its row.
+      std::vector<ConstraintRef> const actorConstraints =
+          _studio->GetAppSettings().prefabEditor.showConstraintsUnderActors
+          ? FindActorConstraints(prefab.constraints, PrefabActorName(kind, row.index))
+          : std::vector<ConstraintRef>{};
+      bool const isSelected = IsRowSelected(kind, row.index);
+      bool nodeOpen = false;
+      float const originalIndent = ImGui::GetStyle().IndentSpacing;
+      if (actorConstraints.empty()) {
+        if (hasArticulated) {
+          ImGui::Indent(leafIndent);
+        }
+        if (ImGui::Selectable(row.name.c_str(), isSelected, ImGuiSelectableFlags_SpanAllColumns)) {
+          HandleTopLevelRowClick(rowIndex, {kind, row.index, -1});
+        }
+        if (hasArticulated) {
+          ImGui::Unindent(leafIndent);
         }
       } else {
-        HighlightStagedObject(StagedObjectForSource(source, row.index));
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow |
+            ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAllColumns;
+        if (isSelected) {
+          flags |= ImGuiTreeNodeFlags_Selected;
+        }
+        ImGui::GetStyle().IndentSpacing = originalIndent * 0.4f;
+        nodeOpen = ImGui::TreeNodeEx(row.name.c_str(), flags);
+        if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+          HandleTopLevelRowClick(rowIndex, {kind, row.index, -1});
+        }
       }
+      if (ImGui::IsItemHovered()) {
+        if (kind == Selection::Kind::NestedPrefab) {
+          // Hovering the nested prefab row highlights all of its staged scene objects.
+          for (auto const& staged : _stage.GetActors()) {
+            if (staged.source == StagedActorSource::NestedPrefab &&
+                staged.sourceActorIndex == row.index) {
+              HighlightStagedObject(staged.sceneObject);
+            }
+          }
+        } else {
+          HighlightStagedObject(StagedObjectForSource(source, row.index));
+        }
+      }
+      if (!simulating && ImGui::BeginPopupContextItem(popupId, ImGuiPopupFlags_MouseButtonRight)) {
+        bool const rowInSelection = IsRowSelected(kind, row.index);
+        if (ImGui::Selectable("Copy")) {
+          if (rowInSelection && _selections.size() > 1) {
+            CopySelectionToClipboard();
+          } else {
+            CopyActorToClipboard(kind, row.index);
+          }
+        }
+        if (ImGui::Selectable("Duplicate")) {
+          if (rowInSelection && _selections.size() > 1) {
+            edits.duplicateSelection = true;
+          } else {
+            edits.duplicateKind = kind;
+            edits.duplicateIndex = row.index;
+          }
+        }
+        if (ImGui::Selectable("Delete")) {
+          if (rowInSelection && _selections.size() > 1) {
+            edits.deleteSelection = true;
+          } else {
+            deleteTarget = row.index;
+          }
+        }
+        if (kind != Selection::Kind::NestedPrefab) {
+          ImGui::Separator();
+          if (ImGui::BeginMenu("Add Constraint")) {
+            ShowCreateConstraintMenuItems({kind, row.index, -1}, edits);
+            ImGui::EndMenu();
+          }
+        }
+        ImGui::EndPopup();
+      }
+      ImGui::TableNextColumn();
+      ImGui::TextUnformatted(row.type);
+      if (nodeOpen) {
+        ImGui::Indent(leafIndent);
+        for (ConstraintRef const& ref : actorConstraints) {
+          std::string const name = std::string(ConstraintTypeLabel(ref.type)) + " (" +
+              DescribeConstraint(prefab, ref) + ")";
+          ShowConstraintRow(ref, name.c_str(), "Constraint", simulating, edits);
+        }
+        ImGui::Unindent(leafIndent);
+        ImGui::TreePop();
+      }
+      ImGui::GetStyle().IndentSpacing = originalIndent;
+    };
+
+    ImGui::BeginChild("PrefabActorsChild");
+    auto tableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable |
+        ImGuiTableFlags_Sortable;
+    // Match the Bot Hierarchy table styling.
+    ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyleColorVec4(ImGuiCol_HeaderActive));
+    if (ImGui::BeginTable("##PrefabActors", 2, tableFlags)) {
+      ImGui::TableSetupScrollFreeze(0, 1);
+      ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_DefaultSort);
+      ImGui::TableSetupColumn("Type");
+      ImGui::TableHeadersRow();
+
+      // Sort by the active column/direction; Name is the stable tiebreaker.
+      if (ImGuiTableSortSpecs* sortSpecs = ImGui::TableGetSortSpecs()) {
+        if (sortSpecs->SpecsCount > 0) {
+          ImGuiTableColumnSortSpecs const& spec = sortSpecs->Specs[0];
+          bool const ascending = spec.SortDirection == ImGuiSortDirection_Ascending;
+          std::stable_sort(
+              rows.begin(), rows.end(), [&](HierarchyRow const& lhs, HierarchyRow const& rhs) {
+                int cmp = 0;
+                if (spec.ColumnIndex == 1) {
+                  cmp = std::strcmp(lhs.type, rhs.type);
+                }
+                if (cmp == 0) {
+                  cmp = lhs.name.compare(rhs.name);
+                }
+                return ascending ? (cmp < 0) : (cmp > 0);
+              });
+        }
+      }
+
+      auto const& articulatedActors = prefab.actors.articulated;
+
+      for (int rowIndex = 0; rowIndex < static_cast<int>(rows.size()); ++rowIndex) {
+        HierarchyRow const& row = rows[rowIndex];
+        // Two-part ID scope (category, then index) so rows of different kinds sharing an index
+        // don't collide.
+        ImGui::PushID(static_cast<int>(row.category));
+        ImGui::PushID(row.index);
+
+        if (row.category == RowCategory::Rigid) {
+          leafRow(
+              rowIndex,
+              row,
+              Selection::Kind::Rigid,
+              StagedActorSource::Rigid,
+              "ActorPopup",
+              edits.rigidToDelete);
+        } else if (row.category == RowCategory::Soft) {
+          leafRow(
+              rowIndex,
+              row,
+              Selection::Kind::Soft,
+              StagedActorSource::Soft,
+              "SoftPopup",
+              edits.softToDelete);
+        } else if (row.category == RowCategory::Articulated) {
+          int const a = row.index;
+          auto const& actor = articulatedActors[a];
+          int const numLinks = static_cast<int>(actor.links.size());
+          // Compute each link's children on the fly from parentLink (no persisted child lists),
+          // reusing the persistent scratch buffer: grow if needed, then clear the entries we use.
+          if (static_cast<int>(_linkChildrenScratch.size()) < numLinks) {
+            _linkChildrenScratch.resize(numLinks);
+          }
+          for (int j = 0; j < numLinks; ++j) {
+            _linkChildrenScratch[j].clear();
+          }
+          for (int j = 0; j < numLinks; ++j) {
+            int const parent = actor.links[j].parentLink;
+            if (parent >= 0 && parent < numLinks) {
+              _linkChildrenScratch[parent].push_back(j);
+            }
+          }
+          // Ancestors of the focused link (within this actor) that must be force-opened.
+          std::unordered_set<int> ancestorsToOpen;
+          Selection const* const primary = PrimarySelection();
+          bool const focusThisActor = _forceLinkFocus && primary &&
+              primary->kind == Selection::Kind::ArticulatedLink && primary->actorIndex == a;
+          if (focusThisActor && primary->linkIndex >= 0 && primary->linkIndex < numLinks) {
+            int current = actor.links[primary->linkIndex].parentLink;
+            while (current >= 0 && current < numLinks) {
+              ancestorsToOpen.insert(current);
+              current = actor.links[current].parentLink;
+            }
+          }
+
+          ImGui::TableNextRow();
+          ImGui::TableNextColumn();
+          bool const actorSelected = IsRowSelected(Selection::Kind::ArticulatedActor, a);
+          if (focusThisActor) {
+            ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+          }
+          ImGuiTreeNodeFlags actorFlags = ImGuiTreeNodeFlags_OpenOnArrow |
+              ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAllColumns;
+          if (actorSelected) {
+            actorFlags |= ImGuiTreeNodeFlags_Selected;
+          }
+          float const originalIndent = ImGui::GetStyle().IndentSpacing;
+          ImGui::GetStyle().IndentSpacing = originalIndent * 0.4f;
+          bool const actorOpen = ImGui::TreeNodeEx(row.name.c_str(), actorFlags);
+          if (ImGui::IsItemHovered()) {
+            // Hovering the actor row highlights all of its links.
+            for (int j = 0; j < numLinks; ++j) {
+              HighlightStagedObject(StagedObjectForSource(StagedActorSource::Articulated, a, j));
+            }
+          }
+          if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+            HandleTopLevelRowClick(rowIndex, {Selection::Kind::ArticulatedActor, a, -1});
+          }
+          if (!simulating &&
+              ImGui::BeginPopupContextItem("ArticulatedPopup", ImGuiPopupFlags_MouseButtonRight)) {
+            bool const rowInSelection = IsRowSelected(Selection::Kind::ArticulatedActor, a);
+            if (ImGui::Selectable("Copy")) {
+              if (rowInSelection && _selections.size() > 1) {
+                CopySelectionToClipboard();
+              } else {
+                CopyActorToClipboard(Selection::Kind::ArticulatedActor, a);
+              }
+            }
+            if (ImGui::Selectable("Duplicate")) {
+              if (rowInSelection && _selections.size() > 1) {
+                edits.duplicateSelection = true;
+              } else {
+                edits.duplicateKind = Selection::Kind::ArticulatedActor;
+                edits.duplicateIndex = a;
+              }
+            }
+            if (ImGui::Selectable("Delete")) {
+              if (rowInSelection && _selections.size() > 1) {
+                edits.deleteSelection = true;
+              } else {
+                edits.articulatedActorToDelete = a;
+              }
+            }
+            ImGui::Separator();
+            if (ImGui::BeginMenu("Add Constraint")) {
+              ShowCreateConstraintMenuItems({Selection::Kind::ArticulatedActor, a, -1}, edits);
+              ImGui::EndMenu();
+            }
+            ImGui::EndPopup();
+          }
+          ImGui::TableNextColumn();
+          ImGui::TextUnformatted(row.type);
+          if (actorOpen) {
+            for (int j = 0; j < numLinks; ++j) {
+              if (actor.links[j].parentLink == superdex::robotics::kIndexNone) {
+                RenderArticulatedLinkTree(
+                    a, actor, _linkChildrenScratch, ancestorsToOpen, j, simulating, edits);
+              }
+            }
+            ImGui::TreePop();
+          }
+          ImGui::GetStyle().IndentSpacing = originalIndent;
+        } else {
+          leafRow(
+              rowIndex,
+              row,
+              Selection::Kind::NestedPrefab,
+              StagedActorSource::NestedPrefab,
+              "NestedPopup",
+              edits.nestedToDelete);
+        }
+
+        ImGui::PopID();
+        ImGui::PopID();
+      }
+      ImGui::EndTable();
     }
-    if (!simulating && ImGui::BeginPopupContextItem(popupId, ImGuiPopupFlags_MouseButtonRight)) {
-      bool const rowInSelection = IsRowSelected(kind, row.index);
-      if (ImGui::Selectable("Copy")) {
-        if (rowInSelection && _selections.size() > 1) {
-          CopySelectionToClipboard();
-        } else {
-          CopyActorToClipboard(kind, row.index);
-        }
+    ImGui::PopStyleColor(); // ImGuiCol_Header
+    // Right-click empty table space to create actors and constraints. The table (ScrollY) has its
+    // own inner child window, so detect the hover via ChildWindows and open the popup manually
+    // rather than using BeginPopupContextWindow (which only tests the outer child).
+    if (!simulating && ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) &&
+        !ImGui::IsAnyItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
+      ImGui::OpenPopup("PrefabTableContext");
+    }
+    if (ImGui::BeginPopup("PrefabTableContext")) {
+      ShowCreateActorMenuItems(edits);
+      if (ImGui::BeginMenu("Create Constraint")) {
+        Selection const* const primary = PrimarySelection();
+        ShowCreateConstraintMenuItems(primary ? *primary : Selection{}, edits);
+        ImGui::EndMenu();
       }
-      if (ImGui::Selectable("Duplicate")) {
-        if (rowInSelection && _selections.size() > 1) {
-          edits.duplicateSelection = true;
-        } else {
-          edits.duplicateKind = kind;
-          edits.duplicateIndex = row.index;
-        }
-      }
-      if (ImGui::Selectable("Delete")) {
-        if (rowInSelection && _selections.size() > 1) {
-          edits.deleteSelection = true;
-        } else {
-          deleteTarget = row.index;
-        }
+      ImGui::Separator();
+      if (ImGui::Selectable("Paste")) {
+        edits.pasteRequested = true;
       }
       ImGui::EndPopup();
     }
-    if (hasArticulated) {
-      ImGui::Unindent(leafIndent);
-    }
-    ImGui::TableNextColumn();
-    ImGui::TextUnformatted(row.type);
-  };
-
-  // Match the Bot Hierarchy table styling.
-  ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyleColorVec4(ImGuiCol_HeaderActive));
-  ImGui::BeginChild("PrefabActorsChild");
-  auto tableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable |
-      ImGuiTableFlags_Sortable;
-  if (ImGui::BeginTable("##PrefabActors", 2, tableFlags)) {
-    ImGui::TableSetupScrollFreeze(0, 1);
-    ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_DefaultSort);
-    ImGui::TableSetupColumn("Type");
-    ImGui::TableHeadersRow();
-
-    // Sort by the active column/direction; Name is the stable tiebreaker.
-    if (ImGuiTableSortSpecs* sortSpecs = ImGui::TableGetSortSpecs()) {
-      if (sortSpecs->SpecsCount > 0) {
-        ImGuiTableColumnSortSpecs const& spec = sortSpecs->Specs[0];
-        bool const ascending = spec.SortDirection == ImGuiSortDirection_Ascending;
-        std::stable_sort(
-            rows.begin(), rows.end(), [&](HierarchyRow const& lhs, HierarchyRow const& rhs) {
-              int cmp = 0;
-              if (spec.ColumnIndex == 1) {
-                cmp = std::strcmp(lhs.type, rhs.type);
-              }
-              if (cmp == 0) {
-                cmp = lhs.name.compare(rhs.name);
-              }
-              return ascending ? (cmp < 0) : (cmp > 0);
-            });
-      }
-    }
-
-    auto const& articulatedActors = prefab.actors.articulated;
-
-    for (int rowIndex = 0; rowIndex < static_cast<int>(rows.size()); ++rowIndex) {
-      HierarchyRow const& row = rows[rowIndex];
-      // Two-part ID scope (category, then index) so rows of different kinds sharing an index don't
-      // collide.
-      ImGui::PushID(static_cast<int>(row.category));
-      ImGui::PushID(row.index);
-
-      if (row.category == RowCategory::Rigid) {
-        leafRow(
-            rowIndex,
-            row,
-            Selection::Kind::Rigid,
-            StagedActorSource::Rigid,
-            "ActorPopup",
-            edits.rigidToDelete);
-      } else if (row.category == RowCategory::Soft) {
-        leafRow(
-            rowIndex,
-            row,
-            Selection::Kind::Soft,
-            StagedActorSource::Soft,
-            "SoftPopup",
-            edits.softToDelete);
-      } else if (row.category == RowCategory::Articulated) {
-        int const a = row.index;
-        auto const& actor = articulatedActors[a];
-        int const numLinks = static_cast<int>(actor.links.size());
-        // Compute each link's children on the fly from parentLink (no persisted child lists),
-        // reusing the persistent scratch buffer: grow if needed, then clear the entries we use.
-        if (static_cast<int>(_linkChildrenScratch.size()) < numLinks) {
-          _linkChildrenScratch.resize(numLinks);
-        }
-        for (int j = 0; j < numLinks; ++j) {
-          _linkChildrenScratch[j].clear();
-        }
-        for (int j = 0; j < numLinks; ++j) {
-          int const parent = actor.links[j].parentLink;
-          if (parent >= 0 && parent < numLinks) {
-            _linkChildrenScratch[parent].push_back(j);
-          }
-        }
-        // Ancestors of the focused link (within this actor) that must be force-opened.
-        std::unordered_set<int> ancestorsToOpen;
-        Selection const* const primary = PrimarySelection();
-        bool const focusThisActor = _forceLinkFocus && primary &&
-            primary->kind == Selection::Kind::ArticulatedLink && primary->actorIndex == a;
-        if (focusThisActor && primary->linkIndex >= 0 && primary->linkIndex < numLinks) {
-          int current = actor.links[primary->linkIndex].parentLink;
-          while (current >= 0 && current < numLinks) {
-            ancestorsToOpen.insert(current);
-            current = actor.links[current].parentLink;
-          }
-        }
-
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        bool const actorSelected = IsRowSelected(Selection::Kind::ArticulatedActor, a);
-        if (focusThisActor) {
-          ImGui::SetNextItemOpen(true, ImGuiCond_Always);
-        }
-        ImGuiTreeNodeFlags actorFlags = ImGuiTreeNodeFlags_OpenOnArrow |
-            ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAllColumns;
-        if (actorSelected) {
-          actorFlags |= ImGuiTreeNodeFlags_Selected;
-        }
-        float const originalIndent = ImGui::GetStyle().IndentSpacing;
-        ImGui::GetStyle().IndentSpacing = originalIndent * 0.4f;
-        bool const actorOpen = ImGui::TreeNodeEx(row.name.c_str(), actorFlags);
-        if (ImGui::IsItemHovered()) {
-          // Hovering the actor row highlights all of its links.
-          for (int j = 0; j < numLinks; ++j) {
-            HighlightStagedObject(StagedObjectForSource(StagedActorSource::Articulated, a, j));
-          }
-        }
-        if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
-          HandleTopLevelRowClick(rowIndex, {Selection::Kind::ArticulatedActor, a, -1});
-        }
-        if (!simulating &&
-            ImGui::BeginPopupContextItem("ArticulatedPopup", ImGuiPopupFlags_MouseButtonRight)) {
-          bool const rowInSelection = IsRowSelected(Selection::Kind::ArticulatedActor, a);
-          if (ImGui::Selectable("Copy")) {
-            if (rowInSelection && _selections.size() > 1) {
-              CopySelectionToClipboard();
-            } else {
-              CopyActorToClipboard(Selection::Kind::ArticulatedActor, a);
-            }
-          }
-          if (ImGui::Selectable("Duplicate")) {
-            if (rowInSelection && _selections.size() > 1) {
-              edits.duplicateSelection = true;
-            } else {
-              edits.duplicateKind = Selection::Kind::ArticulatedActor;
-              edits.duplicateIndex = a;
-            }
-          }
-          if (ImGui::Selectable("Delete")) {
-            if (rowInSelection && _selections.size() > 1) {
-              edits.deleteSelection = true;
-            } else {
-              edits.articulatedActorToDelete = a;
-            }
-          }
-          ImGui::EndPopup();
-        }
-        ImGui::TableNextColumn();
-        ImGui::TextUnformatted(row.type);
-        if (actorOpen) {
-          for (int j = 0; j < numLinks; ++j) {
-            if (actor.links[j].parentLink == superdex::robotics::kIndexNone) {
-              RenderArticulatedLinkTree(
-                  a, actor, _linkChildrenScratch, ancestorsToOpen, j, simulating, edits);
-            }
-          }
-          ImGui::TreePop();
-        }
-        ImGui::GetStyle().IndentSpacing = originalIndent;
-      } else {
-        leafRow(
-            rowIndex,
-            row,
-            Selection::Kind::NestedPrefab,
-            StagedActorSource::NestedPrefab,
-            "NestedPopup",
-            edits.nestedToDelete);
-      }
-
-      ImGui::PopID();
-      ImGui::PopID();
-    }
-    ImGui::EndTable();
+    ImGui::EndChild();
+    ImGui::EndTabItem();
   }
-  // Right-click empty table space to create new top-level actors. The table (ScrollY) has its own
-  // inner child window, so detect the hover via ChildWindows and open the popup manually rather
-  // than using BeginPopupContextWindow (which only tests the outer child).
-  if (!simulating && ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) &&
-      !ImGui::IsAnyItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
-    ImGui::OpenPopup("PrefabTableContext");
-  }
-  if (ImGui::BeginPopup("PrefabTableContext")) {
-    if (ImGui::Selectable("Create Rigid")) {
-      edits.createRigid = true;
-    }
-    if (ImGui::Selectable("Create Soft")) {
-      edits.createSoft = true;
-    }
-    if (ImGui::Selectable("Create Articulated")) {
-      edits.createArticulated = true;
-    }
-    if (ImGui::Selectable("Create Nested Prefab")) {
-      edits.createNested = true;
-    }
+  if (ImGui::BeginTabItem("Constraints")) {
+    ShowHierarchyToolbar(simulating, edits, /*withActorButton=*/false);
     ImGui::Separator();
-    if (ImGui::Selectable("Paste")) {
-      edits.pasteRequested = true;
-    }
-    ImGui::EndPopup();
+    ImGui::BeginChild("PrefabConstraintsChild");
+    ShowConstraintsTable(simulating, edits);
+    ImGui::EndChild();
+    ImGui::EndTabItem();
   }
-  ImGui::EndChild();
-  ImGui::PopStyleColor(); // ImGuiCol_Header
+  ImGui::EndTabBar();
   ImGui::End();
 
   // Common epilogue for the deferred structural edits below: clear selection, restage, mark dirty
@@ -1633,7 +1724,11 @@ void PrefabEditor::ShowPrefabHierarchyWindow(bool* open) {
   };
 
   // Apply deferred structural edits (at most one per frame is reachable).
-  if (edits.rigidToDelete >= 0 &&
+  // Constraints on a deleted actor would no longer load, so they go with it.
+  if (ApplyConstraintEdits(edits)) {
+    // Applied a constraint edit (at most one edit per frame is reachable).
+  } else if (
+      edits.rigidToDelete >= 0 &&
       edits.rigidToDelete < static_cast<int>(prefab.actors.rigid.size())) {
     RemoveConstraintsReferencingActor(
         prefab.constraints, std::string_view(prefab.actors.rigid[edits.rigidToDelete].name));
@@ -1841,6 +1936,7 @@ std::string PrefabEditor::BuildActorClipboardBlock(Selection::Kind kind, int act
         json = SReflect::ToJsonString(prefab.prefabs[actorIndex], true);
       }
       break;
+    case Selection::Kind::Constraint:
     case Selection::Kind::None:
       break;
   }
@@ -1930,6 +2026,7 @@ std::optional<PrefabEditor::Selection> PrefabEditor::DuplicateActorNoCommit(
       _studio->GetAssetManager().ResyncReferencer(_prefabAsset);
       return Selection{Selection::Kind::NestedPrefab, static_cast<int>(prefabs.size()) - 1, -1};
     }
+    case Selection::Kind::Constraint:
     case Selection::Kind::None:
       return std::nullopt;
   }
@@ -1949,6 +2046,10 @@ void PrefabEditor::DuplicateActor(Selection::Kind kind, int actorIndex) {
 }
 
 void PrefabEditor::DuplicateSelection(bool commitUndo) {
+  if (_selections.size() == 1 && _selections.back().kind == Selection::Kind::Constraint) {
+    DuplicateConstraintAndSelect(_selections.back().constraint);
+    return;
+  }
   // Duplicating appends to the end of each array, so earlier indices stay valid as we iterate
   // _selections directly (DuplicateActorNoCommit only appends to the prefab arrays; _selections is
   // reassigned only after the loop). Multiple links of one articulated actor map to the same actor,
@@ -1984,6 +2085,10 @@ bool PrefabEditor::DeleteSelection() {
     return false;
   }
   auto& prefab = _prefabAsset->GetPrefab();
+
+  if (_selections.size() == 1 && _selections.back().kind == Selection::Kind::Constraint) {
+    return DeleteConstraint(_selections.back().constraint);
+  }
 
   // Single articulated-link selection: delete just that link (and its descendants), or the whole
   // articulation when the root link is selected. Mirrors the per-link delete in the hierarchy.
@@ -2036,6 +2141,7 @@ bool PrefabEditor::DeleteSelection() {
       case Selection::Kind::NestedPrefab:
         nestedIdx.push_back(sel.actorIndex);
         break;
+      case Selection::Kind::Constraint:
       case Selection::Kind::None:
         break;
     }
@@ -2195,10 +2301,10 @@ void PrefabEditor::ShowPrefabDetailsWindow(bool* open) {
   ImGui::End();
 }
 
-void PrefabEditor::ShowActorDetailsWindow(bool* open) {
+void PrefabEditor::ShowDetailsWindow(bool* open) {
   auto const& prefab = _prefabAsset->GetPrefab();
 
-  ImGui::Begin("Actor Details", open);
+  ImGui::Begin("Details", open);
 
   // Sticky large name header: rendered before the scrolling child so it stays fixed at the top.
   std::string const headerName = SelectedActorDisplayName();
@@ -2251,12 +2357,15 @@ void PrefabEditor::ShowActorDetailsWindow(bool* open) {
           ShowNestedPrefabDetails(primary->actorIndex);
         }
         break;
+      case Selection::Kind::Constraint:
+        ShowConstraintDetails(primary->constraint);
+        break;
       case Selection::Kind::None:
-        ImGui::TextDisabled("Select an actor to edit its properties.");
+        ImGui::TextDisabled("Select an actor or a constraint to edit its properties.");
         break;
     }
   } else {
-    ImGui::TextDisabled("Select an actor to edit its properties.");
+    ImGui::TextDisabled("Select an actor or a constraint to edit its properties.");
   }
   ImGui::EndDisabled();
   ImGui::EndChild();
@@ -2279,6 +2388,8 @@ std::string PrefabEditor::SelectedActorDisplayName() const {
   switch (primary->kind) {
     case Selection::Kind::None:
       return {};
+    case Selection::Kind::Constraint:
+      return ConstraintTypeLabel(primary->constraint.type);
     case Selection::Kind::Rigid:
       if (primary->actorIndex < 0 || primary->actorIndex >= static_cast<int>(rigid.size())) {
         return {};

@@ -95,6 +95,18 @@ struct BotEditorSettings {
   MOCHI_STRUCT_END()
 };
 
+struct PrefabEditorSettings {
+  bool showConstraintsUnderActors = true;
+
+  MOCHI_STRUCT_BEGIN(superdex::studio::PrefabEditorSettings)
+  MOCHI_FIELD(showConstraintsUnderActors)
+  MOCHI_ATTRIBUTE(DisplayName("Show Constraints Under Actors"));
+  MOCHI_ATTRIBUTE(Description(
+      "Also list each constraint on the Prefab Hierarchy's Actors tab, under the link or actors "
+      "it constrains."));
+  MOCHI_STRUCT_END()
+};
+
 // Linear RGBA in [0, 1]. A plain 4-float array so the settings header stays free of renderer
 // types; converted to the renderer's color type at the draw call sites.
 using Color4 = mochi::NdArray<float, 4>;
@@ -595,6 +607,7 @@ struct AppSettings {
   AssetBrowserSettings assetBrowser;
   LogConsoleSettings logConsole;
   BotEditorSettings botEditor;
+  PrefabEditorSettings prefabEditor;
   BotVisualizationSettings botVisualization;
   TaskSettings tasks;
   AssetTunerSettings assetTuner;
@@ -611,6 +624,7 @@ struct AppSettings {
   MOCHI_FIELD(assetBrowser)
   MOCHI_FIELD(logConsole)
   MOCHI_FIELD(botEditor)
+  MOCHI_FIELD(prefabEditor)
   MOCHI_FIELD(botVisualization)
   MOCHI_FIELD(tasks)
   MOCHI_FIELD(assetTuner)

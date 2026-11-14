@@ -65,10 +65,19 @@ class PrefabEditor : public AssetEditor {
  private:
   // Identifies the currently selected hierarchy item.
   struct Selection {
-    enum class Kind { None, Rigid, ArticulatedActor, ArticulatedLink, NestedPrefab, Soft };
+    enum class Kind {
+      None,
+      Rigid,
+      ArticulatedActor,
+      ArticulatedLink,
+      NestedPrefab,
+      Soft,
+      Constraint
+    };
     Kind kind = Kind::None;
     int actorIndex = -1;
     int linkIndex = -1; // articulated link index (ArticulatedLink only)
+    ConstraintRef constraint = {}; // Constraint only
   };
 
   // Flattened hierarchy row categories (top-level actor kinds).
@@ -104,6 +113,12 @@ class PrefabEditor : public AssetEditor {
     bool createArticulated = false;
     bool createNested = false;
     bool pasteRequested = false;
+    // Constraint edits: create one of this type (prefilled from `constraintContext`), or duplicate
+    // / delete an existing one.
+    mochi::ConstraintType createConstraint = mochi::ConstraintType::None;
+    Selection constraintContext = {};
+    std::optional<ConstraintRef> duplicateConstraint;
+    std::optional<ConstraintRef> deleteConstraint;
   };
 
   //------------------------------------------------------------------------------------------------
@@ -190,7 +205,7 @@ class PrefabEditor : public AssetEditor {
   // Highlight a staged render object (if any) with the hierarchy hover color.
   void HighlightStagedObject(mochi_renderer::SceneObject* object);
   void ShowPrefabDetailsWindow(bool* open);
-  void ShowActorDetailsWindow(bool* open);
+  void ShowDetailsWindow(bool* open);
   void ShowContactFilterWindow(bool* open);
   void ShowScenePrefabDetails();
   void ShowRigidActorDetails(int rigidIndex);
@@ -203,9 +218,38 @@ class PrefabEditor : public AssetEditor {
   // Constraints (prefab_editor_constraints.cpp)
   //------------------------------------------------------------------------------------------------
 
+  // The cog at the top right of the hierarchy and its settings menu.
+  void ShowHierarchySettingsCog();
+  // "+ Actor" / "+ Constraint" buttons at the top of the hierarchy.
+  void ShowHierarchyToolbar(bool simulating, HierarchyEdits& edits, bool withActorButton);
+  // Menu items that create each actor kind / constraint type (inside an open menu or popup).
+  static void ShowCreateActorMenuItems(HierarchyEdits& edits);
+  void ShowCreateConstraintMenuItems(Selection const& context, HierarchyEdits& edits);
+  // The Constraints tab of the hierarchy: one row per constraint.
+  void ShowConstraintsTable(bool simulating, HierarchyEdits& edits);
+  // One constraint row (in the Constraints tab, or under the link or actor it constrains).
+  void ShowConstraintRow(
+      ConstraintRef ref,
+      char const* name,
+      char const* type,
+      bool simulating,
+      HierarchyEdits& edits);
+  // The prefab name of top-level actor `index` of `kind` (empty for other kinds).
+  std::string_view PrefabActorName(Selection::Kind kind, int index) const;
+  // Applies the deferred constraint edits in `edits`. Returns true if it applied one.
+  bool ApplyConstraintEdits(HierarchyEdits const& edits);
+  void ShowConstraintDetails(ConstraintRef ref);
+  // Appends a constraint of `type`, attached to what `context` selects (or the first suitable
+  // actors), selects it and records an undo step.
+  void CreateConstraint(mochi::ConstraintType type, Selection const& context);
+  // Duplicate / delete one constraint, update the selection and record an undo step.
+  void DuplicateConstraintAndSelect(ConstraintRef ref);
+  bool DeleteConstraint(ConstraintRef ref);
   // Call right after an actor's name input: once the rename is committed, renames the actor in the
   // constraints that reference it. Returns true if it changed any.
   bool RenameActorInConstraints(std::string_view name, bool collides);
+  // Highlights the staged actors `ref` references (on hierarchy hover).
+  void HighlightConstraintActors(ConstraintRef ref);
   ConstraintActorIndex BuildConstraintActorIndex() const;
 
   //------------------------------------------------------------------------------------------------
@@ -299,6 +343,12 @@ class PrefabEditor : public AssetEditor {
   // One-shot flag: when set, the hierarchy expands ancestors of and scrolls to the selected
   // articulated link (set on viewport pick, consumed while rendering the tree).
   bool _forceLinkFocus = false;
+  // One-shot flag: show the Actors tab of the hierarchy (set on viewport pick).
+  bool _focusActorsTab = false;
+  // The actors constraint fields can name, rebuilt each frame.
+  ConstraintActorIndex _constraintActorIndex;
+  // Constraints tab rows (description, constraint), reused across frames.
+  std::vector<std::pair<std::string, ConstraintRef>> _constraintRowsScratch;
   // An actor's name when its name input was activated (see RenameActorInConstraints).
   std::string _renameStartName;
 };
