@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "assets/prefab_constraints.h"
 #include "editors/asset_editor.h"
 #include "rendering/scene_stage.h"
 #include "simulation/mochi_async_scene.h"
@@ -199,6 +200,15 @@ class PrefabEditor : public AssetEditor {
   void ShowNestedPrefabDetails(int prefabIndex);
 
   //------------------------------------------------------------------------------------------------
+  // Constraints (prefab_editor_constraints.cpp)
+  //------------------------------------------------------------------------------------------------
+
+  // Call right after an actor's name input: once the rename is committed, renames the actor in the
+  // constraints that reference it. Returns true if it changed any.
+  bool RenameActorInConstraints(std::string_view name, bool collides);
+  ConstraintActorIndex BuildConstraintActorIndex() const;
+
+  //------------------------------------------------------------------------------------------------
   // Structural edits
   //------------------------------------------------------------------------------------------------
 
@@ -206,7 +216,9 @@ class PrefabEditor : public AssetEditor {
       mochi::prefab::ArticulatedActorPrefab& actor,
       int parentIdx,
       std::string_view baseName);
-  static void RemoveArticulatedLinkAndDescendants(
+  // Returns each joint's new index (negative for removed joints), or an empty map when nothing
+  // was removed.
+  static std::vector<int> RemoveArticulatedLinkAndDescendants(
       mochi::prefab::ArticulatedActorPrefab& actor,
       int linkIdx);
   void ReparentArticulatedLink(
@@ -287,6 +299,8 @@ class PrefabEditor : public AssetEditor {
   // One-shot flag: when set, the hierarchy expands ancestors of and scrolls to the selected
   // articulated link (set on viewport pick, consumed while rendering the tree).
   bool _forceLinkFocus = false;
+  // An actor's name when its name input was activated (see RenameActorInConstraints).
+  std::string _renameStartName;
 };
 
 } // namespace superdex::studio

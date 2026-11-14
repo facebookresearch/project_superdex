@@ -489,8 +489,13 @@ void PrefabEditor::CreatePhysicsActors(mochi::Scene* scene) {
     return;
   }
 
+  // One invalid constraint would fail the whole prefab; simulate the rest without it.
+  mochi::prefab::ScenePrefab prefab = _prefabAsset->GetPrefab();
+  for (std::string const& reason : RemoveInvalidConstraints(prefab, BuildConstraintActorIndex())) {
+    MOCHI_LOG_WARNING("Simulating without constraint %s", reason.c_str());
+  }
   mochi::prefab::PrefabParams prefabParams;
-  auto const result = mochi::prefab::AddToScene(_prefabAsset->GetPrefab(), scene, prefabParams, e);
+  auto const result = mochi::prefab::AddToScene(prefab, scene, prefabParams, e);
   if (!e.IsOK()) {
     MOCHI_LOG_ERROR("Failed to add prefab to physics");
     return;
@@ -990,7 +995,7 @@ int PrefabEditor::AddArticulatedLink(
   return static_cast<int>(actor.links.size()) - 1;
 }
 
-void PrefabEditor::RemoveArticulatedLinkAndDescendants(
+std::vector<int> PrefabEditor::RemoveArticulatedLinkAndDescendants(
     mochi::prefab::ArticulatedActorPrefab& actor,
     int linkIdx) {
   using namespace mochi;
@@ -998,7 +1003,7 @@ void PrefabEditor::RemoveArticulatedLinkAndDescendants(
   // The root link (no parent) cannot be removed.
   if (linkIdx <= 0 || linkIdx >= numLinks ||
       actor.links[linkIdx].parentLink == superdex::robotics::kIndexNone) {
-    return;
+    return {};
   }
   // Mark linkIdx and all its descendants. A single forward pass suffices because appends preserve
   // topological order (a link's parent always has a smaller index).
@@ -1034,6 +1039,7 @@ void PrefabEditor::RemoveArticulatedLinkAndDescendants(
   // best-effort so the actor stays self-consistent after a structural edit (known limitation).
   actor.cycles.clear();
   actor.jointVelocities.reset();
+  return indexMap;
 }
 
 // Find an articulated link by name; returns its index or kIndexNone if absent.
@@ -1074,11 +1080,13 @@ static mochi::DynamicArray<mochi::TransformRT> ComputeArticulatedRestRootTransfo
 // articulated actor) via a stable DFS pre-order from the root, remapping parentLink indices.
 // Sibling order is preserved, so the hierarchy view is unchanged. Assumes a single valid (acyclic)
 // tree.
-static void ReorderArticulatedActorTopological(mochi::prefab::ArticulatedActorPrefab& actor) {
+// Returns each link's (and joint's) new index, or an empty map when nothing moved.
+static std::vector<int> ReorderArticulatedActorTopological(
+    mochi::prefab::ArticulatedActorPrefab& actor) {
   using namespace mochi;
   int const numLinks = static_cast<int>(actor.links.size());
   if (numLinks <= 1) {
-    return;
+    return {};
   }
   DynamicArray<DynamicArray<int>> children(numLinks);
   int root = 0;
@@ -1105,7 +1113,7 @@ static void ReorderArticulatedActorTopological(mochi::prefab::ArticulatedActorPr
     }
   }
   if (static_cast<int>(newOrder.size()) != numLinks) {
-    return; // Disconnected/cyclic: leave untouched (caller guards against this).
+    return {}; // Disconnected/cyclic: leave untouched (caller guards against this).
   }
   DynamicArray<int> oldToNew(numLinks, 0);
   for (int newIdx = 0; newIdx < numLinks; ++newIdx) {
@@ -1130,6 +1138,7 @@ static void ReorderArticulatedActorTopological(mochi::prefab::ArticulatedActorPr
   }
   actor.links = std::move(newLinks);
   actor.joints = std::move(newJoints);
+  return {oldToNew.begin(), oldToNew.end()};
 }
 
 void PrefabEditor::ReparentArticulatedLink(
@@ -1188,7 +1197,8 @@ void PrefabEditor::ReparentArticulatedLink(
   // link violates it, so re-establish topological order. Reindexing invalidates cycle/velocity data
   // that references joint/DOF indices, so drop it best-effort (as link removal does).
   if (newParentIdx > linkIdx) {
-    ReorderArticulatedActorTopological(actor);
+    std::vector<int> const oldToNew = ReorderArticulatedActorTopological(actor);
+    RemapJointConstraints(_prefabAsset->GetPrefab().constraints, std::string(actor.name), oldToNew);
     actor.cycles.clear();
     actor.jointVelocities.reset();
   }
@@ -1625,15 +1635,22 @@ void PrefabEditor::ShowPrefabHierarchyWindow(bool* open) {
   // Apply deferred structural edits (at most one per frame is reachable).
   if (edits.rigidToDelete >= 0 &&
       edits.rigidToDelete < static_cast<int>(prefab.actors.rigid.size())) {
+    RemoveConstraintsReferencingActor(
+        prefab.constraints, std::string_view(prefab.actors.rigid[edits.rigidToDelete].name));
     prefab.actors.rigid.erase(prefab.actors.rigid.begin() + edits.rigidToDelete);
     applyDeferredEdit();
   } else if (
       edits.softToDelete >= 0 && edits.softToDelete < static_cast<int>(prefab.actors.soft.size())) {
+    RemoveConstraintsReferencingActor(
+        prefab.constraints, std::string_view(prefab.actors.soft[edits.softToDelete].name));
     prefab.actors.soft.erase(prefab.actors.soft.begin() + edits.softToDelete);
     applyDeferredEdit();
   } else if (
       edits.articulatedActorToDelete >= 0 &&
       edits.articulatedActorToDelete < static_cast<int>(prefab.actors.articulated.size())) {
+    RemoveConstraintsReferencingActor(
+        prefab.constraints,
+        std::string_view(prefab.actors.articulated[edits.articulatedActorToDelete].name));
     prefab.actors.articulated.erase(
         prefab.actors.articulated.begin() + edits.articulatedActorToDelete);
     applyDeferredEdit();
@@ -1654,8 +1671,11 @@ void PrefabEditor::ShowPrefabHierarchyWindow(bool* open) {
   } else if (
       edits.delLinkActor >= 0 &&
       edits.delLinkActor < static_cast<int>(prefab.actors.articulated.size())) {
-    RemoveArticulatedLinkAndDescendants(
-        prefab.actors.articulated[edits.delLinkActor], edits.delLinkIndex);
+    auto& actor = prefab.actors.articulated[edits.delLinkActor];
+    RemapJointConstraints(
+        prefab.constraints,
+        std::string(actor.name),
+        RemoveArticulatedLinkAndDescendants(actor, edits.delLinkIndex));
     applyDeferredEdit();
   } else if (edits.createRigid) {
     CreateRigidActor();
@@ -1667,6 +1687,8 @@ void PrefabEditor::ShowPrefabHierarchyWindow(bool* open) {
     CreateNestedPrefab();
   } else if (
       edits.nestedToDelete >= 0 && edits.nestedToDelete < static_cast<int>(prefab.prefabs.size())) {
+    RemoveConstraintsReferencingActor(
+        prefab.constraints, std::string_view(prefab.prefabs[edits.nestedToDelete].name));
     prefab.prefabs.erase(prefab.prefabs.begin() + edits.nestedToDelete);
     applyDeferredEdit();
   } else if (edits.duplicateSelection) {
@@ -1889,6 +1911,9 @@ std::optional<PrefabEditor::Selection> PrefabEditor::DuplicateActorNoCommit(
       mochi::prefab::ArticulatedActorPrefab copy = articulated[actorIndex];
       copy.name = mochi::DynamicString{
           MakeUniquePrefabActorName(copy.name.empty() ? "Articulated" : std::string(copy.name))};
+      // The joint springs and limits belong with the joints, so the copy keeps them.
+      CopyJointConstraints(
+          prefab.constraints, std::string(articulated[actorIndex].name), std::string(copy.name));
       articulated.push_back(std::move(copy));
       return Selection{
           Selection::Kind::ArticulatedActor, static_cast<int>(articulated.size()) - 1, -1};
@@ -1970,9 +1995,13 @@ bool PrefabEditor::DeleteSelection() {
       auto& actor = articulated[sel.actorIndex];
       if (sel.linkIndex > 0 && sel.linkIndex < static_cast<int>(actor.links.size()) &&
           actor.links[sel.linkIndex].parentLink != superdex::robotics::kIndexNone) {
-        RemoveArticulatedLinkAndDescendants(actor, sel.linkIndex);
+        RemapJointConstraints(
+            prefab.constraints,
+            std::string(actor.name),
+            RemoveArticulatedLinkAndDescendants(actor, sel.linkIndex));
         deleted = true;
       } else if (sel.linkIndex >= 0 && sel.linkIndex < static_cast<int>(actor.links.size())) {
+        RemoveConstraintsReferencingActor(prefab.constraints, std::string_view(actor.name));
         articulated.erase(articulated.begin() + sel.actorIndex);
         deleted = true;
       }
@@ -2014,11 +2043,13 @@ bool PrefabEditor::DeleteSelection() {
   if (rigidIdx.empty() && softIdx.empty() && articulatedIdx.empty() && nestedIdx.empty()) {
     return false;
   }
-  auto eraseDescending = [](auto& array, std::vector<int>& indices) {
+  auto eraseDescending = [&](auto& array, std::vector<int>& indices) {
     std::sort(indices.begin(), indices.end(), std::greater<int>());
     indices.erase(std::unique(indices.begin(), indices.end()), indices.end());
     for (int index : indices) {
       if (index >= 0 && index < static_cast<int>(array.size())) {
+        // Constraints on a deleted actor would no longer load; they go with it.
+        RemoveConstraintsReferencingActor(prefab.constraints, std::string_view(array[index].name));
         array.erase(array.begin() + index);
       }
     }
@@ -2658,10 +2689,11 @@ void PrefabEditor::ShowRigidActorDetails(int rigidIndex) {
 
   ImGui::SeparatorText("General");
   ImGui::LabelText("Type", "%s", "Rigid");
-  if (ImGui::NameInputWithCollisionCheck(
-          "Name",
-          actor->name,
-          TopLevelNameCollides(FallbackName(kRigidPrefix, actor->name, rigidIndex)))) {
+  bool const nameCollides =
+      TopLevelNameCollides(FallbackName(kRigidPrefix, actor->name, rigidIndex));
+  bool const renamed = ImGui::NameInputWithCollisionCheck("Name", actor->name, nameCollides);
+  changed |= RenameActorInConstraints(std::string_view(actor->name), nameCollides);
+  if (renamed) {
     changed = true;
     // The staged actor is keyed by name (used for simulation sync), so a rename must restage.
     restage = true;
@@ -2723,10 +2755,10 @@ void PrefabEditor::ShowSoftActorDetails(int softIndex) {
 
   ImGui::SeparatorText("General");
   ImGui::LabelText("Type", "%s", "Soft");
-  if (ImGui::NameInputWithCollisionCheck(
-          "Name",
-          actor->name,
-          TopLevelNameCollides(FallbackName(kSoftPrefix, actor->name, softIndex)))) {
+  bool const nameCollides = TopLevelNameCollides(FallbackName(kSoftPrefix, actor->name, softIndex));
+  bool const renamed = ImGui::NameInputWithCollisionCheck("Name", actor->name, nameCollides);
+  changed |= RenameActorInConstraints(std::string_view(actor->name), nameCollides);
+  if (renamed) {
     changed = true;
     // The staged actor is keyed by name (used for simulation sync), so a rename must restage.
     restage = true;
@@ -2815,10 +2847,11 @@ void PrefabEditor::ShowArticulatedActorDetails(int actorIndex) {
 
   ImGui::SeparatorText("General");
   ImGui::LabelText("Type", "%s", "Articulated");
-  if (ImGui::NameInputWithCollisionCheck(
-          "Name",
-          actor.name,
-          TopLevelNameCollides(FallbackName(kArticulatedPrefix, actor.name, actorIndex)))) {
+  bool const nameCollides =
+      TopLevelNameCollides(FallbackName(kArticulatedPrefix, actor.name, actorIndex));
+  bool const renamed = ImGui::NameInputWithCollisionCheck("Name", actor.name, nameCollides);
+  changed |= RenameActorInConstraints(std::string_view(actor.name), nameCollides);
+  if (renamed) {
     changed = true;
     // The staged actor is keyed by name (used for simulation sync), so a rename must restage.
     restage = true;
@@ -2966,10 +2999,11 @@ void PrefabEditor::ShowNestedPrefabDetails(int prefabIndex) {
 
   ImGui::SeparatorText("General");
   ImGui::LabelText("Type", "%s", "Nested Prefab");
-  if (ImGui::NameInputWithCollisionCheck(
-          "Name",
-          ref.name,
-          TopLevelNameCollides(FallbackName(kNestedPrefix, ref.name, prefabIndex)))) {
+  bool const nameCollides =
+      TopLevelNameCollides(FallbackName(kNestedPrefix, ref.name, prefabIndex));
+  bool const renamed = ImGui::NameInputWithCollisionCheck("Name", ref.name, nameCollides);
+  changed |= RenameActorInConstraints(std::string_view(ref.name), nameCollides);
+  if (renamed) {
     changed = true;
     // The staged actor is keyed by name (used for simulation sync), so a rename must restage.
     restage = true;
