@@ -32,6 +32,10 @@ SUPERDEXPHYSICSEDITOR_API FString SanitizeForPackagePath(const FString& InStr);
 // empty name.
 SUPERDEXPHYSICSEDITOR_API FString SanitizeForFileName(const FString& InStr);
 
+// Name of the component an importer generates for something named Name (e.g. a prefab actor),
+// before it is made unique: SanitizeForFileName, with a leading '_' if it starts with a digit.
+SUPERDEXPHYSICSEDITOR_API FString SanitizeForComponentName(const FString& Name);
+
 // Absolute form of a file path with '/' separators, to compare and key source paths by.
 SUPERDEXPHYSICSEDITOR_API FString NormalizePath(const FString& Path);
 

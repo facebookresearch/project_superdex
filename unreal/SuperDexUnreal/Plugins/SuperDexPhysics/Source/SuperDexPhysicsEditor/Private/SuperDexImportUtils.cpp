@@ -50,6 +50,11 @@ FString SanitizeForFileName(const FString& InStr) {
   return Result.IsEmpty() ? FString(TEXT("link")) : Result;
 }
 
+FString SanitizeForComponentName(const FString& Name) {
+  const FString name = SanitizeForFileName(Name);
+  return FChar::IsDigit(name[0]) ? TEXT("_") + name : name;
+}
+
 FString NormalizePath(const FString& Path) {
   FString normalized = FPaths::ConvertRelativePathToFull(Path);
   FPaths::NormalizeFilename(normalized);

@@ -45,10 +45,39 @@
 #include "MochiRigidMeshComponent.h"
 #include "MochiSoftMeshComponent.h"
 #include "SuperDexImportUtils.h"
+#include "SuperDexPrefabImporterInternal.h"
 #include "SuperDexSoftRenderModel.h"
 #include "UObject/SavePackage.h"
 
 #include <string_view>
+
+using namespace SuperDexPrefabImporterInternal;
+
+namespace SuperDexPrefabImporterInternal {
+
+FString ToFString(const mochi::DynamicString& S) {
+  return FString(UTF8_TO_TCHAR(S.c_str()));
+}
+
+FString ResolvePrefabPath(
+    const FString& RootDir,
+    const FString& SourcePath,
+    const mochi::DynamicString& Path) {
+  const std::string root(TCHAR_TO_UTF8(*RootDir));
+  const std::string source(TCHAR_TO_UTF8(*SourcePath));
+  return SuperDexImportUtils::NormalizePath(
+      ToFString(mochi::prefab::GetPrefabFullPath(Path.c_str(), root, source)));
+}
+
+mochi::prefab::ScenePrefab LoadPrefab(const FString& SourcePath, bool& bOutSuccess) {
+  mochi::ErrorLog error;
+  const std::string path(TCHAR_TO_UTF8(*SourcePath));
+  mochi::prefab::ScenePrefab prefab = mochi::prefab::ShallowLoadFromFile(path, error);
+  bOutSuccess = error.IsOK();
+  return prefab;
+}
+
+} // namespace SuperDexPrefabImporterInternal
 
 namespace {
 
@@ -83,10 +112,6 @@ UWorld::InitializationValues GetMapBuildInitializationValues() {
       .EnableTraceCollision(false)
       .CreateNavigation(false)
       .CreateAISystem(false);
-}
-
-FString ToFString(const mochi::DynamicString& S) {
-  return FString(UTF8_TO_TCHAR(S.c_str()));
 }
 
 // Name of the i-th actor of a kind, falling back to Mochi's default naming.
@@ -159,10 +184,7 @@ void CopyProperties(UObject* Dst, const UObject* Src) {
 }
 
 FString MakeVariableName(const FString& Name, TSet<FName>& UsedNames) {
-  FString base = SuperDexImportUtils::SanitizeForFileName(Name);
-  if (!base.IsEmpty() && FChar::IsDigit(base[0])) {
-    base = TEXT("_") + base;
-  }
+  const FString base = SuperDexImportUtils::SanitizeForComponentName(Name);
   FString name = base;
   for (int i = 1; UsedNames.Contains(FName(*name)); ++i) {
     name = FString::Printf(TEXT("%s_%d"), *base, i);
@@ -230,17 +252,6 @@ bool FindLinkPair(
   return findLink(Entry.actors[0], OutLinkA) && findLink(Entry.actors[1], OutLinkB);
 }
 
-bool HasConstraints(const mochi::prefab::ConstraintLists& C) {
-  return !C.articulated3dRotationRange.empty() || !C.articulatedSingleDofRange.empty() ||
-      !C.articulated3dRotationTarget.empty() || !C.articulatedSingleDofTarget.empty() ||
-      !C.jointRotationRange.empty() || !C.jointRotationTracking.empty() ||
-      !C.rigidPivotPosition.empty() || !C.rigidPivotToRigidTarget.empty() ||
-      !C.rigidPivotRotation.empty() || !C.rigidPrismaticJoint.empty() ||
-      !C.rigidSphericalJoint.empty() || !C.deformableNodePosition.empty() ||
-      !C.deformableNodeToRigid.empty() || !C.deformableNodeToDeformableNode.empty() ||
-      !C.rodElementRotation.empty() || !C.rodElementRotationToRigid.empty();
-}
-
 // The files a prefab references directly (nested prefabs excluded), as written in the prefab.
 TArray<mochi::DynamicString> GetReferencedFiles(const mochi::prefab::ScenePrefab& Prefab) {
   TArray<mochi::DynamicString> files;
@@ -286,24 +297,6 @@ TArray<mochi::DynamicString> GetReferencedFiles(const mochi::prefab::ScenePrefab
 FString GetRootDir(const FString& SourcePath) {
   const FString rootDir = SuperDexImportUtils::FindSuperDexRootDir(SourcePath);
   return rootDir.IsEmpty() ? FPaths::GetPath(SourcePath) : rootDir;
-}
-
-FString ResolvePrefabPath(
-    const FString& RootDir,
-    const FString& SourcePath,
-    const mochi::DynamicString& Path) {
-  const std::string root(TCHAR_TO_UTF8(*RootDir));
-  const std::string source(TCHAR_TO_UTF8(*SourcePath));
-  return SuperDexImportUtils::NormalizePath(
-      ToFString(mochi::prefab::GetPrefabFullPath(Path.c_str(), root, source)));
-}
-
-mochi::prefab::ScenePrefab LoadPrefab(const FString& SourcePath, bool& bOutSuccess) {
-  mochi::ErrorLog error;
-  const std::string path(TCHAR_TO_UTF8(*SourcePath));
-  mochi::prefab::ScenePrefab prefab = mochi::prefab::ShallowLoadFromFile(path, error);
-  bOutSuccess = error.IsOK();
-  return prefab;
 }
 
 void HashPrefabFiles(const FString& SourcePath, FSHA1& Sha, TSet<FString>& Visited) {
@@ -384,7 +377,7 @@ class FMapOutput : public FSuperDexPrefabImporter::FOutput {
   virtual USceneComponent* AddActor(UClass* ComponentClass, const FString& Name) override {
     AActor* actor = SpawnActor(AActor::StaticClass(), Name, FTransform::Identity);
     USceneComponent* component = NewObject<USceneComponent>(
-        actor, ComponentClass, FName(*SuperDexImportUtils::SanitizeForFileName(Name)));
+        actor, ComponentClass, FName(*SuperDexImportUtils::SanitizeForComponentName(Name)));
     actor->SetRootComponent(component);
     actor->AddInstanceComponent(component);
     Components.Add(component);
@@ -685,6 +678,7 @@ bool FSuperDexPrefabImporter::Import(
 
   auto populate = [&](FOutput& Output) {
     AddActors(context, Output, nestedPrefabs);
+    AddConstraints(context, Output);
     AddSceneSettings(context, Output);
   };
   if (bBlueprint) {
@@ -1300,8 +1294,9 @@ void FSuperDexPrefabImporter::AddActors(
   if (!actors.rod.empty()) {
     WarnUnsupported(prefabName, TEXT("Rod actors"));
   }
-  if (HasConstraints(Context.Data.constraints)) {
-    WarnUnsupported(prefabName, TEXT("Constraints"));
+  const auto& constraints = Context.Data.constraints;
+  if (!constraints.rodElementRotation.empty() || !constraints.rodElementRotationToRigid.empty()) {
+    WarnUnsupported(prefabName, TEXT("Rod constraints"));
   }
   if (!Context.Data.controllers.empty()) {
     WarnUnsupported(prefabName, TEXT("Pose controllers"));
@@ -1317,12 +1312,8 @@ void FSuperDexPrefabImporter::AddRigidActor(
   UStaticMesh* renderModel = ImportRenderModel(Context, Actor.renderModelFile);
   const FTransform actorToParent(
       M2U.RotationToUnreal(Actor.rotation), M2U.TranslationToUnreal(Actor.translation));
-  const FVector scale = M2U.DirectionToUnreal(Actor.scale).GetAbs();
-  // Mochi bakes the actor's scale, then the shape offset, into the shape.
-  const FTransform shapeToActor(
-      M2U.RotationToUnreal(Actor.shapeRotation),
-      M2U.TranslationToUnreal(Actor.shapeTranslation),
-      scale);
+  const FTransform shapeToActor = GetShapeToActor(Actor, M2U);
+  const FVector scale = shapeToActor.GetScale3D();
   // SuperDex Studio renders the model offset in the actor frame, scaled by the actor's scale.
   const FTransform renderToActor(
       M2U.RotationToUnreal(Actor.renderModelRotation),
@@ -1448,11 +1439,7 @@ void FSuperDexPrefabImporter::AddSoftActor(
       Output.AddActor(UMochiSoftMeshComponent::StaticClass(), ActorName));
   const FTransform actorToParent(
       M2U.RotationToUnreal(Actor.rotation), M2U.TranslationToUnreal(Actor.translation));
-  const FTransform shapeToActor(
-      M2U.RotationToUnreal(Actor.shapeRotation),
-      M2U.TranslationToUnreal(Actor.shapeTranslation),
-      M2U.DirectionToUnreal(Actor.scale).GetAbs());
-  component->SetRelativeTransform(shapeToActor * actorToParent);
+  component->SetRelativeTransform(GetShapeToActor(Actor, M2U) * actorToParent);
   component->Model = model;
   component->bHasGravity = Actor.hasGravity;
   if (!Actor.layer.empty()) {

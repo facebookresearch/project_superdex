@@ -186,6 +186,8 @@ class SUPERDEXPHYSICSEDITOR_API FSuperDexPrefabImporter {
       const mochi::prefab::ArticulatedActorPrefab& Actor,
       const FString& ActorName);
   void AddSceneSettings(FPrefabContext& Context, FOutput& Output);
+  // Add a constraint component per prefab constraint (SuperDexPrefabImporterConstraints.cpp).
+  void AddConstraints(FPrefabContext& Context, FOutput& Output);
 
   FSuperDexImportSession& Session;
   // SuperDex Studio space (right-handed, X forward, Y left, Z up, meters) to Unreal.
