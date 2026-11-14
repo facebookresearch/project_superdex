@@ -360,6 +360,17 @@ prefab; a mistake there still fails the prefab when it plays. Renaming an actor
 renames it in its constraints once the new name is entered; deleting an actor or
 a link deletes the constraints on it.
 
+The viewport draws the selected constraint and the one under the mouse in the
+hierarchy: ranges as wedges or bars, targets as an orange marker with a spring
+back to the current value, and anchors as dots joined by a red line when they
+pull apart. **Show > Constraints** (`C`) draws every constraint at once.
+
+<Figure
+  src="../../img/prefab_editor/constraints_viewport.webp"
+  alt="The midi keyboard in the viewport with Show > Constraints on: a grey hinge axis runs under the keys, each key has an orange target needle beside a white needle at its current angle, the buttons show their travel axis with a target marker, and the joystick shows its rotation axes."
+  caption="Every constraint drawn at once: orange targets, white current values."
+/>
+
 ## Placing, Duplicating, and Snapping
 
 **+ Actor** at the top of the Prefab Hierarchy's Actors tab, or `Right-click` on
