@@ -108,6 +108,9 @@ std::optional<mochi::ActorType> ParseActorType(std::string_view name) {
   if (name == "soft") {
     return mochi::ActorType::Soft;
   }
+  if (name == "rod") {
+    return mochi::ActorType::Rod;
+  }
   return std::nullopt;
 }
 
@@ -308,9 +311,12 @@ RestoredActor ReadRestoredActor(
     return restored;
   }
   restored.rootTranslations = read("root_translation_xyz");
-  if (actor.type == mochi::ActorType::Soft) {
+  if (actor.type == mochi::ActorType::Soft || actor.type == mochi::ActorType::Rod) {
     restored.displacements = read("displacements");
     restored.nodeVelocities = read("node_velocities");
+    if (actor.type == mochi::ActorType::Rod) {
+      restored.elementFrameAxes = read("element_frame_axes");
+    }
     return restored;
   }
   restored.jointPositions = read("joint_positions");
@@ -338,6 +344,13 @@ bool HasStatePerFrame(
       HasFrames(actor.rootTranslations, 3, numFrames);
   if (actor.type == mochi::ActorType::Soft) {
     return hasRoot && HasFrames(actor.displacements, numDofs, numFrames) &&
+        HasFrames(actor.nodeVelocities, numDofs, numFrames);
+  }
+  if (actor.type == mochi::ActorType::Rod) {
+    auto const mesh = sceneActor.GetMesh();
+    return hasRoot && HasFrames(actor.displacements, mesh.coordinates.size(), numFrames) &&
+        HasFrames(
+               actor.elementFrameAxes, 3 * static_cast<size_t>(mesh.GetNumElements()), numFrames) &&
         HasFrames(actor.nodeVelocities, numDofs, numFrames);
   }
   return hasRoot && HasFrames(actor.jointPositions, numDofs, numFrames) &&
@@ -494,8 +507,18 @@ void EpisodeRestorer::RestoreFrame(size_t frameIndex, mochi::Error& error) {
 
     auto const numDofs = static_cast<size_t>(sceneActor->GetNumDofs());
     sceneActor->SetRootTransform(GetWorldFromRoot(actor, frameIndex), error);
-    if (actor.type == mochi::ActorType::Soft) {
-      sceneActor->SetDisplacements(GetFrameValues(actor.displacements, frameIndex, numDofs), error);
+    if (actor.type == mochi::ActorType::Soft || actor.type == mochi::ActorType::Rod) {
+      if (actor.type == mochi::ActorType::Rod) {
+        auto const mesh = sceneActor->GetMesh();
+        sceneActor->SetRodPose(
+            GetFrameValues(actor.displacements, frameIndex, mesh.coordinates.size()),
+            GetFrameValues(
+                actor.elementFrameAxes, frameIndex, 3 * static_cast<size_t>(mesh.GetNumElements())),
+            error);
+      } else {
+        sceneActor->SetDisplacements(
+            GetFrameValues(actor.displacements, frameIndex, numDofs), error);
+      }
       sceneActor->SetNodeVelocitiesLocal(
           GetFrameValues(actor.nodeVelocities, frameIndex, numDofs), error);
       continue;

@@ -3,8 +3,8 @@
 Records [SuperDex Physics](https://facebookresearch.github.io/project_superdex/physics/)
 simulations as episodes in the [Rerun](https://rerun.io/) RRD format.
 
-The `superdex.recorder` package writes transactional episodes with rigid and articulated state,
-robot controllers, step durations, body parameters, and optional contact forces.
+The `superdex.recorder` package writes transactional episodes with rigid, articulated, soft and
+rod state, robot controllers, step durations, body parameters, and optional contact forces.
 `EpisodeReader` reads selected frames back, and `EpisodeRestorer` restores a scene to a
 recorded frame. Robot and keypoint shadows add visualization without changing the simulation.
 

@@ -18,13 +18,17 @@
 #include <superdex_recorder/episode_restorer.h>
 #include <superdex_recorder/physics_recorder.h>
 
+#include <mochi_physics/mochi_physics_experimental.h>
 #include <superdex_physics.h>
 
 #include <gtest/gtest.h>
 
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
+#include <numbers>
 #include <random>
 #include <string>
 #include <vector>
@@ -96,33 +100,25 @@ TEST(EpisodeRestorerTest, RestoresRecordedFramesFromAnEpisodeFile) {
   std::filesystem::remove_all(directory);
 }
 
-TEST(EpisodeRestorerTest, RestoresSoftActorsFromAnEpisodeFile) {
+// Records an actor in flight for five frames, restores frames out of order into a second scene, and
+// expects its root position and `getState` to match the recording at each restored frame and after
+// the next step. `createActor` creates the actor with its initial velocities.
+void ExpectRestoresActorInFlight(
+    std::function<Actor*(Context&, Scene&, Error&)> const& createActor,
+    std::function<std::vector<real>(Actor const&, Error&)> const& getState) {
   Error error;
   Context* const context = CreateContext(0);
-  constexpr std::array<real, 12> kCoordinates = {
-      0_r, 0_r, 0_r, 0.1_r, 0_r, 0_r, 0_r, 0.1_r, 0_r, 0_r, 0_r, 0.1_r};
-  constexpr std::array<int, 4> kConnectivity = {0, 1, 2, 3};
-  auto const createTetrahedron = [&](Scene& scene) {
-    SoftActorParams params;
-    params.name = "tetrahedron";
-    params.shape = context->CreateTetMeshShape(kCoordinates, kConnectivity, error);
-    return scene.CreateSoftActor(params, error);
-  };
-  // A tetrahedron in flight, deforming from one moving corner.
   Scene* const live = context->CreateScene("live");
-  Actor* const liveTetrahedron = createTetrahedron(*live);
-  constexpr std::array<real, 12> kInitialVelocities = {
-      0_r, 0_r, 0_r, 1_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r};
-  liveTetrahedron->SetNodeVelocitiesLocal(kInitialVelocities, error);
+  Actor* const liveActor = createActor(*context, *live, error);
+  ASSERT_TRUE(error.IsOK()) << error.ToString();
   auto const directory = std::filesystem::temp_directory_path() /
       ("superdex_episode_restorer_test_" + std::to_string(std::random_device{}()));
   auto episode = Recorder{{.outputDirectory = directory}}.BeginEpisode({}, error);
-  // Root position and displacements at each frame.
-  auto const getState = [&](Actor const& actor) {
+  auto const getFullState = [&](Actor const& actor) {
     Real3 const root = actor.GetRootTransform().GetTranslation();
     std::vector<real> state{root[0], root[1], root[2]};
-    auto const displacements = actor.GetDisplacements(error);
-    state.insert(state.end(), displacements.begin(), displacements.end());
+    std::vector<real> const actorState = getState(actor, error);
+    state.insert(state.end(), actorState.begin(), actorState.end());
     return state;
   };
   std::vector<std::vector<real>> recordedStates;
@@ -133,20 +129,20 @@ TEST(EpisodeRestorerTest, RestoresSoftActorsFromAnEpisodeFile) {
         live->Step(0.01_r);
       }
       physics.Record({.frame = frame, .simulationTimeSec = live->GetTotalSimulationTime()}, error);
-      recordedStates.push_back(getState(*liveTetrahedron));
+      recordedStates.push_back(getFullState(*liveActor));
     }
   }
   episode->Commit(error);
   auto const recording = EpisodeReader::Open(episode->GetOutputPath(), error);
   Scene* const restored = context->CreateScene("restored");
-  Actor* const restoredTetrahedron = createTetrahedron(*restored);
+  Actor* const restoredActor = createActor(*context, *restored, error);
   ASSERT_TRUE(error.IsOK()) << error.ToString();
 
   auto const restorer = EpisodeRestorer::Create(*restored, *recording, error);
 
   ASSERT_TRUE(error.IsOK()) << error.ToString();
   auto const expectStateAt = [&](size_t frameIndex) {
-    std::vector<real> const state = getState(*restoredTetrahedron);
+    std::vector<real> const state = getFullState(*restoredActor);
     ASSERT_EQ(state.size(), recordedStates[frameIndex].size());
     for (size_t i = 0; i < state.size(); ++i) {
       EXPECT_NEAR(state[i], recordedStates[frameIndex][i], 1e-6_r);
@@ -157,7 +153,7 @@ TEST(EpisodeRestorerTest, RestoresSoftActorsFromAnEpisodeFile) {
     restorer->RestoreFrame(frameIndex, error);
     expectStateAt(frameIndex);
   }
-  // The restored node velocities carry the next step.
+  // The restored velocities carry the next step.
   restored->Step(0.01_r);
   expectStateAt(4);
   EXPECT_TRUE(error.IsOK()) << error.ToString();
@@ -165,6 +161,78 @@ TEST(EpisodeRestorerTest, RestoresSoftActorsFromAnEpisodeFile) {
   context->DestroyScene(restored);
   DestroyContext(context);
   std::filesystem::remove_all(directory);
+}
+
+TEST(EpisodeRestorerTest, RestoresSoftActorsFromAnEpisodeFile) {
+  // A tetrahedron in flight, deforming from one moving corner.
+  ExpectRestoresActorInFlight(
+      [](Context& context, Scene& scene, Error& error) {
+        constexpr std::array<real, 12> kCoordinates = {
+            0_r, 0_r, 0_r, 0.1_r, 0_r, 0_r, 0_r, 0.1_r, 0_r, 0_r, 0_r, 0.1_r};
+        constexpr std::array<int, 4> kConnectivity = {0, 1, 2, 3};
+        constexpr std::array<real, 12> kVelocities = {
+            0_r, 0_r, 0_r, 1_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r, 0_r};
+        SoftActorParams params;
+        params.name = "tetrahedron";
+        params.shape = context.CreateTetMeshShape(kCoordinates, kConnectivity, error);
+        Actor* const tetrahedron = scene.CreateSoftActor(params, error);
+        if (tetrahedron != nullptr) {
+          tetrahedron->SetNodeVelocitiesLocal(kVelocities, error);
+        }
+        return tetrahedron;
+      },
+      [](Actor const& tetrahedron, Error& error) {
+        auto const displacements = tetrahedron.GetDisplacements(error);
+        return std::vector<real>(displacements.begin(), displacements.end());
+      });
+}
+
+// A rod in flight, bending from one moving node and twisting: a straight one, or a ring.
+void ExpectRestoresRodInFlight(bool isClosedLoop) {
+  constexpr size_t kNumNodes = 8;
+  ExpectRestoresActorInFlight(
+      [isClosedLoop](Context& context, Scene& scene, Error& error) {
+        std::array<Real3, kNumNodes> nodes{};
+        for (size_t i = 0; i < nodes.size(); ++i) {
+          real const angle = 2_r * std::numbers::pi_v<real> * static_cast<real>(i) / kNumNodes;
+          nodes[i] = isClosedLoop ? Real3{0.05_r * std::cos(angle), 0.05_r * std::sin(angle), 0_r}
+                                  : Real3{0.05_r * static_cast<real>(i), 0_r, 0_r};
+        }
+        RodActorParams params;
+        params.name = "rod";
+        params.shape = experimental::CreatePolylineShape(&context, nodes, {}, isClosedLoop, error);
+        Actor* const rod = scene.CreateRodActor(params, error);
+        if (rod != nullptr) {
+          // Per node: velocity xyz, then the twist rate of the element that starts at it, which an
+          // open rod's last node lacks.
+          std::array<real, 4 * kNumNodes> velocities{};
+          velocities[2] = 1_r;
+          size_t const numElements = isClosedLoop ? kNumNodes : kNumNodes - 1;
+          for (size_t element = 0; element < numElements; ++element) {
+            velocities[4 * element + 3] = 2_r;
+          }
+          rod->SetNodeVelocitiesLocal(velocities, error);
+        }
+        return rod;
+      },
+      [](Actor const& rod, Error& error) {
+        auto const mesh = rod.GetMesh();
+        size_t const numDisplacements = mesh.coordinates.size();
+        std::vector<real> pose(numDisplacements + 3 * static_cast<size_t>(mesh.GetNumElements()));
+        rod.GetRodPose(
+            Span<real>(pose.data(), numDisplacements),
+            Span<real>(pose.data() + numDisplacements, pose.size() - numDisplacements),
+            error);
+        return pose;
+      });
+}
+
+TEST(EpisodeRestorerTest, RestoresOpenRodActorsFromAnEpisodeFile) {
+  ExpectRestoresRodInFlight(false);
+}
+
+TEST(EpisodeRestorerTest, RestoresClosedRodActorsFromAnEpisodeFile) {
+  ExpectRestoresRodInFlight(true);
 }
 
 } // namespace

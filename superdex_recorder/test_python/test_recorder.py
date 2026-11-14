@@ -17,7 +17,7 @@ from __future__ import annotations
 import gc
 import tempfile
 import unittest
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -473,25 +473,22 @@ class RecorderTest(unittest.TestCase):
                     sdp.destroy_scene(scene)
                 sdp.shutdown()
 
-    def test_soft_actors_record_their_surface_at_every_frame(self) -> None:
+    def check_surface_recorded_at_every_frame(
+        self,
+        create_actor: Callable[[sdp.Scene], sdp.Actor],
+        get_mesh: Callable[[sdp.Actor], Any],
+        get_vertices: Callable[[sdp.Actor], Any],
+    ) -> None:
+        """Records three frames of a deforming actor, then checks its recorded surface: the
+        triangles of `get_mesh` once, and the vertices of `get_vertices` and their normals at
+        every frame."""
         with tempfile.TemporaryDirectory() as directory_string:
             sdp.initialize(num_worker_threads=0)
             scene = None
             physics = None
             try:
-                scene = sdp.create_scene("soft surface")
-                tetrahedron = scene.create_soft_actor(
-                    name="tetrahedron",
-                    shape=sdp.create_tet_mesh_shape(
-                        coordinates=[0, 0, 0, 0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1],
-                        connectivity=[0, 1, 2, 3],
-                    ),
-                )
-                assert tetrahedron is not None
-                # Moving one corner deforms the tetrahedron.
-                tetrahedron.set_node_velocities_local(
-                    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]
-                )
+                scene = sdp.create_scene("deforming surface")
+                actor = create_actor(scene)
                 episode = self.make_recorder(Path(directory_string)).begin_episode()
                 physics = recorder.PhysicsRecorder(episode, scene)
                 surfaces = []
@@ -499,15 +496,13 @@ class RecorderTest(unittest.TestCase):
                     if frame > 0:
                         scene.step(0.01)
                     physics.record(frame, scene.get_total_simulation_time())
-                    surfaces.append(
-                        np.array(tetrahedron.get_surface_mesh_node_positions_local())
-                    )
-                triangles = np.asarray(tetrahedron.get_surface_mesh().connectivity)
+                    surfaces.append(np.array(get_vertices(actor)))
+                triangles = np.asarray(get_mesh(actor).connectivity)
                 episode.commit()
 
                 rrd_verify.assert_rerun_accepts(episode.output_path)
                 recording = EpisodeReader(episode.output_path)
-                path = "world/tetrahedron/surface"
+                path = f"world/{actor.get_name()}/surface"
                 [indices] = recording.component_samples(
                     "Mesh3D:triangle_indices", entity_path=path
                 )
@@ -526,10 +521,11 @@ class RecorderTest(unittest.TestCase):
                     surfaces,
                     atol=1e-6,
                 )
+                self.assertFalse(np.allclose(surfaces[0], surfaces[2]))
                 self.assertEqual(len(samples["Mesh3D:vertex_normals"]), 3)
                 # The surface's parent entity carries the root transform.
                 transforms = recording.component_samples(
-                    "Transform3D:translation", entity_path="world/tetrahedron"
+                    "Transform3D:translation", entity_path=f"world/{actor.get_name()}"
                 )
                 self.assertEqual(transforms[0].timelines["frame"], 0)
             finally:
@@ -538,6 +534,54 @@ class RecorderTest(unittest.TestCase):
                 if scene is not None:
                     sdp.destroy_scene(scene)
                 sdp.shutdown()
+
+    def test_soft_actors_record_their_surface_at_every_frame(self) -> None:
+        def create_tetrahedron(scene: sdp.Scene) -> sdp.Actor:
+            tetrahedron = scene.create_soft_actor(
+                name="tetrahedron",
+                shape=sdp.create_tet_mesh_shape(
+                    coordinates=[0, 0, 0, 0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1],
+                    connectivity=[0, 1, 2, 3],
+                ),
+            )
+            assert tetrahedron is not None
+            # Moving one corner deforms the tetrahedron.
+            tetrahedron.set_node_velocities_local([0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0])
+            return tetrahedron
+
+        self.check_surface_recorded_at_every_frame(
+            create_tetrahedron,
+            lambda actor: actor.get_surface_mesh(),
+            lambda actor: actor.get_surface_mesh_node_positions_local(),
+        )
+
+    def test_rods_record_their_contact_skin_at_every_frame(self) -> None:
+        def create_rod(scene: sdp.Scene) -> sdp.Actor:
+            model = sdp.experimental.generate_tubular_rod_model_data(
+                nodes=[[0.05 * i, 0.0, 0.0] for i in range(7)],
+                element_frame_axes=[],
+                radius=0.01,
+                num_cross_section_segments=8,
+                is_closed_loop=False,
+            )
+            rod = scene.create_rod_actor(
+                name="rod",
+                shape=sdp.create_model_shape(model),
+                collider_type=sdp.ColliderType.POINT_CLOUD,
+                use_contact_skin=True,
+            )
+            assert rod is not None
+            # Moving one end bends the rod. A rod has 4 velocity values per node.
+            velocities = np.zeros(4 * 7)
+            velocities[2] = 1.0
+            rod.set_node_velocities_local(velocities)
+            return rod
+
+        self.check_surface_recorded_at_every_frame(
+            create_rod,
+            lambda actor: actor.get_contact_skin_mesh(),
+            lambda actor: actor.get_contact_skin_mesh_node_positions_local(),
+        )
 
     def test_reader_returns_only_requested_frames(self) -> None:
         with tempfile.TemporaryDirectory() as directory_string:

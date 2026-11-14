@@ -138,8 +138,8 @@ def apply_recorded_physics(recording: EpisodeReader, scene: sdp.Scene) -> None:
             actor.get_mass(), sample.value[0], rel_tol=_MASS_RELATIVE_TOLERANCE
         ):
             raise ValueError(
-                f"{actor.get_name()!r} has mass {actor.get_mass()} with its recorded "
-                f"density, but {sample.value[0]} was recorded."
+                f"{actor.get_name()!r} has mass {actor.get_mass()}, but "
+                f"{sample.value[0]} was recorded."
             )
 
 

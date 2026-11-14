@@ -87,7 +87,7 @@ size_t ContactCollector::FindBody(mochi::ActorHandle handle, mochi::Error& error
     MOCHI_LOG_ERROR(
         "Contact references actor %s, which is not a recorded contact body.",
         actor == nullptr ? "(destroyed)" : actor->GetName());
-    MOCHI_ERROR_SET(error, "Contact references an actor outside the recorded rigid body layout.");
+    MOCHI_ERROR_SET(error, "Contact references an actor outside the recorded contact bodies.");
     return 0;
   }
   return index->second;

@@ -24,7 +24,6 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
-#include <initializer_list>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -118,9 +117,10 @@ std::string_view ActorTypeName(mochi::ActorType type) {
       return "articulated";
     case mochi::ActorType::Soft:
       return "soft";
+    case mochi::ActorType::Rod:
+      return "rod";
     case mochi::ActorType::None:
     case mochi::ActorType::Shell:
-    case mochi::ActorType::Rod:
     case mochi::ActorType::Count:
       break;
   }
@@ -279,7 +279,7 @@ PhysicsRecorder::PhysicsRecorder(
     }
     if (actor->GetType() != mochi::ActorType::Rigid &&
         actor->GetType() != mochi::ActorType::Articulated &&
-        actor->GetType() != mochi::ActorType::Soft) {
+        actor->GetType() != mochi::ActorType::Soft && actor->GetType() != mochi::ActorType::Rod) {
       unrecordedActorNames.push_back(actor->GetName());
       return;
     }
@@ -299,13 +299,13 @@ PhysicsRecorder::PhysicsRecorder(
     MOCHI_ERROR_IF(
         !contactlessActorNames.empty(),
         error,
-        "Contact recording supports only rigid and articulated actors.");
+        "Contact recording supports only rigid, articulated and rod actors.");
     MOCHI_ERROR_RETURN(error);
   }
   for (char const* const name : unrecordedActorNames) {
     MOCHI_LOG_WARNING(
-        "Not recording actor %s: only rigid, articulated and soft actors are recorded, so this "
-        "episode cannot be restored.",
+        "Not recording actor %s: only rigid, articulated, soft and rod actors are recorded, so "
+        "this episode cannot be restored.",
         name);
   }
 
@@ -366,6 +366,7 @@ void PhysicsRecorder::RegisterActor(std::string id, mochi::Actor& actor, mochi::
   std::string const dataPath = "data/physics/actors/" + encodedId;
   std::string const entityPath = "world/" + encodedId;
 
+  bool const isRod = actor.GetType() == mochi::ActorType::Rod;
   bool const hasPoseController =
       actor.GetType() == mochi::ActorType::Articulated && actor.HasArticulatedPoseController(error);
   MOCHI_ERROR_RETURN(error);
@@ -380,9 +381,12 @@ void PhysicsRecorder::RegisterActor(std::string id, mochi::Actor& actor, mochi::
     if (!actor.IsStatic()) {
       fields.push_back(ActorField("superdex.physics.com_translation_xyz"));
     }
-  } else if (actor.GetType() == mochi::ActorType::Soft) {
+  } else if (isRod || actor.GetType() == mochi::ActorType::Soft) {
     fields.push_back(ActorField("superdex.physics.displacements"));
     fields.push_back(ActorField("superdex.physics.node_velocities"));
+    if (isRod) {
+      fields.push_back(ActorField("superdex.physics.element_frame_axes"));
+    }
   } else {
     fields.push_back(ActorField("superdex.physics.joint_positions"));
     fields.push_back(ActorField("superdex.physics.joint_velocities"));
@@ -522,20 +526,31 @@ void PhysicsRecorder::RegisterActor(std::string id, mochi::Actor& actor, mochi::
     if (hasPoseController) {
       registered.controllerTargets.resize(numDofs);
     }
-  } else if (actor.GetType() == mochi::ActorType::Soft) {
+  } else if (isRod || actor.GetType() == mochi::ActorType::Soft) {
     WritePhysicalParameters(dataPath, actor, error);
-    auto const mesh = actor.GetSurfaceMesh();
-    MOCHI_ERROR_IF(
-        mesh.nodesPerElement != 3, error, "Soft actor surface mesh is not a triangle mesh.");
-    MOCHI_ERROR_RETURN(error);
-    // A negative index wraps past the vertex count, which CreateDeformableMeshSeries rejects.
-    std::vector<uint32_t> const triangles(mesh.connectivity.begin(), mesh.connectivity.end());
-    registered.surfaceSeries = _episode.CreateDeformableMeshSeries(
-        entityPath + "/surface",
-        mesh.coordinates.size() / 3,
-        triangles,
-        ColorForId(entityPath),
-        error);
+    if (isRod) {
+      auto const rod = actor.GetMesh();
+      registered.displacements.resize(rod.coordinates.size());
+      registered.elementFrameAxes.resize(3 * static_cast<size_t>(rod.GetNumElements()));
+      RegisterContactBody(entityPath, actor);
+    }
+    // Soft actors are shown by their surface, and rods by their contact skin, if they have one.
+    auto const mesh = isRod ? actor.GetContactSkinMesh() : actor.GetSurfaceMesh();
+    if (!mesh.connectivity.empty()) {
+      MOCHI_ERROR_IF(
+          mesh.nodesPerElement != 3,
+          error,
+          "Deformable actor display mesh is not a triangle mesh.");
+      MOCHI_ERROR_RETURN(error);
+      // A negative index wraps past the vertex count, which CreateDeformableMeshSeries rejects.
+      std::vector<uint32_t> const triangles(mesh.connectivity.begin(), mesh.connectivity.end());
+      registered.surfaceSeries = _episode.CreateDeformableMeshSeries(
+          entityPath + "/surface",
+          mesh.coordinates.size() / 3,
+          triangles,
+          ColorForId(entityPath),
+          error);
+    }
   } else {
     WriteGeometry(entityPath, actor, error);
     WritePhysicalParameters(dataPath, actor, error);
@@ -566,8 +581,11 @@ void PhysicsRecorder::RegisterActor(std::string id, mochi::Actor& actor, mochi::
   if (registered.surfaceSeries != nullptr) {
     // Mochi computes surface vertices only for registered queries. Computing them now also covers
     // a Record before the first step.
-    for (mochi::QueryType const query :
-         {mochi::QueryType::SurfaceNodePositions, mochi::QueryType::SurfaceNodeNormals}) {
+    using mochi::QueryType;
+    auto const queries = isRod
+        ? std::array{QueryType::ContactSkinNodePositions, QueryType::ContactSkinNodeNormals}
+        : std::array{QueryType::SurfaceNodePositions, QueryType::SurfaceNodeNormals};
+    for (QueryType const query : queries) {
       registered.queries.push_back(actor.RegisterQueryAndCompute(query, error));
     }
   }
@@ -591,11 +609,15 @@ void PhysicsRecorder::WritePhysicalParameters(
   if (actor.IsStatic()) {
     return;
   }
+  // Rods have a mass but no density.
+  mochi::Error densityError;
+  std::array<double, 1> const density{static_cast<double>(actor.GetDensity(densityError))};
+  if (densityError.IsOK()) {
+    _episode.WriteConstantScalars(path, ActorField("superdex.physics.density"), density, error);
+  }
   mochi::Error massError;
-  std::array<double, 1> const density{static_cast<double>(actor.GetDensity(massError))};
   std::array<double, 1> const mass{static_cast<double>(actor.GetMass(massError))};
   if (massError.IsOK()) {
-    _episode.WriteConstantScalars(path, ActorField("superdex.physics.density"), density, error);
     _episode.WriteConstantScalars(path, ActorField("superdex.physics.mass"), mass, error);
   }
 }
@@ -719,18 +741,38 @@ void PhysicsRecorder::Record(SampleTime time, mochi::Error& error) {
       continue;
     }
 
-    if (actor->GetType() == mochi::ActorType::Soft) {
-      std::array<mochi::Span<mochi::real const>, 4> const fields{
-          AsSpan(translation),
-          AsSpan(quaternion),
-          actor->GetDisplacements(error),
-          actor->GetNodeVelocitiesLocal(error),
-      };
-      MOCHI_ERROR_RETURN(error);
-      registered.stateSeries.Append(time, fields, error);
-      auto const surfacePositions = actor->GetSurfaceMeshNodePositionsLocal(error);
-      auto const surfaceNormals = actor->GetSurfaceMeshNodeNormalsLocal(error);
-      registered.surfaceSeries->Append(time, surfacePositions, surfaceNormals, error);
+    bool const isRod = actor->GetType() == mochi::ActorType::Rod;
+    if (isRod || actor->GetType() == mochi::ActorType::Soft) {
+      if (isRod) {
+        actor->GetRodPose(registered.displacements, registered.elementFrameAxes, error);
+        std::array<mochi::Span<mochi::real const>, 5> const fields{
+            AsSpan(translation),
+            AsSpan(quaternion),
+            AsSpan(registered.displacements),
+            actor->GetNodeVelocitiesLocal(error),
+            AsSpan(registered.elementFrameAxes),
+        };
+        MOCHI_ERROR_RETURN(error);
+        registered.stateSeries.Append(time, fields, error);
+      } else {
+        std::array<mochi::Span<mochi::real const>, 4> const fields{
+            AsSpan(translation),
+            AsSpan(quaternion),
+            actor->GetDisplacements(error),
+            actor->GetNodeVelocitiesLocal(error),
+        };
+        MOCHI_ERROR_RETURN(error);
+        registered.stateSeries.Append(time, fields, error);
+      }
+      if (registered.surfaceSeries != nullptr) {
+        registered.surfaceSeries->Append(
+            time,
+            isRod ? actor->GetContactSkinMeshNodePositionsLocal(error)
+                  : actor->GetSurfaceMeshNodePositionsLocal(error),
+            isRod ? actor->GetContactSkinMeshNodeNormalsLocal(error)
+                  : actor->GetSurfaceMeshNodeNormalsLocal(error),
+            error);
+      }
       MOCHI_ERROR_RETURN(error);
       continue;
     }

@@ -58,6 +58,10 @@ KNOB_SPAWN_NAME = "knob"
 # `BOT_SCENE_PATH`'s knob pose, just above the foam.
 KNOB_ROTATION = [0.0, -math.sqrt(0.5), -math.sqrt(0.5), 0.0]
 KNOB_TRANSLATION = [0.0075, -0.245, 0.8355]
+ROD_SPAWN_NAME = "rod"
+# Tilted, above `BOT_SCENE_PATH`'s foam, so that one end lands first.
+ROD_ROTATION = [0.0, math.sin(0.15), 0.0, math.cos(0.15)]
+ROD_TRANSLATION = [-0.15, -0.045, 0.9]
 SLOT_ARM_PATH = "@bots/internal/t3/right/t3_right.superdex_bot"
 # Alternatives for one slot that share the arm's articulated actor name.
 SLOT_BOTS = ("t3_right", "t3_right_osc_v2")
@@ -82,6 +86,23 @@ def colliding_bodies(scene: sdp.Scene) -> dict[str, sdp.Actor]:
         if actor.get_type() == sdp.ActorType.RIGID
         and actor.get_collider_type() != sdp.ColliderType.NONE
     }
+
+
+def rod_node_positions(rod: sdp.Actor) -> np.ndarray:
+    """World positions of a rod's nodes."""
+    mesh = rod.get_mesh()
+    real_dtype = np.asarray(mesh.coordinates).dtype
+    displacements = np.zeros(len(mesh.coordinates), dtype=real_dtype)
+    axes = np.zeros(3 * mesh.get_num_elements(), dtype=real_dtype)
+    rod.get_rod_pose(displacements, axes)
+    local = (np.asarray(mesh.coordinates) + displacements).reshape(-1, 3)
+    root = rod.get_root_transform()
+    return np.array(
+        [
+            (root * sdp.TransformRT(translation=p.tolist())).translation.tolist()
+            for p in local
+        ]
+    )
 
 
 def randomize_physics(
@@ -305,44 +326,60 @@ class RebuildSceneTest(unittest.TestCase):
             [getattr(live_hand.get_contact_params(), name) for name in names],
         )
 
-    def test_rebuilds_bot_spawned_by_task(self) -> None:
+    def write_spawn_scene(
+        self,
+        name: str,
+        prefab: str,
+        spawn_name: str,
+        rotation: list[float],
+        translation: list[float],
+    ) -> tuple[Path, Path]:
+        """A bot scene offering `prefab`, and a task that spawns it as `spawn_name`."""
         # Bot scenes can't use absolute paths, so a tag locates the assets.
         (self.directory / ".superdex_root").write_text(
             json.dumps({"@bots": str(resolve_asset("bots"))})
         )
-        bot_scene_path = self.directory / "knob.mochi_bot_scene"
+        bot_scene_path = self.directory / f"{name}.mochi_bot_scene"
         bot_scene_path.write_text(
             json.dumps(
                 {
-                    "metadata": {"name": "knob"},
+                    "metadata": {"name": name},
                     "scene": {
                         "baseScene": "@bots/internal/tests/bot_scene/base_scene/"
                         "base_scene.mochi_scene",
-                        "spawnablePrefabs": [
-                            {"name": "knob", "path": f"@bots/{KNOB_ARCHIVE}"}
-                        ],
+                        "spawnablePrefabs": [{"name": name, "path": prefab}],
                     },
                 }
             )
         )
-        task_path = self.directory / "knob.mochi_bot_task"
+        task_path = self.directory / f"{name}.mochi_bot_task"
         task_path.write_text(
             json.dumps(
                 {
-                    "metadata": {"name": "knob"},
+                    "metadata": {"name": name},
                     "resetState": [
                         {
-                            "name": KNOB_SPAWN_NAME,
-                            "prefabName": "knob",
+                            "name": spawn_name,
+                            "prefabName": name,
                             "parent": "task_root",
                             "parentFromSpawn": {
-                                "rotation": KNOB_ROTATION,
-                                "translation": KNOB_TRANSLATION,
+                                "rotation": rotation,
+                                "translation": translation,
                             },
                         }
                     ],
                 }
             )
+        )
+        return bot_scene_path, task_path
+
+    def test_rebuilds_bot_spawned_by_task(self) -> None:
+        bot_scene_path, task_path = self.write_spawn_scene(
+            "knob",
+            f"@bots/{KNOB_ARCHIVE}",
+            KNOB_SPAWN_NAME,
+            KNOB_ROTATION,
+            KNOB_TRANSLATION,
         )
         live = load_bot_scene(str(bot_scene_path), self.context)
         live_scene = physics_scene(live)
@@ -379,6 +416,67 @@ class RebuildSceneTest(unittest.TestCase):
                     ),
                     physical_parameters(live_body, contact_param_names),
                 )
+
+    def test_rebuilt_scene_resumes_rod_episode(self) -> None:
+        model = sdp.experimental.generate_tubular_rod_model_data(
+            nodes=[[0.05 * i, 0.0, 0.0] for i in range(7)],
+            element_frame_axes=[],
+            radius=0.01,
+            num_cross_section_segments=8,
+            is_closed_loop=False,
+        )
+        sdp.model.save_to_file(
+            model, str(self.directory / "rod.mochi.h5"), sdp.FileFormat.H5
+        )
+        prefab_path = self.directory / "rod.mochi_prefab"
+        prefab_path.write_text(
+            json.dumps(
+                {
+                    "actors": {
+                        "rod": [
+                            {
+                                "name": "rod",
+                                "shape": "./rod.mochi.h5",
+                                "colliderType": "PointCloud",
+                                "useContactSkin": True,
+                            }
+                        ]
+                    }
+                }
+            )
+        )
+        bot_scene_path, task_path = self.write_spawn_scene(
+            "rod", "rod.mochi_prefab", ROD_SPAWN_NAME, ROD_ROTATION, ROD_TRANSLATION
+        )
+        live = load_bot_scene(str(bot_scene_path), self.context)
+        params = sdp.prefab.PrefabParams()
+        params.rotation = ROD_ROTATION
+        params.translation = ROD_TRANSLATION
+        params.apply_scene_settings = False
+        (live_rod,) = sdp.prefab.add_to_scene(
+            str(prefab_path), str(self.directory), physics_scene(live), params
+        ).actors
+        kinematic_path, _ = self.record(
+            physics_scene(live), [live_rod], NUM_FRAMES, spawn_name=ROD_SPAWN_NAME
+        )
+        live_positions = []
+        for _ in range(NUM_RESUME_FRAMES):
+            physics_scene(live).step(TIME_STEP)
+            live_positions.append(rod_node_positions(live_rod))
+
+        recording = EpisodeReader(kinematic_path)
+        rebuilt = recorder.rebuild_scene(
+            recording, bot_scene_path, self.context, bot_task_path=task_path
+        )
+        scene = physics_scene(rebuilt.bot_scene)
+        rod = scene_actors(scene)[f"{ROD_SPAWN_NAME}/rod"]
+        recorder.EpisodeRestorer(recording, scene).restore_frame(NUM_FRAMES)
+        error = 0.0
+        for expected in live_positions:
+            scene.step(TIME_STEP)
+            error = max(error, float(np.abs(rod_node_positions(rod) - expected).max()))
+
+        self.assertLess(error, RESUME_TOLERANCE)
 
     def test_accepts_files_matching_recorded_hashes(self) -> None:
         live, spawned = self.load_live_scene()
@@ -458,7 +556,7 @@ class RebuildSceneTest(unittest.TestCase):
         # Scaled bodies have the same density but more mass.
         live, spawned = self.load_live_scene(scale=1.1)
         kinematic_path, _ = self.record(physics_scene(live), spawned, 1)
-        with self.assertRaisesRegex(ValueError, "with its recorded density"):
+        with self.assertRaisesRegex(ValueError, "has mass .*, but .* was recorded"):
             recorder.rebuild_scene(
                 EpisodeReader(kinematic_path),
                 BOT_SCENE_PATH,

@@ -21,13 +21,16 @@
  * - Articulated actors: root pose, joint positions and velocities, pose-controller targets, and
  *   link transforms.
  * - Soft actors: root pose, displacements and node velocities, and surface vertices for viewing.
+ * - Rod actors: root pose, node displacements, element frame axes, node velocities with twist
+ *   rates, and contact-skin vertices, if any, for viewing.
  *
  * Not supported:
- * - Shell and rod actors are skipped with a warning, and the episode cannot be restored.
+ * - Shell actors are skipped with a warning, and the episode cannot be restored.
  * - Nested soft actors, such as soft pads on an articulated actor, move with their articulated
  *   actor; their own deformation is not recorded.
  * - Actors created after the recorder are not recorded.
- * - Contact recording supports only rigid and articulated actors, and fails on a scene with others.
+ * - Contact recording supports only rigid, articulated and rod actors, and fails on a scene with
+ *   others.
  */
 
 #pragma once
@@ -99,7 +102,10 @@ class SUPERDEX_RECORDER_API PhysicsRecorder final {
     mochi::DynamicArray<mochi::real> controllerTargets;
     bool hasPoseController = false;
     std::optional<detail::LinkKinematics> linkKinematics;
-    /* Soft actors. */
+    /* Rod actors: buffers for GetRodPose. */
+    mochi::DynamicArray<mochi::real> displacements;
+    mochi::DynamicArray<mochi::real> elementFrameAxes;
+    /* Soft and rod actors. */
     DeformableMeshSeries* surfaceSeries = nullptr;
     /* Mochi queries this recorder registered on the actor; the destructor cancels them. */
     std::vector<mochi::QueryHandle> queries;

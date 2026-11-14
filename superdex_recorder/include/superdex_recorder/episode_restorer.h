@@ -58,11 +58,14 @@ struct RestoredActor {
   std::vector<mochi::real> comTranslations;
   std::vector<mochi::real> linearVelocities;
   std::vector<mochi::real> angularVelocities;
-  /* Articulated and soft actors: root position, xyz per frame. */
+  /* Articulated, soft and rod actors: root position, xyz per frame. */
   std::vector<mochi::real> rootTranslations;
-  /* Soft actors: one value per DoF per frame, in the actor's frame. */
+  /* Soft and rod actors, in the actor's frame: displacements are xyz per node per frame, and
+   * node velocities one value per DoF per frame. */
   std::vector<mochi::real> displacements;
   std::vector<mochi::real> nodeVelocities;
+  /* Rod actors: xyz per element per frame, in the actor's frame. */
+  std::vector<mochi::real> elementFrameAxes;
   /* Articulated actors: one value per DoF per frame. */
   std::vector<mochi::real> jointPositions;
   std::vector<mochi::real> jointVelocities;
