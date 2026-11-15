@@ -67,12 +67,13 @@ inline void AddRigidBodyGravity(
 }
 
 /**
- * @brief Under PSD projection, the minimum curvature of a rigid body's rotational inertia, as a
- * fraction of its Gauss-Newton curvature. When the extrapolated rotation is orthonormal, an
- * isotropic body's smallest exact curvature at an angle phi from it is cos(phi) times its
- * Gauss-Newton curvature, so 1/2 leaves its Hessian exact within about 60 degrees.
+ * @brief Under PSD projection, the minimum curvature of a rotational Hessian derived from a
+ * rotation difference merit, such as a rigid body's inertia or damping, as a fraction of its
+ * Gauss-Newton curvature. When the reference rotation is orthonormal, an isotropic merit's smallest
+ * exact curvature at an angle theta from it is cos(theta) times its Gauss-Newton curvature, so 1/2
+ * leaves its Hessian exact within about 60 degrees.
  */
-inline constexpr real kMinInertiaCurvatureRatio = 0.5_r;
+inline constexpr real kMinRotationalCurvatureRatio = 0.5_r;
 
 /**
  * @brief Adds rigid-body inertia terms derived from a merit function as presented in the Rigid IPC
@@ -87,7 +88,7 @@ inline constexpr real kMinInertiaCurvatureRatio = 0.5_r;
  *or Dqk-1 (aka PreviousDelta). Possible values: GradTarget::Previous, GradTarget::PreviousDelta,
  * GradTarget::Current.
  * @tparam kPsdDRes If true, the rotational Hessian of these terms, not the accumulated block of
- * @p outHessian, is projected with @ref ProjectSymAbove above @ref kMinInertiaCurvatureRatio *
+ * @p outHessian, is projected with @ref ProjectSymAbove above @ref kMinRotationalCurvatureRatio *
  * (G + 16 eps tr(W) I), with G = tr(W) I - R W R^T the Gauss-Newton Hessian, R the current
  * rotation and W the second moment over @p dtStage^2. Without a positive definite floor, as for
  * zero inertia, it is projected to be positive semi-definite. Requires @ref GradTarget::Current:
@@ -235,7 +236,7 @@ inline void AddRigidBodyInertiaFromMerit(
         VMatrix3x3r const gaussNewton =
             VDiagonalMatrix<3>((1_r + kRoundingRelTol) * Trace3x3(rotatedInertia)) - rotatedInertia;
         if (IsSpd(gaussNewton)) {
-          hessianRot = ProjectSymAbove(hessianRot, kMinInertiaCurvatureRatio * gaussNewton);
+          hessianRot = ProjectSymAbove(hessianRot, kMinRotationalCurvatureRatio * gaussNewton);
         } else {
           ProjectSymPsd(hessianRot);
         }
@@ -405,8 +406,11 @@ GetRigidInertiaFn(GradTarget gradTarget, bool useNewtonEuler, bool psdDRes) {
   }
 }
 
-// Function to add rigid-body damping terms.
-template <GradTarget kGradTarget>
+// Function to add rigid-body damping terms. If kPsdDRes, which requires GradTarget::Current, the
+// rotational Hessian of these terms, not the accumulated block of outHessian, has its eigenvalues
+// raised to at least kMinRotationalCurvatureRatio times its Gauss-Newton curvature,
+// damping / dtStage.
+template <GradTarget kGradTarget, bool kPsdDRes>
 inline void AddRigidBodyDamping(
     TransformRT const& state,
     real damping,
@@ -418,6 +422,9 @@ inline void AddRigidBodyDamping(
   static_assert(
       kGradTarget == GradTarget::Current || kGradTarget == GradTarget::Previous,
       "Unsupported target");
+  static_assert(
+      !kPsdDRes || kGradTarget == GradTarget::Current,
+      "PSD projection requires GradTarget::Current");
   if (!outEnergy && !outGradient && !outHessian) {
     return;
   }
@@ -475,12 +482,51 @@ inline void AddRigidBodyDamping(
     outHessianCom += VDiagonalMatrix<3>(dampingFactor);
 
     // Rotation component
-    outHessianRot += lie::WeightedRotationDifferenceHessian(energyRotMatrix);
+    VMatrix3x3r hessianRot = lie::WeightedRotationDifferenceHessian(energyRotMatrix);
+    if constexpr (kPsdDRes) {
+      // For R Rs^T a rotation by theta about n, the block is dampingFactor (cos(theta) n n^T +
+      // (1 + cos(theta)) / 2 (I - n n^T)), with trace dampingFactor (1 + 2 cos(theta)). Eigenvalues
+      // below minCurvature are raised to it.
+      real const trace = Trace3x3(hessianRot);
+      real const axial = 0.5_r * (trace - dampingFactor);
+      real const transverse = 0.25_r * (trace + dampingFactor);
+      real const minCurvature = kMinRotationalCurvatureRatio * dampingFactor;
+      if (transverse < minCurvature) {
+        hessianRot = VDiagonalMatrix<3>(minCurvature);
+      } else if (axial < minCurvature) {
+        // hessianRot - transverse I = (axial - transverse) n n^T
+        hessianRot += ((minCurvature - axial) / (axial - transverse)) *
+            (hessianRot - VDiagonalMatrix<3>(transverse));
+      }
+    }
+    outHessianRot += hessianRot;
 
     // Store output
     StoreSubmatrix<3, 3, 6, 6>(*outHessian, Int2{0, 0}, outHessianCom);
     StoreSubmatrix<3, 3, 6, 6>(*outHessian, Int2{3, 3}, outHessianRot);
   }
+}
+
+using RigidDampingFn = void (*)(
+    TransformRT const&,
+    real,
+    TransformRT const&,
+    real,
+    double*,
+    RigidGradient*,
+    RigidHessian*);
+// Helper function to dispatch the appropriate damping assembly function. Damping depends only on
+// the current and previous poses, so gradTarget must be GradTarget::Current or
+// GradTarget::Previous.
+[[nodiscard]] inline RigidDampingFn GetRigidDampingFn(GradTarget gradTarget, bool psdDRes) {
+  MOCHI_ASSERT_VERBOSE(
+      gradTarget == GradTarget::Current || gradTarget == GradTarget::Previous,
+      "Damping depends only on the current and previous poses");
+  if (gradTarget != GradTarget::Current) {
+    return AddRigidBodyDamping<GradTarget::Previous, /*kPsdDRes*/ false>;
+  }
+  return psdDRes ? AddRigidBodyDamping<GradTarget::Current, /*kPsdDRes*/ true>
+                 : AddRigidBodyDamping<GradTarget::Current, /*kPsdDRes*/ false>;
 }
 
 /**

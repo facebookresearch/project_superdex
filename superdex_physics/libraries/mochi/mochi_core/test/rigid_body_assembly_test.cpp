@@ -478,7 +478,7 @@ TEST(RigidBodyAssembly, RigidInertiaFnPsdDRes) {
   };
 
   // Merit-based inertia: ProjectSymAbove's projection of the exact Hessian above the floor
-  // kMinInertiaCurvatureRatio * (G + 16 eps tr(W) I), with G from Newton-Euler inertia and
+  // kMinRotationalCurvatureRatio * (G + 16 eps tr(W) I), with G from Newton-Euler inertia and
   // tr(W) = tr(G) / 2, applied to the inertia's Hessian alone.
   auto expectFloored = [&]<typename InertiaT>(
                            InertiaT const& secondMoment, InertiaT const& momentOfInertia) {
@@ -488,7 +488,7 @@ TEST(RigidBodyAssembly, RigidInertiaFnPsdDRes) {
           hessianRot(/*useNewtonEuler*/ false, /*psdDRes*/ false, secondMoment, pose);
       VMatrix3x3r const gaussNewton =
           hessianRot(/*useNewtonEuler*/ true, /*psdDRes*/ false, momentOfInertia, pose);
-      VMatrix3x3r const floor = kMinInertiaCurvatureRatio *
+      VMatrix3x3r const floor = kMinRotationalCurvatureRatio *
           (gaussNewton +
            VDiagonalMatrix<3>(8_r * std::numeric_limits<real>::epsilon() * Trace3x3(gaussNewton)));
       VMatrix3x3r const floored =
@@ -550,12 +550,12 @@ TEST(RigidBodyAssembly, RigidBodyDampingCurrent) {
   TransformRT stageStartPos;
   SetPose(std::array<real, kNumDofs>{-0.2_r, 0.2_r, 0.4_r, -0.5_r, 0.2_r, -0.6_r}, stageStartPos);
   real dtStage = 1e-2_r;
+  RigidDampingFn const exactFn = GetRigidDampingFn(GradTarget::Current, /*psdDRes*/ false);
 
   // Create assembly lambda and test
   auto assembler =
       [&](TransformRT const& pose, double* energy, RigidGradient* gradient, RigidHessian* hessian) {
-        AddRigidBodyDamping<GradTarget::Current>(
-            pose, damping, stageStartPos, dtStage, energy, gradient, hessian);
+        exactFn(pose, damping, stageStartPos, dtStage, energy, gradient, hessian);
       };
   TestConsistency(assembler, 1e-3_r, 4e-3_r);
 
@@ -568,13 +568,46 @@ TEST(RigidBodyAssembly, RigidBodyDampingCurrent) {
   Real3 expectedTorque = ToReal3(damping * vel.GetOmegaAndVSym().first);
 
   RigidGradient gradient{};
-  AddRigidBodyDamping<GradTarget::Current>(
-      pose, damping, stageStartPos, dtStage, nullptr, &gradient, nullptr);
+  exactFn(pose, damping, stageStartPos, dtStage, nullptr, &gradient, nullptr);
   Real3 force = Unflatten<Real3 const>(gradient)[0];
   Real3 torque = Unflatten<Real3 const>(gradient)[1];
 
   EXPECT_NEAR_TOL(force, expectedForce, 1e-3_r);
   EXPECT_NEAR_TOL(torque, expectedTorque, 1e-3_r);
+
+  // Under psdDRes, the damping's own rotational Hessian, not the accumulated block, is floored at
+  // kMinRotationalCurvatureRatio times its Gauss-Newton Hessian d I, d = damping / dtStage. At an
+  // angle theta about n from the stage start, its exact curvature is d cos(theta) along n and
+  // d (1 + cos(theta)) / 2 across it.
+  real const d = damping / dtStage;
+  Vec4r const n{2_r / 7_r, -3_r / 7_r, 6_r / 7_r};
+  auto hessianRot = [&](RigidDampingFn dampingFn, real theta, VMatrix3x3r const& seed = {}) {
+    TransformRT const rotated{
+        Quaternion::FromRotationVector(theta * n) * stageStartPos.GetRotation()};
+    RigidHessian hessian{};
+    StoreSubmatrix<3, 3, 6, 6>(hessian, Int2{3, 3}, seed);
+    dampingFn(rotated, damping, stageStartPos, dtStage, nullptr, nullptr, &hessian);
+    VMatrix3x3r rotational;
+    LoadSubmatrix<3, 3, 6, 6>(rotational, Int2{3, 3}, hessian);
+    return rotational;
+  };
+  RigidDampingFn const flooredFn = GetRigidDampingFn(GradTarget::Current, /*psdDRes*/ true);
+
+  // Within 60 degrees, the exact Hessian is kept bitwise.
+  EXPECT_EQ(ToNdArray3x3(hessianRot(flooredFn, 0.5_r)), ToNdArray3x3(hessianRot(exactFn, 0.5_r)));
+
+  VMatrix3x3r const seed = VDiagonalMatrix<3>(-d);
+  VMatrix3x3r const nn = Outer3(n, n);
+  for (real theta : {0.5_r, 1.3_r, 2.1_r, 3.1_r}) {
+    real const c = Cos(theta);
+    VMatrix3x3r const expected = d *
+        (Max(c, kMinRotationalCurvatureRatio) * nn +
+         Max(0.5_r * (1_r + c), kMinRotationalCurvatureRatio) * (VEye<3>() - nn));
+    EXPECT_NEAR_TOL(
+        ToNdArray3x3(hessianRot(flooredFn, theta, seed) - seed),
+        ToNdArray3x3(expected),
+        1e-4_r * d);
+  }
 }
 
 TEST(RigidBodyAssembly, RigidBodyDampingPrevious) {
@@ -589,7 +622,8 @@ TEST(RigidBodyAssembly, RigidBodyDampingPrevious) {
                        double* energy,
                        RigidGradient* gradient,
                        RigidHessian* hessian) {
-    AddRigidBodyDamping<GradTarget::Previous>(
+    // The Previous target ignores psdDRes
+    GetRigidDampingFn(GradTarget::Previous, /*psdDRes*/ true)(
         pose, damping, stageStartPos, dtStage, energy, gradient, hessian);
   };
   TestConsistency(assembler, 1e-3_r, 7e-3_r);

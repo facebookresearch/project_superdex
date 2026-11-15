@@ -2091,9 +2091,7 @@ void articulated::compound::AssembleDampingForces(
   auto const* joints = bodyShape.shape->GetJointsData();
   auto const jointTypes = joints->jointTypes;
   auto const dofInfo = joints->dofInfo;
-  auto dampingFuncRigidBody = params.gradTarget == GradTarget::Current
-      ? AddRigidBodyDamping<GradTarget::Current>
-      : AddRigidBodyDamping<GradTarget::Previous>;
+  auto const dampingFuncRigidBody = GetRigidDampingFn(params.gradTarget, params.psdDRes);
   auto assemblerRigidBody =
       [&](int i, double* energy, RigidGradient* gradient, RigidHessian* hessian) -> bool {
     MOCHI_ASSERT_VERBOSE_FREE_OR_SPHERICAL(jointTypes[i]);
