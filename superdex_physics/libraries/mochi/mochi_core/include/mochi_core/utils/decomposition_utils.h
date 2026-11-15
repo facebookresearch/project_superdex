@@ -113,6 +113,30 @@ inline void ProjectSymPsd(VMatrix2x2r& A, real eps = std::numeric_limits<real>::
 // Note that in reality we don't set the minimum eigenvalue to zero but add a small perturbation.
 inline void ProjectSymPsd(VMatrix3x3r& A, real eps = std::numeric_limits<real>::epsilon());
 
+/// @brief Returns whether the symmetric 3x3 matrix @p A is positive definite, that is, whether all
+/// pivots of its LDL^T factorization are positive.
+///
+/// @details It resolves eigenvalues down to a small multiple of eps times the largest, with eps the
+/// machine epsilon, even two of them at once; nearer zero, its answer depends on rounding.
+///
+/// @note Reads only the lower triangle of @p A.
+[[nodiscard]] MOCHI_FORCE_INLINE bool IsSpd(VMatrix3x3r const& A);
+
+/// @brief Returns the nearest symmetric 3x3 matrix X to @p S, in the Frobenius norm, above the
+/// positive semi-definite floor @p F, that is, with X - F positive semi-definite: F plus S - F with
+/// its negative eigenvalues clipped to zero.
+///
+/// @details Two margins keep the result above @p F after rounding and make it a fixed point. With
+/// eps the machine epsilon, @p S is returned unchanged only if S - F - m I is positive definite,
+/// with m = 16 eps (tr S + tr F). Otherwise, the eigenvalues of S - F below r = 32 eps (2 tr F +
+/// the sum of the positive eigenvalues of S - F) are raised to r.
+///
+/// @param[in] S The symmetric matrix to project.
+/// @param[in] F The floor, symmetric positive semi-definite.
+///
+/// @return @p S, or F + Q diag(max(lambda, r)) Q^T with S - F = Q diag(lambda) Q^T.
+[[nodiscard]] inline VMatrix3x3r ProjectSymAbove(VMatrix3x3r const& S, VMatrix3x3r const& F);
+
 /**************************************************************************************************
   Cholesky Decomposition
 */

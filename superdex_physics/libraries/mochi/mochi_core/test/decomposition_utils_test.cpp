@@ -335,6 +335,23 @@ static constexpr NdArray<real, 4> kTestMetrics2x2[] = {
     {4_r, -1_r, -1_r, 0.5_r},           // Moderate condition number.
     {1_r, 0.99_r, 0.99_r, 1_r},         // Near-singular SPD (high condition number).
 };
+static constexpr Matrix3x3r kTestMetrics3x3[] = {
+    // Identity.
+    Matrix3x3r{Real3{1_r, 0_r, 0_r}, Real3{0_r, 1_r, 0_r}, Real3{0_r, 0_r, 1_r}},
+    // Well-conditioned SPD.
+    Matrix3x3r{Real3{2_r, 0.5_r, 0_r}, Real3{0.5_r, 1_r, 0.2_r}, Real3{0_r, 0.2_r, 1.5_r}},
+    // Moderate condition number.
+    Matrix3x3r{Real3{4_r, -1_r, 0.5_r}, Real3{-1_r, 0.5_r, 0_r}, Real3{0.5_r, 0_r, 2_r}},
+    // Near-singular SPD (high condition number).
+    Matrix3x3r{Real3{1_r, 0.99_r, 0.99_r}, Real3{0.99_r, 1_r, 0.99_r}, Real3{0.99_r, 0.99_r, 1_r}},
+    // Ill-conditioned SPD (condition number about 2e4).
+    Matrix3x3r{Real3{1_r, 0.9999_r, 0_r}, Real3{0.9999_r, 1_r, 0_r}, Real3{0_r, 0_r, 1e-4_r}},
+    // A slender body's, rotated: eigenvalues 1, 1 and 1.24e-5.
+    Matrix3x3r{
+        Real3{0.2602491_r, -0.417464408_r, 0.135032593_r},
+        Real3{-0.417464408_r, 0.764411869_r, 0.0762030859_r},
+        Real3{0.135032593_r, 0.0762030859_r, 0.975351431_r}},
+};
 // clang-format on
 
 static constexpr int kNumMats3x3 = isize(kTestMatrices3x3);
@@ -520,6 +537,18 @@ static void VerifyPsdWithMetric(
   EXPECT_GE(eigvals[1], -epsEigenvalue);
 }
 
+// In single precision, checks that S' - floorRatio * M has positive leading minors in double.
+static void
+ExpectAboveFloorInDouble(Matrix3x3r const& SProj, Matrix3x3r const& M, real floorRatio) {
+  if constexpr (!MOCHI_USE_DOUBLE_PRECISION) {
+    auto const A = StaticCast<NdArray<double, 3, 3>>(SProj) -
+        double(floorRatio) * StaticCast<NdArray<double, 3, 3>>(M);
+    EXPECT_GT(A[0][0], 0.0);
+    EXPECT_GT(A[0][0] * A[1][1] - A[0][1] * A[1][0], 0.0);
+    EXPECT_GT(Det(A), 0.0);
+  }
+}
+
 /**************************************************************************************************
   Eigendecomposition: 2x2
 */
@@ -690,25 +719,22 @@ TEST(DecompositionUtils, LeftPolarDecomposition3x3) {
 TEST(DecompositionUtils, IsSpd) {
   constexpr real kEpsilon = 1e2_r * std::numeric_limits<real>::epsilon();
 
-  // Targeted Sylvester criterion branches.
-  // Branch 1: A₁₁ < 0 (first check fails).
+  // Targeted LDL^T pivot branches.
+  // Branch 1: first pivot < 0.
   EXPECT_FALSE(
-      details::IsSpd(
-          VMatrix3x3r{Vec4r{-1_r, 0_r, 0_r}, Vec4r{0_r, 100_r, 0_r}, Vec4r{0_r, 0_r, 100_r}}));
-  // Branch 2: A₁₁ > 0, 2×2 leading minor < 0 (second check fails).
+      IsSpd(VMatrix3x3r{Vec4r{-1_r, 0_r, 0_r}, Vec4r{0_r, 100_r, 0_r}, Vec4r{0_r, 0_r, 100_r}}));
+  // Branch 2: first pivot > 0, second pivot < 0.
   EXPECT_FALSE(
-      details::IsSpd(
-          VMatrix3x3r{Vec4r{1_r, 2_r, 0_r}, Vec4r{2_r, 1_r, 0_r}, Vec4r{0_r, 0_r, 100_r}}));
-  // Branch 3: A₁₁ > 0, 2×2 minor > 0, det(3x3) < 0 (third check fails).
+      IsSpd(VMatrix3x3r{Vec4r{1_r, 2_r, 0_r}, Vec4r{2_r, 1_r, 0_r}, Vec4r{0_r, 0_r, 100_r}}));
+  // Branch 3: first two pivots > 0, third pivot < 0.
   EXPECT_FALSE(
-      details::IsSpd(
-          VMatrix3x3r{Vec4r{2_r, 1_r, 2_r}, Vec4r{1_r, 2_r, 1_r}, Vec4r{2_r, 1_r, 1_r}}));
+      IsSpd(VMatrix3x3r{Vec4r{2_r, 1_r, 2_r}, Vec4r{1_r, 2_r, 1_r}, Vec4r{2_r, 1_r, 1_r}}));
   // All pass: identity.
-  EXPECT_TRUE(details::IsSpd(VEye<3>()));
+  EXPECT_TRUE(IsSpd(VEye<3>()));
 
   // Indefinite matrix with non-negative leading principal minors but negative non-leading principal
   // minors.
-  EXPECT_FALSE(details::IsSpd(VDiagonalMatrix<3>(Vec4r{1_r, 0_r, -1_r})));
+  EXPECT_FALSE(IsSpd(VDiagonalMatrix<3>(Vec4r{1_r, 0_r, -1_r})));
 
   // Rotated matrices with known eigenvalues.
   for (real scaling : kScalings) {
@@ -719,38 +745,42 @@ TEST(DecompositionUtils, IsSpd) {
       RotationVariantSvd3x3(ToSimdMatrix(A), U, sv, VT);
 
       // Test symmetric matrices with known eigenvalues.
-      EXPECT_TRUE(
-          details::IsSpd(Dot3x3(
-              U, Dot3x3(VDiagonalMatrix<3>(scaling * Vec4r{1_r, 2_r, 3_r}), Transpose3x3(U)))));
-      EXPECT_TRUE(
-          details::IsSpd(Dot3x3(
-              U,
-              Dot3x3(VDiagonalMatrix<3>(scaling * Vec4r{kEpsilon, 1_r, 1_r}), Transpose3x3(U)))));
-      EXPECT_TRUE(
-          details::IsSpd(Dot3x3(
-              U,
-              Dot3x3(VDiagonalMatrix<3>(scaling * Vec4r{1_r, kEpsilon, 1_r}), Transpose3x3(U)))));
-      EXPECT_TRUE(
-          details::IsSpd(Dot3x3(
-              U,
-              Dot3x3(VDiagonalMatrix<3>(scaling * Vec4r{1_r, 1_r, kEpsilon}), Transpose3x3(U)))));
+      EXPECT_TRUE(IsSpd(
+          Dot3x3(U, Dot3x3(VDiagonalMatrix<3>(scaling * Vec4r{1_r, 2_r, 3_r}), Transpose3x3(U)))));
+      EXPECT_TRUE(IsSpd(Dot3x3(
+          U, Dot3x3(VDiagonalMatrix<3>(scaling * Vec4r{kEpsilon, 1_r, 1_r}), Transpose3x3(U)))));
+      EXPECT_TRUE(IsSpd(Dot3x3(
+          U, Dot3x3(VDiagonalMatrix<3>(scaling * Vec4r{1_r, kEpsilon, 1_r}), Transpose3x3(U)))));
+      EXPECT_TRUE(IsSpd(Dot3x3(
+          U, Dot3x3(VDiagonalMatrix<3>(scaling * Vec4r{1_r, 1_r, kEpsilon}), Transpose3x3(U)))));
 
-      EXPECT_FALSE(
-          details::IsSpd(Dot3x3(
-              U, Dot3x3(VDiagonalMatrix<3>(scaling * Vec4r{-1_r, 2_r, 3_r}), Transpose3x3(U)))));
-      EXPECT_FALSE(
-          details::IsSpd(Dot3x3(
-              U,
-              Dot3x3(VDiagonalMatrix<3>(scaling * Vec4r{-kEpsilon, 1_r, 1_r}), Transpose3x3(U)))));
-      EXPECT_FALSE(
-          details::IsSpd(Dot3x3(
-              U,
-              Dot3x3(VDiagonalMatrix<3>(scaling * Vec4r{1_r, -kEpsilon, 1_r}), Transpose3x3(U)))));
-      EXPECT_FALSE(
-          details::IsSpd(Dot3x3(
-              U,
-              Dot3x3(VDiagonalMatrix<3>(scaling * Vec4r{1_r, 1_r, -kEpsilon}), Transpose3x3(U)))));
+      EXPECT_FALSE(IsSpd(
+          Dot3x3(U, Dot3x3(VDiagonalMatrix<3>(scaling * Vec4r{-1_r, 2_r, 3_r}), Transpose3x3(U)))));
+      EXPECT_FALSE(IsSpd(Dot3x3(
+          U, Dot3x3(VDiagonalMatrix<3>(scaling * Vec4r{-kEpsilon, 1_r, 1_r}), Transpose3x3(U)))));
+      EXPECT_FALSE(IsSpd(Dot3x3(
+          U,
+          Dot3x3(VDiagonalMatrix<3>(scaling * Vec4r{1_r, -kEpsilon, kEpsilon}), Transpose3x3(U)))));
+      EXPECT_FALSE(IsSpd(Dot3x3(
+          U, Dot3x3(VDiagonalMatrix<3>(scaling * Vec4r{1_r, 1_r, -kEpsilon}), Transpose3x3(U)))));
     }
+  }
+
+  // The pivots are robust to the scale of normal entries: s * [[1, 0, 0], [0, 1, c], [0, c, 1]] is
+  // positive definite if and only if |c| < 1.
+  auto const coupled = [](real s, real c) {
+    return s * VMatrix3x3r{Vec4r{1_r, 0_r, 0_r}, Vec4r{0_r, 1_r, c}, Vec4r{0_r, c, 1_r}};
+  };
+  EXPECT_FALSE(IsSpd(coupled(1e8_r * std::numeric_limits<real>::min(), 1.25_r)));
+  EXPECT_TRUE(IsSpd(coupled(4_r * Sqrt(std::numeric_limits<real>::max()), 0.5_r)));
+  // They also resolve two small eigenvalues at once, at any scale:
+  // s * [[1, c, c], [c, 1, c], [c, c, 1]] has eigenvalues s (1 + 2c), s (1 - c) and s (1 - c).
+  auto const dense = [](real s, real c) {
+    return s * VMatrix3x3r{Vec4r{1_r, c, c}, Vec4r{c, 1_r, c}, Vec4r{c, c, 1_r}};
+  };
+  for (real scaling : kScalings) {
+    EXPECT_TRUE(IsSpd(dense(scaling, 1_r - kEpsilon)));
+    EXPECT_FALSE(IsSpd(dense(scaling, 1_r + kEpsilon)));
   }
 }
 
@@ -1006,6 +1036,75 @@ TEST(DecompositionUtils, ProjectPsdWithMetric) {
         // Verify the projection is idempotent.
         VMatrix2x2r const SProjAgain = ProjectPsdWithMetric(SProj, M, epsCholesky, epsEigenvalue);
         EXPECT_LE(Norm(ToNdArray2x2(SProjAgain - SProj)), kPsdRelTol * Norm(SProjNd));
+      }
+    }
+  }
+}
+
+TEST(DecompositionUtils, ProjectSymAbove) {
+  // Floors kFloorRatio * M. S = R·Q·diag(λ)·Qᵀ·Rᵀ, with M = R·Rᵀ, is above the floor where λ
+  // exceeds kFloorRatio.
+  real constexpr kFloorRatio = 0.5_r;
+  real constexpr kRelTol = 8_r * kStableEigenRelTol;
+  Matrix3x3r const offDiagonal{Real3{0_r, 1_r, 1_r}, Real3{1_r, 0_r, -1_r}, Real3{1_r, -1_r, 0_r}};
+  for (auto const& metric : kTestMetrics3x3) {
+    for (real scaling : kScalings) {
+      // R = V·diag(√μ)·Vᵀ, with M = V·diag(μ)·Vᵀ.
+      Matrix3x3r const MNd = scaling * metric;
+      VMatrix3x3r const M = ToSimdMatrix(MNd);
+      Real3 mu;
+      Matrix3x3r VT;
+      AnalyticalEigendecompSym(MNd, mu, &VT, /*transpose*/ true);
+      Real3 const sqrtMu{Sqrt(mu[0]), Sqrt(mu[1]), Sqrt(mu[2])};
+      Matrix3x3r const R = Dot(Transpose(VT), Dot(DiagonalMatrix(sqrtMu), VT));
+
+      // Far above the floor in every direction, S is returned unchanged.
+      Matrix3x3r const SKept = MNd + Norm(MNd) * Eye<3>();
+      EXPECT_EQ(ToNdArray3x3(ProjectSymAbove(ToSimdMatrix(SKept), kFloorRatio * M)), SKept);
+
+      // The projection above F = floorRatio * M is F + Q diag(max(lambda, r)) Q^T, with
+      // S - F = Q diag(lambda) Q^T, up to the rounding margins; it is above F after rounding, and
+      // idempotent.
+      auto const expectProjectedAbove = [&](Matrix3x3r const& S, real floorRatio) {
+        Matrix3x3r const floorNd = floorRatio * MNd;
+        VMatrix3x3r const floor = floorRatio * M;
+        VMatrix3x3r const SAbove = ProjectSymAbove(ToSimdMatrix(S), floor);
+        Matrix3x3r const SAboveNd = ToNdArray3x3(SAbove);
+        Real3 excessEigs;
+        Matrix3x3r excessQT;
+        AnalyticalEigendecompSym(S - floorNd, excessEigs, &excessQT, /*transpose*/ true);
+        real const raisedMargin = 32_r * std::numeric_limits<real>::epsilon() *
+            (2_r * Trace(floorNd) + Sum(Max(excessEigs, 0_r)));
+        Matrix3x3r const expectedAbove = floorNd +
+            Dot(Transpose(excessQT), Dot(DiagonalMatrix(Max(excessEigs, raisedMargin)), excessQT));
+        EXPECT_LE(Norm(SAboveNd - expectedAbove), kRelTol * Max(Norm(S), Norm(expectedAbove)));
+        ExpectAboveFloorInDouble(SAboveNd, MNd, floorRatio);
+        EXPECT_EQ(ToNdArray3x3(ProjectSymAbove(SAbove, floor)), SAboveNd);
+      };
+      expectProjectedAbove(SKept, kFloorRatio);
+      expectProjectedAbove(1e4_r * Norm(MNd) * offDiagonal, kFloorRatio);
+      expectProjectedAbove(Matrix3x3r{}, kFloorRatio);
+
+      for (auto const& mat : kTestMatricesSym3x3) {
+        Real3 sv;
+        Matrix3x3r QT;
+        AnalyticalEigendecompSym(mat, sv, &QT, /*transpose*/ true);
+        Matrix3x3r const RQ = Dot(R, Transpose(QT));
+        auto const congruence = [&](Real3 const& eigs) {
+          return Dot(RQ, Dot(DiagonalMatrix(eigs), Transpose(RQ)));
+        };
+        expectProjectedAbove(congruence(Real3{1e4_r, 1e4_r, -1_r}), kFloorRatio);
+
+        // S and the floor at other scales than M.
+        for (real sScaling : {1e-3_r, 1_r, 1e3_r}) {
+          for (Real3 const& eigs :
+               {Real3{2_r, 0.25_r, -1_r},
+                Real3{-1_r, -2_r, -3_r},
+                Real3{2_r, 1_r, 1.001_r * kFloorRatio},
+                Real3{2_r, 1_r, 0.999_r * kFloorRatio}}) {
+            expectProjectedAbove(congruence(sScaling * eigs), sScaling * kFloorRatio);
+          }
+        }
       }
     }
   }

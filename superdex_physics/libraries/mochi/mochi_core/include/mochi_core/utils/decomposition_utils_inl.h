@@ -657,25 +657,24 @@ inline void LeftPolarDecomposition3x3(VMatrix3x3r const& A, VMatrix3x3r& U, VMat
   Positive Semi-Definite Projection of Symmetric Matrices.
 */
 
-namespace details {
-
-/// @brief Cheap heuristic check for symmetric positive-definiteness (SPD) of a 3x3 matrix.
-/// @details Uses Sylvester's strict leading-minor criterion: the three leading principal minors
-/// must be strictly positive.
-/// @note Assumes @p A is symmetric without verifying it.
-[[nodiscard]] inline bool IsSpd(VMatrix3x3r const& A) {
-  if (Get<0>(A[0]) <= 0_r) {
+[[nodiscard]] MOCHI_FORCE_INLINE bool IsSpd(VMatrix3x3r const& A) {
+  real const d0 = Get<0>(A[0]);
+  if (!(d0 > 0_r)) {
     return false;
-  } else if ((Get<0>(A[0]) * Get<1>(A[1]) - Get<0>(A[1]) * Get<1>(A[0])) <= 0_r) {
-    return false;
-  } else if (Det3x3(A) <= 0_r) {
-    return false;
-  } else {
-    return true;
   }
+  real const invD0 = 1_r / d0;
+  real const a10 = Get<0>(A[1]);
+  real const l10 = a10 * invD0;
+  real const d1 = Get<1>(A[1]) - l10 * a10;
+  if (!(d1 > 0_r)) {
+    return false;
+  }
+  real const a20 = Get<0>(A[2]);
+  real const l20 = a20 * invD0;
+  real const l21d1 = Get<1>(A[2]) - l20 * a10;
+  // Dividing before multiplying avoids the underflow and overflow of the square of l21d1.
+  return Get<2>(A[2]) - l20 * a20 - l21d1 * (l21d1 / d1) > 0_r;
 }
-
-} // namespace details
 
 inline void ProjectSymPsd(VMatrix2x2r& A, real eps) {
   MOCHI_ASSERT_VERBOSE(eps >= 0_r, "Negative eps.");
@@ -707,11 +706,9 @@ inline void ProjectSymPsd(VMatrix2x2r& A, real eps) {
 inline void ProjectSymPsd(VMatrix3x3r& A, real eps) {
   MOCHI_ASSERT_VERBOSE(eps >= 0_r, "Negative eps.");
   // To improve performance and avoid accumulation of finite precision errors, project only if not
-  // already positive definite. The fast-path predicate is intentionally a strict-Sylvester PD check
-  // rather than a full PSD check: it requires only the three leading principal minors (cheap)
-  // instead of all seven principal minors needed for a PSD test. Singular PSD matrices fall through
-  // to the eigendecomposition and are projected correctly.
-  if (!details::IsSpd(A)) {
+  // already positive definite. Singular PSD matrices fall through to the eigendecomposition and are
+  // projected correctly.
+  if (!IsSpd(A)) {
     // Perform eigendecomposition.
     Vec4r L;
     VMatrix3x3r QT;
@@ -720,6 +717,24 @@ inline void ProjectSymPsd(VMatrix3x3r& A, real eps) {
     // Perform projection.
     A = Dot3x3(Transpose3x3(QT), Dot3x3(VDiagonalMatrix<3>(Max(L, Vec4r{eps})), QT));
   }
+}
+
+[[nodiscard]] inline VMatrix3x3r ProjectSymAbove(VMatrix3x3r const& S, VMatrix3x3r const& F) {
+  // Keep S only if S - F is positive definite by more than its rounding error
+  real constexpr kRoundingRelTol = 16_r * std::numeric_limits<real>::epsilon();
+  real const traceF = Trace3x3(F);
+  real const margin = kRoundingRelTol * (Trace3x3(S) + traceF);
+  VMatrix3x3r const excess = S - F;
+  if (IsSpd(excess - VDiagonalMatrix<3>(margin))) {
+    return S;
+  }
+
+  // Raise to r so that the result stays above F after rounding and a second call keeps it
+  Vec4r eigvals MOCHI_NO_INIT;
+  VMatrix3x3r QT MOCHI_NO_INIT;
+  AnalyticalEigendecompSym3x3(SimdFullToSym(excess), eigvals, &QT);
+  real const raisedMargin = 2_r * kRoundingRelTol * (2_r * traceF + HSum<3>(Max(eigvals, Vec4r{})));
+  return F + Dot3x3(Transpose3x3(QT) * Max(eigvals, Vec4r{raisedMargin}), QT);
 }
 
 inline VMatrix2x2r CholeskySym2x2(VMatrix2x2r const& A, real eps) {
