@@ -950,13 +950,20 @@ inline void BatchedProjectSymPsd(BatchReal3x3<kBatchSize>& A, real eps) {
       V{0.5_r} * (A[0][2] + A[2][0]),
       V{0.5_r} * (A[1][2] + A[2][1])};
 
-  // Skip the eigendecomposition when every lane is already SPD based on strict Sylvester check on
-  // the three leading principal minors.
-  V const minor1 = sym[0];
-  V const minor2 = sym[0] * sym[1] - sym[3] * sym[3];
-  V const minor3 = sym[0] * (sym[1] * sym[2] - sym[5] * sym[5]) -
-      sym[3] * (sym[3] * sym[2] - sym[5] * sym[4]) + sym[4] * (sym[3] * sym[5] - sym[1] * sym[4]);
-  if (AllTrue<kBatchSize>(Min(minor1, minor2, minor3) > V{0_r})) {
+  // Skip the eigendecomposition when the LDLᵀ pivots of every lane are positive, i.e., when every
+  // lane is already positive definite.
+  V const zero = V{0_r};
+  V const d0 = sym[0];
+  V const invD0 = V{1_r} / d0;
+  V const l10 = sym[3] * invD0;
+  V const d1 = sym[1] - l10 * sym[3];
+  V const l20 = sym[4] * invD0;
+  V const l21d1 = sym[5] - l20 * sym[3];
+
+  // Dividing before multiplying avoids the underflow and overflow of the square of l21d1.
+  V const d2 = sym[2] - l20 * sym[4] - l21d1 * (l21d1 / d1);
+
+  if (AllTrue<kBatchSize>((d0 > zero) && (d1 > zero) && (d2 > zero))) {
     return;
   }
 

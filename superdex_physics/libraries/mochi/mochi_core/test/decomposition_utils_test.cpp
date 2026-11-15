@@ -549,6 +549,38 @@ ExpectAboveFloorInDouble(Matrix3x3r const& SProj, Matrix3x3r const& M, real floo
   }
 }
 
+// Projects the batch of mats with eps = scaling * kPsdRelTol, and checks each lane: if every lane
+// is positive definite, the batch is unchanged; otherwise, each lane is Q·max(Λ, eps)·Qᵀ, with
+// Q·Λ·Qᵀ its scalar eigendecomposition, up to both eigendecompositions' errors, which clamping
+// eigenvalues doesn't amplify. The checks undo the scaling, since the norm of a scaled matrix may
+// overflow.
+template <int kBatchSize>
+static void VerifyBatchedProjectSymPsd(
+    std::array<Matrix3x3r, kBatchSize> const& mats,
+    real scaling,
+    bool allPositiveDefinite) {
+  real const eps = scaling * kPsdRelTol;
+  BatchReal3x3<kBatchSize> batch = LoadBatchMatrix3x3<kBatchSize>(MakeConstSpan(mats));
+  BatchedProjectSymPsd<kBatchSize>(batch, eps);
+  std::array<Matrix3x3r, kBatchSize> projected{};
+  StoreBatchMatrix3x3<kBatchSize>(batch, MakeSpan(projected));
+
+  if (allPositiveDefinite) {
+    EXPECT_EQ(projected, mats);
+    return;
+  }
+
+  for (int i = 0; i < kBatchSize; ++i) {
+    Real3 eigvals;
+    Matrix3x3r QT;
+    AnalyticalEigendecompSym(mats[i], eigvals, &QT, /*transpose*/ true);
+    Matrix3x3r const expected = Dot(Transpose(QT), Dot(DiagonalMatrix(Max(eigvals, eps)), QT));
+    EXPECT_LE(
+        Norm((projected[i] - expected) / scaling),
+        2_r * kStableEigenRelTol * Max(Norm(mats[i] / scaling), 1_r));
+  }
+}
+
 /**************************************************************************************************
   Eigendecomposition: 2x2
 */
@@ -1219,41 +1251,55 @@ MOCHI_BATCH_TEST(DecompositionUtils, BatchedSvd3x3_MixedLane, TestBatchedSvd3x3M
 
 template <int kBatchSize>
 static void TestBatchedProjectSymPsd() {
+  // Lanes with different projections. Only the first is positive definite.
   std::array<Matrix3x3r, kBatchSize> mats{};
   for (int i = 0; i < kBatchSize; ++i) {
     mats[i] = kMixedLaneMatsPsd3x3[i % kNumMixedLaneMatsPsd3x3];
   }
+  VerifyBatchedProjectSymPsd<kBatchSize>(mats, 1_r, /*allPositiveDefinite*/ kBatchSize == 1);
 
-  // Scalar reference.
-  std::array<Matrix3x3r, kBatchSize> expected{};
-  for (int i = 0; i < kBatchSize; ++i) {
-    VMatrix3x3r v = ToSimdMatrix(mats[i]);
-    ProjectSymPsd(v);
-    expected[i] = ToNdArray3x3(v);
+  // A batch is kept if and only if every lane is positive definite, at every scaling, including
+  // ones at which squares of the entries overflow or underflow. The batches hold s·[[1, c, c], [c,
+  // 1, c], [c, c, 1]], with eigenvalues s (1 + 2c), s (1 - c) and s (1 - c), for c = 1 - kEpsilon,
+  // and in turn in one lane, a matrix that isn't positive definite: the same for c = 1 + kEpsilon,
+  // s·[[1, 0, 0.8], [0, 1, 0.8], [0.8, 0.8, 1]], or Q·diag(s λ)·Qᵀ, for λ = (3, 2, -1) or (1,
+  // kEpsilon, -kEpsilon). The eigenvectors Q of kTestMatricesSym3x3 include permutations, which
+  // make each LDLᵀ pivot negative alone.
+  constexpr real kEpsilon = 1e2_r * std::numeric_limits<real>::epsilon();
+  auto const dense = [](real s, real c) {
+    return s * Matrix3x3r{Real3{1_r, c, c}, Real3{c, 1_r, c}, Real3{c, c, 1_r}};
+  };
+  std::array<Matrix3x3r, kNumMatsSym3x3> rotations{};
+  for (int i = 0; i < kNumMatsSym3x3; ++i) {
+    Real3 eigvals;
+    AnalyticalEigendecompSym(kTestMatricesSym3x3[i], eigvals, &rotations[i], /*transpose*/ true);
   }
 
-  // Batched.
-  using V = BatchReal<kBatchSize>;
-  BatchReal3x3<kBatchSize> aBatch{};
-  alignas(alignof(V)) real staging[V::kSize]{};
-  for (int k = 0; k < 9; ++k) {
-    int const row = k / 3;
-    int const col = k % 3;
-    for (int i = 0; i < kBatchSize; ++i) {
-      staging[i] = mats[i][row][col];
+  DynamicArray<real> scalings(kEigenScalings.begin(), kEigenScalings.end());
+  scalings.push_back(Sqrt(std::numeric_limits<real>::min()) * std::numeric_limits<real>::epsilon());
+
+  int lane = 0;
+  for (real scaling : scalings) {
+    DynamicArray<Matrix3x3r> notPositiveDefinite = {
+        dense(scaling, 1_r + kEpsilon),
+        scaling *
+            Matrix3x3r{Real3{1_r, 0_r, 0.8_r}, Real3{0_r, 1_r, 0.8_r}, Real3{0.8_r, 0.8_r, 1_r}}};
+    for (Matrix3x3r const& QT : rotations) {
+      for (Real3 const& spectrum : {Real3{3_r, 2_r, -1_r}, Real3{1_r, kEpsilon, -kEpsilon}}) {
+        notPositiveDefinite.push_back(
+            Dot(Transpose(QT), Dot(DiagonalMatrix(scaling * spectrum), QT)));
+      }
     }
-    aBatch[row][col] = Load<V>(staging);
-  }
-  BatchedProjectSymPsd<kBatchSize>(aBatch);
 
-  for (int i = 0; i < kBatchSize; ++i) {
-    for (int k = 0; k < 9; ++k) {
-      int const row = k / 3;
-      int const col = k % 3;
-      EXPECT_NEAR(
-          aBatch[row][col][i],
-          expected[i][row][col],
-          Max(kPsdRelTol * Abs(expected[i][row][col]), kPsdAbsTol));
+    Matrix3x3r const positiveDefinite = dense(scaling, 1_r - kEpsilon);
+    mats.fill(positiveDefinite);
+    VerifyBatchedProjectSymPsd<kBatchSize>(mats, scaling, /*allPositiveDefinite*/ true);
+
+    for (Matrix3x3r const& mat : notPositiveDefinite) {
+      mats.fill(positiveDefinite);
+      mats[lane] = mat;
+      lane = (lane + 1) % kBatchSize;
+      VerifyBatchedProjectSymPsd<kBatchSize>(mats, scaling, /*allPositiveDefinite*/ false);
     }
   }
 }
