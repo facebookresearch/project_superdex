@@ -18,10 +18,13 @@
 
 #include <mochi_core/articulated_body/articulated_body_params.h>
 #include <mochi_core/utils/activations.h>
+#include <mochi_core/utils/decomposition_utils.h>
 #include <mochi_core/utils/differentiability.h>
 #include <mochi_core/utils/dtransform.h>
 #include <mochi_core/utils/lie.h>
 #include <mochi_core/utils/rigid_body_utils.h>
+
+#include <limits>
 
 namespace mochi {
 
@@ -64,6 +67,14 @@ inline void AddRigidBodyGravity(
 }
 
 /**
+ * @brief Under PSD projection, the minimum curvature of a rigid body's rotational inertia, as a
+ * fraction of its Gauss-Newton curvature. When the extrapolated rotation is orthonormal, an
+ * isotropic body's smallest exact curvature at an angle phi from it is cos(phi) times its
+ * Gauss-Newton curvature, so 1/2 leaves its Hessian exact within about 60 degrees.
+ */
+inline constexpr real kMinInertiaCurvatureRatio = 0.5_r;
+
+/**
  * @brief Adds rigid-body inertia terms derived from a merit function as presented in the Rigid IPC
  *paper.
  *
@@ -74,7 +85,13 @@ inline void AddRigidBodyGravity(
  * @tparam kGradTarget The gradient target type. Effectively, given the merit as f( qk, qk-1, Dqk-1)
  *the template dictates whether we return derivatives wrt to qk (aka Current), qk-1 (aka Previous),
  *or Dqk-1 (aka PreviousDelta). Possible values: GradTarget::Previous, GradTarget::PreviousDelta,
- * GradTarget::Current (default).
+ * GradTarget::Current.
+ * @tparam kPsdDRes If true, the rotational Hessian of these terms, not the accumulated block of
+ * @p outHessian, is projected with @ref ProjectSymAbove above @ref kMinInertiaCurvatureRatio *
+ * (G + 16 eps tr(W) I), with G = tr(W) I - R W R^T the Gauss-Newton Hessian, R the current
+ * rotation and W the second moment over @p dtStage^2. Without a positive definite floor, as for
+ * zero inertia, it is projected to be positive semi-definite. Requires @ref GradTarget::Current:
+ * the other targets' Hessians are mixed second derivatives, which are not symmetric.
  * @tparam InertiaT The type for the second moment of inertia: real (isotropic inertia), Vec4r
  * (anisotropic unrotated inertia), VMatrix3x3r (arbitrary second moment of inertia).
  *
@@ -93,7 +110,7 @@ inline void AddRigidBodyGravity(
  * @param[out] outNonPotential Unused, as these terms have a potential. For dispatch with
  * @ref AddRigidBodyInertiaNewtonEuler.
  */
-template <GradTarget kGradTarget, typename InertiaT>
+template <GradTarget kGradTarget, bool kPsdDRes, typename InertiaT>
 inline void AddRigidBodyInertiaFromMerit(
     real mass,
     InertiaT const& inertia,
@@ -105,6 +122,9 @@ inline void AddRigidBodyInertiaFromMerit(
     RigidGradient* outGradient,
     RigidHessian* outHessian,
     RigidNonPotentialTerms* /*outNonPotential*/ = nullptr) {
+  static_assert(
+      !kPsdDRes || kGradTarget == GradTarget::Current,
+      "PSD projection requires GradTarget::Current");
   // Early exit if no outputs are requested
   if (!outEnergy && !outGradient && !outHessian) {
     return;
@@ -206,7 +226,21 @@ inline void AddRigidBodyInertiaFromMerit(
     VMatrix3x3r outHessianRot;
     LoadSubmatrix<3, 3, 6, 6>(outHessianRot, Int2{3, 3}, *outHessian);
     if constexpr (kGradTarget == GradTarget::Current) {
-      outHessianRot += lie::WeightedRotationDifferenceHessian(energyRotMatrix);
+      VMatrix3x3r hessianRot = lie::WeightedRotationDifferenceHessian(energyRotMatrix);
+      if constexpr (kPsdDRes) {
+        // The Gauss-Newton Hessian tr(W) I - R W R^T, shifted above its rounding error so that a
+        // line-like body's is positive definite
+        real constexpr kRoundingRelTol = 16_r * std::numeric_limits<real>::epsilon();
+        VMatrix3x3r const rotatedInertia = RotateInertia(scaledInertia, currRot);
+        VMatrix3x3r const gaussNewton =
+            VDiagonalMatrix<3>((1_r + kRoundingRelTol) * Trace3x3(rotatedInertia)) - rotatedInertia;
+        if (IsSpd(gaussNewton)) {
+          hessianRot = ProjectSymAbove(hessianRot, kMinInertiaCurvatureRatio * gaussNewton);
+        } else {
+          ProjectSymPsd(hessianRot);
+        }
+      }
+      outHessianRot += hessianRot;
     } else {
       outHessianRot += Dot3x3(lie::WeightedRotationDifferenceHessianMixed(energyRotMatrix), chain);
       if constexpr (kGradTarget == GradTarget::Previous) {
@@ -225,11 +259,13 @@ inline void AddRigidBodyInertiaFromMerit(
  * does not derive from a merit. The function computes an approximate merit and an approximate
  * Hessian. If a merit-based inertia is needed, use AddRigidBodyInertiaFromMerit().
  *
- * @tparam InertiaT The type for the first moment of inertia: real (isotropic inertia), Vec4r
- * (anisotropic unrotated inertia), VMatrix3x3r (arbitrary first moment of inertia).
+ * @tparam kPsdDRes If true, the rotational Hessian of these terms, not the accumulated block of
+ * @p outHessian, is projected to be positive semi-definite.
+ * @tparam InertiaT The type for the moment of inertia: real (isotropic inertia), Vec4r (anisotropic
+ * unrotated inertia), VMatrix3x3r (arbitrary moment of inertia).
  *
  * @param mass The mass of the rigid body.
- * @param inertia The first moment of inertia of the rigid body.
+ * @param inertia The moment of inertia of the rigid body.
  * @param dtStage The time step duration of the current stage.
  * @param state The current transform state of the rigid body (position and rotation).
  * @param stageStartPos The transform state at the start of the current stage.
@@ -242,8 +278,13 @@ inline void AddRigidBodyInertiaFromMerit(
  *nullptr if not needed.
  * @param[out] outNonPotential Pointer to also accumulate the rotational energy and gradient, as
  * these terms have no potential. Can be nullptr if not needed.
+ *
+ * @note With @p kPsdDRes, the rotational Hessian needs no floor, unlike in
+ * @ref AddRigidBodyInertiaFromMerit: it equals that function's Gauss-Newton Hessian, the rotated
+ * @p inertia over @p dtStage^2, which is positive semi-definite unless a principal moment of
+ * inertia is negative.
  */
-template <typename InertiaT>
+template <bool kPsdDRes, typename InertiaT>
 inline void AddRigidBodyInertiaNewtonEuler(
     real mass,
     InertiaT const& inertia,
@@ -307,9 +348,13 @@ inline void AddRigidBodyInertiaNewtonEuler(
     StoreSubmatrix<3, 3, 6, 6>(*outHessian, Int2{0, 0}, outHessianCom);
 
     // The rotation hessian is accurate only if the assumptions of the merit hold.
+    VMatrix3x3r hessianRot = M * dtStage2i;
+    if constexpr (kPsdDRes) {
+      ProjectSymPsd(hessianRot);
+    }
     VMatrix3x3r outHessianRot;
     LoadSubmatrix<3, 3, 6, 6>(outHessianRot, Int2{3, 3}, *outHessian);
-    outHessianRot += M * dtStage2i;
+    outHessianRot += hessianRot;
     StoreSubmatrix<3, 3, 6, 6>(*outHessian, Int2{3, 3}, outHessianRot);
   }
 }
@@ -328,7 +373,8 @@ using RigidInertiaFn = void (*)(
     RigidHessian*,
     RigidNonPotentialTerms*);
 template <typename InertiaT>
-inline RigidInertiaFn<InertiaT> GetRigidInertiaFn(GradTarget gradTarget, bool useNewtonEuler) {
+inline RigidInertiaFn<InertiaT>
+GetRigidInertiaFn(GradTarget gradTarget, bool useNewtonEuler, bool psdDRes) {
   static_assert(
       static_cast<int>(GradTarget::Count) == 5,
       "Please update the switch statement below if GradTarget enum changes");
@@ -337,20 +383,25 @@ inline RigidInertiaFn<InertiaT> GetRigidInertiaFn(GradTarget gradTarget, bool us
     MOCHI_ASSERT_VERBOSE(
         gradTarget == GradTarget::Current,
         "Newton-Euler inertia is not supported with differentiability");
-    return AddRigidBodyInertiaNewtonEuler<InertiaT>;
+    return psdDRes ? AddRigidBodyInertiaNewtonEuler</*kPsdDRes*/ true, InertiaT>
+                   : AddRigidBodyInertiaNewtonEuler</*kPsdDRes*/ false, InertiaT>;
   } else {
-    // clang-format off
     switch (gradTarget) {
       case GradTarget::Current:
-        return AddRigidBodyInertiaFromMerit<GradTarget::Current, InertiaT>;
+        return psdDRes
+            ? AddRigidBodyInertiaFromMerit<GradTarget::Current, /*kPsdDRes*/ true, InertiaT>
+            : AddRigidBodyInertiaFromMerit<GradTarget::Current, /*kPsdDRes*/ false, InertiaT>;
       case GradTarget::Previous:
-        return AddRigidBodyInertiaFromMerit<GradTarget::Previous, InertiaT>;
+        return AddRigidBodyInertiaFromMerit<GradTarget::Previous, /*kPsdDRes*/ false, InertiaT>;
       case GradTarget::PreviousDelta:
-        return AddRigidBodyInertiaFromMerit<GradTarget::PreviousDelta, InertiaT>;
-      MOCHI_UNLIKELY default: MOCHI_ASSERT_VERBOSE(false, "Unexpected grad target");
+        return AddRigidBodyInertiaFromMerit<
+            GradTarget::PreviousDelta,
+            /*kPsdDRes*/ false,
+            InertiaT>;
+      MOCHI_UNLIKELY default:
+        MOCHI_ASSERT_VERBOSE(false, "Unexpected grad target");
         return nullptr;
     }
-    // clang-format on
   }
 }
 

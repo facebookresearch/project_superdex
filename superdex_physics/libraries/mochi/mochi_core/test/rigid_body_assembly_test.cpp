@@ -16,12 +16,15 @@
 
 #include <mochi_core/test/mochi_test_helpers.h>
 
+#include <mochi_core/utils/matrix_utils.h>
 #include <mochi_core/utils/nd_array_utils.h>
 #include <mochi_core/utils/rigid_body_assembly.h>
 
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <array>
+#include <limits>
+#include <utility>
 
 using namespace mochi;
 
@@ -253,7 +256,7 @@ TEST(MultiBody, RigidBodyInertiaFromMerit) {
   // Create assembly lambda and test
   auto assembler =
       [&](TransformRT const& pose, double* energy, RigidGradient* gradient, RigidHessian* hessian) {
-        AddRigidBodyInertiaFromMerit<GradTarget::Current>(
+        AddRigidBodyInertiaFromMerit<GradTarget::Current, /*kPsdDRes*/ false>(
             mass, inertia, dtStage, pose, stageStartPos, stageStartVel, energy, gradient, hessian);
       };
   TestConsistency(assembler, 1e-3_r, 4e-3_r);
@@ -276,7 +279,7 @@ TEST(MultiBody, RigidBodyInertiaFromMerit_GradPrevPose) {
 
   // Create assembly lambda and test
   auto assembler = [&](TransformRT const& stageStartPos, double* energy, RigidGradient* gradient) {
-    AddRigidBodyInertiaFromMerit<GradTarget::Previous>(
+    AddRigidBodyInertiaFromMerit<GradTarget::Previous, /*kPsdDRes*/ false>(
         mass, inertia, dtStage, pose, stageStartPos, stageStartVel, energy, gradient, nullptr);
   };
   TestConsistency(assembler, 1e-3_r);
@@ -286,7 +289,7 @@ TEST(MultiBody, RigidBodyInertiaFromMerit_GradPrevPose) {
   SetPose(kPoseValsRef, stageStartPos);
   double energyOriginal{};
   double energyTest{};
-  AddRigidBodyInertiaFromMerit<GradTarget::Current>(
+  AddRigidBodyInertiaFromMerit<GradTarget::Current, /*kPsdDRes*/ false>(
       mass,
       inertia,
       dtStage,
@@ -296,7 +299,7 @@ TEST(MultiBody, RigidBodyInertiaFromMerit_GradPrevPose) {
       &energyOriginal,
       nullptr,
       nullptr);
-  AddRigidBodyInertiaFromMerit<GradTarget::Previous>(
+  AddRigidBodyInertiaFromMerit<GradTarget::Previous, /*kPsdDRes*/ false>(
       mass, inertia, dtStage, pose, stageStartPos, stageStartVel, &energyTest, nullptr, nullptr);
 
   EXPECT_NEAR(energyTest / energyOriginal, 1_r, 1e-6_r);
@@ -323,7 +326,7 @@ TEST(MultiBody, RigidBodyInertiaFromMerit_GradPrevPoseIncrement) {
             stageStartDeltaPos.GetRotation().GetConjugate() * stageStartPos.GetRotation(),
             stageStartPos.VGetTranslation() - stageStartDeltaPos.VGetTranslation()};
         stageStartVel.SetFromFiniteDifferencePose(oldPose, stageStartPos, dtStage);
-        AddRigidBodyInertiaFromMerit<GradTarget::PreviousDelta>(
+        AddRigidBodyInertiaFromMerit<GradTarget::PreviousDelta, /*kPsdDRes*/ false>(
             mass, inertia, dtStage, pose, stageStartPos, stageStartVel, energy, gradient, nullptr);
       };
   TestConsistency(assembler, 1e-3_r);
@@ -335,7 +338,7 @@ TEST(MultiBody, RigidBodyInertiaFromMerit_GradPrevPoseIncrement) {
   stageStartVel.UpdateVSymIfDirty(dtStage);
   double energyOriginal{};
   double energyTest{};
-  AddRigidBodyInertiaFromMerit<GradTarget::Current>(
+  AddRigidBodyInertiaFromMerit<GradTarget::Current, /*kPsdDRes*/ false>(
       mass,
       inertia,
       dtStage,
@@ -345,7 +348,7 @@ TEST(MultiBody, RigidBodyInertiaFromMerit_GradPrevPoseIncrement) {
       &energyOriginal,
       nullptr,
       nullptr);
-  AddRigidBodyInertiaFromMerit<GradTarget::PreviousDelta>(
+  AddRigidBodyInertiaFromMerit<GradTarget::PreviousDelta, /*kPsdDRes*/ false>(
       mass, inertia, dtStage, pose, stageStartPos, stageStartVel, &energyTest, nullptr, nullptr);
 
   EXPECT_NEAR(energyTest / energyOriginal, 1_r, 1e-6_r);
@@ -370,9 +373,9 @@ TEST(MultiBody, RigidBodyInertiaFromMerit_HessMixedPrevPose) {
   auto assembler = [&](TransformRT const& stageStartPos,
                        RigidGradient* gradient,
                        RigidHessian* hessianMixed) {
-    AddRigidBodyInertiaFromMerit<GradTarget::Current>(
+    AddRigidBodyInertiaFromMerit<GradTarget::Current, /*kPsdDRes*/ false>(
         mass, inertia, dtStage, pose, stageStartPos, stageStartVel, nullptr, gradient, nullptr);
-    AddRigidBodyInertiaFromMerit<GradTarget::Previous>(
+    AddRigidBodyInertiaFromMerit<GradTarget::Previous, /*kPsdDRes*/ false>(
         mass, inertia, dtStage, pose, stageStartPos, stageStartVel, nullptr, nullptr, hessianMixed);
   };
   TestConsistencyMixed(assembler, 4e-3_r);
@@ -400,9 +403,9 @@ TEST(MultiBody, RigidBodyInertiaFromMerit_HessMixedPrevPoseIncrement) {
         stageStartDeltaPos.GetRotation().GetConjugate() * stageStartPos.GetRotation(),
         stageStartPos.VGetTranslation() - stageStartDeltaPos.VGetTranslation()};
     stageStartVel.SetFromFiniteDifferencePose(oldPose, stageStartPos, dtStage);
-    AddRigidBodyInertiaFromMerit<GradTarget::Current>(
+    AddRigidBodyInertiaFromMerit<GradTarget::Current, /*kPsdDRes*/ false>(
         mass, inertia, dtStage, pose, stageStartPos, stageStartVel, nullptr, gradient, nullptr);
-    AddRigidBodyInertiaFromMerit<GradTarget::PreviousDelta>(
+    AddRigidBodyInertiaFromMerit<GradTarget::PreviousDelta, /*kPsdDRes*/ false>(
         mass, inertia, dtStage, pose, stageStartPos, stageStartVel, nullptr, nullptr, hessianMixed);
   };
   TestConsistencyMixed(assembler, 4e-3_r);
@@ -433,10 +436,112 @@ TEST(RigidBodyAssembly, RigidBodyInertiaNewtonEuler) {
   // Create assembly lambda and test
   auto assembler =
       [&](TransformRT const& pose, double* energy, RigidGradient* gradient, RigidHessian* hessian) {
-        AddRigidBodyInertiaNewtonEuler(
+        AddRigidBodyInertiaNewtonEuler</*kPsdDRes*/ false>(
             mass, inertia, dtStage, pose, stageStartPos, stageStartVel, energy, gradient, hessian);
       };
   TestConsistency(assembler, 1e-3_r, 3e-3_r);
+}
+
+TEST(RigidBodyAssembly, RigidInertiaFnPsdDRes) {
+  real const mass = 1.3_r;
+  VMatrix3x3r const inertia =
+      RotateInertia(Vec4r{1.2_r, 0.7_r, 0.1_r}, Rodrigues(Vec4r{-0.4_r, 0.2_r, 0.1_r}));
+  real const dtStage = 1e-2_r;
+  TransformRT stageStartPos;
+  SetPose(std::array<real, kNumDofs>{-0.2_r, 0.2_r, 0.4_r, -0.5_r, 0.2_r, -0.6_r}, stageStartPos);
+  RigidBodyVel stageStartVel;
+  stageStartVel.SetOmega({-0.8_r, 0.6_r, -0.4_r});
+  stageStartVel.UpdateVSymIfDirty(dtStage);
+  // Far from the extrapolated rotation, the exact Hessian is below the floor and is raised. At that
+  // rotation, it equals the Gauss-Newton Hessian G, which the floor changes only within its
+  // rounding margins.
+  TransformRT referencePose;
+  SetPose(kPoseValsRef, referencePose);
+  TransformRT const extrapolatedPose{
+      Quaternion::FromRotationVector(stageStartVel.GetFiniteStepRotationVector(dtStage)) *
+      stageStartPos.GetRotation()};
+
+  // The rotational block of the Hessian, accumulated onto `seed`.
+  auto hessianRot = [&]<typename InertiaT>(
+                        bool useNewtonEuler,
+                        bool psdDRes,
+                        InertiaT const& in,
+                        TransformRT const& pose,
+                        VMatrix3x3r const& seed = {}) {
+    RigidHessian hessian{};
+    StoreSubmatrix<3, 3, 6, 6>(hessian, Int2{3, 3}, seed);
+    GetRigidInertiaFn<InertiaT>(GradTarget::Current, useNewtonEuler, psdDRes)(
+        mass, in, dtStage, pose, stageStartPos, stageStartVel, nullptr, nullptr, &hessian, nullptr);
+    VMatrix3x3r rotational;
+    LoadSubmatrix<3, 3, 6, 6>(rotational, Int2{3, 3}, hessian);
+    return rotational;
+  };
+
+  // Merit-based inertia: ProjectSymAbove's projection of the exact Hessian above the floor
+  // kMinInertiaCurvatureRatio * (G + 16 eps tr(W) I), with G from Newton-Euler inertia and
+  // tr(W) = tr(G) / 2, applied to the inertia's Hessian alone.
+  auto expectFloored = [&]<typename InertiaT>(
+                           InertiaT const& secondMoment, InertiaT const& momentOfInertia) {
+    for (auto const& [pose, raised] :
+         {std::pair{referencePose, true}, std::pair{extrapolatedPose, false}}) {
+      VMatrix3x3r const exact =
+          hessianRot(/*useNewtonEuler*/ false, /*psdDRes*/ false, secondMoment, pose);
+      VMatrix3x3r const gaussNewton =
+          hessianRot(/*useNewtonEuler*/ true, /*psdDRes*/ false, momentOfInertia, pose);
+      VMatrix3x3r const floor = kMinInertiaCurvatureRatio *
+          (gaussNewton +
+           VDiagonalMatrix<3>(8_r * std::numeric_limits<real>::epsilon() * Trace3x3(gaussNewton)));
+      VMatrix3x3r const floored =
+          gaussNewton +
+          hessianRot(
+              /*useNewtonEuler*/ false, /*psdDRes*/ true, secondMoment, pose, -gaussNewton);
+      EXPECT_NEAR_TOL(
+          ToNdArray3x3(floored),
+          ToNdArray3x3(ProjectSymAbove(exact, floor)),
+          1e-5_r * Norm3x3(gaussNewton));
+      EXPECT_EQ(Norm3x3(floored - exact) > 1e-3_r * Norm3x3(gaussNewton), raised);
+    }
+  };
+  // A line-like body's second moment n n^T has rank 1, so its G is singular about n without the
+  // 16 eps tr(W) shift.
+  Vec4r const axis{2_r / 7_r, -3_r / 7_r, 6_r / 7_r};
+  VMatrix3x3r const line = Outer3(axis, axis);
+  // The floor has no absolute tolerances, so it holds at any scale.
+  for (real scale : {1_r, 1e-12_r}) {
+    expectFloored(scale * inertia, scale * SecondMomentToMomentOfInertia(inertia));
+    // Isotropic, and anisotropic unrotated
+    expectFloored(scale * 0.6_r, scale * 1.2_r);
+    expectFloored(scale * Vec4r{0.2_r, 0.5_r, 0.3_r}, scale * Vec4r{0.8_r, 0.5_r, 0.7_r});
+    expectFloored(scale * line, scale * SecondMomentToMomentOfInertia(line));
+  }
+  // A block above the floor is kept bitwise.
+  EXPECT_EQ(
+      ToNdArray3x3(
+          hessianRot(/*useNewtonEuler*/ false, /*psdDRes*/ true, inertia, extrapolatedPose)),
+      ToNdArray3x3(
+          hessianRot(/*useNewtonEuler*/ false, /*psdDRes*/ false, inertia, extrapolatedPose)));
+
+  // Zero inertia, or invalid inertia with a negative principal moment, has no positive definite
+  // floor, and Newton-Euler inertia's Hessian is its own Gauss-Newton Hessian. Both get a positive
+  // semi-definite projection of the inertia's Hessian alone.
+  auto expectProjected = [&]<typename InertiaT>(bool useNewtonEuler, InertiaT const& in) {
+    for (TransformRT const& pose : {referencePose, extrapolatedPose}) {
+      VMatrix3x3r projected = hessianRot(useNewtonEuler, /*psdDRes*/ false, in, pose);
+      ProjectSymPsd(projected);
+      VMatrix3x3r const seed = -2_r * projected;
+      EXPECT_NEAR_TOL(
+          ToNdArray3x3(hessianRot(useNewtonEuler, /*psdDRes*/ true, in, pose, seed) - seed),
+          ToNdArray3x3(projected),
+          1e-6_r * Norm3x3(projected));
+    }
+  };
+  expectProjected(/*useNewtonEuler*/ false, VMatrix3x3r{});
+  expectProjected(/*useNewtonEuler*/ false, VDiagonalMatrix<3>(Vec4r{-0.25_r, -0.25_r, 1.25_r}));
+  expectProjected(/*useNewtonEuler*/ false, 0_r);
+  expectProjected(/*useNewtonEuler*/ false, Vec4r{-0.25_r, -0.25_r, 1.25_r});
+  expectProjected(/*useNewtonEuler*/ true, SecondMomentToMomentOfInertia(inertia));
+  expectProjected(/*useNewtonEuler*/ true, -0.1_r);
+  expectProjected(/*useNewtonEuler*/ true, Vec4r{1.3_r, 0.7_r, -0.1_r});
 }
 
 TEST(RigidBodyAssembly, RigidBodyDampingCurrent) {

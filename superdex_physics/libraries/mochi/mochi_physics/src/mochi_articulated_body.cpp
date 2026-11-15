@@ -2152,7 +2152,8 @@ void articulated::compound::AssembleInertiaForces(
   auto const jointTypes = joints->jointTypes;
   auto const jointAxes = joints->jointAxes;
   auto const dofInfo = joints->dofInfo;
-  auto inertiaFuncRigidBody = GetRigidInertiaFn<real>(params.gradTarget, useNewtonEulerInertia);
+  auto inertiaFuncRigidBody =
+      GetRigidInertiaFn<real>(params.gradTarget, useNewtonEulerInertia, params.psdDRes);
   // Newton-Euler inertia reports its non-potential terms with the objective
   bool const reportsNonPotential =
       ReportsNonPotentialTerms(params, simParams.value) && useNewtonEulerInertia;
@@ -2181,13 +2182,6 @@ void articulated::compound::AssembleInertiaForces(
           AsConstView(nonPotential.rotGradient),
           dofInfo[i].GetRotOffset(),
           props.reducedDofsDim);
-    }
-
-    if (params.psdDRes && hessian) {
-      VMatrix3x3r outHessianRot;
-      LoadSubmatrix<3, 3, 6, 6>(outHessianRot, Int2{3, 3}, *hessian);
-      ProjectSymPsd(outHessianRot, std::numeric_limits<real>::epsilon());
-      StoreSubmatrix<3, 3, 6, 6>(*hessian, Int2{3, 3}, outHessianRot);
     }
     return true;
   };

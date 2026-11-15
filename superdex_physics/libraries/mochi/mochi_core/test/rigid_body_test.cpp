@@ -421,6 +421,13 @@ TEST(RigidBodyUtils, RotateInertia) {
   matVec4 = RotateInertia(vecM, q);
   matVMatrix3x3 = RotateInertia(VDiagonalMatrix<3>(vecM), q);
   EXPECT_NEAR_TOL(matVMatrix3x3, matVec4, kRoundingRelTol * HMax<3>(vecM));
+
+  // The overloads that take the rotation matrix match those that take the quaternion.
+  VMatrix3x3r const rot = ToVMatrix3x3(q);
+  EXPECT_NEAR_TOL(RotateInertia(m, rot), matReal, kRoundingRelTol * m);
+  EXPECT_NEAR_TOL(RotateInertia(vecM, rot), matVec4, kRoundingRelTol * HMax<3>(vecM));
+  EXPECT_NEAR_TOL(
+      RotateInertia(VDiagonalMatrix<3>(vecM), rot), matVMatrix3x3, kRoundingRelTol * HMax<3>(vecM));
 }
 
 TEST(RigidBodyUtils, IsMomentOfInertiaValid) {

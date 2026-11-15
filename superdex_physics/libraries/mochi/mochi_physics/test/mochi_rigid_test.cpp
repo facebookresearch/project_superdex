@@ -31,7 +31,10 @@ class AccurateRigidInertia : public test::MochiSceneTestBase {};
 TEST_F(AccurateRigidInertia, AccurateRigidInertia) {
   real constexpr kDt = 1e-1_r;
 
-  auto runTest = [&](IntegrationMethod method, bool useNewtonEulerInertia, real tol) {
+  auto runTest = [&](IntegrationMethod method,
+                     bool useNewtonEulerInertia,
+                     real tol,
+                     real angularVelocityScale = 1_r) {
     // Disable gravity
     _scene->SetGravity(Real3{});
 
@@ -54,7 +57,8 @@ TEST_F(AccurateRigidInertia, AccurateRigidInertia) {
     experimental::EnableNewtonEulerInertia(actor, useNewtonEulerInertia, test::ExpectOK{});
 
     // Set initial angular velocity
-    actor->SetVelocity(Real3{}, Real3{1.5_r, 0.3_r, 0.6_r}, test::ExpectOK{});
+    actor->SetVelocity(
+        Real3{}, angularVelocityScale * Real3{1.5_r, 0.3_r, 0.6_r}, test::ExpectOK{});
 
     // Get rest-pose inertia
     auto m = actor->GetRigidMomentOfInertiaLocal(test::ExpectOK{});
@@ -97,13 +101,19 @@ TEST_F(AccurateRigidInertia, AccurateRigidInertia) {
       /* useNewtonEulerInertia */ false,
       6e-1_r); // 60% tolerance
   runTest(IntegrationMethod::BDF2, /* useNewtonEulerInertia */ false, 6e-1_r); // 60% tolerance
-  runTest(IntegrationMethod::DIRK33, /* useNewtonEulerInertia */ false, 6e-1_r); // 50% tolerance
+  runTest(IntegrationMethod::DIRK33, /* useNewtonEulerInertia */ false, 6e-1_r); // 60% tolerance
   runTest(
       IntegrationMethod::BackwardEuler,
       /* useNewtonEulerInertia */ true,
       2e-1_r); // 20% tolerance, due to dissipation
   runTest(IntegrationMethod::BDF2, /* useNewtonEulerInertia */ true, 3e-2_r); // 3% tolerance
   runTest(IntegrationMethod::DIRK33, /* useNewtonEulerInertia */ true, 2e-3_r); // 0.2% tolerance
+  // A fast spin, 71 degrees on the first step, where the exact rotational Hessian turns indefinite
+  runTest(
+      IntegrationMethod::BackwardEuler,
+      /* useNewtonEulerInertia */ false,
+      0.95_r, // 95% tolerance, due to dissipation
+      /* angularVelocityScale */ 5.75_r);
 }
 
 class StaticActor : public test::MochiSceneTestBase {

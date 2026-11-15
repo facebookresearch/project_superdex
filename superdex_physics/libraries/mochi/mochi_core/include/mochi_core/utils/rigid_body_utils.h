@@ -95,8 +95,8 @@ inline VMatrix3x3r SecondMomentToMomentOfInertia(VMatrix3x3r const& M) {
       iz <= ix + iy + absTol;
 }
 
-// Rotate inertia from rest configuration to rotated configuration. Valid for both moment of inertia
-// and second moment.
+// Rotate inertia from rest configuration to rotated configuration, given by a quaternion or a
+// rotation matrix. Valid for both moment of inertia and second moment.
 inline VMatrix3x3r RotateInertia(VMatrix3x3r const& M, Quaternion const& q) {
   auto R_RT = ToVMatrix3x3_WithTranspose(q);
   return Dot3x3(R_RT.first, Dot3x3(M, R_RT.second));
@@ -108,6 +108,18 @@ inline VMatrix3x3r RotateInertia(Vec4r const& M, Quaternion const& q) {
 }
 
 inline VMatrix3x3r RotateInertia(real M, Quaternion const& /*q*/) {
+  return VDiagonalMatrix<3>(M);
+}
+
+inline VMatrix3x3r RotateInertia(VMatrix3x3r const& M, VMatrix3x3r const& rot) {
+  return Dot3x3(Dot3x3(rot, M), Transpose3x3(rot));
+}
+
+inline VMatrix3x3r RotateInertia(Vec4r const& M, VMatrix3x3r const& rot) {
+  return Dot3x3(rot * M, Transpose3x3(rot));
+}
+
+inline VMatrix3x3r RotateInertia(real M, VMatrix3x3r const& /*rot*/) {
   return VDiagonalMatrix<3>(M);
 }
 

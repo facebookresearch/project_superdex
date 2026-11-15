@@ -42,7 +42,6 @@
 #include <mochi_core/utils/spmat_utils.h>
 
 #include <functional>
-#include <limits>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -762,12 +761,8 @@ void mochi::rigid::EntityAssemble(
 
   // Compute inertial terms
   if (assembleInertia) {
-    auto inertiaFunc = GetRigidInertiaFn<VMatrix3x3r>(gradTarget, useNewtonEulerInertia);
-
-    // We need a separate hessian storage to project the rotational part to its PSD cone
-    RigidHessian tempInertiaHessian{};
-    RigidHessian* inertiaHessian =
-        (params.assemDRes && params.psdDRes) ? &tempInertiaHessian : hessian;
+    auto inertiaFunc =
+        GetRigidInertiaFn<VMatrix3x3r>(gradTarget, useNewtonEulerInertia, params.psdDRes);
     inertiaFunc(
         rigidInertia.GetMass(),
         useNewtonEulerInertia ? rigidInertia.GetMomentOfInertiaLocal()
@@ -778,26 +773,11 @@ void mochi::rigid::EntityAssemble(
         stageStartVel.value,
         energy,
         gradient,
-        inertiaHessian,
+        hessian,
         nonPotential);
-
-    if (params.assemDRes && params.psdDRes) {
-      VMatrix3x3r outHessian, outInertiaHessian;
-      // add translational part
-      LoadSubmatrix<3, 3, 6, 6>(outHessian, Int2{0, 0}, tempHessian);
-      LoadSubmatrix<3, 3, 6, 6>(outInertiaHessian, Int2{0, 0}, tempInertiaHessian);
-      outHessian += outInertiaHessian;
-      StoreSubmatrix<3, 3, 6, 6>(tempHessian, Int2{0, 0}, outHessian);
-      // project rotational part
-      LoadSubmatrix<3, 3, 6, 6>(outHessian, Int2{3, 3}, tempHessian);
-      LoadSubmatrix<3, 3, 6, 6>(outInertiaHessian, Int2{3, 3}, tempInertiaHessian);
-      ProjectSymPsd(outInertiaHessian, std::numeric_limits<real>::epsilon());
-      outHessian += outInertiaHessian;
-      StoreSubmatrix<3, 3, 6, 6>(tempHessian, Int2{3, 3}, outHessian);
-    }
   }
 
-  // Compute contact terms
+  // Compute external force terms
   if (assembleExternalForces) {
     AddRigidBodyExternalForces(
         currPose.value,
