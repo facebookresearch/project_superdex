@@ -1,0 +1,104 @@
+---
+title: Tactile Observations
+sidebar_label: Tactile Observations
+sidebar_position: 5
+---
+
+# Tactile Observations
+
+SuperDex exposes tactile readings through concrete representations. A producer
+may emit any representation directly, and downstream code can transform it
+without depending on a particular policy or training framework.
+
+| Representation | Description | Reference implementation |
+|---|---|---|
+| Vertex forces | Dense per-vertex force vectors | `SensorLinkVertexForce` |
+| Aggregate force or wrench | Values aggregated across one tactile site | `SensorAggregateForce` or `SensorAggregateWrench` |
+| Rectangular force grid | A regular spatial grid | `MapTactileHemisphereToRect` |
+
+The aggregate-force baseline is deliberately simple. It sums per-vertex forces
+without applying a learned response, sensor calibration, threshold, or torque
+model. The graph aggregate sensors remain internal while their serialized API
+is reviewed; the underlying C++ aggregation functions are public.
+
+## Vertex-force layout contract
+
+A `TactileTaxelLayout` contains ordered vertex positions in the sensor link
+frame. The order defines vertex identity. A graph consumer that requires the
+geometry obtains the producer-owned `VertexListMeta` through
+`TryGetSensorMetadata<VertexListMeta>()` during initialization.
+
+Vertex-force observations contain one sensor-link-frame force vector for every
+layout entry. Taxels with no reported contact have a valid zero force. Sparse
+node-force records with the same index are accumulated.
+
+## Reading Mochi node forces
+
+Mochi computes node-force queries during a simulation step. Register the query
+before stepping, keep the handle while reading, and cancel it when the consumer
+is done.
+
+```cpp
+Error error;
+TactileTaxelLayout layout = MakeTactileTaxelLayout(taxelPositions, error);
+QueryHandle query = actor->RegisterQuery(QueryType::NodeContactForces, error);
+
+// Step the scene before the first read.
+TactileTaxelForces taxelForces =
+    ReadTactileTaxelForces(actor, actor->GetRootTransform(), layout, error);
+TactileAggregateForce aggregateForce = AggregateTactileForce(taxelForces, error);
+
+actor->CancelQuery(query);
+```
+
+`taxelForces.forces` and `aggregateForce.force` are expressed in newtons in the
+supplied sensor-link frame. Supplying the frame explicitly also supports sensors whose
+frame is offset from their actor; use the actor root transform when the two
+frames coincide.
+
+The corresponding C++ entry points are `MakeTactileTaxelLayout`,
+`ReadTactileTaxelForces`, and `AggregateTactileForce` in
+`superdex_robotics/sensors/tactile_observation.h`.
+
+## Supplying a layout
+
+The producer does not guess which mesh represents a sensor. Applications must
+provide the stable, ordered taxel positions that correspond to the actor's node
+indices. This keeps the public API independent of a particular sensor asset and
+makes the same reader usable for simulated and externally sourced layouts.
+
+The fixed output shape and `VertexListMeta` are validated when the graph is
+built. They remain producer-owned and immutable for that sensor instance.
+
+## Mapping a hemispherical sensor to a rectangle
+
+`MapTactileHemisphereToRect` maps ordered taxel positions and forces onto a
+row-major rectangular force grid. Configure the hemisphere center, the
+center-to-tip direction, a tangent direction for zero longitude, and the grid
+shape:
+
+```cpp
+TactileHemisphereRectParams params{
+    .center = hemisphereCenterSensorLink,
+    .tipDirection = {0_r, 0_r, 1_r},
+    .zeroLongitudeDirection = {1_r, 0_r, 0_r},
+    .width = 16,
+    .height = 8,
+};
+TactileForceGrid grid =
+    MapTactileHemisphereToRect(layout, taxelForces, params, error);
+```
+
+The tip has continuous coordinates `(polar latitude=0, longitude=0)` and maps
+to the center column of the first row. The hemisphere rim spans the final row;
+longitude wraps across the left and right edges. This polar equirectangular
+mapping remains finite at the tip, unlike a geographic Mercator projection.
+
+Each taxel contributes to exactly one cell. `grid.forces` contains cell force
+sums, so reducing the grid preserves the total selected taxel force.
+`grid.taxel_counts` distinguishes empty cells and permits an application to
+compute a per-cell mean when that representation is more appropriate.
+
+For a SEED-shaped sensor, pass the hemisphere center from the sensor geometry
+and choose the tip and zero-longitude directions from the sensor link axes. No
+learned response or sensor-specific calibration is applied by the mapper.
