@@ -389,13 +389,13 @@ For `PointCloud` colliders discretizing the [double-integral generalization](#do
 | `penaltyCoefficient` | `real` | `1e9` | Pa/m | Penalty coefficient $k$. Higher values reduce penetration but may degrade stability. |
 | `penaltySmoothingHalfDistance` | `real` | `0.005` | m | Smoothing half-width $\epsilon$ of the ramp $h_{\epsilon,\delta}$. Larger values improve stability but may increase penetration. |
 | `penaltyThresholdDefault` | `real` | `0.001` | m | Default contact threshold $\delta$ at which the penalty activates. |
-| `penaltyThresholdExtraPadding` | `real` | `0` | m | Additional contribution to $\delta$ when the colliding actor uses `None` or `PointCloud`; helps prevent tunneling through thin actors. |
+| `penaltyThresholdExtraPadding` | `real` | `0` | m | **Experimental.** Additional contribution to $\delta$ when the colliding actor uses `None` or `PointCloud`; helps prevent tunneling through thin actors. |
 | `collidingPenaltyThresholdPadding` | `real` | `0` | m | **Experimental.** Additional contribution to $\delta$ taken from the colliding actor, for any collider except `PointCloud` colliders and SDF colliders of soft actors; helps prevent tunneling of thin or coarsely sampled colliding actors. |
-| `frictionWithColliderNormal` | `bool` | `true` | -- | Use the collider-field direction $\mathbf{N}_B$ for the normal/tangential split; when `false`, use the unit vector along $-\mathbf{N}_A$ where available. |
-| `maxAlignmentNormals` | `real` | `0` | -- | Maximum-normal-alignment parameter $m$; contact is rejected when $s > m$. Valid range: [-1, 1]. |
+| `frictionWithColliderNormal` | `bool` | `true` | -- | **Experimental.** Use the collider-field direction $\mathbf{N}_B$ for the normal/tangential split; when `false`, use the unit vector along $-\mathbf{N}_A$ where available. |
+| `maxAlignmentNormals` | `real` | `0` | -- | **Experimental.** Maximum-normal-alignment parameter $m$; contact is rejected when $s > m$. Valid range: [-1, 1]. |
 | `viscousFrictionCoefficient` | `real` | `0` | s/m | Tangential viscous friction coefficient $c_t$. |
 | `coulombFrictionCoefficient` | `real` | `0.5` | -- | Coulomb friction coefficient $\mu$. |
-| `frictionFalloffVel` | `real` | `0.01` | m/s | Falloff velocity $V_f$, the ramp width of the [viscous regularization](#viscous-regularization) of Coulomb friction. |
+| `frictionFalloffVel` | `real` | `0.01` | m/s | **Experimental.** Falloff velocity $V_f$, the ramp width of the [viscous regularization](#viscous-regularization) of Coulomb friction. |
 | `preslidingDisplacement` | `real` | `1e-4` | m | **Experimental.** Presliding displacement $\ell_p$, the ramp width of the [elasto-plastic regularization](#elasto-plastic-regularization), which replaces $V_f$ when `elastoPlasticFriction` is enabled. |
 | `normalViscousDampingCoefficient` | `real` | `0` | s/m | Normal viscous damping coefficient $c_n$, which controls velocity-dependent restitution. |
 | `distanceErrorBound` | `real` | `0` | m | **Experimental.** Extra collider bounding-volume padding for approximate distance fields. |
