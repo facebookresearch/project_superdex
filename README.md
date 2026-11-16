@@ -224,6 +224,13 @@ Certain third party dependencies and third party assets in this repo are license
 
 ---
 
+## Acknowledgments
+Project SuperDex benefited from ideas and research findings shared by the open-source community. We are especially grateful to the authors and contributors of the following projects:
+
+* [senua-superdex-accuracy](https://github.com/senuamedia/senua-superdex-accuracy) by Senua Media: inspiration for the elasto-plastic friction model.
+
+---
+
 # Citation
 
 Citation details will be added here upon publication.
