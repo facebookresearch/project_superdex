@@ -61,6 +61,11 @@ struct bots::BotSensorPrefab [equality(default), no_reflection] {
   String type;
   // @brief Human-readable, findable identifier for this sensor instance.
   String name;
+  // @brief Sensor graph inputs. `source` resolves on this sensor's bot and link;
+  // `other_link/source` resolves on the same bot; `other_bot/link/source` is already canonical; and
+  // `/other_bot/link/source` resolves from the graph root. A root-qualified scene sensor such as
+  // `/overhead` is also accepted. Every resolved name must identify a graph node during Build().
+  DynamicArray<String> inputs [no_serialize_defaults];
   // @brief Sensor pose relative to the associated link's actor (aFromB convention: maps
   // sensor-frame coordinates into the link frame). Chain to world via SensorBase::GetWorldTransform.
   TransformRT parentFromSensor [no_serialize_defaults];
@@ -1118,6 +1123,208 @@ struct bots::CameraSensorParams [no_reflection] {
   real lookDistance [units("m")];
 }
 
+// @brief Geometry used to flatten a tactile spherical cap into a rectangle.
+enum bots::TactileRectProjectionType [no_reflection] {
+  // @brief Lambert azimuthal equal-area disk followed by a concentric square transform.
+  AzimuthalEqualArea = 1,
+  // @brief Azimuthal equidistant disk followed by a concentric square transform.
+  AzimuthalEquidistant = 2,
+  // @brief Standard octahedral direction encoding.
+  Octahedral = 3,
+}
+
+// @brief Resampling from projected taxels into the output grid.
+enum bots::TactileRectRasterizationType [no_reflection] {
+  // @brief Distribute every taxel's force across its discrete projected Voronoi region.
+  ConservativeVoronoi = 1,
+  // @brief Accumulate every taxel's complete force into its nearest output cell.
+  NearestCell = 2,
+}
+
+// @brief Handling for source taxels outside a configured tactile spherical cap.
+enum bots::TactileRectOutsidePolicy [no_reflection] {
+  // @brief Reject a layout containing any taxel outside the configured cap.
+  Reject = 1,
+  // @brief Explicitly exclude taxels outside the configured cap.
+  Exclude = 2,
+}
+
+// @brief Fixed geometry for a SEED force RectMap sensor.
+struct bots::SensorSeedRectMapParams [no_reflection] {
+  Real3 center [units("m")];
+  Real3 tipDirection;
+  Real3 zeroLongitudeDirection;
+  int width = 256;
+  int height = 256;
+  real maxPolarLatitude [units("rad")] = 1.5707963267948966;
+  bots::TactileRectProjectionType projection = bots::TactileRectProjectionType::AzimuthalEqualArea;
+  bots::TactileRectRasterizationType rasterization = bots::TactileRectRasterizationType::ConservativeVoronoi;
+  int voronoiOversampling = 4;
+  bots::TactileRectOutsidePolicy outsidePolicy = bots::TactileRectOutsidePolicy::Reject;
+}
+
+// @brief SEED tactile sensor parameters.
+struct bots::SensorSeedV1MLPParams {
+  // @brief Path to the JSON weights file (forcenet_weights.json).
+  String weightsPath;
+  // @brief Offset from link origin to hemisphere center in link-local frame [m].
+  Real3 hemisphereCenterOffset [units("m")];
+  // @brief When true, output = raw contact force (skip MLP inference).
+  bool bypassModel;
+}
+
+// @brief SEED tactile sensor result.
+struct bots::SensorSeedV1MLPResult {
+  Real3 inputForce;
+  Real3 inputNormal;
+  Real3 outputForce;
+  Real3 contactCentroid;
+  Real3 contactNormal;
+  int numContacts;
+}
+
+// @brief Ordered, sensor-link-frame positions for a tactile taxel layout.
+struct bots::TactileTaxelLayout [no_reflection] {
+  // @brief Taxel positions [m] in the sensor link frame. Their order is the taxel identity.
+  DynamicArray<Real3> positions [units("m")];
+}
+
+// @brief Dense per-taxel force observation for one tactile site.
+struct bots::TactileTaxelForces [no_reflection] {
+  // @brief One force [N] per layout taxel, in the sensor link frame.
+  DynamicArray<Real3> forces [units("N")];
+}
+
+// @brief Aggregate force observation for one tactile site.
+struct bots::TactileAggregateForce [no_reflection] {
+  // @brief Sum of the taxel forces [N], in the sensor link frame.
+  Real3 force [units("N")];
+}
+
+// @brief Aggregate wrench observation for one tactile site.
+struct bots::TactileAggregateWrench [no_reflection] {
+  // @brief Sum of the taxel forces [N], in the sensor link frame.
+  Real3 force [units("N")];
+  // @brief Sum of position cross force about referencePoint [N*m], in the sensor link frame.
+  Real3 torque [units("Nm")];
+  // @brief Point about which torque is resolved [m], in the sensor link frame.
+  Real3 referencePoint [units("m")];
+}
+
+// @brief Configuration for mapping a tactile spherical cap to a rectangle.
+struct bots::TactileHemisphereRectParams [no_reflection] {
+  // @brief Hemisphere center [m] in the sensor link frame.
+  Real3 center [units("m")];
+  // @brief Direction from center to the tactile tip. It is normalized by the mapper.
+  Real3 tipDirection;
+  // @brief Direction assigned longitude zero. Its component along tipDirection is removed.
+  Real3 zeroLongitudeDirection;
+  // @brief Number of rectangular grid columns.
+  int width = 0;
+  // @brief Number of rectangular grid rows.
+  int height = 0;
+  // @brief Largest selected polar angle [rad]. Pi/2 describes a hemisphere.
+  real maxPolarLatitude [units("rad")] = 1.5707963267948966;
+  // @brief Spherical-cap flattening geometry.
+  bots::TactileRectProjectionType projection = bots::TactileRectProjectionType::AzimuthalEqualArea;
+  // @brief Force-conserving resampling from projected taxels into grid cells.
+  bots::TactileRectRasterizationType rasterization = bots::TactileRectRasterizationType::ConservativeVoronoi;
+  // @brief Linear fine-grid scale used to resolve Voronoi regions before output downsampling.
+  int voronoiOversampling = 4;
+  // @brief Handling for source taxels beyond maxPolarLatitude.
+  bots::TactileRectOutsidePolicy outsidePolicy = bots::TactileRectOutsidePolicy::Reject;
+}
+
+// @brief Resolved, immutable mapping from an ordered taxel layout to a rectangular grid.
+struct bots::TactileRectProjectionMap [no_reflection] {
+  // @brief Normalized rectangular coordinates in [-1, 1], one per source taxel.
+  DynamicArray<Real2> coordinates;
+  // @brief Row-major destination cell per source taxel, or -1 when explicitly excluded.
+  DynamicArray<int> taxelCells;
+  // @brief CSR offsets into contributionCells and contributionWeights, one row per taxel.
+  DynamicArray<int> taxelContributionOffsets;
+  // @brief Row-major destination cells receiving force from each taxel.
+  DynamicArray<int> contributionCells;
+  // @brief Per-taxel force fractions. Every selected taxel's CSR row sums to one.
+  DynamicArray<real> contributionWeights;
+  // @brief Number of grid columns.
+  int width;
+  // @brief Number of grid rows.
+  int height;
+  // @brief Number of source taxels selected by the projection.
+  int selectedTaxelCount;
+  // @brief Resampling used to build the contribution matrix.
+  bots::TactileRectRasterizationType rasterization;
+  // @brief Fine-grid scale used for Voronoi resampling, or one for nearest-cell mode.
+  int voronoiOversampling;
+}
+
+// @brief Rectangular tactile force grid for one site.
+struct bots::TactileForceGrid [no_reflection] {
+  // @brief Row-major cell force sums [N] in the sensor link frame.
+  DynamicArray<Real3> forces [units("N")];
+  // @brief Number of source taxels making a nonzero contribution to each row-major cell.
+  DynamicArray<int> taxelCounts;
+  // @brief Number of grid columns.
+  int width;
+  // @brief Number of grid rows.
+  int height;
+}
+
+// @brief Build an ordered tactile taxel layout.
+//
+// @param[in] positions Taxel positions [m] in sensor link frame, in stable taxel order.
+// @return Validated layout. Empty layouts and non-finite positions raise an error.
+fn bots::MakeTactileTaxelLayout(Span<Real3 const> positions) -> bots::TactileTaxelLayout [export, mochi_error];
+
+// @brief Read a dense per-taxel force observation from a Mochi actor.
+//
+// The caller must register QueryType::NodeContactForces before stepping the scene and keep that
+// query registered while reading.
+//
+// @param[in] actor Actor whose node-force query is read.
+// @param[in] worldFromSensor Sensor-frame pose in world space. Pass the actor root transform when
+// the actor and sensor frames coincide.
+// @param[in] layout Ordered taxel layout matching the actor's node indices.
+// @return One sensor-link-frame force per layout taxel.
+fn bots::ReadTactileTaxelForces(Actor const* actor, TransformRT const& worldFromSensor, bots::TactileTaxelLayout const& layout) -> bots::TactileTaxelForces [export, mochi_error];
+
+// @brief Sum per-taxel forces into one aggregate force observation.
+//
+// No learned response, calibration, threshold, or torque model is applied.
+//
+// @param[in] taxelForces Dense per-taxel force observation.
+// @return Sum of all taxel forces.
+fn bots::AggregateTactileForce(bots::TactileTaxelForces const& taxelForces) -> bots::TactileAggregateForce [export, mochi_error];
+
+// @brief Aggregate per-taxel forces into a wrench about referencePoint.
+//
+// @param[in] layout Ordered taxel positions in the sensor link frame.
+// @param[in] taxelForces Per-taxel forces indexed by layout.
+// @param[in] referencePoint Torque reference point [m] in the sensor link frame.
+// @return Force and torque about the configured reference point.
+fn bots::AggregateTactileWrench(bots::TactileTaxelLayout const& layout, bots::TactileTaxelForces const& taxelForces, Real3 const& referencePoint) -> bots::TactileAggregateWrench [export, mochi_error];
+
+// @brief Resolve a tactile spherical-cap layout into a rectangular projection.
+// @param[in] layout Ordered taxel positions in the sensor link frame.
+// @param[in] params Projection frame, geometry, selection and output grid shape.
+// @return Stable coordinates, nearest cells and a force-conserving contribution map.
+fn bots::BuildTactileRectProjection(bots::TactileTaxelLayout const& layout, bots::TactileHemisphereRectParams const& params) -> bots::TactileRectProjectionMap [export, mochi_error];
+
+// @brief Rasterize per-taxel forces through a resolved tactile projection.
+// @param[in] projection Resolved mapping built for the source layout.
+// @param[in] taxelForces Per-taxel forces indexed by that layout.
+// @return Row-major rectangular force grid and per-cell taxel counts.
+fn bots::RasterizeTactileRectProjection(bots::TactileRectProjectionMap const& projection, bots::TactileTaxelForces const& taxelForces) -> bots::TactileForceGrid [export, mochi_error];
+
+// @brief Resolve and rasterize a per-taxel force observation in one call.
+//
+// @param[in] layout Ordered taxel positions in the sensor link frame.
+// @param[in] taxelForces Per-taxel forces indexed by layout.
+// @param[in] params Hemisphere frame and output grid shape.
+// @return Row-major rectangular force grid and per-cell taxel counts.
+fn bots::MapTactileHemisphereToRect(bots::TactileTaxelLayout const& layout, bots::TactileTaxelForces const& taxelForces, bots::TactileHemisphereRectParams const& params) -> bots::TactileForceGrid [export, mochi_error];
+
 // @brief A simple PD controller written in joint space.
 class bots::ControllerBasicJscPd(bots::ControllerBase) [no_init, no_destruct] {
   // @brief Registration type name for this controller (see RoboticsContext::RegisterControllerType).
@@ -1226,13 +1433,21 @@ class bots::SensorArticulatedJointWrench(bots::SensorBase) [no_init, no_destruct
   fn TypeName() -> StringView [static];
 }
 
-// @brief Ordered per-vertex force point cloud from one link's contact mesh.
+// @brief Acquisition cadence for a link vertex-force source.
+struct bots::SensorLinkVertexForceParams [no_reflection] {
+  // @brief Samples per second, or zero to capture every graph step.
+  real sampleRateHz [units("1/s")];
+}
+
+// @brief Vertex-force point cloud derived from one link's ordered contact vertices.
 class bots::SensorLinkVertexForce(bots::SensorBase) [no_init, no_destruct, no_reflection] {
   // @brief Canonical serialized sensor type identifier.
   // @return Stable type identifier.
   fn TypeName() -> StringView [static];
+  // @brief Get acquisition parameters.
+  // @return Current acquisition parameters.
+  fn GetParams() -> bots::SensorLinkVertexForceParams const& [const];
 }
-
 // @brief Base class for robot actuators.
 //
 // Mirrors @ref ControllerBase and @ref SensorBase: derives from ComponentBase for common lifecycle
@@ -1275,6 +1490,21 @@ class bots::CameraSensor(bots::SensorBase) [no_init, no_destruct] {
   // @brief Set sensor parameters.
   // @param[in] params Params.
   fn SetParams(bots::CameraSensorParams const& params) -> void [mochi_error];
+}
+
+// @brief Image-like force map derived from one vertex-force point-cloud sensor.
+class bots::SensorSeedRectMap(bots::SensorBase) [no_init, no_destruct, no_reflection] {
+  fn TypeName() -> StringView [static];
+  fn GetParams() -> bots::SensorSeedRectMapParams const& [const];
+}
+
+// @brief SEED tactile sensor using Mochi-native MLP inference.
+class bots::SensorSeedV1MLP(bots::SensorBase) [no_init, no_destruct, no_reflection] {
+  fn TypeName() -> StringView [static];
+  fn ComputeSignal() -> bots::SensorSeedV1MLPResult [mochi_error, overloaded];
+  fn ComputeSignal(Span<ContactPoint const> contacts) -> bots::SensorSeedV1MLPResult [mochi_error, overloaded];
+  fn GetParams() -> bots::SensorSeedV1MLPParams const& [const];
+  fn SetParams(bots::SensorSeedV1MLPParams const& params) -> void [mochi_error];
 }
 
 // @brief Create a @ref Bot runtime object from a @ref BotPrefab. Builds the underlying
@@ -1400,6 +1630,15 @@ struct bots::BotEntry [no_reflection] {
   Quaternion _legacyRotation [no_python, no_serialize_defaults, reflection_name("rotation")];
 }
 
+// @brief Borrowed identity of a selected sensor graph output.
+// Valid only until graph mutation or destruction.
+struct bots::SensorGraphNodeView [no_reflection] {
+  // @brief Canonical graph node name.
+  StringView name;
+  // @brief Sensor handle in the owning robotics context.
+  bots::SensorHandle handle;
+}
+
 // @brief One slot a scene offers, and the bots eligible to fill it.
 struct bots::SlotEntry [no_reflection] {
   // @brief Unique slot name within the scene, e.g. "right". Names a role, not a bot.
@@ -1419,6 +1658,9 @@ struct bots::SceneSensorEntry [no_reflection, ignore_extraneous_fields] {
   String type;
   // @brief Unique instance name for runtime lookup.
   String name;
+  // @brief Canonical sensor graph inputs. Use `bot/link/sensor` for a bot-owned node and the scene
+  // sensor's own name for a scene-owned node. Scene sensors have no bot/link context for shortening.
+  DynamicArray<String> inputs [no_serialize_defaults];
   // @brief Sensor pose relative to the scene root (aFromB convention: maps sensor-frame
   // coordinates into the parent scene frame). Chain to world via SensorBase::GetWorldTransform.
   // Default: identity.
@@ -1549,6 +1791,19 @@ class bots::BotScene [no_init, no_reflection] {
   // @return Robotics context, or None if unavailable.
   fn GetRoboticsContext() -> bots::RoboticsContext* [const, nullable];
 
+  // @brief Reset acquisition; samples await the next positive physics step.
+  fn ResetSensors() -> void [mochi_error];
+
+  // @brief Reconstruct the declared graph with caller-selected outputs and reset acquisition.
+  // Call between episodes after adding/removing a bot. Failure leaves the graph unbuilt.
+  // Does not reset physics, controllers or task state.
+  //
+  // @param[in] outputs Canonical names of the graph sensors to enable as outputs.
+  fn RebuildSensorGraph(Span<DynamicString const> outputs) -> void [mochi_error];
+
+  // @brief Surface an error captured while the graph ran in a native post-step callback.
+  fn CheckSensorGraph() -> void [const, mochi_error];
+
   // @brief Look up a bot by the name declared in the .superdex_scene file.
   //
   // @param[in] name Exact declared bot name.
@@ -1633,6 +1888,15 @@ class bots::BotScene [no_init, no_reflection] {
   // @param[in] name Exact declared name of the bot to initialize.
   // @return The loaded bot, or None on error.
   fn InitializeBot(StringView name) -> bots::Bot* [mochi_error];
+
+  // @brief Enable canonical graph output names and initialize newly active dependencies.
+  // Existing sensor state and selections survive; an empty list does nothing.
+  // @param[in] sensor_outputs Canonical names of existing graph nodes to select.
+  fn AddSensorOutputs(Span<String const> sensor_outputs) -> void [mochi_error];
+
+  // @brief Enumerate the graph's current selected outputs in dependency order.
+  // Borrowed view invalidated by graph mutation or destruction; empty while unbuilt.
+  fn GetSensorOutputs() -> Span<bots::SensorGraphNodeView const> [const];
 
   // @brief Get the original parameters this BotScene was loaded from.
   //

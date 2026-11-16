@@ -56,6 +56,22 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
     .value("COUNT", superdex::robotics::ControllerInputKind::Count, "Number of enum values.")
   ;
 
+  nb::enum_<superdex::robotics::TactileRectProjectionType>(m_bots, "TactileRectProjectionType", "Geometry used to flatten a tactile spherical cap into a rectangle.")
+    .value("AZIMUTHAL_EQUAL_AREA", superdex::robotics::TactileRectProjectionType::AzimuthalEqualArea, "Lambert azimuthal equal-area disk followed by a concentric square transform.")
+    .value("AZIMUTHAL_EQUIDISTANT", superdex::robotics::TactileRectProjectionType::AzimuthalEquidistant, "Azimuthal equidistant disk followed by a concentric square transform.")
+    .value("OCTAHEDRAL", superdex::robotics::TactileRectProjectionType::Octahedral, "Standard octahedral direction encoding.")
+  ;
+
+  nb::enum_<superdex::robotics::TactileRectRasterizationType>(m_bots, "TactileRectRasterizationType", "Resampling from projected taxels into the output grid.")
+    .value("CONSERVATIVE_VORONOI", superdex::robotics::TactileRectRasterizationType::ConservativeVoronoi, "Distribute every taxel's force across its discrete projected Voronoi region.")
+    .value("NEAREST_CELL", superdex::robotics::TactileRectRasterizationType::NearestCell, "Accumulate every taxel's complete force into its nearest output cell.")
+  ;
+
+  nb::enum_<superdex::robotics::TactileRectOutsidePolicy>(m_bots, "TactileRectOutsidePolicy", "Handling for source taxels outside a configured tactile spherical cap.")
+    .value("REJECT", superdex::robotics::TactileRectOutsidePolicy::Reject, "Reject a layout containing any taxel outside the configured cap.")
+    .value("EXCLUDE", superdex::robotics::TactileRectOutsidePolicy::Exclude, "Explicitly exclude taxels outside the configured cap.")
+  ;
+
   nb::enum_<superdex::robotics::SensorDType>(m_bots, "SensorDType", "Scalar representation of one sensor tensor element.")
     .value("FLOAT32", superdex::robotics::SensorDType::Float32)
   ;
@@ -90,20 +106,34 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::ControllerBasicJscPdObsv>(m_bots, "ControllerBasicJscPdObsv", "Observation state — robot state variables read each control step. Fill it with\nGetCurrentObservationsFromMochi to read the live simulation, or populate it\ndirectly from an external state source (e.g., a real robot)."));
   registry.StoreClass(nb::class_<superdex::robotics::ControllerBasicJscPdTarget>(m_bots, "ControllerBasicJscPdTarget", "Target setpoint for the controller."));
   registry.StoreClass(nb::class_<superdex::robotics::CameraSensorParams>(m_bots, "CameraSensorParams", "Parameters for a camera sensor (fixed or wrist-mounted). Loaded from a\n.superdex_sensor JSON file via SReflect. Fields with value 0 mean \"use engine\ndefault\"."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorSeedRectMapParams>(m_bots, "SensorSeedRectMapParams", "Fixed geometry for a SEED force RectMap sensor."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorSeedV1MLPParams>(m_bots, "SensorSeedV1MLPParams", "SEED tactile sensor parameters."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorSeedV1MLPResult>(m_bots, "SensorSeedV1MLPResult", "SEED tactile sensor result."));
+  registry.StoreClass(nb::class_<superdex::robotics::TactileTaxelLayout>(m_bots, "TactileTaxelLayout", "Ordered, sensor-link-frame positions for a tactile taxel layout."));
+  registry.StoreClass(nb::class_<superdex::robotics::TactileTaxelForces>(m_bots, "TactileTaxelForces", "Dense per-taxel force observation for one tactile site."));
+  registry.StoreClass(nb::class_<superdex::robotics::TactileAggregateForce>(m_bots, "TactileAggregateForce", "Aggregate force observation for one tactile site."));
+  registry.StoreClass(nb::class_<superdex::robotics::TactileAggregateWrench>(m_bots, "TactileAggregateWrench", "Aggregate wrench observation for one tactile site."));
+  registry.StoreClass(nb::class_<superdex::robotics::TactileHemisphereRectParams>(m_bots, "TactileHemisphereRectParams", "Configuration for mapping a tactile spherical cap to a rectangle."));
+  registry.StoreClass(nb::class_<superdex::robotics::TactileRectProjectionMap>(m_bots, "TactileRectProjectionMap", "Resolved, immutable mapping from an ordered taxel layout to a rectangular grid."));
+  registry.StoreClass(nb::class_<superdex::robotics::TactileForceGrid>(m_bots, "TactileForceGrid", "Rectangular tactile force grid for one site."));
   registry.StoreClass(nb::class_<superdex::robotics::ControllerBasicJscPd, superdex::robotics::ControllerBase>(m_bots, "ControllerBasicJscPd", "A simple PD controller written in joint space.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorAxis>(m_bots, "SensorAxis", "Meaning of one tensor dimension. Labels are empty or contain one entry per\nelement. Units are empty, contain one broadcast unit, or contain one unit per\nelement. At most one axis in a format declares units."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorFormat>(m_bots, "SensorFormat", "Immutable shape and meaning of one sensor's numeric output."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorSample>(m_bots, "SensorSample", "Borrowed view of one completed sensor publication. The payload remains\nproducer-owned and is valid only until that sensor publishes, resets,\ninitializes again or is destroyed."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorBase, superdex::robotics::ComponentBase>(m_bots, "SensorBase", "Base class for graph-native robot sensors. Derives from ComponentBase for common\nidentity and ownership. SensorGraph drives the uniform Init, Step, Reset and\nLatest lifecycle; concrete sensors implement acquisition or transformation.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorArticulatedJointWrench, superdex::robotics::SensorBase>(m_bots, "SensorArticulatedJointWrench", "Actor-wide source of every measurable articulated-joint wrench.\n\nEmits one row per non-static joint. Static links are excluded and named in typed\nobservation metadata because Mochi does not compute their contact forces.", nb::never_destruct()));
-  registry.StoreClass(nb::class_<superdex::robotics::SensorLinkVertexForce, superdex::robotics::SensorBase>(m_bots, "SensorLinkVertexForce", "Ordered per-vertex force point cloud from one link's contact mesh.", nb::never_destruct()));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorLinkVertexForceParams>(m_bots, "SensorLinkVertexForceParams", "Acquisition cadence for a link vertex-force source."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorLinkVertexForce, superdex::robotics::SensorBase>(m_bots, "SensorLinkVertexForce", "Vertex-force point cloud derived from one link's ordered contact vertices.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::ActuatorBase, superdex::robotics::ComponentBase>(m_bots, "ActuatorBase", "Base class for robot actuators.\n\nMirrors :class:`~superdex.robotics.ControllerBase` and\n:class:`~superdex.robotics.SensorBase`: derives from ComponentBase for common\nlifecycle (validity, actor, destroy). No concrete actuators exist yet; this\nestablishes the contract early so the first actuator follows the same shape as\ncontrollers and sensors.\n\nRegistration contract (a ``RoboticsContext::RegisterActuator<T>`` template lands\nwith the first concrete actuator, mirroring RegisterController/RegisterSensor):\nevery actuator must declare static constexpr std::string_view TypeName() {\nreturn \"...\"; } (used by the registration templates and for the generated Python\ntype_name() binding), implement std::string_view GetTypeName() const override;\n// returns TypeName() and provide a uniform constructor ActuatorX(Actor* actor,\nstd::string_view paramArgs, Error& error); that loads its own params from the\npath or inline JSON. An (Actor*, Params const&, Error&) overload is recommended\nfor programmatic / non-filesystem construction.\n\nTeardown contract (mirrors :class:`~superdex.robotics.ControllerBase` /\n:class:`~superdex.robotics.SensorBase`):\n:meth:`~superdex.robotics.ComponentBase.get_actor` resolves the live actor on\ndemand and yields None once the owning mochi Scene (or the actor) is gone, so an\nactuator that outlives its Scene (Scene destroyed before the RoboticsContext)\nsees :meth:`~superdex.robotics.ComponentBase.get_actor` == None in its\ndestructor. Any concrete actuator whose destructor releases actor-held resources\nmust therefore guard on GetActor() != None (or, for context-owned resources,\nresolve via GetContext()) so teardown never dereferences a dangling Actor*.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::CameraSensor, superdex::robotics::SensorBase>(m_bots, "CameraSensor", "Camera sensor runtime object. Stores intrinsics/extrinsics for use by renderers\n(UE, etc.). No ComputeSignal — cameras don't produce data in the mochi physics\nloop; renderers query GetParams() to configure their camera actors.", nb::never_destruct()));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorSeedRectMap, superdex::robotics::SensorBase>(m_bots, "SensorSeedRectMap", "Image-like force map derived from one vertex-force point-cloud sensor.", nb::never_destruct()));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorSeedV1MLP, superdex::robotics::SensorBase>(m_bots, "SensorSeedV1MLP", "SEED tactile sensor using Mochi-native MLP inference.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::BotSceneMetadata>(m_bots, "BotSceneMetadata", "Human-readable metadata for a .superdex_scene file. Not consumed by the runtime."));
   registry.StoreClass(nb::class_<superdex::robotics::PrefabEntry>(m_bots, "PrefabEntry", "A named reference to a spawnable scene, prefab, bot, or bot archive."));
   registry.StoreClass(nb::class_<superdex::robotics::BaseSceneParams>(m_bots, "BaseSceneParams", "Scene definition within a .superdex_scene.\n\nThe base_scene is optional — a scene under construction may not have one yet.\nWhen present it is the authoritative source for all simulation physics\nparameters (gravity, solver config, contact filtering, collision layers, etc.);\nwhen absent the scene keeps its default parameters."));
   registry.StoreClass(nb::class_<superdex::robotics::ControllerEntry>(m_bots, "ControllerEntry", "A controller instance to create and attach to a bot."));
   registry.StoreClass(nb::class_<superdex::robotics::BotEntry>(m_bots, "BotEntry", "A bot (robot) to instantiate in the scene."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorGraphNodeView>(m_bots, "SensorGraphNodeView", "Borrowed identity of a selected sensor graph output. Valid only until graph\nmutation or destruction."));
   registry.StoreClass(nb::class_<superdex::robotics::SlotEntry>(m_bots, "SlotEntry", "One slot a scene offers, and the bots eligible to fill it."));
   registry.StoreClass(nb::class_<superdex::robotics::SceneSensorEntry>(m_bots, "SceneSensorEntry", "A scene-level sensor (not attached to any bot).\n\nUseful for environment-level observations such as overhead cameras, force\nplates, or proximity sensors mounted on fixtures."));
   registry.StoreClass(nb::class_<superdex::robotics::BotScenePrefab>(m_bots, "BotScenePrefab", "Complete parameter set for a .superdex_scene file.\n\nA .superdex_scene is a JSON config that serves as the single source of truth for\na complete simulation environment. It unifies scene geometry, robots,\ncontrollers, and sensors."));
@@ -240,10 +270,11 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
   ;
 
   registry.GetClass<superdex::robotics::BotSensorPrefab>()
-    .def("__init__", [](superdex::robotics::BotSensorPrefab* self, nb::object type, nb::object name, nb::object parent_from_sensor, nb::object params) {
+    .def("__init__", [](superdex::robotics::BotSensorPrefab* self, nb::object type, nb::object name, nb::object inputs, nb::object parent_from_sensor, nb::object params) {
       superdex::robotics::BotSensorPrefab result{};
       result.type = nb::cast<mochi::DynamicString>(type);
       result.name = nb::cast<mochi::DynamicString>(name);
+      result.inputs = nb::cast<mochi::DynamicArray<mochi::DynamicString>>(inputs);
       result.parentFromSensor = nb::cast<mochi::TransformRT>(parent_from_sensor);
       result.params = nb::cast<mochi::DynamicString>(params);
       new (self) superdex::robotics::BotSensorPrefab(std::move(result));
@@ -251,6 +282,7 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       , nb::kw_only()
       , nb::arg("type") = superdex::robotics::BotSensorPrefab{}.type
       , nb::arg("name") = superdex::robotics::BotSensorPrefab{}.name
+      , nb::arg("inputs").sig("...") = superdex::robotics::BotSensorPrefab{}.inputs
       , nb::arg("parent_from_sensor").sig("...") = superdex::robotics::BotSensorPrefab{}.parentFromSensor
       , nb::arg("params") = superdex::robotics::BotSensorPrefab{}.params
     )
@@ -261,6 +293,7 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def("__deepcopy__", [](superdex::robotics::BotSensorPrefab const& self, nb::dict) { return superdex::robotics::BotSensorPrefab(self); })
     .def_rw("type", &superdex::robotics::BotSensorPrefab::type, "Registered sensor type (e.g., \"SENSOR_CAMERA\").")
     .def_rw("name", &superdex::robotics::BotSensorPrefab::name, "Human-readable, findable identifier for this sensor instance.")
+    .def_prop_rw("inputs", [](superdex::robotics::BotSensorPrefab& self) -> mochi::DynamicArray<mochi::DynamicString>& { return self.inputs; }, [](superdex::robotics::BotSensorPrefab& self, nb::object val) { self.inputs = nb::cast<mochi::DynamicArray<mochi::DynamicString>>(val); }, "Sensor graph inputs. `source` resolves on this sensor's bot and link;\n`other_link/source` resolves on the same bot; `other_bot/link/source` is already\ncanonical; and `/other_bot/link/source` resolves from the graph root. A\nroot-qualified scene sensor such as `/overhead` is also accepted. Every resolved\nname must identify a graph node during Build().")
     .def_rw("parent_from_sensor", &superdex::robotics::BotSensorPrefab::parentFromSensor, "Sensor pose relative to the associated link's actor (aFromB convention: maps\nsensor-frame coordinates into the link frame). Chain to world via\nSensorBase::GetWorldTransform.")
     .def_rw("params", &superdex::robotics::BotSensorPrefab::params, "Sensor parameters: a path to a .superdex_sensor JSON file or inline JSON. Empty\nuses defaults.")
   ;
@@ -1259,6 +1292,273 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("look_distance", &superdex::robotics::CameraSensorParams::lookDistance, "Distance ahead of offset point to place look-at target (wrist cameras only).")
   ;
 
+  registry.GetClass<superdex::robotics::SensorSeedRectMapParams>()
+    .def("__init__", [](superdex::robotics::SensorSeedRectMapParams* self, nb::object center, nb::object tip_direction, nb::object zero_longitude_direction, nb::object width, nb::object height, nb::object max_polar_latitude, nb::object projection, nb::object rasterization, nb::object voronoi_oversampling, nb::object outside_policy) {
+      superdex::robotics::SensorSeedRectMapParams result{};
+      result.center = nb::cast<mochi::Real3>(center);
+      result.tipDirection = nb::cast<mochi::Real3>(tip_direction);
+      result.zeroLongitudeDirection = nb::cast<mochi::Real3>(zero_longitude_direction);
+      result.width = nb::cast<int>(width);
+      result.height = nb::cast<int>(height);
+      result.maxPolarLatitude = nb::cast<mochi::real>(max_polar_latitude);
+      result.projection = nb::cast<superdex::robotics::TactileRectProjectionType>(projection);
+      result.rasterization = nb::cast<superdex::robotics::TactileRectRasterizationType>(rasterization);
+      result.voronoiOversampling = nb::cast<int>(voronoi_oversampling);
+      result.outsidePolicy = nb::cast<superdex::robotics::TactileRectOutsidePolicy>(outside_policy);
+      new (self) superdex::robotics::SensorSeedRectMapParams(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("center").sig("...") = superdex::robotics::SensorSeedRectMapParams{}.center
+      , nb::arg("tip_direction").sig("...") = superdex::robotics::SensorSeedRectMapParams{}.tipDirection
+      , nb::arg("zero_longitude_direction").sig("...") = superdex::robotics::SensorSeedRectMapParams{}.zeroLongitudeDirection
+      , nb::arg("width") = superdex::robotics::SensorSeedRectMapParams{}.width
+      , nb::arg("height") = superdex::robotics::SensorSeedRectMapParams{}.height
+      , nb::arg("max_polar_latitude") = superdex::robotics::SensorSeedRectMapParams{}.maxPolarLatitude
+      , nb::arg("projection") = superdex::robotics::SensorSeedRectMapParams{}.projection
+      , nb::arg("rasterization") = superdex::robotics::SensorSeedRectMapParams{}.rasterization
+      , nb::arg("voronoi_oversampling") = superdex::robotics::SensorSeedRectMapParams{}.voronoiOversampling
+      , nb::arg("outside_policy") = superdex::robotics::SensorSeedRectMapParams{}.outsidePolicy
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SensorSeedRectMapParams const& self) { return superdex::robotics::SensorSeedRectMapParams(self); })
+    .def("__deepcopy__", [](superdex::robotics::SensorSeedRectMapParams const& self, nb::dict) { return superdex::robotics::SensorSeedRectMapParams(self); })
+    .def_prop_rw("center", [](superdex::robotics::SensorSeedRectMapParams& self) -> mochi::Real3& { return self.center; }, [](superdex::robotics::SensorSeedRectMapParams& self, nb::object val) { self.center = nb::cast<mochi::Real3>(val); })
+    .def_prop_rw("tip_direction", [](superdex::robotics::SensorSeedRectMapParams& self) -> mochi::Real3& { return self.tipDirection; }, [](superdex::robotics::SensorSeedRectMapParams& self, nb::object val) { self.tipDirection = nb::cast<mochi::Real3>(val); })
+    .def_prop_rw("zero_longitude_direction", [](superdex::robotics::SensorSeedRectMapParams& self) -> mochi::Real3& { return self.zeroLongitudeDirection; }, [](superdex::robotics::SensorSeedRectMapParams& self, nb::object val) { self.zeroLongitudeDirection = nb::cast<mochi::Real3>(val); })
+    .def_rw("width", &superdex::robotics::SensorSeedRectMapParams::width)
+    .def_rw("height", &superdex::robotics::SensorSeedRectMapParams::height)
+    .def_rw("max_polar_latitude", &superdex::robotics::SensorSeedRectMapParams::maxPolarLatitude)
+    .def_rw("projection", &superdex::robotics::SensorSeedRectMapParams::projection)
+    .def_rw("rasterization", &superdex::robotics::SensorSeedRectMapParams::rasterization)
+    .def_rw("voronoi_oversampling", &superdex::robotics::SensorSeedRectMapParams::voronoiOversampling)
+    .def_rw("outside_policy", &superdex::robotics::SensorSeedRectMapParams::outsidePolicy)
+  ;
+
+  registry.GetClass<superdex::robotics::SensorSeedV1MLPParams>()
+    .def("__init__", [](superdex::robotics::SensorSeedV1MLPParams* self, nb::object weights_path, nb::object hemisphere_center_offset, nb::object bypass_model) {
+      superdex::robotics::SensorSeedV1MLPParams result{};
+      result.weightsPath = nb::cast<mochi::DynamicString>(weights_path);
+      result.hemisphereCenterOffset = nb::cast<mochi::Real3>(hemisphere_center_offset);
+      result.bypassModel = nb::cast<bool>(bypass_model);
+      new (self) superdex::robotics::SensorSeedV1MLPParams(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("weights_path") = superdex::robotics::SensorSeedV1MLPParams{}.weightsPath
+      , nb::arg("hemisphere_center_offset").sig("...") = superdex::robotics::SensorSeedV1MLPParams{}.hemisphereCenterOffset
+      , nb::arg("bypass_model") = superdex::robotics::SensorSeedV1MLPParams{}.bypassModel
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SensorSeedV1MLPParams const& self) { return superdex::robotics::SensorSeedV1MLPParams(self); })
+    .def("__deepcopy__", [](superdex::robotics::SensorSeedV1MLPParams const& self, nb::dict) { return superdex::robotics::SensorSeedV1MLPParams(self); })
+    .def_rw("weights_path", &superdex::robotics::SensorSeedV1MLPParams::weightsPath, "Path to the JSON weights file (forcenet_weights.json).")
+    .def_prop_rw("hemisphere_center_offset", [](superdex::robotics::SensorSeedV1MLPParams& self) -> mochi::Real3& { return self.hemisphereCenterOffset; }, [](superdex::robotics::SensorSeedV1MLPParams& self, nb::object val) { self.hemisphereCenterOffset = nb::cast<mochi::Real3>(val); }, "Offset from link origin to hemisphere center in link-local frame [m].")
+    .def_rw("bypass_model", &superdex::robotics::SensorSeedV1MLPParams::bypassModel, "When true, output = raw contact force (skip MLP inference).")
+  ;
+
+  registry.GetClass<superdex::robotics::SensorSeedV1MLPResult>()
+    .def("__init__", [](superdex::robotics::SensorSeedV1MLPResult* self, nb::object input_force, nb::object input_normal, nb::object output_force, nb::object contact_centroid, nb::object contact_normal, nb::object num_contacts) {
+      superdex::robotics::SensorSeedV1MLPResult result{};
+      result.inputForce = nb::cast<mochi::Real3>(input_force);
+      result.inputNormal = nb::cast<mochi::Real3>(input_normal);
+      result.outputForce = nb::cast<mochi::Real3>(output_force);
+      result.contactCentroid = nb::cast<mochi::Real3>(contact_centroid);
+      result.contactNormal = nb::cast<mochi::Real3>(contact_normal);
+      result.numContacts = nb::cast<int>(num_contacts);
+      new (self) superdex::robotics::SensorSeedV1MLPResult(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("input_force").sig("...") = superdex::robotics::SensorSeedV1MLPResult{}.inputForce
+      , nb::arg("input_normal").sig("...") = superdex::robotics::SensorSeedV1MLPResult{}.inputNormal
+      , nb::arg("output_force").sig("...") = superdex::robotics::SensorSeedV1MLPResult{}.outputForce
+      , nb::arg("contact_centroid").sig("...") = superdex::robotics::SensorSeedV1MLPResult{}.contactCentroid
+      , nb::arg("contact_normal").sig("...") = superdex::robotics::SensorSeedV1MLPResult{}.contactNormal
+      , nb::arg("num_contacts") = superdex::robotics::SensorSeedV1MLPResult{}.numContacts
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SensorSeedV1MLPResult const& self) { return superdex::robotics::SensorSeedV1MLPResult(self); })
+    .def("__deepcopy__", [](superdex::robotics::SensorSeedV1MLPResult const& self, nb::dict) { return superdex::robotics::SensorSeedV1MLPResult(self); })
+    .def_prop_rw("input_force", [](superdex::robotics::SensorSeedV1MLPResult& self) -> mochi::Real3& { return self.inputForce; }, [](superdex::robotics::SensorSeedV1MLPResult& self, nb::object val) { self.inputForce = nb::cast<mochi::Real3>(val); })
+    .def_prop_rw("input_normal", [](superdex::robotics::SensorSeedV1MLPResult& self) -> mochi::Real3& { return self.inputNormal; }, [](superdex::robotics::SensorSeedV1MLPResult& self, nb::object val) { self.inputNormal = nb::cast<mochi::Real3>(val); })
+    .def_prop_rw("output_force", [](superdex::robotics::SensorSeedV1MLPResult& self) -> mochi::Real3& { return self.outputForce; }, [](superdex::robotics::SensorSeedV1MLPResult& self, nb::object val) { self.outputForce = nb::cast<mochi::Real3>(val); })
+    .def_prop_rw("contact_centroid", [](superdex::robotics::SensorSeedV1MLPResult& self) -> mochi::Real3& { return self.contactCentroid; }, [](superdex::robotics::SensorSeedV1MLPResult& self, nb::object val) { self.contactCentroid = nb::cast<mochi::Real3>(val); })
+    .def_prop_rw("contact_normal", [](superdex::robotics::SensorSeedV1MLPResult& self) -> mochi::Real3& { return self.contactNormal; }, [](superdex::robotics::SensorSeedV1MLPResult& self, nb::object val) { self.contactNormal = nb::cast<mochi::Real3>(val); })
+    .def_rw("num_contacts", &superdex::robotics::SensorSeedV1MLPResult::numContacts)
+  ;
+
+  registry.GetClass<superdex::robotics::TactileTaxelLayout>()
+    .def("__init__", [](superdex::robotics::TactileTaxelLayout* self, nb::object positions) {
+      superdex::robotics::TactileTaxelLayout result{};
+      result.positions = nb::cast<mochi::DynamicArray<mochi::Real3>>(positions);
+      new (self) superdex::robotics::TactileTaxelLayout(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("positions").sig("...") = superdex::robotics::TactileTaxelLayout{}.positions
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::TactileTaxelLayout const& self) { return superdex::robotics::TactileTaxelLayout(self); })
+    .def("__deepcopy__", [](superdex::robotics::TactileTaxelLayout const& self, nb::dict) { return superdex::robotics::TactileTaxelLayout(self); })
+    .def_prop_rw("positions", [](superdex::robotics::TactileTaxelLayout& self) -> mochi::DynamicArray<mochi::Real3>& { return self.positions; }, [](superdex::robotics::TactileTaxelLayout& self, nb::object val) { self.positions = nb::cast<mochi::DynamicArray<mochi::Real3>>(val); }, "Taxel positions [m] in the sensor link frame. Their order is the taxel identity.")
+  ;
+
+  registry.GetClass<superdex::robotics::TactileTaxelForces>()
+    .def("__init__", [](superdex::robotics::TactileTaxelForces* self, nb::object forces) {
+      superdex::robotics::TactileTaxelForces result{};
+      result.forces = nb::cast<mochi::DynamicArray<mochi::Real3>>(forces);
+      new (self) superdex::robotics::TactileTaxelForces(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("forces").sig("...") = superdex::robotics::TactileTaxelForces{}.forces
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::TactileTaxelForces const& self) { return superdex::robotics::TactileTaxelForces(self); })
+    .def("__deepcopy__", [](superdex::robotics::TactileTaxelForces const& self, nb::dict) { return superdex::robotics::TactileTaxelForces(self); })
+    .def_prop_rw("forces", [](superdex::robotics::TactileTaxelForces& self) -> mochi::DynamicArray<mochi::Real3>& { return self.forces; }, [](superdex::robotics::TactileTaxelForces& self, nb::object val) { self.forces = nb::cast<mochi::DynamicArray<mochi::Real3>>(val); }, "One force [N] per layout taxel, in the sensor link frame.")
+  ;
+
+  registry.GetClass<superdex::robotics::TactileAggregateForce>()
+    .def("__init__", [](superdex::robotics::TactileAggregateForce* self, nb::object force) {
+      superdex::robotics::TactileAggregateForce result{};
+      result.force = nb::cast<mochi::Real3>(force);
+      new (self) superdex::robotics::TactileAggregateForce(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("force").sig("...") = superdex::robotics::TactileAggregateForce{}.force
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::TactileAggregateForce const& self) { return superdex::robotics::TactileAggregateForce(self); })
+    .def("__deepcopy__", [](superdex::robotics::TactileAggregateForce const& self, nb::dict) { return superdex::robotics::TactileAggregateForce(self); })
+    .def_prop_rw("force", [](superdex::robotics::TactileAggregateForce& self) -> mochi::Real3& { return self.force; }, [](superdex::robotics::TactileAggregateForce& self, nb::object val) { self.force = nb::cast<mochi::Real3>(val); }, "Sum of the taxel forces [N], in the sensor link frame.")
+  ;
+
+  registry.GetClass<superdex::robotics::TactileAggregateWrench>()
+    .def("__init__", [](superdex::robotics::TactileAggregateWrench* self, nb::object force, nb::object torque, nb::object reference_point) {
+      superdex::robotics::TactileAggregateWrench result{};
+      result.force = nb::cast<mochi::Real3>(force);
+      result.torque = nb::cast<mochi::Real3>(torque);
+      result.referencePoint = nb::cast<mochi::Real3>(reference_point);
+      new (self) superdex::robotics::TactileAggregateWrench(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("force").sig("...") = superdex::robotics::TactileAggregateWrench{}.force
+      , nb::arg("torque").sig("...") = superdex::robotics::TactileAggregateWrench{}.torque
+      , nb::arg("reference_point").sig("...") = superdex::robotics::TactileAggregateWrench{}.referencePoint
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::TactileAggregateWrench const& self) { return superdex::robotics::TactileAggregateWrench(self); })
+    .def("__deepcopy__", [](superdex::robotics::TactileAggregateWrench const& self, nb::dict) { return superdex::robotics::TactileAggregateWrench(self); })
+    .def_prop_rw("force", [](superdex::robotics::TactileAggregateWrench& self) -> mochi::Real3& { return self.force; }, [](superdex::robotics::TactileAggregateWrench& self, nb::object val) { self.force = nb::cast<mochi::Real3>(val); }, "Sum of the taxel forces [N], in the sensor link frame.")
+    .def_prop_rw("torque", [](superdex::robotics::TactileAggregateWrench& self) -> mochi::Real3& { return self.torque; }, [](superdex::robotics::TactileAggregateWrench& self, nb::object val) { self.torque = nb::cast<mochi::Real3>(val); }, "Sum of position cross force about referencePoint [N*m], in the sensor link\nframe.")
+    .def_prop_rw("reference_point", [](superdex::robotics::TactileAggregateWrench& self) -> mochi::Real3& { return self.referencePoint; }, [](superdex::robotics::TactileAggregateWrench& self, nb::object val) { self.referencePoint = nb::cast<mochi::Real3>(val); }, "Point about which torque is resolved [m], in the sensor link frame.")
+  ;
+
+  registry.GetClass<superdex::robotics::TactileHemisphereRectParams>()
+    .def("__init__", [](superdex::robotics::TactileHemisphereRectParams* self, nb::object center, nb::object tip_direction, nb::object zero_longitude_direction, nb::object width, nb::object height, nb::object max_polar_latitude, nb::object projection, nb::object rasterization, nb::object voronoi_oversampling, nb::object outside_policy) {
+      superdex::robotics::TactileHemisphereRectParams result{};
+      result.center = nb::cast<mochi::Real3>(center);
+      result.tipDirection = nb::cast<mochi::Real3>(tip_direction);
+      result.zeroLongitudeDirection = nb::cast<mochi::Real3>(zero_longitude_direction);
+      result.width = nb::cast<int>(width);
+      result.height = nb::cast<int>(height);
+      result.maxPolarLatitude = nb::cast<mochi::real>(max_polar_latitude);
+      result.projection = nb::cast<superdex::robotics::TactileRectProjectionType>(projection);
+      result.rasterization = nb::cast<superdex::robotics::TactileRectRasterizationType>(rasterization);
+      result.voronoiOversampling = nb::cast<int>(voronoi_oversampling);
+      result.outsidePolicy = nb::cast<superdex::robotics::TactileRectOutsidePolicy>(outside_policy);
+      new (self) superdex::robotics::TactileHemisphereRectParams(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("center").sig("...") = superdex::robotics::TactileHemisphereRectParams{}.center
+      , nb::arg("tip_direction").sig("...") = superdex::robotics::TactileHemisphereRectParams{}.tipDirection
+      , nb::arg("zero_longitude_direction").sig("...") = superdex::robotics::TactileHemisphereRectParams{}.zeroLongitudeDirection
+      , nb::arg("width") = superdex::robotics::TactileHemisphereRectParams{}.width
+      , nb::arg("height") = superdex::robotics::TactileHemisphereRectParams{}.height
+      , nb::arg("max_polar_latitude") = superdex::robotics::TactileHemisphereRectParams{}.maxPolarLatitude
+      , nb::arg("projection") = superdex::robotics::TactileHemisphereRectParams{}.projection
+      , nb::arg("rasterization") = superdex::robotics::TactileHemisphereRectParams{}.rasterization
+      , nb::arg("voronoi_oversampling") = superdex::robotics::TactileHemisphereRectParams{}.voronoiOversampling
+      , nb::arg("outside_policy") = superdex::robotics::TactileHemisphereRectParams{}.outsidePolicy
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::TactileHemisphereRectParams const& self) { return superdex::robotics::TactileHemisphereRectParams(self); })
+    .def("__deepcopy__", [](superdex::robotics::TactileHemisphereRectParams const& self, nb::dict) { return superdex::robotics::TactileHemisphereRectParams(self); })
+    .def_prop_rw("center", [](superdex::robotics::TactileHemisphereRectParams& self) -> mochi::Real3& { return self.center; }, [](superdex::robotics::TactileHemisphereRectParams& self, nb::object val) { self.center = nb::cast<mochi::Real3>(val); }, "Hemisphere center [m] in the sensor link frame.")
+    .def_prop_rw("tip_direction", [](superdex::robotics::TactileHemisphereRectParams& self) -> mochi::Real3& { return self.tipDirection; }, [](superdex::robotics::TactileHemisphereRectParams& self, nb::object val) { self.tipDirection = nb::cast<mochi::Real3>(val); }, "Direction from center to the tactile tip. It is normalized by the mapper.")
+    .def_prop_rw("zero_longitude_direction", [](superdex::robotics::TactileHemisphereRectParams& self) -> mochi::Real3& { return self.zeroLongitudeDirection; }, [](superdex::robotics::TactileHemisphereRectParams& self, nb::object val) { self.zeroLongitudeDirection = nb::cast<mochi::Real3>(val); }, "Direction assigned longitude zero. Its component along tipDirection is removed.")
+    .def_rw("width", &superdex::robotics::TactileHemisphereRectParams::width, "Number of rectangular grid columns.")
+    .def_rw("height", &superdex::robotics::TactileHemisphereRectParams::height, "Number of rectangular grid rows.")
+    .def_rw("max_polar_latitude", &superdex::robotics::TactileHemisphereRectParams::maxPolarLatitude, "Largest selected polar angle [rad]. Pi/2 describes a hemisphere.")
+    .def_rw("projection", &superdex::robotics::TactileHemisphereRectParams::projection, "Spherical-cap flattening geometry.")
+    .def_rw("rasterization", &superdex::robotics::TactileHemisphereRectParams::rasterization, "Force-conserving resampling from projected taxels into grid cells.")
+    .def_rw("voronoi_oversampling", &superdex::robotics::TactileHemisphereRectParams::voronoiOversampling, "Linear fine-grid scale used to resolve Voronoi regions before output\ndownsampling.")
+    .def_rw("outside_policy", &superdex::robotics::TactileHemisphereRectParams::outsidePolicy, "Handling for source taxels beyond maxPolarLatitude.")
+  ;
+
+  registry.GetClass<superdex::robotics::TactileRectProjectionMap>()
+    .def("__init__", [](superdex::robotics::TactileRectProjectionMap* self, nb::object coordinates, nb::object taxel_cells, nb::object taxel_contribution_offsets, nb::object contribution_cells, nb::object contribution_weights, nb::object width, nb::object height, nb::object selected_taxel_count, nb::object rasterization, nb::object voronoi_oversampling) {
+      superdex::robotics::TactileRectProjectionMap result{};
+      result.coordinates = nb::cast<mochi::DynamicArray<mochi::Real2>>(coordinates);
+      result.taxelCells = nb::cast<mochi::DynamicArray<int>>(taxel_cells);
+      result.taxelContributionOffsets = nb::cast<mochi::DynamicArray<int>>(taxel_contribution_offsets);
+      result.contributionCells = nb::cast<mochi::DynamicArray<int>>(contribution_cells);
+      result.contributionWeights = nb::cast<mochi::DynamicArray<mochi::real>>(contribution_weights);
+      result.width = nb::cast<int>(width);
+      result.height = nb::cast<int>(height);
+      result.selectedTaxelCount = nb::cast<int>(selected_taxel_count);
+      result.rasterization = nb::cast<superdex::robotics::TactileRectRasterizationType>(rasterization);
+      result.voronoiOversampling = nb::cast<int>(voronoi_oversampling);
+      new (self) superdex::robotics::TactileRectProjectionMap(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("coordinates").sig("...") = superdex::robotics::TactileRectProjectionMap{}.coordinates
+      , nb::arg("taxel_cells").sig("...") = superdex::robotics::TactileRectProjectionMap{}.taxelCells
+      , nb::arg("taxel_contribution_offsets").sig("...") = superdex::robotics::TactileRectProjectionMap{}.taxelContributionOffsets
+      , nb::arg("contribution_cells").sig("...") = superdex::robotics::TactileRectProjectionMap{}.contributionCells
+      , nb::arg("contribution_weights").sig("...") = superdex::robotics::TactileRectProjectionMap{}.contributionWeights
+      , nb::arg("width") = superdex::robotics::TactileRectProjectionMap{}.width
+      , nb::arg("height") = superdex::robotics::TactileRectProjectionMap{}.height
+      , nb::arg("selected_taxel_count") = superdex::robotics::TactileRectProjectionMap{}.selectedTaxelCount
+      , nb::arg("rasterization") = superdex::robotics::TactileRectProjectionMap{}.rasterization
+      , nb::arg("voronoi_oversampling") = superdex::robotics::TactileRectProjectionMap{}.voronoiOversampling
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::TactileRectProjectionMap const& self) { return superdex::robotics::TactileRectProjectionMap(self); })
+    .def("__deepcopy__", [](superdex::robotics::TactileRectProjectionMap const& self, nb::dict) { return superdex::robotics::TactileRectProjectionMap(self); })
+    .def_prop_rw("coordinates", [](superdex::robotics::TactileRectProjectionMap& self) -> mochi::DynamicArray<mochi::Real2>& { return self.coordinates; }, [](superdex::robotics::TactileRectProjectionMap& self, nb::object val) { self.coordinates = nb::cast<mochi::DynamicArray<mochi::Real2>>(val); }, "Normalized rectangular coordinates in [-1, 1], one per source taxel.")
+    .def_prop_rw("taxel_cells", [](superdex::robotics::TactileRectProjectionMap& self) -> mochi::DynamicArray<int>& { return self.taxelCells; }, [](superdex::robotics::TactileRectProjectionMap& self, nb::object val) { self.taxelCells = nb::cast<mochi::DynamicArray<int>>(val); }, "Row-major destination cell per source taxel, or -1 when explicitly excluded.")
+    .def_prop_rw("taxel_contribution_offsets", [](superdex::robotics::TactileRectProjectionMap& self) -> mochi::DynamicArray<int>& { return self.taxelContributionOffsets; }, [](superdex::robotics::TactileRectProjectionMap& self, nb::object val) { self.taxelContributionOffsets = nb::cast<mochi::DynamicArray<int>>(val); }, "CSR offsets into contributionCells and contributionWeights, one row per taxel.")
+    .def_prop_rw("contribution_cells", [](superdex::robotics::TactileRectProjectionMap& self) -> mochi::DynamicArray<int>& { return self.contributionCells; }, [](superdex::robotics::TactileRectProjectionMap& self, nb::object val) { self.contributionCells = nb::cast<mochi::DynamicArray<int>>(val); }, "Row-major destination cells receiving force from each taxel.")
+    .def_prop_rw("contribution_weights", [](superdex::robotics::TactileRectProjectionMap& self) -> mochi::DynamicArray<mochi::real>& { return self.contributionWeights; }, [](superdex::robotics::TactileRectProjectionMap& self, nb::object val) { self.contributionWeights = nb::cast<mochi::DynamicArray<mochi::real>>(val); }, "Per-taxel force fractions. Every selected taxel's CSR row sums to one.")
+    .def_rw("width", &superdex::robotics::TactileRectProjectionMap::width, "Number of grid columns.")
+    .def_rw("height", &superdex::robotics::TactileRectProjectionMap::height, "Number of grid rows.")
+    .def_rw("selected_taxel_count", &superdex::robotics::TactileRectProjectionMap::selectedTaxelCount, "Number of source taxels selected by the projection.")
+    .def_rw("rasterization", &superdex::robotics::TactileRectProjectionMap::rasterization, "Resampling used to build the contribution matrix.")
+    .def_rw("voronoi_oversampling", &superdex::robotics::TactileRectProjectionMap::voronoiOversampling, "Fine-grid scale used for Voronoi resampling, or one for nearest-cell mode.")
+  ;
+
+  registry.GetClass<superdex::robotics::TactileForceGrid>()
+    .def("__init__", [](superdex::robotics::TactileForceGrid* self, nb::object forces, nb::object taxel_counts, nb::object width, nb::object height) {
+      superdex::robotics::TactileForceGrid result{};
+      result.forces = nb::cast<mochi::DynamicArray<mochi::Real3>>(forces);
+      result.taxelCounts = nb::cast<mochi::DynamicArray<int>>(taxel_counts);
+      result.width = nb::cast<int>(width);
+      result.height = nb::cast<int>(height);
+      new (self) superdex::robotics::TactileForceGrid(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("forces").sig("...") = superdex::robotics::TactileForceGrid{}.forces
+      , nb::arg("taxel_counts").sig("...") = superdex::robotics::TactileForceGrid{}.taxelCounts
+      , nb::arg("width") = superdex::robotics::TactileForceGrid{}.width
+      , nb::arg("height") = superdex::robotics::TactileForceGrid{}.height
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::TactileForceGrid const& self) { return superdex::robotics::TactileForceGrid(self); })
+    .def("__deepcopy__", [](superdex::robotics::TactileForceGrid const& self, nb::dict) { return superdex::robotics::TactileForceGrid(self); })
+    .def_prop_rw("forces", [](superdex::robotics::TactileForceGrid& self) -> mochi::DynamicArray<mochi::Real3>& { return self.forces; }, [](superdex::robotics::TactileForceGrid& self, nb::object val) { self.forces = nb::cast<mochi::DynamicArray<mochi::Real3>>(val); }, "Row-major cell force sums [N] in the sensor link frame.")
+    .def_prop_rw("taxel_counts", [](superdex::robotics::TactileForceGrid& self) -> mochi::DynamicArray<int>& { return self.taxelCounts; }, [](superdex::robotics::TactileForceGrid& self, nb::object val) { self.taxelCounts = nb::cast<mochi::DynamicArray<int>>(val); }, "Number of source taxels making a nonzero contribution to each row-major cell.")
+    .def_rw("width", &superdex::robotics::TactileForceGrid::width, "Number of grid columns.")
+    .def_rw("height", &superdex::robotics::TactileForceGrid::height, "Number of grid rows.")
+  ;
+
   registry.GetClass<superdex::robotics::ControllerBasicJscPd, superdex::robotics::ControllerBase>()
     .def_static("type_name", &superdex::robotics::ControllerBasicJscPd::TypeName
       , "Registration type name for this controller (see\nRoboticsContext::RegisterControllerType).\n\nReturns:\n    This controller's registration type name."
@@ -1394,9 +1694,28 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+  registry.GetClass<superdex::robotics::SensorLinkVertexForceParams>()
+    .def("__init__", [](superdex::robotics::SensorLinkVertexForceParams* self, nb::object sample_rate_hz) {
+      superdex::robotics::SensorLinkVertexForceParams result{};
+      result.sampleRateHz = nb::cast<mochi::real>(sample_rate_hz);
+      new (self) superdex::robotics::SensorLinkVertexForceParams(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("sample_rate_hz") = superdex::robotics::SensorLinkVertexForceParams{}.sampleRateHz
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SensorLinkVertexForceParams const& self) { return superdex::robotics::SensorLinkVertexForceParams(self); })
+    .def("__deepcopy__", [](superdex::robotics::SensorLinkVertexForceParams const& self, nb::dict) { return superdex::robotics::SensorLinkVertexForceParams(self); })
+    .def_rw("sample_rate_hz", &superdex::robotics::SensorLinkVertexForceParams::sampleRateHz, "Samples per second, or zero to capture every graph step.")
+  ;
+
   registry.GetClass<superdex::robotics::SensorLinkVertexForce, superdex::robotics::SensorBase>()
     .def_static("type_name", &superdex::robotics::SensorLinkVertexForce::TypeName
       , "Canonical serialized sensor type identifier.\n\nReturns:\n    Stable type identifier."
+    )
+    .def("get_params", &superdex::robotics::SensorLinkVertexForce::GetParams
+      , "Get acquisition parameters.\n\nReturns:\n    Current acquisition parameters."
+      , nb::rv_policy::reference
     )
   ;
 
@@ -1420,6 +1739,50 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     }
       , nb::arg("params")
       , "Set sensor parameters.\n\nArgs:\n    params (CameraSensorParams): Params.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    )
+  ;
+
+  registry.GetClass<superdex::robotics::SensorSeedRectMap, superdex::robotics::SensorBase>()
+    .def_static("type_name", &superdex::robotics::SensorSeedRectMap::TypeName
+    )
+    .def("get_params", &superdex::robotics::SensorSeedRectMap::GetParams
+      , nb::rv_policy::reference
+    )
+  ;
+
+  registry.GetClass<superdex::robotics::SensorSeedV1MLP, superdex::robotics::SensorBase>()
+    .def_static("type_name", &superdex::robotics::SensorSeedV1MLP::TypeName
+    )
+    .def("compute_signal", [](superdex::robotics::SensorSeedV1MLP& self) {
+      mochi::Error error;
+      auto result = self.ComputeSignal(error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+    )
+    .def("compute_signal", [](superdex::robotics::SensorSeedV1MLP& self, mochi::Span<mochi::ContactPoint const> contacts) {
+      mochi::Error error;
+      auto result = self.ComputeSignal(contacts, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("contacts")
+    )
+    .def("get_params", &superdex::robotics::SensorSeedV1MLP::GetParams
+      , nb::rv_policy::reference
+    )
+    .def("set_params", [](superdex::robotics::SensorSeedV1MLP& self, superdex::robotics::SensorSeedV1MLPParams const& params) {
+      mochi::Error error;
+      self.SetParams(params, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , nb::arg("params")
     )
   ;
 
@@ -1540,6 +1903,24 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_rw("roboperator_class", &superdex::robotics::BotEntry::roboperatorClass, "Key naming the teleoperator rig that drives this bot; the consumer maps it to a\nconcrete class. Empty means use the consumer's default for the slot this bot\nfills.")
   ;
 
+  registry.GetClass<superdex::robotics::SensorGraphNodeView>()
+    .def("__init__", [](superdex::robotics::SensorGraphNodeView* self, nb::object name, nb::object handle) {
+      superdex::robotics::SensorGraphNodeView result{};
+      result.name = nb::cast<std::string_view>(name);
+      result.handle = nb::cast<superdex::robotics::SensorHandle>(handle);
+      new (self) superdex::robotics::SensorGraphNodeView(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("name") = superdex::robotics::SensorGraphNodeView{}.name
+      , nb::arg("handle").sig("...") = superdex::robotics::SensorGraphNodeView{}.handle
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SensorGraphNodeView const&) { throw nb::type_error("SensorGraphNodeView cannot be copied because it contains non-owning members (Span, StringView, or pointer)."); })
+    .def("__deepcopy__", [](superdex::robotics::SensorGraphNodeView const&, nb::dict) { throw nb::type_error("SensorGraphNodeView cannot be copied because it contains non-owning members (Span, StringView, or pointer). Shallow copy is not currently allowed either, to prevent mistakes."); })
+    .def_rw("name", &superdex::robotics::SensorGraphNodeView::name, "Canonical graph node name.")
+    .def_rw("handle", &superdex::robotics::SensorGraphNodeView::handle, "Sensor handle in the owning robotics context.")
+  ;
+
   registry.GetClass<superdex::robotics::SlotEntry>()
     .def("__init__", [](superdex::robotics::SlotEntry* self, nb::object name, nb::object controlled_bots) {
       superdex::robotics::SlotEntry result{};
@@ -1559,10 +1940,11 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
   ;
 
   registry.GetClass<superdex::robotics::SceneSensorEntry>()
-    .def("__init__", [](superdex::robotics::SceneSensorEntry* self, nb::object type, nb::object name, nb::object parent_from_sensor, nb::object params) {
+    .def("__init__", [](superdex::robotics::SceneSensorEntry* self, nb::object type, nb::object name, nb::object inputs, nb::object parent_from_sensor, nb::object params) {
       superdex::robotics::SceneSensorEntry result{};
       result.type = nb::cast<mochi::DynamicString>(type);
       result.name = nb::cast<mochi::DynamicString>(name);
+      result.inputs = nb::cast<mochi::DynamicArray<mochi::DynamicString>>(inputs);
       result.parentFromSensor = nb::cast<mochi::TransformRT>(parent_from_sensor);
       result.params = nb::cast<mochi::DynamicString>(params);
       new (self) superdex::robotics::SceneSensorEntry(std::move(result));
@@ -1570,6 +1952,7 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       , nb::kw_only()
       , nb::arg("type") = superdex::robotics::SceneSensorEntry{}.type
       , nb::arg("name") = superdex::robotics::SceneSensorEntry{}.name
+      , nb::arg("inputs").sig("...") = superdex::robotics::SceneSensorEntry{}.inputs
       , nb::arg("parent_from_sensor").sig("...") = superdex::robotics::SceneSensorEntry{}.parentFromSensor
       , nb::arg("params") = superdex::robotics::SceneSensorEntry{}.params
     )
@@ -1578,6 +1961,7 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def("__deepcopy__", [](superdex::robotics::SceneSensorEntry const& self, nb::dict) { return superdex::robotics::SceneSensorEntry(self); })
     .def_rw("type", &superdex::robotics::SceneSensorEntry::type, "Sensor type identifier (registered string), e.g. \"SENSOR_CAMERA\".")
     .def_rw("name", &superdex::robotics::SceneSensorEntry::name, "Unique instance name for runtime lookup.")
+    .def_prop_rw("inputs", [](superdex::robotics::SceneSensorEntry& self) -> mochi::DynamicArray<mochi::DynamicString>& { return self.inputs; }, [](superdex::robotics::SceneSensorEntry& self, nb::object val) { self.inputs = nb::cast<mochi::DynamicArray<mochi::DynamicString>>(val); }, "Canonical sensor graph inputs. Use `bot/link/sensor` for a bot-owned node and\nthe scene sensor's own name for a scene-owned node. Scene sensors have no\nbot/link context for shortening.")
     .def_rw("parent_from_sensor", &superdex::robotics::SceneSensorEntry::parentFromSensor, "Sensor pose relative to the scene root (aFromB convention: maps sensor-frame\ncoordinates into the parent scene frame). Chain to world via\nSensorBase::GetWorldTransform. Default: identity.")
     .def_rw("params", &superdex::robotics::SceneSensorEntry::params, "Sensor-specific parameters: a path to a .superdex_sensor JSON file or inline\nJSON. Omit to use defaults.")
   ;
@@ -1684,6 +2068,34 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       , "Get the robotics context (bot/controller/sensor/actuator resource owner).\n\nReturns:\n    Robotics context, or None if unavailable."
       , nb::rv_policy::reference
     )
+    .def("reset_sensors", [](superdex::robotics::BotScene& self) {
+      mochi::Error error;
+      self.ResetSensors(error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , "Reset acquisition; samples await the next positive physics step.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    )
+    .def("rebuild_sensor_graph", [](superdex::robotics::BotScene& self, mochi::Span<mochi::DynamicString const> outputs) {
+      mochi::Error error;
+      self.RebuildSensorGraph(outputs, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , nb::arg("outputs")
+      , "Reconstruct the declared graph with caller-selected outputs and reset\nacquisition. Call between episodes after adding/removing a bot. Failure leaves\nthe graph unbuilt. Does not reset physics, controllers or task state.\n\nArgs:\n    outputs (ArrayLikeDynamicString): Canonical names of the graph sensors to\n        enable as outputs.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    )
+    .def("check_sensor_graph", [](superdex::robotics::BotScene& self) {
+      mochi::Error error;
+      self.CheckSensorGraph(error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , "Surface an error captured while the graph ran in a native post-step callback.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    )
     .def("get_bot", &superdex::robotics::BotScene::GetBot
       , nb::arg("name")
       , "Look up a bot by the name declared in the .superdex_scene file.\n\nArgs:\n    name (str): Exact declared bot name.\n\nReturns:\n    Loaded bot, or None if the name is not found or this BotScene is moved from."
@@ -1769,6 +2181,19 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       , nb::arg("name")
       , "Instantiate a bot the .superdex_scene declares but that is not loaded -- one\nremoved with RemoveBot, or left out when the scene was loaded -- together with\nits controllers, at its declared placement and initial pose. Errors, creating\nnothing, if no bot named `name` is declared, it is already loaded, or it fails\nto instantiate.\n\nArgs:\n    name (str): Exact declared name of the bot to initialize.\n\nReturns:\n    The loaded bot, or None on error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
       , nb::rv_policy::reference
+    )
+    .def("add_sensor_outputs", [](superdex::robotics::BotScene& self, mochi::Span<mochi::DynamicString const> sensor_outputs) {
+      mochi::Error error;
+      self.AddSensorOutputs(sensor_outputs, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+    }
+      , nb::arg("sensor_outputs")
+      , "Enable canonical graph output names and initialize newly active dependencies.\nExisting sensor state and selections survive; an empty list does nothing.\n\nArgs:\n    sensor_outputs (ArrayLikeString): Canonical names of existing graph nodes to\n        select.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    )
+    .def("get_sensor_outputs", &superdex::robotics::BotScene::GetSensorOutputs
+      , "Enumerate the graph's current selected outputs in dependency order. Borrowed\nview invalidated by graph mutation or destruction; empty while unbuilt."
     )
     .def("get_bot_scene_prefab", &superdex::robotics::BotScene::GetBotScenePrefab
       , "Get the original parameters this BotScene was loaded from.\n\nReturns:\n    Original scene parameters, or an empty prefab if this BotScene is moved\n    from."
@@ -2077,6 +2502,98 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       , nb::arg("src_pose")
       , nb::arg("num_actor_dofs")
       , "Convert a bot-space pose to an articulated-actor pose.\n\nBot DOFs never include the root joint's, whether or not the articulation has\nany: a Free root contributes 6 actor DOFs that bot space excludes, and a Hard\nroot contributes none. The two spaces therefore share an order and differ only\nby that leading offset, so this copies srcPose to pose[i + numBaseDofs] and\nzero-fills the base DOFs, producing the actor-DOF layout\n:meth:`~superdex.physics.Actor.set_articulated_pose_from_joints` expects. It\nnever permutes.\n\nArgs:\n    bot_prefab (BotPrefab): Bot describing the articulation.\n    src_pose (ArrayLikeReal): Bot-space pose (must have\n        ``superdex::robotics::BotPrefab::_numDofs`` entries).\n    num_actor_dofs (int): The actor's DOF count\n        (:meth:`~superdex.physics.Actor.get_num_dofs`).\n\nReturns:\n    Pose in actor-DOF layout, sized to numActorDofs.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nWarning:\n    This documentation references the following C++ API, which is not available\n    in Python: ``superdex::robotics::BotPrefab::_numDofs``."
+    );
+
+    m_bots.def("make_tactile_taxel_layout", [](mochi::Span<mochi::Real3 const> positions) {
+      mochi::Error error;
+      auto result = superdex::robotics::MakeTactileTaxelLayout(positions, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("positions")
+      , "Build an ordered tactile taxel layout.\n\nArgs:\n    positions (ArrayLikeReal3): Taxel positions [m] in sensor link frame, in\n        stable taxel order.\n\nReturns:\n    Validated layout. Empty layouts and non-finite positions raise an error.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+
+    m_bots.def("read_tactile_taxel_forces", [](mochi::Actor const* actor, mochi::TransformRT const& world_from_sensor, superdex::robotics::TactileTaxelLayout const& layout) {
+      mochi::Error error;
+      auto result = superdex::robotics::ReadTactileTaxelForces(actor, world_from_sensor, layout, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("actor").none()
+      , nb::arg("world_from_sensor")
+      , nb::arg("layout")
+      , "Read a dense per-taxel force observation from a Mochi actor.\n\nThe caller must register QueryType::NodeContactForces before stepping the scene\nand keep that query registered while reading.\n\nArgs:\n    actor (Actor): Actor whose node-force query is read.\n    world_from_sensor (TransformRT): Sensor-frame pose in world space. Pass the\n        actor root transform when the actor and sensor frames coincide.\n    layout (TactileTaxelLayout): Ordered taxel layout matching the actor's node\n        indices.\n\nReturns:\n    One sensor-link-frame force per layout taxel.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+
+    m_bots.def("aggregate_tactile_force", [](superdex::robotics::TactileTaxelForces const& taxel_forces) {
+      mochi::Error error;
+      auto result = superdex::robotics::AggregateTactileForce(taxel_forces, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("taxel_forces")
+      , "Sum per-taxel forces into one aggregate force observation.\n\nNo learned response, calibration, threshold, or torque model is applied.\n\nArgs:\n    taxel_forces (TactileTaxelForces): Dense per-taxel force observation.\n\nReturns:\n    Sum of all taxel forces.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+
+    m_bots.def("aggregate_tactile_wrench", [](superdex::robotics::TactileTaxelLayout const& layout, superdex::robotics::TactileTaxelForces const& taxel_forces, mochi::Real3 const& reference_point) {
+      mochi::Error error;
+      auto result = superdex::robotics::AggregateTactileWrench(layout, taxel_forces, reference_point, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("layout")
+      , nb::arg("taxel_forces")
+      , nb::arg("reference_point")
+      , "Aggregate per-taxel forces into a wrench about referencePoint.\n\nArgs:\n    layout (TactileTaxelLayout): Ordered taxel positions in the sensor link\n        frame.\n    taxel_forces (TactileTaxelForces): Per-taxel forces indexed by layout.\n    reference_point (Real3Like): Torque reference point [m] in the sensor link\n        frame.\n\nReturns:\n    Force and torque about the configured reference point.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+
+    m_bots.def("build_tactile_rect_projection", [](superdex::robotics::TactileTaxelLayout const& layout, superdex::robotics::TactileHemisphereRectParams const& params) {
+      mochi::Error error;
+      auto result = superdex::robotics::BuildTactileRectProjection(layout, params, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("layout")
+      , nb::arg("params")
+      , "Resolve a tactile spherical-cap layout into a rectangular projection.\n\nArgs:\n    layout (TactileTaxelLayout): Ordered taxel positions in the sensor link\n        frame.\n    params (TactileHemisphereRectParams): Projection frame, geometry, selection\n        and output grid shape.\n\nReturns:\n    Stable coordinates, nearest cells and a force-conserving contribution map.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+
+    m_bots.def("rasterize_tactile_rect_projection", [](superdex::robotics::TactileRectProjectionMap const& projection, superdex::robotics::TactileTaxelForces const& taxel_forces) {
+      mochi::Error error;
+      auto result = superdex::robotics::RasterizeTactileRectProjection(projection, taxel_forces, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("projection")
+      , nb::arg("taxel_forces")
+      , "Rasterize per-taxel forces through a resolved tactile projection.\n\nArgs:\n    projection (TactileRectProjectionMap): Resolved mapping built for the source\n        layout.\n    taxel_forces (TactileTaxelForces): Per-taxel forces indexed by that layout.\n\nReturns:\n    Row-major rectangular force grid and per-cell taxel counts.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+    );
+
+    m_bots.def("map_tactile_hemisphere_to_rect", [](superdex::robotics::TactileTaxelLayout const& layout, superdex::robotics::TactileTaxelForces const& taxel_forces, superdex::robotics::TactileHemisphereRectParams const& params) {
+      mochi::Error error;
+      auto result = superdex::robotics::MapTactileHemisphereToRect(layout, taxel_forces, params, error);
+      if (!error.IsOK()) {
+        throw MochiErrorException(error);
+      }
+      return result;
+    }
+      , nb::arg("layout")
+      , nb::arg("taxel_forces")
+      , nb::arg("params")
+      , "Resolve and rasterize a per-taxel force observation in one call.\n\nArgs:\n    layout (TactileTaxelLayout): Ordered taxel positions in the sensor link\n        frame.\n    taxel_forces (TactileTaxelForces): Per-taxel forces indexed by layout.\n    params (TactileHemisphereRectParams): Hemisphere frame and output grid\n        shape.\n\nReturns:\n    Row-major rectangular force grid and per-cell taxel counts.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
     );
 
     m_bots.def("create_bot", [](mochi::Scene* scene, superdex::robotics::BotPrefab const& bot_prefab, superdex::robotics::RoboticsContext* bots_context) {

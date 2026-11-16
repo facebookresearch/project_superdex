@@ -153,9 +153,9 @@ enum class BoundsComparator {
 
 } // namespace superdex::robotics
 
-/* Hand-written rather than generated, for the reason given on BotaStencil: the criterion structs
- * below reflect fields of these enum types, which instantiates the trait, so the specializations
- * have to precede them. */
+/* Hand-written rather than generated, for the reason given on LegacyBotaStencil: the criterion
+ * structs below reflect fields of these enum types, which instantiates the trait, so the
+ * specializations have to precede them. */
 MOCHI_ENUM_BEGIN(superdex::robotics::CriteriaCombinator)
 MOCHI_ENUM_ITEM(All)
 MOCHI_ENUM_ITEM(Any)

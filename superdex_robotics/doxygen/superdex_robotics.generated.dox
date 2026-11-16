@@ -52,6 +52,56 @@
 /// @brief Number of enum values.
 ///
 
+/// @enum superdex::robotics::TactileRectProjectionType
+///
+/// @brief Geometry used to flatten a tactile spherical cap into a rectangle.
+///
+
+/// @var superdex::robotics::TactileRectProjectionType::AzimuthalEqualArea
+///
+/// @brief Lambert azimuthal equal-area disk followed by a concentric square transform.
+///
+
+/// @var superdex::robotics::TactileRectProjectionType::AzimuthalEquidistant
+///
+/// @brief Azimuthal equidistant disk followed by a concentric square transform.
+///
+
+/// @var superdex::robotics::TactileRectProjectionType::Octahedral
+///
+/// @brief Standard octahedral direction encoding.
+///
+
+/// @enum superdex::robotics::TactileRectRasterizationType
+///
+/// @brief Resampling from projected taxels into the output grid.
+///
+
+/// @var superdex::robotics::TactileRectRasterizationType::ConservativeVoronoi
+///
+/// @brief Distribute every taxel's force across its discrete projected Voronoi region.
+///
+
+/// @var superdex::robotics::TactileRectRasterizationType::NearestCell
+///
+/// @brief Accumulate every taxel's complete force into its nearest output cell.
+///
+
+/// @enum superdex::robotics::TactileRectOutsidePolicy
+///
+/// @brief Handling for source taxels outside a configured tactile spherical cap.
+///
+
+/// @var superdex::robotics::TactileRectOutsidePolicy::Reject
+///
+/// @brief Reject a layout containing any taxel outside the configured cap.
+///
+
+/// @var superdex::robotics::TactileRectOutsidePolicy::Exclude
+///
+/// @brief Explicitly exclude taxels outside the configured cap.
+///
+
 /// @enum superdex::robotics::SensorDType
 ///
 /// @brief Scalar representation of one sensor tensor element.
@@ -95,6 +145,11 @@
 /// @var superdex::robotics::BotSensorPrefab::name
 ///
 /// @brief Human-readable, findable identifier for this sensor instance.
+///
+
+/// @var superdex::robotics::BotSensorPrefab::inputs
+///
+/// @brief Sensor graph inputs. `source` resolves on this sensor's bot and link; `other_link/source` resolves on the same bot; `other_bot/link/source` is already canonical; and `/other_bot/link/source` resolves from the graph root. A root-qualified scene sensor such as `/overhead` is also accepted. Every resolved name must identify a graph node during Build().
 ///
 
 /// @var superdex::robotics::BotSensorPrefab::parentFromSensor
@@ -909,6 +964,221 @@
 /// @brief Distance ahead of offset point to place look-at target (wrist cameras only).
 ///
 
+/// @struct superdex::robotics::SensorSeedRectMapParams
+///
+/// @brief Fixed geometry for a SEED force RectMap sensor.
+///
+
+/// @struct superdex::robotics::SensorSeedV1MLPParams
+///
+/// @brief SEED tactile sensor parameters.
+///
+
+/// @var superdex::robotics::SensorSeedV1MLPParams::weightsPath
+///
+/// @brief Path to the JSON weights file (forcenet_weights.json).
+///
+
+/// @var superdex::robotics::SensorSeedV1MLPParams::hemisphereCenterOffset
+///
+/// @brief Offset from link origin to hemisphere center in link-local frame [m].
+///
+
+/// @var superdex::robotics::SensorSeedV1MLPParams::bypassModel
+///
+/// @brief When true, output = raw contact force (skip MLP inference).
+///
+
+/// @struct superdex::robotics::SensorSeedV1MLPResult
+///
+/// @brief SEED tactile sensor result.
+///
+
+/// @struct superdex::robotics::TactileTaxelLayout
+///
+/// @brief Ordered, sensor-link-frame positions for a tactile taxel layout.
+///
+
+/// @var superdex::robotics::TactileTaxelLayout::positions
+///
+/// @brief Taxel positions [m] in the sensor link frame. Their order is the taxel identity.
+///
+
+/// @struct superdex::robotics::TactileTaxelForces
+///
+/// @brief Dense per-taxel force observation for one tactile site.
+///
+
+/// @var superdex::robotics::TactileTaxelForces::forces
+///
+/// @brief One force [N] per layout taxel, in the sensor link frame.
+///
+
+/// @struct superdex::robotics::TactileAggregateForce
+///
+/// @brief Aggregate force observation for one tactile site.
+///
+
+/// @var superdex::robotics::TactileAggregateForce::force
+///
+/// @brief Sum of the taxel forces [N], in the sensor link frame.
+///
+
+/// @struct superdex::robotics::TactileAggregateWrench
+///
+/// @brief Aggregate wrench observation for one tactile site.
+///
+
+/// @var superdex::robotics::TactileAggregateWrench::force
+///
+/// @brief Sum of the taxel forces [N], in the sensor link frame.
+///
+
+/// @var superdex::robotics::TactileAggregateWrench::torque
+///
+/// @brief Sum of position cross force about referencePoint [N*m], in the sensor link frame.
+///
+
+/// @var superdex::robotics::TactileAggregateWrench::referencePoint
+///
+/// @brief Point about which torque is resolved [m], in the sensor link frame.
+///
+
+/// @struct superdex::robotics::TactileHemisphereRectParams
+///
+/// @brief Configuration for mapping a tactile spherical cap to a rectangle.
+///
+
+/// @var superdex::robotics::TactileHemisphereRectParams::center
+///
+/// @brief Hemisphere center [m] in the sensor link frame.
+///
+
+/// @var superdex::robotics::TactileHemisphereRectParams::tipDirection
+///
+/// @brief Direction from center to the tactile tip. It is normalized by the mapper.
+///
+
+/// @var superdex::robotics::TactileHemisphereRectParams::zeroLongitudeDirection
+///
+/// @brief Direction assigned longitude zero. Its component along tipDirection is removed.
+///
+
+/// @var superdex::robotics::TactileHemisphereRectParams::width
+///
+/// @brief Number of rectangular grid columns.
+///
+
+/// @var superdex::robotics::TactileHemisphereRectParams::height
+///
+/// @brief Number of rectangular grid rows.
+///
+
+/// @var superdex::robotics::TactileHemisphereRectParams::maxPolarLatitude
+///
+/// @brief Largest selected polar angle [rad]. Pi/2 describes a hemisphere.
+///
+
+/// @var superdex::robotics::TactileHemisphereRectParams::projection
+///
+/// @brief Spherical-cap flattening geometry.
+///
+
+/// @var superdex::robotics::TactileHemisphereRectParams::rasterization
+///
+/// @brief Force-conserving resampling from projected taxels into grid cells.
+///
+
+/// @var superdex::robotics::TactileHemisphereRectParams::voronoiOversampling
+///
+/// @brief Linear fine-grid scale used to resolve Voronoi regions before output downsampling.
+///
+
+/// @var superdex::robotics::TactileHemisphereRectParams::outsidePolicy
+///
+/// @brief Handling for source taxels beyond maxPolarLatitude.
+///
+
+/// @struct superdex::robotics::TactileRectProjectionMap
+///
+/// @brief Resolved, immutable mapping from an ordered taxel layout to a rectangular grid.
+///
+
+/// @var superdex::robotics::TactileRectProjectionMap::coordinates
+///
+/// @brief Normalized rectangular coordinates in [-1, 1], one per source taxel.
+///
+
+/// @var superdex::robotics::TactileRectProjectionMap::taxelCells
+///
+/// @brief Row-major destination cell per source taxel, or -1 when explicitly excluded.
+///
+
+/// @var superdex::robotics::TactileRectProjectionMap::taxelContributionOffsets
+///
+/// @brief CSR offsets into contributionCells and contributionWeights, one row per taxel.
+///
+
+/// @var superdex::robotics::TactileRectProjectionMap::contributionCells
+///
+/// @brief Row-major destination cells receiving force from each taxel.
+///
+
+/// @var superdex::robotics::TactileRectProjectionMap::contributionWeights
+///
+/// @brief Per-taxel force fractions. Every selected taxel's CSR row sums to one.
+///
+
+/// @var superdex::robotics::TactileRectProjectionMap::width
+///
+/// @brief Number of grid columns.
+///
+
+/// @var superdex::robotics::TactileRectProjectionMap::height
+///
+/// @brief Number of grid rows.
+///
+
+/// @var superdex::robotics::TactileRectProjectionMap::selectedTaxelCount
+///
+/// @brief Number of source taxels selected by the projection.
+///
+
+/// @var superdex::robotics::TactileRectProjectionMap::rasterization
+///
+/// @brief Resampling used to build the contribution matrix.
+///
+
+/// @var superdex::robotics::TactileRectProjectionMap::voronoiOversampling
+///
+/// @brief Fine-grid scale used for Voronoi resampling, or one for nearest-cell mode.
+///
+
+/// @struct superdex::robotics::TactileForceGrid
+///
+/// @brief Rectangular tactile force grid for one site.
+///
+
+/// @var superdex::robotics::TactileForceGrid::forces
+///
+/// @brief Row-major cell force sums [N] in the sensor link frame.
+///
+
+/// @var superdex::robotics::TactileForceGrid::taxelCounts
+///
+/// @brief Number of source taxels making a nonzero contribution to each row-major cell.
+///
+
+/// @var superdex::robotics::TactileForceGrid::width
+///
+/// @brief Number of grid columns.
+///
+
+/// @var superdex::robotics::TactileForceGrid::height
+///
+/// @brief Number of grid rows.
+///
+
 /// @class superdex::robotics::ControllerBasicJscPd
 ///
 /// @brief A simple PD controller written in joint space.
@@ -1040,9 +1310,19 @@
 /// @return This sensor's canonical registration type name.
 ///
 
+/// @struct superdex::robotics::SensorLinkVertexForceParams
+///
+/// @brief Acquisition cadence for a link vertex-force source.
+///
+
+/// @var superdex::robotics::SensorLinkVertexForceParams::sampleRateHz
+///
+/// @brief Samples per second, or zero to capture every graph step.
+///
+
 /// @class superdex::robotics::SensorLinkVertexForce
 ///
-/// @brief Ordered per-vertex force point cloud from one link's contact mesh.
+/// @brief Vertex-force point cloud derived from one link's ordered contact vertices.
 ///
 
 /// @fn std::string_view superdex::robotics::SensorLinkVertexForce::TypeName()
@@ -1050,6 +1330,13 @@
 /// @brief Canonical serialized sensor type identifier.
 ///
 /// @return Stable type identifier.
+///
+
+/// @fn SensorLinkVertexForceParams const& superdex::robotics::SensorLinkVertexForce::GetParams() const
+///
+/// @brief Get acquisition parameters.
+///
+/// @return Current acquisition parameters.
 ///
 
 /// @class superdex::robotics::ActuatorBase
@@ -1088,6 +1375,16 @@
 ///
 /// @param[in] params Params.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+///
+
+/// @class superdex::robotics::SensorSeedRectMap
+///
+/// @brief Image-like force map derived from one vertex-force point-cloud sensor.
+///
+
+/// @class superdex::robotics::SensorSeedV1MLP
+///
+/// @brief SEED tactile sensor using Mochi-native MLP inference.
 ///
 
 /// @struct superdex::robotics::BotSceneArchiveMetadata
@@ -1227,6 +1524,21 @@
 /// @brief Legacy key captured on load: older assets stored a flat `rotation`. Folded into @ref superdex::robotics::BotEntry::parentFromBot "parentFromBot" by ApplyLegacyBotEntryTransforms and cleared (so re-saves omit it).
 ///
 
+/// @struct superdex::robotics::SensorGraphNodeView
+///
+/// @brief Borrowed identity of a selected sensor graph output. Valid only until graph mutation or destruction.
+///
+
+/// @var superdex::robotics::SensorGraphNodeView::name
+///
+/// @brief Canonical graph node name.
+///
+
+/// @var superdex::robotics::SensorGraphNodeView::handle
+///
+/// @brief Sensor handle in the owning robotics context.
+///
+
 /// @struct superdex::robotics::SlotEntry
 ///
 /// @brief One slot a scene offers, and the bots eligible to fill it.
@@ -1257,6 +1569,11 @@
 /// @var superdex::robotics::SceneSensorEntry::name
 ///
 /// @brief Unique instance name for runtime lookup.
+///
+
+/// @var superdex::robotics::SceneSensorEntry::inputs
+///
+/// @brief Canonical sensor graph inputs. Use `bot/link/sensor` for a bot-owned node and the scene sensor's own name for a scene-owned node. Scene sensors have no bot/link context for shortening.
 ///
 
 /// @var superdex::robotics::SceneSensorEntry::parentFromSensor
@@ -1404,6 +1721,28 @@
 /// @return Robotics context, or None if unavailable.
 ///
 
+/// @fn void superdex::robotics::BotScene::ResetSensors(superdex::Error& error)
+///
+/// @brief Reset acquisition; samples await the next positive physics step.
+///
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+///
+
+/// @fn void superdex::robotics::BotScene::RebuildSensorGraph(Span<DynamicString const> outputs, superdex::Error& error)
+///
+/// @brief Reconstruct the declared graph with caller-selected outputs and reset acquisition. Call between episodes after adding/removing a bot. Failure leaves the graph unbuilt. Does not reset physics, controllers or task state.
+///
+/// @param[in] outputs Canonical names of the graph sensors to enable as outputs.
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+///
+
+/// @fn void superdex::robotics::BotScene::CheckSensorGraph(superdex::Error& error) const
+///
+/// @brief Surface an error captured while the graph ran in a native post-step callback.
+///
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+///
+
 /// @fn Bot* superdex::robotics::BotScene::GetBot(std::string_view name) const
 ///
 /// @brief Look up a bot by the name declared in the .superdex_scene file.
@@ -1491,6 +1830,19 @@
 /// @param[in] name Exact declared name of the bot to initialize.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 /// @return The loaded bot, or None on error.
+///
+
+/// @fn void superdex::robotics::BotScene::AddSensorOutputs(Span<DynamicString const> sensor_outputs, superdex::Error& error)
+///
+/// @brief Enable canonical graph output names and initialize newly active dependencies. Existing sensor state and selections survive; an empty list does nothing.
+///
+/// @param[in] sensor_outputs Canonical names of existing graph nodes to select.
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+///
+
+/// @fn Span<SensorGraphNodeView const> superdex::robotics::BotScene::GetSensorOutputs() const
+///
+/// @brief Enumerate the graph's current selected outputs in dependency order. Borrowed view invalidated by graph mutation or destruction; empty while unbuilt.
 ///
 
 /// @fn BotScenePrefab const& superdex::robotics::BotScene::GetBotScenePrefab() const
@@ -1759,6 +2111,81 @@
 /// @param[in] path Path to the MJCF file.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 /// @return The loaded @ref superdex::robotics::BotPrefab "BotPrefab".
+///
+
+/// @fn TactileTaxelLayout superdex::robotics::MakeTactileTaxelLayout(Span<Real3 const> positions, superdex::Error& error)
+///
+/// @brief Build an ordered tactile taxel layout.
+///
+/// @param[in] positions Taxel positions [m] in sensor link frame, in stable taxel order.
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+/// @return Validated layout. Empty layouts and non-finite positions raise an error.
+///
+
+/// @fn TactileTaxelForces superdex::robotics::ReadTactileTaxelForces(Actor const* actor, TransformRT const& worldFromSensor, TactileTaxelLayout const& layout, superdex::Error& error)
+///
+/// @brief Read a dense per-taxel force observation from a Mochi actor.
+///
+/// The caller must register QueryType::NodeContactForces before stepping the scene and keep that query registered while reading.
+///
+/// @param[in] actor Actor whose node-force query is read.
+/// @param[in] worldFromSensor Sensor-frame pose in world space. Pass the actor root transform when the actor and sensor frames coincide.
+/// @param[in] layout Ordered taxel layout matching the actor's node indices.
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+/// @return One sensor-link-frame force per layout taxel.
+///
+
+/// @fn TactileAggregateForce superdex::robotics::AggregateTactileForce(TactileTaxelForces const& taxelForces, superdex::Error& error)
+///
+/// @brief Sum per-taxel forces into one aggregate force observation.
+///
+/// No learned response, calibration, threshold, or torque model is applied.
+///
+/// @param[in] taxelForces Dense per-taxel force observation.
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+/// @return Sum of all taxel forces.
+///
+
+/// @fn TactileAggregateWrench superdex::robotics::AggregateTactileWrench(TactileTaxelLayout const& layout, TactileTaxelForces const& taxelForces, Real3 const& referencePoint, superdex::Error& error)
+///
+/// @brief Aggregate per-taxel forces into a wrench about referencePoint.
+///
+/// @param[in] layout Ordered taxel positions in the sensor link frame.
+/// @param[in] taxelForces Per-taxel forces indexed by layout.
+/// @param[in] referencePoint Torque reference point [m] in the sensor link frame.
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+/// @return Force and torque about the configured reference point.
+///
+
+/// @fn TactileRectProjectionMap superdex::robotics::BuildTactileRectProjection(TactileTaxelLayout const& layout, TactileHemisphereRectParams const& params, superdex::Error& error)
+///
+/// @brief Resolve a tactile spherical-cap layout into a rectangular projection.
+///
+/// @param[in] layout Ordered taxel positions in the sensor link frame.
+/// @param[in] params Projection frame, geometry, selection and output grid shape.
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+/// @return Stable coordinates, nearest cells and a force-conserving contribution map.
+///
+
+/// @fn TactileForceGrid superdex::robotics::RasterizeTactileRectProjection(TactileRectProjectionMap const& projection, TactileTaxelForces const& taxelForces, superdex::Error& error)
+///
+/// @brief Rasterize per-taxel forces through a resolved tactile projection.
+///
+/// @param[in] projection Resolved mapping built for the source layout.
+/// @param[in] taxelForces Per-taxel forces indexed by that layout.
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+/// @return Row-major rectangular force grid and per-cell taxel counts.
+///
+
+/// @fn TactileForceGrid superdex::robotics::MapTactileHemisphereToRect(TactileTaxelLayout const& layout, TactileTaxelForces const& taxelForces, TactileHemisphereRectParams const& params, superdex::Error& error)
+///
+/// @brief Resolve and rasterize a per-taxel force observation in one call.
+///
+/// @param[in] layout Ordered taxel positions in the sensor link frame.
+/// @param[in] taxelForces Per-taxel forces indexed by layout.
+/// @param[in] params Hemisphere frame and output grid shape.
+/// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
+/// @return Row-major rectangular force grid and per-cell taxel counts.
 ///
 
 /// @fn BotScenePrefab superdex::robotics::LoadBotScenePrefabFromFile(std::string_view path, superdex::Error& error)

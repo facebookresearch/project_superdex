@@ -18,12 +18,16 @@
 #include <superdex_robotics/sensors/sensor_link_vertex_force.h>
 
 #include <superdex_robotics/sensors/sensor_recording.h>
+#include <superdex_robotics/utils/file_utils.h>
+
+#include <sensors/sensor_timing.h>
 
 #include <mochi_core/utils/basic_utils.h>
 #include <mochi_core/utils/nd_array_utils.h>
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 
 using namespace mochi;
 using namespace superdex::robotics;
@@ -33,16 +37,29 @@ SensorLinkVertexForce::SensorLinkVertexForce(
     std::string_view paramArgs,
     Error& error)
     : SensorBase(linkActor, error) {
+  Params const params = paramArgs.empty()
+      ? Params{}
+      : LoadParamsFromPathOrJson<Params>(paramArgs, error, /*allowPartial=*/false);
   MOCHI_ERROR_RETURN(error);
+  Initialize(params, error);
+}
+
+SensorLinkVertexForce::SensorLinkVertexForce(Actor* linkActor, Params const& params, Error& error)
+    : SensorBase(linkActor, error) {
+  Initialize(params, error);
+}
+
+void SensorLinkVertexForce::Initialize(Params const& params, Error& error) {
   MOCHI_ERROR_IF(
-      !paramArgs.empty() && paramArgs != "{}",
+      !std::isfinite(params.sampleRateHz) || params.sampleRateHz < 0_r,
       error,
-      "SensorLinkVertexForce does not accept configuration parameters");
+      "SensorLinkVertexForce sampleRateHz must be finite and nonnegative");
   MOCHI_ERROR_RETURN(error);
-  if (linkActor == nullptr) {
+  if (GetActor() == nullptr) {
     MOCHI_ERROR_SET(error, "SensorLinkVertexForce requires a link actor");
     return;
   }
+  _params = params;
 }
 
 SensorLinkVertexForce::~SensorLinkVertexForce() {
@@ -124,13 +141,23 @@ SensorStepResult SensorLinkVertexForce::Step(StepTime const& now, Error& error) 
   MOCHI_ERROR_RETURN(error, SensorStepResult::NoUpdate);
   MOCHI_ERROR_IF_NOT(inputs.empty(), error, "SensorLinkVertexForce does not accept inputs");
   MOCHI_ERROR_RETURN(error, SensorStepResult::NoUpdate);
+  auto const samplePeriod =
+      detail::SensorCapturePeriod(now, _params.sampleRateHz, _lastSamplePeriod);
+  if (!samplePeriod) {
+    return SensorStepResult::NoUpdate;
+  }
   ReadTactileTaxelForcesInto(GetActor(), GetWorldTransform(), _layout, _graphForces, error);
   FlattenTactileTaxelForcesInto(
       _graphForces, Span<float>{_graphOutput.data(), _graphOutput.size()}, error);
   MOCHI_ERROR_RETURN(error, SensorStepResult::NoUpdate);
   PublishSample(now, Span<float const>{_graphOutput}, error);
   MOCHI_ERROR_RETURN(error, SensorStepResult::NoUpdate);
+  _lastSamplePeriod = samplePeriod;
   return SensorStepResult::Published;
+}
+
+void SensorLinkVertexForce::ResetSensor() {
+  _lastSamplePeriod.reset();
 }
 
 TactileTaxelForces SensorLinkVertexForce::ComputeSignal(Error& error) {

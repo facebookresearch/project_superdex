@@ -427,8 +427,8 @@ class MOCHI_API RoboticsContext {
       superdex::Error& error);
 
   /* @brief Destroy the sensor associated with the given handle.
+   * Clear every graph borrowing this sensor first; otherwise destruction asserts and is refused.
    * @param handle Sensor handle to destroy; invalid or stale handles are ignored. */
-  /* Clear every graph borrowing this sensor before destroying it. */
   void DestroySensor(SensorHandle handle);
 
   /* @brief Get the sensor associated with the given handle. Returns nullptr if invalid. Downcast to

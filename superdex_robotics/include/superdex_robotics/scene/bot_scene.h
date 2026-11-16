@@ -32,6 +32,9 @@ struct ScenePrefab;
 
 namespace superdex::robotics {
 
+class SensorGraph;
+struct SensorGraphNodeView;
+
 /**
  * @brief Human-readable metadata for a .superdex_scene file. Not consumed by the runtime.
  */
@@ -214,6 +217,9 @@ struct SceneSensorEntry {
   /// Unique instance name for runtime lookup.
   DynamicString name;
 
+  /* Sensor graph inputs. Bot-owned inputs use their complete "bot/link/sensor" graph name. */
+  DynamicArray<DynamicString> inputs;
+
   /// Sensor pose relative to the scene root (aFromB convention: maps sensor-frame coordinates into
   /// the parent scene frame). Chain to world via SensorBase::GetWorldTransform. Default: identity.
   TransformRT parentFromSensor;
@@ -236,6 +242,7 @@ struct SceneSensorEntry {
   MOCHI_ATTRIBUTE(IgnoreExtraneousFields);
   MOCHI_FIELD(type)
   MOCHI_FIELD(name)
+  MOCHI_FIELD(inputs) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD(parentFromSensor) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD(params)
   MOCHI_FIELD_NAME(_legacyTranslation, "translation") MOCHI_ATTRIBUTE(NoSerializeDefaults);
@@ -402,6 +409,21 @@ class MOCHI_API BotScene {
    * @return Robotics context, or nullptr if unavailable. */
   [[nodiscard]] RoboticsContext* GetRoboticsContext() const;
 
+  /* @brief Get the scene's borrowed sensor graph. Graph access and membership changes must be
+   * serialized on the physics stepping thread. */
+  [[nodiscard]] SensorGraph* GetSensorGraph() const;
+
+  /* @brief Reset the built graph and its acquisition clock; samples await the next physics step. */
+  void ResetSensors(superdex::Error& error);
+
+  /* @brief Reconstruct the declared graph, select caller-supplied outputs and reset acquisition.
+   * Use for an explicit acquisition restart. Failure leaves the graph unbuilt.
+   * This does not reset physics, controllers or task state. */
+  void RebuildSensorGraph(Span<DynamicString const> outputs, superdex::Error& error);
+
+  /* @brief Surface any error captured by the native post-physics sensor callback. */
+  void CheckSensorGraph(superdex::Error& error) const;
+
   /* @brief Look up a bot by the name declared in the .superdex_scene file.
    * @param name Exact declared bot name.
    * @return Loaded bot, or nullptr if the name is not found or this BotScene is moved from. */
@@ -478,7 +500,9 @@ class MOCHI_API BotScene {
   /* Retire a bot loaded from the .superdex_scene: destroy its controllers, actuators, sensors,
    * and articulated actor (actuators and sensors hold link-actor pointers, so they are destroyed
    * before the actor), then erase it from the bot registry so scene teardown does not
-   * double-destroy it. Errors if no bot named `name` is loaded.
+   * double-destroy it. Prunes its sensor nodes and downstream dependants before destruction,
+   * preserving other sensors, enabled outputs and the acquisition clock.
+   * Errors if no bot named `name` is loaded.
    * @param name Exact declared name of the loaded bot to remove.
    * @param error Error status. */
   void RemoveBot(std::string_view name, superdex::Error& error);
@@ -487,11 +511,22 @@ class MOCHI_API BotScene {
    * scene's botsToInitialize, or removed with @ref RemoveBot -- together with its controllers, at
    * its declared placement and initial pose. Its prefab is loaded from file, and changed by the
    * @ref BotPrefabEdit the scene was loaded with, if any. Errors, creating nothing, if no bot named
-   * `name` is declared, it is already loaded, or it fails to instantiate.
+   * `name` is declared, it is already loaded, or it fails to instantiate. Extends the graph without
+   * resetting existing sensors or changing enabled outputs. Added nodes start disabled.
    * @param name Exact declared name of the bot to initialize.
    * @param error Error status.
    * @return The loaded bot, or nullptr on error. */
   Bot* InitializeBot(std::string_view name, superdex::Error& error);
+
+  /* @brief Enable canonical graph output names and initialize their newly active dependencies.
+   * Existing sensor state and selections survive; an empty list does nothing.
+   * @param sensor_outputs Canonical names of existing graph nodes to select.
+   * @param error Error status. */
+  void AddSensorOutputs(Span<DynamicString const> sensor_outputs, superdex::Error& error);
+
+  /* @brief Enumerate the graph's current selected outputs in dependency order.
+   * Borrowed view invalidated by graph mutation or destruction; empty while unbuilt. */
+  [[nodiscard]] Span<SensorGraphNodeView const> GetSensorOutputs() const;
 
   /* @brief Get the original parameters this BotScene was loaded from.
    * @return Original scene parameters, or an empty prefab if this BotScene is moved from. */

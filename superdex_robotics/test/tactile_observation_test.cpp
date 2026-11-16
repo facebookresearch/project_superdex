@@ -235,15 +235,16 @@ TEST(TactileObservationTest, HemisphereRectMapsTipAndRimAndConservesForce) {
   TactileHemisphereRectParams params;
   params.width = 4;
   params.height = 2;
+  params.rasterization = TactileRectRasterizationType::NearestCell;
 
   TactileForceGrid const grid = MapTactileHemisphereToRect(layout, layerOne, params, error);
 
   EXPECT_OK(error);
   ASSERT_EQ(grid.forces.size(), 8);
   ASSERT_EQ(grid.taxelCounts.size(), 8);
-  EXPECT_EQ(grid.forces[2], (Real3{1_r, 0_r, 0_r}));
-  EXPECT_EQ(grid.forces[6], (Real3{0_r, 2_r, 0_r}));
-  EXPECT_EQ(grid.forces[7], (Real3{0_r, 0_r, 3_r}));
+  EXPECT_EQ(grid.forces[2], (Real3{0_r, 0_r, 3_r}));
+  EXPECT_EQ(grid.forces[6], (Real3{1_r, 0_r, 0_r}));
+  EXPECT_EQ(grid.forces[7], (Real3{0_r, 2_r, 0_r}));
   EXPECT_EQ(grid.taxelCounts[2], 1);
   EXPECT_EQ(grid.taxelCounts[6], 1);
   EXPECT_EQ(grid.taxelCounts[7], 1);
@@ -256,6 +257,188 @@ TEST(TactileObservationTest, HemisphereRectMapsTipAndRimAndConservesForce) {
   EXPECT_EQ(gridSum, layerTwo.force);
 }
 
+TEST(TactileObservationTest, ConservativeVoronoiFillsGridAndConservesForce) {
+  DynamicArray<Real3> const positions = {{0_r, 0_r, 1_r}};
+  Error error;
+  TactileTaxelLayout const layout = MakeTactileTaxelLayout(positions, error);
+  EXPECT_OK(error);
+  TactileTaxelForces layerOne;
+  layerOne.forces = {{16_r, 32_r, 48_r}};
+  TactileHemisphereRectParams params;
+  params.width = 4;
+  params.height = 4;
+
+  TactileRectProjectionMap const projection = BuildTactileRectProjection(layout, params, error);
+  EXPECT_OK(error);
+  EXPECT_EQ(projection.rasterization, TactileRectRasterizationType::ConservativeVoronoi);
+  EXPECT_EQ(projection.voronoiOversampling, 4);
+  ASSERT_EQ(projection.taxelContributionOffsets.size(), 2);
+  EXPECT_EQ(projection.taxelContributionOffsets[0], 0);
+  EXPECT_EQ(projection.taxelContributionOffsets[1], 16);
+
+  TactileForceGrid const grid = RasterizeTactileRectProjection(projection, layerOne, error);
+  EXPECT_OK(error);
+  ASSERT_EQ(grid.forces.size(), 16);
+  Real3 gridSum = {};
+  for (int cell = 0; cell < isize(grid.forces); ++cell) {
+    EXPECT_NEAR_EQ(grid.forces[cell], (Real3{1_r, 2_r, 3_r}));
+    EXPECT_EQ(grid.taxelCounts[cell], 1);
+    gridSum += grid.forces[cell];
+  }
+  EXPECT_NEAR_EQ(gridSum, layerOne.forces[0]);
+}
+
+TEST(TactileObservationTest, RectProjectionTypesPlaceTipAtEvenGridCenter) {
+  DynamicArray<Real3> const positions = {{0_r, 0_r, 1_r}, {1_r, 0_r, 0_r}, {0_r, 1_r, 0_r}};
+  Error error;
+  TactileTaxelLayout const layout = MakeTactileTaxelLayout(positions, error);
+  EXPECT_OK(error);
+  TactileHemisphereRectParams params;
+  params.width = 256;
+  params.height = 256;
+  params.rasterization = TactileRectRasterizationType::NearestCell;
+
+  for (TactileRectProjectionType const projectionType :
+       {TactileRectProjectionType::AzimuthalEqualArea,
+        TactileRectProjectionType::AzimuthalEquidistant,
+        TactileRectProjectionType::Octahedral}) {
+    params.projection = projectionType;
+    TactileRectProjectionMap const projection = BuildTactileRectProjection(layout, params, error);
+    EXPECT_OK(error);
+    ASSERT_EQ(projection.coordinates.size(), 3);
+    ASSERT_EQ(projection.taxelCells.size(), 3);
+    EXPECT_NEAR_EQ(projection.coordinates[0], Real2{});
+    EXPECT_EQ(projection.taxelCells[0], 128 * 256 + 128);
+    EXPECT_EQ(projection.taxelCells[1], 128 * 256 + 255);
+    EXPECT_EQ(projection.taxelCells[2], 128);
+    EXPECT_EQ(projection.selectedTaxelCount, 3);
+  }
+}
+
+TEST(TactileObservationTest, CachedProjectionRasterizesFramesIntoStableStorage) {
+  DynamicArray<Real3> const positions = {{0_r, 0_r, 1_r}, {1_r, 0_r, 0_r}};
+  Error error;
+  TactileTaxelLayout const layout = MakeTactileTaxelLayout(positions, error);
+  EXPECT_OK(error);
+  TactileHemisphereRectParams params;
+  params.width = 4;
+  params.height = 2;
+  params.rasterization = TactileRectRasterizationType::NearestCell;
+  TactileRectProjectionMap const projection = BuildTactileRectProjection(layout, params, error);
+  EXPECT_OK(error);
+
+  TactileForceGrid grid;
+  grid.forces.resize(8);
+  grid.taxelCounts.resize(8);
+  Real3 const* const forceStorage = grid.forces.data();
+  int const* const countStorage = grid.taxelCounts.data();
+  TactileTaxelForces frame;
+  frame.forces = {{1_r, 2_r, 3_r}, {4_r, 5_r, 6_r}};
+
+  RasterizeTactileRectProjectionInto(projection, frame, grid, error);
+  EXPECT_OK(error);
+  frame.forces = {{7_r, 8_r, 9_r}, {10_r, 11_r, 12_r}};
+  RasterizeTactileRectProjectionInto(projection, frame, grid, error);
+
+  EXPECT_OK(error);
+  EXPECT_EQ(grid.forces.data(), forceStorage);
+  EXPECT_EQ(grid.taxelCounts.data(), countStorage);
+  Real3 forceSum = {};
+  for (Real3 const& force : grid.forces) {
+    forceSum += force;
+  }
+  EXPECT_EQ(forceSum, (Real3{17_r, 19_r, 21_r}));
+}
+
+TEST(TactileObservationTest, RectProjectionTypesResolveDistinctInteriorCoordinates) {
+  constexpr real kSqrtThreeOverTwo = 0.8660254037844386_r;
+  DynamicArray<Real3> const positions = {{kSqrtThreeOverTwo, 0_r, 0.5_r}};
+  Error error;
+  TactileTaxelLayout const layout = MakeTactileTaxelLayout(positions, error);
+  EXPECT_OK(error);
+  TactileHemisphereRectParams params;
+  params.width = 256;
+  params.height = 256;
+  params.rasterization = TactileRectRasterizationType::NearestCell;
+
+  params.projection = TactileRectProjectionType::AzimuthalEqualArea;
+  TactileRectProjectionMap const equalArea = BuildTactileRectProjection(layout, params, error);
+  EXPECT_OK(error);
+  params.projection = TactileRectProjectionType::AzimuthalEquidistant;
+  TactileRectProjectionMap const equidistant = BuildTactileRectProjection(layout, params, error);
+  EXPECT_OK(error);
+  params.projection = TactileRectProjectionType::Octahedral;
+  TactileRectProjectionMap const octahedral = BuildTactileRectProjection(layout, params, error);
+  EXPECT_OK(error);
+
+  EXPECT_GT(equalArea.coordinates[0][0], equidistant.coordinates[0][0]);
+  EXPECT_GT(equidistant.coordinates[0][0], octahedral.coordinates[0][0]);
+}
+
+TEST(TactileObservationTest, RectProjectionExplicitlyExcludesTaxelsOutsideCap) {
+  DynamicArray<Real3> const positions = {{0_r, 0_r, 1_r}, {0_r, 0_r, -1_r}};
+  Error error;
+  TactileTaxelLayout const layout = MakeTactileTaxelLayout(positions, error);
+  EXPECT_OK(error);
+  TactileTaxelForces layerOne;
+  layerOne.forces = {{1_r, 2_r, 3_r}, {100_r, 200_r, 300_r}};
+  TactileHemisphereRectParams params;
+  params.width = 4;
+  params.height = 4;
+  params.rasterization = TactileRectRasterizationType::NearestCell;
+  params.outsidePolicy = TactileRectOutsidePolicy::Exclude;
+
+  TactileRectProjectionMap const projection = BuildTactileRectProjection(layout, params, error);
+  EXPECT_OK(error);
+  ASSERT_EQ(projection.taxelCells.size(), 2);
+  EXPECT_EQ(projection.selectedTaxelCount, 1);
+  EXPECT_GE(projection.taxelCells[0], 0);
+  EXPECT_EQ(projection.taxelCells[1], -1);
+  TactileForceGrid const grid = RasterizeTactileRectProjection(projection, layerOne, error);
+  EXPECT_OK(error);
+  Real3 gridSum = {};
+  int countSum = 0;
+  for (int cell = 0; cell < isize(grid.forces); ++cell) {
+    gridSum += grid.forces[cell];
+    countSum += grid.taxelCounts[cell];
+  }
+  EXPECT_EQ(gridSum, (Real3{1_r, 2_r, 3_r}));
+  EXPECT_EQ(countSum, 1);
+}
+
+TEST(TactileObservationTest, HemisphereRectProjectionParametersChangeTheMapping) {
+  DynamicArray<Real3> const positions = {{0_r, 0_r, 1_r}, {1_r, 0_r, 0_r}};
+  Error error;
+  TactileTaxelLayout const layout = MakeTactileTaxelLayout(positions, error);
+  EXPECT_OK(error);
+  TactileTaxelForces layerOne;
+  layerOne.forces = {{1_r, 0_r, 0_r}, {0_r, 1_r, 0_r}};
+  TactileHemisphereRectParams params;
+  params.width = 4;
+  params.height = 2;
+
+  TactileForceGrid const first = MapTactileHemisphereToRect(layout, layerOne, params, error);
+  EXPECT_OK(error);
+  TactileForceGrid const second = MapTactileHemisphereToRect(layout, layerOne, params, error);
+  EXPECT_OK(error);
+  params.rasterization = TactileRectRasterizationType::NearestCell;
+  TactileForceGrid const nearest = MapTactileHemisphereToRect(layout, layerOne, params, error);
+  EXPECT_OK(error);
+  params.rasterization = TactileRectRasterizationType::ConservativeVoronoi;
+  params.voronoiOversampling = 5;
+  TactileForceGrid const oversampled = MapTactileHemisphereToRect(layout, layerOne, params, error);
+  EXPECT_OK(error);
+  params.voronoiOversampling = 4;
+  params.width = 5;
+  TactileForceGrid const changed = MapTactileHemisphereToRect(layout, layerOne, params, error);
+
+  EXPECT_OK(error);
+  EXPECT_EQ(first.forces, second.forces);
+  EXPECT_NE(first.taxelCounts, nearest.taxelCounts);
+  EXPECT_EQ(first.forces.size(), oversampled.forces.size());
+  EXPECT_NE(first.forces.size(), changed.forces.size());
+}
+
 TEST(TactileObservationTest, HemisphereRectWrapsPositivePiLongitudeToTheFirstColumn) {
   DynamicArray<Real3> const positions = {{-1_r, 0_r, 0_r}};
   Error error;
@@ -266,12 +449,16 @@ TEST(TactileObservationTest, HemisphereRectWrapsPositivePiLongitudeToTheFirstCol
   TactileHemisphereRectParams params;
   params.width = 4;
   params.height = 2;
+  params.rasterization = TactileRectRasterizationType::NearestCell;
 
   TactileForceGrid const grid = MapTactileHemisphereToRect(layout, layerOne, params, error);
 
   EXPECT_OK(error);
-  EXPECT_EQ(grid.forces[4], (Real3{1_r, 2_r, 3_r}));
-  EXPECT_EQ(grid.taxelCounts[4], 1);
+  // The projected vertical coordinate is zero, so rounding may select either
+  // adjacent row. The longitude seam must still wrap to the first column.
+  EXPECT_EQ(grid.taxelCounts[0] + grid.taxelCounts[4], 1);
+  int const populatedCell = grid.taxelCounts[0] == 1 ? 0 : 4;
+  EXPECT_EQ(grid.forces[populatedCell], (Real3{1_r, 2_r, 3_r}));
 }
 
 TEST(TactileObservationTest, HemisphereRectRejectsTaxelBehindRim) {
@@ -306,6 +493,41 @@ TEST(TactileObservationTest, HemisphereRectRejectsOverflowingGridShape) {
 
   EXPECT_NOT_OK(error);
   EXPECT_TRUE(grid.forces.empty());
+}
+
+TEST(TactileObservationTest, RectProjectionSupportsSingleCellDimensions) {
+  DynamicArray<Real3> const positions = {{0_r, 0_r, 1_r}};
+  Error layoutError;
+  TactileTaxelLayout const layout = MakeTactileTaxelLayout(positions, layoutError);
+  EXPECT_OK(layoutError);
+  TactileHemisphereRectParams params;
+  params.width = 1;
+  params.height = 4;
+
+  Error narrowError;
+  TactileRectProjectionMap const narrow = BuildTactileRectProjection(layout, params, narrowError);
+  EXPECT_OK(narrowError);
+  ASSERT_EQ(narrow.taxelCells.size(), 1);
+  EXPECT_EQ(narrow.taxelCells[0], 2);
+  EXPECT_EQ(narrow.contributionCells.size(), 4);
+
+  params.width = 4;
+  params.height = 1;
+  Error shortError;
+  TactileRectProjectionMap const shortMap = BuildTactileRectProjection(layout, params, shortError);
+  EXPECT_OK(shortError);
+  ASSERT_EQ(shortMap.taxelCells.size(), 1);
+  EXPECT_EQ(shortMap.taxelCells[0], 2);
+  EXPECT_EQ(shortMap.contributionCells.size(), 4);
+
+  params.width = 1;
+  TactileTaxelForces layerOne;
+  layerOne.forces = {{1_r, 2_r, 3_r}};
+  Error singleError;
+  TactileForceGrid const single = MapTactileHemisphereToRect(layout, layerOne, params, singleError);
+  EXPECT_OK(singleError);
+  ASSERT_EQ(single.forces.size(), 1);
+  EXPECT_EQ(single.forces[0], (Real3{1_r, 2_r, 3_r}));
 }
 
 TEST(TactileObservationTest, HemisphereRectRejectsMutatedNonFiniteLayoutPositions) {

@@ -20,6 +20,8 @@
 #include <superdex_robotics/sensors/sensor_base.h>
 #include <superdex_robotics/sensors/tactile_observation.h>
 
+#include <optional>
+
 namespace superdex::robotics {
 
 /* @brief Ordered spatial meaning of a vertex-list tensor. */
@@ -35,9 +37,20 @@ struct SensorMetadataKey<VertexListMeta> {
   static constexpr std::string_view Key = "tactile.vertex_list.v1";
 };
 
+struct SensorLinkVertexForceParams {
+  /* Zero captures every graph step; a positive rate uses a drift-free episode-time schedule. */
+  real sampleRateHz = 0_r;
+
+  MOCHI_STRUCT_BEGIN(superdex::robotics::SensorLinkVertexForceParams)
+  MOCHI_FIELD(sampleRateHz) MOCHI_ATTRIBUTE(Units("1/s"));
+  MOCHI_STRUCT_END()
+};
+
 // NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor)
 class MOCHI_API SensorLinkVertexForce : public SensorBase {
  public:
+  using Params = SensorLinkVertexForceParams;
+
   static constexpr std::string_view TypeName() {
     return "SENSOR_LINK_VERTEX_FORCE";
   }
@@ -47,6 +60,7 @@ class MOCHI_API SensorLinkVertexForce : public SensorBase {
   }
 
   SensorLinkVertexForce(Actor* linkActor, std::string_view paramArgs, superdex::Error& error);
+  SensorLinkVertexForce(Actor* linkActor, Params const& params, superdex::Error& error);
   ~SensorLinkVertexForce() override;
 
   MOCHI_DECLARE_NO_COPY_NO_MOVE(SensorLinkVertexForce)
@@ -63,13 +77,19 @@ class MOCHI_API SensorLinkVertexForce : public SensorBase {
     return _layout;
   }
 
+  [[nodiscard]] Params const& GetParams() const {
+    return _params;
+  }
+
  private:
-  void ResetSensor() override {}
+  void ResetSensor() override;
 
   [[nodiscard]] SensorFormat InitSensor(SensorScope const& scope, superdex::Error& error) override;
 
   void ResolveLayout(superdex::Error& error);
+  void Initialize(Params const& params, superdex::Error& error);
 
+  Params _params;
   TactileTaxelLayout _layout;
   VertexListMeta _metadata;
   InteractionWrenchMeta _interactionMetadata;
@@ -77,6 +97,7 @@ class MOCHI_API SensorLinkVertexForce : public SensorBase {
   DynamicArray<float> _graphOutput;
   QueryHandle _nodeForceQuery;
   bool _queryRegistered = false;
+  std::optional<int64_t> _lastSamplePeriod;
 };
 
 } // namespace superdex::robotics

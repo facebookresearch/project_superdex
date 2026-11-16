@@ -6,6 +6,10 @@ SINGLEX-3 tactile sensor geometry based on hardware by Seed Robotics — [https:
 
 The SuperDex assembly in this directory also references Tesollo DG-5F-M short-wrist fingertip geometry.
 
+`seed.superdex_sensor` configures the public Mochi-native SEED MLP response with
+`models/v0.1/forcenet_weights.json`. PyTorch artifacts remain under `internal/`
+and are not part of the open-source package.
+
 - Seed Robotics license scope and attribution: see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
 - Tesollo hand terms and attribution: [`../../hands/dg5f_short`](../../hands/dg5f_short) — see its README, LICENSE, and NOTICE.
 

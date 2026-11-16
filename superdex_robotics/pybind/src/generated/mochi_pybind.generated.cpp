@@ -61,9 +61,11 @@ namespace mochi {
     DefDynamicArray<superdex::robotics::SceneUrdfJointVelocityLimit>(m_bots, "DynamicArraySceneUrdfJointVelocityLimit");
     DefDynamicArray<superdex::robotics::SceneUrdfLinkAlias>(m_bots, "DynamicArraySceneUrdfLinkAlias");
     DefDynamicArray<superdex::robotics::SensorAxis>(m_bots, "DynamicArraySensorAxis");
+    DefDynamicArray<superdex::robotics::SensorGraphNodeView>(m_bots, "DynamicArraySensorGraphNodeView");
     DefDynamicArray<superdex::robotics::SensorHandle>(m_bots, "DynamicArraySensorHandle");
     DefDynamicArray<superdex::robotics::SlotEntry>(m_bots, "DynamicArraySlotEntry");
     DefDynamicArray<superdex::robotics::SpawnEntry>(m_bots, "DynamicArraySpawnEntry");
+    DefSpan<superdex::robotics::SensorGraphNodeView const>(m_bots, "SpanConstSensorGraphNodeView");
   }
 
   inline void DefineFinalize([[maybe_unused]] nb::module_& m) {

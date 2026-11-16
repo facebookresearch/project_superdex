@@ -21,6 +21,8 @@
 #include <superdex_robotics/sensors/camera_sensor.h>
 #include <superdex_robotics/sensors/sensor_articulated_joint_wrench.h>
 #include <superdex_robotics/sensors/sensor_link_vertex_force.h>
+#include <superdex_robotics/sensors/sensor_seed_rect_map.h>
+#include <superdex_robotics/sensors/sensor_seed_v1_mlp.h>
 #if MOCHI_INTERNAL
 #include <superdex_robotics/actuators/internal/actuators_internal.h>
 #include <superdex_robotics/controllers/internal/controllers_internal.h>
@@ -33,6 +35,7 @@
 #include "bot_impl.h"
 
 #include <algorithm>
+#include <cmath>
 #include <type_traits>
 #include <vector>
 
@@ -412,6 +415,13 @@ void RoboticsContext::DestroyBot(Scene* scene, BotHandle handle) {
      * was built on) so they can be destroyed below. Captured before the bot's BotImpl is moved
      * out — the pointer stays valid because moving a unique_ptr does not destroy the pointee. */
     Bot const* const botPtr = it->second.bot.get();
+    for (auto const& [value, slot] : slots.sensorSlots) {
+      if (slot.sensor != nullptr && slot.sensor->GetOwningBot() == botPtr &&
+          slot.sensor->_graphBorrowCount != 0) {
+        MOCHI_ASSERT(false, "Clear every SensorGraph before destroying its sensor's bot");
+        return;
+      }
+    }
     for (auto const& [value, slot] : slots.controllerSlots) {
       if (slot.controller != nullptr && slot.controller->GetOwningBot() == botPtr) {
         controllersToDestroy.emplace_back(value);
@@ -679,6 +689,8 @@ void RoboticsContext::RegisterBuiltinTypes() {
   RegisterSensor<SensorArticulatedJointWrench>();
   RegisterSensor<CameraSensor>();
   RegisterSensor<SensorLinkVertexForce>();
+  RegisterSensor<SensorSeedRectMap>();
+  RegisterSensor<SensorSeedV1MLP>();
 }
 
 /* --- Sensors --- */
@@ -736,18 +748,21 @@ void RoboticsContext::DestroySensor(SensorHandle handle) {
     return;
   }
 
-  SensorBase* toDestroy = nullptr;
+  SensorBase* sensor = nullptr;
   _slots.Mutate([&](Slots& slots) {
     auto it = slots.sensorSlots.find(handle.value);
     if (it == slots.sensorSlots.end()) {
       return;
     }
-    toDestroy = it->second.sensor;
+    if (it->second.sensor->_graphBorrowCount != 0) {
+      MOCHI_ASSERT(false, "Clear every SensorGraph before destroying its sensors");
+      return;
+    }
+    sensor = it->second.sensor;
     slots.sensorSlots.erase(it);
   });
-
-  if (toDestroy) {
-    ComponentBase::Destroy(toDestroy);
+  if (sensor != nullptr) {
+    ComponentBase::Destroy(sensor);
   }
 }
 

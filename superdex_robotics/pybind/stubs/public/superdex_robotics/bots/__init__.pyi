@@ -421,6 +421,25 @@ type ArrayLikeSensorAxis = (
     Sequence[SensorAxis] | DynamicArraySensorAxis | npt.NDArray[Any]
 )
 
+class DynamicArraySensorGraphNodeView:
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, size: int, value: SensorGraphNodeView = ...) -> None: ...
+    @overload
+    def __init__(self, sequence: Sequence[SensorGraphNodeView]) -> None: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> SensorGraphNodeView: ...
+    def __setitem__(self, index: int, value: SensorGraphNodeView) -> None: ...
+    def __iter__(self) -> Iterator[SensorGraphNodeView]: ...
+    def append(self, value: SensorGraphNodeView) -> None: ...
+    def clear(self) -> None: ...
+    def resize(self, size: int) -> None: ...
+
+type ArrayLikeSensorGraphNodeView = (
+    Sequence[SensorGraphNodeView] | DynamicArraySensorGraphNodeView | npt.NDArray[Any]
+)
+
 class DynamicArraySensorHandle:
     @overload
     def __init__(self) -> None: ...
@@ -476,6 +495,11 @@ type ArrayLikeSpawnEntry = (
     Sequence[SpawnEntry] | DynamicArraySpawnEntry | npt.NDArray[Any]
 )
 
+class SpanConstSensorGraphNodeView:
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> SensorGraphNodeView: ...
+    def __iter__(self) -> Iterator[SensorGraphNodeView]: ...
+
 class BotFileType:
     """Type of content stored in a .superdex_bot file."""
     BOT_PREFAB: BotFileType
@@ -522,6 +546,50 @@ class ControllerInputKind:
     """The controller's own layout; only callers that know its type drive it."""
     COUNT: ControllerInputKind
     """Number of enum values."""
+    def __init__(self, value: int) -> None: ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def value(self) -> int: ...
+    def __int__(self) -> int: ...
+    def __index__(self) -> int: ...
+
+class TactileRectProjectionType:
+    """Geometry used to flatten a tactile spherical cap into a rectangle."""
+    AZIMUTHAL_EQUAL_AREA: TactileRectProjectionType
+    """Lambert azimuthal equal-area disk followed by a concentric square transform."""
+    AZIMUTHAL_EQUIDISTANT: TactileRectProjectionType
+    """Azimuthal equidistant disk followed by a concentric square transform."""
+    OCTAHEDRAL: TactileRectProjectionType
+    """Standard octahedral direction encoding."""
+    def __init__(self, value: int) -> None: ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def value(self) -> int: ...
+    def __int__(self) -> int: ...
+    def __index__(self) -> int: ...
+
+class TactileRectRasterizationType:
+    """Resampling from projected taxels into the output grid."""
+    CONSERVATIVE_VORONOI: TactileRectRasterizationType
+    """Distribute every taxel's force across its discrete projected Voronoi region."""
+    NEAREST_CELL: TactileRectRasterizationType
+    """Accumulate every taxel's complete force into its nearest output cell."""
+    def __init__(self, value: int) -> None: ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def value(self) -> int: ...
+    def __int__(self) -> int: ...
+    def __index__(self) -> int: ...
+
+class TactileRectOutsidePolicy:
+    """Handling for source taxels outside a configured tactile spherical cap."""
+    REJECT: TactileRectOutsidePolicy
+    """Reject a layout containing any taxel outside the configured cap."""
+    EXCLUDE: TactileRectOutsidePolicy
+    """Explicitly exclude taxels outside the configured cap."""
     def __init__(self, value: int) -> None: ...
     @property
     def name(self) -> str: ...
@@ -631,6 +699,16 @@ class BotSensorPrefab:
     """Registered sensor type (e.g., "SENSOR_CAMERA")."""
     name: str
     """Human-readable, findable identifier for this sensor instance."""
+    @property
+    def inputs(self) -> mochi_physics.DynamicArrayString:
+        """Sensor graph inputs. `source` resolves on this sensor's bot and link;
+        `other_link/source` resolves on the same bot; `other_bot/link/source` is already
+        canonical; and `/other_bot/link/source` resolves from the graph root. A
+        root-qualified scene sensor such as `/overhead` is also accepted. Every resolved
+        name must identify a graph node during Build().
+        """
+    @inputs.setter
+    def inputs(self, value: mochi_physics.ArrayLikeString) -> None: ...
     parent_from_sensor: mochi_physics.TransformRT
     """Sensor pose relative to the associated link's actor (aFromB convention: maps
     sensor-frame coordinates into the link frame). Chain to world via
@@ -648,6 +726,7 @@ class BotSensorPrefab:
         *,
         type: str = ...,
         name: str = ...,
+        inputs: mochi_physics.ArrayLikeString = ...,
         parent_from_sensor: mochi_physics.TransformRT = ...,
         params: str = ...,
     ) -> None: ...
@@ -2295,6 +2374,313 @@ class CameraSensorParams:
         look_distance: float = ...,
     ) -> None: ...
 
+class SensorSeedRectMapParams:
+    """Fixed geometry for a SEED force RectMap sensor."""
+    @property
+    def center(self) -> mochi_physics.Real3: ...
+    @center.setter
+    def center(self, value: mochi_physics.Real3Like) -> None: ...
+    @property
+    def tip_direction(self) -> mochi_physics.Real3: ...
+    @tip_direction.setter
+    def tip_direction(self, value: mochi_physics.Real3Like) -> None: ...
+    @property
+    def zero_longitude_direction(self) -> mochi_physics.Real3: ...
+    @zero_longitude_direction.setter
+    def zero_longitude_direction(self, value: mochi_physics.Real3Like) -> None: ...
+    width: int
+    height: int
+    max_polar_latitude: float
+    projection: TactileRectProjectionType
+    rasterization: TactileRectRasterizationType
+    voronoi_oversampling: int
+    outside_policy: TactileRectOutsidePolicy
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        center: mochi_physics.Real3Like = ...,
+        tip_direction: mochi_physics.Real3Like = ...,
+        zero_longitude_direction: mochi_physics.Real3Like = ...,
+        width: int = ...,
+        height: int = ...,
+        max_polar_latitude: float = ...,
+        projection: TactileRectProjectionType | int = ...,
+        rasterization: TactileRectRasterizationType | int = ...,
+        voronoi_oversampling: int = ...,
+        outside_policy: TactileRectOutsidePolicy | int = ...,
+    ) -> None: ...
+
+class SensorSeedV1MLPParams:
+    """SEED tactile sensor parameters."""
+    weights_path: str
+    """Path to the JSON weights file (forcenet_weights.json)."""
+    @property
+    def hemisphere_center_offset(self) -> mochi_physics.Real3:
+        """Offset from link origin to hemisphere center in link-local frame [m]."""
+    @hemisphere_center_offset.setter
+    def hemisphere_center_offset(self, value: mochi_physics.Real3Like) -> None: ...
+    bypass_model: bool
+    """When true, output = raw contact force (skip MLP inference)."""
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        weights_path: str = ...,
+        hemisphere_center_offset: mochi_physics.Real3Like = ...,
+        bypass_model: bool = ...,
+    ) -> None: ...
+
+class SensorSeedV1MLPResult:
+    """SEED tactile sensor result."""
+    @property
+    def input_force(self) -> mochi_physics.Real3: ...
+    @input_force.setter
+    def input_force(self, value: mochi_physics.Real3Like) -> None: ...
+    @property
+    def input_normal(self) -> mochi_physics.Real3: ...
+    @input_normal.setter
+    def input_normal(self, value: mochi_physics.Real3Like) -> None: ...
+    @property
+    def output_force(self) -> mochi_physics.Real3: ...
+    @output_force.setter
+    def output_force(self, value: mochi_physics.Real3Like) -> None: ...
+    @property
+    def contact_centroid(self) -> mochi_physics.Real3: ...
+    @contact_centroid.setter
+    def contact_centroid(self, value: mochi_physics.Real3Like) -> None: ...
+    @property
+    def contact_normal(self) -> mochi_physics.Real3: ...
+    @contact_normal.setter
+    def contact_normal(self, value: mochi_physics.Real3Like) -> None: ...
+    num_contacts: int
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        input_force: mochi_physics.Real3Like = ...,
+        input_normal: mochi_physics.Real3Like = ...,
+        output_force: mochi_physics.Real3Like = ...,
+        contact_centroid: mochi_physics.Real3Like = ...,
+        contact_normal: mochi_physics.Real3Like = ...,
+        num_contacts: int = ...,
+    ) -> None: ...
+
+class TactileTaxelLayout:
+    """Ordered, sensor-link-frame positions for a tactile taxel layout."""
+    @property
+    def positions(self) -> mochi_physics.DynamicArrayReal3:
+        """Taxel positions [m] in the sensor link frame. Their order is the taxel
+        identity.
+        """
+    @positions.setter
+    def positions(self, value: mochi_physics.ArrayLikeReal3) -> None: ...
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, *, positions: mochi_physics.ArrayLikeReal3 = ...) -> None: ...
+
+class TactileTaxelForces:
+    """Dense per-taxel force observation for one tactile site."""
+    @property
+    def forces(self) -> mochi_physics.DynamicArrayReal3:
+        """One force [N] per layout taxel, in the sensor link frame."""
+    @forces.setter
+    def forces(self, value: mochi_physics.ArrayLikeReal3) -> None: ...
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, *, forces: mochi_physics.ArrayLikeReal3 = ...) -> None: ...
+
+class TactileAggregateForce:
+    """Aggregate force observation for one tactile site."""
+    @property
+    def force(self) -> mochi_physics.Real3:
+        """Sum of the taxel forces [N], in the sensor link frame."""
+    @force.setter
+    def force(self, value: mochi_physics.Real3Like) -> None: ...
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, *, force: mochi_physics.Real3Like = ...) -> None: ...
+
+class TactileAggregateWrench:
+    """Aggregate wrench observation for one tactile site."""
+    @property
+    def force(self) -> mochi_physics.Real3:
+        """Sum of the taxel forces [N], in the sensor link frame."""
+    @force.setter
+    def force(self, value: mochi_physics.Real3Like) -> None: ...
+    @property
+    def torque(self) -> mochi_physics.Real3:
+        """Sum of position cross force about referencePoint [N*m], in the sensor link
+        frame.
+        """
+    @torque.setter
+    def torque(self, value: mochi_physics.Real3Like) -> None: ...
+    @property
+    def reference_point(self) -> mochi_physics.Real3:
+        """Point about which torque is resolved [m], in the sensor link frame."""
+    @reference_point.setter
+    def reference_point(self, value: mochi_physics.Real3Like) -> None: ...
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        force: mochi_physics.Real3Like = ...,
+        torque: mochi_physics.Real3Like = ...,
+        reference_point: mochi_physics.Real3Like = ...,
+    ) -> None: ...
+
+class TactileHemisphereRectParams:
+    """Configuration for mapping a tactile spherical cap to a rectangle."""
+    @property
+    def center(self) -> mochi_physics.Real3:
+        """Hemisphere center [m] in the sensor link frame."""
+    @center.setter
+    def center(self, value: mochi_physics.Real3Like) -> None: ...
+    @property
+    def tip_direction(self) -> mochi_physics.Real3:
+        """Direction from center to the tactile tip. It is normalized by the mapper."""
+    @tip_direction.setter
+    def tip_direction(self, value: mochi_physics.Real3Like) -> None: ...
+    @property
+    def zero_longitude_direction(self) -> mochi_physics.Real3:
+        """Direction assigned longitude zero. Its component along tipDirection is
+        removed.
+        """
+    @zero_longitude_direction.setter
+    def zero_longitude_direction(self, value: mochi_physics.Real3Like) -> None: ...
+    width: int
+    """Number of rectangular grid columns."""
+    height: int
+    """Number of rectangular grid rows."""
+    max_polar_latitude: float
+    """Largest selected polar angle [rad]. Pi/2 describes a hemisphere."""
+    projection: TactileRectProjectionType
+    """Spherical-cap flattening geometry."""
+    rasterization: TactileRectRasterizationType
+    """Force-conserving resampling from projected taxels into grid cells."""
+    voronoi_oversampling: int
+    """Linear fine-grid scale used to resolve Voronoi regions before output
+    downsampling.
+    """
+    outside_policy: TactileRectOutsidePolicy
+    """Handling for source taxels beyond maxPolarLatitude."""
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        center: mochi_physics.Real3Like = ...,
+        tip_direction: mochi_physics.Real3Like = ...,
+        zero_longitude_direction: mochi_physics.Real3Like = ...,
+        width: int = ...,
+        height: int = ...,
+        max_polar_latitude: float = ...,
+        projection: TactileRectProjectionType | int = ...,
+        rasterization: TactileRectRasterizationType | int = ...,
+        voronoi_oversampling: int = ...,
+        outside_policy: TactileRectOutsidePolicy | int = ...,
+    ) -> None: ...
+
+class TactileRectProjectionMap:
+    """Resolved, immutable mapping from an ordered taxel layout to a rectangular grid.
+    """
+    @property
+    def coordinates(self) -> mochi_physics.DynamicArrayReal2:
+        """Normalized rectangular coordinates in [-1, 1], one per source taxel."""
+    @coordinates.setter
+    def coordinates(self, value: mochi_physics.ArrayLikeReal2) -> None: ...
+    @property
+    def taxel_cells(self) -> mochi_physics.DynamicArrayInt:
+        """Row-major destination cell per source taxel, or -1 when explicitly excluded.
+        """
+    @taxel_cells.setter
+    def taxel_cells(self, value: mochi_physics.ArrayLikeInt) -> None: ...
+    @property
+    def taxel_contribution_offsets(self) -> mochi_physics.DynamicArrayInt:
+        """CSR offsets into contributionCells and contributionWeights, one row per
+        taxel.
+        """
+    @taxel_contribution_offsets.setter
+    def taxel_contribution_offsets(self, value: mochi_physics.ArrayLikeInt) -> None: ...
+    @property
+    def contribution_cells(self) -> mochi_physics.DynamicArrayInt:
+        """Row-major destination cells receiving force from each taxel."""
+    @contribution_cells.setter
+    def contribution_cells(self, value: mochi_physics.ArrayLikeInt) -> None: ...
+    @property
+    def contribution_weights(self) -> mochi_physics.DynamicArrayReal:
+        """Per-taxel force fractions. Every selected taxel's CSR row sums to one."""
+    @contribution_weights.setter
+    def contribution_weights(self, value: mochi_physics.ArrayLikeReal) -> None: ...
+    width: int
+    """Number of grid columns."""
+    height: int
+    """Number of grid rows."""
+    selected_taxel_count: int
+    """Number of source taxels selected by the projection."""
+    rasterization: TactileRectRasterizationType
+    """Resampling used to build the contribution matrix."""
+    voronoi_oversampling: int
+    """Fine-grid scale used for Voronoi resampling, or one for nearest-cell mode."""
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        coordinates: mochi_physics.ArrayLikeReal2 = ...,
+        taxel_cells: mochi_physics.ArrayLikeInt = ...,
+        taxel_contribution_offsets: mochi_physics.ArrayLikeInt = ...,
+        contribution_cells: mochi_physics.ArrayLikeInt = ...,
+        contribution_weights: mochi_physics.ArrayLikeReal = ...,
+        width: int = ...,
+        height: int = ...,
+        selected_taxel_count: int = ...,
+        rasterization: TactileRectRasterizationType | int = ...,
+        voronoi_oversampling: int = ...,
+    ) -> None: ...
+
+class TactileForceGrid:
+    """Rectangular tactile force grid for one site."""
+    @property
+    def forces(self) -> mochi_physics.DynamicArrayReal3:
+        """Row-major cell force sums [N] in the sensor link frame."""
+    @forces.setter
+    def forces(self, value: mochi_physics.ArrayLikeReal3) -> None: ...
+    @property
+    def taxel_counts(self) -> mochi_physics.DynamicArrayInt:
+        """Number of source taxels making a nonzero contribution to each row-major cell.
+        """
+    @taxel_counts.setter
+    def taxel_counts(self, value: mochi_physics.ArrayLikeInt) -> None: ...
+    width: int
+    """Number of grid columns."""
+    height: int
+    """Number of grid rows."""
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        forces: mochi_physics.ArrayLikeReal3 = ...,
+        taxel_counts: mochi_physics.ArrayLikeInt = ...,
+        width: int = ...,
+        height: int = ...,
+    ) -> None: ...
+
 class ControllerBasicJscPd(ControllerBase):
     """A simple PD controller written in joint space."""
     @staticmethod
@@ -2488,14 +2874,29 @@ class SensorArticulatedJointWrench(SensorBase):
             This sensor's canonical registration type name.
         """
 
+class SensorLinkVertexForceParams:
+    """Acquisition cadence for a link vertex-force source."""
+    sample_rate_hz: float
+    """Samples per second, or zero to capture every graph step."""
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, *, sample_rate_hz: float = ...) -> None: ...
+
 class SensorLinkVertexForce(SensorBase):
-    """Ordered per-vertex force point cloud from one link's contact mesh."""
+    """Vertex-force point cloud derived from one link's ordered contact vertices."""
     @staticmethod
     def type_name() -> str:
         """Canonical serialized sensor type identifier.
 
         Returns:
             Stable type identifier.
+        """
+    def get_params(self) -> SensorLinkVertexForceParams:
+        """Get acquisition parameters.
+
+        Returns:
+            Current acquisition parameters.
         """
 
 class ActuatorBase(ComponentBase):
@@ -2557,6 +2958,26 @@ class CameraSensor(SensorBase):
         Raises:
             :class:`~superdex.physics.Error`: If an error occurs.
         """
+
+class SensorSeedRectMap(SensorBase):
+    """Image-like force map derived from one vertex-force point-cloud sensor."""
+    @staticmethod
+    def type_name() -> str: ...
+    def get_params(self) -> SensorSeedRectMapParams: ...
+
+class SensorSeedV1MLP(SensorBase):
+    """SEED tactile sensor using Mochi-native MLP inference."""
+    @staticmethod
+    def type_name() -> str: ...
+    @overload
+    def compute_signal(self) -> SensorSeedV1MLPResult: ...
+    @overload
+    def compute_signal(
+        self,
+        contacts: mochi_physics.ArrayLikeContactPoint,
+    ) -> SensorSeedV1MLPResult: ...
+    def get_params(self) -> SensorSeedV1MLPParams: ...
+    def set_params(self, params: SensorSeedV1MLPParams) -> None: ...
 
 class BotSceneMetadata:
     """Human-readable metadata for a .superdex_scene file. Not consumed by the runtime.
@@ -2707,6 +3128,19 @@ class BotEntry:
         roboperator_class: str = ...,
     ) -> None: ...
 
+class SensorGraphNodeView:
+    """Borrowed identity of a selected sensor graph output. Valid only until graph
+    mutation or destruction.
+    """
+    name: str
+    """Canonical graph node name."""
+    handle: SensorHandle
+    """Sensor handle in the owning robotics context."""
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, *, name: str = ..., handle: SensorHandle = ...) -> None: ...
+
 class SlotEntry:
     """One slot a scene offers, and the bots eligible to fill it."""
     name: str
@@ -2741,6 +3175,14 @@ class SceneSensorEntry:
     """Sensor type identifier (registered string), e.g. "SENSOR_CAMERA"."""
     name: str
     """Unique instance name for runtime lookup."""
+    @property
+    def inputs(self) -> mochi_physics.DynamicArrayString:
+        """Canonical sensor graph inputs. Use `bot/link/sensor` for a bot-owned node and
+        the scene sensor's own name for a scene-owned node. Scene sensors have no
+        bot/link context for shortening.
+        """
+    @inputs.setter
+    def inputs(self, value: mochi_physics.ArrayLikeString) -> None: ...
     parent_from_sensor: mochi_physics.TransformRT
     """Sensor pose relative to the scene root (aFromB convention: maps sensor-frame
     coordinates into the parent scene frame). Chain to world via
@@ -2758,6 +3200,7 @@ class SceneSensorEntry:
         *,
         type: str = ...,
         name: str = ...,
+        inputs: mochi_physics.ArrayLikeString = ...,
         parent_from_sensor: mochi_physics.TransformRT = ...,
         params: str = ...,
     ) -> None: ...
@@ -2896,6 +3339,33 @@ class BotScene:
 
         Returns:
             Robotics context, or None if unavailable.
+        """
+    def reset_sensors(self) -> None:
+        """Reset acquisition; samples await the next positive physics step.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+        """
+    def rebuild_sensor_graph(
+        self,
+        outputs: mochi_physics.ArrayLikeDynamicString,
+    ) -> None:
+        """Reconstruct the declared graph with caller-selected outputs and reset
+        acquisition. Call between episodes after adding/removing a bot. Failure leaves
+        the graph unbuilt. Does not reset physics, controllers or task state.
+
+        Args:
+            outputs (ArrayLikeDynamicString): Canonical names of the graph sensors to
+                enable as outputs.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+        """
+    def check_sensor_graph(self) -> None:
+        """Surface an error captured while the graph ran in a native post-step callback.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
         """
     def get_bot(self, name: str) -> Optional[Bot]:
         """Look up a bot by the name declared in the .superdex_scene file.
@@ -3043,6 +3513,21 @@ class BotScene:
 
         Raises:
             :class:`~superdex.physics.Error`: If an error occurs.
+        """
+    def add_sensor_outputs(self, sensor_outputs: mochi_physics.ArrayLikeString) -> None:
+        """Enable canonical graph output names and initialize newly active dependencies.
+        Existing sensor state and selections survive; an empty list does nothing.
+
+        Args:
+            sensor_outputs (ArrayLikeString): Canonical names of existing graph nodes to
+                select.
+
+        Raises:
+            :class:`~superdex.physics.Error`: If an error occurs.
+        """
+    def get_sensor_outputs(self) -> SpanConstSensorGraphNodeView:
+        """Enumerate the graph's current selected outputs in dependency order. Borrowed
+        view invalidated by graph mutation or destruction; empty while unbuilt.
         """
     def get_bot_scene_prefab(self) -> BotScenePrefab:
         """Get the original parameters this BotScene was loaded from.
@@ -3522,6 +4007,140 @@ def build_articulated_pose_from_bot_pose(
     Warning:
         This documentation references the following C++ API, which is not available
         in Python: ``superdex::robotics::BotPrefab::_numDofs``.
+    """
+
+def make_tactile_taxel_layout(
+    positions: mochi_physics.ArrayLikeReal3,
+) -> TactileTaxelLayout:
+    """Build an ordered tactile taxel layout.
+
+    Args:
+        positions (ArrayLikeReal3): Taxel positions [m] in sensor link frame, in
+            stable taxel order.
+
+    Returns:
+        Validated layout. Empty layouts and non-finite positions raise an error.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+def read_tactile_taxel_forces(
+    actor: mochi_physics.Actor,
+    world_from_sensor: mochi_physics.TransformRT,
+    layout: TactileTaxelLayout,
+) -> TactileTaxelForces:
+    """Read a dense per-taxel force observation from a Mochi actor.
+
+    The caller must register QueryType::NodeContactForces before stepping the scene
+    and keep that query registered while reading.
+
+    Args:
+        actor (Actor): Actor whose node-force query is read.
+        world_from_sensor (TransformRT): Sensor-frame pose in world space. Pass the
+            actor root transform when the actor and sensor frames coincide.
+        layout (TactileTaxelLayout): Ordered taxel layout matching the actor's node
+            indices.
+
+    Returns:
+        One sensor-link-frame force per layout taxel.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+def aggregate_tactile_force(taxel_forces: TactileTaxelForces) -> TactileAggregateForce:
+    """Sum per-taxel forces into one aggregate force observation.
+
+    No learned response, calibration, threshold, or torque model is applied.
+
+    Args:
+        taxel_forces (TactileTaxelForces): Dense per-taxel force observation.
+
+    Returns:
+        Sum of all taxel forces.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+def aggregate_tactile_wrench(
+    layout: TactileTaxelLayout,
+    taxel_forces: TactileTaxelForces,
+    reference_point: mochi_physics.Real3Like,
+) -> TactileAggregateWrench:
+    """Aggregate per-taxel forces into a wrench about referencePoint.
+
+    Args:
+        layout (TactileTaxelLayout): Ordered taxel positions in the sensor link
+            frame.
+        taxel_forces (TactileTaxelForces): Per-taxel forces indexed by layout.
+        reference_point (Real3Like): Torque reference point [m] in the sensor link
+            frame.
+
+    Returns:
+        Force and torque about the configured reference point.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+def build_tactile_rect_projection(
+    layout: TactileTaxelLayout,
+    params: TactileHemisphereRectParams,
+) -> TactileRectProjectionMap:
+    """Resolve a tactile spherical-cap layout into a rectangular projection.
+
+    Args:
+        layout (TactileTaxelLayout): Ordered taxel positions in the sensor link
+            frame.
+        params (TactileHemisphereRectParams): Projection frame, geometry, selection
+            and output grid shape.
+
+    Returns:
+        Stable coordinates, nearest cells and a force-conserving contribution map.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+def rasterize_tactile_rect_projection(
+    projection: TactileRectProjectionMap,
+    taxel_forces: TactileTaxelForces,
+) -> TactileForceGrid:
+    """Rasterize per-taxel forces through a resolved tactile projection.
+
+    Args:
+        projection (TactileRectProjectionMap): Resolved mapping built for the source
+            layout.
+        taxel_forces (TactileTaxelForces): Per-taxel forces indexed by that layout.
+
+    Returns:
+        Row-major rectangular force grid and per-cell taxel counts.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
+    """
+
+def map_tactile_hemisphere_to_rect(
+    layout: TactileTaxelLayout,
+    taxel_forces: TactileTaxelForces,
+    params: TactileHemisphereRectParams,
+) -> TactileForceGrid:
+    """Resolve and rasterize a per-taxel force observation in one call.
+
+    Args:
+        layout (TactileTaxelLayout): Ordered taxel positions in the sensor link
+            frame.
+        taxel_forces (TactileTaxelForces): Per-taxel forces indexed by layout.
+        params (TactileHemisphereRectParams): Hemisphere frame and output grid
+            shape.
+
+    Returns:
+        Row-major rectangular force grid and per-cell taxel counts.
+
+    Raises:
+        :class:`~superdex.physics.Error`: If an error occurs.
     """
 
 def create_bot(

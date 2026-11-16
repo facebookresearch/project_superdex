@@ -26,6 +26,8 @@
 #include <superdex_robotics/controllers/controller_basic_osc_pd.h>
 #include <superdex_robotics/controllers/controller_mochi_articulated_pose.h>
 #include <superdex_robotics/sensors/camera_sensor.h>
+#include <superdex_robotics/sensors/sensor_seed_rect_map.h>
+#include <superdex_robotics/sensors/sensor_seed_v1_mlp.h>
 #include <superdex_robotics/superdex_robotics.h>
 #include <superdex_robotics/utils/bot_utils.h>
 #include <superdex_robotics/utils/superdex_robotics_api_checks.generated.h>
@@ -126,6 +128,21 @@ MOCHI_STRUCT_END_EX()
 
 MOCHI_STRUCT_BEGIN_EX(superdex::robotics::ControllerBasicJscPdTarget)
 MOCHI_FIELD(targetPose)
+MOCHI_STRUCT_END_EX()
+
+MOCHI_STRUCT_BEGIN_EX(superdex::robotics::SensorSeedV1MLPParams)
+MOCHI_FIELD(weightsPath)
+MOCHI_FIELD(hemisphereCenterOffset) MOCHI_ATTRIBUTE(Units("m"))
+MOCHI_FIELD(bypassModel)
+MOCHI_STRUCT_END_EX()
+
+MOCHI_STRUCT_BEGIN_EX(superdex::robotics::SensorSeedV1MLPResult)
+MOCHI_FIELD(inputForce)
+MOCHI_FIELD(inputNormal)
+MOCHI_FIELD(outputForce)
+MOCHI_FIELD(contactCentroid)
+MOCHI_FIELD(contactNormal)
+MOCHI_FIELD(numContacts)
 MOCHI_STRUCT_END_EX()
 
 MOCHI_STRUCT_BEGIN_EX(superdex::robotics::ControllerBasicJscPd)

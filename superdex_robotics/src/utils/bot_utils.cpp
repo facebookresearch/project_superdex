@@ -767,6 +767,26 @@ void superdex::robotics::Validate(
   }
   MOCHI_ERROR_RETURN(error);
 
+  for (int i = 0; i < numLinks; ++i) {
+    BotLinkPrefab const& link = botPrefab.links[i];
+    std::unordered_set<std::string_view> sensorNames;
+    for (BotSensorPrefab const& sensor : link.sensors) {
+      if (sensor.name.empty()) {
+        continue;
+      }
+      if (!sensorNames.insert(std::string_view(sensor.name)).second) {
+        REPORT_LINK_ISSUE(
+            results,
+            i,
+            "link '%s' has duplicate sensor name '%s'",
+            link.name.c_str(),
+            sensor.name.c_str());
+        MOCHI_ERROR_SET(error, "Invalid BotPrefab: duplicate sensor name within a link");
+        return;
+      }
+    }
+  }
+
   // The skin is referenced in contact overrides by the bot's (top-level actor's) name, so no link
   // may share that name -- otherwise a skin<->link override reference would be ambiguous.
   if (botPrefab.skin.has_value()) {

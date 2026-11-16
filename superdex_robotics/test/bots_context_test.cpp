@@ -26,11 +26,77 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
+
 using namespace mochi;
 using namespace superdex::robotics;
 using namespace mochi::test;
 
 namespace {
+
+class TestNumericSensor final : public SensorBase {
+ public:
+  static constexpr std::string_view TypeName() {
+    return "TEST_NUMERIC_SENSOR";
+  }
+
+  TestNumericSensor(Actor* actor, std::string_view /*paramArgs*/, Error& error)
+      : SensorBase(actor, error) {}
+
+  [[nodiscard]] std::string_view GetTypeName() const override {
+    return TypeName();
+  }
+
+  [[nodiscard]] SensorStepResult Step(StepTime const& now, Error& error) override {
+    std::array<float, 3> const values{1.0F, 2.0F, 3.0F};
+    return PublishSample(now, values, error) ? SensorStepResult::Published
+                                             : SensorStepResult::NoUpdate;
+  }
+
+ private:
+  void ResetSensor() override {}
+
+  [[nodiscard]] SensorFormat InitSensor(SensorScope const& /*scope*/, Error& error) override {
+    MOCHI_ERROR_IF_NOT(Inputs().empty(), error, "TestNumericSensor does not accept inputs");
+    return {
+        .kind = "test.force.v1",
+        .shape = {3},
+        .axes = {{.name = "component", .labels = {"x", "y", "z"}, .units = {"N"}}},
+    };
+  }
+};
+
+class TestUnitlessNumericSensor final : public SensorBase {
+ public:
+  static constexpr std::string_view TypeName() {
+    return "TEST_UNITLESS_NUMERIC_SENSOR";
+  }
+
+  TestUnitlessNumericSensor(Actor* actor, std::string_view /*paramArgs*/, Error& error)
+      : SensorBase(actor, error) {}
+
+  [[nodiscard]] std::string_view GetTypeName() const override {
+    return TypeName();
+  }
+
+  [[nodiscard]] SensorStepResult Step(StepTime const& now, Error& error) override {
+    std::array<float, 1> const values{0.5F};
+    return PublishSample(now, values, error) ? SensorStepResult::Published
+                                             : SensorStepResult::NoUpdate;
+  }
+
+ private:
+  void ResetSensor() override {}
+
+  [[nodiscard]] SensorFormat InitSensor(SensorScope const& /*scope*/, Error& error) override {
+    MOCHI_ERROR_IF_NOT(Inputs().empty(), error, "TestUnitlessNumericSensor does not accept inputs");
+    return {
+        .kind = "test.normalized.v1",
+        .shape = {1},
+        .axes = {{.name = "component", .labels = {"score"}, .units = {}}},
+    };
+  }
+};
 
 // Minimal loader that returns empty shapes; used to exercise BuildArticulatedActorParams
 // for prefabs whose links carry no shape files.
@@ -410,6 +476,35 @@ TEST_F(RoboticsContextTest, CreateAndDestroySensor) {
   GetCtx().DestroySensor(handle);
   EXPECT_FALSE(GetCtx().IsValidSensor(handle));
   EXPECT_EQ(GetCtx().GetSensor(handle), nullptr);
+}
+
+TEST_F(RoboticsContextTest, NumericObservationDispatchesThroughSensorBase) {
+  GetCtx().RegisterSensor<TestNumericSensor>();
+  SensorHandle const handle =
+      GetCtx().CreateSensor(TestNumericSensor::TypeName(), nullptr, "numeric", "", ExpectOK{});
+
+  SensorBase* const sensor = GetCtx().GetSensor(handle);
+  ASSERT_NE(sensor, nullptr);
+  sensor->Init({}, {}, ExpectOK{});
+  EXPECT_EQ((DynamicArray<SensorDimension>{3}), sensor->GetFormat().shape);
+  EXPECT_EQ("test.force.v1", sensor->GetFormat().kind);
+  EXPECT_EQ(sensor->Step({.step = 4}, ExpectOK{}), SensorStepResult::Published);
+  EXPECT_EQ((Span<float const>{std::array<float, 3>{1.0F, 2.0F, 3.0F}}), sensor->Latest().Floats());
+}
+
+TEST_F(RoboticsContextTest, NumericObservationMayBeUnitless) {
+  GetCtx().RegisterSensor<TestUnitlessNumericSensor>();
+  SensorHandle const handle = GetCtx().CreateSensor(
+      TestUnitlessNumericSensor::TypeName(), nullptr, "normalized", "", ExpectOK{});
+
+  SensorBase* const sensor = GetCtx().GetSensor(handle);
+  ASSERT_NE(sensor, nullptr);
+  sensor->Init({}, {}, ExpectOK{});
+  ASSERT_EQ(sensor->GetFormat().axes.size(), 1);
+  EXPECT_TRUE(sensor->GetFormat().axes[0].units.empty());
+  EXPECT_EQ(sensor->Step({.step = 1}, ExpectOK{}), SensorStepResult::Published);
+  ASSERT_EQ(sensor->Latest().Floats().size(), 1);
+  EXPECT_FLOAT_EQ(sensor->Latest().Floats()[0], 0.5F);
 }
 
 TEST_F(RoboticsContextTest, UnknownSensorTypeReturnsError) {

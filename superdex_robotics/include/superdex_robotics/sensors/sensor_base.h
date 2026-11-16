@@ -149,9 +149,13 @@ class MOCHI_API SensorBase : public ComponentBase {
   ~SensorBase() override;
 
  private:
+  friend class SensorGraph;
+  friend class RoboticsContext;
+
   void PrepareOutput(SensorFormat format, superdex::Error& error);
   void ClearOutput();
 
+  int32_t _graphBorrowCount = 0;
   SensorFormat _format;
   DynamicArray<SensorBase const*> _inputs;
   DynamicArray<float> _output;

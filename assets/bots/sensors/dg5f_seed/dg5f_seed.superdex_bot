@@ -86,7 +86,7 @@
       "sensors": [
         {
           "typeName": "SENSOR_SEED_V1_MLP",
-          "paramsFile": "internal/seed.superdex_sensor"
+          "paramsFile": "seed.superdex_sensor"
         }
       ],
       "shape": "collision/dg5f_link_tip_sensor_clean_dome_collision.mochi.h5"

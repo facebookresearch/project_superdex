@@ -27,7 +27,9 @@ using namespace superdex::robotics;
 
 SensorBase::SensorBase(Actor* actor, Error& /*error*/) : ComponentBase(actor) {}
 SensorBase::SensorBase(Error& /*error*/) : ComponentBase(nullptr) {}
-SensorBase::~SensorBase() = default;
+SensorBase::~SensorBase() {
+  MOCHI_ASSERT(_graphBorrowCount == 0, "Clear every SensorGraph before destroying its sensors");
+}
 
 Span<float const> SensorSample::Floats() const {
   MOCHI_ASSERT(data != nullptr || elementCount == 0);

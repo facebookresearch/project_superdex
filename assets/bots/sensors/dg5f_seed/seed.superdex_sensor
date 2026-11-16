@@ -1,0 +1,5 @@
+{
+  "weightsPath": "models/v0.1/forcenet_weights.json",
+  "hemisphereCenterOffset": [0.0, 0.0, -0.004],
+  "bypassModel": false
+}

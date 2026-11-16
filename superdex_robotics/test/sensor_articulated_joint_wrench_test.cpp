@@ -231,8 +231,8 @@ TEST_F(SensorArticulatedJointWrenchTest, LayoutOmitsStaticRootAndNamesMeasurable
   EXPECT_EQ(0, layout->omittedStaticLinkIndices[0]);
 
   SensorGraph graph;
-  graph.Add("joints", &sensor);
-  graph.AddOutput("joints");
+  graph.Add("joints", &sensor, mochi::test::ExpectOK{});
+  graph.SetOutputEnabled("joints", true, mochi::test::ExpectOK{});
   Error error;
   graph.Build({.scene = _scene, .robotics = nullptr}, error);
   ASSERT_TRUE(error.IsOK()) << error.ToString();
@@ -251,8 +251,8 @@ TEST_F(SensorArticulatedJointWrenchTest, PhysicsQueryFailurePropagatesFromStep) 
   BuildPendulum();
   SensorArticulatedJointWrench sensor(_pole, "", ExpectOK{});
   SensorGraph graph;
-  graph.Add("joints", &sensor);
-  graph.AddOutput("joints");
+  graph.Add("joints", &sensor, mochi::test::ExpectOK{});
+  graph.SetOutputEnabled("joints", true, mochi::test::ExpectOK{});
   Error error;
   graph.Build({.scene = _scene, .robotics = nullptr}, error);
   ASSERT_TRUE(error.IsOK()) << error.ToString();
@@ -277,8 +277,8 @@ TEST_F(SensorArticulatedJointWrenchTest, GraphPublishesActorWideRowsAndLatestOnl
   FreezeAllDofs();
   SensorArticulatedJointWrench sensor(_pole, "", ExpectOK{});
   SensorGraph graph;
-  graph.Add("joints", &sensor);
-  graph.AddOutput("joints");
+  graph.Add("joints", &sensor, mochi::test::ExpectOK{});
+  graph.SetOutputEnabled("joints", true, mochi::test::ExpectOK{});
   Error error;
   graph.Build({.scene = _scene, .robotics = nullptr}, error);
   ASSERT_TRUE(error.IsOK()) << error.ToString();
@@ -331,8 +331,8 @@ TEST_F(SensorArticulatedJointWrenchTest, HardJointBelowAMovingJointIsReportedAnd
   EXPECT_EQ(0, layout->omittedStaticLinkIndices[0]);
 
   SensorGraph graph;
-  graph.Add("joints", &sensor);
-  graph.AddOutput("joints");
+  graph.Add("joints", &sensor, mochi::test::ExpectOK{});
+  graph.SetOutputEnabled("joints", true, mochi::test::ExpectOK{});
   Error error;
   graph.Build({.scene = _scene, .robotics = nullptr}, error);
   ASSERT_TRUE(error.IsOK()) << error.ToString();
@@ -374,8 +374,8 @@ TEST_F(SensorArticulatedJointWrenchTest, MultipleSourcesShareTheReferenceCounted
     _scene->Step(kDt);
   }
   SensorGraph graph;
-  graph.Add("survivor", survivor.get());
-  graph.AddOutput("survivor");
+  graph.Add("survivor", survivor.get(), mochi::test::ExpectOK{});
+  graph.SetOutputEnabled("survivor", true, mochi::test::ExpectOK{});
   Error error;
   graph.Build({.scene = _scene, .robotics = nullptr}, error);
   graph.Reset(error);

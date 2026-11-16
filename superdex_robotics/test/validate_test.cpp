@@ -109,6 +109,33 @@ TEST_F(BotUtilsValidate, DuplicateLinkLinkName) {
   Validate(bp, nullptr, ExpectNotOK{});
 }
 
+TEST_F(BotUtilsValidate, DuplicateSensorNameWithinLink) {
+  auto bp = MakeValidBotPrefab(2);
+  BotSensorPrefab sensor;
+  sensor.name = "tactile";
+  bp.links[1].sensors.push_back(sensor);
+  bp.links[1].sensors.push_back(sensor);
+  Error error;
+  Validate(bp, nullptr, error);
+  ASSERT_FALSE(error.IsOK());
+  EXPECT_NE(error.ToString().find("duplicate sensor name within a link"), std::string::npos);
+}
+
+TEST_F(BotUtilsValidate, SameSensorNameOnDifferentLinks) {
+  auto bp = MakeValidBotPrefab(2);
+  BotSensorPrefab sensor;
+  sensor.name = "tactile";
+  bp.links[0].sensors.push_back(sensor);
+  bp.links[1].sensors.push_back(sensor);
+  Validate(bp, nullptr, ExpectOK{});
+}
+
+TEST_F(BotUtilsValidate, UnnamedLegacySensorRemainsValid) {
+  auto bp = MakeValidBotPrefab(2);
+  bp.links[1].sensors.emplace_back();
+  Validate(bp, nullptr, ExpectOK{});
+}
+
 // 4b. Duplicate joint-joint names
 TEST_F(BotUtilsValidate, DuplicateJointJointName) {
   auto bp = MakeValidBotPrefab(3);

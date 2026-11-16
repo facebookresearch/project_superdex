@@ -106,6 +106,9 @@ struct BotSensorPrefab {
   /* Human-readable, findable identifier for this sensor instance. */
   DynamicString name;
 
+  /* Sensor graph inputs. Unqualified names resolve on this sensor's link. */
+  DynamicArray<DynamicString> inputs;
+
   /* Sensor pose relative to the associated link's actor (aFromB convention: maps sensor-frame
    * coordinates into the link frame). Chain to world via SensorBase::GetWorldTransform. */
   TransformRT parentFromSensor;
@@ -133,6 +136,7 @@ struct BotSensorPrefab {
   MOCHI_STRUCT_BEGIN(superdex::robotics::BotSensorPrefab)
   MOCHI_FIELD(type)
   MOCHI_FIELD(name)
+  MOCHI_FIELD(inputs) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD(parentFromSensor) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD(params) MOCHI_ATTRIBUTE(JsonString) MOCHI_ATTRIBUTE(NoSerializeDefaults);
   MOCHI_FIELD_NAME(_legacyTypeName, "typeName") MOCHI_ATTRIBUTE(NoSerializeDefaults);
