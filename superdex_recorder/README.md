@@ -59,6 +59,11 @@ with recorder.begin_episode(metadata) as episode:
 is the complete version: it drives an arm with OSC and a hand with JSC, and records a shadow of
 the commanded pose.
 
+## Videos
+
+[`tools/rrd_video`](tools/rrd_video/README.md) renders recorded episodes to real-time videos
+with Rerun.
+
 ## Building
 
 Enable the recorder in a CMake source build with `-DSUPERDEX_BUILD_RECORDER=ON`. The Python
