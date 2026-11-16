@@ -130,8 +130,11 @@ struct ContactParams {
   real penaltyThresholdDefault = 0.001_r;
 
   /**
-   * @brief Extra padding [m] added to the default contact detection threshold if the colliding
-   * actor has @ref ColliderType::None or @ref ColliderType::PointCloud.
+   * @brief [Experimental] Extra padding [m] added to the default contact detection threshold if the
+   * colliding actor has @ref ColliderType::None or @ref ColliderType::PointCloud.
+   *
+   * @warning This is an experimental feature. It may be changed or removed in the future. Use at
+   * your own risk.
    *
    * @note Must be finite and not negative.
    * @note Extra padding is useful to avoid tunneling through thin actors when the other actor has
@@ -161,8 +164,11 @@ struct ContactParams {
   // Parameters for friction
 
   /**
-   * @brief Use collider's normal (normalized SDF gradient) for friction direction if true, or the
-   * colliding's surface normal at the sample point if false.
+   * @brief [Experimental] Use collider's normal (normalized SDF gradient) for friction direction if
+   * true, or the colliding's surface normal at the sample point if false.
+   *
+   * @warning This is an experimental feature. It may be changed or removed in the future. Use at
+   * your own risk.
    *
    * @note For co-dimensional colliding actors with ambiguous normals, the collider's normal is
    * always used regardless of frictionWithColliderNormal.
@@ -170,11 +176,14 @@ struct ContactParams {
   bool frictionWithColliderNormal = true;
 
   /**
-   * @brief Maximum normal alignment threshold.
+   * @brief [Experimental] Maximum normal alignment threshold.
    *
    * @details Normal alignment is defined as the dot product between colliding and collider normals.
    * Contact is disabled for sample points whose normal alignment exceeds this threshold. This
    * prevents sample points from being trapped inside the collider when penetration is large.
+   *
+   * @warning This is an experimental feature. It may be changed or removed in the future. Use at
+   * your own risk.
    *
    * @note Must be in [-1, 1]. -1 allows contact only for perfectly opposing normals, 1 allows all
    * contacts.
@@ -207,12 +216,15 @@ struct ContactParams {
   real coulombFrictionCoefficient = 0.5_r;
 
   /**
-   * @brief Velocity threshold for Coulomb friction smoothing [m/s].
+   * @brief [Experimental] Velocity threshold for Coulomb friction smoothing [m/s].
    *
    * @details For C1Regularized, the Coulomb friction force smoothly transitions from 0 to full
    * strength as tangential velocity increases from 0 to frictionFalloffVel (compact support). For
    * CinfRegularized, the force asymptotically approaches full strength with no compact support
    * boundary; frictionFalloffVel controls the regularization scale.
+   *
+   * @warning This is an experimental feature. It may be changed or removed in the future. Use at
+   * your own risk.
    *
    * @note Must be finite and not negative. For CinfRegularized, a value of zero is clamped
    * internally to avoid numerical issues.

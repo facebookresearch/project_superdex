@@ -3457,9 +3457,10 @@ class ContactParams:
         :meth:`~superdex.physics.ContactParams.get_penalty_threshold_dist`
     """
     penalty_threshold_extra_padding: float
-    """Extra padding [m] added to the default contact detection threshold if the
-    colliding actor has :class:`NONE <superdex.physics.ColliderType>` or
-    :class:`POINT_CLOUD <superdex.physics.ColliderType>`.
+    """[Experimental] Extra padding [m] added to the default contact detection
+    threshold if the colliding actor has :class:`NONE
+    <superdex.physics.ColliderType>` or :class:`POINT_CLOUD
+    <superdex.physics.ColliderType>`.
 
     Note:
         Must be finite and not negative.
@@ -3468,6 +3469,10 @@ class ContactParams:
         Extra padding is useful to avoid tunneling through thin actors when the
         other actor has :class:`NONE <superdex.physics.ColliderType>` or
         :class:`POINT_CLOUD <superdex.physics.ColliderType>`.
+
+    Warning:
+        This is an experimental feature. It may be changed or removed in the future.
+        Use at your own risk.
 
     See Also:
         :attr:`~superdex.physics.ContactParams.penalty_threshold_default`,
@@ -3501,15 +3506,20 @@ class ContactParams:
         :attr:`~superdex.physics.ContactParams.penalty_threshold_extra_padding`
     """
     friction_with_collider_normal: bool
-    """Use collider's normal (normalized SDF gradient) for friction direction if true,
-    or the colliding's surface normal at the sample point if false.
+    """[Experimental] Use collider's normal (normalized SDF gradient) for friction
+    direction if true, or the colliding's surface normal at the sample point if
+    false.
 
     Note:
         For co-dimensional colliding actors with ambiguous normals, the collider's
         normal is always used regardless of frictionWithColliderNormal.
+
+    Warning:
+        This is an experimental feature. It may be changed or removed in the future.
+        Use at your own risk.
     """
     max_alignment_normals: float
-    """Maximum normal alignment threshold.
+    """[Experimental] Maximum normal alignment threshold.
 
     Normal alignment is defined as the dot product between colliding and collider
     normals. Contact is disabled for sample points whose normal alignment exceeds
@@ -3524,6 +3534,10 @@ class ContactParams:
         For co-dimensional colliding actors with ambiguous normals, contact is not
         disabled regardless of maxAlignmentNormals (normal alignment cannot be
         computed).
+
+    Warning:
+        This is an experimental feature. It may be changed or removed in the future.
+        Use at your own risk.
     """
     viscous_friction_coefficient: float
     """Viscous friction coefficient [s/m].
@@ -3560,7 +3574,7 @@ class ContactParams:
         disables Coulomb friction if either of them does.
     """
     friction_falloff_vel: float
-    """Velocity threshold for Coulomb friction smoothing [m/s].
+    """[Experimental] Velocity threshold for Coulomb friction smoothing [m/s].
 
     For C1Regularized, the Coulomb friction force smoothly transitions from 0 to
     full strength as tangential velocity increases from 0 to frictionFalloffVel
@@ -3581,6 +3595,10 @@ class ContactParams:
         is the geometric mean of the colliding and collider's thresholds. The
         exception is if the collider is static, in which case the colliding's
         threshold is used.
+
+    Warning:
+        This is an experimental feature. It may be changed or removed in the future.
+        Use at your own risk.
     """
     presliding_displacement: float
     """[Experimental] Presliding displacement of elasto-plastic Coulomb friction [m].
