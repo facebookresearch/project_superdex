@@ -27,6 +27,7 @@
 #include <superdex_robotics/scene/bot_task.h>
 #include <superdex_robotics/sensors/camera_sensor.h>
 #include <superdex_robotics/sensors/sensor_articulated_joint_wrench.h>
+#include <superdex_robotics/sensors/sensor_link_vertex_force.h>
 #include <superdex_robotics/superdex_robotics.h>
 #include <superdex_robotics/utils/archive_utils.h>
 #include <superdex_robotics/utils/asset_snapshot.h>
@@ -342,6 +343,9 @@ static_assert(std::is_same_v<decltype(&superdex::robotics::SensorBase::GetWorldT
 
 // class superdex::robotics::SensorArticulatedJointWrench
 static_assert(std::is_same_v<decltype(&superdex::robotics::SensorArticulatedJointWrench::TypeName), std::string_view (*)()>, "\n  ERROR: Function superdex::robotics::SensorArticulatedJointWrench::TypeName is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
+
+// class superdex::robotics::SensorLinkVertexForce
+static_assert(std::is_same_v<decltype(&superdex::robotics::SensorLinkVertexForce::TypeName), std::string_view (*)()>, "\n  ERROR: Function superdex::robotics::SensorLinkVertexForce::TypeName is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");
 
 // class superdex::robotics::CameraSensor
 static_assert(std::is_same_v<decltype(&superdex::robotics::CameraSensor::TypeName), std::string_view (*)()>, "\n  ERROR: Function superdex::robotics::CameraSensor::TypeName is out-of-sync with C++.\n  Please check the function signature, then run mochi_gen_py to regenerate this file.\n");

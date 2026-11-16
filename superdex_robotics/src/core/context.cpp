@@ -20,6 +20,7 @@
 #include <superdex_robotics/core/context.h>
 #include <superdex_robotics/sensors/camera_sensor.h>
 #include <superdex_robotics/sensors/sensor_articulated_joint_wrench.h>
+#include <superdex_robotics/sensors/sensor_link_vertex_force.h>
 #if MOCHI_INTERNAL
 #include <superdex_robotics/actuators/internal/actuators_internal.h>
 #include <superdex_robotics/controllers/internal/controllers_internal.h>
@@ -677,6 +678,7 @@ void RoboticsContext::RegisterBuiltinTypes() {
   RegisterController<ControllerBasicOscPd>();
   RegisterSensor<SensorArticulatedJointWrench>();
   RegisterSensor<CameraSensor>();
+  RegisterSensor<SensorLinkVertexForce>();
 }
 
 /* --- Sensors --- */

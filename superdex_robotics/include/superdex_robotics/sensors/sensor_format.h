@@ -30,6 +30,7 @@ enum class SensorDType {
 using SensorDimension = int32_t;
 
 inline constexpr std::string_view kSensorFormatKindWrench6DList = "Wrench6DList";
+inline constexpr std::string_view kSensorFormatKindForce3D = "Force3D";
 inline constexpr std::string_view kSensorFormatKindWrench6D = "Wrench6D";
 
 /* @brief Meaning of one tensor dimension.
@@ -42,6 +43,14 @@ struct SensorAxis {
 
   bool operator==(SensorAxis const& rhs) const = default;
 };
+
+inline SensorAxis MakeForceComponentAxis() {
+  return {
+      .name = "force_component",
+      .labels = {"Fx", "Fy", "Fz"},
+      .units = {"N", "N", "N"},
+  };
+}
 
 inline SensorAxis MakeWrenchComponentAxis() {
   return {

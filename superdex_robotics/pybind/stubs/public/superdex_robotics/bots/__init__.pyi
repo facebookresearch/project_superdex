@@ -2488,6 +2488,16 @@ class SensorArticulatedJointWrench(SensorBase):
             This sensor's canonical registration type name.
         """
 
+class SensorLinkVertexForce(SensorBase):
+    """Ordered per-vertex force point cloud from one link's contact mesh."""
+    @staticmethod
+    def type_name() -> str:
+        """Canonical serialized sensor type identifier.
+
+        Returns:
+            Stable type identifier.
+        """
+
 class ActuatorBase(ComponentBase):
     """Base class for robot actuators.
 

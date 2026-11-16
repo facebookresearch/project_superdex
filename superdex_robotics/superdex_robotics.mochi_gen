@@ -1226,6 +1226,13 @@ class bots::SensorArticulatedJointWrench(bots::SensorBase) [no_init, no_destruct
   fn TypeName() -> StringView [static];
 }
 
+// @brief Ordered per-vertex force point cloud from one link's contact mesh.
+class bots::SensorLinkVertexForce(bots::SensorBase) [no_init, no_destruct, no_reflection] {
+  // @brief Canonical serialized sensor type identifier.
+  // @return Stable type identifier.
+  fn TypeName() -> StringView [static];
+}
+
 // @brief Base class for robot actuators.
 //
 // Mirrors @ref ControllerBase and @ref SensorBase: derives from ComponentBase for common lifecycle

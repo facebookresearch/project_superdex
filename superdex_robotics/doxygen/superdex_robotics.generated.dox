@@ -1040,6 +1040,18 @@
 /// @return This sensor's canonical registration type name.
 ///
 
+/// @class superdex::robotics::SensorLinkVertexForce
+///
+/// @brief Ordered per-vertex force point cloud from one link's contact mesh.
+///
+
+/// @fn std::string_view superdex::robotics::SensorLinkVertexForce::TypeName()
+///
+/// @brief Canonical serialized sensor type identifier.
+///
+/// @return Stable type identifier.
+///
+
 /// @class superdex::robotics::ActuatorBase
 ///
 /// @brief Base class for robot actuators.
