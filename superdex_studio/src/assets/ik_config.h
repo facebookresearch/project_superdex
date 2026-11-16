@@ -34,7 +34,7 @@ inline std::string SerializeStudioIKConfig(BotIKConfig const& config) {
   return std::string(robotics::SerializeIKConfig(config));
 }
 inline mochi::Path ResolveIKBotPath(mochi::Path const& doc, std::string_view ref) {
-  return mochi::Path(std::string(robotics::ResolveIKBotPath(doc.ToString(), ref)));
+  return {std::string(robotics::ResolveIKBotPath(doc.ToString(), ref))};
 }
 inline std::string MakeIKBotReference(mochi::Path const& doc, mochi::Path const& bot) {
   return std::string(robotics::MakeIKBotReference(doc.ToString(), bot.ToString()));
