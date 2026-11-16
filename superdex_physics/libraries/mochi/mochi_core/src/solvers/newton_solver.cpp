@@ -391,8 +391,11 @@ bool NewtonSolver<T>::TakeStep(
   // Restore previous solution if there is no improvement
   if (!improved && !takeFinalLsStepIfNoImprovement) {
     problem.SetSolution(sol0);
-    problem.UpdateObjResDRes({.assemObj = true, .assemRes = true, .assemDRes = false});
-    status.objective = problem.GetObjective();
+    bool const usesMerit = LineSearchUsesMerit(_params.lineSearch.type);
+    problem.UpdateObjResDRes({.assemObj = usesMerit, .assemRes = true, .assemDRes = false});
+    if (usesMerit) {
+      status.objective = problem.GetObjective();
+    }
   }
 
   if (_params.verbosity >= VerbosityLevel::Verbose) {

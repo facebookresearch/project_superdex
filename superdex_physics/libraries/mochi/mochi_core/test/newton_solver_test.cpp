@@ -401,15 +401,22 @@ TEST(NewtonSolver, SmoothLocalMinimum) {
         EXPECT_EQ(result.totalNumLinearIterDone, resultBis.totalNumLinearIterDone);
 
         // The stored increment must be the step taken, also when the line search fails and the
-        // solve keeps its last trial. With these parameters, Armijo and Wolfe reject both trials.
+        // solve keeps its last trial. From x = -0.85, the Newton step overshoots, so every line
+        // search but None rejects both trials, on the first try and on the retry. Only the
+        // searches that test the merit assemble the objective.
         params.maxIter = 1;
         params.lineSearch.maxIter = 2;
         params.lineSearch.alpha = 0.5_r;
-        params.lineSearch.wolfe1 = 0.75_r;
         solver.SetParams(params);
-        problem.SetSolution(x0);
-        solver.Solve(problem);
-        EXPECT_NEAR(problem.GetIncrement()[0], problem.GetSolution()[0] - x0[0], kAbsTol);
+        ColumnVector<real, 1> const overshootStart(-0.85_r);
+        problem.SetSolution(overshootStart);
+        auto const failed = solver.Solve(problem);
+        EXPECT_EQ(failed.totalNumLSIterDone, lineSearchType == LineSearchType::None ? 0 : 4);
+        EXPECT_NEAR(
+            problem.GetIncrement()[0], problem.GetSolution()[0] - overshootStart[0], kAbsTol);
+        problem.UpdateObjective();
+        EXPECT_EQ(
+            failed.objective, LineSearchUsesMerit(lineSearchType) ? problem.GetObjective() : 0.0);
       }
     }
   }

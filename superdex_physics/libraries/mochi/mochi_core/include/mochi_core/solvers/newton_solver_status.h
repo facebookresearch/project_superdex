@@ -31,6 +31,8 @@ template <typename T>
 struct NewtonSolverStatus {
   /// @brief Current objective.
   ///
+  /// @note Assembled only if the line search tests the merit (@ref LineSearchUsesMerit). Otherwise
+  /// it stays 0.
   /// @note Not the merit the line searches test (@ref SnleProblem::LineSearchMerit). That merit
   /// differs when some terms have no potential: it replaces their energy with their work along the
   /// step from the search's start, so it isn't a function of the state.
