@@ -71,12 +71,12 @@ class SnleProblem {
   // Returns the vector containing the current solution increment.
   ColumnVectorView<T const> GetIncrement() const;
 
-  // Returns the current objective. Line searches test LineSearchMerit instead, which differs from
-  // it when some terms have no potential.
+  // Returns the current objective, which must be assembled at the current solution. Line searches
+  // test LineSearchMerit instead, which differs from it when some terms have no potential.
   double GetObjective() const;
 
-  // Get the residual vector for the full problem.
-  // Computed on-demand based on per-actor data, then cached internally.
+  // Returns the residual vector for the full problem, which must be assembled at the current
+  // solution.
   ColumnVectorView<T const> GetResidual() const;
 
   // Computes the dresidual matrix for the full problem.

@@ -46,11 +46,13 @@ ColumnVectorView<T const> SnleProblem<T>::GetIncrement() const {
 
 template <typename T>
 double SnleProblem<T>::GetObjective() const {
+  MOCHI_ASSERT_VERBOSE(!_dirtyObj, "The objective isn't assembled at the current solution.");
   return this->objective;
 }
 
 template <typename T>
 ColumnVectorView<T const> SnleProblem<T>::GetResidual() const {
+  MOCHI_ASSERT_VERBOSE(!_dirtyRes, "The residual isn't assembled at the current solution.");
   return AsConstView(_fullRes);
 }
 
