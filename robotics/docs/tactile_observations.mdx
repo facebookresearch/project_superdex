@@ -84,20 +84,36 @@ TactileHemisphereRectParams params{
     .zeroLongitudeDirection = {1_r, 0_r, 0_r},
     .width = 16,
     .height = 8,
+    .rasterization = TactileRectRasterizationType::ConservativeVoronoi,
+    .voronoiOversampling = 4,
 };
 TactileForceGrid grid =
     MapTactileHemisphereToRect(layout, taxelForces, params, error);
 ```
 
-The tip has continuous coordinates `(polar latitude=0, longitude=0)` and maps
-to the center column of the first row. The hemisphere rim spans the final row;
-longitude wraps across the left and right edges. This polar equirectangular
-mapping remains finite at the tip, unlike a geographic Mercator projection.
+For repeated frames with one layout, resolve the projection once with
+`BuildTactileRectProjection`, then pass each vertex-force observation to
+`RasterizeTactileRectProjection`. C++ callers that also preallocate the
+output use `RasterizeTactileRectProjectionInto`; it retains the output storage
+and does not repeat the projection or Voronoi work.
 
-Each taxel contributes to exactly one cell. `grid.forces` contains cell force
-sums, so reducing the grid preserves the total selected taxel force.
-`grid.taxel_counts` distinguishes empty cells and permits an application to
-compute a per-cell mean when that representation is more appropriate.
+The default equal-area projection places the tip at continuous coordinate
+`(0, 0)`, at the intersection of the four central cells for an even grid. It
+maps the configured spherical cap through a disk into the full rectangle.
+Equidistant and octahedral projections are also available.
+
+The default conservative Voronoi rasterization resolves ownership on a support
+grid whose linear dimensions are `voronoi_oversampling` times the requested
+output dimensions. It distributes each taxel force across its support region,
+then sum-downsamples into the output grid. The cached contribution weights for
+each selected taxel sum to one, so the rectangular-grid force sum equals the
+selected taxel-force sum. A 64-by-64 grid with the default factor of four
+uses a 256-by-256 support map while retaining a 64-by-64 runtime observation.
+
+Set `rasterization` to `TactileRectRasterizationType.NEAREST_CELL` for the
+sparse compatibility representation in which every taxel contributes its
+complete force to one nearest output cell. `grid.taxel_counts` reports how many
+source taxels contribute to each output cell in either mode.
 
 For a SEED-shaped sensor, pass the hemisphere center from the sensor geometry
 and choose the tip and zero-longitude directions from the sensor link axes. No
