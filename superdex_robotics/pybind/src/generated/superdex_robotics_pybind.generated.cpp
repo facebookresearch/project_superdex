@@ -56,6 +56,10 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
     .value("COUNT", superdex::robotics::ControllerInputKind::Count, "Number of enum values.")
   ;
 
+  nb::enum_<superdex::robotics::SensorDType>(m_bots, "SensorDType", "Scalar representation of one sensor tensor element.")
+    .value("FLOAT32", superdex::robotics::SensorDType::Float32)
+  ;
+
   registry.StoreClass(nb::class_<superdex::robotics::RoboticsHandle>(m_bots, "RoboticsHandle", "Shared base handle for bots, controllers, sensors, and actuators. The distinct\nderived handle types below encode the component kind in the C++ type\n(compile-time safety); all share this base's raw value and validity check."));
   registry.StoreClass(nb::class_<superdex::robotics::BotHandle, superdex::robotics::RoboticsHandle>(m_bots, "BotHandle", "Distinct handle identifying a bot in its owning\n:class:`~superdex.robotics.RoboticsContext`."));
   registry.StoreClass(nb::class_<superdex::robotics::ControllerHandle, superdex::robotics::RoboticsHandle>(m_bots, "ControllerHandle", "Distinct handle identifying a controller in its owning\n:class:`~superdex.robotics.RoboticsContext`."));
@@ -87,7 +91,10 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::ControllerBasicJscPdTarget>(m_bots, "ControllerBasicJscPdTarget", "Target setpoint for the controller."));
   registry.StoreClass(nb::class_<superdex::robotics::CameraSensorParams>(m_bots, "CameraSensorParams", "Parameters for a camera sensor (fixed or wrist-mounted). Loaded from a\n.superdex_sensor JSON file via SReflect. Fields with value 0 mean \"use engine\ndefault\"."));
   registry.StoreClass(nb::class_<superdex::robotics::ControllerBasicJscPd, superdex::robotics::ControllerBase>(m_bots, "ControllerBasicJscPd", "A simple PD controller written in joint space.", nb::never_destruct()));
-  registry.StoreClass(nb::class_<superdex::robotics::SensorBase, superdex::robotics::ComponentBase>(m_bots, "SensorBase", "Base class for robot sensors. Derives from ComponentBase for common lifecycle\n(validity, actor, destroy). Each derived sensor keeps its own specialized\nComputeSignal signature.", nb::never_destruct()));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorAxis>(m_bots, "SensorAxis", "Meaning of one tensor dimension. Labels are empty or contain one entry per\nelement. Units are empty, contain one broadcast unit, or contain one unit per\nelement. At most one axis in a format declares units."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorFormat>(m_bots, "SensorFormat", "Immutable shape and meaning of one sensor's numeric output."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorSample>(m_bots, "SensorSample", "Borrowed view of one completed sensor publication. The payload remains\nproducer-owned and is valid only until that sensor publishes, resets,\ninitializes again or is destroyed."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorBase, superdex::robotics::ComponentBase>(m_bots, "SensorBase", "Base class for graph-native robot sensors. Derives from ComponentBase for common\nidentity and ownership. SensorGraph drives the uniform Init, Step, Reset and\nLatest lifecycle; concrete sensors implement acquisition or transformation.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::ActuatorBase, superdex::robotics::ComponentBase>(m_bots, "ActuatorBase", "Base class for robot actuators.\n\nMirrors :class:`~superdex.robotics.ControllerBase` and\n:class:`~superdex.robotics.SensorBase`: derives from ComponentBase for common\nlifecycle (validity, actor, destroy). No concrete actuators exist yet; this\nestablishes the contract early so the first actuator follows the same shape as\ncontrollers and sensors.\n\nRegistration contract (a ``RoboticsContext::RegisterActuator<T>`` template lands\nwith the first concrete actuator, mirroring RegisterController/RegisterSensor):\nevery actuator must declare static constexpr std::string_view TypeName() {\nreturn \"...\"; } (used by the registration templates and for the generated Python\ntype_name() binding), implement std::string_view GetTypeName() const override;\n// returns TypeName() and provide a uniform constructor ActuatorX(Actor* actor,\nstd::string_view paramArgs, Error& error); that loads its own params from the\npath or inline JSON. An (Actor*, Params const&, Error&) overload is recommended\nfor programmatic / non-filesystem construction.\n\nTeardown contract (mirrors :class:`~superdex.robotics.ControllerBase` /\n:class:`~superdex.robotics.SensorBase`):\n:meth:`~superdex.robotics.ComponentBase.get_actor` resolves the live actor on\ndemand and yields None once the owning mochi Scene (or the actor) is gone, so an\nactuator that outlives its Scene (Scene destroyed before the RoboticsContext)\nsees :meth:`~superdex.robotics.ComponentBase.get_actor` == None in its\ndestructor. Any concrete actuator whose destructor releases actor-held resources\nmust therefore guard on GetActor() != None (or, for context-owned resources,\nresolve via GetContext()) so teardown never dereferences a dangling Actor*.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::CameraSensor, superdex::robotics::SensorBase>(m_bots, "CameraSensor", "Camera sensor runtime object. Stores intrinsics/extrinsics for use by renderers\n(UE, etc.). No ComputeSignal — cameras don't produce data in the mochi physics\nloop; renderers query GetParams() to configure their camera actors.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::BotSceneMetadata>(m_bots, "BotSceneMetadata", "Human-readable metadata for a .superdex_scene file. Not consumed by the runtime."));
@@ -1248,27 +1255,6 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("forward_axis", [](superdex::robotics::CameraSensorParams& self) -> mochi::Real3& { return self.forwardAxis; }, [](superdex::robotics::CameraSensorParams& self, nb::object val) { self.forwardAxis = nb::cast<mochi::Real3>(val); }, "Forward direction in EE-local frame (wrist cameras only).")
     .def_prop_rw("up_axis_local", [](superdex::robotics::CameraSensorParams& self) -> mochi::Real3& { return self.upAxisLocal; }, [](superdex::robotics::CameraSensorParams& self, nb::object val) { self.upAxisLocal = nb::cast<mochi::Real3>(val); }, "Up direction in EE-local frame (wrist cameras only).")
     .def_rw("look_distance", &superdex::robotics::CameraSensorParams::lookDistance, "Distance ahead of offset point to place look-at target (wrist cameras only).")
-    .def_static("load_from_file", [](std::string_view path) {
-      mochi::Error error;
-      auto result = superdex::robotics::CameraSensorParams::LoadFromFile(path, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-      return result;
-    }
-      , nb::arg("path")
-      , "Load sensor parameters from a JSON file.\n\nArgs:\n    path (str): Path to a .superdex_sensor JSON file.\n\nReturns:\n    Loaded parameters.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    )
-    .def("save_to_file", [](superdex::robotics::CameraSensorParams& self, std::string_view path) {
-      mochi::Error error;
-      self.SaveToFile(path, error);
-      if (!error.IsOK()) {
-        throw MochiErrorException(error);
-      }
-    }
-      , nb::arg("path")
-      , "Save sensor parameters to a JSON file.\n\nArgs:\n    path (str): Destination file path.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
-    )
   ;
 
   registry.GetClass<superdex::robotics::ControllerBasicJscPd, superdex::robotics::ControllerBase>()
@@ -1313,7 +1299,80 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
   ;
 
+  registry.GetClass<superdex::robotics::SensorAxis>()
+    .def("__init__", [](superdex::robotics::SensorAxis* self, nb::object name, nb::object labels, nb::object units) {
+      superdex::robotics::SensorAxis result{};
+      result.name = nb::cast<mochi::DynamicString>(name);
+      result.labels = nb::cast<mochi::DynamicArray<mochi::DynamicString>>(labels);
+      result.units = nb::cast<mochi::DynamicArray<mochi::DynamicString>>(units);
+      new (self) superdex::robotics::SensorAxis(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("name") = superdex::robotics::SensorAxis{}.name
+      , nb::arg("labels").sig("...") = superdex::robotics::SensorAxis{}.labels
+      , nb::arg("units").sig("...") = superdex::robotics::SensorAxis{}.units
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SensorAxis const& self) { return superdex::robotics::SensorAxis(self); })
+    .def("__deepcopy__", [](superdex::robotics::SensorAxis const& self, nb::dict) { return superdex::robotics::SensorAxis(self); })
+    .def_rw("name", &superdex::robotics::SensorAxis::name)
+    .def_prop_rw("labels", [](superdex::robotics::SensorAxis& self) -> mochi::DynamicArray<mochi::DynamicString>& { return self.labels; }, [](superdex::robotics::SensorAxis& self, nb::object val) { self.labels = nb::cast<mochi::DynamicArray<mochi::DynamicString>>(val); })
+    .def_prop_rw("units", [](superdex::robotics::SensorAxis& self) -> mochi::DynamicArray<mochi::DynamicString>& { return self.units; }, [](superdex::robotics::SensorAxis& self, nb::object val) { self.units = nb::cast<mochi::DynamicArray<mochi::DynamicString>>(val); })
+  ;
+
+  registry.GetClass<superdex::robotics::SensorFormat>()
+    .def("__init__", [](superdex::robotics::SensorFormat* self, nb::object kind, nb::object shape, nb::object dtype, nb::object axes) {
+      superdex::robotics::SensorFormat result{};
+      result.kind = nb::cast<mochi::DynamicString>(kind);
+      result.shape = nb::cast<mochi::DynamicArray<int>>(shape);
+      result.dtype = nb::cast<superdex::robotics::SensorDType>(dtype);
+      result.axes = nb::cast<mochi::DynamicArray<superdex::robotics::SensorAxis>>(axes);
+      new (self) superdex::robotics::SensorFormat(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("kind") = superdex::robotics::SensorFormat{}.kind
+      , nb::arg("shape").sig("...") = superdex::robotics::SensorFormat{}.shape
+      , nb::arg("dtype") = superdex::robotics::SensorFormat{}.dtype
+      , nb::arg("axes").sig("...") = superdex::robotics::SensorFormat{}.axes
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SensorFormat const& self) { return superdex::robotics::SensorFormat(self); })
+    .def("__deepcopy__", [](superdex::robotics::SensorFormat const& self, nb::dict) { return superdex::robotics::SensorFormat(self); })
+    .def_rw("kind", &superdex::robotics::SensorFormat::kind)
+    .def_prop_rw("shape", [](superdex::robotics::SensorFormat& self) -> mochi::DynamicArray<int>& { return self.shape; }, [](superdex::robotics::SensorFormat& self, nb::object val) { self.shape = nb::cast<mochi::DynamicArray<int>>(val); })
+    .def_rw("dtype", &superdex::robotics::SensorFormat::dtype)
+    .def_prop_rw("axes", [](superdex::robotics::SensorFormat& self) -> mochi::DynamicArray<superdex::robotics::SensorAxis>& { return self.axes; }, [](superdex::robotics::SensorFormat& self, nb::object val) { self.axes = nb::cast<mochi::DynamicArray<superdex::robotics::SensorAxis>>(val); })
+  ;
+
+  registry.GetClass<superdex::robotics::SensorSample>()
+    .def("__init__", [](superdex::robotics::SensorSample* self, nb::object capture_step, nb::object capture_time) {
+      superdex::robotics::SensorSample result{};
+      result.captureStep = nb::cast<int64_t>(capture_step);
+      result.captureTime = nb::cast<double>(capture_time);
+      new (self) superdex::robotics::SensorSample(std::move(result));
+    }
+      , nb::kw_only()
+      , nb::arg("capture_step") = superdex::robotics::SensorSample{}.captureStep
+      , nb::arg("capture_time") = superdex::robotics::SensorSample{}.captureTime
+    )
+    .def(nb::init<>())
+    .def("__copy__", [](superdex::robotics::SensorSample const& self) { return superdex::robotics::SensorSample(self); })
+    .def("__deepcopy__", [](superdex::robotics::SensorSample const& self, nb::dict) { return superdex::robotics::SensorSample(self); })
+    .def_rw("capture_step", &superdex::robotics::SensorSample::captureStep, "Monotonic source capture step, or a negative value before first publication.")
+    .def_rw("capture_time", &superdex::robotics::SensorSample::captureTime, "Source capture time in seconds.")
+  ;
+
   registry.GetClass<superdex::robotics::SensorBase, superdex::robotics::ComponentBase>()
+    .def("get_format", &superdex::robotics::SensorBase::GetFormat
+      , "Return the immutable tensor contract prepared when this sensor was initialized.\n\nReturns:\n    Shape, element type, semantic kind, labels and units for the sensor output."
+      , nb::rv_policy::reference
+    )
+    .def("latest", &superdex::robotics::SensorBase::Latest
+      , "Return the latest completed publication without triggering acquisition.\n\nReturns:\n    A borrowed sample header and tensor view."
+    )
+    .def("copy_latest_values", &superdex::robotics::SensorBase::CopyLatestValues
+      , "Copy the latest flat payload for owning API and language-binding boundaries.\n\nReturns:\n    An owning copy of the latest values in the configured Mochi precision."
+    )
     .def("get_parent_from_sensor", &superdex::robotics::SensorBase::GetParentFromSensor
       , "The sensor's pose relative to its parent frame: the associated link's actor for\nbot-owned sensors, or the scene root for scene-level / actor-less sensors.\naFromB convention (maps sensor-frame coordinates into the parent frame).\n\nReturns:\n    Sensor pose relative to its parent frame."
       , nb::rv_policy::reference

@@ -22,10 +22,10 @@
 #include <superdex_robotics/controllers/controller_base.h>
 #include <superdex_robotics/sensors/sensor_base.h>
 
+#include <mochi_core/utils/guarded.h>
 #include <functional>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -158,7 +158,7 @@ struct IBotLoader;
  *
  * Manages bot, controller, sensor, and actuator lifetimes via RoboticsHandle. Provides a
  * string-keyed factory registry for creating components by type name. Thread-safe for slot
- * operations via _slotsMutex.
+ * operations through guarded slot storage.
  *
  * Created via CreateRoboticsContext(), destroyed via DestroyRoboticsContext(). The consumer owns
  * the pointer — matching the mochi::CreateContext() / mochi::DestroyContext() pattern. Built-in
@@ -428,6 +428,7 @@ class MOCHI_API RoboticsContext {
 
   /* @brief Destroy the sensor associated with the given handle.
    * @param handle Sensor handle to destroy; invalid or stale handles are ignored. */
+  /* Clear every graph borrowing this sensor before destroying it. */
   void DestroySensor(SensorHandle handle);
 
   /* @brief Get the sensor associated with the given handle. Returns nullptr if invalid. Downcast to
@@ -598,8 +599,9 @@ class MOCHI_API RoboticsContext {
    * call this. */
   void RegisterBuiltinTypes();
 
-  /* @ref GetBotContainingActor for callers that already hold _slotsMutex. */
-  [[nodiscard]] Bot* GetBotContainingActorLocked(Actor const* actor) const;
+  struct Slots;
+
+  [[nodiscard]] static Bot* GetBotContainingActorLocked(Actor const* actor, Slots const& slots);
 
   /* Every live sensor / actuator owned by @p owner, in creation order. Backs
    * @ref Bot::GetControllerHandles, @ref Bot::GetSensorHandles and @ref Bot::GetActuatorHandles,
@@ -696,20 +698,23 @@ class MOCHI_API RoboticsContext {
     }
   };
 
-  mutable std::mutex _slotsMutex;
-  std::unordered_map<RoboticsHandle::ValueType, BotSlot> _botSlots;
-  std::unordered_map<RoboticsHandle::ValueType, ControllerSlot> _controllerSlots;
-  std::unordered_map<RoboticsHandle::ValueType, SensorSlot> _sensorSlots;
-  std::unordered_map<RoboticsHandle::ValueType, ActuatorSlot> _actuatorSlots;
-  RoboticsHandle::ValueType _nextHandle = 1;
+  struct Slots {
+    std::unordered_map<RoboticsHandle::ValueType, BotSlot> botSlots;
+    std::unordered_map<RoboticsHandle::ValueType, ControllerSlot> controllerSlots;
+    std::unordered_map<RoboticsHandle::ValueType, SensorSlot> sensorSlots;
+    std::unordered_map<RoboticsHandle::ValueType, ActuatorSlot> actuatorSlots;
+    RoboticsHandle::ValueType nextHandle = 1;
+    /* Teardown callbacks registered against this context (see RegisterOnDestroy), keyed by the
+     * monotonic handle value. Ordered so ~RoboticsContext can fire them in reverse registration
+     * order — the dependent-teardown ordering mochi uses — before releasing the bots below. A
+     * BotScene registers one so a later BotScene teardown does not touch the freed context. */
+    std::map<RoboticsHandle::ValueType, std::function<void()>> onDestroyCallbacks;
+  };
+
+  mochi::Guarded<Slots> _slots;
   std::unordered_map<std::string, ControllerFactory> _controllerFactories;
   std::unordered_map<std::string, SensorFactory> _sensorFactories;
   std::unordered_map<std::string, ActuatorFactory> _actuatorFactories;
-  /* Teardown callbacks registered against this context (see RegisterOnDestroy), keyed by the
-   * monotonic handle value. Ordered so ~RoboticsContext can fire them in reverse registration order
-   * — the dependent-teardown ordering mochi uses — before releasing the bots below. A BotScene
-   * registers one so a later BotScene teardown does not touch the freed context. */
-  std::map<RoboticsHandle::ValueType, std::function<void()>> _onDestroyCallbacks;
 };
 
 } // namespace superdex::robotics

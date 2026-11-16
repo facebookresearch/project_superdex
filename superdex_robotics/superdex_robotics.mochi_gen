@@ -1116,15 +1116,6 @@ struct bots::CameraSensorParams [no_reflection] {
   Real3 upAxisLocal;
   // @brief Distance ahead of offset point to place look-at target (wrist cameras only).
   real lookDistance [units("m")];
-
-  // @brief Load sensor parameters from a JSON file.
-  // @param[in] path Path to a .superdex_sensor JSON file.
-  // @return Loaded parameters.
-  fn LoadFromFile(StringView path) -> bots::CameraSensorParams [mochi_error, static];
-
-  // @brief Save sensor parameters to a JSON file.
-  // @param[in] path Destination file path.
-  fn SaveToFile(StringView path) -> void [mochi_error, const];
 }
 
 // @brief A simple PD controller written in joint space.
@@ -1154,10 +1145,54 @@ class bots::ControllerBasicJscPd(bots::ControllerBase) [no_init, no_destruct] {
 
 }
 
-// @brief Base class for robot sensors.
-// Derives from ComponentBase for common lifecycle (validity, actor, destroy).
-// Each derived sensor keeps its own specialized ComputeSignal signature.
+// @brief Scalar representation of one sensor tensor element.
+enum bots::SensorDType {
+  Float32,
+}
+
+// @brief Meaning of one tensor dimension.
+// Labels are empty or contain one entry per element. Units are empty, contain one broadcast unit,
+// or contain one unit per element. At most one axis in a format declares units.
+struct bots::SensorAxis [no_reflection] {
+  String name;
+  DynamicArray<String> labels;
+  DynamicArray<String> units;
+}
+
+// @brief Immutable shape and meaning of one sensor's numeric output.
+struct bots::SensorFormat [no_reflection] {
+  String kind;
+  DynamicArray<int> shape;
+  bots::SensorDType dtype = Float32;
+  DynamicArray<bots::SensorAxis> axes;
+}
+
+// @brief Borrowed view of one completed sensor publication.
+// The payload remains producer-owned and is valid only until that sensor publishes, resets,
+// initializes again or is destroyed.
+struct bots::SensorSample [no_reflection] {
+  // @brief Monotonic source capture step, or a negative value before first publication.
+  int64 captureStep;
+  // @brief Source capture time in seconds.
+  double captureTime;
+}
+
+// @brief Base class for graph-native robot sensors.
+// Derives from ComponentBase for common identity and ownership. SensorGraph drives the uniform
+// Init, Step, Reset and Latest lifecycle; concrete sensors implement acquisition or transformation.
 class bots::SensorBase(bots::ComponentBase) [no_init, no_destruct] {
+  // @brief Return the immutable tensor contract prepared when this sensor was initialized.
+  // @return Shape, element type, semantic kind, labels and units for the sensor output.
+  fn GetFormat() -> bots::SensorFormat const& [const];
+
+  // @brief Return the latest completed publication without triggering acquisition.
+  // @return A borrowed sample header and tensor view.
+  fn Latest() -> bots::SensorSample [const];
+
+  // @brief Copy the latest flat payload for owning API and language-binding boundaries.
+  // @return An owning copy of the latest values in the configured Mochi precision.
+  fn CopyLatestValues() -> DynamicArray<real> [const];
+
   // @brief The sensor's pose relative to its parent frame: the associated link's actor for
   // bot-owned sensors, or the scene root for scene-level / actor-less sensors. aFromB convention
   // (maps sensor-frame coordinates into the parent frame).

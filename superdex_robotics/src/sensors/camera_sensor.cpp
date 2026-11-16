@@ -22,24 +22,7 @@ using namespace superdex::robotics;
 
 #if MOCHI_USE_REFLECTION
 
-CameraSensorParams CameraSensorParams::LoadFromFile(std::string_view path, Error& error) {
-  return LoadParamsFromFile<CameraSensorParams>(path, error);
-}
-
-void CameraSensorParams::SaveToFile(std::string_view path, Error& error) const {
-  SaveParamsToFile(*this, path, error);
-}
-
 #else
-
-CameraSensorParams CameraSensorParams::LoadFromFile(std::string_view, Error& error) {
-  MOCHI_ERROR_SET(error, "LoadFromFile requires MOCHI_USE_REFLECTION");
-  return {};
-}
-
-void CameraSensorParams::SaveToFile(std::string_view, Error& error) const {
-  MOCHI_ERROR_SET(error, "SaveToFile requires MOCHI_USE_REFLECTION");
-}
 
 #endif
 

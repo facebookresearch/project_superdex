@@ -100,8 +100,8 @@ class UserSensor final : public SensorBase {
     return TypeName();
   }
 
-  void Reset() override {
-    ++_resetCount;
+  SensorStepResult Step(StepTime const& /*now*/, superdex::Error& /*error*/) override {
+    return SensorStepResult::NoUpdate;
   }
 
   [[nodiscard]] std::string const& ParamArgs() const {
@@ -112,6 +112,15 @@ class UserSensor final : public SensorBase {
   }
 
  private:
+  SensorFormat InitSensor(SensorScope const& /*scope*/, superdex::Error& error) override {
+    MOCHI_ERROR_SET(error, "UserSensor is not graph-enabled");
+    return {};
+  }
+
+  void ResetSensor() override {
+    ++_resetCount;
+  }
+
   /* Copied, not referenced: paramArgs is a view onto the caller's (often temporary) string. */
   std::string _paramArgs;
   int _resetCount = 0;
@@ -132,7 +141,17 @@ class OtherUserSensor final : public SensorBase {
     return TypeName();
   }
 
-  void Reset() override {}
+  SensorStepResult Step(StepTime const& /*now*/, superdex::Error& /*error*/) override {
+    return SensorStepResult::NoUpdate;
+  }
+
+ private:
+  void ResetSensor() override {}
+
+  SensorFormat InitSensor(SensorScope const& /*scope*/, superdex::Error& error) override {
+    MOCHI_ERROR_SET(error, "OtherUserSensor is not graph-enabled");
+    return {};
+  }
 };
 
 class UserActuator final : public ActuatorBase {

@@ -52,6 +52,10 @@ MOCHI_ENUM_ITEM(Custom)
 MOCHI_ENUM_COUNT(Count)
 MOCHI_ENUM_END()
 
+MOCHI_ENUM_BEGIN(superdex::robotics::SensorDType)
+MOCHI_ENUM_ITEM(Float32)
+MOCHI_ENUM_END()
+
 MOCHI_STRUCT_BEGIN_EX(superdex::robotics::RoboticsHandle)
 MOCHI_FIELD(value)
 MOCHI_STRUCT_END_EX()

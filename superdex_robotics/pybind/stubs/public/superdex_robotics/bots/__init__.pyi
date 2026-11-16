@@ -402,6 +402,25 @@ type ArrayLikeSceneUrdfLinkAlias = (
     Sequence[SceneUrdfLinkAlias] | DynamicArraySceneUrdfLinkAlias | npt.NDArray[Any]
 )
 
+class DynamicArraySensorAxis:
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, size: int, value: SensorAxis = ...) -> None: ...
+    @overload
+    def __init__(self, sequence: Sequence[SensorAxis]) -> None: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> SensorAxis: ...
+    def __setitem__(self, index: int, value: SensorAxis) -> None: ...
+    def __iter__(self) -> Iterator[SensorAxis]: ...
+    def append(self, value: SensorAxis) -> None: ...
+    def clear(self) -> None: ...
+    def resize(self, size: int) -> None: ...
+
+type ArrayLikeSensorAxis = (
+    Sequence[SensorAxis] | DynamicArraySensorAxis | npt.NDArray[Any]
+)
+
 class DynamicArraySensorHandle:
     @overload
     def __init__(self) -> None: ...
@@ -503,6 +522,17 @@ class ControllerInputKind:
     """The controller's own layout; only callers that know its type drive it."""
     COUNT: ControllerInputKind
     """Number of enum values."""
+    def __init__(self, value: int) -> None: ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def value(self) -> int: ...
+    def __int__(self) -> int: ...
+    def __index__(self) -> int: ...
+
+class SensorDType:
+    """Scalar representation of one sensor tensor element."""
+    FLOAT32: SensorDType
     def __init__(self, value: int) -> None: ...
     @property
     def name(self) -> str: ...
@@ -2264,28 +2294,6 @@ class CameraSensorParams:
         up_axis_local: mochi_physics.Real3Like = ...,
         look_distance: float = ...,
     ) -> None: ...
-    @staticmethod
-    def load_from_file(path: str) -> CameraSensorParams:
-        """Load sensor parameters from a JSON file.
-
-        Args:
-            path (str): Path to a .superdex_sensor JSON file.
-
-        Returns:
-            Loaded parameters.
-
-        Raises:
-            :class:`~superdex.physics.Error`: If an error occurs.
-        """
-    def save_to_file(self, path: str) -> None:
-        """Save sensor parameters to a JSON file.
-
-        Args:
-            path (str): Destination file path.
-
-        Raises:
-            :class:`~superdex.physics.Error`: If an error occurs.
-        """
 
 class ControllerBasicJscPd(ControllerBase):
     """A simple PD controller written in joint space."""
@@ -2340,11 +2348,98 @@ class ControllerBasicJscPd(ControllerBase):
             :class:`~superdex.physics.Error`: If an error occurs.
         """
 
-class SensorBase(ComponentBase):
-    """Base class for robot sensors. Derives from ComponentBase for common lifecycle
-    (validity, actor, destroy). Each derived sensor keeps its own specialized
-    ComputeSignal signature.
+class SensorAxis:
+    """Meaning of one tensor dimension. Labels are empty or contain one entry per
+    element. Units are empty, contain one broadcast unit, or contain one unit per
+    element. At most one axis in a format declares units.
     """
+    name: str
+    @property
+    def labels(self) -> mochi_physics.DynamicArrayString: ...
+    @labels.setter
+    def labels(self, value: mochi_physics.ArrayLikeString) -> None: ...
+    @property
+    def units(self) -> mochi_physics.DynamicArrayString: ...
+    @units.setter
+    def units(self, value: mochi_physics.ArrayLikeString) -> None: ...
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        name: str = ...,
+        labels: mochi_physics.ArrayLikeString = ...,
+        units: mochi_physics.ArrayLikeString = ...,
+    ) -> None: ...
+
+class SensorFormat:
+    """Immutable shape and meaning of one sensor's numeric output."""
+    kind: str
+    @property
+    def shape(self) -> mochi_physics.DynamicArrayInt: ...
+    @shape.setter
+    def shape(self, value: mochi_physics.ArrayLikeInt) -> None: ...
+    dtype: SensorDType
+    @property
+    def axes(self) -> DynamicArraySensorAxis: ...
+    @axes.setter
+    def axes(self, value: ArrayLikeSensorAxis) -> None: ...
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        kind: str = ...,
+        shape: mochi_physics.ArrayLikeInt = ...,
+        dtype: SensorDType | int = ...,
+        axes: ArrayLikeSensorAxis = ...,
+    ) -> None: ...
+
+class SensorSample:
+    """Borrowed view of one completed sensor publication. The payload remains
+    producer-owned and is valid only until that sensor publishes, resets,
+    initializes again or is destroyed.
+    """
+    capture_step: int
+    """Monotonic source capture step, or a negative value before first publication."""
+    capture_time: float
+    """Source capture time in seconds."""
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        *,
+        capture_step: int = ...,
+        capture_time: float = ...,
+    ) -> None: ...
+
+class SensorBase(ComponentBase):
+    """Base class for graph-native robot sensors. Derives from ComponentBase for common
+    identity and ownership. SensorGraph drives the uniform Init, Step, Reset and
+    Latest lifecycle; concrete sensors implement acquisition or transformation.
+    """
+    def get_format(self) -> SensorFormat:
+        """Return the immutable tensor contract prepared when this sensor was
+        initialized.
+
+        Returns:
+            Shape, element type, semantic kind, labels and units for the sensor output.
+        """
+    def latest(self) -> SensorSample:
+        """Return the latest completed publication without triggering acquisition.
+
+        Returns:
+            A borrowed sample header and tensor view.
+        """
+    def copy_latest_values(self) -> mochi_physics.DynamicArrayReal:
+        """Copy the latest flat payload for owning API and language-binding boundaries.
+
+        Returns:
+            An owning copy of the latest values in the configured Mochi precision.
+        """
     def get_parent_from_sensor(self) -> mochi_physics.TransformRT:
         """The sensor's pose relative to its parent frame: the associated link's actor
         for

@@ -60,6 +60,7 @@ namespace mochi {
     DefDynamicArray<superdex::robotics::SceneSensorEntry>(m_bots, "DynamicArraySceneSensorEntry");
     DefDynamicArray<superdex::robotics::SceneUrdfJointVelocityLimit>(m_bots, "DynamicArraySceneUrdfJointVelocityLimit");
     DefDynamicArray<superdex::robotics::SceneUrdfLinkAlias>(m_bots, "DynamicArraySceneUrdfLinkAlias");
+    DefDynamicArray<superdex::robotics::SensorAxis>(m_bots, "DynamicArraySensorAxis");
     DefDynamicArray<superdex::robotics::SensorHandle>(m_bots, "DynamicArraySensorHandle");
     DefDynamicArray<superdex::robotics::SlotEntry>(m_bots, "DynamicArraySlotEntry");
     DefDynamicArray<superdex::robotics::SpawnEntry>(m_bots, "DynamicArraySpawnEntry");

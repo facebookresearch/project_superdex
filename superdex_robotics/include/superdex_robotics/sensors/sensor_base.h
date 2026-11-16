@@ -18,62 +18,162 @@
 
 #include <superdex_physics.h>
 #include <superdex_robotics/core/component_base.h>
+#include <superdex_robotics/sensors/sensor_format.h>
 
 #include <mochi_core/utils/transform_rt.h>
 
+#include <cstddef>
+#include <cstdint>
 #include <string_view>
 
 namespace superdex::robotics {
 
-/* @brief Base class for robot sensors.
- * Derives from ComponentBase for common lifecycle (validity, actor, destroy).
- * Each derived sensor keeps its own specialized ComputeSignal signature. */
+class RoboticsContext;
+class SensorRecordingSink;
+
+/* @brief Simulation or hardware time supplied after one acquisition step. */
+struct StepTime {
+  double t = 0.0;
+  double dt = 0.0;
+  int64_t step = 0;
+};
+
+/* @brief Borrowed view of the latest completed sensor output.
+ * The payload remains valid until this sensor publishes again, resets, is initialized again, or is
+ * destroyed. SensorGraph execution and borrowed reads are externally serialized. */
+struct SensorSample {
+  int64_t captureStep = -1;
+  double captureTime = 0.0;
+  void const* data = nullptr;
+  int64_t elementCount = 0;
+
+  [[nodiscard]] MOCHI_API Span<float const> Floats() const;
+};
+
+enum class SensorStepResult {
+  NoUpdate,
+  Published,
+};
+
+/* @brief Resources available while a graph initializes a sensor. */
+struct SensorScope {
+  Scene* scene = nullptr;
+  RoboticsContext* robotics = nullptr;
+};
+
+/* @brief Base class for synchronous source and derived sensor nodes. */
 // NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor)
 class MOCHI_API SensorBase : public ComponentBase {
  public:
-  /* @brief Reset internal state between episodes, keeping params. Pure virtual so every sensor
-   * states its answer explicitly: a stateful sensor that silently inherited a no-op would leave
-   * stale state alive across a reset, which is only discoverable in the collected data. A sensor
-   * that holds no per-episode state implements this as an empty body. */
-  void Reset() override = 0;
+  /* @brief Bind fixed graph inputs and prepare immutable output storage. */
+  void Init(Span<SensorBase const* const> inputs, SensorScope const& scope, superdex::Error& error);
 
-  /* @brief The sensor's pose relative to its parent frame: the associated link's actor for
-   * bot-owned sensors, or the scene root for scene-level / actor-less sensors. aFromB convention
-   * (maps sensor-frame coordinates into the parent frame).
-   * @return Sensor pose relative to its parent frame. */
+  /* @brief Clear the published sample, then reset sensor-specific episode state. */
+  void Reset() final;
+
+  /* @brief Advance this sensor after one physics or hardware step. */
+  [[nodiscard]] virtual SensorStepResult Step(StepTime const& now, superdex::Error& error) = 0;
+
+  [[nodiscard]] SensorFormat const& GetFormat() const {
+    return _format;
+  }
+
+  /* @brief Return the latest sample without triggering acquisition or allocation. */
+  [[nodiscard]] SensorSample Latest() const {
+    return _latest;
+  }
+
+  /* @brief Copy the latest flat payload for owning API and language-binding boundaries. */
+  [[nodiscard]] DynamicArray<real> CopyLatestValues() const;
+
+  /* @brief Query optional sensor-specific metadata by a stable library-owned key.
+   * The bytes are an opaque borrowed view of one live producer-owned object, not a wire format.
+   * Interpret them only through TryGetSensorMetadata() while this initialization remains live; do
+   * not copy, persist or deserialize the raw bytes. */
+  [[nodiscard]] virtual Span<std::byte const> TryGetMetadata(std::string_view key) const;
+
+  /* @brief Write constant, sensor-specific recording fields. */
+  virtual void ConfigureRecording(SensorRecordingSink& sink, superdex::Error& error) const;
+
+  /* @brief Write the latest completed sample and any sensor-specific per-sample fields. */
+  virtual void Record(SensorRecordingSink& sink, superdex::Error& error) const;
+
+  /* @brief The sensor's pose relative to its parent frame: the associated link actor for attached
+   * sensors, or the scene root for unattached sensors. Uses the aFromB convention. */
   [[nodiscard]] TransformRT const& GetParentFromSensor() const {
     return _parentFromSensor;
   }
 
-  /* @brief Set the sensor's pose relative to its parent frame.
-   * @param parentFromSensor The new parent-from-sensor transform (aFromB convention). */
+  /* @brief Set the parent-from-sensor transform using the aFromB convention. */
   void SetParentFromSensor(TransformRT const& parentFromSensor) {
     _parentFromSensor = parentFromSensor;
   }
 
-  /* @brief The sensor's pose in world space.
-   * When the sensor is bound to a Mochi @ref Actor, that actor's transform is already
-   * world-resolved by the simulation, so world = actorWorldTransform * parentFromSensor. When the
-   * sensor has no actor (a fusion sensor that consumes other sensors, or a scene sensor standing in
-   * for a scene root that has no Mochi actor), the scene root is the parent: world =
-   * parentFromSensor, i.e. the scene-root-to-world transform is treated as identity (a surrogate
-   * for a real scene-root actor) until scene spawn transforms are supported.
-   * @return Sensor pose in world space. */
+  /* @brief Return the sensor pose in world space.
+   * Attached actors are already world-resolved. For an unattached sensor, parentFromSensor is the
+   * scene-root-to-sensor transform and the scene-root-to-world transform is currently identity. */
   [[nodiscard]] TransformRT GetWorldTransform() const;
 
  protected:
-  /* @brief Common sensor constructor archetype: stores the (optionally null) @p actor via
-   * ComponentBase. A null actor is permitted so a sensor can run without a live Mochi body -- e.g.
-   * a fusion sensor that consumes other sensors' outputs and re-emits fused data, mirroring how a
-   * controller can run without an Actor. Sensors that require an actor enforce that themselves. The
-   * @p error argument is retained for archetype/delegation uniformity even though the base no
-   * longer validates the actor. */
-  SensorBase(Actor* actor, [[maybe_unused]] superdex::Error& error) : ComponentBase(actor) {}
+  /* @brief Construct an attached sensor. Sensors that require an actor validate it themselves. */
+  SensorBase(Actor* actor, superdex::Error& error);
 
-  /* The sensor's pose relative to its parent frame (see GetParentFromSensor). */
+  /* @brief Construct an unattached node such as a fusion sensor. */
+  explicit SensorBase(superdex::Error& error);
+
+  /* @brief Resolve sensor-specific resources and return the fixed output format. */
+  [[nodiscard]] virtual SensorFormat InitSensor(
+      SensorScope const& scope,
+      superdex::Error& error) = 0;
+
+  /* @brief Reset sensor-specific state. Stateless sensors implement an explicit no-op. */
+  virtual void ResetSensor() = 0;
+
+  [[nodiscard]] Span<SensorBase const* const> Inputs() const {
+    return _inputs;
+  }
+
+  /* @brief Complete the sensor's write stroke by copying one full sample into owned storage. */
+  bool PublishSample(
+      StepTime const& now,
+      Span<float const> sample,
+      superdex::Error& error,
+      SensorSample const* source = nullptr);
+
+  /* Sensor pose relative to its parent frame; see GetParentFromSensor(). */
   TransformRT _parentFromSensor;
 
   ~SensorBase() override;
+
+ private:
+  void PrepareOutput(SensorFormat format, superdex::Error& error);
+  void ClearOutput();
+
+  SensorFormat _format;
+  DynamicArray<SensorBase const*> _inputs;
+  DynamicArray<float> _output;
+  SensorSample _latest;
 };
+
+template <typename T>
+struct SensorMetadataKey;
+
+/* @brief Query optional typed sensor metadata. The returned object remains producer-owned and is
+ * valid only while the sensor's current initialization remains live. */
+template <typename T>
+[[nodiscard]] T const* TryGetSensorMetadata(SensorBase const& sensor) {
+  Span<std::byte const> const bytes = sensor.TryGetMetadata(SensorMetadataKey<T>::Key);
+  if (bytes.empty() || bytes.size() != sizeof(T)) {
+    return nullptr;
+  }
+  auto const address = reinterpret_cast<uintptr_t>(bytes.data());
+  if (address % alignof(T) != 0) {
+    return nullptr;
+  }
+  // TryGetMetadata returns the byte view of an already-live T owned by the producer. This recovers
+  // that original pointer; it does not materialize T from copied object representation, so metadata
+  // may contain owning strings and other non-trivially-copyable members.
+  return reinterpret_cast<T const*>(bytes.data());
+}
 
 } // namespace superdex::robotics

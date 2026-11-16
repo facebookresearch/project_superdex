@@ -56,12 +56,10 @@ struct CameraSensorParams {
    * @param path Path to a .superdex_sensor JSON file.
    * @param error Error status.
    * @return Loaded parameters. */
-  static MOCHI_API CameraSensorParams LoadFromFile(std::string_view path, superdex::Error& error);
 
   /* @brief Save sensor parameters to a JSON file.
    * @param path Destination file path.
    * @param error Error status. */
-  MOCHI_API void SaveToFile(std::string_view path, superdex::Error& error) const;
 
   MOCHI_STRUCT_BEGIN(superdex::robotics::CameraSensorParams)
   MOCHI_FIELD(name)
@@ -95,8 +93,9 @@ class MOCHI_API CameraSensor : public SensorBase {
     return TypeName();
   }
 
-  /* Nothing to clear between episodes: a camera holds only its params and pose. */
-  void Reset() override {}
+  SensorStepResult Step(StepTime const& /*now*/, superdex::Error& /*error*/) override {
+    return SensorStepResult::NoUpdate;
+  }
 
   using Params = CameraSensorParams;
 
@@ -123,6 +122,15 @@ class MOCHI_API CameraSensor : public SensorBase {
   }
 
  private:
+  void ResetSensor() override {
+    /* A camera holds only its parameters and pose between samples. */
+  }
+
+  SensorFormat InitSensor(SensorScope const& /*scope*/, superdex::Error& error) override {
+    MOCHI_ERROR_SET(error, "CameraSensor is not yet graph-enabled");
+    return {};
+  }
+
   Params _params;
 };
 

@@ -26,8 +26,8 @@
 
 #include <nanobind/stl/vector.h>
 
+#include <mochi_core/utils/guarded.h>
 #include <algorithm>
-#include <mutex>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -68,19 +68,7 @@ class PythonComponent : public BaseT {
         _typeName(std::move(typeName)) {}
 
   /* Owned by the RoboticsContext and holds a strong Python reference; non-copyable, non-movable. */
-  PythonComponent(PythonComponent const&) = delete;
-  PythonComponent& operator=(PythonComponent const&) = delete;
-  PythonComponent(PythonComponent&&) = delete;
-  PythonComponent& operator=(PythonComponent&&) = delete;
-
-  /* No hasattr guard: the registration factories reject an instance without `reset`, so the
-   * attribute is guaranteed. A raising reset() propagates to the caller rather than being
-   * swallowed -- resetting is experiment hygiene, and a silent failure is the thing worth
-   * avoiding. */
-  void Reset() override {
-    nb::gil_scoped_acquire gil;
-    _impl.attr("reset")();
-  }
+  MOCHI_DECLARE_NO_COPY_NO_MOVE(PythonComponent)
 
   [[nodiscard]] std::string_view GetTypeName() const override {
     return _typeName;
@@ -100,6 +88,15 @@ class PythonComponent : public BaseT {
   }
 
  protected:
+  /* No hasattr guard: the registration factories reject an instance without `reset`, so the
+   * attribute is guaranteed. A raising reset() propagates to the caller rather than being
+   * swallowed -- resetting is experiment hygiene, and a silent failure is the thing worth
+   * avoiding. */
+  void ResetPython() {
+    nb::gil_scoped_acquire gil;
+    _impl.attr("reset")();
+  }
+
   [[nodiscard]] std::string const& TypeNameString() const {
     return _typeName;
   }
@@ -111,8 +108,7 @@ class PythonComponent : public BaseT {
 
 /* Controllers add virtuals the other kinds do not have. They are configured after construction,
  * because the scene entry that names a controller also carries its params. Sensors and actuators
- * receive their paramArgs as a constructor argument instead, so their adapters need nothing beyond
- * the shared template.
+ * receive their paramArgs during construction and do not need ConfigureFromSceneEntry().
  *
  * A Python controller driven by floats defines `input_size()`, `input_kind()` (a
  * ControllerInputKind), `current_input()` and `compute_output_from_input(input, dt)` (one effort
@@ -174,6 +170,10 @@ class PythonController final : public PythonComponent<superdex::robotics::Contro
     } catch (std::exception const& e) {
       Fail("compute_output_from_input", e, error);
     }
+  }
+
+  void Reset() override {
+    ResetPython();
   }
 
   void ConfigureFromSceneEntry(
@@ -249,14 +249,45 @@ class PythonController final : public PythonComponent<superdex::robotics::Contro
   std::vector<int> _controlledDofs;
 };
 
-using PythonSensor = PythonComponent<superdex::robotics::SensorBase>;
-using PythonActuator = PythonComponent<superdex::robotics::ActuatorBase>;
+class PythonSensor final : public PythonComponent<superdex::robotics::SensorBase> {
+ public:
+  PythonSensor(nb::object impl, std::string typeName, mochi::Actor* actor, mochi::Error& error)
+      : PythonComponent(std::move(impl), std::move(typeName), actor, error) {}
 
-/* Every component must implement reset(), matching the pure-virtual Reset() the C++ bases
- * require. A component is reset between episodes or trials, so a stateful one that quietly
- * inherited a no-op would carry stale state into the next run and only show it in the collected
- * data. Checked here, at creation, so the failure lands at scene load rather than mid-collection.
- * A component with no per-episode state writes `def reset(self): pass`. */
+  superdex::robotics::SensorStepResult Step(
+      superdex::robotics::StepTime const& /*now*/,
+      mochi::Error& /*error*/) override {
+    return superdex::robotics::SensorStepResult::NoUpdate;
+  }
+
+ private:
+  superdex::robotics::SensorFormat InitSensor(
+      superdex::robotics::SensorScope const& /*scope*/,
+      mochi::Error& error) override {
+    MOCHI_ERROR_SET(error, "Python sensor is not graph-enabled");
+    return {};
+  }
+
+  void ResetSensor() override {
+    ResetPython();
+  }
+};
+
+class PythonActuator final : public PythonComponent<superdex::robotics::ActuatorBase> {
+ public:
+  PythonActuator(nb::object impl, std::string typeName, mochi::Actor* actor, mochi::Error& error)
+      : PythonComponent(std::move(impl), std::move(typeName), actor, error) {}
+
+  void Reset() override {
+    ResetPython();
+  }
+};
+
+/* Every Python component must implement reset(). A component is reset between episodes or trials,
+ * so a stateful one that quietly inherited a no-op would carry stale state into the next run and
+ * only show it in the collected data. Checked here, at creation, so the failure lands at scene load
+ * rather than mid-collection. A component with no per-episode state writes `def reset(self): pass`.
+ */
 bool RequireResetMethod(nb::object const& impl, std::string const& typeName, mochi::Error& error) {
   if (nb::hasattr(impl, "reset")) {
     return true;
@@ -332,8 +363,7 @@ NB_MODULE(SUPERDEX_ROBOTICS_MODULE_NAME, m) {
   // needs it. Static storage means the create_context and teardown lambdas below reference it
   // without capturing, and it stays valid when the teardown runs after this function returns (at
   // shutdown/atexit).
-  static superdex::robotics::RoboticsContext* g_botsContext = nullptr;
-  static std::mutex g_botsContextMutex; // NOLINT(facebook-thread-safety-analysis)
+  static mochi::Guarded<superdex::robotics::RoboticsContext*> g_botsContext{nullptr};
   auto m_bots = nb::borrow<nb::module_>(m.attr("bots"));
 
   m_bots.def(
@@ -341,11 +371,12 @@ NB_MODULE(SUPERDEX_ROBOTICS_MODULE_NAME, m) {
       []() -> superdex::robotics::RoboticsContext* {
         // The physics Context lives in the shared pybind-core library.
         mochi::CheckContext();
-        std::scoped_lock lock(g_botsContextMutex); // NOLINT(facebook-thread-safety-analysis)
-        if (!g_botsContext) {
-          g_botsContext = superdex::robotics::CreateRoboticsContext();
-        }
-        return g_botsContext;
+        return g_botsContext.Mutate([](superdex::robotics::RoboticsContext*& context) {
+          if (context == nullptr) {
+            context = superdex::robotics::CreateRoboticsContext();
+          }
+          return context;
+        });
       },
       nb::rv_policy::reference,
       "Create a RoboticsContext. Returns the existing one if already created.");
@@ -356,11 +387,12 @@ NB_MODULE(SUPERDEX_ROBOTICS_MODULE_NAME, m) {
   // Empty capture: g_botsContext has static storage. Null-guarded and idempotent, so it is safe
   // to run when no context was created or after a prior teardown.
   mochi::RegisterContextDependent([]() {
-    std::scoped_lock lock(g_botsContextMutex); // NOLINT(facebook-thread-safety-analysis)
-    if (g_botsContext) {
-      superdex::robotics::DestroyRoboticsContext(g_botsContext);
-      g_botsContext = nullptr;
-    }
+    g_botsContext.Mutate([](superdex::robotics::RoboticsContext*& context) {
+      if (context != nullptr) {
+        superdex::robotics::DestroyRoboticsContext(context);
+        context = nullptr;
+      }
+    });
   });
 
   /* Pure-Python components.
