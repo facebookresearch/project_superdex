@@ -789,11 +789,11 @@ TEST(StaticCast, IslandOperators) {
     std::vector<std::pair<int, AnyMatrix<float>>> actorMatrices;
     Matrix<float, 3, 3> actorMat1;
     actorMat1.SetRandom(11);
-    actorMatrices.push_back({0, AnyMatrix<float>{actorMat1}});
+    actorMatrices.emplace_back(0, AnyMatrix<float>{actorMat1});
 
     Matrix<float, 2, 2> actorMat2;
     actorMat2.SetRandom(22);
-    actorMatrices.push_back({3, AnyMatrix<float>{actorMat2}});
+    actorMatrices.emplace_back(3, AnyMatrix<float>{actorMat2});
 
     // Create interaction matrices
     std::vector<AnyInteractionMatrixInfo<float>> interactionMatrices;
@@ -873,7 +873,7 @@ TEST(StaticCast, IslandOperators) {
     std::vector<std::pair<int, AnyMatrix<double>>> actorMatrices;
     Matrix<double, 2, 2> actorMat;
     actorMat.SetRandom(55);
-    actorMatrices.push_back({0, AnyMatrix<double>{actorMat}});
+    actorMatrices.emplace_back(0, AnyMatrix<double>{actorMat});
 
     IslandOperatorsOwningLite<double> opsOwningDouble{std::move(actorMatrices), {}};
     IslandOperators<double> opsDouble = opsOwningDouble.AsConstView();
