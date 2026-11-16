@@ -32,9 +32,9 @@
 #include <superdex_robotics/domain_randomization/domain_randomization_episode.h>
 #include <superdex_robotics/scene/bot_scene.h>
 #include <superdex_robotics/scene/bot_task.h>
-#include <superdex_robotics/sensors/camera_sensor.h>
 #include <superdex_robotics/sensors/sensor_articulated_joint_wrench.h>
 #include <superdex_robotics/sensors/sensor_base.h>
+#include <superdex_robotics/sensors/sensor_camera.h>
 #include <superdex_robotics/sensors/sensor_graph.h>
 #include <superdex_robotics/sensors/sensor_link_vertex_force.h>
 #include <superdex_robotics/sensors/sensor_seed_rect_map.h>

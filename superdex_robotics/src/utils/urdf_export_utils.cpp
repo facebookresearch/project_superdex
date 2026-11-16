@@ -16,7 +16,7 @@
 
 #include "urdf_utils.h"
 
-#include <superdex_robotics/sensors/camera_sensor.h>
+#include <superdex_robotics/sensors/sensor_camera.h>
 
 #include <mochi_core/utils/constants.h>
 #include <mochi_core/utils/container_utils.h>
@@ -535,7 +535,7 @@ std::string StripIndexPrefix(std::string_view name) {
 
 bool IsCamera(std::string_view type) {
   // "fixed_camera" and "wrist_camera" are legacy names for SENSOR_CAMERA.
-  return type == CameraSensor::TypeName() || type == "fixed_camera" || type == "wrist_camera";
+  return type == SensorCamera::TypeName() || type == "fixed_camera" || type == "wrist_camera";
 }
 
 class SceneUrdfExporter {

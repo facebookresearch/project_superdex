@@ -61,14 +61,14 @@ class ComponentIdentityTest(MochiTestBase):
     def test_actor_less_sensor_reports_its_identity(self) -> None:
         bots_ctx = sdr.create_context()
         handle = bots_ctx.create_sensor(
-            sdr.CameraSensor.type_name(), None, "fixed_cam", ""
+            sdr.SensorCamera.type_name(), None, "fixed_cam", ""
         )
         try:
             sensor = bots_ctx.get_sensor(handle)
             assert sensor is not None
             self.assertTrue(sensor.is_valid())
             self.assertEqual(sensor.get_name(), "fixed_cam")
-            self.assertEqual(sensor.get_type_name(), sdr.CameraSensor.type_name())
+            self.assertEqual(sensor.get_type_name(), sdr.SensorCamera.type_name())
             # Created with no link actor, so it is bound to nothing and owned by no bot.
             self.assertIsNone(sensor.get_actor())
             self.assertIsNone(sensor.get_owning_bot())
@@ -77,7 +77,7 @@ class ComponentIdentityTest(MochiTestBase):
 
     def test_sensor_created_without_a_name_reports_an_empty_one(self) -> None:
         bots_ctx = sdr.create_context()
-        handle = bots_ctx.create_sensor(sdr.CameraSensor.type_name(), None, "", "")
+        handle = bots_ctx.create_sensor(sdr.SensorCamera.type_name(), None, "", "")
         try:
             sensor = bots_ctx.get_sensor(handle)
             assert sensor is not None
@@ -89,7 +89,7 @@ class ComponentIdentityTest(MochiTestBase):
 class SensorPoseTest(MochiTestBase):
     def test_parent_pose_round_trips_and_resolves_to_world(self) -> None:
         bots_ctx = sdr.create_context()
-        handle = bots_ctx.create_sensor(sdr.CameraSensor.type_name(), None, "cam", "")
+        handle = bots_ctx.create_sensor(sdr.SensorCamera.type_name(), None, "cam", "")
         try:
             sensor = bots_ctx.get_sensor(handle)
             assert sensor is not None
@@ -138,7 +138,7 @@ class ComponentOnABotTest(MochiTestBase):
             # A sensor on a bot link resolves its world pose through the link's actor, so
             # it is offset from the pose expressed in the link frame.
             sensor_handle = bots_ctx.create_sensor(
-                sdr.CameraSensor.type_name(), bot.get_articulated_actor(), "wrist", ""
+                sdr.SensorCamera.type_name(), bot.get_articulated_actor(), "wrist", ""
             )
             try:
                 sensor = bots_ctx.get_sensor(sensor_handle)

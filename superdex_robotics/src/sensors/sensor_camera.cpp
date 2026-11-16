@@ -14,27 +14,21 @@
  * limitations under the License.
  */
 
-#include <superdex_robotics/sensors/camera_sensor.h>
+#include <superdex_robotics/sensors/sensor_camera.h>
 #include <superdex_robotics/utils/file_utils.h>
 
 using namespace mochi;
 using namespace superdex::robotics;
 
-#if MOCHI_USE_REFLECTION
-
-#else
-
-#endif
-
-CameraSensor::CameraSensor(Actor* linkActor, CameraSensor::Params const& params, Error& error)
+SensorCamera::SensorCamera(Actor* linkActor, SensorCamera::Params const& params, Error& error)
     : SensorBase(linkActor, error) {
   MOCHI_ERROR_RETURN(error);
   _params = params;
 }
 
-CameraSensor::CameraSensor(Actor* linkActor, std::string_view paramArgs, Error& error)
+SensorCamera::SensorCamera(Actor* linkActor, std::string_view paramArgs, Error& error)
     : SensorBase(linkActor, error) {
   MOCHI_ERROR_RETURN(error);
-  _params = LoadParamsFromPathOrJson<CameraSensorParams>(paramArgs, error);
+  _params = LoadParamsFromPathOrJson<SensorCameraParams>(paramArgs, error);
   MOCHI_ERROR_RETURN(error);
 }

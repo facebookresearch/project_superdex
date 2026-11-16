@@ -30,7 +30,7 @@ class PublicApiTest(MochiTestBase):
         self.assertEqual(joint.effort_limit, sdr.EFFORT_UNBOUNDED)
 
         sensor = sdr.BotSensorPrefab(
-            type=sdr.CameraSensor.type_name(),
+            type=sdr.SensorCamera.type_name(),
             name="camera",
             parent_from_sensor=sdp.TransformRT([1.0, 2.0, 3.0]),
             params="camera.json",
@@ -56,7 +56,7 @@ class PublicApiTest(MochiTestBase):
         )
         handle = sdr.SensorHandle()
         try:
-            handle = context.create_sensor(sdr.CameraSensor.type_name(), actor)
+            handle = context.create_sensor(sdr.SensorCamera.type_name(), actor)
             self.assertTrue(context.is_valid_sensor(handle))
         finally:
             if context.is_valid_sensor(handle):

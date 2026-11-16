@@ -25,7 +25,7 @@
 #include <superdex_robotics/controllers/controller_basic_jsc_pd.h>
 #include <superdex_robotics/controllers/controller_basic_osc_pd.h>
 #include <superdex_robotics/controllers/controller_mochi_articulated_pose.h>
-#include <superdex_robotics/sensors/camera_sensor.h>
+#include <superdex_robotics/sensors/sensor_camera.h>
 #include <superdex_robotics/sensors/sensor_seed_rect_map.h>
 #include <superdex_robotics/sensors/sensor_seed_v1_mlp.h>
 #include <superdex_robotics/superdex_robotics.h>
@@ -157,7 +157,7 @@ MOCHI_STRUCT_BEGIN_EX(superdex::robotics::ActuatorBase)
 MOCHI_BASE_CLASS(superdex::robotics::ComponentBase)
 MOCHI_STRUCT_END_EX()
 
-MOCHI_STRUCT_BEGIN_EX(superdex::robotics::CameraSensor)
+MOCHI_STRUCT_BEGIN_EX(superdex::robotics::SensorCamera)
 MOCHI_BASE_CLASS(superdex::robotics::SensorBase)
 MOCHI_STRUCT_END_EX()
 

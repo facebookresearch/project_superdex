@@ -1159,7 +1159,7 @@ class RoboticsContext:
     def get_sensor(self, handle: SensorHandle) -> Optional[SensorBase]:
         """Get the sensor associated with the given handle. Returns None if invalid.
         Downcast to the concrete sensor type as needed (e.g.
-        ``static_cast<CameraSensor*>(GetSensor(handle))``).
+        ``static_cast<SensorCamera*>(GetSensor(handle))``).
 
         Args:
             handle (SensorHandle): Sensor handle to resolve.
@@ -2316,7 +2316,7 @@ class ControllerBasicJscPdTarget:
     @overload
     def __init__(self, *, target_pose: mochi_physics.ArrayLikeReal = ...) -> None: ...
 
-class CameraSensorParams:
+class SensorCameraParams:
     """Parameters for a camera sensor (fixed or wrist-mounted). Loaded from a
     .superdex_sensor JSON file via SReflect. Fields with value 0 mean "use engine
     default".
@@ -2930,7 +2930,7 @@ class ActuatorBase(ComponentBase):
     """
     ...
 
-class CameraSensor(SensorBase):
+class SensorCamera(SensorBase):
     """Camera sensor runtime object. Stores intrinsics/extrinsics for use by renderers
     (UE, etc.). No ComputeSignal — cameras don't produce data in the mochi physics
     loop; renderers query GetParams() to configure their camera actors.
@@ -2943,17 +2943,17 @@ class CameraSensor(SensorBase):
         Returns:
             This sensor's registration type name.
         """
-    def get_params(self) -> CameraSensorParams:
+    def get_params(self) -> SensorCameraParams:
         """Get sensor parameters.
 
         Returns:
             The params.
         """
-    def set_params(self, params: CameraSensorParams) -> None:
+    def set_params(self, params: SensorCameraParams) -> None:
         """Set sensor parameters.
 
         Args:
-            params (CameraSensorParams): Params.
+            params (SensorCameraParams): Params.
 
         Raises:
             :class:`~superdex.physics.Error`: If an error occurs.

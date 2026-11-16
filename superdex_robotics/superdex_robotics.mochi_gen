@@ -385,7 +385,7 @@ class bots::RoboticsContext [no_init, no_destruct] {
 
   // @brief Get the sensor associated with the given handle. Returns None if invalid. Downcast
   // to the concrete sensor type as needed (e.g.
-  // @code static_cast<CameraSensor*>(GetSensor(handle)) @endcode).
+  // @code static_cast<SensorCamera*>(GetSensor(handle)) @endcode).
   //
   // @param[in] handle Sensor handle to resolve.
   // @return Context-owned sensor, or None if the handle is invalid or stale.
@@ -1098,7 +1098,7 @@ struct bots::ControllerBasicJscPdTarget {
 // @brief Parameters for a camera sensor (fixed or wrist-mounted).
 // Loaded from a .superdex_sensor JSON file via SReflect.
 // Fields with value 0 mean "use engine default".
-struct bots::CameraSensorParams [no_reflection] {
+struct bots::SensorCameraParams [no_reflection] {
   // @brief Camera name carried in the params, distinct from the sensor's instance name.
   String name;
   // @brief Rendered image width [px].
@@ -1477,7 +1477,7 @@ class bots::ActuatorBase(bots::ComponentBase) [no_init, no_destruct] {}
 // Stores intrinsics/extrinsics for use by renderers (UE, etc.).
 // No ComputeSignal — cameras don't produce data in the mochi physics loop;
 // renderers query GetParams() to configure their camera actors.
-class bots::CameraSensor(bots::SensorBase) [no_init, no_destruct] {
+class bots::SensorCamera(bots::SensorBase) [no_init, no_destruct] {
   // @brief Registration type name for this sensor (see RoboticsContext::RegisterSensorType).
   //
   // @return This sensor's registration type name.
@@ -1485,11 +1485,11 @@ class bots::CameraSensor(bots::SensorBase) [no_init, no_destruct] {
 
   // @brief Get sensor parameters.
   // @return The params.
-  fn GetParams() -> bots::CameraSensorParams const& [const];
+  fn GetParams() -> bots::SensorCameraParams const& [const];
 
   // @brief Set sensor parameters.
   // @param[in] params Params.
-  fn SetParams(bots::CameraSensorParams const& params) -> void [mochi_error];
+  fn SetParams(bots::SensorCameraParams const& params) -> void [mochi_error];
 }
 
 // @brief Image-like force map derived from one vertex-force point-cloud sensor.

@@ -322,7 +322,7 @@
 
 /// @fn SensorBase* superdex::robotics::RoboticsContext::GetSensor(SensorHandle handle) const
 ///
-/// @brief Get the sensor associated with the given handle. Returns None if invalid. Downcast to the concrete sensor type as needed (e.g. `static_cast<CameraSensor*>(GetSensor(handle))`).
+/// @brief Get the sensor associated with the given handle. Returns None if invalid. Downcast to the concrete sensor type as needed (e.g. `static_cast<SensorCamera*>(GetSensor(handle))`).
 ///
 /// @param[in] handle Sensor handle to resolve.
 /// @return Context-owned sensor, or None if the handle is invalid or stale.
@@ -904,62 +904,62 @@
 /// @brief Target joint positions [m or rad]
 ///
 
-/// @struct superdex::robotics::CameraSensorParams
+/// @struct superdex::robotics::SensorCameraParams
 ///
 /// @brief Parameters for a camera sensor (fixed or wrist-mounted). Loaded from a .superdex_sensor JSON file via SReflect. Fields with value 0 mean "use engine default".
 ///
 
-/// @var superdex::robotics::CameraSensorParams::name
+/// @var superdex::robotics::SensorCameraParams::name
 ///
 /// @brief Camera name carried in the params, distinct from the sensor's instance name.
 ///
 
-/// @var superdex::robotics::CameraSensorParams::imageWidth
+/// @var superdex::robotics::SensorCameraParams::imageWidth
 ///
 /// @brief Rendered image width [px].
 ///
 
-/// @var superdex::robotics::CameraSensorParams::imageHeight
+/// @var superdex::robotics::SensorCameraParams::imageHeight
 ///
 /// @brief Rendered image height [px].
 ///
 
-/// @var superdex::robotics::CameraSensorParams::fovVerticalDeg
+/// @var superdex::robotics::SensorCameraParams::fovVerticalDeg
 ///
 /// @brief Vertical field of view [deg].
 ///
 
-/// @var superdex::robotics::CameraSensorParams::nearClip
+/// @var superdex::robotics::SensorCameraParams::nearClip
 ///
 /// @brief Distance to the near clip plane [m].
 ///
 
-/// @var superdex::robotics::CameraSensorParams::farClip
+/// @var superdex::robotics::SensorCameraParams::farClip
 ///
 /// @brief Distance to the far clip plane [m].
 ///
 
-/// @var superdex::robotics::CameraSensorParams::lookAt
+/// @var superdex::robotics::SensorCameraParams::lookAt
 ///
 /// @brief Look-at target in world space (fixed cameras only).
 ///
 
-/// @var superdex::robotics::CameraSensorParams::offsetLocal
+/// @var superdex::robotics::SensorCameraParams::offsetLocal
 ///
 /// @brief Offset from EE frame origin in local coordinates (wrist cameras only).
 ///
 
-/// @var superdex::robotics::CameraSensorParams::forwardAxis
+/// @var superdex::robotics::SensorCameraParams::forwardAxis
 ///
 /// @brief Forward direction in EE-local frame (wrist cameras only).
 ///
 
-/// @var superdex::robotics::CameraSensorParams::upAxisLocal
+/// @var superdex::robotics::SensorCameraParams::upAxisLocal
 ///
 /// @brief Up direction in EE-local frame (wrist cameras only).
 ///
 
-/// @var superdex::robotics::CameraSensorParams::lookDistance
+/// @var superdex::robotics::SensorCameraParams::lookDistance
 ///
 /// @brief Distance ahead of offset point to place look-at target (wrist cameras only).
 ///
@@ -1350,26 +1350,26 @@
 /// Teardown contract (mirrors @ref superdex::robotics::ControllerBase "ControllerBase" / @ref superdex::robotics::SensorBase "SensorBase"): @ref superdex::robotics::ComponentBase::GetActor "GetActor" resolves the live actor on demand and yields None once the owning mochi Scene (or the actor) is gone, so an actuator that outlives its Scene (Scene destroyed before the RoboticsContext) sees @ref superdex::robotics::ComponentBase::GetActor "GetActor" == None in its destructor. Any concrete actuator whose destructor releases actor-held resources must therefore guard on GetActor() != None (or, for context-owned resources, resolve via GetContext()) so teardown never dereferences a dangling Actor*.
 ///
 
-/// @class superdex::robotics::CameraSensor
+/// @class superdex::robotics::SensorCamera
 ///
 /// @brief Camera sensor runtime object. Stores intrinsics/extrinsics for use by renderers (UE, etc.). No ComputeSignal — cameras don't produce data in the mochi physics loop; renderers query GetParams() to configure their camera actors.
 ///
 
-/// @fn std::string_view superdex::robotics::CameraSensor::TypeName()
+/// @fn std::string_view superdex::robotics::SensorCamera::TypeName()
 ///
 /// @brief Registration type name for this sensor (see RoboticsContext::RegisterSensorType).
 ///
 /// @return This sensor's registration type name.
 ///
 
-/// @fn CameraSensorParams const& superdex::robotics::CameraSensor::GetParams() const
+/// @fn SensorCameraParams const& superdex::robotics::SensorCamera::GetParams() const
 ///
 /// @brief Get sensor parameters.
 ///
 /// @return The params.
 ///
 
-/// @fn void superdex::robotics::CameraSensor::SetParams(CameraSensorParams const& params, superdex::Error& error)
+/// @fn void superdex::robotics::SensorCamera::SetParams(SensorCameraParams const& params, superdex::Error& error)
 ///
 /// @brief Set sensor parameters.
 ///

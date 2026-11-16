@@ -27,7 +27,7 @@ namespace superdex::robotics {
 /* @brief Parameters for a camera sensor (fixed or wrist-mounted).
  * Loaded from a .superdex_sensor JSON file via SReflect.
  * Fields with value 0 mean "use engine default". */
-struct CameraSensorParams {
+struct SensorCameraParams {
   DynamicString name;
 
   int imageWidth = 0;
@@ -61,7 +61,7 @@ struct CameraSensorParams {
    * @param path Destination file path.
    * @param error Error status. */
 
-  MOCHI_STRUCT_BEGIN(superdex::robotics::CameraSensorParams)
+  MOCHI_STRUCT_BEGIN(superdex::robotics::SensorCameraParams)
   MOCHI_FIELD(name)
   MOCHI_FIELD(imageWidth) MOCHI_ATTRIBUTE(Units("px"));
   MOCHI_FIELD(imageHeight) MOCHI_ATTRIBUTE(Units("px"));
@@ -81,7 +81,7 @@ struct CameraSensorParams {
  * No ComputeSignal — cameras don't produce data in the mochi physics loop;
  * renderers query GetParams() to configure their camera actors. */
 // NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor)
-class MOCHI_API CameraSensor : public SensorBase {
+class MOCHI_API SensorCamera : public SensorBase {
  public:
   /* @brief Registration type name for this sensor (see RoboticsContext::RegisterSensorType).
    * @return This sensor's registration type name. */
@@ -97,16 +97,16 @@ class MOCHI_API CameraSensor : public SensorBase {
     return SensorStepResult::NoUpdate;
   }
 
-  using Params = CameraSensorParams;
+  using Params = SensorCameraParams;
 
   /* @brief Construct from @p paramArgs -- either a params file path or an inline JSON string (empty
    * uses defaults); the sensor loads its own params. This is the factory
    * RoboticsContext::RegisterSensor uses. */
-  CameraSensor(Actor* linkActor, std::string_view paramArgs, superdex::Error& error);
+  SensorCamera(Actor* linkActor, std::string_view paramArgs, superdex::Error& error);
 
   /* @brief Construct from a pre-loaded params struct (programmatic / non-filesystem construction).
    */
-  CameraSensor(Actor* linkActor, Params const& params, superdex::Error& error);
+  SensorCamera(Actor* linkActor, Params const& params, superdex::Error& error);
 
   /* @brief Get sensor parameters.
    * @return The params. */
@@ -127,7 +127,7 @@ class MOCHI_API CameraSensor : public SensorBase {
   }
 
   SensorFormat InitSensor(SensorScope const& /*scope*/, superdex::Error& error) override {
-    MOCHI_ERROR_SET(error, "CameraSensor is not yet graph-enabled");
+    MOCHI_ERROR_SET(error, "SensorCamera is not yet graph-enabled");
     return {};
   }
 

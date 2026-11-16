@@ -181,7 +181,7 @@ class PurePythonSensorTest(MochiTestBase):
     def test_get_python_sensor_none_for_cpp_sensor(self) -> None:
         bots_ctx = sdr.create_context()
         handle = bots_ctx.create_sensor(
-            sdr.CameraSensor.type_name(), None, "cpp_cam", ""
+            sdr.SensorCamera.type_name(), None, "cpp_cam", ""
         )
         try:
             self.assertIsNone(sdr.get_python_sensor(bots_ctx, handle))

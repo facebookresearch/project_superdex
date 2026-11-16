@@ -105,7 +105,7 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::ControllerBasicJscPdParams>(m_bots, "ControllerBasicJscPdParams", "Joint-space PD controller parameters."));
   registry.StoreClass(nb::class_<superdex::robotics::ControllerBasicJscPdObsv>(m_bots, "ControllerBasicJscPdObsv", "Observation state — robot state variables read each control step. Fill it with\nGetCurrentObservationsFromMochi to read the live simulation, or populate it\ndirectly from an external state source (e.g., a real robot)."));
   registry.StoreClass(nb::class_<superdex::robotics::ControllerBasicJscPdTarget>(m_bots, "ControllerBasicJscPdTarget", "Target setpoint for the controller."));
-  registry.StoreClass(nb::class_<superdex::robotics::CameraSensorParams>(m_bots, "CameraSensorParams", "Parameters for a camera sensor (fixed or wrist-mounted). Loaded from a\n.superdex_sensor JSON file via SReflect. Fields with value 0 mean \"use engine\ndefault\"."));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorCameraParams>(m_bots, "SensorCameraParams", "Parameters for a camera sensor (fixed or wrist-mounted). Loaded from a\n.superdex_sensor JSON file via SReflect. Fields with value 0 mean \"use engine\ndefault\"."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedRectMapParams>(m_bots, "SensorSeedRectMapParams", "Fixed geometry for a SEED force RectMap sensor."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedV1MLPParams>(m_bots, "SensorSeedV1MLPParams", "SEED tactile sensor parameters."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedV1MLPResult>(m_bots, "SensorSeedV1MLPResult", "SEED tactile sensor result."));
@@ -125,7 +125,7 @@ void mochi::DeclareSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module
   registry.StoreClass(nb::class_<superdex::robotics::SensorLinkVertexForceParams>(m_bots, "SensorLinkVertexForceParams", "Acquisition cadence for a link vertex-force source."));
   registry.StoreClass(nb::class_<superdex::robotics::SensorLinkVertexForce, superdex::robotics::SensorBase>(m_bots, "SensorLinkVertexForce", "Vertex-force point cloud derived from one link's ordered contact vertices.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::ActuatorBase, superdex::robotics::ComponentBase>(m_bots, "ActuatorBase", "Base class for robot actuators.\n\nMirrors :class:`~superdex.robotics.ControllerBase` and\n:class:`~superdex.robotics.SensorBase`: derives from ComponentBase for common\nlifecycle (validity, actor, destroy). No concrete actuators exist yet; this\nestablishes the contract early so the first actuator follows the same shape as\ncontrollers and sensors.\n\nRegistration contract (a ``RoboticsContext::RegisterActuator<T>`` template lands\nwith the first concrete actuator, mirroring RegisterController/RegisterSensor):\nevery actuator must declare static constexpr std::string_view TypeName() {\nreturn \"...\"; } (used by the registration templates and for the generated Python\ntype_name() binding), implement std::string_view GetTypeName() const override;\n// returns TypeName() and provide a uniform constructor ActuatorX(Actor* actor,\nstd::string_view paramArgs, Error& error); that loads its own params from the\npath or inline JSON. An (Actor*, Params const&, Error&) overload is recommended\nfor programmatic / non-filesystem construction.\n\nTeardown contract (mirrors :class:`~superdex.robotics.ControllerBase` /\n:class:`~superdex.robotics.SensorBase`):\n:meth:`~superdex.robotics.ComponentBase.get_actor` resolves the live actor on\ndemand and yields None once the owning mochi Scene (or the actor) is gone, so an\nactuator that outlives its Scene (Scene destroyed before the RoboticsContext)\nsees :meth:`~superdex.robotics.ComponentBase.get_actor` == None in its\ndestructor. Any concrete actuator whose destructor releases actor-held resources\nmust therefore guard on GetActor() != None (or, for context-owned resources,\nresolve via GetContext()) so teardown never dereferences a dangling Actor*.", nb::never_destruct()));
-  registry.StoreClass(nb::class_<superdex::robotics::CameraSensor, superdex::robotics::SensorBase>(m_bots, "CameraSensor", "Camera sensor runtime object. Stores intrinsics/extrinsics for use by renderers\n(UE, etc.). No ComputeSignal — cameras don't produce data in the mochi physics\nloop; renderers query GetParams() to configure their camera actors.", nb::never_destruct()));
+  registry.StoreClass(nb::class_<superdex::robotics::SensorCamera, superdex::robotics::SensorBase>(m_bots, "SensorCamera", "Camera sensor runtime object. Stores intrinsics/extrinsics for use by renderers\n(UE, etc.). No ComputeSignal — cameras don't produce data in the mochi physics\nloop; renderers query GetParams() to configure their camera actors.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedRectMap, superdex::robotics::SensorBase>(m_bots, "SensorSeedRectMap", "Image-like force map derived from one vertex-force point-cloud sensor.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::SensorSeedV1MLP, superdex::robotics::SensorBase>(m_bots, "SensorSeedV1MLP", "SEED tactile sensor using Mochi-native MLP inference.", nb::never_destruct()));
   registry.StoreClass(nb::class_<superdex::robotics::BotSceneMetadata>(m_bots, "BotSceneMetadata", "Human-readable metadata for a .superdex_scene file. Not consumed by the runtime."));
@@ -580,7 +580,7 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     )
     .def("get_sensor", &superdex::robotics::RoboticsContext::GetSensor
       , nb::arg("handle")
-      , "Get the sensor associated with the given handle. Returns None if invalid.\nDowncast to the concrete sensor type as needed (e.g.\n``static_cast<CameraSensor*>(GetSensor(handle))``).\n\nArgs:\n    handle (SensorHandle): Sensor handle to resolve.\n\nReturns:\n    Context-owned sensor, or None if the handle is invalid or stale."
+      , "Get the sensor associated with the given handle. Returns None if invalid.\nDowncast to the concrete sensor type as needed (e.g.\n``static_cast<SensorCamera*>(GetSensor(handle))``).\n\nArgs:\n    handle (SensorHandle): Sensor handle to resolve.\n\nReturns:\n    Context-owned sensor, or None if the handle is invalid or stale."
       , nb::rv_policy::reference
     )
     .def("destroy_sensor", &superdex::robotics::RoboticsContext::DestroySensor
@@ -1247,9 +1247,9 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
     .def_prop_rw("target_pose", [](superdex::robotics::ControllerBasicJscPdTarget& self) -> mochi::DynamicArray<mochi::real>& { return self.targetPose; }, [](superdex::robotics::ControllerBasicJscPdTarget& self, nb::object val) { self.targetPose = nb::cast<mochi::DynamicArray<mochi::real>>(val); }, "Target joint positions [m or rad]")
   ;
 
-  registry.GetClass<superdex::robotics::CameraSensorParams>()
-    .def("__init__", [](superdex::robotics::CameraSensorParams* self, nb::object name, nb::object image_width, nb::object image_height, nb::object fov_vertical_deg, nb::object near_clip, nb::object far_clip, nb::object look_at, nb::object offset_local, nb::object forward_axis, nb::object up_axis_local, nb::object look_distance) {
-      superdex::robotics::CameraSensorParams result{};
+  registry.GetClass<superdex::robotics::SensorCameraParams>()
+    .def("__init__", [](superdex::robotics::SensorCameraParams* self, nb::object name, nb::object image_width, nb::object image_height, nb::object fov_vertical_deg, nb::object near_clip, nb::object far_clip, nb::object look_at, nb::object offset_local, nb::object forward_axis, nb::object up_axis_local, nb::object look_distance) {
+      superdex::robotics::SensorCameraParams result{};
       result.name = nb::cast<mochi::DynamicString>(name);
       result.imageWidth = nb::cast<int>(image_width);
       result.imageHeight = nb::cast<int>(image_height);
@@ -1261,35 +1261,35 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       result.forwardAxis = nb::cast<mochi::Real3>(forward_axis);
       result.upAxisLocal = nb::cast<mochi::Real3>(up_axis_local);
       result.lookDistance = nb::cast<mochi::real>(look_distance);
-      new (self) superdex::robotics::CameraSensorParams(std::move(result));
+      new (self) superdex::robotics::SensorCameraParams(std::move(result));
     }
       , nb::kw_only()
-      , nb::arg("name") = superdex::robotics::CameraSensorParams{}.name
-      , nb::arg("image_width") = superdex::robotics::CameraSensorParams{}.imageWidth
-      , nb::arg("image_height") = superdex::robotics::CameraSensorParams{}.imageHeight
-      , nb::arg("fov_vertical_deg") = superdex::robotics::CameraSensorParams{}.fovVerticalDeg
-      , nb::arg("near_clip") = superdex::robotics::CameraSensorParams{}.nearClip
-      , nb::arg("far_clip") = superdex::robotics::CameraSensorParams{}.farClip
-      , nb::arg("look_at").sig("...") = superdex::robotics::CameraSensorParams{}.lookAt
-      , nb::arg("offset_local").sig("...") = superdex::robotics::CameraSensorParams{}.offsetLocal
-      , nb::arg("forward_axis").sig("...") = superdex::robotics::CameraSensorParams{}.forwardAxis
-      , nb::arg("up_axis_local").sig("...") = superdex::robotics::CameraSensorParams{}.upAxisLocal
-      , nb::arg("look_distance") = superdex::robotics::CameraSensorParams{}.lookDistance
+      , nb::arg("name") = superdex::robotics::SensorCameraParams{}.name
+      , nb::arg("image_width") = superdex::robotics::SensorCameraParams{}.imageWidth
+      , nb::arg("image_height") = superdex::robotics::SensorCameraParams{}.imageHeight
+      , nb::arg("fov_vertical_deg") = superdex::robotics::SensorCameraParams{}.fovVerticalDeg
+      , nb::arg("near_clip") = superdex::robotics::SensorCameraParams{}.nearClip
+      , nb::arg("far_clip") = superdex::robotics::SensorCameraParams{}.farClip
+      , nb::arg("look_at").sig("...") = superdex::robotics::SensorCameraParams{}.lookAt
+      , nb::arg("offset_local").sig("...") = superdex::robotics::SensorCameraParams{}.offsetLocal
+      , nb::arg("forward_axis").sig("...") = superdex::robotics::SensorCameraParams{}.forwardAxis
+      , nb::arg("up_axis_local").sig("...") = superdex::robotics::SensorCameraParams{}.upAxisLocal
+      , nb::arg("look_distance") = superdex::robotics::SensorCameraParams{}.lookDistance
     )
     .def(nb::init<>())
-    .def("__copy__", [](superdex::robotics::CameraSensorParams const& self) { return superdex::robotics::CameraSensorParams(self); })
-    .def("__deepcopy__", [](superdex::robotics::CameraSensorParams const& self, nb::dict) { return superdex::robotics::CameraSensorParams(self); })
-    .def_rw("name", &superdex::robotics::CameraSensorParams::name, "Camera name carried in the params, distinct from the sensor's instance name.")
-    .def_rw("image_width", &superdex::robotics::CameraSensorParams::imageWidth, "Rendered image width [px].")
-    .def_rw("image_height", &superdex::robotics::CameraSensorParams::imageHeight, "Rendered image height [px].")
-    .def_rw("fov_vertical_deg", &superdex::robotics::CameraSensorParams::fovVerticalDeg, "Vertical field of view [deg].")
-    .def_rw("near_clip", &superdex::robotics::CameraSensorParams::nearClip, "Distance to the near clip plane [m].")
-    .def_rw("far_clip", &superdex::robotics::CameraSensorParams::farClip, "Distance to the far clip plane [m].")
-    .def_prop_rw("look_at", [](superdex::robotics::CameraSensorParams& self) -> mochi::Real3& { return self.lookAt; }, [](superdex::robotics::CameraSensorParams& self, nb::object val) { self.lookAt = nb::cast<mochi::Real3>(val); }, "Look-at target in world space (fixed cameras only).")
-    .def_prop_rw("offset_local", [](superdex::robotics::CameraSensorParams& self) -> mochi::Real3& { return self.offsetLocal; }, [](superdex::robotics::CameraSensorParams& self, nb::object val) { self.offsetLocal = nb::cast<mochi::Real3>(val); }, "Offset from EE frame origin in local coordinates (wrist cameras only).")
-    .def_prop_rw("forward_axis", [](superdex::robotics::CameraSensorParams& self) -> mochi::Real3& { return self.forwardAxis; }, [](superdex::robotics::CameraSensorParams& self, nb::object val) { self.forwardAxis = nb::cast<mochi::Real3>(val); }, "Forward direction in EE-local frame (wrist cameras only).")
-    .def_prop_rw("up_axis_local", [](superdex::robotics::CameraSensorParams& self) -> mochi::Real3& { return self.upAxisLocal; }, [](superdex::robotics::CameraSensorParams& self, nb::object val) { self.upAxisLocal = nb::cast<mochi::Real3>(val); }, "Up direction in EE-local frame (wrist cameras only).")
-    .def_rw("look_distance", &superdex::robotics::CameraSensorParams::lookDistance, "Distance ahead of offset point to place look-at target (wrist cameras only).")
+    .def("__copy__", [](superdex::robotics::SensorCameraParams const& self) { return superdex::robotics::SensorCameraParams(self); })
+    .def("__deepcopy__", [](superdex::robotics::SensorCameraParams const& self, nb::dict) { return superdex::robotics::SensorCameraParams(self); })
+    .def_rw("name", &superdex::robotics::SensorCameraParams::name, "Camera name carried in the params, distinct from the sensor's instance name.")
+    .def_rw("image_width", &superdex::robotics::SensorCameraParams::imageWidth, "Rendered image width [px].")
+    .def_rw("image_height", &superdex::robotics::SensorCameraParams::imageHeight, "Rendered image height [px].")
+    .def_rw("fov_vertical_deg", &superdex::robotics::SensorCameraParams::fovVerticalDeg, "Vertical field of view [deg].")
+    .def_rw("near_clip", &superdex::robotics::SensorCameraParams::nearClip, "Distance to the near clip plane [m].")
+    .def_rw("far_clip", &superdex::robotics::SensorCameraParams::farClip, "Distance to the far clip plane [m].")
+    .def_prop_rw("look_at", [](superdex::robotics::SensorCameraParams& self) -> mochi::Real3& { return self.lookAt; }, [](superdex::robotics::SensorCameraParams& self, nb::object val) { self.lookAt = nb::cast<mochi::Real3>(val); }, "Look-at target in world space (fixed cameras only).")
+    .def_prop_rw("offset_local", [](superdex::robotics::SensorCameraParams& self) -> mochi::Real3& { return self.offsetLocal; }, [](superdex::robotics::SensorCameraParams& self, nb::object val) { self.offsetLocal = nb::cast<mochi::Real3>(val); }, "Offset from EE frame origin in local coordinates (wrist cameras only).")
+    .def_prop_rw("forward_axis", [](superdex::robotics::SensorCameraParams& self) -> mochi::Real3& { return self.forwardAxis; }, [](superdex::robotics::SensorCameraParams& self, nb::object val) { self.forwardAxis = nb::cast<mochi::Real3>(val); }, "Forward direction in EE-local frame (wrist cameras only).")
+    .def_prop_rw("up_axis_local", [](superdex::robotics::SensorCameraParams& self) -> mochi::Real3& { return self.upAxisLocal; }, [](superdex::robotics::SensorCameraParams& self, nb::object val) { self.upAxisLocal = nb::cast<mochi::Real3>(val); }, "Up direction in EE-local frame (wrist cameras only).")
+    .def_rw("look_distance", &superdex::robotics::SensorCameraParams::lookDistance, "Distance ahead of offset point to place look-at target (wrist cameras only).")
   ;
 
   registry.GetClass<superdex::robotics::SensorSeedRectMapParams>()
@@ -1722,15 +1722,15 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
   registry.GetClass<superdex::robotics::ActuatorBase, superdex::robotics::ComponentBase>()
   ;
 
-  registry.GetClass<superdex::robotics::CameraSensor, superdex::robotics::SensorBase>()
-    .def_static("type_name", &superdex::robotics::CameraSensor::TypeName
+  registry.GetClass<superdex::robotics::SensorCamera, superdex::robotics::SensorBase>()
+    .def_static("type_name", &superdex::robotics::SensorCamera::TypeName
       , "Registration type name for this sensor (see\nRoboticsContext::RegisterSensorType).\n\nReturns:\n    This sensor's registration type name."
     )
-    .def("get_params", &superdex::robotics::CameraSensor::GetParams
+    .def("get_params", &superdex::robotics::SensorCamera::GetParams
       , "Get sensor parameters.\n\nReturns:\n    The params."
       , nb::rv_policy::reference
     )
-    .def("set_params", [](superdex::robotics::CameraSensor& self, superdex::robotics::CameraSensorParams const& params) {
+    .def("set_params", [](superdex::robotics::SensorCamera& self, superdex::robotics::SensorCameraParams const& params) {
       mochi::Error error;
       self.SetParams(params, error);
       if (!error.IsOK()) {
@@ -1738,7 +1738,7 @@ void mochi::DefineSuperdexRobotics_SuperdexRobotics([[maybe_unused]] nb::module_
       }
     }
       , nb::arg("params")
-      , "Set sensor parameters.\n\nArgs:\n    params (CameraSensorParams): Params.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
+      , "Set sensor parameters.\n\nArgs:\n    params (SensorCameraParams): Params.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs."
     )
   ;
 

@@ -177,7 +177,7 @@ struct IBotLoader;
  *   ctx->DestroyController(handle);
  *
  *   auto sHandle = ctx->CreateSensor("SENSOR_CAMERA", linkActor, "wrist_cam", "", error);
- *   auto* cam = static_cast<CameraSensor*>(ctx->GetSensor(sHandle));
+ *   auto* cam = static_cast<SensorCamera*>(ctx->GetSensor(sHandle));
  *   cam->SetParams(camParams, error);
  *   auto const& intrinsics = cam->GetParams();
  *   ctx->DestroySensor(sHandle);
@@ -207,10 +207,7 @@ class MOCHI_API RoboticsContext {
   using ActuatorFactory =
       std::function<ActuatorBase*(Actor*, std::string_view paramArgs, superdex::Error&)>;
 
-  RoboticsContext(RoboticsContext const&) = delete;
-  RoboticsContext& operator=(RoboticsContext const&) = delete;
-  RoboticsContext(RoboticsContext&&) = delete;
-  RoboticsContext& operator=(RoboticsContext&&) = delete;
+  MOCHI_DECLARE_NO_COPY_NO_MOVE(RoboticsContext)
 
   /* --- Bots --- */
 
@@ -432,7 +429,7 @@ class MOCHI_API RoboticsContext {
   void DestroySensor(SensorHandle handle);
 
   /* @brief Get the sensor associated with the given handle. Returns nullptr if invalid. Downcast to
-   * the concrete sensor type as needed (e.g. static_cast<CameraSensor*>(GetSensor(handle))).
+   * the concrete sensor type as needed (e.g. static_cast<SensorCamera*>(GetSensor(handle))).
    * @param handle Sensor handle to resolve.
    * @return Context-owned sensor, or nullptr if the handle is invalid or stale. */
   SensorBase* GetSensor(SensorHandle handle) const;

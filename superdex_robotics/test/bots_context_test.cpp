@@ -20,7 +20,7 @@
 #include <superdex_robotics/controllers/controller_basic_osc_pd.h>
 #include <superdex_robotics/core/context.h>
 #include <superdex_robotics/core/loader.h>
-#include <superdex_robotics/sensors/camera_sensor.h>
+#include <superdex_robotics/sensors/sensor_camera.h>
 #include <superdex_robotics/superdex_robotics.h>
 #include <superdex_robotics/utils/bot_utils.h>
 
@@ -465,7 +465,7 @@ TEST_F(RoboticsContextTest, CreateAndDestroySensor) {
   auto* linkActor = _scene->CreateRigidActor(rigidParams, ExpectOK{});
 
   auto handle =
-      GetCtx().CreateSensor(CameraSensor::TypeName(), linkActor, /*name*/ {}, {}, ExpectOK{});
+      GetCtx().CreateSensor(SensorCamera::TypeName(), linkActor, /*name*/ {}, {}, ExpectOK{});
   EXPECT_TRUE(handle.IsValid());
   EXPECT_TRUE(GetCtx().IsValidSensor(handle));
 
@@ -516,15 +516,15 @@ TEST_F(RoboticsContextTest, UnknownSensorTypeReturnsError) {
 }
 
 // The legacy sensor aliases "fixed_camera" and "wrist_camera" resolve to the same sensor as
-// SENSOR_CAMERA (CameraSensor), so old (internal) assets keep loading. Registered by
+// SENSOR_CAMERA (SensorCamera), so old (internal) assets keep loading. Registered by
 // RegisterLegacySensorTypes, which is internal-only, so this test is gated to internal builds.
 #if MOCHI_INTERNAL
-TEST_F(RoboticsContextTest, LegacyCameraAliasesResolveToCameraSensor) {
+TEST_F(RoboticsContextTest, LegacyCameraAliasesResolveToSensorCamera) {
   Actor* robot = CreateChainRobot(4);
   for (char const* legacyName : {"fixed_camera", "wrist_camera"}) {
     auto handle = GetCtx().CreateSensor(legacyName, robot, {}, /*name*/ {}, ExpectOK{});
     EXPECT_TRUE(handle.IsValid());
-    EXPECT_NE(dynamic_cast<CameraSensor*>(GetCtx().GetSensor(handle)), nullptr);
+    EXPECT_NE(dynamic_cast<SensorCamera*>(GetCtx().GetSensor(handle)), nullptr);
     GetCtx().DestroySensor(handle);
   }
 }
@@ -600,7 +600,7 @@ TEST_F(RoboticsContextTest, ControllerAndSensorHandlesAreDistinct) {
   auto* linkActor = _scene->CreateRigidActor(rigidParams, ExpectOK{});
 
   auto sensorHandle =
-      GetCtx().CreateSensor(CameraSensor::TypeName(), linkActor, /*name*/ {}, {}, ExpectOK{});
+      GetCtx().CreateSensor(SensorCamera::TypeName(), linkActor, /*name*/ {}, {}, ExpectOK{});
   EXPECT_TRUE(sensorHandle.IsValid());
 
   /* Controllers and sensors are now distinct C++ types (ControllerHandle vs SensorHandle), so
@@ -624,7 +624,7 @@ TEST_F(RoboticsContextTest, ContextDestroyCleansSensors) {
   auto* linkActor = _scene->CreateRigidActor(rigidParams, ExpectOK{});
 
   auto handle =
-      GetCtx().CreateSensor(CameraSensor::TypeName(), linkActor, /*name*/ {}, {}, ExpectOK{});
+      GetCtx().CreateSensor(SensorCamera::TypeName(), linkActor, /*name*/ {}, {}, ExpectOK{});
   EXPECT_TRUE(handle.IsValid());
   EXPECT_TRUE(GetCtx().IsValidSensor(handle));
 
