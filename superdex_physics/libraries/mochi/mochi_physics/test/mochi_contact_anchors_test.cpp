@@ -1278,9 +1278,7 @@ TEST_F(FrictionAnchors, PlacementDropsPreload) {
 }
 
 // Active holds the anchors used by a step; Pending holds those advanced for the next one.
-// A diverged step retains the anchors it used in both sets.
 TEST_F(FrictionAnchors, StepAdoptsAnchorsPendingFromLastStep) {
-  test::ExpectLoggingInScope expectWarning(_mochiContext, LogChannel::Warning);
   Actor* cube = CreateCubeUnderTangentialLoad(1.5_r);
   Step(20);
   ASSERT_FALSE(GetPendingAnchors(cube).empty());
@@ -1290,20 +1288,53 @@ TEST_F(FrictionAnchors, StepAdoptsAnchorsPendingFromLastStep) {
   Step(1);
   ExpectAnchors(pending, GetAnchors(cube));
   ASSERT_FALSE(GetPendingAnchors(cube).empty());
+}
+
+// A diverged step resets the state of its actors, rigid or deformable, which their anchors no
+// longer match, so it releases them: it empties Pending, and Active keeps the anchors the step
+// used. The next step starts without anchors and rebuilds them.
+class FrictionAnchorsDivergence : public FrictionAnchors,
+                                  public ::testing::WithParamInterface<bool> {
+ protected:
+  Actor* CreateCube() {
+    return GetParam() ? CreateSoftCube() : CreateRigidCube();
+  }
+};
+
+TEST_P(FrictionAnchorsDivergence, DivergedStepReleasesAnchors) {
+  test::ExpectLoggingInScope expectWarning(_mochiContext, LogChannel::Warning);
+  SetTangentialLoad(0.5_r);
+  CreatePlane();
+  Actor* cube = CreateCube();
+  Step(20);
+  DynamicArray<FrictionAnchor> const adopted = GetPendingAnchors(cube);
+  ASSERT_FALSE(adopted.empty());
 
   // Zero tolerances and a tiny divergence threshold make the next step diverge.
-  DynamicArray<FrictionAnchor> const adopted = GetPendingAnchors(cube);
-  SolverParams params = _scene->GetSolverParams();
-  params.nonLinearSolver.absTol = 0_r;
-  params.nonLinearSolver.relTol = 0_r;
-  params.nonLinearSolver.relStepTol = 0_r;
-  params.nonLinearSolver.absDivTol = 1e-30_r;
-  _scene->SetSolverParams(params, test::ExpectOK{});
+  SolverParams const params = _scene->GetSolverParams();
+  SolverParams divergingParams = params;
+  divergingParams.nonLinearSolver.absTol = 0_r;
+  divergingParams.nonLinearSolver.relTol = 0_r;
+  divergingParams.nonLinearSolver.relStepTol = 0_r;
+  divergingParams.nonLinearSolver.absDivTol = 1e-30_r;
+  _scene->SetSolverParams(divergingParams, test::ExpectOK{});
   Step(1);
   ASSERT_EQ(ConvergenceStatus::Diverged, cube->GetConvergenceStatus());
   ExpectAnchors(adopted, GetAnchors(cube));
-  ExpectAnchors(adopted, GetPendingAnchors(cube));
+  EXPECT_TRUE(GetPendingAnchors(cube).empty());
+
+  _scene->SetSolverParams(params, test::ExpectOK{});
+  Step(1);
+  ASSERT_NE(ConvergenceStatus::Diverged, cube->GetConvergenceStatus());
+  EXPECT_TRUE(GetAnchors(cube).empty());
+  EXPECT_FALSE(GetPendingAnchors(cube).empty());
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    Actors,
+    FrictionAnchorsDivergence,
+    ::testing::Bool(),
+    [](::testing::TestParamInfo<bool> const& info) { return info.param ? "Soft" : "Rigid"; });
 
 // A placement after a step drops the anchors that the next step adopts, which would otherwise bring
 // back those dropped from the anchors the last step used. A solve-free assembly in between, which a

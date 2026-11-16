@@ -57,9 +57,10 @@ void mochi::UpdateFrictionAnchors(
     CActiveCollisions</*kIsSync*/ true, TimeStep::Current> const& syncCollisions,
     CFrictionAnchors<AnchorSet::Pending>& outNext,
     CFrictionAnchorIndex<AnchorSet::Active>& outIndex) {
-  // A stopped solve is accepted. A diverged last stage keeps Pending, which equals the anchors the
-  // step used: the promotion copied it, and resets drop the same anchors from both sets.
-  if (convergence && convergence->stageStatus == ConvergenceStatus::Diverged) {
+  // A stopped solve is accepted. A divergence, at any stage, resets the actor's state, which the
+  // anchors no longer match: release them.
+  if (convergence && convergence->stepStatus == ConvergenceStatus::Diverged) {
+    outNext.anchors.clear();
     return;
   }
 

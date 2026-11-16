@@ -84,8 +84,8 @@ namespace mochi {
  * position of each contact relative to its Active anchor, or zero without one. The anchors stay
  * fixed during the stages of a step. After the last stage, AdvanceFrictionAnchorOffsets advances
  * the offsets to the end of the step, and UpdateFrictionAnchors rebuilds Pending from the contacts
- * that keep their anchors, even at zero offset. A diverged last stage keeps Pending, which equals
- * Active: the promotion copies it, and resets drop the same anchors from both sets.
+ * that keep their anchors, even at zero offset. A diverged step resets the actor's state, so it
+ * releases the anchors: it empties Pending, and Active keeps the anchors the step used.
  *
  * @note Queued preload resets drop the anchors from both sets after promotion, so that no later
  * promotion brings them back, even if a sleeping island skips the solve that rebuilds Pending.
@@ -222,7 +222,7 @@ void FillFrictionAnchorOffsets(
 
 // Rebuilds the next-step anchors of the contacts that keep them after AdvanceFrictionAnchorOffsets,
 // including zero offsets. Uses the Active index as scratch and reuses Pending's capacity. A
-// diverged last stage keeps Pending, which equals the anchors the step used.
+// diverged step empties Pending.
 void UpdateFrictionAnchors(
     FrictionAnchorReg reg,
     CConvergenceStatus const* convergence,

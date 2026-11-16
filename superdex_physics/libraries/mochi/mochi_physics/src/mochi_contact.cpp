@@ -5207,7 +5207,7 @@ void mochi::AdvanceFrictionAnchorOffsets(
     CConvergenceStatus const* convergence,
     CActiveCollisions</*kIsSync*/ false, TimeStep::Current>& asyncCollisions,
     CActiveCollisions</*kIsSync*/ true, TimeStep::Current>& syncCollisions) {
-  if (convergence && convergence->stageStatus == ConvergenceStatus::Diverged) {
+  if (convergence && convergence->stepStatus == ConvergenceStatus::Diverged) {
     return;
   }
   ContactEvalConfig const config = MakeAnchorAdvanceEvalConfig(simParams->experimentalEval, reg, e);
