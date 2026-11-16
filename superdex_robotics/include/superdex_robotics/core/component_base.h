@@ -42,10 +42,7 @@ class Bot; /* forward declaration for GetOwningBot (raw pointer, not a handle) *
  * in the mochi ownership graph. */
 class MOCHI_API ComponentBase {
  public:
-  ComponentBase(ComponentBase const&) = delete;
-  ComponentBase& operator=(ComponentBase const&) = delete;
-  ComponentBase(ComponentBase&&) = delete;
-  ComponentBase& operator=(ComponentBase&&) = delete;
+  MOCHI_DECLARE_NO_COPY_NO_MOVE(ComponentBase)
 
   /* @brief Whether this component remains usable. Returns false after its owning
    * @ref RoboticsContext destroys it.
