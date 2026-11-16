@@ -44,7 +44,8 @@ struct SnleProblemFunctions {
   std::function<void(SnleProblem<T>& problem)> onPostNewSolution;
 
   // Function to be executed after a solution increment is computed. It may zero increment entries
-  // at constrained DoFs.
+  // at constrained DoFs. It must build the actors' state from the solution and the increment alone,
+  // since UpdateSolutionFrom calls it without first moving the actors to its 'start'.
   std::function<void(SnleProblem<T>& problem)> onPostNewIncrement;
 };
 
@@ -85,17 +86,18 @@ class SnleProblem {
   // Returns the set of linear operators for the system's coupled equations.
   IslandOperators<T> GetOperators() const;
 
-  // Scales the increment vector.
-  void ScaleIncrement(T alpha);
-
   // Takes the current increment and modifies the problem solution. It also updates the position
   // state of the actors to be consistent with the new solution.
   void UpdateSolution();
 
-  // Sets the solution vector to the given vector.
-  // If 'invokePost' is true, it also updates the position state of the actors to be consistent with
-  // the new solution.
-  void SetSolution(ColumnVectorView<T const> val, bool invokePost = true);
+  // Like UpdateSolution, but takes the step from 'start' instead of the current solution, after
+  // scaling the increment by 'factor', which stays scaled. The actors aren't moved to 'start'
+  // first.
+  void UpdateSolutionFrom(ColumnVectorView<T const> start, T factor);
+
+  // Sets the solution vector to the given vector. It also updates the position state of the actors
+  // to be consistent with the new solution.
+  void SetSolution(ColumnVectorView<T const> val);
 
   // Updates the objective. Calls UpdateObjResDRes.
   void UpdateObjective();

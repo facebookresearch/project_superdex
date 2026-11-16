@@ -45,12 +45,6 @@ ColumnVectorView<T const> SnleProblem<T>::GetIncrement() const {
 }
 
 template <typename T>
-void SnleProblem<T>::ScaleIncrement(T alpha) {
-  MOCHI_PROFILE_SCOPE();
-  this->increment *= alpha;
-}
-
-template <typename T>
 double SnleProblem<T>::GetObjective() const {
   return this->objective;
 }

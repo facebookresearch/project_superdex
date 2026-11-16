@@ -38,12 +38,18 @@ void SnleProblem<T>::UpdateSolution() {
 }
 
 template <typename T>
-void SnleProblem<T>::SetSolution(ColumnVectorView<T const> val, bool invokePost) {
+void SnleProblem<T>::UpdateSolutionFrom(ColumnVectorView<T const> start, T factor) {
+  MOCHI_PROFILE_SCOPE();
+  this->solution = start;
+  this->increment *= factor;
+  OnPostNewIncrement();
+}
+
+template <typename T>
+void SnleProblem<T>::SetSolution(ColumnVectorView<T const> val) {
   MOCHI_PROFILE_SCOPE();
   this->solution = val;
-  if (invokePost) {
-    OnPostNewSolution();
-  }
+  OnPostNewSolution();
 }
 
 template <typename T>

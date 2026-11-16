@@ -192,12 +192,12 @@ bool LineSearch<T>::Simple(Problem& problem, Status& status, LsParams const& par
   int& it = status.numLastLSIterDone;
   for (it = 0; it < params.maxIter; ++it) {
     // Compute new candidate solution
-    if (it > 0) {
-      problem.SetSolution(sol0, /*invokePost*/ false);
+    if (it == 0) {
+      problem.UpdateSolution();
+    } else {
       scale *= params.alpha;
-      problem.ScaleIncrement(params.alpha);
+      problem.UpdateSolutionFrom(sol0, params.alpha);
     }
-    problem.UpdateSolution();
 
     // Compute merit at x + dx position
     problem.UpdateObjective();
@@ -239,12 +239,12 @@ bool LineSearch<T>::Armijo(Problem& problem, Status& status, LsParams const& par
   int& it = status.numLastLSIterDone;
   for (it = 0; it < params.maxIter; ++it) {
     // Compute new candidate solution
-    if (it > 0) {
-      problem.SetSolution(sol0, /*invokePost*/ false);
+    if (it == 0) {
+      problem.UpdateSolution();
+    } else {
       scale *= params.alpha;
-      problem.ScaleIncrement(params.alpha);
+      problem.UpdateSolutionFrom(sol0, params.alpha);
     }
-    problem.UpdateSolution();
 
     // Compute merit at x + dx position
     problem.UpdateObjective();
@@ -305,15 +305,15 @@ bool LineSearch<T>::Wolfe(Problem& problem, Status& status, LsParams const& para
         scaleMin <= scaleMax, "Inconsistent scale bounds: [%.5e, %.5e].\n", scaleMin, scaleMax);
 
     // Compute new candidate solution, if the scale bounds leave room for it
-    if (it > 0) {
+    if (it == 0) {
+      problem.UpdateSolution();
+    } else {
       if (!(scaleMin < scaleNew && scaleNew < scaleMax)) {
         break;
       }
-      problem.SetSolution(sol0, /*invokePost*/ false);
-      problem.ScaleIncrement(scaleNew / scale);
+      problem.UpdateSolutionFrom(sol0, scaleNew / scale);
       scale = scaleNew;
     }
-    problem.UpdateSolution();
 
     // Compute merit and gradient at x + dx position
     problem.UpdateObjResDRes(
@@ -348,9 +348,7 @@ bool LineSearch<T>::Wolfe(Problem& problem, Status& status, LsParams const& para
   // failed the 2nd by below, if any.
   if (!improved && scaleMin > T(0)) {
     if (scale != scaleMin) {
-      problem.SetSolution(sol0, /*invokePost*/ false);
-      problem.ScaleIncrement(scaleMin / scale);
-      problem.UpdateSolution();
+      problem.UpdateSolutionFrom(sol0, scaleMin / scale);
       problem.UpdateObjResDRes(
           {.assemObj = true, .assemRes = true, .assemDRes = false, .psdDRes = false});
     }
@@ -381,11 +379,11 @@ bool LineSearch<T>::ResidualNorm(Problem& problem, Status& status, LsParams cons
   int& it = status.numLastLSIterDone;
   for (it = 0; it < params.maxIter; ++it) {
     // Compute new candidate solution
-    if (it > 0) {
-      problem.SetSolution(sol0, /*invokePost*/ false);
-      problem.ScaleIncrement(params.alpha);
+    if (it == 0) {
+      problem.UpdateSolution();
+    } else {
+      problem.UpdateSolutionFrom(sol0, params.alpha);
     }
-    problem.UpdateSolution();
 
     // Compute the residual at x + dx
     problem.UpdateResidual();
