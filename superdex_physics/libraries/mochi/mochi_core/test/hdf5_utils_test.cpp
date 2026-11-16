@@ -49,13 +49,13 @@ TEST(Hdf5Utils, WriteReadFile) {
 
   // Write an H5 file
   {
-    auto file = hdf5::OpenFileForWrite(tempPath.c_str(), test::ExpectOK{});
+    auto file = hdf5::OpenFileForWrite(tempPath, test::ExpectOK{});
     H5TestWriteGroups(file);
   }
 
   // Read it back
   {
-    auto file = hdf5::OpenFileForRead(tempPath.c_str(), test::ExpectOK{});
+    auto file = hdf5::OpenFileForRead(tempPath, test::ExpectOK{});
     H5TestReadGroups(file);
   }
 
