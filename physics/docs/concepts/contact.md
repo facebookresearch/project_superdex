@@ -251,6 +251,8 @@ Elasto-plastic friction has the following scope and requirements:
 - The anchors of an actor's contacts, and those of other actors' contacts on it, are part of its history, which setters that change its state discontinuously invalidate (see [`Actor`](pathname:///generated/api/latest/cpp/classsuperdex_1_1Actor.html)): e.g., placing it or setting its velocity, including any velocity of a static actor. Its contacts then start the next step without elastic pre-load. `SetRootTransform` alone on a static actor moves it over the next step and keeps the anchors on it.
 - Anchors are part of the captured scene state. `Scene::UpdateQueries` reproduces the forces of the last step exactly with `BackwardEuler`, `BDF2`, and `BDF3`, if the scene has not been modified since the last step (see its API reference). Changing `elastoPlasticFriction` changes the content of the scene state, so states captured before the change cannot be restored after it.
 
+The development of the elasto-plastic friction model took inspiration from the contribution of [Senua Media](https://github.com/senuamedia/senua-superdex-accuracy).
+
 #### Restitution Behavior of Rigid Collisions
 
 The normal viscous damping corresponds to the impact model of [Hunt and Crossley (1975)](#references), applying a viscous force that is proportional to the elastic normal force from the penalty stiffness.
