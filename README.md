@@ -224,6 +224,15 @@ Certain third party dependencies and third party assets in this repo are license
 
 ---
 
-# Citation
+## Citation
 
-Citation details will be added here upon publication.
+If you use Project SuperDex in your work, please cite it as:
+
+```bibtex
+@software{project_superdex,
+  title  = {Project SuperDex: A Unified Platform for Dexterous Manipulation Research},
+  author = {{The Project SuperDex Team}},
+  year   = {2026},
+  url    = {https://github.com/facebookresearch/project_superdex}
+}
+```
