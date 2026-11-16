@@ -18,13 +18,14 @@
 #include <superdex_robotics/controllers/controller_basic_osc_pd.h>
 #include <superdex_robotics/controllers/controller_mochi_articulated_pose.h>
 #include <superdex_robotics/core/context.h>
+#include <superdex_robotics/sensors/camera_sensor.h>
+#include <superdex_robotics/sensors/sensor_articulated_joint_wrench.h>
 #if MOCHI_INTERNAL
 #include <superdex_robotics/actuators/internal/actuators_internal.h>
 #include <superdex_robotics/controllers/internal/controllers_internal.h>
 #include <superdex_robotics/sensors/internal/sensors_internal.h>
 #endif // MOCHI_INTERNAL
 #include <superdex_robotics/core/loader.h>
-#include <superdex_robotics/sensors/camera_sensor.h>
 #include <superdex_robotics/superdex_robotics.h>
 #include <superdex_robotics/utils/bot_utils.h>
 
@@ -674,6 +675,7 @@ void RoboticsContext::RegisterBuiltinTypes() {
   RegisterController<ControllerMochiArticulatedPose>();
   RegisterController<ControllerBasicJscPd>();
   RegisterController<ControllerBasicOscPd>();
+  RegisterSensor<SensorArticulatedJointWrench>();
   RegisterSensor<CameraSensor>();
 }
 

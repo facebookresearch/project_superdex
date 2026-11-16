@@ -2473,6 +2473,21 @@ class SensorBase(ComponentBase):
             Sensor pose in world space.
         """
 
+class SensorArticulatedJointWrench(SensorBase):
+    """Actor-wide source of every measurable articulated-joint wrench.
+
+    Emits one row per non-static joint. Static links are excluded and named in typed
+    observation metadata because Mochi does not compute their contact forces.
+    """
+    @staticmethod
+    def type_name() -> str:
+        """Registration type name for this sensor (pass to
+        RoboticsContext.create_sensor).
+
+        Returns:
+            This sensor's canonical registration type name.
+        """
+
 class ActuatorBase(ComponentBase):
     """Base class for robot actuators.
 

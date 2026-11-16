@@ -1216,6 +1216,16 @@ class bots::SensorBase(bots::ComponentBase) [no_init, no_destruct] {
   fn GetWorldTransform() -> TransformRT [const];
 }
 
+// @brief Actor-wide source of every measurable articulated-joint wrench.
+//
+// @details Emits one row per non-static joint. Static links are excluded and named in typed
+// observation metadata because Mochi does not compute their contact forces.
+class bots::SensorArticulatedJointWrench(bots::SensorBase) [no_init, no_destruct, no_reflection] {
+  // @brief Registration type name for this sensor (pass to RoboticsContext.create_sensor).
+  // @return This sensor's canonical registration type name.
+  fn TypeName() -> StringView [static];
+}
+
 // @brief Base class for robot actuators.
 //
 // Mirrors @ref ControllerBase and @ref SensorBase: derives from ComponentBase for common lifecycle

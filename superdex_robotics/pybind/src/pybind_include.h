@@ -33,6 +33,7 @@
 #include <superdex_robotics/scene/bot_scene.h>
 #include <superdex_robotics/scene/bot_task.h>
 #include <superdex_robotics/sensors/camera_sensor.h>
+#include <superdex_robotics/sensors/sensor_articulated_joint_wrench.h>
 #include <superdex_robotics/sensors/sensor_base.h>
 #include <superdex_robotics/superdex_robotics.h>
 #include <superdex_robotics/utils/asset_snapshot.h>

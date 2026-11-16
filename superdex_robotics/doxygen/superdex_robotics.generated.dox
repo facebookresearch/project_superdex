@@ -1026,6 +1026,20 @@
 /// @return Sensor pose in world space.
 ///
 
+/// @class superdex::robotics::SensorArticulatedJointWrench
+///
+/// @brief Actor-wide source of every measurable articulated-joint wrench.
+///
+/// @details Emits one row per non-static joint. Static links are excluded and named in typed observation metadata because Mochi does not compute their contact forces.
+///
+
+/// @fn std::string_view superdex::robotics::SensorArticulatedJointWrench::TypeName()
+///
+/// @brief Registration type name for this sensor (pass to RoboticsContext.create_sensor).
+///
+/// @return This sensor's canonical registration type name.
+///
+
 /// @class superdex::robotics::ActuatorBase
 ///
 /// @brief Base class for robot actuators.

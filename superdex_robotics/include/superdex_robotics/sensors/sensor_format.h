@@ -19,6 +19,7 @@
 #include <superdex_physics.h>
 
 #include <cstdint>
+#include <string_view>
 
 namespace superdex::robotics {
 
@@ -27,6 +28,9 @@ enum class SensorDType {
 };
 
 using SensorDimension = int32_t;
+
+inline constexpr std::string_view kSensorFormatKindWrench6DList = "Wrench6DList";
+inline constexpr std::string_view kSensorFormatKindWrench6D = "Wrench6D";
 
 /* @brief Meaning of one tensor dimension.
  * Labels are empty or contain one entry per element. Units are empty, contain one broadcast unit,
@@ -38,6 +42,14 @@ struct SensorAxis {
 
   bool operator==(SensorAxis const& rhs) const = default;
 };
+
+inline SensorAxis MakeWrenchComponentAxis() {
+  return {
+      .name = "wrench_component",
+      .labels = {"Fx", "Fy", "Fz", "Tx", "Ty", "Tz"},
+      .units = {"N", "N", "N", "N*m", "N*m", "N*m"},
+  };
+}
 
 /* @brief Immutable shape and meaning of one sensor's numeric output. */
 struct SensorFormat {

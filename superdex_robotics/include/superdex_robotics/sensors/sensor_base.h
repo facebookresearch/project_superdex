@@ -50,6 +50,8 @@ struct SensorSample {
   [[nodiscard]] MOCHI_API Span<float const> Floats() const;
 };
 
+/* @brief Result of advancing one sensor for one graph step.
+ * Meaningful only when the Step error argument remains OK; a non-OK error is always failure. */
 enum class SensorStepResult {
   NoUpdate,
   Published,
@@ -71,7 +73,8 @@ class MOCHI_API SensorBase : public ComponentBase {
   /* @brief Clear the published sample, then reset sensor-specific episode state. */
   void Reset() final;
 
-  /* @brief Advance this sensor after one physics or hardware step. */
+  /* @brief Advance this sensor after one physics or hardware step. The returned state
+   * is meaningful only while @p error is OK. */
   [[nodiscard]] virtual SensorStepResult Step(StepTime const& now, superdex::Error& error) = 0;
 
   [[nodiscard]] SensorFormat const& GetFormat() const {
