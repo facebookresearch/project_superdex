@@ -121,10 +121,10 @@ wrist_cam = bot.create_sensor("SENSOR_CAMERA", "fr3_link8", "wrist_cam")
 
 # Create a scene-level camera on the context with no link actor, so it has no owning
 # bot; the context owns it. "scene_cam" is its instance name (what finders match);
-# CameraSensorParams.name below is a separate params field.
+# SensorCameraParams.name below is a separate params field.
 camera_handle = bots_context.create_sensor("SENSOR_CAMERA", None, "scene_cam")
-camera = bots_context.get_sensor(camera_handle)  # resolves to a CameraSensor
-camera.set_params(robotics.CameraSensorParams(
+camera = bots_context.get_sensor(camera_handle)  # resolves to a SensorCamera
+camera.set_params(robotics.SensorCameraParams(
     name="scene_cam",
     image_width=1280,
     image_height=720,
@@ -142,7 +142,7 @@ bots_context.destroy_sensor(camera_handle)
 <TabItem value="cpp" label="C++">
 
 ```cpp
-#include <superdex_robotics/sensors/camera_sensor.h>  // CameraSensor, CameraSensorParams
+#include <superdex_robotics/sensors/sensor_camera.h>  // SensorCamera, SensorCameraParams
 
 // create_bot also builds the bot's prefab-declared sensors and actuators.
 // Attach a controller; it is associated with this bot:
@@ -154,12 +154,12 @@ SensorBase* wristCam = bot->CreateSensor("SENSOR_CAMERA", "fr3_link8", "wrist_ca
 
 // Create a scene-level camera on the context with no link actor, so it has no owning
 // bot; the context owns it. "scene_cam" is its instance name (what finders match);
-// CameraSensorParams::name below is a separate params field.
+// SensorCameraParams::name below is a separate params field.
 SensorHandle cameraHandle = botsContext->CreateSensor(
     "SENSOR_CAMERA", /*linkActor*/ nullptr, "scene_cam", /*paramArgs*/ "", error);
-auto* camera = static_cast<CameraSensor*>(botsContext->GetSensor(cameraHandle));
+auto* camera = static_cast<SensorCamera*>(botsContext->GetSensor(cameraHandle));
 
-CameraSensorParams params;
+SensorCameraParams params;
 params.name = "scene_cam";
 params.imageWidth = 1280;
 params.imageHeight = 720;
