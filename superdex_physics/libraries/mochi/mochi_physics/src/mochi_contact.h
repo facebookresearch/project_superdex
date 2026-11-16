@@ -184,18 +184,18 @@ struct CDeformablePointAsyncCollisionsResponse {
 
   /** @brief The friction and damping parts of the energies and gradients (see
    * @ref AddContactSampleResponse), with an entry per response sample, zero for samples without
-   * friction or damping, if the assembly reports them (see @ref ReportsContactDissipation). Empty
-   * otherwise. */
-  DynamicArray<double> _dissipationEnergies;
-  DynamicArray<Real3> _dissipationGradients;
+   * friction or damping, if the assembly reports them (see @ref ReportsContactNonPotentialTerms).
+   * Empty otherwise. */
+  DynamicArray<double> _nonPotentialEnergies;
+  DynamicArray<Real3> _nonPotentialGradients;
 
   /** @brief Whether the assembly reports friction and damping, and whether some sample does. */
-  bool _reportsDissipation = false;
-  bool _hasReportedDissipation = false;
+  bool _reportsNonPotential = false;
+  bool _hasReportedNonPotential = false;
 
   /** @brief Scratch for the friction and damping of one collider's contacts (see
    * @ref ComputeCollisionResponse), kept across assemblies to reuse its allocation. */
-  CollisionResponseResult _dissipationScratch;
+  CollisionResponseResult _nonPotentialScratch;
 
  public:
   [[nodiscard]] MOCHI_FORCE_INLINE bool Empty() const {
@@ -218,21 +218,21 @@ struct CDeformablePointAsyncCollisionsResponse {
     return _hessians[responseIndex];
   }
 
-  [[nodiscard]] MOCHI_FORCE_INLINE double GetDissipationEnergy(int responseIndex) const {
-    return _dissipationEnergies[responseIndex];
+  [[nodiscard]] MOCHI_FORCE_INLINE double GetNonPotentialEnergy(int responseIndex) const {
+    return _nonPotentialEnergies[responseIndex];
   }
 
-  [[nodiscard]] MOCHI_FORCE_INLINE Real3 const& GetDissipationGradient(int responseIndex) const {
-    return _dissipationGradients[responseIndex];
+  [[nodiscard]] MOCHI_FORCE_INLINE Real3 const& GetNonPotentialGradient(int responseIndex) const {
+    return _nonPotentialGradients[responseIndex];
   }
 
-  // Whether some sample reported friction or damping (see GetDissipationEnergy).
-  [[nodiscard]] bool HasReportedDissipation() const {
-    return _hasReportedDissipation;
+  // Whether some sample reported friction or damping (see GetNonPotentialEnergy).
+  [[nodiscard]] bool HasReportedNonPotentialTerms() const {
+    return _hasReportedNonPotential;
   }
 
-  [[nodiscard]] CollisionResponseResult& DissipationScratch() {
-    return _dissipationScratch;
+  [[nodiscard]] CollisionResponseResult& NonPotentialScratch() {
+    return _nonPotentialScratch;
   }
 
   void Clear() {
@@ -244,16 +244,16 @@ struct CDeformablePointAsyncCollisionsResponse {
     _hessians.clear();
     _activeContactElementIndices.clear();
     _isActiveContactElement.clear();
-    _dissipationEnergies.clear();
-    _dissipationGradients.clear();
-    _reportsDissipation = false;
-    _hasReportedDissipation = false;
+    _nonPotentialEnergies.clear();
+    _nonPotentialGradients.clear();
+    _reportsNonPotential = false;
+    _hasReportedNonPotential = false;
   }
 
-  // reportsDissipation: whether the assembly reports friction and damping (see
-  // GetDissipationEnergy).
+  // reportsNonPotential: whether the assembly reports friction and damping (see
+  // GetNonPotentialEnergy).
   void
-  Reset(int numContactElements, int numQuadsPerContactElement, bool reportsDissipation = false) {
+  Reset(int numContactElements, int numQuadsPerContactElement, bool reportsNonPotential = false) {
     MOCHI_ASSERT_VERBOSE(
         numContactElements >= 0, "Number of contact elements must be non-negative.");
     MOCHI_ASSERT_VERBOSE(
@@ -291,22 +291,22 @@ struct CDeformablePointAsyncCollisionsResponse {
     _activeContactElementIndices.clear();
     _activeContactElementIndices.reserve(numContactElements);
 
-    _dissipationEnergies.clear();
-    _dissipationGradients.clear();
-    _reportsDissipation = reportsDissipation;
-    _hasReportedDissipation = false;
+    _nonPotentialEnergies.clear();
+    _nonPotentialGradients.clear();
+    _reportsNonPotential = reportsNonPotential;
+    _hasReportedNonPotential = false;
   }
 
   // Add response data for a contact sample. If data is provided more than once for the same sample
   // index, the values are accumulated. The dissipation energy and gradient, the part of the
-  // response from friction and damping, require a Reset with reportsDissipation.
+  // response from friction and damping, require a Reset with reportsNonPotential.
   void AddContactSampleResponse(
       int sampleIndex,
       double const* energy,
       Real3 const* gradient,
       VMatrix3x3r const* hessian,
-      double const* dissipationEnergy = nullptr,
-      Real3 const* dissipationGradient = nullptr) {
+      double const* nonPotentialEnergy = nullptr,
+      Real3 const* nonPotentialGradient = nullptr) {
     MOCHI_ASSERT_VERBOSE(sampleIndex >= 0, "Contact sample index must be non-negative.");
     MOCHI_ASSERT_VERBOSE(
         sampleIndex < isize(_responseIndexFromSampleIndex),
@@ -315,9 +315,9 @@ struct CDeformablePointAsyncCollisionsResponse {
         _numQuadsPerContactElement > 0,
         "Number of quadrature points per contact element must be positive.");
     MOCHI_ASSERT_VERBOSE(
-        (dissipationEnergy == nullptr) == (dissipationGradient == nullptr) &&
-            (!dissipationEnergy || _reportsDissipation),
-        "The dissipation energy and gradient must be given together, after a Reset with reportsDissipation.");
+        (nonPotentialEnergy == nullptr) == (nonPotentialGradient == nullptr) &&
+            (!nonPotentialEnergy || _reportsNonPotential),
+        "The dissipation energy and gradient must be given together, after a Reset with reportsNonPotential.");
 
     int responseIndex = _responseIndexFromSampleIndex[sampleIndex];
     if (responseIndex == kInvalidIndex) {
@@ -333,9 +333,9 @@ struct CDeformablePointAsyncCollisionsResponse {
       if (hessian) {
         _hessians.push_back(ToNdArray3x3(*hessian));
       }
-      if (_reportsDissipation) {
-        _dissipationEnergies.push_back(dissipationEnergy ? *dissipationEnergy : 0.0);
-        _dissipationGradients.push_back(dissipationGradient ? *dissipationGradient : Real3{});
+      if (_reportsNonPotential) {
+        _nonPotentialEnergies.push_back(nonPotentialEnergy ? *nonPotentialEnergy : 0.0);
+        _nonPotentialGradients.push_back(nonPotentialGradient ? *nonPotentialGradient : Real3{});
       }
     } else {
       if (energy) {
@@ -347,13 +347,13 @@ struct CDeformablePointAsyncCollisionsResponse {
       if (hessian) {
         _hessians[responseIndex] += ToNdArray3x3(*hessian);
       }
-      if (dissipationEnergy) {
-        _dissipationEnergies[responseIndex] += *dissipationEnergy;
-        _dissipationGradients[responseIndex] += *dissipationGradient;
+      if (nonPotentialEnergy) {
+        _nonPotentialEnergies[responseIndex] += *nonPotentialEnergy;
+        _nonPotentialGradients[responseIndex] += *nonPotentialGradient;
       }
     }
-    if (dissipationEnergy) {
-      _hasReportedDissipation = true;
+    if (nonPotentialEnergy) {
+      _hasReportedNonPotential = true;
     }
 
     int const contactElementIndex = sampleIndex / _numQuadsPerContactElement;
@@ -388,8 +388,8 @@ struct CDeformablePointAsyncCollisionsResponse {
         _hessians.empty() || isize(_hessians) == isize(_sampleIndices),
         "Contact response hessians must be empty or match the number of response samples.");
     MOCHI_ASSERT_VERBOSE(
-        isize(_dissipationEnergies) == (_reportsDissipation ? isize(_sampleIndices) : 0) &&
-            isize(_dissipationGradients) == isize(_dissipationEnergies),
+        isize(_nonPotentialEnergies) == (_reportsNonPotential ? isize(_sampleIndices) : 0) &&
+            isize(_nonPotentialGradients) == isize(_nonPotentialEnergies),
         "Contact response dissipation must match the number of response samples if reported, and be empty otherwise.");
     if (!allowedContactElementMask.empty()) {
       MOCHI_ASSERT_VERBOSE(
@@ -999,7 +999,7 @@ GetContactPairParams(ContactAssemblyReg const& reg, entt::entity colliding, entt
 // constants when differentiating their energy, so their energy is in general not a potential of
 // their force. Explicit normals lag the normals and the load, so the energy of friction and damping
 // is a potential for a fixed contact set.
-[[nodiscard]] inline bool ReportsContactDissipation(
+[[nodiscard]] inline bool ReportsContactNonPotentialTerms(
     AssemblyParams const& params,
     CSimulationParams const& simParams) {
   return ReportsNonPotentialTerms(params, simParams) && !simParams.experimentalEval.explicitNormals;

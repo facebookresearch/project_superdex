@@ -218,8 +218,8 @@ TEST(MochiContact, ComputeCollisionResponse) {
       constexpr real kTol = MOCHI_USE_DOUBLE_PRECISION ? 1e-12_r : 1e-5_r;
       CollisionResponseResult ref;
       ref.ResizeNoInit(isize(contactQuery.sampleIndices), true, true, true);
-      CollisionResponseResult refDissipation;
-      refDissipation.ResizeNoInit(isize(contactQuery.sampleIndices), true, true, false);
+      CollisionResponseResult refNonPotential;
+      refNonPotential.ResizeNoInit(isize(contactQuery.sampleIndices), true, true, false);
       for (int numPoints = 1; numPoints < isize(contactQuery.sampleIndices); ++numPoints) {
         Interval<int> const range{1, 1 + numPoints};
         int const flags = 1 + numPoints % 7;
@@ -236,15 +236,15 @@ TEST(MochiContact, ComputeCollisionResponse) {
             true,
             true,
             ref,
-            kGradTarget == GradTarget::Current ? &refDissipation : nullptr);
+            kGradTarget == GradTarget::Current ? &refNonPotential : nullptr);
         RigidContactSums expected;
-        RigidContactSums expectedDissipation;
+        RigidContactSums expectedNonPotential;
         // Upper bounds of the sums of the term magnitudes, to scale the tolerances
         real energyScale = 0_r;
         real forceScale = 0_r;
         real dForceScale = 0_r;
-        real dissipationEnergyScale = 0_r;
-        real dissipationForceScale = 0_r;
+        real nonPotentialEnergyScale = 0_r;
+        real nonPotentialForceScale = 0_r;
         for (int s : range) {
           real const w = weights[contactQuery.sampleIndices[s]];
           Vec4r const leverArm =
@@ -266,19 +266,19 @@ TEST(MochiContact, ComputeCollisionResponse) {
           dForceScale += Sqr(lever) * Norm3x3(wd);
           if constexpr (kGradTarget == GradTarget::Current) {
             EXPECT_NEAR(
-                refDissipation.energy[s],
+                refNonPotential.energy[s],
                 res.energy[s] - nonDissipative.energy[s],
                 kTol * (Abs(res.energy[s]) + Abs(nonDissipative.energy[s])));
             EXPECT_LE(
-                Norm(refDissipation.force[s] - (res.force[s] - nonDissipative.force[s])),
+                Norm(refNonPotential.force[s] - (res.force[s] - nonDissipative.force[s])),
                 kTol * (Norm(res.force[s]) + Norm(nonDissipative.force[s])));
-            double const weDissipation = w * refDissipation.energy[s];
-            Vec4r const wfDissipation = w * ToSimd(refDissipation.force[s]);
-            expectedDissipation.energy += weDissipation;
-            expectedDissipation.force += wfDissipation;
-            expectedDissipation.torque += Cross3(leverArm, wfDissipation);
-            dissipationEnergyScale += Abs(static_cast<real>(weDissipation));
-            dissipationForceScale += lever * Norm(ToReal3(wfDissipation));
+            double const weNonPotential = w * refNonPotential.energy[s];
+            Vec4r const wfNonPotential = w * ToSimd(refNonPotential.force[s]);
+            expectedNonPotential.energy += weNonPotential;
+            expectedNonPotential.force += wfNonPotential;
+            expectedNonPotential.torque += Cross3(leverArm, wfNonPotential);
+            nonPotentialEnergyScale += Abs(static_cast<real>(weNonPotential));
+            nonPotentialForceScale += lever * Norm(ToReal3(wfNonPotential));
           }
         }
 
@@ -289,12 +289,12 @@ TEST(MochiContact, ComputeCollisionResponse) {
           }
         };
 
-        for (bool const reportsDissipation : {false, true}) {
-          if (reportsDissipation && kGradTarget != GradTarget::Current) {
+        for (bool const reportsNonPotential : {false, true}) {
+          if (reportsNonPotential && kGradTarget != GradTarget::Current) {
             break;
           }
           DynamicArray<Real3> outForce(nContacts, Real3{});
-          RigidContactSums dissipation;
+          RigidContactSums nonPotential;
           RigidContactSums const actual = ComputeRigidContactSums<kGradTarget>(
               range,
               contactQuery,
@@ -307,7 +307,7 @@ TEST(MochiContact, ComputeCollisionResponse) {
               assemForce,
               assemDForce,
               assemForce ? MakeSpan(outForce) : Span<Real3>{},
-              reportsDissipation ? &dissipation : nullptr);
+              reportsNonPotential ? &nonPotential : nullptr);
 
           EXPECT_NEAR(actual.energy, expected.energy, kTol * energyScale);
           EXPECT_LE(Norm(ToReal3(actual.force - expected.force)), kTol * forceScale);
@@ -316,12 +316,12 @@ TEST(MochiContact, ComputeCollisionResponse) {
           EXPECT_LE(Norm3x3(actual.skewDForce - expected.skewDForce), kTol * dForceScale);
           EXPECT_LE(Norm3x3(actual.skewDForceSkew - expected.skewDForceSkew), kTol * dForceScale);
           expectOutForce(MakeConstSpan(outForce));
-          if (reportsDissipation) {
+          if (reportsNonPotential) {
             EXPECT_NEAR(
-                dissipation.energy, expectedDissipation.energy, kTol * dissipationEnergyScale);
-            real const tol = kTol * dissipationForceScale;
-            EXPECT_LE(Norm(ToReal3(dissipation.force - expectedDissipation.force)), tol);
-            EXPECT_LE(Norm(ToReal3(dissipation.torque - expectedDissipation.torque)), tol);
+                nonPotential.energy, expectedNonPotential.energy, kTol * nonPotentialEnergyScale);
+            real const tol = kTol * nonPotentialForceScale;
+            EXPECT_LE(Norm(ToReal3(nonPotential.force - expectedNonPotential.force)), tol);
+            EXPECT_LE(Norm(ToReal3(nonPotential.torque - expectedNonPotential.torque)), tol);
           }
         }
 
@@ -331,20 +331,20 @@ TEST(MochiContact, ComputeCollisionResponse) {
           constexpr int kNumSlices = kNumBones + 1;
           std::array<Vec4r, kNumSlices> skForce{};
           std::array<Vec4r, kNumSlices> skTorque{};
-          std::array<Vec4r, kNumSlices> skDissipationForce{};
-          std::array<Vec4r, kNumSlices> skDissipationTorque{};
+          std::array<Vec4r, kNumSlices> skNonPotentialForce{};
+          std::array<Vec4r, kNumSlices> skNonPotentialTorque{};
           std::array<VMatrix3x3r, kNumSlices * kNumSlices> skDForce{};
           std::array<VMatrix3x3r, kNumSlices * kNumSlices> skSkewBDForce{};
           std::array<VMatrix3x3r, kNumSlices * kNumSlices> skSkewADForce{};
           std::array<VMatrix3x3r, kNumSlices * kNumSlices> skSkewDForceSkew{};
           real skForceScale = 0_r;
-          real skDissipationForceScale = 0_r;
+          real skNonPotentialForceScale = 0_r;
           real skDForceScale = 0_r;
           for (int s : range) {
             int const sample = contactQuery.sampleIndices[s];
             real const w = weights[sample];
             Vec4r const wf = (assemForce ? w : 0_r) * ToSimd(ref.force[s]);
-            Vec4r const wfDissipation = w * ToSimd(refDissipation.force[s]);
+            Vec4r const wfNonPotential = w * ToSimd(refNonPotential.force[s]);
             VMatrix3x3r const wd = (assemDForce ? w : 0_r) * ref.dforce[s];
             std::array<real, kNumSlices> scales{};
             std::array<Vec4r, kNumSlices> leverArms{};
@@ -360,8 +360,8 @@ TEST(MochiContact, ComputeCollisionResponse) {
               maxLever = Max(maxLever, Norm(ToReal3(leverArms[a])));
               skForce[a] += scales[a] * wf;
               skTorque[a] += Cross3(leverArms[a], wf);
-              skDissipationForce[a] += scales[a] * wfDissipation;
-              skDissipationTorque[a] += Cross3(leverArms[a], wfDissipation);
+              skNonPotentialForce[a] += scales[a] * wfNonPotential;
+              skNonPotentialTorque[a] += Cross3(leverArms[a], wfNonPotential);
               for (int b = a; b < kNumSlices; ++b) {
                 int const p = a * kNumSlices + b;
                 VMatrix3x3r const skewAWD = Dot3x3(Skew3(leverArms[a]), wd);
@@ -372,7 +372,7 @@ TEST(MochiContact, ComputeCollisionResponse) {
               }
             }
             skForceScale += (1_r + maxLever) * Norm(ToReal3(wf));
-            skDissipationForceScale += (1_r + maxLever) * Norm(ToReal3(wfDissipation));
+            skNonPotentialForceScale += (1_r + maxLever) * Norm(ToReal3(wfNonPotential));
             skDForceScale += Sqr(1_r + maxLever) * Norm3x3(wd);
           }
 
@@ -384,9 +384,9 @@ TEST(MochiContact, ComputeCollisionResponse) {
                 .boneRotations = MakeConstSpan(boneRotations),
                 .rigidColliderOrigin =
                     hasRigidColliderSlice ? std::optional{origin} : std::nullopt};
-            for (bool const reportsDissipation : {false, true}) {
+            for (bool const reportsNonPotential : {false, true}) {
               DynamicArray<Real3> skOutForce(nContacts, Real3{});
-              SkinnedContactSums dissipation(
+              SkinnedContactSums nonPotential(
                   slices.NumSlices(),
                   /*assemForce*/ true,
                   /*assemDForce*/ false,
@@ -404,22 +404,24 @@ TEST(MochiContact, ComputeCollisionResponse) {
                   assemDForce,
                   GetDefaultAllocator(),
                   assemForce ? MakeSpan(skOutForce) : Span<Real3>{},
-                  reportsDissipation ? &dissipation : nullptr);
+                  reportsNonPotential ? &nonPotential : nullptr);
 
               EXPECT_NEAR(skinned.energy, expected.energy, kTol * energyScale);
-              if (reportsDissipation) {
+              if (reportsNonPotential) {
                 EXPECT_NEAR(
-                    dissipation.energy, expectedDissipation.energy, kTol * dissipationEnergyScale);
+                    nonPotential.energy,
+                    expectedNonPotential.energy,
+                    kTol * nonPotentialEnergyScale);
               }
               for (int a = 0; a < skinned.numSlices; ++a) {
                 if (assemForce) {
                   EXPECT_LE(Norm(ToReal3(skinned.force[a] - skForce[a])), kTol * skForceScale);
                   EXPECT_LE(Norm(ToReal3(skinned.torque[a] - skTorque[a])), kTol * skForceScale);
                 }
-                if (reportsDissipation) {
-                  real const tol = kTol * skDissipationForceScale;
-                  EXPECT_LE(Norm(ToReal3(dissipation.force[a] - skDissipationForce[a])), tol);
-                  EXPECT_LE(Norm(ToReal3(dissipation.torque[a] - skDissipationTorque[a])), tol);
+                if (reportsNonPotential) {
+                  real const tol = kTol * skNonPotentialForceScale;
+                  EXPECT_LE(Norm(ToReal3(nonPotential.force[a] - skNonPotentialForce[a])), tol);
+                  EXPECT_LE(Norm(ToReal3(nonPotential.torque[a] - skNonPotentialTorque[a])), tol);
                 }
                 if (assemDForce) {
                   for (int b = a; b < skinned.numSlices; ++b) {

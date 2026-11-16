@@ -482,7 +482,7 @@ void mochi::shell::AssembleAsyncContact(
         MakeConstSpan(disc.femElements), outResponse, Span<real const>{});
 
     AssembleObjResDRes<ElementT>(contactL2g, contactNbs, boundaryOp, results, activeSubset);
-    deformable::AssembleContactDissipation<ElementT>(
+    deformable::AssembleContactNonPotentialTerms<ElementT>(
         contactL2g,
         contactNbs,
         MakeConstSpan(disc.femElements),

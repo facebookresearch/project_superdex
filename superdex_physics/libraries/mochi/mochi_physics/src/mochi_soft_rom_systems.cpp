@@ -338,7 +338,7 @@ void mochi::rom::AssembleAndProjectAsyncContact(
         AsView(outSnle.reducedResidual),
         AsView(std::get<Matrix<real>>(outSnle.reducedDResidual)),
         params);
-    deformable::AssembleAndProjectContactDissipation<ElementT>(
+    deformable::AssembleAndProjectContactNonPotentialTerms<ElementT>(
         bdL2g, MakeConstSpan(disc.femElements), outResponse, bdFaceWeights, denseJacobian, outSnle);
   });
 }

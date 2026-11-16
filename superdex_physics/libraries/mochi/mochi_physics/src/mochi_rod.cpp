@@ -2052,7 +2052,7 @@ void AssembleAsyncContact(
 
     AssembleObjResDRes<ElementT, fem::kNumRodFields>(
         contactL2g, contactNbs, boundaryOp, results, activeSubset);
-    deformable::AssembleContactDissipation<ElementT, fem::kNumRodFields>(
+    deformable::AssembleContactNonPotentialTerms<ElementT, fem::kNumRodFields>(
         contactL2g,
         contactNbs,
         MakeConstSpan(disc.femElements),

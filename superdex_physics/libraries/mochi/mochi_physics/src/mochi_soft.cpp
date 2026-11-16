@@ -502,13 +502,13 @@ void mochi::soft::AssembleAsyncContact(
     // ROMs project their full residual onto their reduced DoFs after assembly, but not their
     // non-potential residual, which is assembled in reduced DoFs.
     if (!isRom) {
-      deformable::AssembleContactDissipation<ElementT>(
+      deformable::AssembleContactNonPotentialTerms<ElementT>(
           bdL2g, bdNbs, MakeConstSpan(disc.femElements), outResponse, bdFaceWeights, outActorSnle);
-    } else if (outResponse.HasReportedDissipation()) {
+    } else if (outResponse.HasReportedNonPotentialTerms()) {
       MOCHI_ASSERT_VERBOSE(
           romJacobian && romJacobian->TryGet<rom::CRomJacobian::DenseT>(),
           "Expected dense ROM Jacobian.");
-      deformable::AssembleAndProjectContactDissipation<ElementT>(
+      deformable::AssembleAndProjectContactNonPotentialTerms<ElementT>(
           bdL2g,
           MakeConstSpan(disc.femElements),
           outResponse,

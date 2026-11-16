@@ -946,7 +946,7 @@ TEST(ContactPenalties, ElastoPlasticFriction_DForceAnchorIsCoulombBlockOfDForce)
           false,
           true,
           withCoulombResponse,
-          /*outDissipation*/ nullptr,
+          /*outNonPotential*/ nullptr,
           /*assemDForceAnchor*/ true);
       ComputeCollisionResponse<GradTarget::Current>(
           result, withoutCoulomb, config, kDt, false, false, true, withoutCoulombResponse);
@@ -959,7 +959,7 @@ TEST(ContactPenalties, ElastoPlasticFriction_DForceAnchorIsCoulombBlockOfDForce)
           false,
           false,
           anchorResponse,
-          /*outDissipation*/ nullptr,
+          /*outNonPotential*/ nullptr,
           /*assemDForceAnchor*/ true);
 
       for (int i = 0; i < numContacts; ++i) {

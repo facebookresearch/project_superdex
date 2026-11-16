@@ -81,8 +81,8 @@ void SetupActiveCollisionNormals(
     CContactSamples<TimeStep::Current> const& contactPositions,
     CActiveCollisions<kIsSync, TimeStep::Current>& activeCollisions);
 
-// With ReportsContactDissipation, the response also holds the friction and damping of its samples
-// (see CDeformablePointAsyncCollisionsResponse::GetDissipationEnergy).
+// With ReportsContactNonPotentialTerms, the response also holds the friction and damping of its
+// samples (see CDeformablePointAsyncCollisionsResponse::GetNonPotentialEnergy).
 template <typename DiscretizationType, int kNumFields>
 void ComputeAsyncContactResponse(
     ContactAssemblyReg reg,
@@ -99,15 +99,15 @@ void ComputeAsyncContactResponse(
     Span<bool const> allowedContactElementMask = {});
 
 /**
- * @brief Creates a batched boundary (traction/contact) assembly operator. With kDissipation, it
+ * @brief Creates a batched boundary (traction/contact) assembly operator. With kNonPotential, it
  * reads the response's friction and damping instead (see
- * @ref CDeformablePointAsyncCollisionsResponse::GetDissipationEnergy), without a Hessian.
+ * @ref CDeformablePointAsyncCollisionsResponse::GetNonPotentialEnergy), without a Hessian.
  */
 template <
     class ElementT,
     int kNumFields = ElementT::kSpaceDim,
     int kBatchSize = kDefaultFemBatchSize,
-    bool kDissipation = false>
+    bool kNonPotential = false>
 [[nodiscard]] NoDispElOpFnType<ElementT, kNumFields, kBatchSize> MakeBatchedBoundaryOp(
     Span<ElementT const> elements,
     CDeformablePointAsyncCollisionsResponse const& response,
@@ -147,20 +147,20 @@ template <
         }
         if (cbEnergy) {
           double const energy =
-              kDissipation ? response.GetDissipationEnergy(respIdx) : response.GetEnergy(respIdx);
+              kNonPotential ? response.GetNonPotentialEnergy(respIdx) : response.GetEnergy(respIdx);
           *cbEnergy = Set(*cbEnergy, b, energy);
         }
         if (cbForce) {
-          sf[b] = kDissipation ? response.GetDissipationGradient(respIdx)
-                               : response.GetGradient(respIdx);
+          sf[b] = kNonPotential ? response.GetNonPotentialGradient(respIdx)
+                                : response.GetGradient(respIdx);
         }
       }
       if (cbForce) {
         LoadTransposed(&sf[0][0], *cbForce);
       }
       MOCHI_ASSERT_VERBOSE(
-          !kDissipation || !cbDForce, "The response holds no Hessian of friction and damping.");
-      if (!kDissipation && cbDForce) {
+          !kNonPotential || !cbDForce, "The response holds no Hessian of friction and damping.");
+      if (!kNonPotential && cbDForce) {
         for (int r = 0; r < 3; ++r) {
           for (int c = 0; c < 3; ++c) {
             alignas(alignof(V)) real sd[V::kSize]{};
@@ -183,20 +183,20 @@ template <
 // Assembles the friction and damping of a contact response through its boundary op, as
 // non-potential terms of outSnle (see SnleProblem::nonPotentialEnergy) in its full DoFs.
 template <class ElementT, int kNumFields = ElementT::kSpaceDim>
-void AssembleContactDissipation(
+void AssembleContactNonPotentialTerms(
     Local2GlobalMap const& l2g,
     NodalBasedStructure const& nbs,
     Span<ElementT const> elements,
     CDeformablePointAsyncCollisionsResponse const& response,
     Span<real const> bdFaceWeights,
     ActorSnle& outSnle) {
-  if (!response.HasReportedDissipation()) {
+  if (!response.HasReportedNonPotentialTerms()) {
     return;
   }
   AssembleObjResDRes<ElementT, kNumFields>(
       l2g,
       nbs,
-      MakeBatchedBoundaryOp<ElementT, kNumFields, kDefaultFemBatchSize, /*kDissipation*/ true>(
+      MakeBatchedBoundaryOp<ElementT, kNumFields, kDefaultFemBatchSize, /*kNonPotential*/ true>(
           elements, response, bdFaceWeights),
       {.outObj = &outSnle.nonPotentialEnergy,
        .outRes = outSnle.NonPotentialResidual(outSnle.fullResidual.Rows()),
@@ -204,17 +204,17 @@ void AssembleContactDissipation(
       response.ViewActiveContactElementSubset());
 }
 
-// AssembleContactDissipation, projected element by element onto the reduced DoFs with the dense
-// Jacobian of a ROM.
+// AssembleContactNonPotentialTerms, projected element by element onto the reduced DoFs with the
+// dense Jacobian of a ROM.
 template <class ElementT>
-void AssembleAndProjectContactDissipation(
+void AssembleAndProjectContactNonPotentialTerms(
     Local2GlobalMap const& l2g,
     Span<ElementT const> elements,
     CDeformablePointAsyncCollisionsResponse const& response,
     Span<real const> bdFaceWeights,
     RowMatrixView<real const> romJacobian,
     ActorSnle& outSnle) {
-  if (!response.HasReportedDissipation()) {
+  if (!response.HasReportedNonPotentialTerms()) {
     return;
   }
   AssembleAndProjectObjResDRes<ElementT>(
@@ -223,7 +223,7 @@ void AssembleAndProjectContactDissipation(
           ElementT,
           ElementT::kSpaceDim,
           kDefaultFemBatchSize,
-          /*kDissipation*/ true>(elements, response, bdFaceWeights),
+          /*kNonPotential*/ true>(elements, response, bdFaceWeights),
       response.ViewActiveContactElementSubset(),
       romJacobian,
       outSnle.nonPotentialEnergy,

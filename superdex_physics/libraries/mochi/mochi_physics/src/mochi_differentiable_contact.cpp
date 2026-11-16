@@ -228,7 +228,7 @@ static void AccumulateRigidContactForceAdjoints(
         false,
         true,
         response,
-        /*outDissipation*/ nullptr,
+        /*outNonPotential*/ nullptr,
         readsAnchors);
 
     // The queried force also depends on the anchor offset z_n that the step read, so
@@ -523,7 +523,7 @@ void AccumulateSolveAnchorAdjoints(
         false,
         false,
         response,
-        /*outDissipation*/ nullptr,
+        /*outNonPotential*/ nullptr,
         /*assemDForceAnchor*/ true);
 
     // J (-lambda), the contact displacement induced by the solve adjoint, in the collider frame:

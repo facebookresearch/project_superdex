@@ -279,7 +279,7 @@ static void ComputeAsyncContactResponseImpl(
     bool evalEner,
     bool evalGrad,
     bool evalHess,
-    bool reportsDissipation,
+    bool reportsNonPotential,
     Span<bool const> allowedContactElementMask) {
   MOCHI_PROFILE_SCOPE();
 
@@ -301,14 +301,15 @@ static void ComputeAsyncContactResponseImpl(
   auto const worldFromLocalRotation = ToVMatrix3x3(transform.GetRotation());
 
   // Reset contact response samples.
-  outResponse.Reset(numContactElements, FemDiscretization<ElementT>::kNumQuads, reportsDissipation);
+  outResponse.Reset(
+      numContactElements, FemDiscretization<ElementT>::kNumQuads, reportsNonPotential);
 
   // Preallocate memory for collision response. Use stack memory if possible. 32 KiB is enough in
   // most cases.
   MOCHI_FILO_STACK_ALLOCATOR(allocator, 32 * 1024);
   CollisionResponseResult collisionResponse(&allocator);
   collisionResponse.Reserve(collisions, evalEner, evalGrad, evalHess);
-  CollisionResponseResult& dissipation = outResponse.DissipationScratch();
+  CollisionResponseResult& nonPotential = outResponse.NonPotentialScratch();
 
   // Compute collision response.
   for (int c = 0; c < numColliders; ++c) {
@@ -320,9 +321,9 @@ static void ComputeAsyncContactResponseImpl(
 
     int const numActiveSamples = isize(contactQuery.sampleIndices);
     collisionResponse.ResizeNoInit(numActiveSamples, evalEner, evalGrad, evalHess);
-    bool const colliderReportsDissipation = reportsDissipation && HasDissipation(contactParams);
-    if (colliderReportsDissipation) {
-      dissipation.ResizeNoInit(numActiveSamples, true, true, false);
+    bool const colliderReportsNonPotential = reportsNonPotential && HasDissipation(contactParams);
+    if (colliderReportsNonPotential) {
+      nonPotential.ResizeNoInit(numActiveSamples, true, true, false);
     }
 
     // Add the transformation between collider and world space. The response is the gradient wrt the
@@ -343,7 +344,7 @@ static void ComputeAsyncContactResponseImpl(
         evalGrad,
         evalHess,
         collisionResponse,
-        colliderReportsDissipation ? &dissipation : nullptr);
+        colliderReportsNonPotential ? &nonPotential : nullptr);
 
     // Assemble
     for (size_t i = 0; i < numActiveSamples; ++i) {
@@ -359,19 +360,19 @@ static void ComputeAsyncContactResponseImpl(
         outDForce = &collisionResponse.dforce[i];
         *outDForce = TransformContactDForceToCollidingLocal(colliderFromLocal, *outDForce);
       }
-      double const* dissipationEnergy = nullptr;
-      Real3* dissipationForce = nullptr;
-      if (colliderReportsDissipation) {
-        dissipationEnergy = &dissipation.energy[i];
-        dissipationForce = &dissipation.force[i];
-        *dissipationForce =
-            TransformContactForceToCollidingLocal(colliderFromLocal, *dissipationForce);
+      double const* nonPotentialEnergy = nullptr;
+      Real3* nonPotentialForce = nullptr;
+      if (colliderReportsNonPotential) {
+        nonPotentialEnergy = &nonPotential.energy[i];
+        nonPotentialForce = &nonPotential.force[i];
+        *nonPotentialForce =
+            TransformContactForceToCollidingLocal(colliderFromLocal, *nonPotentialForce);
       }
 
       // Write energy response to buffer.
       int const sampleIndex = contactQuery.sampleIndices[i];
       outResponse.AddContactSampleResponse(
-          sampleIndex, outEnergy, outForce, outDForce, dissipationEnergy, dissipationForce);
+          sampleIndex, outEnergy, outForce, outDForce, nonPotentialEnergy, nonPotentialForce);
     }
 
     // Optionally store data for queries
@@ -416,7 +417,7 @@ void deformable::ComputeAsyncContactResponse(
         params.assemObj,
         params.assemRes,
         params.assemDRes,
-        ReportsContactDissipation(params, simParams),
+        ReportsContactNonPotentialTerms(params, simParams),
         allowedContactElementMask);
   });
 }
