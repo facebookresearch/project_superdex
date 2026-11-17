@@ -128,6 +128,10 @@ static_assert(SReflect::detail::CountMethodArgNames("f") < 0);
 static_assert(SReflect::detail::CountMethodArgNames("f(a,)") < 0);
 static_assert(SReflect::detail::CountMethodArgNames("f(a, a)") < 0);
 static_assert(SReflect::detail::CountMethodArgNames("f()x") < 0);
+static_assert(SReflect::detail::CountMethodArgNames("_f(a_1)") == 1);
+static_assert(SReflect::detail::CountMethodArgNames("f(a b)") < 0);
+static_assert(SReflect::detail::CountMethodArgNames("f(1a)") < 0);
+static_assert(SReflect::detail::CountMethodArgNames("f-g()") < 0);
 
 static SReflect::MethodInfo const& Method(char const* name) {
   SReflect::MethodInfo const* method = Machine::GetTypeInfo().FindMethod(name);

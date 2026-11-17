@@ -3219,8 +3219,13 @@ void detail::AddFieldInfo(
     StructTypeInfo& info,
     std::unique_ptr<FieldTypeInfo> field,
     char const* name) {
-  SR_ASSERT(name != nullptr && name[0] != '\0', "Field and property names must not be empty");
-  SR_ASSERT(strchr(name, '/') == nullptr, "Field and property names must not contain '/'");
+  SR_ASSERT(
+      name != nullptr && IsValidMemberName(name),
+      Format(
+          "Field or property name \"%s\" in %s is not an identifier (ASCII letters, digits and "
+          "underscores, not starting with a digit)",
+          name ? name : "",
+          info._name));
   SR_ASSERT(!IsMemberNameUsed(info, name), kMemberNameUsedMessage);
   field->_name = name;
   field->_nameWithNamespace = name;

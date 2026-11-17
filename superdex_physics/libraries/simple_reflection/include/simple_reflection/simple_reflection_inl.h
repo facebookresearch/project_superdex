@@ -1109,13 +1109,25 @@ struct SReflectTypeTraits<picojson::value> {
 };
 
 /////////////////////////////////////////////////////////////////////////////
-// Properties (see SR_Property)
+// Member names
 /////////////////////////////////////////////////////////////////////////////
 
 namespace SReflect::detail {
 
+// Field, property, method and argument names are identifiers: ASCII letters, digits and
+// underscores, not starting with a digit.
+constexpr bool IsValidMemberName(std::string_view name) {
+  return !name.empty() && (name.front() < '0' || name.front() > '9') &&
+      name.find_first_not_of("_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") ==
+      std::string_view::npos;
+}
+
 // Implemented in the cpp because it asserts.
 void AddFieldInfo(StructTypeInfo& info, std::unique_ptr<FieldTypeInfo> field, char const* name);
+
+/////////////////////////////////////////////////////////////////////////////
+// Properties (see SR_Property)
+/////////////////////////////////////////////////////////////////////////////
 
 // The type returned by calling the getter on a const object, and the property's value type T.
 template <class MyStruct, class Getter>
@@ -1398,10 +1410,6 @@ constexpr std::string_view TrimMethodName(std::string_view s) {
   return s.substr(first, s.find_last_not_of(" \t\n\r") + 1 - first);
 }
 
-constexpr bool IsValidMethodNamePart(std::string_view s) {
-  return !s.empty() && s.find_first_of("/(),") == std::string_view::npos;
-}
-
 // Return part i of an SR_Method name like "name(a, b)", trimmed: the method name for i = 0, then
 // each argument name.
 constexpr std::string_view MethodNamePart(std::string_view nameWithArgs, int i) {
@@ -1429,7 +1437,7 @@ constexpr int CountMethodArgNames(std::string_view nameWithArgs) {
     count += c == ',' ? 1 : 0;
   }
   for (int i = 0; i <= count; ++i) {
-    if (!IsValidMethodNamePart(MethodNamePart(s, i))) {
+    if (!IsValidMemberName(MethodNamePart(s, i))) {
       return -1;
     }
     for (int j = 1; j < i; ++j) {
@@ -1602,8 +1610,8 @@ template <class MyStruct, int kNumArgNames, class F>
 void AddMethod(StructTypeInfo& info, char const* nameWithArgs, F fn) {
   static_assert(
       kNumArgNames >= 0,
-      "SR_Method name must look like \"name(arg1, arg2)\", with unique, non-empty names that do "
-      "not contain '/', '(', ')' or ','.");
+      "SR_Method name must look like \"name(arg1, arg2)\", where the names are unique identifiers: "
+      "ASCII letters, digits and underscores, not starting with a digit.");
   static_assert(
       kNumArgNames < 0 || IsStatelessAccessor<F>(),
       "SR_Method callable must not capture or hold state.");

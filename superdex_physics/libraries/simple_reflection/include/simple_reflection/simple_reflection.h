@@ -352,9 +352,9 @@ Goes between the SR_BeginStruct and SR_EndStruct macros. See examples (above).
 /**
 Adds a field (member variable) to the class or struct, but give it a name that is different
 from the actual class member. Example: SR_Field_Name(_myValue, "value")
-The name must not be empty, must not contain '/', which separates the parts of a path (see
-IssueReport), and must be unique across all fields, properties and methods, including those
-inherited via SR_BaseClass.
+The name must be an identifier: ASCII letters, digits and underscores, not starting with a digit. It
+must be unique across all fields, properties and methods, including those inherited via
+SR_BaseClass.
 */
 #define SR_Field_Name(member, name)               IMPL_SR_Field_Name(member, name)
 
@@ -414,8 +414,9 @@ constructible. Otherwise, binary loading returns false.
 
 Deserialization of writable properties is read-modify-write: the current value is read through the
 getter, the serialized data is applied on top, and the result is passed to the setter. A reference
-getter's value is deserialized in place. Names must be non-empty, must not contain '/', and must be
-unique across all fields, properties and methods, including those inherited via SR_BaseClass.
+getter's value is deserialized in place. Names must be identifiers (ASCII letters, digits and
+underscores, not starting with a digit) and must be unique across all fields, properties and
+methods, including those inherited via SR_BaseClass.
 
 Example:
   struct Angle;
@@ -469,9 +470,10 @@ callers that only have a TypeInfo can call only methods whose return and argumen
 constructible.
 
 Like property accessors, the callable must not capture anything or hold state. An exception thrown
-by the method propagates to the caller. Names must be non-empty, must not contain '/', '(', ')' or
-',', and must be unique across all fields, properties and methods, including those inherited via
-SR_BaseClass. Attributes after SR_Method describe the method.
+by the method propagates to the caller. The method and argument names must be identifiers (ASCII
+letters, digits and underscores, not starting with a digit). Method names must be unique across all
+fields, properties and methods, including those inherited via SR_BaseClass. Argument names must
+differ from each other. Attributes after SR_Method describe the method.
 
 Example (see also Example 4 at the top of this file):
   SR_Method("add(n)", &Counter::Add);

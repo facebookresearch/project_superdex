@@ -2109,12 +2109,23 @@ TEST(SReflect, VectorOfBoolIsReplacedAndInvalidElementsContinue) {
   EXPECT_EQ((std::vector<std::string>{"0", "2"}), Paths(issues));
 }
 
-TEST(SReflect, FieldNamesCannotContainPathSyntax) {
-  // Calls what SR_Field_Name does, on a StructTypeInfo that the test owns, so that nothing leaks.
+static_assert(SReflect::detail::IsValidMemberName("_value1"));
+static_assert(SReflect::detail::IsValidMemberName("snake_case"));
+
+TEST(SReflect, FieldNamesMustBeIdentifiers) {
+  // Calls what SR_Field_Name and SR_Property do, on a StructTypeInfo that the test owns, so that
+  // nothing leaks.
   std::unique_ptr<SReflect::StructTypeInfo> const info{
       SReflect::MakeStructTypeInfo<IssueInner>("SReflectTest::FieldNameValidation")};
+  for (char const* name : {"", "a/b", "a[0", "b]", "a b", "a-b", "a.b", "1a", "caf\xc3\xa9"}) {
+    EXPECT_THROW(
+        SReflect::detail::AddField(*info, name, 0, SReflect::GetTypeInfo<int32_t>()),
+        std::runtime_error)
+        << '"' << name << '"';
+  }
+  auto const getValue = [](IssueInner const& inner) { return inner.value; };
   EXPECT_THROW(
-      SReflect::detail::AddField(*info, "a/b", 0, SReflect::GetTypeInfo<int32_t>()),
+      SReflect::detail::AddProperty<IssueInner>(*info, "a b", getValue, nullptr),
       std::runtime_error);
 }
 
