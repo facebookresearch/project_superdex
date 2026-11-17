@@ -495,12 +495,16 @@ struct PhysicsDragSettings {
 // window, which is where the live feature list is known.
 struct PhysicsDebugSettings {
   bool enabled = false;
+  bool drawOnTop = true;
   std::unordered_map<std::string, bool> features{{"Actor Mesh", true}};
 
   MOCHI_STRUCT_BEGIN(superdex::studio::PhysicsDebugSettings)
   MOCHI_FIELD(enabled)
   MOCHI_ATTRIBUTE(DisplayName("Enable Debug Draw"));
   MOCHI_ATTRIBUTE(Description("Draw mochi's physics debug visualization while simulating."));
+  MOCHI_FIELD(drawOnTop)
+  MOCHI_ATTRIBUTE(DisplayName("Draw On Top"));
+  MOCHI_ATTRIBUTE(Description("Draw debug lines over the scene instead of hiding them behind it."));
   MOCHI_FIELD(features) MOCHI_ATTRIBUTE(HideFromEditor);
   MOCHI_STRUCT_END()
 };

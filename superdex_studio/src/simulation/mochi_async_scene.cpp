@@ -101,6 +101,8 @@ DebugDrawSettingsEdit ShowDebugDrawSettings(
     PhysicsDebugSettings& settings) {
   DebugDrawSettingsEdit edit;
   edit.masterToggled = ImGui::Checkbox("Enable Debug Draw", &settings.enabled);
+  edit.drawOnTopToggled = ImGui::Checkbox("Draw On Top", &settings.drawOnTop);
+  ImGui::ItemTooltipWrapped("Draw debug lines over the scene instead of hiding them behind it.");
   // Indent the feature rows to the checkbox's label so they read as its children rather than as a
   // differently-shaped control sitting next to it.
   float const featureIndent = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x;
@@ -475,7 +477,13 @@ void MochiAsyncScene::ApplySceneSettings() {
 void MochiAsyncScene::DrawDebug(
     DebugDraw* debugDraw,
     mochi::CoordinateSpaceConverter const& converter) {
-  if (IsSimulating() && _settings.debug.enabled) {
+  bool const drawing = IsSimulating() && _settings.debug.enabled;
+  // The depth test applies to every line in the viewport, so it is only turned on while the physics
+  // debug draw asks for it; the other debug lines stay on top.
+  if (debugDraw) {
+    debugDraw->EnableLineDepthTest(drawing && !_settings.debug.drawOnTop);
+  }
+  if (drawing) {
     if (!debugDraw) {
       return;
     }

@@ -72,10 +72,11 @@ bool IsDebugDrawFeatureEnabled(
 // What the user changed in a ShowDebugDrawSettings() call.
 struct DebugDrawSettingsEdit {
   bool masterToggled = false;
+  bool drawOnTopToggled = false;
   int toggledFeature = -1; //< index into GetMochiDebugDrawFeatures, or -1 if none
 
   bool AnyChange() const {
-    return masterToggled || toggledFeature >= 0;
+    return masterToggled || drawOnTopToggled || toggledFeature >= 0;
   }
 };
 

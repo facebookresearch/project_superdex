@@ -179,6 +179,7 @@ DebugDraw::DebugDraw(filament::Engine* engine, filament::Scene* scene)
       .material(0, _material->getDefaultInstance())
       .geometry(
           0, filament::RenderableManager::PrimitiveType::LINES, _vertexBuffer, _indexBuffer, 0, 0)
+      .channel(kOnTopChannel) // Lines start without the depth test; see EnableLineDepthTest.
       .culling(false)
       .receiveShadows(false)
       .castShadows(false)
@@ -999,6 +1000,12 @@ void DebugDraw::EnableLineDepthTest(bool enabled) {
   filament::MaterialInstance* mi = _material->getDefaultInstance();
   mi->setDepthCulling(enabled);
   mi->setDepthWrite(enabled); // Must also write depth when depth test is enabled
+  // Without the depth test, lines only stay on top if nothing is drawn after them. Opaque
+  // renderables within a channel are sorted by distance, so the lines would draw first (and be
+  // painted over) whenever the camera was closer to their bounds' center than to the scene
+  // geometry. The last channel draws after everything else.
+  auto& rcm = _engine->getRenderableManager();
+  rcm.setChannel(rcm.getInstance(_entity), enabled ? kDefaultChannel : kOnTopChannel);
 }
 
 void DebugDraw::Commit(std::optional<filament::math::float3> overlaySortViewPos) {

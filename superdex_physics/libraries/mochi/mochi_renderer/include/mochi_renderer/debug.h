@@ -218,6 +218,10 @@ class DebugDraw {
       filament::math::float3& outU,
       filament::math::float3& outV);
 
+  // Filament's default render channel, and its last one (channels are clamped to [0..7]).
+  static constexpr uint8_t kDefaultChannel = 2;
+  static constexpr uint8_t kOnTopChannel = 7;
+
   static constexpr uint32_t kInitialMaxVertices = 64 * 1024;
   static constexpr uint32_t kInitialMaxIndices = 64 * 1024;
 
