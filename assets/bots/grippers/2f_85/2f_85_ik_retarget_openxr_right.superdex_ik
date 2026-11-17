@@ -3,9 +3,9 @@
     "excludeCollisionShapes": true,
     "fixedBase": true,
     "solverParams": {
-      "absTol": 0.0099999997764825821,
+      "absTol": 0.10000000149011612,
       "lineSearchMaxIter": 10,
-      "maxElapsedTimeSeconds": 0.01,
+      "maxElapsedTimeSeconds": 0.002,
       "maxIter": 20,
       "positionErrorThres": 0.0099999997764825821,
       "relTol": 9.9999999392252903e-09,
