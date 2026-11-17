@@ -41,7 +41,7 @@ void USuperDexWristbandComponent::OnRegister() {
   if ((GetOwner() != nullptr) && !IsRunningCommandlet()) {
     if (NameTextRender == nullptr) {
       NameTextRender = CreateTextRenderComponent(WristbandToNameText);
-      NameTextRender->SetText(FText::FromString("Poseable Name"));
+      SetPoseableActorNameText(TEXT("Poseable Name"));
     }
     if (SourceTextRender == nullptr) {
       SourceTextRender = CreateTextRenderComponent(WristbandToSourceText);
@@ -75,6 +75,22 @@ UTextRenderComponent* USuperDexWristbandComponent::CreateTextRenderComponent(
   return OutTextRenderComponent;
 }
 
+void USuperDexWristbandComponent::SetPoseableActorNameText(const FString& Name) {
+  NameTextRender->SetText(FText::FromString(Name));
+
+  const FVector BaseScale = WristbandToNameText.GetScale3D();
+  double FitScale = 1.0;
+  if (bShortenPoseableActorName) {
+    // Text runs along local Y; GetTextLocalSize excludes the component transform's scale.
+    const double TextWidth = NameTextRender->GetTextLocalSize().Y * FMath::Abs(BaseScale.Y);
+    const double MaxWidth = FMath::Max(0.0, static_cast<double>(MaxPoseableActorNameWidth));
+    if (TextWidth > MaxWidth) {
+      FitScale = MaxWidth / TextWidth;
+    }
+  }
+  NameTextRender->SetRelativeScale3D(BaseScale * FitScale);
+}
+
 void USuperDexWristbandComponent::TickComponent(
     float DeltaTime,
     enum ELevelTick TickType,
@@ -100,7 +116,7 @@ void USuperDexWristbandComponent::TickComponent(
   }
   if (AncestorPoseableComponent != nullptr) {
     // we have a valid ancestor, set the text based on its pose source and the owning actor
-    NameTextRender->SetText(FText::FromString(GetOwner()->GetName()));
+    SetPoseableActorNameText(GetOwner()->GetName());
 
     FSuperDexPose Pose;
     bool bHavePose = AncestorPoseableComponent->GetPose(Pose);
@@ -111,7 +127,7 @@ void USuperDexWristbandComponent::TickComponent(
     // if we didn't find a USuperDexPoseableComponent ancestor, try the owner
     ASuperDexPoseableActor* OwnerPoseableActor = Cast<ASuperDexPoseableActor>(GetOwner());
     if (OwnerPoseableActor != nullptr) {
-      NameTextRender->SetText(FText::FromString(OwnerPoseableActor->GetName()));
+      SetPoseableActorNameText(OwnerPoseableActor->GetName());
 
       FSuperDexPose Pose;
       bool bHavePose = OwnerPoseableActor->GetPose(Pose);
@@ -120,7 +136,7 @@ void USuperDexWristbandComponent::TickComponent(
       }
     } else {
       // All the way up the chain there is not a poseable
-      NameTextRender->SetText(FText::FromString("No Poseable Ancestor"));
+      SetPoseableActorNameText(TEXT("No Poseable Ancestor"));
       SourceTextRender->SetText(FText::FromString("No Poseable Ancestor"));
     }
   }

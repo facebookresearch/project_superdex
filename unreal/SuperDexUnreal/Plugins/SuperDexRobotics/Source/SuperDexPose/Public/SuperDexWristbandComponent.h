@@ -35,6 +35,18 @@ class SUPERDEXPOSE_API USuperDexWristbandComponent : public UStaticMeshComponent
   UPROPERTY(BlueprintReadOnly, Category = "SuperDex")
   TObjectPtr<class UTextRenderComponent> SourceTextRender = nullptr;
 
+  /** Shrink the full poseable actor name uniformly to fit its maximum width. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
+  bool bShortenPoseableActorName = true;
+
+  /** Maximum name width in centimeters before the wristband component's own scale is applied. */
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      Category = "SuperDex",
+      meta = (Units = "cm", ClampMin = "0.0", EditCondition = "bShortenPoseableActorName"))
+  float MaxPoseableActorNameWidth = 8.0f;
+
   /** Relative transform from the wristband mesh root to poseable name text render component. */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SuperDex")
   FTransform WristbandToNameText;
@@ -59,6 +71,9 @@ class SUPERDEXPOSE_API USuperDexWristbandComponent : public UStaticMeshComponent
       FActorComponentTickFunction* ThisTickFunction) override;
 
  private:
+  /** Sets the full name and fits its text scale to the configured width. */
+  void SetPoseableActorNameText(const FString& Name);
+
   /** Creates a text render component, with given relative transform, and sets up default values. */
   UTextRenderComponent* CreateTextRenderComponent(FTransform RelativeTransform);
 };
