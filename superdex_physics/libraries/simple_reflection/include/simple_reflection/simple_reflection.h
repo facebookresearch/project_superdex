@@ -335,18 +335,36 @@ SR_BaseClass.
 /**
 Adds a property to the class or struct: a member reached through a getter and an optional setter.
   SR_Property("name", getter, setter)   // Read-write
-  SR_Property("name", getter)           // Read-only (automatically gets Attribute_ReadOnly)
+  SR_Property("name", getter)           // Read-only (automatically gets Attribute_ReadOnly),
+                                        // unless the getter returns T& (see Reference getter)
 
 Accessors can be member function pointers, lambdas or free functions, and the getter and setter can
 be of different kinds. Lambdas written inside SR_BeginClass can access private members.
 
-Getter: returns T or const T&, where T is a supported type. Either a const member function of the
-  class or one of its base classes, or a callable invoked as getter(obj) with obj as
-  `const MyStruct&`. If a member function name is overloaded, the const overload is selected.
+Getter: returns T or a reference to T, where T is a supported type. Every getter must be callable
+  on a const object, because reads such as serialization, validation and copying only have a const
+  object. Either a const member function of the class or one of its base classes, or a callable
+  invoked as getter(obj) with obj as `const MyStruct&`. A member function with no const overload is
+  rejected.
 Setter: returns void and takes T or const T&. Either a member function of the class or one of its
   base classes, or a callable invoked as setter(obj, value) with obj as `MyStruct&`. If a member
   function name is overloaded, the overload taking the getter's T is selected. A setter may adjust
-  the value it is given, or throw to reject it.
+  the value it is given, or throw to reject it. With a setter, the getter must return T or const T&
+  even on a non-const object, so that only the setter can change the value. An overloaded member
+  function getter name is fine, because only its const overload is selected when there is a setter.
+Reference getter: a property without a setter is writable if its getter, called on a non-const
+  object, returns a non-const reference T&. Writes go directly through that reference, so they
+  behave like writes to a field. Any of these work:
+  - A generic lambda taking `auto&`, which returns const T& or T& to match the object.
+  - A getter that returns T& even on a const object, such as through a reference or pointer member.
+  - A member function name overloaded as `T& Get()` and `T const& Get() const`. Reads call the const
+    overload and writes call the non-const one.
+  Const and non-const calls must have the same value type T, even if the property is read-only.
+  Neither call may return a pointer or T&&. A non-const member overload returning T by value keeps
+  the property read-only, including when its const overload returns T&.
+  The reference only needs to stay valid until the access that requested it returns, so the getter
+  can look the value up on every call:
+    SR_Property("transform", [](auto& actor) -> auto& { return actor.template Get<Transform>(); });
 
 A free function must be declared before the SR_Property line. Inside SR_BeginStruct, that means
 before the class, after a forward declaration of the class. An overloaded free function name must
@@ -369,9 +387,9 @@ read-only value into a temporary and discards it. This requires its value type T
 constructible. Otherwise, binary loading returns false.
 
 Deserialization of writable properties is read-modify-write: the current value is read through the
-getter, the serialized data is applied on top, and the result is passed to the setter. Names must be
-non-empty, must not contain '/', and must be unique across all fields and properties, including
-those inherited via SR_BaseClass.
+getter, the serialized data is applied on top, and the result is passed to the setter. A reference
+getter's value is deserialized in place. Names must be non-empty, must not contain '/', and must be
+unique across all fields and properties, including those inherited via SR_BaseClass.
 
 Example:
   struct Angle;
@@ -1187,8 +1205,8 @@ class FieldTypeInfo : public TypeInfo {
   uint8_t* GetFieldPtr(void* structBasePtr) const;
   uint8_t const* GetFieldPtr(void const* structBasePtr) const;
 
-  // True for properties that have no setter. Attribute_ReadOnly, which is an editor hint, does not
-  // affect it.
+  // True for properties that have no setter and no reference getter (see SR_Property).
+  // Attribute_ReadOnly, which is an editor hint, does not affect it.
   [[nodiscard]] virtual bool IsReadOnly() const = 0;
 
   // These functions let an exception thrown by a property's getter or setter propagate.
@@ -1208,9 +1226,10 @@ class FieldTypeInfo : public TypeInfo {
       const = 0;
 
   // Call cb with the address of a value it may modify. If cb returns true, write the value back:
-  // properties pass a copy of the getter's value and then pass the modified copy to the setter.
-  // Fields pass the member itself, so changes take effect immediately whatever cb returns. Return
-  // false without calling cb if read-only. Does not fire Attribute_OnChanged (SetValue does).
+  // properties with a setter pass a copy of the getter's value and then pass the modified copy to
+  // the setter. Fields and reference getters pass the value itself, so changes take effect
+  // immediately whatever cb returns. Return false without calling cb if read-only. Does not fire
+  // Attribute_OnChanged (SetValue does).
   virtual bool ModifyValue(void* obj, detail::FunctionRef<bool(void* value)> cb) const = 0;
 
   // TypeInfo overrides. These take the address of a value of type _innerTypeInfo.

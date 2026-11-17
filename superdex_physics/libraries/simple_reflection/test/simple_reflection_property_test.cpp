@@ -31,6 +31,7 @@ SR_WARNING_POP()
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace SReflectPropertyTest {
@@ -38,6 +39,7 @@ namespace SReflectPropertyTest {
 static constexpr double kPi = 3.14159265358979323846;
 
 static int g_strictChangedCount = 0;
+static int g_referenceChangedCount = 0;
 
 namespace {
 
@@ -84,10 +86,16 @@ struct Gadget : Base {
   float levelStorage = 0.5f;
   int32_t levelSetCount = 0;
   std::string nameStorage;
+  std::string nameRefStorage;
+  mutable int32_t nameRefReadCount = 0;
+  int32_t nameRefWriteCount = 0;
   double radians = 0.0;
   int32_t strictStorage = 0;
   InnerPair innerStorage{1, 9};
+  int32_t innerSetCount = 0;
   std::string payloadStorage;
+  std::vector<InnerPair> components{InnerPair{}};
+  mutable InnerPair cacheStorage;
   bool enabled = false;
 
   [[nodiscard]] float GetLevel() const {
@@ -109,6 +117,23 @@ struct Gadget : Base {
   }
   void SetName(std::string const& v) {
     nameStorage = v;
+  }
+
+  std::string const& GetReadOnlyName() const {
+    return nameStorage;
+  }
+
+  std::string const& GetNameRef() const noexcept {
+    ++nameRefReadCount;
+    return nameRefStorage;
+  }
+  std::string& GetNameRef() noexcept {
+    ++nameRefWriteCount;
+    return nameRefStorage;
+  }
+
+  InnerPair& GetCache() const {
+    return cacheStorage;
   }
 
   static double GetDegrees(Gadget const& g) {
@@ -150,7 +175,10 @@ struct Gadget : Base {
   SR_Property(
       "inner",
       [](auto const& g) -> auto const& { return g.innerStorage; },
-      [](auto& g, InnerPair const& v) { g.innerStorage = v; });
+      [](auto& g, InnerPair const& v) {
+        g.innerStorage = v;
+        ++g.innerSetCount;
+      });
   // By-value lambdas on a string that holds JSON
   SR_Property(
       "payload",
@@ -161,6 +189,15 @@ struct Gadget : Base {
   SR_Property("innerArray", ([](Gadget const& g) {
                 return std::array<int32_t, 2>{g.innerStorage.a, g.innerStorage.b};
               }));
+  // Writable without a setter: a generic lambda returning a reference it looks up on each call
+  SR_Property("component", [](auto& g) -> auto& { return g.components.front(); });
+  SRA_OnChanged([] { ++g_referenceChangedCount; });
+  // Writable without a setter: an overloaded member function, writing through the non-const one
+  SR_Property("nameRef", &Gadget::GetNameRef);
+  // Writable without a setter: a const member function returning a non-const reference
+  SR_Property("cache", &Gadget::GetCache);
+  // Read-only: a const member function returning a const reference
+  SR_Property("readOnlyName", &Gadget::GetReadOnlyName);
   SR_Field(enabled);
   SR_EndStruct();
 };
@@ -243,6 +280,29 @@ class CountingAllocator final : public SReflect::Allocator {
   }
 };
 
+struct ReferenceNoDefault {
+  NoDefault& external;
+
+  SR_BeginStruct(SReflectPropertyTest::ReferenceNoDefault);
+  SR_Property("value", [](auto& obj) -> auto& { return obj.external; });
+  SR_EndStruct()
+};
+
+struct ValueGetterPair {
+  mutable int32_t storage = 7;
+
+  int32_t& Get() const {
+    return storage;
+  }
+  int32_t Get() noexcept {
+    return storage;
+  }
+
+  SR_BeginStruct(SReflectPropertyTest::ValueGetterPair);
+  SR_Property("value", &ValueGetterPair::Get);
+  SR_EndStruct()
+};
+
 class PrivateAccessors {
   int32_t _a = 0;
 
@@ -284,10 +344,13 @@ static Gadget MakeGadget() {
   g.count = 3;
   g.levelStorage = 0.25f;
   g.nameStorage = "bob";
+  g.nameRefStorage = "carol";
   g.radians = 1.0;
   g.strictStorage = 2;
   g.innerStorage = InnerPair{5, 6};
   g.payloadStorage = R"({"k":1})";
+  g.components.front() = InnerPair{7, 8};
+  g.cacheStorage = InnerPair{3, 4};
   g.enabled = true;
   return g;
 }
@@ -297,11 +360,16 @@ static void ExpectWritableMembersEqual(Gadget const& expected, Gadget const& act
   EXPECT_EQ(expected.count, actual.count);
   EXPECT_EQ(expected.levelStorage, actual.levelStorage);
   EXPECT_EQ(expected.nameStorage, actual.nameStorage);
+  EXPECT_EQ(expected.nameRefStorage, actual.nameRefStorage);
   EXPECT_DOUBLE_EQ(expected.radians, actual.radians);
   EXPECT_EQ(expected.strictStorage, actual.strictStorage);
   EXPECT_EQ(expected.innerStorage.a, actual.innerStorage.a);
   EXPECT_EQ(expected.innerStorage.b, actual.innerStorage.b);
   EXPECT_EQ(expected.payloadStorage, actual.payloadStorage);
+  EXPECT_EQ(expected.components.front().a, actual.components.front().a);
+  EXPECT_EQ(expected.components.front().b, actual.components.front().b);
+  EXPECT_EQ(expected.cacheStorage.a, actual.cacheStorage.a);
+  EXPECT_EQ(expected.cacheStorage.b, actual.cacheStorage.b);
   EXPECT_EQ(expected.enabled, actual.enabled);
 }
 
@@ -321,6 +389,10 @@ TEST(SReflectProperty, Registration) {
       "inner",
       "payload",
       "innerArray",
+      "component",
+      "nameRef",
+      "cache",
+      "readOnlyName",
       "enabled"};
   EXPECT_EQ(expected, names);
 
@@ -334,6 +406,8 @@ TEST(SReflectProperty, Registration) {
   EXPECT_FALSE(Field("level").IsReadOnly());
   EXPECT_TRUE(Field("innerArray").IsReadOnly());
   EXPECT_TRUE(Field("innerArray").HasAttribute<SReflect::Attribute_ReadOnly>());
+  EXPECT_TRUE(Field("readOnlyName").IsReadOnly());
+  EXPECT_TRUE(Field("readOnlyName").HasAttribute<SReflect::Attribute_ReadOnly>());
   EXPECT_TRUE(Field("id").IsReadOnly());
   auto const& idAttributes = Field("id")._attributes;
   auto const isReadOnlyAttribute = [](auto const& attribute) {
@@ -373,6 +447,8 @@ TEST(SReflectProperty, Accessors) {
   Field("inner").VisitValue(&g, [&](void const* value) { visited = value; });
   EXPECT_EQ(&g.innerStorage, visited); // A getter returning const& is not copied
   Field("inner").VisitValue(&g, [&](void const* value) { return visited = value; }); // Ignored
+  Field("readOnlyName").VisitValue(&std::as_const(g), [&](void const* value) { visited = value; });
+  EXPECT_EQ(&g.nameStorage, visited);
 }
 
 TEST(SReflectProperty, ModifyValueWritesBackOnlyWhenTheCallbackReturnsTrue) {
@@ -391,6 +467,13 @@ TEST(SReflectProperty, ModifyValueWritesBackOnlyWhenTheCallbackReturnsTrue) {
   EXPECT_EQ(1, g.levelSetCount);
   EXPECT_EQ(0.75f, g.levelStorage);
 
+  EXPECT_TRUE(Field("inner").ModifyValue(&g, [](void* value) {
+    static_cast<InnerPair*>(value)->a = 5;
+    return false;
+  }));
+  EXPECT_EQ(1, g.innerStorage.a);
+  EXPECT_EQ(0, g.innerSetCount);
+
   // A field is modified in place, so there is nothing to write back
   EXPECT_TRUE(Field("count").ModifyValue(&g, [](void* value) {
     *static_cast<int32_t*>(value) = 5;
@@ -402,6 +485,77 @@ TEST(SReflectProperty, ModifyValueWritesBackOnlyWhenTheCallbackReturnsTrue) {
     ADD_FAILURE() << "Called the callback of a read-only property";
     return true;
   }));
+}
+
+TEST(SReflectProperty, ReferenceGettersWriteInPlace) {
+  Gadget g;
+  int const changedCountBefore = g_referenceChangedCount;
+  auto modifyInPlace = [&g](char const* name, auto& expected, auto const& replacement) {
+    using T = std::decay_t<decltype(expected)>;
+    EXPECT_FALSE(Field(name).IsReadOnly()) << name;
+    EXPECT_FALSE(Field(name).HasAttribute<SReflect::Attribute_ReadOnly>()) << name;
+    EXPECT_EQ(nullptr, Field(name).GetFieldPtr(&g)) << name;
+    EXPECT_TRUE(Field(name).ModifyValue(&g, [&](void* value) {
+      EXPECT_EQ(&expected, value) << name;
+      *static_cast<T*>(value) = replacement;
+      return false; // Ignored, because the value is modified in place
+    }));
+  };
+  modifyInPlace("component", g.components.front(), InnerPair{2, 3});
+  modifyInPlace("nameRef", g.nameRefStorage, "bob");
+  modifyInPlace("cache", g.cacheStorage, InnerPair{4, 5});
+  EXPECT_EQ(2, g.components.front().a);
+  EXPECT_EQ("bob", g.nameRefStorage);
+  EXPECT_EQ(4, g.cacheStorage.a);
+  EXPECT_EQ(changedCountBefore, g_referenceChangedCount);
+
+  g.components.reserve(g.components.capacity() + 1);
+
+  std::string const name = "alice";
+  EXPECT_TRUE(Field("nameRef").SetValue(&g, &name));
+  EXPECT_EQ("alice", g.nameRefStorage);
+  EXPECT_TRUE(g.nameStorage.empty());
+
+  InnerPair const pair{5, 6};
+  EXPECT_TRUE(Field("component").SetValue(&g, &pair));
+  EXPECT_EQ(6, g.components.front().b);
+  EXPECT_EQ(changedCountBefore + 1, g_referenceChangedCount);
+
+  EXPECT_TRUE(SReflect::FromJsonString(g, R"({"component": {"a": 1}})"));
+  EXPECT_EQ(1, g.components.front().a);
+  EXPECT_EQ(6, g.components.front().b);
+  EXPECT_EQ(changedCountBefore + 1, g_referenceChangedCount);
+}
+
+TEST(SReflectProperty, ReferenceGetterSelectsConstReadsAndNonConstWrites) {
+  Gadget g;
+  g.nameRefStorage = "bob";
+  std::string value;
+  Field("nameRef").GetValue(&std::as_const(g), &value);
+  EXPECT_EQ("bob", value);
+  EXPECT_EQ(1, g.nameRefReadCount);
+  EXPECT_EQ(0, g.nameRefWriteCount);
+
+  value = "alice";
+  EXPECT_TRUE(Field("nameRef").SetValue(&g, &value));
+  EXPECT_EQ("alice", g.nameRefStorage);
+  EXPECT_EQ(1, g.nameRefReadCount);
+  EXPECT_EQ(1, g.nameRefWriteCount);
+}
+
+TEST(SReflectProperty, ByValueNonConstGetterKeepsPropertyReadOnly) {
+  ValueGetterPair obj;
+  auto const* field = SReflect::GetTypeInfo<ValueGetterPair>().FindField("value");
+  ASSERT_NE(nullptr, field);
+  EXPECT_TRUE(field->IsReadOnly());
+  EXPECT_TRUE(field->HasAttribute<SReflect::Attribute_ReadOnly>());
+  int32_t const value = 9;
+  EXPECT_FALSE(field->SetValue(&obj, &value));
+  EXPECT_FALSE(field->ModifyValue(&obj, [](void*) {
+    ADD_FAILURE() << "Called the callback of a read-only property";
+    return true;
+  }));
+  EXPECT_EQ(7, obj.storage);
 }
 
 TEST(SReflectProperty, FailedSetsLeaveObjectUnchanged) {
@@ -449,6 +603,7 @@ TEST(SReflectProperty, JsonLoadIsReadModifyWrite) {
   EXPECT_TRUE(SReflect::FromJsonString(g, R"({"inner": {"a": 5}})"));
   EXPECT_EQ(5, g.innerStorage.a);
   EXPECT_EQ(9, g.innerStorage.b);
+  EXPECT_EQ(1, g.innerSetCount);
 }
 
 TEST(SReflectProperty, ThrowingSetterDuringLoadIsReportedAsAnIssue) {
@@ -533,12 +688,26 @@ TEST(SReflectProperty, NewReleasesMemoryWhenConstructionThrows) {
   EXPECT_EQ(allocator.allocations, allocator.deallocations);
 }
 
+TEST(SReflectProperty, ReferenceGetterLoadsBinaryWithoutDefaultConstructingItsValue) {
+  static_assert(!std::is_default_constructible_v<NoDefault>);
+  NoDefault source{9};
+  NoDefault destination{1};
+  ReferenceNoDefault const src{source};
+  ReferenceNoDefault dst{destination};
+  std::vector<uint8_t> const bytes = SReflect::ToBytes(src);
+  SReflect::SpanStreamReader reader{SReflect::Span<uint8_t const>{bytes}};
+  EXPECT_TRUE(SReflect::FromBytes(reader, dst));
+  EXPECT_FALSE(reader.HasUnreadBytes());
+  EXPECT_EQ(9, destination.value);
+}
+
 TEST(SReflectProperty, StructCopy) {
   Gadget const src = MakeGadget();
   Gadget dst;
   SReflect::GetTypeInfo<Gadget>().Set(&src, &dst);
   ExpectWritableMembersEqual(src, dst);
   EXPECT_EQ(1, dst.levelSetCount); // Copied through the setter
+  EXPECT_EQ(1, dst.innerSetCount);
   EXPECT_EQ(7, dst.idStorage); // Read-only properties are skipped
 }
 

@@ -1125,6 +1125,17 @@ template <class MyStruct, class Getter>
 using PropertyValueType =
     std::remove_cv_t<std::remove_reference_t<PropertyGetterReturn<MyStruct, Getter>>>;
 
+// True if calling the getter on a non-const object returns a non-const lvalue reference.
+template <class MyStruct, class Getter>
+constexpr bool GetterReturnsMutableReference() {
+  if constexpr (std::is_invocable_v<Getter const&, MyStruct&>) {
+    using R = std::invoke_result_t<Getter const&, MyStruct&>;
+    return std::is_lvalue_reference_v<R> && !std::is_const_v<std::remove_reference_t<R>>;
+  } else {
+    return false;
+  }
+}
+
 // Member function getters: only const member functions match, which resolves overloads like
 // T& Get() / T const& Get() const. Any other callable (e.g. a lambda) is passed through.
 template <class C, class R>
@@ -1138,6 +1149,30 @@ auto SelectGetter(R (C::*getter)() const noexcept) {
 template <class F, std::enable_if_t<!std::is_member_pointer_v<std::decay_t<F>>, int> = 0>
 std::decay_t<F> SelectGetter(F&& getter) {
   return std::forward<F>(getter);
+}
+
+// Selects the non-const member overload, whose return type determines writability. Called with 0,
+// so the int tag beats the long tag of the const fallbacks. Returns nullptr for anything else,
+// whose writes go through the getter itself.
+template <class C, class R>
+auto SelectMutableGetter(R (C::*getter)(), int /*tag*/) {
+  return getter;
+}
+template <class C, class R>
+auto SelectMutableGetter(R (C::*getter)() noexcept, int /*tag*/) {
+  return getter;
+}
+template <class C, class R>
+std::nullptr_t SelectMutableGetter(R (C::* /*getter*/)() const, long /*tag*/) {
+  return nullptr;
+}
+template <class C, class R>
+std::nullptr_t SelectMutableGetter(R (C::* /*getter*/)() const noexcept, long /*tag*/) {
+  return nullptr;
+}
+template <class F, std::enable_if_t<!std::is_member_pointer_v<std::decay_t<F>>, int> = 0>
+std::nullptr_t SelectMutableGetter(F&& /*getter*/, long /*tag*/) {
+  return nullptr;
 }
 
 // Member function setters: resolves an overloaded name to the overload taking T or const T&.
@@ -1191,22 +1226,33 @@ constexpr bool IsStatelessAccessor() {
 
 // Accessors are called through std::invoke, so a member function pointer and a callable taking the
 // object as its first argument behave the same.
-template <class MyStruct, class T, class Getter, class Setter>
+template <class MyStruct, class T, class Getter, class Setter, class MutableGetter>
 class PropertyTypeInfoImpl final : public FieldTypeInfo {
  public:
   static constexpr bool kHasSetter = !std::is_null_pointer_v<Setter>;
+  // The non-const member function overload selected by SelectMutableGetter, else the getter
+  using WriteGetter =
+      std::conditional_t<std::is_null_pointer_v<MutableGetter>, Getter, MutableGetter>;
+  // Without a setter, a getter returning T& on a non-const object is written through in place.
+  static constexpr bool kWritesThroughGetter =
+      !kHasSetter && GetterReturnsMutableReference<MyStruct, WriteGetter>();
 
-  PropertyTypeInfoImpl(Getter getter, Setter setter)
-      : _getter(std::move(getter)), _setter(std::move(setter)) {}
+  PropertyTypeInfoImpl(Getter getter, Setter setter, MutableGetter mutableGetter)
+      : _getter(std::move(getter)),
+        _setter(std::move(setter)),
+        _mutableGetter(std::move(mutableGetter)) {}
 
   [[nodiscard]] bool IsReadOnly() const override {
-    return !kHasSetter;
+    return !kHasSetter && !kWritesThroughGetter;
   }
 
   bool SetValue(void* obj, void const* srcValue) const override {
     if constexpr (kHasSetter) {
       std::invoke(_setter, *static_cast<MyStruct*>(obj), *static_cast<T const*>(srcValue));
       FireOnChanged();
+      return true;
+    } else if constexpr (kWritesThroughGetter) {
+      Set(srcValue, std::addressof(GetMutableValue(obj)));
       return true;
     } else {
       (void)obj;
@@ -1233,6 +1279,9 @@ class PropertyTypeInfoImpl final : public FieldTypeInfo {
         std::invoke(_setter, self, std::move(value));
       }
       return true;
+    } else if constexpr (kWritesThroughGetter) {
+      cb(std::addressof(GetMutableValue(obj)));
+      return true;
     } else {
       (void)obj;
       (void)cb;
@@ -1241,12 +1290,27 @@ class PropertyTypeInfoImpl final : public FieldTypeInfo {
   }
 
  private:
+  T& GetMutableValue(void* obj) const {
+    auto& self = *static_cast<MyStruct*>(obj);
+    if constexpr (std::is_null_pointer_v<MutableGetter>) {
+      return std::invoke(_getter, self);
+    } else {
+      return std::invoke(_mutableGetter, self);
+    }
+  }
+
   Getter _getter;
   Setter _setter;
+  MutableGetter _mutableGetter;
 };
 
-template <class MyStruct, class Getter, class Setter>
-void AddProperty(StructTypeInfo& info, char const* name, Getter getter, Setter setter) {
+template <class MyStruct, class Getter, class Setter, class MutableGetter = std::nullptr_t>
+void AddProperty(
+    StructTypeInfo& info,
+    char const* name,
+    Getter getter,
+    Setter setter,
+    MutableGetter mutableGetter = nullptr) {
   constexpr bool kGetterIsCallable = std::is_invocable_v<Getter const&, MyStruct const&>;
   static_assert(
       kGetterIsCallable,
@@ -1259,10 +1323,23 @@ void AddProperty(StructTypeInfo& info, char const* name, Getter getter, Setter s
     using T = PropertyValueType<MyStruct, Getter>;
     static_assert(!std::is_pointer_v<T>, "SR_Property getter must not return a pointer.");
     static_assert(
-        std::is_same_v<std::remove_cv_t<GetterReturn>, T> || std::is_same_v<GetterReturn, T const&>,
-        "SR_Property getter must return T or const T&, not a non-const reference.");
+        !std::is_rvalue_reference_v<GetterReturn>,
+        "SR_Property getter must return T or a reference to T, not T&&.");
     static_assert(IsSupportedType<T>(), "SR_Property value type is not supported.");
+    using Property = PropertyTypeInfoImpl<MyStruct, T, Getter, Setter, MutableGetter>;
+    if constexpr (std::is_invocable_v<typename Property::WriteGetter const&, MyStruct&>) {
+      using WriteReturn = std::invoke_result_t<typename Property::WriteGetter const&, MyStruct&>;
+      static_assert(
+          std::is_same_v<std::remove_cv_t<WriteReturn>, T> || std::is_same_v<WriteReturn, T&> ||
+              std::is_same_v<WriteReturn, T const&>,
+          "SR_Property getter must return T, T& or T const& with the same type for const and "
+          "non-const objects.");
+    }
     if constexpr (!std::is_null_pointer_v<Setter>) {
+      static_assert(
+          !GetterReturnsMutableReference<MyStruct, Getter>(),
+          "SR_Property getter must not return a non-const reference when there is a setter. Return "
+          "T or const T&, so that only the setter can change the value.");
       static_assert(
           IsStatelessAccessor<Setter>(),
           "SR_Property setter must not capture or hold state. Use constants inside the lambda "
@@ -1280,8 +1357,8 @@ void AddProperty(StructTypeInfo& info, char const* name, Getter getter, Setter s
       }
     }
 
-    auto property = std::make_unique<PropertyTypeInfoImpl<MyStruct, T, Getter, Setter>>(
-        std::move(getter), std::move(setter));
+    auto property =
+        std::make_unique<Property>(std::move(getter), std::move(setter), std::move(mutableGetter));
     property->_coreType = CoreType::CT_field;
     property->_isProperty = true;
     property->_innerTypeInfo = &GetTypeInfo<T>();
@@ -1438,15 +1515,19 @@ void AddProperty(StructTypeInfo& info, char const* name, Getter getter, Setter s
 #define IMPL_SR_PROPERTY_SELECT(A1, A2, NAME, ...) NAME
 #define IMPL_SR_Property(name, ...)                                                         \
   IMPL_SR_EXPAND(IMPL_SR_EXPAND(IMPL_SR_PROPERTY_SELECT(                                    \
-      __VA_ARGS__, IMPL_SR_Property_RW, IMPL_SR_Property_RO, unused))(name, __VA_ARGS__))
+      __VA_ARGS__, IMPL_SR_Property_GetSet, IMPL_SR_Property_Get, unused))(name, __VA_ARGS__))
 
-#define IMPL_SR_Property_RO(name, getter)                                                   \
+#define IMPL_SR_Property_Get(name, getter)                                                  \
   {                                                                                         \
     SReflect::detail::AddProperty<MyStruct>(                                                \
-        *myInfo, name, SReflect::detail::SelectGetter(getter), nullptr);                    \
+        *myInfo,                                                                            \
+        name,                                                                               \
+        SReflect::detail::SelectGetter(getter),                                             \
+        nullptr,                                                                            \
+        SReflect::detail::SelectMutableGetter(getter, 0));                                  \
   }
 
-#define IMPL_SR_Property_RW(name, getter, setter)                                           \
+#define IMPL_SR_Property_GetSet(name, getter, setter)                                       \
   {                                                                                         \
     auto srGetter = SReflect::detail::SelectGetter(getter);                                 \
     SReflect::detail::AddProperty<MyStruct>(                                                \
