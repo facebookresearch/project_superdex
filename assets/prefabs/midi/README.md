@@ -18,9 +18,9 @@ The keyboard has 22 white and 15 black keys (three octaves from C3 to C6), a pit
 ## Modifications and Processing
 
 - Manually authored the keyboard geometry in SolidWorks and assembled it in `cad/midi.SLDASM`. Each white key shape (C, D, E, F, G, A, B) is its own part, plus a full-width top C that ends the keyboard, and the black keys sit in the notches between them. Four rubber feet sit under the housing.
-- Exported one STEP interchange model per part.
-- Generated the collision models in Studio (`superdex_studio --process`) from the STEP models, rotated from the CAD's Y-up frame into SuperDex's Z-up frame.
-- Generated the render models from the SolidWorks tessellation of each part, with materials taken from the CAD appearances, then a near-black top panel and side inlays and polished metal wheels, joystick and knob. The four buttons share one shape and have one render model per color.
+- Exported one STEP interchange model per part. The housing, the main knob and the mod wheel have a `Collision` configuration, which their STEP models come from: it leaves out the housing's edge fillets and the knob's top fillet, which are for the render models only, and the mod wheel's knurling, too fine to matter for contact.
+- Generated the collision models in Studio (`superdex_studio --process`) from the STEP models, rotated from the CAD's Y-up frame into SuperDex's Z-up frame: remeshed to 10 mm edges for the keys, 12 mm for the housing and 6 mm for the other controls and the feet, about 33k triangles for the whole keyboard.
+- Generated the render models from the SolidWorks tessellation of each part, with materials taken from the CAD appearances, then a near-black top panel and side inlays with horizontal ribs (a normal map generated for this package, 4 mm pitch), the same black without ribs in the panel's wells and slider tracks and on the key bed, and brushed metal wheels, joystick and knob. The housing's render model has 1 mm fillets on its edges, and the main knob's a 0.75 mm fillet around its top. The four buttons share one shape and have one render model per color.
 - Assembled the articulation from the CAD layout. The part meshes keep the CAD layout (keys along X, players' side at -Y). The prefab turns the articulated actor 90 deg about Z and centers its footprint, so in the prefab frame the keyboard sits on the XY plane with Z up, the keys run along Y, and the players' side faces +X.
 
 ## Physics Tuning

@@ -24,14 +24,15 @@
       "method": "From Model Viewer",
       "modifier": "Source from CAD Model",
       "properties": {
-        "allowPartialFailure": true,
+        "allowPartialFailure": false,
         "angularDeflection": 0.25,
         "backend": "Isotropic",
         "combineTouchingSolids": true,
         "edgeSampling": "Uniform",
         "linearDeflection": 0.05,
-        "targetEdgeLength": 0,
-        "targetEdgeLengthFraction": 0.0088
+        "targetEdgeLength": 12.0,
+        "targetEdgeLengthFraction": 0.02,
+        "faceColorSizing": []
       }
     },
     {
@@ -40,17 +41,8 @@
       "method": "Make Manifold",
       "modifier": "Refine Mesh",
       "properties": {
+        "removeAlmostDegenerateFaces": true,
         "thenMakeWatertight": true
-      }
-    },
-    {
-      "collapsed": true,
-      "enabled": true,
-      "method": "Tangential Relaxation (Smoothing)",
-      "modifier": "Refine Mesh",
-      "properties": {
-        "angleSmoothingIterations": 0,
-        "tangentialRelaxationIterations": 3
       }
     },
     {
@@ -59,6 +51,8 @@
       "method": "SDF",
       "modifier": "Export Mochi Model",
       "properties": {
+        "bakeSdf": true,
+        "exportPath": "../collision/midi_housing.mochi.h5",
         "sdf": {
           "boundaryPaddingDist": 0.005,
           "minGridResolution": [
@@ -67,11 +61,11 @@
             6
           ],
           "resolutionDelta": [
-            0.75,
-            0.75,
-            0.75
+            0.00476,
+            0.00476,
+            0.00476
           ],
-          "resolutionMode": "MeanEdge"
+          "resolutionMode": "Explicit"
         }
       }
     }
