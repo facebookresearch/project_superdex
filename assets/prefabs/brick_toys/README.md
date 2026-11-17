@@ -10,7 +10,8 @@ This package contains a Meta-owned 2x2 large interlocking brick toy prefab for u
 - Exported the collision model as a STEP interchange model.
 - Generated GLB render geometry from the source CAD (`large_brick_toy_2x2_render.glb` and `large_brick_toy_2x2_exact_tolerance.glb`).
 - Generated SDF collision geometry for SuperDex Physics in Studio (`intermediates/large_brick_toy_2x2_collision.StudioProcessing.json`).
-- Assembled the asset with contact settings as `large_brick_toy_2x2.mochi_prefab`.
+- Assembled the asset with contact settings and a 6.5 g mass as `large_brick_toy_2x2.mochi_prefab`.
+- Added red, green, blue, yellow, white, black, teal and orange variants (`large_brick_toy_2x2_<color>.superdex_prefab`), whose render models differ only in base color; `brick_toys.mochi_prefab` shows them as four connected pairs in a 2 x 2 grid.
 
 ## Physics Tuning
 

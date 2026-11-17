@@ -1,0 +1,25 @@
+{
+  "actors": {
+    "rigid": [
+      {
+        "contact": {
+          "coulombFrictionCoefficient": 0.699999988079071,
+          "maxAlignmentNormals": 0.20000000298023224,
+          "penaltyCoefficient": 999999995904,
+          "penaltyThresholdDefault": 0.0012000000569969416,
+          "penaltyThresholdExtraPadding": 0.0010000000474974513
+        },
+        "name": "large_brick_toy_2x2",
+        "renderModel": "./render/large_brick_toy_2x2_render_black.glb",
+        "renderModelRotation": [
+          0.7071067690849304,
+          0,
+          0,
+          0.7071067690849304
+        ],
+        "shape": "./collision/large_brick_toy_2x2_collision.mochi.h5",
+        "mass": 0.0065
+      }
+    ]
+  }
+}

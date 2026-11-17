@@ -1,39 +1,76 @@
 {
+  "_comment": "The 2x2 brick in each color: four connected pairs in a 2 x 2 grid centered on the origin, red on blue, yellow on green, white on black and teal on orange.",
   "prefabs": [
     {
-      "name": "brick_0",
-      "path": "./large_brick_toy_2x2.mochi_prefab",
+      "name": "blue",
+      "path": "./large_brick_toy_2x2_blue.superdex_prefab",
       "translation": [
-        -0.042000006884336472,
-        -0.040000021457672119,
+        -0.0384,
+        0.0066,
         0
       ]
     },
     {
-      "name": "brick_1",
-      "path": "./large_brick_toy_2x2.mochi_prefab",
+      "name": "red",
+      "path": "./large_brick_toy_2x2_red.superdex_prefab",
       "translation": [
-        -0.042000006884336472,
-        -0.040000021457672119,
-        0.018999999389052391
+        -0.0384,
+        0.0066,
+        0.01914
       ]
     },
     {
-      "name": "brick_2",
-      "path": "./large_brick_toy_2x2.mochi_prefab",
+      "name": "green",
+      "path": "./large_brick_toy_2x2_green.superdex_prefab",
       "translation": [
-        -0.042000006884336472,
-        0.0099999755620956421,
+        0.0066,
+        0.0066,
         0
       ]
     },
     {
-      "name": "brick_3",
-      "path": "./large_brick_toy_2x2.mochi_prefab",
+      "name": "yellow",
+      "path": "./large_brick_toy_2x2_yellow.superdex_prefab",
       "translation": [
-        0.0079999938607215881,
-        -0.015000000596046448,
+        0.0066,
+        0.0066,
+        0.01914
+      ]
+    },
+    {
+      "name": "black",
+      "path": "./large_brick_toy_2x2_black.superdex_prefab",
+      "translation": [
+        -0.0384,
+        -0.0384,
         0
+      ]
+    },
+    {
+      "name": "white",
+      "path": "./large_brick_toy_2x2_white.superdex_prefab",
+      "translation": [
+        -0.0384,
+        -0.0384,
+        0.01914
+      ]
+    },
+    {
+      "name": "orange",
+      "path": "./large_brick_toy_2x2_orange.superdex_prefab",
+      "translation": [
+        0.0066,
+        -0.0384,
+        0
+      ]
+    },
+    {
+      "name": "teal",
+      "path": "./large_brick_toy_2x2_teal.superdex_prefab",
+      "translation": [
+        0.0066,
+        -0.0384,
+        0.01914
       ]
     }
   ]
