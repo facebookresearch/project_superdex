@@ -133,7 +133,7 @@ class Viewport {
   Viewport(Viewport&&) = delete;
   Viewport& operator=(Viewport&&) = delete;
   ~Viewport();
-  // Render Scene
+  // The scene this viewport renders, created with the viewport. Never null.
   mochi_renderer::Scene* GetRenderScene() const;
   void RenderScene(Renderer const* renderer);
   // World-anchored debug labels for this viewport. Submit alongside the debug geometry in
@@ -175,6 +175,9 @@ class Viewport {
   // drives the see-through overlay pass from it. Null for viewports without a stage (no highlight).
   void SetSceneStage(SceneStage* stage) {
     _stage = stage;
+  }
+  SceneStage* GetSceneStage() const {
+    return _stage;
   }
   // Whether the scene's display mode shows `object`. Unlike SceneObject::IsVisible, this stays true
   // while a selection or hover highlight hides the object behind its tinted stand-in.
@@ -249,6 +252,9 @@ class Viewport {
   // Valid after ShowViewportContents.
   float GetBottomRightOverlayHeight() const {
     return _bottomRightOverlayHeight;
+  }
+  std::vector<ShowCommand> const& GetShowCommands() const {
+    return _showCommands;
   }
   // The viewport's Measure tool (never null). Every viewport has one and registers its Ctrl+M
   // toggle; editors give it geometry to pick via MeasureTool::SetTargetProvider.

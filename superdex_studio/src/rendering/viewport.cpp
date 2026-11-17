@@ -784,6 +784,8 @@ void Viewport::FocusCameraOnSceneObjects(
       filament::math::float3 const center = (boundsMin + boundsMax) * 0.5f;
       float const radius = length(boundsMax - boundsMin) * 0.5f;
       focused = _renderScene->GetCameraFocusOnSphere(center, radius, from, to);
+      filament::math::float3 const halfExtent = (boundsMax - boundsMin) * 0.5f;
+      orthoHeight = 2.4f * std::max({halfExtent.x, halfExtent.y, halfExtent.z});
     }
   }
   if (!focused && !_renderScene->GetCameraFocusOnAllSceneObjects(from, to, orthoHeight)) {
