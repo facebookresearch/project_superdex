@@ -34,6 +34,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace mochi {
@@ -115,6 +116,12 @@ struct StagedActor {
   // shape's model file, offset and scale. Created the first time StageType::SdfFallbackToMochiModel
   // finds the surface built, then kept like the other two. Never set for deforming actors.
   Instance sdf;
+  // Hidden from the viewport by the user, whatever the StageType shows (see
+  // SceneStage::SetActorHidden).
+  bool hidden = false;
+  // Which representations the last staging asked to show, before `hidden` applies.
+  bool renderWanted = false;
+  bool shapeWanted = false;
   // The currently-visible (selectable) representation's object -- aliases `render.sceneObject`,
   // `shape.sceneObject` or `sdf.sceneObject` (null if none is shown). Selection/picking treat a
   // link as one object, so callers use this.
@@ -430,6 +437,14 @@ struct SceneStage {
   // Get a staged actor by name. Returns null if not found.
   StagedActor const* FindActorByName(std::string_view name) const;
 
+  // Hides or shows staged actor `index` in every representation, on top of what the StageType
+  // shows. Remembered by name, so restaging keeps it hidden. No-op for out-of-range indices.
+  void SetActorHidden(int index, bool hidden);
+  // Shows every actor SetActorHidden hid.
+  void ShowAllActors();
+  // How many staged actors SetActorHidden hid.
+  [[nodiscard]] int GetNumHiddenActors() const;
+
   // Get a staged actor's index by associated SceneObject*. Returns -1 if not found. Matches either
   // representation, so a pick/selection on either the render or shape instance resolves to the
   // link.
@@ -503,6 +518,8 @@ struct SceneStage {
   mochi::Scene* _scene = nullptr;
   StagedActors _actors;
   std::unordered_map<std::string, int> _nameToIndex;
+  // Names of the actors SetActorHidden hid.
+  std::unordered_set<std::string> _hiddenNames;
   mochi_renderer::Scene* _renderScene = nullptr;
   // Whether any highlight clone was shown by the last UpdateHighlights (see HasActiveHighlights).
   bool _hasActiveHighlights = false;

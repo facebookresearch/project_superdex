@@ -244,6 +244,12 @@ class Viewport {
   // the error color. The on/off state and the color are persisted (ViewportStatsSettings).
   // @p provider runs each frame the overlay shows.
   void SetStatsProvider(std::function<StatsText()> provider);
+  // How far up from the bottom edge the viewport's own bottom-right overlay (the hidden-actors
+  // button) reaches this frame, or 0 without one, so an editor's corner status can sit above it.
+  // Valid after ShowViewportContents.
+  float GetBottomRightOverlayHeight() const {
+    return _bottomRightOverlayHeight;
+  }
   // The viewport's Measure tool (never null). Every viewport has one and registers its Ctrl+M
   // toggle; editors give it geometry to pick via MeasureTool::SetTargetProvider.
   MeasureTool* GetMeasureTool() const {
@@ -273,6 +279,12 @@ class Viewport {
   // Draws the Stats overlay rows with their top-left corner at @p pos.
   void ShowStatsText(ImVec2 pos) const;
   void HandleShowCommandShortcuts();
+  // Hides the actors that are selected, or with @p selected false every other actor. No-op without
+  // a selection.
+  void HideActors(bool selected);
+  // While any actor is hidden, a button in the bottom-right corner that counts them and shows them
+  // all again.
+  void ShowHiddenBadge();
   // Feeds the Measure tool the cursor ray for this frame (hover preview, and a pick on click), and
   // switches the tool off if the editor has withdrawn it. Called every frame the viewport is drawn.
   // @p renderHeight is the framebuffer height, needed for the bottom-origin pixel convention
@@ -348,6 +360,8 @@ class Viewport {
   // and drawn at the scene's lowest point. Its appearance is app-wide -- see
   // AppSettings::viewport::groundGrid.
   bool _showGroundGrid = true;
+  // See GetBottomRightOverlayHeight.
+  float _bottomRightOverlayHeight = 0.0f;
   float _groundPlaneHeight = 0.0f;
 
   // --- Scene-object drag state (left-drag) ---

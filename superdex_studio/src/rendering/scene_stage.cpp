@@ -158,6 +158,10 @@ static void ComputeStageVisibility(
 }
 
 static void ApplyStageVisibility(StagedActor& actor, bool renderVisible, bool shapeVisible) {
+  actor.renderWanted = renderVisible;
+  actor.shapeWanted = shapeVisible;
+  renderVisible = renderVisible && !actor.hidden;
+  shapeVisible = shapeVisible && !actor.hidden;
   actor.render.visible = renderVisible;
   actor.shape.visible = shapeVisible;
   actor.sdf.visible = false;
@@ -1503,6 +1507,7 @@ bool SceneStage::ApplyStageRequests(
     // a toggle. This is the base's baseline visibility; UpdateHighlights overrides it to hide a
     // base while its highlight clone stands in. The selectable object aliases whichever
     // representation is visible (render preferred).
+    actor.hidden = _hiddenNames.contains(actor.name);
     ApplyStageVisibility(actor, req.renderVisible, req.shapeVisible);
     ApplySdfVisibility(actor);
 
@@ -1663,6 +1668,40 @@ void SceneStage::SetRepresentationMode(StageType stageType) {
     }
   }
   BuildMissingSdfSurfaces();
+}
+
+void SceneStage::SetActorHidden(int index, bool hidden) {
+  if (index < 0 || index >= isize(_actors)) {
+    return;
+  }
+  StagedActor& actor = _actors[index];
+  if (hidden) {
+    _hiddenNames.insert(actor.name);
+  } else {
+    _hiddenNames.erase(actor.name);
+  }
+  actor.hidden = hidden;
+  ApplyStageVisibility(actor, actor.renderWanted, actor.shapeWanted);
+  ApplySdfVisibility(actor);
+  // An SDF surface created just now has not been placed yet.
+  if (actor.sdf.sceneObject != nullptr) {
+    SetStagedActorWorldTransform(
+        actor, actor.worldTransform, _studio->GetEditorToRendererSpaceConverter());
+  }
+}
+
+int SceneStage::GetNumHiddenActors() const {
+  return static_cast<int>(
+      std::ranges::count_if(_actors, [](StagedActor const& actor) { return actor.hidden; }));
+}
+
+void SceneStage::ShowAllActors() {
+  for (int i = 0; i < isize(_actors); ++i) {
+    if (_actors[i].hidden) {
+      SetActorHidden(i, false);
+    }
+  }
+  _hiddenNames.clear();
 }
 
 void SceneStage::Clear() {

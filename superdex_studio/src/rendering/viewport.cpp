@@ -992,6 +992,16 @@ void Viewport::ShowViewportContents(bool showCameraOrientationGizmo) {
                   static_cast<float>(forwardRender.z)});
       FocusCameraOnSelectedSceneObject(mochi::Real3{dirEditor[0], dirEditor[1], dirEditor[2]});
     }
+    // H hides the selection, Shift+H everything else, Alt+H shows everything again.
+    if (_stage != nullptr) {
+      if (ImGui::IsKeyChordPressed(ImGuiKey_H)) {
+        HideActors(/*selected=*/true);
+      } else if (ImGui::IsKeyChordPressed(ImGuiMod_Shift | ImGuiKey_H)) {
+        HideActors(/*selected=*/false);
+      } else if (ImGui::IsKeyChordPressed(ImGuiMod_Alt | ImGuiKey_H)) {
+        _stage->ShowAllActors();
+      }
+    }
     HandleShowCommandShortcuts();
   }
 
@@ -1176,8 +1186,10 @@ void Viewport::ShowViewportContents(bool showCameraOrientationGizmo) {
     _studio->GetAppSettings().viewport.camera.flySpeed = _cameraController->GetMoveSpeed();
   }
 
-  // Draw the top-left "Show" dropdown last so it overlays the scene image and gizmos.
+  // Draw the top-left "Show" dropdown and the hidden-actors badge last so they overlay the scene
+  // image and gizmos.
   ShowShowMenu();
+  ShowHiddenBadge();
 }
 
 void Viewport::ShowStatsOverlay(
@@ -1949,6 +1961,53 @@ void Viewport::ShowStatsText(ImVec2 pos) const {
     pos.y += lineHeight;
   }
   ImGui::PopFont();
+}
+
+void Viewport::HideActors(bool selected) {
+  std::set<int> selectedActors;
+  for (SceneObject const* object : _selectedObjects) {
+    if (int const index = _stage->GetSceneObjectIndex(object); index >= 0) {
+      selectedActors.insert(index);
+    }
+  }
+  if (selectedActors.empty()) {
+    return;
+  }
+  for (int i = 0; i < _stage->GetNumActors(); ++i) {
+    if (selectedActors.contains(i) == selected) {
+      _stage->SetActorHidden(i, true);
+    }
+  }
+  if (selected) {
+    SetSelectedSceneObjects({});
+  }
+}
+
+void Viewport::ShowHiddenBadge() {
+  _bottomRightOverlayHeight = 0.0f;
+  if (_stage == nullptr) {
+    return;
+  }
+  SceneStage& stage = *_stage;
+  int const numHidden = stage.GetNumHiddenActors();
+  if (numHidden == 0) {
+    return;
+  }
+  std::string const label = ICON_FA_EYE_SLASH " " + std::to_string(numHidden) + " hidden";
+  ImVec2 const framePadding = ImGui::GetStyle().FramePadding;
+  ImVec2 const textSize = ImGui::CalcTextSize(label.c_str());
+  ImVec2 const windowPos = ImGui::GetWindowPos();
+  ImVec2 const windowSize = ImGui::GetWindowSize();
+  ImGui::SetCursorScreenPos(
+      {windowPos.x + windowSize.x - kButtonPadding - textSize.x - 2.0f * framePadding.x,
+       windowPos.y + windowSize.y - kButtonPadding - textSize.y - 2.0f * framePadding.y});
+  ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 100.0f); // ImGui will clamp this
+  if (ImGui::Button(label.c_str())) {
+    stage.ShowAllActors();
+  }
+  ImGui::PopStyleVar();
+  ImGui::SetItemTooltip("Show all (Alt+H)");
+  _bottomRightOverlayHeight = kButtonPadding + textSize.y + 2.0f * framePadding.y;
 }
 
 void Viewport::HandleShowCommandShortcuts() {

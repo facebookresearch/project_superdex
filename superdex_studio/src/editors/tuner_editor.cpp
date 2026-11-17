@@ -667,7 +667,8 @@ void TunerEditor::ShowTabContents() {
   ImGui::EndDisabled();
   ShowStopBanner();
   if (_placingLoad >= 0 || IsRecording()) {
-    // Bottom-right, clear of the stats overlay in the bottom-left corner.
+    // Bottom-right, clear of the stats overlay in the bottom-left corner and above the viewport's
+    // hidden-actors button.
     std::string status;
     if (IsRecording()) {
       status = "REC";
@@ -678,8 +679,9 @@ void TunerEditor::ShowTabContents() {
     }
     constexpr float kMargin = 12.0f;
     ImVec2 const size = ImGui::CalcTextSize(status.c_str());
+    float const bottom = _viewport->GetBottomRightOverlayHeight() + kMargin;
     ImVec2 const pos{
-        ImGui::GetWindowWidth() - size.x - kMargin, ImGui::GetWindowHeight() - size.y - kMargin};
+        ImGui::GetWindowWidth() - size.x - kMargin, ImGui::GetWindowHeight() - size.y - bottom};
     ImVec2 const screen{ImGui::GetWindowPos().x + pos.x, ImGui::GetWindowPos().y + pos.y};
     ImVec2 const pad = ImGui::GetStyle().FramePadding;
     ImGui::GetWindowDrawList()->AddRectFilled(
