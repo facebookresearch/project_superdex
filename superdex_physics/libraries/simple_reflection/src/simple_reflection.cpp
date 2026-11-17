@@ -18,6 +18,8 @@
 
 #if SIMPLE_REFLECTION_ENABLE
 
+#include "simple_reflection_utils.h"
+
 #include <cityhash/city.h> // CityHash by Google (third-party)
 
 SR_WARNING_PUSH()
@@ -32,7 +34,6 @@ SR_WARNING_POP()
 #include <cstdio>
 #include <exception>
 #include <fstream>
-#include <iostream>
 #include <iterator>
 #include <stdexcept>
 #include <string_view>
@@ -73,6 +74,8 @@ SR_EndStructDefinitionEx();
 
 namespace SReflect {
 
+using detail::Format;
+
 // Maximum allowed length for a type name
 static constexpr size_t kMaxTypeNameLen = 256;
 
@@ -80,9 +83,7 @@ static constexpr size_t kMaxTypeNameLen = 256;
 // Debugging
 /////////////////////////////////////////////////////////////////////////////
 
-// Helper function to format a string. Not static because SR_LOG might compile out.
-namespace {
-std::string Format(const char* format, ...) {
+std::string detail::Format(const char* format, ...) {
   va_list args1, args2;
   va_start(args1, format);
   va_copy(args2, args1);
@@ -96,7 +97,6 @@ std::string Format(const char* format, ...) {
   va_end(args1);
   return str;
 }
-} // namespace
 
 // Asserts are enabled by default
 #ifndef SR_ASSERT_ENABLE
@@ -110,19 +110,6 @@ std::string Format(const char* format, ...) {
   }
 #else
 #define SR_ASSERT(condition, message)
-#endif
-
-// Logging is enabled by default
-#ifndef SR_LOG_ENABLE
-#define SR_LOG_ENABLE 1
-#endif
-#if SR_LOG_ENABLE
-// Log using std::cout because it is easier to intercept/redirect if people want to do that.
-// Every line ends with std::endl, which causes a flush which is considered to be appropriate
-// because this macro is generally used for errors/warnings which should appear immediately.
-#define SR_LOG(...) std::cout << "[Simple Reflection] " << Format(__VA_ARGS__) << std::endl;
-#else
-#define SR_LOG(...)
 #endif
 
 /////////////////////////////////////////////////////////////////////////////

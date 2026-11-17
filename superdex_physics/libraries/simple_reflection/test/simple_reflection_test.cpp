@@ -41,6 +41,9 @@ SR_WARNING_POP()
 #include <unordered_map>
 #include <vector>
 
+// Ignore warnings about semicolon after SR_EndStruct()
+SR_WARNING_IGNORE_CLANG(clang diagnostic ignored "-Wextra-semi")
+
 struct SReflectTest_GlobalStruct {
   SR_BeginStruct(SReflectTest_GlobalStruct);
   SR_EndStruct();

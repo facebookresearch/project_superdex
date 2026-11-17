@@ -50,11 +50,13 @@ target_sources(simple_reflection
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/simple_reflection.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/simple_reflection_console.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/simple_reflection_utils.h
     PUBLIC FILE_SET HEADERS
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include/
     FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/include/simple_reflection/simple_reflection.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/simple_reflection/simple_reflection_console.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/simple_reflection/simple_reflection_console_inl.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/simple_reflection/simple_reflection_inl.h
 )
 

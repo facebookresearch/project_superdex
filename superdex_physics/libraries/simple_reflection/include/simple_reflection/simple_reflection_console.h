@@ -22,27 +22,65 @@
 
 #include <string>
 #include <string_view>
-#include <vector>
 
 namespace SReflect {
 
 /**
-Split a command line into tokens:
+Execute a console command on a reflected object. Commands have the form: <path> [args...]
+The path names a member, using '/' to reach nested values. Arguments supply a value to set or
+method parameters. Whitespace separates tokens. Quotes group text, and JSON arrays and objects
+stay together.
 
-- Whitespace separates tokens. Quotes group text and are removed. Text in single quotes is
-  literal. Double quotes resolve backslash escapes. Backslashes outside quotes are literal.
-- Tokens starting with '[' or '{' keep bracketed text intact, including nested groups,
-  whitespace and quotes. Brackets inside strings in double quotes and mismatched closing brackets
-  are literal. Text after the group stays in the token until whitespace.
-- Unclosed quotes consume the remaining input. Unclosed groups get a closing double quote
-  if needed, followed by missing closing brackets. Other JSON errors are left to the caller.
+Examples:
+  count                           Read the "count" field
+  parts/2/mass                    Read the "mass" field of index 2 of the "parts" array.
+  parts/2/mass 3.5                Set that field
+  parts/2 {"label": "wheel"}      Update a struct, keeping other members
+  parts/2/add 1.5 "front wheel"   Call a method with two arguments
+  parts/2/clear                   Call a method with no arguments
 
-Clear outError on success. Unsupported escapes inside double quotes set outError.
+Path resolution:
+  - obj must be a class or struct described by typeInfo.
+  - Paths follow detail::SplitConsolePath syntax, traversing optionals and variants through their
+    contained values.
+  - Methods must be last.
+
+Argument resolution:
+  - A value takes no arguments to read or one to set.
+  - A method takes one argument per parameter.
+  - Strings and enums take literal argument text.
+  - Other arguments must be one complete JSON value.
+  - If any part of the path is read-only, then the command is read-only.
+  - If the path contains a property with a getter/setter pair, then it executes on a temporary
+    variable. It then calls the setter if the command was a set or non-const call.
+  - If a setter or method throws an exception, ConsoleExecute returns an error string. Partial
+    modification is possible in this case, depending on the method internals.
+
+Outputs:
+  - Returns true on success. Empty or whitespace-only commands fail.
+  - On failure, outError receives the error description if non-null. Else, the error is logged.
+  - If non-null, outString receives the value read, the value read back after a set, or a method's
+    return value as pretty JSON. Empty for void methods.
+  - Readback is skipped if outString is null. Otherwise it happens after enclosing setters run.
+    A readback failure reports an error without undoing the set.
 */
-[[nodiscard]] std::vector<std::string> ConsoleTokenize(
-    std::string_view input,
-    std::string& outError);
+bool ConsoleExecute(
+    void* obj,
+    TypeInfo const& typeInfo,
+    std::string_view command,
+    std::string* outString = nullptr,
+    std::string* outError = nullptr);
+
+// Uses GetFinalTypeInfo(*obj)
+template <typename T>
+bool ConsoleExecute(
+    T* obj,
+    std::string_view command,
+    std::string* outString = nullptr,
+    std::string* outError = nullptr);
 
 } // namespace SReflect
+
+#include "simple_reflection_console_inl.h"
 
 #endif // SIMPLE_REFLECTION_ENABLE
