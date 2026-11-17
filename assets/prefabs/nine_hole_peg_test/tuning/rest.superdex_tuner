@@ -1,0 +1,55 @@
+{
+  "comment": "Let the prefab sit for 2 s with no loads. Every peg starts seated on the floor of its hole and centered on its axis, so none should move: its position should stay within about 0.01 mm of where it started and it should not tilt. The board is free, resting on a ground plane (0.68 kg).",
+  "assetsRoot": "",
+  "prefab": "./../nine_hole_peg_test.mochi_prefab",
+  "prefabOverrides": [],
+  "loads": [],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "peg_5/peg"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "peg_1/peg"
+    },
+    {
+      "kind": "Penetration",
+      "target": "peg_5/peg"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "board"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 2.0,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    },
+    "groundHeight": -0.00031
+  },
+  "plots": [
+    {
+      "channels": [
+        "peg_5/peg.pos.z",
+        "peg_1/peg.pos.z"
+      ],
+      "height": 160
+    }
+  ]
+}

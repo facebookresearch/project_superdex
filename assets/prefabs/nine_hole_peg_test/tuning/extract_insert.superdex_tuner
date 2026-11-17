@@ -1,0 +1,210 @@
+{
+  "comment": "Pull the center peg straight up by its top until its bottom clears the board by 10 mm, bring it back over its hole, its bottom 0.34 mm off the hole's axis and tilted 3 degrees, then push it back in by its top (free to turn about the push point, 25-30 mm/s) and let go. Pulling out should take little more than the peg's weight (no wall drag on a centered peg), pushing in should take a light touch (the hand load's force), and the peg should end on the floor of its hole. The board is free, resting on a ground plane (0.68 kg).",
+  "assetsRoot": "",
+  "prefab": "./../nine_hole_peg_test.mochi_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "hand",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "peg_5/peg",
+      "frame": "World",
+      "pointLocal": [
+        0,
+        0,
+        0.04018
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0.0,
+            0.0,
+            0.05798
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Step",
+          "drive": "On"
+        },
+        {
+          "time": 0.3,
+          "position": [
+            0.0,
+            0.0,
+            0.05798
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.3,
+          "position": [
+            0.0,
+            0.0,
+            0.08998
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.6,
+          "position": [
+            0.0,
+            0.0,
+            0.08998
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 2.2,
+          "position": [
+            0.000342,
+            -0.002103,
+            0.082925
+          ],
+          "rotation": [
+            0.0523599,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 2.4,
+          "position": [
+            0.000342,
+            -0.002103,
+            0.082925
+          ],
+          "rotation": [
+            0.0523599,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 3.2,
+          "position": [
+            0.000342,
+            0.0,
+            0.05848
+          ],
+          "rotation": [
+            0.0523599,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "PositionOnly"
+        },
+        {
+          "time": 3.4,
+          "position": [
+            0.000342,
+            0.0,
+            0.05848
+          ],
+          "rotation": [
+            0.0523599,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "PositionOnly"
+        },
+        {
+          "time": 3.45,
+          "position": [
+            0.000342,
+            0.0,
+            0.05848
+          ],
+          "rotation": [
+            0.0523599,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "Off"
+        }
+      ],
+      "drive": {
+        "responseHz": 10,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 8,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "peg_5/peg"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "peg_5/peg"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "board"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 4.0,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    },
+    "groundHeight": -0.00031
+  },
+  "plots": [
+    {
+      "channels": [
+        "load.hand.mag",
+        "peg_5/peg.pos.z"
+      ],
+      "height": 160
+    }
+  ]
+}
