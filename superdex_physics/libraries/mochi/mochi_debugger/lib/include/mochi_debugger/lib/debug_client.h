@@ -49,6 +49,8 @@ namespace mochi::dbg {
 /// @brief An entry in the client's cached scene list.
 struct SceneInfo {
   SceneHandle handle;
+  /// Unique debug name assigned by the server (scenes/<name>).
+  /// Can differ from @ref Scene::GetName.
   std::string name;
 };
 

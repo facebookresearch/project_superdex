@@ -21,11 +21,13 @@
 #include <mochi_core/test/wait_until.h>
 #include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/nd_array.h>
+#include <mochi_core/utils/string_utils.h>
 
 #include <simple_reflection/simple_reflection.h>
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -35,6 +37,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 
 using namespace mochi;
 using namespace mochi::dbg;
@@ -149,6 +152,9 @@ class ConsoleTest : public MochiDebuggerTest {
           scene->UpdateDebugger();
         }
       }
+      for (Scene* scene : _extraScenes) {
+        scene->UpdateDebugger();
+      }
       return finished.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
     });
     finished.get();
@@ -171,9 +177,9 @@ class ConsoleTest : public MochiDebuggerTest {
         SReflect::GetTypeInfo<std::array<int32_t, 3>>()._nameWithNamespace +
         " [1,2,3]\nscenes\ntext std::string \"hello world\"\nvalue int32 7" + methods;
     std::string const child = "name \"child\"\nvalue 3";
-    std::string const scenes = "\"1/2\"\nA";
+    std::string const scenes = "1_2\nA";
     std::string const scenesJson = R"({
-  "1/2": {},
+  "1_2": {},
   "A": {}
 })";
     return {
@@ -201,7 +207,7 @@ class ConsoleTest : public MochiDebuggerTest {
         {"/scenes/A", "name", "\"A\"", ""},
         {"/scenes/A", "./name", "\"A\"", ""},
         {"/scenes/A", "../A//name/", "\"A\"", ""},
-        {"/", "'scenes/\"1/2\"/name'", "\"1/2\"", ""},
+        {"/", "'scenes/\"1_2\"/name'", "\"1/2\"", ""},
         {"/", "missing", "", "not found"},
         {"/", "scenes/missing/name", "", "not found"},
         {"/child", "missing", "", "not found"},
@@ -247,6 +253,7 @@ class ConsoleTest : public MochiDebuggerTest {
   }
 
   ConsoleTestObject _consoleObject;
+  DynamicArray<Scene*> _extraScenes;
   Scene* _sceneA = nullptr;
   Scene* _sceneB = nullptr;
   std::atomic<bool> _received = false;
@@ -304,7 +311,7 @@ TEST_F(ConsoleTest, ChangesDirectoryOnlyAfterValidation) {
       {"/scenes/A", "/scenes/my_scene/../../scenes/", "/scenes", ""},
       {"/child", "value/../..", "/", ""},
       {"/", "./child//", "/child", ""},
-      {"/", "'scenes/\"1/2\"'", "/scenes/\"1/2\"", ""},
+      {"/", "'scenes/\"1_2\"'", "/scenes/\"1_2\"", ""},
       {"/child", "missing", "/child", "not found"},
       {"/scenes/A", "/scene", "/scenes/A", "not found"},
       {"/child", "value", "/child", "Not a directory"},
@@ -325,7 +332,7 @@ TEST_F(ConsoleTest, ChangesDirectoryOnlyAfterValidation) {
   }
   for (std::string_view path :
        {"../", "/scenes/", "/scenes/my_scene/../../scenes", "/scenes/my_scene/../../scenes/"}) {
-    SetDirectory("/scenes/\"1/2\"");
+    SetDirectory("/scenes/\"1_2\"");
     DisconnectClient();
     EXPECT_EQ((Lines{"/scenes", "/"}), Run({"cd " + std::string{path}, "pwd", "cd /", "pwd"}));
     ConnectClient();
@@ -516,4 +523,29 @@ TEST_F(ActorConsoleTest, ActorCommands) {
       {"/scenes/A", "actors 1", "", "Cannot set value because \"actors\" is read-only"},
       {"/scenes/A/actors/box", "ls children", "", "not found"}};
   CheckCases(cases);
+}
+
+TEST_F(ConsoleTest, SceneDebugNames) {
+  std::pair<std::string_view, std::string_view> const names[] = {
+      {"A2", "A2"},
+      {"A", "A3"},
+      {"", "scene"},
+      {"my scene/x", "my_scene_x"},
+      {"a\"b'c\td\ae", "a_b_c_d_e"},
+      {"..", "scene2"},
+      {".", "scene3"},
+      {"[1]", "_1]"},
+      {"{a", "_a"}};
+  DynamicArray<std::string> entries{"1_2", "A"};
+  for (auto const& [createdAs, name] : names) {
+    Scene* scene = _context->CreateScene(std::string{createdAs}.c_str());
+    _extraScenes.push_back(scene);
+    entries.emplace_back(name);
+  }
+  std::ranges::sort(entries);
+  ExpectOutput("ls scenes", Join(entries, "\n"), Run({"ls scenes"}));
+  for (auto const& [createdAs, name] : names) {
+    std::string const command = "cd /scenes/" + std::string{name};
+    EXPECT_EQ(Lines{SReflect::ToJsonString(std::string{createdAs}, false)}, Run({command, "name"}));
+  }
 }

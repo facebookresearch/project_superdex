@@ -206,7 +206,8 @@ void dbg::BuildScenePanel(UiState& state) {
     for (size_t i = 0; i < sp.scenes.size(); ++i) {
       SceneInfo const& info = sp.scenes[i];
       bool const isSelected = sp.selectedSceneIndex == static_cast<int>(i);
-      ImGui::PushID(static_cast<int>(i)); // Scene names may collide; disambiguate by index.
+      // Disambiguate by index, since a scene can be named "None".
+      ImGui::PushID(static_cast<int>(i));
       MOCHI_DEFER(ImGui::PopID());
       if (ImGui::Selectable(info.name.c_str(), isSelected)) {
         state.uiCommands.push_back(UiCommand{CommandId::SelectScene, info.handle.value});

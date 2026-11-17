@@ -38,6 +38,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -76,6 +77,10 @@ class DebugServerImpl : public DebugServerInternal {
     // before the Scene is destroyed.
     SceneImpl* scene = nullptr;
 
+    // Unique among the scenes. It needs no quotes as a path step, so `cd scenes/<name>` works in
+    // the terminal.
+    std::string debugName;
+
     // The SceneDebugger is used to queue scene-specific messages that must be
     // processed on the scene's owning thread.
     std::shared_ptr<SceneDebugger> debugger;
@@ -83,6 +88,8 @@ class DebugServerImpl : public DebugServerInternal {
 
   struct State {
     DynamicArray<SceneInfo> scenes;
+    // The next suffix to try for each debug name base that has been taken (see MakeDebugName)
+    std::unordered_map<std::string, int> nextDebugNameSuffix;
     void* consoleRoot = nullptr;
     SReflect::TypeInfo const* consoleRootType = nullptr;
     net::ClientId client = {};
@@ -109,9 +116,9 @@ class DebugServerImpl : public DebugServerInternal {
   AttachSceneDebuggerForClient(SceneInfo& info, net::ClientId client, net::MessageServer& server);
   static void ReleaseSceneDebugger(SceneInfo& info);
 
-  // Forward a request to the first scene with the given name and return true, leaving request moved
-  // from. Return false and leave request untouched if there is no such scene.
-  bool ForwardToScene(std::string_view sceneName, protocol::CommandRequest& request);
+  // Forward a request to the scene with the given debug name and return true, leaving request
+  // moved from. Return false and leave request untouched if there is no such scene.
+  bool ForwardToScene(std::string_view debugName, protocol::CommandRequest& request);
 
   // Message Handlers:
   void OnSceneRequest(
@@ -131,6 +138,42 @@ class DebugServerImpl : public DebugServerInternal {
 
 } // namespace
 
+// Make a debug name from a scene's name that no scene in state uses: the sanitized name, or
+// "scene" if that is empty, followed by the first free number from 2 up if it is taken.
+static std::string MakeDebugName(DebugServerImpl::State& state, std::string_view sceneName) {
+  std::string base{sceneName};
+  // These would need quotes in a console path or the terminal, where a leading '[' or '{' starts a
+  // bracket group
+  std::ranges::replace_if(
+      base,
+      [](char c) {
+        auto const byte = static_cast<unsigned char>(c);
+        return c == '/' || c == '"' || c == '\'' || byte <= ' ' || byte == 0x7F;
+      },
+      '_');
+  if (base.starts_with('[') || base.starts_with('{')) {
+    base[0] = '_';
+  }
+  if (base.empty() || base == "." || base == "..") {
+    base = "scene";
+  }
+  auto const isTaken = [&](std::string const& name) {
+    return std::ranges::find(state.scenes, name, &DebugServerImpl::SceneInfo::debugName) !=
+        state.scenes.end();
+  };
+  if (!isTaken(base)) {
+    return base;
+  }
+  // Start where the last search for this base ended, so the 100th "scene" doesn't try scene2 to
+  // scene99 first
+  int& suffix = state.nextDebugNameSuffix.try_emplace(base, 2).first->second;
+  std::string name;
+  do {
+    name = base + std::to_string(suffix++);
+  } while (isTaken(name));
+  return name;
+}
+
 // Format a human readable label for UDP discovery.
 static DynamicString FormatLabel(DebugServerImpl::State const& state) {
   // Pick one scene name to show. It is best if code matches DebugClient's auto-selection logic
@@ -139,11 +182,9 @@ static DynamicString FormatLabel(DebugServerImpl::State const& state) {
   char const* sceneName = nullptr;
   SceneHandle sceneHandle;
   for (auto&& info : state.scenes) {
-    char const* name = info.scene->GetName();
-    char const* displayName = (name && *name) ? name : "unnamed";
     auto const handle = info.scene->GetHandle();
-    if ((*displayName != '_') && (handle.value > sceneHandle.value)) {
-      sceneName = displayName;
+    if (!info.debugName.starts_with('_') && (handle.value > sceneHandle.value)) {
+      sceneName = info.debugName.c_str();
       sceneHandle = handle;
     }
   }
@@ -309,7 +350,7 @@ static void FillSceneList(DebugServerImpl::State const& state, protocol::SceneLi
   outList.names.resize(numScenes);
   for (int i = 0; i < numScenes; ++i) {
     outList.handles[i] = state.scenes[i].scene->GetHandle();
-    outList.names[i] = state.scenes[i].scene->GetName();
+    outList.names[i] = state.scenes[i].debugName;
   }
 }
 
@@ -322,8 +363,7 @@ static void ListScenes(
     DebugServerImpl::State const& state,
     DynamicArray<SReflect::ConsoleListEntry>& outEntries) {
   for (auto const& info : state.scenes) {
-    outEntries.push_back(
-        MakeDirectoryEntry(SReflect::detail::FormatPathStep(info.scene->GetName())));
+    outEntries.push_back(MakeDirectoryEntry(info.debugName));
   }
   std::ranges::sort(outEntries, {}, &SReflect::ConsoleListEntry::_name);
 }
@@ -528,7 +568,7 @@ void DebugServerImpl::OnConsoleRequest(net::ClientId client, protocol::CommandRe
       picojson::object scenes;
       _state.Read([&](auto const& state) {
         for (auto const& info : state.scenes) {
-          scenes.emplace(info.scene->GetName(), picojson::object{});
+          scenes.emplace(info.debugName, picojson::object{});
         }
       });
       std::string output = picojson::value{std::move(scenes)}.serialize(/*prettify*/ true);
@@ -563,11 +603,11 @@ void DebugServerImpl::OnConsoleRequest(net::ClientId client, protocol::CommandRe
 }
 
 bool DebugServerImpl::ForwardToScene(
-    std::string_view sceneName,
+    std::string_view debugName,
     protocol::CommandRequest& request) {
   return _state.Mutate([&](auto& state) {
     for (auto& sceneInfo : state.scenes) {
-      if (sceneInfo.scene->GetName() == sceneName) {
+      if (sceneInfo.debugName == debugName) {
         if (!sceneInfo.debugger) { // In case it was released just before _state was locked.
           return false;
         }
@@ -594,8 +634,10 @@ void DebugServerImpl::OnAddScene(Scene* scene) {
   auto handle = scene->GetHandle();
   _state.Mutate([&](auto& state) {
     MOCHI_ASSERT(FindScene(state, handle) == -1, "Already added");
+    std::string debugName = MakeDebugName(state, scene->GetName());
     auto& info = state.scenes.push_back();
     info.scene = assert_cast<SceneImpl*>(scene);
+    info.debugName = std::move(debugName);
     if (state.hasStarted) {
       _server.SetLabel(FormatLabel(state));
 
@@ -608,7 +650,7 @@ void DebugServerImpl::OnAddScene(Scene* scene) {
 
         protocol::SceneAddRemove delta;
         delta.scene = handle;
-        delta.name = scene->GetName();
+        delta.name = info.debugName;
         delta.wasAdded = true;
         _server.Broadcast(delta);
       }
@@ -628,7 +670,7 @@ void DebugServerImpl::OnRemoveScene(Scene* scene) {
     if (state.hasStarted && state.client != 0) {
       protocol::SceneAddRemove delta;
       delta.scene = handle;
-      delta.name = scene->GetName();
+      delta.name = state.scenes[idx].debugName;
       delta.wasAdded = false;
       _server.Broadcast(delta);
     }

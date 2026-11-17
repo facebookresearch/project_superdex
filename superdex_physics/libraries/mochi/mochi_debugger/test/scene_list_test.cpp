@@ -17,6 +17,7 @@
 #include "mochi_debugger_test.h"
 
 #include <mochi_core/net/client_socket.h> // net::SocketStatus
+#include <mochi_core/net/message_client.h>
 #include <mochi_core/test/wait_until.h>
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/string_utils.h>
@@ -73,8 +74,27 @@ TEST_F(SceneListTest, EmptySceneNameBeforeConnect) {
   StartServer();
   ConnectClient();
   test::WaitUntil([&] { return !GetClientSceneNames().empty(); });
-  EXPECT_STREQ(", _Temp", GetClientSceneNames().c_str());
+  EXPECT_STREQ("_Temp, scene", GetClientSceneNames().c_str());
   EXPECT_EQ(scene->GetHandle(), _client->GetSelectedScene());
+}
+
+TEST_F(SceneListTest, ScenesHaveUniqueDebugNames) {
+  [[maybe_unused]] Scene* a = _context->CreateScene("A");
+  Scene* a2 = _context->CreateScene("A");
+  [[maybe_unused]] Scene* a3 = _context->CreateScene("A");
+  [[maybe_unused]] Scene* x = _context->CreateScene("my scene/x");
+  [[maybe_unused]] Scene* unnamed = _context->CreateScene("");
+
+  StartServer();
+  ConnectClient();
+  test::WaitUntil([&] { return !GetClientSceneNames().empty(); });
+  EXPECT_EQ("A, A2, A3, my_scene_x, scene", GetClientSceneNames());
+
+  // The other scenes keep their names, and the next "A" continues from the last suffix
+  _context->DestroyScene(a2);
+  test::WaitUntil([&] { return GetClientSceneNames() == "A, A3, my_scene_x, scene"; });
+  [[maybe_unused]] Scene* a4 = _context->CreateScene("A");
+  test::WaitUntil([&] { return GetClientSceneNames() == "A, A3, A4, my_scene_x, scene"; });
 }
 
 TEST_F(SceneListTest, OnlyHiddenScenesBeforeConnect) {
@@ -221,6 +241,51 @@ TEST_F(SceneListTest, SceneRemovedDropsFromList) {
   _context->DestroyScene(scenes[3]);
   _context->DestroyScene(scenes[5]);
   test::WaitUntil([&] { return GetClientSceneNames() == "s0, s2, s4"; });
+}
+
+TEST_F(SceneListTest, RemovalNotificationCanAddScenes) {
+  Scene* removed = _context->CreateScene("Removed");
+  DynamicArray<Scene*> added;
+  DynamicArray<std::string> expectedNames;
+  for (int i = 0; i < 32; ++i) {
+    expectedNames.push_back(Format("Added%d", i));
+    added.push_back(_context->CreateScene(expectedNames.back()));
+  }
+  std::ranges::sort(expectedNames);
+
+  // Keep scene ownership unchanged while the notification callback grows a separate server's list.
+  auto server = CreateDebugServer(_context);
+  server->OnAddScene(removed);
+  server->StartInProc();
+  auto& messages = server->GetMessageServer_ForTestingOnly();
+  bool sawRemoval = false;
+  net::MessageClient client;
+  client.Register<protocol::WelcomeMessage>();
+  client.Register<protocol::LogMessage>();
+  client.Register<protocol::SceneAddRemove>([&](auto&& msg) {
+    if (!msg.wasAdded) {
+      sawRemoval = true;
+      for (Scene* scene : added) {
+        server->OnAddScene(scene);
+      }
+    }
+  });
+  client.SetVersion(messages.CalcProtocolVersionHash());
+  client.ConnectInProc(messages);
+
+  server->OnRemoveScene(removed);
+  EXPECT_TRUE(sawRemoval);
+  client.Disconnect();
+  _client->ConnectInProc(messages);
+  test::WaitUntil([&] { return _client->GetStatus() == net::SocketStatus::Connected; });
+  DynamicArray<SceneInfo> scenes;
+  _client->GetSceneList(scenes);
+  DynamicArray<std::string> actualNames;
+  for (auto const& scene : scenes) {
+    actualNames.push_back(scene.name);
+  }
+  std::ranges::sort(actualNames);
+  EXPECT_EQ(Join(expectedNames, ", "), Join(actualNames, ", "));
 }
 
 TEST_F(SceneListTest, DisconnectClearsSceneList) {

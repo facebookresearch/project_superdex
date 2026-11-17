@@ -217,6 +217,8 @@ struct ActorSyncData {
 
 struct SceneList {
   DynamicArray<SceneHandle> handles;
+  /// Unique debug names assigned by the server (scenes/<name>).
+  /// Can differ from @ref Scene::GetName.
   DynamicArray<DynamicString> names;
 
   MOCHI_STRUCT_BEGIN(mochi::dbg::protocol::SceneList)
@@ -299,6 +301,8 @@ struct LogMessage : net::Message {
 /// scene's lifetime. After a removal notification, do not resolve or access the announced scene.
 struct SceneAddRemove : net::Message {
   SceneHandle scene;
+  /// Unique debug name assigned by the server (scenes/<name>).
+  /// Can differ from @ref Scene::GetName.
   DynamicString name;
   bool wasAdded = false; ///< False if the scene was removed
 

@@ -55,7 +55,6 @@
 #include <filesystem>
 #include <memory>
 #include <string>
-#include <tuple>
 #include <unordered_map>
 
 #if MOCHI_PLATFORM_WINDOWS
@@ -330,17 +329,10 @@ void MochiDebuggerApp::SyncSceneData() {
     return;
   }
 
-  // 1. Refresh the scene list. Give unnamed scenes a display name, then sort by (name, handle
-  // value) and prepend the invalid "None" entry so index 0 always maps to "no selection".
+  // 1. Refresh the scene list. Sort by name (unique, assigned by the server) and prepend the
+  // invalid "None" entry so index 0 always maps to "no selection".
   client->GetSceneList(sp.scenes);
-  for (SceneInfo& info : sp.scenes) {
-    if (info.name.empty()) {
-      info.name = "unnamed_scene";
-    }
-  }
-  std::ranges::sort(sp.scenes, [](auto const& a, auto const& b) {
-    return std::tie(a.name, a.handle.value) < std::tie(b.name, b.handle.value);
-  });
+  std::ranges::sort(sp.scenes, {}, &SceneInfo::name);
 
   // Insert "None" at the front of the list using push_back + rotate because DynamicArray::insert is
   // not currently implemented.
