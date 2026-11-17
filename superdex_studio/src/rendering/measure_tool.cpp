@@ -413,14 +413,14 @@ bool MeasureTool::IsTargetPickable(MeasureTarget const& target) const {
   return false;
 }
 
-void MeasureTool::ProcessCursorRay(
+bool MeasureTool::ProcessCursorRay(
     filament::math::float3 rayOrigin,
     filament::math::float3 rayDirection,
     bool commit,
     bool additive) {
   if (!_active) {
     ClearHover();
-    return;
+    return false;
   }
   _targets.clear();
   if (_targetProvider) {
@@ -491,13 +491,13 @@ void MeasureTool::ProcessCursorRay(
     if (commit && !additive) {
       ClearSelection();
     }
-    return;
+    return false;
   }
 
   HoverKey const key{
       bestTarget->object, bestHit.triangle, bestHit.facet, bestHit.nearestVertex, _pickMode};
   if (!commit && key == _hoverKey && !_hover.empty()) {
-    return; // same thing under the cursor as last frame; keep the entity we already built
+    return true; // same thing under the cursor as last frame; keep the entity we already built
   }
 
   // Local (render space) -> world (render space) -> editor space
@@ -515,7 +515,7 @@ void MeasureTool::ProcessCursorRay(
   if (!commit) {
     _hover.assign(1, entity);
     _hoverKey = key;
-    return;
+    return true;
   }
   ClearHover();
   if (!additive) {
@@ -527,12 +527,13 @@ void MeasureTool::ProcessCursorRay(
     _selection.erase(existing);
     _activeRecord = -1;
     RecomputeReport();
-    return;
+    return true;
   }
   _selection.push_back(std::move(entity));
   _selectionPoseStamp = CurrentPoseStamp();
   _activeRecord = -1;
   RecomputeReport();
+  return true;
 }
 
 void MeasureTool::DrawDebug(mochi_renderer::DebugDraw* debugDraw, DebugText* debugText) const {

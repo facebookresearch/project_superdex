@@ -204,14 +204,29 @@ class MeasureTool {
 
   // Resolves the cursor ray against every target and, when @p commit is set, adds the hit to the
   // selection (replacing it unless Ctrl or Shift is held). Called by the viewport each frame it is
-  // hovered while the tool is active; @p rayOrigin / @p rayDirection are in render space.
-  void ProcessCursorRay(
+  // hovered while the tool is active; @p rayOrigin / @p rayDirection are in render space. Returns
+  // whether the ray hit anything.
+  bool ProcessCursorRay(
       filament::math::float3 rayOrigin,
       filament::math::float3 rayDirection,
       bool commit,
       bool additive);
   // Drops the hover preview, e.g. when the cursor leaves the viewport.
   void ClearHover();
+
+  MeasurePickMode GetPickMode() const {
+    return _pickMode;
+  }
+  void SetPickMode(MeasurePickMode mode) {
+    _pickMode = mode;
+  }
+  std::vector<MeasureEntity> const& GetSelection() const {
+    return _selection;
+  }
+  MeasurementReport const& GetReport() const {
+    return _report;
+  }
+  void ClearSelection();
 
   // Draws the selection highlight, the hover preview, and the measurement lines and labels. Called
   // once per frame from Viewport::DrawDebug; a no-op when the tool is off.
@@ -221,7 +236,6 @@ class MeasureTool {
   void ShowWindow(char const* name, bool* open);
 
  private:
-  void ClearSelection();
   void RecomputeReport();
   // The current staged-pose stamp, or 0 without a provider.
   uint64_t CurrentPoseStamp() const;
