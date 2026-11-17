@@ -1,0 +1,377 @@
+{
+  "comment": "Pinch the top brick of a column of 24 connected bricks 8 mm up its sides (OpenXR index fingertip and thumb tip, each aimed 2 mm in), lift it 150 mm in 1.5 s and hold it there for 3.4 s. Each connection carries the bricks below it, the top one the most; count the bricks still hanging from the top one at the end (brick_NN.pos.z up about 150 mm), and when any drop.",
+  "assetsRoot": "",
+  "prefab": "./column.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "pinch_a",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "finger_a",
+      "frame": "World",
+      "pointLocal": [
+        0.0001,
+        -0.0032,
+        -0.0177
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0.0159,
+            0.0432,
+            0.48822
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.5,
+          "position": [
+            0.0159,
+            0.0432,
+            0.44822
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.9,
+          "position": [
+            0.0159,
+            0.0292,
+            0.44822
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.1,
+          "position": [
+            0.0159,
+            0.0292,
+            0.44822
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 2.6,
+          "position": [
+            0.0159,
+            0.0292,
+            0.59822
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 6.0,
+          "position": [
+            0.0159,
+            0.0292,
+            0.59822
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    },
+    {
+      "name": "pinch_b",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "finger_b",
+      "frame": "World",
+      "pointLocal": [
+        0.0007,
+        0.0051,
+        -0.0208
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0.0159,
+            -0.0114,
+            0.48822
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.5,
+          "position": [
+            0.0159,
+            -0.0114,
+            0.44822
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.9,
+          "position": [
+            0.0159,
+            0.0026,
+            0.44822
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.1,
+          "position": [
+            0.0159,
+            0.0026,
+            0.44822
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 2.6,
+          "position": [
+            0.0159,
+            0.0026,
+            0.59822
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 6.0,
+          "position": [
+            0.0159,
+            0.0026,
+            0.59822
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_00/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_01/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_02/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_03/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_04/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_05/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_06/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_07/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_08/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_09/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_10/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_11/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_12/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_13/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_14/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_15/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_16/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_17/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_18/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_19/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_20/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_21/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_22/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick_23/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "finger_a"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "finger_b"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 6.0,
+    "groundPlane": true,
+    "groundHeight": -0.00025,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "brick_00/large_brick_toy_2x2.pos.z",
+        "brick_03/large_brick_toy_2x2.pos.z",
+        "brick_06/large_brick_toy_2x2.pos.z",
+        "brick_09/large_brick_toy_2x2.pos.z",
+        "brick_12/large_brick_toy_2x2.pos.z",
+        "brick_15/large_brick_toy_2x2.pos.z",
+        "brick_18/large_brick_toy_2x2.pos.z",
+        "brick_21/large_brick_toy_2x2.pos.z",
+        "brick_23/large_brick_toy_2x2.pos.z"
+      ],
+      "height": 160
+    }
+  ]
+}

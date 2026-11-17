@@ -1,0 +1,91 @@
+{
+  "comment": "Push a brick aligned above another (its bottom 0.5 mm above the studs) straight down with a force rising from 0 to 10 N over 5 s (about 200 gf/s), from 0.5 s. It should hold until about 4 to 5 N (400 to 500 gf), then snap down onto the one below (top.pos.z drops to the stacked height, 19.1 mm). The force at the drop is load.push.mag.",
+  "assetsRoot": "",
+  "prefab": "./pair_apart.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "push",
+      "enabled": true,
+      "type": "Force",
+      "target": "top/large_brick_toy_2x2",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        0.0159,
+        0.0159,
+        0.012
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 10.0,
+        "start": 0.5,
+        "end": 6.0,
+        "riseTime": 5.0,
+        "fallTime": 0.0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "top/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "bottom/large_brick_toy_2x2"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "top/large_brick_toy_2x2"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "bottom/large_brick_toy_2x2"
+    },
+    {
+      "kind": "Penetration",
+      "target": "top/large_brick_toy_2x2",
+      "ignoreGround": true
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 6.0,
+    "groundPlane": true,
+    "groundHeight": -0.00025,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "top/large_brick_toy_2x2.pos.z"
+      ],
+      "height": 160
+    },
+    {
+      "channels": [
+        "load.push.mag"
+      ],
+      "height": 160
+    }
+  ]
+}

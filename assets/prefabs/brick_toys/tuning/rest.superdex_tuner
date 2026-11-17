@@ -1,0 +1,70 @@
+{
+  "comment": "Let a brick on its own and a connected pair sit for 2 s with no loads. Nothing should move more than about 0.1 mm. single.contactForce.z is the brick's weight: 0.064 N for 6.5 g.",
+  "assetsRoot": "",
+  "prefab": "./rest.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "single/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "bottom/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "top/large_brick_toy_2x2"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "single/large_brick_toy_2x2"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "top/large_brick_toy_2x2"
+    },
+    {
+      "kind": "Penetration",
+      "target": "top/large_brick_toy_2x2",
+      "ignoreGround": true
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 2.0,
+    "groundPlane": true,
+    "groundHeight": -0.00025,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "top/large_brick_toy_2x2.pos.z",
+        "bottom/large_brick_toy_2x2.pos.z"
+      ],
+      "height": 160
+    },
+    {
+      "channels": [
+        "single/large_brick_toy_2x2.contactForce.z"
+      ],
+      "height": 160
+    }
+  ]
+}

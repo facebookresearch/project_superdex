@@ -1,0 +1,282 @@
+{
+  "_comment": "24 connected bricks in a column and a right OpenXR index fingertip and thumb tip, for tuning/column_lift.superdex_tuner.",
+  "prefabs": [
+    {
+      "name": "brick_00",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "brick_01",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.01914
+      ]
+    },
+    {
+      "name": "brick_02",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.03828
+      ]
+    },
+    {
+      "name": "brick_03",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.05742
+      ]
+    },
+    {
+      "name": "brick_04",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.07656
+      ]
+    },
+    {
+      "name": "brick_05",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.0957
+      ]
+    },
+    {
+      "name": "brick_06",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.11484
+      ]
+    },
+    {
+      "name": "brick_07",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.13398
+      ]
+    },
+    {
+      "name": "brick_08",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.15312
+      ]
+    },
+    {
+      "name": "brick_09",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.17226
+      ]
+    },
+    {
+      "name": "brick_10",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.1914
+      ]
+    },
+    {
+      "name": "brick_11",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.21054
+      ]
+    },
+    {
+      "name": "brick_12",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.22968
+      ]
+    },
+    {
+      "name": "brick_13",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.24882
+      ]
+    },
+    {
+      "name": "brick_14",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.26796
+      ]
+    },
+    {
+      "name": "brick_15",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.2871
+      ]
+    },
+    {
+      "name": "brick_16",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.30624
+      ]
+    },
+    {
+      "name": "brick_17",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.32538
+      ]
+    },
+    {
+      "name": "brick_18",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.34452
+      ]
+    },
+    {
+      "name": "brick_19",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.36366
+      ]
+    },
+    {
+      "name": "brick_20",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.3828
+      ]
+    },
+    {
+      "name": "brick_21",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.40194
+      ]
+    },
+    {
+      "name": "brick_22",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.42108
+      ]
+    },
+    {
+      "name": "brick_23",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.44022
+      ]
+    }
+  ],
+  "actors": {
+    "rigid": [
+      {
+        "name": "finger_a",
+        "shape": "./../../../bots/hands/openxr/right/collision/xr_09_index_distal_highpoly_collision.mochi.h5",
+        "colliderType": "Sdf",
+        "density": 20800,
+        "translation": [
+          0.0158,
+          0.057979,
+          0.500473
+        ],
+        "rotation": [
+          -0.382683,
+          0,
+          0,
+          0.92388
+        ],
+        "contact": {
+          "frictionWithColliderNormal": false,
+          "penaltyCoefficient": 10000000000.0,
+          "penaltyThresholdDefault": 0.003,
+          "viscousFrictionCoefficient": 20
+        }
+      },
+      {
+        "name": "finger_b",
+        "shape": "./../../../bots/hands/openxr/right/collision/xr_04_thumb_distal_highpoly_collision.mochi.h5",
+        "colliderType": "Sdf",
+        "density": 11200,
+        "translation": [
+          0.0152,
+          -0.026217,
+          0.505683
+        ],
+        "rotation": [
+          0.258819,
+          0,
+          0,
+          0.965926
+        ],
+        "contact": {
+          "frictionWithColliderNormal": false,
+          "penaltyCoefficient": 10000000000.0,
+          "penaltyThresholdDefault": 0.003,
+          "viscousFrictionCoefficient": 20
+        }
+      }
+    ]
+  },
+  "contactFilter": {
+    "actorContactSymmetric": [
+      {
+        "actors": [
+          "finger_a",
+          "finger_b"
+        ],
+        "enable": false
+      }
+    ]
+  }
+}

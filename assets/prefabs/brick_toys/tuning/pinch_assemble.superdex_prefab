@@ -1,0 +1,84 @@
+{
+  "_comment": "A brick on the floor, a loose brick beside it, and a right OpenXR index fingertip and thumb tip (highpoly shapes, about 50 g each, the hand's link contact), for tuning/pinch_assemble.superdex_tuner.",
+  "prefabs": [
+    {
+      "name": "base",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "loose",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.06,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "actors": {
+    "rigid": [
+      {
+        "name": "finger_a",
+        "shape": "./../../../bots/hands/openxr/right/collision/xr_09_index_distal_highpoly_collision.mochi.h5",
+        "colliderType": "Sdf",
+        "density": 20800,
+        "translation": [
+          0.0758,
+          0.057979,
+          0.060253
+        ],
+        "rotation": [
+          -0.382683,
+          0,
+          0,
+          0.92388
+        ],
+        "contact": {
+          "frictionWithColliderNormal": false,
+          "penaltyCoefficient": 10000000000.0,
+          "penaltyThresholdDefault": 0.003,
+          "viscousFrictionCoefficient": 20
+        }
+      },
+      {
+        "name": "finger_b",
+        "shape": "./../../../bots/hands/openxr/right/collision/xr_04_thumb_distal_highpoly_collision.mochi.h5",
+        "colliderType": "Sdf",
+        "density": 11200,
+        "translation": [
+          0.0752,
+          -0.026217,
+          0.065463
+        ],
+        "rotation": [
+          0.258819,
+          0,
+          0,
+          0.965926
+        ],
+        "contact": {
+          "frictionWithColliderNormal": false,
+          "penaltyCoefficient": 10000000000.0,
+          "penaltyThresholdDefault": 0.003,
+          "viscousFrictionCoefficient": 20
+        }
+      }
+    ]
+  },
+  "contactFilter": {
+    "actorContactSymmetric": [
+      {
+        "actors": [
+          "finger_a",
+          "finger_b"
+        ],
+        "enable": false
+      }
+    ]
+  }
+}

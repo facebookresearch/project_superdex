@@ -1,0 +1,223 @@
+{
+  "comment": "Hold the bottom brick still and drive the top one, aligned above it, straight down onto it and back up at 10 mm/s with a stiff spring (300 Hz), to 0.2 mm past the stacked height and 3 mm above where it started. load.drive.mag is the force the brick needs: its peak going down is the push to connect them (target 400 to 500 gf, about 4 to 5 N), going up the pull to separate them (about 1.5 times as much).",
+  "assetsRoot": "",
+  "prefab": "./pair_apart.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "hold",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "bottom/large_brick_toy_2x2",
+      "frame": "World",
+      "pointLocal": [
+        0.0159,
+        0.0159,
+        0.0
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0.0159,
+            0.0159,
+            0.0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 2.1559999999999997,
+          "position": [
+            0.0159,
+            0.0159,
+            0.0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 200,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 200,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    },
+    {
+      "name": "drive",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "top/large_brick_toy_2x2",
+      "frame": "World",
+      "pointLocal": [
+        0.0159,
+        0.0159,
+        0.012
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0.0159,
+            0.0159,
+            0.03622
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.2,
+          "position": [
+            0.0159,
+            0.0159,
+            0.03622
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.728,
+          "position": [
+            0.0159,
+            0.0159,
+            0.03094
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.028,
+          "position": [
+            0.0159,
+            0.0159,
+            0.03094
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.8559999999999999,
+          "position": [
+            0.0159,
+            0.0159,
+            0.03922
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 2.1559999999999997,
+          "position": [
+            0.0159,
+            0.0159,
+            0.03922
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 300,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 300,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "top/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "bottom/large_brick_toy_2x2"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "top/large_brick_toy_2x2"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 2.1559999999999997,
+    "groundPlane": true,
+    "groundHeight": -0.00025,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "top/large_brick_toy_2x2.pos.z"
+      ],
+      "height": 160
+    },
+    {
+      "channels": [
+        "load.drive.mag"
+      ],
+      "height": 160
+    }
+  ]
+}

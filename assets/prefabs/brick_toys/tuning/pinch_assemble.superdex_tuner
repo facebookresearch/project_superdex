@@ -1,0 +1,505 @@
+{
+  "comment": "Pinch a loose brick 8 mm up its sides between a right OpenXR index fingertip and thumb tip (highpoly collision shapes, about 50 g each, each aimed 2 mm into the brick), lift it, carry it over another brick and set it on the studs (0.5 mm above them), let go, then press it down from above with the index fingertip, aimed 4 mm past seated (4.4 to 5.4 s). It should snap on and stay at the stacked height (loose.pos.z about 19.1 mm) with no fingertip inside a brick.",
+  "assetsRoot": "",
+  "prefab": "./pinch_assemble.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "pinch_a",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "finger_a",
+      "frame": "World",
+      "pointLocal": [
+        0.0001,
+        -0.0032,
+        -0.0177
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0.0759,
+            0.0432,
+            0.05
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.5,
+          "position": [
+            0.0759,
+            0.0432,
+            0.008
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.9,
+          "position": [
+            0.0759,
+            0.0292,
+            0.008
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.1,
+          "position": [
+            0.0759,
+            0.0292,
+            0.008
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 1.7,
+          "position": [
+            0.0759,
+            0.0292,
+            0.043
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 2.6,
+          "position": [
+            0.0159,
+            0.0292,
+            0.043
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 3.2,
+          "position": [
+            0.0159,
+            0.0292,
+            0.03222
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 3.4,
+          "position": [
+            0.0159,
+            0.0292,
+            0.03222
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 3.6,
+          "position": [
+            0.0159,
+            0.0432,
+            0.03222
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 4.0,
+          "position": [
+            0.008,
+            0.0159,
+            0.06422
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 4.4,
+          "position": [
+            0.008,
+            0.0159,
+            0.04534
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 5.4,
+          "position": [
+            0.008,
+            0.0159,
+            0.03834
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 5.7,
+          "position": [
+            0.008,
+            0.0159,
+            0.03834
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 6.1,
+          "position": [
+            0.008,
+            0.0159,
+            0.07234
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    },
+    {
+      "name": "pinch_b",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "finger_b",
+      "frame": "World",
+      "pointLocal": [
+        0.0007,
+        0.0051,
+        -0.0208
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0.0759,
+            -0.0114,
+            0.05
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.5,
+          "position": [
+            0.0759,
+            -0.0114,
+            0.008
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.9,
+          "position": [
+            0.0759,
+            0.0026,
+            0.008
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.1,
+          "position": [
+            0.0759,
+            0.0026,
+            0.008
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 1.7,
+          "position": [
+            0.0759,
+            0.0026,
+            0.043
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 2.6,
+          "position": [
+            0.0159,
+            0.0026,
+            0.043
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 3.2,
+          "position": [
+            0.0159,
+            0.0026,
+            0.03222
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 3.4,
+          "position": [
+            0.0159,
+            0.0026,
+            0.03222
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 3.6,
+          "position": [
+            0.0159,
+            -0.0114,
+            0.03222
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 4.0,
+          "position": [
+            0.0159,
+            -0.0294,
+            0.06422
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 6.1,
+          "position": [
+            0.0159,
+            -0.0294,
+            0.06422
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "loose/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "base/large_brick_toy_2x2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "finger_a"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "finger_b"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "finger_a"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "finger_b"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "loose/large_brick_toy_2x2"
+    },
+    {
+      "kind": "Penetration",
+      "target": "loose/large_brick_toy_2x2",
+      "ignoreGround": true
+    },
+    {
+      "kind": "Penetration",
+      "target": "base/large_brick_toy_2x2",
+      "ignoreGround": true
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 6.5,
+    "groundPlane": true,
+    "groundHeight": -0.00025,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "loose/large_brick_toy_2x2.pos.z"
+      ],
+      "height": 160
+    },
+    {
+      "channels": [
+        "finger_a.contactForce.z",
+        "loose/large_brick_toy_2x2.contactForce.z"
+      ],
+      "height": 160
+    }
+  ]
+}

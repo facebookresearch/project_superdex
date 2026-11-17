@@ -12,6 +12,12 @@ This package contains a Meta-owned 2x2 large interlocking brick toy prefab for u
 - Generated SDF collision geometry for SuperDex Physics in Studio (`intermediates/large_brick_toy_2x2_collision.StudioProcessing.json`).
 - Assembled the asset with contact settings as `large_brick_toy_2x2.mochi_prefab`.
 
+## Physics Tuning
+
+- `tuning/insert_force` and `tuning/pull_force` push an aligned brick onto another and pull a connected one off, with rising forces; `tuning/push_pull` drives one onto another and back off at 10 mm/s.
+- `tuning/pinch_assemble` puts one brick on another with an OpenXR index fingertip and thumb tip; `tuning/column_lift` lifts a column of 24 by its top brick.
+- `tuning/rest` (a brick and a connected pair) and `tuning/finger_press` (a fingertip pressed onto a stud).
+
 ## License
 
 The Meta-authored digital assets in this directory are distributed under the [Creative Commons Attribution 4.0 International License (CC-BY-4.0)](./LICENSE). This license applies only to the Meta-authored digital assets in this directory. You must give appropriate credit to Meta Platforms, Inc. and affiliates when you use or redistribute these assets.

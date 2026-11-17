@@ -1,0 +1,32 @@
+{
+  "_comment": "A brick on its own and a stack of two, at rest, for tuning/rest.superdex_tuner.",
+  "prefabs": [
+    {
+      "name": "single",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "bottom",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.05,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "top",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.05,
+        0.0,
+        0.01914
+      ]
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "_comment": "A brick on the floor and a right OpenXR index fingertip above it, for tuning/finger_press.superdex_tuner.",
+  "prefabs": [
+    {
+      "name": "brick",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "actors": {
+    "rigid": [
+      {
+        "name": "finger_a",
+        "shape": "./../../../bots/hands/openxr/right/collision/xr_09_index_distal_highpoly_collision.mochi.h5",
+        "colliderType": "Sdf",
+        "density": 20800,
+        "translation": [
+          0.0158,
+          0.030679,
+          0.070253
+        ],
+        "rotation": [
+          -0.382683,
+          0,
+          0,
+          0.92388
+        ],
+        "contact": {
+          "frictionWithColliderNormal": false,
+          "penaltyCoefficient": 10000000000.0,
+          "penaltyThresholdDefault": 0.003,
+          "viscousFrictionCoefficient": 20
+        }
+      }
+    ]
+  }
+}

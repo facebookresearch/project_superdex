@@ -1,0 +1,23 @@
+{
+  "_comment": "Two connected bricks, for the pull-off tuner.",
+  "prefabs": [
+    {
+      "name": "bottom",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "top",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.01914
+      ]
+    }
+  ]
+}

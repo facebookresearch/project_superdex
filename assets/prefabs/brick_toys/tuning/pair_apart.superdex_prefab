@@ -1,0 +1,23 @@
+{
+  "_comment": "A brick on the floor and one aligned above it, its bottom 0.5 mm above the studs, for the insertion tuners.",
+  "prefabs": [
+    {
+      "name": "bottom",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "top",
+      "path": "./../large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.02422
+      ]
+    }
+  ]
+}
