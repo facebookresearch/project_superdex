@@ -117,6 +117,11 @@ class StackRun {
   [[nodiscard]] EmbeddedMeshes const& Embedded(std::size_t p) const {
     return _outputs[p].embedded;
   }
+  // Whether Generate succeeded at chain position @p p. A position it never ran on still holds the
+  // output it started with, so Output alone cannot tell the two apart.
+  [[nodiscard]] bool WasGenerated(std::size_t p) const {
+    return _generated[p];
+  }
 
  private:
   // Where a stage's reference comes from: a position in the chain, else a mesh captured up front
@@ -130,6 +135,7 @@ class StackRun {
 
   std::vector<MeshProcessingModifier const*> _modifiers; // by chain position
   std::vector<StageMesh> _outputs; // by chain position
+  std::vector<bool> _generated; // by chain position
   std::vector<Reference> _references; // by chain position
   std::function<mochi::MeshData(mochi::MeshData const& output)> _referenceMeshFromOutput;
   ModifierRunContext _ctx;

@@ -163,6 +163,7 @@ StackRun::StackRun(
   std::size_t const n = chain.size();
   _modifiers.reserve(n);
   _outputs.reserve(n);
+  _generated.resize(n, false);
   _references.resize(n);
   for (std::size_t p = 0; p < n; ++p) {
     _modifiers.push_back(stack[chain[p]].get());
@@ -207,6 +208,7 @@ bool StackRun::Generate(std::size_t p, mochi::Error& error) {
     return false;
   }
   _outputs[p] = std::move(out);
+  _generated[p] = true;
   return true;
 }
 

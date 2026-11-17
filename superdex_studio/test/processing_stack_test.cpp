@@ -445,6 +445,30 @@ TEST(ProcessingStackTest, StackRunFailureLeavesNothingForTheStagesBelow) {
   EXPECT_EQ(run.Output(2).GetNumElements(), 0);
 }
 
+TEST(ProcessingStackTest, StackRunReportsOnlyTheStagesItGenerated) {
+  ModifierStack const stack = MakeStack(
+      {{.kind = kSource, .run = ProduceTriangle(1)},
+       {.kind = kTransform, .run = Fail},
+       {.kind = kTransform, .run = AddOne}});
+  auto const currentOutput = [](std::size_t index) {
+    return Triangle(static_cast<mochi::real>(10 * index));
+  };
+  StackRun run(
+      stack, {0, 1, 2}, {}, CurrentMeshes(currentOutput), currentOutput, SameReferenceMesh);
+
+  mochi::Error sourceError;
+  mochi::Error failError;
+  EXPECT_TRUE(run.Generate(0, sourceError));
+  EXPECT_FALSE(run.Generate(1, failError));
+
+  // Position 2 never runs, as when its task is skipped or cancelled, so it still holds the output
+  // it started with.
+  std::vector<bool> const generated{run.WasGenerated(0), run.WasGenerated(1), run.WasGenerated(2)};
+  std::vector<bool> const expected{true, false, false};
+  EXPECT_EQ(generated, expected);
+  EXPECT_EQ(run.Output(2).coordinates[0], 20);
+}
+
 TEST(ProcessingStackTest, StackRunPassesOnTheCurrentOutputOfStagesItSkips) {
   ModifierStack const stack = MakeStack(
       {{.kind = kSource, .run = ProduceTriangle(1)},

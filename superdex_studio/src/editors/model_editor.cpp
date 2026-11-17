@@ -2388,22 +2388,20 @@ void ModelEditor::RunGenerationCascade(
 
   // Commit regenerated stages on the main thread, in chain order so each stage reads its input's
   // freshly-assigned generation id. This completion callback runs after RunGenerationCascade (and
-  // its caller) have returned, so it must capture chain and regen BY VALUE -- they are references
-  // into the caller's frame and would dangle otherwise.
+  // its caller) have returned, so it must capture chain BY VALUE -- it is a reference into the
+  // caller's frame and would dangle otherwise.
   bool const hadExports = !exportChainPositions.empty();
   bool const started = _studio->BeginAsyncTasks(
       "Generating",
       std::move(tasks),
-      [this, run, chain, regen, ctx, hadExports](bool allSucceeded) {
+      [this, run, chain, ctx, hadExports](bool allSucceeded) {
         std::size_t const m = chain.size();
         mochi::MeshData previousOutputSurface;
         std::size_t previousOutputSurfacePosition = m;
         for (std::size_t p = 0; p < m; ++p) {
-          if (!regen[p]) {
+          // Not planned, or failed, skipped, or cancelled: keep the prior buffer + generation id.
+          if (!run->WasGenerated(p)) {
             continue;
-          }
-          if (run->Output(p).GetNumElements() == 0) {
-            continue; // failed/cancelled: keep the prior buffer + generation id
           }
           std::size_t const s = chain[p];
           MeshProcessingModifier& mod = *_modifiers[s];
