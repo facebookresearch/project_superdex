@@ -26,14 +26,20 @@ SR_WARNING_IGNORE_MSVC(4706) // assignment within conditional expression
 #include <picojson/picojson.h> // picojson (third-party)
 SR_WARNING_POP()
 
+#include <array>
 #include <cctype>
 #include <cinttypes>
 #include <cstdio>
 #include <functional>
+#include <iostream>
+#include <memory>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <unordered_map>
+#include <vector>
 
 struct SReflectTest_GlobalStruct {
   SR_BeginStruct(SReflectTest_GlobalStruct);
@@ -1007,7 +1013,8 @@ struct MyBase : public SReflect::BaseObject {
 };
 
 struct MyDerived : public MyBase {
-  MyDerived(std::string s = "", bool b = false, int32_t n = -1) : MyBase(b, n), derivedStr(s) {}
+  MyDerived(std::string s = "", bool b = false, int32_t n = -1)
+      : MyBase(b, n), derivedStr(std::move(s)) {}
   std::string derivedStr;
 
   bool operator==(const MyDerived& rhs) const {
@@ -1728,6 +1735,395 @@ TEST(SReflect, Attribute_IgnoreExtraneousFields) {
   EXPECT_EQ(0, numIssues);
   EXPECT_EQ(10, obj.a);
   EXPECT_EQ(20, obj.b);
+}
+
+// Redirects std::cout, where Simple Reflection logs, into a string while in scope.
+class ScopedCoutCapture {
+ public:
+  ScopedCoutCapture() : _previous(std::cout.rdbuf(_captured.rdbuf())) {}
+  ~ScopedCoutCapture() {
+    std::cout.rdbuf(_previous);
+  }
+  ScopedCoutCapture(ScopedCoutCapture const&) = delete;
+  ScopedCoutCapture& operator=(ScopedCoutCapture const&) = delete;
+
+  std::string Text() const {
+    return _captured.str();
+  }
+
+ private:
+  std::ostringstream _captured;
+  std::streambuf* _previous;
+};
+
+struct IssueInner {
+  int32_t value = 0;
+  SR_BeginStruct(SReflectTest::IssueInner);
+  SR_Field(value);
+  SR_EndStruct();
+};
+
+struct IssueOuter {
+  IssueInner inner;
+  bool flag = false;
+  SR_BeginStruct(SReflectTest::IssueOuter);
+  SR_Field(inner);
+  SR_Field(flag);
+  SR_EndStruct();
+};
+
+// A type mismatch in a nested field, and an unknown field name
+static char const* const kJsonWithTwoIssues =
+    R"({"inner": {"value": "text"}, "flag": true, "bad\nname": 1})";
+
+static std::vector<std::string> Paths(std::vector<SReflect::IssueReport> const& issues) {
+  std::vector<std::string> paths;
+  paths.reserve(issues.size());
+  for (SReflect::IssueReport const& issue : issues) {
+    paths.push_back(issue._path);
+  }
+  return paths;
+}
+
+TEST(SReflect, OutIssuesCapturesIssuesWithoutLogging) {
+  IssueOuter counted;
+  int numIssues = 0;
+  SReflect::FromJsonString(
+      counted, kJsonWithTwoIssues, SReflect::DeserializeFlags::Default, numIssues);
+
+  IssueOuter captured;
+  std::vector<SReflect::IssueReport> issues{{"stale", "stale"}};
+  ScopedCoutCapture log;
+  EXPECT_FALSE(
+      SReflect::FromJsonString(
+          captured, kJsonWithTwoIssues, SReflect::DeserializeFlags::Default, &issues));
+  EXPECT_EQ("", log.Text());
+  EXPECT_EQ(2, numIssues);
+  ASSERT_EQ(static_cast<size_t>(numIssues), issues.size());
+  EXPECT_EQ("inner/value", issues[0]._path);
+  EXPECT_EQ("Expected JSON integer, found string", issues[0]._description);
+  EXPECT_EQ("", issues[1]._path); // An unknown field is reported at the object that contains it
+  EXPECT_EQ(std::string::npos, issues[1]._description.find('\n'));
+  EXPECT_NE(std::string::npos, issues[1]._description.find(R"("bad\nname")"));
+  EXPECT_TRUE(captured.flag); // Deserialization continues after an issue
+}
+
+TEST(SReflect, NullOutIssuesLogsIssues) {
+  IssueOuter obj;
+  ScopedCoutCapture log;
+  EXPECT_FALSE(SReflect::FromJsonString(obj, kJsonWithTwoIssues));
+  EXPECT_NE(
+      std::string::npos,
+      log.Text().find("[Simple Reflection] inner/value: Expected JSON integer, found string"));
+}
+
+TEST(SReflect, OutIssuesReportsUnreadableJson) {
+  IssueOuter obj;
+  std::vector<SReflect::IssueReport> issues;
+  EXPECT_FALSE(SReflect::FromJsonString(obj, "{", SReflect::DeserializeFlags::Default, &issues));
+  EXPECT_EQ(1u, issues.size());
+  int numIssues = 5;
+  SReflect::FromJsonString(obj, "{", SReflect::DeserializeFlags::Default, numIssues);
+  EXPECT_EQ(1, numIssues);
+  EXPECT_FALSE(
+      SReflect::FromJsonString(obj, "[1e999]", SReflect::DeserializeFlags::Default, &issues));
+  EXPECT_EQ(0u, issues.at(0)._description.find("Malformed JSON")); // picojson throws for infinity
+
+  char const* const kMissingFile = "./__simple_reflection_missing_file__.json";
+  EXPECT_FALSE(
+      SReflect::LoadFromJsonFile(obj, kMissingFile, SReflect::DeserializeFlags::Default, &issues));
+  ASSERT_EQ(1u, issues.size()); // Replaced, not appended
+  EXPECT_EQ("", issues[0]._path);
+  EXPECT_NE(std::string::npos, issues[0]._description.find(kMissingFile));
+}
+
+TEST(SReflect, OutIssuesFromJsonValue) {
+  picojson::value json;
+  std::istringstream stream(kJsonWithTwoIssues);
+  ASSERT_EQ("", picojson::parse(json, stream));
+
+  IssueOuter obj;
+  std::vector<SReflect::IssueReport> issues;
+  EXPECT_FALSE(SReflect::FromJsonValue(obj, json, SReflect::DeserializeFlags::Default, &issues));
+  EXPECT_EQ(2u, issues.size());
+  EXPECT_FALSE(
+      SReflect::GetTypeInfo<IssueOuter>().Deserialize(
+          json, &obj, SReflect::DeserializeFlags::Default, &issues));
+  EXPECT_EQ(2u, issues.size());
+
+  picojson::value const empty{picojson::object{}};
+  EXPECT_TRUE(SReflect::FromJsonValue(obj, empty, SReflect::DeserializeFlags::Default, &issues));
+  EXPECT_TRUE(issues.empty());
+}
+
+struct PathRoot {
+  std::vector<IssueInner> list;
+  std::array<std::vector<int32_t>, 2> grid;
+  std::unordered_map<std::string, IssueInner> byName;
+  std::optional<IssueInner> maybe;
+  SR_BeginStruct(SReflectTest::PathRoot);
+  SR_Field(list);
+  SR_Field(grid);
+  SR_Field(byName);
+  SR_Field(maybe);
+  SR_EndStruct();
+};
+
+TEST(SReflect, IssuePathsLeadToTheProblem) {
+  PathRoot root;
+  std::vector<SReflect::IssueReport> issues;
+  SReflect::FromJsonString(
+      root,
+      R"({
+        "list": [{"value": "x"}, {"value": 2}],
+        "grid": [[1], [2, "y"]],
+        "byName": {"plain": {"value": "z"}, "a/b": {"value": false}, "..": {"value": true}},
+        "maybe": {"value": null}
+      })",
+      SReflect::DeserializeFlags::Default,
+      &issues);
+  std::vector<std::string> const expected{
+      "list/0/value",
+      "grid/1/1",
+      R"(byName/".."/value)", // A key that path syntax would misread is written as a JSON string
+      R"(byName/"a/b"/value)",
+      "byName/plain/value",
+      "maybe/value"};
+  EXPECT_EQ(expected, Paths(issues));
+  EXPECT_EQ(2, root.list.at(1).value); // A bad element doesn't stop the rest
+}
+
+TEST(SReflect, PairIssuesAreReportedAtKeyAndValue) {
+  std::pair<int32_t, std::vector<int32_t>> pr;
+  std::vector<SReflect::IssueReport> issues;
+  EXPECT_FALSE(
+      SReflect::FromJsonString(pr, "[1, 2]", SReflect::DeserializeFlags::Default, &issues));
+  ASSERT_EQ(1u, issues.size());
+  EXPECT_EQ("Expected JSON object, found array", issues[0].ToString());
+
+  SReflect::FromJsonString(pr, R"({"value": [3]})", SReflect::DeserializeFlags::Default, &issues);
+  ASSERT_EQ(1u, issues.size());
+  EXPECT_EQ("key: Missing from the JSON", issues[0].ToString());
+  EXPECT_EQ(std::vector<int32_t>{3}, pr.second);
+
+  SReflect::FromJsonString(
+      pr, R"({"key": 4, "value": [5, "x"]})", SReflect::DeserializeFlags::Default, &issues);
+  EXPECT_EQ(std::vector<std::string>{"value/1"}, Paths(issues));
+  EXPECT_EQ(4, pr.first);
+}
+
+TEST(SReflect, MapEntriesWithUnreadableKeysAreSkipped) {
+  std::unordered_map<int32_t, IssueInner> byId;
+  std::vector<SReflect::IssueReport> issues;
+  SReflect::FromJsonString(
+      byId,
+      R"({"abc": {"value": 1}, "null": {"value": 2}, "1.5": {"value": 3}, "4": {"value": 4}})",
+      SReflect::DeserializeFlags::Default,
+      &issues);
+  std::vector<std::string> const expected{"1.5", "abc", "null"}; // In key order
+  EXPECT_EQ(expected, Paths(issues));
+  // A key of the wrong type reads differently from a problem with the value at the same path
+  EXPECT_EQ("Map key: Expected JSON integer, found number", issues.at(0)._description);
+  ASSERT_EQ(1u, byId.size());
+  EXPECT_EQ(4, byId.at(4).value);
+}
+
+TEST(SReflect, EnumValuesWithoutAnItemRoundTrip) {
+  auto const noItem = static_cast<MyFruit>(7);
+  MyFruit fruit = MyFruit::Apple;
+  std::vector<SReflect::IssueReport> issues;
+  EXPECT_TRUE(
+      SReflect::FromJsonString(
+          fruit, SReflect::ToJsonString(noItem), SReflect::DeserializeFlags::Default, &issues));
+  EXPECT_EQ(noItem, fruit);
+
+  for (char const* json : {R"("")", R"("Pear")", R"("Pe\nar")"}) {
+    EXPECT_FALSE(
+        SReflect::FromJsonString(fruit, json, SReflect::DeserializeFlags::Default, &issues));
+    ASSERT_EQ(1u, issues.size()) << json;
+    EXPECT_EQ(0u, issues[0]._description.find("Unknown enum value")) << json;
+    EXPECT_EQ(std::string::npos, issues[0]._description.find('\n')) << json;
+  }
+}
+
+TEST(SReflect, MissingFieldIsReportedAtTheField) {
+  IssueOuter obj;
+  std::vector<SReflect::IssueReport> issues;
+  SReflect::FromJsonString(
+      obj, R"({"inner": {}})", SReflect::DeserializeFlags::WarnIfMissingFields, &issues);
+  std::vector<std::string> const expected{"inner/value", "flag"};
+  EXPECT_EQ(expected, Paths(issues));
+}
+
+TEST(SReflect, IssueReportFormatting) {
+  SReflect::IssueReport const issue{"inner/value", "Expected JSON integer, found string"};
+  EXPECT_EQ("inner/value: Expected JSON integer, found string", issue.ToString());
+  EXPECT_EQ("Malformed JSON", (SReflect::IssueReport{"", "Malformed JSON"}.ToString()));
+  ExpectJson(
+      R"({"description": "Expected JSON integer, found string", "path": "inner/value"})",
+      SReflect::ToJsonString(issue));
+}
+
+struct MapKey {
+  int32_t a = 0;
+  int32_t b = 0;
+  bool operator==(MapKey const& other) const {
+    return a == other.a && b == other.b;
+  }
+  SR_BeginStruct(SReflectTest::MapKey);
+  SR_Field(a);
+  SR_Field(b);
+  SR_EndStruct();
+};
+
+struct MapKeyHash {
+  size_t operator()(MapKey const& key) const {
+    return std::hash<int32_t>{}(key.a);
+  }
+};
+
+TEST(SReflect, MapKeysAndValuesStartFromDefaults) {
+  std::unordered_map<std::string, IssueOuter> byName;
+  EXPECT_TRUE(SReflect::FromJsonString(byName, R"({"x": {"flag": true}, "y": {}})"));
+  EXPECT_FALSE(byName["y"].flag);
+
+  std::unordered_map<MapKey, int32_t, MapKeyHash> byKey;
+  std::string const json = R"({"{\"a\": 1, \"b\": 7}": 1, "{\"a\": 2}": 2})";
+  EXPECT_TRUE(SReflect::FromJsonString(byKey, json));
+  EXPECT_EQ(2, byKey[(MapKey{2, 0})]);
+}
+
+TEST(SReflect, VectorOfBoolIsReplacedAndInvalidElementsContinue) {
+  std::vector<bool> flags{true, true, true, true};
+  std::vector<SReflect::IssueReport> issues;
+  EXPECT_FALSE(SReflect::FromJsonString(flags, R"([1, false, "bad"])", {}, &issues));
+  EXPECT_EQ((std::vector<bool>{true, false, true}), flags);
+  EXPECT_EQ((std::vector<std::string>{"0", "2"}), Paths(issues));
+}
+
+TEST(SReflect, FieldNamesCannotContainPathSyntax) {
+  // Calls what SR_Field_Name does, on a StructTypeInfo that the test owns, so that nothing leaks.
+  std::unique_ptr<SReflect::StructTypeInfo> const info{
+      SReflect::MakeStructTypeInfo<IssueInner>("SReflectTest::FieldNameValidation")};
+  EXPECT_THROW(
+      SReflect::detail::AddField(*info, "a/b", 0, SReflect::GetTypeInfo<int32_t>()),
+      std::runtime_error);
+}
+
+// A type with its own TypeInfo, as a type outside Simple Reflection might have, which reads its two
+// values from a JSON array through DeserializeContext. Given a number or a string, it throws the
+// way a careless implementation might.
+struct IntPair {
+  int32_t first = 0;
+  int32_t second = 0;
+};
+
+class IntPairTypeInfo final : public SReflect::TypeInfo {
+ public:
+  void SetInner(void const* /*src*/, void* /*dst*/) const override {}
+  bool IsValidInner(void const* /*src*/, AttributeList const& /*attribs*/) const override {
+    return true;
+  }
+  void SerializeInner(void const* /*src*/, picojson::value& /*dst*/) const override {}
+  void DeserializeInner(
+      picojson::value const& src,
+      void* dst,
+      SReflect::DeserializeContext& context) const override {
+    auto& pair = *static_cast<IntPair*>(dst);
+    if (src.is<double>()) {
+      (void)src.get<std::string>(); // picojson throws on the type mismatch
+    } else if (src.is<std::string>()) {
+      auto const& message = src.get<std::string>();
+      if (message == "bad_alloc") {
+        throw std::bad_alloc{};
+      }
+      throw std::invalid_argument(message);
+    }
+    if (!src.is<picojson::array>() || src.get<picojson::array>().size() != 2) {
+      context.ReportIssue("Expected a JSON array of two integers");
+      return;
+    }
+    auto const& intInfo = SReflect::GetTypeInfo<int32_t>();
+    context.DeserializeChild(0, intInfo, src.get<picojson::array>()[0], &pair.first);
+    context.DeserializeChild(1, intInfo, src.get<picojson::array>()[1], &pair.second);
+  }
+  bool SerializeToBytesInner(void const* /*src*/, SReflect::StreamWriter& /*dst*/) const override {
+    return true;
+  }
+  bool DeserializeFromBytesInner(SReflect::StreamReader& /*src*/, void* /*dst*/) const override {
+    return true;
+  }
+};
+
+} // namespace SReflectTest
+
+template <>
+struct SReflectTypeTraits<SReflectTest::IntPair> {
+  static constexpr SReflect::CoreType coreType = SReflect::CoreType::CT_other;
+  static SReflect::TypeInfo const& GetTypeInfo() {
+    static auto* s_typeInfo = [] {
+      auto* ti = new SReflectTest::IntPairTypeInfo;
+      ti->_coreType = coreType;
+      ti->_name = "IntPair";
+      ti->_nameWithNamespace = "SReflectTest::IntPair";
+      ti->_typeId = SReflect::ComputeTypeId(ti->_nameWithNamespace);
+      ti->_sizeInBytes = sizeof(SReflectTest::IntPair);
+      ti->_alignment = alignof(SReflectTest::IntPair);
+      return ti;
+    }();
+    return *s_typeInfo;
+  }
+};
+
+namespace SReflectTest {
+
+struct HoldsIntPair {
+  IntPair pair;
+  int32_t after = 0;
+  SR_BeginStruct(SReflectTest::HoldsIntPair);
+  SR_Field(pair);
+  SR_Field(after);
+  SR_EndStruct();
+};
+
+TEST(SReflect, CustomTypeReportsIssuesThroughContext) {
+  HoldsIntPair holder;
+  std::vector<SReflect::IssueReport> issues;
+  EXPECT_FALSE(
+      SReflect::FromJsonString(
+          holder, R"({"pair": [1, "x"]})", SReflect::DeserializeFlags::Default, &issues));
+  EXPECT_EQ(std::vector<std::string>{"pair/1"}, Paths(issues));
+  EXPECT_EQ(1, holder.pair.first);
+
+  SReflect::FromJsonString(
+      holder, R"({"pair": [1]})", SReflect::DeserializeFlags::Default, &issues);
+  EXPECT_EQ(std::vector<std::string>{"pair"}, Paths(issues));
+}
+
+TEST(SReflect, ExceptionsFromCustomTypesAreReportedAsIssues) {
+  HoldsIntPair holder;
+  std::vector<SReflect::IssueReport> issues;
+  EXPECT_FALSE(
+      SReflect::FromJsonString(
+          holder, R"({"pair": 5, "after": 1})", SReflect::DeserializeFlags::Default, &issues));
+  ASSERT_EQ(1u, issues.size());
+  EXPECT_EQ("pair: Expected IntPair, found JSON integer", issues[0].ToString());
+  EXPECT_EQ(1, holder.after);
+
+  SReflect::FromJsonString(
+      holder, R"({"pair": "boom", "after": "bad"})", SReflect::DeserializeFlags::Default, &issues);
+  ASSERT_EQ(2u, issues.size());
+  EXPECT_EQ("pair: Failed to deserialize IntPair: boom", issues[0].ToString());
+  EXPECT_EQ("after: Expected JSON integer, found string", issues[1].ToString());
+  EXPECT_EQ(1, holder.after);
+}
+
+TEST(SReflect, AllocationFailuresFromCustomTypesAreRethrown) {
+  HoldsIntPair holder;
+  std::vector<SReflect::IssueReport> issues;
+  EXPECT_THROW(
+      SReflect::FromJsonString(holder, R"({"pair": "bad_alloc"})", {}, &issues), std::bad_alloc);
+  EXPECT_TRUE(issues.empty());
 }
 
 struct StructWithJsonStringField {

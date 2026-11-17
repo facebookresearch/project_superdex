@@ -194,6 +194,12 @@ void LoadFromJsonString(
     std::string const& jsonStr,
     DeserializeFlags deserializeFlags,
     int& outNumIssues);
+bool LoadFromJsonString(
+    void* outObj,
+    TypeInfo const& info,
+    std::string const& jsonStr,
+    DeserializeFlags deserializeFlags,
+    std::vector<IssueReport>* outIssues);
 bool SaveToJsonFile(
     void const* obj,
     TypeInfo const& info,
@@ -205,6 +211,12 @@ bool LoadFromJsonFile(
     char const* filePath,
     DeserializeFlags deserializeFlags,
     int& outNumIssues);
+bool LoadFromJsonFile(
+    void* outObj,
+    TypeInfo const& info,
+    char const* filePath,
+    DeserializeFlags deserializeFlags,
+    std::vector<IssueReport>* outIssues);
 
 bool ToBytes(void const* src, TypeInfo const& srcInfo, StreamWriter& dst) noexcept;
 bool FromBytes(StreamReader& src, void* dst, TypeInfo const& dstInfo) noexcept;
@@ -580,6 +592,16 @@ inline void FromJsonString(
 }
 
 template <typename T>
+inline bool FromJsonString(
+    T& objOut,
+    std::string const& json,
+    DeserializeFlags deserializeFlags,
+    std::vector<IssueReport>* outIssues) {
+  return detail::LoadFromJsonString(
+      &objOut, GetFinalTypeInfo(objOut), json, deserializeFlags, outIssues);
+}
+
+template <typename T>
 inline void ToJsonValue(T const& obj, picojson::value& jsonOut) {
   GetFinalTypeInfo(obj).Serialize(&obj, jsonOut);
 }
@@ -591,6 +613,15 @@ inline void FromJsonValue(
     DeserializeFlags deserializeFlags,
     int& numIssuesOut) {
   GetFinalTypeInfo(objOut).Deserialize(json, &objOut, deserializeFlags, numIssuesOut);
+}
+
+template <typename T>
+inline bool FromJsonValue(
+    T& objOut,
+    picojson::value const& json,
+    DeserializeFlags deserializeFlags,
+    std::vector<IssueReport>* outIssues) {
+  return GetFinalTypeInfo(objOut).Deserialize(json, &objOut, deserializeFlags, outIssues);
 }
 
 template <typename T>
@@ -606,6 +637,16 @@ inline bool LoadFromJsonFile(
     int& numIssuesOut) {
   return detail::LoadFromJsonFile(
       &objOut, GetFinalTypeInfo(objOut), filePath, deserializeFlags, numIssuesOut);
+}
+
+template <typename T>
+inline bool LoadFromJsonFile(
+    T& objOut,
+    char const* filePath,
+    DeserializeFlags deserializeFlags,
+    std::vector<IssueReport>* outIssues) {
+  return detail::LoadFromJsonFile(
+      &objOut, GetFinalTypeInfo(objOut), filePath, deserializeFlags, outIssues);
 }
 
 template <typename T>
@@ -710,11 +751,8 @@ class VectorTypeInfo<std::vector<bool>> final : public ArrayTypeInfo {
   bool IsValidInner(void const* obj, AttributeList const& attribs) const override;
   void SetInner(void const* src, void* dst) const override;
   void SerializeInner(void const* obj, picojson::value& dst) const override;
-  void DeserializeInner(
-      picojson::value const& src,
-      void* dst,
-      DeserializeFlags deserializeFlags,
-      int& inOutIssuesDetected) const override;
+  void DeserializeInner(picojson::value const& src, void* dst, DeserializeContext& context)
+      const override;
   bool SerializeToBytesInner(void const* src, StreamWriter& dst) const override;
   bool DeserializeFromBytesInner(StreamReader& src, void* dst) const override;
   void* GetElement(void* /*obj*/, size_t /*i*/) const override; // Not implemented

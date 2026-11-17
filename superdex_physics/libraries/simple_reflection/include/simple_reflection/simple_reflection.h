@@ -183,6 +183,8 @@ Example 2 - Class using BaseObject
 ///////////////////////////////////////////////////////////////////////////
 namespace SReflect {
 struct Attribute;
+class DeserializeContext;
+struct IssueReport;
 class TypeInfo;
 class StructTypeInfo;
 } // namespace SReflect
@@ -293,6 +295,7 @@ Goes between the SR_BeginStruct and SR_EndStruct macros. See examples (above).
 /**
 Adds a field (member variable) to the class or struct, but give it a name that is different
 from the actual class member. Example: SR_Field_Name(_myValue, "value")
+The name must not contain '/', which separates the parts of a path (see IssueReport).
 */
 #define SR_Field_Name(member, name)               IMPL_SR_Field_Name(member, name)
 
@@ -730,6 +733,15 @@ enum class DeserializeFlags : uint32_t {
 
 /**
 Deserialize any supported type from a JSON string
+
+JSON deserialization reports each problem it finds, such as malformed JSON, a type mismatch or an
+unknown field name, as an issue with a path to where it was found (see IssueReport). The
+deserialization functions come in two forms:
+  - With `int& outNumIssues`, each issue is logged as "path: description" and outNumIssues
+    receives the number of issues.
+  - With `std::vector<IssueReport>* outIssues`, *outIssues is replaced with one IssueReport per
+    issue and the issues are not logged. If outIssues is null, the issues are logged instead. These
+    functions return true if there were no issues, except for LoadFromJsonFile.
 */
 template <typename T>
 void FromJsonString(
@@ -742,11 +754,8 @@ template <typename T>
 bool FromJsonString(
     T& objOut,
     std::string const& json,
-    DeserializeFlags deserializeFlags = DeserializeFlags::Default) {
-  int numIssues = 0;
-  FromJsonString(objOut, json, deserializeFlags, numIssues);
-  return numIssues == 0;
-}
+    DeserializeFlags deserializeFlags = DeserializeFlags::Default,
+    std::vector<IssueReport>* outIssues = nullptr);
 
 // This overload throws an exception if deserialization fails
 template <typename T>
@@ -778,6 +787,13 @@ void FromJsonValue(
     DeserializeFlags deserializeFlags,
     int& outNumIssues);
 
+template <typename T>
+bool FromJsonValue(
+    T& objOut,
+    picojson::value const& json,
+    DeserializeFlags deserializeFlags,
+    std::vector<IssueReport>* outIssues = nullptr);
+
 /**
 Serialize any supported type to a JSON file. Return false if the IO failed.
 */
@@ -785,7 +801,8 @@ template <typename T>
 bool SaveToJsonFile(T const& obj, char const* filePath, bool warnOnFailure = true);
 
 /**
-Deserialize any supported type from a JSON file.  Return false if the IO failed.
+Deserialize any supported type from a JSON file. Return false if the file could not be read or
+parsed.
 */
 template <typename T>
 bool LoadFromJsonFile(
@@ -793,6 +810,13 @@ bool LoadFromJsonFile(
     char const* filePath,
     DeserializeFlags deserializeFlags,
     int& outNumIssues);
+
+template <typename T>
+bool LoadFromJsonFile(
+    T& objOut,
+    char const* filePath,
+    DeserializeFlags deserializeFlags,
+    std::vector<IssueReport>* outIssues = nullptr);
 
 /**
     Serialize any supported type to binary blob.
@@ -934,13 +958,19 @@ class TypeInfo {
   void Serialize(void const* src, picojson::value& dst) const;
 
   /**
-  Deserialize data from a picojson::value into dst
+  Deserialize data from a picojson::value into dst. See FromJsonString for the two ways that issues
+  are reported.
   */
   void Deserialize(
       picojson::value const& src,
       void* dst,
       DeserializeFlags deserializeFlags,
       int& outIssuesDetected) const;
+  bool Deserialize(
+      picojson::value const& src,
+      void* dst,
+      DeserializeFlags deserializeFlags,
+      std::vector<IssueReport>* outIssues = nullptr) const;
 
   /**
   Serialize src in binary format into dst
@@ -1005,14 +1035,12 @@ class TypeInfo {
   virtual void FromUInt64(uint64_t val, void* dst) const;
   virtual void SetInner(void const* src, void* dst) const = 0;
 
-  // These functions should only be called from TypeInfo implementations
+  // These functions should only be called from TypeInfo implementations. To deserialize a nested
+  // value, use the DeserializeContext functions, which also add it to the path of any issues.
   virtual bool IsValidInner(void const* src, AttributeList const& attribs) const = 0;
   virtual void SerializeInner(void const* src, picojson::value& dst) const = 0;
-  virtual void DeserializeInner(
-      picojson::value const& src,
-      void* dst,
-      DeserializeFlags deserializeFlags,
-      int& inOutIssuesDetected) const = 0;
+  virtual void DeserializeInner(picojson::value const& src, void* dst, DeserializeContext& context)
+      const = 0;
   virtual bool SerializeToBytesInner(void const* src, StreamWriter& dst) const = 0;
   virtual bool DeserializeFromBytesInner(StreamReader& src, void* dst) const = 0;
 
@@ -1189,11 +1217,8 @@ class ArrayTypeInfo : public TypeInfo {
   bool IsValidInner(void const* src, AttributeList const& attribs) const override;
   void SetInner(void const* src, void* dst) const override;
   void SerializeInner(void const* src, picojson::value& dst) const override;
-  void DeserializeInner(
-      picojson::value const& src,
-      void* dst,
-      DeserializeFlags deserializeFlags,
-      int& inOutIssuesDetected) const override;
+  void DeserializeInner(picojson::value const& src, void* dst, DeserializeContext& context)
+      const override;
   bool SerializeToBytesInner(void const* src, StreamWriter& dst) const override;
   bool DeserializeFromBytesInner(StreamReader& src, void* dst) const override;
 
@@ -1260,11 +1285,8 @@ class MatrixTypeInfo : public TypeInfo {
   bool IsValidInner(void const* obj, AttributeList const& attribs) const final;
   void SetInner(void const* src, void* dst) const final;
   void SerializeInner(void const* src, picojson::value& dst) const final;
-  void DeserializeInner(
-      picojson::value const& src,
-      void* dst,
-      DeserializeFlags deserializeFlags,
-      int& inOutIssuesDetected) const final;
+  void DeserializeInner(picojson::value const& src, void* dst, DeserializeContext& context)
+      const final;
   bool SerializeToBytesInner(void const* src, StreamWriter& dst) const final;
   bool DeserializeFromBytesInner(StreamReader& src, void* dst) const final;
 
@@ -1305,11 +1327,8 @@ class MapTypeInfo : public SReflect::TypeInfo {
   // TypeInfo overrides
   bool IsValidInner(void const* src, AttributeList const& attribs) const override;
   void SerializeInner(void const* src, picojson::value& dstJson) const override;
-  void DeserializeInner(
-      picojson::value const& srcJson,
-      void* dst,
-      SReflect::DeserializeFlags deserializeFlags,
-      int& inOutIssuesDetected) const override;
+  void DeserializeInner(picojson::value const& srcJson, void* dst, DeserializeContext& context)
+      const override;
   bool SerializeToBytesInner(void const* src, SReflect::StreamWriter& dst) const override;
   bool DeserializeFromBytesInner(SReflect::StreamReader& src, void* dst) const override;
   [[nodiscard]] bool IsMemCopySafe() const override;
@@ -1391,11 +1410,8 @@ class VariantTypeInfo : public TypeInfo {
   void SetInner(void const* src, void* dst) const final;
   [[nodiscard]] bool IsValidInner(void const* src, AttributeList const& attributes) const final;
   void SerializeInner(void const* src, picojson::value& dstJson) const final;
-  void DeserializeInner(
-      picojson::value const& srcJson,
-      void* dst,
-      SReflect::DeserializeFlags deserializeFlags,
-      int& inOutIssuesDetected) const final;
+  void DeserializeInner(picojson::value const& srcJson, void* dst, DeserializeContext& context)
+      const final;
   [[nodiscard]] bool SerializeToBytesInner(void const* src, SReflect::StreamWriter& dst)
       const final;
   [[nodiscard]] bool DeserializeFromBytesInner(SReflect::StreamReader& src, void* dst) const final;
@@ -1410,6 +1426,82 @@ class VariantTypeInfo : public TypeInfo {
 #include "simple_reflection_inl.h"
 
 namespace SReflect {
+
+///////////////////////////////////////////////////////////////////////////
+// Issue Reports
+///////////////////////////////////////////////////////////////////////////
+
+/**
+A problem found while deserializing (see FromJsonString).
+
+_path leads from the object being deserialized to the member with the problem, in steps separated
+by slashes:
+  - A field step is the field's name: "parentField/childField".
+  - An array element step is its index: "parentField/childArray/5/nestedField".
+  - A map's values are named by their keys: "mapField/key". A problem with the key itself is
+    reported at the same path, with a description that mentions the map key.
+  - A std::pair's halves are named as in the JSON: "pairField/key" and "pairField/value".
+  - A name or key that is empty, is "." or "..", or contains '/', '"' or a control character is
+    written as a JSON string: "mapField/\"a/b\"" (see FormatPathStep).
+  - std::optional and std::variant add no step. The path continues into the value they hold.
+  - The path is empty for a problem with the object itself, such as malformed JSON.
+A JSON key that matches no field is reported at the object that contains it.
+*/
+struct IssueReport {
+  std::string _path;
+  std::string _description; // Description of the error, without the path.
+
+  // Format as "path: description", or just the description if the path is empty.
+  [[nodiscard]] std::string ToString() const;
+};
+
+/**
+Passed down through TypeInfo::DeserializeInner. Holds the deserialization flags, and collects the
+issues found, each with the path to where it was found. The public deserialization functions create
+it, so only TypeInfo implementations need to use it directly.
+*/
+class DeserializeContext {
+ public:
+  explicit DeserializeContext(DeserializeFlags flags);
+  DeserializeContext(DeserializeContext const&) = delete;
+  DeserializeContext(DeserializeContext&&) = delete;
+  DeserializeContext& operator=(DeserializeContext const&) = delete;
+  DeserializeContext& operator=(DeserializeContext&&) = delete;
+  ~DeserializeContext() = default;
+
+  [[nodiscard]] DeserializeFlags GetFlags() const;
+  [[nodiscard]] std::vector<IssueReport> const& GetIssues() const;
+  [[nodiscard]] std::vector<IssueReport> TakeIssues();
+
+  // Report a problem with the value being deserialized, or with one of its fields or map entries.
+  void ReportIssue(std::string description);
+  void ReportIssue(std::string_view childName, std::string description);
+
+  // Deserialize src into dst. DeserializeValue is for a value with no step of its own in the path,
+  // such as the value in a std::optional. DeserializeChild adds a step: a field name or map key, or
+  // an array index. An exception is reported as an issue.
+  void DeserializeValue(TypeInfo const& info, picojson::value const& src, void* dst);
+  void DeserializeChild(
+      std::string_view name,
+      TypeInfo const& info,
+      picojson::value const& src,
+      void* dst);
+  void DeserializeChild(size_t index, TypeInfo const& info, picojson::value const& src, void* dst);
+
+ private:
+  struct PathStep {
+    PathStep const* parent;
+    std::string_view name;
+    size_t index = 0;
+    bool isIndex = false;
+
+    void AppendTo(std::string& result) const;
+  };
+
+  DeserializeFlags _flags;
+  std::vector<IssueReport> _issues;
+  PathStep const* _path = nullptr;
+};
 
 ///////////////////////////////////////////////////////////////////////////
 // Attributes
@@ -1648,6 +1740,8 @@ struct Attribute_OnDeserialize : public Attribute {
 };
 
 } // namespace SReflect
+
+SR_DeclareStructEx(SReflect::IssueReport);
 
 #else // if !SIMPLE_REFLECTION_ENABLE
 

@@ -34,6 +34,7 @@ SR_WARNING_POP()
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <stdexcept>
 #include <string_view>
 #include <unordered_map>
 
@@ -64,6 +65,11 @@ SR_EnumItem(CT_variant);
 SR_EnumItem(CT_other);
 SR_EnumItem(X_Count);
 SR_EndEnum();
+
+SR_BeginStructDefinitionEx(SReflect::IssueReport);
+SR_Field_Name(_path, "path");
+SR_Field_Name(_description, "description");
+SR_EndStructDefinitionEx();
 
 namespace SReflect {
 
@@ -213,6 +219,98 @@ class Defer final {
 #define SR_DEFER(code) Defer SR_PP_CAT(_defer, __LINE__)([&]() { code; })
 
 /////////////////////////////////////////////////////////////////////////////
+// Deserialization Issues
+/////////////////////////////////////////////////////////////////////////////
+
+std::string IssueReport::ToString() const {
+  return _path.empty() ? _description : _path + ": " + _description;
+}
+
+// Write text as a JSON string, so that it reads as one unambiguous line inside a description
+static std::string QuoteJson(std::string_view text) {
+  return picojson::value{std::string{text}}.serialize();
+}
+
+/**
+Write a field name or map key as one step of a path (see IssueReport). Return name as-is, or as a
+JSON string if it is empty, is "." or "..", or contains '/', '"' or a control character (below
+0x20). Quoting control characters keeps a path on one line.
+*/
+static std::string FormatPathStep(std::string_view name) {
+  auto const forcesQuotes = [](char c) {
+    return c == '/' || c == '"' || static_cast<unsigned char>(c) < 0x20;
+  };
+  bool const needsQuotes = name.empty() || name == "." || name == ".." ||
+      std::any_of(name.begin(), name.end(), forcesQuotes);
+  return needsQuotes ? QuoteJson(name) : std::string{name};
+}
+
+static char const* JsonTypeName(picojson::value const& value) {
+  if (value.is<picojson::null>()) {
+    return "null";
+  } else if (value.is<bool>()) {
+    return "boolean";
+  } else if (value.is<int64_t>()) {
+    return "integer";
+  } else if (value.is<double>()) {
+    return "number";
+  } else if (value.is<std::string>()) {
+    return "string";
+  } else if (value.is<picojson::array>()) {
+    return "array";
+  } else {
+    return "object";
+  }
+}
+
+// Parse JSON text. Return picojson's error message, which is empty on success. picojson throws
+// instead for a number out of range, such as 1e999.
+static std::string ParseJsonText(picojson::value& out, std::istream& in) {
+  try {
+    return picojson::parse(out, in);
+  } catch (std::overflow_error const& e) {
+    return e.what();
+  }
+}
+
+// Report that src is not the expected type of JSON value. Return false.
+static bool
+ReportWrongJsonType(DeserializeContext& context, char const* expected, picojson::value const& src) {
+  context.ReportIssue(Format("Expected JSON %s, found %s", expected, JsonTypeName(src)));
+  return false;
+}
+
+// Read a typed value from JSON. If the JSON has the wrong type, report an issue and return false.
+template <typename T>
+static bool ReadJsonValue(picojson::value const& src, T& value, DeserializeContext& context) {
+  if constexpr (std::is_same_v<T, bool>) {
+    if (!src.is<bool>()) {
+      return ReportWrongJsonType(context, "boolean", src);
+    }
+    value = src.get<bool>();
+  } else if constexpr (std::is_integral_v<T>) {
+    // Read any signed or unsigned integer as int64_t
+    if (!src.is<int64_t>()) {
+      return ReportWrongJsonType(context, "integer", src);
+    }
+    value = static_cast<T>(src.get<int64_t>());
+  } else if constexpr (std::is_floating_point_v<T>) {
+    // Read any floating point value as double
+    if (!src.is<double>()) {
+      return ReportWrongJsonType(context, "number", src);
+    }
+    value = static_cast<T>(src.get<double>());
+  } else {
+    static_assert(std::is_same_v<T, std::string>, "Unexpected type");
+    if (!src.is<std::string>()) {
+      return ReportWrongJsonType(context, "string", src);
+    }
+    value = src.get<std::string>();
+  }
+  return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////
 // TypeId Enforcement
 /////////////////////////////////////////////////////////////////////////////
 
@@ -280,23 +378,6 @@ void detail::ArrayDestructInPlace(TypeInfo const& elementType, void* ptr, size_t
     elementType._destructInPlace(itr);
   }
 }
-
-namespace detail {
-// Helper to get a typed value from picojson.
-// Adapted from RTech's <Common/PicojsonUtils.h>
-template <typename T>
-static void GetJsonValue(picojson::value const& pjval, T& val) {
-  if constexpr (std::is_integral_v<T> && !std::is_same_v<std::decay_t<T>, bool>) {
-    // Get any signed or unsigned integer as int64_t
-    val = static_cast<T>(pjval.get<int64_t>());
-  } else if constexpr (std::is_floating_point_v<T>) {
-    // Get any floating point value as double
-    val = static_cast<T>(pjval.get<double>());
-  } else {
-    val = pjval.get<T>();
-  }
-}
-} // namespace detail
 
 namespace serde::bytes {
 // TODO:
@@ -662,25 +743,148 @@ void TypeInfo::Serialize(void const* src, picojson::value& dst) const {
   SerializeInner(src, dst);
 }
 
+// The name of the type that info deserializes, for issue descriptions
+static char const* ValueTypeName(TypeInfo const& info) {
+  TypeInfo const* valueInfo = (info._coreType == CoreType::CT_field)
+      ? static_cast<FieldTypeInfo const&>(info)._innerTypeInfo
+      : &info;
+  return valueInfo->_name ? valueInfo->_name : "(unknown)";
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// DeserializeContext
+/////////////////////////////////////////////////////////////////////////////
+
+void DeserializeContext::PathStep::AppendTo(std::string& result) const {
+  if (parent) {
+    parent->AppendTo(result);
+  }
+  if (!result.empty()) {
+    result += '/';
+  }
+  result += isIndex ? std::to_string(index) : FormatPathStep(name);
+}
+
+DeserializeContext::DeserializeContext(DeserializeFlags flags) : _flags(flags) {}
+
+DeserializeFlags DeserializeContext::GetFlags() const {
+  return _flags;
+}
+
+std::vector<IssueReport> const& DeserializeContext::GetIssues() const {
+  return _issues;
+}
+
+std::vector<IssueReport> DeserializeContext::TakeIssues() {
+  return std::exchange(_issues, {});
+}
+
+void DeserializeContext::ReportIssue(std::string description) {
+  std::string path;
+  if (_path) {
+    _path->AppendTo(path);
+  }
+  _issues.push_back(IssueReport{std::move(path), std::move(description)});
+}
+
+void DeserializeContext::ReportIssue(std::string_view childName, std::string description) {
+  PathStep const step{_path, childName};
+  _path = &step;
+  SR_DEFER(_path = step.parent);
+  ReportIssue(std::move(description));
+}
+
+void DeserializeContext::DeserializeValue(
+    TypeInfo const& info,
+    picojson::value const& src,
+    void* dst) {
+  try {
+    info.DeserializeInner(src, dst, *this);
+  } catch (std::bad_alloc const&) {
+    // Allocation failures are not problems with the serialized data.
+    throw;
+  } catch (std::exception const& e) {
+    // A DeserializeInner implemented outside this file may let picojson throw on a type mismatch.
+    bool const isTypeMismatch =
+        std::string_view{e.what()}.find("type mismatch") != std::string_view::npos;
+    ReportIssue(
+        isTypeMismatch
+            ? Format("Expected %s, found JSON %s", ValueTypeName(info), JsonTypeName(src))
+            : Format("Failed to deserialize %s: %s", ValueTypeName(info), e.what()));
+  }
+}
+
+void DeserializeContext::DeserializeChild(
+    std::string_view name,
+    TypeInfo const& info,
+    picojson::value const& src,
+    void* dst) {
+  PathStep const step{_path, name};
+  _path = &step;
+  SR_DEFER(_path = step.parent);
+  DeserializeValue(info, src, dst);
+}
+
+void DeserializeContext::DeserializeChild(
+    size_t index,
+    TypeInfo const& info,
+    picojson::value const& src,
+    void* dst) {
+  PathStep const step{_path, {}, index, true};
+  _path = &step;
+  SR_DEFER(_path = step.parent);
+  DeserializeValue(info, src, dst);
+}
+
+// Deserialize the value passed to a public deserialization function.
+static void DeserializeRoot(
+    TypeInfo const& info,
+    picojson::value const& src,
+    void* dst,
+    DeserializeContext& context) {
+  if (!info.HasAttribute<Attribute_DoNotSerialize>()) {
+    context.DeserializeValue(info, src, dst);
+  }
+}
+
+// Log issues the way the functions with an `int& outNumIssues` parameter do. Return how many.
+static int LogIssues(std::vector<IssueReport> const& issues) {
+  for (IssueReport const& issue : issues) {
+    SR_LOG("%s", issue.ToString().c_str());
+    (void)issue;
+  }
+  return static_cast<int>(issues.size());
+}
+
+// Give the issues to the caller, or log them if outIssues is null. Return true if there were none.
+static bool ReturnIssues(DeserializeContext& context, std::vector<IssueReport>* outIssues) {
+  bool const noIssues = context.GetIssues().empty();
+  if (outIssues != nullptr) {
+    *outIssues = context.TakeIssues();
+  } else {
+    LogIssues(context.GetIssues());
+  }
+  return noIssues;
+}
+
 void TypeInfo::Deserialize(
     picojson::value const& src,
     void* dst,
     DeserializeFlags deserializeFlags,
     int& outIssuesDetected) const {
-  outIssuesDetected = 0;
-  if (HasAttribute<Attribute_DoNotSerialize>()) {
-    return;
-  }
+  DeserializeContext context{deserializeFlags};
+  DeserializeRoot(*this, src, dst, context);
+  outIssuesDetected = LogIssues(context.GetIssues());
+}
 
-  try {
-    DeserializeInner(src, dst, deserializeFlags, outIssuesDetected);
-  } catch (std::runtime_error const& e) {
-    SR_LOG(
-        "Failure while deserializing type '%s': %s",
-        _nameWithNamespace ? _nameWithNamespace : "(unknown)",
-        e.what());
-    ++outIssuesDetected;
-  }
+bool TypeInfo::Deserialize(
+    picojson::value const& src,
+    void* dst,
+    DeserializeFlags deserializeFlags,
+    std::vector<IssueReport>* outIssues) const {
+  DeserializeContext context{deserializeFlags};
+  DeserializeRoot(*this, src, dst, context);
+  return ReturnIssues(context, outIssues);
 }
 
 bool TypeInfo::SerializeToBytes(void const* src, StreamWriter& dst) const {
@@ -788,12 +992,9 @@ class PrimitiveTypeInfo : public TypeInfo {
     return serde::bytes::Deserialize(src, *static_cast<T*>(dst));
   }
 
-  void DeserializeInner(
-      picojson::value const& src,
-      void* dst,
-      DeserializeFlags /*deserializeFlags*/,
-      int& /*inOutIssuesDetected*/) const override {
-    detail::GetJsonValue(src, *static_cast<T*>(dst));
+  void DeserializeInner(picojson::value const& src, void* dst, DeserializeContext& context)
+      const override {
+    ReadJsonValue(src, *static_cast<T*>(dst), context);
   }
 
   uint64_t ToUInt64([[maybe_unused]] void const* src) const override {
@@ -1000,30 +1201,23 @@ class EnumTypeInfoImpl final : public EnumTypeInfo {
     }
   }
 
-  void DeserializeInner(
-      picojson::value const& src,
-      void* dst,
-      DeserializeFlags deserializeFlags,
-      int& inOutIssuesDetected) const override {
-    // Get string, then check if this is an enum item name, or a numeric value
-    std::string dstAsString;
-    detail::GetJsonValue(src, dstAsString);
-    if (!dstAsString.empty()) {
-      if (isdigit(dstAsString[0])) {
-        // Value is a number; read it directly as a number into dst
-        _innerTypeInfo->DeserializeInner(src, dst, deserializeFlags, inOutIssuesDetected);
-      } else {
-        // Value is a string; find the enum item that matches
-        EnumItem const* item = FindItemByName(dstAsString);
-        if (item != nullptr) {
-          // Found an enum item - set dst from its value
-          _innerTypeInfo->FromUInt64(item->_value, dst);
-        } else {
-          // Json has a string that doesn't match any existing enum item; leave at default
-          SR_LOG("Enum value '%s' not found, using default", dstAsString.c_str());
-          ++inOutIssuesDetected;
-        }
-      }
+  void DeserializeInner(picojson::value const& src, void* dst, DeserializeContext& context)
+      const override {
+    // A value that matches no enum item is serialized as a number
+    if (src.is<int64_t>()) {
+      _innerTypeInfo->DeserializeInner(src, dst, context);
+      return;
+    }
+    std::string name;
+    if (!ReadJsonValue(src, name, context)) {
+      return;
+    }
+    EnumItem const* item = FindItemByName(name);
+    if (item != nullptr) {
+      _innerTypeInfo->FromUInt64(item->_value, dst);
+    } else {
+      // Json has a string that doesn't match any existing enum item; leave at default
+      context.ReportIssue(Format("Unknown enum value %s", QuoteJson(name).c_str()));
     }
   }
 
@@ -1207,30 +1401,19 @@ class FieldTypeInfoImpl final : public FieldTypeInfo {
     }
   }
 
-  void DeserializeInner(
-      picojson::value const& src,
-      void* dst,
-      DeserializeFlags deserializeFlags,
-      int& inOutIssuesDetected) const override {
+  void DeserializeInner(picojson::value const& src, void* dst, DeserializeContext& context)
+      const override {
     // src is a picojson value
     // dst is a field pointer
-    try {
-      if (HasAttribute<Attribute_JsonString>() &&
-          (src.is<picojson::object>() || src.is<picojson::array>())) {
-        // This string field carries a serialized JSON value: store the JSON object/array as its
-        // serialized text, routed through the field's normal string assignment so a non-string
-        // target fails and is reported. See Attribute_JsonString.
-        picojson::value const asString{src.serialize(false)};
-        _innerTypeInfo->DeserializeInner(asString, dst, deserializeFlags, inOutIssuesDetected);
-      } else {
-        _innerTypeInfo->DeserializeInner(src, dst, deserializeFlags, inOutIssuesDetected);
-      }
-    } catch (std::runtime_error const& e) {
-      SR_LOG(
-          "Failure while getting json field '%s': '%s'. Is the field type correct? Is there an extra comma in the json?",
-          _name,
-          e.what());
-      ++inOutIssuesDetected;
+    if (HasAttribute<Attribute_JsonString>() &&
+        (src.is<picojson::object>() || src.is<picojson::array>())) {
+      // This string field carries a serialized JSON value: store the JSON object/array as its
+      // serialized text, routed through the field's normal string assignment so a non-string
+      // target fails and is reported. See Attribute_JsonString.
+      picojson::value const asString{src.serialize(false)};
+      _innerTypeInfo->DeserializeInner(asString, dst, context);
+    } else {
+      _innerTypeInfo->DeserializeInner(src, dst, context);
     }
   }
 
@@ -1378,12 +1561,13 @@ class StructTypeInfoImpl final : public StructTypeInfo {
     }
   }
 
-  void DeserializeInner(
-      picojson::value const& src,
-      void* dst,
-      DeserializeFlags deserializeFlags,
-      int& inOutIssuesDetected) const override {
-    auto flags = static_cast<uint32_t>(deserializeFlags);
+  void DeserializeInner(picojson::value const& src, void* dst, DeserializeContext& context)
+      const override {
+    if (!src.is<picojson::object>()) {
+      ReportWrongJsonType(context, "object", src);
+      return;
+    }
+    auto flags = static_cast<uint32_t>(context.GetFlags());
     // Loop over fields, find them, and if exist, deserialize from them
     picojson::object const& srcObj = src.get<picojson::object>();
     int numSrcFieldsMatched = 0;
@@ -1409,19 +1593,13 @@ class StructTypeInfoImpl final : public StructTypeInfo {
       if (srcFieldIt != srcObj.end()) {
         ++numSrcFieldsMatched;
         uint8_t* dstFieldPtr = field->GetFieldPtr(dst);
-        int fieldIssues{0};
-        field->Deserialize(srcFieldIt->second, dstFieldPtr, deserializeFlags, fieldIssues);
-        inOutIssuesDetected += fieldIssues;
+        context.DeserializeChild(field->_name, *field, srcFieldIt->second, dstFieldPtr);
       } else {
         if (field->_innerTypeInfo->_coreType == CoreType::CT_optional) {
           // If the inner type is something like std::optional, then the missing field is not
           // considered to be a problem.
         } else if (flags & static_cast<uint32_t>(DeserializeFlags::WarnIfMissingFields)) {
-          SR_LOG(
-              "Missing json field '%s' in %s object",
-              field->_name,
-              _nameWithNamespace ? _nameWithNamespace : "(unknown)");
-          ++inOutIssuesDetected;
+          context.ReportIssue(field->_name, "Missing from the JSON");
         }
       }
     }
@@ -1434,18 +1612,14 @@ class StructTypeInfoImpl final : public StructTypeInfo {
           FieldTypeInfo const* fieldInfo = FindField(srcField.first);
           if (fieldInfo != nullptr) {
             if (fieldInfo->HasAttribute<Attribute_DoNotSerialize>()) {
-              SR_LOG(
-                  "JSON data for object [%s] contains field [%s], which is marked as 'do not serialize'. Please correct the JSON file or resave it. When resaved, any unsupported fields will be lost.",
-                  _nameWithNamespace ? _nameWithNamespace : "(unknown)",
-                  srcField.first.c_str());
-              ++inOutIssuesDetected;
+              context.ReportIssue(
+                  fieldInfo->_name,
+                  "Present in the JSON, but marked 'do not serialize'. Resaving the JSON will remove it.");
             }
           } else {
-            SR_LOG(
-                "JSON data for object [%s] contains unknown field name [%s]. It may be a typo or it may be a field that was removed from the code. Please correct the JSON file or resave it. When resaved, any unsupported fields will be lost.",
-                _nameWithNamespace ? _nameWithNamespace : "(unknown)",
-                srcField.first.c_str());
-            ++inOutIssuesDetected;
+            context.ReportIssue(Format(
+                "Unknown field %s. It may be a typo, or a field that was removed from the code. Resaving the JSON will remove it.",
+                QuoteJson(srcField.first).c_str()));
           }
         }
       }
@@ -1525,19 +1699,21 @@ void ArrayTypeInfo::SerializeInner(void const* src, picojson::value& dst) const 
 void ArrayTypeInfo::DeserializeInner(
     picojson::value const& src,
     void* dst,
-    DeserializeFlags deserializeFlags,
-    int& inOutIssuesDetected) const {
+    DeserializeContext& context) const {
+  if (!src.is<picojson::array>()) {
+    ReportWrongJsonType(context, "array", src);
+    return;
+  }
   picojson::array const& srcArray = src.get<picojson::array>();
   const size_t numElements = srcArray.size();
   const bool success = SetNumElements(dst, numElements);
   if (success) {
     for (size_t i = 0; i < numElements; ++i) {
-      _innerTypeInfo->DeserializeInner(
-          srcArray[i], GetElement(dst, i), deserializeFlags, inOutIssuesDetected);
+      context.DeserializeChild(i, *_innerTypeInfo, srcArray[i], GetElement(dst, i));
     }
   } else {
-    SR_LOG("Array is the wrong size (got:%zu, expected:%zu)", srcArray.size(), GetNumElements(dst));
-    ++inOutIssuesDetected;
+    context.ReportIssue(
+        Format("Expected %zu elements, found %zu", GetNumElements(dst), srcArray.size()));
   }
 }
 
@@ -1684,17 +1860,22 @@ void VectorTypeInfo<std::vector<bool>>::SerializeInner(void const* src, picojson
 void VectorTypeInfo<std::vector<bool>>::DeserializeInner(
     picojson::value const& src,
     void* dst,
-    DeserializeFlags /*deserializeFlags*/,
-    int& /*inOutIssuesDetected*/) const {
+    DeserializeContext& context) const {
+  if (!src.is<picojson::array>()) {
+    ReportWrongJsonType(context, "array", src);
+    return;
+  }
   picojson::array const& srcArray = src.get<picojson::array>();
   auto& dstVec = *(reinterpret_cast<std::vector<bool>*>(dst));
-  dstVec.reserve(srcArray.size());
-  std::transform(
-      srcArray.begin(), srcArray.end(), std::back_inserter(dstVec), [](auto& elem) -> auto {
-        bool value = false;
-        detail::GetJsonValue(elem, value);
-        return value;
-      });
+  dstVec.resize(srcArray.size());
+  for (size_t i = 0; i < srcArray.size(); ++i) {
+    if (srcArray[i].is<bool>()) {
+      dstVec[i] = srcArray[i].get<bool>();
+    } else {
+      bool value = dstVec[i];
+      context.DeserializeChild(i, *_innerTypeInfo, srcArray[i], &value);
+    }
+  }
 }
 
 bool VectorTypeInfo<std::vector<bool>>::SerializeToBytesInner(void const* src, StreamWriter& dst)
@@ -1763,13 +1944,15 @@ void const* MatrixTypeInfo::GetData(void const* obj) const {
   return GetData(const_cast<void*>(obj));
 }
 
-// TryResize with some error reporting
+// TryResize with some error reporting. If context is non-null, a failure is reported as a
+// deserialization issue. Otherwise it is logged.
 static bool TryResizeMatrix(
     MatrixTypeInfo const& ti,
     void* dst,
     MatrixTypeInfo::Layout& dstLayout,
     size_t numRows,
-    size_t numColumns) {
+    size_t numColumns,
+    DeserializeContext* context = nullptr) {
   if ((dstLayout._numRows == numRows) && (dstLayout._numColumns == numColumns)) {
     return true; // already the right size
   }
@@ -1781,12 +1964,17 @@ static bool TryResizeMatrix(
         dstLayout._numRows == numRows && dstLayout._numColumns == numColumns,
         "TryResize reported success incorrectly. The dimensions were not resized.");
   } else {
-    SR_LOG(
-        "Incompatible matrix dimensions. Expected (%zu x %zu) but got (%zu x %zu).",
+    std::string description = Format(
+        "Expected a %zu x %zu matrix, found %zu x %zu",
         dstLayout._numRows,
         dstLayout._numColumns,
         numRows,
         numColumns);
+    if (context != nullptr) {
+      context->ReportIssue(std::move(description));
+    } else {
+      SR_LOG("%s", description.c_str());
+    }
   }
   return ok;
 }
@@ -1911,11 +2099,9 @@ void MatrixTypeInfo::SerializeInner(void const* src, picojson::value& dst) const
 void MatrixTypeInfo::DeserializeInner(
     picojson::value const& src,
     void* dst,
-    DeserializeFlags deserializeFlags,
-    int& inOutIssuesDetected) const {
+    DeserializeContext& context) const {
   if (!src.is<picojson::array>()) {
-    SR_LOG("Failed to deserialize matrix. Expected an array of arrays in JSON.");
-    ++inOutIssuesDetected;
+    ReportWrongJsonType(context, "array", src);
     return;
   }
 
@@ -1936,16 +2122,15 @@ void MatrixTypeInfo::DeserializeInner(
       numRows = srcOuter.size();
       for (size_t i = 0; i < srcOuter.size(); ++i) {
         if (!srcOuter[i].is<picojson::array>()) {
-          SR_LOG("Failed to deserialize matrix. Expected an array of arrays in JSON.");
-          ++inOutIssuesDetected;
+          context.ReportIssue(
+              Format("Expected each row to be a JSON array, found %s", JsonTypeName(srcOuter[i])));
           return;
         }
         auto const& srcInner = srcOuter[i].get<picojson::array>();
         if (i == 0) {
           numColumns = srcInner.size();
         } else if (srcInner.size() != numColumns) {
-          SR_LOG("Failed to deserialize matrix. Inconsistent row width.");
-          ++inOutIssuesDetected;
+          context.ReportIssue("Rows have different lengths");
           return;
         }
       }
@@ -1953,9 +2138,8 @@ void MatrixTypeInfo::DeserializeInner(
   }
 
   // Resize the destination if necessary
-  bool ok = TryResizeMatrix(*this, dst, dstLayout, numRows, numColumns);
+  bool ok = TryResizeMatrix(*this, dst, dstLayout, numRows, numColumns, &context);
   if (!ok) {
-    ++inOutIssuesDetected;
     return;
   }
 
@@ -1967,10 +2151,9 @@ void MatrixTypeInfo::DeserializeInner(
     for (size_t i = 0; i < numColumns; ++i) {
       auto const& srcElem = srcOuter[i];
       void* dstElem = GetElement(dst, 0, i);
-      int issuesDetected = 0;
-      _innerTypeInfo->DeserializeInner(srcElem, dstElem, deserializeFlags, issuesDetected);
-      if (issuesDetected) {
-        inOutIssuesDetected += issuesDetected;
+      size_t const numIssuesBefore = context.GetIssues().size();
+      _innerTypeInfo->DeserializeInner(srcElem, dstElem, context);
+      if (context.GetIssues().size() != numIssuesBefore) {
         return;
       }
     }
@@ -1978,10 +2161,9 @@ void MatrixTypeInfo::DeserializeInner(
     for (size_t i = 0; i < numRows; ++i) {
       auto const& srcElem = srcOuter[i];
       void* dstElem = GetElement(dst, i, 0);
-      int issuesDetected = 0;
-      _innerTypeInfo->DeserializeInner(srcElem, dstElem, deserializeFlags, issuesDetected);
-      if (issuesDetected) {
-        inOutIssuesDetected += issuesDetected;
+      size_t const numIssuesBefore = context.GetIssues().size();
+      _innerTypeInfo->DeserializeInner(srcElem, dstElem, context);
+      if (context.GetIssues().size() != numIssuesBefore) {
         return;
       }
     }
@@ -1992,10 +2174,9 @@ void MatrixTypeInfo::DeserializeInner(
       for (size_t c = 0; c < numColumns; ++c) {
         auto const& srcElem = srcInner[c];
         void* dstElem = GetElement(dst, r, c);
-        int issuesDetected = 0;
-        _innerTypeInfo->DeserializeInner(srcElem, dstElem, deserializeFlags, issuesDetected);
-        if (issuesDetected) {
-          inOutIssuesDetected += issuesDetected;
+        size_t const numIssuesBefore = context.GetIssues().size();
+        _innerTypeInfo->DeserializeInner(srcElem, dstElem, context);
+        if (context.GetIssues().size() != numIssuesBefore) {
           return;
         }
       }
@@ -2129,13 +2310,23 @@ class PairTypeInfoImpl final : public PairTypeInfo {
     dstJson[kSecond] = uJson;
   }
 
-  void DeserializeInner(
-      picojson::value const& srcJson,
-      void* dst,
-      DeserializeFlags deserializeFlags,
-      int& inOutIssuesDetected) const override {
-    _infoT->DeserializeInner(srcJson[kFirst], GetT(dst), deserializeFlags, inOutIssuesDetected);
-    _infoU->DeserializeInner(srcJson[kSecond], GetU(dst), deserializeFlags, inOutIssuesDetected);
+  void DeserializeInner(picojson::value const& srcJson, void* dst, DeserializeContext& context)
+      const override {
+    if (!srcJson.is<picojson::object>()) {
+      ReportWrongJsonType(context, "object", srcJson);
+      return;
+    }
+    auto const& srcObj = srcJson.get<picojson::object>();
+    auto const deserializeHalf = [&](char const* name, TypeInfo const& info, void* half) {
+      auto const it = srcObj.find(name);
+      if (it == srcObj.end()) {
+        context.ReportIssue(name, "Missing from the JSON");
+      } else {
+        context.DeserializeChild(name, info, it->second, half);
+      }
+    };
+    deserializeHalf(kFirst, *_infoT, GetT(dst));
+    deserializeHalf(kSecond, *_infoU, GetU(dst));
   }
 
   bool SerializeToBytesInner(void const* src, StreamWriter& dst) const override {
@@ -2245,17 +2436,16 @@ void MapTypeInfo::SerializeInner(void const* src, picojson::value& dstJson) cons
 void MapTypeInfo::DeserializeInner(
     picojson::value const& srcJson,
     void* dst,
-    SReflect::DeserializeFlags deserializeFlags,
-    int& inOutIssuesDetected) const {
+    DeserializeContext& context) const {
+  if (!srcJson.is<picojson::object>()) {
+    ReportWrongJsonType(context, "object", srcJson);
+    return;
+  }
+
   // Clear previous contents
   Clear(dst);
 
-  void* tempKey = _keyTypeInfo->New();
-  SR_DEFER(_keyTypeInfo->Delete(tempKey));
-  void* tempValue = _valueTypeInfo->New();
-  SR_DEFER(_valueTypeInfo->Delete(tempValue));
-
-  // Populate key-value pairs
+  // Populate key-value pairs. Issues with an entry, including its key, are reported at its key.
   for (auto&& [keyStr, valueJson] : srcJson.get<picojson::object>()) {
     // Convert string key into json
     picojson::value keyJson;
@@ -2265,20 +2455,33 @@ void MapTypeInfo::DeserializeInner(
     } else {
       // The key is some other type. Attempt to parse it as a JSON string.
       std::istringstream keyStream(keyStr);
-      std::string parseError = picojson::parse(keyJson, keyStream);
-      if (!parseError.empty() || keyJson.is<picojson::null>()) {
-        SR_LOG(
-            "Attempting to parse malformed JSON in map key.\n  JSON: %s\n  error: %s\n",
-            keyStr.c_str(),
-            parseError.empty() ? "unknown" : parseError.c_str());
-        ++inOutIssuesDetected;
+      std::string parseError = ParseJsonText(keyJson, keyStream);
+      if (!parseError.empty()) {
+        context.ReportIssue(keyStr, "Malformed JSON in map key: " + parseError);
+        continue;
+      }
+      if (keyJson.is<picojson::null>()) {
+        context.ReportIssue(keyStr, "Map key is null");
+        continue;
       }
     }
 
-    // Deserialize and insert pairs
-    _keyTypeInfo->DeserializeInner(keyJson, tempKey, deserializeFlags, inOutIssuesDetected);
-    _valueTypeInfo->DeserializeInner(valueJson, tempValue, deserializeFlags, inOutIssuesDetected);
-    Insert(dst, tempKey, tempValue);
+    // Deserialize and insert pairs. Skip an entry whose key could not be read. Each key and value
+    // starts from its default rather than from the previous entry's.
+    void* key = _keyTypeInfo->New();
+    SR_DEFER(_keyTypeInfo->Delete(key));
+    DeserializeContext keyContext{context.GetFlags()};
+    keyContext.DeserializeValue(*_keyTypeInfo, keyJson, key);
+    if (!keyContext.GetIssues().empty()) {
+      for (IssueReport const& issue : keyContext.GetIssues()) {
+        context.ReportIssue(keyStr, "Map key: " + issue.ToString());
+      }
+      continue;
+    }
+    void* value = _valueTypeInfo->New();
+    SR_DEFER(_valueTypeInfo->Delete(value));
+    context.DeserializeChild(keyStr, *_valueTypeInfo, valueJson, value);
+    Insert(dst, key, value);
   }
 }
 
@@ -2452,14 +2655,12 @@ class OptionalTypeInfoImpl final : public OptionalTypeInfo {
   void DeserializeInner(
       picojson::value const& srcJson,
       void* dstOptional,
-      DeserializeFlags deserializeFlags,
-      int& inOutIssuesDetected) const override {
+      DeserializeContext& context) const override {
     if (srcJson.is<picojson::null>()) {
       SetOptionalValue(nullptr, dstOptional); // null in JSON means "no value"
     } else {
       // Make sure it has a value, then deserialize it in place
-      _innerTypeInfo->DeserializeInner(
-          srcJson, EnsureOptionalValue(dstOptional), deserializeFlags, inOutIssuesDetected);
+      context.DeserializeValue(*_innerTypeInfo, srcJson, EnsureOptionalValue(dstOptional));
     }
   }
 
@@ -2558,11 +2759,8 @@ class PicojsonValueTypeInfoImpl final : public TypeInfo {
     dst = *reinterpret_cast<picojson::value const*>(src);
   }
 
-  void DeserializeInner(
-      picojson::value const& src,
-      void* dst,
-      DeserializeFlags /*deserializeFlags*/,
-      int& /*inOutIssuesDetected*/) const override {
+  void DeserializeInner(picojson::value const& src, void* dst, DeserializeContext& /*context*/)
+      const override {
     *reinterpret_cast<picojson::value*>(dst) = src;
   }
 
@@ -2678,18 +2876,16 @@ void VariantTypeInfo::SerializeInner(void const* src, picojson::value& dstJson) 
 void VariantTypeInfo::DeserializeInner(
     picojson::value const& srcJson,
     void* dst,
-    SReflect::DeserializeFlags deserializeFlags,
-    int& inOutIssuesDetected) const {
+    DeserializeContext& context) const {
   // We expect a JSON dictionary with one key
   if (!srcJson.is<picojson::object>()) {
-    SR_LOG("Failed to deserialize variant. Expected {} braces.");
-    inOutIssuesDetected++;
+    ReportWrongJsonType(context, "object", srcJson);
     return;
   }
   auto const& srcJsonObj = srcJson.get<picojson::object>();
   if (srcJsonObj.size() != 1) {
-    SR_LOG("Failed to deserialize variant. Expected a JSON object like { \"TypeName\": value }.");
-    ++inOutIssuesDetected;
+    context.ReportIssue(
+        "Expected a JSON object with one key, the type name, like { \"TypeName\": value }");
     return;
   }
 
@@ -2704,10 +2900,8 @@ void VariantTypeInfo::DeserializeInner(
     }
   }
   if (innerTypeIndex == -1) {
-    SR_LOG(
-        "Failed to deserialize variant. \"%s\" is not one of the supported types.",
-        innerTypeName.c_str());
-    ++inOutIssuesDetected;
+    context.ReportIssue(
+        Format("%s is not one of the variant's types", QuoteJson(innerTypeName).c_str()));
     return;
   }
 
@@ -2716,18 +2910,16 @@ void VariantTypeInfo::DeserializeInner(
   SR_ASSERT(prevInnerTypeIndex < _innerTypes.size(), "Invalid type index");
   if (innerTypeIndex != (int)prevInnerTypeIndex) {
     if (!TrySetInnerTypeIndex(dst, (size_t)innerTypeIndex)) {
-      SR_LOG(
-          "Failed to deserialize variant. The inner type \"%s\" could not be changed to \"%s\".",
-          _innerTypes[prevInnerTypeIndex]->_nameWithNamespace,
-          innerTypeName.c_str());
-      ++inOutIssuesDetected;
+      context.ReportIssue(Format(
+          R"(Failed to change the variant's type from "%s" to "%s")",
+          _innerTypes[prevInnerTypeIndex]->_name,
+          innerTypeName.c_str()));
       return;
     }
   }
 
   // Finally, deserialize the inner object
-  _innerTypes[innerTypeIndex]->DeserializeInner(
-      innerJsonValue, GetInnerObject(dst), deserializeFlags, inOutIssuesDetected);
+  context.DeserializeValue(*_innerTypes[innerTypeIndex], innerJsonValue, GetInnerObject(dst));
 }
 
 bool VariantTypeInfo::SerializeToBytesInner(void const* src, SReflect::StreamWriter& dst) const {
@@ -2858,6 +3050,7 @@ void detail::AddField(
     size_t offset,
     TypeInfo const& innerType) {
   SR_ASSERT(info.FindField(name) == nullptr, "Adding the same field more than once");
+  SR_ASSERT(strchr(name, '/') == nullptr, "Field names must not contain '/'");
   auto* newField = new FieldTypeInfoImpl;
   newField->_coreType = CoreType::CT_field;
   newField->_innerTypeInfo = &innerType;
@@ -2973,12 +3166,9 @@ class StdStringTypeInfo : public StringTypeInfo {
   void SerializeInner(void const* src, picojson::value& dst) const override {
     dst = Str(src);
   }
-  void DeserializeInner(
-      picojson::value const& src,
-      void* dst,
-      DeserializeFlags /*deserializeFlags*/,
-      int& /*inOutIssuesDetected*/) const override {
-    detail::GetJsonValue(src, Str(dst));
+  void DeserializeInner(picojson::value const& src, void* dst, DeserializeContext& context)
+      const override {
+    ReadJsonValue(src, Str(dst), context);
   }
   bool SerializeToBytesInner(void const* src, StreamWriter& dst) const override {
     return serde::bytes::Serialize(Str(src), dst);
@@ -3166,26 +3356,46 @@ std::string detail::SaveToJsonString(void const* obj, TypeInfo const& info, bool
   return jsonValue.serialize(pretty);
 }
 
+static void LoadFromJsonStringImpl(
+    void* outObj,
+    TypeInfo const& info,
+    std::string const& jsonStr,
+    DeserializeContext& context) {
+  std::istringstream jsonStream(jsonStr);
+  picojson::value jsonValue;
+  std::string parseError = ParseJsonText(jsonValue, jsonStream);
+  if (!parseError.empty()) {
+    context.ReportIssue(Format("Malformed JSON: %s", parseError.c_str()));
+    return;
+  }
+  DeserializeRoot(info, jsonValue, outObj, context);
+}
+
 void detail::LoadFromJsonString(
-    void* objOut,
+    void* outObj,
     TypeInfo const& info,
     std::string const& jsonStr,
     DeserializeFlags deserializeFlags,
-    int& numIssuesOut) {
-  std::istringstream jsonStream(jsonStr);
-  picojson::value jsonValue;
-  std::string parseError = picojson::parse(jsonValue, jsonStream);
-  if (!parseError.empty()) {
-    SR_LOG("Attempting to parse malformed JSON.\n  error: %s\n", parseError.c_str());
-    ++numIssuesOut;
-    return;
-  }
-  info.Deserialize(jsonValue, objOut, deserializeFlags, numIssuesOut);
+    int& outNumIssues) {
+  DeserializeContext context{deserializeFlags};
+  LoadFromJsonStringImpl(outObj, info, jsonStr, context);
+  outNumIssues = LogIssues(context.GetIssues());
+}
+
+bool detail::LoadFromJsonString(
+    void* outObj,
+    TypeInfo const& info,
+    std::string const& jsonStr,
+    DeserializeFlags deserializeFlags,
+    std::vector<IssueReport>* outIssues) {
+  DeserializeContext context{deserializeFlags};
+  LoadFromJsonStringImpl(outObj, info, jsonStr, context);
+  return ReturnIssues(context, outIssues);
 }
 
 bool detail::SaveToJsonFile(
     void const* obj,
-    TypeInfo const& typeInfo,
+    TypeInfo const& info,
     char const* filePath,
     bool warnOnFailure) {
   // Attempt to open output file
@@ -3199,7 +3409,7 @@ bool detail::SaveToJsonFile(
 
   // Serialize object into json data
   picojson::value dataVal = picojson::object();
-  typeInfo.Serialize(obj, dataVal);
+  info.Serialize(obj, dataVal);
 
   // Serialize json data to string and write to file
   std::string dataStr = dataVal.serialize(true);
@@ -3208,49 +3418,77 @@ bool detail::SaveToJsonFile(
   return true; // Success
 }
 
-bool detail::LoadFromJsonFile(
-    void* objOut,
-    TypeInfo const& typeInfo,
+// Return false if the file could not be read or parsed.
+static bool LoadFromJsonFileImpl(
+    void* outObj,
+    TypeInfo const& info,
     char const* filePath,
-    DeserializeFlags deserializeFlags,
-    int& numIssuesOut) {
-  numIssuesOut = 0;
-
+    DeserializeContext& context) {
   // Attempt to open file
   std::ifstream inFile(filePath);
   if (!inFile.is_open()) {
     // Failed to open json file
-    SR_LOG("Failed to open JSON file for reading: %s", filePath);
-    numIssuesOut++;
+    context.ReportIssue(Format("Failed to open JSON file for reading: %s", filePath));
     return false; // Failed
   }
 
   // Load data from file into memory
   picojson::value data;
-  std::string parseError = picojson::parse(data, inFile);
+  std::string parseError = ParseJsonText(data, inFile);
   inFile.close();
 
   // Check for parse errors
   if (!parseError.empty()) {
-    SR_LOG(
-        "Attempting to parse malformed JSON.\n  file: %s\n  error: %s\n",
-        filePath,
-        parseError.c_str());
-    numIssuesOut++;
+    context.ReportIssue(Format("Malformed JSON in %s: %s", filePath, parseError.c_str()));
     return false; // Failed
   }
 
   // Deserialize data
-  typeInfo.Deserialize(data, objOut, deserializeFlags, numIssuesOut);
-
-  // If there were any issues, and user has requested any warnings, log the file that produced the
-  // warnings, which is very useful for fixing them.
-  auto flags = static_cast<uint32_t>(deserializeFlags);
-  if (numIssuesOut > 0 && (flags & static_cast<uint32_t>(DeserializeFlags::MaximumWarnings))) {
-    SR_LOG("%d issues detected while deserializing from JSON file: %s", numIssuesOut, filePath);
-  }
-
+  DeserializeRoot(info, data, outObj, context);
   return true; // File read was successful, even if there were JSON issues
+}
+
+// Log the issues. If there were any, and user has requested any warnings, also log the file that
+// produced them, which is very useful for fixing them. Return the number of issues.
+static int LogFileIssues(
+    std::vector<IssueReport> const& issues,
+    DeserializeFlags deserializeFlags,
+    char const* filePath) {
+  int const numIssues = LogIssues(issues);
+  auto flags = static_cast<uint32_t>(deserializeFlags);
+  if (numIssues > 0 && (flags & static_cast<uint32_t>(DeserializeFlags::MaximumWarnings))) {
+    SR_LOG("%d issues detected while deserializing from JSON file: %s", numIssues, filePath);
+  }
+  (void)filePath;
+  return numIssues;
+}
+
+bool detail::LoadFromJsonFile(
+    void* outObj,
+    TypeInfo const& info,
+    char const* filePath,
+    DeserializeFlags deserializeFlags,
+    int& outNumIssues) {
+  DeserializeContext context{deserializeFlags};
+  bool const fileRead = LoadFromJsonFileImpl(outObj, info, filePath, context);
+  outNumIssues = LogFileIssues(context.GetIssues(), deserializeFlags, filePath);
+  return fileRead;
+}
+
+bool detail::LoadFromJsonFile(
+    void* outObj,
+    TypeInfo const& info,
+    char const* filePath,
+    DeserializeFlags deserializeFlags,
+    std::vector<IssueReport>* outIssues) {
+  DeserializeContext context{deserializeFlags};
+  bool const fileRead = LoadFromJsonFileImpl(outObj, info, filePath, context);
+  if (outIssues != nullptr) {
+    *outIssues = context.TakeIssues();
+  } else {
+    LogFileIssues(context.GetIssues(), deserializeFlags, filePath);
+  }
+  return fileRead;
 }
 
 bool detail::ToBytes(void const* src, TypeInfo const& srcInfo, StreamWriter& dst) noexcept {

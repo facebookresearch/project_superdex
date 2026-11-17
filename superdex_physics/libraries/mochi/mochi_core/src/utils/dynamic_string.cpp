@@ -62,8 +62,7 @@ class StringTypeInfo : public SReflect::StringTypeInfo {
   void DeserializeInner(
       picojson::value const& src,
       void* dst,
-      SReflect::DeserializeFlags /*deserializeFlags*/,
-      int& /*inOutIssuesDetected*/) const override {
+      SReflect::DeserializeContext& /*context*/) const override {
     Str(dst) = DynamicString{src.get<std::string>()};
   }
   bool SerializeToBytesInner(void const* src, SReflect::StreamWriter& dst) const override {
