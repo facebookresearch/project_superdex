@@ -515,6 +515,7 @@ bool USuperDexRoboticsFunctionLibrary::ExportSuperDexBotScene(
 
     mochi::prefab::ExportParams Params;
     Params.excludeActors = ToMochiSpan(ExcludeHandles);
+    Params.exportCurrentPose = true;
 
     mochi::prefab::ExportScene(Scene, "base_scene", TCHAR_TO_UTF8(*OutputDir), Params, Error);
     if (!Error.IsOK()) {

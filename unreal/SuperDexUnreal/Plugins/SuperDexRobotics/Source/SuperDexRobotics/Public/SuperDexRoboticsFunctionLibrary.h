@@ -36,6 +36,9 @@ class SUPERDEXROBOTICS_API USuperDexRoboticsFunctionLibrary : public UBlueprintF
    * the scene is captured as it is, task and spawnables included, e.g. to archive the scene a
    * recording was made in.
    *
+   * Base-scene actors are exported in their current pose: articulated joint configurations and
+   * deformations as well as root transforms. Spawnables are exported as spawned.
+   *
    * Pauses the simulation while it exports. Editor only (PIE included): returns false, doing
    * nothing, in packaged builds.
    */
