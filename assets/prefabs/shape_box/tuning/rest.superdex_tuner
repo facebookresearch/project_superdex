@@ -1,0 +1,157 @@
+{
+  "comment": "The prefab as is: the blocks resting in their holes and the lid closed. Everything should settle within a few millimeters and stay put.",
+  "assetsRoot": "",
+  "prefab": "./../shape_box.mochi_prefab",
+  "prefabOverrides": [],
+  "loads": [],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "diamond"
+    },
+    {
+      "kind": "Penetration",
+      "target": "diamond",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "ellipse"
+    },
+    {
+      "kind": "Penetration",
+      "target": "ellipse",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "trapezoid"
+    },
+    {
+      "kind": "Penetration",
+      "target": "trapezoid",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "star"
+    },
+    {
+      "kind": "Penetration",
+      "target": "star",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "octagon"
+    },
+    {
+      "kind": "Penetration",
+      "target": "octagon",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "parallelogram"
+    },
+    {
+      "kind": "Penetration",
+      "target": "parallelogram",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "pentagon"
+    },
+    {
+      "kind": "Penetration",
+      "target": "pentagon",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "hexagon"
+    },
+    {
+      "kind": "Penetration",
+      "target": "hexagon",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "rectangle"
+    },
+    {
+      "kind": "Penetration",
+      "target": "rectangle",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "triangle"
+    },
+    {
+      "kind": "Penetration",
+      "target": "triangle",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cross"
+    },
+    {
+      "kind": "Penetration",
+      "target": "cross",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "square"
+    },
+    {
+      "kind": "Penetration",
+      "target": "square",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "shapebox_body"
+    },
+    {
+      "kind": "Penetration",
+      "target": "shapebox_body",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "shapebox_lid"
+    },
+    {
+      "kind": "Penetration",
+      "target": "shapebox_lid",
+      "ignoreGround": true
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 2.0,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": ["diamond.pos.z", "ellipse.pos.z", "trapezoid.pos.z", "star.pos.z", "octagon.pos.z", "parallelogram.pos.z", "pentagon.pos.z", "hexagon.pos.z", "rectangle.pos.z", "triangle.pos.z", "cross.pos.z", "square.pos.z", "shapebox_body.pos.z", "shapebox_lid.pos.z"],
+      "height": 200
+    }
+  ]
+}

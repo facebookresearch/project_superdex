@@ -1,0 +1,142 @@
+{
+  "comment": "Push the pentagon, hexagon and rectangle blocks straight through their holes in the +Y face, the other blocks parked out of the way: each starts lined up 5 mm outside its hole, and a pose path (30 Hz, so it sags well under the 1 mm clearance; pull capped at 100 m/s^2 times its mass, about 1.8 N) moves it in over 0.8 s until it is through, then lets it go. Each should follow the path without catching: load.push_<block>.error stays well under 1 mm and its force small.",
+  "assetsRoot": "",
+  "prefab": "./../shape_box.mochi_prefab",
+  "prefabOverrides": [
+    {"path": "actors.rigid[name=shapebox_body].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=diamond].translation", "value": "[1.0, -0.6000000000000001, 0.0]"},
+    {"path": "actors.rigid[name=diamond].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=ellipse].translation", "value": "[1.0, -0.5, 0.0]"},
+    {"path": "actors.rigid[name=ellipse].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=trapezoid].translation", "value": "[1.0, -0.4, 0.0]"},
+    {"path": "actors.rigid[name=trapezoid].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=star].translation", "value": "[1.0, -0.30000000000000004, 0.0]"},
+    {"path": "actors.rigid[name=star].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=octagon].translation", "value": "[1.0, -0.2, 0.0]"},
+    {"path": "actors.rigid[name=octagon].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=parallelogram].translation", "value": "[1.0, -0.1, 0.0]"},
+    {"path": "actors.rigid[name=parallelogram].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=triangle].translation", "value": "[1.0, 0.0, 0.0]"},
+    {"path": "actors.rigid[name=triangle].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=cross].translation", "value": "[1.0, 0.1, 0.0]"},
+    {"path": "actors.rigid[name=cross].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=square].translation", "value": "[1.0, 0.2, 0.0]"},
+    {"path": "actors.rigid[name=square].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=pentagon].translation", "value": "[0.0, 0.115, 0.039783]"},
+    {"path": "actors.rigid[name=pentagon].rotation", "value": "[0.809017, 0.0, -0.587785, 0.0]"},
+    {"path": "actors.rigid[name=hexagon].translation", "value": "[0.029502, 0.075, 0.10025]"},
+    {"path": "actors.rigid[name=hexagon].rotation", "value": "[-0.0, -0.866025, -0.0, 0.5]"},
+    {"path": "actors.rigid[name=rectangle].translation", "value": "[-0.052, 0.075, 0.11393]"},
+    {"path": "actors.rigid[name=rectangle].rotation", "value": "[0.0, -0.0, 0.0, 1.0]"}
+  ],
+  "loads": [
+    {
+      "name": "push_pentagon",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "pentagon",
+      "pointLocal": [-0.0, 0.02, 0.0],
+      "waypoints": [
+        {"time": 0.2, "position": [-0.0, 0.095, 0.039783], "rotation": [2.541602, 0.0, -1.846582], "interpolation": "Linear"},
+        {"time": 1.0, "position": [-0.0, 0.037, 0.039783], "rotation": [2.541602, 0.0, -1.846582], "drive": "Off"}
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 100,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "maxAngularAcceleration": 2000
+      }
+    },
+    {
+      "name": "push_hexagon",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "hexagon",
+      "pointLocal": [1e-06, 0.02, 2e-06],
+      "waypoints": [
+        {"time": 0.2, "position": [0.0295, 0.095, 0.10025], "rotation": [-0.0, -2.094395, -0.0], "interpolation": "Linear"},
+        {"time": 1.0, "position": [0.0295, 0.037, 0.10025], "rotation": [-0.0, -2.094395, -0.0], "drive": "Off"}
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 100,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "maxAngularAcceleration": 2000
+      }
+    },
+    {
+      "name": "push_rectangle",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "rectangle",
+      "pointLocal": [0.0187, 0.02, -0.01368],
+      "waypoints": [
+        {"time": 0.2, "position": [-0.0333, 0.095, 0.10025], "rotation": [0.0, 0.0, 0.0], "interpolation": "Linear"},
+        {"time": 1.0, "position": [-0.0333, 0.037, 0.10025], "rotation": [0.0, 0.0, 0.0], "drive": "Off"}
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 100,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "maxAngularAcceleration": 2000
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "pentagon"
+    },
+    {
+      "kind": "Penetration",
+      "target": "pentagon",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "hexagon"
+    },
+    {
+      "kind": "Penetration",
+      "target": "hexagon",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "rectangle"
+    },
+    {
+      "kind": "Penetration",
+      "target": "rectangle",
+      "ignoreGround": true
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 1.5,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": ["pentagon.pos.z", "hexagon.pos.z", "rectangle.pos.z"],
+      "height": 200
+    }
+  ]
+}

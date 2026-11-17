@@ -1,0 +1,142 @@
+{
+  "comment": "Push the star, octagon and parallelogram blocks straight through their holes in the +X face, the other blocks parked out of the way: each starts lined up 5 mm outside its hole, and a pose path (30 Hz, so it sags well under the 1 mm clearance; pull capped at 100 m/s^2 times its mass, about 1.8 N) moves it in over 0.8 s until it is through, then lets it go. Each should follow the path without catching: load.push_<block>.error stays well under 1 mm and its force small.",
+  "assetsRoot": "",
+  "prefab": "./../shape_box.mochi_prefab",
+  "prefabOverrides": [
+    {"path": "actors.rigid[name=shapebox_body].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=diamond].translation", "value": "[1.0, -0.6000000000000001, 0.0]"},
+    {"path": "actors.rigid[name=diamond].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=ellipse].translation", "value": "[1.0, -0.5, 0.0]"},
+    {"path": "actors.rigid[name=ellipse].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=trapezoid].translation", "value": "[1.0, -0.4, 0.0]"},
+    {"path": "actors.rigid[name=trapezoid].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=pentagon].translation", "value": "[1.0, -0.30000000000000004, 0.0]"},
+    {"path": "actors.rigid[name=pentagon].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=hexagon].translation", "value": "[1.0, -0.2, 0.0]"},
+    {"path": "actors.rigid[name=hexagon].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=rectangle].translation", "value": "[1.0, -0.1, 0.0]"},
+    {"path": "actors.rigid[name=rectangle].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=triangle].translation", "value": "[1.0, 0.0, 0.0]"},
+    {"path": "actors.rigid[name=triangle].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=cross].translation", "value": "[1.0, 0.1, 0.0]"},
+    {"path": "actors.rigid[name=cross].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=square].translation", "value": "[1.0, 0.2, 0.0]"},
+    {"path": "actors.rigid[name=square].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=star].translation", "value": "[0.075, 0.012067, 0.059437]"},
+    {"path": "actors.rigid[name=star].rotation", "value": "[-0.217407, -0.217407, -0.672855, 0.672855]"},
+    {"path": "actors.rigid[name=octagon].translation", "value": "[0.115, -0.031299, 0.0932]"},
+    {"path": "actors.rigid[name=octagon].rotation", "value": "[-0.5, 0.5, 0.5, 0.5]"},
+    {"path": "actors.rigid[name=parallelogram].translation", "value": "[0.075, 0.013355, 0.079786]"},
+    {"path": "actors.rigid[name=parallelogram].rotation", "value": "[0.707104, 0.707104, -0.002025, 0.002025]"}
+  ],
+  "loads": [
+    {
+      "name": "push_star",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "star",
+      "pointLocal": [0.002263, 0.02, -0.017487],
+      "waypoints": [
+        {"time": 0.2, "position": [0.095, -1e-06, 0.04658], "rotation": [-0.489454, -0.489454, -1.514813], "interpolation": "Linear"},
+        {"time": 1.0, "position": [0.037, -1e-06, 0.04658], "rotation": [-0.489454, -0.489454, -1.514813], "drive": "Off"}
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 100,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "maxAngularAcceleration": 2000
+      }
+    },
+    {
+      "name": "push_octagon",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "octagon",
+      "pointLocal": [0.0, 0.02, -1e-06],
+      "waypoints": [
+        {"time": 0.2, "position": [0.095, -0.0313, 0.0932], "rotation": [-1.2092, 1.2092, 1.2092], "interpolation": "Linear"},
+        {"time": 1.0, "position": [0.037, -0.0313, 0.0932], "rotation": [-1.2092, 1.2092, 1.2092], "drive": "Off"}
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 100,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "maxAngularAcceleration": 2000
+      }
+    },
+    {
+      "name": "push_parallelogram",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "parallelogram",
+      "pointLocal": [0.014957, 0.02, -0.0135],
+      "waypoints": [
+        {"time": 0.2, "position": [0.095, 0.028389, 0.0932], "rotation": [2.218573, 2.218573, -0.006353], "interpolation": "Linear"},
+        {"time": 1.0, "position": [0.037, 0.028389, 0.0932], "rotation": [2.218573, 2.218573, -0.006353], "drive": "Off"}
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 100,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "maxAngularAcceleration": 2000
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "star"
+    },
+    {
+      "kind": "Penetration",
+      "target": "star",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "octagon"
+    },
+    {
+      "kind": "Penetration",
+      "target": "octagon",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "parallelogram"
+    },
+    {
+      "kind": "Penetration",
+      "target": "parallelogram",
+      "ignoreGround": true
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 1.5,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": ["star.pos.z", "octagon.pos.z", "parallelogram.pos.z"],
+      "height": 200
+    }
+  ]
+}

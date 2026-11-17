@@ -1,0 +1,149 @@
+{
+  "comment": "Press blocks into the box with 300 N through their centers of mass, ramped over 1 s and held for 0.5 s: the square end-on into the outside of the -X wall, the star tip first into its inside, and the rectangle end-on onto the lid between its holes. None should go through: each stops at the wall and comes back when let go. Gravity is off, so the blocks stay where they are put.",
+  "assetsRoot": "",
+  "prefab": "./../shape_box.mochi_prefab",
+  "prefabOverrides": [
+    {"path": "actors.rigid[name=shapebox_body].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=diamond].translation", "value": "[1.0, -0.6000000000000001, 0.0]"},
+    {"path": "actors.rigid[name=diamond].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=ellipse].translation", "value": "[1.0, -0.5, 0.0]"},
+    {"path": "actors.rigid[name=ellipse].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=trapezoid].translation", "value": "[1.0, -0.4, 0.0]"},
+    {"path": "actors.rigid[name=trapezoid].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=octagon].translation", "value": "[1.0, -0.30000000000000004, 0.0]"},
+    {"path": "actors.rigid[name=octagon].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=parallelogram].translation", "value": "[1.0, -0.2, 0.0]"},
+    {"path": "actors.rigid[name=parallelogram].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=pentagon].translation", "value": "[1.0, -0.1, 0.0]"},
+    {"path": "actors.rigid[name=pentagon].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=hexagon].translation", "value": "[1.0, 0.0, 0.0]"},
+    {"path": "actors.rigid[name=hexagon].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=triangle].translation", "value": "[1.0, 0.1, 0.0]"},
+    {"path": "actors.rigid[name=triangle].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=cross].translation", "value": "[1.0, 0.2, 0.0]"},
+    {"path": "actors.rigid[name=cross].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=square].translation", "value": "[-0.115, 0.0, 0.07]"},
+    {"path": "actors.rigid[name=square].rotation", "value": "[0.0, 0.0, -0.707107, 0.707107]"},
+    {"path": "actors.rigid[name=star].translation", "value": "[-0.0034, 0.0, 0.04]"},
+    {"path": "actors.rigid[name=star].rotation", "value": "[0.5, 0.5, 0.5, 0.5]"},
+    {"path": "actors.rigid[name=rectangle].translation", "value": "[-0.0582, -0.0562, 0.1349]"},
+    {"path": "actors.rigid[name=rectangle].rotation", "value": "[0.707107, 0.0, 0.0, 0.707107]"}
+  ],
+  "loads": [
+    {
+      "name": "press_square",
+      "enabled": true,
+      "type": "Force",
+      "target": "square",
+      "frame": "World",
+      "direction": [1, 0, 0],
+      "pointLocal": [0.0, 0.02, -0.0],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {"time": 0.5, "value": 0.0, "interpolation": "Linear"},
+          {"time": 1.5, "value": 300.0, "interpolation": "Step"},
+          {"time": 2.0, "value": 300.0, "interpolation": "Linear"},
+          {"time": 2.1, "value": 0.0, "interpolation": "Step"}
+        ]
+      }
+    },
+    {
+      "name": "press_star",
+      "enabled": true,
+      "type": "Force",
+      "target": "star",
+      "frame": "World",
+      "direction": [-1, 0, 0],
+      "pointLocal": [0.002263, 0.02, -0.017487],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {"time": 0.5, "value": 0.0, "interpolation": "Linear"},
+          {"time": 1.5, "value": 300.0, "interpolation": "Step"},
+          {"time": 2.0, "value": 300.0, "interpolation": "Linear"},
+          {"time": 2.1, "value": 0.0, "interpolation": "Step"}
+        ]
+      }
+    },
+    {
+      "name": "press_rectangle",
+      "enabled": true,
+      "type": "Force",
+      "target": "rectangle",
+      "frame": "World",
+      "direction": [0, 0, -1],
+      "pointLocal": [0.0187, 0.02, -0.01368],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {"time": 0.5, "value": 0.0, "interpolation": "Linear"},
+          {"time": 1.5, "value": 300.0, "interpolation": "Step"},
+          {"time": 2.0, "value": 300.0, "interpolation": "Linear"},
+          {"time": 2.1, "value": 0.0, "interpolation": "Step"}
+        ]
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "square"
+    },
+    {
+      "kind": "Penetration",
+      "target": "square",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "star"
+    },
+    {
+      "kind": "Penetration",
+      "target": "star",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "rectangle"
+    },
+    {
+      "kind": "Penetration",
+      "target": "rectangle",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "shapebox_lid"
+    },
+    {
+      "kind": "Penetration",
+      "target": "shapebox_lid",
+      "ignoreGround": true
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 2.5,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    },
+    "gravity": [0, 0, 0]
+  },
+  "plots": [
+    {
+      "channels": ["square.pos.z", "star.pos.z", "rectangle.pos.z", "shapebox_lid.pos.z"],
+      "height": 200
+    }
+  ]
+}

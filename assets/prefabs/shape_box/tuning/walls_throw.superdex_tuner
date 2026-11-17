@@ -1,0 +1,120 @@
+{
+  "comment": "Throw the square at the -X wall at 10 m/s and the rectangle at the lid at 2 m/s, end-on, from 250 mm away: a 40 ms push takes each to speed before it hits (gravity off). Neither should go through. Fast blocks can pass through thin parts: at these 5 ms steps the lid lets a block sink in from about 3 m/s, and at 10 ms steps a 10 m/s block passes through a wall.",
+  "assetsRoot": "",
+  "prefab": "./../shape_box.mochi_prefab",
+  "prefabOverrides": [
+    {"path": "actors.rigid[name=shapebox_body].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=diamond].translation", "value": "[1.0, -0.6000000000000001, 0.0]"},
+    {"path": "actors.rigid[name=diamond].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=ellipse].translation", "value": "[1.0, -0.5, 0.0]"},
+    {"path": "actors.rigid[name=ellipse].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=trapezoid].translation", "value": "[1.0, -0.4, 0.0]"},
+    {"path": "actors.rigid[name=trapezoid].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=star].translation", "value": "[1.0, -0.30000000000000004, 0.0]"},
+    {"path": "actors.rigid[name=star].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=octagon].translation", "value": "[1.0, -0.2, 0.0]"},
+    {"path": "actors.rigid[name=octagon].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=parallelogram].translation", "value": "[1.0, -0.1, 0.0]"},
+    {"path": "actors.rigid[name=parallelogram].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=pentagon].translation", "value": "[1.0, 0.0, 0.0]"},
+    {"path": "actors.rigid[name=pentagon].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=hexagon].translation", "value": "[1.0, 0.1, 0.0]"},
+    {"path": "actors.rigid[name=hexagon].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=triangle].translation", "value": "[1.0, 0.2, 0.0]"},
+    {"path": "actors.rigid[name=triangle].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=cross].translation", "value": "[1.0, 0.30000000000000004, 0.0]"},
+    {"path": "actors.rigid[name=cross].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=square].translation", "value": "[-0.365, 0.0, 0.07]"},
+    {"path": "actors.rigid[name=square].rotation", "value": "[0.0, 0.0, -0.707107, 0.707107]"},
+    {"path": "actors.rigid[name=rectangle].translation", "value": "[-0.0582, -0.0562, 0.3849]"},
+    {"path": "actors.rigid[name=rectangle].rotation", "value": "[0.707107, 0.0, 0.0, 0.707107]"}
+  ],
+  "loads": [
+    {
+      "name": "throw_square",
+      "enabled": true,
+      "type": "Force",
+      "target": "square",
+      "frame": "World",
+      "direction": [1, 0, 0],
+      "pointLocal": [0.0, 0.02, -0.0],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 4.8502,
+        "riseTime": 0.005,
+        "fallTime": 0.005,
+        "start": 0.0,
+        "end": 0.04
+      }
+    },
+    {
+      "name": "throw_rectangle",
+      "enabled": true,
+      "type": "Force",
+      "target": "rectangle",
+      "frame": "World",
+      "direction": [0, 0, -1],
+      "pointLocal": [0.0187, 0.02, -0.01368],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 0.8639,
+        "riseTime": 0.005,
+        "fallTime": 0.005,
+        "start": 0.0,
+        "end": 0.04
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "square"
+    },
+    {
+      "kind": "Penetration",
+      "target": "square",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "rectangle"
+    },
+    {
+      "kind": "Penetration",
+      "target": "rectangle",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "shapebox_lid"
+    },
+    {
+      "kind": "Penetration",
+      "target": "shapebox_lid",
+      "ignoreGround": true
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 1.0,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    },
+    "gravity": [0, 0, 0]
+  },
+  "plots": [
+    {
+      "channels": ["square.pos.z", "rectangle.pos.z", "shapebox_lid.pos.z"],
+      "height": 200
+    }
+  ]
+}

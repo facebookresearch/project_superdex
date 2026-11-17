@@ -1,0 +1,142 @@
+{
+  "comment": "Push the diamond, ellipse and trapezoid blocks straight through their holes in the -Y face, the other blocks parked out of the way: each starts lined up 5 mm outside its hole, and a pose path (30 Hz, so it sags well under the 1 mm clearance; pull capped at 100 m/s^2 times its mass, about 1.8 N) moves it in over 0.8 s until it is through, then lets it go. Each should follow the path without catching: load.push_<block>.error stays well under 1 mm and its force small.",
+  "assetsRoot": "",
+  "prefab": "./../shape_box.mochi_prefab",
+  "prefabOverrides": [
+    {"path": "actors.rigid[name=shapebox_body].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=star].translation", "value": "[1.0, -0.6000000000000001, 0.0]"},
+    {"path": "actors.rigid[name=star].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=octagon].translation", "value": "[1.0, -0.5, 0.0]"},
+    {"path": "actors.rigid[name=octagon].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=parallelogram].translation", "value": "[1.0, -0.4, 0.0]"},
+    {"path": "actors.rigid[name=parallelogram].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=pentagon].translation", "value": "[1.0, -0.30000000000000004, 0.0]"},
+    {"path": "actors.rigid[name=pentagon].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=hexagon].translation", "value": "[1.0, -0.2, 0.0]"},
+    {"path": "actors.rigid[name=hexagon].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=rectangle].translation", "value": "[1.0, -0.1, 0.0]"},
+    {"path": "actors.rigid[name=rectangle].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=triangle].translation", "value": "[1.0, 0.0, 0.0]"},
+    {"path": "actors.rigid[name=triangle].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=cross].translation", "value": "[1.0, 0.1, 0.0]"},
+    {"path": "actors.rigid[name=cross].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=square].translation", "value": "[1.0, 0.2, 0.0]"},
+    {"path": "actors.rigid[name=square].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=diamond].translation", "value": "[-0.0, -0.115, 0.046]"},
+    {"path": "actors.rigid[name=diamond].rotation", "value": "[0.0, -0.0, 0.0, 1.0]"},
+    {"path": "actors.rigid[name=ellipse].translation", "value": "[0.028645, -0.115, 0.100301]"},
+    {"path": "actors.rigid[name=ellipse].rotation", "value": "[0.0, 1.0, 0.0, 0.000136]"},
+    {"path": "actors.rigid[name=trapezoid].translation", "value": "[-0.031797, -0.075, 0.100394]"},
+    {"path": "actors.rigid[name=trapezoid].rotation", "value": "[1.0, 0.0, -0.000273, 0.0]"}
+  ],
+  "loads": [
+    {
+      "name": "push_diamond",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "diamond",
+      "pointLocal": [0.0, 0.02, 0.0],
+      "waypoints": [
+        {"time": 0.2, "position": [0.0, -0.095, 0.046], "rotation": [0.0, 0.0, 0.0], "interpolation": "Linear"},
+        {"time": 1.0, "position": [0.0, -0.037, 0.046], "rotation": [0.0, 0.0, 0.0], "drive": "Off"}
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 100,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "maxAngularAcceleration": 2000
+      }
+    },
+    {
+      "name": "push_ellipse",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "ellipse",
+      "pointLocal": [-5e-06, 0.019996, 1e-06],
+      "waypoints": [
+        {"time": 0.2, "position": [0.02865, -0.095004, 0.1003], "rotation": [0.0, 3.14132, 0.0], "interpolation": "Linear"},
+        {"time": 1.0, "position": [0.02865, -0.037004, 0.1003], "rotation": [0.0, 3.14132, 0.0], "drive": "Off"}
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 100,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "maxAngularAcceleration": 2000
+      }
+    },
+    {
+      "name": "push_trapezoid",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "trapezoid",
+      "pointLocal": [-3e-06, 0.02, 0.00126],
+      "waypoints": [
+        {"time": 0.2, "position": [-0.0318, -0.095, 0.099134], "rotation": [3.141593, 0.0, -0.000857], "interpolation": "Linear"},
+        {"time": 1.0, "position": [-0.0318, -0.037, 0.099134], "rotation": [3.141593, 0.0, -0.000857], "drive": "Off"}
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 100,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "maxAngularAcceleration": 2000
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "diamond"
+    },
+    {
+      "kind": "Penetration",
+      "target": "diamond",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "ellipse"
+    },
+    {
+      "kind": "Penetration",
+      "target": "ellipse",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "trapezoid"
+    },
+    {
+      "kind": "Penetration",
+      "target": "trapezoid",
+      "ignoreGround": true
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 1.5,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": ["diamond.pos.z", "ellipse.pos.z", "trapezoid.pos.z"],
+      "height": 200
+    }
+  ]
+}

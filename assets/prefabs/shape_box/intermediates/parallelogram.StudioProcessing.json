@@ -19,38 +19,29 @@
   },
   "modifiers": [
     {
-      "collapsed": true,
+      "collapsed": false,
       "enabled": true,
       "method": "From Model Viewer",
       "modifier": "Source from CAD Model",
       "properties": {
-        "allowPartialFailure": true,
-        "angularDeflection": 0.25,
+        "allowPartialFailure": false,
+        "angularDeflection": 1.5,
         "backend": "Isotropic",
         "combineTouchingSolids": true,
         "edgeSampling": "Uniform",
-        "linearDeflection": 0.050000000000000003,
-        "targetEdgeLength": 0,
-        "targetEdgeLengthFraction": 0.050000000000000003
-      }
-    },
-    {
-      "collapsed": false,
-      "enabled": true,
-      "method": "Make Manifold",
-      "modifier": "Refine Mesh",
-      "properties": {
-        "thenMakeWatertight": true
+        "linearDeflection": 0.1,
+        "targetEdgeLength": 6.5,
+        "targetEdgeLengthFraction": 0.02
       }
     },
     {
       "collapsed": true,
-      "enabled": false,
-      "method": "Tangential Relaxation (Smoothing)",
+      "enabled": true,
+      "method": "Make Manifold",
       "modifier": "Refine Mesh",
       "properties": {
-        "angleSmoothingIterations": 0,
-        "tangentialRelaxationIterations": 3
+        "removeAlmostDegenerateFaces": false,
+        "thenMakeWatertight": true
       }
     },
     {
@@ -59,19 +50,21 @@
       "method": "SDF",
       "modifier": "Export Mochi Model",
       "properties": {
+        "bakeSdf": true,
+        "exportPath": "../collision/parallelogram.mochi.h5",
         "sdf": {
-          "boundaryPaddingDist": 0.0050000003539025784,
+          "boundaryPaddingDist": 0.0032,
           "minGridResolution": [
             6,
             6,
             6
           ],
           "resolutionDelta": [
-            0.5,
-            0.5,
-            0.5
+            0.0016000160000000001,
+            0.0016000160000000001,
+            0.0016000160000000001
           ],
-          "resolutionMode": "MeanEdge"
+          "resolutionMode": "Explicit"
         }
       }
     }

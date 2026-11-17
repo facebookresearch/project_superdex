@@ -1,0 +1,88 @@
+{
+  "comment": "Slide the lid all the way out of its slot along +X (150 mm over 1.5 s) and back in, held level like a hand would (a stiff pose path on its center of mass), with the blocks parked out of the way. The slot leaves about 0.5 mm above and below the lid and 2 mm on each side, so it should slide freely both ways: load.slide.error stays well under 1 mm and its force small, and the lid ends where it started.",
+  "assetsRoot": "",
+  "prefab": "./../shape_box.mochi_prefab",
+  "prefabOverrides": [
+    {"path": "actors.rigid[name=shapebox_body].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=diamond].translation", "value": "[1.0, -0.6000000000000001, 0.0]"},
+    {"path": "actors.rigid[name=diamond].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=ellipse].translation", "value": "[1.0, -0.5, 0.0]"},
+    {"path": "actors.rigid[name=ellipse].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=trapezoid].translation", "value": "[1.0, -0.4, 0.0]"},
+    {"path": "actors.rigid[name=trapezoid].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=star].translation", "value": "[1.0, -0.30000000000000004, 0.0]"},
+    {"path": "actors.rigid[name=star].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=octagon].translation", "value": "[1.0, -0.2, 0.0]"},
+    {"path": "actors.rigid[name=octagon].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=parallelogram].translation", "value": "[1.0, -0.1, 0.0]"},
+    {"path": "actors.rigid[name=parallelogram].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=pentagon].translation", "value": "[1.0, 0.0, 0.0]"},
+    {"path": "actors.rigid[name=pentagon].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=hexagon].translation", "value": "[1.0, 0.1, 0.0]"},
+    {"path": "actors.rigid[name=hexagon].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=rectangle].translation", "value": "[1.0, 0.2, 0.0]"},
+    {"path": "actors.rigid[name=rectangle].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=triangle].translation", "value": "[1.0, 0.30000000000000004, 0.0]"},
+    {"path": "actors.rigid[name=triangle].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=cross].translation", "value": "[1.0, 0.4, 0.0]"},
+    {"path": "actors.rigid[name=cross].isStatic", "value": "true"},
+    {"path": "actors.rigid[name=square].translation", "value": "[1.0, 0.5, 0.0]"},
+    {"path": "actors.rigid[name=square].isStatic", "value": "true"}
+  ],
+  "loads": [
+    {
+      "name": "slide",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "shapebox_lid",
+      "pointLocal": [-0.003807, 0.000259, 0.00245],
+      "waypoints": [
+        {"time": 0.3, "position": [-0.000807, 0.000259, 0.12745], "rotation": [0, 0, 0], "interpolation": "Linear"},
+        {"time": 1.8, "position": [0.149193, 0.000259, 0.12745], "rotation": [0, 0, 0], "interpolation": "Step"},
+        {"time": 2.3, "position": [0.149193, 0.000259, 0.12745], "rotation": [0, 0, 0], "interpolation": "Linear"},
+        {"time": 3.8, "position": [-0.000807, 0.000259, 0.12745], "rotation": [0, 0, 0], "drive": "Off"}
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 100,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "maxAngularAcceleration": 2000
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "shapebox_lid"
+    },
+    {
+      "kind": "Penetration",
+      "target": "shapebox_lid",
+      "ignoreGround": true
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 4.5,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": ["shapebox_lid.pos.z"],
+      "height": 200
+    }
+  ]
+}

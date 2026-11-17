@@ -18,9 +18,18 @@ This package contains a simulation-ready shape-sorting-box asset that was create
 The following work was done to produce this simulation-ready asset:
 
 - Hand-modeled the cube body, lid, and 12 shape pieces in SolidWorks using the physical object as a reference; the geometry was not 3D-scanned.
-- Exported STEP CAD interchange files and generated GLB render meshes with differentiated visual materials.
-- Generated SDF-based Mochi collision models from the CAD-derived meshes using per-part SuperDex Studio processing configurations.
-- Assembled the body, lid, and 12 movable shape pieces into a prefab with placement transforms, contact settings, density values, and simulation metadata.
+- The holes were drawn as their pieces offset outward by 1 mm (their corners are 1 mm rounds). Each piece is its hole offset back inward by exactly 1 mm, so every piece has a uniform 1 mm clearance in its hole.
+- Exported STEP CAD interchange files and generated GLB render meshes. The pieces' paints are tinted to the product's colors; the plywood has clear-coated faces and shows its plies, darker and matte, on the cut edges, the hole walls and the box-joint fingers at the corners.
+- Generated SDF-based Mochi collision models from the STEP files with per-part SuperDex Studio processing configurations: about 12k triangles in all, the pieces 470 to 830 each. The hole walls and the lid slot are colored in the CAD so Studio meshes them finer than the rest of the box, and the body's collision model comes from a `Collision` configuration without its 0.5 mm edge rounds, which Studio could not mesh watertight.
+- Assembled the body, lid, and 12 movable shape pieces into a prefab, the pieces resting in their holes or on the floor of the box.
+
+## Physics Tuning
+
+`tuning/` holds `superdex_asset_tuner` scenarios: `rest` (the prefab settles), `insert_*` (each piece pushed through its hole, one face at a time), `lid` (the lid slid out of its slot and back), and `walls_press` / `walls_throw` (pieces pressed with 300 N and thrown at the walls and the lid). Pieces slide through their holes without catching and nothing passes through a wall or the lid. Thin parts have a speed limit, as there is no continuous collision detection: at 5 ms steps a piece thrown at the 4.9 mm lid faster than about 3 m/s starts to sink into it, and at 10 ms steps a piece at 10 m/s can pass through a 10 mm wall.
+
+## Third-Party Material
+
+The plywood edge texture embedded in `render/shape_box_body.glb` and `render/shape_box_lid.glb` is derived from [Plywood](https://polyhaven.com/a/plywood) by Rob Tuytel from Poly Haven, released under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
 
 ## License & IP Notes
 
