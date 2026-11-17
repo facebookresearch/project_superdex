@@ -913,7 +913,11 @@ bool FSuperDexBotIKImportTest::RunTest(const FString& Parameters) {
   TestFalse(TEXT("Successful import is not canceled"), bCanceled);
   TestTrue(TEXT("Exactly one source match assigns the bot"), Asset->OutputBot == Bot);
   TestTrue(
-      TEXT("Source path is normalized"), FPaths::IsSamePath(Asset->SourceOutputBotPath, RobotPath));
+      TEXT("Source path is normalized"),
+      FPaths::IsSamePath(
+          UAssetImportData::ResolveImportFilename(
+              Asset->SourceOutputBotPath, Asset->GetOutermost()),
+          RobotPath));
   if (!TestEqual(TEXT("Import retains one goal"), Asset->Goals.Num(), 1)) {
     return false;
   }
@@ -998,8 +1002,14 @@ bool FSuperDexBotIKFullImportTest::RunTest(const FString&) {
       Asset->OutputBot == Bot && Asset->InputBot == InputBot);
   TestTrue(
       TEXT("Both normalized source paths retained"),
-      FPaths::IsSamePath(Asset->SourceOutputBotPath, RobotPath) &&
-          FPaths::IsSamePath(Asset->SourceInputBotPath, InputBotPath));
+      FPaths::IsSamePath(
+          UAssetImportData::ResolveImportFilename(
+              Asset->SourceOutputBotPath, Asset->GetOutermost()),
+          RobotPath) &&
+          FPaths::IsSamePath(
+              UAssetImportData::ResolveImportFilename(
+                  Asset->SourceInputBotPath, Asset->GetOutermost()),
+              InputBotPath));
   TestEqual(
       TEXT("Source seed retained"), Asset->OutputBotConfiguration[0], static_cast<double>(0.4_r));
   TestEqual(

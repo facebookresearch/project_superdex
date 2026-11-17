@@ -176,12 +176,21 @@ bool USuperDexBotIKConfigFactory::ImportConfig(
       superdex::robotics::ResolveIKBotPath(TCHAR_TO_UTF8(*AbsoluteFilename), Parsed.inputBot);
   const FString OutputBotPath = NormalizeSourcePath(UTF8_TO_TCHAR(NativeOutputBotPath.c_str()));
   const FString InputBotPath = NormalizeSourcePath(UTF8_TO_TCHAR(NativeInputBotPath.c_str()));
-  const bool bPreserveOutputBot = bReimport && Asset->OutputBot &&
-      !Asset->SourceOutputBotPath.IsEmpty() &&
-      FPaths::IsSamePath(NormalizeSourcePath(Asset->SourceOutputBotPath), OutputBotPath);
-  const bool bPreserveInputBot = bReimport && Asset->InputBot &&
-      !Asset->SourceInputBotPath.IsEmpty() &&
-      FPaths::IsSamePath(NormalizeSourcePath(Asset->SourceInputBotPath), InputBotPath);
+  // The source bot paths are stored like the asset's import filename, relative where Unreal can
+  // make them so, so the asset does not record this machine's checkout path.
+  const UPackage* Package = Asset->GetOutermost();
+  const auto StoredPath = [Package](const FString& Path) {
+    return Path.IsEmpty() ? FString() : UAssetImportData::SanitizeImportFilename(Path, Package);
+  };
+  const auto IsStoredPath = [Package](const FString& Stored, const FString& Path) {
+    return !Stored.IsEmpty() &&
+        FPaths::IsSamePath(
+            NormalizeSourcePath(UAssetImportData::ResolveImportFilename(Stored, Package)), Path);
+  };
+  const bool bPreserveOutputBot =
+      bReimport && Asset->OutputBot && IsStoredPath(Asset->SourceOutputBotPath, OutputBotPath);
+  const bool bPreserveInputBot =
+      bReimport && Asset->InputBot && IsStoredPath(Asset->SourceInputBotPath, InputBotPath);
   USuperDexBot* OutputBot =
       bPreserveOutputBot ? Asset->OutputBot.Get() : ResolveBotAsset(OutputBotPath);
   USuperDexBot* InputBot =
@@ -191,8 +200,8 @@ bool USuperDexBotIKConfigFactory::ImportConfig(
   Asset->FromNative(Parsed);
   Asset->OutputBot = OutputBot;
   Asset->InputBot = InputBot;
-  Asset->SourceOutputBotPath = OutputBotPath;
-  Asset->SourceInputBotPath = InputBotPath;
+  Asset->SourceOutputBotPath = StoredPath(OutputBotPath);
+  Asset->SourceInputBotPath = StoredPath(InputBotPath);
   if (!Asset->AssetImportData) {
     Asset->AssetImportData = NewObject<UAssetImportData>(Asset, TEXT("AssetImportData"));
   }
