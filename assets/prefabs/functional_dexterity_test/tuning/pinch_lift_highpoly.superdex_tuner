@@ -1,0 +1,810 @@
+{
+  "comment": "Pinch the center peg 6 mm below its top between a right OpenXR index fingertip and thumb tip (highpoly collision shapes, about 50 g each, each aimed 2 mm inside the peg as a tracked hand closing on it would be, so each grips with about 3 N), lift it out, carry it 40 mm to the side and back (0.6 s each way), lower it back into its hole and let go (4.9 s: the fingers open 8 mm in 0.2 s). Then pick it up again, lift it out, lower it back until its bottom is 2 mm inside the hole, and drop it (8.0 s: the fingers snap open 8 mm in 0.1 s). The peg should not slip down in the fingers while it is held (its height relative to the fingertips stays within about a millimeter), and it should not stick to them when they let go: it should stay seated as they open the first time, and fall straight into its hole (within about 0.1 s) when they open the second time. The board is free, resting on a ground plane (1.58 kg).",
+  "assetsRoot": "",
+  "prefab": "./pinch_highpoly.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "pinch_a",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "finger_a",
+      "frame": "World",
+      "pointLocal": [
+        0.0001,
+        -0.0032,
+        -0.0177
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            -0.0225,
+            0.061965,
+            0.071
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.4,
+          "position": [
+            -0.0225,
+            0.037965,
+            0.041
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.8,
+          "position": [
+            -0.0225,
+            0.029965,
+            0.041
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.0,
+          "position": [
+            -0.0225,
+            0.029965,
+            0.041
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 2.0,
+          "position": [
+            -0.0225,
+            0.029965,
+            0.091
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 2.3,
+          "position": [
+            -0.0225,
+            0.029965,
+            0.091
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 2.9,
+          "position": [
+            0.0175,
+            0.029965,
+            0.091
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 3.1,
+          "position": [
+            0.0175,
+            0.029965,
+            0.091
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 3.7,
+          "position": [
+            -0.0225,
+            0.029965,
+            0.091
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 3.9,
+          "position": [
+            -0.0225,
+            0.029965,
+            0.091
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 4.7,
+          "position": [
+            -0.0225,
+            0.029965,
+            0.042
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 4.9,
+          "position": [
+            -0.0225,
+            0.029965,
+            0.042
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 5.1,
+          "position": [
+            -0.0225,
+            0.039965,
+            0.042
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 5.4,
+          "position": [
+            -0.0225,
+            0.039965,
+            0.042
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 5.8,
+          "position": [
+            -0.0225,
+            0.029965,
+            0.041
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 6.0,
+          "position": [
+            -0.0225,
+            0.029965,
+            0.041
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 7.0,
+          "position": [
+            -0.0225,
+            0.029965,
+            0.091
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 7.3,
+          "position": [
+            -0.0225,
+            0.029965,
+            0.091
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 7.8,
+          "position": [
+            -0.0225,
+            0.029965,
+            0.069
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 8.0,
+          "position": [
+            -0.0225,
+            0.029965,
+            0.069
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 8.1,
+          "position": [
+            -0.0225,
+            0.039965,
+            0.069
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 8.6,
+          "position": [
+            -0.0225,
+            0.039965,
+            0.069
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 9.0,
+          "position": [
+            -0.0225,
+            0.051965,
+            0.099
+          ],
+          "rotation": [
+            -0.7853982,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    },
+    {
+      "name": "pinch_b",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "finger_b",
+      "frame": "World",
+      "pointLocal": [
+        0.0007,
+        0.0051,
+        -0.0208
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            -0.0225,
+            -0.020035,
+            0.071
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.4,
+          "position": [
+            -0.0225,
+            0.003965,
+            0.041
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.8,
+          "position": [
+            -0.0225,
+            0.011965,
+            0.041
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.0,
+          "position": [
+            -0.0225,
+            0.011965,
+            0.041
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 2.0,
+          "position": [
+            -0.0225,
+            0.011965,
+            0.091
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 2.3,
+          "position": [
+            -0.0225,
+            0.011965,
+            0.091
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 2.9,
+          "position": [
+            0.0175,
+            0.011965,
+            0.091
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 3.1,
+          "position": [
+            0.0175,
+            0.011965,
+            0.091
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 3.7,
+          "position": [
+            -0.0225,
+            0.011965,
+            0.091
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 3.9,
+          "position": [
+            -0.0225,
+            0.011965,
+            0.091
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 4.7,
+          "position": [
+            -0.0225,
+            0.011965,
+            0.042
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 4.9,
+          "position": [
+            -0.0225,
+            0.011965,
+            0.042
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 5.1,
+          "position": [
+            -0.0225,
+            0.001965,
+            0.042
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 5.4,
+          "position": [
+            -0.0225,
+            0.001965,
+            0.042
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 5.8,
+          "position": [
+            -0.0225,
+            0.011965,
+            0.041
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 6.0,
+          "position": [
+            -0.0225,
+            0.011965,
+            0.041
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 7.0,
+          "position": [
+            -0.0225,
+            0.011965,
+            0.091
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 7.3,
+          "position": [
+            -0.0225,
+            0.011965,
+            0.091
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 7.8,
+          "position": [
+            -0.0225,
+            0.011965,
+            0.069
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 8.0,
+          "position": [
+            -0.0225,
+            0.011965,
+            0.069
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 8.1,
+          "position": [
+            -0.0225,
+            0.001965,
+            0.069
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 8.6,
+          "position": [
+            -0.0225,
+            0.001965,
+            0.069
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 9.0,
+          "position": [
+            -0.0225,
+            -0.010035,
+            0.099
+          ],
+          "rotation": [
+            0.5235988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "test/peg_6/peg"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "finger_a"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "finger_b"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "finger_a"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "finger_b"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "test/peg_6/peg"
+    },
+    {
+      "kind": "Penetration",
+      "target": "test/peg_6/peg"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "test/board"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 9.2,
+    "groundPlane": true,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    },
+    "groundHeight": -0.00031
+  },
+  "plots": [
+    {
+      "channels": [
+        "test/peg_6/peg.pos.z",
+        "finger_a.pos.z",
+        "finger_a.contactForce.y",
+        "finger_b.contactForce.y"
+      ],
+      "height": 160
+    }
+  ]
+}

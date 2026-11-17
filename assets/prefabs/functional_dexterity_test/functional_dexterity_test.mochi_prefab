@@ -2,265 +2,181 @@
   "actors": {
     "rigid": [
       {
-        "contact": {
-          "coulombFrictionCoefficient": 0.25,
-          "penaltyCoefficient": 999999995904,
-          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
-          "penaltyThresholdDefault": 9.9999997473787516e-05,
-          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
-        },
-        "isStatic": true,
-        "name": "FDT_PegBoard",
-        "renderModel": "./render/pegboard.glb",
+        "name": "board",
         "shape": "./collision/pegboard.mochi.h5",
+        "renderModel": "./render/pegboard.glb",
+        "colliderType": "Sdf",
+        "contact": {
+          "coulombFrictionCoefficient": 0.12,
+          "penaltyCoefficient": 10000000000.0,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltySmoothingHalfDistance": 0.0001
+        },
         "translation": [
-          -0.10300005227327347,
-          -0.10300000011920929,
-          0
-        ]
+          -0.103,
+          -0.103,
+          0.0
+        ],
+        "density": 1200.0,
+        "layer": "PegBoard"
       }
     ]
   },
   "prefabs": [
     {
-      "name": "FDT_Peg",
+      "name": "peg_1",
       "path": "./fdt_peg.mochi_prefab",
-      "rotation": [
-        1,
-        0,
-        0,
-        -4.3711388286737929e-08
-      ],
       "translation": [
-        0.068999998271465302,
-        -0.069000005722045898,
-        0.10670997947454453
+        -0.0675,
+        0.065965,
+        0.007072
       ]
     },
     {
-      "name": "FDT_Peg1",
+      "name": "peg_2",
       "path": "./fdt_peg.mochi_prefab",
-      "rotation": [
-        1,
-        0,
-        0,
-        -4.3711388286737929e-08
-      ],
       "translation": [
-        0.023999996483325958,
-        -0.069000005722045898,
-        0.10670997947454453
+        -0.0225,
+        0.065965,
+        0.007072
       ]
     },
     {
-      "name": "FDT_Peg2",
+      "name": "peg_3",
       "path": "./fdt_peg.mochi_prefab",
-      "rotation": [
-        1,
-        0,
-        0,
-        -4.3711388286737929e-08
-      ],
       "translation": [
-        -0.022128261625766754,
-        -0.069000005722045898,
-        0.10670997947454453
+        0.0225,
+        0.065965,
+        0.007072
       ]
     },
     {
-      "name": "FDT_Peg3",
+      "name": "peg_4",
       "path": "./fdt_peg.mochi_prefab",
-      "rotation": [
-        1,
-        0,
-        0,
-        -4.3711388286737929e-08
-      ],
       "translation": [
-        -0.06600005179643631,
-        -0.069000005722045898,
-        0.10670997947454453
+        0.0675,
+        0.065965,
+        0.007072
       ]
     },
     {
-      "name": "FDT_Peg4",
+      "name": "peg_5",
       "path": "./fdt_peg.mochi_prefab",
-      "rotation": [
-        1,
-        0,
-        0,
-        -4.3711388286737929e-08
-      ],
       "translation": [
-        -0.06600005179643631,
-        -0.024457264691591263,
-        0.10670997947454453
+        -0.0675,
+        0.020965,
+        0.007072
       ]
     },
     {
-      "name": "FDT_Peg5",
+      "name": "peg_6",
       "path": "./fdt_peg.mochi_prefab",
-      "rotation": [
-        1,
-        0,
-        0,
-        -4.3711388286737929e-08
-      ],
       "translation": [
-        -0.022128261625766754,
-        -0.024457264691591263,
-        0.10670997947454453
+        -0.0225,
+        0.020965,
+        0.007072
       ]
     },
     {
-      "name": "FDT_Peg6",
+      "name": "peg_7",
       "path": "./fdt_peg.mochi_prefab",
-      "rotation": [
-        1,
-        0,
-        0,
-        -4.3711388286737929e-08
-      ],
       "translation": [
-        0.023999996483325958,
-        -0.024457264691591263,
-        0.10670997947454453
+        0.0225,
+        0.020965,
+        0.007072
       ]
     },
     {
-      "name": "FDT_Peg7",
+      "name": "peg_8",
       "path": "./fdt_peg.mochi_prefab",
-      "rotation": [
-        1,
-        0,
-        0,
-        -4.3711388286737929e-08
-      ],
       "translation": [
-        0.068999998271465302,
-        -0.024457264691591263,
-        0.10670997947454453
+        0.0675,
+        0.020965,
+        0.007072
       ]
     },
     {
-      "name": "FDT_Peg8",
+      "name": "peg_9",
       "path": "./fdt_peg.mochi_prefab",
-      "rotation": [
-        1,
-        0,
-        0,
-        -4.3711388286737929e-08
-      ],
       "translation": [
-        -0.06600005179643631,
-        0.020511403679847717,
-        0.10670997947454453
+        -0.0675,
+        -0.024035,
+        0.007072
       ]
     },
     {
-      "name": "FDT_Peg9",
+      "name": "peg_10",
       "path": "./fdt_peg.mochi_prefab",
-      "rotation": [
-        1,
-        0,
-        0,
-        -4.3711388286737929e-08
-      ],
       "translation": [
-        -0.022128261625766754,
-        0.020511403679847717,
-        0.10670997947454453
+        -0.0225,
+        -0.024035,
+        0.007072
       ]
     },
     {
-      "name": "FDT_Peg10",
+      "name": "peg_11",
       "path": "./fdt_peg.mochi_prefab",
-      "rotation": [
-        1,
-        0,
-        0,
-        -4.3711388286737929e-08
-      ],
       "translation": [
-        0.023999996483325958,
-        0.020511403679847717,
-        0.10670997947454453
+        0.0225,
+        -0.024035,
+        0.007072
       ]
     },
     {
-      "name": "FDT_Peg11",
+      "name": "peg_12",
       "path": "./fdt_peg.mochi_prefab",
-      "rotation": [
-        1,
-        0,
-        0,
-        -4.3711388286737929e-08
-      ],
       "translation": [
-        0.068999998271465302,
-        0.020511403679847717,
-        0.10670997947454453
+        0.0675,
+        -0.024035,
+        0.007072
       ]
     },
     {
-      "name": "FDT_Peg12",
+      "name": "peg_13",
       "path": "./fdt_peg.mochi_prefab",
-      "rotation": [
-        1,
-        0,
-        0,
-        -4.3711388286737929e-08
-      ],
       "translation": [
-        -0.06600005179643631,
-        0.065423637628555298,
-        0.10670997947454453
+        -0.0675,
+        -0.069035,
+        0.007072
       ]
     },
     {
-      "name": "FDT_Peg13",
+      "name": "peg_14",
       "path": "./fdt_peg.mochi_prefab",
-      "rotation": [
-        1,
-        0,
-        0,
-        -4.3711388286737929e-08
-      ],
       "translation": [
-        -0.022128261625766754,
-        0.065423637628555298,
-        0.10670997947454453
+        -0.0225,
+        -0.069035,
+        0.007072
       ]
     },
     {
-      "name": "FDT_Peg14",
+      "name": "peg_15",
       "path": "./fdt_peg.mochi_prefab",
-      "rotation": [
-        1,
-        0,
-        0,
-        -4.3711388286737929e-08
-      ],
       "translation": [
-        0.023999996483325958,
-        0.065423637628555298,
-        0.10670997947454453
+        0.0225,
+        -0.069035,
+        0.007072
       ]
     },
     {
-      "name": "FDT_Peg15",
+      "name": "peg_16",
       "path": "./fdt_peg.mochi_prefab",
-      "rotation": [
-        1,
-        0,
-        0,
-        -4.3711388286737929e-08
-      ],
       "translation": [
-        0.068999998271465302,
-        0.065423637628555298,
-        0.10670997947454453
+        0.0675,
+        -0.069035,
+        0.007072
       ]
     }
-  ]
+  ],
+  "contactFilter": {
+    "layerContactAsymmetric": [
+      {
+        "enable": false,
+        "layers": [
+          "PegBoard",
+          "Peg"
+        ]
+      }
+    ]
+  }
 }

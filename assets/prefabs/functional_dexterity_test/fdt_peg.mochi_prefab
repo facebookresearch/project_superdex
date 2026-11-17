@@ -1,18 +1,23 @@
 {
+  "_comment": "One peg of the Functional Dexterity Test, white end up, its bottom (black end) at its origin.",
   "actors": {
     "rigid": [
       {
-        "boundaryElementType": "P1Q1",
-        "contact": {
-          "penaltyCoefficient": 999999995904,
-          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
-          "penaltyThresholdDefault": 9.9999997473787516e-05,
-          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
-        },
-        "mass": 0.0068000000901520252,
-        "name": "Rigid1",
+        "name": "peg",
+        "shape": "./collision/peg.mochi.h5",
         "renderModel": "./render/peg.glb",
-        "shape": "./collision/peg.mochi.h5"
+        "colliderType": "Sdf",
+        "boundaryElementType": "P1Q1",
+        "density": 650.0,
+        "contact": {
+          "coulombFrictionCoefficient": 1.0,
+          "penaltyCoefficient": 10000000000.0,
+          "penaltyThresholdDefault": 0.0001,
+          "penaltySmoothingHalfDistance": 0.0001,
+          "viscousFrictionCoefficient": 20.0,
+          "frictionFalloffVel": 0.001
+        },
+        "layer": "Peg"
       }
     ]
   }

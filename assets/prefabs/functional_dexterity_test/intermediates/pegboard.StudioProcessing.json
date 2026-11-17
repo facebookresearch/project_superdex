@@ -1,10 +1,10 @@
 {
   "editorState": {
     "cadRotation": [
-      0.70710676908493042,
+      0.7071067690849304,
       0,
       0,
-      0.70710676908493042
+      0.7071067690849304
     ],
     "cadScale": [
       1,
@@ -19,38 +19,52 @@
   },
   "modifiers": [
     {
-      "collapsed": true,
+      "collapsed": false,
       "enabled": true,
       "method": "From Model Viewer",
       "modifier": "Source from CAD Model",
       "properties": {
-        "allowPartialFailure": true,
-        "angularDeflection": 0.25,
+        "allowPartialFailure": false,
+        "angularDeflection": 0.15,
         "backend": "Isotropic",
         "combineTouchingSolids": true,
         "edgeSampling": "Uniform",
-        "linearDeflection": 0.050000000000000003,
-        "targetEdgeLength": 0,
-        "targetEdgeLengthFraction": 0.011999999999999993
+        "linearDeflection": 0.01,
+        "targetEdgeLength": 60.0,
+        "targetEdgeLengthFraction": 0.01,
+        "faceColorSizing": [
+          {
+            "color": "#A07850",
+            "targetEdgeLength": 6.5,
+            "linearDeflection": 0,
+            "angularDeflection": 0,
+            "targetEdgeLengthFraction": 0
+          },
+          {
+            "color": "#B08860",
+            "targetEdgeLength": 60.0,
+            "linearDeflection": 0,
+            "angularDeflection": 0,
+            "targetEdgeLengthFraction": 0
+          },
+          {
+            "color": "#B89068",
+            "targetEdgeLength": 10.0,
+            "linearDeflection": 0,
+            "angularDeflection": 0,
+            "targetEdgeLengthFraction": 0
+          }
+        ]
       }
     },
     {
       "collapsed": true,
-      "enabled": false,
+      "enabled": true,
       "method": "Make Manifold",
       "modifier": "Refine Mesh",
       "properties": {
+        "removeAlmostDegenerateFaces": true,
         "thenMakeWatertight": true
-      }
-    },
-    {
-      "collapsed": true,
-      "enabled": false,
-      "method": "Tangential Relaxation (Smoothing)",
-      "modifier": "Refine Mesh",
-      "properties": {
-        "angleSmoothingIterations": 0,
-        "tangentialRelaxationIterations": 3
       }
     },
     {
@@ -59,19 +73,21 @@
       "method": "SDF",
       "modifier": "Export Mochi Model",
       "properties": {
+        "bakeSdf": true,
+        "exportPath": "../collision/pegboard.mochi.h5",
         "sdf": {
-          "boundaryPaddingDist": 0.0050000003539025784,
+          "boundaryPaddingDist": 0.0032,
           "minGridResolution": [
             6,
             6,
             6
           ],
           "resolutionDelta": [
-            0.5,
-            0.5,
-            0.5
+            0.0016,
+            0.0016,
+            0.0016
           ],
-          "resolutionMode": "MeanEdge"
+          "resolutionMode": "Explicit"
         }
       }
     }

@@ -1,0 +1,58 @@
+{
+  "_comment": "The test with a right OpenXR index fingertip and thumb tip (highpoly shapes, about 50 g each, the hand's link contact), for tuning/pinch_lift_highpoly.superdex_tuner.",
+  "prefabs": [
+    {
+      "name": "test",
+      "path": "./../functional_dexterity_test.mochi_prefab"
+    }
+  ],
+  "actors": {
+    "rigid": [
+      {
+        "name": "finger_a",
+        "shape": "./../../../bots/hands/openxr/right/collision/xr_09_index_distal_highpoly_collision.mochi.h5",
+        "colliderType": "Sdf",
+        "density": 20800,
+        "contact": {
+          "frictionWithColliderNormal": false,
+          "penaltyCoefficient": 10000000000.0,
+          "penaltyThresholdDefault": 0.003,
+          "viscousFrictionCoefficient": 20
+        },
+        "translation": [
+          0,
+          0.08,
+          0.12
+        ]
+      },
+      {
+        "name": "finger_b",
+        "shape": "./../../../bots/hands/openxr/right/collision/xr_04_thumb_distal_highpoly_collision.mochi.h5",
+        "colliderType": "Sdf",
+        "density": 11200,
+        "contact": {
+          "frictionWithColliderNormal": false,
+          "penaltyCoefficient": 10000000000.0,
+          "penaltyThresholdDefault": 0.003,
+          "viscousFrictionCoefficient": 20
+        },
+        "translation": [
+          0,
+          -0.08,
+          0.12
+        ]
+      }
+    ]
+  },
+  "contactFilter": {
+    "actorContactSymmetric": [
+      {
+        "actors": [
+          "finger_a",
+          "finger_b"
+        ],
+        "enable": false
+      }
+    ]
+  }
+}
