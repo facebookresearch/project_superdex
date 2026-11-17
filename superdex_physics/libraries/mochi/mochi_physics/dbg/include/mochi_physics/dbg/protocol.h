@@ -24,7 +24,9 @@
 #include <mochi_core/utils/reflection.h>
 #include <mochi_physics/mochi_physics.h>
 #include <mochi_physics/mochi_physics_experimental.h>
+#include <simple_reflection/simple_reflection_console.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 
@@ -60,8 +62,8 @@ MOCHI_ENUM_END()
 namespace mochi::dbg::protocol {
 
 // Forwards
+struct CommandReply;
 struct DebugDrawReply;
-struct PingReply;
 struct SceneSettingsReply;
 struct SceneStepReply;
 struct SceneSyncReply;
@@ -286,32 +288,6 @@ struct LogMessage : net::Message {
   MOCHI_STRUCT_END()
 };
 
-/// @brief [S<--C] Health-check message. Recipient responds with @ref PingReply.
-struct PingRequest : net::RequestMessage {
-  using Reply = PingReply;
-  PingRequest();
-  uint64_t sendTimeNs = 0; // Send time [ns]
-
-  MOCHI_STRUCT_BEGIN(mochi::dbg::protocol::PingRequest)
-  MOCHI_BASE_CLASS(net::RequestMessage)
-  MOCHI_FIELD(sendTimeNs)
-  MOCHI_STRUCT_END()
-};
-
-/// @brief [S-->C] Reply to @ref PingRequest.
-struct PingReply : net::ReplyMessage {
-  PingReply();
-  explicit PingReply(PingRequest const& request);
-
-  uint64_t sendTimeNs = 0; // Returns the value from @ref PingRequest [ns]
-  uint64_t recvTimeNs = 0; // Set by constructor. Not serialized.
-
-  MOCHI_STRUCT_BEGIN(mochi::dbg::protocol::PingReply)
-  MOCHI_BASE_CLASS(net::ReplyMessage)
-  MOCHI_FIELD(sendTimeNs)
-  MOCHI_STRUCT_END()
-};
-
 /// @brief [S-->C] Broadcast when a scene is added to or removed from the context.
 ///
 /// @warning Receiving this notification does not grant ownership of the referenced scene or extend
@@ -514,6 +490,44 @@ struct SceneSettingsReply : SceneReply {
   MOCHI_BASE_CLASS(SceneReply)
   MOCHI_FIELD(forceSingleThreaded)
   MOCHI_FIELD(forceSingleIsland)
+  MOCHI_STRUCT_END()
+};
+
+/// @brief [S<--C] Request console command execution on the server (see SReflect::ConsoleExecute)
+struct CommandRequest : net::RequestMessage {
+  using Reply = CommandReply;
+
+  DynamicString command; ///< Full console command, including its arguments
+  DynamicString workingDirectory = "/"; ///< Absolute working directory
+
+  // Prepared by the server before dispatch to a scene. These fields are not serialized.
+  DynamicString path;
+  DynamicArray<DynamicString> args;
+  size_t pathStart = 0;
+  bool isList = false;
+
+  MOCHI_STRUCT_BEGIN(mochi::dbg::protocol::CommandRequest)
+  MOCHI_BASE_CLASS(net::RequestMessage)
+  MOCHI_FIELD(command)
+  MOCHI_FIELD(workingDirectory)
+  MOCHI_STRUCT_END()
+};
+
+/// @brief [S-->C] Reply to @ref CommandRequest.
+struct CommandReply : net::ReplyMessage {
+  using net::ReplyMessage::ReplyMessage;
+
+  DynamicString error; ///< Error description. Empty means success
+  DynamicString output; ///< Output returned from SReflect::ConsoleExecute
+  DynamicString path; ///< Resolved absolute path, including for an empty directory
+  std::optional<DynamicArray<SReflect::ConsoleListEntry>> listing; ///< Present for successful ls
+
+  MOCHI_STRUCT_BEGIN(mochi::dbg::protocol::CommandReply)
+  MOCHI_BASE_CLASS(net::ReplyMessage)
+  MOCHI_FIELD(error)
+  MOCHI_FIELD(output)
+  MOCHI_FIELD(path)
+  MOCHI_FIELD(listing)
   MOCHI_STRUCT_END()
 };
 

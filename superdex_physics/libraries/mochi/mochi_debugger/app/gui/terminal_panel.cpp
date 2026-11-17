@@ -27,6 +27,7 @@
 #include <misc/cpp/imgui_stdlib.h>
 
 #include <cstring>
+#include <functional>
 #include <string>
 
 using namespace mochi;
@@ -103,6 +104,10 @@ BuildLogOutput(LogView& logView, TerminalPanelState& terminal, float reservedFoo
   }
 }
 
+static std::string FormatPrompt(DebugClient const* client) {
+  return (client ? client->GetCommandPrompt() : std::string{}) + "> ";
+}
+
 // Handles Up/Down history browsing inside the command input, shell-style.
 static int TerminalInputCallback(ImGuiInputTextCallbackData* data) {
   auto* term = static_cast<TerminalPanelState*>(data->UserData);
@@ -152,8 +157,7 @@ void dbg::BuildTerminalPanel(UiState& state) {
 
   BuildLogOutput(state.logView, state.terminal, footerHeight);
 
-  std::string const prompt = state.client ? state.client->GetCommandPrompt() : std::string{};
-  std::string const promptText = prompt + "> ";
+  std::string const promptText = FormatPrompt(state.client);
 
   // After Enter the input is cleared and loses focus, so re-assert it here (the box is empty, so
   // this cannot cause a select-all). History recall keeps the input active on its own.
@@ -189,17 +193,30 @@ void dbg::BuildTerminalPanel(UiState& state) {
   if (submit) {
     std::string const command = state.terminal.input;
 
+    // Queued, so the echo and cls come after the output of earlier commands
+    auto const run = [&](std::function<void()> fn) {
+      if (state.client) {
+        state.client->QueueCommand(std::move(fn));
+      } else {
+        fn();
+      }
+    };
+
     // Echo the submitted command. An empty command prints a blank line, like a shell.
-    state.logView.AddLine(
-        LogChannel::Info, command.empty() ? std::string{} : (promptText + command), "", 0);
+    run([&logView = state.logView, client = state.client, command] {
+      logView.AddLine(
+          LogChannel::Info,
+          command.empty() ? std::string{} : FormatPrompt(client) + command,
+          "",
+          0);
+    });
 
     if (!command.empty()) {
       if (command == "cls") {
         // We handle this command ourselves
-        state.logView.Clear();
+        run([&logView = state.logView] { logView.Clear(); });
       } else if (state.client) {
-        // TODO: Queue this command for execution on another thread, to avoid blocking the UI.
-        state.client->ExecuteCommand(command);
+        state.client->QueueCommand(command);
       }
       // Append to history (skip consecutive duplicates), like a normal shell.
       if (state.terminal.history.empty() || state.terminal.history.back() != command) {

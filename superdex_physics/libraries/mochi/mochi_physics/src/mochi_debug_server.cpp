@@ -26,10 +26,20 @@
 #include <mochi_core/utils/dynamic_string.h>
 #include <mochi_core/utils/guarded.h>
 #include <mochi_core/utils/log.h>
+#include <mochi_core/utils/string_utils.h>
+#include <mochi_physics/dbg/console_path.h>
 #include <mochi_physics/dbg/debug_server_internal.h>
 #include <mochi_physics/dbg/protocol.h>
+#include <picojson/picojson.h>
+#include <simple_reflection/simple_reflection_console.h>
 
+#include <algorithm>
 #include <memory>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 using namespace mochi;
 using namespace mochi::dbg;
@@ -56,6 +66,7 @@ class DebugServerImpl : public DebugServerInternal {
   void StartInProc() override;
   void OnAddScene(Scene* scene) override;
   void OnRemoveScene(Scene* scene) override;
+  void SetConsoleRoot_ForTestingOnly(void* object, SReflect::TypeInfo const& typeInfo) override;
   net::MessageServer& GetMessageServer_ForTestingOnly() override {
     return _server;
   }
@@ -72,6 +83,8 @@ class DebugServerImpl : public DebugServerInternal {
 
   struct State {
     DynamicArray<SceneInfo> scenes;
+    void* consoleRoot = nullptr;
+    SReflect::TypeInfo const* consoleRootType = nullptr;
     net::ClientId client = {};
     // For now, the default matches Mochi's historical default (X-right, Y-up, Z-backward)
     CoordinateSpace coordinateSpace = CoordinateSpace::Filament();
@@ -96,15 +109,24 @@ class DebugServerImpl : public DebugServerInternal {
   AttachSceneDebuggerForClient(SceneInfo& info, net::ClientId client, net::MessageServer& server);
   static void ReleaseSceneDebugger(SceneInfo& info);
 
+  // Forward a request to the first scene with the given name and return true, leaving request moved
+  // from. Return false and leave request untouched if there is no such scene.
+  bool ForwardToScene(std::string_view sceneName, protocol::CommandRequest& request);
+
   // Message Handlers:
-  void OnPingRequest(net::ClientId client, protocol::PingRequest const& request);
   void OnSceneRequest(
       net::ClientId client,
       std::unique_ptr<protocol::SceneRequest>&& request,
       protocol::SceneReply&& reply);
+  void OnConsoleRequest(net::ClientId client, protocol::CommandRequest request);
 
   net::MessageServer _server;
   RecursiveGuarded<State> _state;
+
+ public:
+  MOCHI_STRUCT_BEGIN(DebugServerImpl)
+  MOCHI_PROPERTY("port", &DebugServerImpl::GetPort)
+  MOCHI_STRUCT_END()
 };
 
 } // namespace
@@ -206,6 +228,17 @@ void DebugServerImpl::StartInProc() {
   StartImpl(/*preferredPort*/ 0, /*inProc*/ true);
 }
 
+void DebugServerImpl::SetConsoleRoot_ForTestingOnly(
+    void* object,
+    SReflect::TypeInfo const& typeInfo) {
+  _state.Mutate([&](auto& state) {
+    MOCHI_ASSERT(
+        !state.hasStarted, "The console root must be installed while the server is stopped");
+    state.consoleRoot = object;
+    state.consoleRootType = object ? &typeInfo : nullptr;
+  });
+}
+
 void DebugServerImpl::Stop() {
   // Lock the state and clean up the state.
   bool const needsStop = _state.Mutate([&](auto& state) {
@@ -278,6 +311,21 @@ static void FillSceneList(DebugServerImpl::State const& state, protocol::SceneLi
     outList.handles[i] = state.scenes[i].scene->GetHandle();
     outList.names[i] = state.scenes[i].scene->GetName();
   }
+}
+
+static SReflect::ConsoleListEntry MakeDirectoryEntry(std::string_view name) {
+  return {._kind = SReflect::ConsoleEntryKind::Directory, ._name = std::string{name}};
+}
+
+// List the scenes by name, sorted like map keys in SReflect::ConsoleList.
+static void ListScenes(
+    DebugServerImpl::State const& state,
+    DynamicArray<SReflect::ConsoleListEntry>& outEntries) {
+  for (auto const& info : state.scenes) {
+    outEntries.push_back(
+        MakeDirectoryEntry(SReflect::detail::FormatPathStep(info.scene->GetName())));
+  }
+  std::ranges::sort(outEntries, {}, &SReflect::ConsoleListEntry::_name);
 }
 
 // Copy the debug draw feature catalog into the message. Scenes start with debug draw off, and the
@@ -367,12 +415,13 @@ void DebugServerImpl::RegisterSceneRequest() {
 }
 
 void DebugServerImpl::RegisterProtocol() {
+  _server.Register<protocol::CommandReply>();
+  _server.Register<protocol::CommandRequest>([this](net::ClientId client, auto&& request) {
+    OnConsoleRequest(client, std::forward<decltype(request)>(request));
+  });
   _server.Register<protocol::DebugDrawReply>();
   RegisterSceneRequest<protocol::DebugDrawRequest>();
   _server.Register<protocol::LogMessage>();
-  _server.Register<protocol::PingReply>();
-  _server.Register<protocol::PingRequest>(
-      [this](net::ClientId client, auto&& request) { OnPingRequest(client, request); });
   _server.Register<protocol::SceneAddRemove>();
   _server.Register<protocol::SceneSettingsReply>();
   RegisterSceneRequest<protocol::SceneSettingsRequest>();
@@ -387,11 +436,6 @@ void DebugServerImpl::RegisterProtocol() {
   // Set version so connection will be refused if the client does not register exactly the
   // same collection of messages.
   _server.SetVersion(_server.CalcProtocolVersionHash());
-}
-
-void DebugServerImpl::OnPingRequest(net::ClientId client, protocol::PingRequest const& request) {
-  // Reply immediately
-  _server.SendTo(client, protocol::PingReply{request});
 }
 
 void DebugServerImpl::OnSceneRequest(
@@ -417,6 +461,123 @@ void DebugServerImpl::OnSceneRequest(
     reply.error = "No such scene";
     _server.SendTo(client, reply);
   }
+}
+
+void DebugServerImpl::OnConsoleRequest(net::ClientId client, protocol::CommandRequest request) {
+  protocol::CommandReply reply(request);
+  auto const fail = [&](std::string_view error) {
+    reply.error = error;
+    _server.SendTo(client, reply);
+  };
+  std::string error;
+  size_t errorOffset = 0;
+  auto const tokens = SReflect::detail::ConsoleTokenize(request.command, error, &errorOffset);
+  if (!error.empty()) {
+    fail(SReflect::detail::FormatConsoleError(error, request.command, errorOffset));
+    return;
+  }
+  if (tokens.empty()) {
+    _server.SendTo(client, reply); // An empty command is a connection check
+    return;
+  }
+
+  static constexpr std::string_view kCommands[] = {"ls"};
+  request.isList = std::ranges::find(kCommands, tokens.front()) != std::ranges::end(kCommands);
+  size_t const pathIndex = request.isList ? 1 : 0;
+  if (request.isList && tokens.size() > 2) {
+    fail("Invalid number of arguments for ls");
+    return;
+  }
+  std::string const path = tokens.size() > pathIndex ? tokens[pathIndex] : "";
+  std::string resolved;
+  if (!ResolveConsolePath(request.workingDirectory, path, resolved, error, errorOffset)) {
+    SReflect::Span<std::string const> const args{tokens.data() + 1, tokens.size() - 1};
+    fail(SReflect::detail::FormatConsoleError(error, tokens.front(), args, pathIndex, errorOffset));
+    return;
+  }
+  request.path = resolved;
+  reply.path = resolved;
+  if (!request.isList) {
+    request.args.assign(tokens.begin() + 1, tokens.end());
+  }
+
+  std::vector<SReflect::detail::ConsolePathStep> steps;
+  [[maybe_unused]] bool const isValid =
+      SReflect::detail::SplitConsolePath(std::string_view{resolved}.substr(1), steps);
+  MOCHI_ASSERT(isValid, "Resolved path must be valid");
+  for (auto& step : steps) {
+    ++step.offset;
+  }
+  auto const args = DynamicArray<std::string>(request.args.begin(), request.args.end());
+  if (!steps.empty() && steps[0].name == "scenes") {
+    if (steps.size() >= 2) {
+      request.pathStart = steps.size() > 2 ? steps[2].offset : resolved.size();
+      if (ForwardToScene(steps[1].name, request)) {
+        return;
+      }
+      error = SReflect::ToJsonString(steps[1].name, false) + " not found";
+      errorOffset = steps[1].offset;
+    } else if (request.isList) {
+      reply.listing.emplace();
+      _state.Read([&](auto const& state) { ListScenes(state, *reply.listing); });
+    } else if (!args.empty()) {
+      error = "Cannot set value because \"scenes\" is read-only";
+      errorOffset = steps[0].offset;
+    } else {
+      // Each scene maps to an empty object, because scenes are not serialized recursively.
+      picojson::object scenes;
+      _state.Read([&](auto const& state) {
+        for (auto const& info : state.scenes) {
+          scenes.emplace(info.scene->GetName(), picojson::object{});
+        }
+      });
+      std::string output = picojson::value{std::move(scenes)}.serialize(/*prettify*/ true);
+      output.pop_back(); // Pretty JSON ends with a newline
+      reply.output = output;
+    }
+    if (!error.empty()) {
+      reply.error = SReflect::detail::FormatConsoleError(error, resolved, args, 0, errorOffset);
+    }
+  } else {
+    auto const [object, typeInfo] = _state.Read([&](auto const& state) {
+      return std::pair<void*, SReflect::TypeInfo const*>{
+          state.consoleRoot ? state.consoleRoot : this,
+          state.consoleRoot ? state.consoleRootType : &SReflect::GetTypeInfo<DebugServerImpl>()};
+    });
+    if (request.isList) {
+      auto listing = SReflect::ConsoleList(object, *typeInfo, resolved, /*params*/ {}, &error, 1);
+      if (error.empty()) {
+        if (steps.empty()) {
+          listing.insert(listing.begin(), MakeDirectoryEntry("scenes"));
+        }
+        reply.listing = std::move(listing);
+      }
+    } else {
+      std::string output;
+      SReflect::detail::ConsoleExecute(object, *typeInfo, resolved, args, &output, &error, 1);
+      reply.output = output;
+    }
+    reply.error = error;
+  }
+  _server.SendTo(client, reply);
+}
+
+bool DebugServerImpl::ForwardToScene(
+    std::string_view sceneName,
+    protocol::CommandRequest& request) {
+  return _state.Mutate([&](auto& state) {
+    for (auto& sceneInfo : state.scenes) {
+      if (sceneInfo.scene->GetName() == sceneName) {
+        if (!sceneInfo.debugger) { // In case it was released just before _state was locked.
+          return false;
+        }
+        sceneInfo.debugger->OnReceiveAsync(
+            std::make_unique<protocol::CommandRequest>(std::move(request)));
+        return true;
+      }
+    }
+    return false;
+  });
 }
 
 int DebugServerImpl::FindScene(State const& state, SceneHandle handle) {

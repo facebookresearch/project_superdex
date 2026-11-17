@@ -13,7 +13,8 @@
 # limitations under the License.
 
 # Mochi Physics Remote Debugger Protocol (shared by client and server)
-mochi_add_static_library(mochi_physics_dbg)
+mochi_add_interface(mochi_physics_dbg)
+target_include_directories(mochi_physics_dbg INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 # Depend on mochi_physics public headers (not the library).
-target_link_libraries(mochi_physics_dbg PUBLIC mochi_core mochi_physics_headers)
+target_link_libraries(mochi_physics_dbg INTERFACE mochi_core mochi_physics_headers)

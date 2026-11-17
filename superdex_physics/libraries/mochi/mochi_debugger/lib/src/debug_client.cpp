@@ -22,22 +22,26 @@
 #include <mochi_core/utils/span_utils.h>
 #include <mochi_core/utils/string_utils.h>
 #include <mochi_debugger/lib/address.h>
+#include <mochi_debugger/lib/console_utils.h>
 #include <mochi_debugger/lib/debug_client.h>
+#include <mochi_physics/dbg/console_path.h>
 #include <mochi_physics/dbg/protocol.h>
 #include <simple_reflection/simple_reflection_console.h>
 
 #include <algorithm>
 #include <chrono>
+#include <exception>
+#include <future>
+#include <memory>
 #include <optional>
 #include <string>
 #include <thread>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 using namespace mochi;
 using namespace mochi::dbg;
-
-static constexpr double kCommandTimeout = 3.0; // seconds
 
 uint64_t StepProfileHistory::GetBeginSequence() const {
   return empty() ? 0 : front().sequence;
@@ -96,24 +100,39 @@ DebugClient::DebugClient() {
   InitCommands();
 
   _socket.SetStatusCallback([this](auto status) { OnStatusChange(status); });
+  _worker = std::thread([this] { ProcessQueuedCommands(); });
 }
 
 DebugClient::~DebugClient() {
-  Disconnect();
+  _commandQueue.Mutate([](auto& state) {
+    state.isShuttingDown = true;
+    state.commands.clear();
+  });
+  _commandsChanged.notify_all();
+  Disconnect(); // Cancels the request that the running command may be waiting for
+  _worker.join();
+  Disconnect(); // The last command may have connected again
 }
 
 void DebugClient::Connect(std::string_view address, uint16_t port) {
-  Disconnect();
+  std::scoped_lock lock(_connectionMutex);
+  DisconnectLocked();
   _socket.Connect(address, port);
 }
 
 void DebugClient::ConnectInProc(net::MessageServer& server) {
-  Disconnect();
+  std::scoped_lock lock(_connectionMutex);
+  DisconnectLocked();
   _isInProc = true; // Remember that we are using an in-process connection.
   _socket.ConnectInProc(server);
 }
 
 void DebugClient::Disconnect() {
+  std::scoped_lock lock(_connectionMutex);
+  DisconnectLocked();
+}
+
+void DebugClient::DisconnectLocked() {
   _socket.Disconnect();
   _isInProc = false;
 
@@ -175,6 +194,56 @@ void DebugClient::ResetConnectionState() {
   });
 }
 
+void DebugClient::QueueCommand(std::string_view str) {
+  QueueCommand([this, command = std::string{str}] { ExecuteCommand(command); });
+}
+
+void DebugClient::QueueCommand(std::function<void()> fn) {
+  MOCHI_ASSERT_VERBOSE(fn, "Null task");
+  _commandQueue.Mutate([&](auto& state) {
+    if (state.isShuttingDown) {
+      return;
+    }
+    state.commands.push_back(std::move(fn));
+  });
+  _commandsChanged.notify_all();
+}
+
+void DebugClient::WaitForQueuedCommands() {
+  MOCHI_ASSERT(
+      std::this_thread::get_id() != _worker.get_id(), "A queued task cannot wait for itself");
+  auto completed = std::make_shared<std::promise<void>>();
+  auto ready = completed->get_future();
+  QueueCommand([completed = std::move(completed)] { completed->set_value(); });
+  ready.wait(); // A discarded completion command makes the future ready with a broken promise
+}
+
+void DebugClient::ProcessQueuedCommands() {
+  for (;;) {
+    auto command = _commandQueue.MutateWithLock(
+        [&](auto& lock, auto& state) -> std::optional<std::function<void()>> {
+          _commandsChanged.wait(
+              lock, [&] { return state.isShuttingDown || !state.commands.empty(); });
+          if (state.isShuttingDown) {
+            return std::nullopt;
+          }
+          auto next = std::move(state.commands.front());
+          state.commands.pop_front();
+          return next;
+        });
+    if (!command) {
+      return;
+    }
+    try {
+      (*command)();
+    } catch (std::exception const& e) {
+      PrintError(Format("Exception: %s", e.what()));
+    } catch (...) {
+      PrintError("Unknown exception");
+    }
+  }
+}
+
 void DebugClient::ExecuteCommand(std::string_view str) {
   std::string error;
   size_t errorOffset = 0;
@@ -187,80 +256,60 @@ void DebugClient::ExecuteCommand(std::string_view str) {
     return;
   }
 
-  // Look up the command (first token)
+  // The server interprets commands that have no client-side handler.
   auto const it = _commands.find(tokens[0]);
   if (it == _commands.end()) {
-    PrintError(Format("Unknown command: %s", tokens[0].c_str()));
+    CmdRemote(str);
     return;
   }
 
   // Check the number of arguments
-  auto args = MakeConstSpan(tokens).subspan(1);
   auto const& cmd = it->second;
-  if ((cmd.numArgs >= 0) && (cmd.numArgs != isize(args))) {
-    Print("Invalid number of arguments");
+  if ((cmd.numArgsAllowed >= 0) && (cmd.numArgsAllowed != isize(tokens) - 1)) {
+    PrintError("Invalid number of arguments");
     return;
   }
 
   // Call command handler
-  cmd.fn(args);
+  cmd.fn(tokens);
 }
 
 bool DebugClient::IsConnected() const {
   return GetStatus() == net::SocketStatus::Connected;
 }
 
-// Format path as a string. E.g. "/a/b/c"
-static std::string FormatPath(DynamicArray<std::string> const& cmdPath) {
-  std::string path = "/";
-  path += Join(cmdPath, "/");
-  return path;
-}
-
-// Return the new path after resolving the given path argument (may be relative or absolute).
-// Fails if ".." arguments would cause the path to be invalid.
-DynamicArray<std::string> DebugClient::ResolvePath(std::string_view pathArg, Error& error) {
-  MOCHI_ERROR_RETURN(error, {});
-  DynamicArray<std::string> result;
-  auto base = _state.Read(&State::cmdPath);
-
-  bool const rooted = !pathArg.empty() && pathArg.front() == '/';
-  if (!rooted) {
-    result = base;
+std::optional<protocol::CommandReply> DebugClient::ExecuteRemoteCommandAndWait(
+    std::string_view command) {
+  MOCHI_ASSERT(
+      std::this_thread::get_id() == _worker.get_id(),
+      "Remote commands must run on the command worker");
+  if (_socket.GetStatus() != net::SocketStatus::Connected) {
+    PrintError("No connection");
+    return std::nullopt;
   }
+  Error error;
+  protocol::CommandRequest request;
+  request.command = command;
+  request.workingDirectory = GetCommandPath();
 
-  for (std::string_view token : Split(pathArg, "/")) {
-    if (token == ".") {
-      continue;
-    } else if (token == "..") {
-      if (result.empty()) {
-        MOCHI_ERROR_SET(error, "Invalid path");
-        return {};
-      } else {
-        result.pop_back();
-      }
-    } else {
-      result.emplace_back(token);
-    }
+  double const timeout =
+      _state.Read([](auto const& state) { return state.settings.commandTimeout; });
+  auto reply = SendAndAwaitReply(std::move(request), timeout, error);
+  if (!error.IsOK()) {
+    PrintError(Format("No reply from the server: %s", error.GetDescription()));
+    return std::nullopt;
   }
-
-  return result;
+  if (!reply.error.empty()) {
+    PrintError(std::string{reply.error});
+    return std::nullopt;
+  }
+  return reply;
 }
 
 // Find a scene by handle. Return index or -1 if not found.
 static int FindSceneIndex(Span<SceneInfo const> scenes, SceneHandle handle) {
   for (int i = 0; i < isize(scenes); ++i) {
     if (scenes[i].handle == handle) {
-      return i;
-    }
-  }
-  return -1;
-}
-
-// Find a scene by name. Return index or -1 if not found.
-static int FindSceneIndex(Span<SceneInfo const> scenes, std::string_view name) {
-  for (int i = 0; i < isize(scenes); ++i) {
-    if (scenes[i].name == name) {
       return i;
     }
   }
@@ -279,45 +328,14 @@ static protocol::DbgDrawFeatures ReconcileDebugDrawFeatures(
   return newState;
 }
 
-// Set an error if the command path is not valid
-void DebugClient::ValidatePath(Span<std::string const> path, Error& error) {
-  MOCHI_ERROR_RETURN(error);
-  if (path.empty()) {
-    // Empty path (root) is always valid
-    return;
-  }
-
-  if (!IsConnected()) {
-    MOCHI_ERROR_SET(error, "No connection");
-    return;
-  }
-
-  // Empty path tokens are never valid
-  for (auto const& tok : path) {
-    MOCHI_ERROR_IF(tok.empty(), error, "Invalid path");
-  }
-  MOCHI_ERROR_RETURN(error);
-
-  if (path.size() == 1) {
-    // First token is a scene name. Check it against the cached scene list.
-    std::string_view sceneName = path[0];
-    int const sceneIndex =
-        _state.Read([&](auto const& state) { return FindSceneIndex(state.scenes, sceneName); });
-    if (sceneIndex >= 0) {
-      return; // OK
-    }
-  }
-  MOCHI_ERROR_SET(error, "Invalid path");
-}
-
 void DebugClient::InitProtocol() {
+  _socket.Register<protocol::CommandReply>();
+  _socket.Register<protocol::CommandRequest>();
   _socket.Register<protocol::DebugDrawReply>(
       [this](auto&& msg) { OnDebugDrawReply(std::forward<decltype(msg)>(msg)); });
   _socket.Register<protocol::DebugDrawRequest>();
   _socket.Register<protocol::LogMessage>(
       [this](auto&& msg) { OnLogMessage(std::forward<decltype(msg)>(msg)); });
-  _socket.Register<protocol::PingReply>();
-  _socket.Register<protocol::PingRequest>();
   _socket.Register<protocol::SceneAddRemove>(
       [this](auto&& msg) { OnSceneAddRemove(std::forward<decltype(msg)>(msg)); });
   _socket.Register<protocol::SceneSettingsReply>(
@@ -1092,21 +1110,23 @@ void DebugClient::OnLogMessage(protocol::LogMessage&& msg) {
 }
 
 void DebugClient::InitCommands() {
-  auto addCommand = [this](std::string const& name, int numArgs, CommandFn fn) {
+  // Register each command that will be handled on this client. Others will be forwarded to the
+  // server directly. numArgsAllowed == -1 means "any number".
+  auto addCommand = [this](std::string const& name, int numArgsAllowed, CommandFn fn) {
     auto& cmd = _commands[name];
     cmd.fn = std::move(fn);
-    cmd.numArgs = numArgs;
+    cmd.numArgsAllowed = numArgsAllowed;
   };
-  addCommand("connect", -1, [this](auto args) { CmdConnect(args); });
-  addCommand("disconnect", 0, [this](auto /*args*/) { Disconnect(); });
-  addCommand("echo", -1, [this](auto args) { Print(Join(args, " ")); });
-  addCommand("help", -1, [this](auto /*args*/) { CmdHelp(); });
-  addCommand("cd", 1, [this](auto args) { CmdCd(args); });
-  addCommand("pwd", 0, [this](auto /*args*/) { CmdPwd(); });
-  addCommand("ls", -1, [this](auto args) { CmdLs(args); });
-  addCommand("ping", 0, [this](auto /*args*/) { CmdPing(); });
-  addCommand("servers", 0, [this](auto /*args*/) { CmdServers(); });
-  addCommand("quit", -1, [this](auto /*args*/) { CmdQuit(); });
+  addCommand("connect", -1, [this](auto tokens) { CmdConnect(tokens.subspan(1)); });
+  addCommand("disconnect", 0, [this](auto /*tokens*/) { Disconnect(); });
+  addCommand("echo", -1, [this](auto tokens) { Print(Join(tokens.subspan(1), " ")); });
+  addCommand("help", -1, [this](auto /*tokens*/) { CmdHelp(); });
+  addCommand("cd", 1, [this](auto tokens) { CmdCd(tokens.subspan(1)); });
+  addCommand("pwd", 0, [this](auto /*tokens*/) { CmdPwd(); });
+  addCommand("ls", -1, [this](auto tokens) { CmdLs(tokens.subspan(1)); });
+  addCommand("ping", 0, [this](auto /*tokens*/) { CmdPing(); });
+  addCommand("servers", 0, [this](auto /*tokens*/) { CmdServers(); });
+  addCommand("quit", -1, [this](auto /*tokens*/) { CmdQuit(); });
 }
 
 bool DebugClient::WasExitRequested() const {
@@ -1114,7 +1134,7 @@ bool DebugClient::WasExitRequested() const {
 }
 
 std::string DebugClient::GetCommandPath() const {
-  return _state.Read([](State const& state) { return FormatPath(state.cmdPath); });
+  return _state.Read(&State::cmdPath);
 }
 
 std::string DebugClient::GetCommandPrompt() const {
@@ -1122,124 +1142,56 @@ std::string DebugClient::GetCommandPrompt() const {
 }
 
 void DebugClient::CmdCd(Span<std::string const> args) {
-  MOCHI_ASSERT_VERBOSE(args.size() == 1); // Because numArgs == 1
-  auto const& pathArg = args[0];
-  Error error;
-  auto resolved = ResolvePath(pathArg, error);
-  ValidatePath(resolved, error);
-  if (error.IsOK()) {
-    _state.Mutate([&](auto& state) { state.cmdPath = std::move(resolved); });
-  } else {
-    PrintError(error.GetDescription());
+  std::string const cwd = GetCommandPath();
+  std::string path;
+  std::string error;
+  size_t errorOffset = 0;
+  if (!ResolveConsolePath(cwd, args[0], path, error, errorOffset)) {
+    PrintError(
+        SReflect::detail::FormatConsoleError(
+            error, "cd", {args.data(), args.size()}, 1, errorOffset));
+    return;
   }
+  // Validate the path by attempting an "ls" command.
+  // Exception: You are always allowed to shortten the path.
+  bool const isAncestor = path == "/" || cwd.starts_with(path + "/");
+  if (!isAncestor && !ExecuteRemoteCommandAndWait("ls " + SReflect::ToJsonString(path, false))) {
+    return;
+  }
+  _state.Mutate([&](auto& state) { state.cmdPath = std::move(path); });
 }
 
 void DebugClient::CmdPwd() {
   Print(GetCommandPath());
 }
 
-void DebugClient::PrintSceneList() {
-  DynamicArray<std::string> names;
-  _state.Read([&](auto const& state) {
-    for (auto const& s : state.scenes) {
-      names.emplace_back(s.name);
-    }
-  });
-  if (!names.empty()) {
-    std::ranges::sort(names);
-    Print(Join(names, "\n"));
-  }
-}
-
-void DebugClient::PrintActorList(std::string_view sceneName, Error& error) {
-  MOCHI_ERROR_RETURN(error);
-  // TODO: Deal with non-unique scene names
-  SceneHandle sceneHandle = _state.Read([&](auto const& state) {
-    int idx = FindSceneIndex(state.scenes, sceneName);
-    return idx >= 0 ? state.scenes[idx].handle : SceneHandle{};
-  });
-  MOCHI_ERROR_IF(!sceneHandle.IsValid(), error, "Invalid scene");
-  MOCHI_ERROR_RETURN(error);
-
-  // Then get the list of actors
-  protocol::SceneSyncRequest req;
-  req.scene = sceneHandle;
-  req.syncActors = true;
-  auto reply = SendAndAwaitReply(req, kCommandTimeout, error);
-  MOCHI_ERROR_RETURN(error);
-  if (!reply.error.empty()) {
-    // The reply came back, but with an error. Log it.
-    PrintError(std::string{reply.error});
-    return;
-  }
-  if (!reply.actors) {
-    return;
-  }
-
-  // Sort by handle (the first column).
-  std::ranges::sort(
-      *reply.actors, [](auto const& a, auto const& b) { return a.handle.value < b.handle.value; });
-
-  // Build an aligned "handle  type  name" table.
-  auto const& actors = *reply.actors;
-  DynamicArray<std::string> types;
-  DynamicArray<std::string> names;
-  for (auto const& a : actors) {
-    char const* const typeStr = SReflect::EnumToString(a.type);
-    types.emplace_back((typeStr != nullptr && typeStr[0] != '\0') ? typeStr : "?");
-    names.emplace_back(a.name.empty() ? "unnamed" : a.name.c_str());
-  }
-
-  auto maxWidth = [](DynamicArray<std::string> const& col) {
-    size_t width = 0;
-    for (auto const& s : col) {
-      width = Max(width, s.size());
-    }
-    return width;
-  };
-  int const w1 = static_cast<int>(maxWidth(types)) + 2;
-
-  std::string text;
-  for (int i = 0; i < isize(actors); ++i) {
-    if (!text.empty()) {
-      text += '\n';
-    }
-    text += Format(
-        "%016" PRIx64 "  %-*s%s", actors[i].handle.value, w1, types[i].c_str(), names[i].c_str());
-  }
-  if (!text.empty()) {
-    Print(text);
-  }
-}
-
 void DebugClient::CmdLs(Span<std::string const> args) {
+  bool const detailed = !args.empty() && args.back() == "-l";
+  if (detailed) {
+    args = args.subspan(0, args.size() - 1);
+  }
   if (args.size() > 1) {
-    PrintError("Invalid number of arguments");
+    PrintError("Usage: ls [<path>] [-l]");
     return;
   }
-
-  if (!IsConnected()) {
-    PrintError("No connection");
-    return;
+  std::string command = "ls";
+  if (!args.empty()) {
+    command += " " + SReflect::ToJsonString(args[0], false);
   }
+  CmdRemote(command, detailed);
+}
 
-  Error error;
-  auto target = ResolvePath(args.empty() ? "" : args[0], error);
-  ValidatePath(target, error);
-  if (!error.IsOK()) {
-    PrintError(error.GetDescription());
-    return;
-  }
-
-  // We can currently only list contents at the root scope (the list of scenes)
-  if (target.empty()) {
-    PrintSceneList();
-  } else if (target.size() == 1) {
-    PrintActorList(target[0], error);
-  }
-
-  if (!error.IsOK()) {
-    PrintError(error.GetDescription());
+void DebugClient::CmdRemote(std::string_view command, bool detailed) {
+  auto const reply = ExecuteRemoteCommandAndWait(command);
+  if (reply) {
+    if (reply->listing && !reply->listing->empty()) {
+      ConsoleFormatParams params;
+      params._showTypes = detailed;
+      params._includeNamespaces = detailed;
+      Print(FormatConsoleList(*reply->listing, params));
+    } else if (!reply->output.empty()) {
+      Print(std::string{reply->output});
+    }
   }
 }
 
@@ -1255,10 +1207,15 @@ void DebugClient::CmdHelp() {
   pwd                Print current working directory.
   ls                 List current directory contents.
   ls <path>          List contents of specified directory.
+  ls [<path>] -l     List with fully qualified types and method signatures.
+  <path>             Print the value at <path>.
+  <path> <value>     Set the value at <path>, for example: gravity [0, -9.81, 0]
+  <path> [args...]   Call the method at <path>.
   ping               Measure round-trip time to the server.
   echo <message>     Print message to the console.
   disconnect         Disconnect from the current server.
-  quit               Exit.)");
+  quit               Exit.
+)");
 }
 
 void DebugClient::CmdConnect(Span<std::string const> args) {
@@ -1285,16 +1242,17 @@ void DebugClient::CmdPing() {
   }
 
   constexpr int kNumPings = 6;
-  Error error;
   for (int i = 0; i < kNumPings; ++i) {
-    auto reply = SendAndAwaitReply(protocol::PingRequest{}, kCommandTimeout, error);
-    if (!error.IsOK()) {
-      PrintError(Format("ping: %s", error.GetDescription()));
+    using clock = std::chrono::steady_clock;
+    auto const start = clock::now();
+    if (!ExecuteRemoteCommandAndWait("")) {
       return;
     }
-    constexpr uint64_t kNanosPerMilli = 1000000;
-    uint64_t const elapsedMs = (reply.recvTimeNs - reply.sendTimeNs) / kNanosPerMilli;
-    Print(Format("ping: %" PRIu64 " ms", elapsedMs));
+    auto const elapsed = clock::now() - start;
+    Print(Format(
+        "ping: %lld ms",
+        static_cast<long long>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count())));
   }
 }
 

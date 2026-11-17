@@ -28,11 +28,14 @@
 #include <mochi_physics/dbg/protocol.h>
 
 #include <cinttypes>
+#include <condition_variable>
 #include <deque>
 #include <functional>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 
@@ -78,6 +81,9 @@ struct SceneSettings {
 
 /// @brief Customizable settings for DebugClient
 struct DebugClientSettings {
+  /// Maximum wait for a console reply, in seconds
+  double commandTimeout = 3.0;
+
   /// @brief Parameters to control automatic synchronization of scene state
   SceneSyncParams sync;
 
@@ -181,6 +187,8 @@ class DebugClient {
 
  public:
   DebugClient();
+
+  /** @brief Drop queued commands, cancel the running command's request and wait for it to end. */
   ~DebugClient();
 
   /**
@@ -411,11 +419,40 @@ class DebugClient {
   void SetSleepParams(experimental::SleepParams const& params);
 
   /**
-   * @brief Execute a console command
+   * @brief Queue a console command and return immediately.
    *
-   * @param str A command string. First token is the command. Additional tokens are arguments.
+   * @param str A command line string, split into tokens. If the first token names a local command
+   * (see `help`), that command runs with the other tokens as arguments. Otherwise the command is
+   * forwarded unchanged with the working directory for the server to interpret.
+   *
+   * @details Commands and tasks run one at a time, in the order they were queued, on a thread owned
+   * by this client.
    */
-  void ExecuteCommand(std::string_view str);
+  void QueueCommand(std::string_view str);
+
+  /**
+   * @brief Queue a function to run on the command thread after everything queued before it.
+   *
+   * @note Dropped if this client is being destroyed.
+   * @note Exceptions thrown by fn are caught and printed as errors.
+   *
+   * @warning fn must not wait for the thread that destroys this client, which waits for fn to end.
+   */
+  void QueueCommand(std::function<void()> fn);
+
+  /**
+   * @brief Queue a completion command and wait until it has passed through the queue.
+   *
+   * @details All commands queued before the completion command finish first. Commands queued
+   * afterward do not delay this wait. Shutdown may discard queued commands and end the wait.
+   *
+   * @note A command's reply timeout starts when its request is sent. Time spent waiting in the
+   * queue does not count toward that timeout.
+   *
+   * @warning Do not call from the command worker, which would wait for itself. Do not call from a
+   * message receive callback, because reply dispatch must keep running.
+   */
+  void WaitForQueuedCommands();
 
   /**
    * @brief Get the current console command prompt (for terminal UI).
@@ -433,8 +470,9 @@ class DebugClient {
    * @param fn Callback invoked for each printed message with its channel, message text, source
    * file, and line. Pass an empty @ref LogFn to restore default output via Mochi's log system.
    *
-   * @note Must be called before @ref Connect or @ref ConnectInProc to prevent race conditions. The
-   * user-provided function may be called concurrently from multiple threads.
+   * @note Must be called before @ref Connect or @ref ConnectInProc, and while no commands are
+   * pending, to prevent race conditions. The user-provided function may be called concurrently from
+   * multiple threads.
    */
   void SetPrintFunction(LogFn fn);
 
@@ -443,7 +481,7 @@ class DebugClient {
 
   struct CommandInfo {
     CommandFn fn;
-    int numArgs = 0; // -1 means any number
+    int numArgsAllowed = 0; // Number of tokens after the command name. -1 means any number
   };
 
   struct MeshInfo {
@@ -456,7 +494,7 @@ class DebugClient {
   struct State {
     bool exitRequested = false;
     StepMode stepMode = StepMode::Pause; // Current step mode (applies to all scenes)
-    DynamicArray<std::string> cmdPath; // Current console command path
+    std::string cmdPath = "/"; // Canonical absolute console working directory
     DynamicArray<SceneInfo> scenes; // Cached list of scenes, kept in sync with the server
     CoordinateSpace coordinateSpace = CoordinateSpace::Filament(); // Synced from the server
     protocol::DbgDrawFeatures debugDraw; // Feature catalog plus the client's desired enable state
@@ -476,12 +514,14 @@ class DebugClient {
   void InitProtocol();
   void InitCommands();
   bool IsConnected() const;
+  void DisconnectLocked(); // Requires _connectionMutex
   void OnStatusChange(net::SocketStatus status);
   void SetSceneSyncParams(SceneSyncParams const& params);
   void ResetConnectionState(); // Clear per-connection client state (e.g. cached scene list)
   std::string GetCommandPath() const;
-  DynamicArray<std::string> ResolvePath(std::string_view pathArg, Error& error);
-  void ValidatePath(Span<std::string const> path, Error& error);
+  void ProcessQueuedCommands();
+  void ExecuteCommand(std::string_view str);
+  std::optional<protocol::CommandReply> ExecuteRemoteCommandAndWait(std::string_view command);
   static protocol::SceneSyncRequest MakeSyncRequest(State const& state);
   static protocol::DebugDrawRequest MakeDebugDrawRequest(State const& state);
   static protocol::SceneSettingsRequest MakeSceneSettingsRequest(
@@ -510,8 +550,6 @@ class DebugClient {
       int line = 0,
       bool newline = true);
   void PrintError(std::string const& message);
-  void PrintSceneList();
-  void PrintActorList(std::string_view sceneName, Error& error);
 
   // Message handlers
   void OnLogMessage(protocol::LogMessage&& msg);
@@ -528,6 +566,7 @@ class DebugClient {
   void CmdCd(Span<std::string const> args);
   void CmdPwd();
   void CmdLs(Span<std::string const> args);
+  void CmdRemote(std::string_view command, bool detailed = false);
   void CmdHelp();
   void CmdPing();
   void CmdServers();
@@ -540,6 +579,16 @@ class DebugClient {
   std::atomic<bool> _isFullyConnected{false}; // True after WelcomeMessage is received.
   LogFn _printFn;
   std::atomic<bool> _isInProc = false;
+  std::mutex _connectionMutex; // Serializes Connect, ConnectInProc and Disconnect
+
+  struct CommandQueueState {
+    std::deque<std::function<void()>> commands;
+    bool isShuttingDown = false;
+  };
+
+  Guarded<CommandQueueState> _commandQueue;
+  std::condition_variable _commandsChanged;
+  std::thread _worker;
 };
 
 } // namespace mochi::dbg

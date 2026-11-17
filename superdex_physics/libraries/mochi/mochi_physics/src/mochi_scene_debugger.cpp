@@ -20,6 +20,7 @@
 #include "mochi_constraint.h"
 #include "mochi_island.h"
 #include "mochi_scene.h"
+#include "mochi_scene_console.h"
 #include "mochi_scene_profiler.h"
 #include "mochi_sleep.h"
 
@@ -306,6 +307,8 @@ void SceneDebuggerImpl::Init(SceneImpl* scene) {
   MOCHI_ASSERT(_sceneHandle.IsValid(), "Invalid SceneHandle");
 
   // Register message handlers
+  _dispatcher.Register<protocol::CommandRequest>(
+      [this](auto* scene, auto&& msg) { SendToClient(ExecuteSceneCommand(*scene, msg)); });
   _dispatcher.Register<protocol::DebugDrawRequest>([this](auto* scene, auto&& msg) {
     OnDebugDrawRequest(scene, std::forward<decltype(msg)>(msg));
   });

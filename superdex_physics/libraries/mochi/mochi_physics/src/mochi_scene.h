@@ -22,6 +22,7 @@
 #include "mochi_scene_recorder.h"
 
 #include <mochi_core/utils/guarded.h>
+#include <mochi_core/utils/reflection.h>
 #include <mochi_physics/mochi_physics.h>
 #include <mochi_physics/mochi_physics_experimental.h>
 
@@ -395,6 +396,12 @@ class SceneImpl final : public Scene {
   size_t _prevStateBufferSize = 0;
   DynamicArray<uint8_t> _stateBufferForRecycling;
   std::unordered_map<StateHandle, DynamicArray<uint8_t>> _capturedState;
+
+ public:
+  MOCHI_STRUCT_BEGIN(mochi::SceneImpl)
+  MOCHI_PROPERTY("name", [](SceneImpl const& s) -> std::string const& { return s._name; })
+  MOCHI_PROPERTY("gravity", &SceneImpl::GetGravity, &SceneImpl::SetGravity)
+  MOCHI_STRUCT_END()
 };
 
 inline Real3 SceneImpl::GetGravity() const {

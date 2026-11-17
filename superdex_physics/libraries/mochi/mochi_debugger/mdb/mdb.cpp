@@ -60,7 +60,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
     if (!terminal.ReadLine(input)) {
       break;
     }
-    client.ExecuteCommand(input);
+    client.QueueCommand(input);
+    client.WaitForQueuedCommands();
     if (client.WasExitRequested()) {
       break;
     }

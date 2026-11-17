@@ -32,6 +32,10 @@ namespace mochi::net {
 class MessageServer;
 } // namespace mochi::net
 
+namespace SReflect {
+class TypeInfo;
+} // namespace SReflect
+
 namespace mochi::dbg {
 
 /** @brief Extends DebugServer API for internal use within mochi_physics and tests.  */
@@ -64,6 +68,14 @@ class DebugServerInternal : public DebugServer {
    * @ref protocol::SceneAddRemove for restrictions on scene-add/remove notifications.
    */
   virtual net::MessageServer& GetMessageServer_ForTestingOnly() = 0;
+
+  /**
+   * @brief Supply a reflected console root for tests. The built-in scenes route remains available.
+   *
+   * @note Call while the server is stopped. The object and type information are borrowed and
+   * must outlive the server. A null object restores the server's reflected root.
+   */
+  virtual void SetConsoleRoot_ForTestingOnly(void* object, SReflect::TypeInfo const& typeInfo) = 0;
 };
 
 /**
