@@ -7,7 +7,7 @@ This package contains a Meta-owned 2x2 large interlocking brick toy prefab for u
 ## Modifications and Processing
 
 - Manually authored the brick geometry in SolidWorks: a render model, an exact-tolerance model, and a separate behavior-optimized collision model.
-- Exported the collision model as a STEP interchange model.
+- Exported the collision model as a STEP interchange model. `cad/large_brick_toy_2x2_collision.SLDPRT` is saved for SolidWorks 2025; `cad/large_brick_toy_2x2_collision_2026.SLDPRT` is the same part as last edited in SolidWorks 2026. Its studs and the ribs inside the brick carry sawtooth catches: a shallow slope on the side that leads when bricks are pushed together and a steep one on the side that holds them, so a brick snaps on at about 460 gf and snaps off at about 1.7 times that.
 - Generated GLB render geometry from the source CAD (`large_brick_toy_2x2_render.glb` and `large_brick_toy_2x2_exact_tolerance.glb`).
 - Generated SDF collision geometry for SuperDex Physics in Studio (`intermediates/large_brick_toy_2x2_collision.StudioProcessing.json`).
 - Assembled the asset with contact settings and a 6.5 g mass as `large_brick_toy_2x2.mochi_prefab`.

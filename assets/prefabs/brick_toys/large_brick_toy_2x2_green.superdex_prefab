@@ -3,9 +3,9 @@
     "rigid": [
       {
         "contact": {
-          "coulombFrictionCoefficient": 0.699999988079071,
+          "coulombFrictionCoefficient": 0.35,
           "maxAlignmentNormals": 0.20000000298023224,
-          "penaltyCoefficient": 999999995904,
+          "penaltyCoefficient": 10000000000000.0,
           "penaltyThresholdDefault": 0.0012000000569969416,
           "penaltyThresholdExtraPadding": 0.0010000000474974513
         },
