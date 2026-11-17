@@ -109,6 +109,11 @@ class SUPERDEXROBOTICS_API USuperDexBotSceneVisualizationComponent : public USce
       mochi::ShapeHandle RefShape,
       uint64 HandleKey,
       UMochiSceneObject* SceneObject);
+  // A rod's contact skin, deformed every tick by UpdateDeformableMeshes.
+  UMeshComponent* CreateRodMeshComponent(
+      const TArray<mochi::real>& SkinCoords,
+      const TArray<int32>& SkinTriangles,
+      uint64 HandleKey);
   UMeshComponent* NewVisualComponent(TSubclassOf<UMeshComponent> ComponentClass);
   void RequestRenderModel(uint64 HandleKey, const FString& File, UMochiSceneObject* SceneObject);
   void OnRenderModelLoaded(
@@ -116,6 +121,11 @@ class SUPERDEXROBOTICS_API USuperDexBotSceneVisualizationComponent : public USce
       const FString& File,
       UStaticMesh* Mesh,
       UMochiSceneObject* SceneObject);
+  // Re-registers the contact-skin-position query of every deformable visual's actor, cancelling
+  // the previous registrations.
+  void RefreshDeformableQueries(UMochiSceneObject* SceneObject);
+  // Writes the latest deformed contact-skin nodes into each deformable visual's mesh.
+  void UpdateDeformableMeshes(const TMap<uint64, TArray<mochi::real>>& Nodes);
 
   // Per-ShapeHandle cache: geometry built once via MochiDynamicMeshUtil,
   // winding + meters->cm baked, normals computed, inverse-scale baked.
@@ -136,8 +146,13 @@ class SUPERDEXROBOTICS_API USuperDexBotSceneVisualizationComponent : public USce
     TObjectPtr<UMeshComponent> MeshComp = nullptr;
     FTransform ComponentToLink = FTransform::Identity;
     FTransform LinkToWorld = FTransform::Identity;
+    // A rod: its contact-skin mesh follows the actor's deformed contact skin every step.
+    bool bDeformable = false;
   };
   TArray<FVisualEntry> Visuals;
+
+  // The contact-skin-position queries registered for deformable visuals, by actor handle.
+  TArray<TPair<uint64, mochi::QueryHandle>> DeformableQueries;
 
   struct FSkinVisual {
     // The bot's articulated actor handle.
@@ -173,6 +188,8 @@ class SUPERDEXROBOTICS_API USuperDexBotSceneVisualizationComponent : public USce
   // Game→Mochi QueueOrExecuteCommand+WaitForQueuedCommands on the tick path.
   mutable FCriticalSection LatestTransformsLock;
   TMap<uint64, mochi::TransformRT> LatestTransforms;
+  // Deformed contact-skin node positions (actor frame, Mochi units) of each deformable visual.
+  TMap<uint64, TArray<mochi::real>> LatestDeformedNodes;
   mochi::CallbackHandle VizPostStepHandle;
   TWeakObjectPtr<UMochiSceneObject> VizSceneObject;
 

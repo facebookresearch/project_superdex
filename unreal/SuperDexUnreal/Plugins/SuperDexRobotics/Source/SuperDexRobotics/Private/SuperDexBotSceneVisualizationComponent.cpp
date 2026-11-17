@@ -60,6 +60,10 @@ struct FBotSceneVizSnapshotEntry {
   uint64 ShapeKey = 0; // RefShape.value
   mochi::TransformRT WorldFromLink;
   FBotSceneVizRenderModel RenderModel;
+  // A rod actor, drawn from its contact skin (rest positions in the actor frame and triangles).
+  bool bDeformable = false;
+  TArray<mochi::real> SkinCoords;
+  TArray<int32> SkinTriangles;
 };
 
 // A bot's skin render model (see superdex::robotics::ActorSkinRenderModel), with the world
@@ -222,10 +226,24 @@ void USuperDexBotSceneVisualizationComponent::CancelPostStepCallback() {
 }
 
 void USuperDexBotSceneVisualizationComponent::DestroyVisuals() {
+  // The deformable queries were registered on the scene the post-step publisher watches.
+  UMochiSceneObject* QueryScene = VizSceneObject.Get();
   CancelPostStepCallback();
+  if (QueryScene && QueryScene->IsValid() && DeformableQueries.Num() > 0) {
+    QueryScene->QueueOrExecuteCommand([Queries = DeformableQueries](mochi::Scene* Scene) {
+      for (auto const& [Handle, Query] : Queries) {
+        if (mochi::Actor* Actor = Scene ? Scene->GetActor(mochi::ActorHandle(Handle)) : nullptr) {
+          Actor->CancelQuery(Query);
+        }
+      }
+    });
+    QueryScene->WaitForQueuedCommands();
+  }
+  DeformableQueries.Reset();
   {
     FScopeLock Lock(&LatestTransformsLock);
     LatestTransforms.Reset();
+    LatestDeformedNodes.Reset();
   }
   for (auto& V : Visuals) {
     DestroyVisualMeshComponent(V.MeshComp);
@@ -294,6 +312,12 @@ bool USuperDexBotSceneVisualizationComponent::TrySnapshotLinkTransforms(
           E.ShapeKey = Shape.value;
         }
         E.WorldFromLink = WorldFromLink;
+        if (EntryActor->GetType() == mochi::ActorType::Rod) {
+          const mochi::MeshDataView Skin = EntryActor->GetContactSkinMesh();
+          E.bDeformable = !Skin.IsEmpty();
+          E.SkinCoords.Append(Skin.coordinates.data(), (int32)Skin.coordinates.size());
+          E.SkinTriangles.Append(Skin.connectivity.data(), (int32)Skin.connectivity.size());
+        }
         if (RenderModel) {
           E.RenderModel.File = UTF8_TO_TCHAR(RenderModel->file.c_str());
           E.RenderModel.LinkFromModel = RenderModel->actorFromModel;
@@ -474,7 +498,8 @@ void USuperDexBotSceneVisualizationComponent::EnsureVisualsForSnapshot(
       Existing.LinkToWorld = LinkToWorld;
       // Actor handles are recycled, so a handle seen before can now name a different actor (a task
       // swap respawns its prefab instances). Keep the visual only if it still draws the same thing.
-      if (Existing.ShapeKey == Entry.ShapeKey && Existing.RenderModelFile == RenderModelFile) {
+      if (Existing.ShapeKey == Entry.ShapeKey && Existing.RenderModelFile == RenderModelFile &&
+          Existing.bDeformable == Entry.bDeformable) {
         if (IsValid(Existing.MeshComp)) {
           Existing.MeshComp->SetWorldTransform(Existing.ComponentToLink * LinkToWorld);
         }
@@ -491,6 +516,7 @@ void USuperDexBotSceneVisualizationComponent::EnsureVisualsForSnapshot(
     V->ShapeKey = Entry.ShapeKey;
     V->RefShape = Entry.RefShape;
     V->LinkToWorld = LinkToWorld;
+    V->bDeformable = Entry.bDeformable;
 
     if (!RenderModelFile.IsEmpty()) {
       const mochi::Real3& Scale = Entry.RenderModel.Scale;
@@ -502,7 +528,9 @@ void USuperDexBotSceneVisualizationComponent::EnsureVisualsForSnapshot(
       continue;
     }
 
-    V->MeshComp = CreateShapeMeshComponent(Entry.RefShape, HandleKey, SceneObject);
+    V->MeshComp = Entry.bDeformable
+        ? CreateRodMeshComponent(Entry.SkinCoords, Entry.SkinTriangles, HandleKey)
+        : CreateShapeMeshComponent(Entry.RefShape, HandleKey, SceneObject);
     if (IsValid(V->MeshComp)) {
       V->MeshComp->SetWorldTransform(LinkToWorld);
     }
@@ -743,6 +771,45 @@ UMeshComponent* USuperDexBotSceneVisualizationComponent::CreateShapeMeshComponen
   return DynComp;
 }
 
+UMeshComponent* USuperDexBotSceneVisualizationComponent::CreateRodMeshComponent(
+    const TArray<mochi::real>& SkinCoords,
+    const TArray<int32>& SkinTriangles,
+    uint64 HandleKey) {
+  UE::Geometry::FDynamicMesh3 Mesh;
+  FMochiToUnrealConverter M2U;
+  for (int32 i = 0; i + 2 < SkinCoords.Num(); i += 3) {
+    Mesh.AppendVertex(
+        M2U.TranslationToUnreal(mochi::Real3{SkinCoords[i], SkinCoords[i + 1], SkinCoords[i + 2]}));
+  }
+  // The same winding MochiDynamicMeshUtil gives a Mochi mesh.
+  const bool bFlip = M2U.FlipsHandedness();
+  for (int32 i = 0; i + 2 < SkinTriangles.Num(); i += 3) {
+    Mesh.AppendTriangle(
+        bFlip
+            ? UE::Geometry::FIndex3i{SkinTriangles[i], SkinTriangles[i + 1], SkinTriangles[i + 2]}
+            : UE::Geometry::FIndex3i{SkinTriangles[i + 2], SkinTriangles[i + 1], SkinTriangles[i]});
+  }
+  if (Mesh.VertexCount() == 0) {
+    return nullptr;
+  }
+  ComputeOrDiscardVertexNormals(Mesh, /*bComputeNormals=*/true);
+  PrepareDynamicMeshForRuntime(BakedGeometryScale, Mesh);
+
+  UDynamicMeshComponent* DynComp =
+      Cast<UDynamicMeshComponent>(NewVisualComponent(UDynamicMeshComponent::StaticClass()));
+  if (!DynComp) {
+    return nullptr;
+  }
+  DynComp->SetEnableFlatShading(false);
+  DynComp->EditMesh([&Mesh](UE::Geometry::FDynamicMesh3& Target) { Target = MoveTemp(Mesh); });
+  if (UMaterialInstanceDynamic* MID =
+          CreateColoredVizMaterial(DynComp, GetDistinctVizColor(HandleKey, HandleKey))) {
+    DynComp->SetMaterial(0, MID);
+  }
+  DynComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+  return DynComp;
+}
+
 UMeshComponent* USuperDexBotSceneVisualizationComponent::NewVisualComponent(
     TSubclassOf<UMeshComponent> ComponentClass) {
   AActor* Owner = GetOwner();
@@ -855,6 +922,7 @@ void USuperDexBotSceneVisualizationComponent::RebuildIfNeeded() {
   LinkToWorldByHandle.Reset();
   EnsureVisualsForSnapshot(Snapshot, SceneObject);
   EnsureSkinsForSnapshot(SkinSnapshot);
+  RefreshDeformableQueries(SceneObject);
   bHasSceneSnapshot = true;
   SetComponentTickEnabled(Visuals.Num() > 0 || Skins.Num() > 0);
 
@@ -874,13 +942,19 @@ void USuperDexBotSceneVisualizationComponent::RebuildIfNeeded() {
         }
       }
     }
+    TArray<uint64> DeformableHandles;
+    for (auto const& V : Visuals) {
+      if (V.bDeformable) {
+        DeformableHandles.Add(V.HandleValue);
+      }
+    }
     TWeakObjectPtr<USuperDexBotSceneVisualizationComponent> WeakThis(this);
     VizSceneObject = SceneObject;
     // Captures actor handles rather than the BotScene: the callback runs on the Mochi thread and
     // must not depend on the subsystem's BotScene outliving it. A destroyed actor resolves to null.
     VizPostStepHandle = SceneObject->RegisterPostStepCallback(
         "BotSceneViz::PublishTransforms",
-        [WeakThis, Handles, ArticulatedActors](mochi::StepInfo const& Info) {
+        [WeakThis, Handles, ArticulatedActors, DeformableHandles](mochi::StepInfo const& Info) {
           auto* Self = WeakThis.Get();
           if (!Self || !Info.scene) {
             return;
@@ -922,11 +996,28 @@ void USuperDexBotSceneVisualizationComponent::RebuildIfNeeded() {
               }
             }
           }
+          TMap<uint64, TArray<mochi::real>> Deformed;
+          for (uint64 H : DeformableHandles) {
+            mochi::Actor* A = Info.scene->GetActor(mochi::ActorHandle(H));
+            if (!A) {
+              continue;
+            }
+            mochi::Error NodesErr;
+            const mochi::Span<mochi::real const> Nodes =
+                A->GetContactSkinMeshNodePositionsLocal(NodesErr);
+            if (NodesErr.IsOK() && Nodes.size() > 0) {
+              Deformed.Add(H, TArray<mochi::real>(Nodes.data(), (int32)Nodes.size()));
+            }
+          }
           FScopeLock Lock(&Self->LatestTransformsLock);
           // Work around TMap cross-allocator move-assignment deduction on UBT
           Self->LatestTransforms.Reset();
           for (auto& Pair : Published) {
             Self->LatestTransforms.Add(Pair.Key, Pair.Value);
+          }
+          Self->LatestDeformedNodes.Reset();
+          for (auto& Pair : Deformed) {
+            Self->LatestDeformedNodes.Add(Pair.Key, MoveTemp(Pair.Value));
           }
         });
   }
@@ -944,11 +1035,15 @@ void USuperDexBotSceneVisualizationComponent::TickComponent(
   // Poll latest published transforms - no Mochi sync, matches legacy
   // UMochiArticulatedActorObject::TryGetQueryData polling.
   TMap<uint64, mochi::TransformRT> Snapshot;
+  TMap<uint64, TArray<mochi::real>> DeformedNodes;
   {
     FScopeLock Lock(&LatestTransformsLock);
     Snapshot.Reserve(LatestTransforms.Num());
     for (auto const& Pair : LatestTransforms) {
       Snapshot.Add(Pair.Key, Pair.Value);
+    }
+    for (auto const& Pair : LatestDeformedNodes) {
+      DeformedNodes.Add(Pair.Key, Pair.Value);
     }
   }
   if (Snapshot.Num() == 0) {
@@ -966,5 +1061,69 @@ void USuperDexBotSceneVisualizationComponent::TickComponent(
       }
     }
   }
+  UpdateDeformableMeshes(DeformedNodes);
   PoseSkins();
+}
+
+void USuperDexBotSceneVisualizationComponent::RefreshDeformableQueries(
+    UMochiSceneObject* SceneObject) {
+  TArray<uint64> Handles;
+  for (auto const& V : Visuals) {
+    if (V.bDeformable) {
+      Handles.Add(V.HandleValue);
+    }
+  }
+  if (DeformableQueries.Num() == 0 && Handles.Num() == 0) {
+    return;
+  }
+  TSharedPtr<TArray<TPair<uint64, mochi::QueryHandle>>> Registered =
+      MakeShared<TArray<TPair<uint64, mochi::QueryHandle>>>();
+  // The previous registrations can name actors a task swap destroyed (their queries went with
+  // them) or handles since recycled; cancelling an unknown query is a no-op.
+  SceneObject->QueueOrExecuteCommand(
+      [Old = DeformableQueries, Handles, Registered](mochi::Scene* Scene) {
+        if (!Scene) {
+          return;
+        }
+        for (auto const& [Handle, Query] : Old) {
+          if (mochi::Actor* Actor = Scene->GetActor(mochi::ActorHandle(Handle))) {
+            Actor->CancelQuery(Query);
+          }
+        }
+        for (uint64 Handle : Handles) {
+          mochi::Actor* Actor = Scene->GetActor(mochi::ActorHandle(Handle));
+          if (!Actor) {
+            continue;
+          }
+          mochi::ErrorLog Err;
+          const mochi::QueryHandle Query =
+              Actor->RegisterQueryAndCompute(mochi::QueryType::ContactSkinNodePositions, Err);
+          if (Err.IsOK()) {
+            Registered->Add({Handle, Query});
+          }
+        }
+      });
+  SceneObject->WaitForQueuedCommands();
+  DeformableQueries = MoveTemp(*Registered);
+}
+
+void USuperDexBotSceneVisualizationComponent::UpdateDeformableMeshes(
+    const TMap<uint64, TArray<mochi::real>>& Nodes) {
+  const FVector InvScale = FVector::OneVector / BakedGeometryScale;
+  const TArray<mochi::real> NoNormals;
+  for (auto& V : Visuals) {
+    const TArray<mochi::real>* Positions = V.bDeformable ? Nodes.Find(V.HandleValue) : nullptr;
+    UDynamicMeshComponent* DynComp = Cast<UDynamicMeshComponent>(V.MeshComp);
+    if (!Positions || !DynComp) {
+      continue;
+    }
+    DynComp->EditMesh([&](UE::Geometry::FDynamicMesh3& Mesh) {
+      // The mesh was built from the same contact skin: vertex i is node i.
+      if (Mesh.VertexCount() * 3 != Positions->Num()) {
+        return;
+      }
+      UpdateDynamicMeshFromMochiQuery(*Positions, NoNormals, false, false, InvScale, Mesh);
+      ComputeOrDiscardVertexNormals(Mesh, /*bComputeNormals=*/true);
+    });
+  }
 }
