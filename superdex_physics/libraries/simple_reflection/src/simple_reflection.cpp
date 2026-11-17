@@ -3147,15 +3147,9 @@ void detail::AddAttribute(TypeInfo& info, Attribute const* a) {
 }
 
 void detail::AddAttribute(StructTypeInfo& info, Attribute const* a) {
-  if (info._fields.empty()) {
-    // If the attribute is added before any fields, then it describes the struct.
-    AssertAttributeTypeNotPresent(info._attributes, a->GetFinalTypeId());
-    info._attributes.emplace_back(a->GetFinalTypeId(), a);
-  } else {
-    // If the attribute comes after a field, then it describes that field.
-    AssertAttributeTypeNotPresent(info._fields.back()->_attributes, a->GetFinalTypeId());
-    info._fields.back()->_attributes.emplace_back(a->GetFinalTypeId(), a);
-  }
+  auto& attributes = info._attributeTarget ? *info._attributeTarget : info._attributes;
+  AssertAttributeTypeNotPresent(attributes, a->GetFinalTypeId());
+  attributes.emplace_back(a->GetFinalTypeId(), a);
 }
 
 void detail::AddFieldInfo(
@@ -3171,6 +3165,7 @@ void detail::AddFieldInfo(
   field->_nameWithNamespace = name;
   field->_typeId = ComputeTypeId(name);
   info._fields.push_back(field.release());
+  info._attributeTarget = &info._fields.back()->_attributes;
 }
 
 void detail::AddField(
@@ -3187,8 +3182,9 @@ void detail::AddField(
 
 void detail::RemoveField(StructTypeInfo& info, char const* name) {
   for (auto it = info._fields.begin(); it != info._fields.end(); ++it) {
-    if ((*it)->_name == name) {
+    if (std::string_view((*it)->_name) == name) {
       info._fields.erase(it);
+      info._attributeTarget = nullptr;
       return;
     }
   }
@@ -3226,6 +3222,9 @@ void detail::AddBaseClass(
   // Import fields by copying the pointers. We don't have to adjust the field offsets
   // because we assume the baseOffset is zero (see verify above).
   derived._fields.insert(derived._fields.end(), base._fields.begin(), base._fields.end());
+
+  // The inherited fields belong to the base class, so attributes now describe the derived struct.
+  derived._attributeTarget = nullptr;
 }
 
 void detail::AddEnumItem(EnumTypeInfo& info, char const* name, uint64_t value) {
@@ -3452,6 +3451,7 @@ SReflect::StructTypeInfo* detail::CloneStructImpl(const SReflect::StructTypeInfo
 }
 
 void FinalizeStruct(StructTypeInfo* info) {
+  info->_attributeTarget = nullptr;
   // Read-only properties get Attribute_ReadOnly, unless the user already added it.
   for (FieldTypeInfo* field : info->_fields) {
     if (field->_isProperty && field->IsReadOnly() && !field->HasAttribute<Attribute_ReadOnly>()) {

@@ -449,9 +449,9 @@ of multiple interface classes is fine).
 
 /**
 Adds an attribute to provide additional information, or customize behavior.
-If the attribute comes after SR_BeginStruct/SR_BeginClass then it describes the class/struct itself.
-If the attribute comes after an SR_Field, then it describes the field.
-See the individual attribute classes (below) for more details.
+If the attribute comes after an SR_Field or SR_Property, then it describes that member. If it comes
+right after any SR_Begin* macro, SR_BaseClass or SR_RemoveField, then it describes the class/struct
+itself. See the individual attribute classes (below) for more details.
 */
 #define SRA_DoNotSerialize()          { SReflect::detail::AddAttribute(*myInfo, new SReflect::Attribute_DoNotSerialize); }
 #define SRA_DoNotSerializeDefaults(...)  { SReflect::detail::AddAttribute(*myInfo, new SReflect::Attribute_DoNotSerializeDefaults(__VA_ARGS__)); } // Currently only supported for JSON serialization
@@ -1263,6 +1263,10 @@ class StructTypeInfo : public TypeInfo {
   std::vector<StructTypeInfo const*> _baseClasses; // Includes all bases recursively
   std::type_index _typeIndex;
   bool _isMemCopySafe = false;
+
+  // Where the SRA_* macros add attributes while the type is being defined: the most recently added
+  // member, or the struct itself if null.
+  AttributeList* _attributeTarget = nullptr;
 
   /**
   Find a field by name (case-sensitive) or return nullptr if not found.

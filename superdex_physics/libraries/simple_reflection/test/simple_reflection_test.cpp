@@ -1144,6 +1144,63 @@ TEST(SReflect, FieldAttributes) {
   EXPECT_EQ(nullptr, fieldZ->GetAttribute<SReflect::Attribute_DisplayName>());
 }
 
+namespace AttributeAfterBaseClassTest {
+struct Base {
+  int32_t baseValue = 0;
+  int32_t hiddenValue = 0;
+
+  SR_BeginStruct(SReflectTest::AttributeAfterBaseClassTest::Base);
+  SR_Field(baseValue);
+  SR_Field(hiddenValue);
+  SR_EndStruct();
+};
+
+struct Derived : Base {
+  int32_t derivedValue = 0;
+
+  SR_BeginStruct(SReflectTest::AttributeAfterBaseClassTest::Derived);
+  SR_BaseClass(Base);
+  SRA_Description("Derived struct");
+  SR_Field(derivedValue);
+  SR_RemoveField("hiddenValue");
+  SRA_Category("Derived category");
+  SR_EndStruct();
+};
+
+struct FieldThenBase : Base {
+  int32_t ownValue = 0;
+
+  SR_BeginStruct(SReflectTest::AttributeAfterBaseClassTest::FieldThenBase);
+  SR_Field(ownValue);
+  SR_BaseClass(Base);
+  SRA_Description("FieldThenBase struct");
+  SR_EndStruct();
+};
+} // namespace AttributeAfterBaseClassTest
+
+TEST(SReflect, AttributeAfterBaseClassOrRemoveFieldDescribesStruct) {
+  using Base = AttributeAfterBaseClassTest::Base;
+  using Derived = AttributeAfterBaseClassTest::Derived;
+  using FieldThenBase = AttributeAfterBaseClassTest::FieldThenBase;
+
+  auto const& derivedInfo = SReflect::GetTypeInfo<Derived>();
+  auto const* description = derivedInfo.GetAttribute<SReflect::Attribute_Description>();
+  auto const* category = derivedInfo.GetAttribute<SReflect::Attribute_Category>();
+  ASSERT_NE(nullptr, description);
+  ASSERT_NE(nullptr, category);
+  EXPECT_EQ("Derived struct", description->_description);
+  EXPECT_EQ("Derived category", category->_category);
+  EXPECT_FALSE(derivedInfo.FindField("derivedValue")->HasAttribute<SReflect::Attribute_Category>());
+
+  auto const& fieldThenBaseInfo = SReflect::GetTypeInfo<FieldThenBase>();
+  EXPECT_TRUE(fieldThenBaseInfo.HasAttribute<SReflect::Attribute_Description>());
+  EXPECT_TRUE(fieldThenBaseInfo.FindField("ownValue")->_attributes.empty());
+
+  for (auto const* field : SReflect::GetTypeInfo<Base>()._fields) {
+    EXPECT_TRUE(field->_attributes.empty()) << field->_name;
+  }
+}
+
 struct StructWithCustomTraits {
   int32_t x;
   int32_t y;
@@ -3238,7 +3295,7 @@ struct StructWithFieldsRemoved : BaseWithFieldsYouMayNotWant {
   // Inherit fields, but hide "a" and "c"
   SR_BaseClass(SReflectTest::BaseWithFieldsYouMayNotWant);
   SR_RemoveField("a");
-  SR_RemoveField("c");
+  SR_RemoveField(std::string("c").c_str()); // A name that is not a string literal
 
   // This field takes the place of the inherited "a"
   SR_Field_Name(newA, "a");
