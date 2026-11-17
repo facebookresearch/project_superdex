@@ -18,6 +18,8 @@
 #include "MochiPhysicsEditorModule.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "ComponentReregisterContext.h"
+#include "Components/SkinnedMeshComponent.h"
 #include "DynamicMesh/DynamicMesh3.h"
 #include "DynamicMeshToMeshDescription.h"
 #include "Engine/SkeletalMesh.h"
@@ -30,6 +32,7 @@
 #include "StaticMeshOperations.h"
 #include "StaticMeshResources.h"
 #include "StaticToSkeletalMeshConverter.h"
+#include "UObject/UObjectIterator.h"
 
 namespace {
 template <typename TAsset>
@@ -56,6 +59,23 @@ TAsset* CreateOrReuseAsset(const FString& AssetPath, EObjectFlags Flags, bool bF
   }
   return asset;
 }
+
+// Unregisters the components that show any of Meshes for as long as it lives. Regenerating a
+// skeletal mesh and its skeleton replaces them in place, which releases the render data, and
+// invalidates the bone transforms, that those components were set up with.
+class FScopedUnregisterMeshComponents {
+ public:
+  explicit FScopedUnregisterMeshComponents(TArrayView<const USkinnedAsset* const> Meshes) {
+    for (TObjectIterator<USkinnedMeshComponent> it; it; ++it) {
+      if (it->IsRegistered() && it->GetSkinnedAsset() && Meshes.Contains(it->GetSkinnedAsset())) {
+        Contexts.Add(MakeUnique<FComponentReregisterContext>(*it));
+      }
+    }
+  }
+
+ private:
+  TArray<TUniquePtr<FComponentReregisterContext>> Contexts;
+};
 
 // How a mesh is merged into each LOD of a generated skeletal mesh.
 struct FMeshPart {
@@ -450,16 +470,25 @@ bool FMochiArticulationAssetUtils::GenerateSkeletalMesh(
         bPrefix ? TEXT("") : TEXT("SkeletalMesh"));
     constexpr EObjectFlags kFlags = RF_Public | RF_Standalone;
     const TArray<FMochiArticulationSkeletonLink> links = GetSkeletonLinks(Articulation);
-    const auto skeleton = GenerateSkeleton(links, PackagePath, skelName, kFlags);
-    Articulation->SkeletalMesh =
-        GenerateSkeletalMesh(links, skeleton, PackagePath, skelMeshName, kFlags);
-    FProperty* prop = FindFieldChecked<FProperty>(
-        Articulation->StaticClass(), GET_MEMBER_NAME_CHECKED(UMochiArticulation, SkeletalMesh));
-    FPropertyChangedEvent event(prop, EPropertyChangeType::ValueSet);
-    Articulation->PostEditChangeProperty(event);
-    Articulation->Modify(true);
-    if (Articulation->OnSkeletalMeshRegenerated) {
-      Articulation->OnSkeletalMeshRegenerated(Articulation->SkeletalMesh);
+    {
+      // Components showing the mesh being replaced, e.g. in an open level, would otherwise keep
+      // rendering with its released render data.
+      const USkinnedAsset* const replacedMeshes[] = {
+          Articulation->GetSkeletalMesh(),
+          FindObject<USkeletalMesh>(
+              nullptr, *(FPaths::Combine(PackagePath, skelMeshName) + TEXT(".") + skelMeshName))};
+      const FScopedUnregisterMeshComponents unregisterComponents(replacedMeshes);
+      const auto skeleton = GenerateSkeleton(links, PackagePath, skelName, kFlags);
+      Articulation->SkeletalMesh =
+          GenerateSkeletalMesh(links, skeleton, PackagePath, skelMeshName, kFlags);
+      FProperty* prop = FindFieldChecked<FProperty>(
+          Articulation->StaticClass(), GET_MEMBER_NAME_CHECKED(UMochiArticulation, SkeletalMesh));
+      FPropertyChangedEvent event(prop, EPropertyChangeType::ValueSet);
+      Articulation->PostEditChangeProperty(event);
+      Articulation->Modify(true);
+      if (Articulation->OnSkeletalMeshRegenerated) {
+        Articulation->OnSkeletalMeshRegenerated(Articulation->SkeletalMesh);
+      }
     }
     const bool result = Articulation->SkeletalMesh != nullptr;
     Articulation->bNeedGenerateSkeletalMesh = !result;
