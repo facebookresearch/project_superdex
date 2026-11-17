@@ -56,9 +56,9 @@ static std::optional<char> EscapeChar(char c) {
   }
 }
 
-// Append the contents of a quoted section to token, resolving escapes. On entry, i points at the
-// opening quote. Returns the index just past the matching closing quote (or the end of input).
-// Set outError if an unsupported escape is encountered.
+// Append the contents of a quoted section to token, resolving escapes inside double quotes. On
+// entry, i points at the opening quote. Returns the index just past the matching closing quote (or
+// the end of input). Set outError if an unsupported escape is encountered.
 static size_t AppendQuoted(
     std::string_view input,
     size_t i,
@@ -68,17 +68,18 @@ static size_t AppendQuoted(
   auto setError = [&](size_t slashIdx) {
     assert(input[slashIdx] == '\\');
     if (outError.empty()) {
-      outError = "Unsupported escape sequence: \"\\";
       if (slashIdx + 1 < input.size()) {
-        outError += input[slashIdx + 1];
+        outError = std::string{"Unsupported escape sequence: \"\\"} + input[slashIdx + 1] + '"';
+      } else {
+        outError = "Backslash at the end of the input";
       }
-      outError += "\" (index " + std::to_string(slashIdx) + ")";
+      outError += " (index " + std::to_string(slashIdx) + ")";
     }
   };
   size_t const n = input.size();
-  ++i; // Skip the opening quote.
+  ++i;
   while (i < n && input[i] != quote) {
-    if (input[i] == '\\') {
+    if (quote == '"' && input[i] == '\\') {
       if (i + 1 < n) {
         auto const escaped = EscapeChar(input[i + 1]);
         if (escaped) {
@@ -98,8 +99,45 @@ static size_t AppendQuoted(
     }
   }
   if (i < n) {
-    ++i; // Skip the closing quote.
+    ++i;
   }
+  return i;
+}
+
+// Append a JSON array or object to token as-is. On entry, i points at the opening bracket. Returns
+// the index just past the matching closing bracket. If the input ends first, append a closing quote
+// for an open string and the missing closing brackets, and return the end of input.
+static size_t AppendBracketGroup(std::string_view input, size_t i, std::string& token) {
+  assert(input[i] == '[' || input[i] == '{');
+  std::string closers;
+  bool inString = false;
+  size_t const n = input.size();
+  while (i < n) {
+    char const c = input[i++];
+    token.push_back(c);
+    if (inString) {
+      if (c == '\\' && i < n) {
+        token.push_back(input[i++]);
+      } else if (c == '"') {
+        inString = false;
+      }
+    } else if (c == '"') {
+      inString = true;
+    } else if (c == '[') {
+      closers.push_back(']');
+    } else if (c == '{') {
+      closers.push_back('}');
+    } else if (c == closers.back()) {
+      closers.pop_back();
+      if (closers.empty()) {
+        return i;
+      }
+    }
+  }
+  if (inString) {
+    token.push_back('"');
+  }
+  token.append(closers.rbegin(), closers.rend());
   return i;
 }
 
@@ -124,9 +162,12 @@ std::vector<std::string> ConsoleTokenize(std::string_view input, std::string& ou
       }
       ++i;
     } else if (c == '\'' || c == '"') {
-      // Quotes group whitespace and honor backslash escape sequences.
+      // Quotes group whitespace. Only double quotes honor backslash escape sequences.
       inToken = true;
       i = AppendQuoted(input, i, c, token, outError);
+    } else if (!inToken && (c == '[' || c == '{')) {
+      inToken = true;
+      i = AppendBracketGroup(input, i, token);
     } else {
       // Everything else, including a backslash outside quotes, is literal.
       inToken = true;

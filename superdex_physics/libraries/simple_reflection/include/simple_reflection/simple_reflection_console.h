@@ -27,12 +27,17 @@
 namespace SReflect {
 
 /**
-Split a string into tokens the way a command-line shell would.
+Split a command line into tokens:
 
-Tokens are separated by whitespace. If a token is wrapped in single or double quotes, then it may
-contain whitespace and backslash escape sequences. Returns the tokens with quotes removed and
-escapes resolved. outError is cleared on success, or set to an error message if an escape sequence
-is not supported.
+- Whitespace separates tokens. Quotes group text and are removed. Text in single quotes is
+  literal. Double quotes resolve backslash escapes. Backslashes outside quotes are literal.
+- Tokens starting with '[' or '{' keep bracketed text intact, including nested groups,
+  whitespace and quotes. Brackets inside strings in double quotes and mismatched closing brackets
+  are literal. Text after the group stays in the token until whitespace.
+- Unclosed quotes consume the remaining input. Unclosed groups get a closing double quote
+  if needed, followed by missing closing brackets. Other JSON errors are left to the caller.
+
+Clear outError on success. Unsupported escapes inside double quotes set outError.
 */
 [[nodiscard]] std::vector<std::string> ConsoleTokenize(
     std::string_view input,
