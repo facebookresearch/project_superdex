@@ -326,7 +326,7 @@ void MochiDebuggerApp::SyncSceneData() {
   // Insert "None" at the front of the list using push_back + rotate because DynamicArray::insert is
   // not currently implemented.
   sp.scenes.push_back(SceneInfo{{}, "None"});
-  std::rotate(sp.scenes.begin(), sp.scenes.end() - 1, sp.scenes.end());
+  std::ranges::rotate(sp.scenes, sp.scenes.end() - 1);
 
   // 2. Take a single snapshot of the synced data. The actor records and the render scene are
   // updated only when the data has changed (identified by counter value).
