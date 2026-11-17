@@ -35,7 +35,9 @@ namespace mochi {
  *
  * @note When a flag is `false`, the solver will try first with the true Hessian for that pathway.
  * If a Newton attempt fails, the solver retries with fitted Hessians for all pathways and keeps
- * them for the rest of that nonlinear solve. Each solve starts from these flags.
+ * them for the rest of that nonlinear solve. With the exact contact-friction Hessian and a line
+ * search, it also switches to them when an iteration starts with an elasto-plastic contact at or
+ * past reverse presliding yield. Each solve starts from these flags.
  */
 struct SaturationHessianParams {
   /** @brief Use fitted Hessian for contact-friction saturation. */

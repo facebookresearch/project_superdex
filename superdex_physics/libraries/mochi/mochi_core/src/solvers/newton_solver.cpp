@@ -375,7 +375,8 @@ template <typename T>
 bool NewtonSolver<T>::TakeStep(
     Problem& problem,
     Status& status,
-    bool const takeFinalLsStepIfNoImprovement) const {
+    bool const takeFinalLsStepIfNoImprovement,
+    SaturationHessianParams const& fittedSaturationHessian) const {
   MOCHI_PROFILE_SCOPE();
 
   // Save current solution
@@ -385,14 +386,18 @@ bool NewtonSolver<T>::TakeStep(
       : sol.Duplicate(); // For performance, perform copy only if potentially needed
 
   // Line-search in dx direction
-  bool const improved = _lineSearch(problem, status, _params.lineSearch);
+  bool const improved = _lineSearch(problem, status, _params.lineSearch, fittedSaturationHessian);
   status.totalNumLSIterDone += status.numLastLSIterDone;
 
   // Restore previous solution if there is no improvement
   if (!improved && !takeFinalLsStepIfNoImprovement) {
     problem.SetSolution(sol0);
     bool const usesMerit = LineSearchUsesMerit(_params.lineSearch.type);
-    problem.UpdateObjResDRes({.assemObj = usesMerit, .assemRes = true, .assemDRes = false});
+    problem.UpdateObjResDRes(
+        {.assemObj = usesMerit,
+         .assemRes = true,
+         .assemDRes = false,
+         .fittedSaturationHessian = fittedSaturationHessian});
     if (usesMerit) {
       status.objective = problem.GetObjective();
     }
@@ -730,8 +735,9 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
   // Linear operator with the approximate DResidual for the linear solve.
   AnyLinearOperator linOp = {};
 
-  // Starts at the requested flags. A failed attempt switches every pathway to fitted Hessians for
-  // the rest of this solve.
+  // Starts at the requested flags. A failed attempt, or with a line search an iteration starting on
+  // or beyond the trust-region boundary, switches every pathway to fitted Hessians for the rest of
+  // this solve.
   auto fittedSaturationHessian = _params.fittedSaturationHessian;
   T linearResidualNorm = {}; // Expressed in the norm used to monitor linear solver convergence
   while (true) {
@@ -760,6 +766,7 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
 
     // Only start the first trial projecting if the PSD mode is Always.
     bool projectPsd = (psdMode == PsdProjectionMode::Always);
+    bool reassembleDResidual = false;
 
     // Compute residual (always) and objective (only if using a merit-based line search).
     // On the first step we compute dresidual at the same time, assuming we will need it.
@@ -771,6 +778,17 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
       assemblyParams.psdDRes = projectPsd;
       assemblyParams.fittedSaturationHessian = fittedSaturationHessian;
       problem.UpdateObjResDRes(assemblyParams);
+      // On or beyond the trust-region boundary, use fitted Hessians at once: the line search
+      // would fail as soon as a trial crosses it.
+      if (_params.lineSearch.type != LineSearchType::None && !(problem.GetTrustMargin() > T(0))) {
+        fittedSaturationHessian = SaturationHessianParams::All(true);
+        reassembleDResidual = true;
+        if (_params.verbosity >= VerbosityLevel::Verbose) {
+          MOCHI_LOG(
+              "\n\t\tTrust margin %.5e at the start. Fitted Hessians for the rest of this solve.\n",
+              problem.GetTrustMargin());
+        }
+      }
       status.resNorm = problem.GetResidual().Norm();
       if (assemblyParams.assemDRes) {
         status.itersSinceDResidualAssembly = 0;
@@ -817,14 +835,16 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
     bool retry = false;
     LinearSolverStatus linearResult;
     do {
-      // Assemble the dresidual, if needed. Skip it in the first iteration (unless it's a retry)
-      // because it was assembled above together with the residual and (possibly) the objective.
+      // Assemble the dresidual, if needed. Skip it in the first iteration (unless it's a retry or
+      // the Hessians switched to fitted) because it was assembled above together with the residual
+      // and (possibly) the objective.
       if ((!isFirstIter &&
            (status.itersSinceDResidualAssembly >= _params.dResidualAssemblyPeriod ||
             !status.improvedInLastIter)) ||
-          retry) {
+          retry || reassembleDResidual) {
         problem.UpdateDResidual(projectPsd, fittedSaturationHessian);
         status.itersSinceDResidualAssembly = 0;
+        reassembleDResidual = false;
       }
 
       bool const useIslandOperators = details::UseIslandOperators(_params.lParams);
@@ -902,7 +922,8 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
         status.improvedInLastIter = TakeStep(
             problem,
             status,
-            /*takeFinalLsStepIfNoImprovement*/ isLastTry);
+            /*takeFinalLsStepIfNoImprovement*/ isLastTry,
+            fittedSaturationHessian);
         retry = !status.improvedInLastIter;
       }
 
@@ -947,7 +968,10 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
     // TODO: Assess using a per-actor (possibly weighted) norm when convergenceMode =
     // NonLinearSolverConvergenceMode::PerActorWeighted.
     if (_params.explosionControl) {
-      problem.UpdateResidual();
+      problem.UpdateObjResDRes(
+          {.assemObj = false,
+           .assemRes = true,
+           .fittedSaturationHessian = fittedSaturationHessian});
       status.resNorm = problem.GetResidual().Norm();
       if ((status.resNorm > _params.relDivTol * status.resNorm0) ||
           status.resNorm > _params.absDivTol || !IsFinite(status.resNorm)) {

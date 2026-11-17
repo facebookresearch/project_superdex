@@ -52,6 +52,20 @@ namespace mochi {
  * Utility struct implementing line search algorithms. It has no internal state. Simple, Armijo and
  * the Wolfe searches test the merit of @ref SnleProblem::LineSearchMerit, and keep the objective in
  * @ref NewtonSolverStatus::objective.
+ *
+ * The trials are assembled with fittedSaturationHessian, the saturation Hessians of the Newton
+ * solver, so they report the trust margin (see @ref SnleProblem::trustMargin) of the pathways whose
+ * exact Hessian they use, and +inf if none. A trial with a negative margin, outside the trust
+ * region, is rejected. The next trial skips to the first step reduction within the step where the
+ * margin, interpolated linearly between the start and the rejected trial, reaches zero, i.e. the
+ * estimated crossing of the trust-region boundary. The skipped reductions count as line search
+ * iterations. The line search fails, so that the Newton solver retries with fitted Hessians, if
+ * that trial would be shorter than @ref kMinTrustMarginStep of the full step or take more
+ * iterations than are left, or if the margin at the start is not positive and finite: a margin of
+ * +inf at the start, where no term computed one, gives no estimate (@ref NewtonSolver switches to
+ * fitted Hessians before the line search when the margin at the start is not positive). The Wolfe
+ * searches take their lower bound instead, if they have one. A trial with zero margin passes the
+ * margin check, and None ignores the trust margin.
  */
 template <typename T>
 struct LineSearch {
@@ -62,32 +76,56 @@ struct LineSearch {
   /**
    * No line search. Just take the step.
    */
-  static bool None(Problem& problem, Status& status, LsParams const& params);
+  static bool None(
+      Problem& problem,
+      Status& status,
+      LsParams const& params,
+      SaturationHessianParams const& fittedSaturationHessian);
 
   /**
    * Simple backtracking line search with improvement in the merit function.
    */
-  static bool Simple(Problem& problem, Status& status, LsParams const& params);
+  static bool Simple(
+      Problem& problem,
+      Status& status,
+      LsParams const& params,
+      SaturationHessianParams const& fittedSaturationHessian);
 
   /**
    * Backtracking line search with Armijo condition for improvement.
    */
-  static bool Armijo(Problem& problem, Status& status, LsParams const& params);
+  static bool Armijo(
+      Problem& problem,
+      Status& status,
+      LsParams const& params,
+      SaturationHessianParams const& fittedSaturationHessian);
 
   /**
    * Line search with Wolfe weak conditions for improvement. See @ref Wolfe.
    */
-  static bool WolfeWeak(Problem& problem, Status& status, LsParams const& params);
+  static bool WolfeWeak(
+      Problem& problem,
+      Status& status,
+      LsParams const& params,
+      SaturationHessianParams const& fittedSaturationHessian);
 
   /**
    * Line search with Wolfe strong conditions for improvement. See @ref Wolfe.
    */
-  static bool WolfeStrong(Problem& problem, Status& status, LsParams const& params);
+  static bool WolfeStrong(
+      Problem& problem,
+      Status& status,
+      LsParams const& params,
+      SaturationHessianParams const& fittedSaturationHessian);
 
   /**
    * Backtracking line search with residual norm condition for improvement.
    */
-  static bool ResidualNorm(Problem& problem, Status& status, LsParams const& params);
+  static bool ResidualNorm(
+      Problem& problem,
+      Status& status,
+      LsParams const& params,
+      SaturationHessianParams const& fittedSaturationHessian);
 
  private:
   /**
@@ -97,7 +135,32 @@ struct LineSearch {
    * meets both conditions, the line search takes the longest such trial, if any, assembled again
    * unless it was the last one.
    */
-  static bool Wolfe(Problem& problem, Status& status, LsParams const& params, bool strong);
+  static bool Wolfe(
+      Problem& problem,
+      Status& status,
+      LsParams const& params,
+      bool strong,
+      SaturationHessianParams const& fittedSaturationHessian);
+
+  // Shortest trial, as a fraction of the full step, that follows one with negative trust margin.
+  // Shorter ones would mostly creep along a contact that does reverse, which the fitted retry
+  // handles better. The value is empirical.
+  static constexpr T kMinTrustMarginStep = T(0.125);
+
+  /**
+   * Reduction from a trial with negative trust margin @p margin, at @p scale of the full step, to
+   * the next trial: the largest power of alpha within the estimated trust-region boundary, given
+   * the margin @p margin0 at the start. Advances the line search iteration @p it past the skipped
+   * reductions. Returns 0 and sets @p it to params.maxIter, failing the line search, if @p margin0
+   * is not positive and finite, or if the next trial would be shorter than @ref kMinTrustMarginStep
+   * of the full step or past the last iteration. The margin is the distance to the trust-region
+   * boundary, a minimum of distances that are nearly affine in the step (exactly so with linear
+   * kinematics and fixed normals), so it is nearly concave in the step. The root of its chord from
+   * the start, margin0 / (margin0 - margin) of the trial, then estimates where the step leaves the
+   * trust region, conservatively where the margin is concave.
+   */
+  [[nodiscard]] static T
+  TrustMarginReduction(T margin0, T margin, T scale, LsParams const& params, int& it);
 
   /**
    * Slope test of the trials whose merit change is within an estimate of the merit's rounding
@@ -130,15 +193,22 @@ struct LineSearch {
 
     /**
      * Whether the trial, with finite merit @p merit and the increment holding @p scale times dx,
-     * changes the merit within the band and passes the slope test. Assembles the residual if the
-     * slope decides.
+     * changes the merit within the band and passes the slope test. Assembles the residual with
+     * @p fittedSaturationHessian if the slope decides.
      */
-    [[nodiscard]] bool Passes(Problem& problem, double merit, T scale) const {
+    [[nodiscard]] bool Passes(
+        Problem& problem,
+        double merit,
+        T scale,
+        SaturationHessianParams const& fittedSaturationHessian) const {
       MOCHI_ASSERT_VERBOSE(IsFinite(merit), "The slope test requires a finite merit.");
       if (!IsFinite(_slopeBound) || !NearEqual(merit, _merit0, _band)) {
         return false;
       }
-      problem.UpdateResidual(); // No-op if already assembled
+      problem.UpdateObjResDRes( // No-op if already assembled
+          {.assemObj = false,
+           .assemRes = true,
+           .fittedSaturationHessian = fittedSaturationHessian});
       double const slope = problem.GetResidual().Dot(problem.GetIncrement());
       return IsFinite(slope) && slope <= scale * _slopeBound;
     }
@@ -157,10 +227,35 @@ struct LineSearch {
 };
 
 template <typename T>
+T LineSearch<T>::TrustMarginReduction(
+    T margin0,
+    T margin,
+    T scale,
+    LsParams const& params,
+    int& it) {
+  MOCHI_ASSERT_VERBOSE(margin < T(0), "The trial's trust margin must be negative.");
+  if (IsFinite(margin0) && margin0 > T(0)) {
+    // Fraction of the trial where the margin's chord from the start reaches zero
+    T const zeroMarginFactor = margin0 / (margin0 - margin);
+    T reduction = params.alpha;
+    for (int nextIt = it + 1; nextIt < params.maxIter && scale * reduction >= kMinTrustMarginStep;
+         ++nextIt, reduction *= params.alpha) {
+      if (reduction <= zeroMarginFactor) {
+        it = nextIt - 1; // The line search's ++it counts the next trial
+        return reduction;
+      }
+    }
+  }
+  it = params.maxIter;
+  return T(0);
+}
+
+template <typename T>
 bool LineSearch<T>::None(
     Problem& problem,
     Status& /*status*/,
-    [[maybe_unused]] LsParams const& params) {
+    [[maybe_unused]] LsParams const& params,
+    SaturationHessianParams const& /*fittedSaturationHessian*/) {
   MOCHI_PROFILE_SCOPE();
   MOCHI_ASSERT_VERBOSE(params.type == LineSearchType::None, "Inconsistent line search type.");
 
@@ -171,7 +266,11 @@ bool LineSearch<T>::None(
 }
 
 template <typename T>
-bool LineSearch<T>::Simple(Problem& problem, Status& status, LsParams const& params) {
+bool LineSearch<T>::Simple(
+    Problem& problem,
+    Status& status,
+    LsParams const& params,
+    SaturationHessianParams const& fittedSaturationHessian) {
   MOCHI_PROFILE_SCOPE();
   MOCHI_ASSERT_VERBOSE(params.type == LineSearchType::Simple, "Inconsistent line search type.");
   MOCHI_ASSERT(
@@ -186,27 +285,38 @@ bool LineSearch<T>::Simple(Problem& problem, Status& status, LsParams const& par
       status.objective, problem.GetResidual().Dot(problem.GetIncrement()), /*c1*/ 0.0);
   typename Problem::LineSearchMerit const searchMerit(problem);
   bool const finiteStart = IsFinite(status.objective);
+  T const margin0 = problem.GetTrustMargin();
 
   bool improved = false;
   auto scale = T(1);
+  T reduction = params.alpha;
   int& it = status.numLastLSIterDone;
   for (it = 0; it < params.maxIter; ++it) {
     // Compute new candidate solution
     if (it == 0) {
       problem.UpdateSolution();
     } else {
-      scale *= params.alpha;
-      problem.UpdateSolutionFrom(sol0, params.alpha);
+      scale *= reduction;
+      problem.UpdateSolutionFrom(sol0, reduction);
+      reduction = params.alpha;
     }
 
     // Compute merit at x + dx position
-    problem.UpdateObjective();
+    problem.UpdateObjResDRes(
+        {.assemObj = true, .fittedSaturationHessian = fittedSaturationHessian});
+    if (problem.GetTrustMargin() < T(0)) {
+      reduction = TrustMarginReduction(margin0, problem.GetTrustMargin(), scale, params, it);
+      if (reduction == T(0)) {
+        break;
+      }
+      continue;
+    }
     double const merit = searchMerit(scale);
 
     // Check enough improvement
     if (finiteStart && IsFinite(merit) &&
         (merit <= (status.objective + Abs(status.objective * params.maxRelIncrease)) ||
-         slopeTest.Passes(problem, merit, scale))) {
+         slopeTest.Passes(problem, merit, scale, fittedSaturationHessian))) {
       status.objective = problem.GetObjective();
       improved = true;
       break;
@@ -217,7 +327,11 @@ bool LineSearch<T>::Simple(Problem& problem, Status& status, LsParams const& par
 }
 
 template <typename T>
-bool LineSearch<T>::Armijo(Problem& problem, Status& status, LsParams const& params) {
+bool LineSearch<T>::Armijo(
+    Problem& problem,
+    Status& status,
+    LsParams const& params,
+    SaturationHessianParams const& fittedSaturationHessian) {
   MOCHI_PROFILE_SCOPE();
   MOCHI_ASSERT_VERBOSE(params.type == LineSearchType::Armijo, "Inconsistent line search type.");
   MOCHI_ASSERT(
@@ -233,26 +347,38 @@ bool LineSearch<T>::Armijo(Problem& problem, Status& status, LsParams const& par
   RoundingErrorSlopeTest const slopeTest(status.objective, dotDx0Res0, params.wolfe1);
   typename Problem::LineSearchMerit const searchMerit(problem);
   bool const finiteStart = IsFinite(status.objective) && IsFinite(dotDx0Res0);
+  T const margin0 = problem.GetTrustMargin();
 
   bool improved = false;
   auto scale = T(1);
+  T reduction = params.alpha;
   int& it = status.numLastLSIterDone;
   for (it = 0; it < params.maxIter; ++it) {
     // Compute new candidate solution
     if (it == 0) {
       problem.UpdateSolution();
     } else {
-      scale *= params.alpha;
-      problem.UpdateSolutionFrom(sol0, params.alpha);
+      scale *= reduction;
+      problem.UpdateSolutionFrom(sol0, reduction);
+      reduction = params.alpha;
     }
 
     // Compute merit at x + dx position
-    problem.UpdateObjective();
+    problem.UpdateObjResDRes(
+        {.assemObj = true, .fittedSaturationHessian = fittedSaturationHessian});
+    if (problem.GetTrustMargin() < T(0)) {
+      reduction = TrustMarginReduction(margin0, problem.GetTrustMargin(), scale, params, it);
+      if (reduction == T(0)) {
+        break;
+      }
+      continue;
+    }
     double const merit = searchMerit(scale);
 
     // Check enough improvement
     if (finiteStart && IsFinite(merit) &&
-        (merit <= status.objective + scale * factor0 || slopeTest.Passes(problem, merit, scale))) {
+        (merit <= status.objective + scale * factor0 ||
+         slopeTest.Passes(problem, merit, scale, fittedSaturationHessian))) {
       status.objective = problem.GetObjective();
       improved = true;
       break;
@@ -263,22 +389,35 @@ bool LineSearch<T>::Armijo(Problem& problem, Status& status, LsParams const& par
 }
 
 template <typename T>
-bool LineSearch<T>::WolfeWeak(Problem& problem, Status& status, LsParams const& params) {
+bool LineSearch<T>::WolfeWeak(
+    Problem& problem,
+    Status& status,
+    LsParams const& params,
+    SaturationHessianParams const& fittedSaturationHessian) {
   MOCHI_PROFILE_SCOPE();
   MOCHI_ASSERT_VERBOSE(params.type == LineSearchType::WolfeWeak, "Inconsistent line search type.");
-  return Wolfe(problem, status, params, /*strong*/ false);
+  return Wolfe(problem, status, params, /*strong*/ false, fittedSaturationHessian);
 }
 
 template <typename T>
-bool LineSearch<T>::WolfeStrong(Problem& problem, Status& status, LsParams const& params) {
+bool LineSearch<T>::WolfeStrong(
+    Problem& problem,
+    Status& status,
+    LsParams const& params,
+    SaturationHessianParams const& fittedSaturationHessian) {
   MOCHI_PROFILE_SCOPE();
   MOCHI_ASSERT_VERBOSE(
       params.type == LineSearchType::WolfeStrong, "Inconsistent line search type.");
-  return Wolfe(problem, status, params, /*strong*/ true);
+  return Wolfe(problem, status, params, /*strong*/ true, fittedSaturationHessian);
 }
 
 template <typename T>
-bool LineSearch<T>::Wolfe(Problem& problem, Status& status, LsParams const& params, bool strong) {
+bool LineSearch<T>::Wolfe(
+    Problem& problem,
+    Status& status,
+    LsParams const& params,
+    bool strong,
+    SaturationHessianParams const& fittedSaturationHessian) {
   MOCHI_ASSERT(
       params.maxIter > 0,
       "At least 1 line search iteration is required. To run without line search, 'None' line search type must be used.");
@@ -293,6 +432,13 @@ bool LineSearch<T>::Wolfe(Problem& problem, Status& status, LsParams const& para
   RoundingErrorSlopeTest const slopeTest(status.objective, dotDx0Res0, params.wolfe1);
   typename Problem::LineSearchMerit const searchMerit(problem);
   bool const finiteStart = IsFinite(status.objective) && IsFinite(dotDx0Res0);
+  T const margin0 = problem.GetTrustMargin();
+  AssemblyParams const trialParams{
+      .assemObj = true,
+      .assemRes = true,
+      .assemDRes = false,
+      .psdDRes = false,
+      .fittedSaturationHessian = fittedSaturationHessian};
 
   bool improved = false;
   auto scale = T(1);
@@ -316,8 +462,21 @@ bool LineSearch<T>::Wolfe(Problem& problem, Status& status, LsParams const& para
     }
 
     // Compute merit and gradient at x + dx position
-    problem.UpdateObjResDRes(
-        {.assemObj = true, .assemRes = true, .assemDRes = false, .psdDRes = false});
+    problem.UpdateObjResDRes(trialParams);
+    if (problem.GetTrustMargin() < T(0)) {
+      // The lower bound, if any, has a nonnegative margin, and is taken below.
+      if (scaleMin > T(0)) {
+        break;
+      }
+      T const reduction =
+          TrustMarginReduction(margin0, problem.GetTrustMargin(), scale, params, it);
+      if (reduction == T(0)) {
+        break;
+      }
+      scaleMax = scale;
+      scaleNew = scale * reduction;
+      continue;
+    }
 
     // Compute values for Wolfe conditions
     double const dotDxRes = problem.GetResidual().Dot(problem.GetIncrement());
@@ -326,7 +485,8 @@ bool LineSearch<T>::Wolfe(Problem& problem, Status& status, LsParams const& para
     // TODO: Explore choosing the next trial by safeguarded interpolation of the trials' merits and
     // slopes.
     if (!finiteStart || !IsFinite(dotDxRes) || !IsFinite(merit) ||
-        !(merit <= status.objective + scale * t1 || slopeTest.Passes(problem, merit, scale)) ||
+        !(merit <= status.objective + scale * t1 ||
+          slopeTest.Passes(problem, merit, scale, fittedSaturationHessian)) ||
         (strong && dotDxRes > Abs(t2 * scale))) {
       // If not finite, or neither the 1st Wolfe condition nor the slope test is met, or the strong
       // 2nd Wolfe condition is not met by above, reduce the scale.
@@ -349,8 +509,7 @@ bool LineSearch<T>::Wolfe(Problem& problem, Status& status, LsParams const& para
   if (!improved && scaleMin > T(0)) {
     if (scale != scaleMin) {
       problem.UpdateSolutionFrom(sol0, scaleMin / scale);
-      problem.UpdateObjResDRes(
-          {.assemObj = true, .assemRes = true, .assemDRes = false, .psdDRes = false});
+      problem.UpdateObjResDRes(trialParams);
     }
     status.objective = problem.GetObjective();
     improved = true;
@@ -360,7 +519,11 @@ bool LineSearch<T>::Wolfe(Problem& problem, Status& status, LsParams const& para
 }
 
 template <typename T>
-bool LineSearch<T>::ResidualNorm(Problem& problem, Status& status, LsParams const& params) {
+bool LineSearch<T>::ResidualNorm(
+    Problem& problem,
+    Status& status,
+    LsParams const& params,
+    SaturationHessianParams const& fittedSaturationHessian) {
   MOCHI_PROFILE_SCOPE();
   MOCHI_ASSERT_VERBOSE(
       params.type == LineSearchType::ResidualNorm, "Inconsistent line search type.");
@@ -374,19 +537,32 @@ bool LineSearch<T>::ResidualNorm(Problem& problem, Status& status, LsParams cons
   // Compute current residual norm
   auto const resNorm0 = problem.GetResidual().Norm();
   bool const finiteStart = IsFinite(resNorm0);
+  T const margin0 = problem.GetTrustMargin();
 
   bool improved = false;
+  auto scale = T(1);
+  T reduction = params.alpha;
   int& it = status.numLastLSIterDone;
   for (it = 0; it < params.maxIter; ++it) {
     // Compute new candidate solution
     if (it == 0) {
       problem.UpdateSolution();
     } else {
-      problem.UpdateSolutionFrom(sol0, params.alpha);
+      scale *= reduction;
+      problem.UpdateSolutionFrom(sol0, reduction);
+      reduction = params.alpha;
     }
 
     // Compute the residual at x + dx
-    problem.UpdateResidual();
+    problem.UpdateObjResDRes(
+        {.assemObj = false, .assemRes = true, .fittedSaturationHessian = fittedSaturationHessian});
+    if (problem.GetTrustMargin() < T(0)) {
+      reduction = TrustMarginReduction(margin0, problem.GetTrustMargin(), scale, params, it);
+      if (reduction == T(0)) {
+        break;
+      }
+      continue;
+    }
     auto const resNorm = problem.GetResidual().Norm();
 
     if (finiteStart && IsFinite(resNorm) && resNorm <= resNorm0) {

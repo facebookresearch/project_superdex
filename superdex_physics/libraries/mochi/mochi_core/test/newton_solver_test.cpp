@@ -22,10 +22,13 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <functional>
 #include <limits>
+#include <optional>
+#include <string>
 #include <tuple>
 #include <utility>
 #include <variant>
@@ -1214,7 +1217,7 @@ TEST(NewtonSolver, LineSearchRejectsNonFiniteValues) {
 
         bool const accepts =
             (start == 1_r) && (!invalidStartMerit || type == LineSearchType::ResidualNorm);
-        EXPECT_EQ(search(problem, status, params), accepts);
+        EXPECT_EQ(search(problem, status, params, SaturationHessianParams::All(true)), accepts);
         EXPECT_EQ(status.numLastLSIterDone, accepts ? 1 : params.maxIter);
         EXPECT_EQ(problem.GetSolution()[0], -0.5_r);
       }
@@ -1229,11 +1232,13 @@ static bool ReportsTestTrustMargin(AssemblyParams const& params) {
       !params.fittedSaturationHessian.contactFriction;
 }
 
-// One-DoF quadratic with objective (x - 2)^2 / 2, minimized from 0 by the step 2, with a term of
-// trust margin margin(x) (see ReportsTestTrustMargin). Records the parameters of every assembly.
+// One-DoF quadratic with objective (x - 2)^2 / 2, minimized from 0 by the step 2, behind a wall at
+// x >= wall that raises the objective by 3 and the residual to 10, with a term of trust margin
+// margin(x) (see ReportsTestTrustMargin). Records the parameters of every assembly.
 static SnleProblem<real> GetTrustMarginProblem(
     std::function<real(real)> margin,
-    DynamicArray<AssemblyParams>& assemblies) {
+    DynamicArray<AssemblyParams>& assemblies,
+    real wall = kInf) {
   auto residual = ColumnVector<real>::Zero(1);
   auto matrix = AnyMatrix<real>{Matrix<real>{1, 1}};
   std::get<Matrix<real>>(matrix)(0, 0) = 1_r;
@@ -1243,10 +1248,10 @@ static SnleProblem<real> GetTrustMarginProblem(
     assemblies.push_back(params);
     real const x = problem.GetSolution()[0];
     if (params.assemObj) {
-      problem.objective = 0.5 * Sqr(static_cast<double>(x) - 2.0);
+      problem.objective = 0.5 * Sqr(static_cast<double>(x) - 2.0) + (x >= wall ? 3.0 : 0.0);
     }
     if (params.assemRes) {
-      residual[0] = x - 2_r;
+      residual[0] = x >= wall ? 10_r : x - 2_r;
       problem.actorResiduals = {{0, &residual}};
     }
     if (params.assemDRes) {
@@ -1316,7 +1321,8 @@ TEST(SnleProblem, TrustMarginIsReportedWithExactHessians) {
  * and the residual (startSlope, 0). Elsewhere, the residual is (slope, 1), and the objective is
  * merit0 + rise up to the step maxScale dx and merit0 + |merit0| beyond. They include a
  * non-potential term, whose energy rises by nonPotentialRise from the start and whose residual is
- * (2 nonPotentialResidual, 0) at the start and (nonPotentialResidual, 0) elsewhere.
+ * (2 nonPotentialResidual, 0) at the start and (nonPotentialResidual, 0) elsewhere. Records the
+ * saturation flags of every assembly.
  */
 static SnleProblem<real> GetLineSearchTrialProblem(
     double merit0,
@@ -1325,10 +1331,13 @@ static SnleProblem<real> GetLineSearchTrialProblem(
     real slope,
     real maxScale,
     double nonPotentialRise,
-    real nonPotentialResidual) {
+    real nonPotentialResidual,
+    DynamicArray<SaturationHessianParams>& assembledFlags) {
   auto residual = ColumnVector<real>{2};
   auto nonPotential = ColumnVector<real>::Zero(2);
-  auto assembleFn = [=](SnleProblem<real>& problem, AssemblyParams const& params) mutable {
+  auto assembleFn = [=, &assembledFlags](
+                        SnleProblem<real>& problem, AssemblyParams const& params) mutable {
+    assembledFlags.push_back(params.fittedSaturationHessian);
     real const x = problem.GetSolution()[0];
     if (params.assemObj) {
       problem.objective = (x == 0_r) ? merit0
@@ -1364,7 +1373,11 @@ static SnleProblem<real> GetLineSearchTrialProblem(
 // steeply for their curvature test is accepted at dx and bounds the step from below otherwise, and
 // if no trial passes both tests, they take the longest such trial, if any.
 TEST(NewtonSolver, MeritLineSearches) {
-  using Search = bool (*)(SnleProblem<real>&, NewtonSolverStatus<real>&, LineSearchParams const&);
+  using Search = bool (*)(
+      SnleProblem<real>&,
+      NewtonSolverStatus<real>&,
+      LineSearchParams const&,
+      SaturationHessianParams const&);
   std::array<std::pair<LineSearchType, Search>, 4> constexpr kSearches = {
       {{LineSearchType::Simple, &LineSearch<real>::Simple},
        {LineSearchType::Armijo, &LineSearch<real>::Armijo},
@@ -1430,6 +1443,7 @@ TEST(NewtonSolver, MeritLineSearches) {
       std::array<bool, 4> accepted{};
       for (int i = 0; i < isize(kSearches); ++i) {
         auto const [type, search] = kSearches[i];
+        DynamicArray<SaturationHessianParams> assembledFlags;
         SnleProblem<real> problem = GetLineSearchTrialProblem(
             merit0,
             unit * c.startSlope,
@@ -1437,13 +1451,15 @@ TEST(NewtonSolver, MeritLineSearches) {
             unit * c.slope,
             c.maxScale,
             unit * c.nonPotentialRise,
-            unit * c.nonPotentialResidual);
+            unit * c.nonPotentialResidual,
+            assembledFlags);
         problem.SetSolution(ColumnVector<real>::Zero(2));
         problem.UpdateObjResDRes({.assemObj = true, .assemRes = true});
         problem.increment[0] = 1_r;
         problem.increment[1] = 0_r;
         NewtonSolverStatus<real> status;
         status.objective = problem.GetObjective();
+        assembledFlags.clear();
         accepted[i] = search(
             problem,
             status,
@@ -1452,8 +1468,13 @@ TEST(NewtonSolver, MeritLineSearches) {
              .alpha = 0.5_r,
              .wolfe1 = 1e-4_r,
              .wolfe2 = 0.9_r,
-             .maxRelIncrease = 0_r});
+             .maxRelIncrease = 0_r},
+            SaturationHessianParams::All(true));
 
+        // The trials, including the residuals of their slope tests, use the given flags.
+        EXPECT_TRUE(std::ranges::all_of(assembledFlags, [](SaturationHessianParams const& flags) {
+          return flags == SaturationHessianParams::All(true);
+        }));
         EXPECT_NEAR(problem.GetSolution()[0], c.scale[i], 1e-5_r);
         EXPECT_EQ(problem.GetIncrement()[0], problem.GetSolution()[0]); // The step taken
         if (accepted[i]) { // Assembled, with its objective in status.objective
@@ -1467,26 +1488,37 @@ TEST(NewtonSolver, MeritLineSearches) {
   }
 }
 
+// The margin margin0 - slope x.
+static std::function<real(real)> LinearMargin(real margin0, real slope) {
+  return [=](real x) { return margin0 - slope * x; };
+}
+
 // The objective is x^2 / 2 for every flag setting. Only the assembled curvature changes: 2 when all
-// flags are fitted (each step halves x), unfittedCurvature otherwise.
+// flags are fitted (each step halves x), unfittedCurvature otherwise. A term of trust margin
+// margin(x) reports like contact friction (see ReportsTestTrustMargin). Records the parameters of
+// every dresidual assembly.
 static SnleProblem<real> GetRegularizationLatchProblem(
     real unfittedCurvature,
-    DynamicArray<SaturationHessianParams>& assembledModes) {
+    DynamicArray<AssemblyParams>& dResidualAssemblies,
+    std::function<real(real)> margin = [](real) { return kInf; }) {
   auto residual = ColumnVector<real>::Zero(1);
   auto matrix = AnyMatrix<real>{Matrix<real>{1, 1}};
   SnleProblemFunctions<real> functions;
-  functions.assemble = [=, &assembledModes](
+  functions.assemble = [=, &dResidualAssemblies](
                            SnleProblem<real>& problem, AssemblyParams const& params) mutable {
     real const x = problem.GetSolution()[0];
     if (params.assemObj) {
       problem.objective = 0.5 * static_cast<double>(x) * x;
+    }
+    if (ReportsTestTrustMargin(params)) {
+      problem.trustMargin = Min(problem.trustMargin, margin(x));
     }
     if (params.assemRes) {
       residual[0] = x;
       problem.actorResiduals = {{0, &residual}};
     }
     if (params.assemDRes) {
-      assembledModes.push_back(params.fittedSaturationHessian);
+      dResidualAssemblies.push_back(params);
       std::get<Matrix<real>>(matrix)(0, 0) =
           params.fittedSaturationHessian.AllTrue() ? 2_r : unfittedCurvature;
       problem.actorMatrices = {{0, &matrix}};
@@ -1496,6 +1528,12 @@ static SnleProblem<real> GetRegularizationLatchProblem(
     problem.solution += problem.increment;
   };
   return SnleProblem<real>{1, 1, std::move(functions)};
+}
+
+static DynamicArray<SaturationHessianParams> Modes(DynamicArray<AssemblyParams> const& assemblies) {
+  DynamicArray<SaturationHessianParams> modes(assemblies.size());
+  std::ranges::transform(assemblies, modes.begin(), &AssemblyParams::fittedSaturationHessian);
+  return modes;
 }
 
 static NewtonSolverParams GetRegularizationLatchParams(LineSearchType search, int period) {
@@ -1517,29 +1555,72 @@ static NewtonSolverParams GetRegularizationLatchParams(LineSearchType search, in
 }
 
 // A failed attempt, from the line search (a too small exact curvature overshoots) or the linear
-// solver (a negative one aborts), switches every pathway to fitted Hessians for the rest of the
-// solve, also when the dresidual is reassembled lazily. The next solve starts again at the
-// requested flags.
+// solver (a negative one aborts), or with the exact contact-friction Hessian an iteration starting
+// beyond the trust-region boundary (the early switch), switches every pathway to fitted Hessians
+// for the rest of the solve, also when the dresidual is reassembled lazily and when the fitted
+// steps re-enter the trust region. The next solve starts again at the requested flags. The early
+// switch keeps the PSD projection mode.
 TEST(NewtonSolver, RegularizationLatch_PersistsAndResetsBetweenSolves) {
-  for (auto search :
-       {LineSearchType::Armijo, LineSearchType::WolfeStrong, LineSearchType::ResidualNorm}) {
-    for (int period : {1, 2}) {
-      for (auto requested :
-           {SaturationHessianParams::All(false),
-            SaturationHessianParams{
-                .contactFriction = true, .jointFriction = false, .constraintSaturation = false},
-            SaturationHessianParams{
-                .contactFriction = false, .jointFriction = true, .constraintSaturation = false},
-            SaturationHessianParams{
-                .contactFriction = false, .jointFriction = false, .constraintSaturation = true}}) {
-        for (real const unfittedCurvature : {0.25_r, -1_r}) {
-          DynamicArray<SaturationHessianParams> modes;
-          auto problem = GetRegularizationLatchProblem(unfittedCurvature, modes);
+  struct Trigger {
+    std::string name;
+    real unfittedCurvature;
+    PsdProjectionMode psdMode;
+    bool earlySwitch;
+  };
+  for (Trigger const& trigger :
+       {Trigger{
+            .name = "line search fails",
+            .unfittedCurvature = 0.25_r,
+            .psdMode = PsdProjectionMode::Never,
+            .earlySwitch = false},
+        Trigger{
+            .name = "linear solver fails",
+            .unfittedCurvature = -1_r,
+            .psdMode = PsdProjectionMode::Never,
+            .earlySwitch = false},
+        Trigger{
+            .name = "early switch, IfFailAlways",
+            .unfittedCurvature = 0.25_r,
+            .psdMode = PsdProjectionMode::IfFailAlways,
+            .earlySwitch = true},
+        Trigger{
+            .name = "early switch, Always",
+            .unfittedCurvature = 0.25_r,
+            .psdMode = PsdProjectionMode::Always,
+            .earlySwitch = true}}) {
+    for (auto search :
+         {LineSearchType::Armijo, LineSearchType::WolfeStrong, LineSearchType::ResidualNorm}) {
+      for (int period : {1, 2}) {
+        for (auto requested :
+             {SaturationHessianParams::All(false),
+              SaturationHessianParams{
+                  .contactFriction = true, .jointFriction = false, .constraintSaturation = false},
+              SaturationHessianParams{
+                  .contactFriction = false, .jointFriction = true, .constraintSaturation = false},
+              SaturationHessianParams{
+                  .contactFriction = false,
+                  .jointFriction = false,
+                  .constraintSaturation = true}}) {
+          if (trigger.earlySwitch && requested.contactFriction) {
+            continue; // The margin is reported with the exact contact-friction Hessian only
+          }
+          SCOPED_TRACE(
+              trigger.name + ", search " + std::to_string(static_cast<int>(search)) + ", period " +
+              std::to_string(period) + ", fitted contact/joint/constraint " +
+              std::to_string(requested.contactFriction) + std::to_string(requested.jointFriction) +
+              std::to_string(requested.constraintSaturation));
+          DynamicArray<AssemblyParams> assemblies;
+          // The early switch's margin keeps x = 1 outside the trust region, and 1/2 inside.
+          auto problem = GetRegularizationLatchProblem(
+              trigger.unfittedCurvature,
+              assemblies,
+              trigger.earlySwitch ? LinearMargin(0.75_r, 1_r) : LinearMargin(kInf, 0_r));
           auto params = GetRegularizationLatchParams(search, period);
           params.fittedSaturationHessian = requested;
+          params.psdProjMode = trigger.psdMode;
           NewtonSolver<real> solver(params);
           for (int run = 0; run < 2; ++run) {
-            modes.clear();
+            assemblies.clear();
             problem.SetSolution(ColumnVector<real>::Ones(1));
             auto const status = solver.Solve(problem);
             ASSERT_EQ(3, status.numIterDone);
@@ -1550,7 +1631,12 @@ TEST(NewtonSolver, RegularizationLatch_PersistsAndResetsBetweenSolves) {
             DynamicArray<SaturationHessianParams> const expected = period == 1
                 ? DynamicArray<SaturationHessianParams>{requested, fitted, fitted, fitted}
                 : DynamicArray<SaturationHessianParams>{requested, fitted, fitted};
-            EXPECT_EQ(expected, modes);
+            EXPECT_EQ(expected, Modes(assemblies));
+            if (trigger.earlySwitch) {
+              EXPECT_TRUE(std::ranges::all_of(assemblies, [&](AssemblyParams const& p) {
+                return p.psdDRes == (trigger.psdMode == PsdProjectionMode::Always);
+              }));
+            }
           }
         }
       }
@@ -1559,8 +1645,8 @@ TEST(NewtonSolver, RegularizationLatch_PersistsAndResetsBetweenSolves) {
 }
 
 TEST(NewtonSolver, RegularizationLatch_AcceptedBacktrackingDoesNotLatch) {
-  DynamicArray<SaturationHessianParams> modes;
-  auto problem = GetRegularizationLatchProblem(0.4_r, modes);
+  DynamicArray<AssemblyParams> assemblies;
+  auto problem = GetRegularizationLatchProblem(0.4_r, assemblies);
   auto params = GetRegularizationLatchParams(LineSearchType::Armijo, 1);
   params.fittedSaturationHessian = SaturationHessianParams::All(false);
   params.lineSearch.maxIter = 4;
@@ -1570,7 +1656,276 @@ TEST(NewtonSolver, RegularizationLatch_AcceptedBacktrackingDoesNotLatch) {
   EXPECT_EQ(3, status.numIterDone);
   EXPECT_GT(status.totalNumLSIterDone, 0);
   DynamicArray<SaturationHessianParams> const expected(3, SaturationHessianParams::All(false));
-  EXPECT_EQ(expected, modes);
+  EXPECT_EQ(expected, Modes(assemblies));
+}
+
+// A trial with negative trust margin is rejected, and the backtracking line searches skip to the
+// first step reduction whose margin, interpolated from the start, is nonnegative, counting the
+// skipped reductions as iterations. They fail if that trial is shorter than 1/8 of the full step or
+// takes more iterations than are left, or if the margin at the start is not positive and finite.
+// The Wolfe searches skip the same way while they have no lower bound, and otherwise take their
+// lower bound. Every trial is assembled with the given saturation flags.
+TEST(NewtonSolver, LineSearchesLimitTheStepByTheTrustMargin) {
+  using Search = bool (*)(
+      SnleProblem<real>&,
+      NewtonSolverStatus<real>&,
+      LineSearchParams const&,
+      SaturationHessianParams const&);
+  std::array<std::pair<LineSearchType, Search>, 5> constexpr kSearches = {
+      {{LineSearchType::Simple, &LineSearch<real>::Simple},
+       {LineSearchType::Armijo, &LineSearch<real>::Armijo},
+       {LineSearchType::ResidualNorm, &LineSearch<real>::ResidualNorm},
+       {LineSearchType::WolfeWeak, &LineSearch<real>::WolfeWeak},
+       {LineSearchType::WolfeStrong, &LineSearch<real>::WolfeStrong}}};
+  struct Outcome {
+    real scale = 0_r; // Step scale taken, or 0 if the search fails
+    int numTrials = 1; // Assemblies
+    int numIterDone = 4; // status.numLastLSIterDone
+  };
+  struct Case {
+    std::string name;
+    std::function<real(real)> margin;
+    int maxIter = 4;
+    real alpha = 0.5_r;
+    real wolfe2 = 0.9_r;
+    // The margin is reported with the exact contact-friction Hessian (see ReportsTestTrustMargin).
+    SaturationHessianParams fitted = SaturationHessianParams::All(false);
+    Outcome backtracking{}; // Simple, Armijo and ResidualNorm
+    std::optional<Outcome> wolfe{}; // WolfeWeak and WolfeStrong, if different
+    real wall = kInf;
+  };
+  // The margin 1 - slope sqrt(x).
+  auto const convexMargin = [](real slope) {
+    return [=](real x) { return 1_r - slope * Sqrt(x); };
+  };
+  auto const infiniteAtStart = [](real x) { return x < 1_r ? kInf : 1_r - x; };
+  // The margin 1 beyond x = 1.5, behind the wall there, and 1 - slope x before it.
+  auto const marginBehindWall = [](real slope) {
+    return [=](real x) { return x >= 1.5_r ? 1_r : 1_r - slope * x; };
+  };
+  for (Case const& c :
+       {Case{
+            .name = "full step with margin 0.5",
+            .margin = LinearMargin(1_r, 0.25_r),
+            .backtracking = {.scale = 1_r, .numIterDone = 0}},
+        // The trial with zero margin is taken. Wolfe: it is short of the 2nd condition, the next
+        // trial, at 5/8, is past the boundary, so it takes the trial at 1/4 again.
+        Case{
+            .name = "zero margin at 1/4",
+            .margin = LinearMargin(1_r, 2_r),
+            .alpha = 0.25_r,
+            .wolfe2 = 0.5_r,
+            .backtracking = {.scale = 0.25_r, .numTrials = 2, .numIterDone = 1},
+            .wolfe = Outcome{.scale = 0.25_r, .numTrials = 4, .numIterDone = 2}},
+        Case{
+            .name = "zero margin at 1/6, skip to 1/8",
+            .margin = LinearMargin(1_r, 3_r),
+            .backtracking = {.scale = 0.125_r, .numTrials = 2, .numIterDone = 3}},
+        Case{
+            .name = "zero margin at 1/6, skip to 1/8, exact contact friction only",
+            .margin = LinearMargin(1_r, 3_r),
+            .fitted =
+                {.contactFriction = false, .jointFriction = true, .constraintSaturation = true},
+            .backtracking = {.scale = 0.125_r, .numTrials = 2, .numIterDone = 3}},
+        Case{
+            .name = "more reductions than iterations left",
+            .margin = LinearMargin(1_r, 3_r),
+            .maxIter = 2,
+            .backtracking = {.numIterDone = 2}},
+        Case{
+            .name = "zero margin at 1/10, below 1/8",
+            .margin = LinearMargin(1_r, 5_r),
+            .maxIter = 16,
+            .backtracking = {.numIterDone = 16}},
+        // The minimum is a fraction of the full step: 2 reductions by 1/4 are below it.
+        Case{
+            .name = "zero margin at 1/5, below 1/8 with alpha 1/4",
+            .margin = LinearMargin(1_r, 2.5_r),
+            .alpha = 0.25_r,
+            .backtracking = {.numIterDone = 4}},
+        Case{.name = "zero margin at the start", .margin = LinearMargin(0_r, 1_r)},
+        Case{.name = "negative margin at the start", .margin = LinearMargin(-1_r, -0.25_r)},
+        Case{.name = "infinite margin at the start", .margin = infiniteAtStart},
+        Case{
+            .name = "-inf margin at the full step",
+            .margin = [](real x) { return x > 1.5_r ? -kInf : 1_r; }},
+        Case{
+            .name = "rejected again after skipping",
+            .margin = convexMargin(1.2_r),
+            .backtracking = {.scale = 0.25_r, .numTrials = 3, .numIterDone = 2}},
+        Case{
+            .name = "rejected again after skipping to 1/8",
+            .margin = convexMargin(3_r),
+            .maxIter = 8,
+            .backtracking = {.numTrials = 2, .numIterDone = 8}},
+        Case{
+            .name = "skips after a merit rejection",
+            .margin = marginBehindWall(3_r),
+            .maxIter = 8,
+            .backtracking = {.scale = 0.125_r, .numTrials = 3, .numIterDone = 3},
+            .wall = 1.5_r},
+        Case{
+            .name = "merit rejection and a skip below 1/8",
+            .margin = marginBehindWall(5_r),
+            .maxIter = 8,
+            .backtracking = {.numTrials = 2, .numIterDone = 8},
+            .wall = 1.5_r},
+        // Wolfe: the trial at 1/16 is short of the 2nd condition, and the iterations run out, so it
+        // takes that trial.
+        Case{
+            .name = "merit rejects the trial after skipping",
+            .margin = LinearMargin(1_r, 3_r),
+            .maxIter = 5,
+            .backtracking = {.scale = 0.0625_r, .numTrials = 3, .numIterDone = 4},
+            .wolfe = Outcome{.scale = 0.0625_r, .numTrials = 3, .numIterDone = 5},
+            .wall = 0.2_r},
+        Case{
+            .name = "fitted Hessians",
+            .margin = LinearMargin(1_r, 5_r),
+            .fitted = SaturationHessianParams::All(true),
+            .backtracking = {.scale = 1_r, .numIterDone = 0}}}) {
+    for (auto const& [type, search] : kSearches) {
+      SCOPED_TRACE(c.name + ", type " + std::to_string(static_cast<int>(type)));
+      DynamicArray<AssemblyParams> assemblies;
+      SnleProblem<real> problem = GetTrustMarginProblem(c.margin, assemblies, c.wall);
+      problem.SetSolution(ColumnVector<real>::Zero(1));
+      problem.UpdateObjResDRes(
+          {.assemObj = true, .assemRes = true, .fittedSaturationHessian = c.fitted});
+      problem.increment[0] = 2_r;
+      NewtonSolverStatus<real> status;
+      status.objective = problem.GetObjective();
+      assemblies.clear();
+      bool const improved = search(
+          problem,
+          status,
+          {.type = type,
+           .maxIter = c.maxIter,
+           .alpha = c.alpha,
+           .wolfe1 = 1e-4_r,
+           .wolfe2 = c.wolfe2},
+          c.fitted);
+
+      EXPECT_TRUE(std::ranges::all_of(assemblies, [&](AssemblyParams const& params) {
+        return params.fittedSaturationHessian == c.fitted;
+      }));
+      bool const isWolfe = type == LineSearchType::WolfeWeak || type == LineSearchType::WolfeStrong;
+      Outcome const& expected = isWolfe && c.wolfe ? *c.wolfe : c.backtracking;
+      EXPECT_EQ(improved, expected.scale > 0_r);
+      EXPECT_EQ(isize(assemblies), expected.numTrials);
+      EXPECT_EQ(status.numLastLSIterDone, expected.numIterDone);
+      if (improved) {
+        // The cached data are those of the step taken.
+        real const x = problem.GetSolution()[0];
+        EXPECT_EQ(x, 2_r * expected.scale);
+        EXPECT_EQ(problem.GetTrustMargin(), c.fitted.contactFriction ? kInf : c.margin(x));
+        if (type != LineSearchType::ResidualNorm) {
+          EXPECT_EQ(status.objective, 0.5 * Sqr(static_cast<double>(x) - 2.0));
+        }
+      }
+    }
+  }
+}
+
+// With the exact contact-friction Hessian, the assemblies of the Newton solver report the trust
+// margin: at the start of every iteration, in its line searches and when it restores the solution
+// after a failed one, all with the requested flags. It switches to fitted Hessians, which report
+// none, for the rest of the solve when a line search fails on the margin or an iteration starts on
+// or beyond the trust-region boundary. The next solve starts again at the requested flags. Without
+// a line search, the margin neither limits the step nor switches to fitted Hessians.
+TEST(NewtonSolver, TrustMarginEscapesToFittedCurvature) {
+  struct Case {
+    std::string name;
+    std::function<real(real)> margin;
+    int numIterDone;
+    int marginReportsBeforeFitted;
+    int armijoExtraReports = 0; // Armijo's trials leave the residual to assemble, which reports
+  };
+  auto params = GetRegularizationLatchParams(LineSearchType::Armijo, 1);
+  params.lineSearch.maxIter = 4;
+  SaturationHessianParams const requested{
+      .contactFriction = false, .jointFriction = true, .constraintSaturation = true};
+  params.fittedSaturationHessian = requested;
+  for (auto const& c : {
+           // The solve starts on the boundary and goes fitted at once.
+           Case{
+               .name = "start on the boundary",
+               .margin = LinearMargin(0_r, 1_r),
+               .numIterDone = 1,
+               .marginReportsBeforeFitted = 1},
+           // The first iteration stops at the zero margin, halfway, so the second starts on the
+           // boundary. Margin reports: the start and 2 trials of the first iteration, and with
+           // Armijo the residual at the accepted trial.
+           Case{
+               .name = "stop at the boundary",
+               .margin = LinearMargin(1_r, 1_r),
+               .numIterDone = 2,
+               .marginReportsBeforeFitted = 3,
+               .armijoExtraReports = 1},
+           // The zero margin, at a tenth of the first step, is below 1/8 of it, so the first line
+           // search fails and the iteration retries fitted. Margin reports: the start, the full
+           // trial and the restored start.
+           Case{
+               .name = "line search fails",
+               .margin = LinearMargin(0.2_r, 1_r),
+               .numIterDone = 1,
+               .marginReportsBeforeFitted = 3},
+       }) {
+    for (int const period : {1, 2}) {
+      for (auto const search :
+           {LineSearchType::Armijo, LineSearchType::WolfeStrong, LineSearchType::ResidualNorm}) {
+        SCOPED_TRACE(
+            c.name + ", period " + std::to_string(period) + ", type " +
+            std::to_string(static_cast<int>(search)));
+        params.dResidualAssemblyPeriod = period;
+        params.lineSearch.type = search;
+        DynamicArray<AssemblyParams> assemblies;
+        SnleProblem<real> problem = GetTrustMarginProblem(c.margin, assemblies);
+        problem.SetSolution(ColumnVector<real>::Zero(1));
+        NewtonSolver<real> solver(params);
+        auto const status = solver.Solve(problem);
+        EXPECT_EQ(problem.GetSolution()[0], 2_r);
+        EXPECT_EQ(status.numIterDone, c.numIterDone);
+
+        // The dresidual is assembled with fitted Hessians, and the margin isn't reported since.
+        auto const fitted = std::ranges::find_if(assemblies, [](AssemblyParams const& p) {
+          return p.assemDRes && p.fittedSaturationHessian.contactFriction;
+        });
+        ASSERT_NE(fitted, assemblies.end());
+        EXPECT_TRUE(std::ranges::all_of(assemblies.begin(), fitted, [&](AssemblyParams const& p) {
+          return p.fittedSaturationHessian == requested;
+        }));
+        EXPECT_TRUE(std::ranges::all_of(fitted, assemblies.end(), [](AssemblyParams const& p) {
+          return p.fittedSaturationHessian == SaturationHessianParams::All(true);
+        }));
+        EXPECT_EQ(
+            std::ranges::count_if(assemblies.begin(), fitted, ReportsTestTrustMargin),
+            c.marginReportsBeforeFitted +
+                (search == LineSearchType::Armijo ? c.armijoExtraReports : 0));
+        EXPECT_TRUE(std::ranges::none_of(fitted, assemblies.end(), ReportsTestTrustMargin));
+
+        // The next solve starts again at the requested flags.
+        assemblies.clear();
+        problem.SetSolution(ColumnVector<real>::Zero(1));
+        solver.Solve(problem);
+        ASSERT_FALSE(assemblies.empty());
+        EXPECT_EQ(assemblies.front().fittedSaturationHessian, requested);
+      }
+    }
+  }
+
+  // Without a line search, from the boundary: the full step, all with the requested flags.
+  params.dResidualAssemblyPeriod = 1;
+  params.lineSearch.type = LineSearchType::None;
+  DynamicArray<AssemblyParams> assemblies;
+  SnleProblem<real> problem = GetTrustMarginProblem(LinearMargin(0_r, 1_r), assemblies);
+  problem.SetSolution(ColumnVector<real>::Zero(1));
+  NewtonSolver<real> solver(params);
+  auto const status = solver.Solve(problem);
+  EXPECT_EQ(problem.GetSolution()[0], 2_r);
+  EXPECT_EQ(status.numIterDone, 1);
+  EXPECT_TRUE(std::ranges::all_of(assemblies, [&](AssemblyParams const& p) {
+    return p.fittedSaturationHessian == requested;
+  }));
 }
 
 TEST(NewtonSolver, LinearSolveTimeIsPartOfSolveTime) {

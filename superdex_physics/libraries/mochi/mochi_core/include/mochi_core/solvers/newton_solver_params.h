@@ -56,7 +56,7 @@ struct NewtonSolverParams {
 
   // Retries
   PsdProjectionMode psdProjMode = NonLinearSolverParams{}.psdProjMode; // PSD projection mode
-  SaturationHessianParams fittedSaturationHessian = ExperimentalEvalParams{}.fittedSaturationHessian; // Per-pathway control of fitted Hessian use in force saturation terms. A failed attempt switches all pathways to fitted Hessians for the rest of the solve.
+  SaturationHessianParams fittedSaturationHessian = ExperimentalEvalParams{}.fittedSaturationHessian; // Per-pathway control of fitted Hessian use in force saturation terms. A failed attempt, or with a line search an iteration starting on or beyond the contact trust-region boundary, switches all pathways to fitted Hessians for the rest of the solve.
 
   // Explosion control
   bool explosionControl = NonLinearSolverParams{}.explosionControl; // Heuristically prevents explosions

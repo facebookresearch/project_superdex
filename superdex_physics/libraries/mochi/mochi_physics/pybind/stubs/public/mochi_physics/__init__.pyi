@@ -3900,7 +3900,9 @@ class SaturationHessianParams:
         When a flag is `false`, the solver will try first with the true Hessian for
         that pathway. If a Newton attempt fails, the solver retries with fitted
         Hessians for all pathways and keeps them for the rest of that nonlinear
-        solve. Each solve starts from these flags.
+        solve. With the exact contact-friction Hessian and a line search, it also
+        switches to them when an iteration starts with an elasto-plastic contact at
+        or past reverse presliding yield. Each solve starts from these flags.
 
     Warning:
         This is an experimental feature. It may be changed or removed in the future.

@@ -193,7 +193,11 @@ class NewtonSolver {
 
   /** @brief Takes a step in the direction of the current solution increment depending on step
    * parameters. */
-  bool TakeStep(Problem& problem, Status& status, bool takeFinalLsStepIfNoImprovement) const;
+  bool TakeStep(
+      Problem& problem,
+      Status& status,
+      bool takeFinalLsStepIfNoImprovement,
+      SaturationHessianParams const& fittedSaturationHessian) const;
 
   /** @brief Test exit of the iterative solver. */
   bool IsSolverDone(
@@ -229,7 +233,11 @@ class NewtonSolver {
   NewtonSolverParams _params;
   std::unique_ptr<LinearSolver<T>> _linearSolver;
   std::vector<StopCriterion> _stopCriteria;
-  std::function<bool(Problem& problem, Status& status, LineSearchParams const& lsParams)>
+  std::function<bool(
+      Problem& problem,
+      Status& status,
+      LineSearchParams const& lsParams,
+      SaturationHessianParams const& fittedSaturationHessian)>
       _lineSearch;
   Workspace _workspace = {};
   std::shared_ptr<PreconditionerRecyclingManager<T>> _preconditionerRecyclingMgr = nullptr;

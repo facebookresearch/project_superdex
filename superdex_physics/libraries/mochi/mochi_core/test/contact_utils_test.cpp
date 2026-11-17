@@ -1166,7 +1166,7 @@ TEST(ContactPenalties, TrustMargin_MinimumOverContacts) {
 }
 
 // Only elasto-plastic Coulomb friction has a trust margin. With implicit normals, a contact without
-// normal force keeps its margin; with explicit normals, contacts without stage-start normal force
+// normal force keeps its margin. With explicit normals, contacts without stage-start normal force
 // have none.
 TEST(ContactPenalties, TrustMargin_Eligibility) {
   ContactParams const params;

@@ -898,10 +898,10 @@ struct BatchCollisionResponse {
  * displacement δ. The margin m = 1 + u0 · u / (δ |u0|) is the signed distance to its boundary in
  * units of δ: positive inside, zero on the boundary and negative beyond. The anchor offset is fixed
  * during the stage, but u0 is its projection on the friction tangent plane: for a given normal, the
- * margin is affine in the slip. With explicit normals, the normal is fixed during the stage; with
+ * margin is affine in the slip. With explicit normals, the normal is fixed during the stage. With
  * implicit normals, it changes with the contact point, and u0 with it. While sliding, the exact
- * friction Hessian has no curvature along the slip, so a Newton step can overshoot the anchor; the
- * margin measures how far it got. A reference shorter than 0.1 δ has no reliable direction, and
+ * friction Hessian has no curvature along the slip, so a Newton step can overshoot the anchor, and
+ * the margin measures how far it got. A reference shorter than 0.1 δ has no reliable direction, and
  * with explicit normals a contact without stage-start normal force has no friction during the
  * stage: such contacts get +inf.
  *
@@ -1333,7 +1333,7 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
  * @param[out] outDForceAnchor Output force derivatives with respect to the anchor offsets, or
  * nullptr to skip them (GradTarget::Current with elasto-plastic friction only)
  * @param[in,out] outTrustMargin Optional: lowered to the minimum trust margin of the contact points
- * with elasto-plastic Coulomb friction (see @ref ComputeBatchTrustMargin; GradTarget::Current only)
+ * with elasto-plastic Coulomb friction (GradTarget::Current only, see @ref ComputeBatchTrustMargin)
  */
 template <int kBatchSize, GradTarget kGradTarget>
 // TODO[T247578555]: This is a workaround for a bug in VS2022, but it will hurt performance.
@@ -1575,7 +1575,7 @@ MOCHI_FORCE_INLINE
  * @param[out] outDForceAnchor Output force derivatives with respect to the anchor offsets (size
  * kBatchSize, or empty to skip them; GradTarget::Current with elasto-plastic friction only)
  * @param[in,out] outTrustMargin Optional: lowered to the minimum trust margin of the contact points
- * (see @ref ComputeBatchTrustMargin; GradTarget::Current only)
+ * (GradTarget::Current only, see @ref ComputeBatchTrustMargin)
  */
 template <int kBatchSize, GradTarget kGradTarget>
 MOCHI_FORCE_INLINE void ComputeBatchCollisionForceDForce(
