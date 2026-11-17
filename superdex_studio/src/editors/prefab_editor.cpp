@@ -1242,6 +1242,58 @@ void PrefabEditor::HighlightStagedObject(SceneObject* object) {
   }
 }
 
+std::vector<int> PrefabEditor::StagedIndicesFor(Selection const& item) const {
+  StagedActorSource source = StagedActorSource::Rigid;
+  switch (item.kind) {
+    case Selection::Kind::Rigid:
+      source = StagedActorSource::Rigid;
+      break;
+    case Selection::Kind::Soft:
+      source = StagedActorSource::Soft;
+      break;
+    case Selection::Kind::ArticulatedActor:
+    case Selection::Kind::ArticulatedLink:
+      source = StagedActorSource::Articulated;
+      break;
+    case Selection::Kind::NestedPrefab:
+      source = StagedActorSource::NestedPrefab;
+      break;
+    case Selection::Kind::Constraint:
+    case Selection::Kind::None:
+      return {};
+  }
+  bool const oneLink = item.kind == Selection::Kind::ArticulatedLink;
+  std::vector<int> indices;
+  StagedActors const& actors = _stage.GetActors();
+  for (int i = 0; i < static_cast<int>(actors.size()); ++i) {
+    if (actors[i].source == source && actors[i].sourceActorIndex == item.actorIndex &&
+        (!oneLink || actors[i].sourceLinkIndex == item.linkIndex)) {
+      indices.push_back(i);
+    }
+  }
+  return indices;
+}
+
+bool PrefabEditor::IsHidden(Selection const& item) const {
+  std::vector<int> const indices = StagedIndicesFor(item);
+  return !indices.empty() &&
+      std::ranges::all_of(indices, [this](int i) { return _stage.GetActors()[i].hidden; });
+}
+
+void PrefabEditor::ShowVisibilityToggle(Selection const& item) {
+  ImGui::TableNextColumn();
+  std::vector<int> const indices = StagedIndicesFor(item);
+  if (indices.empty()) {
+    return;
+  }
+  bool const hidden = IsHidden(item);
+  if (ImGui::VisibilityToggle("##Visibility", hidden)) {
+    for (int const i : indices) {
+      _stage.SetActorHidden(i, !hidden);
+    }
+  }
+}
+
 void PrefabEditor::RenderArticulatedLinkTree(
     int actorIndex,
     mochi::prefab::ArticulatedActorPrefab const& actor,
@@ -1282,8 +1334,18 @@ void PrefabEditor::RenderArticulatedLinkTree(
     flags |= ImGuiTreeNodeFlags_Selected;
   }
 
+  Selection const item{Selection::Kind::ArticulatedLink, actorIndex, linkIndex};
   std::string const linkName = FallbackName(kLinkPrefix, link.name, linkIndex);
+  bool const hidden = IsHidden(item);
+  if (hidden) {
+    ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+  }
+  // Lets the row's eye take clicks over the row.
+  ImGui::SetNextItemAllowOverlap();
   bool const nodeOpen = ImGui::TreeNodeEx(linkName.c_str(), flags);
+  if (hidden) {
+    ImGui::PopStyleColor();
+  }
   if (ImGui::IsItemHovered()) {
     HighlightStagedObject(
         StagedObjectForSource(StagedActorSource::Articulated, actorIndex, linkIndex));
@@ -1315,6 +1377,7 @@ void PrefabEditor::RenderArticulatedLinkTree(
 
   ImGui::TableNextColumn();
   ImGui::TextDisabled("Articulated Link");
+  ShowVisibilityToggle(item);
 
   if (_forceLinkFocus && selected) {
     ImGui::SetScrollHereY(0.5f);
@@ -1439,8 +1502,14 @@ void PrefabEditor::ShowPrefabHierarchyWindow(bool* open) {
           ? FindActorConstraints(prefab.constraints, PrefabActorName(kind, row.index))
           : std::vector<ConstraintRef>{};
       bool const isSelected = IsRowSelected(kind, row.index);
+      bool const hidden = IsHidden({kind, row.index, -1});
       bool nodeOpen = false;
       float const originalIndent = ImGui::GetStyle().IndentSpacing;
+      if (hidden) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+      }
+      // Lets the row's eye take clicks over the row.
+      ImGui::SetNextItemAllowOverlap();
       if (actorConstraints.empty()) {
         if (hasArticulated) {
           ImGui::Indent(leafIndent);
@@ -1462,6 +1531,9 @@ void PrefabEditor::ShowPrefabHierarchyWindow(bool* open) {
         if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
           HandleTopLevelRowClick(rowIndex, {kind, row.index, -1});
         }
+      }
+      if (hidden) {
+        ImGui::PopStyleColor();
       }
       if (ImGui::IsItemHovered()) {
         if (kind == Selection::Kind::NestedPrefab) {
@@ -1511,6 +1583,7 @@ void PrefabEditor::ShowPrefabHierarchyWindow(bool* open) {
       }
       ImGui::TableNextColumn();
       ImGui::TextUnformatted(row.type);
+      ShowVisibilityToggle({kind, row.index, -1});
       if (nodeOpen) {
         ImGui::Indent(leafIndent);
         for (ConstraintRef const& ref : actorConstraints) {
@@ -1529,11 +1602,18 @@ void PrefabEditor::ShowPrefabHierarchyWindow(bool* open) {
         ImGuiTableFlags_Sortable;
     // Match the Bot Hierarchy table styling.
     ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyleColorVec4(ImGuiCol_HeaderActive));
-    if (ImGui::BeginTable("##PrefabActors", 2, tableFlags)) {
+    if (ImGui::BeginTable("##PrefabActors", 3, tableFlags)) {
       ImGui::TableSetupScrollFreeze(0, 1);
       ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_DefaultSort);
       ImGui::TableSetupColumn("Type");
-      ImGui::TableHeadersRow();
+      ImGui::TableSetupVisibilityColumn();
+      if (ImGui::TableHeadersRowWithVisibilityToggle(_stage.GetNumHiddenActors() > 0)) {
+        if (_stage.GetNumHiddenActors() > 0) {
+          _stage.ShowAllActors();
+        } else {
+          _stage.HideAllActors();
+        }
+      }
 
       // Sort by the active column/direction; Name is the stable tiebreaker.
       if (ImGuiTableSortSpecs* sortSpecs = ImGui::TableGetSortSpecs()) {
@@ -1623,7 +1703,16 @@ void PrefabEditor::ShowPrefabHierarchyWindow(bool* open) {
           }
           float const originalIndent = ImGui::GetStyle().IndentSpacing;
           ImGui::GetStyle().IndentSpacing = originalIndent * 0.4f;
+          Selection const actorItem{Selection::Kind::ArticulatedActor, a, -1};
+          bool const actorHidden = IsHidden(actorItem);
+          if (actorHidden) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+          }
+          ImGui::SetNextItemAllowOverlap();
           bool const actorOpen = ImGui::TreeNodeEx(row.name.c_str(), actorFlags);
+          if (actorHidden) {
+            ImGui::PopStyleColor();
+          }
           if (ImGui::IsItemHovered()) {
             // Hovering the actor row highlights all of its links.
             for (int j = 0; j < numLinks; ++j) {
@@ -1667,6 +1756,7 @@ void PrefabEditor::ShowPrefabHierarchyWindow(bool* open) {
           }
           ImGui::TableNextColumn();
           ImGui::TextUnformatted(row.type);
+          ShowVisibilityToggle(actorItem);
           if (actorOpen) {
             for (int j = 0; j < numLinks; ++j) {
               if (actor.links[j].parentLink == superdex::robotics::kIndexNone) {

@@ -3141,6 +3141,56 @@ bool ImGui::TextButton(char const* label) {
   return pressed;
 }
 
+bool ImGui::VisibilityToggle(char const* id, bool hidden) {
+  PushID(id);
+  if (hidden) {
+    PushStyleColor(ImGuiCol_Text, GetStyleColorVec4(ImGuiCol_TextDisabled));
+  }
+  bool const clicked = TextButton(hidden ? ICON_FA_EYE_SLASH : ICON_FA_EYE);
+  if (hidden) {
+    PopStyleColor();
+  }
+  SetItemTooltip("%s", hidden ? "Show" : "Hide (H)");
+  PopID();
+  return clicked;
+}
+
+void ImGui::TableSetupVisibilityColumn() {
+  TableSetupColumn(
+      "##Visibility",
+      ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize |
+          ImGuiTableColumnFlags_NoSort,
+      CalcTextSize(ICON_FA_EYE_SLASH).x);
+}
+
+bool ImGui::TableHeadersRowWithVisibilityToggle(bool anyHidden) {
+  TableNextRow(ImGuiTableRowFlags_Headers);
+  int const lastColumn = TableGetColumnCount() - 1;
+  bool clicked = false;
+  for (int column = 0; column <= lastColumn; ++column) {
+    if (!TableSetColumnIndex(column)) {
+      continue;
+    }
+    PushID(column);
+    ImVec2 const cellStart = GetCursorScreenPos();
+    if (column == lastColumn) {
+      // The header still draws the cell's background; the eye sits over it.
+      SetNextItemAllowOverlap();
+    }
+    TableHeader(TableGetColumnName(column));
+    if (column == lastColumn) {
+      SetCursorScreenPos(cellStart);
+      PushStyleColor(
+          ImGuiCol_Text, GetStyleColorVec4(anyHidden ? ImGuiCol_TextDisabled : ImGuiCol_Text));
+      clicked = TextButton(anyHidden ? ICON_FA_EYE_SLASH : ICON_FA_EYE);
+      PopStyleColor();
+      SetItemTooltip("%s", anyHidden ? "Show all" : "Hide all");
+    }
+    PopID();
+  }
+  return clicked;
+}
+
 bool ImGui::ButtonColored(char const* label, ImVec4 const& color, ImVec2 const& size) {
   ImVec4 colorHover = ImLerp({1, 1, 1, color.w}, color, 0.8f);
   ImVec4 colorPress = ImLerp({0, 0, 0, color.w}, color, 0.8f);

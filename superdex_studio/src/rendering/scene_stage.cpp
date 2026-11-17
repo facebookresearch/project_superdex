@@ -1690,6 +1690,12 @@ void SceneStage::SetActorHidden(int index, bool hidden) {
   }
 }
 
+void SceneStage::HideAllActors() {
+  for (int i = 0; i < isize(_actors); ++i) {
+    SetActorHidden(i, true);
+  }
+}
+
 int SceneStage::GetNumHiddenActors() const {
   return static_cast<int>(
       std::ranges::count_if(_actors, [](StagedActor const& actor) { return actor.hidden; }));

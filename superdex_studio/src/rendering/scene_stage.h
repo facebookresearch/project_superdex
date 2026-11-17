@@ -442,6 +442,8 @@ struct SceneStage {
   void SetActorHidden(int index, bool hidden);
   // Shows every actor SetActorHidden hid.
   void ShowAllActors();
+  // Hides every staged actor.
+  void HideAllActors();
   // How many staged actors SetActorHidden hid.
   [[nodiscard]] int GetNumHiddenActors() const;
 

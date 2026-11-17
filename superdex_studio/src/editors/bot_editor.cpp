@@ -1518,16 +1518,37 @@ void BotEditor::ShowBotHierarchyWindow(bool* open) {
     }
   };
 
+  // Link i is staged actor i.
+  auto IsLinkHidden = [&](int linkIndex) {
+    return linkIndex < _stage.GetNumActors() && _stage.GetActors()[linkIndex].hidden;
+  };
+  // The last cell of a link's row: the eye that hides or shows the link in the viewport.
+  auto ShowLinkVisibility = [&](int linkIndex) {
+    ImGui::TableNextColumn();
+    if (linkIndex < _stage.GetNumActors() &&
+        ImGui::VisibilityToggle("##Visibility", IsLinkHidden(linkIndex))) {
+      _stage.SetActorHidden(linkIndex, !IsLinkHidden(linkIndex));
+    }
+  };
+  ImVec4 const hiddenColor = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
+
   ImGui::BeginChild("LinkTreeChild");
   auto tableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable |
       ImGuiTableRowFlags_Headers;
   int linkToAdd = -1;
   int linkToDelete = -1;
-  if (ImGui::BeginTable("##LinkTree", 2, tableFlags)) {
+  if (ImGui::BeginTable("##LinkTree", 3, tableFlags)) {
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("Link");
     ImGui::TableSetupColumn("Joint");
-    ImGui::TableHeadersRow();
+    ImGui::TableSetupVisibilityColumn();
+    if (ImGui::TableHeadersRowWithVisibilityToggle(_stage.GetNumHiddenActors() > 0)) {
+      if (_stage.GetNumHiddenActors() > 0) {
+        _stage.ShowAllActors();
+      } else {
+        _stage.HideAllActors();
+      }
+    }
 
     bool showlinkTreeHierarchical = _studio->GetAppSettings().botEditor.showlinkTreeHierarchical;
     if (showlinkTreeHierarchical) {
@@ -1571,7 +1592,13 @@ void BotEditor::ShowBotHierarchyWindow(bool* open) {
           flags |= ImGuiTreeNodeFlags_Selected;
         }
 
-        ImGui::PushStyleColor(ImGuiCol_Text, linkHasIssues ? warningColorLinks : defaultColor);
+        ImGui::PushStyleColor(
+            ImGuiCol_Text,
+            linkHasIssues                 ? warningColorLinks
+                : IsLinkHidden(linkIndex) ? hiddenColor
+                                          : defaultColor);
+        // Lets the row's eye take clicks over the row.
+        ImGui::SetNextItemAllowOverlap();
         bool nodeOpen = ImGui::TreeNodeEx(link.name.c_str(), flags);
         ImGui::PopStyleColor();
         if (ImGui::IsItemHovered()) {
@@ -1610,6 +1637,7 @@ void BotEditor::ShowBotHierarchyWindow(bool* open) {
         ImGui::TextUnformatted(joint.name.c_str());
         ImGui::PopStyleColor();
         ShowIssuesWarning(validateResults.jointIssues[linkIndex]);
+        ShowLinkVisibility(linkIndex);
 
         // Scroll to selected item and center it
         if (_forceLinkFocus && selected) {
@@ -1651,7 +1679,12 @@ void BotEditor::ShowBotHierarchyWindow(bool* open) {
         ImGui::PushID(i);
 
         ImGuiSelectableFlags selFlags = ImGuiSelectableFlags_SpanAllColumns;
-        ImGui::PushStyleColor(ImGuiCol_Text, linkHasIssues ? warningColorLinks : defaultColor);
+        ImGui::PushStyleColor(
+            ImGuiCol_Text,
+            linkHasIssues         ? warningColorLinks
+                : IsLinkHidden(i) ? hiddenColor
+                                  : defaultColor);
+        ImGui::SetNextItemAllowOverlap();
         if (ImGui::Selectable(link.name.c_str(), selected, selFlags)) {
           _selectedBotLinkIndex = i;
           FocusWindowIfOpen("Bot Link Details");
@@ -1679,6 +1712,7 @@ void BotEditor::ShowBotHierarchyWindow(bool* open) {
         ImGui::TextUnformatted(joint->name.c_str());
         ImGui::PopStyleColor();
         ShowIssuesWarning(validateResults.jointIssues[i]);
+        ShowLinkVisibility(i);
 
         if (_forceLinkFocus && selected) {
           ImGui::SetScrollHereY(0.5f);

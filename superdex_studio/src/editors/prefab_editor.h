@@ -205,6 +205,13 @@ class PrefabEditor : public AssetEditor {
       HierarchyEdits& edits);
   // Highlight a staged render object (if any) with the hierarchy hover color.
   void HighlightStagedObject(mochi_renderer::SceneObject* object);
+  // Indices of the staged actors a hierarchy row covers: one actor or link, or everything an
+  // articulated actor (links and skin) or nested prefab stages.
+  std::vector<int> StagedIndicesFor(Selection const& item) const;
+  // Whether everything a hierarchy row covers is hidden in the viewport.
+  bool IsHidden(Selection const& item) const;
+  // The last cell of a hierarchy row: the eye that hides or shows what the row covers.
+  void ShowVisibilityToggle(Selection const& item);
   void ShowPrefabDetailsWindow(bool* open);
   void ShowDetailsWindow(bool* open);
   void ShowContactFilterWindow(bool* open);

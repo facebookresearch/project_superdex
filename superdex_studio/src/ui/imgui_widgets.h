@@ -433,6 +433,16 @@ void IconInputPrefix(char const* icon, char const* tooltip = nullptr);
 
 bool TextButton(char const* label);
 
+// An eye that shows or hides something in the viewport: open while it is shown, slashed and dimmed
+// while hidden. Returns true when clicked.
+bool VisibilityToggle(char const* id, bool hidden);
+// The narrow column a hierarchy table keeps for its VisibilityToggle.
+void TableSetupVisibilityColumn();
+// TableHeadersRow for a table whose last column is TableSetupVisibilityColumn: that column's header
+// holds an eye for the whole table, slashed while @p anyHidden. Returns true when it is clicked;
+// the caller then shows everything if anything is hidden, and hides everything otherwise.
+bool TableHeadersRowWithVisibilityToggle(bool anyHidden);
+
 bool ButtonColored(char const* label, ImVec4 const& color, ImVec2 const& size = ImVec2(0, 0));
 
 // Renders one segment of a split-button (e.g. a toggle joined to a dropdown caret). Only the
