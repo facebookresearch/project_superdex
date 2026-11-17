@@ -415,6 +415,17 @@ struct Member {
 };
 
 struct WalkContext {
+  WalkContext(
+      std::string_view fullPath,
+      Span<std::string const> arguments,
+      size_t start,
+      TypeInfo const& root)
+      : path(fullPath),
+        args(arguments),
+        pathStart(std::min(start, fullPath.size())),
+        rootType(&root),
+        rootStep(LastStep(fullPath.substr(0, pathStart))) {}
+
   std::string_view path;
   Span<std::string const> args;
   size_t pathStart = 0;
@@ -697,16 +708,25 @@ static bool Walk(WalkContext& ctx, WalkNode const& node, size_t i, size_t end, O
   return ok;
 }
 
+// True for the exception picojson throws when asked to serialize a NaN or infinity
+static bool IsNonFiniteError(std::exception const& e) {
+  return std::string_view{e.what()} == "json: !finite";
+}
+
+static std::string NonFiniteMessage(std::string const& stepName) {
+  return stepName + " contains NaN or infinity, which JSON cannot show";
+}
+
 // Serialize value into output as pretty JSON, reporting a NaN or infinity at the current step.
 static bool
 ToOutput(WalkContext& ctx, TypeInfo const& type, void const* value, std::string& output) {
   try {
     output = SaveToJsonString(value, type, true);
   } catch (std::overflow_error const& e) {
-    if (std::string_view{e.what()} != "json: !finite") {
+    if (!IsNonFiniteError(e)) {
       throw;
     }
-    return ctx.FailAtStep(ctx.step, "Value contains NaN or infinity, which JSON cannot show");
+    return ctx.FailAtStep(ctx.step, NonFiniteMessage("Value"));
   }
   output.pop_back(); // Pretty JSON ends with a newline
   return true;
@@ -769,6 +789,11 @@ static bool LoadArgument(
   return true;
 }
 
+// The type of a member that is not a method
+static TypeInfo const& ValueType(Member const& member) {
+  return member.field != nullptr ? *member.field->_innerTypeInfo : *member.element.type;
+}
+
 // Call cb with the current value of a member that is not a method.
 static void VisitMemberValue(Member const& member, FunctionRef<void(void const*)> cb) {
   if (member.field == nullptr) {
@@ -781,7 +806,7 @@ static void VisitMemberValue(Member const& member, FunctionRef<void(void const*)
 // Read or set a value: a field or property, an array element or map value, or the object itself.
 static bool ExecuteValue(WalkContext& ctx, Member const& member, std::string& output) {
   FieldTypeInfo const* const field = member.field;
-  TypeInfo const& type = field != nullptr ? *field->_innerTypeInfo : *member.element.type;
+  TypeInfo const& type = ValueType(member);
   if (ctx.args.size() == 0) {
     bool ok = false;
     VisitMemberValue(member, [&](void const* value) { ok = ToOutput(ctx, type, value, output); });
@@ -889,30 +914,52 @@ static bool CallMethod(WalkContext& ctx, Member const& member, std::string& outp
 }
 
 static bool Execute(WalkContext& ctx, WalkNode const& root, std::string& output) {
-  try {
-    if (root.type->_coreType != CoreType::CT_struct) {
-      return ctx.FailAtStep(kNoStep, "Requires a class or struct");
-    } else if (!ParsePath(ctx)) {
-      return false;
-    } else if (ctx.steps.empty()) {
-      Member member;
-      member.element = root;
-      return ExecuteValue(ctx, member, output);
-    }
-    size_t const last = ctx.steps.size() - 1;
-    return Walk(ctx, root, 0, last, [&](WalkNode const& parent) {
-      Member member;
-      if (!FindMember(ctx, parent, last, member)) {
-        return false;
-      }
-      ctx.isMethod = member.method != nullptr;
-      return ctx.isMethod ? CallMethod(ctx, member, output) : ExecuteValue(ctx, member, output);
-    });
-  } catch (std::exception const& e) {
-    return ctx.FailAtStep(ctx.step, std::string{"Exception: "} + e.what());
-  } catch (...) {
-    return ctx.FailAtStep(ctx.step, "Exception: unknown");
+  if (ctx.steps.empty()) {
+    Member member;
+    member.element = root;
+    return ExecuteValue(ctx, member, output);
   }
+  size_t const last = ctx.steps.size() - 1;
+  return Walk(ctx, root, 0, last, [&](WalkNode const& parent) {
+    Member member;
+    if (!FindMember(ctx, parent, last, member)) {
+      return false;
+    }
+    ctx.isMethod = member.method != nullptr;
+    return ctx.isMethod ? CallMethod(ctx, member, output) : ExecuteValue(ctx, member, output);
+  });
+}
+
+// Check that the object is a struct and split the path, then call command. Exceptions are reported
+// at the step being processed. On failure, set outError, or log the error if it is null.
+static bool RunCommand(WalkContext& ctx, std::string* outError, FunctionRef<bool()> command) {
+  Span<std::string const> const args = ctx.args;
+  bool ok = false;
+  try {
+    if (ctx.rootType->_coreType != CoreType::CT_struct) {
+      ok = ctx.FailAtStep(kNoStep, "Requires a class or struct");
+    } else {
+      ok = ParsePath(ctx) && command();
+    }
+  } catch (std::exception const& e) {
+    ok = ctx.FailAtStep(ctx.step, std::string{"Exception: "} + e.what());
+  } catch (...) {
+    ok = ctx.FailAtStep(ctx.step, "Exception: unknown");
+  }
+  if (ok) {
+    if (outError != nullptr) {
+      outError->clear();
+    }
+    return true;
+  }
+  std::string error =
+      FormatConsoleError(ctx.error, ctx.path, args, ctx.errorToken, ctx.errorOffset);
+  if (outError != nullptr) {
+    *outError = std::move(error);
+  } else {
+    SR_LOG("%s", error.c_str());
+  }
+  return false;
 }
 
 bool detail::ConsoleExecute(
@@ -923,35 +970,256 @@ bool detail::ConsoleExecute(
     std::string* outString,
     std::string* outError,
     size_t pathStart) {
-  WalkContext ctx;
-  ctx.path = path;
-  ctx.args = args;
-  ctx.pathStart = std::min(pathStart, path.size());
-  ctx.rootType = &typeInfo;
-  ctx.rootStep = LastStep(path.substr(0, ctx.pathStart));
+  WalkContext ctx(path, args, pathStart, typeInfo);
+  WalkNode const root{obj, obj, &typeInfo};
   std::string output;
-  bool ok = Execute(ctx, {obj, obj, &typeInfo}, output);
-  if (ok && ctx.modified && !ctx.isMethod && outString != nullptr) {
-    // Read after enclosing setters finish so their adjustments are reflected in the output.
-    ctx.args = {};
-    ok = Execute(ctx, {nullptr, obj, &typeInfo}, output);
-  }
+  bool const ok = RunCommand(ctx, outError, [&] {
+    if (!Execute(ctx, root, output)) {
+      return false;
+    }
+    if (ctx.modified && !ctx.isMethod && outString != nullptr) {
+      // Read after enclosing setters finish so their adjustments are reflected in the output.
+      ctx.args = {};
+      return Execute(ctx, {nullptr, obj, &typeInfo}, output);
+    }
+    return true;
+  });
   if (outString != nullptr) {
     *outString = ok ? std::move(output) : std::string{};
   }
-  if (ok) {
-    if (outError != nullptr) {
-      outError->clear();
-    }
-    return true;
+  return ok;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// ConsoleList
+/////////////////////////////////////////////////////////////////////////////
+
+// Cut captured text at a UTF-8 character boundary. The caller supplies any ellipsis.
+static bool Truncate(std::string& text, size_t maxLength) {
+  if (text.size() <= maxLength) {
+    return false;
   }
-  std::string error = FormatConsoleError(ctx.error, path, args, ctx.errorToken, ctx.errorOffset);
-  if (outError != nullptr) {
-    *outError = std::move(error);
-  } else {
-    SR_LOG("%s", error.c_str());
+  size_t length = maxLength;
+  size_t const minLength = length > 3 ? length - 3 : 0;
+  while (length > minLength && (static_cast<unsigned char>(text[length]) & 0xC0) == 0x80) {
+    --length;
+  }
+  text.resize(length);
+  return true;
+}
+
+static bool IsDirectoryType(TypeInfo const& type) {
+  return type._coreType == CoreType::CT_struct || type._coreType == CoreType::CT_map ||
+      (type._coreType == CoreType::CT_array &&
+       type._typeId != GetTypeInfo<std::vector<bool>>()._typeId);
+}
+
+static bool IsPrimitiveType(TypeInfo const& type) {
+  switch (type._coreType) {
+    case CoreType::CT_string:
+    case CoreType::CT_bool:
+    case CoreType::CT_uint8:
+    case CoreType::CT_int8:
+    case CoreType::CT_uint16:
+    case CoreType::CT_int16:
+    case CoreType::CT_uint32:
+    case CoreType::CT_int32:
+    case CoreType::CT_uint64:
+    case CoreType::CT_int64:
+    case CoreType::CT_float:
+    case CoreType::CT_double:
+    case CoreType::CT_enum:
+      return true;
+    default:
+      return false;
+  }
+}
+
+// All possible values of this type are primitives or arrays of primitives.
+static bool IsPrimitiveOrPrimitiveArrayType(TypeInfo const& type) {
+  if (IsPrimitiveType(type)) {
+    return true;
+  } else if (type._coreType == CoreType::CT_array) {
+    return IsPrimitiveOrPrimitiveArrayType(*static_cast<ArrayTypeInfo const&>(type)._innerTypeInfo);
+  } else if (type._coreType == CoreType::CT_matrix) {
+    return IsPrimitiveOrPrimitiveArrayType(
+        *static_cast<MatrixTypeInfo const&>(type)._innerTypeInfo);
+  } else if (type._coreType == CoreType::CT_optional) {
+    return IsPrimitiveOrPrimitiveArrayType(
+        *static_cast<OptionalTypeInfo const&>(type)._innerTypeInfo);
+  } else if (type._coreType == CoreType::CT_variant) {
+    auto const& types = static_cast<VariantTypeInfo const&>(type)._innerTypes;
+    return std::all_of(types.begin(), types.end(), [](TypeInfo const* inner) {
+      return IsPrimitiveOrPrimitiveArrayType(*inner);
+    });
   }
   return false;
+}
+
+static bool ShouldSerializeValue(TypeInfo const& type, ConsoleListParams const& params) {
+  if (IsPrimitiveType(type)) {
+    return params._serializePrimitives;
+  }
+  return (type._coreType == CoreType::CT_array || type._coreType == CoreType::CT_matrix) &&
+      params._serializePrimitiveArrays && IsPrimitiveOrPrimitiveArrayType(type);
+}
+
+static std::string GetMethodSignature(MethodInfo const& method) {
+  std::string args;
+  for (MethodArgInfo const& arg : method._args) {
+    args += (args.empty() ? "" : ", ") + std::string{arg.GetTypeInfo()._nameWithNamespace} + " " +
+        arg._name;
+  }
+  TypeInfo const* const returnType = method.GetReturnTypeInfo();
+  return "(" + args + ") -> " + (returnType != nullptr ? returnType->_nameWithNamespace : "void");
+}
+
+// visit is called only when classification or requested serialization needs the value.
+template <typename Name, typename Visit>
+static void AddConsoleListEntry(
+    std::vector<ConsoleListEntry>& entries,
+    Name const& name,
+    TypeInfo const& type,
+    Visit const& visit,
+    ConsoleListParams const& params) {
+  ConsoleListEntry& entry = entries.emplace_back();
+  entry._name = "?";
+  entry._typeName = StripNamespaces(type._nameWithNamespace);
+  entry._typeNameWithNamespace = type._nameWithNamespace;
+  bool const wrapped =
+      type._coreType == CoreType::CT_optional || type._coreType == CoreType::CT_variant;
+  std::optional<std::string> text;
+  std::string error;
+  try {
+    text = name();
+    entry._name = FormatPathStep(*text);
+    entry._kind = IsDirectoryType(type) ? ConsoleEntryKind::Directory : ConsoleEntryKind::Field;
+    if (!wrapped && !ShouldSerializeValue(type, params)) {
+      return;
+    }
+    visit([&](void const* value) {
+      WalkNode node{nullptr, value, &type};
+      bool const unwrapped = Unwrap(node);
+      if (unwrapped && IsDirectoryType(*node.type)) {
+        entry._kind = ConsoleEntryKind::Directory;
+      }
+      bool const serialize =
+          unwrapped ? ShouldSerializeValue(*node.type, params) : params._serializePrimitives;
+      if (serialize) {
+        entry._value = SaveToJsonString(value, type, false);
+        entry._isValueTruncated = Truncate(entry._value, params._maxValueLength);
+      }
+    });
+    return;
+  } catch (std::exception const& e) {
+    error = IsNonFiniteError(e) ? NonFiniteMessage(text ? "Value" : "The key") : e.what();
+  } catch (...) {
+    error = "unknown exception";
+  }
+  entry._value.clear();
+  entry._valueError = error.empty() ? "exception with no message" : std::move(error);
+  entry._isValueTruncated = false;
+}
+
+static bool ListValue(
+    WalkContext& ctx,
+    WalkNode node,
+    size_t step,
+    std::vector<ConsoleListEntry>& entries,
+    ConsoleListParams const& params) {
+  if (!Unwrap(node)) {
+    return FailUnwrap(ctx, step, node);
+  } else if (!IsDirectoryType(*node.type)) {
+    return ctx.FailAtStep(step, "Not a directory");
+  }
+  TypeInfo const& type = *node.type;
+  if (type._coreType == CoreType::CT_struct) {
+    auto const& structType = static_cast<StructTypeInfo const&>(type);
+    for (FieldTypeInfo const* field : structType._fields) {
+      if (!field->HasAttribute<Attribute_HideFromEditor>()) {
+        auto const name = [&] { return std::string{field->_name}; };
+        AddConsoleListEntry(
+            entries,
+            name,
+            *field->_innerTypeInfo,
+            [&](auto const& cb) { field->VisitValue(node.constValue, cb); },
+            params);
+      }
+    }
+    for (MethodInfo const* method : structType._methods) {
+      if (!method->HasAttribute<Attribute_HideFromEditor>()) {
+        ConsoleListEntry& entry = entries.emplace_back();
+        entry._kind = ConsoleEntryKind::Method;
+        entry._name = method->_name;
+        entry._typeNameWithNamespace = GetMethodSignature(*method);
+        entry._typeName = StripNamespaces(entry._typeNameWithNamespace);
+      }
+    }
+  } else if (type._coreType == CoreType::CT_array) {
+    auto const& arrayType = static_cast<ArrayTypeInfo const&>(type);
+    size_t const size = arrayType.GetNumElements(node.constValue);
+    for (size_t i = 0; i < size; ++i) {
+      auto const name = [&] { return std::to_string(i); };
+      AddConsoleListEntry(
+          entries,
+          name,
+          *arrayType._innerTypeInfo,
+          [&](auto const& cb) { cb(arrayType.GetElement(node.constValue, i)); },
+          params);
+    }
+  } else {
+    auto const& mapType = static_cast<MapTypeInfo const&>(type);
+    mapType.Enumerate(node.constValue, [&](void const* key, void const* value) {
+      auto const name = [&] { return MapKeyText(mapType, key); };
+      AddConsoleListEntry(
+          entries, name, *mapType._valueTypeInfo, [&](auto const& cb) { cb(value); }, params);
+      return true;
+    });
+    std::sort(entries.begin(), entries.end(), [](auto const& a, auto const& b) {
+      return a._name < b._name;
+    });
+  }
+  return true;
+}
+
+static bool List(
+    WalkContext& ctx,
+    WalkNode const& root,
+    std::vector<ConsoleListEntry>& entries,
+    ConsoleListParams const& params) {
+  if (ctx.steps.empty()) {
+    return ListValue(ctx, root, kNoStep, entries, params);
+  }
+  size_t const last = ctx.steps.size() - 1;
+  return Walk(ctx, root, 0, last, [&](WalkNode const& parent) {
+    Member member;
+    if (!FindMember(ctx, parent, last, member)) {
+      return false;
+    } else if (member.method != nullptr) {
+      return ctx.FailAtStep(last, "Not a directory");
+    }
+    bool ok = false;
+    VisitMemberValue(member, [&](void const* value) {
+      ok = ListValue(ctx, {nullptr, value, &ValueType(member)}, last, entries, params);
+    });
+    return ok;
+  });
+}
+
+std::vector<ConsoleListEntry> ConsoleList(
+    void const* obj,
+    TypeInfo const& typeInfo,
+    std::string_view path,
+    ConsoleListParams const& params,
+    std::string* outError,
+    size_t pathStart) {
+  WalkContext ctx(path, {}, pathStart, typeInfo);
+  WalkNode const root{nullptr, obj, &typeInfo};
+  std::vector<ConsoleListEntry> entries;
+  if (!RunCommand(ctx, outError, [&] { return List(ctx, root, entries, params); })) {
+    entries.clear();
+  }
+  return entries;
 }
 
 bool ConsoleExecute(
@@ -962,9 +1230,9 @@ bool ConsoleExecute(
     std::string* outError) {
   std::string error;
   size_t errorOffset = 0;
-  auto const tokens = detail::ConsoleTokenize(command, error, &errorOffset);
+  auto const tokens = ConsoleTokenize(command, error, &errorOffset);
   if (error.empty() && !tokens.empty()) {
-    return detail::ConsoleExecute(
+    return ConsoleExecute(
         obj, typeInfo, tokens.front(), {tokens.data() + 1, tokens.size() - 1}, outString, outError);
   }
   if (error.empty()) {

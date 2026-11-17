@@ -404,6 +404,9 @@ void InitVariantTypeInfo(
     size_t alignment,
     bool isTriviallyCopyable);
 
+// Quote a path step when its name contains path syntax or control characters.
+[[nodiscard]] std::string FormatPathStep(std::string_view name);
+
 } // namespace detail
 
 /////////////////////////////////////////////////////////////////////////////

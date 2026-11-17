@@ -2057,6 +2057,53 @@ TEST(SReflect, EnumValuesWithoutAnItemRoundTrip) {
   }
 }
 
+TEST(SReflect, IssuePathsQuoteMapKeys) {
+  for (auto const& [key, expectedPath] :
+       {std::pair<std::string, std::string>{"name", "name"},
+        {"", "\"\""},
+        {".", "\".\""},
+        {"..", "\"..\""},
+        {"a/b", "\"a/b\""},
+        {"say \"hi\"", "\"say \\\"hi\\\"\""},
+        {"a\nb", "\"a\\nb\""},
+        {"a\\b", "a\\b"},
+        {"a[1]", "a[1]"}}) {
+    SCOPED_TRACE(key);
+    std::unordered_map<std::string, int32_t> obj;
+    picojson::value const json{picojson::object{{key, picojson::value{std::string{"invalid"}}}}};
+    SReflect::IssueList issues;
+    EXPECT_FALSE(SReflect::FromJsonValue(obj, json, SReflect::DeserializeFlags::Default, &issues));
+    ASSERT_EQ(1u, issues.size());
+    EXPECT_EQ(expectedPath, issues.front()._path);
+  }
+}
+
+template <typename T>
+struct NamespaceContainer {
+  struct Inner {};
+};
+
+} // namespace SReflectTest
+
+SR_BeginStructEx(SReflectTest::NamespaceContainer<std::string>::Inner);
+SR_EndStructEx();
+
+namespace SReflectTest {
+
+TEST(SReflect, TypeNamesPreserveNestedTemplateScopes) {
+  using Inner = NamespaceContainer<std::string>::Inner;
+  auto const& innerType = SReflect::GetTypeInfo<Inner>();
+  EXPECT_STREQ("NamespaceContainer<string>::Inner", innerType._name);
+  EXPECT_STREQ(
+      "SReflectTest::NamespaceContainer<std::string>::Inner", innerType._nameWithNamespace);
+  using Nested = std::vector<std::pair<std::string, Inner>>;
+  auto const& nestedType = SReflect::GetTypeInfo<Nested>();
+  EXPECT_STREQ("vector<pair<string,NamespaceContainer<string>::Inner>>", nestedType._name);
+  EXPECT_STREQ(
+      "std::vector<std::pair<std::string,SReflectTest::NamespaceContainer<std::string>::Inner>>",
+      nestedType._nameWithNamespace);
+}
+
 TEST(SReflect, MissingFieldIsReportedAtTheField) {
   IssueOuter obj;
   SReflect::IssueList issues;

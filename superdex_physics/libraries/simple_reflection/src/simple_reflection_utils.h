@@ -18,11 +18,15 @@
 
 #include <iostream>
 #include <string>
+#include <string_view>
 
 // Internal to the simple_reflection library. Not installed with the public headers.
 namespace SReflect::detail {
 
 std::string Format(char const* format, ...);
+
+// Keep scopes after template arguments, such as vector<int>::iterator.
+[[nodiscard]] std::string StripNamespaces(std::string_view typeName);
 
 } // namespace SReflect::detail
 

@@ -75,6 +75,8 @@ SR_EndStructDefinitionEx();
 namespace SReflect {
 
 using detail::Format;
+using detail::FormatPathStep;
+using detail::StripNamespaces;
 
 // Maximum allowed length for a type name
 static constexpr size_t kMaxTypeNameLen = 256;
@@ -116,47 +118,13 @@ std::string detail::Format(const char* format, ...) {
 // Utilities
 /////////////////////////////////////////////////////////////////////////////
 
-static char const* MakeTypeNameWithoutAnyNamespace(char const* nameWithNamespace) {
-  // Remove all namespaces from the name and return a newly allocated string.
-  // Example: "std::vector<std::pair<std::string,X::Thing>>" --> "vector<pair<string,Thing>>"
-  std::array<char, kMaxTypeNameLen> buf;
-  auto dstBegin = buf.begin();
-  auto dst = buf.begin();
-  auto const srcLen = strlen(nameWithNamespace);
-  char const* src = nameWithNamespace + srcLen - 1;
-  char const* srcREnd = nameWithNamespace;
-  while (src >= srcREnd) {
-    // Look for "::"
-    if (src >= srcREnd + 2 && *src == ':' && *(src - 1) == ':') {
-      // Skip next identifier in reverse order
-      src -= 2;
-      while ((src >= srcREnd) &&
-             ((*src >= 'A' && *src <= 'Z') || (*src >= 'a' && *src <= 'z') ||
-              (*src >= '0' && *src <= '9') || *src == '_')) {
-        src--;
-      }
-    } else {
-      *dst = *src;
-      ++dst;
-      --src;
-    }
-  }
-  // Allocate a copy of the buffer and reverse direction
-  auto const dstLen = dst - dstBegin;
-  char* out = new char[dstLen + 1];
-  memcpy(out, buf.data(), dstLen);
-  std::reverse(out, out + dstLen);
-  out[dstLen] = '\0';
-  return out;
-}
-
 static char const* GetTypeNameWithoutNamespace(const char* nameWithNamespace) {
   // Return just the type name without any namespaces.
   // Example: "MyNamespace::Thing" --> "Thing"
   char const* templateArgs = strchr(nameWithNamespace, '<');
   if (templateArgs) {
     // Remove namespaces from template argument types as well.
-    return MakeTypeNameWithoutAnyNamespace(nameWithNamespace);
+    return detail::MakeTypeName(StripNamespaces(nameWithNamespace).c_str());
   } else {
     // Return the substring that starts after the last colon
     char const* lastColon = strrchr(nameWithNamespace, ':');
@@ -213,6 +181,33 @@ std::string IssueReport::ToString() const {
   return _path.empty() ? _description : _path + ": " + _description;
 }
 
+std::string detail::StripNamespaces(std::string_view typeName) {
+  std::string result;
+  size_t identifierStart = 0; // Where the identifier being copied starts in result
+  bool inNestedName = false; // Copying the scopes after a template, as in vector<int>::iterator
+  for (size_t i = 0; i < typeName.size(); ++i) {
+    char const c = typeName[i];
+    if (c == ':' && i + 1 < typeName.size() && typeName[i + 1] == ':') {
+      inNestedName = inNestedName || (!result.empty() && result.back() == '>');
+      if (inNestedName) {
+        result += "::";
+      } else {
+        result.resize(identifierStart);
+      }
+      ++i;
+    } else {
+      result += c;
+      bool const isIdentifierChar =
+          (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
+      if (!isIdentifierChar) {
+        identifierStart = result.size();
+        inNestedName = false;
+      }
+    }
+  }
+  return result;
+}
+
 // Write text as a JSON string, so that it reads as one unambiguous line inside a description
 static std::string QuoteJson(std::string_view text) {
   return picojson::value{std::string{text}}.serialize();
@@ -223,7 +218,7 @@ Write a field name or map key as one step of a path (see IssueReport). Return na
 JSON string if it is empty, is "." or "..", or contains '/', '"' or a control character (below
 0x20). Quoting control characters keeps a path on one line.
 */
-static std::string FormatPathStep(std::string_view name) {
+std::string detail::FormatPathStep(std::string_view name) {
   auto const forcesQuotes = [](char c) {
     return c == '/' || c == '"' || static_cast<unsigned char>(c) < 0x20;
   };
@@ -3468,7 +3463,7 @@ ArrayTypeInfo* detail::MakeFixedArrayTypeInfoImpl(
       // Use the provided name with namespace as-is
       ti->_nameWithNamespace = nameWithNamespace;
       // Remove all namespaces from the name, including namespaces on inner types which might exist.
-      ti->_name = MakeTypeNameWithoutAnyNamespace(nameWithNamespace);
+      ti->_name = MakeTypeName(StripNamespaces(nameWithNamespace).c_str());
     }
   } else {
     // Format as "T[N]"

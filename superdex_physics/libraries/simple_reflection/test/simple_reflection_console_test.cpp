@@ -19,6 +19,8 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <optional>
@@ -141,6 +143,46 @@ namespace {
 
 enum class Kind { Rigid, Soft };
 
+// A row-major float matrix with fixed dimensions
+template <size_t kRows, size_t kColumns>
+struct Matrix {
+  std::array<float, kRows * kColumns> values;
+};
+
+template <size_t kRows, size_t kColumns>
+class MatrixInfo final : public SReflect::MatrixTypeInfo {
+ public:
+  MatrixInfo() {
+    _coreType = SReflect::CoreType::CT_matrix;
+    _sizeInBytes = sizeof(Matrix<kRows, kColumns>);
+    _alignment = alignof(Matrix<kRows, kColumns>);
+    _name = _nameStorage.c_str();
+    _nameWithNamespace = _name;
+    _typeId = SReflect::ComputeTypeId(_name);
+    _innerTypeInfo = &SReflect::GetTypeInfo<float>();
+    _isRowMajor = true;
+    _fixedNumRows = kRows;
+    _fixedNumColumns = kColumns;
+  }
+
+  void* GetData(void* obj) const override {
+    return static_cast<Matrix<kRows, kColumns>*>(obj)->values.data();
+  }
+
+  bool TryResize(void* /*obj*/, size_t rows, size_t columns) const override {
+    return rows == kRows && columns == kColumns;
+  }
+
+ protected:
+  Layout GetLayoutImpl(void const* /*obj*/) const override {
+    return {kRows, kColumns, kColumns};
+  }
+
+ private:
+  std::string const _nameStorage =
+      "Matrix" + std::to_string(kRows) + "x" + std::to_string(kColumns);
+};
+
 } // namespace
 } // namespace SReflectConsoleTest
 
@@ -148,6 +190,15 @@ SR_BeginEnum(SReflectConsoleTest::Kind);
 SR_EnumItem(Rigid);
 SR_EnumItem(Soft);
 SR_EndEnum();
+
+template <size_t kRows, size_t kColumns>
+struct SReflectTypeTraits<SReflectConsoleTest::Matrix<kRows, kColumns>> {
+  static constexpr SReflect::CoreType coreType = SReflect::CoreType::CT_matrix;
+  static SReflect::MatrixTypeInfo const& GetTypeInfo() {
+    static SReflectConsoleTest::MatrixInfo<kRows, kColumns> const info;
+    return info;
+  }
+};
 
 namespace SReflectConsoleTest {
 
@@ -181,12 +232,23 @@ struct Fragile {
   SR_EndStruct();
 };
 
-// Holds a variant that tests make valueless
+// Holds values that a listing cannot show. Tests make the variant valueless.
 struct Box {
   std::variant<int32_t, Fragile> content;
+  std::unordered_map<float, int32_t> weights{
+      {1.5f, 1},
+      {std::numeric_limits<float>::quiet_NaN(), 2}};
 
   SR_BeginStruct(SReflectConsoleTest::Box);
   SR_Field(content);
+  SR_Field(weights);
+  // Throws a message with two lines while the variant is valueless
+  SR_Property("note", [](Box const& box) {
+    if (box.content.valueless_by_exception()) {
+      throw std::runtime_error("line one\nline two");
+    }
+    return std::string{};
+  });
   SR_EndStruct();
 };
 
@@ -203,7 +265,7 @@ struct Part {
       "limit",
       [](Part const& p) {
         if (p.limitStorage < 0) {
-          throw std::runtime_error("limit is corrupted");
+          throw std::runtime_error(p.limitStorage == -2 ? "" : "limit is corrupted");
         }
         return p.limitStorage;
       },
@@ -231,10 +293,12 @@ struct Part {
   });
   // A return type that isn't default constructible
   SR_Method("snapshot()", [](Part const& p) { return NoDefault{p.mass}; });
+  SR_Method("debugDump()", [](Part const&) {});
+  SRA_HideFromEditor();
   SR_EndStruct();
 };
 
-// Shared by the ConsoleExecute tests. Each member covers a different kind of step or value.
+// Shared by the console tests. Each member covers a different kind of step or value.
 struct Machine {
   int32_t count = 3;
   std::string name = "m1";
@@ -248,6 +312,7 @@ struct Machine {
   std::unordered_map<std::string, Part> named{{"a/b", Part{4.0f, "ab"}}, {"..", Part{5.0f, "up"}}};
   std::optional<Part> spare;
   std::variant<int32_t, Part> slot{Part{6.0f, "slot"}};
+  std::vector<std::unordered_map<std::string, int32_t>> tables{{{"x", 1}}};
   Part coreStorage;
   mutable int32_t coreGetCount = 0;
   int32_t coreSetCount = 0;
@@ -267,6 +332,7 @@ struct Machine {
   SR_Field(named);
   SR_Field(spare);
   SR_Field(slot);
+  SR_Field(tables);
   // A writable property that counts accessor calls and keeps mass between 0 and 10
   SR_Property(
       "core",
@@ -282,8 +348,9 @@ struct Machine {
         m.coreStorage.mass = std::min(core.mass, 10.0f);
         ++m.coreSetCount;
       });
-  // A read-only property
+  // A read-only property, left out of listings
   SR_Property("view", [](Machine const& m) { return m.base; });
+  SRA_HideFromEditor();
   SR_EndStruct();
 };
 
@@ -342,7 +409,49 @@ struct BulkValues {
   SR_EndStruct();
 };
 
+struct ArrayCases {
+  mutable int32_t primitiveGets = 0;
+  std::array<float, 3> positionStorage{1, 2, 3};
+  mutable int32_t positionGets = 0;
+  int32_t positionSets = 0;
+  std::array<std::array<int32_t, 2>, 2> nested{{{1, 2}, {3, 4}}};
+  std::vector<std::optional<Part>> parts{Part{}, std::nullopt};
+  std::vector<bool> flags{true, false};
+
+  SR_BeginStruct(SReflectConsoleTest::ArrayCases);
+  SR_Property("count", [](ArrayCases const& obj) {
+    ++obj.primitiveGets;
+    return int32_t{5};
+  });
+  SR_Property(
+      "position",
+      [](ArrayCases const& obj) {
+        ++obj.positionGets;
+        return obj.positionStorage;
+      },
+      [](ArrayCases& obj, std::array<float, 3> const& value) {
+        obj.positionStorage = value;
+        ++obj.positionSets;
+      });
+  SR_Field(nested);
+  SR_Field(parts);
+  SR_Field(flags);
+  SR_EndStruct();
+};
+
+struct MatrixCases {
+  Matrix<2, 3> grid{{1, 2, 3, 4, 5, 6}};
+  Matrix<3, 1> column{{7, 8, 9}};
+
+  SR_BeginStruct(SReflectConsoleTest::MatrixCases);
+  SR_Field(grid);
+  SR_Field(column);
+  SR_EndStruct();
+};
+
 using Step = std::tuple<std::string, size_t, size_t, bool>; // name, offset, length, isQuoted
+// A ConsoleListEntry: the initial of its kind, then name, type and value
+using Row = std::tuple<char, std::string, std::string, std::string>;
 
 } // namespace
 
@@ -1084,6 +1193,430 @@ TEST(SReflectConsole, ValuelessVariant) {
   std::string error;
   EXPECT_FALSE(SReflect::detail::ConsoleExecute(&box, "content/label", {}, nullptr, &error));
   EXPECT_EQ(error, "Variant \"content\" has no value\n  | content/label\n  | ^");
+}
+
+// List a path that should succeed, as rows.
+template <typename T>
+static std::vector<Row> List(
+    T const& obj,
+    std::string_view path,
+    size_t pathStart = 0,
+    SReflect::ConsoleListParams const& params = {}) {
+  std::string error = "not cleared";
+  auto const entries = SReflect::ConsoleList(&obj, path, params, &error, pathStart);
+  EXPECT_EQ(error, "");
+  std::vector<Row> rows;
+  rows.reserve(entries.size());
+  for (SReflect::ConsoleListEntry const& entry : entries) {
+    rows.emplace_back(
+        SReflect::EnumToString(entry._kind)[0], entry._name, entry._typeName, entry._value);
+  }
+  return rows;
+}
+
+using ValueError = std::pair<std::string, std::string>;
+
+template <typename T>
+static std::vector<ValueError> ListValueErrors(
+    T const& obj,
+    std::string_view path,
+    SReflect::ConsoleListParams const& params = {}) {
+  std::string error = "not cleared";
+  auto const entries = SReflect::ConsoleList(&obj, path, params, &error);
+  EXPECT_TRUE(error.empty());
+  std::vector<ValueError> errors;
+  for (auto const& entry : entries) {
+    if (!entry._valueError.empty()) {
+      EXPECT_TRUE(entry._value.empty());
+      EXPECT_FALSE(entry._isValueTruncated);
+      errors.emplace_back(entry._name, entry._valueError);
+    }
+  }
+  return errors;
+}
+
+// List a path that should fail and return the error.
+template <typename T>
+static std::string ListError(T const& obj, std::string_view path, size_t pathStart = 0) {
+  std::string error;
+  auto const entries = SReflect::ConsoleList(&obj, path, {}, &error, pathStart);
+  EXPECT_FALSE(error.empty());
+  EXPECT_TRUE(entries.empty());
+  return error;
+}
+
+// Replace the row that has the same name as row.
+static void ReplaceRow(std::vector<Row>& rows, Row const& row) {
+  auto const it = std::find_if(
+      rows.begin(), rows.end(), [&](Row const& r) { return std::get<1>(r) == std::get<1>(row); });
+  ASSERT_NE(it, rows.end()) << std::get<1>(row);
+  *it = row;
+}
+
+// The listing of a Part with limit 0
+static std::vector<Row> PartRows(std::string const& mass, std::string const& label) {
+  return {
+      {'F', "mass", "float", mass},
+      {'F', "label", "string", "\"" + label + "\""},
+      {'F', "limit", "int32", "0"},
+      {'M', "scaled", "(float factor) -> float", ""},
+      {'M', "add", "(float amount, string note) -> float", ""},
+      {'M', "clear", "() -> void", ""},
+      {'M', "snapshot", "() -> NoDefault", ""},
+  };
+}
+
+TEST(SReflectConsole, List) {
+  Machine m;
+  // Fields and properties in declaration order, leaving out the hidden "view"
+  std::vector<Row> rows{
+      {'F', "count", "int32", "3"},
+      {'F', "name", "string", "\"m1\""},
+      {'F', "kind", "Kind", "\"Rigid\""},
+      {'F', "enabled", "bool", "true"},
+      {'D', "factory", "Part", ""},
+      {'F', "ratio", "float", "0.5"},
+      {'D', "weights", "vector<float>", "[0.5,1.5]"},
+      {'D', "base", "Part", ""},
+      {'D', "parts", "vector<Part>", ""},
+      {'D', "named", "unordered_map<string,Part>", ""},
+      {'F', "spare", "optional<Part>", "null"},
+      {'D', "slot", "variant<int32,Part>", ""},
+      {'D', "tables", "vector<unordered_map<string,int32>>", ""},
+      {'D', "core", "Part", ""},
+  };
+  EXPECT_EQ(List(m, ""), rows);
+  // A member whose type is always a directory is not read.
+  EXPECT_EQ(m.coreGetCount, 0);
+
+  // Methods come after fields, leaving out the hidden "debugDump".
+  EXPECT_EQ(List(m, "base"), PartRows("1", ""));
+
+  // Hidden members can still be named in a path.
+  EXPECT_EQ(List(m, "view"), PartRows("1", ""));
+  EXPECT_EQ(Execute(m, "base/debugDump"), "");
+
+  // Listing a property reads it once and never writes it.
+  EXPECT_EQ(List(m, "core"), PartRows("1", ""));
+  EXPECT_EQ(m.coreGetCount, 1);
+  EXPECT_EQ(m.coreSetCount, 0);
+
+  // An optional or variant is a directory while it holds one, and keeps its declared type.
+  m.spare = Part{};
+  m.slot = 7;
+  ReplaceRow(rows, {'D', "spare", "optional<Part>", ""});
+  ReplaceRow(rows, {'F', "slot", "variant<int32,Part>", "{\"int32\":7}"});
+  EXPECT_EQ(List(m, ""), rows);
+}
+
+TEST(SReflectConsole, ListContainers) {
+  Machine m;
+  EXPECT_EQ(List(m, "parts"), (std::vector<Row>{{'D', "0", "Part", ""}, {'D', "1", "Part", ""}}));
+  EXPECT_EQ(List(m, "parts/1"), PartRows("3", "p1"));
+
+  // Map keys are sorted, and quoted when needed.
+  m.named["b"] = Part{};
+  m.named["a"] = Part{};
+  EXPECT_EQ(
+      List(m, "named"),
+      (std::vector<Row>{
+          {'D', "\"..\"", "Part", ""},
+          {'D', "\"a/b\"", "Part", ""},
+          {'D', "a", "Part", ""},
+          {'D', "b", "Part", ""}}));
+
+  // Quoted keys, variants and optionals lead to the value they hold.
+  EXPECT_EQ(List(m, "named/\"a/b\""), PartRows("4", "ab"));
+  EXPECT_EQ(List(m, "named/\"..\""), PartRows("5", "up"));
+  EXPECT_EQ(List(m, "slot"), PartRows("6", "slot"));
+  m.spare = Part{7.0f, "s"};
+  EXPECT_EQ(List(m, "spare"), PartRows("7", "s"));
+
+  // An array of maps, whose values are not directories
+  EXPECT_EQ(List(m, "tables"), (std::vector<Row>{{'D', "0", "unordered_map<string,int32>", ""}}));
+  EXPECT_EQ(List(m, "tables/0"), (std::vector<Row>{{'F', "x", "int32", "1"}}));
+
+  // The caller resolved "machine/" to reach m.
+  EXPECT_EQ(List(m, "machine/base", 8), PartRows("1", ""));
+}
+
+TEST(SReflectConsole, ListValues) {
+  Machine m;
+  std::vector<Row> rows = List(m, "");
+
+  // A NaN or a getter that throws only affects that entry.
+  m.ratio = std::numeric_limits<float>::quiet_NaN();
+  ReplaceRow(rows, {'F', "ratio", "float", ""});
+  EXPECT_EQ(List(m, ""), rows);
+  EXPECT_EQ(
+      ListValueErrors(m, ""),
+      (std::vector<ValueError>{
+          {"ratio", "Value contains NaN or infinity, which JSON cannot show"}}));
+  m.base.limitStorage = -1;
+  std::vector<Row> base = PartRows("1", "");
+  ReplaceRow(base, {'F', "limit", "int32", ""});
+  EXPECT_EQ(List(m, "base"), base);
+  for (size_t cap : {0, 4, 1024}) {
+    EXPECT_EQ(
+        ListValueErrors(m, "base", {cap}),
+        (std::vector<ValueError>{{"limit", "limit is corrupted"}}));
+  }
+  EXPECT_TRUE(ListValueErrors(m, "base", {0, false, false}).empty());
+  m.base.limitStorage = -2;
+  EXPECT_EQ(
+      ListValueErrors(m, "base", {0}),
+      (std::vector<ValueError>{{"limit", "exception with no message"}}));
+}
+
+TEST(SReflectConsole, ListErrors) {
+  Machine m;
+  EXPECT_EQ(
+      ListError(m, "count"),
+      "Not a directory\n"
+      "  | count\n"
+      "  | ^");
+  EXPECT_EQ(
+      ListError(m, "weights/0"),
+      "Not a directory\n"
+      "  | weights/0\n"
+      "  |         ^");
+  EXPECT_EQ(
+      ListError(m, "base/add"),
+      "Not a directory\n"
+      "  | base/add\n"
+      "  |      ^");
+  EXPECT_EQ(
+      ListError(m, "spare"),
+      "Optional \"spare\" has no value\n"
+      "  | spare\n"
+      "  | ^");
+  EXPECT_EQ(
+      ListError(m, "base/nope"),
+      "\"nope\" not found\n"
+      "  | base/nope\n"
+      "  |      ^");
+  EXPECT_EQ(
+      ListError(m, "machine/count", 8),
+      "Not a directory\n"
+      "  | machine/count\n"
+      "  |         ^");
+  m.slot = 7;
+  EXPECT_EQ(
+      ListError(m, "slot"),
+      "Not a directory\n"
+      "  | slot\n"
+      "  | ^");
+
+  // Without outError, the error is logged and the listing is cleared.
+  testing::internal::CaptureStdout();
+  EXPECT_TRUE(SReflect::ConsoleList(&m, "nope").empty());
+  EXPECT_EQ(
+      testing::internal::GetCapturedStdout(),
+      "[Simple Reflection] \"nope\" not found\n  | nope\n  | ^\n");
+
+  float const notAStruct = 0;
+  std::string error;
+  EXPECT_TRUE(
+      SReflect::ConsoleList(&notAStruct, SReflect::GetTypeInfo<float>(), "", {}, &error).empty());
+  EXPECT_EQ(error, "Requires a class or struct\n  | ''\n  | ^");
+}
+
+TEST(SReflectConsole, ListValuesThatCannotBeShown) {
+  Box box;
+  MakeValueless(box);
+  ASSERT_TRUE(box.content.valueless_by_exception());
+
+  // Entry errors preserve the exception message.
+  EXPECT_EQ(
+      List(box, ""),
+      (std::vector<Row>{
+          {'F', "content", "variant<int32,Fragile>", ""},
+          {'D', "weights", "unordered_map<float,int32>", ""},
+          {'F', "note", "string", ""}}));
+  EXPECT_EQ(
+      ListValueErrors(box, ""),
+      (std::vector<ValueError>{{"content", "Invalid type index"}, {"note", "line one\nline two"}}));
+  EXPECT_EQ(
+      ListError(box, "content"),
+      "Variant \"content\" has no value\n"
+      "  | content\n"
+      "  | ^");
+
+  // A key that cannot be shown gets an entry of its own.
+  EXPECT_EQ(
+      List(box, "weights"),
+      (std::vector<Row>{{'F', "1.5", "int32", "1"}, {'F', "?", "int32", ""}}));
+  EXPECT_EQ(
+      ListValueErrors(box, "weights"),
+      (std::vector<ValueError>{{"?", "The key contains NaN or infinity, which JSON cannot show"}}));
+}
+
+TEST(SReflectConsole, ListPrimitiveArrays) {
+  ArrayCases obj;
+  EXPECT_EQ(
+      List(obj, ""),
+      (std::vector<Row>{
+          {'F', "count", "int32", "5"},
+          {'D', "position", "array<float,3>", "[1,2,3]"},
+          {'D', "nested", "array<array<int32,2>,2>", "[[1,2],[3,4]]"},
+          {'D', "parts", "vector<optional<Part>>", ""},
+          {'F', "flags", "vector<bool>", "[true,false]"}}));
+  EXPECT_EQ(
+      List(obj, "position"),
+      (std::vector<Row>{
+          {'F', "0", "float", "1"}, {'F', "1", "float", "2"}, {'F', "2", "float", "3"}}));
+  EXPECT_EQ(
+      List(obj, "nested"),
+      (std::vector<Row>{
+          {'D', "0", "array<int32,2>", "[1,2]"}, {'D', "1", "array<int32,2>", "[3,4]"}}));
+  EXPECT_EQ(
+      List(obj, "parts"),
+      (std::vector<Row>{{'D', "0", "optional<Part>", ""}, {'F', "1", "optional<Part>", "null"}}));
+  EXPECT_EQ(ListError(obj, "flags"), "Not a directory\n  | flags\n  | ^");
+
+  EXPECT_EQ(Execute(obj, "position/0", {"42.0"}), "42");
+  EXPECT_EQ(obj.positionStorage, (std::array<float, 3>{42, 2, 3}));
+  EXPECT_EQ(obj.positionSets, 1);
+  obj.parts.clear();
+  std::string error = "not cleared";
+  EXPECT_TRUE(SReflect::ConsoleList(&obj, "parts", {}, &error).empty());
+  EXPECT_TRUE(error.empty());
+}
+
+TEST(SReflectConsole, ListPrimitiveMatrices) {
+  MatrixCases obj;
+  for (bool primitives : {false, true}) {
+    for (bool arrays : {false, true}) {
+      EXPECT_EQ(
+          List(obj, "", 0, {1024, primitives, arrays}),
+          (std::vector<Row>{
+              {'F', "grid", "Matrix2x3", arrays ? "[[1,2,3],[4,5,6]]" : ""},
+              {'F', "column", "Matrix3x1", arrays ? "[7,8,9]" : ""}}));
+    }
+  }
+  EXPECT_EQ(ListError(obj, "grid"), "Not a directory\n  | grid\n  | ^");
+  auto const entries = SReflect::ConsoleList(&obj, "", {4});
+  ASSERT_EQ(entries.size(), 2);
+  EXPECT_EQ(entries[0]._value, "[[1,");
+  EXPECT_EQ(entries[1]._value, "[7,8");
+  EXPECT_TRUE(entries[0]._isValueTruncated);
+  EXPECT_TRUE(entries[1]._isValueTruncated);
+}
+
+TEST(SReflectConsole, ListSerializationOptions) {
+  for (bool primitives : {false, true}) {
+    for (bool arrays : {false, true}) {
+      Machine obj;
+      SReflect::ConsoleListParams const params{1024, primitives, arrays};
+      auto const entries = SReflect::ConsoleList(&obj, "", params);
+      for (auto const& entry : entries) {
+        if (entry._name == "count") {
+          EXPECT_EQ(entry._value, primitives ? "3" : "");
+        } else if (entry._name == "name") {
+          EXPECT_EQ(entry._value, primitives ? "\"m1\"" : "");
+        } else if (entry._name == "kind") {
+          EXPECT_EQ(entry._value, primitives ? "\"Rigid\"" : "");
+        } else if (entry._name == "weights") {
+          EXPECT_EQ(entry._value, arrays ? "[0.5,1.5]" : "");
+        } else if (entry._kind == SReflect::ConsoleEntryKind::Directory) {
+          EXPECT_TRUE(entry._value.empty());
+        }
+        EXPECT_FALSE(entry._isValueTruncated);
+        EXPECT_TRUE(entry._valueError.empty());
+      }
+      EXPECT_EQ(obj.coreGetCount, 0);
+      ArrayCases arrayObj;
+      EXPECT_FALSE(SReflect::ConsoleList(&arrayObj, "", params).empty());
+      EXPECT_EQ(arrayObj.primitiveGets, primitives ? 1 : 0);
+      EXPECT_EQ(arrayObj.positionGets, arrays ? 1 : 0);
+    }
+  }
+  ArrayCases obj;
+  SReflect::ConsoleListParams const params{1024, false, false};
+  auto const entries = SReflect::ConsoleList(&obj, "", params);
+  EXPECT_EQ(obj.positionGets, 0);
+  for (auto const& entry : entries) {
+    EXPECT_TRUE(entry._value.empty());
+  }
+  EXPECT_EQ(
+      List(obj, "position", 0, params),
+      (std::vector<Row>{
+          {'F', "0", "float", ""}, {'F', "1", "float", ""}, {'F', "2", "float", ""}}));
+  EXPECT_EQ(obj.positionGets, 1);
+  EXPECT_EQ(obj.positionSets, 0);
+}
+
+TEST(SReflectConsole, ListValueTruncation) {
+  Machine obj;
+  auto const nameEntry = [&](size_t limit) {
+    auto entries = SReflect::ConsoleList(&obj, "", {limit});
+    return *std::find_if(
+        entries.begin(), entries.end(), [](auto const& entry) { return entry._name == "name"; });
+  };
+  obj.name = "abc";
+  for (size_t limit : {0, 1, 4, 5, 6}) {
+    auto const entry = nameEntry(limit);
+    EXPECT_EQ(entry._value, std::string{"\"abc\""}.substr(0, limit));
+    EXPECT_EQ(entry._isValueTruncated, limit < 5);
+  }
+  // The listing cap falls inside a two-byte character, which must be removed in full.
+  size_t const limit = SReflect::ConsoleListParams{}._maxValueLength;
+  obj.name = std::string(limit - 2, 'x') + "\xC3\xA9\xC3\xA9";
+  auto const entry = nameEntry(limit);
+  EXPECT_EQ(entry._value, "\"" + std::string(limit - 2, 'x'));
+  EXPECT_TRUE(entry._isValueTruncated);
+  obj.name = "\xC3\xA9\xE4\xB8\xAD\xF0\x9F\x98\x80";
+  for (size_t cap : {2, 4, 8}) {
+    auto const captured = nameEntry(cap);
+    EXPECT_EQ(
+        captured._value,
+        cap == 2       ? "\""
+            : cap == 4 ? "\"\xC3\xA9"
+                       : "\"\xC3\xA9\xE4\xB8\xAD");
+    EXPECT_TRUE(captured._isValueTruncated);
+  }
+}
+
+TEST(SReflectConsole, ListTypeNames) {
+  Machine obj;
+  auto const entries = SReflect::ConsoleList(&obj, "");
+  auto const factory = std::find_if(
+      entries.begin(), entries.end(), [](auto const& entry) { return entry._name == "factory"; });
+  ASSERT_NE(factory, entries.end());
+  EXPECT_EQ(factory->_typeName, "Part");
+  EXPECT_EQ(factory->_typeNameWithNamespace, "SReflectConsoleTest::Part");
+  auto const methods = SReflect::ConsoleList(&obj, "base");
+  for (auto const& entry : methods) {
+    if (entry._name == "add") {
+      EXPECT_EQ(entry._typeName, "(float amount, string note) -> float");
+      EXPECT_EQ(entry._typeNameWithNamespace, "(float amount, std::string note) -> float");
+    } else if (entry._name == "snapshot") {
+      EXPECT_EQ(entry._typeName, "() -> NoDefault");
+      EXPECT_EQ(entry._typeNameWithNamespace, "() -> SReflectConsoleTest::NoDefault");
+    }
+  }
+}
+
+TEST(SReflectConsole, ListEntriesJson) {
+  using SReflect::ConsoleEntryKind;
+  std::vector<SReflect::ConsoleListEntry> const entries{
+      {ConsoleEntryKind::Directory, "base", "Part", "SReflectConsoleTest::Part", "", "", false},
+      {ConsoleEntryKind::Field, "count", "int32", "int32", "3", "", true},
+      {ConsoleEntryKind::Method, "clear", "() -> void", "() -> void", "", "", false},
+      {ConsoleEntryKind::Field, "broken", "int32", "int32", "", "getter failed", false}};
+  std::string const json =
+      "[{\"isValueTruncated\":false,\"kind\":\"Directory\",\"name\":\"base\",\"typeName\":\"Part\","
+      "\"typeNameWithNamespace\":\"SReflectConsoleTest::Part\",\"value\":\"\",\"valueError\":\"\"},"
+      "{\"isValueTruncated\":true,\"kind\":\"Field\",\"name\":\"count\",\"typeName\":\"int32\","
+      "\"typeNameWithNamespace\":\"int32\",\"value\":\"3\",\"valueError\":\"\"},"
+      "{\"isValueTruncated\":false,\"kind\":\"Method\",\"name\":\"clear\",\"typeName\":\"() -> void\","
+      "\"typeNameWithNamespace\":\"() -> void\",\"value\":\"\",\"valueError\":\"\"},"
+      "{\"isValueTruncated\":false,\"kind\":\"Field\",\"name\":\"broken\",\"typeName\":\"int32\","
+      "\"typeNameWithNamespace\":\"int32\",\"value\":\"\",\"valueError\":\"getter failed\"}]";
+  EXPECT_EQ(SReflect::ToJsonString(entries, false), json);
+  std::vector<SReflect::ConsoleListEntry> loaded;
+  EXPECT_TRUE(SReflect::FromJsonString(loaded, json));
+  EXPECT_EQ(SReflect::ToJsonString(loaded, false), json);
 }
 
 } // namespace SReflectConsoleTest

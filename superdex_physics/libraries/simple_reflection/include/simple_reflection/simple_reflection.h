@@ -1770,7 +1770,7 @@ by slashes:
     reported at the same path, with a description that mentions the map key.
   - A std::pair's halves are named as in the JSON: "pairField/key" and "pairField/value".
   - A name or key that is empty, is "." or "..", or contains '/', '"' or a control character is
-    written as a JSON string: "mapField/\"a/b\"" (see FormatPathStep).
+    written as a JSON string: "mapField/\"a/b\"".
   - std::optional and std::variant add no step. The path continues into the value they hold.
   - The path is empty for a problem with the object itself, such as malformed JSON.
 A JSON key that matches no field is reported at the object that contains it.
