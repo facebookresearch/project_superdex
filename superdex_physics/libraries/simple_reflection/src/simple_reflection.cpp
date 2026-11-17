@@ -685,7 +685,11 @@ static void
 WriteFieldDescriptor(FieldTypeInfo const& field, picojson::value& entry, picojson::value& dict) {
   picojson::object& obj = entry.get<picojson::object>();
   obj["name"] = SafeString(field._name);
-  obj["offset"] = static_cast<double>(field._offset);
+  obj["isProperty"] = field._isProperty;
+  obj["isReadOnly"] = field.IsReadOnly();
+  if (!field._isProperty) {
+    obj["offset"] = static_cast<double>(field._offset);
+  }
   obj["innerType"] = AddTypeRef(field._innerTypeInfo, dict);
   SetField(obj, "attributes", picojson::value{WriteAttributes(field._attributes, dict)});
 }
@@ -694,9 +698,15 @@ void* TypeInfo::New(Allocator* allocator) const {
   assert(_sizeInBytes != 0);
   assert(_alignment != 0);
   if (_constructInPlace) {
-    auto* ptr = EnsureAllocator(allocator)->allocate(_sizeInBytes, _alignment);
+    Allocator* const actualAllocator = EnsureAllocator(allocator);
+    auto* ptr = actualAllocator->allocate(_sizeInBytes, _alignment);
     if (ptr) {
-      _constructInPlace(ptr);
+      try {
+        _constructInPlace(ptr);
+      } catch (...) {
+        actualAllocator->deallocate(ptr, _sizeInBytes, _alignment);
+        throw;
+      }
       return ptr;
     }
   }
@@ -1339,88 +1349,143 @@ static void PruneDefaultFieldValues(
 /////////////////////////////////////////////////////////////////////////////
 
 uint8_t* FieldTypeInfo::GetFieldPtr(void* structBasePtr) const {
-  return reinterpret_cast<uint8_t*>(structBasePtr) + _offset;
+  return _isProperty ? nullptr : reinterpret_cast<uint8_t*>(structBasePtr) + _offset;
 }
 
 uint8_t const* FieldTypeInfo::GetFieldPtr(void const* structBasePtr) const {
-  return reinterpret_cast<uint8_t const*>(structBasePtr) + _offset;
+  return _isProperty ? nullptr : reinterpret_cast<uint8_t const*>(structBasePtr) + _offset;
+}
+
+void FieldTypeInfo::GetValue(void const* obj, void* dstValue) const {
+  VisitValue(obj, [&](void const* value) { _innerTypeInfo->Set(value, dstValue); });
+}
+
+void FieldTypeInfo::FireOnChanged() const {
+  auto const* onChanged = GetAttribute<Attribute_OnChanged>();
+  if (onChanged != nullptr) {
+    onChanged->_onChanged();
+  }
+}
+
+bool FieldTypeInfo::IsMemCopySafe() const {
+  return !_isProperty && _innerTypeInfo->IsMemCopySafe();
+}
+
+bool FieldTypeInfo::IsValidInner(void const* src, AttributeList const& /*attribs*/) const {
+  return _innerTypeInfo->IsValidInner(src, _attributes);
+}
+
+void FieldTypeInfo::SetInner(void const* src, void* dst) const {
+  _innerTypeInfo->Set(src, dst);
+}
+
+void FieldTypeInfo::SerializeInner(void const* src, picojson::value& dst) const {
+  // src is the address of a value of the inner type
+  // dst is a picojson object
+  if (HasAttribute<Attribute_JsonString>() && _innerTypeInfo->_coreType == CoreType::CT_string) {
+    // This string field carries a serialized JSON value; emit it as that value (e.g. a nested
+    // object) rather than as a quoted string, so a deserialize/serialize round trip is identity.
+    // See Attribute_JsonString.
+    auto const* strInfo = static_cast<StringTypeInfo const*>(_innerTypeInfo);
+    std::string const text{strInfo->GetString(src)};
+    picojson::value parsed;
+    std::istringstream textStream(text);
+    std::string const parseErr = picojson::parse(parsed, textStream);
+    if (parseErr.empty() && (parsed.is<picojson::object>() || parsed.is<picojson::array>())) {
+      dst[_name] = parsed;
+      return;
+    }
+    // Not a JSON object/array (e.g. an empty or non-JSON string): fall through to normal
+    // emission.
+  }
+  picojson::value fieldValue = picojson::object();
+  _innerTypeInfo->SerializeInner(src, fieldValue);
+  if (fieldValue.is<picojson::null>() && (_innerTypeInfo->_coreType == CoreType::CT_optional)) {
+    // This is an optional field for which no value was specified. In this case we do not write
+    // anything to JSON (neither the field name, nor the null value).
+  } else {
+    // Add a key-value pair to the JSON dictionary.
+    dst[_name] = fieldValue;
+  }
+}
+
+void FieldTypeInfo::DeserializeInner(
+    picojson::value const& src,
+    void* dst,
+    DeserializeContext& context) const {
+  // src is a picojson value
+  // dst is the address of a value of the inner type
+  if (HasAttribute<Attribute_JsonString>() &&
+      (src.is<picojson::object>() || src.is<picojson::array>())) {
+    // This string field carries a serialized JSON value: store the JSON object/array as its
+    // serialized text, routed through the field's normal string assignment so a non-string
+    // target fails and is reported. See Attribute_JsonString.
+    picojson::value const asString{src.serialize(false)};
+    _innerTypeInfo->DeserializeInner(asString, dst, context);
+  } else {
+    _innerTypeInfo->DeserializeInner(src, dst, context);
+  }
+}
+
+bool FieldTypeInfo::SerializeToBytesInner(void const* src, StreamWriter& dst) const {
+  return _innerTypeInfo->SerializeToBytesInner(src, dst);
+}
+
+bool FieldTypeInfo::DeserializeFromBytesInner(StreamReader& src, void* dst) const {
+  return _innerTypeInfo->DeserializeFromBytesInner(src, dst);
 }
 
 /////////////////////////////////////////////////////////////////////////////
-// FieldTypeInfoImpl
+// FieldTypeInfoImpl (member variable)
 /////////////////////////////////////////////////////////////////////////////
 
+namespace {
+
 class FieldTypeInfoImpl final : public FieldTypeInfo {
- protected:
-  bool IsValidInner(void const* src, AttributeList const& /*attribs*/) const override {
-    return _innerTypeInfo->IsValidInner(src, _attributes);
+ public:
+  [[nodiscard]] bool IsReadOnly() const override {
+    return false;
   }
 
-  void SetInner(void const* src, void* dst) const override {
-    _innerTypeInfo->Set(src, dst);
+  bool SetValue(void* obj, void const* srcValue) const override {
+    Set(srcValue, GetFieldPtr(obj));
+    return true;
   }
 
-  void SerializeInner(void const* src, picojson::value& dst) const override {
-    // cannot serialize a field so we always call serialize on the inner type
-    // src is a field pointer
-    // dst is a picojson object
-    if (HasAttribute<Attribute_JsonString>() && _innerTypeInfo->_coreType == CoreType::CT_string) {
-      // This string field carries a serialized JSON value; emit it as that value (e.g. a nested
-      // object) rather than as a quoted string, so a deserialize/serialize round trip is identity.
-      // See Attribute_JsonString.
-      auto const* strInfo = static_cast<StringTypeInfo const*>(_innerTypeInfo);
-      std::string const text{strInfo->GetString(src)};
-      picojson::value parsed;
-      std::istringstream textStream(text);
-      std::string const parseErr = picojson::parse(parsed, textStream);
-      if (parseErr.empty() && (parsed.is<picojson::object>() || parsed.is<picojson::array>())) {
-        dst[_name] = parsed;
-        return;
-      }
-      // Not a JSON object/array (e.g. an empty or non-JSON string): fall through to normal
-      // emission.
-    }
-    picojson::value fieldValue = picojson::object();
-    _innerTypeInfo->SerializeInner(src, fieldValue);
-    if (fieldValue.is<picojson::null>() && (_innerTypeInfo->_coreType == CoreType::CT_optional)) {
-      // This is an optional field for which no value was specified. In this case we do not write
-      // anything to JSON (neither the field name, nor the null value).
-    } else {
-      // Add a key-value pair to the JSON dictionary.
-      dst[_name] = fieldValue;
-    }
+  void VisitValue(void const* obj, detail::FunctionRef<void(void const* value)> cb) const override {
+    cb(GetFieldPtr(obj));
   }
 
-  void DeserializeInner(picojson::value const& src, void* dst, DeserializeContext& context)
-      const override {
-    // src is a picojson value
-    // dst is a field pointer
-    if (HasAttribute<Attribute_JsonString>() &&
-        (src.is<picojson::object>() || src.is<picojson::array>())) {
-      // This string field carries a serialized JSON value: store the JSON object/array as its
-      // serialized text, routed through the field's normal string assignment so a non-string
-      // target fails and is reported. See Attribute_JsonString.
-      picojson::value const asString{src.serialize(false)};
-      _innerTypeInfo->DeserializeInner(asString, dst, context);
-    } else {
-      _innerTypeInfo->DeserializeInner(src, dst, context);
-    }
+  bool ModifyValue(void* obj, detail::FunctionRef<bool(void* value)> cb) const override {
+    cb(GetFieldPtr(obj));
+    return true;
   }
-
-  bool SerializeToBytesInner(void const* src, StreamWriter& dst) const override {
-    return _innerTypeInfo->SerializeToBytesInner(src, dst);
-  }
-
-  bool DeserializeFromBytesInner(StreamReader& src, void* dst) const override {
-    return _innerTypeInfo->DeserializeFromBytesInner(src, dst);
-  }
-
-  [[nodiscard]] bool IsMemCopySafe() const override {
-    return _innerTypeInfo->IsMemCopySafe();
-  }
-
-  friend class StructTypeInfo;
 };
+
+} // namespace
+
+/////////////////////////////////////////////////////////////////////////////
+// Properties
+/////////////////////////////////////////////////////////////////////////////
+
+// Binary serialization cannot report issues, so an exception thrown while reading or writing a
+// member, by a property's getter or setter or by the member's own type, is logged and fails the
+// call.
+template <class F>
+static bool
+CallLoggingMemberExceptions(StructTypeInfo const& info, FieldTypeInfo const& field, F&& f) {
+  try {
+    return f();
+  } catch (std::exception const& e) {
+    SR_LOG("Exception while reading or writing '%s' in %s: %s", field._name, info._name, e.what());
+    (void)e;
+  } catch (...) {
+    SR_LOG("Exception while reading or writing '%s' in %s", field._name, info._name);
+  }
+  (void)info;
+  (void)field;
+  return false;
+}
 
 /////////////////////////////////////////////////////////////////////////////
 // StructTypeInfo
@@ -1491,8 +1556,10 @@ class StructTypeInfoImpl final : public StructTypeInfo {
  protected:
   bool IsValidInner(void const* src, AttributeList const& attribs) const override {
     for (FieldTypeInfo const* field : _fields) {
-      uint8_t const* srcFieldPtr = field->GetFieldPtr(src);
-      if (!field->IsValidInner(srcFieldPtr, attribs)) {
+      bool isValid = false;
+      field->VisitValue(
+          src, [&](void const* value) { isValid = field->IsValidInner(value, attribs); });
+      if (!isValid) {
         return false;
       }
     }
@@ -1500,9 +1567,10 @@ class StructTypeInfoImpl final : public StructTypeInfo {
   }
   void SetInner(void const* src, void* dst) const override {
     for (FieldTypeInfo const* field : _fields) {
-      uint8_t const* srcFieldPtr = field->GetFieldPtr(src);
-      uint8_t* dstFieldPtr = field->GetFieldPtr(dst);
-      field->Set(srcFieldPtr, dstFieldPtr);
+      if (field->IsReadOnly()) {
+        continue;
+      }
+      field->VisitValue(src, [&](void const* value) { field->SetValue(dst, value); });
     }
   }
 
@@ -1510,8 +1578,11 @@ class StructTypeInfoImpl final : public StructTypeInfo {
     dst = picojson::object();
     bool fieldHasAttrDoNotSerializeDefaults = false;
     for (FieldTypeInfo const* field : _fields) {
-      uint8_t const* srcFieldPtr = field->GetFieldPtr(src);
-      field->Serialize(srcFieldPtr, dst);
+      // Skip here, before VisitValue, so that a property's getter is not called
+      if (field->HasAttribute<Attribute_DoNotSerialize>()) {
+        continue;
+      }
+      field->VisitValue(src, [&](void const* value) { field->Serialize(value, dst); });
       fieldHasAttrDoNotSerializeDefaults = fieldHasAttrDoNotSerializeDefaults ||
           field->HasAttribute<Attribute_DoNotSerializeDefaults>();
     }
@@ -1531,7 +1602,9 @@ class StructTypeInfoImpl final : public StructTypeInfo {
             // Compare this field to its default value via serialization.
             picojson::value& actualFieldValue = actualFieldIt->second;
             picojson::value defaultFieldValue = picojson::object();
-            field->_innerTypeInfo->Serialize(field->GetFieldPtr(tempInstance), defaultFieldValue);
+            field->VisitValue(tempInstance, [&](void const* value) {
+              field->_innerTypeInfo->Serialize(value, defaultFieldValue);
+            });
             if (actualFieldValue.serialize(false) == defaultFieldValue.serialize(false)) {
               // The field exactly matches the default value. Prune it.
               actualObj.erase(actualFieldIt);
@@ -1582,12 +1655,29 @@ class StructTypeInfoImpl final : public StructTypeInfo {
       }
       if (srcFieldIt != srcObj.end()) {
         ++numSrcFieldsMatched;
-        uint8_t* dstFieldPtr = field->GetFieldPtr(dst);
-        context.DeserializeChild(field->_name, *field, srcFieldIt->second, dstFieldPtr);
+        if (field->IsReadOnly()) {
+          // Read-only properties are written on save but silently skipped on load.
+          continue;
+        }
+        // Properties are read, modified and written back. An exception thrown while deserializing
+        // any member, including by a property's getter or setter, is reported as an issue unless
+        // it is an allocation failure.
+        try {
+          field->ModifyValue(dst, [&](void* value) {
+            context.DeserializeChild(field->_name, *field, srcFieldIt->second, value);
+            return true;
+          });
+        } catch (std::bad_alloc const&) {
+          throw;
+        } catch (std::exception const& e) {
+          context.ReportIssue(field->_name, e.what());
+        } catch (...) {
+          context.ReportIssue(field->_name, "Unknown exception");
+        }
       } else {
-        if (field->_innerTypeInfo->_coreType == CoreType::CT_optional) {
+        if (field->_innerTypeInfo->_coreType == CoreType::CT_optional || field->IsReadOnly()) {
           // If the inner type is something like std::optional, then the missing field is not
-          // considered to be a problem.
+          // considered to be a problem. Nor is a read-only property, which is never loaded.
         } else if (flags & static_cast<uint32_t>(DeserializeFlags::WarnIfMissingFields)) {
           context.ReportIssue(field->_name, "Missing from the JSON");
         }
@@ -1621,8 +1711,17 @@ class StructTypeInfoImpl final : public StructTypeInfo {
       return dst.Write(src, _sizeInBytes);
     } else {
       for (FieldTypeInfo const* field : _fields) {
-        uint8_t const* srcFieldPtr = field->GetFieldPtr(src);
-        if (!field->SerializeToBytes(srcFieldPtr, dst)) {
+        // Skip here, before VisitValue, so that a property's getter is not called
+        if (field->HasAttribute<Attribute_DoNotSerialize>()) {
+          continue;
+        }
+        bool const written = CallLoggingMemberExceptions(*this, *field, [&] {
+          bool fieldWritten = false;
+          field->VisitValue(
+              src, [&](void const* value) { fieldWritten = field->SerializeToBytes(value, dst); });
+          return fieldWritten;
+        });
+        if (!written) {
           return false;
         }
       }
@@ -1635,8 +1734,33 @@ class StructTypeInfoImpl final : public StructTypeInfo {
       return src.Read(dst, _sizeInBytes);
     } else {
       for (FieldTypeInfo const* field : _fields) {
-        uint8_t* dstFieldPtr = field->GetFieldPtr(dst);
-        if (!field->DeserializeFromBytes(src, dstFieldPtr)) {
+        // Skip here, before ModifyValue, so that a property's getter and setter are not called
+        if (field->HasAttribute<Attribute_DoNotSerialize>()) {
+          continue;
+        }
+        bool const read = CallLoggingMemberExceptions(*this, *field, [&] {
+          if (field->IsReadOnly()) {
+            // Read into a temporary and discard it, so the stream stays aligned.
+            TypeInfo const* innerType = field->_innerTypeInfo;
+            void* temp = innerType->New();
+            if (temp == nullptr) {
+              SR_LOG(
+                  "Cannot skip read-only '%s' in %s: its type has no default constructor",
+                  field->_name,
+                  _name);
+              return false;
+            }
+            SR_DEFER(innerType->Delete(temp));
+            return field->DeserializeFromBytes(src, temp);
+          }
+          bool fieldRead = false;
+          field->ModifyValue(dst, [&](void* value) {
+            fieldRead = field->DeserializeFromBytes(src, value);
+            return fieldRead;
+          });
+          return fieldRead;
+        });
+        if (!read) {
           return false;
         }
       }
@@ -3034,21 +3158,31 @@ void detail::AddAttribute(StructTypeInfo& info, Attribute const* a) {
   }
 }
 
+void detail::AddFieldInfo(
+    StructTypeInfo& info,
+    std::unique_ptr<FieldTypeInfo> field,
+    char const* name) {
+  SR_ASSERT(name != nullptr && name[0] != '\0', "Field and property names must not be empty");
+  SR_ASSERT(strchr(name, '/') == nullptr, "Field and property names must not contain '/'");
+  SR_ASSERT(
+      info.FindField(name) == nullptr,
+      "Field or property name is already used in this class or one of its base classes");
+  field->_name = name;
+  field->_nameWithNamespace = name;
+  field->_typeId = ComputeTypeId(name);
+  info._fields.push_back(field.release());
+}
+
 void detail::AddField(
     StructTypeInfo& info,
     char const* name,
     size_t offset,
     TypeInfo const& innerType) {
-  SR_ASSERT(info.FindField(name) == nullptr, "Adding the same field more than once");
-  SR_ASSERT(strchr(name, '/') == nullptr, "Field names must not contain '/'");
-  auto* newField = new FieldTypeInfoImpl;
+  auto newField = std::make_unique<FieldTypeInfoImpl>();
   newField->_coreType = CoreType::CT_field;
   newField->_innerTypeInfo = &innerType;
   newField->_offset = offset;
-  newField->_name = name;
-  newField->_nameWithNamespace = name;
-  newField->_typeId = ComputeTypeId(newField->_nameWithNamespace);
-  info._fields.push_back(newField);
+  AddFieldInfo(info, std::move(newField), name);
 }
 
 void detail::RemoveField(StructTypeInfo& info, char const* name) {
@@ -3075,6 +3209,11 @@ void detail::AddBaseClass(
           derivedAncestor->_typeIndex != baseAncestor->_typeIndex,
           "Diamond inheritence is not supported");
     }
+  }
+  for (FieldTypeInfo const* baseField : base._fields) {
+    SR_ASSERT(
+        derived.FindField(baseField->_name) == nullptr,
+        "Base class field or property name clashes with a name already used in the derived class");
   }
 #endif // SR_ASSERT_ENABLE
 
@@ -3313,6 +3452,12 @@ SReflect::StructTypeInfo* detail::CloneStructImpl(const SReflect::StructTypeInfo
 }
 
 void FinalizeStruct(StructTypeInfo* info) {
+  // Read-only properties get Attribute_ReadOnly, unless the user already added it.
+  for (FieldTypeInfo* field : info->_fields) {
+    if (field->_isProperty && field->IsReadOnly() && !field->HasAttribute<Attribute_ReadOnly>()) {
+      field->_attributes.emplace_back(Attribute_ReadOnly::GetTypeId(), new Attribute_ReadOnly);
+    }
+  }
   for (size_t i = 0; i < info->_fields.size() && info->_isMemCopySafe; ++i) {
     auto* field = info->_fields[i];
     info->_isMemCopySafe &= field->IsMemCopySafe();

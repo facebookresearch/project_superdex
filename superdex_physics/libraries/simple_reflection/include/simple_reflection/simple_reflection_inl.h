@@ -1108,6 +1108,189 @@ struct SReflectTypeTraits<picojson::value> {
   }
 };
 
+/////////////////////////////////////////////////////////////////////////////
+// Properties (see SR_Property)
+/////////////////////////////////////////////////////////////////////////////
+
+namespace SReflect::detail {
+
+// Implemented in the cpp because it asserts.
+void AddFieldInfo(StructTypeInfo& info, std::unique_ptr<FieldTypeInfo> field, char const* name);
+
+// The type returned by calling the getter on a const object, and the property's value type T.
+template <class MyStruct, class Getter>
+using PropertyGetterReturn = std::invoke_result_t<Getter const&, MyStruct const&>;
+
+template <class MyStruct, class Getter>
+using PropertyValueType =
+    std::remove_cv_t<std::remove_reference_t<PropertyGetterReturn<MyStruct, Getter>>>;
+
+// Member function getters: only const member functions match, which resolves overloads like
+// T& Get() / T const& Get() const. Any other callable (e.g. a lambda) is passed through.
+template <class C, class R>
+auto SelectGetter(R (C::*getter)() const) {
+  return getter;
+}
+template <class C, class R>
+auto SelectGetter(R (C::*getter)() const noexcept) {
+  return getter;
+}
+template <class F, std::enable_if_t<!std::is_member_pointer_v<std::decay_t<F>>, int> = 0>
+std::decay_t<F> SelectGetter(F&& getter) {
+  return std::forward<F>(getter);
+}
+
+// Member function setters: resolves an overloaded name to the overload taking T or const T&.
+// Any other callable (e.g. a lambda) is passed through.
+template <class T>
+struct SetterSelector {
+  template <class C, class Ret>
+  static auto Select(Ret (C::*setter)(T)) {
+    return setter;
+  }
+  template <class C, class Ret>
+  static auto Select(Ret (C::*setter)(T const&)) {
+    return setter;
+  }
+  template <class C, class Ret>
+  static auto Select(Ret (C::*setter)(T) noexcept) {
+    return setter;
+  }
+  template <class C, class Ret>
+  static auto Select(Ret (C::*setter)(T const&) noexcept) {
+    return setter;
+  }
+  template <class F, std::enable_if_t<!std::is_member_pointer_v<std::decay_t<F>>, int> = 0>
+  static std::decay_t<F> Select(F&& setter) {
+    return std::forward<F>(setter);
+  }
+};
+
+#if defined(_MSVC_LANG)
+// MSVC reports a stale __cplusplus unless /Zc:__cplusplus is set.
+inline constexpr long kLanguageVersion = _MSVC_LANG;
+#else
+inline constexpr long kLanguageVersion = __cplusplus;
+#endif
+
+// Property accessors must not capture or hold state. Copy captures always add data members, so a
+// capturing closure is not empty. Whether reference captures add members is unspecified before
+// C++20, but in C++20 a closure type is default constructible exactly when it has no capture.
+template <class F>
+constexpr bool IsStatelessAccessor() {
+  if constexpr (std::is_class_v<F>) {
+    if constexpr (kLanguageVersion >= 202002L) {
+      return std::is_empty_v<F> && std::is_default_constructible_v<F>;
+    } else {
+      return std::is_empty_v<F>;
+    }
+  } else {
+    return true;
+  }
+}
+
+// Accessors are called through std::invoke, so a member function pointer and a callable taking the
+// object as its first argument behave the same.
+template <class MyStruct, class T, class Getter, class Setter>
+class PropertyTypeInfoImpl final : public FieldTypeInfo {
+ public:
+  static constexpr bool kHasSetter = !std::is_null_pointer_v<Setter>;
+
+  PropertyTypeInfoImpl(Getter getter, Setter setter)
+      : _getter(std::move(getter)), _setter(std::move(setter)) {}
+
+  [[nodiscard]] bool IsReadOnly() const override {
+    return !kHasSetter;
+  }
+
+  bool SetValue(void* obj, void const* srcValue) const override {
+    if constexpr (kHasSetter) {
+      std::invoke(_setter, *static_cast<MyStruct*>(obj), *static_cast<T const*>(srcValue));
+      FireOnChanged();
+      return true;
+    } else {
+      (void)obj;
+      (void)srcValue;
+      return false;
+    }
+  }
+
+  void VisitValue(void const* obj, FunctionRef<void(void const* value)> cb) const override {
+    auto const& self = *static_cast<MyStruct const*>(obj);
+    if constexpr (std::is_reference_v<PropertyGetterReturn<MyStruct, Getter>>) {
+      cb(&std::invoke(_getter, self));
+    } else {
+      T const value = std::invoke(_getter, self);
+      cb(&value);
+    }
+  }
+
+  bool ModifyValue(void* obj, FunctionRef<bool(void* value)> cb) const override {
+    if constexpr (kHasSetter) {
+      auto& self = *static_cast<MyStruct*>(obj);
+      T value = std::invoke(_getter, std::as_const(self));
+      if (cb(&value)) {
+        std::invoke(_setter, self, std::move(value));
+      }
+      return true;
+    } else {
+      (void)obj;
+      (void)cb;
+      return false;
+    }
+  }
+
+ private:
+  Getter _getter;
+  Setter _setter;
+};
+
+template <class MyStruct, class Getter, class Setter>
+void AddProperty(StructTypeInfo& info, char const* name, Getter getter, Setter setter) {
+  constexpr bool kGetterIsCallable = std::is_invocable_v<Getter const&, MyStruct const&>;
+  static_assert(
+      kGetterIsCallable,
+      "SR_Property getter must be a const member function of the class or one of its base "
+      "classes, or a callable taking the object as `const MyStruct&`.");
+  static_assert(
+      IsStatelessAccessor<Getter>(), "SR_Property getter must not capture or hold state.");
+  if constexpr (kGetterIsCallable) {
+    using GetterReturn = PropertyGetterReturn<MyStruct, Getter>;
+    using T = PropertyValueType<MyStruct, Getter>;
+    static_assert(!std::is_pointer_v<T>, "SR_Property getter must not return a pointer.");
+    static_assert(
+        std::is_same_v<std::remove_cv_t<GetterReturn>, T> || std::is_same_v<GetterReturn, T const&>,
+        "SR_Property getter must return T or const T&, not a non-const reference.");
+    static_assert(IsSupportedType<T>(), "SR_Property value type is not supported.");
+    if constexpr (!std::is_null_pointer_v<Setter>) {
+      static_assert(
+          IsStatelessAccessor<Setter>(),
+          "SR_Property setter must not capture or hold state. Use constants inside the lambda "
+          "body.");
+      constexpr bool kSetterIsCallable = std::is_invocable_v<Setter const&, MyStruct&, T const&>;
+      static_assert(
+          kSetterIsCallable,
+          "SR_Property setter must be a member function of the class or one of its base classes "
+          "taking T or const T&, or a callable taking (MyStruct&, T).");
+      if constexpr (kSetterIsCallable) {
+        using SetterReturn = std::invoke_result_t<Setter const&, MyStruct&, T const&>;
+        static_assert(
+            std::is_void_v<SetterReturn>,
+            "SR_Property setter must return void. Throw an exception to reject a value.");
+      }
+    }
+
+    auto property = std::make_unique<PropertyTypeInfoImpl<MyStruct, T, Getter, Setter>>(
+        std::move(getter), std::move(setter));
+    property->_coreType = CoreType::CT_field;
+    property->_isProperty = true;
+    property->_innerTypeInfo = &GetTypeInfo<T>();
+    AddFieldInfo(info, std::move(property), name);
+  }
+}
+
+} // namespace SReflect::detail
+
 ///////////////////////////////////////////////////////////////////////////
 // Macro Implementations
 ///////////////////////////////////////////////////////////////////////////
@@ -1187,7 +1370,8 @@ struct SReflectTypeTraits<picojson::value> {
 #define IMPL_SR_DeclareStructEx(structType)                                                 \
   template<>                                                                                \
   struct SReflectTypeTraits<structType> {                                                   \
-    static constexpr SReflect::CoreType coreType = SReflect::CoreType::CT_struct;           \
+    [[maybe_unused]] static constexpr SReflect::CoreType coreType =                         \
+        SReflect::CoreType::CT_struct;                                                      \
     static SReflect::StructTypeInfo const& GetTypeInfo();                                   \
   };
 
@@ -1215,7 +1399,8 @@ struct SReflectTypeTraits<picojson::value> {
       !std::is_base_of_v<SReflect::BaseObject, structType>,                                 \
       "Classes deriving from SReflect::BaseObject should use SR_BeginClass/SR_EndClass"     \
       "within the class declaration. It will define the virtual method GetFinalTypeInfo."); \
-    static constexpr SReflect::CoreType coreType = SReflect::CoreType::CT_struct;           \
+    [[maybe_unused]] static constexpr SReflect::CoreType coreType =                         \
+        SReflect::CoreType::CT_struct;                                                      \
     static SReflect::StructTypeInfo const& GetTypeInfo() {                                  \
       static SReflect::StructTypeInfo* s_typeInfo = []() {                                  \
         using MyStruct = structType;                                                        \
@@ -1248,6 +1433,30 @@ struct SReflectTypeTraits<picojson::value> {
 #define IMPL_SR_RemoveField(fieldName)                                                        \
     SReflect::detail::RemoveField(*myInfo, fieldName);
 
+// See SR_Property. IMPL_SR_EXPAND makes MSVC's traditional preprocessor split __VA_ARGS__.
+#define IMPL_SR_EXPAND(x) x
+#define IMPL_SR_PROPERTY_SELECT(A1, A2, NAME, ...) NAME
+#define IMPL_SR_Property(name, ...)                                                         \
+  IMPL_SR_EXPAND(IMPL_SR_EXPAND(IMPL_SR_PROPERTY_SELECT(                                    \
+      __VA_ARGS__, IMPL_SR_Property_RW, IMPL_SR_Property_RO, unused))(name, __VA_ARGS__))
+
+#define IMPL_SR_Property_RO(name, getter)                                                   \
+  {                                                                                         \
+    SReflect::detail::AddProperty<MyStruct>(                                                \
+        *myInfo, name, SReflect::detail::SelectGetter(getter), nullptr);                    \
+  }
+
+#define IMPL_SR_Property_RW(name, getter, setter)                                           \
+  {                                                                                         \
+    auto srGetter = SReflect::detail::SelectGetter(getter);                                 \
+    SReflect::detail::AddProperty<MyStruct>(                                                \
+        *myInfo,                                                                            \
+        name,                                                                               \
+        srGetter,                                                                           \
+        SReflect::detail::SetterSelector<                                                   \
+            SReflect::detail::PropertyValueType<MyStruct, decltype(srGetter)>>::Select(setter)); \
+  }
+
 // See SR_BaseClass
 #define IMPL_SR_BaseClass(BaseClass)                                                        \
   {                                                                                         \
@@ -1263,7 +1472,8 @@ struct SReflectTypeTraits<picojson::value> {
      "SR_BeginEnum can only be used with enums an enum classes.");                          \
   template <>                                                                               \
   struct SReflectTypeTraits<enumName> {                                                     \
-    static constexpr SReflect::CoreType coreType = SReflect::CoreType::CT_enum;             \
+    [[maybe_unused]] static constexpr SReflect::CoreType coreType =                         \
+        SReflect::CoreType::CT_enum;                                                        \
     static SReflect::EnumTypeInfo const& GetTypeInfo() {                                    \
       using IMPL_SR_CHECK_NAMESPACE = ::enumName;                                           \
       if constexpr (sizeof(IMPL_SR_CHECK_NAMESPACE) != 0) {                                 \

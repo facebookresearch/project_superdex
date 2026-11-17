@@ -178,6 +178,35 @@ Example 2 - Class using BaseObject
     thing.name = "Bob";
     UseAnyObject(thing);
   }
+
+Example 3 - Properties (members reached through a getter and an optional setter)
+
+  class Light {
+   public:
+    float GetIntensity() const { return _intensity; }
+    void SetIntensity(float v) { _intensity = std::clamp(v, 0.0f, 1.0f); }
+    std::string const& GetId() const { return _id; }
+
+   private:
+    float _intensity = 1.0f;
+    std::string _id;
+    double _hueRadians = 0.0;
+
+    SR_BeginClass(Light);
+    SR_Property("intensity", &Light::GetIntensity, &Light::SetIntensity);
+    SRA_FloatRange(0.0f, 1.0f);
+    SR_Property("id", &Light::GetId); // Read-only
+    SR_Property("hueDegrees", // Lambdas taking the object as their first argument
+        [](Light const& l) { return l._hueRadians * 180.0 / kPi; },
+        [](Light& l, double degrees) { l._hueRadians = degrees * kPi / 180.0; });
+    SR_EndClass();
+  };
+
+  Properties live in StructTypeInfo::_fields alongside regular fields. SimpleReflection reads
+  properties through their getters and writes writable properties through their setters. Struct
+  copying skips read-only properties. JSON and binary serialization include them. See SR_Property
+  for deserialization requirements. Use FieldTypeInfo::VisitValue, ModifyValue, GetValue and
+  SetValue to access members generically. FieldTypeInfo::GetFieldPtr returns nullptr for properties.
 */
 
 ///////////////////////////////////////////////////////////////////////////
@@ -297,9 +326,79 @@ Goes between the SR_BeginStruct and SR_EndStruct macros. See examples (above).
 /**
 Adds a field (member variable) to the class or struct, but give it a name that is different
 from the actual class member. Example: SR_Field_Name(_myValue, "value")
-The name must not contain '/', which separates the parts of a path (see IssueReport).
+The name must not be empty, must not contain '/', which separates the parts of a path (see
+IssueReport), and must be unique across all fields and properties, including those inherited via
+SR_BaseClass.
 */
 #define SR_Field_Name(member, name)               IMPL_SR_Field_Name(member, name)
+
+/**
+Adds a property to the class or struct: a member reached through a getter and an optional setter.
+  SR_Property("name", getter, setter)   // Read-write
+  SR_Property("name", getter)           // Read-only (automatically gets Attribute_ReadOnly)
+
+Accessors can be member function pointers, lambdas or free functions, and the getter and setter can
+be of different kinds. Lambdas written inside SR_BeginClass can access private members.
+
+Getter: returns T or const T&, where T is a supported type. Either a const member function of the
+  class or one of its base classes, or a callable invoked as getter(obj) with obj as
+  `const MyStruct&`. If a member function name is overloaded, the const overload is selected.
+Setter: returns void and takes T or const T&. Either a member function of the class or one of its
+  base classes, or a callable invoked as setter(obj, value) with obj as `MyStruct&`. If a member
+  function name is overloaded, the overload taking the getter's T is selected. A setter may adjust
+  the value it is given, or throw to reject it.
+
+A free function must be declared before the SR_Property line. Inside SR_BeginStruct, that means
+before the class, after a forward declaration of the class. An overloaded free function name must
+be cast to the intended function pointer type.
+
+Accessors must not capture anything or hold state. If a lambda needs a constant, define it inside
+the lambda body. This is checked at compile time. A lambda with captures, or a functor with data
+members, is not an empty class, so it is rejected. When compiling as C++20, a lambda must also be
+default constructible. The standard guarantees that only for lambdas with no captures, and even an
+unused [&] counts as a capture.
+
+An exception thrown by an accessor propagates to the caller, except during deserialization and
+binary serialization. JSON deserialization reports it as an issue at the property's path (see
+IssueReport). Binary serialization and deserialization log it and return false.
+Allocation failures during JSON deserialization propagate to the caller.
+
+Struct copying skips read-only properties. JSON and binary serialization include read-only
+properties, but deserialization does not assign them. Binary deserialization reads each serialized
+read-only value into a temporary and discards it. This requires its value type T to be default
+constructible. Otherwise, binary loading returns false.
+
+Deserialization of writable properties is read-modify-write: the current value is read through the
+getter, the serialized data is applied on top, and the result is passed to the setter. Names must be
+non-empty, must not contain '/', and must be unique across all fields and properties, including
+those inherited via SR_BaseClass.
+
+Example:
+  struct Angle;
+  double GetTurns(Angle const& a);
+
+  struct Angle {
+    double GetRadians() const { return _radians; }
+    void SetRadians(double radians) { _radians = radians; }
+    double _radians = 0.0;
+
+    SR_BeginStruct(Angle);
+    SR_Property("radians", &Angle::GetRadians, &Angle::SetRadians);
+    SR_Property("degrees",
+        [](Angle const& a) { return a._radians * 180.0 / kPi; },
+        [](Angle& a, double degrees) { a._radians = degrees * kPi / 180.0; });
+    SR_Property("turns", &GetTurns); // Read-only
+    SR_EndStruct();
+  };
+
+  double GetTurns(Angle const& a) { return a._radians / (2.0 * kPi); }
+
+The preprocessor splits macro arguments at commas that are not inside parentheses. Commas in a
+lambda's parameter list are fine, but wrap the whole lambda in parentheses if its body has a comma,
+such as in a template argument list or a braced initializer:
+  SR_Property("xy", ([](Foo const& f) { return std::array<float, 2>{f.x, f.y}; }));
+*/
+#define SR_Property(name, ...)                    IMPL_SR_Property(name, __VA_ARGS__)
 
 /**
 Remove a field that was previously added. This can be used to hide a base class field that in
@@ -927,7 +1026,8 @@ class TypeInfo {
   void Delete(void* ptr, Allocator* allocator = nullptr) const;
 
   /**
-  Copy data from src into dst
+  Copy data from src into dst using reflection. For structs, this copies fields and writable
+  properties and skips read-only properties.
   */
   void Set(void const* src, void* dst) const;
 
@@ -1025,16 +1125,106 @@ class TypeInfo {
 // Fields
 ///////////////////////////////////////////////////////////////////////////
 
+namespace detail {
+
 /**
-Describes a field within a class or struct.
+Non-owning, non-allocating reference to a callable. The callable must outlive the FunctionRef. It
+is always called as const, so mutable lambdas and functors with a non-const operator() are not
+supported. To pass a free function, use an explicit function pointer such as &InspectValue.
+Passing a bare function name is not supported.
+*/
+template <class Sig>
+class FunctionRef;
+
+template <class R, class... Args>
+class FunctionRef<R(Args...)> {
+ public:
+  template <
+      class F,
+      class Callable = std::remove_reference_t<F>,
+      std::enable_if_t<!std::is_same_v<std::decay_t<F>, FunctionRef>, int> = 0,
+      std::enable_if_t<std::is_invocable_r_v<R, Callable const&, Args...>, int> = 0>
+  // Implicit conversion from lambdas is intended, and f is only referenced, never forwarded.
+  // NOLINTNEXTLINE(google-explicit-constructor,facebook-hte-MissingExplicit,facebook-hte-MissingStdForward)
+  FunctionRef(F&& f) noexcept
+      : _obj(std::addressof(f)), _call([](void const* obj, Args... args) -> R {
+          if constexpr (std::is_void_v<R>) {
+            (*static_cast<Callable const*>(obj))(std::forward<Args>(args)...);
+          } else {
+            return (*static_cast<Callable const*>(obj))(std::forward<Args>(args)...);
+          }
+        }) {}
+
+  R operator()(Args... args) const {
+    return _call(_obj, std::forward<Args>(args)...);
+  }
+
+ private:
+  void const* _obj;
+  R (*_call)(void const*, Args...);
+};
+
+} // namespace detail
+
+/**
+Describes a member of a class or struct: either a field (member variable, see SR_Field) or a
+property (getter and optional setter, see SR_Property).
+
+The methods that take an `obj` pointer expect the address of the struct instance and work for both
+fields and properties. The value-pointer methods inherited from TypeInfo (Serialize, Deserialize,
+IsValid, Set, ...) expect the address of a value of type _innerTypeInfo.
+
+VisitValue and ModifyValue callbacks can be lambdas, const-callable functors, or explicit function
+pointers such as &InspectValue.
 */
 class FieldTypeInfo : public TypeInfo {
  public:
   TypeInfo const* _innerTypeInfo = nullptr;
-  size_t _offset = 0;
+  size_t _offset = 0; // Only meaningful when !_isProperty
+  bool _isProperty = false;
 
+  // Returns the address of the member variable, or nullptr for properties.
   uint8_t* GetFieldPtr(void* structBasePtr) const;
   uint8_t const* GetFieldPtr(void const* structBasePtr) const;
+
+  // True for properties that have no setter. Attribute_ReadOnly, which is an editor hint, does not
+  // affect it.
+  [[nodiscard]] virtual bool IsReadOnly() const = 0;
+
+  // These functions let an exception thrown by a property's getter or setter propagate.
+
+  // Copy the member's value into dstValue, an existing value of type _innerTypeInfo, using
+  // _innerTypeInfo->Set. Reflected struct copies skip read-only properties. Use VisitValue to
+  // inspect the getter result directly, including its read-only properties.
+  void GetValue(void const* obj, void* dstValue) const;
+
+  // Assign the member from srcValue, a value of type _innerTypeInfo, and fire Attribute_OnChanged.
+  // Return false if read-only.
+  virtual bool SetValue(void* obj, void const* srcValue) const = 0;
+
+  // Call cb with the address of the member's value. Avoids a copy for fields and for getters that
+  // return const T&.
+  virtual void VisitValue(void const* obj, detail::FunctionRef<void(void const* value)> cb)
+      const = 0;
+
+  // Call cb with the address of a value it may modify. If cb returns true, write the value back:
+  // properties pass a copy of the getter's value and then pass the modified copy to the setter.
+  // Fields pass the member itself, so changes take effect immediately whatever cb returns. Return
+  // false without calling cb if read-only. Does not fire Attribute_OnChanged (SetValue does).
+  virtual bool ModifyValue(void* obj, detail::FunctionRef<bool(void* value)> cb) const = 0;
+
+  // TypeInfo overrides. These take the address of a value of type _innerTypeInfo.
+  [[nodiscard]] bool IsMemCopySafe() const override;
+  void SetInner(void const* src, void* dst) const override;
+  bool IsValidInner(void const* src, AttributeList const& attribs) const override;
+  void SerializeInner(void const* src, picojson::value& dst) const override;
+  void DeserializeInner(picojson::value const& src, void* dst, DeserializeContext& context)
+      const override;
+  bool SerializeToBytesInner(void const* src, StreamWriter& dst) const override;
+  bool DeserializeFromBytesInner(StreamReader& src, void* dst) const override;
+
+ protected:
+  void FireOnChanged() const;
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1409,7 +1599,7 @@ A problem found while deserializing (see FromJsonString).
 
 _path leads from the object being deserialized to the member with the problem, in steps separated
 by slashes:
-  - A field step is the field's name: "parentField/childField".
+  - A field or property step is its name: "parentField/childField".
   - An array element step is its index: "parentField/childArray/5/nestedField".
   - A map's values are named by their keys: "mapField/key". A problem with the key itself is
     reported at the same path, with a description that mentions the map key.
@@ -1725,6 +1915,7 @@ SR_DeclareStructEx(SReflect::IssueReport);
 #define SR_EndStruct()
 #define SR_Field(member)
 #define SR_Field_Name(member, name)
+#define SR_Property(name, ...)
 #define SR_BeginClass(classType)
 #define SR_BeginClassTemplate(classType, ...)
 #define SR_EndClass()

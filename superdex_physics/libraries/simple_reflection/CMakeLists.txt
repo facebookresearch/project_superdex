@@ -71,7 +71,10 @@ endif ()
 #-----------------------------------------------------------------------------
 
 if (SR_BUILD_TESTS)
-    add_executable(simple_reflection_test test/simple_reflection_test.cpp test/type_definitions.cpp)
+    add_executable(simple_reflection_test
+        test/simple_reflection_test.cpp
+        test/simple_reflection_property_test.cpp
+        test/type_definitions.cpp)
     target_link_libraries(simple_reflection_test PRIVATE simple_reflection gtest_main)
     target_compile_features(simple_reflection_test PRIVATE cxx_std_17)
 endif ()

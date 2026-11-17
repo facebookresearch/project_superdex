@@ -1999,6 +1999,23 @@ TEST(SReflect, FieldNamesCannotContainPathSyntax) {
       std::runtime_error);
 }
 
+TEST(SReflect, MemberNamesMustBeNonEmptyAndUnique) {
+  std::unique_ptr<SReflect::StructTypeInfo> const info{
+      SReflect::MakeStructTypeInfo<IssueOuter>("SReflectTest::MemberNameUniqueness")};
+  auto const getFlag = [](IssueOuter const& outer) { return outer.flag; };
+  EXPECT_THROW(
+      SReflect::detail::AddProperty<IssueOuter>(*info, "", getFlag, nullptr), std::runtime_error);
+  SReflect::detail::AddField(*info, "value", 0, SReflect::GetTypeInfo<int32_t>());
+  std::unique_ptr<SReflect::FieldTypeInfo> const value{info->_fields.back()}; // Not owned by info
+  EXPECT_THROW(
+      SReflect::detail::AddProperty<IssueOuter>(*info, "value", getFlag, nullptr),
+      std::runtime_error);
+  // IssueInner has a field named "value" too
+  EXPECT_THROW(
+      SReflect::detail::AddBaseClass(*info, SReflect::GetTypeInfo<IssueInner>(), 0),
+      std::runtime_error);
+}
+
 // A type with its own TypeInfo, as a type outside Simple Reflection might have, which reads its two
 // values from a JSON array through DeserializeContext. Given a number or a string, it throws the
 // way a careless implementation might.
