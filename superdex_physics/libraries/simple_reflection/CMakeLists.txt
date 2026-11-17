@@ -49,10 +49,12 @@ add_library(simple_reflection STATIC)
 target_sources(simple_reflection
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/simple_reflection.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/simple_reflection_console.cpp
     PUBLIC FILE_SET HEADERS
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include/
     FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/include/simple_reflection/simple_reflection.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/simple_reflection/simple_reflection_console.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/simple_reflection/simple_reflection_inl.h
 )
 
@@ -73,6 +75,7 @@ endif ()
 if (SR_BUILD_TESTS)
     add_executable(simple_reflection_test
         test/simple_reflection_test.cpp
+        test/simple_reflection_console_test.cpp
         test/simple_reflection_method_test.cpp
         test/simple_reflection_property_test.cpp
         test/type_definitions.cpp)
