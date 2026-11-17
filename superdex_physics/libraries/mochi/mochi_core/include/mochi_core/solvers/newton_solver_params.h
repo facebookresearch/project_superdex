@@ -33,7 +33,7 @@ struct LineSearchParams {
   real alpha = NonLinearSolverParams{}.lineSearchAlpha;                   // Step reduction factor between line search iterations.
   real wolfe1 = NonLinearSolverParams{}.lineSearchWolfe1;                 // Wolfe first parameter. Only applies to Armijo, WolfeWeak, and WolfeStrong line search types.
   real wolfe2 = NonLinearSolverParams{}.lineSearchWolfe2;                 // Wolfe second parameter. Only applies to Wolfe line search types.
-  real maxRelIncrease = NonLinearSolverParams{}.lineSearchMaxRelIncrease; // Maximum relative increase in the merit to accept the step. An increase beyond it but within an estimate of the merit's rounding error is tested on the slope instead. Only applies to Simple line search type.
+  real maxRelIncrease = NonLinearSolverParams{}.lineSearchMaxRelIncrease; // Maximum relative increase in the merit to accept the step. An increase beyond this maximum is tested on the slope instead if it is within an estimate of the merit's rounding error or the step is so short that rounding error can dominate the increase. Only applies to Simple line search type.
 };
 // clang-format on
 

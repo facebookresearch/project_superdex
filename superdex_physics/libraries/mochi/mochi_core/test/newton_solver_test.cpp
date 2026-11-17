@@ -1359,9 +1359,9 @@ TEST(SnleProblem, TrustMarginIsReportedWithExactHessians) {
 }
 
 /**
- * Two-DoF problem for the step dx = (1, 0) from the zero solution, where the objective is merit0
- * and the residual (startSlope, 0). Elsewhere, the residual is (slope, 1), and the objective is
- * merit0 + rise up to the step maxScale dx and merit0 + |merit0| beyond. They include a
+ * Two-DoF problem for the step dx = (1, 0) from a solution x with x[0] = 0, where the objective is
+ * merit0 and the residual (startSlope, 0). Elsewhere, the residual is (slope, 1), and the objective
+ * is merit0 + rise up to the step maxScale dx and merit0 + |merit0| beyond. They include a
  * non-potential term, whose energy rises by nonPotentialRise from the start and whose residual is
  * (2 nonPotentialResidual, 0) at the start and (nonPotentialResidual, 0) elsewhere. Records the
  * saturation flags of every assembly.
@@ -1407,9 +1407,10 @@ static SnleProblem<real> GetLineSearchTrialProblem(
 }
 
 // A merit-based line search treats a trial that fails its merit test, but changes the merit by no
-// more than the band, as passing that test if its slope passes the merit test's Armijo condition;
-// the Wolfe searches still apply their curvature test. Out of the band, and for trials that pass
-// the merit test, the slope test doesn't apply. Steps longer than maxScale dx rise by |merit0|,
+// more than the band or steps within the floor, 10 kEps |x + s dx|, as passing that test if its
+// slope passes the merit test's Armijo condition; the Wolfe searches still apply their curvature
+// test. Otherwise, and for trials that pass the merit test, the slope test doesn't apply. x[1],
+// which the step doesn't change, sets |x + s dx|. Steps longer than maxScale dx rise by |merit0|,
 // which every merit test and the band reject: by default, the first two trials do, so the third, at
 // step scale 1/4, decides. The Wolfe searches never step beyond dx. A trial still descending too
 // steeply for their curvature test is accepted at dx and bounds the step from below otherwise, and
@@ -1442,6 +1443,7 @@ TEST(NewtonSolver, MeritLineSearches) {
     real maxScale = 0.25_r;
     int maxIter = 3;
     std::array<real, 4> scale = {0.25_r, 0.25_r, 0.25_r, 0.25_r}; // Final step scales
+    real stepFloor{};
   };
   for (double const merit0 : {4.0, -0.25}) {
     real const unit = Abs(real(merit0));
@@ -1458,6 +1460,11 @@ TEST(NewtonSolver, MeritLineSearches) {
           Case{-10 * kEps, kNaN, -0.5_r * kG, {true, false, false, false}},
           Case{-10 * kEps, kInf, -0.5_r * kG, {true, false, false, false}},
           Case{4000 * kEps, -kG, -0.5_r * kG, {false, false, false, false}}, // Out of band
+          // Out of band, but the floor admits the third trial
+          Case{.rise = 4000 * kEps, .startSlope = -kG, .slope = -0.5_r * kG, .accepted = kAllAccept,
+               .stepFloor = 0.3_r},
+          // ... but an uphill slope still fails the slope test
+          Case{.rise = 4000 * kEps, .startSlope = -kG, .slope = 1.5_r * kG, .stepFloor = 0.3_r},
           // Out-of-band drop that fails the Armijo test
           Case{-3000 * kEps, -2e8_r * kEps, -4e8_r * kEps, {true, false, false, false}},
           // In-band drop that fails the Armijo test
@@ -1495,7 +1502,7 @@ TEST(NewtonSolver, MeritLineSearches) {
             unit * c.nonPotentialRise,
             unit * c.nonPotentialResidual,
             assembledFlags);
-        problem.SetSolution(ColumnVector<real>::Zero(2));
+        problem.SetSolution(ColumnVector<real>({{0_r, c.stepFloor / (10_r * kEps)}}));
         problem.UpdateObjResDRes({.assemObj = true, .assemRes = true});
         problem.increment[0] = 1_r;
         problem.increment[1] = 0_r;

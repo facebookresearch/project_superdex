@@ -165,19 +165,24 @@ struct LineSearch {
 
   /**
    * Slope test of the trials whose merit change is within an estimate of the merit's rounding
-   * error.
+   * error, or whose step is so short that rounding error can dominate the merit change.
    *
    * Near convergence, typically in single precision, the merit change of a good step can be
    * smaller than its rounding error, so the merit test can reject the step on rounding error. With
-   * M0 and M1 the merits at x and at the trial x + s dx, ε the machine epsilon of T and
-   * k = @ref kRoundingErrorFactor, a trial that fails the merit test with
-   * |M1 - M0| <= 2 k ε |M0| is accepted if
+   * M0 and M1 the merits at x and at the trial x + s dx, ε the machine epsilon of T,
+   * k = @ref kRoundingErrorFactor and k_s = @ref kStepFloorFactor, a trial that fails the merit
+   * test with |M1 - M0| <= 2 k ε |M0|, or with |s dx| <= k_s ε |x + s dx|, is accepted if
    * F(x + s dx)·dx <= (2 c1 - 1) F(x)·dx, with F the residual and c1 the Armijo constant of the
    * merit test. This is the Armijo condition on (s / 2) (F(x)·dx + F(x + s dx)·dx), the
    * trapezoidal estimate of M1 - M0, which is exact on quadratic merits and free of the
    * cancellation in M1 - M0: Hager and Zhang's approximate Armijo condition (2005). It applies
    * only to trials that have a finite merit and fail the merit test, and never accepts one whose
    * slope or slope bound is not finite.
+   *
+   * The step floor, |s dx| <= k_s ε |x + s dx|, covers merits whose rounding error |M0| misses
+   * entirely: merits measured from the stage start nearly vanish at rest. A step within it moves x
+   * by about k_s times its rounding scale ε |x| or less, so rounding error can dominate the merit
+   * change, whatever M0.
    */
   // TODO: Explore applying the slope test also to trials that pass the merit test within the band.
   class RoundingErrorSlopeTest {
@@ -194,12 +199,13 @@ struct LineSearch {
 
     /**
      * Whether the trial, with finite merit @p merit and the increment holding @p scale times dx,
-     * changes the merit within the band and passes the slope test. Requires the trial's residual
-     * to be assembled.
+     * changes the merit within the band or steps within the floor, and passes the slope test.
+     * Requires the trial's residual to be assembled.
      */
     [[nodiscard]] bool Passes(Problem const& problem, double merit, T scale) const {
       MOCHI_ASSERT_VERBOSE(IsFinite(merit), "The slope test requires a finite merit.");
-      if (!IsFinite(_slopeBound) || !NearEqual(merit, _merit0, _band)) {
+      if (!IsFinite(_slopeBound) ||
+          !(NearEqual(merit, _merit0, _band) || WithinStepFloor(problem))) {
         return false;
       }
       double const slope = problem.GetResidual().Dot(problem.GetIncrement());
@@ -212,6 +218,16 @@ struct LineSearch {
     // orders of magnitude larger, hence the large k.
     // TODO: Explore per-term rounding magnitudes instead of |M0| for the band. See D125958065.
     static constexpr double kRoundingErrorFactor = 1000.0;
+
+    // Smaller floors leave more good trials rejected on rounding error, while much larger ones
+    // let the slope test accept trials that measurably raise the merit.
+    static constexpr double kStepFloorFactor = 10.0;
+
+    // |s dx| <= k_s ε |x + s dx|, measured at the trial since only trials out of the band need it
+    [[nodiscard]] static bool WithinStepFloor(Problem const& problem) {
+      return problem.GetIncrement().Norm() <=
+          kStepFloorFactor * std::numeric_limits<T>::epsilon() * problem.GetSolution().Norm();
+    }
 
     double const _merit0;
     double const _band; // 2 k ε |M0|

@@ -1392,9 +1392,10 @@ class LineSearchType:
         <superdex.physics.LineSearchType>` and :class:`WOLFE_STRONG
         <superdex.physics.LineSearchType>` test a merit: the objective, except that
         terms without a potential may count their work along the step instead of
-        their energy. A step that fails the test but changes the merit by no more
-        than an estimate of its rounding error is tested on the slope of the merit
-        along the step instead.
+        their energy. A step that fails the test is tested on the slope of the merit
+        along the step instead if its merit change is within an estimate of the
+        merit's rounding error or the step is so short that rounding error can
+        dominate the change.
     """
     NONE: LineSearchType
     """No line search. May substantially degrade stability."""
@@ -4246,9 +4247,10 @@ class NonLinearSolverParams:
         Only applies to :class:`SIMPLE <superdex.physics.LineSearchType>`.
 
     Note:
-        An increase beyond this maximum but within an estimate of the merit's
-        rounding error is tested on the slope of the merit along the step instead
-        (see :class:`~superdex.physics.LineSearchType`).
+        An increase beyond this maximum is tested on the slope of the merit along
+        the step instead if it is within an estimate of the merit's rounding error
+        or the step is so short that rounding error can dominate the increase (see
+        :class:`~superdex.physics.LineSearchType`).
     """
     line_search_type: LineSearchType
     """Line search type."""

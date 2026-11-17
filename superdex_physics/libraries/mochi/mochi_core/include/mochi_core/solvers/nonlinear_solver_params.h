@@ -143,8 +143,9 @@ namespace mochi {
  * @note The line searches @ref LineSearchType::Simple, @ref LineSearchType::Armijo, @ref
  * LineSearchType::WolfeWeak and @ref LineSearchType::WolfeStrong test a merit: the objective,
  * except that terms without a potential may count their work along the step instead of their
- * energy. A step that fails the test but changes the merit by no more than an estimate of its
- * rounding error is tested on the slope of the merit along the step instead.
+ * energy. A step that fails the test is tested on the slope of the merit along the step instead
+ * if its merit change is within an estimate of the merit's rounding error or the step is so short
+ * that rounding error can dominate the change.
  */
 enum struct LineSearchType {
   /** @brief No line search. May substantially degrade stability. */
@@ -455,8 +456,9 @@ struct NonLinearSolverParams {
    * @brief Maximum relative increase in the merit to accept the step.
    *
    * @note Only applies to @ref LineSearchType::Simple.
-   * @note An increase beyond this maximum but within an estimate of the merit's rounding error is
-   * tested on the slope of the merit along the step instead (see @ref LineSearchType).
+   * @note An increase beyond this maximum is tested on the slope of the merit along the step
+   * instead if it is within an estimate of the merit's rounding error or the step is so short that
+   * rounding error can dominate the increase (see @ref LineSearchType).
    */
   real lineSearchMaxRelIncrease = 0.0_r;
 
