@@ -1,0 +1,176 @@
+{
+  "comment": "Drop the duck from 10 cm, let it settle, then push a 30 mm sphere down into the top of its head with at most 5 N (a firm finger press), hold, and pull it back. The duck should land upright, dent under the sphere without the sphere passing into it or elements inverting, and spring back.",
+  "assetsRoot": "",
+  "prefab": "./press.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "press",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "presser/Sphere",
+      "frame": "World",
+      "pointLocal": [
+        0,
+        0,
+        0
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0.002,
+            -0.009,
+            0.22
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.0,
+          "position": [
+            0.002,
+            -0.009,
+            0.22
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.5,
+          "position": [
+            0.002,
+            -0.009,
+            0.11
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 2.0,
+          "position": [
+            0.002,
+            -0.009,
+            0.11
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 3.0,
+          "position": [
+            0.002,
+            -0.009,
+            0.08
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 3.5,
+          "position": [
+            0.002,
+            -0.009,
+            0.08
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 4.0,
+          "position": [
+            0.002,
+            -0.009,
+            0.11
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 500,
+        "rotation": true,
+        "rotResponseHz": 15,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "presser/Sphere"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "presser/Sphere"
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 5.0,
+    "groundPlane": true,
+    "groundHeight": 0.0,
+    "record": {
+      "enabled": true,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "presser/Sphere.pos.z",
+        "presser/Sphere.contactForce.z"
+      ],
+      "height": 160
+    }
+  ]
+}

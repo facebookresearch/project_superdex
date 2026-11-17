@@ -1,0 +1,23 @@
+{
+  "_comment": "The duck 10 cm up and the sphere prefab (30 mm, 10 g) above its head, for tuning/drop_press.superdex_tuner.",
+  "prefabs": [
+    {
+      "name": "duck",
+      "path": "./../rubber_duck.superdex_prefab",
+      "translation": [
+        0,
+        0,
+        0.1
+      ]
+    },
+    {
+      "name": "presser",
+      "path": "./../../sphere/sphere.mochi_prefab",
+      "translation": [
+        0.002,
+        -0.009,
+        0.22
+      ]
+    }
+  ]
+}

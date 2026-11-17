@@ -1,0 +1,23 @@
+{
+  "actors": {
+    "soft": [
+      {
+        "contact": {
+          "coulombFrictionCoefficient": 0.60000002384185791
+        },
+        "material": {
+          "density": 200,
+          "neoHookean": {
+            "poissonRatio": 0.30000001192092896,
+            "youngsModulus": 50000
+          },
+          "stiffnessDampingCoefficient": 0.0099999997764825821
+        },
+        "name": "rubber_duck",
+        "renderModel": "./render/rubber_duck.glb",
+        "shape": "./collision/rubber_duck.mochi.h5",
+        "useContactSkin": true
+      }
+    ]
+  }
+}
