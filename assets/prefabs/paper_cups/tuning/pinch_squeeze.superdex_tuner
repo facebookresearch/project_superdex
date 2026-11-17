@@ -1,0 +1,327 @@
+{
+  "comment": "Squeeze the wall of a standing cup 17 mm below the rim twice as hard as the pinch: the index fingertip outside and the thumb tip inside are each aimed 4 mm past the wall (about 13 N), held 1 s, then opened. The wall stops them: in the cup's frame neither pad gets into it. Between the rigid fingertips the cup shifts a few mm and is left standing; aimed twice as far (about 20 N) it is pushed up and out.",
+  "assetsRoot": "",
+  "prefab": "./pinch.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "pinch_a",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "finger_a",
+      "frame": "World",
+      "pointLocal": [
+        0.0001,
+        -0.0032,
+        -0.0177
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0,
+            0.054518,
+            0.135
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.5,
+          "position": [
+            0,
+            0.054518,
+            0.095
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.9,
+          "position": [
+            0,
+            0.038518,
+            0.095
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.2,
+          "position": [
+            0,
+            0.038518,
+            0.095
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 2.2,
+          "position": [
+            0,
+            0.038518,
+            0.095
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 2.4,
+          "position": [
+            0,
+            0.054518,
+            0.095
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 3.0,
+          "position": [
+            0,
+            0.054518,
+            0.145
+          ],
+          "rotation": [
+            -0.7853981633974483,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    },
+    {
+      "name": "pinch_b",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "finger_b",
+      "frame": "World",
+      "pointLocal": [
+        0.0007,
+        0.0051,
+        -0.0208
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0,
+            0.028531,
+            0.135
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.5,
+          "position": [
+            0,
+            0.028531,
+            0.095
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 0.9,
+          "position": [
+            0,
+            0.044531,
+            0.095
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.2,
+          "position": [
+            0,
+            0.044531,
+            0.095
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 2.2,
+          "position": [
+            0,
+            0.044531,
+            0.095
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 2.4,
+          "position": [
+            0,
+            0.028531,
+            0.095
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 3.0,
+          "position": [
+            0,
+            0.028531,
+            0.145
+          ],
+          "rotation": [
+            0.5235987755982988,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        }
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cup/Paper_Cup"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "finger_a"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "finger_b"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "finger_a"
+    },
+    {
+      "kind": "ContactForce",
+      "target": "finger_b"
+    },
+    {
+      "kind": "Penetration",
+      "target": "cup/Paper_Cup",
+      "ignoreGround": true
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 3.2,
+    "groundPlane": true,
+    "groundHeight": -0.00056,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "finger_a.contactForce.y",
+        "finger_b.contactForce.y"
+      ],
+      "height": 160
+    },
+    {
+      "channels": [
+        "cup/Paper_Cup.pos.z"
+      ],
+      "height": 160
+    }
+  ]
+}

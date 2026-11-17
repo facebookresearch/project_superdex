@@ -1,0 +1,41 @@
+{
+  "_comment": "Four cups above each other, each 20 mm above where it would sit nested in the one below, for tuning/stack.superdex_tuner.",
+  "prefabs": [
+    {
+      "name": "cup_0",
+      "path": "./../paper_cup.mochi_prefab",
+      "translation": [
+        0,
+        0,
+        0.0
+      ]
+    },
+    {
+      "name": "cup_1",
+      "path": "./../paper_cup.mochi_prefab",
+      "translation": [
+        0,
+        0,
+        0.037
+      ]
+    },
+    {
+      "name": "cup_2",
+      "path": "./../paper_cup.mochi_prefab",
+      "translation": [
+        0,
+        0,
+        0.074
+      ]
+    },
+    {
+      "name": "cup_3",
+      "path": "./../paper_cup.mochi_prefab",
+      "translation": [
+        0,
+        0,
+        0.111
+      ]
+    }
+  ]
+}

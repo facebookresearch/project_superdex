@@ -1,0 +1,67 @@
+{
+  "comment": "Drop a cup tilted 30 deg from 250 mm onto the ground, and drop a cup into a standing one from 100 mm above where it nests. The first lands, tips onto its side and rolls a little without being thrown; the second wedges into the first (half a millimeter past the resting pitch at impact) without passing through its wall or bottom, and both stay upright.",
+  "assetsRoot": "",
+  "prefab": "./drop.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "tilted/Paper_Cup"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "base/Paper_Cup"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "falling/Paper_Cup"
+    },
+    {
+      "kind": "Penetration",
+      "target": "tilted/Paper_Cup",
+      "ignoreGround": true
+    },
+    {
+      "kind": "Penetration",
+      "target": "falling/Paper_Cup",
+      "ignoreGround": true
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 2.5,
+    "groundPlane": true,
+    "groundHeight": -0.00056,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "tilted/Paper_Cup.pos.z",
+        "falling/Paper_Cup.pos.z"
+      ],
+      "height": 160
+    },
+    {
+      "channels": [
+        "falling/Paper_Cup.penetration.volume"
+      ],
+      "height": 160
+    }
+  ]
+}

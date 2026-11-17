@@ -1,0 +1,75 @@
+{
+  "_comment": "A cup and a right OpenXR index fingertip and thumb tip (highpoly shapes, about 50 g each, the hand's link contact), for the pinch tuners.",
+  "prefabs": [
+    {
+      "name": "cup",
+      "path": "./../paper_cup.mochi_prefab",
+      "translation": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "actors": {
+    "rigid": [
+      {
+        "name": "finger_a",
+        "shape": "./../../../bots/hands/openxr/right/collision/xr_09_index_distal_highpoly_collision.mochi.h5",
+        "colliderType": "Sdf",
+        "density": 20800,
+        "contact": {
+          "frictionWithColliderNormal": false,
+          "penaltyCoefficient": 10000000000.0,
+          "penaltyThresholdDefault": 0.003,
+          "viscousFrictionCoefficient": 20
+        },
+        "translation": [
+          -0.0001,
+          0.069296,
+          0.145253
+        ],
+        "rotation": [
+          -0.382683,
+          0,
+          0,
+          0.92388
+        ]
+      },
+      {
+        "name": "finger_b",
+        "shape": "./../../../bots/hands/openxr/right/collision/xr_04_thumb_distal_highpoly_collision.mochi.h5",
+        "colliderType": "Sdf",
+        "density": 11200,
+        "contact": {
+          "frictionWithColliderNormal": false,
+          "penaltyCoefficient": 10000000000.0,
+          "penaltyThresholdDefault": 0.003,
+          "viscousFrictionCoefficient": 20
+        },
+        "translation": [
+          -0.0007,
+          0.013714,
+          0.150463
+        ],
+        "rotation": [
+          0.258819,
+          0,
+          0,
+          0.965926
+        ]
+      }
+    ]
+  },
+  "contactFilter": {
+    "actorContactSymmetric": [
+      {
+        "actors": [
+          "finger_a",
+          "finger_b"
+        ],
+        "enable": false
+      }
+    ]
+  }
+}

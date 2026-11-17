@@ -1,0 +1,142 @@
+{
+  "comment": "Let the ten-cup pyramid (upside-down cups, 4-3-2-1) sit for 3 s with no loads. Every cup starts where it rests, on the ground or with its rim on the bottoms of the two cups below it, so none should move more than about 0.1 mm or slide off.",
+  "assetsRoot": "",
+  "prefab": "./../paper_cup_pyramid.mochi_prefab",
+  "prefabOverrides": [],
+  "loads": [],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "Cup"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "Cup1"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "Cup2"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "Cup3"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "Cup4"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "Cup5"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "Cup6"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "Cup7"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "Cup8"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "Cup9"
+    },
+    {
+      "kind": "Penetration",
+      "target": "Cup",
+      "ignoreGround": true
+    },
+    {
+      "kind": "Penetration",
+      "target": "Cup1",
+      "ignoreGround": true
+    },
+    {
+      "kind": "Penetration",
+      "target": "Cup2",
+      "ignoreGround": true
+    },
+    {
+      "kind": "Penetration",
+      "target": "Cup3",
+      "ignoreGround": true
+    },
+    {
+      "kind": "Penetration",
+      "target": "Cup4",
+      "ignoreGround": true
+    },
+    {
+      "kind": "Penetration",
+      "target": "Cup5",
+      "ignoreGround": true
+    },
+    {
+      "kind": "Penetration",
+      "target": "Cup6",
+      "ignoreGround": true
+    },
+    {
+      "kind": "Penetration",
+      "target": "Cup7",
+      "ignoreGround": true
+    },
+    {
+      "kind": "Penetration",
+      "target": "Cup8",
+      "ignoreGround": true
+    },
+    {
+      "kind": "Penetration",
+      "target": "Cup9",
+      "ignoreGround": true
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 3.0,
+    "groundPlane": true,
+    "groundHeight": -0.00056,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "Cup.pos.z",
+        "Cup3.pos.z",
+        "Cup6.pos.z",
+        "Cup9.pos.z"
+      ],
+      "height": 160
+    },
+    {
+      "channels": [
+        "Cup4.pos.y",
+        "Cup5.pos.y",
+        "Cup6.pos.y",
+        "Cup7.pos.y",
+        "Cup8.pos.y",
+        "Cup9.pos.y"
+      ],
+      "height": 160
+    }
+  ]
+}

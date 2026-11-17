@@ -1,0 +1,38 @@
+{
+  "_comment": "A cup tilted 30 deg 250 mm above the ground, and a cup 100 mm above where it would nest in a standing one, for tuning/drop.superdex_tuner.",
+  "prefabs": [
+    {
+      "name": "tilted",
+      "path": "./../paper_cup.mochi_prefab",
+      "translation": [
+        0,
+        0,
+        0.25
+      ],
+      "rotation": [
+        0.25881904510252074,
+        0,
+        0,
+        0.9659258262890683
+      ]
+    },
+    {
+      "name": "base",
+      "path": "./../paper_cup.mochi_prefab",
+      "translation": [
+        0.2,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "falling",
+      "path": "./../paper_cup.mochi_prefab",
+      "translation": [
+        0.2,
+        0,
+        0.117
+      ]
+    }
+  ]
+}

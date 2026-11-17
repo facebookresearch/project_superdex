@@ -1,0 +1,87 @@
+{
+  "comment": "Let a standing cup, an upside-down cup and a stack of four nested cups (17.0 mm apart) sit for 2 s with no loads. Each starts where it rests, so nothing should move more than about 0.1 mm, tip or overlap its neighbors.",
+  "assetsRoot": "",
+  "prefab": "./rest.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "upright/Paper_Cup"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "inverted/Paper_Cup"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "nested_0/Paper_Cup"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "nested_1/Paper_Cup"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "nested_2/Paper_Cup"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "nested_3/Paper_Cup"
+    },
+    {
+      "kind": "Penetration",
+      "target": "nested_0/Paper_Cup",
+      "ignoreGround": true
+    },
+    {
+      "kind": "Penetration",
+      "target": "nested_1/Paper_Cup",
+      "ignoreGround": true
+    },
+    {
+      "kind": "Penetration",
+      "target": "nested_2/Paper_Cup",
+      "ignoreGround": true
+    },
+    {
+      "kind": "Penetration",
+      "target": "nested_3/Paper_Cup",
+      "ignoreGround": true
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 2.0,
+    "groundPlane": true,
+    "groundHeight": -0.00056,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "upright/Paper_Cup.pos.z",
+        "inverted/Paper_Cup.pos.z",
+        "nested_0/Paper_Cup.pos.z",
+        "nested_1/Paper_Cup.pos.z",
+        "nested_2/Paper_Cup.pos.z",
+        "nested_3/Paper_Cup.pos.z"
+      ],
+      "height": 160
+    }
+  ]
+}

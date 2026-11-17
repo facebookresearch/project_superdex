@@ -18,17 +18,23 @@ This package contains a paper-cup simulation asset that was created in-house by 
 
 The following work was done to produce this simulation-ready asset:
 
-- Physically scanned the real cup on a 2D scanner, then hand-modeled the cup geometry in SolidWorks using the scan and physical object as references.
-- Converted the CAD work into a GLB render mesh and a Mochi collision model for the released package.
-- Created the Meta-authored processing metadata for this asset in [`../intermediates/paper_cup.StudioProcessing.json`](../intermediates/paper_cup.StudioProcessing.json).
-- Adjusted the visual appearance for rendering, including a reference-inspired cup label; associated product names and marks remain the property of their respective owners.
-- Created reusable single-cup and ten-cup pyramid prefabs with contact settings and placement transforms.
+- Physically scanned the real cup on a 2D scanner and modeled it in SolidWorks (`cad/paper_cup.SLDPRT`) as a revolve: a 2 mm wall, a 2 mm floor over a bottom skirt, and a rolled rim. The `Collision` configuration makes the rim a polygon in section; its profile is revolved into `cad/paper_cup_collision.stl`, even rings of triangles around the cup, which the collision model is generated from.
+- Generated the collision model in Studio (about 2,000 triangles) with a 1.5 mm SDF, fine enough for the 2 mm wall.
+- Generated the render model from the SolidWorks tessellation of the `Default` configuration, with a paper texture printed with the SuperDex logo under a clear coat.
+- Created the Meta-authored processing metadata for this asset in [`intermediates/paper_cup.StudioProcessing.json`](./intermediates/paper_cup.StudioProcessing.json).
+- Created reusable single-cup and ten-cup pyramid prefabs with contact settings and placement transforms; the pyramid's cups start at rest. A cup weighs 40 g.
+
+## Physics Tuning
+
+- `tuning/pinch_lift` pinches the wall between an OpenXR index fingertip outside and thumb tip inside, lifts and carries the cup and sets it down; `tuning/pinch_squeeze` squeezes the wall twice as hard. Neither fingertip passes into the wall.
+- `tuning/stack` drops four cups into each other (they nest about 18 mm apart) and pulls the top one out again; `tuning/drop` drops a cup tilted onto the ground and one into another from 100 mm.
+- `tuning/rest` (a standing, an upside-down and a nested cup stack) and `tuning/rest_pyramid` start at rest: nothing moves more than about 0.1 mm.
 
 ## License & IP Notes
 
 The Meta-authored digital assets in this directory are distributed under the [Creative Commons Attribution 4.0 International License (CC-BY-4.0)](./LICENSE). You must give appropriate credit to Meta Platforms, Inc. when you use or redistribute them.
 
-The license applies only to the Meta-authored render mesh, collision data, and prefab manifests in this directory, together with this asset's Meta-authored processing metadata at [`../intermediates/paper_cup.StudioProcessing.json`](../intermediates/paper_cup.StudioProcessing.json). Its inclusion does not extend this package's license to any other content in `../intermediates`. The license does not grant rights in the underlying physical product design, trade dress, product label, product names, logos, or trademarks.
+The license applies only to the Meta-authored CAD model, render mesh, collision data, prefab manifests and tuners in this directory, together with this asset's Meta-authored processing metadata at [`intermediates/paper_cup.StudioProcessing.json`](./intermediates/paper_cup.StudioProcessing.json). The license does not grant rights in the underlying physical product design, trade dress, product names, logos, or trademarks, including the SuperDex logo printed on the cup.
 
 These assets were modeled after a commercially available product (the ecotainer Carte Blanc hot cup by Graphic Packaging International). While the 3D geometry is Meta's own work, the underlying product design may be protected by Graphic Packaging International's copyright, design-patent, or trade-dress rights. Accordingly:
 

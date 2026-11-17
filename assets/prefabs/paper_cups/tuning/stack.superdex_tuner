@@ -1,0 +1,215 @@
+{
+  "comment": "Drop four cups into each other: each starts 20 mm above where it nests in the one below. They settle nested about 17.0 mm apart (the walls wedge, the bottoms do not touch) without bouncing out or overlapping. Then pull the top cup straight up 150 mm by its center (1 s): it comes out alone (about 2 N at the start), leaving the others in place, and dropped back from 20 mm it nests again where it was.",
+  "assetsRoot": "",
+  "prefab": "./stack.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "pull",
+      "enabled": true,
+      "type": "PosePath",
+      "target": "cup_3/Paper_Cup",
+      "frame": "World",
+      "pointLocal": [
+        0,
+        0,
+        0.05
+      ],
+      "waypoints": [
+        {
+          "time": 0.0,
+          "position": [
+            0,
+            0,
+            0.101
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Step",
+          "drive": "Off"
+        },
+        {
+          "time": 1.5,
+          "position": [
+            0,
+            0,
+            0.101
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 1.6,
+          "position": [
+            0,
+            0,
+            0.101
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 2.6,
+          "position": [
+            0,
+            0,
+            0.251
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 2.9,
+          "position": [
+            0,
+            0,
+            0.251
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Smooth",
+          "drive": "On"
+        },
+        {
+          "time": 3.5,
+          "position": [
+            0,
+            0,
+            0.121
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Linear",
+          "drive": "On"
+        },
+        {
+          "time": 3.6,
+          "position": [
+            0,
+            0,
+            0.121
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "interpolation": "Step",
+          "drive": "Off"
+        }
+      ],
+      "drive": {
+        "responseHz": 30,
+        "dampingRatio": 1,
+        "maxAcceleration": 0,
+        "rotation": true,
+        "rotResponseHz": 30,
+        "rotDampingRatio": 1,
+        "maxAngularAcceleration": 0
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cup_0/Paper_Cup"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cup_1/Paper_Cup"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cup_2/Paper_Cup"
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cup_3/Paper_Cup"
+    },
+    {
+      "kind": "Penetration",
+      "target": "cup_0/Paper_Cup",
+      "ignoreGround": true
+    },
+    {
+      "kind": "Penetration",
+      "target": "cup_1/Paper_Cup",
+      "ignoreGround": true
+    },
+    {
+      "kind": "Penetration",
+      "target": "cup_2/Paper_Cup",
+      "ignoreGround": true
+    },
+    {
+      "kind": "Penetration",
+      "target": "cup_3/Paper_Cup",
+      "ignoreGround": true
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 5.0,
+    "groundPlane": true,
+    "groundHeight": -0.00056,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "cup_0/Paper_Cup.pos.z",
+        "cup_1/Paper_Cup.pos.z",
+        "cup_2/Paper_Cup.pos.z",
+        "cup_3/Paper_Cup.pos.z"
+      ],
+      "height": 160
+    },
+    {
+      "channels": [
+        "cup_0/Paper_Cup.penetration.volume",
+        "cup_1/Paper_Cup.penetration.volume",
+        "cup_2/Paper_Cup.penetration.volume",
+        "cup_3/Paper_Cup.penetration.volume"
+      ],
+      "height": 160
+    }
+  ]
+}

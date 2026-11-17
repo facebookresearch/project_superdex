@@ -1,0 +1,65 @@
+{
+  "_comment": "A cup standing, a cup upside down and four cups nested, each placed at rest, for tuning/rest.superdex_tuner.",
+  "prefabs": [
+    {
+      "name": "upright",
+      "path": "./../paper_cup.mochi_prefab",
+      "translation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "inverted",
+      "path": "./../paper_cup.mochi_prefab",
+      "translation": [
+        0.15,
+        0,
+        0.11231
+      ],
+      "rotation": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "nested_0",
+      "path": "./../paper_cup.mochi_prefab",
+      "translation": [
+        -0.15,
+        0,
+        0.0
+      ]
+    },
+    {
+      "name": "nested_1",
+      "path": "./../paper_cup.mochi_prefab",
+      "translation": [
+        -0.15,
+        0,
+        0.01698
+      ]
+    },
+    {
+      "name": "nested_2",
+      "path": "./../paper_cup.mochi_prefab",
+      "translation": [
+        -0.15,
+        0,
+        0.03397
+      ]
+    },
+    {
+      "name": "nested_3",
+      "path": "./../paper_cup.mochi_prefab",
+      "translation": [
+        -0.15,
+        0,
+        0.051
+      ]
+    }
+  ]
+}
