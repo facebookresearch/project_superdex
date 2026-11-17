@@ -37,6 +37,7 @@
 #include <mochi_core/utils/matrix_utils.h>
 #include <mochi_core/utils/nd_array_utils.h>
 #include <mochi_core/utils/quaternion_utils.h>
+#include <mochi_core/utils/reflection_utils.h>
 #include <mochi_core/utils/string_utils.h>
 #include <mochi_core/utils/task_scheduler.h>
 #include <mochi_core/utils/transform_rt.h>
@@ -108,10 +109,11 @@ struct JsonModelDataDeprecated {
 static void LoadJsonDeprecated(ModelData& outData, picojson::value const& json, Error& error) {
   MOCHI_ERROR_RETURN(error);
 
-  int numIssues = 0;
+  SReflect::IssueList issues;
   JsonModelDataDeprecated deprecated;
-  SReflect::FromJsonValue(deprecated, json, {}, numIssues);
-  MOCHI_ERROR_IF(numIssues, error, "Failed to parse JSON model file");
+  SReflect::FromJsonValue(deprecated, json, {}, &issues);
+  LogDeserializationWarnings("Issues detected while loading a model from JSON:", issues);
+  MOCHI_ERROR_IF(!issues.empty(), error, "Failed to parse JSON model file");
 
   // Check a few things up front
   MOCHI_ERROR_IF(
@@ -176,9 +178,10 @@ static void LoadFromJsonImpl(ModelData& outData, picojson::value const& jsonValu
     // Backwards compatibility for old JSON model files.
     LoadJsonDeprecated(outData, jsonValue, error);
   } else {
-    int numIssues = 0;
-    SReflect::FromJsonValue(outData, jsonValue, {}, numIssues);
-    MOCHI_ERROR_IF(numIssues != 0, error, "Failed to load model file.");
+    SReflect::IssueList issues;
+    SReflect::FromJsonValue(outData, jsonValue, {}, &issues);
+    LogDeserializationWarnings("Issues detected while loading a model from JSON:", issues);
+    MOCHI_ERROR_IF(!issues.empty(), error, "Failed to load model file.");
   }
 }
 

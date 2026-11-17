@@ -139,8 +139,9 @@ Example 1 - Simple struct with some attributes:
     SReflect::SaveToJsonFile(thing, "somewhere/thing.json");
 
     // Deserialization
-    int numIssuesDetected;
-    SReflect::LoadFromJsonFile(thing, "somewhere/thing.json", numIssuesDetected);
+    SReflect::IssueList issues;
+    SReflect::LoadFromJsonFile(
+        thing, "somewhere/thing.json", SReflect::DeserializeFlags::Default, &issues);
 
     // Get the TypeInfo and do whatever you need...
     const SReflect::StructTypeInfo& typeInfo = thing.GetTypeInfo();
@@ -149,6 +150,7 @@ Example 1 - Simple struct with some attributes:
 Example 2 - Class using BaseObject
 
   class Thing : public SReflect::BaseObject {
+   public:
     std::string name;
 
     SR_BeginClass(Thing);
@@ -156,19 +158,19 @@ Example 2 - Class using BaseObject
     SR_EndClass();
   };
 
-  void UseAnyObject(SReflect::BaseObject const& obj) {
+  void UseAnyObject(SReflect::BaseObject& obj) {
     // BaseObject has a virtual function that gives us the derived TypeInfo.
     // Thus, we can now do everything without templates.
 
     // Serialization
     SReflect::SaveToJsonFile(obj, "somewhere/any_object.json");
 
-    // Deserialization
-    int numIssuesDetected;
-    SReflect::LoadFromJsonFile(thing, "somewhere/any_object.json", numIssuesDetected);
+    // Deserialization, logging any issues
+    SReflect::LoadFromJsonFile(
+        obj, "somewhere/any_object.json", SReflect::DeserializeFlags::Default);
 
     // Get the derived TypeInfo and do whatever you need...
-    const SReflect::StructTypeInfo& typeInfo = thing.GetFinalTypeInfo();
+    const SReflect::StructTypeInfo& typeInfo = obj.GetFinalTypeInfo();
   }
 
   void UseThing() {
@@ -735,21 +737,11 @@ enum class DeserializeFlags : uint32_t {
 Deserialize any supported type from a JSON string
 
 JSON deserialization reports each problem it finds, such as malformed JSON, a type mismatch or an
-unknown field name, as an issue with a path to where it was found (see IssueReport). The
-deserialization functions come in two forms:
-  - With `int& outNumIssues`, each issue is logged as "path: description" and outNumIssues
-    receives the number of issues.
-  - With `std::vector<IssueReport>* outIssues`, *outIssues is replaced with one IssueReport per
-    issue and the issues are not logged. If outIssues is null, the issues are logged instead. These
-    functions return true if there were no issues, except for LoadFromJsonFile.
+unknown field name, as an issue with a path to where it was found (see IssueReport). If outIssues is
+non-null, *outIssues is replaced with one IssueReport per issue and the issues are not logged.
+Otherwise the issues are logged as "path: description". These functions return true if there were no
+issues, except for LoadFromJsonFile.
 */
-template <typename T>
-void FromJsonString(
-    T& objOut,
-    std::string const& json,
-    DeserializeFlags deserializeFlags,
-    int& outNumIssues);
-
 template <typename T>
 bool FromJsonString(
     T& objOut,
@@ -781,13 +773,6 @@ void FromJson(nlohmann::json const& j, T& outValue) {
 Deserialize any supported type from picojson
 */
 template <typename T>
-void FromJsonValue(
-    T& objOut,
-    picojson::value const& json,
-    DeserializeFlags deserializeFlags,
-    int& outNumIssues);
-
-template <typename T>
 bool FromJsonValue(
     T& objOut,
     picojson::value const& json,
@@ -802,15 +787,9 @@ bool SaveToJsonFile(T const& obj, char const* filePath, bool warnOnFailure = tru
 
 /**
 Deserialize any supported type from a JSON file. Return false if the file could not be read or
-parsed.
+parsed. If outIssues is null and any warning flag is set, the logged issues are followed by a line
+naming the file.
 */
-template <typename T>
-bool LoadFromJsonFile(
-    T& objOut,
-    char const* filePath,
-    DeserializeFlags deserializeFlags,
-    int& outNumIssues);
-
 template <typename T>
 bool LoadFromJsonFile(
     T& objOut,
@@ -958,14 +937,8 @@ class TypeInfo {
   void Serialize(void const* src, picojson::value& dst) const;
 
   /**
-  Deserialize data from a picojson::value into dst. See FromJsonString for the two ways that issues
-  are reported.
+  Deserialize data from a picojson::value into dst. See FromJsonString for how issues are reported.
   */
-  void Deserialize(
-      picojson::value const& src,
-      void* dst,
-      DeserializeFlags deserializeFlags,
-      int& outIssuesDetected) const;
   bool Deserialize(
       picojson::value const& src,
       void* dst,
@@ -1454,6 +1427,8 @@ struct IssueReport {
   // Format as "path: description", or just the description if the path is empty.
   [[nodiscard]] std::string ToString() const;
 };
+
+using IssueList = std::vector<IssueReport>;
 
 /**
 Passed down through TypeInfo::DeserializeInner. Holds the deserialization flags, and collects the

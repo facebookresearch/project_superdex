@@ -20,6 +20,7 @@
 #include <mochi_core/utils/defer.h>
 #include <mochi_core/utils/guarded.h>
 #include <mochi_core/utils/json_utils.h>
+#include <mochi_core/utils/reflection_utils.h>
 #include <mochi_physics/utils/mochi_prefab.h>
 #include <superdex_robotics/core/loader.h>
 #include <superdex_robotics/scene/bot_scene.h>
@@ -572,11 +573,12 @@ BotScenePrefab superdex::robotics::LoadBotScenePrefabFromFile(
   // scenes (which interleave flat controller keys) still load cleanly -- while typos elsewhere in
   // the scene are still flagged.
   BotScenePrefab params;
-  int numIssues = 0;
-  SReflect::FromJsonValue(params, rawRoot, SReflect::DeserializeFlags::Default, numIssues);
-  if (numIssues > 0) {
-    MOCHI_LOG_WARNING(
-        "Detected %d issue(s) while loading bot scene: %s", numIssues, pathStr.c_str());
+  SReflect::IssueList issues;
+  SReflect::FromJsonValue(params, rawRoot, SReflect::DeserializeFlags::Default, &issues);
+  if (!issues.empty()) {
+    LogDeserializationWarnings(
+        Format("Issues detected while loading a bot scene from JSON file '%s':", pathStr.c_str()),
+        issues);
   }
 
   ValidateBotScenePrefab(params, error);

@@ -22,6 +22,8 @@
 #include <superdex_robotics/internal/internal.h>
 #endif
 
+#include <mochi_core/utils/reflection_utils.h>
+
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -1131,14 +1133,21 @@ template <typename T>
 T LoadParamsFromFile(std::string_view path, superdex::Error& error, bool allowPartial = false) {
   MOCHI_ERROR_RETURN(error, {});
   T params;
-  int numIssues = 0;
+  SReflect::IssueList issues;
   std::string pathStr(path);
   bool const success = SReflect::LoadFromJsonFile(
-      params, pathStr.c_str(), SReflect::DeserializeFlags::Default, numIssues);
+      params, pathStr.c_str(), SReflect::DeserializeFlags::Default, &issues);
+  if (!issues.empty()) {
+    mochi::LogDeserializationWarnings(
+        mochi::Format(
+            "Issues detected while loading parameters from JSON file '%s':", pathStr.c_str()),
+        issues);
+  }
   MOCHI_ERROR_IF(!success, error, "Failed to load params from file");
   MOCHI_ERROR_RETURN(error, {});
   if (!allowPartial) {
-    MOCHI_ERROR_IF(numIssues > 0, error, "Params file has issues (unrecognized or missing fields)");
+    MOCHI_ERROR_IF(
+        !issues.empty(), error, "Params file has issues (unrecognized or missing fields)");
     MOCHI_ERROR_RETURN(error, {});
   }
   return params;
@@ -1183,24 +1192,34 @@ T LoadParamsFromPathOrJson(
   if (pathOrJson.empty()) {
     return params;
   }
-  int numIssues = 0;
+  SReflect::IssueList issues;
   if (IsInlineJson(pathOrJson)) {
-    // The numIssues overload of FromJsonString returns void; a malformed JSON string surfaces as
-    // numIssues > 0 (caught by the strict check below unless allowPartial).
+    // A malformed JSON string is reported as an issue (caught by the strict check below unless
+    // allowPartial).
     SReflect::FromJsonString(
-        params, std::string(pathOrJson), SReflect::DeserializeFlags::Default, numIssues);
+        params, std::string(pathOrJson), SReflect::DeserializeFlags::Default, &issues);
+    if (!issues.empty()) {
+      mochi::LogDeserializationWarnings(
+          "Issues detected while loading parameters from JSON:", issues);
+    }
   } else {
     std::string const pathStr(pathOrJson);
     bool const success = SReflect::LoadFromJsonFile(
-        params, pathStr.c_str(), SReflect::DeserializeFlags::Default, numIssues);
+        params, pathStr.c_str(), SReflect::DeserializeFlags::Default, &issues);
     MOCHI_ERROR_IF(!success, error, "Failed to load params from file");
-    MOCHI_ERROR_RETURN(error, {});
-    if (outBaseDir != nullptr) {
+    if (success && outBaseDir != nullptr) {
       *outBaseDir = std::filesystem::path(pathStr).parent_path().string();
     }
+    if (!issues.empty()) {
+      mochi::LogDeserializationWarnings(
+          mochi::Format(
+              "Issues detected while loading parameters from JSON file '%s':", pathStr.c_str()),
+          issues);
+    }
   }
+  MOCHI_ERROR_RETURN(error, {});
   if (!allowPartial) {
-    MOCHI_ERROR_IF(numIssues > 0, error, "Params have issues (unrecognized or missing fields)");
+    MOCHI_ERROR_IF(!issues.empty(), error, "Params have issues (unrecognized or missing fields)");
     MOCHI_ERROR_RETURN(error, {});
   }
   return params;

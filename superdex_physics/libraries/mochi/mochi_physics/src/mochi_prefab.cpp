@@ -31,6 +31,7 @@
 #include <mochi_core/utils/nd_array_utils.h>
 #include <mochi_core/utils/path.h>
 #include <mochi_core/utils/quaternion_utils.h>
+#include <mochi_core/utils/reflection_utils.h>
 #include <mochi_core/utils/span.h>
 #include <mochi_core/utils/vmatrix.h>
 #include <mochi_physics/mochi_physics_experimental.h>
@@ -143,12 +144,20 @@ ScenePrefab prefab::ShallowLoadFromFile(std::string_view path, Error& error) {
   MOCHI_ERROR_RETURN(error, {});
 
   ScenePrefab prefab;
-  int numIssues = 0;
+  SReflect::IssueList issues;
   bool success = SReflect::LoadFromJsonFile(
       prefab,
       DynamicString(path).c_str(),
       SReflect::DeserializeFlags::WarnIfExtraneousFields,
-      numIssues);
+      &issues);
+  if (!issues.empty()) {
+    LogDeserializationIssues(
+        success ? LogChannel::Warning : LogChannel::Error,
+        Format(
+            "Issues detected while loading a Mochi scene prefab from JSON file '%s':",
+            DynamicString(path).c_str()),
+        issues);
+  }
   MOCHI_ERROR_IF(
       !success, error, "Failed to open prefab file for reading. See log (above) for details.");
   MOCHI_ERROR_RETURN(error, {}); // No partial results

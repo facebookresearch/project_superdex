@@ -847,7 +847,7 @@ static void DeserializeRoot(
   }
 }
 
-// Log issues the way the functions with an `int& outNumIssues` parameter do. Return how many.
+// Log issues for a caller that did not ask for them. Return how many there were.
 static int LogIssues(std::vector<IssueReport> const& issues) {
   for (IssueReport const& issue : issues) {
     SR_LOG("%s", issue.ToString().c_str());
@@ -865,16 +865,6 @@ static bool ReturnIssues(DeserializeContext& context, std::vector<IssueReport>* 
     LogIssues(context.GetIssues());
   }
   return noIssues;
-}
-
-void TypeInfo::Deserialize(
-    picojson::value const& src,
-    void* dst,
-    DeserializeFlags deserializeFlags,
-    int& outIssuesDetected) const {
-  DeserializeContext context{deserializeFlags};
-  DeserializeRoot(*this, src, dst, context);
-  outIssuesDetected = LogIssues(context.GetIssues());
 }
 
 bool TypeInfo::Deserialize(
@@ -3371,17 +3361,6 @@ static void LoadFromJsonStringImpl(
   DeserializeRoot(info, jsonValue, outObj, context);
 }
 
-void detail::LoadFromJsonString(
-    void* outObj,
-    TypeInfo const& info,
-    std::string const& jsonStr,
-    DeserializeFlags deserializeFlags,
-    int& outNumIssues) {
-  DeserializeContext context{deserializeFlags};
-  LoadFromJsonStringImpl(outObj, info, jsonStr, context);
-  outNumIssues = LogIssues(context.GetIssues());
-}
-
 bool detail::LoadFromJsonString(
     void* outObj,
     TypeInfo const& info,
@@ -3449,8 +3428,8 @@ static bool LoadFromJsonFileImpl(
 }
 
 // Log the issues. If there were any, and user has requested any warnings, also log the file that
-// produced them, which is very useful for fixing them. Return the number of issues.
-static int LogFileIssues(
+// produced them, which is very useful for fixing them.
+static void LogFileIssues(
     std::vector<IssueReport> const& issues,
     DeserializeFlags deserializeFlags,
     char const* filePath) {
@@ -3460,19 +3439,6 @@ static int LogFileIssues(
     SR_LOG("%d issues detected while deserializing from JSON file: %s", numIssues, filePath);
   }
   (void)filePath;
-  return numIssues;
-}
-
-bool detail::LoadFromJsonFile(
-    void* outObj,
-    TypeInfo const& info,
-    char const* filePath,
-    DeserializeFlags deserializeFlags,
-    int& outNumIssues) {
-  DeserializeContext context{deserializeFlags};
-  bool const fileRead = LoadFromJsonFileImpl(outObj, info, filePath, context);
-  outNumIssues = LogFileIssues(context.GetIssues(), deserializeFlags, filePath);
-  return fileRead;
 }
 
 bool detail::LoadFromJsonFile(

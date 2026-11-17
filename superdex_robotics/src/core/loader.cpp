@@ -19,6 +19,7 @@
 #include <superdex_robotics/utils/file_utils.h>
 
 #include <mochi_core/utils/json_utils.h>
+#include <mochi_core/utils/reflection_utils.h>
 #include <mochi_physics/utils/mochi_model_utils.h>
 
 using namespace mochi;
@@ -60,12 +61,14 @@ BotPrefab FileBotLoader::LoadBotPrefab(std::string_view path, Error& error) cons
   MOCHI_ERROR_RETURN(error, {});
 
   BotPrefab outBotPrefab;
-  int numIssues = 0;
+  SReflect::IssueList issues;
   std::string pathStr(path);
   bool success = SReflect::LoadFromJsonFile(
-      outBotPrefab, pathStr.c_str(), SReflect::DeserializeFlags::Default, numIssues);
-  if (numIssues > 0) {
-    MOCHI_LOG_WARNING("Detected %d issues while loading: %s", numIssues, pathStr.c_str());
+      outBotPrefab, pathStr.c_str(), SReflect::DeserializeFlags::Default, &issues);
+  if (!issues.empty()) {
+    LogDeserializationWarnings(
+        Format("Issues detected while loading a bot prefab from JSON file '%s':", pathStr.c_str()),
+        issues);
   }
   MOCHI_ERROR_IF(!success, error, "Failed to load BotPrefab .mochi_bot (JSON) file");
   MOCHI_ERROR_RETURN(error, {});
@@ -97,12 +100,15 @@ ModBotPrefab FileBotLoader::LoadModBotPrefab(std::string_view path, Error& error
   MOCHI_ERROR_RETURN(error, {});
 
   ModBotPrefab outModBotPrefab;
-  int numIssues = 0;
+  SReflect::IssueList issues;
   std::string pathStr(path);
   bool const success = SReflect::LoadFromJsonFile(
-      outModBotPrefab, pathStr.c_str(), SReflect::DeserializeFlags::Default, numIssues);
-  if (numIssues > 0) {
-    MOCHI_LOG_WARNING("Detected %d issues while loading: %s", numIssues, pathStr.c_str());
+      outModBotPrefab, pathStr.c_str(), SReflect::DeserializeFlags::Default, &issues);
+  if (!issues.empty()) {
+    LogDeserializationWarnings(
+        Format(
+            "Issues detected while loading a mod bot prefab from JSON file '%s':", pathStr.c_str()),
+        issues);
   }
   MOCHI_ERROR_IF(!success, error, "Failed to load ModBotPrefab from .mochi_bot (JSON) file");
   MOCHI_ERROR_RETURN(error, {});

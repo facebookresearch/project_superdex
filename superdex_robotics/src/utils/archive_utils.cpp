@@ -25,6 +25,7 @@
 #include <mochi_core/utils/file_utils.h>
 #include <mochi_core/utils/json_utils.h>
 #include <mochi_core/utils/overload_visitor.h>
+#include <mochi_core/utils/reflection_utils.h>
 
 #include <mochi_physics/utils/mochi_path_remap.h>
 #include <mochi_physics/utils/mochi_prefab.h>
@@ -719,9 +720,16 @@ static DynamicString GetExtractedArchiveTargetImpl(
   std::filesystem::path extractedDirPath(extractedDir);
   std::string const metadataPath = FindArchiveMetadata(extractedDirPath, metadataFiles).string();
   MetadataT metadata;
-  int numIssues = 0;
+  SReflect::IssueList issues;
   bool const parsed = SReflect::LoadFromJsonFile(
-      metadata, metadataPath.c_str(), SReflect::DeserializeFlags::Default, numIssues);
+      metadata, metadataPath.c_str(), SReflect::DeserializeFlags::Default, &issues);
+  if (!issues.empty()) {
+    LogDeserializationWarnings(
+        Format(
+            "Issues detected while loading archive metadata from JSON file '%s':",
+            metadataPath.c_str()),
+        issues);
+  }
   MOCHI_ERROR_IF(!parsed, error, "Failed to load archive metadata file.");
   MOCHI_ERROR_RETURN(error, {});
   std::string const targetPath = (extractedDirPath / metadata.target.c_str()).generic_string();
@@ -748,9 +756,16 @@ BotArchiveMetadata superdex::robotics::ReadBotArchiveMetadata(
   MOCHI_ERROR_RETURN(error, {});
   auto const metadataPath = (std::filesystem::path(extractedDir) / kArchiveMetadataFile).string();
   BotArchiveMetadata metadata;
-  int numIssues = 0;
+  SReflect::IssueList issues;
   bool const parsed = SReflect::LoadFromJsonFile(
-      metadata, metadataPath.c_str(), SReflect::DeserializeFlags::Default, numIssues);
+      metadata, metadataPath.c_str(), SReflect::DeserializeFlags::Default, &issues);
+  if (!issues.empty()) {
+    LogDeserializationWarnings(
+        Format(
+            "Issues detected while loading bot archive metadata from JSON file '%s':",
+            metadataPath.c_str()),
+        issues);
+  }
   MOCHI_ERROR_IF(!parsed, error, "Failed to load archive metadata file.");
   MOCHI_ERROR_RETURN(error, {});
   return metadata;
@@ -1251,9 +1266,16 @@ BotSceneArchiveMetadata superdex::robotics::ReadBotSceneArchiveMetadata(
   auto const metadataPath =
       FindArchiveMetadata(std::filesystem::path(extractedDir), kSceneArchiveMetadataFiles).string();
   BotSceneArchiveMetadata metadata;
-  int numIssues = 0;
+  SReflect::IssueList issues;
   bool const parsed = SReflect::LoadFromJsonFile(
-      metadata, metadataPath.c_str(), SReflect::DeserializeFlags::Default, numIssues);
+      metadata, metadataPath.c_str(), SReflect::DeserializeFlags::Default, &issues);
+  if (!issues.empty()) {
+    LogDeserializationWarnings(
+        Format(
+            "Issues detected while loading scene archive metadata from JSON file '%s':",
+            metadataPath.c_str()),
+        issues);
+  }
   MOCHI_ERROR_IF(!parsed, error, "Failed to load scene archive metadata file.");
   MOCHI_ERROR_RETURN(error, {});
   return metadata;

@@ -171,10 +171,10 @@ TEST(SReflect, Example1) {
   EXPECT_STREQ("{\"x\":123,\"y\":456}", json.c_str());
 
   // Deserialize from JSON
-  int numIssuesDetected = 0;
+  SReflect::IssueList issues;
   SReflect::FromJsonString(
-      pt, R"({"y":987,"x":654})", SReflect::DeserializeFlags::MaximumWarnings, numIssuesDetected);
-  EXPECT_EQ(0, numIssuesDetected);
+      pt, R"({"y":987,"x":654})", SReflect::DeserializeFlags::MaximumWarnings, &issues);
+  EXPECT_TRUE(issues.empty());
   EXPECT_EQ(654, pt.x);
   EXPECT_EQ(987, pt.y);
 
@@ -227,9 +227,9 @@ static std::string ToJson(const T& obj) {
 template <typename T>
 static T FromJson(std::string const& jsonStr) {
   T obj{};
-  int numIssuesOut = 0;
-  SReflect::FromJsonString(obj, jsonStr, SReflect::DeserializeFlags::MaximumWarnings, numIssuesOut);
-  EXPECT_EQ(0, numIssuesOut);
+  SReflect::IssueList issues;
+  SReflect::FromJsonString(obj, jsonStr, SReflect::DeserializeFlags::MaximumWarnings, &issues);
+  EXPECT_TRUE(issues.empty());
   return obj;
 }
 
@@ -376,9 +376,9 @@ static void TestAnyType(
 
     // Deserialize the JSON into val3
     T val3;
-    int numIssues = 0;
-    SReflect::FromJsonString(val3, json, SReflect::DeserializeFlags::MaximumWarnings, numIssues);
-    EXPECT_EQ(0, numIssues);
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(val3, json, SReflect::DeserializeFlags::MaximumWarnings, &issues);
+    EXPECT_TRUE(issues.empty());
     EXPECT_TRUE(IsEqual(val1, val3));
 
     // Copy the value into a struct with a reflection field
@@ -1437,11 +1437,11 @@ TEST(SReflect, DISABLED_SaveToJsonFile) {
 
   // Load a single value from a file
   int32_t value2 = 0;
-  int numIssues = 911;
+  SReflect::IssueList issues;
   result = SReflect::LoadFromJsonFile(
-      value2, kTempFileName, SReflect::DeserializeFlags::MaximumWarnings, numIssues);
+      value2, kTempFileName, SReflect::DeserializeFlags::MaximumWarnings, &issues);
   EXPECT_TRUE(result);
-  EXPECT_EQ(0, numIssues);
+  EXPECT_TRUE(issues.empty());
   EXPECT_EQ(112358, value2);
 
   // Save a struct, overwriting a file
@@ -1453,11 +1453,10 @@ TEST(SReflect, DISABLED_SaveToJsonFile) {
 
   // Load a struct from a file
   MyStructToSave obj2;
-  numIssues = 911;
   result = SReflect::LoadFromJsonFile(
-      obj2, kTempFileName, SReflect::DeserializeFlags::MaximumWarnings, numIssues);
+      obj2, kTempFileName, SReflect::DeserializeFlags::MaximumWarnings, &issues);
   EXPECT_TRUE(result);
-  EXPECT_EQ(0, numIssues);
+  EXPECT_TRUE(issues.empty());
   EXPECT_EQ(12345, obj.value1);
   EXPECT_EQ(98765, obj.value2);
 
@@ -1662,14 +1661,14 @@ TEST(SReflect, DeserializeMissingFields) {
   MyOuterStruct obj;
   obj.inner.fourth = 7.0;
 
-  int numIssuesDetected = 0;
+  SReflect::IssueList issues;
   SReflect::FromJsonString(
       obj,
       R"({"second":8.0,"inner":{"third":9},"sixth":"ten"})",
       SReflect::DeserializeFlags::MaximumWarnings,
-      numIssuesDetected);
+      &issues);
 
-  EXPECT_EQ(3, numIssuesDetected); // 3 fields missing from json string
+  EXPECT_EQ(3u, issues.size()); // 3 fields missing from json string
   EXPECT_EQ(1, obj.first); // unchanged default
   EXPECT_EQ(8.0, obj.second); // changed
   EXPECT_EQ(9, obj.inner.third); // changed
@@ -1682,14 +1681,14 @@ TEST(SReflect, DeserializeExtraFields) {
   MyOuterStruct obj;
   obj.inner.fourth = 7.0;
 
-  int numIssuesDetected = 0;
+  SReflect::IssueList issues;
   SReflect::FromJsonString(
       obj,
       R"({"second1":8.0,"inner":{"third2":9},"sixth":"ten"})",
       SReflect::DeserializeFlags::MaximumWarnings,
-      numIssuesDetected);
+      &issues);
 
-  EXPECT_EQ(7, numIssuesDetected); // 5 fields missing from json string, 2 extra fields
+  EXPECT_EQ(7u, issues.size()); // 5 fields missing from json string, 2 extra fields
   EXPECT_EQ(1, obj.first); // unchanged default
   EXPECT_EQ(2.0, obj.second); // unchanged default
   EXPECT_EQ(3, obj.inner.third); // unchanged default
@@ -1722,17 +1721,16 @@ TEST(SReflect, Attribute_IgnoreExtraneousFields) {
 
   // Without the attribute, the two unknown keys are counted as issues.
   StructNotIgnoringExtraneousFields control;
-  int controlIssues = 0;
+  SReflect::IssueList controlIssues;
   SReflect::FromJsonString(
-      control, json, SReflect::DeserializeFlags::WarnIfExtraneousFields, controlIssues);
-  EXPECT_EQ(2, controlIssues);
+      control, json, SReflect::DeserializeFlags::WarnIfExtraneousFields, &controlIssues);
+  EXPECT_EQ(2u, controlIssues.size());
 
   // With the attribute, the unknown keys are tolerated (fields still deserialize).
   StructIgnoringExtraneousFields obj;
-  int numIssues = 0;
-  SReflect::FromJsonString(
-      obj, json, SReflect::DeserializeFlags::WarnIfExtraneousFields, numIssues);
-  EXPECT_EQ(0, numIssues);
+  SReflect::IssueList issues;
+  SReflect::FromJsonString(obj, json, SReflect::DeserializeFlags::WarnIfExtraneousFields, &issues);
+  EXPECT_TRUE(issues.empty());
   EXPECT_EQ(10, obj.a);
   EXPECT_EQ(20, obj.b);
 }
@@ -1776,7 +1774,7 @@ struct IssueOuter {
 static char const* const kJsonWithTwoIssues =
     R"({"inner": {"value": "text"}, "flag": true, "bad\nname": 1})";
 
-static std::vector<std::string> Paths(std::vector<SReflect::IssueReport> const& issues) {
+static std::vector<std::string> Paths(SReflect::IssueList const& issues) {
   std::vector<std::string> paths;
   paths.reserve(issues.size());
   for (SReflect::IssueReport const& issue : issues) {
@@ -1786,20 +1784,14 @@ static std::vector<std::string> Paths(std::vector<SReflect::IssueReport> const& 
 }
 
 TEST(SReflect, OutIssuesCapturesIssuesWithoutLogging) {
-  IssueOuter counted;
-  int numIssues = 0;
-  SReflect::FromJsonString(
-      counted, kJsonWithTwoIssues, SReflect::DeserializeFlags::Default, numIssues);
-
   IssueOuter captured;
-  std::vector<SReflect::IssueReport> issues{{"stale", "stale"}};
+  SReflect::IssueList issues{{"stale", "stale"}};
   ScopedCoutCapture log;
   EXPECT_FALSE(
       SReflect::FromJsonString(
           captured, kJsonWithTwoIssues, SReflect::DeserializeFlags::Default, &issues));
   EXPECT_EQ("", log.Text());
-  EXPECT_EQ(2, numIssues);
-  ASSERT_EQ(static_cast<size_t>(numIssues), issues.size());
+  ASSERT_EQ(2u, issues.size());
   EXPECT_EQ("inner/value", issues[0]._path);
   EXPECT_EQ("Expected JSON integer, found string", issues[0]._description);
   EXPECT_EQ("", issues[1]._path); // An unknown field is reported at the object that contains it
@@ -1819,12 +1811,9 @@ TEST(SReflect, NullOutIssuesLogsIssues) {
 
 TEST(SReflect, OutIssuesReportsUnreadableJson) {
   IssueOuter obj;
-  std::vector<SReflect::IssueReport> issues;
+  SReflect::IssueList issues;
   EXPECT_FALSE(SReflect::FromJsonString(obj, "{", SReflect::DeserializeFlags::Default, &issues));
   EXPECT_EQ(1u, issues.size());
-  int numIssues = 5;
-  SReflect::FromJsonString(obj, "{", SReflect::DeserializeFlags::Default, numIssues);
-  EXPECT_EQ(1, numIssues);
   EXPECT_FALSE(
       SReflect::FromJsonString(obj, "[1e999]", SReflect::DeserializeFlags::Default, &issues));
   EXPECT_EQ(0u, issues.at(0)._description.find("Malformed JSON")); // picojson throws for infinity
@@ -1843,7 +1832,7 @@ TEST(SReflect, OutIssuesFromJsonValue) {
   ASSERT_EQ("", picojson::parse(json, stream));
 
   IssueOuter obj;
-  std::vector<SReflect::IssueReport> issues;
+  SReflect::IssueList issues;
   EXPECT_FALSE(SReflect::FromJsonValue(obj, json, SReflect::DeserializeFlags::Default, &issues));
   EXPECT_EQ(2u, issues.size());
   EXPECT_FALSE(
@@ -1871,7 +1860,7 @@ struct PathRoot {
 
 TEST(SReflect, IssuePathsLeadToTheProblem) {
   PathRoot root;
-  std::vector<SReflect::IssueReport> issues;
+  SReflect::IssueList issues;
   SReflect::FromJsonString(
       root,
       R"({
@@ -1895,7 +1884,7 @@ TEST(SReflect, IssuePathsLeadToTheProblem) {
 
 TEST(SReflect, PairIssuesAreReportedAtKeyAndValue) {
   std::pair<int32_t, std::vector<int32_t>> pr;
-  std::vector<SReflect::IssueReport> issues;
+  SReflect::IssueList issues;
   EXPECT_FALSE(
       SReflect::FromJsonString(pr, "[1, 2]", SReflect::DeserializeFlags::Default, &issues));
   ASSERT_EQ(1u, issues.size());
@@ -1914,7 +1903,7 @@ TEST(SReflect, PairIssuesAreReportedAtKeyAndValue) {
 
 TEST(SReflect, MapEntriesWithUnreadableKeysAreSkipped) {
   std::unordered_map<int32_t, IssueInner> byId;
-  std::vector<SReflect::IssueReport> issues;
+  SReflect::IssueList issues;
   SReflect::FromJsonString(
       byId,
       R"({"abc": {"value": 1}, "null": {"value": 2}, "1.5": {"value": 3}, "4": {"value": 4}})",
@@ -1931,7 +1920,7 @@ TEST(SReflect, MapEntriesWithUnreadableKeysAreSkipped) {
 TEST(SReflect, EnumValuesWithoutAnItemRoundTrip) {
   auto const noItem = static_cast<MyFruit>(7);
   MyFruit fruit = MyFruit::Apple;
-  std::vector<SReflect::IssueReport> issues;
+  SReflect::IssueList issues;
   EXPECT_TRUE(
       SReflect::FromJsonString(
           fruit, SReflect::ToJsonString(noItem), SReflect::DeserializeFlags::Default, &issues));
@@ -1948,7 +1937,7 @@ TEST(SReflect, EnumValuesWithoutAnItemRoundTrip) {
 
 TEST(SReflect, MissingFieldIsReportedAtTheField) {
   IssueOuter obj;
-  std::vector<SReflect::IssueReport> issues;
+  SReflect::IssueList issues;
   SReflect::FromJsonString(
       obj, R"({"inner": {}})", SReflect::DeserializeFlags::WarnIfMissingFields, &issues);
   std::vector<std::string> const expected{"inner/value", "flag"};
@@ -1995,7 +1984,7 @@ TEST(SReflect, MapKeysAndValuesStartFromDefaults) {
 
 TEST(SReflect, VectorOfBoolIsReplacedAndInvalidElementsContinue) {
   std::vector<bool> flags{true, true, true, true};
-  std::vector<SReflect::IssueReport> issues;
+  SReflect::IssueList issues;
   EXPECT_FALSE(SReflect::FromJsonString(flags, R"([1, false, "bad"])", {}, &issues));
   EXPECT_EQ((std::vector<bool>{true, false, true}), flags);
   EXPECT_EQ((std::vector<std::string>{"0", "2"}), Paths(issues));
@@ -2088,7 +2077,7 @@ struct HoldsIntPair {
 
 TEST(SReflect, CustomTypeReportsIssuesThroughContext) {
   HoldsIntPair holder;
-  std::vector<SReflect::IssueReport> issues;
+  SReflect::IssueList issues;
   EXPECT_FALSE(
       SReflect::FromJsonString(
           holder, R"({"pair": [1, "x"]})", SReflect::DeserializeFlags::Default, &issues));
@@ -2102,7 +2091,7 @@ TEST(SReflect, CustomTypeReportsIssuesThroughContext) {
 
 TEST(SReflect, ExceptionsFromCustomTypesAreReportedAsIssues) {
   HoldsIntPair holder;
-  std::vector<SReflect::IssueReport> issues;
+  SReflect::IssueList issues;
   EXPECT_FALSE(
       SReflect::FromJsonString(
           holder, R"({"pair": 5, "after": 1})", SReflect::DeserializeFlags::Default, &issues));
@@ -2120,7 +2109,7 @@ TEST(SReflect, ExceptionsFromCustomTypesAreReportedAsIssues) {
 
 TEST(SReflect, AllocationFailuresFromCustomTypesAreRethrown) {
   HoldsIntPair holder;
-  std::vector<SReflect::IssueReport> issues;
+  SReflect::IssueList issues;
   EXPECT_THROW(
       SReflect::FromJsonString(holder, R"({"pair": "bad_alloc"})", {}, &issues), std::bad_alloc);
   EXPECT_TRUE(issues.empty());
@@ -2145,13 +2134,13 @@ struct StructWithJsonStringOnNonString {
 TEST(SReflect, Attribute_JsonString) {
   // Deserialize: a nested JSON object at the tagged field is stored as its serialized text.
   StructWithJsonStringField obj;
-  int numIssues = 0;
+  SReflect::IssueList issues;
   SReflect::FromJsonString(
       obj,
       R"({"payload": {"x": 1, "y": 2}, "tag": 7})",
       SReflect::DeserializeFlags::MaximumWarnings,
-      numIssues);
-  EXPECT_EQ(0, numIssues);
+      &issues);
+  EXPECT_TRUE(issues.empty());
   EXPECT_EQ(7, obj.tag);
   ExpectJson(R"({"x":1,"y":2})", obj.payload);
 
@@ -2171,10 +2160,10 @@ TEST(SReflect, Attribute_JsonString_NonStringFieldReportsIssue) {
   // object into it and report an issue -- the conversion routes through the normal string
   // assignment.
   StructWithJsonStringOnNonString obj;
-  int numIssues = 0;
+  SReflect::IssueList issues;
   SReflect::FromJsonString(
-      obj, R"({"badField": {"x": 1}})", SReflect::DeserializeFlags::None, numIssues);
-  EXPECT_NE(0, numIssues);
+      obj, R"({"badField": {"x": 1}})", SReflect::DeserializeFlags::None, &issues);
+  EXPECT_FALSE(issues.empty());
 }
 
 // Templated utility to verify input value can be roundtripped to json and back
@@ -2185,9 +2174,9 @@ void SerdeJson_Roundtrip_Helper(T const& v1, T& v2) {
   SReflect::ToJsonValue(v1, json);
 
   // Deserialize
-  int numIssues = 0;
-  SReflect::FromJsonValue(v2, json, SReflect::DeserializeFlags::MaximumWarnings, numIssues);
-  EXPECT_EQ(numIssues, 0);
+  SReflect::IssueList issues;
+  SReflect::FromJsonValue(v2, json, SReflect::DeserializeFlags::MaximumWarnings, &issues);
+  EXPECT_TRUE(issues.empty());
 
   // Compare
   EXPECT_EQ(v1, v2);
@@ -2800,10 +2789,10 @@ TEST(SReflect, Serde_MapJsonString) {
   "words" : { "hello" : "world" }
   })";
 
-  int numIssues = 0;
+  SReflect::IssueList issues;
   SimpleMapStruct v2;
-  SReflect::FromJsonString(v2, rawJson1, SReflect::DeserializeFlags::MaximumWarnings, numIssues);
-  EXPECT_EQ(numIssues, 0);
+  SReflect::FromJsonString(v2, rawJson1, SReflect::DeserializeFlags::MaximumWarnings, &issues);
+  EXPECT_TRUE(issues.empty());
   EXPECT_EQ(v1, v2);
 
   // Deserialize from incorrectly written JSON
@@ -2813,8 +2802,8 @@ TEST(SReflect, Serde_MapJsonString) {
   "words": { }
   })";
   SimpleMapStruct v3;
-  SReflect::FromJsonString(v3, rawJson2, SReflect::DeserializeFlags::None, numIssues);
-  EXPECT_NE(numIssues, 0);
+  SReflect::FromJsonString(v3, rawJson2, SReflect::DeserializeFlags::None, &issues);
+  EXPECT_FALSE(issues.empty());
   EXPECT_NE(v1, v3);
 }
 
@@ -3863,9 +3852,9 @@ TEST(SReflect, Matrix_DeserializeJSON) {
     m.layout._numRows = 2;
     m.layout._numColumns = 4;
     m.data.resize(8);
-    int numIssues = 0;
-    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, numIssues);
-    EXPECT_EQ(0, numIssues);
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, &issues);
+    EXPECT_TRUE(issues.empty());
     EXPECT_EQ(2, m.layout._numRows);
     EXPECT_EQ(4, m.layout._numColumns); // was resized
     EXPECT_EQ(m.data, (std::vector<int>{0, 4, 1, 5, 2, 6, 3, 7}));
@@ -3876,9 +3865,9 @@ TEST(SReflect, Matrix_DeserializeJSON) {
     TestMatrix<int, false, false, true> m;
     m.layout._numRows = 2;
     m.layout._numColumns = 0; // To be resized
-    int numIssues = 0;
-    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, numIssues);
-    EXPECT_EQ(0, numIssues);
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, &issues);
+    EXPECT_TRUE(issues.empty());
     EXPECT_EQ(2, m.layout._numRows);
     EXPECT_EQ(4, m.layout._numColumns); // was resized
     EXPECT_EQ(m.data, (std::vector<int>{0, 4, 1, 5, 2, 6, 3, 7}));
@@ -3889,9 +3878,9 @@ TEST(SReflect, Matrix_DeserializeJSON) {
     TestMatrix<int, false, true, false> m;
     m.layout._numRows = 0; // To be resized
     m.layout._numColumns = 4;
-    int numIssues = 0;
-    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, numIssues);
-    EXPECT_EQ(0, numIssues);
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, &issues);
+    EXPECT_TRUE(issues.empty());
     EXPECT_EQ(2, m.layout._numRows); // was resized
     EXPECT_EQ(4, m.layout._numColumns);
     EXPECT_EQ(m.data, (std::vector<int>{0, 4, 1, 5, 2, 6, 3, 7}));
@@ -3903,9 +3892,9 @@ TEST(SReflect, Matrix_DeserializeJSON) {
     m.layout._numRows = 0; // To be resized
     m.layout._numColumns = 0; // To be resized
     m.data.clear(); // To be resized
-    int numIssues = 0;
-    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, numIssues);
-    EXPECT_EQ(0, numIssues);
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, &issues);
+    EXPECT_TRUE(issues.empty());
     EXPECT_EQ(2, m.layout._numRows); // was resized
     EXPECT_EQ(4, m.layout._numColumns); // was resized
     EXPECT_EQ(m.data, (std::vector<int>{0, 4, 1, 5, 2, 6, 3, 7}));
@@ -3917,9 +3906,9 @@ TEST(SReflect, Matrix_DeserializeJSON) {
     m.layout._numRows = 2;
     m.layout._numColumns = 4;
     m.data.resize(8);
-    int numIssues = 0;
-    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, numIssues);
-    EXPECT_EQ(0, numIssues);
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, &issues);
+    EXPECT_TRUE(issues.empty());
     EXPECT_EQ(m.data, (std::vector<int>{0, 1, 2, 3, 4, 5, 6, 7}));
   }
 
@@ -3929,9 +3918,9 @@ TEST(SReflect, Matrix_DeserializeJSON) {
     m.layout._numRows = 2;
     m.layout._numColumns = 0; // To be resized
     m.data.clear(); // To be resized
-    int numIssues = 0;
-    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, numIssues);
-    EXPECT_EQ(0, numIssues);
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, &issues);
+    EXPECT_TRUE(issues.empty());
     EXPECT_EQ(2, m.layout._numRows);
     EXPECT_EQ(4, m.layout._numColumns); // was resized
     EXPECT_EQ(m.data, (std::vector<int>{0, 1, 2, 3, 4, 5, 6, 7}));
@@ -3943,9 +3932,9 @@ TEST(SReflect, Matrix_DeserializeJSON) {
     m.layout._numRows = 0; // To be resized
     m.layout._numColumns = 4;
     m.data.clear(); // To be resized
-    int numIssues = 0;
-    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, numIssues);
-    EXPECT_EQ(0, numIssues);
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, &issues);
+    EXPECT_TRUE(issues.empty());
     EXPECT_EQ(2, m.layout._numRows); // was resized
     EXPECT_EQ(4, m.layout._numColumns);
     EXPECT_EQ(m.data, (std::vector<int>{0, 1, 2, 3, 4, 5, 6, 7}));
@@ -3956,9 +3945,9 @@ TEST(SReflect, Matrix_DeserializeJSON) {
     TestMatrix<int, true, true, true> m;
     m.layout._numRows = 0; // To be resized
     m.layout._numColumns = 0; // To be resized
-    int numIssues = 0;
-    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, numIssues);
-    EXPECT_EQ(0, numIssues);
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, &issues);
+    EXPECT_TRUE(issues.empty());
     EXPECT_EQ(2, m.layout._numRows); // was resized
     EXPECT_EQ(4, m.layout._numColumns); // was resized
     EXPECT_EQ(m.data, (std::vector<int>{0, 1, 2, 3, 4, 5, 6, 7}));
@@ -3970,9 +3959,9 @@ TEST(SReflect, Matrix_DeserializeJSON) {
     m.layout._numRows = 2;
     m.layout._numColumns = 4;
     m.data = std::vector<int>{0, 1, 2, 3, 4, 5, 6, 7};
-    int numIssues = 0;
-    SReflect::FromJsonString(m, "[[9, 9, 9, 9]]", {}, numIssues);
-    EXPECT_NE(0, numIssues); // Can't resize down to 1 row
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(m, "[[9, 9, 9, 9]]", {}, &issues);
+    EXPECT_FALSE(issues.empty()); // Can't resize down to 1 row
     EXPECT_EQ(2, m.layout._numRows); // no change
     EXPECT_EQ(4, m.layout._numColumns); // no change
     EXPECT_EQ(m.data, (std::vector<int>{0, 1, 2, 3, 4, 5, 6, 7})); // no change
@@ -3984,9 +3973,9 @@ TEST(SReflect, Matrix_DeserializeJSON) {
     m.layout._numRows = 2;
     m.layout._numColumns = 4;
     m.data = std::vector<int>{0, 1, 2, 3, 4, 5, 6, 7};
-    int numIssues = 0;
-    SReflect::FromJsonString(m, "[[9, 9, 9, 9, 9], [9, 9, 9, 9, 9]]", {}, numIssues);
-    EXPECT_NE(0, numIssues); // Can't resize up to 5 columns
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(m, "[[9, 9, 9, 9, 9], [9, 9, 9, 9, 9]]", {}, &issues);
+    EXPECT_FALSE(issues.empty()); // Can't resize up to 5 columns
     EXPECT_EQ(2, m.layout._numRows); // no change
     EXPECT_EQ(4, m.layout._numColumns); // no change
     EXPECT_EQ(m.data, (std::vector<int>{0, 1, 2, 3, 4, 5, 6, 7})); // no change
@@ -3998,9 +3987,9 @@ TEST(SReflect, Matrix_DeserializeJSON) {
     m.layout._numRows = 2;
     m.layout._numColumns = 4;
     m.data = std::vector<int>{0, 1, 2, 3, 4, 5, 6, 7};
-    int numIssues = 0;
-    SReflect::FromJsonString(m, "[[9, 9, 9, 9], [9, 9, 9]]", {}, numIssues);
-    EXPECT_NE(0, numIssues); // 2nd row has a diffierent number of values
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(m, "[[9, 9, 9, 9], [9, 9, 9]]", {}, &issues);
+    EXPECT_FALSE(issues.empty()); // 2nd row has a diffierent number of values
     EXPECT_EQ(2, m.layout._numRows); // no change
     EXPECT_EQ(4, m.layout._numColumns); // no change
     EXPECT_EQ(m.data, (std::vector<int>{0, 1, 2, 3, 4, 5, 6, 7})); // no change
@@ -4012,25 +4001,21 @@ TEST(SReflect, Matrix_DeserializeJSON) {
     m.layout._numRows = 2;
     m.layout._numColumns = 4;
     m.data = std::vector<int>{0, 1, 2, 3, 4, 5, 6, 7};
-    int numIssues = 0;
-    SReflect::FromJsonString(m, "123", {}, numIssues);
-    EXPECT_NE(0, numIssues); // no outer array
-    numIssues = 0;
-    SReflect::FromJsonString(m, "[123]", {}, numIssues);
-    EXPECT_NE(0, numIssues); // no inner array
-    numIssues = 0;
-    SReflect::FromJsonString(m, "[[\"oops\"]]", {}, numIssues);
-    EXPECT_NE(0, numIssues); // wrong value type
-    numIssues = 0;
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(m, "123", {}, &issues);
+    EXPECT_FALSE(issues.empty()); // no outer array
+    SReflect::FromJsonString(m, "[123]", {}, &issues);
+    EXPECT_FALSE(issues.empty()); // no inner array
+    SReflect::FromJsonString(m, "[[\"oops\"]]", {}, &issues);
+    EXPECT_FALSE(issues.empty()); // wrong value type
     // This time, we allow that the data may have been modified via partial failure because
     // validating every value in the array up front would be a burden (and something that other type
     // traits don't do).
-    SReflect::FromJsonString(m, "[[123]]", {}, numIssues);
-    EXPECT_EQ(0, numIssues); // Succeed this time
+    SReflect::FromJsonString(m, "[[123]]", {}, &issues);
+    EXPECT_TRUE(issues.empty()); // Succeed this time
     EXPECT_EQ(1, m.layout._numRows);
     EXPECT_EQ(1, m.layout._numColumns);
     EXPECT_EQ(m.data, (std::vector<int>{123}));
-    numIssues = 0;
   }
 
   // Row-major, fixed rows, fixed columns, leading dim
@@ -4040,9 +4025,9 @@ TEST(SReflect, Matrix_DeserializeJSON) {
     m.layout._numColumns = 4;
     m.layout._leadingDim = 5;
     m.data.resize(10, 42);
-    int numIssues = 0;
-    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, numIssues);
-    EXPECT_EQ(0, numIssues);
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, &issues);
+    EXPECT_TRUE(issues.empty());
     EXPECT_EQ(
         m.data, (std::vector<int>{0, 1, 2, 3, 42, 4, 5, 6, 7, 42})); // Some 42 padding remains
   }
@@ -4054,9 +4039,9 @@ TEST(SReflect, Matrix_DeserializeJSON) {
     m.layout._numColumns = 4;
     m.layout._leadingDim = 4;
     m.data.resize(16, 42);
-    int numIssues = 0;
-    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, numIssues);
-    EXPECT_EQ(0, numIssues);
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(m, "[[0, 1, 2, 3], [4, 5, 6, 7]]", {}, &issues);
+    EXPECT_TRUE(issues.empty());
     EXPECT_EQ(
         m.data,
         (std::vector<int>{
@@ -4069,9 +4054,9 @@ TEST(SReflect, Matrix_DeserializeJSON) {
     m.layout._numRows = 2;
     m.layout._numColumns = 4;
     m.data = std::vector<int>{0, 1, 2, 3, 4, 5, 6, 7};
-    int numIssues = 0;
-    SReflect::FromJsonString(m, "[]", {}, numIssues);
-    EXPECT_EQ(0, numIssues); // Succeed this time
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(m, "[]", {}, &issues);
+    EXPECT_TRUE(issues.empty()); // Succeed this time
     EXPECT_EQ(0, m.layout._numRows);
     EXPECT_EQ(0, m.layout._numColumns);
     EXPECT_EQ(m.data, (std::vector<int>{}));
@@ -4083,14 +4068,14 @@ TEST(SReflect, Matrix_DeserializeJSON) {
     m.layout._numRows = 1;
     m.layout._numColumns = 3;
     m.data = std::vector<int>{0, 1, 2};
-    int numIssues = 0;
-    SReflect::FromJsonString(m, "[0, 1, 2]", {}, numIssues);
-    EXPECT_EQ(0, numIssues);
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(m, "[0, 1, 2]", {}, &issues);
+    EXPECT_TRUE(issues.empty());
     EXPECT_EQ(1, m.layout._numRows);
     EXPECT_EQ(3, m.layout._numColumns);
     EXPECT_EQ(m.data, (std::vector<int>{0, 1, 2}));
-    SReflect::FromJsonString(m, "[[3, 4, 5]]", {}, numIssues); // 2D JSON syntax also works here
-    EXPECT_EQ(0, numIssues);
+    SReflect::FromJsonString(m, "[[3, 4, 5]]", {}, &issues); // 2D JSON syntax also works here
+    EXPECT_TRUE(issues.empty());
     EXPECT_EQ(1, m.layout._numRows);
     EXPECT_EQ(3, m.layout._numColumns);
     EXPECT_EQ(m.data, (std::vector<int>{3, 4, 5}));
@@ -4102,14 +4087,14 @@ TEST(SReflect, Matrix_DeserializeJSON) {
     m.layout._numRows = 3;
     m.layout._numColumns = 1;
     m.data = std::vector<int>{0, 1, 2};
-    int numIssues = 0;
-    SReflect::FromJsonString(m, "[0, 1, 2]", {}, numIssues);
-    EXPECT_EQ(0, numIssues);
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(m, "[0, 1, 2]", {}, &issues);
+    EXPECT_TRUE(issues.empty());
     EXPECT_EQ(3, m.layout._numRows);
     EXPECT_EQ(1, m.layout._numColumns);
     EXPECT_EQ(m.data, (std::vector<int>{0, 1, 2}));
-    SReflect::FromJsonString(m, "[[3], [4], [5]]", {}, numIssues); // 2D JSON syntax also works here
-    EXPECT_EQ(0, numIssues);
+    SReflect::FromJsonString(m, "[[3], [4], [5]]", {}, &issues); // 2D JSON syntax also works here
+    EXPECT_TRUE(issues.empty());
     EXPECT_EQ(3, m.layout._numRows);
     EXPECT_EQ(1, m.layout._numColumns);
     EXPECT_EQ(m.data, (std::vector<int>{3, 4, 5}));
@@ -4126,9 +4111,9 @@ static void TestMatrixRoundTrip() {
   for (auto const& json : kJsonStrings) {
     // Parse JSON string (dynamic rows, dynamic columns)
     TestMatrix<int, kIsRowMajor, true, true> src;
-    int numIssues = 0;
-    SReflect::FromJsonString(src, json, {}, numIssues);
-    EXPECT_EQ(0, numIssues);
+    SReflect::IssueList issues;
+    SReflect::FromJsonString(src, json, {}, &issues);
+    EXPECT_TRUE(issues.empty());
 
     // Fixed rows, fixed columns
     {

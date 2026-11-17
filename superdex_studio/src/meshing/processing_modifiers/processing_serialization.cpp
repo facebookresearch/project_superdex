@@ -24,7 +24,7 @@
 
 #include <mochi_core/utils/dynamic_string.h>
 #include <mochi_core/utils/error.h>
-#include <mochi_core/utils/log.h>
+#include <mochi_core/utils/reflection_utils.h>
 
 #include <algorithm>
 #include <array>
@@ -298,12 +298,18 @@ bool LoadProcessingPipeline(
   // Optional editor state.
   auto const editorIt = root.find("editorState");
   if (editorIt != root.end() && editorIt->second.is<picojson::object>()) {
-    int issues = 0;
+    SReflect::IssueList issues;
     SReflect::FromJsonValue(
-        out.editorState, editorIt->second, SReflect::DeserializeFlags::Default, issues);
+        out.editorState, editorIt->second, SReflect::DeserializeFlags::Default, &issues);
     out.hasEditorState = true;
-    if (issues > 0) {
-      out.issues.push_back(Concat({"editorState: ", Unreadable(issues, "field", "fields")}));
+    if (!issues.empty()) {
+      mochi::LogDeserializationWarnings(
+          mochi::Format(
+              "Issues detected while loading processing editor state from JSON file '%s':",
+              path.c_str()),
+          issues);
+      out.issues.push_back(Concat(
+          {"editorState: ", Unreadable(static_cast<int>(issues.size()), "field", "fields")}));
     }
   }
 
@@ -314,15 +320,20 @@ bool LoadProcessingPipeline(
       if (!refVal.is<picojson::object>()) {
         continue;
       }
-      int issues = 0;
+      SReflect::IssueList issues;
       ReferenceModelState ref;
-      SReflect::FromJsonValue(ref, refVal, SReflect::DeserializeFlags::Default, issues);
-      if (issues > 0) {
+      SReflect::FromJsonValue(ref, refVal, SReflect::DeserializeFlags::Default, &issues);
+      if (!issues.empty()) {
+        mochi::LogDeserializationWarnings(
+            mochi::Format(
+                "Issues detected while loading a processing reference model from JSON file '%s':",
+                path.c_str()),
+            issues);
         out.issues.push_back(Concat(
             {"referenceModels[",
              std::to_string(out.referenceModels.size()),
              "]: ",
-             Unreadable(issues, "field", "fields")}));
+             Unreadable(static_cast<int>(issues.size()), "field", "fields")}));
       }
       AbsolutizePath(ref.path, baseFile);
       out.referenceModels.push_back(std::move(ref));
@@ -347,10 +358,17 @@ bool LoadProcessingPipeline(
           headerObj.emplace(key, value);
         }
       }
-      int issues = 0;
+      SReflect::IssueList issues;
       ProcessingEntryHeader entry;
       SReflect::FromJsonValue(
-          entry, picojson::value(headerObj), SReflect::DeserializeFlags::Default, issues);
+          entry, picojson::value(headerObj), SReflect::DeserializeFlags::Default, &issues);
+      if (!issues.empty()) {
+        mochi::LogDeserializationWarnings(
+            mochi::Format(
+                "Issues detected while loading a processing entry from JSON file '%s':",
+                path.c_str()),
+            issues);
+      }
 
       auto const propsIt = entryObj.find("properties");
       bool const hasProps = propsIt != entryObj.end();
@@ -369,8 +387,9 @@ bool LoadProcessingPipeline(
            methodName,
            "): "});
       ReportUnknownKeys(entryObj, kEntryKeys, where, out.issues);
-      if (issues > 0) {
-        out.issues.push_back(Concat({where, Unreadable(issues, "field", "fields")}));
+      if (!issues.empty()) {
+        out.issues.push_back(
+            Concat({where, Unreadable(static_cast<int>(issues.size()), "field", "fields")}));
       }
 
       std::unique_ptr<MeshProcessingModifier> modifier = MakeProcessingModifier(modName);

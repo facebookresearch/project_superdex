@@ -226,9 +226,9 @@ static void FromJsonStr(SReflect::TypeInfo const& ti, void* dst, std::string con
   std::istringstream stream{str};
   picojson::value jsonValue;
   picojson::parse(jsonValue, stream);
-  int numIssues = 0;
-  ti.Deserialize(jsonValue, dst, {}, numIssues);
-  EXPECT_EQ(0, numIssues);
+  SReflect::IssueList issues;
+  ti.Deserialize(jsonValue, dst, {}, &issues);
+  EXPECT_TRUE(issues.empty());
 }
 
 // Helper to serialize then deserialize without templates

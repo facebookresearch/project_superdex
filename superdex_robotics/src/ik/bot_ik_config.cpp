@@ -479,9 +479,7 @@ static bool ParseIKConfigImpl(std::string const& text, BotIKConfig& out, std::st
   if (legacy || versionTwo) {
     object["inputBotScale"] = picojson::value(1.0);
   }
-  int issues = 0;
-  SReflect::FromJsonValue(candidate, value, SReflect::DeserializeFlags::Default, issues);
-  if (issues != 0) {
+  if (!SReflect::FromJsonValue(candidate, value, SReflect::DeserializeFlags::Default)) {
     return Fail(
         diagnostic,
         "IK configuration contains malformed reflected fields (including solver verbosity)");

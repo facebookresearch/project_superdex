@@ -32,6 +32,7 @@
 #include <mochi_core/utils/nd_array.h>
 #include <mochi_core/utils/quaternion.h>
 #include <mochi_core/utils/reflection.h> // MOCHI_STRUCT_BEGIN etc. (props structs reflect via these)
+#include <mochi_core/utils/reflection_utils.h>
 
 #include <simple_reflection/simple_reflection.h> // SReflect::ToJsonValue / FromJsonValue / ToJsonString
 
@@ -364,9 +365,11 @@ class ReflectedMethod : public MeshProcessingMethod {
     SReflect::ToJsonValue(_props, out);
   }
   int DeserializeProps(picojson::value const& in) override {
-    int numIssues = 0;
-    SReflect::FromJsonValue(_props, in, SReflect::DeserializeFlags::Default, numIssues);
-    return numIssues;
+    SReflect::IssueList issues;
+    SReflect::FromJsonValue(_props, in, SReflect::DeserializeFlags::Default, &issues);
+    mochi::LogDeserializationWarnings(
+        "Issues detected while deserializing processing method properties:", issues);
+    return static_cast<int>(issues.size());
   }
   [[nodiscard]] std::string PropsSignature(ModifierRunContext const& /*ctx*/) const override {
     return SReflect::ToJsonString(_props, /*pretty=*/false);

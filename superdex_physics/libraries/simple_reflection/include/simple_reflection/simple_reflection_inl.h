@@ -188,12 +188,6 @@ void AddEnumItem(EnumTypeInfo& info, char const* name, uint64_t value);
 void AddAttribute(EnumTypeInfo& info, Attribute const* a);
 
 std::string SaveToJsonString(void const* obj, TypeInfo const& info, bool pretty);
-void LoadFromJsonString(
-    void* outObj,
-    TypeInfo const& info,
-    std::string const& jsonStr,
-    DeserializeFlags deserializeFlags,
-    int& outNumIssues);
 bool LoadFromJsonString(
     void* outObj,
     TypeInfo const& info,
@@ -205,12 +199,6 @@ bool SaveToJsonFile(
     TypeInfo const& info,
     char const* filePath,
     bool warnOnFailure);
-bool LoadFromJsonFile(
-    void* outObj,
-    TypeInfo const& info,
-    char const* filePath,
-    DeserializeFlags deserializeFlags,
-    int& outNumIssues);
 bool LoadFromJsonFile(
     void* outObj,
     TypeInfo const& info,
@@ -582,16 +570,6 @@ inline std::string ToJsonString(T const& obj, bool pretty) {
 }
 
 template <typename T>
-inline void FromJsonString(
-    T& objOut,
-    std::string const& json,
-    DeserializeFlags deserializeFlags,
-    int& numIssuesOut) {
-  return detail::LoadFromJsonString(
-      &objOut, GetFinalTypeInfo(objOut), json, deserializeFlags, numIssuesOut);
-}
-
-template <typename T>
 inline bool FromJsonString(
     T& objOut,
     std::string const& json,
@@ -607,15 +585,6 @@ inline void ToJsonValue(T const& obj, picojson::value& jsonOut) {
 }
 
 template <typename T>
-inline void FromJsonValue(
-    T& objOut,
-    picojson::value const& json,
-    DeserializeFlags deserializeFlags,
-    int& numIssuesOut) {
-  GetFinalTypeInfo(objOut).Deserialize(json, &objOut, deserializeFlags, numIssuesOut);
-}
-
-template <typename T>
 inline bool FromJsonValue(
     T& objOut,
     picojson::value const& json,
@@ -627,16 +596,6 @@ inline bool FromJsonValue(
 template <typename T>
 inline bool SaveToJsonFile(T const& obj, char const* filePath, bool warnOnFailure) {
   return detail::SaveToJsonFile(&obj, GetFinalTypeInfo(obj), filePath, warnOnFailure);
-}
-
-template <typename T>
-inline bool LoadFromJsonFile(
-    T& objOut,
-    char const* filePath,
-    DeserializeFlags deserializeFlags,
-    int& numIssuesOut) {
-  return detail::LoadFromJsonFile(
-      &objOut, GetFinalTypeInfo(objOut), filePath, deserializeFlags, numIssuesOut);
 }
 
 template <typename T>

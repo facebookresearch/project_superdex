@@ -17,6 +17,7 @@
 #include "scene/prefab_edit.h"
 
 #include <mochi_core/utils/json_utils.h>
+#include <mochi_core/utils/reflection_utils.h>
 #include <mochi_physics/utils/mochi_prefab.h>
 #include <superdex_robotics/scene/bot_scene.h>
 
@@ -198,10 +199,13 @@ void ApplyPrefabEdits(std::string_view edit, Prefab& prefab, Error& error) {
     MOCHI_ERROR_SET(error, "The prefab edit does not fit its prefab");
     return;
   }
-  int issues = 0;
+  SReflect::IssueList issues;
   SReflect::FromJsonValue(
-      prefab, picojson::value(sparse), SReflect::DeserializeFlags::WarnIfExtraneousFields, issues);
-  MOCHI_ERROR_IF(issues != 0, error, "The prefab edit does not fit its prefab's fields");
+      prefab, picojson::value(sparse), SReflect::DeserializeFlags::WarnIfExtraneousFields, &issues);
+  if (!issues.empty()) {
+    LogDeserializationWarnings("The prefab edit does not fit its prefab's fields", issues);
+    MOCHI_ERROR_SET(error, "The prefab edit does not fit its prefab's fields");
+  }
 }
 
 } // namespace
