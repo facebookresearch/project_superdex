@@ -34,8 +34,8 @@ namespace mochi {
  * your own risk.
  *
  * @note When a flag is `false`, the solver will try first with the true Hessian for that pathway.
- * If the Newton iteration fails to improve, all flags are set to `true` and the iteration is
- * retried with fitted Hessians for all pathways.
+ * If a Newton attempt fails, the solver retries with fitted Hessians for all pathways and keeps
+ * them for the rest of that nonlinear solve. Each solve starts from these flags.
  */
 struct SaturationHessianParams {
   /** @brief Use fitted Hessian for contact-friction saturation. */
@@ -125,8 +125,8 @@ struct ExperimentalEvalParams {
    * the exact analytical Hessian (faster convergence but less stable), independently for each
    * saturation pathway.
    *
-   * @note For any flag set to false, the solver will try first with the true Hessian. If it fails,
-   * it will retry with the fitted Hessian.
+   * @note For any flag set to false, the solver will try first with the true Hessian. See
+   * @ref SaturationHessianParams for when it switches to fitted Hessians.
    */
   SaturationHessianParams fittedSaturationHessian;
 

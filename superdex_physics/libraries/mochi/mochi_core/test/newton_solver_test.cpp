@@ -17,6 +17,7 @@
 #include <mochi_core/solvers/line_search.h>
 #include <mochi_core/solvers/newton_solver.h>
 #include <mochi_core/test/mochi_test_helpers.h>
+#include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/sparsity_utils.h>
 
 #include <gtest/gtest.h>
@@ -1373,6 +1374,112 @@ TEST(NewtonSolver, MeritLineSearches) {
       EXPECT_EQ(accepted, c.accepted);
     }
   }
+}
+
+// The objective is x^2 / 2 for every flag setting. Only the assembled curvature changes: 2 when all
+// flags are fitted (each step halves x), unfittedCurvature otherwise.
+static SnleProblem<real> GetRegularizationLatchProblem(
+    real unfittedCurvature,
+    DynamicArray<SaturationHessianParams>& assembledModes) {
+  auto residual = ColumnVector<real>::Zero(1);
+  auto matrix = AnyMatrix<real>{Matrix<real>{1, 1}};
+  SnleProblemFunctions<real> functions;
+  functions.assemble = [=, &assembledModes](
+                           SnleProblem<real>& problem, AssemblyParams const& params) mutable {
+    real const x = problem.GetSolution()[0];
+    if (params.assemObj) {
+      problem.objective = 0.5 * static_cast<double>(x) * x;
+    }
+    if (params.assemRes) {
+      residual[0] = x;
+      problem.actorResiduals = {{0, &residual}};
+    }
+    if (params.assemDRes) {
+      assembledModes.push_back(params.fittedSaturationHessian);
+      std::get<Matrix<real>>(matrix)(0, 0) =
+          params.fittedSaturationHessian.AllTrue() ? 2_r : unfittedCurvature;
+      problem.actorMatrices = {{0, &matrix}};
+    }
+  };
+  functions.onPostNewIncrement = [](SnleProblem<real>& problem) {
+    problem.solution += problem.increment;
+  };
+  return SnleProblem<real>{1, 1, std::move(functions)};
+}
+
+static NewtonSolverParams GetRegularizationLatchParams(LineSearchType search, int period) {
+  NewtonSolverParams params;
+  params.maxIter = 3;
+  params.absTolRes = params.relTolRes = params.solRelTol = 0_r;
+  params.convergenceMode = NonLinearSolverConvergenceMode::Global;
+  params.psdProjMode = PsdProjectionMode::Never;
+  params.verbosity = VerbosityLevel::Silent;
+  params.dResidualAssemblyPeriod = period;
+  params.lineSearch.type = search;
+  params.lineSearch.maxIter = 1;
+  params.linearToleranceStrategy = LinearToleranceStrategy::Constant;
+  params.lParams.solverType = LinearSolverType::CG;
+  params.lParams.preconditionerType = PreconditionerType::None;
+  params.lParams.normType = LinearSolverConvergenceNorm::ResidualL2;
+  params.lParams.abortIfNotSpd = true;
+  return params;
+}
+
+// A failed attempt, from the line search (a too small exact curvature overshoots) or the linear
+// solver (a negative one aborts), switches every pathway to fitted Hessians for the rest of the
+// solve, also when the dresidual is reassembled lazily. The next solve starts again at the
+// requested flags.
+TEST(NewtonSolver, RegularizationLatch_PersistsAndResetsBetweenSolves) {
+  for (auto search :
+       {LineSearchType::Armijo, LineSearchType::WolfeStrong, LineSearchType::ResidualNorm}) {
+    for (int period : {1, 2}) {
+      for (auto requested :
+           {SaturationHessianParams::All(false),
+            SaturationHessianParams{
+                .contactFriction = true, .jointFriction = false, .constraintSaturation = false},
+            SaturationHessianParams{
+                .contactFriction = false, .jointFriction = true, .constraintSaturation = false},
+            SaturationHessianParams{
+                .contactFriction = false, .jointFriction = false, .constraintSaturation = true}}) {
+        for (real const unfittedCurvature : {0.25_r, -1_r}) {
+          DynamicArray<SaturationHessianParams> modes;
+          auto problem = GetRegularizationLatchProblem(unfittedCurvature, modes);
+          auto params = GetRegularizationLatchParams(search, period);
+          params.fittedSaturationHessian = requested;
+          NewtonSolver<real> solver(params);
+          for (int run = 0; run < 2; ++run) {
+            modes.clear();
+            problem.SetSolution(ColumnVector<real>::Ones(1));
+            auto const status = solver.Solve(problem);
+            ASSERT_EQ(3, status.numIterDone);
+            EXPECT_EQ(ConvergenceStatus::Stopped, status.convergence);
+            EXPECT_EQ(0.125_r, problem.GetSolution()[0]);
+            // The dresidual of the first iteration, its fitted retry, and one per reassembly.
+            auto const fitted = SaturationHessianParams::All(true);
+            DynamicArray<SaturationHessianParams> const expected = period == 1
+                ? DynamicArray<SaturationHessianParams>{requested, fitted, fitted, fitted}
+                : DynamicArray<SaturationHessianParams>{requested, fitted, fitted};
+            EXPECT_EQ(expected, modes);
+          }
+        }
+      }
+    }
+  }
+}
+
+TEST(NewtonSolver, RegularizationLatch_AcceptedBacktrackingDoesNotLatch) {
+  DynamicArray<SaturationHessianParams> modes;
+  auto problem = GetRegularizationLatchProblem(0.4_r, modes);
+  auto params = GetRegularizationLatchParams(LineSearchType::Armijo, 1);
+  params.fittedSaturationHessian = SaturationHessianParams::All(false);
+  params.lineSearch.maxIter = 4;
+  NewtonSolver<real> solver(params);
+  problem.SetSolution(ColumnVector<real>::Ones(1));
+  auto const status = solver.Solve(problem);
+  EXPECT_EQ(3, status.numIterDone);
+  EXPECT_GT(status.totalNumLSIterDone, 0);
+  DynamicArray<SaturationHessianParams> const expected(3, SaturationHessianParams::All(false));
+  EXPECT_EQ(expected, modes);
 }
 
 TEST(NewtonSolver, LinearSolveTimeIsPartOfSolveTime) {

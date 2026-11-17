@@ -3898,8 +3898,9 @@ class SaturationHessianParams:
 
     Note:
         When a flag is `false`, the solver will try first with the true Hessian for
-        that pathway. If the Newton iteration fails to improve, all flags are set to
-        `true` and the iteration is retried with fitted Hessians for all pathways.
+        that pathway. If a Newton attempt fails, the solver retries with fitted
+        Hessians for all pathways and keeps them for the rest of that nonlinear
+        solve. Each solve starts from these flags.
 
     Warning:
         This is an experimental feature. It may be changed or removed in the future.
@@ -4021,7 +4022,8 @@ class ExperimentalEvalParams:
 
     Note:
         For any flag set to false, the solver will try first with the true Hessian.
-        If it fails, it will retry with the fitted Hessian.
+        See :class:`~superdex.physics.SaturationHessianParams` for when it switches
+        to fitted Hessians.
     """
     friction_model: CoulombFrictionModel
     """Selects which Coulomb friction smoothing model to use.

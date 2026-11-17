@@ -730,6 +730,9 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
   // Linear operator with the approximate DResidual for the linear solve.
   AnyLinearOperator linOp = {};
 
+  // Starts at the requested flags. A failed attempt switches every pathway to fitted Hessians for
+  // the rest of this solve.
+  auto fittedSaturationHessian = _params.fittedSaturationHessian;
   T linearResidualNorm = {}; // Expressed in the norm used to monitor linear solver convergence
   while (true) {
     MOCHI_PROFILE_SCOPE_N("SolverIteration");
@@ -757,9 +760,6 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
 
     // Only start the first trial projecting if the PSD mode is Always.
     bool projectPsd = (psdMode == PsdProjectionMode::Always);
-
-    // Only start the first trial with fitted Hessian if requested externally.
-    auto fittedSaturationHessian = _params.fittedSaturationHessian;
 
     // Compute residual (always) and objective (only if using a merit-based line search).
     // On the first step we compute dresidual at the same time, assuming we will need it.
