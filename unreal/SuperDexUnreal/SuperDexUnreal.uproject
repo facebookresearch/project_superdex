@@ -24,11 +24,23 @@
 			"Enabled": true
 		},
 		{
+			"Name": "OpenXR",
+			"Enabled": true
+		},
+		{
+			"Name": "OpenXRHandTracking",
+			"Enabled": true
+		},
+		{
 			"Name": "SuperDexAssets",
 			"Enabled": true
 		},
 		{
 			"Name": "SuperDexExamples",
+			"Enabled": true
+		},
+		{
+			"Name": "AndroidInput",
 			"Enabled": true
 		}
 	]

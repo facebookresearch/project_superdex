@@ -11,6 +11,7 @@ Engine 5.5 and 5.8. This is a ready-to-open Unreal project that carries the Supe
 | [SuperDexOpenXRPoseSource](Plugins/PoseSourcePlugins/SuperDexOpenXRPoseSource) | Tracked hand poses from OpenXR hand tracking for SuperDexRobotics |
 | [SuperDexAssets](Plugins/SuperDexAssets) | Content only: task prefabs |
 | [SuperDexExamples](Plugins/SuperDexExamples) | Content only: example levels |
+| [AndroidInput](Plugins/AdditionalPlugins/AndroidInput) | Gamepad and keyboard input on Android (Meta Quest), which the OpenXR integration otherwise blocks |
 
 ## Usage
 

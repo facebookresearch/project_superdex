@@ -1,0 +1,29 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "Android Input",
+	"Description": "Hooks into the Android native input queue to capture gamepad and keyboard events that the OpenXR integration otherwise blocks.",
+	"Category": "Input",
+	"CreatedBy": "Meta Platforms, Inc.",
+	"CreatedByURL": "https://github.com/facebookresearch/project_superdex",
+	"DocsURL": "https://facebookresearch.github.io/project_superdex/",
+	"MarketplaceURL": "",
+	"SupportURL": "https://github.com/facebookresearch/project_superdex/issues",
+	"EnabledByDefault": false,
+	"CanContainContent": false,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": true,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "AndroidInput",
+			"Type": "Runtime",
+			"LoadingPhase": "PreLoadingScreen",
+			"PlatformAllowList": [
+				"Win64",
+				"Android"
+			]
+		}
+	]
+}

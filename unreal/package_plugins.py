@@ -117,6 +117,7 @@ ARCHIVE_STEMS = {
     "SuperDexExamples": "superdex_examples_unrealplugin",
     "SuperDexOpenXRPoseSource": "superdex_openxr_pose_source_unrealplugin",
     "TeleopNodeZenoh": "superdex_teleop_node_zenoh_unrealplugin",
+    "AndroidInput": "superdex_android_input_unrealplugin",
 }
 
 
