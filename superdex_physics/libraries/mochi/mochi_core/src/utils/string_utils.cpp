@@ -17,8 +17,6 @@
 #include <mochi_core/utils/string_utils.h>
 
 #include <cctype>
-#include <optional>
-#include <utility>
 
 using namespace mochi;
 
@@ -80,115 +78,6 @@ DynamicArray<std::string_view> mochi::Split(
   }
 
   return output;
-}
-
-// Translate the character following a backslash into its escape-sequence value. Returns nullopt if
-// `c` is not a supported escape.
-static std::optional<char> EscapeChar(char c) {
-  switch (c) {
-    case 'n':
-      return '\n';
-    case 't':
-      return '\t';
-    case 'r':
-      return '\r';
-    case 'a':
-      return '\a';
-    case 'b':
-      return '\b';
-    case 'f':
-      return '\f';
-    case 'v':
-      return '\v';
-    case '"':
-      return '"';
-    case '\\':
-      return '\\';
-    case '\'':
-      return '\'';
-    default:
-      return std::nullopt;
-  }
-}
-
-// Append the contents of a quoted section to token, resolving escapes. On entry, i points at the
-// opening quote. Returns the index just past the matching closing quote (or the end of input).
-// Set outError if an unsupported escape is encountered.
-static size_t AppendQuoted(
-    std::string_view input,
-    size_t i,
-    char quote,
-    std::string& token,
-    std::string& outError) {
-  auto setError = [&](size_t slashIdx) {
-    MOCHI_ASSERT_VERBOSE(input[slashIdx] == '\\');
-    if (outError.empty()) {
-      if (slashIdx + 1 < input.size()) {
-        outError = Format(
-            R"(Unsupported escape sequence: "\%c" (index %zu))", input[slashIdx + 1], slashIdx);
-      } else {
-        outError = Format(R"(Unsupported escape sequence: "\" (index %zu))", slashIdx);
-      }
-    }
-  };
-  size_t const n = input.size();
-  ++i; // Skip the opening quote.
-  while (i < n && input[i] != quote) {
-    if (input[i] == '\\') {
-      if (i + 1 < n) {
-        auto const escaped = EscapeChar(input[i + 1]);
-        if (escaped) {
-          token.push_back(*escaped);
-        } else {
-          setError(i);
-          token.push_back(input[i + 1]);
-        }
-        i += 2;
-      } else {
-        setError(i);
-        ++i;
-      }
-    } else {
-      token.push_back(input[i]);
-      ++i;
-    }
-  }
-  if (i < n) {
-    ++i; // Skip the closing quote.
-  }
-  return i;
-}
-
-DynamicArray<std::string> mochi::ConsoleTokenize(std::string_view input, std::string& outError) {
-  outError.clear();
-  DynamicArray<std::string> tokens;
-  std::string token;
-  bool inToken = false;
-  size_t const n = input.size();
-  for (size_t i = 0; i < n;) {
-    char const c = input[i];
-    if (std::isspace(static_cast<unsigned char>(c))) {
-      if (inToken) {
-        tokens.push_back(std::move(token));
-        token.clear();
-        inToken = false;
-      }
-      ++i;
-    } else if (c == '\'' || c == '"') {
-      // Quotes group whitespace and honor backslash escape sequences.
-      inToken = true;
-      i = AppendQuoted(input, i, c, token, outError);
-    } else {
-      // Everything else, including a backslash outside quotes, is literal.
-      inToken = true;
-      token.push_back(c);
-      ++i;
-    }
-  }
-  if (inToken) {
-    tokens.push_back(std::move(token));
-  }
-  return tokens;
 }
 
 bool mochi::EndsWithCaseInsensitive(std::string_view str, std::string_view suffix) {

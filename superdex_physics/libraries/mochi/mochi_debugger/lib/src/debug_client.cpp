@@ -24,6 +24,7 @@
 #include <mochi_debugger/lib/address.h>
 #include <mochi_debugger/lib/debug_client.h>
 #include <mochi_physics/dbg/protocol.h>
+#include <simple_reflection/simple_reflection_console.h>
 
 #include <algorithm>
 #include <chrono>
@@ -31,6 +32,7 @@
 #include <string>
 #include <thread>
 #include <tuple>
+#include <vector>
 
 using namespace mochi;
 using namespace mochi::dbg;
@@ -175,9 +177,10 @@ void DebugClient::ResetConnectionState() {
 
 void DebugClient::ExecuteCommand(std::string_view str) {
   std::string error;
-  DynamicArray<std::string> tokens = ConsoleTokenize(str, error);
+  size_t errorOffset = 0;
+  auto const tokens = SReflect::detail::ConsoleTokenize(str, error, &errorOffset);
   if (!error.empty()) {
-    PrintError(error);
+    PrintError(SReflect::detail::FormatConsoleError(error, str, errorOffset));
     return;
   }
   if (tokens.empty()) {

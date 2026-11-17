@@ -82,20 +82,6 @@ template <class ArrayT>
     Allocator* allocator = GetDefaultAllocator());
 
 /**
- * @brief Split a string into tokens the way a command-line shell would.
- *
- * @details Tokens are separated by whitespace. If a token is wrapped in single or double quotes,
- * then it may contain whitespace and backslash escape sequences.
- *
- * @param input Input string to tokenize.
- * @param[out] outError Empty on success. Error message if failure to resolve escape sequence.
- * @return Array of tokens with quotes removed and escapes resolved.
- */
-[[nodiscard]] DynamicArray<std::string> ConsoleTokenize(
-    std::string_view input,
-    std::string& outError);
-
-/**
  * @brief Trim leading and trailing whitespace characters from a string.
  *
  * @param input Input string to be trimmed.
