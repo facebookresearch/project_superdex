@@ -92,6 +92,17 @@ function (_mochi_check_language_compiler lang)
                 "${_mochi_stale}\n"
                 "${_mochi_bypass}")
         endif ()
+    elseif (ANDROID)
+        # Cross builds through the Android NDK's toolchain file. NDK r26 is the first with Clang 17.
+        if (NOT _id STREQUAL "Clang" OR _version VERSION_LESS 17)
+            message(FATAL_ERROR
+                "[Mochi] Supported ${lang} compiler for Android: the Android NDK's Clang 17 or newer (NDK r26 or newer).\n"
+                "${_detected}\n"
+                "Install a newer NDK with the Android SDK Manager, for example: sdkmanager \"ndk;27.2.12479018\"\n"
+                "and configure with -DCMAKE_TOOLCHAIN_FILE=<ndk>/build/cmake/android.toolchain.cmake.\n"
+                "${_mochi_stale}\n"
+                "${_mochi_bypass}")
+        endif ()
     elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
         if (NOT _id STREQUAL "Clang" OR _version VERSION_LESS 17)
             message(FATAL_ERROR

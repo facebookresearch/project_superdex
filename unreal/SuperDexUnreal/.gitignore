@@ -12,6 +12,7 @@ Plugins/**/Intermediate/
 .vscode/
 .idea/
 *.sln
+*.slnx
 *.VC.db
 *.VC.opendb
 .vsconfig

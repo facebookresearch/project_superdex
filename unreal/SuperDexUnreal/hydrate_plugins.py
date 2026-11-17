@@ -25,7 +25,7 @@ Usage
 -----
 Run from anywhere; paths are resolved relative to this file.
 
-    python hydrate_plugins.py [--build-dir DIR] [--ue-root DIR]
+    python hydrate_plugins.py [--build-dir DIR] [--ue-root DIR] [--android [--android-ndk DIR]]
 
 Mochi is built from superdex_physics/libraries/mochi; set SUPERDEX_MOCHI_ROOT to use Mochi
 sources elsewhere.
@@ -39,10 +39,16 @@ the engine's own clang toolchain against the engine's bundled libc++, as Unreal'
 the script needs the engine: pass --ue-root or set UE_ROOT. On Windows use `py -3` in place of
 `python`.
 
+--android builds the Android (arm64-v8a) libraries instead of the host ones, for packaging the
+project for Meta Quest. It cross-compiles with the Android NDK: the same NDK Unreal packages with
+(UE 5.8 requires r27c, 27.2.12479018), with static libc++ as Unreal requires. Pass --android-ndk
+or set ANDROID_NDK_ROOT; otherwise the script looks under $ANDROID_HOME/ndk. Run the host build
+too: the editor that cooks the Android build loads the host libraries.
+
 Examples
 --------
-    # First-time setup on Windows, then open SuperDexUnreal.uproject (UE 5.5). Unreal compiles
-    # the plugin modules the first time the project opens.
+    # First-time setup on Windows, then open SuperDexUnreal.uproject. Unreal compiles the plugin
+    # modules the first time the project opens.
     py -3 hydrate_plugins.py
 
     # Keep the CMake tree somewhere persistent:
@@ -51,11 +57,15 @@ Examples
     # Linux, against an installed engine:
     python3 hydrate_plugins.py --ue-root ~/UnrealEngine-5.5
 
+    # Android libraries for Meta Quest, in addition to the host ones:
+    py -3 hydrate_plugins.py --android
+
 What it writes (all ignored by .gitignore)
 ------------------------------------------
     Plugins/SuperDexPhysics/ThirdParty/mochi_physics/lib/<Platform>/         mochi_physics, marl
     Plugins/SuperDexRobotics/ThirdParty/superdex_robotics/lib/<Platform>/    superdex_robotics
     Plugins/SuperDexRobotics/ThirdParty/superdex_recorder/lib/Win64/         superdex_recorder_shared
+    Plugins/*/ThirdParty/*/lib/Android/*_apl.xml                             Android packaging rules
     Plugins/*/Source/<Module>/ThirdParty/<library>/include                   only if missing or broken
     Plugins/TeleopNodePlugins/TeleopNodeZenoh/Source/TeleopNodeZenoh/Private/ZenohPico      zenoh-pico sources
     Plugins/TeleopNodePlugins/TeleopNodeZenoh/Source/TeleopNodeZenoh/Private/Nanopb   nanopb's C runtime
@@ -64,7 +74,7 @@ A source checkout may already provide the include trees as links into the librar
 those are left alone. A missing or dangling tree is replaced with a copy of the headers.
 TeleopNodeZenoh's sources are placed by configuring its own CMake project (see its README), which
 downloads zenoh-pico and nanopb at pinned commits.
-Windows (Win64) is the supported platform; Linux is for development.
+Windows (Win64) is the supported platform; Linux is for development. Android is for Meta Quest.
 """
 
 from __future__ import annotations
@@ -88,7 +98,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 # Normalised but not symlink-resolved, so a tree assembled out of links reports its own layout.
 PROJECT_DIR = Path(os.path.abspath(__file__)).parent
 
-Platform = Literal["Win64", "Linux"]
+Platform = Literal["Win64", "Linux", "Android"]
 
 
 @dataclass(frozen=True)
@@ -110,11 +120,43 @@ class Lib:
 
 
 @dataclass(frozen=True)
+class AndroidPluginFile:
+    """An Unreal Android plugin file (APL) staged next to the Android libraries. The plugin's
+    Build.cs registers it by `name`; it copies `libs` into the APK and loads them at startup."""
+
+    name: str
+    libs: tuple[str, ...]
+
+    def render(self) -> str:
+        copies = "".join(
+            f'\t\t<copyFile src="$S(PluginDir)/lib{lib}.so" '
+            f'dst="$S(BuildDir)/libs/arm64-v8a/lib{lib}.so" />\n'
+            for lib in self.libs
+        )
+        loads = "".join(
+            f'\t\t<loadLibrary name="{lib}" failmsg="Failed to load lib{lib}.so" />\n'
+            for lib in self.libs
+        )
+        return (
+            '<?xml version="1.0" encoding="utf-8"?>\n'
+            "<!-- Written by hydrate_plugins.py. -->\n"
+            '<root xmlns:android="http://schemas.android.com/apk/res/android">\n'
+            "\t<!-- Copy the libraries into the APK. -->\n"
+            f"\t<resourceCopies>\n{copies}\t</resourceCopies>\n"
+            "\t<!-- Load them in GameActivity before the engine library. -->\n"
+            f"\t<soLoadLibrary>\n{loads}\t</soLoadLibrary>\n"
+            "</root>\n"
+        )
+
+
+@dataclass(frozen=True)
 class LibDir:
     """Libraries staged into one folder, relative to the plugin root, for one platform."""
 
     dest: str
     libs: tuple[Lib, ...]
+    # Android only: the APL files the plugin's Build.cs expects in this folder.
+    android_plugin_files: tuple[AndroidPluginFile, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -151,6 +193,18 @@ PHYSICS = CodePlugin(
             LibDir(
                 "ThirdParty/mochi_physics/lib/Linux",
                 (Lib("mochi_physics"), Lib("marl")),
+            ),
+        ),
+        "Android": (
+            LibDir(
+                "ThirdParty/mochi_physics/lib/Android",
+                (Lib("mochi_physics"), Lib("marl")),
+                # The names SuperDexPhysics.Build.cs and SuperDexPose.Build.cs register. marl
+                # loads first: mochi_physics depends on it.
+                (
+                    AndroidPluginFile("mochi_core_apl.xml", ("marl",)),
+                    AndroidPluginFile("mochi_physics_apl.xml", ("mochi_physics",)),
+                ),
             ),
         ),
     },
@@ -191,6 +245,17 @@ ROBOTICS = CodePlugin(
         "Linux": (
             LibDir(
                 "ThirdParty/superdex_robotics/lib/Linux", (Lib("superdex_robotics"),)
+            ),
+        ),
+        "Android": (
+            LibDir(
+                "ThirdParty/superdex_robotics/lib/Android",
+                (Lib("superdex_robotics"),),
+                (
+                    AndroidPluginFile(
+                        "superdex_robotics_apl.xml", ("superdex_robotics",)
+                    ),
+                ),
             ),
         ),
     },
@@ -359,11 +424,122 @@ def linux_toolchain_args(ue_root: Path) -> list[str]:
     ]
 
 
+# The NDK Unreal Engine 5.8 packages Android builds with. Unreal links its code against this NDK's
+# libc++, and the plugins pass std:: types across the library boundary, so both sides should use
+# the same NDK.
+ANDROID_NDK_VERSION = "27.2.12479018"
+# Oldest NDK with Clang 17, which Mochi requires.
+ANDROID_NDK_MIN_MAJOR = 26
+# Matches MinSDKVersion in Config/DefaultEngine.ini.
+ANDROID_API_LEVEL = 32
+ANDROID_ABI = "arm64-v8a"
+
+
+def _ndk_revision(ndk: Path) -> str | None:
+    try:
+        for line in (ndk / "source.properties").read_text().splitlines():
+            key, _, value = line.partition("=")
+            if key.strip() == "Pkg.Revision":
+                return value.strip()
+    except OSError:
+        pass
+    return None
+
+
+def find_android_ndk(explicit: Path | None) -> Path:
+    """The NDK to cross-compile with: --android-ndk, then ANDROID_NDK_ROOT / ANDROID_NDK_HOME /
+    NDKROOT, then $ANDROID_HOME/ndk/<ANDROID_NDK_VERSION>, then the newest NDK under
+    $ANDROID_HOME/ndk."""
+    candidates: list[Path] = []
+    if explicit:
+        candidates.append(explicit)
+    for var in ("ANDROID_NDK_ROOT", "ANDROID_NDK_HOME", "NDKROOT", "NDK_ROOT"):
+        if os.environ.get(var):
+            candidates.append(Path(os.environ[var]))
+    for var in ("ANDROID_HOME", "ANDROID_SDK_ROOT"):
+        sdk = os.environ.get(var)
+        if sdk:
+            candidates.append(Path(sdk) / "ndk" / ANDROID_NDK_VERSION)
+            candidates += sorted(
+                (Path(sdk) / "ndk").glob("*"),
+                key=lambda d: [int(x) for x in d.name.split(".") if x.isdigit()],
+                reverse=True,
+            )
+    for ndk in candidates:
+        ndk = _abspath(ndk)
+        revision = _ndk_revision(ndk)
+        if (
+            not (ndk / "build/cmake/android.toolchain.cmake").is_file()
+            or revision is None
+        ):
+            continue
+        if int(revision.split(".")[0]) < ANDROID_NDK_MIN_MAJOR:
+            log(
+                "Skipping NDK %s (%s): Mochi needs NDK r%d or newer",
+                ndk,
+                revision,
+                ANDROID_NDK_MIN_MAJOR,
+            )
+            continue
+        if revision != ANDROID_NDK_VERSION:
+            log(
+                "WARNING: NDK %s is %s. Unreal Engine 5.8 packages with %s; use the same NDK as "
+                "Unreal to keep the C++ standard library in step.",
+                ndk,
+                revision,
+                ANDROID_NDK_VERSION,
+            )
+        return ndk
+    raise RuntimeError(
+        f"No usable Android NDK found. Install NDK {ANDROID_NDK_VERSION} with the Android SDK "
+        f'Manager (sdkmanager "ndk;{ANDROID_NDK_VERSION}") and set ANDROID_HOME, or pass '
+        "--android-ndk."
+    )
+
+
+def _ndk_host_bin(ndk: Path) -> Path:
+    prebuilt = sorted((ndk / "toolchains/llvm/prebuilt").glob("*"))
+    if not prebuilt:
+        raise RuntimeError(f"{ndk} has no prebuilt LLVM toolchain")
+    return prebuilt[0] / "bin"
+
+
+def _find_ninja(ndk: Path) -> str | None:
+    """Ninja from PATH, else the copy the Android SDK's CMake package ships next to the NDK."""
+    found = shutil.which("ninja")
+    if found:
+        return found
+    exe = "ninja.exe" if os.name == "nt" else "ninja"
+    shipped = sorted((ndk.parent.parent / "cmake").glob(f"*/bin/{exe}"))
+    return str(shipped[-1]) if shipped else None
+
+
+def android_toolchain_args(ndk: Path) -> list[str]:
+    """CMake arguments for an arm64 Android build that links like Unreal's Android modules:
+    static libc++ (Unreal rejects libraries that need libc++_shared.so) and signed char (Unreal
+    compiles with -fsigned-char; arm64 defaults to unsigned)."""
+    args = [
+        f"-DCMAKE_TOOLCHAIN_FILE={(ndk / 'build/cmake/android.toolchain.cmake').as_posix()}",
+        f"-DANDROID_ABI={ANDROID_ABI}",
+        f"-DANDROID_PLATFORM=android-{ANDROID_API_LEVEL}",
+        "-DANDROID_STL=c++_static",
+        "-DCMAKE_C_FLAGS=-fsigned-char",
+        "-DCMAKE_CXX_FLAGS=-fsigned-char",
+        # Unversioned sonames, the names the APL files copy and load.
+        "-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON",
+    ]
+    ninja = _find_ninja(ndk)
+    if ninja:
+        args.append(f"-DCMAKE_MAKE_PROGRAM={Path(ninja).as_posix()}")
+    return args
+
+
 def build_natives(
     roots: Roots,
     build_dir: Path,
     plat: Platform,
     ue_root: Path | None = None,
+    ndk: Path | None = None,
 ) -> None:
     if not shutil.which("cmake"):
         raise RuntimeError("cmake not found on PATH (CMake 3.25 or newer is required).")
@@ -391,6 +567,9 @@ def build_natives(
         # mochi rejects it with anything but MSVC or clang-cl.
         configure.append("-DMOCHI_UNREAL_ABI=ON")
         configure.append("-DSUPERDEX_BUILD_RECORDER=ON")
+    elif plat == "Android":
+        assert ndk is not None
+        configure += android_toolchain_args(ndk)
     else:
         if ue_root is None:
             raise RuntimeError(
@@ -440,8 +619,19 @@ def _replace_file(source: Path, dest: Path) -> None:
     shutil.copy2(source, dest)
 
 
-def stage_built_libs(roots: Roots, build_dir: Path, plat: Platform) -> list[str]:
+def _replace_text(text: str, dest: Path) -> None:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.is_symlink() or dest.exists():
+        dest.unlink()
+    dest.write_text(text, encoding="utf-8", newline="\n")
+
+
+def stage_built_libs(
+    roots: Roots, build_dir: Path, plat: Platform, ndk: Path | None = None
+) -> list[str]:
     problems: list[str] = []
+    # The Android libraries go into the APK: strip them (the build tree keeps the symbols).
+    strip = _ndk_host_bin(ndk) / "llvm-strip" if plat == "Android" and ndk else None
     for plugin in CODE_PLUGINS:
         for lib_dir in plugin.lib_dirs_for(plat):
             dest_dir = roots.plugin_dir(plugin) / lib_dir.dest
@@ -453,7 +643,12 @@ def stage_built_libs(roots: Roots, build_dir: Path, plat: Platform) -> list[str]
                         continue
                     assert built is not None
                     _replace_file(built, dest_dir / staged_name)
+                    if strip:
+                        run([strip, "--strip-unneeded", dest_dir / staged_name])
                     log("  %s/%s/%s", plugin.name, lib_dir.dest, staged_name)
+            for apl in lib_dir.android_plugin_files:
+                _replace_text(apl.render(), dest_dir / apl.name)
+                log("  %s/%s/%s", plugin.name, lib_dir.dest, apl.name)
     return problems
 
 
@@ -555,6 +750,9 @@ def missing(roots: Roots, plat: Platform) -> list[str]:
                         gaps.append(
                             f"{plugin.name}: missing {lib_dir.dest}/{staged_name}"
                         )
+            for apl in lib_dir.android_plugin_files:
+                if not (root / lib_dir.dest / apl.name).is_file():
+                    gaps.append(f"{plugin.name}: missing {lib_dir.dest}/{apl.name}")
         for tree in plugin.headers:
             if not _tree_usable(root / tree.dest):
                 gaps.append(f"{plugin.name}: missing or broken {tree.dest}")
@@ -583,6 +781,7 @@ def hydrate(
     plat: Platform,
     build_dir: Path,
     ue_root: Path | None = None,
+    ndk: Path | None = None,
 ) -> list[str]:
     """Stage public native dependencies into this project's plugins.
 
@@ -592,12 +791,24 @@ def hydrate(
     log("superdex : %s", roots.superdex)
     log("mochi    : %s", roots.mochi)
     log("platform : %s", plat)
-    build_natives(roots, build_dir, plat, ue_root)
+    if plat == "Android":
+        if ndk is None:
+            raise RuntimeError("Android builds need the Android NDK: pass ndk.")
+        log("ndk      : %s (%s)", ndk, _ndk_revision(ndk))
+    build_natives(roots, build_dir, plat, ue_root, ndk)
     log("Staging libraries")
-    problems = stage_built_libs(roots, build_dir, plat)
+    problems = stage_built_libs(roots, build_dir, plat, ndk)
     log("Checking include trees")
     problems += stage_headers(roots)
-    place_plugin_sources(build_dir, plat, ue_root)
+    if plat != "Android":
+        place_plugin_sources(build_dir, plat, ue_root)
+    elif _missing_plugin_sources():
+        # The placed sources are the same for every platform (Unreal compiles them), and
+        # zenoh-pico's CMake refuses Android targets: the host run places them.
+        problems.append(
+            "TeleopNodeZenoh's sources are not in place. Run hydrate_plugins.py without "
+            "--android first: it places them, and the editor needs the host libraries anyway."
+        )
     problems += [g for g in missing(roots, plat) if g not in problems]
     return problems
 
@@ -615,8 +826,21 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--build-dir",
         type=Path,
-        default=Path(tempfile.gettempdir()) / "superdex-unreal-build",
-        help="CMake build directory (default: %(default)s)",
+        default=None,
+        help="CMake build directory (default: superdex-unreal-build, or "
+        "superdex-unreal-build-android with --android, in the temp directory)",
+    )
+    parser.add_argument(
+        "--android",
+        action="store_true",
+        help="build the Android (arm64-v8a) libraries for Meta Quest instead of the host ones",
+    )
+    parser.add_argument(
+        "--android-ndk",
+        type=Path,
+        default=None,
+        help=f"Android NDK to build with (default: $ANDROID_NDK_ROOT, else "
+        f"$ANDROID_HOME/ndk/{ANDROID_NDK_VERSION})",
     )
     return parser.parse_args(argv)
 
@@ -628,12 +852,17 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     try:
         roots = resolve_roots()
-        plat = host_platform()
+        plat: Platform = "Android" if args.android else host_platform()
+        ndk = find_android_ndk(args.android_ndk) if args.android else None
+        build_dir = args.build_dir or Path(tempfile.gettempdir()) / (
+            "superdex-unreal-build-android" if args.android else "superdex-unreal-build"
+        )
         problems = hydrate(
             roots,
             plat=plat,
-            build_dir=_abspath(args.build_dir),
+            build_dir=_abspath(build_dir),
             ue_root=_abspath(args.ue_root) if args.ue_root else None,
+            ndk=ndk,
         )
     except (
         OSError,
@@ -647,7 +876,10 @@ def main(argv: list[str] | None = None) -> int:
         for problem in problems:
             log("  %s", problem)
         return 1
-    log("Done. Open %s", PROJECT_DIR / "SuperDexUnreal.uproject")
+    if plat == "Android":
+        log("Done. The project can now be packaged for Android; see README.md.")
+    else:
+        log("Done. Open %s", PROJECT_DIR / "SuperDexUnreal.uproject")
     return 0
 
 
