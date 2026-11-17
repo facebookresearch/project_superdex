@@ -169,6 +169,7 @@ void SnleProblem<T>::OnPostNewSolution() {
   // up-to-date as long as it matches the per-actor dresiduals. Therefore _dirtyFullDRes is
   // unchanged.
   _dirtyAssembly = _dirtyObj = _dirtyRes = true;
+  trustMargin = kInf;
 }
 
 template <typename T>
@@ -182,6 +183,7 @@ void SnleProblem<T>::OnPostNewIncrement() {
   // up-to-date as long as it matches the per-actor dresiduals. Therefore _dirtyFullDRes is
   // unchanged.
   _dirtyAssembly = _dirtyObj = _dirtyRes = true;
+  trustMargin = kInf;
 }
 
 template <typename T>

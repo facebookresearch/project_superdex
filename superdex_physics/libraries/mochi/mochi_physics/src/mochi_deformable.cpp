@@ -280,6 +280,7 @@ static void ComputeAsyncContactResponseImpl(
     bool evalGrad,
     bool evalHess,
     bool reportsNonPotential,
+    real* outTrustMargin,
     Span<bool const> allowedContactElementMask) {
   MOCHI_PROFILE_SCOPE();
 
@@ -343,8 +344,10 @@ static void ComputeAsyncContactResponseImpl(
         evalEner,
         evalGrad,
         evalHess,
+        /*assemDForceAnchor*/ false,
         collisionResponse,
-        colliderReportsNonPotential ? &nonPotential : nullptr);
+        colliderReportsNonPotential ? &nonPotential : nullptr,
+        outTrustMargin);
 
     // Assemble
     for (size_t i = 0; i < numActiveSamples; ++i) {
@@ -397,6 +400,7 @@ void deformable::ComputeAsyncContactResponse(
     CRootTransform const& rootTransform,
     AssemblyParams const& params,
     CDeformablePointAsyncCollisionsResponse& outResponse,
+    real& outTrustMargin,
     Span<bool const> allowedContactElementMask) {
   auto const& experimentalEval = simParams.experimentalEval;
   femBoundaryDisc.Visit([&](auto const& femBoundaryDiscImpl) {
@@ -418,6 +422,7 @@ void deformable::ComputeAsyncContactResponse(
         params.assemRes,
         params.assemDRes,
         ReportsContactNonPotentialTerms(params, simParams),
+        ReportsContactTrustMargin(params) ? &outTrustMargin : nullptr,
         allowedContactElementMask);
   });
 }
@@ -435,6 +440,7 @@ void deformable::ComputeAsyncContactResponse(
       CRootTransform const&,                                                              \
       AssemblyParams const&,                                                              \
       CDeformablePointAsyncCollisionsResponse&,                                           \
+      real&,                                                                              \
       Span<bool const>);
 MOCHI_COMPUTE_ASYNC_CONTACT_RESPONSE_INST(CFemBoundaryDiscretization, 3);
 MOCHI_COMPUTE_ASYNC_CONTACT_RESPONSE_INST(CFemSurfaceDiscretization, 3);

@@ -171,6 +171,125 @@ inline Actor* AddSoftContactSkinCube(Scene* scene, real* offsetX = nullptr) {
   return actor;
 }
 
+// Edge length and lift above the ground plane of the minimal, asset-free test cubes below. The lift
+// is that of the cube's -x edge, its lowest on the tilted ground.
+inline constexpr real kMinimalCubeSize = 0.1_r;
+inline constexpr real kMinimalCubeLift = 0.02_r;
+
+// Parameters of a dynamic minimal soft cube of the given shape, just above the ground plane.
+inline SoftActorParams MakeMinimalSoftCubeParams(ShapeHandle shape) {
+  SoftActorParams params;
+  params.name = "MinimalCube";
+  params.layer = "Object";
+  params.shape = shape;
+  params.material.density = 1000_r;
+  params.material.type = SoftMaterialType::NeoHookean;
+  params.material.neoHookean.poissonRatio = 0.3_r;
+  params.material.neoHookean.youngsModulus = 10000_r;
+  params.worldFromLocal.SetTranslation(Real3{0_r, kMinimalCubeLift, 0_r});
+  return params;
+}
+
+// Linear ROM parameters with hyper-reduction for the soft ROM test actors.
+inline experimental::RomParams MakeTestRomParams(
+    char const* source,
+    experimental::RomProjectionStrategy projectionStrategy) {
+  return experimental::RomParams{
+      .source = source,
+      .hyperReduction =
+          experimental::HyperReductionParams{
+              .initializationStrategy =
+                  experimental::SampleMeshInitRandomSampling{
+                      .stepSizeForBoundaryElementsSelection = 3,
+                      .stepSizeForInteriorElementsSelection = 3}},
+      .romProjectionStrategy = projectionStrategy};
+}
+
+// Dynamic minimal soft cube of 5 tetrahedra, just above the ground plane, or just above the top of
+// a support actor and moving with it.
+inline Actor* AddMinimalSoftCube(Scene* scene, Actor const* support = nullptr) {
+  real constexpr kGap = 0.0001_r;
+  SoftActorParams params = MakeMinimalSoftCubeParams(CreateUnitCubeTetMeshShape(
+      scene->GetContext(), Real3{kMinimalCubeSize, kMinimalCubeSize, kMinimalCubeSize}));
+  if (support) {
+    // Centers the cube, which spans [0, kMinimalCubeSize] from its origin, on the support's top.
+    Aabb const bounds = support->GetAabbWorld(test::ExpectOK{});
+    params.worldFromLocal.SetTranslation(
+        bounds.GetCenter() +
+        Real3{
+            -0.5_r * kMinimalCubeSize,
+            0.5_r * bounds.GetSize()[1] + kGap,
+            -0.5_r * kMinimalCubeSize});
+  }
+  Actor* const actor = scene->CreateSoftActor(params, test::ExpectOK{});
+  if (support) {
+    actor->SetVelocity(support->GetLinearVelocity(test::ExpectOK{}), Real3{}, test::ExpectOK{});
+  }
+  return actor;
+}
+
+// Dynamic minimal soft cube with a contact skin (see CreateUnitCubeContactSkinModel), just above
+// the ground plane.
+inline Actor* AddMinimalContactSkinCube(Scene* scene) {
+  ModelData const model =
+      CreateUnitCubeContactSkinModel(Real3{kMinimalCubeSize, kMinimalCubeSize, kMinimalCubeSize});
+  SoftActorParams params =
+      MakeMinimalSoftCubeParams(scene->GetContext()->CreateModelShape(model, test::ExpectOK{}));
+  params.useContactSkin = true;
+  return scene->CreateSoftActor(params, test::ExpectOK{});
+}
+
+// Dynamic minimal soft ROM cube with hyper-reduction, projected with the given strategy, just above
+// the ground plane. It is a grid of 2 x 2 x 2 cells, so that hyper-reduction samples some of its
+// elements, whose linear ROM translates it and stretches it vertically. Requires
+// MOCHI_ENABLE_ROM_ACTORS.
+inline Actor* AddMinimalRomCube(
+    Scene* scene,
+    experimental::RomProjectionStrategy projectionStrategy) {
+  auto const [coordinates, connectivity] = CreateMinimalTetMeshUnitGrid(
+      Real3{kMinimalCubeSize, kMinimalCubeSize, kMinimalCubeSize}, Int3{2, 2, 2});
+  ModelData model;
+  model.mesh.emplace();
+  model.mesh->nodesPerElement = 4;
+  model.mesh->coordinates = Flatten(MakeSpan(coordinates));
+  model.mesh->connectivity = Flatten(MakeSpan(connectivity));
+  // Row-major basis, a row per coordinate and a column per mode.
+  int constexpr kNumModes = 4;
+  DynamicArray<real> basis(isize(model.mesh->coordinates) * kNumModes, 0_r);
+  for (int node = 0; node < isize(coordinates); ++node) {
+    for (int axis = 0; axis < 3; ++axis) {
+      basis[(3 * node + axis) * kNumModes + axis] = 1_r;
+    }
+    basis[(3 * node + 1) * kNumModes + 3] = coordinates[node][1] / kMinimalCubeSize;
+  }
+  char const* const romName = "minimal_cube";
+  SoftActorParams const params = MakeMinimalSoftCubeParams(
+      experimental::CreateModelShapeWithLinearRom(
+          scene->GetContext(), model, romName, MakeConstSpan(basis), test::ExpectOK{}));
+  experimental::ExperimentalSoftActorParams experimentalParams;
+  experimentalParams.rom = MakeTestRomParams(romName, projectionStrategy);
+  return experimental::CreateSoftActor(scene, params, experimentalParams, test::ExpectOK{});
+}
+
+// Dynamic minimal shell cube of 12 triangles, just above the ground plane.
+inline Actor* AddMinimalShellCube(Scene* scene) {
+  auto const [coordinates, connectivity] =
+      CreateMinimalTriMeshUnitCube(Real3{kMinimalCubeSize, kMinimalCubeSize, kMinimalCubeSize});
+  experimental::ShellActorParams params;
+  params.name = "MinimalShellCube";
+  params.layer = "Object";
+  params.shape = scene->GetContext()->CreateTriMeshShape(
+      Flatten(MakeSpan(coordinates)), Flatten(MakeSpan(connectivity)), test::ExpectOK{});
+  params.material = experimental::ShellMaterialParamsFrom3dIsotropic(
+      10000_r, // youngsModulus3d
+      0.3_r, // poissonRatio
+      1000_r, // density3d
+      0.01_r, // thickness
+      test::ExpectOK{});
+  params.worldFromLocal.SetTranslation(Real3{0_r, kMinimalCubeLift, 0_r});
+  return experimental::CreateShellActor(scene, params, test::ExpectOK{});
+}
+
 // Dynamic shell duck above the ground plane, its origin, near its bottom, at height.
 inline Actor* AddShellDuck(Scene* scene, real* offsetX = nullptr, real height = 0.2_r) {
   MOCHI_ASSERT(MOCHI_USE_HDF5, "Adding a shell duck requires HDF5 support");
@@ -217,15 +336,7 @@ AddRomDuck(Scene* scene, experimental::RomProjectionStrategy projectionStrategy,
       test::ExpectOK{});
   params.worldFromLocal.SetTranslation(Real3{0_r, height, 0_r});
   experimental::ExperimentalSoftActorParams experimentalParams;
-  experimentalParams.rom = experimental::RomParams{
-      .source = "biharmonic_10",
-      .hyperReduction =
-          experimental::HyperReductionParams{
-              .initializationStrategy =
-                  experimental::SampleMeshInitRandomSampling{
-                      .stepSizeForBoundaryElementsSelection = 3,
-                      .stepSizeForInteriorElementsSelection = 3}},
-      .romProjectionStrategy = projectionStrategy};
+  experimentalParams.rom = MakeTestRomParams("biharmonic_10", projectionStrategy);
   return experimental::CreateSoftActor(scene, params, experimentalParams, test::ExpectOK{});
 }
 

@@ -2027,7 +2027,8 @@ void AssembleAsyncContact(
       intState,
       rootTransform,
       params,
-      outResponse);
+      outResponse,
+      outActorSnle.trustMargin);
 
   if (outResponse.Empty()) {
     // No contacts.

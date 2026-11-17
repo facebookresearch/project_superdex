@@ -96,7 +96,9 @@ void rigid::SetVelocity(
 }
 
 // If outNonPotentialEnergy and outNonPotentialGradient are not null, they receive the energy and
-// gradient of friction and damping summed over the contacts. Returns whether it reported any.
+// gradient of friction and damping summed over the contacts. Returns whether it reported any. If
+// outTrustMargin is not null, it is lowered to the minimum trust margin of the contacts (see
+// ComputeBatchTrustMargin).
 template <GradTarget kGradTarget>
 [[nodiscard]] static bool AssembleRigidBodyAsyncContactResponse(
     ContactAssemblyReg reg,
@@ -111,7 +113,8 @@ template <GradTarget kGradTarget>
     RigidGradient* outGradient,
     RigidHessian* outHessian,
     double* outNonPotentialEnergy,
-    RigidGradient* outNonPotentialGradient) {
+    RigidGradient* outNonPotentialGradient,
+    real* outTrustMargin) {
   MOCHI_PROFILE_SCOPE();
   MOCHI_ASSERT_VERBOSE(
       (!outEnergy || *outEnergy == 0.0) && (!outGradient || *outGradient == RigidGradient{}) &&
@@ -204,7 +207,8 @@ template <GradTarget kGradTarget>
         assemGradient,
         assemHessian,
         storeForces ? MakeSpan(contactQuery.forcePerUnitArea) : Span<Real3>{},
-        nonPotentialSums ? &*nonPotentialSums : nullptr);
+        nonPotentialSums ? &*nonPotentialSums : nullptr,
+        outTrustMargin);
     if (assemEnergy) {
       *outEnergy += sums.energy;
     }
@@ -744,7 +748,8 @@ void mochi::rigid::EntityAssemble(
         gradient,
         hessian,
         reportsContactNonPotential ? &contactNonPotentialEnergy : nullptr,
-        reportsContactNonPotential ? &contactNonPotentialGradient : nullptr);
+        reportsContactNonPotential ? &contactNonPotentialGradient : nullptr,
+        ReportsContactTrustMargin(params) ? &outActorSnle.trustMargin : nullptr);
   }
 
   // Compute gravitational terms

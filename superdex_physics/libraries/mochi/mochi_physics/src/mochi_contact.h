@@ -1005,6 +1005,14 @@ GetContactPairParams(ContactAssemblyReg const& reg, entt::entity colliding, entt
   return ReportsNonPotentialTerms(params, simParams) && !simParams.experimentalEval.explicitNormals;
 }
 
+// Whether a contact assembly reports the trust margin of its contacts (see
+// SnleProblem::trustMargin): the objective and residual assemblies of the current state with the
+// exact contact friction Hessian.
+[[nodiscard]] inline bool ReportsContactTrustMargin(AssemblyParams const& params) {
+  return (params.assemObj || params.assemRes) && params.gradTarget == GradTarget::Current &&
+      !params.fittedSaturationHessian.contactFriction;
+}
+
 // Whether a contact pair has friction or damping (see HasDissipation), without combining its other
 // contact parameters (see GetContactPairParams).
 [[nodiscard]] inline bool
@@ -1024,6 +1032,17 @@ inline bool ValidCollidingNormals(ContactAssemblyReg const& reg, entt::entity co
     ExperimentalEvalParams const& experimentalEval,
     ContactAssemblyReg reg,
     entt::entity colliding,
+    bool psdDRes,
+    bool useFittedHessian);
+
+// Evaluation configuration of the contact between a colliding actor and a collider in a contact
+// pair assembly: MakeContactEvalConfigAsync, with elasto-plastic friction only if the collider has
+// friction anchors.
+[[nodiscard]] ContactEvalConfig MakeContactEvalConfigPair(
+    ExperimentalEvalParams const& experimentalEval,
+    ContactAssemblyReg reg,
+    entt::entity colliding,
+    entt::entity collider,
     bool psdDRes,
     bool useFittedHessian);
 

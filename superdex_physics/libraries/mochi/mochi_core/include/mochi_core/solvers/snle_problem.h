@@ -20,6 +20,7 @@
 #include <mochi_core/solvers/interaction_matrix_info.h>
 #include <mochi_core/solvers/island_operators.h>
 #include <mochi_core/utils/assembly_params.h>
+#include <mochi_core/utils/constants.h>
 #include <mochi_core/utils/dynamic_array.h>
 
 #include <functional>
@@ -74,6 +75,9 @@ class SnleProblem {
   // Returns the current objective, which must be assembled at the current solution. Line searches
   // test LineSearchMerit instead, which differs from it when some terms have no potential.
   double GetObjective() const;
+
+  // Returns the trust margin (see trustMargin).
+  real GetTrustMargin() const;
 
   // Returns the residual vector for the full problem, which must be assembled at the current
   // solution.
@@ -160,6 +164,14 @@ class SnleProblem {
 
   // Objective value for the global problem.
   double objective = 0.0;
+
+  // Trust margin: the minimum, over the terms that compute one, of their dimensionless signed
+  // distances to the boundary of their trust region. It is positive inside, zero on the boundary
+  // and negative beyond, and +inf if no term computes one. It is set to +inf when the solution
+  // changes or the cached data is invalidated, and lowered by the terms that compute one, in the
+  // objective and residual assemblies of the current state that use their exact Hessian. So with a
+  // cached objective or residual, it reflects the Hessians they were assembled with.
+  real trustMargin = kInf;
 
   // Energy and residuals of the non-potential terms, whose residual has no potential. The
   // objective and the residual include them too. The assembly callback sets them with the

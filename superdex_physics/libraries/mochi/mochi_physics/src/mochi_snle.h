@@ -73,6 +73,10 @@ struct BaseSnle : NoCopy {
 
   double objective = 0.0;
 
+  // Trust margin of the terms of this SNLE that compute one (see SnleProblem::trustMargin). The
+  // island assembly resets it to +inf, and those terms lower it.
+  real trustMargin = kInf;
+
   // If this SNLE data is not directly used by the solver, then set useInSolver to false.
   bool useInSolver = true;
 

@@ -51,6 +51,11 @@ double SnleProblem<T>::GetObjective() const {
 }
 
 template <typename T>
+real SnleProblem<T>::GetTrustMargin() const {
+  return trustMargin;
+}
+
+template <typename T>
 ColumnVectorView<T const> SnleProblem<T>::GetResidual() const {
   MOCHI_ASSERT_VERBOSE(!_dirtyRes, "The residual isn't assembled at the current solution.");
   return AsConstView(_fullRes);
@@ -65,6 +70,7 @@ bool SnleProblem<T>::HasSolutionChangedSinceLastAssembly() const {
 template <typename T>
 void SnleProblem<T>::InvalidateCachedData() {
   _dirtyAssembly = _dirtyObj = _dirtyRes = _dirtyFullDRes = true;
+  trustMargin = kInf;
 }
 
 template <typename T>

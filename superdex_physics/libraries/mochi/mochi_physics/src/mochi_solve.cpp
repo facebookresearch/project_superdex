@@ -54,6 +54,7 @@
 #include <array>
 #include <functional>
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -484,6 +485,22 @@ std::optional<PreconditionerType> mochi::GetActorPreconditionerType(
                                                                          : std::nullopt;
 }
 
+// Visits each SNLE of an island, with the entity that holds it, or nullptr where absent.
+template <typename Visitor>
+static void ForEachIslandSnle(
+    entt::registry& reg,
+    entt::entity island,
+    Span<entt::entity const> actors,
+    Visitor&& visit) {
+  for (auto e : actors) {
+    visit(e, reg.try_get<CActorSnle>(e));
+    visit(e, reg.try_get<CCompoundConstraintSnle>(e));
+    visit(e, reg.try_get<CSkinnedContactSnle>(e));
+    visit(e, reg.try_get<CSkinnedInteractionSnle>(e));
+  }
+  visit(island, reg.try_get<CIslandContactSnle>(island));
+}
+
 static void GatherSnleDataFromActors(
     SnleProblem<real>& outProblem,
     AssemblyParams const& params,
@@ -502,6 +519,7 @@ static void GatherSnleDataFromActors(
       auto& res = useReduced ? actorSnle->reducedResidual : actorSnle->fullResidual;
       auto& dRes = useReduced ? actorSnle->reducedDResidual : actorSnle->fullDResidual;
 
+      outProblem.trustMargin = Min(outProblem.trustMargin, actorSnle->trustMargin);
       if (params.assemObj) {
         outProblem.objective += actorSnle->objective;
         outProblem.nonPotentialEnergy += actorSnle->nonPotentialEnergy;
@@ -552,6 +570,7 @@ static void GatherSnleDataFromActors(
   // Helper: Adds to interactionResiduals and/or interactionMatrices
   auto addInteractionSnleToProblem = [&](InteractionSnle* interSnle) {
     if (interSnle && interSnle->useInSolver) {
+      outProblem.trustMargin = Min(outProblem.trustMargin, interSnle->trustMargin);
       if (params.assemObj) {
         outProblem.objective += interSnle->objective;
         outProblem.nonPotentialEnergy += interSnle->nonPotentialEnergy;
@@ -594,9 +613,10 @@ static void GatherSnleDataFromActors(
     outProblem.actorPreconditioners.clear();
   }
 
-  for (auto e : actors) {
-    ActorSnle* actorSnle = reg.try_get<CActorSnle>(e);
-    if (actorSnle && actorSnle->useInSolver) {
+  ForEachIslandSnle(reg, island, actors, [&]<typename Snle>(entt::entity e, Snle* snle) {
+    if constexpr (!std::is_same_v<Snle, CActorSnle>) {
+      addInteractionSnleToProblem(snle);
+    } else if (snle && snle->useInSolver) {
       // Determine the dof offset for this actor based on the grad target.
       int dofOffset{};
       switch (params.gradTarget) {
@@ -615,15 +635,9 @@ static void GatherSnleDataFromActors(
           MOCHI_ASSERT_VERBOSE(false, "Unexpected grad target");
           break;
       }
-      addActorSnleToProblem(dofOffset, actorSnle, e);
+      addActorSnleToProblem(dofOffset, snle, e);
     }
-    // Add any interactions stored on this actor.
-    addInteractionSnleToProblem(reg.try_get<CCompoundConstraintSnle>(e));
-    addInteractionSnleToProblem(reg.try_get<CSkinnedContactSnle>(e));
-    addInteractionSnleToProblem(reg.try_get<CSkinnedInteractionSnle>(e));
-  }
-
-  addInteractionSnleToProblem(reg.try_get<CIslandContactSnle>(island));
+  });
 }
 
 // Ordered sequence of systems to assemble a single soft actor (includes soft ROM)
@@ -707,6 +721,14 @@ void mochi::solver::AssembleIslandPipeline(
   TimePoint const assemblyStart = stats ? Timer::Now() : TimePoint{};
 
   auto const& descendants = reg.get<CIslandDescendants const>(island);
+
+  // Reset the trust margins of the SNLEs, including those not used in the solver (articulated link
+  // bodies relay theirs to their compound), before the terms that compute one lower them.
+  ForEachIslandSnle(reg, island, descendants.actors, [](entt::entity, BaseSnle* snle) {
+    if (snle) {
+      snle->trustMargin = kInf;
+    }
+  });
 
   // Used to wait for async tasks
   TaskSemaphore masterSemaphore, softCompletionSem;

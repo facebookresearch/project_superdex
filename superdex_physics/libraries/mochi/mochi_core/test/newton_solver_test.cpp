@@ -24,9 +24,11 @@
 
 #include <array>
 #include <cmath>
+#include <functional>
 #include <limits>
 #include <tuple>
 #include <utility>
+#include <variant>
 #include <vector>
 
 using namespace mochi;
@@ -1218,6 +1220,95 @@ TEST(NewtonSolver, LineSearchRejectsNonFiniteValues) {
       }
     }
   }
+}
+
+// Whether an assembly reports the margin of the term of GetTrustMarginProblem, like contact
+// friction does (see ReportsContactTrustMargin in mochi_physics).
+static bool ReportsTestTrustMargin(AssemblyParams const& params) {
+  return (params.assemObj || params.assemRes) && params.gradTarget == GradTarget::Current &&
+      !params.fittedSaturationHessian.contactFriction;
+}
+
+// One-DoF quadratic with objective (x - 2)^2 / 2, minimized from 0 by the step 2, with a term of
+// trust margin margin(x) (see ReportsTestTrustMargin). Records the parameters of every assembly.
+static SnleProblem<real> GetTrustMarginProblem(
+    std::function<real(real)> margin,
+    DynamicArray<AssemblyParams>& assemblies) {
+  auto residual = ColumnVector<real>::Zero(1);
+  auto matrix = AnyMatrix<real>{Matrix<real>{1, 1}};
+  std::get<Matrix<real>>(matrix)(0, 0) = 1_r;
+  SnleProblemFunctions<real> functions;
+  functions.assemble = [=, &assemblies](
+                           SnleProblem<real>& problem, AssemblyParams const& params) mutable {
+    assemblies.push_back(params);
+    real const x = problem.GetSolution()[0];
+    if (params.assemObj) {
+      problem.objective = 0.5 * Sqr(static_cast<double>(x) - 2.0);
+    }
+    if (params.assemRes) {
+      residual[0] = x - 2_r;
+      problem.actorResiduals = {{0, &residual}};
+    }
+    if (params.assemDRes) {
+      problem.actorMatrices = {{0, &matrix}};
+    }
+    if (ReportsTestTrustMargin(params)) {
+      problem.trustMargin = Min(problem.trustMargin, margin(x));
+    }
+  };
+  functions.onPostNewIncrement = [](SnleProblem<real>& problem) {
+    problem.solution += problem.increment;
+  };
+  return SnleProblem<real>{1, 1, std::move(functions)};
+}
+
+// The trust margin is reported by the objective and residual assemblies with the exact Hessian of
+// its term, and kept until the solution changes or the cached data is invalidated. It is +inf if no
+// term computes one.
+TEST(SnleProblem, TrustMarginIsReportedWithExactHessians) {
+  bool computesMargin = true;
+  DynamicArray<AssemblyParams> assemblies;
+  SnleProblem<real> problem = GetTrustMarginProblem(
+      [&computesMargin](real x) { return computesMargin ? 1_r - x : kInf; }, assemblies);
+  auto const assemble = [&](bool exact, bool assemObj, bool assemRes, bool assemDRes) {
+    problem.UpdateObjResDRes(
+        {.assemObj = assemObj,
+         .assemRes = assemRes,
+         .assemDRes = assemDRes,
+         .fittedSaturationHessian = SaturationHessianParams::All(!exact)});
+  };
+
+  // Not reported with fitted Hessians only.
+  problem.SetSolution(ColumnVector<real>({{0.25_r}}));
+  assemble(/*exact*/ false, /*assemObj*/ true, /*assemRes*/ false, /*assemDRes*/ false);
+  EXPECT_EQ(problem.GetTrustMargin(), kInf);
+
+  // Reported with the residual alone, and kept when only the Hessian is assembled.
+  assemble(/*exact*/ true, /*assemObj*/ false, /*assemRes*/ true, /*assemDRes*/ false);
+  EXPECT_EQ(problem.GetTrustMargin(), 0.75_r);
+  assemble(/*exact*/ false, /*assemObj*/ true, /*assemRes*/ true, /*assemDRes*/ true);
+  ASSERT_EQ(isize(assemblies), 3);
+  EXPECT_TRUE(!assemblies[2].assemObj && !assemblies[2].assemRes && assemblies[2].assemDRes);
+  EXPECT_EQ(problem.GetTrustMargin(), 0.75_r);
+
+  // Reset by a Newton increment, then reported with the objective.
+  problem.increment = ColumnVector<real>({{0.375_r}});
+  problem.UpdateSolution();
+  EXPECT_EQ(problem.GetTrustMargin(), kInf);
+  assemble(/*exact*/ true, /*assemObj*/ true, /*assemRes*/ false, /*assemDRes*/ false);
+  EXPECT_EQ(problem.GetTrustMargin(), 0.375_r);
+
+  // Reset by invalidating the cached data.
+  problem.InvalidateCachedData();
+  EXPECT_EQ(problem.GetTrustMargin(), kInf);
+  assemble(/*exact*/ true, /*assemObj*/ true, /*assemRes*/ false, /*assemDRes*/ false);
+  EXPECT_EQ(problem.GetTrustMargin(), 0.375_r);
+
+  // Without terms that compute it, it is +inf.
+  computesMargin = false;
+  problem.SetSolution(ColumnVector<real>({{0.75_r}}));
+  assemble(/*exact*/ true, /*assemObj*/ true, /*assemRes*/ false, /*assemDRes*/ false);
+  EXPECT_EQ(problem.GetTrustMargin(), kInf);
 }
 
 /**

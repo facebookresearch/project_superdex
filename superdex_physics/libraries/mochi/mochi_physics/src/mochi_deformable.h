@@ -82,7 +82,9 @@ void SetupActiveCollisionNormals(
     CActiveCollisions<kIsSync, TimeStep::Current>& activeCollisions);
 
 // With ReportsContactNonPotentialTerms, the response also holds the friction and damping of its
-// samples (see CDeformablePointAsyncCollisionsResponse::GetNonPotentialEnergy).
+// samples (see CDeformablePointAsyncCollisionsResponse::GetNonPotentialEnergy). With
+// ReportsContactTrustMargin, outTrustMargin is lowered to the minimum trust margin of the contacts
+// (see ComputeBatchTrustMargin).
 template <typename DiscretizationType, int kNumFields>
 void ComputeAsyncContactResponse(
     ContactAssemblyReg reg,
@@ -96,6 +98,7 @@ void ComputeAsyncContactResponse(
     CRootTransform const& rootTransform,
     AssemblyParams const& params,
     CDeformablePointAsyncCollisionsResponse& outResponse,
+    real& outTrustMargin,
     Span<bool const> allowedContactElementMask = {});
 
 /**

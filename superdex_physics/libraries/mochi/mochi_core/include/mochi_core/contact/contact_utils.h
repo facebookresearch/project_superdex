@@ -887,14 +887,61 @@ struct BatchCollisionResponse {
   BatchDForce<kBatchSize, kGradTarget> dForce;
 };
 
+/**
+ * @brief Trust margin (see @ref SnleProblem::trustMargin) of a batch of contacts with
+ * elasto-plastic friction: the signed distance from their anchored slip to the plane where it
+ * yields in reverse, in presliding displacements.
+ *
+ * @details With u0 the tangential anchor reference, i.e. the anchor offset projected on the
+ * friction tangent plane, and u the anchored slip, a contact's trusted region is the half-space
+ * u0 · u / |u0| >= -δ of slips that have not yielded in reverse, past the anchor by the presliding
+ * displacement δ. The margin m = 1 + u0 · u / (δ |u0|) is the signed distance to its boundary in
+ * units of δ: positive inside, zero on the boundary and negative beyond. The anchor offset is fixed
+ * during the stage, but u0 is its projection on the friction tangent plane: for a given normal, the
+ * margin is affine in the slip. With explicit normals, the normal is fixed during the stage; with
+ * implicit normals, it changes with the contact point, and u0 with it. While sliding, the exact
+ * friction Hessian has no curvature along the slip, so a Newton step can overshoot the anchor; the
+ * margin measures how far it got. A reference shorter than 0.1 δ has no reliable direction, and
+ * with explicit normals a contact without stage-start normal force has no friction during the
+ * stage: such contacts get +inf.
+ *
+ * @param[in] anchorOffsetT Anchor offset projected on the friction tangent plane, u0
+ * @param[in] anchorSlipT Anchored tangential slip u
+ * @param[in] fPenalty Normal force magnitude of friction: with explicit normals, the stage-start
+ * force (read with explicit normals only)
+ * @param[in] preslidingDisplacement Presliding displacement δ
+ * @param[in] explicitNormals Whether the friction normal and force are those of the stage start
+ */
+template <int kBatchSize>
+MOCHI_FORCE_INLINE BatchReal<kBatchSize> ComputeBatchTrustMargin(
+    BatchReal3<kBatchSize> const& anchorOffsetT,
+    BatchReal3<kBatchSize> const& anchorSlipT,
+    BatchReal<kBatchSize> const& fPenalty,
+    real preslidingDisplacement,
+    bool explicitNormals) {
+  using V = BatchReal<kBatchSize>;
+  real constexpr kMinReferenceRatio = 0.1_r;
+  V const minReference{kMinReferenceRatio * preslidingDisplacement};
+  V const referenceNorm = Norm(anchorOffsetT);
+  V const reliableReference = referenceNorm >= minReference;
+  V const isEligible = explicitNormals ? reliableReference && (fPenalty > V{}) : reliableReference;
+  // The clamp only avoids a division by zero in the lanes that get +inf.
+  V const margin = V{1_r} +
+      Dot(anchorOffsetT, anchorSlipT) / (preslidingDisplacement * Max(referenceNorm, minReference));
+  return Select(isEligible, margin, V{kInf});
+}
+
 // Add the requested energy, force and force derivative of friction and damping to outResponse. If
 // outNonPotential is not null, it also receives the energy and force of friction and damping,
 // whatever assemEnergy and assemForce. It requires GradTarget::Current and must not overlap the
-// other arguments.
+// other arguments. If outTrustMargin is not null and the friction is elasto-plastic Coulomb
+// friction, it is lowered to the minimum trust margin of the contacts (see
+// ComputeBatchTrustMargin).
 template <int kBatchSize, GradTarget kGradTarget>
 MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
     BatchCollisionResponse<kBatchSize, kGradTarget>& outResponse,
     BatchSymMatrix3x3<kBatchSize>* outDForceAnchor,
+    real* outTrustMargin,
     BatchReal<kBatchSize> const& fPenalty,
     BatchReal<kBatchSize> const& dFPenalty,
     BatchReal3<kBatchSize> const& sdfGrad,
@@ -976,7 +1023,18 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
     // displacement, independent of the time step.
     V3 anchorSlipT MOCHI_NO_INIT;
     if (config.elastoPlasticFriction) {
-      anchorSlipT = pRelT + anchorOffset - Dot(anchorOffset, normal) * normal;
+      V3 const anchorOffsetT = anchorOffset - Dot(anchorOffset, normal) * normal;
+      anchorSlipT = pRelT + anchorOffsetT;
+      if (outTrustMargin) {
+        *outTrustMargin =
+            Min(*outTrustMargin,
+                HMin<kBatchSize>(ComputeBatchTrustMargin<kBatchSize>(
+                    anchorOffsetT,
+                    anchorSlipT,
+                    fPenalty,
+                    params.preslidingDisplacement,
+                    config.explicitNormals)));
+      }
     }
     V3 const& slipT = config.elastoPlasticFriction ? anchorSlipT : pRelT;
     V const slipTNorm = Norm(slipT);
@@ -1274,6 +1332,8 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
  * HasDissipation.
  * @param[out] outDForceAnchor Output force derivatives with respect to the anchor offsets, or
  * nullptr to skip them (GradTarget::Current with elasto-plastic friction only)
+ * @param[in,out] outTrustMargin Optional: lowered to the minimum trust margin of the contact points
+ * with elasto-plastic Coulomb friction (see @ref ComputeBatchTrustMargin; GradTarget::Current only)
  */
 template <int kBatchSize, GradTarget kGradTarget>
 // TODO[T247578555]: This is a workaround for a bug in VS2022, but it will hurt performance.
@@ -1302,7 +1362,8 @@ MOCHI_FORCE_INLINE
         bool isSdfGradUnitary,
         bool isNormalCollidingUnitary,
         BatchCollisionResponse<kBatchSize, kGradTarget>* outNonPotential,
-        BatchSymMatrix3x3<kBatchSize>* outDForceAnchor = nullptr) {
+        BatchSymMatrix3x3<kBatchSize>* outDForceAnchor = nullptr,
+        real* outTrustMargin = nullptr) {
   static_assert(
       kCollResponseMaxBatchSize == 8,
       "Please update batched contact functions if the max batch size changes");
@@ -1388,8 +1449,13 @@ MOCHI_FORCE_INLINE
   MOCHI_ASSERT_VERBOSE(
       !outNonPotential || (kGradTarget == GradTarget::Current && hasDissipation),
       "The dissipative response requires GradTarget::Current and dissipation.");
+  MOCHI_ASSERT_VERBOSE(
+      !outTrustMargin || kGradTarget == GradTarget::Current,
+      "The trust margin requires GradTarget::Current.");
   if constexpr (kGradTarget != GradTarget::Current) {
-    outNonPotential = nullptr; // Compiles out the dissipation code for the other targets.
+    // Compiles out the dissipation and trust margin code for the other targets.
+    outNonPotential = nullptr;
+    outTrustMargin = nullptr;
   }
   bool const useImplicitNormalForceForDissipation =
       config.implicitNormalForceForDissipation && hasDissipation;
@@ -1469,6 +1535,7 @@ MOCHI_FORCE_INLINE
     ComputeBatchContactDissipationForceDForce<kBatchSize, kGradTarget>(
         outResponse,
         outDForceAnchor,
+        outTrustMargin,
         fPenalty,
         dFPenalty,
         nCollider,
@@ -1507,6 +1574,8 @@ MOCHI_FORCE_INLINE
  * ComputeBatchCollisionResponse.
  * @param[out] outDForceAnchor Output force derivatives with respect to the anchor offsets (size
  * kBatchSize, or empty to skip them; GradTarget::Current with elasto-plastic friction only)
+ * @param[in,out] outTrustMargin Optional: lowered to the minimum trust margin of the contact points
+ * (see @ref ComputeBatchTrustMargin; GradTarget::Current only)
  */
 template <int kBatchSize, GradTarget kGradTarget>
 MOCHI_FORCE_INLINE void ComputeBatchCollisionForceDForce(
@@ -1531,7 +1600,8 @@ MOCHI_FORCE_INLINE void ComputeBatchCollisionForceDForce(
     bool isNormalCollidingUnitary,
     Span<double> outNonPotentialEnergy = {},
     Span<Real3> outNonPotentialForce = {},
-    Span<VSymMatrix3x3r> outDForceAnchor = {}) {
+    Span<VSymMatrix3x3r> outDForceAnchor = {},
+    real* outTrustMargin = nullptr) {
   bool const assemNonPotential = !outNonPotentialEnergy.empty();
   MOCHI_ASSERT_VERBOSE(!assemEnergy || (outEnergy.size() == kBatchSize));
   MOCHI_ASSERT_VERBOSE(!assemForce || (outForce.size() == kBatchSize));
@@ -1565,7 +1635,8 @@ MOCHI_FORCE_INLINE void ComputeBatchCollisionForceDForce(
       isSdfGradUnitary,
       isNormalCollidingUnitary,
       assemNonPotential ? &nonPotential : nullptr,
-      assemDForceAnchor ? &dForceAnchor : nullptr);
+      assemDForceAnchor ? &dForceAnchor : nullptr,
+      outTrustMargin);
 
   // Store outputs to Spans
   if (assemNonPotential) {
@@ -1612,9 +1683,13 @@ MOCHI_FORCE_INLINE void ComputeBatchCollisionForceDForce(
 }
 
 // Compute the collision response of the contact points in pointRange and store it in outResponse.
+// With assemDForceAnchor, also stores the force derivatives with respect to the anchor offsets in
+// CollisionResponseResult::dforceAnchor (GradTarget::Current with elasto-plastic friction only).
 // If outNonPotential is not null, it also receives the energy and force of friction and damping
 // (see ComputeBatchCollisionResponse). Its energy and force must be sized like the contact points,
-// and it requires GradTarget::Current and HasDissipation(params).
+// and it requires GradTarget::Current and HasDissipation(params). If outTrustMargin is not null, it
+// is lowered to the minimum trust margin of the contact points (see ComputeBatchTrustMargin), which
+// requires GradTarget::Current.
 template <GradTarget kGradTarget>
 void ComputeCollisionResponseRange(
     Interval<int> pointRange,
@@ -1625,14 +1700,13 @@ void ComputeCollisionResponseRange(
     bool assemEnergy,
     bool assemForce,
     bool assemDForce,
+    bool assemDForceAnchor,
     CollisionResponseResult& outResponse,
     CollisionResponseResult* outNonPotential = nullptr,
-    bool assemDForceAnchor = false);
+    real* outTrustMargin = nullptr);
 
-// Compute collision response for a collider and store it in CollisionResponseResult. With
-// assemDForceAnchor, also stores the force derivatives with respect to the anchor offsets in
-// CollisionResponseResult::dforceAnchor (GradTarget::Current with elasto-plastic friction only).
-// See ComputeCollisionResponseRange for outNonPotential.
+// Compute the collision response of all contact points of a collider (see
+// ComputeCollisionResponseRange for the arguments).
 template <GradTarget kGradTarget>
 void ComputeCollisionResponse(
     ContactDetectionResult const& contactQuery,
@@ -1642,9 +1716,10 @@ void ComputeCollisionResponse(
     bool assemEnergy,
     bool assemForce,
     bool assemDForce,
+    bool assemDForceAnchor,
     CollisionResponseResult& outResponse,
     CollisionResponseResult* outNonPotential = nullptr,
-    bool assemDForceAnchor = false) {
+    real* outTrustMargin = nullptr) {
   ComputeCollisionResponseRange<kGradTarget>(
       Interval<int>{0, isize(contactQuery.sampleIndices)},
       contactQuery,
@@ -1654,9 +1729,10 @@ void ComputeCollisionResponse(
       assemEnergy,
       assemForce,
       assemDForce,
+      assemDForceAnchor,
       outResponse,
       outNonPotential,
-      assemDForceAnchor);
+      outTrustMargin);
 }
 
 /**
@@ -2027,6 +2103,8 @@ struct RigidContactSums {
  * damping (see @ref ComputeBatchCollisionResponse) are added to it. Requires @ref
  * GradTarget::Current and
  * @ref HasDissipation.
+ * @param[in,out] outTrustMargin Optional: lowered to the minimum trust margin of the contact points
+ * (see @ref ComputeBatchTrustMargin). Requires @ref GradTarget::Current.
  * @return The sums. Quantities not requested are zero.
  */
 template <GradTarget kGradTarget>
@@ -2042,7 +2120,8 @@ RigidContactSums ComputeRigidContactSums(
     bool assemForce,
     bool assemDForce,
     Span<Real3> outForce = {},
-    RigidContactSums* outNonPotential = nullptr);
+    RigidContactSums* outNonPotential = nullptr,
+    real* outTrustMargin = nullptr);
 
 /**
  * @brief Rigid-form Jacobian slices of the contact points of a skinned actor's partition, read by
@@ -2162,6 +2241,8 @@ struct SkinnedContactSums {
  * @param[in,out] outNonPotential Optional: the energy, force and torque sums of friction and
  * damping (see @ref ComputeBatchCollisionResponse) are added to it. It must have the force arrays.
  * If allocated from @p scratch, it must outlive the returned sums. Requires @ref HasDissipation.
+ * @param[in,out] outTrustMargin Optional: lowered to the minimum trust margin of the contact points
+ * (see @ref ComputeBatchTrustMargin).
  * @return The sums, allocated from @p scratch.
  */
 SkinnedContactSums ComputeSkinnedContactSums(
@@ -2177,7 +2258,8 @@ SkinnedContactSums ComputeSkinnedContactSums(
     bool assemDForce,
     Allocator* scratch,
     Span<Real3> outForce = {},
-    SkinnedContactSums* outNonPotential = nullptr);
+    SkinnedContactSums* outNonPotential = nullptr,
+    real* outTrustMargin = nullptr);
 
 /*************************************************************************************************/
 

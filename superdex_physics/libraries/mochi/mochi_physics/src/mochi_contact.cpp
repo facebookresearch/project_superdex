@@ -4076,7 +4076,7 @@ ContactEvalConfig mochi::MakeContactEvalConfigAsync(
       .elastoPlasticFriction = experimentalEval.elastoPlasticFriction};
 }
 
-static ContactEvalConfig MakeContactEvalConfigPair(
+ContactEvalConfig mochi::MakeContactEvalConfigPair(
     ExperimentalEvalParams const& experimentalEval,
     ContactAssemblyReg reg,
     entt::entity colliding,
@@ -4092,7 +4092,8 @@ static ContactEvalConfig MakeContactEvalConfigPair(
 // The pairs that report dissipation, which require outNonPotentialSnle, also assemble their
 // friction and damping into its non-potential energy and, if nonPotentialResSize is positive, its
 // non-potential residual of that size. Slices with link residuals add theirs to the non-potential
-// parts of the link-space residuals instead.
+// parts of the link-space residuals instead. If outTrustMargin is not null, it is lowered to the
+// minimum trust margin of the contact points (see ComputeBatchTrustMargin).
 template <GradTarget kGradTarget>
 static void AssembleContactPairRanges(
     entt::registry const& reg,
@@ -4101,6 +4102,7 @@ static void AssembleContactPairRanges(
     Span<ContactJac const*> allJacs,
     Allocator* filoAllocator,
     double* outObj,
+    real* outTrustMargin,
     bool assemRes,
     ColumnVectorView<real> outRes, // Empty if no slice assembles into it
     AnyMatrixView<real> outDRes,
@@ -4217,6 +4219,7 @@ static void AssembleContactPairRanges(
     ColumnVector<real> dresValues;
     double nonPotentialObjective = 0.0;
     ColumnVector<real> nonPotentialResValues;
+    real trustMargin = kInf;
     double cost = 0;
   };
 
@@ -4284,6 +4287,7 @@ static void AssembleContactPairRanges(
     AnyMatrixView<real> taskDRes = outDRes;
     double* taskNonPotentialObj = nonPotentialObj;
     ColumnVectorView<real> taskNonPotentialRes = nonPotentialRes;
+    real* taskTrustMargin = outTrustMargin;
 
     if (iTask == 0) {
       // The first task assembles directly to the output residual and matrix.
@@ -4293,6 +4297,9 @@ static void AssembleContactPairRanges(
       // non-potential residual if some of their pairs report dissipation.
       if (assemObj) {
         taskObj = &myTask.objective;
+      }
+      if (outTrustMargin) {
+        taskTrustMargin = &myTask.trustMargin;
       }
       if (!outRes.empty()) {
         myTask.resValues.Reset(outRes.size());
@@ -4415,7 +4422,8 @@ static void AssembleContactPairRanges(
             assemRes,
             assemDRes,
             storeForces ? MakeSpan(response.force) : Span<Real3>{},
-            nonPotentialSums ? &*nonPotentialSums : nullptr);
+            nonPotentialSums ? &*nonPotentialSums : nullptr,
+            taskTrustMargin);
         AssembleSyncRigidContactSums<kGradTarget>(
             reg,
             entity0,
@@ -4465,7 +4473,8 @@ static void AssembleContactPairRanges(
             assemDRes,
             &taskLocalAlloc,
             storeForces ? MakeSpan(response.force) : Span<Real3>{},
-            nonPotentialSums ? &*nonPotentialSums : nullptr);
+            nonPotentialSums ? &*nonPotentialSums : nullptr,
+            taskTrustMargin);
         AssembleSkinnedContactSums(
             sums,
             jacs,
@@ -4504,8 +4513,10 @@ static void AssembleContactPairRanges(
             assemObj,
             assemRes,
             assemDRes,
+            /*assemDForceAnchor*/ false,
             response,
-            reportsNonPotential ? &nonPotential : nullptr);
+            reportsNonPotential ? &nonPotential : nullptr,
+            taskTrustMargin);
         auto const assembleResponse = [&](CollisionResponseResult const& anyResponse,
                                           double* obj,
                                           ColumnVectorView<real> res,
@@ -4577,6 +4588,9 @@ static void AssembleContactPairRanges(
       if (assemObj) {
         *outObj += taskWork[i].objective;
       }
+      if (outTrustMargin) {
+        *outTrustMargin = Min(*outTrustMargin, taskWork[i].trustMargin);
+      }
       if (!outRes.empty()) {
         outRes += taskWork[i].resValues;
       }
@@ -4640,6 +4654,7 @@ static void AssembleAllSyncContactPairs(
     Span<entt::entity const> actors,
     Allocator* filoAllocator,
     double* outObj,
+    real* outTrustMargin, // See AssembleContactPairRanges
     bool assemRes,
     ColumnVectorView<real> outRes, // Empty if no slice assembles into it
     AnyMatrixView<real> outDRes,
@@ -4736,6 +4751,7 @@ static void AssembleAllSyncContactPairs(
       MakeSpan(allJacs),
       filoAllocator,
       outObj,
+      outTrustMargin,
       assemRes,
       outRes,
       outDRes,
@@ -4850,6 +4866,7 @@ void mochi::AssembleIslandSyncContact(
       actors,
       &filoAllocator,
       params.assemObj ? &outContactSnle.objective : nullptr,
+      ReportsContactTrustMargin(params) ? &outContactSnle.trustMargin : nullptr,
       params.assemRes,
       outContactResidual,
       params.assemDRes ? AsView(outContactDResidual) : AnyMatrixView<real>{},
@@ -5008,6 +5025,7 @@ void mochi::AssembleAsyncSkinnedContact(
             false,
             true,
             false,
+            /*assemDForceAnchor*/ false,
             forceOnlyResponse);
         query.forcePerUnitArea = forceOnlyResponse.force;
       }
@@ -5046,6 +5064,7 @@ void mochi::AssembleAsyncSkinnedContact(
       MakeSpan(allJacs),
       &filoAllocator,
       params.assemObj ? &outContactSnle.objective : nullptr,
+      ReportsContactTrustMargin(params) ? &outContactSnle.trustMargin : nullptr,
       params.assemRes,
       outContactResidual,
       params.assemDRes ? AsView(outContactDResidual) : AnyMatrixView<real>{},

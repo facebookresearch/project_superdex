@@ -420,7 +420,11 @@ void ExpectDissipationIsNonPotential(
   }
 }
 
-void ExpectDissipationIsNonPotentialAfterTouch(Scene* scene, real dt) {
+void TestIslandsAfterTouch(
+    Scene* scene,
+    real dt,
+    std::function<void(entt::registry& reg, entt::entity island, SnleProblem<real>& problem)> const&
+        test) {
   auto& reg = GetRegistry(scene);
 
   // Whether pred holds for some current active collision, sync or async.
@@ -455,7 +459,7 @@ void ExpectDissipationIsNonPotentialAfterTouch(Scene* scene, real dt) {
     ColumnVector<real> increment(problem.GetDofsSize());
     increment.SetRandom(/*seed*/ 3, -1e-3_r, 1e-3_r);
     solver::PostNewIncrementLocalPipeline(reg, island, AsConstView(increment), problem.solution);
-    ExpectDissipationIsNonPotential(reg, problem, kDissipationCoefficients);
+    test(reg, island, problem);
   }
 
   if (reg.ctx<CSimulationParams const>().experimentalEval.elastoPlasticFriction) {
@@ -465,6 +469,13 @@ void ExpectDissipationIsNonPotentialAfterTouch(Scene* scene, real dt) {
     });
     EXPECT_TRUE(hasAnchoredContact) << "Elasto-plastic friction should act on anchors.";
   }
+}
+
+void ExpectDissipationIsNonPotentialAfterTouch(Scene* scene, real dt) {
+  TestIslandsAfterTouch(
+      scene, dt, [](entt::registry& reg, entt::entity /*island*/, SnleProblem<real>& problem) {
+        ExpectDissipationIsNonPotential(reg, problem, kDissipationCoefficients);
+      });
 }
 
 } // namespace mochi::test

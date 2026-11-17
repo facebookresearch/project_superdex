@@ -171,7 +171,15 @@ TEST(MochiContact, ComputeCollisionResponse) {
     CollisionResponseResult res;
     res.ResizeNoInit(isize(contactQuery.sampleIndices), true, true, true);
     mochi::ComputeCollisionResponse<GradTarget::Current>(
-        contactQuery, params, config, dtStage, true, true, true, res);
+        contactQuery,
+        params,
+        config,
+        dtStage,
+        true,
+        true,
+        true,
+        /*assemDForceAnchor*/ false,
+        res);
 
     // The response without friction and damping.
     ContactParams nonDissipativeParams = params;
@@ -181,7 +189,15 @@ TEST(MochiContact, ComputeCollisionResponse) {
     CollisionResponseResult nonDissipative;
     nonDissipative.ResizeNoInit(isize(contactQuery.sampleIndices), true, true, false);
     mochi::ComputeCollisionResponse<GradTarget::Current>(
-        contactQuery, nonDissipativeParams, config, dtStage, true, true, false, nonDissipative);
+        contactQuery,
+        nonDissipativeParams,
+        config,
+        dtStage,
+        true,
+        true,
+        false,
+        /*assemDForceAnchor*/ false,
+        nonDissipative);
 
     // Random bone points (rho, s) and bone rotations of the skinned contact sums.
     constexpr int kNumBones = 3;
@@ -235,6 +251,7 @@ TEST(MochiContact, ComputeCollisionResponse) {
             true,
             true,
             true,
+            /*assemDForceAnchor*/ false,
             ref,
             kGradTarget == GradTarget::Current ? &refNonPotential : nullptr);
         RigidContactSums expected;
@@ -460,7 +477,15 @@ TEST(MochiContact, ComputeCollisionResponse) {
       CollisionResponseResult resF;
       resF.ResizeNoInit(isize(contactQuery.sampleIndices), true, true, false);
       mochi::ComputeCollisionResponse<GradTarget::Current>(
-          contactQuery, params, config, dtStage, true, true, false, resF);
+          contactQuery,
+          params,
+          config,
+          dtStage,
+          true,
+          true,
+          false,
+          /*assemDForceAnchor*/ false,
+          resF);
 
       delta = -2_r * kEps * BasisVector<real, 3>(j);
       for (size_t i = 0; i < nContacts; i++) {
@@ -470,7 +495,15 @@ TEST(MochiContact, ComputeCollisionResponse) {
       CollisionResponseResult resB;
       resB.ResizeNoInit(isize(contactQuery.sampleIndices), true, true, false);
       mochi::ComputeCollisionResponse<GradTarget::Current>(
-          contactQuery, params, config, dtStage, true, true, false, resB);
+          contactQuery,
+          params,
+          config,
+          dtStage,
+          true,
+          true,
+          false,
+          /*assemDForceAnchor*/ false,
+          resB);
 
       delta = kEps * BasisVector<real, 3>(j);
       for (size_t i = 0; i < nContacts; i++) {
@@ -4883,3 +4916,174 @@ INSTANTIATE_TEST_SUITE_P(
       return std::get<0>(info.param).name +
           (std::get<1>(info.param) ? "_ElastoPlasticFriction" : "");
     });
+
+// The minimum trust margin of the contacts of an island's actors, as ComputeCollisionResponse
+// reports them.
+static real IslandContactTrustMargin(entt::registry& reg, entt::entity island) {
+  auto const& experimentalEval = reg.ctx<CSimulationParams const>().experimentalEval;
+  real margin = kInf;
+  auto const lowerByCollisions = [&]<bool kIsSync>(entt::entity colliding) {
+    auto const* collisions =
+        reg.try_get<CActiveCollisions<kIsSync, TimeStep::Current> const>(colliding);
+    if (!collisions) {
+      return;
+    }
+    for (auto const& collision : *collisions) {
+      ContactDetectionResult const& query = collision.collisionResult;
+      ContactEvalConfig const config = kIsSync
+          ? MakeContactEvalConfigPair(
+                experimentalEval,
+                reg,
+                colliding,
+                collision.colliderEntity,
+                /*psdDRes*/ false,
+                /*useFittedHessian*/ false)
+          : MakeContactEvalConfigAsync(
+                experimentalEval, reg, colliding, /*psdDRes*/ false, /*useFittedHessian*/ false);
+      CollisionResponseResult response;
+      response.ResizeNoInit(isize(query.sampleIndices), true, false, false);
+      ComputeCollisionResponse<GradTarget::Current>(
+          query,
+          GetContactPairParams(reg, colliding, collision.colliderEntity),
+          config,
+          reg.get<CTimeIntegratorState const>(colliding).dtStage,
+          /*assemEnergy*/ true,
+          /*assemForce*/ false,
+          /*assemDForce*/ false,
+          /*assemDForceAnchor*/ false,
+          response,
+          /*outNonPotential*/ nullptr,
+          &margin);
+    }
+  };
+  for (entt::entity const actor : reg.get<CIslandDescendants const>(island).actors) {
+    lowerByCollisions.template operator()</*kIsSync*/ true>(actor);
+    lowerByCollisions.template operator()</*kIsSync*/ false>(actor);
+  }
+  return margin;
+}
+
+// With worker threads, so the contact pairs split into tasks whose margins are merged.
+class MochiTrustMarginScene : public test::MochiSceneTestBase,
+                              public ::testing::WithParamInterface<DissipationSceneParams> {
+ protected:
+  void SetUp() override {
+    _numWorkerThreads = 3;
+    test::MochiSceneTestBase::SetUp();
+  }
+};
+
+// Once an actor touches the ground or the slab, the trust margin of its island is the minimum of
+// those of its contacts, whatever the contact path. Elasto-plastic friction is on: without it, the
+// margin is +inf (see ContactPenalties.TrustMargin_Eligibility).
+TEST_P(MochiTrustMarginScene, MinimumOverContacts) {
+  SolverParams solverParams = _scene->GetSolverParams();
+  solverParams.experimentalEval.elastoPlasticFriction = true;
+  _scene->SetSolverParams(solverParams, test::ExpectOK{});
+  AddGroundPlane(_scene);
+  GetParam().addActors(_scene);
+  test::TestIslandsAfterTouch(
+      _scene,
+      /*dt*/ 0.02_r,
+      [](entt::registry& reg, entt::entity island, SnleProblem<real>& problem) {
+        // Assembled with the exact contact friction Hessian, which reports the margins of the
+        // contacts. The assembly updates the contacts, which the contact paths may round
+        // differently from ComputeCollisionResponse.
+        auto const expectMargin = [&](AssemblyParams params) {
+          params.fittedSaturationHessian.contactFriction = false;
+          problem.UpdateObjResDRes(params);
+          real const expected = IslandContactTrustMargin(reg, island);
+          ASSERT_TRUE(IsFinite(expected));
+          EXPECT_NEAR(
+              problem.GetTrustMargin(),
+              expected,
+              4_r * std::numeric_limits<real>::epsilon() * Max(1_r, Abs(expected)));
+        };
+        // With the objective and the Hessian, whose cost can split sync contact pairs into tasks.
+        expectMargin({.assemObj = true, .assemDRes = true});
+        // With the residual, after SetSolution outdates the margin.
+        problem.SetSolution(problem.solution.Duplicate());
+        expectMargin({.assemObj = false, .assemRes = true});
+        // At another state, then back, where the margins must be reset rather than only lowered.
+        ColumnVector<real> increment(problem.GetDofsSize());
+        increment.SetRandom(/*seed*/ 5, -1e-3_r, 1e-3_r);
+        for (int i = 0; i < 2; ++i) {
+          solver::PostNewIncrementLocalPipeline(
+              reg, island, AsConstView(increment), problem.solution);
+          problem.SetSolution(problem.solution.Duplicate());
+          expectMargin({.assemObj = true});
+          increment *= -1_r;
+        }
+
+        // The fitted contact friction Hessian reports no contact margins, even with other exact
+        // Hessians.
+        AssemblyParams const fittedContact{
+            .assemObj = true,
+            .fittedSaturationHessian = {
+                .contactFriction = true, .jointFriction = false, .constraintSaturation = false}};
+        problem.SetSolution(problem.solution.Duplicate());
+        problem.UpdateObjResDRes(fittedContact);
+        EXPECT_EQ(problem.GetTrustMargin(), kInf);
+
+        // Nor does an assembly of the Hessian alone, after one that reported margins.
+        problem.SetSolution(problem.solution.Duplicate());
+        expectMargin({.assemObj = true});
+        problem.SetSolution(problem.solution.Duplicate());
+        problem.UpdateObjResDRes(
+            {.assemObj = false,
+             .assemDRes = true,
+             .fittedSaturationHessian = SaturationHessianParams::All(false)});
+        EXPECT_EQ(problem.GetTrustMargin(), kInf);
+      });
+}
+
+// A three-bone skinned actor falling just above the ground, whose skin takes skinned contact sums.
+static Actor* AddFallingThreeBoneSkin(Scene* scene) {
+  Context* const context = scene->GetContext();
+  ArticulatedActorParams params = MakeThreeBoneSkeletonParams(context, {.linkDensity = 1000_r});
+  params.joints[0].type = ArticulatedJointType::Free;
+  for (auto& link : params.links) {
+    link.hasGravity = true;
+  }
+  params.worldFromRoot = TransformRT{Real3{0_r, 0.01_r, 0_r}};
+  ArticulatedSkinParams skinParams;
+  skinParams.shape = CreateThreeBoneShape(context);
+  params.skin = std::move(skinParams);
+  return scene->CreateArticulatedActor(params, test::ExpectOK{});
+}
+
+// The dissipation scenes, and minimal actors that take the other contact paths: async soft FEM
+// contact (soft cube), sync per-point contact (soft cube on a pinned slab), async skinned per-point
+// contact through a linear contact skin (contact-skin cube) and skinned contact sums (three-bone
+// skin). The shell and ROM cubes cover shell and ROM contact in builds without the duck assets.
+static DynamicArray<DissipationSceneParams> TrustMarginScenes() {
+  DynamicArray<DissipationSceneParams> scenes = DissipationScenes();
+  scenes.push_back(
+      {.name = "SoftCube", .addActors = [](Scene* scene) { AddMinimalSoftCube(scene); }});
+  scenes.push_back({.name = "SoftCubeOnPinnedSlab", .addActors = [](Scene* scene) {
+                      AddMinimalSoftCube(scene, AddPinnedSlab(scene, 0.1_r, 0.15_r));
+                    }});
+  scenes.push_back({.name = "ContactSkinSoftCube", .addActors = [](Scene* scene) {
+                      AddMinimalContactSkinCube(scene);
+                    }});
+  scenes.push_back({.name = "ThreeBoneSkin", .addActors = AddFallingThreeBoneSkin});
+  scenes.push_back(
+      {.name = "ShellCube", .addActors = [](Scene* scene) { AddMinimalShellCube(scene); }});
+  if constexpr (MOCHI_ENABLE_ROM_ACTORS) {
+    for (auto const strategy :
+         {RomProjectionStrategy::ActorLevelProjection,
+          RomProjectionStrategy::ElementLevelProjection}) {
+      bool const actorLevel = strategy == RomProjectionStrategy::ActorLevelProjection;
+      scenes.push_back(
+          {.name = actorLevel ? "ActorLevelRomCube" : "ElementLevelRomCube",
+           .addActors = [strategy](Scene* scene) { AddMinimalRomCube(scene, strategy); }});
+    }
+  }
+  return scenes;
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ContactPaths,
+    MochiTrustMarginScene,
+    ::testing::ValuesIn(TrustMarginScenes()),
+    [](::testing::TestParamInfo<DissipationSceneParams> const& info) { return info.param.name; });

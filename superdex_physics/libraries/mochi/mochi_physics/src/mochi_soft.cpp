@@ -471,6 +471,7 @@ void mochi::soft::AssembleAsyncContact(
       rootTransform,
       params,
       outResponse,
+      outActorSnle.trustMargin,
       activeBoundaryFaces ? activeBoundaryFaces->ViewIsActive() : Span<bool const>{});
 
   if (outResponse.Empty()) {

@@ -945,11 +945,18 @@ TEST(ContactPenalties, ElastoPlasticFriction_DForceAnchorIsCoulombBlockOfDForce)
           false,
           false,
           true,
-          withCoulombResponse,
-          /*outNonPotential*/ nullptr,
-          /*assemDForceAnchor*/ true);
+          /*assemDForceAnchor*/ true,
+          withCoulombResponse);
       ComputeCollisionResponse<GradTarget::Current>(
-          result, withoutCoulomb, config, kDt, false, false, true, withoutCoulombResponse);
+          result,
+          withoutCoulomb,
+          config,
+          kDt,
+          false,
+          false,
+          true,
+          /*assemDForceAnchor*/ false,
+          withoutCoulombResponse);
       ComputeCollisionResponse<GradTarget::Current>(
           result,
           params,
@@ -958,9 +965,8 @@ TEST(ContactPenalties, ElastoPlasticFriction_DForceAnchorIsCoulombBlockOfDForce)
           false,
           false,
           false,
-          anchorResponse,
-          /*outNonPotential*/ nullptr,
-          /*assemDForceAnchor*/ true);
+          /*assemDForceAnchor*/ true,
+          anchorResponse);
 
       for (int i = 0; i < numContacts; ++i) {
         VMatrix3x3r const expected =
@@ -1045,7 +1051,15 @@ TEST(ContactPenalties, ElastoPlasticFriction_FollowsConfig) {
     CollisionResponseResult response;
     response.ResizeNoInit(1, false, true, false);
     ComputeCollisionResponse<GradTarget::Current>(
-        *c.contacts, params, config, kDt, false, true, false, response);
+        *c.contacts,
+        params,
+        config,
+        kDt,
+        false,
+        true,
+        false,
+        /*assemDForceAnchor*/ false,
+        response);
     EXPECT_NEAR_EQ(c.expected, response.force[0]);
 
     real const weight = 2_r;
@@ -1062,6 +1076,228 @@ TEST(ContactPenalties, ElastoPlasticFriction_FollowsConfig) {
         false,
         {});
     EXPECT_NEAR_EQ(weight * c.expected, ToReal3(sums.force));
+  }
+}
+
+// Elasto-plastic contacts on the plane z = 0 for the trust margin tests, cycling through patterns
+// of anchor offset and slip, in presliding displacements, with their margins m = 1 + u0 · u / |u0|,
+// where u0 is the offset projected on the plane and u = P slip + u0: ahead of the anchor, past
+// presliding yield behind it, back towards it with normal components, sideways, and offsets too
+// short or normal to give a direction, which get +inf.
+struct TrustMarginContacts {
+  ContactDetectionResult contacts;
+  DynamicArray<real> margins;
+};
+static TrustMarginContacts MakeTrustMarginContacts(real delta, int numContacts) {
+  struct Pattern {
+    Real3 offset;
+    Real3 slip;
+    real margin;
+  };
+  static constexpr std::array<Pattern, 7> kPatterns = {{
+      {.offset = {0.5_r, 0_r, 0_r}, .slip = {0.2_r, 0.3_r, 0_r}, .margin = 1.7_r},
+      {.offset = {1_r, 0_r, 0_r}, .slip = {-2.5_r, 0_r, 0_r}, .margin = -0.5_r},
+      {.offset = {0.3_r, 0.4_r, 0.2_r}, .slip = {-0.6_r, -0.8_r, 0.1_r}, .margin = 0.5_r},
+      {.offset = {1_r, 0_r, 0_r}, .slip = {0_r, 1_r, 0_r}, .margin = 2_r},
+      {.offset = {0.05_r, 0_r, 0_r}, .slip = {-1_r, 0_r, 0_r}, .margin = kInf},
+      {.offset = {0_r, 0_r, 1_r}, .slip = {-1_r, 0_r, 0_r}, .margin = kInf},
+      {.offset = {0_r, 0_r, 0_r}, .slip = {0.5_r, 0_r, 0_r}, .margin = kInf},
+  }};
+  DynamicArray<Real3> slips;
+  DynamicArray<Real3> offsets;
+  TrustMarginContacts result;
+  for (int i = 0; i < numContacts; ++i) {
+    Pattern const& pattern = kPatterns[i % isize(kPatterns)];
+    slips.push_back(pattern.slip * delta);
+    offsets.push_back(pattern.offset * delta);
+    result.margins.push_back(pattern.margin);
+  }
+  result.contacts = MakeAnchoredContacts(slips, offsets);
+  return result;
+}
+
+// Lowers margin to the trust margin of the contact points in range, as
+// ComputeCollisionResponseRange reports it.
+static real RangeTrustMargin(
+    ContactDetectionResult const& contacts,
+    ContactParams const& params,
+    ContactEvalConfig const& config,
+    Interval<int> range,
+    real margin = kInf) {
+  CollisionResponseResult response;
+  response.ResizeNoInit(isize(contacts.sampleIndices), true, false, false);
+  ComputeCollisionResponseRange<GradTarget::Current>(
+      range,
+      contacts,
+      params,
+      config,
+      /*dtStage*/ 0.01_r,
+      /*assemEnergy*/ true,
+      /*assemForce*/ false,
+      /*assemDForce*/ false,
+      /*assemDForceAnchor*/ false,
+      response,
+      /*outNonPotential*/ nullptr,
+      &margin);
+  return margin;
+}
+
+// The trust margin of a range of contact points is the minimum of their margins, for every range,
+// so every batch size and position, and a lower margin is kept.
+TEST(ContactPenalties, TrustMargin_MinimumOverContacts) {
+  ContactParams const params;
+  ContactEvalConfig const config{.elastoPlasticFriction = true};
+  TrustMarginContacts const data =
+      MakeTrustMarginContacts(params.preslidingDisplacement, /*numContacts*/ 19);
+  int const numContacts = isize(data.margins);
+  for (int first = 0; first < numContacts; ++first) {
+    for (int last = first + 1; last <= numContacts; ++last) {
+      real const expected =
+          *std::min_element(data.margins.begin() + first, data.margins.begin() + last);
+      real const actual = RangeTrustMargin(data.contacts, params, config, {first, last});
+      if (IsFinite(expected)) {
+        EXPECT_NEAR(actual, expected, 1e-5_r) << "range [" << first << ", " << last << ")";
+      } else {
+        EXPECT_EQ(actual, expected) << "range [" << first << ", " << last << ")";
+      }
+    }
+  }
+  EXPECT_EQ(RangeTrustMargin(data.contacts, params, config, {0, numContacts}, -10_r), -10_r);
+}
+
+// Only elasto-plastic Coulomb friction has a trust margin. With implicit normals, a contact without
+// normal force keeps its margin; with explicit normals, contacts without stage-start normal force
+// have none.
+TEST(ContactPenalties, TrustMargin_Eligibility) {
+  ContactParams const params;
+  TrustMarginContacts data = MakeTrustMarginContacts(params.preslidingDisplacement, 4);
+  real const expected = *std::ranges::min_element(data.margins);
+  ASSERT_TRUE(IsFinite(expected));
+  Interval<int> const all{0, 4};
+  ContactEvalConfig config{.elastoPlasticFriction = true};
+  EXPECT_NEAR(RangeTrustMargin(data.contacts, params, config, all), expected, 1e-5_r);
+  EXPECT_EQ(
+      RangeTrustMargin(
+          data.contacts, params, ContactEvalConfig{.elastoPlasticFriction = false}, all),
+      kInf);
+
+  // Viscous friction without Coulomb friction runs the friction kernel, but has no margin.
+  ContactParams viscous = params;
+  viscous.coulombFrictionCoefficient = 0_r;
+  viscous.viscousFrictionCoefficient = 1_r;
+  EXPECT_EQ(RangeTrustMargin(data.contacts, viscous, config, all), kInf);
+
+  // With implicit normals, the margins don't depend on the normal force.
+  TrustMarginContacts unloaded = MakeTrustMarginContacts(params.preslidingDisplacement, 4);
+  for (real& distance : unloaded.contacts.sdfInfo.val) {
+    distance = params.GetPenaltyThresholdDist(/*addPadding*/ false);
+  }
+  EXPECT_NEAR(RangeTrustMargin(unloaded.contacts, params, config, all), expected, 1e-5_r);
+
+  // With explicit normals and the same stage-start distances, the margins are unchanged.
+  config.explicitNormals = true;
+  data.contacts.sdfInfoStageStart = data.contacts.sdfInfo;
+  EXPECT_NEAR(RangeTrustMargin(data.contacts, params, config, all), expected, 1e-5_r);
+  for (real& distance : data.contacts.sdfInfoStageStart.val) {
+    distance = params.GetPenaltyThresholdDist(/*addPadding*/ false);
+  }
+  EXPECT_EQ(RangeTrustMargin(data.contacts, params, config, all), kInf);
+}
+
+// The rigid and skinned contact sums report the trust margin of the per-point response for every
+// range, up to rounding, and requesting it leaves the sums unchanged.
+TEST(ContactPenalties, TrustMargin_SameForContactSums) {
+  ContactParams const params;
+  ContactEvalConfig const config{.elastoPlasticFriction = true};
+  real constexpr kDt = 0.01_r;
+  TrustMarginContacts const data =
+      MakeTrustMarginContacts(params.preslidingDisplacement, /*numContacts*/ 19);
+  ContactDetectionResult const& contacts = data.contacts;
+  int const numContacts = isize(contacts.sampleIndices);
+  DynamicArray<real> const weights(numContacts, 0.5_r);
+  Vec4r const origin{0.3_r, -0.2_r, 0.1_r, 0_r};
+
+  // One bone slice, with a point (rho, s) per sample, and a rigid-collider slice about origin.
+  DynamicArray<int> pointOffsets(numContacts + 1);
+  std::iota(pointOffsets.begin(), pointOffsets.end(), 0);
+  DynamicArray<Vec4r> const points(numContacts, Vec4r{0.1_r, 0.2_r, -0.3_r, 0.7_r});
+  DynamicArray<VMatrix3x3r> const boneRotations = {
+      VMatrix3x3r{Vec4r{1_r, 0_r, 0_r}, Vec4r{0_r, 1_r, 0_r}, Vec4r{0_r, 0_r, 1_r}}};
+  SkinnedContactSlices const slices{
+      .pointOffsets = MakeConstSpan(pointOffsets),
+      .points = MakeConstSpan(points),
+      .boneRotations = MakeConstSpan(boneRotations),
+      .rigidColliderOrigin = origin};
+
+  for (int first = 0; first < numContacts; ++first) {
+    for (int last = first + 1; last <= numContacts; ++last) {
+      SCOPED_TRACE("range [" + std::to_string(first) + ", " + std::to_string(last) + ")");
+      Interval<int> const range{first, last};
+      real const expected = RangeTrustMargin(contacts, params, config, range);
+      // The per-point and contact-sum kernels are compiled separately, so they may round
+      // differently.
+      auto const expectMargin = [&](real margin) {
+        if (IsFinite(expected)) {
+          EXPECT_NEAR(
+              margin,
+              expected,
+              4_r * std::numeric_limits<real>::epsilon() * Max(1_r, Abs(expected)));
+        } else {
+          EXPECT_EQ(margin, expected);
+        }
+      };
+
+      auto const rigidSums = [&](real* margin) {
+        return ComputeRigidContactSums<GradTarget::Current>(
+            range,
+            contacts,
+            params,
+            config,
+            kDt,
+            MakeConstSpan(weights),
+            origin,
+            /*assemEnergy*/ true,
+            /*assemForce*/ true,
+            /*assemDForce*/ false,
+            /*outForce*/ {},
+            /*outNonPotential*/ nullptr,
+            margin);
+      };
+      real rigidMargin = kInf;
+      RigidContactSums const rigid = rigidSums(&rigidMargin);
+      RigidContactSums const rigidWithoutMargin = rigidSums(nullptr);
+      expectMargin(rigidMargin);
+      EXPECT_EQ(rigid.energy, rigidWithoutMargin.energy);
+      EXPECT_EQ(ToReal3(rigid.force), ToReal3(rigidWithoutMargin.force));
+      EXPECT_EQ(ToReal3(rigid.torque), ToReal3(rigidWithoutMargin.torque));
+
+      auto const skinnedSums = [&](real* margin) {
+        return ComputeSkinnedContactSums(
+            range,
+            contacts,
+            params,
+            config,
+            kDt,
+            MakeConstSpan(weights),
+            slices,
+            /*assemEnergy*/ true,
+            /*assemForce*/ true,
+            /*assemDForce*/ false,
+            GetDefaultAllocator(),
+            /*outForce*/ {},
+            /*outNonPotential*/ nullptr,
+            margin);
+      };
+      real skinnedMargin = kInf;
+      SkinnedContactSums const skinned = skinnedSums(&skinnedMargin);
+      SkinnedContactSums const skinnedWithoutMargin = skinnedSums(nullptr);
+      expectMargin(skinnedMargin);
+      EXPECT_EQ(skinned.energy, skinnedWithoutMargin.energy);
+      for (int a = 0; a < skinned.numSlices; ++a) {
+        EXPECT_EQ(ToReal3(skinned.force[a]), ToReal3(skinnedWithoutMargin.force[a]));
+        EXPECT_EQ(ToReal3(skinned.torque[a]), ToReal3(skinnedWithoutMargin.torque[a]));
+      }
+    }
   }
 }
 

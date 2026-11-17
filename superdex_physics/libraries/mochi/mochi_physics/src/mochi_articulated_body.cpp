@@ -2701,6 +2701,7 @@ void articulated::compound::EntityAssemble(
       entt::entity const bodyEntity = groupMembers.actors[link];
       auto const& bodySnle = reg.get<CActorSnle const>(bodyEntity);
       auto const& bodyDofOffset = reg.get<CDofOffset const>(bodyEntity);
+      outCompoundSnle.trustMargin = Min(outCompoundSnle.trustMargin, bodySnle.trustMargin);
       if (params.assemObj) {
         outCompoundSnle.objective += bodySnle.objective;
         outCompoundSnle.nonPotentialEnergy += bodySnle.nonPotentialEnergy;

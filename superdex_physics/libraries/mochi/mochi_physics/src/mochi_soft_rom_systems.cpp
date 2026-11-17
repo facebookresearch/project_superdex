@@ -310,6 +310,7 @@ void mochi::rom::AssembleAndProjectAsyncContact(
       rootTransform,
       params,
       outResponse,
+      outSnle.trustMargin,
       activeBoundaryFaces ? activeBoundaryFaces->ViewIsActive() : Span<bool const>{});
 
   if (outResponse.Empty()) {

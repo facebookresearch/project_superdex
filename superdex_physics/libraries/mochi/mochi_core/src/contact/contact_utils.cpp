@@ -77,9 +77,10 @@ void mochi::ComputeCollisionResponseRange(
     bool assemEnergy,
     bool assemForce,
     bool assemDForce,
+    bool assemDForceAnchor,
     CollisionResponseResult& outResponse,
     CollisionResponseResult* outNonPotential,
-    bool assemDForceAnchor) {
+    real* outTrustMargin) {
   MOCHI_PROFILE_SCOPE();
 
   // Outputs should already be the correct size
@@ -148,7 +149,8 @@ void mochi::ComputeCollisionResponseRange(
           outNonPotential ? MakeSpan(outNonPotential->energy).subspan(s, N) : Span<double>{},      \
           outNonPotential ? MakeSpan(outNonPotential->force).subspan(s, N) : Span<Real3>{},        \
           assemDForceAnchor ? MakeSpan(outResponse.dforceAnchor).subspan(s, N)                     \
-                            : Span<VSymMatrix3x3r>{});                                             \
+                            : Span<VSymMatrix3x3r>{},                                              \
+          outTrustMargin);                                                                         \
     }                                                                                              \
     break;
 
@@ -197,9 +199,10 @@ void mochi::ComputeCollisionResponseRange(
       bool,                                                            \
       bool,                                                            \
       bool,                                                            \
+      bool,                                                            \
       CollisionResponseResult&,                                        \
       CollisionResponseResult*,                                        \
-      bool);
+      real*);
 MOCHI_SPECIALIZE_COMPUTE_COLLISION_RESPONSE_RANGE(GradTarget::Current);
 MOCHI_SPECIALIZE_COMPUTE_COLLISION_RESPONSE_RANGE(GradTarget::Previous);
 #undef MOCHI_SPECIALIZE_COMPUTE_COLLISION_RESPONSE_RANGE
@@ -359,7 +362,8 @@ MOCHI_FORCE_INLINE BatchReal3x3<kBatchSize> TimesSkew(
 // Compute the collision response of the batch of kBatchSize contact points starting at 'first',
 // store its forces in outForce if not empty, and gather the weights. If computeLeverArms, also
 // compute the lever arms from 'origin' to the contact points at the time step of kGradTarget. If
-// outNonPotential is not null, also compute the energy and force of friction and damping in it.
+// outNonPotential is not null, also compute the energy and force of friction and damping in it, and
+// if outTrustMargin is not null, lower it to the minimum trust margin of the contact points.
 template <int kBatchSize, GradTarget kGradTarget>
 MOCHI_FORCE_INLINE void ComputeBatchSumsPrologue(
     int first,
@@ -377,7 +381,8 @@ MOCHI_FORCE_INLINE void ComputeBatchSumsPrologue(
     BatchCollisionResponse<kBatchSize, kGradTarget>& outResponse,
     BatchReal<kBatchSize>& outW,
     BatchReal3<kBatchSize>& outLeverArms,
-    BatchCollisionResponse<kBatchSize, kGradTarget>* outNonPotential) {
+    BatchCollisionResponse<kBatchSize, kGradTarget>* outNonPotential,
+    real* outTrustMargin) {
   using V = BatchReal<kBatchSize>;
   MOCHI_ASSERT_VERBOSE(
       !config.elastoPlasticFriction ||
@@ -409,7 +414,9 @@ MOCHI_FORCE_INLINE void ComputeBatchSumsPrologue(
       assemDForce,
       contactQuery.isSdfGradUnitary,
       contactQuery.isNormalCollidingUnitary,
-      outNonPotential);
+      outNonPotential,
+      /*outDForceAnchor*/ nullptr,
+      outTrustMargin);
 
   if (!outForce.empty()) {
     StoreTransposed<kBatchSize>(&outForce[first][0], outResponse.force);
@@ -513,8 +520,8 @@ struct RigidContactLaneSums {
 
 // Add the collision response of the batch of kBatchSize contact points starting at 'first' to
 // outLaneSums, and store its forces in outForce if not empty. If outNonPotentialLaneSums is not
-// null, also add the energy, force and torque of its friction and damping to it. See
-// ComputeRigidContactSums.
+// null, also add the energy, force and torque of its friction and damping to it. If outTrustMargin
+// is not null, also lower it to the minimum trust margin of the batch. See ComputeRigidContactSums.
 template <int kBatchSize, GradTarget kGradTarget>
 static void AddBatchRigidContactSums(
     int first,
@@ -529,7 +536,8 @@ static void AddBatchRigidContactSums(
     bool assemDForce,
     Span<Real3> outForce,
     RigidContactLaneSums<kBatchSize>& outLaneSums,
-    RigidContactLaneSums<kBatchSize>* outNonPotentialLaneSums) {
+    RigidContactLaneSums<kBatchSize>* outNonPotentialLaneSums,
+    real* outTrustMargin) {
   BatchCollisionResponse<kBatchSize, kGradTarget> response MOCHI_NO_INIT;
   BatchCollisionResponse<kBatchSize, kGradTarget> nonPotential MOCHI_NO_INIT;
   BatchReal<kBatchSize> w MOCHI_NO_INIT;
@@ -550,7 +558,8 @@ static void AddBatchRigidContactSums(
       response,
       w,
       leverArms,
-      outNonPotentialLaneSums ? &nonPotential : nullptr);
+      outNonPotentialLaneSums ? &nonPotential : nullptr,
+      outTrustMargin);
 
   outLaneSums.Add(response, w, leverArms, assemEnergy, assemForce, assemDForce);
   if (outNonPotentialLaneSums) {
@@ -577,7 +586,8 @@ RigidContactSums mochi::ComputeRigidContactSums(
     bool assemForce,
     bool assemDForce,
     Span<Real3> outForce,
-    RigidContactSums* outNonPotential) {
+    RigidContactSums* outNonPotential,
+    real* outTrustMargin) {
   MOCHI_PROFILE_SCOPE();
   MOCHI_ASSERT_VERBOSE(pointRange.Valid());
   MOCHI_ASSERT_VERBOSE(
@@ -603,6 +613,9 @@ RigidContactSums mochi::ComputeRigidContactSums(
   MOCHI_ASSERT_VERBOSE(
       !outNonPotential || (kGradTarget == GradTarget::Current && HasDissipation(params)),
       "The dissipative sums require GradTarget::Current and dissipation.");
+  MOCHI_ASSERT_VERBOSE(
+      !outTrustMargin || kGradTarget == GradTarget::Current,
+      "The trust margin requires GradTarget::Current.");
 
   // Full batches accumulate into the same lane sums, which are reduced once. The remaining points
   // form a narrower batch rather than a masked full batch: a full batch would read past pointRange,
@@ -628,7 +641,8 @@ RigidContactSums mochi::ComputeRigidContactSums(
           assemDForce,
           outForce,
           laneSums,
-          outNonPotential ? &nonPotentialLaneSums : nullptr);
+          outNonPotential ? &nonPotentialLaneSums : nullptr,
+          outTrustMargin);
     }
     laneSums.AddTo(sums, assemEnergy, assemForce, assemDForce);
     if (outNonPotential) {
@@ -656,7 +670,8 @@ RigidContactSums mochi::ComputeRigidContactSums(
           assemDForce,                                                                           \
           outForce,                                                                              \
           lastBatchSums,                                                                         \
-          outNonPotential ? &lastBatchNonPotentialSums : nullptr);                               \
+          outNonPotential ? &lastBatchNonPotentialSums : nullptr,                                \
+          outTrustMargin);                                                                       \
       lastBatchSums.AddTo(sums, assemEnergy, assemForce, assemDForce);                           \
       if (outNonPotential) {                                                                     \
         lastBatchNonPotentialSums.AddTo(                                                         \
@@ -695,7 +710,8 @@ RigidContactSums mochi::ComputeRigidContactSums(
       bool,                                                              \
       bool,                                                              \
       Span<Real3>,                                                       \
-      RigidContactSums*);
+      RigidContactSums*,                                                 \
+      real*);
 MOCHI_SPECIALIZE_COMPUTE_RIGID_CONTACT_SUMS(GradTarget::Current);
 MOCHI_SPECIALIZE_COMPUTE_RIGID_CONTACT_SUMS(GradTarget::Previous);
 #undef MOCHI_SPECIALIZE_COMPUTE_RIGID_CONTACT_SUMS
@@ -744,7 +760,8 @@ void AddBatchSkinnedContactSums(
     Span<Real3> outForce,
     SkinnedContactBatchSlices<kBatchSize>& batchSlices,
     SkinnedContactSums& outSums,
-    SkinnedContactSums* outNonPotential) {
+    SkinnedContactSums* outNonPotential,
+    real* outTrustMargin) {
   using V = BatchReal<kBatchSize>;
   using V3 = BatchReal3<kBatchSize>;
   using M3 = BatchReal3x3<kBatchSize>;
@@ -773,7 +790,8 @@ void AddBatchSkinnedContactSums(
       response,
       w,
       rigidColliderLeverArms,
-      outNonPotential ? &nonPotential : nullptr);
+      outNonPotential ? &nonPotential : nullptr,
+      outTrustMargin);
 
   if (assemEnergy) {
     outSums.energy += HSum<kBatchSize>(StaticCast<BatchDouble<kBatchSize>>(w) * response.energy);
@@ -863,7 +881,8 @@ void AddBatchSkinnedContactSums(
 }
 
 // Add the SkinnedContactSums of 'pointRange', whose size must be a multiple of kBatchSize, to
-// outSums, and those of its friction and damping to outNonPotential if not null.
+// outSums, and those of its friction and damping to outNonPotential if not null. Lower
+// outTrustMargin, if not null, to the minimum trust margin of its contact points.
 template <int kBatchSize>
 void AddSkinnedContactSums(
     Interval<int> pointRange,
@@ -879,7 +898,8 @@ void AddSkinnedContactSums(
     Span<Real3> outForce,
     Allocator* scratch,
     SkinnedContactSums& outSums,
-    SkinnedContactSums* outNonPotential) {
+    SkinnedContactSums* outNonPotential,
+    real* outTrustMargin) {
   MOCHI_ASSERT_VERBOSE(pointRange.Size() % kBatchSize == 0);
   SkinnedContactBatchSlices<kBatchSize> batchSlices(slices.NumSlices(), assemDForce, scratch);
   for (int first = pointRange.Min(); first <= pointRange.Max(); first += kBatchSize) {
@@ -897,7 +917,8 @@ void AddSkinnedContactSums(
         outForce,
         batchSlices,
         outSums,
-        outNonPotential);
+        outNonPotential,
+        outTrustMargin);
   }
 }
 
@@ -916,7 +937,8 @@ SkinnedContactSums mochi::ComputeSkinnedContactSums(
     bool assemDForce,
     Allocator* scratch,
     Span<Real3> outForce,
-    SkinnedContactSums* outNonPotential) {
+    SkinnedContactSums* outNonPotential,
+    real* outTrustMargin) {
   MOCHI_PROFILE_SCOPE();
   MOCHI_ASSERT_VERBOSE(pointRange.Valid());
   MOCHI_ASSERT_VERBOSE(
@@ -961,7 +983,8 @@ SkinnedContactSums mochi::ComputeSkinnedContactSums(
         outForce,
         scratch,
         sums,
-        outNonPotential);
+        outNonPotential,
+        outTrustMargin);
   };
 
   int const numPoints = pointRange.Size();

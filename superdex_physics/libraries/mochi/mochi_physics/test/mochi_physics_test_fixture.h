@@ -34,6 +34,7 @@
 
 #include <gtest/gtest.h>
 
+#include <functional>
 #include <memory>
 #include <optional>
 
@@ -93,11 +94,11 @@ inline ShapeHandle CreateUnitCubeTetSoftShape(Context* context) {
   return assert_cast<ContextImpl*>(context)->RegisterShape(shape, ExpectOK{});
 }
 
-// Build a unit-cube tetrahedral model with a unit-cube triangular contact skin whose node i is
-// embedded at tet node i with weight 1.
-inline ModelData CreateUnitCubeContactSkinModel() {
-  auto [tetCoordinates, tetConnectivity] = CreateMinimalTetMeshUnitCube();
-  auto [skinCoordinates, skinConnectivity] = CreateMinimalTriMeshUnitCube();
+// Build a unit-cube tetrahedral model, scaled by `scale`, with a triangular contact skin of the
+// same cube whose node i is embedded at tet node i with weight 1.
+inline ModelData CreateUnitCubeContactSkinModel(Real3 const& scale = Real3{1_r, 1_r, 1_r}) {
+  auto [tetCoordinates, tetConnectivity] = CreateMinimalTetMeshUnitCube(scale);
+  auto [skinCoordinates, skinConnectivity] = CreateMinimalTriMeshUnitCube(scale);
 
   ModelData model;
   model.mesh.emplace();
@@ -412,10 +413,17 @@ void ExpectDissipationIsNonPotential(
     std::optional<DissipationCoefficients> coefficients);
 
 // Steps a scene until some actor has contact at the end of a step, and once more, so that its
-// contacts persist through a whole step. Then runs ExpectDissipationIsNonPotential with
-// kDissipationCoefficients on every island, each of which must touch with friction or damping, at a
-// random increment from the end of that step. With elasto-plastic friction, also expects some
-// contact to have a nonzero anchor offset.
+// contacts persist through a whole step. Then runs test on the problem of every island, at a random
+// increment from the end of that step. With elasto-plastic friction, also expects some contact to
+// have a nonzero anchor offset.
+void TestIslandsAfterTouch(
+    Scene* scene,
+    real dt,
+    std::function<void(entt::registry& reg, entt::entity island, SnleProblem<real>& problem)> const&
+        test);
+
+// TestIslandsAfterTouch with ExpectDissipationIsNonPotential and kDissipationCoefficients. Every
+// island must touch with friction or damping.
 void ExpectDissipationIsNonPotentialAfterTouch(Scene* scene, real dt);
 
 } // namespace mochi::test
