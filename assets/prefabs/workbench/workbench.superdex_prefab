@@ -1,0 +1,14 @@
+{
+  "_comment": "A 2 x 0.5 m workbench, its top 1 m up: a static actor with its origin on the floor under the center of the top.",
+  "actors": {
+    "rigid": [
+      {
+        "name": "workbench",
+        "isStatic": true,
+        "colliderType": "Sdf",
+        "shape": "./collision/workbench.mochi.h5",
+        "renderModel": "./render/workbench.glb"
+      }
+    ]
+  }
+}

@@ -1,0 +1,282 @@
+{
+  "comment": "Throw the same seven objects down onto the top: a 40 ms push on each takes it to about 10 m/s before it hits the top. None should pass through or stick in the top: each should bounce or come to rest on it.",
+  "assetsRoot": "",
+  "prefab": "./falling_objects.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "throw_sphere",
+      "enabled": true,
+      "type": "Force",
+      "target": "sphere/Sphere",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 2.857143,
+        "riseTime": 0.005,
+        "fallTime": 0.005,
+        "start": 0.0,
+        "end": 0.04
+      }
+    },
+    {
+      "name": "throw_block",
+      "enabled": true,
+      "type": "Force",
+      "target": "block/Block_red",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        0.0125,
+        0.0125,
+        0.0125
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 4.464293,
+        "riseTime": 0.005,
+        "fallTime": 0.005,
+        "start": 0.0,
+        "end": 0.04
+      }
+    },
+    {
+      "name": "throw_brick",
+      "enabled": true,
+      "type": "Force",
+      "target": "brick/large_brick_toy_2x2",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        0.0159,
+        0.0159,
+        0.011804
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 4.300561,
+        "riseTime": 0.005,
+        "fallTime": 0.005,
+        "start": 0.0,
+        "end": 0.04
+      }
+    },
+    {
+      "name": "throw_cup",
+      "enabled": true,
+      "type": "Force",
+      "target": "cup/Paper_Cup",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        -3.8e-05,
+        -8.8e-05,
+        0.056307
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 4.285714,
+        "riseTime": 0.005,
+        "fallTime": 0.005,
+        "start": 0.0,
+        "end": 0.04
+      }
+    },
+    {
+      "name": "throw_peg",
+      "enabled": true,
+      "type": "Force",
+      "target": "peg/peg",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        -0.0,
+        1e-06,
+        0.02009
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 0.172608,
+        "riseTime": 0.005,
+        "fallTime": 0.005,
+        "start": 0.0,
+        "end": 0.04
+      }
+    },
+    {
+      "name": "throw_fdt_peg",
+      "enabled": true,
+      "type": "Force",
+      "target": "fdt_peg/peg",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        -0.0,
+        0.0,
+        0.020001
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 2.747066,
+        "riseTime": 0.005,
+        "fallTime": 0.005,
+        "start": 0.0,
+        "end": 0.04
+      }
+    },
+    {
+      "name": "throw_jar",
+      "enabled": true,
+      "type": "Force",
+      "target": "jar/jar_body",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        -4.8e-05,
+        -7e-06,
+        0.061263
+      ],
+      "profile": {
+        "kind": "Envelope",
+        "magnitude": 51.640417,
+        "riseTime": 0.005,
+        "fallTime": 0.005,
+        "start": 0.0,
+        "end": 0.04
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "sphere/Sphere"
+    },
+    {
+      "kind": "Penetration",
+      "target": "sphere/Sphere",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "block/Block_red"
+    },
+    {
+      "kind": "Penetration",
+      "target": "block/Block_red",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick/large_brick_toy_2x2"
+    },
+    {
+      "kind": "Penetration",
+      "target": "brick/large_brick_toy_2x2",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cup/Paper_Cup"
+    },
+    {
+      "kind": "Penetration",
+      "target": "cup/Paper_Cup",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "peg/peg"
+    },
+    {
+      "kind": "Penetration",
+      "target": "peg/peg",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "fdt_peg/peg"
+    },
+    {
+      "kind": "Penetration",
+      "target": "fdt_peg/peg",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "jar/jar_body"
+    },
+    {
+      "kind": "Penetration",
+      "target": "jar/jar_body",
+      "ignoreGround": true
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 2.0,
+    "groundPlane": false,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "sphere/Sphere.pos.z",
+        "block/Block_red.pos.z",
+        "brick/large_brick_toy_2x2.pos.z",
+        "cup/Paper_Cup.pos.z",
+        "peg/peg.pos.z",
+        "fdt_peg/peg.pos.z",
+        "jar/jar_body.pos.z"
+      ],
+      "height": 200
+    }
+  ]
+}

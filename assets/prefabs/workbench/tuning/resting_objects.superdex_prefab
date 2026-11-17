@@ -1,0 +1,72 @@
+{
+  "_comment": "The workbench with seven objects from other SuperDex prefabs resting on its top, for tuning/press.",
+  "prefabs": [
+    {
+      "name": "workbench",
+      "path": "./../workbench.superdex_prefab"
+    },
+    {
+      "name": "sphere",
+      "path": "./../../sphere/sphere.mochi_prefab",
+      "translation": [
+        0.0,
+        -0.54,
+        0.916
+      ]
+    },
+    {
+      "name": "block",
+      "path": "./../../box_and_blocks/block_red.mochi_prefab",
+      "translation": [
+        0.0,
+        -0.36,
+        0.901
+      ]
+    },
+    {
+      "name": "brick",
+      "path": "./../../brick_toys/large_brick_toy_2x2.mochi_prefab",
+      "translation": [
+        0.0,
+        -0.18,
+        0.9005
+      ]
+    },
+    {
+      "name": "cup",
+      "path": "./../../paper_cups/paper_cup.mochi_prefab",
+      "translation": [
+        0.0,
+        0.0,
+        0.9013
+      ]
+    },
+    {
+      "name": "peg",
+      "path": "./../../nine_hole_peg_test/nine_hole_peg.superdex_prefab",
+      "translation": [
+        0.0,
+        0.18,
+        0.901
+      ]
+    },
+    {
+      "name": "fdt_peg",
+      "path": "./../../functional_dexterity_test/fdt_peg.mochi_prefab",
+      "translation": [
+        0.0,
+        0.36,
+        0.901
+      ]
+    },
+    {
+      "name": "jar",
+      "path": "./../../kitchen/jar/jar.mochi_prefab",
+      "translation": [
+        0.0,
+        0.54,
+        0.9014
+      ]
+    }
+  ]
+}

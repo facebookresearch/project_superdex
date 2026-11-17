@@ -1,0 +1,401 @@
+{
+  "comment": "Press the same seven objects, resting on the top, down into it with a force straight down through each one's center of mass that grows over 1 s and holds for 0.5 s: sphere 200 N, block 500 N, toy brick 500 N, paper cup 100 N, nine-hole peg (on end) 100 N, FDT peg 300 N, jar 500 N. None should be pushed through: each sinks into the top by no more than a few millimeters and comes back up when let go.",
+  "assetsRoot": "",
+  "prefab": "./resting_objects.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [
+    {
+      "name": "press_sphere",
+      "enabled": true,
+      "type": "Force",
+      "target": "sphere/Sphere",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.3,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 1.3,
+            "value": 200.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 1.8,
+            "value": 200.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 1.9,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    },
+    {
+      "name": "press_block",
+      "enabled": true,
+      "type": "Force",
+      "target": "block/Block_red",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        0.0125,
+        0.0125,
+        0.0125
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.3,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 1.3,
+            "value": 500.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 1.8,
+            "value": 500.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 1.9,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    },
+    {
+      "name": "press_brick",
+      "enabled": true,
+      "type": "Force",
+      "target": "brick/large_brick_toy_2x2",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        0.0159,
+        0.0159,
+        0.011804
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.3,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 1.3,
+            "value": 500.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 1.8,
+            "value": 500.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 1.9,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    },
+    {
+      "name": "press_cup",
+      "enabled": true,
+      "type": "Force",
+      "target": "cup/Paper_Cup",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        -3.8e-05,
+        -8.8e-05,
+        0.056307
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.3,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 1.3,
+            "value": 100.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 1.8,
+            "value": 100.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 1.9,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    },
+    {
+      "name": "press_peg",
+      "enabled": true,
+      "type": "Force",
+      "target": "peg/peg",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        -0.0,
+        1e-06,
+        0.02009
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.3,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 1.3,
+            "value": 100.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 1.8,
+            "value": 100.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 1.9,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    },
+    {
+      "name": "press_fdt_peg",
+      "enabled": true,
+      "type": "Force",
+      "target": "fdt_peg/peg",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        -0.0,
+        0.0,
+        0.020001
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.3,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 1.3,
+            "value": 300.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 1.8,
+            "value": 300.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 1.9,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    },
+    {
+      "name": "press_jar",
+      "enabled": true,
+      "type": "Force",
+      "target": "jar/jar_body",
+      "frame": "World",
+      "direction": [
+        0,
+        0,
+        -1
+      ],
+      "pointLocal": [
+        -4.8e-05,
+        -7e-06,
+        0.061263
+      ],
+      "profile": {
+        "kind": "Keyframes",
+        "keys": [
+          {
+            "time": 0.3,
+            "value": 0.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 1.3,
+            "value": 500.0,
+            "interpolation": "Step"
+          },
+          {
+            "time": 1.8,
+            "value": 500.0,
+            "interpolation": "Linear"
+          },
+          {
+            "time": 1.9,
+            "value": 0.0,
+            "interpolation": "Step"
+          }
+        ]
+      }
+    }
+  ],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "sphere/Sphere"
+    },
+    {
+      "kind": "Penetration",
+      "target": "sphere/Sphere",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "block/Block_red"
+    },
+    {
+      "kind": "Penetration",
+      "target": "block/Block_red",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick/large_brick_toy_2x2"
+    },
+    {
+      "kind": "Penetration",
+      "target": "brick/large_brick_toy_2x2",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cup/Paper_Cup"
+    },
+    {
+      "kind": "Penetration",
+      "target": "cup/Paper_Cup",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "peg/peg"
+    },
+    {
+      "kind": "Penetration",
+      "target": "peg/peg",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "fdt_peg/peg"
+    },
+    {
+      "kind": "Penetration",
+      "target": "fdt_peg/peg",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "jar/jar_body"
+    },
+    {
+      "kind": "Penetration",
+      "target": "jar/jar_body",
+      "ignoreGround": true
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 2.5,
+    "groundPlane": false,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "sphere/Sphere.pos.z",
+        "block/Block_red.pos.z",
+        "brick/large_brick_toy_2x2.pos.z",
+        "cup/Paper_Cup.pos.z",
+        "peg/peg.pos.z",
+        "fdt_peg/peg.pos.z",
+        "jar/jar_body.pos.z"
+      ],
+      "height": 200
+    }
+  ]
+}

@@ -1,0 +1,106 @@
+{
+  "comment": "Drop seven objects from other SuperDex prefabs (a sphere, a block, a toy brick, a paper cup, a nine-hole test peg on end, an FDT peg and the kitchen jar) onto the top from 300 mm. Each should land and come to rest on the top, not in it: its bottom stays above the top's surface (1 m) give or take its contact band.",
+  "assetsRoot": "",
+  "prefab": "./falling_objects.superdex_prefab",
+  "prefabOverrides": [],
+  "loads": [],
+  "probes": [
+    {
+      "kind": "SolverStats",
+      "target": ""
+    },
+    {
+      "kind": "Performance",
+      "target": ""
+    },
+    {
+      "kind": "BodyPose",
+      "target": "sphere/Sphere"
+    },
+    {
+      "kind": "Penetration",
+      "target": "sphere/Sphere",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "block/Block_red"
+    },
+    {
+      "kind": "Penetration",
+      "target": "block/Block_red",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "brick/large_brick_toy_2x2"
+    },
+    {
+      "kind": "Penetration",
+      "target": "brick/large_brick_toy_2x2",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "cup/Paper_Cup"
+    },
+    {
+      "kind": "Penetration",
+      "target": "cup/Paper_Cup",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "peg/peg"
+    },
+    {
+      "kind": "Penetration",
+      "target": "peg/peg",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "fdt_peg/peg"
+    },
+    {
+      "kind": "Penetration",
+      "target": "fdt_peg/peg",
+      "ignoreGround": true
+    },
+    {
+      "kind": "BodyPose",
+      "target": "jar/jar_body"
+    },
+    {
+      "kind": "Penetration",
+      "target": "jar/jar_body",
+      "ignoreGround": true
+    }
+  ],
+  "stopConditions": [],
+  "run": {
+    "singleThreaded": true,
+    "dt": 0.005,
+    "duration": 2.0,
+    "groundPlane": false,
+    "record": {
+      "enabled": false,
+      "contactPoints": false,
+      "staticActors": false
+    }
+  },
+  "plots": [
+    {
+      "channels": [
+        "sphere/Sphere.pos.z",
+        "block/Block_red.pos.z",
+        "brick/large_brick_toy_2x2.pos.z",
+        "cup/Paper_Cup.pos.z",
+        "peg/peg.pos.z",
+        "fdt_peg/peg.pos.z",
+        "jar/jar_body.pos.z"
+      ],
+      "height": 200
+    }
+  ]
+}
