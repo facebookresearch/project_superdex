@@ -47,6 +47,10 @@ void sleep::ValidateParams(
       params.canSleep && reg.try_ctx<TagDifferentiableScene const>() != nullptr,
       error,
       "Island sleeping (SleepParams::canSleep) is not supported in differentiable scenes.");
+  MOCHI_ERROR_IF(
+      params.canSleep && reg.try_ctx<TagIKScene const>() != nullptr,
+      error,
+      "Island sleeping (SleepParams::canSleep) is not supported in scenes owned by an IKSolver.");
 }
 
 void sleep::InitIsland(entt::registry& reg, entt::entity island) {

@@ -63,6 +63,7 @@ void InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<TagFullyInitialized>(reg);
   ecs::RegisterComponent<TagHasDeepFlowCollider>(reg);
   ecs::RegisterComponent<TagAssemblyPreserveHistory>(reg);
+  ecs::RegisterComponent<TagIKScene>(reg);
   ecs::RegisterComponent<TagRigidActor>(reg);
   ecs::RegisterComponent<TagRomActor>(reg);
   ecs::RegisterComponent<TagSoftActor>(reg);

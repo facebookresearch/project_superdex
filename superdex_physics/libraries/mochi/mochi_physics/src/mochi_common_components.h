@@ -73,6 +73,10 @@ struct TagHasDeepFlowCollider {};
 // integration history. This is used by zero-step solve-free assembly.
 struct TagAssemblyPreserveHistory {};
 
+// Global (registry-context) tag for a scene owned by an IK solver, which reconfigures it for
+// optimization instead of simulation. Island sleeping cannot be enabled in such a scene.
+struct TagIKScene {};
+
 // Indicates that an actor participates in the point-cloud contact system.
 struct TagUsePointCloudContact {};
 

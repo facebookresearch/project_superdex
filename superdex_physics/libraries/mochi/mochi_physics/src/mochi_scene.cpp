@@ -737,6 +737,10 @@ void SceneImpl::Step(double timeStepSec) {
       // Store time step
       sceneTime.Advance(timeStepSec);
 
+      if (!IsFinite(timeStepSec) && _registry.ctx<CSleepParams const>().canSleep) {
+        sleep::WakeAll(_registry);
+      }
+
       // ECS compute velocities and prepare actors
       PreStepEcs(_registry);
 

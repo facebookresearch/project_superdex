@@ -414,6 +414,51 @@ class SceneSleepRecentering : public SceneSleepPerType {};
   Going to sleep
 */
 
+TEST_F(SceneSleep, QuasistaticStepWakesIslandsAndRestartsWindow) {
+  _scene->SetGravity(Real3{});
+  Actor* actor = CreateTestActor(ActorType::Rigid, /*bottomHeight=*/1_r);
+  Step();
+  auto& reg = GetRegistry();
+  entt::entity const island = GetIsland(actor);
+  auto& state = reg.get<CIslandSleepState>(island);
+  auto const params = experimental::GetSleepParams(_scene, test::ExpectOK{});
+
+  for (bool startAsleep : {false, true}) {
+    state.numConsecutiveRestSteps = params.minStepsBeforeSleep;
+    if (startAsleep) {
+      sleep::ForceSleep(reg, island);
+    }
+    int numUpdates = 0;
+    island::SetTestCallback_PostIslandUpdate(reg, [&] {
+      ++numUpdates;
+      EXPECT_TRUE(IsAwake(actor));
+      EXPECT_EQ(0, state.numConsecutiveRestSteps);
+    });
+    MOCHI_DEFER(island::SetTestCallback_PostIslandUpdate(reg, {}));
+
+    _scene->Step(std::numeric_limits<double>::infinity());
+    EXPECT_EQ(1, numUpdates);
+    EXPECT_TRUE(IsAwake(actor));
+  }
+}
+
+TEST_F(SceneSleep, QuasistaticStepSkipsWakeWhenSleepDisabled) {
+  experimental::SetSleepParams(_scene, {.canSleep = false}, test::ExpectOK{});
+  _scene->SetGravity(Real3{});
+  CreateTestActor(ActorType::Rigid, /*bottomHeight=*/1_r);
+  Step();
+  auto& reg = GetRegistry();
+  int numUpdates = 0;
+  island::SetTestCallback_PreIslandUpdate(reg, [&] {
+    ++numUpdates;
+    EXPECT_FALSE(reg.ctx<CWakeUpRequests const>().wakeAll);
+  });
+  MOCHI_DEFER(island::SetTestCallback_PreIslandUpdate(reg, {}));
+
+  _scene->Step(std::numeric_limits<double>::infinity());
+  EXPECT_EQ(1, numUpdates);
+}
+
 TEST_P(SceneSleepPerType, SettlesOnGroundThenSleeps) {
   Actor const* actor = CreateTestActor(GetParam());
   StepUntilAsleep(actor);

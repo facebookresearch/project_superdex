@@ -16,6 +16,7 @@
 
 #include "mochi_ik.h"
 #include "mochi_articulated_body.h"
+#include "mochi_common_components.h"
 #include "mochi_contact_pair_params.h"
 #include "mochi_context.h"
 #include "mochi_scene.h"
@@ -45,6 +46,13 @@ IKSolverImpl::IKSolverImpl(Scene* scene, Error& error) {
 
   // Assign _scene only after error checks. ~IKSolverImpl destroys it.
   _scene = sceneImpl;
+
+  // Dynamic sleep criteria do not apply to IK optimization. The tag keeps sleeping disabled.
+  auto sleepParams = _scene->GetSleepParams();
+  sleepParams.canSleep = false;
+  _scene->SetSleepParams(sleepParams, error);
+  MOCHI_ERROR_RETURN(error);
+  _scene->GetRegistry().set<TagIKScene>();
 
   // Use default solver params
   SetSolverParams(experimental::IKSolverParams{});

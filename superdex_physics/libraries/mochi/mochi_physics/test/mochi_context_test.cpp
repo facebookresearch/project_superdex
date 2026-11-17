@@ -1557,10 +1557,28 @@ TEST_P(MochiContextTest, CreateSceneMultithreaded) {
   RepeatMultithreaded(_mochiContext, fn, 2);
 }
 
+TEST_P(MochiContextTest, CreateIKSolver_DisablesSleepPermanently) {
+  Scene* scene = _mochiContext->CreateScene("IK Scene");
+  MOCHI_DEFER(if (_mochiContext->IsValidScene(scene)) { _mochiContext->DestroyScene(scene); });
+  experimental::SleepParams params{
+      .canSleep = true, .sleepThreshold = 0.25, .minStepsBeforeSleep = 5};
+  experimental::SetSleepParams(scene, params, ExpectOK{});
+
+  auto* solver = experimental::CreateIKSolver(scene, _mochiContext, ExpectOK{});
+  ASSERT_NE(nullptr, solver);
+  MOCHI_DEFER(experimental::DestroyIKSolver(solver, _mochiContext, ExpectOK{}));
+  params.canSleep = false;
+  EXPECT_EQ(params, experimental::GetSleepParams(scene, ExpectOK{}));
+
+  experimental::SetSleepParams(scene, {.canSleep = true}, ExpectNotOK{});
+  EXPECT_EQ(params, experimental::GetSleepParams(scene, ExpectOK{}));
+}
+
 TEST_P(MochiContextTest, CreateIKSolver_InvalidActorPreservesScene) {
   ShapeHandle shape = test::CreateUnitCubeTetMeshShape(_mochiContext);
   Scene* scene = _mochiContext->CreateScene("IK Scene");
   MOCHI_DEFER(if (_mochiContext->IsValidScene(scene)) { _mochiContext->DestroyScene(scene); });
+  experimental::SetSleepParams(scene, {.canSleep = true}, ExpectOK{});
 
   SoftActorParams params;
   params.shape = shape;
@@ -1571,6 +1589,7 @@ TEST_P(MochiContextTest, CreateIKSolver_InvalidActorPreservesScene) {
   EXPECT_EQ(nullptr, experimental::CreateIKSolver(scene, _mochiContext, ExpectNotOK{}));
   ASSERT_TRUE(_mochiContext->IsValidScene(scene));
   EXPECT_EQ(actor, scene->GetActor(actorHandle));
+  EXPECT_TRUE(experimental::GetSleepParams(scene, ExpectOK{}).canSleep);
 }
 
 TEST_P(MochiContextTest, CreateIKSolver_SceneAlreadyOwnedReturnsError) {
