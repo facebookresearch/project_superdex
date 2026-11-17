@@ -46,7 +46,7 @@
  *      MOCHI_ENUM_COUNT(Count)
  *      MOCHI_ENUM_END()
  *
- *    Struct Example (declared inside the class):
+ *    Struct Example 1 (declared inside the class):
  *
  *      struct MyStruct {
  *        int someValue = 0;
@@ -58,7 +58,7 @@
  *        MOCHI_STRUCT_END();
  *      };
  *
- *    Struct Example (declared outside the class):
+ *    Struct Example 2 (declared outside the class, defined inline):
  *
  *      struct MyStruct {
  *        int someValue = 0;
@@ -70,6 +70,22 @@
  *      MOCHI_FIELD(someValue);
  *      MOCHI_FIELD(coords);
  *      MOCHI_STRUCT_END_EX();
+ *
+ *    Struct Example 3 (declared outside the class, defined in cpp):
+ *
+ *      struct MyStruct {
+ *        int someValue = 0;
+ *        DynamicArray<Real3> coords;
+ *      };
+ *
+ *      // Then header global namespace:
+ *      MOCHI_STRUCT_DECLARE_EX(mochi::MyStruct)
+ *
+ *      // In cpp file global namespace:
+ *      MOCHI_STRUCT_DEFINITION_BEGIN_EX(mochi::MyStruct)
+ *      MOCHI_FIELD(someValue);
+ *      MOCHI_FIELD(coords);
+ *      MOCHI_STRUCT_DEFINITION_END_EX();
  *
  *    Template Example (internal):
  *
@@ -90,6 +106,37 @@
  *      MOCHI_FIELD(coords) MOCHI_ATTRIBUTE(Units("m"));
  *      MOCHI_STRUCT_END_EX();
  *
+ *    Properties and Methods Example (declared inside the class):
+ *
+ *      class MyBody {
+ *       public:
+ *        int GetNodeCount() const;
+ *        real GetMass() const;
+ *        void SetMass(real mass, Error& error);
+ *        Real3 GetCenterOfMass(Error& error) const;
+ *        void ApplyForce(Real3 const& force, Error& error);
+ *
+ *        MOCHI_STRUCT_BEGIN(mochi::MyBody)
+ *        MOCHI_PROPERTY("nodeCount", &MyBody::GetNodeCount);
+ *        MOCHI_PROPERTY_WITH_ERROR("mass", &MyBody::GetMass, &MyBody::SetMass);
+ *        MOCHI_PROPERTY_WITH_ERROR("centerOfMass", &MyBody::GetCenterOfMass);
+ *        MOCHI_METHOD_WITH_ERROR("applyForce(force)", &MyBody::ApplyForce);
+ *        MOCHI_STRUCT_END();
+ *      };
+ *
+ *    MOCHI_PROPERTY exposes a property through a getter and optional setter. Getters must work
+ *    on a const object. Without a setter, a property is read-only unless the getter returns a
+ *    non-const reference.
+ *
+ *    MOCHI_METHOD exposes a callable method. Both macros accept member function pointers or
+ *    stateless callables, such as lambdas that take the object as their first argument.
+ *
+ *    The _WITH_ERROR variants require <mochi_core/utils/reflection_error.h>. They accept member
+ *    or free function pointers, with or without a trailing Error&. They supply a local Error when
+ *    needed. If it is set, they throw std::runtime_error with its description. Reflection callers
+ *    do not pass the error argument. A plain getter can pair with a setter that takes Error&.
+ *
+ *    See @ref SR_Property and @ref SR_Method for more details.
  */
 
 /**
@@ -154,6 +201,10 @@
 #define MOCHI_STRUCT_WITH_BASE_EX(name, base) \
   MOCHI_STRUCT_BEGIN_EX(name) MOCHI_BASE_CLASS(base) MOCHI_STRUCT_END_EX()
 
+#define MOCHI_STRUCT_DECLARE_EX(name) IMPL_SR_DeclareStructEx(name)
+#define MOCHI_STRUCT_DEFINITION_BEGIN_EX(name) IMPL_SR_BeginStructDefinitionEx(name)
+#define MOCHI_STRUCT_DEFINITION_END_EX() IMPL_SR_EndStructDefinitionEx()
+
 #define MOCHI_TEMPLATE_BEGIN(name, ...) IMPL_SR_BeginStructTemplate(name, __VA_ARGS__)
 #define MOCHI_TEMPLATE_END() IMPL_SR_EndStruct()
 #define MOCHI_TEMPLATE(name, ...) MOCHI_TEMPLATE_BEGIN(name, __VA_ARGS__) MOCHI_TEMPLATE_END()
@@ -163,6 +214,9 @@
 #define MOCHI_REMOVE_FIELD(name) IMPL_SR_RemoveField(name)
 #define MOCHI_REPLACE_FIELD_NAME(realName, fieldNameToReplace) \
   MOCHI_REMOVE_FIELD(fieldNameToReplace) MOCHI_FIELD_NAME(realName, fieldNameToReplace)
+
+#define MOCHI_PROPERTY(name, ...) IMPL_SR_Property(name, __VA_ARGS__)
+#define MOCHI_METHOD(name, ...) IMPL_SR_Method(name, __VA_ARGS__)
 
 #define MOCHI_BASE_CLASS(name) IMPL_SR_BaseClass(name)
 
@@ -285,6 +339,10 @@ using JsonString = SReflect::Attribute_JsonString;
 #define MOCHI_STRUCT_EX(name)
 #define MOCHI_STRUCT_WITH_BASE_EX(name, base)
 
+#define MOCHI_STRUCT_DECLARE_EX(name)
+#define MOCHI_STRUCT_DEFINITION_BEGIN_EX(name)
+#define MOCHI_STRUCT_DEFINITION_END_EX()
+
 #define MOCHI_TEMPLATE_BEGIN(name, ...)
 #define MOCHI_TEMPLATE_END()
 #define MOCHI_TEMPLATE(name, ...)
@@ -294,7 +352,8 @@ using JsonString = SReflect::Attribute_JsonString;
 #define MOCHI_FIELD_NAME(realName, customName)
 #define MOCHI_REMOVE_FIELD(name)
 #define MOCHI_REPLACE_FIELD_NAME(realName, fieldNameToReplace)
-
+#define MOCHI_PROPERTY(name, ...)
+#define MOCHI_METHOD(name, ...)
 #define MOCHI_ATTRIBUTE(...)
 #define MOCHI_ATTRIBUTE_IF(condition, ...)
 
