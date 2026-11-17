@@ -19,6 +19,8 @@
 #include <mochi_renderer/camera.h>
 #include <mochi_renderer/debug.h>
 #include <mochi_renderer/deformable_model_instance.h>
+#include <mochi_renderer/material.h>
+#include <mochi_renderer/mesh.h>
 #include <mochi_renderer/mochi_renderer.h>
 #include <mochi_renderer/resource.h>
 #include <mochi_renderer/resource_manager.h>
@@ -952,4 +954,65 @@ TEST(StlRenderTest, RenderStlProducesPixels) {
   if (centroid.has_value()) {
     EXPECT_GT(centroid->count, 10) << "Too few non-black pixels, mesh may not have rendered";
   }
+}
+
+static void CheckInstanceMaterialLifetime(
+    SceneObject& primary,
+    ResourceManager& resources,
+    std::weak_ptr<MaterialInstance> initialMaterial) {
+  auto first = primary.GetInstanceable()->GetInstance();
+  auto second = primary.GetInstanceable()->GetInstance();
+  ASSERT_NE(first, nullptr);
+  ASSERT_NE(second, nullptr);
+  auto& rcm = resources.GetEngine()->getRenderableManager();
+  auto getMaterial = [&](SceneObject const& object) {
+    return rcm.getMaterialInstanceAt(rcm.getInstance(object.GetRootEntity()), 0);
+  };
+  auto const* initialNative = getMaterial(*first);
+  primary.SetMaterial(resources.CreateUnlitSeeThroughMaterial({0, 1, 0, 1}));
+  EXPECT_FALSE(initialMaterial.expired());
+  EXPECT_EQ(getMaterial(*first), initialNative);
+  EXPECT_EQ(getMaterial(*second), initialNative);
+
+  auto future = primary.GetInstanceable()->GetInstance();
+  ASSERT_NE(future, nullptr);
+  EXPECT_EQ(getMaterial(*future), getMaterial(primary));
+  EXPECT_NE(getMaterial(*future), initialNative);
+
+  first->SetMaterial(resources.CreateUnlitSeeThroughMaterial({0, 0, 1, 1}));
+  EXPECT_FALSE(initialMaterial.expired());
+  EXPECT_NE(getMaterial(*first), initialNative);
+  second.reset();
+  EXPECT_TRUE(initialMaterial.expired());
+}
+
+TEST(MeshMaterialLifetimeTest, InstancesKeepTheirAssignedMaterial) {
+  SKIP_IF_NO_GPU();
+  auto renderer = MochiRenderer::Create();
+  ASSERT_NE(renderer, nullptr);
+  auto& resources = *renderer->GetResourceManager();
+  std::array<float, 9> const positions{0, 0, 0, 1, 0, 0, 0, 1, 0};
+  std::array<float, 9> const normals{0, 0, 1, 0, 0, 1, 0, 0, 1};
+  std::array<int, 3> const indices{0, 1, 2};
+  auto material = resources.CreateUnlitSeeThroughMaterial({1, 0, 0, 1});
+  std::weak_ptr<MaterialInstance> const initialMaterial = material;
+  auto primary =
+      Mesh::CreateMesh(renderer->GetEngine(), positions, normals, indices, std::move(material));
+  ASSERT_NE(primary, nullptr);
+  CheckInstanceMaterialLifetime(*primary, resources, initialMaterial);
+}
+
+TEST(LineSegmentMaterialLifetimeTest, InstancesKeepTheirAssignedMaterial) {
+  SKIP_IF_NO_GPU();
+  auto renderer = MochiRenderer::Create();
+  ASSERT_NE(renderer, nullptr);
+  auto& resources = *renderer->GetResourceManager();
+  std::array<float, 6> const positions{0, 0, 0, 1, 0, 0};
+  std::array<int, 2> const indices{0, 1};
+  auto material = resources.CreateUnlitSeeThroughMaterial({1, 0, 0, 1});
+  std::weak_ptr<MaterialInstance> const initialMaterial = material;
+  auto primary = LineSegmentMesh::CreateLineSegmentMesh(
+      renderer->GetEngine(), positions, indices, std::move(material));
+  ASSERT_NE(primary, nullptr);
+  CheckInstanceMaterialLifetime(*primary, resources, initialMaterial);
 }

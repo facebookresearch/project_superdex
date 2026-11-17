@@ -493,7 +493,9 @@ IInstanceable* Mesh::GetInstanceable() {
 //--------------------------------------------------------------------------------------------------
 
 MeshInstance::MeshInstance(filament::Engine* engine, utils::Entity entity, Mesh* primaryMesh)
-    : SceneObject(engine), _primaryMesh(primaryMesh), _entity(entity) {}
+    : SceneObject(engine), _primaryMesh(primaryMesh), _entity(entity) {
+  SceneObject::_material = primaryMesh->_material;
+}
 
 MeshInstance::~MeshInstance() {
   _primaryMesh->_instanceCount--;
@@ -653,10 +655,11 @@ bool LineSegmentMesh::Update(mochi::Span<float const> positions) {
 }
 
 void LineSegmentMesh::SetMaterial(std::shared_ptr<MaterialInstance> material) {
-  _material = material;
   auto& rcm = _engine->getRenderableManager();
   auto ri = rcm.getInstance(_entity);
-  rcm.setMaterialInstanceAt(ri, 0, _material->Get());
+  rcm.setMaterialInstanceAt(ri, 0, material->Get());
+  // Keep the previous material alive until the renderable no longer references it.
+  _material = std::move(material);
 }
 
 utils::Entity LineSegmentMesh::GetRootEntity() const {
@@ -714,7 +717,9 @@ LineSegmentMeshInstance::LineSegmentMeshInstance(
     filament::Engine* engine,
     utils::Entity entity,
     LineSegmentMesh* primaryMesh)
-    : SceneObject(engine), _primaryMesh(primaryMesh), _entity(entity) {}
+    : SceneObject(engine), _primaryMesh(primaryMesh), _entity(entity) {
+  SceneObject::_material = primaryMesh->_material;
+}
 
 LineSegmentMeshInstance::~LineSegmentMeshInstance() {
   _primaryMesh->_instanceCount--;
