@@ -1026,6 +1026,7 @@ class TypeInfo {
   Allocate and default construct a new object, similar to calling `new T{}`.
   You may specify a custom allocator. Returns nullptr if not supported.
   Call TypeInfo::Delete for cleanup.
+  If the constructor throws, the memory is released and the exception propagates.
   */
   void* New(Allocator* allocator = nullptr) const;
 
@@ -1033,6 +1034,7 @@ class TypeInfo {
   Allocate and copy construct a new object, similar to calling `new T{src}`.
   You may optionally specify a custom allocator. Returns nullptr if not supported.
   Call TypeInfo::Delete for cleanup.
+  If the constructor throws, the memory is released and the exception propagates.
   */
   void* Clone(void const* src, Allocator* allocator = nullptr) const;
 

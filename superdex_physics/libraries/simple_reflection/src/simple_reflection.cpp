@@ -694,21 +694,26 @@ WriteFieldDescriptor(FieldTypeInfo const& field, picojson::value& entry, picojso
   SetField(obj, "attributes", picojson::value{WriteAttributes(field._attributes, dict)});
 }
 
+template <class Construct>
+static void* AllocateAndConstruct(TypeInfo const& type, Allocator* allocator, Construct construct) {
+  allocator = EnsureAllocator(allocator);
+  void* ptr = allocator->allocate(type._sizeInBytes, type._alignment);
+  if (ptr) {
+    try {
+      construct(ptr);
+    } catch (...) {
+      allocator->deallocate(ptr, type._sizeInBytes, type._alignment);
+      throw;
+    }
+  }
+  return ptr;
+}
+
 void* TypeInfo::New(Allocator* allocator) const {
   assert(_sizeInBytes != 0);
   assert(_alignment != 0);
   if (_constructInPlace) {
-    Allocator* const actualAllocator = EnsureAllocator(allocator);
-    auto* ptr = actualAllocator->allocate(_sizeInBytes, _alignment);
-    if (ptr) {
-      try {
-        _constructInPlace(ptr);
-      } catch (...) {
-        actualAllocator->deallocate(ptr, _sizeInBytes, _alignment);
-        throw;
-      }
-      return ptr;
-    }
+    return AllocateAndConstruct(*this, allocator, _constructInPlace);
   }
   return nullptr;
 }
@@ -717,11 +722,8 @@ void* TypeInfo::Clone(void const* src, Allocator* allocator) const {
   assert(_sizeInBytes != 0);
   assert(_alignment != 0);
   if (_constructInPlaceByCopy) {
-    auto* ptr = EnsureAllocator(allocator)->allocate(_sizeInBytes, _alignment);
-    if (ptr) {
-      _constructInPlaceByCopy(ptr, src);
-      return ptr;
-    }
+    return AllocateAndConstruct(
+        *this, allocator, [this, src](void* ptr) { _constructInPlaceByCopy(ptr, src); });
   }
   return nullptr;
 }

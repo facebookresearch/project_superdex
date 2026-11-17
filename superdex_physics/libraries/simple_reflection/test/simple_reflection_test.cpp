@@ -440,6 +440,68 @@ TEST(SReflect, DefaultAllocator) {
   }
 }
 
+namespace ThrowingConstructorTest {
+// A type whose default and copy constructors throw.
+struct Throws {
+  explicit Throws(int32_t v) : value(v) {}
+  [[noreturn]] Throws() : value(0) {
+    throw std::runtime_error("default constructor");
+  }
+  [[noreturn]] Throws(Throws const& /*unused*/) : value(0) {
+    throw std::runtime_error("copy constructor");
+  }
+  Throws& operator=(Throws const&) = default;
+  int32_t value;
+
+  SR_BeginStruct(SReflectTest::ThrowingConstructorTest::Throws);
+  SR_Field(value);
+  SR_EndStruct();
+};
+
+// Counts all allocations, and those that haven't been released.
+class CountingAllocator final : public SReflect::Allocator {
+ public:
+  int32_t numAllocations = 0;
+  int32_t numLive = 0;
+
+ private:
+  void* do_allocate(size_t bytes, size_t alignment) override {
+    ++numAllocations;
+    ++numLive;
+    return SReflect::GetDefaultAllocator()->allocate(bytes, alignment);
+  }
+  void do_deallocate(void* ptr, size_t bytes, size_t alignment) override {
+    --numLive;
+    SReflect::GetDefaultAllocator()->deallocate(ptr, bytes, alignment);
+  }
+  [[nodiscard]] bool do_is_equal(SReflect::Allocator const& other) const noexcept override {
+    return this == &other;
+  }
+};
+} // namespace ThrowingConstructorTest
+
+// Returns the message of the std::runtime_error that f throws, or an empty string.
+template <class F>
+static std::string RuntimeErrorMessage(F&& f) {
+  try {
+    f();
+  } catch (std::runtime_error const& e) {
+    return e.what();
+  }
+  return {};
+}
+
+TEST(SReflect, NewAndCloneReleaseMemoryIfConstructorThrows) {
+  using Throws = ThrowingConstructorTest::Throws;
+  ThrowingConstructorTest::CountingAllocator allocator;
+  auto const& info = SReflect::GetTypeInfo<Throws>();
+  Throws const src{1};
+  EXPECT_EQ("default constructor", RuntimeErrorMessage([&] { info.New(&allocator); }));
+  EXPECT_EQ("copy constructor", RuntimeErrorMessage([&] { info.Clone(&src, &allocator); }));
+  EXPECT_EQ(2, allocator.numAllocations);
+  EXPECT_EQ(0, allocator.numLive);
+}
+
 TEST(SReflect, PrimitiveTypes) {
   static_assert(
       (int)SReflect::CoreType::X_Count == 22, "Please update this code if you add a CoreType");
