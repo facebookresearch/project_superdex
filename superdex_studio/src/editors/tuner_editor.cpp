@@ -508,6 +508,10 @@ void TunerEditor::Initialize() {
     int const index = objects.empty() ? -1 : _stage.GetSceneObjectIndex(objects.back());
     StagedActor const* picked =
         index < 0 ? nullptr : &_stage.GetActors()[static_cast<size_t>(index)];
+    if (picked != nullptr && picked->source == StagedActorSource::Articulated &&
+        picked->sourceLinkIndex >= 0) {
+      _hierarchy.RevealLink(picked->sourceActorIndex, picked->sourceLinkIndex);
+    }
     auto const& loads = _tunerAsset->GetSpec().loads;
     _loadCards.Resize(loads.size());
     for (size_t i = 0; picked != nullptr && i < loads.size(); ++i) {
@@ -707,6 +711,7 @@ std::vector<AssetEditor::WindowDeclaration> TunerEditor::GetDefaultWindows() {
   using Dock = AssetEditor::DockRegion;
   return {
       {"Asset Tuner Loads", true, Dock::SidePanelTop, false},
+      {"Asset Tuner Prefab Hierarchy", true, Dock::SidePanelTop, false},
       {"Asset Tuner Run", true, Dock::SidePanelBottom, false},
       {"Asset Tuner Prefab Overrides", false, Dock::SidePanelBottom, false},
       {"Asset Tuner Plots", true, Dock::BottomBar, false},
@@ -726,6 +731,9 @@ void TunerEditor::ShowAuxiliaryWindows() {
   if (bool& open = _studio->GetWindowVisible("Asset Tuner Run")) {
     ShowRunWindow(&open);
   }
+  if (bool& open = _studio->GetWindowVisible("Asset Tuner Prefab Hierarchy")) {
+    ShowPrefabHierarchyWindow(&open);
+  }
   if (bool& open = _studio->GetWindowVisible("Asset Tuner Prefab Overrides")) {
     ShowOverridesWindow(&open);
   }
@@ -736,6 +744,41 @@ void TunerEditor::ShowAuxiliaryWindows() {
     ShowPhysicsSettingsWindow(&open);
   }
   ShowMeasureWindow();
+}
+
+void TunerEditor::ShowPrefabHierarchyWindow(bool* open) {
+  if (!ImGui::Begin("Asset Tuner Prefab Hierarchy", open)) {
+    ImGui::End();
+    return;
+  }
+  MochiPrefabAsset const* const prefabAsset = _tunerAsset->GetPrefabAsset();
+  if (prefabAsset == nullptr) {
+    ImGui::TextDisabled("The tuner has no prefab.");
+    ImGui::End();
+    return;
+  }
+  auto const stagedObjects = [this](PrefabHierarchyItem const& item) {
+    std::vector<SceneObject*> objects;
+    for (int const i : StagedIndicesFor(_stage, item)) {
+      if (SceneObject* const object = _stage.GetActors()[i].sceneObject) {
+        objects.push_back(object);
+      }
+    }
+    return objects;
+  };
+  PrefabHierarchy::Callbacks callbacks;
+  callbacks.isSelected = [this, &stagedObjects](PrefabHierarchyItem const& item) {
+    auto const& selected = _viewport->GetSelectedSceneObjects();
+    return std::ranges::any_of(stagedObjects(item), [&selected](SceneObject const* object) {
+      return std::ranges::find(selected, object) != selected.end();
+    });
+  };
+  // A click selects what the row covers, as clicking it in the viewport does.
+  callbacks.onClick = [this, &stagedObjects](int /*rowIndex*/, PrefabHierarchyItem const& item) {
+    _viewport->SetSelectedSceneObjects(stagedObjects(item));
+  };
+  _hierarchy.Show(prefabAsset->GetPrefab(), _stage, *_viewport, callbacks);
+  ImGui::End();
 }
 
 // Only debug draw is editable here: the time step, gravity, solver and ground come from the tuner

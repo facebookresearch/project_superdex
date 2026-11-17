@@ -17,6 +17,7 @@
 #pragma once
 
 #include "editors/asset_editor.h"
+#include "editors/prefab_hierarchy.h"
 #include "rendering/scene_stage.h"
 #include "rendering/stats.h"
 #include "simulation/mochi_async_scene.h"
@@ -227,6 +228,8 @@ class TunerEditor : public AssetEditor {
   void ShowProbeCards(bool& structural);
   void ShowStopConditionCards(bool& structural);
   void ShowOverridesWindow(bool* open);
+  // The tuner's prefab, as the Prefab Editor's Prefab Hierarchy shows it, read-only.
+  void ShowPrefabHierarchyWindow(bool* open);
   void ShowPhysicsSettingsWindow(bool* open);
 
  private:
@@ -235,6 +238,7 @@ class TunerEditor : public AssetEditor {
   SceneStage _stage;
   // The stage's render and collision stats, taken after each staging at the rest pose.
   StageStats _stageStats;
+  PrefabHierarchy _hierarchy;
   MochiAsyncScene _mochiScene;
   PrefabSimSync _simSync;
   std::unique_ptr<PhysicsDragController> _dragController;

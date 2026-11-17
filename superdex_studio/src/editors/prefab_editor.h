@@ -18,6 +18,7 @@
 
 #include "assets/prefab_constraints.h"
 #include "editors/asset_editor.h"
+#include "editors/prefab_hierarchy.h"
 #include "rendering/scene_stage.h"
 #include "rendering/stats.h"
 #include "simulation/mochi_async_scene.h"
@@ -79,18 +80,6 @@ class PrefabEditor : public AssetEditor {
     int actorIndex = -1;
     int linkIndex = -1; // articulated link index (ArticulatedLink only)
     ConstraintRef constraint = {}; // Constraint only
-  };
-
-  // Flattened hierarchy row categories (top-level actor kinds).
-  enum class RowCategory { Rigid, Soft, Articulated, NestedPrefab };
-
-  // One flattened hierarchy row. `type` is a static display label; `category`/`index` map the row
-  // back to its underlying prefab array after sorting.
-  struct HierarchyRow {
-    std::string name;
-    char const* type;
-    RowCategory category;
-    int index;
   };
 
   // Deferred structural edits collected while rendering the hierarchy, applied after the table is
@@ -159,8 +148,8 @@ class PrefabEditor : public AssetEditor {
   void OnGizmoTransformDelta(mochi::TransformRT const& delta, mochi::Real3 const& scaleMul);
   // Map a staged scene object back to the hierarchy selection it belongs to (None if unmapped).
   Selection SelectionForObject(mochi_renderer::SceneObject* object) const;
-  // Map a flattened hierarchy row to its top-level actor selection.
-  static Selection SelectionForRow(HierarchyRow const& row);
+  // The selection a hierarchy row stands for.
+  static Selection ToSelection(PrefabHierarchyItem const& item);
   // The primary (last) selection, or nullptr when nothing is selected.
   Selection const* PrimarySelection() const;
   // Whether a top-level actor row of the given kind/index is part of the current selection.
@@ -192,26 +181,12 @@ class PrefabEditor : public AssetEditor {
   //------------------------------------------------------------------------------------------------
 
   void ShowPrefabHierarchyWindow(bool* open);
-  // Recursively render an articulated actor's link/joint sub-tree. `children` maps each link to its
-  // child link indices; `ancestorsToOpen` holds links to force-open to reveal the focused link.
-  // Deferred structural edits (add/delete link) are written into `edits`.
-  void RenderArticulatedLinkTree(
-      int actorIndex,
-      mochi::prefab::ArticulatedActorPrefab const& actor,
-      std::vector<std::vector<int>> const& children,
-      std::unordered_set<int> const& ancestorsToOpen,
-      int linkIndex,
-      bool simulating,
-      HierarchyEdits& edits);
+  // A hierarchy row's right-click menu. Structural edits are deferred into `edits`.
+  void ShowHierarchyRowMenu(Selection const& item, HierarchyEdits& edits);
+  // The constraints the hierarchy lists under a row: those naming an actor, or on a link's joint.
+  std::vector<ConstraintRef> HierarchyConstraints(Selection const& item) const;
   // Highlight a staged render object (if any) with the hierarchy hover color.
   void HighlightStagedObject(mochi_renderer::SceneObject* object);
-  // Indices of the staged actors a hierarchy row covers: one actor or link, or everything an
-  // articulated actor (links and skin) or nested prefab stages.
-  std::vector<int> StagedIndicesFor(Selection const& item) const;
-  // Whether everything a hierarchy row covers is hidden in the viewport.
-  bool IsHidden(Selection const& item) const;
-  // The last cell of a hierarchy row: the eye that hides or shows what the row covers.
-  void ShowVisibilityToggle(Selection const& item);
   void ShowPrefabDetailsWindow(bool* open);
   void ShowDetailsWindow(bool* open);
   void ShowContactFilterWindow(bool* open);
@@ -344,16 +319,9 @@ class PrefabEditor : public AssetEditor {
   // rows (Rigid, Soft, Articulated actor, Nested prefab) support multi-select; articulated links
   // are always single-select.
   std::vector<Selection> _selections;
-  // Flattened-row index (into `_hierarchyRows`) anchoring Shift-range selection; -1 when unset.
+  // Row index (into `_hierarchy.GetRows()`) anchoring Shift-range selection; -1 when unset.
   int _selectionAnchorRow = -1;
-  // Persistent scratch buffers for the hierarchy window, cleared and reused each frame to avoid
-  // per-frame heap allocation: the flattened row list, and (per articulated actor) each link's
-  // child indices.
-  std::vector<HierarchyRow> _hierarchyRows;
-  std::vector<std::vector<int>> _linkChildrenScratch;
-  // One-shot flag: when set, the hierarchy expands ancestors of and scrolls to the selected
-  // articulated link (set on viewport pick, consumed while rendering the tree).
-  bool _forceLinkFocus = false;
+  PrefabHierarchy _hierarchy;
   // One-shot flag: show the Actors tab of the hierarchy (set on viewport pick).
   bool _focusActorsTab = false;
   // Draw every constraint (Show > Constraints), not just the selected and hovered one.
