@@ -32,6 +32,7 @@ void InitializeOnce(entt::registry& reg) {
   ecs::RegisterComponent<CActorInfo>(reg);
   ecs::RegisterComponent<CBoundingVolume>(reg);
   ecs::RegisterComponent<CConservativeStepBounds>(reg);
+  ecs::RegisterComponent<CDebugName>(reg);
   ecs::RegisterComponent<CContactParams>(reg);
   ecs::RegisterComponent<CConvergenceStatus>(reg);
   MOCHI_REGISTER_ALL_TIME_STEPS_PRE_POST(real, DisplacementLayer::Default, CDisplacementSlice);

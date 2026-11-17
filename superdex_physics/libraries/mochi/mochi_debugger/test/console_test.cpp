@@ -22,6 +22,8 @@
 #include <mochi_core/utils/array_utils.h>
 #include <mochi_core/utils/nd_array.h>
 #include <mochi_core/utils/string_utils.h>
+#include <mochi_physics/src/mochi_common_components.h>
+#include <mochi_physics/src/mochi_scene.h>
 
 #include <simple_reflection/simple_reflection.h>
 
@@ -264,30 +266,52 @@ class ActorConsoleTest : public ConsoleTest {
   void SetUp() override {
     ConsoleTest::SetUp();
     auto const [coordinates, connectivity] = test::CreateMinimalTetMeshUnitCube();
-    ShapeHandle const shape = _context->CreateTetMeshShape(
+    _shape = _context->CreateTetMeshShape(
         Flatten(MakeConstSpan(coordinates)),
         Flatten(MakeConstSpan(connectivity)),
         test::ExpectOK{});
-    RigidActorParams box{};
-    box.name = "box";
-    box.shape = shape;
-    box.colliderType = ColliderType::Box;
-    _sceneA->CreateRigidActor(box, test::ExpectOK{});
+    _box = AddRigid(_sceneA, "box");
+    AddRobot(_sceneA, "robot");
+  }
+
+  ActorHandle AddRigid(Scene* scene, std::string_view name) const {
+    RigidActorParams params{};
+    params.name = DynamicString{name};
+    params.shape = _shape;
+    params.colliderType = ColliderType::Box;
+    return scene->CreateRigidActor(params, test::ExpectOK{})->GetHandle();
+  }
+
+  // An articulated actor with two links
+  Actor* AddRobot(
+      Scene* scene,
+      std::string_view name,
+      std::string_view link0 = "link0",
+      std::string_view link1 = "link1") const {
     ArticulatedActorParams robot{};
-    robot.name = "robot";
+    robot.name = DynamicString{name};
     robot.joints.resize(2, {});
     robot.joints[0].type = ArticulatedJointType::Free;
     robot.joints[1].type = ArticulatedJointType::Spherical;
     robot.links.resize(2, {});
-    robot.links[0].name = "link0";
-    robot.links[0].shape = shape;
+    robot.links[0].name = DynamicString{link0};
+    robot.links[0].shape = _shape;
     robot.links[0].colliderType = ColliderType::Box;
-    robot.links[1].name = "link1";
+    robot.links[1].name = DynamicString{link1};
     robot.links[1].parentLink = 0;
-    robot.links[1].shape = shape;
+    robot.links[1].shape = _shape;
     robot.links[1].colliderType = ColliderType::Box;
-    _sceneA->CreateArticulatedActor(robot, test::ExpectOK{});
+    return scene->CreateArticulatedActor(robot, test::ExpectOK{});
   }
+
+  void ExpectDirectories(std::string_view path, DynamicArray<std::string> expected) {
+    std::ranges::sort(expected);
+    std::string const command = "ls " + std::string{path};
+    ExpectOutput(command, Join(expected, "\n"), Run({command}));
+  }
+
+  ShapeHandle _shape;
+  ActorHandle _box;
 };
 
 } // namespace
@@ -548,4 +572,59 @@ TEST_F(ConsoleTest, SceneDebugNames) {
     std::string const command = "cd /scenes/" + std::string{name};
     EXPECT_EQ(Lines{SReflect::ToJsonString(std::string{createdAs}, false)}, Run({command, "name"}));
   }
+}
+
+TEST_F(ActorConsoleTest, ActorDebugNames) {
+  std::pair<std::string_view, std::string_view> const names[] = {
+      {"", "Rigid"},
+      {".", "Rigid2"},
+      {"sceneInstance/nestedPrefab/robot", "sceneInstance_nestedPrefab_robot"},
+      {"my box", "my_box"},
+      {"[robot", "_robot"}};
+  DynamicArray<std::string> expected;
+  for (auto const& [createdAs, name] : names) {
+    AddRigid(_sceneB, createdAs);
+    expected.emplace_back(name);
+  }
+  AddRobot(_sceneB, "");
+  expected.emplace_back("Articulated");
+  ExpectDirectories("/scenes/1_2/actors", expected);
+  ExpectDirectories("/scenes/1_2/actors/Articulated/children", {"link0", "link1"});
+  EXPECT_EQ(
+      Lines{"\"sceneInstance/nestedPrefab/robot\""},
+      Run({"/scenes/1_2/actors/sceneInstance_nestedPrefab_robot/name"}));
+}
+
+TEST_F(ActorConsoleTest, DuplicateNamesStayStable) {
+  ActorHandle const second = AddRigid(_sceneA, "box");
+  Run({"ls /scenes/A/actors"});
+  auto const [plain, suffixed] = std::minmax(_box, second);
+  AddRigid(_sceneA, "box");
+  ExpectDirectories("/scenes/A/actors", {"box", "box2", "box3", "robot"});
+
+  // A freed name can be taken again, but numbers continue from the last one, so box2 is not reused
+  _sceneA->DestroyActor(plain);
+  _sceneA->DestroyActor(suffixed);
+  AddRigid(_sceneA, "box");
+  AddRigid(_sceneA, "box");
+  ExpectDirectories("/scenes/A/actors", {"box", "box3", "box4", "robot"});
+}
+
+TEST_F(ActorConsoleTest, ChildrenHaveTheirOwnNameScope) {
+  Actor const* const robot = AddRobot(_sceneB, "a/b/robot", "l 0", "l_0");
+  AddRigid(_sceneB, "l_0");
+  ExpectDirectories("/scenes/1_2/actors", {"a_b_robot", "l_0"});
+  ExpectDirectories("/scenes/1_2/actors/a_b_robot/children", {"l_0", "l_02"});
+  EXPECT_STREQ("a/b/robot", robot->GetName());
+}
+
+TEST_F(ActorConsoleTest, DisconnectRemovesDebugNames) {
+  entt::registry const& reg = assert_cast<SceneImpl*>(_sceneA)->GetRegistry();
+  auto const numNames = [&] { return static_cast<int>(reg.view<CDebugName const>().size()); };
+  Run({"ls /scenes/A/actors"});
+  EXPECT_EQ(_sceneA->GetNumActors(), numNames());
+  DisconnectClient();
+  test::WaitUntil([&] { return !_server->HasConnection(); });
+  Run({});
+  EXPECT_EQ(0, numNames());
 }

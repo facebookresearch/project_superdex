@@ -39,7 +39,6 @@
 #include <mochi_core/utils/nd_array.h>
 #include <mochi_core/utils/nd_array_utils.h>
 #include <mochi_core/utils/quaternion.h>
-#include <mochi_core/utils/reflection.h>
 #include <mochi_core/utils/span.h>
 #include <mochi_core/utils/transform_rt.h>
 #include <mochi_debugger/lib/command_line.h>
@@ -49,12 +48,12 @@
 #include <mochi_renderer/mochi_renderer.h>
 
 #include <algorithm>
-#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 #if MOCHI_PLATFORM_WINDOWS
@@ -307,16 +306,6 @@ void MochiDebuggerApp::OnUpdate() {
   }
 }
 
-// Format a display name for an unnamed actor as: "unnamed_<type>" with the actor type lower-cased.
-static std::string UnnamedActorLabel(ActorType actorType) {
-  char const* const typeStr = SReflect::EnumToString(actorType);
-  std::string type = (typeStr != nullptr && typeStr[0] != '\0') ? typeStr : "actor";
-  for (char& c : type) {
-    c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-  }
-  return "unnamed_" + type;
-}
-
 // Per-frame refresh of scene selection, the per-actor records, and the rendered scene. This is
 // the single place that calls DebugClient::GetSceneSyncData, so the whole frame (GUI + viewport)
 // sees one consistent snapshot. The synced meshes (data.actorMeshes) are non-owning views valid
@@ -383,7 +372,6 @@ void MochiDebuggerApp::ImportActors(SceneSyncData const& sync) {
 
   // Pass 1: upsert a record per synced actor. actorMeshes is 1:1 with actors; an actor without a
   // surface mesh has an empty view.
-  DynamicArray<ActorHandle> newActors;
   for (int i = 0; i < isize(sync.actors); ++i) {
     protocol::ActorSyncData const& actor = sync.actors[i];
     MeshSyncDataView const mesh =
@@ -399,24 +387,11 @@ void MochiDebuggerApp::ImportActors(SceneSyncData const& sync) {
       info.type = actor.type;
       info.name = std::string{actor.name};
       sp.treeDirty = true;
-      newActors.push_back(actor.handle);
     }
-  }
-
-  for (ActorHandle const handle : newActors) {
-    ActorInfo& info = sp.actors.at(handle);
-    auto const parentIt = sp.actors.find(info.parent);
-
-    // Format the display name, removing the full parent path from child actor names.
-    info.displayName = info.name;
-    if (parentIt != sp.actors.end()) {
-      std::string const prefix = parentIt->second.name + "/";
-      if (info.displayName.starts_with(prefix)) {
-        info.displayName.erase(0, prefix.size());
-      }
-    }
-    if (info.displayName.empty()) {
-      info.displayName = UnnamedActorLabel(info.type);
+    // The debug name can change when the client reconnects
+    if (info.debugName != std::string_view{actor.debugName}) {
+      info.debugName = std::string{actor.debugName};
+      sp.treeDirty = true;
     }
   }
 

@@ -123,6 +123,13 @@ struct CActorInfo : public NoCopy {
   ActorType type;
 };
 
+// The actor's name in the debug console and the debugger GUI, while a debugger is connected (see
+// dbg::AssignDebugNames)
+struct CDebugName : public NoCopy {
+  explicit CDebugName(std::string name) : name(std::move(name)) {}
+  std::string name;
+};
+
 // The convergence status of an actor during the current time step.
 struct CConvergenceStatus : public NoCopy {
   ConvergenceStatus stageStatus = ConvergenceStatus::None; // Per-stage status

@@ -36,7 +36,7 @@ struct ActorInfo {
   ActorHandle parent; // Parent articulated actor; invalid if top-level.
   ActorType type = {};
   std::string name; // Actual actor name on server
-  std::string displayName; // Modified for unnamed actors and for child actors.
+  std::string debugName; // Unique among siblings and needs no quotes in the console
   bool hasMesh = false; // Whether the actor has a renderable surface mesh.
 
   // Child actors in display order

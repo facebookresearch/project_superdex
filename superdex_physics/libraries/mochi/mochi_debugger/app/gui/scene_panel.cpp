@@ -84,7 +84,7 @@ static void DrawActorIconAndName(ActorInfo const& info, ActorRowLayout const& la
   ImGui::TextUnformatted(IconForActorType(info.type));
   ImGui::SameLine();
   ImGui::SetCursorPosX(iconStartX + layout.typeIconWidth + layout.spacing);
-  ImGui::TextUnformatted(info.displayName.c_str());
+  ImGui::TextUnformatted(info.debugName.c_str());
 }
 
 // Draw the render visibility toggle on the current line, right-justified.
@@ -181,11 +181,11 @@ static void RebuildActorTree(ScenePanelState& sp) {
     }
   }
 
-  // Sort by (displayName, handle). The handle tiebreak makes the ordering total, which matters
+  // Sort by (debugName, handle). The handle tiebreak makes the ordering total, which matters
   // because unordered_map iteration order is not deterministic.
   auto const byNameThenHandle = [&sp](ActorHandle a, ActorHandle b) {
-    return std::tie(sp.actors.at(a).displayName, a.value) <
-        std::tie(sp.actors.at(b).displayName, b.value);
+    return std::tie(sp.actors.at(a).debugName, a.value) <
+        std::tie(sp.actors.at(b).debugName, b.value);
   };
   std::ranges::sort(sp.sortedRootActors, byNameThenHandle);
   for (auto& [handle, info] : sp.actors) {

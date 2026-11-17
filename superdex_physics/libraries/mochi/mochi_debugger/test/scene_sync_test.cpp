@@ -36,6 +36,8 @@
 #include <deque>
 #include <memory>
 #include <ranges>
+#include <string>
+#include <string_view>
 
 using namespace mochi;
 using namespace mochi::dbg;
@@ -163,7 +165,7 @@ class SceneSyncTest : public MochiDebuggerTest {
   // Create a rigid actor with properties that depend on _actorCount so they are all different.
   ActorHandle CreateRigidActor(Scene* scene, bool isStatic = false) {
     RigidActorParams params;
-    params.name = Format("Rigid%2d", _actorCount);
+    params.name = Format("Rigid%02d", _actorCount);
     params.shape = CreateUnitCube();
     params.worldFromLocal.SetRotation(Quaternion::RotationX(0.1_r * _actorCount));
     params.worldFromLocal.SetTranslation(Real3{2.0_r * _actorCount, 0_r, 0_r});
@@ -175,7 +177,7 @@ class SceneSyncTest : public MochiDebuggerTest {
   // Create a soft actor with properties that depend on _actorCount so they are all different.
   ActorHandle CreateSoftActor(Scene* scene) {
     SoftActorParams params;
-    params.name = Format("Soft%2d", _actorCount);
+    params.name = Format("Soft%02d", _actorCount);
     params.shape = CreateUnitCube();
     params.worldFromLocal.SetRotation(Quaternion::RotationX(0.1_r * _actorCount));
     params.worldFromLocal.SetTranslation(Real3{2.0_r * _actorCount, 0_r, 0_r});
@@ -186,7 +188,7 @@ class SceneSyncTest : public MochiDebuggerTest {
   // Create a 2-link articulated actor. Its nested link actors report this actor as their parent.
   ActorHandle CreateArticulatedActor(Scene* scene) {
     ArticulatedActorParams params;
-    params.name = Format("Articulated%2d", _actorCount);
+    params.name = Format("Articulated%02d", _actorCount);
     params.worldFromRoot.SetTranslation(Real3{2.0_r * _actorCount, 0_r, 0_r});
     params.joints = {
         {.type = ArticulatedJointType::Free}, {.type = ArticulatedJointType::Spherical}};
@@ -213,13 +215,13 @@ class SceneSyncTest : public MochiDebuggerTest {
         std::make_shared<ConstrainedNodesData const>(DynamicArray<int>{0}));
 
     SoftActorParams softParams;
-    softParams.name = Format("SoftSkin%2d", _actorCount);
+    softParams.name = Format("SoftSkin%02d", _actorCount);
     softParams.shape =
         assert_cast<ContextImpl*>(_context)->RegisterShape(softShape, test::ExpectOK{});
     softParams.hasGravity = false;
 
     SoftSkinnedActorParams params;
-    params.skeletonParams.name = Format("SoftSkinned%2d", _actorCount);
+    params.skeletonParams.name = Format("SoftSkinned%02d", _actorCount);
     params.skeletonParams.worldFromRoot.SetTranslation(Real3{2.0_r * _actorCount, 0_r, 0_r});
     params.skeletonParams.joints = {{.type = ArticulatedJointType::Free}};
     params.skeletonParams.links = {
@@ -243,11 +245,19 @@ class SceneSyncTest : public MochiDebuggerTest {
 
     // Parent: nested actors report their parent articulated actor; standalone actors report an
     // invalid handle.
+    std::string parentPrefix;
     if (actor->IsNestedLinkActor() || actor->IsNestedSoftActor()) {
       EXPECT_EQ(actor->GetArticulatedActor(test::ExpectOK{}), data.parent);
+      Actor const* parent = scene->GetActor(data.parent);
+      ASSERT_NE(nullptr, parent);
+      parentPrefix = std::string{parent->GetName()} + "/";
     } else {
       EXPECT_FALSE(data.parent.IsValid());
     }
+
+    // The fixture's names need no changes for the console, so the debug name is the name
+    // without the parent's prefix
+    EXPECT_EQ(actor->GetName(), parentPrefix + std::string{data.debugName});
   }
 
   template <typename Fn>
@@ -747,6 +757,26 @@ TEST_F(SceneSyncTest, SyncReportsNestedActorParents) {
   Actor* softSkinnedActor = scene->GetActor(softSkinned);
   ASSERT_NE(nullptr, softSkinnedActor);
   expectParents(softSkinned, softSkinnedActor->GetNestedSoftActors(test::ExpectOK{}));
+}
+
+TEST_F(SceneSyncTest, SyncSendsDebugNames) {
+  Scene* scene = CreateSceneNoGravity();
+  RigidActorParams params{};
+  params.name = "my box";
+  params.shape = CreateUnitCube();
+  ActorHandle const actor = scene->CreateRigidActor(params, test::ExpectOK{})->GetHandle();
+
+  StartServer();
+  ConnectClient();
+  test::WaitUntil([&] { return ClientHasScene(scene->GetHandle()); });
+
+  SetSceneSyncParams(ActorSyncParams());
+  _client->SelectScene(scene->GetHandle());
+  auto const syncData = WaitForSync(scene, GetSceneSyncData().counter + 1);
+  ASSERT_EQ(1, isize(syncData.actors));
+  EXPECT_EQ(actor, syncData.actors[0].handle);
+  EXPECT_EQ("my box", std::string_view{syncData.actors[0].name});
+  EXPECT_EQ("my_box", std::string_view{syncData.actors[0].debugName});
 }
 
 TEST_F(SceneSyncTest, SyncUpdatesWhenActorMoves) {

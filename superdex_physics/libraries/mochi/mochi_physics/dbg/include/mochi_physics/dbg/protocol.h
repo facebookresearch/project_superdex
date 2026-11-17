@@ -197,7 +197,8 @@ struct ActorSyncData {
   ActorType type = {};
   ActorHandle handle = {};
   ActorHandle parent = {}; // Parent articulated actor for nested link/soft actors; invalid if none.
-  DynamicString name = {};
+  DynamicString name = {}; // Actor::GetName()
+  DynamicString debugName = {}; // Unique among the top-level actors or a parent's children
   Float3 position; // XYZ
   Float4 rotation; // Quaternion XYZW
   bool isStatic = false;
@@ -209,6 +210,7 @@ struct ActorSyncData {
   MOCHI_FIELD(handle)
   MOCHI_FIELD(parent)
   MOCHI_FIELD(name)
+  MOCHI_FIELD(debugName)
   MOCHI_FIELD(position)
   MOCHI_FIELD(rotation)
   MOCHI_FIELD(isStatic)

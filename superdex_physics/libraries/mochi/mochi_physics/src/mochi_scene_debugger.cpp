@@ -18,6 +18,7 @@
 #include "mochi_active_collisions.h"
 #include "mochi_common_components.h"
 #include "mochi_constraint.h"
+#include "mochi_ecs_utils.h"
 #include "mochi_island.h"
 #include "mochi_scene.h"
 #include "mochi_scene_console.h"
@@ -270,6 +271,8 @@ class SceneDebuggerImpl final : public SceneDebugger {
   // Whether this instance enabled the scene profiler (scene-thread only).
   bool _profilerEnabled = false;
 
+  ActorDebugNameSuffixes _debugNameSuffixes; // Scene-thread only
+
   // Real-time tracking state
   struct RealTimeTracking {
     std::optional<double> realTimeStart; // Real start time for real-time tracking
@@ -307,8 +310,9 @@ void SceneDebuggerImpl::Init(SceneImpl* scene) {
   MOCHI_ASSERT(_sceneHandle.IsValid(), "Invalid SceneHandle");
 
   // Register message handlers
-  _dispatcher.Register<protocol::CommandRequest>(
-      [this](auto* scene, auto&& msg) { SendToClient(ExecuteSceneCommand(*scene, msg)); });
+  _dispatcher.Register<protocol::CommandRequest>([this](auto* scene, auto&& msg) {
+    SendToClient(ExecuteSceneCommand(*scene, _debugNameSuffixes, msg));
+  });
   _dispatcher.Register<protocol::DebugDrawRequest>([this](auto* scene, auto&& msg) {
     OnDebugDrawRequest(scene, std::forward<decltype(msg)>(msg));
   });
@@ -771,11 +775,14 @@ void SceneDebuggerImpl::SendSyncReply(
       reply.actorMeshRanges.emplace();
       reply.meshVersionCounter = _meshVersionCounter;
     }
+    AssignDebugNames(*scene, _debugNameSuffixes);
+    entt::registry const& reg = scene->GetRegistry();
     scene->ForEachActor([&](Actor const* actor) {
       protocol::ActorSyncData a;
       a.type = actor->GetType();
       a.handle = actor->GetHandle();
       a.name = actor->GetName();
+      a.debugName = reg.get<CDebugName>(GetEntityUnchecked(a.handle)).name;
       auto const& rt = actor->GetRootTransform();
       a.position = StaticCast<Float3>(rt.GetTranslation());
       a.rotation = StaticCast<Float4>(rt.GetRotation().ToReal4());
@@ -1035,6 +1042,10 @@ void SceneDebuggerImpl::ShutdownOnSceneThread(SceneImpl* scene) {
     profiler::Disable(scene->GetRegistry());
     _profilerEnabled = false;
   }
+
+  // Debug names exist only while a debugger is connected
+  scene->GetRegistry().clear<CDebugName>();
+  _debugNameSuffixes.clear();
 }
 
 std::shared_ptr<SceneDebugger>

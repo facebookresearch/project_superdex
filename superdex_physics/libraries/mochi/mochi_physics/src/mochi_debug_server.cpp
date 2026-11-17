@@ -18,6 +18,7 @@
 #include "mochi_debug_draw.h"
 #include "mochi_ecs.h"
 #include "mochi_scene.h"
+#include "mochi_scene_console.h"
 #include "mochi_scene_debugger.h"
 
 #include <mochi_core/net/message_server.h>
@@ -141,37 +142,14 @@ class DebugServerImpl : public DebugServerInternal {
 // Make a debug name from a scene's name that no scene in state uses: the sanitized name, or
 // "scene" if that is empty, followed by the first free number from 2 up if it is taken.
 static std::string MakeDebugName(DebugServerImpl::State& state, std::string_view sceneName) {
-  std::string base{sceneName};
-  // These would need quotes in a console path or the terminal, where a leading '[' or '{' starts a
-  // bracket group
-  std::ranges::replace_if(
-      base,
-      [](char c) {
-        auto const byte = static_cast<unsigned char>(c);
-        return c == '/' || c == '"' || c == '\'' || byte <= ' ' || byte == 0x7F;
-      },
-      '_');
-  if (base.starts_with('[') || base.starts_with('{')) {
-    base[0] = '_';
-  }
-  if (base.empty() || base == "." || base == "..") {
+  std::string base = SanitizeConsoleName(sceneName);
+  if (base.empty()) {
     base = "scene";
   }
-  auto const isTaken = [&](std::string const& name) {
+  return MakeUniqueDebugName(base, state.nextDebugNameSuffix, [&](std::string const& name) {
     return std::ranges::find(state.scenes, name, &DebugServerImpl::SceneInfo::debugName) !=
         state.scenes.end();
-  };
-  if (!isTaken(base)) {
-    return base;
-  }
-  // Start where the last search for this base ended, so the 100th "scene" doesn't try scene2 to
-  // scene99 first
-  int& suffix = state.nextDebugNameSuffix.try_emplace(base, 2).first->second;
-  std::string name;
-  do {
-    name = base + std::to_string(suffix++);
-  } while (isTaken(name));
-  return name;
+  });
 }
 
 // Format a human readable label for UDP discovery.
