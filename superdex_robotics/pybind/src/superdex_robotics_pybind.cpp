@@ -50,14 +50,14 @@ namespace {
  * bases are bound (generated) as [no_init, no_destruct] types that Python does not subclass. The
  * adapter keeps the C++ side authoritative and treats the Python instance as held state.
  *
- * Ownership: the RoboticsContext holds the sole authoritative lifetime. The adapter holds one
- * strong reference to the Python instance and drops it in its destructor. Component destruction is
+ * The adapter releases its Python reference in its destructor. Component destruction is
  * funnelled through RoboticsContext teardown, which the physics module always runs from Python with
  * the interpreter and GIL alive (mochi.shutdown() or its atexit hook), so manipulating Python
  * refcounts here is safe. The GIL is acquired defensively anyway (reentrant when already held). */
 template <typename BaseT>
 class PythonComponent : public BaseT {
  public:
+  /* Owned by the RoboticsContext; holds a strong reference to the Python instance. */
   /* @p baseArgs are forwarded to BaseT's constructor archetype, which differs per component kind
    * ((prefab, actor, error) for controllers, (actor, error) for sensors and actuators), so they
    * trail the arguments this adapter consumes itself. */
@@ -66,9 +66,6 @@ class PythonComponent : public BaseT {
       : BaseT(std::forward<BaseArgs>(baseArgs)...),
         _impl(std::move(impl)),
         _typeName(std::move(typeName)) {}
-
-  /* Owned by the RoboticsContext and holds a strong Python reference; non-copyable, non-movable. */
-  MOCHI_DECLARE_NO_COPY_NO_MOVE(PythonComponent)
 
   [[nodiscard]] std::string_view GetTypeName() const override {
     return _typeName;

@@ -74,8 +74,6 @@ class MOCHI_API SensorArticulatedJointWrench : public SensorBase {
       std::string_view paramArgs,
       superdex::Error& error);
 
-  MOCHI_DECLARE_NO_COPY_NO_MOVE(SensorArticulatedJointWrench)
-
   ~SensorArticulatedJointWrench() override;
 
   void Shutdown();

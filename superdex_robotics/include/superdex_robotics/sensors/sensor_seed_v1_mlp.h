@@ -103,8 +103,6 @@ class MOCHI_API SensorSeedV1MLP : public SensorBase {
    * @c weightsPath is used as-is (assumed already resolved). */
   SensorSeedV1MLP(Actor* linkActor, Params const& params, superdex::Error& error);
 
-  MOCHI_DECLARE_NO_COPY_NO_MOVE(SensorSeedV1MLP)
-
   ~SensorSeedV1MLP() override;
 
   /* @brief Compute sensor signal.

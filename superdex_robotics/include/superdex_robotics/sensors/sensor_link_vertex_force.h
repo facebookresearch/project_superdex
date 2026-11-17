@@ -63,8 +63,6 @@ class MOCHI_API SensorLinkVertexForce : public SensorBase {
   SensorLinkVertexForce(Actor* linkActor, Params const& params, superdex::Error& error);
   ~SensorLinkVertexForce() override;
 
-  MOCHI_DECLARE_NO_COPY_NO_MOVE(SensorLinkVertexForce)
-
   [[nodiscard]] SensorStepResult Step(StepTime const& now, superdex::Error& error) override;
 
   [[nodiscard]] Span<std::byte const> TryGetMetadata(std::string_view key) const override;

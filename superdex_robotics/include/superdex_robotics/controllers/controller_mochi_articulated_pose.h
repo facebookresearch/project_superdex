@@ -66,7 +66,8 @@ struct ControllerMochiArticulatedPoseTarget {
 
 /* @brief ControllerMochiArticulatedPose -- drives a mochi ArticulatedPoseController
  * via either per-link LocalToParent transforms (converted to world-space targets)
- * or non-root pose DOFs combined with a world-space root transform. */
+ * or non-root pose DOFs combined with a world-space root transform.
+ * Owns the actor's singleton ArticulatedPoseController registration, removed in the destructor. */
 
 // NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor)
 class MOCHI_API ControllerMochiArticulatedPose : public ControllerBase {
@@ -92,13 +93,6 @@ class MOCHI_API ControllerMochiArticulatedPose : public ControllerBase {
    * @param robot The articulated robot actor to control.
    * @param error Error status. */
   ControllerMochiArticulatedPose(BotPrefab const* prefab, Actor* robot, superdex::Error& error);
-
-  /* This controller owns a singleton ArticulatedPoseController registration on the
-   * actor (removed in the destructor), so it is neither copyable nor movable. */
-  ControllerMochiArticulatedPose(ControllerMochiArticulatedPose const&) = delete;
-  ControllerMochiArticulatedPose& operator=(ControllerMochiArticulatedPose const&) = delete;
-  ControllerMochiArticulatedPose(ControllerMochiArticulatedPose&&) = delete;
-  ControllerMochiArticulatedPose& operator=(ControllerMochiArticulatedPose&&) = delete;
 
   /* @brief Add a mochi ArticulatedPoseController to the actor using the default/current params.
    * Mochi ArticulatedPoseController is a singleton per articulation so only one controller can be

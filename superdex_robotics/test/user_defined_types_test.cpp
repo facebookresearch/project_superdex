@@ -32,6 +32,7 @@
 
 #include <string>
 #include <string_view>
+#include <type_traits>
 
 using namespace mochi;
 using namespace superdex::robotics;
@@ -176,6 +177,19 @@ class UserActuator final : public ActuatorBase {
  private:
   std::string _paramArgs;
 };
+
+static_assert(!std::is_copy_constructible_v<UserController>);
+static_assert(!std::is_copy_assignable_v<UserController>);
+static_assert(!std::is_move_constructible_v<UserController>);
+static_assert(!std::is_move_assignable_v<UserController>);
+static_assert(!std::is_copy_constructible_v<UserSensor>);
+static_assert(!std::is_copy_assignable_v<UserSensor>);
+static_assert(!std::is_move_constructible_v<UserSensor>);
+static_assert(!std::is_move_assignable_v<UserSensor>);
+static_assert(!std::is_copy_constructible_v<UserActuator>);
+static_assert(!std::is_copy_assignable_v<UserActuator>);
+static_assert(!std::is_move_constructible_v<UserActuator>);
+static_assert(!std::is_move_assignable_v<UserActuator>);
 
 class UserDefinedTypesTest : public testing::Test {
  protected:
