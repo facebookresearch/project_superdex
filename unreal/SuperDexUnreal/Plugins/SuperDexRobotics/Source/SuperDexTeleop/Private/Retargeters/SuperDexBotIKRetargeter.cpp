@@ -322,6 +322,7 @@ bool USuperDexBotIKRetargeter::InitializeRetargeter() {
   }
   NativeConfig = Config->ToNative();
   OutputModel = Config->OutputBot->GetBotPrefab();
+  PrepareBiasedCommandLimits();
   InputModel = Config->InputBot->GetBotPrefab();
   OutputModelJson = Config->OutputBot->GetBotPrefabJson();
   InputModelJson = Config->InputBot->GetBotPrefabJson();
@@ -471,10 +472,9 @@ bool USuperDexBotIKRetargeter::GetTransformedPose_Implementation(
       return false;
     }
   }
-  for (int32 I = 0; I < Positions.Num(); ++I) {
-    if (!JointAngleMultiplierExcludeIndex.Contains(I)) {
-      Positions[I] *= JointAngleMultiplier;
-    }
+  if (!ApplyJointBiasAndLimits(Positions)) {
+    SetStatus(false, TEXT("Biased command must have a valid width and finite coordinates."), true);
+    return false;
   }
   TArray<double> DisplayPositions = Positions;
   if (bSubscribeToTeleopHandJointPositions && GetOwner()) {
@@ -679,6 +679,67 @@ void USuperDexBotIKRetargeter::PublishPending() {
   bPublishing = false;
 }
 
+void USuperDexBotIKRetargeter::PrepareBiasedCommandLimits() {
+  BiasedCommandLimits.Init(FBiasedCommandLimit{}, OutputModel._numDofs);
+  int32 PreviousJoint = INDEX_NONE;
+  int32 Component = 0;
+  for (int32 I = 0; I < BiasedCommandLimits.Num(); ++I) {
+    const int32 JointIndex = OutputModel._dofIndices[I];
+    Component = JointIndex == PreviousJoint ? Component + 1 : 0;
+    PreviousJoint = JointIndex;
+    const auto& Joint = OutputModel.joints[JointIndex];
+    const bool bScalar = Joint.type == mochi::ArticulatedJointType::Revolute ||
+        Joint.type == mochi::ArticulatedJointType::Prismatic;
+    if (!bScalar && Joint.type != mochi::ArticulatedJointType::Spherical) {
+      continue;
+    }
+    // Match MakeBotPose's authored-limit semantics, but never its random fallback ranges.
+    // Native prismatic commands/FK use instantiated metres, unlike nominal prefab seeds.
+    const mochi::real Scale =
+        Joint.type == mochi::ArticulatedJointType::Prismatic ? OutputModel.scale : mochi::real(1);
+    auto& Limit = BiasedCommandLimits[I];
+    if (Joint.minLimit.has_value() && mochi::IsFinite(*Joint.minLimit)) {
+      Limit.bHasMinimum = true;
+      Limit.Minimum = static_cast<double>(
+          (bScalar ? mochi::Dot(*Joint.minLimit, Joint.axis) : (*Joint.minLimit)[Component]) *
+          Scale);
+    }
+    if (Joint.maxLimit.has_value() && mochi::IsFinite(*Joint.maxLimit)) {
+      Limit.bHasMaximum = true;
+      Limit.Maximum = static_cast<double>(
+          (bScalar ? mochi::Dot(*Joint.maxLimit, Joint.axis) : (*Joint.maxLimit)[Component]) *
+          Scale);
+    }
+  }
+}
+
+bool USuperDexBotIKRetargeter::ApplyJointBiasAndLimits(TArray<double>& Positions) const {
+  for (int32 I = 0; I < Positions.Num(); ++I) {
+    if (!JointAngleMultiplierExcludeIndex.Contains(I)) {
+      Positions[I] *= JointAngleMultiplier;
+    }
+  }
+  // Preserve the unbiased path exactly. Exclusions bypass bias, not authored bounds.
+  if (JointAngleMultiplier != 1.0) {
+    if (Positions.Num() != BiasedCommandLimits.Num()) {
+      return false;
+    }
+    for (int32 I = 0; I < Positions.Num(); ++I) {
+      const auto& Limit = BiasedCommandLimits[I];
+      if (Limit.bHasMinimum) {
+        Positions[I] = FMath::Max(Positions[I], Limit.Minimum);
+      }
+      if (Limit.bHasMaximum) {
+        Positions[I] = FMath::Min(Positions[I], Limit.Maximum);
+      }
+    }
+    // Feedback FK may use a different finite vector, so validate the command independently.
+    return std::all_of(
+        Positions.begin(), Positions.end(), [](double Q) { return FMath::IsFinite(Q); });
+  }
+  return true;
+}
+
 void USuperDexBotIKRetargeter::ReleaseSolver() {
   if (bPublishTeleopHandJointTargets && GetOwner()) {
     if (auto* Node = GetOwner()->GetComponentByClass<UTeleopNodeOperatorComponent>()) {
@@ -693,6 +754,7 @@ void USuperDexBotIKRetargeter::ReleaseSolver() {
   InitializedOutputBot = nullptr;
   InitializedInputBot = nullptr;
   PreviousInputPositions.clear();
+  BiasedCommandLimits.Reset();
   LargeInputResidualFrames = 0;
   FScopeLock Lock(&ResultMutex);
   ++SolverGeneration;

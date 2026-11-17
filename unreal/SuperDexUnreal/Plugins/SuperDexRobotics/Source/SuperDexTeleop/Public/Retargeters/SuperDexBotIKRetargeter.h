@@ -65,7 +65,9 @@ class SUPERDEXTELEOP_API USuperDexBotIKRetargeter : public USuperDexRetargeter {
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bot IK|Teleop")
   bool bSubscribeToTeleopHandJointPositions = false;
 
-  /** Preserve legacy finger bias in hand-only prefab DOF order (never combined arm indices). */
+  /** Bias non-excluded hand-only DOFs, then clamp every command DOF to authored output limits.
+   * Bias 1.0 bypasses clamping; received feedback visualization and the raw solver stay unchanged.
+   */
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bot IK|Teleop")
   double JointAngleMultiplier = 1.0;
 
@@ -115,6 +117,17 @@ class SUPERDEXTELEOP_API USuperDexBotIKRetargeter : public USuperDexRetargeter {
 
  private:
   friend struct FSuperDexBotIKRetargeterTestAccess;
+  friend struct FBotIKBiasedCommandTestAccess;
+  struct FBiasedCommandLimit {
+    double Minimum = 0;
+    double Maximum = 0;
+    bool bHasMinimum = false;
+    bool bHasMaximum = false;
+  };
+  // Prepared once in instantiated command units; no random-pose fallback bounds.
+  TArray<FBiasedCommandLimit> BiasedCommandLimits;
+  void PrepareBiasedCommandLimits();
+  bool ApplyJointBiasAndLimits(TArray<double>& Positions) const;
   bool ValidateSourceProvider(FString& Diagnostic) const;
   bool ComputeSuperDexPoseFromJointPositions(
       TConstArrayView<double> DisplayPositions,
