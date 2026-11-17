@@ -799,9 +799,12 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
       _workspace.AdvanceResidual(problem, /*savePrevious*/ !isFirstIter);
     }
 
-    // Set initial residual.
+    // Set initial residual norm and, with explosion control, divergence limit.
     if (isFirstIter) {
       status.resNorm0 = status.resNorm;
+      if (_params.explosionControl) {
+        status.divergenceLimit = Min(_params.relDivTol * status.resNorm0, _params.absDivTol);
+      }
     }
 
     // Log iteration status.
@@ -973,8 +976,7 @@ NewtonSolverStatus<T> NewtonSolver<T>::Solve(Problem& problem) {
            .assemRes = true,
            .fittedSaturationHessian = fittedSaturationHessian});
       status.resNorm = problem.GetResidual().Norm();
-      if ((status.resNorm > _params.relDivTol * status.resNorm0) ||
-          status.resNorm > _params.absDivTol || !IsFinite(status.resNorm)) {
+      if (status.resNorm > status.divergenceLimit || !IsFinite(status.resNorm)) {
         if (_params.verbosity >= VerbosityLevel::Warning) {
           MOCHI_LOG_WARNING(
               "\n\tSolution explosion detected (%f,%f) rel=%f abs=%f.\n",

@@ -50,8 +50,9 @@ namespace mochi {
 
 /**
  * Utility struct implementing line search algorithms. It has no internal state. Simple, Armijo and
- * the Wolfe searches test the merit of @ref SnleProblem::LineSearchMerit, and keep the objective in
- * @ref NewtonSolverStatus::objective.
+ * the Wolfe searches test the merit of @ref SnleProblem::LineSearchMerit, keep the objective in
+ * @ref NewtonSolverStatus::objective, and reject trials whose residual norm exceeds
+ * @ref NewtonSolverStatus::divergenceLimit.
  *
  * The trials are assembled with fittedSaturationHessian, the saturation Hessians of the Newton
  * solver, so they report the trust margin (see @ref SnleProblem::trustMargin) of the pathways whose
@@ -193,22 +194,14 @@ struct LineSearch {
 
     /**
      * Whether the trial, with finite merit @p merit and the increment holding @p scale times dx,
-     * changes the merit within the band and passes the slope test. Assembles the residual with
-     * @p fittedSaturationHessian if the slope decides.
+     * changes the merit within the band and passes the slope test. Requires the trial's residual
+     * to be assembled.
      */
-    [[nodiscard]] bool Passes(
-        Problem& problem,
-        double merit,
-        T scale,
-        SaturationHessianParams const& fittedSaturationHessian) const {
+    [[nodiscard]] bool Passes(Problem const& problem, double merit, T scale) const {
       MOCHI_ASSERT_VERBOSE(IsFinite(merit), "The slope test requires a finite merit.");
       if (!IsFinite(_slopeBound) || !NearEqual(merit, _merit0, _band)) {
         return false;
       }
-      problem.UpdateObjResDRes( // No-op if already assembled
-          {.assemObj = false,
-           .assemRes = true,
-           .fittedSaturationHessian = fittedSaturationHessian});
       double const slope = problem.GetResidual().Dot(problem.GetIncrement());
       return IsFinite(slope) && slope <= scale * _slopeBound;
     }
@@ -301,9 +294,9 @@ bool LineSearch<T>::Simple(
       reduction = params.alpha;
     }
 
-    // Compute merit at x + dx position
+    // Compute merit and gradient at x + dx position
     problem.UpdateObjResDRes(
-        {.assemObj = true, .fittedSaturationHessian = fittedSaturationHessian});
+        {.assemObj = true, .assemRes = true, .fittedSaturationHessian = fittedSaturationHessian});
     if (problem.GetTrustMargin() < T(0)) {
       reduction = TrustMarginReduction(margin0, problem.GetTrustMargin(), scale, params, it);
       if (reduction == T(0)) {
@@ -313,10 +306,11 @@ bool LineSearch<T>::Simple(
     }
     double const merit = searchMerit(scale);
 
-    // Check enough improvement
+    // Check enough improvement within the divergence limit
     if (finiteStart && IsFinite(merit) &&
         (merit <= (status.objective + Abs(status.objective * params.maxRelIncrease)) ||
-         slopeTest.Passes(problem, merit, scale, fittedSaturationHessian))) {
+         slopeTest.Passes(problem, merit, scale)) &&
+        problem.GetResidual().Norm() <= status.divergenceLimit) {
       status.objective = problem.GetObjective();
       improved = true;
       break;
@@ -363,9 +357,9 @@ bool LineSearch<T>::Armijo(
       reduction = params.alpha;
     }
 
-    // Compute merit at x + dx position
+    // Compute merit and gradient at x + dx position
     problem.UpdateObjResDRes(
-        {.assemObj = true, .fittedSaturationHessian = fittedSaturationHessian});
+        {.assemObj = true, .assemRes = true, .fittedSaturationHessian = fittedSaturationHessian});
     if (problem.GetTrustMargin() < T(0)) {
       reduction = TrustMarginReduction(margin0, problem.GetTrustMargin(), scale, params, it);
       if (reduction == T(0)) {
@@ -375,10 +369,10 @@ bool LineSearch<T>::Armijo(
     }
     double const merit = searchMerit(scale);
 
-    // Check enough improvement
+    // Check enough improvement within the divergence limit
     if (finiteStart && IsFinite(merit) &&
-        (merit <= status.objective + scale * factor0 ||
-         slopeTest.Passes(problem, merit, scale, fittedSaturationHessian))) {
+        (merit <= status.objective + scale * factor0 || slopeTest.Passes(problem, merit, scale)) &&
+        problem.GetResidual().Norm() <= status.divergenceLimit) {
       status.objective = problem.GetObjective();
       improved = true;
       break;
@@ -485,11 +479,12 @@ bool LineSearch<T>::Wolfe(
     // TODO: Explore choosing the next trial by safeguarded interpolation of the trials' merits and
     // slopes.
     if (!finiteStart || !IsFinite(dotDxRes) || !IsFinite(merit) ||
-        !(merit <= status.objective + scale * t1 ||
-          slopeTest.Passes(problem, merit, scale, fittedSaturationHessian)) ||
-        (strong && dotDxRes > Abs(t2 * scale))) {
+        !(merit <= status.objective + scale * t1 || slopeTest.Passes(problem, merit, scale)) ||
+        (strong && dotDxRes > Abs(t2 * scale)) ||
+        problem.GetResidual().Norm() > status.divergenceLimit) {
       // If not finite, or neither the 1st Wolfe condition nor the slope test is met, or the strong
-      // 2nd Wolfe condition is not met by above, reduce the scale.
+      // 2nd Wolfe condition is not met by above, or the residual norm is above the divergence
+      // limit, reduce the scale.
       scaleMax = scale;
       scaleNew = scaleMin + params.alpha * (scale - scaleMin);
     } else if ((strong ? dotDxRes < -Abs(t2 * scale) : dotDxRes < t2 * scale) && scale < T(1)) {

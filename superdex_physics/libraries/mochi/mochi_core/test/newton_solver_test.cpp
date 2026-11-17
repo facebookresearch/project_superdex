@@ -1225,6 +1225,48 @@ TEST(NewtonSolver, LineSearchRejectsNonFiniteValues) {
   }
 }
 
+/**
+ * Newton's iterates on sqrt(1 + x²) are x ↦ -x³. From 0.7, where the residual is 0.57, the full
+ * step lands at -0.343, where it is 0.32, and the half step at 0.18, where it is 0.18. With
+ * explosion control, the line searches reject the trials past the divergence limit: with a limit
+ * of 0.29, the full step, so the solve backtracks to the half step and converges; with 0, both, so
+ * the search fails and keeps the half step, on which explosion control stops the solve. Without
+ * explosion control, they reject none.
+ */
+TEST(NewtonSolver, LineSearchRejectsTrialsPastDivergenceLimit) {
+  SnleProblem<real> problem = GetTestProblem(
+      [](real x) { return Sqrt(1_r + x * x); },
+      [](real x) { return x / Sqrt(1_r + x * x); },
+      [](real x) { return 1_r / ((1_r + x * x) * Sqrt(1_r + x * x)); });
+  real constexpr kStart = 0.7_r;
+  real constexpr kAlpha = 0.5_r;
+  real constexpr kHalfStep = kStart - kAlpha * (kStart + kStart * kStart * kStart);
+  for (LineSearchType const type :
+       {LineSearchType::Simple,
+        LineSearchType::Armijo,
+        LineSearchType::WolfeWeak,
+        LineSearchType::WolfeStrong}) {
+    for (auto const& [explosionControl, absDivTol, relDivTol, convergence, solution] :
+         {std::tuple{true, 1e9_r, 0.5_r, ConvergenceStatus::Converged, 0_r},
+          std::tuple{true, 0_r, 1e4_r, ConvergenceStatus::Diverged, kHalfStep},
+          std::tuple{false, 0_r, 1e4_r, ConvergenceStatus::Converged, 0_r}}) {
+      problem.SetSolution(ColumnVector<real, 1>{kStart});
+      NewtonSolverParams params;
+      params.convergenceMode = NonLinearSolverConvergenceMode::Global;
+      params.explosionControl = explosionControl;
+      params.absDivTol = absDivTol;
+      params.relDivTol = relDivTol;
+      params.lineSearch.type = type;
+      params.lineSearch.maxIter = 2;
+      params.lineSearch.alpha = kAlpha;
+      params.verbosity = VerbosityLevel::Error;
+
+      EXPECT_EQ(NewtonSolver<real>(params).Solve(problem).convergence, convergence);
+      EXPECT_NEAR(problem.GetSolution()[0], solution, 1e-3_r);
+    }
+  }
+}
+
 // Whether an assembly reports the margin of the term of GetTrustMarginProblem, like contact
 // friction does (see ReportsContactTrustMargin in mochi_physics).
 static bool ReportsTestTrustMargin(AssemblyParams const& params) {
@@ -1838,7 +1880,6 @@ TEST(NewtonSolver, TrustMarginEscapesToFittedCurvature) {
     std::function<real(real)> margin;
     int numIterDone;
     int marginReportsBeforeFitted;
-    int armijoExtraReports = 0; // Armijo's trials leave the residual to assemble, which reports
   };
   auto params = GetRegularizationLatchParams(LineSearchType::Armijo, 1);
   params.lineSearch.maxIter = 4;
@@ -1853,14 +1894,12 @@ TEST(NewtonSolver, TrustMarginEscapesToFittedCurvature) {
                .numIterDone = 1,
                .marginReportsBeforeFitted = 1},
            // The first iteration stops at the zero margin, halfway, so the second starts on the
-           // boundary. Margin reports: the start and 2 trials of the first iteration, and with
-           // Armijo the residual at the accepted trial.
+           // boundary. Margin reports: the start and 2 trials of the first iteration.
            Case{
                .name = "stop at the boundary",
                .margin = LinearMargin(1_r, 1_r),
                .numIterDone = 2,
-               .marginReportsBeforeFitted = 3,
-               .armijoExtraReports = 1},
+               .marginReportsBeforeFitted = 3},
            // The zero margin, at a tenth of the first step, is below 1/8 of it, so the first line
            // search fails and the iteration retries fitted. Margin reports: the start, the full
            // trial and the restored start.
@@ -1899,8 +1938,7 @@ TEST(NewtonSolver, TrustMarginEscapesToFittedCurvature) {
         }));
         EXPECT_EQ(
             std::ranges::count_if(assemblies.begin(), fitted, ReportsTestTrustMargin),
-            c.marginReportsBeforeFitted +
-                (search == LineSearchType::Armijo ? c.armijoExtraReports : 0));
+            c.marginReportsBeforeFitted);
         EXPECT_TRUE(std::ranges::none_of(fitted, assemblies.end(), ReportsTestTrustMargin));
 
         // The next solve starts again at the requested flags.

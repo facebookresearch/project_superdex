@@ -22,6 +22,7 @@
 #include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/time.h>
 
+#include <limits>
 #include <string>
 
 namespace mochi {
@@ -40,6 +41,12 @@ struct NewtonSolverStatus {
 
   /// @brief Initial residual norm (global, unweighted).
   T resNorm0 = T(0);
+
+  /// @brief Residual norm (global, unweighted) above which explosion control stops the solve and
+  /// the line searches that test the merit reject trials: min(@ref NewtonSolverParams::relDivTol *
+  /// @ref resNorm0, @ref NewtonSolverParams::absDivTol), set on the first iteration. Infinite
+  /// without explosion control.
+  T divergenceLimit = std::numeric_limits<T>::infinity();
 
   /// @brief Residual norm with the solution at the previous iteration (global, unweighted).
   T prevResNorm = T(0);
