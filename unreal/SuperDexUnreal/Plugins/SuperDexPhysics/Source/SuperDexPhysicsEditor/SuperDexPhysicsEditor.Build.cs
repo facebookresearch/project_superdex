@@ -58,6 +58,7 @@ namespace UnrealBuildTool.Rules
                 "InterchangeCore",
                 "InterchangeEngine",
                 "InterchangePipelines",
+                "InterchangeFactoryNodes",
                 "StaticMeshDescription",
                 "SkeletalMeshDescription",
             });

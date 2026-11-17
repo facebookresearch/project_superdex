@@ -17,6 +17,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "UObject/StrongObjectPtr.h"
 
 class UMochiModel;
 class UStaticMesh;
@@ -66,6 +67,15 @@ GetNestedImportFolder(const FString& ParentFolder, const FString& SourceFilePath
 class SUPERDEXPHYSICSEDITOR_API FSuperDexImportSession {
  public:
   // Import a .glb as SM_<AssetName> under DestPackagePath, replacing any existing asset.
+  //
+  // Its materials and textures are named after the GLB's material and image names. Those of named
+  // materials and images are rebuilt from the GLB on every import, replacing existing assets of
+  // those names, also when the mesh already exists (Interchange reimports an existing mesh without
+  // its materials); unnamed ones keep an existing asset as it is. GLBs whose same-named materials
+  // or images have the same content share one asset. If an asset of that name holds a different
+  // GLB's different content (imported earlier in this session, or found on disk with that GLB as
+  // its source), this GLB's asset is named <GLB file name>_<name>, or if that is taken too,
+  // <GLB file name>_<name>_<digest prefix>.
   UStaticMesh* ImportGlbToStaticMesh(
       const FString& GlbPath,
       const FString& DestPackagePath,
@@ -81,6 +91,34 @@ class SUPERDEXPHYSICSEDITOR_API FSuperDexImportSession {
   void Reset();
 
  private:
+  // Content of a material or texture asset imported in this session.
+  struct FGlbAssetContent {
+    FString GlbPath; // Normalized.
+    FString Digest;
+  };
+
+  // Whether the asset ObjectPath, named Name, holds content other than Digest from a GLB other than
+  // the one at the normalized path GlbPath.
+  bool HoldsOtherContent(
+      const FString& ObjectPath,
+      const FString& Name,
+      const FString& GlbPath,
+      const FString& Digest);
+
+  // Replace every reference to each displaced asset (by the object path it was moved from) with
+  // the asset rebuilt at that path, then discard it; put back those that were not rebuilt.
+  static void ReplaceDisplacedAssets(
+      const FString& GlbPath,
+      const TArray<TPair<FString, UObject*>>& Displaced);
+
   TMap<FString, UStaticMesh*> StaticMeshCache;
   TMap<FString, UMochiModel*> MochiModelCache;
+  // By object path.
+  TMap<FString, FGlbAssetContent> GlbAssetContents;
+  // Material and image digests of GLBs that earlier imports' assets came from, by normalized path.
+  TMap<FString, TMap<FString, FString>> SourceGlbDigests;
+  // The Mochi assets pipeline, set not to reuse existing materials, and a copy of it that imports
+  // only materials and textures.
+  TStrongObjectPtr<UObject> GlbAssetsPipeline;
+  TStrongObjectPtr<UObject> GlbMaterialsPipeline;
 };
