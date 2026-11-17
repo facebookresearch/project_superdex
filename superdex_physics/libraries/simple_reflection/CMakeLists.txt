@@ -73,6 +73,7 @@ endif ()
 if (SR_BUILD_TESTS)
     add_executable(simple_reflection_test
         test/simple_reflection_test.cpp
+        test/simple_reflection_method_test.cpp
         test/simple_reflection_property_test.cpp
         test/type_definitions.cpp)
     target_link_libraries(simple_reflection_test PRIVATE simple_reflection gtest_main)

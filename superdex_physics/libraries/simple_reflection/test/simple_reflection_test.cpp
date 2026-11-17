@@ -4776,6 +4776,21 @@ struct TypeInfoJsonUnionB {
   SR_EndStruct();
 };
 
+struct TypeInfoJsonMethods {
+  int32_t total = 0;
+
+  SR_BeginStruct(SReflectTest::TypeInfoJsonMethods);
+  SR_Method("reset()", [](TypeInfoJsonMethods& t) { t.total = 0; });
+  SRA_Description("Sets the total to zero");
+  SR_Method(
+      "divmod(divisor, remainder)",
+      [](TypeInfoJsonMethods const& t, int32_t divisor, int32_t& remainder) {
+        remainder = t.total % divisor;
+        return t.total / divisor;
+      });
+  SR_EndStruct();
+};
+
 TEST(SReflect, TypeInfoToJson_Primitive) {
   auto const& ti = SReflect::GetTypeInfo<int32_t>();
   picojson::value json = ParseJsonForTypeInfoTest(ti.TypeInfoToJson(false));
@@ -4807,6 +4822,7 @@ TEST(SReflect, TypeInfoToJson_StructFieldsAndAttributes) {
   EXPECT_EQ("SReflectTest::TypeInfoJsonStruct", JsonStringAt(object, "nameWithNamespace"));
   EXPECT_FALSE(JsonBoolAt(object, "isMemCopySafe"));
   EXPECT_EQ(object.end(), object.find("baseClasses")); // Omitted when empty.
+  EXPECT_EQ(object.end(), object.find("methods")); // Omitted when empty.
 
   picojson::object const& structAttributes = JsonObjectAt(object, "attributes");
   ASSERT_EQ(1u, structAttributes.size());
@@ -4876,6 +4892,39 @@ TEST(SReflect, TypeInfoToJson_DerivedStructBaseClasses) {
   picojson::array const& fields = JsonArrayAt(object, "fields");
   EXPECT_NE(nullptr, FindNamedJsonObject(fields, "myFloat"));
   EXPECT_NE(nullptr, FindNamedJsonObject(fields, "oneMoreThing"));
+}
+
+TEST(SReflect, TypeInfoToJson_Methods) {
+  auto const& ti = SReflect::GetTypeInfo<TypeInfoJsonMethods>();
+  picojson::value json = ParseJsonForTypeInfoTest(ti.TypeInfoToJson(false));
+  picojson::object const& dict = JsonObject(json);
+  picojson::array const& methods = JsonArrayAt(RootEntry(json, ti), "methods");
+  ASSERT_EQ(2, methods.size());
+
+  picojson::object const* reset = FindNamedJsonObject(methods, "reset");
+  ASSERT_NE(nullptr, reset);
+  EXPECT_FALSE(JsonBoolAt(*reset, "isConst"));
+  EXPECT_TRUE(JsonAt(*reset, "returnType").is<picojson::null>()); // void
+  EXPECT_EQ(reset->end(), reset->find("args")); // Omitted when empty.
+  EXPECT_NE(
+      nullptr,
+      FindAttributeValueByTypeName(
+          dict, JsonObjectAt(*reset, "attributes"), "Attribute_Description"));
+
+  picojson::object const* divmod = FindNamedJsonObject(methods, "divmod");
+  ASSERT_NE(nullptr, divmod);
+  EXPECT_TRUE(JsonBoolAt(*divmod, "isConst"));
+  EXPECT_EQ("CT_int32", JsonStringAt(ResolveRef(dict, JsonAt(*divmod, "returnType")), "coreType"));
+  EXPECT_EQ(divmod->end(), divmod->find("attributes")); // Omitted when empty.
+  picojson::array const& args = JsonArrayAt(*divmod, "args");
+  ASSERT_EQ(2, args.size());
+  picojson::object const& divisor = JsonObject(args[0]);
+  EXPECT_EQ("divisor", JsonStringAt(divisor, "name"));
+  EXPECT_FALSE(JsonBoolAt(divisor, "isNonConstRef"));
+  EXPECT_EQ("CT_int32", JsonStringAt(ResolveRef(dict, JsonAt(divisor, "type")), "coreType"));
+  picojson::object const& remainder = JsonObject(args[1]);
+  EXPECT_EQ("remainder", JsonStringAt(remainder, "name"));
+  EXPECT_TRUE(JsonBoolAt(remainder, "isNonConstRef"));
 }
 
 TEST(SReflect, TypeInfoToJson_EnumTypeInfo) {

@@ -207,6 +207,31 @@ Example 3 - Properties (members reached through a getter and an optional setter)
   copying skips read-only properties. JSON and binary serialization include them. See SR_Property
   for deserialization requirements. Use FieldTypeInfo::VisitValue, ModifyValue, GetValue and
   SetValue to access members generically. FieldTypeInfo::GetFieldPtr returns nullptr for properties.
+
+Example 4 - Methods (functions that can be called through reflection)
+
+  struct Counter {
+    int32_t total = 0;
+    int32_t Add(int32_t n) { return total += n; }
+
+    SR_BeginStruct(Counter);
+    SR_Field(total);
+    SR_Method("add(n)", &Counter::Add);
+    SR_EndStruct();
+  };
+
+  void UseCounter(Counter& counter) {
+    SReflect::MethodInfo const* add = Counter::GetTypeInfo().FindMethod("add");
+
+    // Call with pointers to existing values
+    int32_t n = 5;
+    int32_t newTotal = 0;
+    void* args[] = {&n};
+    add->Call(&counter, &newTotal, args);
+  }
+
+  Methods live in StructTypeInfo::_methods, separate from the fields, so copying, serialization
+  and validation ignore them.
 */
 
 ///////////////////////////////////////////////////////////////////////////
@@ -216,6 +241,7 @@ namespace SReflect {
 struct Attribute;
 class DeserializeContext;
 struct IssueReport;
+class MethodInfo;
 class TypeInfo;
 class StructTypeInfo;
 } // namespace SReflect
@@ -327,8 +353,8 @@ Goes between the SR_BeginStruct and SR_EndStruct macros. See examples (above).
 Adds a field (member variable) to the class or struct, but give it a name that is different
 from the actual class member. Example: SR_Field_Name(_myValue, "value")
 The name must not be empty, must not contain '/', which separates the parts of a path (see
-IssueReport), and must be unique across all fields and properties, including those inherited via
-SR_BaseClass.
+IssueReport), and must be unique across all fields, properties and methods, including those
+inherited via SR_BaseClass.
 */
 #define SR_Field_Name(member, name)               IMPL_SR_Field_Name(member, name)
 
@@ -389,7 +415,7 @@ constructible. Otherwise, binary loading returns false.
 Deserialization of writable properties is read-modify-write: the current value is read through the
 getter, the serialized data is applied on top, and the result is passed to the setter. A reference
 getter's value is deserialized in place. Names must be non-empty, must not contain '/', and must be
-unique across all fields and properties, including those inherited via SR_BaseClass.
+unique across all fields, properties and methods, including those inherited via SR_BaseClass.
 
 Example:
   struct Angle;
@@ -419,6 +445,47 @@ such as in a template argument list or a braced initializer:
 #define SR_Property(name, ...)                    IMPL_SR_Property(name, __VA_ARGS__)
 
 /**
+Adds a method to the class or struct: a function that can be called through reflection (see
+MethodInfo::Call).
+  SR_Method("name(arg1, arg2)", callable)
+
+The name string must name every argument of the method, excluding the object, so "name()" is a
+method with no arguments. Whitespace around each name is ignored. This is checked at compile time
+against the callable's signature, so the name must be a string literal or another constant.
+
+The callable can be a member function pointer of the class or one of its public base classes, or a
+free function or lambda that takes the object as its first argument. Lambdas written inside
+SR_BeginClass can access private members. The first parameter of a lambda may be `auto&` or
+`auto const&`, but no other parameter may be `auto`, and a lambda with an `auto` parameter cannot
+take the class itself as another argument. A method is const, and can be called on a const object,
+if it is a const member function or if its first parameter is a const reference. noexcept and
+virtual member functions work as usual. An overloaded name must be cast to the intended function
+pointer type.
+
+Parameters may be T, const T, const T& or T&, where T is a supported type. A by-value T must be
+copyable. Only T& parameters can change the caller's values (see MethodArgInfo::_isNonConstRef). The
+return type is void, or T, const T& or T& where T is a supported type that can be assigned. Generic
+callers that only have a TypeInfo can call only methods whose return and argument types are default
+constructible.
+
+Like property accessors, the callable must not capture anything or hold state. An exception thrown
+by the method propagates to the caller. Names must be non-empty, must not contain '/', '(', ')' or
+',', and must be unique across all fields, properties and methods, including those inherited via
+SR_BaseClass. Attributes after SR_Method describe the method.
+
+Example (see also Example 4 at the top of this file):
+  SR_Method("add(n)", &Counter::Add);
+  SRA_Description("Adds n and returns the new total");
+  SR_Method("divmod(divisor, remainder)", [](auto const& c, int32_t divisor, int32_t& remainder) {
+    remainder = c.total % divisor;
+    return c.total / divisor;
+  });
+
+Unlike SR_Property, a lambda whose body contains a comma needs no extra parentheses.
+*/
+#define SR_Method(name, ...)                      IMPL_SR_Method(name, __VA_ARGS__)
+
+/**
 Remove a field that was previously added. This can be used to hide a base class field that in
 case you want to expose the information in a different way.
 */
@@ -440,7 +507,8 @@ and structs. These macros exist just for symmetry.
 #define SR_EndClassEx()                 IMPL_SR_EndStructEx()
 
 /**
-Adds a base class to the class/struct that is currently being defined, including all of its fields.
+Adds a base class to the class/struct that is currently being defined, including all of its fields
+and methods.
 Goes between the SR_BeginStruct/SR_EndStruct macros. Does not allow virtual inheritence, diamond
 inheritience, nor multiple inheritence of base classes with non-static data members (but inheritence
 of multiple interface classes is fine).
@@ -449,9 +517,9 @@ of multiple interface classes is fine).
 
 /**
 Adds an attribute to provide additional information, or customize behavior.
-If the attribute comes after an SR_Field or SR_Property, then it describes that member. If it comes
-right after any SR_Begin* macro, SR_BaseClass or SR_RemoveField, then it describes the class/struct
-itself. See the individual attribute classes (below) for more details.
+If the attribute comes after an SR_Field, SR_Property or SR_Method, then it describes that member.
+If it comes right after any SR_Begin* macro, SR_BaseClass or SR_RemoveField, then it describes the
+class/struct itself. See the individual attribute classes (below) for more details.
 */
 #define SRA_DoNotSerialize()          { SReflect::detail::AddAttribute(*myInfo, new SReflect::Attribute_DoNotSerialize); }
 #define SRA_DoNotSerializeDefaults(...)  { SReflect::detail::AddAttribute(*myInfo, new SReflect::Attribute_DoNotSerializeDefaults(__VA_ARGS__)); } // Currently only supported for JSON serialization
@@ -1249,6 +1317,70 @@ class FieldTypeInfo : public TypeInfo {
 };
 
 ///////////////////////////////////////////////////////////////////////////
+// Methods
+///////////////////////////////////////////////////////////////////////////
+
+/**
+Describes one argument of a method (see SR_Method).
+*/
+struct MethodArgInfo {
+  std::string _name; // From the SR_Method name string
+  bool _isNonConstRef = false; // True for a T& parameter, which the method may modify
+  TypeInfo const& (*_getTypeInfo)() = nullptr; // See GetTypeInfo
+
+  // The type is looked up when it is first needed, so that a method can take or return the class
+  // that declares it.
+  [[nodiscard]] TypeInfo const& GetTypeInfo() const {
+    return _getTypeInfo();
+  }
+};
+
+/**
+Describes a method of a class or struct (see SR_Method).
+*/
+class MethodInfo {
+ public:
+  std::string _name; // Without the argument list
+  bool _isConst = false; // True if the method can be called on a const object
+  std::vector<MethodArgInfo> _args; // Excludes the object
+  TypeInfo::AttributeList _attributes;
+  TypeInfo const& (*_getReturnTypeInfo)() = nullptr; // Null if the method returns void
+
+  virtual ~MethodInfo() = default;
+
+  // Return the type of the return value, or nullptr if the method returns void.
+  [[nodiscard]] TypeInfo const* GetReturnTypeInfo() const;
+
+  // Return a pointer to an attribute with the given type. Return nullptr if not found.
+  template <typename T>
+  [[nodiscard]] T const* GetAttribute() const {
+    return static_cast<T const*>(GetAttribute(T::GetTypeId()));
+  }
+  [[nodiscard]] Attribute const* GetAttribute(TypeId attrType) const;
+
+  template <typename T>
+  [[nodiscard]] bool HasAttribute() const {
+    return GetAttribute(T::GetTypeId()) != nullptr;
+  }
+
+  /**
+  Call the method on obj, the address of an instance of the struct, which must not be nullptr.
+  args[i] is the address of an existing value of type _args[i].GetTypeInfo(). returnValue is the
+  address of an existing value of the return type, or nullptr to discard the return value. It is
+  ignored for void methods.
+
+  Return false without calling the method if args.size() doesn't match _args, if an argument is
+  nullptr, or if obj is const and the method isn't. An exception thrown by the method propagates.
+  */
+  bool Call(void* obj, void* returnValue, Span<void* const> args) const;
+  bool Call(void const* obj, void* returnValue, Span<void* const> args) const;
+
+ protected:
+  // Called by Call once the arguments have been checked. Implemented by SR_Method.
+  virtual void CallImpl(void* obj, void* returnValue, void* const* args) const = 0;
+};
+
+///////////////////////////////////////////////////////////////////////////
 // Structs
 ///////////////////////////////////////////////////////////////////////////
 
@@ -1262,6 +1394,7 @@ class StructTypeInfo : public TypeInfo {
   explicit StructTypeInfo(std::type_info const& rttiInfo);
 
   std::vector<FieldTypeInfo*> _fields; // Includes fields inherited via SR_BaseClass
+  std::vector<MethodInfo*> _methods; // Includes methods inherited via SR_BaseClass
   std::vector<StructTypeInfo const*> _baseClasses; // Includes all bases recursively
   std::type_index _typeIndex;
   bool _isMemCopySafe = false;
@@ -1274,6 +1407,11 @@ class StructTypeInfo : public TypeInfo {
   Find a field by name (case-sensitive) or return nullptr if not found.
   */
   [[nodiscard]] FieldTypeInfo const* FindField(std::string_view name) const;
+
+  /**
+  Find a method by name (case-sensitive) or return nullptr if not found.
+  */
+  [[nodiscard]] MethodInfo const* FindMethod(std::string_view name) const;
 
   /**
   Find a base class's info by SReflect::TypeId or return nullptr if not found.
@@ -1941,6 +2079,7 @@ SR_DeclareStructEx(SReflect::IssueReport);
 #define SR_Field(member)
 #define SR_Field_Name(member, name)
 #define SR_Property(name, ...)
+#define SR_Method(name, ...)
 #define SR_BeginClass(classType)
 #define SR_BeginClassTemplate(classType, ...)
 #define SR_EndClass()

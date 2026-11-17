@@ -1490,6 +1490,30 @@ CallLoggingMemberExceptions(StructTypeInfo const& info, FieldTypeInfo const& fie
 }
 
 /////////////////////////////////////////////////////////////////////////////
+// MethodInfo
+/////////////////////////////////////////////////////////////////////////////
+
+TypeInfo const* MethodInfo::GetReturnTypeInfo() const {
+  return _getReturnTypeInfo ? &_getReturnTypeInfo() : nullptr;
+}
+
+Attribute const* MethodInfo::GetAttribute(TypeId attrType) const {
+  return FindAttribute(attrType, _attributes);
+}
+
+bool MethodInfo::Call(void* obj, void* returnValue, Span<void* const> args) const {
+  if (args.size() != _args.size() || std::find(args.begin(), args.end(), nullptr) != args.end()) {
+    return false;
+  }
+  CallImpl(obj, returnValue, args.data());
+  return true;
+}
+
+bool MethodInfo::Call(void const* obj, void* returnValue, Span<void* const> args) const {
+  return _isConst && Call(const_cast<void*>(obj), returnValue, args);
+}
+
+/////////////////////////////////////////////////////////////////////////////
 // StructTypeInfo
 /////////////////////////////////////////////////////////////////////////////
 
@@ -1499,6 +1523,15 @@ FieldTypeInfo const* StructTypeInfo::FindField(std::string_view name) const {
   for (auto* f : _fields) {
     if (f->_name == name) {
       return f;
+    }
+  }
+  return nullptr; // Not found
+}
+
+MethodInfo const* StructTypeInfo::FindMethod(std::string_view name) const {
+  for (auto* m : _methods) {
+    if (m->_name == name) {
+      return m;
     }
   }
   return nullptr; // Not found
@@ -1544,6 +1577,27 @@ void StructTypeInfo::SerializeTypeInfoImpl(picojson::value& entry, picojson::val
     fields.push_back(std::move(fieldEntry));
   }
   SetField(obj, "fields", picojson::value{std::move(fields)});
+  picojson::array methods;
+  methods.reserve(_methods.size());
+  for (MethodInfo const* method : _methods) {
+    picojson::object methodEntry;
+    methodEntry["name"] = method->_name;
+    methodEntry["isConst"] = method->_isConst;
+    methodEntry["returnType"] = AddTypeRef(method->GetReturnTypeInfo(), dict);
+    picojson::array args;
+    for (MethodArgInfo const& arg : method->_args) {
+      picojson::object argEntry;
+      argEntry["name"] = arg._name;
+      argEntry["type"] = AddTypeRef(&arg.GetTypeInfo(), dict);
+      argEntry["isNonConstRef"] = arg._isNonConstRef;
+      args.emplace_back(std::move(argEntry));
+    }
+    SetField(methodEntry, "args", picojson::value{args});
+    SetField(
+        methodEntry, "attributes", picojson::value{WriteAttributes(method->_attributes, dict)});
+    methods.emplace_back(std::move(methodEntry));
+  }
+  SetField(obj, "methods", picojson::value{methods});
   obj["isMemCopySafe"] = IsMemCopySafe();
 }
 
@@ -3154,15 +3208,20 @@ void detail::AddAttribute(StructTypeInfo& info, Attribute const* a) {
   attributes.emplace_back(a->GetFinalTypeId(), a);
 }
 
+static bool IsMemberNameUsed(StructTypeInfo const& info, std::string_view name) {
+  return info.FindField(name) != nullptr || info.FindMethod(name) != nullptr;
+}
+
+static constexpr char const* kMemberNameUsedMessage =
+    "Field, property and method names must be unique, including those inherited via SR_BaseClass";
+
 void detail::AddFieldInfo(
     StructTypeInfo& info,
     std::unique_ptr<FieldTypeInfo> field,
     char const* name) {
   SR_ASSERT(name != nullptr && name[0] != '\0', "Field and property names must not be empty");
   SR_ASSERT(strchr(name, '/') == nullptr, "Field and property names must not contain '/'");
-  SR_ASSERT(
-      info.FindField(name) == nullptr,
-      "Field or property name is already used in this class or one of its base classes");
+  SR_ASSERT(!IsMemberNameUsed(info, name), kMemberNameUsedMessage);
   field->_name = name;
   field->_nameWithNamespace = name;
   field->_typeId = ComputeTypeId(name);
@@ -3180,6 +3239,29 @@ void detail::AddField(
   newField->_innerTypeInfo = &innerType;
   newField->_offset = offset;
   AddFieldInfo(info, std::move(newField), name);
+}
+
+void detail::AddMethodInfo(
+    StructTypeInfo& info,
+    std::unique_ptr<MethodInfo> method,
+    char const* nameWithArgs,
+    Span<MethodArgDesc const> args,
+    bool isConst,
+    TypeInfo const& (*getReturnTypeInfo)()) {
+  method->_name = std::string{MethodNamePart(nameWithArgs, 0)};
+  for (size_t i = 0; i < args.size(); ++i) {
+    MethodArgDesc const& arg = args.data()[i];
+    method->_args.push_back(
+        MethodArgInfo{
+            std::string{MethodNamePart(nameWithArgs, static_cast<int>(i) + 1)},
+            arg.isNonConstRef,
+            arg.getTypeInfo});
+  }
+  SR_ASSERT(!IsMemberNameUsed(info, method->_name), kMemberNameUsedMessage);
+  method->_isConst = isConst;
+  method->_getReturnTypeInfo = getReturnTypeInfo;
+  info._methods.push_back(method.release());
+  info._attributeTarget = &info._methods.back()->_attributes;
 }
 
 void detail::RemoveField(StructTypeInfo& info, char const* name) {
@@ -3209,9 +3291,10 @@ void detail::AddBaseClass(
     }
   }
   for (FieldTypeInfo const* baseField : base._fields) {
-    SR_ASSERT(
-        derived.FindField(baseField->_name) == nullptr,
-        "Base class field or property name clashes with a name already used in the derived class");
+    SR_ASSERT(!IsMemberNameUsed(derived, baseField->_name), kMemberNameUsedMessage);
+  }
+  for (MethodInfo const* baseMethod : base._methods) {
+    SR_ASSERT(!IsMemberNameUsed(derived, baseMethod->_name), kMemberNameUsedMessage);
   }
 #endif // SR_ASSERT_ENABLE
 
@@ -3221,11 +3304,13 @@ void detail::AddBaseClass(
   derived._baseClasses.insert(
       derived._baseClasses.end(), base._baseClasses.begin(), base._baseClasses.end());
 
-  // Import fields by copying the pointers. We don't have to adjust the field offsets
+  // Import fields and methods by copying the pointers. We don't have to adjust the field offsets
   // because we assume the baseOffset is zero (see verify above).
   derived._fields.insert(derived._fields.end(), base._fields.begin(), base._fields.end());
+  derived._methods.insert(derived._methods.end(), base._methods.begin(), base._methods.end());
 
-  // The inherited fields belong to the base class, so attributes now describe the derived struct.
+  // The inherited fields and methods belong to the base class, so attributes now describe the
+  // derived struct.
   derived._attributeTarget = nullptr;
 }
 

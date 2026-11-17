@@ -1366,6 +1366,251 @@ void AddProperty(
   }
 }
 
+/////////////////////////////////////////////////////////////////////////////
+// Methods (see SR_Method)
+/////////////////////////////////////////////////////////////////////////////
+
+// The type and kind of one method argument, passed to AddMethodInfo.
+struct MethodArgDesc {
+  TypeInfo const& (*getTypeInfo)();
+  bool isNonConstRef;
+};
+
+template <class T>
+TypeInfo const& GetTypeInfoRef() {
+  return GetTypeInfo<T>();
+}
+
+// Implemented in the cpp to reduce code bloat.
+void AddMethodInfo(
+    StructTypeInfo& info,
+    std::unique_ptr<MethodInfo> method,
+    char const* nameWithArgs,
+    Span<MethodArgDesc const> args,
+    bool isConst,
+    TypeInfo const& (*getReturnTypeInfo)());
+
+constexpr std::string_view TrimMethodName(std::string_view s) {
+  size_t const first = s.find_first_not_of(" \t\n\r");
+  if (first == std::string_view::npos) {
+    return {};
+  }
+  return s.substr(first, s.find_last_not_of(" \t\n\r") + 1 - first);
+}
+
+constexpr bool IsValidMethodNamePart(std::string_view s) {
+  return !s.empty() && s.find_first_of("/(),") == std::string_view::npos;
+}
+
+// Return part i of an SR_Method name like "name(a, b)", trimmed: the method name for i = 0, then
+// each argument name.
+constexpr std::string_view MethodNamePart(std::string_view nameWithArgs, int i) {
+  size_t const open = nameWithArgs.find('(');
+  if (i == 0) {
+    return TrimMethodName(nameWithArgs.substr(0, open));
+  }
+  std::string_view args = nameWithArgs.substr(open + 1, nameWithArgs.rfind(')') - open - 1);
+  for (; i > 1; --i) {
+    args.remove_prefix(args.find(',') + 1);
+  }
+  return TrimMethodName(args.substr(0, args.find(',')));
+}
+
+// Return the number of argument names in an SR_Method name like "name(a, b)", or -1 if the name is
+// malformed. See SR_Method for the rules.
+constexpr int CountMethodArgNames(std::string_view nameWithArgs) {
+  std::string_view const s = TrimMethodName(nameWithArgs);
+  size_t const open = s.find('(');
+  if (open == std::string_view::npos || s.back() != ')') {
+    return -1;
+  }
+  int count = TrimMethodName(s.substr(open + 1)) == ")" ? 0 : 1;
+  for (char c : s) {
+    count += c == ',' ? 1 : 0;
+  }
+  for (int i = 0; i <= count; ++i) {
+    if (!IsValidMethodNamePart(MethodNamePart(s, i))) {
+      return -1;
+    }
+    for (int j = 1; j < i; ++j) {
+      if (MethodNamePart(s, j) == MethodNamePart(s, i)) {
+        return -1;
+      }
+    }
+  }
+  return count;
+}
+
+// The types in a method's signature: the return type, then the parameters, starting with the
+// object. kIsGenericLambda is true if they come from a generic lambda (see MethodTypesOf).
+template <bool kIsGenericLambda, class R, class... Params>
+struct MethodTypes {};
+
+// Declarations only, for use in decltype. FnTypes(f) gives the MethodTypes of a function or member
+// function pointer, or MethodTypes<false, void, void> for anything else. Deduction also accepts
+// noexcept functions.
+template <class R, class Object, class... Args>
+MethodTypes<false, R, Object, Args...> FnTypes(R (*)(Object, Args...));
+template <class R, class C, class... Args>
+MethodTypes<false, R, C&, Args...> FnTypes(R (C::*)(Args...));
+template <class R, class C, class... Args>
+MethodTypes<false, R, C&, Args...> FnTypes(R (C::*)(Args...) &);
+template <class R, class C, class... Args>
+MethodTypes<false, R, C const&, Args...> FnTypes(R (C::*)(Args...) const);
+template <class R, class C, class... Args>
+MethodTypes<false, R, C const&, Args...> FnTypes(R (C::*)(Args...) const&);
+MethodTypes<false, void, void> FnTypes(...);
+
+// LambdaTypes<kIsGenericLambda>(&F::operator()) gives the MethodTypes of a lambda or functor, whose
+// first parameter is the object.
+template <bool kIsGenericLambda, class R, class F, class Object, class... Args>
+MethodTypes<kIsGenericLambda, R, Object, Args...> LambdaTypes(R (F::*)(Object, Args...) const);
+
+// decltype(MethodTypesOf<MyStruct, F>(0)) is the MethodTypes of callable type F. A generic lambda
+// is instantiated with MyStruct, so an `auto&` or `auto const&` first parameter becomes `MyStruct&`
+// or `MyStruct const&`.
+template <class MyStruct, class F>
+auto MethodTypesOf(int) -> decltype(LambdaTypes<false>(&F::operator()));
+template <class MyStruct, class F, class Operator = decltype(&F::template operator()<MyStruct>)>
+auto MethodTypesOf(long) -> decltype(LambdaTypes<true>(std::declval<Operator>()));
+template <class MyStruct, class F>
+auto MethodTypesOf(...) -> decltype(FnTypes(std::declval<F>()));
+
+template <class T>
+using MethodValueType = std::remove_cv_t<std::remove_reference_t<T>>;
+
+template <class T>
+constexpr bool IsValidMethodArg() {
+  using V = MethodValueType<T>;
+  return !std::is_rvalue_reference_v<T> && !std::is_pointer_v<V> && IsSupportedType<V>() &&
+      std::disjunction_v<std::is_reference<T>, std::is_copy_constructible<V>>;
+}
+
+template <class R>
+constexpr bool IsValidMethodReturn() {
+  if constexpr (std::is_void_v<R>) {
+    return true;
+  } else {
+    using V = MethodValueType<R>;
+    return !std::is_rvalue_reference_v<R> && !std::is_pointer_v<V> && IsSupportedType<V>() &&
+        std::is_assignable_v<V&, R>;
+  }
+}
+
+template <class T>
+T& MethodArg(void* arg) {
+  return *static_cast<T*>(arg);
+}
+
+template <class MyStruct, class F, class R, class Object, class... Args>
+class MethodInfoImpl final : public MethodInfo {
+ public:
+  explicit MethodInfoImpl(F fn) : _fn(std::move(fn)) {}
+
+ protected:
+  void CallImpl(void* obj, void* returnValue, void* const* args) const override {
+    CallWithIndices(obj, returnValue, args, std::index_sequence_for<Args...>{});
+  }
+
+ private:
+  template <size_t... I>
+  void CallWithIndices(
+      void* obj,
+      void* returnValue,
+      [[maybe_unused]] void* const* args,
+      std::index_sequence<I...> /*unused*/) const {
+    using Self = std::
+        conditional_t<std::is_const_v<std::remove_reference_t<Object>>, MyStruct const, MyStruct>;
+    auto& self = *static_cast<Self*>(obj);
+    if constexpr (std::is_void_v<R>) {
+      (void)returnValue;
+      std::invoke(_fn, self, MethodArg<MethodValueType<Args>>(args[I])...);
+    } else if (returnValue == nullptr) {
+      (void)std::invoke(_fn, self, MethodArg<MethodValueType<Args>>(args[I])...);
+    } else {
+      MethodArg<MethodValueType<R>>(returnValue) =
+          std::invoke(_fn, self, MethodArg<MethodValueType<Args>>(args[I])...);
+    }
+  }
+
+  F _fn;
+};
+
+template <
+    class MyStruct,
+    int kNumArgNames,
+    class F,
+    bool kIsGenericLambda,
+    class R,
+    class Object,
+    class... Args>
+void AddMethodWithTypes(
+    StructTypeInfo& info,
+    char const* nameWithArgs,
+    F fn,
+    MethodTypes<kIsGenericLambda, R, Object, Args...> /*unused*/) {
+  constexpr bool kIsValidObject = std::is_lvalue_reference_v<Object> &&
+      std::is_convertible_v<MyStruct*, MethodValueType<Object>*>;
+  // MyStruct binds to the first `auto` parameter, so an argument of type MyStruct may be an `auto`
+  // parameter after a concrete first parameter.
+  constexpr bool kOnlyObjectIsAuto =
+      !kIsGenericLambda || (!std::is_same_v<MethodValueType<Args>, MyStruct> && ...);
+  constexpr bool kArgsAreValid = (IsValidMethodArg<Args>() && ...);
+  constexpr bool kReturnIsValid = IsValidMethodReturn<R>();
+  constexpr bool kNamesMatch = kNumArgNames == static_cast<int>(sizeof...(Args));
+  static_assert(
+      kNumArgNames < 0 || kIsValidObject,
+      "SR_Method needs a member function pointer of the class or one of its public base "
+      "classes, or a function or lambda whose first parameter is `MyStruct&` or "
+      "`const MyStruct&`. A lambda may use `auto&` or `auto const&` for its first parameter only. "
+      "Rvalue-qualified member functions and mutable lambdas are not supported.");
+  static_assert(
+      kNumArgNames < 0 || !kIsValidObject || kOnlyObjectIsAuto,
+      "SR_Method lambdas may use `auto` only for the first parameter, and a lambda with an `auto` "
+      "parameter cannot take the class itself as another argument.");
+  static_assert(
+      kNumArgNames < 0 || !kIsValidObject || kArgsAreValid,
+      "SR_Method parameters must be T, const T, const T& or T&, where T is a supported type that "
+      "can be copied if it is passed by value.");
+  static_assert(
+      kNumArgNames < 0 || !kIsValidObject || kReturnIsValid,
+      "SR_Method must return void, or T, const T& or T&, where T is a supported type that can be "
+      "assigned.");
+  static_assert(
+      kNumArgNames < 0 || !kIsValidObject || kNamesMatch,
+      "SR_Method name must name each argument of the method, excluding the object.");
+  if constexpr (
+      kIsValidObject && kOnlyObjectIsAuto && kArgsAreValid && kReturnIsValid && kNamesMatch) {
+    static constexpr std::array<MethodArgDesc, sizeof...(Args)> kArgs = {MethodArgDesc{
+        &GetTypeInfoRef<MethodValueType<Args>>,
+        std::is_lvalue_reference_v<Args> && !std::is_const_v<std::remove_reference_t<Args>>}...};
+    TypeInfo const& (*getReturnTypeInfo)() = nullptr;
+    if constexpr (!std::is_void_v<R>) {
+      getReturnTypeInfo = &GetTypeInfoRef<MethodValueType<R>>;
+    }
+    AddMethodInfo(
+        info,
+        std::make_unique<MethodInfoImpl<MyStruct, F, R, Object, Args...>>(std::move(fn)),
+        nameWithArgs,
+        Span<MethodArgDesc const>(kArgs.data(), kArgs.size()),
+        std::is_const_v<std::remove_reference_t<Object>>,
+        getReturnTypeInfo);
+  }
+}
+
+template <class MyStruct, int kNumArgNames, class F>
+void AddMethod(StructTypeInfo& info, char const* nameWithArgs, F fn) {
+  static_assert(
+      kNumArgNames >= 0,
+      "SR_Method name must look like \"name(arg1, arg2)\", with unique, non-empty names that do "
+      "not contain '/', '(', ')' or ','.");
+  static_assert(
+      kNumArgNames < 0 || IsStatelessAccessor<F>(),
+      "SR_Method callable must not capture or hold state.");
+  AddMethodWithTypes<MyStruct, kNumArgNames>(
+      info, nameWithArgs, std::move(fn), decltype(MethodTypesOf<MyStruct, F>(0)){});
+}
+
 } // namespace SReflect::detail
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1536,6 +1781,13 @@ void AddProperty(
         srGetter,                                                                           \
         SReflect::detail::SetterSelector<                                                   \
             SReflect::detail::PropertyValueType<MyStruct, decltype(srGetter)>>::Select(setter)); \
+  }
+
+// See SR_Method. The callable is __VA_ARGS__, so commas in a lambda body need no parentheses.
+#define IMPL_SR_Method(name, ...)                                                           \
+  {                                                                                         \
+    SReflect::detail::AddMethod<MyStruct, SReflect::detail::CountMethodArgNames(name)>(     \
+        *myInfo, name, __VA_ARGS__);                                                        \
   }
 
 // See SR_BaseClass
