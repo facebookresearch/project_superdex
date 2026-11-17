@@ -17,7 +17,10 @@
 #include "console_test_utils.h"
 #include "mochi_debugger_test.h"
 
+#include <mochi_core/test/mochi_test_helpers.h>
 #include <mochi_core/test/wait_until.h>
+#include <mochi_core/utils/array_utils.h>
+#include <mochi_core/utils/nd_array.h>
 
 #include <simple_reflection/simple_reflection.h>
 
@@ -213,6 +216,25 @@ class ConsoleTest : public MochiDebuggerTest {
         {"/", "ls 'child/\"A'", "", "Unterminated quotation"}};
   }
 
+  void CheckCases(Span<CommandCase const> cases) {
+    for (auto const& c : cases) {
+      SCOPED_TRACE(std::string{c.cwd} + "> " + std::string{c.command});
+      SetDirectory(c.cwd);
+      auto const lines = Run({c.command});
+      ASSERT_EQ(1, lines.size());
+      if (c.error.empty()) {
+        ExpectOutput(c.command, c.output, lines);
+      } else {
+        EXPECT_TRUE(lines[0].starts_with("error: ")) << lines[0];
+        EXPECT_NE(
+            std::string::npos,
+            NormalizeOutput(c.command, lines[0]).find(NormalizeOutput(c.command, c.error)))
+            << lines[0];
+      }
+      EXPECT_EQ(c.cwd, _client->GetCommandPrompt());
+    }
+  }
+
   void SetTimeout(double timeout) {
     auto settings = _client->GetSettings();
     settings.commandTimeout = timeout;
@@ -230,25 +252,41 @@ class ConsoleTest : public MochiDebuggerTest {
   std::atomic<bool> _received = false;
 };
 
+class ActorConsoleTest : public ConsoleTest {
+ protected:
+  void SetUp() override {
+    ConsoleTest::SetUp();
+    auto const [coordinates, connectivity] = test::CreateMinimalTetMeshUnitCube();
+    ShapeHandle const shape = _context->CreateTetMeshShape(
+        Flatten(MakeConstSpan(coordinates)),
+        Flatten(MakeConstSpan(connectivity)),
+        test::ExpectOK{});
+    RigidActorParams box{};
+    box.name = "box";
+    box.shape = shape;
+    box.colliderType = ColliderType::Box;
+    _sceneA->CreateRigidActor(box, test::ExpectOK{});
+    ArticulatedActorParams robot{};
+    robot.name = "robot";
+    robot.joints.resize(2, {});
+    robot.joints[0].type = ArticulatedJointType::Free;
+    robot.joints[1].type = ArticulatedJointType::Spherical;
+    robot.links.resize(2, {});
+    robot.links[0].name = "link0";
+    robot.links[0].shape = shape;
+    robot.links[0].colliderType = ColliderType::Box;
+    robot.links[1].name = "link1";
+    robot.links[1].parentLink = 0;
+    robot.links[1].shape = shape;
+    robot.links[1].colliderType = ColliderType::Box;
+    _sceneA->CreateArticulatedActor(robot, test::ExpectOK{});
+  }
+};
+
 } // namespace
 
 TEST_F(ConsoleTest, RemoteCommands) {
-  for (auto const& c : RemoteCases()) {
-    SCOPED_TRACE(std::string{c.cwd} + "> " + std::string{c.command});
-    SetDirectory(c.cwd);
-    auto const lines = Run({c.command});
-    ASSERT_EQ(1, lines.size());
-    if (c.error.empty()) {
-      ExpectOutput(c.command, c.output, lines);
-    } else {
-      EXPECT_TRUE(lines[0].starts_with("error: ")) << lines[0];
-      EXPECT_NE(
-          std::string::npos,
-          NormalizeOutput(c.command, lines[0]).find(NormalizeOutput(c.command, c.error)))
-          << lines[0];
-    }
-    EXPECT_EQ(c.cwd, _client->GetCommandPrompt());
-  }
+  CheckCases(RemoteCases());
 }
 
 TEST_F(ConsoleTest, ChangesDirectoryOnlyAfterValidation) {
@@ -452,4 +490,30 @@ TEST_F(ConsoleTest, DisconnectAndDestructionCancelPendingCommands) {
   EXPECT_TRUE(NormalizeOutput("ls", lines[0])
                   .starts_with(NormalizeOutput("ls", "error: No reply from the server:")))
       << lines[0];
+}
+
+TEST_F(ActorConsoleTest, ActorCommands) {
+  std::string const actorsJson = R"({
+  "box": {},
+  "robot": {}
+})";
+  std::string const childrenJson = R"({
+  "link0": {},
+  "link1": {}
+})";
+  CommandCase const cases[] = {
+      {"/scenes/A", "ls actors", "box\nrobot", ""},
+      {"/scenes/A/actors/box", "name", "\"box\"", ""},
+      {"/scenes/A/actors/robot", "name", "\"robot\"", ""},
+      {"/scenes/A/actors/robot", "ls children", "link0\nlink1", ""},
+      {"/scenes/A/actors/robot/children", "link0/name", "\"robot/link0\"", ""},
+      {"/scenes/A/actors/robot/children", "link1/name", "\"robot/link1\"", ""},
+      {"/scenes/A", "actors/box/name", "\"box\"", ""},
+      {"/scenes/A", "actors/missing/name", "", "not found"},
+      {"/scenes/A/actors/robot", "ls children/missing", "", "not found"},
+      {"/scenes/A", "actors", actorsJson, ""},
+      {"/scenes/A/actors/robot", "children", childrenJson, ""},
+      {"/scenes/A", "actors 1", "", "Cannot set value because \"actors\" is read-only"},
+      {"/scenes/A/actors/box", "ls children", "", "not found"}};
+  CheckCases(cases);
 }

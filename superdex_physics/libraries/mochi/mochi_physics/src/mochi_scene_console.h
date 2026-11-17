@@ -30,6 +30,9 @@ namespace mochi::dbg {
 // The arguments of a CommandRequest as std::string, which the SReflect console functions take.
 DynamicArray<std::string> GetCommandArgs(protocol::CommandRequest const& request);
 
+// A path inside a scene can go through the built-in directories actors/<actor name> and, in an
+// actor with nested actors, children/<child name>. They hide reflected members with the same name.
+
 // List, read, set or call the member at the request's path inside the scene, which starts at
 // request.pathStart. Call on the scene's thread. It runs inside the scene's step hooks, so console
 // members must not step the scene, pump the debugger, or destroy the scene or its actors.

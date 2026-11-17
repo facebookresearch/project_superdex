@@ -2632,6 +2632,13 @@ class ActorInterfaceImpl : public ActorInterface {
     return rows;
   }
 #undef MOCHI_ERROR_RETURN_IF_NOT_LINK
+
+  MOCHI_STRUCT_BEGIN(mochi::ActorInterfaceImpl)
+  MOCHI_PROPERTY("name", [](ActorInterfaceImpl const& actor) {
+    return std::string{actor.GetName()};
+  })
+  MOCHI_PROPERTY("type", &ActorInterfaceImpl::GetType)
+  MOCHI_STRUCT_END()
 };
 
 } // namespace

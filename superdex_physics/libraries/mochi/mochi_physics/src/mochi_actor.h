@@ -19,6 +19,8 @@
 #include <mochi_physics/mochi_physics.h>
 #include "mochi_ecs.h"
 
+#include <mochi_core/utils/reflection.h>
+
 #include <memory>
 
 namespace mochi {
@@ -26,7 +28,15 @@ namespace mochi {
 class Scene;
 
 // Unlike Actor, the ActorInterface class has a public destructor so std::unique_ptr can destroy it.
-class ActorInterface : public Actor {};
+class ActorInterface : public Actor {
+ public:
+  // Overridden by MOCHI_STRUCT_BEGIN in the implementation. It describes the most-derived object,
+  // dynamic_cast<void*>(this). simple_reflection's free functions that take an ActorInterface,
+  // such as GetTypeInfo, TryGetTypeInfo, GetFinalTypeInfo and the typed ConsoleExecute and
+  // ConsoleList, do not compile with it: this member makes simple_reflection treat ActorInterface
+  // as a reflected struct, but it has no GetTypeInfo.
+  [[nodiscard]] virtual SReflect::StructTypeInfo const& GetFinalTypeInfo() const = 0;
+};
 using ActorInterfacePtr = std::unique_ptr<ActorInterface>;
 
 // Create an object that implements mochi::Actor to satisfy the public interface.
