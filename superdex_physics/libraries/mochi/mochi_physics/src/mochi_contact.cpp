@@ -1184,10 +1184,10 @@ template <TimeStep kTimeStep, bool kAllowFarSdfQuery>
           colliderBvForCulling);
 
       // Store culled positions and make 'outPositionsToQuery' point to them.
-      culledPositionsBuffer.reserve(culledIndicesBuffer.size());
-      for (int idx : culledIndicesBuffer) {
-        culledPositionsBuffer.push_back(outPositionsToQuery[idx]);
-      }
+      culledPositionsBuffer.resize_noinit(culledIndicesBuffer.size());
+      std::ranges::transform(culledIndicesBuffer, culledPositionsBuffer.begin(), [&](int idx) {
+        return outPositionsToQuery[idx];
+      });
 
       // Remap indices.
       if (activeBoundaryFaces) {
