@@ -2,16 +2,15 @@
   "actors": {
     "rigid": [
       {
-        "boundaryElementType": "P1Q3",
         "contact": {
-          "penaltyCoefficient": 1000000000000.0,
-          "penaltySmoothingHalfDistance": 9.999999747378752e-05,
-          "penaltyThresholdDefault": 9.999999747378752e-05,
-          "penaltyThresholdExtraPadding": 9.999999747378752e-05
+          "penaltyCoefficient": 999999995904,
+          "penaltySmoothingHalfDistance": 9.9999997473787516e-05,
+          "penaltyThresholdDefault": 9.9999997473787516e-05,
+          "penaltyThresholdExtraPadding": 9.9999997473787516e-05
         },
-        "mass": 0.04,
+        "mass": 0.039999999105930328,
         "name": "Paper_Cup",
-        "renderModel": "./render/paper_cup.glb",
+        "renderModel": "./render/paper_cup_render_logo.glb",
         "shape": "./collision/paper_cup.mochi.h5"
       }
     ]
