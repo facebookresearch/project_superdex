@@ -1281,7 +1281,7 @@ class Actor [no_init, no_destruct, use_scene] {
   //
   // @param[in] friction Friction parameters, one per joint. Must be of size equal to the number of
   // joints (matching @ref GetArticulatedJointFrictionParams); all values must be finite and
-  // non-negative.
+  // non-negative, and free joints must have zero friction.
   //
   // @note Only applicable to articulated actors.
   //

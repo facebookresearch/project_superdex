@@ -768,7 +768,7 @@ void mochi::DefineMochiPhysics_MochiPhysicsActor([[maybe_unused]] nb::module_& m
       }
     }
       , nb::arg("friction")
-      , "Set the per-joint friction parameters of the articulated actor.\n\nArgs:\n    friction (ArrayLikeArticulatedJointFrictionParams): Friction parameters, one\n        per joint. Must be of size equal to the number of joints (matching\n        :meth:`~superdex.physics.Actor.get_articulated_joint_friction_params`);\n        all values must be finite and non-negative.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Only applicable to articulated actors.\n\nSee Also:\n    :meth:`~superdex.physics.Actor.get_articulated_joint_friction_params`,\n    :class:`~superdex.physics.ArticulatedJointFrictionParams`"
+      , "Set the per-joint friction parameters of the articulated actor.\n\nArgs:\n    friction (ArrayLikeArticulatedJointFrictionParams): Friction parameters, one\n        per joint. Must be of size equal to the number of joints (matching\n        :meth:`~superdex.physics.Actor.get_articulated_joint_friction_params`);\n        all values must be finite and non-negative, and free joints must have\n        zero friction.\n\nRaises:\n    :class:`~superdex.physics.Error`: If an error occurs.\n\nNote:\n    Only applicable to articulated actors.\n\nSee Also:\n    :meth:`~superdex.physics.Actor.get_articulated_joint_friction_params`,\n    :class:`~superdex.physics.ArticulatedJointFrictionParams`"
     )
     .def("get_articulated_joint_inertia_params", [](mochi::Actor& self) {
       mochi::Error error;

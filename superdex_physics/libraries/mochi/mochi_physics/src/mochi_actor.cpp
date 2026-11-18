@@ -1192,8 +1192,10 @@ class ActorInterfaceImpl : public ActorInterface {
 
     // Validate through the shared per-joint validator so the runtime API and the build-time
     // ArticulatedActorParams validation stay in sync.
-    for (auto const& params : friction) {
-      ValidateFriction(params, error);
+    auto const jointTypes =
+        reg.get<CArticulatedBodyShape const>(e).shape->GetJointsData()->jointTypes;
+    for (int i = 0; i < isize(friction); ++i) {
+      ValidateFriction(jointTypes[i], friction[i], error);
     }
     MOCHI_ERROR_RETURN(error);
     if (friction == MakeConstSpan(current)) {

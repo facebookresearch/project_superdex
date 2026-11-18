@@ -12497,7 +12497,8 @@ class Actor:
             friction (ArrayLikeArticulatedJointFrictionParams): Friction parameters, one
                 per joint. Must be of size equal to the number of joints (matching
                 :meth:`~superdex.physics.Actor.get_articulated_joint_friction_params`);
-                all values must be finite and non-negative.
+                all values must be finite and non-negative, and free joints must have
+                zero friction.
 
         Raises:
             :class:`~superdex.physics.Error`: If an error occurs.

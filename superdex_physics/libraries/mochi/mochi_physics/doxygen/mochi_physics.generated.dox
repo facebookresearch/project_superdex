@@ -6518,7 +6518,7 @@
 ///
 /// @brief Set the per-joint friction parameters of the articulated actor.
 ///
-/// @param[in] friction Friction parameters, one per joint. Must be of size equal to the number of joints (matching @ref mochi::Actor::GetArticulatedJointFrictionParams "GetArticulatedJointFrictionParams"); all values must be finite and non-negative.
+/// @param[in] friction Friction parameters, one per joint. Must be of size equal to the number of joints (matching @ref mochi::Actor::GetArticulatedJointFrictionParams "GetArticulatedJointFrictionParams"); all values must be finite and non-negative, and free joints must have zero friction.
 /// @param[in,out] error Error status. Check @ref mochi::Error::IsOK "Error::IsOK" for success.
 ///
 /// @note Only applicable to articulated actors.

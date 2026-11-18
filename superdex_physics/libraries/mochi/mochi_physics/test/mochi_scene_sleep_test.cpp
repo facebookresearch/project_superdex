@@ -1040,7 +1040,7 @@ static DynamicArray<WakeCase> const& GetWakeCases() {
          auto const current = c.actor->GetArticulatedJointFrictionParams(test::ExpectOK{});
          DynamicArray<ArticulatedJointFrictionParams> friction;
          friction.assign(current.begin(), current.end());
-         friction[0].viscous = 0.05_r;
+         friction.back().viscous = 0.05_r; // The root joint may be free, which has no friction
          c.actor->SetArticulatedJointFrictionParams(MakeConstSpan(friction), test::ExpectOK{});
        }},
       {"SetArticulatedJointInertiaParams",

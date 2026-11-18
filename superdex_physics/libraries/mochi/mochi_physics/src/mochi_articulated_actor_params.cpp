@@ -251,7 +251,10 @@ void mochi::AutoCorrect(ArticulatedActorParams& params, Error& error) {
         description " quaternion should be unit length.")                                         \
   }
 
-void mochi::ValidateFriction(ArticulatedJointFrictionParams const& friction, Error& error) {
+void mochi::ValidateFriction(
+    ArticulatedJointType type,
+    ArticulatedJointFrictionParams const& friction,
+    Error& error) {
   MOCHI_ERROR_RETURN(error);
   MOCHI_ERROR_IF(!IsFinite(friction.viscous), error, "Joint friction viscous is not finite.");
   MOCHI_ERROR_IF(friction.viscous < 0_r, error, "Joint friction viscous is negative.");
@@ -265,6 +268,11 @@ void mochi::ValidateFriction(ArticulatedJointFrictionParams const& friction, Err
   MOCHI_ERROR_IF(
       !IsFinite(friction.stribeckVel), error, "Joint friction stribeckVel is not finite.");
   MOCHI_ERROR_IF(friction.stribeckVel < 0_r, error, "Joint friction stribeckVel is negative.");
+  MOCHI_ERROR_IF(
+      type == ArticulatedJointType::Free &&
+          (friction.viscous != 0_r || friction.coulomb != 0_r || friction.stictionExtra != 0_r),
+      error,
+      "Joint friction must be zero for free joints.");
 }
 
 void mochi::ValidateInertia(real inertia, Error& error) {
@@ -301,7 +309,7 @@ static void ValidateJoint(ArticulatedJointParams const& joint, Error& error) {
       "NaN value detected in joint limits.");
 
   // Friction
-  ValidateFriction(joint.friction, error);
+  ValidateFriction(joint.type, joint.friction, error);
 
   // Inertia
   if (joint.inertia.has_value()) {

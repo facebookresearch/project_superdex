@@ -56,8 +56,12 @@ void AutoCorrect(ArticulatedActorParams& params, Error& error);
 // Check for errors in ArticulatedActorParams
 void Validate(ArticulatedActorParams const& params, Error& error);
 
-// Check for errors in a single joint's friction parameters (finite + non-negative).
-void ValidateFriction(ArticulatedJointFrictionParams const& friction, Error& error);
+// Check for errors in a single joint's friction parameters (finite + non-negative, and zero for a
+// free joint).
+void ValidateFriction(
+    ArticulatedJointType type,
+    ArticulatedJointFrictionParams const& friction,
+    Error& error);
 
 // Check for errors in a single joint's inertia coefficient (finite + non-negative).
 void ValidateInertia(real inertia, Error& error);
