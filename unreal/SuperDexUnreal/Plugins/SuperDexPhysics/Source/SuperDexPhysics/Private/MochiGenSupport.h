@@ -19,11 +19,32 @@
 #include "CoreMinimal.h"
 
 #include <mochi_core/geometry/aabb.h>
+#include <mochi_core/utils/dynamic_array.h>
 #include <mochi_core/utils/dynamic_string.h>
 #include <mochi_core/utils/quaternion.h>
 
+#include <optional>
+
 /** Representation conversions shared by generated Unreal types; no unit scaling. */
 namespace MochiGenSupport {
+
+template <typename T>
+TArray<T> ToUnrealArray(mochi::DynamicArray<T> const& Source) {
+  if (Source.size() > static_cast<size_t>(MAX_int32)) {
+    UE_LOG(LogTemp, Fatal, TEXT("Mochi array is too large for TArray."));
+    return {};
+  }
+  return TArray<T>(Source.data(), static_cast<int32>(Source.size()));
+}
+
+template <typename T>
+mochi::DynamicArray<T> ToMochiArray(TArray<T> const& Source) {
+  mochi::DynamicArray<T> Result;
+  if (Source.Num() != 0) {
+    Result.assign(Source.GetData(), Source.GetData() + Source.Num());
+  }
+  return Result;
+}
 
 template <typename TVector>
 mochi::Real3 ToMochiReal3(TVector const& Value) {
@@ -45,6 +66,30 @@ inline FQuat4f ToUnrealQuaternion(mochi::Quaternion const& Value) {
   return FQuat4f(Components[0], Components[1], Components[2], Components[3]);
 }
 
+template <typename TUnreal, typename TNativeArray, typename TConvert>
+TArray<TUnreal> ToUnrealArray(TNativeArray const& Source, TConvert Convert) {
+  TArray<TUnreal> Result;
+  if (Source.size() > static_cast<size_t>(MAX_int32)) {
+    UE_LOG(LogTemp, Fatal, TEXT("Mochi array is too large for TArray."));
+    return Result;
+  }
+  Result.Reserve(static_cast<int32>(Source.size()));
+  for (auto const& Value : Source) {
+    Result.Add(Convert(Value));
+  }
+  return Result;
+}
+
+template <typename TNative, typename TUnreal, typename TConvert>
+mochi::DynamicArray<TNative> ToMochiArray(TArray<TUnreal> const& Source, TConvert Convert) {
+  mochi::DynamicArray<TNative> Result;
+  Result.reserve(static_cast<size_t>(Source.Num()));
+  for (auto const& Value : Source) {
+    Result.push_back(Convert(Value));
+  }
+  return Result;
+}
+
 inline mochi::DynamicString ToMochiString(FString const& Value) {
   const FTCHARToUTF8 Converted(*Value, Value.Len());
   return mochi::DynamicString(Converted.Get(), static_cast<size_t>(Converted.Length()));
@@ -57,6 +102,24 @@ inline FString ToUnrealString(mochi::DynamicString const& Value) {
   }
   const FUTF8ToTCHAR Converted(Value.data(), static_cast<int32>(Value.size()));
   return FString(Converted.Length(), Converted.Get());
+}
+
+template <typename TNative, typename TUnreal, typename TConvert>
+std::optional<TNative> ToMochiOptional(TOptional<TUnreal> const& Source, TConvert Convert) {
+  std::optional<TNative> Result{};
+  if (Source.IsSet()) {
+    Result = Convert(Source.GetValue());
+  }
+  return Result;
+}
+
+template <typename TUnreal, typename TNative, typename TConvert>
+TOptional<TUnreal> ToUnrealOptional(std::optional<TNative> const& Source, TConvert Convert) {
+  TOptional<TUnreal> Result{};
+  if (Source.has_value()) {
+    Result = Convert(*Source);
+  }
+  return Result;
 }
 
 inline mochi::Aabb ToMochiAabb(FBox3f const& Value) {
