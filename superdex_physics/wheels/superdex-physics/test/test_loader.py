@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import importlib.machinery
 import os
+import sysconfig
 import tempfile
 import unittest
 from pathlib import Path
@@ -57,6 +58,12 @@ def _find_spec_for(installed: dict[str, Path]) -> object:
 
 
 class LoaderTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        # The import_module tests patch importlib.import_module, which sysconfig's lazy
+        # first load goes through; a failed first load breaks sysconfig for the process.
+        sysconfig.get_config_vars()
+
     def test_packaged_native_dir_uses_the_flat_base_payload_for_fp32(
         self,
     ) -> None:
