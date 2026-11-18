@@ -52,6 +52,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
 
   // Create client
   dbg::DebugClient client;
+  client.SetSettings({.autoSelectScene = false});
 
   // Main loop
   std::string input;

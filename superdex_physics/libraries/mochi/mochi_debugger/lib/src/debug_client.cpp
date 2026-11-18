@@ -407,7 +407,7 @@ void DebugClient::OnWelcomeMessage(protocol::WelcomeMessage&& msg) {
     // Maybe auto-select a scene.
     SetSelectedScene(
         state,
-        FindAutoSelectableScene(state.scenes),
+        state.settings.autoSelectScene ? FindAutoSelectableScene(state.scenes) : SceneHandle{},
         syncRequestsToSend,
         debugDrawRequestsToSend,
         sleepRequestsToSend,
@@ -488,7 +488,7 @@ void DebugClient::OnSceneAddRemove(protocol::SceneAddRemove&& msg) {
 
       // If there is no current selection and this is the first auto-selectable scene,
       // then select it now.
-      if (!state.selectedScene.IsValid() && !hadSelectableScene &&
+      if (state.settings.autoSelectScene && !state.selectedScene.IsValid() && !hadSelectableScene &&
           IsAutoSelectableScene(state.scenes.back())) {
         SetSelectedScene(
             state,
@@ -510,7 +510,7 @@ void DebugClient::OnSceneAddRemove(protocol::SceneAddRemove&& msg) {
       if (msg.scene == state.selectedScene) {
         SetSelectedScene(
             state,
-            FindAutoSelectableScene(state.scenes),
+            state.settings.autoSelectScene ? FindAutoSelectableScene(state.scenes) : SceneHandle{},
             syncRequestsToSend,
             debugDrawRequestsToSend,
             sleepRequestsToSend,

@@ -95,6 +95,9 @@ struct DebugClientSettings {
   /// @brief Number of step profiles retained by @ref DebugClient::ReadProfileHistory.
   int maxProfileHistory = 2500;
 
+  /// @brief Enable automatic scene selection on connect and scene changes.
+  bool autoSelectScene = true;
+
   bool operator==(DebugClientSettings const& rhs) const = default;
 };
 
@@ -306,6 +309,8 @@ class DebugClient {
    * nothing selectable existed before, and when the selected scene is removed. By convention a
    * scene name starting with "_" will not be selected automatically, but it could still be selected
    * explicitly.
+   *
+   * @note Disable @ref DebugClientSettings::autoSelectScene to leave selection to @ref SelectScene.
    */
   [[nodiscard]] SceneHandle GetSelectedScene() const;
 

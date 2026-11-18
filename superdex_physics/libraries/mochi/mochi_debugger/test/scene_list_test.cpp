@@ -51,6 +51,38 @@ class SceneListTest : public MochiDebuggerTest {
 };
 } // namespace
 
+TEST_F(SceneListTest, AutoSelectionCanBeDisabledOnConnect) {
+  _client->SetSettings(DebugClientSettings{.autoSelectScene = false});
+  [[maybe_unused]] Scene* alpha = _context->CreateScene("Alpha");
+  StartServer();
+  ConnectClient();
+  EXPECT_EQ("Alpha", GetClientSceneNames());
+  EXPECT_FALSE(_client->GetSelectedScene().IsValid());
+
+  DisconnectClient();
+  ConnectClient();
+  EXPECT_FALSE(_client->GetSelectedScene().IsValid());
+}
+
+TEST_F(SceneListTest, AutoSelectionCanBeDisabledForSceneChanges) {
+  _client->SetSettings(DebugClientSettings{.autoSelectScene = false});
+  StartServer();
+  ConnectClient();
+
+  Scene* alpha = _context->CreateScene("Alpha");
+  test::WaitUntil([&] { return GetClientSceneNames() == "Alpha"; });
+  EXPECT_FALSE(_client->GetSelectedScene().IsValid());
+  Scene* beta = _context->CreateScene("Beta");
+  test::WaitUntil([&] { return GetClientSceneNames() == "Alpha, Beta"; });
+  EXPECT_FALSE(_client->GetSelectedScene().IsValid());
+
+  ClientSelectScene(alpha->GetHandle());
+  _context->DestroyScene(alpha);
+  test::WaitUntil([&] { return GetClientSceneNames() == "Beta"; });
+  EXPECT_FALSE(_client->GetSelectedScene().IsValid());
+  ClientSelectScene(beta->GetHandle());
+}
+
 TEST_F(SceneListTest, ScenesPresentBeforeConnect) {
   // Create multiple scenes before connect
   [[maybe_unused]] Scene* alpha = _context->CreateScene("Alpha");
