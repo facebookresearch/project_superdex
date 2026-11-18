@@ -182,18 +182,19 @@ struct CDeformablePointAsyncCollisionsResponse {
    */
   DynamicArray<bool> _isActiveContactElement;
 
-  /** @brief The friction and damping parts of the energies and gradients (see
-   * @ref AddContactSampleResponse), with an entry per response sample, zero for samples without
-   * friction or damping, if the assembly reports them (see @ref ReportsContactNonPotentialTerms).
-   * Empty otherwise. */
+  /** @brief The non-potential parts of the energies and gradients (see @ref
+   * AddContactSampleResponse and @ref HasNonPotentialTerms) if the assembly reports them (see @ref
+   * ReportsContactNonPotentialTerms), with an entry per response sample, zero for samples without
+   * them. Empty otherwise. */
   DynamicArray<double> _nonPotentialEnergies;
   DynamicArray<Real3> _nonPotentialGradients;
 
-  /** @brief Whether the assembly reports friction and damping, and whether some sample does. */
+  /** @brief Whether the assembly reports non-potential terms, and whether some sample reports
+   * nonzero ones. */
   bool _reportsNonPotential = false;
   bool _hasReportedNonPotential = false;
 
-  /** @brief Scratch for the friction and damping of one collider's contacts (see
+  /** @brief Scratch for the non-potential terms of one collider's contacts (see
    * @ref ComputeCollisionResponse), kept across assemblies to reuse its allocation. */
   CollisionResponseResult _nonPotentialScratch;
 
@@ -226,7 +227,7 @@ struct CDeformablePointAsyncCollisionsResponse {
     return _nonPotentialGradients[responseIndex];
   }
 
-  // Whether some sample reported friction or damping (see GetNonPotentialEnergy).
+  // Whether some sample reported nonzero non-potential terms (see GetNonPotentialEnergy).
   [[nodiscard]] bool HasReportedNonPotentialTerms() const {
     return _hasReportedNonPotential;
   }
@@ -250,7 +251,7 @@ struct CDeformablePointAsyncCollisionsResponse {
     _hasReportedNonPotential = false;
   }
 
-  // reportsNonPotential: whether the assembly reports friction and damping (see
+  // reportsNonPotential: whether the assembly reports non-potential terms (see
   // GetNonPotentialEnergy).
   void
   Reset(int numContactElements, int numQuadsPerContactElement, bool reportsNonPotential = false) {
@@ -298,8 +299,9 @@ struct CDeformablePointAsyncCollisionsResponse {
   }
 
   // Add response data for a contact sample. If data is provided more than once for the same sample
-  // index, the values are accumulated. The dissipation energy and gradient, the part of the
-  // response from friction and damping, require a Reset with reportsNonPotential.
+  // index, the values are accumulated. The non-potential energy and gradient, the part of the
+  // response from non-potential terms (see HasNonPotentialTerms), require a Reset with
+  // reportsNonPotential.
   void AddContactSampleResponse(
       int sampleIndex,
       double const* energy,
@@ -317,7 +319,7 @@ struct CDeformablePointAsyncCollisionsResponse {
     MOCHI_ASSERT_VERBOSE(
         (nonPotentialEnergy == nullptr) == (nonPotentialGradient == nullptr) &&
             (!nonPotentialEnergy || _reportsNonPotential),
-        "The dissipation energy and gradient must be given together, after a Reset with reportsNonPotential.");
+        "The non-potential energy and gradient must be given together, after a Reset with reportsNonPotential.");
 
     int responseIndex = _responseIndexFromSampleIndex[sampleIndex];
     if (responseIndex == kInvalidIndex) {
@@ -352,7 +354,7 @@ struct CDeformablePointAsyncCollisionsResponse {
         _nonPotentialGradients[responseIndex] += *nonPotentialGradient;
       }
     }
-    if (nonPotentialEnergy) {
+    if (nonPotentialEnergy && (*nonPotentialEnergy != 0.0 || *nonPotentialGradient != Real3{})) {
       _hasReportedNonPotential = true;
     }
 
@@ -390,7 +392,7 @@ struct CDeformablePointAsyncCollisionsResponse {
     MOCHI_ASSERT_VERBOSE(
         isize(_nonPotentialEnergies) == (_reportsNonPotential ? isize(_sampleIndices) : 0) &&
             isize(_nonPotentialGradients) == isize(_nonPotentialEnergies),
-        "Contact response dissipation must match the number of response samples if reported, and be empty otherwise.");
+        "Contact response non-potential terms must match the number of response samples if reported, and be empty otherwise.");
     if (!allowedContactElementMask.empty()) {
       MOCHI_ASSERT_VERBOSE(
           isize(allowedContactElementMask) == isize(_isActiveContactElement),
@@ -709,6 +711,10 @@ inline void ValidateContactParams(ContactParams const& params, Error& error) {
       error,
       "Maximum normal alignment (maxAlignmentNormals) must be in [-1, 1].");
   MOCHI_ERROR_IF_NOT(
+      params.alignmentSmoothingFraction >= 0_r && params.alignmentSmoothingFraction <= 1_r,
+      error,
+      "Normal alignment smoothing fraction (alignmentSmoothingFraction) must be in [0, 1].");
+  MOCHI_ERROR_IF_NOT(
       IsFinite(params.coulombFrictionCoefficient) && params.coulombFrictionCoefficient >= 0_r,
       error,
       "Coulomb friction coefficient (coulombFrictionCoefficient) must be finite and not negative.");
@@ -842,7 +848,7 @@ GetCollidingPadding(ContactAssemblyReg const& reg, entt::entity colliding, entt:
 
 // Combines only the Coulomb friction, viscous friction and normal viscous damping coefficients of a
 // pair (see CombineContactParams), which decide whether it has friction or damping. The other
-// parameters are the collider's, with the pair's override.
+// parameters, including those of the alignment gate, are the collider's, with the pair's override.
 [[nodiscard]] inline ContactParams CombineDissipationCoefficients(
     ContactParams const& collidingParams,
     ContactParams const& colliderParams,
@@ -994,11 +1000,12 @@ GetContactPairParams(ContactAssemblyReg const& reg, entt::entity colliding, entt
       GetCollidingPadding(reg, colliding, collider));
 }
 
-// Whether an assembly reports the friction and damping of contact (see ReportsNonPotentialTerms):
-// with implicit normals, whose friction and damping forces treat the normals and the load as
-// constants when differentiating their energy, so their energy is in general not a potential of
-// their force. Explicit normals lag the normals and the load, so the energy of friction and damping
-// is a potential for a fixed contact set.
+// Whether an assembly reports the non-potential terms of contact (see ReportsNonPotentialTerms and
+// HasNonPotentialTerms): with implicit normals, whose friction and damping forces treat the normals
+// and the load as constants when differentiating their energy, and whose penalty forces treat the
+// weight of a smooth alignment gate as a constant, so their energy is in general not a potential of
+// their force. Explicit normals lag the normals, the load and the alignment, so the energy of
+// contact is a potential for a fixed contact set.
 [[nodiscard]] inline bool ReportsContactNonPotentialTerms(
     AssemblyParams const& params,
     CSimulationParams const& simParams) {
@@ -1013,19 +1020,23 @@ GetContactPairParams(ContactAssemblyReg const& reg, entt::entity colliding, entt
       !params.fittedSaturationHessian.contactFriction;
 }
 
-// Whether a contact pair has friction or damping (see HasDissipation), without combining its other
-// contact parameters (see GetContactPairParams).
-[[nodiscard]] inline bool
-PairHasDissipation(ContactAssemblyReg const& reg, entt::entity colliding, entt::entity collider) {
-  return HasDissipation(CombineDissipationCoefficients(
-      reg.get<CContactParams const>(colliding),
-      reg.get<CContactParams const>(collider),
-      FindContactPairParamsOverride(reg, colliding, collider)));
-}
-
 inline bool ValidCollidingNormals(ContactAssemblyReg const& reg, entt::entity colliding) {
   // Tags for actor types without valid normals at colliding samples should be added here.
   return !reg.any_of<TagShellActor, TagRodActor>(colliding);
+}
+
+// Whether a contact pair has non-potential terms (see HasNonPotentialTerms), without combining its
+// other contact parameters (see GetContactPairParams).
+[[nodiscard]] inline bool PairHasNonPotentialTerms(
+    ContactAssemblyReg const& reg,
+    entt::entity colliding,
+    entt::entity collider) {
+  return HasNonPotentialTerms(
+      CombineDissipationCoefficients(
+          reg.get<CContactParams const>(colliding),
+          reg.get<CContactParams const>(collider),
+          FindContactPairParamsOverride(reg, colliding, collider)),
+      ValidCollidingNormals(reg, colliding));
 }
 
 [[nodiscard]] ContactEvalConfig MakeContactEvalConfigAsync(

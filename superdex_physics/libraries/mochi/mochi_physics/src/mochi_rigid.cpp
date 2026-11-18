@@ -96,9 +96,9 @@ void rigid::SetVelocity(
 }
 
 // If outNonPotentialEnergy and outNonPotentialGradient are not null, they receive the energy and
-// gradient of friction and damping summed over the contacts. Returns whether it reported any. If
-// outTrustMargin is not null, it is lowered to the minimum trust margin of the contacts (see
-// ComputeBatchTrustMargin).
+// gradient of the non-potential terms (see HasNonPotentialTerms) summed over the contacts. Returns
+// whether it reported any. If outTrustMargin is not null, it is lowered to the minimum trust margin
+// of the contacts (see ComputeBatchTrustMargin).
 template <GradTarget kGradTarget>
 [[nodiscard]] static bool AssembleRigidBodyAsyncContactResponse(
     ContactAssemblyReg reg,
@@ -127,7 +127,7 @@ template <GradTarget kGradTarget>
       "The contact DResidual only supports GradTarget::Current.");
   MOCHI_ASSERT_VERBOSE(
       (outNonPotentialEnergy == nullptr) == (outNonPotentialGradient == nullptr),
-      "The dissipation energy and gradient must be requested together.");
+      "The non-potential energy and gradient must be requested together.");
 
   bool const assemEnergy = (outEnergy != nullptr);
   bool const assemGradient = (outGradient != nullptr);
@@ -191,7 +191,8 @@ template <GradTarget kGradTarget>
       contactQuery.forcePerUnitArea.resize_noinit(numPoints);
     }
     std::optional<RigidContactSums> nonPotentialSums;
-    if (outNonPotentialEnergy && HasDissipation(contactParams)) {
+    if (outNonPotentialEnergy &&
+        HasNonPotentialTerms(contactParams, config.validCollidingNormals)) {
       nonPotentialSums.emplace();
       reportedNonPotential = true;
     }
@@ -709,7 +710,7 @@ void mochi::rigid::EntityAssemble(
   RigidNonPotentialTerms tempNonPotential;
   RigidNonPotentialTerms* nonPotential = reportsNonPotential ? &tempNonPotential : nullptr;
 
-  // So do the friction and damping of contact.
+  // So do the non-potential terms of contact.
   bool const reportsContactNonPotential = ReportsContactNonPotentialTerms(params, simParams.value);
   double contactNonPotentialEnergy = 0.0;
   RigidGradient contactNonPotentialGradient{};

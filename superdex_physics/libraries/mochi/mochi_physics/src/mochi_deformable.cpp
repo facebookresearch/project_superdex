@@ -322,7 +322,8 @@ static void ComputeAsyncContactResponseImpl(
 
     int const numActiveSamples = isize(contactQuery.sampleIndices);
     collisionResponse.ResizeNoInit(numActiveSamples, evalEner, evalGrad, evalHess);
-    bool const colliderReportsNonPotential = reportsNonPotential && HasDissipation(contactParams);
+    bool const colliderReportsNonPotential =
+        reportsNonPotential && HasNonPotentialTerms(contactParams, config.validCollidingNormals);
     if (colliderReportsNonPotential) {
       nonPotential.ResizeNoInit(numActiveSamples, true, true, false);
     }

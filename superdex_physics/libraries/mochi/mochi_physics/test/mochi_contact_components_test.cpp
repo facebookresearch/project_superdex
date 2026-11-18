@@ -68,6 +68,7 @@ ContactParams MakeColliderContactParams() {
   params.penaltyThresholdExtraPadding = 0.03_r;
   params.frictionWithColliderNormal = false;
   params.maxAlignmentNormals = 0.7_r;
+  params.alignmentSmoothingFraction = 0.6_r;
   params.distanceErrorBound = 0.04_r;
   params.objScale = 3_r;
   return params;
@@ -97,6 +98,7 @@ void ExpectColliderOwnedFieldsUnchanged(
   EXPECT_EQ(collider.penaltyThresholdExtraPadding, actual.penaltyThresholdExtraPadding);
   EXPECT_EQ(collider.frictionWithColliderNormal, actual.frictionWithColliderNormal);
   EXPECT_EQ(collider.maxAlignmentNormals, actual.maxAlignmentNormals);
+  EXPECT_EQ(collider.alignmentSmoothingFraction, actual.alignmentSmoothingFraction);
   EXPECT_EQ(collider.distanceErrorBound, actual.distanceErrorBound);
   EXPECT_EQ(collider.objScale, actual.objScale);
   EXPECT_EQ(collider.collidingPenaltyLengthScale, actual.collidingPenaltyLengthScale);
@@ -113,6 +115,19 @@ TEST(ContactParamsValidation, AcceptsFiniteValuesAtLegalBounds) {
 
   params.maxAlignmentNormals = 1_r;
   ValidateContactParams(params, ExpectOK{});
+
+  for (real const fraction : {0_r, 1_r}) {
+    params.alignmentSmoothingFraction = fraction;
+    ValidateContactParams(params, ExpectOK{});
+  }
+}
+
+TEST(ContactParamsValidation, RejectsAlignmentSmoothingFractionOutsideUnitInterval) {
+  for (real const fraction : {-1e-6_r, 1_r + 1e-6_r}) {
+    ContactParams params;
+    params.alignmentSmoothingFraction = fraction;
+    ValidateContactParams(params, ExpectNotOK{});
+  }
 }
 
 TEST(ContactParamsValidation, RejectsNonFiniteValuesForEveryNumericField) {
@@ -123,6 +138,7 @@ TEST(ContactParamsValidation, RejectsNonFiniteValuesForEveryNumericField) {
       &ContactParams::penaltyThresholdExtraPadding,
       &ContactParams::collidingPenaltyThresholdPadding,
       &ContactParams::maxAlignmentNormals,
+      &ContactParams::alignmentSmoothingFraction,
       &ContactParams::viscousFrictionCoefficient,
       &ContactParams::coulombFrictionCoefficient,
       &ContactParams::frictionFalloffVel,

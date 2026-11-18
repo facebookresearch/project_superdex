@@ -373,16 +373,30 @@ class SUPERDEXPHYSICS_API UMochiContactParams : public UObject {
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Friction", AdvancedDisplay)
   bool bFrictionWithColliderNormal;
 
-  // Maximum alignment of colliding normals (0 means 90 deg, -1 means perfectly opposing, 1 means
-  // all normals are accepted). Nominally contact normals are opposing; this determines the
-  // threshold of disagreement (alignment) at which contacts are rejected for friction computation.
+  // [Experimental] Maximum alignment of colliding normals (-1 means perfectly opposing, 0 means
+  // 90 deg). Nominally contact normals are opposing. Contacts whose alignment exceeds this
+  // threshold are disabled, abruptly or over a band centered at it (see
+  // AlignmentSmoothingFraction). 1 with AlignmentSmoothingFraction = 0 accepts all contacts with
+  // unit normals.
   UPROPERTY(
       EditAnywhere,
       BlueprintReadOnly,
-      Category = "Friction",
+      Category = "Contact",
       AdvancedDisplay,
       meta = (UIMin = -1.0, UIMax = 1.0))
   float MaxAlignmentNormals;
+
+  // [Experimental] Width of the band of alignments, centered at MaxAlignmentNormals, over which
+  // contacts fade out, as a fraction of the range of alignments [-1, MaxAlignmentNormals]. Contacts
+  // at MaxAlignmentNormals keep half their force. 0 disables contacts abruptly. Applies only with
+  // implicit normals.
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadOnly,
+      Category = "Contact",
+      AdvancedDisplay,
+      meta = (ClampMin = 0.0, ClampMax = 1.0))
+  float AlignmentSmoothingFraction;
 
   // Viscous friction coefficient.
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Friction")

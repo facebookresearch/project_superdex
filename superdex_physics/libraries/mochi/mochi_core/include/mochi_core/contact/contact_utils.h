@@ -663,6 +663,22 @@ struct ContactEvalConfig {
       params.normalViscousDampingCoefficient > 0_r;
 }
 
+// Whether the penalty of the contact fades out over a band of normal alignments with implicit
+// normals (see ContactParams::alignmentSmoothingFraction).
+[[nodiscard]] MOCHI_FORCE_INLINE bool HasSmoothAlignmentGate(ContactParams const& params) {
+  return params.alignmentSmoothingFraction > 0_r && params.maxAlignmentNormals > -1_r;
+}
+
+// Whether the contact has terms whose force is not the gradient of their energy when normals are
+// implicit: friction and damping (see HasDissipation), and the part of the penalty that a smooth
+// alignment gate removes (see HasSmoothAlignmentGate), since the force ignores the derivative of
+// the gate. Without valid colliding normals the gate weight is 1, so the gate removes nothing.
+[[nodiscard]] MOCHI_FORCE_INLINE bool HasNonPotentialTerms(
+    ContactParams const& params,
+    bool validCollidingNormals) {
+  return HasDissipation(params) || (validCollidingNormals && HasSmoothAlignmentGate(params));
+}
+
 /*************************************************************************************************/
 
 // Maximum batch size for collision force and dforce computation.
@@ -676,6 +692,22 @@ using BatchDForce = std::conditional_t<
     BatchSymMatrix3x3<kBatchSize>,
     BatchReal3x3<kBatchSize>>;
 
+/**
+ * @brief Collision response (energy, force, and force derivative) of a batch of contact points.
+ *
+ * @note Quantities not requested from @ref ComputeBatchCollisionResponse are left uninitialized.
+ * Lanes beyond @p kBatchSize hold unspecified values.
+ */
+template <int kBatchSize, GradTarget kGradTarget>
+struct BatchCollisionResponse {
+  BatchDouble<kBatchSize> energy;
+  BatchReal3<kBatchSize> force;
+  BatchDForce<kBatchSize, kGradTarget> dForce;
+};
+
+// Penalty energy, force, force derivative and force norm of a batch of contacts, scaled by the
+// weight of their alignment gate. If outNonPotential is not null, the part of the penalty that the
+// gate removes, (w - 1) times the penalty without the gate, is added to its energy and force.
 template <int kBatchSize>
 MOCHI_FORCE_INLINE void ComputeBatchContactPenaltyForceDForce(
     BatchDouble<kBatchSize>& outEnergy,
@@ -684,14 +716,15 @@ MOCHI_FORCE_INLINE void ComputeBatchContactPenaltyForceDForce(
     BatchReal<kBatchSize>& outForceNorm,
     BatchReal<kBatchSize> const& d,
     BatchReal3<kBatchSize> const& sdfGrad,
-    BatchReal<kBatchSize> const& alignmentMask,
+    BatchReal<kBatchSize> const& alignmentWeight,
     BatchReal<kBatchSize> const& alignmentFactor,
     ContactParams const& params,
     ContactEvalConfig const& config,
     bool assemEnergy,
     bool assemForce,
     bool assemDForce,
-    bool assemForceNorm) {
+    bool assemForceNorm,
+    BatchCollisionResponse<kBatchSize, GradTarget::Current>* outNonPotential = nullptr) {
   static_assert(
       kCollResponseMaxBatchSize == 8,
       "Please update batched contact functions if the max batch size changes");
@@ -703,7 +736,7 @@ MOCHI_FORCE_INLINE void ComputeBatchContactPenaltyForceDForce(
   using V = BatchReal<kBatchSize>;
   using Vd = BatchDouble<kBatchSize>;
 
-  auto const penaltyCoeff = V{params.penaltyCoefficient};
+  V const penaltyCoeff = V{params.penaltyCoefficient} * alignmentWeight;
   auto const penaltyThr = V{params.GetPenaltyThresholdDist(config.addPadding)};
   auto const penaltyFalloff = V{params.penaltySmoothingHalfDistance};
 
@@ -712,13 +745,10 @@ MOCHI_FORCE_INLINE void ComputeBatchContactPenaltyForceDForce(
   V dPenalty MOCHI_NO_INIT;
   V ddPenalty MOCHI_NO_INIT;
   PolyReLU<V>(-d, penaltyFalloff, penaltyFalloff - penaltyThr, penalty, dPenalty, ddPenalty);
-  penalty &= alignmentMask; // Ensure no energy, force or dforce
-  dPenalty &= alignmentMask; // Ensure no energy, force or dforce
-  ddPenalty &= alignmentMask; // Ensure no energy, force or dforce
 
   // Output energy
   if (assemEnergy) {
-    outEnergy = 0.5 * Get0(penaltyCoeff) * Sqr(StaticCast<Vd>(penalty));
+    outEnergy = 0.5 * StaticCast<Vd>(penaltyCoeff) * Sqr(StaticCast<Vd>(penalty));
   }
 
   if (assemForce || assemForceNorm) {
@@ -742,6 +772,19 @@ MOCHI_FORCE_INLINE void ComputeBatchContactPenaltyForceDForce(
 
     outDForce = OuterSym(dForceNorm * sdfGrad, sdfGrad);
   }
+
+  // The penalty without the alignment gate is a potential. The part that the gate removes, (w - 1)
+  // times it, is not, since its force ignores the derivative of the gate weight w.
+  // TODO: Disabled contacts (w = 0) report -E, which line-search merits cancel against their
+  // potential E only up to the trapezoidal work estimate, exact only for E quadratic along the
+  // step. A constant w < 1 leaves 1 - w times that error. Freezing a reference weight a = w per
+  // contact at the start of each line search, with potential aE and reported part (w - a)E, would
+  // make constant weights report zero.
+  if (outNonPotential && NotEqual<kBatchSize>(alignmentWeight, V{1_r})) {
+    V const removedCoeff = (alignmentWeight - V{1_r}) * V{params.penaltyCoefficient};
+    outNonPotential->energy += 0.5 * StaticCast<Vd>(removedCoeff) * Sqr(StaticCast<Vd>(penalty));
+    outNonPotential->force += (removedCoeff * penalty * dPenalty) * sdfGrad;
+  }
 }
 
 template <int kBatchSize>
@@ -749,7 +792,7 @@ MOCHI_FORCE_INLINE void ComputeBatchContactPenaltyForceNormDForceNorm(
     BatchReal<kBatchSize>& outForceNorm,
     BatchReal<kBatchSize>& outDForceNorm,
     BatchReal<kBatchSize> const& d,
-    BatchReal<kBatchSize> const& alignmentMask,
+    BatchReal<kBatchSize> const& alignmentWeight,
     BatchReal<kBatchSize> const& alignmentFactor,
     ContactParams const& params,
     ContactEvalConfig const& config,
@@ -764,7 +807,7 @@ MOCHI_FORCE_INLINE void ComputeBatchContactPenaltyForceNormDForceNorm(
 
   using V = BatchReal<kBatchSize>;
 
-  auto const penaltyCoeff = V{params.penaltyCoefficient};
+  V const penaltyCoeff = V{params.penaltyCoefficient} * alignmentWeight;
   auto const penaltyThr = V{params.GetPenaltyThresholdDist(config.addPadding)};
   auto const penaltyFalloff = V{params.penaltySmoothingHalfDistance};
 
@@ -773,9 +816,6 @@ MOCHI_FORCE_INLINE void ComputeBatchContactPenaltyForceNormDForceNorm(
   V dPenalty MOCHI_NO_INIT;
   V ddPenalty MOCHI_NO_INIT;
   PolyReLU<V>(-d, penaltyFalloff, penaltyFalloff - penaltyThr, penalty, dPenalty, ddPenalty);
-  penalty &= alignmentMask; // Ensure no energy, force or dforce
-  dPenalty &= alignmentMask; // Ensure no energy, force or dforce
-  ddPenalty &= alignmentMask; // Ensure no energy, force or dforce
 
   // Output force norm
   V forceNorm = penaltyCoeff * penalty * dPenalty;
@@ -792,8 +832,8 @@ MOCHI_FORCE_INLINE void ComputeBatchContactPenaltyForceNormDForceNorm(
 
 /**
  * @brief Alignment of the normals of a batch of contacts: the dot product of the collider and
- * colliding normals, or -1 (opposed) if the colliding normals are invalid. Contacts with an
- * alignment above @ref ContactParams::maxAlignmentNormals have no penalty force.
+ * colliding normals, or -1 (opposed) if the colliding normals are invalid. Contact penalties are
+ * scaled by @ref ComputeBatchAlignmentGate.
  *
  * @param[in] nCollider Collider normals (SDF gradient, at stage start with explicit normals)
  * @param[in] nColliding Colliding normals (used only with valid colliding normals)
@@ -804,6 +844,49 @@ MOCHI_FORCE_INLINE BatchReal<kBatchSize> ComputeBatchNormalAlignment(
     BatchReal3<kBatchSize> const& nColliding,
     ContactEvalConfig const& config) {
   return config.validCollidingNormals ? Dot(nCollider, nColliding) : BatchReal<kBatchSize>{-1_r};
+}
+
+// Alignment of the normals beyond which a contact has no penalty force: the top of the band of
+// the smooth alignment gate, centered at ContactParams::maxAlignmentNormals, or the maximum
+// alignment itself with the abrupt gate (see ComputeBatchAlignmentGate).
+[[nodiscard]] MOCHI_FORCE_INLINE real
+AlignmentGateCutoff(ContactParams const& params, ContactEvalConfig const& config) {
+  if (config.explicitNormals || !HasSmoothAlignmentGate(params)) {
+    return params.maxAlignmentNormals;
+  }
+  return params.maxAlignmentNormals +
+      0.5_r * params.alignmentSmoothingFraction * (params.maxAlignmentNormals + 1_r);
+}
+
+/**
+ * @brief Weight of the penalty force of a batch of contacts, which fades out with the alignment of
+ * their normals over a band centered at @ref ContactParams::maxAlignmentNormals, of width @ref
+ * ContactParams::alignmentSmoothingFraction times the range of alignments [-1, @ref
+ * ContactParams::maxAlignmentNormals]: from 1 below the band to 0 beyond it (@ref
+ * AlignmentGateCutoff), and 1/2 at the maximum alignment. With explicit normals, a zero smoothing
+ * fraction or a maximum alignment of -1, the gate is abrupt instead: the weight is 1 up to the
+ * maximum alignment and 0 beyond. With explicit normals, a smooth weight would depend on the
+ * previous state through the stage-start normals, which derivatives with respect to the previous
+ * state do not differentiate.
+ *
+ * @param[in] alignment Alignment of the normals, see @ref ComputeBatchNormalAlignment
+ * @param[in] params Contact parameters of the pair
+ * @param[in] config Evaluation configuration
+ */
+template <int kBatchSize>
+MOCHI_FORCE_INLINE BatchReal<kBatchSize> ComputeBatchAlignmentGate(
+    BatchReal<kBatchSize> const& alignment,
+    ContactParams const& params,
+    ContactEvalConfig const& config) {
+  using V = BatchReal<kBatchSize>;
+  if (config.explicitNormals || !HasSmoothAlignmentGate(params)) {
+    return Select(alignment <= V{params.maxAlignmentNormals}, V{1_r}, V{0_r});
+  }
+  // Smoothstep x^2 (3 - 2x) of the position x in the band, 1/2 at the maximum alignment.
+  real const width = params.alignmentSmoothingFraction * (params.maxAlignmentNormals + 1_r);
+  V const x = Clamp(
+      (V{params.maxAlignmentNormals} - alignment) * V{1_r / width} + V{0.5_r}, V{0_r}, V{1_r});
+  return x * x * (V{3_r} - V{2_r} * x);
 }
 
 /**
@@ -875,19 +958,6 @@ MOCHI_FORCE_INLINE BatchReal3<kBatchSize> ProjectToTangentPlane(
 }
 
 /**
- * @brief Collision response (energy, force, and force derivative) of a batch of contact points.
- *
- * @note Quantities not requested from @ref ComputeBatchCollisionResponse are left uninitialized.
- * Lanes beyond @p kBatchSize hold unspecified values.
- */
-template <int kBatchSize, GradTarget kGradTarget>
-struct BatchCollisionResponse {
-  BatchDouble<kBatchSize> energy;
-  BatchReal3<kBatchSize> force;
-  BatchDForce<kBatchSize, kGradTarget> dForce;
-};
-
-/**
  * @brief Trust margin (see @ref SnleProblem::trustMargin) of a batch of contacts with
  * elasto-plastic friction: the signed distance from their anchored slip to the plane where it
  * yields in reverse, in presliding displacements.
@@ -932,7 +1002,7 @@ MOCHI_FORCE_INLINE BatchReal<kBatchSize> ComputeBatchTrustMargin(
 }
 
 // Add the requested energy, force and force derivative of friction and damping to outResponse. If
-// outNonPotential is not null, it also receives the energy and force of friction and damping,
+// outNonPotential is not null, the energy and force of friction and damping are also added to it,
 // whatever assemEnergy and assemForce. It requires GradTarget::Current and must not overlap the
 // other arguments. If outTrustMargin is not null and the friction is elasto-plastic Coulomb
 // friction, it is lowered to the minimum trust margin of the contacts (see
@@ -1008,9 +1078,6 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
   V3 dEnergyFactor MOCHI_NO_INIT;
   bool const computeEnergyFactor =
       assemEnergy || outNonPotential || (kGradTarget == GradTarget::Previous && assemForce);
-  if (outNonPotential) {
-    outNonPotential->force = {};
-  }
 
   // Coulomb friction
   if (params.coulombFrictionCoefficient > 0) {
@@ -1274,7 +1341,7 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
     outEnergy += StaticCast<Vd>(fPenalty) * energyFactor;
   }
   if (outNonPotential) {
-    outNonPotential->energy = StaticCast<Vd>(fPenalty) * energyFactor;
+    outNonPotential->energy += StaticCast<Vd>(fPenalty) * energyFactor;
   }
 
   // Add Previous-target terms from differentiating the explicit stage-start penalty force.
@@ -1327,9 +1394,10 @@ MOCHI_FORCE_INLINE void ComputeBatchContactDissipationForceDForce(
  * @param[in] assemDForce Whether to compute and output force derivatives
  * @param[in] isSdfGradUnitary Whether the SDF gradient is already unit length
  * @param[in] isNormalCollidingUnitary Whether the colliding normals are already unit length
- * @param[out] outNonPotential Optional: the energy and force of friction and damping, which the
- * requested energy and force of @p outResponse include. Requires @ref GradTarget::Current and @ref
- * HasDissipation.
+ * @param[out] outNonPotential Optional: the energy and force of the non-potential terms, which the
+ * requested energy and force of @p outResponse include: friction, damping, and the part of the
+ * penalty that a smooth alignment gate removes (see @ref HasNonPotentialTerms). Requires @ref
+ * GradTarget::Current and @ref HasNonPotentialTerms.
  * @param[out] outDForceAnchor Output force derivatives with respect to the anchor offsets, or
  * nullptr to skip them (GradTarget::Current with elasto-plastic friction only)
  * @param[in,out] outTrustMargin Optional: lowered to the minimum trust margin of the contact points
@@ -1432,31 +1500,39 @@ MOCHI_FORCE_INLINE
   // would normally trap the collider preventing it from escaping. We prevent that contact energy to
   // allow it to escape.
   V const alignmentNormals = ComputeBatchNormalAlignment<kBatchSize>(nCollider, nColliding, config);
-  V const maxAlignment = V{params.maxAlignmentNormals};
-  V const alignmentMask = alignmentNormals <= maxAlignment;
+  V const alignmentWeight = ComputeBatchAlignmentGate<kBatchSize>(alignmentNormals, params, config);
   // maxAlignmentNormals == -1 leaves no nonzero fade interval. Use an unfaded factor instead of
   // evaluating the degenerate endpoint formula.
   bool const useAlignmentFading =
       config.fadeFriction && config.validCollidingNormals && params.maxAlignmentNormals > -1_r;
-  // Compute alignment fading for dissipation
+  // Compute alignment fading for dissipation, which ends where the penalty force does.
+  V const cutoff{AlignmentGateCutoff(params, config)};
   V const alignmentFactor =
-      useAlignmentFading ? (maxAlignment - alignmentNormals) / (maxAlignment + 1_r) : V{1_r};
+      useAlignmentFading ? Max(V{0_r}, (cutoff - alignmentNormals) / (cutoff + 1_r)) : V{1_r};
 
   // Compute penalty force with current data.
   bool constexpr kAssemPenalty =
       IsAssemblyNeeded(StateDependency::ZeroOrder, false /*inputDependency*/, kGradTarget);
   bool const hasDissipation = HasDissipation(params);
   MOCHI_ASSERT_VERBOSE(
-      !outNonPotential || (kGradTarget == GradTarget::Current && hasDissipation),
-      "The dissipative response requires GradTarget::Current and dissipation.");
+      !outNonPotential ||
+          (kGradTarget == GradTarget::Current &&
+           HasNonPotentialTerms(params, config.validCollidingNormals)),
+      "The non-potential response requires GradTarget::Current and non-potential terms.");
   MOCHI_ASSERT_VERBOSE(
       !outTrustMargin || kGradTarget == GradTarget::Current,
       "The trust margin requires GradTarget::Current.");
   if constexpr (kGradTarget != GradTarget::Current) {
-    // Compiles out the dissipation and trust margin code for the other targets.
+    // Compiles out the non-potential and trust margin code for the other targets.
     outNonPotential = nullptr;
     outTrustMargin = nullptr;
   }
+  if (outNonPotential) {
+    outNonPotential->energy = {};
+    outNonPotential->force = {};
+  }
+  bool const reportsGate = outNonPotential && !config.explicitNormals &&
+      config.validCollidingNormals && HasSmoothAlignmentGate(params);
   bool const useImplicitNormalForceForDissipation =
       config.implicitNormalForceForDissipation && hasDissipation;
   if constexpr (kAssemPenalty) {
@@ -1467,14 +1543,15 @@ MOCHI_FORCE_INLINE
         fPenalty,
         d,
         sdfGrad,
-        alignmentMask,
+        alignmentWeight,
         alignmentFactor,
         params,
         config,
         assemEnergy,
         assemForce,
         assemDForce,
-        useImplicitNormalForceForDissipation);
+        useImplicitNormalForceForDissipation,
+        reportsGate ? outNonPotential : nullptr);
   } else {
     // Ensure containers are initialized for GradTarget::Previous
     if (assemEnergy) {
@@ -1525,7 +1602,7 @@ MOCHI_FORCE_INLINE
           fPenalty,
           dFPenalty,
           dStageStart,
-          alignmentMask,
+          alignmentWeight,
           alignmentFactor,
           params,
           config,
@@ -1569,8 +1646,8 @@ MOCHI_FORCE_INLINE
  * @param[out] outForce Output collision forces (size kBatchSize, written if assemForce)
  * @param[out] outDForce Output collision force derivatives (size kBatchSize, written if
  * assemDForce)
- * @param[out] outNonPotentialEnergy, outNonPotentialForce Optional: the energy and force of
- * friction and damping (size kBatchSize, written if not empty). See @ref
+ * @param[out] outNonPotentialEnergy, outNonPotentialForce Optional: the energy and force of the
+ * non-potential terms (size kBatchSize, written if not empty). See @ref
  * ComputeBatchCollisionResponse.
  * @param[out] outDForceAnchor Output force derivatives with respect to the anchor offsets (size
  * kBatchSize, or empty to skip them; GradTarget::Current with elasto-plastic friction only)
@@ -1685,9 +1762,9 @@ MOCHI_FORCE_INLINE void ComputeBatchCollisionForceDForce(
 // Compute the collision response of the contact points in pointRange and store it in outResponse.
 // With assemDForceAnchor, also stores the force derivatives with respect to the anchor offsets in
 // CollisionResponseResult::dforceAnchor (GradTarget::Current with elasto-plastic friction only).
-// If outNonPotential is not null, it also receives the energy and force of friction and damping
+// If outNonPotential is not null, it also receives the energy and force of the non-potential terms
 // (see ComputeBatchCollisionResponse). Its energy and force must be sized like the contact points,
-// and it requires GradTarget::Current and HasDissipation(params). If outTrustMargin is not null, it
+// and it requires GradTarget::Current and HasNonPotentialTerms. If outTrustMargin is not null, it
 // is lowered to the minimum trust margin of the contact points (see ComputeBatchTrustMargin), which
 // requires GradTarget::Current.
 template <GradTarget kGradTarget>
@@ -1803,8 +1880,9 @@ MOCHI_FORCE_INLINE void ComputeBatchAnchorDisplacement(
   // penalty threshold, or masked by the alignment of their normals as in the collision response.
   V const d = Load<kBatchSize, V>(&distance[0]);
   outKeep = (d < V{params.GetPenaltyThresholdDist(config.addPadding)}) &
-      (ComputeBatchNormalAlignment<kBatchSize>(nCollider, nColliding, config) <=
-       V{params.maxAlignmentNormals});
+      (ComputeBatchAlignmentGate<kBatchSize>(
+           ComputeBatchNormalAlignment<kBatchSize>(nCollider, nColliding, config), params, config) >
+       V{0_r});
 }
 
 // Radial return of the displacement w of a batch of contact points from their anchors onto the
@@ -2099,10 +2177,9 @@ struct RigidContactSums {
  * @param[out] outForce Optional collision forces of the contact points, as computed by @ref
  * ComputeCollisionResponseRange. Indexed like the contact points; only @p pointRange is written.
  * Requires @p assemForce.
- * @param[in,out] outNonPotential Optional: the energy, force and torque sums of friction and
- * damping (see @ref ComputeBatchCollisionResponse) are added to it. Requires @ref
- * GradTarget::Current and
- * @ref HasDissipation.
+ * @param[in,out] outNonPotential Optional: the energy, force and torque sums of the non-potential
+ * terms (see @ref ComputeBatchCollisionResponse) are added to it. Requires @ref GradTarget::Current
+ * and @ref HasNonPotentialTerms.
  * @param[in,out] outTrustMargin Optional: lowered to the minimum trust margin of the contact points
  * (see @ref ComputeBatchTrustMargin). Requires @ref GradTarget::Current.
  * @return The sums. Quantities not requested are zero.
@@ -2238,9 +2315,9 @@ struct SkinnedContactSums {
  * @param[out] outForce Optional collision forces of the contact points, as computed by @ref
  * ComputeCollisionResponseRange. Indexed like the contact points; only @p pointRange is written.
  * Requires @p assemForce.
- * @param[in,out] outNonPotential Optional: the energy, force and torque sums of friction and
- * damping (see @ref ComputeBatchCollisionResponse) are added to it. It must have the force arrays.
- * If allocated from @p scratch, it must outlive the returned sums. Requires @ref HasDissipation.
+ * @param[in,out] outNonPotential Optional: the energy, force and torque sums of the non-potential
+ * terms (see @ref ComputeBatchCollisionResponse) are added to it. It must have the force arrays. If
+ * allocated from @p scratch, it must outlive the returned sums. Requires @ref HasNonPotentialTerms.
  * @param[in,out] outTrustMargin Optional: lowered to the minimum trust margin of the contact points
  * (see @ref ComputeBatchTrustMargin).
  * @return The sums, allocated from @p scratch.

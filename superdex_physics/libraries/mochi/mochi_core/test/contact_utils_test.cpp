@@ -562,13 +562,193 @@ TEST(ContactPenalties, Friction_DegenerateNormalsKeepFullStrength) {
   EXPECT_NEAR_EQ((Real3{0_r, 0_r, unfadedForce[0]}), zeroNormalForce);
 
   // Without the collider normal, friction uses the colliding normal, normalized if it isn't unit.
+  // The alignment is 0, at the maximum alignment, which only the abrupt gate keeps at full
+  // strength.
   params.maxAlignmentNormals = 0_r;
+  params.alignmentSmoothingFraction = 0_r;
   normalColliding[0] = Real3{0_r, 0_r, -2_r};
   isNormalCollidingUnitary = false;
   posCollidingStageStart[0] = Real3{0.001_r, 0_r, 0.001_r};
   auto const [collidingNormalEnergy, collidingNormalForce] = eval(unfadedConfig);
   EXPECT_DOUBLE_EQ(unfadedEnergy, collidingNormalEnergy);
   EXPECT_NEAR_EQ((Real3{unfadedForce[0], 0_r, 0_r}), collidingNormalForce);
+}
+
+// Response of one contact at a penetration of 1 mm and a tangential slip of 1 mm along x, whose
+// colliding normal has the given alignment with the collider normal (z), and the parts of its
+// energy and force reported as non-potential (zero without non-potential terms).
+struct AlignedContactResponse {
+  double energy = 0.0;
+  Real3 force;
+  VMatrix3x3r dForce;
+  double reportedEnergy = 0.0;
+  Real3 reportedForce;
+};
+
+static AlignedContactResponse EvaluateAlignedContact(
+    real alignment,
+    ContactParams const& params,
+    ContactEvalConfig const& config) {
+  real const distance[1] = {-0.001_r};
+  Real3 const distanceGrad[1] = {Real3{0_r, 0_r, 1_r}};
+  Real3 const normalColliding[1] = {Real3{Sqrt(1_r - Sqr(alignment)), 0_r, alignment}};
+  Real3 const posColliding[1] = {Real3{0_r, 0_r, 0_r}};
+  Real3 const posCollidingStageStart[1] = {Real3{0.001_r, 0_r, 0_r}};
+  bool const reports = HasNonPotentialTerms(params, config.validCollidingNormals);
+  double energy[1] = {};
+  Real3 force[1] = {};
+  VMatrix3x3r dForce[1] = {};
+  double reportedEnergy[1] = {};
+  Real3 reportedForce[1] = {};
+  ComputeBatchCollisionForceDForce<1, GradTarget::Current>(
+      MakeSpan(energy),
+      MakeSpan(force),
+      MakeSpan(dForce),
+      MakeConstSpan(distance),
+      MakeConstSpan(distanceGrad),
+      {} /* distanceStageStart */,
+      {} /* distanceGradStageStart */,
+      MakeConstSpan(normalColliding),
+      MakeConstSpan(posColliding),
+      MakeConstSpan(posCollidingStageStart),
+      {} /* anchorOffset */,
+      params,
+      config,
+      1_r /* dtFactor */,
+      true /* assemEnergy */,
+      true /* assemForce */,
+      true /* assemDForce */,
+      true /* isSdfGradUnitary */,
+      true /* isNormalCollidingUnitary */,
+      reports ? MakeSpan(reportedEnergy) : Span<double>{},
+      reports ? MakeSpan(reportedForce) : Span<Real3>{});
+  return {
+      .energy = energy[0],
+      .force = force[0],
+      .dForce = dForce[0],
+      .reportedEnergy = reportedEnergy[0],
+      .reportedForce = reportedForce[0]};
+}
+
+// Smoothstep x^2 (3 - 2x).
+static real Smoothstep(real x) {
+  return x * x * (3_r - 2_r * x);
+}
+
+// The penalty force fades out as a C1 smoothstep over a band of alignments centered at
+// maxAlignmentNormals, of width alignmentSmoothingFraction times the alignments
+// [-1, maxAlignmentNormals], and vanishes beyond. The weight scales the whole response, friction
+// included, with either normal load. A zero fraction keeps the abrupt gate.
+TEST(ContactPenalties, AlignmentGate_SmoothstepOfAlignment) {
+  ContactParams params;
+  params.maxAlignmentNormals = 0.2_r;
+  params.alignmentSmoothingFraction = 0.5_r;
+  for (bool const implicitLoad : {false, true}) {
+    ContactEvalConfig const config{
+        .fadeFriction = false, .implicitNormalForceForDissipation = implicitLoad};
+    AlignedContactResponse const full = EvaluateAlignedContact(-1_r, params, config);
+    ASSERT_GT(full.energy, 0.0);
+    ASSERT_GT(full.force[2], 0_r);
+    ASSERT_NE(0_r, full.force[0]) << "No friction";
+
+    // Band [-0.1, 0.5]: weight 1 below, 0.5 at the maximum alignment in the middle, at x = 1/6 of
+    // the band below its top, and 0 from its top.
+    for (auto const [alignment, weight] :
+         {std::pair{-0.4_r, 1_r},
+          std::pair{-0.1_r, 1_r},
+          std::pair{0.2_r, 0.5_r},
+          std::pair{0.4_r, Smoothstep(1_r / 6_r)},
+          std::pair{0.5_r, 0_r},
+          std::pair{0.6_r, 0_r}}) {
+      AlignedContactResponse const response = EvaluateAlignedContact(alignment, params, config);
+      real const tol = 1e-5_r * Norm(full.force);
+      EXPECT_NEAR_RTOL(weight * full.energy, response.energy, 1e-5) << alignment;
+      EXPECT_NEAR_TOL(weight * full.force, response.force, tol) << alignment;
+      real dForceScale = 0_r;
+      for (int r = 0; r < 3; ++r) {
+        dForceScale = Max(dForceScale, Norm(ToReal3(full.dForce[r])));
+      }
+      for (int r = 0; r < 3; ++r) {
+        EXPECT_NEAR_TOL(
+            weight * ToReal3(full.dForce[r]), ToReal3(response.dForce[r]), 1e-5_r * dForceScale)
+            << alignment << ", row " << r;
+      }
+    }
+  }
+
+  params.coulombFrictionCoefficient = 0_r;
+  params.alignmentSmoothingFraction = 0_r;
+  ContactEvalConfig const config;
+  EXPECT_NEAR_RTOL(
+      EvaluateAlignedContact(-1_r, params, config).force[2],
+      EvaluateAlignedContact(0.2_r, params, config).force[2],
+      1e-5_r);
+  EXPECT_EQ(Real3{}, EvaluateAlignedContact(0.21_r, params, config).force);
+}
+
+// Friction fading ends where the smooth gate does, at the top of its band: the friction of a
+// contact is scaled by the gate weight w times (c - s) / (c + 1), with c the top of the band.
+TEST(ContactPenalties, AlignmentGate_FrictionFadesToTheTopOfTheBand) {
+  ContactParams params;
+  params.maxAlignmentNormals = 0.2_r;
+  params.alignmentSmoothingFraction = 0.5_r;
+  real const top = 0.5_r;
+  ContactEvalConfig const config{.fadeFriction = true};
+  real const opposingFriction = EvaluateAlignedContact(-1_r, params, config).force[0];
+  ASSERT_NE(0_r, opposingFriction);
+  for (auto const [alignment, weight] :
+       {std::pair{-0.4_r, 1_r},
+        std::pair{0.2_r, 0.5_r},
+        std::pair{0.4_r, Smoothstep(1_r / 6_r)},
+        std::pair{0.5_r, 0_r}}) {
+    real const fade = (top - alignment) / (top + 1_r);
+    EXPECT_NEAR_TOL(
+        weight * fade * opposingFriction,
+        EvaluateAlignedContact(alignment, params, config).force[0],
+        1e-5_r * Abs(opposingFriction))
+        << alignment;
+  }
+
+  // Just beyond the top of the band, the gate weight can round to a positive value in single
+  // precision. The friction is still zero.
+  params.maxAlignmentNormals = -0.0217_r;
+  params.alignmentSmoothingFraction = 0.1_r;
+  real const beyondTop = std::nextafter(AlignmentGateCutoff(params, config), 1_r);
+  EXPECT_EQ(0_r, EvaluateAlignedContact(beyondTop, params, config).force[0]);
+}
+
+// The part of the penalty that the alignment gate removes, (w - 1) times the penalty without the
+// gate, is reported as non-potential, as friction is. What remains is the penalty without the gate,
+// whatever the alignment: in the band, at the maximum alignment and beyond the band. Without valid
+// colliding normals, the gate removes nothing.
+TEST(ContactPenalties, AlignmentGate_ReportsRemovedPenaltyAsNonPotential) {
+  ContactParams params;
+  params.maxAlignmentNormals = 0.2_r;
+  params.alignmentSmoothingFraction = 0.5_r;
+  params.frictionFalloffVel = 0.01_r;
+  ContactEvalConfig const config;
+
+  for (real const coulomb : {0_r, 0.5_r}) {
+    params.coulombFrictionCoefficient = coulomb;
+    AlignedContactResponse const opposing = EvaluateAlignedContact(-1_r, params, config);
+    if (coulomb == 0_r) {
+      EXPECT_EQ(0.0, opposing.reportedEnergy);
+      EXPECT_EQ(Real3{}, opposing.reportedForce);
+    }
+    double const potentialEnergy = opposing.energy - opposing.reportedEnergy;
+    Real3 const potentialForce = opposing.force - opposing.reportedForce;
+    ASSERT_GT(potentialEnergy, 0.0);
+    for (real const alignment : {0_r, 0.2_r, 0.6_r}) {
+      AlignedContactResponse const response = EvaluateAlignedContact(alignment, params, config);
+      EXPECT_NEAR_RTOL(potentialEnergy, response.energy - response.reportedEnergy, 1e-5);
+      EXPECT_NEAR_TOL(
+          potentialForce, response.force - response.reportedForce, 1e-5_r * Norm(potentialForce));
+    }
+  }
+
+  params.coulombFrictionCoefficient = 0_r;
+  EXPECT_FALSE(HasNonPotentialTerms(params, /*validCollidingNormals*/ false));
+  EXPECT_TRUE(HasNonPotentialTerms(params, /*validCollidingNormals*/ true));
 }
 
 // A contact anchored within the presliding displacement holds a load below the Coulomb limit
@@ -747,7 +927,7 @@ TEST(ContactPenalties, AdvanceAnchorOffsets_FrictionNormal) {
         return result.anchorOffset[0];
       };
   ContactDetectionResult const contact = MakeAnchoredContacts({Real3{}}, {Real3{}});
-  ContactParams const colliderNormalParams;
+  ContactParams colliderNormalParams;
   ASSERT_TRUE(colliderNormalParams.frictionWithColliderNormal);
 
   EXPECT_NEAR_EQ(
@@ -769,7 +949,7 @@ TEST(ContactPenalties, AdvanceAnchorOffsets_FrictionNormal) {
       expectedFor(Real3{0_r, 0_r, 1_r}),
       advance(colliderNormalParams, ContactEvalConfig{}, nonUnitContact));
 
-  ContactParams collidingNormalParams;
+  ContactParams collidingNormalParams = colliderNormalParams;
   collidingNormalParams.frictionWithColliderNormal = false;
   ContactDetectionResult collidingNormalContact = contact;
   collidingNormalContact.normalColliding[0] = Real3{0_r, -1_r, 0_r};
@@ -862,6 +1042,28 @@ TEST(ContactPenalties, AdvanceAnchorOffsets_NormalAlignment) {
   EXPECT_NEAR_TOL(sticking, unmasked.anchorOffset[0], tol);
   EXPECT_NEAR_TOL(sticking, unmasked.anchorOffset[1], tol);
   EXPECT_EQ((DynamicArray<bool>{true, true}), unmasked.keepsAnchor);
+}
+
+// With implicit normals and a smooth alignment gate, contacts keep their anchor as long as the gate
+// weight is positive: at the maximum alignment (weight 1/2) and in the band above it, but not
+// beyond the top of the band.
+TEST(ContactPenalties, AdvanceAnchorOffsets_SmoothAlignmentGate) {
+  ContactParams params;
+  params.maxAlignmentNormals = 0_r;
+  params.alignmentSmoothingFraction = 0.3_r; // Band [-0.15, 0.15].
+  real const delta = params.preslidingDisplacement;
+  Real3 const slip = Real3{0.1_r, 0_r, 0_r} * delta;
+  Real3 const offset = Real3{0.2_r, 0_r, 0_r} * delta;
+  std::array<real, 4> const alignments = {-0.15_r, 0_r, 0.1_r, 0.2_r};
+  ContactDetectionResult result =
+      MakeAnchoredContacts({slip, slip, slip, slip}, {offset, offset, offset, offset});
+  for (int i = 0; i < isize(alignments); ++i) {
+    result.normalColliding[i] = Real3{Sqrt(1_r - Sqr(alignments[i])), 0_r, alignments[i]};
+  }
+  AdvanceAnchorOffsets(result, params, ContactEvalConfig{.elastoPlasticFriction = true});
+
+  EXPECT_EQ((DynamicArray<bool>{true, true, true, false}), result.keepsAnchor);
+  EXPECT_EQ(Real3{}, result.anchorOffset[3]);
 }
 
 // The VJP of the anchor advance matches central finite differences of AdvanceAnchorOffsets in the

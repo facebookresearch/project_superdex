@@ -91,9 +91,10 @@ struct ExperimentalEvalParams {
   /**
    * @brief Fade friction coefficient based on normal alignment.
    *
-   * @details When enabled, friction is scaled by (maxAlignmentNormals - alignment) /
-   * (maxAlignmentNormals + 1), where "alignment" is defined as the dot product between colliding
-   * and collider normals.
+   * @details When enabled, friction is scaled by (c - alignment) / (c + 1), where "alignment" is
+   * defined as the dot product between colliding and collider normals, and c is the alignment at
+   * which contact is disabled: @ref ContactParams::maxAlignmentNormals, or the top of its smoothing
+   * band (see @ref ContactParams::alignmentSmoothingFraction).
    *
    * @note For co-dimensional colliding actors with ambiguous normals, friction fading is disabled
    * regardless of fadeFriction (normal alignment cannot be computed).

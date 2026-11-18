@@ -51,6 +51,7 @@ struct ContactParams {
    * @param[in] collidingPenaltyThresholdPadding See @ref collidingPenaltyThresholdPadding.
    * @param[in] frictionWithColliderNormal See @ref frictionWithColliderNormal.
    * @param[in] maxAlignmentNormals See @ref maxAlignmentNormals.
+   * @param[in] alignmentSmoothingFraction See @ref alignmentSmoothingFraction.
    * @param[in] viscousFrictionCoefficient See @ref viscousFrictionCoefficient.
    * @param[in] coulombFrictionCoefficient See @ref coulombFrictionCoefficient.
    * @param[in] frictionFalloffVel See @ref frictionFalloffVel.
@@ -71,6 +72,7 @@ struct ContactParams {
       real collidingPenaltyThresholdPadding,
       bool frictionWithColliderNormal,
       real maxAlignmentNormals,
+      real alignmentSmoothingFraction,
       real viscousFrictionCoefficient,
       real coulombFrictionCoefficient,
       real frictionFalloffVel,
@@ -179,18 +181,48 @@ struct ContactParams {
    * @brief [Experimental] Maximum normal alignment threshold.
    *
    * @details Normal alignment is defined as the dot product between colliding and collider normals.
-   * Contact is disabled for sample points whose normal alignment exceeds this threshold. This
-   * prevents sample points from being trapped inside the collider when penetration is large.
+   * Contact is disabled for sample points whose normal alignment exceeds this threshold, abruptly
+   * or over a band centered at it (see @ref alignmentSmoothingFraction). This prevents sample
+   * points from being trapped inside the collider when penetration is large.
    *
    * @warning This is an experimental feature. It may be changed or removed in the future. Use at
    * your own risk.
    *
-   * @note Must be in [-1, 1]. -1 allows contact only for perfectly opposing normals, 1 allows all
-   * contacts.
+   * @note Must be in [-1, 1]. -1 allows contact only for perfectly opposing normals. 1 with @ref
+   * alignmentSmoothingFraction = 0 allows all contacts with unit normals. With a smooth band,
+   * contacts at alignment 1 keep half their force.
    * @note For co-dimensional colliding actors with ambiguous normals, contact is not disabled
    * regardless of maxAlignmentNormals (normal alignment cannot be computed).
+   *
+   * @see alignmentSmoothingFraction
    */
   real maxAlignmentNormals = 0_r;
+
+  /**
+   * @brief [Experimental] Width of the band of normal alignments, centered at @ref
+   * maxAlignmentNormals, over which contact fades out, as a fraction of the range of alignments
+   * [-1, @ref maxAlignmentNormals].
+   *
+   * @details The penalty force of a contact is scaled by a C1 smoothstep of its normal alignment,
+   * from 1 at an alignment of m - w / 2 to 0 at m + w / 2, with m = @ref maxAlignmentNormals and
+   * w = @ref alignmentSmoothingFraction * (m + 1). Contacts at m keep half their force. This
+   * removes the jump of the penalty force when contact is disabled. Contacts beyond the band are
+   * disabled, and friction fading (@ref ExperimentalEvalParams::fadeFriction) ends at its top.
+   *
+   * @warning This is an experimental feature. It may be changed or removed in the future. Use at
+   * your own risk.
+   *
+   * @note Must be in [0, 1]. 0 disables contact abruptly at @ref maxAlignmentNormals.
+   * @note With the default 0.1 and the default @ref maxAlignmentNormals = 0, contact between unit
+   * normals fades out between angles of 92.9 and 87.1 degrees (a 5.7-degree band).
+   * @note Applies only with implicit normals (@ref ExperimentalEvalParams::explicitNormals =
+   * false). With explicit normals, contact is disabled abruptly at @ref maxAlignmentNormals.
+   * @note For co-dimensional colliding actors with ambiguous normals, the scale is 1 (normal
+   * alignment cannot be computed).
+   *
+   * @see maxAlignmentNormals
+   */
+  real alignmentSmoothingFraction = 0.1_r;
 
   /**
    * @brief Viscous friction coefficient [s/m].
@@ -343,6 +375,7 @@ struct ContactParams {
   MOCHI_FIELD(collidingPenaltyThresholdPadding) MOCHI_ATTRIBUTE(Units("m"))
   MOCHI_FIELD(frictionWithColliderNormal)
   MOCHI_FIELD(maxAlignmentNormals)
+  MOCHI_FIELD(alignmentSmoothingFraction)
   MOCHI_FIELD(viscousFrictionCoefficient) MOCHI_ATTRIBUTE(Units("s/m"))
   MOCHI_FIELD(coulombFrictionCoefficient)
   MOCHI_FIELD(frictionFalloffVel) MOCHI_ATTRIBUTE(Units("m/s"))

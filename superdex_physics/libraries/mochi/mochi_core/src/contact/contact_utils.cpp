@@ -91,12 +91,13 @@ void mochi::ComputeCollisionResponseRange(
       !assemDForceAnchor || (outResponse.dforceAnchor.size() == isize(contactQuery.sampleIndices)));
   MOCHI_ASSERT_VERBOSE(
       !outNonPotential ||
-          (kGradTarget == GradTarget::Current && HasDissipation(params) &&
+          (kGradTarget == GradTarget::Current &&
+           HasNonPotentialTerms(params, config.validCollidingNormals) &&
            outNonPotential != &outResponse &&
            isize(outNonPotential->energy) == isize(contactQuery.sampleIndices) &&
            isize(outNonPotential->force) == isize(contactQuery.sampleIndices)),
-      "The dissipative response requires GradTarget::Current, dissipation and its own storage of "
-      "the size of the contact points.");
+      "The non-potential response requires GradTarget::Current, non-potential terms and its own "
+      "storage of the size of the contact points.");
 
   MOCHI_ASSERT_VERBOSE(
       !config.explicitNormals ||
@@ -362,8 +363,8 @@ MOCHI_FORCE_INLINE BatchReal3x3<kBatchSize> TimesSkew(
 // Compute the collision response of the batch of kBatchSize contact points starting at 'first',
 // store its forces in outForce if not empty, and gather the weights. If computeLeverArms, also
 // compute the lever arms from 'origin' to the contact points at the time step of kGradTarget. If
-// outNonPotential is not null, also compute the energy and force of friction and damping in it, and
-// if outTrustMargin is not null, lower it to the minimum trust margin of the contact points.
+// outNonPotential is not null, also compute the energy and force of the non-potential terms in it,
+// and if outTrustMargin is not null, lower it to the minimum trust margin of the contact points.
 template <int kBatchSize, GradTarget kGradTarget>
 MOCHI_FORCE_INLINE void ComputeBatchSumsPrologue(
     int first,
@@ -520,7 +521,7 @@ struct RigidContactLaneSums {
 
 // Add the collision response of the batch of kBatchSize contact points starting at 'first' to
 // outLaneSums, and store its forces in outForce if not empty. If outNonPotentialLaneSums is not
-// null, also add the energy, force and torque of its friction and damping to it. If outTrustMargin
+// null, also add the energy, force and torque of its non-potential terms to it. If outTrustMargin
 // is not null, also lower it to the minimum trust margin of the batch. See ComputeRigidContactSums.
 template <int kBatchSize, GradTarget kGradTarget>
 static void AddBatchRigidContactSums(
@@ -611,8 +612,10 @@ RigidContactSums mochi::ComputeRigidContactSums(
       kGradTarget == GradTarget::Current || !assemDForce,
       "The force derivative sums only support GradTarget::Current.");
   MOCHI_ASSERT_VERBOSE(
-      !outNonPotential || (kGradTarget == GradTarget::Current && HasDissipation(params)),
-      "The dissipative sums require GradTarget::Current and dissipation.");
+      !outNonPotential ||
+          (kGradTarget == GradTarget::Current &&
+           HasNonPotentialTerms(params, config.validCollidingNormals)),
+      "The non-potential sums require GradTarget::Current and non-potential terms.");
   MOCHI_ASSERT_VERBOSE(
       !outTrustMargin || kGradTarget == GradTarget::Current,
       "The trust margin requires GradTarget::Current.");
@@ -743,8 +746,8 @@ struct SkinnedContactBatchSlices {
 // would read and write all of it, and zeroing and reducing it would dominate each call, since
 // skinned contact pairs typically have few points. Reducing every batch keeps the state in the
 // scalar sums, O(numSlices^2) but kBatchSize times smaller, at the cost of a lane reduction per
-// batch. If outNonPotential is not null, also add the energy, force and torque sums of friction and
-// damping to it. See ComputeSkinnedContactSums.
+// batch. If outNonPotential is not null, also add the energy, force and torque sums of its
+// non-potential terms to it. See ComputeSkinnedContactSums.
 template <int kBatchSize>
 void AddBatchSkinnedContactSums(
     int first,
@@ -881,7 +884,7 @@ void AddBatchSkinnedContactSums(
 }
 
 // Add the SkinnedContactSums of 'pointRange', whose size must be a multiple of kBatchSize, to
-// outSums, and those of its friction and damping to outNonPotential if not null. Lower
+// outSums, and those of its non-potential terms to outNonPotential if not null. Lower
 // outTrustMargin, if not null, to the minimum trust margin of its contact points.
 template <int kBatchSize>
 void AddSkinnedContactSums(
@@ -943,9 +946,10 @@ SkinnedContactSums mochi::ComputeSkinnedContactSums(
   MOCHI_ASSERT_VERBOSE(pointRange.Valid());
   MOCHI_ASSERT_VERBOSE(
       !outNonPotential ||
-          (HasDissipation(params) && outNonPotential->numSlices == slices.NumSlices() &&
+          (HasNonPotentialTerms(params, config.validCollidingNormals) &&
+           outNonPotential->numSlices == slices.NumSlices() &&
            isize(outNonPotential->force) == slices.NumSlices()),
-      "The dissipative sums require dissipation and their force arrays.");
+      "The non-potential sums require non-potential terms and their force arrays.");
   MOCHI_ASSERT_VERBOSE(
       pointRange.Min() >= 0 && pointRange.Max() < isize(contactQuery.sampleIndices));
   MOCHI_ASSERT_VERBOSE(

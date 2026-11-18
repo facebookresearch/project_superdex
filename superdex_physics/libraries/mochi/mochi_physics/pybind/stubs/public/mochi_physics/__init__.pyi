@@ -3524,12 +3524,16 @@ class ContactParams:
 
     Normal alignment is defined as the dot product between colliding and collider
     normals. Contact is disabled for sample points whose normal alignment exceeds
-    this threshold. This prevents sample points from being trapped inside the
-    collider when penetration is large.
+    this threshold, abruptly or over a band centered at it (see
+    :attr:`~superdex.physics.ContactParams.alignment_smoothing_fraction`). This
+    prevents sample points from being trapped inside the collider when penetration
+    is large.
 
     Note:
-        Must be in [-1, 1]. -1 allows contact only for perfectly opposing normals, 1
-        allows all contacts.
+        Must be in [-1, 1]. -1 allows contact only for perfectly opposing normals. 1
+        with :attr:`~superdex.physics.ContactParams.alignment_smoothing_fraction` =
+        0 allows all contacts with unit normals. With a smooth band, contacts at
+        alignment 1 keep half their force.
 
     Note:
         For co-dimensional colliding actors with ambiguous normals, contact is not
@@ -3539,6 +3543,51 @@ class ContactParams:
     Warning:
         This is an experimental feature. It may be changed or removed in the future.
         Use at your own risk.
+
+    See Also:
+        :attr:`~superdex.physics.ContactParams.alignment_smoothing_fraction`
+    """
+    alignment_smoothing_fraction: float
+    """[Experimental] Width of the band of normal alignments, centered at
+    :attr:`~superdex.physics.ContactParams.max_alignment_normals`, over which
+    contact fades out, as a fraction of the range of alignments [-1,
+    :attr:`~superdex.physics.ContactParams.max_alignment_normals`].
+
+    The penalty force of a contact is scaled by a C1 smoothstep of its normal
+    alignment, from 1 at an alignment of m - w / 2 to 0 at m + w / 2, with m =
+    :attr:`~superdex.physics.ContactParams.max_alignment_normals` and w =
+    :attr:`~superdex.physics.ContactParams.alignment_smoothing_fraction` * (m + 1).
+    Contacts at m keep half their force. This removes the jump of the penalty force
+    when contact is disabled. Contacts beyond the band are disabled, and friction
+    fading (:attr:`~superdex.physics.ExperimentalEvalParams.fade_friction`) ends at
+    its top.
+
+    Note:
+        Must be in [0, 1]. 0 disables contact abruptly at
+        :attr:`~superdex.physics.ContactParams.max_alignment_normals`.
+
+    Note:
+        With the default 0.1 and the default
+        :attr:`~superdex.physics.ContactParams.max_alignment_normals` = 0, contact
+        between unit normals fades out between angles of 92.9 and 87.1 degrees (a
+        5.7-degree band).
+
+    Note:
+        Applies only with implicit normals
+        (:attr:`~superdex.physics.ExperimentalEvalParams.explicit_normals` = false).
+        With explicit normals, contact is disabled abruptly at
+        :attr:`~superdex.physics.ContactParams.max_alignment_normals`.
+
+    Note:
+        For co-dimensional colliding actors with ambiguous normals, the scale is 1
+        (normal alignment cannot be computed).
+
+    Warning:
+        This is an experimental feature. It may be changed or removed in the future.
+        Use at your own risk.
+
+    See Also:
+        :attr:`~superdex.physics.ContactParams.max_alignment_normals`
     """
     viscous_friction_coefficient: float
     """Viscous friction coefficient [s/m].
@@ -3718,6 +3767,7 @@ class ContactParams:
         colliding_penalty_threshold_padding: float = ...,
         friction_with_collider_normal: bool = ...,
         max_alignment_normals: float = ...,
+        alignment_smoothing_fraction: float = ...,
         viscous_friction_coefficient: float = ...,
         coulomb_friction_coefficient: float = ...,
         friction_falloff_vel: float = ...,
@@ -3977,9 +4027,12 @@ class ExperimentalEvalParams:
     fade_friction: bool
     """Fade friction coefficient based on normal alignment.
 
-    When enabled, friction is scaled by (maxAlignmentNormals - alignment) /
-    (maxAlignmentNormals + 1), where "alignment" is defined as the dot product
-    between colliding and collider normals.
+    When enabled, friction is scaled by (c - alignment) / (c + 1), where "alignment"
+    is defined as the dot product between colliding and collider normals, and c is
+    the alignment at which contact is disabled:
+    :attr:`~superdex.physics.ContactParams.max_alignment_normals`, or the top of its
+    smoothing band (see
+    :attr:`~superdex.physics.ContactParams.alignment_smoothing_fraction`).
 
     Note:
         For co-dimensional colliding actors with ambiguous normals, friction fading

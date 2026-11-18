@@ -412,6 +412,16 @@ void ExpectDissipationIsNonPotential(
     SnleProblem<real>& problem,
     std::optional<DissipationCoefficients> coefficients);
 
+// Checks the energy N and residual g that the smooth alignment gate reports as non-potential terms
+// (see HasNonPotentialTerms) at the problem's state, under WolfeStrong, by comparing every actor's
+// contact parameters with the default alignment smoothing fraction to the same parameters with the
+// widest band (fraction 1).
+// - With implicit normals, E - N and F - g agree: the penalty without the gate is their potential.
+// - With explicit normals, E and F agree: the fraction does not change the contact response.
+// Returns whether the band changed E, i.e. whether some contact is in the wider band. Restores the
+// line search and the actors' contact parameters.
+bool ExpectAlignmentGateIsNonPotential(entt::registry& reg, SnleProblem<real>& problem);
+
 // Steps a scene until some actor has contact at the end of a step, and once more, so that its
 // contacts persist through a whole step. Then runs test on the problem of every island, at a random
 // increment from the end of that step. With elasto-plastic friction, also expects some contact to
@@ -422,8 +432,8 @@ void TestIslandsAfterTouch(
     std::function<void(entt::registry& reg, entt::entity island, SnleProblem<real>& problem)> const&
         test);
 
-// TestIslandsAfterTouch with ExpectDissipationIsNonPotential and kDissipationCoefficients. Every
-// island must touch with friction or damping.
+// TestIslandsAfterTouch with ExpectDissipationIsNonPotential and kDissipationCoefficients, and
+// ExpectAlignmentGateIsNonPotential. Every island must touch with friction or damping.
 void ExpectDissipationIsNonPotentialAfterTouch(Scene* scene, real dt);
 
 } // namespace mochi::test

@@ -1124,6 +1124,12 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
     _scene->EnableLayerContactSymmetric("Collider", "Collider", false, test::ExpectOK{});
     _scene->EnableLayerContactSymmetric("Colliding", "Collider", true, test::ExpectOK{});
 
+    // The residual and its derivative omit the derivative of the smooth alignment gate, which the
+    // finite differences include, so test with the abrupt gate.
+    for (auto&& [entity, contactParams] : reg.view<CContactParams>().each()) {
+      contactParams.alignmentSmoothingFraction = 0_r;
+    }
+
     // This test does not step the full simulation, but calling PreStep ensures that certain things
     // are initialized, including islands and DOF offsets.
     PreStep();
@@ -1303,7 +1309,19 @@ class MochiContactTestBase : public test::MochiSceneTestBase,
         coefficients = test::kDissipationCoefficients;
       }
       ExpectDissipationIsNonPotential(coefficients);
+      ExpectAlignmentGateIsNonPotential();
     }
+  }
+
+  // Checks the non-potential terms of the smooth alignment gate (see
+  // test::ExpectAlignmentGateIsNonPotential) at a random state near the initial one, and returns
+  // whether the gate acts there.
+  bool ExpectAlignmentGateIsNonPotential() {
+    InitDisplacedState();
+    SetUnsetStageTimeSteps();
+    auto& reg = GetRegistry();
+    SnleProblem<real> problem = CreateSingleIslandProblem(reg);
+    return test::ExpectAlignmentGateIsNonPotential(reg, problem);
   }
 
   // Whether the fixture's coefficients include friction or damping.
@@ -1797,6 +1815,13 @@ class MochiRigidStaticContact : public MochiContactTestBase {
 
 TEST_P(MochiRigidStaticContact, ContactAssembly) {
   RunTest();
+}
+
+// The cube has contacts in the band of the alignment gate, so its check is not vacuous. With
+// explicit normals the gate is abrupt, so the band has no effect.
+TEST_P(MochiRigidStaticContact, AlignmentGateActs) {
+  InitializeSceneFromParams();
+  EXPECT_EQ(!GetParam().explicitNormals, ExpectAlignmentGateIsNonPotential());
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -4220,6 +4245,9 @@ class ZeroDofSkinContact : public test::MochiSceneTestBase {
   // ones.
   static constexpr real kZeroDofBoxMaxX = 0.05_r;
   static constexpr real kMixedBoxMaxX = 0.3_r;
+  // The side faces of the skin cube are orthogonal to the box face they touch, at the maximum
+  // normal alignment, so only the abrupt gate keeps their contacts at full strength.
+  static constexpr real kAlignmentSmoothingFraction = 0_r;
 
   ShapeHandle CreateSkinShape() {
     auto&& [coordinates, connectivity] = test::CreateMinimalTriMeshUnitCube();
@@ -4271,6 +4299,7 @@ class ZeroDofSkinContact : public test::MochiSceneTestBase {
          .hasGravity = false}};
     params.skin = ArticulatedSkinParams{.shape = skinShape, .layer = "Skin"};
     params.skin->contact.penaltyThresholdDefault = 0_r;
+    params.skin->contact.alignmentSmoothingFraction = kAlignmentSmoothingFraction;
     return params;
   }
 
@@ -4287,6 +4316,7 @@ class ZeroDofSkinContact : public test::MochiSceneTestBase {
     boxParams.hasGravity = false;
     boxParams.mass = 1_r;
     boxParams.contact.penaltyThresholdDefault = 0_r;
+    boxParams.contact.alignmentSmoothingFraction = kAlignmentSmoothingFraction;
     return _scene->CreateRigidActor(boxParams, test::ExpectOK{});
   }
 

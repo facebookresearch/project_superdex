@@ -4045,7 +4045,7 @@ struct ContactAssemblyPair {
   // Set by the pair builders, since sync and async contact retain forces under different
   // conditions, and read again after the tasks.
   bool retainForces = false;
-  // Whether the pair also assembles its friction and damping as non-potential terms.
+  // Whether the pair also assembles its non-potential terms (see HasNonPotentialTerms) separately.
   bool reportsNonPotential = false;
   // Whether the pair assembles from contact sums rather than per-point responses.
   bool useContactSums = false;
@@ -4089,11 +4089,12 @@ ContactEvalConfig mochi::MakeContactEvalConfigPair(
   return config;
 }
 
-// The pairs that report dissipation, which require outNonPotentialSnle, also assemble their
-// friction and damping into its non-potential energy and, if nonPotentialResSize is positive, its
-// non-potential residual of that size. Slices with link residuals add theirs to the non-potential
-// parts of the link-space residuals instead. If outTrustMargin is not null, it is lowered to the
-// minimum trust margin of the contact points (see ComputeBatchTrustMargin).
+// The pairs that report non-potential terms, which require outNonPotentialSnle, also assemble their
+// non-potential terms (see HasNonPotentialTerms) into its non-potential energy and, if
+// nonPotentialResSize is positive, its non-potential residual of that size. Slices with link
+// residuals add theirs to the non-potential parts of the link-space residuals instead. If
+// outTrustMargin is not null, it is lowered to the minimum trust margin of the contact points (see
+// ComputeBatchTrustMargin).
 template <GradTarget kGradTarget>
 static void AssembleContactPairRanges(
     entt::registry const& reg,
@@ -4142,7 +4143,7 @@ static void AssembleContactPairRanges(
     }
     double const averageMappedDofs =
         pair.UsesLinearElementMap() ? pair.linearElementMap->AverageDofsPerElement() : 0.0;
-    // Linear cost, once per residual map: the residual and the dissipation.
+    // Linear cost, once per residual map: the residual and the non-potential residual.
     int const numResidualMaps =
         static_cast<int>(assemRes) + static_cast<int>(pair.reportsNonPotential);
     if (numResidualMaps > 0) {
@@ -4180,7 +4181,7 @@ static void AssembleContactPairRanges(
   }
   MOCHI_ASSERT_VERBOSE(
       !anyReportsNonPotential || outNonPotentialSnle,
-      "Pairs that report dissipation require outNonPotentialSnle.");
+      "Pairs that report non-potential terms require outNonPotentialSnle.");
   if (totalCost == 0) {
     return;
   }
@@ -4255,7 +4256,7 @@ static void AssembleContactPairRanges(
   // Link residuals of all the work, with a contiguous range for each PairWork, with 6 values per
   // slice of its pair. A pair may be split between tasks, but each PairWork belongs to one task, so
   // the ranges are written concurrently. The non-potential link residuals of the pairs that report
-  // dissipation use the same layout.
+  // non-potential terms use the same layout.
   int linkResSize = 0;
   if (assemRes || anyReportsNonPotential) {
     for (auto& task : taskWork) {
@@ -4294,7 +4295,7 @@ static void AssembleContactPairRanges(
     } else {
       MOCHI_PROFILE_SCOPE_N("Init Task Data");
       // Other threads allocate private values arrays for the residual and derivative, and for the
-      // non-potential residual if some of their pairs report dissipation.
+      // non-potential residual if some of their pairs report non-potential terms.
       if (assemObj) {
         taskObj = &myTask.objective;
       }
@@ -4349,7 +4350,8 @@ static void AssembleContactPairRanges(
 
     CollisionResponseResult response(&taskLocalAlloc);
     CollisionResponseResult nonPotential(&taskLocalAlloc);
-    // The per-point dissipative response is used only by the reporting pairs without contact sums.
+    // The per-point non-potential response is used only by the reporting pairs without contact
+    // sums.
     int maxContacts = 0;
     int maxReportingContacts = 0;
     for (auto const& pairWork : myTask.pairWork) {
@@ -4381,8 +4383,10 @@ static void AssembleContactPairRanges(
       auto const contactParams = GetContactPairParams(reg, entity0, entity1);
       bool const reportsNonPotential = pair.reportsNonPotential;
       MOCHI_ASSERT_VERBOSE(
-          !outNonPotentialSnle || reportsNonPotential == HasDissipation(contactParams),
-          "A pair of a reporting assembly reports dissipation iff it has friction or damping.");
+          !outNonPotentialSnle ||
+              reportsNonPotential ==
+                  HasNonPotentialTerms(contactParams, configPair.validCollidingNormals),
+          "A pair of a reporting assembly reports iff it has non-potential terms.");
       response.ResizeNoInit(numContacts, assemObj, assemRes, assemDRes);
       auto const jacs = (pair.jacRange.size() > 0)
           ? Span{&allJacs[pair.jacRange.Min()], pair.jacRange.size()}
@@ -4608,7 +4612,7 @@ static void AssembleContactPairRanges(
 
   // Gather the link residuals into the link-space residuals of their articulations, in a fixed
   // order. Each is zeroed on its first gathered link residual, since it is inactive until then.
-  // Likewise for the non-potential link residuals of the pairs that report dissipation.
+  // Likewise for the non-potential link residuals of the pairs that report non-potential terms.
   auto const gatherLinkResiduals = [&](ColumnVectorView<real const> allLinkRes, bool nonPotential) {
     for (auto const& task : taskWork) {
       for (auto const& pairWork : task.pairWork) {
@@ -4666,8 +4670,8 @@ static void AssembleAllSyncContactPairs(
   bool const needsJacs = assemRes || GetNumValues(outDRes) > 0;
 
   // FILO-backed arrays must reserve their full capacities before they begin filling. The number of
-  // contact Jacobians is an upper bound on the active ones, which the pairs that report dissipation
-  // need too.
+  // contact Jacobians is an upper bound on the active ones, which the pairs that report
+  // non-potential terms need too.
   int numContactPairs = 0;
   int numJacs = 0;
   for (entt::entity const entity : actors) {
@@ -4714,7 +4718,7 @@ static void AssembleAllSyncContactPairs(
         entt::entity const entity1 = collision.colliderEntity;
         auto const& collidingJacData = collidingJacs[collision.collidingJacId];
         bool const reportsNonPotential =
-            outNonPotentialSnle && PairHasDissipation(reg, entity0, entity1);
+            outNonPotentialSnle && PairHasNonPotentialTerms(reg, entity0, entity1);
         if (needsJacs || reportsNonPotential) {
           // Mapped contact retains only collider-side Jacobians. Unmapped fallback pairs preserve
           // colliding before collider ordering.
@@ -4990,8 +4994,8 @@ void mochi::AssembleAsyncSkinnedContact(
         params.fittedSaturationHessian.contactFriction);
   }
   // FILO-backed arrays must reserve their full capacities before they begin filling. The number of
-  // contact Jacobians is an upper bound on the active ones, which the pairs that report dissipation
-  // need too.
+  // contact Jacobians is an upper bound on the active ones, which the pairs that report
+  // non-potential terms need too.
   bool const reportsNonPotential = ReportsContactNonPotentialTerms(params, simParams.value);
   bool const needsJacs = params.assemRes || params.assemDRes;
   DynamicArray<ContactJac const*> allJacs(&filoAllocator);
@@ -5033,7 +5037,7 @@ void mochi::AssembleAsyncSkinnedContact(
     }
 
     bool const pairReportsNonPotential =
-        reportsNonPotential && PairHasDissipation(reg, e, collision.colliderEntity);
+        reportsNonPotential && PairHasNonPotentialTerms(reg, e, collision.colliderEntity);
     int const firstJac = isize(allJacs);
     if ((needsJacs || pairReportsNonPotential) && !linearElementMap) {
       jacData.GetActiveJacs(allJacs);

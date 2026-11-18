@@ -291,6 +291,7 @@ mochi::ContactParams UMochiContactParams::ToMochi() const {
   result.normalViscousDampingCoefficient = mochi::real(NormalViscousDampingCoefficient);
   result.frictionWithColliderNormal = bFrictionWithColliderNormal;
   result.maxAlignmentNormals = mochi::real(MaxAlignmentNormals);
+  result.alignmentSmoothingFraction = mochi::real(AlignmentSmoothingFraction);
   return result;
 }
 
@@ -309,6 +310,7 @@ void UMochiContactParams::FromMochi(const mochi::ContactParams& Mochi) {
   NormalViscousDampingCoefficient = Mochi.normalViscousDampingCoefficient;
   bFrictionWithColliderNormal = Mochi.frictionWithColliderNormal;
   MaxAlignmentNormals = Mochi.maxAlignmentNormals;
+  AlignmentSmoothingFraction = Mochi.alignmentSmoothingFraction;
 }
 
 //------------------------------------------------------------------------------

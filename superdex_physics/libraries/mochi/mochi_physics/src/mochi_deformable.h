@@ -81,7 +81,7 @@ void SetupActiveCollisionNormals(
     CContactSamples<TimeStep::Current> const& contactPositions,
     CActiveCollisions<kIsSync, TimeStep::Current>& activeCollisions);
 
-// With ReportsContactNonPotentialTerms, the response also holds the friction and damping of its
+// With ReportsContactNonPotentialTerms, the response also holds the non-potential terms of its
 // samples (see CDeformablePointAsyncCollisionsResponse::GetNonPotentialEnergy). With
 // ReportsContactTrustMargin, outTrustMargin is lowered to the minimum trust margin of the contacts
 // (see ComputeBatchTrustMargin).
@@ -103,7 +103,7 @@ void ComputeAsyncContactResponse(
 
 /**
  * @brief Creates a batched boundary (traction/contact) assembly operator. With kNonPotential, it
- * reads the response's friction and damping instead (see
+ * reads the response's non-potential terms instead (see
  * @ref CDeformablePointAsyncCollisionsResponse::GetNonPotentialEnergy), without a Hessian.
  */
 template <
@@ -162,7 +162,7 @@ template <
         LoadTransposed(&sf[0][0], *cbForce);
       }
       MOCHI_ASSERT_VERBOSE(
-          !kNonPotential || !cbDForce, "The response holds no Hessian of friction and damping.");
+          !kNonPotential || !cbDForce, "The response holds no Hessian of the non-potential terms.");
       if (!kNonPotential && cbDForce) {
         for (int r = 0; r < 3; ++r) {
           for (int c = 0; c < 3; ++c) {
@@ -183,7 +183,7 @@ template <
   };
 }
 
-// Assembles the friction and damping of a contact response through its boundary op, as
+// Assembles the non-potential terms of a contact response through its boundary op, as
 // non-potential terms of outSnle (see SnleProblem::nonPotentialEnergy) in its full DoFs.
 template <class ElementT, int kNumFields = ElementT::kSpaceDim>
 void AssembleContactNonPotentialTerms(

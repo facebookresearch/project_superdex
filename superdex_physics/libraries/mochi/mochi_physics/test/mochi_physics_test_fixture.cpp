@@ -420,6 +420,67 @@ void ExpectDissipationIsNonPotential(
   }
 }
 
+bool ExpectAlignmentGateIsNonPotential(entt::registry& reg, SnleProblem<real>& problem) {
+  auto& simParams = reg.ctx<CSimulationParams>();
+  LineSearchType const lineSearchType = simParams.nonLinearSolver.lineSearchType;
+  DynamicArray<std::pair<entt::entity, ContactParams>> contactParams;
+  for (auto [e, params] : reg.view<CContactParams const>().each()) {
+    contactParams.emplace_back(e, params);
+  }
+
+  struct Terms {
+    double objective = 0.0;
+    double nonPotentialEnergy = 0.0;
+    ColumnVector<real> residual;
+    ColumnVector<real> nonPotentialResidual;
+  };
+  auto const assemble = [&](real fraction) {
+    for (auto const& [e, params] : contactParams) {
+      reg.get<CContactParams>(e) = params;
+      reg.get<CContactParams>(e).alignmentSmoothingFraction = fraction;
+    }
+    problem.InvalidateCachedData();
+    problem.UpdateObjResDRes({.assemObj = true, .assemRes = true});
+    return Terms{
+        .objective = problem.GetObjective(),
+        .nonPotentialEnergy = problem.nonPotentialEnergy,
+        .residual = problem.GetResidual(),
+        .nonPotentialResidual = SumNonPotentialResiduals(problem)};
+  };
+
+  simParams.nonLinearSolver.lineSearchType = LineSearchType::WolfeStrong;
+  Terms const defaultBand = assemble(ContactParams{}.alignmentSmoothingFraction);
+  // The widest band, as wide as the alignments up to the maximum one.
+  Terms const widestBand = assemble(1_r);
+
+  double const energyScale = Max(Abs(defaultBand.objective), Abs(widestBand.objective));
+  double const energyTol = (MOCHI_USE_DOUBLE_PRECISION ? 1e-10 : 1e-6) * energyScale;
+  real const residualTol = (MOCHI_USE_DOUBLE_PRECISION ? 1e-10_r : 2e-5_r) *
+      Max(defaultBand.residual.Norm(),
+          widestBand.residual.Norm(),
+          defaultBand.nonPotentialResidual.Norm());
+  if (simParams.experimentalEval.explicitNormals) {
+    EXPECT_NEAR(defaultBand.objective, widestBand.objective, energyTol);
+    ColumnVector<real> const residualChange = defaultBand.residual - widestBand.residual;
+    EXPECT_LE(residualChange.Norm(), residualTol);
+  } else {
+    EXPECT_NEAR(
+        defaultBand.objective - defaultBand.nonPotentialEnergy,
+        widestBand.objective - widestBand.nonPotentialEnergy,
+        energyTol);
+    ColumnVector<real> const potentialResidualChange =
+        (defaultBand.residual - defaultBand.nonPotentialResidual) -
+        (widestBand.residual - widestBand.nonPotentialResidual);
+    EXPECT_LE(potentialResidualChange.Norm(), residualTol);
+  }
+
+  simParams.nonLinearSolver.lineSearchType = lineSearchType;
+  for (auto const& [e, params] : contactParams) {
+    reg.get<CContactParams>(e) = params;
+  }
+  return Abs(defaultBand.objective - widestBand.objective) > 10 * energyTol;
+}
+
 void TestIslandsAfterTouch(
     Scene* scene,
     real dt,
@@ -475,6 +536,7 @@ void ExpectDissipationIsNonPotentialAfterTouch(Scene* scene, real dt) {
   TestIslandsAfterTouch(
       scene, dt, [](entt::registry& reg, entt::entity /*island*/, SnleProblem<real>& problem) {
         ExpectDissipationIsNonPotential(reg, problem, kDissipationCoefficients);
+        ExpectAlignmentGateIsNonPotential(reg, problem);
       });
 }
 

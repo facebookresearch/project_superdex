@@ -1104,6 +1104,7 @@ struct ContactParams [equality(default), from_mochi_core] {
   // @param[in] collidingPenaltyThresholdPadding See @ref collidingPenaltyThresholdPadding.
   // @param[in] frictionWithColliderNormal See @ref frictionWithColliderNormal.
   // @param[in] maxAlignmentNormals See @ref maxAlignmentNormals.
+  // @param[in] alignmentSmoothingFraction See @ref alignmentSmoothingFraction.
   // @param[in] viscousFrictionCoefficient See @ref viscousFrictionCoefficient.
   // @param[in] coulombFrictionCoefficient See @ref coulombFrictionCoefficient.
   // @param[in] frictionFalloffVel See @ref frictionFalloffVel.
@@ -1114,7 +1115,7 @@ struct ContactParams [equality(default), from_mochi_core] {
   // @param[in] collidingPenaltyLengthScale See @ref collidingPenaltyLengthScale.
   //
   // @note Must take every parameter in order.
-  ctor ContactParams(real penaltyCoefficient, real penaltySmoothingHalfDistance, real penaltyThresholdDefault, real penaltyThresholdExtraPadding, real collidingPenaltyThresholdPadding, bool frictionWithColliderNormal, real maxAlignmentNormals, real viscousFrictionCoefficient, real coulombFrictionCoefficient, real frictionFalloffVel, real preslidingDisplacement, real normalViscousDampingCoefficient, real distanceErrorBound, real objScale, real collidingPenaltyLengthScale) [no_python];
+  ctor ContactParams(real penaltyCoefficient, real penaltySmoothingHalfDistance, real penaltyThresholdDefault, real penaltyThresholdExtraPadding, real collidingPenaltyThresholdPadding, bool frictionWithColliderNormal, real maxAlignmentNormals, real alignmentSmoothingFraction, real viscousFrictionCoefficient, real coulombFrictionCoefficient, real frictionFalloffVel, real preslidingDisplacement, real normalViscousDampingCoefficient, real distanceErrorBound, real objScale, real collidingPenaltyLengthScale) [no_python];
   // @brief Stiffness of the contact penalty force [Pa/m].
   //
   // @note Must be finite and strictly positive.
@@ -1191,17 +1192,44 @@ struct ContactParams [equality(default), from_mochi_core] {
   // @brief [Experimental] Maximum normal alignment threshold.
   //
   // @details Normal alignment is defined as the dot product between colliding and collider normals.
-  // Contact is disabled for sample points whose normal alignment exceeds this threshold. This
-  // prevents sample points from being trapped inside the collider when penetration is large.
+  // Contact is disabled for sample points whose normal alignment exceeds this threshold, abruptly or
+  // over a band centered at it (see @ref alignmentSmoothingFraction). This prevents sample points
+  // from being trapped inside the collider when penetration is large.
   //
   // @warning This is an experimental feature. It may be changed or removed in the future. Use at
   // your own risk.
   //
-  // @note Must be in [-1, 1]. -1 allows contact only for perfectly opposing normals, 1 allows all
-  // contacts.
+  // @note Must be in [-1, 1]. -1 allows contact only for perfectly opposing normals. 1 with @ref
+  // alignmentSmoothingFraction = 0 allows all contacts with unit normals. With a smooth band,
+  // contacts at alignment 1 keep half their force.
   // @note For co-dimensional colliding actors with ambiguous normals, contact is not disabled
   // regardless of maxAlignmentNormals (normal alignment cannot be computed).
+  //
+  // @see alignmentSmoothingFraction
   real maxAlignmentNormals = 0;
+  // @brief [Experimental] Width of the band of normal alignments, centered at @ref
+  // maxAlignmentNormals, over which contact fades out, as a fraction of the range of alignments
+  // [-1, @ref maxAlignmentNormals].
+  //
+  // @details The penalty force of a contact is scaled by a C1 smoothstep of its normal alignment,
+  // from 1 at an alignment of m - w / 2 to 0 at m + w / 2, with m = @ref maxAlignmentNormals and
+  // w = @ref alignmentSmoothingFraction * (m + 1). Contacts at m keep half their force. This
+  // removes the jump of the penalty force when contact is disabled. Contacts beyond the band are
+  // disabled, and friction fading (@ref ExperimentalEvalParams::fadeFriction) ends at its top.
+  //
+  // @warning This is an experimental feature. It may be changed or removed in the future. Use at
+  // your own risk.
+  //
+  // @note Must be in [0, 1]. 0 disables contact abruptly at @ref maxAlignmentNormals.
+  // @note With the default 0.1 and the default @ref maxAlignmentNormals = 0, contact between unit
+  // normals fades out between angles of 92.9 and 87.1 degrees (a 5.7-degree band).
+  // @note Applies only with implicit normals (@ref ExperimentalEvalParams::explicitNormals = false).
+  // With explicit normals, contact is disabled abruptly at @ref maxAlignmentNormals.
+  // @note For co-dimensional colliding actors with ambiguous normals, the scale is 1 (normal
+  // alignment cannot be computed).
+  //
+  // @see maxAlignmentNormals
+  real alignmentSmoothingFraction = 0.1;
   // @brief Viscous friction coefficient [s/m].
   //
   // @note Friction force is proportional to contact force and tangential velocity.
@@ -1474,9 +1502,10 @@ struct ExperimentalEvalParams [equality(default), from_mochi_core] {
   bool explicitNormals = false;
   // @brief Fade friction coefficient based on normal alignment.
   //
-  // @details When enabled, friction is scaled by (maxAlignmentNormals - alignment) /
-  // (maxAlignmentNormals + 1), where "alignment" is defined as the dot product between colliding
-  // and collider normals.
+  // @details When enabled, friction is scaled by (c - alignment) / (c + 1), where "alignment" is
+  // defined as the dot product between colliding and collider normals, and c is the alignment at
+  // which contact is disabled: @ref ContactParams::maxAlignmentNormals, or the top of its smoothing
+  // band (see @ref ContactParams::alignmentSmoothingFraction).
   //
   // @note For co-dimensional colliding actors with ambiguous normals, friction fading is disabled
   // regardless of fadeFriction (normal alignment cannot be computed).
