@@ -17,6 +17,7 @@
 #include "MochiArticulationTypes.h"
 #include "MochiArticulation.h"
 
+#include "Engine/StaticMesh.h"
 #include "Misc/AutomationTest.h"
 
 #include <limits>
@@ -26,9 +27,13 @@
 #if ENGINE_MAJOR_VERSION >= 5
 #define MOCHI_ARTICULATION_TYPES_TEST_FLAGS \
   (EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::SmokeFilter)
+#define MOCHI_ARTICULATION_FIXTURE_TEST_FLAGS \
+  (EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EngineFilter)
 #else
 #define MOCHI_ARTICULATION_TYPES_TEST_FLAGS \
   (EAutomationTestFlags::ApplicationContextMask | EAutomationTestFlags::SmokeFilter)
+#define MOCHI_ARTICULATION_FIXTURE_TEST_FLAGS \
+  (EAutomationTestFlags::ApplicationContextMask | EAutomationTestFlags::EngineFilter)
 #endif
 
 namespace {
@@ -261,7 +266,7 @@ bool FMochiRotationBoundsConversionTest::RunTest(const FString& Parameters) {
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FMochiArticulationForwardKinematicsTest,
     "SuperDexPhysics.Articulation.ForwardKinematicsMatchesMochi",
-    MOCHI_ARTICULATION_TYPES_TEST_FLAGS)
+    MOCHI_ARTICULATION_FIXTURE_TEST_FLAGS)
 
 bool FMochiArticulationForwardKinematicsTest::RunTest(const FString& Parameters) {
   // A fixed root link with one revolute child, described in the Studio space.
@@ -314,7 +319,7 @@ bool FMochiArticulationForwardKinematicsTest::RunTest(const FString& Parameters)
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FMochiArticulationSphericalForwardKinematicsTest,
     "SuperDexPhysics.Articulation.SphericalForwardKinematicsMatchesMochi",
-    MOCHI_ARTICULATION_TYPES_TEST_FLAGS)
+    MOCHI_ARTICULATION_FIXTURE_TEST_FLAGS)
 
 bool FMochiArticulationSphericalForwardKinematicsTest::RunTest(const FString& Parameters) {
   // A fixed root link with one spherical child, described in the Studio space.
@@ -423,6 +428,110 @@ bool FMochiArticulationJointPositionsFromLinkTransformsTest::RunTest(const FStri
       TestNearlyEqual(FString::Printf(TEXT("DOF %d"), i), recovered[i], q[i], kTolerance);
     }
   }
+  return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FMochiArticulationNamedFramesTest,
+    "SuperDexPhysics.Articulation.NamedFramesAndBounds",
+    MOCHI_ARTICULATION_FIXTURE_TEST_FLAGS)
+
+bool FMochiArticulationNamedFramesTest::RunTest(const FString& Parameters) {
+  const mochi::ArticulatedJointParams rootJoint =
+      MakeJoint(mochi::ArticulatedJointType::Hard, mochi::Real3{0_r, 0_r, 1_r});
+  const mochi::Real3 axis{0_r, 0.6_r, 0.8_r};
+  const mochi::ArticulatedJointParams childJoint =
+      MakeJoint(mochi::ArticulatedJointType::Revolute, axis);
+  mochi::prefab::ArticulatedLinkPrefab root;
+  root.name = "root";
+  mochi::prefab::ArticulatedLinkPrefab child;
+  child.name = "child";
+  child.parentLink = 0;
+  child.parentJointFromLink = mochi::TransformRT(
+      mochi::Quaternion::FromAxisAngle(mochi::Real3{1_r, 0_r, 0_r}, 0.3_r),
+      mochi::Real3{0.05_r, 0.0_r, -0.1_r});
+  TArray<FMochiArticulatedJoint> joints;
+  joints.AddDefaulted(2);
+  joints[0].FromMochi(rootJoint, kStudioToUnreal);
+  joints[1].FromMochi(childJoint, kStudioToUnreal);
+  TArray<FMochiArticulatedLink> links;
+  links.AddDefaulted(2);
+  links[0].FromMochi(root, kStudioToUnreal);
+  links[1].FromMochi(child, kStudioToUnreal);
+  // Transient meshes exercise visual offsets and aggregation without loading assets.
+  UStaticMesh* mesh = NewObject<UStaticMesh>();
+  links[0].RenderModel = mesh;
+  links[0].RenderModelTranslation = FVector(5, -3, 2);
+  links[1].RenderModel = mesh;
+  links[1].RenderModelTranslation = FVector(-7, 4, 9);
+  UMochiArticulation* articulation = NewObject<UMochiArticulation>();
+  articulation->SetDefinition(TEXT("named_frames"), joints, links);
+  const UMochiArticulationBase* base = articulation;
+  const double q = 0.9;
+  TArray<FTransform> parents;
+  TArray<FTransform> roots;
+  if (!TestTrue(TEXT("Parent FK"), base->ComputeLinkToParentTransforms({q}, parents)) ||
+      !TestTrue(TEXT("Root FK"), base->ComputeLinkToArticulationRootTransforms({q}, roots)) ||
+      !TestEqual(TEXT("Parent count"), parents.Num(), 2) ||
+      !TestEqual(TEXT("Root count"), roots.Num(), 2)) {
+    return false;
+  }
+  const mochi::TransformRT childToParent = childJoint.parentLinkFromJoint *
+      mochi::TransformRT(mochi::Quaternion::FromAxisAngle(axis, static_cast<mochi::real>(q))) *
+      child.parentJointFromLink;
+  const FTransform expectedRoot = kStudioToUnreal.TransformToUnreal(rootJoint.parentLinkFromJoint);
+  const FTransform expectedChild = kStudioToUnreal.TransformToUnreal(childToParent) * expectedRoot;
+  TestTrue(TEXT("Parent root preserves root joint"), parents[0].Equals(expectedRoot, kTolerance));
+  TestTrue(TEXT("Root is not reset to identity"), roots[0].Equals(expectedRoot, kTolerance));
+  TestTrue(
+      TEXT("Child relative to parent"),
+      NearlyEqual(kUnrealToStudio.TransformToMochi_RT(parents[1]), childToParent));
+  TestTrue(TEXT("Root accumulates nonidentity root"), roots[1].Equals(expectedChild, kTolerance));
+  TestFalse(TEXT("Parent and root child differ"), parents[1].Equals(roots[1], kTolerance));
+  TArray<FTransform> prefix;
+  TestTrue(TEXT("Parent prefix"), base->ComputeLinkToParentTransforms({q}, prefix, 1.0, 100.0, 0));
+  if (TestEqual(TEXT("Final root count"), prefix.Num(), 1)) {
+    TestTrue(TEXT("Prefix root preserved"), prefix[0].Equals(expectedRoot, kTolerance));
+  }
+  TestTrue(
+      TEXT("Explicit scales and final index"),
+      base->ComputeLinkToArticulationRootTransforms({q * 2}, prefix, 0.5, 100.0, 1));
+  if (TestEqual(TEXT("Final child count"), prefix.Num(), 2)) {
+    TestTrue(TEXT("Angle scale preserved"), prefix[1].Equals(roots[1], kTolerance));
+  }
+  FBoxSphereBounds parentBounds;
+  FBoxSphereBounds rootBounds;
+  FBoxSphereBounds jointBounds;
+  if (!TestTrue(
+          TEXT("Parent bounds"),
+          base->ComputeVisualBoundsFromLinkToParentTransforms(parents, parentBounds)) ||
+      !TestTrue(
+          TEXT("Root bounds"),
+          base->ComputeVisualBoundsFromLinkToArticulationRootTransforms(roots, rootBounds)) ||
+      !TestTrue(
+          TEXT("Joint bounds"), base->ComputeVisualBoundsFromJointPositions({q}, jointBounds))) {
+    return false;
+  }
+  FBox expectedBox(ForceInit);
+  expectedBox +=
+      mesh->GetBounds().GetBox().TransformBy(links[0].GetRenderModelTransform() * expectedRoot);
+  expectedBox +=
+      mesh->GetBounds().GetBox().TransformBy(links[1].GetRenderModelTransform() * expectedChild);
+  const FBoxSphereBounds expectedBounds(expectedBox);
+  auto checkBounds = [&](const FBoxSphereBounds& Bounds) {
+    TestTrue(TEXT("Bounds origin"), Bounds.Origin.Equals(expectedBounds.Origin, kTolerance));
+    TestTrue(TEXT("Bounds extent"), Bounds.BoxExtent.Equals(expectedBounds.BoxExtent, kTolerance));
+    TestTrue(
+        TEXT("Bounds radius"),
+        FMath::IsNearlyEqual(
+            static_cast<double>(Bounds.SphereRadius),
+            static_cast<double>(expectedBounds.SphereRadius),
+            kTolerance));
+  };
+  checkBounds(parentBounds);
+  checkBounds(rootBounds);
+  checkBounds(jointBounds);
+  TestTrue(TEXT("Nonempty aggregate bounds"), rootBounds.SphereRadius > 0);
   return true;
 }
 
