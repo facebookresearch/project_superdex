@@ -20,7 +20,7 @@
 
 #include "MochiGenTypes.h"
 
-#include "MochiPhysicsModule.h"
+#include "MochiGenSupport.h"
 
 #include <type_traits>
 

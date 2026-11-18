@@ -1,0 +1,70 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#pragma once
+
+#include "CoreMinimal.h"
+
+#include <mochi_core/geometry/aabb.h>
+#include <mochi_core/utils/dynamic_string.h>
+#include <mochi_core/utils/quaternion.h>
+
+/** Representation conversions shared by generated Unreal types; no unit scaling. */
+namespace MochiGenSupport {
+
+template <typename TVector>
+mochi::Real3 ToMochiReal3(TVector const& Value) {
+  return mochi::Real3{mochi::real(Value.X), mochi::real(Value.Y), mochi::real(Value.Z)};
+}
+
+template <typename TVector>
+TVector ToUnrealReal3(mochi::Real3 const& Value) {
+  return TVector(Value[0], Value[1], Value[2]);
+}
+
+inline mochi::Quaternion ToMochiQuaternion(FQuat4f const& Value) {
+  return mochi::Quaternion(
+      mochi::real(Value.X), mochi::real(Value.Y), mochi::real(Value.Z), mochi::real(Value.W));
+}
+
+inline FQuat4f ToUnrealQuaternion(mochi::Quaternion const& Value) {
+  auto const Components = Value.ToReal4();
+  return FQuat4f(Components[0], Components[1], Components[2], Components[3]);
+}
+
+inline mochi::DynamicString ToMochiString(FString const& Value) {
+  const FTCHARToUTF8 Converted(*Value, Value.Len());
+  return mochi::DynamicString(Converted.Get(), static_cast<size_t>(Converted.Length()));
+}
+
+inline FString ToUnrealString(mochi::DynamicString const& Value) {
+  if (Value.size() > static_cast<size_t>(MAX_int32)) {
+    UE_LOG(LogTemp, Error, TEXT("Mochi string is too large for FString."));
+    return {};
+  }
+  const FUTF8ToTCHAR Converted(Value.data(), static_cast<int32>(Value.size()));
+  return FString(Converted.Length(), Converted.Get());
+}
+
+inline mochi::Aabb ToMochiAabb(FBox3f const& Value) {
+  return mochi::Aabb(ToMochiReal3(Value.Min), ToMochiReal3(Value.Max));
+}
+
+inline FBox3f ToUnrealAabb(mochi::Aabb const& Value) {
+  return FBox3f(ToUnrealReal3<FVector3f>(Value.GetMin()), ToUnrealReal3<FVector3f>(Value.GetMax()));
+}
+
+} // namespace MochiGenSupport
