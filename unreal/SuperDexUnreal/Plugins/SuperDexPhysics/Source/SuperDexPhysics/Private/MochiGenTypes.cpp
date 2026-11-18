@@ -22,10 +22,13 @@
 
 #include "MochiGenSupport.h"
 
+#include <optional>
 #include <type_traits>
 
 static_assert(std::is_same_v<mochi::real, float>, "Generated Unreal types require single-precision Mochi.");
 static_assert(sizeof(int) == sizeof(int32), "Generated Unreal types require 32-bit Mochi integers.");
+
+using namespace MochiGenSupport;
 
 static_assert(static_cast<int>(EMochiActorType::None) == static_cast<int>(mochi::ActorType::None));
 static_assert(static_cast<int>(EMochiActorType::Rigid) == static_cast<int>(mochi::ActorType::Rigid));
@@ -392,6 +395,242 @@ mochi::PoseConstraintType ToMochi(EMochiPoseConstraintType Value) {
 
 EMochiPoseConstraintType ToUnreal(mochi::PoseConstraintType Value) {
   return static_cast<EMochiPoseConstraintType>(Value);
+}
+
+namespace {
+
+void AssignFromMochi(FMochiAsyncStepParams& Out, mochi::AsyncStepParams const& Src) {
+  Out.bUseFixedTimeStep = static_cast<bool>(Src.useFixedTimeStep);
+  Out.FixedTimeStepSeconds = static_cast<double>(Src.fixedTimeStepSeconds);
+  Out.DynamicTimeStepMinSeconds = static_cast<double>(Src.dynamicTimeStepMinSeconds);
+  Out.DynamicTimeStepMaxSeconds = static_cast<double>(Src.dynamicTimeStepMaxSeconds);
+  Out.TimeStepCallback = Src.timeStepCallback;
+}
+
+void AssignFromMochi(FMochiBoundarySubsamplingParams& Out, mochi::BoundarySubsamplingParams const& Src) {
+  Out.SubsamplingDensity = static_cast<float>(Src.subsamplingDensity);
+  Out.Strategy = ToUnreal(Src.strategy);
+}
+
+void AssignFromMochi(FMochiGridSdfParams& Out, mochi::GridSdfParams const& Src) {
+  Out.ResolutionMode = ToUnreal(Src.resolutionMode);
+  Out.ResolutionDelta = ToUnrealReal3<FVector3f>(Src.resolutionDelta);
+  Out.BoundaryPaddingDist = static_cast<float>(Src.boundaryPaddingDist);
+  Out.MinGridResolution = FIntVector(Src.minGridResolution[0], Src.minGridResolution[1], Src.minGridResolution[2]);
+}
+
+void AssignFromMochi(FMochiLinearSolverParams& Out, mochi::LinearSolverParams const& Src) {
+  Out.SolverType = ToUnreal(Src.solverType);
+  Out.PreconditionerType = ToUnreal(Src.preconditionerType);
+  Out.NormType = ToUnreal(Src.normType);
+  Out.AbsTol = static_cast<float>(Src.absTol);
+  Out.RelTol = static_cast<float>(Src.relTol);
+  Out.RelDivTol = static_cast<float>(Src.relDivTol);
+  Out.MaxIter = static_cast<int32>(Src.maxIter);
+  Out.RestartSize = static_cast<int32>(Src.restartSize);
+  Out.bAbortIfNotSpd = static_cast<bool>(Src.abortIfNotSpd);
+  Out.Verbosity = ToUnreal(Src.verbosity);
+}
+
+void AssignFromMochi(FMochiNonLinearSolverParams& Out, mochi::NonLinearSolverParams const& Src) {
+  Out.SolverType = ToUnreal(Src.solverType);
+  Out.DResidualAssemblyPeriod = static_cast<int32>(Src.dResidualAssemblyPeriod);
+  Out.MaxIter = static_cast<int32>(Src.maxIter);
+  Out.MaxElapsedTimeSeconds = static_cast<double>(Src.maxElapsedTimeSeconds);
+  Out.ConvergenceMode = ToUnreal(Src.convergenceMode);
+  Out.AbsTol = static_cast<float>(Src.absTol);
+  Out.RelTol = static_cast<float>(Src.relTol);
+  Out.RelStepTol = static_cast<float>(Src.relStepTol);
+  Out.bStopIfNoImprovement = static_cast<bool>(Src.stopIfNoImprovement);
+  Out.PsdProjMode = ToUnreal(Src.psdProjMode);
+  Out.bExplosionControl = static_cast<bool>(Src.explosionControl);
+  Out.AbsDivTol = static_cast<float>(Src.absDivTol);
+  Out.RelDivTol = static_cast<float>(Src.relDivTol);
+  Out.LineSearchMaxIter = static_cast<int32>(Src.lineSearchMaxIter);
+  Out.LineSearchAlpha = static_cast<float>(Src.lineSearchAlpha);
+  Out.LineSearchWolfe1 = static_cast<float>(Src.lineSearchWolfe1);
+  Out.LineSearchWolfe2 = static_cast<float>(Src.lineSearchWolfe2);
+  Out.LineSearchMaxRelIncrease = static_cast<float>(Src.lineSearchMaxRelIncrease);
+  Out.LineSearchType = ToUnreal(Src.lineSearchType);
+  Out.LinearToleranceStrategy = ToUnreal(Src.linearToleranceStrategy);
+  Out.Verbosity = ToUnreal(Src.verbosity);
+}
+
+void AssignFromMochi(FMochiSaturationHessianParams& Out, mochi::SaturationHessianParams const& Src) {
+  Out.bContactFriction = static_cast<bool>(Src.contactFriction);
+  Out.bJointFriction = static_cast<bool>(Src.jointFriction);
+  Out.bConstraintSaturation = static_cast<bool>(Src.constraintSaturation);
+}
+
+void AssignFromMochi(FMochiExperimentalEvalParams& Out, mochi::ExperimentalEvalParams const& Src) {
+  Out.bExplicitNormals = static_cast<bool>(Src.explicitNormals);
+  Out.bFadeFriction = static_cast<bool>(Src.fadeFriction);
+  Out.bImplicitNormalForceForDissipation = static_cast<bool>(Src.implicitNormalForceForDissipation);
+  Out.FittedSaturationHessian = ToUnreal(Src.fittedSaturationHessian);
+  Out.FrictionModel = ToUnreal(Src.frictionModel);
+  Out.bElastoPlasticFriction = static_cast<bool>(Src.elastoPlasticFriction);
+  Out.bConsistencyResNorm = static_cast<bool>(Src.consistencyResNorm);
+  Out.ConsistencyResNormStep = static_cast<float>(Src.consistencyResNormStep);
+}
+
+} // namespace
+
+FMochiBoundarySubsamplingParams::FMochiBoundarySubsamplingParams() {
+  AssignFromMochi(*this, mochi::BoundarySubsamplingParams{});
+}
+
+mochi::BoundarySubsamplingParams ToMochi(FMochiBoundarySubsamplingParams const& Src) {
+  mochi::BoundarySubsamplingParams Out{};
+  Out.subsamplingDensity = static_cast<mochi::real>(Src.SubsamplingDensity);
+  Out.strategy = ToMochi(Src.Strategy);
+  return Out;
+}
+
+FMochiBoundarySubsamplingParams ToUnreal(mochi::BoundarySubsamplingParams const& Src) {
+  FMochiBoundarySubsamplingParams Out{};
+  AssignFromMochi(Out, Src);
+  return Out;
+}
+
+FMochiAsyncStepParams::FMochiAsyncStepParams() {
+  AssignFromMochi(*this, mochi::AsyncStepParams{});
+}
+
+mochi::AsyncStepParams ToMochi(FMochiAsyncStepParams const& Src) {
+  mochi::AsyncStepParams Out{};
+  Out.useFixedTimeStep = static_cast<bool>(Src.bUseFixedTimeStep);
+  Out.fixedTimeStepSeconds = static_cast<double>(Src.FixedTimeStepSeconds);
+  Out.dynamicTimeStepMinSeconds = static_cast<double>(Src.DynamicTimeStepMinSeconds);
+  Out.dynamicTimeStepMaxSeconds = static_cast<double>(Src.DynamicTimeStepMaxSeconds);
+  Out.timeStepCallback = Src.TimeStepCallback;
+  return Out;
+}
+
+FMochiAsyncStepParams ToUnreal(mochi::AsyncStepParams const& Src) {
+  FMochiAsyncStepParams Out{};
+  AssignFromMochi(Out, Src);
+  return Out;
+}
+
+FMochiGridSdfParams::FMochiGridSdfParams() {
+  AssignFromMochi(*this, mochi::GridSdfParams{});
+}
+
+mochi::GridSdfParams ToMochi(FMochiGridSdfParams const& Src) {
+  mochi::GridSdfParams Out{};
+  Out.resolutionMode = ToMochi(Src.ResolutionMode);
+  Out.resolutionDelta = ToMochiReal3(Src.ResolutionDelta);
+  Out.boundaryPaddingDist = static_cast<mochi::real>(Src.BoundaryPaddingDist);
+  Out.minGridResolution = mochi::Int3{int(Src.MinGridResolution.X), int(Src.MinGridResolution.Y), int(Src.MinGridResolution.Z)};
+  return Out;
+}
+
+FMochiGridSdfParams ToUnreal(mochi::GridSdfParams const& Src) {
+  FMochiGridSdfParams Out{};
+  AssignFromMochi(Out, Src);
+  return Out;
+}
+
+FMochiLinearSolverParams::FMochiLinearSolverParams() {
+  AssignFromMochi(*this, mochi::LinearSolverParams{});
+}
+
+mochi::LinearSolverParams ToMochi(FMochiLinearSolverParams const& Src) {
+  mochi::LinearSolverParams Out{};
+  Out.solverType = ToMochi(Src.SolverType);
+  Out.preconditionerType = ToMochi(Src.PreconditionerType);
+  Out.normType = ToMochi(Src.NormType);
+  Out.absTol = static_cast<mochi::real>(Src.AbsTol);
+  Out.relTol = static_cast<mochi::real>(Src.RelTol);
+  Out.relDivTol = static_cast<mochi::real>(Src.RelDivTol);
+  Out.maxIter = static_cast<int>(Src.MaxIter);
+  Out.restartSize = static_cast<int>(Src.RestartSize);
+  Out.abortIfNotSpd = static_cast<bool>(Src.bAbortIfNotSpd);
+  Out.verbosity = ToMochi(Src.Verbosity);
+  return Out;
+}
+
+FMochiLinearSolverParams ToUnreal(mochi::LinearSolverParams const& Src) {
+  FMochiLinearSolverParams Out{};
+  AssignFromMochi(Out, Src);
+  return Out;
+}
+
+FMochiNonLinearSolverParams::FMochiNonLinearSolverParams() {
+  AssignFromMochi(*this, mochi::NonLinearSolverParams{});
+}
+
+mochi::NonLinearSolverParams ToMochi(FMochiNonLinearSolverParams const& Src) {
+  mochi::NonLinearSolverParams Out{};
+  Out.solverType = ToMochi(Src.SolverType);
+  Out.dResidualAssemblyPeriod = static_cast<int>(Src.DResidualAssemblyPeriod);
+  Out.maxIter = static_cast<int>(Src.MaxIter);
+  Out.maxElapsedTimeSeconds = static_cast<double>(Src.MaxElapsedTimeSeconds);
+  Out.convergenceMode = ToMochi(Src.ConvergenceMode);
+  Out.absTol = static_cast<mochi::real>(Src.AbsTol);
+  Out.relTol = static_cast<mochi::real>(Src.RelTol);
+  Out.relStepTol = static_cast<mochi::real>(Src.RelStepTol);
+  Out.stopIfNoImprovement = static_cast<bool>(Src.bStopIfNoImprovement);
+  Out.psdProjMode = ToMochi(Src.PsdProjMode);
+  Out.explosionControl = static_cast<bool>(Src.bExplosionControl);
+  Out.absDivTol = static_cast<mochi::real>(Src.AbsDivTol);
+  Out.relDivTol = static_cast<mochi::real>(Src.RelDivTol);
+  Out.lineSearchMaxIter = static_cast<int>(Src.LineSearchMaxIter);
+  Out.lineSearchAlpha = static_cast<mochi::real>(Src.LineSearchAlpha);
+  Out.lineSearchWolfe1 = static_cast<mochi::real>(Src.LineSearchWolfe1);
+  Out.lineSearchWolfe2 = static_cast<mochi::real>(Src.LineSearchWolfe2);
+  Out.lineSearchMaxRelIncrease = static_cast<mochi::real>(Src.LineSearchMaxRelIncrease);
+  Out.lineSearchType = ToMochi(Src.LineSearchType);
+  Out.linearToleranceStrategy = ToMochi(Src.LinearToleranceStrategy);
+  Out.verbosity = ToMochi(Src.Verbosity);
+  return Out;
+}
+
+FMochiNonLinearSolverParams ToUnreal(mochi::NonLinearSolverParams const& Src) {
+  FMochiNonLinearSolverParams Out{};
+  AssignFromMochi(Out, Src);
+  return Out;
+}
+
+FMochiSaturationHessianParams::FMochiSaturationHessianParams() {
+  AssignFromMochi(*this, mochi::SaturationHessianParams{});
+}
+
+mochi::SaturationHessianParams ToMochi(FMochiSaturationHessianParams const& Src) {
+  mochi::SaturationHessianParams Out{};
+  Out.contactFriction = static_cast<bool>(Src.bContactFriction);
+  Out.jointFriction = static_cast<bool>(Src.bJointFriction);
+  Out.constraintSaturation = static_cast<bool>(Src.bConstraintSaturation);
+  return Out;
+}
+
+FMochiSaturationHessianParams ToUnreal(mochi::SaturationHessianParams const& Src) {
+  FMochiSaturationHessianParams Out{};
+  AssignFromMochi(Out, Src);
+  return Out;
+}
+
+FMochiExperimentalEvalParams::FMochiExperimentalEvalParams() {
+  AssignFromMochi(*this, mochi::ExperimentalEvalParams{});
+}
+
+mochi::ExperimentalEvalParams ToMochi(FMochiExperimentalEvalParams const& Src) {
+  mochi::ExperimentalEvalParams Out{};
+  Out.explicitNormals = static_cast<bool>(Src.bExplicitNormals);
+  Out.fadeFriction = static_cast<bool>(Src.bFadeFriction);
+  Out.implicitNormalForceForDissipation = static_cast<bool>(Src.bImplicitNormalForceForDissipation);
+  Out.fittedSaturationHessian = ToMochi(Src.FittedSaturationHessian);
+  Out.frictionModel = ToMochi(Src.FrictionModel);
+  Out.elastoPlasticFriction = static_cast<bool>(Src.bElastoPlasticFriction);
+  Out.consistencyResNorm = static_cast<bool>(Src.bConsistencyResNorm);
+  Out.consistencyResNormStep = static_cast<mochi::real>(Src.ConsistencyResNormStep);
+  return Out;
+}
+
+FMochiExperimentalEvalParams ToUnreal(mochi::ExperimentalEvalParams const& Src) {
+  FMochiExperimentalEvalParams Out{};
+  AssignFromMochi(Out, Src);
+  return Out;
 }
 
 // clang-format on

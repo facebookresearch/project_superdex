@@ -205,33 +205,6 @@ enum class EMochiContactDirection : uint8 {
   OtherContactsThis
 };
 
-USTRUCT(BlueprintType)
-struct SUPERDEXPHYSICS_API FMochiBoundarySubsamplingParams {
-  GENERATED_BODY()
-
-  UPROPERTY(
-      EditAnywhere,
-      BlueprintReadWrite,
-      meta = (ClampMin = "0.0", ClampMax = "1.0"),
-      Category = "Mochi")
-  float SubsamplingDensity = 1.0f;
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
-  EMochiBoundarySubsamplingStrategy Strategy =
-      EMochiBoundarySubsamplingStrategy::UniformProbability;
-};
-/**
- * Legacy ABI-compatible boundary-element conversion.
- *
- * Maps P1Q1, P1Q3, and P1Q6 directly. Experimental values and Count map to Default. Prefer
- * ToUnreal for the complete generated mapping.
- */
-SUPERDEXPHYSICS_API EMochiActorBoundaryElementType FromMochi(mochi::ActorBoundaryElementType Type);
-
-mochi::BoundarySubsamplingParams ToMochi(const FMochiBoundarySubsamplingParams& Params);
-SUPERDEXPHYSICS_API FMochiBoundarySubsamplingParams
-FromMochi(const mochi::BoundarySubsamplingParams& Params);
-
 // Which end of a rod a constraint is attached to.
 UENUM(BlueprintType)
 enum class EMochiRodAttachmentEnd : uint8 {
@@ -242,39 +215,6 @@ enum class EMochiRodAttachmentEnd : uint8 {
 //------------------------------------------------------------------------------
 // STRUCTS
 //------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct SUPERDEXPHYSICS_API FMochiAsyncStepParams {
-  GENERATED_BODY()
-  // Whether to use fixed or dynamic time stepping.
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mochi")
-  bool bUseFixedTimeStep;
-  // Ignored if !useFixedTimeStep
-  UPROPERTY(
-      EditAnywhere,
-      BlueprintReadOnly,
-      meta = (EditCondition = "bUseFixedTimeStep"),
-      Category = "Mochi")
-  double FixedTimeStepSeconds;
-  // Clamp to this minimum time step (fastest rate)
-  UPROPERTY(
-      EditAnywhere,
-      BlueprintReadOnly,
-      meta = (EditCondition = "!bUseFixedTimeStep"),
-      Category = "Mochi")
-  double DynamicTimeStepMinSeconds;
-  // Clamp to this maximum time step (slowest rate)
-  UPROPERTY(
-      EditAnywhere,
-      BlueprintReadOnly,
-      meta = (EditCondition = "!bUseFixedTimeStep"),
-      Category = "Mochi")
-  double DynamicTimeStepMaxSeconds;
-
-  FMochiAsyncStepParams();
-  mochi::AsyncStepParams ToMochi() const;
-  void FromMochi(const mochi::AsyncStepParams& Mochi);
-};
 
 USTRUCT(BlueprintType)
 struct SUPERDEXPHYSICS_API FMochiContactPoint {
@@ -518,24 +458,6 @@ struct SUPERDEXPHYSICS_API FMochiMomentOfInertia {
   bool IsZero() const {
     return Ixx == 0 && Ixy == 0 && Ixz == 0 && Iyy == 0 && Iyz == 0 && Izz == 0;
   }
-};
-
-USTRUCT(BlueprintType)
-struct SUPERDEXPHYSICS_API FMochiGridSdfParams {
-  GENERATED_BODY()
-  // Reference measurement used for computing the size of the SDF voxel
-  UPROPERTY(EditAnywhere, Category = "Mochi")
-  EMochiGridSdfResolutionMode ResolutionMode;
-  // For a measurement M (e.g., mean edge length), delta = resolutionDelta * M
-  UPROPERTY(EditAnywhere, Category = "Mochi")
-  FVector ResolutionDelta;
-  // Distance around the Aabb to consider when computing the range of the SDF
-  UPROPERTY(EditAnywhere, Category = "Mochi")
-  float BoundaryPaddingDist;
-
-  FMochiGridSdfParams();
-  mochi::GridSdfParams ToMochi() const;
-  void FromMochi(const mochi::GridSdfParams& Mochi);
 };
 
 // Mirrors mochi::ActiveShapeTargetingArapMaterialParams::shapeTargetTensor, which is a

@@ -1361,7 +1361,7 @@ void FSuperDexPrefabImporter::AddRigidActor(
   component->BoundaryElementType = ToUnreal(Actor.boundaryElementType);
   component->bEnableBoundarySubsampling = Actor.boundarySubsampling.has_value();
   if (Actor.boundarySubsampling) {
-    component->BoundarySubsamplingParams = FromMochi(*Actor.boundarySubsampling);
+    component->BoundarySubsamplingParams = ToUnreal(*Actor.boundarySubsampling);
   }
   if (Actor.density) {
     UMochiMaterialParams* candidate = NewObject<UMochiMaterialParams>(GetTransientPackage());

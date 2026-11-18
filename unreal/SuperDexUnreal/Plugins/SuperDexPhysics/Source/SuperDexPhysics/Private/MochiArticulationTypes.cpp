@@ -342,7 +342,7 @@ void FMochiArticulatedLink::FromMochi(
                                              : FMochiMomentOfInertia{};
   BoundaryElementType = ::ToUnreal(Mochi.boundaryElementType);
   bEnableBoundarySubsampling = Mochi.boundarySubsampling.has_value();
-  BoundarySubsampling = bEnableBoundarySubsampling ? ::FromMochi(*Mochi.boundarySubsampling)
+  BoundarySubsampling = bEnableBoundarySubsampling ? ::ToUnreal(*Mochi.boundarySubsampling)
                                                    : FMochiBoundarySubsamplingParams{};
 }
 
@@ -377,7 +377,7 @@ void FMochiArticulatedSkin::FromMochi(const mochi::prefab::ArticulatedSkinPrefab
   Layer = Mochi.layer.empty() ? NAME_None : FName(UTF8_TO_TCHAR(Mochi.layer.c_str()));
   BoundaryElementType = ::ToUnreal(Mochi.boundaryElementType);
   bEnableBoundarySubsampling = Mochi.boundarySubsampling.has_value();
-  BoundarySubsampling = bEnableBoundarySubsampling ? ::FromMochi(*Mochi.boundarySubsampling)
+  BoundarySubsampling = bEnableBoundarySubsampling ? ::ToUnreal(*Mochi.boundarySubsampling)
                                                    : FMochiBoundarySubsamplingParams{};
   bOverrideNonCollidingLinks = Mochi.nonCollidingLinks.has_value();
   NonCollidingLinks.Reset();

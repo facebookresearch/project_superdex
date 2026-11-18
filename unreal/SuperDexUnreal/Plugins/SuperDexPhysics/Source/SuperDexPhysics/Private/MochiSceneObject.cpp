@@ -241,12 +241,7 @@ void UMochiSceneObject::ConfigureSettings(const FMochiSceneSettings& InSettings)
 
   // These settings control the simulation time steps on the AsyncScene
   if (MochiAsyncScene) {
-    auto stepParams = MochiAsyncScene->GetAsyncStepParams();
-    stepParams.useFixedTimeStep = InSettings.StepParams.bUseFixedTimeStep;
-    stepParams.fixedTimeStepSeconds = InSettings.StepParams.FixedTimeStepSeconds;
-    stepParams.dynamicTimeStepMinSeconds = InSettings.StepParams.DynamicTimeStepMinSeconds;
-    stepParams.dynamicTimeStepMaxSeconds = InSettings.StepParams.DynamicTimeStepMaxSeconds;
-    MochiAsyncScene->SetAsyncStepParams(stepParams, mochi::ErrorAssert{});
+    MochiAsyncScene->SetAsyncStepParams(::ToMochi(InSettings.StepParams), mochi::ErrorAssert{});
   }
 
   ConfigureDebugDraw(InSettings.bEnableDebugDraw, InSettings.DebugDrawFlags);

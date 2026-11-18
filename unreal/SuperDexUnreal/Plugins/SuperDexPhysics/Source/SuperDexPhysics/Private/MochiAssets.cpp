@@ -312,130 +312,6 @@ void UMochiContactParams::FromMochi(const mochi::ContactParams& Mochi) {
 }
 
 //------------------------------------------------------------------------------
-// MOCHI LINEAR SOLVER PARAMS
-//------------------------------------------------------------------------------
-
-FMochiLinearSolverParams::FMochiLinearSolverParams() {
-  FromMochi(mochi::LinearSolverParams{});
-}
-
-mochi::LinearSolverParams FMochiLinearSolverParams::ToMochi() const {
-  mochi::LinearSolverParams result;
-  result.solverType = mochi::LinearSolverType(KspType);
-  result.preconditionerType = mochi::PreconditionerType(PcType);
-  result.normType = mochi::LinearSolverConvergenceNorm(NormType);
-  result.absTol = ATol;
-  result.relTol = RTol;
-  result.maxIter = MaxIter;
-  return result;
-}
-
-void FMochiLinearSolverParams::FromMochi(const mochi::LinearSolverParams& Mochi) {
-  KspType = EMochiLinearSolverType(Mochi.solverType);
-  PcType = EMochiPreconditionerType(Mochi.preconditionerType);
-  NormType = EMochiLinearSolverConvergenceNorm(Mochi.normType);
-  ATol = Mochi.absTol;
-  RTol = Mochi.relTol;
-  MaxIter = Mochi.maxIter;
-}
-
-//------------------------------------------------------------------------------
-// MOCHI NON LINEAR SOLVER PARAMS
-//------------------------------------------------------------------------------
-
-FMochiNonLinearSolverParams::FMochiNonLinearSolverParams() {
-  FromMochi(mochi::NonLinearSolverParams{});
-}
-
-mochi::NonLinearSolverParams FMochiNonLinearSolverParams::ToMochi() const {
-  mochi::NonLinearSolverParams result;
-
-  result.solverType = mochi::NonLinearSolverType(SolverType);
-
-  result.maxIter = MaxIter;
-  result.absTol = AbsTol;
-  result.relTol = RelTol;
-
-  result.psdProjMode = static_cast<mochi::PsdProjectionMode>(PsdProjMode);
-
-  result.explosionControl = bExplosionControl;
-  result.absDivTol = AbsDivTol;
-  result.relDivTol = RelDivTol;
-
-  result.lineSearchMaxIter = LsMaxIter;
-  result.lineSearchAlpha = LsAlpha;
-  result.lineSearchType = mochi::LineSearchType(LsType);
-
-  result.verbosity = static_cast<mochi::VerbosityLevel>(Verbosity);
-
-  return result;
-}
-
-void FMochiNonLinearSolverParams::FromMochi(const mochi::NonLinearSolverParams& Mochi) {
-  SolverType = EMochiNonLinearSolverType(Mochi.solverType);
-
-  MaxIter = Mochi.maxIter;
-  AbsTol = Mochi.absTol;
-  RelTol = Mochi.relTol;
-
-  PsdProjMode = static_cast<int>(Mochi.psdProjMode);
-
-  bExplosionControl = Mochi.explosionControl;
-  AbsDivTol = Mochi.absDivTol;
-  RelDivTol = Mochi.relDivTol;
-
-  LsMaxIter = Mochi.lineSearchMaxIter;
-  LsAlpha = Mochi.lineSearchAlpha;
-  LsType = EMochiLineSearchType(Mochi.lineSearchType);
-
-  Verbosity = static_cast<EMochiVerbosityLevel>(Mochi.verbosity);
-}
-
-//------------------------------------------------------------------------------
-// MOCHI SATURATION HESSIAN PARAMS
-//------------------------------------------------------------------------------
-
-FMochiSaturationHessianParams::FMochiSaturationHessianParams() {
-  FromMochi(mochi::SaturationHessianParams{});
-}
-
-mochi::SaturationHessianParams FMochiSaturationHessianParams::ToMochi() const {
-  mochi::SaturationHessianParams result;
-  result.contactFriction = bContactFriction;
-  result.jointFriction = bJointFriction;
-  result.constraintSaturation = bConstraintSaturation;
-  return result;
-}
-
-void FMochiSaturationHessianParams::FromMochi(const mochi::SaturationHessianParams& Mochi) {
-  bContactFriction = Mochi.contactFriction;
-  bJointFriction = Mochi.jointFriction;
-  bConstraintSaturation = Mochi.constraintSaturation;
-}
-
-//------------------------------------------------------------------------------
-// MOCHI EXPERIMENTAL EVAL PARAMS
-//------------------------------------------------------------------------------
-
-FMochiExperimentalEvalParams::FMochiExperimentalEvalParams() {
-  FromMochi(mochi::ExperimentalEvalParams{});
-}
-
-mochi::ExperimentalEvalParams FMochiExperimentalEvalParams::ToMochi() const {
-  mochi::ExperimentalEvalParams result;
-  result.fittedSaturationHessian = FittedSaturationHessian.ToMochi();
-  result.implicitNormalForceForDissipation = bImplicitNormalForceForDissipation;
-  result.elastoPlasticFriction = bElastoPlasticFriction;
-  return result;
-}
-
-void FMochiExperimentalEvalParams::FromMochi(const mochi::ExperimentalEvalParams& Mochi) {
-  FittedSaturationHessian.FromMochi(Mochi.fittedSaturationHessian);
-  bImplicitNormalForceForDissipation = Mochi.implicitNormalForceForDissipation;
-  bElastoPlasticFriction = Mochi.elastoPlasticFriction;
-}
-
-//------------------------------------------------------------------------------
 // MOCHI SOLVER PARAMS
 //------------------------------------------------------------------------------
 
@@ -446,16 +322,16 @@ UMochiSolverParams::UMochiSolverParams() {
 
 mochi::SolverParams UMochiSolverParams::ToMochi() const {
   mochi::SolverParams result;
-  result.nonLinearSolver = NonLinearSolverParams.ToMochi();
-  result.linearSolver = LinearSolverParams.ToMochi();
+  result.nonLinearSolver = ::ToMochi(NonLinearSolverParams);
+  result.linearSolver = ::ToMochi(LinearSolverParams);
   result.integrationMethod = ::ToMochi(IntegrationMethod);
-  result.experimentalEval = ExperimentalEvalParams.ToMochi();
+  result.experimentalEval = ::ToMochi(ExperimentalEvalParams);
   return result;
 }
 
 void UMochiSolverParams::FromMochi(const mochi::SolverParams& Mochi) {
-  NonLinearSolverParams.FromMochi(Mochi.nonLinearSolver);
-  LinearSolverParams.FromMochi(Mochi.linearSolver);
+  NonLinearSolverParams = ::ToUnreal(Mochi.nonLinearSolver);
+  LinearSolverParams = ::ToUnreal(Mochi.linearSolver);
   IntegrationMethod = ::ToUnreal(Mochi.integrationMethod);
-  ExperimentalEvalParams.FromMochi(Mochi.experimentalEval);
+  ExperimentalEvalParams = ::ToUnreal(Mochi.experimentalEval);
 }

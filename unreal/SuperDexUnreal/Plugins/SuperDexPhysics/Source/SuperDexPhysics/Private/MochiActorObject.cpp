@@ -66,7 +66,7 @@ mochi::RigidActorParams CreateRigidActorParams(
     actorParams.contact = ContactParams->ToMochi();
   }
   if (GridSdfParams) {
-    actorParams.sdf = GridSdfParams->ToMochi();
+    actorParams.sdf = ::ToMochi(*GridSdfParams);
   }
 
   // Set mass or density, but not both.
@@ -82,7 +82,7 @@ mochi::RigidActorParams CreateRigidActorParams(
   }
   actorParams.boundaryElementType = ToMochi(BoundaryElementType);
   if (BoundarySubsampling) {
-    actorParams.boundarySubsampling = ToMochi(*BoundarySubsampling);
+    actorParams.boundarySubsampling = ::ToMochi(*BoundarySubsampling);
   }
   return actorParams;
 }

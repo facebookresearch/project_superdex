@@ -26,6 +26,8 @@
 #include <mochi_physics/mochi_physics.h>
 #include <mochi_physics/mochi_physics_experimental.h>
 
+#include <functional>
+
 #include "MochiGenTypes.generated.h"
 
 /**
@@ -135,7 +137,7 @@ enum class EMochiColliderType : uint8 {
    *   (expensive), and actor creation fails if it cannot be computed.
    * @note Also supported for soft actors via SDF mapping.
    *
-   * @see GridSdfParams
+   * @see FMochiGridSdfParams
    */
   Sdf = 6,
   /**
@@ -383,10 +385,11 @@ enum class EMochiNonLinearSolverType : uint8 {
    * @note The initial approximation of the dresidual is the actual dresidual (i.e., the first
    *   iteration matches Newton's method).
    * @note The algorithm is restarted with the actual dresidual every
-   *   NonLinearSolverParams::dResidualAssemblyPeriod iterations, or immediately if the line search
-   *   fails to improve the figure of merit it monitors or the linear solver fails to converge.
+   *   FMochiNonLinearSolverParams::DResidualAssemblyPeriod iterations, or immediately if the line
+   *   search fails to improve the figure of merit it monitors or the linear solver fails to
+   *   converge.
    *
-   * @see NonLinearSolverParams::dResidualAssemblyPeriod
+   * @see FMochiNonLinearSolverParams::DResidualAssemblyPeriod
    */
   BFGS = 1,
   /**
@@ -395,10 +398,11 @@ enum class EMochiNonLinearSolverType : uint8 {
    * @note The initial approximation of the dresidual is the actual dresidual (i.e., the first
    *   iteration matches Newton's method).
    * @note The algorithm is restarted with the actual dresidual every
-   *   NonLinearSolverParams::dResidualAssemblyPeriod iterations, or immediately if the line search
-   *   fails to improve the figure of merit it monitors or the linear solver fails to converge.
+   *   FMochiNonLinearSolverParams::DResidualAssemblyPeriod iterations, or immediately if the line
+   *   search fails to improve the figure of merit it monitors or the linear solver fails to
+   *   converge.
    *
-   * @see NonLinearSolverParams::dResidualAssemblyPeriod
+   * @see FMochiNonLinearSolverParams::DResidualAssemblyPeriod
    */
   SR1 = 2,
   /** Number of non-linear solver type enum values. */
@@ -418,12 +422,12 @@ SUPERDEXPHYSICS_API EMochiNonLinearSolverType ToUnreal(mochi::NonLinearSolverTyp
  *
  * @note Convergence is evaluated per simulation island, not scene-wide. Each island is solved
  *   independently, and the selected mode determines how convergence is assessed within that island.
- * @note The norm used to monitor divergence via NonLinearSolverParams::absDivTol and
- *   NonLinearSolverParams::relDivTol is always the L2 norm, irrespective of this setting.
- * @note The norm used to monitor stagnation via NonLinearSolverParams::relStepTol is always the L2
- *   norm, irrespective of this setting.
+ * @note The norm used to monitor divergence via FMochiNonLinearSolverParams::AbsDivTol and
+ *   FMochiNonLinearSolverParams::RelDivTol is always the L2 norm, irrespective of this setting.
+ * @note The norm used to monitor stagnation via FMochiNonLinearSolverParams::RelStepTol is always
+ *   the L2 norm, irrespective of this setting.
  *
- * @see NonLinearSolverParams::absTol, NonLinearSolverParams::relTol
+ * @see FMochiNonLinearSolverParams::AbsTol, FMochiNonLinearSolverParams::RelTol
  */
 UENUM(BlueprintType)
 enum class EMochiNonLinearSolverConvergenceMode : uint8 {
@@ -433,8 +437,8 @@ enum class EMochiNonLinearSolverConvergenceMode : uint8 {
    * Convergence is determined by the global residual norm within each simulation island: |r| <=
    *   absTol or |r| <= relTol * |r0|
    *
-   * @note The default NonLinearSolverParams::absTol and NonLinearSolverParams::relTol are not
-   *   generally appropriate for this mode: set them for the problem's residual scale.
+   * @note The default FMochiNonLinearSolverParams::AbsTol and FMochiNonLinearSolverParams::RelTol
+   *   are not generally appropriate for this mode: set them for the problem's residual scale.
    */
   Global = 0,
   /**
@@ -478,13 +482,13 @@ enum class EMochiLineSearchType : uint8 {
    * Simple line search. Accepts a step if the merit does not increase by more than a specified
    *   relative tolerance.
    *
-   * @see NonLinearSolverParams::lineSearchMaxRelIncrease
+   * @see FMochiNonLinearSolverParams::LineSearchMaxRelIncrease
    */
   Simple = 1,
   /**
    * Line search with Armijo condition.
    *
-   * @see NonLinearSolverParams::lineSearchWolfe1
+   * @see FMochiNonLinearSolverParams::LineSearchWolfe1
    */
   Armijo = 2,
   /**
@@ -495,7 +499,8 @@ enum class EMochiLineSearchType : uint8 {
    *   otherwise leads to longer trials. If no trial meets both conditions, the line search takes
    *   the longest such trial, if any, at the cost of one more assembly unless it was the last.
    *
-   * @see NonLinearSolverParams::lineSearchWolfe1, NonLinearSolverParams::lineSearchWolfe2
+   * @see FMochiNonLinearSolverParams::LineSearchWolfe1,
+   *   FMochiNonLinearSolverParams::LineSearchWolfe2
    */
   WolfeWeak = 3,
   /**
@@ -504,7 +509,8 @@ enum class EMochiLineSearchType : uint8 {
    * Like EMochiLineSearchType::WolfeWeak, but also rejects a trial along which the merit increases
    *   too steeply for the strong 2nd condition.
    *
-   * @see NonLinearSolverParams::lineSearchWolfe1, NonLinearSolverParams::lineSearchWolfe2
+   * @see FMochiNonLinearSolverParams::LineSearchWolfe1,
+   *   FMochiNonLinearSolverParams::LineSearchWolfe2
    */
   WolfeStrong = 4,
   /**
@@ -838,8 +844,8 @@ enum class EMochiLinearSolverConvergenceNorm : uint8 {
    *
    * ‖r‖ = √(Σ_a ‖r_a‖²_W / s_a²), where ‖r_a‖_W = √(Σᵢ wᵢ·rᵢ²) uses actor a's weights from
    *   EMochiNonLinearSolverConvergenceMode::PerActorWeighted, and s_a is the larger of actor a's
-   *   non-linear residual in that norm and NonLinearSolverParams::absTol, or, if both are zero, the
-   *   largest actor's residual.
+   *   non-linear residual in that norm and FMochiNonLinearSolverParams::AbsTol, or, if both are
+   *   zero, the largest actor's residual.
    *
    * @note In EMochiNonLinearSolverConvergenceMode::Global mode, the solvers that support it use
    *   EMochiLinearSolverConvergenceNorm::ResidualL2 instead.
@@ -940,7 +946,7 @@ SUPERDEXPHYSICS_API EMochiVerbosityLevel ToUnreal(mochi::VerbosityLevel Value);
 
 /**
  * The maximum voxel size for an SDF will be determined by one of these measurements scaled by
- *   GridSdfParams::resolutionDelta.
+ *   FMochiGridSdfParams::ResolutionDelta.
  */
 UENUM(BlueprintType)
 enum class EMochiGridSdfResolutionMode : uint8 {
@@ -957,8 +963,8 @@ enum class EMochiGridSdfResolutionMode : uint8 {
   /** Use the average edge length in the mesh as reference. */
   MeanEdge = 5,
   /**
-   * Use GridSdfParams::resolutionDelta to set the maximum voxel size in meters (no scaling based on
-   *   the features of the mesh nor AABB).
+   * Use FMochiGridSdfParams::ResolutionDelta to set the maximum voxel size in meters (no scaling
+   *   based on the features of the mesh nor AABB).
    */
   Explicit = 6,
   /** Total number of resolution modes. */
@@ -1284,5 +1290,658 @@ SUPERDEXPHYSICS_API mochi::PoseConstraintType ToMochi(EMochiPoseConstraintType V
 
 /** Returns the Unreal representation of Value. */
 SUPERDEXPHYSICS_API EMochiPoseConstraintType ToUnreal(mochi::PoseConstraintType Value);
+
+/**
+ * Parameters controlling the stepping behavior of an AsyncScene.
+ *
+ * Configures how an AsyncScene determines the time step size. There are three modes for determining
+ *   the time step size, evaluated in the following priority order:
+ *
+ * 1. If FMochiAsyncStepParams::TimeStepCallback is set and returns a non-negative value, use the
+ *   callback value.
+ * 2. Else if FMochiAsyncStepParams::bUseFixedTimeStep is true, use
+ *   FMochiAsyncStepParams::FixedTimeStepSeconds.
+ * 3. Else, use elapsed real time since the last step (dynamic mode).
+ *
+ * @see AsyncScene::GetAsyncStepParams, AsyncScene::SetAsyncStepParams
+ */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiAsyncStepParams {
+  GENERATED_BODY()
+
+  /**
+   * Use fixed time step if true, dynamic (real-time) time step if false.
+   *
+   * @note "Dynamic" means the time step equals elapsed wall-clock time since the last step.
+   * @note Ignored if FMochiAsyncStepParams::TimeStepCallback is set and returns a non-negative
+   *   value.
+   *
+   * @see FMochiAsyncStepParams::FixedTimeStepSeconds, FMochiAsyncStepParams::TimeStepCallback
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  bool bUseFixedTimeStep{};
+
+  /**
+   * Fixed time step size [s].
+   *
+   * @note Must be finite and non-negative.
+   * @note Used when FMochiAsyncStepParams::bUseFixedTimeStep is true and
+   *   FMochiAsyncStepParams::TimeStepCallback is not set or returns a negative value.
+   * @note Also used by AsyncScene::RequestStepThenPause when
+   *   FMochiAsyncStepParams::TimeStepCallback is not set or returns a negative value, even if
+   *   dynamic-time-step mode is configured.
+   *
+   * @see AsyncScene::RequestStepThenPause, FMochiAsyncStepParams::bUseFixedTimeStep,
+   *   FMochiAsyncStepParams::TimeStepCallback
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  double FixedTimeStepSeconds{};
+
+  /**
+   * Minimum time step size [s] in dynamic mode.
+   *
+   * @note Dynamic mode is only used when FMochiAsyncStepParams::bUseFixedTimeStep is false and
+   *   FMochiAsyncStepParams::TimeStepCallback either is not set or returns a negative value.
+   * @note Must be finite. Negative values are clamped to zero. Values greater than
+   *   FMochiAsyncStepParams::DynamicTimeStepMaxSeconds are clamped down to that maximum.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  double DynamicTimeStepMinSeconds{};
+
+  /**
+   * Maximum time step size [s] in dynamic mode.
+   *
+   * @note Dynamic mode is only used when FMochiAsyncStepParams::bUseFixedTimeStep is false and
+   *   FMochiAsyncStepParams::TimeStepCallback either is not set or returns a negative value.
+   * @note Must be finite. Negative values are clamped to zero.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  double DynamicTimeStepMaxSeconds{};
+
+  /**
+   * Optional callback to provide custom time step size [s].
+   *
+   * @note Called on the simulation thread before each step.
+   * @note If set and it returns a non-negative value, overrides both fixed and dynamic modes.
+   * @note If it returns a negative value, the async scene falls back to the configured fixed or
+   *   dynamic time-step behavior.
+   *
+   * @see FMochiAsyncStepParams::FixedTimeStepSeconds, FMochiAsyncStepParams::bUseFixedTimeStep
+   */
+  std::function<double()> TimeStepCallback{};
+
+  /** Initializes all fields from native Mochi defaults. */
+  FMochiAsyncStepParams();
+};
+
+/** Returns the native Mochi representation of Value. */
+SUPERDEXPHYSICS_API mochi::AsyncStepParams ToMochi(FMochiAsyncStepParams const& Value);
+
+/** Returns the Unreal representation of Value. */
+SUPERDEXPHYSICS_API FMochiAsyncStepParams ToUnreal(mochi::AsyncStepParams const& Value);
+
+/**
+ * Parameters for subsampling boundary integrals such as contact.
+ *
+ * Subsampling reduces the number of boundary sample points used for contact and other boundary
+ *   integrals, which can improve performance at the cost of accuracy.
+ */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiBoundarySubsamplingParams {
+  GENERATED_BODY()
+
+  /**
+   * Subsampling density in the range [0, 1].
+   *
+   * @note 0 means no sample points are used. 1 means all sample points are used.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float SubsamplingDensity{};
+
+  /** Strategy for determining which sample points to use. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  EMochiBoundarySubsamplingStrategy Strategy{};
+
+  /** Initializes all fields from native Mochi defaults. */
+  FMochiBoundarySubsamplingParams();
+};
+
+/** Returns the native Mochi representation of Value. */
+SUPERDEXPHYSICS_API mochi::BoundarySubsamplingParams ToMochi(FMochiBoundarySubsamplingParams const& Value);
+
+/** Returns the Unreal representation of Value. */
+SUPERDEXPHYSICS_API FMochiBoundarySubsamplingParams ToUnreal(mochi::BoundarySubsamplingParams const& Value);
+
+/**
+ * Parameters controlling the resolution of grid-based Signed Distance Fields (SDF).
+ *
+ * A GridSdf represents the SDF to a closed surface mesh as a 3D grid where each vertex stores the
+ *   signed distance to the surface mesh. The SDF grid resolution and bounds are controlled by these
+ *   parameters.
+ */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiGridSdfParams {
+  GENERATED_BODY()
+
+  /**
+   * Defines the mesh feature used as reference measurement for computing the voxel size.
+   *
+   * @see FMochiGridSdfParams::ResolutionDelta
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  EMochiGridSdfResolutionMode ResolutionMode{};
+
+  /**
+   * The maximum voxel size will be FMochiGridSdfParams::ResolutionDelta times the reference
+   *   measurement computed using FMochiGridSdfParams::ResolutionMode.
+   *
+   * @note The actual voxel size may be smaller because the number of grid cells will be rounded up
+   *   to an integer value and clamped to a minimum of FMochiGridSdfParams::MinGridResolution.
+   * @note Increasing FMochiGridSdfParams::ResolutionDelta will result in larger voxels. Doing so
+   *   will make it harder for the SDF to resolve fine details of the mesh, but it will save memory
+   *   and improve SDF generation speed.
+   * @note Decreasing FMochiGridSdfParams::ResolutionDelta will improve the SDF's ability to resolve
+   *   fine details, but it will take more memory and more time to generate. This cost scales
+   *   proportional to N^3. Use with care.
+   *
+   * @see FMochiGridSdfParams::ResolutionMode
+   */
+  UPROPERTY(EditAnywhere, Category = "Mochi")
+  FVector3f ResolutionDelta{};
+
+  /**
+   * Additional distance (in meters) to expand the mesh's axis-aligned bounding box (AABB) when
+   *   determining the SDF grid bounds.
+   *
+   * The SDF grid will cover the mesh's AABB expanded by this distance in all directions. This
+   *   ensures the SDF has valid distance values even slightly outside the mesh's AABB.
+   *
+   * @note In practice, this value should be greater than the value returned by
+   *   ContactParams::GetPenaltyThresholdDist. If the SDF did not have enough padding, then Mochi
+   *   would have to use a less efficient algorithm for collision detection, but it would still
+   *   work.
+   * @note When you load a model and bake a uniform scale value less than 1.0, the model's
+   *   pre-computed SDF will also be scaled, resulting in less absolute padding. The default padding
+   *   value is larger than the default contact penalty threshold distance for this reason.
+   *
+   * @see kGridSdfDefaultBoundaryPadding
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float BoundaryPaddingDist{};
+
+  /**
+   * The minimum grid resolution measured in number of voxels per axis.
+   *
+   * @note This may override the voxel count (and voxel size) computed using
+   *   FMochiGridSdfParams::ResolutionMode and FMochiGridSdfParams::ResolutionDelta.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  FIntVector MinGridResolution{};
+
+  /** Initializes all fields from native Mochi defaults. */
+  FMochiGridSdfParams();
+};
+
+/** Returns the native Mochi representation of Value. */
+SUPERDEXPHYSICS_API mochi::GridSdfParams ToMochi(FMochiGridSdfParams const& Value);
+
+/** Returns the Unreal representation of Value. */
+SUPERDEXPHYSICS_API FMochiGridSdfParams ToUnreal(mochi::GridSdfParams const& Value);
+
+/** Parameters for linear solves. */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiLinearSolverParams {
+  GENERATED_BODY()
+
+  /** Linear solver type. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  EMochiLinearSolverType SolverType{};
+
+  /**
+   * Preconditioner type.
+   *
+   * @note Applies only to iterative solvers.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  EMochiPreconditionerType PreconditionerType{};
+
+  /**
+   * Norm used for the stopping criteria.
+   *
+   * @note Applies only to the solvers documented in EMochiLinearSolverConvergenceNorm.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  EMochiLinearSolverConvergenceNorm NormType{};
+
+  /**
+   * Absolute residual norm tolerance for convergence.
+   *
+   * @note Applies only to iterative solvers.
+   * @note When the solver stops on EMochiLinearSolverConvergenceNorm::ResidualPerActorWeighted, the
+   *   absolute stop ends the solve only once every actor's weighted residual ‖r_a‖_W is at most
+   *   FMochiLinearSolverParams::AbsTol. Otherwise, it bounds the solver's stopping norm.
+   * @note 0 leaves only the relative test.
+   * @note A negative value lets Mochi select it. When the solver stops on
+   *   EMochiLinearSolverConvergenceNorm::ResidualPerActorWeighted, Mochi selects 1% of the residual
+   *   at which the non-linear solver accepts each actor: FMochiNonLinearSolverParams::RelTol times
+   *   the actor's initial residual, or FMochiNonLinearSolverParams::AbsTol if larger. When it stops
+   *   on EMochiLinearSolverConvergenceNorm::ResidualL2 in
+   *   EMochiNonLinearSolverConvergenceMode::Global mode, Mochi selects 1% of the residual at which
+   *   the non-linear solver accepts the island. Otherwise, it selects 1e-9. The selection is 0 when
+   *   FMochiNonLinearSolverParams::AbsTol is 0 and either FMochiNonLinearSolverParams::RelTol or
+   *   the initial residual of an actor or the island is 0, which leaves only the relative test.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float AbsTol{};
+
+  /**
+   * Relative residual norm tolerance for convergence, relative to the same norm of the right-hand
+   *   side.
+   *
+   * @note Applies only to iterative solvers.
+   * @note Ignored when using EMochiLinearToleranceStrategy::EisenstatWalker1 or
+   *   EMochiLinearToleranceStrategy::EisenstatWalker2 in the non-linear solver.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float RelTol{};
+
+  /**
+   * Relative residual norm tolerance for divergence, relative to the same norm of the right-hand
+   *   side.
+   *
+   * @note Applies only to iterative solvers.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float RelDivTol{};
+
+  /**
+   * Maximum number of iterations for iterative solvers.
+   *
+   * @note Applies only to iterative solvers.
+   * @note Must be positive or kAutoLinearSolverMaxIter.
+   * @note kAutoLinearSolverMaxIter lets Mochi select the maximum number of iterations based on the
+   *   problem.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  int32 MaxIter{};
+
+  /**
+   * Krylov subspace dimension before restarting.
+   *
+   * @note Applies only to GMRES solvers (e.g., EMochiLinearSolverType::GMRES,
+   *   EMochiLinearSolverType::CudaGMRES).
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  int32 RestartSize{};
+
+  /**
+   * Abort solve if matrix is not SPD.
+   *
+   * @note Applies only to iterative SPD solvers (e.g., EMochiLinearSolverType::CG,
+   *   EMochiLinearSolverType::CudaCG, EMochiLinearSolverType::AugmentedCG).
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  bool bAbortIfNotSpd{};
+
+  /** Verbosity level for logging output. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  EMochiVerbosityLevel Verbosity{};
+
+  /** Initializes all fields from native Mochi defaults. */
+  FMochiLinearSolverParams();
+};
+
+/** Returns the native Mochi representation of Value. */
+SUPERDEXPHYSICS_API mochi::LinearSolverParams ToMochi(FMochiLinearSolverParams const& Value);
+
+/** Returns the Unreal representation of Value. */
+SUPERDEXPHYSICS_API FMochiLinearSolverParams ToUnreal(mochi::LinearSolverParams const& Value);
+
+/** Parameters for non-linear implicit solves. */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiNonLinearSolverParams {
+  GENERATED_BODY()
+
+  /** Non-linear solver type. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  EMochiNonLinearSolverType SolverType{};
+
+  /**
+   * Every how many non-linear iterations to assemble the dresidual matrix.
+   *
+   * @note For Newton's method, set to >1 to reuse the dresidual across iterations.
+   * @note For quasi-Newton methods (e.g., BFGS, SR1), it must be >1 and indicates every how many
+   *   iterations to restart the algorithm with the actual dresidual.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  int32 DResidualAssemblyPeriod{};
+
+  /** Maximum number of non-linear iterations. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  int32 MaxIter{};
+
+  /**
+   * Maximum elapsed time [s].
+   *
+   * @note The solve terminates if the elapsed time exceeds this threshold.
+   * @note 0 means no time limit.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  double MaxElapsedTimeSeconds{};
+
+  /**
+   * Convergence monitoring mode.
+   *
+   * @note Applies to FMochiNonLinearSolverParams::AbsTol and FMochiNonLinearSolverParams::RelTol.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  EMochiNonLinearSolverConvergenceMode ConvergenceMode{};
+
+  /**
+   * Absolute residual norm tolerance for convergence.
+   *
+   * @note Also the residual below which EMochiLinearSolverConvergenceNorm::ResidualPerActorWeighted
+   *   stops normalizing an actor by its own residual.
+   * @note With a negative FMochiLinearSolverParams::AbsTol, it also determines the linear solver's
+   *   absolute tolerance where supported (see FMochiLinearSolverParams::AbsTol).
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float AbsTol{};
+
+  /**
+   * Relative residual norm tolerance for convergence, relative to the initial residual.
+   *
+   * @note With a negative FMochiLinearSolverParams::AbsTol, it also determines the linear solver's
+   *   absolute tolerance where supported (see FMochiLinearSolverParams::AbsTol).
+   * @note 0 disables this criterion.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float RelTol{};
+
+  /**
+   * Relative tolerance on the L2 norm of the raw linear-solve increment before line search scaling.
+   *
+   * @note The solve terminates with ConvergenceStatus::Stopped status if |dx|/|x| is below this
+   *   threshold (i.e., the step norm is below this fraction of the current solution norm).
+   * @note 0 disables this criterion.
+   * @note Default is kDefaultRelStepTol.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float RelStepTol{};
+
+  /**
+   * Stop the solve if the line search figure of merit does not improve from the previous iteration.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  bool bStopIfNoImprovement{};
+
+  /** Positive Semi-Definite (PSD) projection mode for the dresidual matrix. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  EMochiPsdProjectionMode PsdProjMode{};
+
+  /** Enable heuristic explosion prevention. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  bool bExplosionControl{};
+
+  /**
+   * Absolute divergence tolerance.
+   *
+   * @note Triggers explosion control if residual norm exceeds this value.
+   * @note Used only if FMochiNonLinearSolverParams::bExplosionControl is true.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float AbsDivTol{};
+
+  /**
+   * Relative divergence tolerance, relative to the initial residual.
+   *
+   * @note Triggers explosion control if relative residual norm exceeds this value.
+   * @note Used only if FMochiNonLinearSolverParams::bExplosionControl is true.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float RelDivTol{};
+
+  /**
+   * Maximum number of line search iterations.
+   *
+   * @note Must be >= 1 unless FMochiNonLinearSolverParams::LineSearchType is
+   *   EMochiLineSearchType::None.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  int32 LineSearchMaxIter{};
+
+  /**
+   * Step length reduction factor for line search.
+   *
+   * @note Must be in (0, 1).
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float LineSearchAlpha{};
+
+  /**
+   * Wolfe condition parameter c1 (sufficient decrease).
+   *
+   * @note Must be in (0, 1).
+   * @note Used only by EMochiLineSearchType::Armijo, EMochiLineSearchType::WolfeWeak, and
+   *   EMochiLineSearchType::WolfeStrong line search types.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float LineSearchWolfe1{};
+
+  /**
+   * Wolfe condition parameter c2 (curvature).
+   *
+   * @note Must be in (FMochiNonLinearSolverParams::LineSearchWolfe1, 1).
+   * @note Used only by EMochiLineSearchType::WolfeWeak and EMochiLineSearchType::WolfeStrong line
+   *   search types.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float LineSearchWolfe2{};
+
+  /**
+   * Maximum relative increase in the merit to accept the step.
+   *
+   * @note Only applies to EMochiLineSearchType::Simple.
+   * @note An increase beyond this maximum but within an estimate of the merit's rounding error is
+   *   tested on the slope of the merit along the step instead (see EMochiLineSearchType).
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float LineSearchMaxRelIncrease{};
+
+  /** Line search type. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  EMochiLineSearchType LineSearchType{};
+
+  /** Strategy for adaptive linear solver tolerance (forcing term). */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  EMochiLinearToleranceStrategy LinearToleranceStrategy{};
+
+  /** Verbosity level for logging output. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  EMochiVerbosityLevel Verbosity{};
+
+  /** Initializes all fields from native Mochi defaults. */
+  FMochiNonLinearSolverParams();
+};
+
+/** Returns the native Mochi representation of Value. */
+SUPERDEXPHYSICS_API mochi::NonLinearSolverParams ToMochi(FMochiNonLinearSolverParams const& Value);
+
+/** Returns the Unreal representation of Value. */
+SUPERDEXPHYSICS_API FMochiNonLinearSolverParams ToUnreal(mochi::NonLinearSolverParams const& Value);
+
+/**
+ * [Experimental] Controls whether force-saturation terms use a fitted quadratic Hessian
+ *   independently for each saturation pathway.
+ *
+ * For each flag, `true` selects the fitted Hessian, which is more stable. `false` selects the exact
+ *   analytical Hessian, which may converge faster but is less stable.
+ *
+ * @note When a flag is `false`, the solver will try first with the true Hessian for that pathway.
+ *   If a Newton attempt fails, the solver retries with fitted Hessians for all pathways and keeps
+ *   them for the rest of that nonlinear solve. With the exact contact-friction Hessian and a line
+ *   search, it also switches to them when an iteration starts with an elasto-plastic contact at or
+ *   past reverse presliding yield. Each solve starts from these flags.
+ *
+ * @warning This is an experimental feature. It may be changed or removed in the future. Use at your
+ *   own risk.
+ */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiSaturationHessianParams {
+  GENERATED_BODY()
+
+  /** Use fitted Hessian for contact-friction saturation. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  bool bContactFriction{};
+
+  /** Use fitted Hessian for joint-friction saturation. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  bool bJointFriction{};
+
+  /** Use fitted Hessian for constraint saturation. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  bool bConstraintSaturation{};
+
+  /** Initializes all fields from native Mochi defaults. */
+  FMochiSaturationHessianParams();
+};
+
+/** Returns the native Mochi representation of Value. */
+SUPERDEXPHYSICS_API mochi::SaturationHessianParams ToMochi(FMochiSaturationHessianParams const& Value);
+
+/** Returns the Unreal representation of Value. */
+SUPERDEXPHYSICS_API FMochiSaturationHessianParams ToUnreal(mochi::SaturationHessianParams const& Value);
+
+/**
+ * [Experimental] Evaluation settings common to the full scene.
+ *
+ * They tune the evaluation of internal models (contact, constraints, etc).
+ *
+ * @warning This is an experimental feature. It may be changed or removed in the future. Use at your
+ *   own risk.
+ */
+USTRUCT(BlueprintType)
+struct SUPERDEXPHYSICS_API FMochiExperimentalEvalParams {
+  GENERATED_BODY()
+
+  /**
+   * Use explicit normals (from stage-start kinematics) for the evaluation of friction.
+   *
+   * Whether to treat the colliding and collider normals explicitly (using stage-start kinematics)
+   *   or implicitly (using current kinematics) for the evaluation of alignment and the friction
+   *   plane.
+   *
+   * @note The SDF gradient for the normal collision force is always implicit.
+   * @note explicitNormals = true and implicitNormalForceForDissipation = false produces contact
+   *   residuals that are the exact gradients of the contact merit. This improves convergence
+   *   guarantees of the Newton solve, but may be less stable due to the explicit treatment.
+   * @note A differentiable scene requires explicitNormals = true.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  bool bExplicitNormals{};
+
+  /**
+   * Fade friction coefficient based on normal alignment.
+   *
+   * When enabled, friction is scaled by (maxAlignmentNormals - alignment) / (maxAlignmentNormals +
+   *   1), where "alignment" is defined as the dot product between colliding and collider normals.
+   *
+   * @note For co-dimensional colliding actors with ambiguous normals, friction fading is disabled
+   *   regardless of fadeFriction (normal alignment cannot be computed).
+   * @note fadeFriction = true adds a non-integrable term to the residual unless
+   *   FMochiExperimentalEvalParams::bExplicitNormals = true.
+   *
+   * @see ContactParams::maxAlignmentNormals
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  bool bFadeFriction{};
+
+  /**
+   * Treat the normal contact force implicitly (if true) or explicitly (if false) for dissipative
+   *   contact terms.
+   *
+   * @note Implicit treatment improves stability (especially with high-order time integrators) but
+   *   the resulting dissipative force is not integrable, hence it cannot be derived from an
+   *   objective function. Merit-based line searches therefore count its work along each step
+   *   instead of an energy (see EMochiLineSearchType), and its force dresidual is non-symmetric (a
+   *   symmetric approximation is used). With implicitNormalForceForDissipation = false, the
+   *   distance used for the explicit normal force is approximate when
+   *   FMochiExperimentalEvalParams::bExplicitNormals is false, but accurate when it is true.
+   * @note Dissipative contact terms include Coulomb friction, viscous friction, and normal viscous
+   *   damping. Using an implicit normal force for normal damping can improve the accuracy of the
+   *   effective coefficient of restitution at a given time step size.
+   * @note A differentiable scene requires implicitNormalForceForDissipation = false.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  bool bImplicitNormalForceForDissipation{};
+
+  /**
+   * Controls whether force-saturation terms use a fitted quadratic Hessian (more stable) or the
+   *   exact analytical Hessian (faster convergence but less stable), independently for each
+   *   saturation pathway.
+   *
+   * @note For any flag set to false, the solver will try first with the true Hessian. See
+   *   FMochiSaturationHessianParams for when it switches to fitted Hessians.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  FMochiSaturationHessianParams FittedSaturationHessian{};
+
+  /**
+   * Selects which Coulomb friction smoothing model to use.
+   *
+   * C1Regularized (default) preserves existing behavior exactly. CinfRegularized is an additional
+   *   model that can be selected at runtime without affecting C1Regularized users.
+   *
+   * @note FMochiExperimentalEvalParams::bElastoPlasticFriction requires C1Regularized.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  EMochiCoulombFrictionModel FrictionModel{};
+
+  /**
+   * [Experimental] Use elasto-plastic Coulomb friction.
+   *
+   * Elasto-plastic friction holds a tangential load below the Coulomb limit without slip, and
+   *   slides once the tangential displacement exceeds ContactParams::preslidingDisplacement.
+   *   Regular Coulomb friction, in contrast, needs slip to act.
+   *
+   * @note Applies only to contacts with rigid colliders, static or dynamic, including articulated
+   *   links. Contacts with deformable colliders (soft actors with an Sdf collider, and point cloud
+   *   colliders) keep the velocity-regularized Coulomb friction.
+   * @note Requires FMochiExperimentalEvalParams::FrictionModel = C1Regularized, whose compact
+   *   support saturates friction at the presliding displacement.
+   * @note Requires a time integration method (EMochiIntegrationMethod) whose step ends at its last
+   *   stage: BackwardEuler, BDF2, BDF3, DIRK22 or DIRK33.
+   * @note Friction preload is part of the actor history, and is cleared when it is invalidated (see
+   *   Actor).
+   * @note A static actor given a velocity every step, like a conveyor belt, never builds friction
+   *   preload, so contacts on it creep as with regular friction.
+   * @note Changing this setting changes the content of the scene state, so states captured before
+   *   the change cannot be restored after it.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  bool bElastoPlasticFriction{};
+
+  /**
+   * Validate that the residual is the gradient of the objective by a directional finite-difference
+   *   consistency check.
+   *
+   * @note This operation is expensive and should only be used for debugging.
+   */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  bool bConsistencyResNorm{};
+
+  /** Step size for finite-difference consistency check. */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mochi")
+  float ConsistencyResNormStep{};
+
+  /** Initializes all fields from native Mochi defaults. */
+  FMochiExperimentalEvalParams();
+};
+
+/** Returns the native Mochi representation of Value. */
+SUPERDEXPHYSICS_API mochi::ExperimentalEvalParams ToMochi(FMochiExperimentalEvalParams const& Value);
+
+/** Returns the Unreal representation of Value. */
+SUPERDEXPHYSICS_API FMochiExperimentalEvalParams ToUnreal(mochi::ExperimentalEvalParams const& Value);
 
 // clang-format on

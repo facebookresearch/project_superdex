@@ -805,7 +805,7 @@ bool UMochiModel::BakeSdf(const FMochiGridSdfParams* SdfParams) {
   }
 
   // Use provided params or default
-  mochi::GridSdfParams sdfParams = SdfParams ? SdfParams->ToMochi() : mochi::GridSdfParams{};
+  mochi::GridSdfParams sdfParams = SdfParams ? ::ToMochi(*SdfParams) : mochi::GridSdfParams{};
 
   // Bake the SDF
   mochi::model_utils::BakeSdf(modelData, sdfParams, error);

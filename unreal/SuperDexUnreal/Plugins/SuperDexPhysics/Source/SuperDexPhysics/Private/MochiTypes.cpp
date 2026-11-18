@@ -34,66 +34,6 @@ static FCustomVersionRegistration GRegisterMochiObjectVersion(
     FMochiObjectVersion::LatestVersion,
     TEXT("MochiObjectVer"));
 
-FMochiAsyncStepParams::FMochiAsyncStepParams() {
-  FromMochi(mochi::AsyncStepParams{});
-}
-
-mochi::AsyncStepParams FMochiAsyncStepParams::ToMochi() const {
-  mochi::AsyncStepParams Out;
-  Out.useFixedTimeStep = bUseFixedTimeStep;
-  Out.fixedTimeStepSeconds = FixedTimeStepSeconds;
-  Out.dynamicTimeStepMinSeconds = DynamicTimeStepMinSeconds;
-  Out.dynamicTimeStepMaxSeconds = DynamicTimeStepMaxSeconds;
-  return Out;
-}
-
-void FMochiAsyncStepParams::FromMochi(const mochi::AsyncStepParams& Mochi) {
-  bUseFixedTimeStep = Mochi.useFixedTimeStep;
-  FixedTimeStepSeconds = Mochi.fixedTimeStepSeconds;
-  DynamicTimeStepMinSeconds = Mochi.dynamicTimeStepMinSeconds;
-  DynamicTimeStepMaxSeconds = Mochi.dynamicTimeStepMaxSeconds;
-}
-
-EMochiActorBoundaryElementType FromMochi(mochi::ActorBoundaryElementType Type) {
-  switch (Type) {
-    case mochi::ActorBoundaryElementType::P1Q1:
-      return EMochiActorBoundaryElementType::P1Q1;
-    case mochi::ActorBoundaryElementType::P1Q3:
-      return EMochiActorBoundaryElementType::P1Q3;
-    case mochi::ActorBoundaryElementType::P1Q6:
-      return EMochiActorBoundaryElementType::P1Q6;
-    case mochi::ActorBoundaryElementType::ExperimentalP1Q7:
-    case mochi::ActorBoundaryElementType::ExperimentalP1Q12:
-    case mochi::ActorBoundaryElementType::ExperimentalP1Q16:
-    case mochi::ActorBoundaryElementType::Count:
-      break;
-  }
-  return EMochiActorBoundaryElementType::Default;
-}
-
-FMochiBoundarySubsamplingParams FromMochi(const mochi::BoundarySubsamplingParams& Params) {
-  FMochiBoundarySubsamplingParams result;
-  result.SubsamplingDensity = Params.subsamplingDensity;
-  result.Strategy = Params.strategy == mochi::BoundarySubsamplingStrategy::AreaProportional
-      ? EMochiBoundarySubsamplingStrategy::AreaProportional
-      : EMochiBoundarySubsamplingStrategy::UniformProbability;
-  return result;
-}
-
-mochi::BoundarySubsamplingParams ToMochi(const FMochiBoundarySubsamplingParams& Params) {
-  mochi::BoundarySubsamplingParams result;
-  result.subsamplingDensity = static_cast<mochi::real>(Params.SubsamplingDensity);
-  switch (Params.Strategy) {
-    case EMochiBoundarySubsamplingStrategy::UniformProbability:
-      result.strategy = mochi::BoundarySubsamplingStrategy::UniformProbability;
-      break;
-    case EMochiBoundarySubsamplingStrategy::AreaProportional:
-      result.strategy = mochi::BoundarySubsamplingStrategy::AreaProportional;
-      break;
-  }
-  return result;
-}
-
 mochi::experimental::RomParams FMochiRomParams::ToMochi() const {
   mochi::experimental::RomParams params;
   params.source = std::string(TCHAR_TO_ANSI(*Source));
@@ -108,31 +48,6 @@ mochi::experimental::RomParams FMochiRomParams::ToMochi() const {
         {}};
   }
   return params;
-}
-
-FMochiGridSdfParams::FMochiGridSdfParams() {
-  FromMochi(mochi::GridSdfParams{});
-}
-
-mochi::GridSdfParams FMochiGridSdfParams::ToMochi() const {
-  mochi::GridSdfParams result;
-  result.resolutionMode = static_cast<mochi::GridSdfResolutionMode>(ResolutionMode);
-  result.resolutionDelta = mochi::Real3{
-      static_cast<mochi::real>(ResolutionDelta.X),
-      static_cast<mochi::real>(ResolutionDelta.Y),
-      static_cast<mochi::real>(ResolutionDelta.Z)};
-  // Add small value to padding so collision checks up to and including
-  // the distance of the padding selected aren't subjected to floating point precision issues
-  result.boundaryPaddingDist = BoundaryPaddingDist + 0.000001f;
-  return result;
-}
-
-void FMochiGridSdfParams::FromMochi(const mochi::GridSdfParams& Mochi) {
-  ResolutionMode = static_cast<EMochiGridSdfResolutionMode>(Mochi.resolutionMode);
-  ResolutionDelta.X = Mochi.resolutionDelta[0];
-  ResolutionDelta.Y = Mochi.resolutionDelta[1];
-  ResolutionDelta.Z = Mochi.resolutionDelta[2];
-  BoundaryPaddingDist = Mochi.boundaryPaddingDist;
 }
 
 mochi::Real6 FMochiShapeTargetTensor::ToMochi() const {
